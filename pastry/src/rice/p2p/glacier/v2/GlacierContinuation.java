@@ -17,6 +17,21 @@ public abstract class GlacierContinuation {
   public void init() {
   }
   
+  public synchronized void syncReceiveResult(Object result) {
+    if (!terminated)
+      receiveResult(result);
+  }
+      
+  public synchronized void syncReceiveException(Exception exception) {
+    if (!terminated)
+      receiveException(exception);
+  }  
+  
+  public synchronized void syncTimeoutExpired() {
+    if (!terminated)
+      timeoutExpired();
+  }
+  
   public void setup(int uid) {
     myUID = uid;
     terminated = false;
