@@ -71,7 +71,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
   /**
    * Large period (in seconds) means infrequent, 0 means never.
    */
-  private static final int leafSetMaintFreq = 5*60;
+  private static final int leafSetMaintFreq = 1*60;
   private static final int routeSetMaintFreq = 15*60;
 
   /**
