@@ -1,4 +1,4 @@
-PACKAGE = rice.commonapi
+PACKAGE = rice.p2p.commonapi
 
 SOURCE  = \
 	Application.java\
@@ -7,8 +7,9 @@ SOURCE  = \
 	Message.java\
 	Node.java\
 	NodeHandle.java\
+  NodeHandleSet.java\
 	RouteMessage.java\
-	VirtualizedNode.java
+	Endpoint.java
 
 RMI_SOURCE =
 

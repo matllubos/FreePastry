@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"Free Pastry" Peer-to-Peer Application Development Substrate
+"FreePastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -36,31 +36,73 @@ if advised of the possibility of such damage.
 
 package rice.p2p.commonapi;
 
-import java.io.*;
+import java.util.*;
 
 /**
- * This interface is a container which represents a message, as it is
- * about to be forwarded to another node.
+ * An interface to a generic set of node handles.
  *
  * @version $Id$
  *
  * @author Alan Mislove
- * @author Peter Druschel
  */
-public interface RouteMessage extends Serializable {
+public interface NodeHandleSet {
+  
+  /**
+   * Puts a NodeHandle into the set.
+   *
+   * @param handle the handle to put.
+   *
+   * @return true if the put succeeded, false otherwise.
+   */
+  public boolean put(NodeHandle handle);
 
-  public Id getDestination();
+  /**
+   * Finds the NodeHandle associated with the NodeId.
+   *
+   * @param id a node id.
+   * @return the handle associated with that id or null if no such handle is found.
+   */
+  public NodeHandle get(Id id);
 
-  public NodeHandle getNextHop();
+  /**
+   * Gets the ith element in the set.
+   *
+   * @param i an index.
+   * @return the handle associated with that id or null if no such handle is found.
+   */
+  public NodeHandle get(int i);
 
-  public Message getMessage();
+  /**
+   * Verifies if the set contains this particular id.
+   *
+   * @param id a node id.
+   * @return true if that node id is in the set, false otherwise.
+   */
+  public boolean member(Id id);
 
-  public void setDestination(Id id);
+  /**
+   * Removes a node id and its handle from the set.
+   *
+   * @param nid the node to remove.
+   *
+   * @return the node handle removed or null if nothing.
+   */
+  public NodeHandle remove(Id id);
 
-  public void setNextHop(NodeHandle nextHop);
+  /**
+   * Gets the size of the set.
+   *
+   * @return the size.
+   */
+  public int size();
 
-  public void setMessage(Message message);
+  /**
+   * Gets the index of the element with the given node id.
+   *
+   * @param id the id.
+   *
+   * @return the index or throws a NoSuchElementException.
+   */
+  public int getIndex(Id id) throws NoSuchElementException;
   
 }
-
-

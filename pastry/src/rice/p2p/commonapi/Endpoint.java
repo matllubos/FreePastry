@@ -46,7 +46,7 @@ package rice.p2p.commonapi;
  * @author Alan Mislove
  * @author Peter Druschel
  */
-public interface VirtualizedNode {
+public interface Endpoint {
   
   /**
    * This method makes an attempt to route the message to the root of the given id.
@@ -71,7 +71,7 @@ public interface VirtualizedNode {
    * @param num The number of nodes to return.
    * @param safe Whether or not to return safe nodes.
    */
-  NodeHandle[] localLookup(Id id, int num, boolean safe);
+  NodeHandleSet localLookup(Id id, int num, boolean safe);
 
   /**
    * This methods returns an unordered set of nodehandles on which are neighbors of the local
@@ -80,8 +80,8 @@ public interface VirtualizedNode {
    * @param id The object's id.
    * @param maxRank The number of desired replicas.
    */
-  NodeHandle[] neighborSet(int num);
-  
+  NodeHandleSet neighborSet(int num);
+
   /**
    * This methods returns an ordered set of nodehandles on which replicas of an object with
    * a given id can be stored.  The call returns nodes up to and including a node with maxRank.
@@ -89,7 +89,7 @@ public interface VirtualizedNode {
    * @param id The object's id.
    * @param maxRank The number of desired replicas.
    */
-  NodeHandle[] replicaSet(Id id, int maxRank);
+  NodeHandleSet replicaSet(Id id, int maxRank);
 
   /**
    * This operation provides information about ranges of keys for which the node is currently
@@ -107,6 +107,7 @@ public interface VirtualizedNode {
    * @param lkey An "index" in case of multiple ranges.
    */
   IdRange range(NodeHandle handle, int rank, Id lkey);
+  
 }
 
 

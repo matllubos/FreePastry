@@ -39,7 +39,7 @@ package rice.p2p.commonapi;
 /**
  * Interface which represents a node in a peer-to-peer system, regardless of
  * the underlying protocol.  This represents a factory, in a sense, that will
- * give a application a VirtualizedNode which it can use to send and receive
+ * give a application an Endpoint which it can use to send and receive
  * messages.
  *
  * @version $Id$
@@ -56,10 +56,11 @@ public interface Node {
    *
    * @param application The Application
    * @param instance An identifier for a given instance
-   * @return The virtualized node specific to this application.
+   * @return The endpoint specific to this applicationk, which can be used
+   * for message sending/receiving.
    */
-  public VirtualizedNode registerApplication(Application application, String instance);
-
+  public Endpoint registerApplication(Application application, String instance);
+  
 }
 
 
