@@ -32,13 +32,12 @@ import java.nio.channels.ServerSocketChannel;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Hashtable;
-import java.util.LinkedList;
 import java.util.TimerTask;
 
 import rice.pastry.Log;
+import rice.pastry.NodeHandle;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RouteMessage;
-import rice.pastry.socket.messaging.SocketTransportMessage;
 import rice.pastry.testing.HelloMsg;
 
 /**
@@ -117,11 +116,6 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    */
   public static int PING_THROTTLE = 300000;
 
-  public static final int TYPE_CONTROL = 1;
-  public static final int TYPE_DATA = 2;
-  
-  public static final int MAX_ROUTE_MESSAGE_SIZE = 64000;
-
   /**
    * Constructs a new SocketManager.
    *
@@ -175,7 +169,8 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    * @return The Alive value
    */
   public boolean isAlive(InetSocketAddress address) {
-    return (!dead.contains(address));
+    return ((ConnectionManager)connections.get(address)).getLiveness() < NodeHandle.LIVENESS_FAULTY;    
+    //return (!dead.contains(address));
   }
 
   /**
@@ -227,45 +222,7 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    * @param address DESCRIBE THE PARAMETER
    */
   public void send(InetSocketAddress address, Message message) {
-    
-//    System.out.println("ENQ:"+pastryNode+" SCM.send("+message+"):"+address);
-
-    int type = TYPE_CONTROL;
-
-    if (message instanceof RouteMessage) {
-      RouteMessage rm = (RouteMessage)message;
-//      System.out.println("SCM.send("+rm.unwrap()+"):"+rm.unwrap().getClass().getName());
-//      System.out.println("SCM.send2("+message+")");
-      if (rm.unwrap() instanceof HelloMsg) {
-        //System.out.println("SCM.send2("+rm.unwrap()+")");
-       // type = TYPE_DATA;
-      }
-    }
-    
-    getConnectionManager(address).send(message, TYPE_CONTROL);
-/*    
-    synchronized (socketLock) {
-      if (!controlSockets.containsKey(address)) {
-        debug("No connection open to " + address + " - opening one");
-        openSocket(address, TYPE_CONTROL);
-      }
-
-      SocketManager sm = (SocketManager) controlSockets.get(address);        
-      if (sm != null) {
-        //debug("Found connection open to " + address + " - sending now");
-        
-//        if (sm.isProbing()) {
-//          reroute(address, message);
-//        } else {
-          sm.send(message);        
-          socketUpdated(sm);
-//        }
-      } else {
-        debug("ERROR: Could not connection to remote address " + address + " rerouting message " + message);
-        reroute(address, message);
-      }
-    }
-    */
+    getConnectionManager(address).send(message);
   }
 
   /**
@@ -519,10 +476,10 @@ public class SocketCollectionManager implements SelectionKeyHandler {
 	 * @param address
 	 * @return
 	 */
-	public int getStatus(InetSocketAddress address) {
+	public int getLiveness(InetSocketAddress address) {
     ConnectionManager cm = (ConnectionManager)connections.get(address);
     if (cm != null) {
-      return cm.getStatus();
+      return cm.getLiveness();
     }
 		return 0;
 	}

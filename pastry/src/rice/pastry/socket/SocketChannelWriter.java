@@ -176,9 +176,6 @@ public class SocketChannelWriter {
           debug("About to serialize object " + queue.getFirst());
           Object first = queue.getFirst();
           buffer = serialize(first);
-          if (manager != null) {
-              manager.wroteMessage(first);
-          }
 
           //    if (spn != null)
           //      spn.broadcastSentListeners(queue.getFirst(), (InetSocketAddress) sc.socket().getRemoteSocketAddress(), buffer.limit());

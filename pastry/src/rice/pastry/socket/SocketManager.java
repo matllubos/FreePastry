@@ -1,8 +1,5 @@
 /*
  * Created on Mar 25, 2004
- *
- * To change the template for this generated file go to
- * Window>Preferences>Java>Code Generation>Code and Comments
  */
 package rice.pastry.socket;
 
@@ -45,8 +42,6 @@ import rice.pastry.socket.messaging.SocketTransportMessage;
  */
 public class SocketManager implements SelectionKeyHandler {
 
-  public static final int MAX_PENDING_ACKS = 1;
-
 	// the key to read from
   private SelectionKey key;
 
@@ -59,12 +54,6 @@ public class SocketManager implements SelectionKeyHandler {
   // the node handle we're talking to
   private InetSocketAddress address;
 
-  // the acks we are waiting for
-  // Integer -> AckTimeoutEvent
-  private Hashtable pendingAcks;
-
-  private int currentAckNumber = 0;
-  
   private SocketCollectionManager scm;
 
   private int type = 0;
@@ -108,19 +97,12 @@ public class SocketManager implements SelectionKeyHandler {
   private SocketManager(SocketCollectionManager scm, int type) {
     this.scm = scm;
     this.type = type;
-    initializeControlSocket();
     //System.out.println("SM.ctor("+type+")");
     //sThread.dumpStack();
     reader = new SocketChannelReader(scm.pastryNode);
     writer = new SocketChannelWriter(scm.pastryNode, this);
   }
   
-  protected void initializeControlSocket() {
-    if (type == SocketCollectionManager.TYPE_CONTROL) {
-      pendingAcks = new Hashtable();
-    }    
-  }
-
   /**
    * Method which closes down this socket manager, by closing the socket,
    * cancelling the key and setting the key to be interested in nothing
@@ -158,53 +140,8 @@ public class SocketManager implements SelectionKeyHandler {
       System.out.println("ERROR: Recevied exception " + e + " while closing socket!");
     }
     if (connectionManager != null) {
-      connectionManager.socketClosed(this,type);    
+      connectionManager.socketClosed(this);    
     }
-  }
-
-  public void ackReceived(int i) {
-    //System.out.println(this+" SM.ackReceived("+i+") on type :"+type);
-    AckTimeoutEvent ate;
-    synchronized(pendingAcks) {
-      ate = (AckTimeoutEvent)pendingAcks.remove(new Integer(i));
-      
-      if (ate != null) {
-//        System.out.println(this+" SM.ackReceived("+i+") on type :"+type+"elapsed Time:"+ate.elapsedTime());
-        ate.cancel();      
-      } else {
-        System.out.println(this+" SM.ackReceived("+i+"):Ack received late");
-      }
-    }
-    if (connectionManager != null) {
-      connectionManager.ackReceived(i,ate);
-    }
-  }
-
-  public void ackNotReceived(AckTimeoutEvent ate) {
-    System.out.println(this+" SM.ackNotReceived("+ate+")");
-    synchronized(pendingAcks) {
-      AckTimeoutEvent nate = (AckTimeoutEvent)pendingAcks.remove(new Integer(ate.ackNum));
-      if (nate == null) {
-        // already received ack
-        return;
-      }
-      connectionManager.checkDead();
-    //TODO: Reroute ate.msg
-    }
-  }
-
-  protected void registerMessageForAck(SocketTransportMessage msg) {
-    synchronized(pendingAcks) {
-      AckTimeoutEvent ate = new AckTimeoutEvent(msg, this);
-      pendingAcks.put(new Integer(ate.ackNum),ate);
-      scm.pastryNode.scheduleTask(ate, connectionManager.ACK_DELAY);
-//      System.out.println(this+".registerMsg4Ack("+ate+"):type="+type);
-    }
-  }
-
-  protected void sendAck(SocketTransportMessage smsg) {
-//    System.out.println(this+".sendAck("+smsg+")");
-    writer.enqueue(new AckMessage(smsg.seqNumber,smsg));      
   }
 
   /**
@@ -215,8 +152,9 @@ public class SocketManager implements SelectionKeyHandler {
    */
   public void send(final Object message) {
     //System.out.println("SM<"+type+">.send("+message+")");
-    if (message instanceof SocketControlMessage) {
+//    if (message instanceof SocketControlMessage) {
       writer.enqueue(message);      
+  /*    
     } else {
       try {
         SocketTransportMessage stm = new SocketTransportMessage((Message)message,currentAckNumber++);
@@ -229,6 +167,7 @@ public class SocketManager implements SelectionKeyHandler {
         System.out.println(message.getClass().getName());
       }
     }
+    */
     /*
     if (key != null) { // now called from SCW.addToQueue()
       scm.manager.modifyKey(key);
@@ -299,8 +238,9 @@ public class SocketManager implements SelectionKeyHandler {
    */
   public void read(SelectionKey key) {
     try {
+      //System.out.println("SM<"+type+">.read():1");
       Object o = reader.read((SocketChannel) key.channel());
-//      System.out.println("SM<"+type+">.read("+o+")");
+      //System.out.println("SM<"+type+">.read("+o+"):2");
 
       if (o != null) {
         debug("Read message " + o + " from socket.");
@@ -310,7 +250,6 @@ public class SocketManager implements SelectionKeyHandler {
             this.address = am.address;
 //            System.out.println("SM<"+type+">.read("+o+") -> "+am.type);
             type = am.type;
-            initializeControlSocket();
             scm.newSocketManager(address, this);
 //            scm.socketOpened(address, this);
             
@@ -319,17 +258,19 @@ public class SocketManager implements SelectionKeyHandler {
             System.out.println("SERIOUS ERROR: Received duplicate address assignments: " + this.address + " and " + o);
           }
         } else {
+          receive((Message)o);
+          /*
           if (o instanceof SocketTransportMessage) {
             SocketTransportMessage stm = (SocketTransportMessage)o;
-            if (type == SocketCollectionManager.TYPE_CONTROL) {
-              sendAck(stm);
+            if (type == ConnectionManager.TYPE_CONTROL) {
+              connectionManager.sendAck(stm);
             }
             receive(stm.msg);
           } else if (o instanceof AckMessage) {
-            ackReceived(((AckMessage)o).seqNumber);
+            connectionManager.ackReceived((AckMessage)o);
           } else {
             receive((Message)o);
-          }
+          }*/
         }
       }
     } catch (IOException e) {
@@ -341,6 +282,7 @@ public class SocketManager implements SelectionKeyHandler {
       }
       close();
     }
+    //System.out.println("SM<"+type+">.read():3");
   }
 
 
@@ -360,6 +302,8 @@ public class SocketManager implements SelectionKeyHandler {
     }
   }
 
+  boolean nagle = true;
+
   /**
    * Accepts a new connection on the given key
    *
@@ -370,7 +314,9 @@ public class SocketManager implements SelectionKeyHandler {
     final SocketChannel channel = (SocketChannel) ((ServerSocketChannel) serverKey.channel()).accept();
     channel.socket().setSendBufferSize(scm.SOCKET_BUFFER_SIZE);
     channel.socket().setReceiveBufferSize(scm.SOCKET_BUFFER_SIZE);
-    channel.socket().setTcpNoDelay(true);
+    if (!nagle) {
+      channel.socket().setTcpNoDelay(true);
+    }
     channel.configureBlocking(false);
 
     debug("Accepted connection from " + address);
@@ -389,7 +335,9 @@ public class SocketManager implements SelectionKeyHandler {
     final SocketChannel channel = SocketChannel.open();
     channel.socket().setSendBufferSize(scm.SOCKET_BUFFER_SIZE);
     channel.socket().setReceiveBufferSize(scm.SOCKET_BUFFER_SIZE);
-    channel.socket().setTcpNoDelay(true);
+    if (!nagle) {
+      channel.socket().setTcpNoDelay(true);
+    }
     channel.configureBlocking(false);
 
     final boolean done = channel.connect(address);
@@ -435,7 +383,9 @@ public class SocketManager implements SelectionKeyHandler {
       RouteRowRequestMessage rrMessage = (RouteRowRequestMessage) message;
       send(new RouteRowResponseMessage(scm.pastryNode.getRoutingTable().getRow(rrMessage.getRow())));
     } else {
-      if (address != null) {
+      if (connectionManager != null) {
+        connectionManager.receiveMessage(message);
+      } else if (address != null) {
         scm.pastryNode.receiveMessage(message);
       } else {
         System.out.println("SERIOUS ERROR: Received no address assignment, but got message " + message);
@@ -454,73 +404,6 @@ public class SocketManager implements SelectionKeyHandler {
     }
   }
 
-  /**
-   * DESCRIBE THE CLASS
-   *
-   * @version $Id$
-   * @author jeffh
-   */
-  class AckTimeoutEvent extends TimerTask {
-    public int ackNum;
-    SocketTransportMessage msg;
-    SocketManager sman;
-    public long startTime;
-
-    /**
-     * Constructor for DeadChecker.
-     *
-     * @param address DESCRIBE THE PARAMETER
-     * @param numTries DESCRIBE THE PARAMETER
-     * @param mgr DESCRIBE THE PARAMETER
-     */
-    public AckTimeoutEvent(SocketTransportMessage msg, SocketManager socketManager) {
-      this.ackNum = msg.seqNumber;
-      this.msg = msg;
-      sman = socketManager;
-      startTime = System.currentTimeMillis();
-    }
-
-    /**
-     * Main processing method for the DeadChecker object
-     */
-    public void run() {
-      sman.ackNotReceived(this);
-    }
-
-    public long elapsedTime() {
-      return System.currentTimeMillis() - startTime;
-    }
-    
-    public String toString() {
-      return "ATE<"+ackNum+">:"+msg+":"+elapsedTime();
-    }
-  }
-
-
-	public void wroteMessage(Object msg) {
-    if (true) return;
-    if (type == SocketCollectionManager.TYPE_CONTROL) {
-      if (msg instanceof SocketTransportMessage) {
-        //registerMessageForAck((SocketTransportMessage)msg);
-      } else {
-        //System.out.println("SocketManager.wroteMessage("+msg+") is not a SocketTransportMessage");
-      }
-    }
-	}
-
-	/**
-	 * @return
-	 */
-	public boolean canWrite() {
-    if (pendingAcks.size() > 0) {
-      int l = -1;
-      if (connectionManager != null) {
-        l = connectionManager.size();
-      }
-      //System.out.println(this+".canWrite():"+pendingAcks.size()+","+writer.getSize()+","+l+":"+pendingAcks.elements().nextElement());
-    }
-		return pendingAcks.size() < MAX_PENDING_ACKS;
-	}
 
   public int getType() {
     return type;

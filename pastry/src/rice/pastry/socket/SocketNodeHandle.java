@@ -60,29 +60,20 @@ public class SocketNodeHandle extends DistNodeHandle {
   }
 
   /**
-   * Returns the last known liveness information about the Pastry node
+   * Returns the last known status information about the Pastry node
    * associated with this handle. Invoking this method does not cause network
    * activity.
    *
    * @return true if the node is alive, false otherwise.
    */
-  public boolean isAlive() {
+  public int getLiveness() {
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
 
     if (spn == null) {
-      return true;
+      //System.out.println("SNH.getLiveness(): spn == null");
+      return LIVENESS_ALIVE;
     } else {
-      return spn.getSocketCollectionManager().isAlive(getAddress());
-    }
-  }
-
-  public int getStatus() {
-    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
-
-    if (spn == null) {
-      return STATUS_ALIVE;
-    } else {
-      return spn.getSocketCollectionManager().getStatus(getAddress());
+      return spn.getSocketCollectionManager().getLiveness(getAddress());
     } 
   }
 
