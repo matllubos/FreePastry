@@ -9,7 +9,7 @@ import rice.post.log.*;
 /**
  * Flags object to store the flags of an email
  *
- * @version   $Id$
+ * @version $Id$
  * @author
  */
 public class Flags implements java.io.Serializable {
@@ -36,7 +36,7 @@ public class Flags implements java.io.Serializable {
   /**
    * Gets the Recent attribute of the Flags object
    *
-   * @return   The Recent value
+   * @return The Recent value
    */
   public boolean isRecent() {
     return _recent;
@@ -45,7 +45,7 @@ public class Flags implements java.io.Serializable {
   /**
    * Gets the Deleted attribute of the Flags object
    *
-   * @return   The Deleted value
+   * @return The Deleted value
    */
   public boolean isDeleted() {
     return _deleted;
@@ -54,7 +54,7 @@ public class Flags implements java.io.Serializable {
   /**
    * Gets the Answered attribute of the Flags object
    *
-   * @return   The Answered value
+   * @return The Answered value
    */
   public boolean isAnswered() {
     return _answered;
@@ -63,7 +63,7 @@ public class Flags implements java.io.Serializable {
   /**
    * Gets the Seen attribute of the Flags object
    *
-   * @return   The Seen value
+   * @return The Seen value
    */
   public boolean isSeen() {
     return _seen;
@@ -72,7 +72,7 @@ public class Flags implements java.io.Serializable {
   /**
    * Gets the Flagged attribute of the Flags object
    *
-   * @return   The Flagged value
+   * @return The Flagged value
    */
   public boolean isFlagged() {
     return _flagged;
@@ -81,7 +81,7 @@ public class Flags implements java.io.Serializable {
   /**
    * Gets the Draft attribute of the Flags object
    *
-   * @return   The Draft value
+   * @return The Draft value
    */
   public boolean isDraft() {
     return _draft;
@@ -90,7 +90,7 @@ public class Flags implements java.io.Serializable {
   /**
    * Sets the Deleted attribute of the Flags object
    *
-   * @param value  The new Deleted value
+   * @param value The new Deleted value
    */
   public void setDeleted(boolean value) {
     _deleted = value;
@@ -99,7 +99,7 @@ public class Flags implements java.io.Serializable {
   /**
    * Sets the Answered attribute of the Flags object
    *
-   * @param value  The new Answered value
+   * @param value The new Answered value
    */
   public void setAnswered(boolean value) {
     _answered = value;
@@ -108,7 +108,7 @@ public class Flags implements java.io.Serializable {
   /**
    * Sets the Seen attribute of the Flags object
    *
-   * @param value  The new Seen value
+   * @param value The new Seen value
    */
   public void setSeen(boolean value) {
     _seen = value;
@@ -117,7 +117,7 @@ public class Flags implements java.io.Serializable {
   /**
    * Sets the Flagged attribute of the Flags object
    *
-   * @param value  The new Flagged value
+   * @param value The new Flagged value
    */
   public void setFlagged(boolean value) {
     _flagged = value;
@@ -126,7 +126,7 @@ public class Flags implements java.io.Serializable {
   /**
    * Sets the Draft attribute of the Flags object
    *
-   * @param value  The new Draft value
+   * @param value The new Draft value
    */
   public void setDraft(boolean value) {
     _draft = value;
@@ -135,7 +135,7 @@ public class Flags implements java.io.Serializable {
   /**
    * Returns a Vector representation of the flagList
    *
-   * @return   the Vector of the set flags
+   * @return the Vector of the set flags
    */
   public Vector flagList() {
     Vector flaglist = new Vector();
@@ -164,7 +164,7 @@ public class Flags implements java.io.Serializable {
   /**
    * Returns a string representation of the flags
    *
-   * @return   The string representation of the flags
+   * @return The string representation of the flags
    */
   public String toFlagString() {
     StringBuffer flagBuffer = new StringBuffer();

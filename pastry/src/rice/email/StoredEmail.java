@@ -15,8 +15,8 @@ import rice.post.storage.*;
  * Represents the notion of a stored email: it contains the metadata(int UID),
  * the email and the Flags.
  *
- * @version   $Id$
- * @author    amislove
+ * @version $Id$
+ * @author amislove
  */
 public class StoredEmail implements Serializable, Comparable {
 
@@ -27,9 +27,9 @@ public class StoredEmail implements Serializable, Comparable {
   /**
    * Constructs a stored email
    *
-   * @param email  The email we are dealing with.
-   * @param uid    The unique UID for the email.
-   * @param flags  The flags on the email.
+   * @param email The email we are dealing with.
+   * @param uid The unique UID for the email.
+   * @param flags The flags on the email.
    */
   public StoredEmail(Email email, int uid, Flags flags) {
     _uid = uid;
@@ -40,7 +40,7 @@ public class StoredEmail implements Serializable, Comparable {
   /**
    * Return the UID for the current email
    *
-   * @return   The UID for the email
+   * @return The UID for the email
    */
   public int getUID() {
     return _uid;
@@ -49,8 +49,8 @@ public class StoredEmail implements Serializable, Comparable {
   /**
    * Return the flags for the email
    *
-   * @return   The Flags for the email. //--Or do we want a string
-   *      representation instead of the class?
+   * @return The Flags for the email. //--Or do we want a string representation
+   *      instead of the class?
    */
   public Flags getFlags() {
     return _flags;
@@ -59,7 +59,7 @@ public class StoredEmail implements Serializable, Comparable {
   /**
    * Return the email
    *
-   * @return   The Email.
+   * @return The Email.
    */
   public Email getEmail() {
     return _email;
@@ -68,8 +68,8 @@ public class StoredEmail implements Serializable, Comparable {
   /**
    * DESCRIBE THE METHOD
    *
-   * @param o  DESCRIBE THE PARAMETER
-   * @return   DESCRIBE THE RETURN VALUE
+   * @param o DESCRIBE THE PARAMETER
+   * @return DESCRIBE THE RETURN VALUE
    */
   public boolean equals(Object o) {
     if (!(o instanceof StoredEmail)) {
@@ -82,8 +82,8 @@ public class StoredEmail implements Serializable, Comparable {
   /**
    * DESCRIBE THE METHOD
    *
-   * @param o  DESCRIBE THE PARAMETER
-   * @return   DESCRIBE THE RETURN VALUE
+   * @param o DESCRIBE THE PARAMETER
+   * @return DESCRIBE THE RETURN VALUE
    */
   public int compareTo(Object o) {
     StoredEmail email = (StoredEmail) o;

@@ -19,9 +19,9 @@ import rice.post.storage.*;
  * received emails. The event generated will contain an {@link Email} object as
  * its argument.
  *
- * @version   $Id: pretty.settings,v 1.1 2003/07/10 02:18:11 amislove Exp $
- * @author    Joe Montgomery
- * @author    Derek Ruths
+ * @version $Id: pretty.settings,v 1.1 2003/07/10 02:18:11 amislove Exp $
+ * @author Joe Montgomery
+ * @author Derek Ruths
  */
 public class EmailService extends PostClient {
 
@@ -46,8 +46,8 @@ public class EmailService extends PostClient {
   /**
    * Constructor
    *
-   * @param post     The Post service to use
-   * @param keyPair  DESCRIBE THE PARAMETER
+   * @param post The Post service to use
+   * @param keyPair DESCRIBE THE PARAMETER
    */
   public EmailService(Post post, KeyPair keyPair) {
     _post = post;
@@ -70,7 +70,7 @@ public class EmailService extends PostClient {
   }
 
   /**
-   * @return   the post object this serivce is using.
+   * @return the post object this serivce is using.
    */
   public Post getPost() {
     return _post;
@@ -79,7 +79,7 @@ public class EmailService extends PostClient {
   /**
    * Returns the Log for ePost's root folder.
    *
-   * @param command  is the object notified of the result of the folder
+   * @param command is the object notified of the result of the folder
    *      retrieval.
    */
   public void getRootFolder(final Continuation command) {
@@ -191,10 +191,10 @@ public class EmailService extends PostClient {
    * Sends the email to the recipient. The Email object has a notion of who its
    * recipients are.
    *
-   * @param email              The email to send
-   * @param command            is the object that will be notified of errors
-   *      that occur during the send procedure, or Boolean(true) if it succeeds.
-   * @exception PostException  DESCRIBE THE EXCEPTION
+   * @param email The email to send
+   * @param command is the object that will be notified of errors that occur
+   *      during the send procedure, or Boolean(true) if it succeeds.
+   * @exception PostException DESCRIBE THE EXCEPTION
    */
   public void sendMessage(final Email email, final Continuation command) throws PostException {
     // build a continuation to send the email once it's properly stored
@@ -236,7 +236,7 @@ public class EmailService extends PostClient {
    * This method is how the Post layer informs the EmailService layer that there
    * is an incoming notification of new email.
    *
-   * @param nm  The incoming notification.
+   * @param nm The incoming notification.
    */
   public void notificationReceived(NotificationMessage nm) {
 
