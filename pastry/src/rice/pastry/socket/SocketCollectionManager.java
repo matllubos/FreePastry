@@ -767,7 +767,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         }
       } catch (IOException e) {
         debug("ERROR " + e + " reading - cancelling.");
-        System.out.println("SHUTDOWN OUT: " + localAddress + " Read closing of path " + path + " " + ((SocketChannel) key.channel()).socket().isOutputShutdown());
+        //System.out.println("SHUTDOWN OUT: " + localAddress + " Read closing of path " + path + " " + ((SocketChannel) key.channel()).socket().isOutputShutdown());
         
         // if it's not a bootstrap path, and we didn't close this socket's output,
         // then check to see if the remote address is dead or just closing a socket
