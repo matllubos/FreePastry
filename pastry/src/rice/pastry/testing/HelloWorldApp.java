@@ -166,16 +166,10 @@ public class HelloWorldApp extends PastryAppl {
     /**
      * Invoked by {RMI,Direct}PastryNode when the node has something in its
      * leaf set, and has become ready to receive application messages.
-     *
-     * Despite the notifyAll below, this method is wire protocol independent,
-     * and works for multithreaded as well as event-driven driver apps.
      */
     public void notifyReady() {
 	if (Log.ifp(6))
 	    System.out.println("Node " + getNodeId() + " ready, waking up any clients");
-
-	// signal any apps that might be waiting for the node to get ready
-	synchronized (this) { notifyAll(); }
     }
 }
 

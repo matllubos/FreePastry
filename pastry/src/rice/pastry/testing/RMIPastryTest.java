@@ -230,9 +230,17 @@ public class RMIPastryTest {
 	pastrynodes.add(pn);
 	if (Log.ifp(5)) System.out.println("created " + pn);
 
-	// xxx the first virtual node should block till ready.
+	// the first virtual node blocks till ready.
 	if (firstvnode) {
 	    firstvnode = false;
+	    if (Log.ifp(6)) System.out.println("blocking until first virtual node is ready");
+	    while (pn.isReady() == false) {
+		synchronized (pn) {
+		    if (pn.isReady() == false)
+			try { pn.wait(); } catch (InterruptedException e) { }
+		}
+	    }
+	    if (Log.ifp(6)) System.out.println("first virtual node is ready");
 	}
     }
 

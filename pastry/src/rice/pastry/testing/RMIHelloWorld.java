@@ -276,15 +276,15 @@ public class RMIHelloWorld {
 
 	    // wait till node is ready to accept application messages.
 
-	    synchronized (app) {
+	    synchronized (pn) {
 		if (pn.isReady() == false) {
 		    if (Log.ifp(6)) System.out.println(pn + " isn't ready yet. Waiting.");
 
 		    for (int n = 0; n < nJoinTries; n++) {
 			try {
 			    if (pn.isReady() == false)
-				app.wait(joinTimeout * 1000);
-				// to be signalled by HelloWorldApp.notifyAll()
+				pn.wait(joinTimeout * 1000);
+				// to be signalled by PastryNode.setReady()
 			} catch (InterruptedException e) { }
 			if (pn.isReady()) break;
 			if (Log.ifp(5)) System.out.println(pn + " timed out while trying to join. Retrying initiateJoin.");
@@ -335,9 +335,9 @@ public class RMIHelloWorld {
 	    firstvnode = false;
 	    if (Log.ifp(6)) System.out.println("blocking until first virtual node is ready");
 	    while (pn.isReady() == false) {
-		synchronized (app) {
+		synchronized (pn) {
 		    if (pn.isReady() == false)
-			try { app.wait(); } catch (InterruptedException e) { }
+			try { pn.wait(); } catch (InterruptedException e) { }
 		}
 	    }
 	    if (Log.ifp(6)) System.out.println("first virtual node is ready");

@@ -118,6 +118,9 @@ public abstract class PastryNode implements MessageReceiver
 	Iterator it = apps.iterator();
         while (it.hasNext())
             ((PastryAppl)(it.next())).notifyReady();
+
+	// signal any apps that might be waiting for the node to get ready
+	synchronized (this) { notifyAll(); }
     }
     
     public final LeafSet getLeafSet() { return leafSet; }
