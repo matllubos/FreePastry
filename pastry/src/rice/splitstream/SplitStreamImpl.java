@@ -153,4 +153,12 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
 	new Channel(channelId, stripeId, spareCapacityId, scribe, bandwidthManager, node));
         }
      }
+    
+    /**
+     * Returns the underlying scribe object.
+     */
+    public IScribe getScribe(){
+	return scribe;
+    }
+
 } 
