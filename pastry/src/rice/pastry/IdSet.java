@@ -185,4 +185,25 @@ public class IdSet {
 	return cachedHash;
     }
 
+    
+    
+    /**
+     * Returns a string representation of the IdSet.
+     */
+
+    public String toString() 
+    {
+	Iterator it = getIterator();
+	Id key;
+	String s = "[ IdSet: ";
+	while(it.hasNext()) {
+	    key = (Id)it.next();
+	    s = s + key + ",";
+
+	}
+	s = s + " ]";
+	return s;
+    }
+    
+
 }
