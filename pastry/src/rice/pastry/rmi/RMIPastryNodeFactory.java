@@ -183,6 +183,36 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
    * @param bootstrap Node handle to bootstrap from.
    */
   public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId) {
+    return newNode(bootstrap, nodeId, null);
+  }
+  
+  /**
+   * Makes many policy choices and manufactures a new RMIPastryNode.
+   * Creates a series of artifacts to adorn the node, like a security
+   * manager, a leafset, etc. with hand-picked parameters like the leaf
+   * set size. Finally calls the respective setElements to pass these on
+   * to the {,RMI,Direct}PastryNode as appropriate, and then calls
+   * node.doneNode() (which internally performs mechanisms like exporting
+   * the node and notifying applications).
+   *
+   * @param bootstrap Node handle to bootstrap from.
+   */
+  public PastryNode newNode(final NodeHandle bootstrap, InetSocketAddress proxy) {
+    return newNode(bootstrap, nidFactory.generateNodeId(), proxy);
+  }
+  
+  /**
+   * Makes many policy choices and manufactures a new RMIPastryNode.
+   * Creates a series of artifacts to adorn the node, like a security
+   * manager, a leafset, etc. with hand-picked parameters like the leaf
+   * set size. Finally calls the respective setElements to pass these on
+   * to the {,RMI,Direct}PastryNode as appropriate, and then calls
+   * node.doneNode() (which internally performs mechanisms like exporting
+   * the node and notifying applications).
+   *
+   * @param bootstrap Node handle to bootstrap from.
+   */
+  public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress proxy) {
     final RMIPastryNode pn = new RMIPastryNode(nodeId);
 
     InetSocketAddress address = null;
