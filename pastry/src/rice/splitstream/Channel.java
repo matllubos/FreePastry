@@ -255,6 +255,9 @@ public class Channel extends PastryAppl implements IScribeApp {
      * Channel Object is responsible for managing local node's usage of
      * outgoing bandwidth and incoming bandwidth, which is indicated by number
      * of stripes the local node has tuned to.
+     *
+     * What happens if outChannel < bandwidthUsed?
+     *
      * @param int The outgoing bandwidth 
      * The incoming bandwidth is assumed from the outgoing.
      *
@@ -370,7 +373,7 @@ public class Channel extends PastryAppl implements IScribeApp {
      * Join a specific Stripe of this channel
      * @param stripeID The stripe to subscribe to
      * @param observer the Object that is going to observe the stripe
-     * @return boolean Success of the join operation
+     * @return the Stripe joined
      */ 
     public Stripe joinStripe(StripeId stripeId, Observer observer){
 	Object tableEntry = stripeIdTable.get(stripeId);
