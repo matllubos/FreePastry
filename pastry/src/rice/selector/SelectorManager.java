@@ -62,7 +62,7 @@ public class SelectorManager extends Thread {
   private Selector selector;
 
   // a list of the invocations that need to be done in this thread
-  private LinkedList invocations;
+  protected LinkedList invocations;
 
   // the list of handlers which want to change their key
   private HashSet modifyKeys;

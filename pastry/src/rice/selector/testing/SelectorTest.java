@@ -41,7 +41,8 @@ public class SelectorTest {
         long curTime = System.currentTimeMillis();
         long delay = curTime-lastTime;
         lastTime = curTime;
-        System.out.println("Scheduled many times for delay "+t1Delay+" actual delay "+delay);
+        if ((delay-t1Delay) > 100)
+          System.out.println("Scheduled many times for delay "+t1Delay+" actual delay "+delay);
       }
     },t1Delay, t1Delay);
   }  
@@ -53,7 +54,8 @@ public class SelectorTest {
       public void run() {
         long curTime = System.currentTimeMillis();
         curTime-=t1Start;
-        System.out.println("Scheduled once for delay "+t1Delay+" actual delay "+curTime);
+        if ((curTime-t1Delay) > 100)
+          System.out.println("Scheduled once for delay "+t1Delay+" actual delay "+curTime);
       }
     },t1Delay);
     //if (true) return;
@@ -62,7 +64,8 @@ public class SelectorTest {
       public void run() {
         long curTime = System.currentTimeMillis();
         curTime-=i1Start;
-        System.out.println("invoked after "+curTime+" millis.");
+        if (curTime > 100)
+          System.out.println("invoked after "+curTime+" millis.");
       }
     });    
   }

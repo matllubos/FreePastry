@@ -23,6 +23,26 @@ public class ProfileSelector extends SelectorManager {
 
   public static boolean recordStats = false;
 
+
+  protected void onLoop() {
+    if (!useHeartbeat) return;  
+    long curTime = System.currentTimeMillis();
+    if ((curTime - lastHeartBeat) > HEART_BEAT_INTERVAL) {
+      System.out.println("selector heartbeat "+new Date()+" maxInvokes:"+maxInvokes);
+      lastHeartBeat = curTime;          
+    }
+    printStats();
+  }
+
+  int maxInvokes = 0;
+  public void invoke(Runnable d) {
+    super.invoke(d);
+    int numInvokes = invocations.size();
+    if (numInvokes > maxInvokes) {
+      maxInvokes = numInvokes;
+    }
+  }
+
   // *********************** debugging statistics ****************
   /**
    * Records how long it takes to receive each type of message.
@@ -81,13 +101,5 @@ public class ProfileSelector extends SelectorManager {
 
 
 
-  protected void onLoop() {
-    if (!useHeartbeat) return;  
-    long curTime = System.currentTimeMillis();
-    if ((curTime - lastHeartBeat) > HEART_BEAT_INTERVAL) {
-      System.out.println("selector heartbeat "+new Date());
-      lastHeartBeat = curTime;          
-    }
-    printStats();
-  }
+
 }
