@@ -263,45 +263,62 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
 
           Id ccwId = getFragmentLocation(grrm.getCommonRange().getCCWId(), numFragments-offset, 0);
           Id cwId = getFragmentLocation(grrm.getCommonRange().getCWId(), numFragments-offset, 0);
-          IdRange originalRange = factory.buildIdRange(ccwId, cwId);
+          final IdRange originalRange = factory.buildIdRange(ccwId, cwId);
         
           log(2, "Range response (offset: "+offset+"): "+grrm.getCommonRange()+", original="+originalRange);
         
-          IdSet keySet = fragmentStorage.scan();
-          BloomFilter bv = new BloomFilter((2*keySet.numElements()+5)*syncBloomFilterBitsPerKey, syncBloomFilterNumHashes);
-          Iterator iter = keySet.getIterator();
+          final IdSet keySet = fragmentStorage.scan();
+          endpoint.process(new Executable() {
+            public Object execute() {
+              BloomFilter bv = new BloomFilter((2*keySet.numElements()+5)*syncBloomFilterBitsPerKey, syncBloomFilterNumHashes);
+              Iterator iter = keySet.getIterator();
 
-          while (iter.hasNext()) {
-            FragmentKey fkey = (FragmentKey)iter.next();
-            Id thisPos = getFragmentLocation(fkey);
-            if (originalRange.containsId(thisPos)) {
-              FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(fkey);
-              if (metadata != null) {
-                long currentExp = metadata.getCurrentExpiration();
-                long prevExp = metadata.getPreviousExpiration();
-                log(4, " - Adding "+fkey+" as "+fkey.getVersionKey().getId()+", ecur="+currentExp+", eprev="+prevExp);
-                bv.add(getHashInput(fkey.getVersionKey(), currentExp));
-                bv.add(getHashInput(fkey.getVersionKey(), prevExp));
+              while (iter.hasNext()) {
+                FragmentKey fkey = (FragmentKey)iter.next();
+                Id thisPos = getFragmentLocation(fkey);
+                if (originalRange.containsId(thisPos)) {
+                  FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(fkey);
+                  if (metadata != null) {
+                    long currentExp = metadata.getCurrentExpiration();
+                    long prevExp = metadata.getPreviousExpiration();
+                    log(4, " - Adding "+fkey+" as "+fkey.getVersionKey().getId()+", ecur="+currentExp+", eprev="+prevExp);
+                    bv.add(getHashInput(fkey.getVersionKey(), currentExp));
+                    bv.add(getHashInput(fkey.getVersionKey(), prevExp));
+                  } else {
+                    warn("SYNC Cannot read metadata of object "+fkey.toStringFull()+", storage returned null");
+                  }
+                }
+              }
+              
+              return bv;
+            }
+          }, new Continuation() {
+            public void receiveResult(Object o) {
+              if (o instanceof BloomFilter) {
+                BloomFilter bv = (BloomFilter) o;
+                log(3, "Got "+bv);        
+                log(2, keySet.numElements()+" keys added, sending sync request...");
+
+                sendMessage(
+                  null,
+                  new GlacierSyncMessage(getUID(), grrm.getCommonRange(), offset, bv, getLocalNodeHandle(), grrm.getSource().getId(), tagSync),
+                  grrm.getSource()
+                );
               } else {
-                warn("SYNC Cannot read metadata of object "+fkey.toStringFull()+", storage returned null");
+                warn("While processing range response: Result is of unknown type: "+o+" -- discarding request");
               }
             }
-          }
-
-          log(3, "Got "+bv);        
-          log(2, keySet.numElements()+" keys added, sending sync request...");
-
-          sendMessage(
-            null,
-            new GlacierSyncMessage(getUID(), grrm.getCommonRange(), offset, bv, getLocalNodeHandle(), grrm.getSource().getId(), tagSync),
-            grrm.getSource()
-          );
+            public void receiveException(Exception e) {
+              warn("Exception while processing range response: "+e+" -- discarding request");
+              e.printStackTrace();
+            }
+          });
         } else {
           warn("Unknown result in sync continuation: "+o+" -- discarded");
         }
       }
       public void receiveException(Exception e) {
-        warn("Exception in neighbor continuation: "+e);
+        warn("Exception in sync continuation: "+e);
         e.printStackTrace();
         terminate();
       }
