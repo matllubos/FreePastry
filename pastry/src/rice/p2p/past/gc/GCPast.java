@@ -60,9 +60,12 @@ import rice.p2p.past.*;
 public interface GCPast extends Past {
   
   /**
-   * Timeout valid which indicates that the object should never expire
+   * Timeout value which indicates that the object should never expire.
+   * Note that objects with this timeout value _will_ be deleted in 
+   * the year 292473178. If this is a problem, applications should
+   * check for this value explicitly.
    */
-  public static final long INFINITY_EXPIRATION = -1L;
+  public static final long INFINITY_EXPIRATION = Long.MAX_VALUE;
   
   /**
    * Inserts an object with the given ID into this instance of Past.
