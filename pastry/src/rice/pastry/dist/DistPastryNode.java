@@ -24,6 +24,7 @@
 
 package rice.pastry.dist;
 
+import java.net.*;
 import java.util.*;
 import rice.pastry.*;
 import rice.pastry.join.*;
@@ -53,6 +54,9 @@ public abstract class DistPastryNode extends PastryNode {
    * DESCRIBE THE FIELD
    */
   protected Timer timer;
+  
+  // the list of network listeners
+  private Vector listeners;
 
   // join retransmission stuff
   private ScheduledMessage joinEvent;
@@ -67,6 +71,30 @@ public abstract class DistPastryNode extends PastryNode {
     super(id);
     timer = new Timer(true);
     // uses deamon thread, so it terminates once other threads have terminated
+    
+    this.listeners = new Vector();
+  }
+  
+  public void addNetworkListener(NetworkListener listener) {
+    listeners.add(listener);
+  }
+  
+  protected NetworkListener[] getNetworkListeners() {
+    return (NetworkListener[]) listeners.toArray(new NetworkListener[0]);
+  }
+  
+  public void broadcastSentListeners(Object message, InetSocketAddress address, int size) {
+    NetworkListener[] listeners = getNetworkListeners();
+    
+    for (int i=0; i<listeners.length; i++)
+      listeners[i].dataSent(message, address, size);
+  }
+  
+  public void broadcastReceivedListeners(Object message, InetSocketAddress address, int size) {
+    NetworkListener[] listeners = getNetworkListeners();
+    
+    for (int i=0; i<listeners.length; i++)
+      listeners[i].dataReceived(message, address, size);
   }
 
   /**
