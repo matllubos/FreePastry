@@ -1168,12 +1168,12 @@ public class ConnectionManager {
   
   private void initializeSocketsIfNeeded() {
     if ((controlSocketManager != null) && // I have a socket manager
-        (!controlSocketManager.sentAddress) && // I haven't initialized it
+        (!controlSocketManager.triedToConnect) && // I haven't initialized it
         (controlSocketManager.ctor == 2)) { // I initiated the socket
           controlSocketManager.tryToCreateConnection();
     }
     if ((dataSocketManager != null) && // I have a socket manager
-        (!dataSocketManager.sentAddress) && // I haven't initialized it
+        (!dataSocketManager.triedToConnect) && // I haven't initialized it
         (dataSocketManager.ctor == 2)) { // I initiated the socket
           dataSocketManager.tryToCreateConnection();
     }

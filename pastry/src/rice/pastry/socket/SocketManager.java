@@ -100,7 +100,7 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
    * This variable is true once we have actually connected to the remote socket
    * and can begin communication.
    */
-  boolean connected = false;
+  private boolean connected = false;
   
   /**
    * This variable is true when the socket has been closed.
@@ -242,6 +242,8 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
 
   // ***************** Connection Lifecycle ************************
 
+  protected boolean triedToConnect = false;
+
   /**
    * Queues an AddressMessage with the identifier/type of this socket.  
    * Calls SocketPoolManager.requestToOpenSocket() which will call 
@@ -251,10 +253,7 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
     if (ctor != 2) {
       Thread.dumpStack();
     }
-//    if (!sentAddress) {
-//      send(new AddressMessage(scm.returnAddress,scm.getLocalNodeHandle(),connectionManager.getNodeId(),type));
-//      sentAddress = true;
-//    }
+    triedToConnect = true;
     scm.socketPoolManager.requestToOpenSocket(this);
   }
 
@@ -391,7 +390,7 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
         key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
         cancelCheckDeadTask();
       }
-
+      connected = true;
       debug("Found connectable channel - completed connection");
     } catch (IOException e) {   
       if (!tryToHandleIOException(e)) {
