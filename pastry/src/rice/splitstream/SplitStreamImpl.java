@@ -242,7 +242,7 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
 			   Credentials credentials = new PermissiveCredentials();
 			   Vector child_root_path = (Vector)stripe.getRootPath().clone();
 			   child_root_path.add( ((Scribe)scribe).getLocalHandle() );
-			   channel.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
+			   this.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
 											   channel.getNodeHandle(),
 											   topicId,
 											   credentials,
@@ -274,7 +274,7 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
 			    */
 			   if(!(victimChild.getNodeId().equals(child.getNodeId()) &&
 				topicId.equals((NodeId)victimStripeId))){
-			       channel.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
+			       this.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
 											       channel.getNodeHandle(),
 											       topicId,
 											       credentials,
@@ -283,7 +283,7 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
 			       //System.out.println("Sending PROPOGATE message to"+child.getNodeId()+ " for stripe "+topicId);
 			   }
 			   
-			   channel.routeMsgDirect( victimChild, new ControlDropMessage( channel.getAddress(),
+			   this.routeMsgDirect( victimChild, new ControlDropMessage( channel.getAddress(),
 											channel.getNodeHandle(),
 											victimStripeId,
 											credentials,
