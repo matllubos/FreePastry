@@ -45,6 +45,23 @@ public class ErasureCodec {
     }
   }
 
+  public void dump(byte[] data) {
+    String hex = "0123456789ABCDEF";
+    for (int i=0; i<data.length; i++) {
+      int d = data[i];
+      if (d<0)
+        d+= 256;
+      int hi = (d>>4);
+      int lo = (d&15);
+        
+      System.out.print(hex.charAt(hi)+""+hex.charAt(lo));
+      if (((i%16)==15) || (i==(data.length-1)))
+        System.out.println();
+      else
+        System.out.print(" ");
+    }
+  }
+
   /**
    * DESCRIBE THE METHOD
    *
@@ -124,7 +141,7 @@ public class ErasureCodec {
 
     Fragment frag[] = new Fragment[numFragments];
     for (int i = 0; i < numFragments; i++) {
-      frag[i] = new Fragment(i, wordsPerFragment * 4);
+      frag[i] = new Fragment(wordsPerFragment * 4);
     }
 
     for (int i = 0; i < numFragments; i++) {
@@ -145,8 +162,17 @@ public class ErasureCodec {
    * @param frag DESCRIBE THE PARAMETER
    * @return DESCRIBE THE RETURN VALUE
    */
-  public Object decode(Fragment frag[]) {
-    int wordsPerFragment = (frag[0].payload.length + 3) / 4;
+  public Serializable decode(Fragment frag[]) {
+  
+    if (frag.length != numFragments)
+      return null;
+  
+    int firstFragment = -1;
+    for (int i=0; (i<numFragments) && (firstFragment == -1); i++)
+      if (frag[i] != null)
+        firstFragment = i;
+  
+    int wordsPerFragment = (frag[firstFragment].payload.length + 3) / 4;
     int message[] = new int[numFragments * wordsPerFragment];
     int numGroups = wordsPerFragment / Lfield;
     Arrays.fill(message, 0);
@@ -154,14 +180,16 @@ public class ErasureCodec {
     boolean haveFragment[] = new boolean[numFragments];
     Arrays.fill(haveFragment, false);
 
-    for (int i = 0; i < frag.length; i++) {
-      haveFragment[frag[i].fragmentID] = true;
-      for (int j = 0; j < wordsPerFragment; j++) {
-        message[frag[i].fragmentID * wordsPerFragment + j] =
-          ((frag[i].payload[4 * j + 0]) & 0xFF) +
-          ((frag[i].payload[4 * j + 1] << 8) & 0xFF00) +
-          ((frag[i].payload[4 * j + 2] << 16) & 0xFF0000) +
-          (frag[i].payload[4 * j + 3] << 24);
+    for (int i = 0; i < numFragments; i++) {
+      if (frag[i] != null) {
+        haveFragment[i] = true;
+        for (int j = 0; j < wordsPerFragment; j++) {
+          message[i * wordsPerFragment + j] =
+            ((frag[i].payload[4 * j + 0]) & 0xFF) +
+            ((frag[i].payload[4 * j + 1] << 8) & 0xFF00) +
+            ((frag[i].payload[4 * j + 2] << 16) & 0xFF0000) +
+            (frag[i].payload[4 * j + 3] << 24);
+        }
       }
     }
 
@@ -286,7 +314,7 @@ public class ErasureCodec {
       ByteArrayInputStream byteinput = new ByteArrayInputStream(bytes);
       ObjectInputStream objectInput = new ObjectInputStream(byteinput);
 
-      return objectInput.readObject();
+      return (Serializable) objectInput.readObject();
     } catch (IOException ioe) {
       System.err.println(ioe);
     } catch (ClassNotFoundException cnfe) {
