@@ -4,9 +4,10 @@ import rice.storage.*;
 
 import rice.pastry.*;
 import rice.pastry.standard.*;
+import rice.pastry.security.*;
 
 import ObjectWeb.Persistence.*;
-import ObjectWeb.Security.*;
+//import ObjectWeb.Security.*;
 
 import java.util.*;
 
@@ -22,8 +23,8 @@ public class StorageRegrTest {
   private PersistenceManager _pm;
   private RandomNodeIdFactory _idFactory;
   
-  private static final CredentialsFactory _credentialsFactory =
-    new CredentialsFactory();
+  //private static final CredentialsFactory _credentialsFactory =
+  //  new CredentialsFactory();
 
    
   public StorageRegrTest() {
@@ -34,9 +35,9 @@ public class StorageRegrTest {
   /**
    * Creates a credentials object to be used for an author.
    */
-  private static Credentials _createUserCredentials() {  
-    return _credentialsFactory.createCredential(CredentialsFactory.USER_CREDENTIAL);
-  }
+  //private static Credentials _createUserCredentials() {  
+  //  return _credentialsFactory.createCredential(CredentialsFactory.USER_CREDENTIAL);
+  //}
   
   
   /* ---------- Setup methods ---------- */
@@ -87,7 +88,7 @@ public class StorageRegrTest {
    */
   protected void testSingleFile() throws TestFailedException {
     StorageManager sm = new StorageManagerImpl(_pm);
-    Credentials userCred = _createUserCredentials();
+    Credentials userCred = new Credentials() {};
     
     // Store file1
     NodeId id1 = _idFactory.generateNodeId();
@@ -142,7 +143,7 @@ public class StorageRegrTest {
    */
   protected void testMultipleFiles() throws TestFailedException {
     StorageManager sm = new StorageManagerImpl(_pm);
-    Credentials userCred = _createUserCredentials();
+    Credentials userCred = new Credentials() {};
     
     // Store file1
     NodeId id1 = _idFactory.generateNodeId();
