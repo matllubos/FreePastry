@@ -675,6 +675,11 @@ public class Folder {
                 parent.receiveResult(Boolean.TRUE);
               }
             }
+            
+            public void receiveException(Exception e) {
+              System.out.println("WARNING: Was unable to create snapshot - received exception " + e + ".  Allowing message to be inserted anyway.");
+              parent.receiveResult(Boolean.TRUE);
+            }
           });
         }
       });
@@ -814,6 +819,11 @@ public class Folder {
           _log.setExists(result.length);
         
         parent.receiveResult(result);
+      }
+      
+      public void receiveException(Exception e) {
+        System.out.println("WARNING: Was unable to fetch the next log entry due to exception " + e + " - this is a bad sign.  For now, we're just going to ignore it.");
+        receiveResult(null);
       }
     });
   }
