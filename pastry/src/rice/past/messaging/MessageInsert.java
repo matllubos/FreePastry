@@ -43,7 +43,7 @@ public class MessageInsert extends PASTMessage {
    * @param nodeId Source Pastry node's ID
    * @param fileId Pastry key of file
    * @param update File to be stored
-   * @param cred Credentials of the author of the file
+   * @param authorCred Credentials of the author of the file
    */
   public MessageInsert(NodeId nodeId, 
                        NodeId fileId, 
@@ -68,9 +68,9 @@ public class MessageInsert extends PASTMessage {
   public void performAction(PASTServiceImpl service) {
     debug("  Inserting file " + getFileId() + " at node " +
           service.getPastryNode().getNodeId());
-    StorageObject existing = service.getStorage().retrieve(getFileId());
+    StorageObject existing = service.getStorage().lookup(getFileId());
     if (existing == null) {
-      _success = service.getStorage().store(getFileId(), _file, _cred);
+      _success = service.getStorage().insert(getFileId(), _file, _cred);
     }
     else {
       // Already exists, return false

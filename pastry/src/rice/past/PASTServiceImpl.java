@@ -53,12 +53,6 @@ public class PASTServiceImpl
   private final SendOptions _sendOptions;
   
   /**
-   * Replication factor.  Indicates how many nodes
-   * each document is stored on.
-   */
-  private int _k;
-  
-  /**
    * The table used to store information for blocked threads
    * waiting for a response.
    */
@@ -75,16 +69,13 @@ public class PASTServiceImpl
    * Builds a new PASTService to run on the given PastryNode.
    * @param pn PastryNode to run on
    * @param storage StorageManager used to store and retrieve files
-   * @param k Replication factor to use for storing files
-   *  (number of nodes to store each file on)
    */
-  public PASTServiceImpl(PastryNode pn, StorageManager storage, int k) {
+  public PASTServiceImpl(PastryNode pn, StorageManager storage) {
     super(pn);
     _pastryNode = pn;
     _storage = storage;
     _appCredentials = new PermissiveCredentials();
     _sendOptions = new SendOptions();
-    _k = k;
     _threadTable = new Hashtable();
   }
   
@@ -250,15 +241,15 @@ public class PASTServiceImpl
   /**
    * Inserts a file into the remote PAST storage system, using the given
    * file ID.
-   * @param fileId NodeId to use as a handle for the file
-   * @param file File to store in PAST
-   * @param authorCred Credentials of author of file
-   * @return true if the file was successfully stored
+   * @param id Pastry key identifying this object
+   * @param obj Persistable object to be stored
+   * @param authorCred Author's credentials
+   * @return true if store succeeds, false otherwise
    */
-  public boolean insert(NodeId fileId, Persistable file, Credentials authorCred) {
+  public boolean insert(NodeId id, Persistable obj, Credentials authorCred) {
     NodeId nodeId = _pastryNode.getNodeId();
-    debug("Insert request for file " + fileId + " at node " + nodeId);
-    MessageInsert request = new MessageInsert(nodeId, fileId, file, authorCred);
+    debug("Insert request for file " + id + " at node " + nodeId);
+    MessageInsert request = new MessageInsert(nodeId, id, obj, authorCred);
     MessageInsert response = (MessageInsert) _sendRequestMessage(request);
     if (response != null) {
       return response.getSuccess();
@@ -269,15 +260,16 @@ public class PASTServiceImpl
   }
   
   /**
-   * Appends an update to an existing file in the remote PAST storage system.
-   * @param fileId Handle of original file
-   * @param update Update to the file stored at fileId
-   * @return true if the original file exists and was updated, false otherwise
+   * Appends an update to an existing object in the remote PAST storage system.
+   * @param id Pastry key of original object to be updated
+   * @param update Persistable update to the original object
+   * @param authorCred Update Author's credentials
+   * @return true if update was successful, false if no object was found
    */
-  public boolean append(NodeId fileId, Persistable update) {
+  public boolean update(NodeId id, Persistable update, Credentials authorCred) {
     NodeId nodeId = _pastryNode.getNodeId();
-    debug("Request to append to file " + fileId + " at node " + nodeId);
-    MessageAppend request = new MessageAppend(nodeId, fileId, update);
+    debug("Request to append to file " + id + " at node " + nodeId);
+    MessageAppend request = new MessageAppend(nodeId, id, update, authorCred);
     MessageAppend response = (MessageAppend) _sendRequestMessage(request);
     if (response != null) {
       return response.getSuccess();
@@ -288,15 +280,15 @@ public class PASTServiceImpl
   }
   
   /**
-   * Remotely locates and returns the file and all updates associated with fileId.
-   * @param fileId Handle of original file
-   * @return StorageObject with Persistable file and all updates,
-   * or null if fileId not found.
+   * Remotely locates and returns the object and all updates associated with id.
+   * @param id Pastry key of original object
+   * @return StorageObject with original object and a Vector of all
+   * updates to the object, or null if no object was found
    */
-  public StorageObject lookup(NodeId fileId) {
+  public StorageObject lookup(NodeId id) {
     NodeId nodeId = _pastryNode.getNodeId();
-    debug("Request to look up file " + fileId + " at node " + nodeId);
-    MessageLookup request = new MessageLookup(nodeId, fileId);
+    debug("Request to look up file " + id + " at node " + nodeId);
+    MessageLookup request = new MessageLookup(nodeId, id);
     MessageLookup response = (MessageLookup) _sendRequestMessage(request);
     if (response != null) {
       return response.getContent();
@@ -308,17 +300,17 @@ public class PASTServiceImpl
   }
   
   /**
-   * Remotely reclaims the space used by the file with handle fileId,
+   * Remotely reclaims the space used by the object with handle id,
    * effectively deleting it.
-   * @param fileId Handle of original file
-   * @param authorCred Credentials of user requesting the reclaim
-   * @return true if the file was found and deleted, false otherwise
+   * @param id Pastry key of original object
+   * @param authorCred Author's credentials
+   * @return true if object was deleted, false if no object was found
    */
-  public boolean reclaim(NodeId fileId, Credentials authorCred) {
+  public boolean delete(NodeId id, Credentials authorCred) {
     NodeId nodeId = _pastryNode.getNodeId();
-    System.out.println("Deleting the file with ID: " + fileId);
+    System.out.println("Deleting the file with ID: " + id);
     MessageReclaim request = 
-      new MessageReclaim(_pastryNode.getNodeId(), fileId, authorCred);
+      new MessageReclaim(_pastryNode.getNodeId(), id, authorCred);
     MessageReclaim response = (MessageReclaim) _sendRequestMessage(request);
     if (response != null) {
       return response.getSuccess();

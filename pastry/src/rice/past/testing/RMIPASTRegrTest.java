@@ -197,7 +197,7 @@ public class RMIPASTRegrTest {
     PersistenceManager pm = new DummyPersistenceManager();
     StorageManager sm = new StorageManagerImpl(pm);
 
-    PASTServiceImpl past = new PASTServiceImpl(pn, sm, k);
+    PASTServiceImpl past = new PASTServiceImpl(pn, sm);
     past.DEBUG = true;
     pastNodes.add(past);
     System.out.println("created " + pn);
@@ -284,7 +284,7 @@ public class RMIPASTRegrTest {
                local.insert(remoteId, file, null));
     
     // Lookup file locally
-    StorageObject result = remote.getStorage().retrieve(remoteId);
+    StorageObject result = remote.getStorage().lookup(remoteId);
     assertTrue("RouteRequest", "File should be inserted at known node",
                result != null);
     Persistable file2 = result.getOriginal();
@@ -334,7 +334,7 @@ public class RMIPASTRegrTest {
                    new Integer(0), new Integer(updates.size()));
       
       // Lookup file locally
-      result = remote.getStorage().retrieve(fileId);
+      result = remote.getStorage().lookup(fileId);
       if (result != null) {
         System.out.println("TEST: Found file locally on node " + i);
         localCount++;
@@ -353,7 +353,7 @@ public class RMIPASTRegrTest {
     // Append to file
     System.out.println("TEST: Appending to file with key: " + fileId);
     assertTrue("PASTFunctions", "File should update successfully",
-               local.append(fileId, update));
+               local.update(fileId, update, userCred));
     
     // Make sure updates were found
     for (int i=0; i < pastNodes.size(); i++) {
@@ -378,7 +378,7 @@ public class RMIPASTRegrTest {
     // Reclaim space used by file
     System.out.println("TEST: Reclaiming file with key: " + fileId);
     assertTrue("PASTFunctions", "File should be reclaimed successfully",
-               local.reclaim(fileId, userCred));
+               local.delete(fileId, userCred));
     
     // Make sure file is gone
     for (int i=0; i < pastNodes.size(); i++) {

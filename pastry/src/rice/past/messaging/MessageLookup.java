@@ -51,7 +51,7 @@ public class MessageLookup extends PASTMessage {
   public void performAction(PASTServiceImpl service) {
     debug("  Looking up file " + getFileId() + " at node " +
           service.getPastryNode().getNodeId());
-    _content = service.getStorage().retrieve(getFileId());
+    _content = service.getStorage().lookup(getFileId());
     setType(RESPONSE);
     service.sendMessage(this);
   }

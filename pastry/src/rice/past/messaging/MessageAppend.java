@@ -29,6 +29,11 @@ public class MessageAppend extends PASTMessage {
   protected Persistable _update;
   
   /**
+   * The credentials of the author of the update.
+   */
+  protected Credentials _cred;
+  
+  /**
    * Whether the insert was successful (on a response).
    */
   protected boolean _success = false;
@@ -38,12 +43,15 @@ public class MessageAppend extends PASTMessage {
    * @param nodeId Source Pastry node's ID
    * @param fileId Pastry key of original file
    * @param update Update to be appended to file
+   * @param authorCred Credentials of the author of the update
    */
   public MessageAppend(NodeId nodeId, 
                        NodeId fileId, 
-                       Persistable update) {
+                       Persistable update,
+                       Credentials authorCred) {
     super(nodeId, fileId);
     _update = update;
+    _cred = authorCred;
   }
   
   /**
@@ -60,7 +68,7 @@ public class MessageAppend extends PASTMessage {
   public void performAction(PASTServiceImpl service) {
     debug("  Appending to file " + getFileId() + " at node " +
           service.getPastryNode().getNodeId());
-    _success = service.getStorage().update(getFileId(), _update);
+    _success = service.getStorage().update(getFileId(), _update, _cred);
     setType(RESPONSE);
     service.sendMessage(this);
   }
