@@ -35,7 +35,31 @@ public class Folder {
    *
    * @return the stored Emails
    */
-  public Email[] getContents() {
+  public Email[] getMessages() {
     return (Email[])_contents.toArray();
+  }
+  
+  public void addMessage(Email email) {
+    
+  }
+  
+  public void removeMessage(Email email) {
+    
+  }
+  
+  public void moveMessage(Email email, Folder folder) {
+    
+  }
+  
+  public Folder createChildFolder(String name) {
+    
+  }
+  
+  public Folder getChildFolder(String name) {
+    
+  }
+  
+  public String[] getChildren() {
+    
   }
 }

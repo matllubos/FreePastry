@@ -1,6 +1,7 @@
 package rice.email;
 
 import java.security.*;
+import java.util.HashSet;
 
 import rice.post.*;
 import rice.post.log.*;
@@ -23,6 +24,8 @@ public class EmailService extends PostClient {
   
   // the Emails Service's Post object
   Post _post = null;
+  
+  private HashSet emailServiceListeners = new HashSet(); 
   
   /** 
    * Constructor
@@ -180,6 +183,7 @@ public class EmailService extends PostClient {
    * @param esl is the object that will be notified.
    */
   public void addEmailServiceListener(EmailServiceListener esl) {
+    this.emailServiceListeners.add(esl);
   }
   
   /**
@@ -189,5 +193,6 @@ public class EmailService extends PostClient {
    * @param esl is the object that will no longer be notified.
    */
   public void removeEmailServiceListener(EmailServiceListener esl) {
+    this.emailServiceListeners.remove(esl);
   }
 }
