@@ -81,7 +81,7 @@ public abstract class PastryRegrTest {
     /**
      * get a node handle to bootstrap from.
      */
-    protected abstract NodeHandle getBootstrap();
+    protected abstract NodeHandle getBootstrap(boolean firstNode);
 
     /**
      * wire protocol specific handling of the application object
@@ -125,7 +125,7 @@ public abstract class PastryRegrTest {
      */
 
     private void makePastryNode() {
-	NodeHandle bootstrap = getBootstrap();
+	NodeHandle bootstrap = getBootstrap(pastryNodes.size() == 0);
 	PastryNode pn = generateNode(bootstrap);
 
 	pastryNodes.addElement(pn);
@@ -175,14 +175,8 @@ public abstract class PastryRegrTest {
 	if (n==0) num = 1;
 	for (int i=0; i<num; i++) {
 
-	    NodeHandle bootstrap = null;
-
-	    //      if (n == 0)   // first batch of nodes
-	    bootstrap = getBootstrap();
-	    //      else {    // corresponding node from previous batch
-	    //    PastryNode pn = (PastryNode) pastryNodes.get(/*n+i - num*/n-1);
-	    //    if (pn != null) bootstrap = pn.getLocalHandle();
-	    //      }
+	    NodeHandle bootstrap;
+	    bootstrap = getBootstrap(n == 0);
 
 	    PastryNode pn = generateNode(bootstrap);
 	    pastryNodes.addElement(pn);
@@ -568,7 +562,7 @@ public abstract class PastryRegrTest {
 	    }
 	}
 
-	pt.pause(300000);
+	pt.pause(5000);
 	System.out.println("finished, exiting...");
 	System.exit(0);
     }

@@ -72,7 +72,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
     private static String bshost;
     private static int bsport = 5009;
     private static int numnodes = 1;
-    private static int protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
+    private static int protocol = DistPastryNodeFactory.PROTOCOL_RMI;
 
     private InetSocketAddress bsaddress;
 
@@ -105,10 +105,22 @@ public class DistPastryRegrTest extends PastryRegrTest {
     /**
      * Gets a handle to a bootstrap node.
      *
+     * @param firstNode true if bootstraping the first virtual node on this host
      * @return handle to bootstrap node, or null.
      */
-    protected NodeHandle getBootstrap() {
-      return ((DistPastryNodeFactory) factory).getNodeHandle(bsaddress);
+    protected NodeHandle getBootstrap(boolean firstNode) {
+      if (firstNode)
+	return ((DistPastryNodeFactory) factory).getNodeHandle(bsaddress);
+      else {
+	InetSocketAddress addr = null;
+	try {
+	  addr = new InetSocketAddress(InetAddress.getLocalHost().getHostName(), port);
+	}
+	catch(UnknownHostException e){ 
+	  System.out.println(e);
+	}
+	return ((DistPastryNodeFactory) factory).getNodeHandle(addr);
+      }
     }
 
     /**

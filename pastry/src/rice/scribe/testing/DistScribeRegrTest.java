@@ -234,7 +234,7 @@ public class DistScribeRegrTest {
 		try {
 		    pn.wait();
 		} catch(InterruptedException e) {
-		    System.out.println("Interrupted while waiting for first node to be constructed");
+		    System.out.println(e);
 		}
 	    }
 	}

@@ -72,13 +72,13 @@ public class DistHelloWorld {
     private static int bsport = 5009;
     private static int numnodes = 5;
     private static int nummsgs = 2; // per virtual node
-    public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
+    public static int protocol = DistPastryNodeFactory.PROTOCOL_RMI;
 
     /**
      * Constructor
      */
     public DistHelloWorld() {
-	factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(), PROTOCOL, port);
+	factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(), protocol, port);
 	pastryNodes = new Vector();
 	helloClients = new Vector();
 	rng = new Random(PastrySeed.getSeed());
@@ -89,11 +89,12 @@ public class DistHelloWorld {
      * whether a previous virtual node has already bound itself there.
      * Then we try nattempts times on bshost:bsport. Then we fail.
      *
+     * @param firstNode true of the first virtual node is being bootstrapped on this host
      * @return handle to bootstrap node, or null.
      */
-    protected NodeHandle getBootstrap() {
+    protected NodeHandle getBootstrap(boolean firstNode) {
 	InetSocketAddress addr = null;
-	if(bshost != null )
+	if( firstNode && bshost != null )
 	    addr = new InetSocketAddress(bshost, bsport);
 	else{
 	    try{
@@ -117,7 +118,7 @@ public class DistHelloWorld {
 	for (int i = 0; i < args.length; i++) {
 	    if (args[i].equals("-help")) {
 		System.out.println("Usage: DistHelloWorld [-msgs m] [-nodes n] [-port p] [-bootstrap bshost[:bsport]]");
-		System.out.println("                     [-verbose|-silent|-verbosity v] [-help]");
+		System.out.println("                     [-protocol (rmi|wire)] [-verbose|-silent|-verbosity v] [-help]");
 		System.out.println("");
 		System.out.println("  Ports p and bsport refer to RMI registry  or Socket port numbers (default = 5009).");
 		System.out.println("  Without -bootstrap bshost[:bsport], only localhost:p is used for bootstrap.");
@@ -162,6 +163,22 @@ public class DistHelloWorld {
 		break;
 	    }
 	}
+    
+	for (int i = 0; i < args.length; i++) {
+	    if (args[i].equals("-protocol") && i+1 < args.length) {
+		String s = args[i+1];
+
+		if (s.equalsIgnoreCase("wire"))
+		    protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
+		else if (s.equalsIgnoreCase("rmi"))
+		    protocol = DistPastryNodeFactory.PROTOCOL_RMI;
+		else
+		    System.out.println("ERROR: Unsupported protocol: " + s);
+
+		break;
+	    }
+	}
+	
     }
     
     
@@ -171,14 +188,15 @@ public class DistHelloWorld {
      * pn.isReady() is true) , this application's notifyReady() method
      * is called, and it can do any interesting stuff it wants.
      */
-    public void makePastryNode() {
-	NodeHandle bootstrap = getBootstrap();
+    public PastryNode makePastryNode(boolean firstNode) {
+	NodeHandle bootstrap = getBootstrap(firstNode);
 	PastryNode pn = factory.newNode(bootstrap); // internally initiateJoins
 	pastryNodes.addElement(pn);
 	
 	HelloWorldApp app = new HelloWorldApp(pn);
 	helloClients.addElement(app);
 	if (Log.ifp(5)) System.out.println("created " + pn);
+	return pn;
     }
 
 
@@ -194,10 +212,24 @@ public class DistHelloWorld {
 	Log.init(args);
 	doIinitstuff(args);
 	DistHelloWorld driver = new DistHelloWorld();
+
+	// create first node
+	PastryNode pn = driver.makePastryNode(true);
+
+	// We wait till the first PastryNode on this host is ready so that the 
+	// rest of the nodes find a bootstrap node on the local host
+	synchronized(pn) {
+	    while (!pn.isReady()) {
+		try {
+		    pn.wait();
+		} catch(InterruptedException e) {
+		    System.out.println(e);
+		}
+	    }
+	}
 	
-	
-	for (int i = 0; i < numnodes; i++)
-	    driver.makePastryNode();
+	for (int i = 1; i < numnodes; i++)
+	    driver.makePastryNode(false);
 
 	if (Log.ifp(5)) System.out.println(numnodes + " nodes constructed");
     }
