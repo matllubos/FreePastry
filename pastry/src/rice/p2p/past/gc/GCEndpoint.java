@@ -36,6 +36,7 @@ if advised of the possibility of such damage.
 
 package rice.p2p.past.gc;
 
+import rice.*;
 import java.util.*;
 import rice.p2p.commonapi.*;
 
@@ -214,6 +215,18 @@ public class GCEndpoint implements Endpoint {
    */
   public CancellableTask scheduleMessage(Message message, long delay, long period) {
     return endpoint.scheduleMessage(message, delay, period);
+  }
+  
+  /**
+   * Schedules a job for processing on the dedicated processing thread.  CPU intensive jobs, such
+   * as encryption, erasure encoding, or bloom filter creation should never be done in the context
+   * of the underlying node's thread, and should only be done via this method.  
+   *
+   * @param task The task to run on the processing thread
+   * @param command The command to return the result to once it's done
+   */
+  public void process(Executable task, Continuation command) {
+    endpoint.process(task, command);
   }
   
   /**

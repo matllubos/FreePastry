@@ -36,8 +36,7 @@ if advised of the possibility of such damage.
 
 package rice.p2p.commonapi;
 
-
-
+import rice.*;
 
 /**
  * @(#) Endpoint.java
@@ -181,6 +180,16 @@ public interface Endpoint {
    * @param delay The number of milliseconds to wait before delivering subsequent messages
    */
   CancellableTask scheduleMessage(Message message, long delay, long period);
+  
+  /**
+   * Schedules a job for processing on the dedicated processing thread.  CPU intensive jobs, such
+   * as encryption, erasure encoding, or bloom filter creation should never be done in the context
+   * of the underlying node's thread, and should only be done via this method.  
+   *
+   * @param task The task to run on the processing thread
+   * @param command The command to return the result to once it's done
+   */
+  void process(Executable task, Continuation command);
   
   /**
    * Returns a unique instance name of this endpoint, sort of a mailbox name for this
