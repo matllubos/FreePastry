@@ -114,6 +114,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   protected int expirationCounter;
   protected Continuation flushWait;
   protected boolean rebuildInProgress;
+  protected int numAggregates;
+  protected int numObjectsInAggregates;
 
   private final int loglevel = 2;
 
@@ -157,6 +159,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     this.expirationCounter = 1;
     this.flushWait = null;
     this.rebuildInProgress = false;
+    this.numAggregates = 0;
+    this.numObjectsInAggregates = 0;
     this.debugID = "A" + Character.toUpperCase(instance.charAt(instance.lastIndexOf('-')+1));
 
     readAggregateList();
@@ -180,6 +184,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
     rootKey = null;
     aggregateList.clear();
+    numAggregates = 0;
+    numObjectsInAggregates = 0;
   
     String fileName;
     if ((new File(configFileName)).exists())
@@ -267,7 +273,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       rootKey = null;
       aggregateList.clear();
     } else {
-      log(2, "Aggregate list read OK");
+      log(2, "Aggregate list read OK -- current root: " + ((rootKey == null) ? "null" : rootKey.toStringFull()));
       recalculateReferenceCounts();
     }
   }
@@ -407,7 +413,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         }
       }
 
-      return numAggr + " active aggregates with " + numObj + " objects\n" + (waitingList.scan().numElements()) + " objects waiting";
+      return numAggr + " active aggregates with " + numObj + " objects\n" + getNumObjectsWaiting() + " objects waiting";
     }
 
     if ((cmd.length() >= 6) && cmd.substring(0, 6).equals("insert")) {
@@ -783,9 +789,11 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private void addAggregateDescriptor(AggregateDescriptor aggr) {
     aggregateList.put(aggr.key, aggr);
+    numAggregates ++;
 
     for (int i=0; i<aggr.objects.length; i++) {
       aggregateList.put(new VersionKey(aggr.objects[i].key, aggr.objects[i].version), aggr);
+      numObjectsInAggregates ++;
       AggregateDescriptor prevDesc = (AggregateDescriptor) aggregateList.get(aggr.objects[i].key);
       int objDescIndex = (prevDesc == null) ? -1 : prevDesc.lookupNewest(aggr.objects[i].key);
       if ((objDescIndex < 0) || (prevDesc.objects[objDescIndex].version < aggr.objects[i].version)) {
@@ -802,8 +810,11 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private void removeAggregateDescriptor(AggregateDescriptor aggr) {
     aggregateList.remove(aggr.key);
+    numAggregates --;
+    
     for (int i=0; i<aggr.objects.length; i++) {
       aggregateList.remove(new VersionKey(aggr.objects[i].key, aggr.objects[i].version));
+      numObjectsInAggregates --;
       AggregateDescriptor prevDesc = (AggregateDescriptor) aggregateList.get(aggr.objects[i].key);
       if (prevDesc.key.equals(aggr.key))
         aggregateList.remove(aggr.objects[i].key);
@@ -1517,7 +1528,6 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     if (obj instanceof GCPastContent) {
       theVersion = ((GCPastContent)obj).getVersion();
     } else {
-      warn("INSERTED OBJECT IS NOT OF TYPE GCPASTCONTENT!");
       theVersion = 0;
     }
 
@@ -1859,5 +1869,25 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   public void setRenewThreshold(int expirationRenewThresholdHrs) {
     this.expirationRenewThreshold = expirationRenewThresholdHrs * HOURS;
+  }
+
+  public Past getAggregateStore() {
+    return aggregateStore;
+  }
+  
+  public Past getObjectStore() {
+    return objectStore;
+  }
+  
+  public int getNumObjectsWaiting() {
+    return waitingList.scan().numElements();
+  }
+  
+  public int getNumAggregates() {
+    return numAggregates;
+  }
+  
+  public int getNumObjectsInAggregates() {
+    return numObjectsInAggregates;
   }
 }
