@@ -1,5 +1,7 @@
 package rice.email.proxy.smtp;
 
+import rice.post.*;
+
 import rice.email.*;
 import rice.email.proxy.smtp.manager.*;
 import rice.email.proxy.util.*;
@@ -10,6 +12,7 @@ import java.net.*;
 
 public class SmtpServerImpl extends Thread implements SmtpServer {
 
+  private boolean proxy = false;
   private boolean quit = false;
   private int port;
   private ServerSocket server;
@@ -22,10 +25,11 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
 
   private EmailService email;
 
-  public SmtpServerImpl(int port, EmailService email) throws Exception {
+  public SmtpServerImpl(int port, EmailService email, boolean proxy, PostEntityAddress address) throws Exception {
+    this.proxy = proxy;
     this.port = port;
     this.email = email;
-    this.manager = new SimpleManager(email);
+    this.manager = new SimpleManager(email, proxy, address);
     this.registry = new SmtpCommandRegistry();
     this.workspace = new InMemoryWorkspace();
 
@@ -49,7 +53,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
 
         System.out.println("Accepted connection from " + socket.getInetAddress());
 
-        if (socket.getInetAddress().isSiteLocalAddress()) {
+        if (proxy || (socket.getInetAddress().isSiteLocalAddress())) {
           Thread thread = new Thread() {
             public void run() {
               try {

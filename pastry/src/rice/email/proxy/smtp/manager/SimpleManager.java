@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.*;
 
 import rice.*;
+import rice.post.*;
 import rice.email.*;
 import rice.email.proxy.dns.*;
 import rice.email.proxy.smtp.client.*;
@@ -15,13 +16,19 @@ public class SimpleManager implements SmtpManager {
 
   public static String POST_HOST = "dosa.cs.rice.edu";
 
+  private boolean proxy;
+
   private DnsService dns;
   
   private EmailService email;
 
-  public SimpleManager(EmailService email) throws Exception {
+  private PostEntityAddress address;
+
+  public SimpleManager(EmailService email, boolean proxy, PostEntityAddress address) throws Exception {
     this.email = email;
     this.dns = new DnsServiceImpl();
+    this.proxy = proxy;
+    this.address = address;
   }
 
   public String checkSender(SmtpState state, MailAddress sender) {
@@ -74,8 +81,12 @@ public class SimpleManager implements SmtpManager {
         }
       }
     };
-    
-    email.sendMessage(PostMessage.parseEmail(recipients, state.getMessage().getResource()), done);
+
+    if (proxy) {
+      email.sendMessage(PostMessage.parseEmail(recipients, state.getMessage().getResource(), address), done);
+    } else {
+      email.sendMessage(PostMessage.parseEmail(recipients, state.getMessage().getResource()), done);
+    }
 
     synchronized(wait) { if (result[0] == null) wait.wait(); }
       

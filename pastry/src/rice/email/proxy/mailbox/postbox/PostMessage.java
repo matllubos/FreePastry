@@ -26,6 +26,8 @@ import javax.mail.Session;
 
 public class PostMessage implements StoredMessage {
 
+  public static String UNSECURE_SUBJECT_TITLE = "[UNSECURE]";
+  
   private StoredEmail email;
 
   private int sequence;
@@ -227,6 +229,10 @@ public class PostMessage implements StoredMessage {
   }
 
   public static Email parseEmail(MailAddress[] addresses, Resource content) throws MailboxException {
+    return parseEmail(addresses, content, null);
+  }
+  
+  public static Email parseEmail(MailAddress[] addresses, Resource content, PostEntityAddress address) throws MailboxException {
     try {
       Properties props = new Properties();
       Session session = Session.getDefaultInstance(props, null);
@@ -237,6 +243,10 @@ public class PostMessage implements StoredMessage {
 
       if (froms.length > 0) {
         from = new PostUserAddress(((InternetAddress) froms[0]).getAddress());
+      }
+
+      if (address != null) {
+        from = (PostUserAddress) address;
       }
 
       PostEntityAddress[] recipients = new PostEntityAddress[addresses.length];
@@ -252,6 +262,10 @@ public class PostMessage implements StoredMessage {
       EmailData[] attachments = null;
 
       String headersText = "";
+
+      if (address != null) {
+        mm.setSubject(UNSECURE_SUBJECT_TITLE + " " + mm.getSubject());
+      }
 
       Enumeration e = mm.getAllHeaderLines();
 

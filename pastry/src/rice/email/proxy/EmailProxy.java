@@ -49,6 +49,8 @@ public class EmailProxy extends PostProxy {
 
   static int IMAP_PORT = 1143; 
   static int SMTP_PORT = 1025;
+
+  static boolean PROXY = false;
  
   private EmailService email;
 
@@ -75,7 +77,7 @@ public class EmailProxy extends PostProxy {
       stepDone(SUCCESS);
 
       stepStart("Starting SMTP server on port " + SMTP_PORT);
-      smtp = new SmtpServerImpl(SMTP_PORT, email);
+      smtp = new SmtpServerImpl(SMTP_PORT, email, PROXY, address);
       smtp.start();
       stepDone(SUCCESS);
 
@@ -115,6 +117,13 @@ public class EmailProxy extends PostProxy {
       if (args[i].equals("-smtpport") && i+1 < args.length) {
         int n = Integer.parseInt(args[i+1]);
         if (n > 0) SMTP_PORT = n;
+        break;
+      }
+    }
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-proxy")) {
+        PROXY = true;
         break;
       }
     }
