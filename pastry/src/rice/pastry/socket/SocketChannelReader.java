@@ -196,13 +196,21 @@ public class SocketChannelReader {
   }
   
   protected void record(Object obj, int size, SourceRoute path) {
-    if (obj instanceof rice.pastry.routing.RouteMessage) {
-      record(((rice.pastry.routing.RouteMessage) obj).unwrap(), size, path);
-    } else if (obj instanceof rice.pastry.commonapi.PastryEndpointMessage) {
-      record(((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), size, path);
-    } else if (obj instanceof rice.post.messaging.PostPastryMessage) {
-      record(((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, path);
-    } else {
+		boolean recorded = false;
+		try {
+			if (obj instanceof rice.pastry.routing.RouteMessage) {
+				record(((rice.pastry.routing.RouteMessage) obj).unwrap(), size, path);
+				recorded = true;
+			} else if (obj instanceof rice.pastry.commonapi.PastryEndpointMessage) {
+				record(((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), size, path);
+				recorded = true;
+			} else if (obj instanceof rice.post.messaging.PostPastryMessage) {
+				record(((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, path);
+				recorded = true;
+			}
+		} catch (java.lang.NoClassDefFoundError exc) { }
+
+    if (!recorded) {
       if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + obj.getClass() + " of size " + size + " from " + path);
     }
   }

@@ -170,13 +170,22 @@ public class SocketChannelWriter {
   }
   
   protected void record(String action, Object obj, int size, SourceRoute path) {
-    if (obj instanceof rice.pastry.routing.RouteMessage) {
-      record(action, ((rice.pastry.routing.RouteMessage) obj).unwrap(), size, path);
-    } else if (obj instanceof rice.pastry.commonapi.PastryEndpointMessage) {
-      record(action, ((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), size, path);
-    } else if (obj instanceof rice.post.messaging.PostPastryMessage) {
-      record(action, ((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, path);
-    } else {
+		boolean recorded = false;
+		
+		try {
+			if (obj instanceof rice.pastry.routing.RouteMessage) {
+				record(action, ((rice.pastry.routing.RouteMessage) obj).unwrap(), size, path);
+				recorded = true;
+			} else if (obj instanceof rice.pastry.commonapi.PastryEndpointMessage) {
+				record(action, ((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), size, path);
+				recorded = true;
+			} else if (obj instanceof rice.post.messaging.PostPastryMessage) {
+				record(action, ((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, path);
+				recorded = true;
+			} 
+		} catch (java.lang.NoClassDefFoundError exc) { }
+
+    if (!recorded) {
       if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + action + " message " + obj.getClass() + " of size " + size + " to " + path);
     }
   }
