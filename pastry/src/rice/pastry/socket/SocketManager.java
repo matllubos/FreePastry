@@ -683,6 +683,9 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
       if (connectionManager != null) {
         connectionManager.receiveMessage(message);
       } else if (address != null) {
+        if (message instanceof SocketTransportMessage) {
+          message = ((SocketTransportMessage)message).msg;
+        }
         scm.pastryNode.receiveMessage(message);
       } else {
         System.out.println("SERIOUS ERROR: Received no address assignment, but got message " + message);
@@ -711,8 +714,12 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
    * @return
    */
   public boolean isIdle() {
+    // if dead
+    if ((connectionManager != null) &&
+        (connectionManager.getLiveness() == NodeHandle.LIVENESS_FAULTY))
+      return true;
     if (System.currentTimeMillis() - lastTimeActive > IDLE_THRESHOLD) {    
-      if (connectionManager != null && !connectionManager.isIdleControl(this)) {
+      if (connectionManager != null && !connectionManager.isPendingAcks(this)) {
         return false;
       }
       return writer.isEmpty() && !reader.isDownloading();        
@@ -724,6 +731,9 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
   long IDLE_THRESHOLD = 1000;
   long HALF_CLOSED_IDLE_THRESHOLD = 60000;
   
+  /**
+   * Calls SocketPoolManager.socketUpdated()
+   */
   void markActive() {
     lastTimeActive = System.currentTimeMillis();
     if (connected) {

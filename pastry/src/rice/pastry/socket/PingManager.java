@@ -15,7 +15,6 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -70,6 +69,9 @@ import rice.selector.SelectorManager;
  */
 public class PingManager extends SelectionKeyHandler {
 
+  /**
+   * Link to myself for verification purposes.
+   */
   private SocketNodeHandle localHandle;
 
 	// ********************** User Contorl "Tweak" Fields ****************
@@ -156,6 +158,9 @@ public class PingManager extends SelectionKeyHandler {
    */
   private SocketNodeHandlePool pool;
 
+  /**
+   * Pointer to the node I'm servicing.
+   */
   private SocketPastryNode spn;
 
   /**
@@ -168,7 +173,6 @@ public class PingManager extends SelectionKeyHandler {
   public PingManager(int port, SocketNodeHandlePool pool, SocketNodeHandle localHandle, SocketPastryNode spn) throws BindException {
     this.spn = spn;
     this.port = port;
-//    this.manager = manager;
     this.pool = pool;
     this.localHandle = localHandle;
     proximity = new WeakHashMap();

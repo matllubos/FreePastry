@@ -70,12 +70,13 @@ public class SocketChannelWriter {
   
   /**
    * Static fields for logging based on the messages we are writing.
+   * Enable logWriteTypes to turn on this output.
    */  
+  private static boolean logWriteTypes = false;
 	private static Object statLock = new Object();
   private static HashMap msgTypes = new HashMap();
   private static int numWrites = 0;
   private static int numWriteModulo = 1000;
-  private static boolean logWriteTypes = false;
 
   /**
    * the pastry node

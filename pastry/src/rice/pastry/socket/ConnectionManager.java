@@ -144,7 +144,7 @@ public class ConnectionManager {
   /**
    *  the maximum length of the queue
    */
-  public static int MAXIMUM_QUEUE_LENGTH = 12800;
+  public static int MAXIMUM_QUEUE_LENGTH = 128;
   
   /**
    * The maximum number of in flight messages (not including acks).
@@ -411,7 +411,7 @@ public class ConnectionManager {
    * @param manager
    * @return true if the socket can be considered idle
    */
-  public boolean isIdleControl(SocketManager manager) {
+  public boolean isPendingAcks(SocketManager manager) {
     if (manager.getType() == TYPE_CONTROL) {
       if (manager == controlSocketManager) {
         if (pendingAcks.size() > 0) {
@@ -646,6 +646,8 @@ public class ConnectionManager {
 
   
 // *********************** Control Traffic Handlers **********************
+
+  int lastQueueSize = 0;
 	/**
    * Enqueues the object for sending over the control/routing channel by priority.
    * 
@@ -654,6 +656,12 @@ public class ConnectionManager {
    */
   private boolean enqueue(Message o) {
     if (controlQueue.size() < MAXIMUM_QUEUE_LENGTH) {
+      if (LOG_LOW_LEVEL) {
+        if (controlQueue.size() > lastQueueSize+10) {
+          lastQueueSize = controlQueue.size();
+          System.out.println(this+" queue size = "+lastQueueSize);
+        }
+      }
       addToQueue(o);
       return true;
     } else {      

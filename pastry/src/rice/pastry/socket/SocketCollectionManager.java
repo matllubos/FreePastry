@@ -56,7 +56,7 @@ import rice.selector.TimerTask;
  *  
  * @author Alan Mislove, Jeff Hoye
  */
-public class SocketCollectionManager extends SelectionKeyHandler {
+public class SocketCollectionManager {
 
 	// the selector manager which the collection manager uses
   //SelectorManager manager;
@@ -72,15 +72,16 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   // maps an SocketNodeHandle -> ConnectionManager
   private WeakHashMap connections;
 
-  // ServerSocketChannel for accepting incoming connections
-  private SelectionKey key;
-
   // the port number this manager is listening on
   private int port;
 
   private PingManager pingManager;
 
   private InetSocketAddress bindAddress;
+  
+  public static boolean printConnectionManagers = ConnectionManager.LOG_LOW_LEVEL;
+
+  private TimerTask connectionManagerPrinter = null;
 
   /**
    * the size of the buffers for the socket
@@ -121,8 +122,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           public void run() {
             if (fFailedOnce) System.out.println("SCM.ctor:4");
             try {
-              key = SelectorManager.getSelectorManager().register(channel, SocketCollectionManager.this, SelectionKey.OP_ACCEPT);
-              key.attach(SocketCollectionManager.this);
+              socketPoolManager.key = SelectorManager.getSelectorManager().register(channel, socketPoolManager, SelectionKey.OP_ACCEPT);
             } catch (IOException e) {
               System.out.println("ERROR creating server socket key " + e);
             }
@@ -134,13 +134,28 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     } catch (IOException e) {
       System.out.println("ERROR creating server socket channel " + e);      
     }
+    if (printConnectionManagers) {
+      connectionManagerPrinter = new TimerTask() {
+        public void run() {
+          printConnectionManagers();
+        }
+      };
+      SelectorManager.getSelectorManager().getTimer().schedule(connectionManagerPrinter,60000,60000);
+    }
   }
 
+  /**
+   * Kills all the ConnectionManagers, and the ServerSocket.
+   */
   public void kill() {
     SelectorManager.getSelectorManager().invoke(new Runnable() {
       public void run() {
+        if (connectionManagerPrinter!= null) {
+          connectionManagerPrinter.cancel();
+          connectionManagerPrinter = null;  
+        } 
         try {
-          key.channel().close();
+          socketPoolManager.key.channel().close();
         } catch (IOException ioe) {
           ioe.printStackTrace();
         }
@@ -249,27 +264,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    * @param key The key which is acceptable.
    */
   public void accept(SelectionKey key) {
-    if (acceptorKey != null) {
-//      numTimesNotRemoveKey++;                
-      disableAccept(); // gets enabled when we acceptSocket()
-    }
-    acceptorKey = key; // gets set back to null in acceptSocket()
-    socketPoolManager.requestAccept(); // calls acceptSocket() now or later
+    socketPoolManager.accept(key);    
   }
 
-  public void doAccept(SelectionKey key) {
-    try {
-      socketPoolManager.socketOpened(new SocketManager(key, this));
-    } catch (IOException e) {
-      if (ConnectionManager.LOG_LOW_LEVEL)
-        System.out.println("ERROR (accepting connection): " + e + " at "+addressString());
-    }    
-  }
-
-  public boolean waitingToAccept() {
-    return acceptorKey != null;
-  }
-  
   /**
    * Schedules a task to be called every "period" after "delay"
    * @param task The task to run.
@@ -388,20 +385,6 @@ public class SocketCollectionManager extends SelectionKeyHandler {
 	}
 
 	/**
-	 * 
-	 */
-	public void disableAccept() {
-    key.interestOps(key.interestOps() & ~SelectionKey.OP_ACCEPT);
-	}
-
-	/**
-	 * 
-	 */
-	public void enableAccept() {
-    key.interestOps(key.interestOps() | SelectionKey.OP_ACCEPT);
-	}
-
-	/**
 	 * @return
 	 */
 	public String addressString() {
@@ -426,33 +409,14 @@ public class SocketCollectionManager extends SelectionKeyHandler {
 	public InetSocketAddress getAddress() {
 		return getLocalNodeHandle().getAddress();		
 	}
-
-  SelectionKey acceptorKey = null;
   
-  public void acceptSocket() {
-    if (!pastryNode.isAlive()) return;
-    enableAccept();
-    SelectionKey tempKey = acceptorKey;
-    acceptorKey = null;
-
-    boolean removeKey = false;
-    if (tempKey != null) {
-      SelectionKeyHandler skh = (SelectionKeyHandler)tempKey.attachment();
-      if (skh != null && tempKey.isValid() && tempKey.isAcceptable()) {
-        doAccept(tempKey);
-      }
-    
-    /*
-        if (skh.accept(tempKey)) {
-          removeKey = true;
-        } 
-      } else {
-        removeKey = true;      
-      }
-  
-      if (removeKey) {
-        selector.selectedKeys().remove(tempKey);                                      
-      }*/
+  public void printConnectionManagers() {
+    System.out.println("Connections for "+pastryNode);
+    Iterator i = getConnectionManagers().iterator();
+    while (i.hasNext()) {
+      ConnectionManager cm = (ConnectionManager)i.next();
+      if (cm != null)
+        System.out.println("  "+cm+" "+cm.getStatus());
     }
   }
 

@@ -60,6 +60,7 @@ import rice.pastry.dist.DistPastryNode;
 import rice.pastry.dist.DistPastryNodeFactory;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.ConnectionManager;
+import rice.pastry.socket.SocketCollectionManager;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketPastryNode;
 import rice.pastry.socket.SocketPoolManager;
@@ -108,6 +109,7 @@ public class DistHelloWorldMultiThread {
   public static boolean useNonDirect = true; 
   public static boolean useRandChoices = false;
   public static boolean testSelector = true;
+  public static boolean printConnectionManagers = true;
   
   public static DistPastryNodeFactory getSameFactory() {
     DistPastryNodeFactory sameNodeFactory = 
@@ -581,6 +583,10 @@ public class DistHelloWorldMultiThread {
    */
 	public static void main(String args[]) {
 		initialize(args);
+    ConnectionManager.MAXIMUM_QUEUE_LENGTH *= 100; // becasue leaf set protocol explodes
+    if (printConnectionManagers) {
+      SocketCollectionManager.printConnectionManagers = printConnectionManagers;
+    }
 
 		ArrayList stats = new ArrayList();
 		Stat curStat = null;
