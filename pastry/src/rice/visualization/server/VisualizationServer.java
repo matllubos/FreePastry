@@ -22,6 +22,8 @@ public class VisualizationServer implements Runnable {
   protected Object[] objects;
   
   protected Vector panelCreators;
+
+  protected Vector debugCommandHandlers;
   
   protected ServerSocket server;
   
@@ -38,10 +40,15 @@ public class VisualizationServer implements Runnable {
     this.objects = objects;
     this.node = node;
     this.panelCreators = new Vector();
+    this.debugCommandHandlers = new Vector();
   }
   
   public void addPanelCreator(PanelCreator creator) {
     panelCreators.addElement(creator);
+  }
+  
+  public void addDebugCommandHandler(DebugCommandHandler handler) {
+    debugCommandHandlers.addElement(handler);
   }
   
   public void run() {
@@ -89,9 +96,24 @@ public class VisualizationServer implements Runnable {
           ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
           oos.writeObject(collection.toArray(new DistNodeHandle[0]));       
         } else if (object instanceof UpdateJarRequest) {
-          System.out.println("Got UpdateJarRequest");
           ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
           handleUpdateJarRequest((UpdateJarRequest)object,oos);
+        } else if (object instanceof DebugCommandRequest) {
+          DebugCommandRequest dcr = (DebugCommandRequest) object;
+          ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+          
+          boolean responseSent = false;
+          for (int i=0; (i<debugCommandHandlers.size()) && !responseSent; i++) {
+            DebugCommandHandler handler = (DebugCommandHandler) debugCommandHandlers.elementAt(i);
+            String thisResponse = handler.handleDebugCommand(dcr.command);
+            if (thisResponse != null) {
+              oos.writeObject(new DebugCommandResponse(dcr.command, thisResponse, 202));
+              responseSent = true;
+            }
+          }
+          
+          if (!responseSent)
+            oos.writeObject(new DebugCommandResponse(dcr.command, "Bad Request", 400));
         }
       }
     } catch (IOException e) {
