@@ -119,6 +119,10 @@ public class MultiringNode implements Node, ScribeClient {
     this.collection.addNode(this);
   }
   
+  public NodeHandle getLocalNodeHandle() {
+    return new MultiringNodeHandle(getRingId(), node.getLocalNodeHandle());
+  }
+  
   /**
    * This returns a VirtualizedNode specific to the given application and
    * instance name to the application, which the application can then use
