@@ -441,6 +441,26 @@ public class SplitStreamScribePolicy implements ScribePolicy {
     int numDigits = rice.pastry.Id.IdBitLength / digitLength - 1;
 
     return (numDigits - ((rice.pastry.Id)target).indexOfMSDD((rice.pastry.Id)sample, digitLength));
+  }  
+  
+  /**
+   * Informs this policy that a child was added to a topic - the topic is free to ignore this
+   * upcall if it doesn't care.
+   *
+   * @param topic The topic to unsubscribe from
+   * @param child The child that was added
+   */
+  public void childAdded(Topic topic, NodeHandle child) {
+  }
+  
+  /**
+   * Informs this policy that a child was removed from a topic - the topic is free to ignore this
+   * upcall if it doesn't care.
+   *
+   * @param topic The topic to unsubscribe from
+   * @param child The child that was removed
+   */
+  public void childRemoved(Topic topic, NodeHandle child) {
   }
 
 }

@@ -413,7 +413,9 @@ public class ScribeImpl implements Scribe, Application {
     // we send a confirmation back to the child
     endpoint.route(null, new SubscribeAckMessage(handle, topic, manager.getPathToRoot(), id), child);
 
-    // and lastly notify all of the clients
+    // and lastly notify the policy and all of the clients
+    policy.childAdded(topic, child);
+    
     ScribeClient[] clients = manager.getClients();
 
     for (int i = 0; i < clients.length; i++) {
@@ -463,7 +465,9 @@ public class ScribeImpl implements Scribe, Application {
         endpoint.route(null, new DropMessage(handle, topic), child);
       }
 
-      // and lastly notify all of the clients
+      // and lastly notify the policy and all of the clients
+      policy.childRemoved(topic, child);
+      
       ScribeClient[] clients = manager.getClients();
 
       for (int i = 0; i < clients.length; i++) {

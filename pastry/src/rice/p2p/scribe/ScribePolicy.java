@@ -73,6 +73,24 @@ public interface ScribePolicy {
    * @param children Our current children for this message's topic
    */
   public void directAnycast(AnycastMessage message, NodeHandle parent, NodeHandle[] children);
+  
+  /**
+   * Informs this policy that a child was added to a topic - the topic is free to ignore this
+   * upcall if it doesn't care.
+   *
+   * @param topic The topic to unsubscribe from
+   * @param child The child that was added
+   */
+  public void childAdded(Topic topic, NodeHandle child);
+  
+  /**
+   * Informs this policy that a child was removed from a topic - the topic is free to ignore this
+   * upcall if it doesn't care.
+   *
+   * @param topic The topic to unsubscribe from
+   * @param child The child that was removed
+   */
+  public void childRemoved(Topic topic, NodeHandle child);
 
   /**
    * The default policy for Scribe, which always allows new children to join and adds children in
@@ -110,6 +128,26 @@ public interface ScribePolicy {
       for (int i = 0; i < children.length; i++) {
         message.addFirst(children[i]);
       }
+    }
+    
+    /**
+     * Informs this policy that a child was added to a topic - the topic is free to ignore this
+     * upcall if it doesn't care.
+     *
+     * @param topic The topic to unsubscribe from
+     * @param child The child that was added
+     */
+    public void childAdded(Topic topic, NodeHandle child) {
+    }
+    
+    /**
+     * Informs this policy that a child was removed from a topic - the topic is free to ignore this
+     * upcall if it doesn't care.
+     *
+     * @param topic The topic to unsubscribe from
+     * @param child The child that was removed
+     */
+    public void childRemoved(Topic topic, NodeHandle child) {
     }
   }
 
