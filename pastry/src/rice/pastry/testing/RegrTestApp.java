@@ -58,7 +58,7 @@ import java.util.*;
  * @author peter druschel
  */
 
-public class RegrTestApp extends PastryAppl {
+public class RegrTestApp extends CommonAPIAppl {
 
     private static class RTAddress implements Address {
 	private int myCode = 0x9219d6ff;
