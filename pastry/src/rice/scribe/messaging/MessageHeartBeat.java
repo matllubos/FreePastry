@@ -136,11 +136,6 @@ public class MessageHeartBeat extends ScribeMessage implements Serializable
 		    if( topic.getParent() != m_source)
 			System.out.println("Error:: Inconsistency in distinctParentTable found"); 
 		    topic.postponeParentHandler();
-		    // if waiting to find parent, now send unsubscription msg
-		    if ( topic.isWaitingUnsubscribe() ) {
-			scribe.unsubscribe( topic.getTopicId(), null, cred );
-			topic.waitUnsubscribe( false );
-		    }
 		}
 	    }
 	}
