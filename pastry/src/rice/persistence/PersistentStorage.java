@@ -440,7 +440,7 @@ public class PersistentStorage implements Storage {
   /* Helper functions for Object Input/Output                      */
   /*****************************************************************/
 
-  public static Serializable readObject(File file , int offset) throws Exception  {
+  private static Serializable readObject(File file , int offset) throws Exception  {
 
     Serializable toReturn = null;
     if(file == null)
@@ -471,7 +471,7 @@ public class PersistentStorage implements Storage {
    * @param file The file to create the object from.
    * @return The object that was read in
    */
-  public static Serializable readData(File file) throws Exception{
+  private static Serializable readData(File file) throws Exception{
      return(readObject(file, 1));
   }
 
@@ -484,7 +484,7 @@ public class PersistentStorage implements Storage {
    * @param file The file to create the key from.
    * @return The key that was read in
    */
-  public static Serializable readKey(File file) throws Exception{
+  private static Serializable readKey(File file) throws Exception{
     return (readObject(file, 0));
   }
      
@@ -496,7 +496,7 @@ public class PersistentStorage implements Storage {
    * @param file The file to create the version from.
    * @return The key that was read in
    */
-  public static long readVersion(File file) throws Exception{
+  private static long readVersion(File file) throws Exception{
    long toReturn = 0;
    Long temp = ((Long) readObject(file, 2));
    if(temp != null){
@@ -513,7 +513,7 @@ public class PersistentStorage implements Storage {
    * @param file The file to serialize the object to.
    * @return The object's disk space usage
    */
-   public static long writeObject(Serializable obj, Comparable key, long version, File file)     {
+   private static long writeObject(Serializable obj, Comparable key, long version, File file)     {
        if (obj == null || file == null)
             return 0;
 
