@@ -167,23 +167,26 @@ public class RMINodeHandle extends DistNodeHandle
 
 	    markDead();
 
-	    if (((RouteMessage)msg).getOptions().multipleHopsAllowed() == true) {
-		// bounce back to local dispatcher
-		if (Log.ifp(6)) System.out.println("bouncing message back to self at " + getLocalNode());
-		if (msg instanceof RouteMessage) {
+	    // bounce back to local dispatcher
+	    if (Log.ifp(6)) System.out.println("bouncing message back to self at " + getLocalNode());
+	    if (msg instanceof RouteMessage) {
+		if (((RouteMessage)msg).getOptions().multipleHopsAllowed() == true) {
 		    RouteMessage rmsg = (RouteMessage) msg;
 		    rmsg.nextHop = null;
 		    if (Log.ifp(6)) System.out.println("this msg bounced is " + rmsg);
 		    getLocalNode().receiveMessage(rmsg);
-		} else {
-		    getLocalNode().receiveMessage(msg);
 		}
+		else {
+		    // Drop the RouteMsgDirect message on the floor
+		}
+		
 	    } else {
-		// RouteMsgDirect: drop message on floor
+		getLocalNode().receiveMessage(msg);
 	    }
-	}
+	} 
+	
     }
-
+    
     /**
     * Ping the remote node now, and update the proximity metric.
     *
