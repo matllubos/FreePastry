@@ -78,6 +78,10 @@ public class GCNode implements Node {
     return node.registerApplication(application, instance);
   }
   
+  public NodeHandle getLocalNodeHandle() {
+    return node.getLocalNodeHandle();
+  }
+  
   /**
    * Returns the Id of this node
    *
