@@ -15,6 +15,8 @@ import java.io.Reader;
 import java.net.InetAddress;
 import java.net.Socket;
 
+import java.util.regex.*;
+
 
 
 /**
@@ -111,7 +113,8 @@ public class ImapConnection
     public void print(Reader in)
                throws IOException
     {
-        StreamUtils.copy(in, _out);
+      String result = StreamUtils.toString(in);
+      print(result);
     }
 
     /**

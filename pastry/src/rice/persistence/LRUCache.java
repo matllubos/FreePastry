@@ -100,13 +100,19 @@ public class LRUCache implements Cache {
   public synchronized void cache(final Id id, final Serializable obj, final Continuation c) {
     final int size = getSize(obj);
 
+    if (order.contains(id)) {
+      order.remove(id);
+      order.addFirst(id);
+      c.receiveResult(new Boolean(true));
+      return;
+    }
+      
     if (size > maximumSize) {
       c.receiveResult(new Boolean(false));
       return;
     }
-
     
-    //System.out.println("\nCaching object of size " + size + " with ID " + id);
+    //System.out.println("\nCaching object of size " + size + " with ID " + id + " num " + order.size());
     
     final Continuation store = new Continuation() {
       public void receiveResult(Object o) {
@@ -304,9 +310,9 @@ public class LRUCache implements Cache {
           waitingForSize = false;
           
           if (((Integer) o).intValue() > size) {
+            //System.out.println("Evicting object " + size + " " + o);
+            
             Comparable thisID = (Comparable) order.getLast();
-
-            //System.out.println("Evicting object with ID " + thisID);
 
             uncache((Id) thisID, this);
           } else {

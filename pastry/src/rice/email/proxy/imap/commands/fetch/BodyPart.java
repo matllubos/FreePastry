@@ -174,8 +174,10 @@ public class BodyPart extends FetchPart {
   public void fetchEntireMessage(StoredMessage msg) throws MailboxException {
     try {
       Reader contents = msg.getMessage().getContents();
-      getConn().print( "{" + msg.getMessage().getSize() + "}\r\n");
-      getConn().print(contents);
+      String result = StreamUtils.toString(contents);
+      result = result.replaceAll("\n", "\r\n");
+      getConn().print( "{" + result.length() + "}\r\n");
+      getConn().print(result);
     } catch (MailException me) {
       throw new MailboxException(me);
     } catch (IOException ioe) {
