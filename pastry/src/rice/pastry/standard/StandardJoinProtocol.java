@@ -120,6 +120,7 @@ public class StandardJoinProtocol implements MessageReceiver
 
 		    if ( jh.getNodeId().equals(localHandle.getNodeId()) && !localNode.isReady() ) {
 			System.out.println("NodeId collision, unable to join: " + localHandle.getNodeId());
+      //Thread.dumpStack();
 		    }
 		    else if (jh.isAlive() == true) { // the join handle is alive
 			routeTable.put(jh); // add the num. closest node to the routing table
@@ -179,7 +180,7 @@ public class StandardJoinProtocol implements MessageReceiver
 		JoinRequest jr = new JoinRequest(localHandle);
 
 		RouteMessage rm = new RouteMessage(localHandle.getNodeId(), jr, new PermissiveCredentials(), address);
-
+    rm.getOptions().setRerouteIfSuspected(false);
 		nh.receiveMessage(rm);
 	    }
 	}
