@@ -45,9 +45,10 @@ public class SplitStreamImpl implements SplitStream {
    */
   public SplitStreamImpl(Node node, String instance) {
     this.scribe = new ScribeImpl(node, instance);
-    scribe.setPolicy(new SplitStreamScribePolicy(scribe, this));
     this.node = node;
     this.channels = new Hashtable();
+    scribe.setPolicy(new SplitStreamScribePolicy(scribe, this));
+
   }
 
   /**
@@ -82,10 +83,10 @@ public class SplitStreamImpl implements SplitStream {
     Channel channel = (Channel) channels.get(id);
 
     if (channel == null) {
-      channel = new Channel(id, scribe, node.getIdFactory());
+      channel = new Channel(id, scribe, node.getIdFactory(),this.node.getId());
       channels.put(id, channel);
     }
-
+    ((SplitStreamScribePolicy)scribe.getPolicy()).setMaxChildren(id, SplitStreamScribePolicy.DEFAULT_MAXIMUM_CHILDREN);
     return channel;
   }
 
@@ -98,5 +99,7 @@ public class SplitStreamImpl implements SplitStream {
   public Channel[] getChannels() {
     return (Channel[]) channels.values().toArray(new Channel[0]);
   }
+
+   
 }
 

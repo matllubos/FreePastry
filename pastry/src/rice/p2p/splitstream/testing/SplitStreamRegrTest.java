@@ -104,12 +104,16 @@ public class SplitStreamRegrTest extends CommonAPITest {
      stepDone(SUCCESS);
      stepStart("Attaching and Joining Stripes");
      for(int i = 0; i < NUM_NODES; i++){
-       ssclients[i].attachChannel(id);
-       simulate();
-       ssclients[i].getStripes();
-       simulate();
-       ssclients[i].subscribeStripes();
-       simulate();
+	 ssclients[i].attachChannel(id);
+	 simulate();
+     }
+     for(int i = 0; i < NUM_NODES; i++){
+	 ssclients[i].getStripes();
+	 simulate();
+     }
+     for(int i = 0; i < NUM_NODES; i++){
+	 ssclients[i].subscribeStripes();
+	 simulate();
      }
      stepDone(SUCCESS);
      stepStart("Sending Data");

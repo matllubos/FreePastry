@@ -28,6 +28,15 @@ public class SplitStreamContent implements ScribeContent {
     this.data = data;
   }
 
+    protected Id leafToDrop = null;
+
+    protected NodeHandle originator = null;
+    
+    public SplitStreamContent(Id leafToDrop, NodeHandle originator){
+	this.leafToDrop = leafToDrop;
+	this.originator = originator;
+    }
+
   /**
    * Returns the data for this content
    *
@@ -36,5 +45,12 @@ public class SplitStreamContent implements ScribeContent {
   public byte[] getData() {
     return data;
   }
+
+    public Id getLeafToDrop(){
+	return leafToDrop;
+    }
+    public NodeHandle getOriginator(){
+	return originator;
+    }
 }
 

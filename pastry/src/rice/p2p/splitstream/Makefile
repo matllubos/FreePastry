@@ -4,13 +4,14 @@ SOURCE  = \
 	Channel.java \
 	ChannelId.java \
 	SplitStreamImpl.java \
-	ISplitStream.java \
-	ISplitStreamApp.java \
+	SplitStream.java \
+	SplitStreamClient.java \
+	SplitStreamContent.java \
+	SplitStreamScribePolicy.java \
 	Stripe.java \
-	StripeId.java\
-	SpareCapacityId.java \
-	SplitStreamOutputStream.java\
-	BandwidthManager.java
+	StripeId.java 
+
+
 
 RMI_SOURCE =
 

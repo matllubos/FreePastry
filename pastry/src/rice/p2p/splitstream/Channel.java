@@ -36,6 +36,8 @@ public class Channel {
    */
   protected Stripe[] stripes;
 
+    protected Id localId;
+
   /**
    * Constructor to create a new channel from scratch
    *
@@ -43,12 +45,13 @@ public class Channel {
    * @param channelId DESCRIBE THE PARAMETER
    * @param scribe DESCRIBE THE PARAMETER
    */
-  public Channel(ChannelId channelId, Scribe scribe, IdFactory factory) {
+  public Channel(ChannelId channelId, Scribe scribe, IdFactory factory, Id localId) {
 
     /*
      *  Initialize Member variables
      */
     this.channelId = channelId;
+    this.localId = localId;
 
     /*
      *  Create the stripe id and stripe arrays
@@ -60,9 +63,18 @@ public class Channel {
      *  Create the stripes
      */
     for (int i = 0; i < stripeIds.length; i++) {
-      stripes[i] = new Stripe(stripeIds[i], scribe);
+      stripes[i] = new Stripe(stripeIds[i], scribe, this);
     }
+
+    
   }
+
+    /**
+     * Gets the local node id.
+     */
+    public Id getLocalId(){
+	return localId;
+    }
 
   /**
    * Gets the channelId for this channel
@@ -89,6 +101,10 @@ public class Channel {
    * @return Stripe The Stripe object that is the primary stripe.
    */
   protected Stripe getPrimaryStripe() {
+      for(int i = 0; i < stripes.length; i++){
+	  if(SplitStreamScribePolicy.getPrefixMatch(this.localId, stripes[i].getStripeId().getId()) > 0)
+	      return stripes[i];
+      }
     return null;
     //INSERT LOGIC HERE
   }
