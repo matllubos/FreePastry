@@ -57,6 +57,11 @@ import rice.p2p.scribe.*;
 public class Stripe implements ScribeClient {
 
   /**
+   * The maximum number of failed subscriptions
+   */
+  public static int MAX_FAILED_SUBSCRIPTION = 5;
+
+  /**
    * The stripeId for this stripe
    */
   protected StripeId stripeId;
@@ -84,7 +89,12 @@ public class Stripe implements ScribeClient {
   /**
    * This stripe's channel
    */
-  protected Channel channel = null;
+  protected Channel channel;
+
+  /**
+   * The count of failed subscribe messages
+   */
+  protected Hashtable failed;
 
   /**
    * The constructor used when creating a stripe from scratch.
@@ -97,6 +107,7 @@ public class Stripe implements ScribeClient {
     this.scribe = scribe;
     this.channel = channel;
     this.isPrimary = false;
+    this.failed = new Hashtable();
     if(SplitStreamScribePolicy.getPrefixMatch(this.channel.getLocalId(), stripeId.getId()) > 0)
       this.isPrimary = true;
     
@@ -231,7 +242,20 @@ public class Stripe implements ScribeClient {
    * @param topic The topic that failed
    */
   public void subscribeFailed(Topic topic) {
-    scribe.subscribe(topic, this);
+    Integer count = (Integer) failed.get(topic);
+
+    if (count == null) {
+      count = new Integer(0);
+    }
+
+    if (count.intValue() < MAX_FAILED_SUBSCRIPTION) {
+      count = new Integer(count.intValue() + 1);
+
+      System.out.println("Subscription failed at " + channel.getLocalId() + " for topic " + topic + " - retrying.");
+      scribe.subscribe(topic, this);
+
+      failed.put(topic, count);
+    }
   }
 
   /**
@@ -256,7 +280,7 @@ public class Stripe implements ScribeClient {
    * @return Parent for this topic.
    */
   public NodeHandle getParent(){
-    return ((ScribeImpl)this.scribe).getParent(new Topic(this.getStripeId().getId()));
+    return ((ScribeImpl) this.scribe).getParent(new Topic(this.getStripeId().getId()));
   }
 
   /**
@@ -264,7 +288,7 @@ public class Stripe implements ScribeClient {
    * @return True/False depending on if local node is root for this topic
    */
   public boolean isRoot(){
-    return ((ScribeImpl)this.scribe).isRoot(topic);
+    return ((ScribeImpl) this.scribe).isRoot(topic);
   }
 }
 

@@ -8,6 +8,7 @@ SOURCE  = \
 	SplitStreamClient.java \
 	SplitStreamContent.java \
 	SplitStreamScribePolicy.java \
+	SplitStreamSubscribeContent.java \
 	Stripe.java \
 	StripeId.java 
 

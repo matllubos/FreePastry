@@ -33,58 +33,54 @@ or otherwise) arising in any way out of the use of this software, even
 if advised of the possibility of such damage.
 
 ********************************************************************************/
-
 package rice.p2p.splitstream;
 
+import java.io.*;
+
+import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.scribe.*;
 
 /**
- * This class wraps the nodeId object so we can use type checking and allow more readable and
- * understandable code. All it does is subclass the nodeId and provide a constructor that allows the
- * wrapping of a NodeId object to create a concrete subclass
+ * This represents data sent through scribe for splitstream during a
+ * subscribe
  *
  * @version $Id$
- * @author Ansley Post
  * @author Alan Mislove
  */
-public class StripeId {
+public class SplitStreamSubscribeContent implements ScribeContent {
 
   /**
-   * This stripe's Id
+   * The first stage of the join process
    */
-  protected Id id;
+  public static int STAGE_NON_FINAL = -10;
 
   /**
-   * Constructor that takes in a nodeId and makes a StripeId
+   * The final stage of the join process
+   */
+  public static int STAGE_FINAL = -9;
+  
+  /**
+   * The stage that the client attempting to join is in
+   */
+  protected int stage;
+
+  /**
+   * Constructor taking in a byte[]
    *
-   * @param id The Id for this stripe
+   * @param data The data for this content
    */
-  public StripeId(Id id) {
-    this.id = id;
+  public SplitStreamSubscribeContent(int stage) {
+    this.stage = stage;
   }
 
   /**
-   * Gets the Id attribute of the StripeId object
+    * Returns the data for this content
    *
-   * @return The Id value
+   * @return The data for this content
    */
-  public Id getId() {
-    return id;
-  }
-
-  public String toString() {
-    return "[StripeId " + id + "]";
-  }
-
-  public int hashCode() {
-    return id.hashCode();
-  }
-
-  public boolean equals(Object o) {
-    if (! (o instanceof StripeId)) {
-      return false;
-    }
-
-    return ((StripeId) o).id.equals(id);
+  public int getStage() {
+    return stage;
   }
 }
+

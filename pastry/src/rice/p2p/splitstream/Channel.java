@@ -191,18 +191,6 @@ public class Channel {
         bArray = bArray.clearBit(i);
       }
     }
-    
-    int x = 8;
-    BigInteger bNum2 = new BigInteger(x + "");
-    bNum2 = bNum2.shiftLeft(length-base);
-    
-    for(int i = length-1; i>length-base; i--){
-      if(bNum2.testBit(i)) {
-        bArray = bArray.setBit(i - base);
-      } else {
-        bArray = bArray.clearBit(i - base);
-      }
-    }
 
     byte[] newArray = bArray.toByteArray();
     byte[] result = new byte[array.length];
@@ -232,5 +220,4 @@ public class Channel {
     return result;
   }
 
-  
 }

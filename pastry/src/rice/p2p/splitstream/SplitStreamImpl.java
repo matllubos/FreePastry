@@ -119,13 +119,14 @@ public class SplitStreamImpl implements SplitStream {
       channel = new Channel(id, scribe, node.getIdFactory(),this.node.getId());
       channels.put(id, channel);
     }
+    
     ((SplitStreamScribePolicy)scribe.getPolicy()).setMaxChildren(id, SplitStreamScribePolicy.DEFAULT_MAXIMUM_CHILDREN);
     return channel;
   }
 
 
   /**
-    * Returns all of the channels on this local splitstream
+   * Returns all of the channels on this local splitstream
    *
    * @return All of the channels currently being received by this splitstream
    */
@@ -133,8 +134,13 @@ public class SplitStreamImpl implements SplitStream {
     return (Channel[]) channels.values().toArray(new Channel[0]);
   }
 
-    public SplitStreamScribePolicy getPolicy(){
-	return (SplitStreamScribePolicy)(scribe.getPolicy());
-    }
+  /**
+   * Returns the policy used to control Scribe
+   *
+   * @return The Scribe policy
+   */
+  public SplitStreamScribePolicy getPolicy(){
+    return (SplitStreamScribePolicy)(scribe.getPolicy());
+  }
 }
 

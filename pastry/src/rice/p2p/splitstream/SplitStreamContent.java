@@ -49,8 +49,6 @@ import rice.p2p.scribe.*;
  */
 public class SplitStreamContent implements ScribeContent {
 
-    public static final int STAGE_FINAL = 3;
-
   /**
    * The internal data - just the bytes
    */
@@ -64,11 +62,6 @@ public class SplitStreamContent implements ScribeContent {
   public SplitStreamContent(byte[] data) {
     this.data = data;
   }
-    protected int stage = 0;
-    
-    public SplitStreamContent(int val){
-	this.stage = val;
-    }
 
   /**
    * Returns the data for this content
@@ -78,9 +71,5 @@ public class SplitStreamContent implements ScribeContent {
   public byte[] getData() {
     return data;
   }
-
-    public int getStage(){
-	return stage;
-    }
 }
 
