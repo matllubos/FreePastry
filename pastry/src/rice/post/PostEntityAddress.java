@@ -56,6 +56,7 @@ public abstract class PostEntityAddress implements Serializable {
 
     md.update(string.getBytes());
     NodeId userNodeId = new NodeId(md.digest());
-    return new RingNodeId(userNodeId, ringId);
+    //return new RingNodeId(userNodeId, ringId);
+    return userNodeId;
   }
 }

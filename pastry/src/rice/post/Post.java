@@ -330,6 +330,9 @@ public class Post extends PastryAppl implements IScribeApp  {
    * This method announce's our presence via our scribe tree
    */
   public void announcePresence() {
+    if (rice.pastry.Log.ifp(6))
+      System.out.println(thePastryNode.getNodeId() + "DEBUG: publishing presence to the group " + address.getAddress());
+
     PresenceMessage pm = new PresenceMessage(address, getNodeId());
     scribeService.multicast(address.getAddress(), new PostScribeMessage(signPostMessage(pm)), getCredentials());
   }
@@ -515,6 +518,9 @@ public class Post extends PastryAppl implements IScribeApp  {
           userQueue = new Vector();
           bufferedData.put(message.getDestination(), userQueue);
           scribeService.join(message.getDestination().getAddress(), Post.this, credentials);
+
+          if (rice.pastry.Log.ifp(6))
+            System.out.println(thePastryNode.getNodeId() + "DEBUG: joined Scribe group rooted at " + message.getDestination().getAddress());
         }
 
         userQueue.addElement(message.getEncryptedMessage());
