@@ -35,6 +35,8 @@ import rice.pastry.NodeHandle;
 import rice.pastry.NodeId;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
+import rice.pastry.churn.ChurnJoinProtocol;
+import rice.pastry.churn.ChurnLeafSetProtocol;
 import rice.pastry.dist.DistPastryNodeFactory;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.Message;
@@ -74,6 +76,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    */
   private final static int leafSetMaintFreq = 1 * 60;
   private final static int routeSetMaintFreq = 15 * 60;
+
+  public static boolean churn = false;
+  public static boolean useNearest = true;
+  
 
   /**
    * Constructor.
@@ -157,7 +163,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
         return (int) ping;
       } catch (IOException e) {
         System.out.println("Error pinging address " + wHandle.getAddress() + ": " + e);
-        return wHandle.DEFAULT_PROXIMITY;
+        return SocketNodeHandle.DEFAULT_PROXIMITY;
       }
     } else {
       return wHandle.proximity();
@@ -240,8 +246,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @param nodeId DESCRIBE THE PARAMETER
    * @return A node with a random ID and next port number.
    */
-  public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress proxyAddress, InetAddress bindAddress) {
-    final SocketPastryNode pn = new SocketPastryNode(nodeId);
+  public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId, InetSocketAddress proxyAddress, InetAddress bindAddress) {
+    final SocketPastryNode pn = new SocketPastryNode(nodeId);    
     pn.getLocalNodeI(bootstrap); // register this nodehandle as early as we can
     //SelectorManager sManager = new SelectorManager(pn);
 
@@ -285,9 +291,18 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 
     StandardRouter router = new StandardRouter(localhandle, routeTable, leafSet, secureMan);
-    StandardLeafSetProtocol lsProtocol = new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
+    StandardLeafSetProtocol lsProtocol;
+    StandardJoinProtocol jProtocol;
+    if (churn) {
+      lsProtocol = new ChurnLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
+      jProtocol = new ChurnJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet, (ChurnLeafSetProtocol)lsProtocol);
+      pingManager.setFailedSetManager((ChurnLeafSetProtocol)lsProtocol);
+    } else {
+      lsProtocol = new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
+      jProtocol = new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);      
+    }
+
     StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
-    StandardJoinProtocol jProtocol = new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
 
     msgDisp.registerReceiver(router.getAddress(), router);
     msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
@@ -304,14 +319,21 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     if (bootstrap != null) {
       bootstrap.setLocalNode(pn);
     }
+    
+//    System.out.println("SPNF.getNearest():begin");
+    if (useNearest)
+      bootstrap = getNearest(localhandle, bootstrap);
+//    System.out.println("SPNF.getNearest():end");
 
-    final SocketNodeHandle theLocalHandle = localhandle;
+    final NodeHandle theBootstrap = bootstrap;
+
     // launch thread to handle the sockets
     SelectorManager.getSelectorManager().invoke(
       new Runnable() {
         public void run() {
-//          pn.doneNode(getNearest(theLocalHandle, bootstrap));
-          pn.doneNode(bootstrap);
+//          System.out.println("SPNF.run():begin");
+          pn.doneNode(theBootstrap);
+//          System.out.println("SPNF.run():end");
         }
       });
 

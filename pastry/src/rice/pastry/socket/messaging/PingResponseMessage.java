@@ -36,10 +36,9 @@ if advised of the possibility of such damage.
 
 package rice.pastry.socket.messaging;
 
-import java.net.InetSocketAddress;
 import java.util.Collection;
 
-import rice.pastry.NodeId;
+import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.SocketNodeHandle;
 
 /**
@@ -56,14 +55,19 @@ public class PingResponseMessage extends SocketMessage implements Probe {
   public SocketNodeHandle receiver;
 
 	private long start;
+
+  public LeafSet leafSet;
+  public Collection failedSet;
   
   /**
   * Constructor
   */
-  public PingResponseMessage(long start, SocketNodeHandle sender, SocketNodeHandle receiver) {
+  public PingResponseMessage(long start, SocketNodeHandle sender, SocketNodeHandle receiver, LeafSet leafSet, Collection failedSet) {
     this.start = start;
     this.sender = sender;
     this.receiver = receiver;
+    this.leafSet = leafSet;
+    this.failedSet = failedSet;
   }
   
   public long getStartTime() {
@@ -73,28 +77,16 @@ public class PingResponseMessage extends SocketMessage implements Probe {
   public String toString() {
     return "PingResponseMessage";
   }
-	/* (non-Javadoc)
-	 * @see rice.pastry.socket.messaging.Probe#getFaildset()
-	 */
-	public Collection getFaildset() {
-		// TODO Auto-generated method stub
+	public Collection getFailedset() {
 		return null;
 	}
 
-	/* (non-Javadoc)
-	 * @see rice.pastry.socket.messaging.Probe#getLeafset()
-	 */
-	public Collection getLeafset() {
-		// TODO Auto-generated method stub
-		return null;
+	public LeafSet getLeafset() {
+		return leafSet;
 	}
 
-	/* (non-Javadoc)
-	 * @see rice.pastry.socket.messaging.Probe#getRemoteNode()
-	 */
-	public SocketNodeHandle getRemoteNode() {
-		// TODO Auto-generated method stub
-		return null;
+	public SocketNodeHandle getSender() {
+		return sender;
 	}
 
 }

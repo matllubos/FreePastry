@@ -16,7 +16,6 @@ import rice.p2p.commonapi.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.commonapi.PastryEndpointMessage;
 import rice.pastry.dist.NodeIsDeadException;
-import rice.pastry.leafset.BroadcastLeafSet;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.exception.TooManyMessagesException;
@@ -1307,19 +1306,7 @@ public class ConnectionManager {
     public MsgEntry(Message m) {
      this.message = m;
      timeQueued = System.currentTimeMillis(); 
-    }
-    
-    /**
-     * Yee ol' toString().
-     */
-    public String toString() {
-      if (message instanceof BroadcastLeafSet) {
-        BroadcastLeafSet bls = (BroadcastLeafSet)message;
-        return "  "+bls+" "+System.identityHashCode(bls)+" "+System.identityHashCode(bls.leafSet()) + " @"+timeQueued;            
-      } else {
-        return "  "+message+" "+System.identityHashCode(message) + " @"+timeQueued;
-      }
-    }
+    }    
   }
 
   /**

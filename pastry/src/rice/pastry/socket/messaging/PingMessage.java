@@ -36,12 +36,10 @@ if advised of the possibility of such damage.
 
 package rice.pastry.socket.messaging;
 
-import java.io.*;
-import java.net.InetSocketAddress;
 import java.util.Collection;
 
-import rice.pastry.socket.*;
-import rice.pastry.*;
+import rice.pastry.leafset.LeafSet;
+import rice.pastry.socket.SocketNodeHandle;
 
 /**
  * Class which represents a "ping" message sent through the
@@ -56,13 +54,17 @@ public class PingMessage extends SocketMessage implements Probe {
 	private long start;
   public SocketNodeHandle sender;
   public SocketNodeHandle receiver;
+  public LeafSet leafSet;
+  public Collection failedSet;
 
   /**
    * Constructor
    */
-  public PingMessage(SocketNodeHandle sender, SocketNodeHandle receiver, long startTime) {
+  public PingMessage(SocketNodeHandle sender, SocketNodeHandle receiver, long startTime, LeafSet leafSet, Collection failedSet) {
     this.sender = sender;
     this.receiver = receiver;
+    this.leafSet = leafSet;
+    this.failedSet = failedSet;
     start = startTime;
   }
   
@@ -74,35 +76,16 @@ public class PingMessage extends SocketMessage implements Probe {
     return "PingMessage";
   }
 
-//  private void writeObject(ObjectOutputStream oos)
-//    throws IOException {
-//
-//    start = System.currentTimeMillis();
-//    oos.defaultWriteObject();
-//  }
-
-	/* (non-Javadoc)
-	 * @see rice.pastry.socket.messaging.Probe#getFaildset()
-	 */
-	public Collection getFaildset() {
-		// TODO Auto-generated method stub
-		return null;
+	public Collection getFailedset() {
+		return failedSet;
 	}
 
-	/* (non-Javadoc)
-	 * @see rice.pastry.socket.messaging.Probe#getLeafset()
-	 */
-	public Collection getLeafset() {
-		// TODO Auto-generated method stub
-		return null;
+	public LeafSet getLeafset() {
+		return leafSet;
 	}
 
-	/* (non-Javadoc)
-	 * @see rice.pastry.socket.messaging.Probe#getRemoteNode()
-	 */
-	public SocketNodeHandle getRemoteNode() {
-		// TODO Auto-generated method stub
-		return null;
+	public SocketNodeHandle getSender() {
+		return sender;
 	}
 
 }

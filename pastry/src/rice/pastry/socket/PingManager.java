@@ -21,6 +21,8 @@ import java.util.LinkedList;
 import java.util.WeakHashMap;
 
 import rice.pastry.PastryObjectInputStream;
+import rice.pastry.churn.FailedSetManager;
+import rice.pastry.churn.NullFailedSetManager;
 import rice.pastry.socket.exception.DeserializationException;
 import rice.pastry.socket.exception.ImproperlyFormattedMessageException;
 import rice.pastry.socket.exception.SerializationException;
@@ -163,6 +165,8 @@ public class PingManager extends SelectionKeyHandler {
    */
   private SocketPastryNode spn;
 
+  private FailedSetManager fsm;
+
   /**
    * Constructor for PingManager.
    * 
@@ -175,12 +179,14 @@ public class PingManager extends SelectionKeyHandler {
     this.port = port;
     this.pool = pool;
     this.localHandle = localHandle;
+    this.fsm = new NullFailedSetManager();
     proximity = new WeakHashMap();
     pingSentTimes = new WeakHashMap();
     pingResponseTimes = new WeakHashMap();
     pendingMsgs = new ArrayList();
     // allocate enought bytes to read a node handle
     buffer = ByteBuffer.allocateDirect(DATAGRAM_SEND_BUFFER_SIZE);
+    
 
     try {
       // bind to the appropriate port
@@ -209,6 +215,13 @@ public class PingManager extends SelectionKeyHandler {
       System.out.println("PANIC: Error binding datagram server to port " + port + ": " + e);
       System.exit(-1);
     }
+  }
+
+  /**
+   * @param fsm
+   */
+  public void setFailedSetManager(FailedSetManager fsm) {
+    this.fsm = fsm;   
   }
 
   /**
@@ -332,7 +345,7 @@ public class PingManager extends SelectionKeyHandler {
             ll.removeFirst();
           }
           addPingResponseListener(snh, prl);
-          enqueue(snh, new PingMessage(localHandle, snh, curTime));        
+          enqueue(snh, new PingMessage(localHandle, snh, curTime, spn.getLeafSet(), fsm.getFailedSet()));        
         } else {
           if (getLastTimePingReceived(snh) >= getLastTimePinged(snh)) {
             // we just pinged them, and got a response
@@ -451,7 +464,7 @@ public class PingManager extends SelectionKeyHandler {
     if (message instanceof PingMessage) {
       PingMessage pm = (PingMessage) message;
       if ((pm.receiver == null) || (pm.receiver.equals(localHandle))) {
-        enqueue(pm.sender, new PingResponseMessage(pm.getStartTime(), localHandle, pm.sender));
+        enqueue(pm.sender, new PingResponseMessage(pm.getStartTime(), localHandle, pm.sender, spn.getLeafSet(), fsm.getFailedSet()));
       } else {
 //        System.out.println(this+" ignoring ping message with incorrect receiver");
       }
@@ -634,4 +647,5 @@ public class PingManager extends SelectionKeyHandler {
   public String toString() {
     return "PingManger for "+localHandle;
   }
+
 }

@@ -126,6 +126,17 @@ public class SocketNodeHandle extends DistNodeHandle {
   }
 
   /**
+   * 
+   */
+  public void probe() {
+    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+
+    if (spn != null) {
+      spn.getPingManager().forcePing(this, null);
+    }
+  }
+
+  /**
    * Ping the node. Refreshes the cached liveness status and proximity value of
    * the Pastry node associated with this. Invoking this method causes network
    * activity.
@@ -296,6 +307,7 @@ public class SocketNodeHandle extends DistNodeHandle {
   public int hashCode() {
     return epoch*getNodeId().hashCode();
   }
+
 }
 
 

@@ -8,6 +8,7 @@ package rice.pastry.socket.messaging;
 
 import java.util.Collection;
 
+import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.SocketNodeHandle;
 
 /**
@@ -17,7 +18,7 @@ import rice.pastry.socket.SocketNodeHandle;
  * Window>Preferences>Java>Code Generation>Code and Comments
  */
 public interface Probe {
-  Collection getLeafset();
-  Collection getFaildset();
-  SocketNodeHandle getRemoteNode();
+  LeafSet getLeafset();
+  Collection getFailedset();
+  SocketNodeHandle getSender();
 }
