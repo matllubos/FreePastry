@@ -193,24 +193,23 @@ public class AP3ServiceImpl
     AP3Message callbackMsg = null;
 
     while ( callbackIDCollided )
+    {
+        try
 	{
-	    try
-		{
-		    callbackMsg = _createAP3Message( this.getNodeHandle(),
-                                                     null,
-						     //this.getNodeHandle(),
-						     AP3MessageType.CALLBACK,
-						     -1 );
-		    _routingTable.addEntry( callbackMsg );
-		    callbackIDCollided = false;
-		}
-	    catch ( Exception e )
-		{
-		    callbackIDCollided = true;
-		}
+	    callbackMsg = _createAP3Message( this.getNodeHandle(),
+                                             null,
+					     AP3MessageType.CALLBACK,
+					     -1 );
+	    _routingTable.addEntry( callbackMsg );
+	    callbackIDCollided = false;
+        }
+	catch ( Exception e )
+	{
+	    callbackIDCollided = true;
 	}
+    }
 
-     /* Update the thread table so that this thread can collect its
+    /* Update the thread table so that this thread can collect its
      * response when it arrives.
      */
     ThreadTableEntry entry = new ThreadTableEntry();
@@ -218,9 +217,7 @@ public class AP3ServiceImpl
 
     /* Route the callback message to the randomly chosen node
      */
-    System.out.println( " BLAH BLAH BLAH");
     NodeId blah = _generateRandomNodeID();
-    System.out.println( "WE HAVE A NODE_ID: " + blah ); 
     this._routeMsg( blah, callbackMsg );
 
     /* Wait till a response is received.
@@ -300,7 +297,7 @@ public class AP3ServiceImpl
    * in the message.
    *
    * <p>
-   * If the message is a callback, AP3 will route a response 
+   * If the message is a callback, AP3 will directly send a response 
    * containing the ID of this node to the originating node.
    *   
    * @param msg the message that is arriving.
@@ -417,19 +414,18 @@ public class AP3ServiceImpl
         while ( callbackIDCollided )
         {
             try
-                {
-                    callbackMsg = _createAP3Message( this.getNodeHandle(),
-						     null,
-                                                     //this.getNodeHandle(),
-                                                     AP3MessageType.CALLBACK,
-                                                     -1 );
-                    _routingTable.addEntry( callbackMsg );
-                    callbackIDCollided = false;
-                }
+            {
+                callbackMsg = _createAP3Message( this.getNodeHandle(),
+						 null,
+                                                 AP3MessageType.CALLBACK,
+                                                 -1 );
+                _routingTable.addEntry( callbackMsg );
+                callbackIDCollided = false;
+            }
             catch ( Exception e )
-                {
-                    callbackIDCollided = true;
-                }
+            {
+                callbackIDCollided = true;
+            }
         }
 
         /* Update the thread table so that this thread can collect its
@@ -502,7 +498,6 @@ public class AP3ServiceImpl
 		/* This is a message id collision, drop the request */
 		return;
 	    }
-	//content = this.getNodeHandle();
 	_sendResponseDirect( msg.getSource(), msg.getID(), content );
     }
 
@@ -532,9 +527,9 @@ public class AP3ServiceImpl
 	boolean found = this.routeMsgDirect( dest, msg, _credentials, _sendOptions );
 
 	if ( !found )
-	    {
-		throw new java.lang.Exception( "Error routing directly: target node no longer exists" );
-	    }
+	{
+            throw new java.lang.Exception( "Error routing directly: target node no longer exists" );
+	}
     }
 
   /**
@@ -549,9 +544,7 @@ public class AP3ServiceImpl
    * Helper function used to generate random node ids.
    */
   protected NodeId _generateRandomNodeID() {
-    System.out.println( "We are indeed seeing the procedure" );
     NodeId q = _randomNodeIDFactory.generateNodeId();
-    System.out.println( "The returned value from the factory is: " + q );
     return q;
   }
 
