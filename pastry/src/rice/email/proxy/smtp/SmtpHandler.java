@@ -51,10 +51,8 @@ class SmtpHandler {
     }
   }
 
-  protected void sendGreetings()
-  {
-    _conn.println("220 " + _conn.getServerGreetingsName() +
-                  " Simple Mail Transfer Service Ready");
+  protected void sendGreetings() {
+    _conn.println("220 " + _conn.getServerGreetingsName() + " Simple Mail Transfer Service Ready");
   }
 
   protected void handleCommand() throws IOException {

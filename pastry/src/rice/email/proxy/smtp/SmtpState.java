@@ -8,23 +8,19 @@ public class SmtpState {
   MovingMessage currentMessage;
   Workspace _workspace;
 
-  public SmtpState(Workspace workspace)
-  {
+  public SmtpState(Workspace workspace) {
     _workspace = workspace;
     clearMessage();
   }
 
-  public MovingMessage getMessage()
-  {
-
+  public MovingMessage getMessage() {
     return currentMessage;
   }
 
   /**
     * To destroy a half-contructed message.
    */
-  public void clearMessage()
-  {
+  public void clearMessage() {
     if (currentMessage != null)
       currentMessage.releaseContent();
 

@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.*;
 
 import rice.*;
+import rice.Continuation.*;
 import rice.post.*;
 import rice.email.*;
 import rice.email.proxy.dns.*;
@@ -15,7 +16,7 @@ import rice.email.proxy.mailbox.postbox.*;
 public class SimpleManager implements SmtpManager {
 
   public static int MAX_SIZE = 8000000;
-  public static String POST_HOST = "dosa.cs.rice.edu";
+  public static String[] POST_HOST = new String[] {"dosa.cs.rice.edu", ".epostmail.org"};
   public static String SMTP_HOST = "moe.rice.edu";
 
   private boolean gateway;
@@ -30,8 +31,8 @@ public class SimpleManager implements SmtpManager {
     String s = System.getProperty("POST_HOST");
     
     if ((s != null) && (s.length() > 2)) {
-      System.out.println("Using alternative POST_HOST:"+s);
-      POST_HOST = s;
+      System.out.println("Using alternative POST_HOST:" + s);
+      POST_HOST = new String[] {s};
     }
   }
 
@@ -43,16 +44,29 @@ public class SimpleManager implements SmtpManager {
   }
 
   public String checkSender(SmtpState state, MailAddress sender) {
-    return null;
+    if ((! gateway) && (! isPostAddress(sender)))
+      return sender + ": Sender address rejected: Relay access denied";
+    else 
+      return null;
   }
 
   public String checkRecipient(SmtpState state, MailAddress rcpt) {
-    return null;
+    if (gateway && (! isPostAddress(rcpt)))
+      return rcpt + ": Recipient address rejected: Relay access denied";
+    else 
+      return null;
   }
 
   public String checkData(SmtpState state) { 
-
     return null;
+  }
+  
+  public boolean isPostAddress(MailAddress addr) {
+    for (int i=0; i<POST_HOST.length; i++) 
+      if (addr.getHost().toLowerCase().endsWith(POST_HOST[i].toLowerCase()))
+        return true;
+    
+    return false;
   }
 
   public void send(SmtpState state, boolean local) throws Exception {
@@ -63,7 +77,7 @@ public class SimpleManager implements SmtpManager {
     while (i.hasNext()) {
       MailAddress addr = (MailAddress) i.next();
 
-      if (addr.getHost().equals(POST_HOST)) {
+      if (isPostAddress(addr)) {
         postRecps.add(addr);
       } else {
         nonPostRecps.add(addr);
@@ -77,38 +91,19 @@ public class SimpleManager implements SmtpManager {
     else
       System.out.println("COUNT: " + System.currentTimeMillis() + " Sending message of size " + state.getMessage().getResource().getSize() + " to " + postRecps.size() + " POST recipeints and " + nonPostRecps.size() + " normal recipients.");
     
-    final Exception[] exception = new Exception[1];
-    final Object[] result = new Object[1];
-    final Object wait = "wait";
+    Email email = null;
     
-    Continuation done = new Continuation() {
-      public void receiveResult(Object o) {
-        synchronized(wait) {
-          result[0] = "result";
-          wait.notify();
-        }
-      }
-
-      public void receiveException(Exception e) {
-        synchronized(wait) {
-          exception[0] = e;
-          result[0] = "result";
-          wait.notify();
-        }
-      }
-    };
-
     if (gateway) {
-      email.sendMessage(PostMessage.parseEmail(recipients, state.getMessage().getResource(), address), done);
+      email = PostMessage.parseEmail(recipients, state.getMessage().getResource(), address);
     } else {
-      email.sendMessage(PostMessage.parseEmail(recipients, state.getMessage().getResource()), done);
+      email = PostMessage.parseEmail(recipients, state.getMessage().getResource());
     }
-
-    synchronized(wait) { if (result[0] == null) wait.wait(); }
-      
-    if (exception[0] != null) {
-      throw exception[0];
-    }
+    
+    ExternalContinuation c = new ExternalContinuation();
+    this.email.sendMessage(email, c);
+    c.sleep();
+    
+    if (c.exceptionThrown()) { throw c.getException(); } 
 
     for (int j=0; j<nonPostRecps.size();  j++) {
       MailAddress addr = (MailAddress) nonPostRecps.elementAt(j);

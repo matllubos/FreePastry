@@ -14,12 +14,8 @@ import rice.email.proxy.smtp.manager.SmtpManager;
  * http://asg.web.cmu.edu/rfc/rfc2821.html#sec-4.1.1.6</a>.
  * </p>
  */
-public class VrfyCommand
-    extends SmtpCommand
-{
-    public void execute(SmtpConnection conn, SmtpState state, 
-                        SmtpManager manager, String commandLine) {
-        conn.println(
-                "252 Cannot VRFY user, but will accept message and attempt delivery");
-    }
+public class VrfyCommand extends SmtpCommand {
+  public void execute(SmtpConnection conn, SmtpState state, SmtpManager manager, String commandLine) {
+    conn.println("252 Cannot VRFY user, but will accept message and attempt delivery");
+  }
 }

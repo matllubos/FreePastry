@@ -29,9 +29,7 @@ public class SmtpConnection {
     SmtpHandler handler;
     String heloName;
 
-    public SmtpConnection(SmtpHandler handler, Socket sock)
-                   throws IOException
-    {
+    public SmtpConnection(SmtpHandler handler, Socket sock) throws IOException {
         if (sock != null) {
           this.sock = sock;
           sock.setSoTimeout(TIMEOUT_MILLIS);
@@ -75,12 +73,10 @@ public class SmtpConnection {
     }
 
     public String getClientAddress() {
-
         return clientAddress.getHostName();
     }
 
     public InetAddress getServerAddress() {
-
         return serverAddress;
     }
 
@@ -94,7 +90,6 @@ public class SmtpConnection {
     }
 
     public String getHeloName() {
-
         return heloName;
     }
 

@@ -62,6 +62,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
               try {
                 SmtpHandler handler = new SmtpHandler(registry, manager, workspace);
                 handler.handleConnection(socket);
+                socket.close();
               } catch (IOException e) {
                 System.out.println("IOException occurred during handling of connection - " + e);
               }

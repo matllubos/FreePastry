@@ -33,6 +33,8 @@ import rice.email.proxy.user.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.mailbox.postbox.*;
 
+import rice.proxy.*;
+
 import java.util.*;
 import java.io.*;
 import java.net.*;
@@ -47,31 +49,6 @@ import javax.mail.*;
  * starts the Foedus IMAP and SMTP servers.
  */
 public class EmailProxy extends PostProxy {
-
-  static int IMAP_PORT = 1143; 
-  static int POP3_PORT = 2110; 
-  static int SMTP_PORT = 2025;
-  static int WEBMAIL_PORT = 8082;
-
-  static boolean SSL = false;
-  
-  static boolean GATEWAY = false;
-
-  static boolean ACCEPT_NON_LOCAL = true;
-  
-  static boolean SEND_PUBLISH = true;
-
-  // we must set up the Data Content Handler
-  static {
-    MailcapCommandMap cmdmap = (MailcapCommandMap) CommandMap.getDefaultCommandMap();
-    cmdmap.addMailcap("application/*; ;x-java-content-handler=rice.email.proxy.mail.MailDataHandler");
-    //cmdmap.addMailcap("text/*; ;x-java-content-handler=rice.email.proxy.mail.MailDataHandler");
-    cmdmap.addMailcap("image/*; ;x-java-content-handler=rice.email.proxy.mail.MailDataHandler");
-    cmdmap.addMailcap("audio/*; ;x-java-content-handler=rice.email.proxy.mail.MailDataHandler");
-    cmdmap.addMailcap("video/*; ;x-java-content-handler=rice.email.proxy.mail.MailDataHandler");
-     
-     CommandMap.setDefaultCommandMap(cmdmap);
-  }
  
   protected EmailService email;
 
@@ -82,190 +59,228 @@ public class EmailProxy extends PostProxy {
   protected Pop3ServerImpl pop3;
      
   protected ImapServerImpl imap;
+  
+  protected rice.email.Folder emailFolder;
      
 //  protected WebServer web;
 
-  public EmailProxy(String[] args) {
-      super(args);
+  public static String[][] DEFAULT_PARAMETERS = new String[][] {{"email_accept_non_local", "true"},
+    {"email_send_publish_request", "true"}, 
+    {"email_fetch_log", "true"}, 
+    {"email_fetch_retries", "3"}, 
+    {"email_imap_enable", "true"},
+    {"email_imap_ssl", "false"},
+    {"email_imap_port", "1143"}, 
+    {"email_pop3_enable", "true"},
+    {"email_pop3_port", "2110"}, 
+    {"email_pop3_ssl", "false"},
+    {"email_smtp_enable", "true"},
+    {"email_smtp_port", "2025"}, 
+    {"email_smtp_ssl", "false"},
+    {"email_smtp_gateway", "false"}
+  };
+     
+     
+  /**
+   * Method which initializes the mailcap
+   *
+   * @param parameters The parameters to use
+   */  
+  protected void startMailcap(Parameters parameters) throws Exception {
+    stepStart("Installing custom Mailcap entries");
+    MailcapCommandMap cmdmap = (MailcapCommandMap) CommandMap.getDefaultCommandMap();
+    cmdmap.addMailcap("application/*; ;x-java-content-handler=rice.email.proxy.mail.MailDataHandler");
+    cmdmap.addMailcap("image/*; ;x-java-content-handler=rice.email.proxy.mail.MailDataHandler");
+    cmdmap.addMailcap("audio/*; ;x-java-content-handler=rice.email.proxy.mail.MailDataHandler");
+    cmdmap.addMailcap("video/*; ;x-java-content-handler=rice.email.proxy.mail.MailDataHandler");
+    CommandMap.setDefaultCommandMap(cmdmap);    
+    stepDone(SUCCESS);
+  }
+     
+     
+  /**
+   * Method which fetches the local email service
+   *
+   * @param parameters The parameters to use
+   */  
+  protected void startEmailService(Parameters parameters) throws Exception {
+   stepStart("Starting Email service");
+   email = new EmailService(post, pair, parameters.getBooleanParameter("post_allow_log_insert"));
+   PostMessage.factory = FACTORY;
+   stepDone(SUCCESS);
+  }
+     
+  /**
+   * Method which fetch the local user's email log and inbox
+   *
+   * @param parameters The parameters to use
+   */
+  protected void startFetchEmailLog(Parameters parameters) throws Exception {    
+    if (parameters.getBooleanParameter("email_fetch_log")) {
+      stepStart("Fetching Email INBOX log");
+      int retries = 0;
+      boolean done = false;
+      
+      while (!done) {
+        ExternalContinuation c = new ExternalContinuation();
+        email.getRootFolder(c);
+        c.sleep();
+        
+        if (c.exceptionThrown()) { 
+          if (retries < parameters.getIntParameter("email_fetch_log_retries")) {
+            retries++;
+          } else {
+            throw c.getException(); 
+          }
+        } else {
+          emailFolder = (rice.email.Folder) c.getResult();
+          done = true;
+        }
+      }
+      stepDone(SUCCESS);
+    }
+  }
+     
+  /**
+   * Method which starts the local user manager
+   *
+   * @param parameters The parameters to use
+   */
+  protected void startUserManager(Parameters parameters) throws Exception {    
+    stepStart("Starting User Email Services");
+    
+    if (parameters.getBooleanParameter("email_fetch_log"))
+      manager = new UserManagerImpl(email, new PostMailboxManager(email, emailFolder));
+    else 
+      manager = new UserManagerImpl(email, new PostMailboxManager(email, null));
+    
+    String addr = address.toString();
+    manager.createUser(addr.substring(0, addr.indexOf("@")), null, parameters.getStringParameter("post_password"));
+    stepDone(SUCCESS);
   }
 
-     public void start() throws Exception {
-       super.start();
+  /**
+   * Method which starts the local SMTP server
+   *
+   * @param parameters The parameters to use
+   */
+  protected void startSMTPServer(Parameters parameters) throws Exception {    
+    if (parameters.getBooleanParameter("email_smtp_enable")) {
+      try {
+        int port = parameters.getIntParameter("email_smtp_port");
+        boolean gateway = parameters.getBooleanParameter("email_gateway");
+        boolean accept = parameters.getBooleanParameter("email_accept_nonlocal");
+        
+        if (parameters.getBooleanParameter("email_smtp_ssl")) {
+          stepStart("Starting SSL SMTP server on port " + port);
+          smtp = new SSLSmtpServerImpl(port, email, gateway, address, accept);
+          smtp.start();
+          stepDone(SUCCESS);
+        } else {
+          stepStart("Starting SMTP server on port " + port);
+          smtp = new SmtpServerImpl(port, email, gateway, address, accept);
+          smtp.start();
+          stepDone(SUCCESS);
+        }
+      } catch (Exception e) {
+        stepDone(FAILURE, "ERROR: Unable to launch SMTP server - continuing - " + e);
+      }
+    }
+  }
+
+  /**
+   * Method which starts the local IMAP server
+   *
+   * @param parameters The parameters to use
+   */
+  protected void startIMAPServer(Parameters parameters) throws Exception {    
+    if (parameters.getBooleanParameter("email_imap_enable")) {
+      try {
+        int port = parameters.getIntParameter("email_imap_port");
+        boolean gateway = parameters.getBooleanParameter("email_gateway");
+        boolean accept = parameters.getBooleanParameter("email_accept_nonlocal");
+        
+        if (parameters.getBooleanParameter("email_imap_ssl")) {
+          stepStart("Starting SSL IMAP server on port " + port);
+          imap = new SSLImapServerImpl(port, email, manager, gateway, accept);
+          imap.start();
+          stepDone(SUCCESS);
+        } else {
+          stepStart("Starting IMAP server on port " + port);
+          imap = new ImapServerImpl(port, email, manager, gateway, accept);
+          imap.start();
+          stepDone(SUCCESS);
+        }
+      } catch (Exception e) {
+        stepDone(FAILURE, "ERROR: Unable to launch IMAP server - continuing - " + e);
+      }
+    }
+  }
+
+  /**
+   * Method which starts the local POP3 server
+   *
+   * @param parameters The parameters to use
+   */
+  protected void startPOP3Server(Parameters parameters) throws Exception {    
+    if (parameters.getBooleanParameter("email_pop3_enable")) {
+      try {
+        int port = parameters.getIntParameter("email_pop3_port");
+        boolean gateway = parameters.getBooleanParameter("email_gateway");
+        boolean accept = parameters.getBooleanParameter("email_accept_nonlocal");
+        
+        if (parameters.getBooleanParameter("email_pop3_ssl")) {
+          stepStart("Starting SSL POP3 server on port " + port);
+          pop3 = new SSLPop3ServerImpl(port, email, manager, gateway, accept);
+          pop3.start();
+          stepDone(SUCCESS);
+        } else {
+          stepStart("Starting POP3 server on port " + port);
+          pop3 = new Pop3ServerImpl(port, email, manager, gateway, accept);
+          pop3.start();
+          stepDone(SUCCESS);
+        }
+      } catch (Exception e) {
+        stepDone(FAILURE, "ERROR: Unable to launch IMAP server - continuing - " + e);
+      }
+    }
+  }
+
+
+  /**
+   * Method which starts the local WebMail server
+   *
+   * @param parameters The parameters to use
+   */
+  protected void startWebMailServer(Parameters parameters) throws Exception {    
+    if (parameters.getBooleanParameter("email_webmail_enable")) {
+      int port = parameters.getIntParameter("email_pop3_port");
+      //    stepStart("Starting WebMail server on port " + WEBMAIL_PORT);
+      //    web = new WebServer();
+      //    web.start();
+      //    stepDone(SUCCESS);
+    }
+  }
+
+  public Parameters start(Parameters parameters) throws Exception {
+    initializeParameters(super.start(parameters), DEFAULT_PARAMETERS);
+
+    sectionStart("Starting Email services");
+    startMailcap(parameters);
        
-       if (name != null) {
-         sectionStart("Starting Email services");
-         stepStart("Starting Email service");
-         email = new EmailService(post, pair, ALLOW_LOG_INSERT);
-         stepDone(SUCCESS);
-         
-         ExternalContinuation c = null;
-         
-         if (FETCH_LOGS) {
-           stepStart("Fetching Email INBOX log");
-           int retries = 0;
-           boolean done = false;
-         
-           while (!done) {
-             c = new ExternalContinuation();
-             email.getRootFolder(c);
-             c.sleep();
-           
-             if (c.exceptionThrown()) { 
-               if (retries < NUM_RETRIES) {
-                 retries++;
-               } else {
-                 throw c.getException(); 
-               }
-             } else {
-               done = true;
-             }
-           }
-           stepDone(SUCCESS);
-         }
-         
-         stepStart("Starting User Email Services");
-         
-         if (FETCH_LOGS) 
-           manager = new UserManagerImpl(email, new PostMailboxManager(email, (rice.email.Folder) c.getResult()));
-         else 
-           manager = new UserManagerImpl(email, new PostMailboxManager(email, null));
-           
-         String addr = address.toString();
-         manager.createUser(addr.substring(0, addr.indexOf("@")), null, pass);
-         stepDone(SUCCESS);
-         
-         try {
-           if (! SSL) {
-             stepStart("Starting SMTP server on port " + SMTP_PORT);
-             smtp = new SmtpServerImpl(SMTP_PORT, email, GATEWAY, address, ACCEPT_NON_LOCAL);
-             smtp.start();
-             stepDone(SUCCESS);
-           } else {
-             stepStart("Starting SSL SMTP server on port " + SMTP_PORT);
-             smtp = new SSLSmtpServerImpl(SMTP_PORT, email, GATEWAY, address, ACCEPT_NON_LOCAL);
-             smtp.start();
-             stepDone(SUCCESS);
-           }
-         } catch (Exception e) {
-           System.err.println("ERROR: Unable to launch SMTP server - continuing - " + e);
-         }
-         
-         try {
-           if (! SSL) {
-             stepStart("Starting POP3 server on port " + POP3_PORT);
-             pop3 = new Pop3ServerImpl(POP3_PORT, email, manager, GATEWAY, ACCEPT_NON_LOCAL);
-             pop3.start();
-             stepDone(SUCCESS);
-           } else {
-             stepStart("Starting SSL POP3 server on port " + POP3_PORT);
-             pop3 = new SSLPop3ServerImpl(POP3_PORT, email, manager, GATEWAY, ACCEPT_NON_LOCAL);
-             pop3.start();
-             stepDone(SUCCESS);
-           }
-         } catch (Exception e) {
-           System.err.println("ERROR: Unable to launch POP3 server - continuing - " + e);
-         }
-         
-         try {
-           if (! SSL) {
-             stepStart("Starting IMAP server on port " + IMAP_PORT);
-             imap = new ImapServerImpl(IMAP_PORT, email, manager, GATEWAY, ACCEPT_NON_LOCAL);
-             imap.start();
-             stepDone(SUCCESS);
-           } else {
-             stepStart("Starting SSL IMAP server on port " + IMAP_PORT);
-             imap = new SSLImapServerImpl(IMAP_PORT, email, manager, GATEWAY, ACCEPT_NON_LOCAL);
-             imap.start();
-             stepDone(SUCCESS);
-           }
-         } catch (Exception e) {
-           System.err.println("ERROR: Unable to launch IMAP server - continuing - " + e);
-         }
-         
-         //    stepStart("Starting WebMail server on port " + WEBMAIL_PORT);
-         //    web = new WebServer();
-         //    web.start();
-         //    stepDone(SUCCESS);
-         
-         sectionDone();
-         
-         PostMessage.factory = FACTORY;
-         
-   /*      Thread t = new Thread("POST Presence Announcement Thread") {
-           public void run() {
-             try {
-               while (true) {
-                 Thread.sleep(60000);
-                 post.announcePresence();
-               }
-             } catch (Throwable t) {
-               System.out.println("Error: (PostAnnouncement.run): " + t);
-               t.printStackTrace();
-               System.exit(-1);
-             }
-           }
-         };
-         
-         if (SEND_PUBLISH) {
-           t.start();
-         } */
-       }
-     }
-     
-  public void parseArgs(String[] args) {
-    super.parseArgs(args);
-
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-imapport") && i+1 < args.length) {
-        int n = Integer.parseInt(args[i+1]);
-        if (n > 0) IMAP_PORT = n;
-        break;
-      }
-    }
-    
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-pop3port") && i+1 < args.length) {
-        int n = Integer.parseInt(args[i+1]);
-        if (n > 0) POP3_PORT = n;
-        break;
-      }
+    if (parameters.getBooleanParameter("post_proxy_enable")) {
+      startEmailService(parameters);
+      startFetchEmailLog(parameters);
+      startUserManager(parameters);
+      startSMTPServer(parameters);
+      startIMAPServer(parameters);
+      startPOP3Server(parameters);
+      startWebMailServer(parameters);
     }
 
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-smtpport") && i+1 < args.length) {
-        int n = Integer.parseInt(args[i+1]);
-        if (n > 0) SMTP_PORT = n;
-        break;
-      }
-    }
+    sectionDone();
     
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-ssl")) {
-        SSL = true;
-        break;
-      }
-    }
-    
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-gateway")) {
-        GATEWAY = true;
-        break;
-      }
-    }
-    
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-nonlocal")) {
-        ACCEPT_NON_LOCAL = true;
-        break;
-      }
-    }
-    
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-nopublish")) {
-        SEND_PUBLISH = false;
-        break;
-      }
-    }
+    return parameters;
   }    
 
   /**
@@ -273,12 +288,7 @@ public class EmailProxy extends PostProxy {
    * java rice.email.proxy.EmailProxy userid [-bootstrap hostname[:port]] [-port port] [-imapport port] [-smtpport port]
    */
   public static void main(String[] args) {
-    EmailProxy proxy = new EmailProxy(args);
-    try {
-      proxy.start();
-    } catch (Exception e) {
-      System.err.println("ERROR: Found Exception while start proxy - exiting - " + e);
-      System.exit(-1);
-    }
+    EmailProxy proxy = new EmailProxy();
+    proxy.start();
   }
 }
