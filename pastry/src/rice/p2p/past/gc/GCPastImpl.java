@@ -142,7 +142,23 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param expiration The time to extend the lifetime to
    * @param command Command to be performed when the result is received
    */
-  public void refresh(final IdSet ids, final long expiration, Continuation command) {
+  public void refresh(Id[] array, final long expiration, Continuation command) {
+    IdSet set = factory.buildIdSet();
+    for (int i=0; i<array.length; i++)
+      set.addId(array[i]);
+    
+    refresh(set, expiration, command);
+  }
+  
+  /**
+   * Internal method which actually does the refreshing.  Should not be called
+   * by external applications.
+   *
+   * @param ids The ids to refresh
+   * @param expiration The time to extend the lifetime until
+   * @param command The command to return the result to
+   */
+  protected void refresh(final IdSet ids, final long expiration, Continuation command) {
     if (ids.numElements() == 0) {
       command.receiveResult(new Boolean(true));
       return;
@@ -261,6 +277,25 @@ public class GCPastImpl extends PastImpl implements GCPast {
         };
           
         remove.receiveResult(null);
+      } else if (msg instanceof FetchHandleMessage) {
+        final FetchHandleMessage fmsg = (FetchHandleMessage) msg;
+        storage.getObject(fmsg.getId(), new StandardContinuation(getResponseContinuation(msg)) {
+          public void receiveResult(Object o) {
+            GCPastContent content = (GCPastContent) o;
+            
+            if (content != null) {
+              log.fine("Retrieved data for fetch handles of id " + fmsg.getId());
+              GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(fmsg.getId());
+              
+              if (metadata != null) 
+                parent.receiveResult(content.getHandle(GCPastImpl.this, metadata.getExpiration()));
+              else
+                parent.receiveResult(content.getHandle(GCPastImpl.this, NO_EXPIRATION_SPECIFIED));
+            } else {
+              parent.receiveResult(null);
+            }
+          } 
+        });
       } else {
         super.deliver(id, message);
       }

@@ -129,7 +129,7 @@ public interface GCPast extends Past {
    * @param expiration The time to extend the lifetime to
    * @param command Command to be performed when the result is received
    */
-  public void refresh(IdSet ids, long expiration, Continuation command);
+  public void refresh(Id[] ids, long expiration, Continuation command);
 
 }
 
