@@ -144,12 +144,15 @@ public class Stripe extends Observable implements IScribeApp{
      public void receiveMessage(ScribeMessage msg){
        setChanged();
        notifyObservers(); 
+       System.out.println(new String((byte[]) msg.getData()));
        /* Check the type of message */
        /* then make call accordingly */
      }
      public void scribeIsReady(){}
      public void subscribeHandler(NodeId topicId,
                                   NodeHandle child, boolean wasAdded, Serializable data){
+	  System.out.println("Another Node is attempting to Subscribe to Stripe");
+	  channel.stripeSubscriberAdded();
           /* We should check if we can take this child on */
      }
 

@@ -15,9 +15,11 @@ import java.util.*;
  * class is abstract. The behavior will be decided at a later point
  */
 public class BandwidthManager{
-     private Hashtable channelBandwidth = null;
+     private Hashtable maxBandwidth = null;
+     private Hashtable usedBandwidth = null;
      public BandwidthManager(){
-	channelBandwidth = new Hashtable();
+	maxBandwidth = new Hashtable();
+	usedBandwidth = new Hashtable();
      }
      /**
       * This method makes an attempt to free up bandwidth
@@ -60,12 +62,18 @@ public class BandwidthManager{
      * @param the channel to be added
      */
       public void registerChannel(Channel channel){
-	channelBandwidth.put(channel, new Integer(DEFAULT_CHILDREN)); 
+	maxBandwidth.put(channel, new Integer(DEFAULT_CHILDREN)); 
+	usedBandwidth.put(channel, new Integer(0)); 
 
       }
 
       public void adjustBandwidth(Channel channel, int outbandwidth){
-       channelBandwidth.put(channel, new Integer(outbandwidth));
+        maxBandwidth.put(channel, new Integer(outbandwidth));
+      }
+      public void additionalBandwidthUsed(Channel channel){
+	int oldBandwidth = ((Integer)usedBandwidth.get(channel)).intValue();
+	usedBandwidth.put(channel,new Integer(oldBandwidth + 1));
+	
       }
 
       private static int DEFAULT_CHILDREN = 20;

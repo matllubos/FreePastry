@@ -280,24 +280,28 @@ public class Channel extends PastryAppl implements IScribeApp {
      return spareCapacityId;
   }
 
+  public void stripeSubscriberAdded(){
+	bandwidthManager.additionalBandwidthUsed(this);
+  }
+
 
   public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){}
   public void forwardHandler(ScribeMessage msg){}
   public void receiveMessage(ScribeMessage msg){
      /* Check the type of message */
      /* then make call accordingly */
-	if(msg.getTopicId() == channelId){
+	//if(msg.getTopicId() == channelId){
 	 	ControlAttachMessage attachMessage =(ControlAttachMessage) msg.getData();
 		attachMessage.handleMessage(this, scribe, msg.getSource());
-	}
-	else if(msg.getTopicId() == spareCapacityId){
+	//}
+	/*else if(msg.getTopicId() == spareCapacityId){
 		Stripe stripe = null;
 		ControlFindParentMessage parentMessage = (ControlFindParentMessage) msg;
 		if(stripeIdTable.get(parentMessage.getStripeId()) instanceof Stripe){
 			stripe = (Stripe) stripeIdTable.get(parentMessage.getStripeId());	
 		}
 		parentMessage.handleForwardWrapper((Scribe) scribe,((Scribe) scribe).getTopic(parentMessage.getTopicId()), stripe );
-	}
+	}*/
   }
   public void scribeIsReady(){
   }
