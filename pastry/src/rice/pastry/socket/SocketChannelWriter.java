@@ -178,7 +178,7 @@ public class SocketChannelWriter {
     } else if (obj instanceof rice.post.messaging.PostPastryMessage) {
       record(action, ((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, path);
     } else {
-      System.out.println("COUNT: " + System.currentTimeMillis() + " " + action + " message " + obj.getClass() + " of size " + size + " to " + path);
+      if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + action + " message " + obj.getClass() + " of size " + size + " to " + path);
     }
   }
 

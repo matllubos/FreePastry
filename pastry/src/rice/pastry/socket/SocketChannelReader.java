@@ -159,10 +159,10 @@ public class SocketChannelReader {
             return obj;
           }
         } else {
-          System.out.println("COUNT: " + System.currentTimeMillis() + " Read message, but too big to deserialize on Selector thread");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message, but too big to deserialize on Selector thread");
           ((SocketPastryNode) spn).process(new Executable() {
             public Object execute() {
-              System.out.println("COUNT: " + System.currentTimeMillis() + " Starting deserialization on message on processing thread");
+              if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Starting deserialization on message on processing thread");
               try {
                 return deserialize(objectArray);
               } catch (Exception e) {
@@ -202,7 +202,7 @@ public class SocketChannelReader {
     } else if (obj instanceof rice.post.messaging.PostPastryMessage) {
       record(((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, path);
     } else {
-      System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + obj.getClass() + " of size " + size + " from " + path);
+      if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + obj.getClass() + " of size " + size + " from " + path);
     }
   }
 

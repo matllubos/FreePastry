@@ -369,7 +369,7 @@ public class SocketSourceRouteManager {
       this.pendingRoutes = new HashSet();
       this.deadRoutes = new HashSet();
       
-      System.out.println("ADDRESS MANAGER CREATED AT " + localAddress + " FOR " + address);
+      if (SocketPastryNode.verbose) System.out.println("ADDRESS MANAGER CREATED AT " + localAddress + " FOR " + address);
       
       if (search)
         checkRoute(SourceRoute.build(address));
@@ -405,7 +405,7 @@ public class SocketSourceRouteManager {
         dead = false;
         pool.update(route.getLastHop(), SocketNodeHandle.DECLARED_LIVE);
         
-        System.out.println("COUNT: " + System.currentTimeMillis() + " Found address " + address + " to be alive again.");
+        if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Found address " + address + " to be alive again.");
       } 
       
       // and finally we can now send any pending messages
@@ -431,7 +431,7 @@ public class SocketSourceRouteManager {
       
         pool.update(address, SocketNodeHandle.DECLARED_DEAD);
         
-        System.out.println("COUNT: " + System.currentTimeMillis() + " Found address " + address + " to be dead due to new epoch.");        
+        if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Found address " + address + " to be dead due to new epoch.");        
         
         while (queue.size() > 0)
           reroute(address, (Message) queue.remove(0));        
@@ -471,7 +471,7 @@ public class SocketSourceRouteManager {
           dead = true;
           pool.update(address, SocketNodeHandle.DECLARED_DEAD);
           
-          System.out.println("COUNT: " + System.currentTimeMillis() + " Found address " + address + " to be dead.");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Found address " + address + " to be dead.");
           
           while (queue.size() > 0)
             reroute(address, (Message) queue.remove(0));

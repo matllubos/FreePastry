@@ -241,7 +241,7 @@ public class PingManager extends SelectionKeyHandler {
       if ((spn != null) && (spn instanceof SocketPastryNode))
         ((SocketPastryNode) spn).broadcastSentListeners(msg, path.toArray(), data.length);
       
-      System.out.println("COUNT: " + System.currentTimeMillis() + " Sent message " + msg.getClass() + " of size " + data.length  + " to " + path);    
+      if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Sent message " + msg.getClass() + " of size " + data.length  + " to " + path);    
       
       SelectorManager.getSelectorManager().modifyKey(key);
     } catch (IOException e) {
@@ -268,11 +268,11 @@ public class PingManager extends SelectionKeyHandler {
         ((SocketPastryNode) spn).broadcastReceivedListeners(dm, path.reverse().toArray(), size);
             
       if (dm instanceof PingMessage) {
-        System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + dm.getInboundPath().reverse());      
+        if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + dm.getInboundPath().reverse());      
 
         enqueue(dm.getInboundPath(), new PingResponseMessage(dm.getOutboundPath(), dm.getInboundPath(), start));        
       } else if (dm instanceof PingResponseMessage) {
-        System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + dm.getOutboundPath().reverse());      
+        if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + dm.getOutboundPath().reverse());      
 
         long curTime = System.currentTimeMillis();
         int time = (int) (curTime - start);

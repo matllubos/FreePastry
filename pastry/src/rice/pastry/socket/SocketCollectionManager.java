@@ -140,7 +140,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     this.resigned = false;
     this.random = new Random();
     
-    System.out.println("BINDING TO ADDRESS " + bindAddress + " AND CLAIMING " + localAddress);
+    if (SocketPastryNode.verbose) System.out.println("BINDING TO ADDRESS " + bindAddress + " AND CLAIMING " + localAddress);
     
     try {
       // bind to port
@@ -273,7 +273,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    */
   protected void checkDead(SourceRoute path) {    
     if (! resigned) {
-      System.out.println("CHECK DEAD: " + localAddress + " CHECKING DEATH OF PATH " + path);
+      if (SocketPastryNode.verbose) System.out.println("CHECK DEAD: " + localAddress + " CHECKING DEATH OF PATH " + path);
       DeadChecker checker = new DeadChecker(path, NUM_PING_TRIES);
       ((SocketPastryNode) pastryNode).getTimer().scheduleAtFixedRate(checker, PING_DELAY + random.nextInt(PING_JITTER), PING_DELAY + random.nextInt(PING_JITTER));
       pingManager.forcePing(path, checker);
@@ -539,7 +539,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param mgr DESCRIBE THE PARAMETER
      */
     public DeadChecker(SourceRoute path, int numTries) {
-      System.out.println("DeadChecker(" + path + ") started.");
+      if (SocketPastryNode.verbose) System.out.println("DeadChecker(" + path + ") started.");
 
       this.path = path;
       this.numTries = numTries;
@@ -553,7 +553,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param timeHeardFrom DESCRIBE THE PARAMETER
      */
     public void pingResponse(SourceRoute path, long RTT, long timeHeardFrom) {
-      System.out.println("Terminated DeadChecker(" + path + ") due to ping.");
+      if (SocketPastryNode.verbose) System.out.println("Terminated DeadChecker(" + path + ") due to ping.");
       manager.markAlive(path);
       cancel();
     }
@@ -633,7 +633,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       this.writer = new SocketChannelWriter(pastryNode, path);
       this.bootstrap = bootstrap;
       
-      System.out.println("Opening connection with path " + path);
+      if (SocketPastryNode.verbose) System.out.println("Opening connection with path " + path);
       
       // build the entire connection
       createConnection(path);
@@ -758,7 +758,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
               this.writer.setPath(this.path);
               this.reader.setPath(this.path.reverse());
 
-              System.out.println("Read open connection with path " + this.path);              
+              if (SocketPastryNode.verbose) System.out.println("Read open connection with path " + this.path);              
             } else {
               System.out.println("SERIOUS ERROR: Received duplicate path assignments: " + this.path + " and " + o);
             }
@@ -790,7 +790,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
           
           if (bootstrap) {
-            System.out.println("BOOTSTRAP: DONE SENDING - CLOSING ");
+            if (SocketPastryNode.verbose) System.out.println("BOOTSTRAP: DONE SENDING - CLOSING ");
             close();
           }
         }
@@ -868,7 +868,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       } else {
         long start = System.currentTimeMillis();
         pastryNode.receiveMessage(message);
-        System.out.println("ST: " + (System.currentTimeMillis() - start) + " deliver of " + message);
+        if (SocketPastryNode.verbose) System.out.println("ST: " + (System.currentTimeMillis() - start) + " deliver of " + message);
       }
     }
 

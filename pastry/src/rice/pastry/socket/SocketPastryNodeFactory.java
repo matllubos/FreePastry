@@ -181,7 +181,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   public NodeHandle generateNodeHandle(InetSocketAddress address) {
     // send nodeId request to remote node, wait for response
     // allocate enought bytes to read a node handle
-    System.out.println("Socket: Contacting bootstrap node " + address);
+    if (SocketPastryNode.verbose) System.out.println("Socket: Contacting bootstrap node " + address);
 
     try {
       NodeIdResponseMessage rm = (NodeIdResponseMessage) getResponse(address, new NodeIdRequestMessage());
@@ -202,6 +202,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @return A node with a random ID and next port number.
    */
   public PastryNode newNode(NodeHandle bootstrap) {
+    if (bootstrap == null) {
+      return newNode(bootstrap, NodeId.buildNodeId());
+    } 
     return newNode(bootstrap, nidFactory.generateNodeId());
   }
 
