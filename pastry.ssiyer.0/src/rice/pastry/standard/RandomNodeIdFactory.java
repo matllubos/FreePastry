@@ -31,9 +31,10 @@ package rice.pastry.standard;
 import rice.pastry.*;
 
 import java.util.Random;
+import java.security.*;
 
 /**
- * Constructs random node ids from material pulled from java.util.Random.
+ * Constructs random node ids by SHA'ing material pulled from java.util.Random.
  */
 
 public class RandomNodeIdFactory 
@@ -42,10 +43,20 @@ public class RandomNodeIdFactory
     
     public NodeId generateNodeId() {
 	byte raw[] = new byte[NodeId.nodeIdBitLength >> 3];
-	
 	rng.nextBytes(raw);
 
-	NodeId nodeId = new NodeId(raw);
+	MessageDigest md = null;
+
+	try {
+	    md = MessageDigest.getInstance("SHA");
+	} catch ( NoSuchAlgorithmException e ) {
+	    System.err.println( "No SHA support!" );
+	}
+
+	md.update(raw);
+	byte[] digest = md.digest();
+	
+	NodeId nodeId = new NodeId(digest);
 
 	return nodeId;
     }

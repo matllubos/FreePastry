@@ -110,7 +110,7 @@ public class StandardJoinProtocol implements MessageReceiver
 		    }
 		}	    
 	}
-	else if (msg instanceof RouteMessage) {
+	else if (msg instanceof RouteMessage) { // a join request message on an intermediate node
 	    RouteMessage rm = (RouteMessage) msg;
 
 	    JoinRequest jr = (JoinRequest) rm.unwrap();
@@ -141,7 +141,7 @@ public class StandardJoinProtocol implements MessageReceiver
 
 	    rm.routeMessage(localId);
 	}
-	else if (msg instanceof InitiateJoin) {
+	else if (msg instanceof InitiateJoin) {  // request from the local node to join
 	    InitiateJoin ij = (InitiateJoin) msg;
 	    
 	    NodeHandle nh = ij.getHandle();
@@ -178,22 +178,30 @@ public class StandardJoinProtocol implements MessageReceiver
 	    }
 	}
 
+
 	for (int i=0; i<n; i++) {
 	    RouteSet row[] = routeTable.getRow(i);
 
 	    for (int j=0; j<row.length; j++) {
 		RouteSet rs = row[j];
 
-		int m = rs.size();
-		
 		BroadcastRouteRow brr = new BroadcastRouteRow(localId, row);
 
+		// broadcast to closest node only
+		NodeHandle nh = rs.closestNode();
+		if (nh != null) nh.receiveMessage(brr);
+
+		/*
+		int m = rs.size();
 		for (int k=0; k<m; k++) {
 		    NodeHandle nh = rs.get(k);
 		    
 		    nh.receiveMessage(brr);
 		}
+		*/
 	    }
 	}
+
+
     }
 }

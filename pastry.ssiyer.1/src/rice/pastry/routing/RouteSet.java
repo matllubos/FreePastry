@@ -44,9 +44,10 @@ import java.util.*;
 import java.io.*;
 
 /**
- * A set of nodes typically stored in the routing table.  This
- * is a set of nodes which contains a bounded number of the closest
- * node handles.
+ * A set of nodes typically stored in the routing table.  The
+ * set contains a bounded number of the closest
+ * node handles. Since proximity value can change unpredictably, we don't
+ * keep the set in sorted order.
  *
  * @author Andrew Ladd
  * @author Peter Druschel
@@ -69,7 +70,8 @@ public class RouteSet extends Observable implements NodeSet, Serializable
     }
 
     /**
-     * Puts a node into the set.
+     * Puts a node into the set. The insertion succeeds either if the set is
+     * below is maximal size or if the handle is closer than the most distant member in the set.
      *
      * @param handle the handle to put.
      *
@@ -77,12 +79,24 @@ public class RouteSet extends Observable implements NodeSet, Serializable
      */
     
     public boolean put(NodeHandle handle) {
-	int n = nodes.length;
+	int worstIndex = -1;
+	int worstProximity = Integer.MIN_VALUE;
 
-	for (int i=0; i<theSize; i++)
+	// scan entries
+	for (int i=0; i<theSize; i++) {
+
+	    // if handle is already in the set, abort
 	    if (nodes[i].getNodeId().equals(handle.getNodeId())) return false;
+
+	    // find entry with worst proximity
+	    int p = nodes[i].proximity();
+	    if (p >= worstProximity) {
+		worstProximity = p;
+		worstIndex = i;
+	    }
+	}
 	
-	if (theSize < n) {
+	if (theSize < nodes.length) {
 	    nodes[theSize++] = handle;
 
 	    setChanged();
@@ -91,19 +105,12 @@ public class RouteSet extends Observable implements NodeSet, Serializable
 	    return true; 
 	}
 	else {
-	    int worstIndex = 0;
-	    int worstProximity = nodes[0].proximity();
-
-	    for (int i=1; i<n; i++) {
-		int p = nodes[i].proximity();
-		
-		if (p > worstProximity) {
-		    worstProximity = p;
-		    worstIndex = i;
-		}
-	    }
-
 	    if (handle.proximity() < worstProximity) {
+		// remove handle with worst proximity
+		setChanged();
+		notifyObservers(new NodeSetUpdate(nodes[worstIndex], false));
+				
+		// insert new handle
 		nodes[worstIndex] = handle; 
 
 		setChanged();
@@ -164,28 +171,29 @@ public class RouteSet extends Observable implements NodeSet, Serializable
     public int size() { return theSize; }
     
     /**
-     * Return the closest node in the set.
+     * Return the closest live node in the set.
      *
-     * @return the closest node.
+     * @return the closest node, or null if no live node exists in the set.
      */
 
     public NodeHandle closestNode() { 
-	int bestProximity = nodes[0].proximity();
-	int bestIndex = 0;
+	int bestProximity = Integer.MAX_VALUE;
+	NodeHandle bestNode = null;
 
-	for (int i=1; i<theSize; i++) {
+	for (int i=0; i<theSize; i++) {
+	    if (!nodes[i].isAlive()) continue;
+
 	    int p = nodes[i].proximity();
-
-	    if (p < bestProximity) {
+	    if (p <= bestProximity) {
 		bestProximity = p;
-		bestIndex = i;
+		bestNode = nodes[i];
 	    }
 	}
 
 	//System.out.println(bestProximity);
 	//System.out.println(nodes.length);
 	
-	return nodes[bestIndex];
+	return bestNode;
     }
     
     /**

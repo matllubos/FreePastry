@@ -125,11 +125,7 @@ public class StandardRouter implements MessageReceiver {
 	    NodeHandle handle = null;
 
 	    // get the closest alive node
-	    for (int k=0; k<rs.size(); k++) 
-		if (rs.get(k).isAlive()) {
-		    handle = rs.get(k);
-		    break;
-		}
+	    handle = rs.closestNode();
 
 	    if (handle == null) {
 		// no live routing table entry matching the next digit
