@@ -40,7 +40,7 @@ public class DirectSplitStreamTest{
     private Vector channelIds;
     private Random rng;
     private RandomNodeIdFactory idFactory;
-    private static int numNodes = 100;
+    private static int numNodes = 500;
     private static int port = 5009;
     private static String bshost;
     private static int bsport = 5009;
@@ -58,7 +58,7 @@ public class DirectSplitStreamTest{
     // The number of nodes that fail concurrently. This step of failing
     // nodes concurrently is repeated till the desired number of totalFailures
     // number of nodes has been killed.   
-    private int concurrentFailures =  5; 
+    private int concurrentFailures =  20; 
 
 
     // The number of nodes that join concurrently.
@@ -88,7 +88,7 @@ public class DirectSplitStreamTest{
 
 	System.out.println("SplitStream Test Program v0.4");
 	//PastrySeed.setSeed((int)System.currentTimeMillis());
-	PastrySeed.setSeed( -524481316 );
+	PastrySeed.setSeed( -140035239 );
 	System.out.println(PastrySeed.getSeed() );
 	DirectSplitStreamTest test = new DirectSplitStreamTest();
 	test.init();
@@ -130,6 +130,12 @@ public class DirectSplitStreamTest{
 
 	result &= passed;
 
+	System.out.println("Printing the spare capacity tree\n");
+	DirectSplitStreamTestApp app = (DirectSplitStreamTestApp) test.splitStreamApps.elementAt(0);
+	passed = test.checkTree((NodeId)app.getSpareCapacityId(channelId));
+
+	
+
 	System.out.println("All nodes are joining all stripes");
 	test.join();
 	while(test.simulate());
@@ -145,7 +151,12 @@ public class DirectSplitStreamTest{
 	else
 	    System.out.println("\n\nSTRIPE-TREE MEMBERSHIP TEST : FAILED \n\n");
 
+	
 	result &= passed;
+
+	System.out.println("Printing the spare capacity tree\n");
+	DirectSplitStreamTestApp app2 = (DirectSplitStreamTestApp) test.splitStreamApps.elementAt(0);
+	passed = test.checkTree((NodeId)app2.getSpareCapacityId(channelId));
 
 	/**
 	 * TEST 3 
@@ -193,10 +204,25 @@ public class DirectSplitStreamTest{
 
 	result &= passed;
 
+	test.printParents(channelId);
+
 	/**
 	 * Now we will fail some nodes currently and then see if the system
 	 * still works.
 	 */
+	/*	
+	test.killNodes(test.concurrentFailures);
+	for(int i = 0; i <= test.trThreshold; i++)
+	    test.scheduleHBOnAllNodes();
+
+	passed =  test.checkAllStripeTrees(channelId);
+
+	if(passed)
+	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP TEST : PASSED \n\n");
+	else
+	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP FAILED \n\n");
+	
+	result &= passed;
 	
 	test.killNodes(test.concurrentFailures);
 	for(int i = 0; i <= test.trThreshold; i++)
@@ -209,8 +235,7 @@ public class DirectSplitStreamTest{
 	else
 	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP FAILED \n\n");
 
-	
-
+	*/
 	System.out.println(PastrySeed.getSeed() );
     }
 
@@ -239,6 +264,7 @@ public class DirectSplitStreamTest{
         int base = RoutingTable.baseBitLength();
 	ChannelId cid = 
 	    ((DirectSplitStreamTestApp) splitStreamApps.elementAt(rng.nextInt(numNodes))).createChannel(1<<base,"DirectSplitStreamTest");
+	    //((DirectSplitStreamTestApp) splitStreamApps.elementAt(rng.nextInt(numNodes))).createChannel(1,"DirectSplitStreamTest");
 	while(simulate());
 	return cid;
     }
@@ -653,6 +679,26 @@ public class DirectSplitStreamTest{
 	    scribe = app.getScribe();
 	    scribe.scheduleHB();
 	    while (simulate());
+	}
+    }
+
+    public void printParents(ChannelId channelId){
+	Scribe scribe;
+	StripeId[] stripeIds;
+	DirectSplitStreamTestApp app;
+	while(simulate());
+	for(int i= 0; i < splitStreamApps.size(); i++) {
+	    app = (DirectSplitStreamTestApp)splitStreamApps.elementAt(i);
+	    scribe = app.getScribe();
+	    stripeIds = app.getStripeIds(channelId);
+	    System.out.println("Printing parents for Application "+app.getNodeId());
+	    for(int j = 0; j < stripeIds.length; j++){
+		if(scribe.isRoot(stripeIds[j]))
+		    System.out.println("Node is root for topic "+stripeIds[j]);
+		else
+		    System.out.println("Parent for topic "+stripeIds[j]+" is "+scribe.getParent(stripeIds[j]).getNodeId());
+	    }
+	    System.out.println("\n\n");
 	}
     }
 }

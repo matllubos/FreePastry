@@ -164,6 +164,11 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
 	return channel.getStripes();
     }
 
+    public SpareCapacityId getSpareCapacityId(ChannelId channelId){
+	Channel channel = (Channel) m_channels.get(channelId);
+	return channel.getSpareCapacityId();
+    }
+
     public int getNumStripes(ChannelId channelId){
 	Channel channel = (Channel) m_channels.get(channelId);
 	return channel.getNumStripes();
