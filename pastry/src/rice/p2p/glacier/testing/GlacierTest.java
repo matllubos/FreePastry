@@ -12,6 +12,7 @@ import rice.p2p.glacier.*;
 import rice.p2p.glacier.testing.*;
 import rice.p2p.past.*;
 import rice.p2p.commonapi.IdFactory;
+import rice.p2p.multiring.MultiringIdFactory;
 import rice.persistence.*;
 
 import java.util.*;
@@ -84,7 +85,7 @@ public class GlacierTest {
             new LRUCache(new MemoryStorage(FACTORY), 1000000)
         );
 
-	GlacierImpl glac = new GlacierImpl(pn, "glacier-"+i, pastStor, glacierStor, REPLICATION_FACTOR, numFragments, numSurvivors, INSTANCE);
+	GlacierImpl glac = new GlacierImpl(pn, "glacier-"+i, pastStor, glacierStor, REPLICATION_FACTOR, numFragments, numSurvivors, null, INSTANCE);
 	glaciers.addElement(glac);
 	if (Log.ifp(5)) System.out.println("created " + pn);
     }
