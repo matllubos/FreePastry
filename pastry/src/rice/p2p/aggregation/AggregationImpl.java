@@ -2321,6 +2321,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   public void setLogLevel(int newLevel) {
     this.loglevel = newLevel;
+    aggregateList.setLogLevel(newLevel);
   }
 
   public Past getAggregateStore() {
