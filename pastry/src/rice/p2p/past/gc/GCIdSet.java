@@ -67,7 +67,7 @@ public class GCIdSet implements IdSet {
    * Constructor
    */
   protected GCIdSet(TreeSet set) {
-    this.ids = set;
+    this.ids = new TreeSet(set);
   }
   
   /**

@@ -58,7 +58,7 @@ public class ReplicationImpl implements Replication, Application {
   /**
    * The amount of time to wait between replications
    */
-  public static int MAINTENANCE_INTERVAL = 60  * 1000;
+  public static int MAINTENANCE_INTERVAL = 60 * 10 * 1000;
   
   /**
    * The maximum number of keys to return in one message
