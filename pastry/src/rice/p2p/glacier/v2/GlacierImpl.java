@@ -622,7 +622,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
               if (fragments.isMemberId(keyHere)) {
                 localFragmentID = i;
                 break;
-              } else if (responsibleRange.containsID(getFragmentLocation(keyHere))) {
+              } else if (responsibleRange.containsId(getFragmentLocation(keyHere))) {
                 queriesHere ++;
               }
             }
