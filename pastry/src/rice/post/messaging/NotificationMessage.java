@@ -1,7 +1,7 @@
 package rice.post.messaging;
 
 import rice.post.*;
-import rice.post.messaging.*;
+import rice.pastry.messaging.*;
 import java.io.*;
 
 /**
