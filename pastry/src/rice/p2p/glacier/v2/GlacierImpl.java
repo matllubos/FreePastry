@@ -33,7 +33,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   protected long nextContinuationTimeout;
   protected IdRange responsibleRange;
   protected int nextUID;
-  protected CancellableTask timer;  
+  protected CancellableTask timer; 
+  protected GlacierStatistics statistics;
+  protected Vector listeners;
 
   private int loglevel = 2;
 
@@ -87,6 +89,22 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private final long rateLimitedCheckInterval = 30 * SECONDS;
   private int rateLimitedRequestsPerSecond = 3;
 
+  private final long statisticsReportInterval = 1 * MINUTES;
+
+  private final char tagNeighbor = 1;
+  private final char tagSync = 2;
+  private final char tagSyncManifests = 3;
+  private final char tagSyncFetch = 4;
+  private final char tagHandoff = 5;
+  private final char tagDebug = 6;
+  private final char tagRefresh = 7;
+  private final char tagInsert = 8;
+  private final char tagLookupHandles = 9;
+  private final char tagLookup = 10;
+  private final char tagFetch = 11;
+  private final char tagLocalScan = 12;
+  private final char tagMax = 13;
+
   public GlacierImpl(Node nodeArg, StorageManager fragmentStorageArg, StorageManager neighborStorageArg, int numFragmentsArg, int numSurvivorsArg, IdFactory factoryArg, String instanceArg, GlacierPolicy policyArg) {
     this.fragmentStorage = fragmentStorageArg;
     this.neighborStorage = neighborStorageArg;
@@ -104,6 +122,8 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     this.pendingTraffic = new Hashtable();
     this.timer = null;
     this.nextContinuationTimeout = -1;
+    this.statistics = new GlacierStatistics(tagMax);
+    this.listeners = new Vector();
     this.debugID = "G" + Character.toUpperCase(instance.charAt(instance.lastIndexOf('-')+1));
     determineResponsibleRange();
 
@@ -140,9 +160,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           if (!leafSet.getHandle(k).getId().equals(getLocalNodeHandle().getId())) {
             neighborSeen(leafSet.getHandle(k).getId(), System.currentTimeMillis());
             log(2, "Asking "+leafSet.getHandle(k).getId()+" about neighbors in "+leafRange);
-            endpoint.route(
+            sendMessage(
               null,
-              new GlacierNeighborRequestMessage(getMyUID(), leafRange, getLocalNodeHandle(), leafSet.getHandle(k).getId()),
+              new GlacierNeighborRequestMessage(getMyUID(), leafRange, getLocalNodeHandle(), leafSet.getHandle(k).getId(), tagNeighbor),
               leafSet.getHandle(k)
             );
           }
@@ -259,10 +279,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
 
           log(3, "Got "+bv);        
           log(2, keySet.numElements()+" keys added, sending sync request...");
-        
-          endpoint.route(
+
+          sendMessage(
             null,
-            new GlacierSyncMessage(getUID(), grrm.getCommonRange(), offset, bv, getLocalNodeHandle(), grrm.getSource().getId()),
+            new GlacierSyncMessage(getUID(), grrm.getCommonRange(), offset, bv, getLocalNodeHandle(), grrm.getSource().getId(), tagSync),
             grrm.getSource()
           );
         } else {
@@ -284,9 +304,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         IdRange requestedRange = factory.buildIdRange(ccwId, cwId);
             
         log(2, "Sending range query for ("+requestedRange+") to "+dest);
-        endpoint.route(
+        sendMessage(
           dest,
-          new GlacierRangeQueryMessage(getMyUID(), requestedRange, getLocalNodeHandle(), dest),
+          new GlacierRangeQueryMessage(getMyUID(), requestedRange, getLocalNodeHandle(), dest, tagSync),
           null
         );
       }
@@ -335,9 +355,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                     if (o != null) {
                       log(2, "Fragment "+thisKey+" found ("+o+"), handing off...");
                       FragmentAndManifest fam = (FragmentAndManifest) o;
-                      endpoint.route(
+                      sendMessage(
                         null,
-                        new GlacierDataMessage(grm.getUID(), thisKey, fam.fragment, fam.manifest, getLocalNodeHandle(), grm.getSource().getId(), true),
+                        new GlacierDataMessage(grm.getUID(), thisKey, fam.fragment, fam.manifest, getLocalNodeHandle(), grm.getSource().getId(), true, tagHandoff),
                         grm.getSource()
                       );
                     } else {
@@ -389,9 +409,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                     public void receiveResult(Object o) {
                       log(2, "Handoff: Stored OK, sending receipt: "+thisKey);
 
-                      endpoint.route(
+                      sendMessage(
                         null,
-                        new GlacierResponseMessage(gdm.getUID(), thisKey, true, thisManifest.getExpiration(), responsibleRange.containsId(getFragmentLocation(thisKey)), getLocalNodeHandle(), gdm.getSource().getId(), true),
+                        new GlacierResponseMessage(gdm.getUID(), thisKey, true, thisManifest.getExpiration(), responsibleRange.containsId(getFragmentLocation(thisKey)), getLocalNodeHandle(), gdm.getSource().getId(), true, tagHandoff),
                         gdm.getSource()
                       );
                     }
@@ -403,9 +423,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                 );
               } else {
                 warn("Handoff: We already have a fragment with this key! -- sending response");
-                endpoint.route(
+                sendMessage(
                   null,
-                  new GlacierResponseMessage(gdm.getUID(), thisKey, true, thisManifest.getExpiration(), true, getLocalNodeHandle(), gdm.getSource().getId(), true),
+                  new GlacierResponseMessage(gdm.getUID(), thisKey, true, thisManifest.getExpiration(), true, getLocalNodeHandle(), gdm.getSource().getId(), true, tagHandoff),
                   gdm.getSource()
                 );
                 
@@ -462,9 +482,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         for (int i=0; i<numHandoffs; i++)
           keys[i] = (FragmentKey) handoffs.elementAt(i);
 
-        endpoint.route(
+        sendMessage(
           destination,
-          new GlacierQueryMessage(getMyUID(), keys, getLocalNodeHandle(), destination),
+          new GlacierQueryMessage(getMyUID(), keys, getLocalNodeHandle(), destination, tagHandoff),
           null
         );
       }
@@ -610,7 +630,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                       if (!fragments.isMemberId(thisKey)) {
                         log(3, "Local scan: Sending query for "+thisKey);
                         final long tStart = System.currentTimeMillis();
-                        rateLimitedRetrieveFragment(thisKey, thisManifest, new GlacierContinuation() {
+                        rateLimitedRetrieveFragment(thisKey, thisManifest, tagLocalScan, new GlacierContinuation() {
                           public String toString() {
                             return "Local scan: Fetch fragment: "+thisKey;
                           }
@@ -715,6 +735,48 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         nextTimeout = System.currentTimeMillis() + (1 * SECONDS);
       }
     });
+
+    /* Statistics */
+    
+    addContinuation(new GlacierContinuation() {
+      long nextTimeout;
+      
+      public String toString() {
+        return "Statistics";
+      }
+      public void init() {
+        nextTimeout = System.currentTimeMillis() + statisticsReportInterval;
+      }
+      public void receiveResult(Object o) {
+        warn("STAT received object: "+o);
+      }
+      public void receiveException(Exception e) {
+        warn("STAT received exception: "+e);
+        e.printStackTrace();
+      }
+      public long getTimeout() {
+        return nextTimeout;
+      }
+      public void timeoutExpired() {
+        if (!listeners.isEmpty()) {
+          statistics.pendingRequests = pendingTraffic.size();
+          statistics.numNeighbors = neighborStorage.scan().numElements();
+          statistics.numFragments = fragmentStorage.scan().numElements();
+          statistics.numContinuations = continuations.size();
+          statistics.numObjectsInTrash = (trashStorage == null) ? 0 : trashStorage.scan().numElements();
+          log(2, "Statistics: "+statistics);
+          
+          Enumeration enum = listeners.elements();
+          while (enum.hasMoreElements()) {
+            GlacierStatisticsListener gsl = (GlacierStatisticsListener) enum.nextElement();
+            gsl.receiveStatistics(statistics);
+          }
+        }
+        
+        statistics = new GlacierStatistics(tagMax);
+        nextTimeout += statisticsReportInterval;
+      }
+    });
   }
 
   private void deleteFragment(final Id fkey, final Continuation command) {
@@ -749,6 +811,13 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       log(2, "Deleting fragment "+fkey.toStringFull());
       fragmentStorage.unstore(fkey, command);
     }
+  }
+
+  public void sendMessage(Id id, GlacierMessage message, NodeHandle hint) {
+    String className = message.getClass().getName();
+    log(2, "Send " + ((hint == null) ? "OVR" : "DIR") + " T" + ((int)message.getTag()) + " " + className.substring(className.lastIndexOf('.') + 8));
+    statistics.messagesSentByTag[message.getTag()] ++;
+    endpoint.route(id, message, hint);
   }
 
   public void setTrashcan(StorageManager trashStorage) {
@@ -1148,9 +1217,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         }
         public void init() {
           for (int i=0; i<total; i++) {
-            endpoint.route(
+            sendMessage(
               fragmentLoc,
-              new GlacierQueryMessage(getMyUID(), new FragmentKey[] { id }, getLocalNodeHandle(), fragmentLoc),
+              new GlacierQueryMessage(getMyUID(), new FragmentKey[] { id }, getLocalNodeHandle(), fragmentLoc, tagDebug),
               null
             );
           }
@@ -1186,7 +1255,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       VersionKey vkey = new VersionKey(key, version);
 
       final String[] ret = new String[] { null };
-      retrieveManifest(vkey, new Continuation() {
+      retrieveManifest(vkey, tagDebug, new Continuation() {
         public void receiveResult(Object o) {
           if (o instanceof Manifest)
             ret[0] = ((Manifest)o).toStringFull();
@@ -1227,7 +1296,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       
       log(2, "refresh("+thisId.toStringFull()+"v"+thisVersion+", exp="+expiration+")");
       
-      retrieveManifest(new VersionKey(thisId, thisVersion), new Continuation() {
+      retrieveManifest(new VersionKey(thisId, thisVersion), tagRefresh, new Continuation() {
         public void receiveResult(Object o) {
           if (o instanceof Manifest) {
             Manifest manifest = (Manifest) o;
@@ -1237,7 +1306,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             Manifest[] manifests = new Manifest[numFragments];
             for (int i=0; i<numFragments; i++)
               manifests[i] = manifest;
-            distribute(new VersionKey(thisId, thisVersion), null, manifests, expiration, thisContinuation);
+            distribute(new VersionKey(thisId, thisVersion), null, manifests, expiration, tagDebug, thisContinuation);
           } else {
             warn("refresh("+thisId+"v"+thisVersion+"): Cannot retrieve manifest");
             thisContinuation.receiveResult(new GlacierException("Cannot retrieve manifest -- retry later"));
@@ -1252,7 +1321,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     }
   }
 
-  private void distribute(final VersionKey key, final Fragment[] fragments, final Manifest[] manifests, final long expiration, final Continuation command) {
+  private void distribute(final VersionKey key, final Fragment[] fragments, final Manifest[] manifests, final long expiration, final char tag, final Continuation command) {
     final long tStart = System.currentTimeMillis();
     addContinuation(new GlacierContinuation() {
       NodeHandle[] holder;
@@ -1289,9 +1358,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           keys[0] = new FragmentKey(key, i);
       
           log(3, "Query #"+i+" to "+fragmentLoc);
-          endpoint.route(
+          sendMessage(
             fragmentLoc,
-            new GlacierQueryMessage(getMyUID(), keys, getLocalNodeHandle(), fragmentLoc),
+            new GlacierQueryMessage(getMyUID(), keys, getLocalNodeHandle(), fragmentLoc, tag),
             null
           );
         }
@@ -1311,9 +1380,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                 if (holder[fragmentID] == null) {
                   holder[fragmentID] = grm.getSource();
                   log(3, "Got insert response, sending fragment "+grm.getKey(0));
-                  endpoint.route(
+                  sendMessage(
                     null,
-                    new GlacierDataMessage(getMyUID(), grm.getKey(0), fragments[fragmentID], manifests[fragmentID], getLocalNodeHandle(), grm.getSource().getId(), false),
+                    new GlacierDataMessage(getMyUID(), grm.getKey(0), fragments[fragmentID], manifests[fragmentID], getLocalNodeHandle(), grm.getSource().getId(), false, tag),
                     grm.getSource()
                   );
                 } else {
@@ -1323,9 +1392,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                 if (holder[fragmentID] == null) {
                   holder[fragmentID] = grm.getSource();
                   log(3, "Got refresh response (exp="+grm.getExpiration(0)+"<"+expiration+"), sending manifest "+grm.getKey(0));
-                  endpoint.route(
+                  sendMessage(
                     null,
-                    new GlacierDataMessage(getMyUID(), grm.getKey(0), null, manifests[fragmentID], getLocalNodeHandle(), grm.getSource().getId(), false),
+                    new GlacierDataMessage(getMyUID(), grm.getKey(0), null, manifests[fragmentID], getLocalNodeHandle(), grm.getSource().getId(), false, tag),
                     grm.getSource()
                   );
                 } else {
@@ -1412,11 +1481,11 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       return;
     }
 
-    distribute(vkey, fragments, manifests, expiration, command);
+    distribute(vkey, fragments, manifests, expiration, tagInsert, command);
   }
 
   private void timerExpired() {
-    log(2, "Timer expired");
+    log(3, "Timer expired");
 
     boolean foundTerminated = false;
     long earliestTimeout;
@@ -1532,7 +1601,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   public void lookupHandles(final Id id, final long version, int num, final Continuation command) {
     log(2, "lookupHandles("+id+"v"+version+", n="+num+")");
     
-    retrieveManifest(new VersionKey(id, version), new Continuation() {
+    retrieveManifest(new VersionKey(id, version), tagLookupHandles, new Continuation() {
       public void receiveResult(Object o) {
         if (o instanceof Manifest) {
           log(3, "lookupHandles("+id+"): received manifest "+o+", returning handle...");
@@ -1555,7 +1624,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   public void lookup(Id id, long version, Continuation command) {
     VersionKey vkey = new VersionKey(id, version);
     log(2, "lookup("+id+"v"+version+")");
-    retrieveObject(vkey, null, true, command);
+    retrieveObject(vkey, null, true, tagLookup, command);
   }
 
   public void lookup(Id id, boolean cache, Continuation command) {
@@ -1575,10 +1644,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     }
     
     GlacierContentHandle gch = (GlacierContentHandle) handle;
-    retrieveObject(new VersionKey(gch.getId(), gch.getVersion()), gch.getManifest(), true, command);
+    retrieveObject(new VersionKey(gch.getId(), gch.getVersion()), gch.getManifest(), true, tagFetch, command);
   }
 
-  public void retrieveManifest(final VersionKey key, final Continuation command) {
+  public void retrieveManifest(final VersionKey key, final char tag, final Continuation command) {
     addContinuation(new GlacierContinuation() {
       protected boolean checkedFragment[];
       protected long timeout;
@@ -1614,9 +1683,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         FragmentKey nextKey = new FragmentKey(key, nextID);
         Id nextLocation = getFragmentLocation(nextKey);
         log(3, "retrieveManifest: Asking "+nextLocation+" for "+nextKey);
-        endpoint.route(
+        sendMessage(
           nextLocation,
-          new GlacierFetchMessage(getMyUID(), nextKey, GlacierFetchMessage.FETCH_MANIFEST, getLocalNodeHandle(), nextLocation),
+          new GlacierFetchMessage(getMyUID(), nextKey, GlacierFetchMessage.FETCH_MANIFEST, getLocalNodeHandle(), nextLocation, tag),
           null
         );
       }
@@ -1669,7 +1738,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     });
   }
         
-  public void retrieveObject(final VersionKey key, final Manifest manifest, final boolean beStrict, final Continuation c) {
+  public void retrieveObject(final VersionKey key, final Manifest manifest, final boolean beStrict, final char tag, final Continuation c) {
     addContinuation(new GlacierContinuation() {
       protected boolean checkedFragment[];
       protected Fragment haveFragment[];
@@ -1794,9 +1863,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         FragmentKey nextKey = new FragmentKey(key, nextID);
         Id nextLocation = getFragmentLocation(nextKey);
         log(3, "retrieveObject: Asking "+nextLocation+" for "+nextKey);
-        endpoint.route(
+        sendMessage(
           nextLocation,
-          new GlacierFetchMessage(getMyUID(), nextKey, GlacierFetchMessage.FETCH_FRAGMENT, getLocalNodeHandle(), nextLocation),
+          new GlacierFetchMessage(getMyUID(), nextKey, GlacierFetchMessage.FETCH_FRAGMENT, getLocalNodeHandle(), nextLocation, tag),
           null
         );
       }
@@ -1827,7 +1896,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     });
   }
           
-  public void retrieveFragment(final FragmentKey key, final Manifest manifest, final GlacierContinuation c) {
+  public void retrieveFragment(final FragmentKey key, final Manifest manifest, final char tag, final GlacierContinuation c) {
     addContinuation(new GlacierContinuation() {
       protected int attemptsLeft;
       protected boolean inPhaseTwo;
@@ -1896,9 +1965,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           log(3, "retrieveFragment: Retrying ("+attemptsLeft+" attempts left)");
           timeout = timeout + fragmentRequestTimeout;
           attemptsLeft --;
-          endpoint.route(
+          sendMessage(
             key.getVersionKey().getId(),
-            new GlacierFetchMessage(getMyUID(), key, GlacierFetchMessage.FETCH_FRAGMENT, getLocalNodeHandle(), key.getVersionKey().getId()),
+            new GlacierFetchMessage(getMyUID(), key, GlacierFetchMessage.FETCH_FRAGMENT, getLocalNodeHandle(), key.getVersionKey().getId(), tag),
             null
           );
         } else {
@@ -1908,7 +1977,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           }
           inPhaseTwo = true;
           
-          retrieveObject(key.getVersionKey(), manifest, false, new Continuation() {
+          retrieveObject(key.getVersionKey(), manifest, false, tag, new Continuation() {
             public void receiveResult(Object o) {
               if (o == null) {
                 warn("retrieveFragment: retrieveObject("+key.getVersionKey()+") failed, returns null");
@@ -1942,7 +2011,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     });
   }
 
-  public void rateLimitedRetrieveFragment(final FragmentKey key, final Manifest manifest, final GlacierContinuation c) {
+  public void rateLimitedRetrieveFragment(final FragmentKey key, final Manifest manifest, final char tag, final GlacierContinuation c) {
     log(3, "rateLimitedRetrieveFragment("+key+")");
     if (pendingTraffic.containsKey(key)) {
       log(3, "Fragment is already being retrieved -- discarding request");
@@ -1952,7 +2021,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     log(3, "Added pending job: retrieveFragment("+key+")");  
     pendingTraffic.put(key, new Continuation.SimpleContinuation() {
       public void receiveResult(Object o) {
-        retrieveFragment(key, manifest, c);
+        retrieveFragment(key, manifest, tag, c);
       }
     });
   }
@@ -2009,9 +2078,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         log(3, "Result: haveIt="+haveItA[i]+" amAuthority="+authoritativeA[i]+" expiration="+expirationA[i]);
       }
       
-      endpoint.route(
+      sendMessage(
         null,
-        new GlacierResponseMessage(gqm.getUID(), keyA, haveItA, expirationA, authoritativeA, getLocalNodeHandle(), gqm.getSource().getId(), true),
+        new GlacierResponseMessage(gqm.getUID(), keyA, haveItA, expirationA, authoritativeA, getLocalNodeHandle(), gqm.getSource().getId(), true, gqm.getTag()),
         gqm.getSource()
       );
 
@@ -2053,9 +2122,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
               neighborStorage.getObject(neighbors[currentLookup], this);
             } else {
               log(3, "Sending neighbor response...");
-              endpoint.route(
+              sendMessage(
                 null,
-                new GlacierNeighborResponseMessage(gnrm.getUID(), neighbors, lastSeen, getLocalNodeHandle(), gnrm.getSource().getId()),
+                new GlacierNeighborResponseMessage(gnrm.getUID(), neighbors, lastSeen, getLocalNodeHandle(), gnrm.getSource().getId(), gnrm.getTag()),
                 gnrm.getSource()
               );
             }
@@ -2156,9 +2225,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           if ((manifestIndex == manifestAggregationFactor) || (currentLookup == numLookups)) {
             log(3, "Sending a packet with "+keys.length+" manifests to "+gsm.getSource().getId());
             
-            endpoint.route(
+            sendMessage(
               null,
-              new GlacierDataMessage(getUID(), keys, fragments, manifests, getLocalNodeHandle(), gsm.getSource().getId(), false),
+              new GlacierDataMessage(getUID(), keys, fragments, manifests, getLocalNodeHandle(), gsm.getSource().getId(), false, tagSyncManifests),
               gsm.getSource()
             );
 
@@ -2240,9 +2309,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         IdRange intersectRange = requestedRange.intersectRange(thisRange);
         if (!intersectRange.isEmpty()) {
           log(3, "     - Intersects: "+intersectRange+", sending RangeForward");
-          endpoint.route(
+          sendMessage(
             currentElement,
-            new GlacierRangeForwardMessage(grqm.getUID(), requestedRange, grqm.getSource(), getLocalNodeHandle(), currentElement),
+            new GlacierRangeForwardMessage(grqm.getUID(), requestedRange, grqm.getSource(), getLocalNodeHandle(), currentElement, grqm.getTag()),
             null
           );
         }
@@ -2263,9 +2332,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       IdRange commonRange = responsibleRange.intersectRange(grfm.getRequestedRange());
       if (!commonRange.isEmpty()) {
         log(2, "Range forward: Returning common range "+commonRange+" to requestor "+grfm.getRequestor());
-        endpoint.route(
+        sendMessage(
           null,
-          new GlacierRangeResponseMessage(grfm.getUID(), commonRange, getLocalNodeHandle(), grfm.getRequestor().getId()),
+          new GlacierRangeResponseMessage(grfm.getUID(), commonRange, getLocalNodeHandle(), grfm.getRequestor().getId(), grfm.getTag()),
           grfm.getRequestor()
         );
       } else {
@@ -2292,9 +2361,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
               Fragment fragment = ((gfm.getRequest() & GlacierFetchMessage.FETCH_FRAGMENT)!=0) ? fam.fragment : null;
               Manifest manifest = ((gfm.getRequest() & GlacierFetchMessage.FETCH_MANIFEST)!=0) ? fam.manifest : null;
               
-              endpoint.route(
+              sendMessage(
                 null,
-                new GlacierDataMessage(gfm.getUID(), gfm.getKey(), fragment, manifest, getLocalNodeHandle(), gfm.getSource().getId(), true),
+                new GlacierDataMessage(gfm.getUID(), gfm.getKey(), fragment, manifest, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
                 gfm.getSource()
               );
             } else {
@@ -2314,24 +2383,24 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                           fragment = frags[gfm.getKey().getFragmentID()];
                         }
                           
-                        endpoint.route(
+                        sendMessage(
                           null,
-                          new GlacierDataMessage(gfm.getUID(), gfm.getKey(), fragment, null, getLocalNodeHandle(), gfm.getSource().getId(), true),
+                          new GlacierDataMessage(gfm.getUID(), gfm.getKey(), fragment, null, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
                           gfm.getSource()
                         );
                       } else {
                         log(2, "Original of "+gfm.getKey()+" not found; have different version: "+theVersion);
-                        endpoint.route(
+                        sendMessage(
                           null,
-                          new GlacierResponseMessage(gfm.getUID(), gfm.getKey(), false, 0, true, getLocalNodeHandle(), gfm.getSource().getId(), true),
+                          new GlacierResponseMessage(gfm.getUID(), gfm.getKey(), false, 0, true, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
                           gfm.getSource()
                         );
                       }
                     } else {
                       log(2, "Original of "+gfm.getKey()+" not found either");
-                      endpoint.route(
+                      sendMessage(
                         null,
-                        new GlacierResponseMessage(gfm.getUID(), gfm.getKey(), false, 0, true, getLocalNodeHandle(), gfm.getSource().getId(), true),
+                        new GlacierResponseMessage(gfm.getUID(), gfm.getKey(), false, 0, true, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
                         gfm.getSource()
                       );
                     }
@@ -2386,9 +2455,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                 public void receiveResult(Object o) {
                   log(2, "Stored OK, sending receipt: "+thisKey);
 
-                  endpoint.route(
+                  sendMessage(
                     null,
-                    new GlacierResponseMessage(gdm.getUID(), thisKey, true, thisManifest.getExpiration(), responsibleRange.containsId(getFragmentLocation(thisKey)), getLocalNodeHandle(), gdm.getSource().getId(), true),
+                    new GlacierResponseMessage(gdm.getUID(), thisKey, true, thisManifest.getExpiration(), responsibleRange.containsId(getFragmentLocation(thisKey)), getLocalNodeHandle(), gdm.getSource().getId(), true, gdm.getTag()),
                     gdm.getSource()
                   );
                 }
@@ -2431,9 +2500,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                       new Continuation() {
                         public void receiveResult(Object o) {
                           log(3, "Old manifest for "+thisKey+" replaced OK, sending receipt");
-                          endpoint.route(
+                          sendMessage(
                             null,
-                            new GlacierResponseMessage(gdm.getUID(), thisKey, true, thisManifest.getExpiration(), true, getLocalNodeHandle(), gdm.getSource().getId(), true),
+                            new GlacierResponseMessage(gdm.getUID(), thisKey, true, thisManifest.getExpiration(), true, getLocalNodeHandle(), gdm.getSource().getId(), true, gdm.getTag()),
                             gdm.getSource()
                           );
                         }
@@ -2462,7 +2531,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           log(2, "Data: Manifest for: "+thisKey+", must fetch");
 
           final long tStart = System.currentTimeMillis();
-          rateLimitedRetrieveFragment(thisKey, thisManifest, new GlacierContinuation() {
+          rateLimitedRetrieveFragment(thisKey, thisManifest, tagSyncFetch, new GlacierContinuation() {
             public String toString() {
               return "Fetch synced fragment: "+thisKey;
             }
@@ -2546,5 +2615,13 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   
   public void setNeighborTimeout(long neighborTimeoutMin) {
     this.neighborTimeout = neighborTimeoutMin * MINUTES;
+  }
+  
+  public void addStatisticsListener(GlacierStatisticsListener gsl) {
+    listeners.add(gsl);
+  }
+  
+  public void removeStatisticsListener(GlacierStatisticsListener gsl) {
+    listeners.removeElement(gsl);
   }
 }
