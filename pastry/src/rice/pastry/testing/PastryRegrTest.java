@@ -258,7 +258,7 @@ public abstract class PastryRegrTest {
 	    int to = rng.nextInt(n);
 	    byte[] keyBytes = new byte[Id.IdBitLength/8];
 	    rng.nextBytes(keyBytes);
-	    NodeId key = new NodeId(keyBytes);
+	    NodeId key = NodeId.buildNodeId(keyBytes);
 
 	    RegrTestApp rta = (RegrTestApp) rtApps.get(from);
 	    PastryNode pn = (PastryNode) pastryNodes.get(to);

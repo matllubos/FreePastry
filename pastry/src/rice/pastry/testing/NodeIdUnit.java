@@ -57,7 +57,7 @@ public class NodeIdUnit {
 	
 	rng.nextBytes(raw);
 
-	NodeId nodeId = new NodeId(raw);
+	NodeId nodeId = NodeId.buildNodeId(raw);
 
 	System.out.println("created node " + nodeId);
 
@@ -151,11 +151,11 @@ public class NodeIdUnit {
 	byte[] t2 = {0x3a,0x3f,(byte)0xfa,(byte)0x82,0x00,(byte)0x91,(byte)0xfb,(byte)0x82,(byte)0x9d,(byte)0xd2,
 			(byte)0xd8,0x42,(byte)0x86,0x40,0x5d,(byte)0xd7};
 
-	a = new NodeId(t1/*raw80*/);
-	b = new NodeId(t2/*raw7f*/);
-	NodeId n0 = new NodeId(raw0);
-	NodeId n7f = new NodeId(raw7f);
-	NodeId n80 = new NodeId(raw80);
+	a = NodeId.buildNodeId(t1/*raw80*/);
+	b = NodeId.buildNodeId(t2/*raw7f*/);
+	NodeId n0 = NodeId.buildNodeId(raw0);
+	NodeId n7f = NodeId.buildNodeId(raw7f);
+	NodeId n80 = NodeId.buildNodeId(raw80);
 	NodeId c = n0;
 
 	System.out.println("a=" + a + "b=" + b + "c=" + c);
