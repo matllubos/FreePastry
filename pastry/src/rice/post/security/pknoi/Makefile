@@ -1,8 +1,10 @@
-PACKAGE = rice.post.security
+PACKAGE = rice.post.security.pknoi
 
 SOURCE  = \
 	PKnoIPostCertificate.java \
-        PKnoISecurityModule.java
+        PKnoISecurityModule.java \
+	PKnoIChain.java \
+	PKnoISignature.java
 
 RMI_SOURCE =
 

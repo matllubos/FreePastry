@@ -15,8 +15,8 @@ import rice.post.security.*;
 public class PKnoISignature implements Serializable {
 
   /**
-   * Builds a PKnoIChain from the to and from certificates, and the chain of
-   * signatures which verify each other
+   * Builds a PKnoISignature, in which a single user vouches for another.  This
+   * can be viewed as a single link in the PKnoIChain.
    *
    * @param from The origin user
    * @param to The destination user

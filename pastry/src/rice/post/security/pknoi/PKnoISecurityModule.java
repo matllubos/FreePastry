@@ -97,11 +97,12 @@ public class PKnoISecurityModule extends PostClient implements SecurityModule {
    * performing this method for length longer than 3 or 4 is not recommended, as the
    * algorithm is DFS and is of O(e^len).
    *
-   * @param certificate the certificate to look for
+   * @param destination the certificate to look for
+   * @param source The starting user
    * @param len The maximum chains length to find
    * @param command The command to return the result o
    */
-  public void findChains(PKnoIPostCertificate cert, int len, Continuation command) {
+  public void findChains(PKnoIPostCertificate source, PKnoIPostCertificate destination, int len, Continuation command) {
   }
 
   /**
