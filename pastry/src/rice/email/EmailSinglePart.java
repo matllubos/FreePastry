@@ -1,6 +1,7 @@
 package rice.email;
 
 import java.io.*;
+import java.lang.ref.*;
 import java.security.*;
 import java.util.*;
 
@@ -27,12 +28,17 @@ public class EmailSinglePart extends EmailContentPart {
   /**
    * The actual content of this email part
    */
-  protected transient EmailData content;
+  protected transient SoftReference content;
 
   /**
     * A reference to the content of this email part
    */
   public EmailDataReference contentReference;
+  
+  /**
+   * A reference to the content which is non-soft
+   */
+  protected transient EmailData unstoredContent;
 
   /**
    * Constructor which takes in an EmailData
@@ -40,7 +46,8 @@ public class EmailSinglePart extends EmailContentPart {
   public EmailSinglePart(EmailData content) {
     super(content.getData().length);
     
-    this.content = content;
+    this.content = new SoftReference(content);
+    this.unstoredContent = content;
     this.lines = new String(content.getData()).split("\n").length;
   }
   
@@ -62,15 +69,17 @@ public class EmailSinglePart extends EmailContentPart {
    *   is returned the success or failure of this command
    */
   public void storeData(Continuation command) {
-    if (contentReference != null) {
-      command.receiveResult(new Boolean(true));
+    if ((contentReference != null) || (unstoredContent == null)) { 
+      command.receiveResult(Boolean.TRUE);
       return;
     }
     
-    storage.storeContentHash(content, new StandardContinuation(command) {
+    storage.storeContentHash(unstoredContent, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         contentReference = (EmailDataReference) o;
-        parent.receiveResult(new Boolean(true));
+        unstoredContent = null;
+        
+        parent.receiveResult(Boolean.TRUE);
       }
     });
   }
@@ -81,16 +90,19 @@ public class EmailSinglePart extends EmailContentPart {
    * @param command The command to run once the data is available
    */
   public void getContent(Continuation command) {
-    if (content != null) {
-      command.receiveResult(content);
+    EmailData data = null;
+    
+    if (((data = unstoredContent) != null) ||
+        ((content != null) && ((data = (EmailData) content.get()) != null))) {
+      command.receiveResult(data);
       return;
     }
 
     storage.retrieveContentHash(contentReference, new StandardContinuation(command) {
       public void receiveResult(Object o) {
-        content = (EmailData) o;
+        content = new SoftReference((EmailData) o);
         
-        parent.receiveResult(content);
+        parent.receiveResult(o);
       }
     });    
   }
@@ -132,16 +144,16 @@ public class EmailSinglePart extends EmailContentPart {
   public int hashCode() {
     return contentReference.hashCode();
   }
+  
+  /**
+   * Method which sets this part's storage service
+   *
+   * @param storage The local storage service
+   */
+  public void setStorage(StorageService storage) {
+    super.setStorage(storage);
     
-    /**
-      * Method which sets this part's storage service
-     *
-     * @param storage The local storage service
-     */
-    public void setStorage(StorageService storage) {
-      super.setStorage(storage);
-      
-      if ((content == null) && (contentReference == null))
-        throw new NullPointerException("Content and Reference NULL in EmailsinglePart!");
-    }
+    if ((unstoredContent == null) && (contentReference == null))
+      throw new NullPointerException("Unstored Content and Reference NULL in EmailsinglePart!");
+  }
 }

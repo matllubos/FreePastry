@@ -1,6 +1,7 @@
 package rice.email;
 
 import java.io.*;
+import java.lang.ref.*;
 import java.security.*;
 import java.util.*;
 
@@ -22,7 +23,7 @@ public class EmailHeadersPart extends EmailContentPart {
   /**
    * The data representing the haeders (transient as it is stored).
    */
-  protected transient EmailData headers;
+  protected transient SoftReference headers;
 
   /**
    * A reference to the headers of this email part
@@ -33,6 +34,11 @@ public class EmailHeadersPart extends EmailContentPart {
    * The content of this part
    */
   public EmailContentPart content;
+  
+  /**
+   * A reference to the headers which is non-soft
+   */
+  protected transient EmailData unstoredHeaders;
 
   /**
     * Constructor. Takes in a emailData representing the headers and
@@ -43,7 +49,8 @@ public class EmailHeadersPart extends EmailContentPart {
    */
   public EmailHeadersPart(EmailData headers, EmailContentPart content) {
     super(headers.getData().length + content.getSize());
-    this.headers = headers;
+    this.unstoredHeaders = headers;
+    this.headers = new SoftReference(headers);
     this.content = content;
   }
 
@@ -75,16 +82,19 @@ public class EmailHeadersPart extends EmailContentPart {
    *   obtained
    */
   public void getHeaders(Continuation command) {
-    if (headers != null) {
-      command.receiveResult(headers);
+    EmailData data = null;
+
+    if (((data = unstoredHeaders) != null) ||
+        ((headers != null) && ((data = (EmailData) headers.get()) != null))) {
+      command.receiveResult(data);
       return;
     }
     
     storage.retrieveContentHash(headersReference, new StandardContinuation(command) {
       public void receiveResult(Object o) {
-        headers = (EmailData) o;
+        headers = new SoftReference((EmailData) o);
 
-        parent.receiveResult(headers);
+        parent.receiveResult(o);
       }
     });
   }
@@ -106,15 +116,16 @@ public class EmailHeadersPart extends EmailContentPart {
    *   is returned the success or failure of this command
    */
   public void storeData(Continuation command) {
-    if (headersReference != null) {
-      command.receiveResult(new Boolean(true));
+    if ((headersReference != null) || (unstoredHeaders == null)) {
+      command.receiveResult(Boolean.TRUE);
       return;
     }
 
-    storage.storeContentHash(headers, new StandardContinuation(command) {
+    storage.storeContentHash(unstoredHeaders, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         headersReference = (EmailDataReference) o;
-
+        unstoredHeaders = null;
+        
         content.storeData(parent);
       }
     });
@@ -145,7 +156,7 @@ public class EmailHeadersPart extends EmailContentPart {
     if (headersReference != null) {
       return (headersReference.equals(part.headersReference) && content.equals(part.content));
     } else {
-      return (headers.equals(part.headers) && content.equals(part.content));
+      return (unstoredHeaders.equals(part.unstoredHeaders) && content.equals(part.content));
     }
   }
 }
