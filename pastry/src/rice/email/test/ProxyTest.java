@@ -29,9 +29,20 @@ public class ProxyTest {
 
     public static void main(String[] args) throws Exception {
 
+	String server;
+	String uname;
+	    
+
+	if (args.length < 2) {
+	    System.out.println("Please specify a server and username");
+	    System.exit(-1);
+	}
+	server = args[0];
+	uname = args[1];
+
 	EmailTest et = new EmailTest();
 	String[] nameset = new String[2];
-	nameset[0] = "<dwp@rice.edu>";
+	nameset[0] = "<sender@sender.org>";
 	nameset[1] = "<recipient@recipient.org>";
 	EmailService[] eservset = et.createEmailServices(nameset, 2000);
 	EmailService sender = eservset[0];
