@@ -79,6 +79,24 @@ public class NodeId implements Comparable, Serializable
 	for (int i=0; i<n; i++) nodeId[i] = material[i];
     }
 
+
+
+    /**
+     * Constructor.
+     *
+     * It constructs a new NodeId with a value of 0 for all bits.
+     */
+    public NodeId() 
+    {
+	int n = nodeIdBitLength >> 3;
+	
+	nodeId = new byte[n];
+
+	for (int i=0; i<n; i++) nodeId[i] = 0;
+    }
+    
+
+
     /**
      * Blits the nodeId into a target array.
      *
@@ -409,6 +427,25 @@ public class NodeId implements Comparable, Serializable
 
 
     /**
+     * Xor operator for nodeIds.
+     * Sets this nodeId to the bit-wise XOR of itself and nid
+     *
+     * @param nid a nodeId object
+     */ 
+
+    public void xor(NodeId otherId ) 
+    {
+	int n = nodeIdBitLength >> 3;
+	byte nid[] = new byte[n];
+
+        otherId.blit(nid);
+
+	for (int i=0; i<n; i++) 
+	    nodeId[i] ^= nid[i];
+    }
+
+
+    /**
      * Equivalence relation for nodeIds.
      *
      * @param nid the other node id.
@@ -416,6 +453,8 @@ public class NodeId implements Comparable, Serializable
      */
     
     public boolean equals(NodeId nid) {
+	if(nid == null) 
+	    return false;
 	int n = nodeIdBitLength >> 3;
 
 	for (int i=0; i<n; i++)
