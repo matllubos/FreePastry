@@ -14,6 +14,11 @@ public class GlacierStatistics {
   public long fragmentStorageSize;
   public long trashStorageSize;
   public long tbegin;
+  public long bucketMin;
+  public long bucketMax;
+  public long bucketConsumed;
+  public long bucketTokensPerSecond;
+  public long bucketMaxBurstSize;
   
   public GlacierStatistics(int numTags) {
     this.messagesSentByTag = new int[numTags];
@@ -26,6 +31,9 @@ public class GlacierStatistics {
     this.trashStorageSize = 0;
     this.activeFetches = 0;
     this.tbegin = System.currentTimeMillis();
+    this.bucketMin = 0;
+    this.bucketMax = 0;
+    this.bucketConsumed = 0;
   };
   
   public void dump() {
@@ -34,7 +42,8 @@ public class GlacierStatistics {
     System.out.println("@L.GL   neighbors="+numNeighbors+" fragments="+numFragments+" trash="+numObjectsInTrash);
     System.out.println("@L.GL   continuations="+numContinuations+" pending="+pendingRequests);
     System.out.println("@L.GL   fragSizeBytes="+fragmentStorageSize+" trashSizeBytes="+trashStorageSize);
-    System.out.println("@L.GL   activeFetches="+activeFetches);
+    System.out.println("@L.GL   activeFetches="+activeFetches+" bucketMin="+bucketMin+" bucketMax="+bucketMax);
+    System.out.println("@L.GL   bucketConsumed="+bucketConsumed);
     System.out.print("@L.GL   byTag=");
     for (int i=0; i<messagesSentByTag.length; i++)
       System.out.print(messagesSentByTag[i]+" ");
