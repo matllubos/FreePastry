@@ -34,8 +34,8 @@ public class ScribeInteractiveTest
     // constructor
     
     public ScribeInteractiveTest() {
-	m_factory = new DirectPastryNodeFactory();
-	m_simulator = m_factory.getNetworkSimulator();
+	m_simulator = new EuclideanNetwork();
+	m_factory = new DirectPastryNodeFactory(m_simulator);
 	
 	m_scribeNodes = new LinkedList();
 	m_scribeNodesSorted = new TreeMap();
