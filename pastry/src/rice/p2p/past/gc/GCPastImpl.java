@@ -206,7 +206,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
     
     refresh(set, new StandardContinuation(command) {
       public void receiveResult(Object o) {
-        Boolean[] result = new Boolean[array.length];
+        Object[] result = new Object[array.length];
         Arrays.fill(result, Boolean.TRUE);
         
         parent.receiveResult(result);
@@ -398,11 +398,15 @@ public class GCPastImpl extends PastImpl implements GCPast {
           if (trash != null) {                        
             storage.getObject(gid, new StandardContinuation(this) {
               public void receiveResult(Object o) {
-                trash.store(gid, storage.getMetadata(gid), (Serializable) o, new StandardContinuation(parent) {
-                  public void receiveResult(Object o) {
-                    storage.unstore(gid, parent);
-                  }
-                });
+                if (o != null) {
+                  trash.store(gid, storage.getMetadata(gid), (Serializable) o, new StandardContinuation(parent) {
+                    public void receiveResult(Object o) {
+                      storage.unstore(gid, parent);
+                    }
+                  });
+                } else {
+                  storage.unstore(gid, this);
+                }
               }
             });
           } else {
