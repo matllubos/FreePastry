@@ -125,4 +125,12 @@ public class BroadcastRouteRow extends Message implements Serializable {
      */
 
     public RouteSet[] getRow() { return row; }
+
+    public String toString() {
+	String s = "";
+
+	s+="BroadcastRouteRow(of " + fromNode + ")";
+
+	return s;
+    }
 }

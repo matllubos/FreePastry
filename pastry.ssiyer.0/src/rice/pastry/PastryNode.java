@@ -49,6 +49,7 @@ public class PastryNode implements NodeHandle
     private MessageDispatch myMessageDispatch;
     private LeafSet leafSet;
     private RoutingTable routeSet;
+    private NodeHandle localhandle;
   
     /**
      * Constructor.  Creates a new Pastry network.
@@ -70,11 +71,16 @@ public class PastryNode implements NodeHandle
 	pFactory.doneWithNode(this);
     }
 
+    public NodeHandle getLocalHandle() { return localhandle; }
+    public void setLocalHandle(NodeHandle nh) { localhandle = nh; }
+
     // node handle interface
 
     public final NodeId getNodeId() { return myNodeId; }
     
     public final boolean isAlive() { return true; }
+
+    public final boolean ping() { return true; }
 
     public final int proximity() { return 0; }
 

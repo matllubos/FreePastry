@@ -64,4 +64,6 @@ public class RouterAddress implements Address, Serializable {
     private void writeObject(ObjectOutputStream out)
 	throws IOException, ClassNotFoundException 
     {}
+
+    public String toString() { return "[RouterAddress]"; }
 }

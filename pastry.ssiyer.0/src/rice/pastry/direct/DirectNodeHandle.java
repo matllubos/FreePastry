@@ -50,6 +50,8 @@ class DirectNodeHandle implements NodeHandle
     public NodeId getNodeId() { return remoteNode.getNodeId(); }
     
     public boolean isAlive() { return simulator.isAlive(remoteNode.getNodeId()); }
+
+    public boolean ping() { return isAlive(); }
     
     public int proximity() { return simulator.proximity(localNode.getNodeId(), remoteNode.getNodeId()); }
 

@@ -149,7 +149,8 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	    returnHandle = security.verifyNodeHandle(returnHandle);
 
 	    // perform maintenance prior to sending the leaf set
-	    // this avoids sending dead entries and also cause more rapid reconstruction in the event of massive failures
+	    // this avoids sending dead entries and also cause more rapid
+	    // reconstruction in the event of massive failures
 	    // maintainLeafSet();
 
 	    if (returnHandle.isAlive()) {

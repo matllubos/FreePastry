@@ -62,12 +62,15 @@ public class RMIPastryTest {
 	try {
 	    otherid = other.getNodeId();
 	} catch (Exception e) {
-	    System.out.println("Unable to get remote node id: " + e.toString());
+	    System.out.println("[rmi] Unable to get remote node id: " + e.toString());
 	    return;
 	}
 
 	RMINodeHandle other_handle = new RMINodeHandle(other, otherid, pn);
 	pn.receiveMessage(new InitiateJoin(other_handle));
+
+	System.out.println(pn.getLeafSet());
+	//System.out.println(pn.getRoutingTable());
     }
 
     /**

@@ -199,5 +199,13 @@ public class JoinRequest extends Message implements Serializable
 
 	rows = new RouteSet[rowCount][];
     }
+
+    public String toString() {
+	return "JoinRequest("
+	    + (handle != null ? handle.getNodeId() : null)
+	    + ","
+	    + (joinHandle != null ? joinHandle.getNodeId() : null)
+	    + ")";
+    }
 }
 

@@ -8,7 +8,7 @@ import java.rmi.RemoteException;
 
 /**
  * A remote interface exported by Pastry nodes. This is a subset of
- * NodeHandle, since it doesn't implement proximity or getAlive.
+ * NodeHandle, since it doesn't implement proximity, ping or getAlive.
  *
  * @author Sitaram Iyer
  */

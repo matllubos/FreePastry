@@ -63,4 +63,6 @@ public class JoinAddress implements Address, Serializable {
     private void writeObject(ObjectOutputStream out)
 	throws IOException, ClassNotFoundException 
     {}
+
+    public String toString() { return "[JoinAddress]"; }
 }

@@ -112,6 +112,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
     public void doneWithNode(PastryNode pnode) {
 	lhandle.setProxy(pnode);
 	secureMan.setLocalPastryNode(pnode);
+	pnode.setLocalHandle(lhandle);
 
 	nodeId = null;
 	secureMan = null;

@@ -33,26 +33,33 @@ class RMINodeHandlePool
     public RMINodeHandle coalesce(RMINodeHandle nh)
     {
 	NodeId nid = nh.getNodeId();
-
 	RMINodeHandle ph = (RMINodeHandle) handles.get(nid);
 	if (ph == null) {
 	    handles.put(nid, nh);
+	    nh.setIsInPool(true);
+	    //System.out.println("[rmi] ADDING " + nh + " with id " + nid + " to pool");
 	    return nh;
+	} else {
+	    //System.out.println("[rmi] " + ph + " found, so NOT ADDING " + nh + " with id " + nid + " to pool");
+	    if (ph != nh)
+		nh.setIsInPool(false);
 	}
-
-	// coalesce nh and ph
-
-	if (ph.isAlive() == false && nh.isAlive() == true) {
-	    try {
-		RMIPastryNode rn = nh.getRemote();
-		NodeId rnid = rn.getNodeId(); // bypass the nid cached in handle
-		if (rnid.equals(nid))
-		    ph.makeAlive(rn);
-	    } catch (RemoteException e) {
-		// ignore; red herring probably due to routing anomaly
-	    }
-	}
-
 	return ph;
+    }
+
+    /**
+     * If given NodeId has a NodeHandle in the pool, then the latter is
+     * marked alive.
+     *
+     * @param nid the node nid of the handle to lookup and mark alive.
+     */
+    public void activate(NodeId nid)
+    {
+	RMINodeHandle ph = (RMINodeHandle) handles.get(nid);
+	if (ph != null) {
+	    ph.markAlive();
+	} else {
+	    // do nothing; ignore senders who we don't know anything about
+	}
     }
 }

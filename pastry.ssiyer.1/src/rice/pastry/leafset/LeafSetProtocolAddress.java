@@ -63,4 +63,6 @@ public class LeafSetProtocolAddress implements Address, Serializable {
     private void writeObject(ObjectOutputStream out)
 	throws IOException, ClassNotFoundException 
     {}
+
+    public String toString() { return "[LeafSetProtocolAddress]"; }
 }

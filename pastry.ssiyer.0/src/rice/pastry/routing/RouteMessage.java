@@ -44,11 +44,11 @@ import java.io.*;
 public class RouteMessage extends Message implements Serializable {
     private NodeId target;
     private Message internalMsg;
-    private SendOptions opts;
+    public NodeId senderId;
 
-    private Address auxAddress;
-
-    public NodeHandle nextHop;
+    private transient SendOptions opts;
+    private transient Address auxAddress;
+    public transient NodeHandle nextHop;
 
     /**
      * Constructor.
@@ -159,8 +159,6 @@ public class RouteMessage extends Message implements Serializable {
      */
 
     public boolean routeMessage(NodeId localId) {
-	//ssiyer//System.out.println("[routemsg] routeMessage at " + localId);
-	//ssiyer//System.out.println("[routemsg] nextHop = " + nextHop);
 	if (nextHop == null) return false;
 
 	NodeHandle handle = nextHop;
@@ -193,6 +191,27 @@ public class RouteMessage extends Message implements Serializable {
     }
     
     /**
+     * Get sender Id.
+     * 
+     * @return the immediate sender's NodeId.
+     */
+
+    public NodeId getSenderId() {
+	return senderId;
+    }
+    
+    /**
+     * Set sender Id. Called by NodeHandle just before dispatch, so that
+     * this Id is guaranteed to belong to the immediate sender.
+     * 
+     * @param the immediate sender's NodeId.
+     */
+
+    public void setSenderId(NodeId id) {
+	senderId = id;
+    }
+    
+    /**
      * The wrapped message.
      *
      * @return the wrapped message.
@@ -222,6 +241,7 @@ public class RouteMessage extends Message implements Serializable {
     {
 	target = (NodeId) in.readObject();
 	internalMsg = (Message) in.readObject();
+	senderId = (NodeId) in.readObject();
     }
 
     private void writeObject(ObjectOutputStream out)
@@ -229,6 +249,7 @@ public class RouteMessage extends Message implements Serializable {
     {
 	out.writeObject(target);
 	out.writeObject(internalMsg);
+	out.writeObject(senderId);
     }
 
     public String toString() {
@@ -236,10 +257,11 @@ public class RouteMessage extends Message implements Serializable {
 
 	str += "RouteMessage for target " + target;
 	
-	if (auxAddress != null) str += " with auxilary address " + auxAddress;
+	if (auxAddress != null) str += " with aux address " + auxAddress;
 
-	str += "\n";
+	//str += "\n";
 
+	str += ", wraps ";
 	str += internalMsg.toString();
 
 	return str;

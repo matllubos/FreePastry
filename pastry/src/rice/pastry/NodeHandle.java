@@ -61,6 +61,14 @@ public interface NodeHandle extends MessageReceiver {
      */
     
     public int proximity();
+
+    /**
+     * Ping the node.
+     *
+     * @return true if node is currently alive.
+     */
+    
+    public boolean ping();
 }
 
 

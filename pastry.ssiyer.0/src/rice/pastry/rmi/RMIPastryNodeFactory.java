@@ -36,7 +36,7 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
     private StandardJoinProtocol jProtocol;
 
     private RMIPastryNodeImpl rmilocalnode;
-    private RMINodeHandle rmilocalhandle;
+    private RMINodeHandle localhandle;
 
     private RMINodeHandlePool handlepool;
 
@@ -55,23 +55,24 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
 	} catch (RemoteException e) {
 	    System.out.println("Unable to create RMI Pastry node: " + e.toString());
 	}
-	rmilocalhandle = new RMINodeHandle(rmilocalnode, nodeId /* local! */);
-	rmilocalhandle.setLocalHandle(rmilocalhandle); // itself!
+	localhandle = new RMINodeHandle(rmilocalnode, nodeId);
+	localhandle.setLocalHandle(localhandle); // itself! xxx memory leak?
 
 	handlepool = new RMINodeHandlePool();
-	handlepool.coalesce(rmilocalhandle); // add ourselves to pool
+	localhandle = handlepool.coalesce(localhandle); // add ourselves to pool
+	rmilocalnode.setHandlePool(handlepool);
 
-	secureMan = new RMIPastrySecurityManager(rmilocalhandle, handlepool);
+	secureMan = new RMIPastrySecurityManager(localhandle, handlepool);
 	msgDisp = new MessageDispatch();
 
-	routeTable = new RoutingTable(rmilocalhandle, rtMax);
-	leafSet = new LeafSet(rmilocalhandle, lSetSize);
+	routeTable = new RoutingTable(localhandle, rtMax);
+	leafSet = new LeafSet(localhandle, lSetSize);
 
-	router = new StandardRouter(rmilocalhandle, routeTable, leafSet);
+	router = new StandardRouter(localhandle, routeTable, leafSet);
 
-	lsProtocol = new StandardLeafSetProtocol(rmilocalhandle, secureMan, leafSet, routeTable);
-	rsProtocol = new StandardRouteSetProtocol(rmilocalhandle, secureMan, routeTable);
-	jProtocol = new StandardJoinProtocol(rmilocalhandle, secureMan, routeTable, leafSet);
+	lsProtocol = new StandardLeafSetProtocol(localhandle, secureMan, leafSet, routeTable);
+	rsProtocol = new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
+	jProtocol = new StandardJoinProtocol(localhandle, secureMan, routeTable, leafSet);
 
 	msgDisp.registerReceiver(router.getAddress(), router);
 	msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
@@ -89,8 +90,8 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
     public RoutingTable getRouteSet() { return routeTable; }
 
     public void doneWithNode(PastryNode pnode) {
-	secureMan.setLocalPastryNode(pnode);
 	rmilocalnode.setLocalPastryNode(pnode);
+	pnode.setLocalHandle(localhandle);
 
 	// this bind happens after the registry lookup, so the node never
 	// ends up discovering itself
@@ -104,7 +105,8 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
 	secureMan = null;
 	msgDisp = null;	
 	rmilocalnode = null;
-	rmilocalhandle = null;
+	localhandle = null;
+	handlepool = null;
     }
 }
 

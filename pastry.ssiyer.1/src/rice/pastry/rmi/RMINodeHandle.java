@@ -17,20 +17,15 @@ public class RMINodeHandle implements NodeHandle, Serializable
 {
     private RMIPastryNode remoteNode;
     private NodeId remotenid;
-    private boolean alive;
 
-    // handle with care: localHandle is *not* serialized.
-    private NodeHandle localHandle;
-    /**
-     * setting the local handle. Called with an RMINodeHandle by
-     * RMIPastrySecurityManager after the rest of NodeHandle has serialized
-     * and travelled across. Or at initialization, in two places: PastryTest
-     * calls it with the PastryNode, and NodeFactory calls it with itself.
-     *
-     * @param lnh the local node handle (for bouncing messages back to self).
-     */
-    public void setLocalHandle(NodeHandle lnh) { localHandle = lnh; }
+    private transient boolean alive;	// don't serialize
+    private transient int distance;	// don't serialize
 
+    // this is a sanity check thing: messages should never be sent to
+    // unverified node handles, so this handle should be in the Pool.
+    private transient boolean isInPool;	// don't serialize
+
+    private transient NodeHandle localhandle;
 
     /**
      * Constructor.
@@ -42,99 +37,149 @@ public class RMINodeHandle implements NodeHandle, Serializable
      * @param nid its node id.
      */
     public RMINodeHandle(RMIPastryNode rn, NodeId nid) {
-	System.out.println("[rmi] creating RMI handle for node: " + nid);
-	remoteNode = rn;
-	remotenid = nid;
-	alive = true;
-	localHandle = null;
+	init(rn, nid);
     }
 
     /**
-     * Alternate constructor with localNodeHandle.
+     * Alternate constructor with local Pastry node.
      *
      * @param rn pastry node for whom we're constructing a handle.
      * @param nid its node id.
-     * @param lnh the local node handle (for bouncing messages back to self).
+     * @param pn local Pastry node.
      */
-    public RMINodeHandle(RMIPastryNode rn, NodeId nid, NodeHandle lnh) {
+    public RMINodeHandle(RMIPastryNode rn, NodeId nid, PastryNode pn) {
+	init(rn, nid);
+	setLocalHandle(pn.getLocalHandle());
+    }
+
+    private void init(RMIPastryNode rn, NodeId nid) {
 	System.out.println("[rmi] creating RMI handle for node: " + nid);
 	remoteNode = rn;
 	remotenid = nid;
 	alive = true;
-	localHandle = lnh;
+	distance = 42;
+	isInPool = false;
     }
 
     public RMIPastryNode getRemote() { return remoteNode; }
+
     public NodeId getNodeId() { return remotenid; }
-    public boolean isAlive() { return alive; }
 
     /**
-     * make this nodehandle alive again, if it seemed down due to a routing
-     * anomaly or something.
-     *
-     * @param rn a remote node for this nodeId known to be alive
-     * @param nid its nodeid (procured by remote call from nodehandlepool)
+     * The two localhandle accessor methods.
      */
-    public void makeAlive(RMIPastryNode rn) {
-	if (alive == false) {
-	    // xxx time threshold and expire (return) if greater
-	    // else nodeId clashes will occur eventually
+    public NodeHandle getLocalHandle() { return localhandle; }
+
+    public void setLocalHandle(NodeHandle lh) {
+	localhandle = lh;
+	if (localhandle.getNodeId().equals(remotenid)) {
+	    distance = 0;
 	}
-	remoteNode = rn;
-	alive = true;
     }
 
-    public int proximity() { return 1; /* xxx */ }
+    /**
+     * The three liveness functions.
+     * @return a cached boolean value.
+     */
+    public boolean isAlive() {
+	return alive;
+    }
+
+    public void markAlive() {
+	if (alive == false) {
+	    System.out.println("[rmi] remote node became alive: " + remotenid);
+	    alive = true;
+	    // xxx reset distance to zero, or infinity, or recompute it now
+	}
+    }
+
+    public void markDead() {
+	if (alive == true) {
+	    System.out.println("[rmi] remote node declared dead: " + remotenid);
+	}
+	alive = false;
+    }
+
+    public int proximity() {
+	/* does a few pings */ return distance;
+    }
+
+    public boolean getIsInPool() { return isInPool; }
+    public void setIsInPool(boolean iip) { isInPool = iip; }
 
     public void receiveMessage(Message msg) {
-	// sanity check:
-	if (localHandle == null) {
-	    System.out.println("warning: localHandle is null");
-	}
-
-	if (alive == false) {
-	    System.out.println("warning: trying to speak to dead node: " + msg);
-	}
-
 	try {
-	    System.out.println("[rmi] sent message: " + msg);
-	    remoteNode.receiveMessage(msg);
-	    System.out.println("[rmi] message sent successfully");
-	} catch (RemoteException e) { // failed; mark it dead
-	    System.out.println("[rmi] message failed; remote node declared dead: "
-			       + remotenid);
-	    System.out.println(e.toString());
 
-	    alive = false;
+	    if (isInPool == false) {
+		System.out.println("panic: sending message to unverified handle "
+				   + this + " for " + remotenid + ": " + msg);
+	    }
 
-	    // bounce back to local dispatcher
-	    System.out.println("[rmi] bouncing message back to self at " + localHandle);
 	    if (msg instanceof RouteMessage) {
 		RouteMessage rmsg = (RouteMessage) msg;
-		rmsg.setNextHop(null);
-		localHandle.receiveMessage(rmsg);
+		rmsg.setSenderId(localhandle.getNodeId());
+		System.out.println("[rmi] sending route msg to " +
+				   remotenid + ": " + msg);
 	    } else {
-		localHandle.receiveMessage(msg);
+		System.out.println("[rmi] sending direct msg: " + msg);
 	    }
+
+	    remoteNode.receiveMessage(msg);
+	    //System.out.println("[rmi] message sent successfully");
+
+	    markAlive();
+	} catch (RemoteException e) { // failed; mark it dead
+	    if ((msg instanceof RouteMessage) == false) {
+		System.out.println("[rmi] panic: local message failed: " + msg);
+	    }
+
+	    System.out.println("[rmi] message failed: " + e);
+	    markDead();
+
+	    // bounce back to local dispatcher
+
+	    System.out.println("[rmi] bouncing message back to self at " + localhandle);
+	    RouteMessage rmsg = (RouteMessage) msg;
+	    rmsg.setNextHop(null);
+	    localhandle.receiveMessage(rmsg);
 	}
     }
 
+    public boolean ping() {
+	NodeId tryid;
+	try {
+	    tryid = remoteNode.getNodeId();
+	    if (tryid.equals(remotenid) == false) {
+		System.out.println("[rmi] PANIC: remote node has changed its ID from "
+				   + remotenid + " to " + tryid);
+	    }
+	    markAlive();
+	} catch (RemoteException e) {
+	    if (alive) System.out.println("[rmi] ping failed on live node: " + e);
+	    markDead();
+	}
+	return alive;
+    }
 
+    /*
+     * XXX remove these two methods, and things should still work
+     */
     private void readObject(ObjectInputStream in)
-        throws IOException, ClassNotFoundException
+	throws IOException, ClassNotFoundException 
     {
-        remoteNode = (RMIPastryNode) in.readObject();
-		// xxx The above must be passed by reference. Is it?
-        remotenid = (NodeId) in.readObject();
-        alive = in.readBoolean();
-	localHandle = null; // will be filled in by RMIPastrySecurityManager
+	remoteNode = (RMIPastryNode) in.readObject();
+	remotenid = (NodeId) in.readObject();
+
+	alive = true;
+	isInPool = false;
+	distance = 42;
+	localhandle = null;
     }
 
     private void writeObject(ObjectOutputStream out)
-        throws IOException, ClassNotFoundException
+	throws IOException, ClassNotFoundException 
     {
-        out.writeObject(remoteNode);
-        out.writeObject(remotenid);
-        out.writeBoolean(alive);
-    }
+	out.writeObject(remoteNode);
+	out.writeObject(remotenid);
+    } 
 }
