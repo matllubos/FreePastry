@@ -168,9 +168,9 @@ public class SocketChannelReader {
 			} else if (obj instanceof rice.pastry.commonapi.PastryEndpointMessage) {
 				record(((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), size, path);
 				recorded = true;
-			} else if (obj instanceof rice.post.messaging.PostPastryMessage) {
-				record(((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, path);
-				recorded = true;
+//			} else if (obj instanceof rice.post.messaging.PostPastryMessage) {
+//				record(((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, path);
+//				recorded = true;
 			}
 		} catch (java.lang.NoClassDefFoundError exc) { }
 

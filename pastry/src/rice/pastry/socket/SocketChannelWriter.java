@@ -140,9 +140,9 @@ public class SocketChannelWriter {
 			} else if (obj instanceof rice.pastry.commonapi.PastryEndpointMessage) {
 				record(action, ((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), size, path);
 				recorded = true;
-			} else if (obj instanceof rice.post.messaging.PostPastryMessage) {
-				record(action, ((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, path);
-				recorded = true;
+//			} else if (obj instanceof rice.post.messaging.PostPastryMessage) {
+//				record(action, ((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, path);
+//				recorded = true;
 			} 
 		} catch (java.lang.NoClassDefFoundError exc) { }
 
