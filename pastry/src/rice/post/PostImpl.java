@@ -192,8 +192,8 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
     this.certificate = certificate;
     this.caPublicKey = caPublicKey;
 
-    replicaManager = new RMImpl(node, this, REPLICATION_FACTOR, instance + "-POST");
     memoryStorage = new MemoryStorage(new PastryIdFactory());
+    replicaManager = new RMImpl(node, this, REPLICATION_FACTOR, instance + "-POST");
 
     security = new SecurityService();
     security.loadModule(new CASecurityModule(caPublicKey));
