@@ -1,5 +1,3 @@
-package mydomain ;
-
 import java.io.* ;
 import java.util.* ;
 import org.apache.tools.ant.BuildException;
@@ -57,7 +55,6 @@ public class Append extends Task
   {
     filesets.addElement(set);
   }
-    
   
   // methods
   
@@ -76,14 +73,17 @@ public class Append extends Task
         DirectoryScanner ds = fs.getDirectoryScanner(project) ;
         File fromdir = fs.getDir(project) ;
         String[] destfiles = ds.getIncludedFiles();
-        for (int j = 0; j < destfiles.length;j++)
+        
+        ByteArrayInputStream instream ;
+        ByteArrayOutputStream outstream ;
+        ByteArrayOutputStream outstreamcheck ;
+        FileReader in ;
+        FileWriter out ;
+        int c ;
+        
+        for (int j = 0; j < destfiles.length;j++)  
         {
           File destfile = new File(fromdir + File.separator + destfiles[j]);
-          ByteArrayInputStream instream ;
-          ByteArrayOutputStream outstream ;
-          FileReader in ;
-          FileWriter out ;
-          int c ;
           
           // reads the java code from the destination file and inserts it into a
           // stream buffer for temporary storage
@@ -94,24 +94,34 @@ public class Append extends Task
           in.close();
           outstream.close() ;
           
-          // reads the text from the sourcefile and overwrites it over the java code
-          // in the destination file
+          // checks if stream of source file hasn't already been apppended to
+          // destination file and then does the appending process
           in = new FileReader(sourcefile);
-          out = new FileWriter(destfile, false);
+          outstreamcheck = new ByteArrayOutputStream() ;
           while ((c=in.read()) != -1)
-            out.write(c) ;
+            outstreamcheck.write(c) ;
           in.close();
-          out.close();
-          
-          // reads the java code from the stream buffer and appends it to the text
-          // in the destionation file
-          instream = new ByteArrayInputStream(outstream.toByteArray()) ;
-          out = new FileWriter(destfile, true) ;
-          while ((c=instream.read()) != -1)
-            out.write(c) ;
-          out.close();
+          outstreamcheck.close();
+          if (!outstream.toString().startsWith(outstreamcheck.toString()))
+          {
+            // reads the text from the sourcefile and overwrites it over the java code
+            // in the destination file
+            in = new FileReader(sourcefile);
+            out = new FileWriter(destfile, false);
+            while ((c=in.read()) != -1)
+              out.write(c) ;
+            in.close();
+            out.close();
+            
+            // reads the java code from the stream buffer and appends it to the text
+            // in the destionation file
+            instream = new ByteArrayInputStream(outstream.toByteArray()) ;
+            out = new FileWriter(destfile, true) ;
+            while ((c=instream.read()) != -1)
+              out.write(c) ;
+            out.close();
+          }
         }
-        
       }
     }
     catch (IOException ioex)
