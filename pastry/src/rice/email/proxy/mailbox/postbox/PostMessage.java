@@ -3,6 +3,8 @@ package rice.email.proxy.mailbox.postbox;
 import rice.*;
 import rice.Continuation.*;
 
+import rice.p2p.commonapi.*;
+
 import rice.post.*;
 
 import rice.email.*;
@@ -42,6 +44,8 @@ public class PostMessage implements StoredMessage {
   private int sequence;
 
   private Folder folder;
+  
+  private static IdFactory factory = new rice.pastry.commonapi.PastryIdFactory();
 
 //  private MimeMessage message;
 
@@ -161,10 +165,10 @@ public class PostMessage implements StoredMessage {
       javax.mail.internet.MimeMessage mm = new javax.mail.internet.MimeMessage(session, content.getInputStream());
 
       Address froms[] = mm.getFrom();
-      PostUserAddress from = new PostUserAddress("Unknown");
+      PostUserAddress from = new PostUserAddress(factory, "Unknown");
 
       if ((froms != null) && (froms.length > 0)) {
-        from = new PostUserAddress(((InternetAddress) froms[0]).getAddress());
+        from = new PostUserAddress(factory, ((InternetAddress) froms[0]).getAddress());
       }
 
       if (address != null) {
@@ -174,11 +178,15 @@ public class PostMessage implements StoredMessage {
       PostEntityAddress[] recipients = new PostEntityAddress[addresses.length];
 
       for (int i=0; i<recipients.length; i++) {
-        recipients[i] = new PostUserAddress(addresses[i].toString());
+        recipients[i] = new PostUserAddress(factory, addresses[i].toString());
       }
 
       if (address != null) {
-        mm.setSubject(UNSECURE_SUBJECT_TITLE + " " + mm.getSubject());
+        if (mm.getSubject() == null) {
+          mm.setSubject(UNSECURE_SUBJECT_TITLE + " ");
+        } else {
+          mm.setSubject(UNSECURE_SUBJECT_TITLE + " " + mm.getSubject());
+        }
       }
       
       return new Email(from, recipients, (EmailMessagePart) process(mm));

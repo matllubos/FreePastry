@@ -2,7 +2,7 @@ package rice.email.log;
 
 import java.security.*;
 
-import rice.pastry.Id;
+import rice.p2p.commonapi.*;
 import rice.post.*;
 import rice.post.log.*;
 
