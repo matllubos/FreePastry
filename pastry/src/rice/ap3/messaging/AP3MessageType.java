@@ -12,4 +12,5 @@ public interface AP3MessageType {
 
   public static final int REQUEST = 1;
   public static final int RESPONSE = 2;
+  public static final int CALLBACK = 3;	
 }
