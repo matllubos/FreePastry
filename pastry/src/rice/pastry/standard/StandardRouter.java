@@ -98,15 +98,19 @@ public class StandardRouter implements MessageReceiver {
 
     public void receiveRouteMessage(RouteMessage msg) 
     {
+	//ssiyer//System.out.println("[router] receiveroutemsg " + msg);
 	NodeId target = msg.getTarget();
 	
 	int cwSize = leafSet.cwSize();
 	int ccwSize = leafSet.ccwSize();
 
 	int lsPos = leafSet.mostSimilar(target);
-	
+
 	if (lsPos == 0) // message is for the local node so deliver it
+	{
 	    msg.nextHop = localHandle;
+	    //ssiyer//System.out.println("[router] nexthop = localhandle = " + localHandle.getNodeId());
+	}
 
 	else if ((lsPos > 0 && lsPos < cwSize) ||
 		 (lsPos < 0 && lsPos < ccwSize)) // message is for a node in the leaf set
@@ -114,11 +118,18 @@ public class StandardRouter implements MessageReceiver {
 		NodeHandle handle = leafSet.get(lsPos);
 
 		if (handle.isAlive() == false) {   // node is dead - get rid of it and try again
+
+		    //ssiyer//System.out.println("before: " + leafSet);
+		    //ssiyer//System.out.println("[router] leafset dead handle = " + handle.getNodeId());
+
 		    leafSet.remove(handle.getNodeId());
+		    //ssiyer//System.out.println("after : " + leafSet);
+
 		    receiveRouteMessage(msg);
 		    return;
 		}
 		else msg.nextHop = handle;
+		//ssiyer//System.out.println("[router] leafset live handle = " + handle.getNodeId());
 	    }
 	else {
 	    RouteSet rs = routeTable.getBestEntry(target);

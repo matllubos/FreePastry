@@ -159,6 +159,8 @@ public class RouteMessage extends Message implements Serializable {
      */
 
     public boolean routeMessage(NodeId localId) {
+	//ssiyer//System.out.println("[routemsg] routeMessage at " + localId);
+	//ssiyer//System.out.println("[routemsg] nextHop = " + nextHop);
 	if (nextHop == null) return false;
 
 	NodeHandle handle = nextHop;
@@ -205,6 +207,15 @@ public class RouteMessage extends Message implements Serializable {
      */
 
     public SendOptions getOptions() { return opts; }
+
+    /**
+     * Set the next hop of a message. (Added by Sitaram Iyer). Used in the
+     * RMI subsystem: when remote node is found dead, it nulls the nexthop
+     * and bounces the RouteMessage back to its local node.
+     *
+     * @param nh new next hop
+     */
+    public void setNextHop(NodeHandle nh) { nextHop = nh; }
 
     private void readObject(ObjectInputStream in)
 	throws IOException, ClassNotFoundException 
