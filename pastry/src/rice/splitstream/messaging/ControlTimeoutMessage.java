@@ -21,12 +21,12 @@ import java.io.Serializable;
 public class ControlTimeoutMessage extends Message implements Serializable
 {
     /**
-     * Constants representing the two possible types of messages associated
+     * Constants representing the three possible types of messages associated
      * with a timeout
      */
     private static int ATTACH      = 1;
     private static int FIND_PARENT = 2;
-
+    private static int FINAL_FIND_PARENT = 3;
     /**
      * The number of times the sent message this is related to has failed
      * to elicit a response.
@@ -101,6 +101,27 @@ public class ControlTimeoutMessage extends Message implements Serializable
         this.channel_id = channel_id;
     }
 
+    /**
+     * This is the constructor called when the timeout message is being created on behalf of
+     * a FinalFindParent message.
+     *
+     * @param addr The address of the message destination application
+     * @param num_fails The number of times the bound message has timed out thus far
+     * @param c The sending credentials of the bound message
+     * @param stripe_id The stripe id the bound message pertains to
+     * @param channel_id The channel id the bound message pertains to
+     */
+    public ControlTimeoutMessage( Address addr, int num_fails, Credentials c, 
+                                  StripeId stripe_id, ChannelId channel_id )
+    {
+        super( addr );
+        this.num_fails = num_fails;
+	this.msg_type = FINAL_FIND_PARENT;
+	this.c = c;
+        this.stripe_id = stripe_id;
+        this.channel_id = channel_id;
+    }
+
     public ChannelId getChannelId()
     {
         return channel_id;
@@ -122,7 +143,7 @@ public class ControlTimeoutMessage extends Message implements Serializable
         {
             ignore = channel.getIgnoreTimeout();
         }
-        else if ( msg_type == FIND_PARENT )
+        else if ( msg_type == FIND_PARENT || msg_type == FINAL_FIND_PARENT )
         {
             ignore = channel.getStripe( stripe_id ).getIgnoreTimeout();
         }
@@ -168,6 +189,22 @@ public class ControlTimeoutMessage extends Message implements Serializable
 		    channel.getStripe( stripe_id ).num_fails = num_fails + 1;
                     thePastryNode.scheduleMsg( timeoutMessage, channel.getTimeoutLen() );
                 }
+		else if(msg_type == FINAL_FIND_PARENT){
+		    ControlFinalFindParentMessage cffpMsg = new ControlFinalFindParentMessage(scribe.getAddress(),
+											      scribe.getLocalHandle(),
+											      stripe_id,
+											      c, 
+											      channel.getChannelId() );
+		    scribe.anycast(stripe_id, cffpMsg, c);
+		    
+		    ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( SplitStreamAddress.instance(),
+                                                                                      num_fails+1,
+                                                                                      stripe_id,
+                                                                                      c,
+										      channel_id );
+		    channel.getStripe( stripe_id ).num_fails = num_fails + 1;
+                    thePastryNode.scheduleMsg( timeoutMessage, channel.getTimeoutLen() );
+		}
             }
         }
     }	
