@@ -33,7 +33,8 @@ public class PostLog extends Log {
   private java.security.cert.Certificate certificate;
   
   /**
-   * Constructor for PostLog.  Only Post should need to do this.
+   * Constructor for PostLog.  Package protected: only Post can create
+   * a PostLog.
    *
    * @param user The user whom this PostLog is for
    * @param key The user's public key.

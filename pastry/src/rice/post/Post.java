@@ -97,6 +97,21 @@ public class Post extends PastryAppl implements IScribeApp  {
    */
   private SecurityService security;
   
+  /**
+   * The user's public key.
+   */
+  private PublicKey publicKey;
+  
+  /**
+   * The certificate used to authenticate this user's key pair.
+   */
+  private java.security.cert.Certificate certificate;
+  
+  /**
+   * The public key of the certificate authority.
+   */
+  private PublicKey caPublicKey;
+  
 
   /**
    * Builds a PostService to run on the given pastry node,
@@ -107,20 +122,35 @@ public class Post extends PastryAppl implements IScribeApp  {
    * @param scribe The Scribe service running on this Pastry node.
    * @param address The address of the user in the system
    * @param keyPair The KeyPair of this user
+   * @param cert The certificate authenticating this user
+   * @param caPublicKey The public key of the certificate authority
+   * 
+   * @throws PostException if the PostLog could not be accessed
    */
   public Post(PastryNode node, 
               PASTService past, 
               IScribe scribe,
               PostUserAddress address,
-              KeyPair keyPair) {
+              KeyPair keyPair,
+              java.security.cert.Certificate cert, 
+              PublicKey caPublicKey)
+    throws PostException
+  {
     super(node);
     
     this.pastService = past;
     this.scribeService = scribe;
     this.address = address;
+    this.publicKey = keyPair.getPublic();
+    this.certificate = cert;
+    this.caPublicKey = caPublicKey;
 
-    security = new SecurityService(keyPair);
+    security = new SecurityService(keyPair, caPublicKey);
     storage = new StorageService(past, credentials, security);
+    
+    // Try to get the post log
+    this.log = null;
+    retrievePostLog();
     
     clients = new Vector();
     clientAddresses = new Hashtable();
@@ -188,15 +218,51 @@ public class Post extends PastryAppl implements IScribeApp  {
    * application logs.
    */
   public PostLog getLog() {
-    return null;
+    return log;
+  }
+  
+  /**
+   * @return The PostLog belonging to the given entity, eg. to acquire
+   * another user's public key.
+   */
+  public PostLog getPostLog(PostEntityAddress entity) throws PostException {
+    try {
+      SignedReference logRef = new SignedReference(entity.getAddress());
+      PostLog postLog = (PostLog) storage.retrieveSigned(logRef);
+      if (security.verifyCertificate(postLog.getEntityAddress(),
+                                     postLog.getPublicKey(),
+                                     postLog.getCertificate())) {
+        return postLog;
+      }
+      else {
+        throw new PostException("Certificate of PostLog could not verified" +
+                                " for entity: " + entity);
+      }
+    }
+    catch (StorageException se) {
+      throw new PostException("Could not access PostLog: " + se);
+    }
   }
 
   /**
    * Retrieve's this user's PostLog from PAST, or creates and stores a new one
    * if one does not already exist.
    */
-  private void retrievePostLog() {
-    
+  private void retrievePostLog() throws PostException {
+    try {
+      PostLog postLog = getPostLog(address);
+      if (postLog == null) {
+        // None found, so create a new one
+        postLog = new PostLog(address, publicKey, certificate);
+        storage.storeSigned(postLog, address.getAddress());
+      }
+      
+      // Store the log in a field
+      this.log = postLog;
+    }
+    catch (StorageException se) {
+      throw new PostException("Could not access PostLog: " + se);
+    }
   }
   
   /**

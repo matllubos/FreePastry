@@ -95,17 +95,32 @@ public class StorageService {
    */
   public PostData retrieveContentHash(ContentHashReference reference) throws StorageException {
     try {
-      // TO DO - verify hashes, classes, last class
-      //  (Catch a ClassCastException)
+      // TO DO: fetch from multiple locations to prevent rollback attacks
       ContentHashData chd = 
         (ContentHashData) past.lookup(reference.getLocation()).getOriginal();
+      byte[] keyBytes = reference.getKey().getEncoded();
       
       byte[] cipherText = chd.getData();
-      byte[] plainText = security.decryptDES(cipherText,
-                                             reference.getKey().getEncoded());
+      byte[] plainText = security.decryptDES(cipherText, keyBytes);
       Object data = security.deserialize(plainText);
       
+      // Verify hash(cipher) == location
+      byte[] hashCipher = security.hash(cipherText);
+      byte[] loc = reference.getLocation().copy();
+      if (!Arrays.equals(hashCipher, loc)) {
+        throw new StorageException("Hash of cipher text does not match location.");
+      }
+      
+      // Verify hash(plain) == key
+      byte[] hashPlain = security.hash(plainText);
+      if (!Arrays.equals(hashPlain, keyBytes)) {
+        throw new StorageException("Hash of retrieved content does not match key.");
+      }
+      
       return (PostData) data;
+    }
+    catch (ClassCastException cce) {
+      throw new StorageException("ClassCastException while retrieving data: " + cce);
     }
     catch (IOException ioe) {
       throw new StorageException("IOException while retrieving data: " + ioe);
@@ -157,15 +172,39 @@ public class StorageService {
    * @return The data
    */
   public PostData retrieveSigned(SignedReference reference) throws StorageException {
+    return retrieveSigned(reference, security.getPublicKey());
+  }
+  
+  /**
+   * This method retrieves a previously-stored block from PAST which was
+   * signed using the private key matching the given public key.
+   * This method also does all necessary verification
+   * checks and fetches the content from multiple locations in order
+   * to prevent version-rollback attacks.
+   *
+   * @param location The location of the data
+   * @param publicKey The public key matching the private key used to sign the data
+   * @return The data
+   */
+  public PostData retrieveSigned(SignedReference reference, PublicKey publicKey)
+    throws StorageException
+  {
     try {
-      // TO DO - verify signature, last class, etc...
-      //  (Catch a ClassCastException)
+      // TO DO: fetch from multiple locations to prevent rollback attacks
       SignedData sd = (SignedData) past.lookup(reference.getLocation()).getOriginal();
       
       byte[] plainText = sd.getData();
       Object data = security.deserialize(plainText);
       
+      // Verify signature
+      if (!security.verify(plainText, sd.getSignature(), publicKey)) {
+        throw new StorageException("Signature of retrieved data is not correct.");
+      }
+      
       return (PostData) data;
+    }
+    catch (ClassCastException cce) {
+      throw new StorageException("ClassCastException while retrieving data: " + cce);
     }
     catch (IOException ioe) {
       throw new StorageException("IOException while retrieving data: " + ioe);

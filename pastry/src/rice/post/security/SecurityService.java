@@ -44,6 +44,11 @@ public class SecurityService {
    * The key pair used to sign data.
    */
   private KeyPair keyPair;
+  
+  /**
+   * The public key of the certificate authority.
+   */
+  private PublicKey caPublicKey;
 
   /**
    * The cipher used to encrypt/decrypt data using DES
@@ -64,9 +69,11 @@ public class SecurityService {
    * Contructs a SecurityService given a user's keyPair.
    *
    * @param keyPair The user's key pair to use for data encryption
+   * @param caPublicKey The public key of the certificate authority
    */
-  public SecurityService(KeyPair keyPair) throws SecurityException {
+  public SecurityService(KeyPair keyPair, PublicKey caPublicKey) throws SecurityException {
     this.keyPair = keyPair;
+    this.caPublicKey = caPublicKey;
 
     // Add a provider for RSA encryption
     Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
@@ -80,6 +87,13 @@ public class SecurityService {
     } catch (NoSuchPaddingException e) {
       throw new SecurityException("NoSuchPaddingException on construction: " + e);
     }
+  }
+  
+  /**
+   * Returns this user's public key.
+   */
+  public PublicKey getPublicKey() {
+    return keyPair.getPublic();
   }
 
   /**
@@ -216,7 +230,7 @@ public class SecurityService {
    * @param sig The proposed signature
    * @return Whether or not the sig matches.
    */
-  private boolean verify(byte[] data, byte[] sig) throws SecurityException {
+  public boolean verify(byte[] data, byte[] sig) throws SecurityException {
     return verify(data, sig, keyPair.getPublic());
   }
   
@@ -228,7 +242,7 @@ public class SecurityService {
    * @param key The key to verify against
    * @return Whether or not the sig matches.
    */
-  private boolean verify(byte[] data, byte[] sig, PublicKey key) throws SecurityException {
+  public boolean verify(byte[] data, byte[] sig, PublicKey key) throws SecurityException {
     try {
       signature.initVerify(key);
 
@@ -347,7 +361,7 @@ public class SecurityService {
     System.out.println("[ DONE ]");
     
     System.out.print("    Building cipher\t\t\t\t\t");
-    SecurityService security = new SecurityService(pair);
+    SecurityService security = new SecurityService(pair, null);
 
     System.out.println("[ DONE ]");
     System.out.println("-------------------------------------------------------------");

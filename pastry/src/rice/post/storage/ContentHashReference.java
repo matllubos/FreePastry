@@ -32,7 +32,7 @@ public class ContentHashReference {
    * @param location The location in PAST of the PostData object
    * @param key The encryption key of the PostData object
    */
-  protected ContentHashReference(NodeId location, Key key) {
+  public ContentHashReference(NodeId location, Key key) {
     this.location = location;
     this.key = key;
   }

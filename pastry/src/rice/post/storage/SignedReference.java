@@ -26,7 +26,7 @@ public class SignedReference {
    *
    * @param location The location in PAST of the PostData object
    */
-  protected SignedReference(NodeId location) {
+  public SignedReference(NodeId location) {
     this.location = location;
   }
 
