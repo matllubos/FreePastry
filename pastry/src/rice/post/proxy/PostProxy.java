@@ -245,6 +245,14 @@ public class PostProxy {
   {"glacier_enable", "false"},
   {"glacier_num_fragments", "30"},
   {"glacier_num_survivors", "4"},
+  {"glacier_sync_interval", "3600"},
+  {"glacier_sync_max_fragments", "100"},
+  {"glacier_max_requests_per_second", "3"},
+  {"glacier_neighbor_timeout", "7200"},
+  {"aggregation_flush_interval", "180"},
+  {"aggregation_max_aggregate_size", "1048576"},
+  {"aggregation_max_objects_per_aggregate", "20"},
+  {"aggregation_renew_threshold", "72"},
   {"past_replication_factor", "3"},
   {"application_instance_name", "PostProxy"}
   };
@@ -587,7 +595,8 @@ public class PostProxy {
       FragmentKeyFactory KFACTORY = new FragmentKeyFactory((MultiringIdFactory) FACTORY);
       VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
       PastryIdFactory PFACTORY = new PastryIdFactory();
-      
+
+      stepStart("Starting Glacier Storage");
       glacierMutableStorage = new StorageManagerImpl(KFACTORY,
                                               new PersistentStorage(KFACTORY, prefix + "-glacier-mutable", location, diskLimit),
                                               new EmptyCache(KFACTORY));
@@ -607,6 +616,8 @@ public class PostProxy {
       } else {
         glacierTrashStorage = null;
       }
+      
+      stepDone(SUCCESS);
     }
   }
   
@@ -785,9 +796,13 @@ public class PostProxy {
         )
       );
       
+      immutableGlacier.setSyncInterval(parameters.getIntParameter("glacier_sync_interval"));
+      immutableGlacier.setSyncMaxFragments(parameters.getIntParameter("glacier_sync_max_fragments"));
+      immutableGlacier.setRateLimit(parameters.getIntParameter("glacier_max_requests_per_second"));
+      immutableGlacier.setNeighborTimeout(parameters.getIntParameter("glacier_neighbor_timeout"));
       immutableGlacier.setTrashcan(glacierTrashStorage);
 
-      immutablePast = new AggregationImpl(
+      AggregationImpl immutableAggregation = new AggregationImpl(
         node, 
         immutableGlacier,  
         immutablePast,
@@ -796,6 +811,13 @@ public class PostProxy {
         (MultiringIdFactory) FACTORY,
         parameters.getStringParameter("application_instance_name") + "-aggr-immutable"
       );
+
+      immutableAggregation.setFlushInterval(parameters.getIntParameter("aggregation_flush_interval"));
+      immutableAggregation.setMaxAggregateSize(parameters.getIntParameter("aggregation_max_aggregate_size"));
+      immutableAggregation.setMaxObjectsInAggregate(parameters.getIntParameter("aggregation_max_objects_per_aggregate"));
+      immutableAggregation.setRenewThreshold(parameters.getIntParameter("aggregation_renew_threshold"));
+
+      immutablePast = immutableAggregation;
 
       stepDone(SUCCESS);
     }
