@@ -1,8 +1,8 @@
 1) Anycast --- 
 	a) add failureHandler routine for the class, which will 
-	   be invoked when anycast fails, 
+	   be invoked when anycast fails, --- DONE
 	b) write default anycast message class, with DFS and with 
-	   empty failure handling 
+	   empty failure handling ----- DONE
 
 
 2) Scribe "Create" Semantics 
@@ -14,4 +14,10 @@
 
 
 5) Scribe - Regression test suites for addChild, removeChild, setData method
-	for ScribeMessages etc.
+	for ScribeMessages etc. -- DONE
+
+Changes made to Scribe after Release 
+************************************
+
+1)Added interface method to IScribeApp - isNewRoot() , to let applications 
+ know when they have become root for some topic.
