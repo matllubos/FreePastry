@@ -1,43 +1,78 @@
 package rice.p2p.glacier;
+import java.io.Serializable;
+import rice.p2p.commonapi.Id;
 
 import rice.p2p.glacier.*;
-import rice.p2p.commonapi.Id;
-import java.io.Serializable;
 
+/**
+ * DESCRIBE THE CLASS
+ *
+ * @version $Id$
+ * @author ahae
+ */
 public class HistoryEvent implements Serializable {
-    public int type;
-    FragmentKey key;
-    int fragmentID;
-    Id holder;
-    int sequenceNo;
-    
-    public static final int evtAcquired = 1;
-    public static final int evtHandedOff = 2;
-    public static final int evtNewHolder = 3;
+  /**
+   * DESCRIBE THE FIELD
+   */
+  public int type;
+  FragmentKey key;
+  Id holder;
+  int sequenceNo;
 
-    public HistoryEvent(int type, FragmentKey key, int fragmentID, Id holder, int sequenceNo)
-    {
-        this.type = type;
-        this.key = key;
-        this.fragmentID = fragmentID;
-        this.holder = holder;
-        this.sequenceNo = sequenceNo;
+  /**
+   * DESCRIBE THE FIELD
+   */
+  public final static int evtAcquired = 1;
+  /**
+   * DESCRIBE THE FIELD
+   */
+  public final static int evtHandedOff = 2;
+  /**
+   * DESCRIBE THE FIELD
+   */
+  public final static int evtNewHolder = 3;
+
+  /**
+   * Constructor for HistoryEvent.
+   *
+   * @param type DESCRIBE THE PARAMETER
+   * @param key DESCRIBE THE PARAMETER
+   * @param holder DESCRIBE THE PARAMETER
+   * @param sequenceNo DESCRIBE THE PARAMETER
+   */
+  public HistoryEvent(int type, FragmentKey key, Id holder, int sequenceNo) {
+    this.type = type;
+    this.key = key;
+    this.holder = holder;
+    this.sequenceNo = sequenceNo;
+  }
+
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @return DESCRIBE THE RETURN VALUE
+   */
+  public String toString() {
+    return "[S#" + sequenceNo + " " + eventName(type) + " " + key + " - " + holder + "]";
+  }
+
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @param eventType DESCRIBE THE PARAMETER
+   * @return DESCRIBE THE RETURN VALUE
+   */
+  public static String eventName(int eventType) {
+    if (eventType == evtAcquired) {
+      return "Acquired";
     }
-    
-    public static String eventName(int eventType)
-    {
-        if (eventType == evtAcquired)
-            return "Acquired";
-        if (eventType == evtHandedOff)
-            return "HandedOff";
-        if (eventType == evtNewHolder)
-            return "NewHolder";
-            
-        return "Unknown ("+eventType+")";
+    if (eventType == evtHandedOff) {
+      return "HandedOff";
+    }
+    if (eventType == evtNewHolder) {
+      return "NewHolder";
     }
 
-    public String toString()
-    {
-        return "[S#"+sequenceNo+" "+eventName(type)+" "+key+":"+fragmentID+" - "+holder+"]";
-    }
-};
+    return "Unknown (" + eventType + ")";
+  }
+}
