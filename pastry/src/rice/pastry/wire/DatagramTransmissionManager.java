@@ -71,6 +71,9 @@ public class DatagramTransmissionManager {
 
   private DatagramManager datagramManager;
 
+  private Object killedLock = new Object();
+  private boolean killed = false;
+
   /**
    * Builds a transmission manager for a given pastry node using a given key.
    *
@@ -108,6 +111,20 @@ public class DatagramTransmissionManager {
     }
   }
 
+  public void notifyKilled() {
+    synchronized(killedLock) {
+      if (killed) return;
+      killed = true;    
+    }
+    synchronized(map) {
+      Iterator i = map.values().iterator();
+      while (i.hasNext()) {
+        ((TransmissionEntry)i.next()).notifyKilled();
+      }
+    }
+  }
+
+
   /**
    * Adds a pending write to the queue.
    *
@@ -122,7 +139,10 @@ public class DatagramTransmissionManager {
         map.put(write.getDestination(), entry);
       }
 
-      entry.add(write);
+      //synchronized(killedLock) {
+        
+        entry.add(write);
+      //}
 
       if (entry.getState() == entry.STATE_READY) {
         enableWrite(true, "added " + write);
@@ -202,6 +222,7 @@ public class DatagramTransmissionManager {
       }
     } catch (CancelledKeyException cke) {
       if (!key.isValid()) {
+        DatagramTransmissionManager.this.notifyKilled();
         throw new NodeIsDeadException(cke);
       } else {
         throw cke;
@@ -400,6 +421,19 @@ public class DatagramTransmissionManager {
     }
 
     /**
+     * 
+     */
+    public void notifyKilled() {
+      synchronized(queue) {
+        Iterator i = queue.iterator();
+        while (i.hasNext()) {
+          PendingWrite o = (PendingWrite)i.next();
+          System.err.println("DTM2: Potentially lost the message:"+o.getObject());
+        }
+      }      
+    }
+
+    /**
      * Returns a the current PendingWrite, if the entry is in the STATE_READY
      * state. If not, it thows an IllegalArgumentException. If a write is
      * returned, the state is changed to the STATE_WAITING_FOR_ACK state. Also
@@ -413,7 +447,9 @@ public class DatagramTransmissionManager {
         state = STATE_WAITING_FOR_ACK;
         sendTime = System.currentTimeMillis();
         PendingWrite write = (PendingWrite) queue.getFirst();
+        handle.wireDebug("DBG:udp.get():returning" + write.getObject());
 
+        //System.out.println("DTM:Returning write for object " + write.getObject());
         debug("Returning write for object " + write.getObject());
 
         if (write.getObject() instanceof DatagramMessage) {
@@ -453,6 +489,7 @@ public class DatagramTransmissionManager {
     public void add(PendingWrite write) {
       addToQueue(write);
 
+      handle.wireDebug("DBG:udp add(" + write.getObject() + "):"+queue.size());
       debug("Added write for object " + write.getObject());
 
       if ((queue.size() > MAX_UDP_QUEUE_SIZE) && (!(write.getObject() instanceof DatagramMessage)) &&
@@ -612,25 +649,31 @@ public class DatagramTransmissionManager {
      * @param write The pending write to add
      */
     private void addToQueue(PendingWrite write) {
-      if (!(write.getObject() instanceof DatagramMessage)) {
-        boolean priority = ((Message) write.getObject()).hasPriority();
-
-        if ((priority) && (queue.size() > 0)) {
-          for (int i = 1; i < queue.size(); i++) {
-            PendingWrite thisWrite = (PendingWrite) queue.get(i);
-
-            if ((!(thisWrite.getObject() instanceof DatagramMessage)) &&
-              (!((Message) thisWrite.getObject()).hasPriority())) {
-              debug("Prioritizing datagram message " + write.getObject() + " over message " + thisWrite.getObject());
-
-              queue.add(i, write);
-              return;
+      synchronized(killedLock) {
+        if (killed) {
+          Object o = write.getObject();
+          System.err.println("DTM1: Potentially lost the message:"+o);
+        }
+        if (!(write.getObject() instanceof DatagramMessage)) {
+          boolean priority = ((Message) write.getObject()).hasPriority();
+  
+          if ((priority) && (queue.size() > 0)) {
+            for (int i = 1; i < queue.size(); i++) {
+              PendingWrite thisWrite = (PendingWrite) queue.get(i);
+  
+              if ((!(thisWrite.getObject() instanceof DatagramMessage)) &&
+                (!((Message) thisWrite.getObject()).hasPriority())) {
+                debug("Prioritizing datagram message " + write.getObject() + " over message " + thisWrite.getObject());
+  
+                queue.add(i, write);
+                return;
+              }
             }
           }
         }
+  
+        queue.addLast(write);
       }
-
-      queue.addLast(write);
     }
 
     /**
