@@ -5,187 +5,76 @@ import rice.past.search.*;
 import rice.past.messaging.*;
 
 import rice.pastry.*;
-import rice.pastry.rmi.*;
 import rice.pastry.standard.*;
 import rice.pastry.security.*;
+import rice.pastry.dist.*;
 
 import rice.storage.*;
 import rice.storage.testing.*;
+
 
 import ObjectWeb.Persistence.*;
 
 import java.util.*;
 import java.net.*;
-import java.rmi.Naming;
-import java.rmi.RMISecurityManager;
 import java.io.Serializable;
 
 /**
- * Provides regression testing for the SearchService using RMI.
+ * Provides regression testing for the SearchService using distributed nodes.
  *
  * @version $Id$
  * @author Alan Mislove
  */
 
-public class RMIPASTSearchRegrTest {
-  private PastryNodeFactory factory;
+public class DistPASTSearchRegrTest {
+  private DistPastryNodeFactory factory;
   private Vector pastrynodes;
   private Vector pastNodes;
   private Vector searchServices;
 
   private Random rng;
-  private RandomNodeIdFactory idFactory;
 
   private static int numNodes = 10;
   private static int k = 3;  // replication factor
 
   private static int port = 5009;
-  private static String bshost = "localhost";
+  private static String bshost;
   private static int bsport = 5009;
 
-  public RMIPASTSearchRegrTest() {
-    factory = new RMIPastryNodeFactory(port);
+  private static int protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
+
+  static {
+    try {
+      bshost = InetAddress.getLocalHost().getHostName();
+    } catch (UnknownHostException e) {
+      System.out.println("Error determining local host: " + e);
+    }
+  }
+
+  public DistPASTSearchRegrTest() {
+    factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(),
+                                               protocol,
+                                               port);
     pastrynodes = new Vector();
     pastNodes = new Vector();
     searchServices = new Vector();
     rng = new Random(5);
-    idFactory = new RandomNodeIdFactory();
   }
 
   /**
-   * Gets a handle to a bootstrap node. First tries localhost, to see
-   * whether a previous virtual node has already bound itself. Then it
-   * tries nattempts times on bshost:bsport.
+   * Gets a handle to a bootstrap node.
    *
    * @return handle to bootstrap node, or null.
    */
   protected NodeHandle getBootstrap() {
-    RMIRemoteNodeI bsnode = null;
-    try {
-      bsnode = (RMIRemoteNodeI)Naming.lookup("//:" + port + "/Pastry");
-    } catch (Exception e) {
-      System.out.println("Unable to find bootstrap node on localhost");
-    }
-
-    int nattempts = 3;
-
-    // if bshost:bsport == localhost:port then nattempts = 0.
-    // waiting for ourselves is not harmful, but pointless, and denies
-    // others the usefulness of symmetrically waiting for us.
-
-    if (bsport == port) {
-      InetAddress localaddr = null, connectaddr = null;
-      String host = null;
-
-      try {
-        host = "localhost"; localaddr = InetAddress.getLocalHost();
-        connectaddr = InetAddress.getByName(host = bshost);
-      } catch (UnknownHostException e) {
-        System.out.println("[rmi] Error: Host unknown: " + host);
-        nattempts = 0;
-      }
-
-      if (nattempts != 0 && localaddr.equals(connectaddr))
-        nattempts = 0;
-    }
-
-    for (int i = 1; bsnode == null && i <= nattempts; i++) {
-      try {
-        bsnode = (RMIRemoteNodeI)Naming.lookup("//" + bshost
-                                                 + ":" + bsport
-                                                 + "/Pastry");
-      } catch (Exception e) {
-        System.out.println("Unable to find bootstrap node on "
-                             + bshost + ":" + bsport
-                             + " (attempt " + i + "/" + nattempts + ")");
-      }
-
-      if (i != nattempts)
-        pause(1000);
-    }
-
-    NodeId bsid = null;
-    if (bsnode != null) {
-      try {
-        bsid = bsnode.getNodeId();
-      } catch (Exception e) {
-        System.out.println("[rmi] Unable to get remote node id: " + e.toString());
-        bsnode = null;
-      }
-    }
-
-    RMINodeHandle bshandle = null;
-    if (bsid != null)
-      bshandle = new RMINodeHandle(bsnode, bsid);
-
-    return bshandle;
-  }
-
-  /**
-   * process command line args, set the RMI security manager, and start
-   * the RMI registry. Standard gunk that has to be done for all RMI apps.
-   */
-  private static void doRMIinitstuff(String args[]) {
-    // process command line arguments
-
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-help")) {
-        System.out.println("Usage: RMIPASTRegrTest [-port p] [-bootstrap host[:port]] [-nodes n] [-help]");
-        System.exit(1);
-      }
-    }
-
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-port") && i+1 < args.length) {
-        int p = Integer.parseInt(args[i+1]);
-        if (p > 0) port = p;
-        break;
-      }
-    }
-
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-bootstrap") && i+1 < args.length) {
-        String str = args[i+1];
-        int index = str.indexOf(':');
-        if (index == -1) {
-          bshost = str;
-          bsport = port;
-        } else {
-          bshost = str.substring(0, index);
-          bsport = Integer.parseInt(str.substring(index + 1));
-          if (bsport <= 0) bsport = port;
-        }
-        break;
-      }
-    }
-
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-nodes") && i+1 < args.length) {
-        int n = Integer.parseInt(args[i+1]);
-        if (n > 0) numNodes = n;
-        break;
-      }
-    }
-
-    // set RMI security manager
-
-    if (System.getSecurityManager() == null)
-      System.setSecurityManager(new RMISecurityManager());
-
-    // start RMI registry
-
-    try {
-      java.rmi.registry.LocateRegistry.createRegistry(port);
-    } catch (Exception e) {
-      System.out.println("Error starting RMI registry: " + e);
-    }
+    InetSocketAddress address = new InetSocketAddress(bshost, bsport);
+    return factory.getNodeHandle(address);
   }
 
   public synchronized void pause(int ms) {
     System.out.println("waiting for " + (ms/1000) + " sec");
     try { wait(ms); } catch (InterruptedException e) {}
   }
-
 
 
   /* ---------- Setup methods ---------- */
@@ -943,12 +832,66 @@ public class RMIPASTSearchRegrTest {
 
 
   /**
-   * Usage: RMIPASTTest [-port p] [-bootstrap host[:port]] [-nodes n] [-help]
+   * process command line args
+   */
+  private static void doInitstuff(String args[]) {
+    // process command line arguments
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-help")) {
+        System.out.println("Usage: DistPASTSearchRegrTest [-port p] [-protocol (rmi|wire)] [-bootstrap host[:port]] [-help]");
+        System.exit(1);
+      }
+    }
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-port") && i+1 < args.length) {
+        int p = Integer.parseInt(args[i+1]);
+        if (p > 0) port = p;
+        break;
+      }
+    }
+
+    bsport = port;  // make sure bsport = port, if no -bootstrap argument is provided
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-bootstrap") && i+1 < args.length) {
+        String str = args[i+1];
+        int index = str.indexOf(':');
+        if (index == -1) {
+          bshost = str;
+          bsport = port;
+        } else {
+          bshost = str.substring(0, index);
+          bsport = Integer.parseInt(str.substring(index + 1));
+          if (bsport <= 0) bsport = port;
+        }
+        break;
+      }
+    }
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-protocol") && i+1 < args.length) {
+        String s = args[i+1];
+
+        if (s.equalsIgnoreCase("wire"))
+          protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
+        else if (s.equalsIgnoreCase("rmi"))
+          protocol = DistPastryNodeFactory.PROTOCOL_RMI;
+        else
+          System.out.println("ERROR: Unsupported protocol: " + s);
+
+        break;
+      }
+    }
+  }
+
+  /**
+   * Usage: DistPASTSearchRegrTest [-port p] [-bootstrap host[:port]] [-protocol (rmi|wire)] [-help]
    */
   public static void main(String args[]) {
 
-    doRMIinitstuff(args);
-    RMIPASTSearchRegrTest pastTest = new RMIPASTSearchRegrTest();
+    doInitstuff(args);
+    DistPASTSearchRegrTest pastTest = new DistPASTSearchRegrTest();
     pastTest.runTests();
 
   }

@@ -1,7 +1,7 @@
 PACKAGE = rice.past.testing
 
 SOURCE  = \
-	RMIPASTRegrTest.java
+	DistPASTRegrTest.java
 
 RMI_SOURCE =
 

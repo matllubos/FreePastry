@@ -1,7 +1,7 @@
 PACKAGE = rice.past.search.testing
 
 SOURCE  = \
-	RMIPASTSearchRegrTest.java
+	DistPASTSearchRegrTest.java
 
 RMI_SOURCE =
 
