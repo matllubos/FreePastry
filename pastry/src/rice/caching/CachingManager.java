@@ -104,6 +104,15 @@ public class CachingManager extends PastryAppl {
   }
 
   /**
+   * Method which clients *MUST* call whenever a message is about to be forwarded.
+   *
+   * @param message The message about to be forwarded.
+   */
+  public void forward(CacheLookupMessage message) {
+    message.addHop(thePastryNode.getLocalHandle());
+  }
+
+  /**
    * Method by which the caching manager receives messages through pastry.
    *
    * @param message The message which has arrived.

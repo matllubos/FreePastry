@@ -52,7 +52,7 @@ import java.util.*;
  *
  * @author Alan Mislove
  */
-public abstract class CacheLookupMessage extends Message implements Serializable, LocalNodeI {
+public abstract class CacheLookupMessage extends Message implements Serializable {
 
   // a list containing all of the hops of this message
   private Vector hops = new Vector();
@@ -94,41 +94,23 @@ public abstract class CacheLookupMessage extends Message implements Serializable
    *
    * @return The previous node which this handle was on.
    */
-  public NodeHandle getPreviousNode() {
-    if (hops.size() < 2)
-      return null;
-    else
-      return (NodeHandle) hops.elementAt(hops.size() - 2);
-  }
+  public NodeHandle[] getHops() {
+    NodeHandle[] result = new NodeHandle[hops.size()];
 
-  /**
-   * Accessor method.
-   */
-  public PastryNode getLocalNode() {
-    return node;
-  }
-
-  /**
-    * Accessor method. Notifies the overridable afterSetLocalNode.
-   */
-  public void setLocalNode(PastryNode pn) {
-    node = pn;
-    hops.addElement(pn.getLocalHandle());
-  }
-
-  /**
-   * May be called from handle etc methods to ensure that local node has
-   * been set, either on construction or on deserialization/receivemsg.
-   */
-  public void assertLocalNode() {
-    if (node == null) {
-      new Exception().printStackTrace();
+    for (int i=0; i<hops.size(); i++) {
+      result[i] = (NodeHandle) hops.elementAt(i);
     }
+
+    return result;
   }
-  
-  private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-    in.defaultReadObject();
-    LocalNodeI.pending.addPending(in, this);
+
+  /**
+   * Method by which a hop is added to the message
+   *
+   * @param handle The current handle
+   */
+  public void addHop(NodeHandle handle) {
+    hops.addElement(handle);
   }
 }
 
