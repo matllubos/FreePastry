@@ -85,8 +85,6 @@ public class SplitStreamScribePolicy implements ScribePolicy {
    * @return Whether or not this child should be allowed add.
    */
   public boolean allowSubscribe(SubscribeMessage message, ScribeClient[] clients, NodeHandle[] children) {
-    System.out.println("ANALYSIZING MESSAGE " + message + " CLIENTS " + clients.length + " CHILDREN " + children.length + " ROOT " + scribe.isRoot(message.getTopic()));
-    
     if ((clients.length == 0) && (children.length == 0) && (! scribe.isRoot(message.getTopic()))) {
       return false;
     }

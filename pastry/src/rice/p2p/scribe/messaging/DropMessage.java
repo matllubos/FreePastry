@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"Free Pastry" Peer-to-Peer Application Development Substrate
+"FreePastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -41,72 +41,27 @@ import rice.p2p.commonapi.*;
 import rice.p2p.scribe.*;
 
 /**
- * @(#) SubscribeMessage.java The subscribe message.
+ * @(#) UnsubscribeMessage.java
+ *
+ * The drop message, which tells a child that it's parent can no longer
+ * support it.  Note that this does not necessarily mean that the parent
+ * has failed.
  *
  * @version $Id$
+ *
  * @author Alan Mislove
  */
-public class SubscribeMessage extends AnycastMessage {
-
-  /**
-   * The original subscriber
-   */
-  protected NodeHandle subscriber;
-
-  /**
-  * The previous parent
-   */
-  protected Id previousParent;
+public class DropMessage extends ScribeMessage {
 
   /**
    * Constructor which takes a unique integer Id
    *
+   * @param id The unique id
    * @param source The source address
-   * @param topic DESCRIBE THE PARAMETER
+   * @param dest The destination address
    */
-  public SubscribeMessage(NodeHandle source, Topic topic) {
-    this(source, topic, null);
-  }
-
-  /**
-   * Constructor which takes a unique integer Id
-   *
-   * @param source The source address
-   * @param topic DESCRIBE THE PARAMETER
-   * @param previousParent The parent on this topic who died
-   */
-  public SubscribeMessage(NodeHandle source, Topic topic, Id previousParent) {
-    super(source, topic, null);
-
-    this.subscriber = source;
-    this.previousParent = previousParent;
-  }
-
-  /**
-   * Returns the node who is trying to subscribe
-   *
-   * @return The node who is attempting to subscribe
-   */
-  public NodeHandle getSubscriber() {
-    return subscriber;
-  }
-
-  /**
-   * Returns the node who is trying to subscribe
-   *
-   * @return The node who is attempting to subscribe
-   */
-  public Id getPreviousParent() {
-    return previousParent;
-  }
-
-  /**
-   * Returns a String represneting this message
-   *
-   * @return A String of this message
-   */
-  public String toString() {
-    return "[SubscribeMessage " + topic + " subscriber " + subscriber + "]";
+  public DropMessage(NodeHandle source, Topic topic) {
+    super(source, topic);
   }
 
 }

@@ -173,8 +173,6 @@ public abstract class CommonAPITest {
       nodes[i] = createNode(i);
 
       simulate();
-
-      pause(1000);
       
       processNode(i, nodes[i]);
       simulate();
@@ -197,6 +195,8 @@ public abstract class CommonAPITest {
   protected void simulate() {
     if (PROTOCOL == PROTOCOL_DIRECT) {
       while (simulator.simulate()) {}
+    } else {
+      pause(500);
     }
   }
 

@@ -3,8 +3,11 @@ PACKAGE = rice.p2p.scribe.messaging
 SOURCE  = \
 	ScribeMessage.java \
   AnycastMessage.java \
+  DropMessage.java\
   PublishMessage.java \
+  PublishRequestMessage.java \
   SubscribeMessage.java \
+  SubscribeAckMessage.java \
   UnsubscribeMessage.java
 
 RMI_SOURCE =

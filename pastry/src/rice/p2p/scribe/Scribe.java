@@ -83,6 +83,28 @@ public interface Scribe {
   public void anycast(Topic topic, ScribeContent content);
 
   /**
+   * Returns the current policy for this scribe object
+   *
+   * @return The current policy for this scribe
+   */
+  public ScribePolicy getPolicy();
+
+  /**
+   * Sets the current policy for this scribe object
+   *
+   * @param policy The current policy for this scribe
+   */
+  public void setPolicy(ScribePolicy policy);
+
+  /**
+   * Returns whether or not this Scribe is the root for the given topic
+   *
+   * @param topic The topic in question
+   * @return Whether or not we are currently the root
+   */
+  public boolean isRoot(Topic topic);
+
+  /**
    * Returns the list of children for a given topic
    *
    * @param topic The topic to return the children of
@@ -105,27 +127,5 @@ public interface Scribe {
    * @param child The child to remove
    */
   public void removeChild(Topic topic, NodeHandle child);
-
-  /**
-   * Returns the current policy for this scribe object
-   *
-   * @return The current policy for this scribe
-   */
-  public ScribePolicy getPolicy();
-
-  /**
-   * Sets the current policy for this scribe object
-   *
-   * @param policy The current policy for this scribe
-   */
-  public void setPolicy(ScribePolicy policy);
-
-  /**
-   * Returns whether or not this Scribe is the root for the given topic
-   *
-   * @param topic The topic in question
-   * @return Whether or not we are currently the root
-   */
-  public boolean isRoot(Topic topic);
 }
 

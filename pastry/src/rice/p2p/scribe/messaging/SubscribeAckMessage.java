@@ -52,14 +52,32 @@ import rice.p2p.scribe.*;
 public class SubscribeAckMessage extends ScribeMessage {
 
   /**
+   * The contained path to the root
+   */
+  protected Id[] pathToRoot;
+
+  /**
    * Constructor which takes a unique integer Id
    *
    * @param id The unique id
    * @param source The source address
    * @param dest The destination address
    */
-  public SubscribeAckMessage(NodeHandle source, Topic topic) {
+  public SubscribeAckMessage(NodeHandle source, Topic topic, Id[] pathToRoot) {
     super(source, topic);
+
+    this.pathToRoot = pathToRoot;
+  }
+
+  /**
+   * Returns the path to the root for the node receiving
+   * this message
+   *
+   * @return The new path to the root for the node receiving this
+   * message
+   */
+  public Id[] getPathToRoot() {
+    return pathToRoot;
   }
 
 }
