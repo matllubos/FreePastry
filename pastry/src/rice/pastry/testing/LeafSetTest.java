@@ -95,13 +95,13 @@ public class LeafSetTest {
 
         for (int pos=-min(size/2,nodes/2); pos<=min(size/2,nodes/2); pos++) {
           
-          for (int q=1; q<size+1; q++) {
+          for (int q=0; q<size; q++) {
             IdRange range = leafset.range(leafset.get(pos), q);
-            if ((q <= size/2 - abs(pos)) || (size + 1 > nodes)) {
+            if ((q < size/2 - abs(pos)) || (size + 1 > nodes)) {
               assertTrue("Range of node " + pos + " with q " + q + " nodes " + nodes + " size " + size +
                          " should be defined in leafset " + leafset, range != null);
 
-              if (q >= nodes) {
+              if (q >= nodes-1) {
                 assertTrue("Range of node " + pos + " with q " + q + " nodes " + nodes + " size " + size +
                            " should be full in leafset " + leafset, range.isFull());
               } else {
@@ -127,11 +127,11 @@ public class LeafSetTest {
 
         for (int pos=-min(size/2,nodes/2); pos<=min(size/2,nodes/2); pos++) {
 
-          for (int q=1; q<size+1; q++) {
+          for (int q=0; q<size; q++) {
             IdRange range = leafset.range(leafset.get(pos), q, true);
 
-            if ((q <= size/2 - abs(pos)) || (size + 1 > nodes)) {
-              if (q > nodes) {
+            if ((q < size/2 - abs(pos)) || (size + 1 > nodes)) {
+              if (q >= nodes) {
                 assertTrue("Range of node " + pos + " with q " + q + " nodes " + nodes + " size " + size +
                            " should be empty in leafset " + leafset, range.isEmpty());
               } else {
@@ -148,7 +148,7 @@ public class LeafSetTest {
         if (size + 1 > nodes) {
           IdRange total = new IdRange();
 
-          for (int q=1; q<size+1; q++) {
+          for (int q=0; q<size; q++) {
             total = total.merge(leafset.range(leafset.get(0), q, true));
             total = total.merge(leafset.range(leafset.get(0), q, false));
           }

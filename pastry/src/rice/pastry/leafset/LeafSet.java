@@ -450,59 +450,7 @@ public class LeafSet extends Observable implements Serializable {
    * @param r
    * @return the range of keys, or null if n is not a member of the leafset, or if the range cannot be computed
    */
-  public IdRange range(NodeHandle n, int r) {
-    // first, we check the arguments
-    if (r < 1) return null;
-    if (! (member(n.getNodeId()) || baseId.equals(n.getNodeId()))) return null;
-
-    // get the position of the node and the number of nodes in the network
-    int pos = getIndex(n.getNodeId());
-    int num = getUniqueCount();
-    NodeHandle cw, ccw;
-
-    // if this leafset overlaps (or we are the only node in the network), then we have
-    // global knowledge about the network and can determine any range.  Otherwise, we
-    // need to determine whether or not we can determine the range
-    if (overlaps() || (num == 1)) {
-      
-      // if the rank is more than the number of nodes in the network, then we return
-      // the whole range.  
-      if (r >= num) {
-        return new IdRange(n.getNodeId(), n.getNodeId());
-      }
-
-      // we determine the locations if it's pair nodes
-      // note that what we are doing is the following:
-      //   we want the nodes at indices {pos-r, pos+r}, but these indices
-      //   might be beyond the range of the leafset.  since the range of the unique
-      //   leafset is [-ccwSize .. num-ccwSize-1], we shift the range up to
-      //   [0 .. num-1] by adding ccwSize.  then, we want to mod p+-r
-      //   in order to bring it within this range.  this is done by modding
-      //   num (as this will result in the range [0 .. num-1] as
-      //   desired.  Last, we shift the range back down by substracting
-      //   ccwSize.
-      ccw = get(mod(pos - r + ccwSet.size(), num) - ccwSet.size());
-      cw = get(mod(pos + r + ccwSet.size(), num) - ccwSet.size()); 
-    } else {
-      // now, we need to find the pair nodes for this node range
-      ccw = get(pos - r);
-      cw = get(pos + r);
-    }
-
-    // if either of it's pair nodes are null, then we cannot determine the range
-    if ((ccw == null) || (cw == null)) {
-      return null;
-    }
-
-    // otherwise, we then construct the ranges which comprise the main range, and finally
-    // return the overlap
-    IdRange cwRange = (new IdRange(n.getNodeId(), cw.getNodeId())).ccwHalf();
-    IdRange ccwRange = (new IdRange(ccw.getNodeId(), n.getNodeId())).cwHalf();
-
-    return ccwRange.merge(cwRange);
-  }
-  
-  /*
+  public IdRange range(NodeHandle n, int r) { 
    int pos;
    NodeHandle minN = null, maxN = null;
 
@@ -548,7 +496,61 @@ public class LeafSet extends Observable implements Serializable {
    IdRange cw = (new IdRange(n.getNodeId(), maxN.getNodeId())).ccwHalf();
    IdRange ccw = (new IdRange(minN.getNodeId(), n.getNodeId())).cwHalf();
    //System.out.println("ccw=" + ccw + " cw=" + cw);
-   return ccw.merge(cw); */
+   return ccw.merge(cw); 
+  }
+
+  /*
+   r++;
+
+   // first, we check the arguments
+   if (r < 1) return null;
+   if (! (member(n.getNodeId()) || baseId.equals(n.getNodeId()))) return null;
+
+   // get the position of the node and the number of nodes in the network
+   int pos = getIndex(n.getNodeId());
+   int num = getUniqueCount();
+   NodeHandle cw, ccw;
+
+   // if this leafset overlaps (or we are the only node in the network), then we have
+   // global knowledge about the network and can determine any range.  Otherwise, we
+   // need to determine whether or not we can determine the range
+   if (overlaps() || (num == 1)) {
+
+     // if the rank is more than the number of nodes in the network, then we return
+     // the whole range.
+     if (r >= num) {
+       return new IdRange(n.getNodeId(), n.getNodeId());
+     }
+
+     // we determine the locations if it's pair nodes
+     // note that what we are doing is the following:
+     //   we want the nodes at indices {pos-r, pos+r}, but these indices
+     //   might be beyond the range of the leafset.  since the range of the unique
+     //   leafset is [-ccwSize .. num-ccwSize-1], we shift the range up to
+     //   [0 .. num-1] by adding ccwSize.  then, we want to mod p+-r
+     //   in order to bring it within this range.  this is done by modding
+     //   num (as this will result in the range [0 .. num-1] as
+     //   desired.  Last, we shift the range back down by substracting
+     //   ccwSize.
+     ccw = get(mod(pos - r + ccwSet.size(), num) - ccwSet.size());
+     cw = get(mod(pos + r + ccwSet.size(), num) - ccwSet.size()); 
+    } else {
+      // now, we need to find the pair nodes for this node range
+      ccw = get(pos - r);
+      cw = get(pos + r);
+    }
+
+   // if either of it's pair nodes are null, then we cannot determine the range
+   if ((ccw == null) || (cw == null)) {
+     return null;
+   }
+
+   // otherwise, we then construct the ranges which comprise the main range, and finally
+   // return the overlap
+   IdRange cwRange = (new IdRange(n.getNodeId(), cw.getNodeId())).ccwHalf();
+   IdRange ccwRange = (new IdRange(ccw.getNodeId(), n.getNodeId())).cwHalf();
+
+   return ccwRange.merge(cwRange); */
 
   /**
    * range
