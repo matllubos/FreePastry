@@ -140,7 +140,15 @@ public interface IScribeApp
      */
     public boolean anycastHandler(ScribeMessage msg);
 
-
+    /**
+     * Upcall made by scribe to registered applications to
+     * inform them that local node is now the root for some
+     * topic, and hence can take appropriate action.
+     * 
+     * @param topicId The topic for which local node is the 
+     *        new root.
+     */
+    public void isNewRoot(NodeId topicId);
 }
 
 

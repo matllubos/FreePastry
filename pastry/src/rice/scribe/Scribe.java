@@ -708,7 +708,9 @@ public class Scribe extends PastryAppl implements IScribe
 
 	NodeId topicId = smsg.getTopicId();
 	Topic topic = (Topic)m_topics.get( topicId );
-
+	//if(topic == null)
+	//System.out.println("Topic is null for topic "+topicId+" at "+getNodeId());
+	//System.out.println("Received msg at "+getNodeId()+" for topic "+topicId);
 	smsg.handleDeliverMessage( this, topic );
     }
 
@@ -814,6 +816,10 @@ public class Scribe extends PastryAppl implements IScribe
 			}
 			//System.out.println("Scribe -- setting parent to null for topic"+topic.getTopicId()+ " at "+getNodeId());
 			topic.setParent(null);
+			IScribeApp[] apps = topic.getApps();
+			for( int l = 0; l < apps.length; l++){
+			    apps[l].isNewRoot(topic.getTopicId());
+			}
 		    }
 		}
 	    }
@@ -1531,7 +1537,7 @@ public class Scribe extends PastryAppl implements IScribe
 	    app.update((Object)topicId);
 	}
     }
-    
+
     /**
      * Returns the pastryNode for this application.
      * 
