@@ -102,8 +102,8 @@ public class DistHelloWorldMultiThread {
   private static boolean useRegen = true;
   private static boolean noKilling = false;
   private static boolean oneThreadPerMessage = false;
-  public static boolean useDirect = false;
-  private static boolean limitedSockets = !useDirect;
+  public static boolean useDirect = true;
+  private static boolean limitedSockets = true; //!useDirect;
   public static boolean useNonDirect = true; //!useDirect; //true;
   
   public static DistPastryNodeFactory getSameFactory() {
@@ -468,6 +468,7 @@ public class DistHelloWorldMultiThread {
         return false;
       }
       int numMissing = 0;
+      int numMissingDirect = 0;
       Iterator i = list.iterator();
       while (i.hasNext()) {
         HelloMsg m = (HelloMsg) i.next();
@@ -494,17 +495,18 @@ public class DistHelloWorldMultiThread {
                   if (m.intermediateSource.equals(snh)) { // the last known sender is dead
                     missing = false;
                   }
-                  if (m.nextHop.equals(snh.getId())) { // the intended receiver is dead
+                  if (m.nextHop.equals(snh)) { // the intended receiver is dead
                     missing = false;
                   }
                 } else { // we're not using direct, and we got an ack and the lastNexthop is now dead
-                  if (snh.getId().equals(m.nextHop)) {
+                  if (snh.equals(m.nextHop)) {
                     missing = false;
                   }                  
                 }
               }
               if (missing) {
                 numMissing++;
+                if (m.messageDirect) numMissingDirect++;
                 //System.out.println("     Pre Missing");
                 if (m.nextHop != null) {
                   SocketPastryNode spn = (SocketPastryNode)m.nextHop.getLocalNode();
@@ -528,9 +530,28 @@ public class DistHelloWorldMultiThread {
       if (numMissing == 0) {
         throw new DoneException();
       }
+      System.out.println("  numMissing:"+numMissing+" numMissingDirect:"+numMissingDirect+" lastNumMissingDirectCtr:"+lastNumMissingDirectCtr);
+      if (useDirect && limitedSockets && numMissing == numMissingDirect) {
+        //System.out.println("DHWMT.printMissingMessages() here");
+        // the only missing messages were sent direct
+        // if they remain the same for some number of passes, go ahead and continue         
+        if (lastNumMissingDirect == numMissingDirect) {
+          lastNumMissingDirectCtr++;
+          if (lastNumMissingDirectCtr >= 5) {
+            System.out.println("Giving up with "+numMissingDirect+" undelevered messages.  This is likely due to a node killing a direct connection as the other was sending"); 
+            throw new DoneException();
+          }
+        } else {
+          lastNumMissingDirect = numMissingDirect;
+          lastNumMissingDirectCtr=0; // reset counter
+        }
+      }
     }    
     return true;
   }
+  
+  static int lastNumMissingDirect = 0;
+  static int lastNumMissingDirectCtr = 0;
   
   static int sameNodeNumber = 0;
   public static void manageSameNode(DistHelloWorldMultiThread driver) {
@@ -594,6 +615,8 @@ public class DistHelloWorldMultiThread {
         finishedTime = 0;
 				int kill_counter = 0;
 				int iters = 0;
+        lastNumMissingDirect = 0;
+        lastNumMissingDirectCtr = 0;
 				boolean running = true;
 				while (running) {
           if (useRegen) {
@@ -610,32 +633,33 @@ public class DistHelloWorldMultiThread {
 						if (kill_counter < numnodes * 2 / 3) {
 							//          driver.closePastryNode();          
 
-              boolean choose = false;
-              while(!choose) {
-                int blargh = driver.rng.nextInt(3);
-                switch(blargh) {
-                  case 0:
-                  if (useKill) {
-                    driver.killPastryNode();
-                    choose = true;
-                  }
-                  break;                    
-
-                  case 1:
-                  if (useStall) {
-                    driver.stallPastryNode();
-                    choose = true;
-                  }
-                  break;                    
-
-                  case 2:
-                  if (useTempStall) {
-                    driver.tempStallPastryNode();
-                    choose = true;
-                  }
-                  break;                    
-                }
-              } // while              
+              driver.killPastryNode();
+//              boolean choose = false;
+//              while(!choose) {
+//                int blargh = driver.rng.nextInt(3);
+//                switch(blargh) {
+//                  case 0:
+//                  if (useKill) {
+//                    driver.killPastryNode();
+//                    choose = true;
+//                  }
+//                  break;                    
+//
+//                  case 1:
+//                  if (useStall) {
+//                    driver.stallPastryNode();
+//                    choose = true;
+//                  }
+//                  break;                    
+//
+//                  case 2:
+//                  if (useTempStall) {
+//                    driver.tempStallPastryNode();
+//                    choose = true;
+//                  }
+//                  break;                    
+//                }
+//              } // while              
 							kill_counter++;
 							System.out.println("KillCounter:" + kill_counter);
 						} else {
@@ -848,39 +872,39 @@ public class DistHelloWorldMultiThread {
     }
   }
   
-  public void stallPastryNode() {
-    if (noKilling) return;
-    int killNum = getKillNum();
-    DistPastryNode pn =
-      (DistPastryNode) pastryNodes.remove(killNum);
-    killedNodes.addElement(pn.getLocalHandle());
-    stalledNodes.add(pn);
-    HelloWorldAppMultiThread app = (HelloWorldAppMultiThread)helloClients.remove(killNum);      
-    System.out.println("***********************   perminantely stalling pastry node:" + pn + ","+app);
-    if (pn instanceof SocketPastryNode) {
-        ((SocketPastryNode)pn).stall(15000000);   
-    } else {
-        pn.kill();   
-    }
-  }
-  
-  public void tempStallPastryNode() {
-    if (noKilling) return;
-    int killNum = getKillNum();
-    DistPastryNode pn =
-      (DistPastryNode) pastryNodes.get(killNum);
-    killedNodes.addElement(pn.getLocalHandle());
-    HelloWorldAppMultiThread app = (HelloWorldAppMultiThread)helloClients.get(killNum);      
-    if (pn instanceof SocketPastryNode) {
-      int stallTime = rng.nextInt(90);
-      stallTime+=30;
-      System.out.println("***********************   stalling pastry node for "+stallTime+" seconds:" + pn + ","+app);
-      stallTime*=1000;
-        ((SocketPastryNode)pn).stall(stallTime);   
-    } else {
-      pn.kill();   
-    }
-  }
+//  public void stallPastryNode() {
+//    if (noKilling) return;
+//    int killNum = getKillNum();
+//    DistPastryNode pn =
+//      (DistPastryNode) pastryNodes.remove(killNum);
+//    killedNodes.addElement(pn.getLocalHandle());
+//    stalledNodes.add(pn);
+//    HelloWorldAppMultiThread app = (HelloWorldAppMultiThread)helloClients.remove(killNum);      
+//    System.out.println("***********************   perminantely stalling pastry node:" + pn + ","+app);
+//    if (pn instanceof SocketPastryNode) {
+//        ((SocketPastryNode)pn).stall(15000000);   
+//    } else {
+//        pn.kill();   
+//    }
+//  }
+//  
+//  public void tempStallPastryNode() {
+//    if (noKilling) return;
+//    int killNum = getKillNum();
+//    DistPastryNode pn =
+//      (DistPastryNode) pastryNodes.get(killNum);
+//    killedNodes.addElement(pn.getLocalHandle());
+//    HelloWorldAppMultiThread app = (HelloWorldAppMultiThread)helloClients.get(killNum);      
+//    if (pn instanceof SocketPastryNode) {
+//      int stallTime = rng.nextInt(90);
+//      stallTime+=30;
+//      System.out.println("***********************   stalling pastry node for "+stallTime+" seconds:" + pn + ","+app);
+//      stallTime*=1000;
+//        ((SocketPastryNode)pn).stall(stallTime);   
+//    } else {
+//      pn.kill();   
+//    }
+//  }
   
   Vector killedNodes = new Vector();
   /**
