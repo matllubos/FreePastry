@@ -173,9 +173,9 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
     public NodeHandle remove(NodeId nid) 
     {
 	//System.out.println("Removing " + nid + " from " + this);
-
-	if (baseId.clockwise(nid) == true) return cwSet.remove(nid);
-	else return ccwSet.remove(nid);
+	NodeHandle cw = cwSet.remove(nid);
+	NodeHandle ccw = ccwSet.remove(nid);
+	return (cw != null) ? cw : ccw;
     }
 
     /**
