@@ -203,8 +203,14 @@ public class LeafSet extends Observable implements Serializable {
 
 	NodeHandle res1 = cwSet.remove(nid);
 	NodeHandle res2 = ccwSet.remove(nid);
-	if (res1 != null) return res1;
-	else return res2;
+	if (res1 != null) {
+	    //System.out.println("removed " + res1.getNodeId());
+	    return res1;
+	}
+	else {
+	    //System.out.println("removed " + res2.getNodeId());
+	    return res2;
+	}
     }
 
 
@@ -308,6 +314,46 @@ public class LeafSet extends Observable implements Serializable {
 
     }
 
+    
+    /**
+     * compute an ordered set of nodes that are neighbors of this local node,
+     * in order of numerical closeness to the local node
+     *
+     * @param max the maximal size of the set requested
+     * @return the ordered set of nodehandles
+     */
+    public NodeSet neighborSet(int max) {
+	NodeSet set;
+	int cwSize = cwSize();
+	int ccwSize = ccwSize();
+	NodeHandle cwExtreme = get(cwSize);
+	NodeHandle ccwExtreme = get(-ccwSize);
+	set = replicaSet(baseId,max);
+	if(!set.member(cwExtreme.getNodeId()) && !set.member(ccwExtreme.getNodeId())) {
+	    // the value of max did not cause us to reach either end of the leafset 
+	    // in the method replicaSet
+	   return set;
+	}
+	else {
+	    if(!set.member(cwExtreme.getNodeId())) {
+		// All the nodes in the ccwSet are already members
+		for(int i=1; i <= cwSize; i++) {
+		    set.put(get(i));
+		}
+	    }
+	    if(!set.member(ccwExtreme.getNodeId())) {
+		// All the nodes in the cwSet are already members
+		for(int i=1; i <= ccwSize; i++) {
+		    set.put(get(-i));
+		}
+	    }
+	    return set;
+	}
+    }
+
+
+
+
 
     /**
      * compute an ordered set of nodes, in order of numerical closeness to a given key
@@ -318,6 +364,8 @@ public class LeafSet extends Observable implements Serializable {
      */
 
     public NodeSet replicaSet(Id key, int max) {
+	System.out.println("replicaSet Called with max= " + max + " key= " + key);
+	System.out.println(this);
 	NodeSet set = new NodeSet();
 	if (max < 1) return set;
 
@@ -421,6 +469,8 @@ public class LeafSet extends Observable implements Serializable {
 	
 	//System.out.println("minN=" + minN.getNodeId() + "n=" + n.getNodeId() + "maxN=" + maxN.getNodeId());
 
+	//System.out.print("maxN= " + maxN.getNodeId());
+	//System.out.println("minN= " + minN.getNodeId());
 	IdRange cw = (new IdRange(n.getNodeId(), maxN.getNodeId())).ccwHalf();
 	IdRange ccw = (new IdRange(minN.getNodeId(), n.getNodeId())).cwHalf();
 	//System.out.println("ccw=" + ccw + " cw=" + cw);
