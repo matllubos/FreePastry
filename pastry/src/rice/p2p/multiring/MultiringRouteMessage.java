@@ -88,7 +88,7 @@ public class MultiringRouteMessage implements RouteMessage {
    * @return The destination Id
    */
   public Id getDestinationId() {
-    return new RingId(ringId, message.getDestinationId());
+    return RingId.build(ringId, message.getDestinationId());
   }
   
   /**

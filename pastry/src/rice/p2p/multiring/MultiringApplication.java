@@ -95,7 +95,11 @@ public class MultiringApplication implements Application {
    * @param message The message being sent
    */
   public void deliver(Id id, Message message) {
-    application.deliver(new RingId(ringId, id), message);
+    if (id != null) {
+      application.deliver(RingId.build(ringId, id), message);
+    } else {
+      application.deliver(null, message);
+    }
   }
   
   /**

@@ -84,7 +84,7 @@ public class MultiringEndpoint implements Endpoint {
    * @return The local node's id
    */
   public Id getId() {
-    return new RingId(node.getRingId(), endpoint.getId());
+    return RingId.build(node.getRingId(), endpoint.getId());
   }
   
   /**

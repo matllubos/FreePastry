@@ -89,7 +89,7 @@ public class MultiringIdFactory implements IdFactory {
    * @return The built Id.
    */
   public RingId buildRingId(Id ringId, byte[] material) {
-    return new RingId(ringId, factory.buildId(material));
+    return RingId.build(ringId, factory.buildId(material));
   }
   
   /**
@@ -100,7 +100,7 @@ public class MultiringIdFactory implements IdFactory {
    * @return The built Id.
    */
   public RingId buildRingId(Id ringId, Id id) {
-    return new RingId(ringId, id);
+    return RingId.build(ringId, id);
   }
   
   /**
@@ -130,7 +130,7 @@ public class MultiringIdFactory implements IdFactory {
    * @return The built Id.
    */
   public Id buildId(byte[] material) {
-    return new RingId(getRingId(), factory.buildId(material));
+    return RingId.build(getRingId(), factory.buildId(material));
   }
   
   /**
@@ -140,7 +140,7 @@ public class MultiringIdFactory implements IdFactory {
    * @return The built Id.
    */
   public Id buildId(int[] material) {
-    return new RingId(getRingId(), factory.buildId(material));
+    return RingId.build(getRingId(), factory.buildId(material));
   }
   
   /**
@@ -150,7 +150,7 @@ public class MultiringIdFactory implements IdFactory {
    * @return The built Id.
    */
   public Id buildId(String string) {
-    return new RingId(getRingId(), factory.buildId(string));
+    return RingId.build(getRingId(), factory.buildId(string));
   }
   
   /**
@@ -160,7 +160,7 @@ public class MultiringIdFactory implements IdFactory {
    * @return The built Id.
    */
   public rice.p2p.commonapi.Id buildRandomId(Random rng) {
-    return new RingId(getRingId(), factory.buildRandomId(rng));
+    return RingId.build(getRingId(), factory.buildRandomId(rng));
   }
 
   /**
@@ -177,7 +177,7 @@ public class MultiringIdFactory implements IdFactory {
     string = string.substring(string.indexOf(", ")+2);
     Id normal = factory.buildIdFromToString(string.substring(0, string.length()-1));
     
-    return new RingId(ring, normal);
+    return RingId.build(ring, normal);
   }
   
   /**
@@ -193,7 +193,7 @@ public class MultiringIdFactory implements IdFactory {
     Id ring = factory.buildIdFromToString(chars, 1, find(chars, ',')-1);
     Id normal = factory.buildIdFromToString(chars, 2+find(chars, ','), find(chars, ')') - (2+find(chars, ',')));
     
-    return new RingId(ring, normal);    
+    return RingId.build(ring, normal);    
   }
   
   protected static int find(char[] chars, char value) {
@@ -291,12 +291,12 @@ public class MultiringIdFactory implements IdFactory {
     
     public Comparator comparator() { return null; }
     public Object firstKey() { return (map.firstKey() == null ? null : ((RingId) map.firstKey()).getId()); }
-    public SortedMap headMap(Object toKey) { return map.headMap(new RingId(ringId, (Id) toKey)); }
+    public SortedMap headMap(Object toKey) { return map.headMap(RingId.build(ringId, (Id) toKey)); }
     public Object lastKey() { return (map.lastKey() == null ? null : ((RingId) map.lastKey()).getId()); }
-    public SortedMap subMap(Object fromKey, Object toKey) { return map.subMap(new RingId(ringId, (Id) fromKey), new RingId(ringId, (Id) toKey)); }
-    public SortedMap tailMap(Object fromKey) { return map.tailMap(new RingId(ringId, (Id) fromKey)); }
+    public SortedMap subMap(Object fromKey, Object toKey) { return map.subMap(RingId.build(ringId, (Id) fromKey), RingId.build(ringId, (Id) toKey)); }
+    public SortedMap tailMap(Object fromKey) { return map.tailMap(RingId.build(ringId, (Id) fromKey)); }
     public void clear() { throw new UnsupportedOperationException("clear not supported!"); }
-    public boolean containsKey(Object key) { return map.containsKey(new RingId(ringId, (Id) key)); }
+    public boolean containsKey(Object key) { return map.containsKey(RingId.build(ringId, (Id) key)); }
     public boolean containsValue(Object value) { throw new UnsupportedOperationException("containsValue not supported!"); }
     public Set entrySet() { return new MultiringEntrySet(map.entrySet()); }
     public boolean equals(Object o) { throw new UnsupportedOperationException("equals not supported!"); }
@@ -304,9 +304,9 @@ public class MultiringIdFactory implements IdFactory {
     public int hashCode() { throw new UnsupportedOperationException("hashCode not supported!");  }
     public boolean isEmpty() { throw new UnsupportedOperationException("isEmpty not supported!");  }
     public Set keySet() { return new MultiringKeySet(map.keySet()); }
-    public Object put(Object key, Object value) { return map.put(new RingId(ringId, (Id) key), value); }
+    public Object put(Object key, Object value) { return map.put(RingId.build(ringId, (Id) key), value); }
     public void putAll(Map t) { throw new UnsupportedOperationException("putAll not supported!"); }
-    public Object remove(Object key) { return map.remove(new RingId(ringId, (Id) key)); }
+    public Object remove(Object key) { return map.remove(RingId.build(ringId, (Id) key)); }
     public int size() { return map.size(); }
     public Collection values() { throw new UnsupportedOperationException("values not supported!"); }
   }

@@ -98,7 +98,7 @@ public class MultiringNodeHandle extends NodeHandle implements Observer  {
    * @return The corresponding node's id.
    */
   public Id getId() {
-    return new RingId(ringId, handle.getId());
+    return RingId.build(ringId, handle.getId());
   }
   
   /**

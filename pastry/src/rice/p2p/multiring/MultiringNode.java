@@ -146,7 +146,7 @@ public class MultiringNode implements Node, ScribeClient {
    * @return This node's Id
    */
   public Id getId() {
-    return new RingId(ringId, node.getId());
+    return RingId.build(ringId, node.getId());
   }
   
   /**
@@ -203,7 +203,7 @@ public class MultiringNode implements Node, ScribeClient {
    */
   protected void nodeAdded(Id otherRingId) {
     //System.out.println("JOINING SCRIBE GROUP " + otherRingId + " AT NODE " + getId());
-    scribe.subscribe(new Topic(new RingId(ringId, otherRingId)), this);
+    scribe.subscribe(new Topic(RingId.build(ringId, otherRingId)), this);
   }
   
   /**
@@ -222,7 +222,7 @@ public class MultiringNode implements Node, ScribeClient {
       endpoint.route(id, message, null);
     } else {
       //System.out.println("ANYCASTING TO SCRIBE GROUP " + getTarget(id) + " AT NODE " + getId() + " FOR APPLICATION " + application);
-      scribe.anycast(new Topic(new RingId(ringId, getTarget(id))), new RingMessage(id, message, application));
+      scribe.anycast(new Topic(RingId.build(ringId, getTarget(id))), new RingMessage(id, message, application));
     }
   }
   

@@ -144,7 +144,7 @@ public class MultiringIdSet implements IdSet {
       }
       
       public Object next() {
-        return new RingId(ringId, (Id) i.next());
+        return RingId.build(ringId, (Id) i.next());
       }
       
       public void remove() {
@@ -161,7 +161,7 @@ public class MultiringIdSet implements IdSet {
     Id[] result = set.asArray();
     
     for (int i=0; i<result.length; i++)
-      result[i] = new RingId(ringId, result[i]);
+      result[i] = RingId.build(ringId, result[i]);
     
     return result;
   }

@@ -36,6 +36,10 @@ if advised of the possibility of such damage.
 
 package rice.p2p.multiring;
 
+import java.lang.ref.*;
+import java.io.*;
+import java.util.*;
+
 import rice.p2p.commonapi.*;
 
 /**
@@ -49,7 +53,15 @@ import rice.p2p.commonapi.*;
  */
 public class RingId implements Id {
   
+  /**
+   * Serialver for backward compatibility
+   */
   private static final long serialVersionUID = -4390496639871320200L;
+  
+  /**
+   * Support for coalesced Ids - ensures only one copy of each Id is in memory
+   */
+  private static WeakHashMap RINGID_MAP = new WeakHashMap();
   
   /**
    * The id which this ringId represents
@@ -66,14 +78,70 @@ public class RingId implements Id {
    *
    * @param node The node to base this node off of
    */
-  protected RingId(Id ringId, Id id) {
+  private RingId(Id ringId, Id id) {
     this.id = id;
     this.ringId = ringId;
     
+    if ((id == null) || (ringId == null))
+      throw new IllegalArgumentException("RingId created with args " + ringId + " " + id);
     if (id instanceof RingId)
       throw new IllegalArgumentException("RingId created with id as a RingId!" + ringId + " " + id);
     if (ringId instanceof RingId)
       throw new IllegalArgumentException("RingId created with ringId as a RingId!" + ringId + " " + id);
+  }  
+  
+  /**
+   * Constructor.
+   *
+   * @param material an array of length at least IdBitLength/32 containing raw Id material.
+   */
+  public static RingId build(Id ringId, Id id) {   
+    return resolve(new RingId(ringId, id));
+  }
+  
+  /**
+   * Method which resolves the given id to the canonical one
+   *
+   * @param id The id to resolver
+   * @return The canonicaial one
+   */
+  private static RingId resolve(RingId id) {
+    synchronized (RINGID_MAP) {
+      WeakReference ref = (WeakReference) RINGID_MAP.get(id);
+      RingId result = null;
+      
+      if ((ref != null) && ((result = (RingId) ref.get()) != null)) {
+        return result;
+      } else {
+        RINGID_MAP.put(id, new WeakReference(id));
+        return id;
+      }
+    }    
+  }
+  
+  /**
+   * Define readResolve, which will replace the deserialized object with the canootical
+   * one (if one exists) to ensure RingId coalescing.
+   *
+   * @return The real RingId
+   */
+  private Object readResolve() throws ObjectStreamException {
+    // commented out to preserve backward compatibility with serialization 
+    // should be able to reenable in the future
+    //return resolve(this);
+    return this;
+  }
+  
+  /**
+   * Method which splits apart a ringid string and 
+   * returns the RingID
+   *
+   * @param s The ring to parse
+   * @return The result
+   */
+  public static RingId build(String s) {
+    String[] sArray = s.split("\\(|\\)| |,");
+    return build(rice.pastry.Id.build(sArray[1]), rice.pastry.Id.build(sArray[3]));
   }
   
   /**
@@ -131,7 +199,7 @@ public class RingId implements Id {
    * @return the new Id
    */
   public Id addToId(Distance offset) {
-    return new RingId(ringId, id.addToId(offset));
+    return build(ringId, id.addToId(offset));
   }
   
   /**
@@ -234,11 +302,6 @@ public class RingId implements Id {
    */
   public int compareTo(Object o) {
     return id.compareTo(((RingId)o).id);
-  }
-  
-  public static RingId build(String s) {
-    String[] sArray = s.split("\\(|\\)| |,");
-    return new RingId(rice.pastry.Id.build(sArray[1]), rice.pastry.Id.build(sArray[3]));
   }
 }
 

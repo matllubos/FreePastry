@@ -105,7 +105,7 @@ public class MultiringIdRange implements IdRange {
    * @return the id at the counterclockwise edge of the range (inclusive)
    */
   public Id getCCWId() {
-    return new RingId(ringId, range.getCCWId());
+    return RingId.build(ringId, range.getCCWId());
   }
   
   /**
@@ -114,7 +114,7 @@ public class MultiringIdRange implements IdRange {
    * @return the id at the clockwise edge of the range (exclusive)
    */
   public Id getCWId() {
-    return new RingId(ringId, range.getCWId());
+    return RingId.build(ringId, range.getCWId());
   }
   
   /**
