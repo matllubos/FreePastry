@@ -67,6 +67,8 @@ public class PastryNode implements NodeHandle, MessageReceiver
     
     public boolean isAlive() { return true; }
 
+    public int proximity() { return 0; }
+    
     // message receiver interface
 
     public void receiveMessage(Message msg) 

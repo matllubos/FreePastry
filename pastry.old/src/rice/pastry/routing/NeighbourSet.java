@@ -26,21 +26,39 @@
 // software and patent policy 333-99.  This notice may not be removed.      //
 //////////////////////////////////////////////////////////////////////////////
 
-package rice.pastry;
+package rice.pastry.routing;
 
-import rice.pastry.messaging.MessageReceiver;
-import rice.pastry.messaging.Address;
+import rice.pastry.*;
+import rice.util.*;
+
+import java.util.*;
 
 /**
- * The interface to an entity which takes care of Pastry routing.
+ * A neighbour set stores a bounded number of the closest node handles.  It 
+ * is otherwise like a similar set.
  *
  * @author Andrew Ladd
  */
 
-public interface RoutingManager extends MessageReceiver
-{
-    public NodeId getLocalNodeId();
-    public Address getAddress();
+public class NeighbourSet extends SimilarSet {
+    private class ProxCmp implements Comparator {
+	private ProximityComparator cmp;
+	
+	public ProxCmp() {
+	    cmp = new ProximityComparator();
+	}
+	
+	public int compare(Object a, Object b) {
+	    NodeId aid = (NodeId) a;
+	    NodeId bid = (NodeId) b;
+	    
+	    return cmp.compare(get(aid), get(bid));
+	}
+    }
+    
+    public NeighbourSet(NodeId nid, int size) 
+    {
+	super(nid, size, new ProxCmp());
+    }
 }
-
 

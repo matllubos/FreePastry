@@ -5,7 +5,9 @@ SOURCE  = \
 	NodeIdFactory.java\
 	PastryNode.java\
 	PastryNodeFactory.java\
-	RoutingManager.java
+	RoutingManager.java\
+	SimilarityComparator.java\
+	ProximityComparator.java
 
 RMI_SOURCE =
 

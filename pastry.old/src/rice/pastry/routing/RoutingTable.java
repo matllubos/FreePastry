@@ -61,26 +61,30 @@ public class RoutingTable {
     public final static int idBaseBitLength = 4;
 
     private NodeId myNodeId;
-    private Vector routingTable[][];
+    private NeighbourSet routingTable[][];
+    
+    private int maxEntries;
     
     /**
      * Constructor.
      *
      * @param me the node id for this routing table.
+     * @param max the maximum number of entries at each table slot.
      */
 
-    public RoutingTable(NodeId me) {
+    public RoutingTable(NodeId me, int max) {
 	myNodeId = me;
+	maxEntries = max;
 	
 	int cols = 1 << idBaseBitLength;
 	int rows = NodeId.nodeIdBitLength / idBaseBitLength;
 
 	if (NodeId.nodeIdBitLength % idBaseBitLength > 0) rows++;
 	
-	routingTable = new Vector[rows][cols];
+	routingTable = new NeighbourSet[rows][cols];
 
 	for (int i=0; i<rows; i++)
-	    for (int j=0; j<cols; j++) routingTable[i][j] = new Vector();
+	    for (int j=0; j<cols; j++) routingTable[i][j] = new NeighbourSet(myNodeId, maxEntries);
     }
 
     /**
@@ -90,15 +94,13 @@ public class RoutingTable {
      * @return a set of possible handles to the next hop or null if no strictly better hop can be found.
      */
 
-    public Enumeration bestRoute(NodeId nextId)
+    public NeighbourSet bestRoute(NodeId nextId)
     {
-	int base = 1 << idBaseBitLength;
-
-	int diffDigit = myNodeId.indexOfMSDD(nextId, base);
+	int diffDigit = myNodeId.indexOfMSDD(nextId, idBaseBitLength);
 
 	if (diffDigit < 0) return null;
 	
-	int digit = myNodeId.getDigit(diffDigit, base);
+	int digit = nextId.getDigit(diffDigit, idBaseBitLength);
 	
 	return getNodeSet(diffDigit, digit);
     }
@@ -109,89 +111,140 @@ public class RoutingTable {
      * @param index the index of the digit in base <EM> 2 <SUP> idBaseBitLength </SUP></EM>.  <EM> 0 </EM> is the least significant.
      * @param digit ranges from <EM> 0... 2 <SUP> idBaseBitLength - 1 </SUP> </EM>.  Selects which digit to use.
      *
-     * @return a set of possible handles located at that position in the routing table or null if this empty.
+     * @return a read-only set of possible handles located at that position in the routing table or null if this empty.
      */
 
-    public Enumeration getNodeSet(int index, int digit) 
+    public NeighbourSet getNodeSet(int index, int digit) 
     {
-	Vector nh = routingTable[index][digit];
+	NeighbourSet ns = routingTable[index][digit];
 
-	if (nh.size() == 0) return null;
+	if (ns.size() == 0) return null;
 
-	return nh.elements();
+	return ns;
     }
     
-    private Vector getBestEntry(NodeId nid) 
+    private NeighbourSet getBestEntry(NodeId nid) 
     {
-	int base = 1 << idBaseBitLength;
-
-	int diffDigit = myNodeId.indexOfMSDD(nid, base);
+	int diffDigit = myNodeId.indexOfMSDD(nid, idBaseBitLength);
 
 	if (diffDigit < 0) return null;
 	
-	int digit = myNodeId.getDigit(diffDigit, base);
+	int digit = nid.getDigit(diffDigit, idBaseBitLength);
 
 	return routingTable[diffDigit][digit];
     }
 
     /**
-     * Checks if a given node id is in the routing table.
+     * Puts a handle into the routing table.
      *
-     * @param nid a node id.
-     *
-     * @return true if the node id is in the table, false otherwise.
+     * @param handle the handle to put.
      */
 
-    public NodeHandle findHandle(NodeId nid) 
-    {
-	Vector nh = getBestEntry(nid);
-
-	Enumeration e = nh.elements();
-	
-	while (e.hasMoreElements()) {
-	    NodeHandle handle = (NodeHandle) e.nextElement();
-
-	    NodeId handleNid = handle.getNodeId();
-
-	    if (handleNid.equals(nid)) return handle;
-	}
-
-	return null;
-    }
-    
-    /**
-     * Puts an entry into the routing table.
-     * 
-     * @param handle the handle to put into the table.
-     */
-
-    public void putHandle(NodeHandle handle) 
+    public void put(NodeHandle handle) 
     {
 	NodeId nid = handle.getNodeId();
 
-	Vector nh = getBestEntry(nid);
+	NeighbourSet ns = getBestEntry(nid);
 
-	nh.addElement(handle);
+	ns.put(handle);
     }
 
     /**
-     * Removes an entry from the routing table.
+     * Gets the node handle associated with a given id.
      *
-     * @param nid the node id to remove from the table.
+     * @param nid a node id
+     * @return the handle associated with that id.
+     */
+    
+    public NodeHandle get(NodeId nid) 
+    {
+	NeighbourSet ns = getBestEntry(nid);
+
+	return ns.get(nid);
+    }
+    
+    /**
+     * Removes a node id from the table.
      *
-     * @return true if something was removed, false otherwise.
+     * @param nid the node id to remove.
+     * @return the handle that was removed.
+     */
+    
+    public NodeHandle remove(NodeId nid) 
+    {
+	NeighbourSet ns = getBestEntry(nid);
+
+	return ns.remove(nid);
+    }
+
+    private class MyIterator implements Iterator {
+	private int i, j;
+	private Iterator iter;
+	private Iterator last;
+	
+	private void advance() 
+	{
+	    if (iter == null && j < routingTable[0].length) 
+		iter = routingTable[i][j].closestIterator();
+
+	    if (iter.hasNext() == false) 
+		{
+		    iter = null;
+		    i++;
+		    
+		    if (i == routingTable.length) { j++; i = 0; }
+		    
+		    advance();
+		}	    
+	}
+
+	public MyIterator() {
+	    i = 0;
+	    j = 0;
+
+	    iter = null;
+	    last = null;
+	    
+	    advance();
+	}
+	
+	public boolean hasNext() 
+	{
+	    return j == routingTable[0].length;
+	}
+	
+	public Object next() 
+	{
+	    last = iter;
+	    
+	    return iter.next();
+	}
+
+	public void remove() 
+	{
+	    last.remove();
+	}
+    }
+
+    /**
+     * Returns an iterator over the RoutingTable.
+     *
+     * @return an iterator.
      */
 
-    public boolean removeHandle(NodeId nid) 
+    public Iterator iterator() { return new MyIterator(); }
+
+    public String toString() 
     {
-	Vector nh = getBestEntry(nid);
+	String s = "";
 
-	NodeHandle handle = findHandle(nid);
-
-	if (handle == null) return false;
-
-	nh.remove(handle);
-
-	return true;
+	for (int i=0; i<routingTable.length; i++) {
+	    for (int j=0; j<routingTable[i].length; j++) {
+		s += ("" + routingTable[i][j].size() + "\t");
+	    }		
+	    s += ("\n");
+	}
+	
+	return s;
     }
 }

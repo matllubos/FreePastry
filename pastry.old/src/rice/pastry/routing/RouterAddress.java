@@ -26,21 +26,31 @@
 // software and patent policy 333-99.  This notice may not be removed.      //
 //////////////////////////////////////////////////////////////////////////////
 
-package rice.pastry;
+package rice.pastry.routing;
 
-import rice.pastry.messaging.MessageReceiver;
-import rice.pastry.messaging.Address;
+package rice.pastry.*;
+package rice.pastry.messaging.*;
+
+import java.io.*;
 
 /**
- * The interface to an entity which takes care of Pastry routing.
+ * The address of the router at a pastry node.
  *
  * @author Andrew Ladd
  */
 
-public interface RoutingManager extends MessageReceiver
-{
-    public NodeId getLocalNodeId();
-    public Address getAddress();
+public class RouterAddress implements Address, Serializable {
+    /**
+     * Constructor.
+     */
+    
+    public RouterAddress() {}
+
+    private void readObject(ObjectInputStream in)
+	throws IOException, ClassNotFoundException 
+    {}
+
+    private void writeObject(ObjectOutputStream out)
+	throws IOException, ClassNotFoundException 
+    {}
 }
-
-

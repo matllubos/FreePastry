@@ -26,21 +26,65 @@
 // software and patent policy 333-99.  This notice may not be removed.      //
 //////////////////////////////////////////////////////////////////////////////
 
-package rice.pastry;
+package rice.pastry.routing;
 
-import rice.pastry.messaging.MessageReceiver;
-import rice.pastry.messaging.Address;
+package rice.pastry.*;
+package rice.pastry.messaging.*;
+
+import java.io.*;
 
 /**
- * The interface to an entity which takes care of Pastry routing.
+ * A route message is a pastry message which has been wrapped to
+ * be sent to another pastry node.
  *
  * @author Andrew Ladd
  */
 
-public interface RoutingManager extends MessageReceiver
-{
-    public NodeId getLocalNodeId();
-    public Address getAddress();
+public class RouteMessage extends Message implements Serializable {
+    private NodeId target;
+    private Message internalMsg;
+
+    /**
+     * Constructor.
+     *
+     * @param target this is id of the node the message will be routed to.
+     * @param msg the wrapped message.
+     */
+
+    public RouteMessage(NodeId target, Message msg) 
+    {
+	super(new RouterAddress());
+	this.target = target;
+	internalMsg = msg;
+    }
+
+    /**
+     * Gets the target node id of this message.
+     *
+     * @return the target node id.
+     */
+    
+    public NodeId getTarget() { return target; }
+
+    /**
+     * The wrapped message.
+     *
+     * @return the wrapped message.
+     */
+
+    public Message unwrap() { return internalMsg; }
+    
+    private void readObject(ObjectInputStream in)
+	throws IOException, ClassNotFoundException 
+    {
+	target = (NodeId) in.readObject();
+	internalMsg = (Message) in.readObject();
+    }
+
+    private void writeObject(ObjectOutputStream out)
+	throws IOException, ClassNotFoundException 
+    {
+	out.writeObject(target);
+	out.writeObject(internalMsg);
+    }
 }
-
-

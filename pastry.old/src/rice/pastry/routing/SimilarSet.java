@@ -34,23 +34,41 @@ import rice.util.*;
 import java.util.*;
 
 /**
- * A class for representing and manipulating the leaf set.
+ * A class for representing and manipulating a similar set.
+ *
+ * A similar set stores a bounded number of the most similar node ids 
+ * and associated handles inserted into the set to date.  Queries and other 
+ * operations supported are either log-time or constant-time.
  *  
  * @author Andrew Ladd
  */
 
-public class LeafSet {
-    private SimilarSet cwSet;
-    private SimilarSet ccwSet;
-    private NodeId base;
+public class SimilarSet {
+    private NodeId myNodeId;
     
-    public LeafSet(NodeId nid, int size) 
-    {
-	cwSet = new SimilarSet(nid, size);
-	ccwSet = new SimilarSet(nid, size);
-	base = nid;
+    private SelectiveMap theSM;
+
+    private TreeSet mostSimilar;
+    private TreeSet closest;
+
+    private class SMWatcher implements Observer {
+	public void update(Observable o, Object arg)
+	{	    
+	    mostSimilar.remove(arg);
+	    closest.remove(theSM.get(arg));;
+	}
     }
 
+    private SMWatcher theWatcher;
+
+    /**
+     * Returns the number elements in the set.
+     *
+     * @return the size.
+     */
+    
+    public int size() { return theSM.size(); }
+    
     /**
      * Puts a NodeHandle into the set.
      *
@@ -61,8 +79,14 @@ public class LeafSet {
     {
 	NodeId nid = handle.getNodeId();
 
-	if (base.clockwise(nid) == true) cwSet.put(handle);
-	else ccwSet.put(handle);
+	if (theSM.containsKey(nid) == true) return;
+
+	theSM.put(nid, handle, theWatcher);
+	
+	if (theSM.containsKey(nid) == true) {
+	    mostSimilar.add(nid);
+	    closest.add(nid);
+	}
     }
 
     /**
@@ -74,8 +98,7 @@ public class LeafSet {
     
     public NodeHandle get(NodeId nid) 
     {
-	if (base.clockwise(nid) == true) return cwSet.get(nid);
-	else return ccwSet.get(nid);
+	return (NodeHandle) theSM.get(nid);
     }
     
     /**
@@ -87,42 +110,73 @@ public class LeafSet {
 
     public boolean containsId(NodeId nid) 
     {
-	if (base.clockwise(nid) == true) return cwSet.containsId(nid);
-	else return ccwSet.containsId(nid);
+	return theSM.containsKey(nid);
     }
     
     /**
      * Removes a node id and its handle from the set.
      *
      * @param nid the node to remove.
+     * @return the handle associated with nid that was removed or null.
      */
 
-    public void remove(NodeId nid) 
+    public NodeHandle remove(NodeId nid) 
     {
-	if (base.clockwise(nid) == true) cwSet.remove(nid);
-	else ccwSet.remove(nid);
+	return (NodeHandle) theSM.remove(nid);
     }
     
-    
     /**
-     * Get the clockwise node set.
+     * Returns an iterator which iterates from most to least similar node.
      *
-     * @return the clockwise node set.
+     * @return most to least similar iterator.
+     */
+    
+    public Iterator mostSimilarIterator() { return mostSimilar.iterator(); }
+
+    /**
+     * Returns an iterator which iterates from closest to furthest node.
+     *
+     * @return closest to furthest iterator.
+     */
+    
+    public Iterator closestIterator() { return closest.iterator(); }
+   
+    /**
+     * Constructor.
+     *
+     * @param nid the base node id for this leaf set.
+     * @param size the largest number of node handles that can be placed in this set.
      */
 
-    public SimilarSet getClockwiseSet() { return cwSet; }
-    
+    public SimilarSet(NodeId nid, int size) 
+    {
+	myNodeId = nid;
+	
+	Comparator cmp = new ReverseOrder(new SimilarityComparator(nid));
+	
+	theSM = new SelectiveMap(size, cmp);
+	
+	mostSimilar = new TreeSet(cmp);
+	closest = new TreeSet(new ProximityComparator());
+    }
+
     /**
-     * Get the counterclockwise node set.
-     *
-     * @return the counterclockwise node set.
+     * Constructor.
+     * 
+     * @param nid the base node id for this leaf set.
+     * @param size the largest number of node handles that can be placed in this set.
+     * @param cmp a Comparator for this leaf set (default is Similarity).
      */
-    
-    public SimilarSet getCounterClockwiseSet() { return ccwSet; }
+
+    protected SimilarSet(NodeId nid, int size, Comparator cmp) 
+    {
+	myNodeId = nid;
+	
+	Comparator simCmp = new ReverseOrder(new SimilarityComparator(nid));
+	
+	theSM = new SelectiveMap(size, new ReverseOrder(cmp));
+	
+	mostSimilar = new TreeSet(simCmp);
+	closest = new TreeSet(new ProximityComparator());
+    }
 }
-
-
-
-
-
-

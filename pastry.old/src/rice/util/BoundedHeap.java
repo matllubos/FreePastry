@@ -26,21 +26,79 @@
 // software and patent policy 333-99.  This notice may not be removed.      //
 //////////////////////////////////////////////////////////////////////////////
 
-package rice.pastry;
+package rice.util;
 
-import rice.pastry.messaging.MessageReceiver;
-import rice.pastry.messaging.Address;
+import java.util.*;
 
 /**
- * The interface to an entity which takes care of Pastry routing.
+ * A collection of elements which contains the largest elements placed into it.
  *
  * @author Andrew Ladd
  */
 
-public interface RoutingManager extends MessageReceiver
+public class BoundedHeap extends Heap
 {
-    public NodeId getLocalNodeId();
-    public Address getAddress();
+    private int maxElements;
+
+    /**
+     * Constructor.
+     *
+     * @param maxElts the maximum number of elements allowed in the heap.
+     */
+
+    public BoundedHeap(int maxElts) 
+    {
+	super();
+
+	maxElements = maxElts;	
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param maxElts the maxmimum number of elements allowed in the heap.
+     * @param cmp a Comparator which orders the elements which will go into the heap.
+     */
+    
+    public BoundedHeap(int maxElts, Comparator cmp)
+    {
+	super(cmp);
+	
+	maxElements = maxElts;
+    }
+
+    /**
+     * Changes the maximum element count.
+     *
+     * @param newMax the new maximum count.
+     */
+    
+    public void modifyMaximumElements(int newMax) 
+    {
+	while (size() > newMax) extract();
+    }
+
+    /**
+     * Inserts an element into the heap.
+     *
+     * @param elt the element to insert into the heap.
+     *
+     * @return the interface to the element.
+     */
+    
+    public HeapElementInterface put(Object elt)
+    {
+	HeapElementInterface hei = super.put(elt);
+	
+	if (size() > maxElements) extract();
+
+	return hei;
+    }    
 }
+
+
+
+
+
 
 

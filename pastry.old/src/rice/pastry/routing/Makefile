@@ -1,10 +1,11 @@
 PACKAGE = rice.pastry.routing
 
 SOURCE  = \
-	RoutingTable.java\
-	NodeSet.java\
-	Heap.java\
-	BoundedHeap.java
+	SimilarSet.java\
+	NeighbourSet.java\
+	LeafSet.java\
+	RoutingTable.java
+
 
 RMI_SOURCE =
 

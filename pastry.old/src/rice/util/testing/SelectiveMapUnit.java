@@ -26,21 +26,63 @@
 // software and patent policy 333-99.  This notice may not be removed.      //
 //////////////////////////////////////////////////////////////////////////////
 
-package rice.pastry;
+package rice.util.testing;
 
-import rice.pastry.messaging.MessageReceiver;
-import rice.pastry.messaging.Address;
+import rice.util.*;
+import java.util.*;
 
 /**
- * The interface to an entity which takes care of Pastry routing.
+ * Testing a selective map.
  *
  * @author Andrew Ladd
  */
 
-public interface RoutingManager extends MessageReceiver
-{
-    public NodeId getLocalNodeId();
-    public Address getAddress();
+public class SelectiveMapUnit {
+    private Random rng;
+    
+    public void testSelectiveMap(int n, int m) {
+	HeapUnit hu = new HeapUnit(null);
+
+	Integer ints[] = hu.fillIntArray(n);
+	hu.genRandomPerm(ints);
+	
+	String strings[] = new String[ints.length];
+
+	for (int i=0; i<n; i++) strings[i] = "" + ints[i];
+
+	SelectiveMap sm = new SelectiveMap(m, new ReverseOrder());
+
+	for (int i=0; i<n; i++) sm.put(ints[i], strings[i]);
+
+	boolean foundIt[] = new boolean[m];
+
+	for (int i=0; i<m; i++) foundIt[i] = false;
+	
+	System.out.println("getting the iterator...");
+	
+	Iterator iter = sm.entrySet().iterator();
+
+	for (int i=0; i<m; i++) {
+	    Map.Entry me = (Map.Entry) iter.next();
+	    Integer key = (Integer) me.getKey(); 
+	    String val = (String) me.getValue();
+	    
+	    String keyStr = "" + key;
+
+	    if (keyStr.equals(val) == false) System.out.println(keyStr + " <> " + val);
+
+	    if (foundIt[key.intValue()] == true) System.out.println("found " + key + " twice ");
+	    foundIt[key.intValue()] = true;
+	}
+
+	if (iter.hasNext() == true) System.out.println("didn't run out of elements!");
+
+	System.out.println("test complete");
+    }
+    
+    public static void main(String args[]) {	
+	SelectiveMapUnit smu = new SelectiveMapUnit();
+	smu.testSelectiveMap(30000, 50);
+    }
+
 }
-
-

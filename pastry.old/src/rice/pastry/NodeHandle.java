@@ -52,4 +52,16 @@ public interface NodeHandle extends MessageReceiver {
      */
     
     public boolean isAlive();
+
+    /**
+     * Gets the proximity of this node.
+     *
+     * @return 0 is a local node and anything larger is relative "proximity", 
+     * the larger the value the further away.
+     */
+    
+    public int proximity();
 }
+
+
+

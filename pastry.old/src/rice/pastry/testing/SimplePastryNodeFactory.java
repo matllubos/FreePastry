@@ -26,21 +26,44 @@
 // software and patent policy 333-99.  This notice may not be removed.      //
 //////////////////////////////////////////////////////////////////////////////
 
-package rice.pastry;
+package rice.pastry.testing;
 
-import rice.pastry.messaging.MessageReceiver;
-import rice.pastry.messaging.Address;
+import rice.pastry.*;
+import rice.pastry.messaging.*;
+import java.util.*;
 
 /**
- * The interface to an entity which takes care of Pastry routing.
+ * A simple pastry node factory which generates nodeIds at random.
  *
  * @author Andrew Ladd
  */
 
-public interface RoutingManager extends MessageReceiver
-{
-    public NodeId getLocalNodeId();
-    public Address getAddress();
+public class SimplePastryNodeFactory 
+{   
+    private NodeId nodeId;
+    private RoutingManager rManager;
+    private MessageDispatch mDispatch;
+
+    private Random rng;
+
+    public SimplePastryNodeFactory() 
+    {
+	rng = new Random();
+    }
+
+    public void constructNode()
+    {
+	byte raw[] = new byte[NodeId.nodeIdBitLength];
+	
+	nodeId = new NodeId(raw);
+	
+    }
+    
+    public NodeId getNodeId();
+
+    public RoutingManager getRoutingManager();
+    
+    public MessageDispatch getMessageDispatch();
+    
+    public void doneWithNode();
 }
-
-

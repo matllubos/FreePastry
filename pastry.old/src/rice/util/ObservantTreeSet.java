@@ -26,21 +26,81 @@
 // software and patent policy 333-99.  This notice may not be removed.      //
 //////////////////////////////////////////////////////////////////////////////
 
-package rice.pastry;
+package rice.util;
 
-import rice.pastry.messaging.MessageReceiver;
-import rice.pastry.messaging.Address;
+import java.util.*;
 
 /**
- * The interface to an entity which takes care of Pastry routing.
+ * A TreeSet that has a observer which will remove the element when notified.
  *
  * @author Andrew Ladd
  */
 
-public interface RoutingManager extends MessageReceiver
-{
-    public NodeId getLocalNodeId();
-    public Address getAddress();
+class ObservantTreeSet extends TreeSet {
+    private class TreeObserver implements Observer {
+	public void update(Observable o, Object arg) {
+	    remove(arg);
+	}
+    }
+    
+    private TreeObserver tObs;
+    
+    /**
+     * Returns the observer.
+     *
+     * The observer takes an argument on a notify which is the
+     * element to remove from the tree.
+     *
+     * @return the observer for this tree set.
+     */
+
+    public Observer getObserver() { return tObs; }
+    
+    /**
+     * Constructor.
+     */
+
+    public ObservantTreeSet() {
+	super();
+	tObs = new TreeObserver();
+    }
+    
+    /**
+     * Constructor.
+     *
+     * Creates a TreeSet from a Collection.
+     *
+     * @param c a Collection.
+     */
+
+    public ObservantTreeSet(Collection c) {
+	super(c);
+	tObs = new TreeObserver();
+    }
+    
+    /**
+     * Constructor.
+     *
+     * Creates a TreeSet from a Comparator.
+     *
+     * @param c a Comparator.
+     */
+
+    public ObservantTreeSet(Comparator c) {
+	super(c);
+	tObs = new TreeObserver();
+    }
+    
+    /**
+     * Constructor.
+     *
+     * Creates a TreeSet from a SortedSet.
+     *
+     * @param s a SortedSet.
+     */
+
+    public ObservantTreeSet(SortedSet s) {
+	super(s);
+	tObs = new TreeObserver();
+    }
 }
-
-

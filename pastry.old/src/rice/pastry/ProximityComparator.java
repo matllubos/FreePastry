@@ -28,19 +28,24 @@
 
 package rice.pastry;
 
-import rice.pastry.messaging.MessageReceiver;
-import rice.pastry.messaging.Address;
+import java.util.*;
 
 /**
- * The interface to an entity which takes care of Pastry routing.
+ * Compares two NodeHandles based on proximity.
  *
  * @author Andrew Ladd
  */
 
-public interface RoutingManager extends MessageReceiver
-{
-    public NodeId getLocalNodeId();
-    public Address getAddress();
+public class ProximityComparator implements Comparator {
+    public int compare(Object a, Object b) {
+	NodeHandle ah = (NodeHandle) a;
+	NodeHandle bh = (NodeHandle) b;
+
+	int pa = ah.proximity();
+	int pb = bh.proximity();
+	
+	if (pa < pb) return -1;
+	else if (pa > pb) return 1;
+	else return 0;
+    }
 }
-
-

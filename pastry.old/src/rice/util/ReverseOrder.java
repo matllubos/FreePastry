@@ -26,21 +26,57 @@
 // software and patent policy 333-99.  This notice may not be removed.      //
 //////////////////////////////////////////////////////////////////////////////
 
-package rice.pastry;
+package rice.util;
 
-import rice.pastry.messaging.MessageReceiver;
-import rice.pastry.messaging.Address;
+import java.util.*;
 
 /**
- * The interface to an entity which takes care of Pastry routing.
+ * This object reverses a given ordering on some set of objects.
  *
  * @author Andrew Ladd
  */
 
-public interface RoutingManager extends MessageReceiver
+public class ReverseOrder implements Comparator
 {
-    public NodeId getLocalNodeId();
-    public Address getAddress();
+    private Comparator theCmp;
+
+    /**
+     * Constructor.
+     *
+     * Reverses the natural of Comparable objects.
+     */
+    
+    public ReverseOrder() 
+    {
+	theCmp = null;
+    }
+
+    /**
+     * Constructor.
+     *
+     * Reverses the order of the given comparator.
+     *
+     * @param cmp the comparator to reverse order of. 
+     */
+
+    public ReverseOrder(Comparator cmp)
+    {
+	theCmp = cmp;
+    }
+    
+    public int compare(Object a, Object b) 
+    {
+	if (theCmp == null) {
+	    Comparable ac = (Comparable) a;
+	    Comparable bc = (Comparable) b;
+	    
+	    return - ac.compareTo(bc);
+	}
+	else return - theCmp.compare(a, b);
+    }
+    
+    public boolean equals(Object a, Object b)
+    {
+	return a.equals(b);
+    }
 }
-
-

@@ -33,7 +33,7 @@ import java.io.*;
 
 /**
  * A single node identifier and the bit length for nodes is stored in this class.
- * nodeIds are stored big endian.
+ * nodeIds are stored little endian.
  *
  * @author Andrew Ladd
  */
@@ -129,7 +129,7 @@ public class NodeId implements Serializable
 	/// Hash function is computed by cyclicly XORing the bits of the nodeId.
 	
 	for (int i=0; i<n; i++)
-	    h ^= (nodeId[i] << (i % 4));
+	    h ^= (nodeId[i] << (i % 24));
 
 	return h;		   
     }
@@ -168,7 +168,7 @@ public class NodeId implements Serializable
 	    if (magnitude.length < oth.magnitude.length) return -1;
 	    if (magnitude.length > oth.magnitude.length) return 1;
 	    
-	    for (int i=0; i<magnitude.length; i++) 
+	    for (int i=magnitude.length - 1; i >= 0; i--) 
 		if (magnitude[i] != oth.magnitude[i]) {
 		    int x = magnitude[i];
 		    int y = oth.magnitude[i];
@@ -195,7 +195,27 @@ public class NodeId implements Serializable
 	    if (compareTo(obj) == 0) return true;
 	    else return false;
 	}
-    }    
+
+	/**
+	 * Hash codes.
+	 *
+	 * @return a hash code.
+	 */
+	
+	public int hashCode()
+	{
+	    int n = nodeIdBitLength >> 3;
+	    
+	    int h = 0;
+	    
+	    /// Hash function is computed by cyclicly XORing the bits of the nodeId.
+	    
+	    for (int i=0; i<n; i++)
+		h ^= (magnitude[i] << (i % 24));
+	    
+	    return h;		   
+	}
+    }
     
     /**
      * Returns the distance between a pair of nodeIds.
@@ -221,6 +241,23 @@ public class NodeId implements Serializable
     }
 
     /**
+     * Checks to see if the node is clockwise or counterclockwise.
+     *
+     * @return true if clockwise, false otherwise.
+     */
+    
+    public boolean clockwise(NodeId nid) 
+    {
+	int index = indexOfMSDB(nid);
+
+	boolean nidBit = nid.checkBit(index);
+	boolean myBit = checkBit(index);
+
+	if (myBit == false && nidBit == true) return true;
+	else return false;
+    }
+
+    /**
      * Checks if the ith bit is flipped.
      *
      * i = 0 is the least significant bit.
@@ -235,7 +272,7 @@ public class NodeId implements Serializable
 	int index = i / 8;
 	int shift = i % 8;
 
-	int val = nodeId[i];
+	int val = nodeId[index];
 
 	if (val < 0) val += 256;
 
@@ -284,7 +321,7 @@ public class NodeId implements Serializable
     {
 	int n = nodeIdBitLength >> 3;
 
-	for (int i=0; i<n; i++) {
+	for (int i=n - 1; i>=0; i--) {
 	    int x = nodeId[i];
 	    int y = nid.nodeId[i];
 
@@ -297,7 +334,7 @@ public class NodeId implements Serializable
 		int mask = 0x80;
 		
 		for (int j=0; j<8; j++) {
-		    if ((cmp & mask) != 0) return nodeIdBitLength - 8 * i + j - 1;
+		    if ((cmp & mask) != 0) return 8 * i + 7 - j;
 		    mask >>= 1;
 		}
 	    }
@@ -327,7 +364,7 @@ public class NodeId implements Serializable
     /**
      * Returns a string representation of the nodeId.
      *
-     * The string is a byte string from most to least significant.
+     * The string is a byte string from least to most significant.
      */
 
     public String toString() 
@@ -337,12 +374,12 @@ public class NodeId implements Serializable
 	String tran[] = { "0", "1", "2", "3", "4", "5", "6", "7",
 			  "8", "9", "A", "B", "C", "D", "E", "F" };
 	
-	for (int i=0; i<nodeIdBitLength; i++) {
-	    int iden = nodeId[i];	    
-	    int l = nodeId[i] & 0x0F;
-	    int h = (nodeId[i] >> 4) & 0x0F;
-	    
-	    s = s + tran[h] + tran[l];
+	int n = nodeIdBitLength >> 2;
+
+	for (int i=0; i<n; i++) {
+	    int d = getDigit(i, 4);
+	    	    
+	    s = s + tran[d];
 	}
 
 	return "< nodeId " + s + " >";

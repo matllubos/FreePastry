@@ -26,21 +26,102 @@
 // software and patent policy 333-99.  This notice may not be removed.      //
 //////////////////////////////////////////////////////////////////////////////
 
-package rice.pastry;
+package rice.util.testing;
 
-import rice.pastry.messaging.MessageReceiver;
-import rice.pastry.messaging.Address;
+import rice.util.*;
+import java.util.*;
 
 /**
- * The interface to an entity which takes care of Pastry routing.
+ * Testing a heap.
  *
  * @author Andrew Ladd
  */
 
-public interface RoutingManager extends MessageReceiver
-{
-    public NodeId getLocalNodeId();
-    public Address getAddress();
+public class HeapUnit {
+    private Random rng;
+    private Heap theHeap;
+
+    public void genRandomPerm(Object objs[]) {
+	int n = objs.length;
+
+	for (int i=0; i<n; i++) {
+	    int sw = rng.nextInt();
+
+	    if (sw < 0) sw = -sw;
+
+	    sw = sw % (n - i);
+
+	    Object temp = objs[i];
+	    objs[i] = objs[sw];
+	    objs[sw] = temp;
+	}
+    }
+
+    public Integer[] fillIntArray(int n) {
+	Integer ints[] = new Integer[n];
+
+	for (int i=0; i<n; i++) ints[i] = new Integer(i);
+
+	return ints;
+    }
+
+    public Integer[] heapSort(Integer ints[]) {
+	//for (int i=0; i<ints.length; i++)
+	//    System.out.print(ints[i] + " ");
+	System.out.println("starting insertion...\n");
+
+	for (int i=0; i<ints.length; i++) {
+	    theHeap.put(ints[i]);
+	    //System.out.println(theHeap);
+	    //System.out.println("");
+	    //System.out.println("");
+	}
+
+	Integer outs[] = new Integer[theHeap.size()];
+
+	System.out.println("\nBeginning extraction...\n");
+
+	for (int i=0; i<outs.length; i++) {
+	    outs[i] = (Integer) theHeap.extract();
+	    //System.out.println(theHeap);
+	    //System.out.println("");
+	    //System.out.println("");
+	}
+
+	System.out.println("done!");
+
+	return outs;
+    }
+
+    public Integer[] integersOfInts(int ints[]) {
+	Integer outs[] = new Integer[ints.length];
+
+	for (int i=0; i<ints.length; i++) outs[i] = new Integer(ints[i]);
+
+	return outs;
+    }
+
+    public void verifyHeapSort(Integer ints[]) {
+	Integer outs[] = heapSort(ints);
+
+	for (int i=0; i<outs.length; i++)
+	    if (outs[i].intValue() != i) System.out.println(outs[i].intValue() + " <> " + i);
+    }
+
+    public HeapUnit(Heap h) {
+	rng = new Random();
+	theHeap = h;
+    }
+    
+    public static void main(String args[]) {
+	HeapUnit hu = new HeapUnit(new Heap());
+
+	Integer ints[] = hu.fillIntArray(1000000);
+	hu.genRandomPerm(ints);
+
+	//int rawInts[] = { 29, 7, 1, 23, 25, 2, 0, 16, 18, 9, 6, 14, 15, 3 };
+	//Integer ints[] = hu.integersOfInts(rawInts);
+	
+	hu.verifyHeapSort(ints);
+    }
 }
-
-

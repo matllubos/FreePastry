@@ -5,14 +5,16 @@
 #***************************************************************************
 
 PACKAGES = \
+	rice.util\
+	rice.util.testing\
 	rice.pastry\
+	rice.pastry.messaging\
 	rice.pastry.routing\
-	rice.pastry.messaging
+	rice.pastry.testing
 #	rice.pastry.network
 #	rice.pastry.client\
 #	rice.pastry.networkprototype\
 #	rice.pastry.testclient\
-#	rice.pastry.testing\
 #	rice.pastry.testsocket\
 
 
@@ -22,8 +24,8 @@ JARS =
 
 JARS_3RDPARTY = 
 
-MAIN_CLASS     = 
-MAIN_PACKAGE   = 
+MAIN_CLASS     = RoutingTableUnit
+MAIN_PACKAGE   = rice.pastry.testing
 MAIN_JAR       = 
 
 
