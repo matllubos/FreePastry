@@ -223,6 +223,8 @@ public class SocketChannelWriter {
       oos.writeObject(o);
       int len = baos.toByteArray().length;
 
+      //System.out.println("serializingS " + o + " len=" + len);
+
       ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
       DataOutputStream dos = new DataOutputStream(baos2);
 

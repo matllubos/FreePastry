@@ -316,6 +316,9 @@ public class DatagramManager implements SelectionKeyHandler {
 
       // write out object and find its length
       oos.writeObject(o);
+      
+      int len = baos.toByteArray().length;
+      //System.out.println("serializingD " + o + " len=" + len);
 
       return ByteBuffer.wrap(baos.toByteArray());
     } catch (InvalidClassException e) {

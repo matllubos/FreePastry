@@ -12,6 +12,7 @@ SOURCE  = \
 	RegrTestApp.java\
 	NodeIdUnit.java\
 	PingMessage.java \
+	PingMessageNew.java \
 	PingAddress.java \
 	Ping.java \
 	SinglePingTest.java \

@@ -148,8 +148,8 @@ public abstract class NodeHandle extends Observable implements MessageReceiver, 
    * ObjectInputStream. Refer to README.handles_localnode for details.
    */
   private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-    in.defaultReadObject();
-    LocalNodeI.pending.addPending(in, this);
+      in.defaultReadObject();
+      LocalNodeI.pending.addPending(in, this);
   }
 }
 

@@ -380,9 +380,8 @@ public class Scribe extends PastryAppl implements IScribe
 	// m_apps could be null since the notifyReady() can be called even
 	// before the execution of the constructor of this class is complete.
 	if(m_apps != null) {
-	    //Iterator it = m_apps.iterator();
-	    Vector temp = (Vector)m_apps.clone();
-	    Iterator it = temp.iterator();
+	    Vector tmp_apps = new Vector(m_apps);
+	    Iterator it = tmp_apps.iterator();
 	    while (it.hasNext())
 		((IScribeApp)(it.next())).scribeIsReady();
 	}

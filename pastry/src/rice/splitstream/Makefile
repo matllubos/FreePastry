@@ -4,6 +4,7 @@ SOURCE  = \
 	Channel.java \
 	ChannelId.java \
 	SplitStreamImpl.java \
+#	SplitStreamTest.java \
 	ISplitStream.java \
 	Stripe.java \
 	StripeId.java\

@@ -29,6 +29,9 @@ PACKAGES = \
 	rice.scribe.messaging\
 	rice.scribe.security\
 	rice.scribe.testing\
+	rice.splitstream \
+	rice.splitstream.messaging \
+	rice.splitstream.testing \
 	rice.post\
 	rice.post.log\
 	rice.post.messaging\
@@ -39,7 +42,7 @@ PACKAGES = \
 	rice.email.log\
 	rice.email.messaging\
 	rice.email.test\
-	rice.email.proxy
+	rice.email.proxy \
 #	rice.storage\
 #	rice.storage.testing\
 #	rice.past\
