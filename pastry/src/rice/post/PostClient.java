@@ -2,6 +2,7 @@ package rice.post;
 
 import java.util.Observable;
 
+import rice.*;
 import rice.post.messaging.*;
 
 /**
@@ -23,8 +24,9 @@ public abstract class PostClient extends Observable {
    * that there is an incoming notification. 
    *
    * @param nm The incoming notification.
+   * @param command THe command to return whether or not the notification should be accepted (Boolean true or false)
    */
-  public abstract void notificationReceived(NotificationMessage nm);
+  public abstract void notificationReceived(NotificationMessage nm, Continuation command);
 
   /**
    * Returns the address of this PostClient.  This method is
