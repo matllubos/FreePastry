@@ -7,9 +7,12 @@ SOURCE  = \
 	SplitStreamUnitTest.java \
 	DirectSplitStreamTest.java \
 	DirectSplitStreamTestApp.java \
+	DistStripeLog.java\
 	DistSplitStreamTest.java \
 	DistSplitStreamTestApp.java \
-	DistSplitStreamTestMessage.java
+	DistSplitStreamTestMessage.java \
+	ProcessLog.java
+
 
 
 RMI_SOURCE =
