@@ -226,7 +226,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param set The set of other nodes around the root handle
    */
   public NodeHandleSet replicaSet(Id id, int maxRank, NodeHandle root, NodeHandleSet set) {
-    LeafSet leaf = new LeafSet((rice.pastry.NodeHandle) root, getLeafSet().maxSize());
+    LeafSet leaf = new LeafSet((rice.pastry.NodeHandle) root, getLeafSet().maxSize(), false);
     for (int i=0; i<set.size(); i++)
       leaf.put((rice.pastry.NodeHandle) set.getHandle(i));
     
