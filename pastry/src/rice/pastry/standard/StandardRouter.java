@@ -112,6 +112,10 @@ public class StandardRouter implements MessageReceiver {
     public void receiveRouteMessage(RouteMessage msg) 
     {
 	NodeId target = msg.getTarget();
+
+	if(target == null)
+	  target = localId;
+	
 	
 	int cwSize = leafSet.cwSize();
 	int ccwSize = leafSet.ccwSize();
