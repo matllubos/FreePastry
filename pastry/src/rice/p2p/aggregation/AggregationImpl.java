@@ -331,11 +331,13 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     int h = c.get(Calendar.HOUR);
     int m = c.get(Calendar.MINUTE);
     int s = c.get(Calendar.SECOND);
+    int u = c.get(Calendar.MILLISECOND);
 
     return ((h<10) ? "0" : "") + Integer.toString(h) + ":" +
            ((m<10) ? "0" : "") + Integer.toString(m) + ":" +
-           ((s<10) ? "0" : "") + Integer.toString(s) + " @" +
-           node.getId() + " " + debugID;
+           ((s<10) ? "0" : "") + Integer.toString(s) + "." +
+           ((u<100) ? "0" : "") + ((u<10) ? "0" : "") + Integer.toString(u) +
+           " " + debugID;
   }
 
   private void log(int level, String str) {
