@@ -103,7 +103,7 @@ public interface GCPast extends Past {
   public void insert(PastContent obj, long expiration, Continuation command);
 
   /**
-   * Updates the objects stored under the provided key id to expire no
+   * Updates the objects stored under the provided keys id to expire no
    * earlier than the provided expiration time.  Asyncroniously returns
    * the result to the caller via the provided continuation.  
    *
@@ -111,13 +111,13 @@ public interface GCPast extends Past {
    * will be returned to the command.  If too many of the object replicas 
    * failed to correctly refresh the object, a PastException will be returned
    * to the continuation.  Otherwise, the refresh will be declared successful,
-   * and the results will be returned in a Boolean[].
+   * and the results will be returned in a Boolean[][].
    * 
-   * @param id The key which to refresh
+   * @param id The keys which to refresh
    * @param expiration The time to extend the lifetime to
    * @param command Command to be performed when the result is received
    */
-  public void refresh(Id id, long expiration, Continuation command);
+  public void refresh(Id[] id, long expiration, Continuation command);
 
 }
 

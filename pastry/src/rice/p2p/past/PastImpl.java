@@ -508,6 +508,12 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
                 });
               }
             }
+            
+            public void receiveException(Exception e) {
+              // If the lookup message failed , we then try to fetch all of the handles, just
+              // in case.  This may fail too, but at least we tried.
+              receiveResult(null);
+            }
           });
         }
       }

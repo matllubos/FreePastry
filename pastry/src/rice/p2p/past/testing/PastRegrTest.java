@@ -46,6 +46,7 @@ import rice.p2p.replication.*;
 
 import rice.persistence.*;
 
+import java.io.*;
 import java.util.*;
 import java.net.*;
 import java.io.Serializable;
@@ -93,10 +94,14 @@ public class PastRegrTest extends CommonAPITest {
    * @param num The number of this node
    */
   protected void processNode(int num, Node node) {
-    storages[num] = new StorageManagerImpl(FACTORY,
-                                      new PersistentStorage(FACTORY, "root-" + num, ".", 1000000),
-                                      new LRUCache(new MemoryStorage(FACTORY), 100000));
-    pasts[num] = new PastImpl(node, storages[num], REPLICATION_FACTOR, INSTANCE);
+    try {
+      storages[num] = new StorageManagerImpl(FACTORY,
+                                             new PersistentStorage(FACTORY, "root-" + num, ".", 1000000),
+                                             new LRUCache(new MemoryStorage(FACTORY), 100000));
+      pasts[num] = new PastImpl(node, storages[num], REPLICATION_FACTOR, INSTANCE);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
