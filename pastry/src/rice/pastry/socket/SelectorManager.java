@@ -66,6 +66,9 @@ public class SelectorManager {
   // the amount of time to wait during a selection (ms)
   public int SELECT_WAIT_TIME = 1000;
   
+  // a list of the invocations that need to be done in this thread
+  private LinkedList invocations;
+  
   /**
     * Constructor.
    *
@@ -74,6 +77,7 @@ public class SelectorManager {
    */
   public SelectorManager(SocketPastryNode node) {
     this.node = node;
+    this.invocations = new LinkedList();
     
     // attempt to create selector
     try {
@@ -96,6 +100,29 @@ public class SelectorManager {
    */
   Selector getSelector() {
     return selector;
+  }
+  
+  /**
+   * This method schedules a runnable task to be done by the selector thread
+   * during the next select() call.  All operations which modify the selector
+   * should be done using this method, as they must be done in the selector 
+   * thread.
+   *
+   * @param d The runnable task to invoke
+   */
+  public synchronized void invoke(Runnable d) {
+    invocations.add(d);
+    selector.wakeup();
+  }
+  
+  /**
+   * Method which invokes all pending invocations.  This method should *only* be
+   * called by the selector thread.
+   */
+  private synchronized void doInvocations() {
+    while (invocations.size() > 0) {
+      ((Runnable) invocations.removeFirst()).run();
+    }
   }
   
   /**
@@ -123,7 +150,7 @@ public class SelectorManager {
   }
   
   /**
-    * Selects all of the currenlty selected keys on the selector and returns the result
+   * Selects all of the currenlty selected keys on the selector and returns the result
    * as an array of keys.
    *
    * @return The array of keys
@@ -144,6 +171,8 @@ public class SelectorManager {
       
       // loop while waiting for activity
       while (alive && (select() >= 0)) {
+        
+        doInvocations();
         
         SelectionKey[] keys = selectedKeys();
           

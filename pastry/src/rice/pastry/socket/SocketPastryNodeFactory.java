@@ -136,7 +136,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     SocketNodeHandlePool pool = new SocketNodeHandlePool(pn);
     
     synchronized (this) {      
-      socketManager = new SocketCollectionManager(pn, pool, port, sManager.getSelector());
+      socketManager = new SocketCollectionManager(pn, pool, port, sManager);
       address = getAddress(port);
       port++;
     }

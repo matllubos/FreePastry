@@ -71,8 +71,8 @@ public class SocketCollectionManager implements SelectionKeyHandler {
   // the ping throttle, or how often to actually ping a remote node
   public static int PING_THROTTLE = 10000;
   
-  // the selector which the manager uses
-  private Selector selector;
+  // the selector manager which the collection manager uses
+  private SelectorManager manager;
 
   // the pastry node which this manager serves
   private SocketPastryNode pastryNode;
@@ -111,11 +111,11 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    * @param port The port number which this manager is listening on
    * @param selector The Selector this manager should register with
    */
-  public SocketCollectionManager(SocketPastryNode node, SocketNodeHandlePool pool, int port, Selector selector) {
+  public SocketCollectionManager(SocketPastryNode node, SocketNodeHandlePool pool, int port, final SelectorManager manager) {
     this.pastryNode = node;
     this.port = port;
     this.pool = pool;
-    this.selector = selector;
+    this.manager = manager;
     queue = new LinkedList();
     sockets = new Hashtable();
     pings = new Hashtable();
@@ -126,12 +126,21 @@ public class SocketCollectionManager implements SelectionKeyHandler {
       this.localAddress = new InetSocketAddress(InetAddress.getLocalHost(), port);
       
       // bind to port
-      ServerSocketChannel channel = ServerSocketChannel.open();
+      final ServerSocketChannel channel = ServerSocketChannel.open();
       channel.configureBlocking(false);
       channel.socket().bind(localAddress);
 
-      key = channel.register(selector, SelectionKey.OP_ACCEPT);
-      key.attach(this);
+      final SocketCollectionManager socketCollectionManager = this;
+      manager.invoke(new Runnable() {
+        public void run() {
+          try {
+            key = channel.register(manager.getSelector(), SelectionKey.OP_ACCEPT);
+            key.attach(socketCollectionManager);
+          } catch (IOException e) {
+            System.out.println("ERROR registering server socket " + e);
+          }
+        }
+      });
     } catch (IOException e) {
       System.out.println("ERROR creating server socket channel " + e);
     }
@@ -501,17 +510,24 @@ public class SocketCollectionManager implements SelectionKeyHandler {
      * @param serverKey The server socket key
      */
     protected void acceptConnection(SelectionKey serverKey) throws IOException {
-      SocketChannel channel = (SocketChannel) ((ServerSocketChannel) serverKey.channel()).accept();
+      final SocketChannel channel = (SocketChannel) ((ServerSocketChannel) serverKey.channel()).accept();
       channel.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
       channel.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
       channel.configureBlocking(false);
         
       debug("Accepted connection from " + address);
-
-      synchronized (selector) {
-        this.key = channel.register(selector, SelectionKey.OP_READ);
-        this.key.attach(this);
-      }
+      
+      final SocketManager socketManager = this;
+      manager.invoke(new Runnable() {
+        public void run() {
+          try {
+            key = channel.register(manager.getSelector(), SelectionKey.OP_READ);
+            key.attach(socketManager);
+          } catch (IOException e) {
+            System.out.println("ERROR registering accepted socket " + e);
+          }
+        }
+      });
     }
     
     /**
@@ -519,31 +535,38 @@ public class SocketCollectionManager implements SelectionKeyHandler {
      *
      * @param address The accress to connect to
      */
-    protected void createConnection(InetSocketAddress address) throws IOException {
-      SocketChannel channel = SocketChannel.open();
+    protected void createConnection(final InetSocketAddress address) throws IOException {
+      final SocketChannel channel = SocketChannel.open();
       channel.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
       channel.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
       channel.configureBlocking(false);
       
-      boolean done = channel.connect(address);
+      final boolean done = channel.connect(address);
       this.address = address;
       
       debug("Initiating socket connection to " + address);
       
-      synchronized (selector) {
-        if (done) {
-          this.key = channel.register(selector, SelectionKey.OP_READ);
+      final SocketManager socketManager = this;
+      manager.invoke(new Runnable() {
+        public void run() {
+          try {
+            if (done) {
+              key = channel.register(manager.getSelector(), SelectionKey.OP_READ);
+            
+              if (! key.isValid()) {
+                markDead(address);
+                throw new IOException("Invalid key after connect - remote node dead!");
+              }
+            } else {
+              key = channel.register(manager.getSelector(), SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
+            }
           
-          if (! this.key.isValid()) {
-            markDead(address);
-            throw new IOException("Invalid key after connect - remote node dead!");
+            key.attach(socketManager);
+          } catch (IOException e) {
+            System.out.println("ERROR registering server socket " + e);
           }
-        } else {
-          this.key = channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
         }
-        
-        this.key.attach(this);
-      }
+      });
       
       send(localAddress);
     }
@@ -591,19 +614,21 @@ public class SocketCollectionManager implements SelectionKeyHandler {
      *
      * @param Message message
      */
-    public void send(Object message) {
+    public void send(final Object message) {
       writer.enqueue(message); 
             
-      synchronized (selector) {
-        if (key.isValid()) {
-          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-        } else {
-          debug("ERROR: Unvalid key in write - while sending message " + message);
-          
-          if (message instanceof Message)
-            reroute(address, (Message) message);
+      manager.invoke(new Runnable() {
+        public void run() {
+          if (key.isValid()) {
+            key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+          } else {
+            debug("ERROR: Unvalid key in write - while sending message " + message);
+            
+            if (message instanceof Message)
+              reroute(address, (Message) message);
+          }
         }
-      }
+      });
     }
     
     /**
@@ -657,10 +682,8 @@ public class SocketCollectionManager implements SelectionKeyHandler {
     public void connect(SelectionKey key) {
       try {
         if (((SocketChannel) key.channel()).finishConnect()) {
-          synchronized (selector) {
-            // deregister interest in connecting to this socket
-            key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
-          }
+          // deregister interest in connecting to this socket
+          key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
         }
         
         markAlive(address);
@@ -712,9 +735,7 @@ public class SocketCollectionManager implements SelectionKeyHandler {
     public void write(SelectionKey key) {
       try {
         if (writer.write((SocketChannel) key.channel())) {
-          synchronized (selector) {
-            key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-          }
+          key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
         }
       } catch (IOException e) {
         debug("ERROR " + e + " writing - cancelling.");
