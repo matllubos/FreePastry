@@ -348,6 +348,7 @@ public class StorageService {
 
     private ContentHashReference reference;
     private Continuation command;
+    private PastContentHandle[] handles;
 
     /**
      * This contructs creates a task to store a given data and call the
@@ -365,7 +366,7 @@ public class StorageService {
       * Starts this task running.
      */
     protected void start() {
-      past.lookup(reference.getLocation(), this);
+      past.lookupHandles(reference.getLocation(), past.getReplicationFactor(), this);
 
       // Now we wait until PAST calls us with the receiveResult
       // and then we continue processing this call
@@ -377,46 +378,72 @@ public class StorageService {
      * @param result The result of the command.
      */
     public void receiveResult(Object result) {
-      try {
-        ContentHashData chd = (ContentHashData) result;
+      if (handles == null) {
+        handles = (PastContentHandle[]) result;
 
-        if (chd == null) {
+        if ((handles == null) || (handles.length == 0)) {
           command.receiveResult(null);
           return;
         }
 
-        // TO DO: fetch from multiple locations to prevent rollback attacks
-        byte[] key = reference.getKey();
+        StorageServiceDataHandle handle = null;
 
-        byte[] cipherText = chd.getData();
-        byte[] plainText = SecurityUtils.decryptSymmetric(cipherText, key);
-        Object data = SecurityUtils.deserialize(plainText);
+        for (int i=0; i<handles.length; i++) {
+          StorageServiceDataHandle thisH = (StorageServiceDataHandle) handles[i];
 
-        // Verify hash(cipher) == location
-        byte[] hashCipher = SecurityUtils.hash(cipherText);
-        byte[] loc = reference.getLocation().copy();
-        if (! Arrays.equals(hashCipher, loc)) {
-          command.receiveException(new StorageException("Hash of cipher text does not match location."));
-          return;
+          if (thisH != null) {
+            handle = thisH;
+            break;
+          }
         }
 
-        // Verify hash(plain) == key
-        byte[] hashPlain = SecurityUtils.hash(plainText);
-        if (! Arrays.equals(hashPlain, key)) {
-          command.receiveException(new StorageException("Hash of retrieved content does not match key."));
-          return;
+        if (handle != null) {
+          past.fetch(handle, this);
+        } else {
+          command.receiveResult(null);
         }
+      } else {
+        try {
+          ContentHashData chd = (ContentHashData) result;
 
-        command.receiveResult((PostData) data);
-      }
-      catch (ClassCastException cce) {
-        command.receiveException(new StorageException("ClassCastException while retrieving data: " + cce));
-      }
-      catch (IOException ioe) {
-        command.receiveException(new StorageException("IOException while retrieving data: " + ioe));
-      }
-      catch (ClassNotFoundException cnfe) {
-        command.receiveException(new StorageException("ClassNotFoundException while retrieving data: " + cnfe));
+          if (chd == null) {
+            command.receiveResult(null);
+            return;
+          }
+
+          // TO DO: fetch from multiple locations to prevent rollback attacks
+          byte[] key = reference.getKey();
+
+          byte[] cipherText = chd.getData();
+          byte[] plainText = SecurityUtils.decryptSymmetric(cipherText, key);
+          Object data = SecurityUtils.deserialize(plainText);
+
+          // Verify hash(cipher) == location
+          byte[] hashCipher = SecurityUtils.hash(cipherText);
+          byte[] loc = reference.getLocation().copy();
+          if (! Arrays.equals(hashCipher, loc)) {
+            command.receiveException(new StorageException("Hash of cipher text does not match location."));
+            return;
+          }
+
+          // Verify hash(plain) == key
+          byte[] hashPlain = SecurityUtils.hash(plainText);
+          if (! Arrays.equals(hashPlain, key)) {
+            command.receiveException(new StorageException("Hash of retrieved content does not match key."));
+            return;
+          }
+
+          command.receiveResult((PostData) data);
+        }
+        catch (ClassCastException cce) {
+          command.receiveException(new StorageException("ClassCastException while retrieving data: " + cce));
+        }
+        catch (IOException ioe) {
+          command.receiveException(new StorageException("IOException while retrieving data: " + ioe));
+        }
+        catch (ClassNotFoundException cnfe) {
+          command.receiveException(new StorageException("ClassNotFoundException while retrieving data: " + cnfe));
+        }
       }
     }
 
