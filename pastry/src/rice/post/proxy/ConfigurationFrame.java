@@ -20,6 +20,8 @@ public class ConfigurationFrame extends JFrame {
   public static final Dimension LIST_BOX_SIZE = new Dimension(FRAME_WIDTH, DEFAULT_HEIGHT*6);
   public static final Dimension LIST_BUTTONS_SIZE = new Dimension(FRAME_WIDTH, DEFAULT_HEIGHT);
   public static final Dimension NUMERIC_BOX_SIZE = new Dimension(FRAME_WIDTH/2, DEFAULT_HEIGHT);
+  public static final Dimension SLIDER_BOX_SIZE = new Dimension(FRAME_WIDTH, DEFAULT_HEIGHT);
+  public static final Dimension SLIDER_BOX_MIN = new Dimension((int)(FRAME_WIDTH*0.75), DEFAULT_HEIGHT);
  
   protected Parameters parameters;
   
@@ -764,7 +766,8 @@ public class ConfigurationFrame extends JFrame {
       sliderLabel.setLabelFor(slider);
       sliderLabel.setToolTipText(tip);
       
-      setPreferredSize(TEXT_BOX_SIZE);
+      setPreferredSize(SLIDER_BOX_SIZE);
+      setMinimumSize(SLIDER_BOX_MIN);
       
       GridBagConstraints gbc1 = new GridBagConstraints();
       layout.setConstraints(sliderLabel, gbc1);      
@@ -772,6 +775,7 @@ public class ConfigurationFrame extends JFrame {
       
       GridBagConstraints gbc2 = new GridBagConstraints();
       gbc2.gridx = 1;
+      gbc2.fill = GridBagConstraints.HORIZONTAL;
       layout.setConstraints(slider, gbc2);      
       add(slider);
       
