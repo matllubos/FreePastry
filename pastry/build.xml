@@ -122,7 +122,7 @@
       <fileset dir="${build.dir}" includes="rice/selector/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/serialization/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/visualization/**/*.class"/>
-      <fileset dir="${jar.dir}/epost" includes="ca.publickey,proxy.params"/>
+      <fileset dir="${jar.dir}/epost" includes="ca.publickey,default.params"/>
     </jar>
   </target>
 
