@@ -116,7 +116,7 @@ public class PastryNode implements NodeHandle
 
     // message receiver interface
 
-    public final void receiveMessage(Message msg) 
+    public final synchronized void receiveMessage(Message msg) 
     {
 	if (mySecurityManager.verifyMessage(msg) == true)
 	    myMessageDispatch.dispatchMessage(msg); 
