@@ -2,7 +2,12 @@ PACKAGE = rice.rm.testing
 
 SOURCE  = \
 	DirectRMRegrTestApp.java \
-	DirectRMRegrTest.java 
+	DirectRMRegrTest.java \
+	DistRMRegrTest.java \
+	DistRMRegrTestApp.java \
+	DistRMRegrTestMessage.java \
+	DistRMRegrTestReplicateMessage.java \
+	ObjectState.java
 
 RMI_SOURCE =
 

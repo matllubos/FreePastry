@@ -128,7 +128,7 @@ public class DirectRMRegrTestApp extends PastryAppl implements RMClient
 
     // Upcall from replica manager
     public void responsible(NodeId objectKey, Object object) {
-	System.out.println("responsible() called on node" + getNodeId());
+	//System.out.println("responsible() called on node" + getNodeId());
 	if(m_objects.containsKey(objectKey)) {
 	    // object exists already, so this represents a superfluous message
 	    System.out.println("WARNING: responsible() called on " + getNodeId() + " for object " + objectKey + " that aleady existed");
@@ -143,7 +143,7 @@ public class DirectRMRegrTestApp extends PastryAppl implements RMClient
 
     // Upcall from replica manager
     public void notresponsible(NodeId objectKey) {
-	System.out.println("notresponsible() called on node" + getNodeId());
+	//System.out.println("notresponsible() called on node" + getNodeId());
 	if(!m_objects.containsKey(objectKey)) {
 	    // object does not exist, so this represents a superfluous message
 	    System.out.println("WARNING: notresponsible() called on " + getNodeId() + " for object " + objectKey + " that did not exist");
@@ -158,7 +158,7 @@ public class DirectRMRegrTestApp extends PastryAppl implements RMClient
 
     // Upcall from replica manager
     public void refresh(NodeId objectKey) {
-	System.out.println("refresh() called on node" + getNodeId());
+	//System.out.println("refresh() called on node" + getNodeId());
 	if(!m_objects.containsKey(objectKey)) {
 	    // object does not exists, so this represents a error 
 	    System.out.println("ERROR: refresh() called on " + getNodeId() + " for object " + objectKey + " that did not exist");

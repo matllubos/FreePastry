@@ -37,7 +37,7 @@ if advised of the possibility of such damage.
 
 package rice.rm.messaging;
 
-import rice.pastry.NodeId;
+import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 
@@ -93,6 +93,13 @@ public class RMMessage extends Message implements Serializable{
      
     private Address _rmdemuxAddress;
 
+    /**
+     * The ID of the source of this message.
+     * Should be serializable.
+     */
+    protected NodeHandle _source;
+
+    private int _seqno;
 
     /**
      * Constructor : Builds a new RM Message
@@ -103,15 +110,27 @@ public class RMMessage extends Message implements Serializable{
      * @param replicaFactor the number of replicas required for the object
      * 
      */
-    public RMMessage(Address address, Object content, NodeId objectKey,int messageType, int replicaFactor, Address rmdemuxAddress, Credentials authorCred) {
+    public RMMessage(NodeHandle source, Address address, Object content, NodeId objectKey,int messageType, int replicaFactor, Address rmdemuxAddress, Credentials authorCred, int seqno) {
 	super(address);
+	this._source = source; 
 	this._messageType = messageType;
 	this._object = content;
 	this._objectKey = objectKey;
 	this._replicaFactor = replicaFactor;
 	this._authorCred = authorCred;
 	this._rmdemuxAddress = rmdemuxAddress;
+	this._seqno = seqno;
     }
+    
+
+    public int getSeqno() {
+	return _seqno;
+    }
+
+    public NodeHandle getSource() {
+	return _source;
+    }
+    
     
 
     /**

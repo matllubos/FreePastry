@@ -73,7 +73,7 @@ public class DirectRMRegrTest
     private Vector objectKeys;
 
     // Total nodes in the system
-    private int n = 100;
+    private int n = 20;
     public static boolean setupDone = false;
 
 
@@ -85,11 +85,11 @@ public class DirectRMRegrTest
     // The number of nodes that fail concurrently. This step of failing
     // nodes concurrently is repeated till the desired number of totalFailures
     // number of nodes has been killed.   
-    private int concurrentFailures =  5; 
+    private int concurrentFailures =  2; 
 
 
     // The number of nodes that join concurrently.
-    private int concurrentJoins = 5;
+    private int concurrentJoins = 2;
 
     // Since we experiment with node failures and node joins, this keeps
     // track of the number of nodes currently alive in the Pastry network.
@@ -174,7 +174,7 @@ public class DirectRMRegrTest
 	int i;
 	int numObjects = 100;
 	int numDeleted = 20;
-	int replicaFactor = 8;
+	int replicaFactor = 4;
 	int index;
 	DirectRMRegrTestApp rmApp;
 	NodeId objectKey;

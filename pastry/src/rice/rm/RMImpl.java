@@ -114,6 +114,14 @@ public class RMImpl extends PastryAppl implements RM {
      */
     private Hashtable _appTable;
 
+    // This vector is the list of applications which need to be given the 
+    // upcall rmIsReady() when the RM layer becomes ready.
+    private Vector m_unreadyApps;
+
+    private boolean m_ready;
+
+    public int m_seqno;
+
     private static class RMAddress implements Address {
 	private int myCode = 0x8bed147c;
 	
@@ -160,10 +168,21 @@ public class RMImpl extends PastryAppl implements RM {
     public RMImpl(PastryNode pn)
     {
 	super(pn);
+	m_ready = pn.isReady();
 	_appTable = new Hashtable();
 	_objects = new Hashtable();
 	_credentials = new PermissiveCredentials();
 	_sendOptions = new SendOptions();
+	m_unreadyApps = new Vector();
+	m_seqno = 0;
+    }
+
+    /** 
+     * Returns true if the RM substrate is ready. The RM substrate is
+     * ready when underlying PastryNode is ready.
+     */
+    public boolean isReady() {
+	return m_ready;
     }
 
     /* Gets the local NodeHandle associated with this Scribe node.
@@ -202,29 +221,37 @@ public class RMImpl extends PastryAppl implements RM {
 	    objectKey = rmmsg.getobjectKey();
 	    object = rmmsg.getObject();
 	    replicaFactor = rmmsg.getreplicaFactor();
+	    //System.out.println("replicafactor=" + replicaFactor);
 	    rmdemuxaddress = rmmsg.getAddress();
 	    
-	    System.out.println("REPLICATE:: Leader id "+getNodeId());
+	    //System.out.println("REPLICATE:: Leader id "+getNodeId());
 	    
 	    leafSet = getLeafSet();
+	    //System.out.println("leafset=" + leafSet);
+	    //System.out.println("objectkey= " + objectKey);
+
+	    //System.out.println("leafset=" + leafSet);
 	    
 	    sortedleafSet = (Vector)closestReplicas(leafSet, objectKey);
 	    sortedleafSet = compactReplicaSet(sortedleafSet, replicaFactor);
+	    //System.out.println("compacted leafset=");
+	    //printReplicaSet(sortedleafSet);
 	    
+
 	    /* Here we know that we have at most "replicaFactor" number of
 	     * NodeId's in the sortedLeafSet. So, now we should send "insert"
 	     * messages to these leafSet members.
 	     */
-	    System.out.println("REPLICATE::Number of replicas "+sortedleafSet.size());
+	    //System.out.println("REPLICATE::Number of replicas "+sortedleafSet.size());
 	    // We first insert the object into the Primary replica node 
 	    // that is itself, and then replicate additionally to replicaFactor nodes
-	    msg = new RMMessage(getAddress(), object, objectKey, RMMessage.RM_INSERT, replicaFactor, rmdemuxaddress, getCredentials());
-	    System.out.println("Replicating object"+objectKey+" to "+ getNodeId());
+	    msg = new RMMessage(getLocalHandle(),getAddress(), object, objectKey, RMMessage.RM_INSERT, replicaFactor, rmdemuxaddress, getCredentials(), m_seqno ++);
+	    //System.out.println("Replicating object"+objectKey+" to "+ getNodeId());
 	    routeMsgDirect(getLocalHandle(), msg, getCredentials(), _sendOptions);
 	    
 	    for(i=0; i < sortedleafSet.size(); i++){
-		msg = new RMMessage(getAddress(), object, objectKey, RMMessage.RM_INSERT, replicaFactor, rmdemuxaddress, getCredentials());
-		System.out.println("Replicating object"+objectKey+" to "+((NodeId)sortedleafSet.elementAt(i)));
+		msg = new RMMessage(getLocalHandle(),getAddress(), object, objectKey, RMMessage.RM_INSERT, replicaFactor, rmdemuxaddress, getCredentials(), m_seqno ++);
+		//System.out.println("Replicating object"+objectKey+" to "+((NodeId)sortedleafSet.elementAt(i)));
 		routeMsgDirect(leafSet.get((NodeId)sortedleafSet.elementAt(i)), msg, getCredentials(), _sendOptions);
 	    }
 	}
@@ -242,27 +269,31 @@ public class RMImpl extends PastryAppl implements RM {
 	    replicaFactor = rmmsg.getreplicaFactor();
 	    rmdemuxaddress = rmmsg.getAddress();
 	    
-	    System.out.println("HEARTBEAT:: Leader id "+getNodeId());
+	    //System.out.println("HEARTBEAT:: Leader id "+getNodeId());
 	    
 	    leafSet = getLeafSet();
+	    //System.out.println("leafset=" + leafSet);
+	    //System.out.println("objectkey= " + objectKey);
 	    
 	    sortedleafSet = (Vector)closestReplicas(leafSet, objectKey);
 	    sortedleafSet = compactReplicaSet(sortedleafSet, replicaFactor);
+	    //System.out.println("compacted leafset=");
+	    //printReplicaSet(sortedleafSet);
 	    
 	    /* Here we know that we have at most "replicaFactor" number of
 	     * NodeId's in the sortedLeafSet. So, now we should send "refresh"
 	     * messages to these leafSet members.
 	     */
-	    System.out.println("HEARTBEAT::Number of replicas "+sortedleafSet.size());
+	    //System.out.println("HEARTBEAT::Number of replicas "+sortedleafSet.size());
 	    // We first refresh the object into the Primary replica node 
 	    // that is itself, and then refresh additionally to replicaFactor nodes
-	    msg = new RMMessage(getAddress(), null, objectKey, RMMessage.RM_REFRESH, replicaFactor, rmdemuxaddress, getCredentials());
-	    System.out.println("Refreshing object"+objectKey+" to "+ getNodeId());
+	    msg = new RMMessage(getLocalHandle(),getAddress(), null, objectKey, RMMessage.RM_REFRESH, replicaFactor, rmdemuxaddress, getCredentials(), m_seqno ++);
+	    //System.out.println("Refreshing object"+objectKey+" to "+ getNodeId());
 	    routeMsgDirect(getLocalHandle(), msg, getCredentials(), _sendOptions);
 	    
 	    for(i=0; i < sortedleafSet.size(); i++){
-		msg = new RMMessage(getAddress(), null, objectKey, RMMessage.RM_REFRESH, replicaFactor, rmdemuxaddress, getCredentials());
-		System.out.println("Refreshing object"+objectKey+" to "+((NodeId)sortedleafSet.elementAt(i)));
+		msg = new RMMessage(getLocalHandle(),getAddress(), null, objectKey, RMMessage.RM_REFRESH, replicaFactor, rmdemuxaddress, getCredentials(), m_seqno ++);
+		//System.out.println("Refreshing object"+objectKey+" to "+((NodeId)sortedleafSet.elementAt(i)));
 		routeMsgDirect(leafSet.get((NodeId)sortedleafSet.elementAt(i)), msg, getCredentials(), _sendOptions);
 	    }
 	}
@@ -282,7 +313,7 @@ public class RMImpl extends PastryAppl implements RM {
 	    replicaFactor = rmmsg.getreplicaFactor();
 	    rmdemuxaddress  = rmmsg.getAddress();
 
-	    System.out.println("REMOVE:: Leader id "+getNodeId());
+	    //System.out.println("REMOVE:: Leader id "+getNodeId());
 
 	    leafSet = getLeafSet();
 		
@@ -294,18 +325,18 @@ public class RMImpl extends PastryAppl implements RM {
 	     * number of NodeId's in the sortedLeafSet. So, now we
 	     * should send "delete" messages to these leafSet members.
 	     */
-	    System.out.println("REMOVE::Number of replicas "+sortedleafSet.size());
+	    //System.out.println("REMOVE::Number of replicas "+sortedleafSet.size());
 	    
 	    // We first remove the object into the Primary replica node 
 	    // that is itself, and then remove additionally from replicaFactor nodes
-	    msg = new RMMessage(getAddress(), object, objectKey, RMMessage.RM_DELETE, replicaFactor, rmdemuxaddress, getCredentials());
-	    System.out.println("Removing object"+objectKey+" from "+ getNodeId());
+	    msg = new RMMessage(getLocalHandle(),getAddress(), object, objectKey, RMMessage.RM_DELETE, replicaFactor, rmdemuxaddress, getCredentials(), m_seqno ++);
+	    //System.out.println("Removing object"+objectKey+" from "+ getNodeId());
 	    routeMsgDirect(getLocalHandle(), msg, getCredentials(), _sendOptions);
 	    
 	    
 	    for(i=0; i < sortedleafSet.size(); i++){
-		msg = new RMMessage(getAddress(), null, objectKey, RMMessage.RM_DELETE, replicaFactor, rmdemuxaddress, getCredentials());
-		System.out.println("Removing object" + objectKey + " from " +((NodeId)sortedleafSet.elementAt(i)));
+		msg = new RMMessage(getLocalHandle(),getAddress(), null, objectKey, RMMessage.RM_DELETE, replicaFactor, rmdemuxaddress, getCredentials(), m_seqno ++);
+		//System.out.println("Removing object" + objectKey + " from " +((NodeId)sortedleafSet.elementAt(i)));
 		routeMsgDirect(leafSet.get((NodeId)sortedleafSet.elementAt(i)), msg, getCredentials(), _sendOptions);
 	    }
 	}
@@ -316,15 +347,14 @@ public class RMImpl extends PastryAppl implements RM {
 	    objectKey = rmmsg.getobjectKey();
 	    object = rmmsg.getObject();
 	    rmdemuxaddress = rmmsg.getAddress();
-	    System.out.println("RM_INSERT:: received replica message for objectKey "+ objectKey+" at local node "+getNodeId());
+	    //System.out.println("RM_INSERT:: received replica message for objectKey "+ objectKey+" at local node "+getNodeId() + "from " + rmmsg.getSource().getNodeId() + "MessageId= " + rmmsg.getSeqno());
 	    replicaFactor = rmmsg.getreplicaFactor();
-	    if(_objects.put(objectKey, new Entry(replicaFactor,rmdemuxaddress)) != null)
-		System.out.println("RM_INSERT:: ERRR... insert called for object which already exists in the system.\n");
-	    else {
-		// Call responsible() on the corresponding application
-		rmclient = (RMClient)_appTable.get(rmdemuxaddress);
-		rmclient.responsible(objectKey, object);
+	    if(_objects.put(objectKey, new Entry(replicaFactor,rmdemuxaddress)) != null) {
+		System.out.println("RM_INSERT:: ERROR ... insert called for object  " + objectKey + "at node " + getNodeId()+ "from " + rmmsg.getSource().getNodeId() + "MessageId= " + rmmsg.getSeqno() + " which already exists in the system");
 	    }
+	    // Call responsible() on the corresponding application
+	    rmclient = (RMClient)_appTable.get(rmdemuxaddress);
+	    rmclient.responsible(objectKey, object);
 	    
 	}
 
@@ -332,11 +362,11 @@ public class RMImpl extends PastryAppl implements RM {
 	    // This is a local refresh
 	    objectKey = rmmsg.getobjectKey();
 	    rmdemuxaddress = rmmsg.getAddress();
-	    System.out.println("RM_REFRESH:: received replica message for objectKey "+ objectKey+" at local node "+getNodeId());
+	    //System.out.println("RM_REFRESH:: received replica message for objectKey "+ objectKey+" at local node "+getNodeId() + "from " + rmmsg.getSource().getNodeId() + "MessageId= " + rmmsg.getSeqno() );
 	    replicaFactor = rmmsg.getreplicaFactor();
-	    if(!_objects.containsKey(objectKey))
-		System.out.println("RM_REFRESH:: ERRR... refresh called for object which did not exist in the system.\n");
-	    
+	    if(!_objects.containsKey(objectKey)) {
+		System.out.println("RM_REFRESH:: ERROR ... refresh called for object " + objectKey + "at node " + getNodeId()+  "from " + rmmsg.getSource().getNodeId() +  "MessageId= " + rmmsg.getSeqno() + " which did not exist in the system");
+	    }
 	    // Call refresh() on the corresponding application
 	    rmclient = (RMClient)_appTable.get(rmdemuxaddress);
 	    rmclient.refresh(objectKey);
@@ -347,18 +377,13 @@ public class RMImpl extends PastryAppl implements RM {
 	    objectKey = rmmsg.getobjectKey();
 	    object = rmmsg.getObject();
 	    rmdemuxaddress = rmmsg.getAddress();
-	    System.out.println("RM_DELETE:: receieved replica message for objectKey " + objectKey +" at localnode "+getNodeId());
-	    if(_objects.remove(objectKey) == null)
-		System.out.println("RM_DELETE:: ERRR... delete called for object not in the system. objectKey "+ objectKey);
-	    else {
-
-		// Call notresponsible() on the corresponding application
-		rmclient = (RMClient)_appTable.get(rmdemuxaddress);
-		rmclient.notresponsible(objectKey);
-
-
+	    //System.out.println("RM_DELETE:: receieved replica message for objectKey " + objectKey +" at localnode "+getNodeId() + "from " + rmmsg.getSource().getNodeId());
+	    if(_objects.remove(objectKey) == null) {
+		System.out.println("RM_DELETE:: ERROR ... delete called for object  " + objectKey + "at node " + getNodeId()+ "from " + rmmsg.getSource().getNodeId() +  "MessageId= " + rmmsg.getSeqno() + " not in the system" + "MessageId= " + rmmsg.getSeqno());
 	    }
-	    
+	    // Call notresponsible() on the corresponding application
+	    rmclient = (RMClient)_appTable.get(rmdemuxaddress);
+	    rmclient.notresponsible(objectKey);
 	}
     }
 
@@ -371,8 +396,36 @@ public class RMImpl extends PastryAppl implements RM {
     public boolean register(Address appAddress, RMClient app) {
 	// Keep the appAddress-application mapping in hashtable
 	_appTable.put(appAddress, app);
+	if(isReady())
+	    app.rmIsReady();
+	else
+	    m_unreadyApps.add(app);
 	return true;
     }
+
+     /**
+     * This is called when the underlying pastry node is ready.
+     */
+    public void notifyReady() {
+	Credentials cred;
+	cred = new PermissiveCredentials();
+	//System.out.println("notifyReady called for RM application on" + getNodeId()); 
+	
+	m_ready = true;
+	/**
+	 * Notify RMClient's that were previously waiting for the 
+	 * RM substrate to be ready.
+	 */
+
+	// m_unreadyApps could be null since the notifyReady() can be 
+	// called before the execution of the constructor of this class
+	if(m_unreadyApps != null) {
+	    for(int i=0; i<m_unreadyApps.size(); i++)
+		((RMClient)(m_unreadyApps.elementAt(i))).rmIsReady();
+	}
+    }
+
+    
 
      /**
      * Called by the application when it needs to replicate an object into k nodes
@@ -385,7 +438,7 @@ public class RMImpl extends PastryAppl implements RM {
      * @return true if operation successful else false
      */
     public boolean replicate(Address appAddress, NodeId objectKey, Object object, int replicaFactor) {
-	RMMessage msg = new RMMessage(getAddress(),object,objectKey,RMMessage.RM_REPLICATE, replicaFactor, appAddress, getCredentials());
+	RMMessage msg = new RMMessage(getLocalHandle(),getAddress(),object,objectKey,RMMessage.RM_REPLICATE, replicaFactor, appAddress, getCredentials(), m_seqno ++);
 
 	this.routeMsg(objectKey, msg, _credentials , _sendOptions);
 	return true;
@@ -404,7 +457,7 @@ public class RMImpl extends PastryAppl implements RM {
      * @return true if operation successful else false
      */
     public boolean heartbeat(Address appAddress, NodeId objectKey, int replicaFactor) {
-	RMMessage msg = new RMMessage(getAddress(),null,objectKey,RMMessage.RM_HEARTBEAT, replicaFactor, appAddress, getCredentials());
+	RMMessage msg = new RMMessage(getLocalHandle(),getAddress(),null,objectKey,RMMessage.RM_HEARTBEAT, replicaFactor, appAddress, getCredentials(), m_seqno ++);
 
 	this.routeMsg(objectKey, msg, _credentials , _sendOptions);
 	return true;
@@ -420,7 +473,7 @@ public class RMImpl extends PastryAppl implements RM {
      * @return true if operation successful
      */
     public boolean remove(Address appAddress, NodeId objectKey, int replicaFactor) {
-	RMMessage msg = new RMMessage(getAddress(),null,objectKey,RMMessage.RM_REMOVE, replicaFactor, appAddress, getCredentials());
+	RMMessage msg = new RMMessage(getLocalHandle(),getAddress(),null,objectKey,RMMessage.RM_REMOVE, replicaFactor, appAddress, getCredentials(), m_seqno ++);
 
 	this.routeMsg(objectKey, msg, _credentials , _sendOptions);
 	return true;
@@ -491,19 +544,32 @@ public class RMImpl extends PastryAppl implements RM {
 	 */
 	int i = 0;
 	NodeId current, next;
+	Vector compactSet = new Vector();
 	
-	while((i< size) && (i  < (sortedleafSet.size() - 1))){
-	    current = ((NodeId)sortedleafSet.elementAt(i));
-	    next = ((NodeId)sortedleafSet.elementAt(i+1));
-	    if(current.compareTo(next) == 0){
-		sortedleafSet.remove(i+1);
-	    }
-	    else
-		i++;
+	//System.out.println("size=" + size);
+	/*
+	 while((i< size) && (i  < (sortedleafSet.size() - 1))){
+	     current = ((NodeId)sortedleafSet.elementAt(i));
+	     next = ((NodeId)sortedleafSet.elementAt(i+1));
+	     if(current.compareTo(next) == 0){
+		 sortedleafSet.remove(i+1);
+	     }
+	     else
+		 i++;
+	 }
+	 while (sortedleafSet.size() > i)
+	     sortedleafSet.remove(i);
+	 return sortedleafSet;
+	*/
+	for(i=0; i<sortedleafSet.size(); i++) {
+	    current = (NodeId) sortedleafSet.elementAt(i);
+	    if (! compactSet.contains(current))
+		compactSet.add(current);
+	    if(compactSet.size() == size)
+		break;
 	}
-	while (sortedleafSet.size() > i)
-	    sortedleafSet.remove(i);
-	return sortedleafSet;
+	return compactSet;
+	
     }
 
 
@@ -561,9 +627,10 @@ public class RMImpl extends PastryAppl implements RM {
 	Enumeration keys = _objects.keys();	
 
 	//if(DirectRMRegrTest.setupDone)
-	//  System.out.println("leafSetChange invoked on " + getNodeId());
-	
 	leafSet = getLeafSet();
+	//System.out.println("leafSetChange invoked on " + getNodeId() + "for node " + nh.getNodeId() + "with boolean= " + wasAdded);
+	//System.out.println("leafset= " + leafSet);
+
 	
 	if( wasAdded){
 	    /* A new node was added */ 
@@ -575,10 +642,11 @@ public class RMImpl extends PastryAppl implements RM {
 		rmdemuxaddress =((Entry)_objects.get(objectKey)).getAddress();
 		uncompactedReplicas = closestReplicas(leafSet, objectKey);
 		replicas = compactReplicaSet((Vector)uncompactedReplicas.clone(), (replicaFactor + 1));
+		
+		//System.out.println("********** ******************************************");
+		//System.out.println("At localnode "+getNodeId()+" LeafSet is "+leafSet.toString());
+		//System.out.println("Node "+nh.getNodeId()+"was changed in the leafSet");
 		/*
-		System.out.println("********** ******************************************");
-		System.out.println("At localnode "+getNodeId()+" LeafSet is "+leafSet.toString());
-		System.out.println("Node "+nh.getNodeId()+"was changed in the leafSet");
 		System.out.println("wasAdded is "+wasAdded);
 		System.out.println(" #keys = " + _objects.size());
 		System.out.println("objectKey ="+objectKey);
@@ -612,20 +680,20 @@ public class RMImpl extends PastryAppl implements RM {
 			continue;
 		    else 
 			{
-			    System.out.println("I [" + getNodeId() + "] am the leader node");
+			    //System.out.println("I [" + getNodeId() + "] am the leader node");
 			    /* Clearly, we need to ship this objects to this "nh" node
 			     * and then a delete message to the node with rank
 			     * "replicaFactor +1".
 			     */
 			    
 			    
-			    insertmsg =  new RMMessage(getAddress(), null, objectKey, RMMessage.RM_INSERT, replicaFactor, rmdemuxaddress, getCredentials());
+			    insertmsg =  new RMMessage(getLocalHandle(),getAddress(), null, objectKey, RMMessage.RM_INSERT, replicaFactor, rmdemuxaddress, getCredentials(), m_seqno ++);
 
-			    System.out.println("Replicating objectKey "+objectKey+" into node"+nh.getNodeId()+" from localNode"+getNodeId());
+			    //System.out.println("Replicating objectKey "+objectKey+" into node"+nh.getNodeId()+" from localNode"+getNodeId());
 			    routeMsgDirect(nh, insertmsg, getCredentials(), _sendOptions);
 			    if(replicas.size() >= (replicaFactor +1)){
-				deletemsg =  new RMMessage(getAddress(), null, objectKey, RMMessage.RM_DELETE, replicaFactor, rmdemuxaddress, getCredentials());
-				System.out.println("Deleting objectKey "+objectKey+"from replicaNode "+((NodeId)replicas.elementAt(replicaFactor))+" from localNodeId"+getNodeId());
+				deletemsg =  new RMMessage(getLocalHandle(),getAddress(), null, objectKey, RMMessage.RM_DELETE, replicaFactor, rmdemuxaddress, getCredentials(), m_seqno ++);
+				//System.out.println("Deleting objectKey "+objectKey+"from replicaNode "+((NodeId)replicas.elementAt(replicaFactor))+" from localNodeId"+getNodeId());
 				routeMsgDirect(leafSet.get((NodeId)(replicas.elementAt(replicaFactor))), deletemsg, getCredentials(), _sendOptions);
 			    }
 			}
@@ -635,17 +703,17 @@ public class RMImpl extends PastryAppl implements RM {
 			continue;
 		     if(addedNodeExistsTwiceInUncompactedReplicaSet(uncompactedReplicas,nh.getNodeId()))
 			continue;
-		    System.out.println("I [" + getNodeId() + "] am the secondaryleader node");
+		     //System.out.println("I [" + getNodeId() + "] am the secondaryleader node");
 		    
 		    
 
-		    insertmsg =  new RMMessage(getAddress(), null, objectKey, RMMessage.RM_INSERT, replicaFactor, rmdemuxaddress, getCredentials());
-		    System.out.println("Replicating objectKey "+objectKey+" into node"+nh.getNodeId()+" from localNode "+getNodeId());
+		    insertmsg =  new RMMessage(getLocalHandle(), getAddress(), null, objectKey, RMMessage.RM_INSERT, replicaFactor, rmdemuxaddress, getCredentials(), m_seqno ++);
+		    //System.out.println("Replicating objectKey "+objectKey+" into node"+nh.getNodeId()+" from localNode "+getNodeId());
 		    routeMsgDirect(nh, insertmsg, getCredentials(), _sendOptions);
 		    
 		    if(replicas.size() >= (replicaFactor +1)){
-			deletemsg =  new RMMessage(getAddress(), null, objectKey, RMMessage.RM_DELETE, replicaFactor, rmdemuxaddress, getCredentials());
-			System.out.println("Deleting objectKey "+objectKey+" from replicaNode "+((NodeId)replicas.elementAt(replicaFactor))+" at localNode "+getNodeId());
+			deletemsg =  new RMMessage(getLocalHandle(),getAddress(), null, objectKey, RMMessage.RM_DELETE, replicaFactor, rmdemuxaddress, getCredentials(), m_seqno ++);
+			//System.out.println("Deleting objectKey "+objectKey+" from replicaNode "+((NodeId)replicas.elementAt(replicaFactor))+" at localNode "+getNodeId());
 			routeMsgDirect(leafSet.get((NodeId)(replicas.elementAt(replicaFactor))), deletemsg, getCredentials(), _sendOptions);
 		    }
 		}
@@ -697,8 +765,8 @@ public class RMImpl extends PastryAppl implements RM {
 			if(deletedNodeExistsInReplicaSet(replicas, nh.getNodeId(), replicaFactor))
 			    continue;
 
-			insertmsg =  new RMMessage(getAddress(), null, objectKey, RMMessage.RM_INSERT, replicaFactor, rmdemuxaddress, getCredentials());
-			System.out.println("Replicating objectKey "+objectKey+" into node"+((NodeId)(replicas.elementAt(replicaFactor -1)))+" at localNode "+getNodeId());
+			insertmsg =  new RMMessage(getLocalHandle(), getAddress(), null, objectKey, RMMessage.RM_INSERT, replicaFactor, rmdemuxaddress, getCredentials(), m_seqno ++);
+			//System.out.println("Replicating objectKey "+objectKey+" into node"+((NodeId)(replicas.elementAt(replicaFactor -1)))+" at localNode "+getNodeId());
 			routeMsgDirect(leafSet.get((NodeId)(replicas.elementAt(replicaFactor -1))), insertmsg, getCredentials(), _sendOptions);
 
 		    }
