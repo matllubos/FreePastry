@@ -48,6 +48,11 @@ public class StorageKeyFactory implements IdFactory {
     return null;
   }
 
+  public rice.p2p.commonapi.Id buildIdFromToString(char[] chars, int start, int len) 
+  {
+    return buildIdFromToString(new String(chars, start, len));
+  }
+
   public rice.p2p.commonapi.Id buildIdFromToString(String string)
   {
     StringTokenizer stok = new StringTokenizer(string, "(,)- :");

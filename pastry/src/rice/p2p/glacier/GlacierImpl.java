@@ -506,7 +506,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
     System.out.println(h+":"+m+":"+s+" @"+node.getId()+" *** UNUSUAL *** "+str);
   }
   
-  private synchronized int getUID()
+  protected synchronized int getUID()
   {
     return this.id++;
   }

@@ -75,12 +75,12 @@ public class GlacierTest {
 	PastryNode pn = factory.newNode(getBootstrap());
 	pastryNodes.addElement(pn);
 
-        StorageManager pastStor = new StorageManager(FACTORY,
+        StorageManager pastStor = new StorageManagerImpl(FACTORY,
             new PersistentStorage(FACTORY, "past-root-"+i, ".", 1000000),
             new LRUCache(new MemoryStorage(FACTORY), 1000000)
         );
 
-        StorageManager glacierStor = new StorageManager(FACTORY,
+        StorageManager glacierStor = new StorageManagerImpl(FACTORY,
             new PersistentStorage(FACTORY, "glacier-root-"+i, ".", 1000000),
             new LRUCache(new MemoryStorage(FACTORY), 1000000)
         );

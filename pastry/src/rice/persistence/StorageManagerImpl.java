@@ -144,7 +144,7 @@ public class StorageManagerImpl implements StorageManager {
    * @param oldId The id of the object in question.
    * @param newId The new id of the object in question.
    * @param c The command to run once the operation is complete
-   */
+   *
   public void rename(final Id oldId, final Id newId, Continuation c) {
     cache.rename(oldId, newId, new StandardContinuation(c) {
       public void receiveResult(Object o) {
@@ -152,6 +152,7 @@ public class StorageManagerImpl implements StorageManager {
       }
     });
   }
+  */
 
   /**
    * Returns the object identified by the given id, or <code>null</code> if

@@ -44,7 +44,7 @@ public class VisualizationEmailProxy extends EmailProxy {
       stepDone(FAILURE, e + "");
     }
     
-    server = new VisualizationServer(serverAddress, pastry, new Object[] {pastry, past, storage});
+    server = new VisualizationServer(serverAddress, pastry, new Object[] {pastry, immutablePast, immutableStorage});
     server.setRestartCommand(
       "java -cp classes/:lib/activation.jar:lib/bouncycastle.jar:lib/javamail.jar:lib/junit.jar:lib/antlr.jar:lib/xmlpull_1_1_3_4a.jar:lib/xpp3-1.1.3.4d_b2.jar rice.visualization.proxy.VisualizationEmailProxy",
       args);
