@@ -109,11 +109,20 @@ public class RMIPastryNode extends PastryNode
     private class MaintThread implements Runnable {
 	public void run() {
 
-	    int leaftime = 0, routetime = 0, slptime = leafSetMaintFreq;
+	    int leaftime = 0, routetime = 0, slptime;
+	    
+	    if (leafSetMaintFreq == 0)
+		slptime = routeSetMaintFreq;
+	    else if (routeSetMaintFreq == 0)
+		slptime = leafSetMaintFreq;
+	    else if (leafSetMaintFreq < routeSetMaintFreq)
+		slptime = leafSetMaintFreq;
+	    else
+		slptime = routeSetMaintFreq;
 
-	    if (slptime == 0 ||
-		(routeSetMaintFreq != 0 && routeSetMaintFreq < slptime))
-		    slptime = routeSetMaintFreq;
+	    // Assumes one of leafSetMaintFreq and routeSetMaintFreq is a
+	    // multiple of the other. Generally true; else it approximates
+	    // the larger one to the nearest upward multiple.
 
 	    while (true) {
 		try {
@@ -123,12 +132,12 @@ public class RMIPastryNode extends PastryNode
 		leaftime += slptime;
 		routetime += slptime;
 
-		if (leaftime >= leafSetMaintFreq) {
+		if (leafSetMaintFreq != 0 && leaftime >= leafSetMaintFreq) {
 		    leaftime = 0;
 		    receiveMessage(new InitiateLeafSetMaintenance());
 		}
 
-		if (routetime >= routeSetMaintFreq) {
+		if (routeSetMaintFreq != 0 && routetime >= routeSetMaintFreq) {
 		    routetime = 0;
 		    receiveMessage(new InitiateRouteSetMaintenance());
 		}
