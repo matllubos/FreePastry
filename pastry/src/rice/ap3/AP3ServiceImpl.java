@@ -20,7 +20,7 @@ import java.util.Random;
  * An AP3Service implementation
  *
  * @version $Id$
- # @author Gaurav Oberoi
+ * @author Gaurav Oberoi
  */
 public class AP3ServiceImpl 
   extends PastryAppl
