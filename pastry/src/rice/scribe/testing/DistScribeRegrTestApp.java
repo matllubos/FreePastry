@@ -46,8 +46,7 @@ import rice.pastry.leafset.*;
 
 import rice.scribe.*;
 import rice.scribe.messaging.*;
-import rice.scribe.security.*;
-import rice.scribe.maintenance.*;
+import rice.scribe.testing.*;
 
 import java.util.*;
 import java.security.*;
@@ -62,15 +61,13 @@ import java.io.*;
  * @author Animesh Nandi 
  */
 
-public class DistScribeRegrTestApp implements IScribeApp
+public class DistScribeRegrTestApp extends PastryAppl implements IScribeApp
 {
     protected PastryNode m_pastryNode ;
     public Scribe m_scribe;
-    public Vector listOfTopics;
-    public NodeId topicId;
     public int m_appIndex;
     public static int m_appCount = 0;
-    public int lastSeqNum = -1;
+    
 
     /**
      * The hashtable maintaining mapping from topicId to log object
@@ -79,26 +76,87 @@ public class DistScribeRegrTestApp implements IScribeApp
     public Hashtable m_logTable = null;
 
     /**
+     * The receiver address for the DistScribeApp system.
+     */
+    protected static Address m_address = new DistScribeRegrTestAppAddress();
+
+    /**
      * The SendOptions object to be used for all messaging through Pastry
      */
     protected SendOptions m_sendOptions = null;
 
     /**
-     * The SendOptions object to be used for all messaging through Pastry
+     * The Credentials object to be used for all messaging through Pastry
      */
     protected static Credentials m_credentials = null;
+    
+    //  this determines the frequency with which the DistScribeRegrTest message is 
+    // delivered to this testerapplication.
+    private int m_testFreq ;
 
-    public DistScribeRegrTestApp( PastryNode pn,  Scribe scribe, Credentials cred ) {
-	m_scribe = scribe;
-	m_credentials = cred;
-	m_pastryNode = pn;
-	listOfTopics = new Vector();
-	m_sendOptions = new SendOptions();
-	m_credentials = new PermissiveCredentials();
-	m_logTable = new Hashtable();
-	m_appIndex = m_appCount ++;
+    // This keeps track of the topicIds to which this node subscribes.
+    public Vector m_topics ;
+
+    // This is only required to determine the total virtual nodes on this host, so that
+    // we can unsubscribe some fraction of them.
+    public DistScribeRegrTest m_driver;
+
+    private static class DistScribeRegrTestAppAddress implements Address {
+	private int myCode = 0x8abc748c;
+	
+	public int hashCode() { return myCode; }
+
+	public boolean equals(Object obj) {
+	    return (obj instanceof DistScribeRegrTestAppAddress);
+	}
     }
 
+
+    public DistScribeRegrTestApp( PastryNode pn,  Scribe scribe, Credentials cred, DistScribeRegrTest driver ) {
+	super(pn);
+	m_driver = driver;
+	m_scribe = scribe;
+	m_credentials = cred;
+	if(cred == null) {
+	    m_credentials = new PermissiveCredentials();
+	}
+	m_pastryNode = pn;
+	m_topics = new Vector();
+	m_sendOptions = new SendOptions();
+	m_logTable = new Hashtable();
+	m_appIndex = m_appCount ++;
+
+	// This sets the periodic rate at which the DistScribeRegrTest Messages will be 
+	// invoked.
+	m_testFreq = Scribe.m_scribeMaintFreq;
+    }
+
+
+    public void initialize() {
+	 int i;
+	 NodeId topicId;
+
+	 System.out.println("I am up " + m_scribe.getNodeId());
+
+	 // Create topicIds
+	 for (i=0; i< DistScribeRegrTest.NUM_TOPICS; i++) {
+	     topicId = generateTopicId(new String("Topic " + i));
+	     m_topics.add(topicId);
+	     m_logTable.put(topicId, new DistTopicLog());
+	 }
+	 
+	 // Subscribe to the the topicIds created
+	 for (i=0; i< DistScribeRegrTest.NUM_TOPICS; i++) {
+	     topicId = (NodeId)m_topics.elementAt(i);
+	     create(topicId);
+	     join(topicId);
+	 }
+	 
+	 // Trigger the periodic invokation of DistScribeRegrTest message
+	 m_pastryNode.scheduleMsgAtFixedRate(makeDistScribeRegrTestMessage(m_credentials), 
+					     m_testFreq*1000, m_testFreq*1000);
+    }
+    
     public Scribe getScribe() {
 	return m_scribe;
     }
@@ -214,14 +272,50 @@ public class DistScribeRegrTestApp implements IScribeApp
 	m_scribe.leave( topicId, this, m_credentials );
     }
     
+    public Credentials getCredentials() { 
+	return m_credentials;
+    }
+    
+
+    public Address getAddress() {
+	return m_address;
+    }
+
+    public void messageForAppl(Message msg) {
+	DistScribeRegrTestMessage tmsg = (DistScribeRegrTestMessage)msg;
+	tmsg.handleDeliverMessage( this);
+    }
+
     /**
-     * Returns the credentials of this client.
+     * Makes a DistScribeRegrTest message.
      *
-     * @return the credentials.
+     * @param c the credentials that will be associated with the message
+     * @return the DistScribeRegrTestMessage
      */
-    public Credentials getCredentials() { return m_credentials; }
+    private Message makeDistScribeRegrTestMessage(Credentials c) {
+	return new DistScribeRegrTestMessage( m_address, c );
+    }
+    
+  
+    private NodeId generateTopicId( String topicName ) { 
+	MessageDigest md = null;
+
+	try {
+	    md = MessageDigest.getInstance( "SHA" );
+	} catch ( NoSuchAlgorithmException e ) {
+	    System.err.println( "No SHA support!" );
+	}
+
+	md.update( topicName.getBytes() );
+	byte[] digest = md.digest();
+	
+	NodeId newId = new NodeId( digest );
+	
+	return newId;
+    }
     
 }
+
 
 
 

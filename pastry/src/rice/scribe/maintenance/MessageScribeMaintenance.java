@@ -86,7 +86,7 @@ public class MessageScribeMaintenance extends ScribeMessage implements Serializa
      */
     public void 
 	handleDeliverMessage( Scribe scribe, Topic topic ) {
-	System.out.println("Node" + scribe.getNodeId() + " calls scheduleHB()");
+	//System.out.println("Node" + scribe.getNodeId() + " calls scheduleHB()");
 	scribe.scheduleHB();
 
     }

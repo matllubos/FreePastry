@@ -73,7 +73,7 @@ public class DistScribeRegrTest {
     private Vector pastryNodes;
     private Random rng;
     public Vector distClients;
-    private Vector localNodes;
+    public Vector localNodes;
 
     private static int port = 5009;
     private static String bshost = null;
@@ -182,143 +182,6 @@ public class DistScribeRegrTest {
 	    }
 	}
     }
-    
-    /**
-     * This application spawns a thread for each virtual node. While this is
-     * convenient, note that multithreadedness is not a requirement for Distributed
-     * applications, especially those with only one virtual node per host.
-     * However, it _is_ essential for RMI/WIRE applications to not send messages
-     * till Node.isReady() becomes true (and app.notifyReady() gets called).
-     *
-     * This example demonstrates how to write HelloWorldApp in a wire
-     * protocol independent fashion, catering to both multithreaded and
-     * event-driven execution models.
-     */
-
-    private class ApplThread implements Runnable {
-
-	private PastryNode pn;
-	private DistScribeRegrTestApp m_app;
-	private DistScribeRegrTest m_driver;
-	/**
-	 * Constructor.
-	 *
-	 * @param n this pastrynode
-	 * @param a application object
-	 */
-	ApplThread(PastryNode n, DistScribeRegrTestApp a, DistScribeRegrTest driver) {
-	    pn = n;
-	    m_app = a;
-	    m_driver = driver;
-	}
-
-	public void run() {
-	    int i;
-	    NodeId topicId;
-	    DistTopicLog topicLog;
-	    Vector topics = new Vector();
-	    Random rng = new Random(PastrySeed.getSeed() + m_app.m_appIndex);
-	    // Do application specific stuff here.
-	    System.out.println("I am up "+m_app.m_scribe.getNodeId());
-	   
-	    int publish_period = Scribe.m_scribeMaintFreq;
-	    int threshold = m_app.m_scribe.getTreeRepairThreshold();
-	    int seq_num = -1;
-	    int count = 1;
-	    int lastRecv;
-	    for (i=0; i< DistScribeRegrTest.NUM_TOPICS; i++) {
-		topicId = generateTopicId(new String("Topic " + i));
-		topics.add(topicId);
-		m_app.m_logTable.put(topicId, new DistTopicLog());
-	     }
-
-	    for (i=0; i< DistScribeRegrTest.NUM_TOPICS; i++) {
-		topicId = (NodeId)topics.elementAt(i);
-		m_app.create(topicId);
-		m_app.join(topicId);
-	     }
-
-	    while(true){
-		for (i=0; i< DistScribeRegrTest.NUM_TOPICS; i++) {
-		    topicId = (NodeId) topics.elementAt(i);
-		    topicLog = (DistTopicLog) m_app.m_logTable.get(topicId);
-		    seq_num = topicLog.getSeqNumToPublish();
-		    count = topicLog.getCount();
-		    if( m_app.m_scribe.isRoot(topicId)){
-			m_app.multicast(topicId, new Integer(seq_num));
-			/*
-			 * We play safe in publishing the '-1' so that all nodes
-			 * which were doing a tree repair while the new root
-			 * came up can still see the demarcation of '-1'
-			 */
-			if(count < threshold*2){
-			    count++;
-			}
-			else
-			    seq_num ++;
-		    }
-		    else {
-			count = 1;
-			seq_num = -1;
-		    }
-		    topicLog.setCount(count);
-		    topicLog.setSeqNumToPublish(seq_num);
-
-		    /* We unsubscribe with a probability of 0.1 after we have received
-		     * a sequence number 'UNSUBSCRIBE_LIMIT' for a topic.
-		     */
-		    int allowed = (int)( DistScribeRegrTest.fractionUnsubscribedAllowed * m_driver.localNodes.size());
-		    synchronized( DistScribeRegrTest.LOCK){
-			if( DistScribeRegrTest.numUnsubscribed < allowed){
-			    if(! topicLog.getUnsubscribed()){
-				lastRecv = topicLog.getLastSeqNumRecv();
-				if(lastRecv > DistScribeRegrTest.UNSUBSCRIBE_LIMIT){
-				    int n = rng.nextInt(10);
-				    if( n == 0){
-					m_app.leave(topicId);
-					DistScribeRegrTest.numUnsubscribed ++;
-				    }
-				}
-			    }
-			}
-		    }
-
-		    
-		    if(! topicLog.getUnsubscribed()){
-			long currentTime = System.currentTimeMillis();
-			long prevTime = topicLog.getLastRecvTime();
-			int diff = (int)((currentTime - prevTime)/ 1000.0);
-
-			if( diff > DistScribeRegrTest.IDLE_TIME)
-			    System.out.println("\nWARNING :: "+m_app.m_scribe.getNodeId()+" DID NOT  Receive a message on the topic "+topicId + " for "+diff+" secs \n");
-			
-		    }
-		}
-		try {
-		    Thread.sleep(publish_period*1000);
-		}catch (InterruptedException e) {}
-	    }
-	}
-    }
-    
-    
-    public NodeId generateTopicId( String topicName ) { 
-	MessageDigest md = null;
-
-	try {
-	    md = MessageDigest.getInstance( "SHA" );
-	} catch ( NoSuchAlgorithmException e ) {
-	    System.err.println( "No SHA support!" );
-	}
-
-	md.update( topicName.getBytes() );
-	byte[] digest = md.digest();
-	
-	NodeId newId = new NodeId( digest );
-	
-	return newId;
-    }
-
 
     /**
      * Create a Pastry node and add it to pastryNodes. Also create a client
@@ -335,7 +198,7 @@ public class DistScribeRegrTest {
 	Credentials cred = new PermissiveCredentials();
 	Scribe scribe = new Scribe(pn, cred );
 	scribe.setTreeRepairThreshold(3);
-	DistScribeRegrTestApp app = new DistScribeRegrTestApp(pn, scribe, cred);
+	DistScribeRegrTestApp app = new DistScribeRegrTestApp(pn, scribe, cred, this);
 	distClients.addElement(app);
 
 	while(pn.isReady() == false) {
@@ -343,10 +206,8 @@ public class DistScribeRegrTest {
 		Thread.sleep(2000); // 2 sec polling interval
 	    } catch (InterruptedException e) {}
 	} 
-
-	ApplThread thread = new ApplThread(pn, app, this);
-	new Thread(thread).start();
-
+	
+	app.initialize();
 
     }
 
@@ -375,6 +236,20 @@ public class DistScribeRegrTest {
 	if (Log.ifp(5)) System.out.println(numNodes + " nodes constructed");
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -307,7 +307,7 @@ public class Scribe extends PastryAppl implements IScribe
     public void notifyReady() {
 	Credentials cred;
 	cred = new PermissiveCredentials();
-	System.out.println("notifyReady called for Scribe application on" + getNodeId()); 
+	//System.out.println("notifyReady called for Scribe application on" + getNodeId()); 
 	if(thePastryNode instanceof DistPastryNode) {
 	    thePastryNode.scheduleMsg(makeScribeMaintenanceMessage(cred), 
 				   m_scribeMaintFreq*1000, m_scribeMaintFreq*1000);
