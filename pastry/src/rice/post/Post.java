@@ -24,6 +24,8 @@ import rice.post.security.*;
  * Post applications to use Post functionality.
  * 
  * @version $Id$
+ * @author Ansley Post
+ * @author Alan Mislove
  */
 public class Post extends PastryAppl implements IScribeApp  {
   
@@ -420,6 +422,9 @@ public class Post extends PastryAppl implements IScribeApp  {
   public void faultHandler(ScribeMessage msg, NodeHandle faultyParent) {}
   public void forwardHandler(ScribeMessage msg) {}
   public void scribeIsReady() {}
+  public void isNewRoot(NodeId rootId){}
+  public void newParent(NodeId parentId, NodeHandle parentHandle, java.io.Serializable data){}
+  
   public void subscribeHandler(NodeId topicId, NodeHandle child, boolean wasAdded, Serializable obj ) {}
 
   /**
