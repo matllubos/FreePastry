@@ -104,6 +104,10 @@ public class ReplicationImpl implements Replication, Application {
     this.endpoint = node.registerApplication(this, instance);
     this.handle = endpoint.getLocalNodeHandle();
     
+  //  log.addHandler(new ConsoleHandler());
+  //  log.setLevel(Level.FINER);
+  //  log.getHandlers()[0].setLevel(Level.FINER);
+    
     log.finer(endpoint.getId() + ": Starting up ReplicationImpl with client " + client + " and factor " + replicationFactor);
     
     // inject the first reminder message, which will cause the replication to begin
@@ -199,9 +203,12 @@ public class ReplicationImpl implements Replication, Application {
       if ((range != null) && (! range.intersectRange(getTotalRange()).isEmpty())) {
         log.finer(endpoint.getId() + ": Sending request to " + handle + " for range " + range);
         RequestMessage request = new RequestMessage(this.handle, new IdRange[] {range, ourRange}, new Id[] {hash, ourHash});
+        log.finer(endpoint.getId() + ": About to pass to endpoint"); 
         endpoint.route(handle.getId(), request, handle);
+        log.finer(endpoint.getId() + ": Done passing to endpoint"); 
       }
     }
+    log.finer(endpoint.getId() + ": Done sending out requests"); 
   }
 
   
@@ -255,7 +262,7 @@ public class ReplicationImpl implements Replication, Application {
       if (fetch.numElements() > 0) 
         client.fetch(fetch);
     } else if (message instanceof ReminderMessage) {
-      sendRequests();
+      sendRequests(); 
       endpoint.scheduleMessage(message, MAINTENANCE_INTERVAL);
       updateClient(); 
     } else {
