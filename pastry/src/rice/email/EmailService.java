@@ -174,25 +174,12 @@ public class EmailService extends PostClient {
    * @param nm The incoming notification.
    */
   public void notificationReceived(NotificationMessage nm) {
-  }
-  
-  /**
-   * This method adds an object that will be notified of events that occur in this 
-   * post client.
-   * 
-   * @param esl is the object that will be notified.
-   */
-  public void addEmailServiceListener(EmailServiceListener esl) {
-    this.emailServiceListeners.add(esl);
-  }
-  
-  /**
-   * This method removes an object from the set of objects that are notified by
-   * this email service of events that occur in it.
-   * 
-   * @param esl is the object that will no longer be notified.
-   */
-  public void removeEmailServiceListener(EmailServiceListener esl) {
-    this.emailServiceListeners.remove(esl);
+    
+    if(nm instanceof EmailNotificationMessage) {
+      EmailNotificationMessage enm = (EmailNotificationMessage) enm;
+
+      // notify the observers that an email has been received.
+      this.notifyObservers(enm);
+    }
   }
 }
