@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate 
+"FreePastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -52,7 +52,7 @@ import java.util.*;
  * @author Sitaram Iyer
  */
 
-public class RMIPastrySecurityManager implements PastrySecurityManager 
+public class RMIPastrySecurityManager implements PastrySecurityManager
 {
     private PastryNode localnode;
     private RMINodeHandle localhandle;
@@ -61,9 +61,9 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
     /**
      * Constructor.
      */
-    public RMIPastrySecurityManager(RMINodeHandle rlh, RMINodeHandlePool hp) { 
-	localhandle = rlh;
-	handlepool = hp; // contains only localhandle by now
+    public RMIPastrySecurityManager(RMINodeHandle rlh, RMINodeHandlePool hp) {
+  localhandle = rlh;
+  handlepool = hp; // contains only localhandle by now
     }
 
     /**
@@ -80,7 +80,7 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
      * @param msg a message.
      * @return if the message is safe, false otherwise.
      */
-    
+
     public boolean verifyMessage(Message msg) { return true; }
 
     /**
@@ -91,9 +91,9 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
      *
      * @return true if the credentials match the address, false otherwise.
      */
-    
+
     public boolean verifyAddressBinding(Credentials cred, Address addr) {
-	return true;
+  return true;
     }
 
     /**
@@ -106,21 +106,21 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
 
     public NodeHandle verifyNodeHandle(NodeHandle handle) {
 
-	return handle;
+  return handle;
 
-//	Autocoalescing ensures that verify needn't do anything!
+//  Autocoalescing ensures that verify needn't do anything!
 
-//	NodeId mynid = localnode.getNodeId();
-//	NodeId nid = handle.getNodeId();
+//  NodeId mynid = localnode.getNodeId();
+//  NodeId nid = handle.getNodeId();
 //
-//	if (mynid.equals(nid)) {
-//	    return handlepool.coalesce(localhandle);
-//	}
-//	else if (handle instanceof RMINodeHandle) {
-//	    RMINodeHandle rnh = (RMINodeHandle) handle;
-//	    return handlepool.coalesce(rnh);
-//	}
-//	else throw new Error("node handle of unknown type");	
+//  if (mynid.equals(nid)) {
+//      return handlepool.coalesce(localhandle);
+//  }
+//  else if (handle instanceof RMINodeHandle) {
+//      RMINodeHandle rnh = (RMINodeHandle) handle;
+//      return handlepool.coalesce(rnh);
+//  }
+//  else throw new Error("node handle of unknown type");
     }
 
     /**
@@ -128,6 +128,6 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
      *
      * @return the timestamp.
      */
-    
+
     public Date getTimestamp() { return new Date(); }
 }

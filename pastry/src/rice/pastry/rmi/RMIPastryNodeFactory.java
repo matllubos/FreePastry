@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate 
+"FreePastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -94,7 +94,7 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
     public PastryNode newNode(NodeHandle bootstrap) {
       return newNode(bootstrap, nidFactory.generateNodeId());
     }
-  
+
     /**
      * Makes many policy choices and manufactures a new RMIPastryNode.
      * Creates a series of artifacts to adorn the node, like a security
@@ -113,12 +113,12 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
 
  if (bootstrap != null)
      bootstrap.setLocalNode(pn);
- 
+
  RMINodeHandle localhandle = new RMINodeHandle(null, nodeId);
  localhandle.setLocalNode(pn);
 
  RMINodeHandlePool handlepool = new RMINodeHandlePool();
- localhandle = handlepool.coalesce(localhandle); // add ourselves to pool
+ localhandle = (RMINodeHandle) handlepool.coalesce(localhandle); // add ourselves to pool
 
  RMIPastrySecurityManager secureMan =
      new RMIPastrySecurityManager(localhandle, handlepool);
@@ -148,6 +148,6 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
  pn.doneNode(bootstrap);
 
  return pn;
-    }  
+    }
 }
 

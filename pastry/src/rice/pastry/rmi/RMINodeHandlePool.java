@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate 
+"FreePastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.pastry.rmi;
 
 import rice.pastry.*;
+import rice.pastry.dist.*;
 
 import java.util.*;
 import java.lang.ref.WeakReference;
@@ -50,8 +51,8 @@ import java.rmi.RemoteException;
  * @author Sitaram Iyer
  */
 
-class RMINodeHandlePool
-{
+class RMINodeHandlePool extends DistNodeHandlePool {
+
     private HashMap handles; // pool of RMINodeHandles
 
     /**
@@ -59,7 +60,7 @@ class RMINodeHandlePool
      */
     public RMINodeHandlePool()
     {
-	handles = new HashMap();
+  handles = new HashMap();
     }
 
     /**
@@ -69,32 +70,34 @@ class RMINodeHandlePool
      * @param handle the node handle to coalesce into pool.
      * @return either handle, or a handle from the pool with same NodeId.
      */
-    public RMINodeHandle coalesce(RMINodeHandle handle)
+    public DistNodeHandle coalesce(DistNodeHandle nodehandle)
     {
-	NodeId nid = handle.getNodeId();
-	WeakReference storedref = (WeakReference) handles.get(nid);
-	RMINodeHandle storedhandle = null;
 
-	if (storedref != null) {
-	    storedhandle = (RMINodeHandle) storedref.get();
-	    if (storedhandle == null)
-		storedref.clear(); // xxx need to do?
-	}
+  RMINodeHandle handle = (RMINodeHandle) nodehandle;
+  NodeId nid = handle.getNodeId();
+  WeakReference storedref = (WeakReference) handles.get(nid);
+  RMINodeHandle storedhandle = null;
 
-	if (storedhandle == null) {
+  if (storedref != null) {
+      storedhandle = (RMINodeHandle) storedref.get();
+      if (storedhandle == null)
+    storedref.clear(); // xxx need to do?
+  }
 
-	    WeakReference newref = new WeakReference(handle);
-	    handles.put(nid, newref);
-	    handle.setIsInPool(true);
-	    //System.out.println("ADDING " + handle + " with id " + nid + " to pool");
-	    return handle;
+  if (storedhandle == null) {
 
-	} else {
-	    //System.out.println(storedhandle + " found, so NOT ADDING " + handle + " with id " + nid + " to pool");
-	    if (storedhandle != handle)
-		handle.setIsInPool(false);
-	}
-	return storedhandle;
+      WeakReference newref = new WeakReference(handle);
+      handles.put(nid, newref);
+      handle.setIsInPool(true);
+      //System.out.println("ADDING " + handle + " with id " + nid + " to pool");
+      return handle;
+
+  } else {
+      //System.out.println(storedhandle + " found, so NOT ADDING " + handle + " with id " + nid + " to pool");
+      if (storedhandle != handle)
+    handle.setIsInPool(false);
+  }
+  return storedhandle;
     }
 
     /**
@@ -105,18 +108,18 @@ class RMINodeHandlePool
      */
     public void activate(NodeId nid)
     {
-	WeakReference storedref = (WeakReference) handles.get(nid);
-	RMINodeHandle storedhandle = null;
-	if (storedref != null) {
-	    storedhandle = (RMINodeHandle) storedref.get();
-	    if (storedhandle == null)
-		storedref.clear(); // xxx need to do?
-	}
+  WeakReference storedref = (WeakReference) handles.get(nid);
+  RMINodeHandle storedhandle = null;
+  if (storedref != null) {
+      storedhandle = (RMINodeHandle) storedref.get();
+      if (storedhandle == null)
+    storedref.clear(); // xxx need to do?
+  }
 
-	if (storedhandle != null) {
-	    storedhandle.markAlive();
-	} else {
-	    // do nothing; ignore senders who we don't know anything about
-	}
+  if (storedhandle != null) {
+      storedhandle.markAlive();
+  } else {
+      // do nothing; ignore senders who we don't know anything about
+  }
     }
 }

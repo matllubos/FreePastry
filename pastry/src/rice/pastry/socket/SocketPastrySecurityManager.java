@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.pastry.socket;
 
 import rice.pastry.*;
+import rice.pastry.dist.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 import rice.pastry.standard.*;
@@ -108,7 +109,7 @@ public class SocketPastrySecurityManager implements PastrySecurityManager {
    */
 
   public NodeHandle verifyNodeHandle(NodeHandle handle) {
-    return pool.coalesce((SocketNodeHandle) handle);
+    return pool.coalesce((DistNodeHandle) handle);
   }
 
   /**

@@ -91,17 +91,26 @@ public class SocketPingManager implements MessageReceiver {
     if (msg instanceof PingMessage) {
       PingMessage pm = (PingMessage) msg;
 
-      SocketNodeHandle handle = new SocketNodeHandle(pm.getLocalAddress(), pm.getNodeId(), pastryNode);
-      handle = (SocketNodeHandle) securityManager.verifyNodeHandle(handle);
-
-      handle.receiveMessage(pm.getResponse());
+      // ensure that ping is for us
+      if (pm.getRemoteNodeId().equals(pastryNode.getNodeId())) {
+        SocketNodeHandle handle = new SocketNodeHandle(pm.getLocalAddress(), pm.getLocalNodeId(), pastryNode);
+        handle.receiveMessage(pm.getResponse());
+      } else {
+        System.out.println("PingManager got ping for wrong node - pinged node probably dead.");
+      }
     } else if (msg instanceof PingResponseMessage) {
       PingResponseMessage prm = (PingResponseMessage) msg;
 
-      SocketNodeHandle handle = pastryNode.getNodeHandlePool().get(prm.getRemoteAddress());
+      if (prm.getLocalNodeId().equals(pastryNode.getNodeId())) {
+        SocketNodeHandle handle = ((SocketNodeHandlePool) pastryNode.getNodeHandlePool()).get(prm.getRemoteAddress());
 
-      if (handle != null) {
-        handle.pingResponse(prm.getTime());
+        if (handle != null) {
+          handle.pingResponse(prm.getTime());
+        } else {
+          System.out.println("PingManager got ping response for unrecognized node handle " + prm.getRemoteAddress());
+        }
+      } else {
+        System.out.println("PingManager got ping response for wrong node - original pinger probably dead.");
       }
     }
   }

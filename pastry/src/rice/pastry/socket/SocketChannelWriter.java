@@ -76,8 +76,8 @@ public class SocketChannelWriter {
    * @param o The object to be written
    */
   public SocketChannelWriter(SocketPastryNode spn, Object o) throws IOException {
-    _buffer = serialize(o);
     _spn = spn;
+    _buffer = serialize(o);
   }
 
   /**

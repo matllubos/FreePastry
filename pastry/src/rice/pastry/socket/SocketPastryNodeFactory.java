@@ -15,8 +15,8 @@ notice, this list of conditions and the following disclaimer.
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
 
-- Neither  the name  of Rice  University (RICE) nor  the names  of its
-contributors may be  used to endorse or promote  products derived from
+- Neither  the name of Rice  University (RICE) nor  the names  of its
+contributors may be used to endorse or promote  products derived from
 this software without specific prior written permission.
 
 This software is provided by RICE and the contributors on an "as is"
@@ -168,7 +168,7 @@ public class SocketPastryNodeFactory implements PastryNodeFactory {
     pool.coalesce(localhandle);
 
     // launch thread to handle the sockets
-    Thread t = new Thread () {
+    Thread t = new Thread("Thread for node " + nodeId) {
       public void run() {
         pn.doneNode(bootstrap);
       }

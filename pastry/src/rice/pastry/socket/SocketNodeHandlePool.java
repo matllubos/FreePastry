@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.pastry.socket;
 
 import rice.pastry.*;
+import rice.pastry.dist.*;
 import rice.pastry.routing.*;
 import rice.pastry.messaging.*;
 
@@ -56,10 +57,11 @@ import java.net.*;
  *
  * @author Alan Mislove
  */
-public class SocketNodeHandlePool {
+public class SocketNodeHandlePool extends DistNodeHandlePool {
 
   private HashMap handles;
-  private SocketPastryNode node;
+
+  private SocketPastryNode pastryNode;
 
   /**
    * Constructor.
@@ -67,9 +69,10 @@ public class SocketNodeHandlePool {
    * @param spn The SocketPastryNode this pool will serve.
    */
   public SocketNodeHandlePool(SocketPastryNode spn) {
-    handles = new HashMap();
-    node = spn;
+    super();
 
+    pastryNode = spn;
+    handles = new HashMap();
   }
 
   /**
@@ -82,15 +85,28 @@ public class SocketNodeHandlePool {
    * @param handle The node handle to verify.
    * @return The node handle to use to talk to the pastry node.
    */
-  public SocketNodeHandle coalesce(SocketNodeHandle handle) {
-    InetSocketAddress address = handle.getAddress();
+  public DistNodeHandle coalesce(DistNodeHandle handle) {
+    SocketNodeHandle nodehandle = (SocketNodeHandle) handle;
+
+    InetSocketAddress address = nodehandle.getAddress();
 
     if (handles.get(address) == null) {
-      handles.put(address, handle);
-      node.getSocketManager().register(handle);
+      handles.put(address, nodehandle);
+      pastryNode.getSocketManager().register(nodehandle);
+      nodehandle.setIsInPool(true);
+    } else {
+      nodehandle.setIsInPool(false);
     }
 
-    return (SocketNodeHandle) handles.get(address);
+    SocketNodeHandle response = (SocketNodeHandle) handles.get(address);
+
+    if (! handle.getNodeId().equals(response.getNodeId())) {
+      debug("PANIC: Coalescing of node handles has failed!");
+      debug("Node handle was " + nodehandle.getNodeId() + "/" + nodehandle.getAddress() + " is now " + response.getNodeId() + "/" + response.getAddress());
+      System.exit(0);
+    }
+
+    return response;
   }
 
   /**
@@ -103,5 +119,10 @@ public class SocketNodeHandlePool {
    */
   public SocketNodeHandle get(InetSocketAddress address) {
     return (SocketNodeHandle) handles.get(address);
+  }
+
+  private void debug(String s) {
+    if (Log.ifp(6))
+      System.out.println(pastryNode.getNodeId() + " (P): " + s);
   }
 }

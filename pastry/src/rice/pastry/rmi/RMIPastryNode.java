@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate 
+"FreePastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.pastry.rmi;
 
 import rice.pastry.*;
+import rice.pastry.dist.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
 import rice.pastry.messaging.*;
@@ -55,8 +56,7 @@ import java.rmi.*;
  * @author Sitaram Iyer
  */
 
-public class RMIPastryNode extends PastryNode
-	implements RMIRemoteNodeI
+public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
 {
     private RMIRemoteNodeI remotestub;
     private RMINodeHandlePool handlepool;
@@ -71,90 +71,90 @@ public class RMIPastryNode extends PastryNode
     private int count;
 
     private class MsgHandler implements Runnable {
-	public void run() {
-	    while (true) {
-		Message msg = null;
-		synchronized (queue) {
-		    while (count == 0) {
-			try {
-			    queue.wait();
-			} catch (InterruptedException e) {}
-		    }
+  public void run() {
+      while (true) {
+    Message msg = null;
+    synchronized (queue) {
+        while (count == 0) {
+      try {
+          queue.wait();
+      } catch (InterruptedException e) {}
+        }
 
-		    try {
-			msg = (Message) queue.removeFirst();
-			count--;
-		    } catch (NoSuchElementException e) {
-			System.out.println("no msg despite count = " + count);
-			continue;
-		    }
-		}
+        try {
+      msg = (Message) queue.removeFirst();
+      count--;
+        } catch (NoSuchElementException e) {
+      System.out.println("no msg despite count = " + count);
+      continue;
+        }
+    }
 
-		/*
-		 * The sender of this message is alive. So if we have a
-		 * handle in our pool with this Id, then it should be
-		 * reactivated.
-		 */
-		NodeId sender = msg.getSenderId();
-		if (Log.ifp(6))
-		    System.out.println("received " +
-				       (msg instanceof RouteMessage ? "route" : "direct")
-				       + " msg from " + sender + ": " + msg);
-		if (sender != null) handlepool.activate(sender);
+    /*
+     * The sender of this message is alive. So if we have a
+     * handle in our pool with this Id, then it should be
+     * reactivated.
+     */
+    NodeId sender = msg.getSenderId();
+    if (Log.ifp(6))
+        System.out.println("received " +
+               (msg instanceof RouteMessage ? "route" : "direct")
+               + " msg from " + sender + ": " + msg);
+    if (sender != null) handlepool.activate(sender);
 
-		receiveMessage(msg);
-	    }
-	}
+    receiveMessage(msg);
+      }
+  }
     }
 
     private class MaintThread implements Runnable {
-	public void run() {
+  public void run() {
 
-	    int leaftime = 0, routetime = 0, slptime;
-	    
-	    if (leafSetMaintFreq == 0)
-		slptime = routeSetMaintFreq;
-	    else if (routeSetMaintFreq == 0)
-		slptime = leafSetMaintFreq;
-	    else if (leafSetMaintFreq < routeSetMaintFreq)
-		slptime = leafSetMaintFreq;
-	    else
-		slptime = routeSetMaintFreq;
+      int leaftime = 0, routetime = 0, slptime;
 
-	    // Assumes one of leafSetMaintFreq and routeSetMaintFreq is a
-	    // multiple of the other. Generally true; else it approximates
-	    // the larger one to the nearest upward multiple.
+      if (leafSetMaintFreq == 0)
+    slptime = routeSetMaintFreq;
+      else if (routeSetMaintFreq == 0)
+    slptime = leafSetMaintFreq;
+      else if (leafSetMaintFreq < routeSetMaintFreq)
+    slptime = leafSetMaintFreq;
+      else
+    slptime = routeSetMaintFreq;
 
-	    while (true) {
-		try {
-		    Thread.sleep(1000 * slptime);
-		} catch (InterruptedException e) {}
+      // Assumes one of leafSetMaintFreq and routeSetMaintFreq is a
+      // multiple of the other. Generally true; else it approximates
+      // the larger one to the nearest upward multiple.
 
-		leaftime += slptime;
-		routetime += slptime;
+      while (true) {
+    try {
+        Thread.sleep(1000 * slptime);
+    } catch (InterruptedException e) {}
 
-		if (leafSetMaintFreq != 0 && leaftime >= leafSetMaintFreq) {
-		    leaftime = 0;
-		    receiveMessage(new InitiateLeafSetMaintenance());
-		}
+    leaftime += slptime;
+    routetime += slptime;
 
-		if (routeSetMaintFreq != 0 && routetime >= routeSetMaintFreq) {
-		    routetime = 0;
-		    receiveMessage(new InitiateRouteSetMaintenance());
-		}
-	    }
-	}
+    if (leafSetMaintFreq != 0 && leaftime >= leafSetMaintFreq) {
+        leaftime = 0;
+        receiveMessage(new InitiateLeafSetMaintenance());
+    }
+
+    if (routeSetMaintFreq != 0 && routetime >= routeSetMaintFreq) {
+        routetime = 0;
+        receiveMessage(new InitiateRouteSetMaintenance());
+    }
+      }
+  }
     }
 
     /**
      * Constructor
      */
     public RMIPastryNode(NodeId id) {
-	super(id);
-	remotestub = null;
-	handlepool = null;
-	queue = new LinkedList();
-	count = 0;
+  super(id);
+  remotestub = null;
+  handlepool = null;
+  queue = new LinkedList();
+  count = 0;
     }
 
     /**
@@ -167,10 +167,10 @@ public class RMIPastryNode extends PastryNode
      * @param rsmf Route set maintenance frequency. 0 means never.
      */
     public void setRMIElements(RMINodeHandlePool hp, int p, int lsmf, int rsmf) {
-	handlepool = hp;
-	port = p;
-	leafSetMaintFreq = lsmf;
-	routeSetMaintFreq = rsmf;
+  handlepool = hp;
+  port = p;
+  leafSetMaintFreq = lsmf;
+  routeSetMaintFreq = rsmf;
     }
 
     /**
@@ -178,7 +178,7 @@ public class RMIPastryNode extends PastryNode
      *
      * @return handle pool
      */
-    public RMINodeHandlePool getHandlePool() { return handlepool; }
+    public DistNodeHandlePool getNodeHandlePool() { return handlepool; }
 
     /**
      * Called after the node is initialized.
@@ -187,19 +187,19 @@ public class RMIPastryNode extends PastryNode
      */
     public void doneNode(NodeHandle bootstrap) {
 
-	new Thread(new MsgHandler()).start();
-	if (leafSetMaintFreq > 0 || routeSetMaintFreq > 0)
-	    new Thread(new MaintThread()).start();
+  new Thread(new MsgHandler()).start();
+  if (leafSetMaintFreq > 0 || routeSetMaintFreq > 0)
+      new Thread(new MaintThread()).start();
 
-	try {
-	    remotestub = (RMIRemoteNodeI) UnicastRemoteObject.exportObject(this);
-	} catch (RemoteException e) {
-	    System.out.println("Unable to acquire stub for Pastry node: " + e.toString());
-	}
+  try {
+      remotestub = (RMIRemoteNodeI) UnicastRemoteObject.exportObject(this);
+  } catch (RemoteException e) {
+      System.out.println("Unable to acquire stub for Pastry node: " + e.toString());
+  }
 
-	((RMINodeHandle)localhandle).setRemoteNode(remotestub);
+  ((RMINodeHandle)localhandle).setRemoteNode(remotestub);
 
-	initiateJoin(bootstrap);
+  initiateJoin(bootstrap);
     }
 
     /**
@@ -208,11 +208,11 @@ public class RMIPastryNode extends PastryNode
      * the node never ends up discovering itself.
      */
     protected final void nodeIsReady() {
-	try {
-	    Naming.rebind("//:" + port + "/Pastry", remotestub);
-	} catch (Exception e) {
-	    System.out.println("Unable to bind Pastry node in rmiregistry: " + e.toString());
-	}
+  try {
+      Naming.rebind("//:" + port + "/Pastry", remotestub);
+  } catch (Exception e) {
+      System.out.println("Unable to bind Pastry node in rmiregistry: " + e.toString());
+  }
     }
 
     /**
@@ -221,21 +221,21 @@ public class RMIPastryNode extends PastryNode
      * message handler thread.
      */
     public void remoteReceiveMessage(Message msg) {
-	synchronized (queue) {
-	    queue.add(msg);
-	    count++;
-	    queue.notify();
-	}
+  synchronized (queue) {
+      queue.add(msg);
+      count++;
+      queue.notify();
+  }
     }
 
 //    /**
 //     * Testing purposes only!
 //     */
 //    public void KILLNODE() {
-//	try {
-//	    UnicastRemoteObject.unexportObject(this, true); // force
-//	} catch (NoSuchObjectException e) {
-//	    System.out.println("Unable to unbind Pastry node from rmiregistry: " + e.toString());
-//	}
+//  try {
+//      UnicastRemoteObject.unexportObject(this, true); // force
+//  } catch (NoSuchObjectException e) {
+//      System.out.println("Unable to unbind Pastry node from rmiregistry: " + e.toString());
+//  }
 //    }
 }

@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"Free Pastry" Peer-to-Peer Application Development Substrate 
+"Free Pastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -59,7 +59,7 @@ public class RouteSet extends Observable implements NodeSet, Serializable
     private NodeHandle[] nodes;
     private int theSize;
     private int closest;
-    
+
     /**
      * Constructor.
      *
@@ -67,9 +67,9 @@ public class RouteSet extends Observable implements NodeSet, Serializable
      */
 
     public RouteSet(int maxSize) {
-	nodes = new NodeHandle[maxSize];
-	theSize = 0;	
-	closest = -1;
+  nodes = new NodeHandle[maxSize];
+  theSize = 0;
+  closest = -1;
     }
 
     /**
@@ -80,49 +80,49 @@ public class RouteSet extends Observable implements NodeSet, Serializable
      *
      * @return true if the put succeeded, false otherwise.
      */
-    
+
     public boolean put(NodeHandle handle) {
-	int worstIndex = -1;
-	int worstProximity = Integer.MIN_VALUE;
+  int worstIndex = -1;
+  int worstProximity = Integer.MIN_VALUE;
 
-	// scan entries
-	for (int i=0; i<theSize; i++) {
+  // scan entries
+  for (int i=0; i<theSize; i++) {
 
-	    // if handle is already in the set, abort
-	    if (nodes[i].getNodeId().equals(handle.getNodeId())) return false;
+      // if handle is already in the set, abort
+      if (nodes[i].getNodeId().equals(handle.getNodeId())) return false;
 
-	    // find entry with worst proximity
-	    int p = nodes[i].proximity();
-	    if (p >= worstProximity) {
-		worstProximity = p;
-		worstIndex = i;
-	    }
-	}
-	
-	if (theSize < nodes.length) {
-	    nodes[theSize++] = handle;
+      // find entry with worst proximity
+      int p = nodes[i].proximity();
+      if (p >= worstProximity) {
+    worstProximity = p;
+    worstIndex = i;
+      }
+  }
 
-	    setChanged();
-	    notifyObservers(new NodeSetUpdate(handle, true));
-	    
-	    return true; 
-	}
-	else {
-	    if (handle.proximity() < worstProximity) {
-		// remove handle with worst proximity
-		setChanged();
-		notifyObservers(new NodeSetUpdate(nodes[worstIndex], false));
-				
-		// insert new handle
-		nodes[worstIndex] = handle; 
+  if (theSize < nodes.length) {
+      nodes[theSize++] = handle;
 
-		setChanged();
-		notifyObservers(new NodeSetUpdate(handle, true));
+      setChanged();
+      notifyObservers(new NodeSetUpdate(handle, true));
 
-		return true;
-	    }
-	    else return false;	    
-	}	
+      return true;
+  }
+  else {
+      if (handle.proximity() < worstProximity) {
+    // remove handle with worst proximity
+    setChanged();
+    notifyObservers(new NodeSetUpdate(nodes[worstIndex], false));
+
+    // insert new handle
+    nodes[worstIndex] = handle;
+
+    setChanged();
+    notifyObservers(new NodeSetUpdate(handle, true));
+
+    return true;
+      }
+      else return false;
+  }
     }
 
     /**
@@ -134,20 +134,20 @@ public class RouteSet extends Observable implements NodeSet, Serializable
      */
 
     public NodeHandle remove(NodeId nid) {
-	for (int i=0; i<theSize; i++) {
-	    if (nodes[i].getNodeId().equals(nid)) {
-		NodeHandle handle = nodes[i];
-		
-		nodes[i] = nodes[--theSize];
+  for (int i=0; i<theSize; i++) {
+      if (nodes[i].getNodeId().equals(nid)) {
+    NodeHandle handle = nodes[i];
 
-		setChanged();
-		notifyObservers(new NodeSetUpdate(handle, false));
+    nodes[i] = nodes[--theSize];
 
-		return handle;
-	    }
-	}
+    setChanged();
+    notifyObservers(new NodeSetUpdate(handle, false));
 
-	return null;
+    return handle;
+      }
+  }
+
+  return null;
     }
 
     /**
@@ -159,10 +159,10 @@ public class RouteSet extends Observable implements NodeSet, Serializable
      */
 
     public boolean member(NodeId nid) {
-	for (int i=0; i<theSize; i++) 
-	    if (nodes[i].getNodeId().equals(nid)) return true;
+  for (int i=0; i<theSize; i++)
+      if (nodes[i].getNodeId().equals(nid)) return true;
 
-	return false;
+  return false;
     }
 
     /**
@@ -172,17 +172,17 @@ public class RouteSet extends Observable implements NodeSet, Serializable
      */
 
     public int size() { return theSize; }
-    
+
     /**
      * Pings all new nodes in the RouteSet.
      * No longer- Called from RouteMaintenance.
      */
 
-    public void pingAllNew() { 
-	for (int i=0; i<theSize; i++) {
-	    if (nodes[i].proximity() == Integer.MAX_VALUE)
-		nodes[i].ping();
-	}
+    public void pingAllNew() {
+  for (int i=0; i<theSize; i++) {
+      if (nodes[i].proximity() == Integer.MAX_VALUE)
+    nodes[i].ping();
+  }
     }
 
     /**
@@ -191,56 +191,65 @@ public class RouteSet extends Observable implements NodeSet, Serializable
      * @return the closest node, or null if no live node exists in the set.
      */
 
-    public NodeHandle closestNode() { 
-	int bestProximity = Integer.MAX_VALUE;
-	NodeHandle bestNode = null;
+    public NodeHandle closestNode() {
+  int bestProximity = Integer.MAX_VALUE;
+  NodeHandle bestNode = null;
 
-	for (int i=0; i<theSize; i++) {
-	    if (!nodes[i].isAlive()) continue;
+  for (int i=0; i<theSize; i++) {
+      if (!nodes[i].isAlive()) continue;
 
-	    int p = nodes[i].proximity();
-	    if (p <= bestProximity) {
-		bestProximity = p;
-		bestNode = nodes[i];
-		closest = i;
-	    }
-	}
+      int p = nodes[i].proximity();
+      if (p <= bestProximity) {
+    bestProximity = p;
+    bestNode = nodes[i];
+    closest = i;
+      }
+  }
 
-	//System.out.println(bestProximity);
-	//System.out.println(nodes.length);
+  //System.out.println(bestProximity);
+  //System.out.println(nodes.length);
 
-	// If a backup node handle bubbles up to the top, ping it.
-	if (bestNode != null && bestProximity == Integer.MAX_VALUE)
-	    bestNode.ping();
-	
-	return bestNode;
+  // If a backup node handle bubbles up to the top, ping it.
+  //
+  // NOTE
+  // This is being called during serialization of the initial
+  // join message response, which is sending out the ping before
+  // the remote node had recieved the join message response, causing
+  // the "ERROR: Ping should not be recieved at local node problem"
+  // in the Socket protocol. I have commented it out in the mean
+  // time.  The ping should be sent within the next minute due to
+  // route set maintainance.
+//  if (bestNode != null && bestProximity == Integer.MAX_VALUE)
+//      bestNode.ping();
+
+  return bestNode;
     }
-    
+
     /**
      * Returns the node in the ith position in the set.
      *
      * @return the ith node.
      */
 
-    public NodeHandle get(int i) { 
-	if (i < 0 || i >= theSize) throw new NoSuchElementException();
-	
-	return nodes[i]; 
+    public NodeHandle get(int i) {
+  if (i < 0 || i >= theSize) throw new NoSuchElementException();
+
+  return nodes[i];
     }
 
     /**
      * Returns the node handle with the matching node id or null if none exists.
      *
      * @param nid the node id.
-     * 
+     *
      * @return the node handle.
      */
 
     public NodeHandle get(NodeId nid) {
-     	for (int i=0; i<theSize; i++) 
-	    if (nodes[i].getNodeId().equals(nid)) return nodes[i];
+      for (int i=0; i<theSize; i++)
+      if (nodes[i].getNodeId().equals(nid)) return nodes[i];
 
-	return null;
+  return null;
     }
 
     /**
@@ -249,29 +258,29 @@ public class RouteSet extends Observable implements NodeSet, Serializable
      * @return the node.
      */
 
-    public int getIndex(NodeId nid) { 
-	for (int i=0; i<theSize; i++)
-	    if (nodes[i].getNodeId().equals(nid)) return i;
-	
-	return -1;
+    public int getIndex(NodeId nid) {
+  for (int i=0; i<theSize; i++)
+      if (nodes[i].getNodeId().equals(nid)) return i;
+
+  return -1;
     }
 
     private void readObject(ObjectInputStream in)
-	throws IOException, ClassNotFoundException 
+  throws IOException, ClassNotFoundException
     {
-	nodes = (NodeHandle[]) in.readObject();
-	theSize = in.readInt();
-	closest = in.readInt();
-	if (closest != -1) nodes[closest].ping();
-	closest = -1;
+  nodes = (NodeHandle[]) in.readObject();
+  theSize = in.readInt();
+  closest = in.readInt();
+  if (closest != -1) nodes[closest].ping();
+  closest = -1;
     }
 
     private void writeObject(ObjectOutputStream out)
-	throws IOException, ClassNotFoundException 
+  throws IOException, ClassNotFoundException
     {
-	if (closest == -1) closestNode();
-	out.writeObject(nodes);
-	out.writeInt(theSize);
-	out.writeInt(closest);
-    } 
+  if (closest == -1) closestNode();
+  out.writeObject(nodes);
+  out.writeInt(theSize);
+  out.writeInt(closest);
+    }
 }

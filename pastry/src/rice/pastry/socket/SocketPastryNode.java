@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.pastry.socket;
 
 import rice.pastry.*;
+import rice.pastry.dist.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
 import rice.pastry.messaging.*;
@@ -58,7 +59,7 @@ import java.net.*;
  * @author Alan Mislove
  */
 
-public class SocketPastryNode extends PastryNode {
+public class SocketPastryNode extends DistPastryNode {
 
   // The address (ip + port) of this pastry node
   private InetSocketAddress _address;
@@ -169,7 +170,7 @@ public class SocketPastryNode extends PastryNode {
    *
    * @return The SocketNodeHandlePool for this pastry node.
    */
-  public SocketNodeHandlePool getNodeHandlePool() {
+  public DistNodeHandlePool getNodeHandlePool() {
     return _pool;
   }
 
@@ -182,9 +183,5 @@ public class SocketPastryNode extends PastryNode {
    */
   public void kill() {
     _manager.kill();
-  }
-
-  public NodeHandle verify(NodeHandle nh) {
-    return _pool.coalesce((SocketNodeHandle) nh);
   }
 }

@@ -161,7 +161,7 @@ public class SocketManager {
       channel.configureBlocking(false);
       boolean done = channel.connect(nh.getAddress());
 
-      debug("Connecting to address " + nh.getAddress() + " with thread " + Thread.currentThread());
+      debug("Connecting to address " + nh.getAddress());
 
       if (done) {
         key = channel.register(selector, SelectionKey.OP_READ, nh);
@@ -170,6 +170,8 @@ public class SocketManager {
       }
 
       keyList.put(nh.getAddress(), key);
+    } else {
+      System.out.println("ERROR (openSocket): Request to open already-open socket to " + nh);
     }
   }
 
@@ -596,6 +598,6 @@ public class SocketManager {
 
   private void debug(String s) {
     if (Log.ifp(6))
-      System.out.println(pastryNode.getNodeId() + " (M): " + s);
+      System.out.println(pastryNode.getNodeId() + " (M): " + s + " in thread " + Thread.currentThread());
   }
 }

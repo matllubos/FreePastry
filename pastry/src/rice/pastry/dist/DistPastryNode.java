@@ -34,25 +34,34 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry.rmi;
+package rice.pastry.dist;
 
 import rice.pastry.*;
-import rice.pastry.messaging.*;
-
-import java.rmi.Remote;
-import java.rmi.RemoteException;
 
 /**
- * A remote interface exported by Pastry nodes. This is a subset of
- * NodeHandle, since it doesn't implement proximity, ping or getAlive.
+ * Class which represents the abstraction of a "real" pastry node. Designed
+ * to be extended by the protocol implementation (i.e. RMI or Socket) desired.
  *
  * @version $Id$
  *
- * @author Sitaram Iyer
+ * @author Alan Mislove
  */
-public interface RMIRemoteNodeI extends Remote
-{
-    public NodeId getNodeId() throws java.rmi.RemoteException;
-    public void remoteReceiveMessage(Message msg) throws java.rmi.RemoteException;
-}
 
+public abstract class DistPastryNode extends PastryNode {
+
+    /**
+     * Constructor, with NodeId. Need to set the node's ID before this node
+     * is inserted as localHandle.localNode.
+     */
+    protected DistPastryNode(NodeId id) {
+      super(id);
+    }
+
+    /**
+     * Method which returns the Dist for this Pastry
+     * node.
+     *
+     * @return The node handle pool for this pastry node.
+     */
+    public abstract DistNodeHandlePool getNodeHandlePool();
+}

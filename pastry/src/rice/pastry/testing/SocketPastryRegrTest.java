@@ -58,7 +58,6 @@ import java.net.*;
  * @author peter druschel
  * @author sitaram iyer
  */
-
 public class SocketPastryRegrTest extends PastryRegrTest {
   private static int bootstrapPort = 9000;
   private static String bootstrapHost = "ural.owlnet.rice.edu";
@@ -159,6 +158,6 @@ public class SocketPastryRegrTest extends PastryRegrTest {
    */
   public static void main(String args[]) {
     SocketPastryRegrTest pt = new SocketPastryRegrTest();
-    mainfunc(pt, args, 10 /*n*/, 4/*d*/, 10/*k*/, 10/*m*/, 4/*conc*/);
+    mainfunc(pt, args, 10 /*n*/, 2/*d*/, 10/*k*/, 10/*m*/, 4/*conc*/);
   }
 }

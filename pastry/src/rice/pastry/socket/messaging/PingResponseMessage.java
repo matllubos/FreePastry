@@ -60,6 +60,12 @@ public class PingResponseMessage extends Message {
   // the local address (address of the pinging node)
   private InetSocketAddress localAddress;
 
+  // the nodeId of the pinging node
+  private NodeId localId;
+
+  // the nodeId of the pinged node
+  private NodeId remoteId;
+
   /**
    * Constructor
    *
@@ -67,12 +73,14 @@ public class PingResponseMessage extends Message {
    * @param remoteAddress The address of the pinged node.
    * @param localAddress The address of the pinging node.
    */
-  public PingResponseMessage(long time, InetSocketAddress remoteAddress, InetSocketAddress localAddress) {
+  public PingResponseMessage(long time, NodeId remoteId, NodeId localId, InetSocketAddress remoteAddress, InetSocketAddress localAddress) {
     super(SocketPingManagerAddress.instance());
 
     this.time = time;
     this.remoteAddress = remoteAddress;
     this.localAddress = localAddress;
+    this.remoteId = remoteId;
+    this.localId = localId;
   }
 
   /**
@@ -100,5 +108,23 @@ public class PingResponseMessage extends Message {
    */
   public InetSocketAddress getLocalAddress() {
     return localAddress;
+  }
+
+  /**
+   * Returns the nodeId of the pinging node.
+   *
+   * @return The nodeId of the pinging node.
+   */
+  public NodeId getLocalNodeId() {
+    return localId;
+  }
+
+  /**
+   * Returns the nodeId of the pinging node.
+   *
+   * @return The nodeId of the pinging node.
+   */
+  public NodeId getRemoteNodeId() {
+    return remoteId;
   }
 }
