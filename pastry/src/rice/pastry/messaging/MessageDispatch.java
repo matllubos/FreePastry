@@ -95,6 +95,11 @@ public class MessageDispatch {
     return mr;
   }
 
+  public MessageReceiver getDestinationByAddress(Address addr) {
+    MessageReceiver mr = (MessageReceiver) addressBook.get(addr);    
+    return mr;
+  }
+
   /**
    * Dispatches a message to the appropriate receiver.
    *
