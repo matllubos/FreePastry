@@ -53,7 +53,7 @@ import java.util.*;
  * @author Andrew Ladd
  */
 
-public class RoutingTable {
+public class RoutingTable implements NodeSet {
     /**
      * The routing calculations will occur in base <EM> 2 <SUP> idBaseBitLength </SUP> </EM>
      */

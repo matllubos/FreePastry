@@ -26,6 +26,7 @@ JARS_3RDPARTY =
 
 MAIN_CLASS     = RoutingTableUnit
 MAIN_PACKAGE   = rice.pastry.testing
+
 MAIN_JAR       = 
 
 

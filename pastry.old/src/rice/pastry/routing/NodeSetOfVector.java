@@ -32,66 +32,68 @@ import rice.pastry.*;
 
 import java.util.*;
 
-public interface NodeSet {
-    /**
-     * Checks if the set is read-only.
-     *
-     * @return true if the set is read-only, false otherwise.
-     */
+/**
+ * Creating a NodeSet from a Vector.
+ *
+ * @author Andrew Ladd
+ */
 
-    public boolean isReadOnly();
+public class NodeSetOfVector implements NodeSet {
+    private Vector theSet;
+    private boolean readOnly;
+    
+    public NodeSetOfVector(Vector handles) 
+    {
+	theSet = handles;
+	readOnly = false;
+    }
 
-    /**
-     * Puts an entry into a node set.
-     * 
-     * @param handle the handle to put into the table.
-     */
+    public NodeSetOfVector(Vector handles, boolean isReadOnly) 
+    {
+	theSet = handles;
+	readOnly = isReadOnly;
+    }
 
-    public void putNode(NodeHandle handle);
+    public boolean isReadOnly() { return readOnly; }
 
-    /**
-     * Checks if a given node id is in the node set.
-     *
-     * @param nid a node id.
-     *
-     * @return true if the node id is in the set, false otherwise.
-     */
+    public void putNode(NodeHandle handle) 
+    {
+	theSet.addElement(handle);
+    }
 
-    public NodeHandle findNode(NodeId nid);
+    public NodeHandle findNode(NodeId nid)
+    {
+	Enumeration e = theSet.elements();
 
-    /**
-     * Removes an entry from a node set.
-     *
-     * @param nid the node id to remove from the set.
-     *
-     * @return the handle that was removed, null if nothing was removed.
-     */
+	while (e.hasMoreElements()) {
+	    NodeHandle handle = (NodeHandle) e.nextElement();
 
-    public NodeHandle removeNode(NodeId nid);
+	    NodeId handleNid = handle.getNodeId();
+	    
+	    if (handle.equals(nid)) return handle;
+	}
+	
+	return null;
+    }
 
-    /**
-     * Finds the closest node in the set (in the sense of proximity).
-     *
-     * @return the closest node.
-     */
+    public NodeHandle removeNode(NodeId nid)
+    {
+	NodeHandle handle = findNode(nid);
 
-    public NodeHandle findClosestNode();
+	if (handle == null) return null;
+	
+	theSet.remove(handle);
 
-    /**
-     * Finds the node with the most similar node id.
-     *
-     * @param nid a node.
-     *
-     * @return the most similar node.
-     */
+	return handle;
+    }
 
-    public NodeHandle findMostSimilarNode(NodeId nid);
+    public NodeHandle findClosestNode()
+    {
+	return null;
+    }
+
+    public NodeHandle findMostSimilarNode(NodeId nid) 
+    {
+	return null;
+    }
 }
-
-
-
-
-
-
-
-
