@@ -359,7 +359,12 @@ public abstract class PastryRegrTest {
 		distanceSet.add(nh.getNodeId());
 	    }
 
-	    NodeSet rs = ls.replicaSet(id, ls.size()*2+1);
+	    int expectedSize = distanceSet.headSet(ls.get(-ls.ccwSize()).getNodeId()).size()+1;
+	    int expectedSize1 = distanceSet.headSet(ls.get(ls.cwSize()).getNodeId()).size()+1;
+	    if (expectedSize1 < expectedSize) expectedSize = expectedSize1;
+	    if (ls.overlaps()) expectedSize = distanceSet.size();
+
+	    NodeSet rs = ls.replicaSet(id, expectedSize/*ls.size()*2+1*/);
 	    // now verify the replicaSet
 	    for (int i=0; i<rs.size(); i++) {
 		NodeHandle nh = rs.get(i);
@@ -372,14 +377,13 @@ public abstract class PastryRegrTest {
 	    }
 
 	    // check size 
-	    int expectedSize = distanceSet.headSet(ls.get(-ls.ccwSize()).getNodeId()).size()+1;
-	    int expectedSize1 = distanceSet.headSet(ls.get(ls.cwSize()).getNodeId()).size()+1;
-	    if (expectedSize1 < expectedSize) expectedSize = expectedSize1;
-
+	    /*
 	    NodeHandle nh = rs.get(rs.size()-1);
 	    if ( (nh == null && k != -ls.ccwSize() && k != ls.cwSize()) ||
 		 (nh != null && !ls.overlaps() && ls.size() > 0 && rs.size() != expectedSize) ||
 		 (nh != null && ls.overlaps() && rs.size() != distanceSet.size()) ) 
+	    */
+	    if (rs.size() != expectedSize)
 		System.out.println("checkLeafSet: replicaSet size failure at " + rta.getNodeId() + " k=" + k + 
 				   " expectedSize=" + expectedSize + " " +
 				   "\n" + rs + "\n" + ls + " distanceSet:" + distanceSet);

@@ -313,7 +313,7 @@ public class LeafSet extends Observable implements Serializable {
      * compute an ordered set of nodes, in order of numerical closeness to a given key
      *
      * @param key the key
-     * @param max the maximal size of the set requestes
+     * @param max the maximal size of the set requested
      * @return the ordered set of nodehandles
      */
 
@@ -344,8 +344,9 @@ public class LeafSet extends Observable implements Serializable {
 
 	int cw = nearest;
 	int ccw = nearest;
+	int wrapped = 0;
 
-	for (int i=1; i<max; i++) {
+	while (set.size() < max && wrapped < 3) {
 	    int tmp;
 
 	    // determine next nearest node
@@ -359,15 +360,23 @@ public class LeafSet extends Observable implements Serializable {
 		set.put(cwNode);
 
 		tmp = cw;
-		if (cw == cwSet.size() && (cw = complement(cw)) == tmp) return set;
+		if (cw == cwSet.size()) {
+		    if ((cw = complement(cw)) == tmp) return set;
+		    wrapped++;
+		}
 		cw++;
+
 	    } else {
 		// ccwNode is closer to key
 		set.put(ccwNode);
 
 		tmp = ccw;
-		if (-ccw == ccwSet.size() && (ccw = complement(ccw)) == tmp) return set;
+		if (-ccw == ccwSet.size()) {
+		    if ((ccw = complement(ccw)) == tmp) return set;
+		    wrapped++;
+		}
 		ccw--;
+
 	    }
 	}
 
