@@ -95,7 +95,7 @@ public class SocketChannelReader {
     initialized = false;
 
     sizeBuffer = ByteBuffer.allocateDirect(4);
-    magicBuffer = ByteBuffer.allocateDirect(4);
+    magicBuffer = ByteBuffer.allocateDirect(MAGIC_NUMBER.length);
   }
 
   /**
@@ -119,6 +119,8 @@ public class SocketChannelReader {
       if (magicBuffer.remaining() == 0) {
         magicBuffer.flip();
         verifyMagicBuffer();
+      } else {
+        return null;
       }
     }
 
@@ -133,6 +135,8 @@ public class SocketChannelReader {
       if (sizeBuffer.remaining() == 0) {
         sizeBuffer.flip();
         initializeObjectBuffer();
+      } else {
+        return null;
       }
     }    
 
