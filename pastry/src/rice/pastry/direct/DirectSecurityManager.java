@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate 
+"FreePastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -50,80 +50,73 @@ import java.util.*;
  *
  * @author Andrew Ladd
  */
+public class DirectSecurityManager implements PastrySecurityManager {
+  
+  private PastryNode pnode;
+  private NetworkSimulator sim;
 
-public class DirectSecurityManager implements PastrySecurityManager 
-{
-    private PastryNode pnode;
-    private NetworkSimulator sim;
+  /**
+   * Constructor.
+   */
 
-    /**
-     * Constructor.
-     */
+  public DirectSecurityManager(NetworkSimulator ns) {
+    pnode = null;
+    sim = ns;
+  }
 
-    public DirectSecurityManager(NetworkSimulator ns) { 
-	pnode = null;
-	sim = ns;
-    }
+  /**
+   * Sets the local pastry node.
+   *
+   * @param pn pastry node.
+   */
+  public void setLocalPastryNode(PastryNode local) { pnode = local; }
 
-    /**
-     * Sets the local pastry node.
-     *
-     * @param pn pastry node.
-     */
+  /**
+   * This method takes a message and returns true
+   * if the message is safe and false otherwise.
+   *
+   * @param msg a message.
+   * @return if the message is safe, false otherwise.
+   */
+  public boolean verifyMessage(Message msg) { return true; }
 
-    public void setLocalPastryNode(PastryNode local) { pnode = local; }
+  /**
+   * Checks to see if these credentials can be associated with the address.
+   *
+   * @param cred some credentials.
+   * @param addr an address.
+   *
+   * @return true if the credentials match the address, false otherwise.
+   */
+  public boolean verifyAddressBinding(Credentials cred, Address addr) { return true; }
 
-    /**
-     * This method takes a message and returns true
-     * if the message is safe and false otherwise.
-     *
-     * @param msg a message.
-     * @return if the message is safe, false otherwise.
-     */
-    
-    public boolean verifyMessage(Message msg) { return true; }
+  /**
+   * Verify node handle safety.
+   *
+   * @param handle the handle to check.
+   *
+   * @return the verified node handle
+   */
+  public NodeHandle verifyNodeHandle(NodeHandle handle) {
+    NodeId local = pnode.getNodeId();
+    NodeId nid = handle.getNodeId();
 
-    /**
-     * Checks to see if these credentials can be associated with the address.
-     *
-     * @param cred some credentials.
-     * @param addr an address.
-     *
-     * @return true if the credentials match the address, false otherwise.
-     */
-    
-    public boolean verifyAddressBinding(Credentials cred, Address addr) { return true; }
+    if (local.equals(nid)) {
+      return pnode.getLocalHandle();
+    } else if (handle instanceof DirectNodeHandle) {
+      DirectNodeHandle dnh = (DirectNodeHandle) handle;
 
-    /**
-     * Verify node handle safety.
-     *
-     * @param handle the handle to check.
-     *
-     * @return the verified node handle
-     */
+      DirectNodeHandle retDnh = new DirectNodeHandle(pnode, dnh.getRemote(), sim);
+      sim.registerNodeId(retDnh);
 
-    public NodeHandle verifyNodeHandle(NodeHandle handle) {
-	NodeId local = pnode.getNodeId();
-	NodeId nid = handle.getNodeId();
+      return retDnh;
+    } else throw new Error("node handle of unknown type");
+  }
 
-	if (local.equals(nid)) {
-	    return pnode.getLocalHandle();
-	}
-	else if (handle instanceof DirectNodeHandle) {
-	    DirectNodeHandle dnh = (DirectNodeHandle) handle;
-
-	    DirectNodeHandle retDnh = new DirectNodeHandle(pnode, dnh.getRemote(), sim);
-
-	    return retDnh;
-	}
-	else throw new Error("node handle of unknown type");	
-    }
-
-    /**
-     * Gets the current time for a timestamp.
-     *
-     * @return the timestamp.
-     */
-    
-    public Date getTimestamp() { return new Date(); }
+  /**
+   * Gets the current time for a timestamp.
+   *
+   * @return the timestamp.
+   */
+  public Date getTimestamp() { return new Date(); }
 }

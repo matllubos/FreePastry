@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate 
+"FreePastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -52,196 +52,202 @@ import java.lang.*;
  * @author Y. Charlie Hu
  * @author Rongmei Zhang
  */
+public class SphereNetwork implements NetworkSimulator {
+  
+  private Random rng;
+  private HashMap nodeMap;
+  private Vector msgQueue;
 
-public class SphereNetwork implements NetworkSimulator 
-{
-    private Random rng;
-    private HashMap nodeMap;
-    private Vector msgQueue;
+  private TestRecord testRecord;
 
-    private TestRecord testRecord;
+  private class MessageDelivery {
+    private Message msg;
+    private PastryNode node;
 
-    private class MessageDelivery {
-	private Message msg;
-	private PastryNode node;
-
-	public MessageDelivery(Message m, PastryNode pn) {
-	    msg = m;
-	    node = pn;
-	}
-
-	public void deliver() { 
-	    //System.out.println("delivering to " + node);
-	    //System.out.println(msg);
-		    
-	    node.receiveMessage(msg); 
-	    //System.out.println("----------------------");
-	}
+    public MessageDelivery(Message m, PastryNode pn) {
+      msg = m;
+      node = pn;
     }
 
-    /**
-     * Initialize a random Sphere NodeRecord
-     *
-     */
+    public void deliver() {
+      //System.out.println("delivering to " + node);
+      //System.out.println(msg);
 
-    private class NodeRecord {
-        public double theta, phi;
-	public boolean alive;
-	public DirectNodeHandle handle;
+      node.receiveMessage(msg);
+      //System.out.println("----------------------");
+    }
+  }
 
-	public NodeRecord(DirectNodeHandle nh) {
-  	    theta = Math.asin(2.0 * rng.nextDouble() - 1.0);
-	    phi   = 2.0 * Math.PI * rng.nextDouble();
-	    
-	    alive = true;
-	    handle = nh;
-	}
+  /**
+   * Initialize a random Sphere NodeRecord
+   *
+   */
+  private class NodeRecord {
+    public double theta, phi;
+    public boolean alive;
+    public Vector handles;
 
-	public int proximity(NodeRecord nr) {
-	    return (int)(10000 * Math.acos(Math.cos(phi-nr.phi)*Math.cos(theta)*Math.cos(nr.theta) + 
-					   Math.sin(theta)*Math.sin(nr.theta)));
-	}
+    public NodeRecord(DirectNodeHandle nh) {
+      theta = Math.asin(2.0 * rng.nextDouble() - 1.0);
+      phi   = 2.0 * Math.PI * rng.nextDouble();
+
+      alive = true;
+      handles = new Vector();
+      handles.add(nh);
     }
 
-    /**
-     * Constructor.
-     *
-     */
-
-    public SphereNetwork() {
-	rng = new Random(PastrySeed.getSeed());
-	nodeMap = new HashMap();
-	msgQueue = new Vector();
+    public int proximity(NodeRecord nr) {
+      return (int)(10000 * Math.acos(Math.cos(phi-nr.phi)*Math.cos(theta)*Math.cos(nr.theta) +
+                                     Math.sin(theta)*Math.sin(nr.theta)));
     }
-    
-    /**
-     * register a new node
-     *
-     * @param nh the DirectNodeHandle being registered
-     */
+  }
 
-    public void registerNodeId(DirectNodeHandle nh)
-    {
-	NodeId nid = nh.getNodeId();
+  /**
+   * Constructor.
+   *
+   */
+  public SphereNetwork() {
+    rng = new Random(PastrySeed.getSeed());
+    nodeMap = new HashMap();
+    msgQueue = new Vector();
+  }
 
-	if (nodeMap.get(nid) != null) throw new Error("collision creating network stats for " + nid);
-	nodeMap.put(nid, new NodeRecord(nh));
+  /**
+    * register a new node
+   *
+   * @param nh the DirectNodeHandle being registered
+   */
+
+  public void registerNodeId(DirectNodeHandle nh) {
+    NodeId nid = nh.getNodeId();
+
+    if (nodeMap.get(nid) != null) {
+      NodeRecord record = (NodeRecord) nodeMap.get(nid);
+      record.handles.add(nh);
+    } else {
+      nodeMap.put(nid, new NodeRecord(nh));
     }
+  }
 
-    /**
-     * testing if a NodeId is alive
-     *
-     * @param nid the NodeId being tested
-     * @return true if nid is alive false otherwise
-     */
+  /**
+   * testing if a NodeId is alive
+   *
+   * @param nid the NodeId being tested
+   * @return true if nid is alive false otherwise
+   */
+  public boolean isAlive(NodeId nid) {
+    NodeRecord nr = (NodeRecord) nodeMap.get(nid);
 
-    public boolean isAlive(NodeId nid) {
-	NodeRecord nr = (NodeRecord) nodeMap.get(nid);
-	
-	if (nr == null) throw new Error("asking about node alive for unknown node");
+    if (nr == null) throw new Error("asking about node alive for unknown node");
 
-	return nr.alive;
+    return nr.alive;
+  }
+
+  /**
+   * set the liveliness of a NodeId
+   *
+   * @param nid the NodeId being set
+   * @param alive the value being set
+   */
+  public void setAlive(NodeId nid, boolean alive) {
+    NodeRecord nr = (NodeRecord) nodeMap.get(nid);
+
+    if (nr == null) throw new Error("setting node alive for unknown node");
+
+    if (nr.alive != alive) {
+      nr.alive = alive;
+
+      DirectNodeHandle[] handles = (DirectNodeHandle[]) nr.handles.toArray(new DirectNodeHandle[0]);
+
+      for (int i=0; i<handles.length; i++) {
+        if (alive) {
+          handles[i].notifyObservers(NodeHandle.DECLARED_LIVE);
+        } else {
+          handles[i].notifyObservers(NodeHandle.DECLARED_DEAD);
+        }
+      }
     }
+  }
 
-    /**
-     * set the liveliness of a NodeId 
-     *
-     * @param nid the NodeId being set
-     * @param alive the value being set
-     */
+  /**
+   * computes the proximity between two NodeIds
+   *
+   * @param a the first NodeId
+   * @param b the second NodeId
+   * @return the proximity between the two input NodeIds
+   */
+  public int proximity(NodeId a, NodeId b) {
+    NodeRecord nra = (NodeRecord) nodeMap.get(a);
+    NodeRecord nrb = (NodeRecord) nodeMap.get(b);
 
-    public void setAlive(NodeId nid, boolean alive) {
-	NodeRecord nr = (NodeRecord) nodeMap.get(nid);
-	
-	if (nr == null) throw new Error("setting node alive for unknown node");
+    if (nra == null ||
+        nrb == null) throw new Error("asking about node proximity for unknown node(s)");
 
-	nr.alive = alive;
+    return nra.proximity(nrb);
+  }
+
+  public void deliverMessage(Message msg, PastryNode node) {
+    MessageDelivery md = new MessageDelivery(msg, node);
+
+    msgQueue.addElement(md);
+  }
+
+  public boolean simulate() {
+    if (msgQueue.size() == 0) return false;
+
+    MessageDelivery md = (MessageDelivery) msgQueue.firstElement();
+
+    msgQueue.removeElementAt(0);
+
+    md.deliver();
+
+    return true;
+  }
+
+  /**
+   * set TestRecord
+   *
+   * @param tr input TestRecord
+   */
+  public void setTestRecord( TestRecord tr ){
+    testRecord = tr;
+  }
+
+  /**
+   * get TestRecord
+   *
+   * @return the returned TestRecord
+   */
+  public TestRecord getTestRecord(){
+    return testRecord;
+  }
+
+  /**
+   * find the closest NodeId to an input NodeId out of all NodeIds in the network
+   *
+   * @param nid the input NodeId
+   * @return the NodeId closest to the input NodeId in the network
+   */
+  public DirectNodeHandle getClosest(NodeId nid) {
+    Iterator it = nodeMap.values().iterator();
+    DirectNodeHandle bestHandle = null;
+    int bestProx = Integer.MAX_VALUE;
+    DirectNodeHandle itHandle;
+    NodeId	itId;
+    NodeRecord itRecord;
+
+    while( it.hasNext() ){
+      itRecord = (NodeRecord)it.next();
+      itHandle = (DirectNodeHandle)itRecord.handles.elementAt(0);
+      itId = itHandle.getNodeId();
+      if( !itHandle.isAlive() || !itHandle.getLocalNode().isReady() || nid == itId )
+        continue;
+      if( proximity(nid,itId) < bestProx ){
+        bestProx = proximity(nid,itId);
+        bestHandle = itHandle;
+      }
     }
-
-    /**
-     * computes the proximity between two NodeIds
-     *
-     * @param a the first NodeId 
-     * @param b the second NodeId 
-     * @return the proximity between the two input NodeIds
-     */
-
-    public int proximity(NodeId a, NodeId b)
-    {
-	NodeRecord nra = (NodeRecord) nodeMap.get(a);
-	NodeRecord nrb = (NodeRecord) nodeMap.get(b);
-
-	if (nra == null ||
-	    nrb == null) throw new Error("asking about node proximity for unknown node(s)");
-
-	return nra.proximity(nrb);
-    }
-    
-    public void deliverMessage(Message msg, PastryNode node) {
-	MessageDelivery md = new MessageDelivery(msg, node);
-
-	msgQueue.addElement(md);
-    }
-
-    public boolean simulate() {
-	if (msgQueue.size() == 0) return false;
-	
-	MessageDelivery md = (MessageDelivery) msgQueue.firstElement();
-
-	msgQueue.removeElementAt(0);
-
-	md.deliver();
-	
-	return true;
-    }
-
-    /**
-     * set TestRecord
-     *
-     * @param tr input TestRecord
-     */
-
-    public void setTestRecord( TestRecord tr ){
-	testRecord = tr;
-    }
-
-    /**
-     * get TestRecord
-     *
-     * @return the returned TestRecord
-     */
-
-    public TestRecord getTestRecord(){
-	return testRecord;
-    }
-
-    /**
-     * find the closest NodeId to an input NodeId out of all NodeIds in the network
-     *
-     * @param nid the input NodeId
-     * @return the NodeId closest to the input NodeId in the network
-     */
-
-    public DirectNodeHandle getClosest(NodeId nid) {
-	Iterator it = nodeMap.values().iterator();
-	DirectNodeHandle bestHandle = null;
-	int bestProx = Integer.MAX_VALUE;
-	DirectNodeHandle itHandle;
-	NodeId	itId;
-	NodeRecord itRecord;
-
-	while( it.hasNext() ){
-	    itRecord = (NodeRecord)it.next();
-	    itHandle = itRecord.handle;
-	    itId = itHandle.getNodeId();
-	    if( !itHandle.isAlive() || !itHandle.getLocalNode().isReady() || nid == itId )
-		continue;
-	    if( proximity(nid,itId) < bestProx ){
-		bestProx = proximity(nid,itId);
-		bestHandle = itHandle;
-	    }
-	}
-	return bestHandle;
-    }
+    return bestHandle;
+  }
 }
 

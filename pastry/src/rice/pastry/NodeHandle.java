@@ -48,12 +48,7 @@ import java.util.*;
  *
  * @author Andrew Ladd
  */
-public abstract class NodeHandle extends Observable implements MessageReceiver, LocalNodeI, rice.p2p.commonapi.NodeHandle {
-
-  // constants defining types of observable events
-  public static final Integer PROXIMITY_CHANGED = new Integer(1); 
-  public static final Integer DECLARED_DEAD = new Integer(2);
-  public static final Integer DECLARED_LIVE = new Integer(3);
+public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implements MessageReceiver, LocalNodeI {
 
   // the local pastry node
   protected transient PastryNode localnode;

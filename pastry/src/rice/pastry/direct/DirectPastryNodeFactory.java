@@ -118,7 +118,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
 
     // pn.doneNode(bootstrap);
     pn.doneNode( simulator.getClosest(nodeId) );
-    // pn.doneNode(getNearest(localhandle, bootstrap));
+    //pn.doneNode(getNearest(localhandle, bootstrap));
       
     return pn;
   }

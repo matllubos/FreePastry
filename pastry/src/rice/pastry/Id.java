@@ -879,7 +879,7 @@ public class Id implements rice.p2p.commonapi.Id
     }
 
     public String toStringFull(){
-	String s = "";
+      StringBuffer buffer = new StringBuffer();
 
 	String tran[] = { "0", "1", "2", "3", "4", "5", "6", "7",
 			  "8", "9", "A", "B", "C", "D", "E", "F" };
@@ -888,9 +888,9 @@ public class Id implements rice.p2p.commonapi.Id
 	for (int i=n-1; i>=0; i--) {
 	    int d = getDigit(i, 4);
 	    	    
-	    s = s + tran[d];
+	    buffer.append(tran[d]);
 	}
-        return s;
+        return buffer.toString();
 
     }
 

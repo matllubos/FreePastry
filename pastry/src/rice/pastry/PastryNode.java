@@ -302,6 +302,15 @@ public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.
     }
 
     /**
+     * Returns the Id of this node
+     *
+     * @return This node's Id
+     */
+    public rice.p2p.commonapi.Id getId() {
+      return getNodeId();
+    }
+
+    /**
      * Returns a factory for Ids specific to this node's protocol.
      *
      * @return A factory for creating Ids.

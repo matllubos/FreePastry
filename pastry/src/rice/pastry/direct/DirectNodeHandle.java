@@ -36,6 +36,8 @@ if advised of the possibility of such damage.
 
 package rice.pastry.direct;
 
+import java.util.*;
+
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 
@@ -59,6 +61,11 @@ public class DirectNodeHandle extends NodeHandle
       simulator = sim;
     }
 
+    public void notifyObservers(Object arg) {
+      setChanged();
+      super.notifyObservers(arg);
+    }
+
     public PastryNode getRemote() { return remoteNode; }
 
     public NodeId getNodeId() { return remoteNode.getNodeId(); }
@@ -70,15 +77,15 @@ public class DirectNodeHandle extends NodeHandle
     public int proximity() {
     	assertLocalNode();
     	int result = simulator.proximity(getLocalNode().getNodeId(), remoteNode.getNodeId());
-      notifyObservers();
         
       return result;
     }
 
     public void receiveMessage(Message msg) {
-    	if (!isAlive())
-  	    System.out.println("DirectNodeHandle: attempt to send message to a dead node!");
-
+      if (!isAlive()) {
+  	    System.out.println("DirectNodeHandle: attempt to send message " + msg + " to a dead node!");
+      }
+        
     	simulator.deliverMessage(msg, remoteNode);
     }
 
@@ -95,8 +102,6 @@ public class DirectNodeHandle extends NodeHandle
      */
     public boolean equals(Object obj) {
 	    if (obj == null) return false;
-	    //if (! (obj instanceof DirectNodeHandle) )
-	    //System.out.println("class is " + obj.getClass().getName());
 	    NodeHandle nh = (NodeHandle)obj;
 
 	    if(this.getNodeId().equals(nh.getNodeId()))
