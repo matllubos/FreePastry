@@ -1,0 +1,30 @@
+package rice.email.log;
+
+import rice.post.log.*;
+import rice.email.*;
+
+/**
+ * An Email Deletion Event.  Signifies that the referenced Email was
+ * deleted. 
+ */
+public class DeleteMailEvent implements EmailEvent{
+  Email _email ;
+    
+  /**
+   * Constructor for the DeleteMailEvent.  
+   *
+   * @param email the email to store
+   */
+  public DeleteMailEvent(Email email) {
+    _email = email;
+  }
+
+  /**
+   * Returns the email which this event references.
+   *
+   * @return The email referenced
+   */
+  public Email getEmail() {
+    return _email;
+  }
+}

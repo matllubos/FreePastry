@@ -226,22 +226,76 @@ public class Folder {
    * of the given email in the Folder.  
    * JM Problem, does not have access to folder creation/deletion information.
    *
-   * @param email the email to act as the signal
+   * @param target the email to act as the signal to stop
    * @return the array of recent events
-  public Events[] getPartialEventLog(Email email) {
+   */
+  public EmailEvent[] getPartialEventLog(Email target) throws StorageException {
+    // setup the control vars
+    Vector events = new Vector();
+    boolean finished = false;
+    // get the top entry in the log
+    LogEntryReference top = _log.getTopEntry();
+    LogEntry topEntry = (LogEntry)_storage.retrieveContentHash(top);
+    Email currentEmail = null;
+    
+    // read off and store each entry until the given email is found
+    while (!finished) {
+      if (topEntry instanceof InsertMailLogEntry) {
+	currentEmail = ((InsertMailLogEntry)topEntry).getEmail();
+	events.add(new InsertMailEvent(currentEmail));
+	// if we have reaced the target email, stop going through the log
+	if (currentEmail.equals(target)) {
+	  finished = true;
+	}
+      }
+      else if (topEntry instanceof DeleteMailLogEntry) {
+	events.add(new DeleteMailEvent(((DeleteMailLogEntry)topEntry).getEmail()));
+      }
+      
+      // try to move to the next LogEntry
+      top = topEntry.getPreviousEntry();
+      if (top == null) {
+        finished = true;
+      }
+      else {
+        topEntry = (LogEntry)_storage.retrieveContentHash(top);
+      }
+    }
+    return (EmailEvent[])events.toArray();
+  }  
   
-  
-  }
-  */
   
   /**
-   * Return 
+   * Return all the events that have happened so far in this Folder.
    *
    * @return the complete array of events
-  public Events[] getCompleteEventLog() {
+   */
+  public EmailEvent[] getCompleteEventLog() throws StorageException {
+    // setup the control vars
+    Vector events = new Vector();
+    boolean finished = false;
+    // get the top entry in the log
+    LogEntryReference top = _log.getTopEntry();
+    LogEntry topEntry = (LogEntry)_storage.retrieveContentHash(top);
 
+    // read off and store each entry
+    while (!finished) {
+      if (topEntry instanceof InsertMailLogEntry) {
+	events.add(new InsertMailEvent(((InsertMailLogEntry)topEntry).getEmail()));
+      }
+      else if (topEntry instanceof DeleteMailLogEntry) {
+	events.add(new DeleteMailEvent(((DeleteMailLogEntry)topEntry).getEmail()));
+      }
 
-  }
-  */
-  
+      // try to move to the next LogEntry
+      top = topEntry.getPreviousEntry();
+      if (top == null) {
+        finished = true;
+      }
+      else {
+        topEntry = (LogEntry)_storage.retrieveContentHash(top);
+      }
+    }
+    return (EmailEvent[])events.toArray();
+  }  
 }

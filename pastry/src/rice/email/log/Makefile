@@ -4,6 +4,9 @@ SOURCE  = \
 	DeleteMailLogEntry.java \
 	InsertMailLogEntry.java \
 	SnapShotLogEntry.java \
+	MailEvent.java \
+	DeleteMailEvent.java \
+	InsertMailEvent.java
 
 RMI_SOURCE =
 
