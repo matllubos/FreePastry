@@ -161,12 +161,13 @@ public class Channel implements IScribeApp {
 	System.out.println("Spare Capacity Id "+topicId);
         /* Stripe Id base also fixed to aid debugging */
         //NodeId baseId = random.generateNodeId();
+	System.out.println("Creating "+numStripes+" number of stripes ");
         NodeId baseId = scribe.generateTopicId(name + "STRIPES");
 	for(int i = 0; i < this.numStripes; i++){
 	    StripeId stripeId = new StripeId(baseId.getAlternateId(numStripes, 4, i)); 
 	    Stripe stripe = new Stripe(stripeId, this, scribe,cred,true);
 	    stripeIdTable.put(stripeId, stripe);
-
+	    System.out.println("Created stripe "+stripeId);
             /* This is the code to select the primary stripe, check it */ 
 	    if(stripeId.getDigit(getSplitStream().getRoutingTable().numRows() -1, 4) 
 		== getSplitStream().getNodeId().getDigit(getSplitStream().getRoutingTable().numRows() -1,4))
@@ -181,8 +182,11 @@ public class Channel implements IScribeApp {
         else{
           System.out.println("ERROR: Could not join Spare Capacity Tree");
         }
-   	isReady = true;
-	notifyApps();
+	if(!isReady){
+	    isReady = true;
+	    System.out.println("Channel is ready at "+((Scribe)scribe).getNodeId()+" at the creator");
+	    notifyApps();
+	}
    }  
 
    /**
@@ -240,27 +244,43 @@ public class Channel implements IScribeApp {
 
 
     void initialize(StripeId[] stripeIds, SpareCapacityId spareCapacityId){
-	this.spareCapacityId = spareCapacityId;
-
-	for(int i = 0; i < stripeIds.length; i++){
-	    if(stripeIdTable == null){
-		System.out.println("Debug :: StripeIdTable is null in Channel.java");
+	// initialize the channel metadata if its not ready yet
+	if(!isReady){
+	    this.spareCapacityId = spareCapacityId;
+	    NodeId[] subInfo = new NodeId[stripeIds.length + 2];
+	    subInfo[0] = this.channelId;
+	    for(int i = 0; i < stripeIds.length; i++){
+		if(stripeIdTable == null){
+		    System.out.println("Debug :: StripeIdTable is null in Channel.java");
+		}
+		Stripe stripe = new Stripe( stripeIds[i], this, scribe, cred, false);
+		stripeIdTable.put(stripeIds[i], stripe);
+		subInfo[i+1] = (NodeId)stripeIds[i];
+		/**
+		 * Select the primary stripe
+		 */
+		if( stripeIds[i].getDigit(getSplitStream().getRoutingTable().numRows() -1, 4) 
+		    == getSplitStream().getNodeId().getDigit(getSplitStream().getRoutingTable().numRows() -1,4) )
+		    primaryStripe = stripe;
 	    }
-	    Stripe stripe = new Stripe( stripeIds[i], this, scribe, cred, false);
-	    stripeIdTable.put(stripeIds[i], stripe);
-	    /**
-	     * Select the primary stripe
-	     */
-	    if( stripeIds[i].getDigit(getSplitStream().getRoutingTable().numRows() -1, 4) 
-	        == getSplitStream().getNodeId().getDigit(getSplitStream().getRoutingTable().numRows() -1,4) )
-	        primaryStripe = stripe;
-	}
+	    subInfo[stripeIds.length + 1] = spareCapacityId;
 
-	if(scribe.join(spareCapacityId, this, cred)){
+	    if(scribe.join(this.channelId, this, cred, subInfo)){
+	    }
+	    else{
+		System.out.println("ERROR: Could not join Channel");
+	    }
+
+	    if(scribe.join(spareCapacityId, this, cred)){
+	    }
+	    else{
+		System.out.println("ERROR: Could not join Spare Capacity Tree");
+	    }
+	    
+	    isReady = true;
+	    System.out.println("Channel is ready at "+((Scribe)scribe).getNodeId()+" from initialize messages");
+	    notifyApps();
 	}
-        else{
-	    System.out.println("ERROR: Could not join Spare Capacity Tree");
-        }
     }
 
     /**
@@ -280,12 +300,15 @@ public class Channel implements IScribeApp {
 	this.channelId = channelId;
 	this.spareCapacityId = spareCapacityId;
         this.splitStream = splitStream;
-	
+	NodeId[] subInfo = new NodeId[stripeIds.length + 2];
 
+	subInfo[0] = channelId;
+	System.out.println("Channel -- created from subscribe method, stripeids.length ="+stripeIds.length);
 	for(int i = 0 ; i < stripeIds.length ; i++){
 	    if(stripeIdTable == null) {System.out.println("NULL");}
             Stripe stripe = new Stripe( stripeIds[i], this, scribe, cred, false);
 	    stripeIdTable.put(stripeIds[i], stripe);
+	    subInfo[i+1] = stripeIds[i];
 	    /* Subscribe to a primary stripe */
             /* This is the code to select the primary stripe, check it */ 
 	    if( stripeIds[i].getDigit(getSplitStream().getRoutingTable().numRows() -1, 4) 
@@ -293,12 +316,12 @@ public class Channel implements IScribeApp {
 	        primaryStripe = stripe; 
 	
 	}
-
+	subInfo[stripeIds.length + 1] = spareCapacityId;
 	this.numStripes = stripeIds.length;
 	this.scribe = scribe;
 	this.bandwidthManager = bandwidthManager;
 	this.bandwidthManager.registerChannel(this);
-	if(scribe.join(channelId, this, cred)){
+	if(scribe.join(channelId, this, cred, subInfo)){
 	}
         else{
           System.out.println("ERROR: Could not join Channel Tree");
@@ -308,10 +331,12 @@ public class Channel implements IScribeApp {
         else{	
           System.out.println("ERROR: Could not join Spare Capacity Tree");
         }
-
-	isReady = true;
-	notifyApps();
-	//System.out.println("A Channel Object is being created (In Path) at " + getNodeId());
+	if(!isReady){
+	    isReady = true;
+	    notifyApps();
+	    System.out.println("Channel is ready at "+((Scribe)scribe).getNodeId()+" from subscribe methods");
+	    //System.out.println("A Channel Object is being created (In Path) at " + getNodeId());
+	}
     }
  
     /**
@@ -784,38 +809,42 @@ public class Channel implements IScribeApp {
      * @param msg the msg to handle
      */
     private void handleControlAttachResponseMessage(Message msg){
-        //System.out.println(getNodeId() + " recieved a response to anycast ");
-	NodeId[] subInfo = (NodeId[]) ((ControlAttachResponseMessage) msg).getContent();	
-        System.out.println(subInfo.length);
-	channelId = new ChannelId(subInfo[0]);
-	spareCapacityId = new SpareCapacityId(subInfo[subInfo.length-1]);
+        
+	if(!isReady){
+	    NodeId[] subInfo = (NodeId[]) ((ControlAttachResponseMessage) msg).getContent();	
+	    System.out.println(((Scribe)scribe).getNodeId() + " recieved a response to anycast "+subInfo.length);
+	    channelId = new ChannelId(subInfo[0]);
+	    spareCapacityId = new SpareCapacityId(subInfo[subInfo.length-1]);
+	    
+	    /* Fill in all instance variable for channel */
+	    for(int i = 1 ; i < subInfo.length-1 ; i++){
+		this.numStripes = subInfo.length -2 ;
+		StripeId stripeId = new StripeId(subInfo[i]);
+		Stripe stripe = new Stripe( stripeId, this, scribe, cred, false);
+		stripeIdTable.put(stripeId, stripe);
+		/* Subscribe to a primary stripe */
+		/* This is the code to select the primary stripe, check it */ 
+		if( stripeId.getDigit(getSplitStream().getRoutingTable().numRows() -1, 4) 
+		    == getSplitStream().getNodeId().getDigit(getSplitStream().getRoutingTable().numRows() -1,4) )
+		    primaryStripe = stripe;
+		
+	    }
+	    if(scribe.join(channelId, this, cred, subInfo)){
+	    }
+	    else{
+		System.out.println("ERROR: Could not join channel tree");
+	    }
+	    if(scribe.join(spareCapacityId, this, cred)){
+	    }
+	    else{	
+		System.out.println("ERROR: Could not spare capacity tree");
+	    }
 
-	/* Fill in all instance variable for channel */
-	for(int i = 1 ; i < subInfo.length-1 ; i++){
-	    this.numStripes = subInfo.length -2 ;
-	    StripeId stripeId = new StripeId(subInfo[i]);
-            Stripe stripe = new Stripe( stripeId, this, scribe, cred, false);
-	    stripeIdTable.put(stripeId, stripe);
-	    /* Subscribe to a primary stripe */
-            /* This is the code to select the primary stripe, check it */ 
-	    if( stripeId.getDigit(getSplitStream().getRoutingTable().numRows() -1, 4) 
-	        == getSplitStream().getNodeId().getDigit(getSplitStream().getRoutingTable().numRows() -1,4) )
-	        primaryStripe = stripe;
-
+	    isReady = true;
+	    ignore_timeout = true;
+	    System.out.println("Channel is ready at "+((Scribe)scribe).getNodeId()+" after receiving AttachResponse");
+	    notifyApps();
 	}
-        if(scribe.join(channelId, this, cred, subInfo)){
-	}
-        else{
-           System.out.println("ERROR: Could not join channel tree");
-        }
-	if(scribe.join(spareCapacityId, this, cred)){
-	}
-        else{	
-           System.out.println("ERROR: Could not spare capacity tree");
-        }
-	isReady = true;
-        ignore_timeout = true;
-	notifyApps();
     }
 
     /** 
