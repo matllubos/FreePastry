@@ -143,8 +143,9 @@ public class Channel implements IScribeApp {
 	    System.out.println("Channel Topic Created");
 	    this.channelId = new ChannelId(topicId);
         }
-        else
+        else{
            System.out.println("ERROR: Channel Topic Creation Failed");
+        }
 
         /* Spare Capacity Id currently fixed to aid debugging */
         //topicId = random.generateNodeId();
@@ -224,6 +225,7 @@ public class Channel implements IScribeApp {
                                         this.channelId
                                        );
         //System.out.println("Sending Anycast Message from " + getNodeId());
+        System.out.println("Sending ControlAttach Message");
         this.getSplitStream().routeMsg(channelId, attachMessage, cred, null );
         ignore_timeout = false;
         ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( getSplitStream().getAddress(), 0, channelId, cred, channelId );
@@ -662,6 +664,7 @@ public class Channel implements IScribeApp {
     private void handleControlAttachResponseMessage(Message msg){
         //System.out.println(getNodeId() + " recieved a response to anycast ");
 	NodeId[] subInfo = (NodeId[]) ((ControlAttachResponseMessage) msg).getContent();	
+        System.out.println(subInfo.length);
 	channelId = new ChannelId(subInfo[0]);
 	spareCapacityId = new SpareCapacityId(subInfo[subInfo.length-1]);
 

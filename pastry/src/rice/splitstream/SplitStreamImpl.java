@@ -135,7 +135,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     */
    public Channel attachChannel(ChannelId channelId){
      Channel channel = (Channel) channels.get(channelId);
-     //System.out.println("Attempting to attach to Channel " + channelId);
+     System.out.println("Attempting to attach to Channel " + channelId);
      if(channel == null){
 
      	channel = new Channel(channelId, scribe, credentials, bandwidthManager, this);
@@ -236,6 +236,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 	   Channel channel = (Channel)channels.get(channelId);
 	   
 	   if(channel == null){
+               System.out.println("Channel is NULL , Adding");
 	       channel = new Channel(channelId, stripeId, spareCapacityId, scribe, bandwidthManager, this);
 	       channels.put(channelId, channel);
 	   }
@@ -247,23 +248,30 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 	    * handling, like sending ControlPropogatePathMessage or Drop message if necessary.
 	    */
 	   if(!((NodeId)channelId).equals(topicId)){
-	       //System.out.println("SPLITSTREAM :: Subscription is for stripe"+topicId+" at "+channel.getNodeId()+ " from "+child.getNodeId());
 	       Vector subscribedStripes = channel.getSubscribedStripes();
 	       if(!channel.stripeAlreadySubscribed((StripeId)topicId)){
+                   System.out.println(channel);
 		   Stripe stripe = channel.getStripe((StripeId)topicId);
 		   if(wasAdded){
-		       //System.out.println("SPLITSTREAM :: Used bw "+bandwidthManager.getUsedBandwidth(channel)+" max bw "+bandwidthManager.getMaxBandwidth(channel));
 		       if(bandwidthManager.canTakeChild(channel)){
 			   //System.out.println("SPLITSTREAM :: Subscriber can take child"+child.getNodeId()+" at "+channel.getNodeId());
 			   channel.stripeSubscriberAdded();
 			   Credentials credentials = new PermissiveCredentials();
-			   Vector child_root_path = (Vector)stripe.getRootPath().clone();
-			   child_root_path.add( ((Scribe)scribe).getLocalHandle() );
-			   this.routeMsgDirect( child, new ControlPropogatePathMessage( this.getAddress(),
+                           if(stripe == null){
+                              System.out.println("Stripe is NULL");
+                           }
+                           else{
+                              if(stripe.getRootPath() == null){
+                                 System.out.println("Get Root Path is NULL");
+                               }
+			       Vector child_root_path = (Vector)stripe.getRootPath().clone();
+			       child_root_path.add( ((Scribe)scribe).getLocalHandle() );
+			      this.routeMsgDirect( child, new ControlPropogatePathMessage( this.getAddress(),
 	   this.getNodeHandle(),
            topicId,
 	   credentials, child_root_path, channel.getChannelId() ),
 			   credentials, null );
+                           }
 		       }
 		       else{
 			   /* THIS IS WHERE THE DROP SHOULD OCCUR */
@@ -400,9 +408,15 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
          * Api freeze I don't want to change the class inheritance hierachy
          */
        if( (msg instanceof ControlAttachMessage) ){
+           System.out.println("Got Attach Message at Node " + getNodeId());
 	   ChannelId channelId = ((ControlAttachMessage) msg).getChannelId();
            Channel channel = (Channel) channels.get(channelId);
-           channel.messageForChannel(msg);
+	   if(channel == null){
+ 	     System.out.println("Channel is Null");
+	   }
+           else{
+             channel.messageForChannel(msg);
+           }
        }
        else if (msg instanceof ControlFindParentResponseMessage){
 	   ChannelId channelId = ((ControlFindParentResponseMessage) msg).getChannelId();
@@ -430,6 +444,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
            channel.messageForChannel(msg);
        }
        else if(msg instanceof ControlAttachResponseMessage){
+           System.out.println("Got an Attach Response");
 	   ChannelId channelId = ((ControlAttachResponseMessage) msg).getChannelId();
            Channel channel = (Channel) channels.get(channelId);
            channel.messageForChannel(msg);
@@ -460,7 +475,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
          ChannelId channelId = ((ControlAttachMessage) msg).getChannelId();
          Channel channel = (Channel) channels.get(channelId);
           
-         if(channel == null)
+         if(channel == null || channel.getSpareCapacityId() == null)
             return true; 
          else
             return channel.enrouteChannel(msg);
