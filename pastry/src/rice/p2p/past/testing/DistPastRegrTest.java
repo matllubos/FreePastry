@@ -41,6 +41,7 @@ import rice.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.testing.*;
 import rice.p2p.past.*;
+import rice.p2p.past.messaging.*;
 
 import rice.rm.*;
 
@@ -91,7 +92,7 @@ public class DistPastRegrTest extends DistCommonAPITest {
    */
   protected void processNode(int num, Node node) {
     storages[num] = new StorageManager(FACTORY,
-                                      new MemoryStorage(FACTORY),
+                                      new PersistentStorage(FACTORY, "root-" + num, ".", 1000000),
                                       new LRUCache(new MemoryStorage(FACTORY), 100000));
     pasts[num] = new PastImpl(node, storages[num], REPLICATION_FACTOR, INSTANCE);
   }
@@ -483,6 +484,8 @@ public class DistPastRegrTest extends DistCommonAPITest {
 
                     stepDone();
                     sectionDone();
+
+                    testCaching();
                   }
                 });
               }
@@ -493,6 +496,69 @@ public class DistPastRegrTest extends DistCommonAPITest {
     });
   }
 
+  /**
+    * Tests the dynamic caching function in Past.
+   */
+  protected void testCaching() {
+    final PastImpl local = pasts[rng.nextInt(NUM_NODES)];
+    final Id id = local.getLocalNodeHandle().getId();
+    final PastContent file1 = new TestPastContent(id);
+    final PastContent file2 = new NonMutableTestPastContent(id);
+
+    sectionStart("Caching Testing");
+
+    // Insert file
+    stepStart("Caching Mutable Object");
+    final LookupMessage lmsg = new LookupMessage(1, id, id, id);
+    lmsg.receiveResult(file1);
+    
+    assertTrue("Message should continue to be routed",
+               local.forward(new TestRouteMessage(id, null, lmsg)));
+
+    stepDone();
+
+    stepStart("Cache Shouldn't Contain Object");
+
+    // check cache
+    local.getStorageManager().getCache().getObject(id, new TestCommand() {
+      public void receive(Object result) throws Exception {
+        assertTrue("Object should be null", result == null);
+
+        stepDone();
+
+        stepStart("Caching Non-Mutable Object");
+        
+        lmsg.receiveResult(file2);
+        assertTrue("Message should continue to be routed",
+                   local.forward(new TestRouteMessage(id, null, lmsg)));
+
+        stepDone();
+
+        stepStart("Cache Should Contain Object");
+
+        // check cache
+        local.getStorageManager().getCache().getObject(id, new TestCommand() {
+          public void receive(Object result) throws Exception {
+            assertTrue("Object should not be null", result != null);
+            assertTrue("Object should be correct", result.equals(file2));
+
+            stepDone();
+
+            // check lookup
+            LookupMessage lmsg = new LookupMessage(-1, id, id, id);
+
+            stepStart("Lookup Satisfied By Cache");
+            assertTrue("Message should not continue to be routed",
+                       ! local.forward(new TestRouteMessage(id, null, lmsg)));
+            stepDone();
+            
+            sectionDone();
+          }
+        });
+      }
+    });
+  }
+        
   private void runReplicaMaintence() {
     for (int i=0; i<NUM_NODES; i++) {
       ((RMImpl) pasts[i].getReplicaManager()).periodicMaintenance();
@@ -606,7 +672,6 @@ public class DistPastRegrTest extends DistCommonAPITest {
       return "VersionedTestPastContent(" + id + ", " + version + ")";
     }
   }
-    
   
   protected static class NonOverwritingTestPastContent extends VersionedTestPastContent {
 
@@ -619,6 +684,16 @@ public class DistPastRegrTest extends DistCommonAPITest {
     }
   }
 
+  protected static class NonMutableTestPastContent extends TestPastContent {
+
+    public NonMutableTestPastContent(Id id) {
+      super(id);
+    }
+
+    public boolean isMutable() {
+      return false;
+    }
+  }
 
   /**
     * Utility class for past content object handles
@@ -642,5 +717,46 @@ public class DistPastRegrTest extends DistCommonAPITest {
       return handle;
     }
   }
-  
+
+  /**
+   * Utility class which simulates a route message
+   */
+  protected static class TestRouteMessage implements RouteMessage {
+
+    private Id id;
+
+    private NodeHandle nextHop;
+
+    private Message message;
+    
+    public TestRouteMessage(Id id, NodeHandle nextHop, Message message) {
+      this.id = id;
+      this.nextHop = nextHop;
+      this.message = message;
+    }
+    
+    public Id getDestinationId() {
+      return id;
+    }
+
+    public NodeHandle getNextHopHandle() {
+      return nextHop;
+    }
+
+    public Message getMessage() {
+      return message;
+    }
+
+    public void setDestinationId(Id id) {
+      this.id = id;
+    }
+
+    public void setNextHopHandle(NodeHandle nextHop) {
+      this.nextHop = nextHop;
+    }
+
+    public void setMessage(Message message) {
+      this.message = message;
+    }
+  }
 }

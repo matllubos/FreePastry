@@ -187,12 +187,14 @@ public class PostFolder implements MailFolder {
 
    // return "monkey";
     
-    List all = getMessages(MsgFilter.ALL);
+ /*   List all = getMessages(MsgFilter.ALL);
     
     if (all.size() > 0) {
       return "" + ((PostMessage) all.get(all.size()-1)).getUID();
     } else {
       return "0";
-    }
+    } */
+
+    return Integer.MAX_VALUE + "";
   }
 }

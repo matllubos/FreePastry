@@ -64,6 +64,14 @@ public interface Catalog {
 
   /**
    * Returns whether or not an object is present in the location <code>id</code>.
+   *
+   * @param id The id of the object in question.
+   * @return Whether or not an object is present at id.
+   */
+  public boolean exists(Id id);
+
+  /**
+   * Returns whether or not an object is present in the location <code>id</code>.
    * The result is returned via the receiveResult method on the provided
    * Continuation with an Boolean represnting the result.
    *

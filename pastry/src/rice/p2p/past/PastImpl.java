@@ -187,9 +187,7 @@ public class PastImpl implements Past, Application, RMClient {
 
     if (command != null) {
       message.returnResponse(command);
-    } else {
-      System.out.println("ERROR - Found message " + message.getUID() + " with not pending Continuation.");
-    }
+    } 
   }
 
   /**
@@ -200,6 +198,7 @@ public class PastImpl implements Past, Application, RMClient {
    */
   private void cache(Id id, final PastContent content) {
     if ((content != null) && (! content.isMutable())) {
+      
       storage.cache(id, content, new Continuation() {
         public void receiveResult(Object o) {
           if (! (o.equals(new Boolean(true)))) {
@@ -418,10 +417,12 @@ public class PastImpl implements Past, Application, RMClient {
 
       // if it is a request, look in the cache
       if (! lmsg.isResponse()) {
-        if (storage.getCache().scan(factory.buildIdRange(id, id)).numElements() > 0) {
+        if (storage.getCache().exists(id)) {
           storage.getCache().getObject(id, getResponseContinuation(lmsg));
           return false;
         }
+      } else {
+        cache(id, content);
       }
 
       return true;

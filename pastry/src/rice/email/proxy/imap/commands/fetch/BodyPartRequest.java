@@ -57,7 +57,7 @@ public class BodyPartRequest
           
             for (Iterator i = getPartIterator(); i.hasNext();)
             {
-                result.append(i.next());
+                result.append("\"" + i.next() + "\"");
                 if (i.hasNext())
                     result.append(' ');
             }

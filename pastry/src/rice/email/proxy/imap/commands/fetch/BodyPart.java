@@ -42,11 +42,13 @@ public class BodyPart
               String[] headers = msg.getMessage().getHeader(next);
 
               for (int j=0; j<headers.length; j++) {
-                data += toSentenceCase(next) + ": " + headers[j] + "\r\n";
+                data += toSentenceCase(next) + ": " + headers[j] + "\n";
               }
             }
 
-            getConn().print("{" + data.length() + "}\r\n" + data);
+            data += "\n";
+
+            getConn().print("{" + data.length() + "}\n" + data);
           } else if (req.getType().equals("HEADER.FIELDS")) {
             fetchHeaders(msg, req);
           } else {

@@ -131,6 +131,10 @@ public class MemoryStorage implements Storage {
     }
   }
 
+  public boolean exists(Id id) {
+    return storage.containsKey(id);
+  }
+
   public void exists(Id id, Continuation c) {
     c.receiveResult(new Boolean(storage.containsKey(id)));
   }

@@ -195,6 +195,18 @@ public class PersistentStorage implements Storage {
       c.receiveResult(new Boolean(true));
   }
 
+
+  /**
+   * Returns whether or not an object is present in the location <code>id</code>.
+   *
+   * @param id The id of the object in question.
+   * @return Whether or not an object is present at id.
+   */
+  public boolean exists(Id id) {
+    return idSet.isMemberId(id);
+  }
+  
+
   /**
    * Returns whether or not an object is present in the location <code>id</code>.
    * The result is returned via the receiveResult method on the provided
@@ -379,7 +391,8 @@ public class PersistentStorage implements Storage {
             System.out.println("Caught File Exception");
           }
           catch(Exception e){
-            System.out.println("Caught OTHER EXCEPTION");
+            System.out.println("Caught OTHER EXCEPTION " + e);
+            e.printStackTrace();
           }
        }
        else if(files[i].isDirectory()){

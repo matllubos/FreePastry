@@ -101,6 +101,16 @@ public class StorageManager implements Cache, Storage {
   public Cache getCache() {
     return cache;
   }
+  
+  /**
+   * Returns whether or not an object is present in the location <code>id</code>.
+   *
+   * @param id The id of the object in question.
+   * @return Whether or not an object is present at id.
+   */
+  public boolean exists(Id id) {
+    return (cache.exists(id) || storage.exists(id));
+  }
 
   /**
    * Returns whether or not an object is present in the location <code>id</code>.
