@@ -48,6 +48,8 @@ import java.util.*;
  */
 public class MultiringNodeHandle extends NodeHandle implements Observer  {
   
+  static final long serialVersionUID = -2972303779251779984L;
+
   /**
    * The internal handle
    */
@@ -147,6 +149,17 @@ public class MultiringNodeHandle extends NodeHandle implements Observer  {
    */
   public int hashCode() {
     return (handle.hashCode() + ringId.hashCode());
+  }
+  
+  /**
+   * ReadObject overridden in order to maintain observer.
+   *
+   * @param ois The InputStream
+   */
+  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    ois.defaultReadObject();
+    
+    handle.addObserver(this);
   }
 }
 

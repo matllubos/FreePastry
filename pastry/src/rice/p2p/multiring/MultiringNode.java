@@ -96,7 +96,7 @@ public class MultiringNode implements Node, ScribeClient {
    * @param node The node which this multiring node is wrapping
    * @param ringId The Id of this node's ring
    */
-  public MultiringNode(Node node, Id ringId) {
+  public MultiringNode(Id ringId, Node node) {
     this.node = node;
     this.ringId = ringId;
     this.endpoints = new Hashtable();
@@ -112,8 +112,8 @@ public class MultiringNode implements Node, ScribeClient {
    * @param ringId The Id of this node's ring
    * @param existing An existing node which this node should pair with
    */
-  public MultiringNode(Node node, Id ringId, MultiringNode existing) {
-    this(node, ringId);
+  public MultiringNode(Id ringId, Node node, MultiringNode existing) {
+    this(ringId, node);
     this.collection = existing.getCollection();
     
     this.collection.addNode(this);
@@ -130,7 +130,7 @@ public class MultiringNode implements Node, ScribeClient {
    * for message sending/receiving.
    */
   public Endpoint registerApplication(Application application, String instance) {
-    Endpoint endpoint = new MultiringEndpoint(this, node.registerApplication(new MultiringApplication(getRingId(), application), instance), application);
+    Endpoint endpoint = new MultiringEndpoint(this, node.registerApplication(new MultiringApplication(getRingId(), application), application.getClass() + "-" + instance), application);
     endpoints.put(application.getClass().getName(), endpoint);
     
     return endpoint;
@@ -187,7 +187,7 @@ public class MultiringNode implements Node, ScribeClient {
    * @return A factory for creating Ids.
    */
   public IdFactory getIdFactory() {
-    return new MultiringIdFactory(this, node.getIdFactory());
+    return new MultiringIdFactory(ringId, node.getIdFactory());
   }
   
   /**

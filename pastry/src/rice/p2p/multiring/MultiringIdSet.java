@@ -120,7 +120,10 @@ public class MultiringIdSet implements IdSet {
    * @return the subset
    */
   public IdSet subSet(IdRange range) {
-    return new MultiringIdSet(ringId, set.subSet(((MultiringIdRange) range).getRange()));
+    if (range == null)
+      return this;
+    else
+      return new MultiringIdSet(ringId, set.subSet(((MultiringIdRange) range).getRange()));
   }
   
   /**

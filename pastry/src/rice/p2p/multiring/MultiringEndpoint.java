@@ -102,13 +102,16 @@ public class MultiringEndpoint implements Endpoint {
     if ((hint != null) && (hint instanceof MultiringNodeHandle))
       hint = ((MultiringNodeHandle) hint).getHandle();
           
-    if (id instanceof RingId) {
+    if (id == null) {
+      endpoint.route(null, message, hint);
+    } else if (id instanceof RingId) {
       if (((RingId) id).getRingId().equals(node.getRingId()))
         endpoint.route(((RingId) id).getId(), message, hint);
       else
         node.getCollection().route((RingId) id, message, application.getClass().getName());
     } else {
       System.out.println(getId() + ": WARNING - Application attempting to route without a RingId - could be bad - " + id + " " + message + " " + hint);
+      (new Exception()).printStackTrace();
       endpoint.route(id, message, hint);
     }
   }
@@ -167,7 +170,12 @@ public class MultiringEndpoint implements Endpoint {
     if (lkey != null)
       lkey = ((RingId) lkey).getId();
     
-    return new MultiringIdRange(node.getRingId(), endpoint.range(handle, rank, lkey));
+    IdRange result = endpoint.range(((MultiringNodeHandle) handle).getHandle(), rank, lkey);
+    
+    if (result != null)
+      return new MultiringIdRange(node.getRingId(), result);
+    else
+      return null;
   }
   
   /**
@@ -190,7 +198,12 @@ public class MultiringEndpoint implements Endpoint {
     if (lkey != null)
       lkey = ((RingId) lkey).getId();
     
-    return new MultiringIdRange(node.getRingId(), endpoint.range(handle, rank, lkey, cumulative));
+    IdRange result = endpoint.range(((MultiringNodeHandle) handle).getHandle(), rank, lkey, cumulative);
+    
+    if (result != null)
+      return new MultiringIdRange(node.getRingId(), result);
+    else
+      return null;
   }
   
   /**

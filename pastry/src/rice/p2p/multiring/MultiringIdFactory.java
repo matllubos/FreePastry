@@ -53,7 +53,7 @@ public class MultiringIdFactory implements IdFactory {
   /**
    * The multiring node supporting this endpoint
    */
-  protected MultiringNode node;
+  protected Id ringId;
   
   /**
    * The underlying IdFactory
@@ -65,8 +65,8 @@ public class MultiringIdFactory implements IdFactory {
    *
    * @param factory the underlying factory to use
    */
-  protected MultiringIdFactory(MultiringNode node, IdFactory factory) {
-    this.node = node;
+  public MultiringIdFactory(Id ringId, IdFactory factory) {
+    this.ringId = ringId;
     this.factory = factory;
   }
   
@@ -77,7 +77,7 @@ public class MultiringIdFactory implements IdFactory {
    * @return The Id represetning the local ring
    */
   protected Id getRingId() {
-    return node.getRingId();
+    return ringId;
   }
   
   /**
@@ -129,6 +129,23 @@ public class MultiringIdFactory implements IdFactory {
    */
   public Id buildId(String string) {
     return new RingId(getRingId(), factory.buildId(string));
+  }
+  
+  /**
+   * Builds an Id by converting the given toString() output back to an Id.  Should
+   * not normall be used.
+   *
+   * @param string The toString() representation of an Id
+   * @return The built Id.
+   */
+  public Id buildIdFromToString(String string) {
+    string = string.substring(1);
+    Id ring = factory.buildIdFromToString(string.substring(0, string.indexOf(",")));
+
+    string = string.substring(string.indexOf(", ")+2);
+    Id normal = factory.buildIdFromToString(string.substring(0, string.length()-1));
+    
+    return new RingId(ring, normal);
   }
   
   /**

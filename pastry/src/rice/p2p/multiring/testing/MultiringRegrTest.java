@@ -280,9 +280,9 @@ public class MultiringRegrTest {
    */
   protected MultiringNode createNode(Id ringId, MultiringNode bootstrap) {
     if (bootstrap == null) {
-      return new MultiringNode(factory.newNode(null), ringId);
+      return new MultiringNode(ringId, factory.newNode(null));
     } else {
-      return new MultiringNode(factory.newNode(getBootstrap(bootstrap.getNode())), ringId);
+      return new MultiringNode(ringId, factory.newNode(getBootstrap(bootstrap.getNode())));
     }
   }
   
@@ -298,9 +298,9 @@ public class MultiringRegrTest {
       throw new IllegalArgumentException("EXISTING WAS NULL! " + ringId + " " + bootstrap);
     
     if (bootstrap == null) {
-      return new MultiringNode(factory.newNode(null, (NodeId) existing.getNodeId()), ringId, existing);
+      return new MultiringNode(ringId, factory.newNode(null, (NodeId) existing.getNodeId()), existing);
     } else {
-      return new MultiringNode(factory.newNode(getBootstrap(bootstrap.getNode()), (NodeId) existing.getNodeId()), ringId, existing);
+      return new MultiringNode(ringId, factory.newNode(getBootstrap(bootstrap.getNode()), (NodeId) existing.getNodeId()), existing);
     }
   }
 
