@@ -236,7 +236,7 @@ public class EuclideanNetwork implements NetworkSimulator
 	    itRecord = (NodeRecord)it.next();
 	    itHandle = itRecord.handle;
 	    itId = itHandle.getNodeId();
-	    if( !itHandle.getLocalNode().isReady() || nid == itId )
+	    if( !itHandle.isAlive() || !itHandle.getLocalNode().isReady() || nid == itId )
 		continue;
 	    if( proximity(nid,itId) < bestProx ){
 		bestProx = proximity(nid,itId);
