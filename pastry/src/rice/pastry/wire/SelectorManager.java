@@ -175,6 +175,7 @@ public class SelectorManager {
       selector.close();
     } catch (Throwable e) {
       System.out.println("ERROR (run): " + e);
+      e.printStackTrace();
     }
   }
 
