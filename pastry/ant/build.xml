@@ -40,7 +40,8 @@
     <javac srcdir="${src_dir}" 
            destdir="${build_dir}"
            classpath="${classpath_text}" 
-           excludes="${exclude_files_text}" />
+           excludes="${exclude_files_text}" 
+           deprecation="yes" />
   </target> 
   
   <target name="insertheader">  
