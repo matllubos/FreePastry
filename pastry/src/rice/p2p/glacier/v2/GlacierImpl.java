@@ -35,31 +35,31 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   protected int nextUID;
   protected CancellableTask timer;  
 
-  private final int loglevel = 3;
+  private int loglevel = 2;
 
   private final long SECONDS = 1000;
   private final long MINUTES = 60 * SECONDS;
   private final long HOURS = 60 * MINUTES;
+  private final long DAYS = 24 * HOURS;
+  private final long WEEKS = 7 * DAYS;
 
   private final long insertTimeout = 30 * SECONDS;
   private final double minFragmentsAfterInsert = 3.0;
 
   private final long refreshTimeout = 30 * SECONDS;
 
-  private final long expireNeighborsDelayAfterJoin = 5 * SECONDS;
-  private final long expireNeighborsInterval = 30 * SECONDS;
-  private final long neighborTimeout = 60 * SECONDS;
+  private final long expireNeighborsDelayAfterJoin = 30 * SECONDS;
+  private final long expireNeighborsInterval = 5 * MINUTES;
+  private final long neighborTimeout = 5 * DAYS;
   
-  private final long syncDelayAfterJoin = 15 * SECONDS;
-  private final long syncInterval = 30 * SECONDS;
-  private final long syncMinRemainingLifetime = 60 * SECONDS;
+  private final long syncDelayAfterJoin = 30 * SECONDS;
+  private final long syncInterval = 1 * HOURS;
+  private final long syncMinRemainingLifetime = 5 * MINUTES;
   private final long syncMinQuietTime = insertTimeout;
   private final int syncBloomFilterNumHashes = 3;
   private final int syncBloomFilterBitsPerKey = 4;
   private final int syncPartnersPerTrial = 1;
   private final int syncMaxFragments = 100;
-
-  private final int manifestAggregationFactor = 5;
   
   private final int fragmentRequestMaxAttempts = 3;
   private final long fragmentRequestTimeout = 30 * SECONDS;
@@ -67,6 +67,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private final long manifestRequestTimeout = 30 * SECONDS;
   private final long manifestRequestInitialBurst = 3;
   private final long manifestRequestRetryBurst = 5;
+  private final int manifestAggregationFactor = 5;
 
   private final long overallRestoreTimeout = 3 * MINUTES;
   
@@ -74,10 +75,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private final long handoffInterval = 60 * SECONDS;
   private final int handoffMaxFragments = 100;
 
-  private final long garbageCollectionInterval = 3 * MINUTES;
+  private final long garbageCollectionInterval = 10 * MINUTES;
   private final int garbageCollectionMaxFragmentsPerRun = 100;
 
-  private final long localScanInterval = 60 * SECONDS;
+  private final long localScanInterval = 10 * MINUTES;
   private final int localScanMaxFragmentsPerRun = 20;
 
   private final double restoreMaxRequestFactor = 4.0;
@@ -441,7 +442,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             handoffs.add(fkey);
 
             if (handoffs.size() >= handoffMaxFragments) {
-              log(2, "Limit of "+handoffMaxFragments+" reached for handoff");
+              log(3, "Limit of "+handoffMaxFragments+" reached for handoff");
               break;
             }
             
@@ -692,7 +693,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       }
       public void timeoutExpired() {
         if (pendingTraffic.isEmpty()) {
-          log(2, "Traffic shaper: Idle");
+          log(3, "Traffic shaper: Idle");
           nextTimeout += rateLimitedCheckInterval;
           return;
         }
@@ -1062,6 +1063,11 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       }
       
       return result + numObjects + " object(s) created\n";
+    }
+
+    if ((cmd.length() >= 12) && cmd.substring(0, 12).equals("set loglevel")) {
+      loglevel = Integer.parseInt(cmd.substring(13));
+      return "Log level set to "+loglevel;
     }
 
     if ((cmd.length() >= 6) && cmd.substring(0, 6).equals("delete")) {
