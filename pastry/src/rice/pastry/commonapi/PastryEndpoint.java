@@ -37,17 +37,25 @@ if advised of the possibility of such damage.
 package rice.pastry.commonapi;
 
 import java.security.InvalidParameterException;
-import java.util.TimerTask;
 
 import rice.p2p.commonapi.*;
-
+import rice.p2p.commonapi.Application;
+import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.IdRange;
+import rice.p2p.commonapi.Message;
+import rice.p2p.commonapi.NodeHandle;
+import rice.p2p.commonapi.NodeHandleSet;
+import rice.p2p.commonapi.RouteMessage;
 import rice.pastry.Log;
 import rice.pastry.NodeId;
 import rice.pastry.PastryNode;
-import rice.pastry.leafset.LeafSet;
 import rice.pastry.client.PastryAppl;
-import rice.pastry.security.*;
+import rice.pastry.leafset.LeafSet;
 import rice.pastry.routing.SendOptions;
+import rice.pastry.security.Credentials;
+import rice.pastry.security.PermissiveCredentials;
+import rice.selector.TimerTask;
 
 /**
  * This class serves as gluecode, which allows applications written for the common
@@ -135,7 +143,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param message The message to be delivered
    * @param delay The number of milliseconds to wait before delivering the message
    */
-  public TimerTask scheduleMessage(Message message, long delay) {
+  public CancellableTask scheduleMessage(Message message, long delay) {
     PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), message);
     return thePastryNode.scheduleMsg(pm, delay);
   }
@@ -148,7 +156,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param delay The number of milliseconds to wait before delivering the fist message
    * @param delay The number of milliseconds to wait before delivering subsequent messages
    */
-  public TimerTask scheduleMessage(Message message, long delay, long period) {
+  public CancellableTask scheduleMessage(Message message, long delay, long period) {
     PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), message);
     return thePastryNode.scheduleMsg(pm, delay, period);
   }
