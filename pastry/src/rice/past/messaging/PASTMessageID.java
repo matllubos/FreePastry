@@ -44,6 +44,9 @@ package rice.past.messaging;
  *
  * @version $Id$
  * @author Charles Reis
+ * 
+ * @deprecated This version of PAST has been deprecated - please use the version
+ *   located in the rice.p2p.past package.
  */
 public interface PASTMessageID {
   

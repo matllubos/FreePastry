@@ -52,6 +52,9 @@ import java.io.*;
  *
  * @version $Id$
  * @author Alan Mislove
+ * 
+ * @deprecated This version of PAST has been deprecated - please use the version
+ *   located in the rice.p2p.past package.
  */
 public class MessageFetch extends PASTMessage {
 

@@ -47,6 +47,9 @@ import java.io.Serializable;
  *
  * @version $Id$
  * @author Charles Reis
+ * 
+ * @deprecated This version of PAST has been deprecated - please use the version
+ *   located in the rice.p2p.past package.
  */
 public class PASTMessageIDImpl 
   implements PASTMessageID, Serializable {

@@ -53,6 +53,9 @@ import java.io.*;
  *
  * @version $Id$
  * @author Charles Reis
+ * 
+ * @deprecated This version of PAST has been deprecated - please use the version
+ *   located in the rice.p2p.past package.
  */
 public class MessageReclaim extends PASTMessage {
   
