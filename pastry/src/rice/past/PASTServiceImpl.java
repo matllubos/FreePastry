@@ -395,7 +395,7 @@ public class PASTServiceImpl implements PASTService, Application, RMClient { //,
    *
    * @param id Pastry key of original object
    */
-  private void fetch(final Id id) {
+  private void fetch(final Id id, final Continuation command) {
     Id nodeId = endpoint.getId();
     debug("Request to fetch up file " + id + " at node " + nodeId);
     MessageFetch request = new MessageFetch(nodeId, id);
@@ -403,17 +403,7 @@ public class PASTServiceImpl implements PASTService, Application, RMClient { //,
     // Send the request
     _sendRequestMessage(request, new Continuation() {
       public void receiveResult(final Object result) {
-        storage.store((rice.pastry.Id) id, ((MessageFetch)result).getContent(), new Continuation() {
-          public void receiveResult(Object o) {
-            if (! o.equals(new Boolean(true))) {
-              System.out.println("Storage of object " + result + " failed!");
-            }
-          }
-
-          public void receiveException(Exception e) {
-            System.out.println("ERROR - Exception " + e + " occurred during storage of fetched object " + result);
-          }
-        });
+        storage.store((rice.pastry.Id) id, ((MessageFetch)result).getContent(), command);
       }
 
       public void receiveException(Exception result) {
@@ -437,11 +427,25 @@ public class PASTServiceImpl implements PASTService, Application, RMClient { //,
    * responsible for these keys also
    */
   public void fetch(rice.pastry.IdSet keySet) {
-    Iterator i = keySet.getIterator();
+    final Iterator i = keySet.getIterator();
 
-    while (i.hasNext()) {
-      fetch((Id) i.next());
-    }
+    Continuation c = new Continuation() {
+      public void receiveResult(Object o) {
+        if (! o.equals(new Boolean(true))) {
+          System.out.println("Storage of object failed!");
+        }
+
+        if (i.hasNext()) {
+          fetch((Id) i.next(), this);
+        }
+      }
+
+      public void receiveException(Exception e) {
+        System.out.println("ERROR - Exception " + e + " occurred during storage of fetched object ");
+      }
+    };
+
+    c.receiveResult(new Boolean(true));
   }
 
 
