@@ -25,7 +25,7 @@ public class FileCommandHandler implements DebugCommandHandler {
   public static final String DEFAULT_JAR_FILE = "pastry.jar";
   
 
-	public String handleDebugCommand(String command) {
+  public String handleDebugCommand(String command) {
     
     if (command.startsWith(GET_PROPS_COMMAND)) {
       return handlePropsCmd(command);
@@ -33,12 +33,13 @@ public class FileCommandHandler implements DebugCommandHandler {
     if (command.startsWith(GET_MANIFEST_COMMAND)) {
       return handleManifestCmd(command);
     }
-		return null;
-	}
+    
+    return null;
+  }
 
   protected String handleManifestCmd(String command) {
     String filename = DEFAULT_JAR_FILE;
-    String arg = getArg(command, GET_PROPS_COMMAND.length());
+    String arg = getArg(command, GET_MANIFEST_COMMAND.length());
     if (arg != null) {
       filename = arg;
     }    
@@ -82,8 +83,8 @@ public class FileCommandHandler implements DebugCommandHandler {
       String ret = "";
       String s = br.readLine();
       while (s != null) {
-        ret+=s;
-        s = br.readLine()+"\n";
+        ret+=s+"\n";
+        s = br.readLine();
       } 
       return ret;
     } catch (Throwable t) {
@@ -100,6 +101,7 @@ public class FileCommandHandler implements DebugCommandHandler {
       while (sub.startsWith(" ")) {
         sub = sub.substring(1);
       }
+      
       if (sub.length() >= 1)
         return sub;
     }    
