@@ -1,4 +1,5 @@
 package rice.splitstream;
+import rice.pastry.standard.*;
 import rice.scribe.*;
 import rice.pastry.security.*;
 import rice.pastry.*;
@@ -16,14 +17,14 @@ public class Channel {
 	this.numStripes = numStripes;
  	this.cred = cred;
 	this.scribe = scribe;
-        NodeId topicId = null;
+        NodeId topicId = (new RandomNodeIdFactory()).generateNodeId();
         if(scribe.create(topicId, cred)){
 		isReady = true;
 		this.channelId = (ChannelId) topicId;
         } 		
 	stripes = new Stripe[numStripes];
 	for(int i = 0; i < numStripes; i++){
-		stripes[i] = new Stripe();
+		stripes[i] = new Stripe(this, scribe, cred);
 	}
    }
   /**

@@ -2,6 +2,8 @@ package rice.splitstream;
 import rice.scribe.*;
 import rice.scribe.messaging.*;
 import rice.pastry.*;
+import rice.pastry.standard.*;
+import rice.pastry.security.*;
 import java.io.*; 
 import java.util.Observable;
 /**
@@ -13,7 +15,20 @@ public class Stripe extends Observable implements IScribeApp{
     private Channel channel =  null;
     private InputStream inputStream = null;
     private OutputStream outputStream = null;
+    private Credentials credentials = null;
+    private IScribe scribe = null;
+   
+    public Stripe(Channel channel, IScribe scribe, Credentials credentials){
+      this.scribe = scribe;
+      this.credentials = credentials;
+      this.channel = channel;
 
+      NodeId topicId = (new RandomNodeIdFactory()).generateNodeId();
+      if(scribe.create(topicId, credentials)){
+	stripeState = STRIPE_VALID;
+        this.stripeId = (StripeId) topicId;
+      }
+    }
    /**
     * gets the StripeID for this stripe
     * @return theStripeID 
@@ -37,7 +52,9 @@ public class Stripe extends Observable implements IScribeApp{
      /**
       * Leaves this stripe
       */
-     public void leaveStripe(){}
+     public void leaveStripe(){
+       stripeState = STRIPE_INVALID;
+     }
     /**
     * get the state of the Stripe 
     * @return int s
