@@ -760,10 +760,11 @@ public class ScribeImpl implements Scribe, Application {
 
       log.finer(endpoint.getId() + ": Received publish message with data " + pMessage.getContent() + " for topic " + pMessage.getTopic());
 
-      // if we don't know about this topic, send an unsubscribe message
+      // if we don't know about this topic, or this message did
+      // not come from our parent, send an unsubscribe message
       // otherwise, we deliver the message to all clients and forward the
       // message to all children
-      if (manager != null) {
+      if ((manager != null) && ((manager.getParent() == null) || (manager.getParent().equals(pMessage.getSource())))) {
         pMessage.setSource(handle);
 
         ScribeClient[] clients = manager.getClients();
