@@ -124,8 +124,8 @@ public class ControlFindParentMessage extends Message implements Serializable
              ( originalSource != scribe.getLocalHandle()) )
         {
            scribe.addChild( originalSource, stripe_id );
-           scribe.routeMsgDirect( originalSource,
-                                  new ControlFindParentResponseMessage( scribe.getAddress(),
+           channel.routeMsgDirect( originalSource,
+                                  new ControlFindParentResponseMessage( channel.getAddress(),
                                                                         scribe.getNodeHandle(),
                                                                         channel_id,
                                                                         c,
@@ -143,6 +143,8 @@ public class ControlFindParentMessage extends Message implements Serializable
         else
         {
             Vector v = scribe.getChildren( topic.getTopicId() );
+            System.out.println( "DFSing over topic "+topic.getTopicId() );
+            //System.out.println( "Children of node "+ scribe.getNodeId() + " are " + v );
             if ( v != null )
             {
                 send_to.addAll( 0, scribe.getChildren( topic.getTopicId() ) );
@@ -154,18 +156,21 @@ public class ControlFindParentMessage extends Message implements Serializable
             }
             if ( send_to.size() > 0 )
             {
-                scribe.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
+                System.out.println( "Routing to node "+((NodeHandle)send_to.get(0)).getNodeId() );
+                channel.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
             }
             else
             {
                 if ( !scribe.isRoot( topic.getTopicId() ) )
                 {
-                    scribe.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
+                    System.out.println( "Routing to parent "+((NodeHandle)scribe.getParent( topic.getTopicId() )).getNodeId() );
+                    channel.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
                 }
                 else
                 {
-                    scribe.routeMsgDirect( originalSource,
-                                           new ControlFindParentResponseMessage( scribe.getAddress(),
+                    System.out.println( "You're screwed, we're at the root" );
+                    channel.routeMsgDirect( originalSource,
+                                           new ControlFindParentResponseMessage( channel.getAddress(),
                                                                                  scribe.getNodeHandle(),
                                                                                  channel_id,
                                                                                  c,

@@ -41,7 +41,7 @@ public class ControlDropMessage extends ControlMessage{
    public void handleDeliverMessage( Scribe scribe, Topic topic )
    {
       Credentials c = new PermissiveCredentials();
-      ControlFindParentMessage msg = new ControlFindParentMessage( scribe.getAddress(), 
+      ControlFindParentMessage msg = new ControlFindParentMessage( SplitStreamAddress.instance(), 
                                                                    scribe.getLocalHandle(),
                                                                    spare_id,
                                                                    c,
