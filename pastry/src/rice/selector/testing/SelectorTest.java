@@ -11,7 +11,7 @@ import rice.selector.Timer;
 import rice.selector.TimerTask;
 
 /**
- * @author Jeff Hoye
+ * @author jeffh
  *
  * To change the template for this generated type comment go to
  * Window>Preferences>Java>Code Generation>Code and Comments
