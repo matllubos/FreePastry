@@ -225,16 +225,16 @@ public class RMIPastryNode extends PastryNode
             ((PastryAppl)(it.next())).notifyReady();
     }
 
-    /**
-     * Testing purposes only!
-     */
-    public void KILLNODE() {
-	try {
-	    UnicastRemoteObject.unexportObject(this, true); // force
-	} catch (NoSuchObjectException e) {
-	    System.out.println("Unable to unbind Pastry node from rmiregistry: " + e.toString());
-	}
-    }
+//    /**
+//     * Testing purposes only!
+//     */
+//    public void KILLNODE() {
+//	try {
+//	    UnicastRemoteObject.unexportObject(this, true); // force
+//	} catch (NoSuchObjectException e) {
+//	    System.out.println("Unable to unbind Pastry node from rmiregistry: " + e.toString());
+//	}
+//    }
 
     /**
      * Observer on leafset. Binds node into rmi registry on any leafset
