@@ -1042,7 +1042,7 @@ public class PostProxy {
       String prefix = InetAddress.getLocalHost().getHostName() + "-" + port;
       VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
 
-      GlacierImpl immutableGlacier = new GlacierImpl(
+      final GlacierImpl immutableGlacier = new GlacierImpl(
         node, glacierImmutableStorage, glacierNeighborStorage,
         parameters.getIntParameter("glacier_num_fragments"),
         parameters.getIntParameter("glacier_num_survivors"),
@@ -1061,7 +1061,19 @@ public class PostProxy {
       immutableGlacier.setRateLimit(parameters.getIntParameter("glacier_max_requests_per_second"));
       immutableGlacier.setNeighborTimeout(parameters.getIntParameter("glacier_neighbor_timeout"));
       immutableGlacier.setBandwidthLimit(1024*parameters.getIntParameter("glacier_max_kbytes_per_sec"), 1024*parameters.getIntParameter("glacier_max_kbytes_per_sec")*parameters.getIntParameter("glacier_max_burst_factor"));
+      immutableGlacier.setLogLevel(parameters.getIntParameter("glacier_log_level"));
       immutableGlacier.setTrashcan(glacierTrashStorage);
+
+      final Integer[] done = new Integer[1];
+      SelectorManager.getSelectorManager().invoke(new Runnable() {
+        public void run() {
+          immutableGlacier.startup();
+          done[0] = new Integer(1);
+        }
+      });
+      
+      while (done[0] == null)
+        Thread.sleep(1000);
 
       AggregationImpl immutableAggregation = new AggregationImpl(
         node, 
@@ -1082,6 +1094,7 @@ public class PostProxy {
       immutableAggregation.setConsolidationThreshold(parameters.getIntParameter("aggregation_consolidation_threshold"));
       immutableAggregation.setConsolidationMinObjectsPerAggregate(parameters.getIntParameter("aggregation_min_objects_per_aggregate"));
       immutableAggregation.setConsolidationMinUtilization(parameters.getDoubleParameter("aggregation_min_aggregate_utilization"));
+      immutableAggregation.setLogLevel(parameters.getIntParameter("aggregation_log_level"));
 
       immutablePast = immutableAggregation;
 
@@ -1222,8 +1235,13 @@ public class PostProxy {
       boolean done = false;
       
       while (!done) {
-        ExternalContinuation c = new ExternalContinuation();
-        post.getPostLog(c);
+        final ExternalContinuation c = new ExternalContinuation();
+        SelectorManager.getSelectorManager().invoke(new Runnable() {
+          public void run() {
+            post.getPostLog(c); 
+          }
+        });
+        
         c.sleep();
         
         if (c.exceptionThrown()) { 
