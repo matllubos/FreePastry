@@ -16,6 +16,9 @@ import rice.post.storage.*;
  */
 public abstract class LogEntry implements PostData {
 
+  // the user in whose log this entry appears
+  private PostEntityAddress user;
+  
   // a reference to the previous entry in the log
   private LogEntryReference previousEntryReference;
 
@@ -31,6 +34,20 @@ public abstract class LogEntry implements PostData {
   public LogEntry() {
   }
 
+  /**
+   * Sets the user of this log entry
+   *
+   * @param user The user who created this entry
+   */
+  public void setUser(PostEntityAddress user) {
+    if (this.user == null) {
+      this.user = user;
+    } else {
+      System.out.println("ERROR - Trying to set user on already-set log.");
+      (new Exception()).printStackTrace();
+    }
+  }
+  
   /**
    * Sets the reference to the previous entry in the log
    *

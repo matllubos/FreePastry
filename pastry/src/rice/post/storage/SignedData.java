@@ -29,6 +29,8 @@ class SignedData implements Serializable {
    * The signature used to sign the data.
    */
   private PostSignature signature;
+
+  public transient Object id;
   
   /**
    * Builds a SignedData for a byte array given a timestamp.
@@ -90,5 +92,9 @@ class SignedData implements Serializable {
     return (Arrays.equals(data, signed.getData()) &&
             Arrays.equals(timestamp, signed.getTimestamp()) &&
             signature.equals(signed.getSignature()));
+  }
+
+  public String toString() {
+    return "SignedData[" + id + "]";
   }
 }

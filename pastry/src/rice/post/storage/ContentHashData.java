@@ -19,6 +19,8 @@ class ContentHashData implements Serializable {
    */
   private byte[] data;
 
+  public transient Object id;
+
   /**
    * Builds a ContentHashData from a byte array and the credentials of data
    *
@@ -41,5 +43,9 @@ class ContentHashData implements Serializable {
       return false;
 
     return Arrays.equals(data, ((ContentHashData) o).getData());
+  }
+
+  public String toString() {
+    return "ContentHashData[" + id + "]";
   }
 }

@@ -19,6 +19,8 @@ class SecureData implements Serializable {
    */
   private byte[] data;
 
+  public transient Object id;
+
   /**
     * Builds a SecureData from a byte array and the credentials of data
    *
@@ -41,5 +43,9 @@ class SecureData implements Serializable {
       return false;
 
     return Arrays.equals(data, ((SecureData) o).getData());
+  }
+
+  public String toString() {
+    return "SecureData[" + id + "]";
   }
 }

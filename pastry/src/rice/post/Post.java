@@ -157,10 +157,6 @@ public class Post extends PastryAppl implements IScribeApp  {
     clients = new Vector();
     clientAddresses = new Hashtable();
     bufferedData = new Hashtable();
-    
-    // Try to get the post log
-    this.log = null;
-    retrievePostLog();
   }
 
   /**
@@ -288,11 +284,10 @@ public class Post extends PastryAppl implements IScribeApp  {
   }
 
   /**
-   * @return This user's PostLog, which is the root of all the user's
-   * application logs.
+   * @return The PostLog belonging to the this entity,
    */
-  public PostLog getLog() {
-    return log;
+  public void getPostLog(Continuation command) {
+    getPostLog(getEntityAddress(), command);
   }
   
   /**
@@ -300,17 +295,12 @@ public class Post extends PastryAppl implements IScribeApp  {
    * another user's public key.
    */
   public void getPostLog(PostEntityAddress entity, Continuation command) {
-    RetrievePostLogTask task = new RetrievePostLogTask(entity, command);
-    task.start();
-  }
-
-  /**
-   * Retrieve's this user's PostLog from PAST, or creates and stores a new one
-   * if one does not already exist.
-   */
-  private void retrievePostLog() {
-    RetrieveLocalPostLogTask task = new RetrieveLocalPostLogTask();
-    task.start();
+    if ((entity.equals(getEntityAddress())) && (log != null)) {
+      command.receiveResult(log);
+    } else {
+      RetrievePostLogTask task = new RetrievePostLogTask(entity, command);
+      task.start();
+    }
   }
   
   /**
@@ -756,10 +746,15 @@ public class Post extends PastryAppl implements IScribeApp  {
         PostLog log = (PostLog) o;
 
         if (log == null) {
-          if (rice.pastry.Log.ifp(6))
-            System.out.println("PostLog lookup for user " + address + " failed.");
-          command.receiveResult(null);
-          return;
+          if (address.equals(getEntityAddress())) {
+            Post.this.log = new PostLog(address, publicKey, certificate, Post.this, command);
+            return;
+          } else {
+            if (rice.pastry.Log.ifp(6))
+              System.out.println("PostLog lookup for user " + address + " failed.");
+            command.receiveResult(null);
+            return;
+          }
         }
 
         if ((log.getPublicKey() == null) || (log.getEntityAddress() == null)) {
@@ -777,6 +772,10 @@ public class Post extends PastryAppl implements IScribeApp  {
           storage.verifySigned(log, log.getPublicKey());
 
           log.setPost(Post.this);
+
+          if (address.equals(getEntityAddress())) {
+            Post.this.log = log;
+          }
           
           command.receiveResult(log);
         } else {
@@ -794,78 +793,6 @@ public class Post extends PastryAppl implements IScribeApp  {
      */
     public void receiveException(Exception result) {
       command.receiveException(result);
-    }
-  }
-
-  /**
-    * This class is a task which returns a PostLog to te callee.
-   */
-  protected class RetrieveLocalPostLogTask implements Continuation {
-
-    public static final int STATE_1 = 1;
-    public static final int STATE_2 = 2;
-
-    private int state;
-    
-    /**
-     * Constructs a task which will call the given command once the result
-     * is available.
-     */
-    public RetrieveLocalPostLogTask() {
-    }
-
-    /**
-      * Starts this task running.
-     */
-    public void start() {
-      state = STATE_1;
-      getPostLog(address, this);
-    }
-
-    private void startState1(PostLog logNew) {
-      Post.this.log = logNew;
-
-      if (logNew == null) {
-        state = STATE_2;
-        
-        // None found, so create a new one
-        Post.this.log = new PostLog(address, publicKey, certificate, Post.this, this);
-      }
-    }
-
-    private void startState2(Boolean b) {
-      if (! b.booleanValue()) {
-        System.out.println("Error occured storing log " + b);
-      }
-    }    
-
-    /**
-      * Called when the result of a previous call is ready for
-     * processing.
-     *
-     * @param o The result.
-     */
-    public void receiveResult(Object o) {
-      switch(state) {
-        case STATE_1:
-          startState1((PostLog) o);
-          break;
-        case STATE_2:
-          startState2((Boolean) o);
-          break;
-        default:
-          System.out.println("In unknown State in RetrieveLocalPostLogTask: " + state);
-          break;
-      }
-    }
-
-    /**
-     * Called when a previously requested result causes an exception
-     *
-     * @param result The exception caused
-     */
-    public void receiveException(Exception result) {
-      System.out.println("Exception occured in in RetrieveLocalPostLogTask: " + result);
     }
   }
 

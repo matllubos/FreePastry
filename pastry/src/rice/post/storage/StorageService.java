@@ -295,6 +295,7 @@ public class StorageService {
         key = new SecretKeySpec(hash, "DES");
 
         ContentHashData chd = new ContentHashData(cipherText);
+        chd.id = data;
 
         // Store the content hash data in PAST
         past.insert(location, chd, credentials, this);
@@ -465,6 +466,7 @@ public class StorageService {
         byte[] timestamp = security.getByteArray(System.currentTimeMillis());
 
         SignedData sd = new SignedData(plainText, timestamp);
+        sd.id = data;
 
         sd.setSignature(security.sign(sd.getDataAndTimestamp()));
 
@@ -688,6 +690,7 @@ public class StorageService {
         key = new SecretKeySpec(keyByte, "DES");
 
         SecureData sd = new SecureData(cipherText);
+        sd.id = data;
 
         // Store the content hash data in PAST
         past.insert(location, sd, credentials, this);

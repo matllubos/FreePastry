@@ -91,7 +91,7 @@ public class Log implements PostData {
    * Helper method to sync this log object on the network.
    *
    * Once this method is finished, it will call the command.receiveResult()
-   * method with a Boolean value indicating success, or it may call
+   * method with the current log as the argument, or it may call
    * receiveExcception if an exception occurred.
    *
    * @param command The command to run once done
@@ -127,9 +127,20 @@ public class Log implements PostData {
    * @param log The log to remove
    * @param command The command to run once done
    */
-  public void removeChildLog(Object name, Continuation command) {
+  public void removeChildLog(Object name, final Continuation command) {
     children.remove(name);
-    sync(command);
+
+    Continuation c = new Continuation() {
+      public void receiveResult(Object o) {
+        command.receiveResult(new Boolean(true));
+      }
+
+      public void receiveException(Exception e) {
+        command.receiveException(e);
+      }
+    };
+    
+    sync(c);
   }
 
   /**
@@ -310,11 +321,7 @@ public class Log implements PostData {
           startState1((LogReference) o);
           break;
         case STATE_2:
-          if (((Boolean)o).booleanValue()) {
-            startState2();
-          } else {
-            command.receiveException(new StorageException("Sync of Log Failed on addChildLog:" + o));
-          }
+          startState2();
           break;
         default:
           command.receiveException(new StorageException("Received unexpected state: " + state));
@@ -360,6 +367,7 @@ public class Log implements PostData {
 
     public void start() {
       state = STATE_1;
+      entry.setUser(post.getEntityAddress());
       entry.setPreviousEntryReference(topEntryReference);
       entry.setPreviousEntry(topEntry);
       post.getStorageService().storeContentHash(entry, this);
@@ -384,11 +392,7 @@ public class Log implements PostData {
           startState1((LogEntryReference) o);
           break;
         case STATE_2:
-          if (((Boolean)o).booleanValue()) {
-            startState2();
-          } else {
-            command.receiveException(new StorageException("Sync of Log Failed on addLogEntry:" + o));
-          }
+          startState2();
           break;
         default:
           command.receiveException(new StorageException("Received unexpected state on addLogEntry: " + state));
@@ -430,7 +434,7 @@ public class Log implements PostData {
     }
 
     public void receiveResult(Object o) {
-      command.receiveResult(new Boolean(true));
+      command.receiveResult(Log.this);
     }
 
     /**
@@ -442,7 +446,9 @@ public class Log implements PostData {
       command.receiveException(result);
     }
   }
-  
-  
+
+  public String toString() {
+    return "Log[" + name + "]";
+  }
 }
 

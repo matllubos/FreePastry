@@ -73,5 +73,9 @@ public class PostLog extends Log {
   public PostCertificate getCertificate() {
     return certificate;
   }
+
+  public String toString() {
+    return "PostLog[" + user + "]";
+  }
 }
 
