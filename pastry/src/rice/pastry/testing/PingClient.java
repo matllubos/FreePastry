@@ -34,7 +34,7 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry.standard;
+package rice.pastry.testing;
 
 import rice.pastry.*;
 import rice.pastry.client.*;
@@ -52,7 +52,7 @@ import java.util.*;
  * @author Andrew Ladd
  */
 
-public class PingClient extends PastryClient {
+public class PingClient extends PastryAppl {
     private static class PingAddress implements Address {
 	private int myCode = 0x9219d8ff;
 	
@@ -94,15 +94,17 @@ public class PingClient extends PastryClient {
     public Credentials getCredentials() { return pingCred; }
 
     public void sendPing(NodeId nid) {
-	routeMessage(nid, new PingMessage(getNodeId(), nid), pingCred);
+	// routeMessage, sans the getAddress() in the RouteMessage constructor
+	routeMsg(nid, new PingMessage(getNodeId(), nid), pingCred, new SendOptions());
     }
 
     public void sendTrace(NodeId nid) {
 	System.out.println("sending a trace from " + getNodeId() + " to " + nid);
-	sendEnrouteMessage(nid, new PingMessage(getNodeId(), nid), pingCred);
+	// sendEnrouteMessage
+	routeMsg(nid, new PingMessage(getNodeId(), nid), pingCred, new SendOptions());
     }
 
-    public void messageForClient(Message msg) {
+    public void messageForAppl(Message msg) {
 	System.out.print(msg);
 	System.out.println(" received");
     }
@@ -115,19 +117,19 @@ public class PingClient extends PastryClient {
     }
 
 
-    public void leafSetChange(NodeId nid, boolean wasAdded) {
+    public void leafSetChange(NodeHandle nh, boolean wasAdded) {
 	System.out.println("at... " + getNodeId() + "'s leaf set");
-	System.out.print("node " + nid + " was ");
+	System.out.print("node " + nh.getNodeId() + " was ");
 	if (wasAdded) System.out.println("added");
 	else System.out.println("removed");
     }
 
 
-    public void routeSetChange(NodeId nid, boolean wasAdded) {
+    public void routeSetChange(NodeHandle nh, boolean wasAdded) {
 	System.out.println("at... " + getNodeId() + "'s route set");
-	System.out.print("node " + nid + " was ");
+	System.out.print("node " + nh.getNodeId() + " was ");
 	if (wasAdded) System.out.println("added");
 	else System.out.println("removed");
-	}
+    }
 
 }
