@@ -317,6 +317,7 @@
       </tarfileset>
       <tarfileset dir="ant" includes="**/*" prefix="ant"/>
       <tarfileset dir="license" includes="**/*" prefix="license"/>
+      <tarfileset dir="licensing" includes="**/*" prefix="licensing"/>
       <tarfileset dir="${lib.dir}" prefix="lib">
         <include name="xmlpull*.jar"/> 
         <include name="bouncy*.jar"/> 
@@ -363,6 +364,7 @@
       </zipfileset>
       <zipfileset dir="ant" includes="**/*" prefix="ant" />
       <zipfileset dir="license" includes="**/*" prefix="license" />
+      <zipfileset dir="licensing" includes="**/*" prefix="licensing" />
       <zipfileset dir="${lib.dir}" prefix="lib">
         <include name="xmlpull*.jar"/> 
         <include name="bouncy*.jar"/> 
@@ -371,9 +373,13 @@
       <zipfileset dir="." includes="build.xml"/>
     </zip>
     <tar destfile="FreePastry-${freepastry-version}-docs.tgz" compression="gzip">
+      <tarfileset dir="license" includes="**/*" prefix="license" />
+      <tarfileset dir="licensing" includes="**/*" prefix="licensing" />
       <tarfileset dir="${docs.dir}" prefix="docs" />
     </tar>
     <zip destfile="FreePastry-${freepastry-version}-docs.zip">
+      <zipfileset dir="license" includes="**/*" prefix="license" />
+      <zipfileset dir="licensing" includes="**/*" prefix="licensing" />
       <zipfileset dir="${docs.dir}" prefix="docs" />
     </zip>
     <checksum fileext=".md5sum" todir="." algorithm="MD5">
