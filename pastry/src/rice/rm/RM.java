@@ -63,18 +63,6 @@ public interface RM {
     public boolean register(RMClient app, int replicaFactor);
 
 
-    /**
-     * Called by the application when it needs to replicate an object into k nodes
-     * closest to the object key.
-     *
-     * @param objectKey  the pastry key for the object
-     * @param object the object
-     * @return true if operation successful else false
-     */
-    public boolean replicate( Id objectKey, Object object);
-
-
-
 
     /*
      * Start the periodic maintenance 

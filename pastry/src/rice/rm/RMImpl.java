@@ -104,33 +104,8 @@ public class RMImpl extends CommonAPIAppl implements RM {
     public RMClient m_unreadyApp = null;
 
 
-    public Hashtable m_pendingObjects;
-
-
     public Hashtable m_pendingRanges;
 
-
-    public static class ReplicateEntry{
-	private int numAcks;
-	private Object object;
-	
-	public ReplicateEntry(Object _object){
-	    this.numAcks = 0;
-	    this.object = _object ;
-	}
-	public int getNumAcks(){
-	    return numAcks;
-	}
-
-	public Object getObject() {
-	    return object;
-	}
-
-	public void incNumAcks() {
-	    numAcks ++;
-	    return;
-	}
-    }
 
     private static class RMAddress implements Address {
 	private int myCode = 0x8bed147c;
@@ -207,7 +182,6 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	_credentials = new PermissiveCredentials();
 	_sendOptions = new SendOptions();
 	m_seqno = 0;
-	m_pendingObjects = new Hashtable();
 	m_pendingRanges = new Hashtable();
     }
 
@@ -456,21 +430,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
     
 
-    /**
-     * Called by the application when it needs to replicate an object into
-     * k nodes closest to the object key.
-     *
-     * @param objectKey  the pastry key for the object
-     * @param object the object
-     * @return true if operation successful else false
-     */
-    public boolean replicate(Id objectKey, Object object) {
-	m_pendingObjects.put(objectKey, new ReplicateEntry(object));
-	RMReplicateMsg msg = new RMReplicateMsg(getLocalHandle(),getAddress(),objectKey, getCredentials(), m_seqno ++);
-	route(objectKey, msg, null);
-	return true;
-
-    }
+  
 
 
     public void periodicMaintenance() {
@@ -597,18 +557,6 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	
     }
 
-
-    public RMImpl.ReplicateEntry getPendingObject(Id key) {
-	return (RMImpl.ReplicateEntry)m_pendingObjects.get(key);
-    }
-
-    public void removePendingObject(Id key) {
-	m_pendingObjects.remove(key);
-    }
-
-
-
-  
 
     /**
      * This function determines the nodes to which the local node requests
