@@ -375,17 +375,19 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * If the method works, then nothing should be done and the method should return.  If
    * an error condition is detected, an exception should be thrown.
    */
-  public static InetSocketAddress verifyConnection(int timeout, InetSocketAddress local, InetSocketAddress existing) throws IOException {
-    System.err.println("Verifying connection of local node " + local + " using " + existing);
+  public static InetSocketAddress verifyConnection(int timeout, InetSocketAddress local, InetSocketAddress[] existing) throws IOException {
+    System.err.println("Verifying connection of local node " + local + " using " + existing[0] + " and " + existing.length + " more");
     DatagramSocket socket = null;
     
     try {
       socket = new DatagramSocket(local);
       socket.setSoTimeout(timeout);
-      byte[] buf = PingManager.addHeader(SourceRoute.build(new EpochInetSocketAddress(existing)), new IPAddressRequestMessage(), new EpochInetSocketAddress(local));    
-      DatagramPacket send = new DatagramPacket(buf, buf.length, existing);
       
-      socket.send(send);
+      for (int i=0; i<existing.length; i++) {
+        byte[] buf = PingManager.addHeader(SourceRoute.build(new EpochInetSocketAddress(existing[i])), new IPAddressRequestMessage(), new EpochInetSocketAddress(local));    
+        DatagramPacket send = new DatagramPacket(buf, buf.length, existing[i]);
+        socket.send(send);
+      }
       
       DatagramPacket receive = new DatagramPacket(new byte[10000], 10000);
       socket.receive(receive);
