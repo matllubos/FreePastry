@@ -197,9 +197,6 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    * @return A node with a random ID and next port number.
    */
   public PastryNode newNode(NodeHandle bootstrap) {
-    if (bootstrap == null) {
-      //return newNode(bootstrap,new NodeId(new byte[8]));
-    }
     return newNode(bootstrap, nidFactory.generateNodeId());
   }
 
@@ -212,8 +209,32 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    * @return A node with a random ID and next port number.
    */
   public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId) {
+    return newNode(bootstrap, nodeId, null);
+  }
+  
+  
+  /**
+   * Method which creates a Pastry node from the next port with a randomly
+   * generated NodeId.
+   *
+   * @param bootstrap Node handle to bootstrap from.
+   * @return A node with a random ID and next port number.
+   */
+  public PastryNode newNode(NodeHandle bootstrap, InetSocketAddress proxy) {
+    return newNode(bootstrap, nidFactory.generateNodeId(), proxy);
+  }
+  
+  /**
+   * Method which creates a Pastry node from the next port with a randomly
+   * generated NodeId.
+   *
+   * @param bootstrap Node handle to bootstrap from.
+   * @param nodeId DESCRIBE THE PARAMETER
+   * @return A node with a random ID and next port number.
+   */
+  public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress proxy) {
     final WirePastryNode pn = new WirePastryNode(nodeId);
-
+    
     SelectorManager sManager = new SelectorManager(pn);
 
     DatagramManager dManager = null;
