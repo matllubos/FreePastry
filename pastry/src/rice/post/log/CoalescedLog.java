@@ -204,9 +204,18 @@ public class CoalescedLog extends EncryptedLog {
   protected class PhantomLogEntry extends LogEntry {
     
     /**
-    * Constructor which takes the wrapped entry
+     * Constructor which takes the wrapped entry
      */
     public PhantomLogEntry() {
+    }
+    
+    /**
+     * Returns the reference to the previous entry in the log
+     *
+     * @return A reference to the previous log entry
+     */
+    public LogEntryReference getPreviousEntryReference() {
+      return topEntryReference;
     }
     
     /**

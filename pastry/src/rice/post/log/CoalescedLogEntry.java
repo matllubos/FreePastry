@@ -161,6 +161,18 @@ final class CoalescedLogEntry extends LogEntry {
      */
     public PhantomLogEntry(LogEntry entry) {
       this.entry = entry;
+    } 
+    
+    /**
+     * Returns the reference to the previous entry in the log
+     *
+     * @return A reference to the previous log entry
+     */
+    public LogEntryReference getPreviousEntryReference() {
+      if (entry == entries[0]) 
+        return CoalescedLogEntry.this.getPreviousEntryReference();
+      
+      return null;
     }
     
     /**

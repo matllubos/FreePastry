@@ -81,7 +81,7 @@ public abstract class LogEntry implements PostData {
   }
   
   /**
-    * Returns the reference to the previous entry in the log
+   * Returns the reference to the previous entry in the log
    *
    * @return A reference to the previous log entry
    */

@@ -190,7 +190,7 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
       int start = rng.nextInt(array.length);
       int current = (start + 1) % array.length;
       
-      while (current != start) { 
+      do { 
         GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(array[current]);
         
         if ((metadata != null) && (metadata instanceof DeliveryMetadata) && 
@@ -200,7 +200,7 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
         } else {
           current = (current + 1) % array.length;
         }
-      }
+      } while (current != start);
       
       System.out.println("Could not find any messages for user " + address + " - not tragic, but strange...");
       

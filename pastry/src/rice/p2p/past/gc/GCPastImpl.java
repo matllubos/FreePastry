@@ -327,27 +327,25 @@ public class GCPastImpl extends PastImpl implements GCPast {
               metadata = (GCPastMetadata) storage.getMetadata(id);
               
               if ((metadata != null) && (metadata.getExpiration() < System.currentTimeMillis()) ||
-                  (metadata == null) && (DEFAULT_EXPIRATION < System.currentTimeMillis()))
-                break;
-            }
-              
-            if (i.hasNext()) {
-              collected++;
-              
-              final Id gid = id;
+                  (metadata == null) && (DEFAULT_EXPIRATION < System.currentTimeMillis())) {
+                collected++;
+                final Id gid = id;
                 
-              if (trash != null) {                        
-                storage.getObject(gid, new StandardContinuation(this) {
-                  public void receiveResult(Object o) {
-                    trash.store(gid, storage.getMetadata(gid), (Serializable) o, new StandardContinuation(parent) {
-                      public void receiveResult(Object o) {
-                        storage.unstore(gid, parent);
-                      }
-                    });
-                  }
-                });
-              } else {
-                storage.unstore(gid, this);
+                if (trash != null) {                        
+                  storage.getObject(gid, new StandardContinuation(this) {
+                    public void receiveResult(Object o) {
+                      trash.store(gid, storage.getMetadata(gid), (Serializable) o, new StandardContinuation(parent) {
+                        public void receiveResult(Object o) {
+                          storage.unstore(gid, parent);
+                        }
+                      });
+                    }
+                  });
+                } else {
+                  storage.unstore(gid, this);
+                }
+                
+                return;
               }
             }
           }
