@@ -170,8 +170,10 @@ public class CACertificateGenerator {
         
         String filename = userid + ".epost";
         File dir = new File(".");
+        String hash = "";
         if (web) {
-          dir = new File("certificates/d" + (new SecureRandom()).nextInt(Integer.MAX_VALUE));
+          hash = SecurityUtils.toHex(SecurityUtils.hash((userid + password + ring).getBytes()));
+          dir = new File("/tmp/epost/" + hash);
           
           if (! dir.mkdir()) 
             throw new IOException("Could not create directory " + dir); 
@@ -184,7 +186,7 @@ public class CACertificateGenerator {
         println(web, "[ DONE ]");
   
         if (web) {
-          System.out.println("<a href=\""+webPrefix+dir.getName()+"/"+filename+"\">"+filename+"</a>");
+          System.out.println(hash);
           done = true;
         } else {
           print(web, "Create another key? y/n [No]: ");
