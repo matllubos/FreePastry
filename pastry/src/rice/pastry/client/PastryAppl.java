@@ -234,6 +234,21 @@ public abstract class PastryAppl implements MessageReceiver
     }
 
 
+    /**
+     * Called by the layered Pastry application to check if the local 
+     * pastry node is the one that is currently closest to the object key id.
+     *
+     * @param key 
+     * the object key id 
+     *
+     * @return true if the local node is currently the closest to the key. 
+     */
+    public boolean isClosest(NodeId key) {
+	return thePastryNode.isClosest(key);
+    }
+
+
+
 
     // abstract methods, to be overridden by the derived application object
     

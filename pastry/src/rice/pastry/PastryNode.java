@@ -123,6 +123,26 @@ public abstract class PastryNode implements MessageReceiver
 	synchronized (this) { notifyAll(); }
     }
     
+ 
+    /**
+     * Called by the layered Pastry application to check if the local 
+     * pastry node is the one that is currently closest to the object key id.
+     *
+     * @param key 
+     * the object key id 
+     *
+     * @return true if the local node is currently the closest to the key. 
+     */
+    public final boolean isClosest(NodeId key) {
+	
+	if(leafSet.mostSimilar(key) == 0)
+	    return true;
+	else
+	    return false;
+    }
+
+
+
     public final LeafSet getLeafSet() { return leafSet; }
 
     public final RoutingTable getRoutingTable() { return routeSet; }
