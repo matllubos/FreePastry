@@ -8,9 +8,14 @@ package rice.selector;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.Iterator;
 
 /**
  * @author jeffh
@@ -30,15 +35,17 @@ public class ProfileSelector extends SelectorManager {
   public String lastTaskToString = null;
   public long lastTaskHash = 0;
 
+  int numInvocationsScheduled = 0;
+  int numInvocationsExecuted = 0;
   
 
-	/**
-	 * 
-	 */
-	public ProfileSelector() {
-		super(true);
+  /**
+   * 
+   */
+  public ProfileSelector() {
+    super(true);
     new Thread(new Runnable() {
-			public void run() {
+      public void run() {
         while(true) {
           System.out.println("LastTask: type:"+lastTaskType+" class:"+lastTaskClass+" toString():"+lastTaskToString+" hash:"+lastTaskHash);
           try {
@@ -46,16 +53,19 @@ public class ProfileSelector extends SelectorManager {
           } catch (InterruptedException ie) {
           }
           }
-			}
-		}, "ProfileSelectorWatchdog").start();
+      }
+    }, "ProfileSelectorWatchdog").start();
 
-	}
+  }
 
+//  int numLoops = 0;
   protected void onLoop() {
+//    numLoops++;
+//    if (numLoops % 100 == 0) System.out.println("Selector loops:"+numLoops);
     if (!useHeartbeat) return;  
     long curTime = System.currentTimeMillis();
     if ((curTime - lastHeartBeat) > HEART_BEAT_INTERVAL) {
-      System.out.println("selector heartbeat "+new Date()+" maxInvokes:"+maxInvokes);
+      System.out.println("selector heartbeat "+new Date()+" maxInvokes:"+maxInvokes+" invokesSched:"+numInvocationsScheduled+" invokesExe:"+numInvocationsExecuted+" CurrentThread:"+Thread.currentThread()+"@"+System.identityHashCode(Thread.currentThread()));
       printStats();
       lastHeartBeat = curTime;          
     }
@@ -63,7 +73,14 @@ public class ProfileSelector extends SelectorManager {
 
   int maxInvokes = 0;
   public void invoke(Runnable d) {
-    super.invoke(d);
+    synchronized(this) {
+      numInvocationsScheduled++;
+      super.invoke(d);
+    }
+    //System.out.println("ProfileSelector.invoke("+d.getClass().getName()+"@"+System.identityHashCode(d)+")");
+//    if (!(d instanceof ConnectionManager.SenderInvokee)) {
+//      //Thread.dumpStack();
+//    }
     int numInvokes = invocations.size();
     if (numInvokes > maxInvokes) {
       maxInvokes = numInvokes;
@@ -74,12 +91,12 @@ public class ProfileSelector extends SelectorManager {
   /**
    * Records how long it takes to receive each type of message.
    */
-  public Hashtable stats = new Hashtable();
+  private Hashtable stats = new Hashtable();
   
   public void addStat(String s, long time) {
     if (!recordStats) return;
     Stat st = (Stat)stats.get(s);
-    if (st == null) {
+    if (st == null) { 
       st = new Stat(s);
       stats.put(s,st);
     }
@@ -88,13 +105,34 @@ public class ProfileSelector extends SelectorManager {
 
   public void printStats() {
     if (!recordStats) return;
-    if (stats == null) return;
-    synchronized(stats) {
-      Enumeration e = stats.elements();
-      while(e.hasMoreElements()) {
-        Stat s = (Stat)e.nextElement(); 
-        System.out.println("  "+s);
+
+    ArrayList list = new ArrayList(stats.size());
+    if (stats != null) {
+      synchronized(stats) {
+        Enumeration e = stats.elements();
+        while(e.hasMoreElements()) {
+          Stat s = (Stat)e.nextElement(); 
+          list.add(s);
+//          System.out.println("  "+s);
+        }
       }
+    }
+    
+    Collections.sort(list,new Comparator() {
+      public boolean equals(Object arg0) {
+        return false;
+      }
+
+      public int compare(Object arg0, Object arg1) {
+        Stat stat1 = (Stat)arg0;
+        Stat stat2 = (Stat)arg1;
+        
+        return (int)(stat2.totalTime-stat1.totalTime);
+      }
+    });
+    Iterator i = list.iterator();
+    while(i.hasNext()) {
+      System.out.println("  "+i.next()); 
     }
   }
 
@@ -143,7 +181,12 @@ public class ProfileSelector extends SelectorManager {
           skh.read(keys[i]);
           int time = (int)(System.currentTimeMillis() - startTime);
           lastTaskType = "Read Complete";
-          addStat("reading",time);   
+//          if (skh instanceof PingManager) {
+//            addStat("readingUDP",time);   
+//          } else {
+//            addStat("readingTCP",time);               
+//          }
+          //addStat("reading",time);               
         }
 
         // write
@@ -156,7 +199,12 @@ public class ProfileSelector extends SelectorManager {
           skh.write(keys[i]);
           int time = (int)(System.currentTimeMillis() - startTime);
           lastTaskType = "Write Complete";
-          addStat("writing",time);   
+//          if (skh instanceof PingManager) {
+//            addStat("writingUDP",time);   
+//          } else {
+//            addStat("writingTCP",time);               
+//          }
+//          addStat("writing",time);   
         }
       } else {
         keys[i].channel().close();
@@ -170,7 +218,57 @@ public class ProfileSelector extends SelectorManager {
    * Method which invokes all pending invocations. This method should *only* be
    * called by the selector thread.
    */
-  protected void doInvocations() {
+  protected void doInvocations() {    
+    Iterator i;
+    synchronized(this) {
+      i = new ArrayList(invocations).iterator();
+      invocations.clear();
+    }
+    Runnable run;
+    while (i.hasNext()) {
+      numInvocationsExecuted++;
+      run = (Runnable)i.next();
+      //System.out.println("ProfileSelector.doInvocations()"+run.getClass().getName()+"@"+System.identityHashCode(run));
+      try {
+        lastTaskType = "Invocation";
+        lastTaskClass = run.getClass().getName();
+        lastTaskToString = run.toString();
+        lastTaskHash = System.identityHashCode(run);
+        long startTime = System.currentTimeMillis();
+        run.run();
+        int time = (int)(System.currentTimeMillis() - startTime);
+//        if (run instanceof ConnectionManager.SenderInvokee) {
+//          ConnectionManager.SenderInvokee si = (ConnectionManager.SenderInvokee)run;
+//          addStat("sending "+si.message.getClass().getName(), time);  
+//        } else {
+//          addStat(run.getClass().getName(),time);        
+//        }
+        lastTaskType = "Invocation Complete";
+      } catch (Exception e) {
+        System.err.println("Invoking runnable caused exception " + e + " - continuing");
+        e.printStackTrace();
+      }
+    }
+
+    synchronized(this) {
+      i = new ArrayList(modifyKeys).iterator();
+    }
+    SelectionKey key;
+    while (i.hasNext()) {
+      key = (SelectionKey)i.next();
+      if (key.isValid() && (key.attachment() != null)) {
+        SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
+        lastTaskType = "ModifyKey";
+        lastTaskClass = skh.getClass().getName();
+        lastTaskHash = System.identityHashCode(skh);
+        lastTaskToString = skh.toString();        
+        skh.modifyKey(key);
+        lastTaskType = "ModifyKey Complete";
+      }
+    }
+  }
+
+  protected void doInvocations2() {
     Runnable run = getInvocation();
 
     while (run != null) {
@@ -233,7 +331,7 @@ public class ProfileSelector extends SelectorManager {
     
     public String toString() {
       long avgTime = totalTime/num;
-      return name+"\t numInstances:"+num+"\t totalTime:"+totalTime+"\t maxTime:"+maxTime+"\t avgTime:"+avgTime;
+      return name+"\t maxTime:"+maxTime+"\t avgTime:"+avgTime+"\t numInstances:"+num+"\t totalTime:"+totalTime;
     }
   }
 
