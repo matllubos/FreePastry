@@ -23,7 +23,8 @@ public class PersistentStorage implements Storage {
 
   private static final String logFileName    = "transactions.persist";
   private static final String serialFileName = "serialTable.persist";
-
+  
+  private File serialFile;
   private File rootDirectory;       // root directory to store stuff in
   private File backupDirectory;     // dir for storing persistent objs
   private File psDirectory;         // dir persistent storage stuff is in
@@ -53,6 +54,8 @@ public class PersistentStorage implements Storage {
       System.out.println("Succesfully Initialized Directories");
     else
       System.out.println("ERROR: Failed to Initialized Directories");
+    
+   serialFile = new File(infoDirectory, serialFileName);
 
     persistentObjects = new Hashtable();
   }
@@ -184,7 +187,36 @@ public class PersistentStorage implements Storage {
    * @return The objects
    */
   public void scan(Comparable start, Comparable end, Continuation c) {
-  }
+
+    try {
+      start.compareTo(end);
+      end.compareTo(start);
+    } catch (ClassCastException e) {
+        c.receiveException(new IllegalArgumentException("start and end passed into scan are not co-comparable!"));
+        return;
+    }
+
+    Vector result = new Vector();
+    Iterator i = persistentObjects.keySet().iterator();
+
+    while (i.hasNext()) {
+      try {
+        Comparable thisID = (Comparable) i.next();
+        if ((start.compareTo(thisID) <= 0) &&
+            (end.compareTo(thisID) >= 0))
+          result.addElement(thisID);
+      } catch (ClassCastException e) {
+     }
+    }
+
+    Comparable[] array = new Comparable[result.size()];
+
+    for (int j=0; j<result.size(); j++) {
+      array[j] = (Comparable) result.elementAt(j);
+    }
+
+    c.receiveResult(array);
+   }
 
   /**
    * Returns the total size of the stored data in bytes.The result
@@ -262,8 +294,47 @@ public class PersistentStorage implements Storage {
   }
 
   private void writePersistentTable(){
+     synchronized(persistentObjects){
+       File transactionFile = new File(transDirectory, serialFileName);
+       writeObject( persistentObjects, transactionFile);
+       transactionFile.renameTo(serialFile); //assume Atomic
+     }
 
   }
+  /*****************************************************************/
+  /* Helper functions for Object Output                            */
+  /*****************************************************************/
+
+
+  /**
+   * Abstract over writing a single object to a file using Java
+   * serialization.
+   *
+   * @param obj The object to be writen
+   * @param file The file to serialize the object to.
+   * @return The object's disk space usage
+   */
+   public static long writeObject(Object obj, File file) {
+       if (obj == null || file == null)
+            return 0;
+
+       FileOutputStream fout;
+       ObjectOutputStream objout;
+
+       synchronized (file) {
+          try {
+              fout = new FileOutputStream(file);
+              objout = new ObjectOutputStream(fout);
+              objout.writeObject(obj);
+              fout.close();
+              objout.close();
+          }
+          catch (Exception e) {
+             e.printStackTrace();
+          }
+          return file.length();
+       }
+    }
 
   /*****************************************************************/
   /* Functions for Configuration Management                        */
