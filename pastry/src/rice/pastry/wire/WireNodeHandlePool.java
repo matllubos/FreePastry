@@ -90,7 +90,7 @@ public class WireNodeHandlePool extends DistNodeHandlePool {
 
     InetSocketAddress address = nodehandle.getAddress();
 
-    if (handles.get(address) == null) {
+    if ((handles.get(address) == null) || (handles.get(address) == nodehandle)) {
       handles.put(address, nodehandle);
       nodehandle.setIsInPool(true);
     } else {
