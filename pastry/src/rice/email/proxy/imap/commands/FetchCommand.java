@@ -51,14 +51,11 @@ public class FetchCommand extends AbstractImapCommand {
       ImapState state = getState();
       MailFolder fold = state.getSelectedFolder();
       List msgs = fold.getMessages(_range);
-      StringBuffer result = new StringBuffer();
       for (Iterator i = msgs.iterator(); i.hasNext();) {
         StoredMessage msg = (StoredMessage) i.next();
 
-        result.append(fetchMessage(msg));
+        getConn().print(fetchMessage(msg));
       }
-
-      getConn().print(result.toString());
 
       taggedSimpleSuccess();
     } catch (MailboxException e) {
