@@ -276,7 +276,7 @@ public class LRUCacheTest extends Test {
 
         stepStart("Requesting Scan from 'Monkey' to 9");
         handleBadScan.receiveException(new Exception());
-        //cache.scan(data[11],data[9], handleBadScan);
+        //cache.scan(new IdRange(data[11],data[9]), handleBadScan);
       }
 
       public void receiveException(Exception e) {
@@ -307,7 +307,7 @@ public class LRUCacheTest extends Test {
         stepDone(SUCCESS);
 
         stepStart("Requesting Scan from 8 to 10");
-        cache.scan(data[8], data[10], verify2);
+        cache.scan(new IdRange(data[8], data[10]), verify2);
       }
 
       public void receiveException(Exception e) {
@@ -324,7 +324,7 @@ public class LRUCacheTest extends Test {
         }
 
         stepStart("Requesting Scan from 3 to 6");
-        cache.scan(data[3], data[6], verify);
+        cache.scan(new IdRange(data[3], data[6]), verify);
       }
 
       public void receiveException(Exception e) {
@@ -369,7 +369,7 @@ public class LRUCacheTest extends Test {
         if (NUM_DELETED == -1) {
           stepStart("Checking object deletion");
           NUM_DELETED = ((Integer) o).intValue();
-          cache.scan(data[13 + START_NUM], data[13 + END_NUM], this);
+          cache.scan(new IdRange(data[13 + START_NUM], data[13 + END_NUM]), this);
         } else {
           int length = ((IdSet)o).numElements();
 
