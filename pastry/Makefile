@@ -87,7 +87,7 @@ NODOC_PACKAGES =
 
 JARS = pastry.jar
 
-JARS_LIB       = javamail.jar bouncycastle.jar antlr.jar activation.jar junit.jar
+JARS_LIB       = javamail.jar bouncycastle.jar antlr.jar activation.jar junit.jar xmlpull_1_1_3_4a.jar xpp3-1.1.3.4d_b2.jar
 
 JARS_3RDPARTY = 
 
