@@ -25,6 +25,15 @@ public class SimpleManager implements SmtpManager {
   private EmailService email;
 
   private PostEntityAddress address;
+ 
+  static {
+    String s = System.getProperty("POST_HOST");
+    
+    if ((s != null) && (s.length() > 2)) {
+      System.out.println("Using alternative POST_HOST:"+s);
+      POST_HOST = s;
+    }
+  }
 
   public SimpleManager(EmailService email, boolean gateway, PostEntityAddress address) throws Exception {
     this.email = email;
