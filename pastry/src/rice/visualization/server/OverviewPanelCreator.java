@@ -3,6 +3,7 @@ package rice.visualization.server;
 import rice.visualization.data.*;
 import rice.pastry.*;
 import rice.pastry.dist.*;
+import rice.selector.*;
 
 import java.awt.*;
 import java.io.*;
@@ -18,20 +19,12 @@ public class OverviewPanelCreator implements PanelCreator {
   protected Vector used = new Vector();
   protected Vector total = new Vector();
   
-  public OverviewPanelCreator() {
-    Thread t = new Thread("Overview Panel Monitor Thread") {
+  public OverviewPanelCreator(rice.selector.Timer timer) {
+    timer.scheduleAtFixedRate(new rice.selector.TimerTask() {
       public void run() {
-        while (true) {
-          try {
-            updateData();
-            Thread.currentThread().sleep(UPDATE_TIME);
-          } catch (InterruptedException e) {
-          }
-        }
+        updateData();
       }
-    };
-    
-    t.start();
+    }, UPDATE_TIME, UPDATE_TIME);
   }
   
   public DataPanel createPanel(Object[] objects) {

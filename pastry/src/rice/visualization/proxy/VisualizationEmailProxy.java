@@ -45,18 +45,19 @@ public class VisualizationEmailProxy extends EmailProxy {
       }
       
       server = new VisualizationServer(serverAddress, pastry, immutableStorage, new Object[] {pastry, immutablePast, immutableStorage});
-      server.addPanelCreator(new OverviewPanelCreator());
-      NetworkActivityPanelCreator network = new NetworkActivityPanelCreator();
+      server.addPanelCreator(new OverviewPanelCreator(timer));
+      NetworkActivityPanelCreator network = new NetworkActivityPanelCreator(timer);
       server.addPanelCreator(network);
       MessageDistributionPanelCreator message = new MessageDistributionPanelCreator();
       server.addPanelCreator(message);
       RecentMessagesPanelCreator recent = new RecentMessagesPanelCreator();
       server.addPanelCreator(recent);
       server.addPanelCreator(new PastryPanelCreator());
-      server.addPanelCreator(new PASTPanelCreator());
+      server.addPanelCreator(new PASTPanelCreator(timer, realImmutablePast));
+      server.addPanelCreator(new GCPanelCreator(timer, realImmutablePast));
 
       if (immutablePast instanceof AggregationImpl) {
-        server.addPanelCreator(new AggregationPanelCreator((AggregationImpl) immutablePast)); 
+        server.addPanelCreator(new AggregationPanelCreator(timer, (AggregationImpl) immutablePast)); 
         Past aggregateStore = ((AggregationImpl)immutablePast).getAggregateStore();
         if (aggregateStore instanceof GlacierImpl)
           server.addPanelCreator(new GlacierPanelCreator((GlacierImpl) aggregateStore));

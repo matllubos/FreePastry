@@ -4,6 +4,7 @@ import rice.visualization.data.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
+import rice.selector.*;
 
 import java.awt.*;
 import java.net.*;
@@ -29,20 +30,12 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
   
   protected double receivedTotal = 0;
   
-  public NetworkActivityPanelCreator() {
-    Thread t = new Thread("Network Activity Panel Monitor Thread") {
+  public NetworkActivityPanelCreator(rice.selector.Timer timer) {  
+    timer.scheduleAtFixedRate(new rice.selector.TimerTask() {
       public void run() {
-        while (true) {
-          try {
-            updateData();
-            Thread.currentThread().sleep(UPDATE_TIME);
-          } catch (InterruptedException e) {
-          }
-        }
+        updateData();
       }
-    };
-    
-    t.start();
+    }, UPDATE_TIME, UPDATE_TIME);
   }
   
   public DataPanel createPanel(Object[] objects) {

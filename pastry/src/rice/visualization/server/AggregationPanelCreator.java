@@ -4,6 +4,7 @@ import rice.visualization.data.*;
 import rice.pastry.*;
 import rice.p2p.aggregation.*;
 import rice.persistence.*;
+import rice.selector.*;
 import rice.Continuation.*;
 
 import java.awt.*;
@@ -22,25 +23,17 @@ public class AggregationPanelCreator implements PanelCreator {
   int waitingPtr = 0, aggrObjPtr = 0, seqNo = 0;
   AggregationImpl aggregation;
   
-  public AggregationPanelCreator(AggregationImpl aggregation) {
+  public AggregationPanelCreator(rice.selector.Timer timer, AggregationImpl aggregation) {
     this.aggregation = aggregation;
 
     Arrays.fill(aggregatesHistory, aggregation.getNumAggregates());
     Arrays.fill(objectsHistory, aggregation.getNumObjectsInAggregates());
 
-    Thread t = new Thread("Aggregation Panel Monitor Thread") {
+    timer.scheduleAtFixedRate(new rice.selector.TimerTask() {
       public void run() {
-        while (true) {
-          try {
-            updateData();
-            Thread.currentThread().sleep(UPDATE_TIME);
-          } catch (InterruptedException e) {
-          }
-        }
+        updateData();
       }
-    };
-      
-    t.start();
+    }, UPDATE_TIME, UPDATE_TIME);
   }
   
   public DataPanel createPanel(Object[] objects) {

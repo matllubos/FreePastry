@@ -3,8 +3,10 @@ package rice.visualization.server;
 import rice.visualization.data.*;
 import rice.pastry.*;
 import rice.p2p.past.*;
+import rice.p2p.past.gc.*;
 import rice.persistence.*;
 import rice.Continuation.*;
+import rice.selector.*;
 
 import java.awt.*;
 import java.util.*;
@@ -21,32 +23,24 @@ public class PASTPanelCreator implements PanelCreator {
   Vector times = new Vector();
   
   protected StorageManager manager;
+  protected Past past;
   
-  public PASTPanelCreator() {
-    Thread t = new Thread("PAST Panel Monitor Thread") {
+  public PASTPanelCreator(rice.selector.Timer timer, Past past) {
+    this.past = past;
+    
+    timer.scheduleAtFixedRate(new rice.selector.TimerTask() {
       public void run() {
-        while (true) {
-          try {
-            updateData();
-            Thread.currentThread().sleep(UPDATE_TIME);
-          } catch (InterruptedException e) {
-          }
-        }
+        updateData();
       }
-    };
-      
-    t.start();
+    }, UPDATE_TIME, UPDATE_TIME);
   }
   
   public DataPanel createPanel(Object[] objects) {
     PastryNode node = null;
-    PastImpl past = null;
     
     for (int i=0; i<objects.length; i++) {
       if (objects[i] instanceof PastryNode)
         node = (PastryNode) objects[i];
-      else if (objects[i] instanceof PastImpl)
-        past = (PastImpl) objects[i];
       else if (objects[i] instanceof StorageManager)
         manager = (StorageManager) objects[i];
       
@@ -57,7 +51,7 @@ public class PASTPanelCreator implements PanelCreator {
     return null;
   }
   
-  protected DataPanel createPanel(PastryNode node, PastImpl past, StorageManager manager) {
+  protected DataPanel createPanel(PastryNode node, Past past, StorageManager manager) {
     DataPanel pastPanel = new DataPanel("PAST");
     
     GridBagConstraints pastCons = new GridBagConstraints();
@@ -66,12 +60,24 @@ public class PASTPanelCreator implements PanelCreator {
     pastCons.fill = GridBagConstraints.HORIZONTAL;
     
     KeyValueListView pastView = new KeyValueListView("Overview", 380, 200, pastCons);
-    rice.p2p.commonapi.IdRange prim = past.getEndpoint().range(past.getEndpoint().getLocalNodeHandle(), 0, null, true);
-    rice.p2p.commonapi.IdRange total = past.getEndpoint().range(past.getEndpoint().getLocalNodeHandle(), past.getReplicationFactor(), null, true);
-    pastView.add("Prim. Range", prim.getCCWId() + " -> " + prim.getCWId());
-    pastView.add("Total Range", total.getCCWId() + " -> " + total.getCWId());
-    pastView.add("# Prim. Keys", past.scan(prim).numElements() + "");
-    pastView.add("# Total Keys", past.scan(total).numElements() + "");
+    
+    if (past instanceof PastImpl) {
+      PastImpl pastI = (PastImpl) past;
+      rice.p2p.commonapi.IdRange prim = pastI.getEndpoint().range(pastI.getEndpoint().getLocalNodeHandle(), 0, null, true);
+      rice.p2p.commonapi.IdRange total = pastI.getEndpoint().range(pastI.getEndpoint().getLocalNodeHandle(), pastI.getReplicationFactor(), null, true);
+      pastView.add("Prim. Range", (prim == null ? "All" : prim.getCCWId() + " -> " + prim.getCWId()));
+      pastView.add("Total Range", (total == null ? "All" : total.getCCWId() + " -> " + total.getCWId()));
+      pastView.add("# Prim. Keys", pastI.scan(prim).numElements() + "");
+      pastView.add("# Total Keys", pastI.scan(total).numElements() + "");
+    } else {
+      GCPastImpl pastI = (GCPastImpl) past;
+      rice.p2p.commonapi.IdRange prim = pastI.getEndpoint().range(pastI.getEndpoint().getLocalNodeHandle(), 0, null, true);
+      rice.p2p.commonapi.IdRange total = pastI.getEndpoint().range(pastI.getEndpoint().getLocalNodeHandle(), pastI.getReplicationFactor(), null, true);
+      pastView.add("Prim. Range", (prim == null ? "All" : prim.getCCWId() + " -> " + prim.getCWId()));
+      pastView.add("Total Range", (total == null ? "All" : total.getCCWId() + " -> " + total.getCWId()));
+      pastView.add("# Prim. Keys", pastI.scan(prim).numElements() + "");
+      pastView.add("# Total Keys", pastI.scan(total).numElements() + "");
+    }
     
     pastPanel.addDataView(pastView);
     
@@ -81,7 +87,7 @@ public class PASTPanelCreator implements PanelCreator {
       dataStorageCons.gridy = 0;
       dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
       
-      LineGraphView dataStorageView = new LineGraphView("Data Stored", 380, 200, dataStorageCons, "Time (sec)", "Data (B)", true);
+      LineGraphView dataStorageView = new LineGraphView("Storage Size", 380, 200, dataStorageCons, "Time (sec)", "Data (B)", true);
       dataStorageView.addSeries("Data Stored", getTimeArray(), getDataArray(), Color.blue);
       
       pastPanel.addDataView(dataStorageView);
