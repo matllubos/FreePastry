@@ -40,16 +40,19 @@ public class PastryNetworkTest {
       nodes.add(handle);
       
       System.out.println("Fetching leafset of " + handle);
-      
-      LeafSet ls = factory.getLeafSet(handle);
-      
-      leafsets.put(handle, ls);
-      
-      NodeSet ns = ls.neighborSet(Integer.MAX_VALUE);
-      
-      for (int i=0; i<ns.size(); i++) {
-        if (! nodes.contains(ns.get(i)))
-          unseen.add(ns.get(i));
+
+      try {
+        LeafSet ls = factory.getLeafSet(handle);
+        leafsets.put(handle, ls);
+        
+        NodeSet ns = ls.neighborSet(Integer.MAX_VALUE);
+        
+        for (int i=0; i<ns.size(); i++) {
+          if (! nodes.contains(ns.get(i)))
+            unseen.add(ns.get(i));
+        }
+      } catch (IOException ioe) {
+        ioe.printStackTrace();
       }
     }
     
@@ -88,10 +91,13 @@ public class PastryNetworkTest {
       NodeHandle handle = (NodeHandle) i.next(); 
       
       System.out.println("Fetching route row " + row + " of " + handle);
-      
-      RouteSet[] set = factory.getRouteRow(handle, row);
-      
-      routerows.put(handle, set);      
+      try {
+        RouteSet[] set = factory.getRouteRow(handle, row);
+        
+        routerows.put(handle, set);      
+      } catch (IOException ioe) {
+        ioe.printStackTrace();
+      }
     }
     
     System.out.println("Fetched all route rows - return...");
