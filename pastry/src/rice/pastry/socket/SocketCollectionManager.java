@@ -359,9 +359,10 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         }
       }
     } catch (IOException e) {
-      System.out.println("GOT ERROR " + e + " OPENING SOCKET!");
+      System.out.println("GOT ERROR " + e + " OPENING SOCKET - MARKING " + address + " AS DEAD!");
       e.printStackTrace();
       closeSocket(address);
+      markDead(address);
     }
   }
 
@@ -399,7 +400,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         ((RouteMessage) m).nextHop = null;
         pastryNode.receiveMessage(m);
       } else {
-        debug("Dropping message " + m + " because next hop is dead!");
+        System.out.println("Dropping message " + m + " because next hop is dead!");
       }
     }
   }
@@ -802,12 +803,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           }
         });
 
-      InetSocketAddress fake = new InetSocketAddress(InetAddress.getLocalHost(), BOOTSTRAP_PORT);
-      
       if (bootstrap) {
-        send(fake);
-        
-        System.out.println("BOOTSTRAP: SENDING ADDRESS " + fake);
+        send(new InetSocketAddress(InetAddress.getLocalHost(), BOOTSTRAP_PORT));
       } else {
         send(localAddress);
       }

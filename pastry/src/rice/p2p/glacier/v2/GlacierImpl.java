@@ -35,7 +35,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   protected final IdFactory factory;
   protected final Hashtable continuations;
   protected final Hashtable pendingTraffic;
-  protected final String debugID;l
+  protected final String debugID;
   protected final Random random;
   protected StorageManager trashStorage;
   protected long nextContinuationTimeout;
