@@ -920,8 +920,20 @@ public class PostProxy {
       if (d.exceptionThrown())
         throw d.getException();
       stepDone(SUCCESS);
+      
+      Serializable aggregate = (Serializable) d.getResult();
+      
+      if (immutablePast instanceof Aggregation) {
+        stepStart("Restoring Aggregation Root");
+        ExternalContinuation e = new ExternalContinuation();
+        ((Aggregation) immutablePast).setHandle(aggregate, e);
+        e.sleep();
+        
+        if (e.exceptionThrown())
+          throw e.getException();
+        stepDone(SUCCESS);
+      }
     }
-
     
     stepStart("Starting POST service");
     post = new PostImpl(node, immutablePast, mutablePast, pendingPast, deliveredPast, address, pair, certificate, caPublic, 

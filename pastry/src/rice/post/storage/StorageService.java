@@ -304,13 +304,17 @@ public class StorageService {
               
               Continuation c = new StandardContinuation(parent) {
                 int i = 0;
+                Serializable aggregate = null;
                 
                 public void receiveResult(Object o) {
                   if (i < logs.length) {
+                    if (logs[i] instanceof PostLog)
+                      aggregate = ((PostLog) logs[i]).getAggregateHead();
+                    
                     i++;                    
                     storeSigned(logs[i-1], logs[i-1].getLocation(), System.currentTimeMillis(), GCPast.INFINITY_EXPIRATION, keyPair, mutablePast, this);
                   } else {
-                    parent.receiveResult(Boolean.TRUE);
+                    parent.receiveResult(aggregate);
                   }
                 }
               };
