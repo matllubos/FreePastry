@@ -24,6 +24,7 @@ public class ScribeRegrTest
     private NetworkSimulator m_simulator;
     
     private LinkedList m_scribeNodes;
+    private LinkedList m_scribeApps;
     public TreeMap m_scribeNodesSorted;
     //    private Vector m_rtApps;
 
@@ -42,8 +43,8 @@ public class ScribeRegrTest
 	m_factory = new DirectPastryNodeFactory(m_simulator);
 	
 	m_scribeNodes = new LinkedList();
+	m_scribeApps = new LinkedList();
 	m_scribeNodesSorted = new TreeMap();
-	//	rtApps = new Vector();
 	rng = new Random();
 	m_tracker = new MRTracker();
 	m_topics = new Vector();
@@ -53,9 +54,7 @@ public class ScribeRegrTest
 
 	NodeHandle bootstrap = null;
 	try {
-	    ScribeRegrTestApp otherApp = 
-		(ScribeRegrTestApp)m_scribeNodes.getLast();
-	    PastryNode lastnode = (PastryNode)otherApp.getPastryNode();
+	    PastryNode lastnode = (PastryNode)m_scribeNodes.getLast();
 	    bootstrap = lastnode.getLocalHandle();
 	} catch (NoSuchElementException e) {
 	}
@@ -66,7 +65,8 @@ public class ScribeRegrTest
 
 	ScribeRegrTestApp app = new ScribeRegrTestApp( pnode, cred );
 
-	m_scribeNodes.add(app);
+	m_scribeNodes.add(pnode);
+	m_scribeApps.add(app);
 	m_scribeNodesSorted.put(app.getNodeId(),app);
 	
 	int n = m_scribeNodes.size();
@@ -81,6 +81,8 @@ public class ScribeRegrTest
      * Main entry point for the regression test suite.
      */
     public static void main(String args[]) {
+	Log.init(args);
+
 	ScribeRegrTest st = new ScribeRegrTest();
 	int n, m, t, i;
 
@@ -114,7 +116,7 @@ public class ScribeRegrTest
 	    //nothing to do with the actual scribe api is just stuff that is 
 	    //done to verify correctness.
 	    for( j = 0; j < nodes; j++ ) {
-		app = (ScribeRegrTestApp)m_scribeNodes.get( j );
+		app = (ScribeRegrTestApp)m_scribeApps.get( j );
 		app.putTopic( tid );
 	    }
 	    //now add the topics to the regr test. again just for testing. 
@@ -129,6 +131,8 @@ public class ScribeRegrTest
 	    }
 	}
 
+	while (simulate());
+
 	//start publishing stuff to all the topics, selected at random.
 	for( i = 0; i < topics; i++ ) {
 	    for( j = 0; j < msgs; j++ ) {
@@ -140,10 +144,12 @@ public class ScribeRegrTest
 	    }
 	}
 
+	while (simulate());
+
 	//verifying that what we sent was received (nothing more and nothing 
 	//less) by the correct nodes 
 	for( i = 0; i < nodes; i++ ) {
-	    app = (ScribeRegrTestApp)m_scribeNodes.get( i );
+	    app = (ScribeRegrTestApp)m_scribeApps.get( i );
 	    app.verifyApplication( m_topics, m_tracker );
 	}
 
@@ -168,25 +174,25 @@ public class ScribeRegrTest
 
     //publish a msg from one of the test apps that we are keeping in the suite.
     private void publish( int node, NodeId tid ) {
-	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeNodes.get( node );
+	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeApps.get( node );
 	app.publish( tid );
     }
 
     //subscribe one of the suite apps to topic tid
     private void subscribe( int node, NodeId tid ) {
-	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeNodes.get( node );
+	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeApps.get( node );
 	app.subscribe( tid );
     }
 
     //unsubscribe one of the suite apps to topic tid
     private void unsubscribe( int node, NodeId tid ) {
-	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeNodes.get( node );
+	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeApps.get( node );
 	app.unsubscribe( tid );
     }
 
     //create a topic tid from a given app.
     private void create( int node, NodeId tid ) {
-	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeNodes.get( node );
+	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeApps.get( node );
 	app.create( tid );
     }
 }

@@ -91,10 +91,6 @@ public class ScribeRegrTestApp implements IScribeApp
 	return m_scribe.generateTopicId( topicName );
     }
 
-    public PastryNode getPastryNode() {
-	return (PastryNode)m_scribe.getNodeHandle();
-    }
-
     public NodeId getNodeId() {
 	return m_scribe.getNodeId();
     }
