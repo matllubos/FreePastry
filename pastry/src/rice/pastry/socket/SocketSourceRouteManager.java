@@ -21,8 +21,14 @@ import rice.selector.*;
  */
 public class SocketSourceRouteManager {
   
+  // the minimum amount of time between check dead checks on dead routes
+  public static long CHECK_DEAD_THROTTLE = 1000 * 60 * 10;
+  
+  // the minimum amount of time between pings
+  public static long PING_THROTTLE = 1000 * 60 * 10;
+  
   // the local pastry node
-  private PastryNode spn;
+  private SocketPastryNode spn;
   
   // the list of best routes
   private Hashtable managers;
@@ -44,7 +50,7 @@ public class SocketSourceRouteManager {
    * @param bindAddress The address which the node should bind to
    * @param proxyAddress The address which the node should advertise as it's address
    */
-  protected SocketSourceRouteManager(PastryNode node, SocketNodeHandlePool pool, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
+  protected SocketSourceRouteManager(SocketPastryNode node, SocketNodeHandlePool pool, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
     this.spn = node;
     this.pool = pool;
     this.managers = new Hashtable();
@@ -281,7 +287,8 @@ public class SocketSourceRouteManager {
       SocketNodeHandle handle = (SocketNodeHandle) nodes.get(i);
       
       if ((! handle.isLocal()) && (! handle.getEpochAddress().equals(destination)) &&
-          (getBestRoute(handle.getEpochAddress()) != null)) 
+          (getBestRoute(handle.getEpochAddress()) != null) && 
+          (! getBestRoute(handle.getEpochAddress()).goesThrough(destination))) 
         result.add(getBestRoute(handle.getEpochAddress()).append(destination));
     }
     
@@ -331,34 +338,78 @@ public class SocketSourceRouteManager {
     // the queue of messages waiting for a route
     protected Vector queue;
     
-    // the list of known-dead routes for this manager
-    protected HashSet deadRoutes;
-
-    // the list of currently-checking routes for this manager
-    protected HashSet pendingRoutes;
+    // the list of known route -> managers for this manager
+    protected HashMap routes;
     
     // the current liveness of this address
     protected int liveness;
     
-    // the current best-known proximity of this address
-    protected int proximity;
+    // the last time this address was pinged
+    protected long updated;
     
     /**
-     * Constructor, given an address
+     * Constructor, given an address and whether or not it should attempt to
+     * find the best route
+     *
+     * @param address The address
+     * @param search Whether or not the manager should try and find a route
      */
     public AddressManager(EpochInetSocketAddress address, boolean search) {
       this.address = address;
       this.queue = new Vector();
-      this.pendingRoutes = new HashSet();
-      this.deadRoutes = new HashSet();
+      this.routes = new HashMap();
       this.liveness = SocketNodeHandle.LIVENESS_SUSPECTED;
-      this.proximity = SocketNodeHandle.DEFAULT_PROXIMITY;
+      this.updated = 0L;
       
       if (SocketPastryNode.verbose) System.out.println("ADDRESS MANAGER CREATED AT " + localAddress + " FOR " + address);
       
-      if (search)
-        checkRoute(SourceRoute.build(address));
+      if (search) {
+        getRouteManager(SourceRoute.build(address)).checkLiveness();
+        this.updated = System.currentTimeMillis();
+      }
     }
+    
+    /**
+     * Method which returns the route manager for the given route
+     *
+     * @param route The route
+     * @return THe manager
+     */
+    protected SourceRouteManager getRouteManager(SourceRoute route) {
+      SourceRouteManager result = (SourceRouteManager) routes.get(route);
+      
+      if (result == null) {
+        result = new SourceRouteManager(route);
+        routes.put(route, result);
+      }
+      
+      return result;
+    }
+    
+    /**
+     * Method which returns the last cached proximity value for the given address.
+     * If there is no cached value, then DEFAULT_PROXIMITY is returned.
+     *
+     * @param address The address to return the value for
+     * @return The ping value to the remote address
+     */
+    public int proximity() {
+      if (best == null)
+        return SocketNodeHandle.DEFAULT_PROXIMITY;
+      else
+        return getRouteManager(best).proximity();
+    }  
+    
+    /**
+     * Method which returns the last cached liveness value for the given address.
+     * If there is no cached value, then true is returned.
+     *
+     * @param address The address to return the value for
+     * @return The Alive value
+     */
+    public int getLiveness() {
+      return liveness;
+    } 
     
     /**
      * This method should be called when a known route is declared
@@ -367,8 +418,7 @@ public class SocketSourceRouteManager {
      * @param route The now-live route
      */
     protected synchronized void markAlive(SourceRoute route) {
-      deadRoutes.remove(route);
-      pendingRoutes.remove(route);
+      getRouteManager(route).markAlive();
       
       // first, we check and see if we have no best route (this can happen if the best just died)
       if (best == null) {
@@ -380,9 +430,11 @@ public class SocketSourceRouteManager {
       // if se, we switch our best route to that one
       if ((best.getNumHops() > route.getNumHops()) || 
           ((best.getNumHops() == route.getNumHops()) &&
-           (manager.proximity(best)) > manager.proximity(route))) {
+           (getRouteManager(best).proximity() > getRouteManager(route).proximity()))) {
         debug("Route " + route + " is better than previous best route " + best + " - replacing");
+            
         best = route;  
+        pool.update(address, SocketNodeHandle.PROXIMITY_CHANGED);
       }
       
       // finally, mark this address as alive
@@ -396,10 +448,12 @@ public class SocketSourceRouteManager {
      * @param route The now-suspected route
      */
     protected synchronized void markSuspected(SourceRoute route) {      
+      getRouteManager(route).markSuspected();
+      
       // mark this address as suspected, if this is currently the best route
       if ((best != null) && (best.equals(route)))
           setSuspected();
-    }    
+    }
     
     /**
      * This method should be called when a known route is declared
@@ -408,11 +462,10 @@ public class SocketSourceRouteManager {
      * @param route The now-dead route
      */
     protected synchronized void markDead(SourceRoute route) {
-      deadRoutes.add(route);      
-      pendingRoutes.remove(route);
+      getRouteManager(route).markDead();
       
       // if we're already dead, who cares
-      if ((liveness == SocketNodeHandle.LIVENESS_DEAD) || (liveness == SocketNodeHandle.LIVENESS_DEAD_FOREVER))
+      if (liveness >= SocketNodeHandle.LIVENESS_DEAD)
         return;
       
       // if this route was the best, or if we have no best, we need to
@@ -424,14 +477,9 @@ public class SocketSourceRouteManager {
         SourceRoute[] routes = getAllRoutes(route.getLastHop());
         boolean found = false;
 
-        for (int i=0; i<routes.length; i++) {
-          if (! deadRoutes.contains(routes[i])) {
+        for (int i=0; i<routes.length; i++) 
+          if (getRouteManager(routes[i]).checkLiveness()) 
             found = true;
-
-            if (! pendingRoutes.contains(routes[i]))
-              checkRoute(routes[i]);            
-          }
-        }
         
         if (! found) 
           setDead();
@@ -446,9 +494,7 @@ public class SocketSourceRouteManager {
      * @param address The now-dead address
      */
     protected synchronized void markDeadForever() {      
-      System.out.println("MARKING ADDRESS " + address + " AS DEAD FOREVER!");
-      this.best = null;
-      
+      this.best = null;            
       setDeadForever();
     }
     
@@ -459,44 +505,45 @@ public class SocketSourceRouteManager {
      * @param proximity The proximity
      */
     protected synchronized void markProximity(SourceRoute route, int proximity) {
-      if (this.proximity > proximity) {
-        // first, we check and see if we have no best route (this can happen if the best just died)
-        if (best == null) {
-          debug("No previous best route existed to " + address + " route " + route + " is now the best");
-          best = route;        
-        }
-        
-        this.proximity = proximity;
-        pool.update(address, SocketNodeHandle.PROXIMITY_CHANGED);
-        setAlive();
-      }
-    }
+      getRouteManager(route).markAlive();
+      getRouteManager(route).markProximity(proximity);
+      setAlive();
       
+      // first, we check and see if we have no best route (this can happen if the best just died)
+      if (best == null) {
+        debug("No previous best route existed to " + address + " route " + route + " is now the best");
+        best = route;        
+      }
+        
+      // next, we update everyone if this is the active route
+      if (route.equals(best))
+        pool.update(address, SocketNodeHandle.PROXIMITY_CHANGED);
+    }
+
     /**
      * Method which enqueues a message to this address
      *
      * @param message The message to send
      */
     public synchronized void send(Message message) {
-      // if we're dead, we go ahead and just checkDead on our best route
-      if (liveness == SocketNodeHandle.LIVENESS_DEAD)
-        manager.checkDead(SourceRoute.build(address));
+      // if we're dead, we go ahead and just checkDead on the direct route
+      if (liveness == SocketNodeHandle.LIVENESS_DEAD) {
+        getRouteManager(SourceRoute.build(address)).checkLiveness();
+        this.updated = System.currentTimeMillis();
+      }
       
       // and in any case, we either send if we have a best route or add the message
       // to the queue
       if (best == null) {
         queue.add(message);
-        
-        if (pendingRoutes.size() == 0)
-          System.err.println("ERROR: Enqueueing message to " + address + " without any pending routes - very very bad!!!");
-      } else if (! manager.isOpen(best)) {
+      } else if (! getRouteManager(best).isOpen()) {
         queue.add(message);
         
-        //System.err.println("NOTE: Found closed socket to best route " + best + " - pinging route to ensure still valid.");
-        checkRoute(best);
-        best = null;
+        getRouteManager(best).checkLiveness();
+        this.best = null;
+        this.updated = System.currentTimeMillis();
       } else {
-        manager.send(best, message);
+        getRouteManager(best).send(message);
       }
     }
     
@@ -504,84 +551,55 @@ public class SocketSourceRouteManager {
      * Method which suggests a ping to the remote node.
      */
     public void ping() {
-      switch (liveness) {
-        case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
-          return;
-        case SocketNodeHandle.LIVENESS_DEAD:
-          System.out.println("PING: CHECKING DEAD ON DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
-          manager.checkDead(SourceRoute.build(address));
-          break;
-        default:
-          if (best != null) {
-            manager.ping(best);
+      if (System.currentTimeMillis() - updated > PING_THROTTLE) {
+        this.updated = System.currentTimeMillis();
         
-            // check to see if the direct route is available
-            if (! best.isDirect()) 
-              manager.ping(SourceRoute.build(address));
-          }
-          
-          break;
+        switch (liveness) {
+          case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
+            return;
+          case SocketNodeHandle.LIVENESS_DEAD:
+            System.out.println("PING: PINGING DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
+            getRouteManager(SourceRoute.build(address)).ping();
+            break;
+          default:
+            if (best != null) {
+              getRouteManager(best).ping();
+              
+              // check to see if the direct route is available
+              if (! best.isDirect()) 
+                getRouteManager(SourceRoute.build(address)).ping();
+            }
+            
+            break;
+        }
       }
     }  
-    
     
     /**
      * Method which suggests a ping to the remote node.
      */
     public void checkLiveness() {
+      this.updated = System.currentTimeMillis();
+      
       switch (liveness) {
         case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
           return;
         case SocketNodeHandle.LIVENESS_DEAD:
           System.out.println("CHECKLIVENESS: CHECKING DEAD ON DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
-          manager.checkDead(SourceRoute.build(address));
+          getRouteManager(SourceRoute.build(address)).checkLiveness();
           break;
         default:
           if (best != null) {
-            manager.checkLiveness(best);
+            getRouteManager(best).checkLiveness();
             
             // check to see if the direct route is available
             if (! best.isDirect()) 
-              manager.ping(SourceRoute.build(address));
+              getRouteManager(SourceRoute.build(address)).checkLiveness();
           }
           
           break;
       }  
-    }  
-    
-    /**
-     * Method which returns the last cached proximity value for the given address.
-     * If there is no cached value, then DEFAULT_PROXIMITY is returned.
-     *
-     * @param address The address to return the value for
-     * @return The ping value to the remote address
-     */
-    public int proximity() {
-      return proximity;
-    }  
-    
-    /**
-     * Method which returns the last cached liveness value for the given address.
-     * If there is no cached value, then true is returned.
-     *
-     * @param address The address to return the value for
-     * @return The Alive value
-     */
-    public int getLiveness() {
-      return liveness;
-    }  
-    
-    /**
-     * Method which checks to see if the given address is dead
-     *
-     * @param route The route to check
-     */
-    protected synchronized void checkRoute(SourceRoute route) {
-      if (! pendingRoutes.contains(route)) {
-        pendingRoutes.add(route);
-        manager.checkDead(route);
-      }
-    }
+    }   
     
     /**
      * Internal method which marks this address as being alive.  If we were dead before, it
@@ -605,7 +623,7 @@ public class SocketSourceRouteManager {
       
       // and finally we can now send any pending messages
       while (queue.size() > 0)
-        manager.send(best, (Message) queue.remove(0));    
+        getRouteManager(best).send((Message) queue.remove(0));    
     }
     
     /**
@@ -628,12 +646,13 @@ public class SocketSourceRouteManager {
       // and finally we can now reroute any route messages
       Object[] array = queue.toArray();
       
-      for (int i=0; i<array.length; i++) 
+      for (int i=0; i<array.length; i++) {
         if (array[i] instanceof RouteMessage) {
           System.out.println("REROUTE: Rerouting message " + array[i] + " due to suspected next hop " + address);
           reroute(address, (Message) array[i]);
           queue.remove(array[i]);
         }
+      }
     }
     
     /**
@@ -678,6 +697,136 @@ public class SocketSourceRouteManager {
           pool.update(address, SocketNodeHandle.DECLARED_DEAD);        
           if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead forever.");
           break;
+      }
+    }
+    
+    /**
+     * Internal class which is charges with managing the remote connection via
+     * a specific route
+     */
+    public class SourceRouteManager {
+      
+      // the remote route of this manager
+      protected SourceRoute route;
+      
+      // the current liveness of this route
+      protected int liveness;
+      
+      // the current best-known proximity of this route
+      protected int proximity;
+      
+      // the last time the liveness information was updated
+      protected long updated;
+      
+      // whether or not a check dead is currently being carried out on this route
+      protected boolean pending;
+      
+      /**
+       * Constructor - builds a route manager given the route
+       *
+       * @param route The route
+       */
+      public SourceRouteManager(SourceRoute route) {
+        this.route = route;
+        this.liveness = SocketNodeHandle.LIVENESS_SUSPECTED;
+        this.proximity = SocketNodeHandle.DEFAULT_PROXIMITY;
+        this.pending = false;
+        this.updated = 0L;
+      }
+      
+      /**
+       * Method which returns the last cached proximity value for the given address.
+       * If there is no cached value, then DEFAULT_PROXIMITY is returned.
+       *
+       * @param address The address to return the value for
+       * @return The ping value to the remote address
+       */
+      public int proximity() {
+        return proximity;
+      }
+       
+      /**
+       * This method should be called when this route is declared
+       * alive.
+       */
+      protected void markAlive() {
+        this.liveness = SocketNodeHandle.LIVENESS_ALIVE;
+        this.pending = false;
+      }
+      
+      /**
+       * This method should be called when this route is declared
+       * suspected.
+       */
+      protected void markSuspected() {      
+        this.liveness = SocketNodeHandle.LIVENESS_SUSPECTED;
+      }    
+      
+      /**
+       * This method should be called when this route is declared
+       * dead.
+       */
+      protected void markDead() {
+        this.liveness = SocketNodeHandle.LIVENESS_DEAD;
+        this.pending = false;
+      }
+      
+      /**
+       * This method should be called when this route has its proximity updated
+       *
+       * @param proximity The proximity
+       */
+      protected void markProximity(int proximity) {
+        if (this.proximity > proximity) 
+          this.proximity = proximity;
+      }
+      
+      /**
+       * Method which checks to see this route is dead.  If this address has
+       * been checked within the past CHECK_DEAD_THROTTLE millis, then
+       * this method does not actually do a check.
+       *
+       * @return Whether or not a check will actually be carried out
+       */
+      protected boolean checkLiveness() {
+        if (this.pending)
+          return true;
+        
+        if ((this.liveness < SocketNodeHandle.LIVENESS_DEAD) || 
+            (this.updated < System.currentTimeMillis() - CHECK_DEAD_THROTTLE)) {
+          this.updated = System.currentTimeMillis();
+          this.pending = true;
+          manager.checkLiveness(route);
+          return true;
+        }
+        
+        return false;
+      }
+      
+      /**
+       * Method which enqueues a message along this route
+       *
+       * @param message The message to send
+       */
+      public synchronized void send(Message message) {
+        manager.send(route, message);
+      }
+      
+      /**
+       * Method which suggests a ping to the remote node.
+       */
+      public void ping() {
+        manager.ping(route);
+      }
+      
+      /**
+       * Returns whether or not a socket is currently open to this 
+       * route
+       *
+       * @return Whether or not a socket is currently open to this route
+       */
+      public boolean isOpen() {
+        return manager.isOpen(route);
       }
     }
   }

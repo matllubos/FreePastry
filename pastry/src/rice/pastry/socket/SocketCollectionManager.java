@@ -94,11 +94,11 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    * @param pool DESCRIBE THE PARAMETER
    * @param address The address to claim the node is at (for proxying)
    */
-  public SocketCollectionManager(PastryNode node, SocketNodeHandlePool pool, SocketSourceRouteManager manager, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
+  public SocketCollectionManager(SocketPastryNode node, SocketNodeHandlePool pool, SocketSourceRouteManager manager, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
     this.pastryNode = node;
     this.manager = manager;
     this.localAddress = proxyAddress;
-    this.pingManager = new PingManager(pool, manager, node, bindAddress, proxyAddress);
+    this.pingManager = new PingManager(node, manager, bindAddress, proxyAddress);
     this.socketQueue = new LinkedList();
     this.sockets = new Hashtable();
     this.sourceRouteQueue = new LinkedList();
@@ -132,12 +132,76 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   }  
   
   /**
+   *      -----  EXTERNAL METHODS ----- 
+   */
+  
+  /**
+   * Method which sends bootstraps a node by sending message across the wire,
+   * using a fake IP address in the header so that the local node is not marked
+   * alive, and then closes the connection.
+   *
+   * @param message The message to send
+   * @param address The address to send the message to
+   */
+  public void bootstrap(SourceRoute path, Message message) {
+    if (! resigned) {
+      synchronized (sockets) {
+        openSocket(path, true);    
+        ((SocketManager) sockets.get(path)).send(message);
+      }
+    }
+  }
+
+  /**
+   * Method which sends a message across the wire.
+   *
+   * @param message The message to send
+   * @param address The address to send the message to
+   */
+  public void send(SourceRoute path, Message message) {
+    if (! resigned) {
+      synchronized (sockets) {
+        if (!sockets.containsKey(path)) {
+          debug("No connection open to path " + path + " - opening one");
+          openSocket(path, false);
+        }
+        
+        if (sockets.containsKey(path)) {
+          debug("Found connection open to path " + path + " - sending now");
+          
+          ((SocketManager) sockets.get(path)).send(message);
+          socketUpdated(path);
+        } else {
+          debug("ERROR: Could not connection to remote address " + path + " rerouting message " + message);
+          manager.reroute(path.getLastHop(), message);
+        }
+      }
+    }
+  }
+  
+  /**
    * Method which suggests a ping to the remote node.
    *
    * @param route The route to use
    */
   public void ping(SourceRoute route) {
-    pingManager.ping(route, null);
+    if (! resigned) 
+      pingManager.ping(route, null);
+  }
+  
+  /**
+   * Initiates a liveness test on the given address, if the remote node does not
+   * respond, it is declared dead.
+   *
+   * @param address DESCRIBE THE PARAMETER
+   */
+  protected void checkLiveness(SourceRoute path) {    
+    if (! resigned) {
+      if (SocketPastryNode.verbose) System.out.println("CHECK DEAD: " + localAddress + " CHECKING DEATH OF PATH " + path);
+      DeadChecker checker = new DeadChecker(path, NUM_PING_TRIES);
+      ((SocketPastryNode) pastryNode).getTimer().scheduleAtFixedRate(checker, PING_DELAY + random.nextInt(PING_JITTER), PING_DELAY + random.nextInt(PING_JITTER));
+      pingManager.ping(path, checker);
+    }
   }
   
   /**
@@ -152,77 +216,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   }
   
   /**
-   * Method which checks the liveness of the given path: if a socket is already
-   * open, true is immediately returned.  Otherwise, checkDead() is called on
-   * the path.
-   *
-   * @param route The route to use
+   *      -----  INTERNAL METHODS ----- 
    */
-  public void checkLiveness(SourceRoute route) {
-    if (! sockets.containsKey(route))
-      checkDead(route);
-  }
-  
-  /**
-   * Method which returns the last cached proximity value for the given address.
-   * If there is no cached value, then DEFAULT_PROXIMITY is returned.
-   *
-   * @param address The address to return the value for
-   * @return The ping value to the remote address
-   */
-  public int proximity(SourceRoute path) {
-    return pingManager.proximity(path);
-  }
-
-  /**
-   * Method which sends a message across the wire.
-   *
-   * @param message The message to send
-   * @param address The address to send the message to
-   */
-  public void send(SourceRoute path, Message message) {
-    synchronized (sockets) {
-      if (!sockets.containsKey(path)) {
-        debug("No connection open to path " + path + " - opening one");
-        openSocket(path, false);
-      }
-      
-      if (sockets.containsKey(path)) {
-        debug("Found connection open to path " + path + " - sending now");
-
-        ((SocketManager) sockets.get(path)).send(message);
-        socketUpdated(path);
-      } else {
-        debug("ERROR: Could not connection to remote address " + path + " rerouting message " + message);
-        manager.reroute(path.getLastHop(), message);
-      }
-    }
-  }
-  
-  /**
-   * Method which sends bootstraps a node by sending message across the wire,
-   * using a fake IP address in the header so that the local node is not marked
-   * alive, and then closes the connection.
-   *
-   * @param message The message to send
-   * @param address The address to send the message to
-   */
-  public void bootstrap(SourceRoute path, Message message) {
-    synchronized (sockets) {
-      openSocket(path, true);    
-      ((SocketManager) sockets.get(path)).send(message);
-    }
-  }
-  
-  /**
-   * Method which is called by the ping manager to indicate that the address has expired
-   * and should be marked dead without question - this indicates a new epoch.
-   *
-   * @param address The address of the remote node
-   */
-  protected void markDead(EpochInetSocketAddress address) {
-    manager.markDead(address); 
-  }
 
   /**
    * Specified by the SelectionKeyHandler interface. Is called whenever a key
@@ -238,21 +233,6 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       new SocketAccepter(key);
     } catch (IOException e) {
       System.out.println("ERROR (accepting connection): " + e);
-    }
-  }
-
-  /**
-   * Initiates a liveness test on the given address, if the remote node does not
-   * respond, it is declared dead.
-   *
-   * @param address DESCRIBE THE PARAMETER
-   */
-  protected void checkDead(SourceRoute path) {    
-    if (! resigned) {
-      if (SocketPastryNode.verbose) System.out.println("CHECK DEAD: " + localAddress + " CHECKING DEATH OF PATH " + path);
-      DeadChecker checker = new DeadChecker(path, NUM_PING_TRIES);
-      ((SocketPastryNode) pastryNode).getTimer().scheduleAtFixedRate(checker, PING_DELAY + random.nextInt(PING_JITTER), PING_DELAY + random.nextInt(PING_JITTER));
-      pingManager.forcePing(path, checker);
     }
   }
 
@@ -445,9 +425,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   }
 
   /**
-   * DESCRIBE THE METHOD
+   * Method which prints out debugging information
    *
-   * @param s DESCRIBE THE PARAMETER
+   * @param s The string to print
    */
   private void debug(String s) {
     if (Log.ifp(8)) {
@@ -545,7 +525,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         if (manager.getLiveness(path.getLastHop()) == SocketNodeHandle.LIVENESS_ALIVE)
           manager.markSuspected(path);
         
-        pingManager.forcePing(path, this);
+        pingManager.ping(path, this);
       } else {
         System.out.println("DeadChecker(" + path + ") expired - marking as dead.");
         manager.markDead(path);
@@ -775,7 +755,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         // then check to see if the remote address is dead or just closing a socket
         if ((path != null) && (path.getFirstHop().getAddress().getPort() != BOOTSTRAP_PORT) && 
             (! ((SocketChannel) key.channel()).socket().isOutputShutdown()))
-          checkDead(path);
+          checkLiveness(path);
         
         close();
       }
@@ -1158,7 +1138,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param s DESCRIBE THE PARAMETER
      */
     private void debug(String s) {
-      if (Log.ifp(5)) {
+      if (Log.ifp(8)) {
         System.out.println(pastryNode.getNodeId() + " (SRM): " + s);
       }
     }

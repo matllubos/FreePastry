@@ -229,6 +229,19 @@ public class SourceRoute implements Serializable {
   }
   
   /**
+   * Returns whether or not this route goes through the given address
+   *
+   * @return whether or not this route goes through the given address
+   */
+  public boolean goesThrough(EpochInetSocketAddress address) {
+    for (int i=0; i<path.length; i++)
+      if (path[i].equals(address))
+        return true;
+    
+    return false;
+  }
+  
+  /**
    * Internal method which returns an array representing the source
    * route
    *

@@ -28,7 +28,7 @@ import rice.pastry.messaging.*;
 public class SocketChannelReader {
   
   // the maximal message size to be deserialized on the selector thread
-  public static final int SELECTOR_DESERIALIZATION_MAX_SIZE = 100000;
+  public static final int SELECTOR_DESERIALIZATION_MAX_SIZE = 1000000;
 
   // the pastry node
   private PastryNode spn;
@@ -174,7 +174,7 @@ public class SocketChannelReader {
 			}
 		} catch (java.lang.NoClassDefFoundError exc) { }
 
-    if (!recorded) {
+    if ((!recorded) && (SocketPastryNode.verbose)) {
       if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + obj.getClass() + " of size " + size + " from " + path);
     }
   }

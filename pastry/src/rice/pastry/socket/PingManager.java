@@ -41,18 +41,6 @@ public class PingManager extends SelectionKeyHandler {
   // The list of pending meesages
   protected ArrayList pendingMsgs;
 
-  // the list of the last time a ping was sent
-  private Hashtable pingtimes;
-
-  // the list of response times
-  private Hashtable pingResponseTimes;
-
-  // the list of cached ping values
-  private Hashtable pings;
-  
-  // the local pastry node
-  private PastryNode spn;
-
   // the buffer used for writing datagrams
   private ByteBuffer buffer;
 
@@ -61,9 +49,6 @@ public class PingManager extends SelectionKeyHandler {
 
   // the key used to determine what has taken place
   private SelectionKey key;
-
-  // the node handle pool on this node
-  private SocketNodeHandlePool pool;
   
   // the source route manager
   private SocketSourceRouteManager manager;
@@ -71,22 +56,21 @@ public class PingManager extends SelectionKeyHandler {
   // the local address of this node
   private EpochInetSocketAddress localAddress;
   
+  // the local node
+  private SocketPastryNode spn;
+  
   /**
    * @param port DESCRIBE THE PARAMETER
    * @param manager DESCRIBE THE PARAMETER
    * @param pool DESCRIBE THE PARAMETER
    */
-  public PingManager(SocketNodeHandlePool pool, SocketSourceRouteManager manager, PastryNode spn, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
-    this.pool = pool;
+  public PingManager(SocketPastryNode spn, SocketSourceRouteManager manager, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
     this.spn = spn;
     this.manager = manager;
-    this.pings = new Hashtable();
-    this.pingtimes = new Hashtable();
-    this.pingResponseTimes = new Hashtable();
     this.pendingMsgs = new ArrayList();
     this.localAddress = proxyAddress;
     
-    // allocate enought bytes to read a node handle
+    // allocate enought bytes to read data
     this.buffer = ByteBuffer.allocateDirect(DATAGRAM_SEND_BUFFER_SIZE);
 
     try {
@@ -104,65 +88,36 @@ public class PingManager extends SelectionKeyHandler {
   }
   
   /**
-    * Makes this node resign from the network.  Is designed to be used for
-   * debugging and testing.
+   *        ----- EXTERNAL METHODS -----
    */
-  public void resign() throws IOException {
-    key.channel().close();
-    key.cancel();
-  }
-
+  
   /**
-   * Gets the LastTimePinged attribute of the PingManager object
+   * Method which actually sends a ping to over the specified path, and returns the result
+   * to the specified listener.  Note that if no ping response is ever received, the 
+   * listener is never called.
    *
-   * @param address DESCRIBE THE PARAMETER
-   * @return The LastTimePinged value
+   * @param path The path to send the ping over
+   * @param prl The listener which should hear about the response
    */
-  public long getLastTimePinged(SourceRoute path) {
-    return ((Long) pingtimes.get(path)).longValue();
+  protected void ping(SourceRoute path, PingResponseListener prl) {
+    debug("Actually sending ping via path " + path + " local " + localAddress);
+
+    addPingResponseListener(path, prl);
+    enqueue(path, new PingMessage(path, path.reverse(localAddress)));
   }
   
   /**
-   * Resets the last pinged time, only should be called when a node is marked 
-   * dead.
-   *
-   * @param address The address to reset
+   * Makes this node resign from the network.  Is designed to be used for
+   * debugging and testing.
    */
-  protected void resetLastTimePinged(SourceRoute path) {
-    pingtimes.remove(path);
+  protected void resign() throws IOException {
+    key.channel().close();
+    key.cancel();
   }
-
+  
   /**
-   * Gets the LastTimeHeardFrom attribute of the PingManager object
-   *
-   * @param address DESCRIBE THE PARAMETER
-   * @return The LastTimeHeardFrom value
+   *        ----- INTERNAL METHODS -----
    */
-  public long getLastTimeHeardFrom(SourceRoute path) {
-    Long l = (Long) pingResponseTimes.get(path);
-    
-    if (l != null) {
-      return l.longValue();
-    } else {
-      return 0;
-    }
-  }
-
-  /**
-   * Method which returns the last cached proximity value for the given address.
-   * If there is no cached value, then DEFAULT_PROXIMITY is returned.
-   *
-   * @param address The address to return the value for
-   * @return DESCRIBE THE RETURN VALUE
-   */
-  public int proximity(SourceRoute path) {
-    Integer i = (Integer) pings.get(path);
-
-    if (i == null) 
-      return SocketNodeHandle.DEFAULT_PROXIMITY;
-
-    return i.intValue();
-  }
 
   /**
    * Adds a feature to the PingResponseListener attribute of the PingManager
@@ -172,20 +127,35 @@ public class PingManager extends SelectionKeyHandler {
    *      attribute
    * @param prl The feature to be added to the PingResponseListener attribute
    */
-  public void addPingResponseListener(SourceRoute path, PingResponseListener prl) {
-    if (prl == null) {
+  protected void addPingResponseListener(SourceRoute path, PingResponseListener prl) {
+    if (prl == null) 
       return;
+    
+    ArrayList list = (ArrayList) pingListeners.get(path);
+    
+    if (list == null) {
+      list = new ArrayList();
+      pingListeners.put(path, list);
     }
     
-    synchronized (pingResponseTimes) {
-      ArrayList list = (ArrayList) pingListeners.get(path);
+    list.add(prl);
+  }
+  
+  /**
+   * caller must synchronized(pingResponseTimes)
+   *
+   * @param address
+   * @param proximity
+   * @param lastTimePinged
+   */
+  protected void notifyPingResponseListeners(SourceRoute path, int proximity, long lastTimePinged) {
+    ArrayList list = (ArrayList) pingListeners.remove(path);
+    
+    if (list != null) {
+      Iterator i = list.iterator();
       
-      if (list == null) {
-        list = new ArrayList();
-        pingListeners.put(path, list);
-      }
-      
-      list.add(prl);
+      while (i.hasNext()) 
+        ((PingResponseListener) i.next()).pingResponse(path, proximity, lastTimePinged);
     }
   }
 
@@ -238,21 +208,15 @@ public class PingManager extends SelectionKeyHandler {
         enqueue(dm.getInboundPath(), new PingResponseMessage(dm.getOutboundPath(), dm.getInboundPath(), start));        
       } else if (dm instanceof PingResponseMessage) {
         if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + dm.getOutboundPath().reverse());      
-
-        long curTime = System.currentTimeMillis();
-        int time = (int) (curTime - start);
+        int ping = (int) (System.currentTimeMillis() - start);
         
-        if ((pings.get(dm.getOutboundPath()) == null) || (((Integer) pings.get(dm.getOutboundPath())).intValue() > time)) {
-          pings.put(dm.getOutboundPath(), new Integer(time));
-          manager.markProximity(dm.getOutboundPath(), time);
-        }
-
-        pingResponse(dm.getOutboundPath(), curTime);
+        manager.markAlive(dm.getOutboundPath());
+        manager.markProximity(dm.getOutboundPath(), ping);
+        notifyPingResponseListeners(dm.getOutboundPath(), ping, start);
       } else if (dm instanceof WrongEpochMessage) {
         WrongEpochMessage wem = (WrongEpochMessage) dm;
         
         if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + dm.getOutboundPath().reverse());      
-        System.out.println("----- INFO: Received wrong epoch update from " + wem.getCorrect() + " was " + wem.getIncorrect());      
 
         manager.markAlive(dm.getOutboundPath());
         manager.markDead(wem.getIncorrect());
@@ -265,18 +229,37 @@ public class PingManager extends SelectionKeyHandler {
       }
     }
   }
-
+  
   /**
    * DESCRIBE THE METHOD
    *
-   * @param address DESCRIBE THE PARAMETER
-   * @param curTime DESCRIBE THE PARAMETER
+   * @param key DESCRIBE THE PARAMETER
    */
-  public void pingResponse(SourceRoute path, long curTime) {
-    synchronized (pingResponseTimes) {
-      manager.markAlive(path);
-      pingResponseTimes.put(path, new Long(curTime));
-      notifyPingResponseListeners(path, proximity(path), curTime);
+  public void read(SelectionKey key) {
+    try {
+      InetSocketAddress address = null;
+      
+      while ((address = (InetSocketAddress) channel.receive(buffer)) != null) {
+        buffer.flip();
+        
+        if (address.getPort() % 2 == localAddress.getAddress().getPort() % 2) {
+          buffer.clear();
+          System.out.println("Dropping packet");
+          return;
+        } 
+        
+        if (buffer.remaining() > 0) {
+          readHeader(address);
+        } else {
+          debug("Read from datagram channel, but no bytes were there - no bad, but wierd.");
+          break;
+        }
+      }
+    } catch (IOException e) {
+      System.out.println("ERROR (datagrammanager:read): " + e);
+      e.printStackTrace();
+    } finally {
+      buffer.clear();
     }
   }
 
@@ -318,112 +301,6 @@ public class PingManager extends SelectionKeyHandler {
         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
     }
   }
-
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @param key DESCRIBE THE PARAMETER
-   */
-  public void read(SelectionKey key) {
-    try {
-      InetSocketAddress address = null;
-
-      while ((address = (InetSocketAddress) channel.receive(buffer)) != null) {
-        buffer.flip();
-        
-     /*   if (address.getPort() % 2 == localAddress.getAddress().getPort() % 2) {
-          buffer.clear();
-          System.out.println("Dropping packet");
-          return;
-        } */
-
-        if (buffer.remaining() > 0) {
-          readHeader(address);
-        } else {
-          debug("Read from datagram channel, but no bytes were there - no bad, but wierd.");
-          break;
-        }
-      }
-    } catch (IOException e) {
-      System.out.println("ERROR (datagrammanager:read): " + e);
-      e.printStackTrace();
-    } finally {
-      buffer.clear();
-    }
-  }
-
-
-  /**
-   * Method which initiates a ping to the remote node. Once the ping is
-   * complete, the result will be available via the proximity() call.
-   *
-   * @param address The address to ping
-   * @param prl DESCRIBE THE PARAMETER
-   */
-  public void ping(SourceRoute path, PingResponseListener prl) {
-    ping(path, prl, false);
-  }
-
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @param address DESCRIBE THE PARAMETER
-   * @param prl DESCRIBE THE PARAMETER
-   */
-  protected void forcePing(SourceRoute path, PingResponseListener prl) {
-    ping(path, prl, true);
-  }
-
-  /**
-   * caller must synchronized(pingResponseTimes)
-   *
-   * @param address
-   * @param proximity
-   * @param lastTimePinged
-   */
-  protected void notifyPingResponseListeners(SourceRoute path, int proximity, long lastTimePinged) {
-    ArrayList list = (ArrayList) pingListeners.get(path);
-    
-    if (list != null) {
-      Iterator i = list.iterator();
-      
-      while (i.hasNext()) {
-        ((PingResponseListener) i.next()).pingResponse(path, proximity, lastTimePinged);
-        i.remove();
-      }
-    }
-  }
-
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @param address DESCRIBE THE PARAMETER
-   * @param prl DESCRIBE THE PARAMETER
-   * @param force DESCRIBE THE PARAMETER
-   */
-  private void ping(SourceRoute path, PingResponseListener prl, boolean force) {
-    synchronized (pingResponseTimes) {
-      if (force ||
-          (pingtimes.get(path) == null) ||
-          (System.currentTimeMillis() - getLastTimePinged(path) > PING_THROTTLE)) {
-        pingtimes.put(path, new Long(System.currentTimeMillis()));
-        addPingResponseListener(path, prl);
-        
-        debug("Actually sending ping via path " + path + " local " + localAddress);
-        
-        enqueue(path, new PingMessage(path, path.reverse(localAddress)));
-      } else {
-        // we just pinged them, and got a response
-        if (getLastTimeHeardFrom(path) >= getLastTimePinged(path)) {
-          if (prl != null) 
-            prl.pingResponse(path, proximity(path), getLastTimeHeardFrom(path));
-        } else {
-          // we are still waiting to hear from someone
-          addPingResponseListener(path, prl);
-        }
-      }
-    }
-  }
   
   /**
    * Method which serializes a given object into a ByteBuffer, in order to
@@ -447,6 +324,28 @@ public class PingManager extends SelectionKeyHandler {
     } catch (NotSerializableException e) {
       System.out.println("PANIC: Object to be serialized was not serializable! [" + message + "]");
       throw new IOException("Unserializable class " + message + " during attempt to serialize.");
+    }
+  }
+  
+  /**
+   * Method which takes in a ByteBuffer read from a datagram, and deserializes
+   * the contained object.
+   *
+   * @param buffer The buffer read from the datagram.
+   * @return The deserialized object.
+   * @exception IOException if the buffer can't be deserialized
+   */
+  public static Object deserialize(byte[] array) throws IOException {
+    ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(array));
+    
+    try {
+      return ois.readObject();
+    } catch (ClassNotFoundException e) {
+      System.out.println("PANIC: Unknown class type in serialized message!");
+      throw new IOException("Unknown class type in message - closing channel.");
+    } catch (InvalidClassException e) {
+      System.out.println("PANIC: Serialized message was an invalid class!");
+      throw new IOException("Invalid class in message - closing channel.");
     }
   }
   
@@ -543,28 +442,6 @@ public class PingManager extends SelectionKeyHandler {
       throw new IOException("Improper message header received - ignoring. Read " + ((byte) header[0]) + " " + ((byte) header[1]) + " " + ((byte) header[2]) + " " + ((byte) header[3]));
     }    
   }
-  
-  /**
-   * Method which takes in a ByteBuffer read from a datagram, and deserializes
-   * the contained object.
-   *
-   * @param buffer The buffer read from the datagram.
-   * @return The deserialized object.
-   * @exception IOException if the buffer can't be deserialized
-   */
-  public static Object deserialize(byte[] array) throws IOException {
-    ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(array));
-    
-    try {
-      return ois.readObject();
-    } catch (ClassNotFoundException e) {
-      System.out.println("PANIC: Unknown class type in serialized message!");
-      throw new IOException("Unknown class type in message - closing channel.");
-    } catch (InvalidClassException e) {
-      System.out.println("PANIC: Serialized message was an invalid class!");
-      throw new IOException("Invalid class in message - closing channel.");
-    }
-  }    
     
   /**
    * Internal class which holds a pending datagram

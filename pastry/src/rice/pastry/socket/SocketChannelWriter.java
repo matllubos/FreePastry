@@ -146,7 +146,7 @@ public class SocketChannelWriter {
 			} 
 		} catch (java.lang.NoClassDefFoundError exc) { }
 
-    if (!recorded) {
+    if ((!recorded) && (SocketPastryNode.verbose)) {
       if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + action + " message " + obj.getClass() + " of size " + size + " to " + path);
     }
   }

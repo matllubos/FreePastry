@@ -111,28 +111,36 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @return The proximity of the provided handle
    */
   public int getProximity(NodeHandle local, NodeHandle handle) {
-    SocketNodeHandle lHandle = (SocketNodeHandle) local;
-    SocketNodeHandle wHandle = (SocketNodeHandle) handle;
+    EpochInetSocketAddress lAddress = ((SocketNodeHandle) local).getEpochAddress();
+    EpochInetSocketAddress rAddress = ((SocketNodeHandle) handle).getEpochAddress();
 
+    lAddress = new EpochInetSocketAddress(new InetSocketAddress(lAddress.getAddress().getAddress(), lAddress.getAddress().getPort()+1));
+    
     // if this is a request for an old version of us, then we return
     // infinity as an answer
-    if (lHandle.getAddress().equals(wHandle.getAddress())) {
+    if (lAddress.equals(rAddress)) {
       return Integer.MAX_VALUE;
     }
+    
+    DatagramSocket socket = null;
+    SourceRoute route = SourceRoute.build(new EpochInetSocketAddress[] {rAddress});
 
-    if (wHandle.proximity() == SocketNodeHandle.DEFAULT_PROXIMITY) {
-      try {
-        long startTime = System.currentTimeMillis();
-        getResponse(wHandle.getAddress(), new NodeIdRequestMessage());
-        long ping = System.currentTimeMillis() - startTime;
+    try {
+      socket = new DatagramSocket(lAddress.getAddress().getPort());
+      socket.setSoTimeout(5000);
 
-        return (int) ping;
-      } catch (IOException e) {
-        System.out.println("Error pinging address " + wHandle.getAddress() + ": " + e);
-        return wHandle.DEFAULT_PROXIMITY;
-      }
-    } else {
-      return wHandle.proximity();
+      byte[] data = PingManager.addHeader(route, new PingMessage(route, route.reverse(lAddress)), lAddress);
+      
+      socket.send(new DatagramPacket(data, data.length, rAddress.getAddress()));
+      
+      long start = System.currentTimeMillis();
+      socket.receive(new DatagramPacket(new byte[10000], 10000));
+      return (int) (System.currentTimeMillis() - start);
+    } catch (IOException e) {
+      return Integer.MAX_VALUE-1;
+    } finally {
+      if (socket != null)
+        socket.close();
     }
   }
 
@@ -257,7 +265,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     } catch (InterruptedException e) {}
     
     pn.doneNode(getNearest(localhandle, bootstrap));
-//    pn.doneNode(bootstrap);
+ //   pn.doneNode(bootstrap);
 
     return pn;
   }
