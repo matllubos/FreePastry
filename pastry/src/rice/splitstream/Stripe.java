@@ -159,7 +159,7 @@ public class Stripe extends Observable implements IScribeApp{
      public void subscribeHandler(NodeId topicId,
                                   NodeHandle child, boolean wasAdded, Serializable data){
 	    BandwidthManager bandwidthManager = getChannel().getBandwidthManager();
-	    if(bandwidthManager.canTakeChild(getChannel(), this)){
+	    if(bandwidthManager.canTakeChild(getChannel())){
 	        channel.stripeSubscriberAdded();
             }
 	    else{

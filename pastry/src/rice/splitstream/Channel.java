@@ -339,6 +339,9 @@ public class Channel extends PastryAppl implements IScribeApp {
 	else if(msg.getTopicId() == spareCapacityId){
 		handleSpareCapacityMessage(msg);
 	}
+	else{
+	    System.out.println("Unknown Scribe Message");
+        }
   }
   public void scribeIsReady(){
   }
@@ -407,10 +410,9 @@ public class Channel extends PastryAppl implements IScribeApp {
     System.out.println("SpareCapacity Message");
     Stripe stripe = null;
     ControlFindParentMessage parentMessage = (ControlFindParentMessage) msg;
-    if(stripeIdTable.get(parentMessage.getStripeId()) instanceof Stripe){
-      stripe = (Stripe) stripeIdTable.get(parentMessage.getStripeId());	
-    }
-    parentMessage.handleForwardWrapper((Scribe) scribe,((Scribe) scribe).getTopic(parentMessage.getTopicId()), stripe );
+    //if(stripeIdTable.get(parentMessage.getStripeId()) instanceof Stripe){
+    //  stripe = (Stripe) stripeIdTable.get(parentMessage.getStripeId());	
+    //}
   }
   
 /**

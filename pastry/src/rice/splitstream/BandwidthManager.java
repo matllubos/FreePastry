@@ -64,7 +64,7 @@ public class BandwidthManager{
       * system can take on another child.
       * @return whether we can take on another child 
       */
-      public boolean canTakeChild(Channel channel, Stripe s){
+      public boolean canTakeChild(Channel channel){
         return(getUsedBandwidth(channel) < getMaxBandwidth(channel)); 
       }
     /**
