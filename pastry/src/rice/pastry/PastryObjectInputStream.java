@@ -26,13 +26,14 @@ public class PastryObjectInputStream extends ObjectInputStream {
 	 */
 	public PastryObjectInputStream(InputStream stream, PastryNode node) throws IOException {
 		super(stream);
-    
     this.node = node;
     enableResolveObject(true);
 	}  
   
 	protected Object resolveObject(Object input) throws IOException {
     if (input instanceof LocalNodeI) {
+      if (node != null)
+        input = node.getLocalNodeI((LocalNodeI)input);
       ((LocalNodeI) input).setLocalNode(node);
     }
     

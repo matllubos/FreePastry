@@ -42,6 +42,7 @@ import rice.pastry.client.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
 
+import java.lang.ref.WeakReference;
 import java.util.*;
 
 /**
@@ -64,6 +65,22 @@ public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.
     protected NodeHandle localhandle;
     private boolean ready;
     protected Vector apps;
+    /**
+     * This hash map helps us coalesce the nodeHandles so that there is
+     * only one reference of each
+     * 
+     * maps NodeHandle -> WeakReference(NodeHandle) 
+     */
+    protected WeakHashMap nodeHandleSet = new WeakHashMap(); 
+    
+    public LocalNodeI getLocalNodeI(LocalNodeI lni) {
+      WeakReference wr = (WeakReference)nodeHandleSet.get(lni);
+      if (wr == null) {
+        wr = new WeakReference(lni);
+        nodeHandleSet.put(lni,wr);
+      }
+      return (LocalNodeI)wr.get();
+    }
     
     /**
      * Constructor, with NodeId. Need to set the node's ID before this node
