@@ -95,7 +95,7 @@ public class ErasureCodec {
       if (generateFragment[i])
         wantFragments ++;
         
-    System.out.println(System.currentTimeMillis()+" XXX before encode("+bytes.length+" bytes, "+wantFragments+" fragments) free="+Runtime.getRuntime().freeMemory()+" total="+Runtime.getRuntime().totalMemory());
+    // System.out.println(System.currentTimeMillis()+" XXX before encode("+bytes.length+" bytes, "+wantFragments+" fragments) free="+Runtime.getRuntime().freeMemory()+" total="+Runtime.getRuntime().totalMemory());
     
     int numWords = (bytes.length + 3) / 4;
     int wordsPerGroup = (numSurvivors * Lfield);
@@ -140,7 +140,7 @@ public class ErasureCodec {
       }
     }
 
-    System.out.println(System.currentTimeMillis()+" XXX after encode("+bytes.length+" bytes, "+wantFragments+" fragments) free="+Runtime.getRuntime().freeMemory()+" total="+Runtime.getRuntime().totalMemory());
+    // System.out.println(System.currentTimeMillis()+" XXX after encode("+bytes.length+" bytes, "+wantFragments+" fragments) free="+Runtime.getRuntime().freeMemory()+" total="+Runtime.getRuntime().totalMemory());
 
     return frag;
   }
@@ -185,7 +185,8 @@ public class ErasureCodec {
     for (int i=0; i<frag.length; i++)
       if (frag[i] != null)
         firstFrag = frag[i];
-    System.out.println(System.currentTimeMillis()+" XXX before decode("+firstFrag.getPayload().length+" bytes per fragment) free="+Runtime.getRuntime().freeMemory()+" total="+Runtime.getRuntime().totalMemory());
+
+    // System.out.println(System.currentTimeMillis()+" XXX before decode("+firstFrag.getPayload().length+" bytes per fragment) free="+Runtime.getRuntime().freeMemory()+" total="+Runtime.getRuntime().totalMemory());
 
     if (frag.length != numFragments)
       return null;
@@ -294,7 +295,7 @@ public class ErasureCodec {
       ByteArrayInputStream byteinput = new ByteArrayInputStream(bytes);
       ObjectInputStream objectInput = new ObjectInputStream(byteinput);
 
-      System.out.println(System.currentTimeMillis()+" XXX after decode("+firstFrag.getPayload().length+" bytes per fragment) free="+Runtime.getRuntime().freeMemory()+" total="+Runtime.getRuntime().totalMemory());
+      // System.out.println(System.currentTimeMillis()+" XXX after decode("+firstFrag.getPayload().length+" bytes per fragment) free="+Runtime.getRuntime().freeMemory()+" total="+Runtime.getRuntime().totalMemory());
  
       return (Serializable) objectInput.readObject();
     } catch (IOException ioe) {
