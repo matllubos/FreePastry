@@ -143,8 +143,10 @@ public class BroadcastLeafSet extends Message implements Serializable
     public String toString() {
 	String s = "";
 
-	s+="BroadcastLeafSet(of " + fromNode.getNodeId() + ":" + theLeafSet + ")";
-	//s+="BroadcastLeafSet of " + fromNode.getNodeId() + " " + theLeafSet.cwSize() + " : " + theLeafSet.ccwSize();
+	if (Log.ifp(7))
+	    s+="BroadcastLeafSet(of " + fromNode.getNodeId() + ":" + theLeafSet + ")";
+	else if (Log.ifp(5))
+	    s+="BroadcastLeafSet(of " + fromNode.getNodeId() + ")";
 
 	return s;
     }

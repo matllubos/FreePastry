@@ -248,17 +248,21 @@ public class RouteMessage extends Message implements Serializable {
     public String toString() {
 	String str = "";
 
-	str += "RouteMessage for target " + target;
-	
-	if (auxAddress != null) str += " with aux address " + auxAddress;
+	if (Log.ifp(7)) {
+	    str += "RouteMessage for target " + target;
 
-	//str += "\n";
+	    if (auxAddress != null) str += " with aux address " + auxAddress;
 
-	str += ", wraps ";
-	str += internalMsg;
+	    //str += "\n";
 
-	if (nextHop != null)
-	    str += ", nexthop = " + nextHop.getNodeId();
+	    str += ", wraps ";
+	    str += internalMsg;
+
+	    if (nextHop != null)
+		str += ", nexthop = " + nextHop.getNodeId();
+	} else if (Log.ifp(5)) {
+	    str += "[ " + internalMsg + " ]";
+	}
 
 	return str;
     }

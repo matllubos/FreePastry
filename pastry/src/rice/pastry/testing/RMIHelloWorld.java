@@ -69,7 +69,7 @@ public class RMIHelloWorld {
     private Random rng;
 
     private static int port = 5009;
-    private static String bshost = "none";
+    private static String bshost = null;
     private static int bsport = 5009;
     private static int numnodes = 1;
     private static int nummsgs = 2; // per virtual node
@@ -94,10 +94,20 @@ public class RMIHelloWorld {
     protected NodeHandle getBootstrap() {
 	RMIRemoteNodeI bsnode = null;
 
+	if (bshost != null && bshost.equals("none")) {
+	    if (Log.ifp(5)) System.out.println("Not using any bootstrap node");
+	    return null;
+	}
+
 	try {
 	    bsnode = (RMIRemoteNodeI)Naming.lookup("//:" + port + "/Pastry");
 	} catch (Exception e) {
-	    System.out.println("Unable to find bootstrap node on localhost");
+	    if (Log.ifp(5)) System.out.println("Unable to find bootstrap node on localhost");
+	}
+
+	if (bshost == null && bsnode == null) {
+	    if (Log.ifp(5)) System.out.println("Not using any bootstrap node");
+	    return null;
 	}
 
 	int nattempts = 3;
@@ -114,7 +124,7 @@ public class RMIHelloWorld {
 		host = "localhost"; localaddr = InetAddress.getLocalHost();
 		connectaddr = InetAddress.getByName(host = bshost);
 	    } catch (UnknownHostException e) {
-		System.out.println("[rmi] Error: Host unknown: " + host);
+		System.out.println("Error: Host unknown: " + host);
 		nattempts = 0;
 	    }
 
@@ -128,9 +138,10 @@ public class RMIHelloWorld {
 							 + ":" + bsport
 							 + "/Pastry");
 	    } catch (Exception e) {
-		System.out.println("Unable to find bootstrap node on "
-				   + bshost + ":" + bsport
-				   + " (attempt " + i + "/" + nattempts + ")");
+		if (Log.ifp(5))
+		    System.out.println("Unable to find bootstrap node on "
+				       + bshost + ":" + bsport
+				       + " (attempt " + i + "/" + nattempts + ")");
 	    }
 
 	    if (i != nattempts)
@@ -142,7 +153,7 @@ public class RMIHelloWorld {
 	    try {
 		bsid = bsnode.getNodeId();
 	    } catch (RemoteException e) {
-		System.out.println("[rmi] Unable to get remote node id: " + e.toString());
+		if (Log.ifp(5)) System.out.println("Unable to get remote node id: " + e.toString());
 		bsnode = null;
 	    }
 	}
@@ -164,14 +175,12 @@ public class RMIHelloWorld {
 
 	for (int i = 0; i < args.length; i++) {
 	    if (args[i].equals("-help")) {
-		System.out.println("Usage: RMIHelloWorld [-msgs m] [-port p] [-nodes n]");
-		System.out.println("                     [-verbose|-silent|-verbosity v]");
-		System.out.println("                     [-bootstrap host[:port]|none] [-help]");
+		System.out.println("Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap bshost[:bsport]]");
+		System.out.println("                     [-verbose|-silent|-verbosity v] [-help]");
 		System.out.println("");
-		System.out.println("       Ports refer to RMI registry port numbers");
-		System.out.println("       Without -bootstrap host[:port], it tries to bootstrap from localhost only");
-		System.out.println("       With -bootstrap none, it doesn't even try that");
-		System.out.println("       Default verbosity is 5, -verbose is 10 and -silent is -1");
+		System.out.println("  Ports p and bsport refer to RMI registry port numbers (default = 5009).");
+		System.out.println("  Without -bootstrap bshost[:bsport], only localhost:p is used for bootstrap.");
+		System.out.println("  Default verbosity is 5, -verbose is 10, and -silent is -1 (error msgs only).");
 		System.exit(1);
 	    }
 	}
@@ -270,7 +279,7 @@ public class RMIHelloWorld {
 
 	    synchronized (app) {
 		if (pn.isReady() == false) {
-		    System.out.println(pn + " isn't ready yet. Waiting.");
+		    if (Log.ifp(6)) System.out.println(pn + " isn't ready yet. Waiting.");
 
 		    for (int n = 0; n < nJoinTries; n++) {
 			try {
@@ -279,19 +288,22 @@ public class RMIHelloWorld {
 				// to be signalled by HelloWorldApp.notifyAll()
 			} catch (InterruptedException e) { }
 			if (pn.isReady()) break;
-			System.out.println(pn + " timed out while trying to join. Retrying initiateJoin.");
+			if (Log.ifp(5)) System.out.println(pn + " timed out while trying to join. Retrying initiateJoin.");
 			pn.initiateJoin(bootstrap);
 		    }
-		    if (!pn.isReady()) System.out.println("Panic: unable to join!");
-		    else System.out.println(pn + " is ready now. Proceeding to send messages.");
+		    if (!pn.isReady())
+			System.out.println("Panic: unable to join!");
+		    else {
+			if (Log.ifp(6)) System.out.println(pn + " is ready now. Proceeding to send messages.");
+		    }
 		} else {
-		    System.out.println(pn + " is ready at the time this client is starting.");
+		    if (Log.ifp(6)) System.out.println(pn + " is ready at the time this client is starting.");
 		}
 	    }
 
 	    // okay. now print the leaf set and send some messages.
 
-	    System.out.println(pn.getLeafSet());
+	    if (Log.ifp(5)) System.out.println(pn.getLeafSet());
 
 	    for (int i = 0; i < nummsgs; i++)
 		app.sendRndMsg(rng);
@@ -313,7 +325,7 @@ public class RMIHelloWorld {
 	ApplThread thread = new ApplThread(pn, app, bootstrap);
 	new Thread(thread).start();
 
-	System.out.println("created " + pn);
+	if (Log.ifp(5)) System.out.println("created " + pn);
     }
 
     /**
@@ -322,22 +334,26 @@ public class RMIHelloWorld {
      * @param ms milliseconds.
      */
     public synchronized void pause(int ms) {
-	System.out.println("waiting for " + (ms/1000) + " sec");
+	if (Log.ifp(5)) System.out.println("waiting for " + (ms/1000) + " sec");
 	try { wait(ms); } catch (InterruptedException e) {}
     }
 
     /**
-     *	Usage: RMIHelloWorld [-msgs m] [-port p] [-nodes n]
-     *			     [-verbose|-silent|-verbosity v]
-     *			     [-bootstrap host[:port]|none] [-help]
+     * Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap bshost[:bsport]]
+     *                      [-verbose|-silent|-verbosity v] [-help].
+     *
+     * Ports p and bsport refer to RMI registry port numbers (default = 5009).
+     * Without -bootstrap bshost[:bsport], only localhost:p is used for bootstrap.
+     * Default verbosity is 5, -verbose is 10, and -silent is -1 (error msgs only).
      */
     public static void main(String args[]) {
+	Log.init(args);
 	doRMIinitstuff(args);
 	RMIHelloWorld driver = new RMIHelloWorld();
 
 	for (int i = 0; i < numnodes; i++)
 	    driver.makePastryNode();
 
-	System.out.println(numnodes + " nodes constructed");
+	if (Log.ifp(5)) System.out.println(numnodes + " nodes constructed");
     }
 }

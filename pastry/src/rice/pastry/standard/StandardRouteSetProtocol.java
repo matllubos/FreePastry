@@ -161,7 +161,8 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver
 
     private void maintainRouteSet() {
 
-	//System.out.println("maintainRouteSet " + localHandle.getNodeId());
+	if (Log.ifp(7))
+	    System.out.println("maintainRouteSet " + localHandle.getNodeId());
 
 	// for each populated row in our routing table
 	for (int i=routeTable.numRows()-1; i>=0; i--) {

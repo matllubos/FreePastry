@@ -63,7 +63,7 @@ public class RMIPastryTest {
     private Vector pastrynodes;
 
     private static int port = 5009;
-    private static String bshost = "thor03";
+    private static String bshost = null;
     private static int bsport = 5009;
     private static int numnodes = 1;
 
@@ -81,10 +81,16 @@ public class RMIPastryTest {
      */
     protected NodeHandle getBootstrap() {
 	RMIRemoteNodeI bsnode = null;
+
 	try {
 	    bsnode = (RMIRemoteNodeI)Naming.lookup("//:" + port + "/Pastry");
 	} catch (Exception e) {
-	    System.out.println("Unable to find bootstrap node on localhost");
+	    if (Log.ifp(5)) System.out.println("Unable to find bootstrap node on localhost");
+	}
+
+	if (bshost == null || bsnode.equals("none")) {
+	    if (Log.ifp(5)) System.out.println("Not using any bootstrap node");
+	    return null;
 	}
 
 	int nattempts = 3;
@@ -101,7 +107,7 @@ public class RMIPastryTest {
 		host = "localhost"; localaddr = InetAddress.getLocalHost();
 		connectaddr = InetAddress.getByName(host = bshost);
 	    } catch (UnknownHostException e) {
-		System.out.println("[rmi] Error: Host unknown: " + host);
+		System.out.println("Error: Host unknown: " + host);
 		nattempts = 0;
 	    }
 
@@ -115,9 +121,10 @@ public class RMIPastryTest {
 							 + ":" + bsport
 							 + "/Pastry");
 	    } catch (Exception e) {
-		System.out.println("Unable to find bootstrap node on "
-				   + bshost + ":" + bsport
-				   + " (attempt " + i + "/" + nattempts + ")");
+		if (Log.ifp(5))
+		    System.out.println("Unable to find bootstrap node on "
+				       + bshost + ":" + bsport
+				       + " (attempt " + i + "/" + nattempts + ")");
 	    }
 
 	    if (i != nattempts)
@@ -129,7 +136,7 @@ public class RMIPastryTest {
 	    try {
 		bsid = bsnode.getNodeId();
 	    } catch (RemoteException e) {
-		System.out.println("[rmi] Unable to get remote node id: " + e.toString());
+		if (Log.ifp(5)) System.out.println("Unable to get remote node id: " + e.toString());
 		bsnode = null;
 	    }
 	}
@@ -150,7 +157,12 @@ public class RMIPastryTest {
 
 	for (int i = 0; i < args.length; i++) {
 	    if (args[i].equals("-help")) {
-		System.out.println("Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]");
+		System.out.println("Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap bshost[:bsport]]");
+		System.out.println("                     [-verbose|-silent|-verbosity v] [-help]");
+		System.out.println("");
+		System.out.println("  Ports p and bsport refer to RMI registry port numbers (default = 5009).");
+		System.out.println("  Without -bootstrap bshost[:bsport], only localhost:p is used for bootstrap.");
+		System.out.println("  Default verbosity is 5, -verbose is 10, and -silent is -1 (error msgs only).");
 		System.exit(1);
 	    }
 	}
@@ -207,31 +219,36 @@ public class RMIPastryTest {
 
 	PastryNode pn = factory.newNode(getBootstrap());
 	pastrynodes.add(pn);
-	System.out.println("created " + pn);
+	if (Log.ifp(5)) System.out.println("created " + pn);
     }
 
     public void printLeafSets() {
 	pause(1000);
 	for (int i = 0; i < pastrynodes.size(); i++)
-	    System.out.println(((PastryNode)pastrynodes.get(i)).getLeafSet());
+	    if (Log.ifp(5)) System.out.println(((PastryNode)pastrynodes.get(i)).getLeafSet());
     }
 
     public synchronized void pause(int ms) {
-	System.out.println("waiting for " + (ms/1000) + " sec");
+	if (Log.ifp(5)) System.out.println("waiting for " + (ms/1000) + " sec");
 	try { wait(ms); } catch (InterruptedException e) {}
     }
 
     /**
-     * Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
+     * Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap bshost[:bsport]]
+     *                      [-verbose|-silent|-verbosity v] [-help].
+     *
+     * Ports p and bsport refer to RMI registry port numbers (default = 5009).
+     * Without -bootstrap bshost[:bsport], only localhost:p is used for bootstrap.
+     * Default verbosity is 5, -verbose is 10, and -silent is -1 (error msgs only).
      */
     public static void main(String args[]) {
+	Log.init(args);
 	doRMIinitstuff(args);
 	RMIPastryTest pt = new RMIPastryTest();
 
 	for (int i = 0; i < numnodes; i++)
 	    pt.makePastryNode();
 
-	while (true)
-	    pt.printLeafSets();
+	while (true) pt.printLeafSets();
     }
 }

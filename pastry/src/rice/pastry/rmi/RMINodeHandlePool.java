@@ -86,11 +86,11 @@ class RMINodeHandlePool
 	    WeakReference newref = new WeakReference(handle);
 	    handles.put(nid, newref);
 	    handle.setIsInPool(true);
-	    //System.out.println("[rmi] ADDING " + handle + " with id " + nid + " to pool");
+	    //System.out.println("ADDING " + handle + " with id " + nid + " to pool");
 	    return handle;
 
 	} else {
-	    //System.out.println("[rmi] " + storedhandle + " found, so NOT ADDING " + handle + " with id " + nid + " to pool");
+	    //System.out.println(storedhandle + " found, so NOT ADDING " + handle + " with id " + nid + " to pool");
 	    if (storedhandle != handle)
 		handle.setIsInPool(false);
 	}

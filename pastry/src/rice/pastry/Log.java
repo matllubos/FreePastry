@@ -34,105 +34,49 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry.routing;
+package rice.pastry;
 
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.pastry.security.*;
-
-import java.io.*;
 import java.util.*;
 
 /**
- * Request a row from the routing table from another node.
+ * A fairly rudimentary Log class for the moment.
  *
  * @version $Id$
  *
- * @author Andrew Ladd
+ * @author Sitaram Iyer
  */
 
-public class RequestRouteRow extends Message implements Serializable
-{
-    private NodeHandle handle;
-    private int row;
+public class Log {
+    /**
+     * Sets the default verbosity level to 5
+     */
+    private static int verbosity = 5;
 
     /**
-     * Constructor.
+     * Called by Pastry applications to parse for verbosity options.
      *
-     * @param nh the return handle.
-     * @param r which row
+     * @param args Command-line arguments.
      */
-    
-    public RequestRouteRow(NodeHandle nh, int r) { 
-	super(new RouteProtocolAddress()); 
-	handle = nh;
-	row = r;
-    }
-    
-    /**
-     * Constructor.
-     *
-     * @param cred the credentials.
-     * @param nh the return handle.
-     * @param r which row
-     */
+    public static void init(String args[]) {
+	for (int i = 0; i < args.length; i++) {
+	    if (args[i].equals("-verbosity") && i+1 < args.length)
+		verbosity = Integer.parseInt(args[i+1]);
 
-    public RequestRouteRow(Credentials cred, NodeHandle nh, int r) { 
-	super(new RouteProtocolAddress(), cred); 
-	handle = nh;
-	row = r;
-    }
-    
-    /**
-     * Constructor.
-     *
-     * @param stamp the timestamp
-     * @param nh the return handle
-     * @param r which row
-     */
+	    else if (args[i].equals("-verbose"))
+		verbosity = 10;
 
-    public RequestRouteRow(Date stamp, NodeHandle nh, int r) { 
-	super(new RouteProtocolAddress(), stamp); 
-	handle = nh;
-	row = r;
+	    else if (args[i].equals("-silent"))
+		verbosity = -1;
+	}
     }
 
     /**
-     * Constructor.
+     * Called before every println, to check if verbosity levels are okay.
      *
-     * @param cred the credentials.
-     * @param stamp the timestamp
-     * @param nh the return handle.
-     * @param r which row
-     */    
-
-    public RequestRouteRow(Credentials cred, Date stamp, NodeHandle nh, int r) { 
-	super(new RouteProtocolAddress(), cred, stamp); 
-	handle = nh;
-	row = r;
-    }
-
-    /**
-     * The return handle for the message
-     *
-     * @return the node handle
+     * @param v required verbosity
+     * @return true if verbosity is leq v.
      */
-
-    public NodeHandle returnHandle() { return handle; }
-
-    /**
-     * Gets the row that made the request.
-     *
-     * @return the row.
-     */
-    
-    public int getRow() { return row; }
-
-    public String toString() {
-	String s = "";
-
-	s+="RequestRouteRow(row " + row + " by " + handle.getNodeId() + ")";
-
-	return s;
+    public static boolean ifp(int v) {
+	return (v <= verbosity) ? true : false;
     }
 }

@@ -96,9 +96,10 @@ public class RMIPastryNode extends PastryNode
 		 * reactivated.
 		 */
 		NodeId sender = msg.getSenderId();
-		System.out.println("[rmi] received " +
-				   (msg instanceof RouteMessage ? "route" : "direct")
-				   + " msg from " + sender + ": " + msg);
+		if (Log.ifp(5))
+		    System.out.println("received " +
+				       (msg instanceof RouteMessage ? "route" : "direct")
+				       + " msg from " + sender + ": " + msg);
 		if (sender != null) handlepool.activate(sender);
 
 		receiveMessage(msg);

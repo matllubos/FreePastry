@@ -110,4 +110,12 @@ public class RequestLeafSet extends Message implements Serializable
      */
 
     public NodeHandle returnHandle() { return handle; }
+
+    public String toString() {
+	String s = "";
+
+	s+="RequestLeafSet(by " + handle.getNodeId() + ")";
+
+	return s;
+    }
 }

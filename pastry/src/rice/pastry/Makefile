@@ -7,7 +7,8 @@ SOURCE  = \
 	PastryNode.java\
 	PastryNodeFactory.java\
 	NodeSet.java\
-	NodeSetUpdate.java
+	NodeSetUpdate.java \
+	Log.java
 
 #	NodeIdI.java
 

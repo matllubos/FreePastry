@@ -101,7 +101,7 @@ public class HelloWorld {
 
 	HelloWorldApp app = new HelloWorldApp(pn);
 	helloClients.addElement(app);
-	System.out.println("created " + pn);
+	if (Log.ifp(5)) System.out.println("created " + pn);
     }
 
     /**
@@ -110,7 +110,7 @@ public class HelloWorld {
     private void printLeafSets() {
 	for (int i = 0; i < pastryNodes.size(); i++) {
 	    PastryNode pn = (PastryNode) pastryNodes.get(i);
-	    System.out.println(pn.getLeafSet());
+	    if (Log.ifp(5)) System.out.println(pn.getLeafSet());
 	}
     }
 
@@ -137,6 +137,8 @@ public class HelloWorld {
      *		         [-simultaneous_joins] [-simultaneous_msgs] [-help]
      */
     public static void main(String args[]) {
+
+	Log.init(args);
 
 	for (int i = 0; i < args.length; i++) {
 	    if (args[i].equals("-nodes") && i+1 < args.length)
@@ -165,11 +167,11 @@ public class HelloWorld {
 	    if (simultaneous_joins == false) while (driver.simulate()) ;
 	}
 	if (simultaneous_joins) {
-	    System.out.println("let the joins begin!");
+	    if (Log.ifp(5)) System.out.println("let the joins begin!");
 	    while (driver.simulate()) ;
 	}
 
-	System.out.println(numnodes + " nodes constructed");
+	if (Log.ifp(5)) System.out.println(numnodes + " nodes constructed");
 
 	driver.printLeafSets();
 	
@@ -179,7 +181,7 @@ public class HelloWorld {
 	}
 
 	if (simultaneous_msgs) {
-	    System.out.println("let the msgs begin!");
+	    if (Log.ifp(5)) System.out.println("let the msgs begin!");
 	    while (driver.simulate()) ;
 	}
     }

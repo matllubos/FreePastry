@@ -266,7 +266,8 @@ public class StandardLeafSetProtocol implements MessageReceiver {
     
     public void maintainLeafSet() {	
 
-	//System.out.println("maintainLeafSet " + localHandle.getNodeId());
+	if (Log.ifp(7))
+	    System.out.println("maintainLeafSet " + localHandle.getNodeId());
 
 	boolean lostMembers = false;
 
