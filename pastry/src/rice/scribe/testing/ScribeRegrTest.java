@@ -50,7 +50,17 @@ public class ScribeRegrTest
     }
     
     public void makeScribeNode() {
-	PastryNode pnode = new PastryNode(m_factory);
+
+	NodeHandle bootstrap = null;
+	try {
+	    ScribeRegrTestApp otherApp = 
+		(ScribeRegrTestApp)m_scribeNodes.getLast();
+	    PastryNode lastnode = (PastryNode)otherApp.getPastryNode();
+	    bootstrap = lastnode.getLocalHandle();
+	} catch (NoSuchElementException e) {
+	}
+
+	PastryNode pnode = m_factory.newNode(bootstrap);
 
 	Credentials cred = new PermissiveCredentials();
 
@@ -61,13 +71,6 @@ public class ScribeRegrTest
 	
 	int n = m_scribeNodes.size();
 	
-	if (n > 1) {
-	    ScribeRegrTestApp otherApp = 
-		(ScribeRegrTestApp)m_scribeNodes.get(n - 2);
-	    PastryNode other = (PastryNode)otherApp.getPastryNode();
-	    
-	    pnode.receiveMessage(new InitiateJoin(other));
-	}
     }
 
     public boolean simulate() { 

@@ -9,7 +9,7 @@ import rice.pastry.direct.*;
 import java.util.*;
 
 /**
- * Application used by the Regreesion test suites. It runs over a Scribe node
+ * Application used by the Regression test suites. It runs over a Scribe node
  * but it is notified from the whole network of what topics have been created
  * so that it can verify correctness after execution.
  *
@@ -137,61 +137,3 @@ public class ScribeRegrTestApp implements IScribeApp
 	m_tracker.putTopic( tid );
     }
 }
-
-/**
- * MessagesReceivedTracker. Keeps track of all messages received on all topics
- * in the current node.
- */
-class MRTracker 
-{
-    HashMap m_topics;
-    MRTracker() {
-	m_topics = new HashMap();
-    }
-    int getMessagesReceived( NodeId tid ) {
-	return ((CSPair)getPair( tid )).getCount();
-    }
-    void receivedMessage( NodeId tid ) {
-	((CSPair)getPair( tid )).receivedMessage();
-    }
-    void setSubscribed( NodeId tid, boolean is ) {
-	CSPair pair = (CSPair)m_topics.get( tid );
-	if( pair == null ) {
-	    pair = new CSPair();
-	    m_topics.put( tid, pair );
-	}
-
-	((CSPair)getPair( tid )).setSubscribed(is);
-    }
-    boolean isSubscribed( NodeId tid ) {
-	return ((CSPair)getPair( tid )).isSubscribed();
-    }
-    private CSPair getPair( NodeId tid ) {
-	CSPair pair = (CSPair)m_topics.get( tid );
-	if( pair == null ) {
-	    throw new Error( "Error in MRTracker" );
-	}
-	return pair;
-    }
-    void putTopic( NodeId tid ) {
-	m_topics.put( tid, new CSPair() );
-    }
-}
-
-/**
- * CountSubscribedPair keeps track for a single topic of how many messages have
- * been received from it and whether we are subscribed to it or not. 
- */
-class CSPair {
-    private int m_count;
-    private boolean m_isSubscribed;
-    CSPair() {
-	m_count = 0;
-	m_isSubscribed = false;
-    }
-    int getCount() { return m_count; }
-    void receivedMessage() { m_count++; }
-    boolean isSubscribed() { return m_isSubscribed; }
-    void setSubscribed( boolean sub ) { m_isSubscribed = sub; }
-}
-

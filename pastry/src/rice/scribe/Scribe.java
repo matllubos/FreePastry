@@ -156,7 +156,7 @@ public class Scribe extends PastryAppl implements IScribe
 	topic.subscribe( false );
 
 	ScribeMessage msg = makeUnsubscribeMessage( topicId, cred );
-	this.routeMsgDirect( thePastryNode, msg, cred, m_sendOptions );
+	this.routeMsgDirect( thePastryNode.getLocalHandle(), msg, cred, m_sendOptions );
     }
     
     /**
@@ -317,7 +317,7 @@ public class Scribe extends PastryAppl implements IScribe
      * @return the node handle.
      */
     public NodeHandle getNodeHandle() {
-	return thePastryNode;
+	return thePastryNode.getLocalHandle();
     }
 
     /**
@@ -356,7 +356,7 @@ public class Scribe extends PastryAppl implements IScribe
      * @return the ScribeMessage.
      */
     public ScribeMessage makeSubscribeMessage( NodeId tid, Credentials c ) {
-	return new MessageSubscribe( m_address, this.thePastryNode, tid, c );
+	return new MessageSubscribe( m_address, this.thePastryNode.getLocalHandle(), tid, c );
     }
 
     /**
@@ -369,7 +369,7 @@ public class Scribe extends PastryAppl implements IScribe
      * @return the ScribeMessage.
      */
     public ScribeMessage makeUnsubscribeMessage( NodeId tid, Credentials c ) {
-	return new MessageUnsubscribe( m_address, this.thePastryNode, tid, c );
+	return new MessageUnsubscribe( m_address, this.thePastryNode.getLocalHandle(), tid, c );
     }
 
     /**
@@ -381,7 +381,7 @@ public class Scribe extends PastryAppl implements IScribe
      * @return the ScribeMessage.
      */
     public ScribeMessage makeCreateMessage( NodeId tid, Credentials c ) {
-	return new MessageCreate( m_address, this.thePastryNode, tid, c );
+	return new MessageCreate( m_address, this.thePastryNode.getLocalHandle(), tid, c );
     }
 
     /**
@@ -393,7 +393,7 @@ public class Scribe extends PastryAppl implements IScribe
      * @return the ScribeMessage.
      */
     public ScribeMessage makePublishMessage( NodeId tid, Credentials c ) {
-	return new MessagePublish( m_address, this.thePastryNode, tid, c );
+	return new MessagePublish( m_address, this.thePastryNode.getLocalHandle(), tid, c );
     }
 
     /**
@@ -405,7 +405,7 @@ public class Scribe extends PastryAppl implements IScribe
      * @return the ScribeMessage.
      */
     public ScribeMessage makeHeartBeatMessage( NodeId tid, Credentials c ) {
-	return new MessageHeartBeat( m_address, this.thePastryNode, tid, c );
+	return new MessageHeartBeat( m_address, this.thePastryNode.getLocalHandle(), tid, c );
     }
 }
 
