@@ -3,13 +3,17 @@
   <!-- Necessary properties and paths -->
   <property name="src.dir" value="src"/>
   <property name="jar.dir" value="jars"/>
+  <property name="license.dir" value="license"/>
   <property name="build.dir" value="classes" />  
   <property name="lib.dir" value="lib" />
   <property name="pretty.dir" value="pretty" />
   <property name="pretty.lib.dir" value="pretty/lib" />
   <property name="docs.dir" value="docs" />
   <property name="javadoc.dir" value="${docs.dir}/javadoc" />
+  <property name="license.file" value="License.txt"/>
+  <property name="license.path" value="${license.dir}/${license.file}"/>
 
+  
   <!-- Jars that Pretty package needs -->
   <path id="pretty.classpath">
     <fileset dir="${pretty.lib.dir}">
@@ -69,19 +73,42 @@
     <antcall target="make_rmic_stubs"/>
   </target>
 
+  <target name="beautifyandlicense">
+    <antcall target="beautify"/>
+    <antcall target="appendlicense"/>
+  </target>  
+    
+  
   <target name="beautify" depends="init">
-    <fail unless="pretty.src.dir" 
-          message="You must set the pretty.src.dir property"/>
     <pathconvert refid="pretty.classpath"
                  pathsep=":"
                  property="pretty.classpath.path"/>
     <taskdef name="pretty" 
              classname="org.acm.seguin.ant.Pretty" 
              classpath="${pretty.classpath.path}"/>
-    <pretty settingsDir="${pretty.dir}" cvs="true">      
-      <fileset dir="${src.dir}/${pretty.src.dir}" includes="**/*.java"/> 
+    <pretty settingsDir="${pretty.dir}" compileDir="${build.dir}">      
+      <fileset dir="${src.dir}" includes="**/*.java"/> 
     </pretty>  
   </target> 
+
+  <target name="compileappend" depends="init">
+    <javac srcdir="${pretty.lib.dir}"
+           destdir="."
+           deprecation="yes"
+           debuglevel="lines,vars,source"
+           debug="true">
+    </javac>
+  </target> 
+
+  <target name="appendlicense" depends="compileappend">
+    <taskdef name="append" 
+             classname="Append"
+             classpath="."/>
+    <append srcfile="${license.path}">      
+      <fileset dir="${src.dir}" includes="**/*.java"/> 
+    </append>
+  </target>  
+  
 
   <target name="javadoc" depends="init">
     <javadoc destdir="${javadoc.dir}"
