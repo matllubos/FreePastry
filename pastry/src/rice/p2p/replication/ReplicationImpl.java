@@ -165,7 +165,12 @@ public class ReplicationImpl implements Replication, Application {
    * @return The *total* range
    */
   protected IdRange getTotalRange() {
-    return endpoint.range(handle, replicationFactor, handle.getId(), true);
+    IdRange range = endpoint.range(handle, replicationFactor, handle.getId(), true);
+    
+    if (range == null)
+      range = factory.buildIdRange(handle.getId(), handle.getId());
+    
+    return range;
   }
     
   /**
@@ -184,14 +189,16 @@ public class ReplicationImpl implements Replication, Application {
     log.finer(endpoint.getId() + ": Sending out requests"); 
     NodeHandleSet handles = endpoint.neighborSet(Integer.MAX_VALUE);
     IdRange ourRange = endpoint.range(handle, 0, handle.getId());
+    Id ourHash = client.scan(ourRange).hash();
     
     for (int i=0; i<handles.size(); i++) {
       NodeHandle handle = handles.getHandle(i);
-      IdRange range = endpoint.range(handle, 0, handle.getId());
+      IdRange range = endpoint.range(handle, 0, handle.getId()).intersectRange(getTotalRange());
+      Id hash = client.scan(range).hash();
 
       if ((range != null) && (! range.intersectRange(getTotalRange()).isEmpty())) {
         log.finer(endpoint.getId() + ": Sending request to " + handle + " for range " + range);
-        RequestMessage request = new RequestMessage(this.handle, new IdRange[] {range.intersectRange(getTotalRange()), ourRange});
+        RequestMessage request = new RequestMessage(this.handle, new IdRange[] {range, ourRange}, new Id[] {hash, ourHash});
         endpoint.route(handle.getId(), request, handle);
       }
     }
@@ -230,10 +237,15 @@ public class ReplicationImpl implements Replication, Application {
       RequestMessage rm = (RequestMessage) message;
       IdSet response = factory.buildIdSet();
       
-      for (int i=0; i<rm.getRanges().length; i++)
-        response = merge(response, client.scan(rm.getRanges()[i]));
-      
-      endpoint.route(rm.getSource().getId(), new ResponseMessage(handle, response), rm.getSource());
+      for (int i=0; i<rm.getRanges().length; i++) {
+        IdSet set = client.scan(rm.getRanges()[i]);
+        
+        if (! set.hash().equals(rm.getHashes()[i]))
+          response = merge(response, set);
+      }
+        
+      if (response.numElements() > 0)
+        endpoint.route(rm.getSource().getId(), new ResponseMessage(handle, response), rm.getSource());
     } else if (message instanceof ResponseMessage) {
       ResponseMessage rm = (ResponseMessage) message;
       IdSet keys = rm.getIdSet();
@@ -260,6 +272,7 @@ public class ReplicationImpl implements Replication, Application {
    * @param joined Whether the node has joined or left
    */
   public void update(NodeHandle handle, boolean joined) {
+    updateClient();
   }
   
 }
