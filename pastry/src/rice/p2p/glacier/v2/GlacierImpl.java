@@ -1,8 +1,7 @@
 package rice.p2p.glacier.v2;
 
-// o Handoff
-// o Multiple fragments on one node
-// o Speed up returns (when enough receipts have been received)!
+// o Multiple fragments on one node?
+// o Refresh + sign?
 
 import java.util.*;
 import java.security.*;
@@ -15,13 +14,7 @@ import rice.persistence.*;
 import rice.p2p.glacier.*;
 import rice.p2p.glacier.v2.*;
 import rice.p2p.glacier.v2.messaging.*;
-import rice.p2p.multiring.*;
-import rice.pastry.leafset.*;
 import rice.visualization.server.DebugCommandHandler;
-import rice.pastry.commonapi.PastryIdFactory;
-import rice.pastry.dist.DistPastryNode;
-import rice.pastry.NodeId;
-import rice.post.storage.SignedData;
 
 public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Application, DebugCommandHandler {
 
@@ -30,68 +23,60 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   protected final GlacierPolicy policy;
   protected final Node node;
   protected final int numFragments;
-  protected String instance;
-  private int id;
-  protected int numSurvivors;
-  protected Endpoint endpoint;
-  private MultiringIdFactory factory;
-  private PastryIdFactory pastryIdFactory;
-  protected IdRange responsibleRange;
-
-  private final char tiContinuation = 4;
-
-  protected Hashtable continuations;
-  
-  protected Hashtable timers;
+  protected final String instance;
+  protected final int numSurvivors;
+  protected final Endpoint endpoint;
+  protected final IdFactory factory;
+  protected final Hashtable continuations;
   protected long nextContinuationTimeout;
+  protected IdRange responsibleRange;
+  protected int nextUID;
+  protected TimerTask timer;  
 
-  private int SECONDS = 1000;
-  private int MINUTES = 60 * SECONDS;
-  private int HOURS = 60 * MINUTES;
+  private final long SECONDS = 1000;
+  private final long MINUTES = 60 * SECONDS;
+  private final long HOURS = 60 * MINUTES;
 
-  private final int insertTimeout = 10 * SECONDS;
+  private final long insertTimeout = 10 * SECONDS;
   private final double minFragmentsAfterInsert = 2.0;
 
-  private final int expireNeighborsDelayAfterJoin = 5 * SECONDS;
-  private final int expireNeighborsInterval = 20 * SECONDS;
-  private final int neighborTimeout = 60 * SECONDS;
+  private final long expireNeighborsDelayAfterJoin = 5 * SECONDS;
+  private final long expireNeighborsInterval = 20 * SECONDS;
+  private final long neighborTimeout = 60 * SECONDS;
   
-  private final int syncDelayAfterJoin = 15 * SECONDS;
-  private final int syncInterval = 60 * SECONDS;
+  private final long syncDelayAfterJoin = 15 * SECONDS;
+  private final long syncInterval = 60 * SECONDS;
   private final int syncPartnersPerTrial = 1;
 
   private final int manifestAggregationFactor = 5;
   
   private final int fragmentRequestMaxAttempts = 3;
-  private final int fragmentRequestTimeout = 20 * SECONDS;
+  private final long fragmentRequestTimeout = 20 * SECONDS;
 
-  private final int overallRestoreTimeout = 2 * MINUTES;
+  private final long overallRestoreTimeout = 2 * MINUTES;
   
-  private final int handoffDelayAfterJoin = 45 * SECONDS;
-  private final int handoffInterval = 60 * SECONDS;
+  private final long handoffDelayAfterJoin = 45 * SECONDS;
+  private final long handoffInterval = 60 * SECONDS;
   private final int handoffMaxFragments = 100;
 
   private final double restoreMaxRequestFactor = 4.0;
   private final int restoreMaxBoosts = 2;
 
-  public GlacierImpl(Node theNode, StorageManager fragmentStorageArg, StorageManager theNeighborStorage, int numFragmentsArg, int numSurvivors, MultiringIdFactory factory, String instanceArg, GlacierPolicy policyArg) {
+  public GlacierImpl(Node nodeArg, StorageManager fragmentStorageArg, StorageManager neighborStorageArg, int numFragmentsArg, int numSurvivorsArg, IdFactory factoryArg, String instanceArg, GlacierPolicy policyArg) {
     this.fragmentStorage = new FragmentStorage(fragmentStorageArg);
-    this.neighborStorage = theNeighborStorage;
+    this.neighborStorage = neighborStorageArg;
     this.policy = policyArg;
-    this.node = theNode;
+    this.node = nodeArg;
     this.instance = instanceArg;
     this.endpoint = node.registerApplication(this, instance);
     this.numFragments = numFragmentsArg;
-    this.numSurvivors = numSurvivors;
-    this.factory = factory;
+    this.numSurvivors = numSurvivorsArg;
+    this.factory = factoryArg;
     this.responsibleRange = null;
-    this.id = 0;
-
+    this.nextUID = 0;
     this.continuations = new Hashtable();
-    this.timers = new Hashtable();
-    this.pastryIdFactory = new PastryIdFactory();
+    this.timer = null;
     this.nextContinuationTimeout = -1;
-
     determineResponsibleRange();
 
     /* Neighbor requests */
@@ -105,19 +90,32 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       public void init() {
         nextTimeout = System.currentTimeMillis() + expireNeighborsDelayAfterJoin;
 
-        LeafSet leafSet = ((DistPastryNode) ((MultiringNode) node).getNode()).getLeafSet();
-        NodeHandle cwExtreme = leafSet.get(leafSet.cwSize());
-        NodeHandle ccwExtreme = leafSet.get(-leafSet.ccwSize());
-        IdRange leafRange = pastryIdFactory.buildIdRange(ccwExtreme.getId(), cwExtreme.getId());
+        NodeHandleSet leafSet = endpoint.neighborSet(999);
+        NodeHandle localHandle = getLocalNodeHandle();
+        NodeHandle cwExtreme = localHandle;
+        NodeHandle ccwExtreme = localHandle;
+
+        for (int i=0; i<leafSet.size(); i++) {
+          NodeHandle thisHandle = leafSet.getHandle(i);
+          if (localHandle.getId().clockwise(thisHandle.getId())) {
+            if (cwExtreme.getId().clockwise(thisHandle.getId()))
+              cwExtreme = thisHandle;
+          } else {
+            if (ccwExtreme.getId().clockwise(thisHandle.getId()))
+              ccwExtreme = thisHandle;
+          }
+        }
+
+        IdRange leafRange = factory.buildIdRange(ccwExtreme.getId(), cwExtreme.getId());
     
-        for (int k = 0; k < leafSet.size(); k++) {
-          if ((leafSet.get(k) != null) && !leafSet.get(k).getId().equals(((RingId)getLocalNodeHandle().getId()).getId())) {
-            neighborSeen(leafSet.get(k).getId(), System.currentTimeMillis());
-            log("Asking "+leafSet.get(k).getId()+" about neighbors in "+leafRange);
+        for (int k=0; k<leafSet.size(); k++) {
+          if (!leafSet.getHandle(k).getId().equals(getLocalNodeHandle().getId())) {
+            neighborSeen(leafSet.getHandle(k).getId(), System.currentTimeMillis());
+            log("Asking "+leafSet.getHandle(k).getId()+" about neighbors in "+leafRange);
             endpoint.route(
               null,
-              new GlacierNeighborRequestMessage(getMyUID(), leafRange, getLocalNodeHandle(), leafSet.get(k).getId()),
-              leafSet.get(k)
+              new GlacierNeighborRequestMessage(getMyUID(), leafRange, getLocalNodeHandle(), leafSet.getHandle(k).getId()),
+              leafSet.getHandle(k)
             );
           }
         }
@@ -143,14 +141,14 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         final long earliestAcceptableDate = System.currentTimeMillis() - neighborTimeout;
         IdSet allNeighbors = neighborStorage.scan();
         Iterator iter = allNeighbors.getIterator();
-        LeafSet leafSet = ((DistPastryNode) ((MultiringNode) node).getNode()).getLeafSet();
+        NodeHandleSet leafSet = endpoint.neighborSet(999);
 
         log("Checking neighborhood for expired certificates...");
         
         while (iter.hasNext()) {
           final Id thisNeighbor = (Id) iter.next();
 
-          if (leafSet.get((NodeId)thisNeighbor) != null) {
+          if (leafSet.memberHandle(thisNeighbor)) {
             log("CNE: Refreshing current neighbor: "+thisNeighbor);
             neighborSeen(thisNeighbor, System.currentTimeMillis());
           } else {
@@ -211,7 +209,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
 
           Id ccwId = getFragmentLocation(grrm.getCommonRange().getCCWId(), numFragments-offset, 0);
           Id cwId = getFragmentLocation(grrm.getCommonRange().getCWId(), numFragments-offset, 0);
-          IdRange originalRange = pastryIdFactory.buildIdRange(ccwId, cwId);
+          IdRange originalRange = factory.buildIdRange(ccwId, cwId);
         
           log("Range response (offset: "+offset+"): "+grrm.getCommonRange()+", original="+originalRange);
         
@@ -221,7 +219,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
 
           while (iter.hasNext()) {
             FragmentKey fkey = (FragmentKey)iter.next();
-            Id thisPos = ((RingId)getFragmentLocation(fkey)).getId();
+            Id thisPos = getFragmentLocation(fkey);
             if (originalRange.containsId(thisPos)) {
               log(" - Adding "+fkey+" as "+fkey.getVersionKey().getId());
 /***********************MUST HASH SOMETHING ELSE: OBJHASH + EXPIRATION DATE?******/
@@ -252,7 +250,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         Id dest = getFragmentLocation(getLocalNodeHandle().getId(), offset, 0);
         Id ccwId = getFragmentLocation(responsibleRange.getCCWId(), offset, 0);
         Id cwId = getFragmentLocation(responsibleRange.getCWId(), offset, 0);
-        IdRange requestedRange = pastryIdFactory.buildIdRange(ccwId, cwId);
+        IdRange requestedRange = factory.buildIdRange(ccwId, cwId);
             
         log("Sending range query for ("+requestedRange+") to "+dest);
         endpoint.route(
@@ -284,7 +282,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           for (int i=0; i<grm.numKeys(); i++) {
             final FragmentKey thisKey = grm.getKey(i);
             if (grm.getHaveIt(i) && grm.getAuthoritative(i)) {
-              Id thisPos = ((RingId)getFragmentLocation(thisKey)).getId();
+              Id thisPos = getFragmentLocation(thisKey);
               if (!responsibleRange.containsId(thisPos)) {
                 log("Deleting fragment "+thisKey);
                 fragmentStorage.unstore(thisKey, new Continuation() {
@@ -321,13 +319,12 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   
         while (iter.hasNext()) {
           FragmentKey fkey = (FragmentKey) iter.next();
-          RingId thisRingId = (RingId)getFragmentLocation(fkey);
-          Id thisPos = thisRingId.getId();
+          Id thisPos = getFragmentLocation(fkey);
           if (!responsibleRange.containsId(thisPos)) {
             log("Must hand off "+fkey+" @"+thisPos);
             handoffs.add(fkey);
             if (destination == null)
-              destination = thisRingId;
+              destination = thisPos;
           }
         }
         
@@ -365,24 +362,24 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     
     if ((nextContinuationTimeout == -1) || (thisTimeout < nextContinuationTimeout)) {
       if (nextContinuationTimeout != -1)
-        removeTimer(tiContinuation);
+        cancelTimer();
       
       nextContinuationTimeout = thisTimeout;
       if (nextContinuationTimeout > now)
-        addTimer((int)(nextContinuationTimeout - now), tiContinuation);
+        setTimer((int)(nextContinuationTimeout - now));
       else
-        timerExpired(tiContinuation);
+        timerExpired();
     }
   }
 
   private void determineResponsibleRange() {
-    Id cwPeer = null, ccwPeer = null, myNodeId = ((RingId)getLocalNodeHandle().getId()).getId();
+    Id cwPeer = null, ccwPeer = null, myNodeId = getLocalNodeHandle().getId();
     
     log("Determining responsible range");
     
     Iterator iter = neighborStorage.scan().getIterator();
     while (iter.hasNext()) {
-      Id thisNeighbor = (Id)iter.next();
+      Id thisNeighbor = (Id) iter.next();
       log("Considering neighbor: "+thisNeighbor);
       if (myNodeId.clockwise(thisNeighbor)) {
         if ((cwPeer == null) || thisNeighbor.isBetween(myNodeId, cwPeer))
@@ -401,7 +398,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     log("CCW: "+ccwPeer+" CW: "+cwPeer+" ME: "+myNodeId);
       
     if ((ccwPeer == null) || (cwPeer == null)) {
-      responsibleRange = pastryIdFactory.buildIdRange(myNodeId, myNodeId);
+      responsibleRange = factory.buildIdRange(myNodeId, myNodeId);
       return;
     }
     
@@ -417,7 +414,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     else
       cwHalfDistance = cwPeer.longDistanceFromId(myNodeId).shiftDistance(1,0);
     
-    responsibleRange = pastryIdFactory.buildIdRange(
+    responsibleRange = factory.buildIdRange(
       ccwPeer.addToId(ccwHalfDistance),
       myNodeId.addToId(cwHalfDistance)
     );
@@ -453,36 +450,44 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   }
 
   protected synchronized int getUID() {
-    return id++;
+    return nextUID++;
   }
 
   /**
    * Schedule a timer event
    *
    * @param timeoutMsec Length of the delay (in milliseconds)
-   * @param timeoutID Identifier (to distinguish between multiple timers)
    */
-  private void addTimer(int timeoutMsec, char timeoutID) {
-    /*
-     *  We schedule a GlacierTimeoutMessage with the ID of the
-     *  requested timer. This message will be delivered if the
-     *  pires and it has not been removed in the meantime.
-     */
-    TimerTask timer = endpoint.scheduleMessage(new GlacierTimeoutMessage(timeoutID, getLocalNodeHandle()), timeoutMsec);
-    timers.put(new Integer(timeoutID), timer);
+  private void setTimer(int timeoutMsec) {
+    timer = endpoint.scheduleMessage(new GlacierTimeoutMessage(0, getLocalNodeHandle()), timeoutMsec);
   }
 
   /**
    * Cancel a timer event that has not yet occurred
-   *
-   * @param timeoutID Identifier of the timer event to be cancelled
    */
-  private void removeTimer(int timeoutID) {
-    TimerTask timer = (TimerTask) timers.remove(new Integer(timeoutID));
-
+  private void cancelTimer() {
     if (timer != null) {
       timer.cancel();
+      timer = null;
     }
+  }
+
+  private byte[] getDistance(double d) {
+    byte[] result = new byte[20];
+      
+    double c = 0.5;
+    for (int i=19; i>=0; i--) {
+      result[i] = 0;
+      for (int j=7; j>=0; j--) {
+        if (d >= c) {
+          result[i] |= (1<<j);
+          d -= c;
+        }
+        c /= 2;
+      }
+    }
+    
+    return result;
   }
 
   /**
@@ -494,47 +499,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
    * @return The location of the fragment
    */
   private Id getFragmentLocation(Id objectKey, int fragmentNr, long version) {
-    if (objectKey instanceof rice.pastry.Id) {
-      rice.pastry.Id realId = (rice.pastry.Id) objectKey;
-      double f = 0;
-      double d;
-
-      /* Convert the objectID to a floating point value between 0 and 1 */
-
-      d = 0.5;
-      for (int i = 0; i < realId.IdBitLength; i++) {
-        if (realId.getDigit((realId.IdBitLength - 1 - i), 1) > 0) {
-          f += d;
-        }
-        d /= 2;
-      }
-
-      /* Apply the placement function */
-
-      double vOffset = version * (1.0/2.7182821);
-      vOffset -= (long)vOffset;
-      
-      f += (((float)fragmentNr) / ((float)numFragments)) + vOffset;
-      while (f>=1)
-        f -= 1;
-
-      /* Convert the floating point value back to an ID */
-
-      rice.pastry.Id result = rice.pastry.Id.build();
-      d = 0.5;
-      for (int i = 0; i < realId.IdBitLength; i++) {
-        if (f >= d) {
-          result.setBit((realId.IdBitLength - 1 - i), 1);
-          f -= d;
-        }
-        d /= 2;
-      }
-
-      return result;
-    } else {
-      RingId rok = (RingId) objectKey;
-      return factory.buildRingId(rok.getRingId(), getFragmentLocation(rok.getId(), fragmentNr, version));
-    }
+    double vOffset = version * (1.0/2.7182821);
+    vOffset -= (long)vOffset;
+    double totalOffset = (((float)fragmentNr) / ((float)numFragments)) + vOffset;
+    return objectKey.addToId(factory.buildIdDistance(getDistance(totalOffset)));
   }
   
   private Id getFragmentLocation(FragmentKey fkey) {
@@ -543,12 +511,6 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       fkey.getFragmentID(),
       fkey.getVersionKey().getVersion()
     );
-  }
-  
-  protected boolean amResponsibleFor(Id id) {
-    if (id instanceof RingId) {
-      return responsibleRange.containsId(((RingId)id).getId());
-    } else return responsibleRange.containsId(id);
   }
   
   /**
@@ -566,14 +528,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   {
     String myInstance = "glacier."+instance.substring(instance.lastIndexOf("-") + 1);
     String requestedInstance = command.substring(0, command.indexOf(" "));
+    String cmd = command.substring(requestedInstance.length() + 1);
     
-    System.out.println("MINE |"+myInstance+"| REQ |"+requestedInstance+"|");
-  
-    if (!requestedInstance.equals(myInstance))
+    if (!requestedInstance.equals(myInstance) && !requestedInstance.equals("g"))
       return null;
-  
-    String cmd = command.substring(myInstance.length() + 1);
-    System.out.println("CMD |"+cmd+"|");
   
     if ((cmd.length() >= 2) && cmd.substring(0, 2).equals("ls")) {
       FragmentKeySet keyset = (FragmentKeySet) fragmentStorage.scan();
@@ -584,7 +542,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       
       while (iter.hasNext()) {
         FragmentKey thisKey = (FragmentKey) iter.next();
-        boolean isMine = amResponsibleFor(getFragmentLocation(thisKey));
+        boolean isMine = responsibleRange.containsId(getFragmentLocation(thisKey));
         result = result + ((Id)thisKey).toStringFull()+" "+(isMine ? "OK" : "MIGRATE")+"\n";
       }
       
@@ -610,10 +568,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       Iterator iter = neighborStorage.scan().getIterator();
       String result = "";
 
-      result = result + neighborStorage.scan().numElements()+ " neighbors\n";
+      result = result + neighborStorage.scan().numElements()+ " neighbor(s)\n";
       
       while (iter.hasNext())
-        result = result + ((Id)iter.next()).toString()+"\n";
+        result = result + ((Id)iter.next()).toStringFull()+"\n";
         
       return result;
     }
@@ -632,10 +590,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       String result = "";
       
       for (int i=0; i<numObjects; i++) {
-        Id randomID = rice.pastry.Id.makeRandomId(new Random());
+        Id randomID = factory.buildRandomId(new Random());
         result = result + randomID.toStringFull() + "\n";
         insert(
-          new DebugContent(factory.buildRingId(((RingId)getLocalNodeHandle().getId()).getRingId(), randomID), false, 0),
+          new DebugContent(randomID, false, 0),
           System.currentTimeMillis() + 30*SECONDS,
           new Continuation() {
             public void receiveResult(Object o) {
@@ -656,26 +614,6 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     insert(obj, System.currentTimeMillis() + 30*SECONDS, command);
   }
 
-  public long extractVersion(Object o) {
-    if (o instanceof GCPastContent) {
-      return ((GCPastContent)o).getVersion();
-    } else if (o instanceof SignedData) {
-      SignedData sd = (SignedData) o;
-      byte[] timestamp = sd.getTimestamp();
-      if (timestamp.length > 8) 
-        throw new RuntimeException("Timestamp in SignedData exceeds 8 bytes!");
-      
-      long ts = 0;
-      for (int i=0; i<timestamp.length; i++)
-        ts = (ts<<8) + ((timestamp[i]<0) ? (256+timestamp[i]) : timestamp[i]);
-      return ts;
-    } else if (o instanceof DebugContent) {
-      return ((DebugContent) o).getVersion();
-    } else {
-      return 0;
-    }
-  }
-
   public void refresh(final Id[] id, final long expiration, final Continuation command) {
     command.receiveResult(new Object[] { new Boolean(true) });
     /* Implement me */
@@ -684,7 +622,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   public void insert(final PastContent obj, long expiration, final Continuation command) {
     log("Insert " + obj + " " + command + " (mutable=" + obj.isMutable() + ")");
 
-    long theVersion = extractVersion(obj);
+    long theVersion = (obj instanceof GCPastContent) ? ((GCPastContent)obj).getVersion() : 0;
     final VersionKey vkey = new VersionKey(obj.getId(), theVersion);
 
     final Fragment[] fragments = policy.encodeObject(obj);
@@ -807,74 +745,58 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     });
   }
 
-  private void timerExpired(char timerID) {
-    log("TIMER EXPIRED: #" + (int) timerID);
+  private void timerExpired() {
+    log("TIMER EXPIRED");
 
-    switch (timerID) {
-      case tiContinuation:
-      {
-        boolean foundTerminated = false;
-        long earliestTimeout;
-        int numDelete;
+    boolean foundTerminated = false;
+    long earliestTimeout;
+    int numDelete;
         
-        do {
-          long now = System.currentTimeMillis();
-          int[] deleteList = new int[100];
-          numDelete = 0;
-          earliestTimeout = -1;
+    do {
+      long now = System.currentTimeMillis();
+      int[] deleteList = new int[100];
+      numDelete = 0;
+      earliestTimeout = -1;
         
-          log("Timer run at "+now);
+      log("Timer run at "+now);
           
-          Enumeration enu = continuations.elements();
-          while (enu.hasMoreElements()) {
-            GlacierContinuation gc = (GlacierContinuation) enu.nextElement();
+      Enumeration enu = continuations.elements();
+      while (enu.hasMoreElements()) {
+        GlacierContinuation gc = (GlacierContinuation) enu.nextElement();
 
-            if (!gc.hasTerminated() && gc.getTimeout() < (now + 1*SECONDS)) {
-              log("Timer: Resuming ["+gc+"]");
-              gc.timeoutExpired();
-              if (!gc.hasTerminated() && (gc.getTimeout() < (now + 1*SECONDS)))
-                panic("Continuation does not set new timeout: "+gc);
-            }
+        if (!gc.hasTerminated() && gc.getTimeout() < (now + 1*SECONDS)) {
+          log("Timer: Resuming ["+gc+"]");
+          gc.timeoutExpired();
+          if (!gc.hasTerminated() && (gc.getTimeout() < (now + 1*SECONDS)))
+            panic("Continuation does not set new timeout: "+gc);
+        }
             
-            if (!gc.hasTerminated()) {
-              if ((earliestTimeout == -1) || (gc.getTimeout() < earliestTimeout))
-                earliestTimeout = gc.getTimeout();
-            } else {
-              if (numDelete < 100)
-                deleteList[numDelete++] = gc.getMyUID();
-            }
-          }
+        if (!gc.hasTerminated()) {
+          if ((earliestTimeout == -1) || (gc.getTimeout() < earliestTimeout))
+            earliestTimeout = gc.getTimeout();
+        } else {
+          if (numDelete < 100)
+            deleteList[numDelete++] = gc.getMyUID();
+        }
+      }
 
-          if (numDelete > 0) {          
-            log("Deleting "+numDelete+" expired continuations");
-            for (int i=0; i<numDelete; i++)
-              continuations.remove(new Integer(deleteList[i]));
-          }
+      if (numDelete > 0) {          
+        log("Deleting "+numDelete+" expired continuations");
+        for (int i=0; i<numDelete; i++)
+          continuations.remove(new Integer(deleteList[i]));
+      }
             
-        } while ((numDelete == 100) || ((earliestTimeout >= 0) && (earliestTimeout < System.currentTimeMillis())));
+    } while ((numDelete == 100) || ((earliestTimeout >= 0) && (earliestTimeout < System.currentTimeMillis())));
 
-        if (earliestTimeout >= 0) {
-          log("Next timeout is at "+earliestTimeout);
-          addTimer((int)Math.max(earliestTimeout - System.currentTimeMillis(), 1*SECONDS), tiContinuation);
-        } else log("No more timeouts");
-        
-        break;
-      }
-      default:
-      {
-        panic("Unknown timer expired: " + (int) timerID);
-      }
-    }
-  }
-
-  public boolean isPlausibleSource(NodeHandle source, Id id) {
-    /* perform density check to see if <source> might be responsible for <id> */
-    return true;
+    if (earliestTimeout >= 0) {
+      log("Next timeout is at "+earliestTimeout);
+      setTimer((int)Math.max(earliestTimeout - System.currentTimeMillis(), 1*SECONDS));
+    } else log("No more timeouts");
   }
 
   public void neighborSeen(Id nodeId, long when) {
 
-    if (nodeId.equals(((RingId)getLocalNodeHandle().getId()).getId()))
+    if (nodeId.equals(getLocalNodeHandle().getId()))
       return;
 
     log("Neighbor: "+nodeId+" was seen at "+when);
@@ -929,7 +851,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     if (!joined)
       return;
 
-    neighborSeen(((RingId)handle.getId()).getId(), System.currentTimeMillis());
+    neighborSeen(handle.getId(), System.currentTimeMillis());
   }
 
   public void lookupHandles(Id id, int num, Continuation command) {
@@ -1264,7 +1186,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         haveItA[i] = fragmentStorage.exists(gqm.getKey(i));
         log("My range is "+responsibleRange);
         log("Location is "+fragmentLocation);
-        authoritativeA[i] = amResponsibleFor(fragmentLocation);
+        authoritativeA[i] = responsibleRange.containsId(fragmentLocation);
         log("Result: haveIt="+haveItA[i]+" amAuthority="+authoritativeA[i]);
       }
       
@@ -1351,7 +1273,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       
       while (iter.hasNext()) {
         FragmentKey fkey = (FragmentKey)iter.next();
-        Id thisPos = ((RingId)getFragmentLocation(fkey)).getId();
+        Id thisPos = getFragmentLocation(fkey);
         if (range.containsId(thisPos)) {
           if (!bv.contains(fkey.getVersionKey().toByteArray())) {
             log(fkey+" @"+thisPos+" - MISSING");
@@ -1403,7 +1325,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           if (hisFID >= numFragments)
             panic("Assertion failed: L938");
           keys[manifestIndex] = new FragmentKey(thisKey.getVersionKey(), hisFID);
-          log("SYN2: He should have key "+keys[manifestIndex]+" @"+((RingId)getFragmentLocation(keys[manifestIndex])).getId());
+          log("SYN2: He should have key "+keys[manifestIndex]+" @"+getFragmentLocation(keys[manifestIndex]));
           manifestIndex ++;
           currentLookup ++;
           if ((manifestIndex == manifestAggregationFactor) || (currentLookup == numLookups)) {
@@ -1440,7 +1362,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       Iterator iter = neighborStorage.scan().getIterator();
       Vector ccwIDs = new Vector();
       Vector cwIDs = new Vector();
-      Id myID = ((RingId)getLocalNodeHandle().getId()).getId();
+      Id myID = getLocalNodeHandle().getId();
       
       while (iter.hasNext()) {
         Id thisNeighbor = (Id)iter.next();
@@ -1489,14 +1411,13 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
 
         log(" - #"+i+" "+currentElement+": "+ccwId+"-"+cwId);
         
-        IdRange thisRange = pastryIdFactory.buildIdRange(ccwId, cwId);
+        IdRange thisRange = factory.buildIdRange(ccwId, cwId);
         IdRange intersectRange = requestedRange.intersectRange(thisRange);
         if (!intersectRange.isEmpty()) {
           log("     - Intersects: "+intersectRange+", sending RangeForward");
-          RingId currentElementRID = factory.buildRingId(((RingId)getLocalNodeHandle().getId()).getRingId(), currentElement);
           endpoint.route(
-            currentElementRID,
-            new GlacierRangeForwardMessage(grqm.getUID(), requestedRange, grqm.getSource(), getLocalNodeHandle(), currentElementRID),
+            currentElement,
+            new GlacierRangeForwardMessage(grqm.getUID(), requestedRange, grqm.getSource(), getLocalNodeHandle(), currentElement),
             null
           );
         }
@@ -1543,7 +1464,6 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             if (o != null) {
               log("Fragment "+gfm.getKey()+" found ("+o+"), returning...");
               FragmentAndManifest fam = (FragmentAndManifest) o;
-              log("FAM: "+fam.fragment+" / "+fam.manifest);
               endpoint.route(
                 null,
                 new GlacierDataMessage(gfm.getUID(), gfm.getKey(), fam.fragment, null, getLocalNodeHandle(), gfm.getSource().getId(), true),
@@ -1555,7 +1475,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                 new Continuation() {
                   public void receiveResult(Object o) {
                     if (o != null) {
-                      long theVersion = extractVersion(o);
+                      long theVersion = (o instanceof GCPastContent) ? ((GCPastContent)o).getVersion() : 0;
                       if (theVersion == gfm.getKey().getVersionKey().getVersion()) {
                         log("Original of "+gfm.getKey()+" found ("+o+", ts="+theVersion+", expected="+gfm.getKey().getVersionKey().getVersion()+") Recoding...");
                         Fragment[] frags = policy.encodeObject((Serializable) o);
@@ -1615,7 +1535,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         if ((thisFragment != null) && (thisManifest != null)) {
           log("Got Fragment+Manifest for "+thisKey);
 
-          if (!amResponsibleFor(getFragmentLocation(thisKey))) {
+          if (!responsibleRange.containsId(getFragmentLocation(thisKey))) {
             warn("Not responsible for "+thisKey+" (at "+getFragmentLocation(thisKey)+") -- discarding");
             continue;
           }
@@ -1647,7 +1567,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                   boolean haveItA[] = new boolean[1];
                   haveItA[0] = true;
                   boolean authoritativeA[] = new boolean[1];
-                  authoritativeA[0] = amResponsibleFor(getFragmentLocation(thisKey));
+                  authoritativeA[0] = responsibleRange.containsId(getFragmentLocation(thisKey));
                   
                   endpoint.route(
                     null,
@@ -1671,7 +1591,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         
         if ((thisFragment == null) && (thisManifest != null)) {
 
-          if (!amResponsibleFor(getFragmentLocation(thisKey))) {
+          if (!responsibleRange.containsId(getFragmentLocation(thisKey))) {
             warn("Not responsible for "+thisKey+" (at "+getFragmentLocation(thisKey)+") -- discarding");
             continue;
           }
@@ -1743,8 +1663,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       /* TimeoutMessages are generated by the local node when a 
          timeout expires. */
     
-      GlacierTimeoutMessage gtm = (GlacierTimeoutMessage) msg;
-      timerExpired((char) gtm.getUID());
+      timerExpired();
       return;
     } else {
       panic("GLACIER ERROR - Received message " + msg + " of unknown type.");
