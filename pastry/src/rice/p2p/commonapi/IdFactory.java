@@ -90,12 +90,19 @@ public interface IdFactory {
    * @return An IdRange with the appropriate delimiters.
    */
   public IdRange buildIdRange(Id cw, Id ccw);
-
+  
   /**
    * Creates an empty IdSet.
    *
    * @return an empty IdSet
    */
   public IdSet buildIdSet();
+  
+  /**
+   * Creates an empty NodeHandleSet.
+   *
+   * @return an empty NodeHandleSet
+   */
+  public NodeHandleSet buildNodeHandleSet();
 }
 

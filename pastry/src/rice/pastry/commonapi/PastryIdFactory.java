@@ -127,5 +127,14 @@ public class PastryIdFactory implements IdFactory {
   public IdSet buildIdSet() {
     return new rice.pastry.IdSet();
   }
+  
+  /**
+   * Creates an empty NodeHandleSet.
+   *
+   * @return an empty NodeHandleSet
+   */
+  public NodeHandleSet buildNodeHandleSet() {
+    return new rice.pastry.NodeSet();
+  }
 }
 

@@ -66,7 +66,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   // ----- STATIC FIELDS -----
 
   // the number of milliseconds to wait before declaring a message lost
-  public static int MESSAGE_TIMEOUT = 10000;
+  public static int MESSAGE_TIMEOUT = 15000;
   
 
   // ----- VARIABLE FIELDS -----
@@ -132,7 +132,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    *
    * @return A new id
    */
-  private int getUID() {
+  private synchronized int getUID() {
     return id++;
   }
 
@@ -220,7 +220,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param message The message that arrived
    */
   private void handleResponse(PastMessage message) {
-    log.finer("handling reponse message " + message + " from the request");
+    log.fine("handling reponse message " + message + " from the request");
     Continuation command = removePending(message.getUID());
 
     if (command != null) {
@@ -241,12 +241,12 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
       storage.cache(content.getId(), content, new Continuation() {
         public void receiveResult(Object o) {
           if (! (o.equals(new Boolean(true)))) {
-            log.warning("Caching of " + content + " failed.");
+            log.warning("Caching of " + content + " under id " + content.getId() + " failed.");
           }
         }
 
         public void receiveException(Exception e) {
-          log.warning("Caching of " + content + " caused exception " + e);
+          log.warning("Caching of " + content + " under id " + content.getId() + " caused exception " + e);
         }
       });
     }
@@ -327,7 +327,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
       }
     };
 
-    sendRequest(obj.getId(), new LookupHandlesMessage(getUID(), obj.getId(), replicationFactor, getLocalNodeHandle(), obj.getId()), receiveReplicas);
+    sendRequest(obj.getId(), new LookupHandlesMessage(getUID(), obj.getId(), replicationFactor+1, getLocalNodeHandle(), obj.getId()), receiveReplicas);
   }
 
   /**
@@ -373,7 +373,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
               if (o != null) {
                 command.receiveResult(o);
               } else {
-                lookupHandles(id, replicationFactor, new StandardContinuation(this) {
+                lookupHandles(id, replicationFactor+1, new StandardContinuation(this) {
                   public void receiveResult(Object o) {
                     PastContentHandle[] handles = (PastContentHandle[]) o;
 
@@ -625,7 +625,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
         // back to the previous node
         Continuation forward = new Continuation() {
           public void receiveResult(Object o) {
-
+            log.fine("Received object " + o + " for id " + lmsg.getId());
+            
             // send result back
             getResponseContinuation(lmsg).receiveResult(o);
 

@@ -127,7 +127,7 @@ public class LookupMessage extends ContinuationMessage {
    * @return A string representing this message
    */
   public String toString() {
-    return "[LookupMessage for " + id + "]";
+    return "[LookupMessage for " + id + " data " + response + "]";
   }
 }
 
