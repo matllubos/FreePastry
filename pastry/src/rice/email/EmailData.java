@@ -34,7 +34,7 @@ public class EmailData implements PostData {
 
   /**
    * This method dynamically builds an appropriate SignedReference for
-   * this type of PostData given a location and key.  
+   * this type of PostData given a location.  
    *
    * @param location the location of the data
    */
