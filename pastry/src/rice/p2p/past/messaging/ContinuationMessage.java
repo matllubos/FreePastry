@@ -34,73 +34,77 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.past;
+package rice.p2p.past.messaging;
 
-import java.io.Serializable;
 import rice.*;
 import rice.p2p.commonapi.*;
 
-
 /**
-* @(#) PASTContent.java
+ * @(#) ContinuationMessage.java
  *
- * This interface must be implemented by all content objects stored in
- * PAST.
- *
- * The interface allows applications to control the semantics of an
- * instance of PAST. For instance, it allows applications to control
- * which objects can be inserted (e.g., content-hash objects only),
- * what happens when an object is inserted that already exists in
- * PAST, etc.
+ * This class the abstraction of a message used internally by Past which serves
+ * as a continuation.
  *
  * @version $Id$
+ *
  * @author Alan Mislove
  * @author Ansley Post
  * @author Peter Druschel
  */
-public interface PASTContent extends Serializable {
+public abstract class ContinuationMessage extends PastMessage implements Continuation {
+
+  // the response data
+  private Boolean success;
+
+  // the response exception, if one is thrown
+  private Exception exception;
 
   /**
-   * Checks if a insert operation should be allowed.  Invoked when a
-   * PAST node receives an insert request and it is a replica root for
-   * the id; invoked on the object to be inserted.  This method
-   * determines the effect of an insert operation on an object that
-   * already exists: it computes the new value of the stored object,
-   * as a function of the new and the existing object.
+    * Constructor which takes a unique integer Id, as well as the
+   * data to be stored
    *
-   * @param id the key identifying the object
-   * @param newObj the new object to be stored
-   * @param existingObj the existing object stored on this node (null if no object associated with id is stored on this node)
-   * @return null, if the operation is not allowed; else, the new
-   * object to be stored on the local node.
+   * @param uid The unique id
+   * @param id The location to be stored
+   * @param source The source address
+   * @param dest The destination address
+   * @param content The data to be stored
    */
-  public PASTContent checkInsert(Id id, PASTContent existingContent) throws PASTException;
+  protected ContinuationMessage(int uid, Id source, Id dest) {
+    super(uid, source, dest);
+  }
 
   /**
-   * Produces a handle for this content object. The handle is retrieved and returned to the
-   * client as a result of the PAST.lookupHandles() method.
+    * Method which builds a response for this message, using the provided
+   * object as a result.
    *
-   * @return the handle
+   * @param o The object argument
    */
-  public PASTContentHandle getHandle();
+  public void receiveResult(Object o) {
+    setResponse();
+    response = (Boolean) o;
+  }
 
   /**
-   * Returns the Id under which this object is stored in PAST.
+    * Method which builds a response for this message, using the provided
+   * exception, which was thrown
    *
-   * @return the id
+   * @param e The exception argument
    */
-  public Id getId();
+  public void receiveException(Exception e) {
+    setResponse();
+    exception = e;
+  }
 
   /**
-   * States if this content object is mutable. Mutable objects are not subject to dynamic caching in PAST.
+    * Method by which this message is supposed to return it's response.
    *
-   * @return true if this object is mutable, else false
+   * @param c The continuation to return the reponse to.
    */
-  public boolean isMutable();
-
+  public void returnResponse(Continuation c) {
+    if (exception == null)
+      c.receiveResult(response);
+    else
+      c.receiveException(exception);
+  }
 }
-
-
-
-
 

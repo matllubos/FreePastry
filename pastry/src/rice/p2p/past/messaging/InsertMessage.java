@@ -34,69 +34,50 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.past;
-
-import java.io.Serializable;
+package rice.p2p.past.messaging;
 
 import rice.*;
 import rice.p2p.commonapi.*;
 
 /**
- * A handle class for content-hash objects stored in PAST.
+ * @(#) InsertMessage.java
+ *
+ * This class the abstraction of a message used internally by Past.
  *
  * @version $Id$
+ *
+ * @author Alan Mislove
+ * @author Ansley Post
  * @author Peter Druschel
  */
+public class InsertMessage extends ContinuationMessage {
 
-public class ContentHashPASTContentHandle implements PASTContentHandle {
+  // the data to insert
+  private PastContent content;
+  
+  /**
+   * Constructor which takes a unique integer Id, as well as the
+   * data to be stored
+   *
+   * @param uid The unique id
+   * @param id The location to be stored
+   * @param source The source address
+   * @param dest The destination address
+   * @param content The data to be stored
+   */
+  protected InsertMessage(int uid, PastContent content, Id source, Id dest) {
+    super(uid, source, dest);
 
-    // the node on which the content object resides
-    private NodeHandle storageNode;
+    this.content = content;
+  }
 
-    // the object's id
-    private Id myId;
-
-
-    /**
-     * Constructor
-     *
-     * @param id key identifying the object to be inserted
-     * @param obj the object to be inserted
-     * @param command Command to be performed when the result is received
-     */
- 
-    public ContentHashPASTContentHandle(NodeHandle nh, Id id) {
-	storageNode = nh;
-	myId = id;
-    }
-
-
-    /*
-     * PASTContentHandle methods
-     */
-
-    /**
-     * get the id of the PASTContent object associated with this handle
-     * @return the id
-     */
-
-    public Id getId() {return myId;}
-
-    /**
-     * get the NodeHandle of the PAST node on which the object associated with this handle is stored
-     * @return the id
-     */
-
-    public NodeHandle getNode() {return storageNode;}
-
+  /**
+   * Method which returns the content
+   *
+   * @param o The contained content
+   */
+  public PastContent getContent() {
+    return content;
+  }
 }
-
-
-
-
-
-
-
-
-
 

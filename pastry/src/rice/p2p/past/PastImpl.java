@@ -34,10 +34,11 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.past;
+package rice.p2p.past;
 
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.past.messaging.*;
 
 /**
  * @(#) PastImpl.java
@@ -49,7 +50,7 @@ import rice.p2p.commonapi.*;
  * @author Ansley Post
  * @author Peter Druschel
  */
-public class PastImpl implements Past, Application, RMClient {
+public class PastImpl implements Past, Application, RMClient {0
 
   // this application's endpoint
   protected Endpoint endpoint;
@@ -99,6 +100,23 @@ public class PastImpl implements Past, Application, RMClient {
   }
 
   /**
+   * Returns a continuation which will respond to the given message.
+   *
+   * @return A new id
+   */
+  private Continuation getResponseContinuation(final PastMessage msg) {
+    return new Continuation() {
+      public void receiveResult(Object o) {
+        route(msg.getSource(), msg.buildResponseMessage(o), null);
+      }
+
+      public void receiveException(Exception e) {
+        route(msg.getSource(), msg.buildResponseMessage(e), null);
+      }
+    };
+  }
+
+  /**
    * Sends a request message across the wire, and stores the appropriate
    * continuation.
    *
@@ -121,6 +139,8 @@ public class PastImpl implements Past, Application, RMClient {
 
     if (command != null) {
       command.receiveResult(message.getResult());
+    } else {
+      System.out.println("ERROR - Found message " + message.getUID() + " with not pending Continuation.");
     }
   }
 
@@ -241,23 +261,16 @@ public class PastImpl implements Past, Application, RMClient {
       handleResponse((PastMessage) message);
     } else {
       if (msg instanceof InsertMessage) {
-        InsertMessage imsg = (InsertMessage) msg;
-        storage.store(imsg.getId(),
-                      imsg.getContent(),
-                      new Continuation() {
-                        public void receiveResult(Object o) {
-                          route(msg.getSource(), msg.getResponseMessage(o), null);
-                        }
-
-                        public void receiveException(Exception e) {
-                          route(msg.getSource(), msg.getResponseMessage(e), null);
-                        }
-                      };);
+        InsertMessage imsg = (InsertMessage) msg;        
+        storage.store(imsg.getId(), imsg.getContent(), getResponseContinuation(msg));
       } else if (msg instanceof LookupMessage) {
-        // lookup
+        LookupMessage lmsg = (LookupMessage) msg;
+        storage.getObject(lmsg.getId(), getResponseContinuation(msg));
       } else if (msg instanceof FetchMessage) {
-        // fetch
+        FetchMessage fmsg = (FetchMessage) msg;
+        storage.getObject(fmsg.getId(), getResponseContinuation(msg));
       } else {
+        System.out.println("ERROR - Received message " + msg + " of unknown type.");
       }
     }
   }
@@ -283,7 +296,37 @@ public class PastImpl implements Past, Application, RMClient {
    *
    * @param keySet set containing the keys that needs to be fetched
    */
-  public void fetch(IdSet keySet);
+  public void fetch(IdSet keySet) {
+    Iterator i = keySet.getIterator();
+
+    while (i.hasNext()) {
+      final Id id = (Id) i.next();
+
+      final Continuation receive = new Contination() {
+        public void receiveResult(Object o) {
+          if (! (o.equals(new Boolean(true)))) {
+            System.out.println("Insertion of id " + id + " failed.");
+          }
+        }
+
+        public void receiveException(Exception e) {
+          System.out.println("Insertion of id " + id + " caused exception " + e + ".");
+        }
+      };
+      
+      Contination insert = new Continuation() {
+        public void receiveResult(Object o) {
+          storage.store(id, o, receive);
+        }
+
+        public void receiveException(Exception e) {
+          System.out.println("Retreival of id " + id + " caused exception " + e + ".");
+        }
+      };
+
+      lookup(id, insert);
+    }
+  }
 
   /**
    * This upcall is simply to denote that the underlying replica manager
@@ -305,7 +348,30 @@ public class PastImpl implements Past, Application, RMClient {
    * @param range the range of keys for which the local node is currently
    * responsible
    */
-  public void isResponsible(IdRange range);
+  public void isResponsible(IdRange range) {
+    IdRange notRange = range.getComplementRange();
 
+    Continuation c = new Continuation() {
+      private Iterator notIds;
+
+      public void receiveResult(Object o) {
+        if (o instanceof IdSet) {
+          notIds = ((IdSet) o).getIterator();
+        } else if (! o.equals(new Boolean(true))) {
+          System.out.println("Unstore of Id did not succeed!");
+        }
+
+        if (notIds.hasNext()) {
+          storage.unstore((rice.pastry.Id) notIds.next(), this);
+        }
+      }
+
+      public void receiveException(Exception e) {
+        System.out.println("Exception " + e + " occurred during removal of objects.");
+      }
+    };
+
+    storage.getStorage().scan((rice.pastry.IdRange) notRange, c);
+  }    
 }
 

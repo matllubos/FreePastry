@@ -34,11 +34,7 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.past;
-
-import rice.*;
-import rice.p2p.commonapi.*;
-
+package rice.p2p.past;
 
 /**
  * @(#) PastException.java

@@ -34,9 +34,10 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.past;
+package rice.p2p.past;
 
 import java.io.Serializable;
+
 import rice.*;
 import rice.p2p.commonapi.*;
 
