@@ -430,7 +430,7 @@ public abstract class CommonAPITest {
         if (s.equalsIgnoreCase("sphere"))
           SIMULATOR = SIMULATOR_SPHERE;
         else if (s.equalsIgnoreCase("euclidean"))
-          PROTOCOL = SIMULATOR_EUCLIDEAN;
+          SIMULATOR = SIMULATOR_EUCLIDEAN;
         else
           System.out.println("ERROR: Unsupported simulator: " + s);
 
