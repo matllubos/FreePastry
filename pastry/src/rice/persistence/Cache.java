@@ -73,7 +73,7 @@ public interface Cache extends Catalog {
    * @return <code>True</code> if the cache actaully stores the object, else
    * <code>False</code> (through receiveResult on c).
    */
-  public void cache(Comparable id, Serializable obj, Continuation c);
+  public void cache(Id id, Serializable obj, Continuation c);
 
   /**
    * Removes the object from the list of cached objects. This method is
@@ -85,7 +85,7 @@ public interface Cache extends Catalog {
    * @return <code>True</code> if the action succeeds, else
    * <code>False</code>  (through receiveResult on c).
    */
-  public void uncache(Comparable id, Continuation c);
+  public void uncache(Id id, Continuation c);
 
   /**
    * Returns the maximum size of the cache, in bytes. The result
