@@ -57,6 +57,10 @@ public class SecureReference implements Serializable {
   public byte[] getKey() {
     return key;
   }
+  
+  public int hashCode() {
+    return location.hashCode();
+  }
 
   public boolean equals(Object o) {
     if (! (o instanceof SecureReference))

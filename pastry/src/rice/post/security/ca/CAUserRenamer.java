@@ -25,7 +25,7 @@ import rice.serialization.*;
  */
 public class CAUserRenamer {
   
-  public static String default_base_address = "dosa.cs.rice.edu";
+  public static String default_base_address = "rice.epostmail.org";
   public static String default_ring = "Rice";
   
   public static KeyPair getKeyPair(String username) throws Exception {
@@ -61,10 +61,14 @@ public class CAUserRenamer {
         BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
         String oldUserid = input.readLine();
         
-        System.out.print("    Reading in " + oldUserid + "'s keypair\t\t\t\t");
-        KeyPair pair = getKeyPair(oldUserid);
-        System.out.println("[ DONE ]");
+        String pass = CAKeyGenerator.fetchPassword("Please enter " + oldUserid + "'s password");
         
+        System.out.print("    Reading in " + oldUserid + "'s keypair\t\t\t\t");
+        KeyPair pair = CACertificateGenerator.readKeyPair(new File(oldUserid + ".epost"), pass);
+        System.out.println("[ DONE ]");
+                                                          
+        (new File(oldUserid + ".epost")).renameTo(new File(oldUserid + ".epost.old"));
+
         System.out.print("Please enter the new base address ["+default_base_address+"]: ");
         String base_address = input.readLine();
         if (base_address.equals("")) 
@@ -96,17 +100,9 @@ public class CAUserRenamer {
         System.out.print("    Generating the certificate " + address.getAddress() + "\t");
         PostCertificate certificate = CASecurityModule.generate(address, pair.getPublic(), caPair.getPrivate());
         System.out.println("[ DONE ]");
-        
-        (new File(userid + ".certificate")).renameTo(new File(userid + ".certificate.old"));
-        
-        FileOutputStream fos = new FileOutputStream(userid + ".certificate");
-        ObjectOutputStream oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fos)));
-        
+                
         System.out.print("    Writing out certificate to '" + userid + ".certificate'\t\t");
-        oos.writeObject(certificate);
-        
-        oos.flush();
-        oos.close();
+        CACertificateGenerator.writeFile(certificate, pair, pass, new File(userid + ".epost"));
         System.out.println("[ DONE ]");
                 
         System.out.print("Create another key? y/n [No]: ");

@@ -339,30 +339,33 @@ public class PostProxy {
    * @param parameters The parameters to use
    */
   protected void startCheckNAT(Parameters parameters) throws Exception {
+    InetSocketAddress[] addresses = parameters.getInetSocketAddressArrayParameter("pastry_proxy_connectivity_hosts");
+    Random random = new Random();
+    
     try {
       natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getIntParameter("pastry_proxy_connectivity_timeout")/4,
                                                             new InetSocketAddress(InetAddress.getLocalHost(), parameters.getIntParameter("pastry_proxy_connectivity_port")),
-                                                            parameters.getInetSocketAddressParameter("pastry_proxy_connectivity_host")).getAddress();
+                                                            addresses[random.nextInt(addresses.length)]).getAddress();
     } catch (SocketTimeoutException e) {}
   
     if (natAddress == null) 
       try {
         natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getIntParameter("pastry_proxy_connectivity_timeout")/2,
                                                               new InetSocketAddress(InetAddress.getLocalHost(), parameters.getIntParameter("pastry_proxy_connectivity_port")),
-                                                              parameters.getInetSocketAddressParameter("pastry_proxy_connectivity_host")).getAddress();
+                                                              addresses[random.nextInt(addresses.length)]).getAddress();
       } catch (SocketTimeoutException e) {}
     
     if (natAddress == null) 
       try {
         natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getIntParameter("pastry_proxy_connectivity_timeout"),
                                                               new InetSocketAddress(InetAddress.getLocalHost(), parameters.getIntParameter("pastry_proxy_connectivity_port")),
-                                                              parameters.getInetSocketAddressParameter("pastry_proxy_connectivity_host")).getAddress();
+                                                              addresses[random.nextInt(addresses.length)]).getAddress();
       } catch (SocketTimeoutException e) {}
     
     if (natAddress == null) {
       int j = message("ePOST attempted to determine the NAT IP address, but was unable to.  This\n" +
                       "is likely caused by an incorrectly configured NAT - make sure that your NAT\n" +
-                      "is set up to forward both TCP and UDP packets on port " + parameters.getIntParameter("pastry_proxy_connectivity_port") + " to '" + address + "'.\n\n" + 
+                      "is set up to forward both TCP and UDP packets on port " + parameters.getIntParameter("pastry_proxy_connectivity_port") + " to '" + InetAddress.getLocalHost() + "'.\n\n" + 
                       "Error: java.net.SocketTimeoutException", new String[] {"Kill ePOST Proxy", "Retry"}, "Kill ePOST Proxy");
     
       if (j == 1)
@@ -684,8 +687,8 @@ public class PostProxy {
    */  
   protected void startRetrieveUserClone(Parameters parameters) throws Exception {
     if (parameters.getBooleanParameter("post_log_clone_enable")) {
-      stepStart("Creating PostLog for previous address " + parameters.getBooleanParameter("post_log_clone_username"));
-      clone = new PostUserAddress(FACTORY, parameters.getStringParameter("post_log_clone_username"));
+      stepStart("Creating PostLog for previous address " + parameters.getStringParameter("post_log_clone_username"));
+      clone = new PostUserAddress(new MultiringIdFactory(generateRingId("Rice"), new PastryIdFactory()), parameters.getStringParameter("post_log_clone_username"));
       stepDone(SUCCESS);
     }
   }

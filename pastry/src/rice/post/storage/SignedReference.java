@@ -40,6 +40,10 @@ public class SignedReference implements Serializable {
   public Id getLocation() {
     return location;
   }
+  
+  public int hashCode() {
+    return location.hashCode();
+  }
 
   public boolean equals(Object o) {
     if (! (o instanceof SignedReference))
