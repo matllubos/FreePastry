@@ -95,9 +95,7 @@ public class FragmentKeyFactory implements IdFactory {
   }
 
   public rice.p2p.commonapi.Id buildIdFromToString(char[] chars, int offset, int length) {
-    System.err.println("FragmentKeyFactory.buildIdFromToString(char[], int, int) called");
-    System.exit(1);
-    return null;
+    return buildIdFromToString(new String(chars, offset, length));
   }
 
   /**
