@@ -16,6 +16,7 @@ public class LocalVisualizationFrame extends JFrame {
   
   protected LocalVisualizationFrame(LocalVisualization visualization) {
     super("Local Node Visualization"); 
+    setResizable(false);
     
     this.visualization = visualization;
     

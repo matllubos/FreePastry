@@ -22,6 +22,7 @@ public class VisualizationFrame extends JFrame {
   
   protected VisualizationFrame(Visualization visualization) {
     super("Pastry Network Visualization"); 
+    setResizable(false);
     
     this.visualization = visualization;
     

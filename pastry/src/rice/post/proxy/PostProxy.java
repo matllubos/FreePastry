@@ -344,7 +344,9 @@ public class PostProxy {
    * @param parameters The parameters to use
    */
   protected void startCheckNAT(Parameters parameters) throws Exception {
+    System.err.println("Starting parsing...");
     InetSocketAddress[] addresses = parameters.getInetSocketAddressArrayParameter("pastry_proxy_connectivity_hosts");
+    System.err.println("Done parsing...");
     Random random = new Random();
     
     try {
@@ -1441,6 +1443,7 @@ public class PostProxy {
     public PostDialog() {
       panel = new PostPanel();
       kill = new KillPanel();
+      setResizable(false);
 
       area = new JTextArea(15,75);
       area.setFont(new Font("Courier", Font.PLAIN, 10));
