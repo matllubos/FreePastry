@@ -118,9 +118,11 @@ public class StandardRouter implements MessageReceiver {
 	if (lsPos == 0) // message is for the local node so deliver it
 	    msg.nextHop = localHandle;
 
-	else if ((lsPos > 0 && lsPos < cwSize) ||
-		 //		 (lsPos < 0 && lsPos < ccwSize)) // message is for a node in the leaf set
-		 (lsPos < 0 && -lsPos < ccwSize)) // message is for a node in the leaf set
+	else if ((lsPos>0 && lsPos<cwSize ) ||
+		 (lsPos==cwSize && !leafSet.get(lsPos).getNodeId().clockwise(target)) ||
+		 (lsPos<0 && -lsPos<ccwSize) ||
+		 (-lsPos==ccwSize && leafSet.get(lsPos).getNodeId().clockwise(target)) )
+
 	    {
 		NodeHandle handle = leafSet.get(lsPos);
 
