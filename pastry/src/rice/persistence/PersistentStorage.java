@@ -38,9 +38,7 @@ public class PersistentStorage implements Storage {
 
   private int storageSize;
   private int usedSize;
-  private Hashtable storedObjects;
   private Hashtable persistentObjects;
-  private Hashtable cachedObjects;
 
   /**
    * Builds a PersistentStorage given a root directory in which to
@@ -56,9 +54,7 @@ public class PersistentStorage implements Storage {
     else
       System.out.println("ERROR: Failed to Initialized Directories");
 
-    storedObjects = new Hashtable();
     persistentObjects = new Hashtable();
-    cachedObjects = new Hashtable();
   }
 
   /**
@@ -113,7 +109,6 @@ public class PersistentStorage implements Storage {
       transcFile.renameTo(objFile); /* Assume Atomic */
 
 
-      storedObjects.put(obj, id);
       persistentObjects.put(obj, id);
 
       writePersistentTable();
@@ -139,6 +134,10 @@ public class PersistentStorage implements Storage {
    * <code>false</code>.
    */
   public void unstore(Comparable id, Continuation c) {
+     /* 1. Should remove this from hashtable */
+     /* 2. Should write hashtable atomically */
+     /* 3. Should remove from disk */
+     /* 4. Should update the value of used space */
   }
 
   /**
@@ -151,6 +150,7 @@ public class PersistentStorage implements Storage {
    * @return Whether or not an object is present at id.
    */
   public void exists(Comparable id, Continuation c) {
+     c.receiveResult(new Boolean(persistentObjects.containsKey(id))); 
   }
 
   /**
@@ -162,6 +162,7 @@ public class PersistentStorage implements Storage {
    * object (through receiveResult on c).
    */
   public void getObject(Comparable id, Continuation c){
+    c.receiveResult(persistentObjects.get(id));
   }
 
   /**
@@ -193,7 +194,8 @@ public class PersistentStorage implements Storage {
    * @param c The command to run once the operation is complete
    * @return The total size, in bytes, of data stored.
    */
-  public void getTotalSize(Continuation c) {
+  public void getTotalSize(Continuation c){
+    c.receiveResult(new Integer(usedSize));
   }
 
   /*****************************************************************/
