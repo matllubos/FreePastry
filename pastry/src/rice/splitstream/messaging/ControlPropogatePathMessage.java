@@ -66,8 +66,8 @@ public class ControlPropogatePathMessage extends Message{
 	  if(path.contains((NodeHandle)children.get(i))){
 	      // Cycle dude..
 	      //System.out.println("PROPOGATE_PATH :: Cycle detected at "+scribe.getNodeId()+ " with child "+((NodeHandle)children.get(i)).getNodeId()+" for stripe "+stripe.getStripeId());
-	      channel.getSplitStream().routeMsgDirect((NodeHandle)children.get(i), new ControlDropMessage( channel.getAddress(),
-								     channel.getNodeHandle(),
+	      channel.getSplitStream().routeMsgDirect((NodeHandle)children.get(i), new ControlDropMessage( channel.getSplitStream().getAddress(),
+								     channel.getSplitStream().getNodeHandle(),
 								     stripe.getStripeId(),
 								     credentials,
 								     channel.getSpareCapacityId(),
@@ -80,8 +80,8 @@ public class ControlPropogatePathMessage extends Message{
 	      Vector forward_path = (Vector)path.clone();
 	      forward_path.add( scribe.getLocalHandle() );
 	      channel.getSplitStream().routeMsgDirect( (NodeHandle)children.get(i), 
-				      new ControlPropogatePathMessage( channel.getAddress(),
-								       channel.getNodeHandle(),
+				      new ControlPropogatePathMessage( channel.getSplitStream().getAddress(),
+								       channel.getSplitStream().getNodeHandle(),
 								       stripe.getStripeId(),
 								       credentials,
 								       forward_path,

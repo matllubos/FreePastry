@@ -139,10 +139,10 @@ public class ControlTimeoutMessage extends Message implements Serializable
             {
                 if ( msg_type == ATTACH )
                 {
-        	    ControlAttachMessage attachMessage = new ControlAttachMessage( addr, scribe.getLocalHandle(), channel_id );
+        	    ControlAttachMessage attachMessage = new ControlAttachMessage( channel.getSplitStream().getAddress(), scribe.getLocalHandle(), channel_id );
                     //scribe.anycast( dest, attachMessage, c );
                     channel.getSplitStream().routeMsg( dest, attachMessage, c, null );
-                    ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( channel.getAddress(),
+                    ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( channel.getSplitStream().getAddress(),
                                                                                       num_fails+1,
                                                                                       dest,
                                                                                       c, channel_id );

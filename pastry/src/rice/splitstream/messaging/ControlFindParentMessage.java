@@ -146,7 +146,7 @@ public class ControlFindParentMessage extends Message implements Serializable
 		
 		
 		channel.getSplitStream().routeMsgDirect( originalSource,
-					new ControlFindParentResponseMessage( channel.getAddress(),
+					new ControlFindParentResponseMessage( channel.getSplitStream().getAddress(),
 									      scribe.getNodeHandle(),
 									      channel_id,
 									      c,
@@ -200,7 +200,7 @@ public class ControlFindParentMessage extends Message implements Serializable
 
 
 			channel.getSplitStream().routeMsgDirect( originalSource,
-						new ControlFindParentResponseMessage( channel.getAddress(),
+						new ControlFindParentResponseMessage( channel.getSplitStream().getAddress(),
 										      scribe.getNodeHandle(),
 										      channel_id,
 										      c,
@@ -231,7 +231,7 @@ public class ControlFindParentMessage extends Message implements Serializable
 			    
 			    
 			    channel.getSplitStream().routeMsgDirect( originalSource,
-						    new ControlFindParentResponseMessage( channel.getAddress(),
+						    new ControlFindParentResponseMessage( channel.getSplitStream().getAddress(),
 											  scribe.getNodeHandle(),
 											  channel_id,
 											  c,

@@ -62,7 +62,7 @@ public boolean handleMessage( Channel channel, IScribe scribe, NodeHandle source
       }
       return_array[return_array.length-1] = (NodeId)spcapid;
 
-      ControlAttachResponseMessage response = new ControlAttachResponseMessage( channel.getAddress(), channel_id );
+      ControlAttachResponseMessage response = new ControlAttachResponseMessage( channel.getSplitStream().getAddress(), channel_id );
       Credentials credentials = new PermissiveCredentials();
       response.setContent( return_array );
       if(return_array == null){
@@ -72,6 +72,7 @@ public boolean handleMessage( Channel channel, IScribe scribe, NodeHandle source
       }
       //((Scribe)scribe).routeMsgDirect( source, response, null, null );
       channel.getSplitStream().routeMsgDirect( source, response, credentials, null );
+      return false;
 }
 
 public NodeHandle getSource()

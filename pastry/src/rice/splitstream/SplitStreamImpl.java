@@ -40,6 +40,11 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     private BandwidthManager bandwidthManager = new BandwidthManager();
 
     /**
+     * The pastry address of this application
+     */
+    private static Address address = SplitStreamAddress.instance();
+
+    /**
      * Credentials for this application
      */
     private Credentials credentials = new PermissiveCredentials();
@@ -79,7 +84,8 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
      * The constructor for building the splitStream object
      */
      public SplitStreamImpl(PastryNode node, IScribe scribe){
- 	this.scribe = scribe;  
+ 	super(node);
+        this.scribe = scribe;  
  	this.scribe.registerScribeObserver(this);
 	this.scribe.registerApp(this);
         this.node = node;
@@ -100,7 +106,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     */
    public Channel createChannel(int numStripes, String name){
 
-	Channel channel = new Channel(numStripes, name, scribe, credentials, bandwidthManager, node);
+	Channel channel = new Channel(numStripes, name, scribe, credentials, bandwidthManager, this);
 	channels.put(channel.getChannelId(), channel);
 	return (channel);
 
@@ -126,7 +132,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
      //System.out.println("Attempting to attach to Channel " + channelId);
      if(channel == null){
 
-     	channel = new Channel(channelId, scribe, credentials, bandwidthManager, node);
+     	channel = new Channel(channelId, scribe, credentials, bandwidthManager, this);
 	channels.put(channelId, channel);
      }
 	return channel;
@@ -221,7 +227,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 	   Channel channel = (Channel)channels.get(channelId);
 	   
 	   if(channel == null){
-	       channel = new Channel(channelId, stripeId, spareCapacityId, scribe, bandwidthManager, node);
+	       channel = new Channel(channelId, stripeId, spareCapacityId, scribe, bandwidthManager, this);
 	       channels.put(channelId, channel);
 	   }
 	   
@@ -244,12 +250,11 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 			   Credentials credentials = new PermissiveCredentials();
 			   Vector child_root_path = (Vector)stripe.getRootPath().clone();
 			   child_root_path.add( ((Scribe)scribe).getLocalHandle() );
-			   this.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
-											   channel.getNodeHandle(),
-											   topicId,
-											   credentials,
-											   child_root_path ),
-						   credentials, null );
+			   this.routeMsgDirect( child, new ControlPropogatePathMessage( this.getAddress(),
+	   this.getNodeHandle(),
+           topicId,
+	   credentials, child_root_path, channel.getChannelId() ),
+			   credentials, null );
 		       }
 		       else{
 			   /* THIS IS WHERE THE DROP SHOULD OCCUR */
@@ -276,17 +281,18 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 			    */
 			   if(!(victimChild.getNodeId().equals(child.getNodeId()) &&
 				topicId.equals((NodeId)victimStripeId))){
-			       this.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
-											       channel.getNodeHandle(),
-											       topicId,
-											       credentials,
-											       child_root_path ),
+			       this.routeMsgDirect( child, new ControlPropogatePathMessage( this.getAddress(),
+            this.getNodeHandle(),
+	    topicId,
+	    credentials,
+	    child_root_path,
+            channel.getChannelId() ),
 						       credentials, null );
 			       //System.out.println("Sending PROPOGATE message to"+child.getNodeId()+ " for stripe "+topicId);
 			   }
 			   
-			   this.routeMsgDirect( victimChild, new ControlDropMessage( channel.getAddress(),
-     channel.getNodeHandle(),
+			   this.routeMsgDirect( victimChild, new ControlDropMessage( this.getAddress(),
+     this.getNodeHandle(),
      victimStripeId,
      credentials,
      channel.getSpareCapacityId(), 
@@ -346,6 +352,14 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 	    app.splitstreamIsReady();
 	}
     }
+   
+    /**
+     * Get PastryNode returns a pastyr node
+     * @returns PastryNode the Node
+     */
+    public PastryNode getPastryNode(){
+      return thePastryNode;
+    }
 
     /** -- Pastry Implementation -- **/
     
@@ -375,13 +389,13 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 	/**This should be cleaned up, but since we are past the
          * Api freeze I don't want to change the class inheritance hierachy
          */
-       if( (msg instanceof ControlAttachMessage){
+       if( (msg instanceof ControlAttachMessage) ){
 	   ChannelId channelId = ((ControlAttachMessage) msg).getChannelId();
            Channel channel = (Channel) channels.get(channelId);
            channel.messageForChannel(msg);
        }
        else if (msg instanceof ControlFindParentResponseMessage){
-	   ChannelId channelId = ((ControlFindParentMessage) msg).getChannelId();
+	   ChannelId channelId = ((ControlFindParentResponseMessage) msg).getChannelId();
            Channel channel = (Channel) channels.get(channelId);
            channel.messageForChannel(msg);
        }
@@ -395,13 +409,13 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
            Channel channel = (Channel) channels.get(channelId);
            channel.messageForChannel(msg);
        }
-       else if(msg instanceof ControlPropagatePathMessage){
-	   ChannelId channelId = ((ControlPropagetPatheMessage) msg).getChannelId();
+       else if(msg instanceof ControlPropogatePathMessage){
+	   ChannelId channelId = ((ControlPropogatePathMessage) msg).getChannelId();
            Channel channel = (Channel) channels.get(channelId);
            channel.messageForChannel(msg);
        }
-       else if(msg instanceof ControlTimeOutMessage){
-	   ChannelId channelId = ((ControlTimeOut) msg).getChannelId();
+       else if(msg instanceof ControlTimeoutMessage){
+	   ChannelId channelId = ((ControlTimeoutMessage) msg).getChannelId();
            Channel channel = (Channel) channels.get(channelId);
            channel.messageForChannel(msg);
        }
@@ -422,17 +436,25 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
      */
     public boolean enrouteMsg(Message msg){
 
-      if( (msg instanceof ControlFindParentMessage)
-          (msg instanceof ControlAttachMessage)){
-	
-         ChannelId channelId = msg.getChannelId();
+      if( (msg instanceof ControlFindParentMessage) ){
+         ChannelId channelId = ((ControlFindParentMessage)msg).getChannelId();
          Channel channel = (Channel) channels.get(channelId);
           
          if(channel == null)
-            this.routeMsg(channelId)
+            return true; 
          else
-            channel.enrouteChannel(msg);
+            return channel.enrouteChannel(msg);
       }
+      else if(msg instanceof ControlAttachMessage){
+         ChannelId channelId = ((ControlAttachMessage) msg).getChannelId();
+         Channel channel = (Channel) channels.get(channelId);
+          
+         if(channel == null)
+            return true; 
+         else
+            return channel.enrouteChannel(msg);
+      }
+      return true;
     }
     
 } 

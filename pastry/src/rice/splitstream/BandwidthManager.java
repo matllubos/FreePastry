@@ -134,20 +134,20 @@ public class BandwidthManager{
 	    // Now, select that child which doesnt share a prefix with local
 	    // node.
 	    Vector candidateChildren = new Vector();
-	    int numDigits = channel.getRoutingTable().numRows() - 1;
+	    int numDigits = channel.getSplitStream().getRoutingTable().numRows() - 1;
 	    int digitLength = RoutingTable.baseBitLength();
 	    
 	    //System.out.println("numDigits "+numDigits+" digitLength "+digitLength);
 	    // Start comparing the children's digits with local node's
 	    // digits, starting with most significant digit going all the
 	    // way to least signifcant digit 
-	    //System.out.println("Local node "+channel.getNodeId());
+	    //System.out.println("Local node "+channel.getSplitStream().getNodeId());
 	    for(int k = 0; k < numDigits; k++){
 		for(int j = 0; j < children.size(); j++){
 		    NodeHandle c = (NodeHandle)children.elementAt(j);
 		    //System.out.println("Comparing with child "+c.getNodeId());
 		    // Compare the k-th digit from the most significant digit
-		    if(channel.getNodeId().getDigit(numDigits - k, digitLength) != 
+		    if(channel.getSplitStream().getNodeId().getDigit(numDigits - k, digitLength) != 
 		       c.getNodeId().getDigit(numDigits - k, digitLength))
 			candidateChildren.add(c);
 		}

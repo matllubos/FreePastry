@@ -188,7 +188,7 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
     public RoutingTable getRoutingTable( ChannelId channelId )
     {
 	Channel channel = (Channel) m_channels.get(channelId);
-	return channel.getRoutingTable();
+	return channel.getSplitStream().getRoutingTable();
     }
 
 }

@@ -301,12 +301,14 @@ public class Stripe extends Observable implements IScribeApp{
 		    Credentials credentials = new PermissiveCredentials();
 		    Vector child_root_path = (Vector)root_path.clone();
 		    child_root_path.add( ((Scribe)scribe).getLocalHandle() );
-		    channel.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
-										    channel.getNodeHandle(),
-										    topicId,
-										    credentials,
-										    child_root_path ),
-					    credentials, null );
+		    channel.getSplitStream().routeMsgDirect( child, new ControlPropogatePathMessage( channel.getSplitStream().getAddress(),
+    channel.getSplitStream().getNodeHandle(),
+    topicId,
+    credentials,
+    child_root_path,
+    channel.getChannelId() 
+  ),
+    credentials, null );
 		    //System.out.println("STRIPE :: Done with taking child "+getChannel().getNodeId());
 		}
 		else{
@@ -337,23 +339,24 @@ public class Stripe extends Observable implements IScribeApp{
 		     */
 		    if(!(victimChild.getNodeId().equals(child.getNodeId()) &&
 				topicId.equals((NodeId)victimStripeId))){
-			channel.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
-											channel.getNodeHandle(),
-											topicId,
-											credentials,
-											child_root_path ),
+			channel.getSplitStream().routeMsgDirect( child, new ControlPropogatePathMessage( channel.getSplitStream().getAddress(),
+	channel.getSplitStream().getNodeHandle(),
+	topicId,
+        credentials,
+	child_root_path,
+        channel.getChannelId() ),
 						credentials, null );
 			//System.out.println("Sending PROPOGATE message to" +child.getNodeId()+ " for stripe "+topicId);
 		    }
 
-		    channel.routeMsgDirect( victimChild, new ControlDropMessage( channel.getAddress(),
-										     channel.getNodeHandle(),
+		    channel.getSplitStream().routeMsgDirect( victimChild, new ControlDropMessage( channel.getSplitStream().getAddress(),
+										     channel.getSplitStream().getNodeHandle(),
 										     victimStripeId,
 										     credentials,
 										     channel.getSpareCapacityId(),
 										     channel.getChannelId(),
-										     channel.getTimeoutLen() ),
-						credentials, null ); 
+     channel.getTimeoutLen())
+     , credentials, null ); 
 		    //System.out.println(" STRIPE "+this+" Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+ " at "+channel.getNodeId());
 
 		    victimStripe.setLocalDrop(true);

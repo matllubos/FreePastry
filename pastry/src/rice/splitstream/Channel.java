@@ -85,11 +85,7 @@ public class Channel implements IScribeApp {
      */
     private boolean isReady = false;
 
-    /**
-     * The pastry address of this application
-     */
-    private static Address address = SplitStreamAddress.instance();
-
+  
     /**
      * The bandwidth manager for this channel, responsible for 
      * keeping track of the number of children, and then deciding
@@ -164,8 +160,8 @@ public class Channel implements IScribeApp {
 	    stripeIdTable.put(stripeId, stripe);
 
             /* This is the code to select the primary stripe, check it */ 
-	    if(stripeId.getDigit(getRoutingTable().numRows() -1, 4) 
-		== getNodeId().getDigit(getRoutingTable().numRows() -1,4))
+	    if(stripeId.getDigit(getSplitStream().getRoutingTable().numRows() -1, 4) 
+		== getSplitStream().getNodeId().getDigit(getSplitStream().getRoutingTable().numRows() -1,4))
 		primaryStripe = stripe; 
 	    
 
@@ -173,7 +169,6 @@ public class Channel implements IScribeApp {
 	}
         sendSubscribeMessage();
 	if(scribe.join(spareCapacityId, this, cred)){
-	    System.out.println("Creator Joined Spare Capacity Group" + getNodeId());
 	}		
    	isReady = true;
 	notifyApps();
@@ -191,7 +186,6 @@ public class Channel implements IScribeApp {
 	}
 	subInfo[subInfo.length-1] = spareCapacityId;
 	if(scribe.join(channelId, this, cred, subInfo)){
-	    System.out.println("Creator Joined Group" + getNodeId());
 	}		
     }
 
@@ -214,14 +208,15 @@ public class Channel implements IScribeApp {
         this.splitStream = splitStream;
 	this.bandwidthManager.registerChannel(this);
         scribe.registerApp(this);
-	ControlAttachMessage attachMessage = new ControlAttachMessage();
+	ControlAttachMessage attachMessage = 
+               new ControlAttachMessage(this.getSplitStream().getAddress(),
+                                        this.getSplitStream().getNodeHandle(),
+                                        this.channelId
+                                       );
         //System.out.println("Sending Anycast Message from " + getNodeId());
-        scribe.anycast(channelId, attachMessage, cred );
+        this.getSplitStream().routeMsg(channelId, attachMessage, cred, null );
         ignore_timeout = false;
-        ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( this.getAddress(),
-                                                                          0,
-                                                                          channelId,
-                                                                          cred );
+        ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( getSplitStream().getAddress(), 0, channelId, cred, channelId );
 	this.splitStream.getPastryNode().scheduleMsg( timeoutMessage, timeoutLen );
 
     }
@@ -251,8 +246,8 @@ public class Channel implements IScribeApp {
 	    stripeIdTable.put(stripeIds[i], stripe);
 	    /* Subscribe to a primary stripe */
             /* This is the code to select the primary stripe, check it */ 
-	    if( stripeIds[i].getDigit(getRoutingTable().numRows() -1, 4) 
-	        == getNodeId().getDigit(getRoutingTable().numRows() -1,4) )
+	    if( stripeIds[i].getDigit(getSplitStream().getRoutingTable().numRows() -1, 4) 
+	        == getSplitStream().getNodeId().getDigit(getSplitStream().getRoutingTable().numRows() -1,4) )
 	        primaryStripe = stripe; 
 	
 	}
@@ -269,7 +264,7 @@ public class Channel implements IScribeApp {
 
 	isReady = true;
 	notifyApps();
-	System.out.println("A Channel Object is being created (In Path) at " + getNodeId());
+	//System.out.println("A Channel Object is being created (In Path) at " + getNodeId());
     }
  
     /**
@@ -483,7 +478,7 @@ public class Channel implements IScribeApp {
 	int maxAllowed = bandwidthManager.getMaxBandwidth(this);
 	
 	if((currentUsage + 1) == maxAllowed){
-	    System.out.println("Node " + getNodeId() + " Joining Spare Capacity Tree Again");
+	    System.out.println("Node " + getSplitStream().getNodeId() + " Joining Spare Capacity Tree Again");
 	    scribe.join(getSpareCapacityId(), this, cred);
 	}
     }
@@ -495,7 +490,7 @@ public class Channel implements IScribeApp {
 	bandwidthManager.additionalBandwidthUsed(this);
 
 	if(!bandwidthManager.canTakeChild(this)){
-	    System.out.println("Node " + getNodeId() + " Leaving Spare Capacity Tree");
+	    System.out.println("Node " + getSplitStream().getNodeId() + " Leaving Spare Capacity Tree");
 	    scribe.leave(getSpareCapacityId(), this, cred);
 	}
     }
@@ -530,7 +525,7 @@ public class Channel implements IScribeApp {
 	/* Check the type of message */
 	/* then make call accordingly */
 	if(msg.getTopicId().equals(channelId)){
-	    handleChannelMessage(msg);
+	    //handleChannelMessage(msg);
 	}
 	else if(msg.getTopicId().equals(spareCapacityId)){
 	    //handleSpareCapacityMessage(msg);
@@ -555,27 +550,9 @@ public class Channel implements IScribeApp {
     public void subscribeHandler(NodeId topicId, 
 				 NodeHandle child, boolean wasAdded, Serializable data){}
 
-    /** -- Pastry Implementation -- **/
-    
-    /**
-     * Returns the application address of this pastry application
-     * @return Address the applications address
-     */
-    public Address getAddress(){
-	return address;
-    }
-    
-    /**
-     * Gets the securtiy credentials for this pastry application
-     *
-     * @return Credentials the credentials
-     */
-    public Credentials getCredentials(){
-	return null;
-    }
 
     /**
-     * MessageForAppl takes a message in from pastry
+     * MessageForChannel takes a message in from pastry
      * determines what type of message it is and then 
      * sends it to the appropriate sub routine to be handled
      */
@@ -600,6 +577,9 @@ public class Channel implements IScribeApp {
         {
             handleControlTimeoutMessage( msg );
         }
+        else if( msg instanceof ControlAttachMessage){
+            handleAttachMessage(msg); 
+        }
 	else{
 	    System.out.println("Unknown Pastry Message Type");
 	}
@@ -616,8 +596,8 @@ public class Channel implements IScribeApp {
 	    return handleControlFindParentMessage(msg); 
 	}
         else if(msg instanceof ControlAttachMessage){
-            System.out.println("CONTROL ATTACH MESSAGE !!!")
-            System.out.println("CODE SHOULD BE ADDED TO MAKE ME WORK!!!")
+            System.out.println("CONTROL ATTACH MESSAGE !!!");
+            System.out.println("CODE SHOULD BE ADDED TO MAKE ME WORK!!!");
         }
 	return true;
     }
@@ -643,8 +623,8 @@ public class Channel implements IScribeApp {
 	    stripeIdTable.put(stripeId, stripe);
 	    /* Subscribe to a primary stripe */
             /* This is the code to select the primary stripe, check it */ 
-	    if( stripeId.getDigit(getRoutingTable().numRows() -1, 4) 
-	        == getNodeId().getDigit(getRoutingTable().numRows() -1,4) )
+	    if( stripeId.getDigit(getSplitStream().getRoutingTable().numRows() -1, 4) 
+	        == getSplitStream().getNodeId().getDigit(getSplitStream().getRoutingTable().numRows() -1,4) )
 	        primaryStripe = stripe;
 
 	}
@@ -694,7 +674,7 @@ public class Channel implements IScribeApp {
         }
 	//System.out.println("Node "+getNodeId()+" received DROP message"+" for stripe "+dropMessage.getStripeId());
 	dropMessage.handleDeliverMessage((Scribe)scribe, 
-           ((Scribe) scribe).getTopic(dropMessage.getStripeId()), this.thePastryNode, this);
+           ((Scribe) scribe).getTopic(dropMessage.getStripeId()), getSplitStream().getPastryNode(), this);
     }
 
 
@@ -706,12 +686,9 @@ public class Channel implements IScribeApp {
      *
      * @param msg the ScribeMessage for this channel
      */
-    private void handleChannelMessage(ScribeMessage msg){
-
-	ControlAttachMessage attachMessage =
-           (ControlAttachMessage) msg.getData();
-
-	attachMessage.handleMessage(this, scribe, msg.getSource());
+    private void handleAttachMessage(Message msg){
+        ControlAttachMessage attachMsg = (ControlAttachMessage) msg;
+	attachMsg.handleMessage(this, scribe, attachMsg.getSource());
     }
 
     /**
@@ -786,7 +763,7 @@ public class Channel implements IScribeApp {
     {
         System.out.println( "Received a scheduled timeout message. Ignoring? "+ignore_timeout );
         ControlTimeoutMessage timeoutMessage = (ControlTimeoutMessage)msg;
-        timeoutMessage.handleMessage( this, this.thePastryNode, (Scribe)this.scribe );
+        timeoutMessage.handleMessage( this, getSplitStream().getPastryNode(), (Scribe)this.scribe );
     }
  
     /**
