@@ -1,13 +1,15 @@
 package rice.splitstream;
+import rice.scribe.*;
+import rice.scribe.messaging.*;
 import rice.pastry.*;
 import java.io.*; 
 import java.util.Observable;
 /**
  * This class encapsulates all data about an individual stripe.
  */
-public class Stripe extends Observable implements IScribe{
+public class Stripe extends Observable implements IScribeApp{
     private int stripeState = 0;
-    private stripeId = null;
+    private StripeId stripeId = null;
     private Channel channel =  null;
     private InputStream inputStream = null;
     private OutputStream outputStream = null;
@@ -41,7 +43,16 @@ public class Stripe extends Observable implements IScribe{
     * @return int s
     */
     public int getState(){ return stripeState;}
+    /**
+     * Scribe Implementation Methods
+     */
 
+     public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){}
+     public void forwardHandler(ScribeMessage msg){}
+     public void receiveMessage(ScribeMessage msg){}
+     public void scribeIsReady(){}
+     public void subscribeHandler(ScribeMessage msg, NodeId topicId, 
+                                  NodeHandle child, boolean wasAdded){}
     public static final int STRIPE_VALID = 0;
     public static final int STRIPE_INVALID = 1;
 }
