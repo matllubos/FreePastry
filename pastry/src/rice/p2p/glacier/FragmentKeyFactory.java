@@ -5,6 +5,7 @@ import rice.p2p.commonapi.*;
 import rice.p2p.multiring.MultiringIdFactory;
 import rice.p2p.multiring.RingId;
 import rice.pastry.Id;
+import java.util.Random;
 
 /**
  * DESCRIBE THE CLASS
@@ -63,6 +64,16 @@ public class FragmentKeyFactory implements IdFactory {
   }
 
   /**
+   * Builds a random protocol-specific Id.
+   *
+   * @param rng A random number generator
+   * @return The built Id.
+   */
+  public rice.p2p.commonapi.Id buildRandomId(Random rng) {
+    return new FragmentKey(new VersionKey(FACTORY.buildRandomId(rng), rng.nextLong()), rng.nextInt());
+  }
+
+  /**
    * DESCRIBE THE METHOD
    *
    * @param string DESCRIBE THE PARAMETER
@@ -80,7 +91,7 @@ public class FragmentKeyFactory implements IdFactory {
     String fragmentIdS = stok.nextToken();
     RingId key = FACTORY.buildRingId(rice.pastry.Id.build(keyRingS), rice.pastry.Id.build(keyNodeS));
 
-    return new FragmentKey(new VersionKey(key, Integer.valueOf(versionS).intValue()), Integer.valueOf(fragmentIdS).intValue());
+    return new FragmentKey(new VersionKey(key, Long.valueOf(versionS).longValue()), Integer.valueOf(fragmentIdS).intValue());
   }
 
   public rice.p2p.commonapi.Id buildIdFromToString(char[] chars, int offset, int length) {
