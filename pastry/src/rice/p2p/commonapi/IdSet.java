@@ -38,7 +38,6 @@ package rice.p2p.commonapi;
 
 import java.io.Serializable;
 import java.util.*;
-import java.security.*;
 
 /**
  * @(#) IdSet.java

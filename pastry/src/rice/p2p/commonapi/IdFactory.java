@@ -35,9 +35,7 @@ if advised of the possibility of such damage.
 ********************************************************************************/
 
 package rice.p2p.commonapi;
-import java.io.*;
 
-import java.lang.Comparable;
 import java.util.*;
 
 /**

@@ -38,7 +38,6 @@ package rice.p2p.commonapi;
 import java.io.*;
 
 import java.lang.Comparable;
-import java.util.*;
 
 /**
  * @(#) Id.java This interface is an abstraction of an Id (or key) from the CommonAPI paper.
