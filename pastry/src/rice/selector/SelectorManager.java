@@ -36,10 +36,16 @@ if advised of the possibility of such damage.
 
 package rice.selector;
 
-import java.io.*;
-import java.net.*;
-import java.nio.channels.*;
-import java.util.*;
+import java.io.IOException;
+import java.nio.channels.SelectableChannel;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.TreeSet;
 
 /**
  * This class is the class which handles the selector, and listens for activity.
@@ -49,7 +55,7 @@ import java.util.*;
  * @version $Id$
  * @author Alan Mislove
  */
-public class SelectorManager extends Thread {
+public class SelectorManager extends Thread implements Timer {
 
   public static int TIMEOUT = 500;
 
@@ -65,11 +71,11 @@ public class SelectorManager extends Thread {
   protected LinkedList invocations;
 
   // the list of handlers which want to change their key
-  private HashSet modifyKeys;
+  protected HashSet modifyKeys;
 
-  private Timer timer;
+//  private Timer timer;
 
-  private TimerThread timerThread;
+//  private TimerThread timerThread;
   
   boolean alive = true;
 
@@ -87,9 +93,9 @@ public class SelectorManager extends Thread {
     } catch (IOException e) {
       System.out.println("SEVERE ERROR (SelectorManager): Error creating selector " + e);
     }
-    timer = new Timer(selector, profile);
-    timerThread = timer.thread;
-  //  setPriority(Thread.MAX_PRIORITY);
+//    timer = new Timer(selector, profile);
+//    timerThread = timer.thread;
+    //setPriority(Thread.MAX_PRIORITY);
     start();
   }
 
@@ -128,6 +134,7 @@ public class SelectorManager extends Thread {
    * @return The SelectionKey which uniquely identifies this channel
    */
   public SelectionKey register(SelectableChannel channel, SelectionKeyHandler handler, int ops) throws IOException {
+//    System.out.println("SM.register("+channel.getClass().getName()+")");    
     return channel.register(selector, ops, handler);
   }
 
@@ -156,6 +163,7 @@ public class SelectorManager extends Thread {
    * @param key The key which is to be chanegd
    */
   public synchronized void modifyKey(SelectionKey key) {
+    System.out.println("modifyKey("+key+")");
     modifyKeys.add(key);
     selector.wakeup();
   }
@@ -172,14 +180,26 @@ public class SelectorManager extends Thread {
    */
   public void run() {
     try {
+      System.out.println("SelectorManager starting...");
       debug("SelectorManager starting...");
 
       // loop while waiting for activity
       while (alive) {
-        timerThread.mainLoopHelper(this);
+        Thread.yield();
+//        try { Thread.sleep(100); } catch (Exception ioe) {}
+        executeDueTasks();
         onLoop();
         doInvocations();
         doSelections();
+        synchronized(selector) {          
+          int selectTime = SelectorManager.TIMEOUT;   
+          if (timerQueue.size() > 0) {
+            TimerTask first = (TimerTask)timerQueue.first(); 
+            selectTime = (int)(first.nextExecutionTime - System.currentTimeMillis());
+            //System.out.println("SelectTime:"+selectTime);
+          }
+          select(selectTime);
+        }
       }
 
       SelectionKey[] keys = keys();
@@ -197,7 +217,7 @@ public class SelectorManager extends Thread {
     } catch (Throwable t) {
       System.out.println("ERROR (SelectorManager.run): " + t);
       t.printStackTrace(System.out);
-      System.exit(-10);
+      System.exit(-1);
     }
   }
 
@@ -207,6 +227,7 @@ public class SelectorManager extends Thread {
     for (int i = 0; i < keys.length; i++) {
       selector.selectedKeys().remove(keys[i]);
 
+      synchronized(keys[i]) {
       SelectionKeyHandler skh = (SelectionKeyHandler) keys[i].attachment();
 
       if (skh != null) {
@@ -233,6 +254,7 @@ public class SelectorManager extends Thread {
         keys[i].channel().close();
         keys[i].cancel();
       }
+      }
     }
   }
 
@@ -241,14 +263,43 @@ public class SelectorManager extends Thread {
    * called by the selector thread.
    */
   protected void doInvocations() {
+    Iterator i;
+    synchronized(this) {
+      i = new ArrayList(invocations).iterator();
+      invocations.clear();
+    }
+    Runnable run;
+    while (i.hasNext()) {
+      run = (Runnable)i.next();
+      try {
+      //  long start = System.currentTimeMillis();
+        run.run();
+      //  System.out.println("ST: " + (System.currentTimeMillis() - start) + " " + run.toString());
+      } catch (Exception e) {
+        System.err.println("Invoking runnable caused exception " + e + " - continuing");
+        e.printStackTrace();
+      }
+    }
+
+    synchronized(this) {
+      i = new ArrayList(modifyKeys).iterator();
+      modifyKeys.clear();
+    }
+    SelectionKey key;
+    while (i.hasNext()) {
+      key = (SelectionKey)i.next();
+      if (key.isValid() && (key.attachment() != null))
+        ((SelectionKeyHandler) key.attachment()).modifyKey(key);
+    }
+  }
+
+  protected void doInvocations2() {
     Runnable run = getInvocation();
     while (run != null) {
       try {
-        long start = System.currentTimeMillis();
+      //  long start = System.currentTimeMillis();
         run.run();
-        
-        if (System.currentTimeMillis() - start > 1000)
-          System.out.println("ST: " + (System.currentTimeMillis() - start) + " invocation " + run.toString());
+      //  System.out.println("ST: " + (System.currentTimeMillis() - start) + " " + run.toString());
       } catch (Exception e) {
         System.err.println("Invoking runnable caused exception " + e + " - continuing");
         e.printStackTrace();
@@ -295,10 +346,6 @@ public class SelectorManager extends Thread {
     }
   }
 
-  void select() throws IOException {
-    select(TIMEOUT);
-  }
-  
   /**
    * Selects on the selector, and returns the result. Also properly synchronizes
    * around the selector
@@ -306,28 +353,39 @@ public class SelectorManager extends Thread {
    * @return DESCRIBE THE RETURN VALUE
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  void select(int time) throws IOException {
+  long lastTimePrinted = 0;
+  
+  int select(int time) throws IOException {
     if (time > TIMEOUT)
       time = TIMEOUT;
-    
-    try {
-      if ((time <= 0) || (invocations.size() > 0) || (modifyKeys.size() > 0)) 
-        selector.selectNow();
-      else {
-        synchronized (selector) {
-          selector.select(time);
+    try {      
+      if ((time <= 0) || (invocations.size() > 0) || (modifyKeys.size() > 0)) {
+        if ((System.currentTimeMillis() - lastTimePrinted) > 3000) {
+          String s = "Selecting now: i:"+invocations.size()+" m:"+modifyKeys.size();          
+          Iterator i;
+          synchronized(this) {
+            i = new ArrayList(modifyKeys).iterator();
+          }
+          while(i.hasNext()) {
+            i.next();
+          }
+          System.out.println(s);
+          lastTimePrinted = System.currentTimeMillis();
         }
-        
-        // yield to allow other operations on the selector to proceed
-        Thread.yield();
+        return selector.selectNow();
       }
+
+      wakeupTime = System.currentTimeMillis()-time;
+//      if (time < 500) System.out.println("Selecting for "+time);
+      return selector.select(time);
     } catch (IOException e) {
       if (e.getMessage().indexOf("Interrupted system call") >= 0) {
         System.out.println("Got interrupted system call, continuing anyway...");
+        return 1;
       } else {
         throw e;
       }
-    } 
+    }
   }
 
   /**
@@ -363,14 +421,117 @@ public class SelectorManager extends Thread {
     }
   }
 
-	public Timer getTimer() {
-		return timer;
-	}
+  public TreeSet timerQueue = new TreeSet();
 
-	/**
-	 * @return
-	 */
-	public static boolean isSelectorThread() {
+  /**
+   * @return
+   */
+  public static boolean isSelectorThread() {
     return Thread.currentThread() == manager;
-	}
+  }
+  
+  public void schedule(TimerTask task, long delay) {
+    task.nextExecutionTime = System.currentTimeMillis() + delay;    
+    addTask(task);
+  }  
+
+  public void schedule(TimerTask task, Date time) {
+    task.nextExecutionTime = time.getTime();
+    addTask(task);
+  }
+  
+  public void schedule(TimerTask task, long delay, long period) {
+    task.nextExecutionTime = System.currentTimeMillis() + delay;
+    task.period = (int)period;
+    addTask(task);
+  }
+  
+  public void schedule(TimerTask task, Date firstTime, long period) {
+    task.nextExecutionTime = firstTime.getTime();
+    task.period = (int)period;
+    addTask(task);
+  }
+  
+  public void scheduleAtFixedRate(TimerTask task, long delay, long period) {
+    task.nextExecutionTime = System.currentTimeMillis() + delay;
+    task.period = (int)period;
+    addTask(task);
+  }
+  
+  public void scheduleAtFixedRate(TimerTask task, Date firstTime, long period) {
+    task.nextExecutionTime = firstTime.getTime();
+    task.period = (int)period;
+    addTask(task);
+  }
+
+  long wakeupTime = 0;
+
+  private void addTask(TimerTask task) {
+    //System.out.println("AddTask("+task+") "+(task.scheduledExecutionTime() - System.currentTimeMillis()));
+    synchronized(selector) {
+      boolean ret = timerQueue.add(task);  
+      if (!ret) {
+        Thread.dumpStack();
+      }
+    }
+    // need to interrupt thread if waiting too long in selector    
+    if (wakeupTime >= task.scheduledExecutionTime())
+      selector.wakeup();
+  }
+
+  protected void executeDueTasks() {
+    //System.out.println("SM.executeDueTasks()");
+    long now = System.currentTimeMillis();
+    ArrayList executeNow = new ArrayList();
+    
+    // step 1, fetch all due timers
+    synchronized(selector) {
+      boolean done = false;
+      while(!done) {
+        if (timerQueue.size() > 0) {
+          TimerTask next = (TimerTask)timerQueue.first(); 
+          if (next.nextExecutionTime <= now) {
+            executeNow.add(next);
+            //System.out.println("Removing:"+next);
+            timerQueue.remove(next);          
+          } else {
+            done = true;
+          }
+        } else {
+          done = true; 
+        }
+      }
+    }
+    
+    
+    // step 2, execute them all
+    // items to be added back into the queue
+    ArrayList addBack = new ArrayList();
+    Iterator i = executeNow.iterator();
+    while(i.hasNext()) {
+      TimerTask next = (TimerTask)i.next(); 
+      try {
+        //System.out.println("SM.Executing "+next);
+        if (next.execute()) {
+          addBack.add(next); 
+        }
+      } catch (Exception e) {
+        e.printStackTrace(); 
+      }
+    }
+    
+    // step 3, add them back if necessary
+    synchronized(selector) {
+      i = addBack.iterator();
+      while(i.hasNext()) {
+        TimerTask tt = (TimerTask)i.next();
+        //System.out.println("SM.addBack("+tt+")");
+        timerQueue.add(tt);
+      }
+    }  
+  }
+
+  public Timer getTimer() {
+    return this;
+  } 
 }
