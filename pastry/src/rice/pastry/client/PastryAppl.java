@@ -199,8 +199,8 @@ public abstract class PastryAppl implements MessageReceiver
     /**
      * Called by a layered Pastry application to obtain a copy of the leaf
      * set. The leaf set contains the nodeId to IP address binding of the
-     * l/2 nodes with numerically closest smaller and the l/2 nodes with
-     * numerically closest larger nodeIds, relatively to the local node's
+     * l/2 nodes with numerically closest counterclockwise and the l/2 nodes with
+     * numerically closest clockwise nodeIds, relatively to the local node's
      * id. 
      *
      * @return the local node's leaf set

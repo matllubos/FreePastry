@@ -58,7 +58,6 @@ public class LeafSet extends Observable implements Serializable {
     private SimilarSet ccwSet;
 
     private int theSize;
-    private boolean singleton; // the leafset was always empty
 
     /**
      * Constructor.
@@ -71,7 +70,6 @@ public class LeafSet extends Observable implements Serializable {
     {
 	baseId = localNode.getNodeId();
 	theSize = size;
-	singleton = true;
 
 	cwSet = new SimilarSet(localNode, size/2, true);
 	ccwSet = new SimilarSet(localNode, size/2, false);
@@ -91,8 +89,6 @@ public class LeafSet extends Observable implements Serializable {
 	if (member(nid)) return false;
 	
 	boolean res = cwSet.put(handle) | ccwSet.put(handle);
-	singleton &= res;
-
 	return res;
     }
 
@@ -122,16 +118,6 @@ public class LeafSet extends Observable implements Serializable {
     public boolean overlaps() {
 	if (size() > 0 && ccwSet.member(cwSet.get(cwSet.size()-1).getNodeId())) return true;
 	else return false;
-    }
-
-    /**
-     * Test if the leafset has always been empty
-     * 
-     * @return true if the leafset never contaied any entries (a singleton node)
-     */
-
-    public boolean isSingleton() {
-	return singleton;
     }
 
     /**
@@ -241,6 +227,32 @@ public class LeafSet extends Observable implements Serializable {
 
 
     /**
+     * complement - given an index of a node in the leafset, produces
+     * the index of the same nodeId in the opposite half of the
+     * leafset
+     *
+     * @param index the index of the entry to complement
+     * @param the index of the same node in the opposite half of the leafset, or inx if it does not exist there
+     */
+    private int complement(int inx) {
+	int res;
+
+	if (inx == 0) return 0;
+	if (inx < 0) {
+	    if (inx < -ccwSize()) return inx;
+	    res = cwSet.getIndex(ccwSet.get(-inx - 1).getNodeId()) + 1;
+	}
+	else {
+	    if (inx > cwSize()) return inx;	    
+	    res = -ccwSet.getIndex(cwSet.get(inx - 1).getNodeId()) - 1;	    
+	}
+	
+	if (res == 0) res = inx;
+	return res;
+    }
+
+
+    /**
      * Numerically closests node to a given a node in the leaf set. 
      *
      * @param nid a node id.
@@ -299,7 +311,7 @@ public class LeafSet extends Observable implements Serializable {
 	// merge the received leaf set into our own
 	// to minimize inserts/removes, we do this from nearest to farthest nodes
 
-	// get indexes of localId in the leafset
+	// get indeces of localId in the leafset
 	int cw = remotels.cwSet.getIndex(baseId);
 	int ccw = remotels.ccwSet.getIndex(baseId);
 
@@ -313,20 +325,56 @@ public class LeafSet extends Observable implements Serializable {
 		    cw = ccw = 0;
 		}
 		else {
+
+		    // find the num. closest to localId in the remotels
+		    int closest = remotels.mostSimilar(baseId);
+		    NodeId closestId = remotels.get(closest).getNodeId();
 		    
-		    if (baseId.clockwise(from.getNodeId())) {
-			cw = 0;
-			ccw = remotels.cwSet.getIndex(remotels.ccwSet.get(0).getNodeId()) + 1;
-			if (ccw == 0) ccw = -1;
+		    if (closest == -remotels.ccwSize() || closest == remotels.cwSize()) {
+			System.out.println("LeafSet::merge, received an out of range leafset!");
+			// doesn't hurt to merge it anyways
+			//return;
+		    }
+
+		    if (closest == 0) {
+			// from is closest
+			if (baseId.clockwise(closestId)) {
+			    cw = closest;
+			    ccw = remotels.complement(closest - 1); 
+			}
+			else {
+			    cw = remotels.complement(closest + 1);
+			    ccw = closest;
+			}
+		    }
+		    else if (closest < 0) {
+			// from is cw
+			if (baseId.clockwise(closestId)) {
+			    cw = closest;
+			    ccw = remotels.complement(closest - 1); 
+			}
+			else {
+			    cw = closest + 1;
+			    ccw = remotels.complement(closest);
+			}
 		    }
 		    else {
-			ccw = 0;
-			cw = -remotels.ccwSet.getIndex(remotels.cwSet.get(0).getNodeId()) - 1;
-			if (cw == 0) cw = 1;
+			// from is ccw
+			if (baseId.clockwise(closestId)) {
+			    cw = remotels.complement(closest); 
+			    ccw = closest - 1; 
+			}
+			else {
+			    ccw = closest;
+			    cw = remotels.complement(closest + 1);
+			}
 		    }
+			    
 		}
 	    }
 	    else {
+		// localId in ccw set
+
 		ccw = -ccw  - 2;
 		cw = ccw + 2;
 	    }

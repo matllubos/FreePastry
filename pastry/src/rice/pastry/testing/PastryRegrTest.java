@@ -412,10 +412,10 @@ public abstract class PastryRegrTest {
      */
 
     protected static void mainfunc(PastryRegrTest pt, String args[]) {
-	int n = 100;
-	int d = 20;
+	int n = 4000;
+	int d = 1000;
 	int k = 100;
-	int numConcJoins = 4;
+	int numConcJoins = 1;
 	int m = 100;
 
 	Date old = new Date();

@@ -171,7 +171,7 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver
 	    int myCol = localHandle.getNodeId().getDigit(i, RoutingTable.idBaseBitLength);
 	    int j;
 
-	    // try up to three times to find a column with live entries
+	    // try up to maxTrials times to find a column with live entries
 	    for (j=0; j<maxTrials; j++) {
 		// pick a random column
 		int col = rng.nextInt(routeTable.numColumns());

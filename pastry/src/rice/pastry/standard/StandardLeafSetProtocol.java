@@ -173,8 +173,8 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 		
 	    if (remotels.test(nh)) {
 		// member nh is missing from remote leafset, send local leafset
-		//System.out.println("StandardLeafsetProtocol: node " + nh.getNodeId() + " missing from " +
-		//remotels);
+		//System.out.println("StandardLeafsetProtocol: at " + localHandle.getNodeId() + 
+		//	   ", node " + nh.getNodeId() + " missing from " + remotels);
 		missing = true;
 		nh.receiveMessage(bl);		    
 		System.out.println("sending ls to " + nh.getNodeId());

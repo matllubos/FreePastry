@@ -302,7 +302,7 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
      *
      * @param nid a node id.
      *
-     * @return -1 if the base id or the index most similar node.
+     * @return -1 if the base id is most similar, else the index of the most similar node.
      */
 
     public int mostSimilar(NodeId nid) {
