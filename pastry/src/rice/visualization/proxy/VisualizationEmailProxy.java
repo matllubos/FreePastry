@@ -1,16 +1,23 @@
 package rice.visualization.proxy;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+
+import rice.email.proxy.EmailProxy;
+import rice.p2p.multiring.MultiringNode;
+import rice.pastry.dist.DistNodeHandle;
+import rice.pastry.dist.DistPastryNode;
+import rice.proxy.Parameters;
 import rice.visualization.*;
-import rice.visualization.server.*;
-import rice.email.proxy.*;
-import rice.proxy.*;
-
-import java.io.*;
-import java.net.*;
-
-import rice.p2p.multiring.*;
-
-import rice.pastry.dist.*;
+import rice.visualization.Visualization;
+import rice.visualization.server.MessageDistributionPanelCreator;
+import rice.visualization.server.NetworkActivityPanelCreator;
+import rice.visualization.server.OverviewPanelCreator;
+import rice.visualization.server.PASTPanelCreator;
+import rice.visualization.server.PastryPanelCreator;
+import rice.visualization.server.RecentMessagesPanelCreator;
+import rice.visualization.server.VisualizationServer;
 
 public class VisualizationEmailProxy extends EmailProxy {
     
@@ -64,7 +71,9 @@ public class VisualizationEmailProxy extends EmailProxy {
         
         if (parameters.getBooleanParameter("visualization_client_enable")) {
           stepStart("Launching Visualization Client");
-          Visualization visualization = new Visualization((DistNodeHandle) pastry.getLocalHandle());
+          Ring[] r = new Ring[1];
+          r[0] = new Ring("global",(DistNodeHandle) pastry.getLocalHandle());
+          Visualization visualization = new Visualization(r);
           stepDone(SUCCESS);
         }
       } catch (Exception e) {

@@ -1,18 +1,15 @@
 package rice.visualization;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
-import java.awt.*;
+import java.io.File;
+import java.net.InetSocketAddress;
+import java.util.Hashtable;
+import java.util.Iterator;
 
-import rice.visualization.data.*;
-import rice.visualization.client.*;
-import rice.visualization.server.*;
-
-import rice.p2p.commonapi.*;
-import rice.pastry.commonapi.*;
-import rice.pastry.dist.*;
-import rice.pastry.*;
+import rice.pastry.NodeId;
+import rice.pastry.dist.DistNodeHandle;
+import rice.visualization.client.UpdateJarResponse;
+import rice.visualization.client.VisualizationClient;
+import rice.visualization.data.Data;
 
 public class Visualization {
   
@@ -24,26 +21,42 @@ public class Visualization {
   public static int STATE_FAULT = VisualizationClient.STATE_FAULT;
   
   public static int REFRESH_TIME = 1000;
+    
+  /**
+   * String name to Ring
+   */
+  protected Hashtable rings;
   
-  protected Vector nodes;
+  /**
+   * Parallel data structure to provide order
+   */
+  protected Ring[] ringArray;
   
   protected VisualizationFrame frame;
   
-  protected DistNodeHandle selected = null;
+  protected DistNodeHandle selectedNode = null;
+  protected Ring selectedRing;
   
-  protected DistNodeHandle highlighted = null;
-  
-  protected Hashtable clients;
-  
-  protected Hashtable neighbors;
+  protected DistNodeHandle highlightedNode = null;
+  protected Ring highlightedRing = null;
   
   protected Data data;
     
-  public Visualization(DistNodeHandle handle) {
-    this.nodes = new Vector();
+
+  public Visualization(Ring[] bootstrapNodes) {
+    for (int i = 0; i < bootstrapNodes.length; i++) {
+      System.out.println(bootstrapNodes[i]);
+    }        
+    ringArray = bootstrapNodes;
+
+    this.rings = new Hashtable();
+    for (int i = 0; i < bootstrapNodes.length; i++) {
+      rings.put(bootstrapNodes[i].name,bootstrapNodes[i]);
+    }
+    selectedRing = bootstrapNodes[0];
+    
     this.frame = new VisualizationFrame(this);
-    this.clients = new Hashtable();
-    this.neighbors = new Hashtable();
+    
     
     Thread t = new Thread() {
       public void run() {
@@ -60,130 +73,172 @@ public class Visualization {
     
     t.start(); 
     
-    addNode(handle);
+    //addNode(handle);
   }
   
-  public void addNode(DistNodeHandle handle) {
-    DistNodeHandle[] distnodes = getNodes();
-    
-    for (int i=0; i<distnodes.length; i++) 
-      if (distnodes[i].getNodeId().equals(handle.getNodeId()))
-        return;
-    
-    nodes.addElement(handle);
+  public DistNodeHandle getSelectedNode() {
+    return selectedNode;
   }
   
-  public DistNodeHandle getSelected() {
-    return selected;
+  public Ring getSelectedRing() {
+    return selectedRing;
+  }
+
+  /**
+   * @return The number of rings.
+   */  
+  public int getNumRings() {
+    return rings.size();
+  }
+  
+  /**
+   * This is kind of a silly way to lookup rings, but hey, this is graphics programming.
+   * @param index
+   * @return the index'th ring.
+   */
+  public Ring getRingByIndex(int index) {
+    return ringArray[index];
   }
   
   public DistNodeHandle getHighlighted() {
-    return highlighted;
+    return highlightedNode;
   }
   
   protected void refreshData() {
-    DistNodeHandle handle = getSelected();
+    DistNodeHandle handle = getSelectedNode();
+    Ring r = getSelectedRing();
     if (handle != null) {
-      getData(handle);
+      getData(handle,r);
       frame.repaint();
     }
   }
+  
+  public DistNodeHandle[] getNodes() {
+    return getNodes(selectedRing);
+  }
+  
+  public DistNodeHandle[] getNodes(Ring r) {
+    return r.getNodes();
+  }
+  
+  
   
   public Data getData() {
     return data;
   }
   
-  public void setHighlighted(DistNodeHandle node) {
-    if (highlighted != node) {
-      highlighted = node;
-      frame.nodeHighlighted(node);
+  public void setHighlighted(DistNodeHandle node, Ring r) {
+    if ((highlightedNode != node) || (highlightedRing != r)) {
+      highlightedNode = node;
+      highlightedRing = r;
+      frame.nodeHighlighted(node,r);
     }
   }
   
-  public void setSelected(InetSocketAddress addr) {
-    DistNodeHandle[] handles = getNodes();
+//  public void setSelected(InetSocketAddress addr) {
+//    setSelected(addr,selectedRing);
+//  }
+  
+  public void setSelected(InetSocketAddress addr, Ring r) {
+    DistNodeHandle[] handles = r.getNodes();
     
     for (int i=0; i<handles.length; i++) {
       if (handles[i].getAddress().equals(addr)) {
-        setSelected(handles[i]);
+        setSelected(handles[i], r);
         return;
       }
     }
   }
-  
-  public void setSelected(NodeId id) {
-    DistNodeHandle[] handles = getNodes();
+
+  public void selectRing(Ring r) {
+    selectedRing = r;
+//    boolean repaint = false;
+//    if (selectedNode == null)
+//      repaint = true;
+    setSelected((DistNodeHandle)null, r);
+//    if (repaint) {
+//      frame.nodeSelected(selectedNode, r);
+//    }
+  }  
+
+//  public void setSelected(NodeId id) {
+//    setSelected(id,selectedRing);
+//  }  
+
+  public void setSelected(NodeId id, Ring r) {
+    DistNodeHandle[] handles = r.getNodes();
       
     for (int i=0; i<handles.length; i++) {
       if (handles[i].getNodeId().equals(id)) {
-        setSelected(handles[i]);
+        setSelected(handles[i],r);
         return;
       }
     }
   }
   
-  public void setSelected(DistNodeHandle node) {
-    if ((selected == null) || (! selected.equals(node))) {
-      selected = node;
-      frame.nodeSelected(node);
+  public void setSelected(DistNodeHandle node, Ring r) {
+    if ((selectedNode == null) || (! selectedNode.equals(node)) || (! selectedRing.equals(r))) {
+      selectedNode = node;
+      selectedRing = r;
+      frame.nodeSelected(node,r);
     }
   }
   
-  public int getState(DistNodeHandle node) {
-    if (clients.get(node.getNodeId()) != null)
-      return ((VisualizationClient) clients.get(node.getNodeId())).getState();
+  public int getState(DistNodeHandle node, Ring r) {
+    if (r.clients.get(node.getNodeId()) != null)
+      return ((VisualizationClient) r.clients.get(node.getNodeId())).getState();
     else 
       return STATE_UNKNOWN;
   }
   
-  public DistNodeHandle[] getNodes() {
-    return (DistNodeHandle[]) nodes.toArray(new DistNodeHandle[0]);
-  }
-  
-  public DistNodeHandle[] getNeighbors(DistNodeHandle handle) {
-    if (neighbors.get(handle.getId()) == null)
+  public DistNodeHandle[] getNeighbors(DistNodeHandle handle, Ring r) {
+    if (r.neighbors.get(handle.getId()) == null)
       return new DistNodeHandle[0];
     
-    return (DistNodeHandle[]) neighbors.get(handle.getId());
+    return (DistNodeHandle[]) r.neighbors.get(handle.getId());
   }
   
   public synchronized UpdateJarResponse updateJar(File[] files, String executionString) {
-    if (selected == null) {
+    if (selectedNode == null) {
       throw new RuntimeException("No Node Selected");
     }
-    VisualizationClient client = (VisualizationClient) clients.get(selected.getNodeId());
+    VisualizationClient client = (VisualizationClient) selectedRing.clients.get(selectedNode.getNodeId());
     return client.updateJar(files,executionString);    
   }
   
   public void openDebugConsole() {
-    if (selected == null) {
+    if (selectedNode == null) {
       throw new RuntimeException("No Node Selected");
     }
-    VisualizationClient client = (VisualizationClient) clients.get(selected.getNodeId());
+    VisualizationClient client = (VisualizationClient) selectedRing.clients.get(selectedNode.getNodeId());
     DebugCommandFrame consoleFrame = new DebugCommandFrame(client);
     consoleFrame.pack();
   }
 
-  protected Data getData(DistNodeHandle handle) {
-      VisualizationClient client = (VisualizationClient) clients.get(handle.getNodeId());
+//  protected Data getData(DistNodeHandle handle) {
+//    return getData(handle,selectedRing);
+//  }
+
+  protected Data getData(DistNodeHandle handle, Ring r) {
+      VisualizationClient client = (VisualizationClient) r.clients.get(handle.getNodeId());
       
       if (client == null) {
         InetSocketAddress address = new InetSocketAddress(handle.getAddress().getAddress(), handle.getAddress().getPort() + PORT_OFFSET);
         client = new VisualizationClient(address);
-        clients.put(handle.getId(), client);
+        r.clients.put(handle.getId(), client);
         client.connect();
       }
       
       DistNodeHandle[] handles = client.getHandles();
       
       if (handles == null) {
-        neighbors.remove(handle.getId());
+        r.neighbors.remove(handle.getId());
         return new Data();
       } else {
-        neighbors.put(handle.getId(), handles);
+        r.neighbors.put(handle.getId(), handles);
       
         for (int i=0; i<handles.length; i++) 
-          addNode(handles[i]);
+          r.addNode(handles[i]);
         
         data = client.getData();
       

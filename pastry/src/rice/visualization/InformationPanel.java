@@ -1,16 +1,17 @@
 package rice.visualization;
 
-import java.awt.*;
-import java.awt.geom.*;
-import java.awt.event.*;
-import javax.swing.*;
-import java.math.*;
-import java.net.*;
-import java.util.*;
+import java.awt.Dimension;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.net.InetSocketAddress;
 
-import rice.pastry.*;
-import rice.pastry.dist.*;
-import rice.p2p.commonapi.*;
+import javax.swing.BorderFactory;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JComboBox;
+import javax.swing.JPanel;
+
+import rice.pastry.NodeId;
+import rice.pastry.dist.DistNodeHandle;
 
 public class InformationPanel extends JPanel {
   
@@ -34,7 +35,7 @@ public class InformationPanel extends JPanel {
     combo.addItemListener(new ItemListener() {
       public void itemStateChanged(ItemEvent state) { 
         if (state.getStateChange() == state.SELECTED) {
-          InformationPanel.this.visualization.setSelected((NodeId) state.getItem());
+          InformationPanel.this.visualization.setSelected((NodeId) state.getItem(),InformationPanel.this.visualization.getSelectedRing());
         }
       }
     });
@@ -45,7 +46,7 @@ public class InformationPanel extends JPanel {
     addrCombo.addItemListener(new ItemListener() {
       public void itemStateChanged(ItemEvent state) { 
         if (state.getStateChange() == state.SELECTED) {
-          InformationPanel.this.visualization.setSelected((InetSocketAddress) state.getItem());
+          InformationPanel.this.visualization.setSelected((InetSocketAddress) state.getItem(),InformationPanel.this.visualization.getSelectedRing());
         }
       }
     });
@@ -55,7 +56,7 @@ public class InformationPanel extends JPanel {
     return new Dimension(INFORMATION_PANEL_WIDTH, INFORMATION_PANEL_HEIGHT);
   }
   
-  public void nodeSelected(DistNodeHandle node) {
+  public void nodeSelected(DistNodeHandle node, Ring r) {
     if (node != null) {
       DistNodeHandle[] handles = visualization.getNodes();
       

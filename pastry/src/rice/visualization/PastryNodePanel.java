@@ -31,14 +31,14 @@ public class PastryNodePanel extends JPanel {
     this.factory = factory;
   }
   
-  public void nodeSelected(DistNodeHandle node) {
+  public void nodeSelected(DistNodeHandle node, Ring r) {
     removeAll();
     
-    if (visualization.getSelected() != null) {
+    if (node != null) {
       if (pane != null)
         selected = pane.getSelectedIndex();
   
-      processData(visualization.getData(visualization.getSelected()));
+      processData(visualization.getData(node,r));
     } else {
       pane = null;
       selected = 0;
