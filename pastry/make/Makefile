@@ -50,7 +50,8 @@ JAVA_BIN         = $(JAVA_HOME)/bin
 #***************************************************************************
 
 JAVA     = java
-JAVAC    = djavac
+JAVAC	 = $(shell if test -e $(JAVA_BIN)/djavac; then	echo djavac;   \
+		   else					echo  javac; fi)
 JAVAH    = javah
 RMIC     = rmic
 JAR      = jar
