@@ -178,6 +178,23 @@ public interface Continuation {
       result.printStackTrace();
     }
   }
+  
+  /**
+   * This class is a Continuation provided for simplicity which
+   * passes both results and exceptions to the receiveResult() method.
+   */
+  public abstract static class SimpleContinuation implements Continuation {
+    
+    /**
+     * Called when an execption occured as a result of the
+     * previous command.  Simply prints an error message to the screen.
+     *
+     * @param result The exception which was caused.
+     */
+    public void receiveException(Exception result) {
+      receiveResult(result);
+    }
+  }
 
   /**
    * This class provides a continuation which is designed to be used from
