@@ -92,10 +92,14 @@ public class Email implements java.io.Serializable {
    *
    * @return The body of this email.
    */
-  public EmailData getBody() throws StorageException {
+  public EmailData getBody() {
     // if the body has not been fetched already, fetch it
     if (this.body == null) {
-      body = (EmailData)storage.retrieveContentHash(bodyRef);
+      try {
+	body = (EmailData)storage.retrieveContentHash(bodyRef);
+      } catch (StorageException s) {
+	// JM do something sensible here
+      }      
     }
     // return the body
     return this.body;
@@ -106,11 +110,15 @@ public class Email implements java.io.Serializable {
    *
    * @return The attachments of this email.
    */
-  public EmailData[] getAttachments() throws StorageException {
+  public EmailData[] getAttachments() {
     // if the attachments have not been fetched already, fetch them
     if (this.attachments == null) {
       for (int i = 0; i < attachmentRefs.length; i++) {
-	attachments[i] = (EmailData)storage.retrieveContentHash(attachmentRefs[i]);
+	try {
+	  attachments[i] = (EmailData)storage.retrieveContentHash(attachmentRefs[i]);
+	} catch (StorageException s) {
+	  // JM do something sensible here
+	}
       }
     }
     // return the attachments
@@ -122,12 +130,16 @@ public class Email implements java.io.Serializable {
    * saves the references to the content in the email.  
    * Should be called before the Email is sent over the wire.
    */
-  protected void storeData() throws StorageException {   
+  protected void storeData() {   
     if (this.attachmentRefs == null) {
       attachmentRefs = new EmailDataReference[attachments.length];
       // insert the email attachments into PAST, store their references
       for (int i = 0; i < attachments.length; i++) {
+	try {
 	attachmentRefs[i] = (EmailDataReference)storage.storeContentHash(attachments[i]); 
+	} catch (StorageException s) {
+	// JM do something sensible here
+	}
       }
     }
 
@@ -135,7 +147,11 @@ public class Email implements java.io.Serializable {
     // JM try replacing this with "if (bodyRef == null) { " for a laugh
     if (!(this.bodyRef instanceof EmailDataReference)) {
       // insert the email body into PAST, store the reference
-      bodyRef = (EmailDataReference)storage.storeContentHash(body);
+      try {
+	bodyRef = (EmailDataReference)storage.storeContentHash(body);
+	} catch (StorageException s) {
+	// JM do something sensible here
+      }
     }
   }
 }

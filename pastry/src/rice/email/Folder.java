@@ -46,11 +46,16 @@ public class Folder {
    * Used to read the contents of the Folder and build up the array
    * of Emails stored by the Folder.
    */
-  private Email[] readContents() throws PostException, StorageException {
+  private Email[] readContents() throws PostException {
     Vector contents = new Vector();
     boolean finished = false;
     LogEntryReference top = _log.getTopEntry();
-    LogEntry topEntry = (LogEntry)_storage.retrieveContentHash(top);
+    LogEntry topEntry = null;
+    try {
+      topEntry = (LogEntry)_storage.retrieveContentHash(top);
+    } catch (StorageException s) {
+      // JM do something sensible here
+    }
     int uncompressedEntries = 0;
     
     // walk through the log and build up the contents of the folder
@@ -82,7 +87,11 @@ public class Folder {
         finished = true;
       }
       else {
-        topEntry = (LogEntry)_storage.retrieveContentHash(top);
+	try {
+	  topEntry = (LogEntry)_storage.retrieveContentHash(top);
+	} catch (StorageException s) {
+	  // JM do something sensible here
+	}
       }
       uncompressedEntries += 1;
     }
@@ -100,11 +109,15 @@ public class Folder {
    * read before the complete Folder contents can be returned.
    * @param state the current contents of the Folder
    */
-  private void snapShotUpdate(int entries, Email[] contents) throws StorageException {
+  private void snapShotUpdate(int entries, Email[] contents) {
     // if the number of entries is greater than the compression limit,
     // add a new snapshot
     if (entries > COMPRESS_LIMIT) {
-      _log.addLogEntry(new SnapShotLogEntry(contents));      
+      try {
+	_log.addLogEntry(new SnapShotLogEntry(contents));
+      } catch (StorageException s) {
+	// JM do something sensible here
+      }
     }    
   }
 
@@ -122,7 +135,7 @@ public class Folder {
    *
    * @return the stored Emails
    */
-  public Email[] getMessages() throws PostException, StorageException {
+  public Email[] getMessages() throws PostException {
     return readContents();
   }
 
@@ -161,7 +174,7 @@ public class Folder {
    * @param srcFolder The source folder for the message.
    * @param destFolder The destination folder for the message.
    */
-  public void moveMessage(Email email, Folder folder) throws PostException, StorageException  {
+  public void moveMessage(Email email, Folder folder) throws PostException {
     folder.addMessage(email);
     removeMessage(email);
   }
@@ -229,13 +242,18 @@ public class Folder {
    * @param target the email to act as the signal to stop
    * @return the array of recent events
    */
-  public EmailEvent[] getPartialEventLog(Email target) throws StorageException {
+  public EmailEvent[] getPartialEventLog(Email target) {
     // setup the control vars
     Vector events = new Vector();
     boolean finished = false;
     // get the top entry in the log
     LogEntryReference top = _log.getTopEntry();
-    LogEntry topEntry = (LogEntry)_storage.retrieveContentHash(top);
+    LogEntry topEntry = null;
+    try {
+      topEntry = (LogEntry)_storage.retrieveContentHash(top);
+    } catch (StorageException s) {
+      // JM do something sensible here
+    }
     Email currentEmail = null;
     
     // read off and store each entry until the given email is found
@@ -258,7 +276,11 @@ public class Folder {
         finished = true;
       }
       else {
-        topEntry = (LogEntry)_storage.retrieveContentHash(top);
+	try {
+	  topEntry = (LogEntry)_storage.retrieveContentHash(top);
+	} catch (StorageException s) {
+	  // JM do something sensible here
+	}	
       }
     }
     return (EmailEvent[])events.toArray();
@@ -270,13 +292,18 @@ public class Folder {
    *
    * @return the complete array of events
    */
-  public EmailEvent[] getCompleteEventLog() throws StorageException {
+  public EmailEvent[] getCompleteEventLog()  {
     // setup the control vars
     Vector events = new Vector();
     boolean finished = false;
     // get the top entry in the log
     LogEntryReference top = _log.getTopEntry();
-    LogEntry topEntry = (LogEntry)_storage.retrieveContentHash(top);
+    LogEntry topEntry = null;
+    try {
+      topEntry = (LogEntry)_storage.retrieveContentHash(top);
+    } catch (StorageException s) {
+      // JM do something sensible here
+    }
 
     // read off and store each entry
     while (!finished) {
@@ -293,7 +320,11 @@ public class Folder {
         finished = true;
       }
       else {
-        topEntry = (LogEntry)_storage.retrieveContentHash(top);
+	try {
+	  topEntry = (LogEntry)_storage.retrieveContentHash(top);
+	} catch (StorageException s) {
+	  // JM do something sensible here
+	}
       }
     }
     return (EmailEvent[])events.toArray();
