@@ -87,7 +87,8 @@ public class PKnoISecurityModule extends PostClient implements SecurityModule {
    *
    * @param nm The incoming notification.
    */
-  public void notificationReceived(NotificationMessage nm) {
+  public void notificationReceived(NotificationMessage nm, Continuation command) {
+    command.receiveResult(new Boolean(true));
     // NOTHING NOW
   }
 
