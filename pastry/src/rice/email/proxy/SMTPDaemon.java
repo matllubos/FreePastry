@@ -168,12 +168,8 @@ class SMTPDaemon implements Runnable {
 				    messageData,  // body reference
 				    attachments); // attach refs
 	
-	try {
-	    service.sendMessage(deliverMe);
-	} catch (PostException e) {
-	    // do something sensible
-	}
-
+	service.sendMessage(deliverMe);
+	
 	// Tell the user that we delivered the message
 	w.println("250 Message accepted for delivery");
 	

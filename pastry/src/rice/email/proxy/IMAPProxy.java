@@ -25,6 +25,10 @@ import rice.post.*;
  */
 public class IMAPProxy implements Observer {
 
+    private final int STATE_INITIAL = 1;
+    private final int STATE_GETTING_BODY = 2;
+    private final int STATE_FINISHED = 3;
+
     InetAddress address;
     int port;
 
@@ -94,37 +98,17 @@ public class IMAPProxy implements Observer {
   public void update(Observable updater, Object emailNote) {
 
       Email email = ((EmailNotificationMessage) emailNote).getEmail();
-	
-      // FIXME: have a way to use other folders?
-      try {
 
-	  // Get the inbox
-	  javax.mail.Folder thisFolder = imapStore.getFolder("INBOX");
-	  Message[] messageArray = new Message[1];
+      // Save that email in a continuation and have it deal with it.
+      IMAPContinuation ic = new IMAPContinuation(email);
 
-	  // Build a Message out of that Email, put it in the array container
-	  messageArray[0] = unparseEmail(email);
-
-	  // Append that Message to the specified folder.
-	  thisFolder.appendMessages(messageArray);
-      } catch (MessagingException e) {
-	  // Do something sensible
-      } 
-  }
-
-  private Message unparseEmail(Email email) throws MessagingException {
-      MimeMessage message = new MimeMessage(session);
-
-      // Build up this message
-
-      // Sender (from field)
-      message.setSender(new InternetAddress(toInetEmail(email.getSender())));
-
-      // Subject field
+      MimeMessage message = ic.getMessage();
+      message.setSender(new
+	  InternetAddress(toInetEmail(email.getSender())));
       message.setSubject(email.getSubject());
 
-      // TO DO: Handle groups
-      
+      // TODO: Handle groups
+
       // Recipients
       PostEntityAddress[] recips = email.getRecipients();
       Address[] container = new Address[1];
@@ -133,23 +117,55 @@ public class IMAPProxy implements Observer {
 	  message.addRecipients(Message.RecipientType.TO, container);
       }
 
+      // Set the message's contents to an empty body, arrange to have
+      // it filled in
       Multipart emailContents = new MimeMultipart();
-
-      // FIXME - Pull this email body out of its reference. For now we use
-      // an empty body - a fairly uninteresting message is built...
-      MimeBodyPart mimeBody = new MimeBodyPart();
-      mimeBody.setText(new String(email.getBody().getData()));
-
-      emailContents.addBodyPart(mimeBody);
-
-
       message.setContent(emailContents);
 
-      return message;
-
-  }    
-    
-  private String toInetEmail(PostUserAddress address) {
-      return address.getName();
+      // Get the body and remember the continuation
+      ic.setState(STATE_GETTING_BODY);
+      email.getBody(ic);	
   }
+    
+    /**
+     * This method is called by the continuation when the email body
+     * has been fetched.
+     *
+     * @param ic The IMAPContinuation in question
+     * @param body The body of the email that was fetched
+     */
+    protected void update_gotbody(IMAPContinuation ic, EmailData body) {
+
+	MimeBodyPart mimeBody = new MimeBodyPart();
+	mimeBody.setText(new String(body.getData()));
+	
+	// Add that newly constructed body part in.
+	((Multipart)
+	 ic.getMessage().getContent()).addBodyPart(mimeBody);
+
+	// Finish up (FIXME do attachments)
+	deliverMessage(ic.getMessage());	
+    }
+
+    /**
+     * Called when the MIME message has been completely built up
+     * @param message The message to put in the inbox.
+     */
+    private void deliverMessage(MimeMessage message) {
+	try {
+	    javax.mail.Folder thisFolder =
+		imapStore.getFolder("INBOX");
+	    Message[] messageArray = new Message[1];
+	    messageArray[0] = message;
+	    thisFolder.appendMessages(messageArray);
+	} catch (MessagingException e) {
+	    System.err.println("Error delivering message: " + e);
+	}
+    }
+    
+    private String toInetEmail(PostUserAddress address) {
+	return address.getName();
+    }
 }
+
+
