@@ -288,6 +288,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     channel.socket().close();
     channel.close();
 
+    System.out.println(o.getClass().getName());
+
     return (Message) o;
   }
 

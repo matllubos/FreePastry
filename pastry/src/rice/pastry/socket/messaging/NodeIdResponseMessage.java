@@ -48,7 +48,7 @@ import rice.pastry.*;
  *
  * @author Alan Mislove
  */
-public class NodeIdResponseMessage extends SocketMessage {
+public class NodeIdResponseMessage extends SocketControlMessage {
 
   private NodeId nid;
 

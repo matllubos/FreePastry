@@ -154,6 +154,10 @@ public class SocketPastryNode extends DistPastryNode {
     manager.kill();
   }
 
+  public void stall() {
+      manager.stall();
+  }
+
   /**
    * Prints out a String representation of this node
    *

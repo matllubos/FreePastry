@@ -50,7 +50,7 @@ import rice.pastry.routing.*;
 *
 * @author Alan Mislove
 */
-public class RouteRowResponseMessage extends SocketMessage {
+public class RouteRowResponseMessage extends SocketControlMessage {
 
   private RouteSet[] set;
 

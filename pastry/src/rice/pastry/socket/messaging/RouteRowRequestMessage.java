@@ -48,7 +48,7 @@ import rice.pastry.leafset.*;
 *
 * @author Alan Mislove
 */
-public class RouteRowRequestMessage extends SocketMessage {
+public class RouteRowRequestMessage extends SocketControlMessage {
 
   protected int row;
   

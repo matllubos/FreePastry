@@ -49,7 +49,7 @@ import rice.pastry.leafset.*;
 *
 * @author Alan Mislove
 */
-public class LeafSetResponseMessage extends SocketMessage {
+public class LeafSetResponseMessage extends SocketControlMessage {
 
   private LeafSet leafset;
 

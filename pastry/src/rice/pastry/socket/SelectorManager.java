@@ -109,6 +109,12 @@ public class SelectorManager {
 
       // loop while waiting for activity
       while (alive && (select() >= 0)) {
+        if (stall) {
+            try {
+                Thread.sleep(STALL_TIME);
+            } catch (InterruptedException ie) {}
+        }
+
 
         doInvocations();
 
@@ -256,4 +262,14 @@ public class SelectorManager {
       System.out.println(node.getNodeId() + " (M): " + s);
     }
   }
+
+
+  boolean stall = false;
+  int STALL_TIME = 500000;
+    /**
+     * 
+     */
+    public void stall() {
+        stall = true;
+    }
 }

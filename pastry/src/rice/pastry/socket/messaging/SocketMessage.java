@@ -51,6 +51,8 @@ import java.net.*;
  */
 public abstract class SocketMessage extends Message {
   
+  public int seqNumber = 0;
+  
   /**
    * Constructor
    */

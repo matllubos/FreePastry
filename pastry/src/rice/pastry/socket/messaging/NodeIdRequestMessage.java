@@ -50,7 +50,7 @@ import rice.pastry.*;
  *
  * @author Alan Mislove
  */
-public class NodeIdRequestMessage extends SocketMessage {
+public class NodeIdRequestMessage extends SocketControlMessage {
 
   /**
    * Constructor

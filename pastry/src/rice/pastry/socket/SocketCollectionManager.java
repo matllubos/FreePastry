@@ -24,16 +24,30 @@
 
 package rice.pastry.socket;
 
-import java.io.*;
-import java.net.*;
-import java.nio.*;
-import java.nio.channels.*;
-import java.util.*;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.TimerTask;
 
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
-import rice.pastry.socket.messaging.*;
+import rice.pastry.Log;
+import rice.pastry.messaging.Message;
+import rice.pastry.routing.RouteMessage;
+import rice.pastry.socket.messaging.AckMessage;
+import rice.pastry.socket.messaging.LeafSetRequestMessage;
+import rice.pastry.socket.messaging.LeafSetResponseMessage;
+import rice.pastry.socket.messaging.NodeIdRequestMessage;
+import rice.pastry.socket.messaging.NodeIdResponseMessage;
+import rice.pastry.socket.messaging.RouteRowRequestMessage;
+import rice.pastry.socket.messaging.RouteRowResponseMessage;
+import rice.pastry.socket.messaging.SocketMessage;
 
 /**
  * Class which maintains all outgoing open sockets. It is responsible for
@@ -49,20 +63,23 @@ import rice.pastry.socket.messaging.*;
  */
 public class SocketCollectionManager implements SelectionKeyHandler {
 
-  long PING_DELAY = 1500;
+  long PING_DELAY = 3000;
   int NUM_PING_TRIES = 3;
 
+  long ACK_DELAY = 1500;
+
+
   // the selector manager which the collection manager uses
-  private SelectorManager manager;
+  SelectorManager manager;
 
   // the pastry node which this manager serves
-  private SocketPastryNode pastryNode;
+  SocketPastryNode pastryNode;
 
   // the node handle pool on this node
   private SocketNodeHandlePool pool;
 
   // the local address of the node
-  private InetSocketAddress localAddress;
+  InetSocketAddress localAddress;
 
   // the linked list of open sockets
   private LinkedList queue;
@@ -103,7 +120,7 @@ public class SocketCollectionManager implements SelectionKeyHandler {
   /**
    * DESCRIBE THE FIELD
    */
-  public static int PING_THROTTLE = 10000;
+  public static int PING_THROTTLE = 300000;
 
   /**
    * Constructs a new SocketManager.
@@ -208,11 +225,16 @@ public class SocketCollectionManager implements SelectionKeyHandler {
         openSocket(address);
       }
 
-      if (sockets.containsKey(address)) {
+      SocketManager sm = (SocketManager) sockets.get(address);        
+      if (sm != null) {
         //debug("Found connection open to " + address + " - sending now");
-
-        ((SocketManager) sockets.get(address)).send(message);
-        socketUpdated(address);
+        
+//        if (sm.isProbing()) {
+//          reroute(address, message);
+//        } else {
+          sm.send(message);        
+          socketUpdated(address);
+//        }
       } else {
         debug("ERROR: Could not connection to remote address " + address + " rerouting message " + message);
         reroute(address, message);
@@ -248,7 +270,7 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    */
   public void accept(SelectionKey key) {
     try {
-      new SocketManager(key);
+      new SocketManager(key, this);
     } catch (IOException e) {
       System.out.println("ERROR (accepting connection): " + e);
     }
@@ -304,6 +326,7 @@ public class SocketCollectionManager implements SelectionKeyHandler {
       System.out.println("checkDead called with null address");
       return;
     }
+    
     DeadChecker checker = new DeadChecker(address, NUM_PING_TRIES, pingManager);
     pastryNode.scheduleTask(checker, PING_DELAY, PING_DELAY);
     pingManager.forcePing(address, checker);
@@ -405,7 +428,7 @@ public class SocketCollectionManager implements SelectionKeyHandler {
     try {
       synchronized (sockets) {
         if (!sockets.containsKey(address)) {
-          socketOpened(address, new SocketManager(address));
+          socketOpened(address, new SocketManager(address, this));
         } else {
           debug("SERIOUS ERROR: Request to open socket to already-open socket to " + address);
         }
@@ -529,7 +552,7 @@ public class SocketCollectionManager implements SelectionKeyHandler {
                              InetSocketAddress address,
                              long RTT,
                              long timeHeardFrom) {
-      System.out.println("Terminated DeadChecker(" + address + ") due to ping.");
+      //System.out.println("Terminated DeadChecker(" + address + ") due to ping.");
       cancel();
     }
 
@@ -549,321 +572,5 @@ public class SocketCollectionManager implements SelectionKeyHandler {
     }
   }
 
-  /**
-   * Private class which is tasked with reading the greeting message off of a
-   * newly connected socket. This greeting message says who the socket is coming
-   * from, and allows the connected to hand the socket off the appropriate node
-   * handle.
-   *
-   * @version $Id$
-   * @author jeffh
-   */
-  private class SocketManager implements SelectionKeyHandler {
 
-    // the key to read from
-    private SelectionKey key;
-
-    // the reader reading data off of the stream
-    private SocketChannelReader reader;
-
-    // the writer (in case it is necessary)
-    private SocketChannelWriter writer;
-
-    // the node handle we're talking to
-    private InetSocketAddress address;
-
-    /**
-     * Constructor which accepts an incoming connection, represented by the
-     * selection key. This constructor builds a new SocketManager, and waits
-     * until the greeting message is read from the other end. Once the greeting
-     * is received, the manager makes sure that a socket for this handle is not
-     * already open, and then proceeds as normal.
-     *
-     * @param key The server accepting key for the channel
-     * @exception IOException DESCRIBE THE EXCEPTION
-     */
-    public SocketManager(SelectionKey key) throws IOException {
-      this();
-      acceptConnection(key);
-    }
-
-    /**
-     * Constructor which creates an outgoing connection to the given node
-     * handle. This creates the connection by building the socket and sending
-     * accross the greeting message. Once the response greeting message is
-     * received, everything proceeds as normal.
-     *
-     * @param address DESCRIBE THE PARAMETER
-     * @exception IOException DESCRIBE THE EXCEPTION
-     */
-    public SocketManager(InetSocketAddress address) throws IOException {
-      this();
-      createConnection(address);
-    }
-
-    /**
-     * Private constructor which builds the socket channel reader and writer, as
-     * well other bookkeeping objects for this socket manager.
-     */
-    private SocketManager() {
-      reader = new SocketChannelReader(pastryNode);
-      writer = new SocketChannelWriter(pastryNode);
-    }
-
-    /**
-     * Method which closes down this socket manager, by closing the socket,
-     * cancelling the key and setting the key to be interested in nothing
-     */
-    public void close() {
-      try {
-        synchronized (manager.getSelector()) {
-          if (key != null) {
-            key.channel().close();
-            key.cancel();
-            key.attach(null);
-            key = null;
-          }
-        }
-
-        if (address != null) {
-          socketClosed(address, this);
-
-          Iterator i = writer.getQueue().iterator();
-          writer.reset();
-
-          /**
-           * Here, if we have not been declared dead, then we attempt to resend
-           * the messages. However, if we have been declared dead, we reroute
-           * the route messages via the pastry node, but delete any messages
-           * routed directly.
-           */
-          while (i.hasNext()) {
-            Object o = i.next();
-
-            if (o instanceof Message) {
-              reroute(address, (Message) o);
-            }
-          }
-
-          address = null;
-        }
-      } catch (IOException e) {
-        System.out.println("ERROR: Recevied exception " + e + " while closing socket!");
-      }
-    }
-
-    /**
-     * The entry point for outgoing messages - messages from here are enqueued
-     * for transport to the remote node
-     *
-     * @param message DESCRIBE THE PARAMETER
-     */
-    public void send(final Object message) {
-      writer.enqueue(message);
-
-      if (key != null) {
-        manager.modifyKey(key);
-      }
-    }
-
-    /**
-     * Method which should change the interestOps of the handler's key. This
-     * method should *ONLY* be called by the selection thread in the context of
-     * a select().
-     *
-     * @param key The key in question
-     */
-    public void modifyKey(SelectionKey key) {
-      if (!writer.isEmpty()) {
-        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-      }
-    }
-
-    /**
-     * Specified by the SelectionKeyHandler interface. Is called whenever a key
-     * has become acceptable, representing an incoming connection.
-     *
-     * @param key The key which is acceptable.
-     */
-    public void accept(SelectionKey key) {
-      System.out.println("PANIC: read() called on SocketCollectionManager!");
-    }
-
-    /**
-     * Specified by the SelectionKeyHandler interface - calling this tells this
-     * socket manager that the connection has completed and we can now
-     * read/write.
-     *
-     * @param key The key which is connectable.
-     */
-    public void connect(SelectionKey key) {
-      try {
-        if (((SocketChannel) key.channel()).finishConnect()) {
-          // deregister interest in connecting to this socket
-          key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
-        }
-
-        markAlive(address);
-
-        debug("Found connectable channel - completed connection");
-      } catch (Exception e) {
-        debug("Got exception " + e + " on connect - marking as dead");
-        System.out.println("Mark Dead due to failure to connect");
-        markDead(address);
-
-        close();
-      }
-    }
-
-    /**
-     * Reads from the socket attached to this connector.
-     *
-     * @param key The selection key for this manager
-     */
-    public void read(SelectionKey key) {
-      try {
-        Object o = reader.read((SocketChannel) key.channel());
-
-        if (o != null) {
-          debug("Read message " + o + " from socket.");
-          if (o instanceof InetSocketAddress) {
-            if (address == null) {
-              this.address = (InetSocketAddress) o;
-              socketOpened(address, this);
-
-              markAlive(address);
-            } else {
-              System.out.println("SERIOUS ERROR: Received duplicate address assignments: " + this.address + " and " + o);
-            }
-          } else {
-            receive((Message) o);
-          }
-        }
-      } catch (IOException e) {
-        debug("ERROR " + e + " reading - cancelling.");
-        checkDead(address);
-        close();
-      }
-    }
-
-
-    /**
-     * Writes to the socket attached to this socket manager.
-     *
-     * @param key The selection key for this manager
-     */
-    public void write(SelectionKey key) {
-      try {
-        if (writer.write((SocketChannel) key.channel())) {
-          key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-        }
-      } catch (IOException e) {
-        debug("ERROR " + e + " writing - cancelling.");
-        close();
-      }
-    }
-
-    /**
-     * Accepts a new connection on the given key
-     *
-     * @param serverKey The server socket key
-     * @exception IOException DESCRIBE THE EXCEPTION
-     */
-    protected void acceptConnection(SelectionKey serverKey) throws IOException {
-      final SocketChannel channel = (SocketChannel) ((ServerSocketChannel) serverKey.channel()).accept();
-      channel.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
-      channel.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
-      channel.configureBlocking(false);
-
-      debug("Accepted connection from " + address);
-
-      key = channel.register(manager.getSelector(), SelectionKey.OP_READ);
-      key.attach(this);
-    }
-
-    /**
-     * Creates the outgoing socket to the remote handle
-     *
-     * @param address The accress to connect to
-     * @exception IOException DESCRIBE THE EXCEPTION
-     */
-    protected void createConnection(final InetSocketAddress address) throws IOException {
-      final SocketChannel channel = SocketChannel.open();
-      channel.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
-      channel.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
-      channel.configureBlocking(false);
-
-      final boolean done = channel.connect(address);
-      this.address = address;
-
-      debug("Initiating socket connection to " + address);
-
-      final SelectionKeyHandler handler = this;
-
-      manager.invoke(
-        new Runnable() {
-          public void run() {
-            try {
-              if (done) {
-                key = channel.register(manager.getSelector(), SelectionKey.OP_READ);
-              } else {
-                key = channel.register(manager.getSelector(), SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
-              }
-
-              key.attach(handler);
-              manager.modifyKey(key);
-            } catch (IOException e) {
-              System.out.println("ERROR creating server socket channel " + e);
-            }
-          }
-        });
-
-      send(localAddress);
-    }
-
-    /**
-     * Method which is called once a message is received off of the wire If it's
-     * for us, it's handled here, otherwise, it's passed to the pastry node.
-     *
-     * @param message The receved message
-     */
-    protected void receive(Message message) {
-      if (message instanceof NodeIdRequestMessage) {
-        send(new NodeIdResponseMessage(pastryNode.getNodeId()));
-      } else if (message instanceof LeafSetRequestMessage) {
-        send(new LeafSetResponseMessage(pastryNode.getLeafSet()));
-      } else if (message instanceof RouteRowRequestMessage) {
-        RouteRowRequestMessage rrMessage = (RouteRowRequestMessage) message;
-        send(new RouteRowResponseMessage(pastryNode.getRoutingTable().getRow(rrMessage.getRow())));
-      }
-      /*
-       *  else if (message instanceof PingMessage) {
-       *  send(new PingResponseMessage(((PingMessage) message).getStartTime()));
-       *  } else if (message instanceof PingResponseMessage) {
-       *  int time = (int) (System.currentTimeMillis() - ((PingResponseMessage) message).getStartTime());
-       *  if ((pings.get(address) == null) || (((Integer) pings.get(address)).intValue() > time)) {
-       *  pings.put(address, new Integer(time));
-       *  pool.update(address, SocketNodeHandle.PROXIMITY_CHANGED);
-       *  }
-       *  }
-       */else {
-        if (address != null) {
-          pastryNode.receiveMessage(message);
-        } else {
-          System.out.println("SERIOUS ERROR: Received no address assignment, but got message " + message);
-        }
-      }
-    }
-
-    /**
-     * DESCRIBE THE METHOD
-     *
-     * @param s DESCRIBE THE PARAMETER
-     */
-    private void debug(String s) {
-      if (Log.ifp(8)) {
-        System.out.println(pastryNode.getNodeId() + " (SM " + pastryNode.getNodeId() + " -> " + address + "): " + s);
-      }
-    }
-  }
 }
