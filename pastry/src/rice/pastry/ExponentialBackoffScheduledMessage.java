@@ -58,7 +58,7 @@ public class ExponentialBackoffScheduledMessage extends ScheduledMessage {
   
   public boolean cancel() {
     //System.out.println("EB.cancel()");
-
+		super.cancel();
     if (myTask!=null) {
       myTask.cancel();
       myTask = null;
