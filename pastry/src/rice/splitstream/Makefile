@@ -4,10 +4,11 @@ SOURCE  = \
 	Channel.java \
 	ChannelId.java \
 	SplitStreamImpl.java \
-#	SplitStreamTest.java \
 	ISplitStream.java \
+	ISplitStreamApp.java \
 	Stripe.java \
 	StripeId.java\
+	SpareCapacityId.java \
 	SplitStreamOutputStream.java\
 	BandwidthManager.java
 
