@@ -19,10 +19,10 @@ import rice.p2p.past.*;
 class SignedData extends StorageServiceData {
 
   // The time that the data was stored.
-  protected byte[] timestamp;
+  protected transient byte[] timestamp;
 
   // The signature used to sign the data.
-  protected byte[] signature;
+  protected transient byte[] signature;
   
   /**
    * Builds a SignedData for a byte array given a timestamp.
@@ -123,5 +123,33 @@ class SignedData extends StorageServiceData {
   public PastContentHandle getHandle(Past local) {
     long time = (new BigInteger(1, timestamp)).longValue();
     return new StorageServiceDataHandle(local.getLocalNodeHandle(), location, time);
+  }
+  
+  /**
+    * Internal method for writing out this data object
+   *
+   * @param oos The current output stream
+   */
+  private void writeObject(ObjectOutputStream oos) throws IOException {
+    oos.defaultWriteObject();
+    
+    oos.writeInt(timestamp.length);
+    oos.write(timestamp);
+    oos.writeInt(signature.length);
+    oos.write(signature);
+  }
+  
+  /**
+    * Internal method for reading in this data object
+   *
+   * @param ois The current input stream
+   */
+  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    ois.defaultReadObject();
+    
+    timestamp = new byte[ois.readInt()];
+    ois.readFully(timestamp, 0, timestamp.length);
+    signature = new byte[ois.readInt()];
+    ois.readFully(signature, 0, signature.length);
   }
 }

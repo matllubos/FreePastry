@@ -6,10 +6,12 @@ import java.security.*;
 import java.security.cert.*;
 import java.security.spec.*;
 import java.util.*;
+import java.util.zip.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 
 import rice.post.*;
+import rice.serialization.*;
 
 /**
  * This class contains a large number of static methods for performing
@@ -88,7 +90,7 @@ public class SecurityUtils {
 
   static {
     // Add a provider for RSA encryption
-    Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+    Security.insertProviderAt(new org.bouncycastle.jce.provider.BouncyCastleProvider(), 2);
 
     try {
       cipherSymmetric = Cipher.getInstance(SYMMETRIC_ALGORITHM);
@@ -118,10 +120,11 @@ public class SecurityUtils {
    */
   public static byte[] serialize(Object o) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ObjectOutputStream oos = new ObjectOutputStream(baos);
+    ObjectOutputStream oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(baos)));
 
     oos.writeObject(o);
     oos.flush();
+    oos.close();
 
     return baos.toByteArray();
   }
@@ -136,7 +139,7 @@ public class SecurityUtils {
    */
   public static Object deserialize(byte[] data) throws IOException, ClassNotFoundException {
     ByteArrayInputStream bais = new ByteArrayInputStream(data);
-    ObjectInputStream ois = new ObjectInputStream(bais);
+    ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(bais)));
 
     return ois.readObject();
   }

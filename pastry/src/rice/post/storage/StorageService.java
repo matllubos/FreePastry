@@ -464,7 +464,7 @@ public class StorageService {
       try {
         byte[] plainText = SecurityUtils.serialize(data);
         byte[] timestamp = SecurityUtils.getByteArray(System.currentTimeMillis());
-
+        
         SignedData sd = new SignedData(location, plainText, timestamp);
 
         sd.setSignature(SecurityUtils.sign(sd.getDataAndTimestamp(), keyPair.getPrivate()));
@@ -594,7 +594,7 @@ public class StorageService {
 
           command.receiveResult((PostData) data);
         } catch (IOException ioe) {
-          command.receiveException(new StorageException("IOException while retrieving data: " + ioe));
+          command.receiveException(new StorageException("IOException while retrieving data at " + reference.getLocation() + ": " + ioe));
         } catch (ClassNotFoundException cnfe) {
           command.receiveException(new StorageException("ClassNotFoundException while retrieving data: " + cnfe));
         }

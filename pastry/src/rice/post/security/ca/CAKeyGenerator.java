@@ -4,9 +4,11 @@ import java.io.*;
 import java.net.*;
 import java.security.*;
 import java.util.*;
+import java.util.zip.*;
 
 import rice.post.*;
 import rice.post.security.*;
+import rice.serialization.*;
 
 /**
  * This class starts generates a new keypair for the certificate authority, asks
@@ -89,7 +91,7 @@ public class CAKeyGenerator {
       System.out.println("[ DONE ]");
 
       FileOutputStream fos = new FileOutputStream("ca.keypair.enc");
-      ObjectOutputStream oos = new ObjectOutputStream(fos);
+      ObjectOutputStream oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fos)));
 
       System.out.print("    Writing out encrypted keypair\t\t\t\t");
       oos.writeObject(cipher);
@@ -99,7 +101,7 @@ public class CAKeyGenerator {
       System.out.println("[ DONE ]");
 
       fos = new FileOutputStream("ca.publickey");
-      oos = new ObjectOutputStream(fos);
+      oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fos)));
 
       System.out.print("    Writing out public key\t\t\t\t\t");
       oos.writeObject(pair.getPublic());

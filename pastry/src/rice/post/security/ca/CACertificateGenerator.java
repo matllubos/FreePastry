@@ -2,6 +2,7 @@ package rice.post.security.ca;
 
 import java.io.*;
 import java.net.*;
+import java.util.zip.*;
 import java.security.*;
 
 import java.util.*;
@@ -10,6 +11,7 @@ import rice.post.*;
 import rice.post.security.*;
 
 import rice.pastry.commonapi.*;
+import rice.serialization.*;
 
 /**
  * This class starts generates a new certificate for the given username using
@@ -30,7 +32,7 @@ public class CACertificateGenerator {
       System.out.println("POST Certificate Generator");
 
       FileInputStream fis = new FileInputStream("ca.keypair.enc");
-      ObjectInputStream ois = new ObjectInputStream(fis);
+      ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
 
       System.out.print("    Reading in encrypted keypair\t\t\t\t");
       byte[] cipher = (byte[]) ois.readObject();
@@ -68,7 +70,7 @@ public class CACertificateGenerator {
       System.out.println("[ DONE ]");
 
       FileOutputStream fos = new FileOutputStream(userid + ".certificate");
-      ObjectOutputStream oos = new ObjectOutputStream(fos);
+      ObjectOutputStream oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fos)));
 
       System.out.print("    Writing out certificate to '" + userid + ".certificate'\t\t");
       oos.writeObject(certificate);
@@ -87,7 +89,7 @@ public class CACertificateGenerator {
       System.out.println("[ DONE ]");
 
       fos = new FileOutputStream(userid + ".keypair.enc");
-      oos = new ObjectOutputStream(fos);
+      oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fos)));
 
       System.out.print("    Writing out encrypted keypair\t\t\t\t");
       oos.writeObject(cipher);

@@ -16,7 +16,7 @@ import rice.p2p.past.*;
 abstract class StorageServiceData implements PastContent {
 
   // The data stored in this content hash object.
-  protected byte[] data;
+  protected transient byte[] data;
 
   // The location where the data is stored
   protected Id location;
@@ -66,5 +66,29 @@ abstract class StorageServiceData implements PastContent {
    */
   public PastContentHandle getHandle(Past local) {
     return new StorageServiceDataHandle(local.getLocalNodeHandle(), location);
+  }
+  
+  /**
+   * Internal method for writing out this data object
+   *
+   * @param oos The current output stream
+   */
+  private void writeObject(ObjectOutputStream oos) throws IOException {
+    oos.defaultWriteObject();
+    
+    oos.writeInt(data.length);
+    oos.write(data);
+  }
+  
+  /**
+   * Internal method for reading in this data object
+   *
+   * @param ois The current input stream
+   */
+  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    ois.defaultReadObject();
+    
+    data = new byte[ois.readInt()];
+    ois.readFully(data, 0, data.length);
   }
 }
