@@ -5,6 +5,9 @@ import java.net.*;
 import java.util.zip.*;
 import rice.proxy.*;
 import rice.post.security.*;
+import java.security.*;
+import rice.p2p.util.*;
+import rice.p2p.multiring.*;
 
 public class NetworkLogServer {
   
@@ -12,8 +15,11 @@ public class NetworkLogServer {
   
   protected int count;
   
-  public NetworkLogServer(int port) {
+  protected PrivateKey key;
+  
+  public NetworkLogServer(PrivateKey key, int port) {
     this.port = port;
+    this.key = key;
     this.count = 0;
   }
   
@@ -28,8 +34,12 @@ public class NetworkLogServer {
     }
   }
   
-  public static void main(String[] args) {
-    new NetworkLogServer(Integer.parseInt(args[0])).start();
+  public static void main(String[] args) throws Exception {
+    // add cert stuff here
+    String ring = args[0];
+    String pass = args[1];
+    KeyPair pair = RingCertificate.readKeyPair(ring.toLowerCase(), pass);
+    new NetworkLogServer(pair.getPrivate(), Integer.parseInt(args[2])).start();
   }
     
   protected class NetworkLogClient extends Thread {
@@ -49,36 +59,13 @@ public class NetworkLogServer {
       this.id = id;
     }
     
-    protected void readHeader(InputStream in) {
+    protected void readHeader(DataInputStream in) {
       try {
-        byte[] dumb = new byte[8];
-        
-        int b = 0;
-
-        while (b < 8) {
-          int i = in.read(dumb, b, 8-b);
-          if (i <= 0)
-            throw new EOFException();
-          else
-            b += i;
-          
-          System.out.println(id + " b is " + b);
-        }
-        
-        int len = (int) SecurityUtils.getLong(dumb);
+        int len = (int) in.readLong();
         
         System.out.println(id + " Read length " + len);
         byte[] header = new byte[len];
-        
-        int c = 0;
- 
-        while (c < len) {
-          int i = in.read(header, c, len-c);
-          if (i <= 0)
-            throw new EOFException();
-          else
-            c += i;
-        }
+        in.readFully(header);
         
         ByteArrayInputStream bais = new ByteArrayInputStream(header);
         ObjectInputStream ois = new ObjectInputStream(bais);
@@ -97,37 +84,34 @@ public class NetworkLogServer {
     }
     
     public void run() {
-      InputStream in = null;
+      DataInputStream in = null;
       
       try {
-        in = socket.getInputStream();
+        in = new DataInputStream(new GZIPInputStream(new EncryptedInputStream(key, socket.getInputStream())));
         readHeader(in);
         
         int total = 0;
         int read = 0;
         
-        in = new GZIPInputStream(in);
-        
         while ((total < length) && ((read = in.read(buffer)) > 0)) {
           out.write(buffer, 0, read); 
           total += read;
-          
-      //    System.out.println(id + " Read " + total + " of " + length + " bytes...");
         }
         
         System.out.println(id + " Done reading, sending confirmation...");
         
         if (read != -1) socket.getOutputStream().write((byte) 1); 
-        System.out.println(id + " Done writing...");
+        System.out.println(id + " Done writing... (" + read + ")");
       } catch (IOException e) {
         System.err.println("ERROR: Got exception " + e + " while reading file - aborting!");
+        e.printStackTrace();
       } finally {
         try {
           System.out.println(id + " Exiting");
           
-          in.close();
+          if (in != null) in.close();
           if (out != null) out.close();
-          if (out != null) socket.close();
+          if (socket != null) socket.close();
         } catch (IOException e) {
           System.err.println("PANIC: Got exception " + e + " while closing streams!");
         }

@@ -4,7 +4,9 @@ import java.io.*;
 import java.net.*;
 import java.util.zip.*;
 import rice.proxy.*;
+import java.security.*;
 import rice.post.security.*;
+import rice.p2p.util.*;
 
 public class NetworkLogManager extends LogManager {
   
@@ -20,12 +22,15 @@ public class NetworkLogManager extends LogManager {
   
   protected int pastry_port;
   
+  protected int buffer_size;
+  
   protected NetworkLogManagerThread thread;
   
   public NetworkLogManager(Parameters parameters) {
     this.file = new File(parameters.getStringParameter("standard_output_redirect_filename"));
     this.other = parameters.getStringArrayParameter("standard_output_network_other_filenames");
     this.interval = parameters.getLongParameter("standard_output_network_interval");
+    this.buffer_size = parameters.getIntParameter("standard_output_network_buffer_size");
     this.pastry_port = 10001;
     
     if (file.exists()) 
@@ -36,15 +41,14 @@ public class NetworkLogManager extends LogManager {
     } catch (IOException e) {
       System.err.println("ERROR: problem with file " + file + " - got exception " + e);
     }
-    
-    this.thread = new NetworkLogManagerThread(parameters);
-    this.thread.start();
-    
+        
     this.start = System.currentTimeMillis();
   }
   
-  protected void setPastryPort(int port) {
+  protected void setInfo(int port, PublicKey key, InetSocketAddress server) {
     this.pastry_port = port;
+    this.thread = new NetworkLogManagerThread(key, server);
+    this.thread.start();
   }
   
   protected File getFileName() {
@@ -95,11 +99,13 @@ public class NetworkLogManager extends LogManager {
     
     protected byte[] buffer;
     
-    public NetworkLogManagerThread(Parameters parameters) {      
-      this.host = new InetSocketAddress(parameters.getStringParameter("standard_output_network_host_name"),
-                                        parameters.getIntParameter("standard_output_network_host_port"));
+    protected PublicKey key;
+    
+    public NetworkLogManagerThread(PublicKey key, InetSocketAddress server) {      
+      this.host = server;
+      this.key = key;
       
-      this.buffer = new byte[parameters.getIntParameter("standard_output_network_buffer_size")];
+      this.buffer = new byte[buffer_size];
     }
     
     public void run() {
@@ -165,38 +171,38 @@ public class NetworkLogManager extends LogManager {
     protected void sendFile(File file, boolean delete) {
       Socket socket = new Socket();
       InputStream in = null;
-      OutputStream out = null;
+      GZIPOutputStream out = null;
 
       try {
         in = new FileInputStream(file);
 
-        socket.connect(host);        
-        out = socket.getOutputStream();
+        socket.connect(host);      
+        out = new GZIPOutputStream(new EncryptedOutputStream(key, socket.getOutputStream()));
         
         byte[] header = getHeader(file);
         
         System.out.println("Writing length " + header.length);
         
-        out.write(SecurityUtils.getByteArray((long) header.length));
+        out.write(MathUtils.longToByteArray(header.length));
         out.write(header);
-        out.flush();
-        
-        out = new GZIPOutputStream(out);
-        
+
         int read = 0;
         
-        while ((read = in.read(buffer)) != -1) {
+        while ((read = in.read(buffer)) != -1) 
           out.write(buffer, 0, read); 
-        //  System.out.println("Wrote " + read + " more bytes");
-        }
         
-        ((GZIPOutputStream) out).finish();
+        out.finish();
+        out.flush();
         System.out.println("Done writing...");
         
         int done = socket.getInputStream().read(new byte[1]);
-        System.out.println("Done reading...");
+        System.out.println("Done reading... (" + done + ")");
+        
+        if (done < 0)
+          throw new IOException("Log file was not correctly received - skipping...");
       } catch (IOException e) {
         System.err.println("ERROR: Got exception " + e + " while sending file - aborting!");
+        e.printStackTrace();
         return;
       } finally {
         try {
