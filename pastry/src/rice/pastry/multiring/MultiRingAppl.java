@@ -101,7 +101,7 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp, Serializabl
     return scribe;
   }
 
-  protected RingId getRingId() {
+  public RingId getRingId() {
     return ((RingNodeId) thePastryNode.getNodeId()).getRingId();
   }
 

@@ -64,7 +64,10 @@ PACKAGES = \
 	rice.email.proxy.smtp\
 	rice.email.proxy.smtp.manager\
 	rice.email.proxy.smtp.commands\
-	rice.email.proxy.user 
+	rice.email.proxy.user\
+	rice.testharness\
+	rice.testharness.messaging\
+	rice.testharness.tests
 #	rice.storage\
 #	rice.storage.testing\
 #	rice.past.search\

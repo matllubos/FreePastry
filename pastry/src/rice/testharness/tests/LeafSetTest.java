@@ -99,6 +99,8 @@ public class LeafSetTest extends Test {
     TreeMap pastryNodesSorted = new TreeMap();
     boolean success = true;
 
+    System.out.println("startTest, #nodes=" + nodes.length);
+
     for (int i=0; i<nodes.length; i++) {
       pastryNodesSorted.put(nodes[i].getNodeId(), nodes[i].getNodeId());
     }

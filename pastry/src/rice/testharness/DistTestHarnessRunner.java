@@ -190,24 +190,27 @@ public class DistTestHarnessRunner {
      * @return handle to bootstrap node, or null.
      */
   protected NodeHandle getPastryBootstrap() {
+    InetSocketAddress bootAddress = null;
+    InetSocketAddress address = null;
+
+    try {
+      bootAddress = new InetSocketAddress(BOOTSTRAP_HOST, BOOTSTRAP_PORT);
+      address = new InetSocketAddress(InetAddress.getLocalHost(), START_PORT); 
+    } catch (Exception e) {
+      System.out.println("ERROR (getBootstrap): " + e);
+    }
+
     if (pastryNodes.size() == 0) {
-      InetSocketAddress bootAddress = null;
-      InetSocketAddress address = null;
-
-      try {
-        bootAddress = new InetSocketAddress(BOOTSTRAP_HOST, BOOTSTRAP_PORT);
-        address = new InetSocketAddress(InetAddress.getLocalHost(), START_PORT); 
-      } catch (Exception e) {
-        System.out.println("ERROR (getBootstrap): " + e);
-      }
-
       if (address.equals(bootAddress)) {
         return null;
       } else {
         return factory.getNodeHandle(bootAddress);
       }
     } else {
-      return factory.getNodeHandle(((WireNodeHandle) ((PastryNode) pastryNodes.elementAt(pastryNodes.size() - 1)).getLocalHandle()).getAddress());
+	return factory.getNodeHandle(address);
+
+	// eliminated wire dependency -PD
+	//return factory.getNodeHandle(((WireNodeHandle) ((PastryNode) pastryNodes.elementAt(pastryNodes.size() - 1)).getLocalHandle()).getAddress());
     }
   }
 
@@ -255,6 +258,24 @@ public class DistTestHarnessRunner {
         break;
       }
     }
+
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-protocol") && i+1 < args.length) {
+        String s = args[i+1];
+
+	if (s.equalsIgnoreCase("wire"))
+          PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
+	else if (s.equalsIgnoreCase("rmi"))
+          PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
+	else
+          System.out.println("ERROR: Unsupported protocol: " + s);
+
+	break;
+      }
+    }
+
+
   }
   
   /**
