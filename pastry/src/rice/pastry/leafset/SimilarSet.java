@@ -42,7 +42,7 @@ import java.util.*;
 import java.io.*;
 
 /**
- * A set of nodes, ordered by numerical distance of their nodeId from the baseId (local nodeId)
+ * A set of nodes, ordered by numerical distance of their nodeId from the local nodeId
  *
  * @version $Id$
  *
@@ -53,13 +53,9 @@ import java.io.*;
 
 public class SimilarSet extends Observable implements NodeSetI, Serializable, Observer
 {
-    private NodeHandle localNode;
-    private NodeId baseId;
+    private NodeHandle ln;
     private boolean clockwise;
-
     private NodeHandle[] nodes;
-    private NodeId.Distance[] dist;
-
     private int theSize;
 
     /**
@@ -71,31 +67,23 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
 
     protected void swap(int i, int j) {
 	NodeHandle handle = nodes[i];
-	NodeId.Distance d = dist[i];
-
 	nodes[i] = nodes[j];
-	dist[i] = dist[j];
-	
 	nodes[j] = handle;
-	dist[j] = d;
     }
 
     /**
      * Constructor.
      *
-     * @param ls the leafset
      * @param localNode the local node 
      * @param size the size of the similar set.
      * @param cw true if this is the clockwise leafset half
      */
 
     public SimilarSet(NodeHandle localNode, int size, boolean cw) {
-	this.localNode = localNode;
-	baseId = localNode.getNodeId();
+	ln = localNode;
 	clockwise = cw;
 	theSize = 0;
 	nodes = new NodeHandle[size];
-	dist = new NodeId.Distance[size];
     }
     
     /**
@@ -109,21 +97,19 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
     public boolean test(NodeHandle handle)
     {
 	NodeId nid = handle.getNodeId();
-	NodeId.Distance d;
 
-	if (nid.equals(baseId)) return false;
+	if (nid.equals(ln.getNodeId())) return false;
 
 	for (int i=0; i<theSize; i++)
 	    if (nid.equals(nodes[i].getNodeId())) return false;
 
 	if (theSize < nodes.length) return true;
-	
-	if (baseId.clockwise(nid) == clockwise)
-	    d = baseId.distance(nid);
-	else
-	    d = baseId.longDistance(nid);
 
-	if (dist[theSize - 1].compareTo(d) <= 0) return false;
+	if (clockwise) {
+	    if (!nid.isBetween(ln.getNodeId(), nodes[theSize-1].getNodeId())) return false;
+	} else {
+	    if (!nid.isBetween(nodes[theSize-1].getNodeId(), ln.getNodeId())) return false;
+	}
 
 	return true;
     }
@@ -140,30 +126,16 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
     public boolean put(NodeHandle handle)
     {
 	NodeId nid = handle.getNodeId();
-	NodeId.Distance d;
+	//int index;
 
-	if (nid.equals(baseId)) return false;
-
-	for (int i=0; i<theSize; i++)
-	    if (nid.equals(nodes[i].getNodeId())) return false;
-
-	if (baseId.clockwise(nid) == clockwise)
-	    d = baseId.distance(nid);
-	else
-	    d = baseId.longDistance(nid);
-
-	int index;
+	if (!test(handle)) return false;
 
 	if (theSize < nodes.length) {
 	    nodes[theSize] = handle;
-	    dist[theSize] = d;
-	    
-	    index = theSize;
+	    //index = theSize;
 	    theSize++;
 	}
 	else {
-	    if (dist[theSize - 1].compareTo(d) <= 0) return false;
-
 	    theSize --;
 	    
 	    setChanged();
@@ -174,15 +146,21 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
 	    
 	    theSize++;
 
-	    nodes[theSize - 1] = handle;
-	    dist[theSize - 1] = d;
-	    
-	    index = theSize - 1;
+	    nodes[theSize-1] = handle;
+	    //index = theSize-1;
 	}
 
-	for (int i=index; i>0; i--)
-	    if (dist[i].compareTo(dist[i-1]) < 0) swap(i, i - 1);
-	    else break;
+	// bubble the new node into the correct position
+	if (clockwise) {
+	    for (int i=theSize-1; i>0; i--)
+		if (nid.isBetween(ln.getNodeId(), nodes[i-1].getNodeId())) swap(i, i-1);
+		else break;
+	}
+	else {
+	    for (int i=theSize-1; i>0; i--)
+		if (nid.isBetween(nodes[i-1].getNodeId(), ln.getNodeId())) swap(i, i-1);
+		else break;
+	}
 
 	setChanged();
 	notifyObservers(new NodeSetUpdate(handle, true));
@@ -231,13 +209,13 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
     /**
      * Gets the ith element in the set.
      *
-     * @param i an index. i == -1 refers to the baseId
+     * @param i an index. i == -1 refers to the local node
      * @return the handle associated with that id or null if no such handle is found.
      */
     
     public NodeHandle get(int i) {
 	if (i < -1 || i >= theSize) return null;
-	if (i == -1) return localNode;
+	if (i == -1) return ln;
 	
 	return nodes[i]; 
     }
@@ -287,7 +265,6 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
 		
 	for (int j=i+1; j<theSize; j++) {
 	    nodes[j - 1] = nodes[j];
-	    dist[j - 1] = dist[j];
 	}
 		
 	theSize --;
@@ -323,18 +300,18 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
     public int size() { return theSize; }
 
     /**
-     * Numerically closest node to a given a node.  Returns -1 if the base id is the most similar
+     * Numerically closest node to a given a node.  Returns -1 if the local nodeId is the most similar
      * and returns an index otherwise.
      *
      * @param nid a node id.
      *
-     * @return -1 if the base id is most similar, else the index of the most similar node.
+     * @return -1 if the local nodeId is most similar, else the index of the most similar node.
      */
 
     public int mostSimilar(Id nid) {
 	if (theSize == 0) return -1;
 
-	NodeId.Distance minDist = baseId.distance(nid);
+	NodeId.Distance minDist = ln.getNodeId().distance(nid);
 	int min = -1;
 
 	for (int i=0; i<theSize; i++) {
@@ -347,27 +324,6 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
 	}
 
 	return min;
-
-	/*
-	NodeId.Distance baseDist = baseId.distance(nid);
-	NodeId.Distance d;
-
-	if (theSize == 0) return -1;
-	
-	d = nodes[0].getNodeId().distance(nid);
-	
-	if (baseDist.compareTo(d) <= 0) return -1;
-
-	for (int i=1; i<theSize; i++) {
-	    NodeId.Distance dprime = nodes[i].getNodeId().distance(nid);
-
-	    if (d.compareTo(dprime) <= 0) return i - 1;
-	    
-	    d = dprime;
-	}
-
-	return theSize - 1;
-	*/
 
     }
 }

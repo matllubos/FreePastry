@@ -222,7 +222,7 @@ public abstract class PastryRegrTest {
 	    System.out.println("created " + rta[i].getNodeId());
 
 	    checkLeafSet(rta[i]);
-	    //checkRoutingTable(rta[i]);
+	    checkRoutingTable(rta[i]);
 	}
 
 	System.out.println("messages: " + msgCount);
@@ -423,9 +423,9 @@ public abstract class PastryRegrTest {
 		// fetch the replicaSet of the key at the ccw edge of the range
 		NodeSet cs = ls.replicaSet(range.getCCW(), maxRank+1);
 
-		//if ( !cs.member(nearest)) {
-		if ( j>=0 && cs.get(j/2).getNodeId() != nearest ||
-		     j<0 && !cs.member(ls.get(k)) ) {
+		if ( (j>=0 && cs.get(j/2).getNodeId() != nearest) ||
+		     (j<0 && !ls.overlaps() && cs.get(maxRank).getNodeId() != nearest) ||
+		     (j<0 && ls.overlaps() && cs.get(0).getNodeId() != nearest) ) {
 		    System.out.println("checkLeafSet: range failure 1 at " + rta.getNodeId() + " k=" + k + " j=" + j +
 				       " maxRank=" + maxRank + "\n" + cs + "\n" + ls + "\n" + range + "\nnearest=" + nearest);
 		    
@@ -442,9 +442,9 @@ public abstract class PastryRegrTest {
 		// fetch the replicaSet of the key at the cw edge of the range
 		cs = ls.replicaSet(range.getCW().getCCW(), maxRank+1);
 
-		//if ( !cs.member(nearest)) {
-		if ( j>= 0 && cs.get(j/2).getNodeId() != nearest ||
-		     j<0 && !cs.member(ls.get(k)) ) {
+		if ( (j>= 0 && cs.get(j/2).getNodeId() != nearest) ||
+		     (j<0 && !ls.overlaps() && cs.get(maxRank).getNodeId() != nearest) ||
+		     (j<0 && ls.overlaps() && cs.get(0).getNodeId() != nearest) ) {
 		    System.out.println("checkLeafSet: range failure 2 at " + rta.getNodeId() + " k=" + k + " j=" + j +
 				       " maxRank=" + maxRank + "\n" + cs + "\n" + ls + "\n" + range + "\nnearest=" + nearest);
 
