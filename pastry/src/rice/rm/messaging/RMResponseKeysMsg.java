@@ -78,8 +78,7 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
     public void handleDeliverMessage( RMImpl rm) {
 	//System.out.println(rm.getNodeId() + " received ResponseKeys msg from" + getSource().getNodeId());
 	
-	// This vector starts a new round of ranges that this node requests
-	Vector toAskFor = new Vector();
+
 	IdSet fetchSet = new IdSet();
 	RMMessage.KEEntry entry;
 	RMMessage.KEEntry toAskForEntry;
@@ -125,30 +124,75 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 		    rm.removePendingRange(getSource().getNodeId(), reqRange);
 		}
 		else {
-		    // For the Time being we do the version we had earlier
-		    // in which we simply disable the hash
-		    toAskForEntry = new RMMessage.KEEntry(reqRange, false);
-		    toAskFor.add(toAskForEntry);
-		}
+		    rm.updatePendingRange(getSource().getNodeId(), reqRange, numKeys);
 
+		}
+	    }
+	}
+	if(fetchSet.numElements()!= 0)
+	    rm.app.fetch(fetchSet);		
+		
+	
+	if(rm.m_pendingRanges.containsKey(getSource().getNodeId())) {
+
+	    // This vector starts a new round of ranges that this node requests
+	    Vector toAskFor = new Vector();
+	    int totalNumKeys = 0;
+
+	    // This means that we have some Ranges that still
+	    // need to be dealt with
+		    
+	    // We will now check the state of the pending Ranges
+	    // Do Splitting of Ranges for those ranges that exceed
+	    // 'numKeys' value over the threshold
+	    
+	    //System.out.println("Before splitting");
+	    //rm.printPendingRanges(getSource().getNodeId());
+	    rm.splitPendingRanges(getSource().getNodeId());
+	    //System.out.println("After splitting");
+	    //rm.printPendingRanges(getSource().getNodeId());
+	    Vector pendingRanges;
+	    pendingRanges = rm.getPendingRanges(getSource().getNodeId());
+	    for(int j=0; j< pendingRanges.size(); j++) {
+		RMImpl.KEPenEntry pendingEntry = (RMImpl.KEPenEntry)pendingRanges.elementAt(j);
+		// At this instant we have already done the splitting
+		// So the 'numKeys' in the Pending Ranges will
+		// either be -1 or will be less than the threshold
+		
+		if(pendingEntry.getNumKeys() == -1) {
+		    RMMessage.KEEntry toSendEntry = new RMMessage.KEEntry(pendingEntry.getReqRange(), true);
+		    toAskFor.add(toSendEntry);
+		}
+		else {
+		    int numKeys;
+		    numKeys = pendingEntry.getNumKeys();
+		    //System.out.println("numKeys= " + numKeys);
+		    if((numKeys + totalNumKeys) <= RMMessage.MAXKEYSINRANGE) {
+			totalNumKeys = totalNumKeys + numKeys;
+			RMMessage.KEEntry toSendEntry = new RMMessage.KEEntry(pendingEntry.getReqRange(), false);
+			toAskFor.add(toSendEntry);
+		    }
+		}
 	    }
 	    
-	}
-	    
-	rm.app.fetch(fetchSet);
+	    //for(int k=0; k<toAskFor.size(); k++) {
+	    //RMMessage.KEEntry checkEntry;
+	    //checkEntry = (RMMessage.KEEntry)toAskFor.elementAt(k);
+	    //System.out.println("entry[" + k + "] = " + checkEntry);
+	    // }
 
-	if(toAskFor.size()!=0) {
+    
 	    RMRequestKeysMsg msg;
 	    msg = new RMRequestKeysMsg(rm.getLocalHandle(),rm.getAddress() , rm.getCredentials(), rm.m_seqno ++, toAskFor);
 	    rm.route(null, msg, getSource());
-	    System.out.println(rm.getNodeId() + "explicitly asking for keys");
+	    //System.out.println(rm.getNodeId() + "explicitly asking for keys");
 	    
-	}
-    }
 	
+	}
+	
+    }
+    
 }
-
-
 
 
 

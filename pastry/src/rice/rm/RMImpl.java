@@ -165,6 +165,10 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	    return numKeys;
 	}
 
+	public void updateNumKeys(int val) {
+	    numKeys = val;
+	}
+
 	// Equality is based only on the reqRange part, does not care
 	// about the numKeys argument
 	public boolean equals(Object obj) {
@@ -246,6 +250,31 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	
     }
 
+     public void updatePendingRange(NodeId toNode, IdRange reqRange, int numKeys) {
+	 //System.out.println("updatePendingRange( " + toNode + " , " + reqRange + " , " + numKeys + " ) ");
+	RMImpl.KEPenEntry entry= new RMImpl.KEPenEntry(reqRange); 
+	Vector setOfRanges;
+	if(m_pendingRanges.containsKey(toNode)) {
+	    setOfRanges = (Vector) m_pendingRanges.get(toNode);
+	    if(setOfRanges.contains(entry)) {
+		int index; 
+		index = setOfRanges.indexOf(entry);
+		// Note that the actual entry is a different entry
+		// because of the way we defined the equals() method on
+		// KEPenEntry
+		RMImpl.KEPenEntry actualEntry;
+		actualEntry = (RMImpl.KEPenEntry) setOfRanges.elementAt(index);
+		actualEntry.updateNumKeys(numKeys);
+	    }
+	    else
+		System.out.println("Warning1: In updatePendingRange(): Should not happen");
+	}
+	else {
+	    System.out.println("Warning2:: In updatePendingRange() : Should not happen");
+	}
+	
+    }
+
 
     public void removePendingRange(NodeId toNode, IdRange reqRange) {
 	//System.out.println("removePendingRange( " + toNode + " , " + reqRange + " ) ");
@@ -259,14 +288,94 @@ public class RMImpl extends CommonAPIAppl implements RM {
 		    m_pendingRanges.remove(toNode);
 	    }
 	    else 
-		System.out.println("Warning1:: Should not happen");
+		System.out.println("Warning1:: In removePendingRange() : Should not happen");
 	     
 	}
 	else {
-	    System.out.println("Warning2:: Should not happen");
+	    System.out.println("Warning2:: In removePendingRange() : Should not happen");
 	} 
 
     }
+
+
+    public void splitPendingRanges(NodeId toNode) {
+	//System.out.println("splitRanges( " + toNode + " )");
+
+	Vector setOfRanges;
+	if(m_pendingRanges.containsKey(toNode)) {
+	    setOfRanges = (Vector) m_pendingRanges.get(toNode);
+	    for(int i=0; i< setOfRanges.size(); i++) {
+		RMImpl.KEPenEntry entry;
+		entry = (RMImpl.KEPenEntry)setOfRanges.elementAt(i);
+		if(entry.getNumKeys() > RMMessage.MAXKEYSINRANGE) {
+		    setOfRanges.remove(i);
+		    // We split this range
+		    Vector allParts = splitRange(entry.getReqRange());
+		    for(int j=0; j < allParts.size(); j++) {
+			IdRange part;
+			RMImpl.KEPenEntry newEntry;
+			part = (IdRange)allParts.elementAt(j);
+			newEntry = new RMImpl.KEPenEntry(part);
+			setOfRanges.insertElementAt(newEntry, i+j);
+
+		    }
+
+		} 
+	    }
+	}
+	else {
+	    System.out.println("Warning2:: In splitRanges() : Should not happen");
+	}
+    }
+
+    // Returns a Vector of the split parts of this range
+    private Vector splitRange(IdRange bigRange) {
+	Vector parts = new Vector();
+	parts.add(bigRange);
+	while(parts.size() < RMMessage.SPLITFACTOR ) {
+	    IdRange range;
+	    IdRange ccwHalf;
+	    IdRange cwHalf;
+	    range = (IdRange)parts.elementAt(0);
+	    ccwHalf = range.ccwHalf();
+	    cwHalf = range.cwHalf();
+	    parts.add(ccwHalf);
+	    parts.add(cwHalf);
+	    parts.remove(0);
+	}
+	return parts;
+    }
+
+    public Vector getPendingRanges(NodeId toNode) {
+	Vector setOfRanges;
+	if(m_pendingRanges.containsKey(toNode)) {
+	    setOfRanges = (Vector) m_pendingRanges.get(toNode);
+	    return setOfRanges; 
+	}
+	else { 
+	    System.out.println("Warning: getPendingRanges()");
+	    return new Vector();
+	}
+
+    }
+
+    public void printPendingRanges(NodeId toNode) {
+	Vector setOfRanges;
+	if(m_pendingRanges.containsKey(toNode)) {
+	    setOfRanges = (Vector) m_pendingRanges.get(toNode);
+	    System.out.print("Pending Ranges= ");
+	    for(int i=0; i< setOfRanges.size(); i++) {
+		RMImpl.KEPenEntry entry;
+		entry = (RMImpl.KEPenEntry)setOfRanges.elementAt(i);
+		System.out.print(entry + " , ");
+	    }
+	    System.out.println("");
+	}
+	else 
+	    System.out.println("Warning: printPendingRanges()");
+
+    }
+
 
 
     /**
@@ -560,7 +669,15 @@ public class RMImpl extends CommonAPIAppl implements RM {
 }
 
 
+/*
 
+ Notes
+------
+
+ 1. Change the values of SPLITFACTOR and MAXKEYSINRANGE to appropriate values.
+
+
+*/
 
 
 
