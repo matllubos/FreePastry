@@ -37,7 +37,11 @@ public class EmailTest {
 		RandomNodeIdFactory rnd = new RandomNodeIdFactory();
 
 		for(int i = 0; i < nodeNum; i++) {
-		    int port = (int)(((double) 16000)*Math.random());
+		    int port = 0;
+
+		    while(port < 1024) {
+			port = (int)(((double) 16000)*Math.random());
+		    }
 
 		    WirePastryNodeFactory idFactory;
 		    idFactory = new WirePastryNodeFactory(rnd, port);
