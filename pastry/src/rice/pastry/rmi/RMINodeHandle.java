@@ -72,6 +72,12 @@ public class RMINodeHandle implements NodeHandle, Serializable
      */
     private transient boolean isInPool;
 
+    /**
+     * Need localnode within handle for three reasons: to determine isLocal
+     * (thus alive and distance = 0), to set senderId in messages (used for
+     * coalescing on the other end), and to bounce messages back to self on
+     * failure.
+     */
     private transient PastryNode localnode;
     private transient boolean isLocal;
 
