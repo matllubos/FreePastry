@@ -868,7 +868,8 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
 	set = replicaSet(target, replicaFactor + 1);
 	// We choose the best replica in terms of 'proximity' other than the self node
-	set.remove(getNodeId());
+  // REMOVED - AM - If we are a replica, we should be considered.
+  //set.remove(getNodeId());
 	if(set.size()==0)
 	    return;	
 	closestReplica = set.get(0);
