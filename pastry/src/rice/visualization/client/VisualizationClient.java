@@ -42,6 +42,10 @@ public class VisualizationClient {
     } 
   }
   
+  public void close() throws IOException {
+    socket.close();
+  }
+  
   public InetSocketAddress getAddress() {
     return address;
   }

@@ -37,6 +37,11 @@ public class LocalVisualization implements DataProvider {
             updateData();
             frame.repaint();
           }
+          
+          if (client != null)
+            client.close();
+          
+          System.out.println("Visualization Thread now dying...");
         } catch (Exception e) {
           System.out.println(e);
         }

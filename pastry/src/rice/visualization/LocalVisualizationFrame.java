@@ -39,7 +39,9 @@ public class LocalVisualizationFrame extends JFrame {
   public void windowClosed(WindowEvent e) {
   LocalVisualizationFrame.this.visualization.exit();
   }      
-  public void windowClosing(WindowEvent e) {}
+      public void windowClosing(WindowEvent e) {
+        LocalVisualizationFrame.this.visualization.exit();
+      }      
   public void windowDeactivated(WindowEvent e) {}      
   public void windowDeiconified(WindowEvent e) {}      
   public void windowIconified(WindowEvent e) {}      
