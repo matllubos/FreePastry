@@ -15,16 +15,24 @@ public class DebugCommandFrame extends JFrame implements ActionListener {
   
   protected JTextArea responseField;
 
+  protected String lastCommand;
+
   public void actionPerformed(ActionEvent e) {
-    responseField.setText("debug> "+e.getActionCommand()+"\n"+client.executeCommand(e.getActionCommand()));
+    String command = e.getActionCommand();
+    if (command.equals(""))
+      command = lastCommand;
+
+    responseField.setText("debug> "+command+"\n"+client.executeCommand(command));
     requestField.setText("");
     requestField.requestFocus();
+    lastCommand = command;
   }
 
   protected DebugCommandFrame(VisualizationClient client) {
     super(client.getAddress().toString()); 
     
     this.client = client;
+    this.lastCommand = "node status";
     
     requestField = new JTextField();
     responseField = new JTextArea(16, 40);
