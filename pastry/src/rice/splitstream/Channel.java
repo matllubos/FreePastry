@@ -350,6 +350,8 @@ public class Channel extends PastryAppl implements IScribeApp {
      * @return the stripeID left 
      */
     public StripeId leaveStripe(){
+	if(subscribedStripes.size() == 0)
+	    return null;
        Stripe stripe = (Stripe) subscribedStripes.firstElement();
        subscribedStripes.removeElement(stripe);
        stripe.leaveStripe(); 
@@ -651,5 +653,36 @@ public class Channel extends PastryAppl implements IScribeApp {
 	    ISplitStreamApp app = (ISplitStreamApp)it.next();
 	    app.channelIsReady(getChannelId());
 	}
+    }
+
+    /**
+     * Returns the meta data associated with the channel,
+     * e.g. channelId, the number of stripes, the stripeIds and the 
+     * the spare capacity ids.
+     *
+     * @return meta-data associated with this channel
+     */
+    public NodeId[] getChannelMetaData(){
+	NodeId[] subInfo = new NodeId[this.numStripes + 2]; 
+	subInfo[0] = channelId;
+	for(int i = 1; i < subInfo.length -1; i++){
+	    subInfo[i] = getStripes()[i - 1];
+	}
+	subInfo[subInfo.length-1] = spareCapacityId;
+
+	return subInfo;
+    }
+
+    public Stripe getStripe(StripeId stripeId){
+	return (Stripe)(stripeIdTable.get(stripeId));
+    }
+
+    public boolean stripeAlreadySubscribed(StripeId stripeId){
+	for(int i = 0; i < subscribedStripes.size(); i++){
+	    Stripe stripe = (Stripe)subscribedStripes.elementAt(i);
+	    if(stripe.getStripeId().equals(stripeId))
+		return true;
+	}
+	return false;
     }
 }
