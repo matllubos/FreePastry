@@ -56,6 +56,7 @@ public class BroadcastLeafSet extends Message implements Serializable
     public static final int Update = 0;
     public static final int JoinInitial = 1;
     public static final int JoinAdvertise = 2;
+    public static final int Correction = 3;
 
     private NodeHandle fromNode;
     private LeafSet theLeafSet;

@@ -263,10 +263,12 @@ public abstract class PastryRegrTest {
 	NodeId localId = rta.getNodeId();
 
 	// check size
-	if (ls.size() < ls.maxSize() && (pastryNodesSorted.size()-1)*2 != ls.size())
+	if ( (ls.size() < ls.maxSize() && (pastryNodesSorted.size()-1)*2 != ls.size()) ||
+	     (ls.size() == ls.maxSize() && (pastryNodesSorted.size()-1 < ls.maxSize() / 2)) ||
+	     (ls.size() > ls.maxSize()) )
 	    System.out.println("checkLeafSet: incorrect size " + rta.getNodeId() +
 			       " ls.size()=" + ls.size() + " total nodes=" + pastryNodesSorted.size() + "\n" + ls);
-
+	     
 	// check for correct leafset range
 	// ccw half
 	for (int i=-ls.ccwSize(); i<0; i++) {
@@ -429,10 +431,10 @@ public abstract class PastryRegrTest {
 
 	Date old = new Date();
 
-	for (int i=0; i<n; i += numConcJoins) {
+	for (int i=0; i<n; i = pt.pastryNodes.size()) {
 	    pt.makePastryNode(numConcJoins);
 
-	    if ((i + numConcJoins) % m == 0) {
+	    if ( true /*(i + numConcJoins) % m == 0*/ ) {
 		Date now = new Date();
 		System.out.println((i + numConcJoins) + " " + (now.getTime() - old.getTime()) + 
 				   " " + pt.msgCount);
@@ -443,7 +445,7 @@ public abstract class PastryRegrTest {
 	    pt.sendPings(k);
 	}
 	
-	System.out.println(n + " nodes constructed");
+	System.out.println(pt.pastryNodes.size() + " nodes constructed");
 
 	System.out.println("starting RT and leafset check");
 	// check all routing tables, leaf sets

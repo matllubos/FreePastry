@@ -112,11 +112,14 @@ public class LeafSet extends Observable implements Serializable {
     /**
      * Test if the leafset overlaps
      * 
-     * @return true if the most distant cw member appears in the ccw set, false otherwise
+     * @return true if the most distant cw member appears in the ccw set or vice versa, false otherwise
      */
 
     public boolean overlaps() {
-	if (size() > 0 && ccwSet.member(cwSet.get(cwSet.size()-1).getNodeId())) return true;
+	if (size() > 0 && ( ccwSet.member(cwSet.get(cwSet.size()-1).getNodeId()) ||
+			    cwSet.member(ccwSet.get(ccwSet.size()-1).getNodeId()) ) )
+	    return true;
+
 	else return false;
     }
 
@@ -304,13 +307,15 @@ public class LeafSet extends Observable implements Serializable {
      * @param from the node from which we received the leafset
      * @param routeTable the routing table
      * @param security the security manager
+     * @param testOnly if true, do not change the leafset
+     * @return true if the local leafset changed
      */
 
-    public void merge(LeafSet remotels, NodeHandle from, RoutingTable routeTable, 
-			     PastrySecurityManager security) {
+    public boolean merge(LeafSet remotels, NodeHandle from, RoutingTable routeTable, 
+			     PastrySecurityManager security, boolean testOnly) {
 
 	//System.out.println("LeafSet::merge of " + remotels + " into \n" + this);
-
+	boolean changed = false;
 	int cwSize = remotels.cwSize();
 	int ccwSize = remotels.ccwSize();
 	
@@ -412,11 +417,17 @@ public class LeafSet extends Observable implements Serializable {
 	    if (nh.isAlive() == false) continue;
 	    //if (member(nh.getNodeId())) continue;
 
-	    // merge into our cw leaf set half
-	    cwSet.put(nh);
+	    if (testOnly) {
+		// merge into our cw leaf set half
+		changed |= cwSet.test(nh);
+	    }
+	    else {
+		// merge into our cw leaf set half
+		changed |= cwSet.put(nh);
 
-	    // update RT as well
-	    routeTable.put(nh);
+		// update RT as well
+		routeTable.put(nh);
+	    }
 	}
 
 	for (int i=ccw; i>= -ccwSize; i--) {
@@ -428,16 +439,46 @@ public class LeafSet extends Observable implements Serializable {
 	    nh = security.verifyNodeHandle(nh);
 	    if (nh.isAlive() == false) continue;
 	    //if (member(nh.getNodeId())) continue;
-		
-	    // merge into our leaf set
-	    ccwSet.put(nh);
 
-	    // update RT as well
-	    routeTable.put(nh);
+	    if (testOnly) {
+		// merge into our leaf set
+		changed |= ccwSet.test(nh);
+	    }
+	    else {
+		// merge into our leaf set
+		changed |= ccwSet.put(nh);
+
+		// update RT as well
+		routeTable.put(nh);
+	    }
 	}
+
+	// if there is overlap, insert nearest nodes regardless of orientation
+	if (overlaps()) {
+	    for (int i=-ccwSize; i <= cwSize; i++) {
+		NodeHandle nh;
+
+		if (i == 0) nh = from;
+		else nh = remotels.get(i);
+		
+		nh = security.verifyNodeHandle(nh);
+		if (nh.isAlive() == false) continue;
+		
+		if (testOnly) {
+		    // merge into our leaf set
+		    changed |= test(nh);
+		}
+		else {
+		    // merge into our leaf set
+		    changed |= put(nh);
+		}
+	    }
+	}
+
 
 	//System.out.println("LeafSet::merge result: " + this);
 
+	return changed;
     }
 
 
