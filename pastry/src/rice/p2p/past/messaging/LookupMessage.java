@@ -59,9 +59,6 @@ public class LookupMessage extends ContinuationMessage {
   // whether or not this message has been cached
   private boolean cached = false;
 
-  // whether or not to look for nearest replicas
-  private boolean useReplicas;
-
   // the list of nodes where this message has been
   private NodeHandle handle;
   
@@ -74,11 +71,10 @@ public class LookupMessage extends ContinuationMessage {
    * @param source The source address
    * @param dest The destination address
    */
-  public LookupMessage(int uid, Id id, boolean useReplicas, NodeHandle source, Id dest) {
+  public LookupMessage(int uid, Id id, NodeHandle source, Id dest) {
     super(uid, source, dest);
 
     this.id = id;
-    this.useReplicas = useReplicas;
   }
 
   /**
@@ -123,15 +119,6 @@ public class LookupMessage extends ContinuationMessage {
    */
   public NodeHandle getPreviousNodeHandle() {
     return handle;
-  }
-
-  /**
-   * Returns whether or not this message should use the replicas
-   *
-   * @return Whether or not this message should use the replicas
-   */
-  public boolean useReplicas() {
-    return useReplicas;
   }
 }
 

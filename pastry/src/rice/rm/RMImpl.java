@@ -860,35 +860,39 @@ public class RMImpl extends CommonAPIAppl implements RM {
      * nextHop field in the RouteMessage. 
      */
     public void lookupForward(RouteMessage msg) {
-	Id target = msg.getTarget();
-	int replicaFactor = rFactor;
-	NodeSet set;
-	int minProx;
-	NodeHandle closestReplica;
+      Id target = msg.getTarget();
+      NodeSet set;
+      int minProx;
+      NodeHandle closestReplica = null;
 
-	set = replicaSet(target, replicaFactor + 1);
-	// We choose the best replica in terms of 'proximity' other than the self node
-  // REMOVED - AM - If we are a replica, we should be considered.
-  //set.remove(getNodeId());
-	if(set.size()==0)
-	    return;	
-	closestReplica = set.get(0);
-	minProx = closestReplica.proximity();
-	for(int i= 1; i<set.size(); i++) {
-	    NodeHandle nh;
-	    int prox;
-	    nh = set.get(i);
-	    prox = nh.proximity();
-	    if(prox < minProx) {
-		minProx = prox;
-		closestReplica = nh;
-	    }
-	}
-	// We will change the nextHop Field of the RouteMessage to reflect this closest Replica
-	msg.setNextHop(closestReplica);
-	return;
+      set = replicaSet(target, rFactor + 1);
+
+      if(set.size()==0)
+        return;
+
+      minProx = Integer.MAX_VALUE;
+
+      for(int i= 1; i<set.size(); i++) {
+        NodeHandle handle = set.get(i);
+
+        // if handle is numerically closer or shares a longer prefix
+        if ((handle.getNodeId().indexOfMSDB(target) < getNodeId().indexOfMSDB(target)) ||
+            ((handle.getNodeId().indexOfMSDB(target) == getNodeId().indexOfMSDB(target)) &&
+             (handle.getNodeId().distance(target).compareTo(getNodeId().distance(target)) < 0))) {
+          if (handle.proximity() < minProx) {
+            minProx = handle.proximity();
+            closestReplica = handle;
+          }
+        }
+      }
+      
+      // We will change the nextHop Field of the RouteMessage to reflect this closest Replica
+      if (closestReplica != null) {
+        msg.setNextHop(closestReplica);
+      }
+
+      return;
     }
-    
 }
 
 

@@ -134,7 +134,15 @@ public class DistPastRegrTest extends DistCommonAPITest {
         stepStart("File Insertion");
         local.insert(file, new TestCommand() {
           public void receive(Object result) throws Exception {
-            assertTrue("Insert of file should succeed", ((Boolean)result).booleanValue());
+            assertTrue("Insert of file result should not be null", result != null);
+            assertTrue("Insert of file should return Boolean[]", result instanceof Boolean[]);
+            assertTrue("Insert of file should return correct sized Boolean[]", ((Boolean[]) result).length == REPLICATION_FACTOR);
+
+            for (int i=0; i<((Boolean[]) result).length; i++) {
+              assertTrue("Insert of file should not return null at replica", ((Boolean[]) result)[i] != null);
+              assertTrue("Insert of file should succeed at replica", ((Boolean[]) result)[i].booleanValue());
+            }
+
             stepDone();
 
             // run replica maintenance
@@ -190,7 +198,15 @@ public class DistPastRegrTest extends DistCommonAPITest {
     stepStart("File Insertion");
     local.insert(oldFile, new TestCommand() {
       public void receive(Object result) throws Exception {
-        assertTrue("Insert of file should succeed", ((Boolean)result).booleanValue());
+        assertTrue("Insert of file result should not be null", result != null);
+        assertTrue("Insert of file should return Boolean[]", result instanceof Boolean[]);
+        assertTrue("Insert of file should return correct sized Boolean[]", ((Boolean[]) result).length == REPLICATION_FACTOR);
+
+        for (int i=0; i<((Boolean[]) result).length; i++) {
+          assertTrue("Insert of file should not return null at replica", ((Boolean[]) result)[i] != null);
+          assertTrue("Insert of file should succeed at replica", ((Boolean[]) result)[i].booleanValue());
+        }
+        
         stepDone();
 
         // run replica maintenance
@@ -210,7 +226,15 @@ public class DistPastRegrTest extends DistCommonAPITest {
             stepStart("Overwriting File Insertion");
             local.insert(newFile, new TestCommand() {
               public void receive(Object result) throws Exception {
-                assertTrue("Insert of overwriting file should succeed", ((Boolean)result).booleanValue());
+                assertTrue("Insert of file result should not be null", result != null);
+                assertTrue("Insert of file should return Boolean[]", result instanceof Boolean[]);
+                assertTrue("Insert of file should return correct sized Boolean[]", ((Boolean[]) result).length == REPLICATION_FACTOR);
+
+                for (int i=0; i<((Boolean[]) result).length; i++) {
+                  assertTrue("Insert of file should not return null at replica", ((Boolean[]) result)[i] != null);
+                  assertTrue("Insert of file should succeed at replica", ((Boolean[]) result)[i].booleanValue());
+                }
+
                 stepDone();
 
                 // run replica maintenance
@@ -230,7 +254,15 @@ public class DistPastRegrTest extends DistCommonAPITest {
                     stepStart("Non-overwriting File Insertion");
                     local.insert(newNewFile, new TestCommand() {
                       public void receive(Object result) throws Exception {
-                        assertTrue("Insert of non-overwriting file should succeed", ((Boolean)result).booleanValue());
+                        assertTrue("Insert of file result should not be null", result != null);
+                        assertTrue("Insert of file should return Boolean[]", result instanceof Boolean[]);
+                        assertTrue("Insert of file should return correct sized Boolean[]", ((Boolean[]) result).length == REPLICATION_FACTOR);
+
+                        for (int i=0; i<((Boolean[]) result).length; i++) {
+                          assertTrue("Insert of file should not return null at replica", ((Boolean[]) result)[i] != null);
+                          assertTrue("Insert of file should succeed at replica", ((Boolean[]) result)[i].booleanValue());
+                        }
+                        
                         stepDone();
 
                         // run replica maintenance
@@ -450,7 +482,15 @@ public class DistPastRegrTest extends DistCommonAPITest {
     stepStart("File Insertion");
     local.insert(file, new TestCommand() {
       public void receive(Object result) throws Exception {
-        assertTrue("Insert of file should succeed", ((Boolean)result).booleanValue());
+        assertTrue("Insert of file result should not be null", result != null);
+        assertTrue("Insert of file should return Boolean[]", result instanceof Boolean[]);
+        assertTrue("Insert of file should return correct sized Boolean[]", ((Boolean[]) result).length == REPLICATION_FACTOR);
+
+        for (int i=0; i<((Boolean[]) result).length; i++) {
+          assertTrue("Insert of file should not return null at replica", ((Boolean[]) result)[i] != null);
+          assertTrue("Insert of file should succeed at replica", ((Boolean[]) result)[i].booleanValue());
+        }
+        
         stepDone();
         
         // run replica maintenance
@@ -523,7 +563,7 @@ public class DistPastRegrTest extends DistCommonAPITest {
 
     // Insert file
     stepStart("Caching Mutable Object");
-    final LookupMessage lmsg = new LookupMessage(1, id, false, local.getLocalNodeHandle(), id);
+    final LookupMessage lmsg = new LookupMessage(1, id, local.getLocalNodeHandle(), id);
     lmsg.receiveResult(file1);
     
     assertTrue("Message should continue to be routed",
@@ -559,7 +599,7 @@ public class DistPastRegrTest extends DistCommonAPITest {
             stepDone();
 
             // check lookup
-            LookupMessage lmsg = new LookupMessage(-1, id, false, local.getLocalNodeHandle(), id);
+            LookupMessage lmsg = new LookupMessage(-1, id, local.getLocalNodeHandle(), id);
 
             stepStart("Lookup Satisfied By Cache");
             assertTrue("Message should not continue to be routed",

@@ -76,6 +76,10 @@ public class PastTest extends Test {
 
   public static int DATA_BYTE_LENGTH = 1000;
 
+  protected Id[] ids;
+
+  protected TestPastContent[] contents;
+
   protected Node node;
   
   protected Past past;
@@ -83,6 +87,8 @@ public class PastTest extends Test {
   protected StorageManager storage;
 
   protected Random random;
+
+  protected boolean inserted;
 
   /**
     * Constructor which takes the local node this test is on,
@@ -98,48 +104,89 @@ public class PastTest extends Test {
     super(out, localNode, harness, INSTANCE);
 
     storage = new StorageManager(FACTORY,
-                                 new MemoryStorage(FACTORY),
+                                 new PersistentStorage(FACTORY, ".", 1000000),
                                  new LRUCache(new MemoryStorage(FACTORY), 1000000));
     past = new PastImpl(localNode, storage, REPLICATION_FACTOR, INSTANCE);
     random = new Random();
+
+    ids = new Id[NUM_ITEMS];
+    contents = new TestPastContent[NUM_ITEMS];
+    inserted = false;
   }	
 
   /**
     * Method which is called when the TestHarness wants this
     * Test to begin testing.
     */
-  public void startTest(rice.pastry.NodeHandle[] nodes) {
-    Continuation insert = new Continuation() {
-      private int num = 0;
-      private byte[] idData = new byte[ID_BYTE_LENGTH];
-      private byte[] data = new byte[DATA_BYTE_LENGTH];
-      
-      public void receiveResult(Object o) {
-        if (! (o.equals(Boolean.TRUE))) {
-          System.out.println("Insert " + num + " failed - aborting.");
-          return;
+  public synchronized void startTest(rice.pastry.NodeHandle[] nodes) {
+    if (! inserted) {
+      Continuation insert = new Continuation() {
+        private int num = -1;
+        private byte[] idData = new byte[ID_BYTE_LENGTH];
+
+        public void receiveResult(Object o) {
+          if (! (o instanceof Boolean[])) {
+            System.out.println("Insert " + num + " returned unexpected response - aborting.");
+            return;
+          }
+
+          if (num < NUM_ITEMS - 1) {
+            num++;
+            random.nextBytes(idData);
+
+            byte[] data = new byte[DATA_BYTE_LENGTH];
+            random.nextBytes(data);
+            
+            ids[num] = FACTORY.buildId(idData);
+            contents[num] = new TestPastContent(ids[num], data);
+
+            System.out.println("Inserting item " + num + " at " + ids[num]);
+
+            past.insert(contents[num], this);
+          } else {
+            System.out.println("Insert of " + num + " objects done.");
+            inserted = true;
+          }
         }
 
-        if (num < NUM_ITEMS) {
-          num++;
-
-          random.nextBytes(idData);
-          Id id = FACTORY.buildId(idData);
-
-          System.out.println("Inserting item " + num + " at " + id);
-
-          past.insert(new TestPastContent(id, data), this);
-        } else {
-          System.out.println("Insert of " + num + " objects done.");
+        public void receiveException(Exception e) {
+          System.out.println("Insert " + num + " failed with exception " + e + " - aborting.");
         }
-      }
+      };
 
-      public void receiveException(Exception e) {
-        System.out.println("Insert " + num + " failed with exception " + e + " - aborting.");
-      }
-    };
+      insert.receiveResult(new Boolean[0]);
+    } else {
+      Continuation verify = new Continuation() {
+        private int num = 0;
 
-    insert.receiveResult(Boolean.TRUE);
+        public void receiveResult(Object o) {
+          if (o != null) {
+            TestPastContent content = (TestPastContent) o;
+
+            if (! Arrays.equals(contents[num].data, content.data)) {
+              System.out.println("Lookup of " + num + " returned wrong data - aborting.");
+            }
+            
+            num++;
+          } else {
+            System.out.println("Lookup of " + num + " failed - aborting.");
+            return;
+          }
+
+          if (num < NUM_ITEMS) {
+            past.lookup(ids[num], this);
+          } else {
+            System.out.println("Verification of " + num + " objects done.");
+          }
+        }
+
+        public void receiveException(Exception e) {
+          System.out.println("Verification " + num + " failed with exception " + e + " - aborting.");
+        }
+      };
+
+      past.lookup(ids[0], verify);      
+    }
   }
 
   public void messageForAppl(rice.pastry.messaging.Message msg) {

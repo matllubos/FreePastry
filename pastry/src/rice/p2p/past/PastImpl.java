@@ -83,10 +83,13 @@ public class PastImpl implements Past, Application, RMClient {
   private int id;
 
   // the hashtable of outstanding messages
-  private Hashtable pending;
+  private Hashtable outstanding;
 
   // the factory for manipulating ids
   protected IdFactory factory;
+
+  // the set of Ids which we need to fetch
+  protected IdSet pending;
   
   /**
    * Constructor for Past
@@ -103,8 +106,9 @@ public class PastImpl implements Past, Application, RMClient {
 
     replicaManager = new RMImpl((rice.pastry.PastryNode) node, this, replicas, instance);
     id = Integer.MIN_VALUE;
-    pending = new Hashtable();
+    outstanding = new Hashtable();
     replicationFactor = replicas;
+    pending = factory.buildIdSet();
   }
   
 
@@ -174,7 +178,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @param command The continuation to run
    */
   private void insertPending(int uid, Continuation command) {
-    pending.put(new Integer(uid), command);
+    outstanding.put(new Integer(uid), command);
   }
 
   /**
@@ -184,7 +188,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @return The continuation to run
    */
   private Continuation removePending(int uid) {
-    return (Continuation) pending.remove(new Integer(uid));
+    return (Continuation) outstanding.remove(new Integer(uid));
   }
 
   /**
@@ -223,18 +227,120 @@ public class PastImpl implements Past, Application, RMClient {
     }
   }
 
+  /**
+   * Method which adds a set of Ids to the list of pending
+   * ids to be fetched.
+   *
+   * @param set The keys to fetch
+   */
+  private void addToPending(IdSet set) {
+    Iterator i = set.getIterator();
+
+    while (i.hasNext()) {
+      Id id = (Id) i.next();
+
+      if ((! pending.isMemberId(id)) &&
+          (! storage.getStorage().exists(id))) {
+        pending.addId(id);
+      }
+    }
+  }
+
+  /**
+   * Sends out the request for the next pending id. 
+   */
+  private void fetchNextPending() {
+    final Id id = (Id) pending.getIterator().next();
+    
+    final Continuation receive = new Continuation() {
+      public void receiveResult(Object o) {
+        if (! (o.equals(new Boolean(true)))) {
+          System.out.println("Insertion of replica of id " + id + " failed.");
+        }
+        
+        fetchPendingCompleted(id);
+      }
+
+      public void receiveException(Exception e) {
+        System.out.println("Insertion of replica id " + id + " caused exception " + e + ".");
+        fetchPendingCompleted(id);
+      }
+    };
+
+    final Continuation insert = new Continuation() {
+      public void receiveResult(Object o) {
+        if (o == null) {
+          System.out.println("Could not fetch id " + id);
+        } else {
+          PastContent content = (PastContent) o;
+          storage.store(content.getId(), content, receive);
+        }
+      }
+
+      public void receiveException(Exception e) {
+        System.out.println("Retreival of replica id " + id + " caused exception " + e + ".");
+        fetchPendingCompleted(id);
+      }
+    };
+
+    Continuation fetch = new Continuation() {
+      public void receiveResult(Object o) {
+        if (o != null) {
+          PastContentHandle[] handles = (PastContentHandle[]) o;
+          PastContentHandle handle = null;
+          int i=0;
+
+          while ((handle == null) && (i<handles.length)) {
+            handle = handles[i];
+            i++;
+          }
+
+          if (handle == null) {
+            System.out.println("Could not fetch object of id " + id + " - all replicas were null.");
+            fetchPendingCompleted(id);
+          } else {
+            fetch(handle, insert);
+          }
+        }
+      }
+
+      public void receiveException(Exception e) {
+        System.out.println("Fetch handles of replica of id " + id + " caused exception " + e + ".");
+        fetchPendingCompleted(id);
+      }
+    };
+    
+    lookupHandles(id, replicationFactor, fetch);
+  }
+
+  /**
+   * Method which is called once a fetch of a pending id has been completed, regardless
+   * of failure or not.
+   *
+   * @param id The id which the fetch of has completed
+   */
+  private void fetchPendingCompleted(Id id) {
+    pending.removeId(id);
+
+    if (pending.getIterator().hasNext()) {
+      fetchNextPending();
+    }
+  }
+
   
   // ----- PAST METHODS -----
   
   /**
    * Inserts an object with the given ID into this instance of Past.
    * Asynchronously returns a PastException to command, if the
-   * operation was unsuccessful.
+   * operation was unsuccessful.  If the operation was successful, a
+   * Boolean[] is returned representing the responses from each of
+   * the replicas which inserted the object.
    *
    * @param obj the object to be inserted
    * @param command Command to be performed when the result is received
    */
-  public void insert(PastContent obj, Continuation command) {
+  public void insert(final PastContent obj, final Continuation command) {
     if (command == null) return;
     if (obj == null) {
       command.receiveException(new RuntimeException("Object cannot be null in insert!"));
@@ -242,8 +348,58 @@ public class PastImpl implements Past, Application, RMClient {
     }
 
     replicaManager.registerKey((rice.pastry.Id) obj.getId());
-                          
-    sendRequest(obj.getId(), new InsertMessage(getUID(), obj, getLocalNodeHandle(), obj.getId()), command);
+
+    final Continuation receiveHandles = new Continuation() {
+
+      // the number of handles we are waiting for
+      private int num = -1;
+
+      // the responses we have received
+      private Vector handles = new Vector();
+
+      public void receiveResult(Object o) {
+        if (num == -1) {
+          num = ((Integer) o).intValue();
+        } else {
+          handles.add(o);
+
+          if (handles.size() == num) {
+            Boolean[] array = new Boolean[num];
+
+            for (int i=0; i<num; i++) {
+              array[i] = (Boolean) handles.elementAt(i);
+            }
+
+            command.receiveResult(array);
+          }
+        }
+      }
+
+      public void receiveException(Exception e) {
+        command.receiveException(e);
+      }
+    };
+
+    Continuation receiveReplicas = new Continuation() {
+
+      public void receiveResult(Object o) {
+        NodeHandleSet replicas = (NodeHandleSet) o;
+
+        // record the number of handles we are going to insert
+        receiveHandles.receiveResult(new Integer(replicas.size()));
+
+        for (int i=0; i<replicas.size(); i++) {
+          NodeHandle node = replicas.getHandle(i);
+          sendRequest(node.getId(), new InsertMessage(getUID(), obj, getLocalNodeHandle(), obj.getId()), node, receiveHandles);
+        }
+      }
+
+      public void receiveException(Exception e) {
+        command.receiveException(e);
+      }
+    };
+
+    sendRequest(obj.getId(), new LookupHandlesMessage(getUID(), obj.getId(), replicationFactor, getLocalNodeHandle(), obj.getId()), receiveReplicas);
   }
 
   /**
@@ -268,38 +424,13 @@ public class PastImpl implements Past, Application, RMClient {
    * @param command Command to be performed when the result is received
    */
   public void lookup(Id id, Continuation command) {
-    lookup(id, command, true);
-  }
-
-  /**
-   * Retrieves the object stored in this instance of Past with the
-   * given ID.  Asynchronously returns a PastContent object as the
-   * result to the provided Continuation, or a PastException. This
-   * method is provided for convenience; its effect is identical to a
-   * lookupHandles() and a subsequent fetch() to the handle that is
-   * nearest in the network.
-   *
-   * The client must authenticate the object. In case of failure, an
-   * alternate replica of the object can be obtained via
-   * lookupHandles() and fetch().
-   *
-   * This method is not safe if the object is immutable and storage
-   * nodes are not trusted. In this case, clients should used the
-   * lookUpHandles method to obtains the handles of all primary
-   * replicas and determine which replica is fresh in an
-   * application-specific manner.
-   *
-   * @param id the key to be queried
-   * @param command Command to be performed when the result is received
-   */
-  protected void lookup(Id id, Continuation command, boolean useReplicas) {
     if (command == null) return;
     if (id == null) {
       command.receiveException(new RuntimeException("Id cannot be null in lookup!"));
       return;
     }
 
-    sendRequest(id, new LookupMessage(getUID(), id, useReplicas, getLocalNodeHandle(), id), command);
+    sendRequest(id, new LookupMessage(getUID(), id, getLocalNodeHandle(), id), command);
   }
 
   /**
@@ -374,7 +505,7 @@ public class PastImpl implements Past, Application, RMClient {
 
         for (int i=0; i<replicas.size(); i++) {
           NodeHandle node = replicas.getHandle(i);
-          sendRequest(null, new FetchHandleMessage(getUID(), id, getLocalNodeHandle(), node.getId()), node, receiveHandles);
+          sendRequest(node.getId(), new FetchHandleMessage(getUID(), id, getLocalNodeHandle(), node.getId()), node, receiveHandles);
         }
       }
 
@@ -455,7 +586,7 @@ public class PastImpl implements Past, Application, RMClient {
 
       // if it is a request, look in the cache
       if (! lmsg.isResponse()) {
-        if (storage.getCache().exists(id)) {
+        if (storage.exists(id)) {
 
           // deliver the message, which will do what we want
           deliver(endpoint.getId(), lmsg);
@@ -463,9 +594,7 @@ public class PastImpl implements Past, Application, RMClient {
           return false;
         } else {
           // otherwise, see if we can route to the closest replica
-          if (lmsg.useReplicas()) {
-            //replicaManager.lookupForward((rice.pastry.routing.RouteMessage) message);
-          }
+          replicaManager.lookupForward((rice.pastry.routing.RouteMessage) message);
         }
       } else {
         // if the message hasn't been cached and we don't have it, cache it
@@ -499,6 +628,8 @@ public class PastImpl implements Past, Application, RMClient {
     } else {
       if (msg instanceof InsertMessage) {
         final InsertMessage imsg = (InsertMessage) msg;
+        pending.removeId(imsg.getContent().getId());
+        
         storage.getObject(imsg.getContent().getId(), new Continuation() {
           public void receiveResult(Object o) {
             try {
@@ -595,61 +726,14 @@ public class PastImpl implements Past, Application, RMClient {
    * @param keySet set containing the keys that needs to be fetched
    */
   public void fetch(rice.pastry.IdSet keySet) {
-    Iterator i = keySet.getIterator();
+    if (pending.getIterator().hasNext()) {
+      addToPending(keySet);
+    } else {
+      addToPending(keySet);
 
-    while (i.hasNext()) {
-      final Id id = (Id) i.next();
-
-      final Continuation receive = new Continuation() {
-        public void receiveResult(Object o) {
-          if (! (o.equals(new Boolean(true)))) {
-            System.out.println("Insertion of replica id " + id + " failed.");
-          }
-        }
-
-        public void receiveException(Exception e) {
-          System.out.println("Insertion of replica id " + id + " caused exception " + e + ".");
-        }
-      };
-      
-      final Continuation insert = new Continuation() {
-        public void receiveResult(Object o) {
-          if (o == null) {
-            System.out.println("Could not fetch id " + id);
-          } else {
-            storage.store(id, (Serializable) o, receive);
-          }
-        }
-
-        public void receiveException(Exception e) {
-          System.out.println("Retreival of replica id " + id + " caused exception " + e + ".");
-        }
-      };
-
-      Continuation fetch = new Continuation() {
-        public void receiveResult(Object o) {
-          PastContentHandle[] handles = (PastContentHandle[]) o;
-          PastContentHandle handle = null;
-          int i=0;
-
-          while ((handle == null) && (i<handles.length)) {
-            handle = handles[i];
-            i++;
-          }
-
-          if (handle == null) {
-            System.out.println("Could not fetch id " + id + " - all replicas were null.");
-          } else {
-            fetch(handle, insert);
-          }
-        }
-
-        public void receiveException(Exception e) {
-          System.out.println("Fetch handles of replica id " + id + " caused exception " + e + ".");
-        }
-      };
-
-      lookupHandles(id, replicationFactor, fetch);
+      if (pending.getIterator().hasNext()) {
+        fetchNextPending();
+      }
     }
   }
 

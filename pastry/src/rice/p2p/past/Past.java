@@ -56,11 +56,13 @@ import rice.p2p.commonapi.*;
  * @author Peter Druschel
  */
 public interface Past {
-  
- /**
+
+  /**
    * Inserts an object with the given ID into this instance of Past.
    * Asynchronously returns a PastException to command, if the
-   * operation was unsuccessful. 
+   * operation was unsuccessful.  If the operation was successful, a
+   * Boolean[] is returned representing the responses from each of
+   * the replicas which inserted the object.
    * 
    * @param obj the object to be inserted
    * @param command Command to be performed when the result is received
