@@ -132,6 +132,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private static int maxAggregateSize = 1024*1024;
   private static int maxObjectsInAggregate = 20;
+  private static int maxAggregatesPerRun = 3;
   
   private static final boolean addMissingAfterRefresh = false;
   private static final int nominalReferenceCount = 2;
@@ -446,6 +447,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         "flushInterval = " + (int)(flushInterval / SECONDS) + " sec\n" +
         "maxAggregateSize = " + maxAggregateSize + " bytes\n" +
         "maxObjectsInAggregate = " + maxObjectsInAggregate + " objects\n" +
+        "maxAggregatesPerRun = " + maxAggregatesPerRun + " aggregates\n" +
         "addMissingAfterRefresh = " + addMissingAfterRefresh + "\n" +
         "nominalReferenceCount = " + nominalReferenceCount + "\n" +
         "maxPointersPerAggregate = " + maxPointersPerAggregate + "\n" +
@@ -1069,6 +1071,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     while (true) {
       ObjectDescriptor thisObject = null;
       boolean mustAddObject = false;
+
+      if (aggregates.size() > maxAggregatesPerRun)
+        break;
       
       while (iter.hasNext()) {
         thisObject = (ObjectDescriptor) waitingList.getMetadata((Id) iter.next());
