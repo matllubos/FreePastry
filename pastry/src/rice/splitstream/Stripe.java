@@ -144,6 +144,7 @@ public class Stripe extends Observable implements IScribeApp{
      public void receiveMessage(ScribeMessage msg){
        setChanged();
        notifyObservers(); 
+
        /* Check the type of message */
        /* then make call accordingly */
      }
