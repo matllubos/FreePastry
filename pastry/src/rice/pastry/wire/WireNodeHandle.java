@@ -70,7 +70,9 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
   public static int STATE_USING_UDP_WAITING_TO_DISCONNECT = -4;
 
   // the largest message size to send over UDP
-  public static int MAX_UDP_MESSAGE_SIZE = 8192;
+  public static int MAX_UDP_MESSAGE_SIZE = DatagramManager.DATAGRAM_SEND_BUFFER_SIZE;
+  
+  public static int SOCKET_BUFFER_SIZE = 32768;
 
   // the ip address and port of the remote node
   private InetSocketAddress address;
@@ -238,6 +240,8 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
       //  InetSocketAddress tcpAddress = new InetSocketAddress(address.getAddress(), address.getPort());// + 1);
 
         SocketChannel channel = SocketChannel.open();
+        channel.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
+        channel.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
         channel.configureBlocking(false);
         boolean done = channel.connect(address);
 

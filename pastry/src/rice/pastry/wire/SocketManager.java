@@ -184,6 +184,8 @@ public class SocketManager implements SelectionKeyHandler {
   public void accept(SelectionKey key) {
     try {
       SocketChannel channel = (SocketChannel) ((ServerSocketChannel) key.channel()).accept();
+      channel.socket().setSendBufferSize(WireNodeHandle.SOCKET_BUFFER_SIZE);
+      channel.socket().setReceiveBufferSize(WireNodeHandle.SOCKET_BUFFER_SIZE);      
       channel.configureBlocking(false);
 
       Selector selector = pastryNode.getSelectorManager().getSelector();

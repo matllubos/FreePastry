@@ -75,8 +75,12 @@ public class DatagramManager implements SelectionKeyHandler {
   private DatagramChannel channel;
 
   // the size of the buffer used to read incoming datagrams
-  // must be big enough to encompass a whole datagram packet
-  public static int BUFFER_SIZE = 32768;
+  // must be big enough to encompass multiple datagram packets
+  public static int DATAGRAM_RECEIVE_BUFFER_SIZE = 131072;
+  
+  // the size of the buffer used to send outgoing datagrams
+  // this is also the largest message size than can be sent via UDP
+  public static int DATAGRAM_SEND_BUFFER_SIZE = 65536;
 
   // the key used to determine what has taken place
   private SelectionKey key;
@@ -112,7 +116,7 @@ public class DatagramManager implements SelectionKeyHandler {
     lastAckNum = new HashMap();
 
     // allocate enought bytes to read a node handle
-    buffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
+    buffer = ByteBuffer.allocateDirect(DATAGRAM_SEND_BUFFER_SIZE);
 
     try {
       // bind to the appropriate port
@@ -120,6 +124,8 @@ public class DatagramManager implements SelectionKeyHandler {
       channel.configureBlocking(false);
       InetSocketAddress isa = new InetSocketAddress(port);
       channel.socket().bind(isa);
+      channel.socket().setSendBufferSize(DATAGRAM_SEND_BUFFER_SIZE);
+      channel.socket().setReceiveBufferSize(DATAGRAM_RECEIVE_BUFFER_SIZE);
 
       Selector selector = manager.getSelector();
 
