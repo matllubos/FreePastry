@@ -221,7 +221,7 @@ public class DistScribeRegrTest {
 	    // Do application specific stuff here.
 	    System.out.println("I am up "+m_app.m_scribe.getNodeId());
 	   
-	    int publish_period = DistScribeMaintenanceThread.m_maintPeriod;
+	    int publish_period = Scribe.m_scribeMaintFreq;
 	    int threshold = m_app.m_scribe.getTreeRepairThreshold();
 	    int seq_num = -1;
 	    int count = 1;
