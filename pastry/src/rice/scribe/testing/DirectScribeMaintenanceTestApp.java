@@ -227,6 +227,13 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp, IScribeObserv
 	return data;
 	
     }
+
+    /** 
+     * Upcall by scribe to let this application know that 
+     * it is the new root.
+     */
+    public void isNewRoot(NodeId topicId){
+    }
 }
 
 

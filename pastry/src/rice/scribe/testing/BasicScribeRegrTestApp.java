@@ -221,6 +221,13 @@ public class BasicScribeRegrTestApp implements IScribeApp
     public void putTopic( NodeId tid ) {
 	//	m_tracker.putTopic( tid );
     }
+
+    /** 
+     * Upcall by scribe to let this application know that 
+     * it is the new root.
+     */
+    public void isNewRoot(NodeId topicId){
+    }
 }
 
 

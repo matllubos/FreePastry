@@ -325,7 +325,13 @@ public class DistScribeRegrTestApp extends PastryAppl implements IScribeApp
     private Message makeDistScribeRegrTestMessage(Credentials c) {
 	return new DistScribeRegrTestMessage( m_address, c );
     }
-    
+
+    /** 
+     * Upcall by scribe to let this application know that 
+     * it is the new root.
+     */
+    public void isNewRoot(NodeId topicId){
+    }
 }
 
 
