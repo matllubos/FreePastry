@@ -3,8 +3,9 @@ package rice.pastry.leafset;
 import rice.pastry.*;
 
 import java.util.*;
+import java.io.*;
 
-public class SimilarSet extends Observable implements NodeSet 
+public class SimilarSet extends Observable implements NodeSet, Serializable
 {
     private NodeId baseId;
     private boolean clockwise;

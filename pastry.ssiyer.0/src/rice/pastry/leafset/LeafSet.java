@@ -31,6 +31,7 @@ package rice.pastry.leafset;
 import rice.pastry.*;
 
 import java.util.*;
+import java.io.*;
 
 /**
  * A class for representing and manipulating the leaf set.
@@ -38,7 +39,7 @@ import java.util.*;
  * @author Andrew Ladd
  */
 
-public class LeafSet extends Observable implements NodeSet {
+public class LeafSet extends Observable implements NodeSet, Serializable {
     private int theSize;
 
     private NodeId baseId;

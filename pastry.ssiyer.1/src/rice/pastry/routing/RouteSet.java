@@ -41,6 +41,7 @@ import rice.pastry.*;
 import rice.pastry.NodeSet;
 
 import java.util.*;
+import java.io.*;
 
 /**
  * A set of nodes typically stored in the routing table.  This
@@ -51,7 +52,7 @@ import java.util.*;
  * @author Peter Druschel
  */
 
-public class RouteSet extends Observable implements NodeSet
+public class RouteSet extends Observable implements NodeSet, Serializable
 {
     private NodeHandle[] nodes;
     private int theSize;

@@ -172,7 +172,7 @@ public class NodeId implements Comparable, Serializable
      * A class for representing and manipulating the distance between two nodeIds on the circle.
      */
     
-    public class Distance implements Comparable {
+    public class Distance implements Comparable, Serializable {
 	private int difference[];
 	
 	/**
