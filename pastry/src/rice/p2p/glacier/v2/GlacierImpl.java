@@ -2617,7 +2617,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                     FragmentAndManifest fam = (FragmentAndManifest) o;
                     fam.manifest = thisManifest;
                     log(3, "Got FAM for "+thisKey+", now replacing old manifest with new one...");
-                    fragmentStorage.store(thisKey, new FragmentMetadata(thisManifest.getExpiration(), metadata.getCurrentExpiration(), System.currentTimeMillis()), fam,
+                    fragmentStorage.store(thisKey, new FragmentMetadata(thisManifest.getExpiration(), ((metadata == null) ? 0 : metadata.getCurrentExpiration()), System.currentTimeMillis()), fam,
                       new Continuation() {
                         public void receiveResult(Object o) {
                           log(3, "Old manifest for "+thisKey+" replaced OK, sending receipt");
