@@ -6,6 +6,7 @@ SOURCE  = \
 	PostCertificate.java \
   CertificateAuthorityKeyGenerator.java \
   CertificateGenerator.java \
+  SecurityUtils.java
   password.java
 
 RMI_SOURCE =
