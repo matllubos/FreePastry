@@ -36,6 +36,8 @@ if advised of the possibility of such damage.
 
 package rice.pastry.commonapi;
 
+import java.util.TimerTask;
+
 import rice.p2p.commonapi.*;
 
 import rice.pastry.Log;
@@ -116,9 +118,9 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param message The message to be delivered
    * @param delay The number of milliseconds to wait before delivering the message
    */
-  public void scheduleMessage(Message message, long delay) {
+  public TimerTask scheduleMessage(Message message, long delay) {
     PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), message);
-    thePastryNode.scheduleMsg(pm, delay);
+    return thePastryNode.scheduleMsg(pm, delay);
   }
 
   /**

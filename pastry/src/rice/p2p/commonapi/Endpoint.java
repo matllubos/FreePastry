@@ -36,6 +36,8 @@ if advised of the possibility of such damage.
 
 package rice.p2p.commonapi;
 
+import java.util.TimerTask;
+
 /**
  * @(#) Endpoint.java
  *
@@ -150,7 +152,7 @@ public interface Endpoint {
    * @param message The message to be delivered
    * @param delay The number of milliseconds to wait before delivering the message
    */
-  void scheduleMessage(Message message, long delay);
+  TimerTask scheduleMessage(Message message, long delay);
   
 }
 
