@@ -22,21 +22,19 @@ public abstract class SocketProbe extends SocketMessage implements Probe {
   public SocketNodeHandle sender;
   public SocketNodeHandle receiver;
   public LivenessLeafSet leafSet;
-  public Collection failedSet;
   private int state;
 
 
 
-  public SocketProbe(SocketNodeHandle sender, SocketNodeHandle receiver, LeafSet leafSet, Collection failedSet, int joinState) {
+  public SocketProbe(SocketNodeHandle sender, SocketNodeHandle receiver, LeafSet leafSet, int joinState) {
     this.sender = sender;
     this.receiver = receiver;
     this.leafSet = new LivenessLeafSet(leafSet);
-    this.failedSet = failedSet;
     state = joinState; 
   }
 
-  public Collection getFailedset() {
-    return failedSet;
+  public Collection getFailedSet() {
+    return leafSet.getSet(NodeHandle.LIVENESS_SUSPECTED);
   }
 
   public LivenessLeafSet getLeafset() {
@@ -52,8 +50,7 @@ public abstract class SocketProbe extends SocketMessage implements Probe {
   }
   
   public String toString() {
-    return leafSet.toString();
+    return ""+getState();//leafSet.toString();
   }
 
-	public abstract boolean isResponse();
 }

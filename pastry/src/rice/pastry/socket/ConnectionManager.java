@@ -106,7 +106,7 @@ public class ConnectionManager {
   /**
    * Enable to turn on additional debugging.
    */
-  public static final boolean LOG_LOW_LEVEL = false;
+  public static boolean LOG_LOW_LEVEL = false;
   
   /**
    * Kept for debugging.
@@ -268,7 +268,8 @@ public class ConnectionManager {
     this.epoch = snh.getEpoch();
     this.id = snh.getId();
     this.snh = new WeakReference(snh);
-    this.pingManager = scm.getPingManager();    
+    this.pingManager = scm.getPingManager();   
+    addLivenessListener(scm); 
     pendingAcks = new HashMap();
     controlQueue = new LinkedList();    
     liveness = NodeHandle.LIVENESS_UNKNOWN; 
@@ -510,6 +511,7 @@ public class ConnectionManager {
    * @param type SocketCollectionManager.TYPE_CONTROL, SocketCollectionManager.TYPE_DATA
    */
   public void send(final Message message) {    
+    if (!scm.pastryNode.isAlive()) return;
     if (errors(message)) {
       return;
     }
@@ -609,6 +611,7 @@ public class ConnectionManager {
    */
   private void sendNow(Message message) {    
 //    System.out.println(this+".sendNow("+message+"):"+message.getClass().getName());    
+    if (!scm.pastryNode.isAlive()) return;
 
     int type = getMessageType(message);
     if (type == TYPE_CONTROL) {  
@@ -1010,7 +1013,7 @@ public class ConnectionManager {
    * @param newStatus NodeHandle.LIVENESS_ALIVE, NodeHandle.LIVENESS_SUSPECTED, NodeHandle.LIVENESS_FAULTY, NodeHandle.LIVENESS_UNKNOWN
    */
   private void setLiveness(int newLiveness) {
-    if ((liveness == NodeHandle.LIVENESS_FAULTY) &&
+    if ((liveness >= NodeHandle.LIVENESS_SUSPECTED) &&
         (newLiveness == NodeHandle.LIVENESS_SUSPECTED)) {
           System.out.println("Attempting to downgrade faultyness without setting to alive command rejected");    
           Thread.dumpStack();
@@ -1025,7 +1028,7 @@ public class ConnectionManager {
 
   /**
    * Starts pinging the remote node if we're not already pinging them.
-   *
+   * @return true if it is going to send another ping
    */
   public boolean checkDead() {
     return checkDead(1);
@@ -1033,6 +1036,8 @@ public class ConnectionManager {
   
   public boolean checkDead(int powerOffset) {
     //assertSelectorThread();
+    if (!scm.pastryNode.isAlive()) return false;
+
     if (powerOffset < 1) {
       throw new RuntimeException("Invalid Power Offset "+powerOffset);
     }
@@ -1076,14 +1081,19 @@ public class ConnectionManager {
    */
   protected void markDead() {
     long susTime = System.currentTimeMillis() - markSuspectedTime;
-    //if (LOG_LOW_LEVEL)
+    if (LOG_LOW_LEVEL)
       System.out.println(this+"markDead() after being suspected for "+susTime);
     timesMarkedDead++;
     if (SocketPastryNodeFactory.churn && isInLeafSet()) {
-      System.out.println(this+" marking UNREACHABLE");
+//      if (!scm.pastryNode.isAlive())
+//        Thread.dumpStack();
+      if (scm.pastryNode.isAlive()) {
+        System.out.println(this+" marking UNREACHABLE");
+      }
       setLiveness(NodeHandle.LIVENESS_UNREACHABLE);
     } else {
-      System.out.println(this+" marking FAULTY");
+      if (SocketPastryNodeFactory.churn)
+        System.out.println(this+" marking FAULTY");
       setLiveness(NodeHandle.LIVENESS_FAULTY);
       scm.markDead((SocketNodeHandle)snh.get());
     }
@@ -1248,15 +1258,17 @@ public class ConnectionManager {
   private boolean rerouteExtractedMessage(Message o) {
     if (o instanceof RouteMessage) {
       RouteMessage rm = (RouteMessage)o;
+      if (liveness >= NodeHandle.LIVENESS_SUSPECTED) {
+        if (rm.getOptions().rerouteIfSuspected()) {
+          scm.reroute(rm);
+          return true;
+        } // else we are suspected, but not supposed to rerouteIfSuspected()        
+      }
       switch (liveness) {
         case NodeHandle.LIVENESS_SUSPECTED:
-          if (rm.getOptions().rerouteIfSuspected()) {
-            scm.reroute(rm);
-            return true;
-          } // else we are suspected, but not supposed to rerouteIfSuspected()
           return false;
         case NodeHandle.LIVENESS_UNREACHABLE:
-          messageNotSent(o,SocketPastryNode.EC_NODE_UNREACHABLE);
+          messageNotSent(rm.unwrap(),SocketPastryNode.EC_NODE_UNREACHABLE);
           return true;
         case NodeHandle.LIVENESS_FAULTY:
           scm.reroute(rm);
@@ -1370,6 +1382,9 @@ public class ConnectionManager {
       //System.out.println("Registered DeadChecker("+address+")");
       this.address = address;
       this.powerOffset = powerOffset;
+      if (!scm.pastryNode.isAlive()) {
+        Thread.dumpStack();
+      }
     }
 
     public void start() {
@@ -1380,7 +1395,7 @@ public class ConnectionManager {
       schedule(powerOffset);
       SocketNodeHandle snh = getNodeHandle();
 			if (snh != null) {
-	      pingManager.forcePing(snh, this);
+	      pingManager.forcePing(snh, this, true);
 			} else {
 			  // we're about to be collected
 //			  System.out.println("Connection manager has no node handle1.");	
@@ -1483,7 +1498,7 @@ public class ConnectionManager {
         
         SocketNodeHandle snh = getNodeHandle();
         if (snh != null) {
-	        pingManager.forcePing(snh, DeadChecker.this);
+	        pingManager.forcePing(snh, DeadChecker.this, true);
 	        schedule(powerOffset);
         } else {
           // we're about to be collected
@@ -1727,6 +1742,10 @@ public class ConnectionManager {
     if (controlSocketManager!=null) {
       controlSocketManager.close();
     }
+    if (deadChecker != null) {
+      deadChecker.cancel();
+      deadChecker = null;
+    }
   }
   
   /**
@@ -1741,7 +1760,7 @@ public class ConnectionManager {
    * needs to close down remaining connections
    */
 	protected void finalize() throws Throwable {
-    //if (LOG_LOW_LEVEL)
+    if (LOG_LOW_LEVEL)
       System.out.println(this+"CM.finalize()");
     close();
 		super.finalize();
@@ -1759,7 +1778,7 @@ public class ConnectionManager {
     livenessListeners.add(ll);
 	}
   
-  private void updateLivenessListeners() {
+  private void updateLivenessListeners() {    
     if (livenessListeners.size() == 0) return;
     Iterator i = ((Collection)livenessListeners.clone()).iterator();
     while(i.hasNext()) {

@@ -21,8 +21,6 @@ import java.util.LinkedList;
 import java.util.WeakHashMap;
 
 import rice.pastry.PastryObjectInputStream;
-import rice.pastry.churn.FailedSetManager;
-import rice.pastry.churn.NullFailedSetManager;
 import rice.pastry.churn.Probe;
 import rice.pastry.churn.ProbeListener;
 import rice.pastry.socket.exception.DeserializationException;
@@ -167,8 +165,6 @@ public class PingManager extends SelectionKeyHandler {
    */
   private SocketPastryNode spn;
 
-  private FailedSetManager fsm;
-
   /**
    * Constructor for PingManager.
    * 
@@ -181,7 +177,6 @@ public class PingManager extends SelectionKeyHandler {
     this.port = port;
     this.pool = pool;
     this.localHandle = localHandle;
-    this.fsm = new NullFailedSetManager();
     proximity = new WeakHashMap();
     pingSentTimes = new WeakHashMap();
     pingResponseTimes = new WeakHashMap();
@@ -217,13 +212,6 @@ public class PingManager extends SelectionKeyHandler {
       System.out.println("PANIC: Error binding datagram server to port " + port + ": " + e);
       System.exit(-1);
     }
-  }
-
-  /**
-   * @param fsm
-   */
-  public void setFailedSetManager(FailedSetManager fsm) {
-    this.fsm = fsm;   
   }
 
   /**
@@ -289,7 +277,7 @@ public class PingManager extends SelectionKeyHandler {
    * @param prl DESCRIBE THE PARAMETER
    */
   protected void ping(SocketNodeHandle snh, PingResponseListener prl) {
-    ping(snh, prl, false);
+    ping(snh, prl, false, true);
   }
 
   /**
@@ -311,8 +299,8 @@ public class PingManager extends SelectionKeyHandler {
    * @param address the address to ping
    * @param prl the PRL to notify when the response arrives
    */
-  protected void forcePing(SocketNodeHandle snh, PingResponseListener prl) {
-    ping(snh, prl, true);
+  protected void forcePing(SocketNodeHandle snh, PingResponseListener prl, boolean requestResponse) {
+    ping(snh, prl, true, requestResponse);
   }
 
 
@@ -323,7 +311,7 @@ public class PingManager extends SelectionKeyHandler {
    * @param prl the response listener to notify
    * @param force bypass the PING_THROTTLE rule.
    */
-  private void ping(final SocketNodeHandle snh, final PingResponseListener prl, final boolean force) {
+  private void ping(final SocketNodeHandle snh, final PingResponseListener prl, final boolean force, final boolean requestResponse) {
     if (snh.equals(localHandle)) {
 //      Thread.dumpStack();
       return;
@@ -347,7 +335,7 @@ public class PingManager extends SelectionKeyHandler {
             ll.removeFirst();
           }
           addPingResponseListener(snh, prl);
-          enqueue(snh, new PingMessage(localHandle, snh, curTime, spn.getLeafSet(), fsm.getFailedSet(), fsm.getJoinState()));        
+          enqueue(snh, new PingMessage(localHandle, snh, curTime, spn.getLeafSet(), spn.getJoinedState(), requestResponse));        
         } else {
           if (getLastTimePingReceived(snh) >= getLastTimePinged(snh)) {
             // we just pinged them, and got a response
@@ -479,7 +467,7 @@ public class PingManager extends SelectionKeyHandler {
       PingMessage pm = (PingMessage) message;
       if ((pm.receiver == null) || (pm.receiver.equals(localHandle))) {
         notifyProbeListeners(pm);
-        enqueue(pm.sender, new PingResponseMessage(pm.getStartTime(), localHandle, pm.sender, spn.getLeafSet(), fsm.getFailedSet(), fsm.getJoinState()));
+        enqueue(pm.sender, new PingResponseMessage(pm.getStartTime(), localHandle, pm.sender, spn.getLeafSet(), spn.getJoinedState()));
       } else {
 //        System.out.println(this+" ignoring ping message with incorrect receiver");
       }
@@ -491,7 +479,7 @@ public class PingManager extends SelectionKeyHandler {
       int time = (int) (curTime - startTime);
       LinkedList ll = (LinkedList)pingSentTimes.get(prm.sender);
       if (ll == null) {
-        System.out.println("WARNING: "+this+" received unexpected ping response from "+prm.sender+" with unexpected starttime "+startTime);
+        //System.out.println("WARNING: "+this+" received unexpected ping response from "+prm.sender+" with unexpected starttime "+startTime);
         return;
       }
 

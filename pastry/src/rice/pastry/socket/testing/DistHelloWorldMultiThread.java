@@ -56,13 +56,16 @@ import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
 import rice.pastry.PastryNodeFactory;
 import rice.pastry.PastrySeed;
+import rice.pastry.churn.ChurnLeafSetProtocol;
 import rice.pastry.dist.DistPastryNode;
 import rice.pastry.dist.DistPastryNodeFactory;
 import rice.pastry.leafset.LeafSet;
+import rice.pastry.leafset.LeafSetProtocolAddress;
 import rice.pastry.socket.ConnectionManager;
 import rice.pastry.socket.SocketCollectionManager;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketPastryNode;
+import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.socket.SocketPoolManager;
 import rice.pastry.standard.RandomNodeIdFactory;
 import rice.selector.testing.SelectorTest;
@@ -93,7 +96,7 @@ public class DistHelloWorldMultiThread {
   private static int port = 5009;
   private static String bshost = null;
   private static int bsport = 5009;
-  private static int numnodes = 30;
+  private static int numnodes = 8;
   private static int nummsgs = 50;
   public static int protocol = DistPastryNodeFactory.PROTOCOL_SOCKET;
   private static boolean toFile = true;
@@ -101,9 +104,9 @@ public class DistHelloWorldMultiThread {
   private static boolean useRegen = true;
   private static boolean oneThreadPerMessage = false;
   public static boolean useDirect = true;
-  private static boolean limitedSockets = true; 
+  private static boolean limitedSockets = false; 
   public static boolean useNonDirect = true; 
-  public static boolean useRandChoices = true;
+  public static boolean useRandChoices = false;
   public static boolean testSelector = true;
   public static boolean printConnectionManagers = false;
   static int NUM_ITERS = 30;
@@ -255,10 +258,8 @@ public class DistHelloWorldMultiThread {
     NodeHandle bootstrap = getBootstrap(firstNode);
     PastryNode pn = pnf.newNode(bootstrap); // internally initiateJoins
     pastryNodes.addElement(pn);
-    if (protocol == DistPastryNodeFactory.PROTOCOL_SOCKET) {
-      SocketNodeHandle snh = (SocketNodeHandle)pn.getLocalHandle();
-      System.out.println(snh.getAddress());
-    }
+    SocketNodeHandle snh = (SocketNodeHandle)pn.getLocalHandle();
+    System.out.println(snh.getAddress());
     HelloWorldAppMultiThread app = new HelloWorldAppMultiThread(pn, this);
     helloClients.addElement(app);
     //if (Log.ifp(5)) System.out.println("created " + pastryNodes.size()+ "th pastry node " + pn);
@@ -269,7 +270,24 @@ public class DistHelloWorldMultiThread {
     synchronized (pn) {
       while (!pn.isReady()) {
         try {
-          pn.wait();
+          pn.wait(5000);
+          if (!pn.isReady()) {
+            System.out.println("waitUntilReady() still waiting for "+pn+" "+pn.getLeafSet());
+            if (SocketPastryNodeFactory.churn) {
+              ChurnLeafSetProtocol clsp = (ChurnLeafSetProtocol)pn.getMessageDispatch().getDestinationByAddress(new LeafSetProtocolAddress());
+              Iterator i = clsp.getProbing().iterator();
+              while (i.hasNext()) {
+                SocketNodeHandle h = (SocketNodeHandle)i.next();
+                ConnectionManager cm = ((SocketPastryNode)pn).sManager.getConnectionManager(h);
+                String s = "null";
+                if (cm != null) {
+                  s = cm.getStatus();              
+                }
+                System.out.println("  "+h+" "+h.getLiveness()+" "+s);
+              }
+            }
+          }
+
         } catch (InterruptedException e) {
           System.out.println(e);
         }
@@ -850,8 +868,10 @@ public class DistHelloWorldMultiThread {
     DistPastryNode pn =
       (DistPastryNode) pastryNodes.remove(killNum);
     killedNodes.addElement(pn.getLocalHandle());
-    HelloWorldAppMultiThread app = (HelloWorldAppMultiThread)helloClients.remove(killNum);      
-    System.out.println("***********************   killing pastry node:" + pn + ","+app);
+    HelloWorldAppMultiThread app = (HelloWorldAppMultiThread)helloClients.remove(killNum);     
+    SocketNodeHandle snh = (SocketNodeHandle)pn.getLocalHandle();
+ 
+    System.out.println("***********************   killing pastry node:" + pn + ","+app+" "+snh.getAddress());
     pn.kill();
   }
   

@@ -60,7 +60,7 @@ import rice.selector.SelectorManager;
  *
  * @version $Id: SocketPastryNodeFactory.java,v 1.6 2004/03/08 19:53:57 amislove
  *      Exp $
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
@@ -295,9 +295,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     StandardLeafSetProtocol lsProtocol;
     StandardJoinProtocol jProtocol;
     if (churn) {
-      lsProtocol = new ChurnLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
+      lsProtocol = new ChurnLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable, leafSetMaintFreq);
+      socketManager.addLivenessListener(lsProtocol);
       jProtocol = new ChurnJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet, (ChurnLeafSetProtocol)lsProtocol);
-      pingManager.setFailedSetManager((ChurnLeafSetProtocol)lsProtocol);
       pingManager.addProbeListener((ChurnLeafSetProtocol)lsProtocol);
     } else {
       lsProtocol = new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);

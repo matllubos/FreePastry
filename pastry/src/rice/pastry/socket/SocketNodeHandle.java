@@ -48,7 +48,6 @@ public class SocketNodeHandle extends DistNodeHandle {
 
   static final long serialVersionUID = -1905829262183080770L;
 
-
   /**
    * The default distance, which is used before a ping
    */
@@ -131,13 +130,14 @@ public class SocketNodeHandle extends DistNodeHandle {
   /**
    * 
    */
-  public void probe() {
+  public void probe(boolean requestResponse) {
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
-    if (!spn.getSocketCollectionManager().checkDead(this))
-      spn.getPingManager().forcePing(this, null);
-//    if (spn != null) {
-//      spn.getPingManager().forcePing(this, null);
-//    }
+    if (requestResponse) {
+      if (!spn.getSocketCollectionManager().checkDead(this))
+        spn.getPingManager().forcePing(this, null, requestResponse);
+    } else {
+      spn.getPingManager().forcePing(this, null, requestResponse);      
+    }
   }
 
   /**
@@ -156,6 +156,28 @@ public class SocketNodeHandle extends DistNodeHandle {
     }
 
     return isAlive();
+  }
+
+  /**
+   * @return the last time we sent a probe
+   */
+  public long getLastTimeProbeSent() {
+    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+
+    if (spn != null) 
+      return spn.getPingManager().getLastTimePinged(this);
+    return 0;
+  }
+
+  /**
+   * @return the last time we received a probe
+   */
+  public long getLastTimeProbeReceived() {
+    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+
+    if (spn != null) 
+      return spn.getPingManager().getLastTimePingReceived(this);
+    return 0;
   }
 
   /**

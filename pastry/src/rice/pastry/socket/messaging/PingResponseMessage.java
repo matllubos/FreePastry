@@ -57,8 +57,8 @@ public class PingResponseMessage extends SocketProbe {
   /**
   * Constructor
   */
-  public PingResponseMessage(long start, SocketNodeHandle sender, SocketNodeHandle receiver, LeafSet leafSet, Collection failedSet, int joinState) {
-    super(sender,receiver,leafSet,failedSet,joinState);
+  public PingResponseMessage(long start, SocketNodeHandle sender, SocketNodeHandle receiver, LeafSet leafSet, int joinState) {
+    super(sender,receiver,leafSet,joinState);
     this.start = start;
   }
   
@@ -72,5 +72,9 @@ public class PingResponseMessage extends SocketProbe {
 
 	public boolean isResponse() {
 		return true;
+	}
+
+	public boolean requestResponse() {
+		return false;
 	}
 }

@@ -32,6 +32,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Vector;
 import java.util.WeakHashMap;
 
 import rice.pastry.Log;
@@ -39,6 +40,7 @@ import rice.pastry.NodeHandle;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.exception.TooManyMessagesException;
+import rice.pastry.standard.StandardLeafSetProtocol;
 import rice.selector.SelectorManager;
 import rice.selector.TimerTask;
 
@@ -56,7 +58,7 @@ import rice.selector.TimerTask;
  *  
  * @author Alan Mislove, Jeff Hoye
  */
-public class SocketCollectionManager {
+public class SocketCollectionManager implements LivenessListener {
 
   // the pastry node which this manager serves
   SocketPastryNode pastryNode;
@@ -437,6 +439,28 @@ public class SocketCollectionManager {
       System.out.println(pastryNode.getNodeId() + " (SCM): " + s);
     }
   }
+
+  Vector livenessListeners = new Vector();
+  
+	/**
+	 * @param lsProtocol
+	 */
+	public void addLivenessListener(StandardLeafSetProtocol lsProtocol) {
+    livenessListeners.add(lsProtocol);
+	}
+
+  protected void notifyLivenessListeners(NodeHandle nh, int liveness) {
+    //System.out.println("SCM.notifyLivenessListeners()"+livenessListeners.size());
+    Iterator i = ((Collection)livenessListeners.clone()).iterator();
+    while(i.hasNext()) {
+      LivenessListener ll = (LivenessListener)i.next();
+      ll.updateLiveness(nh,liveness);
+    }
+  }
+
+	public void updateLiveness(NodeHandle nh, int liveness) {
+    notifyLivenessListeners(nh,liveness);
+	}
 
 //	protected void finalize() throws Throwable {
 //    System.out.println(this+"SCM.finalize()");

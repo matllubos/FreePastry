@@ -135,7 +135,7 @@ public class SocketNodeHandlePool extends DistNodeHandlePool {
         if (handle != null) {
           if (!printed) {
             if (update == SocketNodeHandle.DECLARED_DEAD) {
-              System.out.println(node.getNodeId() + " found " + handle.getNodeId() + " to be dead.");
+              //System.out.println(node.getNodeId() + " found " + handle.getNodeId() + " to be dead.");
             } else if (update == SocketNodeHandle.DECLARED_LIVE) {
               System.out.println(node.getNodeId() + " found " + handle.getNodeId() + " to be alive again.");
             }

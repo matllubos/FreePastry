@@ -28,6 +28,7 @@ import java.net.InetSocketAddress;
 
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeId;
+import rice.pastry.churn.Probe;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.dist.DistNodeHandlePool;
 import rice.pastry.dist.DistPastryNode;
@@ -171,11 +172,11 @@ public class SocketPastryNode extends DistPastryNode {
       PastryAppl a = (PastryAppl)mr;
       a.messageNotDelivered(m, errorCode);
     } else {
-      if ((errorCode == EC_CONNECTION_FAULTY) && (Thread.currentThread() == SelectorManager.getSelectorManager())) {
+      if ((errorCode == EC_CONNECTION_FAULTY) && SelectorManager.isSelectorThread()) {
         // don't print anything 
-      } else {
+      } else {        
         System.out.println("WARNING: message not sent "+m+":"+getErrorString(errorCode));    
-        //Thread.dumpStack();
+        Thread.dumpStack();
       }
     }
   }
@@ -289,5 +290,27 @@ public class SocketPastryNode extends DistPastryNode {
   public String toString() {
     return "SocketPastryNode (" + getNodeId() + ")";
   }
+
+  int joinedState;
+	/**
+	 * 
+	 */
+	protected int getJoinedState() {
+		return joinedState;
+	}
+
+  public void setJoinedState(int js) {
+//    if (joinedState != js)
+//      System.out.println(this+".setJoinedState("+js+")");
+    joinedState = js;
+  }
+
+	/* (non-Javadoc)
+	 * @see rice.pastry.PastryNode#nodeIsReady()
+	 */
+	public void nodeIsReady() {
+    setJoinedState(Probe.STATE_READY);
+		super.nodeIsReady();
+	}
 
 }

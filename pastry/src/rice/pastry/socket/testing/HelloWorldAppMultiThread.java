@@ -366,4 +366,9 @@ public class HelloWorldAppMultiThread extends PastryAppl {
 //    }
 //	}
 
+	public void messageNotDelivered(Message msg, int errorCode) {
+		// TODO Auto-generated method stub
+		super.messageNotDelivered(msg, errorCode);
+	}
+
 }
