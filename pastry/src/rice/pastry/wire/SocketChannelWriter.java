@@ -92,7 +92,8 @@ public class SocketChannelWriter {
 
   /**
    * Adds an object to this SocketChannelWriter's queue of pending
-   * objects to write.
+   * objects to write.  This methos is synchronized and therefore 
+   * safe for use by multiple threads.
    *
    * @param o The object to be written.
    */
@@ -101,7 +102,9 @@ public class SocketChannelWriter {
 //        (((SocketTransportMessage) o).getObject() instanceof rice.testharness.messaging.SubscribedMessage))
 //      System.out.println(pastryNode.getNodeId() + " (W): Enqueuing write of SM.");
 
-    queue.addLast(o);
+    synchronized (queue) {
+      queue.addLast(o);
+    }
   }
 
   /**
@@ -112,7 +115,9 @@ public class SocketChannelWriter {
    * @return Whether or not there are objects still to be written.
    */
   public boolean isEmpty() {
-    return ((buffer == null) && (queue.size() == 0));
+    synchronized (queue) {
+      return ((buffer == null) && (queue.size() == 0));
+    }
   }
 
   /**
@@ -134,31 +139,32 @@ public class SocketChannelWriter {
    * @return true if this output stream is done, false otherwise
    */
   public boolean write(SocketChannel sc) throws IOException {
-    if (buffer == null) {
-      if (queue.size() > 0) {
-        buffer = serialize(queue.getFirst());
-      } else {
-        return true;
+    synchronized (queue) {
+      if (buffer == null) {
+        if (queue.size() > 0) {
+          buffer = serialize(queue.getFirst());
+        } else {
+          return true;
+        }
       }
+      
+      int j = buffer.limit();
+      int i = sc.write(buffer);
+      
+      debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
+      
+      if (buffer.remaining() != 0) {
+        return false;
+      }
+      
+      queue.removeFirst();
+      
+      buffer = null;
+      
+      // if there are more objects in the queue, try writing those
+      // otherwise, return saying all objects have been written
+      return write(sc);
     }
-
-
-    int j = buffer.limit();
-    int i = sc.write(buffer);
-
-    debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
-
-    if (buffer.remaining() != 0) {
-      return false;
-    }
-
-    queue.removeFirst();
-
-    buffer = null;
-
-    // if there are more objects in the queue, try writing those
-    // otherwise, return saying all objects have been written
-    return write(sc);
   }
 
   /**

@@ -124,4 +124,17 @@ public class WireNodeHandlePool extends DistNodeHandlePool {
     if (Log.ifp(6))
       System.out.println(pastryNode.getNodeId() + " (P): " + s);
   }
+
+  public String toString() {
+    String response = "";
+
+    Iterator i = handles.keySet().iterator();
+
+    while (i.hasNext()) {
+      Object o = i.next();
+      response += o + "\t->\t" + handles.get(o) + "\n";
+    }
+
+    return response;
+  }
 }

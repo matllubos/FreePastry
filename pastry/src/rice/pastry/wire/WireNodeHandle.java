@@ -70,11 +70,11 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
   public static int STATE_USING_UDP_WAITING_TO_DISCONNECT = -4;
 
   // the largest message size to send over UDP
-  public static int MAX_UDP_MESSAGE_SIZE = 32768;
+  public static int MAX_UDP_MESSAGE_SIZE = 8192;
 
   // the ip address and port of the remote node
-  private InetSocketAddress address;
-
+  private InetSocketAddress address;           
+  
   private int pingthrottle = 5;
 
   // the time the last ping was performed
@@ -179,17 +179,8 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
       if (state != STATE_USING_TCP) {
         try {
           if (state == STATE_USING_UDP) {
-            // Check for object size
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(baos);
-
-            oos.writeObject(msg);
-            oos.flush();
-
-            byte[] array = baos.toByteArray();
-
             // if message is small enough, send via UDP
-            if (array.length <= MAX_UDP_MESSAGE_SIZE) {
+            if (messageSize(msg) <= MAX_UDP_MESSAGE_SIZE) {
               debug("Message is small enough to go over UDP - sending.");
               ((WirePastryNode) getLocalNode()).getDatagramManager().write(address, msg);
             } else {
@@ -207,16 +198,36 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
           System.out.println("IOException serializing message " + msg + " - cancelling message.");
         }
       } else {
-        synchronized (writer) {
-          writer.enqueue(new SocketTransportMessage(msg));
+        writer.enqueue(new SocketTransportMessage(msg));
+        
+        if (((WirePastryNode) getLocalNode()).inThread()) {
           key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-        }
-
+        } else {
+          ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector().wakeup();
+        }        
+        
         debug("Enqueued message " + msg + " for writing in socket writer.");
       }
-
-      ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector().wakeup();
     }
+  }
+  
+  /**
+   * Method which returns the size of an object about to be sent over the wire.  This size includes
+   * all of the wrapper messages (such as the Socket Transport Message).
+   * 
+   * @param obj The object
+   * @return The total size the object and wrappers will occupy.
+   */
+  private int messageSize(Object obj) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ObjectOutputStream oos = new ObjectOutputStream(baos);
+    
+    oos.writeObject(new SocketTransportMessage(obj));
+    oos.flush();
+    
+    byte[] array = baos.toByteArray();   
+    
+    return array.length;
   }
 
   /**
@@ -250,13 +261,15 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
         if (messages != null) {
           Iterator i = messages.iterator();
 
-          synchronized (writer) {
-            while (i.hasNext()) {
-              writer.enqueue(i.next());
-            }
+          while (i.hasNext()) {
+            writer.enqueue(i.next());
           }
-
-          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+          
+          if (((WirePastryNode) getLocalNode()).inThread()) {
+            key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+          } else {
+            ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector().wakeup();
+          }
         }
       } catch (IOException e) {
         markDead();
@@ -365,9 +378,12 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
     if (state == STATE_USING_TCP) {
       state = STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT;
 
-      synchronized (writer) {
-        writer.enqueue(new DisconnectMessage());
+      writer.enqueue(new DisconnectMessage());
+      
+      if (((WirePastryNode) getLocalNode()).inThread()) {
         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+      } else {
+        ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector().wakeup();
       }
     } else {
       System.out.println("Recieved disconnect request at non-connected socket - very bad... (state == " + state + ")");
@@ -561,7 +577,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
     if (nodeId == null) {
       nodeId = nid;
     } else {
-     debug("ERROR: Attempt to set node more than once!");
+      System.out.println("PANIC: Attempt to set node more than once! was " + nodeId + " attempt " + nid);
     }
   }
 

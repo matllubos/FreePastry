@@ -139,10 +139,10 @@ public class SelectorManager {
         }
 
         // wake up all SelectionKeyManagers
-        it = selector.keys().iterator();
+        Object[] keys = selector.keys().toArray();
 
-        while (it.hasNext()) {
-          SelectionKey key = (SelectionKey) it.next();
+        for (int i=0; i<keys.length; i++) {
+          SelectionKey key = (SelectionKey) keys[i];
           SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
 
           if (skh != null)
@@ -150,10 +150,10 @@ public class SelectorManager {
         }
       }
 
-      Iterator i = selector.keys().iterator();
+      Object[] keys = selector.keys().toArray();
 
-      while (i.hasNext()) {
-        SelectionKey key = (SelectionKey) i.next();
+      for (int i=0; i<keys.length; i++) {
+        SelectionKey key = (SelectionKey) keys[i];
         key.channel().close();
         key.cancel();
       }

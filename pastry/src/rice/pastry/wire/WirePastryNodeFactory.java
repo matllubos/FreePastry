@@ -163,6 +163,8 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
         pn.doneNode(bootstrap);
       }
     };
+    
+    pn.setThread(t);
 
     t.start();
 

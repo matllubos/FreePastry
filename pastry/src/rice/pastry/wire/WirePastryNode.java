@@ -78,6 +78,9 @@ public class WirePastryNode extends DistPastryNode {
 
   // The pool of all node handles
   private WireNodeHandlePool _pool;
+  
+  // The thread in which the SelectorManager is running
+  private Thread _executionThread;
 
   private class MaintThread implements Runnable {
     public void run() {
@@ -151,6 +154,24 @@ public class WirePastryNode extends DistPastryNode {
     _pool = pool;
     leafSetMaintFreq = lsmf;
     routeSetMaintFreq = rsmf;
+  }
+  
+  /**
+   * Sets the thread which the pastry node is running in.
+   * 
+   * @param t The thread
+   */
+  public void setThread(Thread t) {
+    _executionThread = t;
+  }
+  
+  /**
+   * Checks whether the current thread is the execution thread.
+   * 
+   * @return whether or not the current thread is the executing thread
+   */
+  public boolean inThread() {
+    return _executionThread.equals(Thread.currentThread());
   }
 
   /**
