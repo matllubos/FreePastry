@@ -874,10 +874,11 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
       for(int i= 1; i<set.size(); i++) {
         NodeHandle handle = set.get(i);
+        int base = RoutingTable.idBaseBitLength;
 
         // if handle is numerically closer or shares a longer prefix
-        if ((handle.getNodeId().indexOfMSDB(target) < getNodeId().indexOfMSDB(target)) ||
-            ((handle.getNodeId().indexOfMSDB(target) == getNodeId().indexOfMSDB(target)) &&
+        if ((handle.getNodeId().indexOfMSDD(target, base) < getNodeId().indexOfMSDD(target, base)) ||
+            ((handle.getNodeId().indexOfMSDD(target, base) == getNodeId().indexOfMSDD(target, base)) &&
              (handle.getNodeId().distance(target).compareTo(getNodeId().distance(target)) < 0))) {
           if (handle.proximity() < minProx) {
             minProx = handle.proximity();
