@@ -176,7 +176,6 @@ public abstract class PastryAppl implements MessageReceiver
     public boolean routeMsgDirect(NodeHandle dest, Message msg, Credentials cred, SendOptions opt) {
 	if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] routemsgdirect " + msg + " to " + dest);
 	if (!dest.isAlive()) return false;
-	opt.setMultipleHopsAllowed(false);
 	RouteMessage rm = new RouteMessage(dest, msg, cred, opt, getAddress());
 	thePastryNode.receiveMessage(rm);
 	return dest.isAlive();

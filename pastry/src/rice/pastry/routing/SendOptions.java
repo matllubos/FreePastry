@@ -132,15 +132,22 @@ public class SendOptions implements Serializable
 	return allowMultipleHops;
     }
 
-    /**
-     * Set whether multiple hops are allowed during the transmission of this message.
-     *
-     * @param allowed true if so, false otherwise.
-     */
-
-    public void setMultipleHopsAllowed(boolean allowed) 
+    private void readObject(ObjectInputStream in)
+	throws IOException, ClassNotFoundException 
     {
-	allowMultipleHops = allowed;
+	random = in.readBoolean();
+	noShortCuts = in.readBoolean();
+	shortestPath = in.readBoolean();
+	allowMultipleHops = in.readBoolean();
+    }
+    
+    private void writeObject(ObjectOutputStream out)
+	throws IOException, ClassNotFoundException 
+    {
+	out.writeBoolean(random);
+	out.writeBoolean(noShortCuts);
+	out.writeBoolean(shortestPath);
+	out.writeBoolean(allowMultipleHops);
     }
 }
 
