@@ -38,6 +38,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   protected Vector listeners;
 
   private int loglevel = 2;
+  private final boolean faultInjectionEnabled = false;
 
   private final long SECONDS = 1000;
   private final long MINUTES = 60 * SECONDS;
@@ -1083,7 +1084,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         "rateLimitedRequestsPerSecond = " + rateLimitedRequestsPerSecond + "\n";
     }    
 
-    if ((cmd.length() >= 5) && cmd.substring(0, 5).equals("flush")) {
+    if ((cmd.length() >= 5) && cmd.substring(0, 5).equals("flush") && faultInjectionEnabled) {
       FragmentKeySet keyset = (FragmentKeySet) fragmentStorage.scan();
       Iterator iter = keyset.getIterator();
       
@@ -1148,7 +1149,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       return result;
     }
 
-    if ((cmd.length() >= 6) && cmd.substring(0, 6).equals("insert")) {
+    if ((cmd.length() >= 6) && cmd.substring(0, 6).equals("insert") && faultInjectionEnabled) {
       int numObjects = Integer.parseInt(cmd.substring(7));
       String result = "";
       
@@ -1175,7 +1176,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       return "Log level set to "+loglevel;
     }
 
-    if ((cmd.length() >= 6) && cmd.substring(0, 6).equals("delete")) {
+    if ((cmd.length() >= 6) && cmd.substring(0, 6).equals("delete") && faultInjectionEnabled) {
       String[] vkeyS = cmd.substring(7).split("[v:]");
       Id key = factory.buildIdFromToString(vkeyS[0]);
       long version = Long.parseLong(vkeyS[1]);
@@ -1198,7 +1199,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       return "delete("+id+")="+ret[0];
     }
 
-    if ((cmd.length() >= 5) && cmd.substring(0, 5).equals("burst")) {
+    if ((cmd.length() >= 5) && cmd.substring(0, 5).equals("burst") && faultInjectionEnabled) {
       String[] vkeyS = cmd.substring(6).split("[v:]");
       Id key = factory.buildIdFromToString(vkeyS[0]);
       long version = Long.parseLong(vkeyS[1]);
