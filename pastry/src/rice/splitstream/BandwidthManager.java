@@ -92,6 +92,8 @@ public class BandwidthManager{
       public void additionalBandwidthUsed(Channel channel){
 	int oldBandwidth = ((Integer)usedBandwidth.get(channel)).intValue();
 	usedBandwidth.put(channel,new Integer(oldBandwidth + 1));
+	if((oldBandwidth + 1) == (DEFAULT_CHILDREN + 1))
+		System.out.println(">----------WARNING --------< ");
       }
       /**
        * Gets the bandwidth a channel is currently using.
@@ -111,5 +113,5 @@ public class BandwidthManager{
 	int bandwidth = ((Integer)maxBandwidth.get(channel)).intValue();
 	return bandwidth;
       }
-      private static int DEFAULT_CHILDREN = 20;
+      private static int DEFAULT_CHILDREN = 17;
 } 

@@ -122,7 +122,7 @@ public class ControlFindParentMessage extends Message implements Serializable
              ( !isInRootPath( scribe, originalSource ) ) &&
              ( originalSource != scribe.getLocalHandle()) )
         {
-           System.out.println("TAKING ON CHILD "  + originalSource.getNodeId());scribe.addChild( originalSource, stripe_id );
+           //System.out.println("TAKING ON CHILD "  + originalSource.getNodeId());scribe.addChild( originalSource, stripe_id );
 	   channel.stripeSubscriberAdded();
            channel.routeMsgDirect( originalSource,
                                   new ControlFindParentResponseMessage( channel.getAddress(),
@@ -136,7 +136,7 @@ public class ControlFindParentMessage extends Message implements Serializable
 
            if ( !bandwidthManager.canTakeChild( channel ) )
            {
-               scribe.leave( topic.getTopicId(), null, c );
+               //scribe.leave( topic.getTopicId(), null, c );
            }
 
         }

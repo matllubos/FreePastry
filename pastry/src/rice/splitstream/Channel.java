@@ -313,7 +313,8 @@ public class Channel extends PastryAppl implements IScribeApp {
    */
   public void stripeSubscriberAdded(){
 	bandwidthManager.additionalBandwidthUsed(this);
-	if(bandwidthManager.getMaxBandwidth(this) == 
+	/* off by one bug, here?  */
+       if(bandwidthManager.getMaxBandwidth(this) == 
            bandwidthManager.getUsedBandwidth(this) ){
 		System.out.println("Node " + getNodeId() + " Leaving Spare Capacity Tree");
 		scribe.leave(getSpareCapacityId(), this, cred);
@@ -392,7 +393,8 @@ public class Channel extends PastryAppl implements IScribeApp {
 	isReady = true;
   }
   private void handleControlFindParentResponseMessage(Message msg){
-    System.out.println("Find Parent Response Messeage");
+    ControlFindParentResponseMessage prmessage = (ControlFindParentResponseMessage) msg;
+    prmessage.handleMessage((Scribe) scribe, ((Scribe) scribe).getTopic(prmessage.getStripeId()));
    /* Should call stripe.setParent() */
   }
   private void handleControlDropMessage(Message msg){
@@ -410,7 +412,7 @@ public class Channel extends PastryAppl implements IScribeApp {
   }
   private void handleSpareCapacityMessage(ScribeMessage msg){
     /* This is when we get a spare capacity request */
-    System.out.println("SpareCapacity Message from " + msg.getSource().getNodeId() + " at " + getNodeId());
+    //System.out.println("SpareCapacity Message from " + msg.getSource().getNodeId() + " at " + getNodeId());
     Stripe stripe = null;
     ControlFindParentMessage parentMessage = (ControlFindParentMessage) msg.getData();
     parentMessage.handleMessage((Scribe) scribe, ((Scribe)scribe).getTopic(getSpareCapacityId()), this);
