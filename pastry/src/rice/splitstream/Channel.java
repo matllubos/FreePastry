@@ -411,11 +411,21 @@ public class Channel extends PastryAppl implements IScribeApp {
     }
 
     /** -- Scribe Implementation -- **/
-
+    /** 
+     * The method called when a fault occurs
+     * Currently not implemented
+     *
+     */
     public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){
        /* Implement me */
     }
+    
+    /**
+     * The method called when a Scribe Message is forwarded
+     * Currently not Implemented
+     */
     public void forwardHandler(ScribeMessage msg){}
+
     /**
      * Handles Scribe Messages that the application recieves.
      * Right now the channel can receive two types of messages
@@ -436,12 +446,23 @@ public class Channel extends PastryAppl implements IScribeApp {
 	    System.out.println("Unknown Scribe Message");
         }
     }
+
+    /**
+     * Upcall generated when the underlying scribe layer is ready
+     * Currently not implmented
+     */
     public void scribeIsReady(){
     }
+    
+    /**
+     * Upcall generated when a new subscribe is added 
+     * We don't care how many people subscribe to a channel, so not used
+     */
     public void subscribeHandler(NodeId topicId, 
 				 NodeHandle child, boolean wasAdded, Serializable data){}
 
     /** -- Pastry Implementation -- **/
+
     public Address getAddress(){
 	return address;
     }
@@ -477,6 +498,13 @@ public class Channel extends PastryAppl implements IScribeApp {
 	return true;
     }
 
+    /**
+     * Handles the ControlAttachResponseMessage that is received
+     * through pastry.  It takes the information and uses it to
+     * fill in the data structures for this channel such as StripeIds etc.
+     *
+     * @param msg the msg to handle
+     */
     private void handleControlAttachResponseMessage(Message msg){
         //System.out.println(getNodeId() + " recieved a response to anycast ");
 	NodeId[] subInfo = (NodeId[]) ((ControlAttachResponseMessage) msg).getContent();	
@@ -497,59 +525,116 @@ public class Channel extends PastryAppl implements IScribeApp {
 	notifyApps();
     }
 
+    /** 
+     * Handles the ControlFindParentResponseMessage recieved through pastry
+     * 
+     * @param msg the ControlFindParentMessage to handle
+     */ 
     private void handleControlFindParentResponseMessage(Message msg){
-	ControlFindParentResponseMessage prmessage = (ControlFindParentResponseMessage) msg;
-	prmessage.handleMessage((Scribe) scribe, ((Scribe) scribe).getTopic(prmessage.getStripeId()));
-	/* Should call stripe.setParent() */
+
+	ControlFindParentResponseMessage prmessage = 
+            (ControlFindParentResponseMessage) msg;
+
+	prmessage.handleMessage((Scribe) scribe, 
+          ((Scribe) scribe).getTopic(prmessage.getStripeId()));
     }
 
+    /**
+     * Handles the ControlDropMessage recieved through pastry
+     *
+     * @param msg the ControlDropMessage to handle
+     */
     private void handleControlDropMessage(Message msg){
-	//System.out.println("Drop Message");
-	ControlDropMessage dropMessage = (ControlDropMessage) msg;
+	
+        ControlDropMessage dropMessage = (ControlDropMessage) msg;
 	Stripe stripe = (Stripe) stripeIdTable.get(dropMessage.getStripeId());
-	if(stripe != null)
-	    {
-		stripe.dropped();
-		stripe.setRootPath( null );
-	    }
-	dropMessage.handleDeliverMessage((Scribe)scribe, ((Scribe) scribe).getTopic(dropMessage.getStripeId()));
+
+	if(stripe != null){
+          stripe.dropped();
+          stripe.setRootPath( null );
+        }
+
+	dropMessage.handleDeliverMessage((Scribe)scribe, 
+           ((Scribe) scribe).getTopic(dropMessage.getStripeId()));
     }
 
+
+    /**
+     * Handles a scribe message that is destined for the channel
+     *
+     * Assumes a ControlAttachMessage because that is the only message
+     * that can currently go to the channel obj
+     *
+     * @param msg the ScribeMessage for this channel
+     */
     private void handleChannelMessage(ScribeMessage msg){
-	/* this case is when we get an attach message */
-	ControlAttachMessage attachMessage =(ControlAttachMessage) msg.getData();
+
+	ControlAttachMessage attachMessage =
+           (ControlAttachMessage) msg.getData();
+
 	attachMessage.handleMessage(this, scribe, msg.getSource());
     }
 
+    /**
+     * Handles the message that is recieved through the spare capacity
+     * tree.
+     *
+     * Assumes this is a SpareCapacityMessage as that is the only kind of
+     * message that can be routed to the spareCapacityIds currently
+     *
+     * @param msg the Scribe Message recieved
+     */
     private void handleSpareCapacityMessage(ScribeMessage msg){
-	/* This is when we get a spare capacity request */
+
 	//System.out.println("SpareCapacity Message from " + msg.getSource().getNodeId() + " at " + getNodeId());
+
 	Stripe stripe = null;
-	ControlFindParentMessage parentMessage = (ControlFindParentMessage) msg.getData();
+	ControlFindParentMessage parentMessage = 
+          (ControlFindParentMessage) msg.getData();
+
 	if(stripeIdTable.get(parentMessage.getStripeId()) instanceof Stripe){
 	  stripe = (Stripe) stripeIdTable.get(parentMessage.getStripeId());	
 	}
-	parentMessage.handleMessage((Scribe) scribe, ((Scribe)scribe).getTopic(getSpareCapacityId()), this, stripe);
-    }
 
+	parentMessage.handleMessage((Scribe) scribe, 
+          ((Scribe)scribe).getTopic(getSpareCapacityId()), this, stripe);
+
+    }
+    
+    /**
+     *
+     * Handles the ControlFindParentMessage through pastry
+     *
+     * @param msg the message to handle
+     */
     private boolean handleControlFindParentMessage(Message msg){
+
 	Stripe stripe = null;
 	ControlFindParentMessage parentMessage = (ControlFindParentMessage) msg;
+
 	if(stripeIdTable.get(parentMessage.getStripeId()) instanceof Stripe){
 	   stripe = (Stripe) stripeIdTable.get(parentMessage.getStripeId());	
 	}
-	return parentMessage.handleMessage((Scribe ) scribe, ((Scribe)scribe).getTopic(getSpareCapacityId()), this, stripe); 
+
+	return parentMessage.handleMessage((Scribe ) scribe,
+          ((Scribe)scribe).getTopic(getSpareCapacityId()), this, stripe); 
 
     }
-   
+
+    /**
+     * Handles the ControlPropagatePathMessage used to propagate
+     * data and detect cycles
+     *
+     * @param msg the message to be handled
+     */  
     private void handleControlPropogatePathMessage( Message msg )
     {
-	ControlPropogatePathMessage ppMessage = (ControlPropogatePathMessage)msg;
+	ControlPropogatePathMessage ppMessage = 
+          (ControlPropogatePathMessage)msg;
 	Stripe stripe = (Stripe)stripeIdTable.get( ppMessage.getStripeId() );
-	if ( stripe != null )
-	    {
-		ppMessage.handleMessage( (Scribe)scribe, this, stripe );
-	    }
+	if ( stripe != null ) {
+          ppMessage.handleMessage( (Scribe)scribe, this, stripe );
+	}
     }
  
     /**
@@ -565,11 +650,18 @@ public class Channel extends PastryAppl implements IScribeApp {
 	toReturn = toReturn + "Spare Capacity Id: " + getSpareCapacityId();
 	return(toReturn);	
     }
-
+    /**
+     * Registers the application for an upcall
+     * 
+     * @param The application to be added
+     */
     public void registerApp(ISplitStreamApp app){
 	m_apps.add(app);
     }
-
+   
+    /**
+     * Called to notify apps when an event occurs
+     */
     public void notifyApps(){
 	Iterator it = m_apps.iterator();
 
@@ -579,10 +671,3 @@ public class Channel extends PastryAppl implements IScribeApp {
 	}
     }
 }
-  
-
-
-
-
-
-
