@@ -187,7 +187,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    */
   public PastryNode newNode(NodeHandle bootstrap) {
     if (bootstrap == null) {
-      return newNode(bootstrap,new NodeId(new byte[8]));
+      //return newNode(bootstrap,new NodeId(new byte[8]));
     }
     return newNode(bootstrap, nidFactory.generateNodeId());
   }
