@@ -203,7 +203,7 @@ public class PersistentStorage implements Storage {
         toReturn = readData(objFile);
       }
       catch(Exception e){
-        /* Do nothing */
+        e.printStackTrace();
       }
       c.receiveResult(toReturn);
   }
