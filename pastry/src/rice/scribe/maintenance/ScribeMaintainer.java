@@ -188,7 +188,7 @@ public class ScribeMaintainer
 	prev_parent = topic.getParent();
 	if( prev_parent != null){
 	    msgu = m_scribe.makeUnsubscribeMessage( topicId, cred);
-	    //m_scribe.routeMsgDirect(prev_parent, msgu, cred, opt);
+	    m_scribe.routeMsgDirect(prev_parent, msgu, cred, opt);
 	}
 	topic.setParent(null);
 
