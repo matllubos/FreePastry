@@ -92,9 +92,18 @@ public class FragmentKey implements Id, Comparable {
    * @return DESCRIBE THE RETURN VALUE
    */
   public byte[] toByteArray() {
-    System.err.println("FragmentKey::toByteArray() called");
-    System.exit(1);
-    return null;
+    byte[] v = key.toByteArray();
+    byte[] result = new byte[v.length + 4];
+
+    for (int i=0; i<v.length; i++)
+      result[i] = v[i];
+
+    result[v.length + 0] = (byte)(0xFF & (id>>24));
+    result[v.length + 1] = (byte)(0xFF & (id>>16));
+    result[v.length + 2] = (byte)(0xFF & (id>>8));
+    result[v.length + 3] = (byte)(0xFF & (id));
+
+    return result;
   }
 
   /**
