@@ -163,7 +163,7 @@ public class SelectorManager extends Thread implements Timer {
    * @param key The key which is to be chanegd
    */
   public synchronized void modifyKey(SelectionKey key) {
-    System.out.println("modifyKey("+key+")");
+//    System.out.println("modifyKey("+key+")");
     modifyKeys.add(key);
     selector.wakeup();
   }
@@ -353,25 +353,11 @@ public class SelectorManager extends Thread implements Timer {
    * @return DESCRIBE THE RETURN VALUE
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  long lastTimePrinted = 0;
-  
   int select(int time) throws IOException {
     if (time > TIMEOUT)
       time = TIMEOUT;
     try {      
       if ((time <= 0) || (invocations.size() > 0) || (modifyKeys.size() > 0)) {
-        if ((System.currentTimeMillis() - lastTimePrinted) > 3000) {
-          String s = "Selecting now: i:"+invocations.size()+" m:"+modifyKeys.size();          
-          Iterator i;
-          synchronized(this) {
-            i = new ArrayList(modifyKeys).iterator();
-          }
-          while(i.hasNext()) {
-            i.next();
-          }
-          System.out.println(s);
-          lastTimePrinted = System.currentTimeMillis();
-        }
         return selector.selectNow();
       }
 
