@@ -366,6 +366,8 @@ public class PostProxy {
           PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
         else if (s.equalsIgnoreCase("rmi"))
           PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
+        else if (s.equalsIgnoreCase("socket"))
+          PROTOCOL = DistPastryNodeFactory.PROTOCOL_SOCKET;
         else
           System.out.println("ERROR: Unsupported protocol: " + s);
 
