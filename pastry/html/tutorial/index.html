@@ -18,7 +18,7 @@
 
 Before you begin, you should meet the following requirements.  
 <ol>
-  <li>An intermediate level of knowledge in the Java programming language.  <a href="http://java.sun.com/docs/books/tutorial/">The Java Tutoral</a> is a good place to start. 
+  <li>An intermediate level of knowledge in the Java programming language.  <a href="http://java.sun.com/docs/books/tutorial/">The Java Tutorial</a> is a good place to start. 
   <li>A basic understanding of Pastry overlay structure.  Read the short overview <a href="http://freepastry.rice.edu/PAST/overview.pdf">[pdf]</a><a href="http://freepastry.rice.edu/PAST/overview.ps">[ps]</a> of <a href="http://freepastry.rice.edu/">FreePastry</a>.
   <li>Have a working copy of FreePastry-1.4 or later.  You can simply download the <a href="http://freepastry.rice.edu/FreePastry/FreePastry-1.4.jar">jar</a>, or download and build the <a href="http://freepastry.rice.edu/FreePastry/download.htm">source</a>.
 </ol>
@@ -33,9 +33,9 @@ In this lesson we are going to use Socket transport layer to communicate.  The S
 <h2>Terms:</h2>
 <ul>
   <li><b>NodeId</b> -- The randomly assigned unique identifier of a Node in the FreePastry.  <i>Typically a NodeId is 160bit represented by 20 Hex digits.  We usually only display the first 6 digits as this is enough to uniquely identify nodes for a pretty large ring.</i></li><br/>
-  <li><b>NodeIdFactory</b> -- This generates your local NodeId.  <i>Why do we need a NodeIdFactory?  In a real deployment of Pastry, it is critical that one cannont choose their NodeId.  To accomplish this you may want to use a Certificate Authority to centrally assign NodeIds.  However, for your initial purposes one doesn't need to be able to secure the choice of NodeId.  The factory pattern gives us the flexibility we need to change this behavior in the future.  Thus we begin with RandomNodeIdFactory which generates a Random node id.</i></li><br/>
+  <li><b>NodeIdFactory</b> -- This generates your local NodeId.  <i>Why do we need a NodeIdFactory?  In a real deployment of Pastry, it is critical that one cannot choose their NodeId.  To accomplish this you may want to use a Certificate Authority to centrally assign NodeIds.  However, for your initial purposes one doesn't need to be able to secure the choice of NodeId.  The factory pattern gives us the flexibility we need to change this behavior in the future.  Thus we begin with RandomNodeIdFactory which generates a Random node id.</i></li><br/>
   <li><b>PastryNode</b> -- This is a Node in the network.  <i>Your application will send messages through the node and the node will deliver messages to your application.</i></li><br/>
-  <li><b>NodeHandle</b> -- This is a "refernece" to a PastryNode.  It is how you refer to a specific node in the network.  <i>A NodeHandle consists of a NodeId and whatever information the transport layer needs to find the node in the underlieing protocol.  In this case an IP address and port.  In this lesson, you will use a NodeHandle to bootstrap your node into the ring.  You can get the NodeHandle to your local node by calling PastryNode.getLocalHandle().  In the distributed environment, you will need to get a NodeHandle to your bootstrap node(s) by asking the transport layer.  In this case you are interested in acquiring a node handle from an IP address and port.  The the Socket transport uses this information to opens a socket to this address:port and requests a copy of the NodeHandle from the remote node.  If it doesn't find a node at this location it returns null.</i></li><br/>
+  <li><b>NodeHandle</b> -- This is a "reference" to a PastryNode.  It is how you refer to a specific node in the network.  <i>A NodeHandle consists of a NodeId and whatever information the transport layer needs to find the node in the underlieing protocol.  In this case an IP address and port.  In this lesson, you will use a NodeHandle to bootstrap your node into the ring.  You can get the NodeHandle to your local node by calling PastryNode.getLocalHandle().  In the distributed environment, you will need to get a NodeHandle to your bootstrap node(s) by asking the transport layer.  In this case you are interested in acquiring a node handle from an IP address and port.  The the Socket transport uses this information to opens a socket to this address:port and requests a copy of the NodeHandle from the remote node.  If it doesn't find a node at this location it returns null.</i></li><br/>
   <li><b>Bootstrap Node</b> -- The node you use to join the ring.  <i>When a node starts up, it can either join an existing ring, or start a new one.  If you don't have a ring yet, then your choice is narrowed down to starting your own.  But once your first node has started a ring, you probably want all new nodes join that one.  To join a ring, you need to bootstrap off of any one node in the existing ring.  This is the bootstrap node.  In the example below, we use the first node that we construct as the bootstrap node.  In a real deployment, you may want to cache several nodes so that if you are unable to boot off of the first one, you can try others.</i></li><br/>
   <li><b>PastryNodeFactory</b> -- Constructs and initializes the Pastry Node.  <i>This sets up the PastryNode including the transport layer, the Leafset Maintenance protocol and, the RoutingTable Maintenance protocol.  These protocols are necessary for a FreePastry deployment to properly maintain the overlay structure.  In this example we will use the SocketPastryNodeFactory which as its name implies sets up the pastry node to use the Socket transport layer to communicate with other nodes.</i></li><br/>  
 </ul>
@@ -92,7 +92,7 @@ public DistTutorial(int bindport, InetSocketAddress bootaddress) throws Exceptio
 NodeIdFactory nidFactory = new RandomNodeIdFactory();
 </code><br/></li><br/>
 
-  <li>Give the nidFactory to our SocketPastryNodeFactory.  Additionaly, we need to tell the SocketPastryNodeFactory what port to bind our pastry node to.<br/><br/>
+  <li>Give the nidFactory to our SocketPastryNodeFactory.  Additionally, we need to tell the SocketPastryNodeFactory what port to bind our pastry node to.<br/><br/>
 <code>
 PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport);
 </code><br/></li><br/>
@@ -169,7 +169,7 @@ Lesson 2 will aid you in running your code.</h3></center>
 
 <h3>Download the tutorial file <a href="./src/lesson1/DistTutorial.java">DistTutorial.java</a>.</h3>
 
-<p/>After you compile the code, you can either run multiple nodes on 1 computer (but in seperate processes) or if you have multiple computers, you can launch them on different machines as long as the computers can communicate with eachother via IP.  In otherwords, it won't work if the comupters are behind different firewalls.
+<p/>After you compile the code, you can either run multiple nodes on 1 computer (but in separate processes) or if you have multiple computers, you can launch them on different machines as long as the computers can communicate with each other via IP.  In other words, it won't work if the computers are behind different firewalls.
 
 <ul>
   <li><b>Step 1:</b> Compile
@@ -207,7 +207,7 @@ Finished creating new node SocketNodeHandle (<0x74345D..>/FOO/10.9.8.7:9002 [605
 </ul>
 
 <center><h3>Congratulations!  You have just launched your first FreePastry ring!<br>
-Lesson 3 will show you how to send and receive messages by creating a commonAPI applicatoin.</h3></center>
+Lesson 3 will show you how to send and receive messages by creating a commonAPI application.</h3></center>
 
 <br/><hr/><br/>
 
@@ -218,23 +218,23 @@ Lesson 3 will show you how to send and receive messages by creating a commonAPI 
 <a href="./src/lesson3/MyApp.java">MyApp.java</a>,
 <a href="./src/lesson3/myMsg.java">MyMsg.java</a> into a directory called rice/tutorial/lesson3/.</h3>
 
-<p/>This tutorial will show you how to create and run your first FreePastry applicatoin.  You will be able to send/receive messages with this application.
+<p/>This tutorial will show you how to create and run your first FreePastry application.  You will be able to send/receive messages with this application.
 
 <h2>Terms:</h2>
 <ul>
   <li><b>CommonAPI</b> -- Universal interface to structured overlays.  <i>The rice.p2p.commonapi package provides an interface similar to the one provided in 'Towards a Common API for Structured Peer-to-Peer Overlays', by F. Dabek, B. Zhao, P. Druschel, J. Kubiatowicz, and I. Stoica, published in the second International Workshop on Peer-to-Peer Systems, Berkeley, CA, February 2003.  The API is designed to allow applications to be written in a protocol-independent manner, allowing the easy migration of applications from Pastry to Chord to CAN to Tapestry, etc....  Applications need only interact with the interfaces in the rice.p2p.commonapi package, and need not worry about anything in the rice.pastry packages.</i></li><br/>
   
   <li><b>Application</b> -- A program that runs on a Node.   <i>This is an interface which all applications on top of a Node must export.  This interface allows the underlying node to deliver message, inform the application of passing messages, and changes in the neighbor nodes.
-      <p/>You can have multiple Applications on a single node, and you can even have multiple </i>instances<i> of an Application on the same node.  Why would you want multiple instances on the same node?  Many applications in FreePastry are intermediate applications that provide a service for higher level applications.  It is convienient to have a seperate instances of say... Scribe for each higher application that would like to multicast.  This way you know that any messages that scribe delivers are in regards to your higher level traffic, and you don't need to distinguish that traffic between multiple high level applications.</i></li><br/>
+      <p/>You can have multiple Applications on a single node, and you can even have multiple </i>instances<i> of an Application on the same node.  Why would you want multiple instances on the same node?  Many applications in FreePastry are intermediate applications that provide a service for higher level applications.  It is convenient to have a separate instances of say... Scribe for each higher application that would like to multicast.  This way you know that any messages that scribe delivers are in regards to your higher level traffic, and you don't need to distinguish that traffic between multiple high level applications.</i></li><br/>
   <li><b>Endpoint.java</b> -- This interface represents an endpoint which applications can use to send messages from.  <i>An endpoint is obtained by the registerApplication() method in Node.  The endpoint represents the applications' view of the world.</i></li><br/>
   
   <li><b>Id.java</b> -- This interface is the abstraction of an Id in a structured overlay.  <i>The only assumption that is made is that the Id space is circular.  An Id could represent a live node in the network, an object in the network, or simply a random Id.  NodeId implements this interface.</i></li><br/>
 
-  <li><b>Message.java</b> -- This interface represents the abstraction of a message in the common API.  <i>Thus, messages sent to other nodes should extend or implement this class.  FreePastry sends messages around the network by first coverting them to a byte stream using java serialization.</i></li><br/>
+  <li><b>Message.java</b> -- This interface represents the abstraction of a message in the common API.  <i>Thus, messages sent to other nodes should extend or implement this class.  FreePastry sends messages around the network by first converting them to a byte stream using java serialization.</i></li><br/>
 </ul>
 
 <h3>MyMsg</h3>
-<p/>Let's start by taking a look at your message class.  In FreePastry a Message is an Object that is Serializable.  The transport layer serializes this object into bytes then sends it through the network.  When the message is received, it is deserialized back into an Object and delivered to your applicatoin.
+<p/>Let's start by taking a look at your message class.  In FreePastry a Message is an Object that is Serializable.  The transport layer serializes this object into bytes then sends it through the network.  When the message is received, it is deserialized back into an Object and delivered to your application.
 <pre>
 public class MyMsg implements Message {
 </pre>
@@ -264,7 +264,7 @@ We will create a <code>toString()</code> so that we can print out the message.
 
 <pre>
   public String toString() {
-    return "TestMsg from "+from+" to "+to;
+    return "MyMsg from "+from+" to "+to;
   }
 </pre>
 
@@ -281,12 +281,12 @@ Finally we have the constructor that loads the payload.
 
 <p/>Now let's take a look at MyApp.  MyApp is designed to log output whenever we send or receive a message.
 
-<p/>The Enpoint is what we will call on to send messages.
+<p/>The Endpoint is what we will call on to send messages.
 <pre>
   protected Endpoint endpoint;
 </pre>
 
-<p/>The constructor generates an Endpoint from the node.  The instance is designed to allow you to run the same app multiple times on the same node.  The apps will not receive each other's messages.  You will only be able to send messages to apps that generated enpoints with the same instance string.  For most of your apps, you will only run one instance, so just make sure the instance is the same on all nodes.
+<p/>The constructor generates an Endpoint from the node.  The instance is designed to allow you to run the same app multiple times on the same node.  The apps will not receive each other's messages.  You will only be able to send messages to apps that generated endpoints with the same instance string.  For most of your apps, you will only run one instance, so just make sure the instance is the same on all nodes.
 <pre>
   public MyApp(Node node) {
     // We are only going to use one instance of this application on each PastryNode
@@ -297,31 +297,31 @@ Finally we have the constructor that loads the payload.
 
 <h4>Sending a message:</h4>
 
-<p/>In a Distributed Hash Table, or DHT, you typically want to route to the nearest node to the hash of an object that you are interested in.  The commonAPI provides you with <code>Enpoint.route()</code> to accomplish this.  This function sends a <code>MyMsg</code> to an id.  
+<p/>In a Distributed Hash Table, or DHT, you typically want to route to the nearest node to the hash of an object that you are interested in.  The commonAPI provides you with <code>Endpoint.route()</code> to accomplish this.  This function sends a <code>MyMsg</code> to an id.  
 <pre>
   /**
    * Called to route a message to the id
    */
-  public void routeTestMsg(Id id) {
+  public void routeMyMsg(Id id) {
     System.out.println(this+" sending to "+id);    
     Message msg = new MyMsg(endpoint.getId(), id);
     endpoint.route(id, msg, null);
   }
 </pre>
 
-Note that <code>Enpoint.route()</code> takes 3 arguments.  They are:
+Note that <code>Endpoint.route()</code> takes 3 arguments.  They are:
 <ol>
   <li><b>Id</b> -- the destination</li>
   <li><b>Message</b> -- the message to send</li>
   <li><b>NodeHandle</b> -- a "hint" this means a first node to try</li>
 </ol>
 
-Sometimes you need to send messages to a particular Node in the network, not just to the nearest key.  For example, if you need to send messages that are large, they are going to take up a lot of bandwidth, it is more efficient to <i>not</i> route the messages through the overlay, but rather send directly to the node.  You can also use the <code>Enpoint.route()</code> method to do this by giving a null argument to the Id and your target NodeHandle as the "hint" argument.
+Sometimes you need to send messages to a particular Node in the network, not just to the nearest key.  For example, if you need to send messages that are large, they are going to take up a lot of bandwidth, it is more efficient to <i>not</i> route the messages through the overlay, but rather send directly to the node.  You can also use the <code>Endpoint.route()</code> method to do this by giving a null argument to the Id and your target NodeHandle as the "hint" argument.
 <pre>
   /**
    * Called to directly send a message to the nh
    */
-  public void routeTestMsgDirect(NodeHandle nh) {
+  public void routeMyMsgDirect(NodeHandle nh) {
     System.out.println(this+" sending direct to "+nh);    
     Message msg = new MyMsg(endpoint.getId(), nh.getId());
     endpoint.route(null, msg, nh);
@@ -398,7 +398,7 @@ Here is the new code we will add to the bottom of the DistTutorial constructor:
   </pre>
   </li>
 
- <li>After waiting 10 seconds, let's send some messages, but only if I am not the first node.  Afterall, if I'm the only node in the ring, it is hardly interesting to send messages to myself.
+ <li>After waiting 10 seconds, let's send some messages, but only if I am not the first node.  After all, if I'm the only node in the ring, it is hardly interesting to send messages to myself.
   <pre>
     if (bootHandle != null) {
   </pre>
@@ -468,14 +468,14 @@ Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connectio
 Couldn't find a bootstrap node, starting a new ring...
 Finished creating new node SocketNodeHandle (<0xC20545..>/FOO/10.9.8.7:9001 [-4445364026872145996])
 
-MyApp <0xC20545..> received TestMsg from <0xDD90C6..> to <0xA67C20..>
-MyApp <0xC20545..> received TestMsg from <0xDD90C6..> to <0xBF799E..>
-MyApp <0xC20545..> received TestMsg from <0xDD90C6..> to <0xC4BEE7..>
-MyApp <0xC20545..> received TestMsg from <0xDD90C6..> to <0x86ACA9..>
-MyApp <0xC20545..> received TestMsg from <0xDD90C6..> to <0x9906E6..>
-MyApp <0xC20545..> received TestMsg from <0xDD90C6..> to <0x8F5015..>
-MyApp <0xC20545..> received TestMsg from <0xDD90C6..> to <0xC20545..>
-MyApp <0xC20545..> received TestMsg from <0xDD90C6..> to <0xC20545..>
+MyApp <0xC20545..> received MyMsg from <0xDD90C6..> to <0xA67C20..>
+MyApp <0xC20545..> received MyMsg from <0xDD90C6..> to <0xBF799E..>
+MyApp <0xC20545..> received MyMsg from <0xDD90C6..> to <0xC4BEE7..>
+MyApp <0xC20545..> received MyMsg from <0xDD90C6..> to <0x86ACA9..>
+MyApp <0xC20545..> received MyMsg from <0xDD90C6..> to <0x9906E6..>
+MyApp <0xC20545..> received MyMsg from <0xDD90C6..> to <0x8F5015..>
+MyApp <0xC20545..> received MyMsg from <0xDD90C6..> to <0xC20545..>
+MyApp <0xC20545..> received MyMsg from <0xDD90C6..> to <0xC20545..>
 </pre>
 
 <p/>Node2:
@@ -484,24 +484,24 @@ java rice.tutorial.lesson3.DistTutorial 9002 10.9.8.7 9001
 Finished creating new node SocketNodeHandle (<0xDD90C6..>/FOO/10.9.8.7:9002 [5138450490561334965])
 
 MyApp <0xDD90C6..> sending to <0x2E5C63..>
-MyApp <0xDD90C6..> received TestMsg from <0xDD90C6..> to <0x2E5C63..>
+MyApp <0xDD90C6..> received MyMsg from <0xDD90C6..> to <0x2E5C63..>
 MyApp <0xDD90C6..> sending to <0x03045C..>
-MyApp <0xDD90C6..> received TestMsg from <0xDD90C6..> to <0x03045C..>
+MyApp <0xDD90C6..> received MyMsg from <0xDD90C6..> to <0x03045C..>
 MyApp <0xDD90C6..> sending to <0xA67C20..>
 MyApp <0xDD90C6..> sending to <0xF9C506..>
-MyApp <0xDD90C6..> received TestMsg from <0xDD90C6..> to <0xF9C506..>
+MyApp <0xDD90C6..> received MyMsg from <0xDD90C6..> to <0xF9C506..>
 MyApp <0xDD90C6..> sending to <0xBF799E..>
 MyApp <0xDD90C6..> sending to <0xC4BEE7..>
 MyApp <0xDD90C6..> sending to <0x86ACA9..>
 MyApp <0xDD90C6..> sending to <0x41F900..>
-MyApp <0xDD90C6..> received TestMsg from <0xDD90C6..> to <0x41F900..>
+MyApp <0xDD90C6..> received MyMsg from <0xDD90C6..> to <0x41F900..>
 MyApp <0xDD90C6..> sending to <0x9906E6..>
 MyApp <0xDD90C6..> sending to <0x8F5015..>
 MyApp <0xDD90C6..> sending direct to [SNH: <0xDD90C6..> -> <0xC20545..>/FOO/10.9.8.7:9001 [-4445364026872145996]]
 MyApp <0xDD90C6..> sending direct to [SNH: <0xDD90C6..> -> <0xC20545..>/FOO/10.9.8.7:9001 [-4445364026872145996]]
 </pre>
 
-<center><h3>Congratulations!  You have just sent and received your first messages in FreePastry!<br.>
+<center><h3>Congratulations!  You have just sent and received your first messages in FreePastry!<br/>
 Coming soon: Lesson 4: Running multiple nodes in the same JVM.<br/>
 Lesson 5: Scribe<br/>
 Lesson 6: Past<br/>
