@@ -149,9 +149,28 @@ public class Folder {
   public void createChildFolder(String name, Continuation command) throws PostException {
     // make the log to add
     Log log = new Log(name, _log.getLocation(), _post);
-    // make the continuation to perform after adding the log
-    Continuation preCommand = new FolderAddLogEntryTask(name, log, command);
+    // make the entry to insert after the new log has been added
+    LogEntry entry = new InsertFolderLogEntry(name);
+    // make the continuation to perform after adding the log.  This takes in the entry to insert
+    // and the log to insert it into.  
+    Continuation preCommand = new FolderAddLogEntryTask(entry, _log, command);
     _log.addChildLog(log, preCommand);    
+  }
+
+  /**
+   * Deletes a folder from the user's mailbox.
+   *
+   * @param name The name of the folder to delete.
+   */
+  public void removeFolder(String name) throws PostException {
+    // make the continuation to perform after removing the log
+    Continuation command = new FolderNullTask(null);
+    // make the entry to insert after the log has been deleted
+    LogEntry entry = new DeleteFolderLogEntry(name);
+    // make the continuation to perform after adding the log.  This takes in the entry to insert
+    // and the log to insert it into.  
+    Continuation preCommand = new FolderAddLogEntryTask(entry, _log, command);
+    _log.removeChildLog(name, preCommand);
   }
 
   /**
@@ -173,22 +192,6 @@ public class Folder {
    */
   public String[] getChildren(Continuation command) throws PostException {
     return (String[])_log.getChildLogNames();    
-  }
-
-  /**
-   * Deletes a folder from the user's mailbox.
-   *
-   * @param name The name of the folder to delete.
-   */
-  public void removeFolder(String name) throws PostException {
-    /*
-    try {
-      _log.removeChildLog(name);
-      _log.addLogEntry(new DeleteFolderLogEntry(name));
-    } catch (StorageException e) {
-      throw new PostException(e.getMessage());
-    }
-    */
   }
 
   /**
@@ -423,15 +426,15 @@ public class Folder {
    * Returns the contents to the given command.
    */
   protected class FolderAddLogEntryTask implements Continuation {
-    String _logName;
+    LogEntry _entry;
     Log _newLog;
     Continuation _command;
 
     /**
      * Constructs a FolderAddLogEntryTask.
      */
-    public FolderAddLogEntryTask(String logName, Log newLog, Continuation command) {
-      _logName = logName;
+    public FolderAddLogEntryTask(LogEntry entry, Log newLog, Continuation command) {
+      _entry = entry;
       _newLog = newLog;
       _command = command;
     }
@@ -449,7 +452,7 @@ public class Folder {
     public void receiveResult(Object o) {
       Folder result = new Folder(_newLog, _post);
       FolderReturnResultTask preCommand = new FolderReturnResultTask(result, _command);
-      _log.addLogEntry(new InsertFolderLogEntry(_logName), preCommand);
+      _log.addLogEntry(_entry, preCommand);
     }
 
     /**

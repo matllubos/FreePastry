@@ -130,18 +130,16 @@ public class Email implements java.io.Serializable {
    * storage.  If the storage process is successful, then this
    * listener will not be notified of anything.
    */
-    protected void storeData(Continuation errorListener) {   
+  protected void storeData(Continuation errorListener) {   
     // if the body has not already been inserted into PAST
-    // JM try replacing this with "if (bodyRef == null) { " for a laugh
-    if (!(this.bodyRef instanceof EmailDataReference)) {
-      EmailStoreDataTask command = new
-	  EmailStoreDataTask(EmailStoreDataTask.BODY, errorListener);
+    if (this.bodyRef != null) {
+      //if (!(this.bodyRef instanceof EmailDataReference)) {
+      EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.BODY, errorListener);
       storage.storeContentHash(body, command);
     }
     else if (this.attachmentRefs == null) {
       // make a new task to store the email's contents (body and attachments)
-      EmailStoreDataTask command = new
-	  EmailStoreDataTask(EmailStoreDataTask.ATTACHMENT, errorListener);
+      EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.ATTACHMENT, errorListener);
       // begin storing the body, execute the rest of the task once this is complete
       storage.storeContentHash(attachments[0], command);
     }
@@ -254,8 +252,9 @@ public class Email implements java.io.Serializable {
     protected static final int BODY = -1;
     protected static final int ATTACHMENT = 0;
 
-    int _index;
-      private Continuation resultListener;
+    // the current position in the continuation
+    private int _index;
+    private Continuation resultListener;
       
     /**
      * Constructs a EmailStoreDataTask.
@@ -277,6 +276,14 @@ public class Email implements java.io.Serializable {
      * storing the attachments.  Once each of the attachments is stored, the method is done.
      */
     public void receiveResult(Object o) {
+      // save the returned reference
+      if (_index == BODY) {
+	bodyRef = (EmailDataReference)o;
+      } else {
+	attachmentRefs[_index] = (EmailDataReference)o;
+      }
+      
+      // store the next data item in the email
       if (_index < attachments.length) {
 	_index = _index + 1;      
 	EmailStoreDataTask command = new EmailStoreDataTask(_index, null);
