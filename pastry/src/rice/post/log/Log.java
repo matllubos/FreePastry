@@ -157,12 +157,44 @@ public class Log implements PostData {
    * This method returns a reference to a specific child log of
    * this log, given the child log's name.
    *
+   * @deprecated Use the getChildLog(name, continuation) - Log metadata needs to be set up
    * @param name The name of the log to return.
    * @return A reference to the requested log, or null if the name
    * is unrecognized.
    */
   public LogReference getChildLog(Object name) {
     return (LogReference) children.get(name);
+  }
+
+  /**
+   * This method returns a the specific child log of
+   * this log, given the child log's name.
+   *
+   * @param name The name of the log to return.
+   * @param command The command to run once done.
+   */
+  public void getChildLog(Object name, final Continuation command) {
+    LogReference ref = (LogReference) children.get(name);
+
+    if (ref == null) {
+      command.receiveResult(null);
+      return;
+    }
+
+    Continuation fetch = new Continuation() {
+      public void receiveResult(Object o) {
+        Log log = (Log) o;
+        log.setPost(post);
+
+        command.receiveResult(o);
+      }
+
+      public void receiveException(Exception e) {
+        command.receiveException(e);
+      }
+    };
+
+    post.getStorageService().retrieveSigned(ref, fetch);
   }
 
   /**
