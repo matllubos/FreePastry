@@ -277,9 +277,11 @@ public class Email implements java.io.Serializable {
      * storing the attachments.  Once each of the attachments is stored, the method is done.
      */
     public void receiveResult(Object o) {
-      _index = _index + 1;      
-      EmailStoreDataTask command = new EmailStoreDataTask(_index, null);
-      storage.storeContentHash(attachments[_index], command);
+      if (_index < attachments.length) {
+	_index = _index + 1;      
+	EmailStoreDataTask command = new EmailStoreDataTask(_index, null);
+	storage.storeContentHash(attachments[_index], command);
+      }
     }
 
     /**

@@ -161,8 +161,9 @@ public class Folder {
    * @param name the name of the Folder to return
    * @return the selected child Folder
    */
-  public Folder getChildFolder(String name) throws PostException {
+  public void getChildFolder(String name, Continuation command) throws PostException {
     /*
+      returns Folder
     try {
       Log log = (Log)_storage.retrieveSigned(_log.getChildLog(name));
       return new Folder(log, _storage);
@@ -170,7 +171,6 @@ public class Folder {
       throw new PostException(e.getMessage());
     }
     */
-    return null;
   }
 
   /**
@@ -178,11 +178,11 @@ public class Folder {
    *
    * @return an array of the names of the child Folders
    */
-  public String[] getChildren() throws PostException {
+  public void getChildren(Continuation command) throws PostException {
     /*
+      returns String[]
     return (String[])_log.getChildLogNames();
     */
-    return null;
   }
 
   /**
@@ -209,8 +209,9 @@ public class Folder {
    * @param target the email to act as the signal to stop
    * @return the array of recent events
    */
-  public EmailEvent[] getPartialEventLog(Email target) {
+  public void getPartialEventLog(Email target, Continuation command) {
     /*
+      returns EmailEvent[]
     // setup the control vars
     Vector events = new Vector();
     boolean finished = false;
@@ -253,7 +254,6 @@ public class Folder {
     }
     return (EmailEvent[])events.toArray();
     */
-    return null;
   }  
   
   
@@ -262,8 +262,9 @@ public class Folder {
    *
    * @return the complete array of events
    */
-  public EmailEvent[] getCompleteEventLog()  {
+  public void getCompleteEventLog(Continuation command)  {
     /*
+      returns EmailEvent[]
     // setup the control vars
     Vector events = new Vector();
     boolean finished = false;
@@ -306,7 +307,6 @@ public class Folder {
     }
     return (EmailEvent[])events.toArray();
     */
-    return null;
   }  
 
   /**
