@@ -6,6 +6,7 @@ import rice.email.*;
 /**
  * Stores an email in the LogEntry chain.  Holds the email and a pointer
  * to the next LogEntry.
+ * @author Joe Montgomery
  */
 public class InsertMailLogEntry extends LogEntry {
   Email _email;

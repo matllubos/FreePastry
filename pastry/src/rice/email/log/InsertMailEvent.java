@@ -4,6 +4,7 @@ import rice.email.*;
 /**
  * An Email Creation Event (ECE).  Signifies that the referenced Email was
  * created. 
+ * @author Joe Montgomery
  */
 public class InsertMailEvent implements Event {
   Email _email;

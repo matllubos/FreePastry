@@ -7,6 +7,7 @@ import rice.email.*;
  * Serves as a summary of the log chain up to the current point.  Lets
  * the email reader display the current emails without having to read
  * through the entire chain.
+ * @author Joe Montgomery
  */
 public class SnapShotLogEntry extends LogEntry {
   // stores the emails of the current folder

@@ -6,6 +6,7 @@ import rice.email.*;
 /**
  * An anti-email node, serves to cancel out the mail node that it
  * matches up to.
+ * @author Joe Montgomery
  */
 public class DeleteMailLogEntry extends LogEntry {
   Email _email ;

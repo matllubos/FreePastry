@@ -11,6 +11,8 @@ import rice.email.messaging.*;
 /**
  * Represents a notion of a message in the POST system.  This class is designed 
  * to be a small representation of an Email, with pointers to all of the content.
+ * @author Joe Montgomery
+ * @author Derek Ruths
  */
 public class Email implements java.io.Serializable {
 

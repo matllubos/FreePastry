@@ -4,6 +4,7 @@ import rice.email.*;
 /**
  * A Folder Creation Event.  Signifies that the referenced Folder was
  * created. 
+ * @author Joe Montgomery
  */
 public class InsertFolderEvent implements Event {
   String _name;

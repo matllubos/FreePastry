@@ -19,6 +19,8 @@ import rice.email.messaging.*;
  * The EmailService uses the observer pattern to notify other objects
  * of newly received emails.  The event generated will contain an
  * {@link Email} object as its argument.
+ * @author Joe Montgomery
+ * @author Derek Ruths
  */
 public class EmailService extends PostClient {
 
@@ -193,7 +195,6 @@ public class EmailService extends PostClient {
 
   /**
     * Returns the Log for ePost's root folder.
-   * JM this needs some error checking for when the given folder is not found
    *
    * @param c is the object notified of the result of the folder retrieval.
    */

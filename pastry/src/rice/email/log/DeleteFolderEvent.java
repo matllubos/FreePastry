@@ -4,6 +4,7 @@ import rice.email.*;
 /**
  * A Folder Deletion Event.  Signifies that the referenced Folder was
  * deleted. 
+ * @author Joe Montgomery
  */
 public class DeleteFolderEvent implements Event {
   String _name;

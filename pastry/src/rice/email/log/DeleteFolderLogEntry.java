@@ -5,6 +5,7 @@ import rice.email.*;
 
 /**
  * Node which marks a Folder deletion.
+ * @author Joe Montgomery
  */
 public class DeleteFolderLogEntry extends LogEntry {
   String _name;
