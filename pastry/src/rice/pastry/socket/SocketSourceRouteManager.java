@@ -194,7 +194,7 @@ public class SocketSourceRouteManager {
     AddressManager am = (AddressManager) managers.get(address);
     
     if (am == null)
-      return manager.proximity(SourceRoute.build(address));
+      return SocketNodeHandle.DEFAULT_PROXIMITY;
     else
       return am.proximity();  
   }
@@ -261,6 +261,19 @@ public class SocketSourceRouteManager {
     debug("Found route " + route + " to be suspected");
     
     getAddressManager(route.getLastHop(), false).markSuspected(route);
+  }
+  
+  /**
+   * This method should be called when a known route has its proximity updated
+   *
+   * @param route The route
+   * @param proximity The proximity
+   */
+  protected synchronized void markProximity(SourceRoute route, int proximity) {
+    AddressManager am = (AddressManager) managers.get(route.getLastHop());
+    
+    if (am != null)
+      am.markProximity(route, proximity);
   }
   
   /**
@@ -363,6 +376,9 @@ public class SocketSourceRouteManager {
     // the current liveness of this address
     protected int liveness;
     
+    // the current best-known proximity of this address
+    protected int proximity;
+    
     /**
      * Constructor, given an address
      */
@@ -372,6 +388,7 @@ public class SocketSourceRouteManager {
       this.pendingRoutes = new HashSet();
       this.deadRoutes = new HashSet();
       this.liveness = SocketNodeHandle.LIVENESS_SUSPECTED;
+      this.proximity = SocketNodeHandle.DEFAULT_PROXIMITY;
       
       if (SocketPastryNode.verbose) System.out.println("ADDRESS MANAGER CREATED AT " + localAddress + " FOR " + address);
       
@@ -470,6 +487,19 @@ public class SocketSourceRouteManager {
       
       setDeadForever();
     }
+    
+    /**
+     * This method should be called when a known route has its proximity updated
+     *
+     * @param route The route
+     * @param proximity The proximity
+     */
+    protected synchronized void markProximity(SourceRoute route, int proximity) {
+      if (this.proximity > proximity) {
+        this.proximity = proximity;
+        pool.update(address, SocketNodeHandle.PROXIMITY_CHANGED);
+      }
+    }
       
     /**
      * Method which enqueues a message to this address
@@ -488,6 +518,12 @@ public class SocketSourceRouteManager {
         
         if (pendingRoutes.size() == 0)
           System.err.println("ERROR: Enqueueing message to " + address + " without any pending routes - very very bad!!!");
+      } else if (! manager.isOpen(best)) {
+        queue.add(message);
+        
+        System.err.println("NOTE: Found closed socket to best route " + best + " - pinging route to ensure still valid.");
+        checkRoute(best);
+        best = null;
       } else {
         manager.send(best, message);
       }
@@ -550,10 +586,7 @@ public class SocketSourceRouteManager {
      * @return The ping value to the remote address
      */
     public int proximity() {
-      if (best != null) 
-        return manager.proximity(best);
-      else
-        return SocketNodeHandle.DEFAULT_PROXIMITY;
+      return proximity;
     }  
     
     /**
@@ -601,7 +634,7 @@ public class SocketSourceRouteManager {
       
       // and finally we can now send any pending messages
       while (queue.size() > 0)
-        send((Message) queue.remove(0));    
+        manager.send(best, (Message) queue.remove(0));    
     }
     
     /**

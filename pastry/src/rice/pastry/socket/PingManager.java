@@ -279,9 +279,9 @@ public class PingManager extends SelectionKeyHandler {
         
         if ((pings.get(dm.getOutboundPath()) == null) || (((Integer) pings.get(dm.getOutboundPath())).intValue() > time)) {
           pings.put(dm.getOutboundPath(), new Integer(time));
-          pool.update(dm.getOutboundPath().getLastHop(), SocketNodeHandle.PROXIMITY_CHANGED);
+          manager.markProximity(dm.getOutboundPath(), time);
         }
-        
+
         pingResponse(dm.getOutboundPath(), curTime);
       } else if (dm instanceof WrongEpochMessage) {
         WrongEpochMessage wem = (WrongEpochMessage) dm;

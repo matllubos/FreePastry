@@ -176,6 +176,17 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   }
   
   /**
+   * Returns whether or not a socket is currently open to the given 
+   * route
+   *
+   * @param route The route
+   * @return Whether or not a socket is currently open to that route
+   */
+  public boolean isOpen(SourceRoute route) {
+    return sockets.containsKey(route); 
+  }
+  
+  /**
    * Method which checks the liveness of the given path: if a socket is already
    * open, true is immediately returned.  Otherwise, checkDead() is called on
    * the path.
