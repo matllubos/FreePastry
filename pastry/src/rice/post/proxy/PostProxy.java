@@ -1058,6 +1058,7 @@ public class PostProxy {
       immutableGlacier.setSyncMaxFragments(parameters.getIntParameter("glacier_sync_max_fragments"));
       immutableGlacier.setRateLimit(parameters.getIntParameter("glacier_max_requests_per_second"));
       immutableGlacier.setNeighborTimeout(parameters.getIntParameter("glacier_neighbor_timeout"));
+      immutableGlacier.setBandwidthLimit(1024*parameters.getIntParameter("glacier_max_kbytes_per_sec"), 1024*parameters.getIntParameter("glacier_max_kbytes_per_sec")*parameters.getIntParameter("glacier_max_burst_factor"));
       immutableGlacier.setTrashcan(glacierTrashStorage);
 
       AggregationImpl immutableAggregation = new AggregationImpl(
