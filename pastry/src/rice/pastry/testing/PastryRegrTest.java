@@ -383,20 +383,23 @@ public abstract class PastryRegrTest {
 
 		    // check if closest entry has valid proximity
 		    NodeHandle nh = rs.closestNode();
-		    if (nh != null && nh.proximity() ==  Integer.MAX_VALUE) {
-			System.out.println("checkRoutingTable failure 0, row=" + i + " column=" + j);
+		    int bestProximity = Integer.MAX_VALUE;;
+		    if (nh != null) {
+			bestProximity = nh.proximity();
+			if (nh.proximity() ==  Integer.MAX_VALUE) {
+			    System.out.println("checkRoutingTable failure 0, row=" + i + " column=" + j);
+			}
 		    }
 
-		    int lastProximity = 0;
+
 		    for (int k=0; k<rs.size(); k++) {
 
 			// check for correct proximity ordering
-			if (rs.get(k).proximity() < lastProximity) {
+			if (rs.get(k).proximity() < bestProximity) {
 			    System.out.println("checkRoutingTable failure 1, row=" + i + " column=" + j +
 					       " rank=" + k);
 
 			}
-			//lastProximity = rs.get(k).proximity();
 
 			NodeId id = rs.get(k).getNodeId();
 
