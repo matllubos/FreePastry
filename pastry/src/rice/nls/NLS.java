@@ -5,7 +5,7 @@
  * @author: Animesh Nandi 
  */
 
-package ObjectWeb.NLS;
+package rice.nls;
 
 import java.net.URL;
 import ObjectWeb.Naming.Bindable;
