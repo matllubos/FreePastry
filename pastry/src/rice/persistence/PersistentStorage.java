@@ -66,10 +66,9 @@ public class PersistentStorage implements Storage {
   private static String rootDir;                          // rootDirectory
   private static final String backupDir = "/FreePastry-Storage-Root/"; // backupDirectory
 
-  private long storageSize;
-  private long usedSize;
-  private Hashtable fileMap;
-
+  private long storageSize; /* The amount of storage allowed to be used */
+  private long usedSize; /* The amount of storage currently in use */
+  private Hashtable fileMap; /* Mapds Id -> Files */
   /**
    * Builds a PersistentStorage given a root directory in which to
    * persist the data.
@@ -198,8 +197,15 @@ public class PersistentStorage implements Storage {
    * object (through receiveResult on c).
    */
   public void getObject(Comparable id, Continuation c){
-      File objFile = getFile(id); 
-      c.receiveResult(readData(objFile));
+      File objFile = getFile(id);
+      Object toReturn = null;
+      try{ 
+        toReturn = readData(objFile);
+      }
+      catch(Exception e){
+        /* Do nothing */
+      }
+      c.receiveResult(toReturn);
   }
 
   /**
@@ -289,6 +295,15 @@ public class PersistentStorage implements Storage {
     return true;
   }
 
+
+  /**
+   * Inititializes the FileMap data structure
+   * 
+   * In doing this it must resolve conflicts and aborted
+   * transactions. After this is run the most current stable
+   * state should be restored
+   *
+   */
   private void initFileMap(){
 
     File[] files = backupDirectory.listFiles();
@@ -298,21 +313,64 @@ public class PersistentStorage implements Storage {
        /* insert keys into file Map */
        /* need to check for uncompleted and conflicting transactions */
        if(files[i].isFile()){
+
           try{
-            fileMap.put(readKey(files[i]), files[i]);
-            increaseUsedSpace(files[i].length()); /* increase the amount used */
+             
+            long version = readVersion(files[i]);
+            Object key = readKey(files[i]);
+
+            if(!fileMap.containsKey(key)){
+              fileMap.put(key , files[i]);
+              increaseUsedSpace(files[i].length()); /* increase amount used */
+            }
+            else{
+               /* resolve conflict due to unfinished trans */
+              fileMap.put(key, resolveConflict((File) fileMap.get(key), files[i]));
+              System.out.println("Resolving Conflicting Versions");
+            }
+          }
+          catch(java.io.EOFException e){
+              System.out.println("Recovering From Incomplete Write");
+              files[i].delete();
           }
           catch(java.io.IOException e){
             System.out.println("Caught File Exception");
             /* handle the case where there is an uncompleted trans */
           }
           catch(Exception e){
-            e.printStackTrace();
+            System.out.println("Caught OTHER EXCEPTION");
           }
        }
     }
   
   }
+
+  /**
+   * resolve a Conflict between two files that claim to have
+   * the same key 
+   *
+   * Checks the version number and returns the newest one
+   * and adjust acounting information correctly
+   *
+   * @param oldFile the File already mapped
+   * @param newFile the conflicting file
+   *
+   * @return File the correct file
+   *
+   */
+  private File resolveConflict(File oldFile, File newFile) throws Exception{
+     if(readVersion(oldFile) > readVersion(newFile)){
+        newFile.delete();
+        return oldFile;
+     }
+     else{
+        decreaseUsedSpace(oldFile.length());
+        oldFile.delete();
+        increaseUsedSpace(newFile.length());
+        return newFile;
+     }
+  }
+
 
   /**
    * Create a directory given its name
@@ -382,7 +440,7 @@ public class PersistentStorage implements Storage {
   /* Helper functions for Object Input/Output                      */
   /*****************************************************************/
 
-  public static Serializable readObject(File file , int offset){
+  public static Serializable readObject(File file , int offset) throws Exception  {
 
     Serializable toReturn = null;
     if(file == null)
@@ -393,19 +451,14 @@ public class PersistentStorage implements Storage {
     FileInputStream fin;
     ObjectInputStream objin;
     synchronized (file) {
-          try {
-              fin = new FileInputStream(file);
-              objin = new ObjectInputStream(fin);
-              for(int i = 0 ; i < offset; i ++){
-                 objin.readObject(); /* skip objects */
-              }
-              toReturn = (Serializable) objin.readObject();
-              fin.close();
-              objin.close();
-          }
-          catch (Exception e) {
-             e.printStackTrace();
-          }
+        fin = new FileInputStream(file);
+        objin = new ObjectInputStream(fin);
+        for(int i = 0 ; i < offset; i ++){
+           objin.readObject(); /* skip objects */
+        }
+        toReturn = (Serializable) objin.readObject();
+        fin.close();
+        objin.close();
     }
     return toReturn;
   }
@@ -418,7 +471,7 @@ public class PersistentStorage implements Storage {
    * @param file The file to create the object from.
    * @return The object that was read in
    */
-  public static Serializable readData(File file){
+  public static Serializable readData(File file) throws Exception{
      return(readObject(file, 1));
   }
 
