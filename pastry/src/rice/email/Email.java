@@ -125,17 +125,23 @@ public class Email implements java.io.Serializable {
    * Stores the content of the Email into PAST and 
    * saves the references to the content in the email.  
    * Should be called before the Email is sent over the wire.
+   *
+   * @param errorListener os the object notified of any errors in
+   * storage.  If the storage process is successful, then this
+   * listener will not be notified of anything.
    */
-  protected void storeData() {   
+    protected void storeData(Continuation errorListener) {   
     // if the body has not already been inserted into PAST
     // JM try replacing this with "if (bodyRef == null) { " for a laugh
     if (!(this.bodyRef instanceof EmailDataReference)) {
-      EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.BODY);
+      EmailStoreDataTask command = new
+	  EmailStoreDataTask(EmailStoreDataTask.BODY, errorListener);
       storage.storeContentHash(body, command);
     }
     else if (this.attachmentRefs == null) {
       // make a new task to store the email's contents (body and attachments)
-      EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.ATTACHMENT);
+      EmailStoreDataTask command = new
+	  EmailStoreDataTask(EmailStoreDataTask.ATTACHMENT, errorListener);
       // begin storing the body, execute the rest of the task once this is complete
       storage.storeContentHash(attachments[0], command);
     }
@@ -249,11 +255,14 @@ public class Email implements java.io.Serializable {
     protected static final int ATTACHMENT = 0;
 
     int _index;
+      private Continuation resultListener;
+      
     /**
      * Constructs a EmailStoreDataTask.
      */
-    public EmailStoreDataTask(int index) {
+    public EmailStoreDataTask(int index, Continuation resultListener) {
       _index = index;
+      this.resultListener = resultListener;
     }
 
     /**
@@ -269,7 +278,7 @@ public class Email implements java.io.Serializable {
      */
     public void receiveResult(Object o) {
       _index = _index + 1;      
-      EmailStoreDataTask command = new EmailStoreDataTask(_index);
+      EmailStoreDataTask command = new EmailStoreDataTask(_index, null);
       storage.storeContentHash(attachments[_index], command);
     }
 
@@ -277,7 +286,12 @@ public class Email implements java.io.Serializable {
      * Simply prints out an error message.
      */  
     public void receiveException(Exception e) {
-      System.out.println("Exception " + e + "  occured while trying to store email body or attachment " + _index);
+      System.out.println("Exception " + e +
+			 "  occured while trying to store email body or attachment " + _index);
+
+      if(this.resultListener != null) {
+	  this.resultListener.receiveException(e);
+      }
     }
   }
 }

@@ -83,15 +83,15 @@ public class EmailService extends PostClient {
    * of who its recipients are.
    *
    * @param email The email to send
+   * @param errorListener is the object that will be notified of
+   * errors that occur during the send procedure.
    */
-  public void sendMessage(Email email) throws PostException {
+  public void sendMessage(Email email, Continuation errorListener) throws PostException {
 
-    /*
     // store the Email's data before sending it
     StorageService storage = _post.getStorageService();
     email.setStorage(storage);
-    email.storeData();
-    */
+    email.storeData(errorListener);
 
     // send the notification messages to each of the recipients
     PostEntityAddress[] recipients = email.getRecipients();

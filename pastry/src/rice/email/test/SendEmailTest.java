@@ -23,10 +23,10 @@ public class SendEmailTest extends EmailTest {
 	public void runSendReceiveTest() {
 
 		// Create the sender
-		EmailService sender = this.createEmailService();
+		EmailService sender = this.createEmailService("user1");
 
 		// create the receiver
-		EmailService receiver = this.createEmailService();
+		EmailService receiver = this.createEmailService("user2");
 		receiver.addObserver(new EmailReceiver());
 
 		// create an email to send
@@ -44,7 +44,7 @@ public class SendEmailTest extends EmailTest {
 					body, attachments);
 
 		try {
-			sender.sendMessage(email);
+			sender.sendMessage(email, null);
 		} catch(Exception e) {
 			System.err.println("Error sending email");
 			e.printStackTrace();

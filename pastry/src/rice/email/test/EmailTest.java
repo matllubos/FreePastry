@@ -21,7 +21,7 @@ public class EmailTest {
 
 	private InetSocketAddress firstAddress = null;	
 
-	protected EmailService createEmailService() {
+	protected EmailService createEmailService(String username) {
 
 		try {
 
@@ -44,7 +44,7 @@ public class EmailTest {
 		KeyPair caPair = kpg.generateKeyPair();
 		KeyPair pair = kpg.generateKeyPair();
 
-		PostUserAddress address = new PostUserAddress("test");
+		PostUserAddress address = new PostUserAddress(username);
 
 		NodeId nodeId = localNode.getNodeId();
 
@@ -71,7 +71,7 @@ public class EmailTest {
 
 		for(int i = 0; i < 10; i++) {
 			System.out.println("Creating " + i);
-			et.createEmailService();
+			et.createEmailService("user" + i);
 		}
 
 		Thread.sleep(5000);
