@@ -167,15 +167,6 @@ public class PostProxy {
   protected void start() {
     try {
       sectionStart("Creating and Initializing Services");
-      stepStart("Creating Pastry node"); 
-      DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new IPNodeIdFactory(PORT),
-                                                                       PROTOCOL,
-                                                                       PORT);	
-      InetSocketAddress bootAddress = new InetSocketAddress(BOOTSTRAP_HOST, BOOTSTRAP_PORT);
-
-      pastry = factory.newNode(factory.getNodeHandle(bootAddress));
-      stepDone(SUCCESS);
-
       stepStart("Retrieving CA public key");
       FileInputStream fis = new FileInputStream("ca.publickey");
       ObjectInputStream ois = new ObjectInputStream(fis);
@@ -278,8 +269,18 @@ public class PostProxy {
 
       stepStart("Starting StorageManager");
       StorageManager storage = new StorageManager(FACTORY,
-                                                  new PersistentStorage(FACTORY, pastry.getNodeId().toString(), ".", DISK_SIZE),
+                                                  new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + ":" + PORT, ".", DISK_SIZE),
                                                   new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE));
+      stepDone(SUCCESS);
+      
+      stepStart("Creating Pastry node");
+      DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new IPNodeIdFactory(PORT),
+                                                                       PROTOCOL,
+                                                                       PORT);
+      InetSocketAddress bootAddress = new InetSocketAddress(BOOTSTRAP_HOST, BOOTSTRAP_PORT);
+
+      pastry = factory.newNode(factory.getNodeHandle(bootAddress));
+      Thread.sleep(3000);
       stepDone(SUCCESS);
 
       stepStart("Starting SCRIBE service");
@@ -296,7 +297,7 @@ public class PostProxy {
 
       sectionDone();
 
-      stepStart("Fetching POST log");
+      stepStart("Fetching POST log at " + address.getAddress());
       ExternalContinuation c = new ExternalContinuation();
       post.getPostLog(c);
       c.sleep();
