@@ -3,7 +3,6 @@ package rice.email;
 import java.security.*;
 
 import rice.p2p.commonapi.*;
-import rice.past.*;
 import rice.post.storage.*;
 
 /**
