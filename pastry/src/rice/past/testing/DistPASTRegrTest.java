@@ -77,7 +77,7 @@ public class DistPASTRegrTest {
   private static String bshost;
   private static int bsport = 5009;
 
-  private static int protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
+  private static int protocol = DistPastryNodeFactory.PROTOCOL_RMI;
 
   private static IdFactory FACTORY = new PastryIdFactory();
 
@@ -90,7 +90,7 @@ public class DistPASTRegrTest {
   }
 
   public DistPASTRegrTest() {
-    idFactory = new RandomNodeIdFactory();
+    idFactory = new IPNodeIdFactory();
     factory = DistPastryNodeFactory.getFactory(idFactory,
                                                protocol,
                                                port);
