@@ -86,6 +86,16 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
     public final NodeId getNodeId() {
       return nodeId;
     }
+    
+    /**
+     * Gets the epoch or session identifier 
+     * of this Pastry node.  
+     *
+     * @return the epoch.
+     */
+    public int getEpoch() {
+      return epoch;	
+    }
 
     /**
      * Returns the IP address and port of the remote node.
