@@ -32,8 +32,8 @@ public class Wire {
   private static int oneOfsCalled = 0;
   private static int pendingsCalled = 0;
   
-  static boolean outputDebug = true;
-  
+  static boolean outputDebug = false;
+  static Object outputStreamLock = new Object();
   /**
    * Automatic determination of ulimit -n
    */

@@ -294,23 +294,24 @@ public class SocketManager implements SelectionKeyHandler {
   }
   
   transient PrintStream outputStream = null;
-  synchronized void wireDebug(String s) {
+  void wireDebug(String s) {
     if (!Wire.outputDebug) return;
-    try {
-      if (outputStream == null) {
-        String r = null;
-        if (pastryNode != null) {
-          r = pastryNode.getId().toString();
+    synchronized(Wire.outputStreamLock) {
+      try {
+        if (outputStream == null) {
+          String r = null;
+          if (pastryNode != null) {
+            r = pastryNode.getId().toString();
+          }
+          String t = "SM "+r+".txt";
+          outputStream = new PrintStream(new FileOutputStream(t)); 
         }
-        String t = "SM "+r+".txt";
-        outputStream = new PrintStream(new FileOutputStream(t)); 
+        outputStream.println(s);
+      } catch (IOException ioe) {
+        ioe.printStackTrace();
       }
-      outputStream.println(s);
-    } catch (IOException ioe) {
-      ioe.printStackTrace();
     }
   }
-
   /**
    * Private class which is tasked with reading the greeting message off of a
    * newly connected socket. This greeting message says who the socket is coming

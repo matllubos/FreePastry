@@ -232,23 +232,24 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
     }
   }
   transient PrintStream outputStream = null;
-  synchronized void wireDebug(String s) {
+  void wireDebug(String s) {
     if (!Wire.outputDebug) return;
-    try {
-      if (outputStream == null) {
-        String r = null;
-        if (pastryNode != null) {
-          r = pastryNode.getId().toString();
+    synchronized(Wire.outputStreamLock) {
+      try {
+        if (outputStream == null) {
+          String r = null;
+          if (pastryNode != null) {
+            r = pastryNode.getId().toString();
+          }
+          String t = "DM "+r+".txt";
+          outputStream = new PrintStream(new FileOutputStream(t)); 
         }
-        String t = "DM "+r+".txt";
-        outputStream = new PrintStream(new FileOutputStream(t)); 
+        outputStream.println(s);
+      } catch (IOException ioe) {
+        ioe.printStackTrace();
       }
-      outputStream.println(s);
-    } catch (IOException ioe) {
-      ioe.printStackTrace();
     }
   }
-
   /**
    * Specified by the SelectionKeyHandler interface - is called when there is
    * space in the DatagramChannel's buffer to write some data.

@@ -24,7 +24,8 @@ public class MessageDigestFactory {
     //<0xB7E51E..>:SEN:[ [PEM PublishMessage[TOPIC <0xEACAF8..>]:0            2105027332] ]
     //ENQ:[ [PEM PublishMessage[TOPIC <0xFACAF8..>]:9         2105036629] ]
     //SEN:{[ [PEM PublishMessage[TOPIC <0xEACAF8..>]:7                2105034628] ]}
-
+    //ENQ:[ {Hello #3100 from <0x687040..> to <0xFD4D94..> received by null} ]
+    
     //[ [PEM PublishMessage[TOPIC <0xEACAF8..>]:0            2105027332] ]
     //[ [PEM PublishMessage[TOPIC <0xFACAF8..>]:9         2105036629] ]
     //{[ [PEM PublishMessage[TOPIC <0xEACAF8..>]:7                2105034628] ]}
@@ -39,6 +40,10 @@ public class MessageDigestFactory {
       String subMsg = messageLine.substring(7,7+15);
       if (subMsg.equals("PublishMessage[") || subMsg.equals(" PublishMessage")) {
         return new PublishMessageDigest(lineNum, local,remote,messageLine,type,udp,globalMessageNum++);
+      }
+      subMsg = messageLine.substring(3,3+5);
+      if (subMsg.equals("Hello") || subMsg.equals("{Hello")) {
+        return new HelloMessageDigest(lineNum, local, remote, messageLine, type, udp, globalMessageNum++);
       }
     } catch (StringIndexOutOfBoundsException se) {
       

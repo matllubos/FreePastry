@@ -591,23 +591,24 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
   }
   
   transient PrintStream outputStream = null;
-  synchronized void wireDebug(String s) {
+  void wireDebug(String s) {
     if (!Wire.outputDebug) return;
-    
-    try {
-      if (outputStream == null) {
-        String r = null;
-        if (localnode != null) {
-          r = localnode.getId().toString();
-        } else {
-          return;
+    synchronized(Wire.outputStreamLock) {
+      try {
+        if (outputStream == null) {
+          String r = null;
+          if (localnode != null) {
+            r = localnode.getId().toString();
+          } else {
+            return;
+          }
+          String t = "WNH "+r+"->"+getNodeId().toString()+".txt";
+          outputStream = new PrintStream(new FileOutputStream(t)); 
         }
-        String t = "WNH "+r+"->"+getNodeId().toString()+".txt";
-        outputStream = new PrintStream(new FileOutputStream(t)); 
+        outputStream.println(s);
+      } catch (IOException ioe) {
+        ioe.printStackTrace();
       }
-      outputStream.println(s);
-    } catch (IOException ioe) {
-      ioe.printStackTrace();
     }
   }
   

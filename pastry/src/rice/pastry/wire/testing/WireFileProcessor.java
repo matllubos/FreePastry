@@ -343,8 +343,8 @@ public class WireFileProcessor {
     int numMsgsT = 0;
     Iterator digIter = set.keySet().iterator();
     while (digIter.hasNext()) {      
-      MessageDigest msg = (MessageDigest)digIter.next();        
-      if (msg instanceof PublishMessageDigest) {
+      MessageDigest msg = (MessageDigest)digIter.next();   
+      if (msg.searchForMe) {
         ObjPair i = (ObjPair)set.get(msg);
         numMsgsU += i.udp.size();
         numMsgsT += i.tcp.size();
@@ -385,8 +385,8 @@ public class WireFileProcessor {
     int totalMissing = 0;
     Iterator i = sa.keySet().iterator();
     while(i.hasNext()) {
-      Object oa = i.next();
-      if (oa instanceof PublishMessageDigest) {
+      MessageDigest oa = (MessageDigest)i.next();
+      if (oa.searchForMe) {
         ObjPair i1 = (ObjPair)sa.get(oa);
         if (sb.containsKey(oa)) {
           ObjPair i2 = (ObjPair)sb.get(oa);

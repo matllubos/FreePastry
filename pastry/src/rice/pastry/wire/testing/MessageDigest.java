@@ -22,6 +22,8 @@ public class MessageDigest {
   public boolean udp = true;
   public int lineNumber;
   
+  public boolean searchForMe = false;
+  
   public MessageDigest(int lineNumber, String local, String remote, String messagLine,
                        int type, boolean udp) {
     this.lineNumber = lineNumber;

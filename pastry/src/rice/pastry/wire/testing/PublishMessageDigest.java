@@ -36,6 +36,7 @@ public class PublishMessageDigest extends MessageDigest {
     int globalMsgNum) {
     super(lineNum, local, remote, messageLine, type, udp);
     this.globalMsgNum = globalMsgNum;
+    searchForMe = true;
     fixMessageLine();
     parseMessageLine();
   }
