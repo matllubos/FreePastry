@@ -53,8 +53,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private final char tiMonitor = 2;
   private final char tiConsolidate = 3;
   private final char tiStatistics = 4;
+  private final char tiExpire = 5;
   protected Hashtable timers;
-  protected int expirationCounter;
   protected Continuation flushWait;
   protected boolean rebuildInProgress;
   protected Vector monitorIDs;
@@ -70,6 +70,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private static final long WEEKS = 7 * DAYS;
 
   private static final long flushDelayAfterJoin = 30 * SECONDS;
+  private static final long flushStressInterval = 5 * MINUTES;
   private static long flushInterval = 5 * MINUTES;
 
   private static int maxAggregateSize = 1024*1024;
@@ -81,7 +82,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private static final int maxPointersPerAggregate = 100;
   private static final long pointerArrayLifetime = 2 * WEEKS;
 
-  private static final long expirationInterval = 15 * MINUTES;
+  private static final long aggrRefreshInterval = 15 * MINUTES;
+  private static final long aggrRefreshDelayAfterJoin = 70 * SECONDS;
   private static long expirationRenewThreshold = 3 * DAYS;
 
   private static final boolean monitorEnabled = false;
@@ -118,7 +120,6 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     this.stats = aggregateList.getStatistics(statsGranularity, statsRange, nominalReferenceCount);
     this.policy = policy;
     this.factory = factory;
-    this.expirationCounter = 1;
     this.flushWait = null;
     this.rebuildInProgress = false;
     this.monitorIDs = new Vector();
@@ -130,6 +131,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       log(2, "Aggregate list read OK -- current root: " + ((aggregateList.getRoot() == null) ? "null" : aggregateList.getRoot().toStringFull()));
 
     addTimer(jitterTerm(flushDelayAfterJoin), tiFlush);
+    addTimer(jitterTerm(aggrRefreshDelayAfterJoin), tiExpire);
     addTimer(jitterTerm(consolidationDelayAfterJoin), tiConsolidate);
     addTimer(statsInterval, tiStatistics);
     if (monitorEnabled)
@@ -251,7 +253,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         "nominalReferenceCount = " + nominalReferenceCount + "\n" +
         "maxPointersPerAggregate = " + maxPointersPerAggregate + "\n" +
         "pointerArrayLifetime = " + (int)(pointerArrayLifetime / DAYS) + " days\n" +
-        "expirationInterval = " + (int)(expirationInterval / SECONDS) + " sec\n" +
+        "aggrRefreshInterval = " + (int)(aggrRefreshInterval / SECONDS) + " sec\n" +
+        "aggrRefreshDelayAfterJoin = " + (int)(aggrRefreshDelayAfterJoin / SECONDS) + " sec\n" +
         "expirationRenewThreshold = " + (int)(expirationRenewThreshold / HOURS) + " hrs\n" +
         "consolidationDelayAfterJoin = " + (int)(consolidationDelayAfterJoin / SECONDS) + " sec\n" +
         "consolidationInterval = " + (int)(consolidationInterval / SECONDS) + " sec\n" +
@@ -667,8 +670,10 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
       result = result + waitingList.scan().numElements()+ " object(s) waiting\n";
       
-      while (iter.hasNext())
-        result = result + ((Id)iter.next()).toStringFull()+"\n";
+      while (iter.hasNext()) {
+        Id thisId = (Id) iter.next();
+        result = result + thisId.toStringFull()+" "+waitingList.getMetadata(thisId)+"\n";
+      }
         
       return result;
     }
@@ -805,13 +810,17 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       ObjectDescriptor thisObject = null;
       boolean mustAddObject = false;
 
-      if (aggregates.size() > maxAggregatesPerRun)
+      if (aggregates.size() >= maxAggregatesPerRun)
         break;
       
       while (iter.hasNext()) {
         Id thisId = (Id) iter.next();
         thisObject = (ObjectDescriptor) waitingList.getMetadata(thisId);
         if (thisObject != null) {
+          thisObject = new ObjectDescriptor(
+            thisObject.key, thisObject.version, thisObject.currentLifetime,
+            thisObject.refreshedLifetime, thisObject.size
+          );
           if ((((currentAggregateSize + thisObject.size) <= maxAggregateSize) || currentAggregate.isEmpty()) && (currentObjectsInAggregate < maxObjectsInAggregate)) {
             currentAggregateSize += thisObject.size;
             currentObjectsInAggregate ++;
@@ -1205,7 +1214,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     switch (timerID) {
       case tiFlush :
       {
-        Continuation doNothing = new Continuation() {
+        formAggregates(new Continuation() {
           public void receiveResult(Object o) { 
             log(3, "Scheduled flush: Success (o="+o+")");
           }
@@ -1213,18 +1222,19 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             warn("Scheduled flush: Failure (e="+e+")");
             e.printStackTrace();
           }
-        };
+        });
         
-        if ((--expirationCounter) < 1) {
-          expirationCounter = (int)(expirationInterval / flushInterval);
-          refreshAggregates();
-          formAggregates(doNothing);
-          reconnectTree();
-        } else {
-          formAggregates(doNothing);
-        }
-        
-        addTimer(jitterTerm(flushInterval), tiFlush);
+        if (waitingList.getSize() >= (maxObjectsInAggregate * maxAggregatesPerRun))
+          addTimer(jitterTerm(flushStressInterval), tiFlush);
+        else
+          addTimer(jitterTerm(flushInterval), tiFlush);
+        break;
+      }
+      case tiExpire :
+      {
+        refreshAggregates();
+        reconnectTree();
+        addTimer(jitterTerm(aggrRefreshInterval), tiExpire);
         break;
       }
       case tiConsolidate :
@@ -1408,8 +1418,12 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
           foundWaiting = true;
 
           if (thisObject.refreshedLifetime < expiration) {
-            thisObject.refreshedLifetime = expiration;
-            waitingList.setMetadata(vkey, thisObject, new Continuation() {
+            ObjectDescriptor newDescriptor = new ObjectDescriptor(
+              thisObject.key, thisObject.version, thisObject.currentLifetime, 
+              expiration, thisObject.size
+            );
+
+            waitingList.setMetadata(vkey, newDescriptor, new Continuation() {
               public void receiveResult(Object o) {
                 log(3, "Refreshed metadata written ok for "+vkey.toStringFull());
               }
@@ -1450,16 +1464,20 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
               final int theSize = getSize(obj);
 
               if (policy.shouldBeAggregated(obj, theSize)) {
-                log(3, "ADDING MISSING OBJECT AFTER REFRESH: "+obj.getId());
+                if (!waitingList.exists(vkey)) {
+                  log(3, "ADDING MISSING OBJECT AFTER REFRESH: "+obj.getId());
 
-                waitingList.store(vkey, new ObjectDescriptor(obj.getId(), theVersionF, expiration, expiration, theSize), obj, new Continuation() {
-                  public void receiveResult(Object o) {
-                  }
-                  public void receiveException(Exception e) { 
-                    warn("Exception while refreshing aggregate: "+obj.getId()+" (e="+e+")");
-                    e.printStackTrace();
-                  }
-                });
+                  waitingList.store(vkey, new ObjectDescriptor(obj.getId(), theVersionF, expiration, expiration, theSize), obj, new Continuation() {
+                    public void receiveResult(Object o) {
+                    }
+                    public void receiveException(Exception e) { 
+                      warn("Exception while refreshing aggregate: "+obj.getId()+" (e="+e+")");
+                      e.printStackTrace();
+                    }
+                  });
+                } else {
+                  log(3, "Missing object already in waiting list: "+obj.getId());
+                }
               }
             
               command.receiveResult(new Boolean(true));
@@ -1857,7 +1875,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
           log(3, "lookupHandles("+id+","+max+") handled by PAST; ret="+o);
           command.receiveResult(o);
         } else {
-          log(2, "lookupHandles("+id+","+max+") failed, ret="+o+" -- restoring");
+          log(2, "lookupHandles("+id+","+max+") failed, ret="+o);
 
           AggregateDescriptor adc = (AggregateDescriptor) aggregateList.getADC(id);
           if (adc!=null) {
@@ -1867,6 +1885,12 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             if (objDescIndex < 0) {
               warn("lookupHandles: Aggregate found, but object not found in aggregate?!? -- aborted");
               command.receiveException(new AggregationException("Inconsistency detected in aggregate list -- try restarting the application"));
+              return;
+            }
+          
+            if (adc.objects[objDescIndex].refreshedLifetime < System.currentTimeMillis()) {
+              log(3, "Object "+id+" exists, but has expired -- ignoring");
+              command.receiveResult(new PastContentHandle[] { null });
               return;
             }
         
