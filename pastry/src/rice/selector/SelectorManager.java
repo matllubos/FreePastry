@@ -216,7 +216,13 @@ public class SelectorManager extends Thread {
   private void doInvocations() {
     Runnable run = getInvocation();
     while (run != null) {
-      run.run();
+      try {
+        run.run();
+      } catch (Exception e) {
+        System.err.println("Invoking runnable caused exception " + e + " - continuing");
+        e.printStackTrace();
+      }
+      
       run = getInvocation();
     }
 
