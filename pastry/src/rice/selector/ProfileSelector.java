@@ -88,6 +88,7 @@ public class ProfileSelector extends SelectorManager {
 
   public void printStats() {
     if (!recordStats) return;
+    if (stats == null) return;
     synchronized(stats) {
       Enumeration e = stats.elements();
       while(e.hasMoreElements()) {
