@@ -45,7 +45,7 @@ import java.io.*;
  * nodeIds are stored little endian.
  *
  * @author Andrew Ladd
- * @author Tsuen Wan Nguen
+ * @author Peter Druschel
  */
 
 public class NodeId implements Comparable, Serializable 
