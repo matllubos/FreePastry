@@ -34,75 +34,65 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.p2p.past.messaging;
+package rice.p2p.past.gc.messaging;
 
 import rice.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
+import rice.p2p.past.messaging.*;
+import rice.p2p.past.gc.*;
 
 /**
- * @(#) InsertMessage.java
+ * @(#) GCRefreshMessage.java
  *
- * This class represents a message which is an insert request in past.
+ * This class represents a message which is an request to extend the lifetime
+ * of a set of keys stored in GCPast.
  *
  * @version $Id$
  *
  * @author Alan Mislove
- * @author Ansley Post
- * @author Peter Druschel
  */
-public class InsertMessage extends ContinuationMessage {
+public class GCRefreshMessage extends ContinuationMessage {
 
-  // serailver for bward compatibility
-  static final long serialVersionUID = -7027957470028259605L;
+  // the list of keys which should be refreshed
+  protected IdSet keys;
   
-  // the data to insert
-  protected PastContent content;
+  // the timestamp at which the objects should now expire
+  protected long expiration;
   
   /**
    * Constructor which takes a unique integer Id, as well as the
-   * data to be stored
+   * keys to be refreshed
    *
    * @param uid The unique id
-   * @param content The content to be inserted
+   * @param keys The keys to be refreshed
+   * @param expiration The new expiration time
    * @param source The source address
    * @param dest The destination address
    */
-  public InsertMessage(int uid, PastContent content, NodeHandle source, Id dest) {
+  public GCRefreshMessage(int uid, IdSet keys, long expiration, NodeHandle source, Id dest) {
     super(uid, source, dest);
 
-    this.content = content;
+    this.expiration = expiration;
+    this.keys = keys;
   }
 
   /**
-   * Method which returns the content
+   * Method which returns the expiration time
    *
-   * @return The contained content
+   * @return The contained expiration time
    */
-  public PastContent getContent() {
-    return content;
+  public long getExpiration() {
+    return expiration;
   }
   
   /**
-   * Method which builds a response for this message, using the provided
-   * object as a result.
+   * Method which returns the list of keys
    *
-   * @param o The object argument
+   * @return The list of keys to be refreshed
    */
-  public void receiveResult(Object o) {
-    super.receiveResult(o);
-    content = null;
-  }
-  
-  /**
-   * Method which builds a response for this message, using the provided
-   * exception, which was thrown
-   *
-   * @param e The exception argument
-   */
-  public void receiveException(Exception e) {
-    super.receiveException(e);
-    content = null;
+  public IdSet getKeys() {
+    return keys;
   }
 
   /**
@@ -111,7 +101,7 @@ public class InsertMessage extends ContinuationMessage {
    * @return A string representing this message
    */
   public String toString() {
-    return "[InsertMessage for " + content + "]";
+    return "[GCRefreshMessage to " + expiration + "]";
   }
 }
 

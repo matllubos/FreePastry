@@ -34,30 +34,28 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.p2p.past.messaging;
+package rice.p2p.past.gc.messaging;
 
 import rice.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
+import rice.p2p.past.messaging.*;
+import rice.p2p.past.gc.*;
 
 /**
- * @(#) InsertMessage.java
+ * @(#) GCInsertMessage.java
  *
- * This class represents a message which is an insert request in past.
+ * This class represents a message which is an insert request in past, 
+ * coupled with an expiration time for the object.
  *
  * @version $Id$
  *
  * @author Alan Mislove
- * @author Ansley Post
- * @author Peter Druschel
  */
-public class InsertMessage extends ContinuationMessage {
+public class GCInsertMessage extends InsertMessage {
 
-  // serailver for bward compatibility
-  static final long serialVersionUID = -7027957470028259605L;
-  
-  // the data to insert
-  protected PastContent content;
+  // the timestamp at which the object expires
+  protected long expiration;
   
   /**
    * Constructor which takes a unique integer Id, as well as the
@@ -65,44 +63,23 @@ public class InsertMessage extends ContinuationMessage {
    *
    * @param uid The unique id
    * @param content The content to be inserted
+   * @param expiration The expiration time
    * @param source The source address
    * @param dest The destination address
    */
-  public InsertMessage(int uid, PastContent content, NodeHandle source, Id dest) {
-    super(uid, source, dest);
+  public GCInsertMessage(int uid, PastContent content, long expiration, NodeHandle source, Id dest) {
+    super(uid, content, source, dest);
 
-    this.content = content;
+    this.expiration = expiration;
   }
 
   /**
-   * Method which returns the content
+   * Method which returns the expiration time
    *
-   * @return The contained content
+   * @return The contained expiration time
    */
-  public PastContent getContent() {
-    return content;
-  }
-  
-  /**
-   * Method which builds a response for this message, using the provided
-   * object as a result.
-   *
-   * @param o The object argument
-   */
-  public void receiveResult(Object o) {
-    super.receiveResult(o);
-    content = null;
-  }
-  
-  /**
-   * Method which builds a response for this message, using the provided
-   * exception, which was thrown
-   *
-   * @param e The exception argument
-   */
-  public void receiveException(Exception e) {
-    super.receiveException(e);
-    content = null;
+  public long getExpiration() {
+    return expiration;
   }
 
   /**
@@ -111,7 +88,7 @@ public class InsertMessage extends ContinuationMessage {
    * @return A string representing this message
    */
   public String toString() {
-    return "[InsertMessage for " + content + "]";
+    return "[GCInsertMessage for " + content + " exp " + expiration + "]";
   }
 }
 

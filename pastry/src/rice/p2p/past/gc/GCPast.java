@@ -68,6 +68,11 @@ public interface GCPast extends Past {
   public static final long INFINITY_EXPIRATION = Long.MAX_VALUE;
   
   /**
+   * Timeout value which represents objects stored before garbage colection
+   */
+  public static final long NO_EXPIRATION_SPECIFIED = -1L;
+  
+  /**
    * Inserts an object with the given ID into this instance of Past.
    * Asynchronously returns a PastException to command, if the
    * operation was unsuccessful.  If the operation was successful, a
@@ -110,17 +115,21 @@ public interface GCPast extends Past {
    * earlier than the provided expiration time.  Asyncroniously returns
    * the result to the caller via the provided continuation.  
    *
-   * If no object under the provided key was found, a NoSuchObjectException
-   * will be returned to the command.  If too many of the object replicas 
-   * failed to correctly refresh the object, a PastException will be returned
-   * to the continuation.  Otherwise, the refresh will be declared successful,
-   * and the results will be returned in a Boolean[][].
+   * The result of this operation is an Object[], which is the same length
+   * as the input array of Ids.  Each element in the array is either 
+   * Boolean(true), representing that the refresh succeeded for the 
+   * cooresponding Id, or an Exception describing why the refresh failed.  
+   * Specifically, the possible exceptions which can be returned are:
+   * 
+   * ObjectNotFoundException - if no object was found under the given key
+   * RefreshFailedException - if the refresh operation failed for any other
+   *   reason (the getMessage() will describe the failure)
    * 
    * @param id The keys which to refresh
    * @param expiration The time to extend the lifetime to
    * @param command Command to be performed when the result is received
    */
-  public void refresh(Id[] id, long expiration, Continuation command);
+  public void refresh(IdSet ids, long expiration, Continuation command);
 
 }
 

@@ -34,84 +34,54 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.p2p.past.messaging;
+package rice.p2p.past.gc.messaging;
 
 import rice.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
+import rice.p2p.past.messaging.*;
 
 /**
- * @(#) InsertMessage.java
+ * @(#) GCCollectMessage.java
  *
- * This class represents a message which is an insert request in past.
+ * This class represents a message which tells GC Past that it's time to
+ * delete all the expired objects in the local store.
  *
  * @version $Id$
  *
  * @author Alan Mislove
- * @author Ansley Post
- * @author Peter Druschel
  */
-public class InsertMessage extends ContinuationMessage {
-
-  // serailver for bward compatibility
-  static final long serialVersionUID = -7027957470028259605L;
-  
-  // the data to insert
-  protected PastContent content;
+public class GCCollectMessage extends PastMessage {
   
   /**
-   * Constructor which takes a unique integer Id, as well as the
-   * data to be stored
+   * Constructor
    *
-   * @param uid The unique id
-   * @param content The content to be inserted
+   * @param id The location to be stored
    * @param source The source address
    * @param dest The destination address
    */
-  public InsertMessage(int uid, PastContent content, NodeHandle source, Id dest) {
-    super(uid, source, dest);
-
-    this.content = content;
-  }
-
-  /**
-   * Method which returns the content
-   *
-   * @return The contained content
-   */
-  public PastContent getContent() {
-    return content;
+  public GCCollectMessage(int id, NodeHandle source, Id dest) {
+    super(id, source, dest);
   }
   
   /**
-   * Method which builds a response for this message, using the provided
-   * object as a result.
+   * Method by which this message is supposed to return it's response -
+   * in this case, it lets the continuation know that a the message was
+   * lost via the receiveException method.
    *
-   * @param o The object argument
+   * @param c The continuation to return the reponse to.
    */
-  public void receiveResult(Object o) {
-    super.receiveResult(o);
-    content = null;
+  public void returnResponse(Continuation c) {
+    c.receiveException(new PastException("Should not be called!"));
   }
   
   /**
-   * Method which builds a response for this message, using the provided
-   * exception, which was thrown
-   *
-   * @param e The exception argument
-   */
-  public void receiveException(Exception e) {
-    super.receiveException(e);
-    content = null;
-  }
-
-  /**
-    * Returns a string representation of this message
+  * Returns a string representation of this message
    *
    * @return A string representing this message
    */
   public String toString() {
-    return "[InsertMessage for " + content + "]";
+    return "[GCCollectMessage]";
   }
 }
 
