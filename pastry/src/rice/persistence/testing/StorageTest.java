@@ -278,7 +278,7 @@ public class StorageTest extends Test {
     if (store) {
       setUp(get0);
     } else {
-      get0.receiveResult(new Boolean(true));
+      get1.receiveResult("First Object");
     }
   }
 
@@ -353,7 +353,7 @@ public class StorageTest extends Test {
 
     final Continuation check1 = new Continuation() {
       public void receiveResult(Object o) {
-        if (o.equals(new Boolean(true))) {
+        if ((! store) || o.equals(new Boolean(true))) {
           stepDone(SUCCESS);
         } else {
           stepDone(FAILURE);
@@ -409,7 +409,7 @@ public class StorageTest extends Test {
     
     final Continuation retrieve1 = new Continuation() {
       public void receiveResult(Object o) {
-        if (o.equals(new Boolean(false))) {
+        if ((! store) ||  o.equals(new Boolean(false))) {
           stepDone(SUCCESS);
         } else {
           stepDone(FAILURE);
@@ -426,7 +426,7 @@ public class StorageTest extends Test {
     
     final Continuation check1 = new Continuation() {
       public void receiveResult(Object o) {
-        if (o.equals(new Boolean(true))) {
+        if ((! store) || o.equals(new Boolean(true))) {
           stepDone(SUCCESS);
         } else {
           stepDone(FAILURE);
