@@ -15,6 +15,7 @@ import java.io.*;
  * structures on the current node to keep track of the topic. 
  * 
  * @author Romer Gil 
+ * @author Eric Engineer
  */
 
 
@@ -55,8 +56,6 @@ public class MessageCreate extends ScribeMessage implements Serializable
 	
 	topic.addToScribe();
 	topic.topicManager( true );
-	System.out.println( "Node: " + scribe.getNodeId() + " created topic" );
-	System.out.println( "TopicId: " + topic.getTopicId() );
     }
     
     /**
@@ -71,7 +70,7 @@ public class MessageCreate extends ScribeMessage implements Serializable
      */
     public boolean 
 	handleForwardMessage( Scribe scribe, Topic topic ) {
-	//	System.out.println( "Node: " + scribe.getNodeId() + " forwarded create" );
+
 	return true;
     }
 

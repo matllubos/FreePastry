@@ -14,6 +14,7 @@ import java.io.*;
  * from a topic. 
  * 
  * @author Romer Gil 
+ * @author Eric Engineer
  */
 
 

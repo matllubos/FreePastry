@@ -47,9 +47,6 @@ public class MessageHeartBeat extends ScribeMessage implements Serializable
 	Credentials cred = scribe.getCredentials();
 	SendOptions opt = scribe.getSendOptions();
 	
-	System.out.println("##########################################MESSAGEHEARTBEAT"
-			   +"##########################################");
-
 	if ( topic != null ) {
 	    // take note of the parent for this topic and tell the failure 
 	    // handler that the parent is ok

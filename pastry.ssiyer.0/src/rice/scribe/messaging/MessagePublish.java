@@ -17,6 +17,7 @@ import java.util.*;
  * to all the nodes children of the current node and calling the event handler.
  * 
  * @author Romer Gil 
+ * @author Eric Engineer
  */
 
 
@@ -54,10 +55,7 @@ public class MessagePublish extends ScribeMessage implements Serializable
 	    // take note of the parent for this topic and tell the failure 
 	    // handler that the parent is ok
 	    if( !topic.isTopicManager() ) {
-		if( m_source != topic.getParent() && topic.getParent() != null) {
-		    System.err.println("parents:"+m_source+topic.getParent()+
-				       scribe.getNodeHandle() );
-System.err.println("------------------------------------TWO PARENTS-------------------");
+		if(m_source != topic.getParent() && topic.getParent() != null){
 		}
 		topic.setParent( m_source );
 		topic.restartParentHandler();
@@ -96,7 +94,6 @@ System.err.println("------------------------------------TWO PARENTS-------------
 	    // if local node is subscriber of this topic, pass the event to
 	    // the application's event handler
 	    if ( topic.isSubscribed() ) {
-System.out.println( "MessagePublish at:"+scribe.getNodeHandle() + " from " + m_source );
 		scribe.getScribeApp().receiveMessage( this );
 	    }
 	    

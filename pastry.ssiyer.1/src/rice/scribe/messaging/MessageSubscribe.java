@@ -15,6 +15,7 @@ import java.io.*;
  * to a topic. 
  * 
  * @author Romer Gil 
+ * @author Eric Engineer
  */
 
 
@@ -46,8 +47,6 @@ public class MessageSubscribe extends ScribeMessage implements Serializable
 	handleDeliverMessage( Scribe scribe, Topic topic ) {
 	//we know that we are topic manager because we received the topic msg
 	topic.topicManager( true );
-
-	System.out.println( "Node: " + scribe.getNodeId() + " recived sub" );
 
 	if( !scribe.getSecurityManager().
 	   verifyCanSubscribe( m_source, m_topicId ) ){
@@ -105,7 +104,6 @@ public class MessageSubscribe extends ScribeMessage implements Serializable
 	    return true;
 	}
 	else {
-	    System.out.println( "Node: "+scribe.getNodeId()+" forward sub" );
 	}
 	
 	if ( topic == null ) {
@@ -123,7 +121,6 @@ public class MessageSubscribe extends ScribeMessage implements Serializable
 
 	    // join multicast tree by routing subscribe message thru pastry
 	    scribe.routeMsg( m_topicId, msg, cred, opt );
-	    System.out.println( "created topic reference: "+scribe.getNodeHandle() );
 	}
 	
 	// make the source a child for this topic
