@@ -14,6 +14,7 @@ PACKAGES = \
 	rice.pastry.direct\
 	rice.pastry.standard\
 	rice.pastry.rmi\
+	rice.pastry.security\
 	rice.pastry.testing
 
 #	rice.ap3\
