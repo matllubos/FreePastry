@@ -274,4 +274,13 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
   public Object clone() {
     return new FragmentKeySet(this);
   }
+
+  /**
+   * return this set as an array
+   * @return the array
+   */
+  public rice.p2p.commonapi.Id[] asArray() {
+    return (rice.p2p.commonapi.Id[]) idSet.toArray(new rice.p2p.commonapi.Id[0]);
+  }
+  
 }
