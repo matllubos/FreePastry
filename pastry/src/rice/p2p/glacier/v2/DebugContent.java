@@ -4,13 +4,14 @@ import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.glacier.*;
+import java.io.*;
 
 public class DebugContent implements PastContent, GCPastContent {
 
   protected Id myId;
   protected boolean isMutable;
   protected long version;
-  protected byte[] payload;
+  protected transient byte[] payload;
 
   public DebugContent(Id id, boolean isMutable, long version, byte[] payload) {
     myId = id;
@@ -49,6 +50,18 @@ public class DebugContent implements PastContent, GCPastContent {
   
   public byte[] getPayload() {
     return payload;
+  }
+
+  private void writeObject(ObjectOutputStream oos) throws IOException {
+    oos.defaultWriteObject();
+    oos.writeInt(payload.length);
+    oos.write(payload);
+  }
+  
+  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    ois.defaultReadObject();
+    payload = new byte[ois.readInt()];
+    ois.readFully(payload, 0, payload.length);
   }
 }
 
