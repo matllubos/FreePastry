@@ -51,16 +51,12 @@ public class Log implements PostData {
    * @param location The location of this log in PAST
    */
   public Log(Object name, NodeId location, Post post) {
-    System.out.println("Creating Log");
     this.name = name;
     this.location = location;
 
     children = new HashMap();
 
     setPost(post);
-    if (post == null) {
-      System.out.println("The post field is null");
-    }
   }
   
   /**
@@ -264,18 +260,6 @@ public class Log implements PostData {
      */
     public void start() {
       state = STATE_1;
-      if (post == null) {
-	System.out.println("post");
-      }
-      if (post.getStorageService() == null) {
-	System.out.println("post.getStorageService()");
-      }
-      if (log == null) {
-	System.out.println("log");
-      }
-      if (log.getLocation() == null) {
-	System.out.println("log.getLocation");
-      }
       post.getStorageService().storeSigned(log, log.getLocation(), this);
     }
 
