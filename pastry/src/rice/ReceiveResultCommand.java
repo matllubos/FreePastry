@@ -2,23 +2,26 @@ package rice;
 
 /**
  * This class is a callback class which allows a class to return
- * results from methods at a later time.  The method should return
- * a CommandIdentifier which will be returned via the
- * receiveResult command.
+ * results from methods at a later time.
  *
  * @version $Id$
  */
 public interface ReceiveResultCommand  {
 
   /**
-   * Called when a previously requested result is now availble.  The
-   * identifier is the previously returned identifier for the
-   * request.
+   * Called when a previously requested result is now availble.
    *
-   * @param identifier The identifier returned when the request was made.
    * @param result The result of the command.
    */
-  public void receiveResult(ResultIdentifier identifier, Object result);
+  public void receiveResult(Object result);
+
+  /**
+   * Called when an execption occured as a result of the
+   * previous command.
+   *
+   * @param result The exception which was caused.
+   */
+  public void receiveException(Exception result);
 
 }
 
