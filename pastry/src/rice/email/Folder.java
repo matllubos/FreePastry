@@ -26,7 +26,6 @@ public class Folder {
 
   // the post service used by the Folder to create new logs
   private Post _post;
-
   /**
    * Constructs an empty Folder.
    * @param name The name of the folder.
@@ -52,6 +51,11 @@ public class Folder {
     _post = post;
     _storage = post.getStorageService();
   }
+
+    public void setPost(Post post) {
+	_post = post;
+	_log.setPost(post);
+    }
 
   /**
    * Used to read the contents of the Folder and build up the array

@@ -31,7 +31,7 @@ public class ProxyTest {
 
 	EmailTest et = new EmailTest();
 	String[] nameset = new String[2];
-	nameset[0] = "<amislove@rice.edu>";
+	nameset[0] = "<dwp@rice.edu>";
 	nameset[1] = "<recipient@recipient.org>";
 	EmailService[] eservset = et.createEmailServices(nameset, 2000);
 	EmailService sender = eservset[0];
@@ -47,7 +47,7 @@ public class ProxyTest {
 	    FileReader("password"));
 	String pass = r.readLine();
 
-	imp.attach(receiver, "amislove", pass);
+	imp.attach(receiver, "dwp", pass);
  
 	System.err.println("IMAP proxy started.");
 
