@@ -386,7 +386,7 @@ public class PostImpl implements Post, Application, ScribeClient {
         // verify message is signed
         if (! verifySignedPostMessage(signedMessage, senderLog.getPublicKey())) {
           logger.warning(endpoint.getId() + ": Problem encountered verifying " + message.getClass().getName() + " from " + sender + " - dropping on floor.");
-          parent.receiveException(new PostException("Problem encountered verifying " + message.getClass().getName() + " from " + sender + " - dropping on floor."));
+          parent.receiveException(new PostException("Problem encountered verifying " + message.getClass().getName() + " from " + sender + " - dropping on floor. (ourkey: " + keyPair.getPublic() + " senderkey: " + senderLog.getPublicKey() + ")"));
           return;
         }
 

@@ -10,4 +10,8 @@ import rice.p2p.commonapi.*;
  */
 public class SynchronizeMessage implements Message {
   
+  public int getPriority() {
+    return MEDIUM_PRIORITY;
+  }
+  
 }
