@@ -24,6 +24,10 @@ public class Manifest implements Serializable {
   public byte[] getFragmentHash(int fragmentID) {
     return fragmentHash[fragmentID];
   }
+
+  public byte[][] getFragmentHashes() {
+    return fragmentHash;
+  }
   
   public byte[] getSignature() {
     return signature;
@@ -33,7 +37,7 @@ public class Manifest implements Serializable {
     this.signature = signature;
   }
   
-  public long getExpirationDate() {
+  public long getExpiration() {
     return expirationDate;
   }
   
