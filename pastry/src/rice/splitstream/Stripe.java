@@ -127,20 +127,26 @@ public class Stripe extends Observable implements IScribeApp{
       */
      public void leaveStripe(){
        stripeState = STRIPE_UNSUBSCRIBED;
+       scribe.leave(stripeId, this, credentials);
      }
+
+     /**
+      * Joins this stripe
+      */
      public void joinStripe(){
 	if(scribe.join(stripeId, this, credentials)){
  		stripeState = STRIPE_SUBSCRIBED;
 		inputStream = new ByteArrayInputStream(inputBuffer);
 	}
      }
+
+     /**
+      * Method called when this stripe is dropped
+      */
      public void dropped(){
         stripeState = STRIPE_DROPPED;
      }
-	
-     public void backdoorSend(Serializable data){
-	scribe.multicast(stripeId, data, credentials);
-     }
+
     /**
     * get the state of the Stripe 
     * @return int s
