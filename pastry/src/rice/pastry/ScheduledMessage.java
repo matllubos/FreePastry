@@ -69,16 +69,38 @@ public class ScheduledMessage extends TimerTask {
       return msg;
   }
 
+	public PastryNode getLocalNode() {
+		return localNode;
+	}
+
   /**
    * deliver the message
    */
   public void run() {
     try {
-      localNode.receiveMessage(msg);
+    	// timing with cancellation
+    	Message m = msg;
+    	if (m != null)
+        localNode.receiveMessage(msg);
+    } catch (NullPointerException npe) {
+			// could have been a timing issue with cancellation, no biggie
     } catch (Exception e) {
       System.err.println("Delivering " + this + " caused exception " + e);
       e.printStackTrace();
     }
+  }
+
+	public String toString() {
+		return "SchedMsg for "+msg;	
+	}
+  /* (non-Javadoc)
+   * @see rice.p2p.commonapi.CancellableTask#cancel()
+   */
+  public boolean cancel() {
+		// memory management
+		msg = null;
+		localNode = null;
+    return super.cancel();
   }
 
 }
