@@ -724,7 +724,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         for (int i=0; i<rateLimitedRequestsPerSecond; i++) {
           if (!pendingTraffic.isEmpty()) {
             Enumeration keys = pendingTraffic.keys();
-            FragmentKey thisKey = (FragmentKey) keys.nextElement();
+            Object thisKey = (Object) keys.nextElement();
             log(3, "Sending request "+thisKey);
             Continuation c = (Continuation) pendingTraffic.remove(thisKey);
             c.receiveResult(new Boolean(true));
@@ -1287,29 +1287,37 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       final long thisVersion = versions[i];
       
       log(2, "refresh("+thisId.toStringFull()+"v"+thisVersion+", exp="+expiration+")");
-      
-      retrieveManifest(new VersionKey(thisId, thisVersion), tagRefresh, new Continuation() {
-        public void receiveResult(Object o) {
-          if (o instanceof Manifest) {
-            Manifest manifest = (Manifest) o;
 
-            log(3, "refresh("+thisId.toStringFull()+"v"+thisVersion+"): Got manifest");
-            manifest = policy.updateManifest(new VersionKey(thisId, thisVersion), manifest, expiration);
-            Manifest[] manifests = new Manifest[numFragments];
-            for (int i=0; i<numFragments; i++)
-              manifests[i] = manifest;
-            distribute(new VersionKey(thisId, thisVersion), null, manifests, expiration, tagRefresh, thisContinuation);
-          } else {
-            warn("refresh("+thisId+"v"+thisVersion+"): Cannot retrieve manifest");
-            thisContinuation.receiveResult(new GlacierException("Cannot retrieve manifest -- retry later"));
-          }
-        }
-        public void receiveException(Exception e) {
-          warn("refresh("+thisId+"v"+thisVersion+"): Exception while retrieving manifest: "+e);
-          e.printStackTrace();
-          thisContinuation.receiveException(e);
+      final VersionKey thisVersionKey = new VersionKey(thisId, thisVersion);
+      Continuation prev = (Continuation) pendingTraffic.put(thisVersionKey, new Continuation.SimpleContinuation() {
+        public void receiveResult(Object o) {
+          retrieveManifest(thisVersionKey, tagRefresh, new Continuation() {
+            public void receiveResult(Object o) {
+              if (o instanceof Manifest) {
+                Manifest manifest = (Manifest) o;
+
+                log(3, "refresh("+thisId.toStringFull()+"v"+thisVersion+"): Got manifest");
+                manifest = policy.updateManifest(new VersionKey(thisId, thisVersion), manifest, expiration);
+                Manifest[] manifests = new Manifest[numFragments];
+                for (int i=0; i<numFragments; i++)
+                  manifests[i] = manifest;
+                distribute(new VersionKey(thisId, thisVersion), null, manifests, expiration, tagRefresh, thisContinuation);
+              } else {
+                warn("refresh("+thisId+"v"+thisVersion+"): Cannot retrieve manifest");
+                thisContinuation.receiveResult(new GlacierException("Cannot retrieve manifest -- retry later"));
+              }
+            }
+            public void receiveException(Exception e) {
+              warn("refresh("+thisId+"v"+thisVersion+"): Exception while retrieving manifest: "+e);
+              e.printStackTrace();
+              thisContinuation.receiveException(e);
+            }
+          });
         }
       });
+      
+      if (prev != null)
+        prev.receiveException(new GlacierException("Key collision in traffic shaper (refresh)"));
     }
   }
 
@@ -2022,11 +2030,14 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     }
   
     log(3, "Added pending job: retrieveFragment("+key+")");  
-    pendingTraffic.put(key, new Continuation.SimpleContinuation() {
+    Continuation prev = (Continuation) pendingTraffic.put(key, new Continuation.SimpleContinuation() {
       public void receiveResult(Object o) {
         retrieveFragment(key, manifest, tag, c);
       }
     });
+    
+    if (prev != null)
+      prev.receiveException(new GlacierException("Key collision in traffic shaper (rateLimitedRetrieveFragment)"));
   }
   
   public void deliver(Id id, Message message) {
