@@ -149,6 +149,20 @@ public interface IScribeApp
      *        new root.
      */
     public void isNewRoot(NodeId topicId);
+
+
+    /**
+     * Upcall made by scribe to the registered applications to
+     * inform them that a new parent is found for local node
+     * in the topic tree.
+     *
+     * @param topicId The topic for which new parent is found
+     * 
+     * @param newParent The new parent
+     *
+     * @param data The data received with the ACK message.
+     */
+    public void newParent(NodeId topicId, NodeHandle newParent, Serializable data);
 }
 
 
