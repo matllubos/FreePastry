@@ -2,8 +2,7 @@
 
 "Free Pastry" Peer-to-Peer Application Development Substrate 
 
-Copyright 2002, Rice University. All rights reserved.  Developed by
-Andrew Ladd, Peter Druschel.
+Copyright 2002, Rice University. All rights reserved. 
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -49,7 +48,10 @@ import java.util.*;
  * A PastryAppl is an abstract class that every Pastry application
  * extends.  This is the external Pastry API.
  *
- * @author Peter Druschel */
+ * @version $Id$
+ *
+ * @author Peter Druschel 
+*/
 
 public abstract class PastryAppl implements MessageReceiver
 {

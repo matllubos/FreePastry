@@ -1,30 +1,38 @@
-//////////////////////////////////////////////////////////////////////////////
-// Rice Open Source Pastry Implementation                  //               //
-//                                                         //  R I C E      //
-// Copyright (c)                                           //               //
-// Romer Gil                   rgil@cs.rice.edu            //   UNIVERSITY  //
-// Andrew Ladd                 aladd@cs.rice.edu           //               //
-// Tsuen Wan Ngan              twngan@cs.rice.edu          ///////////////////
-//                                                                          //
-// This program is free software; you can redistribute it and/or            //
-// modify it under the terms of the GNU General Public License              //
-// as published by the Free Software Foundation; either version 2           //
-// of the License, or (at your option) any later version.                   //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU General Public License for more details.                             //
-//                                                                          //
-// You should have received a copy of the GNU General Public License        //
-// along with this program; if not, write to the Free Software              //
-// Foundation, Inc., 59 Temple Place - Suite 330,                           //
-// Boston, MA  02111-1307, USA.                                             //
-//                                                                          //
-// This license has been added in concordance with the developer rights     //
-// for non-commercial and research distribution granted by Rice University  //
-// software and patent policy 333-99.  This notice may not be removed.      //
-//////////////////////////////////////////////////////////////////////////////
+/*************************************************************************
+
+"FreePastry" Peer-to-Peer Application Development Substrate 
+
+Copyright 2002, Rice University. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+contributors may be  used to endorse or promote  products derived from
+this software without specific prior written permission.
+
+This software is provided by RICE and the contributors on an "as is"
+basis, without any representations or warranties of any kind, express
+or implied including, but not limited to, representations or
+warranties of non-infringement, merchantability or fitness for a
+particular purpose. In no event shall RICE or contributors be liable
+for any direct, indirect, incidental, special, exemplary, or
+consequential damages (including, but not limited to, procurement of
+substitute goods or services; loss of use, data, or profits; or
+business interruption) however caused and on any theory of liability,
+whether in contract, strict liability, or tort (including negligence
+or otherwise) arising in any way out of the use of this software, even
+if advised of the possibility of such damage.
+
+********************************************************************************/
 
 package rice.pastry.security;
 
@@ -32,10 +40,10 @@ import java.io.*;
 
 /**
  * This is the interface for a Pastry Credentials object.
- * 
  * This should be serializable.
  *
- * @author Tsuen Wan Ngan
+ * @version $Id$
+ *
  * @author Andrew Ladd
  */
 

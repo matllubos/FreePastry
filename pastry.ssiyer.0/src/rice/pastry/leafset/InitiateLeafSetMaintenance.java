@@ -46,6 +46,8 @@ import java.util.*;
 /**
  * Initiate leaf set maintenance on the local node.
  *
+ * @version $Id$
+ *
  * @author Peter Druschel
  */
 

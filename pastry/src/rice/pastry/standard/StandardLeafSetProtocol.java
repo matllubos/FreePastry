@@ -47,6 +47,8 @@ import java.util.*;
 /**
  * An implementation of a simple leaf set protocol.
  *
+ * @version $Id$
+ *
  * @author Peter Druschel
  * @author Andrew Ladd
  */

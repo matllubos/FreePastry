@@ -1,14 +1,6 @@
-/*
- * @(#)
- *
- * @version $Id$
- * @author Peter Druschel
- *
- */
-
 /*************************************************************************
 
-"Free Pastry" Peer-to-Peer Application Development Substrate 
+"FreePastry" Peer-to-Peer Application Development Substrate 
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -60,6 +52,8 @@ import java.util.*;
  * PastryRegrTest
  *
  * a regression test suite for pastry.
+ *
+ * @version $Id$
  *
  * @author andrew ladd
  * @author peter druschel

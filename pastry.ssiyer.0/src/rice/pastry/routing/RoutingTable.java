@@ -2,8 +2,7 @@
 
 "Free Pastry" Peer-to-Peer Application Development Substrate 
 
-Copyright 2002, Rice University. All rights reserved.  Developed by
-Andrew Ladd, Peter Druschel.
+Copyright 2002, Rice University. All rights reserved. 
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -57,6 +56,8 @@ import java.util.*;
  * the most significant (numerically) difference from the node id that the table
  * routes for at the <EM> index </EM>th digit and the differing digit is <EM> digit </EM>.  An <EM> index </EM> of <EM> 0 </EM>
  *  is the least significant digit.
+ *
+ * @version $Id$
  *
  * @author Andrew Ladd
  * @author Peter Druschel
