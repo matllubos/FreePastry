@@ -36,7 +36,7 @@ public class CertificateGenerator {
       KeyPair caPair = (KeyPair) security.deserialize(data);
       System.out.println("[ DONE ]");
 
-      System.out.print("Please enter the new username (@post): ");
+      System.out.print("Please enter the new username (@rice.edu.post): ");
       BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
       String userid = input.readLine();
       
@@ -49,7 +49,7 @@ public class CertificateGenerator {
       System.out.println("[ DONE ]");
 
       System.out.print("    Generating the certificate\t\t\t\t\t");
-      PostUserAddress address = new PostUserAddress(userid + "@post");
+      PostUserAddress address = new PostUserAddress(userid + "@rice.edu.post");
       PostCertificate certificate = security.generateCertificate(address, pair.getPublic(), caPair.getPrivate());
       System.out.println("[ DONE ]");
 

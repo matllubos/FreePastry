@@ -217,6 +217,12 @@ public class MessagePropertyPart
         getConn().print("" + msg.getUID());
     }
 
+    void msgID(StoredMessage msg)
+      throws MailboxException
+    {
+      getConn().print("\"" + msg.getSequenceNumber() + "\"");
+    }
+
     void msgFlags(StoredMessage msg)
            throws MailboxException
     {
@@ -341,7 +347,7 @@ public class MessagePropertyPart
         } else {
             getConn().print("\"" + inReplyTo[0] + "\" ");
         }
-        msgUID(msg);
+        msgID(msg);
         getConn().print(")");
       } catch (MailException me) {
         throw new MailboxException(me);
