@@ -24,18 +24,28 @@
 
 package rice.pastry.wire;
 
-import java.io.*;
-import java.net.*;
-import java.nio.*;
-import java.nio.channels.*;
-import java.nio.charset.*;
-import java.util.*;
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InvalidClassException;
+import java.io.NotSerializableException;
+import java.io.ObjectOutputStream;
+import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
+import java.util.Iterator;
+import java.util.LinkedList;
 
-import rice.pastry.wire.exception.*;
-import rice.pastry.wire.messaging.socket.*;
+import rice.pastry.Log;
+import rice.pastry.messaging.Message;
+import rice.pastry.wire.exception.NodeIsDeadException;
+import rice.pastry.wire.exception.SerializationException;
+import rice.pastry.wire.messaging.socket.HelloMessage;
+import rice.pastry.wire.messaging.socket.SocketCommandMessage;
+import rice.pastry.wire.messaging.socket.SocketTransportMessage;
 
 /**
  * Class which serves as an "writer" for all of the messages sent across the
@@ -80,6 +90,7 @@ public class SocketChannelWriter {
    * DESCRIBE THE FIELD
    */
   protected static byte[] MAGIC_NUMBER = new byte[]{0x45, 0x79, 0x12, 0x0D};
+
 
   /**
    * Constructor which creates this SocketChannelWriter with a pastry node and
@@ -210,35 +221,53 @@ public class SocketChannelWriter {
    * @exception IOException DESCRIBE THE EXCEPTION
    */
   public boolean write(SocketChannel sc) throws IOException {
-    synchronized (queue) {
-      if (buffer == null) {
-        if ((!waitingForGreeting) && (queue.size() > 0)) {
-          debug("About to serialize object " + queue.getFirst());
-          buffer = serialize(queue.getFirst());
-        } else {
-          updateSelectionKeyBasedOnQueue();
-          return true;
+    IOException ioe = null;
+    boolean didWrite = false;
+    
+    Object ooo = null;
+    if (queue.size() > 0) {
+      ooo = queue.getFirst();
+    } 
+    
+    try {
+      synchronized (queue) {
+        if (buffer == null) {
+          if ((!waitingForGreeting) && (queue.size() > 0)) {
+            debug("About to serialize object " + queue.getFirst());
+            buffer = serialize(queue.getFirst());
+          } else {
+            updateSelectionKeyBasedOnQueue();
+            return true;
+          }
         }
+  
+        int j = buffer.limit();
+        int i = sc.write(buffer);
+  
+        debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
+  
+        if (buffer.remaining() != 0) {
+          return false;
+        }
+  
+        if (!waitingForGreeting) {
+          queue.removeFirst();
+        }
+  
+        buffer = null;
+  
+        // if there are more objects in the queue, try writing those
+        // otherwise, return saying all objects have been written
+        didWrite = write(sc);
       }
+    } catch (IOException e) {
+      ioe = e;
+    } finally {
 
-      int j = buffer.limit();
-      int i = sc.write(buffer);
+      Wire.registerSocketChannel(sc,"write:"+ooo+" ex:"+ioe);
 
-      debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
-
-      if (buffer.remaining() != 0) {
-        return false;
-      }
-
-      if (!waitingForGreeting) {
-        queue.removeFirst();
-      }
-
-      buffer = null;
-
-      // if there are more objects in the queue, try writing those
-      // otherwise, return saying all objects have been written
-      return write(sc);
+      if (ioe != null) throw ioe;
+      return didWrite;
     }
   }
 

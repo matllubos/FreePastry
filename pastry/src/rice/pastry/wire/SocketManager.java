@@ -53,12 +53,15 @@ public class SocketManager implements SelectionKeyHandler {
   private WirePastryNode pastryNode;
 
   // the linked list of open sockets
-  private LinkedList openSockets;
+  protected LinkedList openSockets;
 
   // maps a SelectionKey -> SocketConnector
   private HashMap connectors;
 
   // ServerSocketChannel for accepting incoming connections
+  private ServerSocketChannel serverChannel;
+
+  // ServerSocketChannels key for accepting incoming connections
   private SelectionKey key;
 
   // the port number this manager is listening on
@@ -70,6 +73,7 @@ public class SocketManager implements SelectionKeyHandler {
    */
   public static int MAX_OPEN_SOCKETS = 256;
 
+ 
   /**
    * Constructs a new SocketManager.
    *
@@ -79,7 +83,7 @@ public class SocketManager implements SelectionKeyHandler {
    */
   public SocketManager(WirePastryNode node, int port, Selector selector) {
     pastryNode = node;
-    openSockets = new LinkedList();
+    openSockets = generateOpenSockets();
     connectors = new HashMap();
     this.port = port;
 
@@ -87,15 +91,19 @@ public class SocketManager implements SelectionKeyHandler {
       // bind to port
       InetSocketAddress server = new InetSocketAddress(InetAddress.getLocalHost(), port);
 
-      ServerSocketChannel channel = ServerSocketChannel.open();
-      channel.configureBlocking(false);
-      channel.socket().bind(server);
+      serverChannel = ServerSocketChannel.open();
+      serverChannel.configureBlocking(false);
+      serverChannel.socket().bind(server);
 
-      key = channel.register(selector, SelectionKey.OP_ACCEPT);
+      key = serverChannel.register(selector, SelectionKey.OP_ACCEPT);
       key.attach(this);
     } catch (IOException e) {
       System.out.println("ERROR creating server socket channel " + e);
     }
+  }
+  
+  protected LinkedList generateOpenSockets() {
+    return new LinkedList();
   }
 
   /**
@@ -109,18 +117,29 @@ public class SocketManager implements SelectionKeyHandler {
   public void openSocket(WireNodeHandle handle) {
     synchronized (openSockets) {
       if (!openSockets.contains(handle)) {
+
+        removeOpenSocketsIfNeeded();   
+
         openSockets.addFirst(handle);
-
+        
         debug("Got request to open socket to " + handle);
-
-        if (openSockets.size() > MAX_OPEN_SOCKETS) {
-          WireNodeHandle snh = (WireNodeHandle) openSockets.removeLast();
-          snh.disconnect();
-        }
+        
       } else {
         debug("ERROR: Request to open already-open socket to " + handle.getAddress());
       }
     }
+  }
+  
+  protected void removeOpenSocketsIfNeeded() {
+    while (needToDisconnectSockets() && openSockets.size() > 0) {             
+      WireNodeHandle snh = (WireNodeHandle) openSockets.removeLast();
+      System.out.println("Removing Open Soket because needed. :"+snh.getAddress());   
+      snh.disconnect();
+    }    
+  }
+  
+  protected boolean needToDisconnectSockets() {
+    return openSockets.size() > MAX_OPEN_SOCKETS;
   }
 
   /**
@@ -130,6 +149,9 @@ public class SocketManager implements SelectionKeyHandler {
    * @param handle The handle which has been disconnected.
    */
   public void closeSocket(WireNodeHandle handle) {
+    if (true) return;
+    
+    System.out.println("SocketManager.closeSocket():"+handle.getAddress()+","+handle.getId());
     synchronized (openSockets) {
       if (openSockets.contains(handle)) {
         openSockets.remove(handle);
@@ -268,7 +290,7 @@ public class SocketManager implements SelectionKeyHandler {
       System.out.println(pastryNode.getNodeId() + " (SM): " + s);
     }
   }
-
+  
   /**
    * Private class which is tasked with reading the greeting message off of a
    * newly connected socket. This greeting message says who the socket is coming
@@ -356,6 +378,8 @@ public class SocketManager implements SelectionKeyHandler {
 
           writer.enqueue(new RouteRowResponseMessage(pastryNode.getRoutingTable().getRow(message.getRow())));
 //          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        
+        
         } else {
           System.out.println("Read unknown message " + o + " - dropping on floor.");
         }

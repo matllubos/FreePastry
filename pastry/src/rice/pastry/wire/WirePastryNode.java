@@ -65,6 +65,7 @@ public class WirePastryNode extends DistPastryNode {
   // The thread in which the SelectorManager is running
   private Thread _executionThread;
 
+  private static final int BASE_NUM_FDS_REQUIRED = 5;
 
   /**
    * Constructor
@@ -73,6 +74,7 @@ public class WirePastryNode extends DistPastryNode {
    */
   public WirePastryNode(NodeId id) {
     super(id);
+    Wire.acquireFileDescriptors(BASE_NUM_FDS_REQUIRED);
   }
 
   /**
@@ -188,5 +190,7 @@ public class WirePastryNode extends DistPastryNode {
   public void kill() {
     super.kill();
     _manager.kill();
+//    _sManager.kill();
+    Wire.releaseFileDescriptors(BASE_NUM_FDS_REQUIRED);
   }
 }

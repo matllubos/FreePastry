@@ -166,6 +166,10 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
     try {
       NodeIdResponseMessage rm = (NodeIdResponseMessage) getResponse(address, new NodeIdRequestMessage());
 
+//      for (int i = 0; i< 10; i++) {
+//        getResponse(address, new NodeIdRequestMessage());
+//      }
+
       return new WireNodeHandle(address, rm.getNodeId());
     } catch (IOException e) {
       System.out.println("Error connecting to address " + address + ": " + e);
@@ -203,13 +207,14 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
     InetSocketAddress address = null;
 
     synchronized (this) {
-      dManager = new DatagramManager(pn, sManager, port);
+      dManager = new DatagramManager(pn, sManager, port); 
 
       // wakeup was moved to the NeedsWakeUp interface from SelectionKeyHandler
       // it must now be explicitly registered
       sManager.registerForWakeup(dManager);
-
-      socketManager = new SocketManager(pn, port, sManager.getSelector());
+      
+      socketManager = new GlobalSocketManager(pn, port, sManager.getSelector());
+//      socketManager = new SocketManager(pn, port, sManager.getSelector());
 
       address = getAddress(port);
 
@@ -284,28 +289,61 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    * @return The response
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  protected SocketCommandMessage getResponse(InetSocketAddress address, SocketCommandMessage message) throws IOException {
-    // create reader and writer
-    SocketChannelWriter writer = new SocketChannelWriter(null, null, null);
-    SocketChannelReader reader = new SocketChannelReader(null);
+  protected SocketCommandMessage getResponse(
+    InetSocketAddress address,
+    SocketCommandMessage message)
+    throws IOException {
 
-    // bind to the appropriate port
-    SocketChannel channel = SocketChannel.open();
-    channel.configureBlocking(true);
-    channel.socket().connect(address);
-
-    writer.enqueue(message);
-    writer.write(channel);
+    SocketChannel channel = null;
     Object o = null;
+    IOException ex = null;
 
-    while (o == null) {
-      o = reader.read(channel);
+
+    try {
+
+      // create reader and writer
+      SocketChannelWriter writer =
+        new SocketChannelWriter(null, null, null);
+      SocketChannelReader reader = new SocketChannelReader(null);
+
+      Wire.acquireFileDescriptor();
+
+      // bind to the appropriate port
+      channel = SocketChannel.open();
+      channel.configureBlocking(true);
+      channel.socket().connect(address);
+
+      writer.enqueue(message);
+      writer.write(channel);
+
+      while (o == null) {
+        o = reader.read(channel);
+      }
+
+    } catch (IOException e) {
+      //e.printStackTrace();
+      ex = e;
+
+    } finally {
+
+      Wire.registerSocketChannel(channel, "getResponse("+message+")");
+
+
+      if (ex == null) {
+      } else {
+        System.out.println("not registering bogus channel:"+ex);
+      }
+
+      channel.close();
+//      channel.socket().close();
+
+      Wire.releaseFileDescriptor();
+
+      if (ex != null)
+        throw ex;
+
+      return (SocketCommandMessage) o;
     }
-
-    channel.socket().close();
-    channel.close();
-
-    return (SocketCommandMessage) o;
   }
 
   /**

@@ -163,7 +163,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
    * @param key The new SelectionKey
    * @param scm The new Key value
    */
-  public void setKey(SelectionKey key, SocketCommandMessage scm) {
+  public synchronized void setKey(SelectionKey key, SocketCommandMessage scm) {
     debug("Got new key  (state == " + state + ")");
 
     // if we're currently using UDP, accept the connection as usual
@@ -312,6 +312,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
             }
           } catch (IOException e) {
             System.out.println("IOException serializing message " + msg + " - cancelling message.");
+            e.printStackTrace();
           }
           break;
         default:
@@ -389,6 +390,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
         channel.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
         channel.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
         channel.configureBlocking(false);
+
         boolean done = channel.connect(address);
 
         debug("Opening socket to " + address);
@@ -436,6 +438,9 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
          */
       } catch (IOException e) {
         debug("IOException connecting to remote node " + address);
+        e.printStackTrace();
+        System.out.println("WireNodeHandle.connectToRemoteNode(): IOException connecting to remote node " + address);
+
 
         // mark state as TCP in order to show this was unexpeceted
         setState(STATE_USING_TCP);
@@ -463,7 +468,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
    * DisconnectMessage, the remote node will finish writing out any pending
    * objects, and then will actually disconnect the socket.
    */
-  public void disconnect() {
+  public synchronized void disconnect() {
     debug("Received disconnect request... (state == " + state + ")");
 
     if (state == STATE_USING_TCP) {
@@ -471,15 +476,6 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
 
       writer.enqueue(new DisconnectMessage());
 
-      // enqueue does this automatically
-      /*
-       *  if (((WirePastryNode) getLocalNode()).inThread()) {
-       *  enableWrite(true);
-       *  /        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-       *  } else {
-       *  ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector().wakeup();
-       *  }
-       */
     } else {
       System.out.println("Recieved disconnect request at non-connected socket - very bad... (state == " + state + ")");
     }
@@ -552,6 +548,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
       close(writer.getQueue());
     }
   }
+  
 
   /**
    * Called by the socket manager whenever there is data to be read from this
@@ -565,39 +562,46 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
       ((WirePastryNode) getLocalNode()).getSocketManager().update(this);
     }
 
-    try {
-      // inform reader that data is available
-      Object o = null;
 
-      while ((o = reader.read((SocketChannel) key.channel())) != null) {
-        if (o != null) {
-          if (o instanceof SocketCommandMessage) {
-            debug("Read socket message " + o + " - passing to node handle.");
-            receiveSocketMessage((SocketCommandMessage) o);
-          } else if (o instanceof SocketTransportMessage) {
-            SocketTransportMessage stm = (SocketTransportMessage) o;
+    // this is a hack because we may have been concurrently closed
+    SocketChannelReader tempReader = reader;
+    SocketChannelWriter tempWriter = writer;
 
-            if (stm.getDestination().equals(getLocalNode().getNodeId())) {
-              debug("Read message " + o + " - passing to pastry node.");
-              getLocalNode().receiveMessage((Message) stm.getObject());
+    if ((tempReader != null) && (tempWriter != null)) {
+      try {
+        // inform reader that data is available
+        Object o = null;
+      
+        while ((o = tempReader.read((SocketChannel) key.channel())) != null) {
+          if (o != null) {
+            if (o instanceof SocketCommandMessage) {
+              debug("Read socket message " + o + " - passing to node handle.");
+              receiveSocketMessage((SocketCommandMessage) o);
+            } else if (o instanceof SocketTransportMessage) {
+              SocketTransportMessage stm = (SocketTransportMessage) o;
+  
+              if (stm.getDestination().equals(getLocalNode().getNodeId())) {
+                debug("Read message " + o + " - passing to pastry node.");
+                getLocalNode().receiveMessage((Message) stm.getObject());
+              } else {
+                debug("Read message " + o + " at " + nodeId + " for wrong nodeId " + stm.getDestination() + " - killing connection.");
+                throw new IOException("Incoming message was for incorrect node id.");
+              }
             } else {
-              debug("Read message " + o + " at " + nodeId + " for wrong nodeId " + stm.getDestination() + " - killing connection.");
-              throw new IOException("Incoming message was for incorrect node id.");
+              throw new IllegalArgumentException("Message " + o + " was not correctly wrapped.");
             }
-          } else {
-            throw new IllegalArgumentException("Message " + o + " was not correctly wrapped.");
           }
         }
+      } catch (ImproperlyFormattedMessageException e) {
+        System.out.println("Improperly formatted message found during parsing - ignoring message... " + e);
+        tempReader.reset();
+      } catch (DeserializationException e) {
+        System.out.println("An error occured during message deserialization - ignoring message...");
+        tempReader.reset();
+      } catch (IOException e) {
+        debug("Error occurred during reading from " + address + " at " + getNodeId() + " - closing socket. " + e);
+        close(tempWriter.getQueue());
       }
-    } catch (ImproperlyFormattedMessageException e) {
-      System.out.println("Improperly formatted message found during parsing - ignoring message... " + e);
-      reader.reset();
-    } catch (DeserializationException e) {
-      System.out.println("An error occured during message deserialization - ignoring message...");
-      reader.reset();
-    } catch (IOException e) {
-      debug("Error occurred during reading from " + address + " at " + getNodeId() + " - closing socket. " + e);
-      close(writer.getQueue());
     }
   }
 
@@ -694,6 +698,22 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
    * @param newState The new State value
    */
   private void setState(int newState) {
+    if ((state == STATE_USING_UDP) && (newState == STATE_USING_TCP)) {
+      Wire.acquireFileDescriptor();
+    }
+
+    if ((newState == STATE_USING_UDP) && (state == STATE_USING_TCP)) {
+      Wire.releaseFileDescriptor();
+    }
+
+    if ((newState == STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT) && (state == STATE_USING_TCP)) {
+      Wire.releaseingFileDescriptor();
+    }
+
+    if ((newState == STATE_USING_UDP) && (state == STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT)) {
+      Wire.doneReleaseingFileDescriptor();
+    }
+
     state = newState;
     /*
      *  String newStateString = "unknown";
@@ -735,65 +755,69 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     return array.length;
   }
 
+
   /**
    * Private method used for closing the socket (if there is one present). It
    * also cancels the SelectionKey so that it is never called again.
    *
    * @param messages The messages that need to be rerouted (or null)
    */
-  private void close(Iterator messages) {
-    try {
-      debug("Closing and cleaning up socket.");
-
-      if (key != null) {
-        key.channel().close();
-        key.cancel();
-        key.attach(null);
+  private synchronized void close(Iterator messages) {
+      if (state == STATE_USING_UDP) {
+        return;
       }
-
-      // unexpected disconnect
-      if (state == STATE_USING_TCP) {
-        debug("Disconnect was unexpected - marking node as dead.");
-        ((WirePastryNode) getLocalNode()).getSocketManager().closeSocket(this);
-        markDead();
-      }
-
-      setState(STATE_USING_UDP);
-
-      if (messages != null) {
-        debug("Messages contains " + writer.queueSize() + " messages.");
-
-        Iterator i = messages;
-
-        while (i.hasNext()) {
-          Object msg = i.next();
-
-          if (msg instanceof SocketTransportMessage) {
-            SocketTransportMessage smsg = (SocketTransportMessage) msg;
-
-            // if it's a routeMessage, reroute it
-            if (smsg.getObject() instanceof RouteMessage) {
-              RouteMessage rmsg = (RouteMessage) smsg.getObject();
-              rmsg.nextHop = null;
-              getLocalNode().receiveMessage(rmsg);
-
-              debug("Rerouted message " + rmsg);
+      try {
+        debug("Closing and cleaning up socket.");
+  
+        if (key != null) {
+          key.channel().close();
+          key.cancel();
+          key.attach(null);
+        }
+  
+        // unexpected disconnect
+        if (state == STATE_USING_TCP) {
+          debug("Disconnect was unexpected - marking node as dead.");
+          ((WirePastryNode) getLocalNode()).getSocketManager().closeSocket(this);
+          markDead();
+        }
+  
+        setState(STATE_USING_UDP);
+  
+        if (messages != null) {
+          debug("Messages contains " + writer.queueSize() + " messages.");
+  
+          Iterator i = messages;
+  
+          while (i.hasNext()) {
+            Object msg = i.next();
+  
+            if (msg instanceof SocketTransportMessage) {
+              SocketTransportMessage smsg = (SocketTransportMessage) msg;
+  
+              // if it's a routeMessage, reroute it
+              if (smsg.getObject() instanceof RouteMessage) {
+                RouteMessage rmsg = (RouteMessage) smsg.getObject();
+                rmsg.nextHop = null;
+                getLocalNode().receiveMessage(rmsg);
+  
+                debug("Rerouted message " + rmsg);
+              } else {
+                debug("Dropped message " + smsg + " on floor.");
+              }
             } else {
-              debug("Dropped message " + smsg + " on floor.");
+              debug("Dropped message " + msg + " on floor.");
             }
-          } else {
-            debug("Dropped message " + msg + " on floor.");
           }
         }
+  
+        debug("Done rerouting messages...");
+        writer = null;
+        reader = null;
+      } catch (IOException e) {
+        System.out.println("IOException " + e + " disconnecting from remote node " + address);
+        markDead();
       }
-
-      debug("Done rerouting messages...");
-      writer = null;
-      reader = null;
-    } catch (IOException e) {
-      System.out.println("IOException " + e + " disconnecting from remote node " + address);
-      markDead();
-    }
   }
 
 
