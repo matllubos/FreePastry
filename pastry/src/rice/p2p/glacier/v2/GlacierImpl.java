@@ -41,9 +41,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   protected GlacierStatistics statistics;
   protected Vector listeners;
 
-  private int loglevel = 2;
+  private int loglevel = 3;
   private final boolean logStatistics = true;
-  private final boolean faultInjectionEnabled = false;
+  private final boolean faultInjectionEnabled = true;
 
   private final long SECONDS = 1000;
   private final long MINUTES = 60 * SECONDS;
@@ -276,11 +276,15 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             Id thisPos = getFragmentLocation(fkey);
             if (originalRange.containsId(thisPos)) {
               FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(fkey);
-              long currentExp = metadata.getCurrentExpiration();
-              long prevExp = metadata.getPreviousExpiration();
-              log(4, " - Adding "+fkey+" as "+fkey.getVersionKey().getId()+", ecur="+currentExp+", eprev="+prevExp);
-              bv.add(getHashInput(fkey.getVersionKey(), currentExp));
-              bv.add(getHashInput(fkey.getVersionKey(), prevExp));
+              if (metadata != null) {
+                long currentExp = metadata.getCurrentExpiration();
+                long prevExp = metadata.getPreviousExpiration();
+                log(4, " - Adding "+fkey+" as "+fkey.getVersionKey().getId()+", ecur="+currentExp+", eprev="+prevExp);
+                bv.add(getHashInput(fkey.getVersionKey(), currentExp));
+                bv.add(getHashInput(fkey.getVersionKey(), prevExp));
+              } else {
+                warn("Cannot read metadata of object "+fkey.toStringFull()+", storage returned null");
+              }
             }
           }
 
@@ -944,7 +948,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   }
 
   private void log(int level, String str) {
-    if (level <= loglevel)
+    if (level <= loglevel) 
       System.out.println(getLogPrefix() + level + " " + str);
   }
 
