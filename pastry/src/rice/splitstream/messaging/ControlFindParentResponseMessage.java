@@ -119,11 +119,15 @@ public class ControlFindParentResponseMessage extends Message
         }
         else
 	    {
-		if(checkFinalTry()){
+		Channel channel = stripe.getChannel();
+		int num_fails = stripe.num_fails;
+		int max_fails = channel.getMaxTimeout();
+		
+		if(max_fails > 0 && num_fails < max_fails)
+		    stripe.setIgnoreTimeout( false );
+		else if(checkFinalTry()){
 		    System.out.println("CFPResponse -- failed, should retry. Source "+source.getNodeId()+" Topic "+stripe.getStripeId());
 		    
-		    Channel channel = stripe.getChannel();
-		    int num_fails = stripe.num_fails;
 		    Credentials c = new PermissiveCredentials();
 		    
 		    // Policy for handling failures in FindParentMessage
@@ -142,11 +146,11 @@ public class ControlFindParentResponseMessage extends Message
 		    scribe.anycast(stripe.getStripeId(), cffpMsg, c);
 
 		    ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( SplitStreamAddress.instance(),
-                                                                                      num_fails+1,
+                                                                                      0,//num_fails+1,
                                                                                       stripe.getStripeId(),
                                                                                       c,
 										      channel_id );
-		    stripe.num_fails = num_fails + 1;
+		    stripe.num_fails = 0;
                     scribe.getPastryNode().scheduleMsg( timeoutMessage, channel.getTimeoutLen() );
 		    stripe.setIgnoreTimeout( false );
 		}
