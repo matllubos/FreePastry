@@ -55,13 +55,17 @@ import rice.persistence.*;
  */
 public class StorageTest extends Test {
   
-  private Storage storage;
+  protected Storage storage;
+
+  protected boolean store;
 
   /**
    * Builds a MemoryStorageTest
    */
-  public StorageTest() {
+  public StorageTest(boolean store) {
     storage = new MemoryStorage();
+
+    this.store = store;
   }
 
   public void setUp(final Continuation c) {
@@ -270,8 +274,12 @@ public class StorageTest extends Test {
         stepException(e);
       }
     };
- 
-    setUp(get0);
+
+    if (store) {
+      setUp(get0);
+    } else {
+      get0.receiveResult(new Boolean(true));
+    }
   }
 
   public void testExists(final Continuation c) {
@@ -798,7 +806,7 @@ public class StorageTest extends Test {
   }
 
   public static void main(String[] args) {
-    StorageTest test = new StorageTest();
+    StorageTest test = new StorageTest(true);
 
     test.start();
   }
