@@ -133,8 +133,12 @@ public class Visualization {
   public void setHighlighted(Node node, Ring ring) {
     if ((highlightedNode != node) || (highlightedRing != ring)) {
       highlightedNode = node;
-      highlightedRing = ring;
-      frame.nodeHighlighted(node);
+      highlightedRing = ring;      
+      try {
+        frame.nodeHighlighted(node);
+      } catch (NullPointerException npe) {
+        System.out.println("ERROR: Visualization.setHighlighted() frame == null!!!");
+      }
     }
   }
   
