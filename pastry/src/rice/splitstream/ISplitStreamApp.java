@@ -4,6 +4,7 @@ package rice.splitstream;
  * This interface allows an application running on top of SplitStream 
  * to be notified of events.
  *
+ * @version $Id$
  * @author Ansley Post
  */
  public interface ISplitStreamApp{
