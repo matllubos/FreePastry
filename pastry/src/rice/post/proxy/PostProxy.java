@@ -10,7 +10,6 @@ import rice.pastry.standard.*;
 
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
-import rice.p2p.past.gc.*;
 import rice.p2p.multiring.*;
 
 import rice.persistence.*;
