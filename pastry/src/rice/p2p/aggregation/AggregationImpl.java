@@ -123,6 +123,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   protected Id rootKey;
   protected int expirationCounter;
   protected Continuation flushWait;
+  protected boolean rebuildInProgress;
 
   private final int loglevel = 3;
 
@@ -162,6 +163,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     this.factory = factory;
     this.expirationCounter = 1;
     this.flushWait = null;
+    this.rebuildInProgress = false;
     this.debugID = "A" + Character.toUpperCase(instance.charAt(instance.lastIndexOf('-')+1));
 
     readAggregateList();
@@ -439,7 +441,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
     if ((cmd.length() >= 2) && cmd.substring(0, 2).equals("ls")) {
       Enumeration enum = aggregateList.elements();
-      String result = "";
+      StringBuffer result = new StringBuffer();
       int numAggr = 0, numObj = 0;
 
       long now = System.currentTimeMillis();
@@ -450,27 +452,27 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       while (enum.hasMoreElements()) {
         AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
         if (!aggr.marker) {
-          result = result + "***" + aggr.key.toStringFull() + " (" + aggr.objects.length + " obj, " + 
+          result.append("***" + aggr.key.toStringFull() + " (" + aggr.objects.length + " obj, " + 
                    aggr.pointers.length + " ptr, " + aggr.referenceCount + " ref, exp=" + 
-                   (aggr.currentLifetime - now) + ")\n";
+                   (aggr.currentLifetime - now) + ")\n");
           for (int i=0; i<aggr.objects.length; i++)
-            result = result + "    #"+i+" "+
+            result.append("    #"+i+" "+
               aggr.objects[i].key.toStringFull()+"v"+aggr.objects[i].version +
               ", lt=" + (aggr.objects[i].currentLifetime-now) +
               ", rt=" + (aggr.objects[i].refreshedLifetime-now) +
-              ", size=" + aggr.objects[i].size + " bytes\n";
+              ", size=" + aggr.objects[i].size + " bytes\n");
           for (int i=0; i<aggr.pointers.length; i++) 
-            result = result + "    Ref "+aggr.pointers[i].toStringFull()+"\n";
-          result = result + "\n";
+            result.append("    Ref "+aggr.pointers[i].toStringFull()+"\n");
+          result.append("\n");
           aggr.marker = true;
           numAggr ++;
           numObj += aggr.objects.length;
         }
       }
 
-      result = result + numAggr + " aggregate(s), " + numObj + " object(s)";
+      result.append(numAggr + " aggregate(s), " + numObj + " object(s)");
       
-      return result;
+      return result.toString();
     }
 
     if ((cmd.length() >= 10) && cmd.substring(0, 10).equals("write list")) {
@@ -1135,6 +1137,12 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
 
   private void reconnectTree() {
+  
+    if (rebuildInProgress) {
+      log(2, "Skipping connectivity check (rebuild in progress)");
+      return;
+    }
+  
     log(2, "Checking for disconnections");
     
     Id[] disconnected = getSomePointers(1);
@@ -1357,14 +1365,14 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       command.receiveException(new AggregationException("Illegal handle"));
       return;
     }
-      
-    Id newRoot = (Id) handle;
-    if (!newRoot.equals(rootKey)) {
-      rootKey = newRoot;
-      rebuildAggregateList(command);
-    } else {
+    
+    if (aggregateList.get((Id) handle) != null) {
+      log(2, "Rebuild: Handle "+handle+" is already covered by current root");
       command.receiveResult(new Boolean(true));
     }
+      
+    rootKey = (Id) handle;
+    rebuildAggregateList(command);
   }
 
   private void rebuildAggregateList(final Continuation command) {
@@ -1378,6 +1386,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     final Vector keysToDo = new Vector();
     final Vector keysDone = new Vector();
     keysToDo.add(rootKey);
+    rebuildInProgress = true;
     
     log(3, "Rebuild: Fetching handles for aggregate " + rootKey.toStringFull());
     aggregateStore.lookupHandles(rootKey, 999, new Continuation() {
@@ -1445,6 +1454,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                   } else {
                     recalculateReferenceCounts();
                     writeAggregateList();
+                    rebuildInProgress = false;
                     command.receiveResult(new Boolean(true));
                   }
                 } else {
@@ -1475,10 +1485,12 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
           aggregateStore.lookupHandles(currentLookup, 999, this);
         } else {
           if (aggregateList.isEmpty()) {
+            rebuildInProgress = false;
             command.receiveException(new AggregationException("Cannot read root aggregate! -- retry later"));
           } else {
             recalculateReferenceCounts();
             writeAggregateList();
+            rebuildInProgress = false;
             command.receiveResult(new Boolean(true));
           }
         }
