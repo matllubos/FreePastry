@@ -74,14 +74,18 @@ public class Channel {
    */
   protected Stripe[] stripes;
 
-    protected Id localId;
+  /**
+   * The Id of the local node
+   */
+  protected Id localId;
 
   /**
    * Constructor to create a new channel from scratch
    *
-   * @param splitStream the splitStream instance for this node
-   * @param channelId DESCRIBE THE PARAMETER
-   * @param scribe DESCRIBE THE PARAMETER
+   * @param channelId The Id of the channel
+   * @param scribe The underlying stripe object
+   * @param factory The Id factory
+   * @param localId The local Id
    */
   public Channel(ChannelId channelId, Scribe scribe, IdFactory factory, Id localId) {
 
@@ -103,16 +107,16 @@ public class Channel {
     for (int i = 0; i < stripeIds.length; i++) {
       stripes[i] = new Stripe(stripeIds[i], scribe, this);
     }
-
-    
   }
 
-    /**
-     * Gets the local node id.
-     */
-    public Id getLocalId(){
-	return localId;
-    }
+  /**
+   * Gets the local node id.
+   *
+   * @return The local node id
+   */
+  public Id getLocalId(){
+    return localId;
+  }
 
   /**
    * Gets the channelId for this channel
@@ -139,12 +143,12 @@ public class Channel {
    * @return Stripe The Stripe object that is the primary stripe.
    */
   protected Stripe getPrimaryStripe() {
-      for(int i = 0; i < stripes.length; i++){
-	  if(SplitStreamScribePolicy.getPrefixMatch(this.localId, stripes[i].getStripeId().getId()) > 0)
-	      return stripes[i];
-      }
+    for(int i = 0; i < stripes.length; i++) {
+      if (SplitStreamScribePolicy.getPrefixMatch(this.localId, stripes[i].getStripeId().getId()) > 0)
+        return stripes[i];
+    }
+    
     return null;
-    //INSERT LOGIC HERE
   }
 
   /**
@@ -191,26 +195,33 @@ public class Channel {
     int x = 8;
     BigInteger bNum2 = new BigInteger(x + "");
     bNum2 = bNum2.shiftLeft(length-base);
-    for(int i = length-1; i>length-base; i--){
-	if(bNum2.testBit(i)){
-	    bArray = bArray.setBit(i - base);
-	}else{
-	    bArray = bArray.clearBit(i - base);
-	}
-    }
     
+    for(int i = length-1; i>length-base; i--){
+      if(bNum2.testBit(i)) {
+        bArray = bArray.setBit(i - base);
+      } else {
+        bArray = bArray.clearBit(i - base);
+      }
+    }
+
     byte[] newArray = bArray.toByteArray();
     byte[] result = new byte[array.length];
-    
+
     if (newArray.length <= array.length) {
       System.arraycopy(newArray, 0, result, result.length-newArray.length, newArray.length);
     } else {
       System.arraycopy(newArray, newArray.length-array.length, result, 0, array.length);
     }
-    
+
     return switchEndian(result);
   }
 
+  /**
+   * Switches the endianness of the array
+   *
+   * @param array The array to switch
+   * @return THe switched array
+   */
   private static byte[] switchEndian(byte[] array) {
     byte[] result = new byte[array.length];
 

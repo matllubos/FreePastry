@@ -264,7 +264,7 @@ public class Stripe implements ScribeClient {
      * @return Dumps the path.
      */
     public void printPath(){
-	((ScribeImpl)this.scribe).printPathToRoot(topic);
+	//((ScribeImpl)this.scribe).printPathToRoot(topic);
     }
 }
 
