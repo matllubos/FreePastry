@@ -61,6 +61,13 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
     protected InetSocketAddress address;
 
     /**
+     * a unique number matching the liveness of this node
+     * this number will be different each time the process is run, but the NodeId
+     * can be the same.
+     */
+    protected int epoch;
+
+    /**
      * Constructor
      *
      * @param nodeId This node handle's node Id.
@@ -68,6 +75,7 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
     public DistNodeHandle(NodeId nodeId, InetSocketAddress address) {
       this.nodeId = nodeId;
       this.address = address;
+      epoch = new Random().nextInt();
     }
 
     /**
