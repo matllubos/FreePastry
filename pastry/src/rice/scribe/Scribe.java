@@ -273,6 +273,16 @@ public class Scribe extends PastryAppl implements IScribe
 	m_distinctChildrenTable = new Hashtable();
 	m_distinctParentTable = new Hashtable();
 	m_alreadySentHBNodes = new HashSet();
+
+	/* If the node is already up, then the application should itself
+	 * start the maintenance thread "here", otherwise its started in 
+	 * notifyReady().
+	 */
+	if(pn.isReady()){
+	    if(thePastryNode instanceof DistPastryNode) {
+		new Thread(new DistScribeMaintenanceThread(this, 10)).start();
+	    } 
+	}
     }
 
     /**
