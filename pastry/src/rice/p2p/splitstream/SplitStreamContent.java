@@ -14,6 +14,8 @@ import rice.p2p.scribe.*;
  */
 public class SplitStreamContent implements ScribeContent {
 
+    public static final int STAGE_FINAL = 3;
+
   /**
    * The internal data - just the bytes
    */
@@ -27,14 +29,10 @@ public class SplitStreamContent implements ScribeContent {
   public SplitStreamContent(byte[] data) {
     this.data = data;
   }
-
-    protected Id leafToDrop = null;
-
-    protected NodeHandle originator = null;
+    protected int stage = 0;
     
-    public SplitStreamContent(Id leafToDrop, NodeHandle originator){
-	this.leafToDrop = leafToDrop;
-	this.originator = originator;
+    public SplitStreamContent(int val){
+	this.stage = val;
     }
 
   /**
@@ -46,11 +44,8 @@ public class SplitStreamContent implements ScribeContent {
     return data;
   }
 
-    public Id getLeafToDrop(){
-	return leafToDrop;
-    }
-    public NodeHandle getOriginator(){
-	return originator;
+    public int getStage(){
+	return stage;
     }
 }
 

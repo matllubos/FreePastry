@@ -87,7 +87,8 @@ public class SplitStreamRegrTest extends CommonAPITest {
     // Run each test
     testBasic();
     testBandwidthUsage();
-    testIndependence();
+    //testIndependence();
+    testMaintenance(NUM_NODES/10);
   }
 
     protected void testBandwidthUsage(){
@@ -143,6 +144,41 @@ public class SplitStreamRegrTest extends CommonAPITest {
 	sectionDone();
     }
 
+    protected void testMaintenance(int num){
+	sectionStart("Maintenance of multicast trees");
+	stepStart("Killing Nodes");
+	for(int i = 0; i < num; i++){
+	    System.out.println("Killing "+ssclients[i].getId());
+	    kill(i);
+	    simulate();
+	}
+	stepDone(SUCCESS);
+	stepStart("Tree Recovery");
+
+	
+	byte[] data = {0,1,0,1,1};
+	for(int i = 0; i < 10; i++){
+	    ssclients[rng.nextInt(NUM_NODES - num) + num].publishAll(data);
+	    simulate();
+	}
+
+	int totalmsgs = 0;
+	for(int i = 0; i < NUM_NODES - num; i++){
+	    totalmsgs = totalmsgs + ssclients[i+num].getNumMesgs(); 
+	    if(ssclients[i+num].getNumMesgs() != 16 * 10)
+		System.out.println(ssclients[i+num].getId()+" recived "+ssclients[i+num].getNumMesgs());
+	    ssclients[i+num].reset();
+	}
+	
+	if(totalmsgs == ((NUM_NODES - num) * 16 * 10)){
+	    stepDone(SUCCESS);
+	}
+	else{
+	    stepDone(FAILURE, "Expected " + ((NUM_NODES - num) * 16 * 10) + " messages, got " + totalmsgs);
+	}
+	sectionDone();
+    }
+
   /*
    *  ---------- Test methods and classes ----------
    */
@@ -181,6 +217,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
      int totalmsgs = 0;
      for(int i = 0; i < NUM_NODES; i++){
         totalmsgs = totalmsgs + ssclients[i].getNumMesgs(); 
+	ssclients[i].reset();
      }
 
      if(totalmsgs == (NUM_NODES * 16 * 2)){
@@ -295,6 +332,13 @@ public class SplitStreamRegrTest extends CommonAPITest {
      return numMesgsReceived;
    }
 
+      public void reset(){
+	  numMesgsReceived = 0;
+      }
+      
+      public Id getId(){
+	  return channel.getLocalId();
+      }
    private void log(String s){
       //System.out.println("" + n + " " + s);
    }

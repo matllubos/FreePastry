@@ -41,6 +41,8 @@ public class SplitStreamScribePolicy implements ScribePolicy {
    */
   protected Hashtable policy;
 
+    Random rng = new Random(PastrySeed.getSeed());
+    
 
   /**
    * Constructor which takes a splitStream object
@@ -94,10 +96,26 @@ public class SplitStreamScribePolicy implements ScribePolicy {
       Channel channel = getChannel(message.getTopic());
       NodeHandle newChild = (NodeHandle)message.getSubscriber();
       
-
+      // first see if we are in the 3rd stage of algorithm for locating parent.
+      ScribeContent content = message.getContent();
+      if(content != null && (content instanceof SplitStreamContent)){
+	  int stage = ((SplitStreamContent)content).getStage();
+	  if(stage == SplitStreamContent.STAGE_FINAL){
+	      System.out.println("Stage "+stage);
+	      List list = Arrays.asList(children);
+	      if(!list.contains(message.getSource())){
+		  System.out.println("CHAOS :: sending drop message to "+message.getSource()+" a node which is not our child, at "+channel.getLocalId());
+		  return false;
+	      }
+	      else{
+		  this.scribe.removeChild(message.getTopic(), message.getSource());
+		  return true;
+	      }
+	  }
+      }
+      
 
       if(canTakeChild(channel)){
-	  //System.out.println("Accepting request from "+newChild.getId()+" at "+channel.getLocalId()+" for "+message.getTopic().getId());
 	  return true;
       }
       else{
@@ -105,7 +123,6 @@ public class SplitStreamScribePolicy implements ScribePolicy {
 	      return false;
 	  else{
 	      NodeHandle victimChild = freeBandwidth(channel, newChild, message.getTopic().getId());
-	      //System.out.println("Received subscription from "+newChild.getId()+" at "+channel.getLocalId()+" victim child "+victimChild.getId()+" for stripe "+message.getTopic().getId()+" getTotalChildren "+getTotalChildren(channel));
 	      if(victimChild.getId().equals(newChild.getId()))
 		  return false;
 	      else{
@@ -127,22 +144,38 @@ public class SplitStreamScribePolicy implements ScribePolicy {
   public void directAnycast(AnycastMessage message, NodeHandle parent, NodeHandle[] children) {
     message.addFirst(parent);
 
+
     // NEED TO ADD CHILDREN/PARENTS SELECTIVELY HERE
+    Vector good = new Vector();
+    Vector bad = new Vector();
     for (int i=0; i<children.length; i++) {
 	if(SplitStreamScribePolicy.getPrefixMatch(message.getTopic().getId(), children[i].getId()) > 0)
-	    message.addFirst(children[i]);
+	    good.add(children[i]);
 	else
-	    message.addLast(children[i]);
+	    bad.add(children[i]);
     }
+    int index;
+    while(good.size() > 0){
+	index = rng.nextInt(good.size());
+	message.addFirst((NodeHandle)(good.elementAt(index)));
+	good.remove((NodeHandle)(good.elementAt(index)));
+    }
+    while(bad.size() > 0){
+	index = rng.nextInt(bad.size());
+	message.addLast((NodeHandle)(bad.elementAt(index)));
+	bad.remove((NodeHandle)(bad.elementAt(index)));
+    }
+
 
     NodeHandle nextHop = message.getNext();
     if(message instanceof SubscribeMessage){
 	if(nextHop == null){
-	// If yes, then we are in 3rd stage of our algorithm
+	    // If yes, then we are in 3rd stage of our algorithm
 	    // need to remove myself from the parent
-	    //System.out.println(" source "+message.getSource().getId()+" for stripe "+message.getTopic().getId()+" at "+getChannel(message.getTopic()).getLocalId());
-	    System.exit(1);
-	    SplitStreamContent ssc = new SplitStreamContent(getChannel(message.getTopic()).getLocalId(), ((SubscribeMessage)message).getSubscriber());
+	    System.out.println(" **** 3rd Stage : source "+((SubscribeMessage)message).getSubscriber().getId()+" for stripe "+message.getTopic().getId()+" at "+getChannel(message.getTopic()).getLocalId()+" parent "+parent);
+	    //System.exit(1);
+	    //SplitStreamContent ssc = new SplitStreamContent(getChannel(message.getTopic()).getLocalId(), ((SubscribeMessage)message).getSubscriber());
+	    SplitStreamContent ssc = new SplitStreamContent(SplitStreamContent.STAGE_FINAL);
 	    message.remove(parent);
 	    message.addFirst(parent);
 	    message.setContent(ssc);
@@ -216,14 +249,7 @@ public class SplitStreamScribePolicy implements ScribePolicy {
          * to use 
          */
 	Stripe primaryStripe = channel.getPrimaryStripe();
-	Stripe[] stripes = channel.getStripes();
-	Vector candidateStripes = new Vector();
-	Random rng = new Random(PastrySeed.getSeed());
 	Id localId = channel.getLocalId();
-	NodeHandle victimChild;
-	Id victimStripeId;
-	
-	Vector returnVector;
 
 	if(!stripeId.equals(primaryStripe.getStripeId().getId()))
 	    System.exit(1);
@@ -235,113 +261,21 @@ public class SplitStreamScribePolicy implements ScribePolicy {
 	// node. 
 	
 	int minPrefixMatch;
-	int minPrefixMatchIndex = -1;
-	
 	minPrefixMatch = getPrefixMatch(stripeId, newChild.getId());
 	
 	Vector victims = new Vector();
 	for(int j = 0; j < children.length; j++){
 	    NodeHandle c = (NodeHandle)children[j];
 	    int match = getPrefixMatch(stripeId, c.getId());
-	    //System.out.println("min "+minPrefixMatch +", match "+match+" for child "+c.getId()+" for topic "+stripeId +" new child "+newChild.getId());
 	    if(match < minPrefixMatch){
-		//minPrefixMatch = match;
-		//minPrefixMatchIndex = j;
 		victims.addElement(c);
 	    }
 	}
-	/*
-	if(minPrefixMatchIndex == -1)
-	    victimChild = newChild;
-	else
-	    victimChild = (NodeHandle)children[minPrefixMatchIndex];
-	*/
+
 	if(victims.size() == 0)
 	    return newChild;
 	else
 	    return (NodeHandle)victims.elementAt(rng.nextInt(victims.size()));
-	//return victimChild;
-	/** 
-	 * Go through all non-primary stripes and find all stripes
-	 * for which local node has children, these stripes are
-	 * favorite candidates for dropping children.
-	 */
-	//System.out.println("Primary stripe "+primaryStripe.getStripeId()+" new child "+newChild.getId()+" localId "+localNodeId);
-
-	/*
-	if(!primaryStripe.getStripeId().getId().equals(stripeId)){
-	    victimChild = newChild;
-	    victimStripeId = stripeId;
-	}
-	else {
-	    for(int i = 0; i < stripes.length; i++){
-		//System.out.println("\nComparing stripe "+stripes[i].getStripeId()+" with primary "+primaryStripe.getStripeId()+" children  "+scribe.getChildren(new Topic(stripes[i].getStripeId().getId())).length);
-		if(!stripes[i].getStripeId().getId().equals(primaryStripe.getStripeId().getId())
-		   && scribe.getChildren(new Topic(stripes[i].getStripeId().getId())).length > 0){
-		    candidateStripes.addElement(stripes[i].getStripeId().getId());
-		    //System.out.println("Candidate stripe "+stripes[i].getStripeId()+", children "+scribe.getChildren(new Topic(stripes[i].getStripeId().getId())).length +" new child "+newChild.getId()+" localId "+localNodeId);
-		}
-	    }
-	    //System.exit(1);
-	    
-	    
-	    
-	    if(candidateStripes.size() > 0){
-		// There is at least one non-primary stripe for which
-		// local node has children, hence can drop one of its child
-		// Randomly select one such non-primary stripe.
-		
-		if(candidateStripes.contains(stripeId)){
-		    victimChild = newChild;
-		    victimStripeId = stripeId;
-		}
-		else {
-		    
-		    int j = rng.nextInt(candidateStripes.size());
-		    NodeHandle[] children = scribe.getChildren(new Topic((Id)candidateStripes.elementAt(j)));
-		    
-		    // Now randomly select one of its child.
-		    //System.out.println("Children length "+children.length+" candidate stripe "+stripes[j].getStripeId());
-		    int k = rng.nextInt(children.length);
-		    victimChild = (NodeHandle)children[k];
-		    victimStripeId = (Id)candidateStripes.elementAt(j);
-		}
-	    }
-	    else {
-		
-		
-		
-		// We have to drop one of child of the primary stripe.
-		NodeHandle[] children = scribe.getChildren(new Topic(primaryStripe.getStripeId().getId()));
-		
-		// Now, select that child which doesnt share least prefix with local
-		// node. 
-		
-		int minPrefixMatch;
-		int minPrefixMatchIndex = -1;
-		
-		minPrefixMatch = getPrefixMatch(localNodeId, newChild.getId());
-		
-		for(int j = 0; j < children.length; j++){
-		    NodeHandle c = (NodeHandle)children[j];
-		    int match = getPrefixMatch(localNodeId, c.getId());
-		    if(match < minPrefixMatch){
-			minPrefixMatch = match;
-			minPrefixMatchIndex = j;
-		    }
-		}
-		if(minPrefixMatchIndex == -1)
-		    victimChild = newChild;
-		else
-		    victimChild = (NodeHandle)children[minPrefixMatchIndex];
-		victimStripeId = primaryStripe.getStripeId().getId();
-	    }
-	}
-	returnVector = new Vector();
-	returnVector.add(victimChild);
-	returnVector.add(victimStripeId);
-	return returnVector;
-	*/
     }
     
 

@@ -152,21 +152,7 @@ public class Stripe implements ScribeClient {
    * @return Whether or not the anycast should continue
    */
   public boolean anycast(Topic topic, ScribeContent content) {
-      System.out.println("Anycast handler");
-      System.exit(1);
-      if(this.topic.equals(topic)){
-	  if(content instanceof SplitStreamContent){
-	      Id leafToDrop = ((SplitStreamContent)content).getLeafToDrop();
-	      NodeHandle originator = ((SplitStreamContent)content).getOriginator();
-	      // we are in 3rd stage of algorithm for locating a parent
-	      NodeHandle[] children = scribe.getChildren(topic);
-	      for(int i = 0; i < children.length; i++)
-		  if(((NodeHandle)children[i]).getId().equals(leafToDrop))
-		      this.scribe.removeChild(topic, (NodeHandle)children[i]);
-	      this.scribe.addChild(topic, originator);
-	  }
-      }
-    return false;
+      return false;
   }
 
   /**
