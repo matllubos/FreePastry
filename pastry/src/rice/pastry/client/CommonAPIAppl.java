@@ -333,18 +333,21 @@ public abstract class CommonAPIAppl extends PastryAppl
 	    if (rm.nextHop != null) {
 		NodeHandle nextHop = rm.nextHop;
 
-		// route the message
-		rm.routeMessage(getNodeId());
-		
 		// if the message is for the local node, deliver it here
-		if (getNodeId().equals(nextHop.getNodeId()))
+		if (getNodeId().equals(nextHop.getNodeId())) {
 		    deliver(rm.getTarget(), rm.unwrap());
+		}
+		else {
+		    // route the message
+		    rm.routeMessage(getNodeId());
+		}
+		
 	    }
 	}
 	else {
-	    // if the message is not a RouteMessage, then it is for the local node
-	    // we ignore this and instead deliver the message above, 
-	    // because deliver requires access to the message's key
+	    // if the message is not a RouteMessage, then it is for the local node and 
+	    // was sent with a PastryAppl.routeMsgDirect(); we deliver it for backward compatibility
+	    deliver(null, msg);
 	}
     }
 
