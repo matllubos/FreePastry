@@ -30,12 +30,6 @@ public class Channel extends PastryAppl implements IScribeApp {
     private ChannelId channelId = null;
 
     /**
-     * The number of stripes in this channel the node is currently
-     * subscribed to.
-     */
-    private int numSubscribedStripes = 0;
-
-    /**
      * The Node id the spare capacity tree is rooted at.
      */
     private SpareCapacityId spareCapacityId = null;
@@ -111,7 +105,6 @@ public class Channel extends PastryAppl implements IScribeApp {
         /* This method should probably broken down into smaller sub methods */
  	super(node);	
         
-        this.numSubscribedStripes = numStripes;
 	this.scribe = scribe;
 	this.bandwidthManager = bandwidthManager;
 	this.numStripes = numStripes;
