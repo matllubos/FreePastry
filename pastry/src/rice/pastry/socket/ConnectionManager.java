@@ -1363,7 +1363,7 @@ public class ConnectionManager {
 	      pingManager.forcePing(snh, this);
 			} else {
 			  // we're about to be collected
-			  System.out.println("Connection manager has no node handle1.");	
+//			  System.out.println("Connection manager has no node handle1.");	
 			}
     }
     
@@ -1467,7 +1467,7 @@ public class ConnectionManager {
 	        schedule(powerOffset);
         } else {
           // we're about to be collected
-  			  System.out.println("Connection manager has no node handle2.");	
+//  			  System.out.println("Connection manager has no node handle2.");	
         }
       } else {
         markDead();
@@ -1721,7 +1721,7 @@ public class ConnectionManager {
    * needs to close down remaining connections
    */
 	protected void finalize() throws Throwable {
-    //if (LOG_LOW_LEVEL)
+    if (LOG_LOW_LEVEL)
       System.out.println(this+"CM.finalize()");
     close();
 		super.finalize();

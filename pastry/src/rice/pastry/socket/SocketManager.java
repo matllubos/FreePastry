@@ -671,6 +671,9 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
         if (connectionManager != null) {
           connectionManager.receiveMessage(message);
         } else if (address != null) {
+          if (ctor != 3) {
+            Thread.dumpStack();
+          }
           scm.pastryNode.receiveMessage(message);
         } else {
           System.out.println("SERIOUS ERROR: Received no address assignment, but got message " + message);

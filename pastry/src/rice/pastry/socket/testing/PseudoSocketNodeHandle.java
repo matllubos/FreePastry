@@ -35,4 +35,8 @@ public class PseudoSocketNodeHandle implements Serializable {
 		throw new RuntimeException("equals not supported");
   }
 
+  public String toString() {
+    return "[PSNH: " + id + "@" + epoch + "]";
+  }
+
 }

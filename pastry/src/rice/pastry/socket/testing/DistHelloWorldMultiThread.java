@@ -93,21 +93,21 @@ public class DistHelloWorldMultiThread {
   private static int port = 5009;
   private static String bshost = null;
   private static int bsport = 5009;
-  private static int numnodes = 10;
+  private static int numnodes = 30;
   private static int nummsgs = 50;
   public static int protocol = DistPastryNodeFactory.PROTOCOL_SOCKET;
   private static boolean toFile = true;
-  private static boolean useKill = false;
+  private static boolean useKill = true;
   private static boolean useRegen = true;
   private static boolean oneThreadPerMessage = false;
   public static boolean useDirect = true;
   private static boolean limitedSockets = true; 
   public static boolean useNonDirect = true; 
-  public static boolean useRandChoices = false;
-  public static boolean testSelector = false;
+  public static boolean useRandChoices = true;
+  public static boolean testSelector = true;
   public static boolean printConnectionManagers = false;
-  static int NUM_ITERS = 1000;
-  public static int numSockets = 8;
+  static int NUM_ITERS = 30;
+  public static int numSockets = 10;
 
   
   public static DistPastryNodeFactory getSameFactory() {
@@ -491,11 +491,12 @@ public class DistHelloWorldMultiThread {
                   if (m.getIntermediateSource().equals(snh)) { // the last known sender is dead
                     missing = false;
                   }
-                  if (m.getNextHop().equals(snh)) { // the intended receiver is dead
+                  if ((m.getNextHop() == null) || (m.getNextHop().equals(snh))) { // the intended receiver is dead
                     missing = false;
                   }
                 } else { // we're not using direct, and we got an ack and the lastNexthop is now dead
-                  if (m.getNextHop().equals(snh)) {
+                  if ((m.getNextHop() == null) || (m.getNextHop().equals(snh))) { // the intended receiver is dead
+//                  if (m.getNextHop().equals(snh)) {
                     missing = false;
                   }                  
                 }
@@ -521,6 +522,7 @@ public class DistHelloWorldMultiThread {
               }
           } else {
             numMissing++;
+            if (m.messageDirect) numMissingDirect++;
             System.out.println("  Missing msg: " + m.getInfo());
           }
         }
@@ -618,13 +620,14 @@ public class DistHelloWorldMultiThread {
           useDirect = rng.nextBoolean();
           useNonDirect = rng.nextBoolean();
           useRegen = rng.nextBoolean();
+          useKill = rng.nextBoolean();
         }
         if (limitedSockets)
   				SocketPoolManager.MAX_OPEN_SOCKETS = numSocks;
         else 
           SocketPoolManager.MAX_OPEN_SOCKETS = defautltMaxOpenSockets;
           
-				curStat = new Stat(SocketPoolManager.MAX_OPEN_SOCKETS, numnodes, useDirect, useNonDirect, useRegen);
+				curStat = new Stat(SocketPoolManager.MAX_OPEN_SOCKETS, numnodes, useDirect, useNonDirect, useRegen, useKill);
         System.out.println(" running with "+curStat);
 				stats.add(curStat);
         
@@ -868,15 +871,16 @@ class Stat {
   public long lsCompleteTime;
   public long startTime;
   public long endTime;
-  boolean useDirect, useNonDirect, useRegen;
+  boolean useDirect, useNonDirect, useRegen, useKill;
   int numMissing = 0;
   
-  public Stat(int numS, int numN, boolean useDirect, boolean useNonDirect, boolean useRegen) {
+  public Stat(int numS, int numN, boolean useDirect, boolean useNonDirect, boolean useRegen, boolean useKill) {
     numSocks = numS;
     numNodes = numN;
     this.useDirect = useDirect;
     this.useNonDirect = useNonDirect;
     this.useRegen = useRegen;
+    this.useKill = useKill;
     startTime = System.currentTimeMillis();
   }
   
@@ -892,7 +896,7 @@ class Stat {
   public String toString() {
     long t = endTime-startTime;
     long t2 = lsCompleteTime-startTime;
-    return "numNodes:"+numNodes+" numSocks:"+numSocks +" timeFinishedCreating:"+t2+" timeFinished:"+t+" useDirect:"+useDirect+" useNonDirect:"+useNonDirect+" useRegen:"+useRegen+" numMissing:"+numMissing;
+    return "numNodes:"+numNodes+" numSocks:"+numSocks +" timeFinishedCreating:"+t2+" timeFinished:"+t+" useDirect:"+useDirect+" useNonDirect:"+useNonDirect+" useRegen:"+useRegen+" useKill:"+useKill+" numMissing:"+numMissing;
   }
 }
 

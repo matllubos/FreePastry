@@ -262,6 +262,7 @@ public class SocketNodeHandle extends DistNodeHandle {
     if (getLocalNode() == null) {
       return "[SNH: " + nodeId + "@" + epoch+ "/" + address + "]";
     } else {
+//      Thread.dumpStack();
       return "[SNH: " + getLocalNode().getNodeId() + " -> " + nodeId + "@" + epoch + "/" + address + "]";
     }
   }

@@ -384,11 +384,11 @@ public class SocketCollectionManager {
    * @return The list of all open sockets
    */
   public String toString() {
-    String result = "";
+    String result = "SCM:";
 
     Iterator i = connections.keySet().iterator();
     while (i.hasNext()) {
-      result += i.next().toString() + "\n";
+      result += "  "+i.next().toString() + "\n";
     }
 
     return result;
@@ -419,9 +419,9 @@ public class SocketCollectionManager {
     }
   }
   
-	protected void finalize() throws Throwable {
-    System.out.println(this+".finalize()");
-		super.finalize();
-	}
+//	protected void finalize() throws Throwable {
+//    System.out.println(this+"SCM.finalize()");
+//		super.finalize();
+//	}
 
 }
