@@ -129,7 +129,7 @@ public class HelloWorldApp extends PastryAppl {
      */
     public boolean enrouteMessage(Message msg, NodeId key, NodeId nextHop, SendOptions opt) {
 	if (Log.ifp(5))
-	    System.out.println("Enroute: " + msg + " at " + getNodeId());
+	    System.out.println("Hello: Enroute " + msg + " at " + getNodeId());
 	return true;
     }
 

@@ -64,7 +64,7 @@ import java.rmi.RemoteException;
 
 public class RMIPastryRegrTest extends PastryRegrTest {
     private static int port = 5009;
-    private static String bshost = "thor03";
+    private static String bshost = null;
     private static int bsport = 5009;
     private static int numnodes = 1;
 
@@ -206,6 +206,7 @@ public class RMIPastryRegrTest extends PastryRegrTest {
 	    java.rmi.registry.LocateRegistry.createRegistry(port);
 	} catch (RemoteException e) {
 	    System.out.println("Error starting RMI registry: " + e);
+	    System.exit(1);
 	}
     }
 

@@ -123,6 +123,7 @@ public class DirectPastryRegrTest extends PastryRegrTest {
      * main. just create the object and call PastryNode's main.
      */
     public static void main(String args[]) {
+	Log.init(args);
 	DirectPastryRegrTest pt = new DirectPastryRegrTest();
 	mainfunc(pt, args, 500 /*n*/, 30/*d*/, 100/*k*/, 100/*m*/, 4/*conc*/);
     }

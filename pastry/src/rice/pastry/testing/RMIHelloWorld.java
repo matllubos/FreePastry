@@ -94,13 +94,9 @@ public class RMIHelloWorld {
     protected NodeHandle getBootstrap() {
 	RMIRemoteNodeI bsnode = null;
 
-	if (bshost != null && bshost.equals("none")) {
-	    if (Log.ifp(5)) System.out.println("Not using any bootstrap node");
-	    return null;
-	}
-
 	try {
 	    bsnode = (RMIRemoteNodeI)Naming.lookup("//:" + port + "/Pastry");
+	    if (bsnode != null) if (Log.ifp(5)) System.out.println("Bootstrapping from localhost:" + port);
 	} catch (Exception e) {
 	    if (Log.ifp(5)) System.out.println("Unable to find bootstrap node on localhost");
 	}
@@ -137,6 +133,7 @@ public class RMIHelloWorld {
 		bsnode = (RMIRemoteNodeI)Naming.lookup("//" + bshost
 							 + ":" + bsport
 							 + "/Pastry");
+		if (bsnode != null) if (Log.ifp(5)) System.out.println("Bootstrapping from " + bshost + ":" + bsport);
 	    } catch (Exception e) {
 		if (Log.ifp(5))
 		    System.out.println("Unable to find bootstrap node on "
@@ -144,7 +141,7 @@ public class RMIHelloWorld {
 				       + " (attempt " + i + "/" + nattempts + ")");
 	    }
 
-	    if (i != nattempts)
+	    if (bsnode == null && i != nattempts)
 		pause(1000);
 	}
 
@@ -161,6 +158,8 @@ public class RMIHelloWorld {
 	RMINodeHandle bshandle = null;
 	if (bsid != null)
 	    bshandle = new RMINodeHandle(bsnode, bsid);
+
+	if (bsnode == null) if (Log.ifp(5)) System.out.println("Not using any bootstrap node");
 
 	return bshandle;
     }
@@ -233,6 +232,7 @@ public class RMIHelloWorld {
 	    java.rmi.registry.LocateRegistry.createRegistry(port);
 	} catch (RemoteException e) {
 	    System.out.println("Error starting RMI registry: " + e);
+	    System.exit(1);
 	}
     }
 

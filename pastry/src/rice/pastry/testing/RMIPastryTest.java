@@ -73,9 +73,9 @@ public class RMIPastryTest {
     }
 
     /**
-     * Gets a handle to a bootstrap node. First tries localhost, to see
-     * whether a previous virtual node has already bound itself. Then it
-     * tries nattempts times on bshost:bsport.
+     * Gets a handle to a bootstrap node. First we try localhost, to see
+     * whether a previous virtual node has already bound itself there.
+     * Then we try nattempts times on bshost:bsport. Then we fail.
      *
      * @return handle to bootstrap node, or null.
      */
@@ -84,11 +84,12 @@ public class RMIPastryTest {
 
 	try {
 	    bsnode = (RMIRemoteNodeI)Naming.lookup("//:" + port + "/Pastry");
+	    if (bsnode != null) if (Log.ifp(5)) System.out.println("Bootstrapping from localhost:" + port);
 	} catch (Exception e) {
 	    if (Log.ifp(5)) System.out.println("Unable to find bootstrap node on localhost");
 	}
 
-	if (bshost == null || bsnode.equals("none")) {
+	if (bshost == null && bsnode == null) {
 	    if (Log.ifp(5)) System.out.println("Not using any bootstrap node");
 	    return null;
 	}
@@ -120,6 +121,7 @@ public class RMIPastryTest {
 		bsnode = (RMIRemoteNodeI)Naming.lookup("//" + bshost
 							 + ":" + bsport
 							 + "/Pastry");
+		if (bsnode != null) if (Log.ifp(5)) System.out.println("Bootstrapping from " + bshost + ":" + bsport);
 	    } catch (Exception e) {
 		if (Log.ifp(5))
 		    System.out.println("Unable to find bootstrap node on "
@@ -127,7 +129,7 @@ public class RMIPastryTest {
 				       + " (attempt " + i + "/" + nattempts + ")");
 	    }
 
-	    if (i != nattempts)
+	    if (bsnode == null && i != nattempts)
 		pause(1000);
 	}
 
@@ -144,6 +146,8 @@ public class RMIPastryTest {
 	RMINodeHandle bshandle = null;
 	if (bsid != null)
 	    bshandle = new RMINodeHandle(bsnode, bsid);
+
+	if (bsnode == null) if (Log.ifp(5)) System.out.println("Not using any bootstrap node");
 
 	return bshandle;
     }
@@ -210,6 +214,7 @@ public class RMIPastryTest {
 	    java.rmi.registry.LocateRegistry.createRegistry(port);
 	} catch (RemoteException e) {
 	    System.out.println("Error starting RMI registry: " + e);
+	    System.exit(1);
 	}
     }
 
