@@ -126,9 +126,15 @@ public class NetworkLogManager extends LogManager {
     protected void sendFiles() {
       File[] files = new File(".").listFiles(new FilenameFilter() {
         public boolean accept(File parent, String file) {
-          if (file.startsWith(NetworkLogManager.this.file + "."))
-            return true;
-          
+          return file.startsWith(NetworkLogManager.this.file + ".");
+        }
+      });
+      
+      for (int i=0; i<files.length; i++) 
+        sendFile(files[i], true);
+      
+      files = new File(".").listFiles(new FilenameFilter() {
+        public boolean accept(File parent, String file) {
           for (int i=0; i<other.length; i++)
             if (file.startsWith(other[i]))
               return true;
@@ -138,7 +144,7 @@ public class NetworkLogManager extends LogManager {
       });
       
       for (int i=0; i<files.length; i++) 
-        sendFile(files[i]);
+        sendFile(files[i], false);
     }
     
     protected byte[] getHeader(File file) {
@@ -156,7 +162,7 @@ public class NetworkLogManager extends LogManager {
       }
     }
     
-    protected void sendFile(File file) {
+    protected void sendFile(File file, boolean delete) {
       Socket socket = new Socket();
       InputStream in = null;
       OutputStream out = null;
@@ -202,7 +208,8 @@ public class NetworkLogManager extends LogManager {
         }
       }
       
-      file.delete();
+      if (delete)
+        file.delete();
     }
   }
 }
