@@ -505,7 +505,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
       System.out.println("An error occured during message deserialization - ignoring message...");
       reader.reset();
     } catch (IOException e) {
-      debug("Error occurred during reading from " + address + " - closing socket. " + e);
+      debug("Error occurred during reading from " + address + " at " + getNodeId() + " - closing socket. " + e);
       close(writer.getQueue());
     }
   }

@@ -207,7 +207,7 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
         distance = Integer.MAX_VALUE;
 
 	setChanged();
-        notifyObservers(DECLARED_DEAD);
+  notifyObservers(DECLARED_DEAD);
       }
     }
 

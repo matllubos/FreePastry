@@ -88,6 +88,14 @@ public class PastryEndpointMessage extends rice.pastry.messaging.Message {
     this.message = message;
   }
 
+  /**
+   * Returns the String representation of this message
+   *
+   * @return The string
+   */
+  public String toString() {
+    return "[PEM " + message + "]";
+  }
 }
 
 
