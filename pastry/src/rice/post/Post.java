@@ -182,6 +182,13 @@ public class Post extends PastryAppl implements IScribeApp  {
      return credentials;
    }
 
+  /**
+   * @return The CA's public key
+   */
+  public PublicKey getCAPublicKey() {
+    return caPublicKey;
+  }
+
   
   /**
    * The method by which Pastry passes a message up to POST
@@ -244,7 +251,16 @@ public class Post extends PastryAppl implements IScribeApp  {
     ProcessPresenceMessageTask task = new ProcessPresenceMessageTask(message);
     task.start();
   }
-    
+
+  /**
+   * This method processes a delivery message containing a notification message.
+   *
+   * @param message The incoming message.
+   */
+  private void processDeliveryMessage(DeliveryMessage message) {
+    ProcessDeliveryMessageTask task = new ProcessDeliveryMessageTask(message);
+    task.start();
+  }
   
   /**
    * This method processes a notification message by passing it up
@@ -252,8 +268,8 @@ public class Post extends PastryAppl implements IScribeApp  {
    *
    * @param message The incoming message.
    */
-  private void processEncryptedNotificationMessage(EncryptedNotificationMessage message, SignedPostMessage source) {
-    ProcessEncryptedNotificationMessageTask task = new ProcessEncryptedNotificationMessageTask(message, source);
+  private void processEncryptedNotificationMessage(EncryptedNotificationMessage message) {
+    ProcessEncryptedNotificationMessageTask task = new ProcessEncryptedNotificationMessageTask(message);
     task.start();
   }
 
@@ -453,7 +469,9 @@ public class Post extends PastryAppl implements IScribeApp  {
       } else if (message instanceof PresenceMessage) {
         processPresenceMessage((PresenceMessage) message);
       } else if (message instanceof EncryptedNotificationMessage) {
-        processEncryptedNotificationMessage((EncryptedNotificationMessage) message, signedMessage);
+        processEncryptedNotificationMessage((EncryptedNotificationMessage) message);
+      } else if (message instanceof DeliveryMessage) {
+        processDeliveryMessage((DeliveryMessage) message);
       } else if (message instanceof ReceiptMessage) {
         processReceiptMessage((ReceiptMessage) message);
       } else {
@@ -538,7 +556,8 @@ public class Post extends PastryAppl implements IScribeApp  {
           
           for (int i=0; i<userQueue.size(); i++) {
             SignedPostMessage spm = (SignedPostMessage) userQueue.elementAt(i);
-            routeMsg(message.getLocation(), new PostPastryMessage(spm), getCredentials(), new SendOptions());
+            DeliveryMessage dm = new DeliveryMessage(address, getNodeId(), spm);
+            routeMsg(message.getLocation(), new PostPastryMessage(signPostMessage(dm)), getCredentials(), new SendOptions());
           }
         } else {
           System.out.println(thePastryNode.getNodeId() + "DEBUG: ERROR - presence message from : " + message.getSender() + " should not be received here.");
@@ -546,7 +565,37 @@ public class Post extends PastryAppl implements IScribeApp  {
       }
     }
   }
-    
+
+  /**
+   * This class is called whenever a DeliveryMessage comes in, and it
+   *  handles the message.
+   */
+  protected class ProcessDeliveryMessageTask {
+
+    private DeliveryMessage message;
+
+    /**
+      * Constructs a ProcessDeliveryMessageTask given a message.
+     */
+    public ProcessDeliveryMessageTask(DeliveryMessage message) {
+      this.message = message;
+    }
+
+    /**
+      * Starts the processing of this message.
+     */
+    public void start() {
+      System.out.println(thePastryNode.getNodeId() + "DEBUG: delivery message from : " + message.getSender());
+
+      // send receipt
+      ReceiptMessage rm = new ReceiptMessage(address, message.getEncryptedMessage());
+      routeMsg(message.getLocation(), new PostPastryMessage(signPostMessage(rm)), getCredentials(), new SendOptions());
+
+      // process internal message
+      processSignedPostMessage(message.getEncryptedMessage());
+    }
+  }
+      
 
   /**
    * This class is called whenever a EncryptedNotificationMessage comes in, and it
@@ -555,28 +604,21 @@ public class Post extends PastryAppl implements IScribeApp  {
   protected class ProcessEncryptedNotificationMessageTask {
 
     private EncryptedNotificationMessage message;
-    private SignedPostMessage source;
     private NotificationMessage nm;
     private PostEntityAddress sender;
 
     /**
     * Constructs a ProcessEncryptedNotificationMessageTask given a message.
      */
-    public ProcessEncryptedNotificationMessageTask(EncryptedNotificationMessage message, SignedPostMessage source) {
+    public ProcessEncryptedNotificationMessageTask(EncryptedNotificationMessage message) {
       this.message = message;
-      this.source = source;
     }
 
     /**
       * Starts the processing of this message.
      */
     public void start() {
-
       System.out.println(thePastryNode.getNodeId() + "DEBUG: encrypted notification message from : " + message.getSender());
-      
-      // send receipt
-      ReceiptMessage rm = new ReceiptMessage(address, source);
-      routeMsg(message.getSender().getAddress(), new PostPastryMessage(signPostMessage(rm)), getCredentials(), new SendOptions());
 
       // decrypt and verify notification message
       try {
@@ -646,8 +688,12 @@ public class Post extends PastryAppl implements IScribeApp  {
         Vector userQueue = (Vector) bufferedData.get(sender);
 
         if (userQueue != null) {
-          userQueue.remove(sm);
+          boolean success = userQueue.remove(sm);
 
+          if (! success) {
+            System.out.println("ERROR - Received receiptmessage for unknown message " + sm);
+          }
+          
           if (userQueue.size() == 0) {
             bufferedData.remove(sender);
             scribeService.leave(sender.getAddress(), Post.this, credentials);
@@ -708,10 +754,13 @@ public class Post extends PastryAppl implements IScribeApp  {
           return;
         }
 
-        if (security.verifyCertificate(caPublicKey,
-                                       log.getEntityAddress(),
-                                       log.getPublicKey(),
-                                       log.getCertificate())) {
+        if (! (log.getEntityAddress().equals(log.getCertificate().getAddress()) &&
+               log.getPublicKey().equals(log.getCertificate().getKey()))) {
+          command.receiveException(new PostException("Malformed PostLog: Certificate does not match log owner."));
+          return;
+        }
+        
+        if (security.verifyCertificate(caPublicKey, log.getCertificate())) {
           storage.verifySigned(log, log.getPublicKey());
 
           command.receiveResult(log);
@@ -838,7 +887,8 @@ public class Post extends PastryAppl implements IScribeApp  {
       PostLog destinationLog = (PostLog) o;
 
       if (destinationLog == null) {
-	System.out.println("ERROR - Could not send notification message to non-existant user " + destination);
+        System.out.println("ERROR - Could not send notification message to non-existant user " + destination);
+        return;
       }
       
       System.out.println(thePastryNode.getNodeId() + "DEBUG: received destination log");

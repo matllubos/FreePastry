@@ -1,6 +1,7 @@
 package rice.post.security;
 
 import java.io.*;
+import java.util.*;
 
 /**
  * This class is a wrapper for a signature in the POST system.
@@ -22,5 +23,13 @@ public class PostSignature implements Serializable {
 
   protected byte[] getSignature() {
     return sig;
+  }
+
+  public boolean equals(Object o) {
+    if (! (o instanceof PostSignature)) {
+      return false;
+    }
+
+    return Arrays.equals(sig, ((PostSignature)o).getSignature());
   }
 }

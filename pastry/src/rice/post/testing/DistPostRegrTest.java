@@ -78,7 +78,7 @@ public class DistPostRegrTest {
     postNodes = new Vector();
     postClients = new Vector();
     scribeNodes = new Vector();    
-    rng = new Random(5);
+    rng = new Random();
     
     kpg = KeyPairGenerator.getInstance("RSA");
     caPair = kpg.generateKeyPair();
@@ -236,18 +236,31 @@ public class DistPostRegrTest {
 
     sendingPost.sendNotification(dnm);
 
+    Thread t = new Thread() {
+      public void run() {
+        try {
+          while (true) {
+            receivingPost.announcePresence();
+            Thread.sleep(2000);
+          }
+        } catch (Exception e) {
+          System.out.println("INTERRUPTED: " + e);
+        }
+      }
+    };
+
+    t.start();
+
+    System.out.println("Waiting for notification message...");
+
     synchronized (waitObject) {
       try {
-        while (! notificationReceived) {
-          receivingPost.announcePresence();
-          waitObject.wait(2000);
-          System.out.println("Waiting for notification message...");
-        }
-      } catch (InterruptedException e) {
-        System.out.println("ERROR WAITING:"  + e);
+        waitObject.wait();
+      } catch (Exception e) {
+        System.out.println("INTERRUPTED (2): " + e);
       }
     }
-
+      
     if (notificationFailed) {
       throw new TestFailedException("Notificaiton received at wrong Post!");
     }

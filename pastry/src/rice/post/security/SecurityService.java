@@ -12,7 +12,7 @@ import javax.crypto.spec.*;
 import rice.post.*;
 
 /**
- * This class is a utility for performing security-related operations
+* This class is a utility for performing security-related operations
  * and it stores the user's key pair for encryption and signing
  * purposes.
  *
@@ -24,39 +24,39 @@ public class SecurityService {
   * The name of the symmetric cipher to use.
    */
   public static final String ASYMMETRIC_ALGORITHM = "RSA";
-  
+
   /**
-   * The name of the symmetric cipher to use.
+  * The name of the symmetric cipher to use.
    */
   public static final String SYMMETRIC_ALGORITHM = "DES/ECB/PKCS5Padding";
-  
+
   /**
-   * The name of the signature algorithm to use.
+    * The name of the signature algorithm to use.
    */
   public static final String SIGNATURE_ALGORITHM = "SHA1withRSA";
 
   /**
-   * The length of DES keys
+    * The length of DES keys
    */
   public static final int SYMMETRIC_KEY_LENGTH = 8;
-  
+
   /**
-   * The name of the hash function.
+    * The name of the hash function.
    */
   public static final String HASH_ALGORITHM = "MD5";
 
   /**
-   * The key pair used to sign data.
+    * The key pair used to sign data.
    */
   private KeyPair keyPair;
-  
+
   /**
-   * The public key of the certificate authority.
+    * The public key of the certificate authority.
    */
   private PublicKey caPublicKey;
 
   /**
-   * The cipher used to encrypt/decrypt data using DES
+    * The cipher used to encrypt/decrypt data using DES
    */
   private Cipher cipherDES;
 
@@ -66,7 +66,7 @@ public class SecurityService {
   private Cipher cipherRSA;
 
   /**
-   * The signature used for verification and signing data.
+    * The signature used for verification and signing data.
    */
   private Signature signature;
 
@@ -74,9 +74,9 @@ public class SecurityService {
     * A random object
    */
   private Random random;
-  
+
   /**
-   * Contructs a SecurityService given a user's keyPair.
+    * Contructs a SecurityService given a user's keyPair.
    *
    * @param keyPair The user's key pair to use for data encryption
    * @param caPublicKey The public key of the certificate authority
@@ -87,9 +87,9 @@ public class SecurityService {
 
     // Add a provider for RSA encryption
     Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-    
+
     this.random = new Random();
-    
+
     try {
       cipherDES = Cipher.getInstance(SYMMETRIC_ALGORITHM);
       cipherRSA = Cipher.getInstance(ASYMMETRIC_ALGORITHM);
@@ -100,16 +100,16 @@ public class SecurityService {
       throw new SecurityException("NoSuchPaddingException on construction: " + e);
     }
   }
-  
+
   /**
-   * Returns this user's public key.
+    * Returns this user's public key.
    */
   public PublicKey getPublicKey() {
     return keyPair.getPublic();
   }
 
   /**
-   * Utility method for serializing an object to a byte[].
+    * Utility method for serializing an object to a byte[].
    *
    * @param o The object to serialize
    * @return The byte[] of the object
@@ -125,7 +125,7 @@ public class SecurityService {
   }
 
   /**
-   * Utility method for deserializing an object from a byte[]
+    * Utility method for deserializing an object from a byte[]
    *
    * @param data The data to deserialize
    * @return The object
@@ -138,7 +138,7 @@ public class SecurityService {
   }
 
   /**
-   * Utility method for determining the hash of a byte[] using a secure
+    * Utility method for determining the hash of a byte[] using a secure
    * hashing algorithm.
    *
    * @param input The input
@@ -158,21 +158,21 @@ public class SecurityService {
   }
 
   /**
-   * Utility method for encrypting a block of data with DES.
+    * Utility method for encrypting a block of data with DES.
    *
    * @param data The data
    * @param key The key
    * @return The ciphertext
    */
   public byte[] encryptDES(byte[] data, byte[] key) throws SecurityException {
-    try {      
-	synchronized (cipherDES) {
-	    DESKeySpec DESkey = new DESKeySpec(key);
-	    SecretKeySpec secretKey = new SecretKeySpec(DESkey.getKey(), "DES");
-	    cipherDES.init(Cipher.ENCRYPT_MODE, secretKey);
-	    
-	    return cipherDES.doFinal(data);
-	}
+    try {
+      synchronized (cipherDES) {
+        DESKeySpec DESkey = new DESKeySpec(key);
+        SecretKeySpec secretKey = new SecretKeySpec(DESkey.getKey(), "DES");
+        cipherDES.init(Cipher.ENCRYPT_MODE, secretKey);
+
+        return cipherDES.doFinal(data);
+      }
     } catch (InvalidKeyException e) {
       throw new SecurityException("InvalidKeyException encrypting object: " + e);
     } catch (IllegalBlockSizeException e) {
@@ -183,7 +183,7 @@ public class SecurityService {
   }
 
   /**
-   * Utility method for decrypting some data with DES
+    * Utility method for decrypting some data with DES
    *
    * @param data The data to decrypt
    * @param key The key
@@ -191,13 +191,13 @@ public class SecurityService {
    */
   public byte[] decryptDES(byte[] data, byte[] key) throws SecurityException {
     try {
-	synchronized (cipherDES) {
-	    DESKeySpec DESkey = new DESKeySpec(key);
-	    SecretKeySpec secretKey = new SecretKeySpec(DESkey.getKey(), "DES");
-	    cipherDES.init(Cipher.DECRYPT_MODE, secretKey); 
-	    
-	    return cipherDES.doFinal(data);
-	}
+      synchronized (cipherDES) {
+        DESKeySpec DESkey = new DESKeySpec(key);
+        SecretKeySpec secretKey = new SecretKeySpec(DESkey.getKey(), "DES");
+        cipherDES.init(Cipher.DECRYPT_MODE, secretKey);
+
+        return cipherDES.doFinal(data);
+      }
     } catch (InvalidKeyException e) {
       throw new SecurityException("InvalidKeyException decrypting object: " + e);
     } catch (IllegalBlockSizeException e) {
@@ -208,7 +208,7 @@ public class SecurityService {
   }
 
   /**
-   * Utility method for signing a block of data with the user's private key
+    * Utility method for signing a block of data with the user's private key
    *
    * @param data The data
    * @return The signature
@@ -225,17 +225,17 @@ public class SecurityService {
    */
   private PostSignature sign(byte[] data, PrivateKey key) throws SecurityException {
     try {
-	if ((data == null) || (key == null)) {
-	    throw new SecurityException("Attempt to use null data or key for signature:" + data + " " + key);
-	}
+      if ((data == null) || (key == null)) {
+        throw new SecurityException("Attempt to use null data or key for signature:" + data + " " + key);
+      }
 
-	synchronized (signature) {
-	    signature.initSign(key);
+      synchronized (signature) {
+        signature.initSign(key);
 
-	    signature.update(hash(data));
+        signature.update(hash(data));
 
-	    return new PostSignature(signature.sign());
-	}
+        return new PostSignature(signature.sign());
+      }
     } catch (InvalidKeyException e) {
       throw new SecurityException("InvalidKeyException signing object: " + e);
     } catch (SignatureException e) {
@@ -244,7 +244,7 @@ public class SecurityService {
   }
 
   /**
-   * Utility method for verifying a signature using the user's public
+    * Utility method for verifying a signature using the user's public
    * key.
    *
    * @param data The data to verify
@@ -254,9 +254,9 @@ public class SecurityService {
   public boolean verify(byte[] data, PostSignature sig) throws SecurityException {
     return verify(data, sig, keyPair.getPublic());
   }
-  
+
   /**
-   * Utility method for verifying a signature
+    * Utility method for verifying a signature
    *
    * @param data The data to verify
    * @param sig The proposed signature
@@ -265,22 +265,22 @@ public class SecurityService {
    */
   public boolean verify(byte[] data, PostSignature sig, PublicKey key) throws SecurityException {
     try {
-	synchronized (signature) {
-	    signature.initVerify(key);
+      synchronized (signature) {
+        signature.initVerify(key);
 
-	    signature.update(hash(data));
-	    
-	    return signature.verify(sig.getSignature());
-	}
+        signature.update(hash(data));
+
+        return signature.verify(sig.getSignature());
+      }
     } catch (InvalidKeyException e) {
       throw new SecurityException("InvalidKeyException verifying object: " + e);
     } catch (SignatureException e) {
       throw new SecurityException("SignatureException verifying object: " + e);
-    }   
+    }
   }
 
   /**
-   * Utility method for verifying a certificate
+    * Utility method for verifying a certificate
    *
    * @param caKey The key to verify against (CA's pub key)
    * @param address The address of the entity
@@ -288,10 +288,10 @@ public class SecurityService {
    * @param certificate The proposed certificate
    * @return Whether or not the certificate matches.
    */
-  public boolean verifyCertificate(PublicKey caKey, PostEntityAddress address, PublicKey key, PostCertificate certificate) throws SecurityException {
+  public boolean verifyCertificate(PublicKey caKey, PostCertificate certificate) throws SecurityException {
     try {
-      byte[] keyByte = serialize(key);
-      byte[] addressByte = serialize(address);
+      byte[] keyByte = serialize(certificate.getKey());
+      byte[] addressByte = serialize(certificate.getAddress());
 
       byte[] all = new byte[addressByte.length + keyByte.length];
       System.arraycopy(addressByte, 0, all, 0, addressByte.length);
@@ -304,7 +304,7 @@ public class SecurityService {
   }
 
   /**
-   * Utility method for verifying a signature
+    * Utility method for verifying a signature
    *
    * @param address The address of the entity
    * @param key The key to of the entity
@@ -320,14 +320,14 @@ public class SecurityService {
       System.arraycopy(addressByte, 0, all, 0, addressByte.length);
       System.arraycopy(keyByte, 0, all, addressByte.length, keyByte.length);
 
-      return new PostCertificate(sign(all, caKey).getSignature());
+      return new PostCertificate(address, key, sign(all, caKey).getSignature());
     } catch (IOException e) {
       throw new SecurityException("InvalidKeyException verifying object: " + e);
     }
   }
-  
+
   /**
-   * Encrypts the given byte[] using the user's public key.
+    * Encrypts the given byte[] using the user's public key.
    *
    * TO DO: Check length of input
    *
@@ -339,7 +339,7 @@ public class SecurityService {
   }
 
   /**
-   * Encrypts the given byte[] using the provided public key.
+    * Encrypts the given byte[] using the provided public key.
    *
    * TO DO: Check length of input
    *
@@ -349,11 +349,11 @@ public class SecurityService {
    */
   public byte[] encryptRSA(byte[] data, PublicKey key) throws SecurityException {
     try {
-	synchronized (cipherRSA) {
-	    cipherRSA.init(Cipher.ENCRYPT_MODE, key);
+      synchronized (cipherRSA) {
+        cipherRSA.init(Cipher.ENCRYPT_MODE, key);
 
-	    return cipherRSA.doFinal(data);
-	}
+        return cipherRSA.doFinal(data);
+      }
     } catch (InvalidKeyException e) {
       throw new SecurityException("InvalidKeyException encrypting object: " + e);
     } catch (IllegalBlockSizeException e) {
@@ -362,9 +362,9 @@ public class SecurityService {
       throw new SecurityException("BadPaddingException encrypting object: " + e);
     }
   }
-  
+
   /**
-   * Decrypts the given byte[] using the user's private key.
+    * Decrypts the given byte[] using the user's private key.
    *
    * TO DO: Check length of input
    *
@@ -373,11 +373,11 @@ public class SecurityService {
    */
   public byte[] decryptRSA(byte[] data) throws SecurityException {
     try {
-	synchronized (cipherRSA) {
-	    cipherRSA.init(Cipher.DECRYPT_MODE, keyPair.getPrivate());
+      synchronized (cipherRSA) {
+        cipherRSA.init(Cipher.DECRYPT_MODE, keyPair.getPrivate());
 
-	    return cipherRSA.doFinal(data);
-	}
+        return cipherRSA.doFinal(data);
+      }
     } catch (InvalidKeyException e) {
       throw new SecurityException("InvalidKeyException decrypting object: " + e);
     } catch (IllegalBlockSizeException e) {
@@ -394,10 +394,10 @@ public class SecurityService {
 
     return key;
   }
-    
-  
+
+
   /**
-   * Private utility method for converting a long into a byte[]
+    * Private utility method for converting a long into a byte[]
    *
    * @param input The log to convert
    * @return a byte[] representation
@@ -418,7 +418,7 @@ public class SecurityService {
   }
 
   /**
-   * Private utility method for converting a byte[] into a long
+    * Private utility method for converting a byte[] into a long
    *
    * @param input The byte[] to convert
    * @return a long representation
@@ -428,9 +428,9 @@ public class SecurityService {
             (input[4] << 24) | (input[5] << 16) | (input[6] << 8) | input[7]);
   }
 
-  
+
   /**
-   * Tests the security service.
+    * Tests the security service.
    */
   public static void main(String[] argv) throws NoSuchAlgorithmException, IOException, ClassNotFoundException {
     System.out.println("SecurityService Test Suite");
@@ -441,7 +441,7 @@ public class SecurityService {
     KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
     KeyPair pair = kpg.generateKeyPair();
     System.out.println("[ DONE ]");
-    
+
     System.out.print("    Building cipher\t\t\t\t\t");
     SecurityService security = new SecurityService(pair, null);
 
@@ -451,7 +451,7 @@ public class SecurityService {
 
     System.out.print("    Testing long conversion\t\t\t\t");
     long testLong = Long.parseLong("0123456789ABCDEF", 16);
-    
+
     byte[] testLongByte = security.getByteArray(testLong);
 
     if ((testLongByte[0] == (byte) 0x01) &&
@@ -468,8 +468,8 @@ public class SecurityService {
       System.out.println("    Input: \t" + testLong);
       System.out.println("    Output:\t" + testLongByte[0] + " " + testLongByte[1] + " "  +                   testLongByte[2] + " "  + testLongByte[3]);
     }
-    
-    
+
+
     System.out.print("    Testing serialization\t\t\t\t");
     String testString = "test";
     byte[] testStringByte = security.serialize(testString);
@@ -500,7 +500,7 @@ public class SecurityService {
 
     System.out.print("    Testing symmetric encryption\t\t\t");
     Random random = new Random();
-    
+
     byte[] key = new byte[8];
     random.nextBytes(key);
     byte[] testStringCipherText = security.encryptDES(testStringByte, key);
@@ -514,7 +514,7 @@ public class SecurityService {
       System.out.println("    Length:\t" + testStringByte.length);
       System.out.println("    Cipher Len:\t" + testStringCipherText.length);
       System.out.println("    Output Len:\t" + testStringPlainText.length);
-    }    
+    }
 
     System.out.print("    Testing signing and verification (phase 1)\t\t");
 
@@ -532,7 +532,7 @@ public class SecurityService {
     System.out.print("    Testing signing and verification (phase 2)\t\t");
 
     testStringSig.getSignature()[0]++;
-    
+
     if (! security.verify(testStringByte, testStringSig)) {
       System.out.println("[ PASSED ]");
     } else {
@@ -540,7 +540,7 @@ public class SecurityService {
       System.out.println("    Input: \t" + testString);
       System.out.println("    Length:\t" + testStringByte.length);
       System.out.println("    Sig Len:\t" + testStringSig.getSignature().length);
-    }   
+    }
 
     System.out.print("    Testing RSA functions\t\t\t\t");
 
@@ -556,9 +556,9 @@ public class SecurityService {
       System.out.println("    Enc Len:\t" + testStringEncrypted.length);
       System.out.println("    Dec Len:\t" + testStringDecrypted.length);
     }
-    
 
-    
+
+
     System.out.println("-------------------------------------------------------------");
   }
 }
