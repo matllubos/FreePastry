@@ -35,6 +35,7 @@ if advised of the possibility of such damage.
 ********************************************************************************/
 
 
+
 package rice.rm;
 
 import rice.pastry.*;
@@ -64,53 +65,115 @@ import rice.rm.testing.*;
  * This runs as a Application which dynamically (in the presence of nodes
  * joining and leaving the network) maintains the invariant
  * that objects are replicated over the requested number of replicas.
+ * This module has been built over the CommonAPI defined in
+ * "Towards a Common API for Structured Peer-to-Peer Overlays." Frank
+ * Dabek, Ben Zhao, Peter Druschel, John Kubiatowicz and Ion
+ * Stoica. In Proceedings of the 2nd International Workshop on
+ * Peer-to-peer Systems (IPTPS'03) , Berkeley, CA, February 2003.
+ * Hence the implementation is meant to be seamlessly portable to the
+ * other existing P2P protocols.
  *
  * @version $Id$
+ *
  * @author Animesh Nandi
  */
 
 
 public class RMImpl extends CommonAPIAppl implements RM {
 
-
-
+    /**
+     * The Credentials object to be used for all messaging through Pastry.
+     */
     private Credentials _credentials;
 
+    /**
+     * The SendOptions object to be used for all messaging through Pastry.
+     */
     public SendOptions _sendOptions;
 
+    /**
+     * This flag is set to true when this RM substrate is ready. The
+     * RM substrate is ready when the underlying Pastry node is ready.
+     */
     private boolean m_ready;
 
-    // This will be incremented for every message that this node sends remotely.
-    // Specifically incremented for every RMRequestKeysMsg, RMResponseKeysMsg it sends
+    /**
+     * This will be incremented for every message that this node sends
+     * remotely. Specifically, incremented for every RMRequestKeysMsg,
+     * RMResponseKeysMsg it sends. This is to aid in the debugging phase.
+     */
     public int m_seqno;
 
-    // This is to keep track of events with respect to RMRequestKeysMsg only
-    // Since RMRequestKeysMsg is the only message that needs a timeout mechanism
-    // Incremented for every different RMRequestKeys message generation event
-    // That is if a Timeout occurred for a RMRequestKeysMsg, then the subsequent RMRequestKeysMsg
-    // that will be resent will have the SAME eventId but an increased value of seqNo.
+    /**
+     * This is to keep track of events with respect to RMRequestKeysMsg only.
+     * Since RMRequestKeysMsg is the only message that needs a timeout
+     * mechanism. Incremented for every different RMRequestKeys message
+     * generation event. That is if a Timeout occurred for a RMRequestKeysMsg,
+     * then the subsequent RMRequestKeysMsg, that will be resent will have the
+     * SAME eventId but an increased value of seqNo.
+     */
     public int m_eId;
 
+    /**
+     * This represents the range of object identifiers in the Id space for
+     * which this node (by virtue of its position in the Id Space relative
+     * to the positions of the other Pastry nodes) is an i-root (0<=i<=k). 
+     */
     public IdRange myRange;
 
-    // rFactor stands for the number of additonal replicas
-    // the promary replica is denoted a 0-root, other replcas are
-    // denoted as i-root , 1<i<rFactor
-    public int rFactor; // standard rFactor to be used
+    /**
+     * rFactor stands for the number of additional replicas for an object.
+     * The primary replica is denoted a 0-root, other replicas are
+     * denoted as i-root (1<=i<=rFactor).
+     */
+    public int rFactor; 
 
-    public RMClient app; // Application that uses this Replica Manager
+    /**
+     * Application that uses this Replica Manager.
+     */
+    public RMClient app; 
 
-    
+    /**
+     * This hashtable is keyed by the NodeId of the node to whom
+     * this local node is requesting for a set of keys in the Keys
+     * Exchange protocol. Since potentially the number of keys in 
+     * a particular range could be very high, asking for the entire
+     * set of keys in the intial range could result in huge packet 
+     * sizes. In order to circumvent this problem, we devise some
+     * strategies in the Keys Exchange protocol to split this range
+     * into smaller ranges and issue requests for these subranges
+     * one at a time. This requires state in the form of this hashtable
+     * to maintain the list f pending ranges, for which a request for
+     * the key set is yet to be issued.
+     */  
     public Hashtable m_pendingRanges;
 
-    // This table will be used by the Timeout mechanism in RMRequestKeysMsg
+    /**
+     * This table will be used by the Timeout mechanism in 
+     * RMRequestKeysMsg.
+     */
     public Hashtable m_pendingEvents;
     
+    /**
+     * This value represents the maximum size of the keySet corresponding
+     * to a requested id range that we would like to fit in a single message.
+     * As a result of this, we need some strategies to split ranges in the 
+     * Keys Exchange Protocol. 
+     */  
     public static int MAXKEYSINRANGE = 1024;
 
+    /**
+     * This value represents the splitting factor by which a range is 
+     * split into in the Keys Exchange Protocol. The splitting method
+     * is recursive binary splitting until we split the range into 
+     * a total of SPLITFACTOR parts.
+     */
     public static int SPLITFACTOR = 16;
     
-
+    /**
+     * This is the per entry state corresponding to the m_pendingRanges
+     * hashtable that we maintain in the Keys Exchange Protocol.
+     */
     public static class KEPenEntry {
 	private IdRange reqRange;
 	private int numKeys;
@@ -138,8 +201,10 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	    numKeys = val;
 	}
 
-	// Equality is based only on the reqRange part, does not care
-	// about the numKeys argument
+	/**
+	 * Equality is based only on the reqRange part, does not care
+	 * about the numKeys argument.
+	 */
 	public boolean equals(Object obj) {
 	    KEPenEntry oEntry;
 	    oEntry = (KEPenEntry)obj;
@@ -164,10 +229,12 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
 
     /**
-     * Constructor : Builds a new ReplicaManager(RM) associated with this 
-     * pastryNode.
+     * Builds a new ReplicaManager(RM) associated with a particular RMclient.
      * @param pn the PastryNode associated with this application
-     * @return void
+     * @param _app the client associated with this replica manager
+     * @param _rFactor the replicaFactor associated with the replica manager
+     * @param instance the string used to sucessfully instantiate different
+     *                 application instances on the same pastry node
      */
     public RMImpl(PastryNode pn, RMClient _app, int _rFactor, String instance)
     {
@@ -220,19 +287,31 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	return m_ready;
     }
 
-    /* Gets the local NodeHandle associated with this Scribe node.
-     *
-     * @return local handle of Scribe node.
+    /**
+     * Gets the local NodeHandle associated with this Pastry node.
+     * @return local handle of the underlying pastry node.
      */
     public NodeHandle getLocalHandle() {
 	return thePastryNode.getLocalHandle();
     }
 
+    /**
+     * Gets the underlying local Pastry node.
+     * @return local pastry node.
+     */
     public PastryNode getPastryNode() {
 	return thePastryNode;
     }
 
 
+
+
+    /**
+     * Used to insert entries to the m_pendingEvents hashtable
+     * @param toNode the node with whom the local node is communicating
+     *               this is the key for this entry in the hashtable
+     * @param eId the event Id associated with this RMRequestKeys msg.
+     */
     public void addPendingEvent(NodeId toNode, int eId) {
 	//System.out.println("At " + getNodeId() + "addPendingEvent( " + toNode + " , " + eId + " ) ");
 	Integer entry = new Integer(eId); 
@@ -250,6 +329,14 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	
     }
 
+
+
+    /**
+     * Used to remove entries to the m_pendingEvents hashtable
+     * @param toNode the node with whom the local node is communicating
+     *               this is the key for this entry in the hashtable
+     * @param eId the event Id associated with this RMRequestKeys msg.
+     */
     public void removePendingEvent(NodeId toNode, int eId) {
 	//System.out.println("At " + getNodeId() + "removePendingEvent( " + toNode + " , " + eId + " ) ");
 
@@ -276,6 +363,14 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
     }
 
+
+
+    /**
+     * Used to check for existence of an entry in the m_pendingEvents hashtable
+     * @param toNode the node with whom the local node is communicating
+     *               this is the key for this entry in the hashtable
+     * @param eId the event Id associated with this RMRequestKeys msg.
+     */
     public boolean isPendingEvent(NodeId toNode, int eId) {
 	//System.out.println("At " + getNodeId() + "isPendingEvent( " + toNode + " , " + eId + " ) ");
 
@@ -291,6 +386,13 @@ public class RMImpl extends CommonAPIAppl implements RM {
     }
    
 
+
+    /**
+     * Used to insert a pending range to the m_pendingRanges hashtable
+     * @param toNode the node with whom the local node is communicating
+     *               this is the key for this entry in the hashtable
+     * @param reqRange the pending range.
+     */
     public void addPendingRange(NodeId toNode, IdRange reqRange) {
 	//System.out.println("At " + getNodeId() + "addPendingRange( " + toNode + " , " + reqRange + " ) ");
 	RMImpl.KEPenEntry entry= new RMImpl.KEPenEntry(reqRange); 
@@ -308,6 +410,15 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	
     }
 
+
+    /**
+     * Used to update the state of a pending range to the m_pendingRanges
+     * hashtable.
+     * @param toNode the node with whom the local node is communicating
+     *               this is the key for this entry in the hashtable
+     * @param reqRange the pending range.
+     * @param numKeys the expected number of keys associated with this subrange
+     */
      public void updatePendingRange(NodeId toNode, IdRange reqRange, int numKeys) {
 	 //System.out.println("At " + getNodeId() + "updatePendingRange( " + toNode + " , " + reqRange + " , " + numKeys + " ) ");
 	RMImpl.KEPenEntry entry= new RMImpl.KEPenEntry(reqRange); 
@@ -338,6 +449,13 @@ public class RMImpl extends CommonAPIAppl implements RM {
     }
 
 
+
+    /**
+     * Used to remove a pending range to the m_pendingRanges hashtable
+     * @param toNode the node with whom the local node is communicating
+     *               this is the key for this entry in the hashtable
+     * @param reqRange the pending range.
+     */
     public void removePendingRange(NodeId toNode, IdRange reqRange) {
 	//System.out.println("At " + getNodeId() + "removePendingRange( " + toNode + " , " + reqRange + " ) ");
 
@@ -365,6 +483,13 @@ public class RMImpl extends CommonAPIAppl implements RM {
     
 
 
+    /**
+     * Iterates over the list of pending Ranges and splits the ranges
+     * if the expected number of keys in a range is greater than 
+     * MAXKEYSINRANGE.
+     * @param toNode the node with which this local was communicating in
+     *               the keys exchange protocol. 
+     */
     public void splitPendingRanges(NodeId toNode) {
 	//System.out.println("splitRanges( " + toNode + " )");
 
@@ -395,7 +520,13 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	}
     }
 
-    // Returns a Vector of the split parts of this range
+    /**
+     * Returns a Vector of the split parts of this range. The splitting
+     * method is recursive binary spliting until we get a total SPLITFACTOR
+     * number of subranges from the intitial range.
+     * @param bigRange the intial range that needs to be split
+     * @return the list of subranges that were got by splitting 'bigRange'.
+     */
     private Vector splitRange(IdRange bigRange) {
 	Vector parts = new Vector();
 	parts.add(bigRange);
@@ -413,6 +544,13 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	return parts;
     }
 
+
+    /**
+     * Gets the list of pending Ranges corresponding to a node that
+     * we are communicating to in the Keys Exchange Protocol. 
+     * @param toNode the node with which this local was communicating in
+     *               the keys exchange protocol. 
+     */    
     public Vector getPendingRanges(NodeId toNode) {
 	Vector setOfRanges;
 	if(m_pendingRanges.containsKey(toNode)) {
@@ -426,6 +564,13 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
     }
 
+
+    /**
+     * Prints the list of pending Ranges corresponding to a node that
+     * we are communicating to in the Keys Exchange Protocol. 
+     * @param toNode the node with which this local was communicating in
+     *               the keys exchange protocol. 
+     */ 
     public void printPendingRanges(NodeId toNode) {
 	Vector setOfRanges;
 	if(m_pendingRanges.containsKey(toNode)) {
@@ -448,9 +593,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
     /**
      * Called by pastry when a message arrives for this application.
      * @param msg the message that is arriving.
-     * @return void
      */
-    //public void messageForAppl(Message msg){
     public void deliver(Id key, Message msg) {
 	RMMessage  rmmsg = (RMMessage)msg;
 	rmmsg.handleDeliverMessage( this);
@@ -458,11 +601,10 @@ public class RMImpl extends CommonAPIAppl implements RM {
     }
 
   
-     /**
+    /**
      * This is called when the underlying pastry node is ready.
      */
     public void notifyReady() {
-	//System.out.println(getLeafSet());
 	if(app!=null) {
 	    //System.out.println("notifyReady called for RM application on" + getNodeId()); 
 	    m_ready = true;
@@ -494,13 +636,13 @@ public class RMImpl extends CommonAPIAppl implements RM {
     }
 
     
-
-  
-
-
+    /**
+     * This is the periodic maintenance protocol which removes stale objects
+     * as well as checks to see if there is any missing object. This call
+     * is invoked by the RMMaintenanceMsg message that is scheduled to be 
+     * periodically invoked at the local node.
+     */
     public void periodicMaintenance() {
-
-	
 	// Remove stale objects
 	if(myRange!=null)
 	    app.isResponsible(myRange);
@@ -530,11 +672,10 @@ public class RMImpl extends CommonAPIAppl implements RM {
     
     /**
      * Implements the main algorithm for keeping the invariant that an object 
-     * would  be stored in k closest nodes to the objectKey  while the nodes are
-     * coming up or going down. 
-     * @param nh NodeHandle of the node which caused the leafSet change
+     * would  be stored in k closest nodes to the objectKey  while the nodes 
+     * are coming up or going down. 
+     * @param nh NodeHandle of the node which caused the neighborSet change
      * @param wasAdded true if added, false if removed
-     * @return void
      */
     public void update(NodeHandle nh, boolean wasAdded) {
 	if(!isReady())
@@ -620,8 +761,9 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
     /**
      * This function determines the nodes to which the local node requests
-     * for keys
-     * @param rangeSet - contains a list of IdRanges that this node will request for 
+     * for keys.
+     * @param rangeSet - contains a list of IdRanges that this node will
+     *                   request for. 
      */
     private NodeSet requestorSet(Vector rangeSet)
     {
@@ -653,6 +795,14 @@ public class RMImpl extends CommonAPIAppl implements RM {
     }
 
 
+    /**
+     * We send RMRequestKeys messages to the the nodes in the 'set'
+     * asking for keys in the ranges specified in the 'rangeSet'. 
+     * Additionally, in order to implement the TIMEOUT mechanism to
+     * handle loss of RMRequestKeysMsg, we wrap the RMRequestKeysMsg
+     * in a RMTimeoutMsg which we schedule on the local node after a 
+     * TIMEOUT period.
+     */
     public void sendKeyRequestMessages(NodeSet set, Vector rangeSet) {
 	if(rangeSet.size() == 0)
 	    return;
@@ -686,16 +836,29 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	}
     }
 
-    public void registerKey(Id key) {
-	// Currently we do nothing here, on the assumption that 
-	// our Replica Manager is based totally on the Pull Model
 
-	// We can do something here if we want to incorporate the Push Model
-	
+     /**
+     * Called by client(RMClient) to notify the RM substrate of the
+     * presence of a key corresponding to a object that was 'recently'
+     * inserted at itself. The RM substrate algorithm is designed on a 
+     * Pull model. This call however gives the RM substrate to implement
+     * the Push model if it desires so in future. The current implementation
+     * this method is non-operational since we believe that the Pull model 
+     * behaves sufficiently well. 
+     */
+    public void registerKey(Id key) {
+	// Currently we do nothing here. 
 
     }
 
 
+    /**
+     * Called by client(RMClient) to enable optimizations to route to the
+     * nearest replica. Should be called by client in the context of the 
+     * forward method of a lookup message. Should only be called if the local
+     * client does not have the desired object. This call could change the 
+     * nextHop field in the RouteMessage. 
+     */
     public void lookupForward(RouteMessage msg) {
 	Id target = msg.getTarget();
 	int replicaFactor = rFactor;
@@ -726,6 +889,8 @@ public class RMImpl extends CommonAPIAppl implements RM {
     }
     
 }
+
+
 
 
 
