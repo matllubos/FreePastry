@@ -11,6 +11,8 @@ import rice.post.storage.*;
  * Represents a notion of a folder in the email service.
  */
 public class Folder {
+  private static final int COMPRESS_LIMIT = 100;
+
   // name of the folder
   private String _name;
 
@@ -20,12 +22,8 @@ public class Folder {
   // the storage service used by the Folder to fetch log contents
   private StorageService _storage;
 
-  // the nodeID of the client's POST
-  //private NodeID _nodeId;
-
   /**
    * Constructs an empty Folder.
-   * JM I think that this should be disappeared.
    * @param name The name of the folder.
    */
   public Folder(String name) {
@@ -53,7 +51,8 @@ public class Folder {
     boolean finished = false;
     LogEntryReference top = _log.getTopEntry();
     LogEntry topEntry = (LogEntry)_storage.retrieveContentHash(top);
-
+    int uncompressedEntries = 0;
+    
     // walk through the log and build up the contents of the folder
     while (!finished) {
       // deal with the current LogEntry
@@ -85,12 +84,33 @@ public class Folder {
       else {
         topEntry = (LogEntry)_storage.retrieveContentHash(top);
       }
+      uncompressedEntries += 1;
     }
+    snapShotUpdate(uncompressedEntries);
     return (Email[])contents.toArray();
   }
 
   /**
-    * Returns the name of this folder
+   * Handles the snapShot policy of the Folder.  The current policy is
+   * to check to see if more than 100 entries need to be read to build
+   * up the contents of the Folder.  If more than 100 entries need to
+   * be read, a new SnapShot is entered.
+   * 
+   * @param count the number of entries in the log that need to be
+   * read before the complete Folder contents can be returned.
+   * @param state the current contents of the Folder
+   */
+  private void snapShotUpdate(int entries, Email[] contents)
+  {
+    // if the number of entries is greater than the compression limit,
+    // add a new snapshot
+    if (entries > COMPRESS_LIMIT) {
+      _log.addLogEntry(new SnapShotLogEntry(contents));      
+    }    
+  }
+
+  /**
+   * Returns the name of this folder
    *
    * @return The name of the folder
    */
@@ -134,7 +154,7 @@ public class Folder {
   }
 
   /**
-    * Moves a message from this folder into a another, given folder.
+   * Moves a message from this folder into a another, given folder.
    * This means adding the message to the destination folder, and
    * removing the message from this folder.
    *
@@ -147,6 +167,13 @@ public class Folder {
     removeMessage(email);
   }
 
+  /**
+   * Creates a new child of the given name.  The current Folder
+   * is the parent.
+   *
+   * @param name the name of the new child Folder
+   * @return the newly created child Folder
+   */   
   public Folder createChildFolder(String name) throws PostException {
     try {
       Log log = new Log(name, _log.getLocation());
@@ -157,6 +184,13 @@ public class Folder {
     }
   }
 
+  /**
+   * Returns the selected Folder.  The Folder is selected by its name;
+   * if the Folder does not exist an exception is thrown.
+   * 
+   * @param name the name of the Folder to return
+   * @return the selected child Folder
+   */
   public Folder getChildFolder(String name) throws PostException {
     try {
       Log log = (Log)_storage.retrieveSigned(_log.getChildLog(name));
@@ -166,12 +200,17 @@ public class Folder {
     }
   }
 
+  /**
+   * Returns the names of the child Folders of the current Folder.
+   *
+   * @return an array of the names of the child Folders
+   */
   public String[] getChildren() throws PostException {
     return (String[])_log.getChildLogNames();
   }
 
   /**
-    * Deletes a folder from the user's mailbox.
+   * Deletes a folder from the user's mailbox.
    *
    * @param name The name of the folder to delete.
    */
@@ -182,4 +221,28 @@ public class Folder {
       throw new PostException(e.getMessage());
     }
   }
+
+  /**
+   * Return all the events that happened after the arrival
+   * of the given email in the Folder.  
+   * JM Problem, does not have access to folder creation/deletion information.
+   *
+   * @param email the email to act as the signal
+   * @return the array of recent events
+  public Events[] getPartialEventLog(Email email) {
+  
+  
+  }
+  */
+  
+  /**
+   * Return 
+   *
+   * @return the complete array of events
+  public Events[] getCompleteEventLog() {
+
+
+  }
+  */
+  
 }

@@ -71,6 +71,8 @@ public class Email implements java.io.Serializable {
    * email is sent or received, which lets the EmailClient be
    * effectively ignorant of the storage service (which is good, since
    * this Service is part of the POST layer).
+   *
+   * @param s the StorageService the email is to use
    */
   protected void setStorage(StorageService s) {
     storage = s;
@@ -90,10 +92,10 @@ public class Email implements java.io.Serializable {
    *
    * @return The body of this email.
    */
-  public EmailData getBody() {
+  public EmailData getBody() throws StorageException {
     // if the body has not been fetched already, fetch it
     if (this.body == null) {
-      // JM body = (EmailData)storage.retrieveContentHash(bodyRef);
+      body = (EmailData)storage.retrieveContentHash(bodyRef);
     }
     // return the body
     return this.body;
@@ -104,11 +106,11 @@ public class Email implements java.io.Serializable {
    *
    * @return The attachments of this email.
    */
-  public EmailData[] getAttachments() {
+  public EmailData[] getAttachments() throws StorageException {
     // if the attachments have not been fetched already, fetch them
     if (this.attachments == null) {
       for (int i = 0; i < attachmentRefs.length; i++) {
-	// JM attachments[i] = (EmailData)storage.retrieveContentHash(attachmentRefs[i]);
+	attachments[i] = (EmailData)storage.retrieveContentHash(attachmentRefs[i]);
       }
     }
     // return the attachments
@@ -120,12 +122,12 @@ public class Email implements java.io.Serializable {
    * saves the references to the content in the email.  
    * Should be called before the Email is sent over the wire.
    */
-  protected void storeData() {   
+  protected void storeData() throws StorageException {   
     if (this.attachmentRefs == null) {
       attachmentRefs = new EmailDataReference[attachments.length];
       // insert the email attachments into PAST, store their references
       for (int i = 0; i < attachments.length; i++) {
-	// JM attachmentRefs[i] = (EmailDataReference)storage.storeContentHash(attachments[i]); 
+	attachmentRefs[i] = (EmailDataReference)storage.storeContentHash(attachments[i]); 
       }
     }
 
@@ -133,7 +135,7 @@ public class Email implements java.io.Serializable {
     // JM try replacing this with "if (bodyRef == null) { " for a laugh
     if (!(this.bodyRef instanceof EmailDataReference)) {
       // insert the email body into PAST, store the reference
-      // JM bodyRef = (EmailDataReference)storage.storeContentHash(body);
+      bodyRef = (EmailDataReference)storage.storeContentHash(body);
     }
   }
 }
