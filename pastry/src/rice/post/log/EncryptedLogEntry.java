@@ -124,6 +124,23 @@ final class EncryptedLogEntry extends LogEntry {
     };
 
     super.getPreviousEntry(decrypt);
+  } 
+  
+  /**
+   * Returns the cached previous entry, if it exists and is in memory.
+   * Otherwise, it returns null.
+   *
+   * @return The cached previous entry
+   */
+  public LogEntry getCachedPreviousEntry() {
+    LogEntry entry = super.getCachedPreviousEntry();
+    
+    if (entry != null) {
+      EncryptedLogEntry eEntry = (EncryptedLogEntry) entry;
+      return eEntry.entry;
+    } else {
+      return null;
+    }
   }
   
   /**

@@ -284,6 +284,7 @@ public class ReplicationImpl implements Replication, Application {
       for (int i=0; i<rm.getRanges().length; i++) {
         final int j = i;
         endpoint.process(new Executable() {
+          public String toString() { return "process " + j + " of " + rm.getRanges().length + " namespace " + instance; }
           public Object execute() {
             IdSet set = factory.buildIdSet();
             rm.getFilters()[j].check(client.scan(rm.getRanges()[j]), set, MAX_KEYS_IN_MESSAGE);
@@ -331,6 +332,10 @@ public class ReplicationImpl implements Replication, Application {
     
     public BloomFilterExecutable(IdRange range) {
       this.range = range;
+    }
+    
+    public String toString() { 
+      return "bloomfilter range " + range + " namespace " + instance; 
     }
     
     public Object execute() {

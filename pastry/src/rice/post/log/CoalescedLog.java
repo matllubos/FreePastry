@@ -219,7 +219,29 @@ public class CoalescedLog extends EncryptedLog {
     }
     
     /**
-      * Method which redirects the getPreviousEntry back
+     * Returns whether or not this log entry has a previous log entry
+     *
+     * @return Whether or not this log entry has a previous
+     */
+    public boolean hasPreviousEntry() {
+      return (topEntryReference != null);
+    }    
+    
+    /**
+     * Returns the cached previous entry, if it exists and is in memory.
+     * Otherwise, it returns null.
+     *
+     * @return The cached previous entry
+     */
+    public LogEntry getCachedPreviousEntry() {
+      if (topEntry == null)
+        return null;
+      else
+        return ((EncryptedLogEntry) topEntry).entry;
+    }
+      
+    /**
+     * Method which redirects the getPreviousEntry back
      * to the Coalesed entry
      *
      * @param command The command to return the result to.

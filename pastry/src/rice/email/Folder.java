@@ -214,31 +214,42 @@ public class Folder {
           parent.receiveResult(Boolean.TRUE);
           return;
         }
-        
-        if (o instanceof SnapShotLogEntry) {
-          SnapShotLogEntry sEntry = (SnapShotLogEntry) o;
-          
-          if (sEntry.getTopEntry() == null) {
+
+        LogEntry entry = (LogEntry) o;
+                
+        while (entry.hasPreviousEntry()) {
+          if ((top != null) && (top.equals(entry))) {
             parent.receiveResult(Boolean.TRUE);
             return;
-          } else {
-            top = sEntry.getTopEntry();
           }
-        } 
+
+          if (entry instanceof SnapShotLogEntry) {
+            SnapShotLogEntry sEntry = (SnapShotLogEntry) entry;
+          
+            if (sEntry.getTopEntry() == null) {
+              parent.receiveResult(Boolean.TRUE);
+              return;
+            } else {
+              top = sEntry.getTopEntry();
+            }
+          } 
+          
+          if (entry.getPreviousEntryReference() != null) {
+            System.out.println("Adding next ref " + entry.getPreviousEntryReference());
+            set.add(entry.getPreviousEntryReference());
+          }
+
+          LogEntry cached = entry.getCachedPreviousEntry();
+          if (cached == null)
+            break;
+          else
+            entry = cached;
+        }
         
-        LogEntry entry = (LogEntry) o;
-        
-        if ((top != null) && (top.equals(entry))) {
+        if (entry.hasPreviousEntry()) 
+          entry.getPreviousEntry(this);
+        else 
           parent.receiveResult(Boolean.TRUE);
-          return;
-        }
-        
-        if (entry.getPreviousEntryReference() != null) {
-          System.out.println("Adding next ref " + entry.getPreviousEntryReference());
-          set.add(entry.getPreviousEntryReference());
-        }
-        
-        entry.getPreviousEntry(this);
       }
     });
   }

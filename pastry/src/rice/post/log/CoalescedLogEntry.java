@@ -135,6 +135,34 @@ final class CoalescedLogEntry extends LogEntry {
   }
   
   /**
+   * Method which returns the previous entry for the given entry
+   *
+   * @param entry The entry to fetch the previous entry for
+   * @command The command to return the result to
+   */
+  protected LogEntry getCachedPreviousEntry(LogEntry entry) {
+    if (entry == entries[0]) {
+      LogEntry nEntry = getCachedPreviousEntry();
+    
+      if (nEntry instanceof CoalescedLogEntry) {
+        LogEntry[] otherEntries = ((CoalescedLogEntry) nEntry).getEntries();
+        return otherEntries[otherEntries.length-1];
+      } else {
+        return nEntry;
+      }
+    } else {
+      for (int i=1; i<entries.length; i++) 
+        if (entries[i] == entry) 
+          return entries[i-1];
+          
+      if (entry == null) 
+        return entries[entries.length-1];
+          
+      throw new IllegalArgumentException("ERROR: Could not find previous entry for " + entry);
+    } 
+  }
+  
+  /**
    * Called upon deserialization, which tells the log entries who their parent
    * is
    *
@@ -173,6 +201,28 @@ final class CoalescedLogEntry extends LogEntry {
         return CoalescedLogEntry.this.getPreviousEntryReference();
       
       return null;
+    }  
+    
+    /**
+     * Returns the cached previous entry, if it exists and is in memory.
+     * Otherwise, it returns null.
+     *
+     * @return The cached previous entry
+     */
+    public LogEntry getCachedPreviousEntry() {
+      return CoalescedLogEntry.this.getCachedPreviousEntry(entry);
+    }
+    
+    /**
+     * Returns whether or not this log entry has a previous log entry
+     *
+     * @return Whether or not this log entry has a previous
+     */
+    public boolean hasPreviousEntry() {
+      if (entry == entries[0])
+        return (CoalescedLogEntry.this.getPreviousEntryReference() != null);
+      else
+        return true;
     }
     
     /**

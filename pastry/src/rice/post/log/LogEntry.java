@@ -17,6 +17,9 @@ import rice.post.storage.*;
  */
 public abstract class LogEntry implements PostData {
 
+  // serialver for backward compatibility
+  private static final long serialVersionUID = 2210096794853078256L;
+  
   // the user in whose log this entry appears
   protected PostEntityAddress user;
   
@@ -94,12 +97,37 @@ public abstract class LogEntry implements PostData {
   }
   
   /**
+   * Returns whether or not this log entry has a previous log entry
+   *
+   * @return Whether or not this log entry has a previous
+   */
+  public boolean hasPreviousEntry() {
+    if (parent != null)
+      return parent.hasPreviousEntry();
+    else
+      return (previousEntryReference != null);
+  }
+  
+  /**
    * Returns the reference to the previous entry in the log
    *
    * @return A reference to the previous log entry
    */
   public void getPreviousEntry(final Continuation command) {
     getRealPreviousEntry(command);
+  }
+  
+  /**
+   * Returns the cached previous entry, if it exists and is in memory.
+   * Otherwise, it returns null.
+   *
+   * @return The cached previous entry
+   */
+  public LogEntry getCachedPreviousEntry() {
+    if (parent != null) 
+      return parent.getCachedPreviousEntry();
+    
+    return ((previousEntry == null) ? null : (LogEntry) previousEntry.get());
   }
 
   /**
