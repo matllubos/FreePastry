@@ -154,12 +154,12 @@ sort.2=Class(Instance,Static)
 # Check the protection next
 # To sort with public methods/variables use Protection(public)
 # To sort with private methods/variables use Protection(private)
-sort.3=Protection(public)
+#sort.3=Protection(public)
 
 # Group setters and getters last
 # Setters are methods that start with the word 'set'
 # Getters are methods that start with the word 'get' or 'is'
-sort.4=Method(getter,setter,other)
+sort.3=Method(getter,setter,other)
 
 
 
