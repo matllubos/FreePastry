@@ -116,7 +116,7 @@ public class MimeMessage
             throw new MailException(ioe);
         }
 
-        out.append("\r\n");
+        out.append("\r");
 
         return out.toString();
     }
