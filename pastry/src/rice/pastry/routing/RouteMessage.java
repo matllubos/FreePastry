@@ -161,6 +161,26 @@ public class RouteMessage extends Message implements Serializable {
 	nextHop = null;
     }
 
+
+    /**
+     * Constructor.
+     *
+     * @param target this is id of the node the message will be routed to.
+     * @param msg the wrapped message.
+     * @param firstHop the nodeHandle of the first hop destination
+     * @param aux an auxilary address which the message after each hop.
+     */
+
+    public RouteMessage(Id target, Message msg, NodeHandle firstHop, Address aux) 
+    {
+	super(new RouterAddress());
+	this.target = (NodeId)target;
+	internalMsg = msg;
+	this.opts = new SendOptions();
+	auxAddress = aux;
+	nextHop = firstHop;
+    }
+
     /**
      * Routes the messages if the next hop has been set up.
      *

@@ -3,9 +3,11 @@ PACKAGE = rice.pastry
 SOURCE  = \
 	Id.java\
 	IdSet.java \
+	IdRange.java \
 	NodeId.java\
 	NodeIdFactory.java\
 	NodeHandle.java\
+	OrderedNodeSet.java\
 	LocalNode.java\
 	LocalNodeI.java\
 	PendingLocalNodesList.java\

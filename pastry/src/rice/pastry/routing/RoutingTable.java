@@ -180,6 +180,49 @@ public class RoutingTable extends Observable implements Observer {
     }
 
     /**
+     * Determines a set of alternate hops towards a given key.
+     * 
+     * @param key the key
+     * @param set a set of nodehandles (result)
+     * @param max the maximal number of alternate hops requested
+     */
+
+    public void alternateRoutes(Id key, NodeSet set, int max)
+    {
+	final int cols = 1 << idBaseBitLength;
+	int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
+	if (diffDigit < 0) return;
+	int keyDigit = key.getDigit(diffDigit, idBaseBitLength);
+	int myDigit = myNodeId.getDigit(diffDigit, idBaseBitLength);
+	Id.Distance myDistance = myNodeId.distance(key);
+	boolean finished = false;
+	int count = 0;
+
+	for (int i=0; !finished; i++) {
+	    for (int j=0; j<2; j++) {
+		int digit = (j == 0) ? 
+		    (keyDigit + i) & (cols - 1) : (keyDigit + cols - i) & (cols - 1);
+
+		RouteSet rs = getRouteSet(diffDigit, digit);
+		for (int k=0; rs!=null && k<rs.size(); k++) {
+		    NodeHandle n = rs.get(k);
+		    
+		    if (n.isAlive()) {
+			Id.Distance nDist = n.getNodeId().distance(key);
+
+			if (set != null && count < max && myDistance.compareTo(nDist) > 0) {
+			    set.put(n);
+			    count++;
+			}
+		    }
+		}
+		
+		if (digit == myDigit) finished = true;
+	    }
+	}
+    }
+
+    /**
      * Gets the set of handles at a particular entry in the table.
      *
      * @param index the index of the digit in base <EM> 2 <SUP> idBaseBitLength </SUP></EM>.  <EM> 0 </EM> is the least significant.

@@ -1,8 +1,8 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate 
+"Free Pastry" Peer-to-Peer Application Development Substrate 
 
-Copyright 2002, Rice University. All rights reserved.
+Copyright 2002, Rice University. All rights reserved. 
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -39,52 +39,106 @@ package rice.pastry;
 import java.util.*;
 
 /**
- * An interface to a generic set of nodes.
- *
+ * Represents an ordered set of NodeHandles.
+ * *
  * @version $Id$
  *
- * @author Andrew Ladd
+ * @author Peter Druschel
  */
 
-public interface NodeSet 
-{       
+public class NodeSet implements NodeSetI {
+
+    private Vector set;
+
     /**
-     * Puts a NodeHandle into the set.
-     *
-     * @param handle the handle to put.
-     *
-     * @return true if the put succeeded, false otherwise.
+     * Constructor.
+     */
+    public NodeSet() {
+	set = new Vector();
+    }
+
+    /**
+     * Constructor.
+     */
+    public NodeSet(Vector s) {
+	set = s;
+    }
+
+    /**
+     * Copy constructor.
+     */
+    public NodeSet(NodeSet o) {
+	set = new Vector(o.set);
+    }
+
+
+    /*
+     * NodeSet methods
      */
 
-    public boolean put(NodeHandle handle);
-    
+
     /**
-     * Finds the NodeHandle associated with the NodeId.
+     * Appends a member to the ordered set.
+     *
+     * @param handle the handle to put.
+     * @return false if handle was already a member, true otherwise
+     */
+
+    public boolean put(NodeHandle handle) {
+	if (set.contains(handle)) return false;
+
+	set.add(handle);
+	return true;
+    }
+
+    /**
+     * Finds the NodeHandle associated with a NodeId.
      *
      * @param nid a node id.
      * @return the handle associated with that id or null if no such handle is found.
      */
     
-    public NodeHandle get(NodeId nid);
+    public NodeHandle get(NodeId nid) {
+	NodeHandle h;
 
+	try {
+	    return (NodeHandle) set.elementAt(getIndex(nid));
+	} catch (Exception e) {
+	    return null;
+	}
+
+    }
 
     /**
      * Gets the ith element in the set.
      *
      * @param i an index.
-     * @return the handle associated with that id or null if no such handle is found.
+     * @return the handle, or null if the position is out of bounds
      */
     
-    public NodeHandle get(int i);
+    public NodeHandle get(int i) {
+	NodeHandle h;
+
+	try {
+	    h = (NodeHandle) set.elementAt(i);
+	} catch (Exception e) {
+	    return null;
+	}
+	
+	return h;
+    }
+
     
     /**
-     * Verifies if the set contains this particular id.
-     * 
-     * @param nid a node id.
-     * @return true if that node id is in the set, false otherwise.
-     */
+     * test membership using Id
+     * @param id the id to test
+     * @return true of NodeHandle associated with id is a member, false otherwise
+     */ 
 
-    public boolean member(NodeId nid);
+    public boolean member(NodeId nid) {
+	return (getIndex(nid) > 0);
+    }
+
     
     /**
      * Removes a node id and its handle from the set.
@@ -94,23 +148,127 @@ public interface NodeSet
      * @return the node handle removed or null if nothing.
      */
 
-    public NodeHandle remove(NodeId nid);
+    public NodeHandle remove(NodeId nid) {
+	try {
+	    return (NodeHandle) set.remove(getIndex(nid));
+	} catch (Exception e) {
+	    return null;
+	}
+    }
+
         
     /**
-     * Gets the size of half the leaf set.
+     * Gets the number of elements.
      *
      * @return the size.
      */
 
-    public int size();
+    public int size() {
+	return set.size();
+    }
 
     /**
      * Gets the index of the element with the given node id.
      *
      * @param nid the node id.
-     *
-     * @return the index or throws a NoSuchElementException.
+     * @return the index or -1 if no such element
      */
 
-    public int getIndex(NodeId nid) throws NoSuchElementException;
+    public int getIndex(NodeId nid) {
+	NodeHandle h;	
+
+	for (int i=0; i<set.size(); i++) {
+	    try {
+		h = (NodeHandle) set.elementAt(i);
+		if (h.getNodeId().equals(nid)) return i;
+	    } catch (Exception e) {}
+	}
+	
+	return -1;
+    }
+
+
+    /*
+     * additional methods unique to NodeSet
+     */
+
+
+    /**
+     * insert a member at the given index
+     *
+     * @param index the position at which to insert the element into the ordered set
+     * @param handle the handle to add
+     * @return false if handle was already a member, true otherwise
+     */ 
+    public boolean insert(int index, NodeHandle handle) {
+	if (set.contains(handle)) return false;
+
+	set.add(index, handle);
+	return true;
+    }
+
+    /**
+     * remove a member
+     * @param handle the handle to remove
+     */ 
+    public void remove(NodeHandle handle) {
+	set.remove(handle);
+    }
+
+    /**
+     * remove a member at a given position
+     * @param index the position of the member to remove
+     */ 
+    public void remove(int index) {
+	set.remove(index);
+    }
+
+    /**
+     * determine rank of a member
+     * @param handle the handle to test
+     * @return rank (index) of the handle, or -1 if handle is not a member
+     */ 
+    public int indexOf(NodeHandle handle) {
+	return set.indexOf(handle);
+    }
+
+    /**
+     * test membership
+     * @param handle the handle to test
+     * @return true of handle is a member, false otherwise
+     */ 
+    public boolean member(NodeHandle handle) {
+	return set.contains(handle);
+    }
+
+    /**
+     * return a subset of this set, consisting of the members within a given range of positions
+     * @param from the lower end of the range (inclusive)
+     * @param to the upper end of the range (exclusive)
+     * @return the subset, or null of the arguments were out of bounds
+     */ 
+    NodeSet subSet(int from, int to) {
+	NodeSet res;
+
+	try {
+	    res = new NodeSet(new Vector(set.subList(from, to)));
+	} catch (Exception e) {
+	    return null;
+	}
+
+	return res;
+    }
+
+    /**
+     * return an iterator that iterates over the elements of this set
+     * @return the interator
+     */
+    Iterator getIterator() {
+	return set.iterator();
+    }
+
 }
+
+
+
+

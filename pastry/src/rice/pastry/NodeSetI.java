@@ -34,70 +34,83 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry.messaging;
+package rice.pastry;
 
 import java.util.*;
 
 /**
- * An object which remembers the mapping from names to MessageReceivers
- * and dispatches messages by request.
+ * An interface to a generic set of nodes.
  *
  * @version $Id$
  *
  * @author Andrew Ladd
  */
 
-public class MessageDispatch 
-{
-    // have modified from HashMap to HashMap to use the internal representation 
-    // of a LocalAddress.  Otherwise remote node cannot get its message delivered
-    // because objects constructed differently are not mapped to the same value
-    private HashMap addressBook;
-
+public interface NodeSetI 
+{       
     /**
-     * Registers a receiver with the mail service.
+     * Puts a NodeHandle into the set.
      *
-     * @param name a name for a receiver.
-     * @param receiver the receiver.
+     * @param handle the handle to put.
+     *
+     * @return true if the put succeeded, false otherwise.
      */
 
-    public void registerReceiver(Address address, MessageReceiver receiver) 
-    {
-      if (addressBook.get(address) != null) {
-        System.out.println("ERROR - Registering receiver for already-registered address " + address);
-      }
-      
-	addressBook.put(address, receiver);	
-    }
-
+    public boolean put(NodeHandle handle);
+    
     /**
-     * Dispatches a message to the appropriate receiver.
+     * Finds the NodeHandle associated with the NodeId.
      *
-     * @param msg the message.
-     * 
-     * @return true if message could be dispatched, false otherwise.
-     */
-
-    public boolean dispatchMessage(Message msg) 
-    {
-	MessageReceiver mr = (MessageReceiver) addressBook.get(msg.getDestination());
-
-	if (mr != null) {
-	    mr.receiveMessage(msg); return true;
-	} else {
-	    System.out.println("Could not dispatch message " + msg + " because the application address " + msg.getDestination() + " was unknown.");
-	    System.out.println("Message is going to be dropped on the floor.");
-	    return false;
-	}
-    }
-
-    /**
-     * Constructor.
+     * @param nid a node id.
+     * @return the handle associated with that id or null if no such handle is found.
      */
     
-    public MessageDispatch() 
-    {
-	addressBook = new HashMap();
-    }
+    public NodeHandle get(NodeId nid);
 
+
+    /**
+     * Gets the ith element in the set.
+     *
+     * @param i an index.
+     * @return the handle associated with that id or null if no such handle is found.
+     */
+    
+    public NodeHandle get(int i);
+    
+    /**
+     * Verifies if the set contains this particular id.
+     * 
+     * @param nid a node id.
+     * @return true if that node id is in the set, false otherwise.
+     */
+
+    public boolean member(NodeId nid);
+    
+    /**
+     * Removes a node id and its handle from the set.
+     *
+     * @param nid the node to remove.
+     *
+     * @return the node handle removed or null if nothing.
+     */
+
+    public NodeHandle remove(NodeId nid);
+        
+    /**
+     * Gets the size of the set.
+     *
+     * @return the size.
+     */
+
+    public int size();
+
+    /**
+     * Gets the index of the element with the given node id.
+     *
+     * @param nid the node id.
+     *
+     * @return the index or throws a NoSuchElementException.
+     */
+
+    public int getIndex(NodeId nid) throws NoSuchElementException;
 }

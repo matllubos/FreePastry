@@ -37,7 +37,7 @@ if advised of the possibility of such damage.
 package rice.pastry.routing;
 
 import rice.pastry.*;
-import rice.pastry.NodeSet;
+import rice.pastry.NodeSetI;
 
 import java.util.*;
 import java.io.*;
@@ -54,7 +54,7 @@ import java.io.*;
  * @author Peter Druschel
  */
 
-public class RouteSet extends Observable implements NodeSet, Serializable, Observer
+public class RouteSet extends Observable implements NodeSetI, Serializable, Observer
 {
     private NodeHandle[] nodes;
     private int theSize;

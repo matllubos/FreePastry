@@ -51,7 +51,7 @@ import java.io.*;
  */
 
 
-public class SimilarSet extends Observable implements NodeSet, Serializable, Observer
+public class SimilarSet extends Observable implements NodeSetI, Serializable, Observer
 {
     private NodeHandle localNode;
     private NodeId baseId;

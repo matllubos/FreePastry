@@ -39,98 +39,98 @@ package rice.pastry;
 import java.util.*;
 
 /**
- * Represents a set of Pastry ids.
+ * Represents a contiguous range of Pastry ids.
  * *
  * @version $Id$
  *
  * @author Peter Druschel
  */
 
-public class IdSet {
+public class IdRange {
 
-    private SortedSet idSet;
+    private Id left;
+    private Id right;
 
     /**
      * Constructor.
+     *
+     * @param left the id at the counterclockwise edge of the range (inclusive)
+     * @param right the id at the clockwise edge of the range (exclusive)
      */
-    public IdSet() {
-	idSet = new TreeSet();
+    public IdRange(Id left, Id right) {
+	this.left = left;
+	this.right = right;
     }
 
     /**
      * Copy constructor.
      */
-    public IdSet(IdSet o) {
-	idSet = new TreeSet(idSet);
+    public IdRange(IdRange o) {
+	this.left  = o.left;
+	this.right = o.right;
     }
 
     /**
-     * return the number of elements
+     * return the size of the range
+     * @return the numerical distance of the range
      */ 
-    public int numElements() {
-	return idSet.size();
+    public Id.Distance size() {
+	return left.distance(right);
     }
 
+
     /**
-     * add a member
-     * @param id the id to add
+     * get left edge of range
+     * @return the id at the counterclockwise edge of the range (inclusive)
      */ 
-    public void addMember(Id id) {
-	idSet.add(id);
+    public Id getLeft() {
+	return left;
     }
 
     /**
-     * remove a member
-     * @param id the id to remove
+     * get right edge of range
+     * @return the id at the clockwise edge of the range (exclusive)
      */ 
-    public void removeMember(Id id) {
-	idSet.remove(id);
+    public Id getRight() {
+	return right;
     }
 
     /**
-     * test membership
-     * @param id the id to test
-     * @return true of id is a member, false otherwise
+     * set left edge of range
+     * @param left the new id at the counterclockwise edge of the range (inclusive)
      */ 
-    public boolean isMember(Id id) {
-	return idSet.contains(id);
+    public void setLeft(Id left) {
+	this.left = left;
     }
 
     /**
-     * return the smallest member id
-     * @return the smallest id in the set
+     * set right edge of range
+     * @param right the new id at the clockwise edge of the range (exclusive)
      */ 
-    public Id minMember() {
-	return (Id) idSet.first();
+    public void setRight(Id right) {
+	this.right = right;
     }
 
     /**
-     * return the largest member id
-     * @return the largest id in the set
-     */ 
-    public Id maxMember() {
-	return (Id) idSet.last();
-    }
-
-    /**
-     * return a subset of this set, consisting of the member ids in a given range
-     * @param from the lower end of the range (inclusive)
-     * @param to the upper end of the range (exclusive)
-     * @return the subset
-     */ 
-    public IdSet subSet(Id from, Id to) {
-	IdSet res = new IdSet();
-
-	res.idSet = idSet.subSet(from, to);
-	return res;
-    }
-
-    /**
-     * return an iterator that iterates over the elements of this set
-     * @return the interator
+     * merge two ranges
+     * 
+     * @param other the other range
+     * @return the result range or null if other doesn't overlap or butt with this range
      */
-    public Iterator getIterator() {
-	return idSet.iterator();
+    public IdRange merge(IdRange other) {
+	// XXX -implement
+	return null;
+    }
+
+    /**
+     * intersect two ranges
+     * 
+     * @param other the other range
+     * @return the result range or null if other doesn't overlap with this range
+     */
+    public IdRange intersect(IdRange other) {
+	// XXX -implement
+	return null;
     }
 
 }
