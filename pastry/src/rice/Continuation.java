@@ -100,6 +100,40 @@ public interface Continuation {
       parent.receiveException(result);
     }
   }
+  
+  /**
+   * This class is a Continuation provided for simplicity which
+   * passes any results up to the parent Continuation which it
+   * is constructed with.  Subclasses should implement the
+   * receiveException() method with the appropriate behavior.
+   */
+  public static abstract class ErrorContinuation implements Continuation {
+    
+    /**
+    * The parent continuation
+     */
+    protected Continuation parent;
+    
+    /**
+     * Constructor which takes in the parent continuation
+     * for this continuation.
+     *
+     * @param continuation The parent of this continuation
+     */
+    public ErrorContinuation(Continuation continuation) {
+      parent = continuation;
+    }
+    
+    /**
+     * Called when an the result is availble.  Simply passes the result
+     * to the parent;
+     *
+     * @param result The result
+     */
+    public void receiveResult(Object result) {
+      parent.receiveResult(result);
+    }
+  }
 
   /**
    * This class is a Continuation provided for simplicity which
@@ -141,6 +175,7 @@ public interface Continuation {
      */
     public void receiveException(Exception result) {
       System.out.println("ERROR - Received exception " + result + " during task " + name);
+      result.printStackTrace();
     }
   }
 
