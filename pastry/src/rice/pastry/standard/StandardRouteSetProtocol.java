@@ -180,7 +180,7 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver
 		RouteSet rs = row[col];
 
 		// ping all nodes in routeset
-		rs.pingAll();
+		rs.pingAllNew();
 
 		// swap row with closest node only
 		NodeHandle nh = rs.closestNode();
