@@ -144,6 +144,25 @@ if advised of the possibility of such damage.
    is a PARENT. For each topic in this list, it RESETS the
    heartBeatsMissed counter.
 
+   There is however an issue of inconsistency in the 
+   parent-child relationship from the view of the parent and the 
+   child that may arise if certain messages like MessageAckOnSubscribe, 
+   HeartBeat message etc is lost. This inconsistency leads to the PARENT 
+   node having a different list of topics corresponding to the child 
+   node in the DistinctChildren table as compared to the list of topics 
+   corresponding to the parent node in the DistinctParentTable of the 
+   CHILD node. In order to detect this inconsistency and remove it the 
+   PARENT node sends a fingerprint of the topic list (EXOR of the topics 
+   in the list) in the HeartBeat message. The CHILD node on receiving 
+   the HeartBeat message compares the fingerprint in the message with
+   the fingerprint in its local DistinctParentTable corresponding to the
+   PARENT node. If the fingerprints dont match, an inconsistency has 
+   occurred and thus it sends a MessageRequestToParent requesting for 
+   the list of topics for which the PARENT node has this node as its 
+   CHILD. The PARENT node replies with a MessageReplyFromParent sending
+   this list of topics requested for. The CHILD node on receiving this
+   list of topics, takes actions to remove the inconsistency.  
+
 
 
    Other Approach to Tree Maintenance ( Discarded for the reasons
