@@ -138,6 +138,15 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
   }
 
   /**
+   * Returns the state of this WireNodeHandle
+   *
+   * @return The state of this handle
+   */
+  public int getState() {
+    return state;
+  }
+
+  /**
    * Method which is called when a SocketCommandMessage comes across an open
    * socket for this node handle.
    *
@@ -465,22 +474,22 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
     if (state == STATE_USING_TCP)
       ((WirePastryNode) getLocalNode()).getSocketManager().update(this);
 
-//    debug("Found data to be read from " + getNodeId());
-
     try {
       // inform reader that data is available
-      Object o = reader.read((SocketChannel) key.channel());
+      Object o = null;
 
-      if (o != null) {
-        if (o instanceof SocketCommandMessage) {
-          debug("Read socket message " + o + " - passing to node handle.");
-          receiveSocketMessage((SocketCommandMessage) o);
-        } else if (o instanceof SocketTransportMessage) {
-          debug("Read message " + o + " - passing to pastry node.");
-          SocketTransportMessage stm = (SocketTransportMessage) o;
-          getLocalNode().receiveMessage((Message) stm.getObject());
-        } else {
-          throw new IllegalArgumentException("Message " + o + " was not correctly wrapped.");
+      while ((o = reader.read((SocketChannel) key.channel())) != null) {
+        if (o != null) {
+          if (o instanceof SocketCommandMessage) {
+            debug("Read socket message " + o + " - passing to node handle.");
+            receiveSocketMessage((SocketCommandMessage) o);
+          } else if (o instanceof SocketTransportMessage) {
+            debug("Read message " + o + " - passing to pastry node.");
+            SocketTransportMessage stm = (SocketTransportMessage) o;
+            getLocalNode().receiveMessage((Message) stm.getObject());
+          } else {
+            throw new IllegalArgumentException("Message " + o + " was not correctly wrapped.");
+          }
         }
       }
     } catch (ImproperlyFormattedMessageException e) {

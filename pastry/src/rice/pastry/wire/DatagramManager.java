@@ -169,52 +169,55 @@ public class DatagramManager implements SelectionKeyHandler {
      WireNodeHandle handle = null;
 
     try {
-      InetSocketAddress address = (InetSocketAddress) channel.receive(buffer);
-      buffer.flip();
-      Object o = deserialize(buffer);
+      InetSocketAddress address = null;
+      while ((address = (InetSocketAddress) channel.receive(buffer)) != null) {
+        buffer.flip();
+        Object o = deserialize(buffer);
 
-      if (o instanceof DatagramMessage) {
-        DatagramMessage message = (DatagramMessage) o;
+        if (o instanceof DatagramMessage) {
+          DatagramMessage message = (DatagramMessage) o;
 
-        // make sure message is for us
-        if (message.getDestination().equals(pastryNode.getNodeId())) {
-          debug("Deserialzied message " + o + " from " + message.getSource());
+          // make sure message is for us
+          if (message.getDestination().equals(pastryNode.getNodeId())) {
+            debug("Deserialzied message " + o + " from " + message.getSource());
 
-          // make sure this handle is in the pool
-          handle = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(message.getSource());
+            // make sure this handle is in the pool
+            handle = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(message.getSource());
 
-          if (handle == null) {
-            handle = new WireNodeHandle(address, message.getSource(), pastryNode);
-            handle = (WireNodeHandle) pastryNode.getNodeHandlePool().coalesce(handle);
-          }
+            if (handle == null) {
+              handle = new WireNodeHandle(address, message.getSource(), pastryNode);
+              handle = (WireNodeHandle) pastryNode.getNodeHandlePool().coalesce(handle);
+            }
 
-          // if ack, simply record it
-          if (o instanceof AcknowledgementMessage) {
-            transmissionManager.receivedAck((AcknowledgementMessage) message);
-          } else {
-            // hand message off to the pastry node
-            if (sendAck(address, message)) {
-              if (o instanceof DatagramTransportMessage) {
-                // hand off to pastry node if a transport message is received
-                DatagramTransportMessage dtm = (DatagramTransportMessage) o;
+            // if ack, simply record it
+            if (o instanceof AcknowledgementMessage) {
+              transmissionManager.receivedAck((AcknowledgementMessage) message);
+            } else {
+              // hand message off to the pastry node
+              if (sendAck(address, message)) {
+                if (o instanceof DatagramTransportMessage) {
+                  // hand off to pastry node if a transport message is received
+                  DatagramTransportMessage dtm = (DatagramTransportMessage) o;
 
-                pastryNode.receiveMessage((Message) dtm.getObject());
-              } else if (o instanceof PingMessage) {
-                // do nothing (ack has been sent)
-              } else {
-                System.out.println("ERROR: Recieved unreccognized datagrammessage: " + o);
+                  pastryNode.receiveMessage((Message) dtm.getObject());
+                } else if (o instanceof PingMessage) {
+                  // do nothing (ack has been sent)
+                } else {
+                  System.out.println("ERROR: Recieved unreccognized datagrammessage: " + o);
+                }
               }
             }
+          } else {
+            debug("ERROR: Recieved message " + message + " at " + pastryNode.getNodeId() +
+                  " for dest " + message.getDestination() + " - dropping on floor.");
           }
         } else {
-          System.out.println("ERROR: Recieved message " + message + " at " + pastryNode.getNodeId() +
-                             " for dest " + message.getDestination() + " - dropping on floor.");
+          System.out.println("ERROR: Received unrecognized message " + o + " at " + pastryNode.getNodeId() +
+                             " - dropping on floor.");
         }
       }
     } catch (IOException e) {
       debug("ERROR (datagrammanager:read): " + e);
-      if (handle != null)
-        handle.markDead();
     }
   }
 
@@ -279,8 +282,10 @@ public class DatagramManager implements SelectionKeyHandler {
    * @param address The desintation address of the ack.
    * @param ackNum The number of the incoming packet.
    */
-  private boolean sendAck(InetSocketAddress address, DatagramMessage message) {
-    ackQueue.add(message.getAck(address));
+  private boolean sendAck(InetSocketAddress address, DatagramMessage message)
+    throws IOException {
+    if (channel.send(serialize(message.getAck(address)), address) == 0)
+      ackQueue.add(message.getAck(address));
 
     Integer num = (Integer) lastAckNum.get(message.getSource());
 

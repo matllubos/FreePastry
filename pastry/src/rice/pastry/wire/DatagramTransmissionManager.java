@@ -107,6 +107,14 @@ public class DatagramTransmissionManager {
       }
 
       entry.add(write);
+
+      if (entry.getState() == entry.STATE_READY) {
+        if (pastryNode.inThread()) {
+          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        } else {
+          pastryNode.getSelectorManager().getSelector().wakeup();
+        }
+      }
     }
   }
 
@@ -341,7 +349,8 @@ public class DatagramTransmissionManager {
 
       debug("Added write for object " + write.getObject());
 
-      if ((queue.size() > MAX_UDP_QUEUE_SIZE) && (! (write.getObject() instanceof DatagramMessage))) {
+      if ((queue.size() > MAX_UDP_QUEUE_SIZE) && (! (write.getObject() instanceof DatagramMessage)) &&
+          (handle.getState() == WireNodeHandle.STATE_USING_UDP)) {
         LinkedList list = new LinkedList();
 
         Iterator i = queue.iterator();
