@@ -142,22 +142,31 @@ public class MessageAnycast extends ScribeMessage implements Serializable
      */
     public boolean 
 	handleForwardMessage(Scribe scribe, Topic topic ) {
-	//System.out.println("MessageAnycast -- Forwarded at "+scribe.getNodeId()+" source "+m_source.getNodeId());
+	//System.out.println("MessageAnycast -- Forwarded at "+scribe.getNodeId()+" source "+m_source.getNodeId()+" for topic "+getTopicId());
 
 	
 	// first check if local node has already been visited,
 	// if yes, then check if we know who to send this message
 	// next to otherwise keep forwording through pastry
 	if(already_seen.contains(scribe.getLocalHandle())){
+	    if(send_to.contains(scribe.getLocalHandle()))
+		send_to.remove((Object)scribe.getLocalHandle());
+	    //if(send_to.size() > 0){
+	    //send_to.remove(0);
+	    //}
 	    if(send_to.size() > 0){
-		send_to.remove(0);
+		boolean sent = false;
+		while(!sent){
+		    sent = scribe.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
+		    if(!sent){
+			//System.out.println("RouteMsgDirect Failed ");
+			send_to.remove(0);
+		    }
+		}
+		if(sent)
+		    return false;
 	    }
-	    if(send_to.size() > 0){
-		scribe.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
-		return false;
-	    }
-	    else
-		return true;
+	    return true;
 	}
 	// Node is not part of the tree, and don't have a list 
 	// built up of anywhere else to forward this message to 
@@ -167,18 +176,32 @@ public class MessageAnycast extends ScribeMessage implements Serializable
         // Receiving node is not part of the tree
 	if( topic == null){
 	    send_to.remove(0);
+	    boolean sent = false;
 
             // Something in the send_to list, so we can forward the message along
 	    if ( send_to.size() > 0 ){
-		scribe.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
+		while(!sent){
+		    sent = scribe.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
+		    if(!sent){
+			//System.out.println("RouteMsgDirect Failed ");
+			send_to.remove(0);
+		    }
+		}
 	    }
             // Something broke along the way, and we can't find our way back to the
 	    // spare capacity tree 
-	    else{
+	    if(!sent){
 		//System.out.println("Message Anycast -- DFS FAILED ");
 		// Call the fault handler, since no one could satisfy 
 		// the anycast request.
-		faultHandler(scribe);
+		//faultHandler(scribe);
+		if(!already_seen.contains(scribe.getLocalHandle()))
+		    already_seen.add(scribe.getLocalHandle());
+		if(send_to.contains(scribe.getLocalHandle())){
+		    //System.out.println("Send to contains local node -- FINE");
+		    send_to.remove((Object)scribe.getLocalHandle());
+		}
+		scribe.anycast(getTopicId(), this, c);
 	    }
 	}
 	else {
@@ -188,30 +211,39 @@ public class MessageAnycast extends ScribeMessage implements Serializable
             Vector toAdd = new Vector();
             NodeHandle child;
 	    boolean result = true;
-            
+            boolean sent = false;
             // Check if all my children are already visited or not,
             // if visited, then I will check if I can take this child
 	    // and if not, return to parent.
             for(int i = 0; i < children.size(); i++){
                 child = (NodeHandle)children.elementAt(i);
-                if(!already_seen.contains(child) && !send_to.contains(child))
+                if(!already_seen.contains(child) && !send_to.contains(child) && child.isAlive())
                     toAdd.add(child);
             }
             // My children have not been visited, so adding the children and then
 	    // adding the local node itself, so that DFS search should come back
 	    // to me if sub-tree under me is unable to satisfy the request
             if(toAdd.size() > 0){
+		//System.out.println("DFS :: adding num "+toAdd.size()+" at "+scribe.getNodeId());
                 if(!send_to.contains(scribe.getLocalHandle()))
 		  send_to.add( 0, scribe.getLocalHandle());
                 send_to.addAll(0, toAdd);
-		scribe.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
-		return false;
+		//System.out.println("DFS:: forwarding to "+((NodeHandle)send_to.get(0)).getNodeId()+" at "+scribe.getNodeId());
+		while(!sent){
+		    sent = scribe.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
+		    if(!sent){
+			//System.out.println("RouteMsgDirect Failed ");
+			send_to.remove(0);
+		    }
+		}
+		if(sent)
+		    return false;
 	    }
-	    else {
+	    if(!sent){
 		// If local node is a leaf, then check if local registered
 		// applications can satisfy the anycast request.
 		IScribeApp[] apps = topic.getApps();
-		
+		//System.out.println("DFS :: not adding , so chekcing local apps  at "+scribe.getNodeId());
 		for (int i=0; i<apps.length && result; i++) {
 		    result = apps[i].anycastHandler(this);
 		}
@@ -220,27 +252,46 @@ public class MessageAnycast extends ScribeMessage implements Serializable
 	    // if result == false, then that means one of registered
 	    // application was able to satisfy the request, and hence
 	    // anycast message should not be routed furthur for DFS.
-	    if(result == false)
+	    if(result == false){
+		//System.out.println("DFS :: some local node satisfed the request");
 		return false;
+	    }
 	    else {
+		//System.out.println("No local aplication satisfied ");
 		if(!already_seen.contains(scribe.getLocalHandle()))
 		   already_seen.add(scribe.getLocalHandle());
 		if(send_to.contains(scribe.getLocalHandle())){
 		    //System.out.println("Send to contains local node -- FINE");
 		    send_to.remove((Object)scribe.getLocalHandle());
 		}
-		if(send_to.size() > 0)
-		    scribe.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
-		else {
+
+		sent = false;
+
+		if(send_to.size() > 0){
+		    //System.out.println("Sending to next node "+((NodeHandle)send_to.get(0)).getNodeId());
+		    while(!sent){
+			sent = scribe.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
+			if(!sent){
+			    //System.out.println("RouteMsgDirect Failed ");
+			    send_to.remove(0);
+			}
+		    }
+		}
+		if(!sent){
 		    //Sending to parent if not root
 		    if ( !scribe.isRoot( topic.getTopicId() ) ){
-			if(scribe.getParent( topic.getTopicId()) != null){
-			    scribe.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
+			NodeHandle parent = scribe.getParent(topic.getTopicId());
+			if(parent != null && parent.isAlive()){
+			//if(scribe.getParent( topic.getTopicId()) != null){
+			    //System.out.println("Sending to parent");
+			    if(scribe.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null ))
+				sent = true;
 			}
-			else {
+			if(!sent) {
 			    //System.out.println("WARNING -- Parent is null for non-root node.. should handle this case -- At "+scribe.getNodeId()+" for topic "+topic.getTopicId()+" already_seen_size "+alreadySeenSize());
 			    // We are not part of tree anymore, so should 
 			    // anycast furthur this message
+			    //System.out.println("Parent null -- so anycasting again");
 			    scribe.anycast(topic.getTopicId(), this, c);
 			}
 		    }
