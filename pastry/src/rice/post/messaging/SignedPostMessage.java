@@ -47,4 +47,15 @@ public final class SignedPostMessage implements Serializable {
   public PostSignature getSignature() {
     return signature;
   }
+
+    public boolean equals(Object o) {
+	if (o instanceof SignedPostMessage) {
+	    SignedPostMessage spm = (SignedPostMessage) o;
+	    return (this.message.equals(spm.getMessage()) && 
+		    this.signature.equals(spm.getSignature()));
+	} 
+
+	return false;
+    }
+
 }

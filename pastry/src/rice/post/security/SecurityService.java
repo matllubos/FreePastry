@@ -166,11 +166,13 @@ public class SecurityService {
    */
   public byte[] encryptDES(byte[] data, byte[] key) throws SecurityException {
     try {      
-      DESKeySpec DESkey = new DESKeySpec(key);
-      SecretKeySpec secretKey = new SecretKeySpec(DESkey.getKey(), "DES");
-      cipherDES.init(Cipher.ENCRYPT_MODE, secretKey);
-
-      return cipherDES.doFinal(data);
+	synchronized (cipherDES) {
+	    DESKeySpec DESkey = new DESKeySpec(key);
+	    SecretKeySpec secretKey = new SecretKeySpec(DESkey.getKey(), "DES");
+	    cipherDES.init(Cipher.ENCRYPT_MODE, secretKey);
+	    
+	    return cipherDES.doFinal(data);
+	}
     } catch (InvalidKeyException e) {
       throw new SecurityException("InvalidKeyException encrypting object: " + e);
     } catch (IllegalBlockSizeException e) {
@@ -189,11 +191,13 @@ public class SecurityService {
    */
   public byte[] decryptDES(byte[] data, byte[] key) throws SecurityException {
     try {
-      DESKeySpec DESkey = new DESKeySpec(key);
-      SecretKeySpec secretKey = new SecretKeySpec(DESkey.getKey(), "DES");
-      cipherDES.init(Cipher.DECRYPT_MODE, secretKey); 
-
-      return cipherDES.doFinal(data);
+	synchronized (cipherDES) {
+	    DESKeySpec DESkey = new DESKeySpec(key);
+	    SecretKeySpec secretKey = new SecretKeySpec(DESkey.getKey(), "DES");
+	    cipherDES.init(Cipher.DECRYPT_MODE, secretKey); 
+	    
+	    return cipherDES.doFinal(data);
+	}
     } catch (InvalidKeyException e) {
       throw new SecurityException("InvalidKeyException decrypting object: " + e);
     } catch (IllegalBlockSizeException e) {
@@ -221,11 +225,17 @@ public class SecurityService {
    */
   private PostSignature sign(byte[] data, PrivateKey key) throws SecurityException {
     try {
-      signature.initSign(key);
+	if ((data == null) || (key == null)) {
+	    throw new SecurityException("Attempt to use null data or key for signature:" + data + " " + key);
+	}
 
-      signature.update(data);
+	synchronized (signature) {
+	    signature.initSign(key);
 
-      return new PostSignature(signature.sign());
+	    signature.update(hash(data));
+
+	    return new PostSignature(signature.sign());
+	}
     } catch (InvalidKeyException e) {
       throw new SecurityException("InvalidKeyException signing object: " + e);
     } catch (SignatureException e) {
@@ -255,11 +265,13 @@ public class SecurityService {
    */
   public boolean verify(byte[] data, PostSignature sig, PublicKey key) throws SecurityException {
     try {
-      signature.initVerify(key);
+	synchronized (signature) {
+	    signature.initVerify(key);
 
-      signature.update(data);
-
-      return signature.verify(sig.getSignature());
+	    signature.update(hash(data));
+	    
+	    return signature.verify(sig.getSignature());
+	}
     } catch (InvalidKeyException e) {
       throw new SecurityException("InvalidKeyException verifying object: " + e);
     } catch (SignatureException e) {
@@ -337,9 +349,11 @@ public class SecurityService {
    */
   public byte[] encryptRSA(byte[] data, PublicKey key) throws SecurityException {
     try {
-      cipherRSA.init(Cipher.ENCRYPT_MODE, key);
+	synchronized (cipherRSA) {
+	    cipherRSA.init(Cipher.ENCRYPT_MODE, key);
 
-      return cipherRSA.doFinal(data);
+	    return cipherRSA.doFinal(data);
+	}
     } catch (InvalidKeyException e) {
       throw new SecurityException("InvalidKeyException encrypting object: " + e);
     } catch (IllegalBlockSizeException e) {
@@ -359,9 +373,11 @@ public class SecurityService {
    */
   public byte[] decryptRSA(byte[] data) throws SecurityException {
     try {
-      cipherRSA.init(Cipher.DECRYPT_MODE, keyPair.getPrivate());
+	synchronized (cipherRSA) {
+	    cipherRSA.init(Cipher.DECRYPT_MODE, keyPair.getPrivate());
 
-      return cipherRSA.doFinal(data);
+	    return cipherRSA.doFinal(data);
+	}
     } catch (InvalidKeyException e) {
       throw new SecurityException("InvalidKeyException decrypting object: " + e);
     } catch (IllegalBlockSizeException e) {
