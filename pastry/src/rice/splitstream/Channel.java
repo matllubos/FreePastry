@@ -1,9 +1,10 @@
 package rice.splitstream;
 import rice.pastry.standard.*;
 import rice.scribe.*;
+import rice.scribe.messaging.*;
 import rice.pastry.security.*;
 import rice.pastry.*;
-public class Channel {
+public class Channel implements IScribeApp {
    /**
     * ChannelId for this channel 
     */
@@ -17,6 +18,7 @@ public class Channel {
     * The array of all subscribed stripes
     */
    private Stripe[] stripes = null;
+   private Stripe primaryStripe = null;
    /**
     * The stripeIds for all stripes in this channel.
     */
@@ -67,6 +69,7 @@ public class Channel {
 		stripeIds[i] = stripes[i].getStripeId();
 	}
         /* Send a create message to the node with responsible with the stripes*/
+        /* Also select the primary stripe */
    }
 
    /**
@@ -79,7 +82,7 @@ public class Channel {
         /* Send out a message to the scribe group */
         /* Get back all the StripeID's and then process them */
         /* Then we should be attached */
- 
+        /* we also need to create and mark a primary stripe */ 
 
    }
   
@@ -121,11 +124,7 @@ public class Channel {
    * @return Stripe The Strip object that is the primary stripe.
    */ 
   public Stripe getPrimaryStripe(){
-   /** 
-    * GO THROUGH AND LOOK AT THE STRIPES AND FIGURE OUT WHICH
-    * ONE IS THE PRIMARY
-    */
-    return null;
+    return primaryStripe;
   }
 
   /**
@@ -173,6 +172,17 @@ public class Channel {
   public int getNumStripes(){
      return stripeIds.length;
   }
+
+
+  public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){}
+  public void forwardHandler(ScribeMessage msg){}
+  public void receiveMessage(ScribeMessage msg){
+     /* Check the type of message */
+     /* then make call accordingly */
+  }
+  public void scribeIsReady(){}
+  public void subscribeHandler(ScribeMessage msg, NodeId topicId, 
+                               NodeHandle child, boolean wasAdded){}
 }
 
 
