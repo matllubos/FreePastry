@@ -647,10 +647,15 @@ public class Post extends PastryAppl implements IScribeApp  {
       // remove message
       synchronized (bufferedData) {
         Vector userQueue = (Vector) bufferedData.get(sender);
-        userQueue.remove(sm);
 
-        if (userQueue.size() == 0) {
-          bufferedData.remove(sender);
+        if (userQueue != null) {
+          userQueue.remove(sm);
+
+          if (userQueue.size() == 0) {
+            bufferedData.remove(sender);
+            scribeService.leave(sender.getAddress(), Post.this, credentials);
+          }
+        } else {
           scribeService.leave(sender.getAddress(), Post.this, credentials);
         }
       }

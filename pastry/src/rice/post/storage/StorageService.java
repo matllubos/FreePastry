@@ -666,13 +666,13 @@ public class StorageService {
       try {
         byte[] plainText = security.serialize(data);
 
-        byte[] key = security.generateKeyDES();
+        byte[] keyByte = security.generateKeyDES();
 
-        byte[] cipherText = security.encryptDES(plainText, key);
+        byte[] cipherText = security.encryptDES(plainText, keyByte);
         byte[] loc = security.hash(cipherText);
 
-        NodeId location = new NodeId(loc);
-        SecretKeySpec secretKey = new SecretKeySpec(key, "DES");
+        location = new NodeId(loc);
+        key = new SecretKeySpec(keyByte, "DES");
 
         SecureData sd = new SecureData(cipherText);
 

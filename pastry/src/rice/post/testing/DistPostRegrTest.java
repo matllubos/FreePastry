@@ -1,5 +1,7 @@
 package rice.post.testing;
 
+import rice.*;
+
 import rice.past.*;
 import rice.past.messaging.*;
 
@@ -8,13 +10,13 @@ import rice.pastry.dist.*;
 import rice.pastry.standard.*;
 import rice.pastry.security.*;
 
-import rice.storage.*;
-import rice.storage.testing.*;
-
 import rice.post.*;
 import rice.post.messaging.*;
+import rice.post.storage.*;
 
 import rice.scribe.*;
+
+import rice.storage.*;
 
 import java.util.*;
 import java.net.*;
@@ -259,6 +261,21 @@ public class DistPostRegrTest {
   }
 
   /**
+   * Tests the storage service on POST
+   */
+  protected void testStorage() throws TestFailedException {
+    int node = rng.nextInt(numNodes);
+
+    Post post = (Post) postNodes.elementAt(node);
+    StorageService storage = post.getStorageService();
+
+    PostData data = new DummyPostData(rng.nextLong());
+
+    DummyContentHashStorageTest test = new DummyContentHashStorageTest(storage, data);
+    test.start();
+  }
+  
+  /**
    * Initializes and runs all regression tests.
    */
   public void runTests() {
@@ -267,10 +284,7 @@ public class DistPostRegrTest {
     try {
       // Run each test
       testNotification();
-
-      // TO DO:
-      //  Test permissions (problems with serializability of dummy credentials?)
-      //  Test timeout
+      testStorage();
 
       System.out.println("\n\nDEBUG-All tests passed!---------------------\n");
     }
@@ -385,4 +399,150 @@ public class DistPostRegrTest {
     }
   }
 
+  protected static class DummyPostData implements PostData {
+
+    private long number;
+    
+    public DummyPostData(long number) {
+      this.number = number;
+    }
+
+    public boolean equals(Object o) {
+      if (o instanceof DummyPostData) {
+        return (((DummyPostData) o).number == number);
+      }
+
+      return false;
+    }
+
+    public SignedReference buildSignedReference(NodeId location) {
+      return new SignedReference(location);
+    }
+
+    public ContentHashReference buildContentHashReference(NodeId location, Key key) {
+      return new ContentHashReference(location, key);
+    }
+
+    public SecureReference buildSecureReference(NodeId location, Key key) {
+      return new SecureReference(location, key);
+    }
+  }
+
+  protected class DummyContentHashStorageTest implements ReceiveResultCommand {
+
+    public static final int STATE_1 = 1;
+    public static final int STATE_2 = 2;
+    
+    private StorageService storage;
+    private PostData data;
+    private ContentHashReference reference;
+    private int state;
+    
+    public DummyContentHashStorageTest(StorageService storage, PostData data) {
+      this.storage = storage;
+      this.data = data;
+    }
+
+    public void start() {
+      System.out.println("ContentHashTest storing data.");
+      
+      state = STATE_1;
+      storage.storeContentHash(data, this);
+    }
+
+    private void startState1(ContentHashReference ref) {
+      this.reference = ref;
+      System.out.println("ContentHashTest received reference - checking.");
+
+      state = STATE_2;
+      storage.retrieveContentHash(reference, this);
+    }
+
+    private void startState2(PostData data) {
+      if (this.data.equals(data)) {
+        System.out.println("ContentHashTest ran successfully.");
+
+        DummySecureStorageTest test = new DummySecureStorageTest(storage, data);
+        test.start();
+      } else {
+        System.out.println("ContentHashTest return incorrect data.");
+      }
+    }
+    
+    public void receiveResult(Object o) {
+      switch (state) {
+        case STATE_1:
+          startState1((ContentHashReference) o);
+          break;
+        case STATE_2:
+          startState2((PostData) o);
+          break;
+        default:
+          System.out.println("Unknown state in DummyCHST:" + state);
+          break;
+      }
+    }
+
+    public void receiveException(Exception e) {
+      System.out.println("Exception occured in DummyCHST: " + e);
+    }
+  }
+
+  protected class DummySecureStorageTest implements ReceiveResultCommand {
+
+    public static final int STATE_1 = 1;
+    public static final int STATE_2 = 2;
+
+    private StorageService storage;
+    private PostData data;
+    private SecureReference reference;
+    private int state;
+
+    public DummySecureStorageTest(StorageService storage, PostData data) {
+      this.storage = storage;
+      this.data = data;
+    }
+
+    public void start() {
+      System.out.println("SecureTest storing data.");
+
+      state = STATE_1;
+      storage.storeSecure(data, this);
+    }
+
+    private void startState1(SecureReference ref) {
+      this.reference = ref;
+      System.out.println("SecureTest received reference - checking.");
+
+      state = STATE_2;
+      storage.retrieveSecure(reference, this);
+    }
+
+    private void startState2(PostData data) {
+      if (this.data.equals(data)) {
+        System.out.println("SecureTest ran successfully.");
+      } else {
+        System.out.println("SecureTest return incorrect data.");
+      }
+    }
+
+    public void receiveResult(Object o) {
+      switch (state) {
+        case STATE_1:
+          startState1((SecureReference) o);
+          break;
+        case STATE_2:
+          startState2((PostData) o);
+          break;
+        default:
+          System.out.println("Unknown state in DummySST:" + state);
+          break;
+      }
+    }
+
+    public void receiveException(Exception e) {
+      System.out.println("Exception occured in DummySST: " + e);
+    }
+  }
+  
 }
