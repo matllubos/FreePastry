@@ -88,11 +88,6 @@ public class DistScribeRegrTestApp implements IScribeApp
      */
     protected static Credentials m_credentials = null;
 
-    private int m_distLogCounter ;
-
-    private String  m_distLogName ;
-
-
     public DistScribeRegrTestApp( PastryNode pn,  Scribe scribe, Credentials cred ) {
 	m_scribe = scribe;
 	m_credentials = cred;
@@ -102,7 +97,6 @@ public class DistScribeRegrTestApp implements IScribeApp
 	m_credentials = new PermissiveCredentials();
 	m_logTable = new Hashtable();
 	m_appIndex = m_appCount ++;
-	m_distLogName = new String("logs/" + m_appIndex);
     }
 
     public Scribe getScribe() {
@@ -116,16 +110,8 @@ public class DistScribeRegrTestApp implements IScribeApp
 	NodeId topicId;
 	DistTopicLog topicLog;
 	
-	
 	topicId = (NodeId) msg.getTopicId();
-	try {
-	    BufferedWriter out = new BufferedWriter(new FileWriter(m_distLogName, true));
-	    m_distLogCounter = (int)System.currentTimeMillis();
-	    out.write( m_distLogCounter + " " + (Integer)msg.getData()+ "\n");
-	    out.close();
-	}
-	catch (IOException e) {
-	}
+	//System.out.println("Node "+m_scribe.getNodeId()+" received seqno "+((Integer)msg.getData()).intValue()+" for topic "+topicId);
 	processLog(topicId,((Integer)msg.getData()).intValue());
     }
 
