@@ -146,7 +146,8 @@ public abstract class CommonAPITest {
    * factories in preparation for node creation.
    */
   public CommonAPITest() {
-    idFactory = new IPNodeIdFactory(PORT);
+      //idFactory = new IPNodeIdFactory(PORT); 
+      idFactory = new RandomNodeIdFactory();
 
     if (SIMULATOR == SIMULATOR_SPHERE) {
       simulator = new SphereNetwork();
