@@ -73,6 +73,14 @@ public interface IdFactory {
    * @return The built Id.
    */
   public Id buildId(String string);
+
+  /**
+   * Builds a random protocol-specific Id.
+   *
+   * @param rng A random number generator
+   * @return The built Id.
+   */
+  public Id buildRandomId(Random rng);
   
   /**
    * Builds an Id by converting the given toString() output back to an Id.  Should
