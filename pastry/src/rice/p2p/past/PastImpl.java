@@ -557,7 +557,7 @@ public class PastImpl implements Past, Application, RMClient {
             if (content != null) {
               getResponseContinuation(msg).receiveResult(content.getHandle(PastImpl.this));
             } else {
-              getResponseContinuation(msg).receiveException(new RuntimeException("Replica did not have object!"));
+              getResponseContinuation(msg).receiveResult(null);
             }
           }	
 
@@ -612,7 +612,7 @@ public class PastImpl implements Past, Application, RMClient {
         }
       };
       
-      Continuation insert = new Continuation() {
+      final Continuation insert = new Continuation() {
         public void receiveResult(Object o) {
           if (o == null) {
             System.out.println("Could not fetch id " + id);
@@ -626,7 +626,30 @@ public class PastImpl implements Past, Application, RMClient {
         }
       };
 
-      lookup(id, insert, false);
+      Continuation fetch = new Continuation() {
+        public void receiveResult(Object o) {
+          PastContentHandle[] handles = (PastContentHandle[]) o;
+          PastContentHandle handle = null;
+          int i=0;
+
+          while ((handle == null) && (i<handles.length)) {
+            handle = handles[i];
+            i++;
+          }
+
+          if (handle == null) {
+            System.out.println("Could not fetch id " + id + " - all replicas were null.");
+          } else {
+            fetch(handle, insert);
+          }
+        }
+
+        public void receiveException(Exception e) {
+          System.out.println("Fetch handles of replica id " + id + " caused exception " + e + ".");
+        }
+      };
+
+      lookupHandles(id, replicationFactor, fetch);
     }
   }
 

@@ -269,7 +269,11 @@ public abstract class DistCommonAPITest {
    */
   protected final void stepDone(String status, String message) {
     System.out.println("[" + status + "]");
-    System.out.println("    " + message);
+
+    if ((message != null) && (! message.equals(""))) {
+      System.out.println("     " + message);
+    }
+
     if(status.equals(FAILURE))
       System.exit(0);
   }
