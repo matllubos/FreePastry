@@ -9,6 +9,7 @@ import rice.pastry.messaging.*;
 import rice.pastry.*;
 import rice.past.*;
 import rice.scribe.*;
+import rice.scribe.messaging.*;
 import rice.post.log.*;
 import rice.post.messaging.*;
 import rice.post.storage.*;
@@ -101,20 +102,22 @@ public class Post extends PastryAppl implements IScribeApp  {
    */
   public void messageForAppl(Message message) {
     if(message instanceof NotificationMessage){
-        PostClient client = hash.get(message.getClientId());
+        NotificationMessage nmessage = (NotificationMessage) message;
+        PostClient client = (PostClient) clientAddresses.get(nmessage.getClientId());
         if(client != null){
-          client.notificationReceived(message);
+          client.notificationReceived(nmessage);
     	}
     }
     else if( message instanceof DeliveryRequestMessage){
         /* Buffer this for Delivery */
+        DeliveryRequestMessage dmessage = (DeliveryRequestMessage) message;
         synchronized(bufferedData){
-          userQueue = buffered.get(message.getDestination());
+          Vector userQueue = (Vector) bufferedData.get(dmessage.getDestination());
           if(userQueue == null){
             userQueue = new Vector();
-            bufferedData.put(userQueue);
+            bufferedData.put(dmessage.getDestination(), userQueue);
           }
-          userQueue.addElement(message.getNotificationMessage());
+          userQueue.addElement(dmessage.getNotificationMessage());
         }
     }
     else if( message instanceof RecieptMessage ){
@@ -139,10 +142,9 @@ public class Post extends PastryAppl implements IScribeApp  {
    */
   /* TO DO:: FIX ME!!! topic id */
   private void announcePresence(){
-     NodeHandle nodeId = new NodeHandle();
-     nodeId.setLocalNode(node); 
+     NodeHandle nodeId = thePastryNode.getLocalHandle();
      MessagePublish sMessage = 
-                  new MessagePublish(getAddress(), nodeId, null, getCreditials());
+                  new MessagePublish(getAddress(), nodeId, null, getCredentials());
     scribe.routeMsg(sMessage);
   }
 
@@ -265,5 +267,5 @@ public class Post extends PastryAppl implements IScribeApp  {
 
   }
   public void scribeIsReady(){}
-  public void subscribeHandler(ScribeMessage msg){}
+  public void subscribeHandler(ScribeMessage msg, NodeId topicId, NodeHandle child, boolean wasAdded){}
 }
