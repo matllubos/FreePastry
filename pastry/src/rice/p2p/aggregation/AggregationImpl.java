@@ -37,10 +37,6 @@ import rice.persistence.StorageManager;
 import rice.visualization.server.DebugCommandHandler;
 import rice.p2p.glacier.v2.GlacierContentHandle;
 
-import rice.post.PostEntityAddress;
-import rice.post.storage.SignedData;
-import rice.post.security.SecurityUtils;
-
 public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregation, Application, DebugCommandHandler {
 
   protected final Past aggregateStore;
