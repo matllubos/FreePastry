@@ -492,7 +492,7 @@ public class SocketSourceRouteManager {
       } else if (! manager.isOpen(best)) {
         queue.add(message);
         
-        System.err.println("NOTE: Found closed socket to best route " + best + " - pinging route to ensure still valid.");
+        //System.err.println("NOTE: Found closed socket to best route " + best + " - pinging route to ensure still valid.");
         checkRoute(best);
         best = null;
       } else {
