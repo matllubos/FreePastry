@@ -36,7 +36,6 @@ if advised of the possibility of such damage.
 
 package rice.p2p.scribe;
 
-import java.io.*;
 import java.util.*;
 import java.util.logging.*;
 import java.util.prefs.*;
@@ -45,7 +44,6 @@ import rice.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.scribe.messaging.*;
 
-import rice.pastry.commonapi.PastryEndpoint;
 /**
  * @(#) ScribeImpl.java Thie provided implementation of Scribe.
  *
@@ -85,7 +83,7 @@ public class ScribeImpl implements Scribe, Application {
   protected NodeHandle handle;
 
   /**
-   * Constructor for Scribe, using the defaultpolicy.
+   * Constructor for Scribe, using the default policy.
    *
    * @param node The node below this Scribe implementation
    * @param instance The unique instance name of this Scribe
@@ -380,74 +378,58 @@ public class ScribeImpl implements Scribe, Application {
         SubscribeMessage sMessage = (SubscribeMessage) message.getMessage();
 
         // if this is our own subscribe message, ignore it
-	if(sMessage.getSource().getId().equals(endpoint.getId()))
-	    return true;
-
-	// if message reached again at the originator, then forward it toward
-	// the topic
-        if (sMessage.getSubscriber().getId().equals(endpoint.getId())) {
-	    log.finer("Message "+sMessage+" reached the originator "+endpoint.getLocalNodeHandle().getId());
-	    // reset the source of the message to be us
-	    sMessage.setSource(endpoint.getLocalNodeHandle());
-	    endpoint.route(sMessage.getTopic().getId(), sMessage, null);
-	    return false;
+        if (sMessage.getSource().getId().equals(endpoint.getId())) {
+          return true;
         }
 
         if (manager != null) {
           // first, we have to make sure that we don't create a loop, which would occur
-	  // if the subcribing node's previous parent is on our path to the root
-	  
+          // if the subcribing node's previous parent is on our path to the root
           Id previousParent = sMessage.getPreviousParent();
           List path = Arrays.asList(manager.getPathToRoot());
 
-          //if (path.contains(previousParent) || path.contains(sMessage.getSubscriber().getId())) {
-	  if(path.contains(sMessage.getSubscriber().getId())){
-            log.finer(endpoint.getId() + ": Rejecting subscribe message from " +
+          if (path.contains(previousParent)) {
+            log.info(endpoint.getId() + ": Rejecting subscribe message from " +
                       sMessage.getSubscriber() + " for topic " + sMessage.getTopic() +
                       " because we are on the subscriber's path to the root.");
-	    //aMessage.printVisitedList();
-	    //System.out.println();
-	    // add the local node to the visited list
-	    sMessage.addVisited(endpoint.getLocalNodeHandle());
-	    sMessage.setSource(endpoint.getLocalNodeHandle());
-	    endpoint.route(sMessage.getTopic().getId(), sMessage, null);
-	    return false;
+            return true;
           }
-	}
+        }
+          
+        ScribeClient[] clients = new ScribeClient[0];
+        NodeHandle[] handles = new NodeHandle[0];
 
-	ScribeClient[] clients = new ScribeClient[0];
-	NodeHandle[] handles = new NodeHandle[0];
-	
-	if (manager != null) {
-            clients = manager.getClients();
-            handles = manager.getChildren();
-	}
-	
-	if(Arrays.asList(handles).contains(sMessage.getSubscriber())){
-	    return false;
-	}
-	
-	// see if the policy will allow us to take on this child
-	if (policy.allowSubscribe(sMessage, clients, handles)) {
-	    log.finer(endpoint.getId() + ": Hijacking subscribe message from " +
-		      sMessage.getSubscriber() + " for topic " + sMessage.getTopic());
-	    
-	    // if so, add the child
-	    addChild(sMessage.getTopic(), sMessage.getSubscriber());
-	    return false;
-	}
-	
-	// otherwise, we are effectively rejecting the child
-	log.finer(endpoint.getId() + ": Rejecting subscribe message from " +
-		  sMessage.getSubscriber() + " for topic " + sMessage.getTopic());
-	
-	// if we are not associated with this topic at all, we simply let the subscribe go
-	// closer to the root
-	if (manager == null) {
-	    return true;
-	}
+        if (manager != null) {
+          clients = manager.getClients();
+          handles = manager.getChildren();
+        }
+
+        // check if child is already there
+        if (Arrays.asList(handles).contains(sMessage.getSubscriber())){
+          return false;
+        }
+
+        // see if the policy will allow us to take on this child
+        if (policy.allowSubscribe(sMessage, clients, handles)) {
+          log.finer(endpoint.getId() + ": Hijacking subscribe message from " +
+            sMessage.getSubscriber() + " for topic " + sMessage.getTopic());
+
+          // if so, add the child
+          addChild(sMessage.getTopic(), sMessage.getSubscriber());
+          return false;
+        }
+
+        // otherwise, we are effectively rejecting the child
+        log.finer(endpoint.getId() + ": Rejecting subscribe message from " +
+          sMessage.getSubscriber() + " for topic " + sMessage.getTopic());
+
+        // if we are not associated with this topic at all, we simply let the subscribe go
+        // closer to the root
+        if (manager == null) {
+          return true;
+        }
       } else {
-	  // if we are not associated with this topic at all, let the
+        // if we are not associated with this topic at all, let the
         // anycast continue
         if (manager == null) {
           return true;
@@ -458,17 +440,17 @@ public class ScribeImpl implements Scribe, Application {
         // see if one of our clients will accept the anycast
         for (int i = 0; i < clients.length; i++) {
           if (clients[i].anycast(aMessage.getTopic(), aMessage.getContent())) {
-            log.info(endpoint.getId() + ": Accepting anycast message from " +
+            log.finer(endpoint.getId() + ": Accepting anycast message from " +
               aMessage.getSource() + " for topic " + aMessage.getTopic());
 
             return false;
           }
         }
 
-        // if we are the orginator for this anycast and it already has a (non-null) destination,
+        // if we are the orginator for this anycast and it already has a destination,
         // we let it go ahead
-        if (aMessage.getSource().getId().equals(endpoint.getId()) && 
-	    ( message.getNextHopHandle() != null) &&
+        if (aMessage.getSource().getId().equals(endpoint.getId()) &&
+            ( message.getNextHopHandle() != null) &&
             (! handle.equals(message.getNextHopHandle()))) {
           return true;
         }
@@ -497,14 +479,7 @@ public class ScribeImpl implements Scribe, Application {
       log.finer(endpoint.getId() + ": Forwarding anycast message for topic " + aMessage.getTopic() + "on to " + handle);
 
       if (handle == null) {
-	  if(isRoot(aMessage.getTopic()))
-	      log.warning(endpoint.getId() + ": Anycast " + aMessage + " failed.");
-	  else
-	      endpoint.route(aMessage.getTopic().getId(), aMessage, null);
-	  //aMessage.printVisitedList();
-	  //System.out.println();
-	//endpoint.route(aMessage.getTopic().getId(), aMessage, null);
-	//return false;
+        log.fine(endpoint.getId() + ": Anycast " + aMessage + " failed.");
       } else {
         endpoint.route(handle.getId(), aMessage, handle);
       }
@@ -545,35 +520,33 @@ public class ScribeImpl implements Scribe, Application {
       SubscribeAckMessage saMessage = (SubscribeAckMessage) message;
       TopicManager manager = (TopicManager) topics.get(saMessage.getTopic());
 
-      if(isRoot(saMessage.getTopic()) || !saMessage.getSource().isAlive()){
+      log.finer(endpoint.getId() + ": Received subscribe ack message from " +
+        saMessage.getSource() + " for topic " + saMessage.getTopic());
 
-	  if(!isRoot(saMessage.getTopic()) && manager != null && manager.getParent() == null)
-	      endpoint.route(saMessage.getTopic().getId(), new SubscribeMessage(endpoint.getLocalNodeHandle(), saMessage.getTopic(), null), null);
-      }
-      else{
-	  log.finer(endpoint.getId() + ": Received subscribe ack message from " +
-		    saMessage.getSource() + " for topic " + saMessage.getTopic());
-	  
-	  // if we don't know about this topic, then we unsubscribe
-	  // if we already have a parent, then this is either an errorous
-	  // subscribe ack, or our path to the root has changed.
-	  if (manager != null) {
-	      if (manager.getParent() == null || (manager.getParent() != null && !manager.getParent().isAlive())) {
-		  manager.setParent(saMessage.getSource());
-	      }
-	      
-	      if (manager.getParent() != null && manager.getParent().equals(saMessage.getSource())) {
-		  manager.setPathToRoot(saMessage.getPathToRoot());
-	      } else {
-		  log.finer(endpoint.getId() + ": Received unexpected subscribe ack message (already have a parent"+manager.getParent()+") from " +
-			      saMessage.getSource() + " for topic " + saMessage.getTopic());
-		  endpoint.route(saMessage.getSource().getId(), new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
-	      }
-	  } else {
-	      log.warning(endpoint.getId() + ": Received unexpected subscribe ack message from " +
-			  saMessage.getSource() + " for unknown topic " + saMessage.getTopic());
-	      endpoint.route(saMessage.getSource().getId(), new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
-	  }
+      // if we're the root, reject the ack message
+      if(isRoot(saMessage.getTopic())) {
+        endpoint.route(saMessage.getSource().getId(), new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
+      } else {
+        // if we don't know about this topic, then we unsubscribe
+        // if we already have a parent, then this is either an errorous
+        // subscribe ack, or our path to the root has changed.
+        if (manager != null) {
+          if (manager.getParent() == null) {
+            manager.setParent(saMessage.getSource());
+          }
+
+          if (manager.getParent().equals(saMessage.getSource())) {
+            manager.setPathToRoot(saMessage.getPathToRoot());
+          } else {
+            log.warning(endpoint.getId() + ": Received unexpected subscribe ack message (already have a parent) from " +
+                        saMessage.getSource() + " for topic " + saMessage.getTopic());
+            endpoint.route(saMessage.getSource().getId(), new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
+          }
+        } else {
+          log.warning(endpoint.getId() + ": Received unexpected subscribe ack message from " +
+                      saMessage.getSource() + " for unknown topic " + saMessage.getTopic());
+          endpoint.route(saMessage.getSource().getId(), new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
+        }
       }
     } else if (message instanceof PublishRequestMessage) {
       PublishRequestMessage prMessage = (PublishRequestMessage) message;
@@ -633,17 +606,16 @@ public class ScribeImpl implements Scribe, Application {
       DropMessage dMessage = (DropMessage) message;
       log.finer(endpoint.getId() + ": Received drop message from " +
                 dMessage.getSource() + " for topic " + dMessage.getTopic());
-      //System.out.println(endpoint.getId() + ": Received drop message from " +
-      // dMessage.getSource() + " for topic " + dMessage.getTopic());
+      
       TopicManager manager = (TopicManager) topics.get(dMessage.getTopic());
 
       if (manager != null) {
-        if (manager.getParent() != null && manager.getParent().equals(dMessage.getSource())) {
+        if ((manager.getParent() != null) && manager.getParent().equals(dMessage.getSource())) {
           // we set the parent to be null, and then send out another subscribe message
-	    manager.setParent(null);
+          manager.setParent(null);
           endpoint.route(dMessage.getTopic().getId(), new SubscribeMessage(handle, dMessage.getTopic()), null);
         } else {
-	    log.warning(endpoint.getId() + ": Received unexpected drop message from non-parent " +
+          log.warning(endpoint.getId() + ": Received unexpected drop message from non-parent " +
                       dMessage.getSource() + " for topic " + dMessage.getTopic() + " - ignoring");
         }
       } else {
@@ -660,44 +632,31 @@ public class ScribeImpl implements Scribe, Application {
    * @param handle The handle that has joined/left
    * @param joined Whether the node has joined or left
    */
-  public void update(NodeHandle nh, boolean joined) {
-      if(!endpoint.getLocalNodeHandle().isAlive()){
-	  return;
-      }
-      Set set = topics.keySet();
-      Iterator e = set.iterator();
-      TopicManager manager;
-      Topic topic;
+  public void update(NodeHandle handle, boolean joined) {
+    Set set = topics.keySet();
+    Iterator e = set.iterator();
+    TopicManager manager;
+    Topic topic;
 
-      while(e.hasNext()){
-	  topic = (Topic)e.next();
-	  manager = (TopicManager)topics.get(topic);
-	  
-	  if(joined){
-	      if(manager.getParent() == null){
-		  // send subscribe message
-		  endpoint.route(topic.getId(), new SubscribeMessage(handle, topic), null);
-	      }
-	  }
-	  else {
-	      if(isRoot(topic) && manager.getParent() != null && !manager.getParent().getId().equals(nh.getId())){
-		  endpoint.route(manager.getParent().getId(), new UnsubscribeMessage(handle, topic), manager.getParent());
-		  manager.setParent(null);
-	      }
-	  }
+    while(e.hasNext()){
+      topic = (Topic)e.next();
+      manager = (TopicManager)topics.get(topic);
+
+      if (joined){
+        // check if new guy is root, we were old root, then subscribe
+        if (manager.getParent() == null){
+          // send subscribe message
+          endpoint.route(topic.getId(), new SubscribeMessage(handle, topic), null);
+        }
+      } else {
+        if (isRoot(topic) && (manager.getParent() != null)) {
+          endpoint.route(manager.getParent().getId(), new UnsubscribeMessage(handle, topic), manager.getParent());
+          manager.setParent(null);
+        }
       }
-      
+    }    
   }
 
-    public void printPathToRoot(Topic topic){
-	TopicManager manager = (TopicManager)topics.get(topic);
-	Id[] path = manager.getPathToRoot();
-	System.out.println("Local Node "+endpoint.getLocalNodeHandle().getId()+", path to root for topic "+topic.getId());
-	for(int i = 0; i < path.length; i++)
-	    System.out.println(path[i]+"\t");
-	System.out.println("\nFinished");
-    }
-    
   /**
    * Class which keeps track of a given topic
    *
@@ -804,10 +763,6 @@ public class ScribeImpl implements Scribe, Application {
       return pathToRoot;
     }
 
-      public Topic getTopic(){
-	  return topic;
-      }
-
     /**
      * Sets the PathToRoot attribute of the TopicManager object
      *
@@ -821,15 +776,13 @@ public class ScribeImpl implements Scribe, Application {
 
       // now send the information out to our children
       NodeHandle[] children = getChildren();
-      List path = Arrays.asList(this.pathToRoot);
-      Vector toDrop = new Vector();
       for (int i=0; i<children.length; i++) {
-	  if(path.contains(children[i].getId())){
-	      endpoint.route(children[i].getId(), new DropMessage(handle, topic), children[i]);
-	      removeChild(children[i]);
-	  }
-	  else
-	      endpoint.route(children[i].getId(), new SubscribeAckMessage(handle, topic, getPathToRoot()), children[i]);
+        if(Arrays.asList(this.pathToRoot).contains(children[i].getId())){
+          endpoint.route(children[i].getId(), new DropMessage(handle, topic), children[i]);
+          removeChild(children[i]);
+        } else {
+          endpoint.route(children[i].getId(), new SubscribeAckMessage(handle, topic, getPathToRoot()), children[i]);
+        }
       }
     }
 
@@ -840,7 +793,7 @@ public class ScribeImpl implements Scribe, Application {
      */
     public void setParent(NodeHandle handle) {
       if ((handle != null) && (parent != null)) {
-        log.warning(endpoint.getId() + ": Unexpectedly changing parents for topic " + topic + " previous parent "+parent.getId()+" new parent "+handle.getId());
+        log.warning(endpoint.getId() + ": Unexpectedly changing parents for topic " + topic);
       }
 
       if (parent != null) {
@@ -869,16 +822,13 @@ public class ScribeImpl implements Scribe, Application {
           ScribeImpl.this.removeChild(topic, (NodeHandle) o);
         } else if (o.equals(parent)) {
           // if our parent has died, then we must resubscribe to the topic
-	   // set path to contain only us and update the children.
-	  if(!ScribeImpl.this.isRoot(topic)){
-	      endpoint.route(topic.getId(), new SubscribeMessage(endpoint.getLocalNodeHandle(), topic, ((NodeHandle)o).getId()), null);
-	      log.fine(endpoint.getId() + ": Parent " + parent + " for topic " + topic + " has died - resubscribing.");
-	  }
+          log.fine(endpoint.getId() + ": Parent " + parent + " for topic " + topic + " has died - resubscribing.");
+
           setParent(null);
-	  this.setPathToRoot(new Id[0]);
+          endpoint.route(topic.getId(), new SubscribeMessage(endpoint.getLocalNodeHandle(), topic, ((NodeHandle)o).getId()), null);
         } else {
-	    log.warning(endpoint.getId() + ": Received unexpected update from " + o);
-	    o.deleteObserver(this);
+          log.warning(endpoint.getId() + ": Received unexpected update from " + o);
+          o.deleteObserver(this);
         }
       }
     }
@@ -946,7 +896,5 @@ public class ScribeImpl implements Scribe, Application {
 
       return unsub;
     }
-      
-    
   }
 }

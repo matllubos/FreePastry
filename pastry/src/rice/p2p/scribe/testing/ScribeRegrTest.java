@@ -728,6 +728,9 @@ public class ScribeRegrTest extends CommonAPITest {
     public void childRemoved(Topic topic, NodeHandle child) {
      // System.out.println("CHILD REMOVED AT " + scribe.getId());
     }
+
+    public void subscribeFailed(Topic topic) {
+    }
   }
 
   public class TestScribePolicy extends ScribePolicy.DefaultScribePolicy {

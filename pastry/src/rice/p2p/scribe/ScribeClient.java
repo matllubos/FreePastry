@@ -87,5 +87,14 @@ public interface ScribeClient {
    */
   public void childRemoved(Topic topic, NodeHandle child);
 
+  /**
+   * Informs the client that a subscribe on the given topic failed
+   * - the client should retry the subscribe or take appropriate
+   * action.
+   *
+   * @param topic The topic which the subscribe failed on
+   */
+  public void subscribeFailed(Topic topic);
+
 }
 
