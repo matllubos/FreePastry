@@ -46,20 +46,16 @@ class RMIPastryNodeImpl extends UnicastRemoteObject implements RMIPastryNode
      * Proxies to the local node to accept a message.
      */
     public void receiveMessage(Message msg) {
-	if (msg instanceof RouteMessage) {
-	    /*
-	    * The sender of this message is alive. So if we have a handle in
-	    * our pool with this Id, then it should be reactivated.
-	     */
-	    RouteMessage rmsg = (RouteMessage) msg;
-	    NodeId sender = rmsg.getSenderId();
-	    handlepool.activate(sender);
+	/*
+	 * The sender of this message is alive. So if we have a handle in
+	 * our pool with this Id, then it should be reactivated.
+	 */
+	NodeId sender = msg.getSenderId();
+	if (sender != null) handlepool.activate(sender);
 
-	    System.out.println("[rmi] received route msg from "
-			       + sender + ": " + msg);
-	} else {
-	    System.out.println("[rmi] received direct msg: " + msg);
-	}
+	System.out.println("[rmi] received " +
+			   (msg instanceof RouteMessage ? "route" : "direct")
+			   + " msg from " + sender + ": " + msg);
 
 	node.receiveMessage(msg);
     }

@@ -16,6 +16,7 @@ import java.util.*;
 
 public class RMIPastrySecurityManager implements PastrySecurityManager 
 {
+    private PastryNode localnode;
     private RMINodeHandle localhandle;
     private RMINodeHandlePool handlepool;
 
@@ -26,6 +27,13 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
 	localhandle = rlh;
 	handlepool = hp; // contains only localhandle by now
     }
+
+    /**
+     * Sets the local Pastry node after it is fully constructed.
+     *
+     * @param pn local Pastry node.
+     */
+    public void setLocalPastryNode(PastryNode pn) { localnode = pn; }
 
     /**
      * This method takes a message and returns true
@@ -46,7 +54,9 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
      * @return true if the credentials match the address, false otherwise.
      */
     
-    public boolean verifyAddressBinding(Credentials cred, Address addr) { return true; }
+    public boolean verifyAddressBinding(Credentials cred, Address addr) {
+	return true;
+    }
 
     /**
      * Verify node handle safety.
@@ -57,16 +67,16 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
      */
 
     public NodeHandle verifyNodeHandle(NodeHandle handle) {
-	NodeId mynid = localhandle.getNodeId();
+	NodeId mynid = localnode.getNodeId();
 	NodeId nid = handle.getNodeId();
+
+	System.out.println("[rmi] verifying " + handle + nid);
 
 	if (mynid.equals(nid)) {
 	    return localhandle;
 	    //return handlepool.coalesce(localhandle);
 	}
 	else if (handle instanceof PastryNode) {
-	    //DirectNodeHandle rnh = new RMINodeHandle((PastryNode) handle);
-	    //return rnh;
 	    System.out.println("[rmi] panic: Handle instanceof PastryNode. Tentatively returning NULL.");
 	    return null; // xxx
 	}
@@ -77,8 +87,8 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
 	else if (handle instanceof RMINodeHandle) {
 	    RMINodeHandle rnh = (RMINodeHandle) handle;
 
-	    // set local handle, for bouncing failed RouteMessages to myself
-	    rnh.setLocalHandle(localhandle);
+	    // set local node, for bouncing failed RouteMessages to myself
+	    rnh.setLocalHandle(localnode);
 
 	    return handlepool.coalesce(rnh);
 	}

@@ -23,9 +23,10 @@ public class RMINodeHandle implements NodeHandle, Serializable
 
     // this is a sanity check thing: messages should never be sent to
     // unverified node handles, so this handle should be in the Pool.
-    private transient boolean isInPool;	// don't serialize
+    private transient boolean isInPool;
 
     private transient NodeHandle localhandle;
+    private transient boolean isLocal;
 
     /**
      * Constructor.
@@ -36,7 +37,9 @@ public class RMINodeHandle implements NodeHandle, Serializable
      * @param rn pastry node for whom we're constructing a handle.
      * @param nid its node id.
      */
+     
     public RMINodeHandle(RMIPastryNode rn, NodeId nid) {
+	System.out.println("[rmi] creating RMI handle for node: " + nid);
 	init(rn, nid);
     }
 
@@ -48,17 +51,20 @@ public class RMINodeHandle implements NodeHandle, Serializable
      * @param pn local Pastry node.
      */
     public RMINodeHandle(RMIPastryNode rn, NodeId nid, PastryNode pn) {
+	System.out.println("[rmi] creating RMI handle for node: " + nid + ", local = " + pn);
 	init(rn, nid);
-	setLocalHandle(pn.getLocalHandle());
+	//setLocalHandle(pn.getLocalHandle());
+	setLocalHandle(pn);
     }
 
     private void init(RMIPastryNode rn, NodeId nid) {
-	System.out.println("[rmi] creating RMI handle for node: " + nid);
 	remoteNode = rn;
 	remotenid = nid;
 	alive = true;
 	distance = 42;
 	isInPool = false;
+	localhandle = null;
+	isLocal = false;
     }
 
     public RMIPastryNode getRemote() { return remoteNode; }
@@ -71,10 +77,11 @@ public class RMINodeHandle implements NodeHandle, Serializable
     public NodeHandle getLocalHandle() { return localhandle; }
 
     public void setLocalHandle(NodeHandle lh) {
+	System.out.println("[rmi] setlocalhandle "
+			   + this + "(" + remotenid + " ) " + lh);
 	localhandle = lh;
-	if (localhandle.getNodeId().equals(remotenid)) {
-	    distance = 0;
-	}
+	if (localhandle.getNodeId().equals(remotenid))
+	    isLocal = true;
     }
 
     /**
@@ -82,6 +89,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
      * @return a cached boolean value.
      */
     public boolean isAlive() {
+	if (isLocal && !alive) System.out.println("[rmi] panic; local node dead");
 	return alive;
     }
 
@@ -101,7 +109,9 @@ public class RMINodeHandle implements NodeHandle, Serializable
     }
 
     public int proximity() {
-	/* does a few pings */ return distance;
+	if (isLocal) return 0;
+	/* do a few pings */
+	return distance;
     }
 
     public boolean getIsInPool() { return isInPool; }
@@ -110,34 +120,31 @@ public class RMINodeHandle implements NodeHandle, Serializable
     public void receiveMessage(Message msg) {
 	try {
 
-	    if (isInPool == false) {
+	    if (alive == false)
+		System.out.println("[rmi] warning: trying to send msg to dead node "
+				   + remotenid + ": " + msg);
+
+	    if (isInPool == false)
 		System.out.println("panic: sending message to unverified handle "
 				   + this + " for " + remotenid + ": " + msg);
-	    }
 
-	    if (msg instanceof RouteMessage) {
-		RouteMessage rmsg = (RouteMessage) msg;
-		rmsg.setSenderId(localhandle.getNodeId());
-		System.out.println("[rmi] sending route msg to " +
-				   remotenid + ": " + msg);
-	    } else {
-		System.out.println("[rmi] sending direct msg: " + msg);
-	    }
+	    msg.setSenderId(localhandle.getNodeId());
+
+	    System.out.println("[rmi] sending " +
+			       (msg instanceof RouteMessage ? "route" : "direct")
+			       + " msg to " + remotenid + ": " + msg);
 
 	    remoteNode.receiveMessage(msg);
 	    //System.out.println("[rmi] message sent successfully");
 
 	    markAlive();
 	} catch (RemoteException e) { // failed; mark it dead
-	    if ((msg instanceof RouteMessage) == false) {
-		System.out.println("[rmi] panic: local message failed: " + msg);
-	    }
+	    System.out.println("[rmi] message failed: " + msg + e);
+	    if (isLocal) System.out.println("[rmi] panic; local message failed: " + msg);
 
-	    System.out.println("[rmi] message failed: " + e);
 	    markDead();
 
 	    // bounce back to local dispatcher
-
 	    System.out.println("[rmi] bouncing message back to self at " + localhandle);
 	    RouteMessage rmsg = (RouteMessage) msg;
 	    rmsg.setNextHop(null);
@@ -147,6 +154,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
 
     public boolean ping() {
 	NodeId tryid;
+	if (isLocal) return alive;
 	try {
 	    tryid = remoteNode.getNodeId();
 	    if (tryid.equals(remotenid) == false) {
@@ -161,24 +169,20 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	return alive;
     }
 
-    /*
-     * XXX remove these two methods, and things should still work
-     */
     private void readObject(ObjectInputStream in)
 	throws IOException, ClassNotFoundException 
     {
-	remoteNode = (RMIPastryNode) in.readObject();
-	remotenid = (NodeId) in.readObject();
-
-	alive = true;
-	isInPool = false;
-	distance = 42;
-	localhandle = null;
+	RMIPastryNode rn = (RMIPastryNode) in.readObject();
+	NodeId rnid = (NodeId) in.readObject();
+	System.out.println("[rmi] readobject RMI handle for node: " + rnid);
+	init(rn, rnid); // initialize all the other elements also
     }
 
     private void writeObject(ObjectOutputStream out)
 	throws IOException, ClassNotFoundException 
     {
+	if (isLocal) System.out.println("[rmi] possible error; writeObject from " + localhandle.getNodeId() + " to local node " + remotenid);
+	System.out.println("[rmi] writeobject RMI handle for node: " + remotenid);
 	out.writeObject(remoteNode);
 	out.writeObject(remotenid);
     } 

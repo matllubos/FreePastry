@@ -56,7 +56,6 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
 	    System.out.println("Unable to create RMI Pastry node: " + e.toString());
 	}
 	localhandle = new RMINodeHandle(rmilocalnode, nodeId);
-	localhandle.setLocalHandle(localhandle); // itself! xxx memory leak?
 
 	handlepool = new RMINodeHandlePool();
 	localhandle = handlepool.coalesce(localhandle); // add ourselves to pool
@@ -90,7 +89,9 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
     public RoutingTable getRouteSet() { return routeTable; }
 
     public void doneWithNode(PastryNode pnode) {
+	localhandle.setLocalHandle(pnode); // itself!
 	rmilocalnode.setLocalPastryNode(pnode);
+	secureMan.setLocalPastryNode(pnode);
 	pnode.setLocalHandle(localhandle);
 
 	// this bind happens after the registry lookup, so the node never
