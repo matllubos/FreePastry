@@ -5,6 +5,7 @@ import java.security.*;
 
 import rice.*;
 import rice.post.*;
+import rice.post.messaging.*;
 import rice.post.security.*;
 
 /**
@@ -14,7 +15,7 @@ import rice.post.security.*;
  * @version $Id$
  * @author amislove
  */
-public class PKnoISecurityModule implements SecurityModule {
+public class PKnoISecurityModule extends PostClient implements SecurityModule {
 
   /**
    * The name of the module
@@ -78,4 +79,51 @@ public class PKnoISecurityModule implements SecurityModule {
       throw new SecurityException("InvalidKeyException verifying object: " + e);
     }
   }
+
+  /**
+   * This method is how the Post object informs the clients
+   * that there is an incoming notification.  This should never be called on the
+   * PKnoI client.
+   *
+   * @param nm The incoming notification.
+   */
+  public void notificationReceived(NotificationMessage nm) {
+    // NOTHING NOW
+  }
+
+  /**
+   * This method will attempt to find all chains of length up to len, and return
+   * a PKnoIChain[] to the continuation once all chains have been completed.  Note that
+   * performing this method for length longer than 3 or 4 is not recommended, as the
+   * algorithm is DFS and is of O(e^len).
+   *
+   * @param certificate the certificate to look for
+   * @param len The maximum chains length to find
+   * @param command The command to return the result o
+   */
+  public void findChains(PKnoIPostCertificate cert, int len, Continuation command) {
+  }
+
+  /**
+   * This method should be called when this user wishes to "vouch" for the user with
+   * the provided certificate.  This should *ONLY* be called if the user has estabilished
+   * this user's identity through out-of-band means.  Note that other users added this way
+   * will be visible to the world, and is considered an affirmation of the user.
+   *
+   * @param cert The certificate to vouch for
+   * @param command The command to run with the success/failure
+   */
+  public void addPublic(PKnoIPostCertificate cert, Continuation command) {
+  }
+
+  /**
+   * This method should be called when this user wishes to record a non-verified certificate
+   * for later use.  This users are hidden from the rest of the world.
+   *
+   * @param cert The certificate to add
+   * @param command The command to run with the success/failure
+   */
+  public void addPrivate(PKnoIPostCertificate cert, Continuation command) {
+  }
+  
 }
