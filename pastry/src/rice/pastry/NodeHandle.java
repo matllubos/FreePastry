@@ -53,7 +53,8 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
   public static final int LIVENESS_UNKNOWN = 0;
   public static final int LIVENESS_ALIVE = 1;
   public static final int LIVENESS_SUSPECTED = 2;
-  public static final int LIVENESS_FAULTY = 3;
+  public static final int LIVENESS_UNREACHABLE = 3;
+  public static final int LIVENESS_FAULTY = 4;
     
   // the local pastry node
   protected transient PastryNode localnode;
@@ -114,8 +115,13 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    * @param pn local pastrynode
    */
   public final void setLocalNode(PastryNode pn) {
+    //System.out.println("r.p.NodeHandle.setLocalNode("+pn+")");
     localnode = pn;
-    if (localnode != null) afterSetLocalNode();
+    if (localnode != null) {
+      afterSetLocalNode();
+    } else {
+      //Thread.dumpStack(); 
+    }
   }
 
   /**
