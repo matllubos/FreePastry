@@ -155,6 +155,15 @@ public class Visualization {
     return client.updateJar(files,executionString);    
   }
   
+  public void openDebugConsole() {
+    if (selected == null) {
+      throw new RuntimeException("No Node Selected");
+    }
+    VisualizationClient client = (VisualizationClient) clients.get(selected.getNodeId());
+    DebugCommandFrame consoleFrame = new DebugCommandFrame(client);
+    consoleFrame.pack();
+  }
+
   protected Data getData(DistNodeHandle handle) {
       VisualizationClient client = (VisualizationClient) clients.get(handle.getNodeId());
       
