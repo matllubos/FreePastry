@@ -191,13 +191,13 @@ public class IdRange {
 	Id newCW, newCCW;
 	boolean intersect = false;
 
-	if (ccw.isBetween(o.ccw, o.cw)) {
+	if (ccw.isBetween(o.ccw, o.cw) || ccw.equals(o.ccw)) {
 	    newCCW = ccw;
 	    intersect = true;
 	} else
 	    newCCW = o.ccw;
 
-	if (cw.isBetween(o.ccw, o.cw)) {
+	if (cw.isBetween(o.ccw, o.cw) || cw.equals(o.cw)) {
 	    newCW = cw;
 	    intersect = true;
 	}
