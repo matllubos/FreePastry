@@ -25,6 +25,11 @@ public class StorageManagerImpl implements StorageManager {
   private final PersistenceManager _storage;
   private Hashtable _registeredKeys;
   
+  /**
+   * Constructs a new StorageManager, which uses the given PersistenceManager
+   * to store Persistable objects.
+   * @param storage An existing PersistenceManager to use
+   */
   public StorageManagerImpl(PersistenceManager storage) {
     _storage = storage;
     _registeredKeys = new Hashtable();  // TO DO: try to retrieve from persistence
@@ -59,52 +64,53 @@ public class StorageManagerImpl implements StorageManager {
   
   
   /**
-   * Stores a file with the given fileId in local storage.
-   * @param fileId Pastry key identifying this file
-   * @param file Persistable file to be stored
+   * Inserts an object with the given ID in local storage.
+   * @param id Pastry key identifying this object
+   * @param obj Persistable object to be stored
    * @param authorCred Author's credentials
    * @return true if store succeeds, false otherwise
    */
-  public boolean store(NodeId fileId, Persistable file, Credentials authorCred) {
+  public boolean insert(NodeId id, Persistable obj, Credentials authorCred) {
     // Check if a file already exists
-    PersistenceID pid = _lookupKey(fileId);
+    PersistenceID pid = _lookupKey(id);
     if (pid != null) {
       // Only overwrite if appropriate credentials
-      StorageObjectImpl object = (StorageObjectImpl) _storage.getObject(pid);
-      if (!_canDelete(object, authorCred)) {
+      StorageObjectImpl sObject = (StorageObjectImpl) _storage.getObject(pid);
+      if (!_canDelete(sObject, authorCred)) {
         // No permission to overwrite
         return false;
       }
       else {
         // Otherwise, author can overwrite successfully
-        if (!delete(fileId, authorCred)) {
+        if (!delete(id, authorCred)) {
           // Delete must have failed for another reason
           return false;
         }
       }
     }
 
-    StorageObjectImpl object = new StorageObjectImpl(file, authorCred);
-    pid = _storage.register(object);
-    _registerKey(fileId, pid);
-    return _storage.makePersistent(object, pid);
+    StorageObjectImpl sObject = new StorageObjectImpl(obj, authorCred);
+    pid = _storage.register(sObject);
+    _registerKey(id, pid);
+    return _storage.makePersistent(sObject, pid);
   }
   
   /**
-   * Stores an update to the file with ID fileId.
-   * @param fileId Pastry key of original file to be updated
-   * @param update Persistable update to the original file
-   * @return true if update was successful, false if no file was found
+   * Stores an update to the object with the given ID.
+   * @param id Pastry key of original object to be updated
+   * @param update Persistable update to the original object
+   * @param authorCred Update Author's credentials
+   * @return true if update was successful, false if no object was found
    */
-  public boolean update(NodeId fileId, Persistable update) {
-    PersistenceID pid = _lookupKey(fileId);
+  public boolean update(NodeId id, Persistable update, Credentials authorCred) {
+    PersistenceID pid = _lookupKey(id);
     if (pid == null) {
       return false;
     }
-    StorageObjectImpl object = (StorageObjectImpl) retrieve(fileId);
-    if (object != null) {
-      object.addUpdate(update);
-      return _storage.makePersistent(object, pid);
+    StorageObjectImpl sObject = (StorageObjectImpl) lookup(id);
+    if (sObject != null) {
+      sObject.addUpdate(update, authorCred);
+      return _storage.makePersistent(sObject, pid);
     }
     else {
       return false;
@@ -112,37 +118,36 @@ public class StorageManagerImpl implements StorageManager {
   }
   
   /**
-   * Retrieves the file and all associated updates with ID fileId.
-   * @param fileId Pastry key of original file
-   * @return StorageObject with original file and a Vector of all
-   * updates to the file, or null if no file was found
+   * Retrieves the object and all associated updates with the given ID.
+   * @param id Pastry key of original object
+   * @return StorageObject with original object and a Vector of all
+   * updates to the object, or null if no object was found
    */
-  public StorageObject retrieve(NodeId fileId) {
-    PersistenceID pid = _lookupKey(fileId);
-    StorageObject object = null;
+  public StorageObject lookup(NodeId id) {
+    PersistenceID pid = _lookupKey(id);
+    StorageObject sObject = null;
     
     if (pid != null) {
-      object = (StorageObject) _storage.getObject(pid);
+      sObject = (StorageObject) _storage.getObject(pid);
     }
-    return object;
+    return sObject;
   }
   
   /**
-   * Removes the file with ID fileId from storage.
-   * @param fileId Pastry key of original file
+   * Removes the object with the given ID from storage.
+   * @param id Pastry key of original object
    * @param authorCred Author's credentials
-   * @return true if file was deleted, 
-   * false if no file was found or inappropriate credentials
+   * @return true if object was deleted, false if no object was found
    */
-  public boolean delete(NodeId fileId, Credentials authorCred) {
-    PersistenceID pid = _lookupKey(fileId);
+  public boolean delete(NodeId id, Credentials authorCred) {
+    PersistenceID pid = _lookupKey(id);
     boolean successful = false;
     
     if (pid != null) {
-      StorageObjectImpl object = (StorageObjectImpl) _storage.getObject(pid);
+      StorageObjectImpl sObject = (StorageObjectImpl) _storage.getObject(pid);
       // Only delete if appropriate credentials
-      if (_canDelete(object, authorCred)) {
-        _removeKey(fileId);
+      if (_canDelete(sObject, authorCred)) {
+        _removeKey(id);
         successful = _storage.makeNonPersistent(pid);
         _storage.unregister(pid);
       }
@@ -156,6 +161,10 @@ public class StorageManagerImpl implements StorageManager {
    * NOTE:  Currently only checks to see if the supplied credentials
    * are equal to the author's credentials, or if the author's
    * credentials were null.
+   * 
+   * TO DO:
+   * The StorageManager needs a SecurityManager to handle this behavior!
+   * 
    * @param obj StorageObject to delete
    * @param cred Credentials of user wishing to delete obj
    */

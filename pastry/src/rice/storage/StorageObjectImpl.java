@@ -23,7 +23,7 @@ public class StorageObjectImpl implements StorageObject, Persistable, Serializab
   private final Persistable _original;
   private final Credentials _authorCred;
   private final Vector _updates;
-  //private final Vector _updateCredentials;
+  private final Vector _updateCredentials;
   
   /**
    * Create a new StorageObject for the given Persistable object,
@@ -35,7 +35,7 @@ public class StorageObjectImpl implements StorageObject, Persistable, Serializab
     _original = original;
     _authorCred = cred;
     _updates = new Vector();
-    //_updateCredentials = new Vector();
+    _updateCredentials = new Vector();
   }
   
   /**
@@ -47,9 +47,12 @@ public class StorageObjectImpl implements StorageObject, Persistable, Serializab
   
   /**
    * Returns the Credentials of the author of the original file.
-   * Package protected: this is not accessible to most users.
+   * 
+   * TO DO: Resolve security issues with checking credentials!
+   * (Currently, anyone can delete a StorageObject using the
+   * credentials supplied by this method!)
    */
-  Credentials getAuthorCredentials() {
+  public Credentials getAuthorCredentials() {
     return _authorCred;
   }
   
@@ -63,23 +66,48 @@ public class StorageObjectImpl implements StorageObject, Persistable, Serializab
   }
   
   /**
-   * Returns a Vector of Credentials objects corresponding to each
-   * update in the Updates vector.
+   * Returns the Credentials for each of the updates to the
+   * original object.
    * 
-   * NOT NEEDED: Authors of updates are handled at application level.
-   *
+   * TO DO: Resolve security issues with checking credentials!
+   */
   public Vector getUpdateCredentials() {
     return _updateCredentials;
   }
-  */
+  
+  
+  /**
+   * Returns a Vector with the original Persistable object in the first position,
+   * followed by all Persistable updates.  Purely a convenience method.
+   */
+  public Vector getAllPersistables() {
+    Vector all = new Vector();
+    all.add(_original);
+    all.addAll(_updates);
+    return all;
+  }
+
+  /**
+   * Returns a Vector with the author Credentials of the original
+   * object in the first position, followed by the author Credentials
+   * of all updates.  Purely a convenience method.
+   */
+  public Vector getAllAuthorCredentials() {
+    Vector all = new Vector();
+    all.add(_authorCred);
+    all.addAll(_updateCredentials);
+    return all;
+  }
+  
   
   /**
    * Adds an update to the original object.
    * @param update Persistable update to the original
+   * @param authorCred Credentials of author of update
    */
-  public void addUpdate(Persistable update) {
+  public void addUpdate(Persistable update, Credentials authorCred) {
     _updates.add(update);
-    //_updateCredentials.add(cred);
+    _updateCredentials.add(authorCred);
   }
   
   

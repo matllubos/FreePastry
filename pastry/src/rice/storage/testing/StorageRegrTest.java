@@ -94,10 +94,10 @@ public class StorageRegrTest {
     NodeId id1 = _idFactory.generateNodeId();
     Persistable file1 = new DummyPersistable("file 1");
     assertTrue("SingleFile", "File should store successfully",
-               sm.store(id1, file1, userCred));
+               sm.insert(id1, file1, userCred));
     
     // Retrieve file1
-    StorageObject result = sm.retrieve(id1);
+    StorageObject result = sm.lookup(id1);
     assertTrue("SingleFile", "Retrieved result should not be null",
                result != null);
     Persistable file2 = result.getOriginal();
@@ -112,12 +112,12 @@ public class StorageRegrTest {
       new DummyPersistable("update 2")
     };
     assertTrue("SingleFile", "Update 1 should store successfully",
-               sm.update(id1, updateArray[0]));
+               sm.update(id1, updateArray[0], userCred));
     assertTrue("SingleFile", "Update 2 should store successfully",
-               sm.update(id1, updateArray[1]));
+               sm.update(id1, updateArray[1], userCred));
     
     // Retrieve updated file
-    result = sm.retrieve(id1);
+    result = sm.lookup(id1);
     assertTrue("SingleFile", "Retrieved result should not be null",
                result != null);
     Persistable file3 = result.getOriginal();
@@ -133,7 +133,7 @@ public class StorageRegrTest {
     // Remove file1
     assertTrue("SingleFile", "File should successfully delete",
                sm.delete(id1, userCred));
-    result = sm.retrieve(id1);
+    result = sm.lookup(id1);
     assertTrue("SingleFile", "Retrieved result should be null",
                result == null);
   }
@@ -149,22 +149,22 @@ public class StorageRegrTest {
     NodeId id1 = _idFactory.generateNodeId();
     Persistable file1 = new DummyPersistable("file 1");
     assertTrue("MultipleFiles", "File 1 should store successfully",
-               sm.store(id1, file1, userCred));
+               sm.insert(id1, file1, userCred));
     
     // Store file2
     NodeId id2 = _idFactory.generateNodeId();
     Persistable file2 = new DummyPersistable("file 2");
     assertTrue("MultipleFiles", "File 2 should store successfully",
-               sm.store(id2, file2, userCred));
+               sm.insert(id2, file2, userCred));
     
     // Store file3
     NodeId id3 = _idFactory.generateNodeId();
     Persistable file3 = new DummyPersistable("file 3");
     assertTrue("MultipleFiles", "File 3 should store successfully",
-               sm.store(id3, file3, userCred));
+               sm.insert(id3, file3, userCred));
     
     // Retrieve file1
-    StorageObject result = sm.retrieve(id1);
+    StorageObject result = sm.lookup(id1);
     assertTrue("MultipleFiles", "Retrieved result (1) should not be null",
                result != null);
     Persistable file = result.getOriginal();
@@ -175,10 +175,10 @@ public class StorageRegrTest {
     
     // Update file2
     Persistable update1 = new DummyPersistable("update 1");
-    sm.update(id2, update1);
+    sm.update(id2, update1, userCred);
     
     // Retrieve file3
-    result = sm.retrieve(id3);
+    result = sm.lookup(id3);
     assertTrue("MultipleFiles", "Retrieved result (3) should not be null",
                result != null);
     file = result.getOriginal();
@@ -190,13 +190,13 @@ public class StorageRegrTest {
     // Remove file3
     assertTrue("MultipleFiles", "File should successfully delete",
                sm.delete(id3, userCred));
-    result = sm.retrieve(id3);
+    result = sm.lookup(id3);
     assertTrue("MultipleFiles", "Retrieved result should be null",
                result == null);
     
     
     // Retrieve file2
-    result = sm.retrieve(id2);
+    result = sm.lookup(id2);
     assertTrue("MultipleFiles", "Retrieved result (2) should not be null",
                result != null);
     file = result.getOriginal();
@@ -225,15 +225,15 @@ public class StorageRegrTest {
     NodeId id1 = _idFactory.generateNodeId();
     Persistable file1 = new DummyPersistable("file 1");
     assertTrue("InsertCredentials", "File should store successfully",
-               sm.store(id1, file1, userCred));
+               sm.insert(id1, file1, userCred));
     
     // Store file2 as userCred2
     Persistable file2 = new DummyPersistable("file 2");
     assertTrue("InsertCredentials", "File should not store successfully",
-               !sm.store(id1, file2, userCred2));
+               !sm.insert(id1, file2, userCred2));
     
     // Check correct file exists
-    StorageObject result = sm.retrieve(id1);
+    StorageObject result = sm.lookup(id1);
     assertTrue("InsertCredentials", "Retrieved result should not be null",
                result != null);
     Persistable fileA = result.getOriginal();
@@ -244,10 +244,10 @@ public class StorageRegrTest {
     // Store file3 as userCred
     Persistable file3 = new DummyPersistable("file 3");
     assertTrue("InsertCredentials", "File should store successfully",
-               sm.store(id1, file3, userCred));
+               sm.insert(id1, file3, userCred));
     
     // Check new file exists
-    result = sm.retrieve(id1);
+    result = sm.lookup(id1);
     assertTrue("InsertCredentials", "Retrieved result should not be null",
                result != null);
     Persistable fileB = result.getOriginal();
@@ -269,12 +269,12 @@ public class StorageRegrTest {
     // Store file1
     NodeId id1 = _idFactory.generateNodeId();
     Persistable file1 = new DummyPersistable("file 1");
-    sm.store(id1, file1, userCred);
+    sm.insert(id1, file1, userCred);
         
     // Remove file1 with wrong credentials
     assertTrue("DeleteCredentials", "File should not successfully delete",
                !sm.delete(id1, userCred2));
-    StorageObject result = sm.retrieve(id1);
+    StorageObject result = sm.lookup(id1);
     assertTrue("DeleteCredentials", "Retrieved result should not be null",
                result != null);
     Persistable file2 = result.getOriginal();

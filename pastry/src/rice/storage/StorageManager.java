@@ -19,36 +19,37 @@ import ObjectWeb.Persistence.Persistable;
 public interface StorageManager {
   
   /**
-   * Stores a file with the given fileId in local storage.
-   * @param fileId Pastry key identifying this file
-   * @param file Persistable file to be stored
+   * Inserts an object with the given ID in local storage.
+   * @param id Pastry key identifying this object
+   * @param obj Persistable object to be stored
    * @param authorCred Author's credentials
    * @return true if store succeeds, false otherwise
    */
-  public boolean store(NodeId fileId, Persistable file, Credentials authorCred);
+  public boolean insert(NodeId id, Persistable obj, Credentials authorCred);
   
   /**
-   * Stores an update to the file with ID fileId.
-   * @param fileId Pastry key of original file to be updated
-   * @param update Persistable update to the original file
-   * @return true if update was successful, false if no file was found
+   * Stores an update to the object with the given ID.
+   * @param id Pastry key of original object to be updated
+   * @param update Persistable update to the original object
+   * @param authorCred Update Author's credentials
+   * @return true if update was successful, false if no object was found
    */
-  public boolean update(NodeId fileId, Persistable update);
+  public boolean update(NodeId id, Persistable update, Credentials authorCred);
   
   /**
-   * Retrieves the file and all associated updates with ID fileId.
-   * @param fileId Pastry key of original file
-   * @return StorageObject with original file and a Vector of all
-   * updates to the file, or null if no file was found
+   * Retrieves the object and all associated updates with the given ID.
+   * @param id Pastry key of original object
+   * @return StorageObject with original object and a Vector of all
+   * updates to the object, or null if no object was found
    */
-  public StorageObject retrieve(NodeId fileId);
+  public StorageObject lookup(NodeId id);
   
   /**
-   * Removes the file with ID fileId from storage.
-   * @param fileId Pastry key of original file
+   * Removes the object with the given ID from storage.
+   * @param id Pastry key of original object
    * @param authorCred Author's credentials
-   * @return true if file was deleted, false if no file was found
+   * @return true if object was deleted, false if no object was found
    */
-  public boolean delete(NodeId fileId, Credentials authorCred);
+  public boolean delete(NodeId id, Credentials authorCred);
   
 }
