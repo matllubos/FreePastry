@@ -8,10 +8,8 @@ import java.io.Serializable;
 public class FragmentAndManifest implements Serializable {
   public Fragment fragment;
   public Manifest manifest;
-  public FragmentKey key;
   
-  public FragmentAndManifest(FragmentKey key, Fragment fragment, Manifest manifest) {
-    this.key = key;
+  public FragmentAndManifest(Fragment fragment, Manifest manifest) {
     this.fragment = fragment;
     this.manifest = manifest;
   }
