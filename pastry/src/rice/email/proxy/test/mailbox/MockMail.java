@@ -1,12 +1,13 @@
 package rice.email.proxy.test.mailbox;
 
+import rice.email.*;
 import rice.email.proxy.mail.*;
 import rice.email.proxy.mailbox.*;
 
 public class MockMail
     implements StoredMessage
 {
-    MimeMessage _msg;
+    Email _msg;
     FlagList _flags;
     int _sequenceNumber;
     int _uid;
@@ -15,16 +16,16 @@ public class MockMail
       _uid = uid;
     }
 
-    public void setMessage(MimeMessage msg)
+    public void setMessage(Email msg)
     {
         _msg = msg;
         _flags = new MockFlagList();
     }
 
-    public MimeMessage getMessage()
+    public Email getMessage()
     {
 
-        return _msg;
+      return _msg;
     }
 
     public FlagList getFlagList()

@@ -17,6 +17,11 @@ import rice.post.storage.*;
 public abstract class EmailContentPart implements Serializable {
 
   /**
+   * The size of this part, in bytes
+   */
+  protected int size;
+  
+  /**
    * The local storage service
    */
   protected transient StorageService storage;
@@ -24,9 +29,28 @@ public abstract class EmailContentPart implements Serializable {
   /**
    * Constructor which takes in an EmailData
    */
-  public EmailContentPart() {
+  public EmailContentPart(int size) {
+    this.size = size;
   }
 
+  /**
+   * Sets the size of this part, in bytes
+   *
+   * @param size The size of this part
+   */
+  protected void setSize(int size) {
+    this.size = size;
+  }
+
+  /**
+   * Returns the size of this part, in bytes
+   *
+   * @return The size of this part
+   */
+  public int getSize() {
+    return size;
+  }
+  
   /**
    * Method which sets this part's storage service
    *

@@ -1,5 +1,6 @@
 package rice.email.proxy.mail;
 
+import rice.email.*;
 import rice.email.proxy.mailbox.*;
 
 public interface StoredMessage
@@ -8,7 +9,7 @@ public interface StoredMessage
 
   int getSequenceNumber();
 
-  MimeMessage getMessage()
+  Email getMessage()
     throws MailboxException;
 
   FlagList getFlagList();

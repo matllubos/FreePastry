@@ -17,9 +17,9 @@ import rice.post.storage.*;
 public class EmailSinglePart extends EmailContentPart {
 
   /**
-  * The header of this email part
+   * The number of lines for this email single part
    */
-  protected transient EmailData headers;
+  protected int lines;
 
   /**
    * The actual content of this email part
@@ -32,16 +32,13 @@ public class EmailSinglePart extends EmailContentPart {
   protected EmailDataReference contentReference;
 
   /**
-   * A reference to the content of this email part
-   */
-  protected EmailDataReference headersReference;
-
-  /**
    * Constructor which takes in an EmailData
    */
-  public EmailSinglePart(EmailData headers, EmailData content) {
-    this.headers = headers;
+  public EmailSinglePart(EmailData content) {
+    super(content.getData().length);
+    
     this.content = content;
+    this.lines = new String(content.getData()).split("\n").length;
   }
 
   /**
@@ -52,41 +49,15 @@ public class EmailSinglePart extends EmailContentPart {
    *   is returned the success or failure of this command
    */
   public void storeData(Continuation command) {
-    if ((contentReference != null) && (headersReference != null)) {
+    if (contentReference != null) {
       command.receiveResult(new Boolean(true));
       return;
     }
     
-    storage.storeContentHash(headers, new StandardContinuation(command) {
+    storage.storeContentHash(content, new StandardContinuation(command) {
       public void receiveResult(Object o) {
-        headersReference = (EmailDataReference) o;
-
-        storage.storeContentHash(content, new StandardContinuation(parent) {
-          public void receiveResult(Object o) {
-            contentReference = (EmailDataReference) o;
-            parent.receiveResult(new Boolean(true));
-          }
-        });
-      }
-    });
-  }
-
-  /**
-   * Method which retrieves and returns this content's headers
-   *
-   * @param command The command to run once the data is available
-   */
-  public void getHeaders(Continuation command) {
-    if (headers != null) {
-      command.receiveResult(headers);
-      return;
-    }
-
-    storage.retrieveContentHash(headersReference, new StandardContinuation(command) {
-      public void receiveResult(Object o) {
-        headers = (EmailData) o;
-
-        parent.receiveResult(headers);
+        contentReference = (EmailDataReference) o;
+        parent.receiveResult(new Boolean(true));
       }
     });
   }
@@ -112,6 +83,15 @@ public class EmailSinglePart extends EmailContentPart {
   }
 
   /**
+   * Returns the number of lines for this email single part
+   *
+   * @return The number of lines of the data
+   */
+  public int getLines() {
+    return lines;
+  }
+
+  /**
    * Returns whether or not this emailSinglePart is equal to the
    * given object
    *
@@ -126,10 +106,9 @@ public class EmailSinglePart extends EmailContentPart {
     EmailSinglePart part = (EmailSinglePart) o;
 
     if (contentReference != null) {
-      return (contentReference.equals(part.contentReference) &&
-              headersReference.equals(part.headersReference));
+      return contentReference.equals(part.contentReference);
     } else {
-      return (content.equals(part.content) && headers.equals(part.headers));
+      return content.equals(part.content);
     }
   }
 }

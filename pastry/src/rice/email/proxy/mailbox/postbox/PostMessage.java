@@ -43,7 +43,7 @@ public class PostMessage implements StoredMessage {
 
   private Folder folder;
 
-  private MimeMessage message;
+//  private MimeMessage message;
 
   public PostMessage(StoredEmail storedEmail, int sequence, Folder folder) {
     this.email = storedEmail;
@@ -71,8 +71,8 @@ public class PostMessage implements StoredMessage {
     return email;
   }
 
-  public MimeMessage getMessage() throws MailboxException {
-    if (message != null) {
+  public Email getMessage() throws MailboxException {
+/*    if (message != null) {
       return message;
     } else {
       try {
@@ -90,7 +90,15 @@ public class PostMessage implements StoredMessage {
       } catch (MessagingException e) {
         throw new MailboxException(e);
       }
-    }
+    } */
+ /*   ExternalContinuation c = new ExternalContinuation();
+    email.getEmail().getContent(c);
+    c.sleep();
+
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+
+    return (EmailMessagePart) c.getResult(); */
+    return email.getEmail();
   }
   
   public FlagList getFlagList() {
@@ -173,7 +181,7 @@ public class PostMessage implements StoredMessage {
         mm.setSubject(UNSECURE_SUBJECT_TITLE + " " + mm.getSubject());
       }
       
-      return new Email(from, recipients, process(mm));
+      return new Email(from, recipients, (EmailMessagePart) process(mm));
     } catch (IOException e) {
       throw new MailboxException(e);
     } catch (MessagingException e) {
@@ -185,40 +193,42 @@ public class PostMessage implements StoredMessage {
     Object content = part.getContent();
     
     if (content instanceof Multipart) {
-      return process((Multipart) content);
+      String type = part.getContentType();
+      return process((Multipart) content, type);
     } else if (content instanceof MimePart) {
       return process((MimePart) content);
     } else {
-      return process(part, part.getInputStream());
+      if (part instanceof MimeBodyPart)
+        return process(((MimeBodyPart) part).getRawInputStream());
+      else
+        return process(part.getInputStream());
     }
   }
 
-  private static EmailMessagePart process(MimePart mime) throws IOException, MessagingException {
+  private static EmailHeadersPart process(MimePart mime) throws IOException, MessagingException {
     EmailData headers = new EmailData(getHeaders(mime).getBytes());
     EmailContentPart part = processContent(mime);
 
-    return new EmailMessagePart(headers, part);
+    if (mime instanceof javax.mail.internet.MimeMessage)
+      return new EmailMessagePart(headers, part);
+    else
+      return new EmailHeadersPart(headers, part);
   }
 
-  private static EmailMultiPart process(Multipart part) throws IOException, MessagingException {
-    EmailMessagePart[] parts = new EmailMessagePart[part.getCount()];
+  private static EmailMultiPart process(Multipart part, String boundary) throws IOException, MessagingException {
+    EmailHeadersPart[] parts = new EmailHeadersPart[part.getCount()];
 
     for (int i=0; i<parts.length; i++) {
       parts[i] = process((MimePart) part.getBodyPart(i));
     }
 
-    return new EmailMultiPart(parts);
+    return new EmailMultiPart(parts, boundary);
   }
 
-  private static EmailSinglePart process(MimePart mime, InputStream stream) throws IOException, MessagingException {
-    EmailData headers = new EmailData(getHeaders(mime).getBytes());
-    
+  private static EmailSinglePart process(InputStream stream) throws IOException, MessagingException {
     String data = StreamUtils.toString(new InputStreamReader(stream));
-    return new EmailSinglePart(headers, new EmailData(data.getBytes()));
+    return new EmailSinglePart(new EmailData(data.getBytes()));
   }
-
-
-  
 
   private static String getHeaders(MimePart mime) throws MessagingException {
     Enumeration e = mime.getAllHeaderLines();
@@ -227,10 +237,8 @@ public class PostMessage implements StoredMessage {
 
     while (e.hasMoreElements()) {
       String header = (String) e.nextElement();
-      headersText += header.replace('\r', ' ').replace('\n', ' ') + "\n";
+      headersText += header + "\r\n";
     }
-
-//    System.out.println("RETURNING MIMEPART HEADERS: " + headersText);
 
     return headersText;
   }
@@ -243,18 +251,6 @@ public class PostMessage implements StoredMessage {
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
     return c.getResult();
-  }
-
-  private static String getHeaders(EmailSinglePart part) throws MailboxException {
-    ExternalContinuation c = new ExternalContinuation();
-    part.getHeaders(c);
-    c.sleep();
-
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
- //   System.out.println("RETURNING SINGLE HEADERS: " + new String(((EmailData) c.getResult()).getData()));
-
-    return new String(((EmailData) c.getResult()).getData());
   }
 
   private static String getHeaders(EmailMessagePart part) throws MailboxException {

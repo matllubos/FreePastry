@@ -94,7 +94,12 @@ public class PostFolder implements MailFolder {
 
   public void put(MovingMessage msg, List lflags, String date) throws MailboxException {
     try {
-      Email email = PostMessage.parseEmail(msg.getResource());
+      Email email = msg.getEmail();
+
+      if (email == null) {
+        email = PostMessage.parseEmail(msg.getResource());
+      }
+      
       Flags flags = new Flags();
 
       Iterator i = lflags.iterator();

@@ -67,24 +67,8 @@ public class CopyCommand
     void copyMessage(StoredMessage msg, Mailbox box, String destFold)
               throws MailboxException
     {
-        MovingMessage iMsg = getState().createMovingMessage();
-        try
-        {
-            iMsg.readFullContent(msg.getMessage().getContents());
-            box.getFolder(destFold).put(iMsg);
-        }
-        catch (IOException ioe)
-        {
-            throw new MailboxException(ioe);
-        }
-        catch (MailException me)
-        {
-            throw new MailboxException(me);
-        }
-        finally
-        {
-            iMsg.releaseContent();
-        }
+      MovingMessage message = new MovingMessage(msg.getMessage());
+      box.getFolder(destFold).put(message);
     }
 
     public String getFolder()

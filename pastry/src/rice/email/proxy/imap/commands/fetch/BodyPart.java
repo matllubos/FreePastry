@@ -1,9 +1,11 @@
 package rice.email.proxy.imap.commands.fetch;
 
+import rice.*;
+import rice.Continuation.*;
+
+import rice.email.*;
 import rice.email.proxy.mail.*;
-
 import rice.email.proxy.imap.commands.*;
-
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.util.*;
 
@@ -62,212 +64,222 @@ public class BodyPart extends FetchPart {
   }
 
   protected String fetchHandler(StoredMessage msg, Object part) throws MailboxException {
-    try {
-      if (part instanceof RFC822PartRequest) {
-        RFC822PartRequest rreq = (RFC822PartRequest) part;
+    ExternalContinuation c = new ExternalContinuation();
+    msg.getMessage().getContent(c);
+    c.sleep();
 
-        if (rreq.getType().equals("SIZE")) {
-          return "" + msg.getMessage().getSize();
-        } else {
-          BodyPartRequest breq = new BodyPartRequest();
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
-          if (rreq.getType().equals("HEADER")) {
-            breq.appendType("HEADER");
-            breq.setPeek(true);
-          } else if (rreq.getType().equals("TEXT")) {
-            breq.appendType("TEXT");
-          }
-
-          return fetchHandler(msg, breq);
-        }
-      } else if (part instanceof BodyPartRequest) {
-        String result = "";
-        
-        BodyPartRequest breq = (BodyPartRequest) part;
-
-        if (breq.getType().size() == 0) {
-          InputStream stream = msg.getMessage().getMessage().getRawInputStream();
-          StringWriter writer = new StringWriter();
-
-          StreamUtils.copy(new InputStreamReader(stream), writer);
-          Enumeration headers = msg.getMessage().getMessage().getAllHeaderLines();
-          String header = "";
-          
-          while (headers.hasMoreElements()) {
-            header += headers.nextElement() + "\r\n";
-          }
-
-          header += "\r\n" + writer.toString();
-          
-          result += "{" + header.length() + "}\r\n" + header;
-        } else {
-          result += fetchPart(breq, clone(breq.getType()), msg.getMessage().getMessage(), true);
-        }
+    EmailMessagePart message = (EmailMessagePart) c.getResult();
     
-        if ((! breq.getPeek()) &&	(! msg.getFlagList().isSeen())) {
-          msg.getFlagList().addFlag("\\SEEN");
-          msg.getFlagList().commit();
-          result += " ";
+    if (part instanceof RFC822PartRequest) {
+      RFC822PartRequest rreq = (RFC822PartRequest) part;
 
-          FetchPart handler = FetchCommand.regestry.getHandler("FLAGS");
-          handler.setConn(getConn());
-          result += handler.fetch(msg, "FLAGS");
+      if (rreq.getType().equals("SIZE")) {
+        return "" + message.getSize();
+      } else {
+        BodyPartRequest breq = new BodyPartRequest();
+ 
+        if (rreq.getType().equals("HEADER")) {
+          breq.appendType("HEADER");
+          breq.setPeek(true);
+        } else if (rreq.getType().equals("TEXT")) {
+          breq.appendType("TEXT");
         }
 
-        return result;
-      } else {
-        return "NIL";
+        return fetchHandler(msg, breq);
       }
-    } catch (IOException ioe) {
-      throw new MailboxException(ioe);
-    } catch (MailException me) {
-      throw new MailboxException(me);
-    } catch (MessagingException me) {
-      throw new MailboxException(me);
+    } else if (part instanceof BodyPartRequest) {
+      String result = "";
+
+      BodyPartRequest breq = (BodyPartRequest) part;
+
+      if (breq.getType().size() == 0) {
+        result = fetchAll(breq, message);
+      } else {
+        result = fetchPart(breq, clone(breq.getType()), message);
+      }
+
+      if ((! breq.getPeek()) &&	(! msg.getFlagList().isSeen())) {
+        msg.getFlagList().addFlag("\\SEEN");
+        msg.getFlagList().commit();
+        result += " ";
+
+        FetchPart handler = FetchCommand.regestry.getHandler("FLAGS");
+        handler.setConn(getConn());
+        result += handler.fetch(msg, "FLAGS");
+      }
+
+      return result;
+    } else {
+      return "NIL";
     }
   }
 
-  protected String fetchPart(BodyPartRequest breq, List types, MimePart content, boolean topLevel) throws MailboxException {
+  protected String fetchPart(BodyPartRequest breq, List types, EmailHeadersPart part) throws MailboxException {
+    ExternalContinuation c = new ExternalContinuation();
+    part.getContent(c);
+    c.sleep();
+
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }    
+
+    EmailContentPart content = (EmailContentPart) c.getResult();
+
     if (types.size() == 0) {
       return fetchAll(breq, content);
     }
     
-    Object part = null;
     String type = (String) types.remove(0);
 
     try {
-      try {
-        part = content.getContent();
+      // see if the part request is a number
+      int i = Integer.parseInt(type);
 
-        // see if the part request is a number
-        int i = Integer.parseInt(type);
+      if (content instanceof EmailMultiPart) {
+        c = new ExternalContinuation();
+        ((EmailMultiPart) content).getContent(c);
+        c.sleep();
 
-         if (part instanceof MimeMultipart) {
-          MimeMultipart mime = (MimeMultipart) part;
+        if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
-          if (i-1 < mime.getCount()) {
-            return fetchPart(breq, types, (MimeBodyPart) mime.getBodyPart(i-1), false);
-          }
-        } else if (part instanceof javax.mail.internet.MimeMessage) {
-          types.add(0, type);
-          return fetchPart(breq, types, (javax.mail.internet.MimeMessage) part, topLevel);
-        } else if ((part instanceof MimeBodyPart) && (((MimeBodyPart) part).getContent() instanceof MimePart)) {
-          types.add(0, type);
-          return fetchPart(breq, types, (MimeBodyPart) part, topLevel);
-        } else if ((i == 1) && (types.size() == 0)) {
-          return fetchAll(breq, content);
+        EmailHeadersPart[] parts = (EmailHeadersPart[]) c.getResult();
+
+        if (i-1 < parts.length) {
+          return fetchPart(breq, types, parts[i-1]);
         }
-      } catch (NumberFormatException e) {
-        if (part == null)
-          throw new MailboxException("Could not properly parse content of " + content);
+      } else if (content instanceof EmailMessagePart) {
+        types.add(0, type);
+        return fetchPart(breq, types, (EmailMessagePart) content);
+      } else if ((i == 1) && (types.size() == 0)) {
+        return fetchAll(breq, content);
+      }
+    } catch (NumberFormatException e) {
+      if (content == null)
+        throw new MailboxException("Could not properly parse content of " + part);
 
-        if (part instanceof javax.mail.internet.MimeMessage) {
-          types.add(0, type);
-          return fetchPart(breq, types, (javax.mail.internet.MimeMessage) part, topLevel);
-        } else if (content instanceof MimeBodyPart) {
-          if (type.equals("MIME")) {
-            return fetchHeader((MimePart) content);
-          }
-        } else if (content instanceof javax.mail.internet.MimeMessage) {
-          if (type.equals("HEADER")) {
-            return fetchHeader((MimePart) content);
-          } else if (type.equals("HEADER.FIELDS")) {
-            return fetchHeader((MimePart) content, split(breq.getPartIterator()));
-          } else if (type.equals("HEADER.FIELDS.NOT")) {
-            return fetchHeader((MimePart) content, split(breq.getPartIterator()), false);
-          } else if (type.equals("TEXT")) {
-            return fetchAll(breq, ((javax.mail.internet.MimeMessage) content).getRawInputStream());
-          } else if (type.equals("MIME")) {
-          } else {
-            throw new MailboxException("Unknown section text specifier");
-          }
+      if (content instanceof EmailMessagePart) {
+        types.add(0, type);
+        return fetchPart(breq, types, (EmailMessagePart) content);
+      } else if (type.equals("MIME") && (! (part instanceof EmailMessagePart))) {
+        return fetchHeader(part);
+      } else {
+        if (type.equals("HEADER")) {
+          return fetchHeader(part);
+        } else if (type.equals("HEADER.FIELDS")) {
+          return fetchHeader(part, split(breq.getPartIterator()));
+        } else if (type.equals("HEADER.FIELDS.NOT")) {
+          return fetchHeader(part, split(breq.getPartIterator()), false);
+        } else if (type.equals("TEXT")) {
+          return fetchAll(breq, content);
+        } else {
+          throw new MailboxException("Unknown section text specifier");
         }
       }
-    } catch (IOException ioe) {
-      throw new MailboxException(ioe);
-    } catch (MessagingException me) {
-      me.printStackTrace();
-      throw new MailboxException(me);
     }
 
-    System.out.println("DIDN'T KNOW WHAT TO DO WITH " + part.getClass().getName() + " " + type);
+    System.out.println("DIDN'T KNOW WHAT TO DO WITH " + part.getClass().getName() + " " + content.getClass().getName() + " " + type);
 
     return "\"\"";
   }
 
-  protected String fetchHeader(MimePart msg) throws MailboxException {
-    return fetchHeader(msg, new String[0], false);
+  protected String fetchHeader(EmailHeadersPart part) throws MailboxException {
+    return fetchHeader(part, new String[0], false);
   }
 
-  protected String fetchHeader(MimePart msg, String[] parts) throws MailboxException {
-    return fetchHeader(msg, parts, true);
+  protected String fetchHeader(EmailHeadersPart part, String[] parts) throws MailboxException {
+    return fetchHeader(part, parts, true);
   }
 
-  protected String fetchHeader(MimePart msg, String[] parts, boolean exclude) throws MailboxException {
+  protected String fetchHeader(EmailHeadersPart part, String[] parts, boolean exclude) throws MailboxException {
     try {
+      ExternalContinuation c = new ExternalContinuation();
+      part.getHeaders(c);
+      c.sleep();
+
+      if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+
+      EmailData data = (EmailData) c.getResult();
+      
+      InternetHeaders iHeaders = new InternetHeaders(new ByteArrayInputStream(data.getData()));
       Enumeration headers;
 
       if (exclude) {
-        headers = msg.getMatchingHeaderLines(parts);
+        headers = iHeaders.getMatchingHeaderLines(parts);
       } else {
-        headers = msg.getNonMatchingHeaderLines(parts);
+        headers = iHeaders.getNonMatchingHeaderLines(parts);
       }
 
-      String result = collapse(headers) + "\r\n";
-      
-      return "{" + result.length() + "}\r\n" + result;
-    } catch (MessagingException me) {
-      throw new MailboxException(me);
+      return format(collapse(headers) + "\r\n");
+    } catch (MessagingException e) {
+      throw new MailboxException(e);
     }
   }
 
-  public String fetchAll(BodyPartRequest breq, Object data) throws MailboxException {
-    try {
-      if (data instanceof String) {
-        String content = getRange(breq, "" + data);
-        return format(content);
-      } else if (data instanceof MimeBodyPart) {
-        MimeBodyPart mime = (MimeBodyPart) data;
+  public String fetchAll(BodyPartRequest breq, EmailContentPart part) throws MailboxException {
+    return format(getRange(breq, fetchAll(part)));
+  }
 
-        InputStream stream = mime.getRawInputStream();
-        StringWriter writer = new StringWriter();
+  public String fetchAll(EmailContentPart part) throws MailboxException {
+    if (part instanceof EmailMultiPart)
+      return fetchAll((EmailMultiPart) part);
+    else if (part instanceof EmailSinglePart)
+      return fetchAll((EmailSinglePart) part);
+    else if (part instanceof EmailHeadersPart)
+      return fetchAll((EmailHeadersPart) part);
+    else
+      throw new MailboxException("Unrecognized part " + part);
+  }
 
-        StreamUtils.copy(new InputStreamReader(stream), writer);
+  public String fetchAll(EmailMultiPart part) throws MailboxException {
+    String type = part.getType();
+    String seperator = type.substring(type.toLowerCase().indexOf("boundary=\"")+10, type.length()-1);
+    StringBuffer result = new StringBuffer();
 
-        String content = getRange(breq, writer.toString());
-        return format(content);
-      } else if (data instanceof javax.mail.internet.MimeMessage) {
-        javax.mail.internet.MimeMessage mime = (javax.mail.internet.MimeMessage) data;
+    ExternalContinuation c = new ExternalContinuation();
+    part.getContent(c);
+    c.sleep();
 
-        InputStream stream = mime.getRawInputStream();
-        StringWriter writer = new StringWriter();
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
-        StreamUtils.copy(new InputStreamReader(stream), writer);
+    EmailContentPart[] parts = (EmailContentPart[]) c.getResult();
 
-        String content = getRange(breq, writer.toString());
-        return format(content);
-      } else if (data instanceof MimeMultipart) {
-        MimeMultipart mime = (MimeMultipart) data;
-
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        mime.writeTo(stream);
-
-        String content = getRange(breq, stream.toString());
-        return format(content);
-      } else if (data instanceof InputStream) {
-        StringWriter writer = new StringWriter();
-        StreamUtils.copy(new InputStreamReader((InputStream) data), writer);
-
-        String content = getRange(breq, writer.toString());
-        return format(content);
-      } else {
-        return "NIL";
-      }
-    } catch (IOException ioe) {
-      throw new MailboxException(ioe);
-    } catch (MessagingException me) {
-      throw new MailboxException(me);
+    for (int i=0; i<parts.length; i++) {
+      result.append("--" + seperator + "\r\n" + fetchAll(parts[i]) + "\r\n");
     }
+
+    result.append("--" + seperator + "--\r\n");
+
+    return result.toString();
+  }
+
+  public String fetchAll(EmailSinglePart part) throws MailboxException {
+    ExternalContinuation c = new ExternalContinuation();
+    part.getContent(c);
+    c.sleep();
+
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+
+    return new String(((EmailData) c.getResult()).getData());
+  }
+
+  public String fetchAll(EmailHeadersPart part) throws MailboxException {
+    ExternalContinuation c = new ExternalContinuation();
+    part.getHeaders(c);
+    c.sleep();
+
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+
+    EmailData headers = (EmailData) c.getResult();
+    
+    c = new ExternalContinuation();
+    part.getContent(c);
+    c.sleep();
+
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+
+    EmailContentPart data = (EmailContentPart) c.getResult();
+
+    return new String(headers.getData()) + "\r\n" + fetchAll(data);
   }
 
   private String getRange(BodyPartRequest breq, String content) {

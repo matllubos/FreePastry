@@ -1,7 +1,12 @@
 package rice.email.proxy.test.mailbox;
 
+import rice.*;
+import rice.Continuation.*;
+
+import rice.email.*;
 import rice.email.proxy.mail.*;
 import rice.email.proxy.mailbox.*;
+import rice.email.proxy.mailbox.postbox.*;
 import rice.email.proxy.util.*;
 
 import java.io.*;
@@ -97,22 +102,14 @@ public class MockMailFolder
         return results;
     }
 
-    public void appendMessage(String content)
-                       throws MailboxException
-    {
-        try
-        {
-            MockMail mail = new MockMail(_nextUID);
-            _nextUID++;
-            mail.setMessage(new MimeMessage(new StringBufferResource(
-                                                    content)));
+    public void appendMessage(String content) throws MailboxException {
+      MockMail mail = new MockMail(_nextUID);
+      _nextUID++;
+      Email email = PostMessage.parseEmail(new StringBufferResource(content));
 
-            messages.add(mail);
-        }
-        catch (MailException me)
-        {
-            throw new MailboxException(me);
-        }
+      mail.setMessage(email);
+
+      messages.add(mail);
     }
 
     public void put(MovingMessage msg)

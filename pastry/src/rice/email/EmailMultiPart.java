@@ -17,19 +17,43 @@ import rice.post.storage.*;
 public class EmailMultiPart extends EmailContentPart {
 
   /**
+   * The string used to seperate the parts of this multipart
+   */
+  protected String type;
+
+  /**
    * The actual content of this email part
    */
-  public EmailMessagePart[] content;
+  public EmailHeadersPart[] content;
 
   /**
    * Constructor which takes in an Emailpart list 
    */
-  public EmailMultiPart(EmailMessagePart[] content) {
+  public EmailMultiPart(EmailHeadersPart[] content, String type) {
+    super(0);
+    
+    int size = 0;
+    for (int i=0; i<content.length; i++) {
+      size += content[i].getSize();
+    }
+
+    setSize(size);
+
+    this.type = type;
     this.content = content;
 
     if ((content == null) || (content.length == 0)) {
       throw new IllegalArgumentException("Content[] must contain at least one element!");
     }
+  }
+
+  /**
+   * Returns the seperator used for this multipart
+   *
+   * @return The seperator for this multipart
+   */
+  public String getType() {
+    return type;
   }
 
   /**

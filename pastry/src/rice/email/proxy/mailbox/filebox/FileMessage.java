@@ -3,6 +3,7 @@ package rice.email.proxy.mailbox.filebox;
 import java.io.*;
 import java.util.regex.*;
 
+import rice.email.*;
 import rice.email.proxy.mail.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.util.*;
@@ -56,8 +57,8 @@ public class FileMessage implements StoredMessage {
     }
   }
 
-  public MimeMessage getMessage() throws MailboxException {
-    return getMimeMessage();
+  public Email getMessage() throws MailboxException {
+    return null;//getMimeMessage();
   }
 
   public int getSequenceNumber() {

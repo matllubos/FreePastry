@@ -39,6 +39,15 @@ public class MovingMessage
         _workspace = workspace;
     }
 
+    public MovingMessage(Email email)
+    {
+      this.email = email;
+    }
+
+    public Email getEmail() {
+      return email;
+    }
+
     public Resource getResource()
       throws IOException
     {
