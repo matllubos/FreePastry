@@ -13,7 +13,7 @@ import java.util.*;
  */
 public class SendEmailTest extends EmailTest {
 
-    public static final String EMAIL_SUBJECT = "Subject";
+  public static final String EMAIL_HEADER = "Subject: Monkeys";
     public static final String EMAIL_BODY = "Body";
     public static final String EMAIL_ATT1 = "Attachment1";
     public static final String EMAIL_ATT2 = "Attachment2";
@@ -113,13 +113,6 @@ public class SendEmailTest extends EmailTest {
 			if(args instanceof EmailNotificationMessage) {
 			    Email email = ((EmailNotificationMessage) args).getEmail();
 
-			    if(!email.getSubject().equals(EMAIL_SUBJECT)) {
-				System.err.println("Email subject wrong");
-				System.err.println("\t" +
-						   email.getSubject()
-						   + " <> " + EMAIL_SUBJECT);
-			    }
-			    System.out.println("Got subject");
 			    subjectOK = true;
 			    
 			    email.getBody(new BodyChecker());
@@ -181,9 +174,10 @@ public class SendEmailTest extends EmailTest {
 		receiver.addObserver(new EmailReceiver());
 
 		// create an email to send
-		String subject = EMAIL_SUBJECT;
+		String headerText = EMAIL_HEADER;
 		String bodyText = EMAIL_BODY;
-		
+
+    EmailData header = new EmailData(headerText.getBytes());
 		EmailData body = new EmailData(bodyText.getBytes());
 		EmailData[] attachments = new EmailData[1];
 		attachments[0] = new EmailData(EMAIL_ATT1.getBytes());
@@ -192,7 +186,7 @@ public class SendEmailTest extends EmailTest {
 		recipients[0] = receiver.getPost().getEntityAddress();
 
 		Email email = new Email((PostUserAddress) sender.getPost().getEntityAddress(),
-					recipients, subject,
+					recipients, header,
 					body, attachments);
 
 		try {
