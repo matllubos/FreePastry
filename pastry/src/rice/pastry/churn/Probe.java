@@ -22,12 +22,19 @@ public interface Probe {
   public static final int STATE_READY = 2;
   
   LivenessLeafSet getLeafset();
-  Collection getFailedset();
   NodeHandle getSender();
+  Collection getFailedSet();
+  
   int getState();
 
 	/**
 	 * @return true if this is a reply
 	 */
 	boolean isResponse();
+  
+  /**
+   * @return true for request, false for response
+   * can be false on a request if a response is not necessary
+   */
+  boolean requestResponse();
 }

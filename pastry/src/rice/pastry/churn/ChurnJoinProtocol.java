@@ -19,6 +19,7 @@ import rice.pastry.routing.RouteSet;
 import rice.pastry.routing.RoutingTable;
 import rice.pastry.security.PastrySecurityManager;
 import rice.pastry.security.PermissiveCredentials;
+import rice.pastry.socket.SocketPastryNode;
 import rice.pastry.standard.StandardJoinProtocol;
 
 /**
@@ -153,9 +154,10 @@ public class ChurnJoinProtocol extends StandardJoinProtocol {
           
           // update local RT, then broadcast rows to our peers
           mergeRows(jr);
-//  for each j in Li do { probe(j) }
-          lsProtocol.joinState = Probe.STATE_JOINED;
-          lsProtocol.probeLeafSet();
+          
+          ((SocketPastryNode)localNode).setJoinedState(Probe.STATE_JOINED);
+//  for each j in Li do { probe(j) }          
+          lsProtocol.probeLeafSet(true);
 
           // we have now successfully joined the ring, set the local node ready
           //localNode.setReady();

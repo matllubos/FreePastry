@@ -6,6 +6,7 @@
  */
 package rice.pastry.churn;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -21,6 +22,7 @@ import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RoutingTable;
 import rice.pastry.security.PastrySecurityManager;
+import rice.pastry.socket.ConnectionManager;
 import rice.pastry.socket.LivenessListener;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketPastryNode;
@@ -29,25 +31,33 @@ import rice.pastry.standard.StandardLeafSetProtocol;
 /**
  * @author Jeff Hoye
  */
-public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements FailedSetManager, ProbeListener, Observer, LivenessListener {
+public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements ProbeListener, Observer, LivenessListener {
 
-  Vector failed = new Vector();
+  boolean maintainEntireLeafset = true;
+
+  /**
+   * of SocketNodeHandle
+   */
   Vector probing = new Vector();
-  int joinState = Probe.STATE_NONE;
+
   /**
    * This holds the most recent leafset received by each node
    * SocketNodeHandle -> LivenessLeafSet
    */
   Hashtable reachable = new Hashtable();
 
+  int maintenanceInterval = 60000;
+  
 	public ChurnLeafSetProtocol(
 		PastryNode ln,
 		NodeHandle local,
 		PastrySecurityManager sm,
 		LeafSet ls,
-		RoutingTable rt) {
+		RoutingTable rt,
+    int maintenanceInterval) {
 		super(ln, local, sm, ls, rt);
     ls.addObserver(this);
+    this.maintenanceInterval = maintenanceInterval;
 	}
 
 	/**
@@ -130,20 +140,49 @@ public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements Fai
   public void maintainLeafSet() {
 
     //  System.out.println("maintainLeafSet " + localHandle.getNodeId());
-    // TODO: suppress if we recently received other data
-    for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
-      SocketNodeHandle snh = (SocketNodeHandle)leafSet.get(i); 
-      probe(snh);
+    checkLivenessOfLeafset();
+
+    if (maintainEntireLeafset) {
+      for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
+        SocketNodeHandle snh = (SocketNodeHandle)leafSet.get(i); 
+        verifyMemberCheckedIn(snh);        
+        sendMaintenanceProbe(snh);
+      }
+    } else {
+      SocketNodeHandle snh = (SocketNodeHandle)leafSet.get(1); 
+      sendMaintenanceProbe(snh);      
+      snh = (SocketNodeHandle)leafSet.get(-1); 
+      verifyMemberCheckedIn(snh);      
     }
+  }
+
+  protected void verifyMemberCheckedIn(SocketNodeHandle snh) {
+    int lastTimeReceived = (int)(System.currentTimeMillis() - snh.getLastTimeProbeReceived());
+    if (lastTimeReceived > maintenanceInterval) { 
+      // we didn't get the expected probe from the neighbor
+      memberDidntCheckIn(snh);
+    }
+  }
+  
+  protected void sendMaintenanceProbe(SocketNodeHandle snh) {
+    // suppress if we recently received other data
+    int lastTimeSent = (int)(System.currentTimeMillis() - snh.getLastTimeProbeSent());
+    if (lastTimeSent > maintenanceInterval)
+      probe(snh, false);
+  }
+  
+  protected void memberDidntCheckIn(SocketNodeHandle snh) {
+    snh.probe(true);        
   }
   
 	/**
 	 * probe the entire leafset
 	 */
-	public void probeLeafSet() {
+	public void probeLeafSet(boolean requestResponse) {
     for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
       SocketNodeHandle snh = (SocketNodeHandle)leafSet.get(i); 
-      probe(snh);
+      if (snh.getLiveness() < NodeHandle.LIVENESS_UNREACHABLE)
+        probe(snh, requestResponse);
     }
 	}
 
@@ -152,19 +191,14 @@ public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements Fai
 //    send hLS-PROBE; i; L; failedii to j
 //    probingi += j
 //    probe-retriesi(j) := 0
-  public void probe(SocketNodeHandle snh) {
+  public void probe(SocketNodeHandle snh, boolean requestResponse) {
     if (snh.equals(localHandle)) return; // don't probe self
-    if (!probing.contains(snh) && !failed.contains(snh)) {
-      addLivessListener(snh);
+    if (!probing.contains(snh) && snh.getLiveness() < NodeHandle.LIVENESS_UNREACHABLE) {
       probing.add(snh);      
-      snh.probe();
+      snh.probe(requestResponse);
 //      probeRetries.put(snh,new Integer(0));
     }
   }
-
-	public Collection getFailedSet() {
-		return failed;
-	}
 
 //  RECEIVE(LS-PROBE | LS-PROBE-REPLY; j; L; failed)
 //    failedi := failedi - j
@@ -183,7 +217,6 @@ public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements Fai
 //    System.out.println(localNode+" probeReceived("+p+")");
 //    System.out.println(localNode+" probeReceived()1"+leafSet);
 //  failedi := failedi - j
-    failed.remove(p.getSender());
     if (p.getState() < Probe.STATE_JOINED) {
       return;
     }    
@@ -198,13 +231,17 @@ public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements Fai
     routeTable.put(p.getSender());
     
 //  for each n in Li and failed do { probei(n) }
-    Collection failedSet = p.getFailedset();
+    Collection failedSet = p.getFailedSet();
     if (failedSet != null) {
       for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
         SocketNodeHandle snh = (SocketNodeHandle)leafSet.get(i); 
-        if (failedSet.contains(snh)) {
-          System.out.println("found "+snh+" failed.");
-          probe(snh);      
+        Iterator i2 = failedSet.iterator();
+        while(i2.hasNext()) {
+          LivenessHandle lh = (LivenessHandle)i2.next();
+          if (lh.nh.equals(snh)) {
+//            System.out.println(this+".probeReceived() found "+snh+" failed.");
+            probe(snh, true);
+          }
         }
       }    
     }
@@ -223,12 +260,12 @@ public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements Fai
 //  L0 := Li; 
     LeafSet lsprime = leafSet.copy();
 
-    Collection fs = p.getFailedset();
+    Collection fs = p.getFailedSet();
     if (fs != null) {
       Iterator it = fs.iterator();
       while(it.hasNext()) {
-        NodeHandle nh = (NodeHandle)it.next();
-        lsprime.remove(nh);
+        LivenessHandle nh = (LivenessHandle)it.next();
+        lsprime.remove(nh.nh);
       }
     }
 
@@ -236,7 +273,7 @@ public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements Fai
 //  L0:add(L - failedi)
     for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
       SocketNodeHandle snh = (SocketNodeHandle)leafSet.get(i); 
-      if (!failed.contains(snh)) {
+      if (snh.getLiveness() < NodeHandle.LIVENESS_FAULTY) {
         lsprime.put(snh);
       }
     }    
@@ -245,7 +282,7 @@ public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements Fai
     for (int i=-lsprime.ccwSize(); i<=lsprime.cwSize(); i++) {
       SocketNodeHandle snh = (SocketNodeHandle)lsprime.get(i); 
       if (leafSet.get((NodeId)snh.getId()) == null) {
-        probe(snh);
+        probe(snh, true);
       }
     }    
 
@@ -257,6 +294,7 @@ public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements Fai
     if (p.isResponse())
       doneProbing((SocketNodeHandle)p.getSender(), false);
 //    System.out.println(localNode+" probeReceived()2"+leafSet);
+    checkLivenessOfLeafset();
 	}
 
   public void mergeLeafSet(LeafSet ls2) {
@@ -267,12 +305,13 @@ public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements Fai
   }
 
   public void handleRemoteLeafset(LivenessLeafSet lls, SocketNodeHandle snh) {
-
     // merge the leafset
     Iterator i = lls.leafSet.iterator();
     while(i.hasNext()) {
-      LivenessHandle handle = (LivenessHandle)i.next(); 
-      leafSet.put(handle.nh);
+      LivenessHandle handle = (LivenessHandle)i.next();
+      if (handle.liveness < NodeHandle.LIVENESS_FAULTY) {
+        leafSet.put(handle.nh);
+      }
     }     
     
     reachable.put(snh,lls);        
@@ -281,14 +320,19 @@ public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements Fai
   public void checkLivenessOfLeafset() {
     for (int ii=-leafSet.ccwSize(); ii<=leafSet.cwSize(); ii++) {
       SocketNodeHandle snh2 = (SocketNodeHandle)leafSet.get(ii); 
-      checkLiveness(snh2);
+      if (snh2 != null)
+        checkLiveness(snh2);
     }               
   }
 
   public void checkLiveness(SocketNodeHandle snh) {
+    //System.out.println("CLSP.checkLiveness()");
     if (snh.getLiveness() >= NodeHandle.LIVENESS_UNREACHABLE) {
-      if (getBestLivenessValue(snh) >= NodeHandle.LIVENESS_UNREACHABLE) {
+      int bestLiveness = getBestLivenessValue(snh);
+      if (bestLiveness >= NodeHandle.LIVENESS_UNREACHABLE) {
         markDead(snh);
+      } else {
+//        System.out.println("CLSP.checkLiveness("+snh+") bestLiveness = "+bestLiveness);
       }
     }    
   }
@@ -298,13 +342,25 @@ public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements Fai
    */
   public int getBestLivenessValue(SocketNodeHandle snh) {
     Iterator i = reachable.keySet().iterator();
+    ArrayList needToRemove = new ArrayList();
     int bestLiveness = NodeHandle.LIVENESS_FAULTY;
     while(i.hasNext()) {
       SocketNodeHandle key = (SocketNodeHandle)i.next();
-      LivenessLeafSet lls = (LivenessLeafSet)reachable.get(key);
-      int liveness = lls.getLiveness(snh);
-      if ((liveness > NodeHandle.LIVENESS_UNKNOWN) && (liveness < bestLiveness))
-        bestLiveness = liveness;
+      if (key.getLiveness() <= NodeHandle.LIVENESS_SUSPECTED) {
+        LivenessLeafSet lls = (LivenessLeafSet)reachable.get(key);
+        int liveness = lls.getLiveness(snh);
+        if ((liveness > NodeHandle.LIVENESS_UNKNOWN) && (liveness < bestLiveness)) {
+          bestLiveness = liveness;
+//          if (liveness <= NodeHandle.LIVENESS_SUSPECTED)
+//            System.out.println("CLSP.getBestLivenessValue("+snh+"):"+liveness+" "+key+" val:"+key.getLiveness());
+        }
+      } else {
+        needToRemove.add(key);
+      }
+    }
+    i = needToRemove.iterator();
+    while(i.hasNext()) {
+      reachable.remove(i.next());
     }
     return bestLiveness;
   }
@@ -327,52 +383,44 @@ public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements Fai
 //    System.out.println(localNode+" doneProbing("+snh+") "+probing.size());
 //    printProbing();
 //  probingi := probingi - j
-    if (snh != null)
-      if (nodeHasFailed) {
-        failed.add(snh);        
-      }
-      removeLivenessListener(snh);
-      probing.remove(snh);    
+    probing.remove(snh);    
 //  if (probingi = {})
     if (probing.size() == 0) {
 //    if (Li:complete)
       if (leafSet.isComplete()) {
 //      activei := true; 
-        joinState = Probe.STATE_READY;
+        ((SocketPastryNode)localNode).setJoinedState(Probe.STATE_READY);
         localNode.setReady();
 //      failed := {}
-        while (!failed.isEmpty()) {
-          failed.remove(0);
-        }
       } else {
 //      if (jLi:leftj < l=2)
         if (leafSet.cwSize() < leafSet.maxSize()/2)
 //        probe(Li:leftmost)
-          probe((SocketNodeHandle)leafSet.get(leafSet.cwSize()));
+          probe((SocketNodeHandle)leafSet.get(leafSet.cwSize()),true);
 //      if (jLi:rightj < l=2)
         if (leafSet.ccwSize() < leafSet.maxSize()/2)
 //        probe(Li:rightmost)
-          probe((SocketNodeHandle)leafSet.get(-leafSet.ccwSize()));        
+          probe((SocketNodeHandle)leafSet.get(-leafSet.ccwSize()),true);        
       }
+    } else {
+      // Leafset is not complete
+//      if (!((SocketPastryNode)localNode).isReady()) {
+////        System.out.println("CLSP.doneNode()"+leafSet);
+//  
+//        System.out.println("CLSP.doneNode(): still probing");
+//        Iterator i = probing.iterator();
+//        while (i.hasNext()) {
+//          SocketNodeHandle h = (SocketNodeHandle)i.next();
+//          ConnectionManager cm = ((SocketPastryNode)localNode).sManager.getConnectionManager(h);
+//          String s = "null";
+//          if (cm != null) {
+//            s = cm.getStatus();              
+//          }
+//          System.out.println("  "+h+" "+h.getLiveness()+" "+s);
+//        }
+//      }      
     }
   }
-
-  /**
-   * Listens to liveness to trigger doneprobing
-   * @param snh
-   */
-  private void addLivessListener(SocketNodeHandle snh) {
-    ((SocketPastryNode)localNode).addLivenessListener(snh, this);
-  }
-
-
-  /**
-   * Listens to liveness to trigger doneprobing
-	 * @param snh
-	 */
-	private void removeLivenessListener(SocketNodeHandle snh) {
-    ((SocketPastryNode)localNode).removeLivenessListener(snh, this);
-	}
 
 	public void printProbing() {
     Iterator i = probing.iterator();
@@ -380,11 +428,6 @@ public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements Fai
       System.out.println("  "+i.next());
     }
   }
-
-	public int getJoinState() {
-    if (localNode.isReady()) return Probe.STATE_READY;
-		return joinState;
-	}
 
 	public void update(Observable arg0, Object arg1) {
 //    NodeSetUpdate nsu = (NodeSetUpdate)arg1;		
@@ -395,6 +438,13 @@ public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements Fai
     if (nh == null) return;
     if (liveness >= NodeHandle.LIVENESS_UNREACHABLE) {
       doneProbing((SocketNodeHandle)nh, true);
-    }
+      reachable.remove(nh);      
+      checkLiveness((SocketNodeHandle)nh);
+      probeLeafSet(false); // notify all other members
+    }     
+	}
+
+	public Collection getProbing() {
+		return (Collection)probing.clone();
 	}
 }

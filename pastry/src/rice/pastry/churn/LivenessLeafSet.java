@@ -41,4 +41,20 @@ public class LivenessLeafSet implements Serializable {
     }
     return NodeHandle.LIVENESS_UNKNOWN;
   }
+
+  /**
+   * 
+   * @param liveness the liveness to match
+   * @return Collection of the list matching liveness.
+   */
+	public Collection getSet(int liveness) {
+    Collection list = new ArrayList();
+    Iterator i = leafSet.iterator();
+    while(i.hasNext()) {
+      LivenessHandle lh = (LivenessHandle)i.next();
+      if (lh.liveness > liveness)
+        list.add(lh);
+    }
+    return list;
+	}
 }
