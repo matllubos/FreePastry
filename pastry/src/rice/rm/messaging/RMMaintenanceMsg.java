@@ -74,7 +74,7 @@ public class RMMaintenanceMsg extends RMMessage implements Serializable
      * The time offset after the RM substrate on the local node is ready 
      * when we first trigger the maintenance protocol.
      */ 
-    public static int maintStart = 120; // in seconds (here it is 2 minutes)
+    public static int maintStart = new Random().nextInt(600); // in seconds (here it is up to 10 minutes)
 
     /**
      * Constructor
