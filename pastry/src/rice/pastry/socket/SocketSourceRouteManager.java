@@ -290,9 +290,11 @@ public class SocketSourceRouteManager {
       send(address, m);
     } else {
       if (m instanceof RouteMessage) {
-        debug("Attempting to reroute route message " + m);
-        ((RouteMessage) m).nextHop = null;
-        spn.receiveMessage(m);
+        if (((RouteMessage) m).getOptions().multipleHopsAllowed()) {
+          debug("Attempting to reroute route message " + m);
+          ((RouteMessage) m).nextHop = null;
+          spn.receiveMessage(m);
+        }
       } else {
         System.out.println("Dropping message " + m + " because next hop is dead!");
       }
