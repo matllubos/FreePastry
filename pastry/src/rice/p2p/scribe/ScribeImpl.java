@@ -117,9 +117,9 @@ public class ScribeImpl implements Scribe, Application {
     this.handle = endpoint.getLocalNodeHandle();
     this.id = Integer.MIN_VALUE;
     
-    //log.addHandler(new ConsoleHandler());
-    //log.setLevel(Level.FINEST);
-    //log.getHandlers()[0].setLevel(Level.FINEST);
+   // log.addHandler(new ConsoleHandler());
+   // log.setLevel(Level.FINEST);
+   // log.getHandlers()[0].setLevel(Level.FINEST);
     
     log.finer(endpoint.getId() + ": Starting up Scribe");
   }
@@ -458,6 +458,27 @@ public class ScribeImpl implements Scribe, Application {
     } else {
       log.warning(endpoint.getId() + ": Unexpected attempt to remove child " + child + " from unknown topic " + topic);
     }
+  }
+  
+  /**
+   * Returns the list of topics the given client is subscribed
+   * to.
+   *
+   * @param client The client in question
+   * @return The list of topics
+   */
+  public Topic[] getTopics(ScribeClient client) {
+    Vector result = new Vector();
+    
+    Enumeration e = topics.keys();
+    
+    while (e.hasMoreElements()) {
+      Topic topic = (Topic) e.nextElement();
+      if (((TopicManager) topics.get(topic)).containsClient(client))
+        result.add(topic);
+    }
+    
+    return (Topic[]) result.toArray(new Topic[0]);
   }
 
 
@@ -901,6 +922,17 @@ public class ScribeImpl implements Scribe, Application {
      */
     public ScribeClient[] getClients() {
       return (ScribeClient[]) clients.toArray(new ScribeClient[0]);
+    }
+    
+    /**
+     * Returns whether or not this topic manager contains the given
+     * client.
+     *
+     * @param client The client in question
+     * @return Whether or not this manager contains the client
+     */
+    public boolean containsClient(ScribeClient client) {
+      return clients.contains(client);
     }
 
     /**

@@ -137,5 +137,14 @@ public interface Scribe {
    * @param child The child to remove
    */
   public void removeChild(Topic topic, NodeHandle child);
+  
+  /**
+   * Returns the list of topics the given client is subscribed
+   * to.
+   *
+   * @param client The client in question
+   * @return The list of topics
+   */
+  public Topic[] getTopics(ScribeClient client);
 }
 
