@@ -6,7 +6,8 @@ SOURCE  = \
 	NetworkSimulator.java\
 	DirectSecurityManager.java\
 	DirectPastryNodeFactory.java\
-	EuclideanNetwork.java
+	EuclideanNetwork.java\
+	SphereNetwork.java
 
 RMI_SOURCE =
 
