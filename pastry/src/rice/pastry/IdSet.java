@@ -133,13 +133,30 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
 
     /**
      * return a subset of this set, consisting of the member ids in a given range
-     * @param from the lower end of the range (inclusive)
-     * @param to the upper end of the range (exclusive)
+     * @param from the counterclockwise end of the range (inclusive)
+     * @param to the clockwise end of the range (exclusive)
      * @return the subset
      */ 
     public IdSet subSet(Id from, Id to) {
-	IdSet res = new IdSet(idSet.subSet(from, to));
+	IdSet res;
+	if (from.compareTo(to) <= 0) {
+	    res = new IdSet(idSet.subSet(from, to));
+	} else {
+	    SortedSet ss = idSet.tailSet(from);
+	    ss.addAll(idSet.headSet(to));
+	    res = new IdSet(ss);
+	}  
+
 	return res;
+    }
+
+    /**
+     * return a subset of this set, consisting of the member ids in a given range
+     * @param range the range
+     * @return the subset
+     */ 
+    public IdSet subSet(IdRange range) {
+	return subSet(range.getCCW(), range.getCW());
     }
 
     /**
@@ -240,7 +257,8 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
      * @return the subset
      */
     public rice.p2p.commonapi.IdSet subSet(rice.p2p.commonapi.IdRange range) {
-      return subSet((Id) range.getCWId(), (Id) range.getCCWId());
+	//return subSet((Id) range.getCWId(), (Id) range.getCCWId());
+	return subSet((IdRange)range);
     }
     
 
