@@ -29,7 +29,13 @@ public class VisualizationGlacierEmailProxy extends EmailProxy {
   }
   
   public void start() { 
-    super.start();
+    try {
+      super.start();
+    } catch (Exception e) {
+      System.err.println("Exception: "+e);
+      e.printStackTrace();
+      System.exit(1);
+    }
     
     DistPastryNode pastry = (DistPastryNode) ((MultiringNode) node).getNode();
     
@@ -44,7 +50,7 @@ public class VisualizationGlacierEmailProxy extends EmailProxy {
       stepDone(FAILURE, e + "");
     }
     
-    server = new VisualizationServer(serverAddress, pastry, storage, new Object[] {pastry, past, storage});
+    server = new VisualizationServer(serverAddress, pastry, new Object[] {pastry, past, storage});
     server.setRestartCommand(
       "java -cp classes/:lib/activation.jar:lib/bouncycastle.jar:lib/javamail.jar:lib/junit.jar:lib/antlr.jar:lib/xmlpull_1_1_3_4a.jar:lib/xpp3-1.1.3.4d_b2.jar rice.visualization.proxy.VisualizationEmailProxy",
       args);
@@ -89,7 +95,12 @@ public class VisualizationGlacierEmailProxy extends EmailProxy {
   
   public static void main(String[] args) {
     VisualizationGlacierEmailProxy proxy = new VisualizationGlacierEmailProxy(args);
-    proxy.start();
+    try {
+        proxy.start();
+    } catch (Exception e) {
+        System.err.println("Exception: "+e);
+        e.printStackTrace();
+    }
   }
   
 }
