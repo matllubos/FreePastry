@@ -67,6 +67,9 @@ import rice.pastry.wire.messaging.socket.*;
  */
 public class SocketChannelWriter {
 
+  // the maximum length of the queue
+  public static int MAXIMUM_QUEUE_LENGTH = 50;
+
   // the magic number array which is written first
   protected static byte[] MAGIC_NUMBER = new byte[] {0x45, 0x79, 0x12, 0x0D};
   
@@ -118,7 +121,11 @@ public class SocketChannelWriter {
    */
   public void enqueue(Object o) {
     synchronized (queue) {
-      queue.addLast(o);
+      if (queue.size() < MAXIMUM_QUEUE_LENGTH) {
+        queue.addLast(o);
+      } else {
+        System.err.println("Maximum TCP queue length reached - message " + o + " will be dropped.");
+      }
     }
   }
 
@@ -179,6 +186,8 @@ public class SocketChannelWriter {
     synchronized (queue) {
       if (buffer == null) {
         if ((! waitingForGreeting) && (queue.size() > 0)) {
+          System.out.println("Writing message " + queue.getFirst() + " on socket to address " + sc.socket().getRemoteSocketAddress());
+ 
           buffer = serialize(queue.getFirst());
         } else {
           return true;

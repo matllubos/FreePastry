@@ -155,7 +155,9 @@ public class SocketChannelReader {
 
         byte[] objectArray = new byte[objectSize];
         buffer.get(objectArray);
-        return deserialize(objectArray);
+        Object obj = deserialize(objectArray);
+        System.out.println("Read message " + obj + " off of the socket stream from " + sc.socket().getRemoteSocketAddress());
+        return obj;
       }
     }
 
