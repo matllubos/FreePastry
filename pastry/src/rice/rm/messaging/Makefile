@@ -4,7 +4,8 @@ SOURCE  = \
 	RMMessage.java \
 	RMRequestKeysMsg.java \
 	RMResponseKeysMsg.java \
-	RMMaintenanceMsg.java
+	RMMaintenanceMsg.java \
+	RMTimeoutMsg.java
 
 
 RMI_SOURCE =

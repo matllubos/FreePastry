@@ -59,14 +59,52 @@ public class RMRequestKeysMsg extends RMMessage implements Serializable{
 
     private Vector rangeSet;
 
+    // This is to handle the loss of this type of messages
+    // (The other kind of messages do not require a Timeout mechanism, hence they do not have this field)
+    // That is if a Timeout occurred for a RMRequestKeysMsg, then the subsequent RMRequestKeysMsg
+    // that will be resent will have the SAME eventId but an INCREASED value of seqNo.
+    private int eventId; 
+
+    // In the Timeout mechanism upto MAXATTEMPTS will be made
+    private int attempt;
+
+    public static int TIMEOUT = 10; // 10 seconds
+
+    public static int MAXATTEMPTS = 3; 
+
+    public static class WrappedMsg {
+	RMRequestKeysMsg msg;
+	NodeHandle dest;
+	
+
+	public WrappedMsg(RMRequestKeysMsg _msg, NodeHandle _dest) {
+	    msg = _msg;
+	    dest = _dest;
+	}
+
+	public RMRequestKeysMsg getMsg() {
+	    return msg;
+	}
+
+	public NodeHandle getDest() {
+	    return dest;
+	}
+    } 
+
+
+
+
 
     /**
      * Constructor : Builds a new RM Message
      */
-    public RMRequestKeysMsg(NodeHandle source, Address address, Credentials authorCred, int seqno, Vector _rangeSet) {
+    public RMRequestKeysMsg(NodeHandle source, Address address, Credentials authorCred, int seqno, Vector _rangeSet, int _eventId) {
 	super(source,address, authorCred, seqno);
 	this.rangeSet = _rangeSet;
-	
+	this.eventId = _eventId;
+	// This is the first attempt, Subsequent attempts due to Timeout
+	// will call incrAttempt()
+	this.attempt = 1;
     }
 
 
@@ -99,12 +137,14 @@ public class RMRequestKeysMsg extends RMMessage implements Serializable{
 	    boolean hashEnabled;
 	    Id hash = new Id();
 	    IdSet keySet = new IdSet();
+
 	    // The values that will not be required to be filled
 	    // will remain as the above DONTCARE values
 
 
 	    reqRange = entry.getReqRange();
 	    hashEnabled = entry.getHashEnabled();
+
 	    //System.out.println("myRange= " + rm.myRange);
 	    //System.out.println("reqRange= " + reqRange);
 	    if(rm.myRange == null) 
@@ -130,11 +170,30 @@ public class RMRequestKeysMsg extends RMMessage implements Serializable{
 	}
 	
 	RMResponseKeysMsg msg;
-	msg = new RMResponseKeysMsg(rm.getLocalHandle(),rm.getAddress() , rm.getCredentials(), rm.m_seqno ++, returnedRangeSet);
+	msg = new RMResponseKeysMsg(rm.getLocalHandle(),rm.getAddress() , rm.getCredentials(), rm.m_seqno ++, returnedRangeSet, getEventId());
 	rm.route(null, msg, getSource());
     }
 
     
+    public int getEventId() {
+	return eventId;
+    }
+
+    // Since this message has a timeout mechanism, the next we send the message as a result 
+    // of Timeout we need to reflect the current seqNo used by the application
+    public void setSeqNo(int val) {
+	_seqno = val;
+
+    }
+
+    public void incrAttempt() {
+	attempt++;
+	return;
+    }
+ 
+    public int getAttempt() {
+	return attempt;
+    }
     
 }
 

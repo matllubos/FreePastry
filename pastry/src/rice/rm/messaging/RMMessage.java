@@ -71,7 +71,7 @@ public abstract class RMMessage extends Message implements Serializable{
     protected NodeHandle _source;
 
     // for debugging purposes
-    private int _seqno;
+    protected int _seqno;
 
 
     // This class will be used by the messaging system

@@ -80,7 +80,16 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
     private boolean m_ready;
 
+    // This will be incremented for every message that this node sends remotely.
+    // Specifically incremented for every RMRequestKeysMsg, RMResponseKeysMsg it sends
     public int m_seqno;
+
+    // This is to keep track of events with respect to RMRequestKeysMsg only
+    // Since RMRequestKeysMsg is the only message that needs a timeout mechanism
+    // Incremented for every different RMRequestKeys message generation event
+    // That is if a Timeout occurred for a RMRequestKeysMsg, then the subsequent RMRequestKeysMsg
+    // that will be resent will have the SAME eventId but an increased value of seqNo.
+    public int m_eId;
 
     public IdRange myRange;
 
@@ -94,6 +103,8 @@ public class RMImpl extends CommonAPIAppl implements RM {
     
     public Hashtable m_pendingRanges;
 
+    // This table will be used by the Timeout mechanism in RMRequestKeysMsg
+    public Hashtable m_pendingEvents;
     
     public static int MAXKEYSINRANGE = 1024;
 
@@ -168,7 +179,9 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	_credentials = new PermissiveCredentials();
 	_sendOptions = new SendOptions();
 	m_seqno = 0;
+	m_eId = 0;
 	m_pendingRanges = new Hashtable();
+	m_pendingEvents = new Hashtable();
 	if(isReady()) {
 
 	    
@@ -219,6 +232,64 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	return thePastryNode;
     }
 
+
+    public void addPendingEvent(NodeId toNode, int eId) {
+	//System.out.println("At " + getNodeId() + "addPendingEvent( " + toNode + " , " + eId + " ) ");
+	Integer entry = new Integer(eId); 
+	Vector setOfEvents;
+	if(m_pendingEvents.containsKey(toNode)) {
+	    setOfEvents = (Vector) m_pendingEvents.get(toNode);
+	    if(!setOfEvents.contains(entry))
+		setOfEvents.add(entry);
+	}
+	else {
+	    setOfEvents = new Vector();
+	    setOfEvents.add(entry);
+	    m_pendingEvents.put(toNode, setOfEvents);
+	}
+	
+    }
+
+    public void removePendingEvent(NodeId toNode, int eId) {
+	//System.out.println("At " + getNodeId() + "removePendingEvent( " + toNode + " , " + eId + " ) ");
+
+	Vector setOfEvents;
+	if(m_pendingEvents.containsKey(toNode)) {
+	    setOfEvents = (Vector) m_pendingEvents.get(toNode);
+	    if(setOfEvents.contains(new Integer(eId))) {
+		setOfEvents.remove(new Integer(eId));
+		if(setOfEvents.isEmpty())
+		    m_pendingEvents.remove(toNode);
+	    }
+	    else {
+		// Possible cause is message duplication, or Timeout expiring while the response msg
+		// is int transit
+		//System.out.println("At " + getNodeId() + "Warning1: In removePendingEvent(" + toNode + "," + eId +  " ): Should not happen");
+	    }
+	}
+	else {
+	    // Possible cause is message duplication,  or Timeout expiring while the response msg
+		// is int transit
+		//System.out.println("At " + getNodeId() + "Warning2: In removePendingEvent(" + toNode + "," + eId +  " ): Should not happen");
+	    
+	} 
+
+    }
+
+    public boolean isPendingEvent(NodeId toNode, int eId) {
+	//System.out.println("At " + getNodeId() + "isPendingEvent( " + toNode + " , " + eId + " ) ");
+
+	Vector setOfEvents;
+	if(!m_pendingEvents.containsKey(toNode))
+	    return false;
+	
+	setOfEvents = (Vector) m_pendingEvents.get(toNode);
+	if(setOfEvents.contains(new Integer(eId))) 
+	    return true;
+	else
+	    return false;
+    }
+   
 
     public void addPendingRange(NodeId toNode, IdRange reqRange) {
 	//System.out.println("At " + getNodeId() + "addPendingRange( " + toNode + " , " + reqRange + " ) ");
@@ -290,6 +361,8 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	} 
 
     }
+
+    
 
 
     public void splitPendingRanges(NodeId toNode) {
@@ -597,7 +670,17 @@ public class RMImpl extends CommonAPIAppl implements RM {
 		addPendingRange(toNode.getNodeId(),reqRange);
 
 	    }
-	    msg = new RMRequestKeysMsg(getLocalHandle(),getAddress(), getCredentials(), m_seqno ++, rangeSet);
+	    int eId = m_eId ++;
+	    msg = new RMRequestKeysMsg(getLocalHandle(),getAddress(), getCredentials(), m_seqno ++, rangeSet, eId);
+
+	    if(getPastryNode() instanceof DistPastryNode) {
+		// We will also wrap this message in order to implement the TIMEOUT mechanism.
+		RMRequestKeysMsg.WrappedMsg wmsg = new RMRequestKeysMsg.WrappedMsg(msg, toNode);
+		RMTimeoutMsg tmsg = new RMTimeoutMsg(getNodeHandle(), getAddress(), getCredentials(), m_seqno ++, wmsg);
+		getPastryNode().scheduleMsg(tmsg, RMRequestKeysMsg.TIMEOUT * 1000);
+		addPendingEvent(toNode.getNodeId(), eId); 
+	    }
+
 	    //System.out.println("At " + getNodeId() + "sending RequestKeys msg to " + toNode.getNodeId());
 	    route(null, msg, toNode);
 	}

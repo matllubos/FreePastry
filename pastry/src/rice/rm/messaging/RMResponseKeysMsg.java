@@ -40,7 +40,7 @@ package rice.rm.messaging;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
-
+import rice.pastry.dist.*;
 import rice.rm.*;
 
 import java.util.*;
@@ -59,12 +59,16 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 
     private Vector rangeSet;
 
+    // Event Id of the RMRequestKeysMsg to which this is a response
+    private int eventId;
+
     /**
      * Constructor : Builds a new RM Message
      */
-    public RMResponseKeysMsg(NodeHandle source, Address address, Credentials authorCred, int seqno, Vector _rangeSet) {
+    public RMResponseKeysMsg(NodeHandle source, Address address, Credentials authorCred, int seqno, Vector _rangeSet, int _eventId) {
 	super(source,address, authorCred, seqno);
 	rangeSet = _rangeSet;
+	eventId = _eventId;
     }
 
 
@@ -77,6 +81,12 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
      */
     public void handleDeliverMessage( RMImpl rm) {
 	//System.out.println("Start " + rm.getNodeId() + " received ResponseKeys msg from" + getSource().getNodeId() + "seq= " + getSeqno());
+
+
+	// We will first remove this event from the m_PendingEvents Hashtable
+	int eId = eventId;
+	NodeId toNode = getSource().getNodeId();
+	rm.removePendingEvent(toNode, eId);
 
 	IdSet fetchSet = new IdSet();
 	RMMessage.KEEntry entry;
@@ -188,7 +198,18 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 	    
     
 	    RMRequestKeysMsg msg;
-	    msg = new RMRequestKeysMsg(rm.getLocalHandle(),rm.getAddress() , rm.getCredentials(), rm.m_seqno ++, toAskFor);
+	    int neweId = rm.m_eId ++;
+	    msg = new RMRequestKeysMsg(rm.getLocalHandle(),rm.getAddress() , rm.getCredentials(), rm.m_seqno ++, toAskFor, neweId);
+
+	    if(rm.getPastryNode() instanceof DistPastryNode) {
+		// We will also wrap this message in order to implement the TIMEOUT mechanism.
+		RMRequestKeysMsg.WrappedMsg wmsg = new RMRequestKeysMsg.WrappedMsg(msg, getSource());
+		RMTimeoutMsg tmsg = new RMTimeoutMsg(rm.getNodeHandle(), rm.getAddress(), rm.getCredentials(), rm.m_seqno ++, wmsg);
+		rm.getPastryNode().scheduleMsg(tmsg, RMRequestKeysMsg.TIMEOUT * 1000);
+		rm.addPendingEvent(getSource().getNodeId(), neweId); 
+		
+	    }
+
 	    rm.route(null, msg, getSource());
 	    //System.out.println(rm.getNodeId() + "explicitly asking for keys");
 	    
@@ -196,6 +217,12 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 	}
 	//System.out.println("Done " + rm.getNodeId() + " received ResponseKeys msg from" + getSource().getNodeId() + "seq= " + getSeqno());
     }
+
+     
+    public int getEventId() {
+	return eventId;
+    }
+
     
 }
 
