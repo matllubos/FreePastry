@@ -1,5 +1,7 @@
 package rice.email.proxy.smtp.manager;
 
+import java.util.*;
+
 import rice.*;
 import rice.email.*;
 import rice.email.proxy.smtp.*;
@@ -37,6 +39,13 @@ public class SimpleManager implements SmtpManager {
   }
 
   public void send(SmtpState state) throws Exception {
+    Vector recps = new Vector();
+    Iterator i = state.getMessage().getRecipientIterator();
+
+    while (i.hasNext()) recps.add(i.next());
+
+    MailAddress[] recipients = (MailAddress[]) recps.toArray(new MailAddress[0]);
+    
     final Exception[] exception = new Exception[1];
     final Object[] result = new Object[1];
     final Object wait = "wait";
@@ -58,7 +67,7 @@ public class SimpleManager implements SmtpManager {
       }
     };
     
-    email.sendMessage(PostMessage.parseEmail(state.getMessage().getResource()), done);
+    email.sendMessage(PostMessage.parseEmail(recipients, state.getMessage().getResource()), done);
 
     synchronized(wait) { if (result[0] == null) wait.wait(); }
       

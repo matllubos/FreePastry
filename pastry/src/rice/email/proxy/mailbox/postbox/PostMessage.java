@@ -204,22 +204,45 @@ public class PostMessage implements StoredMessage {
       if (cc == null) cc = new Address[0];
       if (bcc == null) bcc = new Address[0];
 
+      MailAddress[] recipients = new MailAddress[to.length + cc.length + bcc.length];
+
+      for (int i=0; i<recipients.length; i++) {
+        if (i < to.length) {
+          recipients[i] = new MailAddress(((InternetAddress) to[i]).getAddress());
+        } else if (i < to.length + cc.length) {
+          recipients[i] = new MailAddress(((InternetAddress) cc[i-to.length]).getAddress());
+        } else {
+          recipients[i] = new MailAddress(((InternetAddress) bcc[i-cc.length-to.length]).getAddress());
+        }
+      }
+
+      return parseEmail(recipients, content);
+    } catch (IOException e) {
+      throw new MailboxException(e);
+    } catch (MessagingException e) {
+      throw new MailboxException(e);
+    } catch (MalformedAddressException e) {
+      throw new MailboxException(e);
+    }
+  }
+
+  public static Email parseEmail(MailAddress[] addresses, Resource content) throws MailboxException {
+    try {
+      Properties props = new Properties();
+      Session session = Session.getDefaultInstance(props, null);
+      javax.mail.internet.MimeMessage mm = new javax.mail.internet.MimeMessage(session, content.getInputStream());
+
+      Address froms[] = mm.getFrom();
       PostUserAddress from = new PostUserAddress("Unknown");
 
       if (froms.length > 0) {
         from = new PostUserAddress(((InternetAddress) froms[0]).getAddress());
       }
 
-      PostEntityAddress[] recipients = new PostEntityAddress[to.length + cc.length + bcc.length];
+      PostEntityAddress[] recipients = new PostEntityAddress[addresses.length];
 
       for (int i=0; i<recipients.length; i++) {
-        if (i < to.length) {
-          recipients[i] = new PostUserAddress(((InternetAddress) to[i]).getAddress());
-        } else if (i < to.length + cc.length) {
-          recipients[i] = new PostUserAddress(((InternetAddress) cc[i-to.length]).getAddress());
-        } else {
-          recipients[i] = new PostUserAddress(((InternetAddress) bcc[i-cc.length-to.length]).getAddress());
-        }
+        recipients[i] = new PostUserAddress(addresses[i].toString());
       }
 
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -234,12 +257,9 @@ public class PostMessage implements StoredMessage {
 
       while (e.hasMoreElements()) {
         String header = (String) e.nextElement();
+        header = header.replaceAll("\n", "");
         
-	if (header.charAt(header.length()-1) == '\n') {
-          headersText += header;
-        } else {
-          headersText += header + "\n";
-        }
+        headersText += header + "\n";
       }
 
       headers = new EmailData(headersText.getBytes());
