@@ -5,6 +5,7 @@ SOURCE  = \
 	Id.java\
 	IdRange.java\
 	IdFactory.java\
+  IdSet.java\
 	Message.java\
 	Node.java\
 	NodeHandle.java\

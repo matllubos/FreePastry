@@ -48,7 +48,7 @@ import java.security.*;
  * @author Peter Druschel
  */
 
-public class IdSet implements Serializable {
+public class IdSet implements rice.p2p.commonapi.IdSet {
 
     private SortedSet idSet;
 
@@ -204,6 +204,43 @@ public class IdSet implements Serializable {
 	}
 	s = s + " ]";
 	return s;
+    }
+
+    // Common API Support
+
+    /**
+      * add a member
+     * @param id the id to add
+     */
+    public void addId(rice.p2p.commonapi.Id id) {
+      addMember((Id) id);
+    }
+
+    /**
+      * remove a member
+     * @param id the id to remove
+     */
+    public void removeId(rice.p2p.commonapi.Id id) {
+      removeId((Id) id);
+    }
+
+    /**
+      * test membership
+     * @param id the id to test
+     * @return true of id is a member, false otherwise
+     */
+    public boolean isMemberId(rice.p2p.commonapi.Id id) {
+      return isMember((Id) id);
+    }
+
+    /**
+      * return a subset of this set, consisting of the member ids in a given range
+     * @param from the lower end of the range (inclusive)
+     * @param to the upper end of the range (exclusive)
+     * @return the subset
+     */
+    public rice.p2p.commonapi.IdSet subSet(rice.p2p.commonapi.IdRange range) {
+      return subSet((Id) range.getCWId(), (Id) range.getCCWId());
     }
     
 
