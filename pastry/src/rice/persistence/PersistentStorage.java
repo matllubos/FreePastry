@@ -36,7 +36,8 @@ public class PersistentStorage implements Storage {
   private static final String infoDir = "/pminfo/";       // infoDirectory
   private static final String transDir = "/transaction";  // transDirectory
 
-
+  private int storageSize;
+  private int usedSize;
   private Hashtable storedObjects;
   private Hashtable persistentObjects;
   private Hashtable cachedObjects;
@@ -274,6 +275,8 @@ public class PersistentStorage implements Storage {
    * @return boolean, true if the operation suceeds false if it doesn't
    */
   public boolean setRoot(String dir) {
+    /* We should do something logical here to the existing files */
+    rootDir = dir;
     return true;
   }
 
@@ -283,7 +286,7 @@ public class PersistentStorage implements Storage {
    * @return String the directory for the root
    */
   public String getRoot() {
-    return null;
+    return rootDir;
   }
 
   /**
@@ -302,6 +305,17 @@ public class PersistentStorage implements Storage {
    * @return boolean, true if the operation suceeds false if it doesn't
    */
   public boolean setStorageSize(int size) {
-    return true;
+    if(storageSize >= size){
+        storageSize = size;
+        return true;
+    }
+    else if( size > usedSize){
+        storageSize = size;
+        return true;
+    }
+    else {
+       return false;
+    }
+
   }
 }
