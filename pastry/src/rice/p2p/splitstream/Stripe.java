@@ -81,7 +81,10 @@ public class Stripe implements ScribeClient {
    */
   protected Vector clients;
 
-    protected Channel channel = null;
+  /**
+   * This stripe's channel
+   */
+  protected Channel channel = null;
 
   /**
    * The constructor used when creating a stripe from scratch.
@@ -95,7 +98,8 @@ public class Stripe implements ScribeClient {
     this.channel = channel;
     this.isPrimary = false;
     if(SplitStreamScribePolicy.getPrefixMatch(this.channel.getLocalId(), stripeId.getId()) > 0)
-	this.isPrimary = true;
+      this.isPrimary = true;
+    
     this.clients = new Vector();
     this.topic = new Topic(stripeId.getId());
   }
@@ -220,11 +224,15 @@ public class Stripe implements ScribeClient {
   public void childRemoved(Topic topic, NodeHandle child) {
   }
 
-    public void subscribeFailed(Topic topic){
-	System.out.println("DEBUG :: Subscription failed for stripe "+getStripeId().getId());
-	// should subscribe again
-	scribe.subscribe(topic, this);
-    }
+
+  /**
+   * Informs this client that a subscription failed
+   *
+   * @param topic The topic that failed
+   */
+  public void subscribeFailed(Topic topic) {
+    scribe.subscribe(topic, this);
+  }
 
   /**
     * Returns a String representation of this Stripe
@@ -235,36 +243,28 @@ public class Stripe implements ScribeClient {
     return "Stripe " + stripeId;
   }
 
-    /**
-     * Utility method. Returns the list of children for this stripe.
-     * @return A array of children.
-     */
-    public NodeHandle[] getChildren(){
-	return this.scribe.getChildren(new Topic(this.getStripeId().getId()));
-    }
+  /**
+   * Utility method. Returns the list of children for this stripe.
+   * @return A array of children.
+   */
+  public NodeHandle[] getChildren(){
+    return this.scribe.getChildren(new Topic(this.getStripeId().getId()));
+  }
 
-    /**
-     * Utility method. Returns the parent for this topic in the scribe tree.
-     * @return Parent for this topic.
-     */
-    public NodeHandle getParent(){
-	return ((ScribeImpl)this.scribe).getParent(new Topic(this.getStripeId().getId()));
-    }
+  /**
+   * Utility method. Returns the parent for this topic in the scribe tree.
+   * @return Parent for this topic.
+   */
+  public NodeHandle getParent(){
+    return ((ScribeImpl)this.scribe).getParent(new Topic(this.getStripeId().getId()));
+  }
 
-    /**
-     * Utility method. Checks if local node is root for this topic.
-     * @return True/False depending on if local node is root for this topic
-     */
-    public boolean isRoot(){
-	return ((ScribeImpl)this.scribe).isRoot(topic);
-    }
-
-    /**
-     * Utility method. Prints path to root for this topic.
-     * @return Dumps the path.
-     */
-    public void printPath(){
-	//((ScribeImpl)this.scribe).printPathToRoot(topic);
-    }
+  /**
+   * Utility method. Checks if local node is root for this topic.
+   * @return True/False depending on if local node is root for this topic
+   */
+  public boolean isRoot(){
+    return ((ScribeImpl)this.scribe).isRoot(topic);
+  }
 }
 
