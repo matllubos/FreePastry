@@ -3,6 +3,7 @@ package rice.post.log;
 import java.security.*;
 import java.util.*;
 
+import rice.*;
 import rice.pastry.*;
 import rice.post.*;
 import rice.post.storage.*;
@@ -49,16 +50,13 @@ public class Log implements PostData {
    * @param name Some unique identifier for this log
    * @param location The location of this log in PAST
    */
-  public Log(Object name, NodeId location, Post post) throws StorageException {
+  public Log(Object name, NodeId location, Post post) {
     this.name = name;
     this.location = location;
 
     children = new HashMap();
 
-    if (post != null) {
-      setPost(post);
-      sync();
-    }
+    setPost(post);
   }
   
   /**
@@ -86,34 +84,47 @@ public class Log implements PostData {
 
   /**
    * Helper method to sync this log object on the network.
+   *
+   * Once this method is finished, it will call the command.receiveResult()
+   * method with a Boolean value indicating success, or it may call
+   * receiveExcception if an exception occurred.
+   *
+   * @param command The command to run once done
    */
-  protected void sync() throws StorageException {
-    post.getStorageService().storeSigned(this, location);
+  protected void sync(ReceiveResultCommand command) {
+    SyncTask task = new SyncTask(command);
+    task.start();
   }
   
   /**
    * This method adds a child log to this log, essentially forming a tree
    * of logs.
    *
+   * Once this method is finished, it will call the command.receiveResult()
+   * method with a LogReference for the new log, or it may call
+   * receiveExcception if an exception occurred.
+   *
    * @param log The log to add as a child.
+   * @param command The command to run once done
    */
-  public LogReference addChildLog(Log log) throws StorageException {
-    LogReference lr = (LogReference) post.getStorageService().storeSigned(log, log.getLocation());
-    
-    children.put(log.getName(), lr);
-    sync();
-
-    return lr;
+  public void addChildLog(Log log, ReceiveResultCommand command) {
+    AddChildLogTask task = new AddChildLogTask(log, command);
+    task.start();
   }
 
   /**
    * This method removes a child log from this log.
    *
+   * Once this method is finished, it will call the command.receiveResult()
+   * method with a Boolean value indicating success, or it may call
+   * receiveExcception if an exception occurred.
+   *
    * @param log The log to remove
+   * @param command The command to run once done
    */
-  public void removeChildLog(Object name) throws StorageException {
+  public void removeChildLog(Object name, ReceiveResultCommand command) {
     children.remove(name);
-    sync();
+    sync(command);
   }
 
   /**
@@ -144,26 +155,32 @@ public class Log implements PostData {
    * LogEntryReference which is a pointer to the LogEntry in PAST. Note that 
    * this method reinserts this Log into PAST in order to reflect the addition.
    *
+   * Once this method is finished, it will call the command.receiveResult()
+   * method with a LogEntryReference for the new entry, or it may call
+   * receiveExcception if an exception occurred.
+   *
    * @param entry The log entry to append to the log.
+   * @param command The command to run once done
    */
-  public LogEntryReference addLogEntry(LogEntry entry) throws StorageException {
-    entry.setPreviousEntry(topEntry);
-    topEntry = (LogEntryReference) post.getStorageService().storeContentHash(entry);
-    sync();
-    
-    return topEntry;
+  public void addLogEntry(LogEntry entry, ReceiveResultCommand command) {
+    AddLogEntryTask task = new AddLogEntryTask(entry, command);
+    task.start();
   }
 
   /**
    * This method retrieves a log entry given a reference to the log entry.
-   * This method also performs the appropriate verification checks and 
+   * This method also performs the appropriate verification checks and
    * decryption necessary.
    *
+   * Once this method is finished, it will call the command.receiveResult()
+   * method with a LogEntry, or it may call
+   * receiveExcception if an exception occurred.
+   *
    * @param reference The reference to the log entry
-   * @return The log entry referenced
+   * @param command The command to run once a result is available
    */
-  public LogEntry retrieveLogEntry(LogEntryReference reference) throws StorageException {
-    return (LogEntry) post.getStorageService().retrieveContentHash(reference);
+  public void retrieveLogEntry(LogEntryReference reference, ReceiveResultCommand command) {
+    post.getStorageService().retrieveContentHash(reference, command);
   }
 
   /**
@@ -209,6 +226,214 @@ public class Log implements PostData {
    */
   public SecureReference buildSecureReference(NodeId location, Key key) {
     throw new IllegalArgumentException("Logs are only stored as signed blocks.");
-  }  
+  }
+
+  /**
+   * This class encapsulates the logic needed to add a child log to
+   * the current log.
+   */
+  protected class AddChildLogTask implements ReceiveResultCommand {
+
+    public static final int STATE_1 = 1;
+    public static final int STATE_2 = 2;
+    
+    private Log log;
+    private LogReference reference;
+    private ReceiveResultCommand command;
+    private int state;
+
+    /**
+     * This construct will build an object which will call the given
+     * command once processing has been completed, and will provide
+     * a result.
+     *
+     * @param log The log to add
+     * @param command The command to call
+     */
+    protected AddChildLogTask(Log log, ReceiveResultCommand command) {
+      this.log = log;
+      this.command = command;
+    }
+
+    /**
+     * Starts the process to add the child log.
+     */
+    public void start() {
+      state = STATE_1;
+      post.getStorageService().storeSigned(log, log.getLocation(), this);
+    }
+
+    private void startState1(LogReference reference) {
+      this.reference = reference;
+      children.put(log.getName(), reference);
+
+      state = STATE_2;
+      SyncTask task = new SyncTask(this);
+      task.start();
+    }
+
+    private void startState2() {
+      command.receiveResult(reference);
+    }
+
+    /**
+     * Receives the result of a command.
+     */
+    public void receiveResult(Object o) {
+      switch(state) {
+        case STATE_1:
+          if (o instanceof LogReference) {
+            startState1((LogReference) o);
+          } else {
+            command.receiveException(new StorageException("Received unexpected response for storeSigned on addChildLog:" + o));
+          }
+        case STATE_2:
+          if (o instanceof Boolean) {
+            if (((Boolean)o).booleanValue()) {
+              startState2();
+            } else {
+              command.receiveException(new StorageException("Sync of Log Failed on addChildLog:" + o));
+            }
+          } else {
+            command.receiveException(new StorageException("Received unexpected response for sync on addChildLog:" + o));
+          }
+        default:
+          command.receiveException(new StorageException("Received unexpected state: " + state));
+      }
+    }
+
+    /**
+      * Called when a previously requested result causes an exception
+     *
+     * @param result The exception caused
+     */
+    public void receiveException(Exception result) {
+      command.receiveException(result);
+    }
+  }
+
+  /**
+   * This class encapsulates the logic needed to add a log entry to
+   * the current log.
+   */
+  protected class AddLogEntryTask implements ReceiveResultCommand {
+
+    public static final int STATE_1 = 1;
+    public static final int STATE_2 = 2;
+
+    private LogEntry entry;
+    private ReceiveResultCommand command;
+    private int state;
+    
+    /**
+     * This construct will build an object which will call the given
+     * command once processing has been completed, and will provide
+     * a result.
+     *
+     * @param entry The log entry to add
+     * @param command The command to call
+     */
+    protected AddLogEntryTask(LogEntry entry, ReceiveResultCommand command) {
+      this.entry = entry;
+      this.command = command;
+    }
+
+    public void start() {
+      state = STATE_1;
+      entry.setPreviousEntry(topEntry);
+      post.getStorageService().storeContentHash(entry, this);
+    }
+
+    private void startState1(LogEntryReference reference) {
+      topEntry = reference;
+
+      state = STATE_2;
+      SyncTask task = new SyncTask(this);
+      task.start();
+    }
+
+    private void startState2() {
+      command.receiveResult(topEntry);
+    }
+
+    public void receiveResult(Object o) {
+      switch(state) {
+        case STATE_1:
+          if (o instanceof LogEntryReference) {
+            startState1((LogEntryReference) o);
+          } else {
+            command.receiveException(new StorageException("Received unexpected response for storeSigned on addLogEntry:" + o));
+          }
+        case STATE_2:
+          if (o instanceof Boolean) {
+            if (((Boolean)o).booleanValue()) {
+              startState2();
+            } else {
+              command.receiveException(new StorageException("Sync of Log Failed on addLogEntry:" + o));
+            }
+          } else {
+            command.receiveException(new StorageException("Received unexpected response for sync on addLogEntry:" + o));
+          }
+        default:
+          command.receiveException(new StorageException("Received unexpected state on addLogEntry: " + state));
+      }
+    }
+
+    /**
+      * Called when a previously requested result causes an exception
+     *
+     * @param result The exception caused
+     */
+    public void receiveException(Exception result) {
+      command.receiveException(result);
+    }
+  }
+
+  /**
+   * This class encapsulates the logic needed to sync
+   * the current log on the network.
+   */
+  protected class SyncTask implements ReceiveResultCommand {
+
+    private ReceiveResultCommand command;
+    
+    /**
+     * This construct will build an object which will call the given
+     * command once processing has been completed, and will provide
+     * a result.
+     *
+     * @param command The command to call
+     */
+    protected SyncTask(ReceiveResultCommand command) {
+      this.command = command;
+    }
+
+    public void start() {
+      post.getStorageService().storeSigned(Log.this, location, this);
+    }
+
+    public void receiveResult(Object o) {
+      if (o instanceof Boolean) {
+        if (((Boolean)o).booleanValue()) {
+          command.receiveResult(o);
+        } else {
+          command.receiveException(new StorageException("Sync of Log Failed:" + o));
+        }
+      } else {
+        command.receiveException(new StorageException("Received unexpected response for sync:" + o));
+      }
+    }
+
+    /**
+      * Called when a previously requested result causes an exception
+     *
+     * @param result The exception caused
+     */
+    public void receiveException(Exception result) {
+      command.receiveException(result);
+    }
+  }
+  
+  
 }
 

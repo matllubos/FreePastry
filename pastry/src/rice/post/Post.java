@@ -4,6 +4,7 @@ import java.security.*;
 import java.util.*;
 import java.io.*;
 
+import rice.*;
 import rice.pastry.security.*;
 import rice.pastry.client.*;
 import rice.pastry.messaging.*;
@@ -88,6 +89,8 @@ public class Post extends PastryAppl implements IScribeApp  {
   
   
   // --- SECURITY SUPPORT ---
+
+  private RandomNodeIdFactory factory;
   
   /**
    * The security service for managing all security related tasks.
@@ -147,6 +150,7 @@ public class Post extends PastryAppl implements IScribeApp  {
 
     security = new SecurityService(keyPair, caPublicKey);
     storage = new StorageService(past, credentials, security);
+    factory = new RandomNodeIdFactory();
     
     // Try to get the post log
     this.log = null;
@@ -186,7 +190,7 @@ public class Post extends PastryAppl implements IScribeApp  {
    */
   public void messageForAppl(Message message) {
     if (message instanceof PostMessageWrapper) {
-      handlePostMessage(((PostMessageWrapper) message).getMessage());
+      processPostMessage(((PostMessageWrapper) message).getMessage());
     } else {
       System.out.println("Found unknown pastry message " + message + " - dropping on floor.");
     }
@@ -199,7 +203,7 @@ public class Post extends PastryAppl implements IScribeApp  {
    */
   public void receiveMessage(ScribeMessage msg) {
     if (msg.getData() instanceof PostMessageWrapper) {
-      handlePostMessage(((PostMessageWrapper) msg.getData()).getMessage());
+      processPostMessage(((PostMessageWrapper) msg.getData()).getMessage());
     } else {
       System.out.println("Found unknown Scribe message " + msg.getData() + " - dropping on floor.");
     }
@@ -212,65 +216,21 @@ public class Post extends PastryAppl implements IScribeApp  {
    *
    * @param message The incoming message.
    */
-  private	void handlePostMessage(PostMessage message) {
-    PostEntityAddress sender = message.getSender();
-    PostLog senderLog = null;
-
-    try {
-      senderLog = getPostLog(sender);
-    } catch (PostException e) {
-      System.out.println("PostException occured while retrieving PostLog for " + sender + " - aborting.");
-      return;
-    }      
-
-    // look up sender
-    if (senderLog == null) {
-      System.out.println("Found PostMessage from non-existent sender " + sender + " - dropping on floor.");
-      return;
-    }
-
-    // verify messag is signed
-    if (! verifyPostMessage(message, senderLog.getPublicKey())) {
-      System.out.println("Problem encountered verifying PostMessage from " + sender + " - dropping on floor.");
-      return;
-    }
-
-    if (message instanceof DeliveryRequestMessage) {
-      handleDeliveryRequestMessage((DeliveryRequestMessage) message);
-    } else if (message instanceof PresenceMessage) {
-      handlePresenceMessage((PresenceMessage) message);
-    } else if (message instanceof EncryptedNotificationMessage) {
-      handleEncryptedNotificationMessage((EncryptedNotificationMessage) message);
-    } else if (message instanceof ReceiptMessage) {
-      handleRecieptMessage((ReceiptMessage) message);
-    } else {
-      System.out.println("Found unknown Postmessage " + message + " - dropping on floor.");
-    }
+  private	void processPostMessage(PostMessage message) {
+    ProcessPostMessageTask task = new ProcessPostMessageTask(message);
+    task.start();
   }
   
   /**
-   * This method handles the processing of a delivery
+   * This method processs the processing of a delivery
    * request message by subscribing the appriate scribe
    * group.
    *
    * @param message The incoming message.
    */
-  private void handleDeliveryRequestMessage(DeliveryRequestMessage message){
-    /* Buffer this for Delivery */
-
-    System.out.println(thePastryNode.getNodeId() + "DEBUG: received delivery request from : " + message.getSender() + " to: " + message.getDestination());
-    
-    synchronized(bufferedData) {
-      Vector userQueue = (Vector) bufferedData.get(message.getDestination());
-
-      if (userQueue == null) {
-        userQueue = new Vector();
-        bufferedData.put(message.getDestination(), userQueue);
-        scribeService.join(message.getDestination().getAddress(), this, credentials);
-      }
-
-      userQueue.addElement(message.getEncryptedMessage());
-    }
+  private void processDeliveryRequestMessage(DeliveryRequestMessage message){
+    ProcessDeliveryRequestMessageTask task = new ProcessDeliveryRequestMessageTask(message);
+    task.start();
   }
 
   /**
@@ -280,24 +240,9 @@ public class Post extends PastryAppl implements IScribeApp  {
    *
    * @param message The incoming message
    */
-  private void handlePresenceMessage(PresenceMessage message) {
-
-    System.out.println(thePastryNode.getNodeId() + "DEBUG: presence message from : " + message.getSender());
-    
-    synchronized (bufferedData) {
-
-      Vector userQueue = (Vector) bufferedData.get(message.getSender());
-
-      if (userQueue != null) {
-        for (int i=0; i<userQueue.size(); i++) {
-          EncryptedNotificationMessage enm = (EncryptedNotificationMessage) userQueue.elementAt(i);
-
-          signAndPreparePostMessage(enm);
-          
-          routeMsg(message.getLocation(), new PostPastryMessage(enm), getCredentials(), new SendOptions());
-        }
-      }
-    }
+  private void processPresenceMessage(PresenceMessage message) {
+    ProcessPresenceMessageTask task = new ProcessPresenceMessageTask(message);
+    task.start();
   }
     
   
@@ -307,61 +252,9 @@ public class Post extends PastryAppl implements IScribeApp  {
    *
    * @param message The incoming message.
    */
-  private void handleEncryptedNotificationMessage(EncryptedNotificationMessage message) {
-    // send receipt
-    ReceiptMessage rm = new ReceiptMessage(address, message);
-    signAndPreparePostMessage(rm);
-    routeMsg(message.getSender().getAddress(), new PostPastryMessage(rm), getCredentials(), new SendOptions());
-
-    NotificationMessage nm = null;
-    
-    // decrypt and verify notification message
-    try {
-      byte[] key = security.decryptRSA(message.getKey());
-      nm = (NotificationMessage) security.deserialize(security.decryptDES(message.getData(), key));
-    } catch (SecurityException e) {
-      System.out.println("SecurityException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
-      return;
-    } catch (IOException e) {
-      System.out.println("IOException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
-      return;
-    } catch (ClassNotFoundException e) {
-      System.out.println("ClassNotFoundException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
-      return;
-    } catch (ClassCastException e) {
-      System.out.println("ClassCastException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
-      return;
-    }
-    
-    PostEntityAddress sender = nm.getSender();
-    PostLog senderLog = null;
-
-    try {
-      senderLog = getPostLog(sender);
-    } catch (PostException e) {
-      System.out.println("PostException occured while retrieving PostLog for " + sender + " - aborting.");
-      return;
-    }    
-    
-    // look up sender
-    if (senderLog == null) {
-      System.out.println("Found NotificationMessage from non-existent sender " + sender + " - dropping on floor.");
-      return;
-    }
-    
-    if (! verifyPostMessage(nm, senderLog.getPublicKey())) {
-      System.out.println("Error occured during verification of notification message " + nm + " - dropping on floor.");
-      return;
-    }
-
-    // deliver notification messag
-    PostClient client = (PostClient) clientAddresses.get(nm.getClientAddress());
-
-    if (client != null) {
-      client.notificationReceived(nm);
-    } else {
-      System.out.println("Found notification message for unknown client " + client + " - dropping on floor.");
-    }	
+  private void processEncryptedNotificationMessage(EncryptedNotificationMessage message) {
+    ProcessEncryptedNotificationMessageTask task = new ProcessEncryptedNotificationMessageTask(message);
+    task.start();
   }
 
   /**
@@ -371,15 +264,9 @@ public class Post extends PastryAppl implements IScribeApp  {
    *
    * @param message The incoming message.
    */
-  private void handleRecieptMessage(ReceiptMessage message) {
-    EncryptedNotificationMessage enm = message.getEncryptedNotificationMessage();
-    PostEntityAddress sender = message.getSender();
-
-    // remove message
-    synchronized (bufferedData) {
-      Vector userQueue = (Vector) bufferedData.get(sender);
-      userQueue.remove(enm);
-    }
+  private void processReceiptMessage(ReceiptMessage message) {
+    ProcessReceiptMessageTask task = new ProcessReceiptMessageTask(message);
+    task.start();
   }
 
   /**
@@ -394,45 +281,18 @@ public class Post extends PastryAppl implements IScribeApp  {
    * @return The PostLog belonging to the given entity, eg. to acquire
    * another user's public key.
    */
-  public PostLog getPostLog(PostEntityAddress entity) throws PostException {
-    SignedReference logRef = new SignedReference(entity.getAddress());
-    PostLog postLog = (PostLog) storage.retrieveSigned(logRef);
-
-    if (postLog == null) {
-      System.out.println("PostLog lookup for user " + entity + " failed.");
-      return null;
-    }
-
-    if ((postLog.getPublicKey() == null) || (postLog.getEntityAddress() == null)) {
-      throw new PostException("Malformed PostLog: " + postLog.getPublicKey() + " " + postLog.getEntityAddress());
-    }
-
-    if (security.verifyCertificate(postLog.getEntityAddress(),
-                                   postLog.getPublicKey(),
-                                   postLog.getCertificate())) {
-      storage.verifySigned(postLog, postLog.getPublicKey());
-
-      return postLog;
-    }
-    else {
-      throw new PostException("Certificate of PostLog could not verified" +
-                              " for entity: " + entity);
-    }
+  public void getPostLog(PostEntityAddress entity, ReceiveResultCommand command) {
+    RetrievePostLogTask task = new RetrievePostLogTask(entity, command);
+    task.start();
   }
 
   /**
    * Retrieve's this user's PostLog from PAST, or creates and stores a new one
    * if one does not already exist.
    */
-  private void retrievePostLog() throws PostException {
-    PostLog postLog = getPostLog(address);
-    if (postLog == null) {
-      // None found, so create a new one
-      postLog = new PostLog(address, publicKey, certificate, this);
-    }
-
-    // Store the log in a field
-    this.log = postLog;
+  private void retrievePostLog() {
+    RetrieveLocalPostLogTask task = new RetrieveLocalPostLogTask();
+    task.start();
   }
   
   /**
@@ -489,50 +349,8 @@ public class Post extends PastryAppl implements IScribeApp  {
    * are encapsulated inside the message object.
    */
   public void sendNotification(NotificationMessage message) {
-    NodeId random = (new RandomNodeIdFactory()).generateNodeId();
-
-    System.out.println(thePastryNode.getNodeId() + "DEBUG: picked random node: " + random);
-    
-    // TO DO : Assuming just a user for now, grouping crap later...
-    PostUserAddress destination = (PostUserAddress) message.getDestination();
-    PostLog destinationLog = null;
-
-    System.out.println(thePastryNode.getNodeId() + "DEBUG: sending message to: " + destination);
-    
-    try {
-      destinationLog = getPostLog(destination);
-    } catch (PostException e) {
-      System.out.println("PostException occured while retrieving PostLog for " + destination + " - aborting.");
-      e.printStackTrace();
-      return;
-    }
-
-    System.out.println(thePastryNode.getNodeId() + "DEBUG: received destination log");
-    
-    signAndPreparePostMessage(message);
-
-    byte[] cipherText = null;
-    
-    try {
-      byte[] key = security.generateKeyDES();
-      byte[] keyCipherText = security.encryptRSA(key, destinationLog.getPublicKey());
-      cipherText = security.encryptDES(security.serialize(message), key);
-
-      System.out.println(thePastryNode.getNodeId() + "DEBUG: built encrypted notfn msg: " + destination);
-      
-      EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, keyCipherText, cipherText);
-      DeliveryRequestMessage drm = new DeliveryRequestMessage(address, destination, enm);
-
-      signAndPreparePostMessage(drm);
-
-      System.out.println(thePastryNode.getNodeId() + "DEBUG: sending delivery request to : " + random);
-      
-      routeMsg(random, new PostPastryMessage(drm), getCredentials(), new SendOptions());
-    } catch (SecurityException e) {
-      System.out.println("SecurityException occured which encrypting NotificationMessage " + e + " - dropping on floor.");
-    } catch (IOException e) {
-      System.out.println("IOException occured which encrypting NotificationMessage " + e + " - dropping on floor.");
-    } 
+    SendNotificationMessageTask task = new SendNotificationMessageTask(message);
+    task.start();
   }
 
   /**
@@ -587,4 +405,470 @@ public class Post extends PastryAppl implements IScribeApp  {
                                NodeId topicId,
                                NodeHandle child,
                                boolean wasAdded){}
+
+  /**
+   * This class is called whenever a PostMessage comes in, and it
+   * performs the necessary verification tasks and then handles the
+   * message.
+   */
+  protected class ProcessPostMessageTask implements ReceiveResultCommand {
+
+    private PostMessage message;
+    private PostEntityAddress sender;
+    private PostLog senderLog;
+
+    /**
+     * Constructs a ProcessPostMessageTask given a message.
+     */
+    public ProcessPostMessageTask(PostMessage message) {
+      this.message = message;
+    }
+
+    /**
+     * Starts the processing of this message.
+     */
+    public void start() {
+      sender = message.getSender();
+      getPostLog(sender, this);
+    }
+
+    public void receiveResult(Object o) {
+      senderLog = (PostLog) o;
+
+      // look up sender
+      if (senderLog == null) {
+        System.out.println("Found PostMessage from non-existent sender " + sender + " - dropping on floor.");
+        return;
+      }
+
+      // verify message is signed
+      if (! verifyPostMessage(message, senderLog.getPublicKey())) {
+        System.out.println("Problem encountered verifying PostMessage from " + sender + " - dropping on floor.");
+        return;
+      }
+
+      if (message instanceof DeliveryRequestMessage) {
+        processDeliveryRequestMessage((DeliveryRequestMessage) message);
+      } else if (message instanceof PresenceMessage) {
+        processPresenceMessage((PresenceMessage) message);
+      } else if (message instanceof EncryptedNotificationMessage) {
+        processEncryptedNotificationMessage((EncryptedNotificationMessage) message);
+      } else if (message instanceof ReceiptMessage) {
+        processReceiptMessage((ReceiptMessage) message);
+      } else {
+        System.out.println("Found unknown Postmessage " + message + " - dropping on floor.");
+      }
+    }
+
+    public void receiveException(Exception e) {
+      System.out.println("Exception " + e + "  occured during handling of PostMessage: " + message + " - dropping on floor.");
+    }
+  }
+
+  /**
+   * This class is called whenever a DeliveryRequestMessage comes in, and it
+   *  handles the message.
+   */
+  protected class ProcessDeliveryRequestMessageTask {
+
+    private DeliveryRequestMessage message;
+
+    /**
+      * Constructs a ProcessPostMessageTask given a message.
+     */
+    public ProcessDeliveryRequestMessageTask(DeliveryRequestMessage message) {
+      this.message = message;
+    }
+
+    /**
+      * Starts the processing of this message.
+     */
+    public void start() {
+      /* Buffer this for Delivery */
+
+      System.out.println(thePastryNode.getNodeId() + "DEBUG: received delivery request from : " + message.getSender() + " to: " + message.getDestination());
+
+      synchronized(bufferedData) {
+        Vector userQueue = (Vector) bufferedData.get(message.getDestination());
+
+        if (userQueue == null) {
+          userQueue = new Vector();
+          bufferedData.put(message.getDestination(), userQueue);
+          scribeService.join(message.getDestination().getAddress(), Post.this, credentials);
+        }
+
+        userQueue.addElement(message.getEncryptedMessage());
+      }
+    }
+  }
+
+  /**
+   * This class is called whenever a PresenceMessage comes in, and it
+   *  handles the message.
+   */
+  protected class ProcessPresenceMessageTask {
+
+    private PresenceMessage message;
+
+    /**
+      * Constructs a ProcessPostMessageTask given a message.
+     */
+    public ProcessPresenceMessageTask(PresenceMessage message) {
+      this.message = message;
+    }
+
+    /**
+      * Starts the processing of this message.
+     */
+    public void start() {
+
+      System.out.println(thePastryNode.getNodeId() + "DEBUG: presence message from : " + message.getSender());
+
+      synchronized (bufferedData) {
+
+        Vector userQueue = (Vector) bufferedData.get(message.getSender());
+
+        if (userQueue != null) {
+          for (int i=0; i<userQueue.size(); i++) {
+            EncryptedNotificationMessage enm = (EncryptedNotificationMessage) userQueue.elementAt(i);
+
+            signAndPreparePostMessage(enm);
+
+            routeMsg(message.getLocation(), new PostPastryMessage(enm), getCredentials(), new SendOptions());
+          }
+        }
+      }
+    }
+  }
+    
+
+  /**
+   * This class is called whenever a EncryptedNotificationMessage comes in, and it
+   *  handles the message.
+   */
+  protected class ProcessEncryptedNotificationMessageTask implements ReceiveResultCommand {
+
+    private EncryptedNotificationMessage message;
+    private NotificationMessage nm;
+    private PostEntityAddress sender;
+
+    /**
+    * Constructs a ProcessEncryptedNotificationMessageTask given a message.
+     */
+    public ProcessEncryptedNotificationMessageTask(EncryptedNotificationMessage message) {
+      this.message = message;
+    }
+
+    /**
+      * Starts the processing of this message.
+     */
+    public void start() {
+      // send receipt
+      ReceiptMessage rm = new ReceiptMessage(address, message);
+      signAndPreparePostMessage(rm);
+      routeMsg(message.getSender().getAddress(), new PostPastryMessage(rm), getCredentials(), new SendOptions());
+
+      // decrypt and verify notification message
+      try {
+        byte[] key = security.decryptRSA(message.getKey());
+        nm = (NotificationMessage) security.deserialize(security.decryptDES(message.getData(), key));
+      } catch (SecurityException e) {
+        System.out.println("SecurityException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
+        return;
+      } catch (IOException e) {
+        System.out.println("IOException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
+        return;
+      } catch (ClassNotFoundException e) {
+        System.out.println("ClassNotFoundException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
+        return;
+      } catch (ClassCastException e) {
+        System.out.println("ClassCastException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
+        return;
+      }
+
+      sender = nm.getSender();
+      getPostLog(sender, this);
+
+      // now we wait until the log is retrieved
+    }
+
+    public void receiveResult(Object o) {
+      PostLog senderLog = (PostLog) o;
+
+      // look up sender
+      if (senderLog == null) {
+        System.out.println("Found NotificationMessage from non-existent sender " + sender + " - dropping on floor.");
+        return;
+      }
+
+      if (! verifyPostMessage(nm, senderLog.getPublicKey())) {
+        System.out.println("Error occured during verification of notification message " + nm + " - dropping on floor.");
+        return;
+      }
+
+      // deliver notification messag
+      PostClient client = (PostClient) clientAddresses.get(nm.getClientAddress());
+
+      if (client != null) {
+        client.notificationReceived(nm);
+      } else {
+        System.out.println("Found notification message for unknown client " + client + " - dropping on floor.");
+      }
+    }
+
+    public void receiveException(Exception e) {
+      System.out.println("Exception " + e + "  occured during processing of EncryptedNotificationMessage: " + message + " - dropping on floor.");
+    }
+  }
+
+  /**
+    * This class is called whenever a RecieptMessage comes in, and it
+   *  handles the message.
+   */
+  protected class ProcessReceiptMessageTask {
+
+    private ReceiptMessage message;
+    private NotificationMessage nm;
+    private PostEntityAddress sender;
+
+    /**
+      * Constructs a ProcessRecieptMessageTask given a message.
+     */
+    public ProcessReceiptMessageTask(ReceiptMessage message) {
+      this.message = message;
+    }
+
+    /**
+      * Starts the processing of this message.
+     */
+    public void start() {
+      EncryptedNotificationMessage enm = message.getEncryptedNotificationMessage();
+      PostEntityAddress sender = message.getSender();
+
+      // remove message
+      synchronized (bufferedData) {
+        Vector userQueue = (Vector) bufferedData.get(sender);
+        userQueue.remove(enm);
+      }
+    }
+  }
+
+  /**
+   * This class is a task which returns a PostLog to te callee.
+   */
+  protected class RetrievePostLogTask implements ReceiveResultCommand {
+
+    private PostEntityAddress address;
+    private ReceiveResultCommand command;
+
+    /**
+     * Constructs a task which will call the given command once the result
+     * is available.
+     */
+    public RetrievePostLogTask(PostEntityAddress address, ReceiveResultCommand command) {
+      this.address = address;
+      this.command = command;
+    }
+
+    /**
+     * Starts this task running.
+     */
+    public void start() {
+      SignedReference logRef = new SignedReference(address.getAddress());
+      storage.retrieveSigned(logRef, this);
+
+      // Now we wait for the storage service to return the result
+      // to us.
+    }
+
+    /**
+     * Called when the result of a previous call is ready for
+     * processing.
+     *
+     * @param o The result.
+     */
+    public void receiveResult(Object o) {
+      try {
+        PostLog log = (PostLog) o;
+
+        if (log == null) {
+          System.out.println("PostLog lookup for user " + address + " failed.");
+          command.receiveException(new PostException("Could not find PostLog for user " + address));
+          return;
+        }
+
+        if ((log.getPublicKey() == null) || (log.getEntityAddress() == null)) {
+          command.receiveException(new PostException("Malformed PostLog: " + log.getPublicKey() + " " + log.getEntityAddress()));
+          return;
+        }
+
+        if (security.verifyCertificate(log.getEntityAddress(),
+                                       log.getPublicKey(),
+                                       log.getCertificate())) {
+          storage.verifySigned(log, log.getPublicKey());
+
+          command.receiveResult(log);
+        } else {
+          command.receiveException(new PostException("Certificate of PostLog could not verified for entity: " + address));
+        }
+      } catch (ClassCastException e) {
+        command.receiveException(new PostException("Received unknown value " + o + " from retrievePostLog."));
+      }
+    }
+
+    /**
+      * Called when a previously requested result causes an exception
+     *
+     * @param result The exception caused
+     */
+    public void receiveException(Exception result) {
+      command.receiveException(result);
+    }
+  }
+
+  /**
+    * This class is a task which returns a PostLog to te callee.
+   */
+  protected class RetrieveLocalPostLogTask implements ReceiveResultCommand {
+
+    public static final int STATE_1 = 1;
+    public static final int STATE_2 = 2;
+
+    private int state;
+    private PostLog log;
+    
+    /**
+     * Constructs a task which will call the given command once the result
+     * is available.
+     */
+    public RetrieveLocalPostLogTask() {
+    }
+
+    /**
+      * Starts this task running.
+     */
+    public void start() {
+      state = STATE_1;
+      getPostLog(address, this);
+    }
+
+    private void startState1(PostLog log) {
+      this.log = log;
+      
+      if (log == null) {
+        state = STATE_2;
+        
+        // None found, so create a new one
+        log = new PostLog(address, publicKey, certificate, Post.this, this);
+      }
+    }
+
+    private void startState2(Boolean b) {
+      if (b.booleanValue()) {
+        Post.this.log = log;
+      } else {
+        System.out.println("Error occured storing log " + b);
+      }
+    }    
+
+    /**
+      * Called when the result of a previous call is ready for
+     * processing.
+     *
+     * @param o The result.
+     */
+    public void receiveResult(Object o) {
+      switch(state) {
+        case STATE_1:
+          if (o instanceof PostLog) {
+            startState1((PostLog) o);
+          } else {
+            System.out.println("Received unknown response " + o + " from getPostLog()");
+          }
+        case STATE_2:
+          if (o instanceof Boolean) {
+            startState2((Boolean) o);
+          }
+        default:
+          System.out.println("In unknown State in RetrieveLocalPostLogTask: " + state);
+      }
+    }
+
+    /**
+     * Called when a previously requested result causes an exception
+     *
+     * @param result The exception caused
+     */
+    public void receiveException(Exception result) {
+      startState1(null);
+    }
+  }
+
+  /**
+    * This class is called whenever a PostMessage comes in, and it
+   * performs the necessary verification tasks and then handles the
+   * message.
+   */
+  protected class SendNotificationMessageTask implements ReceiveResultCommand {
+
+    private NotificationMessage message;
+    private PostUserAddress destination;
+    
+    /**
+      * Constructs a ProcessPostMessageTask given a message.
+     */
+    public SendNotificationMessageTask(NotificationMessage message) {
+      this.message = message;
+    }
+
+    /**
+      * Starts the processing of this message.
+     */
+    public void start() {
+      // TO DO : Assuming just a user for now, grouping crap later...
+      destination = (PostUserAddress) message.getDestination();
+
+      System.out.println(thePastryNode.getNodeId() + "DEBUG: sending message to: " + destination);
+
+      getPostLog(destination, this);
+    }
+
+    public void receiveResult(Object o) {
+      PostLog destinationLog = (PostLog) o;
+      signAndPreparePostMessage(message);
+      
+      System.out.println(thePastryNode.getNodeId() + "DEBUG: received destination log");
+      
+      NodeId random = factory.generateNodeId();
+
+      System.out.println(thePastryNode.getNodeId() + "DEBUG: picked random node: " + random);
+
+      byte[] cipherText = null;
+
+      try {
+        byte[] key = security.generateKeyDES();
+        byte[] keyCipherText = security.encryptRSA(key, destinationLog.getPublicKey());
+        cipherText = security.encryptDES(security.serialize(message), key);
+
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: built encrypted notfn msg: " + destination);
+
+        EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, keyCipherText, cipherText);
+        DeliveryRequestMessage drm = new DeliveryRequestMessage(address, destination, enm);
+
+        signAndPreparePostMessage(drm);
+
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: sending delivery request to : " + random);
+
+        routeMsg(random, new PostPastryMessage(drm), getCredentials(), new SendOptions());
+      } catch (SecurityException e) {
+        System.out.println("SecurityException occured which encrypting NotificationMessage " + e + " - dropping on floor.");
+      } catch (IOException e) {
+        System.out.println("IOException occured which encrypting NotificationMessage " + e + " - dropping on floor.");
+      }
+    }
+
+    public void receiveException(Exception e) {
+      System.out.println("Exception " + e + "  occured during sending NotificationMessage: " + message + " - dropping on floor.");
+    }
+  }
 }
