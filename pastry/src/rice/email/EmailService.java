@@ -94,6 +94,58 @@ public class EmailService extends PostClient {
 	  this.resultHandler.receiveException(result);
 	}
     }
+
+  /**
+   * Used to add a email root folder when one does not previously exist.  
+   * Calls ESRootFolderCont to returns the actual email root Folder rather 
+   * than a ref to it.
+   */
+    private class ESSendMessageCont implements Continuation {
+      Continuation resultHandler;
+      Email email;
+      EmailService emailService;
+
+      ESSendMessageCont(Email e, EmailService es, Continuation c) {
+	System.out.println("Starting a new ESSendMessageCont");
+	this.email = e;
+	this.emailService = es;
+	this.resultHandler = c;
+      }
+	
+      /**
+       * Called when a previously requested result is now available.
+       *
+       * @param result The result of the command.
+       */
+      public void receiveResult(Object result) {
+	System.out.println("ESSendMessageCont received a result.");
+	System.out.println("Result is: " + result);
+	
+	// send the notification messages to each of the recipients
+	PostEntityAddress[] recipients = email.getRecipients();
+	EmailNotificationMessage msg;
+	
+	for (int i = 0; i < recipients.length; i++) {	
+	  // create the Notification message, notification should go to ePost
+	  msg = new EmailNotificationMessage(email, recipients[i], this.emailService);
+	  
+	  // use POST to send the Delivery message
+	  _post.sendNotification(msg);
+	}
+	// pass any result from the Store Data (there should be none) to the handler.
+	this.resultHandler.receiveResult(result);
+      }
+
+      /**
+       * Called when an execption occured as a result of the previous command.
+       *
+       * @param result The exception which was caused.
+       */
+      public void receiveException(Exception result) {
+	System.out.println("ESSendMessageCont received an exception.");
+	this.resultHandler.receiveException(result);
+      }
+    }
   
   // the name of the Inbox's log
   public static final String INBOX_NAME="Inbox";
@@ -129,22 +181,13 @@ public class EmailService extends PostClient {
    */
   public void sendMessage(Email email, Continuation errorListener) throws PostException {
 
-    // store the Email's data before sending it
+    // get the storage service, and let the Email itself know about the Service
     StorageService storage = _post.getStorageService();
     email.setStorage(storage);
-    email.storeData(errorListener);
-
-    // send the notification messages to each of the recipients
-    PostEntityAddress[] recipients = email.getRecipients();
-    EmailNotificationMessage msg;
-
-    for (int i = 0; i < recipients.length; i++) {	
-      // create the Notification message, notification should go to ePost
-      msg = new EmailNotificationMessage(email, recipients[i], this);
-      
-      // use POST to send the Delivery message
-      _post.sendNotification(msg);
-    }
+    // make a continuation to handle the notification to the recipients
+    Continuation preCommand = new ESSendMessageCont(email, this, errorListener);
+    // start storing the data
+    email.storeData(preCommand);
   }
   
   /**
