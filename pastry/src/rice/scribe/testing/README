@@ -1,0 +1,68 @@
+***********************************************************************
+			README
+***********************************************************************
+
+
+
+DistScribeRegrTest.java [ DISTRIBUTED REGRESSION TEST]
+==========================================
+
+Scenario 
+--------
+We experiment with 5 groups and ask each node to join to each group.
+The current root for each group multicasts messages to the group 
+with increasing sequence numbers. When a node becomes the root, it
+first multicasts some messages with sequence number -1, and then
+with increasing sequence numbers. 
+
+
+
+
+Usage
+------
+
+$java 	-Djava.security.policy = <your-policy-file> DistScribeRegrTest [-port p] 
+	[-bootstrap host[:port]] [-nodes n] [-help]
+
+
+
+Expected Output
+---------------
+
+1) Each node should receive increasing sequence numbers for each group
+after it joins the group and before it leaves the group. Notice that 
+it will receive only those messages which were multicast after it 
+joined.
+
+2) A node can miss a few sequence numbers (approx. TreeRepairThreshold) 
+when its parent dies and before the tree is repaired.
+
+3) When the output doesnt match the expected output, some Warning messages
+are printed suggesting the mis-match, for instance 
+   a) if lesser sequence number is received, or
+   b) if duplicate sequence number is received, suggesting that two or 
+      more nodes have this node as their child corresponding to this 
+      multicast tree, or
+   c) if sequence number received is greater than the (previous sequence
+      number received plus the TreeRepairThreshold), suggesting that
+      tree repair took longer than expected, or
+   d) if it didnt receive any message on a group for a specified period
+      even though root was multicasting on that group, suggesting that
+      it is probably no longer part of the multicast group, or
+   e) if it receives message for a group it has already left
+
+
+
+
+
+
+
+
+DirectScribeRegrTest.java [ SIMULATION BASED REGRESSION TEST]
+=============================================================
+
+
+This is a comprehensive testing of Scribe funcationalities. You should check
+if all the sub-tests were PASSED. The final message tells you whether the 
+entire test consisting of several sub-tests PASSED or not.
+
