@@ -4,6 +4,7 @@ import rice.scribe.*;
 import rice.scribe.messaging.*;
 import rice.pastry.security.*;
 import rice.pastry.*;
+
 public class Channel implements IScribeApp {
    /**
     * ChannelId for this channel 
@@ -18,6 +19,9 @@ public class Channel implements IScribeApp {
     * The array of all subscribed stripes
     */
    private Stripe[] stripes = null;
+   /**
+    * The primary stripe for this node.
+    */
    private Stripe primaryStripe = null;
    /**
     * The stripeIds for all stripes in this channel.
@@ -50,7 +54,8 @@ public class Channel implements IScribeApp {
     * Constructor to Create a new channel
     *
     */
-   public Channel(int numStripes, IScribe scribe, Credentials cred, BandwidthManager bandwidthManager){
+   public Channel(int numStripes, IScribe scribe, Credentials cred, 
+                  BandwidthManager bandwidthManager){
 
         this.subscribedStripes = numStripes;
 	this.scribe = scribe;
@@ -75,11 +80,15 @@ public class Channel implements IScribeApp {
    /**
     * Constructor to create a Channel when a channelID is known
     */ 
-   public Channel(ChannelId channelId, IScribe scribe, BandwidthManager bandwidthManager){
+   public Channel(ChannelId channelId, IScribe scribe, Credentials cred, 
+                  BandwidthManager bandwidthManager){
+	
 	this.channelId = channelId;
 	this.bandwidthManager = bandwidthManager;
 	this.scribe = scribe;
-        /* Send out a message to the scribe group */
+        /* is this right? */
+        /* Change the data to be the message we want to send */
+        scribe.anycast(channelId, null, cred);
         /* Get back all the StripeID's and then process them */
         /* Then we should be attached */
         /* we also need to create and mark a primary stripe */ 

@@ -10,16 +10,43 @@ import java.util.Observable;
  * This class encapsulates all data about an individual stripe.
  */
 public class Stripe extends Observable implements IScribeApp{
-
+   /**
+    * The stripe state, wheter it is dropped, connected, etc.
+    */
    private int stripeState = 0;
+   /**
+    * The stripeId for this stripe
+    */
    private StripeId stripeId = null;
+   /**
+    * The channel this stripe is a part of.
+    */
    private Channel channel =  null;
+   /**
+    * The input stream used to get data from this stripe.
+    */
    private InputStream inputStream = null;
+   /**
+    * The output stream used to give date to this stripe.
+    */
    private OutputStream outputStream = null;
+   /**
+    * The credentials for this node. Not currently used.
+    * Here as a place holder.
+    */
    private Credentials credentials = null;
+   /** 
+    * The scribe instance used by this stripe.
+    */
    private IScribe scribe = null;
+   /**
+    * A flag wheter or not this stripe is the primary stripe for this node
+    */
    private boolean isPrimary = false;  
  
+   /**
+    * The constructor used when creating a stripe from scratch.
+    */
    public Stripe(Channel channel, IScribe scribe, Credentials credentials){
       this.scribe = scribe;
       this.credentials = credentials;
@@ -30,6 +57,14 @@ public class Stripe extends Observable implements IScribeApp{
 	stripeState = STRIPE_SUBSCRIBED;
         this.stripeId = (StripeId) topicId;
       }
+    }
+    /**
+     * The constructor used to join a stripe when you know the 
+     * StripeId
+     */
+    public Stripe(StripeId stripeId, Channel channel, IScribe scribe, 
+             	  Credentials credentials){
+
     }
     /**
     * gets the StripeID for this stripe
