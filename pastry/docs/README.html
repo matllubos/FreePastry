@@ -51,7 +51,7 @@ ps</a> </i>]</font></li>
 <ul>
   <li><font face="Helvetica, Arial, sans-serif"> M. Castro, P. Druschel,
  A.-M.  Kermarrec&nbsp; and A. Rowstron, "<i>SCRIBE: A large-scale and
-decentralised application-level multicast infrastructure</i>", IEEE
+decentralized application-level multicast infrastructure</i>", IEEE
 Journal on Selected  Areas  in Communications (JSAC) (Special issue on
 Network Support for Multicast   Communications). 2002, to appear.&nbsp; [<i><a href="http://www.research.microsoft.com/%7Eantr/PAST/jsac.pdf.zip">
 pdf.zip</a> | <a href="http://www.research.microsoft.com/%7Eantr/PAST/jsac.ps.zip">
@@ -130,7 +130,7 @@ developed using Sun's SDK, version 1.4.2_03+ <br>
   <li>p2p.scribe -- Minor changes.</li><br/>
   <li>p2p.replication -- This has been modified to use bloom filters instead of key lists for replication.</li><br/>
   <li>p2p.splitstream -- Minor scalability improvements based on planetlab deployment.</li><br>
-  <li>(NEW) p2p.util -- Various utilites for p2p packages, including Cryptography and XML.</li><br>
+  <li>(NEW) p2p.util -- Various utilities for p2p packages, including Cryptography and XML.</li><br>
   <li>(NEW) p2p.multiring -- An implementation of the IPTPS paper, complete with optional RingCertificates.</li><br>
   <li>(NEW) p2p.aggregation -- Improves DHT efficiency by aggregating small objects</li><br>
 <ul>
@@ -262,12 +262,12 @@ simulations run about 50% faster, and use a lot less memory.<br>
 <br>
 <br>
 <h3> Notes</h3>
-Release 1.3.2 has the following limitations. <br>
+Release 1.4 has the following limitations. <br>
 &nbsp;
 <ul>
-  <li> More performance tuning needs to be done.</li>
-&nbsp; <li> Three "transport protocols" are provided with this release,
-"Direct", "RMI", and "Wire".</li>
+  <li>More performance tuning needs to be done.</li>
+&nbsp; <li>Two "transport protocols" are provided with this release,
+"Socket", and "Direct".</li>
 </ul>
 <ul>
   <ul>
@@ -278,39 +278,26 @@ application development and testing.</li>
 </ul>
 <ul>
   <ul>
-    <li>"RMI" is simple transport protocol based on Java RMI. Several
-"virtual" Pastry  nodes can be started in each Java VM. RMI is used for
-communication across  physical nodes.<br>
-    </li>
+    <li>"Socket" uses an event-based implementation based on sockets, and
+uses the non-blocking NIO support in Java 1.4.2.  It uses TCP for all
+communication except liveness checks which are UDP.  This version is much 
+more robust than prior distributions and has been tested extensively on 
+planetlab.</li>
   </ul>
 </ul>
-<blockquote>
   <ul>
-    <li>"Wire" uses an event-based implementation based on sockets, and
-uses the non-blocking NIO support in Java 1.4. It uses UDP as transport
-by default, switching dynamically to TCP for large messages or in the
-event that a stream of traffic is sent to a given node. The wire
-protocol is till in beta testing, in part because the implementations of
-the Java NIO do not yet work properly and efficiently in several Java
-VMs on some platforms (for instance, Sun's JDK 1.4.1 RC1 and earlier on
-Windows platforms).
-<br><br>
+<blockquote>
 Support for simulated killing of nodes is for testing purposes only.
-There is a potential to lose any messages that are queued to be sent
-when you simulate killing a node. Any such dropped messages will print
-the error:<br><br> Potentially lost the message: [message.toString()]<br><br>There
-is a known issue in the BSD (FreeBSD, OS X) implementations of Java NIO
-that bubbles up the error: "IOException: Bad file descriptor", whenever
-a node simulates being killed. We catch the error and print the message
-to the command line. Simulated killing of nodes causes instability in
-some JVMs prior to JRE 1.4.2.
 <br><br>On Unix systems, Java's socket implementation uses File
-Descriptors. In this implementation, the File Descriptors can be used
-up if too many nodes are running in a single process. If you require
-running more than one node inside a single process, consider increasing
-the number of File Descriptors per process (bash: ulimit -n), or
-lowering the available sockets per node
-(rice.pastry.wire.SocketManager.MAX_OPEN_SOCKETS).
+Descriptors.  In this implementation, the File Descriptors can be used
+up if too many nodes are running in a single process.  We have a soft
+limit on the number of file descriptors, but we are aware that you can 
+exceed this number under some scenarios.  For example if you send messages 
+to to more nodes than you have file descriptors without giving up the 
+thread to allow io.  If you require running more than one node inside a 
+single process, consider increasing the number of File Descriptors per 
+process (bash: ulimit -n), or lowering the available sockets per node
+(rice.pastry.socket.SocketCollectionManager.MAX_OPEN_SOCKETS).
 </li>
   </ul>
 </blockquote>
@@ -318,7 +305,7 @@ lowering the available sockets per node
 standard to ensure interoperability among different implementations.</blockquote>
 <ul>
   <li> Security support does not exist in this release. Therefore,
-the&nbsp; software should only be run in trusted environments. Future
+the software should only be run in trusted environments. Future
 releases will include security.</li>
 </ul>
 <blockquote>(Background: To start a Pastry node, the IP address (and
@@ -341,14 +328,17 @@ Scribe paper</a>.<br>
 To use the binary distribution, download the pastry jar file and set
 the Java classpath to include the path of the jar file. This can be done
 using the "-cp" command line argument, or by setting the CLASSPATH
-variable in  your shell environment.
-<p>To compile the source distribution, you will need to have GNU make
-installed (available from <a href="ftp://ftp.gnu.org/pub/gnu/make">ftp://ftp.gnu.org/pub/gnu/make</a>
-, or as part of <a href="http://www.cygwin.com/">cygwin</a> ) on your
-system. Expand the archive (FreePastry-1.3.tgz or FreePastry-1.3.zip)
-into a directory. Set the environment variables mentioned in setpath.csh
-to values appropriate for your system. Execute "make" in the top level
-directory (you may have to run "make" twice the first time), then change
+variable in  your shell environment.  For some applications you may need the 
+3rd party libraries included with the distribution.  These are available
+in the source distributions.  Simply unpack the distribution and include the 
+jars in the lib/ directory in your classpath.
+<p>To compile the source distribution we have switched to ant for the build 
+process.  You will need to have ANT installed (available from 
+<a href="http://ant.apache.org/">http://ant.apache.org/</a>) on your
+system.  Expand the archive (FreePastry-1.4-source.tgz or FreePastry-1.4-source.zip)
+into a directory. Execute "ant" in the top level
+directory (you may have to increase the maximum memory for ant by setting the
+environment variable ANT_OPTS=-Xmx128m), then change
 to the "classes" directory to run FreePastry.&nbsp; </p>
 <p>You may have to provide a Java security policy file with sufficient
 permissions to allow FreePastry to contact other nodes. The simplest way
@@ -453,7 +443,7 @@ DistHelloWorld.java) may be a good starting point.<br>
 <br>
 Another sample Pastry application is rice.scribe.<br>
 <br>
-Application writers are stringly encouraged to base newly written
+Application writers are strongly encouraged to base newly written
 applications on the new common API. Such applications should import the
 package rice.p2p.commonapi.<br>
 <br>
@@ -461,7 +451,7 @@ package rice.p2p.commonapi.<br>
 <h3> Running Scribe</h3>
 1. To run a simple distributed test:
 <pre><b>
-     java [-cp pastry.jar] rice.p2p.scribe.testing.ScribeRegrTest [-nodes n] [-port p] [-bootstrap bshost[:bsport]] [-protocol (direct|wire|rmi)] [-help]
+     java [-cp pastry.jar] rice.p2p.scribe.testing.ScribeRegrTest [-nodes n] [-port p] [-bootstrap bshost[:bsport]] [-protocol (direct|socket)] [-help]
 
         Ports p and bsport refer to contact port numbers (default = 5009).
         Without -bootstrap bshost[:bsport], only localhost:p is used for bootstrap.
@@ -472,7 +462,7 @@ package rice.p2p.commonapi.<br>
 <h3> Running PAST</h3>
 1. To run a simple distributed test: <br>
 <pre><b>
-     java [-cp pastry.jar] rice.p2p.past.testing.PastRegrTest [-nodes n] [-protocol (direct|wire|rmi)]<br>
+     java [-cp pastry.jar] rice.p2p.past.testing.PastRegrTest [-nodes n] [-protocol (direct|socket)]<br>
 </b></pre>
 This creates a network of <tt>n</tt> nodes (10 by default), and then
 runs the Past regression test over these nodes.
@@ -480,7 +470,7 @@ runs the Past regression test over these nodes.
 <hr>
 <a name="SplitStream"><h3> Running SplitStream</h3></a>
 The FreePastry implementation of SplitStream implements the system
-described in the SOSP '03 paper.
+described in the <a href="http://freepastry.rice.edu/SplitStream/default.htm">SOSP '03 paper</a>.
 <p>
 SplitStream.java class provides an interface that can be used by
 applications to create SplitStream instances. Each SplitStream forest
@@ -490,13 +480,13 @@ SplitStream forest is represented by a class (Stripe.java), which
 handles the data reception and subscription failures.
 </p><p>
 Applications can configure the maximum capacity each channel can
-accomodate in terms of number of children it is willing to accept. Applications can control total
+accommodate in terms of number of children it is willing to accept. Applications can control total
 outgoing capacity they are willing to provide by changing the value in ScribeSplitStreamPolicy.java.
 </p><p>
 
 1. To run a simple distributed test: <br>
 </p><pre><b>
-     java [-cp pastry.jar] rice.p2p.splitstream.testing.SplitStreamRegrTest [-nodes n] [-protocol (direct|wire|rmi)]<br>
+     java [-cp pastry.jar] rice.p2p.splitstream.testing.SplitStreamRegrTest [-nodes n] [-protocol (direct|socket)]<br>
 </b></pre>
 This creates a network of <tt>n</tt> nodes (10 by default), and then
 runs the SplitStream regression test over these nodes.
