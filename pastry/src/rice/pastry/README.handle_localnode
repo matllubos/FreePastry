@@ -70,7 +70,24 @@ it returns, the Message goes out of scope, and the stream gets finalized.
 This is the only solution (I think) where we (the Pastry hackers) and the
 application writers don't have to keep track of all the handles used in
 various messages -- either for verifying them, or for assigning localNodes.
-Consequences are, as mentioned before, implicit verification, and perhaps
-getting rid of the security manager for a while.
+Consequences are, as mentioned before, implicit verification, and reducing
+the security manager to purely policies.
 
 Sitaram Iyer, 5 Apr 2002, 6am, good night!
+
+
+Mail to Peter (and introduction of LocalNodeI):
+
+> I am not sure this is possible in a completely transparent manner. Note
+> that verification will later involve verifying signatures. This
+> verification must be performed by code provided by the local node -- so
+> can't be performed by the handle class itself, as that many be shipped
+> with the handle.
+
+THe difference is that the security mgr can be accessible to everyone
+without passing it into every little irrelevant function.
+
+Not completely transparent (handles and other shipped-with classes implement
+LocalNodeI, but RouteSet, HelloMsg and other containers don't). setLocalNode
+invocations on each of these little handles and stuff buried inside Messages
+is transparent.
