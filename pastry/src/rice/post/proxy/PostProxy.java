@@ -19,6 +19,7 @@ import rice.post.*;
 import rice.post.delivery.*;
 import rice.post.security.*;
 import rice.post.security.ca.*;
+import rice.post.storage.*;
 
 import rice.serialization.*;
 import rice.proxy.*;
@@ -109,6 +110,11 @@ public class PostProxy {
    * The default size of the cache to use (in bytes)
    */
   static int CACHE_SIZE = 50000000;
+  
+  /**
+   * The default size of the cache to use (in bytes)
+   */
+  static int MEMORY_CACHE_SIZE = 50000;
 
   /**
    * The default size of the disk storage to use (in bytes)
@@ -139,6 +145,11 @@ public class PostProxy {
    * Whether or not to redirect output to 'nohup.out'
    */
   public static boolean REDIRECT_OUTPUT = true;
+  
+  /**
+   * Whether or not fetch the post log/inbox log head.  Should normally be done
+   */
+  public static boolean FETCH_LOGS = true;
 
   
   // ----- DISPLAY FIELDS -----
@@ -278,6 +289,33 @@ public class PostProxy {
       stepDone(SUCCESS);
     }
     
+    stepStart("Installing Shutdown Hooks");
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      public void run() {
+        int num = Thread.currentThread().getThreadGroup().activeCount();
+        Thread[] threads = new Thread[num];
+        Thread.currentThread().getThreadGroup().enumerate(threads);
+        
+        for (int i=0; i<num; i++) {
+          System.err.println("Thread " + i + ":");
+          threads[i].dumpStack();
+        }
+      }
+    });
+    stepDone(SUCCESS);
+    
+    stepStart("Adding System Security Manager " + System.getSecurityManager());
+    System.setSecurityManager(new SecurityManager() {
+      public void checkPermission(java.security.Permission perm) {}
+      
+      public void checkExit(int status) {
+        System.out.println("SYSTEM.EXIT CALLED! " + status);
+        Thread.dumpStack();
+        super.checkExit(status);
+      }
+    }); 
+    stepDone(SUCCESS);
+    
     stepStart("Retrieving CA public key");
     InputStream fis = ClassLoader.getSystemResource("ca.publickey").openStream();
     ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
@@ -390,17 +428,17 @@ public class PostProxy {
     
     stepStart("Starting StorageManager");
     immutableStorage = new StorageManagerImpl(FACTORY,
-                                             new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT , ".", DISK_SIZE),  // + "-immutable"
+                                             new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-immutable", ".", DISK_SIZE),
                                              new LRUCache(new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-cache", ".", DISK_SIZE), CACHE_SIZE));
-//    mutableStorage = new StorageManagerImpl(FACTORY,
-//                                           new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-mutable", ".", DISK_SIZE),
-//                                           new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE));    
+    mutableStorage = new StorageManagerImpl(FACTORY,
+                                           new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-mutable", ".", DISK_SIZE),
+                                           new EmptyCache(FACTORY));    
     pendingStorage = new StorageManagerImpl(FACTORY,
-                                        new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-pending", ".", DISK_SIZE),
-                                        new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE));
+                                            new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-pending", ".", DISK_SIZE),
+                                            new EmptyCache(FACTORY));    
     deliveredStorage = new StorageManagerImpl(FACTORY,
-                                          new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-delivered", ".", DISK_SIZE),
-                                          new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE));
+                                              new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-delivered", ".", DISK_SIZE),
+                                              new EmptyCache(FACTORY));    
     stepDone(SUCCESS);
     
     stepStart("Creating Pastry node");
@@ -441,19 +479,21 @@ public class PostProxy {
       stepStart("Starting PAST service");
     } else {
       stepStart("Starting PAST service");
-      immutablePast = new PastImpl(node,immutableStorage, REPLICATION_FACTOR, INSTANCE_NAME); // + "-immutable"
+      immutablePast = new PastImpl(node,immutableStorage, REPLICATION_FACTOR, INSTANCE_NAME + "-immutable"); //
     }
     
-//    mutablePast = new PastImpl(node, mutableStorage, REPLICATION_FACTOR, INSTANCE_NAME + "-mutable"); //, new MutablePastPolicy());
+  //  stepStart("Starting PAST service");
+  //  immutablePast = new PastImpl(node,immutableStorage, REPLICATION_FACTOR, INSTANCE_NAME + "-immutable"); 
+    mutablePast = new PastImpl(node, mutableStorage, REPLICATION_FACTOR, INSTANCE_NAME + "-mutable", new PostPastPolicy());
     deliveredPast = new PastImpl(node, deliveredStorage, REPLICATION_FACTOR, INSTANCE_NAME + "-delivered");
     pendingPast = new DeliveryPastImpl(node, pendingStorage, REPLICATION_FACTOR, INSTANCE_NAME + "-pending", deliveredPast);
     stepDone(SUCCESS);
     
     stepStart("Starting POST service");
-    post = new PostImpl(node, immutablePast, immutablePast, pendingPast, deliveredPast, address, pair, certificate, caPublic, INSTANCE_NAME, ALLOW_LOG_INSERT);
+    post = new PostImpl(node, immutablePast, mutablePast, pendingPast, deliveredPast, address, pair, certificate, caPublic, INSTANCE_NAME, ALLOW_LOG_INSERT);
     stepDone(SUCCESS);
     
-    if (name != null) {
+    if ((name != null) && FETCH_LOGS) {
       int retries = 0;
       
       stepStart("Fetching POST log at " + address.getAddress());
@@ -582,6 +622,13 @@ public class PostProxy {
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-noredirect")) {
         REDIRECT_OUTPUT = false;
+        break;
+      }
+    }
+    
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-nofetch")) {
+        FETCH_LOGS = false;
         break;
       }
     }

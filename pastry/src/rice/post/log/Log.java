@@ -252,33 +252,41 @@ public class Log implements PostData {
     
     Continuation comm = new Continuation() {
       public void receiveResult(Object o) {
+        AddLogEntryTask alet = null;
+        
         synchronized (buffer) {
           if ((buffer.size() > 0) && (buffer.get(0) == task)) {
             buffer.remove(0);
             
             if (buffer.size() > 0) {
-              AddLogEntryTask alet = (AddLogEntryTask) buffer.get(0);
-              alet.start();
+              alet = (AddLogEntryTask) buffer.get(0);
             }
             
             command.receiveResult(o);
           }
         }
+        
+        if (alet != null)
+          alet.start();
       }
 
       public void receiveException(Exception e) {
+        AddLogEntryTask alet = null;
+        
         synchronized (buffer) {
           if ((buffer.size() > 0) && (buffer.get(0) == task)) {
             buffer.remove(0);
             
             if (buffer.size() > 0) {
-              AddLogEntryTask alet = (AddLogEntryTask) buffer.get(0);
-              alet.start();
+              alet = (AddLogEntryTask) buffer.get(0);
             }
             
             command.receiveException(e);
           }
         }
+        
+        if (alet != null)
+          alet.start();
       }
     };
     

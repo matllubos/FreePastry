@@ -57,8 +57,12 @@ import rice.persistence.*;
  * @author Alan Mislove
  */
 public class DeliveryPastImpl extends PastImpl implements DeliveryPast {
+  
+  protected HashMap cache;
 
   protected PastImpl delivered;
+  
+  protected IdFactory factory;
   
   /**
    * Constructor for DeliveryPastImpl
@@ -72,6 +76,8 @@ public class DeliveryPastImpl extends PastImpl implements DeliveryPast {
     super(node, manager, replicas, instance + "-delivery");
     
     this.delivered = delivered;
+    this.cache = new HashMap();
+    this.factory = node.getIdFactory();
   }
   
   /**
@@ -135,22 +141,22 @@ public class DeliveryPastImpl extends PastImpl implements DeliveryPast {
    * @param command The command to return the results to
    */
   public void getGroups(final Continuation command) {
+    syncCache();
+  
     final Vector result = new Vector();
     final Iterator i = scan(endpoint.range(endpoint.getLocalNodeHandle(), 0, null, true)).getIterator();
     
     Continuation c = new StandardContinuation(command) {
       public void receiveResult(Object o) {
-        if (o != null) {
-          PostEntityAddress address = ((Delivery) o).getMessage().getDestination();
-        
-          if (! result.contains(address))
-            result.add(address);
+        if (o != null) {        
+          if (! result.contains(o))
+            result.add(o);
         }
         
         if (i.hasNext())
-          storage.getObject((Id) i.next(), this);
+          getUser((Id) i.next(), this);
         else
-          command.receiveResult(result.toArray(new PostEntityAddress[0]));
+          parent.receiveResult(result.toArray(new PostEntityAddress[0]));
       }
     };
     
@@ -188,5 +194,60 @@ public class DeliveryPastImpl extends PastImpl implements DeliveryPast {
     c.receiveResult(null);
   }
   
+  /**
+   * Removes any stale entries from the cache.  This is done by doing 
+   * scan(disk) - cache's set.
+   */
+  protected void syncCache() {
+    Iterator i = difference(cache.keySet(), scan()).getIterator();
+    
+    while (i.hasNext()) 
+      cache.remove(i.next());
+  }
+  
+  /**
+   * Computes the difference between the set and the idSet
+   *
+   * @param set The set to subtract from
+   * @param idset The set to subtract
+   * @return The difference
+   */
+  protected IdSet difference(Set set, IdSet idSet) {
+    IdSet result = factory.buildIdSet();
+    Iterator i = set.iterator();
+    
+    while (i.hasNext()) {
+      Id next = (Id) i.next();
+      if (! idSet.isMemberId(next))
+        result.addId(next);
+    }
+    
+    return result;
+  }
+    
+  
+  /**
+   * Either returns the userid associated with the given id by looking in the cache,
+   * or reads it off of disk.
+   *
+   * @param id The id to return the PostEntityAddress of
+   * @param command The command to return the result to
+   */
+  protected void getUser(final Id id, Continuation command) {
+    PostEntityAddress address = (PostEntityAddress) cache.get(id);
+    
+    if (address != null) {
+      command.receiveResult(address);
+    } else {
+      storage.getObject(id, new StandardContinuation(command) {
+        public void receiveResult(Object o) {
+          PostEntityAddress address = ((Delivery) o).getMessage().getDestination();
+          cache.put(id, address);
+          
+          parent.receiveResult(address);
+        }
+      });
+    }
+  }
 }
 

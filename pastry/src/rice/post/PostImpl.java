@@ -117,6 +117,11 @@ public class PostImpl implements Post, Application, ScribeClient {
    * The service which maintians the list of pending deliveries, and delivers messages
    */
   private DeliveryService delivery;
+  
+  /**
+   * The buffer of incoming delivery messages
+   */
+  private Vector deliveryBuffer;
 
   
   // --- STORAGE SUPPORT ---
@@ -195,6 +200,7 @@ public class PostImpl implements Post, Application, ScribeClient {
     
     this.scribe = new ScribeImpl(node, instance);
     this.delivery = new DeliveryService(this, deliveryPast, deliveredPast, scribe, node.getIdFactory());
+    this.deliveryBuffer = new Vector();
 
     this.security = new SecurityService();
     this.security.loadModule(new CASecurityModule(caPublicKey));
@@ -420,7 +426,7 @@ public class PostImpl implements Post, Application, ScribeClient {
    *
    * @param message The incoming message.
    */
-  private void processDeliveryMessage(final DeliveryMessage message, Continuation command) {
+  private void processDeliveryMessage(final DeliveryMessage message, final Continuation command) {
     logger.fine(endpoint.getId() + ": Delivery message from : " + message.getSender());
 
     if (! message.getDestination().equals(address)) {
@@ -429,34 +435,96 @@ public class PostImpl implements Post, Application, ScribeClient {
       return;
     }
     
-    delivery.check(message.getEncryptedMessage(), new StandardContinuation(command) {
-      public void receiveResult(Object o) {
-        if (((Boolean) o).booleanValue()) {
-          logger.fine(endpoint.getId() + ": Haven't seen message " + message + " before - accepting");
-
-          processSignedPostMessage(message.getEncryptedMessage(), new StandardContinuation(parent) {
-            public void receiveResult(Object o) {
-              byte[] sig = signPostMessage(message.getEncryptedMessage().getMessage()).getSignature();
-              
-              delivery.delivered(message.getEncryptedMessage(), sig, parent);
+    Runnable buffered = new Runnable() {
+      public void next() {
+        Runnable run = null;
+        
+        synchronized (deliveryBuffer) {
+          if ((deliveryBuffer.size() > 0) && (deliveryBuffer.get(0) == this)) {
+            deliveryBuffer.remove(0);
+            
+            if (deliveryBuffer.size() > 0) {
+              run = (Runnable) deliveryBuffer.get(0);
             }
-          });
-          
-        } else {
-          logger.fine(endpoint.getId() + ": Seen message " + message + " before - ignoring");
-          parent.receiveResult(new Boolean(true));
-        }
+          }
+        } 
+        
+        if (run != null)
+          run.run();
       }
-    });
+      
+      public void run() {
+        delivery.check(message.getEncryptedMessage(), new StandardContinuation(command) {
+          public void receiveResult(Object o) {
+            if (((Boolean) o).booleanValue()) {
+              logger.fine(endpoint.getId() + ": Haven't seen message " + message + " before - accepting");
+              
+              processSignedPostMessage(message.getEncryptedMessage(), new StandardContinuation(parent) {
+                public void receiveResult(Object o) {
+                  byte[] sig = signPostMessage(message.getEncryptedMessage().getMessage()).getSignature();
+                  delivery.delivered(message.getEncryptedMessage(), sig, new StandardContinuation(parent) {
+                    public void receiveResult(Object o) {
+                      parent.receiveResult(o);
+                      next();
+                    }
+                    
+                    public void receiveException(Exception e) {
+                      parent.receiveException(e);
+                      next();
+                    }
+                  });
+                }
+                
+                public void receiveException(Exception e) {
+                  parent.receiveException(e);
+                  next();
+                }
+              });
+            } else {
+              logger.fine(endpoint.getId() + ": Seen message " + message + " before - ignoring");
+              parent.receiveResult(new Boolean(true));
+              next();
+            }   
+          }
+          
+          public void receiveException(Exception e) {
+            parent.receiveException(e);
+            next();
+          }
+        });
+      }
+    };
+
+    boolean go = false;
+    
+    synchronized (deliveryBuffer) {
+      deliveryBuffer.add(buffered);
+      
+      if (deliveryBuffer.size() == 1) 
+        go = true;
+    }
+    
+    if (go)
+      buffered.run();
   }
   
   /**
-   * This method processes a message to synchronize the pending notification messages.
+   * This method processes a message to synchronize the pending notification messages.  Also sends out a
+   * PublishRequestMessage, if we are not currently processing any deliveries.
    *
    * @param message The incoming message.
    */
   private void processSynchronizeMessage(SynchronizeMessage message) {
     delivery.synchronize();
+    
+    boolean go = false;
+    
+    synchronized (deliveryBuffer) {
+      go = (deliveryBuffer.size() == 0);
+    }
+    
+    if (go)
+      announcePresence();
   }
   
   /**

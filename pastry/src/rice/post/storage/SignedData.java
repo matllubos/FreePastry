@@ -16,7 +16,7 @@ import rice.p2p.past.*;
  * 
  * @version $Id$
  */
-class SignedData extends StorageServiceData {
+public class SignedData extends StorageServiceData {
 
   // The time that the data was stored.
   protected transient byte[] timestamp;
