@@ -50,16 +50,16 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
 
   private final long expireNeighborsDelayAfterJoin = 30 * SECONDS;
   private final long expireNeighborsInterval = 5 * MINUTES;
-  private final long neighborTimeout = 5 * DAYS;
+  private long neighborTimeout = 5 * DAYS;
   
   private final long syncDelayAfterJoin = 30 * SECONDS;
-  private final long syncInterval = 1 * HOURS;
   private final long syncMinRemainingLifetime = 5 * MINUTES;
   private final long syncMinQuietTime = insertTimeout;
   private final int syncBloomFilterNumHashes = 3;
   private final int syncBloomFilterBitsPerKey = 4;
   private final int syncPartnersPerTrial = 1;
-  private final int syncMaxFragments = 100;
+  private long syncInterval = 1 * HOURS;
+  private int syncMaxFragments = 100;
   
   private final int fragmentRequestMaxAttempts = 3;
   private final long fragmentRequestTimeout = 30 * SECONDS;
@@ -72,7 +72,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private final long overallRestoreTimeout = 3 * MINUTES;
   
   private final long handoffDelayAfterJoin = 45 * SECONDS;
-  private final long handoffInterval = 60 * SECONDS;
+  private final long handoffInterval = 2 * MINUTES;
   private final int handoffMaxFragments = 100;
 
   private final long garbageCollectionInterval = 10 * MINUTES;
@@ -84,8 +84,8 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private final double restoreMaxRequestFactor = 4.0;
   private final int restoreMaxBoosts = 2;
 
-  private final int rateLimitedRequestsPerSecond = 3;
   private final long rateLimitedCheckInterval = 30 * SECONDS;
+  private int rateLimitedRequestsPerSecond = 3;
 
   public GlacierImpl(Node nodeArg, StorageManager fragmentStorageArg, StorageManager neighborStorageArg, int numFragmentsArg, int numSurvivorsArg, IdFactory factoryArg, String instanceArg, GlacierPolicy policyArg) {
     this.fragmentStorage = fragmentStorageArg;
@@ -977,6 +977,42 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       
       return result.toString();
     }
+
+    if ((cmd.length() >= 11) && cmd.substring(0, 11).equals("show config")) {
+      return 
+        "numFragments = " + numFragments + "\n" +
+        "numSurvivors = " + numSurvivors + "\n" +
+        "insertTimeout = " + (int)(insertTimeout / SECONDS) + " sec\n" +
+        "minFragmentsAfterInsert = "+ minFragmentsAfterInsert + "x" + numSurvivors + "\n" +
+        "refreshTimeout = " + (int)(refreshTimeout / SECONDS) + " sec\n" +
+        "expireNeighborsDelayAfterJoin = " + (int)(expireNeighborsDelayAfterJoin / SECONDS) + " sec\n" +
+        "expireNeighborsInterval = " + (int)(expireNeighborsInterval / MINUTES) + " min\n" +
+        "neighborTimeout = " + (int)(neighborTimeout / HOURS) + " hrs\n" +
+        "syncDelayAfterJoin = " + (int)(syncDelayAfterJoin / SECONDS) + " sec\n" +
+        "syncMinRemainingLifetime = " + (int)(syncMinRemainingLifetime / SECONDS) + " sec\n" +
+        "syncMinQuietTime = " + (int)(syncMinQuietTime / SECONDS) + " sec\n" +
+        "syncBloomFilter = " + syncBloomFilterNumHashes + " hashes, " + syncBloomFilterBitsPerKey + " bpk\n" +
+        "syncPartnersPerTrial = " + syncPartnersPerTrial + "\n" +
+        "syncInterval = " + (int)(syncInterval / MINUTES) + " min\n" +
+        "syncMaxFragments = " + syncMaxFragments + "\n" +
+        "fragmentRequestMaxAttempts = " + fragmentRequestMaxAttempts + "\n" +
+        "fragmentRequestTimeout = " + (int)(fragmentRequestTimeout / SECONDS) + " sec\n" +
+        "manifestRequestTimeout = " + (int)(manifestRequestTimeout / SECONDS) + " sec\n" +
+        "manifestBurst = " + manifestRequestInitialBurst + " -> " + manifestRequestRetryBurst + "\n" +
+        "manifestAggregationFactor = " + manifestAggregationFactor + "\n" +
+        "overallRestoreTimeout = " + (int)(overallRestoreTimeout / SECONDS) + " sec\n" +
+        "handoffDelayAfterJoin = " + (int)(handoffDelayAfterJoin / SECONDS) + " sec\n" +
+        "handoffInterval = " + (int)(handoffInterval / SECONDS) + " sec\n" +
+        "handoffMaxFragments = " + handoffMaxFragments + "\n" +
+        "garbageCollectionInterval = " + (int)(garbageCollectionInterval / MINUTES) + " min\n" +
+        "garbageCollectionMaxFragmentsPerRun = " + garbageCollectionMaxFragmentsPerRun + "\n" +
+        "localScanInterval = " + (int)(localScanInterval / MINUTES) + " min\n" +
+        "localScanMaxFragmentsPerRun = " + localScanMaxFragmentsPerRun + "\n" +
+        "restoreMaxRequestFactor = " + restoreMaxRequestFactor + "\n" +
+        "restoreMaxBoosts = " + restoreMaxBoosts + "\n" +
+        "rateLimitedCheckInterval = " + (int)(rateLimitedCheckInterval / SECONDS) + " sec\n" +
+        "rateLimitedRequestsPerSecond = " + rateLimitedRequestsPerSecond + "\n";
+    }    
 
     if ((cmd.length() >= 5) && cmd.substring(0, 5).equals("flush")) {
       FragmentKeySet keyset = (FragmentKeySet) fragmentStorage.scan();
@@ -2494,5 +2530,21 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
 
   public NodeHandle getLocalNodeHandle() {
     return endpoint.getLocalNodeHandle();
+  }
+  
+  public void setSyncInterval(int syncIntervalSec) {
+    this.syncInterval = syncIntervalSec * SECONDS;
+  }
+  
+  public void setSyncMaxFragments(int syncMaxFragments) {
+    this.syncMaxFragments = syncMaxFragments;
+  }
+  
+  public void setRateLimit(int rps) {
+    this.rateLimitedRequestsPerSecond = rps;
+  }
+  
+  public void setNeighborTimeout(long neighborTimeoutMin) {
+    this.neighborTimeout = neighborTimeoutMin * MINUTES;
   }
 }
