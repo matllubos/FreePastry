@@ -40,8 +40,8 @@ public class Visualization {
   protected Data data;
     
   public Visualization(DistNodeHandle handle) {
-    this.frame = new VisualizationFrame(this);
     this.nodes = new Vector();
+    this.frame = new VisualizationFrame(this);
     this.clients = new Hashtable();
     this.neighbors = new Hashtable();
     
