@@ -109,14 +109,17 @@ public class RouteSet extends Observable implements NodeSet, Serializable, Obser
       }
       else {
         if (handle.proximity() == Integer.MAX_VALUE) {
+          // wait until the proximity value is available
           handle.addObserver(this);
-
           return false;
         }
         else if (handle.proximity() < worstProximity) {
           // remove handle with worst proximity
           setChanged();
           notifyObservers(new NodeSetUpdate(nodes[worstIndex], false));
+
+	  // in case we observe this handle, stop doing so
+	  nodes[worstIndex].deleteObserver(this);
 
           // insert new handle
           nodes[worstIndex] = handle;
@@ -135,12 +138,14 @@ public class RouteSet extends Observable implements NodeSet, Serializable, Obser
      * proximity of a registered node handle is changed.
      *
      * @param o The node handle
-     * @param arg The argument (should be null)
+     * @param arg the event type (PROXIMITY_CHANGE, DECLARED_LIVE, DECLARED_DEAD)
      */
     public void update(Observable o, Object arg) {
 
       // if the proximity is initialized for the time, insert the handle
-      if (((Integer) arg).intValue() == NodeHandle.PROXIMITY_CHANGED) {
+      if (((Integer) arg) == NodeHandle.PROXIMITY_CHANGED) {
+
+	//System.out.println("RouteSet:update(), inserting pinged node");
         put((NodeHandle) o);   
 
 	// we're no longer interested in this handle
@@ -165,6 +170,9 @@ public class RouteSet extends Observable implements NodeSet, Serializable, Obser
 
           setChanged();
           notifyObservers(new NodeSetUpdate(handle, false));
+
+	  // in case we observe this handle, stop doing so
+	  handle.deleteObserver(this);
 
           return handle;
         }

@@ -168,6 +168,8 @@ public class SimilarSet extends Observable implements NodeSet, Serializable, Obs
 	    
 	    setChanged();
 	    notifyObservers(new NodeSetUpdate(nodes[theSize - 1], false));
+
+	    nodes[theSize-1].deleteObserver(this);
 	    
 	    theSize++;
 
@@ -196,16 +198,14 @@ public class SimilarSet extends Observable implements NodeSet, Serializable, Obs
      * proximity of a registered node handle is changed.
      *
      * @param o The node handle
-     * @param arg The argument (should be null)
+     * @param arg the event type (PROXIMITY_CHANGE, DECLARED_LIVE, DECLARED_DEAD)
      */
     public void update(Observable o, Object arg) {
+      // if the node is declared dead, remove it immediately
+      if (((Integer) arg) == NodeHandle.DECLARED_DEAD) {
 
-      // if the node is declared, remove it immediately
-      if (((Integer) arg).intValue() == NodeHandle.DECLARED_DEAD) {
+	//System.out.println("SimilarSet:update(), removing dead node");
         remove(((NodeHandle) o).getNodeId());
-
-	// we're no longer interested in this handle
-	o.deleteObserver(this);
       }
 
     }
@@ -294,6 +294,8 @@ public class SimilarSet extends Observable implements NodeSet, Serializable, Obs
 	setChanged();
 	notifyObservers(new NodeSetUpdate(handle, false));
 		
+	handle.deleteObserver(this);
+
 	return handle;
     }
 

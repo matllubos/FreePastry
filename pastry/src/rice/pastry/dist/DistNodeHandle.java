@@ -40,6 +40,7 @@ import rice.pastry.*;
 import rice.pastry.messaging.*;
 
 import java.io.*;
+import java.util.*;
 
 /**
  * Abstract class for handles to "real" remote nodes. This class abstracts out
@@ -51,7 +52,7 @@ import java.io.*;
  * @author Alan Mislove
  */
 
-public abstract class DistNodeHandle extends NodeHandle {
+public abstract class DistNodeHandle extends NodeHandle implements Observer {
 
     // the nodeId of this node handle's remote node
     protected NodeId nodeId;
@@ -85,10 +86,10 @@ public abstract class DistNodeHandle extends NodeHandle {
     }
 
     /**
-     * Method which verifies this node handle by looking into the node handle
+     * Verifies this node handle by looking into the node handle
      * pool to see if there is already an entry there. If so, all method called
      * on this node handle will redirect to the previously-existing one. Otherwise,
-     * this node handle in inserted into the pool, and all methods are executed on
+     * this node handle is inserted into the pool, and all methods are executed on
      * this node handle.
      */
     private final void verify() {
@@ -104,6 +105,7 @@ public abstract class DistNodeHandle extends NodeHandle {
         }
       }
     }
+
 
     /**
      * Gets the nodeId of this Pastry node.
@@ -171,7 +173,8 @@ public abstract class DistNodeHandle extends NodeHandle {
         alive = true;
         distance = Integer.MAX_VALUE;
 
-        notifyObservers(new Integer(DECLARED_LIVE));
+	setChanged();
+        notifyObservers(DECLARED_LIVE);
       }
     }
 
@@ -199,7 +202,8 @@ public abstract class DistNodeHandle extends NodeHandle {
         alive = false;
         distance = Integer.MAX_VALUE;
 
-        notifyObservers(new Integer(DECLARED_DEAD));
+	setChanged();
+        notifyObservers(DECLARED_DEAD);
       }
     }
 
@@ -237,7 +241,8 @@ public abstract class DistNodeHandle extends NodeHandle {
     protected final void setProximity(int value) {
       distance = value;
 
-      notifyObservers(new Integer(PROXIMITY_CHANGED));
+      setChanged();
+      notifyObservers(PROXIMITY_CHANGED);
     }
 
     /**
@@ -342,7 +347,6 @@ public abstract class DistNodeHandle extends NodeHandle {
 
     public boolean equals(Object obj) {
       if ((obj == null) || (! (obj instanceof NodeHandle))) return false;
-
       NodeHandle nh = (NodeHandle) obj;
       
       return nodeId.equals(nh.getNodeId());
@@ -388,6 +392,82 @@ public abstract class DistNodeHandle extends NodeHandle {
          System.out.println(getLocalNode() + " (" + nodeId + "): " + s);
      }
    }
+
+    //
+    // Observable methods -- these need to be overriden because of redirection
+    //
+
+    public void addObserver(Observer o) {
+	verify();
+	if (redirect != null)
+	    redirect.addObserver(o);
+	else
+	    super.addObserver(o);
+    }
+
+    public int countObservers() {
+	verify();
+	if (redirect != null)
+	    return redirect.countObservers();
+	else
+	    return super.countObservers();
+    }
+
+    public void deleteObserver(Observer o) {
+	verify();
+	if (redirect != null)
+	    redirect.deleteObserver(o);
+	else
+	    super.deleteObserver(o);
+    }
+
+    public void deleteObservers() {
+	verify();
+	if (redirect != null)
+	    redirect.deleteObservers();
+	else
+	    super.deleteObservers();
+    }
+
+    public boolean hasChanged() {
+	verify();
+	if (redirect != null)
+	    return redirect.hasChanged();
+	else
+	    return super.hasChanged();
+    }
+
+    public void notifyObservers() {
+	verify();
+	if (redirect != null)
+	    redirect.notifyObservers();
+	else
+	    super.notifyObservers();
+    }
+
+    public void notifyObservers(Object arg) {
+	verify();
+	if (redirect != null)
+	    redirect.notifyObservers(arg);
+	else
+	    super.notifyObservers(arg);
+    }
+
+    protected void setChanged() {
+	verify();
+	if (redirect != null)
+	    redirect.setChanged();
+	else
+	    super.setChanged();
+    }
+
+    protected void clearChanged() {
+	verify();
+	if (redirect != null)
+	    redirect.clearChanged();
+	else
+	    super.clearChanged();
+    }
 }
 
 

@@ -51,9 +51,9 @@ import java.util.*;
 public abstract class NodeHandle extends Observable implements MessageReceiver, LocalNodeI {
 
   // constants defining types of observable events
-  public static final int PROXIMITY_CHANGED = 1;
-  public static final int DECLARED_DEAD = 2;
-  public static final int DECLARED_LIVE = 3;
+  public static final Integer PROXIMITY_CHANGED = new Integer(1); 
+  public static final Integer DECLARED_DEAD = new Integer(2);
+  public static final Integer DECLARED_LIVE = new Integer(3);
 
   // the local pastry node
   private transient PastryNode localnode;
