@@ -1,8 +1,8 @@
 package rice.email.proxy.imap.commands.fetch;
 
 import rice.email.proxy.mail.*;
-
 import rice.email.proxy.mailbox.*;
+import rice.email.proxy.util.*;
 
 import java.io.*;
 
@@ -53,11 +53,11 @@ public class MessagePropertyPart extends FetchPart {
           getConn().print(" ");
           fetch(msg, "BODY");
         } else if ("BODY".equals(part)) {
-          fetchBodystructure(msg);
+          getConn().print(fetchBodystructure(msg.getMessage().getMessage(), false));
         } else if ("BODYSTRUCTURE".equals(part)) {
-          fetchBodystructure(msg);
+          getConn().print(fetchBodystructure(msg.getMessage().getMessage(), true));
         } else if ("ENVELOPE".equals(part)) {
-          fetchEnvelope(msg);
+          getConn().print(fetchEnvelope(msg.getMessage().getMessage()));
         } else if ("FLAGS".equals(part)) {
           fetchFlags(msg);
         } else if ("INTERNALDATE".equals(part)) {
@@ -72,33 +72,68 @@ public class MessagePropertyPart extends FetchPart {
         me.printStackTrace();
       }
     }
-
-    void fetchBodystructure(StoredMessage msg) throws MailboxException {
+    
+    String fetchBodystructure(MimePart mime, boolean bodystructure) throws MailboxException {
       try {
-        Object data = msg.getMessage().getContent();
-
+        Object data = mime.getContent();
+        String result = "";
+        
         if (data instanceof String) {
           String content = (String) data;
-          String[] lines = content.split("\n");
-          getConn().print("(\"TEXT\" \"PLAIN\" NIL NIL NIL \"7BIT\" " + content.length() +
-                          " " + lines.length + ")");
+
+          String[] type = mime.getHeader("Content-Type");
+          String contentType = "\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\")";
+          
+          if ((type != null) && (type.length > 0)) {
+            contentType = handleContentType(type[0]);
+          }
+
+          String encoding = getHeader(mime, "Content-Transfer-Encoding").toUpperCase();
+
+          if (encoding.equals("NIL"))
+            encoding = "\"7BIT\"";
+
+          StringWriter writer = new StringWriter();
+
+          if (mime instanceof MimeBodyPart)
+            StreamUtils.copy(new InputStreamReader(((MimeBodyPart) mime).getRawInputStream()), writer);
+          else
+            StreamUtils.copy(new InputStreamReader(mime.getInputStream()), writer);
+            
+          result = "(" + contentType + " NIL NIL " + encoding + " " +
+                   writer.toString().length() + " " + countLines(writer.toString());
+
+          if (bodystructure) {
+            result += " " + getHeader(mime, "Content-MD5");
+
+            String disposition = getHeader(mime, "Content-Disposition");
+
+            if (! disposition.equals("NIL"))
+              result += " (" + handleContentType(disposition, false, false) + ") ";
+            else
+              result += " NIL ";
+
+            result += getHeader(mime, "Content-Language");
+          }
+
+          result += ")";
         } else if (data instanceof MimeMultipart) {
-          MimeMultipart mime = (MimeMultipart) data;
-          String content = parseMimeMultipart(mime);
-          getConn().print(content);
+          MimeMultipart part = (MimeMultipart) data;
+          result = parseMimeMultipart(part, bodystructure);
         } else {
           String content = "" + data;
-          getConn().print("{" + content.length() + "}\r\n");
-          getConn().print(content);
+          result = "{" + content.length() + "}\r\n" +content;
         }
+
+        return result;
       } catch (MessagingException e) {
         throw new MailboxException(e);
-      } catch (MailException me) {
-        throw new MailboxException(me);
+      } catch (IOException ioe) {
+        throw new MailboxException(ioe);
       }
     }
 
-    private String parseMimeMultipart(MimeMultipart mime) throws MessagingException, MailboxException {
+    private String parseMimeMultipart(MimeMultipart mime, boolean bodystructure) throws MessagingException, MailboxException {
       try {
         String result = "(";
 
@@ -106,35 +141,144 @@ public class MessagePropertyPart extends FetchPart {
           MimeBodyPart part = (MimeBodyPart) mime.getBodyPart(i);
 
           if (part.getContent() instanceof MimeMultipart) {
-            result += parseMimeMultipart((MimeMultipart) part.getContent());
+            result += parseMimeMultipart((MimeMultipart) part.getContent(), bodystructure);
           } else {
-            result += parseMimeBodyPart(part);
+            result += parseMimeBodyPart(part, bodystructure);
           }
         }
 
-        String content = "mixed";
+        if (mime.getContentType().toLowerCase().indexOf("multipart/") >= 0) {
+          String type = handleContentType(mime.getContentType());
 
-        if (mime.getContentType().indexOf("multipart") > 0) {
-          String msg = mime.getContentType();
-          content = msg.substring(msg.indexOf("multipart")+10, msg.indexOf(" ", msg.indexOf("multipart")+10));
+          type = type.substring(type.indexOf(" ") + 1);
+
+          if (! bodystructure) {
+            type = type.substring(0, type.indexOf(" ("));
+          } else {
+            type += " NIL NIL";
+          }
+            
+          result += " " + type;
+        } else {
+          result += " \"MIXED\"";
         }
         
-        result += " \"" + content + "\")";
-
-        return result;
+        return result + ")";
       } catch (IOException ioe) {
         throw new MailboxException(ioe);
       }
     }
 
-    private String parseMimeBodyPart(MimeBodyPart mime) throws MessagingException {
-      String result = "(";
+    private String parseMimeBodyPart(MimeBodyPart mime, boolean bodystructure) throws MessagingException {
+      try {
+        String result = "(";
 
-      String type = mime.getContentType().toUpperCase();
+        result += handleContentType(mime.getContentType()) + " ";
+
+        String encoding = ("\"" + mime.getEncoding() + "\"").toUpperCase();
+
+        if (encoding.equals("\"NULL\"")) {
+          encoding = "\"7BIT\"";
+        }
+
+        String id = "\"" + mime.getContentID() + "\"";
+
+        if (id.equals("\"null\"")) {
+          id = "NIL";
+        }
+
+        String description = "\"" + mime.getDescription() + "\"";
+
+        if (description.equals("\"null\"")) {
+          description = "NIL";
+        }
+
+        StringWriter writer = new StringWriter();
+        StreamUtils.copy(new InputStreamReader(mime.getRawInputStream()), writer);
+        
+        result +=  id + " " + description + " " + encoding + " " + writer.toString().length();
+
+        if (handleContentType(mime.getContentType().toUpperCase()).indexOf("\"TEXT\" \"") >= 0) {
+          result += " " + countLines(writer.toString());
+        }
+
+        if (handleContentType(mime.getContentType().toUpperCase()).startsWith("\"MESSAGE\" \"RFC822\"")) {
+          javax.mail.internet.MimeMessage message = (javax.mail.internet.MimeMessage) mime.getContent();
+          result += " " + fetchEnvelope(message) + " " + fetchBodystructure(message, bodystructure) + " " +
+            countLines(writer.toString());
+        }
+
+        if (bodystructure) {
+          String md5 = mime.getContentMD5();
+          String disposition = mime.getHeader("Content-Disposition", ";");
+          String language[] = mime.getContentLanguage();
+
+          if (md5 == null)
+            result += " NIL";
+          else
+            result += " \"" + md5 + "\"";
+
+          if (disposition != null)
+            result += " (" + handleContentType(disposition, false, false) + ")";
+          else
+            result += " NIL";
+
+          if (language == null)
+            result += " NIL";
+          else
+            result += " \"" + language[0] + "\"";
+        }
+
+        result += ")";
+
+        return result;
+      } catch (IOException e) {
+        throw new MessagingException();
+      } catch (MailboxException e) {
+        throw new MessagingException();
+      }
+    }
+
+    private String handleContentType(String type) {
+      return handleContentType(type, true);
+    }
+
+    private String handleContentType(String type, boolean includeSubType) {
+      return handleContentType(type, includeSubType, true);
+    }
+    
+    private String handleContentType(String type, boolean includeSubType, boolean insertDefaultChartype) {
+      String[] props = type.split(";");
+
+      String result = parseContentType(props[0], includeSubType) + " ";
+
+      String propText = "";
+
+      for (int i=1; i<props.length; i++) {
+        String thisProp = parseBodyParameter(props[i]);
+
+        if (! thisProp.equals("NIL"))
+          propText += thisProp + " ";
+      }
+
+      if (propText.equals(""))
+        if (insertDefaultChartype)
+          result += "(\"CHARSET\" \"US-ASCII\")";
+        else
+          result += "NIL";
+      else
+        result += "(" + propText.trim() + ")";
+
+      return result;
+    }
+
+    private String parseContentType(String type, boolean includeSubType) {
+      if (type.matches("\".*\"")) {
+        type = type.substring(1, type.length()-1);
+      }
+      
       String mainType = "\"" + type + "\"";
       String subType = "NIL";
-
-      System.out.println("Got type " + type);
 
       if (type.indexOf("/") != -1) {
         mainType = "\"" + type.substring(0,type.indexOf("/")) + "\"";
@@ -146,84 +290,39 @@ public class MessagePropertyPart extends FetchPart {
         }
       }
 
-      String charset = parseContentType(type, "charset");
-      String name = parseContentType(type, "name");
+      if (includeSubType)
+        return mainType.toUpperCase() + " " + subType.toUpperCase();
+      else
+        return mainType.toUpperCase();
+    }
+    
+    private String parseBodyParameter(String content) {
+      content = content.trim();
+      String result = "NIL";
 
-      if (charset.matches("\".*\"")) {
-        charset = charset.substring(1, charset.length()-1);
-      }
+      if (content.indexOf("=") >= 0) {
+        String name = content.substring(0, content.indexOf("=")).toUpperCase();
+        String value = content.substring(content.indexOf("=") + 1);
 
-      if (name.matches("\".*\"")) {
-        name = name.substring(1, name.length()-1);
-      }
-
-      result += mainType + " " + subType + " ";
-
-
-      if ((charset.equals("NIL")) && (name.equals("NIL"))) {
-        result += "NIL ";
-      } else {
-        result += "(";
-
-        if (! charset.equals("NIL")) {
-          result += "\"CHARSET\" \"" + charset + "\"";
+        if (value.matches("\".*\"")) {
+          value = value.substring(1, value.length()-1);
         }
 
-        if ((! charset.equals("NIL")) && (! name.equals("NIL"))) {
-          result += " ";
-        }
-        
-        if (! name.equals("NIL")) {
-          result += "\"NAME\" \"" + name + "\"";
-        }
-
-        result += ") ";
-      }
-
-      String encoding = "\"" + mime.getEncoding() + "\"";
-
-      if (encoding.equals("\"null\"")) {
-        encoding = "\"7BIT\"";
-      }
-
-      String id = "\"" + mime.getContentID() + "\"";
-
-      if (id.equals("\"null\"")) {
-        id = "NIL";
-      }
-
-      String description = "\"" + mime.getDescription() + "\"";
-
-      if (description.equals("\"null\"")) {
-        description = "NIL";
-      }
-      
-      result +=  id + " " + description + " " + encoding + " " + mime.getSize();
-
-      if (mainType.toLowerCase().equals("text")) {
-        result += " " + mime.getLineCount();
-      }
-
-      result += ")";
+        result = "\"" + name.toUpperCase() + "\" \"" + value + "\"";
+      } 
 
       return result;
     }
 
-    private String parseContentType(String content, String field) {
-      String temp = content.substring(0).toUpperCase();
-      field = field.toUpperCase();
+    private int countLines(String string) {
+      int len = (string.split("\n")).length;
 
-      if (temp.indexOf(field + "=") != -1) {
-        if (temp.indexOf(";", temp.indexOf(field + "=")) != -1) {
-          return content.substring(temp.indexOf(field + "=") + field.length() + 1,
-                                   temp.indexOf(";", temp.indexOf(field + "=")));
-        } else {
-          return content.substring(temp.indexOf(field + "=") + field.length() + 1);
-        }
-      } else {
-        return "NIL";
+      if (! string.endsWith("\n")) {
+        len--;
       }
-    }    
+
+      return len;
+    }
 
     void fetchSize(StoredMessage msg) throws MailboxException, MailException {
         getConn().print("" + msg.getMessage().getSize());
@@ -245,21 +344,21 @@ public class MessagePropertyPart extends FetchPart {
         getConn().print("\"" + msg.getMessage().getInternalDate() + "\"");
     }
 
-    private void addresses(InternetAddress[] addresses) {
+    private String addresses(InternetAddress[] addresses) {
       if ((addresses != null) && (addresses.length > 0)) {
-        getConn().print("(");
+        String result = "(";
 
         for (int i=0; i<addresses.length; i++) {
-          address(addresses[i]);
+          result += address(addresses[i]);
         }
 
-        getConn().print(")");
+        return result + ")";
       } else {
-        getConn().print("NIL");
+        return "NIL";
       }
     }
 
-    private void address(InternetAddress address) {
+    private String address(InternetAddress address) {
       String personal = address.getPersonal();
 
       if (personal == null)
@@ -280,11 +379,11 @@ public class MessagePropertyPart extends FetchPart {
         }
       }
 
-      getConn().print("(" + personal + " NIL " + user + " " + server + ")");
+      return "(" + personal + " NIL " + user + " " + server + ")";
     }
 
     private String collapse(String[] addresses) {
-      if (addresses == null) return "";
+      if ((addresses == null) || (addresses.length == 0)) return "";
       if (addresses.length == 1) return addresses[0];
       
       String result = addresses[0];
@@ -295,52 +394,57 @@ public class MessagePropertyPart extends FetchPart {
 
       return result;
     }
-    
-    public void fetchEnvelope(StoredMessage msg) throws MailboxException {
+
+    private String getHeader(MimePart part, String header) throws MailboxException {
       try {
-        getConn().print("(");
-        fetchInternaldate(msg);
+        String[] result = part.getHeader(header);
 
-        String[] subject = msg.getMessage().getHeader("Subject");
+        if ((result != null) && (result.length > 0)) {
+          String text = result[0].replaceAll("\\n", "").replaceAll("\\r", "");
 
-        if ((subject != null) && (subject.length > 0))
-            getConn().print(" \"" + subject[0] + "\" ");
-        else
-            getConn().print(" NIL ");
+          if (text.indexOf("\"") == -1)
+            return "\"" + text + "\"";
+          else
+            return "{" + text.length() + "}\r\n" + text; 
+      } else
+          return "NIL";
+      } catch (MessagingException e) {
+        throw new MailboxException(e);
+      }
+    }
+    
+    public String fetchEnvelope(MimePart part) throws MailboxException {
+      try {
+        String result = "(" + getHeader(part, "Date") + " " + getHeader(part, "Subject") + " ";
 
         //from, sender, reply-to, to, cc, bcc, in-reply-to, and message-id.
-        InternetAddress[] from = InternetAddress.parse(collapse(msg.getMessage().getHeader("From")));
-        InternetAddress[] sender = InternetAddress.parse(collapse(msg.getMessage().getHeader("Sender")));
-        InternetAddress[] replyTo = InternetAddress.parse(collapse(msg.getMessage().getHeader("Reply-To")));
-        InternetAddress[] to = InternetAddress.parse(collapse(msg.getMessage().getHeader("To")));
-        InternetAddress[] cc = InternetAddress.parse(collapse(msg.getMessage().getHeader("Cc")));
-        InternetAddress[] bcc = InternetAddress.parse(collapse(msg.getMessage().getHeader("Bcc")));
-        String[] inReplyTo = msg.getMessage().getHeader("In-Reply-To");
-        
-        addresses(from);
-        getConn().print(" ");
-        addresses(sender);
-        getConn().print(" ");
-        addresses(replyTo);
-        getConn().print(" ");
-        addresses(to);
-        getConn().print(" ");
-        addresses(cc);
-        getConn().print(" ");
-        addresses(bcc);
-        getConn().print(" ");
+        InternetAddress[] from = InternetAddress.parse(collapse(part.getHeader("From")));
+        InternetAddress[] sender = InternetAddress.parse(collapse(part.getHeader("Sender")));
+        InternetAddress[] replyTo = InternetAddress.parse(collapse(part.getHeader("Reply-To")));
+        InternetAddress[] to = InternetAddress.parse(collapse(part.getHeader("To")));
+        InternetAddress[] cc = InternetAddress.parse(collapse(part.getHeader("Cc")));
+        InternetAddress[] bcc = InternetAddress.parse(collapse(part.getHeader("Bcc")));
 
-        if ((inReplyTo == null) || (inReplyTo.length == 0)) {
-            getConn().print("NIL ");
-        } else {
-            getConn().print("\"" + inReplyTo[0] + "\" ");
-        }
-        fetchID(msg);
-        getConn().print(")");
-      } catch (MailException me) {
-        throw new MailboxException(me);
+        if (addresses(sender).equals("NIL"))
+          sender = from;
+
+        if (addresses(replyTo).equals("NIL"))
+          replyTo = from;
+        
+        result += addresses(from) + " ";
+        result += addresses(sender) + " ";
+        result += addresses(replyTo) + " ";
+        result += addresses(to) + " ";
+        result += addresses(cc) + " ";
+        result += addresses(bcc) + " ";
+        result += getHeader(part, "In-Reply-To") + " ";
+        result += getHeader(part, "Message-ID") + ")";
+
+        return result;
       } catch (AddressException ae) {
         throw new MailboxException(ae);
+      } catch (MessagingException me) {
+        throw new MailboxException(me);
       }
     }
 }

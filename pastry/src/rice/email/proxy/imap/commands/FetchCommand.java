@@ -31,10 +31,8 @@ public class FetchCommand
 {
 	public static FetchOptionRegistry regestry = new FetchOptionRegistry();
 	
-    public FetchCommand()
-    {
+    public FetchCommand() {
         super("FETCH");
-	appendPartRequest("UID");
     }
 
     public boolean isValidForState(ImapState state)
@@ -75,7 +73,7 @@ public class FetchCommand
                         " FETCH (");
         for (Iterator i = parts.iterator(); i.hasNext();)
         {
-            Object part = i.next();
+          Object part = i.next();
             FetchPart handler = regestry.getHandler(part);
             handler.setConn(getConn());
             handler.fetch(msg, part);

@@ -8,7 +8,7 @@ import java.io.Reader;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import java.text.SimpleDateFormat;
+import java.text.*;
 
 import java.util.*;
 
@@ -22,9 +22,9 @@ public class MimeMessage
     Resource _resource;
 
     MimeBodyPart _message;
-    
-    static final SimpleDateFormat dateFormatter = new SimpleDateFormat(
-                                                          "EEE, d MMM yyyy HH:mm:ss Z");
+
+    static final SimpleDateFormat dateReader = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z");
+    static final SimpleDateFormat dateWriter = new SimpleDateFormat("d-MMM-yyyy HH:mm:ss Z");
 
     public MimeMessage(Resource file)
                 throws MailException
@@ -127,7 +127,12 @@ public class MimeMessage
 
     public String[] getHeader(String name) throws MailException {
       try {
-        return _message.getHeader(name);
+        String[] headers =  _message.getHeader(name);
+
+        if (headers == null)
+          return new String[0];
+        else
+          return headers; 
       } catch (MessagingException me) {
         throw new MailException(me);
       }
@@ -166,9 +171,27 @@ public class MimeMessage
     public String getInternalDate()
     {
        try {
-         String[] result = _message.getHeader("Date");
-         return result[0];
-       } catch (Exception e) {
+         String[] result = _message.getHeader("Received");
+         String[] stuff = result[0].split(";");
+
+         Date date = null;
+         int i=0;
+ 
+         while ((date == null) && (i < stuff.length)) {
+           try {
+             i++;
+             date = dateReader.parse(stuff[i].trim());
+           } catch (ParseException e) {
+           }
+         }
+
+         if (date == null) return "NIL";
+
+         if (date.getDate() < 10) 
+           return " " + dateWriter.format(date);
+         else
+           return dateWriter.format(date);
+         } catch (Exception e) {
        }
 
       return null;

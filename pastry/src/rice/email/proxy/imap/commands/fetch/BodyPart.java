@@ -86,16 +86,25 @@ public class BodyPart extends FetchPart {
         BodyPartRequest breq = (BodyPartRequest) part;
 
         if (breq.getType().size() == 0) {
-          ByteArrayOutputStream baos = new ByteArrayOutputStream();
-          msg.getMessage().getMessage().writeTo(baos);
+          InputStream stream = msg.getMessage().getMessage().getRawInputStream();
+          StringWriter writer = new StringWriter();
+
+          StreamUtils.copy(new InputStreamReader(stream), writer);
+          Enumeration headers = msg.getMessage().getMessage().getAllHeaderLines();
+          String header = "";
           
-          String content = baos.toString();
-          getConn().print("{" + content.length() + "}\r\n");
-          getConn().print(content);
+          while (headers.hasMoreElements()) {
+            header += headers.nextElement() + "\r\n";
+          }
+
+          header += "\r\n" + writer.toString();
+          
+          getConn().print("{" + header.length() + "}\r\n");
+          getConn().print(header);
         } else {
-          fetchPart(breq, clone(breq.getType()), msg.getMessage().getMessage());
+          fetchPart(breq, clone(breq.getType()), msg.getMessage().getMessage(), true);
         }
-          
+      /*    
         if ((! breq.getPeek()) &&	(! msg.getFlagList().isSeen())) {
           msg.getFlagList().addFlag("\\SEEN");
           msg.getFlagList().commit();
@@ -104,7 +113,7 @@ public class BodyPart extends FetchPart {
           FetchPart handler = FetchCommand.regestry.getHandler("FLAGS");
           handler.setConn(getConn());
           handler.fetch(msg, "FLAGS");
-        }
+        } */
       } else {
         getConn().print("NIL");
       }
@@ -117,9 +126,7 @@ public class BodyPart extends FetchPart {
     }
   }
 
-  protected void fetchPart(BodyPartRequest breq, List types, MimeBodyPart content) throws MailboxException {
-    System.out.println("Content is a " + content.getClass().getName());
-    
+  protected void fetchPart(BodyPartRequest breq, List types, MimeBodyPart content, boolean topLevel) throws MailboxException {
     try {
       if (types.size() == 0) {
         fetchAll(breq, content);
@@ -127,24 +134,40 @@ public class BodyPart extends FetchPart {
         String type = (String) types.remove(0);
 
         if (type.equals("HEADER")) {
-          fetchHeader(content);
+          if (topLevel || (content.getContent() instanceof MimePart)) 
+            fetchHeader((MimePart) content);
+          else
+            getConn().print("\"\"");
         } else if (type.equals("HEADER.FIELDS")) {
-          fetchHeader(content, split(breq.getPartIterator()));
+          if (topLevel || (content.getContent() instanceof MimePart))
+            fetchHeader((MimePart) content, split(breq.getPartIterator()));
+          else
+            getConn().print("\"\"");
         } else if (type.equals("HEADER.FIELDS.NOT")) {
-          fetchHeader(content, split(breq.getPartIterator()), false);
+          if (topLevel || (content.getContent() instanceof MimePart))
+            fetchHeader((MimePart) content, split(breq.getPartIterator()), false);
+          else
+            getConn().print("\"\"");
         } else if (type.equals("TEXT")) {
-          fetchAll(breq, content.getContent());
+          if (topLevel || (content.getContent() instanceof MimePart))
+            fetchAll(breq, content);
+          else
+            getConn().print("\"\"");
         } else {
           int i = Integer.parseInt(type);
           Object part = content.getContent();
 
-          if ((part instanceof String) && (i == 1)) {
-            fetchAll(breq, part);
+          if ((part instanceof String) && (i == 1) && (types.size() == 0) && topLevel) {
+            fetchAll(breq, content);
           } else if (part instanceof MimeMultipart) {
             MimeMultipart mime = (MimeMultipart) part;
-            fetchPart(breq, types, (MimeBodyPart) mime.getBodyPart(i-1));
+
+            if (i-1 < mime.getCount())
+              fetchPart(breq, types, (MimeBodyPart) mime.getBodyPart(i-1), false);
+            else
+              getConn().print("\"\"");
           } else {
-            fetchAll(breq, "");
+            getConn().print("\"\"");
           }
         }
       }
@@ -155,15 +178,15 @@ public class BodyPart extends FetchPart {
     }
   }
 
-  protected void fetchHeader(MimeBodyPart msg) throws MailboxException {
+  protected void fetchHeader(MimePart msg) throws MailboxException {
     fetchHeader(msg, new String[0], false);
   }
 
-  protected void fetchHeader(MimeBodyPart msg, String[] parts) throws MailboxException {
+  protected void fetchHeader(MimePart msg, String[] parts) throws MailboxException {
     fetchHeader(msg, parts, true);
   }
 
-  protected void fetchHeader(MimeBodyPart msg, String[] parts, boolean exclude) throws MailboxException {
+  protected void fetchHeader(MimePart msg, String[] parts, boolean exclude) throws MailboxException {
     try {
       Enumeration headers;
 
@@ -181,52 +204,18 @@ public class BodyPart extends FetchPart {
       throw new MailboxException(me);
     }
   }
-/*
-  protected void fetchMessagePart(StoredMessage msg, String[] part) throws MailboxException {
-    try {
-      Object data = msg.getMessage().getContent();
-
-      if (data instanceof String) {
-        if ((part.length == 1) && (part[0].equals("TEXT") || part[0].equals("1"))) {
-          String content = "" + data;
-          getConn().print("{" + content.length() + "}\r\n");
-          getConn().print(content);
-        } else {
-          getConn().print("NIL");
-        }
-      } else if (data instanceof MimeMultipart) {
-        MimeMultipart mime = (MimeMultipart) data;
-
-        int i = Integer.parseInt(part[0]);
-        
-        MimeBodyPart thisPart = (MimeBodyPart) mime.getBodyPart(i-1);
-
-        InputStream stream = thisPart.getRawInputStream();
-        StringWriter writer = new StringWriter();
-
-        StreamUtils.copy(new InputStreamReader(stream), writer);
-
-        String content = writer.toString();
-        getConn().print("{" + content.length() + "}\r\n");
-        getConn().print(content);
-      } else {
-        getConn().print("NIL");
-      }
-    } catch (IOException ioe) {
-      throw new MailboxException(ioe);
-    } catch (MailException me) {
-      throw new MailboxException(me);
-    } catch (MessagingException me) {
-      throw new MailboxException(me);
-    }
-  } */
 
   public void fetchAll(BodyPartRequest breq, Object data) throws MailboxException {
     try {
       if (data instanceof String) {
         String content = getRange(breq, "" + data);
-        getConn().print("{" + content.length() + "}\r\n");
-        getConn().print(content);
+
+        if (content.equals("")) {
+          getConn().print("\"\"");
+        } else {
+          getConn().print("{" + content.length() + "}\r\n");
+          getConn().print(content);
+        }
       } else if (data instanceof MimeBodyPart) {
         MimeBodyPart mime = (MimeBodyPart) data;
 
@@ -236,6 +225,15 @@ public class BodyPart extends FetchPart {
         StreamUtils.copy(new InputStreamReader(stream), writer);
 
         String content = getRange(breq, writer.toString());
+        getConn().print("{" + content.length() + "}\r\n");
+        getConn().print(content);
+      } else if (data instanceof MimeMultipart) {
+        MimeMultipart mime = (MimeMultipart) data;
+
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        mime.writeTo(stream);
+
+        String content = getRange(breq, stream.toString());
         getConn().print("{" + content.length() + "}\r\n");
         getConn().print(content);
       } else {

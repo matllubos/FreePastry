@@ -90,7 +90,7 @@ public class BodyPartRequest {
 
       for (Iterator i = getPartIterator(); i.hasNext();)
       {
-        result.append("\"" + i.next() + "\"");
+        result.append("\"" + i.next().toString().toUpperCase() + "\"");
         if (i.hasNext())
           result.append(' ');
       }
