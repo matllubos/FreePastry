@@ -44,6 +44,7 @@ import java.util.*;
 import java.net.*;
 import java.rmi.Naming;
 import java.rmi.RMISecurityManager;
+import java.rmi.RemoteException;
 
 /**
  * Pastry test.
@@ -127,7 +128,7 @@ public class RMIPastryTest {
 	if (bsnode != null) {
 	    try {
 		bsid = bsnode.getNodeId();
-	    } catch (Exception e) {
+	    } catch (RemoteException e) {
 		System.out.println("[rmi] Unable to get remote node id: " + e.toString());
 		bsnode = null;
 	    }
@@ -195,7 +196,7 @@ public class RMIPastryTest {
 
 	try {
 	    java.rmi.registry.LocateRegistry.createRegistry(port);
-	} catch (Exception e) {
+	} catch (RemoteException e) {
 	    System.out.println("Error starting RMI registry: " + e);
 	}
     }

@@ -1,4 +1,4 @@
-export JAVA_DEV_ROOT=/home/ssiyer/pastry
+export JAVA_DEV_ROOT=/home/ssiyer/research/ds/pastry
 export JAVA_HOME=/usr/java/jdk1.3.1_01
 export PATH=$JAVA_HOME/bin:$PATH
 export IS_UNIX=true

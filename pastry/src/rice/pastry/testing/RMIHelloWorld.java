@@ -44,6 +44,7 @@ import java.util.*;
 import java.net.*;
 import java.rmi.Naming;
 import java.rmi.RMISecurityManager;
+import java.rmi.RemoteException;
 
 /**
  * A hello world example for pastry. This is the "RMI" driver.
@@ -139,7 +140,7 @@ public class RMIHelloWorld {
 	if (bsnode != null) {
 	    try {
 		bsid = bsnode.getNodeId();
-	    } catch (Exception e) {
+	    } catch (RemoteException e) {
 		System.out.println("[rmi] Unable to get remote node id: " + e.toString());
 		bsnode = null;
 	    }
@@ -213,7 +214,7 @@ public class RMIHelloWorld {
 
 	try {
 	    java.rmi.registry.LocateRegistry.createRegistry(port);
-	} catch (Exception e) {
+	} catch (RemoteException e) {
 	    System.out.println("Error starting RMI registry: " + e);
 	}
     }

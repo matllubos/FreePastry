@@ -50,6 +50,7 @@ import java.util.*;
 import java.net.*;
 import java.rmi.Naming;
 import java.rmi.RMISecurityManager;
+import java.rmi.RemoteException;
 
 /**
  * a regression test suite for pastry with RMI.
@@ -130,7 +131,7 @@ public class RMIPastryRegrTest extends PastryRegrTest {
 	if (bsnode != null) {
 	    try {
 		bsid = bsnode.getNodeId();
-	    } catch (Exception e) {
+	    } catch (RemoteException e) {
 		System.out.println("[rmi] Unable to get remote node id: " + e.toString());
 		bsnode = null;
 	    }
@@ -203,7 +204,7 @@ public class RMIPastryRegrTest extends PastryRegrTest {
 
 	try {
 	    java.rmi.registry.LocateRegistry.createRegistry(port);
-	} catch (Exception e) {
+	} catch (RemoteException e) {
 	    System.out.println("Error starting RMI registry: " + e);
 	}
     }
