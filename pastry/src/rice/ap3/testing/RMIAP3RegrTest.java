@@ -358,6 +358,7 @@ public class RMIAP3RegrTest {
     assertEquals("Fetch", "Fetched content should have come from client",
                   "my content", _nodeB.getService()._routeMsgMsg.getContent());
     // Routing table should be unmodified
+    AP3RoutingTable table = _nodeB.getService().getAP3RoutingTable();
     assertTrue("Fetch", "Routing table should be unmodified",
                 table.getNumEntries() == 0);
   }
