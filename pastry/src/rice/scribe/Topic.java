@@ -244,8 +244,10 @@ public class Topic
 
 	m_parent = parent;
 
-	if( prev_parent == parent)
-	    return;
+	if(prev_parent!= null && parent!=null) {
+	    if( prev_parent.equals(parent))
+		return;
+	}
 
 	if(prev_parent != null)
 	    m_scribe.removeParentForTopic(prev_parent, this.getTopicId());

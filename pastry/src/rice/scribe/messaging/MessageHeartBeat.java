@@ -133,7 +133,7 @@ public class MessageHeartBeat extends ScribeMessage implements Serializable
 		    topic = scribe.getTopic(topicId);
 		    // take note of the parent for this topic and tell the
 		    // failure handler that the parent is ok
-		    if( topic.getParent() != m_source)
+		    if(! topic.getParent().equals( m_source))
 			System.out.println("Error:: Inconsistency in distinctParentTable found"); 
 		    topic.postponeParentHandler();
 		}

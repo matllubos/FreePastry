@@ -106,7 +106,7 @@ public class MessagePublish extends ScribeMessage implements Serializable
 		    }
 		}
 		else {
-		    if(topic.getParent()!= m_source) {
+		    if(!topic.getParent().equals(m_source)) {
 			ScribeMessage msg = scribe.makeUnsubscribeMessage( m_topicId, cred );
 			scribe.routeMsgDirect( m_source, msg, cred, opt );
 		    }

@@ -100,7 +100,7 @@ public class MessageAckOnSubscribe extends ScribeMessage implements Serializable
 	    return;
 	}
 
-	if( prev_parent != null && prev_parent != m_source){
+	if( prev_parent != null && !prev_parent.equals(m_source)){
 	    // If we had non-null previous parent and it is different
 	    // from new parent, then we send an unsubscribe message
 	    // to prev parent for this topic.
