@@ -134,7 +134,7 @@ public class ControlTimeoutMessage extends Message implements Serializable
 
         if ( !ignore )
         {
-            if ( num_fails > channel.getTimeouts() )
+            if ( ( num_fails > channel.getTimeouts() ) && ( channel.getTimeouts() != -1 ) )
             {
                 /* Exceeded allowable number of retries; generate app-level upcall(?) */
             }
