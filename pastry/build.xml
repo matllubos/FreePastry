@@ -61,11 +61,6 @@
 	   includes="**/*.java"
            deprecation="yes"
 	   debug="true">
-
-      <!-- Compilation problems :( -->
-      <exclude name="rice/ap3/**/*.java"/>
-      <exclude name="rice/im/**/*.java"/>
-
     </javac>
     <antcall target="make_rmic_stubs"/>
   </target>
