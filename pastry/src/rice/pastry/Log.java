@@ -41,6 +41,10 @@ import java.util.*;
 /**
  * A fairly rudimentary Log class for the moment.
  *
+ * Usage: if (Log.ifp(v)) System.out.println("foo");
+ * Conventions: Use 5 for most messages, seen by default.
+ *              Use 6 or 7 for junky informational messages.
+ *
  * @version $Id$
  *
  * @author Sitaram Iyer
