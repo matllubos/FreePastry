@@ -138,7 +138,7 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
     }
 
     public void splitstreamIsReady(){
-
+       System.out.println("SplitStream is Ready");
     }
 
     public void channelIsReady(ChannelId channelId){
