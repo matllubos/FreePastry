@@ -106,6 +106,11 @@ final class CoalescedLogEntry extends LogEntry {
           command.receiveResult(entries[i-1]);
           return;
         }
+          
+      if (entry == null) {
+        command.receiveResult(entries[entries.length-1]);
+        return;
+      }
       
       command.receiveException(new IllegalArgumentException("ERROR: Could not find previous entry for " + entry));
     } 
