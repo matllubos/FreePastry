@@ -205,7 +205,8 @@ public class ControlFinalFindParentMessage extends MessageAnycast
 								     c,
 								     new Boolean( true ), 
 								     stripe.getStripeId(),
-								     sendPath),
+								     sendPath,
+								     false),
 			       c,
 			       null );
 
@@ -254,20 +255,18 @@ public class ControlFinalFindParentMessage extends MessageAnycast
 	}
     }
 
-    public void faultHandler(){
+    public void faultHandler(Scribe scribe){
 	System.out.println("ControlFinalFindParentMessage -- DFS Failed. Noone could take me "+originalSource.getNodeId()+" as a child. - traversed "+alreadySeenSize());
 	
-	Vector sendPath = (Vector)recv_stripe.getRootPath().clone();
-	sendPath.add(((Scribe)ss.getScribe()).getLocalHandle());
-
-	ss.routeMsgDirect( originalSource,
-			   new ControlFindParentResponseMessage( ss.getAddress(),
-								 ((Scribe)ss.getScribe()).getNodeHandle(),
+	scribe.routeMsgDirect( originalSource,
+			       new ControlFindParentResponseMessage( SplitStreamAddress.instance(),
+								 scribe.getNodeHandle(),
 								 channel_id,
 								 cred,
 								 new Boolean( false ), 
 								 recv_stripe.getStripeId(),
-								 sendPath),
+								 null, 
+								 false),
 			   cred,
 			   null );
     }
