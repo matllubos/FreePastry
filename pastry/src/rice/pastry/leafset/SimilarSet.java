@@ -156,7 +156,8 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
         if (leafSet.observe)
   	      notifyObservers(new NodeSetUpdate(nodes[theSize], false));
       }
-	    nodes[theSize].deleteObserver(this);
+      if (leafSet.observe)
+  	    nodes[theSize].deleteObserver(this);
 	    
 	    theSize++;
 
@@ -183,7 +184,8 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
   }
 
 	// register as an observer, so we'll be notified if the handle is declared dead
-	handle.addObserver(this);
+  if (leafSet.observe)
+  	handle.addObserver(this);
 
 	return true;
     }
@@ -320,7 +322,8 @@ return null;
     	notifyObservers(new NodeSetUpdate(handle, false));
   }
 		
-	handle.deleteObserver(this);
+  if (leafSet.observe)
+  	handle.deleteObserver(this);
 
 	return handle;
     }
