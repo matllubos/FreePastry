@@ -1341,6 +1341,7 @@ public class PostProxy {
       layout.setConstraints(kill, e);      
       getContentPane().add(kill);
       
+      setTitle("ePOST");
       pack();
       show();
     }
