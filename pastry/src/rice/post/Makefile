@@ -2,6 +2,7 @@ PACKAGE = rice.post
 
 SOURCE  = \
 	Post.java \
+  PostImpl.java \
 	PostClient.java \
 	PostClientAddress.java \
 	PostException.java \

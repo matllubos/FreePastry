@@ -143,7 +143,7 @@ public class DistPostRegrTest {
 
       PostCertificate certificate = security.generateCertificate(address, pair.getPublic(), caPair.getPrivate());
       
-      Post post = new Post(pn, past, scribe, address, pair, certificate, caPair.getPublic(), INSTANCE_NAME);
+      Post post = new PostImpl(pn, past, scribe, address, pair, certificate, caPair.getPublic(), INSTANCE_NAME);
       postNodes.add(post);
 
       DummyPostClient dpc = new DummyPostClient(post);

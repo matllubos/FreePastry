@@ -167,7 +167,7 @@ public class EmailProxy {
       input.readLine();
 
       System.out.print("    Starting POST service\t\t\t\t\t");
-      post = new Post(pastry, past, scribe, address, pair, certificate, caPublic, INSTANCE_NAME);
+      post = new PostImpl(pastry, past, scribe, address, pair, certificate, caPublic, INSTANCE_NAME);
       System.out.println("[ DONE ]");
       
       Thread.sleep(5000);

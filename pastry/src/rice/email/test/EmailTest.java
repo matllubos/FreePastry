@@ -126,12 +126,12 @@ public class EmailTest {
                                                                         pair.getPublic(),
                                                                         caPair.getPrivate());
 
-        Post post = new Post(localNodes[i],
-                             pastServices[i],
-                             scribes[i],
-                             addresses[i], pair, cert,
-                             caPair.getPublic(),
-                             INSTANCE_NAME);
+        Post post = new PostImpl(localNodes[i],
+                                 pastServices[i],
+                                 scribes[i],
+                                 addresses[i], pair, cert,
+                                 caPair.getPublic(),
+                                 INSTANCE_NAME);
         emailServices[i] = new EmailService(post);
 
         new Thread(new Announcer(emailServices[i], waitTime)).start();
