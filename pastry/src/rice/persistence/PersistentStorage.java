@@ -1,5 +1,4 @@
-package rice.persistence;
-/*
+package rice.persistence; /*
  * @(#) PersistenceManager.java
  *
  * @author Ansley Post
@@ -26,12 +25,10 @@ public class PersistentStorage implements Storage {
   private File serialFile;
   private File rootDirectory;       // root directory to store stuff in
   private File backupDirectory;     // dir for storing persistent objs
-  private File psDirectory;         // dir persistent storage stuff is in
   private File infoDirectory;       // dir for some management info
   private File transDirectory;      // directory for unrolling copies
 
   private static String rootDir;                          // rootDirectory
-  private static final String psDir = "/ps/";             // psDirectory
   private static final String backupDir = "/Backup/";     // backupDirectory
   private static final String infoDir = "/pminfo/";       // infoDirectory
   private static final String transDir = "/transaction";  // transDirectory
@@ -47,6 +44,7 @@ public class PersistentStorage implements Storage {
    * @param rootDir The root directory of the persisted disk.
    */
   public PersistentStorage(String rootDir) {
+    System.out.println("Setting up Persistent Storage");
     this.rootDir = rootDir;
 
     if(this.initDirectories())
@@ -156,7 +154,9 @@ public class PersistentStorage implements Storage {
    * @return Whether or not an object is present at id.
    */
   public void exists(Comparable id, Continuation c) {
-     c.receiveResult(new Boolean(persistentObjects.containsKey(id))); 
+     String fileName = makeFileName(id);
+     File objFile = new File(backupDirectory, fileName);
+     c.receiveResult(new Boolean(objFile.exists())); 
   }
 
   /**
@@ -168,7 +168,9 @@ public class PersistentStorage implements Storage {
    * object (through receiveResult on c).
    */
   public void getObject(Comparable id, Continuation c){
-    c.receiveResult(persistentObjects.get(id));
+      String fileName = makeFileName(id);
+      File objFile = new File(backupDirectory, fileName);
+      c.receiveResult(readObject(objFile));
   }
 
   /**
@@ -244,6 +246,7 @@ public class PersistentStorage implements Storage {
    */
   private boolean initDirectories()
   {
+    System.out.println("Initing Directories");
     rootDirectory = new File(rootDir);
     if (createDir(rootDirectory) == false) {
       return false;
@@ -259,22 +262,11 @@ public class PersistentStorage implements Storage {
       return false;
     }
 
-    psDirectory = new File(rootDirectory, psDir);
-    if (createDir(psDirectory) == false) {
-      return false;
-    }
-    else {
-      File[] files = psDirectory.listFiles();
-      int numFiles = files.length;
-
-      for (int i = 0; i < numFiles; i++) {
-        files[i].delete();
-      }
-    }
     transDirectory = new File(rootDirectory, transDir);
     if (createDir(transDirectory) == false) {
       return false;
     }
+    System.out.println("Done Initing Directories");
     return true;
   }
 
@@ -304,9 +296,34 @@ public class PersistentStorage implements Storage {
 
   }
   /*****************************************************************/
-  /* Helper functions for Object Output                            */
+  /* Helper functions for Object Input/Output                      */
   /*****************************************************************/
+  public static Serializable readObject(File file){
+    /* We should check that a file in not being read and written concurrently */
+    Serializable toReturn = null;
+    if(file == null)
+       return null;
+    if(!file.exists())
+       return null;
 
+    FileInputStream fin;
+    ObjectInputStream objin;
+
+    synchronized (file) {
+          try {
+              fin = new FileInputStream(file);
+              objin = new ObjectInputStream(fin);
+              toReturn = (Serializable) objin.readObject();
+              fin.close();
+              objin.close();
+          }
+          catch (Exception e) {
+             e.printStackTrace();
+          }
+    }
+    return toReturn;
+  }
+     
 
   /**
    * Abstract over writing a single object to a file using Java
