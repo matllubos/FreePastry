@@ -8,7 +8,7 @@ import rice.post.security.*;
 import rice.email.*;
 import rice.past.*;
 import rice.scribe.*;
-import rice.storage.*;
+import rice.persistence.*;
 
 import java.net.*;
 
@@ -20,7 +20,7 @@ import java.security.*;
  *
  * @author Derek Ruths
  */
-public abstract class EmailTest {
+public class EmailTest {
 
     private InetSocketAddress firstAddress = null;	
     private SecurityService securityService = new SecurityService(null, null);
@@ -86,7 +86,7 @@ public abstract class EmailTest {
 
 		addresses[i] = new PostUserAddress(usernames[i]);
 
-		sManagers[i] = new MemoryStorageManager();
+		sManagers[i] = new StorageManager(new MemoryStorage(), new LRUCache(new MemoryStorage(), 1000000));
 
 		scribes[i] = new Scribe(localNodes[i], null);
 		
