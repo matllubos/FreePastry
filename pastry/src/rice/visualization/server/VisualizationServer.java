@@ -3,10 +3,16 @@ package rice.visualization.server;
 import java.io.*;
 import java.net.*;
 
+import rice.p2p.multiring.*;
+import rice.p2p.commonapi.IdFactory;
+
+import rice.*;
+import rice.persistence.*;
 import rice.visualization.*;
 import rice.visualization.data.*;
 import rice.visualization.client.*;
 import rice.pastry.*;
+import rice.pastry.commonapi.*;
 import rice.pastry.dist.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
@@ -29,17 +35,30 @@ public class VisualizationServer implements Runnable {
   
   protected PastryNode node;
   
+  protected StorageManager storage;
+  
   protected boolean willAcceptNewJars = true;
   
   protected boolean willAcceptNewRestartCommandLine = true;
   
   private String restartCommand = null;
+  
+  protected NetworkActivityChecker NAchecker;
+  
+  protected FreeDiskSpaceChecker FDSchecker;
+  
+  protected Random rng = new Random();
     
-  public VisualizationServer(InetSocketAddress address, PastryNode node, Object[] objects) {
+  public VisualizationServer(InetSocketAddress address, PastryNode node, StorageManager storage, Object[] objects) {
     this.address = address;
     this.objects = objects;
     this.node = node;
+    this.storage = storage;
     this.panelCreators = new Vector();
+    this.NAchecker = new NetworkActivityChecker();
+    this.FDSchecker = new FreeDiskSpaceChecker();
+    
+    ((DistPastryNode) node).addNetworkListener(NAchecker);
     this.debugCommandHandlers = new Vector();
   }
   
@@ -59,7 +78,7 @@ public class VisualizationServer implements Runnable {
       while (true) {
         final Socket socket = server.accept();
         
-        Thread t = new Thread() {
+        Thread t = new Thread("Visualization Server Thread for " + socket.getRemoteSocketAddress()) {
           public void run() {
             handleConnection(socket);
           }
@@ -81,7 +100,6 @@ public class VisualizationServer implements Runnable {
       while (true) {
         ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
         Object object = ois.readObject();
-        System.out.println("Got "+object);
         
         if (object instanceof DataRequest) {
           ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
@@ -94,7 +112,12 @@ public class VisualizationServer implements Runnable {
           
           Collection collection = handles.values();
           ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-          oos.writeObject(collection.toArray(new DistNodeHandle[0]));       
+          oos.writeObject(collection.toArray(new DistNodeHandle[0])); 
+        } else if (object instanceof ErrorsRequest) {
+          NAchecker.checkForErrors();
+          FDSchecker.checkForErrors();
+          ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+          oos.writeObject(getErrors());
         } else if (object instanceof UpdateJarRequest) {
           ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
           handleUpdateJarRequest((UpdateJarRequest)object,oos);
@@ -196,6 +219,10 @@ public class VisualizationServer implements Runnable {
     }
   }
   
+  protected String[] getErrors() {
+    return ((DistPastryNode) node).getErrors();
+  }
+  
   protected Data getData() {
     Data data = new Data();
     
@@ -226,6 +253,70 @@ public class VisualizationServer implements Runnable {
         restartCommand = restartCommand.concat(" "+args[i]);    
       }
     }
+  }
+  
+  public class NetworkActivityChecker implements NetworkListener {
+   
+    protected long lastSent = System.currentTimeMillis();
+
+    protected long lastReceived = System.currentTimeMillis();
+    
+    public void dataSent(Object message, InetSocketAddress address, int size) {
+      lastSent = System.currentTimeMillis();
+    }
+    
+    public void dataReceived(Object message, InetSocketAddress address, int size) {
+      lastReceived = System.currentTimeMillis();
+    }
+    
+    public void checkForErrors() {
+      int sent = (int) ((System.currentTimeMillis() - lastSent)/1000);
+      if (sent > 60)
+        ((DistPastryNode) node).addError("WARNING: No message has been sent in over " + sent + " seconds.");
+      
+      int received = (int) ((System.currentTimeMillis() - lastReceived)/1000);
+      if (received > 60)
+        ((DistPastryNode) node).addError("WARNING: No message has been received in over " + received + " seconds.");
+    }
+  
+  }
+  
+  public class FreeDiskSpaceChecker {
+    
+    byte[] data = new byte[5000];
+    
+    public void checkForErrors() {
+      final rice.p2p.commonapi.Id id  = generateId();
+      
+      storage.store(id, data, new Continuation() {
+        public void receiveResult(Object o) {
+          if (! (o.equals(new Boolean(true)))) 
+            ((DistPastryNode) node).addError("SEVERE: Attempt to store data under " + id + " failed with " + o);
+          else
+            storage.unstore(id, new Continuation() {
+              public void receiveResult(Object o) {
+                if (! (o.equals(new Boolean(true)))) 
+                  ((DistPastryNode) node).addError("SEVERE: Attempt to store data under " + id + " failed with " + o);
+              }
+              
+              public void receiveException(Exception e) {
+                ((DistPastryNode) node).addError("SEVERE: Attempt to store data under " + id + " failed with " + e);
+              }
+            });
+        }
+        
+        public void receiveException(Exception e) {
+          ((DistPastryNode) node).addError("SEVERE: Attempt to store data under " + id + " failed with " + e);
+        }
+      });
+    }
+  }
+  
+  private rice.p2p.commonapi.Id generateId() {
+    byte[] data = new byte[20];
+    rng.nextBytes(data);
+    IdFactory factory = new MultiringIdFactory(node.getId(), new PastryIdFactory());
+    return factory.buildId(data);
   }
 
 }

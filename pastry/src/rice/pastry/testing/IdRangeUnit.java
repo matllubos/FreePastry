@@ -90,7 +90,7 @@ public class IdRangeUnit {
       byte[] data = new byte[Id.IdBitLength / 8];
 
       data[data.length-1] = b;
-      return new Id(data);
+      return Id.build(data);
     }
       
 
