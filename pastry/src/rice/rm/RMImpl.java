@@ -657,6 +657,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
  7. Dont forget to enable calling of periodicMaintenance() in Maintenance msg
 
+ 8. Set the appropriate value of Maintenance Freq;
 
 */
 

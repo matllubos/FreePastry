@@ -60,7 +60,7 @@ import java.util.*;
 public class RMMaintenanceMsg extends RMMessage implements Serializable
 {
 
-    public static int maintFreq = 30 ; // in seconds
+    public static int maintFreq = 120 ; // in seconds (here it is 2 minutes)
     
 
     /**
