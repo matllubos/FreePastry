@@ -101,6 +101,21 @@ public interface Catalog {
    */
   public void scan(IdRange range , Continuation c);
 
+ /**
+   * Return the objects identified by the given range of ids. The IdSet 
+   * returned contains the Ids of the stored objects. The range is
+   * partially inclusive, the lower range is inclusive, and the upper
+   * exclusive.
+   *
+   *
+   * NOTE: This method blocks so if the behavior of this method changes and
+   * no longer stored in memory, this method may be deprecated.
+   *
+   * @param range The range to query  
+   * @return The idset containg the keys 
+   */
+  public IdSet scan(IdRange range);
+
   /**
    * Returns the total size of the stored data in bytes.The result
    * is returned via the receiveResult method on the provided

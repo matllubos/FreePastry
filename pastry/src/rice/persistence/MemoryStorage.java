@@ -137,6 +137,26 @@ public class MemoryStorage implements Storage {
     c.receiveResult(idSet.subSet(range.getCCW(), range.getCW()));    
   }
 
+  /**
+   * Return the objects identified by the given range of ids. The IdSet 
+   * returned contains the Ids of the stored objects. The range is
+   * partially inclusive, the lower range is inclusive, and the upper
+   * exclusive.
+   *
+   *
+   * NOTE: This method blocks so if the behavior of this method changes and
+   * the guys don't fit in memory, this method may be deprecated.
+   *
+   * @param range The range to query  
+   * @return The idset containg the keys 
+   */
+  public IdSet scan(IdRange range){
+    IdSet toReturn = idSet.subSet(range.getCCW(), range.getCW()); 
+    return(toReturn);
+  }
+
+
+
   public void getTotalSize(Continuation c) {
     c.receiveResult(new Integer(currentSize));
   }

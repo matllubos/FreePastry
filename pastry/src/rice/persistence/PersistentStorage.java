@@ -237,29 +237,35 @@ public class PersistentStorage implements Storage {
    *
    *
    * When the operation is complete, the receiveResult() method is called
-   * on the provided continuation with a Comparable[] result containing the
+   * on the provided continuation with an IdSet result containing the
    * resulting IDs.
    *
-   * @param start The staring id of the range. (inclusive)
-   * @param end The ending id of the range. (exclusive) 
+   * @param range The range to query  
    * @param c The command to run once the operation is complete
    * @return The idset containg the keys 
    */
   public void scan(IdRange range , Continuation c) {
-    Id startId;
-    Id endId;
-    try {
-      startId = (Id) range.getCCW();
-      endId = (Id) range.getCW();
-    } catch (ClassCastException e) {
-        c.receiveException(new IllegalArgumentException("start and end passed into scan are not id!"));
-        return;
-    }
-
-    IdSet toReturn = idSet.subSet(startId, endId); 
-
+    IdSet toReturn = idSet.subSet(range.getCCW(), range.getCW()); 
     c.receiveResult(toReturn);
-   }
+  }
+
+  /**
+   * Return the objects identified by the given range of ids. The IdSet 
+   * returned contains the Ids of the stored objects. The range is
+   * partially inclusive, the lower range is inclusive, and the upper
+   * exclusive.
+   *
+   *
+   * NOTE: This method blocks so if the behavior of this method changes and
+   * uses the disk, this method may be deprecated.
+   *
+   * @param range The range to query  
+   * @return The idset containg the keys 
+   */
+  public IdSet scan(IdRange range){
+    IdSet toReturn = idSet.subSet(range.getCCW(), range.getCW()); 
+    return(toReturn);
+  }
 
   /**
    * Returns the total size of the stored data in bytes.The result

@@ -45,7 +45,7 @@ package rice.persistence;
  * @version $Id$
  */
 import java.io.*;
-
+import java.util.Iterator;
 import rice.*;
 import rice.pastry.*;
 
@@ -168,27 +168,28 @@ public class StorageManager implements Cache, Storage {
    */
    public void scan(final IdRange range, final Continuation c) {
     Continuation scanner = new Continuation() {
-      private Comparable[] fromCache;
+      private IdSet fromCache;
       
       public void receiveResult(Object o) {
         if (fromCache == null) {
-          fromCache = (Comparable[]) o;
+          fromCache = (IdSet) o;
 
           storage.scan(range, this);
         } else {
-          Comparable[] fromStorage = (Comparable[]) o;
+          IdSet fromStorage = (IdSet) o;
 
-          Comparable[] result = new Comparable[fromCache.length + fromStorage.length];
+          IdSet toReturn = new IdSet();
 
-          for (int i=0; i<fromCache.length; i++) {
-            result[i] = fromCache[i];
+          Iterator i = fromStorage.getIterator(); 
+          while(i.hasNext()){
+             toReturn.addMember((Id) i.next());
+          }
+          i = fromCache.getIterator(); 
+          while(i.hasNext()){
+             toReturn.addMember((Id) i.next());
           }
 
-          for (int i=fromCache.length; i<result.length; i++) {
-            result[i] = fromStorage[i - fromCache.length];
-          }
-
-          c.receiveResult(result);
+          c.receiveResult(toReturn);
         }
       }
 
@@ -200,6 +201,35 @@ public class StorageManager implements Cache, Storage {
     cache.scan(range, scanner);   
   }
 
+  /**
+   * Return the objects identified by the given range of ids. The IdSet 
+   * returned contains the Ids of the stored objects. The range is
+   * partially inclusive, the lower range is inclusive, and the upper
+   * exclusive.
+   *
+   *
+   * NOTE: This method blocks so if the behavior of this method changes and
+   * uses the disk, this method may be deprecated.
+   *
+   * @param range The range to query  
+   * @return The idset containg the keys 
+   */
+  public IdSet scan(IdRange range){
+          IdSet fromStorage = storage.scan(range);
+          IdSet fromCache = cache.scan(range);  
+          IdSet toReturn = new IdSet();
+          Iterator i = fromStorage.getIterator(); 
+          while(i.hasNext()){
+             toReturn.addMember((Id) i.next());
+          }
+          i = fromCache.getIterator(); 
+          while(i.hasNext()){
+             toReturn.addMember((Id) i.next());
+          }
+          return(toReturn);
+  }
+
+  
   /**
    * Returns the total size of the stored data in bytes.The result
    * is returned via the receiveResult method on the provided
