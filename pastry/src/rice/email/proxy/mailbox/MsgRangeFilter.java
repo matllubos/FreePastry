@@ -43,6 +43,10 @@ public class MsgRangeFilter
             else
                 _top = Integer.parseInt(top);
 
+            if ((_top < 0) || (_bottom < 0)) {
+              throw new MailboxException("Invalid range given");
+            }
+
         }
 
         _isUID = uid;
