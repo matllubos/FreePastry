@@ -245,9 +245,9 @@ public class PastryRegrTest {
 	NodeId localId = rta.getNodeId();
 
 	// check size
-	if (ls.size() < ls.maxSize() && pastryNodesSorted.size() > ls.size() + 1)
-	    System.out.println("checkLeafSet: too small at" + rta.getNodeId() +
-			       "ls.size()=" + ls.size() + " total nodes=" + pastryNodesSorted.size() + "\n" + ls);
+	if (ls.size() < ls.maxSize() && (pastryNodesSorted.size()-1)*2 != ls.size())
+	    System.out.println("checkLeafSet: incorrect size " + rta.getNodeId() +
+			       " ls.size()=" + ls.size() + " total nodes=" + pastryNodesSorted.size() + "\n" + ls);
 
 	// check for correct leafset range
 	// ccw half
@@ -401,10 +401,10 @@ public class PastryRegrTest {
     public static void main(String args[]) {
 	PastryRegrTest pt = new PastryRegrTest();
 	
-	int n = 500;
-	int d = 200;
+	int n = 30;
+	int d = 20;
 	int k = 100;
-	int numConcJoins = 8;
+	int numConcJoins = 1;
 	int m = 100;
 
 	Date old = new Date();

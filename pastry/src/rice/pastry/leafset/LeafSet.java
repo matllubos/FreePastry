@@ -58,7 +58,7 @@ public class LeafSet extends Observable implements Serializable {
     private SimilarSet ccwSet;
 
     private int theSize;
-    private boolean wrapped; // the leafset contains the entire ring
+    private boolean singleton; // the leafset was always empty
 
     /**
      * Constructor.
@@ -71,7 +71,7 @@ public class LeafSet extends Observable implements Serializable {
     {
 	baseId = localNode.getNodeId();
 	theSize = size;
-	wrapped = true;
+	singleton = true;
 
 	cwSet = new SimilarSet(localNode, size/2, true);
 	ccwSet = new SimilarSet(localNode, size/2, false);
@@ -81,49 +81,19 @@ public class LeafSet extends Observable implements Serializable {
      * Puts a NodeHandle into the set.
      *
      * @param handle the handle to put.
-     * @param from the node from which the handle was received
      * @return true if successful, false otherwise.
      */
 
-    /*
-    private boolean put(NodeHandle handle, NodeHandle from) 
+    public boolean put(NodeHandle handle) 
     {
 	NodeId nid = handle.getNodeId();
 	if (nid.equals(baseId)) return false;
 	if (member(nid)) return false;
 	
-	if (size() == 0) {
-	    cwSet.put(handle);
-	    ccwSet.put(handle);
-	    return true;
-	}
-	
-	boolean res1;
-	boolean res2;
+	boolean res = cwSet.put(handle) | ccwSet.put(handle);
+	singleton &= res;
 
-	if (ccwSet.member(from)) 
-	    res1 = cwSet.put(handle);
-	if (cwSet.member(from))
-	    res2 = cwSet.put(handle);
-
-	return res1 | res2;
-    }
-    */
-
-    /**
-     * Puts a NodeHandle into the set.
-     *
-     * @param handle the handle to put.
-     * @return true if successful, false otherwise.
-     */
-
-    private boolean put(NodeHandle handle) 
-    {
-	NodeId nid = handle.getNodeId();
-	if (nid.equals(baseId)) return false;
-	if (member(nid)) return false;
-
-	return cwSet.put(handle) || ccwSet.put(handle);
+	return res;
     }
 
     /**
@@ -144,17 +114,24 @@ public class LeafSet extends Observable implements Serializable {
 
 
     /**
-     * Test if the leafset spans the entire ring
+     * Test if the leafset overlaps
      * 
      * @return true if the most distant cw member appears in the ccw set, false otherwise
      */
 
-    public boolean spansRing() {
-	/*
+    public boolean overlaps() {
 	if (size() > 0 && ccwSet.member(cwSet.get(cwSet.size()-1).getNodeId())) return true;
 	else return false;
-	*/
-	return false;
+    }
+
+    /**
+     * Test if the leafset has always been empty
+     * 
+     * @return true if the leafset never contaied any entries (a singleton node)
+     */
+
+    public boolean isSingleton() {
+	return singleton;
     }
 
     /**
@@ -330,21 +307,23 @@ public class LeafSet extends Observable implements Serializable {
 	    // localId not in cw set
 
 	    if (ccw < 0) {
-		// localId not in received leafset, we are joining
+		// localId not in received leafset, that means local node is joining
 
-		if (remotels.size() == 0) {
+		if (remotels.size() < 2) {
 		    cw = ccw = 0;
 		}
 		else {
-		    // get index of entry closest to local nodeId
-		    int closest = remotels.mostSimilar(baseId);
-		    NodeId closestId = remotels.get(closest).getNodeId();
 		    
-		    if (!baseId.clockwise(closestId) && !baseId.equals(closestId))
-			closest++;
-
-		    cw = closest;
-		    ccw = closest - 1;
+		    if (baseId.clockwise(from.getNodeId())) {
+			cw = 0;
+			ccw = remotels.cwSet.getIndex(remotels.ccwSet.get(0).getNodeId()) + 1;
+			if (ccw == 0) ccw = -1;
+		    }
+		    else {
+			ccw = 0;
+			cw = -remotels.ccwSet.getIndex(remotels.cwSet.get(0).getNodeId()) - 1;
+			if (cw == 0) cw = 1;
+		    }
 		}
 	    }
 	    else {

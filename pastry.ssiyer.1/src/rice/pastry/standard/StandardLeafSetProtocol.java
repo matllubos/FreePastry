@@ -384,7 +384,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	// if we lost entries, or the size is below max and we don't span the entire ring then
 	// request the leafset from other leafset members
 	if (lostMembers || 
-	    //(leafSet.size() < leafSet.maxSize() && !leafSet.spansRing())) {
+	    //(leafSet.size() < leafSet.maxSize() && !leafSet.overlaps())) {
 	    (leafSet.size() < leafSet.maxSize()) ) {
 
 	    // request leaf sets
@@ -416,7 +416,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	    }
 	}
 
-	if (allDead && ccwSize > 0) 
+	if (allDead && leafSet.size() > 0) 
 	    System.out.println("Ring failure at" + localHandle.getNodeId() + "all ccw leafset entries failed");
 
 	allDead = true;
@@ -430,7 +430,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	    }
 	}
 
-	if (allDead && cwSize > 0) 
+	if (allDead && leafSet.size() > 0) 
 	    System.out.println("Ring failure at" + localHandle.getNodeId() + "all cw leafset entries failed");
 
     }

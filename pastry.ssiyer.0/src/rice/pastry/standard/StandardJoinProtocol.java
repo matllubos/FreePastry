@@ -103,6 +103,7 @@ public class StandardJoinProtocol implements MessageReceiver
 	    
 	    if (nh.isAlive() == true)  // the handle is alive
 		if (jr.accepted() == false) {   // this the terminal node on the request path
+		    //leafSet.put(nh);
 		    jr.acceptJoin(localHandle,leafSet);
 
 		    nh.receiveMessage(jr);
