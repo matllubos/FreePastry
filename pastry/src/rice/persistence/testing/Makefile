@@ -1,3 +1,5 @@
+PACKAGE = rice.persistence.testing
+
 SOURCE  = \
   Test.java \
   StorageTest.java \

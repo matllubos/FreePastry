@@ -1,3 +1,5 @@
+PACKAGE = rice.persistence
+
 SOURCE  = \
   Catalog.java \
 	Storage.java \
