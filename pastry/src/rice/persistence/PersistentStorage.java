@@ -354,7 +354,7 @@ public class PersistentStorage implements Storage {
           throw e;
         }
 
-        System.out.println("COUNT: " + System.currentTimeMillis() + " Storing data of class " + obj.getClass().getName() + " under " + id.toStringFull() + " of size " + objFile.length() + " in " + name);       
+        System.out.println("COUNT: " + System.currentTimeMillis() + " Storing data of class " + obj.getClass().getName() + " under " + id.toStringFull() + " of size " + transcFile.length() + " in " + name);       
         
         /* recalculate amount used */
         decreaseUsedSpace(getFileLength(objFile)); 
