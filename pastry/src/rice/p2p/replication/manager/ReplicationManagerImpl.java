@@ -196,9 +196,6 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
   public void setRange(final IdRange range) {
     log.finest(endpoint.getId() + ": Removing range " + range + " from the list of pending ids");
 
-    /* tell the helper and deleter that the range has changed */
-    System.out.println("RMImpl.setRange " + instance + ": " + range);
-
     helper.setRange(range);
     deleter.setRange(range);
   }    
