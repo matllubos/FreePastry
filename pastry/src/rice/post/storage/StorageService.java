@@ -10,7 +10,6 @@ import javax.crypto.spec.*;
 
 import rice.*;
 import rice.past.*;
-import rice.storage.*;
 import rice.post.*;
 import rice.post.security.*;
 import rice.pastry.*;
@@ -351,15 +350,14 @@ public class StorageService {
      */
     public void receiveResult(Object result) {
       try {
-        StorageObject so = (StorageObject) result;
+        ContentHashData chd = (ContentHashData) result;
 
-        if (so == null) {
+        if (chd == null) {
           command.receiveResult(null);
           return;
         }
 
         // TO DO: fetch from multiple locations to prevent rollback attacks
-        ContentHashData chd = (ContentHashData) so.getOriginal();
         byte[] keyBytes = reference.getKey().getEncoded();
 
         byte[] cipherText = chd.getData();
@@ -395,7 +393,7 @@ public class StorageService {
     }
 
     /**
-      * Called when a previously requested result causes an exception
+     * Called when a previously requested result causes an exception
      *
      * @param result The exception caused
      */
@@ -421,7 +419,7 @@ public class StorageService {
     private int state;
 
     /**
-      * This contructs creates a task to store a given data and call the
+     * This contructs creates a task to store a given data and call the
      * given command when the data has been stored.
      *
      * @param data The data to store
@@ -438,13 +436,13 @@ public class StorageService {
      */
     protected void start() {
       state = STATE_1;
-      past.exists(location, this);
+      past.delete(location, credentials, this);
 
-      // Now we wait to see if this thing exists in PAST, which is relayed to
+      // Now we wait to see if this thing existed in PAST, which is relayed to
       // us via the receiveResult method
     }
 
-    private void startState1(boolean exists) {
+    private void startState1() {
       try {
         byte[] plainText = security.serialize(data);
         byte[] timestamp = security.getByteArray(System.currentTimeMillis());
@@ -455,13 +453,8 @@ public class StorageService {
 
         state = STATE_2;
 
-        if (exists) {
-          // Store the signed data in PAST as an update
-          past.update(location, sd, credentials, this);
-        } else {
-          // Store the signed data in PAST starting a new thingy
-          past.insert(location, sd, credentials, this);
-        }
+        // Store the signed data in PAST 
+        past.insert(location, sd, credentials, this);
 
         // Now we wait to make sure that the update or insert worked, and
         // then return the reference.
@@ -486,7 +479,7 @@ public class StorageService {
     public void receiveResult(Object result) {
       switch (state) {
         case STATE_1:
-          startState1(((Boolean) result).booleanValue());
+          startState1();
           break;
         case STATE_2:
           startState2(((Boolean) result).booleanValue());
@@ -547,37 +540,22 @@ public class StorageService {
       Object data = null;
       
       try {
-        StorageObject so = (StorageObject) result;
+        SignedData sd = (SignedData) result;
 
-        if (so == null) {
+        if (sd == null) {
           command.receiveResult(null);
           return;
         }
-
-        SignedData sd = null;
-
-        if (so.getUpdates().size() == 0) {
-          sd = (SignedData) so.getOriginal();
-        } else {
-          Vector updates = so.getUpdates();
-          sd = (SignedData) updates.elementAt(updates.size() - 1);
-        }
-
+      
         byte[] plainText = sd.getData();
         data = security.deserialize(plainText);
 
         pendingVerification.put(data, sd);
 
         command.receiveResult((PostData) data);
-      }
- /*     catch (ClassCastException cce) {
-        command.receiveException(new StorageException("ClassCastException while retrieving data: " + data + result));
-        cce.printStackTrace();
-      } */
-      catch (IOException ioe) {
+      } catch (IOException ioe) {
         command.receiveException(new StorageException("IOException while retrieving data: " + ioe));
-      }
-      catch (ClassNotFoundException cnfe) {
+      } catch (ClassNotFoundException cnfe) {
         command.receiveException(new StorageException("ClassNotFoundException while retrieving data: " + cnfe));
       }
     }
@@ -760,14 +738,13 @@ public class StorageService {
      */
     public void receiveResult(Object result) {
       try {
-        StorageObject so = (StorageObject) result;
+        SecureData sd = (SecureData) result;
 
-        if (so == null) {
+        if (sd == null) {
           command.receiveResult(null);
           return;
         }
 
-        SecureData sd = (SecureData) so.getOriginal();
         byte[] keyBytes = reference.getKey().getEncoded();
 
         byte[] cipherText = sd.getData();

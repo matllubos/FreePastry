@@ -17,7 +17,7 @@ import rice.post.security.*;
 
 import rice.scribe.*;
 
-import rice.storage.*;
+import rice.persistence.*;
 
 import java.util.*;
 import java.net.*;
@@ -111,7 +111,7 @@ public class DistPostRegrTest {
     PastryNode pn = factory.newNode(getBootstrap());
     pastrynodes.add(pn);
 
-    StorageManager sm = new MemoryStorageManager();
+    StorageManager sm = new StorageManager(new MemoryStorage(), new LRUCache(new MemoryStorage(), 1000000));
     PASTServiceImpl past = new PASTServiceImpl(pn, sm);
     pastNodes.add(past);
 
