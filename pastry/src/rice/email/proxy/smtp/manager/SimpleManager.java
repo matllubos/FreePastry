@@ -15,6 +15,7 @@ import rice.email.proxy.mailbox.postbox.*;
 public class SimpleManager implements SmtpManager {
 
   public static String POST_HOST = "dosa.cs.rice.edu";
+  public static String SMTP_HOST = "moe.rice.edu";
 
   private boolean gateway;
 
@@ -96,7 +97,8 @@ public class SimpleManager implements SmtpManager {
 
     for (int j=0; j<nonPostRecps.size();  j++) {
       MailAddress addr = (MailAddress) nonPostRecps.elementAt(j);
-      String[] hosts = dns.lookup(addr.getHost());
+//      String[] hosts = dns.lookup(addr.getHost());
+      String[] hosts = new String[] {SMTP_HOST};
 
       if (hosts.length == 0) {
         System.out.println( "No MX records found for " + addr.getHost());
