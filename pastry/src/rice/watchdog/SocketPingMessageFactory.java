@@ -33,7 +33,8 @@ public class SocketPingMessageFactory implements PingMessageFactory {
     if (initialized) return;
     initialized = true;
     pingMessage = null;
-    pingMessage = new PingMessage(new InetSocketAddress(InetAddress.getLocalHost(),port));
+    // TODO: figure out how to fix this, now we need socket node handles to ping
+//    pingMessage = new PingMessage(null, new InetSocketAddress(InetAddress.getLocalHost(),port));
 
 /*
     try {
