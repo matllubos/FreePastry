@@ -379,7 +379,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
       while (i.hasNext()) {
         Id id = (Id) i.next();
         
-        if (range.containsId(id)) {
+        if (notRange.containsId(id)) {
           set.removeId(id);
         }
       }

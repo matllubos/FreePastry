@@ -439,6 +439,8 @@ public abstract class CommonAPITest {
           PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
         else if (s.equalsIgnoreCase("rmi"))
           PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
+        else if (s.equalsIgnoreCase("socket"))
+          PROTOCOL = DistPastryNodeFactory.PROTOCOL_SOCKET;
         else if (s.equalsIgnoreCase("direct"))
           PROTOCOL = PROTOCOL_DIRECT;
         else
