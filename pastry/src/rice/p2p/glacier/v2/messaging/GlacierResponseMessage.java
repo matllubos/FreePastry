@@ -6,19 +6,21 @@ import rice.p2p.glacier.*;
 
 public class GlacierResponseMessage extends GlacierMessage {
   protected FragmentKey[] keys;
+  protected long[] lifetimes;
   protected boolean[] haveIt;
   protected boolean[] authoritative;
 
-  public GlacierResponseMessage(int uid, FragmentKey key, boolean haveIt, boolean authoritative, NodeHandle source, Id dest, boolean isResponse) {
-    this(uid, new FragmentKey[] { key }, new boolean[] { haveIt }, new boolean[] { authoritative }, source, dest, isResponse);
+  public GlacierResponseMessage(int uid, FragmentKey key, boolean haveIt, long lifetime, boolean authoritative, NodeHandle source, Id dest, boolean isResponse) {
+    this(uid, new FragmentKey[] { key }, new boolean[] { haveIt }, new long[] { lifetime }, new boolean[] { authoritative }, source, dest, isResponse);
   }
 
-  public GlacierResponseMessage(int uid, FragmentKey[] keys, boolean[] haveIt, boolean[] authoritative, NodeHandle source, Id dest, boolean isResponse) {
+  public GlacierResponseMessage(int uid, FragmentKey[] keys, boolean[] haveIt, long[] lifetimes, boolean[] authoritative, NodeHandle source, Id dest, boolean isResponse) {
     super(uid, source, dest, isResponse);
 
     this.keys = keys;
     this.haveIt = haveIt;
     this.authoritative = authoritative;
+    this.lifetimes = lifetimes;
   }
 
   public int numKeys() {
@@ -35,6 +37,10 @@ public class GlacierResponseMessage extends GlacierMessage {
 
   public boolean getAuthoritative(int index) {
     return authoritative[index];
+  }
+
+  public long getExpiration(int index) {
+    return lifetimes[index];
   }
 
   public String toString() {
