@@ -300,6 +300,24 @@ public class PASTServiceImpl
   }
   
   /**
+   * Returns whether an object is currently stored at the given ID.
+   * @param id Pastry key of original object
+   * @return true if an object was found, false otherwise
+   */
+  public boolean exists(NodeId id) {
+    NodeId nodeId = _pastryNode.getNodeId();
+    debug("Request to determine if file " + id + " exists, at node " + nodeId);
+    MessageExists request = new MessageExists(nodeId, id);
+    MessageExists response = (MessageExists) _sendRequestMessage(request);
+    if (response != null) {
+      return response.exists();
+    }
+    else {
+      return false;
+    }
+  }
+  
+  /**
    * Remotely reclaims the space used by the object with handle id,
    * effectively deleting it.
    * @param id Pastry key of original object

@@ -14,34 +14,34 @@ import java.util.Random;
 import java.io.*;
 
 /**
- * @(#) MessageLookup.java
+ * @(#) MessageExists.java
  *
- * PASTMessage requesting a file be retrieved from the local node.
+ * PASTMessage detemining if a file exists at a given id.
  *
  * @version $Id$
  * @author Charles Reis
  */
-public class MessageLookup extends PASTMessage {
+public class MessageExists extends PASTMessage {
   
   /**
    * Content to be returned
    */
-  protected StorageObject _content = null;
+  protected boolean _exists = false;
   
   /**
-   * Builds a new request to lookup an existing file.
+   * Builds a new request to see if a file exists.
    * @param nodeId Source Pastry node's ID
    * @param fileId Pastry key of desired file
    */
-  public MessageLookup(NodeId nodeId, NodeId fileId) {
+  public MessageExists(NodeId nodeId, NodeId fileId) {
     super(nodeId, fileId);
   }
   
   /**
-   * Returns the located storage object.
+   * Returns whether the file exists.
    */
-  public StorageObject getContent() {
-    return _content;
+  public boolean exists() {
+    return _exists;
   }
   
   /**
@@ -49,9 +49,9 @@ public class MessageLookup extends PASTMessage {
    * @param service PASTService on which to act
    */
   public void performAction(PASTServiceImpl service) {
-    debug("  Looking up file " + getFileId() + " at node " +
+    debug("  Seeing if file " + getFileId() + " exists, at node " +
           service.getPastryNode().getNodeId());
-    _content = service.getStorage().lookup(getFileId());
+    _exists = service.getStorage().exists(getFileId());
     setType(RESPONSE);
     service.sendMessage(this);
   }
@@ -60,7 +60,7 @@ public class MessageLookup extends PASTMessage {
    * Display this message.
    */
   public String toString() {
-    String val = "LOOKUP ";
+    String val = "EXISTS ";
     if (getType() == REQUEST) {
       val += "Request: ";
     }

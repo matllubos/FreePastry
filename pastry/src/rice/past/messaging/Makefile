@@ -7,6 +7,7 @@ SOURCE  = \
 	PASTMessage.java\
 	MessageInsert.java\
 	MessageLookup.java\
+	MessageExists.java\
 	MessageAppend.java\
 	MessageReclaim.java
 

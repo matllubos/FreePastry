@@ -90,11 +90,20 @@ public class StorageRegrTest {
     StorageManager sm = new StorageManagerImpl(_pm);
     Credentials userCred = new Credentials() {};
     
-    // Store file1
     NodeId id1 = _idFactory.generateNodeId();
     Persistable file1 = new DummyPersistable("file 1");
+    
+    // Check that file1 does not exist
+    assertTrue("SingleFile", "File should not exist",
+               !sm.exists(id1));
+    
+    // Store file1
     assertTrue("SingleFile", "File should store successfully",
                sm.insert(id1, file1, userCred));
+    
+    // Check that file1 exists
+    assertTrue("SingleFile", "File should exist",
+               sm.exists(id1));
     
     // Retrieve file1
     StorageObject result = sm.lookup(id1);
@@ -130,12 +139,20 @@ public class StorageRegrTest {
                    updateArray[i], update);
     }
     
+    // Check that file1 exists
+    assertTrue("SingleFile", "File should exist",
+               sm.exists(id1));
+    
     // Remove file1
     assertTrue("SingleFile", "File should successfully delete",
                sm.delete(id1, userCred));
     result = sm.lookup(id1);
     assertTrue("SingleFile", "Retrieved result should be null",
                result == null);
+    
+    // Check that file1 does not exist
+    assertTrue("SingleFile", "File should not exist",
+               !sm.exists(id1));
   }
   
   /**

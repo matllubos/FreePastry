@@ -45,6 +45,13 @@ public interface StorageManager {
   public StorageObject lookup(NodeId id);
   
   /**
+   * Returns whether an object is currently stored at the given ID.
+   * @param id Pastry key of original object
+   * @return true if an object was found, false otherwise
+   */
+  public boolean exists(NodeId id);
+  
+  /**
    * Removes the object with the given ID from storage.
    * @param id Pastry key of original object
    * @param authorCred Author's credentials

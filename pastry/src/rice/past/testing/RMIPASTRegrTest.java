@@ -278,10 +278,18 @@ public class RMIPASTRegrTest {
     NodeId remoteId = remote.getPastryNode().getNodeId();
     Persistable file = new DummyPersistable("test file");
     
+    // Check file does not exist
+    assertTrue("RouteRequest", "File should not exist before insert",
+               !local.exists(remoteId));
+    
     // Insert file
     System.out.println("TEST: RouteRequest: Inserting file with key: " + remoteId);
     assertTrue("RouteRequest", "Insert of file should succeed",
                local.insert(remoteId, file, null));
+    
+    // Check file exists
+    assertTrue("RouteRequest", "File should exist after insert",
+               local.exists(remoteId));
     
     // Lookup file locally
     StorageObject result = remote.getStorage().lookup(remoteId);
@@ -307,11 +315,15 @@ public class RMIPASTRegrTest {
     StorageObject test = local.lookup(fileId);
     assertTrue("PASTFunctions", "Lookup before insert should fail",
                  test == null);
+    assertTrue("PASTFunctions", "File should not exist before insert",
+               !local.exists(fileId));
     
     // Insert file
     System.out.println("TEST: PASTFunctions: Inserting file with key: " + fileId);
     assertTrue("PASTFunctions", "Insert of file should succeed",
                local.insert(fileId, file, userCred));
+    assertTrue("PASTFunctions", "File should exist after insert",
+               local.exists(fileId));
     
     // Try to insert again
     assertTrue("PASTFunctions", "Re-insert of file should fail",
@@ -374,6 +386,9 @@ public class RMIPASTRegrTest {
                    update, update2);
     }
 
+    // Check file still exists
+    assertTrue("PASTFunctions", "File should still exist after updates",
+               local.exists(fileId));
     
     // Reclaim space used by file
     System.out.println("TEST: Reclaiming file with key: " + fileId);
@@ -389,6 +404,10 @@ public class RMIPASTRegrTest {
       assertTrue("PASTFunctions", "File should not be found remotely, node " + i,
                  result == null);
     }
+    
+    // Check file does not exist
+    assertTrue("PASTFunctions", "File should not exist after delete",
+               !local.exists(fileId));
   }
   
 
