@@ -1385,32 +1385,18 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         refreshInAggregates();
       }
       private void refreshInAggregates() {
-        Continuation.MultiContinuation mc = new Continuation.MultiContinuation(new Continuation() {
+        Continuation c = new Continuation() {
           public void receiveResult(Object o) {
-            try {
-              Object[] oa = (Object[]) o;
-              for (int i=0; i<oa.length; i++)
-                if ((result[i] instanceof Boolean) && !(oa[i] instanceof Boolean))
-                  result[i] = oa[i];
-            } catch (Exception e) {
-              warn("Cannot merge results");
-              e.printStackTrace();
-            }
-            
             aggregateList.writeToDisk(); 
-            command.receiveResult(result);
+            command.receiveResult(o);
           }
           public void receiveException(Exception e) {
             e.printStackTrace();
             command.receiveException(e);
           }
-        }, ids.length);
+        };
 
-        int totalMissing = 0;
-        for (int i=0; i<ids.length; i++)
-          totalMissing += refreshInternal(ids[i], expirations[i], (totalMissing < maxReaggregationPerRefresh), mc.getSubContinuation(i));
-        if (totalMissing > 0)
-          warn("refresh: "+totalMissing+"/"+ids.length+" objects not in aggregate list, fetched "+Math.min(totalMissing, maxReaggregationPerRefresh));
+        refreshInternal(ids, expirations, result, c);
       }
     });
   }
@@ -1460,143 +1446,211 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     }
   }
 
-  private int refreshInternal(final Id id, final long expiration, final boolean mayReaggregate, final Continuation command) {
-    int objectsMissing = 0;
-
-    AggregateDescriptor adc = (AggregateDescriptor) aggregateList.getADC(id);
-    log(2, "Refresh("+id.toStringFull()+", expiration="+expiration+")");
+  private void refreshInternal(final Id[] ids, final long[] expirations, final Object[] result, final Continuation command) {
+    log(2, "refreshInternal: Accepted "+ids.length+" keys, starting with first key...");
     
-    if (adc!=null) {
-      int objDescIndex = adc.lookupNewest(id);
-      if (objDescIndex < 0) {
-        warn("NL: Aggregate found, but object not found in aggregate?!? -- aborted");
-        command.receiveException(new AggregationException("Inconsistency detected in aggregate list -- try restarting the application"));
-        return objectsMissing;
-      }
+    final Continuation theContinuation = new Continuation() {
+      int objectsMissing = 0;
+      int objectsFetched = 0;
+      int currentIndex = -1;
 
-      if (adc.objects[objDescIndex].refreshedLifetime < expiration)
-        aggregateList.setObjectRefreshedLifetime(adc, objDescIndex, expiration);
-
-      command.receiveResult(new Boolean(true));
-    } else {
-      boolean foundWaiting = false;
-      IdSet waitingIds = waitingList.scan();
-      Iterator iter = waitingIds.getIterator();
-      
-      while (iter.hasNext()) {
-        final VersionKey vkey = (VersionKey) iter.next();
-        if (vkey.getId().equals(id)) {
-          ObjectDescriptor thisObject = (ObjectDescriptor) waitingList.getMetadata(vkey);
-          log(2, "Refreshing in waiting list: " + vkey.toStringFull());
-          foundWaiting = true;
-          
-          if (thisObject == null) {
-            warn("Broken object in waiting list: " + vkey.toStringFull() + ", removing...");
-            waitingList.unstore(vkey, new Continuation() {
-              public void receiveResult(Object o) {
-                log(2, "Broken object "+vkey.toStringFull()+" removed successfully");
-              }
-              public void receiveException(Exception e) {
-                warn("Cannot remove broken object "+vkey.toStringFull()+" from waiting list (exception: "+e+")");
-                e.printStackTrace();
-              }
-            });
-            command.receiveException(new AggregationException("Object in waiting list, but broken: "+vkey.toStringFull()));
-            return objectsMissing;
-          }
-
-          if (thisObject.refreshedLifetime < expiration) {
-            ObjectDescriptor newDescriptor = new ObjectDescriptor(
-              thisObject.key, thisObject.version, thisObject.currentLifetime, 
-              expiration, thisObject.size
-            );
-
-            waitingList.setMetadata(vkey, newDescriptor, new Continuation() {
-              public void receiveResult(Object o) {
-                log(3, "Refreshed metadata written ok for "+vkey.toStringFull());
-              }
-              public void receiveException(Exception e) {
-                warn("Cannot refresh waiting object "+vkey.toStringFull()+", e="+e);
-                e.printStackTrace();
-              }
-            });
-          }
+      public void receiveResult(Object o) {
+        if (currentIndex >= 0) {
+          log(3, "Internal refresh of "+ids[currentIndex].toStringFull()+" returned "+o);
+          result[currentIndex] = o;
         }
-      }
-      
-      if (foundWaiting) {
-        log(2, "Found waiting -- returning");
-        command.receiveResult(new Boolean(true));
-        return objectsMissing;
-      }
-    
-      /* Maybe the object is missing from the aggregate list? We attempt to fetch it 
-         from PAST, and if it is found there, we add it to the waiting list */
 
-      if (addMissingAfterRefresh) {
-        objectsMissing ++;
-        
-        if (mayReaggregate) {
-          objectStore.lookup(id, false, new Continuation() {
-            public void receiveResult(Object o) {
-              if (o instanceof PastContent) {
-                final PastContent obj = (PastContent) o;
-                warn("Refresh: Found in PAST, but not in aggregate list: "+id);
+        currentIndex ++;
+        if (currentIndex >= ids.length) {
+          if (objectsMissing > 0) 
+            warn("refresh: "+objectsMissing+"/"+ids.length+" objects not in aggregate list, fetched "+objectsFetched+" (max "+maxReaggregationPerRefresh+")");
             
-                long theVersion;
-                if (o instanceof GCPastContent) {
-                  theVersion = ((GCPastContent)obj).getVersion();
-                } else {
-                  theVersion = 0;
-                } 
+          int nOK = 0;
+          for (int i=0; i<ids.length; i++)
+            if (result[i] instanceof Boolean)
+              nOK ++;
+              
+          log(2, "refreshInternal: Processed "+ids.length+" keys, completed "+nOK);
+          if (loglevel>3)
+            for (int i=0; i<ids.length; i++)
+              log(4, " - "+ids[i].toStringFull()+": "+result[i]);
+            
+          command.receiveResult(result);
+          return;
+        }
+        
+        final Id id = ids[currentIndex];
+        final long expiration = expirations[currentIndex];
+        log(2, "Refresh("+id.toStringFull()+", expiration="+expiration+") started");
+        
+        /* In the common case, the aggregate is in the list, and we can simply update its lifetime there */
+        
+        AggregateDescriptor adc = (AggregateDescriptor) aggregateList.getADC(id);
+        if (adc!=null) {
+          int objDescIndex = adc.lookupNewest(id);
+          if (objDescIndex < 0) {
+            warn("NL: Aggregate found, but object not found in aggregate?!? -- aborted");
+            command.receiveException(new AggregationException("Inconsistency detected in aggregate list -- try restarting the application"));
+            return;
+          }
 
-                final VersionKey vkey = new VersionKey(obj.getId(), theVersion);
-                final long theVersionF = theVersion;
-                final int theSize = getSize(obj);
+          if (adc.objects[objDescIndex].refreshedLifetime < expiration) {
+            log(3, "Changing expiration date from "+adc.objects[objDescIndex].refreshedLifetime+" to "+expiration);
+            aggregateList.setObjectRefreshedLifetime(adc, objDescIndex, expiration);
+          } else {
+            log(3, "Expiration is "+adc.objects[objDescIndex].refreshedLifetime+" already, no update needed");
+          }
 
-                if (policy.shouldBeAggregated(obj, theSize)) {
-                  if (!waitingList.exists(vkey)) {
-                    log(3, "ADDING MISSING OBJECT AFTER REFRESH: "+obj.getId());
+          receiveResult(new Boolean(true));
+          return;
+        } else {
 
-                    waitingList.store(vkey, new ObjectDescriptor(obj.getId(), theVersionF, expiration, expiration, theSize), obj, new Continuation() {
-                      public void receiveResult(Object o) {
-                        ((PastImpl) objectStore).cache(obj, new Continuation() {
+          /* If the aggregate is not in the list, check whether it is still in the waiting list */
+        
+          boolean foundWaiting = false;
+          IdSet waitingIds = waitingList.scan();
+          Iterator iter = waitingIds.getIterator();
+      
+          while (iter.hasNext()) {
+            final VersionKey vkey = (VersionKey) iter.next();
+            if (vkey.getId().equals(id)) {
+              ObjectDescriptor thisObject = (ObjectDescriptor) waitingList.getMetadata(vkey);
+              log(2, "Refreshing in waiting list: " + vkey.toStringFull());
+              foundWaiting = true;
+          
+              if (thisObject == null) {
+                warn("Broken object in waiting list: " + vkey.toStringFull() + ", removing...");
+                final Continuation myParent = this;
+                waitingList.unstore(vkey, new Continuation() {
+                  public void receiveResult(Object o) {
+                    log(2, "Broken object "+vkey.toStringFull()+" removed successfully");
+                    myParent.receiveResult(new AggregationException("Object in waiting list, but broken: "+vkey.toStringFull()));
+                  }
+                  public void receiveException(Exception e) {
+                    warn("Cannot remove broken object "+vkey.toStringFull()+" from waiting list (exception: "+e+")");
+                    e.printStackTrace();
+                    myParent.receiveResult(new AggregationException("Object broken, in waiting list, and cannot remove: "+vkey.toStringFull()+" (e="+e+")"));
+                  }
+                });
+                return;
+              }
+
+              if (thisObject.refreshedLifetime < expiration) {
+                ObjectDescriptor newDescriptor = new ObjectDescriptor(
+                  thisObject.key, thisObject.version, thisObject.currentLifetime, 
+                  expiration, thisObject.size
+                );
+
+                final Continuation myParent = this;
+                waitingList.setMetadata(vkey, newDescriptor, new Continuation() {
+                  public void receiveResult(Object o) {
+                    log(3, "Refreshed metadata written ok for "+vkey.toStringFull());
+                    myParent.receiveResult(new Boolean(true));
+                  }
+                  public void receiveException(Exception e) {
+                    warn("Cannot refresh waiting object "+vkey.toStringFull()+", e="+e);
+                    e.printStackTrace();
+                    myParent.receiveResult(new AggregationException("Cannot refresh waiting object "+vkey.toStringFull()+", setMetadata() failed (e="+e+")"));
+                  }
+                });
+              } else {
+                log(3, "Object found in waiting list and no update needed: "+vkey.toStringFull());
+                receiveResult(new Boolean(true));
+                return;
+              }
+            }
+          }
+          
+          /* If the object is neither in the aggregate list nor in the waiting list, there must have
+             been a failure, and we need to reaggregate this object. */
+    
+          objectsMissing ++;
+          if (addMissingAfterRefresh) {
+            if (objectsFetched < maxReaggregationPerRefresh) {
+              objectsFetched ++;
+              final Continuation myParent = this;
+              objectStore.lookup(id, false, new Continuation() {
+                public void receiveResult(Object o) {
+                  if (o instanceof PastContent) {
+                    final PastContent obj = (PastContent) o;
+                    warn("Refresh: Found in PAST, but not in aggregate list: "+id.toStringFull());
+            
+                    long theVersion;
+                    if (o instanceof GCPastContent) {
+                      theVersion = ((GCPastContent)obj).getVersion();
+                    } else {
+                      theVersion = 0;
+                    } 
+
+                    final VersionKey vkey = new VersionKey(obj.getId(), theVersion);
+                    final long theVersionF = theVersion;
+                    final int theSize = getSize(obj);
+
+                    if (policy.shouldBeAggregated(obj, theSize)) {
+                      if (!waitingList.exists(vkey)) {
+                        log(3, "ADDING MISSING OBJECT AFTER REFRESH: "+obj.getId());
+
+                        waitingList.store(vkey, new ObjectDescriptor(obj.getId(), theVersionF, expiration, expiration, theSize), obj, new Continuation() {
                           public void receiveResult(Object o) {
-                          }       
+                            ((PastImpl) objectStore).cache(obj, new Continuation() {
+                              public void receiveResult(Object o) {
+                                myParent.receiveResult(new Boolean(true));
+                              }
+                              public void receiveException(Exception e) {
+                                warn("Refresh: Exception while precaching object: "+obj.getId()+" (e="+e+")");
+                                e.printStackTrace();
+                                myParent.receiveResult(new Boolean(true));
+                              }
+                            });
+                          }
                           public void receiveException(Exception e) { 
-                            warn("Exception while precaching aggregate: "+obj.getId()+" (e="+e+")");
+                            warn("Exception while refreshing aggregate: "+obj.getId()+" (e="+e+")");
                             e.printStackTrace();
+                            myParent.receiveResult(new AggregationException("Cannot store reaggregated object in waiting list: "+id.toStringFull()));
                           }
                         });
+
+                        return;
+                      } else {
+                        log(3, "Refresh: Missing object already in waiting list: "+obj.getId().toStringFull());
+                        myParent.receiveResult(new Boolean(true));
                       }
-                      public void receiveException(Exception e) { 
-                        warn("Exception while refreshing aggregate: "+obj.getId()+" (e="+e+")");
-                        e.printStackTrace();
-                      }
-                    });
+                    }
+                    
+                    log(3, "Refresh: Missing object should not be aggregated: "+id.toStringFull());
+                    myParent.receiveResult(new Boolean(true));
                   } else {
-                    log(3, "Missing object already in waiting list: "+obj.getId());
+                    warn("Cannot find refreshed object "+id+", lookup returns "+o);
+                    myParent.receiveException(new AggregationException("Object not found during reaggregation: "+id.toStringFull()));
                   }
                 }
-            
-                command.receiveResult(new Boolean(true));
-              } else {
-                warn("Cannot find refreshed object "+id+", lookup returns "+o);
-                command.receiveException(new AggregationException("Object not found: "+id.toStringFull()));
-              }
+                public void receiveException(Exception e) {
+                  myParent.receiveException(e);
+                }
+              });
+              return;
+            } else {
+              log(3, "Refresh: Limit of "+maxReaggregationPerRefresh+" reaggregations exceeded; postponing...");
+              receiveResult(new Boolean(true));
+              return;
             }
-            public void receiveException(Exception e) {
-              command.receiveException(e);
-            }
-          });
+          } else {
+            warn("Refreshed object not found in any aggregate: "+id.toStringFull());
+            receiveResult(new Boolean(true));
+            return;
+          }
         }
-      } else {
-        warn("Refreshed object not found in any aggregate: "+id.toStringFull());
-        command.receiveResult(new Boolean(true));
+        
+        /* This should NEVER be reached */
       }
-    }
+      public void receiveException(Exception e) {
+        warn("Exception while refreshing "+ids[currentIndex].toStringFull()+", e="+e);
+        e.printStackTrace();
+        receiveResult(e);
+      }
+    };
     
-    return objectsMissing;
+    theContinuation.receiveResult(null);
   }
 
   private int getSize(PastContent obj) {
