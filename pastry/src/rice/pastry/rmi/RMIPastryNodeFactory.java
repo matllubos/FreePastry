@@ -104,6 +104,7 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
 	    rmiRegistry = java.rmi.registry.LocateRegistry.createRegistry(port);
 	} catch (Exception e) {
 	    System.out.println("Error starting RMI registry: " + e);
+	    System.exit(-1);
 	}
     }
 

@@ -43,7 +43,7 @@ import java.net.*;
 import java.security.*;
 
 /**
- * Constructs NodeIds for virtual nodes derived from the IP address of the local machine.
+ * Constructs NodeIds for virtual nodes derived from the IP address and port number of this Java VM.
  *
  * @version $Id$
  *
@@ -54,12 +54,18 @@ public class IPNodeIdFactory implements NodeIdFactory
 {
     private static int nextInstance = 0;
     private InetAddress localIP;
+    private int port;
+
 
     /**
      * Constructor.
+     *
+     * @param port the port number on which this Java VM listens
      */
-    
-    public IPNodeIdFactory() {
+   
+    public IPNodeIdFactory(int port) {
+	this.port = port;
+
 	try {
 	    localIP = InetAddress.getLocalHost();
 	    if (localIP.isLoopbackAddress()) throw new Exception("got loopback address");
@@ -83,8 +89,15 @@ public class IPNodeIdFactory implements NodeIdFactory
     public NodeId generateNodeId() {
 	byte rawIP[] = localIP.getAddress();
 
+	byte rawPort[] = new byte[2];
+	int tmp = port;
+	for (int i=0; i<2; i++) {
+	    rawPort[i] = (byte)(tmp & 0xff);
+	    tmp >>= 8;
+	}
+
 	byte raw[] = new byte[4];
-	int tmp = ++nextInstance;
+	tmp = ++nextInstance;
 	for (int i=0; i<4; i++) {
 	    raw[i] = (byte)(tmp & 0xff);
 	    tmp >>= 8;
@@ -98,6 +111,7 @@ public class IPNodeIdFactory implements NodeIdFactory
 	}
 
 	md.update(rawIP);
+	md.update(rawPort);
 	md.update(raw);
 	byte[] digest = md.digest();
 	

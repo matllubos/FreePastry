@@ -128,6 +128,7 @@ public class DatagramManager implements SelectionKeyHandler {
       key.attach(this);
     } catch (IOException e) {
       System.out.println("PANIC: Error binding datagram server to port " + port + ": " + e);
+      System.exit(-1);
     }
 
     // instanciate the transmission manager

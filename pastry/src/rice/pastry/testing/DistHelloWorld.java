@@ -78,7 +78,7 @@ public class DistHelloWorld {
      * Constructor
      */
     public DistHelloWorld() {
-	factory = DistPastryNodeFactory.getFactory(new IPNodeIdFactory(), protocol, port);
+	factory = DistPastryNodeFactory.getFactory(new IPNodeIdFactory(port), protocol, port);
 	pastryNodes = new Vector();
 	helloClients = new Vector();
 	rng = new Random(PastrySeed.getSeed());
@@ -135,7 +135,7 @@ public class DistHelloWorld {
 	for (int i = 0; i < args.length; i++) {
 	    if (args[i].equals("-port") && i+1 < args.length) {
 		int p = Integer.parseInt(args[i+1]);
-		if (p > 0) port = p;
+		if (p > 0) {port = p; bsport = p;}
 		break;
 	    }
 	}
