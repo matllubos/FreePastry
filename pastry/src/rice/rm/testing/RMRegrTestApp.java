@@ -233,7 +233,9 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
 	    Id key = (Id)it.next();
 	    Id ccw = range.getCCW();
 	    Id cw = range.getCW();
-	    if(!key.isBetween(ccw, cw)) {
+	    //if(!key.isBetween(ccw, cw)) {
+	    if(!range.contains(key)) {
+		//System.out.println("ccw= " + ccw + " cw= " + cw + " key= " + key);
 		toRemove.add(key);
 	    }
 	}

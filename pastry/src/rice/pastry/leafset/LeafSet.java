@@ -461,13 +461,32 @@ public class LeafSet extends Observable implements Serializable {
 	if (size() == 0 && r == 0) return new IdRange(n.getNodeId(), n.getNodeId());
 	
 	// get edge nodes for range calculation
+	int wrappedCount= 0;
 	int min = pos;
 	int max = pos;
+
 	for (int i=0; i<r+1; i++) {
-	    if (min == -ccwSize() && (min = complement(min)) == -ccwSize()) return null;
-	    if (max == cwSize() && (max = complement(max)) == cwSize()) return null;
+	    if (min == -ccwSize()) {
+		if((min = complement(min)) == -ccwSize()) 
+		    return null;
+		else 
+		    wrappedCount++;
+	    }
+	    if (max == cwSize()) {
+		if((max = complement(max)) == cwSize())
+		    return null;
+		else 
+		    wrappedCount++;
+	    }
+
 	    min--;
 	    max++;
+	    if((wrappedCount==2) || ((wrappedCount == 1) && (max >= min))) {
+		// Return a full range
+		IdRange fullRange;
+		fullRange = new IdRange(false);
+		return fullRange;
+	    }
 	}
 	minN = get(min);
 	maxN = get(max);

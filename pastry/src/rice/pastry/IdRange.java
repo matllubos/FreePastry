@@ -74,6 +74,18 @@ public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
 	cw = ccw;
     }
 
+    /* Constructs an empty/full range
+     *
+     * @param type - if type is true then constructs an empty range, else
+     *                constructs a full range 
+     */
+    public IdRange(boolean type) {
+	empty = type;
+	ccw = new Id();
+	cw = ccw;
+
+    }
+
     /**
      * Copy constructor.
      */
@@ -178,6 +190,7 @@ public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
 	this.cw = cw;
 	empty = false;
     }
+
 
     /**
      * merge two ranges
@@ -378,6 +391,8 @@ public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
       return complement();
     }
 }
+
+
 
 
 
