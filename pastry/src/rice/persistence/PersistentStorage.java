@@ -860,6 +860,7 @@ public class PersistentStorage implements Storage {
         }
       } catch (Exception e) {
         System.err.println("ERROR: Received Exception " + e + " while initing file " + files[i] + " - moving to lost+found.");
+        e.printStackTrace();
         moveToLost(files[i]);
       }
     }
