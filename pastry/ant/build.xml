@@ -1,48 +1,57 @@
 <project name="testant" default="compile" basedir="../">
 
-  <property name="src" value="src"/> 
-  <property name="build" value="classes"/>  
-  <property name="lib" value="lib" />
-  <property name="ant-lib" value="ant/lib" />
+  <property name="src_dir" value="src"/> 
+  <property name="build_dir" value="classes"/>  
+  <property name="lib_dir" value="lib" />
+  <property name="ant_dir" value="ant" />
+  <property name="ant_lib_dir" value="${ant_dir}/lib" />
+  <property name="exclude_files_text" value="rice/past/search/** 
+                                             rice/ap3/** 
+                                             rice/nls/** 
+                                             rice/rm/testing/** 
+                                             rice/bscribe/** 
+                                             rice/storage/** 
+                                             rice/caching/** 
+                                             rice/email/test/** 
+                                             rice/splitstream/testing/**" />
 
   <target name="init">   
-    <mkdir dir="${build}" />
+    <mkdir dir="${build_dir}" />
     
     <path id="classpath">
-      <fileset dir="${lib}">
+      <fileset dir="${lib_dir}">
         <include name="*.jar" />
       </fileset>
-      <pathelement path="${built}" />
+      <pathelement path="${built_dir}" />
     </path>
 
     <pathconvert refid="classpath"
                  property="classpath_text"
                  pathsep="${path.separator}" />
+                 
   </target>
 
-  <target name="beautify" depends="compile">
-    <taskdef name="pretty" classname="org.acm.seguin.ant.Pretty" classpath="${ant-lib}/jrefactory.jar:${ant-lib}/JRefactoryModule.jar:${ant-lib}/JavaStyle.jar" />
-
-    <pretty settingsDir="." cvs="true">      
-      <fileset dir="${src}"> 
-        <include name="**/*.java" />      
-      </fileset>    
-    </pretty>  
-  </target> 
-
   <target name="compile" depends="init">    
-    <javac srcdir="${src}" 
-           destdir="${build}"
+    <javac srcdir="${src_dir}" 
+           destdir="${build_dir}"
            classpath="${classpath_text}" 
-           excludes="rice/past/search/** rice/nls/** rice/rm/testing/**" />  
+           excludes="${exclude_files_text}" />
   </target> 
   
   <target name="insertheader">  
   </target> 
 
+  <target name="beautify" depends="compile">
+    <taskdef name="pretty" classname="org.acm.seguin.ant.Pretty" classpath="${ant_lib_dir}/jrefactory.jar:${ant_lib_dir}/JRefactoryModule.jar:${ant_lib_dir}/JavaStyle.jar" />
+
+    <pretty settingsDir="${ant_dir}" cvs="true">      
+      <fileset dir="${src_dir}" includes="**/*.java" excludes="${exclude_files_text}"/>
+    </pretty>  
+  </target> 
+
   <target name="jar" depends="compile">   
-    <jar destfile="${build}/app.jar" basedir="${build}">
-      <fileset dir="${build}/classes/**/*.class"/>
+    <jar destfile="${build_dir}/pastry.jar" basedir="${build_dir}">
+      <fileset dir="${build_dir}/**/*.class"/>
     </jar>
   </target>
 </project>

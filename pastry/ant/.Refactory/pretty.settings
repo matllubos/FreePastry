@@ -240,7 +240,7 @@ version.descr=$Id$
 space.before.javadoc=true
 
 # Should we sort the types and imports?
-sort.top=false
+sort.top=true
 
 # Should catch statements look like
 # (true) is:
@@ -257,7 +257,8 @@ sort.top=false
 # // Something here
 # }
 # This value is also used for else statements
-catch.start.line=true
+catch.start.line=false
+else.start.line=false
 
 # This determines if there should be a space after keywords
 # When this value is true, you get:
@@ -275,7 +276,7 @@ keyword.space=true
 # Do you want to lineup the names and descriptions
 # in javadoc comments?
 #
-javadoc.id.lineup=false
+javadoc.id.lineup=true
 
 #
 # How many spaces should javadoc comments be indented?
@@ -331,14 +332,14 @@ field.name.indent=-1
 #
 # Include javadoc comments where ever they appear
 #
-keep.all.javadoc=false
+keep.all.javadoc=true
 
 
 #
 # End of line character(s) - either CR, CRNL, or NL
 # CR means carriage return, NL means newline
 #
-end.line=CRNL
+end.line=CR
 
 #
 # Absolute indent before a single line comment.
