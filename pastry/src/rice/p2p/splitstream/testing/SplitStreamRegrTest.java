@@ -90,7 +90,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
    */
   protected void processNode(int num, Node node) {
     splitstreams[num] = new SplitStreamImpl(node, INSTANCE);
-    ssclients[num] = new SplitStreamTestClient(node);
+    ssclients[num] = new SplitStreamTestClient(node, splitstreams[num]);
   }
 
   /**
@@ -114,6 +114,13 @@ public class SplitStreamRegrTest extends CommonAPITest {
    * Tests routing a Past request to a particular node.
    */
   protected void testBasic() {
+     int creator  = rng.nextInt(NUM_NODES);
+     ChannelId id = new ChannelId(generateId());
+     ssclients[creator].createChannel(id); 
+     for(int i = 0; i < NUM_NODES; i++){
+       ssclients[i].attachChannel(id);
+       ssclients[i].getStripes();
+     }
 
   }
 
@@ -129,16 +136,62 @@ public class SplitStreamRegrTest extends CommonAPITest {
   }
  
   private class SplitStreamTestClient{
+  
+   /** 
+    * The underlying common api node
+    *
+    */
+   private Node n = null;
 
-   public SplitStreamTestClient(Node n){
-      System.out.println("Client Created on Node " + n);
+   /** 
+    * The stripes for a channel 
+    *
+    */
+   private Stripe[] stripes;
+
+   /** 
+    * The channel to be used for this test
+    *
+    */
+   private Channel channel;
+
+   /** 
+    * The SplitStream service for this node 
+    *
+    */
+   private SplitStream ss;
+
+   public SplitStreamTestClient(Node n, SplitStream ss){
+      this.n = n;
+      this.ss =ss;
+      log("Client Created " + n);
    }
    public void joinFailed(Stripe s){
-      System.out.println("Join Failed on Stripe " + s);
+      log("Join Failed on Stripe " + s);
    }
 
    public void deliver(Stripe s, byte[] data){
-      System.out.println("Data recieved on Stripe" + s);
+      log("Data recieved on Stripe" + s);
   }
+   
+   public void createChannel(ChannelId cid){
+      log("Channel " + cid + " created."); 
+      channel = ss.createChannel(cid);
+   }
+
+   public void attachChannel(ChannelId cid){
+      log("Attaching to Channel " + cid + "."); 
+      if(channel == null)
+        channel = ss.attachChannel(cid);
+   }
+
+   public void getStripes(){
+      log("Retrieving Stripes.");
+      
+   }
+
+   private void log(String s){
+      System.out.println("" + n + " " + s);
+   }
  }
 }
