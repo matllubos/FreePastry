@@ -38,6 +38,8 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
     private RMIPastryNodeImpl rmilocalnode;
     private RMINodeHandle rmilocalhandle;
 
+    private RMINodeHandlePool handlepool;
+
     private static final int rtMax = 8;
     private static final int lSetSize = 12;
   
@@ -54,8 +56,12 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
 	    System.out.println("Unable to create RMI Pastry node: " + e.toString());
 	}
 	rmilocalhandle = new RMINodeHandle(rmilocalnode, nodeId /* local! */);
+	rmilocalhandle.setLocalHandle(rmilocalhandle); // itself!
 
-	secureMan = new RMIPastrySecurityManager();
+	handlepool = new RMINodeHandlePool();
+	handlepool.coalesce(rmilocalhandle); // add ourselves to pool
+
+	secureMan = new RMIPastrySecurityManager(rmilocalhandle, handlepool);
 	msgDisp = new MessageDispatch();
 
 	routeTable = new RoutingTable(rmilocalhandle, rtMax);

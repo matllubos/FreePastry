@@ -10,28 +10,31 @@ import java.util.*;
 /**
  * Security manager for RMI connections between nodes.
  *
+ * @author Andrew Ladd
  * @author Sitaram Iyer
  */
 
 public class RMIPastrySecurityManager implements PastrySecurityManager 
 {
-    private PastryNode pnode;
+    private PastryNode local;
+    private RMINodeHandle rmilocalhandle;
+    private RMINodeHandlePool handlepool;
 
     /**
      * Constructor.
      */
-
-    public RMIPastrySecurityManager() { 
-	pnode = null;
+    public RMIPastrySecurityManager(RMINodeHandle rlh, RMINodeHandlePool hp) { 
+	local = null;
+	rmilocalhandle = rlh;
+	handlepool = hp; // contains only rmilocalhandle by now
     }
 
     /**
      * Sets the local pastry node.
      *
-     * @param pn pastry node.
+     * @param pn local pastry node.
      */
-
-    public void setLocalPastryNode(PastryNode local) { pnode = local; }
+    public void setLocalPastryNode(PastryNode pn) { local = pn; }
 
     /**
      * This method takes a message and returns true
@@ -63,13 +66,11 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
      */
 
     public NodeHandle verifyNodeHandle(NodeHandle handle) {
-	NodeId local = pnode.getNodeId();
+	NodeId mynid = local.getNodeId();
 	NodeId nid = handle.getNodeId();
 
-	if (local.equals(nid)) {
-	    ProxyNodeHandle lnh = new ProxyNodeHandle(local);
-	    lnh.setProxy(pnode);
-	    return lnh;
+	if (mynid.equals(nid)) {
+	    return rmilocalhandle;
 	}
 	else if (handle instanceof PastryNode) {
 	    //DirectNodeHandle rnh = new RMINodeHandle((PastryNode) handle);
@@ -78,16 +79,17 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
 	    return null; // xxx
 	}
 	else if (handle instanceof ProxyNodeHandle) {
-	    //ProxyNodeHandle lnh = (ProxyNodeHandle) handle;
-	    //RMINodeHandle rnh = new RMINodeHandle(lnh.getNode());
-	    //return rnh;
-	    System.out.println("Handle instanceof ProxyNodeHandle. Tentatively returning NULL.");
-	    return null; // xxx
+	    System.out.println("Handle instanceof ProxyNodeHandle. Returning NULL.");
+	    return null;
 	}
 	else if (handle instanceof RMINodeHandle) {
 	    RMINodeHandle rnh = (RMINodeHandle) handle;
-	    RMINodeHandle retRnh = new RMINodeHandle(rnh.getRemote());
-	    return retRnh;
+
+	    // set local handle to me. useful when it wants to bounce
+	    // RouteMessages back to itself.
+	    rnh.setLocalHandle(local);
+
+	    return handlepool.coalesce(rnh);
 	}
 	else throw new Error("node handle of unknown type");	
     }

@@ -2,6 +2,7 @@ PACKAGE = rice.pastry.rmi
 
 SOURCE  = \
 	RMINodeHandle.java\
+	RMINodeHandlePool.java\
 	RMIPastryNode.java\
 	RMIPastryNodeFactory.java\
 	RMIPastryNodeImpl.java\

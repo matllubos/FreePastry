@@ -7,9 +7,7 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 
 /**
- * RMIPastryNode
- *
- * a remote interface exported by Pastry nodes. This is a subset of
+ * A remote interface exported by Pastry nodes. This is a subset of
  * NodeHandle, since it doesn't implement proximity or getAlive.
  *
  * @author Sitaram Iyer
