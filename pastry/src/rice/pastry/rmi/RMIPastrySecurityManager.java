@@ -105,18 +105,22 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
      */
 
     public NodeHandle verifyNodeHandle(NodeHandle handle) {
-	//return true;
-	NodeId mynid = localnode.getNodeId();
-	NodeId nid = handle.getNodeId();
 
-	if (mynid.equals(nid)) {
-	    return handlepool.coalesce(localhandle);
-	}
-	else if (handle instanceof RMINodeHandle) {
-	    RMINodeHandle rnh = (RMINodeHandle) handle;
-	    return handlepool.coalesce(rnh);
-	}
-	else throw new Error("node handle of unknown type");	
+	return handle;
+
+//	Autocoalescing ensures that verify needn't do anything!
+
+//	NodeId mynid = localnode.getNodeId();
+//	NodeId nid = handle.getNodeId();
+//
+//	if (mynid.equals(nid)) {
+//	    return handlepool.coalesce(localhandle);
+//	}
+//	else if (handle instanceof RMINodeHandle) {
+//	    RMINodeHandle rnh = (RMINodeHandle) handle;
+//	    return handlepool.coalesce(rnh);
+//	}
+//	else throw new Error("node handle of unknown type");	
     }
 
     /**

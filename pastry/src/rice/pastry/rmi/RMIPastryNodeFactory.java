@@ -103,7 +103,9 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
 	localhandle.setLocalNode(pn);
 
 	RMINodeHandlePool handlepool = new RMINodeHandlePool();
-	localhandle = handlepool.coalesce(localhandle); // add ourselves to pool
+
+	// not needed due to autocoalescing
+	//localhandle = handlepool.coalesce(localhandle); // add ourselves to pool
 
 	RMIPastrySecurityManager secureMan =
 	    new RMIPastrySecurityManager(localhandle, handlepool);

@@ -174,6 +174,13 @@ public class RMIPastryNode extends PastryNode
     }
 
     /**
+     * accessor method for RMI handle pool.
+     *
+     * @return handle pool
+     */
+    public RMINodeHandlePool getHandlePool() { return handlepool; }
+
+    /**
      * Called after the node is initialized.
      *
      * @param hp Node handle pool

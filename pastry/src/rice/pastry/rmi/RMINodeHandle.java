@@ -44,8 +44,12 @@ import java.io.*;
 import java.rmi.RemoteException;
 
 /**
- * Merely a stub to a RMINodeHandleCoalesced. Indirection needed for
- * transparent handle verification.
+ * A locally stored node handle that points to a remote RMIRemoteNodeI.
+ *
+ * Need localnode within handle for three reasons: to determine isLocal
+ * (thus alive and distance = 0), to set senderId in messages (used for
+ * coalescing on the other end), and to bounce messages back to self on
+ * failure.
  *
  * @version $Id$
  *
@@ -57,8 +61,8 @@ public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
     private RMIRemoteNodeI remoteNode;
     private NodeId remotenid;
 
-    public static int index=0;
-    public int id;
+    public transient static int index=0;
+    public transient int id;
 
     /**
      * Cached liveness bit, updated by any message, including ping.
@@ -80,6 +84,9 @@ public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
 
     private transient long lastpingtime;
     private static final long pingthrottle = 14 /* seconds */;
+
+    private transient RMINodeHandle redirect;
+    private transient boolean verified;
 
     /**
      * Constructor.
@@ -106,12 +113,13 @@ public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
     public RMINodeHandle(RMIRemoteNodeI rn, NodeId nid, PastryNode pn) {
 	if (Log.ifp(6)) System.out.println("creating RMI handle for node: " + nid + ", local = " + pn);
 	init(rn, nid);
+	//System.out.println("setLocalNode " + this + ":" + getNodeId() + " to " + pn + ":" + pn.getNodeId());
 	setLocalNode(pn);
     }
 
     private void init(RMIRemoteNodeI rn, NodeId nid) {
-	//redirect = null;
-	//verified = false;
+	redirect = null;
+	verified = false;
 	remoteNode = rn;
 	remotenid = nid;
 	alive = true;
@@ -122,14 +130,20 @@ public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
 	id = index++;
     }
 
+    /**
+     * NodeId accessor method. Same as redirect.getNodeId().
+
+     * @return NodeId of remote Pastry node.
+     */
     public NodeId getNodeId() { return remotenid; }
 
     /**
-     * Remotenode accessor method.
+     * Remotenode accessor method. Same as redirect.getRemote().
 
      * @return RMI remote reference to Pastry node.
      */
     public RMIRemoteNodeI getRemote() { return remoteNode; }
+
 
     /**
      * Remotenode accessor method.
@@ -137,8 +151,14 @@ public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
      * @param rn RMI remote reference to some Pastry node.
      */
     public void setRemoteNode(RMIRemoteNodeI rn) {
+	if (verified == false) verify();
+
 	if (remoteNode != null) System.out.println("panic");
 	remoteNode = rn;
+
+        if (redirect != null) {			// do nothing
+	    /* assert(redirect.getRemote().nodeid == rn.nodeid); */
+	}
     }
 
     /**
@@ -155,6 +175,9 @@ public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
      * @return a cached boolean value.
      */
     public boolean isAlive() {
+	if (verified == false) verify();
+        if (redirect != null) { return redirect.isAlive(); }
+
 	if (isLocal && !alive) System.out.println("panic; local node dead");
 	return alive;
     }
@@ -164,6 +187,9 @@ public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
      * infinity.
      */
     public void markAlive() {
+	if (verified == false) verify();
+        if (redirect != null) { redirect.markAlive(); return; }
+
 	if (alive == false) {
 	    if (Log.ifp(5)) System.out.println(getLocalNode() + "found " + remotenid + " to be alive after all");
 	    alive = true;
@@ -176,6 +202,9 @@ public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
      * infinity.
      */
     public void markDead() {
+	if (verified == false) verify();
+        if (redirect != null) { redirect.markDead(); return; }
+
 	if (alive == true) {
 	    if (Log.ifp(5)) System.out.println(getLocalNode() + "found " + remotenid + " to be dead");
 	    alive = false;
@@ -190,12 +219,20 @@ public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
      * 0 if node is local.
      */
     public int proximity() {
+	if (verified == false) verify();
+        if (redirect != null) { return redirect.proximity(); }
+
 	if (isLocal) return 0;
 	// for (int i = 0; i < 10; i++) if (!ping()) break;
 	return distance;
     }
 
-    public boolean getIsInPool() { return isInPool; }
+    public boolean getIsInPool() {
+	if (verified == false) verify();
+        if (redirect != null) { return redirect.getIsInPool(); }
+	return isInPool;
+    }
+
     public void setIsInPool(boolean iip) { isInPool = iip; }
 
     /**
@@ -204,6 +241,9 @@ public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
      * @param msg Message to be delivered, may or may not be routeMessage.
      */
     public void receiveMessage(Message msg) {
+
+	if (verified == false) verify();
+        if (redirect != null) { redirect.receiveMessage(msg); return; }
 
 	assertLocalNode();
 
@@ -259,6 +299,10 @@ public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
      * @return liveness of remote node.
      */
     public boolean ping() {
+
+	if (verified == false) verify();
+        if (redirect != null) { return redirect.ping(); }
+
 	NodeId tryid;
 
 	/*
@@ -303,9 +347,25 @@ public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
 	return alive;
     }
 
-    //private void verify() {
-	//x
-    //}
+    /**
+     * Someday verify will actually implement some policy. not today.
+     */
+    private void verify()
+    {
+	RMIPastryNode localnode = (RMIPastryNode) getLocalNode();
+	if (localnode == null) {
+	    //System.out.println("warning: localnode null in " + this + ":" + getNodeId() + ", can't verify");
+	    return;
+	}
+
+	RMINodeHandle nh = localnode.getHandlePool().coalesce(this);
+	if (nh != this)
+	    redirect = nh;
+	else
+	    redirect = null;
+
+	verified = true;
+    }
 
     private void readObject(ObjectInputStream in)
 	throws IOException, ClassNotFoundException 
@@ -327,6 +387,9 @@ public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
     } 
 
     public String toString() {
+	if (verified == false) verify();
+	if (redirect != null) { return redirect.toString(); }
+
 	return (isLocal ? "(local " : "") + "handle " + remotenid
 	    + (alive ? "" : ":dead")
 	    + ", localnode = " + getLocalNode()

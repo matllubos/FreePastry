@@ -40,6 +40,7 @@ import java.io.*;
 import java.util.*;
 
 import rice.pastry.messaging.*;
+import rice.pastry.rmi.*;
 
 /**
  * Abstract class that some Serializable classes (such as NodeHandle and
@@ -66,8 +67,8 @@ public abstract class LocalNode implements Serializable {
      * Accessor method. Notifies the overridable afterSetLocalNode.
      */
     public final void setLocalNode(PastryNode pn) {
-	    localnode = pn;
-	    if (localnode != null) afterSetLocalNode();
+	localnode = pn;
+	if (localnode != null) afterSetLocalNode();
     }
 
     /**
