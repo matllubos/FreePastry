@@ -2,7 +2,6 @@
 package rice.pastry.testing;
 
 import rice.pastry.*;
-import rice.pastry.rmi.*;
 import rice.pastry.standard.*;
 import rice.pastry.dist.*;
 
