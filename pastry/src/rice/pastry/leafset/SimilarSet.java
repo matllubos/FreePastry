@@ -51,7 +51,7 @@ import java.io.*;
  */
 
 
-public class SimilarSet extends Observable implements NodeSet, Serializable
+public class SimilarSet extends Observable implements NodeSet, Serializable, Observer
 {
     private NodeHandle localNode;
     private NodeId baseId;
@@ -99,7 +99,7 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
     }
     
     /**
-     * Test is a NodeHandle belongs into the set. Predicts if a put would succeed.
+     * Test if a NodeHandle belongs into the set. Predicts if a put would succeed.
      *
      * @param handle the handle to test.
      *
@@ -184,9 +184,32 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
 	setChanged();
 	notifyObservers(new NodeSetUpdate(handle, true));
 
+	// register as an observer, so we'll be notified if the handle is declared dead
+	handle.addObserver(this);
+
 	return true;
     }
     
+
+    /**
+     * Is called by the Observer pattern whenever the liveness or
+     * proximity of a registered node handle is changed.
+     *
+     * @param o The node handle
+     * @param arg The argument (should be null)
+     */
+    public void update(Observable o, Object arg) {
+
+      // if the node is declared, remove it immediately
+      if (((Integer) arg).intValue() == NodeHandle.DECLARED_DEAD) {
+        remove(((NodeHandle) o).getNodeId());
+
+	// we're no longer interested in this handle
+	o.deleteObserver(this);
+      }
+
+    }
+
 
     /**
      * Finds the NodeHandle associated with the NodeId.

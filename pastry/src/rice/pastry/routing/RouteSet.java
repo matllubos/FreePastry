@@ -138,8 +138,13 @@ public class RouteSet extends Observable implements NodeSet, Serializable, Obser
      * @param arg The argument (should be null)
      */
     public void update(Observable o, Object arg) {
-      if (o instanceof NodeHandle) {
-        put((NodeHandle) o);
+
+      // if the proximity is initialized for the time, insert the handle
+      if (((Integer) arg).intValue() == NodeHandle.PROXIMITY_CHANGED) {
+        put((NodeHandle) o);   
+
+	// we're no longer interested in this handle
+	o.deleteObserver(this);
       }
     }
 

@@ -171,7 +171,7 @@ public abstract class DistNodeHandle extends NodeHandle {
         alive = true;
         distance = Integer.MAX_VALUE;
 
-        notifyObservers();
+        notifyObservers(new Integer(DECLARED_LIVE));
       }
     }
 
@@ -199,7 +199,7 @@ public abstract class DistNodeHandle extends NodeHandle {
         alive = false;
         distance = Integer.MAX_VALUE;
 
-        notifyObservers();
+        notifyObservers(new Integer(DECLARED_DEAD));
       }
     }
 
@@ -237,7 +237,7 @@ public abstract class DistNodeHandle extends NodeHandle {
     protected final void setProximity(int value) {
       distance = value;
 
-      notifyObservers();
+      notifyObservers(new Integer(PROXIMITY_CHANGED));
     }
 
     /**
