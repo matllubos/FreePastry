@@ -1,6 +1,5 @@
 package rice.scribe.testing;
 
-
 import rice.pastry.*;
 import rice.pastry.security.*;
 import rice.scribe.*;
@@ -9,7 +8,13 @@ import rice.pastry.direct.*;
 
 import java.util.*;
 
-
+/**
+ * Application used by the Regreesion test suites. It runs over a Scribe node
+ * but it is notified from the whole network of what topics have been created
+ * so that it can verify correctness after execution.
+ *
+ * @author Romer Gil
+ */
 public class ScribeRegrTestApp implements IScribeApp
 {
     
@@ -17,11 +22,15 @@ public class ScribeRegrTestApp implements IScribeApp
     private Scribe m_scribe;
     MRTracker m_tracker = new MRTracker();
     
-    public ScribeRegrTestApp( PastryNode node, Credentials cred, NetworkSimulator simulator ) {
-	m_scribe = new Scribe( node, this, cred, simulator );
+    public ScribeRegrTestApp( PastryNode node, Credentials cred ) {
+	m_scribe = new Scribe( node, this, cred );
 	m_credentials = cred;
     }
 
+    /**
+     * This makes sure that if the current app was subscribed to a topic,
+     * it received all the messages published to it.
+     */
     public boolean verifyApplication( List topics, MRTracker trk ) {
 	Iterator it = topics.iterator();
 	NodeId tid;
@@ -49,26 +58,33 @@ public class ScribeRegrTestApp implements IScribeApp
 	return true;
     }
 
+    /**
+     * up-call invoked by scribe when a publish message is 'delivered'.
+     */
     public void receiveMessage( ScribeMessage msg ) {
-	System.out.println( "Node: " + m_scribe.getNodeId() + 
-			    " received a message " );
 	m_tracker.receivedMessage( msg.getTopicId() );
     }
 
+    /**
+     * up-call invoked by scribe when a publish message is forwarded through
+     * the multicast tree.
+     */
     public void forwardHandler( ScribeMessage msg ) {
-	System.out.println( "Node: " + m_scribe.getNodeId() + 
-			    " forwarding message" );
+
     }
     
+    /**
+     * up-call invoked by scribe when a node detects a failure from its parent.
+     */
     public void faultHandler( ScribeMessage msg ) {
-	System.out.println( "Node: " + m_scribe.getNodeId() + 
-			    " detected broken multicast tree" );
-	System.out.println( m_scribe.getNodeHandle() + "-----------------------------------------------------------" );
+
     }
 
+    /**
+     * up-call invoked by scribe when a node is added to the multicast tree.
+     */
     public void subscribeHandler( ScribeMessage msg ) {
-	System.out.println( "Node: " + m_scribe.getNodeId() + 
-			    " adopted "+msg.getSource()+" to its multicast tree" );
+
     }
 
     public NodeId generateTopicId( String topicName ) {
@@ -83,32 +99,49 @@ public class ScribeRegrTestApp implements IScribeApp
 	return m_scribe.getNodeId();
     }
 
+    /**
+     * direct call to scribe for creating a topic from the current node.
+     */
     public void create( NodeId topicId ) {
-	System.out.println( m_scribe.getNodeHandle() + " sending create req");
 	m_scribe.create( topicId, m_credentials );
     }
 
+    /**
+     * direct call to scribe for publishing to a topic from the current node.
+     */    
     public void publish( NodeId topicId ) {
-	System.out.println( m_scribe.getNodeHandle() + " sending pub req");
 	m_scribe.publish( topicId, null, m_credentials );
     }
 
+    /**
+     * direct call to scribe for subscribing to a topic from the current node.
+     */    
     public void subscribe( NodeId topicId ) {
-	System.out.println( m_scribe.getNodeHandle() + " sending sub req"+topicId);
 	m_scribe.subscribe( topicId, m_credentials );
 	m_tracker.setSubscribed( topicId, true );
     }
 
+    /**
+     * direct call to scribe for unsubscribing to a topic from the current node
+     */    
     public void unsubscribe( NodeId topicId ) {
-	System.out.println( m_scribe.getNodeHandle() + " sending uns req");
 	m_scribe.unsubscribe( topicId, m_credentials );
     }
     
+    /**
+     * Let's the current node know about a topic created in the whole scribe
+     * network. This is not used for any other purposes than just verifying
+     * after the regr test that all messages to all topics where received.
+     */
     public void putTopic( NodeId tid ) {
 	m_tracker.putTopic( tid );
     }
 }
 
+/**
+ * MessagesReceivedTracker. Keeps track of all messages received on all topics
+ * in the current node.
+ */
 class MRTracker 
 {
     HashMap m_topics;
@@ -145,6 +178,10 @@ class MRTracker
     }
 }
 
+/**
+ * CountSubscribedPair keeps track for a single topic of how many messages have
+ * been received from it and whether we are subscribed to it or not. 
+ */
 class CSPair {
     private int m_count;
     private boolean m_isSubscribed;

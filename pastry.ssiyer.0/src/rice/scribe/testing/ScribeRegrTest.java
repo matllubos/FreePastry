@@ -18,7 +18,6 @@ import java.security.*;
  *
  * @author Romer Gil
  */
-
 public class ScribeRegrTest
 {
     private DirectPastryNodeFactory m_factory;
@@ -52,11 +51,10 @@ public class ScribeRegrTest
     
     public void makeScribeNode() {
 	PastryNode pnode = new PastryNode(m_factory);
-	System.out.println(m_scribeNodes.size()+":created " + pnode);
 
 	Credentials cred = new PermissiveCredentials();
 
-	ScribeRegrTestApp app = new ScribeRegrTestApp( pnode, cred, m_simulator );
+	ScribeRegrTestApp app = new ScribeRegrTestApp( pnode, cred );
 
 	m_scribeNodes.add(app);
 	m_scribeNodesSorted.put(app.getNodeId(),app);
@@ -70,18 +68,20 @@ public class ScribeRegrTest
 	    
 	    pnode.receiveMessage(new InitiateJoin(other));
 	}
-	
-	//System.out.println("");
     }
 
     public boolean simulate() { 
 	return m_simulator.simulate(); 
     }
     
+    /**
+     * Main entry point for the regression test suite.
+     */
     public static void main(String args[]) {
 	ScribeRegrTest st = new ScribeRegrTest();
 	int n, m, t, i;
 
+	//n #nodes, m #messages per topic, t #topics
 	n = 100;
 	m = 10;
 	t = 3;
@@ -101,24 +101,32 @@ public class ScribeRegrTest
 	int i, j, k, subs, node, topic;
 	NodeId tid;
 	ScribeRegrTestApp app;
-	
+
+	//create 'topics' number of topics, from randomly selected nodes.
 	for( i = 0; i < topics; i++ ) {
 	    tid = generateTopicId( new String( "ScribeTest" + i ) );
 	    node = rng.nextInt( nodes );
 	    create( node, tid );
+	    //let all the apps know about the topic. For the regr.This has 
+	    //nothing to do with the actual scribe api is just stuff that is 
+	    //done to verify correctness.
 	    for( j = 0; j < nodes; j++ ) {
 		app = (ScribeRegrTestApp)m_scribeNodes.get( j );
 		app.putTopic( tid );
 	    }
+	    //now add the topics to the regr test. again just for testing. 
 	    m_topics.add( tid );
 	    m_tracker.setSubscribed( tid, true );
 
+	    //now subscribe a random number of nodes to the topic we are 
+	    //lookin at
 	    subs = rng.nextInt( nodes );
 	    for( j = 0; j < subs; j++ ) {
 		subscribe( rng.nextInt( nodes ), tid );
 	    }
 	}
 
+	//start publishing stuff to all the topics, selected at random.
 	for( i = 0; i < topics; i++ ) {
 	    for( j = 0; j < msgs; j++ ) {
 		topic = rng.nextInt( topics );
@@ -129,6 +137,8 @@ public class ScribeRegrTest
 	    }
 	}
 
+	//verifying that what we sent was received (nothing more and nothing 
+	//less) by the correct nodes 
 	for( i = 0; i < nodes; i++ ) {
 	    app = (ScribeRegrTestApp)m_scribeNodes.get( i );
 	    app.verifyApplication( m_topics, m_tracker );
@@ -153,22 +163,25 @@ public class ScribeRegrTest
 	return newId;
     }
 
-
+    //publish a msg from one of the test apps that we are keeping in the suite.
     private void publish( int node, NodeId tid ) {
 	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeNodes.get( node );
 	app.publish( tid );
     }
 
+    //subscribe one of the suite apps to topic tid
     private void subscribe( int node, NodeId tid ) {
 	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeNodes.get( node );
 	app.subscribe( tid );
     }
 
+    //unsubscribe one of the suite apps to topic tid
     private void unsubscribe( int node, NodeId tid ) {
 	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeNodes.get( node );
 	app.unsubscribe( tid );
     }
 
+    //create a topic tid from a given app.
     private void create( int node, NodeId tid ) {
 	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeNodes.get( node );
 	app.create( tid );

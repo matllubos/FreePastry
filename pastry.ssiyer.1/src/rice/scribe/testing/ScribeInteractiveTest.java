@@ -10,6 +10,12 @@ import rice.pastry.security.*;
 import java.util.*;
 import java.io.*;
 
+
+/**
+ * An interactive tester app for Scribe.
+ *
+ * @author Romer Gil
+ */
 public class ScribeInteractiveTest
 {
     private DirectPastryNodeFactory m_factory;
@@ -40,11 +46,10 @@ public class ScribeInteractiveTest
     
     public void makeScribeNode() {
 	PastryNode pnode = new PastryNode(m_factory);
-	System.out.println(m_scribeNodes.size()+":created " + pnode);
 
 	Credentials cred = new PermissiveCredentials();
 
-	ScribeRegrTestApp app = new ScribeRegrTestApp( pnode, cred, m_simulator );
+	ScribeRegrTestApp app = new ScribeRegrTestApp( pnode, cred );
 
 	m_scribeNodes.add(app);
 	m_scribeNodesSorted.put(app.getNodeId(),app);
@@ -62,13 +67,16 @@ public class ScribeInteractiveTest
 	    pnode.receiveMessage(new InitiateJoin(other));
 	}
 	
-	//System.out.println("");
     }
 
     public boolean simulate() { 
 	return m_simulator.simulate(); 
     }
     
+    /**
+     * Main entry point for the interactive tester. The commands entered are 
+     * all (or at least most) of the form 'command node# topic#'.
+     */
     public static void main(String args[]) {
 	ScribeInteractiveTest st = new ScribeInteractiveTest();
 	
@@ -99,6 +107,8 @@ public class ScribeInteractiveTest
 	System.gc();
     }
 
+    /* Basically a big switch/case for reading the input and acting accordingly
+     */
     private boolean parseInput( String in ) {
 	StringTokenizer tokened = new StringTokenizer( in, " \t\n" );
 	if( !tokened.hasMoreTokens() ) {
