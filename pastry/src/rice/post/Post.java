@@ -121,6 +121,18 @@ public class Post extends PastryAppl {
       clientAddresses.put(client.getAddress(), client);
     }
   }
+  /**
+   * This method announce's our presence via our scribe tree
+   * 
+   */
+  /* TO DO:: FIX ME!!! topic id */
+  private void announcePresence(){
+     NodeHandle nodeId = new NodeHandle();
+     nodeId.setLocalNode(node); 
+     MessagePublish sMessage = 
+                  new MessagePublish(getAddress(), nodeId, null, getCreditials());
+    scribe.routeMsg(sMessage);
+  }
 
   /**
    * Removes a client from this PostService.  
