@@ -25,6 +25,11 @@ public class ControlFindParentResponseMessage extends ControlMessage
 	this.stripe_id = stripe_id;
     }
 
+    public StripeId getStripeId()
+    {
+        return stripe_id;
+    }
+
     /**
      * This node is the message originator.  It should set its parent to
      * the Id of the originator of this message or, in the case of a "false"
