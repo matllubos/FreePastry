@@ -193,7 +193,7 @@ public class ReplicationRegrTest extends CommonAPITest {
   
   public void runMaintenance() {
     for (int i=0; i<NUM_NODES; i++) {
-      replications[i].sendRequests();
+      replications[i].replicate();
     }
     
     simulate();
