@@ -247,6 +247,7 @@ public class Channel implements IScribeApp {
 	// initialize the channel metadata if its not ready yet
 	if(!isReady){
 	    this.spareCapacityId = spareCapacityId;
+	    this.numStripes = stripeIds.length;
 	    NodeId[] subInfo = new NodeId[stripeIds.length + 2];
 	    subInfo[0] = this.channelId;
 	    for(int i = 0; i < stripeIds.length; i++){
