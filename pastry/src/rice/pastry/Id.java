@@ -379,7 +379,7 @@ public class Id implements rice.p2p.commonapi.Id {
    * @param i which bit to set.
    * @param v new value of bit
    */
-  private void setBit(int i, int v) {
+  public void setBit(int i, int v) {
     int index = i / 32;
     int shift = i % 32;
     int val = Id[index];
