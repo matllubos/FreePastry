@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
+import rice.post.proxy.PostProxy;
 
 /**
  * @author Jeff Hoye
@@ -20,10 +21,6 @@ public class FileCommandHandler implements DebugCommandHandler {
 
   public static final String GET_PROPS_COMMAND = "pastry.getproperties";
   public static final String GET_MANIFEST_COMMAND = "pastry.getmanifest";
-
-  public static final String DEFAULT_PARAMS_FILE = "proxy.params";
-  public static final String DEFAULT_JAR_FILE = "pastry.jar";
-  
 
   public String handleDebugCommand(String command) {
     
@@ -38,11 +35,8 @@ public class FileCommandHandler implements DebugCommandHandler {
   }
 
   protected String handleManifestCmd(String command) {
-    String filename = DEFAULT_JAR_FILE;
-    String arg = getArg(command, GET_MANIFEST_COMMAND.length());
-    if (arg != null) {
-      filename = arg;
-    }    
+    final String filename = System.getProperty("java.class.path");
+
     try {  
       File f = new File(filename);
       if (!f.exists()) {
@@ -50,7 +44,7 @@ public class FileCommandHandler implements DebugCommandHandler {
       }
       JarFile jf = new JarFile(f);
       Manifest m = jf.getManifest();
-      Map map = m.getEntries();
+      Map map = m.getMainAttributes();
       Iterator i = map.keySet().iterator();
       String ret = "Jar "+filename+":\n";
       while (i.hasNext()) {
@@ -67,11 +61,8 @@ public class FileCommandHandler implements DebugCommandHandler {
   }
   
   protected String handlePropsCmd(String command) {
-    String filename = DEFAULT_PARAMS_FILE;
-    String arg = getArg(command, GET_PROPS_COMMAND.length());
-    if (arg != null) {
-      filename = arg;
-    }
+    final String filename = PostProxy.PROXY_PARAMETERS_NAME + ".params";
+
     try {  
       File f = new File(filename);
       if (!f.exists()) {
