@@ -375,9 +375,10 @@ public class Proxy {
         if (j >= 0)
           monitor.answered();
       } catch (IOException e) {
-        System.err.println("ERROR: Got IOException while checking liveness!" + e + " This is usually a JVM crash - we're going to exit now.");
+        System.err.println("ERROR: Got IOException while checking liveness!" + e + " This is usually an unrecoverable JVM crash - we're going to exit now.");
         e.printStackTrace();
-      }
+        System.exit(-1);
+      } 
     }
   }
   
@@ -411,6 +412,9 @@ public class Proxy {
             hf.fetch();
             
             String filename = new String(baos.toByteArray()).trim();
+            
+            if (filename.indexOf("\t") > 0)
+              filename = filename.substring(0, filename.indexOf("\t"));
             
             if (! new File(".", filename).exists()) {
               ByteArrayOutputStream baos1 = new ByteArrayOutputStream();
@@ -469,7 +473,7 @@ public class Proxy {
               }
             }
           } catch (Exception e) {
-            System.out.println("ERROR: Got exception " + e + " while running automatic update - ignoring");
+            System.err.println("ERROR: Got exception " + e + " while running automatic update - ignoring");
             e.printStackTrace();
           }
         } catch (InterruptedException e) {
