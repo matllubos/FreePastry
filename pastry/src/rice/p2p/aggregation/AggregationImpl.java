@@ -587,6 +587,39 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       
       return "refresh("+id+", "+expiration+")="+ret[0];
     }
+
+    if ((cmd.length() >= 7) && cmd.substring(0, 7).equals("killall")) {
+      String args = cmd.substring(8);
+      String expirationArg = args.substring(args.lastIndexOf(' ') + 1);
+      String keyArg = args.substring(0, args.lastIndexOf(' '));
+
+      Id id = factory.buildIdFromToString(keyArg);
+      long expiration = System.currentTimeMillis() + Long.parseLong(expirationArg);
+
+      AggregateDescriptor aggr = (AggregateDescriptor) aggregateList.get(id);
+      if (aggr != null) {
+        aggr.currentLifetime = Math.min(aggr.currentLifetime, expiration);
+        for (int i=0; i<aggr.objects.length; i++) {
+          aggr.objects[i].currentLifetime = Math.min(aggr.objects[i].currentLifetime, expiration);
+          aggr.objects[i].refreshedLifetime = Math.min(aggr.objects[i].refreshedLifetime, expiration);
+        }
+        return "OK";
+      }
+      
+      return "Aggregate "+id+" not found in aggregate list";
+    }
+
+    if ((cmd.length() >= 7) && cmd.substring(0, 7).equals("waiting")) {
+      Iterator iter = waitingList.scan().getIterator();
+      String result = "";
+
+      result = result + waitingList.scan().numElements()+ " object(s) waiting\n";
+      
+      while (iter.hasNext())
+        result = result + ((Id)iter.next()).toStringFull()+"\n";
+        
+      return result;
+    }
       
     if ((cmd.length() >= 7) && cmd.substring(0, 7).equals("vlookup")) {
       String[] vkeyS = cmd.substring(8).split("v");
@@ -702,8 +735,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private void storeAggregate(final Aggregate aggr, final long expiration, final ObjectDescriptor[] desc, final Id[] pointers, final Continuation command) {
     aggr.setId(factory.buildId(aggr.getContentHash()));
     log("Storing aggregate, CH="+aggr.getId()+", expiration="+expiration+" (rel "+(expiration-System.currentTimeMillis())+")");
-  
-    aggregateStore.insert(aggr, new Continuation() {
+
+    Continuation c = new Continuation() {
       public void receiveResult(Object o) {
         AggregateDescriptor adc = new AggregateDescriptor(
           aggr.getId(),
@@ -726,7 +759,12 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       public void receiveException(Exception e) {
         command.receiveException(e);
       }
-    });
+    };
+    
+    if (aggregateStore instanceof GCPast) 
+      ((GCPast)aggregateStore).insert(aggr, expiration, c);
+    else
+      aggregateStore.insert(aggr, c);
   }
 
   private synchronized VersionKey getMostCurrentWaiting(Id id) {
@@ -871,6 +909,10 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     for (int i=0; i<components.length; i++)
       if (components[i].refreshedLifetime > maxLifetime)
         maxLifetime = components[i].refreshedLifetime;
+
+/***XXX***/
+    if (maxLifetime > (now + 120 * SECONDS))
+      maxLifetime = now + 120 * SECONDS;
 
     return maxLifetime;
   }
@@ -1293,7 +1335,11 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     if (policy.shouldBeAggregated(obj, theSize)) {
       log("AGGREGATE INSERT: "+obj.getId());
 
-      objectStore.insert(obj, command);
+      if (objectStore instanceof GCPast) 
+        ((GCPast)objectStore).insert(obj, lifetime, command);
+      else
+        objectStore.insert(obj, command);
+        
       waitingList.store(vkey, null, obj, new Continuation() {
         public void receiveResult(Object o) {
           waiting.add(new ObjectDescriptor(obj.getId(), theVersionF, lifetime, lifetime, theSize));
@@ -1333,8 +1379,15 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         }
       };
       
-      objectStore.insert(obj, c);
-      aggregateStore.insert(obj, c);
+      if (objectStore instanceof GCPast) 
+        ((GCPast)objectStore).insert(obj, lifetime, c);
+      else 
+        objectStore.insert(obj, c);
+        
+      if (aggregateStore instanceof GCPast)
+        ((GCPast)aggregateStore).insert(obj, lifetime, c);
+      else
+        aggregateStore.insert(obj, c);
     }
   }
   
