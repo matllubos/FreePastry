@@ -45,6 +45,10 @@ public class Post extends PastryAppl implements IScribeApp  {
   // the map of PostClientAddress -> PostClient
   private Hashtable clientAddresses;
 
+  //--- Buffering Support ---
+  // The data structure to hold the packets
+  private Hashtable bufferedData;
+
   /**
    * Builds a PostService to run on the given pastry node,
    * using the provided PAST and Scribe services.
@@ -69,6 +73,7 @@ public class Post extends PastryAppl implements IScribeApp  {
     
     clients = new Vector();
     clientAddresses = new Hashtable();
+    bufferedData = new Hashtable();
   }
 
   /**
@@ -102,6 +107,15 @@ public class Post extends PastryAppl implements IScribeApp  {
     	}
     }
     else if( message instanceof DeliveryRequestMessage){
+        /* Buffer this for Delivery */
+        synchronized(bufferedData){
+          userQueue = buffered.get(message.getDestination());
+          if(userQueue == null){
+            userQueue = new Vector();
+            bufferedData.put(userQueue);
+          }
+          userQueue.addElement(message.getNotificationMessage());
+        }
     }
     else if( message instanceof RecieptMessage ){
     }
@@ -237,6 +251,14 @@ public class Post extends PastryAppl implements IScribeApp  {
   public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){}
   public void forwardHandler(ScribeMessage msg){}
   public void receiveMessage(ScribeMessage msg){
+
+     synchronized(bufferedData){
+	
+          userQueue = buffered.get(message.getDestination());
+          if(userQueue != null){
+            /* Iterate and send */ 
+          }
+     }
      /* Check and see if I have any messages for this person */
      /* If I do then call sendNotification over and over again */
      /* Until they are all delivered */
