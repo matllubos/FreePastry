@@ -173,7 +173,8 @@ public class SelectorManager {
                 //System.out.println("******************* Exiting Write");
               }
             } else {
-              key.cancel();
+              //System.err.println("Found key witout attachment!");
+              //key.cancel();
             }
           }
           // synch(key)
