@@ -76,6 +76,8 @@ public class IMAPProxy implements Observer, MessageCountListener {
 	}
 
 	public void receiveResult(Object o) {
+
+	    System.err.println("Received a continuation call");
 	    switch(state) {
 	    case STATE_INITIAL:
 		System.err.println("Received a result in initial state!");
@@ -99,19 +101,19 @@ public class IMAPProxy implements Observer, MessageCountListener {
     }
   
   // constructors
-  /**
-   * This constructor instantiates the proxy.  The address and port specified instruct the
-   * IMAP service of the port and address it should bind to locally.
-   * 
-   * @param address is the address of our remote IMAP server
-   * @param port is the IMAP port to connect to on the server
-   * 
-   */
-  public IMAPProxy(InetAddress address, int port) {
-      this.address = address;
-      this.port = port;
-  }
-  
+    /**
+     * This constructor instantiates the proxy.  The address and port specified instruct the
+     * IMAP service of the port and address it should bind to locally.
+     * 
+     * @param address is the address of our remote IMAP server
+     * @param port is the IMAP port to connect to on the server
+     * 
+     */
+    public IMAPProxy(InetAddress address, int port) {
+	this.address = address;
+	this.port = port;
+    }
+    
   // methods
   /**
    * This method attaches this IMAP proxy to a specific EmailService
@@ -156,12 +158,16 @@ public class IMAPProxy implements Observer, MessageCountListener {
    */
   public void update(Observable updater, Object emailNote) {
 
+      System.err.println("IMAPProxy got an email");
+
       try {
 
 	  Email email = ((EmailNotificationMessage) emailNote).getEmail();
 	  
 	  // Save that email in a continuation and have it deal with it.
 	  IMAPContinuation ic = new IMAPContinuation(this, email);
+
+	  System.err.println("Built a continuation");
 	  
 	  MimeMessage message = ic.getMessage();
 	  message.setSender(new
@@ -185,7 +191,10 @@ public class IMAPProxy implements Observer, MessageCountListener {
 	  
 	  // Get the body and remember the continuation
 	  ic.setState(STATE_GETTING_BODY);
-	  email.getBody(ic);	
+
+	  System.err.println("About to fetch the body of the message");
+	  email.getBody(ic);
+	  System.err.println("Called getBody.");
       } catch (MessagingException e) {
 	  System.err.println("IMAP proxy error on update: " + e);
       }
@@ -277,10 +286,3 @@ public class IMAPProxy implements Observer, MessageCountListener {
     public void messagesRemoved(MessageCountEvent e) {
     }
 }
-
-
-
-
-
-
-

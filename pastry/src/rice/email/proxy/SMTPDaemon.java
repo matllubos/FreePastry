@@ -153,7 +153,7 @@ class SMTPDaemon implements Runnable {
 		}
 		//System.err.println("Sending to user " + recip);
 
-		PostUserAddress thisRecip = new PostUserAddress(recip);
+		PostUserAddress thisRecip = new PostUserAddress(recip.trim());
 		recipients.add(thisRecip);
 
 		w.println("250 " + recip + "...Recipient ok");
@@ -194,8 +194,9 @@ class SMTPDaemon implements Runnable {
 	}
 
 	System.err.println("Sending mail from: " + sender.getName());
-	System.err.println("First recipient: " +
-			   ((PostUserAddress) recipientArray[0]).getName());
+	System.err.println("First recipient: '" +
+			   ((PostUserAddress)
+			    recipientArray[0]).getName() + "'");
 	System.err.println("Subject: " + subject);
 	System.err.println("Message data: \n" + messageBuf.toString());
 
