@@ -329,6 +329,9 @@ public class Id implements rice.p2p.commonapi.Id {
    * @return true if they are equal, false otherwise.
    */
   public boolean equals(Object obj) {
+    if (obj == null)
+      return false; 
+    
     Id nid = (Id) obj;
 
     for (int i = 0; i < nlen; i++) {
