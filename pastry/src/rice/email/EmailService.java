@@ -41,7 +41,7 @@ public class EmailService extends PostClient {
 	    
 	    Folder f = new Folder(emailLog, _post.getStorageService());
 
-	    c.receiveResult(f);
+	    result.receiveResult(f);
 	}
 
 	/**
@@ -51,7 +51,7 @@ public class EmailService extends PostClient {
 	 * @param result The exception which was caused.
 	 */
 	public void receiveException(Exception result) {
-	    c.receiveException(result);
+	    result.receiveException(result);
 	}
 
     }
