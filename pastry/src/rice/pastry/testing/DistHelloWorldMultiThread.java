@@ -314,13 +314,13 @@ public class DistHelloWorldMultiThread {
           "Messages Delivered so far :" + driver.recievedMessages());
         ArrayList list = driver.getMissingMessages();
         System.out.println("Missing Messages so far :" + list.size());
-        /*
+        
                         Iterator i = list.iterator();
                         while (i.hasNext()) {
                             HelloMsg m = (HelloMsg)i.next();
                             System.out.println("  Missing msg: "+m);
                             
-                        }*/
+                        }
         if (kill_counter < 10) {
           driver.killPastryNode();
           kill_counter++;
