@@ -39,7 +39,6 @@ import rice.pastry.messaging.Message;
 import rice.pastry.routing.InitiateRouteSetMaintenance;
 import rice.selector.SelectorManager;
 import rice.selector.Timer;
-import rice.selector.TimerTask;
 import sun.misc.SignalHandler;
 
 /**
@@ -167,6 +166,8 @@ public abstract class DistPastryNode extends PastryNode {
     // cancel join retransmissions
   }
 
+	protected ScheduledMessage leafSetRoutineMaintenance = null;
+	protected ScheduledMessage routeSetRoutineMaintenance = null;
 
   /**
    * Called after the node is initialized.
@@ -175,15 +176,17 @@ public abstract class DistPastryNode extends PastryNode {
    */
   public void doneNode(NodeHandle bootstrap) {
 
-    if (leafSetMaintFreq > 0) {
-      // schedule the leafset maintenance event
-      scheduleMsgAtFixedRate(new InitiateLeafSetMaintenance(),
-        leafSetMaintFreq * 1000, leafSetMaintFreq * 1000);
-    }
     if (routeSetMaintFreq > 0) {
       // schedule the routeset maintenance event
-      scheduleMsgAtFixedRate(new InitiateRouteSetMaintenance(),
+      routeSetRoutineMaintenance = scheduleMsgAtFixedRate(new InitiateRouteSetMaintenance(),
         routeSetMaintFreq * 1000, routeSetMaintFreq * 1000);
+//        System.out.println("Scheduling routeSetMaint for "+routeSetMaintFreq * 1000+","+routeSetMaintFreq * 1000);
+    }
+    if (leafSetMaintFreq > 0) {
+      // schedule the leafset maintenance event
+      leafSetRoutineMaintenance = scheduleMsgAtFixedRate(new InitiateLeafSetMaintenance(),
+        leafSetMaintFreq * 1000, leafSetMaintFreq * 1000);
+//        System.out.println("Scheduling leafSetMaint for "+leafSetMaintFreq * 1000+","+leafSetMaintFreq * 1000);
     }
   }
 
