@@ -38,6 +38,24 @@ final class CoalescedLogEntry extends LogEntry {
   }
   
   /**
+   * Returns whether or not this coaleseced log entry contains
+   * the provided entry
+   *
+   * @param entry The entry to search for
+   * @return Whetehr or not this entry contains it
+   */
+  protected boolean contains(LogEntry entry) {
+    if (entry == null)
+      return false;
+    
+    for (int i=0; i<entries.length; i++)
+      if ((entries[i] != null) && (entries[i].equals(entry)))
+        return true;
+    
+    return false;
+  }
+  
+  /**
    * Method which returns the number of current log entries
    *
    * @return The number of yet-to-be-coalesced log entries

@@ -355,7 +355,7 @@ public class Log implements PostData {
         public void receiveResult(Object o) {
           LogEntry thisEntry = (LogEntry) o;
           
-          if (((entry != null) && (entry.equals(thisEntry))) ||
+          if (((entry != null) && (thisEntry.contains(entry))) ||
               (thisEntry.getPreviousEntryReference() == null)) {
             parent.receiveResult(Boolean.TRUE);
           } else {

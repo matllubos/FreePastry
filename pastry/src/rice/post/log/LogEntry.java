@@ -37,6 +37,20 @@ public abstract class LogEntry implements PostData {
    */
   public LogEntry() {
   }
+  
+  /**
+   * Returns whether or not this coaleseced log entry contains
+   * the provided entry
+   *
+   * @param entry The entry to search for
+   * @return Whetehr or not this entry contains it
+   */
+  protected boolean contains(LogEntry entry) {
+    if (entry == null)
+      return false;
+        
+    return this.equals(entry);
+  }
 
   /**
    * Sets the user of this log entry

@@ -35,6 +35,20 @@ final class EncryptedLogEntry extends LogEntry {
 
     initializeEntry();
   }
+  
+  /**
+   * Returns whether or not this coaleseced log entry contains
+   * the provided entry
+   *
+   * @param entry The entry to search for
+   * @return Whetehr or not this entry contains it
+   */
+  protected boolean contains(LogEntry entry) {
+    if ((entry == null) || (this.entry == null))
+      return false;
+        
+    return this.entry.equals(entry);
+  }
 
   /**
    * Method which initializes the key, and constructs the cipherKey variables

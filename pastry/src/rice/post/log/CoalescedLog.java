@@ -83,6 +83,20 @@ public class CoalescedLog extends EncryptedLog {
   }
   
   /**
+   * This method returns a list of all the handles stored in the folder or
+   * any subfolders.
+   *
+   * Returns a PastContentHandle[] containing all of 
+   * the handles in to the provided continatuion.
+   */
+  public void getLogEntryReferences(final Set set, final LogEntry entry, Continuation command) {
+    if (pending.contains(entry)) 
+      command.receiveResult(Boolean.TRUE);
+    else
+      super.getLogEntryReferences(set, entry, command);
+  }
+  
+  /**
    * This method returns a reference to the most recent entry in the log,
    * which can then be used to walk down the log.
    *
