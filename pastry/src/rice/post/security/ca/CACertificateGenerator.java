@@ -34,15 +34,24 @@ public class CACertificateGenerator {
       byte[] cipher = (byte[]) ois.readObject();
       System.out.println("[ DONE ]");
 
-      String pass = CAKeyGenerator.fetchPassword("Please enter the password");
+      String pass;
+      byte[] key = null;
+      byte[] data = null;
 
-      System.out.print("    Decrypting keypair\t\t\t\t\t\t");
-      byte[] key = SecurityUtils.hash(pass.getBytes());
-      byte[] data = SecurityUtils.decryptSymmetric(cipher, key);
-
+      try {
+	  pass = CAKeyGenerator.fetchPassword("Please enter the password");
+	  
+	  System.out.print("    Decrypting keypair\t\t\t\t\t\t");
+	  key = SecurityUtils.hash(pass.getBytes());
+	  data = SecurityUtils.decryptSymmetric(cipher, key);
+      }catch (SecurityException e) {
+	  System.out.println("Incorrect Password! Exiting...");
+	  System.exit(-1);
+      }
+      
       KeyPair caPair = (KeyPair) SecurityUtils.deserialize(data);
       System.out.println("[ DONE ]");
-
+    
       System.out.print("Please enter the new username (@dosa.cs.rice.edu): ");
       BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
       String userid = input.readLine();
