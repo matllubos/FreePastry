@@ -17,16 +17,19 @@ public class PASTPanelCreator implements PanelCreator {
   public static int UPDATE_TIME = 1000;
   
   Vector data = new Vector();
-
   Vector cache = new Vector();
-  
   Vector times = new Vector();
+  Vector inserts = new Vector();
+  Vector lookups = new Vector();
+  Vector fetchHandles = new Vector();
+  Vector others = new Vector();
   
-  protected StorageManager manager;
-  protected Past past;
+  protected PastImpl past;
+  protected String name;
   
-  public PASTPanelCreator(rice.selector.Timer timer, Past past) {
+  public PASTPanelCreator(rice.selector.Timer timer, String name, PastImpl past) {
     this.past = past;
+    this.name = name;
     
     timer.scheduleAtFixedRate(new rice.selector.TimerTask() {
       public void run() {
@@ -36,48 +39,26 @@ public class PASTPanelCreator implements PanelCreator {
   }
   
   public DataPanel createPanel(Object[] objects) {
-    PastryNode node = null;
-    
-    for (int i=0; i<objects.length; i++) {
-      if (objects[i] instanceof PastryNode)
-        node = (PastryNode) objects[i];
-      else if (objects[i] instanceof StorageManager)
-        manager = (StorageManager) objects[i];
-      
-      if ((node != null) && (past != null) && (manager != null))
-        return createPanel(node, past, manager);
-    }
-    
-    return null;
-  }
-  
-  protected DataPanel createPanel(PastryNode node, Past past, StorageManager manager) {
-    DataPanel pastPanel = new DataPanel("PAST");
+    DataPanel pastPanel = new DataPanel(name + " PAST");
     
     GridBagConstraints pastCons = new GridBagConstraints();
     pastCons.gridx = 0;
     pastCons.gridy = 0;
     pastCons.fill = GridBagConstraints.HORIZONTAL;
     
-    KeyValueListView pastView = new KeyValueListView("Overview", 380, 200, pastCons);
+    KeyValueListView pastView = new KeyValueListView(name + " Overview", 380, 200, pastCons);
     
-    if (past instanceof PastImpl) {
-      PastImpl pastI = (PastImpl) past;
-      rice.p2p.commonapi.IdRange prim = pastI.getEndpoint().range(pastI.getEndpoint().getLocalNodeHandle(), 0, null, true);
-      rice.p2p.commonapi.IdRange total = pastI.getEndpoint().range(pastI.getEndpoint().getLocalNodeHandle(), pastI.getReplicationFactor(), null, true);
-      pastView.add("Prim. Range", (prim == null ? "All" : prim.getCCWId() + " -> " + prim.getCWId()));
-      pastView.add("Total Range", (total == null ? "All" : total.getCCWId() + " -> " + total.getCWId()));
-      pastView.add("# Prim. Keys", pastI.scan(prim).numElements() + "");
-      pastView.add("# Total Keys", pastI.scan(total).numElements() + "");
-    } else {
-      GCPastImpl pastI = (GCPastImpl) past;
-      rice.p2p.commonapi.IdRange prim = pastI.getEndpoint().range(pastI.getEndpoint().getLocalNodeHandle(), 0, null, true);
-      rice.p2p.commonapi.IdRange total = pastI.getEndpoint().range(pastI.getEndpoint().getLocalNodeHandle(), pastI.getReplicationFactor(), null, true);
-      pastView.add("Prim. Range", (prim == null ? "All" : prim.getCCWId() + " -> " + prim.getCWId()));
-      pastView.add("Total Range", (total == null ? "All" : total.getCCWId() + " -> " + total.getCWId()));
-      pastView.add("# Prim. Keys", pastI.scan(prim).numElements() + "");
-      pastView.add("# Total Keys", pastI.scan(total).numElements() + "");
-    }
+    rice.p2p.commonapi.IdRange prim = past.getEndpoint().range(past.getEndpoint().getLocalNodeHandle(), 0, null, true);
+    rice.p2p.commonapi.IdRange total = past.getEndpoint().range(past.getEndpoint().getLocalNodeHandle(), past.getReplicationFactor(), null, true);
+    pastView.add("Prim. Range", (prim == null ? "All" : prim.getCCWId() + " -> " + prim.getCWId()));
+    pastView.add("Total Range", (total == null ? "All" : total.getCCWId() + " -> " + total.getCWId()));
+    pastView.add("# Prim. Keys", past.scan(prim).numElements() + "");
+    pastView.add("# Total Keys", past.scan(total).numElements() + "");
+    pastView.add("SM", past.getStorageManager().getClass().getName());
+    pastView.add("Storage", past.getStorageManager().getStorage().getClass().getName());
+    pastView.add("Cache", past.getStorageManager().getCache().getClass().getName());
+    pastView.add("Instance", ((PersistentStorage) past.getStorageManager().getStorage()).getName());
+    pastView.add("Size", "" +  past.getStorageManager().getStorage().getTotalSize());
     
     pastPanel.addDataView(pastView);
     
@@ -87,24 +68,29 @@ public class PASTPanelCreator implements PanelCreator {
       dataStorageCons.gridy = 0;
       dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
       
-      LineGraphView dataStorageView = new LineGraphView("Storage Size", 380, 200, dataStorageCons, "Time (sec)", "Data (B)", true);
-      dataStorageView.addSeries("Data Stored", getTimeArray(), getDataArray(), Color.blue);
-      
+      LineGraphView dataStorageView = new LineGraphView(name + " Storage Size", 380, 200, dataStorageCons, "Time (sec)", "Data (KB)", true, false);
+      dataStorageView.addSeries("Data Stored", getTimeArray(), getArray(data), Color.blue);
+      dataStorageView.addSeries("Cache Size", getTimeArray(), getArray(cache), Color.orange);
+            
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
       System.out.println("Exceptoin " + e + " thrown.");
       e.printStackTrace();
     }
+    
     try {      
-      GridBagConstraints cacheCons = new GridBagConstraints();
-      cacheCons.gridx = 2;
-      cacheCons.gridy = 0;
-      cacheCons.fill = GridBagConstraints.HORIZONTAL;
+      GridBagConstraints dataStorageCons = new GridBagConstraints();
+      dataStorageCons.gridx = 2;
+      dataStorageCons.gridy = 0;
+      dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
       
-      LineGraphView cacheView = new LineGraphView("Cache Size", 380, 200, cacheCons, "Time (sec)", "Data (B)", true);
-      cacheView.addSeries("Cache Size", getTimeArray(), getCacheArray(), Color.orange);
+      LineGraphView dataStorageView = new LineGraphView(name + " Requests", 380, 200, dataStorageCons, "Time (sec)", "Count", false, true);
+      dataStorageView.addSeries("Insert", getTimeArray(), getArray(inserts), Color.blue);
+      dataStorageView.addSeries("Lookup", getTimeArray(), getArray(lookups), Color.red);
+      dataStorageView.addSeries("Fetch Handle", getTimeArray(), getArray(fetchHandles), Color.green);
+      dataStorageView.addSeries("Refresh", getTimeArray(), getArray(others), Color.black);
       
-      pastPanel.addDataView(cacheView);
+      pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
       System.out.println("Exceptoin " + e + " thrown.");
       e.printStackTrace();
@@ -127,25 +113,12 @@ public class PASTPanelCreator implements PanelCreator {
     }
   }
   
-  protected synchronized double[] getDataArray() {
-    if (times.size() > 0) {
-      double[] dataA = new double[data.size()];
+  protected synchronized double[] getArray(Vector vector) {
+    if (vector.size() > 0) {
+      double[] dataA = new double[vector.size()];
       
       for (int i=0; i<dataA.length; i++) 
-        dataA[i] = ((Double) data.elementAt(i)).doubleValue();
-      
-      return dataA;
-    } else {
-      return new double[0];
-    }
-  }
-  
-  protected synchronized double[] getCacheArray() {
-    if (times.size() > 0) {
-      double[] dataA = new double[cache.size()];
-      
-      for (int i=0; i<dataA.length; i++) 
-        dataA[i] = ((Double) cache.elementAt(i)).doubleValue();
+        dataA[i] = ((Double) vector.elementAt(i)).doubleValue();
       
       return dataA;
     } else {
@@ -154,32 +127,32 @@ public class PASTPanelCreator implements PanelCreator {
   }
   
   protected synchronized void updateData() {
-    if (manager != null) {
-      try {
-      data.add(new Double((double) getTotalSize(manager.getStorage())));
-      cache.add(new Double((double) getTotalSize(manager.getCache())));
+    try {
+      data.add(new Double((double) past.getStorageManager().getStorage().getTotalSize()/1000));
+      cache.add(new Double((double) past.getStorageManager().getCache().getTotalSize()/1000));
       times.add(new Long(System.currentTimeMillis()));
+      inserts.add(new Double((double) past.inserts));
+      lookups.add(new Double((double) past.lookups));
+      fetchHandles.add(new Double((double) past.fetchHandles));
+      others.add(new Double((double) past.other));
+      
+      past.inserts = 0;
+      past.lookups = 0;
+      past.fetchHandles = 0;
+      past.other = 0;
       
       if (data.size() > NUM_DATA_POINTS) {
         data.removeElementAt(0); 
         times.removeElementAt(0);
         cache.removeElementAt(0);
+        inserts.removeElementAt(0);
+        lookups.removeElementAt(0);
+        fetchHandles.removeElementAt(0);
+        others.removeElementAt(0);
       }
-      } catch (Exception e) {
-        System.out.println("Ecception " + e + " thrown.");
-      }
+    } catch (Exception e) {
+      System.out.println("Ecception " + e + " thrown.");
+      e.printStackTrace();
     }
-  }
-  
-  protected int getTotalSize(Catalog catalog) throws Exception {
-    ExternalContinuation c = new ExternalContinuation();
-    
-    catalog.getTotalSize(c);
-    c.sleep();
-  
-    if (c.getException() == null)
-      return (int) ((Long) c.getResult()).longValue();
-    else
-      throw c.getException();
   }
 }

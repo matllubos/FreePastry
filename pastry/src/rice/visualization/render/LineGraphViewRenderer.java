@@ -45,7 +45,7 @@ public class LineGraphViewRenderer extends ViewRenderer {
             data[i].add(domain[j], range[j]);
         }
         
-        BufferedImage image = createGraph(data, view.getXLabel(), view.getYLabel(), view.getWidth() - 2*getDefaultBorder(), view.getHeight() - 2*getDefaultBorder(), colors, view.getArea());
+        BufferedImage image = createGraph(data, view.getXLabel(), view.getYLabel(), view.getWidth() - 2*getDefaultBorder(), view.getHeight() - 2*getDefaultBorder(), colors, view.getArea(), view.getLegend());
         g.drawImage(image, getDefaultBorder(), getDefaultBorder(), null);
       }
     }; 
@@ -55,14 +55,14 @@ public class LineGraphViewRenderer extends ViewRenderer {
     return panel; 
   }
   
-  public BufferedImage createGraph(XYSeries[] series, String xLabel, String yLabel, int width, int height, Color[] color, boolean area) {
+  public BufferedImage createGraph(XYSeries[] series, String xLabel, String yLabel, int width, int height, Color[] color, boolean area, boolean legend) {
     XYSeriesCollection dataset= new XYSeriesCollection();
     
     for (int i=0; i<series.length; i++)
       dataset.addSeries(series[i]);
     
     JFreeChart chart =
-      ChartFactory.createXYLineChart(null, xLabel, yLabel, dataset, PlotOrientation.VERTICAL, false, false, false);
+      ChartFactory.createXYLineChart(null, xLabel, yLabel, dataset, PlotOrientation.VERTICAL, legend, false, false);
     
     XYPlot plot = chart.getXYPlot();
     

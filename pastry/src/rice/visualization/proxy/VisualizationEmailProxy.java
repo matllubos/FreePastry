@@ -10,7 +10,7 @@ import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.dist.DistPastryNode;
 import rice.proxy.Parameters;
 import rice.p2p.glacier.v2.GlacierImpl;
-import rice.p2p.past.Past;
+import rice.p2p.past.*;
 import rice.p2p.aggregation.AggregationImpl;
 import rice.visualization.*;
 import rice.visualization.Visualization;
@@ -53,7 +53,8 @@ public class VisualizationEmailProxy extends EmailProxy {
       RecentMessagesPanelCreator recent = new RecentMessagesPanelCreator();
       server.addPanelCreator(recent);
       server.addPanelCreator(new PastryPanelCreator());
-      server.addPanelCreator(new PASTPanelCreator(timer, realImmutablePast));
+      server.addPanelCreator(new MultiPASTPanelCreator(timer, new String[] {"Immutable", "Mutable", "Pending", "Delivered"},
+                                                       new PastImpl[] {(PastImpl) realImmutablePast, (PastImpl) mutablePast, pendingPast, deliveredPast}));
       server.addPanelCreator(new GCPanelCreator(timer, realImmutablePast));
 
       if (immutablePast instanceof AggregationImpl) {

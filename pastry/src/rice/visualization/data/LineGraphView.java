@@ -21,7 +21,9 @@ public class LineGraphView extends DataView {
   
   protected boolean area;
   
-  public LineGraphView(String name, int width, int height, GridBagConstraints constraints, String xLabel, String yLabel, boolean area) {
+  protected boolean legend;
+  
+  public LineGraphView(String name, int width, int height, GridBagConstraints constraints, String xLabel, String yLabel, boolean area, boolean legend) {
     super(name, width, height, constraints);
     
     this.labels = new Vector();
@@ -31,6 +33,7 @@ public class LineGraphView extends DataView {
     this.xLabel = xLabel;
     this.yLabel = yLabel;
     this.area = area;
+    this.legend = legend;
   }
   
   public void addSeries(String name, double[] domain, double[] range, Color color) {
@@ -70,6 +73,10 @@ public class LineGraphView extends DataView {
   
   public boolean getArea() {
     return area;
+  }
+  
+  public boolean getLegend() {
+    return legend;
   }
 }
 

@@ -13,7 +13,7 @@ import rice.pastry.dist.*;
 public class PastryNodePanel extends JPanel {
   
   public static int PASTRY_NODE_PANEL_WIDTH = PastryRingPanel.PASTRY_RING_PANEL_WIDTH + InformationPanel.INFORMATION_PANEL_WIDTH;
-  public static int PASTRY_NODE_PANEL_HEIGHT = 250;
+  public static int PASTRY_NODE_PANEL_HEIGHT = 300;
   
   public static int PASTRY_NODE_TAB_WIDTH = PASTRY_NODE_PANEL_WIDTH - 40;
   public static int PASTRY_NODE_TAB_HEIGHT = PASTRY_NODE_PANEL_HEIGHT - 40;
@@ -48,19 +48,26 @@ public class PastryNodePanel extends JPanel {
   }
   
   protected void processData(Data data) {
-    pane = new JTabbedPane();
+    pane = processDataPanels(data.getDataPanels());
     add(pane);
 
-    DataPanel[] panels = data.getDataPanels();
-    
-    for (int i=0; i<panels.length; i++) {
-      JPanel panel = processDataPanel(panels[i]);
-      pane.addTab(panels[i].getName(), panel);
-    }
-    
-    pane.setSelectedIndex(selected);
-    
     doLayout(); 
+  }
+  
+  protected JTabbedPane processDataPanels(DataPanel[] panels) {
+    JTabbedPane pane = new JTabbedPane();
+
+    for (int i=0; i<panels.length; i++) {
+      if (panels[i] instanceof MultiDataPanel) {
+        JTabbedPane tabs = processDataPanels(((MultiDataPanel) panels[i]).getDataPanels());
+        pane.addTab(panels[i].getName(), tabs);
+      } else {
+        JPanel panel = processDataPanel(panels[i]);
+        pane.addTab(panels[i].getName(), panel);
+      }
+    }
+//    pane.setSelectedIndex(selected);
+    return pane;
   }
   
   protected JPanel processDataPanel(DataPanel panel) {

@@ -234,14 +234,26 @@ public class VisualizationServer implements Runnable {
       if (panel != null) {
         data.addDataPanel(panel);
         
-        for (int j=0; j<panel.getDataViewCount(); j++) {
-          panel.getDataView(j).setData(data);
-        }
+        setData(panel, data);
       }
     }
     
     return data;
   }
+  
+  protected void setData(DataPanel panel, Data data) {
+    if (panel instanceof MultiDataPanel) {
+      DataPanel[] panels = ((MultiDataPanel) panel).getDataPanels();
+      
+      for (int i=0; i<panels.length; i++)
+        setData(panels[i], data);
+    } else {
+      for (int j=0; j<panel.getDataViewCount(); j++) {
+        panel.getDataView(j).setData(data);
+      }
+    }
+  }
+    
 
   /**
    * @param string

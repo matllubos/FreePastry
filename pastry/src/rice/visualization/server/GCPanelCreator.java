@@ -62,8 +62,8 @@ public class GCPanelCreator implements PanelCreator {
       dataStorageCons.gridy = 0;
       dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
       
-      LineGraphView dataStorageView = new LineGraphView("Refreshed Objects", 380, 200, dataStorageCons, "Time (sec)", "Number Refreshed", true);
-      dataStorageView.addSeries("Num OBjects", getTimeArray(), getRefreshedArray(), Color.blue);
+      LineGraphView dataStorageView = new LineGraphView("Refreshed Objects", 380, 200, dataStorageCons, "Time (sec)", "Number Refreshed", false, false);
+      dataStorageView.addSeries("Num Objects", getTimeArray(), getRefreshedArray(), Color.blue);
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
@@ -77,7 +77,7 @@ public class GCPanelCreator implements PanelCreator {
       dataStorageCons.gridy = 0;
       dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
       
-      LineGraphView dataStorageView = new LineGraphView("Collected Objects", 380, 200, dataStorageCons, "Time (sec)", "Number Collected", true);
+      LineGraphView dataStorageView = new LineGraphView("Collected Objects", 380, 200, dataStorageCons, "Time (sec)", "Number Collected", false, false);
       dataStorageView.addSeries("Num OBjects", getTimeArray(), getCollectedArray(), Color.blue);
       
       pastPanel.addDataView(dataStorageView);
@@ -92,7 +92,7 @@ public class GCPanelCreator implements PanelCreator {
       cacheCons.gridy = 0;
       cacheCons.fill = GridBagConstraints.HORIZONTAL;
       
-      LineGraphView cacheView = new LineGraphView("Expiration Times", 380, 200, cacheCons, "Time (hours)", "Objects", true);
+      LineGraphView cacheView = new LineGraphView("Expiration Times", 380, 200, cacheCons, "Time (hours)", "Objects", true, false);
       cacheView.addSeries("Expiration Times", expirations, getExpirations(), Color.red);
       
       pastPanel.addDataView(cacheView);

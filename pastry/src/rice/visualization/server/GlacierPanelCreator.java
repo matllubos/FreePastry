@@ -78,7 +78,7 @@ public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListe
     graphCons.gridx = 2;
     graphCons.gridy = 0;
     graphCons.fill = GridBagConstraints.HORIZONTAL;
-    LineGraphView graphView = new LineGraphView("Messages", 380, 200, graphCons, "Minutes", "Messages", false);
+    LineGraphView graphView = new LineGraphView("Messages", 380, 200, graphCons, "Minutes", "Messages", false, false);
 
     String tagToString[] = new String[] { "--", "Neighbor", "Sync", "SyncManifests", "SyncFetch", "Handoff", "Debug", "Refresh", "Insert", "LookupHandles", "Lookup", "Fetch", "LocalScan" };
     Color tagToColor[] = new Color[] { Color.white, Color.green, Color.blue, Color.black, Color.cyan, Color.darkGray, Color.lightGray, Color.magenta, Color.orange, Color.pink, Color.red, Color.yellow, Color.gray };

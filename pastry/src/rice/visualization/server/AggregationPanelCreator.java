@@ -60,7 +60,7 @@ public class AggregationPanelCreator implements PanelCreator {
     graphCons.gridy = 0;
     graphCons.fill = GridBagConstraints.HORIZONTAL;
 
-    LineGraphView graphView = new LineGraphView("Waiting list", 380, 200, graphCons, "Seconds", "Objects", false);
+    LineGraphView graphView = new LineGraphView("Waiting list", 380, 200, graphCons, "Seconds", "Objects", false, false);
     double[] waitingSeries = new double[WAITING_HISTORY];
     double[] timeSeries = new double[WAITING_HISTORY];
     for (int i=0; i<WAITING_HISTORY; i++) {
@@ -74,7 +74,7 @@ public class AggregationPanelCreator implements PanelCreator {
     graphCons2.gridy = 0;
     graphCons2.fill = GridBagConstraints.HORIZONTAL;
 
-    LineGraphView graphView2 = new LineGraphView("Aggregate list", 380, 200, graphCons2, "Minutes", "Objects / Aggregates", false);
+    LineGraphView graphView2 = new LineGraphView("Aggregate list", 380, 200, graphCons2, "Minutes", "Objects / Aggregates", false, false);
     double[] aggrCreatedSeries = new double[AGGR_OBJ_HISTORY-1];
     double[] avgSizeSeries = new double[AGGR_OBJ_HISTORY-1];
     double[] timeSeries2 = new double[AGGR_OBJ_HISTORY-1];

@@ -46,7 +46,7 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
     dataSentCons.gridy = 0;
     dataSentCons.fill = GridBagConstraints.HORIZONTAL;
     
-    LineGraphView dataSentView = new LineGraphView("Data Sent", 380, 200, dataSentCons, "Time (sec)", "Data (B)", false);
+    LineGraphView dataSentView = new LineGraphView("Data Sent", 380, 200, dataSentCons, "Time (sec)", "Data (B)", false, false);
     dataSentView.addSeries("Data Sent", getTimeArray(), getSentArray(), Color.green);
     
     GridBagConstraints dataReceivedCons = new GridBagConstraints();
@@ -54,7 +54,7 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
     dataReceivedCons.gridy = 0;
     dataReceivedCons.fill = GridBagConstraints.HORIZONTAL;
     
-    LineGraphView dataReceivedView = new LineGraphView("Data Received", 380, 200, dataReceivedCons, "Time (sec)", "Data (B)", false);
+    LineGraphView dataReceivedView = new LineGraphView("Data Received", 380, 200, dataReceivedCons, "Time (sec)", "Data (B)", false, false);
     dataReceivedView.addSeries("Data Received", getTimeArray(), getReceivedArray(), Color.red);
     
     GridBagConstraints dataBreakdownCons = new GridBagConstraints();
