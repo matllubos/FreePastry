@@ -99,9 +99,10 @@ public class Channel implements IScribeApp {
     private Set m_apps = new HashSet();
 
     /**
-     * Number of timeouts allowable before generating an upcall
+     * Number of timeouts allowable before generating an upcall;
+     * -1 indicates an infinite number of retries
      */
-    private int max_timeouts = 5;
+    private int max_timeouts = -1;
 
     /**
      * Length of time to wait for a response before timing out
