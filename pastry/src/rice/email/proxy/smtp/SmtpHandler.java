@@ -56,12 +56,14 @@ class SmtpHandler {
   }
 
   protected void handleCommand() throws IOException {
-    _currentLine = _conn.readLine().trim();
+    _currentLine = _conn.readLine();
 
     if (_currentLine == null) {
       quit();
       return;
     }
+    
+    _currentLine = _currentLine.trim();
 
     // eliminate invalid line lengths before parsing
     if (! commandLegalSize()) {

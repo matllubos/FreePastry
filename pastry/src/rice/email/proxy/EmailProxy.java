@@ -54,11 +54,11 @@ public class EmailProxy extends PostProxy {
 
   protected UserManagerImpl manager;
 
-  protected SmtpServerImpl smtp;
+  protected SmtpServer smtp;
 
-  protected Pop3ServerImpl pop3;
+  protected Pop3Server pop3;
      
-  protected ImapServerImpl imap;
+  protected ImapServer imap;
   
   protected rice.email.Folder emailFolder;
      
@@ -71,12 +71,15 @@ public class EmailProxy extends PostProxy {
     {"email_imap_enable", "true"},
     {"email_imap_ssl", "false"},
     {"email_imap_port", "1143"}, 
+    {"email_imap_non_blocking", "true"},
     {"email_pop3_enable", "true"},
     {"email_pop3_port", "2110"}, 
     {"email_pop3_ssl", "false"},
+    {"email_pop3_non_blocking", "true"},
     {"email_smtp_enable", "true"},
     {"email_smtp_port", "2025"}, 
     {"email_smtp_ssl", "false"},
+    {"email_smtp_non_blocking", "true"},
     {"email_smtp_gateway", "false"}
   };
      
@@ -176,6 +179,11 @@ public class EmailProxy extends PostProxy {
           smtp = new SSLSmtpServerImpl(port, email, gateway, address, accept);
           smtp.start();
           stepDone(SUCCESS);
+        } else if (parameters.getBooleanParameter("email_smtp_non_blocking")) {
+          stepStart("Starting Non-Blocking SMTP server on port " + port);
+          smtp = new NonBlockingSmtpServerImpl(port, email, gateway, address, accept);
+          smtp.start();
+          stepDone(SUCCESS);
         } else {
           stepStart("Starting SMTP server on port " + port);
           smtp = new SmtpServerImpl(port, email, gateway, address, accept);
@@ -205,6 +213,11 @@ public class EmailProxy extends PostProxy {
           imap = new SSLImapServerImpl(port, email, manager, gateway, accept);
           imap.start();
           stepDone(SUCCESS);
+        } else if (parameters.getBooleanParameter("email_imap_non_blocking")) {
+          stepStart("Starting Non-Blocking IMAP server on port " + port);
+          imap = new NonBlockingImapServerImpl(port, email, manager, gateway, accept);
+          imap.start();
+          stepDone(SUCCESS);
         } else {
           stepStart("Starting IMAP server on port " + port);
           imap = new ImapServerImpl(port, email, manager, gateway, accept);
@@ -232,6 +245,11 @@ public class EmailProxy extends PostProxy {
         if (parameters.getBooleanParameter("email_pop3_ssl")) {
           stepStart("Starting SSL POP3 server on port " + port);
           pop3 = new SSLPop3ServerImpl(port, email, manager, gateway, accept);
+          pop3.start();
+          stepDone(SUCCESS);
+        } else if (parameters.getBooleanParameter("email_pop3_non_blocking")) {
+          stepStart("Starting Non-Blocking POP3 server on port " + port);
+          pop3 = new NonBlockingPop3ServerImpl(port, email, manager, gateway, accept);
           pop3.start();
           stepDone(SUCCESS);
         } else {

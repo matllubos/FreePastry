@@ -6,7 +6,7 @@ package rice.email.proxy.imap;
  */
 public interface ImapServer {
   
-    public int getPort();
+  public int getPort();
   
   public void start();
   
