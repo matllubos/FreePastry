@@ -26,6 +26,10 @@ import java.net.*;
 import java.io.Serializable;
 import java.security.*;
 
+/**
+ *
+ * @author Ansley Post
+ */
 
 public class SplitStreamTest implements ISplitStreamApp, Observer{
 

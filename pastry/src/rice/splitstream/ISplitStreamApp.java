@@ -3,6 +3,8 @@ package rice.splitstream;
  *
  * This interface allows an application running on top of SplitStream 
  * to be notified of events.
+ *
+ * @author Ansley Post
  */
  public interface ISplitStreamApp{
 
@@ -17,6 +19,8 @@ package rice.splitstream;
      /**
       * Notification from a channel when it is ready, so that
       * application can take appropriate action.
+      * 
+      * @param channelId the channel which is ready
       */
      public void channelIsReady(ChannelId channelId);
 

@@ -13,8 +13,9 @@ import rice.pastry.security.*;
 
 import rice.splitstream.messaging.*;
 /*
- * @(#) SplitStream.java
+ * @(#) SplitStreamImpl.java
  *
+ * @author Ansley Post
  */
 
 /**

@@ -6,6 +6,8 @@ import rice.pastry.*;
 /**
  * This class just wraps the NodeId so that
  * we can have type checking.
+ *
+ * @author Ansley Post
  */
 public class ChannelId extends NodeId{
  /**

@@ -1,6 +1,10 @@
 package rice.splitstream;
-import rice.pastry.*;
 
+import rice.pastry.*;
+/**
+ *
+ * @author Ansley Post
+ */
 public interface ISplitStream{
 
    /**

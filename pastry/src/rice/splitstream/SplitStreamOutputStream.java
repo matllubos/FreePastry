@@ -1,8 +1,14 @@
 package rice.splitstream;
-import rice.splitstream.messaging.*;
+
 import java.io.*;
+
+import rice.splitstream.messaging.*;
 import rice.pastry.security.*;
 import rice.scribe.*;
+/**
+ *
+ * @author Ansley Post
+ */
 public class SplitStreamOutputStream extends ByteArrayOutputStream{
 
    private StripeId stripeId;

@@ -13,8 +13,9 @@ import java.util.*;
  * you must come up with some method for dropping channels. You must
  * handle user requests at some higher priority than what is going on
  * in the backround.  There are many ways to wiegh each of these priorities
- * and there must be some more discussion on which is best. So this
- * class is abstract. The behavior will be decided at a later point
+ * and there must be some more discussion on which is best.
+ *
+ * @author Ansley Post
  */
 public class BandwidthManager{
 

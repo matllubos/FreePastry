@@ -1,15 +1,23 @@
 package rice.splitstream;
+
 import rice.splitstream.messaging.*;
+
 import rice.scribe.*;
 import rice.scribe.messaging.*;
+
 import rice.pastry.*;
 import rice.pastry.standard.*;
 import rice.pastry.security.*;
+
 import java.io.*; 
 import java.util.*;
+
 /**
  * This class encapsulates all data about an individual stripe.
+ *
+ * @author Ansley Post
  */
+
 public class Stripe extends Observable implements IScribeApp{
    /**
     * The stripe state, wheter it is dropped, connected, etc.
