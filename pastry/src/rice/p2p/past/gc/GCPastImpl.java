@@ -36,6 +36,7 @@ if advised of the possibility of such damage.
 
 package rice.p2p.past.gc;
 
+import java.io.*;
 import java.util.*;
 
 import rice.*;
@@ -64,6 +65,11 @@ public class GCPastImpl extends PastImpl implements GCPast {
   public static int COLLECTION_INTERVAL = 3600000;
   
   /**
+   * The trash can, or where objects should go once expired.  If null, they are deleted
+   */
+  protected StorageManager trash;
+  
+  /**
    * Constructor for GCPast
    *
    * @param node The node below this Past implementation
@@ -72,7 +78,22 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param instance The unique instance name of this Past
    */
   public GCPastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy) {
+    this(node, manager, replicas, instance, policy, null);
+  }
+  
+  
+  /**
+   * Constructor for GCPast
+   *
+   * @param node The node below this Past implementation
+   * @param manager The storage manager to be used by Past
+   * @param replicas The number of object replicas
+   * @param instance The unique instance name of this Past
+   * @param trash The storage manager to place the deleted objects into (if null, they are removed)
+   */
+  public GCPastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy, StorageManager trash) {
     super(node, manager, replicas, instance, policy);
+    this.trash = trash;
     
     endpoint.scheduleMessage(new GCCollectMessage(0, getLocalNodeHandle(), node.getId()), COLLECTION_INTERVAL, COLLECTION_INTERVAL);
   }
@@ -271,8 +292,23 @@ public class GCPastImpl extends PastImpl implements GCPast {
               if (((GCId) array[index]).getExpiration() < System.currentTimeMillis()) 
                 break;
               
-            if (index < array.length)
-              storage.unstore(((GCId) array[index]).getId(), this);
+            if (index < array.length) {
+              final GCId id = (GCId) array[index];
+
+              if (trash != null) {                
+                storage.getObject(id.getId(), new StandardContinuation(this) {
+                  public void receiveResult(Object o) {
+                    trash.store(id.getId(), storage.getMetadata(id.getId()), (Serializable) o, new StandardContinuation(parent) {
+                      public void receiveResult(Object o) {
+                        storage.unstore(id.getId(), parent);
+                      }
+                    });
+                  }
+                });
+              } else {
+                storage.unstore(id.getId(), this);
+              }
+            }
           }
         };
           
