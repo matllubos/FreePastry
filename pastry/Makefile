@@ -29,26 +29,26 @@ PACKAGES = \
 	rice.scribe.messaging\
 	rice.scribe.security\
 	rice.scribe.testing\
-	rice.pastry.rmi
+	rice.pastry.rmi\
+	rice.post\
+	rice.post.log\
+	rice.post.messaging\
+	rice.post.storage\
+#	rice.post.email\
+#	rice.post.email.log\
+#	rice.post.email.messaging\
+#	rice.post.email.proxy\
+	rice.storage\
+	rice.storage.testing\
+	rice.past\
+	rice.past.messaging\
+	rice.past.testing\
+	rice.past.search\
+	rice.past.search.testing
 #	rice.ap3\
 #	rice.ap3.routing\
 #	rice.ap3.messaging\
 #	rice.ap3.testing\
-#	rice.storage\
-#	rice.storage.testing\
-#	rice.past\
-#	rice.past.messaging\
-#	rice.past.testing\
-#	rice.past.search\
-#	rice.past.search.testing\
-#	rice.post\
-#	rice.post.log\
-#	rice.post.messaging\
-#	rice.post.storage\
-#	rice.post.email\
-#	rice.post.email.log\
-#	rice.post.email.messaging\
-#	rice.post.email.proxy
 
 NODOC_PACKAGES = 
 
