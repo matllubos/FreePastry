@@ -1,26 +1,32 @@
 # Mark done entries by commenting them out with a # in the left column.
 
-General cleanup:
+GENERAL CLEANUP
 
-Correctness:
+CORRECTNESS
 
     Leaf set consistency on massive concurrent joins.
 
-Functionality:
+FUNCTIONALITY
 
     Transparent handle verification, and setLocalHandle.
 
-    Find nearby node algorithm.
+PERFORMANCE
 
-Performance:
+    Find-nearby-node algorithm.
 
-Security:
+SECURITY
 
     Consider getting rid of the security managers for a while. Or keep them
     around, but actually verify in the verifyHandles, not duplicate or
     coalesce handles, or set local nodes.
 
-When the Socket interface is being implemented:
+APPLICATIONS
+
+    RoundTrip (or HelloWorld with flags) to measure the real latency diff.
+
+LONG-TERM
+
+    When the Socket interface is being implemented:
 
     Consider moving stuff common to all wire protocols to base. This
     includes significant stuff from RMINodeHandle{,Pool}. Make NodeHandle
