@@ -51,6 +51,8 @@ public class EmailProxy extends PostProxy {
   static int SMTP_PORT = 1025;
 
   static boolean PROXY = false;
+
+  static boolean ACCEPT_NON_LOCAL = false;
  
   private EmailService email;
 
@@ -77,12 +79,12 @@ public class EmailProxy extends PostProxy {
       stepDone(SUCCESS);
 
       stepStart("Starting SMTP server on port " + SMTP_PORT);
-      smtp = new SmtpServerImpl(SMTP_PORT, email, PROXY, address);
+      smtp = new SmtpServerImpl(SMTP_PORT, email, PROXY, address, ACCEPT_NON_LOCAL);
       smtp.start();
       stepDone(SUCCESS);
 
       stepStart("Starting IMAP server on port " + IMAP_PORT);
-      imap = new ImapServerImpl(IMAP_PORT, email, manager, PROXY);
+      imap = new ImapServerImpl(IMAP_PORT, email, manager, PROXY, ACCEPT_NON_LOCAL);
       imap.start();
       stepDone(SUCCESS);
 
@@ -124,6 +126,13 @@ public class EmailProxy extends PostProxy {
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-proxy")) {
         PROXY = true;
+        break;
+      }
+    }
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-nonlocal")) {
+        ACCEPT_NON_LOCAL = true;
         break;
       }
     }

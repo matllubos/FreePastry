@@ -16,6 +16,7 @@ public final class ImapServerImpl extends Thread implements ImapServer {
   private ServerSocket server;
 
   private boolean proxy;
+  private boolean acceptNonLocal;
   
   private UserManager manager;
 
@@ -23,7 +24,8 @@ public final class ImapServerImpl extends Thread implements ImapServer {
 
   private EmailService email;
 
-  public ImapServerImpl(int port, EmailService email, UserManager manager, boolean proxy) throws IOException {
+  public ImapServerImpl(int port, EmailService email, UserManager manager, boolean proxy, boolean acceptNonLocal) throws IOException {
+    this.acceptNonLocal = acceptNonLocal;
     this.proxy = proxy;
     this.port = port;
     this.email = email;
@@ -48,7 +50,7 @@ public final class ImapServerImpl extends Thread implements ImapServer {
 
         System.out.println("Accepted connection from " + socket.getInetAddress());
 
-        if (proxy || (socket.getInetAddress().isSiteLocalAddress())) {
+        if (acceptNonLocal || proxy || (socket.getInetAddress().isSiteLocalAddress())) {
           Thread thread = new Thread() {
             public void run() {
               try {

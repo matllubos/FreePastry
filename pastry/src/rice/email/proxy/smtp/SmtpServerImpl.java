@@ -12,6 +12,7 @@ import java.net.*;
 
 public class SmtpServerImpl extends Thread implements SmtpServer {
 
+  private boolean acceptNonLocal = false;
   private boolean proxy = false;
   private boolean quit = false;
   private int port;
@@ -25,7 +26,8 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
 
   private EmailService email;
 
-  public SmtpServerImpl(int port, EmailService email, boolean proxy, PostEntityAddress address) throws Exception {
+  public SmtpServerImpl(int port, EmailService email, boolean proxy, PostEntityAddress address, boolean acceptNonLocal) throws Exception {
+    this.acceptNonLocal = acceptNonLocal;
     this.proxy = proxy;
     this.port = port;
     this.email = email;
@@ -53,7 +55,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
 
         System.out.println("Accepted connection from " + socket.getInetAddress());
 
-        if (proxy || (socket.getInetAddress().isSiteLocalAddress())) {
+        if (acceptNonLocal || proxy || (socket.getInetAddress().isSiteLocalAddress())) {
           Thread thread = new Thread() {
             public void run() {
               try {
