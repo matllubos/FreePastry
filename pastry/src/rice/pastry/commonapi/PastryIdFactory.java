@@ -39,6 +39,7 @@ package rice.pastry.commonapi;
 import rice.p2p.commonapi.*;
 
 import java.lang.Comparable;
+import java.lang.ref.*;
 import java.io.*;
 import java.util.*;
 import java.security.*;
@@ -53,6 +54,11 @@ import java.security.*;
  * @author Peter Druschel
  */
 public class PastryIdFactory implements IdFactory {
+  
+  /**
+   * Static hashtable of ringIds, for coalescing multiple ids
+   */
+  protected static WeakHashMap ID_CACHE = new WeakHashMap();
 
   private MessageDigest md;
 
@@ -68,13 +74,31 @@ public class PastryIdFactory implements IdFactory {
   }
   
   /**
+   * Method which ensures that only one copy of each thingy is ever stored
+   *
+   * @param input The Id to be returned
+   * @return THe canocotial object
+   */
+  protected Id process(Id input) {
+    WeakReference ref = (WeakReference) ID_CACHE.get(input);
+    Id result = null;
+    
+    if ((ref != null) && ((result = (Id) ref.get()) != null)) {
+      return result;
+    } else {
+      ID_CACHE.put(input, new WeakReference(input));
+      return input;
+    }
+  }
+      
+  /**
    * Builds a protocol-specific Id given the source data.
    *
    * @param material The material to use
    * @return The built Id.
    */
   public Id buildId(byte[] material) {
-    return new rice.pastry.Id(material);
+    return process(new rice.pastry.Id(material));
   }
 
   /**
@@ -84,7 +108,7 @@ public class PastryIdFactory implements IdFactory {
    * @return The built Id.
    */
   public Id buildId(int[] material) {
-    return new rice.pastry.Id(material);
+    return process(new rice.pastry.Id(material));
   }
 
   /**
@@ -106,9 +130,22 @@ public class PastryIdFactory implements IdFactory {
    * @return The built Id.
    */
   public Id buildIdFromToString(String string) {
-    return new rice.pastry.Id(string);
+    return process(new rice.pastry.Id(string));
   }
-
+  
+  /**
+   * Builds an Id by converting the given toString() output back to an Id.  Should
+   * not normally be used.
+   *
+   * @param chars The character array
+   * @param offset The offset to start reading at
+   * @param length The length to read
+   * @return The built Id.
+   */
+  public Id buildIdFromToString(char[] chars, int offset, int length) {
+    return process(new rice.pastry.Id(chars, offset, length));
+  }
+  
   /**
    * Builds a protocol-specific Id.Distance given the source data.
    *
