@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate 
+"FreePastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -38,6 +38,9 @@ package rice.pastry;
 
 import rice.pastry.messaging.*;
 
+import java.io.*;
+import java.util.*;
+
 /**
  * Interface for handles to remote nodes.
  *
@@ -45,71 +48,104 @@ import rice.pastry.messaging.*;
  *
  * @author Andrew Ladd
  */
+public abstract class NodeHandle extends Observable implements MessageReceiver, LocalNodeI {
 
-public interface NodeHandle extends MessageReceiver {
-    /**
-     * Gets the nodeId of this Pastry node.
-     *
-     * @return the node id.
-     */
-    
-    public NodeId getNodeId();
+  // the local pastry node
+  private transient PastryNode localnode;
 
-    /**
-     * Returns the last known liveness information about the Pastry node associated with this handle.
-     * Invoking this method does not cause network activity.
-     *
-     * @return true if the node is alive, false otherwise.
-     */
-    
-    public boolean isAlive();
+  /**
+   * Gets the nodeId of this Pastry node.
+   *
+   * @return the node id.
+   */
+  public abstract NodeId getNodeId();
 
-    /**
-     * Returns the last known proximity information about the Pastry node associated with this handle.
-     * Invoking this method does not cause network activity.
-     *
-     * Smaller values imply greater proximity. The exact nature and interpretation of the proximity metric 
-     * implementation-specific.
-     *
-     * @return the proximity metric value
-     */
-    
-    public int proximity();
+  /**
+   * Returns the last known liveness information about the Pastry node associated with this handle.
+   * Invoking this method does not cause network activity.
+   *
+   * @return true if the node is alive, false otherwise.
+   */
+  public abstract boolean isAlive();
 
-    /**
-     * Ping the node. Refreshes the cached liveness status and proximity value of the Pastry node associated
-     * with this.
-     * Invoking this method causes network activity.
-     *
-     * @return true if node is currently alive.
-     */
-    
-    public boolean ping();
+  /**
+   * Returns the last known proximity information about the Pastry node associated with this handle.
+   * Invoking this method does not cause network activity.
+   *
+   * Smaller values imply greater proximity. The exact nature and interpretation of the proximity metric
+   * implementation-specific.
+   *
+   * @return the proximity metric value
+   */
+  public abstract int proximity();
 
-    /**
-     * Set the local PastryNode.
-     *
-     * @param pn local pastrynode
-     */
-    
-    public void setLocalNode(PastryNode pn);
+  /**
+   * Ping the node. Refreshes the cached liveness status and proximity value of the Pastry node associated
+   * with this.
+   * Invoking this method causes network activity.
+   *
+   * @return true if node is currently alive.
+   */
+  public abstract boolean ping();
 
-    /**
-     * Equality operator for nodehandles.
-     *
-     * @param obj a nodehandle object
-     * @return true if they are equal, false otherwise.
-     */ 
-    public boolean equals(Object obj);
+  /**
+   * Set the local PastryNode.
+   *
+   * @param pn local pastrynode
+   */
+  public final void setLocalNode(PastryNode pn) {
+    localnode = pn;
+    if (localnode != null) afterSetLocalNode();
+  }
+
+  /**
+   * Method that can be overridden by handle to set isLocal, etc.
+   */
+  public void afterSetLocalNode() {}
+
+  /**
+   * Accessor method.
+   */
+  public final PastryNode getLocalNode() {
+    return localnode;
+  }
+
+  /**
+   * May be called from handle etc methods to ensure that local node has
+   * been set, either on construction or on deserialization/receivemsg.
+   */
+  public final void assertLocalNode() {
+    if (localnode == null) {
+      System.out.println("PANIC: localnode is null in " + this);
+      (new Exception()).printStackTrace();
+    }
+  }
+
+  /**
+   * Equality operator for nodehandles.
+   *
+   * @param obj a nodehandle object
+   * @return true if they are equal, false otherwise.
+   */
+  public abstract boolean equals(Object obj);
 
 
-    /**
-     * Hash codes for nodehandles.
-     * 
-     * @return a hash code.
-     */
-    public int hashCode(); 
+  /**
+   * Hash codes for nodehandles.
+   *
+   * @return a hash code.
+   */
+  public abstract int hashCode();
 
+  /**
+   * Called on deserialization. Adds itself to a pending-setLocalNode
+   * list. This list is in a static (global) hash, indexed by the
+   * ObjectInputStream. Refer to README.handles_localnode for details.
+   */
+  private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+    in.defaultReadObject();
+    LocalNodeI.pending.addPending(in, this);
+  }
 }
 
 

@@ -10,7 +10,7 @@ met:
 
 - Redistributions of source code must retain the above copyright
 notice, this list of conditions and the following disclaimer.
-
+  
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
@@ -34,69 +34,91 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry;
+package rice.pastry.wire;
 
-import java.io.*;
+import rice.pastry.*;
+import rice.pastry.dist.*;
+import rice.pastry.messaging.*;
+import rice.pastry.security.*;
+import rice.pastry.standard.*;
+
 import java.util.*;
 
-import rice.pastry.messaging.*;
-import rice.pastry.rmi.*;
-
 /**
- * Implementation of the LocalNodeI interface that some Serializable classes (such
- * as Certificate) extend, if they want to be kept informed of what
- * node they're on. If a class cannot use this provided implementation (for reasons
- * such as multiple inheritance), it should implement the method provided in the
- * LocalNode interface in the same manner as these.
+ * Security manager for wire connections between nodes.
  *
  * @version $Id$
  *
- * @author Sitaram Iyer
  * @author Alan Mislove
  */
-public abstract class LocalNode implements LocalNodeI {
 
-  // the local pastry node
-  private transient PastryNode localnode;
+public class WirePastrySecurityManager implements PastrySecurityManager {
 
-  public LocalNode() { localnode = null; }
-
-  /**
-   * Accessor method.
-   */
-  public final PastryNode getLocalNode() { return localnode; }
+  private PastryNode localnode;
+  private WireNodeHandle localhandle;
+  private WireNodeHandlePool pool;
 
   /**
-   * Accessor method. Notifies the overridable afterSetLocalNode.
+   * Constructor.
    */
-  public final void setLocalNode(PastryNode pn) {
+  public WirePastrySecurityManager(WireNodeHandle snh, WireNodeHandlePool snhp) {
+    localhandle = snh;
+    pool = snhp;
+  }
+
+  /**
+   * Sets the local Pastry node after it is fully constructed.
+   *
+   * @param pn local Pastry node.
+   */
+  public void setLocalPastryNode(PastryNode pn) {
     localnode = pn;
-    if (localnode != null) afterSetLocalNode();
   }
 
   /**
-   * Method that can be overridden by handle to set isLocal, etc.
+   * This method takes a message and returns true
+   * if the message is safe and false otherwise.
+   *
+   * @param msg a message.
+   * @return if the message is safe, false otherwise.
    */
-  public void afterSetLocalNode() {}
 
-  /**
-   * May be called from handle etc methods to ensure that local node has
-   * been set, either on construction or on deserialization/receivemsg.
-   */
-  public final void assertLocalNode() {
-    if (localnode == null) {
-      System.out.println("PANIC: localnode is null in " + this);
-      (new Exception()).printStackTrace();
-    }
+  public boolean verifyMessage(Message msg) {
+    return true;
   }
 
   /**
-   * Called on deserialization. Adds itself to a pending-setLocalNode
-   * list. This list is in a static (global) hash, indexed by the
-   * ObjectInputStream. Refer to README.handles_localnode for details.
+   * Checks to see if these credentials can be associated with the address.
+   *
+   * @param cred some credentials.
+   * @param addr an address.
+   *
+   * @return true if the credentials match the address, false otherwise.
    */
-  private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-    in.defaultReadObject();
-    LocalNodeI.pending.addPending(in, this);
+
+  public boolean verifyAddressBinding(Credentials cred, Address addr) {
+    return true;
+  }
+
+  /**
+   * Verify node handle safety.
+   *
+   * @param handle the handle to check.
+   *
+   * @return the verified node handle
+   */
+
+  public NodeHandle verifyNodeHandle(NodeHandle handle) {
+    return pool.coalesce((DistNodeHandle) handle);
+  }
+
+  /**
+   * Gets the current time for a timestamp.
+   *
+   * @return the timestamp.
+   */
+
+  public Date getTimestamp() {
+    return new Date();
   }
 }

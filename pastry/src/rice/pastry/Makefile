@@ -5,6 +5,8 @@ SOURCE  = \
 	NodeIdFactory.java\
 	NodeHandle.java\
 	LocalNode.java\
+	LocalNodeI.java\
+	PendingLocalNodesList.java\
 	PastryNode.java\
 	PastryNodeFactory.java\
 	NodeSet.java\

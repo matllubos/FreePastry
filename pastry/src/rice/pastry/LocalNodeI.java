@@ -34,83 +34,55 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry.direct;
+package rice.pastry;
 
-import rice.pastry.*;
+import java.io.*;
+import java.util.*;
+
 import rice.pastry.messaging.*;
+import rice.pastry.rmi.*;
 
 /**
- * the node handle used with the direct network
+ * Interface that some Serializable classes (such as NodeHandle and
+ * Certificate) implement, if they want to be kept informed of what node
+ * they're on. Think of this as a pattern. One implementation of this
+ * is provided (LocalNodeImpl), but if a class cannot use this implementation
+ * (for reasons such as multiple inheritance), it should implement
+ * LocalNode and provide the methods below.
+ *
+ * NOTE: All implementations of local nodes should override their readObject()
+ * methods in order to add the following lines:
+ *
+ *    in.defaultReadObject();
+ *    LocalNode.pending.addPending(in, this)
+ *
+ * which will schedule the LocalNode to have it's local node to be set to
+ * non-null.
  *
  * @version $Id$
  *
- * @author Andrew Ladd
- * @author Rongmei Zhang/Y. Charlie Hu
+ * @author Alan Mislove
  */
-
-public class DirectNodeHandle extends NodeHandle
-{
-    private PastryNode remoteNode;
-    private NetworkSimulator simulator;
-
-    public DirectNodeHandle(PastryNode ln, PastryNode rn, NetworkSimulator sim) {
-      setLocalNode(ln);
-      remoteNode = rn;
-      simulator = sim;
-    }
-
-    public PastryNode getRemote() { return remoteNode; }
-
-    public NodeId getNodeId() { return remoteNode.getNodeId(); }
-
-    public boolean isAlive() { return simulator.isAlive(remoteNode.getNodeId()); }
-
-    public boolean ping() { return isAlive(); }
-
-    public int proximity() {
-    	assertLocalNode();
-    	int result = simulator.proximity(getLocalNode().getNodeId(), remoteNode.getNodeId());
-      notifyObservers();
-
-      return result;
-    }
-
-    public void receiveMessage(Message msg) {
-    	if (!isAlive())
-  	    System.out.println("DirectNodeHandle: attempt to send message to a dead node!");
-
-    	simulator.deliverMessage(msg, remoteNode);
-    }
-
-    public NetworkSimulator getSimulator() {
-    	return simulator;
-    }
+public interface LocalNodeI extends Serializable {
 
     /**
-     * Equivalence relation for nodehandles. They are equal if and only
-     * if their corresponding NodeIds are equal.
-     *
-     * @param obj the other nodehandle .
-     * @return true if they are equal, false otherwise.
+     * Refer to README.handles_localnode.
      */
-    public boolean equals(Object obj) {
-	    if(obj == null)
-	      return false;
-	    NodeHandle nh = (NodeHandle)obj;
-
-	    if(this.getNodeId().equals(nh.getNodeId()))
-	      return true;
-	    else
-	      return false;
-    }
+    public static PendingLocalNodesList pending = new PendingLocalNodesList();
 
     /**
-     * Hash codes for node handles.It is the hashcode of
-     * their corresponding NodeId's.
-     *
-     * @return a hash code.
+     * Accessor method.
      */
-    public int hashCode(){
-	    return this.getNodeId().hashCode();
-    }
+    public PastryNode getLocalNode();
+
+    /**
+     * Accessor method. Notifies the overridable afterSetLocalNode.
+     */
+    public void setLocalNode(PastryNode pn);
+
+    /**
+     * May be called from handle etc methods to ensure that local node has
+     * been set, either on construction or on deserialization/receivemsg.
+     */
+    public void assertLocalNode();
 }

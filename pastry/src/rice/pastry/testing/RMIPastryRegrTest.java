@@ -38,6 +38,7 @@ package rice.pastry.testing;
 
 import rice.pastry.*;
 import rice.pastry.rmi.*;
+import rice.pastry.dist.*;
 import rice.pastry.standard.*;
 import rice.pastry.join.*;
 import rice.pastry.client.*;
@@ -64,15 +65,23 @@ import java.rmi.RemoteException;
 
 public class RMIPastryRegrTest extends PastryRegrTest {
     private static int port = 5009;
-    private static String bshost = null;
+    private static String bshost = "ural.owlnet.rice.edu";
     private static int bsport = 5009;
     private static int numnodes = 1;
+
+    private InetSocketAddress bsaddress;
 
     // constructor
 
     public RMIPastryRegrTest() {
-  super();
-  factory = new RMIPastryNodeFactory(port);
+      super();
+      factory = DistPastryNodeFactory.getFactory(DistPastryNodeFactory.PROTOCOL_RMI, port);
+
+      try {
+        bsaddress = new InetSocketAddress(bshost, bsport);
+      } catch (Exception e) {
+        System.out.println("ERROR (doStuff): " + e);
+      }
     }
 
     /**
@@ -83,65 +92,7 @@ public class RMIPastryRegrTest extends PastryRegrTest {
      * @return handle to bootstrap node, or null.
      */
     protected NodeHandle getBootstrap() {
-  RMIRemoteNodeI bsnode = null;
-  try {
-      bsnode = (RMIRemoteNodeI)Naming.lookup("//:" + port + "/Pastry");
-  } catch (Exception e) {
-      System.out.println("Unable to find bootstrap node on localhost");
-  }
-
-  int nattempts = 3;
-
-  // if bshost:bsport == localhost:port then nattempts = 0.
-  // waiting for ourselves is not harmful, but pointless, and denies
-  // others the usefulness of symmetrically waiting for us.
-
-  if (bsport == port) {
-      InetAddress localaddr = null, connectaddr = null;
-      String host = null;
-
-      try {
-    host = "localhost"; localaddr = InetAddress.getLocalHost();
-    connectaddr = InetAddress.getByName(host = bshost);
-      } catch (UnknownHostException e) {
-    System.out.println("[rmi] Error: Host unknown: " + host);
-    nattempts = 0;
-      }
-
-      if (nattempts != 0 && localaddr.equals(connectaddr))
-    nattempts = 0;
-  }
-
-  for (int i = 1; bsnode == null && i <= nattempts; i++) {
-      try {
-    bsnode = (RMIRemoteNodeI)Naming.lookup("//" + bshost
-               + ":" + bsport
-               + "/Pastry");
-      } catch (Exception e) {
-    System.out.println("Unable to find bootstrap node on "
-           + bshost + ":" + bsport
-           + " (attempt " + i + "/" + nattempts + ")");
-      }
-
-      if (i != nattempts)
-    pause(1000);
-  }
-
-  NodeId bsid = null;
-  if (bsnode != null) {
-      try {
-    bsid = bsnode.getNodeId();
-      } catch (RemoteException e) {
-    System.out.println("[rmi] Unable to get remote node id: " + e.toString());
-    bsnode = null;
-      }
-  }
-
-  RMINodeHandle bshandle = null;
-  if (bsid != null)
-      bshandle = new RMINodeHandle(bsnode, bsid);
-
-  return bshandle;
+      return ((DistPastryNodeFactory) factory).getNodeHandle(bsaddress);
     }
 
     /**
@@ -149,82 +100,83 @@ public class RMIPastryRegrTest extends PastryRegrTest {
      * the RMI registry. Standard gunk that has to be done for all RMI apps.
      */
     private static void doRMIinitstuff(String args[]) {
-  // process command line arguments
+      // process command line arguments
 
-  for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-help")) {
-    System.out.println("Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]");
-    System.exit(1);
+      for (int i = 0; i < args.length; i++) {
+        if (args[i].equals("-help")) {
+          System.out.println("Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]");
+          System.exit(1);
+        }
       }
-  }
 
-  for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-port") && i+1 < args.length) {
-    int p = Integer.parseInt(args[i+1]);
-    if (p > 0) port = p;
-    break;
+      for (int i = 0; i < args.length; i++) {
+        if (args[i].equals("-port") && i+1 < args.length) {
+          int p = Integer.parseInt(args[i+1]);
+          if (p > 0) port = p;
+          break;
+        }
       }
-  }
 
-  for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-bootstrap") && i+1 < args.length) {
-    String str = args[i+1];
-    int index = str.indexOf(':');
-    if (index == -1) {
-        bshost = str;
-        bsport = port;
-    } else {
-        bshost = str.substring(0, index);
-        bsport = Integer.parseInt(str.substring(index + 1));
-        if (bsport <= 0) bsport = port;
-    }
-    break;
+      for (int i = 0; i < args.length; i++) {
+        if (args[i].equals("-bootstrap") && i+1 < args.length) {
+          String str = args[i+1];
+          int index = str.indexOf(':');
+          if (index == -1) {
+            bshost = str;
+            bsport = port;
+          } else {
+            bshost = str.substring(0, index);
+            bsport = Integer.parseInt(str.substring(index + 1));
+            if (bsport <= 0) bsport = port;
+          }
+          break;
+        }
       }
-  }
 
-  for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-nodes") && i+1 < args.length) {
-    int n = Integer.parseInt(args[i+1]);
-    if (n > 0) numnodes = n;
-    break;
+      for (int i = 0; i < args.length; i++) {
+        if (args[i].equals("-nodes") && i+1 < args.length) {
+          int n = Integer.parseInt(args[i+1]);
+          if (n > 0) numnodes = n;
+          break;
+        }
       }
-  }
 
-  // set RMI security manager
+      // set RMI security manager
 
-  if (System.getSecurityManager() == null)
-      System.setSecurityManager(new RMISecurityManager());
+      if (System.getSecurityManager() == null)
+        System.setSecurityManager(new RMISecurityManager());
 
-  // start RMI registry
+      // start RMI registry
 
-  try {
-      java.rmi.registry.LocateRegistry.createRegistry(port);
-  } catch (RemoteException e) {
-      System.out.println("Error starting RMI registry: " + e);
-  }
+      try {
+        java.rmi.registry.LocateRegistry.createRegistry(port);
+      } catch (RemoteException e) {
+        System.out.println("Error starting RMI registry: " + e);
+      }
     }
 
     private class ApplThread implements Runnable {
-  PastryNode pn;
-  RegrTestApp app;
-  ApplThread(PastryNode n, RegrTestApp a) { pn = n; app = a; }
+      PastryNode pn;
+      RegrTestApp app;
+      ApplThread(PastryNode n, RegrTestApp a) { pn = n; app = a; }
 
-  public void run() {
+      public void run() {
 
-      // wait till node is ready to accept application messages.
-      if (pn.isReady() == false) {
-    synchronized (app) {
-        //System.out.println(pn + " isn't ready yet. Waiting.");
-        try { app.wait(); } catch (InterruptedException e) { }
-    }
-    if (pn.isReady() == false) System.out.println("panic");
-    //System.out.println(pn + " is ready now. Proceeding to send messages.");
-      } else {
-    //System.out.println(pn + " is ready at the time this client is starting.");
+        // wait till node is ready to accept application messages.
+        if (pn.isReady() == false) {
+          synchronized (app) {
+            //System.out.println(pn + " isn't ready yet. Waiting.");
+            try { app.wait(); } catch (InterruptedException e) { }
+          }
+
+          if (pn.isReady() == false) System.out.println("panic");
+          //System.out.println(pn + " is ready now. Proceeding to send messages.");
+        } else {
+          //System.out.println(pn + " is ready at the time this client is starting.");
+        }
+
+        //doappstuff();
       }
-
-      //doappstuff();
-  }
     }
 
     /**
@@ -235,20 +187,20 @@ public class RMIPastryRegrTest extends PastryRegrTest {
      * @param app newly created application
      */
     protected void registerapp(PastryNode pn, RegrTestApp app) {
-  ApplThread thread = new ApplThread(pn, app);
-  new Thread(thread).start();
+      ApplThread thread = new ApplThread(pn, app);
+      new Thread(thread).start();
     }
 
     // do nothing in the RMI world
     public boolean simulate() { return false; }
 
     public boolean isReallyAlive(NodeId id) {
-  // xxx
-  return false;
+      // xxx
+      return false;
     }
 
     protected void killNode(PastryNode pn) {
-//  ((RMIPastryNode)pn).KILLNODE();
+  //  ((RMIPastryNode)pn).KILLNODE();
     }
 
     /**
@@ -256,8 +208,8 @@ public class RMIPastryRegrTest extends PastryRegrTest {
      */
 
     public static void main(String args[]) {
-  doRMIinitstuff(args);
-  RMIPastryRegrTest pt = new RMIPastryRegrTest();
-  mainfunc(pt, args, 10 /*n*/, 4/*d*/, 10/*k*/, 10/*m*/, 4/*conc*/);
+      doRMIinitstuff(args);
+      RMIPastryRegrTest pt = new RMIPastryRegrTest();
+      mainfunc(pt, args, 10 /*n*/, 4/*d*/, 10/*k*/, 10/*m*/, 4/*conc*/);
     }
 }

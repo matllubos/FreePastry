@@ -1,5 +1,4 @@
-#***************************************************************************
-#
+	
 #  (C) 2000 Geotecnical Software Services - GeoSoft
 # 
 #***************************************************************************
@@ -21,10 +20,11 @@ PACKAGES = \
 	rice.pastry.standard\
 	rice.pastry.rmi\
 	rice.pastry.security\
-	rice.pastry.socket\
-	rice.pastry.socket.exception\
-	rice.pastry.socket.messaging\
 	rice.pastry.testing\
+	rice.pastry.wire\
+	rice.pastry.wire.exception\
+	rice.pastry.wire.messaging.datagram\
+	rice.pastry.wire.messaging.socket\
 	rice.scribe\
 	rice.scribe.maintenance\
 	rice.scribe.messaging\

@@ -11,7 +11,7 @@ SOURCE  = \
 	NodeIdUnit.java\
 	PingMessage.java PingAddress.java Ping.java SinglePingTest.java\
 	PingTestRecord.java DirectPastryPingTest.java \
-	SocketPastryRegrTest.java
+	WirePastryRegrTest.java
 
 
 RMI_SOURCE =

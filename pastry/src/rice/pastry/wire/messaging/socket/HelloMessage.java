@@ -34,69 +34,55 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry;
+package rice.pastry.wire.messaging.socket;
 
-import java.io.*;
-import java.util.*;
+import rice.pastry.wire.*;
+import rice.pastry.*;
 
-import rice.pastry.messaging.*;
-import rice.pastry.rmi.*;
+import java.net.*;
 
 /**
- * Implementation of the LocalNodeI interface that some Serializable classes (such
- * as Certificate) extend, if they want to be kept informed of what
- * node they're on. If a class cannot use this provided implementation (for reasons
- * such as multiple inheritance), it should implement the method provided in the
- * LocalNode interface in the same manner as these.
+ * Class which represents a greeting in the socket-based pastry protocol. It contains
+ * the InetSocketAddress and nodeId of the socket-initiating node.
  *
  * @version $Id$
  *
- * @author Sitaram Iyer
  * @author Alan Mislove
  */
-public abstract class LocalNode implements LocalNodeI {
+public class HelloMessage extends SocketCommandMessage {
 
-  // the local pastry node
-  private transient PastryNode localnode;
+  private InetSocketAddress address;
 
-  public LocalNode() { localnode = null; }
-
-  /**
-   * Accessor method.
-   */
-  public final PastryNode getLocalNode() { return localnode; }
+  private NodeId nodeId;
 
   /**
-   * Accessor method. Notifies the overridable afterSetLocalNode.
+   * Constructor
    */
-  public final void setLocalNode(PastryNode pn) {
-    localnode = pn;
-    if (localnode != null) afterSetLocalNode();
+  public HelloMessage(WirePastryNode pn) {
+    super();
+    address = ((WireNodeHandle) pn.getLocalHandle()).getAddress();
+    nodeId = pn.getNodeId();
   }
 
   /**
-   * Method that can be overridden by handle to set isLocal, etc.
+   * Returns the address of the source of this message.
+   *
+   * @return The address of the source of the message.
    */
-  public void afterSetLocalNode() {}
-
-  /**
-   * May be called from handle etc methods to ensure that local node has
-   * been set, either on construction or on deserialization/receivemsg.
-   */
-  public final void assertLocalNode() {
-    if (localnode == null) {
-      System.out.println("PANIC: localnode is null in " + this);
-      (new Exception()).printStackTrace();
-    }
+  public InetSocketAddress getAddress() {
+    return address;
   }
 
   /**
-   * Called on deserialization. Adds itself to a pending-setLocalNode
-   * list. This list is in a static (global) hash, indexed by the
-   * ObjectInputStream. Refer to README.handles_localnode for details.
+   * Returns the NodeId of the source
+   *
+   * @return The NodeId of the source of this message.
    */
-  private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-    in.defaultReadObject();
-    LocalNodeI.pending.addPending(in, this);
+  public NodeId getNodeId() {
+    return nodeId;
+  }
+
+  public String toString() {
+    return "HelloMessage from " + address + "(" + nodeId + ")";
   }
 }

@@ -1,0 +1,597 @@
+/**************************************************************************
+
+"FreePastry" Peer-to-Peer Application Development Substrate
+
+Copyright 2002, Rice University. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+contributors may be  used to endorse or promote  products derived from
+this software without specific prior written permission.
+
+This software is provided by RICE and the contributors on an "as is"
+basis, without any representations or warranties of any kind, express
+or implied including, but not limited to, representations or
+warranties of non-infringement, merchantability or fitness for a
+particular purpose. In no event shall RICE or contributors be liable
+for any direct, indirect, incidental, special, exemplary, or
+consequential damages (including, but not limited to, procurement of
+substitute goods or services; loss of use, data, or profits; or
+business interruption) however caused and on any theory of liability,
+whether in contract, strict liability, or tort (including negligence
+or otherwise) arising in any way out of the use of this software, even
+if advised of the possibility of such damage.
+
+********************************************************************************/
+
+package rice.pastry.wire;
+
+import rice.pastry.*;
+import rice.pastry.dist.*;
+import rice.pastry.routing.*;
+import rice.pastry.messaging.*;
+import rice.pastry.wire.exception.*;
+import rice.pastry.wire.messaging.datagram.*;
+import rice.pastry.wire.messaging.socket.*;
+
+import java.io.*;
+import java.nio.*;
+import java.nio.channels.*;
+import java.nio.charset.*;
+import java.util.*;
+import java.net.*;
+
+/**
+ * Class which represents a node handle in the socket-based pastry protocol.
+ * Initially, all of the messages are sent over UDP.  If a message is too large
+ * to be sent over the UDP protocol (as determined by the MAX_UDP_MESSAGE_SIZE),
+ * then a socket connection is opened to the remote node.
+ *
+ * @version $Id$
+ *
+ * @author Alan Mislove
+ */
+public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandler {
+
+  // possible states of the WireNodeHandle
+  public static int STATE_USING_UDP = -1;
+  public static int STATE_USING_TCP = -2;
+  public static int STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT = -3;
+  public static int STATE_USING_UDP_WAITING_TO_DISCONNECT = -4;
+
+  // the largest message size to send over UDP
+  public static int MAX_UDP_MESSAGE_SIZE = 32768;
+
+  // the ip address and port of the remote node
+  private InetSocketAddress address;
+
+  private int pingthrottle = 5;
+
+  // the time the last ping was performed
+  private transient long lastpingtime;
+
+  // used only when there is a socket open
+  private transient SocketChannelReader reader;
+  private transient SocketChannelWriter writer;
+  private transient SelectionKey key;
+  private transient int state;
+
+  /**
+   * Constructor.
+   *
+   * @param address The address of the host on which this node resides
+   * @param port The port number of this node on the host
+   * @param nid The NodeId of this host
+   */
+  public WireNodeHandle(InetSocketAddress address, NodeId nid) {
+    super(nid);
+
+    debug("creating Socket handle for node: " + nid + " address: " + address);
+
+    this.address = address;
+    lastpingtime = 0;
+
+    state = STATE_USING_UDP;
+  }
+
+  /**
+   * Alternate constructor with local Pastry node.
+   *
+   * @param address The address of the host on which this node resides
+   * @param nid The NodeId of this host
+   * @param pn The local Pastry node
+   */
+  public WireNodeHandle(InetSocketAddress address, NodeId nid, PastryNode pn) {
+    super(nid);
+
+    debug("creating Socket handle for node: " + nid + ", local: " + pn + " address: " + address);
+
+    this.address = address;
+    lastpingtime = 0;
+
+    state = STATE_USING_UDP;
+
+    setLocalNode(pn);
+  }
+
+  /**
+   * Returns the IP address and port of the remote node.
+   *
+   * @return The InetSocketAddress of the remote node.
+   */
+  public InetSocketAddress getAddress() {
+    return address;
+  }
+
+  /**
+   * Method which is called when a SocketCommandMessage comes across an open
+   * socket for this node handle.
+   *
+   * @param message The message coming across the wire.
+   */
+  public void receiveSocketMessage(SocketCommandMessage message) {
+    if (message instanceof DisconnectMessage) {
+      debug("Received DisconnectMessage (state == " + state + ")");
+
+      if (state == STATE_USING_TCP) {
+        state = STATE_USING_UDP_WAITING_TO_DISCONNECT;
+        ((WirePastryNode) getLocalNode()).getSocketManager().closeSocket(this);
+        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+      } else if (state == STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT) {
+        close();
+      } else {
+        System.out.println("Recieved DisconnectMessage at non-connected socket - not fatal... (state == " + state + ")");
+      }
+    }
+  }
+
+  /**
+   * Called to send a message to the node corresponding to this handle.
+   *
+   * @param msg Message to be delivered, may or may not be routeMessage.
+   */
+  public void receiveMessageImpl(Message msg) {
+    assertLocalNode();
+
+    WirePastryNode spn = (WirePastryNode) getLocalNode();
+
+    if (isLocal) {
+      debug("Sending message " + msg + " locally");
+      spn.receiveMessage(msg);
+    } else {
+      debug("Passing message " + msg + " to the socket controller for writing (state == " + state + ")");
+
+      // if we don't know our node Id, we must request it
+      if (nodeId == null)
+       ((WirePastryNode) getLocalNode()).getDatagramManager().write(address, new NodeIdRequestMessage(getLocalNode().getNodeId()));
+
+      // check to see if socket is open
+      if (state != STATE_USING_TCP) {
+        try {
+          if (state == STATE_USING_UDP) {
+            // Check for object size
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(baos);
+
+            oos.writeObject(msg);
+            oos.flush();
+
+            byte[] array = baos.toByteArray();
+
+            // if message is small enough, send via UDP
+            if (array.length <= MAX_UDP_MESSAGE_SIZE) {
+              debug("Message is small enough to go over UDP - sending.");
+              ((WirePastryNode) getLocalNode()).getDatagramManager().write(address, msg);
+            } else {
+              debug("Message is too large - open up socket!");
+              LinkedList list = new LinkedList();
+              list.addFirst(msg);
+
+              connectToRemoteNode(list);
+            }
+          } else {
+            // if we're waiting to disconnect, send message over UDP anyway
+            ((WirePastryNode) getLocalNode()).getDatagramManager().write(address, msg);
+          }
+        } catch (IOException e) {
+          System.out.println("IOException serializing message " + msg + " - cancelling message.");
+        }
+      } else {
+        synchronized (writer) {
+          writer.enqueue(new SocketTransportMessage(msg));
+          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        }
+      }
+    }
+  }
+
+  /**
+   * Method which initiates a connection to a remote node. This is done by connecting
+   * to the server socket on the remote node.  This can be called by the receiveMessageImpl,
+   * if there is a too-big message waiting to be sent, or by the TransmissionManager if there
+   * are too many messages in the queue.
+   */
+  public void connectToRemoteNode(LinkedList messages) {
+    if (state == STATE_USING_UDP) {
+      try {
+        InetSocketAddress tcpAddress = new InetSocketAddress(address.getAddress(), address.getPort() + 1);
+
+        SocketChannel channel = SocketChannel.open();
+        channel.configureBlocking(false);
+        boolean done = channel.connect(tcpAddress);
+
+        debug("Opening socket to " + tcpAddress);
+
+        if (done) {
+          key = channel.register(((WirePastryNode) getLocalNode()).getSelectorManager().getSelector(),
+                                 SelectionKey.OP_READ);
+        } else {
+          key = channel.register(((WirePastryNode) getLocalNode()).getSelectorManager().getSelector(),
+                                 SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
+        }
+
+        setKey(key);
+        writer.enqueue(new HelloMessage((WirePastryNode) getLocalNode()));
+
+        if (messages != null) {
+          Iterator i = messages.iterator();
+
+          synchronized (writer) {
+            while (i.hasNext()) {
+              writer.enqueue(i.next());
+            }
+          }
+
+          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        }
+      } catch (IOException e) {
+        markDead();
+        state = STATE_USING_UDP;
+        System.out.println("IOException connecting to remote node " + address);
+      }
+    }
+  }
+
+  /**
+   * Method which sets the SelectionKey of this node handle.  Is designed to be called
+   * whenever a TCP connection has been established.  All pending message will now be sent
+   * over TCP using the socket attached to this SelectionKey.
+   *
+   * If a socket has already been established, there is a protocol for determining which
+   * socket to close.  If the address:port of the local is less than that of the remote,
+   * this node ignores the incoming key. Otherwise, it will kill it's own socket and use
+   * the new key as the "real" socket.
+   *
+   * NOTE: There are known problems with this implementation, especially under high stress.
+   *
+   * @param key The new SelectionKey
+   */
+  public void setKey(SelectionKey key) {
+    debug("Got new key  (state == " + state + ")");
+
+    // if we're currently using UDP, accept the connection as usual
+    if (state == STATE_USING_UDP) {
+      this.key = key;
+      state = STATE_USING_TCP;
+      key.attach(this);
+
+      ((WirePastryNode) getLocalNode()).getSocketManager().openSocket(this);
+
+      reader = new SocketChannelReader((WirePastryNode) getLocalNode(), this);
+      writer = new SocketChannelWriter((WirePastryNode) getLocalNode());
+    } else {
+      // otherwise, we have problems!
+      InetSocketAddress local = ((WireNodeHandle) getLocalNode().getLocalHandle()).getAddress();
+      InetSocketAddress remote = getAddress();
+
+      System.out.println("Found double socket... (state == " + state + ")");
+
+      // if not currently connected (connection killing pending), we must request a new socket
+      if (state != STATE_USING_TCP) {
+        ((WirePastryNode) getLocalNode()).getSocketManager().openSocket(this);
+      }
+
+      // determine who should kill the socket
+      if ((getAddress(local.getAddress()) > getAddress(remote.getAddress())) ||
+          ((getAddress(local.getAddress()) == getAddress(remote.getAddress())) &&
+           (local.getPort() > remote.getPort()))) {
+
+        // kill our socket and use the new one
+        try {
+          this.key.attach(null);
+          this.key.channel().close();
+          this.key.cancel();
+        } catch (IOException e) {
+          System.out.println("ERROR closing unnecessary socket: " + e);
+        }
+
+        // use new socket
+        this.key = key;
+        state = STATE_USING_TCP;
+        key.attach(this);
+
+        System.out.println("Killing our socket, using new one...");
+      } else {
+
+        // use our socket and ignore the new one
+        key.attach(null);
+        System.out.println("Using our socket, letting other socket die...");
+      }
+    }
+  }
+
+  /**
+   * Utility method for converting an InetAddress to an int
+   * (for comparison purposes).
+   *
+   * @param address The address to convert
+   * @return An int representation of the address
+   */
+  private int getAddress(InetAddress address) {
+    byte[] tmp = address.getAddress();
+
+    int i = (((int) tmp[0]) << 24) | (((int) tmp[1]) << 16) |
+            (((int) tmp[2]) << 8) | (((int) tmp[3]));
+
+    return i;
+  }
+
+  /**
+   * Method that is designed to be called by the SocketManager when it wishes for
+   * this node handle to disconnect. Once this is called, the node handle will finish
+   * writing out any pending objects in the queue, and then send a DisconnectMessage
+   * to the remote node.  Upon receiving this DisconnectMessage, the remote node will
+   * finish writing out any pending objects, and then will actually disconnect the socket.
+   */
+  public void disconnect() {
+    debug("Received disconnect request... (state == " + state + ")");
+
+    if (state == STATE_USING_TCP) {
+      state = STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT;
+
+      synchronized (writer) {
+        writer.enqueue(new DisconnectMessage());
+        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+      }
+    } else {
+      System.out.println("Recieved disconnect request at non-connected socket - very bad... (state == " + state + ")");
+    }
+  }
+
+  /**
+   * Requeired by the SelectionKeyHandler interface. Should never be called
+   * (because we never accept connections).
+   */
+  public void accept(SelectionKey key) {
+    System.out.println("PANIC: accept() called on WireNodeHandle!");
+  }
+
+  /**
+   * Called by the socket manager whnever this node handle needs to complete it's connection
+   * to it's remote node. Is specified by the SelectionKeyHandler interface.
+   */
+  public void connect(SelectionKey key) {
+    try {
+      if (((SocketChannel) key.channel()).finishConnect()) {
+        markAlive();
+
+        // deregister interest in connecting to this socket
+        key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
+      }
+
+      debug("Found connectable channel - completed connection to " + address);
+    } catch (ConnectException e) {
+      debug("ERROR connecting - cancelling. " + e);
+      close();
+    } catch (SocketException e) {
+      debug("ERROR connecting - cancelling. " + e);
+      close();
+    } catch (IOException e) {
+      debug("ERROR connecting - cancelling. " + e);
+      close();
+    }
+  }
+
+  /**
+   * Called by the socket manager whenever this node handle has registered interest
+   * in writing to it's remote node, and the socket is ready for writing. Is specified
+   * by the SelectionKeyHandler interface.
+   */
+  public void write(SelectionKey key) {
+    if (state == STATE_USING_TCP)
+      ((WirePastryNode) getLocalNode()).getSocketManager().update(this);
+
+//    debug("Found channel ready for data - writing to " +address);
+
+    try {
+      // if writer is done, remove interest from writing
+      if (writer.write((SocketChannel) key.channel())) {
+        key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+
+        if (state == STATE_USING_UDP_WAITING_TO_DISCONNECT) {
+          close();
+        }
+      }
+    } catch (IOException e) {
+      debug("ERROR writing - cancelling. " + e);
+      close();
+    }
+  }
+
+  /**
+   * Called by the socket manager whenever there is data to be read from this
+   * node handle's remote node. Is specified from the SelectionKeyHandler
+   * interface.
+   */
+  public void read(SelectionKey key) {
+    if (state == STATE_USING_TCP)
+      ((WirePastryNode) getLocalNode()).getSocketManager().update(this);
+
+//    debug("Found data to be read from " + getNodeId());
+
+    try {
+      // inform reader that data is available
+      reader.read((SocketChannel) key.channel());
+    } catch (ImproperlyFormattedMessageException e) {
+      System.out.println("Improperly formatted message found during parsing - ignoring message... " + e);
+      reader.reset();
+    } catch (DeserializationException e) {
+      System.out.println("An error occured during message deserialization - ignoring message...");
+      reader.reset();
+    } catch (IOException e) {
+      debug("Error occurred during reading from " + address + " closing socket. " + e);
+      close();
+    }
+  }
+
+  /**
+   * Is called by the SelectorManager every time the manager is awakened. Checks to
+   * make sure that if we are waiting to write data, we are registered as being
+   * interested in writing.
+   */
+  public void wakeup() {
+    if ((writer != null) && (! writer.isEmpty())) {
+      if (! key.isValid())
+        System.out.println("ERROR: Recieved wakeup with non-valid key! (state == " + state + ")");
+      else
+        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+    }
+  }
+
+  /**
+   * Private method used for closing the socket (if there is one present).
+   * It also cancels the SelectionKey so that it is never called again.
+   */
+  private void close() {
+    try {
+      key.channel().close();
+      key.cancel();
+      key.attach(null);
+
+      // unexpected disconnect
+      if (state == STATE_USING_TCP) {
+        ((WirePastryNode) getLocalNode()).getSocketManager().closeSocket(this);
+        markDead();
+      }
+
+      state = STATE_USING_UDP;
+    } catch (IOException e) {
+      System.out.println("IOException " + e + " disconnecting from remote node " + address);
+      markDead();
+    }
+  }
+
+  /**
+   * Ping the remote node now, and update the proximity metric.
+   * This method ALWAYS uses UDP, even if there already is a TCP socket
+   * open.
+   *
+   * @return liveness of remote node.
+   */
+  public boolean pingImpl() {
+    if (isLocal) {
+      setProximity(0);
+      return alive;
+    }
+
+    long now = System.currentTimeMillis();
+    if (now - lastpingtime < pingthrottle*1000)
+        return alive;
+
+    lastpingtime = now;
+
+    if (getLocalNode() != null) {
+      ((WirePastryNode) getLocalNode()).getDatagramManager().ping(address);
+    }
+
+    return alive;
+  }
+
+  /**
+   * Method which is called by the SocketPingManager when a
+   * ping response comes back for this node.
+   *
+   * @param starttime The time at which this ping was initiated.
+   */
+  public void pingResponse() {
+    if (isLocal) {
+      debug("ERROR (pingResponse): Ping should never be sent to local node...");
+      debug("This Error is OK *ONLY* if this is happening during the initial join phase (before this node has recieved a JoinMessage response");
+      return;
+    }
+
+    long stoptime = System.currentTimeMillis();
+    if (proximity() > (int)(stoptime - lastpingtime))
+      setProximity((int) (stoptime - lastpingtime));
+
+    debug("Received ping - proximity is " + proximity());
+
+    markAlive();
+  }
+
+  /**
+   * Method by which the DatagramManager sets our nodeId as a result of a NodeIdRequestMessage.
+   *
+   * @param nid The node id of the remote node this node handle represents.
+   */
+  public void setNodeId(NodeId nid) {
+    if (nodeId == null) {
+      nodeId = nid;
+    } else {
+     debug("ERROR: Attempt to set node more than once!");
+    }
+  }
+
+  /**
+   * Equivalence relation for nodehandles. They are equal if and
+   * only if their corresponding NodeIds are equal.
+   *
+   * @param obj the other nodehandle .
+   * @return true if they are equal, false otherwise.
+   */
+  public boolean equals(Object obj) {
+    NodeHandle nh;
+
+    if ((obj == null) || (! (obj instanceof NodeHandle))) return false;
+
+    nh = (NodeHandle) obj;
+
+    return getNodeId().equals(nh.getNodeId());
+  }
+
+  /**
+   * Hash codes for node handles. It is the hashcode of
+   * their corresponding NodeId's.
+   *
+   * @return a hash code.
+   */
+  public int hashCode(){
+    return this.getNodeId().hashCode();
+  }
+
+  /**
+   * Overridden in order to specify the default state (using UDP)
+   */
+  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    ois.defaultReadObject();
+
+    state = STATE_USING_UDP;
+  }
+
+  public String toStringImpl() {
+    return (isLocal ? "(local " : "") + "handle " + nodeId
+            + (alive ? "" : ":dead")
+            + ", localnode = " + getLocalNode()
+            + " " + address + ")";
+  }
+}

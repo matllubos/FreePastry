@@ -51,7 +51,7 @@ import java.io.*;
  * @author Alan Mislove
  */
 
-public abstract class DistNodeHandle extends LocalNode implements NodeHandle, Serializable {
+public abstract class DistNodeHandle extends NodeHandle {
 
     // the nodeId of this node handle's remote node
     protected NodeId nodeId;
@@ -63,8 +63,10 @@ public abstract class DistNodeHandle extends LocalNode implements NodeHandle, Se
     // liveness and distance functions
     protected transient boolean isInPool;
     protected transient boolean alive;
-    protected transient int distance;
     protected transient boolean isLocal;
+
+    // distance metric. private in order to notify observers of metric change
+    private transient int distance;
 
     /**
      * Constructor
@@ -120,10 +122,8 @@ public abstract class DistNodeHandle extends LocalNode implements NodeHandle, Se
       alive = true;
 
       if ((nodeId != null) && getLocalNode().getNodeId().equals(nodeId)) {
-  //      debug("AfterSetLocalNode called, isLocal true.");
         isLocal = true;
       } else {
-  //      debug("AfterSetLocalNode called, isLocal false.");
         isLocal = false;
       }
 
@@ -168,6 +168,8 @@ public abstract class DistNodeHandle extends LocalNode implements NodeHandle, Se
 
         alive = true;
         distance = Integer.MAX_VALUE;
+
+        notifyObservers();
       }
     }
 
@@ -188,6 +190,8 @@ public abstract class DistNodeHandle extends LocalNode implements NodeHandle, Se
 
         alive = false;
         distance = Integer.MAX_VALUE;
+
+        notifyObservers();
       }
     }
 
@@ -213,6 +217,19 @@ public abstract class DistNodeHandle extends LocalNode implements NodeHandle, Se
         return 0;
       else
         return distance;
+    }
+
+    /**
+     * Method which is designed to be called by subclassses whenever there is a change in the distance
+     * metric.  This is done in order to abstract out the notification of the observers of a distance
+     * metric change.
+     *
+     * @param value The new distance value
+     */
+    protected final void setProximity(int value) {
+      distance = value;
+
+      notifyObservers();
     }
 
     /**
@@ -330,13 +347,13 @@ public abstract class DistNodeHandle extends LocalNode implements NodeHandle, Se
      * @param s The message to print.
      */
     protected void debug(String s) {
-    if (Log.ifp(6)) {
-      if (getLocalNode() != null)
-        System.out.println(getLocalNode().getNodeId() + " (" + nodeId + "): " + s);
-      else
-        System.out.println(getLocalNode() + " (" + nodeId + "): " + s);
-    }
-  }
+      if (Log.ifp(6)) {
+       if (getLocalNode() != null)
+         System.out.println(getLocalNode().getNodeId() + " (" + nodeId + "): " + s);
+       else
+         System.out.println(getLocalNode() + " (" + nodeId + "): " + s);
+     }
+   }
 }
 
 

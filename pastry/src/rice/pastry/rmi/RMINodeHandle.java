@@ -48,7 +48,7 @@ import java.rmi.RemoteException;
 * A locally stored node handle that points to a remote RMIRemoteNodeI.
 *
 * Need localnode within handle for three reasons: to determine isLocal
-* (thus alive and distance = 0), to set senderId in messages (used for
+* (thus alive and proximity() = 0), to set senderId in messages (used for
 * coalescing on the other end), and to bounce messages back to self on
 * failure.
 *
@@ -78,10 +78,10 @@ public class RMINodeHandle extends DistNodeHandle
      */
 
     public RMINodeHandle(RMIRemoteNodeI rn, NodeId nid) {
-	super(nid);
+      super(nid);
 
-	if (Log.ifp(6)) System.out.println("creating RMI handle for node: " + nid);
-	init(rn, nid);
+      if (Log.ifp(6)) System.out.println("creating RMI handle for node: " + nid);
+      init(rn, nid);
     }
 
     /**
@@ -92,20 +92,20 @@ public class RMINodeHandle extends DistNodeHandle
     * @param pn local Pastry node.
      */
     public RMINodeHandle(RMIRemoteNodeI rn, NodeId nid, PastryNode pn) {
-	super(nid);
+      super(nid);
 
-	if (Log.ifp(6)) System.out.println("creating RMI handle for node: " + nid + ", local = " + pn);
-	init(rn, nid);
-	//System.out.println("setLocalNode " + this + ":" + getNodeId() + " to " + pn + ":" + pn.getNodeId());
-	setLocalNode(pn);
+      if (Log.ifp(6)) System.out.println("creating RMI handle for node: " + nid + ", local = " + pn);
+      init(rn, nid);
+      //System.out.println("setLocalNode " + this + ":" + getNodeId() + " to " + pn + ":" + pn.getNodeId());
+      setLocalNode(pn);
     }
 
     private void init(RMIRemoteNodeI rn, NodeId remoteNodeId) {
-	remoteNode = rn;
-	nodeId = remoteNodeId;
+      remoteNode = rn;
+      nodeId = remoteNodeId;
 
-	lastpingtime = 0;
-	id = index++;
+      lastpingtime = 0;
+      id = index++;
     }
 
     /**
@@ -122,8 +122,8 @@ public class RMINodeHandle extends DistNodeHandle
     * @param rn RMI remote reference to some Pastry node.
      */
     public void setRemoteNode(RMIRemoteNodeI rn) {
-	if (remoteNode != null) System.out.println("panic");
-	remoteNode = rn;
+      if (remoteNode != null) System.out.println("panic");
+      remoteNode = rn;
     }
 
     /**
@@ -132,57 +132,56 @@ public class RMINodeHandle extends DistNodeHandle
     * @param msg Message to be delivered, may or may not be routeMessage.
      */
     public void receiveMessageImpl(Message msg) {
-	assertLocalNode();
+      assertLocalNode();
 
-	if (isLocal) {
-	    getLocalNode().receiveMessage(msg);
-	    return;
-	}
+      if (isLocal) {
+          getLocalNode().receiveMessage(msg);
+          return;
+      }
 
-	if (alive == false)
-	    if (Log.ifp(6))
-		System.out.println("warning: trying to send msg to dead node "
-				   + nodeId + ": " + msg);
+      if (alive == false)
+          if (Log.ifp(6))
+        System.out.println("warning: trying to send msg to dead node "
+               + nodeId + ": " + msg);
 
-	if (isInPool == false)
-	    System.out.println("panic: sending message to unverified handle "
-			       + this + " for " + nodeId + ": " + msg);
+      if (isInPool == false)
+          System.out.println("panic: sending message to unverified handle "
+                 + this + " for " + nodeId + ": " + msg);
 
-	msg.setSenderId(getLocalNode().getNodeId());
+      msg.setSenderId(getLocalNode().getNodeId());
 
-	if (Log.ifp(6))
-	    System.out.println("sending " +
-			       (msg instanceof RouteMessage ? "route" : "direct")
-			       + " msg to " + nodeId + ": " + msg);
+      if (Log.ifp(6))
+          System.out.println("sending " +
+                 (msg instanceof RouteMessage ? "route" : "direct")
+                 + " msg to " + nodeId + ": " + msg);
 
-	try {
+      try {
+        remoteNode.remoteReceiveMessage(msg);
+        //System.out.println("message sent successfully");
 
-	    remoteNode.remoteReceiveMessage(msg);
-	    //System.out.println("message sent successfully");
+        markAlive();
+      } catch (RemoteException e) { // failed; mark it dead
+        if (Log.ifp(6)) System.out.println("message failed: " + msg + e);
+        if (isLocal) System.out.println("panic; local message failed: " + msg);
 
-	    markAlive();
-	} catch (RemoteException e) { // failed; mark it dead
-	    if (Log.ifp(6)) System.out.println("message failed: " + msg + e);
-	    if (isLocal) System.out.println("panic; local message failed: " + msg);
+        markDead();
 
-	    markDead();
+        // bounce back to local dispatcher
+        if (Log.ifp(6)) System.out.println("bouncing message back to self at " + getLocalNode());
+        if (msg instanceof RouteMessage) {
+          RouteMessage rmsg = (RouteMessage) msg;
+          rmsg.nextHop = null;
+          if (Log.ifp(6)) System.out.println("this msg bounced is " + rmsg);
+          getLocalNode().receiveMessage(rmsg);
+        } else {
+          // drop these on floor --
+          // these are either routemessagedirect (XXX eventually)
+          // or leafsetbroadcast or other internal pastry msgs
 
-	    // bounce back to local dispatcher
-	    if (Log.ifp(6)) System.out.println("bouncing message back to self at " + getLocalNode());
-	    if (msg instanceof RouteMessage) {
-		RouteMessage rmsg = (RouteMessage) msg;
-		rmsg.nextHop = null;
-		if (Log.ifp(6)) System.out.println("this msg bounced is " + rmsg);
-		getLocalNode().receiveMessage(rmsg);
-	    } else {
-		// drop these on floor --
-		// these are either routemessagedirect (XXX eventually)
-		// or leafsetbroadcast or other internal pastry msgs
-
-		// getLocalNode().receiveMessage(msg);
-		if (Log.ifp(6)) System.out.println("msg dropped on floor due to dead node " + msg);
-	    }
-	}
+          // getLocalNode().receiveMessage(msg);
+          if (Log.ifp(6)) System.out.println("msg dropped on floor due to dead node " + msg);
+        }
+      }
     }
 
     /**
@@ -191,71 +190,72 @@ public class RMINodeHandle extends DistNodeHandle
     * @return liveness of remote node.
      */
     public boolean pingImpl() {
-	NodeId tryid;
+    	NodeId tryid;
 
-	/*
-	* Note subtle point: When ping is called from RouteSet.readObject,
-	* the RMI security manager has not yet had a chance to call the
-	* above setLocalNode. So isLocal may be false even for local node.
-	*
-	* This is not disastrous; at worst, we'll ping the local node once.
-	 */
+      /*
+      * Note subtle point: When ping is called from RouteSet.readObject,
+      * the RMI security manager has not yet had a chance to call the
+      * above setLocalNode. So isLocal may be false even for local node.
+      *
+      * This is not disastrous; at worst, we'll ping the local node once.
+       */
 
-	if (isLocal) return alive;
+      if (isLocal) return alive;
 
-	/*
-	* throttle super-rapid pings
-	 */
-	long now = System.currentTimeMillis();
-	if (now - lastpingtime < pingthrottle*1000)
-	    return alive;
-	lastpingtime = now;
+      /*
+      * throttle super-rapid pings
+       */
+      long now = System.currentTimeMillis();
+      if (now - lastpingtime < pingthrottle*1000)
+        return alive;
 
-	if (Log.ifp(7)) System.out.println(getLocalNode() + " pinging " + nodeId);
-	try {
+      lastpingtime = now;
 
-	    long starttime = System.currentTimeMillis();
+      if (Log.ifp(7)) System.out.println(getLocalNode() + " pinging " + nodeId);
 
-	    tryid = remoteNode.getNodeId();
+      try {
+        long starttime = System.currentTimeMillis();
 
-	    long stoptime = System.currentTimeMillis();
-	    if (distance > (int)(stoptime - starttime))
-		distance = (int)(stoptime - starttime);
+        tryid = remoteNode.getNodeId();
 
-	    if (Log.ifp(7)) System.out.println("proximity metric = " + distance);
+        long stoptime = System.currentTimeMillis();
+        if (proximity() > (int)(stoptime - starttime))
+          setProximity((int) (stoptime - starttime));
 
-	    if (tryid.equals(nodeId) == false)
-		System.out.println("PANIC: remote node has changed its ID from "
-				   + nodeId + " to " + tryid);
-	    markAlive();
-	} catch (RemoteException e) {
-	    if (alive) if (Log.ifp(6)) System.out.println("ping failed on live node: " + e);
-	    markDead();
-	}
-	return alive;
+        if (Log.ifp(7)) System.out.println("proximity metric = " + proximity());
+
+        if (tryid.equals(nodeId) == false)
+          System.out.println("PANIC: remote node has changed its ID from "
+                             + nodeId + " to " + tryid);
+        markAlive();
+      } catch (RemoteException e) {
+        if (alive) if (Log.ifp(6)) System.out.println("ping failed on live node: " + e);
+        markDead();
+      }
+
+      return alive;
     }
 
     private void readObject(ObjectInputStream in)
-	throws IOException, ClassNotFoundException
-	{
+	    throws IOException, ClassNotFoundException {
 	    RMIRemoteNodeI rn = (RMIRemoteNodeI) in.readObject();
 	    NodeId rnid = (NodeId) in.readObject();
 	    init(rn, rnid); // initialize all the other elements
-	}
+  	}
 
     private void writeObject(ObjectOutputStream out)
-	throws IOException, ClassNotFoundException
-	{
+    	throws IOException, ClassNotFoundException {
 	    if (isLocal) if (Log.ifp(7)) {
-		assertLocalNode();
-		System.out.println("writeObject from " + getLocalNode().getNodeId() + " to local node " + nodeId);
+    		assertLocalNode();
+    		System.out.println("writeObject from " + getLocalNode().getNodeId() + " to local node " + nodeId);
 	    }
+
 	    out.writeObject(remoteNode);
 	    out.writeObject(nodeId);
-	}
+  	}
 
     /**
-     * Equivalence relation for nodehandles. They are equal if and 
+     * Equivalence relation for nodehandles. They are equal if and
      * only if their corresponding NodeIds are equal.
      *
      * @param obj the other nodehandle .
@@ -263,32 +263,31 @@ public class RMINodeHandle extends DistNodeHandle
      */
 
     public boolean equals(Object obj) {
-	NodeHandle nh;
-	
-	if(obj == null) return false;
+    	NodeHandle nh;
 
-	nh = (NodeHandle)obj;
-	if(this.getNodeId().equals(nh.getNodeId()))
-	    return true;
-	else
-	    return false;
+    	if(obj == null) return false;
+
+    	nh = (NodeHandle)obj;
+    	if(this.getNodeId().equals(nh.getNodeId()))
+  	    return true;
+    	else
+  	    return false;
     }
-    
+
     /**
-     * Hash codes for node handles. It is the hashcode of 
+     * Hash codes for node handles. It is the hashcode of
      * their corresponding NodeId's.
-     * 
+     *
      * @return a hash code.
      */
     public int hashCode(){
-	return this.getNodeId().hashCode();
+    	return this.getNodeId().hashCode();
     }
 
-
     public String toStringImpl() {
-	return (isLocal ? "(local " : "") + "handle " + nodeId
-	    + (alive ? "" : ":dead")
-	    + ", localnode = " + getLocalNode()
-	    + ")";
+    	return (isLocal ? "(local " : "") + "handle " + nodeId
+        	    + (alive ? "" : ":dead")
+        	    + ", localnode = " + getLocalNode()
+        	    + ")";
     }
 }

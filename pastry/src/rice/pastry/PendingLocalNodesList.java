@@ -39,64 +39,62 @@ package rice.pastry;
 import java.io.*;
 import java.util.*;
 
-import rice.pastry.messaging.*;
-import rice.pastry.rmi.*;
-
 /**
- * Implementation of the LocalNodeI interface that some Serializable classes (such
- * as Certificate) extend, if they want to be kept informed of what
- * node they're on. If a class cannot use this provided implementation (for reasons
- * such as multiple inheritance), it should implement the method provided in the
- * LocalNode interface in the same manner as these.
+ * Class which stores a list of LocalNodes waiting to have their
+ * local pastry node to be set non-null.
  *
  * @version $Id$
  *
- * @author Sitaram Iyer
  * @author Alan Mislove
  */
-public abstract class LocalNode implements LocalNodeI {
+public class PendingLocalNodesList {
 
-  // the local pastry node
-  private transient PastryNode localnode;
-
-  public LocalNode() { localnode = null; }
+  // maps ObjectInputStream -> LinkedList (of LocalNodes)
+  private HashMap map = new HashMap();
 
   /**
-   * Accessor method.
+   * Adds a pending LocalNode to the list of pending LocalNodes.
+   *
+   * @param in The input stream reading the LocalNode
+   * @param client The LocalNodeI itself
    */
-  public final PastryNode getLocalNode() { return localnode; }
+  public void addPending(ObjectInputStream in, LocalNodeI client) {
+    LinkedList pendinglist = null;
 
-  /**
-   * Accessor method. Notifies the overridable afterSetLocalNode.
-   */
-  public final void setLocalNode(PastryNode pn) {
-    localnode = pn;
-    if (localnode != null) afterSetLocalNode();
+    if (map.containsKey(in) == false)
+      map.put(in, pendinglist = new LinkedList());
+    else
+      pendinglist = (LinkedList) map.get(in);
+
+    if (Log.ifp(8))
+      System.out.println("pending " + this + " on list " + in);
+
+    pendinglist.add(client);
   }
 
   /**
-   * Method that can be overridden by handle to set isLocal, etc.
+   * Sets all of the pending local nodes read in by the given input
+   * stream.
+   *
+   * @param in The input stream reading the LocalNodes
+   * @param node The local pastry node.
    */
-  public void afterSetLocalNode() {}
+  public void setPending(ObjectInputStream in, PastryNode node) {
+    LinkedList pending = (LinkedList) map.remove(in);
 
-  /**
-   * May be called from handle etc methods to ensure that local node has
-   * been set, either on construction or on deserialization/receivemsg.
-   */
-  public final void assertLocalNode() {
-    if (localnode == null) {
-      System.out.println("PANIC: localnode is null in " + this);
-      (new Exception()).printStackTrace();
+    if (pending != null) {
+      Iterator iter = pending.iterator();
+      while (iter.hasNext()) {
+        LocalNodeI ln = (LocalNodeI) iter.next();
+
+        if (Log.ifp(8))
+          System.out.println("setting local node " + node + " to " + ln);
+
+        if (ln.getLocalNode() != null)
+          System.out.println("setting local node twice! " + node + " to " + ln);
+
+        ln.setLocalNode(node);
+      }
     }
-  }
-
-  /**
-   * Called on deserialization. Adds itself to a pending-setLocalNode
-   * list. This list is in a static (global) hash, indexed by the
-   * ObjectInputStream. Refer to README.handles_localnode for details.
-   */
-  private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-    in.defaultReadObject();
-    LocalNodeI.pending.addPending(in, this);
   }
 }

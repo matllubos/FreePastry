@@ -37,7 +37,8 @@ if advised of the possibility of such damage.
 package rice.pastry.testing;
 
 import rice.pastry.*;
-import rice.pastry.socket.*;
+import rice.pastry.wire.*;
+import rice.pastry.dist.*;
 import rice.pastry.standard.*;
 import rice.pastry.join.*;
 import rice.pastry.client.*;
@@ -54,24 +55,58 @@ import java.net.*;
  *
  * @version $Id$
  *
- * @author andrew ladd
- * @author peter druschel
- * @author sitaram iyer
+ * @author Alan Mislove
  */
-public class SocketPastryRegrTest extends PastryRegrTest {
+public class WirePastryRegrTest extends PastryRegrTest {
   private static int bootstrapPort = 9000;
-  private static String bootstrapHost = "ural.owlnet.rice.edu";
+  private static String bootstrapHost = "verm.owlnet.rice.edu";
 
   private static int port = 9000;
 
-  private static byte[] bootstrapNodeIdArray = new byte[32];
-
-  private static NodeId bootstrapNodeId = new NodeId(bootstrapNodeIdArray);
+  private InetSocketAddress bootstrap;
 
   // constructor
-  public SocketPastryRegrTest() {
+  public WirePastryRegrTest(String[] args) {
     super();
-    factory = new SocketPastryNodeFactory(port);
+
+    initVars(args);
+
+    factory = DistPastryNodeFactory.getFactory(DistPastryNodeFactory.PROTOCOL_WIRE, port);
+
+    try {
+      bootstrap = new InetSocketAddress(bootstrapHost, bootstrapPort);
+    } catch (Exception e) {
+      System.out.println("ERROR (doStuff): " + e);
+    }
+  }
+
+  private void initVars(String[] args) {
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-help")) {
+        System.out.println("Usage: WirePastryRegrTest [-bootstrap host[:port]] [-help]");
+        System.exit(1);
+      }
+    }
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-bootstrap") && i+1 < args.length) {
+        String str = args[i+1];
+        int index = str.indexOf(':');
+        if (index == -1) {
+          bootstrapHost = str;
+          bootstrapPort = port;
+        } else {
+          bootstrapHost = str.substring(0, index);
+          int port = Integer.parseInt(str.substring(index + 1));
+          if (port > 0) {
+            bootstrapPort = port;
+            this.port = port;
+          }
+        }
+
+        break;
+      }
+    }
   }
 
   /**
@@ -80,22 +115,20 @@ public class SocketPastryRegrTest extends PastryRegrTest {
   protected PastryNode generateNode(NodeHandle bootstrap) {
     PastryNode pn = null;
     InetSocketAddress address = null;
-    InetSocketAddress bootAddress = null;
 
     try {
       address = new InetSocketAddress(InetAddress.getLocalHost(), port);
-      bootAddress = new InetSocketAddress(bootstrapHost, bootstrapPort);
     } catch (Exception e) {
       System.out.println("ERROR (doStuff): " + e);
     }
 
-    if (! address.equals(bootAddress)) {
-      pn = ((SocketPastryNodeFactory) factory).newNode((SocketNodeHandle) bootstrap, port);
+    if (! address.equals(this.bootstrap)) {
+      pn = factory.newNode((WireNodeHandle) bootstrap);
     } else {
-      pn = ((SocketPastryNodeFactory) factory).newNode(null, port, bootstrapNodeId);
+      pn = factory.newNode(null);
     }
 
-    port++;
+    port+=2;
 
     return pn;
   }
@@ -109,27 +142,8 @@ public class SocketPastryRegrTest extends PastryRegrTest {
    * @return handle to bootstrap node, or null.
    */
   protected NodeHandle getBootstrap() {
-    InetSocketAddress bootAddress = null;
-
-    try {
-      bootAddress = new InetSocketAddress(bootstrapHost, bootstrapPort);
-    } catch (Exception e) {
-      System.out.println("ERROR (getBootstrap): " + e);
-    }
-
-    return new SocketNodeHandle(bootAddress, bootstrapNodeId);
+    return ((DistPastryNodeFactory) factory).getNodeHandle(bootstrap);
   }
-
-/*
-  private class ApplThread implements Runnable {
-    SocketPastryNode pn;
-    RegrTestApp app;
-    ApplThread(SocketPastryNode n, RegrTestApp a) { pn = n; app = a; }
-
-    public void run() {
-        pn.beginListening();
-    }
-  } */
 
   /**
    * wire protocol specific handling of the application object
@@ -150,14 +164,14 @@ public class SocketPastryRegrTest extends PastryRegrTest {
   }
 
   protected void killNode(PastryNode pn) {
-    ((SocketPastryNode) pn).kill();
+    ((WirePastryNode) pn).kill();
   }
 
   /**
-   * Usage: RMIRegrPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
+   * Usage: WireRegrPastryTest [-bootstrap host[:port]] [-help]
    */
   public static void main(String args[]) {
-    SocketPastryRegrTest pt = new SocketPastryRegrTest();
+    WirePastryRegrTest pt = new WirePastryRegrTest(args);
     mainfunc(pt, args, 10 /*n*/, 2/*d*/, 10/*k*/, 10/*m*/, 4/*conc*/);
   }
 }
