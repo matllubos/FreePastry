@@ -278,40 +278,53 @@ fetch [boolean isUID]
 	
 fetch_part[FetchCommand cmd]
 	{
+    boolean realBody = false;
     BodyPartRequest breq = new BodyPartRequest();
     RFC822PartRequest rreq = new RFC822PartRequest();
-    System.out.println("INSIDE FETCH PART");
 	}
 	:
-	(b:BODY {breq.setName(b.getText()); System.out.println("GOT BODY " + b.getText());}
-   | 
-   bp:BODYPEEK {breq.setName("BODY"); breq.setPeek(true); System.out.println("GOT BODY PEEK " + bp.getText());})
-	  (LSBRACKET
+	b:BODY {breq.setName(b.getText());}
+	  (LSBRACKET {realBody = true;}
 	    (h:ATOM {breq.setType(h.getText());}
 	      (SPACE LPAREN 
           a:ATOM {breq.addPart(a.getText());} (SPACE at:ATOM {breq.addPart(at.getText());})*
 	      RPAREN)?)?
 	  RSBRACKET)?
   {
+    if (realBody) {
+      cmd.appendPartRequest(breq);
+    } else {
+      cmd.appendPartRequest("BODY");
+    }  
+  }
+  |
+  bp:BODYPEEK {breq.setName("BODY"); breq.setPeek(true);}
+	  (LSBRACKET
+	    (hp:ATOM {breq.setType(hp.getText());}
+	      (SPACE LPAREN 
+          ap:ATOM {breq.addPart(ap.getText());} (SPACE atp:ATOM {breq.addPart(atp.getText());})*
+	      RPAREN)?)?
+	  RSBRACKET)?
+  {
     cmd.appendPartRequest(breq);
   }
   |
-	r:RFC822 {rreq.setName(r.getText()); System.out.println("GOT RFC " + r.getText());}
+	r:RFC822 {rreq.setName(r.getText());}
   {
     cmd.appendPartRequest(rreq);
   }
   |
-	rh:RFC822HEADER {rreq.setName("RFC822"); rreq.setType("HEADER"); System.out.println("GOT RFC " + rh.getText());}
+	rh:RFC822HEADER {rreq.setName("RFC822"); rreq.setType("HEADER");}
   {
     cmd.appendPartRequest(rreq);
   }
   |
-	rt:RFC822TEXT {rreq.setName("RFC822"); rreq.setType("TEXT"); System.out.println("GOT RFC " + rt.getText());}
+	rt:RFC822TEXT {rreq.setName("RFC822"); rreq.setType("TEXT");}
   {
     cmd.appendPartRequest(rreq);
   }
   |
-	p:ATOM { cmd.appendPartRequest(p.getText()); System.out.println("GOT OTHER " + p.getText());} 
+	p:ATOM { cmd.appendPartRequest(p.getText());} 
 ;
 /*
  * Commands for unauthorized people

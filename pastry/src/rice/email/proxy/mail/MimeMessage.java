@@ -151,9 +151,9 @@ public class MimeMessage
         try
         {
 
-            return _message.getSize();
+            return _resource.getSize();
         }
-        catch (MessagingException ioe)
+        catch (IOException ioe)
         {
             throw new MailException(ioe);
         }

@@ -15,7 +15,10 @@ import rice.email.proxy.util.Workspace;
 
 import java.io.IOException;
 
-import java.net.Socket;
+import java.util.*;
+import java.text.*;
+
+import java.net.*;
 import java.net.SocketTimeoutException;
 
 
@@ -80,9 +83,14 @@ final class ParserImapHandler
 
     }
 
-    protected void sendGreetings()
-    {
-        conn.println("* OK IMAP4rev1 server ready");
+    protected void sendGreetings() {
+      SimpleDateFormat df = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z (z)");
+      
+      try {
+        conn.println("* OK [CAPABILITY IMAP4REV1] " + InetAddress.getLocalHost().getHostName() + " IMAP4rev1 2001.315 at " + df.format(new Date()));
+      } catch (UnknownHostException e) {
+        conn.println("* OK [CAPABILITY IMAP4REV1] IMAP4rev1 2001.315 at " + df.format(new Date()));
+      } 
     }
 
     protected void handleCommand()

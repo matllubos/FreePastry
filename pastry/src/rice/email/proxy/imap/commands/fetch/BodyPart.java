@@ -40,7 +40,8 @@ public class BodyPart extends FetchPart {
     String result = "";
 
     while (e.hasMoreElements()) {
-      result += e.nextElement() + "\r\n";
+      String header = e.nextElement().toString();
+      result += header + "\r\n";
     }
 
     return result;

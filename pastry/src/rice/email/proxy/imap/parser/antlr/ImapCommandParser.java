@@ -882,55 +882,39 @@ public ImapCommandParser(ParserSharedInputState state) {
 	) throws RecognitionException, TokenStreamException {
 		
 		Token  b = null;
-		Token  bp = null;
 		Token  h = null;
 		Token  a = null;
 		Token  at = null;
+		Token  bp = null;
+		Token  hp = null;
+		Token  ap = null;
+		Token  atp = null;
 		Token  r = null;
 		Token  rh = null;
 		Token  rt = null;
 		Token  p = null;
 		
+		boolean realBody = false;
 		BodyPartRequest breq = new BodyPartRequest();
 		RFC822PartRequest rreq = new RFC822PartRequest();
-		System.out.println("INSIDE FETCH PART");
 			
 		
 		switch ( LA(1)) {
 		case BODY:
-		case BODYPEEK:
 		{
-			{
-			switch ( LA(1)) {
-			case BODY:
-			{
-				b = LT(1);
-				match(BODY);
-				if ( inputState.guessing==0 ) {
-					breq.setName(b.getText()); System.out.println("GOT BODY " + b.getText());
-				}
-				break;
-			}
-			case BODYPEEK:
-			{
-				bp = LT(1);
-				match(BODYPEEK);
-				if ( inputState.guessing==0 ) {
-					breq.setName("BODY"); breq.setPeek(true); System.out.println("GOT BODY PEEK " + bp.getText());
-				}
-				break;
-			}
-			default:
-			{
-				throw new NoViableAltException(LT(1), getFilename());
-			}
-			}
+			b = LT(1);
+			match(BODY);
+			if ( inputState.guessing==0 ) {
+				breq.setName(b.getText());
 			}
 			{
 			switch ( LA(1)) {
 			case LSBRACKET:
 			{
 				match(LSBRACKET);
+				if ( inputState.guessing==0 ) {
+					realBody = true;
+				}
 				{
 				switch ( LA(1)) {
 				case ATOM:
@@ -952,7 +936,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 							breq.addPart(a.getText());
 						}
 						{
-						_loop58:
+						_loop57:
 						do {
 							if ((LA(1)==SPACE)) {
 								match(SPACE);
@@ -963,7 +947,107 @@ public ImapCommandParser(ParserSharedInputState state) {
 								}
 							}
 							else {
-								break _loop58;
+								break _loop57;
+							}
+							
+						} while (true);
+						}
+						match(RPAREN);
+						break;
+					}
+					case RSBRACKET:
+					{
+						break;
+					}
+					default:
+					{
+						throw new NoViableAltException(LT(1), getFilename());
+					}
+					}
+					}
+					break;
+				}
+				case RSBRACKET:
+				{
+					break;
+				}
+				default:
+				{
+					throw new NoViableAltException(LT(1), getFilename());
+				}
+				}
+				}
+				match(RSBRACKET);
+				break;
+			}
+			case EOF:
+			case SPACE:
+			case RPAREN:
+			{
+				break;
+			}
+			default:
+			{
+				throw new NoViableAltException(LT(1), getFilename());
+			}
+			}
+			}
+			if ( inputState.guessing==0 ) {
+				
+				if (realBody) {
+				cmd.appendPartRequest(breq);
+				} else {
+				cmd.appendPartRequest("BODY");
+				}  
+				
+			}
+			break;
+		}
+		case BODYPEEK:
+		{
+			bp = LT(1);
+			match(BODYPEEK);
+			if ( inputState.guessing==0 ) {
+				breq.setName("BODY"); breq.setPeek(true);
+			}
+			{
+			switch ( LA(1)) {
+			case LSBRACKET:
+			{
+				match(LSBRACKET);
+				{
+				switch ( LA(1)) {
+				case ATOM:
+				{
+					hp = LT(1);
+					match(ATOM);
+					if ( inputState.guessing==0 ) {
+						breq.setType(hp.getText());
+					}
+					{
+					switch ( LA(1)) {
+					case SPACE:
+					{
+						match(SPACE);
+						match(LPAREN);
+						ap = LT(1);
+						match(ATOM);
+						if ( inputState.guessing==0 ) {
+							breq.addPart(ap.getText());
+						}
+						{
+						_loop62:
+						do {
+							if ((LA(1)==SPACE)) {
+								match(SPACE);
+								atp = LT(1);
+								match(ATOM);
+								if ( inputState.guessing==0 ) {
+									breq.addPart(atp.getText());
+								}
+							}
+							else {
+								break _loop62;
 							}
 							
 						} while (true);
@@ -1020,7 +1104,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 			r = LT(1);
 			match(RFC822);
 			if ( inputState.guessing==0 ) {
-				rreq.setName(r.getText()); System.out.println("GOT RFC " + r.getText());
+				rreq.setName(r.getText());
 			}
 			if ( inputState.guessing==0 ) {
 				
@@ -1034,7 +1118,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 			rh = LT(1);
 			match(RFC822HEADER);
 			if ( inputState.guessing==0 ) {
-				rreq.setName("RFC822"); rreq.setType("HEADER"); System.out.println("GOT RFC " + rh.getText());
+				rreq.setName("RFC822"); rreq.setType("HEADER");
 			}
 			if ( inputState.guessing==0 ) {
 				
@@ -1048,7 +1132,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 			rt = LT(1);
 			match(RFC822TEXT);
 			if ( inputState.guessing==0 ) {
-				rreq.setName("RFC822"); rreq.setType("TEXT"); System.out.println("GOT RFC " + rt.getText());
+				rreq.setName("RFC822"); rreq.setType("TEXT");
 			}
 			if ( inputState.guessing==0 ) {
 				
@@ -1062,7 +1146,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 			p = LT(1);
 			match(ATOM);
 			if ( inputState.guessing==0 ) {
-				cmd.appendPartRequest(p.getText()); System.out.println("GOT OTHER " + p.getText());
+				cmd.appendPartRequest(p.getText());
 			}
 			break;
 		}

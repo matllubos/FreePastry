@@ -16,7 +16,7 @@ import javax.mail.internet.*;
 public class MessagePropertyPart extends FetchPart {
   
     List supportedParts = Arrays.asList(new Object[]  {
-      "ALL", "FAST", "FULL", "ENVELOPE",
+      "ALL", "FAST", "FULL", "BODY", "BODYSTRUCTURE", "ENVELOPE",
       "FLAGS", "INTERNALDATE", "RFC822.SIZE", "UID"
     });
 
@@ -43,6 +43,10 @@ public class MessagePropertyPart extends FetchPart {
           fetch(msg, "RFC822.SIZE");
           fetch(msg, "ENVELOPE");
           fetch(msg, "BODY");
+        } else if ("BODY".equals(part)) {
+          fetchBodystructure(msg);
+        } else if ("BODYSTRUCTURE".equals(part)) {
+          fetchBodystructure(msg);
         } else if ("ENVELOPE".equals(part)) {
           fetchEnvelope(msg);
         } else if ("FLAGS".equals(part)) {
@@ -60,7 +64,7 @@ public class MessagePropertyPart extends FetchPart {
       }
     }
 
-/*    void body(StoredMessage msg) throws MailboxException {
+    void fetchBodystructure(StoredMessage msg) throws MailboxException {
       try {
         Object data = msg.getMessage().getContent();
 
@@ -151,37 +155,6 @@ public class MessagePropertyPart extends FetchPart {
         return "NIL";
       }
     }    
- 
-    void text(StoredMessage msg)
-      throws MailboxException, MailException
-    {
-      try {
-        Object data = msg.getMessage().getContent();
-
-        if (data instanceof String) {
-          String content = (String) data;
-          getConn().print("{" + content.length() + "}\r\n");
-          getConn().print(content);
-        } else if (data instanceof MimeMultipart) {
-          MimeMultipart mime = (MimeMultipart) data;
-
-          ByteArrayOutputStream baos = new ByteArrayOutputStream();
-          mime.writeTo(baos);
-
-          String content = new String(baos.toByteArray());
-          getConn().print("{" + content.length() + "}\r\n");
-          getConn().print(content);
-        } else {
-          String content = "" + data;
-          getConn().print("{" + content.length() + "}\r\n");
-          getConn().print(content);
-        }
-      } catch (IOException e) {
-        throw new MailboxException(e);
-      } catch (MessagingException e) {
-        throw new MailboxException(e);
-      }
-    } */
 
     void fetchSize(StoredMessage msg) throws MailboxException, MailException {
         getConn().print("" + msg.getMessage().getSize());
@@ -202,26 +175,6 @@ public class MessagePropertyPart extends FetchPart {
     void fetchInternaldate(StoredMessage msg) throws MailboxException {
         getConn().print("\"" + msg.getMessage().getInternalDate() + "\"");
     }
-
-  /*  public void entireMsg(StoredMessage msg)
-                   throws MailboxException
-    {
-        try
-        {
-            Reader contents = msg.getMessage().getContents();
-            getConn().print(
-                    "{" + msg.getMessage().getSize() + "}\r\n");
-            getConn().print(contents);
-        }
-        catch (MailException me)
-        {
-            throw new MailboxException(me);
-        }
-        catch (IOException ioe)
-        {
-            throw new MailboxException(ioe);
-        }
-    } */
 
     private void addresses(InternetAddress[] addresses) {
       if ((addresses != null) && (addresses.length > 0)) {

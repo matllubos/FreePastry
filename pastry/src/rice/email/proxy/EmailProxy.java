@@ -132,11 +132,30 @@ public class EmailProxy {
       System.out.println("[ DONE ]");
 
       String pass = CertificateAuthorityKeyGenerator.fetchPassword(userid + "'s password");
+      byte[] key = null;
+      byte[] data = null;
 
-      System.out.print("    Decrypting " + userid + "'s keypair\t\t\t\t");
-      byte[] key = SecurityService.hash(pass.getBytes());
-      byte[] data = SecurityService.decryptDES(cipher, key);
+      try {
+        System.out.print("    Decrypting " + userid + "'s keypair\t\t\t\t");
+        key = SecurityService.hash(pass.getBytes());
+        data = SecurityService.decryptDES(cipher, key);
+      } catch (SecurityException e) {
+        System.out.println("[FAILED]");
+        System.out.println("Incorrect password.  Please try again.");
 
+        pass = CertificateAuthorityKeyGenerator.fetchPassword(userid + "'s password");
+
+        try {
+          System.out.print("    Decrypting " + userid + "'s keypair\t\t\t\t");
+          key = SecurityService.hash(pass.getBytes());
+          data = SecurityService.decryptDES(cipher, key);
+        } catch (SecurityException se) {
+          System.out.println("[FAILED]");
+          System.out.println("Incorrect password.  Exiting.");
+          System.exit(-1);
+        }
+      }
+      
       pair = (KeyPair) SecurityService.deserialize(data);
       System.out.println("[ DONE ]");
 
