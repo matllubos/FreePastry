@@ -127,6 +127,18 @@ public class RoutingTable extends Observable implements Observer {
     public static int baseBitLength() { return idBaseBitLength; }
 
 
+  /**
+   * Determines an alternate hop numerically closer to the key than the one we are at. This assumes
+   * that bestEntry did not produce a live nodeHandle that matches the next digit of the key.
+   * 
+   * @param key the key
+   * @return a nodeHandle of a numerically closer node, relative to the key
+   */
+
+  public NodeHandle bestAlternateRoute(Id key)
+  {
+    return bestAlternateRoute(NodeHandle.LIVENESS_SUSPECTED, key); 
+  }
     /**
      * Determines an alternate hop numerically closer to the key than the one we are at. This assumes
      * that bestEntry did not produce a live nodeHandle that matches the next digit of the key.
@@ -135,7 +147,7 @@ public class RoutingTable extends Observable implements Observer {
      * @return a nodeHandle of a numerically closer node, relative to the key
      */
 
-    public NodeHandle bestAlternateRoute(Id key)
+  public NodeHandle bestAlternateRoute(int minLiveness, Id key)
     {
 	final int cols = 1 << idBaseBitLength;
 	int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
@@ -155,7 +167,7 @@ public class RoutingTable extends Observable implements Observer {
 		for (int k=0; rs!=null && k<rs.size(); k++) {
 		    NodeHandle n = rs.get(k);
 		    
-		    if (n.isAlive()) {
+		    if (n.getLiveness() <= minLiveness /*isAlive()*/) {
 			NodeId.Distance nDist = n.getNodeId().distance(key);
 
 			if (bestDistance.compareTo(nDist) > 0) {
@@ -179,27 +191,25 @@ public class RoutingTable extends Observable implements Observer {
 	return alt;
     }
 
-    /**
-     * Determines a set of alternate hops towards a given key.
-     * 
-     * @param key the key
-     * @param max the maximal number of alternate hops requested
-     * @return a set of nodehandles, or null if no alternate hops exist
-     */
-
-    public NodeSet alternateRoutes(Id key, int max)
-    {
-	NodeSet set = new NodeSet();
-	final int cols = 1 << idBaseBitLength;
-	int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
-	if (diffDigit < 0) return set;
-	int keyDigit = key.getDigit(diffDigit, idBaseBitLength);
-	int myDigit = myNodeId.getDigit(diffDigit, idBaseBitLength);
-	Id.Distance myDistance = myNodeId.distance(key);
-	boolean finished = false;
-	int count = 0;
-
-	for (int i=0; !finished; i++) {
+  /**
+   * Determines a set of alternate hops towards a given key.
+   * 
+   * @param key the key
+   * @param max the maximal number of alternate hops requested
+   * @return a set of nodehandles, or null if no alternate hops exist
+   */
+  public NodeSet alternateRoutes(Id key, int max) {
+  	NodeSet set = new NodeSet();
+  	final int cols = 1 << idBaseBitLength;
+  	int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
+  	if (diffDigit < 0) return set;
+  	int keyDigit = key.getDigit(diffDigit, idBaseBitLength);
+  	int myDigit = myNodeId.getDigit(diffDigit, idBaseBitLength);
+  	Id.Distance myDistance = myNodeId.distance(key);
+  	boolean finished = false;
+  	int count = 0;
+  
+  	for (int i=0; !finished; i++) {
 	    for (int j=0; j<2; j++) {
 		int digit = (j == 0) ? 
 		    (keyDigit + i) & (cols - 1) : (keyDigit + cols - i) & (cols - 1);

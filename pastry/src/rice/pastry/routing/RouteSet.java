@@ -89,7 +89,7 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
       for (int i=0; i<theSize; i++) {
 
         // if handle is already in the set, abort
-        if (nodes[i].getNodeId().equals(handle.getNodeId())) return false;
+        if (nodes[i].equals(handle)) return false;
 
         // find entry with worst proximity
         int p = nodes[i].proximity();
@@ -220,19 +220,25 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
       }
     }
 
+  /**
+   * Return the closest live node in the set.
+   *
+   * @return the closest node, or null if no live node exists in the set.
+   */
+  public NodeHandle closestNode() {
+    return closestNode(NodeHandle.LIVENESS_SUSPECTED);
+  }
     /**
      * Return the closest live node in the set.
      *
      * @return the closest node, or null if no live node exists in the set.
      */
-
-    public NodeHandle closestNode() {
+  public NodeHandle closestNode(int minLiveness) {
       int bestProximity = Integer.MAX_VALUE;
       NodeHandle bestNode = null;
 
       for (int i=0; i<theSize; i++) {
-        if (!nodes[i].isAlive()) continue;
-
+        if (!(nodes[i].getLiveness() <= minLiveness) /*isAlive()*/) continue;        
         int p = nodes[i].proximity();
         if (p <= bestProximity) {
           bestProximity = p;
