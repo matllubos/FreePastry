@@ -207,8 +207,13 @@ public class SocketChannelReader {
   }
 
   private void debug(String s) {
-    if (Log.ifp(6))
-      System.out.println(spn.getNodeId() + " (R): " + s);
+    if (Log.ifp(6)) {
+      if (spn == null) {
+        System.out.println("(R): " + s);
+      } else {
+        System.out.println(spn.getNodeId() + " (R): " + s);
+      }
+    }
   }
 
 }

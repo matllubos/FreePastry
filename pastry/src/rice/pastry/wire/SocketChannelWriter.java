@@ -92,18 +92,15 @@ public class SocketChannelWriter {
 
   /**
    * Adds an object to this SocketChannelWriter's queue of pending
-   * objects to write.  This methos is synchronized and therefore 
+   * objects to write.  This methos is synchronized and therefore
    * safe for use by multiple threads.
    *
    * @param o The object to be written.
    */
   public void enqueue(Object o) {
-//    if ((o instanceof SocketTransportMessage) &&
-//        (((SocketTransportMessage) o).getObject() instanceof rice.testharness.messaging.SubscribedMessage))
-//      System.out.println(pastryNode.getNodeId() + " (W): Enqueuing write of SM.");
-
     synchronized (queue) {
       queue.addLast(o);
+//      System.out.println("SQ: " + queue.size());
     }
   }
 
@@ -147,20 +144,20 @@ public class SocketChannelWriter {
           return true;
         }
       }
-      
+
       int j = buffer.limit();
       int i = sc.write(buffer);
-      
+
       debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
-      
+
       if (buffer.remaining() != 0) {
         return false;
       }
-      
+
       queue.removeFirst();
-      
+
       buffer = null;
-      
+
       // if there are more objects in the queue, try writing those
       // otherwise, return saying all objects have been written
       return write(sc);
@@ -207,8 +204,13 @@ public class SocketChannelWriter {
   }
 
   private void debug(String s) {
-    if (Log.ifp(6))
-      System.out.println(pastryNode.getNodeId() + " (W): " + s);
+    if (Log.ifp(6)) {
+      if (pastryNode == null) {
+        System.out.println("(W): " + s);
+      } else {
+        System.out.println(pastryNode.getNodeId() + " (W): " + s);
+      }
+    }
   }
 }
 

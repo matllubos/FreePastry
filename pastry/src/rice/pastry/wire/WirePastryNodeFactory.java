@@ -116,6 +116,8 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
         o = reader.read(channel);
       }
 
+      debug("Read " + o + " from remote node...");
+
       NodeIdResponseMessage rm = (NodeIdResponseMessage) o;
       handle = new WireNodeHandle(address, rm.getNodeId());
 
@@ -224,6 +226,11 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
     }
 
     return result;
+  }
+
+  private void debug(String s) {
+    if (Log.ifp(6))
+      System.out.println(" (F): " + s);
   }
 }
 

@@ -142,14 +142,16 @@ public class DatagramTransmissionManager {
    * @param num The number of the ack
    */
   public void receivedAck(InetSocketAddress address, int num) {
-    synchronized (map) {
-      TransmissionEntry entry = (TransmissionEntry) map.get(address);
+    TransmissionEntry entry = null;
 
-      if (entry != null) {
-        entry.ackReceived(num);
-      } else {
-        debug("PANIC: Ack received from unknown address " + address);
-      }
+    synchronized (map) {
+      entry = (TransmissionEntry) map.get(address);
+    }
+
+    if (entry != null) {
+      entry.ackReceived(num);
+    } else {
+      debug("PANIC: Ack received from unknown address " + address);
     }
   }
 
@@ -260,10 +262,14 @@ public class DatagramTransmissionManager {
     // to determine the next timeout time
     public double TIMEOUT_FACTOR = 2;
 
-    // the maximum number to retries before declaring the node
-    // to be dead
+    // the maximum number to retries before dropping the message
+    // on the floor
     public int MAX_NUM_RETRIES = 4;
 
+    // the maximum number of retries before declaring the node to
+    // be dead and attampting to open a socket
+    public int NUM_RETRIES_BEFORE_OPENING_SOCKET = 2;
+    
     // the maximum number of objects in the UDP queue before we
     // open a socket
     public int MAX_UDP_QUEUE_SIZE = 4;
@@ -291,6 +297,8 @@ public class DatagramTransmissionManager {
      */
     public void add(PendingWrite write) {
       queue.addLast(write);
+
+//      System.out.println("DQ: " + queue.size());
 
       debug("Added write for object " + write.getObject());
 
@@ -402,6 +410,23 @@ public class DatagramTransmissionManager {
           numRetries++;
         }
 
+        if (numRetries == NUM_RETRIES_BEFORE_OPENING_SOCKET) {
+          WireNodeHandle wnh = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address);
+     
+          LinkedList list = new LinkedList();
+          
+          Iterator i = queue.iterator();
+          i.next();
+          
+          while (i.hasNext()) {
+            PendingWrite pw = (PendingWrite) i.next();
+            list.addLast(new SocketTransportMessage(pw.getObject()));
+            i.remove();
+          }
+          
+          wnh.connectToRemoteNode(list);
+        }
+          
         if (numRetries >= MAX_NUM_RETRIES) {
           ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address).markDead();
           System.out.println(pastryNode.getNodeId() + " found " + address + " to be dead - cancelling all messages ");

@@ -63,6 +63,9 @@ public class SelectorManager {
   // used for testing (simulating killing a node)
   private boolean alive = true;
 
+  // the amount of time to wait during a selection (ms)
+  public int SELECT_WAIT_TIME = 100;
+  
   /**
    * Constructor.
    *
@@ -109,52 +112,53 @@ public class SelectorManager {
       debug("Manager starting...");
 
       // loop while waiting for activity
-      while (alive && (selector.select(100) >= 0)) {
-
+      while (alive && (selector.select(SELECT_WAIT_TIME) >= 0)) {
         Object[] keys = null;
-        
+
         synchronized (selector) {
           keys = selector.selectedKeys().toArray();
         }
-        
+
         for (int i=0; i<keys.length; i++) {
           SelectionKey key = (SelectionKey) keys[i];
           selector.selectedKeys().remove(key);
-          
+
           SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
-          
+
           if (skh != null) {
             // accept
             if (key.isValid() && key.isAcceptable()) {
               skh.accept(key);
             }
-            
+
             // connect
             if (key.isValid() && key.isConnectable()) {
               skh.connect(key);
             }
-            
+
             // read
             if (key.isValid() && key.isReadable()) {
               skh.read(key);
             }
-            
+
             // write
             if (key.isValid() && key.isWritable()) {
               skh.write(key);
             }
+          } else {
+            key.cancel();
           }
         }
-        
+
         // wake up all SelectionKeyManagers
         synchronized (selector) {
           keys = selector.keys().toArray();
         }
-        
+
         for (int i=0; i<keys.length; i++) {
           SelectionKey key = (SelectionKey) keys[i];
           SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
-          
+
           if (skh != null)
             skh.wakeup();
         }
