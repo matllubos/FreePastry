@@ -213,7 +213,7 @@ public abstract class LogEntry implements PostData {
    * @param key The key used to encrypt this object
    * @return A LogEntryReference to this object
    */
-  public ContentHashReference buildContentHashReference(Id location, byte[] key) {
+  public ContentHashReference buildContentHashReference(Id[] location, byte[][] key) {
     return new LogEntryReference(location, key);
   }
 

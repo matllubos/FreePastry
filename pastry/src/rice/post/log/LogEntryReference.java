@@ -15,10 +15,13 @@ import rice.post.storage.*;
  */
 public class LogEntryReference extends ContentHashReference {
 
+  // serialver
+  private static final long serialVersionUID = 3104562140019022408L;
+  
   /**
    * Creates a new LogEntryReference.
    */
-  public LogEntryReference(Id location, byte[] key) {
+  public LogEntryReference(Id[] location, byte[][] key) {
     super(location, key);
   }
 

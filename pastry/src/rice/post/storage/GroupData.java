@@ -58,7 +58,7 @@ public class GroupData implements PostData {
    * @param key The for the data
    * @return A pointer to the data
    */
-  public ContentHashReference buildContentHashReference(Id location, byte[] key) {
+  public ContentHashReference buildContentHashReference(Id[] location, byte[][] key) {
     throw new UnsupportedOperationException("GroupData cannot be stored as a ContentHash");
   }
   

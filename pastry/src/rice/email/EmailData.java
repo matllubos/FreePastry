@@ -13,6 +13,9 @@ import rice.post.storage.*;
  * @author Alan Mislove
  */
 public class EmailData implements PostData {
+  
+  // serialver
+  private static final long serialVersionUID = 5751102504682081475L;
 
   /**
    * The data representing the stored data
@@ -36,7 +39,7 @@ public class EmailData implements PostData {
    * @param location the location of the data
    * @param key the key of the data
    */
-  public ContentHashReference buildContentHashReference(Id location, byte[] key) {
+  public ContentHashReference buildContentHashReference(Id[] location, byte[][] key) {
     return new EmailDataReference(location, key);
   }
 

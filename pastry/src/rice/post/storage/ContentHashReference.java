@@ -12,6 +12,13 @@ import rice.p2p.past.*;
  * stored in the Post system.  This class knows both the
  * location in the network and the encryption key of the
  * corresponding PostData object.
+ *
+ * This class has been extended to support multiple object locations
+ * and keys, with each stored in ContentHash form.  This is to allow
+ * very large objects to be transparently broken up into a group of
+ * smaller objects, and each fragment is stored seperately. Note that
+ * a readObject() method has been defined to support the automatic
+ * migration of old-style references to the new style.
  * 
  * @version $Id$
  */
@@ -23,12 +30,12 @@ public class ContentHashReference implements Serializable {
   /**
    * Location where this data is stored in PAST.
    */
-  private Id location;
+  private Id[] locations;
   
   /**
    * Key used to sign the content hash.
    */
-  private byte[] key;
+  private byte[][] keys;
 
   /**
    * Contructs a PostDataReference object given
@@ -37,27 +44,32 @@ public class ContentHashReference implements Serializable {
    * @param location The location in PAST of the PostData object
    * @param key The encryption key of the PostData object
    */
-  public ContentHashReference(Id location, byte[] key) {
-    this.location = location;
-    this.key = key;
+  public ContentHashReference(Id[] locations, byte[][] keys) {
+    this.locations = locations;
+    this.keys = keys;
   }
 
   /**
-   * @return The location of the data referenced by this object
+   * @return The locations of the data referenced by this object
    */
-  public Id getLocation() {
-    return location;
+  public Id[] getLocations() {
+    return locations;
   }
 
   /**
-   * @return The encryption key for the data
+   * @return The encryption keys for the data
    */
-  public byte[] getKey() {
-    return key;
+  public byte[][] getKeys() {
+    return keys;
   }
   
   public int hashCode() {
-    return location.hashCode();
+    int result = 383727781;
+    
+    for (int i=0; i<locations.length; i++)
+      result ^= locations[i].hashCode();
+    
+    return result;
   }
 
   public boolean equals(Object o) {
@@ -66,11 +78,41 @@ public class ContentHashReference implements Serializable {
 
     ContentHashReference ref = (ContentHashReference) o;
 
-    return (location.equals(ref.getLocation()) &&
-            Arrays.equals(key, ref.getKey()));
+    return Arrays.equals(locations, ref.getLocations());
   }
 
   public String toString() {
-    return "[ContentHashRef " + location + "]";
+    StringBuffer result = new StringBuffer();
+    result.append("[ContentHashRef ");
+    
+    for (int i=0; i<locations.length; i++)
+      result.append(locations[i].toString());
+    
+    result.append(" ]");
+    
+    return result.toString();
+  }
+  
+  /**
+   * ReadObject overridden in order to support translation from
+   * old -> new style references.  
+   *
+   * @param ois Object Input Stream
+   */
+  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    ObjectInputStream.GetField gf = ois.readFields();
+    
+    if (! gf.defaulted("locations")) {
+      this.locations = (Id[]) gf.get("locations", new Object());
+      this.keys = (byte[][]) gf.get("keys", new Object());
+    } else {
+      if (gf.get("location", null) != null) {
+        this.locations = new Id[] { (Id) gf.get("location", new Object()) };
+        this.keys = new byte[][] { (byte[]) gf.get("key", new Object()) };
+      } else {
+        this.locations = new Id[0];
+        this.keys = new byte[0][0];
+      }
+    }
   }
 }

@@ -31,6 +31,9 @@ import rice.post.security.*;
  */
 public class StorageService {
   
+  // the maximum size of a content-hash object
+  public static int MAX_CONTENT_HASH_SIZE = 1000000;
+  
   /**
    * The default timeout period of objects (3 weeks)
    */
@@ -137,10 +140,7 @@ public class StorageService {
     endpoint.process(new Executable() {
       public Object execute() {
         try {
-          byte[] plainText = SecurityUtils.serialize(data);
-          byte[] hash = SecurityUtils.hash(plainText);
-          byte[] cipherText = SecurityUtils.encryptSymmetric(plainText, hash);
-          return new Object[] {plainText, cipherText};
+          return SecurityUtils.serialize(data);
         } catch (IOException e) {
           return e;
         }
@@ -152,48 +152,108 @@ public class StorageService {
           return;
         }
         
-        byte[] plainText = (byte[]) ((Object[]) o)[0];
-        byte[] cipherText = (byte[]) ((Object[]) o)[1];
-        byte[] loc = SecurityUtils.hash(cipherText);
+        final byte[][] partitions = partition((byte[]) o);
         
-        final Id location = factory.buildId(loc);
+        storeContentHashEntry(partitions[0], new StandardContinuation(parent) {
+          protected int i=0;
+          protected Id[] locations = new Id[partitions.length];
+          protected byte[][] keys = new byte[partitions.length][];
+          
+          public void receiveResult(Object o) {
+            locations[i] = (Id) ((Object[]) o)[0];
+            keys[i] = (byte[]) ((Object[]) o)[1];
+            i++;
+
+            if (i < partitions.length) {
+              storeContentHashEntry(partitions[i], this);
+              return;
+            } else {
+              parent.receiveResult(data.buildContentHashReference(locations, keys));
+            }
+          }
+        });
+      }
+    });
+  }
+  
+  /**
+   * Method which partitions a serialized object into acceptable size arrays - currently, 
+   * it just splits the array into a bunch of arrays of size MAX_CONTENT_HASH_SIZE or
+   * less.
+   *
+   * @param array the array
+   * @return Splitted shaat
+   */
+  public static byte[][] partition(byte[] array) {
+    Vector result = new Vector();
+    int offset = 0;
+    
+    while (offset < array.length) {
+      byte[] next = new byte[(array.length - offset < MAX_CONTENT_HASH_SIZE ? array.length - offset : MAX_CONTENT_HASH_SIZE)];
+      System.arraycopy(array, offset, next, 0, next.length);
+      result.add(next);
+      offset += next.length;
+    }
+    
+    System.out.println("PARTITION: Split " + array.length + " bytes into " + result.size() + " groups...");
+    
+    return (byte[][]) result.toArray(new byte[0][]);
+  }
+  
+  /**
+   * Performs the actual content hashing and insertion of a single content has
+   * block.  Returns an array containing the Id and byte[] key of the inserted 
+   * object.
+   *
+   * @param data The data to store.
+   * @param command The command to run once the store has completed.
+   */
+  public void storeContentHashEntry(final byte[] plainText, final Continuation command) {
+    endpoint.process(new Executable() {
+      public Object execute() {
+        return SecurityUtils.encryptSymmetric(plainText, SecurityUtils.hash(plainText));
+      }
+    }, new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        final byte[] cipherText = (byte[]) o;
+        final Id location = factory.buildId(SecurityUtils.hash(cipherText));
         final byte[] key = SecurityUtils.hash((byte[]) plainText);
         final ContentHashData chd = new ContentHashData(location, cipherText);
         
-        immutablePast.lookupHandles(location, immutablePast.getReplicationFactor()+1, new StandardContinuation(command) {
+        immutablePast.lookupHandles(location, immutablePast.getReplicationFactor()+1, new StandardContinuation(parent) {
           public void receiveResult(Object o) {
             PastContentHandle[] handles = (PastContentHandle[]) o;
             
-            for (int i=0; i<handles.length; i++) 
-              // the object already exists - simply refresh and return a reference
+            // the object already exists - simply refresh and return a reference
+            for (int i=0; i<handles.length; i++) {
               if (handles[i] != null) {
-                final ContentHashReference ref = data.buildContentHashReference(location, key);
-                
-                refreshContentHash(new ContentHashReference[] {ref}, new StandardContinuation(parent) {
+                refreshContentHash(new ContentHashReference[] {new ContentHashReference(new Id[] {location}, new byte[][] {key})}, new StandardContinuation(parent) {
                   public void receiveResult(Object o) {
-                    parent.receiveResult(ref);
+                    parent.receiveResult(new Object[] {location, key});
                   }
                 });
                 
                 return;
               }
+            }
+             
+            // otherwise, we have to insert it ourselves
+            Continuation result = new StandardContinuation(parent) {
+              public void receiveResult(Object o) {
+                Boolean[] results = (Boolean[]) o;
+                int failed = 0;
                 
-                Continuation result = new StandardContinuation(parent) {
-                  public void receiveResult(Object o) {
-                    Boolean[] results = (Boolean[]) o;
-                    int failed = 0;
-                    
-                    for (int i=0; i<results.length; i++) {
-                      if ((results[i] == null) || (! results[i].booleanValue())) 
-                        failed++;
-                    }
-                    
-                    if (failed <= results.length/2) 
-                      parent.receiveResult(data.buildContentHashReference(location, key));
-                    else 
-                      parent.receiveException(new IOException("Storage of content hash data into PAST failed - had " + failed + "/" + results.length + " failures."));
-                  }
-                };
+                for (int i=0; i<results.length; i++) {
+                  if ((results[i] == null) || (! results[i].booleanValue())) 
+                    failed++;
+                }
+                
+                if (failed <= results.length/2) 
+                  parent.receiveResult(new Object[] {location, key});
+                else 
+                  parent.receiveException(new IOException("Storage of content hash data into PAST failed - had " + failed + "/" + results.length + " failures."));
+              }
+            };
             
             // Store the content hash data in PAST
             if (immutablePast instanceof GCPast) 
@@ -218,7 +278,64 @@ public class StorageService {
    * @param command The command to run once the store has completed.
    */
   public void retrieveContentHash(final ContentHashReference reference, Continuation command) {
-    immutablePast.lookup(reference.getLocation(), new StandardContinuation(command) {
+    retrieveContentHashEntry(reference.getLocations()[0], reference.getKeys()[0], new StandardContinuation(command) {
+      protected int i = 0;
+      protected byte[][] data = new byte[reference.getLocations().length][];
+      protected int length = 0;
+      
+      public void receiveResult(Object o) {
+        data[i] = (byte[]) o;
+        length += data[i].length;
+        i++;
+        
+        // first retrieve all of the entries
+        if (i < reference.getLocations().length) {
+          retrieveContentHashEntry(reference.getLocations()[i], reference.getKeys()[i], this);
+          return;
+        } else {
+          // then actually put it all together and deserialize
+          final byte[] plainText = new byte[length];
+          int sofar = 0;
+          
+          for (int j=0; j<data.length; j++) {
+            System.arraycopy(data[j], 0, plainText, sofar, data[j].length);
+            sofar += data[j].length;
+          }
+          
+          endpoint.process(new Executable() {
+            public Object execute() {
+              try {
+                return (PostData) SecurityUtils.deserialize(plainText);
+              } catch (ClassCastException cce) {
+                return new StorageException("ClassCastException while retrieving data: " + cce);
+              } catch (IOException ioe) {
+                return new StorageException("IOException while retrieving data: " + ioe);
+              } catch (ClassNotFoundException cnfe) {
+                return new StorageException("ClassNotFoundException while retrieving data: " + cnfe);
+              }
+            }
+          }, new StandardContinuation(parent) {
+            public void receiveResult(Object o) {
+              if (o instanceof PostData)
+                parent.receiveResult(o);
+              else
+                parent.receiveException((Exception) o);
+            }
+          });          
+        }
+      }
+    });
+  }
+  
+  /**
+   * This method retrieves a single content hash entry and verifies it.  The byte[]
+   * data is returned to the caller
+   *
+   * @param reference The reference to the PostDataObject
+   * @param command The command to run once the store has completed.
+   */
+  public void retrieveContentHashEntry(final Id location, final byte[] key, Continuation command) {
+    immutablePast.lookup(location, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         ContentHashData chd = (ContentHashData) o;
         
@@ -227,11 +344,10 @@ public class StorageService {
           return;
         }
         
-        final byte[] key = reference.getKey();        
         final byte[] cipherText = chd.getData();
         
         // Verify hash(cipher) == location
-        if (! Arrays.equals(SecurityUtils.hash(cipherText), reference.getLocation().toByteArray())) {
+        if (! Arrays.equals(SecurityUtils.hash(cipherText), location.toByteArray())) {
           parent.receiveResult(new StorageException("Hash of cipher text does not match location."));
           return;
         }
@@ -250,26 +366,8 @@ public class StorageService {
               return;
             }
             
-            endpoint.process(new Executable() {
-              public Object execute() {
-                try {
-                  return (PostData) SecurityUtils.deserialize(plainText);
-                } catch (ClassCastException cce) {
-                  return new StorageException("ClassCastException while retrieving data: " + cce);
-                } catch (IOException ioe) {
-                  return new StorageException("IOException while retrieving data: " + ioe);
-                } catch (ClassNotFoundException cnfe) {
-                  return new StorageException("ClassNotFoundException while retrieving data: " + cnfe);
-                }                  
-              }
-            }, new StandardContinuation(parent) {
-              public void receiveResult(Object o) {
-                if (o instanceof PostData)
-                  parent.receiveResult(o);
-                else
-                  parent.receiveException((Exception) o);
-              }
-            });
+            // finally return the plaintext
+            parent.receiveResult(plainText);
           }
         });
       }
@@ -287,10 +385,13 @@ public class StorageService {
    */
   public void refreshContentHash(ContentHashReference[] references, Continuation command) {
     if (immutablePast instanceof GCPast) {
-      Id[] ids = new Id[references.length];
-    
-      for (int i=0; i<ids.length; i++)
-        ids[i] = references[i].getLocation();
+      HashSet idset = new HashSet();
+      
+      for (int i=0; i<references.length; i++)
+        for (int j=0; j<references[i].getLocations().length; j++)
+          idset.add(references[i].getLocations()[j]);
+      
+      Id[] ids = (Id[]) idset.toArray(new Id[0]);
       
       System.out.println("CALLING REFERSH WITH " + ids.length + " OBJECTS!");
       ((GCPast) immutablePast).refresh(ids, getTimeout(), new StandardContinuation(command) {

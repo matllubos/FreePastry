@@ -15,6 +15,9 @@ import rice.post.storage.*;
  */
 public class SnapShot implements PostData {
   
+  // serialver
+  private static final long serialVersionUID = 9034592939830134320L;
+  
   // stores the emails of the current folder
   private StoredEmail[] emails;
   
@@ -84,7 +87,7 @@ public class SnapShot implements PostData {
    * @param key The for the data
    * @return A pointer to the data
    */
-  public ContentHashReference buildContentHashReference(Id location, byte[] key) {
+  public ContentHashReference buildContentHashReference(Id[] location, byte[][] key) {
     return new ContentHashReference(location, key);
   }
   

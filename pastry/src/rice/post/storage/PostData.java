@@ -35,7 +35,7 @@ public interface PostData extends Serializable {
    * @param key The for the data
    * @return A pointer to the data
    */
-  public ContentHashReference buildContentHashReference(Id location, byte[] key);
+  public ContentHashReference buildContentHashReference(Id[] locations, byte[][] keys);
 
   /**
     * This method dynamically builds an appropriate SecureReference
