@@ -1,3 +1,39 @@
+/*************************************************************************
+
+"Free Pastry" Peer-to-Peer Application Development Substrate
+
+Copyright 2002, Rice University. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+contributors may be  used to endorse or promote  products derived from
+this software without specific prior written permission.
+
+This software is provided by RICE and the contributors on an "as is"
+basis, without any representations or warranties of any kind, express
+or implied including, but not limited to, representations or
+warranties of non-infringement, merchantability or fitness for a
+particular purpose. In no event shall RICE or contributors be liable
+for any direct, indirect, incidental, special, exemplary, or
+consequential damages (including, but not limited to, procurement of
+substitute goods or services; loss of use, data, or profits; or
+business interruption) however caused and on any theory of liability,
+whether in contract, strict liability, or tort (including negligence
+or otherwise) arising in any way out of the use of this software, even
+if advised of the possibility of such damage.
+
+********************************************************************************/
+
 package rice.p2p.splitstream;
 
 import java.io.*;
@@ -9,15 +45,17 @@ import rice.p2p.scribe.*;
 
 /**
  * The channel controls all the meta data associated with a group of stripes. It contains the
- * stripes themselves plus any sparecapcity groups associated with the group of stripes. It also
- * manages the amount of bandwidth that is used by this collection of stripes. A Channel is created
- * by giving it a name which is then hashed to come up with a channelId which uniquely identifies
- * this channel. If other nodes want to join the channel they attach to it. ( Join the scribe group
- * ) This is the channel object that represents a group of stripes in SplitStream.
+ * stripes themselves, and one of the stripe is the primary stripe for this channel.
+ * A stripe whose topicId matches some prefix with local node id, then it becomes its primary stripe.
+ * A channelId uniquely identifies a channel. Number of stripes is obtained by pow(2, STRIPE_BASE), so for
+ * STRIPE_BASE = 4, it is 16. Stripe identifiers are obtained by replacing first digit by every possible value of 
+ * a digit and second digit by 8. So, if channelId is <0x1AB88..>, then stripe id's generated are <0x08B88..>,
+ * <0x18B88..>, <0x28B88..> etc. 
  *
  * @version $Id$
  * @author Ansley Post
  * @author Alan Mislove
+ * @author Atul Singh
  */
 public class Channel {
 
@@ -149,6 +187,7 @@ public class Channel {
         bArray = bArray.clearBit(i);
       }
     }
+    
     int x = 8;
     BigInteger bNum2 = new BigInteger(x + "");
     bNum2 = bNum2.shiftLeft(length-base);
@@ -159,7 +198,7 @@ public class Channel {
 	    bArray = bArray.clearBit(i - base);
 	}
     }
-
+    
     byte[] newArray = bArray.toByteArray();
     byte[] result = new byte[array.length];
     

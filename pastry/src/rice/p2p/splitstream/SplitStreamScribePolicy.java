@@ -1,3 +1,38 @@
+/*************************************************************************
+
+"Free Pastry" Peer-to-Peer Application Development Substrate
+
+Copyright 2002, Rice University. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+contributors may be  used to endorse or promote  products derived from
+this software without specific prior written permission.
+
+This software is provided by RICE and the contributors on an "as is"
+basis, without any representations or warranties of any kind, express
+or implied including, but not limited to, representations or
+warranties of non-infringement, merchantability or fitness for a
+particular purpose. In no event shall RICE or contributors be liable
+for any direct, indirect, incidental, special, exemplary, or
+consequential damages (including, but not limited to, procurement of
+substitute goods or services; loss of use, data, or profits; or
+business interruption) however caused and on any theory of liability,
+whether in contract, strict liability, or tort (including negligence
+or otherwise) arising in any way out of the use of this software, even
+if advised of the possibility of such damage.
+
+********************************************************************************/
 package rice.p2p.splitstream;
 
 import java.util.*;
@@ -6,10 +41,9 @@ import rice.p2p.commonapi.*;
 import rice.p2p.scribe.*;
 import rice.p2p.scribe.messaging.*;
 
-
-//import rice.pastry.NodeId;
 import rice.pastry.PastrySeed;
 import rice.pastry.routing.RoutingTable;
+
 /**
  * This class represents SplitStream's policy for Scribe, which only allows children
  * according to the bandwidth manager and makes anycasts first traverse all nodes
@@ -18,6 +52,7 @@ import rice.pastry.routing.RoutingTable;
  *
  * @version $Id$
  * @author Alan Mislove
+ * @author Atul Singh
  */
 public class SplitStreamScribePolicy implements ScribePolicy {
 
@@ -41,6 +76,9 @@ public class SplitStreamScribePolicy implements ScribePolicy {
    */
   protected Hashtable policy;
 
+    /**
+     * A radom number used to introduce randomness while adding children.
+     */
     Random rng = new Random(PastrySeed.getSeed());
     
 
@@ -83,9 +121,31 @@ public class SplitStreamScribePolicy implements ScribePolicy {
   }
 
   /**
-   * This method only allows subscriptions if we are already subscribed to this topic -
-   * if this would cause us to become implicitly subscribed, then it is not allowed.  Additionally,
-   * this method asks the bandwidth manager for that topic if the child should be allowed.
+   * This method implements the "locating parent" algorithm of SplitStream. Whenever a node receives 
+   * subscription request, it executes following algorithm :
+   * 
+   * 1) Checks if it has available capacity, 
+   *    if yes, take it
+   *    if no, go to step 2
+   * 
+   * 2) If subscription is for primary stripe,
+   *    if no, dont take it, return false
+   *    if yes, need to drop someone
+   *           first check if our children list for this topic is non-zero
+   *             if yes, find a child which shares less prefix match than the new subscriber
+   *                     if found one, send it a drop message and accept newe subscriber, return true
+   *                     if no, dont accept the new subscriber, return false
+   *              if no, look for children in other stripes which we can drop
+   *                  we select a stripe such that it is not
+   *                  a) primary stripe
+   *                  b) we are not the root for the stripe (may happen in very small networks)
+   *                  c) we have non-zero children for this stripe
+   *                  if found such a stripe, we drop a random child from that stripe and accept the new 
+   *                     subscriber, return true.
+   *
+   * 3) Checks if one of our child for a stripe sent us a request message for dropping it and taking
+   *    the new subscriber (STAGE_3), then we drop the child and return true to accept the subscriber.    
+   *
    *
    * @param message The subscribe message in question
    * @param children The list of children who are currently subscribed to this topic
@@ -93,18 +153,21 @@ public class SplitStreamScribePolicy implements ScribePolicy {
    * @return Whether or not this child should be allowed add.
    */
   public boolean allowSubscribe(SubscribeMessage message, ScribeClient[] clients, NodeHandle[] children) {
+      
       Channel channel = getChannel(message.getTopic());
       NodeHandle newChild = (NodeHandle)message.getSubscriber();
+
+      // I should not accept myself - wierd case, should not happen
+      if(message.getSubscriber().getId().equals(channel.getLocalId()))
+	  return false;
       
       // first see if we are in the 3rd stage of algorithm for locating parent.
       ScribeContent content = message.getContent();
       if(content != null && (content instanceof SplitStreamContent)){
 	  int stage = ((SplitStreamContent)content).getStage();
 	  if(stage == SplitStreamContent.STAGE_FINAL){
-	      //System.out.println("Stage "+stage);
 	      List list = Arrays.asList(children);
 	      if(!list.contains(message.getSource())){
-		  //System.out.println("CHAOS :: sending drop message to "+message.getSource()+" a node which is not our child, at "+channel.getLocalId());
 		  return false;
 	      }
 	      else{
@@ -115,7 +178,7 @@ public class SplitStreamScribePolicy implements ScribePolicy {
       }
       
 
-      if(canTakeChild(channel)){
+      if(getTotalChildren(channel) < getMaxChildren(channel.getChannelId())){
 	  return true;
       }
       else{
@@ -127,8 +190,6 @@ public class SplitStreamScribePolicy implements ScribePolicy {
 		  if(victimChild.getId().equals(newChild.getId()))
 		      return false;
 		  else{
-		      //System.out.println("Removing child "+victimChild+" at "+channel.getLocalId()+" for topic "
-		      //+message.getTopic().getId()+" for new child "+newChild);
 		      scribe.removeChild(new Topic(message.getTopic().getId()), victimChild);
 		      return true;
 		  }
@@ -137,10 +198,6 @@ public class SplitStreamScribePolicy implements ScribePolicy {
 		  Vector res = freeBandwidthUltimate(message.getTopic().getId());
 		  if(res != null){
 		      scribe.removeChild(new Topic((Id)res.elementAt(1)), (NodeHandle)res.elementAt(0));
-		      //scribe.addChild(message.getTopic(),((SubscribeMessage)message).getSubscriber());
-		      //System.out.println("Adding child "+((SubscribeMessage)message).getSubscriber() + " for topic "
-		      //+message.getTopic()+" at "+getChannel(message.getTopic()).getLocalId()
-		      //+" removing child "+(NodeHandle)res.elementAt(0));
 		      return true;
 		  }
 		  else
@@ -166,80 +223,69 @@ public class SplitStreamScribePolicy implements ScribePolicy {
 	  else
 	      message.addLast(parent);
       }
-    
-    // NEED TO ADD CHILDREN/PARENTS SELECTIVELY HERE
-
-    // we do not want to anycast through our own children
-    if(message instanceof SubscribeMessage && !((SubscribeMessage)message).getSubscriber().getId().equals(getChannel(message.getTopic()).getLocalId())){
-	Vector good = new Vector();
-	Vector bad = new Vector();
-	for (int i=0; i<children.length; i++) {
-	    if(SplitStreamScribePolicy.getPrefixMatch(message.getTopic().getId(), children[i].getId()) > 0)
+      if(message instanceof SubscribeMessage)
+	  if(Arrays.asList(children).contains(((SubscribeMessage)message).getSubscriber())){
+	      (new Exception()).printStackTrace();
+	      System.exit(1);
+	  }
+      // First add children which match prefix with the stripe, then those which dont.
+      // Introduce some randomness so that load is balanced among children.
+      Vector good = new Vector();
+      Vector bad = new Vector();
+      for (int i=0; i<children.length; i++) {
+	  if(SplitStreamScribePolicy.getPrefixMatch(message.getTopic().getId(), children[i].getId()) > 0)
 		good.add(children[i]);
-	    else
-		bad.add(children[i]);
-	}
-	int index;
-	while(good.size() > 0){
-	    index = rng.nextInt(good.size());
-	    message.addFirst((NodeHandle)(good.elementAt(index)));
-	    good.remove((NodeHandle)(good.elementAt(index)));
-	}
-	while(bad.size() > 0){
-	    index = rng.nextInt(bad.size());
-	    message.addLast((NodeHandle)(bad.elementAt(index)));
-	    bad.remove((NodeHandle)(bad.elementAt(index)));
-	}
-    
-    
-	
-	//if(message instanceof SubscribeMessage){
-	
-	NodeHandle nextHop = message.getNext();
-	// make sure that the next node is alive
-	while ((nextHop != null) && (!nextHop.isAlive())) {
-	nextHop = message.getNext();
-	}
-	
-	if(nextHop == null){
-	    
-	    // two cases, either
-	    // a) local node is a leaf
-	    // b) local node is root for non-prefix match topic,
-	    
-	    if(this.scribe.isRoot(message.getTopic())){
-		//System.out.println(" Local node "+getChannel(message.getTopic()).getLocalId()+" is root for topic "+message.getTopic().getId()+", next hop is null, for subscriber "+((SubscribeMessage)message).getSubscriber());
-		Vector res = freeBandwidthUltimate(message.getTopic().getId());
-		if(res != null){
-		    scribe.removeChild(new Topic((Id)res.elementAt(1)), (NodeHandle)res.elementAt(0));
-		    scribe.addChild(message.getTopic(),((SubscribeMessage)message).getSubscriber());
-		    //System.out.println("Adding child "+((SubscribeMessage)message).getSubscriber() + " for topic "
-		    //+message.getTopic()+" at "+getChannel(message.getTopic()).getLocalId()
-		    //+" removing child "+(NodeHandle)res.elementAt(0));
-		    return;
-		}
-		
-	    }
-	    else{
-		
-		// If yes, then we are in 3rd stage of our algorithm
-		// need to remove myself from the parent
-		//System.out.println(" **** 3rd Stage : source "+((SubscribeMessage)message).getSubscriber().getId()+" for stripe "+message.getTopic().getId()+" at "+getChannel(message.getTopic()).getLocalId()+" parent "+parent);
-		//System.exit(1);
-		//SplitStreamContent ssc = new SplitStreamContent(getChannel(message.getTopic()).getLocalId(), ((SubscribeMessage)message).getSubscriber());
-		SplitStreamContent ssc = new SplitStreamContent(SplitStreamContent.STAGE_FINAL);
-		message.remove(parent);
-		message.addFirst(parent);
-		message.setContent(ssc);
-	    }
-	}
-	else
-	    message.addFirst(nextHop);
-    }
-
-    
+	  else
+	      bad.add(children[i]);
+      }
+      int index;
+      while(good.size() > 0){
+	  index = rng.nextInt(good.size());
+	  message.addFirst((NodeHandle)(good.elementAt(index)));
+	  good.remove((NodeHandle)(good.elementAt(index)));
+      }
+      while(bad.size() > 0){
+	  index = rng.nextInt(bad.size());
+	  message.addLast((NodeHandle)(bad.elementAt(index)));
+	  bad.remove((NodeHandle)(bad.elementAt(index)));
+      }
+      
+      
+      NodeHandle nextHop = message.getNext();
+      // make sure that the next node is alive
+      while ((nextHop != null) && (!nextHop.isAlive())) {
+	  nextHop = message.getNext();
+      }
+      
+      if(nextHop == null){
+	  // if nexthop is null, then we are in 3rd stage of algorithm for locating parent.
+	  
+	  // two cases, either
+	  // a) local node is a leaf
+	  //      send message to our parent for dropping us and taking new subscriber
+	  // b) local node is root for non-prefix match topic,
+	  //      drop a child from non-primary, non-root stripe and accept the new subscriber
+	  
+	  if(this.scribe.isRoot(message.getTopic())){
+	      Vector res = freeBandwidthUltimate(message.getTopic().getId());
+	      if(res != null){
+		  scribe.removeChild(new Topic((Id)res.elementAt(1)), (NodeHandle)res.elementAt(0));
+		  scribe.addChild(message.getTopic(),((SubscribeMessage)message).getSubscriber());
+		  return;
+	      }
+	      
+	  }
+	  else{
+	      SplitStreamContent ssc = new SplitStreamContent(SplitStreamContent.STAGE_FINAL);
+	      message.remove(parent);
+	      message.addFirst(parent);
+	      message.setContent(ssc);
+	  }
+      }
+      else
+	  message.addFirst(nextHop);
   }
-
+    
   /**
    * Returns the Channel which contains the stripe cooresponding to the
    * provided topic.
@@ -283,17 +329,9 @@ public class SplitStreamScribePolicy implements ScribePolicy {
     return total;
   }
 
-    public boolean canTakeChild(Channel channel){
-	return (getTotalChildren(channel) < getMaxChildren(channel.getChannelId()));
-    }
-
      /**
      * This method makes an attempt to free up bandwidth
-     * when it is needed. It follows the basic outline as
-     * describe above,not completely defined.
-     *
-     * @param channel The channel whose bandwidth usage needs
-     *                to be controlled.
+     * from non-primary, non-root stripes (for which local node is not root).
      *
      * @return A vector containing the child to be dropped and
      *         the corresponding stripeId
@@ -312,13 +350,6 @@ public class SplitStreamScribePolicy implements ScribePolicy {
 	Topic tp;
 	for(int i = 0; i < stripes.length; i++){
 	    tp = new Topic(stripes[i].getStripeId().getId());
-	    /*
-	    if(channel.getPrimaryStripe().getStripeId().getId().equals(stripes[i].getStripeId().getId()))
-		System.out.println(stripes[i].getStripeId().getId()+" is same as primary stripe "+channel.getPrimaryStripe().getStripeId().getId()+" for "+i);
-	    if(this.scribe.isRoot(tp))
-		System.out.println("local node is root for "+tp.getId());
-	    System.out.println(scribe.getChildren(tp).length+" children for stripe "+tp.getId());
-	    */    
 	    if(!channel.getPrimaryStripe().getStripeId().getId().equals(stripes[i].getStripeId().getId()) && !this.scribe.isRoot(tp) && scribe.getChildren(tp).length > 0)
 		candidateStripes.add(stripes[i].getStripeId().getId());
 	}
@@ -327,7 +358,7 @@ public class SplitStreamScribePolicy implements ScribePolicy {
 	    for(int i = 0; i < stripes.length; i++){
 		tp = new Topic(stripes[i].getStripeId().getId());
 		if(!channel.getPrimaryStripe().getStripeId().getId().equals(stripes[i].getStripeId().getId()) && scribe.getChildren(tp).length > 0 && !stripes[i].getStripeId().getId().equals(stripeId))
-		candidateStripes.add(stripes[i].getStripeId().getId());
+		    candidateStripes.add(stripes[i].getStripeId().getId());
 	    }
 	}
 
@@ -350,11 +381,16 @@ public class SplitStreamScribePolicy implements ScribePolicy {
 	return null;
     }
 
+    /**
+     * This method attempts to free bandwidth from our primary stripe.
+     * It selects a child whose prefix match with the stripe is minimum, and drops it.
+     * If multiple such child exist and newChild has same prefix match as them, then 
+     * new child is not taken, otherwise a random selection is made.
+     * Otherwise, new child is taken and victim child is dropped.
+     *
+     * @return The victim child to drop.
+     */
     public NodeHandle freeBandwidth(Channel channel, NodeHandle newChild, Id stripeId){
-         
-         // This should be implemented depending upon the policies you want
-         // to use 
-         //
 	Stripe primaryStripe = channel.getPrimaryStripe();
 	Id localId = channel.getLocalId();
 
@@ -387,7 +423,10 @@ public class SplitStreamScribePolicy implements ScribePolicy {
     
 
    
-
+    /** 
+     * Helper method for finding prefix match between two Ids.
+     * @return The number of most significant digits that match.
+     */
      public static int getPrefixMatch(Id target, Id sample){
 	int digitLength = RoutingTable.baseBitLength();
 	int numDigits = rice.pastry.Id.IdBitLength / digitLength - 1;
