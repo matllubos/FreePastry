@@ -33,6 +33,8 @@ import rice.pastry.security.Credentials;
 import java.io.*;
 import java.util.*;
 
+import rice.pastry.*;
+
 /**
  * This is an abstract implementation of a message object.
  * 
@@ -44,6 +46,7 @@ public abstract class Message implements Serializable
     private Address destination;
     private Credentials credentials;
     private Date theStamp;
+    private NodeId senderId;
 
     /**
      * Gets the address of message receiver that the message is for.
@@ -68,6 +71,23 @@ public abstract class Message implements Serializable
      */
 
     public Date getDate() { return theStamp; }
+
+    /**
+     * Get sender Id.
+     * 
+     * @return the immediate sender's NodeId.
+     */
+
+    public NodeId getSenderId() { return senderId; }
+    
+    /**
+     * Set sender Id. Called by NodeHandle just before dispatch, so that
+     * this Id is guaranteed to belong to the immediate sender.
+     * 
+     * @param the immediate sender's NodeId.
+     */
+
+    public void setSenderId(NodeId id) { senderId = id; }
 
     /**
      * If the message has no timestamp, this will stamp the message.
@@ -98,6 +118,7 @@ public abstract class Message implements Serializable
 	destination = dest;
 	credentials = null;
 	theStamp = null;
+	senderId = null;
     }
 
     /**
@@ -112,6 +133,7 @@ public abstract class Message implements Serializable
 	destination = dest;
 	credentials = cred;
 	theStamp = null;
+	senderId = null;
     }
 
     /**
@@ -127,6 +149,7 @@ public abstract class Message implements Serializable
 	destination = dest;
 	credentials = cred;
 	this.theStamp = timestamp;
+	senderId = null;
     }
 
     /**
@@ -140,17 +163,20 @@ public abstract class Message implements Serializable
     {
 	destination = dest;
 	this.theStamp = timestamp;
+	senderId = null;
     }
 
     private void readObject(ObjectInputStream in)
 	throws IOException, ClassNotFoundException 
     {
 	destination = (Address) in.readObject();
+	senderId = (NodeId) in.readObject();
     }
 
     private void writeObject(ObjectOutputStream out)
 	throws IOException, ClassNotFoundException 
     {
 	out.writeObject(destination);
+	out.writeObject(senderId);
     }
 }

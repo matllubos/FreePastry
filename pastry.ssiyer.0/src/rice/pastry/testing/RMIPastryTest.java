@@ -66,7 +66,7 @@ public class RMIPastryTest {
 	    return;
 	}
 
-	RMINodeHandle other_handle = new RMINodeHandle(other, otherid, pn);
+	RMINodeHandle other_handle = new RMINodeHandle(other, otherid /* , pn */);
 	pn.receiveMessage(new InitiateJoin(other_handle));
 
 	System.out.println(pn.getLeafSet());
