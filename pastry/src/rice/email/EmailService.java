@@ -121,7 +121,8 @@ public class EmailService extends PostClient {
       PostLog mainLog = _post.getLog();
       LogReference emailLogRef = mainLog.getChildLog(pca);
 
-      _post.getStorageService().retrieveSigned(emailLogRef, new ESRootFolderCont(c));
+      StorageService storage = _post.getStorageService();
+      storage.retrieveSigned(emailLogRef, new ESRootFolderCont(c));
   }
 
   /**

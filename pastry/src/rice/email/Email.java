@@ -95,7 +95,7 @@ public class Email implements java.io.Serializable {
    */
   public void getBody(Continuation command) {
     // if the body has not been fetched already, fetch it
-    if (this.body == null) {
+    if ((this.body == null) && (this.bodyRef != null)) { 
       // make a new command to store the returned body and 
       // then return the body once it has been stored
       EmailGetBodyTask preCommand = new EmailGetBodyTask(command);
@@ -137,7 +137,7 @@ public class Email implements java.io.Serializable {
       EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.BODY, errorListener);
       storage.storeContentHash(body, command);
     }
-    else if ((this.attachmentRefs == null) && (attachments.length > 0)) {      
+    else if ((this.attachmentRefs == null) && (attachments != null) && (attachments.length > 0)) {      
       // make a new task to store the email's contents (body and attachments)
       EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.ATTACHMENT, errorListener);
       // begin storing the body, execute the rest of the task once this is complete
