@@ -14,4 +14,23 @@ package rice.splitstream;
    public void handleParentFailure(Stripe s);
 
 
+     /**
+      * Notification from a channel when it is ready, so that
+      * application can take appropriate action.
+      */
+     public void channelIsReady(ChannelId channelId);
+
+     /**
+      * Notification from a splitstream when it is ready, so that
+      * application can take appropriate action.
+      */
+     public void splitstreamIsReady();
  }
+
+
+
+
+
+
+
+

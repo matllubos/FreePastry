@@ -37,7 +37,7 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
  private Vector channels;
  private Random rng;
  private RandomNodeIdFactory idFactory;
- private static int numNodes = 100;
+ private static int numNodes = 500;
  private static int port = 5009;
  private static String bshost;
  private static int bsport = 5009;
@@ -216,6 +216,8 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
   protected void createNodes() {
     for (int i=0; i < numNodes; i++) {
       makeNode();
+      System.out.print("<"+i+">");
+      while(simulate());
     }
     while(simulate());
     System.out.println("All Nodes Created Succesfully");
@@ -224,5 +226,10 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
 	return simulator.simulate(); 
   }
 
+    public void channelIsReady(ChannelId channelId){
+    }
+
+    public void splitstreamIsReady(){
+    }
 
 }

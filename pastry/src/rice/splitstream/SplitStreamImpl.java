@@ -42,6 +42,14 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
      * or explicitly.
      */
     private Hashtable channels;
+
+    /**
+     * Set of ISplitStreamApps waiting for the SplitStream object to be ready,
+     * which is ready when Scribe is ready
+     */
+    private Set m_apps = new HashSet();
+
+    private boolean m_ready = false;
     /**
      * The constructor for building the splitStream object
      */
@@ -127,7 +135,9 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
      //System.out.println("Recieved message");
    }
    public void scribeIsReady(){
-     //System.out.println("Scribe is Ready");
+       //System.out.println("Scribe is Ready");
+       m_ready = true;
+       notifyApps();
    }
    public void subscribeHandler(NodeId topicId, 
                                NodeHandle child, 
@@ -161,4 +171,18 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
 	return scribe;
     }
 
+    public void registerApp(ISplitStreamApp app){
+	m_apps.add(app);
+    }
+
+    public void notifyApps(){
+	Iterator it = m_apps.iterator();
+	
+	while(it.hasNext()){
+	    ISplitStreamApp app = (ISplitStreamApp)it.next();
+	    app.splitstreamIsReady();
+	}
+    }
+
 } 
+
