@@ -51,12 +51,6 @@ public class SimpleFolderTest extends EmailTest {
       _state = GOT_ROOT;
       Continuation command = new SimpleFolderCont(_rootFolder);      
       _sender.getRootFolder(command);
-      // if this does not work, make a root for the EmailApp
-      
-
-      // now get the root
-      
-
     }
 
     else if (_state == GOT_ROOT) {

@@ -284,8 +284,8 @@ public class Email implements java.io.Serializable {
       }
       
       // store the next data item in the email
+      _index = _index + 1;      
       if (_index < attachments.length) {
-	_index = _index + 1;      
 	EmailStoreDataTask command = new EmailStoreDataTask(_index, null);
 	storage.storeContentHash(attachments[_index], command);
       }
