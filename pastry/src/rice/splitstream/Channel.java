@@ -486,7 +486,6 @@ public class Channel extends PastryAppl implements IScribeApp {
 
     /** 
      * The method called when a fault occurs
-     * Currently not implemented
      *
      */
     public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){
@@ -505,8 +504,8 @@ public class Channel extends PastryAppl implements IScribeApp {
     /**
      * Handles Scribe Messages that the application recieves.
      * Right now the channel can receive two types of messages
-     * 1. Attach Requests
-     * 2. Spare Capactiy Requests
+     * Attach Requests
+     *
      */
     public void receiveMessage(ScribeMessage msg){
 	/* Check the type of message */
@@ -612,6 +611,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	NodeId[] subInfo = (NodeId[]) ((ControlAttachResponseMessage) msg).getContent();	
 	channelId = new ChannelId(subInfo[0]);
 	spareCapacityId = new SpareCapacityId(subInfo[subInfo.length-1]);
+
 	/* Fill in all instance variable for channel */
 	for(int i = 1 ; i < subInfo.length-1 ; i++){
 	    this.numStripes = subInfo.length -2 ;
@@ -779,6 +779,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	toReturn = toReturn + "Spare Capacity Id: " + getSpareCapacityId();
 	return(toReturn);	
     }
+
     /**
      * Registers the application for an upcall
      * 
