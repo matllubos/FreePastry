@@ -41,12 +41,15 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
 
     public int OUT_BW = 16;
 
-    public DirectSplitStreamTestApp(ISplitStream splitstream, int index){
+    public DirectSplitStreamTest m_driver;
+
+    public DirectSplitStreamTestApp(ISplitStream splitstream, int index, DirectSplitStreamTest driver){
 	m_splitstream = splitstream;
 	m_appIndex = index;
 	m_channels = new Hashtable();
 	m_scribe = (Scribe) ((SplitStreamImpl)m_splitstream).getScribe();
 	m_numRecv = 0;
+	m_driver = driver;
     }
 
     /**
@@ -134,6 +137,7 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
 	while(channel.getNumSubscribedStripes() < channel.getNumStripes()){
 	    Stripe stripe = channel.joinAdditionalStripe(this);
 	    //System.out.println("Node "+getNodeId()+" Joining stripe "+stripe.getStripeId());
+	    //while(m_driver.simulate());
 	}
     }
 

@@ -40,7 +40,7 @@ public class DirectSplitStreamTest{
     private Vector channelIds;
     private Random rng;
     private RandomNodeIdFactory idFactory;
-    private static int numNodes = 50;
+    private static int numNodes = 500;
     private static int port = 5009;
     private static String bshost;
     private static int bsport = 5009;
@@ -87,8 +87,9 @@ public class DirectSplitStreamTest{
 	boolean result = true;
 
 	System.out.println("SplitStream Test Program v0.4");
-	//PastrySeed.setSeed((int)System.currentTimeMillis());
-	PastrySeed.setSeed(-319234760);
+	PastrySeed.setSeed((int)System.currentTimeMillis());
+	//PastrySeed.setSeed(-30786261);
+	//PastrySeed.setSeed(-239023564);
 	System.out.println(PastrySeed.getSeed() );
 	DirectSplitStreamTest test = new DirectSplitStreamTest();
 	test.init();
@@ -134,7 +135,6 @@ public class DirectSplitStreamTest{
 	DirectSplitStreamTestApp app = (DirectSplitStreamTestApp) test.splitStreamApps.elementAt(0);
 	passed = test.checkTree((NodeId)app.getSpareCapacityId(channelId));
 
-	
 
 	System.out.println("All nodes are joining all stripes");
 	test.join();
@@ -255,6 +255,7 @@ public class DirectSplitStreamTest{
  	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP FAILED \n\n");
 	*/
 	System.out.println(PastrySeed.getSeed() );
+
     }
 
     public DirectSplitStreamTest(){
@@ -303,12 +304,15 @@ public class DirectSplitStreamTest{
 		DirectSplitStreamTestApp app = (DirectSplitStreamTestApp)splitStreamApps.elementAt(j);
 		
 		// Join all stripes for all channels an app has created or attached to.
+		//System.out.println("Node "+j+" is trying to subscribe to Channel");
 		app.joinChannelStripes(channelId);
 		while(simulate());
-		System.out.println("Node "+app.getNodeId()+" subscribed to the Channel");
+		System.out.println("Node "+app.getNodeId()+" number "+j+" subscribed to the Channel");
 		while(simulate());
+		//System.out.println("------------------");
 		//System.out.println("Spare Capacity tree "+BFS(app.getSpareCapacityId(channelId)));
 		while(simulate());
+		//System.out.println("+++++++++++++++++");
 	    }
 	    
 	}	
@@ -350,7 +354,7 @@ public class DirectSplitStreamTest{
 	scribe.setTreeRepairThreshold(trThreshold);
 	scribeNodes.add(scribe);  
 	ISplitStream ss = new SplitStreamImpl(pn, scribe);
-	DirectSplitStreamTestApp app = new DirectSplitStreamTestApp(ss, appCount++);
+	DirectSplitStreamTestApp app = new DirectSplitStreamTestApp(ss, appCount++, this);
 	splitStreamNodes.add(ss);
 	splitStreamApps.add(app);
 	nodeIdToApp.put(pn.getNodeId(), app);
@@ -541,7 +545,7 @@ public class DirectSplitStreamTest{
 
     public boolean checkBandwidthUsage(ChannelId channelId){
 	boolean result = true;
-
+	int num = 0;
 	DirectSplitStreamTestApp app;
 
 	for(int i = 0; i < splitStreamApps.size(); i++){
@@ -550,7 +554,12 @@ public class DirectSplitStreamTest{
 		result &= false;
 		System.out.println("App "+i+" "+ app.getNodeId()+" have used "+app.showBandwidth(channelId)+" bandwith, Allocated "+app.OUT_BW);
 	    }
+	    if(app.showBandwidth(channelId) < app.OUT_BW){
+		num++;
+		System.out.println("App "+i+" "+ app.getNodeId()+" have used "+app.showBandwidth(channelId)+" bandwith, Allocated "+app.OUT_BW);
+	    }
 	}
+	System.out.println("************* Number of nodes actually having spare capacity are "+num);
 	
 	return result;
 
