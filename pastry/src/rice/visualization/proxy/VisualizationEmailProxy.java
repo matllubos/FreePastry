@@ -18,6 +18,7 @@ import rice.visualization.server.PASTPanelCreator;
 import rice.visualization.server.PastryPanelCreator;
 import rice.visualization.server.RecentMessagesPanelCreator;
 import rice.visualization.server.VisualizationServer;
+import rice.visualization.server.DebugCommandHandler;
 
 public class VisualizationEmailProxy extends EmailProxy {
     
