@@ -134,7 +134,7 @@ public class DistRMRegrTestApp extends RMRegrTestApp
 	md.update( topicName.getBytes() );
 	byte[] digest = md.digest();
 	
-	NodeId newId = new NodeId( digest );
+	Id newId = NodeId.build( digest );
 	
 	return newId;
     }

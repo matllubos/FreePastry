@@ -330,7 +330,7 @@ public class DirectRMRegrTest
 	md.update( topicName.getBytes() );
 	byte[] digest = md.digest();
 	
-	NodeId newId = new NodeId( digest );
+	NodeId newId = NodeId.buildNodeId( digest );
 	
 	return newId;
     }
