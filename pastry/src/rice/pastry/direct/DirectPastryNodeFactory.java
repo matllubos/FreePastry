@@ -52,6 +52,7 @@ import java.util.*;
  *
  * @author Andrew Ladd
  * @author Sitaram Iyer
+ * @author Rongmei Zhang/Y. Charlie Hu
  */
 
 public class DirectPastryNodeFactory implements PastryNodeFactory
@@ -70,12 +71,97 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 
     public DirectPastryNodeFactory() {
 	nidFactory = new RandomNodeIdFactory();
-//	simulator = new EuclideanNetwork();
+	//	simulator = new EuclideanNetwork();
 	simulator = new SphereNetwork();
     }
 
     public NetworkSimulator getNetworkSimulator() { return simulator; }
     
+    /**
+     * Get the closest node from a RouteSet
+     */
+
+    private NodeHandle getClosest( NodeHandle local, RouteSet rs ){
+	NodeHandle nh = null;
+	NodeHandle nearHandle = null;
+	double dist = Double.MAX_VALUE;
+	double newdist;
+
+	for ( int i=0; i<rs.size(); i++ ) {
+	    nh = rs.get(i);
+	    newdist = simulator.proximity( local.getNodeId(), nh.getNodeId() );
+	    if( dist >= newdist  ){
+		nearHandle = nh;
+		dist = newdist;
+	    }
+	}
+	return nearHandle;
+    }
+
+    /**
+     * The discovery algorithm to find a nearby node
+     */
+
+    private NodeHandle discover( NodeHandle localhandle, NodeHandle bootstrap ){
+	if( bootstrap == null )
+	    return null;
+
+	PastryNode	nearNode = ((DirectNodeHandle)bootstrap).getLocal();
+	LeafSet 	ls = nearNode.getLeafSet();
+	NodeHandle 	nearHandle = bootstrap;
+	double		dist = simulator.proximity( localhandle.getNodeId(), bootstrap.getNodeId() );
+	double		newdist;
+	int		i;
+	NodeHandle	nh, currentClosest;
+
+	for( i=0; i<ls.size(); i++ ){
+	    nh = ls.get( i );
+	    if( nh == null )
+		continue;
+	    newdist = simulator.proximity( localhandle.getNodeId(), nh.getNodeId() );
+	    if( dist >= newdist  ){
+		nearHandle = nh;
+		dist = newdist;
+	    }
+	}
+
+	nearNode = ((DirectNodeHandle)nearHandle).getLocal();
+	RoutingTable rt = nearNode.getRoutingTable();
+	int depth = rt.numRows();
+
+	while( depth -- > 0 ){
+	    for( i=0; i<rt.numColumns(); i++ ){
+		nh = getClosest( localhandle, rt.getRow(depth)[i] );
+		if( nh == null )
+		    continue;
+		newdist = simulator.proximity( localhandle.getNodeId(), nh.getNodeId() );
+		if( dist >= newdist  ){
+		    nearHandle = nh;
+		    dist = newdist;
+		}
+	    }
+	    nearNode = ((DirectNodeHandle)nearHandle).getLocal();
+	    rt = nearNode.getRoutingTable();
+	}
+	
+	do{
+	    currentClosest = nearHandle;
+	    for( i=0; i<rt.numColumns(); i++ ){
+		nh = getClosest( localhandle, rt.getRow(0)[i] );
+		if( nh == null )
+		    continue;
+		newdist = simulator.proximity( localhandle.getNodeId(), nh.getNodeId() );
+		if( dist >= newdist  ){
+		    nearHandle = nh;
+		    dist = newdist;
+		}
+	    }
+	    nearNode = ((DirectNodeHandle)nearHandle).getLocal();
+	    rt = nearNode.getRoutingTable();
+	}while( currentClosest != nearHandle );
+	return nearHandle;
+    }
+
     /**
      * Manufacture a new Pastry node.
      *
@@ -115,7 +201,8 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	pn.setDirectElements(/* simulator */);
 	secureMan.setLocalPastryNode(pn);
 
-	pn.doneNode(bootstrap);
+//	pn.doneNode(bootstrap);
+	pn.doneNode( discover(localhandle,bootstrap) );
 
 	return pn;
     }
