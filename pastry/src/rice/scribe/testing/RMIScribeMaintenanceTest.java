@@ -171,29 +171,17 @@ public class RMIScribeMaintenanceTest {
 
 	private PastryNode pn;
 	private RMIScribeMaintenanceTestApp m_app;
-	private NodeHandle m_bootstrap;
 	private RMIScribeMaintenanceTest m_driver;
-	private int m_index = 0;
-	private boolean ackOnSubscribe = true;
-	/**
-	 * Number of times to try joining, in case join messages are lost,
-	 * and the retry timeout period.
-	 */
-	private static final int nJoinTries = 3, joinTimeout = 300 /* sec */;
-
 	/**
 	 * Constructor.
 	 *
 	 * @param n this pastrynode
 	 * @param a application object
-	 * @param bs bootstrap handle
 	 */
-	ApplThread(PastryNode n, RMIScribeMaintenanceTestApp a, NodeHandle bs, RMIScribeMaintenanceTest driver) {
+	ApplThread(PastryNode n, RMIScribeMaintenanceTestApp a, RMIScribeMaintenanceTest driver) {
 	    pn = n;
 	    m_app = a;
-	    m_bootstrap = bs;
 	    m_driver = driver;
-	    m_index = m_driver.num.intValue();
 	}
 
 	public void run() {
@@ -201,36 +189,32 @@ public class RMIScribeMaintenanceTest {
 	    // Do application specific stuff here.
 	    System.out.println("I am up "+m_app.m_scribe.getNodeId());
 	    NodeId topicId = generateTopicId(new String("Control Channel"));
-	    
-	    InetAddress localaddr = null;
-	    String host = null;
-	    
-	    try {
-		localaddr = InetAddress.getLocalHost();
-	    } catch (UnknownHostException e) {
-		System.out.println("[rmi] Error: Host unknown: " );
-	    }
-	    host = localaddr.getHostName();
 
-	    if(m_app.m_appIndex == 0 && host.equals(publisherHost))
-		m_app.create(topicId);
+	    int threshold = m_app.m_scribe.getTreeRepairThreshold();
+
+	    m_app.create(topicId);
 	    m_app.subscribe(topicId);
-	    int count = 0;
-	    while(true){
-		if(  m_app.m_appIndex == 0 && host.equals(publisherHost)) {
+	    int seq_num = -1;
+	    int count = 1;
+	    int warningLimit = threshold * m_app.m_tolerance;
 
-		    m_app.publish(topicId, new Integer(m_app.m_seqno));
-		    m_app.m_seqno ++;
-		    pause(10*1000);
+	    while(true){
+		if( m_app.m_scribe.isRoot(topicId)){
+		    m_app.publish(topicId, new Integer(seq_num));
+		    if(count < warningLimit){
+			count++;
+		    }
+		    else
+			seq_num ++;
 		}
 		else {
-		    pause(10*1000);
-		    //m_app.processLog(topicId);
+		    count = 1;
+		    seq_num = -1;
 		}
+		pause(10*1000);
 
-		count ++;
 		NodeHandle parent =  m_app.m_scribe.getTopic(topicId).getParent();
-		//System.out.println("Parent for topic "+parent+" at node "+m_app.m_scribe.getNodeId());
+
 		if(parent != null){
 		    if( !m_driver.localNodes.contains(parent.getNodeId()))
 			System.out.println("Yoooooo.. My "+m_app.m_scribe.getNodeId()+ " appindex=" + m_app.m_appIndex + "'s parent "+parent+"is in other machine");
@@ -262,15 +246,9 @@ public class RMIScribeMaintenanceTest {
 
 
     /**
-     * Is this the first virtual node being created? If so, block till ready.
-     */
-    private static boolean firstvnode = true;
-    
-    /**
      * Create a Pastry node and add it to pastryNodes. Also create a client
      * application for this node, and spawn off a separate thread for it.
      */
-    
     public void makeScribeNode() {
 	NodeHandle bootstrap = getBootstrap();
 	PastryNode pn = factory.newNode(bootstrap); // internally initiateJoins
@@ -296,19 +274,11 @@ public class RMIScribeMaintenanceTest {
 	    }
 	}
 	
-	ApplThread thread = new ApplThread(pn, app, bootstrap, this);
+	ApplThread thread = new ApplThread(pn, app, this);
 	new Thread(thread).start();
 
 
     }
-
-    /**
-     * Start the maintenance sub-system.
-     */
-    public void startMaintenance(){
-	//m_timer.scheduleAtFixedRate(m_event, 0, m_schedulingRate);
-    }
-
 
     /**
      * Poz.

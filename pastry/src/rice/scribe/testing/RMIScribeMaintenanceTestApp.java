@@ -34,8 +34,7 @@ public class RMIScribeMaintenanceTestApp implements IScribeApp
     public NodeId topicId;
     public int m_appIndex;
     public static int m_appCount = 0;
-    public int m_seqno = 0;
-    
+    public int m_tolerance = 3;
     /**
      * The hashtable maintaining mapping from topicId to log object
      * maintained by this application for that topic.
