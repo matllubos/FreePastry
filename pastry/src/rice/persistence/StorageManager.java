@@ -46,8 +46,9 @@ package rice.persistence;
  */
 import java.io.*;
 import java.util.Iterator;
+
 import rice.*;
-import rice.pastry.*;
+import rice.p2p.commonapi.*;
 
 /**
  * This class provides both persistent and caching services to
@@ -59,6 +60,9 @@ import rice.pastry.*;
  */
 public class StorageManager implements Cache, Storage {
 
+  // the factory used to manipulate ids
+  private IdFactory factory;
+  
   // the storage used by this manager
   private Storage storage;
 
@@ -74,7 +78,8 @@ public class StorageManager implements Cache, Storage {
    *        persistent storage.
    * @param cache The Cache object which will serve as the cache.
    */
-  public StorageManager(Storage storage, Cache cache) {
+  public StorageManager(IdFactory factory, Storage storage, Cache cache) {
+    this.factory = factory;
     this.storage = storage;
     this.cache = cache;
   }
@@ -178,15 +183,15 @@ public class StorageManager implements Cache, Storage {
         } else {
           IdSet fromStorage = (IdSet) o;
 
-          IdSet toReturn = new IdSet();
+          IdSet toReturn = factory.buildIdSet();
 
           Iterator i = fromStorage.getIterator(); 
           while(i.hasNext()){
-             toReturn.addMember((Id) i.next());
+             toReturn.addId((Id) i.next());
           }
           i = fromCache.getIterator(); 
           while(i.hasNext()){
-             toReturn.addMember((Id) i.next());
+             toReturn.addId((Id) i.next());
           }
 
           c.receiveResult(toReturn);
@@ -217,14 +222,14 @@ public class StorageManager implements Cache, Storage {
   public IdSet scan(IdRange range){
           IdSet fromStorage = storage.scan(range);
           IdSet fromCache = cache.scan(range);  
-          IdSet toReturn = new IdSet();
+          IdSet toReturn = factory.buildIdSet();
           Iterator i = fromStorage.getIterator(); 
           while(i.hasNext()){
-             toReturn.addMember((Id) i.next());
+             toReturn.addId((Id) i.next());
           }
           i = fromCache.getIterator(); 
           while(i.hasNext()){
-             toReturn.addMember((Id) i.next());
+             toReturn.addId((Id) i.next());
           }
           return(toReturn);
   }

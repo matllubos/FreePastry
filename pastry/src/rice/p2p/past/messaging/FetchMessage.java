@@ -34,48 +34,51 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.persistence.testing;
-
-/*
- * @(#) PersistentStorageTest.java
- *
- * @author Ansley Post
- * @author Alan Mislove
- * 
- * @version $Id$
- */
-import java.util.*;
+package rice.p2p.past.messaging;
 
 import rice.*;
 import rice.p2p.commonapi.*;
-import rice.pastry.commonapi.*;
-import rice.persistence.*;
+import rice.p2p.past.*;
 
 /**
- * This class is a class which tests the PersistentStorage class
- * in the rice.persistence package.
+ * @(#) FetchMessage.java
+ *
+ * This class the abstraction of a message used internally by Past.
+ *
+ * @version $Id$
+ *
+ * @author Alan Mislove
+ * @author Ansley Post
+ * @author Peter Druschel
  */
-public class PersistentStorageTest extends MemoryStorageTest {
+public class FetchMessage extends ContinuationMessage {
 
-  private static IdFactory FACTORY = new PastryIdFactory();
+  // the id to fetch
+  private PastContentHandle handle;
+  
+  /**
+   * Constructor which takes a unique integer Id, as well as the
+   * data to be stored
+   *
+   * @param uid The unique id
+   * @param id The location to be stored
+   * @param source The source address
+   * @param dest The destination address
+   * @param content The data to be stored
+   */
+  public FetchMessage(int uid, PastContentHandle handle, Id source, Id dest) {
+    super(uid, source, dest);
+
+    this.handle = handle;
+  }
 
   /**
-   * Builds a MemoryStorageTest
+   * Method which returns the handle
+   *
+   * @param o The contained handle
    */
-  public PersistentStorageTest(boolean store) {
-    super(store);
-    storage = new PersistentStorage(FACTORY, "PersistentStorageTest" , ".", 20000000);
-  }
-
-  public static void main(String[] args) {
-    boolean store = true;
-
-    if (args.length > 0) {
-      store = ! args[0].equals("-nostore");
-    }
-    
-    PersistentStorageTest test = new PersistentStorageTest(store);
-    
-    test.start();
+  public PastContentHandle getHandle() {
+    return handle;
   }
 }
+

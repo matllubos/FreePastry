@@ -48,7 +48,7 @@ import java.io.*;
 import java.util.*;
 
 import rice.*;
-import rice.pastry.*;
+import rice.p2p.commonapi.*;
 
 /**
  * This class is an implementation of Storage which provides
@@ -59,7 +59,9 @@ import rice.pastry.*;
  * writing the data to disk.
  */
 public class PersistentStorage implements Storage {
- 
+
+  private IdFactory factory;			  // the factory used for creating ids
+  
   private String name;              // the name of this instance
   private File rootDirectory;       // root directory to store stuff in
   private File backupDirectory;     // dir for storing persistent objs
@@ -82,8 +84,8 @@ public class PersistentStorage implements Storage {
   *
   * @param rootDir The root directory of the persisted disk.
   */
-  public PersistentStorage(String rootDir, int size) {
-    this("default", rootDir, size);
+  public PersistentStorage(IdFactory factory, String rootDir, int size) {
+    this(factory, "default", rootDir, size);
   }
    
  /**
@@ -94,7 +96,8 @@ public class PersistentStorage implements Storage {
   * @param rootDir The root directory of the persisted disk.
   * @param size the size of the storage in bytes
   */
-  public PersistentStorage(String name, String rootDir, int size){
+  public PersistentStorage(IdFactory factory, String name, String rootDir, int size) {
+    this.factory = factory;
     this.name = name;
     this.rootDir = rootDir;
     storageSize = size; 
@@ -147,7 +150,7 @@ public class PersistentStorage implements Storage {
         decreaseUsedSpace(getFileLength(objFile)); /* decrease amount used */
         deleteFile(objFile);
         increaseUsedSpace(transcFile.length()); /* increase the amount used */
-        idSet.addMember(id); 
+        idSet.addId(id); 
         if(numFilesDir(transcFile.getParentFile()) > MAX_FILES){
             expandDirectory(transcFile.getParentFile());
         }
@@ -185,7 +188,7 @@ public class PersistentStorage implements Storage {
        c.receiveResult(new Boolean(false));
        return;
       } 
-      idSet.removeMember((Id) id);
+      idSet.removeId(id);
       decreaseUsedSpace(objFile.length());
       objFile.delete();
        
@@ -202,7 +205,7 @@ public class PersistentStorage implements Storage {
    * @return Whether or not an object is present at id.
    */
   public void exists(Id id, Continuation c) {
-     c.receiveResult(new Boolean(idSet.isMember((Id) id))); 
+     c.receiveResult(new Boolean(idSet.isMemberId(id))); 
   }
 
   /**
@@ -245,7 +248,7 @@ public class PersistentStorage implements Storage {
    * @return The idset containg the keys 
    */
   public void scan(IdRange range , Continuation c) {
-    IdSet toReturn = idSet.subSet(range.getCCW(), range.getCW()); 
+    IdSet toReturn = idSet.subSet(factory.buildIdRange(range.getCCWId(), range.getCWId())); 
     c.receiveResult(toReturn);
   }
 
@@ -263,7 +266,7 @@ public class PersistentStorage implements Storage {
    * @return The idset containg the keys 
    */
   public IdSet scan(IdRange range){
-    IdSet toReturn = idSet.subSet(range.getCCW(), range.getCW()); 
+    IdSet toReturn = idSet.subSet(factory.buildIdRange(range.getCCWId(), range.getCWId())); 
     return(toReturn);
   }
 
@@ -295,7 +298,7 @@ public class PersistentStorage implements Storage {
     if(numFilesDir(appDirectory) > MAX_FILES)
             expandDirectory(appDirectory);
 
-    idSet = new IdSet();
+    idSet = factory.buildIdSet();
 
     if(directoryTransactionInProgress()){
       directoryCleanUp(appDirectory);
@@ -358,8 +361,8 @@ public class PersistentStorage implements Storage {
             long version = readVersion(files[i]);
             Object key = readKey(files[i]);
 
-            if(!idSet.isMember((Id) key)){
-              idSet.addMember((Id) key);
+            if(!idSet.isMemberId((Id) key)){
+              idSet.addId((Id) key);
               increaseUsedSpace(files[i].length()); /* increase amount used */
             }
             else{

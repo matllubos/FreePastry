@@ -48,7 +48,8 @@ import java.util.*;
 
 import rice.*;
 import rice.persistence.*;
-import rice.pastry.*;
+import rice.p2p.commonapi.*;
+import rice.pastry.commonapi.*;
 
 /**
  * This class is a class which tests the Cache class
@@ -57,6 +58,8 @@ import rice.pastry.*;
 public class LRUCacheTest extends Test {
 
   protected static final int CACHE_SIZE = 100;
+
+  private static IdFactory FACTORY = new PastryIdFactory();
   
   private Cache cache;
 
@@ -66,14 +69,14 @@ public class LRUCacheTest extends Test {
    * Builds a MemoryStorageTest
    */
   public LRUCacheTest() {
-    cache = new LRUCache(new MemoryStorage(), CACHE_SIZE);
+    cache = new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE);
 
     data  = new Id[500];
     int[] x = new int[5];
 
     for (int i = 0; i < 500; i ++){
         x[3] = i;
-      	data[i] = new Id(x);
+      	data[i] = FACTORY.buildId(x);
     }
     
   }
@@ -299,7 +302,7 @@ public class LRUCacheTest extends Test {
         }
 
 
-        if (! result.isMember(data[3])) {
+        if (! result.isMemberId(data[3])) {
           stepDone(FAILURE, "Result had incorrect element " + data[3] + ", expected 3.");
           return;
         }
@@ -307,7 +310,7 @@ public class LRUCacheTest extends Test {
         stepDone(SUCCESS);
 
         stepStart("Requesting Scan from 8 to 10");
-        cache.scan(new IdRange(data[8], data[10]), verify2);
+        cache.scan(FACTORY.buildIdRange(data[8], data[10]), verify2);
       }
 
       public void receiveException(Exception e) {
@@ -324,7 +327,7 @@ public class LRUCacheTest extends Test {
         }
 
         stepStart("Requesting Scan from 3 to 6");
-        cache.scan(new IdRange(data[3], data[6]), verify);
+        cache.scan(FACTORY.buildIdRange(data[3], data[6]), verify);
       }
 
       public void receiveException(Exception e) {
@@ -369,7 +372,7 @@ public class LRUCacheTest extends Test {
         if (NUM_DELETED == -1) {
           stepStart("Checking object deletion");
           NUM_DELETED = ((Integer) o).intValue();
-          cache.scan(new IdRange(data[13 + START_NUM], data[13 + END_NUM]), this);
+          cache.scan(FACTORY.buildIdRange(data[13 + START_NUM], data[13 + END_NUM + SKIP]), this);
         } else {
           int length = ((IdSet)o).numElements();
 
@@ -415,7 +418,7 @@ public class LRUCacheTest extends Test {
           return;
         }
 
-        if (random.nextBoolean()) { 
+        if (random.nextBoolean()) {
           num_deleted++;
           cache.uncache(data[13 + (count += SKIP)], this);
         } else {
@@ -452,7 +455,7 @@ public class LRUCacheTest extends Test {
           removeRandom.receiveResult(new Boolean(true));
           return;
         }
-        
+
         cache.exists(data[13 + (count += SKIP)], this);
       }
 

@@ -1,6 +1,9 @@
 package rice.email.proxy;
 
+import rice.p2p.commonapi.IdFactory;
+
 import rice.pastry.client.*;
+import rice.pastry.commonapi.*;
 import rice.pastry.leafset.*;
 import rice.pastry.security.*;
 import rice.pastry.messaging.*;
@@ -47,6 +50,8 @@ public class EmailProxy {
 
   static final int DEFAULT_CACHE_SIZE = 100000;
   static final int DEFAULT_DISK_SIZE = 10000000;
+
+  static final IdFactory FACTORY = new PastryIdFactory();
 
   static final String INSTANCE_NAME = "EmailProxy";
   
@@ -110,8 +115,9 @@ public class EmailProxy {
       System.out.println("[ DONE ]");
 
       System.out.print("    Starting StorageManager\t\t\t\t\t");
-      StorageManager storage = new StorageManager(new PersistentStorage(".", DEFAULT_DISK_SIZE),
-                                                  new LRUCache(new MemoryStorage(), DEFAULT_CACHE_SIZE));
+      StorageManager storage = new StorageManager(FACTORY,
+                                                  new PersistentStorage(FACTORY, ".", DEFAULT_DISK_SIZE),
+                                                  new LRUCache(new MemoryStorage(FACTORY), DEFAULT_CACHE_SIZE));
       System.out.println("[ DONE ]");
 
       System.out.print("    Starting SCRIBE service\t\t\t\t\t");

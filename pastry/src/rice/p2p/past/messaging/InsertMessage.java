@@ -38,6 +38,7 @@ package rice.p2p.past.messaging;
 
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.past.*;
 
 /**
  * @(#) InsertMessage.java
@@ -65,7 +66,7 @@ public class InsertMessage extends ContinuationMessage {
    * @param dest The destination address
    * @param content The data to be stored
    */
-  protected InsertMessage(int uid, PastContent content, Id source, Id dest) {
+  public InsertMessage(int uid, PastContent content, Id source, Id dest) {
     super(uid, source, dest);
 
     this.content = content;

@@ -115,10 +115,10 @@ public interface Past {
    * alternate replica can be obtained using a different handle obtained via
    * lookupHandles().
    * 
-   * @param id the key to be queried
+   * @param handle the key to be queried
    * @param command Command to be performed when the result is received 
    */
-  public void fetch(PastContentHandle id, Continuation command);
+  public void fetch(PastContentHandle handle, Continuation command);
 
   /**
    * Return the ids of objects stored in this instance of Past on the
@@ -135,7 +135,7 @@ public interface Past {
    *
    * @return the nodehandle
    */
-//  public NodeHandle getNodeHandle();
+  public NodeHandle getLocalNodeHandle();
 
 }
 

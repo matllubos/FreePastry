@@ -108,5 +108,12 @@ public interface Id extends Comparable, Serializable {
     public Distance shiftDistance(int cnt, int fill);
   }
 
+  /**
+   * Returns a string representing the full length of this Id.
+   *
+   * @return A string with all of this Id
+   */
+  public String toStringFull();
+
 }
   

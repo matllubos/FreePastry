@@ -46,6 +46,7 @@ import rice.pastry.standard.*;
 import rice.pastry.security.*;
 
 import rice.p2p.commonapi.*;
+import rice.pastry.commonapi.*;
 
 import rice.persistence.*;
 
@@ -77,6 +78,8 @@ public class DistPASTRegrTest {
   private static int bsport = 5009;
 
   private static int protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
+
+  private static IdFactory FACTORY = new PastryIdFactory();
 
   static {
     try {
@@ -122,8 +125,9 @@ public class DistPASTRegrTest {
     PastryNode pn = factory.newNode((rice.pastry.NodeHandle) getBootstrap());
     pastrynodes.add(pn);
 
-    StorageManager storage = new StorageManager(new MemoryStorage(),
-                                                new LRUCache(new MemoryStorage(), 10000));
+    StorageManager storage = new StorageManager(FACTORY,
+                                                new MemoryStorage(FACTORY),
+                                                new LRUCache(new MemoryStorage(FACTORY), 10000));
 
     PASTServiceImpl past = new PASTServiceImpl(pn, storage, "PAST");
     past.DEBUG = false;

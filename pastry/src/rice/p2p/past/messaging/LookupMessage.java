@@ -38,6 +38,7 @@ package rice.p2p.past.messaging;
 
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.past.*;
 
 /**
  * @(#) LookupMessage.java
@@ -54,7 +55,7 @@ public class LookupMessage extends ContinuationMessage {
 
   // the id to fetch
   private Id id;
-  
+   
   /**
    * Constructor which takes a unique integer Id, as well as the
    * data to be stored
@@ -65,7 +66,7 @@ public class LookupMessage extends ContinuationMessage {
    * @param dest The destination address
    * @param content The data to be stored
    */
-  protected LookupMessage(int uid, Id id, Id source, Id dest) {
+  public LookupMessage(int uid, Id id, Id source, Id dest) {
     super(uid, source, dest);
 
     this.id = id;

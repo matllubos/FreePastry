@@ -42,12 +42,12 @@ import rice.*;
 import rice.p2p.commonapi.*;
 
 /**
- * A handle class for content-hash objects stored in PAST.
+ * A handle class for content-hash objects stored in Past.
  *
  * @version $Id$
  * @author Peter Druschel
  */
-public class ContentHashPASTContentHandle implements PASTContentHandle {
+public class ContentHashPastContentHandle implements PastContentHandle {
 
   // the node on which the content object resides
   private NodeHandle storageNode;
@@ -62,16 +62,16 @@ public class ContentHashPASTContentHandle implements PASTContentHandle {
    * @param obj the object to be inserted
    * @param command Command to be performed when the result is received
    */
-  public ContentHashPASTContentHandle(NodeHandle nh, Id id) {
+  public ContentHashPastContentHandle(NodeHandle nh, Id id) {
     storageNode = nh;
     myId = id;
   }
 
   
-  // ----- PASTCONTENTHANDLE METHODS -----
+  // ----- PastCONTENTHANDLE METHODS -----
 
   /**
-   * Returns the id of the PASTContent object associated with this handle
+   * Returns the id of the PastContent object associated with this handle
    *
    * @return the id
    */
@@ -80,7 +80,7 @@ public class ContentHashPASTContentHandle implements PASTContentHandle {
   }
 
   /**
-   * Returns the NodeHandle of the PAST node on which the object associated
+   * Returns the NodeHandle of the Past node on which the object associated
    * with this handle is stored
    *
    * @return the id

@@ -36,9 +36,15 @@ if advised of the possibility of such damage.
 
 package rice.p2p.past;
 
+import java.io.*;
+import java.util.*;
+
 import rice.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.messaging.*;
+import rice.persistence.*;
+
+import rice.rm.*;
 
 /**
  * @(#) PastImpl.java
@@ -50,7 +56,7 @@ import rice.p2p.past.messaging.*;
  * @author Ansley Post
  * @author Peter Druschel
  */
-public class PastImpl implements Past, Application, RMClient {0
+public class PastImpl implements Past, Application, RMClient {
 
   // this application's endpoint
   protected Endpoint endpoint;
@@ -82,7 +88,7 @@ public class PastImpl implements Past, Application, RMClient {0
     storage = manager;
     endpoint = node.registerApplication(this, instance);
 
-    replicaManager = new ReplicaManager((rice.pastry.PastryNode) node, this, replicas, instance);
+    replicaManager = new RMImpl((rice.pastry.PastryNode) node, this, replicas, instance);
     id = Integer.MIN_VALUE;
     pending = new Hashtable();
   }
@@ -91,11 +97,11 @@ public class PastImpl implements Past, Application, RMClient {0
   // ----- INTERNAL METHODS -----
 
   /**
-   * Returns a new id for a message
+   * Returns a new uid for a message
    *
    * @return A new id
    */
-  private int getId() {
+  private int getUID() {
     return id++;
   }
 
@@ -105,13 +111,17 @@ public class PastImpl implements Past, Application, RMClient {0
    * @return A new id
    */
   private Continuation getResponseContinuation(final PastMessage msg) {
+    final ContinuationMessage cmsg = (ContinuationMessage) msg;
+    
     return new Continuation() {
       public void receiveResult(Object o) {
-        route(msg.getSource(), msg.buildResponseMessage(o), null);
+        cmsg.receiveResult(o);
+        endpoint.route(msg.getSource(), cmsg, null);
       }
 
       public void receiveException(Exception e) {
-        route(msg.getSource(), msg.buildResponseMessage(e), null);
+        cmsg.receiveException(e);
+        endpoint.route(msg.getSource(), cmsg, null);
       }
     };
   }
@@ -138,7 +148,7 @@ public class PastImpl implements Past, Application, RMClient {0
     Continuation command = (Continuation) pending.remove(new Integer(message.getUID()));
 
     if (command != null) {
-      command.receiveResult(message.getResult());
+      message.returnResponse(command);
     } else {
       System.out.println("ERROR - Found message " + message.getUID() + " with not pending Continuation.");
     }
@@ -156,7 +166,7 @@ public class PastImpl implements Past, Application, RMClient {0
    * @param command Command to be performed when the result is received
    */
   public void insert(PastContent obj, Continuation command) {
-    sendRequest(obj.getId(), new InsertMessage(getId(), obj), command);
+    sendRequest(obj.getId(), new InsertMessage(getUID(), obj, endpoint.getId(), obj.getId()), command);
   }
 
   /**
@@ -181,7 +191,7 @@ public class PastImpl implements Past, Application, RMClient {0
    * @param command Command to be performed when the result is received
    */
   public void lookup(Id id, Continuation command) {
-    sendRequest(id, new LookupMessage(getId(), id), command);
+    sendRequest(id, new LookupMessage(getUID(), id, endpoint.getId(), id), command);
   }
 
   /**
@@ -213,8 +223,8 @@ public class PastImpl implements Past, Application, RMClient {0
    * @param id the key to be queried
    * @param command Command to be performed when the result is received
    */
-  public void fetch(PastContentHandle id, Continuation command) {
-    sendRequest(id.getId(), new FetchMessage(getId(), id), command);
+  public void fetch(PastContentHandle handle, Continuation command) {
+    sendRequest(handle.getId(), new FetchMessage(getUID(), handle, endpoint.getId(), handle.getId()), command);
   }
 
   /**
@@ -227,6 +237,15 @@ public class PastImpl implements Past, Application, RMClient {0
    */
   public IdSet scan(IdRange range) {
     return storage.scan(range);
+  }
+
+  /**
+   * get the nodeHandle of the local Past node
+   *
+   * @return the nodehandle
+   */
+  public NodeHandle getLocalNodeHandle() {
+    return endpoint.getLocalNodeHandle();
   }
   
 
@@ -245,6 +264,7 @@ public class PastImpl implements Past, Application, RMClient {0
    * @return Whether or not to forward the message further
    */
   public boolean forward(RouteMessage message) {
+    return true;
   }
 
   /**
@@ -261,14 +281,16 @@ public class PastImpl implements Past, Application, RMClient {0
       handleResponse((PastMessage) message);
     } else {
       if (msg instanceof InsertMessage) {
-        InsertMessage imsg = (InsertMessage) msg;        
-        storage.store(imsg.getId(), imsg.getContent(), getResponseContinuation(msg));
+        InsertMessage imsg = (InsertMessage) msg;
+        storage.store(imsg.getContent().getId(), imsg.getContent(), getResponseContinuation(msg));
       } else if (msg instanceof LookupMessage) {
         LookupMessage lmsg = (LookupMessage) msg;
         storage.getObject(lmsg.getId(), getResponseContinuation(msg));
+        // HERE  - NEED TO RETRIEVE HANDLE AND THEN VERIFY OBJECT
       } else if (msg instanceof FetchMessage) {
         FetchMessage fmsg = (FetchMessage) msg;
-        storage.getObject(fmsg.getId(), getResponseContinuation(msg));
+        storage.getObject(fmsg.getHandle().getId(), getResponseContinuation(msg));
+        // HERE  - NEED TO VERIFY OBJECT
       } else {
         System.out.println("ERROR - Received message " + msg + " of unknown type.");
       }
@@ -296,13 +318,13 @@ public class PastImpl implements Past, Application, RMClient {0
    *
    * @param keySet set containing the keys that needs to be fetched
    */
-  public void fetch(IdSet keySet) {
+  public void fetch(rice.pastry.IdSet keySet) {
     Iterator i = keySet.getIterator();
 
     while (i.hasNext()) {
       final Id id = (Id) i.next();
 
-      final Continuation receive = new Contination() {
+      final Continuation receive = new Continuation() {
         public void receiveResult(Object o) {
           if (! (o.equals(new Boolean(true)))) {
             System.out.println("Insertion of id " + id + " failed.");
@@ -314,9 +336,9 @@ public class PastImpl implements Past, Application, RMClient {0
         }
       };
       
-      Contination insert = new Continuation() {
+      Continuation insert = new Continuation() {
         public void receiveResult(Object o) {
-          storage.store(id, o, receive);
+          storage.store(id, (Serializable) o, receive);
         }
 
         public void receiveException(Exception e) {
@@ -348,7 +370,7 @@ public class PastImpl implements Past, Application, RMClient {0
    * @param range the range of keys for which the local node is currently
    * responsible
    */
-  public void isResponsible(IdRange range) {
+  public void isResponsible(rice.pastry.IdRange range) {
     IdRange notRange = range.getComplementRange();
 
     Continuation c = new Continuation() {
@@ -372,6 +394,16 @@ public class PastImpl implements Past, Application, RMClient {0
     };
 
     storage.getStorage().scan((rice.pastry.IdRange) notRange, c);
-  }    
+  }
+
+  /**
+   * This upcall should return the set of keys that the application
+   * currently stores in this range. Should return a empty IdSet (not null),
+   * in the case that no keys belong to this range.
+   * @param range the requested range
+   */
+  public rice.pastry.IdSet scan(rice.pastry.IdRange range) {
+    return (rice.pastry.IdSet) storage.scan(range);
+  }
 }
 

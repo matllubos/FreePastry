@@ -42,7 +42,7 @@ import rice.*;
 import rice.p2p.commonapi.*;
 
 /**
- * An abstract class for content-hash objects stored in PAST.
+ * An abstract class for content-hash objects stored in Past.
  *
  * Provided as a convenience.
  *
@@ -50,16 +50,16 @@ import rice.p2p.commonapi.*;
  * @author Peter Druschel
  * @author Alan Mislove
  */
-public abstract class ContentHashPASTContent implements PASTContent {
+public abstract class ContentHashPastContent implements PastContent {
 
-  // the local PAST instance used with this class; to be set by derived classes
-  protected transient PAST myPAST;
+  // the local Past instance used with this class; to be set by derived classes
+  protected transient Past myPast;
 
   // to be set by derived classes
   protected Id myId;
 
   /**
-   * Inserts this object into its associated PAST instance.
+   * Inserts this object into its associated Past instance.
    * Asynchronously returns a boolean as the result to the provided
    * Continuation, indicating whether the insert was successful.
    *
@@ -69,15 +69,15 @@ public abstract class ContentHashPASTContent implements PASTContent {
    */
   public void insert(Continuation command) {
     Id myId = getContentHash();
-    myPAST.insert(this, command);
+    myPast.insert(this, command);
   }
 
 
-  // ----- PASTCONTENT METHODS -----
+  // ----- PastCONTENT METHODS -----
 
   /**
    * Checks if a insert operation should be allowed.  Invoked when a
-   * PAST node receives an insert request and it is a replica root for
+   * Past node receives an insert request and it is a replica root for
    * the id; invoked on the object to be inserted.  This method
    * determines the effect of an insert operation on an object that
    * already exists: it computes the new value of the stored object,
@@ -89,30 +89,30 @@ public abstract class ContentHashPASTContent implements PASTContent {
    * @return null, if the operation is not allowed; else, the new
    * object to be stored on the local node.
    */
-  public PASTContent checkInsert(Id id, PASTContent existingContent) throws PASTException {
+  public PastContent checkInsert(Id id, PastContent existingContent) throws PastException {
     // can't overwrite content hash objects
     if (existingContent != null)
-      throw new PASTException("ContentHashPASTContent: can't insert, object already exists");
+      throw new PastException("ContentHashPastContent: can't insert, object already exists");
 
     // only allow correct content hash key
     if (!id.equals(getContentHash()))
-      throw new PASTException("ContentHashPASTContent: can't insert, content hash incorrect");
+      throw new PastException("ContentHashPastContent: can't insert, content hash incorrect");
 
     return this;
   }
 
   /**
    * Produces a handle for this content object. The handle is retrieved and returned to the
-   * client as a result of the PAST.lookupHandles() method.
+   * client as a result of the Past.lookupHandles() method.
    *
    * @return the handle
    */
-  public PASTContentHandle getHandle() {
-    return new ContentHashPASTContentHandle(myPAST.getNodeHandle(), myId);
+  public PastContentHandle getHandle() {
+    return new ContentHashPastContentHandle(myPast.getLocalNodeHandle(), myId);
   }
 
   /**
-   * Returns the Id under which this object is stored in PAST.
+   * Returns the Id under which this object is stored in Past.
    *
    * @return the id
    */
@@ -121,7 +121,7 @@ public abstract class ContentHashPASTContent implements PASTContent {
   }
 
   /**
-   * States if this content object is mutable. Mutable objects are not subject to dynamic caching in PAST.
+   * States if this content object is mutable. Mutable objects are not subject to dynamic caching in Past.
    *
    * @return true if this object is mutable, else false
    */

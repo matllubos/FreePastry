@@ -114,6 +114,13 @@ public interface Endpoint {
    * @param lkey An "index" in case of multiple ranges.
    */
   IdRange range(NodeHandle handle, int rank, Id lkey);
+
+  /**
+   * Returns a handle to the local node below this endpoint.
+   *
+   * @return A NodeHandle referring to the local node.
+   */
+  NodeHandle getLocalNodeHandle();
   
 }
 

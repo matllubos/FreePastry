@@ -1,5 +1,8 @@
 package rice.email.test;
 
+import rice.p2p.commonapi.IdFactory;
+
+import rice.pastry.commonapi.*;
 import rice.pastry.standard.*;
 import rice.pastry.*;
 import rice.pastry.wire.*;
@@ -22,6 +25,8 @@ import java.security.*;
  */
 public class EmailTest {
 
+  public static IdFactory FACTORY = new PastryIdFactory();
+  
   public static String INSTANCE_NAME = "EmailTest";
   
   private InetSocketAddress firstAddress = null;
@@ -88,7 +93,9 @@ public class EmailTest {
 
         addresses[i] = new PostUserAddress(usernames[i]);
 
-        sManagers[i] = new StorageManager(new MemoryStorage(), new LRUCache(new MemoryStorage(), 1000000));
+        sManagers[i] = new StorageManager(FACTORY,
+                                          new MemoryStorage(FACTORY),
+                                          new LRUCache(new MemoryStorage(FACTORY), 1000000));
 
         scribes[i] = new Scribe(localNodes[i], null);
 

@@ -2,10 +2,13 @@ package rice.post.testing;
 
 import rice.*;
 
+import rice.p2p.commonapi.IdFactory;
+
 import rice.past.*;
 import rice.past.messaging.*;
 
 import rice.pastry.*;
+import rice.pastry.commonapi.*;
 import rice.pastry.dist.*;
 import rice.pastry.standard.*;
 import rice.pastry.security.*;
@@ -60,6 +63,8 @@ public class DistPostRegrTest {
 
   private static int protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
 
+  private static IdFactory FACTORY = new PastryIdFactory();
+
   private static String INSTANCE_NAME = "PostTesting";
 
   static {
@@ -113,7 +118,9 @@ public class DistPostRegrTest {
     PastryNode pn = factory.newNode(getBootstrap());
     pastrynodes.add(pn);
 
-    StorageManager sm = new StorageManager(new MemoryStorage(), new LRUCache(new MemoryStorage(), 1000000));
+    StorageManager sm = new StorageManager(FACTORY,
+                                           new MemoryStorage(FACTORY),
+                                           new LRUCache(new MemoryStorage(FACTORY), 1000000));
     PASTServiceImpl past = new PASTServiceImpl(pn, sm, INSTANCE_NAME);
     pastNodes.add(past);
 

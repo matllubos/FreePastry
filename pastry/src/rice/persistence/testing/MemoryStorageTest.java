@@ -47,7 +47,8 @@ package rice.persistence.testing;
 import java.util.*;
 
 import rice.*;
-import rice.pastry.*;
+import rice.p2p.commonapi.*;
+import rice.pastry.commonapi.*;
 import rice.persistence.*;
 
 /**
@@ -55,6 +56,8 @@ import rice.persistence.*;
  * in the rice.persistence package.
  */
 public class MemoryStorageTest extends Test {
+
+  private static IdFactory FACTORY = new PastryIdFactory();
   
   protected Storage storage;
 
@@ -65,12 +68,12 @@ public class MemoryStorageTest extends Test {
    * Builds a MemoryMemoryStorageTest
    */
   public MemoryStorageTest(boolean store) {
-    storage = new MemoryStorage();
+    storage = new MemoryStorage(FACTORY);
     data  = new Id[500];
     int[] x = new int[5];
     for (int i = 0; i < 500; i ++){
         x[3] = i;
-      	data[i] = new Id(x);
+      	data[i] = FACTORY.buildId(x);
     }
     this.store = store;
   }
@@ -524,7 +527,7 @@ public class MemoryStorageTest extends Test {
         }
 
 
-        if (! ((result.isMember(data[3])) && (result.isMember(data[4])))) {
+        if (! ((result.isMemberId(data[3])) && (result.isMemberId(data[4])))) {
           stepDone(FAILURE, "Result had incorrect elements " + data[0] + ", " + data[1] + ", expected 3 and 4.");
           return;
         }
@@ -532,7 +535,7 @@ public class MemoryStorageTest extends Test {
         stepDone(SUCCESS);
         
         stepStart("Requesting Scan from 8 to 10");
-        storage.scan(new IdRange(data[8], data[10]), verify2);        
+        storage.scan(FACTORY.buildIdRange(data[8], data[10]), verify2);        
       }
 
       public void receiveException(Exception e) {
@@ -549,7 +552,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Requesting Scan from 3 to 6");
-        storage.scan(new IdRange(data[3], data[6]), verify);
+        storage.scan(FACTORY.buildIdRange(data[3], data[6]), verify);
       }
 
       public void receiveException(Exception e) {
@@ -593,7 +596,7 @@ public class MemoryStorageTest extends Test {
         if (NUM_DELETED == -1) {
           stepStart("Checking object deletion");
           NUM_DELETED = ((Integer) o).intValue();
-          storage.scan(new IdRange(data[13 + START_NUM], data[13 + END_NUM]), this);
+          storage.scan(FACTORY.buildIdRange(data[13 + START_NUM], data[13 + END_NUM + SKIP]), this);
         } else {
           int length = ((IdSet)o).numElements();
 
@@ -676,7 +679,7 @@ public class MemoryStorageTest extends Test {
           return;
         }
         
-        storage.scan(new IdRange(data[13 + (count += SKIP)], data[13 + END_NUM]), this);
+        storage.scan(FACTORY.buildIdRange(data[13 + (count += SKIP)], data[13 + END_NUM]), this);
       }
 
       public void receiveException(Exception e) {

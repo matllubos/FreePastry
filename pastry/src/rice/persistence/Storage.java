@@ -47,7 +47,7 @@ package rice.persistence;
 import java.io.*;
 
 import rice.*;
-import rice.pastry.*;
+import rice.p2p.commonapi.*;
 
 /**
  * This interface is the abstraction of something which provides a

@@ -38,6 +38,7 @@ package rice.p2p.past.messaging;
 
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.past.*;
 
 /**
  * @(#) PastMessage.java
@@ -50,7 +51,7 @@ import rice.p2p.commonapi.*;
  * @author Ansley Post
  * @author Peter Druschel
  */
-public abstract class PastMessage {
+public abstract class PastMessage implements Message {
 
   // the unique id for this message
   protected int id;
@@ -115,6 +116,15 @@ public abstract class PastMessage {
    */
   protected void setResponse() {
     isResponse = true;
+  }
+
+  /**
+   * Method which returns whether or not this message is a response.
+   *
+   * @return whether or not this message is a response.
+   */
+  public boolean isResponse() {
+    return isResponse;
   }
 
   /**

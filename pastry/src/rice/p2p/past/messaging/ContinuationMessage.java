@@ -38,6 +38,7 @@ package rice.p2p.past.messaging;
 
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.past.*;
 
 /**
  * @(#) ContinuationMessage.java
@@ -54,7 +55,7 @@ import rice.p2p.commonapi.*;
 public abstract class ContinuationMessage extends PastMessage implements Continuation {
 
   // the response data
-  private Boolean success;
+  private Object response;
 
   // the response exception, if one is thrown
   private Exception exception;
@@ -70,7 +71,7 @@ public abstract class ContinuationMessage extends PastMessage implements Continu
    * @param content The data to be stored
    */
   protected ContinuationMessage(int uid, Id source, Id dest) {
-    super(uid, source, dest);
+    super(uid, source, dest); 
   }
 
   /**
@@ -81,7 +82,7 @@ public abstract class ContinuationMessage extends PastMessage implements Continu
    */
   public void receiveResult(Object o) {
     setResponse();
-    response = (Boolean) o;
+    response = o;
   }
 
   /**

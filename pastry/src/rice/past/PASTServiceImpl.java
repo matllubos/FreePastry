@@ -495,7 +495,7 @@ public class PASTServiceImpl implements PASTService, Application, RMClient { //,
    * the case that no keys belong to this range
    */
   public rice.pastry.IdSet scan(rice.pastry.IdRange range) {
-    return storage.getStorage().scan(range);
+    return (rice.pastry.IdSet) storage.getStorage().scan(range);
   }
 
   // ---------- Caching Manager Client Methods ----------

@@ -42,7 +42,7 @@ import rice.*;
 import rice.p2p.commonapi.*;
 
 /**
- * @(#) PASTContentHandle.java
+ * @(#) PastContentHandle.java
  * 
  * This interface must be implemented by all content object handles.
  *
@@ -51,16 +51,16 @@ import rice.p2p.commonapi.*;
  * @author Ansley Post
  * @author Peter Druschel 
  */
-public interface PASTContentHandle extends Serializable {
+public interface PastContentHandle extends Serializable {
 
   /**
-   * get the id of the PASTContent object associated with this handle
+   * get the id of the PastContent object associated with this handle
    * @return the id
    */
   public Id getId();
 
   /**
-   * get the NodeHandle of the PAST node on which the object associated with this handle is stored
+   * get the NodeHandle of the Past node on which the object associated with this handle is stored
    * @return the id
    */
   public NodeHandle getNode();

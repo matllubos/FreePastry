@@ -1,4 +1,4 @@
-PACKAGE = rice.past
+PACKAGE = rice.p2p.past
 
 SOURCE  = \
 	Past.java \

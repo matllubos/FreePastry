@@ -226,6 +226,15 @@ public class PastryEndpoint extends PastryAppl implements rice.p2p.commonapi.End
     return range(n, r, key, false);
   }
 
+  /**
+   * Returns a handle to the local node below this endpoint.
+   *
+   * @return A NodeHandle referring to the local node.
+   */
+  public NodeHandle getLocalNodeHandle() {
+    return thePastryNode.getLocalHandle();
+  }
+
   // Upcall to Application support
 
   public final void messageForAppl(rice.pastry.messaging.Message msg) {

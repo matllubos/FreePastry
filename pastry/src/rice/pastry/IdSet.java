@@ -1,8 +1,8 @@
 /*************************************************************************
 
-"Free Pastry" Peer-to-Peer Application Development Substrate 
+"Free Pastry" Peer-to-Peer Application Development Substrate
 
-Copyright 2002, Rice University. All rights reserved. 
+Copyright 2002, Rice University. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -50,220 +50,220 @@ import java.security.*;
 
 public class IdSet implements rice.p2p.commonapi.IdSet {
 
-    private TreeSet idSet;
+  private TreeSet idSet;
 
-    // a cache of the fingerprint hash
-    private Id cachedHash;
-    private boolean validHash;
+  // a cache of the fingerprint hash
+  private Id cachedHash;
+  private boolean validHash;
 
-    /**
-     * Constructor.
-     */
-    public IdSet() {
-	idSet = new TreeSet();
-	validHash = false;
+  /**
+   * Constructor.
+   */
+  public IdSet() {
+    idSet = new TreeSet();
+    validHash = false;
+  }
+
+  /**
+   * Constructor.
+   * constructs a shallow copy of the given IdSet o.
+   * @param s the SortedSet based on which we construct a new IdSet
+   */
+  protected IdSet(TreeSet s) {
+    idSet = (TreeSet) s.clone();
+    validHash = false;
+  }
+
+  /**
+   * Copy constructor.
+   * constructs a shallow copy of the given IdSet o.
+   * @param o the IdSet to copy
+   */
+  public IdSet(IdSet o) {
+    idSet = new TreeSet(o.idSet);
+    cachedHash = o.cachedHash;
+    validHash = o.validHash;
+  }
+
+  /**
+   * return the number of elements
+   */
+  public int numElements() {
+    return idSet.size();
+  }
+
+  /**
+   * add a member
+   * @param id the id to add
+   */
+  public void addMember(Id id) {
+    idSet.add(id);
+    validHash = false;
+  }
+
+  /**
+   * remove a member
+   * @param id the id to remove
+   */
+  public void removeMember(Id id) {
+    idSet.remove(id);
+    validHash = false;
+  }
+
+  /**
+   * test membership
+   * @param id the id to test
+   * @return true of id is a member, false otherwise
+   */
+  public boolean isMember(Id id) {
+    return idSet.contains(id);
+  }
+
+  /**
+   * return the smallest member id
+   * @return the smallest id in the set
+   */
+  public Id minMember() {
+    return (Id) idSet.first();
+  }
+
+  /**
+   * return the largest member id
+   * @return the largest id in the set
+   */
+  public Id maxMember() {
+    return (Id) idSet.last();
+  }
+
+  /**
+   * return a subset of this set, consisting of the member ids in a given range
+   * @param from the counterclockwise end of the range (inclusive)
+   * @param to the clockwise end of the range (exclusive)
+   * @return the subset
+   */
+  public IdSet subSet(Id from, Id to) {
+    IdSet res;
+    if (from.compareTo(to) <= 0) {
+      res = new IdSet( (TreeSet) idSet.subSet(from, to));
+    } else {
+      SortedSet ss = idSet.tailSet(from);
+      ss.addAll(idSet.headSet(to));
+      res = new IdSet( (TreeSet) ss);
     }
 
-    /**
-     * Constructor.
-     * constructs a shallow copy of the given IdSet o.
-     * @param s the SortedSet based on which we construct a new IdSet
-     */
-    protected IdSet(TreeSet s) {
-	idSet = (TreeSet) s.clone();
-	validHash = false;
+    return res;
+  }
+
+  /**
+   * return a subset of this set, consisting of the member ids in a given range
+   * @param range the range
+   * @return the subset
+   */
+  public IdSet subSet(IdRange range) {
+    return subSet(range.getCCW(), range.getCW());
+  }
+
+  /**
+   * return an iterator over the elements of this set
+   * @return the interator
+   */
+  public Iterator getIterator() {
+    return idSet.iterator();
+  }
+
+  /**
+   * compute a fingerprint of the members in this IdSet
+   *
+   * @return an Id containing the secure hash of this set
+   */
+
+  public Id getHash() {
+
+    if (validHash) return cachedHash;
+
+    // recompute the hash
+    MessageDigest md = null;
+    try {
+      md = MessageDigest.getInstance("SHA");
+    } catch ( NoSuchAlgorithmException e ) {
+      System.err.println( "No SHA support!" );
+      return null;
     }
 
-    /**
-     * Copy constructor.
-     * constructs a shallow copy of the given IdSet o.
-     * @param o the IdSet to copy
-     */
-    public IdSet(IdSet o) {
-	idSet = new TreeSet(o.idSet);
-	cachedHash = o.cachedHash;
-	validHash = o.validHash;
+    Iterator it = idSet.iterator();
+    byte[] raw = new byte[Id.IdBitLength / 8];
+    Id id;
+
+    while (it.hasNext()) {
+      id = (Id) it.next();
+      id.blit(raw);
+      md.update(raw);
     }
 
-    /**
-     * return the number of elements
-     */ 
-    public int numElements() {
-	return idSet.size();
+    byte[] digest = md.digest();
+    cachedHash = new Id(digest);
+    validHash = true;
+
+    return cachedHash;
+  }
+
+
+
+  /**
+   * Returns a string representation of the IdSet.
+   */
+
+  public String toString()
+  {
+    Iterator it = getIterator();
+    Id key;
+    String s = "[ IdSet: ";
+    while(it.hasNext()) {
+      key = (Id)it.next();
+      s = s + key + ",";
+
     }
+    s = s + " ]";
+    return s;
+  }
 
-    /**
-     * add a member
-     * @param id the id to add
-     */ 
-    public void addMember(Id id) {
-	idSet.add(id);
-	validHash = false;
-    }
+  // Common API Support
 
-    /**
-     * remove a member
-     * @param id the id to remove
-     */ 
-    public void removeMember(Id id) {
-	idSet.remove(id);
-	validHash = false;
-    }
+  /**
+   * add a member
+   * @param id the id to add
+   */
+  public void addId(rice.p2p.commonapi.Id id) {
+    addMember((Id) id);
+  }
 
-    /**
-     * test membership
-     * @param id the id to test
-     * @return true of id is a member, false otherwise
-     */ 
-    public boolean isMember(Id id) {
-	return idSet.contains(id);
-    }
+  /**
+   * remove a member
+   * @param id the id to remove
+   */
+  public void removeId(rice.p2p.commonapi.Id id) {
+    removeMember((Id) id);
+  }
 
-    /**
-     * return the smallest member id
-     * @return the smallest id in the set
-     */ 
-    public Id minMember() {
-	return (Id) idSet.first();
-    }
+  /**
+   * test membership
+   * @param id the id to test
+   * @return true of id is a member, false otherwise
+   */
+  public boolean isMemberId(rice.p2p.commonapi.Id id) {
+    return isMember((Id) id);
+  }
 
-    /**
-     * return the largest member id
-     * @return the largest id in the set
-     */ 
-    public Id maxMember() {
-	return (Id) idSet.last();
-    }
+  /**
+   * return a subset of this set, consisting of the member ids in a given range
+   * @param from the lower end of the range (inclusive)
+   * @param to the upper end of the range (exclusive)
+   * @return the subset
+   */
+  public rice.p2p.commonapi.IdSet subSet(rice.p2p.commonapi.IdRange range) {
+    //return subSet((Id) range.getCWId(), (Id) range.getCCWId());
+    return subSet((IdRange)range);
+  }
 
-    /**
-     * return a subset of this set, consisting of the member ids in a given range
-     * @param from the counterclockwise end of the range (inclusive)
-     * @param to the clockwise end of the range (exclusive)
-     * @return the subset
-     */ 
-    public IdSet subSet(Id from, Id to) {
-	IdSet res;
-	if (from.compareTo(to) <= 0) {
-	    res = new IdSet( (TreeSet) idSet.subSet(from, to));
-	} else {
-	    SortedSet ss = idSet.tailSet(from);
-	    ss.addAll(idSet.headSet(to));
-	    res = new IdSet( (TreeSet) ss);
-	}  
-
-	return res;
-    }
-
-    /**
-     * return a subset of this set, consisting of the member ids in a given range
-     * @param range the range
-     * @return the subset
-     */ 
-    public IdSet subSet(IdRange range) {
-	return subSet(range.getCCW(), range.getCW());
-    }
-
-    /**
-     * return an iterator over the elements of this set
-     * @return the interator
-     */
-    public Iterator getIterator() {
-	return idSet.iterator();
-    }
-
-    /**
-     * compute a fingerprint of the members in this IdSet
-     *
-     * @return an Id containing the secure hash of this set
-     */
-
-    public Id getHash() {
-
-	if (validHash) return cachedHash;
-
-	// recompute the hash
-	MessageDigest md = null;
-	try {
-	    md = MessageDigest.getInstance("SHA");
-	} catch ( NoSuchAlgorithmException e ) {
-	    System.err.println( "No SHA support!" );
-	    return null;
-	}
-
-	Iterator it = idSet.iterator();
-	byte[] raw = new byte[Id.IdBitLength / 8];
-	Id id;
-
-	while (it.hasNext()) {
-	    id = (Id) it.next();
-	    id.blit(raw);
-	    md.update(raw);
-	}
-
-	byte[] digest = md.digest();
-	cachedHash = new Id(digest);
-	validHash = true;
-
-	return cachedHash;
-    }
-
-    
-    
-    /**
-     * Returns a string representation of the IdSet.
-     */
-
-    public String toString() 
-    {
-	Iterator it = getIterator();
-	Id key;
-	String s = "[ IdSet: ";
-	while(it.hasNext()) {
-	    key = (Id)it.next();
-	    s = s + key + ",";
-
-	}
-	s = s + " ]";
-	return s;
-    }
-
-    // Common API Support
-
-    /**
-      * add a member
-     * @param id the id to add
-     */
-    public void addId(rice.p2p.commonapi.Id id) {
-      addMember((Id) id);
-    }
-
-    /**
-      * remove a member
-     * @param id the id to remove
-     */
-    public void removeId(rice.p2p.commonapi.Id id) {
-      removeId((Id) id);
-    }
-
-    /**
-      * test membership
-     * @param id the id to test
-     * @return true of id is a member, false otherwise
-     */
-    public boolean isMemberId(rice.p2p.commonapi.Id id) {
-      return isMember((Id) id);
-    }
-
-    /**
-      * return a subset of this set, consisting of the member ids in a given range
-     * @param from the lower end of the range (inclusive)
-     * @param to the upper end of the range (exclusive)
-     * @return the subset
-     */
-    public rice.p2p.commonapi.IdSet subSet(rice.p2p.commonapi.IdRange range) {
-	//return subSet((Id) range.getCWId(), (Id) range.getCCWId());
-	return subSet((IdRange)range);
-    }
-    
 
 }

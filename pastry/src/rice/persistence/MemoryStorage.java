@@ -48,7 +48,7 @@ import java.io.*;
 import java.util.*;
 
 import rice.*;
-import rice.pastry.*;
+import rice.p2p.commonapi.*;
 
 /**
  * This class is an implementation of Storage which provides
@@ -61,15 +61,21 @@ public class MemoryStorage implements Storage {
   // the hashtable used to store the data
   private Hashtable storage;
 
+  // the current list of Ids
   private IdSet idSet;
+  
   // the current total size
   private int currentSize;
+
+  // the factory for manipulating the ids
+  private IdFactory factory;
   
   /**
    * Builds a MemoryStorage object.
    */
-  public MemoryStorage() {
-    idSet = new IdSet();
+  public MemoryStorage(IdFactory factory) {
+    this.factory = factory;
+    idSet = factory.buildIdSet();
     storage = new Hashtable();
     currentSize = 0;
   }
@@ -96,7 +102,7 @@ public class MemoryStorage implements Storage {
     currentSize += getSize(obj);
     
     storage.put(id, obj);
-    idSet.addMember(id);
+    idSet.addId(id);
     c.receiveResult(new Boolean(true));
   }
 
@@ -115,7 +121,7 @@ public class MemoryStorage implements Storage {
    */
   public void unstore(Id id, Continuation c) {
     Object stored = storage.remove(id);
-    idSet.removeMember(id);
+    idSet.removeId(id);
 
     if (stored != null) {
       currentSize -= getSize(stored);
@@ -134,7 +140,7 @@ public class MemoryStorage implements Storage {
   }
 
   public void scan(IdRange range , Continuation c) {
-    c.receiveResult(idSet.subSet(range.getCCW(), range.getCW()));    
+    c.receiveResult(idSet.subSet(factory.buildIdRange(range.getCCWId(), range.getCWId())));    
   }
 
   /**
@@ -151,7 +157,7 @@ public class MemoryStorage implements Storage {
    * @return The idset containg the keys 
    */
   public IdSet scan(IdRange range){
-    IdSet toReturn = idSet.subSet(range.getCCW(), range.getCW()); 
+    IdSet toReturn = idSet.subSet(factory.buildIdRange(range.getCCWId(), range.getCWId())); 
     return(toReturn);
   }
 
