@@ -1,8 +1,8 @@
 package rice.past.messaging;
 
-import rice.past.*;
+import rice.*;
 
-import rice.storage.*;
+import rice.past.*;
 
 import rice.pastry.NodeId;
 import rice.pastry.messaging.Message;
@@ -63,19 +63,40 @@ public class MessageInsert extends PASTMessage {
    * Inserts this message's file into the service.
    * @param service PASTService on which to act
    */
-  public void performAction(PASTServiceImpl service) {
+  public void performAction(final PASTServiceImpl service) {
     debug("  Inserting file " + getFileId() + " at node " +
           service.getPastryNode().getNodeId());
-    StorageObject existing = service.getStorage().lookup(getFileId());
-    if (existing == null) {
-      _success = service.getStorage().insert(getFileId(), _file, _cred);
-    }
-    else {
-      // Already exists, return false
-      _success = false;
-    }
-    setType(RESPONSE);
-    service.sendMessage(this);
+
+    final Continuation insert = new Continuation() {
+      public void receiveResult(Object o) {
+        _success = ((Boolean) o).booleanValue();
+        setType(RESPONSE);
+        service.sendMessage(MessageInsert.this);
+      }
+
+      public void receiveException(Exception e) {
+        System.out.println("Exception " + e + " occurred during an insert!");
+      }
+    };
+
+    Continuation check = new Continuation() {
+      public void receiveResult(Object o) {
+        if (! ((Boolean) o).booleanValue()) {
+          service.getStorage().store(getFileId(), _file, insert);
+        } else {
+          // Already exists, return false
+          _success = false;
+          setType(RESPONSE);
+          service.sendMessage(MessageInsert.this);
+        }
+      }
+
+      public void receiveException(Exception e) {
+        System.out.println("Exception " + e + " occurred during an insert!");
+      }
+    };
+
+    service.getStorage().exists(getFileId(), check);
   }
   
   /**

@@ -9,7 +9,7 @@ import rice.pastry.security.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 
-import rice.storage.*;
+import rice.persistence.*;
 
 import java.io.*;
 import java.util.Hashtable;
@@ -23,10 +23,8 @@ import java.util.Hashtable;
  * @version $Id$
  * @author Charles Reis
  */
-public class PASTServiceImpl 
-  extends PastryAppl
-  implements PASTService
-{
+public class PASTServiceImpl extends PastryAppl implements PASTService {
+  
   /**
    * Whether to print debugging statements.
    */
@@ -35,78 +33,83 @@ public class PASTServiceImpl
   /**
    * PastryNode this service is running on.
    */
-  private final PastryNode _pastryNode;
+  private PastryNode pastry;
   
   /**
-   * StorageManager used to store objects.
+   * Storage used to store objects (persistedly).
    */
-  private final StorageManager _storage;
+  private Storage storage;
+
+  /**
+   * Cache used to cache objects in transit.
+   */
+  private Cache cache; 
     
   /**
    * Credentials for this application
    */
-  private final Credentials _appCredentials;
+  private Credentials credentials;
   
   /**
    * SendOptions to be used on the Pastry messages.
    */
-  private final SendOptions _sendOptions;
+  private SendOptions sendOptions;
   
   /**
    * The table used to store commands waiting for a response.
    * Maps PASTMessageID to Continuation.
    */
-  protected final Hashtable _commandTable;
+  protected Hashtable commandTable;
   
   /**
    * Timeout to use while waiting for response messages, in milliseconds.
    */
-  private long _timeout = 5000;
-  
-  
+  private long timeout = 5000;
   
   /**
-   * Builds a new PASTService to run on the given PastryNode.
-   * @param pn PastryNode to run on
-   * @param storage StorageManager used to store and retrieve files
+   * Builds a new PASTService to run on the given PastryNode, given a
+   * Storage object (to persistedly store objects) and a cache used
+   * to cache objects.
+   *
+   * @param pastry PastryNode to run on
+   * @param storage The Storage object to use for persistent storage
+   * @param cache The Cache used to cache objects in transit
    */
-  public PASTServiceImpl(PastryNode pn, StorageManager storage) {
-    super(pn);
-    _pastryNode = pn;
-    _storage = storage;
-    _appCredentials = new PermissiveCredentials();
-    _sendOptions = new SendOptions();
-    _commandTable = new Hashtable();
+  public PASTServiceImpl(PastryNode pastry, Storage storage, Cache cache) {
+    super(pastry);
+    this.pastry = pastry;
+    this.storage = storage;
+    this.cache = cache;
+    credentials = new PermissiveCredentials();
+    sendOptions = new SendOptions();
+    commandTable = new Hashtable();
   }
-  
-  
+
   /**
-   * Returns the StorageManager used by this PAST node.
+   * Returns the Storage object
+   *
+   * @return This PAST's Storage object
    */
-  public StorageManager getStorage() {
-    return _storage;
+  public Storage getStorage() {
+    return storage;
   }
-  
+
   /**
-   * Returns the PastryNode this PAST service is running on.
+   * Returns the Cache object
+   *
+   * @return This PAST's Storage object
+   */
+  public Cache getCache() {
+    return cache;
+  }
+
+  /**
+   * Returns the PastryNode 
+   *
+   * @return This PAST's Pastry Node
    */
   public PastryNode getPastryNode() {
-    return _pastryNode;
-  }
-  
-  /**
-   * Gets the timeout used while waiting for replies.
-   */
-  public long getTimeout() {
-    return _timeout;
-  }
-  
-  /**
-   * Sets the timeout used while waiting for replies.
-   * @param timeout New value for timeout
-   */
-  public void setTimeout(long timeout) {
-    _timeout = timeout;
+    return pastry;
   }
   
   // ---------- PastryAppl Methods ----------
@@ -126,7 +129,7 @@ public class PASTServiceImpl
    * @return the credentials.
    */
   public Credentials getCredentials() {
-    return _appCredentials;
+    return credentials;
   }
   
   /**
@@ -137,32 +140,27 @@ public class PASTServiceImpl
   public void messageForAppl(Message msg) {
     if (msg instanceof PASTMessage) {
       PASTMessage pmsg = (PASTMessage) msg;
+      
       if (pmsg.getType() == PASTMessage.REQUEST) {
-        // Request
         pmsg.performAction(this);
-      }
-      else {
-        // Response
+      } else {
         _handleResponseMessage(pmsg);
       }
-    }
-    else {
-      System.err.println("PAST Error: Received a non-PAST message:" + msg);
+    } else {
+      System.err.println("PAST Error: Received a non-PAST message:" + msg + " - dropping on floor.");
     }
   }
   
   /**
    * Sends a message to a remote PAST node (either a request or response).
+   *
    * @param msg PASTMessage to send
    */
   public void sendMessage(PASTMessage msg) {
     if (msg.getType() == PASTMessage.REQUEST) {
-      // Request
-      routeMsg(msg.getFileId(), msg, _appCredentials, _sendOptions);
-    }
-    else {
-      // Response
-      routeMsg(msg.getSource(), msg, _appCredentials, _sendOptions);
+      routeMsg(msg.getFileId(), msg, credentials, sendOptions);
+    } else {
+      routeMsg(msg.getSource(), msg, credentials, sendOptions);
     }
   }
   
@@ -177,7 +175,7 @@ public class PASTServiceImpl
   {
     // Update the command table so that this command can collect its
     // response when it arrives.
-    _commandTable.put(msg.getID(), command);
+    commandTable.put(msg.getID(), command);
     
     // Route the request to the remote node
     sendMessage(msg);
@@ -190,7 +188,7 @@ public class PASTServiceImpl
   protected void _handleResponseMessage(PASTMessage msg) {
     // Look up the command waiting for this response
     Continuation command = 
-      (Continuation) _commandTable.get(msg.getID());
+      (Continuation) commandTable.get(msg.getID());
         
     if (command != null) {
       // Give response to the command
@@ -216,7 +214,7 @@ public class PASTServiceImpl
   public void insert(NodeId id, Serializable obj, Credentials authorCred,
                      final Continuation command)
   {
-    NodeId nodeId = _pastryNode.getNodeId();
+    NodeId nodeId = pastry.getNodeId();
     debug("Insert request for file " + id + " at node " + nodeId);
     MessageInsert request = new MessageInsert(nodeId, id, obj, authorCred);
     
@@ -224,12 +222,18 @@ public class PASTServiceImpl
     _sendRequestMessage(request, new Continuation() {
       public void receiveResult(Object result) {
         if (result == null) {
+          System.out.println("ERROR: Recieved null result in PAST.insert");
+          
           // Not successful
           command.receiveResult(new Boolean(false));
         }
         else if (result instanceof MessageInsert) {
           // Return whether successful
           boolean success = ((MessageInsert)result).getSuccess();
+          if (! success) {
+            System.out.println("ERROR: Recieved bad result in PAST.insert");
+          }
+          
           command.receiveResult(new Boolean(success));
         }
         else {
@@ -242,47 +246,7 @@ public class PASTServiceImpl
       }
     });
   }
-  
-  /**
-   * Stores an update to the object with the given ID.
-   * Asynchronously returns a boolean as the result to the provided
-   * UpdateResultCommand, indicating whether the insert was successful.
-   * 
-   * @param id Pastry key of original object to be updated
-   * @param update Persistable update to the original object
-   * @param authorCred Update Author's credentials
-   * @param command Command to be performed when the result is received
-   */
-  public void update(NodeId id, Serializable update, Credentials authorCred, 
-                     final Continuation command)
-  {
-    NodeId nodeId = _pastryNode.getNodeId();
-    debug("Request to append to file " + id + " at node " + nodeId);
-    MessageAppend request = new MessageAppend(nodeId, id, update, authorCred);
     
-    // Send the request
-    _sendRequestMessage(request, new Continuation() {
-      public void receiveResult(Object result) {
-        if (result == null) {
-          // Not successful
-          command.receiveResult(new Boolean(false));
-        }
-        else if (result instanceof MessageAppend) {
-          // Return whether successful
-          boolean success = ((MessageAppend)result).getSuccess();
-          command.receiveResult(new Boolean(success));
-        }
-        else {
-          // Should have gotten a MessageAppend
-          command.receiveException(new IllegalArgumentException("Expected a MessageAppend result, got " + result));
-        }
-      }
-      public void receiveException(Exception result) {
-        command.receiveException(result);
-      }
-    });
-  }
-  
   /**
    * Retrieves the object and all associated updates with the given ID.
    * Asynchronously returns a StorageObject as the result to the provided
@@ -292,7 +256,7 @@ public class PASTServiceImpl
    * @param command Command to be performed when the result is received
    */
   public void lookup(NodeId id, final Continuation command) {
-    NodeId nodeId = _pastryNode.getNodeId();
+    NodeId nodeId = pastry.getNodeId();
     debug("Request to look up file " + id + " at node " + nodeId);
     MessageLookup request = new MessageLookup(nodeId, id);
     
@@ -327,7 +291,7 @@ public class PASTServiceImpl
    * @param command Command to be performed when the result is received
    */
   public void exists(NodeId id, final Continuation command) {
-    NodeId nodeId = _pastryNode.getNodeId();
+    NodeId nodeId = pastry.getNodeId();
     debug("Request to determine if file " + id + " exists, at node " + nodeId);
     MessageExists request = new MessageExists(nodeId, id);
     
@@ -353,7 +317,7 @@ public class PASTServiceImpl
       }
     });
   }
-  
+ 
   /**
    * Reclaims the storage used by the object with the given ID.
    * Asynchronously returns a boolean as the result to the provided
@@ -363,12 +327,11 @@ public class PASTServiceImpl
    * @param authorCred Author's credentials
    */
   public void delete(NodeId id, Credentials authorCred,
-                     final Continuation command)
-  {
-    NodeId nodeId = _pastryNode.getNodeId();
+                     final Continuation command) {
+    NodeId nodeId = pastry.getNodeId();
     System.out.println("Deleting the file with ID: " + id);
     MessageReclaim request = 
-      new MessageReclaim(_pastryNode.getNodeId(), id, authorCred);
+      new MessageReclaim(pastry.getNodeId(), id, authorCred);
     
     // Send the request
     _sendRequestMessage(request, new Continuation() {
@@ -392,7 +355,7 @@ public class PASTServiceImpl
       }
     });
   }
-  
+    
   /**
    * Prints a debugging message to System.out if the
    * DEBUG flag is turned on.

@@ -1,8 +1,8 @@
 package rice.past.messaging;
 
-import rice.past.*;
+import rice.*;
 
-import rice.storage.*;
+import rice.past.*;
 
 import rice.pastry.NodeId;
 import rice.pastry.messaging.Message;
@@ -46,12 +46,26 @@ public class MessageExists extends PASTMessage {
    * Looks up the file in the given service's storage.
    * @param service PASTService on which to act
    */
-  public void performAction(PASTServiceImpl service) {
+  public void performAction(final PASTServiceImpl service) {
     debug("  Seeing if file " + getFileId() + " exists, at node " +
           service.getPastryNode().getNodeId());
-    _exists = service.getStorage().exists(getFileId());
-    setType(RESPONSE);
-    service.sendMessage(this);
+
+    Continuation c = new Continuation() {
+      public void receiveResult(Object o) {
+        _exists = ((Boolean) o).booleanValue();
+
+        debug("File was found (" + _exists + ") at " + service.getPastryNode().getNodeId());
+        
+        setType(RESPONSE);
+        service.sendMessage(MessageExists.this);
+      }
+
+      public void receiveException(Exception e) {
+        System.out.println("Exception " + e + " occured during an exists call.");
+      }
+    };
+
+    service.getStorage().exists(getFileId(), c);
   }
   
   /**

@@ -9,8 +9,7 @@ import rice.pastry.dist.*;
 import rice.pastry.standard.*;
 import rice.pastry.security.*;
 
-import rice.storage.*;
-import rice.storage.testing.*;
+import rice.persistence.*;
 
 import java.util.*;
 import java.net.*;
@@ -84,9 +83,8 @@ public class DistPASTRegrTest {
     PastryNode pn = factory.newNode(getBootstrap());
     pastrynodes.add(pn);
 
-    StorageManager sm = new MemoryStorageManager();
-
-    PASTServiceImpl past = new PASTServiceImpl(pn, sm);
+    PASTServiceImpl past = new PASTServiceImpl(pn, new MemoryStorage(),
+                                               new LRUCache(new MemoryStorage(), 10000));
     past.DEBUG = true;
     pastNodes.add(past);
     System.out.println("created " + pn);
@@ -190,15 +188,17 @@ public class DistPASTRegrTest {
                            ((Boolean)result).booleanValue());
 
                 // Lookup file locally
-                StorageObject object = remote.getStorage().lookup(remoteId);
-                assertTrue("RouteRequest", "File should be inserted at known node",
-                           object != null);
-                String file2 = (String) object.getOriginal();
-                assertEquals("RouteRequest", "Retrieved local file should be the same",
-                             file, file2);
-                
-                // DONE WITH THE TEST!
-                System.out.println("\n\n---- testRouteRequest passed! ---------------------\n");
+                remote.getStorage().getObject(remoteId, new TestCommand() {
+                  public void receive(Object result) throws Exception {
+                    assertTrue("RouteRequest", "File should be inserted at known node",
+                               result != null);
+                    assertEquals("RouteRequest", "Retrieved local file should be the same",
+                                 file, result);
+
+                    // DONE WITH THE TEST!
+                    System.out.println("\n\n---- testRouteRequest passed! ---------------------\n");
+                  }
+                });
               }
             });
           }
@@ -305,115 +305,49 @@ public class DistPASTRegrTest {
       remote = (PASTServiceImpl) pastNodes.elementAt(currentIndex);
       remote.lookup(fileId, new TestCommand() {
         public void receive(Object res) throws Exception {
-          StorageObject result = (StorageObject) res;
+          Serializable result = (Serializable) res;
           
           // Check that file is found using PAST, but has no updates
           assertTrue("PASTFunctions", "File should always be found remotely",
                      result != null);
-          String file2 = (String) result.getOriginal();
           assertEquals("PASTFunctions", 
                        "Retrieved file should be the same, node " + currentIndex,
-                       file, file2);
-          Vector updates = result.getUpdates();
-          assertEquals("PASTFunctions", 
-                       "Retrieved file should have no updates, node " + currentIndex,
-                       new Integer(0), new Integer(updates.size()));
-          
-          // Lookup file locally (using StorageManager)
-          result = remote.getStorage().lookup(fileId);
-          if (result != null) {
-            System.out.println("TEST: Found file locally on node " + currentIndex);
-            localCount++;
-            file2 = (String) result.getOriginal();
-            assertEquals("PASTFunctions", 
-                         "Retrieved local file should be the same, node " + currentIndex,
-                         file, file2);
-          }
-          
-          // Now check if we've visited all nodes
-          currentIndex++;
-          if (currentIndex < pastNodes.size()) {
-            // Perform this check on the next node
-            remote = (PASTServiceImpl) pastNodes.elementAt(currentIndex);
-            remote.lookup(fileId, this);
-          }
-          else {
-            // We've seen all the nodes, so move on
-            
-            // TO DO: Make this k instead of 1 when ReplicationManager is used
-            assertEquals("PASTFunctions", 
-                         "File should have been found 1 time after insert",
-                         new Integer(1), new Integer(localCount));
-            
-            runAppendTests();
-          }
-        }
-      });
-    }
-    
-    /**
-     * Checks that appending to a file works.
-     */
-    protected void runAppendTests() {
-      
-      // Append to file
-      System.out.println("TEST: Appending to file with key: " + fileId);
-      local.update(fileId, update, userCred, new TestCommand() {
-        public void receive(Object success) throws Exception {
-          assertTrue("PASTFunctions", "File should update successfully",
-                     ((Boolean)success).booleanValue());
-          
-          // "Loop" to make sure update is found by each node
-          //   (Runs the same command several times, incrementing currentIndex field)
-          currentIndex = 0;
-          remote = (PASTServiceImpl) pastNodes.elementAt(currentIndex);
-          remote.lookup(fileId, new TestCommand() {
-            public void receive(Object res) throws Exception {
-              StorageObject result = (StorageObject) res;
-              
-              // Lookup file using PAST
-              assertTrue("PASTFunctions", "File should always be found remotely",
-                         result != null);
-              String file2 = (String) result.getOriginal();
-              assertEquals("PASTFunctions", 
-                           "Retrieved file should be the same, node " + currentIndex,
-                           file, file2);
-              Vector updates = result.getUpdates();
-              assertEquals("PASTFunctions", 
-                           "Retrieved file should have 1 update, node " + currentIndex,
-                           new Integer(1), new Integer(updates.size()));
-              String update2 = (String) updates.elementAt(0);
-              assertEquals("PASTFunctions", 
-                           "Retrieved update should be the same, node " + currentIndex,
-                           update, update2);
-              
+                       file, result);
+
+          final TestCommand MONKEY = this;
+         
+          // Lookup file locally (using Storage)
+          remote.getStorage().getObject(fileId, new TestCommand() {
+            public void receive(Object result) throws Exception {
+              if (result != null) {
+                System.out.println("TEST: Found file locally on node " + currentIndex);
+                localCount++;
+                assertEquals("PASTFunctions",
+                             "Retrieved local file should be the same, node " + currentIndex,
+                             file, result);
+              }
+
               // Now check if we've visited all nodes
               currentIndex++;
               if (currentIndex < pastNodes.size()) {
                 // Perform this check on the next node
                 remote = (PASTServiceImpl) pastNodes.elementAt(currentIndex);
-                remote.lookup(fileId, this);
-              }
-              else {
+                remote.lookup(fileId, MONKEY);
+              } else {
                 // We've seen all the nodes, so move on
-                
-                // Check file still exists
-                local.exists(fileId, new TestCommand() {
-                  public void receive(Object exists) throws Exception {
-                    assertTrue("PASTFunctions", 
-                               "File should still exist after updates",
-                               ((Boolean)exists).booleanValue());
-                    
-                    runReclaimTests();
-                  }
-                });
+                // TO DO: Make this k instead of 1 when ReplicationManager is used
+                assertEquals("PASTFunctions",
+                             "File should have been found 1 time after insert",
+                             new Integer(1), new Integer(localCount));
+
+                runReclaimTests();
               }
             }
           });
         }
       });
-    }
-    
+    } 
+
     /**
      * Checks that deleting a file works.
      */
@@ -442,8 +376,7 @@ public class DistPASTRegrTest {
                 // Perform this check on the next node
                 remote = (PASTServiceImpl) pastNodes.elementAt(currentIndex);
                 remote.lookup(fileId, this);
-              }
-              else {
+              } else {
                 // We've seen all the nodes, so move on
                 
                 // Check file does not exist
@@ -464,7 +397,6 @@ public class DistPASTRegrTest {
       });
     }
   }
-
 
   /**
    * Initializes and runs all regression tests.
