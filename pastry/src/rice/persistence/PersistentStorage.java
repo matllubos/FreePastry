@@ -393,6 +393,8 @@ public class PersistentStorage implements Storage {
           /* write the metadata to the file */
           writeMetadata(getFile(id), metadata);
           
+          System.out.println("COUNT: " + System.currentTimeMillis() + " Updating metadata for " + id.toStringFull() + " in " + name);
+          
           /* then update our cache */
           synchronized (idSet) {
             PersistentStorage.this.metadata.put(id, metadata);
@@ -478,7 +480,7 @@ public class PersistentStorage implements Storage {
    * @return The idset containg the keys 
    */
   public IdSet scan() {
-    synchronized(idSet){
+    synchronized (idSet){
       return (IdSet) idSet.clone();
     }
   }
@@ -576,7 +578,7 @@ public class PersistentStorage implements Storage {
   /**
    * Ensures that all files are in the correct directories, and moves files which
    * are in the wrong directory.  Also checks for any temporary files and resolves
-   * any detected conflicts.
+   * any detected conflicts.  
    * 
    * @param dir The directory to start on
    */
@@ -639,6 +641,7 @@ public class PersistentStorage implements Storage {
    * transactions. After this is run the most current stable
    * state should be restored.  Also record the total used space
    * for all files in the root.
+   * Lastly, deletes any files which are of zero length.
    *
    */
   private boolean initFileMap(File dir) throws IOException {
@@ -652,14 +655,25 @@ public class PersistentStorage implements Storage {
     for (int i=0; i<files.length; i++) {
       if (files[i].isFile()) {
         Id id = readKey(files[i]);
-        increaseUsedSpace(getFileLength(files[i]));
-        idSet.addId(id);
+        long len = getFileLength(files[i]);
         
-        /* if the file is newer than the metadata file, update the metadata 
-           if we don't have the metadata for this file, update it */
-        if ((! metadata.containsKey(id)) || (files[i].lastModified() > metadataFile.lastModified())) {
-          metadata.put(id, readMetadata(files[i]));
-          changed = true;
+        if (len > 0) {
+          increaseUsedSpace(len);
+          idSet.addId(id);
+        
+          /* if the file is newer than the metadata file, update the metadata 
+            if we don't have the metadata for this file, update it */
+          if ((! metadata.containsKey(id)) || (files[i].lastModified() > metadataFile.lastModified())) {
+            metadata.put(id, readMetadata(files[i]));
+            changed = true;
+          }
+        } else {
+          moveToLost(files[i]);
+          
+          if (metadata.containsKey(id)) {
+            metadata.remove(id);
+            changed = true;
+          }
         }
       } else if (files[i].isDirectory()) {
         boolean result = initFileMap(files[i]);
