@@ -105,6 +105,10 @@ public class DistPastRegrTest extends DistCommonAPITest {
    * nodes have been created and are ready.
    */
   protected void runTest() {
+    if (NUM_NODES < 2) {
+      System.out.println("The DistPastRegrTest must be run with at least 2 nodes for proper testing.  Use the '-nodes n' to specify the number of nodes.");
+      return;
+    }
     
     // Run each test
     testRouteRequest();
@@ -136,7 +140,9 @@ public class DistPastRegrTest extends DistCommonAPITest {
           public void receive(Object result) throws Exception {
             assertTrue("Insert of file result should not be null", result != null);
             assertTrue("Insert of file should return Boolean[]", result instanceof Boolean[]);
-            assertTrue("Insert of file should return correct sized Boolean[]", ((Boolean[]) result).length == REPLICATION_FACTOR);
+            assertTrue("Insert of file should return correct sized Boolean[]", (((Boolean[]) result).length == REPLICATION_FACTOR) ||
+                      ((NUM_NODES < REPLICATION_FACTOR) &&
+                       (((Boolean[]) result).length) == NUM_NODES));
 
             for (int i=0; i<((Boolean[]) result).length; i++) {
               assertTrue("Insert of file should not return null at replica", ((Boolean[]) result)[i] != null);
@@ -200,7 +206,9 @@ public class DistPastRegrTest extends DistCommonAPITest {
       public void receive(Object result) throws Exception {
         assertTrue("Insert of file result should not be null", result != null);
         assertTrue("Insert of file should return Boolean[]", result instanceof Boolean[]);
-        assertTrue("Insert of file should return correct sized Boolean[]", ((Boolean[]) result).length == REPLICATION_FACTOR);
+        assertTrue("Insert of file should return correct sized Boolean[]", (((Boolean[]) result).length == REPLICATION_FACTOR) ||
+                   ((NUM_NODES < REPLICATION_FACTOR) &&
+                    (((Boolean[]) result).length) == NUM_NODES));
 
         for (int i=0; i<((Boolean[]) result).length; i++) {
           assertTrue("Insert of file should not return null at replica", ((Boolean[]) result)[i] != null);
@@ -228,7 +236,9 @@ public class DistPastRegrTest extends DistCommonAPITest {
               public void receive(Object result) throws Exception {
                 assertTrue("Insert of file result should not be null", result != null);
                 assertTrue("Insert of file should return Boolean[]", result instanceof Boolean[]);
-                assertTrue("Insert of file should return correct sized Boolean[]", ((Boolean[]) result).length == REPLICATION_FACTOR);
+                assertTrue("Insert of file should return correct sized Boolean[]", (((Boolean[]) result).length == REPLICATION_FACTOR) ||
+                           ((NUM_NODES < REPLICATION_FACTOR) &&
+                            (((Boolean[]) result).length) == NUM_NODES));
 
                 for (int i=0; i<((Boolean[]) result).length; i++) {
                   assertTrue("Insert of file should not return null at replica", ((Boolean[]) result)[i] != null);
@@ -256,7 +266,9 @@ public class DistPastRegrTest extends DistCommonAPITest {
                       public void receive(Object result) throws Exception {
                         assertTrue("Insert of file result should not be null", result != null);
                         assertTrue("Insert of file should return Boolean[]", result instanceof Boolean[]);
-                        assertTrue("Insert of file should return correct sized Boolean[]", ((Boolean[]) result).length == REPLICATION_FACTOR);
+                        assertTrue("Insert of file should return correct sized Boolean[]", (((Boolean[]) result).length == REPLICATION_FACTOR) ||
+                                   ((NUM_NODES < REPLICATION_FACTOR) &&
+                                    (((Boolean[]) result).length) == NUM_NODES));
 
                         for (int i=0; i<((Boolean[]) result).length; i++) {
                           assertTrue("Insert of file should not return null at replica", ((Boolean[]) result)[i] != null);
@@ -484,7 +496,9 @@ public class DistPastRegrTest extends DistCommonAPITest {
       public void receive(Object result) throws Exception {
         assertTrue("Insert of file result should not be null", result != null);
         assertTrue("Insert of file should return Boolean[]", result instanceof Boolean[]);
-        assertTrue("Insert of file should return correct sized Boolean[]", ((Boolean[]) result).length == REPLICATION_FACTOR);
+        assertTrue("Insert of file should return correct sized Boolean[]", (((Boolean[]) result).length == REPLICATION_FACTOR) ||
+                   ((NUM_NODES < REPLICATION_FACTOR) &&
+                    (((Boolean[]) result).length) == NUM_NODES));
 
         for (int i=0; i<((Boolean[]) result).length; i++) {
           assertTrue("Insert of file should not return null at replica", ((Boolean[]) result)[i] != null);
@@ -516,11 +530,21 @@ public class DistPastRegrTest extends DistCommonAPITest {
 
                 PastContentHandle[] handles = (PastContentHandle[]) result;
 
-                assertTrue("All replicas should be returned", handles.length == REPLICATION_FACTOR);
+                assertTrue("All replicas should be returned", (handles.length == REPLICATION_FACTOR) ||
+                           ((NUM_NODES < REPLICATION_FACTOR) && (handles.length) == NUM_NODES));
 
                 for (int i=0; i<handles.length; i++) {
                   assertTrue("Replica " + i + " should not be null", handles[i] != null);
                   assertEquals("Replica " + i + " should be for right object", remoteId, handles[i].getId());
+                }
+
+                for (int i=0; i<handles.length; i++) {
+                  for (int j=0; j<handles.length; j++) {
+                    if (i != j) {
+                      assertTrue("Handles " + handles[i] + " and " + handles[j] + " should be different",
+                                 (! handles[i].getNodeHandle().getId().equals(handles[j].getNodeHandle().getId())));
+                    }
+                  }
                 }
 
                 stepDone();
@@ -534,7 +558,22 @@ public class DistPastRegrTest extends DistCommonAPITest {
 
                     PastContentHandle[] handles = (PastContentHandle[]) result;
 
-                    assertTrue("All replicas should be returned", handles.length == REPLICATION_FACTOR);
+                    assertTrue("All replicas should be returned", (handles.length == REPLICATION_FACTOR) ||
+                               ((NUM_NODES < REPLICATION_FACTOR) && (handles.length) == NUM_NODES));
+
+                    for (int i=0; i<handles.length; i++) {
+                      assertTrue("Replica " + i + " should not be null", handles[i] != null);
+                      assertEquals("Replica " + i + " should be for right object", remoteId, handles[i].getId());
+                    }
+
+                    for (int i=0; i<handles.length; i++) {
+                      for (int j=0; j<handles.length; j++) {
+                        if (i != j) {
+                          assertTrue("Handles " + handles[i] + " and " + handles[j] + " should be different",
+                                     (! handles[i].getNodeHandle().getId().equals(handles[j].getNodeHandle().getId())));
+                        }
+                      }
+                    }
 
                     stepDone();
                     sectionDone();
