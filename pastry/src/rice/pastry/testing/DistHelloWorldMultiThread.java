@@ -304,9 +304,12 @@ public class DistHelloWorldMultiThread {
     //Now sit back and enjoy the fun, add some churn..
 
     int kill_counter = 0;
+    int iters = 0;
     while (true) {
-      for (int i = 0; i < 50; i++) {
-        driver.sendRandomMessage();
+      if (iters < 10) {
+        for (int i = 0; i < 50; i++) {
+          driver.sendRandomMessage();
+        }
       }
       try {
         System.out.println("Messages Sent so far :" + driver.sentMessages());
@@ -318,13 +321,14 @@ public class DistHelloWorldMultiThread {
                         Iterator i = list.iterator();
                         while (i.hasNext()) {
                             HelloMsg m = (HelloMsg)i.next();
-                            System.out.println("  Missing msg: "+m);
-                            
+                            System.out.println("  Missing msg: "+m);                            
                         }
-        if (kill_counter < 10) {
+        if (kill_counter < numnodes*2/3) {
           driver.killPastryNode();
           kill_counter++;
           System.out.println("KillCounter:" + kill_counter);
+        } else {
+          iters++;
         }
 
         Thread.currentThread().sleep(5000);
@@ -437,9 +441,11 @@ public class DistHelloWorldMultiThread {
   * is called, and it can do any interesting stuff it wants.
   */
   public void killPastryNode() {
-
+  
+    int killNum = rng.nextInt(pastryNodes.size());
     DistPastryNode pn =
-      (DistPastryNode) pastryNodes.get(rng.nextInt(pastryNodes.size()));
+      (DistPastryNode) pastryNodes.remove(killNum);
+      helloClients.remove(killNum);      
     System.out.println("***********************   killing pastry node:" + pn);
     pn.kill();
   }
