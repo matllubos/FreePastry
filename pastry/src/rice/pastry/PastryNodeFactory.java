@@ -1,0 +1,95 @@
+//////////////////////////////////////////////////////////////////////////////
+// Rice Open Source Pastry Implementation                  //               //
+//                                                         //  R I C E      //
+// Copyright (c)                                           //               //
+// Romer Gil                   rgil@cs.rice.edu            //   UNIVERSITY  //
+// Andrew Ladd                 aladd@cs.rice.edu           //               //
+// Tsuen Wan Ngan              twngan@cs.rice.edu          ///////////////////
+//                                                                          //
+// This program is free software; you can redistribute it and/or            //
+// modify it under the terms of the GNU General Public License              //
+// as published by the Free Software Foundation; either version 2           //
+// of the License, or (at your option) any later version.                   //
+//                                                                          //
+// This program is distributed in the hope that it will be useful,          //
+// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
+// GNU General Public License for more details.                             //
+//                                                                          //
+// You should have received a copy of the GNU General Public License        //
+// along with this program; if not, write to the Free Software              //
+// Foundation, Inc., 59 Temple Place - Suite 330,                           //
+// Boston, MA  02111-1307, USA.                                             //
+//                                                                          //
+// This license has been added in concordance with the developer rights     //
+// for non-commercial and research distribution granted by Rice University  //
+// software and patent policy 333-99.  This notice may not be removed.      //
+//////////////////////////////////////////////////////////////////////////////
+
+package rice.pastry;
+
+import rice.pastry.messaging.*;
+import rice.pastry.security.*;
+
+import java.util.*;
+
+/**
+ * The interface to an object which can construct PastryNodes.
+ *
+ * @author Andrew Ladd
+ */
+
+public interface PastryNodeFactory 
+{
+    /**
+     * Call this to construct the material for a node for a new Pastry network.
+     */
+
+    public void constructNode();
+        
+    /**
+     * Gets the node id from the constructed node.
+     *
+     * @return a node id.
+     */
+
+    public NodeId getNodeId();
+
+    /**
+     * Gets the security manager for the constructed node.
+     *
+     * @return the security manager.
+     */
+    
+    public PastrySecurityManager getSecurityManager();
+    
+    /**
+     * Gets the message dispatch for the constructed node.
+     *
+     * @return the message dispatch.
+     */
+    
+    public MessageDispatch getMessageDispatch();
+
+    /**
+     * Returns an observable view of the leaf set.
+     *
+     * @return the leaf set observer.
+     */
+    
+    public Observable getLeafSet();
+
+    /**
+     * Returns an observable view of the route set.
+     *
+     * @return the route set observer.
+     */
+    
+    public Observable getRouteSet();
+    
+    /**
+     * Cleans up the construction.
+     */
+
+    public void doneWithNode(PastryNode pnode);
+}
