@@ -116,7 +116,7 @@ public class MultiringRegrTest {
   public static int BOOTSTRAP_PORT = 5009;
 
   // the procotol to use when creating nodes
-  public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
+  public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_DEFAULT;
 
   // the simulator to use in the case of direct
   public static int SIMULATOR = SIMULATOR_SPHERE;
@@ -572,11 +572,12 @@ public class MultiringRegrTest {
       if (args[i].equals("-protocol") && i+1 < args.length) {
         String s = args[i+1];
 
-        if (s.equalsIgnoreCase("wire"))
-          PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
-        else if (s.equalsIgnoreCase("rmi"))
-          PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
-        else if (s.equalsIgnoreCase("socket"))
+//        if (s.equalsIgnoreCase("wire"))
+//          PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
+//        else if (s.equalsIgnoreCase("rmi"))
+//          PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
+//        else 
+          if (s.equalsIgnoreCase("socket"))
           PROTOCOL = DistPastryNodeFactory.PROTOCOL_SOCKET;
         else if (s.equalsIgnoreCase("direct"))
           PROTOCOL = PROTOCOL_DIRECT;

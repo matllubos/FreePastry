@@ -328,11 +328,12 @@ public class RingCertificate implements Serializable {
         
     // translate the protocol
     int protocolId = 0;
-    if (protocol.equalsIgnoreCase("wire")) {
-      protocolId = DistPastryNodeFactory.PROTOCOL_WIRE;
-    } else if (protocol.equalsIgnoreCase("rmi")) {
-      protocolId = DistPastryNodeFactory.PROTOCOL_RMI;
-    } else if (protocol.equalsIgnoreCase("socket")) {
+//    if (protocol.equalsIgnoreCase("wire")) {
+//      protocolId = DistPastryNodeFactory.PROTOCOL_WIRE;
+//    } else if (protocol.equalsIgnoreCase("rmi")) {
+//      protocolId = DistPastryNodeFactory.PROTOCOL_RMI;
+//    } else 
+      if (protocol.equalsIgnoreCase("socket")) {
       protocolId = DistPastryNodeFactory.PROTOCOL_SOCKET;
     } 
     

@@ -43,7 +43,7 @@ public class DistRMRegrTest {
     private static String bshost = null;
     private static int bsport = 5009;
     private static int numNodes = 5;
-    public static int protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
+    public static int protocol = DistPastryNodeFactory.PROTOCOL_DEFAULT;
 
 
     public DistRMRegrTest(){
@@ -125,10 +125,13 @@ public class DistRMRegrTest {
 	    if (args[i].equals("-protocol") && i+1 < args.length) {
 		String s = args[i+1];
 
-		if (s.equalsIgnoreCase("wire"))
-		    protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
-		else if (s.equalsIgnoreCase("rmi"))
-		    protocol = DistPastryNodeFactory.PROTOCOL_RMI;
+//		if (s.equalsIgnoreCase("wire"))
+//		    protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
+//    else if (s.equalsIgnoreCase("rmi"))
+//      protocol = DistPastryNodeFactory.PROTOCOL_RMI;
+//    else 
+      if (s.equalsIgnoreCase("socket"))
+      protocol = DistPastryNodeFactory.PROTOCOL_SOCKET;
 		else
 		    System.out.println("ERROR: Unsupported protocol: " + s);
 

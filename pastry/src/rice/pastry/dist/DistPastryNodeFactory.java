@@ -29,16 +29,18 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
   /**
    * DESCRIBE THE FIELD
    */
-  public static int PROTOCOL_RMI = 0;
+//  public static int PROTOCOL_RMI = 0;
   /**
    * DESCRIBE THE FIELD
    */
-  public static int PROTOCOL_WIRE = 1;
+//  public static int PROTOCOL_WIRE = 1;
   /**
    * DESCRIBE THE FIELD
    */
   public static int PROTOCOL_SOCKET = 2;
 
+  public static int PROTOCOL_DEFAULT = PROTOCOL_SOCKET;
+  
   /**
    * Constructor. Protected - one should use the getFactory method.
    */

@@ -36,7 +36,7 @@ public class DistHelloWorld {
     private static int bsport = 5009;
     private static int numnodes = 5;
     private static int nummsgs = 2; // per virtual node
-    public static int protocol = DistPastryNodeFactory.PROTOCOL_RMI;
+    public static int protocol = DistPastryNodeFactory.PROTOCOL_DEFAULT;
 
     /**
      * Constructor
@@ -132,10 +132,13 @@ public class DistHelloWorld {
 	    if (args[i].equals("-protocol") && i+1 < args.length) {
 		String s = args[i+1];
 
-		if (s.equalsIgnoreCase("wire"))
-		    protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
-		else if (s.equalsIgnoreCase("rmi"))
-		    protocol = DistPastryNodeFactory.PROTOCOL_RMI;
+//		if (s.equalsIgnoreCase("wire"))
+//		    protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
+//    else if (s.equalsIgnoreCase("rmi"))
+//      protocol = DistPastryNodeFactory.PROTOCOL_RMI;
+//    else 
+      if (s.equalsIgnoreCase("socket"))
+      protocol = DistPastryNodeFactory.PROTOCOL_SOCKET;
 		else
 		    System.out.println("ERROR: Unsupported protocol: " + s);
 
