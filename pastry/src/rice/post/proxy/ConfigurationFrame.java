@@ -16,6 +16,9 @@ public class ConfigurationFrame extends JFrame {
   
   public static final Dimension ENABLE_BOX_SIZE = new Dimension(FRAME_WIDTH/2, DEFAULT_HEIGHT);
   public static final Dimension TEXT_BOX_SIZE = new Dimension(FRAME_WIDTH, DEFAULT_HEIGHT);
+  public static final Dimension LIST_SIZE = new Dimension(FRAME_WIDTH/2, DEFAULT_HEIGHT*4);
+  public static final Dimension LIST_BOX_SIZE = new Dimension(FRAME_WIDTH, DEFAULT_HEIGHT*6);
+  public static final Dimension LIST_BUTTONS_SIZE = new Dimension(FRAME_WIDTH, DEFAULT_HEIGHT);
   public static final Dimension NUMERIC_BOX_SIZE = new Dimension(FRAME_WIDTH/2, DEFAULT_HEIGHT);
  
   protected Parameters parameters;
@@ -25,14 +28,33 @@ public class ConfigurationFrame extends JFrame {
   public ConfigurationFrame(Parameters parameters) {
     super("ePOST Configuration");
     
+    addWindowListener(new WindowListener() {
+      public void windowActivated(WindowEvent e) {}      
+      public void windowClosed(WindowEvent e) {
+        synchronized (ConfigurationFrame.this) {
+          ConfigurationFrame.this.notify();
+        }
+      }      
+      public void windowClosing(WindowEvent e) {
+        synchronized (ConfigurationFrame.this) {
+          ConfigurationFrame.this.notify();
+        }
+      }      
+      public void windowDeactivated(WindowEvent e) {}      
+      public void windowDeiconified(WindowEvent e) {}      
+      public void windowIconified(WindowEvent e) {}      
+      public void windowOpened(WindowEvent e) {}
+    });
+    
     this.parameters = parameters;
-    this.panels = new ControlPanel[6];
+    this.panels = new ControlPanel[7];
     this.panels[0] = new EmailConfiguration();
-    this.panels[1] = new JavaConfiguration();
-    this.panels[2] = new PostConfiguration();
-    this.panels[3] = new ProxyConfiguration();
-    this.panels[4] = new GlacierConfiguration();
-    this.panels[5] = new OtherConfiguration();
+    this.panels[1] = new ForwardingConfiguration();
+    this.panels[2] = new JavaConfiguration();
+    this.panels[3] = new PostConfiguration();
+    this.panels[4] = new ProxyConfiguration();
+    this.panels[5] = new GlacierConfiguration();
+    this.panels[6] = new OtherConfiguration();
     
     GridBagLayout layout = new GridBagLayout();
     getContentPane().setLayout(layout);
@@ -40,11 +62,12 @@ public class ConfigurationFrame extends JFrame {
     JTabbedPane pane = new JTabbedPane();
     
     pane.addTab("Email", null, panels[0], "Email Configuration Pane");
-    pane.addTab("Java", null, panels[1], "Java Configuration Pane");
-    pane.addTab("POST", null, panels[2], "POST Configuration Pane");
-    pane.addTab("Proxy", null, panels[3], "Proxy Configuration Pane");
-    pane.addTab("Glacier", null, panels[4], "Glacier Configuration Pane");
-    pane.addTab("Other", null, panels[5], "Other Configuration Pane");
+    pane.addTab("Forward", null, panels[1], "Email Forwarding Configuration Pane");
+    pane.addTab("Java", null, panels[2], "Java Configuration Pane");
+    pane.addTab("POST", null, panels[3], "POST Configuration Pane");
+    pane.addTab("Proxy", null, panels[4], "Proxy Configuration Pane");
+    pane.addTab("Glacier", null, panels[5], "Glacier Configuration Pane");
+    pane.addTab("Other", null, panels[6], "Other Configuration Pane");
 
     ButtonPane button = new ButtonPane(new GridBagLayout());
     
@@ -70,10 +93,18 @@ public class ConfigurationFrame extends JFrame {
     
     protected JButton cancel;
     protected JButton save;
+    protected JButton password;
     
     protected ButtonPane(GridBagLayout layout) {
       super(layout);
      
+      this.password = new JButton("Change Password");
+      this.password.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          new ChangePasswordFrame(parameters);
+        }
+      });
+      
       this.cancel = new JButton("Cancel");
       this.cancel.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
@@ -96,12 +127,17 @@ public class ConfigurationFrame extends JFrame {
         }
       });
       
+      GridBagConstraints gbb = new GridBagConstraints();
+      layout.setConstraints(password, gbb);
+      add(password); 
+      
       GridBagConstraints gbc = new GridBagConstraints();
+      gbc.gridx = 1;
       layout.setConstraints(cancel, gbc);      
       add(cancel); 
       
       GridBagConstraints gbd = new GridBagConstraints();
-      gbd.gridx = 1;
+      gbd.gridx = 2;
       layout.setConstraints(save, gbd);      
       add(save);
     }
@@ -137,6 +173,13 @@ public class ConfigurationFrame extends JFrame {
                                 new ImapConfiguration(new GridBagLayout()),
                                 new Pop3Configuration(new GridBagLayout()),
                                 new SSLConfiguration(new GridBagLayout())});
+    }
+  }
+  
+  protected class ForwardingConfiguration extends ControlPanel {
+    public ForwardingConfiguration() {
+      super(new GridBagLayout(), 
+            new TitledPanel[] { new GeneralForwardingConfiguration(new GridBagLayout())});
     }
   }
   
@@ -256,6 +299,14 @@ public class ConfigurationFrame extends JFrame {
       super("General", layout, 
             new ConfigurationPanel[][] { 
             { new EnableBox("email_gateway", "Serve As Gateway", new GridBagLayout(), "Whether or not this machine should serve as a gateway - this should only be done by site administrators"), new EnableBox("email_accept_nonlocal", "Non-Local Connections", new GridBagLayout(), "Whether or not the email servers should accept connections which are not from the local box") } });
+    }
+  }
+  
+  protected class GeneralForwardingConfiguration extends TitledPanel {
+    public GeneralForwardingConfiguration(GridBagLayout layout) {      
+      super("Email Forwarding", layout, 
+            new ConfigurationPanel[][] { 
+            { new ListBox("post_forward_addresses", "Forwarding Addresses", new GridBagLayout(), "The list of email addresses you would like your mail forwarded to - note that these must be ePOST addresses")} });
     }
   }
 
@@ -540,6 +591,160 @@ public class ConfigurationFrame extends JFrame {
     }
   }
   
+  protected class ListBox extends ConfigurationPanel {
+    
+    protected String label;
+    
+    protected JList field;
+    
+    protected DefaultListModel model;
+    
+    public ListBox(String parameter, String label, GridBagLayout layout, String tip) {
+      super(parameter, layout);
+      this.label = label; 
+      this.model = new DefaultListModel();
+      
+      String[] array = parameters.getStringArrayParameter(parameter);
+      for (int i=0; i<array.length; i++)
+        model.add(i, array[i]);
+      
+      this.field = new JList(model);
+      this.field.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+      this.field.setLayoutOrientation(JList.VERTICAL);
+      this.field.setVisibleRowCount(-1);
+      
+      JScrollPane listScroller = new JScrollPane(this.field);
+      listScroller.setPreferredSize(LIST_SIZE);
+      
+      JLabel fieldLabel = new JLabel(label + ": ", JLabel.TRAILING);
+      fieldLabel.setLabelFor(field);
+      fieldLabel.setToolTipText(tip);
+      
+      setPreferredSize(LIST_BOX_SIZE);
+      
+      GridBagConstraints gbc1 = new GridBagConstraints();
+      layout.setConstraints(fieldLabel, gbc1);      
+      add(fieldLabel);
+      
+      GridBagConstraints gbc2 = new GridBagConstraints();
+      gbc2.gridx = 1;
+      gbc2.gridwidth = 2;
+      layout.setConstraints(listScroller, gbc2);      
+      add(listScroller);
+      
+      JButton add = new JButton(" Add ");
+      JButton remove = new JButton("Remove");
+      
+      GridBagConstraints gbc3 = new GridBagConstraints();
+      gbc3.gridx = 1;
+      gbc3.gridy = 1;
+      layout.setConstraints(add, gbc3);      
+      add(add);
+      
+      GridBagConstraints gbc4 = new GridBagConstraints();
+      gbc4.gridx = 2;
+      gbc4.gridy = 1;
+      layout.setConstraints(remove, gbc4);      
+      add(remove);
+      
+      remove.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          int selected = field.getSelectedIndex();
+          if (selected >= 0) {
+            int i = JOptionPane.showConfirmDialog(null, "Are you sure you want to remove the address '" + model.elementAt(selected) + "'?", "Confirm Removal", JOptionPane.YES_NO_OPTION);
+            
+            if (i == JOptionPane.YES_OPTION) {
+              model.removeElementAt(selected); 
+            }
+          }
+        }
+      });
+      
+      add.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          new ListElementAddFrame();
+        }
+      });
+    }
+    
+    public class ListElementAddFrame extends JFrame {
+     
+      protected JTextField field;
+      
+      public ListElementAddFrame() {
+        super("Add Element");
+        this.field = new JTextField(20);
+        GridBagLayout layout = new GridBagLayout();
+        
+        getContentPane().setLayout(layout);
+        
+        JLabel fieldLabel = new JLabel("Please enter the element: ", JLabel.TRAILING);
+        fieldLabel.setLabelFor(field);
+        
+        GridBagConstraints gbc1 = new GridBagConstraints();
+        layout.setConstraints(fieldLabel, gbc1);      
+        getContentPane().add(fieldLabel);
+        
+        GridBagConstraints gbc2 = new GridBagConstraints();
+        gbc2.gridx = 1;
+        gbc2.gridwidth = 2;
+        layout.setConstraints(field, gbc2);      
+        getContentPane().add(field);
+        
+        JButton cancel = new JButton("Cancel");
+        JButton submit = new JButton("Submit");
+        
+        GridBagConstraints gbc3 = new GridBagConstraints();
+        gbc3.gridx = 1;
+        gbc3.gridy = 1;
+        layout.setConstraints(cancel, gbc3);      
+        getContentPane().add(cancel);
+        
+        GridBagConstraints gbc4 = new GridBagConstraints();
+        gbc4.gridx = 2;
+        gbc4.gridy = 1;
+        layout.setConstraints(submit, gbc4);      
+        getContentPane().add(submit);
+        
+        final JFrame frame = this;
+        
+        getRootPane().setDefaultButton(submit);
+        
+        cancel.addActionListener(new ActionListener() {
+          public void actionPerformed(ActionEvent e) {
+            frame.dispose();
+          }
+        });
+        
+        submit.addActionListener(new ActionListener() {
+          public void actionPerformed(ActionEvent e) {
+            model.addElement(field.getText());
+            frame.dispose();
+          }
+        });
+        
+        pack();
+        show();
+      }
+    }
+    
+    protected String getValue() {
+      StringBuffer result = new StringBuffer();
+      Object[] array = model.toArray();
+      
+      for (int i=0; i<array.length; i++) {
+        if (! array[i].toString().equals("")) {
+          result.append(array[i].toString());
+      
+          if (i < array.length-1)
+            result.append(",");
+        }
+      }
+      
+      return result.toString(); 
+    }
+  }
+  
   protected class SliderBox extends ConfigurationPanel {
 
     protected String label;
@@ -632,6 +837,123 @@ public class ConfigurationFrame extends JFrame {
     } catch (Exception e) { System.out.println("ERROR: " + e); }
     
     return null;
+  }
+  
+  public class ChangePasswordFrame extends JFrame {
+    
+    protected JPasswordField old;
+    protected JPasswordField new1;
+    protected JPasswordField new2;
+    
+    protected Parameters parameters;
+    
+    protected boolean submitted = false;
+    
+    public ChangePasswordFrame(Parameters p) {
+      super("Password");
+      this.parameters = p;
+      this.old = new JPasswordField(20);
+      this.new1 = new JPasswordField(20);
+      this.new2 = new JPasswordField(20);
+      GridBagLayout layout = new GridBagLayout();
+      
+      getContentPane().setLayout(layout);
+      
+      JLabel oldLabel = new JLabel("Current password: ", JLabel.TRAILING);
+      oldLabel.setLabelFor(old);
+      
+      JLabel new1Label = new JLabel("New password: ", JLabel.TRAILING);
+      new1Label.setLabelFor(new1);
+                           
+      JLabel new2Label = new JLabel("Re-enter new password: ", JLabel.TRAILING);
+      new2Label.setLabelFor(new2);
+                           
+      GridBagConstraints gbc1 = new GridBagConstraints();
+      layout.setConstraints(oldLabel, gbc1);      
+      getContentPane().add(oldLabel);
+      
+      GridBagConstraints gbc2 = new GridBagConstraints();
+      gbc2.gridx = 1;
+      gbc2.gridwidth = 2;
+      layout.setConstraints(old, gbc2);      
+      getContentPane().add(old);
+      
+      GridBagConstraints gbc3 = new GridBagConstraints();
+      gbc3.gridy = 1;
+      layout.setConstraints(new1Label, gbc3);      
+      getContentPane().add(new1Label);
+      
+      GridBagConstraints gbc4 = new GridBagConstraints();
+      gbc4.gridy = 1;
+      gbc4.gridx = 1;
+      gbc4.gridwidth = 2;
+      layout.setConstraints(new1, gbc4);      
+      getContentPane().add(new1);
+      
+      GridBagConstraints gbc5 = new GridBagConstraints();
+      gbc5.gridy = 2;
+      layout.setConstraints(new2Label, gbc5);      
+      getContentPane().add(new2Label);
+      
+      GridBagConstraints gbc6 = new GridBagConstraints();
+      gbc6.gridy = 2;
+      gbc6.gridx = 1;
+      gbc6.gridwidth = 2;
+      layout.setConstraints(new2, gbc6);      
+      getContentPane().add(new2);
+      
+      JButton submit = new JButton("Submit");
+      
+      GridBagConstraints gbc7 = new GridBagConstraints();
+      gbc7.gridy = 3;
+      gbc7.gridx = 2;
+      layout.setConstraints(submit, gbc7);      
+      getContentPane().add(submit);
+      
+      JButton cancel = new JButton("Cancel");
+      
+      GridBagConstraints gbc8 = new GridBagConstraints();
+      gbc8.gridy = 3;
+      gbc8.gridx = 1;
+      layout.setConstraints(cancel, gbc8);      
+      getContentPane().add(cancel);
+      
+      getRootPane().setDefaultButton(submit);
+      
+      submit.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          if (old.getText().equals(parameters.getStringParameter("post_password"))) {
+            if (new1.getText().equals(new2.getText())) {
+              if (new1.getText().length() > 0) {
+                try {
+                  rice.post.security.ca.CAPasswordChanger.changePassword(parameters.getStringParameter("post_username"), old.getText(), new1.getText());
+                  JOptionPane.showMessageDialog(null, "Your password has been changed - it will not take effect until a reboot.");
+                } catch (Exception f) {
+                  JOptionPane.showMessageDialog(null, "An error occurred - your password has not been changed.\n\n" + f.toString());   
+                }
+                
+                ChangePasswordFrame.this.dispose();
+              } else {
+                JOptionPane.showMessageDialog(null, "Please enter a non-null password.");
+              }
+            } else {
+              JOptionPane.showMessageDialog(null, "The passwords do not match - please try again");
+            }
+          } else {
+            JOptionPane.showMessageDialog(null, "The old password was incorrent - please try again."); 
+          }
+        }
+      });
+      
+      cancel.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          ChangePasswordFrame.this.dispose();
+        }
+      });
+      
+      pack();
+      show();
+    }
   }
   
 }
