@@ -38,6 +38,8 @@ package rice.pastry.multiring;
 
 import rice.pastry.*;
 
+import java.util.*;
+
 /**
  * This class represents a nodeId, combined with a ring-identfying Id.  This
  * class is designed to be backwards-compatible with other applications, as all
@@ -77,6 +79,26 @@ public class RingNodeId extends NodeId {
     return ringId;
   }
 
+  public void setRingId(RingId ringId) {
+    if (this.ringId == null) {
+      this.ringId = ringId;
+    }
+  }
+
+  public int hashCode() {
+    return super.hashCode();
+  }
+
+  public boolean equals(Object o) {
+    if (o instanceof RingNodeId) {
+      RingNodeId other = (RingNodeId) o;
+
+      return Arrays.equals(this.copy(), other.copy());
+    }
+
+    return false;
+  }
+  
   public String toString() {
     return "[RingId:" + ringId + ", NodeId" + super.toString() + "]";
   }

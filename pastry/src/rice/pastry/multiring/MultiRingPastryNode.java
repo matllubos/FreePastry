@@ -40,10 +40,12 @@ import java.util.*;
 
 import rice.pastry.*;
 import rice.pastry.client.*;
+import rice.pastry.join.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
 import rice.pastry.security.*;
+import rice.pastry.standard.*;
 
 /**
  * Class which represents a pastry node which is in multiple rings.  It internally
@@ -85,41 +87,67 @@ public class MultiRingPastryNode extends PastryNode {
   public PastryNode getPastryNode() {
     return primaryNode;
   }
+
+  public RingId getRingId() {
+    return ((RingNodeId) myNodeId).getRingId();
+  }
   
-  public void receiveMessage(Message msg) {
+  public void processMessage(Message msg) {
+    System.out.println(getNodeId() + " Saw the message " + msg.getClass().getName());
+    
+    if ((msg instanceof JoinRequest) &&
+        ((JoinRequest) msg).accepted()) {
+      NodeHandle acceptor = ((JoinRequest) msg).getJoinHandle();
+      RingNodeId nodeId = (RingNodeId) acceptor.getNodeId();
+      ((RingNodeId) myNodeId).setRingId(nodeId.getRingId());
+    }
+    
     if (msg instanceof RouteMessage) {
       RouteMessage rm = (RouteMessage) msg;
 
       if (rm.getTarget() instanceof RingNodeId) {
-        if (! ((RingNodeId) rm.getTarget()).getRingId().equals(appl.getRingId())) {
-          MultiRingPastryNode node = getNextHop(((RingNodeId) rm.getTarget()).getRingId());
+        RingId targetRingId = ((RingNodeId) rm.getTarget()).getRingId();
+        if (targetRingId != null) {
+          if (! targetRingId.equals(getRingId())) {
+            MultiRingPastryNode node = getNextHop(targetRingId);
 
-          if (node != null) {
-            System.out.println("Handing message for " + rm.getTarget() + " to other node " + node + " from " + this);
-            node.receiveMessage(rm);
-          } else {
-            System.out.println("Handing message for " + rm.getTarget() + " to appl for routing");
-            appl.routeMultiRingMessage(rm);
-          }
-
-          return;
-        } 
-      } 
+            if (node != null) {
+              System.out.println("Handing message for " + rm.getTarget() + " to other node " + node + " from " + this);
+              node.receiveMessage(rm);
+            } else {
+              System.out.println("Handing message for " + rm.getTarget() + " to appl for routing");
+              appl.routeMultiRingMessage(rm);
+            }
+          } 
+        }
+      }
     }
-    
-    primaryNode.receiveMessage(msg);
   }
 
   public void setBootstrap(NodeHandle bootstrap) {
-    appl.setBootstrap(bootstrap);
+    if (bootstrap == null) {
+      if (getParent() != null) {
+        RingId ringId = new RingId((new RandomNodeIdFactory()).generateNodeId().copy());
+        ((RingNodeId) myNodeId).setRingId(ringId);
+
+        System.out.println("Generated new random ring ID: " + ringId);
+
+        broadcastRingId(ringId);
+      } else {
+        RingId ringId = MultiRingPastryNode.GLOBAL_RING_ID;
+        ((RingNodeId) myNodeId).setRingId(ringId);
+        
+        System.out.println("Used global ringId: " + ringId);
+      }
+    } 
   }
 
   public void setParentPastryNode(MultiRingPastryNode parent) {
     if ((children.size() == 0) && (parentNode == null)) {
       parentNode = parent;
 
-      if (parent.getMultiRingAppl().getRingId() != null) {
-        appl.addRing(parent.getMultiRingAppl().getRingId());
+      if (getRingId() != null) {
+        appl.addRing(parent.getRingId());
       }
     } else {
       throw new IllegalArgumentException("Cannot set a parent of a node with children or a parent!");
@@ -130,8 +158,8 @@ public class MultiRingPastryNode extends PastryNode {
     if (parentNode == null) {
       children.addElement(child);
 
-      if (child.getMultiRingAppl().getRingId() != null) {
-        broadcastRingId(child.getMultiRingAppl().getRingId());
+      if (child.getRingId() != null) {
+        broadcastRingId(child.getRingId());
       }
     } else {
       throw new IllegalArgumentException("Cannot add a child to a node with a parent!");
@@ -151,7 +179,6 @@ public class MultiRingPastryNode extends PastryNode {
       }
     }
   }
-    
 
   public MultiRingAppl getMultiRingAppl() {
     return appl;
@@ -165,7 +192,7 @@ public class MultiRingPastryNode extends PastryNode {
     for (int i=0; i<children.size(); i++) {
       MultiRingPastryNode node = (MultiRingPastryNode) children.elementAt(i);
 
-      if (node.getMultiRingAppl().getRingId().equals(ringId)) {
+      if (node.getRingId().equals(ringId)) {
         return node;
       }
     }
@@ -175,6 +202,12 @@ public class MultiRingPastryNode extends PastryNode {
   
   // ----- METHODS WHICH JUST PASS THROUGH TO THE PASTRY NODE -----
 
+  public void receiveMessage(Message m) { primaryNode.receiveMessage(m); }
+    
+  public MessageDispatch getMessageDispatch() { return primaryNode.getMessageDispatch(); }
+
+  public void setMessageDispatch(MessageDispatch md) { primaryNode.setMessageDispatch(md); }
+  
   public final void setElements(NodeHandle lh, PastrySecurityManager sm, MessageDispatch md, LeafSet ls, RoutingTable rt) {
     primaryNode.setElements(lh, sm, md, ls, rt);
   }

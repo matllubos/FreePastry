@@ -5,7 +5,9 @@ SOURCE	= \
 	MultiRingPastryNodeFactory.java\
   MultiRingAppl.java\
   RingId.java\
-  RingNodeId.java
+  RingNodeId.java\
+  RandomRingNodeIdFactory.java\
+  MultiRingMessageDispatch.java
 
 MAIN	= 
 

@@ -54,7 +54,7 @@ import java.util.*;
 
 public abstract class PastryNode implements MessageReceiver {
 
-    private NodeId myNodeId;
+    protected NodeId myNodeId;
     private PastrySecurityManager mySecurityManager;
     private MessageDispatch myMessageDispatch;
     private LeafSet leafSet;
@@ -103,6 +103,19 @@ public abstract class PastryNode implements MessageReceiver {
     public NodeId getNodeId() { return myNodeId; }
     
     public boolean isReady() { return ready; }
+
+    /**
+     * FOR TESTING ONLY - DO NOT USE!
+     */
+    public MessageDispatch getMessageDispatch() {
+      return myMessageDispatch;
+    }
+
+    public void setMessageDispatch(MessageDispatch md) {
+      myMessageDispatch = md;
+
+      System.out.println("Set MD to a " + md.getClass().getName());
+    }
     
     /**
      * Overridden by derived classes, and invoked when the node has

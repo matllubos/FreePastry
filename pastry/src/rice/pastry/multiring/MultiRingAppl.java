@@ -67,8 +67,6 @@ import rice.scribe.messaging.*;
 public class MultiRingAppl extends PastryAppl implements IScribeApp {
 
   public static int REMINDER_TIMEOUT = 5000;
-  
-  private RingId ringId;
 
   private Scribe scribe;
 
@@ -94,31 +92,17 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp {
     cache = new RouteCache();
   }
 
-  public RingId getRingId() {
-    return ringId;
-  }
-
   public void addRing(RingId ringId) {
-    System.out.println("Joining SCRIBE group " + ringId + " at " + thePastryNode.getNodeId() + " (" + this.ringId + ")");
+    System.out.println("Joining SCRIBE group " + getRingId() + " at " + thePastryNode.getNodeId());
     scribe.join(ringId.toNodeId(), this, credentials, null);
   }
 
+  protected RingId getRingId() {
+    return ((RingNodeId) thePastryNode.getNodeId()).getRingId();
+  }
+
   public void messageForAppl(Message msg) {
-    if (msg instanceof RingIdRequestMessage) {
-      RingIdRequestMessage request = (RingIdRequestMessage) msg;
-      routeMsgDirect(request.getSource(), new RingIdResponseMessage(ringId), credentials, null);
-    } else if (msg instanceof RingIdResponseMessage) {
-      RingIdResponseMessage response = (RingIdResponseMessage) msg;
-
-      if (ringId == null) {
-        ringId = response.getRingId();
-
-        System.out.println("Received ring ID: " + ringId);
-        ((MultiRingPastryNode) thePastryNode).broadcastRingId(ringId);
-      }	else {
-        System.out.println("Received unexpected ringid response (" + response.getRingId() + ") - ignoring.");
-      }
-    } else if (msg instanceof RingLookupResponseMessage) {
+    if (msg instanceof RingLookupResponseMessage) {
       RingLookupResponseMessage response = (RingLookupResponseMessage) msg;
       RouteMessage[] messages = pending.get(response.getRingId());
 
@@ -139,7 +123,7 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp {
 
       RouteMessage[] messages = pending.get(reminder.getRingId());
 
-      if (ringId.equals(MultiRingPastryNode.GLOBAL_RING_ID)) {
+      if (getRingId().equals(MultiRingPastryNode.GLOBAL_RING_ID)) {
         System.out.println("ERROR - Could not find a node in ring " + reminder.getRingId() + " in the global ring - dropping messages on floor.");
       } else {
         System.out.println("Could not find direct route to " + reminder.getRingId() + " - rerouting via global ring.");
@@ -152,26 +136,6 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp {
       System.out.println("Received unknown message " + msg + " - ignoring.");
     } 
   }
-  
-  public void setBootstrap(NodeHandle bootstrap) {
-    if (bootstrap == null) {
-      if (((MultiRingPastryNode) thePastryNode).getParent() != null) {
-        ringId = new RingId((new RandomNodeIdFactory()).generateNodeId().copy());
-
-        System.out.println("Generated new random ring ID: " + ringId);
-
-        ((MultiRingPastryNode) thePastryNode).broadcastRingId(ringId);
-      } else {
-        ringId = MultiRingPastryNode.GLOBAL_RING_ID;
-        
-        System.out.println("Used global ringId: " + ringId);
-      }
-    } else {
-      System.out.println("Sending a messge to " + bootstrap.getNodeId() + " to determine ring id");
-      routeMsgDirect(bootstrap, new RingIdRequestMessage(getNodeHandle()), credentials, null);
-    }
-  }
-
 
   protected void routeMultiRingMessage(RouteMessage rm) {
     routeMultiRingMessage(rm, ((RingNodeId) rm.getTarget()).getRingId());
@@ -208,7 +172,7 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp {
   public boolean anycastHandler(ScribeMessage msg) {
     MessageAnycast anycast = (MessageAnycast) msg;
     RingLookupRequestMessage request = (RingLookupRequestMessage) anycast.getData();
-    System.out.println("Received anycast for ringId " + request.getRingId() + " in ringId " + ringId + " at nodeId " + thePastryNode.getNodeId() +
+    System.out.println("Received anycast for ringId " + request.getRingId() + " in ringId " + getRingId() + " at nodeId " + thePastryNode.getNodeId() +
                        " from " + anycast.getSource() + " - responding.");
     RingLookupResponseMessage response = new RingLookupResponseMessage(getNodeHandle(), request.getRingId());
 

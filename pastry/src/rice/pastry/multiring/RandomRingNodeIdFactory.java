@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate
+"FreePastry" Peer-to-Peer Application Development Substrate 
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -34,30 +34,32 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry.multiring.messaging;
+package rice.pastry.multiring;
 
 import rice.pastry.*;
-import rice.pastry.multiring.*;
+import rice.pastry.standard.*;
+
+import java.util.Random;
+import java.security.*;
 
 /**
-* A class representing a ring id request.
+ * Constructs random ring node ids by SHA'ing consecutive numbers, with random starting value.
  *
  * @version $Id$
  *
  * @author Alan Mislove
  */
-public class RingIdRequestMessage extends MultiRingApplMessage {
 
-  private NodeHandle source;
-  
+public class RandomRingNodeIdFactory extends RandomNodeIdFactory {
+
   /**
-  * Constructor
+   * generate a nodeId
+   *
+   * @return the new nodeId
    */
-  public RingIdRequestMessage(NodeHandle source) {
-    this.source = source;
+  public NodeId generateNodeId() {
+    return new RingNodeId(super.generateNodeId(), null);
   }
 
-  public NodeHandle getSource() {
-    return source;
-  }
 }
+

@@ -155,12 +155,20 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
 
     SelectorManager sManager = new SelectorManager(pn);
 
-    DatagramManager dManager = new DatagramManager(pn, sManager, port);
+    DatagramManager dManager = null;
+    SocketManager socketManager = null;
+    InetSocketAddress address = null;
+    
+    synchronized (this) {
+      dManager = new DatagramManager(pn, sManager, port);
+      
+      socketManager = new SocketManager(pn, port , sManager.getSelector());
 
-    SocketManager socketManager = new SocketManager(pn, port , sManager.getSelector());
+      address = getAddress(port);
 
-    InetSocketAddress address = getAddress(port);
-
+      port++;
+    }
+      
     WireNodeHandle localhandle = new WireNodeHandle(address, nodeId);
 
     WireNodeHandlePool pool = new WireNodeHandlePool(pn);
@@ -206,8 +214,6 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
     pn.setThread(t);
 
     t.start();
-
-    port++;
 
     return pn;
   }

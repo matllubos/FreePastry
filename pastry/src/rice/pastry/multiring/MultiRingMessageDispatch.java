@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate
+"FreePastry" Peer-to-Peer Application Development Substrate 
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -34,30 +34,26 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry.multiring.messaging;
+package rice.pastry.multiring;
 
-import rice.pastry.*;
-import rice.pastry.multiring.*;
+import java.util.*;
+import rice.pastry.messaging.*;
 
-/**
- * A class representing a ring id response.
- *
- * @version $Id$
- *
- * @author Alan Mislove
- */
-public class RingIdResponseMessage extends MultiRingApplMessage {
+public class MultiRingMessageDispatch extends MessageDispatch {
 
-  private RingId ringId;
-  
-  /**
-  * Constructor
-   */
-  public RingIdResponseMessage(RingId ringId) {
-    this.ringId = ringId;
+  private MultiRingPastryNode node;
+
+  private MessageDispatch dispatch;
+
+  public MultiRingMessageDispatch(MultiRingPastryNode node, MessageDispatch dispatch) {
+    this.node = node;
+    this.dispatch = dispatch;
   }
 
-  public RingId getRingId() {
-    return ringId;
+  public boolean dispatchMessage(Message msg) {
+    node.processMessage(msg);
+
+    return dispatch.dispatchMessage(msg);
   }
+
 }
