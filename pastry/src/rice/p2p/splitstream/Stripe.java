@@ -209,5 +209,17 @@ public class Stripe implements ScribeClient {
     public NodeHandle[] getChildren(){
 	return this.scribe.getChildren(new Topic(this.getStripeId().getId()));
     }
+
+    public NodeHandle getParent(){
+	return ((ScribeImpl)this.scribe).getParent(new Topic(this.getStripeId().getId()));
+    }
+    
+    public boolean isRoot(){
+	return ((ScribeImpl)this.scribe).isRoot(topic);
+    }
+
+    public void printPath(){
+	((ScribeImpl)this.scribe).printPathToRoot(topic);
+    }
 }
 

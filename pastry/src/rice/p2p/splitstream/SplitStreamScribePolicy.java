@@ -101,10 +101,10 @@ public class SplitStreamScribePolicy implements ScribePolicy {
       if(content != null && (content instanceof SplitStreamContent)){
 	  int stage = ((SplitStreamContent)content).getStage();
 	  if(stage == SplitStreamContent.STAGE_FINAL){
-	      System.out.println("Stage "+stage);
+	      //System.out.println("Stage "+stage);
 	      List list = Arrays.asList(children);
 	      if(!list.contains(message.getSource())){
-		  System.out.println("CHAOS :: sending drop message to "+message.getSource()+" a node which is not our child, at "+channel.getLocalId());
+		  //System.out.println("CHAOS :: sending drop message to "+message.getSource()+" a node which is not our child, at "+channel.getLocalId());
 		  return false;
 	      }
 	      else{
@@ -122,13 +122,31 @@ public class SplitStreamScribePolicy implements ScribePolicy {
 	  if(!message.getTopic().getId().equals(channel.getPrimaryStripe().getStripeId().getId()))
 	      return false;
 	  else{
-	      NodeHandle victimChild = freeBandwidth(channel, newChild, message.getTopic().getId());
-	      if(victimChild.getId().equals(newChild.getId()))
-		  return false;
-	      else{
-		  scribe.removeChild(new Topic(message.getTopic().getId()), victimChild);
-		  return true;
+	      if(children.length > 0){
+		  NodeHandle victimChild = freeBandwidth(channel, newChild, message.getTopic().getId());
+		  if(victimChild.getId().equals(newChild.getId()))
+		      return false;
+		  else{
+		      System.out.println("Removing child "+victimChild+" at "+channel.getLocalId()+" for topic "
+					 +message.getTopic().getId()+" for new child "+newChild);
+		      scribe.removeChild(new Topic(message.getTopic().getId()), victimChild);
+		      return true;
+		  }
 	      }
+	      else {
+		  Vector res = freeBandwidthUltimate(message.getTopic().getId());
+		  if(res != null){
+		      scribe.removeChild(new Topic((Id)res.elementAt(1)), (NodeHandle)res.elementAt(0));
+		      //scribe.addChild(message.getTopic(),((SubscribeMessage)message).getSubscriber());
+		      System.out.println("Adding child "+((SubscribeMessage)message).getSubscriber() + " for topic "
+					 +message.getTopic()+" at "+getChannel(message.getTopic()).getLocalId()
+					 +" removing child "+(NodeHandle)res.elementAt(0));
+		      return true;
+		  }
+		  else
+		      return false;
+	      }
+	      
 	  }
       }
   }
@@ -167,18 +185,46 @@ public class SplitStreamScribePolicy implements ScribePolicy {
     }
 
 
-    NodeHandle nextHop = message.getNext();
+
     if(message instanceof SubscribeMessage){
+
+	NodeHandle nextHop = message.getNext();
+	// make sure that the next node is alive
+	while ((nextHop != null) && (!nextHop.isAlive())) {
+	    nextHop = message.getNext();
+	}
+
 	if(nextHop == null){
-	    // If yes, then we are in 3rd stage of our algorithm
-	    // need to remove myself from the parent
-	    System.out.println(" **** 3rd Stage : source "+((SubscribeMessage)message).getSubscriber().getId()+" for stripe "+message.getTopic().getId()+" at "+getChannel(message.getTopic()).getLocalId()+" parent "+parent);
-	    //System.exit(1);
-	    //SplitStreamContent ssc = new SplitStreamContent(getChannel(message.getTopic()).getLocalId(), ((SubscribeMessage)message).getSubscriber());
-	    SplitStreamContent ssc = new SplitStreamContent(SplitStreamContent.STAGE_FINAL);
-	    message.remove(parent);
-	    message.addFirst(parent);
-	    message.setContent(ssc);
+
+	    // two cases, either
+	    // a) local node is a leaf
+	    // b) local node is root for non-prefix match topic,
+	    
+	    if(this.scribe.isRoot(message.getTopic())){
+		//System.out.println(" Local node "+getChannel(message.getTopic()).getLocalId()+" is root for topic "+message.getTopic().getId()+", next hop is null, for subscriber "+((SubscribeMessage)message).getSubscriber());
+		Vector res = freeBandwidthUltimate(message.getTopic().getId());
+		if(res != null){
+		    scribe.removeChild(new Topic((Id)res.elementAt(1)), (NodeHandle)res.elementAt(0));
+		    scribe.addChild(message.getTopic(),((SubscribeMessage)message).getSubscriber());
+		    System.out.println("Adding child "+((SubscribeMessage)message).getSubscriber() + " for topic "
+				       +message.getTopic()+" at "+getChannel(message.getTopic()).getLocalId()
+				       +" removing child "+(NodeHandle)res.elementAt(0));
+		    return;
+		}
+		
+	    }
+	    else{
+		
+		// If yes, then we are in 3rd stage of our algorithm
+		// need to remove myself from the parent
+		//System.out.println(" **** 3rd Stage : source "+((SubscribeMessage)message).getSubscriber().getId()+" for stripe "+message.getTopic().getId()+" at "+getChannel(message.getTopic()).getLocalId()+" parent "+parent);
+		//System.exit(1);
+		//SplitStreamContent ssc = new SplitStreamContent(getChannel(message.getTopic()).getLocalId(), ((SubscribeMessage)message).getSubscriber());
+		SplitStreamContent ssc = new SplitStreamContent(SplitStreamContent.STAGE_FINAL);
+		message.remove(parent);
+		message.addFirst(parent);
+		message.setContent(ssc);
+	    }
 	}
 	else
 	    message.addFirst(nextHop);
@@ -243,11 +289,63 @@ public class SplitStreamScribePolicy implements ScribePolicy {
      * @return A vector containing the child to be dropped and
      *         the corresponding stripeId
      */ 
+    public Vector freeBandwidthUltimate(Id stripeId){
+	Channel channel = getChannel(new Topic(stripeId));
+	Stripe[] stripes = channel.getStripes();
+
+	// find those stripes which are
+	// a) non-primary
+	// b) i am not root for them
+	// c) have at least one child
+
+	Vector candidateStripes = new Vector();
+	Id victimStripeId = null;
+	Topic tp;
+	for(int i = 0; i < stripes.length; i++){
+	    tp = new Topic(stripes[i].getStripeId().getId());
+	    /*
+	    if(channel.getPrimaryStripe().getStripeId().getId().equals(stripes[i].getStripeId().getId()))
+		System.out.println(stripes[i].getStripeId().getId()+" is same as primary stripe "+channel.getPrimaryStripe().getStripeId().getId()+" for "+i);
+	    if(this.scribe.isRoot(tp))
+		System.out.println("local node is root for "+tp.getId());
+	    System.out.println(scribe.getChildren(tp).length+" children for stripe "+tp.getId());
+	    */    
+	    if(!channel.getPrimaryStripe().getStripeId().getId().equals(stripes[i].getStripeId().getId()) && !this.scribe.isRoot(tp) && scribe.getChildren(tp).length > 0)
+		candidateStripes.add(stripes[i].getStripeId().getId());
+	}
+
+	if(candidateStripes.size() == 0){
+	    for(int i = 0; i < stripes.length; i++){
+		tp = new Topic(stripes[i].getStripeId().getId());
+		if(!channel.getPrimaryStripe().getStripeId().getId().equals(stripes[i].getStripeId().getId()) && scribe.getChildren(tp).length > 0 && !stripes[i].getStripeId().getId().equals(stripeId))
+		candidateStripes.add(stripes[i].getStripeId().getId());
+	    }
+	}
+
+	if(candidateStripes.size() > 0){
+	    victimStripeId = (Id)candidateStripes.elementAt(rng.nextInt(candidateStripes.size()));
+
+	    NodeHandle[] children;
+	    children = this.scribe.getChildren(new Topic(victimStripeId));
+	    if(children.length == 0){
+		System.out.println("Should not happen");
+		System.exit(1);
+	    }
+	    NodeHandle child = children[rng.nextInt(children.length)];
+	    Vector result = new Vector();
+	    //System.out.println("Vicitm stripe "+victimStripeId+" , at "+channel.getLocalId()+" victim child "+child.getId());
+	    result.addElement(child);
+	    result.addElement(victimStripeId);
+	    return result;
+	}
+	return null;
+    }
+
     public NodeHandle freeBandwidth(Channel channel, NodeHandle newChild, Id stripeId){
-        /** 
-         * This should be implemented depending upon the policies you want
-         * to use 
-         */
+         
+         // This should be implemented depending upon the policies you want
+         // to use 
+         //
 	Stripe primaryStripe = channel.getPrimaryStripe();
 	Id localId = channel.getLocalId();
 

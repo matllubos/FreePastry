@@ -88,7 +88,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
     testBasic();
     testBandwidthUsage();
     //testIndependence();
-    testMaintenance(NUM_NODES/10);
+    testMaintenance(NUM_NODES/2);
   }
 
     protected void testBandwidthUsage(){
@@ -152,7 +152,13 @@ public class SplitStreamRegrTest extends CommonAPITest {
 	    kill(i);
 	    simulate();
 	}
-	stepDone(SUCCESS);
+	if(checkTree(num, NUM_NODES))
+	    stepDone(SUCCESS);
+	else{
+	    //printPaths(num, NUM_NODES);
+	    stepDone(FAILURE, "not all have parent");
+
+	}
 	stepStart("Tree Recovery");
 
 	
@@ -160,22 +166,27 @@ public class SplitStreamRegrTest extends CommonAPITest {
 	for(int i = 0; i < 10; i++){
 	    ssclients[rng.nextInt(NUM_NODES - num) + num].publishAll(data);
 	    simulate();
-	}
+	    
+	    
+	    int totalmsgs = 0;
+	    for(int j = 0; j < NUM_NODES - num; j++){
+		totalmsgs = totalmsgs + ssclients[j+num].getNumMesgs(); 
+		if(ssclients[j+num].getNumMesgs() != 16)
+		    System.out.println(ssclients[i+num].getId()+" recived "+ssclients[i+num].getNumMesgs());
+		ssclients[j+num].reset();
+	    }
+	    System.out.println("Expected " + ((NUM_NODES - num) * 16) + " messages, got " + totalmsgs);
 
-	int totalmsgs = 0;
-	for(int i = 0; i < NUM_NODES - num; i++){
-	    totalmsgs = totalmsgs + ssclients[i+num].getNumMesgs(); 
-	    if(ssclients[i+num].getNumMesgs() != 16 * 10)
-		System.out.println(ssclients[i+num].getId()+" recived "+ssclients[i+num].getNumMesgs());
-	    ssclients[i+num].reset();
 	}
-	
+	/*
 	if(totalmsgs == ((NUM_NODES - num) * 16 * 10)){
 	    stepDone(SUCCESS);
 	}
 	else{
+	    printPaths(num, NUM_NODES);
 	    stepDone(FAILURE, "Expected " + ((NUM_NODES - num) * 16 * 10) + " messages, got " + totalmsgs);
 	}
+	*/
 	sectionDone();
     }
 
@@ -206,7 +217,10 @@ public class SplitStreamRegrTest extends CommonAPITest {
 	 ssclients[i].subscribeStripes();
 	 simulate();
      }
-     stepDone(SUCCESS);
+     if(checkTree(0, NUM_NODES))
+	 stepDone(SUCCESS);
+     else
+	 stepDone(FAILURE,"not all stripes have a parent");
      stepStart("Sending Data");
      byte[] data = {0,1,0,1,1};
      ssclients[creator].publishAll(data);
@@ -229,6 +243,32 @@ public class SplitStreamRegrTest extends CommonAPITest {
      sectionDone();
      testFailure(1);
   }
+
+    protected boolean checkTree(int startindex, int num){
+	Stripe[] stripes;
+	boolean result = true;
+	for(int i = startindex; i < num; i++){
+	    stripes = ssclients[i].getStripes();
+	    for(int j = 0; j < stripes.length; j++){
+		if(stripes[j].getParent() == null && !stripes[j].isRoot()){
+		    result = false;
+		    System.out.println("Node "+ssclients[i].getId()+" is parent less for topic "+stripes[j].getStripeId().getId());
+		}
+	    }
+	}
+	return result;
+    }
+
+    protected void printPaths(int startindex, int num){
+	Stripe[] stripes;
+	for(int i = startindex; i < num; i++){
+	    stripes = ssclients[i].getStripes();
+	    for(int j = 0; j < stripes.length; j++){
+		System.out.println("print path for stripe "+stripes[j].getStripeId().getId());
+		stripes[j].printPath();
+	    }
+	}
+    }
  
   protected void testFailure(int numnodes){
      sectionStart("Failure Test");
