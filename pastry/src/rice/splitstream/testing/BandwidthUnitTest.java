@@ -34,16 +34,18 @@ public class BandwidthUnitTest{
  private BandwidthManager bandwidthManager;
 
  public static void main(String argv[]){
-      System.out.println("Bandwidth Test Program v0.1");
       BandwidthUnitTest test = new BandwidthUnitTest();
-      test.init();
-      test.createNodes();
-      test.setChannel(test.createChannel());
-      test.setBandwidthManager(test.getChannel().getBandwidthManager());
-      test.testBandwidthManager();
+      test.run();
  } 
 
-  public void testBandwidthManager(){
+  public boolean run(){
+      init();
+      createNodes();
+      setChannel(createChannel());
+      setBandwidthManager(getChannel().getBandwidthManager());
+      return(testBandwidthManager());
+  }
+  public boolean testBandwidthManager(){
     boolean passed = true;
     System.out.println("");
     getBandwidthManager().setDefaultBandwidth(50);
@@ -124,6 +126,7 @@ public class BandwidthUnitTest{
     else{
       System.out.println("Bandwidth Unit Test         [ FAILED ] ");
     }
+    return passed;
   }
 
   public Channel getChannel(){
@@ -144,7 +147,6 @@ public class BandwidthUnitTest{
 
   public Channel createChannel(){
 
-	System.out.println("Attempting to create a Channel");
         int base = RoutingTable.baseBitLength();
 	Channel c = 
            ((ISplitStream) splitStreamNodes.elementAt(0)).createChannel(1<<base,"BandwidthUnitTest");
@@ -169,7 +171,6 @@ public class BandwidthUnitTest{
       while(simulate());
     }
     while(simulate());
-    System.out.println("All Nodes Created Succesfully");
   }
 
   protected void makeNode() {
