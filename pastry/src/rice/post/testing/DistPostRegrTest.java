@@ -60,6 +60,8 @@ public class DistPostRegrTest {
 
   private static int protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
 
+  private static String INSTANCE_NAME = "PostTesting";
+
   static {
     try {
       bshost = InetAddress.getLocalHost().getHostName();
@@ -112,7 +114,7 @@ public class DistPostRegrTest {
     pastrynodes.add(pn);
 
     StorageManager sm = new StorageManager(new MemoryStorage(), new LRUCache(new MemoryStorage(), 1000000));
-    PASTServiceImpl past = new PASTServiceImpl(pn, sm);
+    PASTServiceImpl past = new PASTServiceImpl(pn, sm, INSTANCE_NAME);
     pastNodes.add(past);
 
     Scribe scribe = new Scribe(pn, credentials);
@@ -135,7 +137,7 @@ public class DistPostRegrTest {
 
       PostCertificate certificate = security.generateCertificate(address, pair.getPublic(), caPair.getPrivate());
       
-      Post post = new Post(pn, past, scribe, address, pair, certificate, caPair.getPublic());
+      Post post = new Post(pn, past, scribe, address, pair, certificate, caPair.getPublic(), INSTANCE_NAME);
       postNodes.add(post);
 
       DummyPostClient dpc = new DummyPostClient(post);

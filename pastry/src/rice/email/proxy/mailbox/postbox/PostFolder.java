@@ -160,8 +160,6 @@ public class PostFolder implements MailFolder {
 
       LinkedList list = new LinkedList();
       Email[] emails = (Email[]) result[0];
-
-      System.out.println("called getMsgs, there were " + emails.length + " messages.");
       
       for (int i=emails.length-1; i>=0; i--) {
         PostMessage msg = new PostMessage(emails[i], emails.length-i, this.getFolder());

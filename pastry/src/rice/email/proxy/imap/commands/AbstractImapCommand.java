@@ -44,7 +44,7 @@ public abstract class AbstractImapCommand
 
     protected void taggedExceptionFailure(Throwable exception)
     {
-        _conn.println(
+        _conn.println("\r\n" +
                 _tag + " NO " + getCmdName() + " " + 
                 exception.getMessage());
     }

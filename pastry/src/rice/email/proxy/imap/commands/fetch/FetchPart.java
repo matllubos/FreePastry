@@ -4,6 +4,8 @@ import rice.email.proxy.imap.ImapConnection;
 
 import rice.email.proxy.mail.StoredMessage;
 
+import rice.email.proxy.mailbox.*;
+
 
 public abstract class FetchPart
 {
@@ -11,7 +13,7 @@ public abstract class FetchPart
 
     public abstract boolean canHandle(Object req);
 
-    public abstract void fetch(StoredMessage msg, Object part);
+    public abstract void fetch(StoredMessage msg, Object part) throws MailboxException;
 
     public ImapConnection getConn()
     {

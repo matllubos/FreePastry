@@ -47,6 +47,8 @@ public class EmailProxy {
 
   static final int DEFAULT_CACHE_SIZE = 100000;
   static final int DEFAULT_DISK_SIZE = 10000000;
+
+  static final String INSTANCE_NAME = "EmailProxy";
   
   private Credentials _credentials = new PermissiveCredentials();
 
@@ -117,7 +119,7 @@ public class EmailProxy {
       System.out.println("[ DONE ]");
 
       System.out.print("    Starting PAST service\t\t\t\t\t");
-      past = new PASTServiceImpl(pastry, storage);
+      past = new PASTServiceImpl(pastry, storage, INSTANCE_NAME);
       System.out.println("[ DONE ]");
 
       System.out.print("    Press <ENTER> when you have the Pastry and PAST networks up.\n");
@@ -125,7 +127,7 @@ public class EmailProxy {
       input.readLine();
 
       System.out.print("    Starting POST service\t\t\t\t\t");
-      post = new Post(pastry, past, scribe, address, pair, certificate, caPair.getPublic());
+      post = new Post(pastry, past, scribe, address, pair, certificate, caPair.getPublic(), INSTANCE_NAME);
       System.out.println("[ DONE ]");
       
       Thread.sleep(5000);

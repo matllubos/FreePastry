@@ -298,7 +298,7 @@ public class StorageService {
         chd.id = data;
 
         // Store the content hash data in PAST
-        past.insert(location, chd, credentials, this);
+        past.insert(location, chd, this);
 
         // Now we wait until PAST calls us with the receiveResult
         // and then we return the address
@@ -454,7 +454,7 @@ public class StorageService {
      */
     protected void start() {
       state = STATE_1;
-      past.delete(location, credentials, this);
+      past.delete(location, this);
 
       // Now we wait to see if this thing existed in PAST, which is relayed to
       // us via the receiveResult method
@@ -473,7 +473,7 @@ public class StorageService {
         state = STATE_2;
 
         // Store the signed data in PAST 
-        past.insert(location, sd, credentials, this);
+        past.insert(location, sd, this);
 
         // Now we wait to make sure that the update or insert worked, and
         // then return the reference.
@@ -693,7 +693,7 @@ public class StorageService {
         sd.id = data;
 
         // Store the content hash data in PAST
-        past.insert(location, sd, credentials, this);
+        past.insert(location, sd, this);
 
         // Now we wait until PAST calls us with the receiveResult
         // and then we return the address

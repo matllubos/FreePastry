@@ -129,6 +129,7 @@ public class Post extends PastryAppl implements IScribeApp  {
    * @param keyPair The KeyPair of this user
    * @param certificate The certificate authenticating this user
    * @param caPublicKey The public key of the certificate authority
+   * @param instance The unique instance name of this POST
    * 
    * @throws PostException if the PostLog could not be accessed
    */
@@ -138,10 +139,11 @@ public class Post extends PastryAppl implements IScribeApp  {
               PostEntityAddress address,
               KeyPair keyPair,
               PostCertificate certificate, 
-              PublicKey caPublicKey)
+              PublicKey caPublicKey,
+              String instance)
     throws PostException
   {
-    super(node);
+    super(node, instance);
     
     this.pastService = past;
     this.scribeService = scribe;

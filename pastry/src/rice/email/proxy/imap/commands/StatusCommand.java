@@ -58,12 +58,18 @@ public class StatusCommand
                 response += "MESSAGES " + exists + " ";
             }
 
-            if (_requests.contains("MESSAGES"))
+            if (_requests.contains("RECENT"))
             {
                 int recent = fold.getMessages(MsgFilter.RECENT).size();
                 response += "RECENT " + recent + " ";
             }
 
+            if (_requests.contains("UNSEEN"))
+            {
+              int recent = fold.getMessages(MsgFilter.not(MsgFilter.SEEN)).size();
+              response += "UNSEEN " + recent + " ";
+            }
+            
             if (_requests.contains("UIDVALIDITY"))
             {
                 String uid = fold.getUIDValidity();

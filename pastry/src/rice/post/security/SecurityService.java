@@ -43,7 +43,7 @@ public class SecurityService {
   /**
     * The name of the hash function.
    */
-  public static final String HASH_ALGORITHM = "MD5";
+  public static final String HASH_ALGORITHM = "SHA1";
 
   /**
     * The key pair used to sign data.

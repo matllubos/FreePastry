@@ -82,7 +82,7 @@ public class PostMailbox implements Mailbox {
         }
       };
 
-      root.getFolder().getChildFolder(name, fetch);
+      root.getFolder().getChildFolder(name.toLowerCase(), fetch);
 
       synchronized (wait) { if(folder[0] == null) wait.wait(); }
 

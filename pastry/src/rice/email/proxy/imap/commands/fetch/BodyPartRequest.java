@@ -53,12 +53,16 @@ public class BodyPartRequest
         
         if (_parts != null)
         {
+          result.append(" (");
+          
             for (Iterator i = getPartIterator(); i.hasNext();)
             {
                 result.append(i.next());
                 if (i.hasNext())
                     result.append(' ');
             }
+
+            result.append(")");
         }
 
         result.append("]");

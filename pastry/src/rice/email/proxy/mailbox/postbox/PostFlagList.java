@@ -20,8 +20,6 @@ public class PostFlagList implements FlagList {
       loc.put(email, new PostFlagList());
     }
 
-    System.out.println("There are " + loc.size() + " monkeys.");
-
     return (PostFlagList) loc.get(email);
   }
   
@@ -42,8 +40,6 @@ public class PostFlagList implements FlagList {
 
     if ("\\Seen".equalsIgnoreCase(flag))
       setSeen(value);
-
-    System.out.println("Setting flag " + flag);
   }
 
   public void commit()

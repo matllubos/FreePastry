@@ -121,92 +121,105 @@ public class EmailService extends PostClient {
     }
     
     // find the Client Id for this client
-    PostClientAddress pca = PostClientAddress.getAddress(this);
+    final PostClientAddress pca = PostClientAddress.getAddress(this);
 
-    // use the Id to fetch the root log
-    PostLog mainLog = null;  //_post.getPostLog(null);
-    
-    // use the main root log to try to fetch the ePost root log
-    LogReference emailLogRef = mainLog.getChildLog(pca);
+    final Continuation getLog = new Continuation() {
+      public void receiveResult(Object o) {
+        PostLog mainLog = (PostLog) o;
 
-    // if ePost does not yet have a root log, add one
-    // JM is it correct to add the new log at the same location as the previous one?
-    if (emailLogRef == null) {
-      
-      // fetch the folder, and then create an "inbox" folder
-      final Continuation fetch = new Continuation() {
-        public void receiveResult(Object o) {
-          try {
-            if (folder == null) {
-              
-              Log emailLog = (Log) o;
-              emailLog.setPost(_post);
+        if (mainLog == null) {
+          command.receiveException(new Exception("PostLog was null - aborting."));
+        } else {
+          // use the main root log to try to fetch the ePost root log
+          LogReference emailLogRef = mainLog.getChildLog(pca);
 
-              folder = new Folder(emailLog, _post);
+          // if ePost does not yet have a root log, add one
+          // JM is it correct to add the new log at the same location as the previous one?
+          if (emailLogRef == null) {
 
-              folder.createChildFolder("inbox", this);
-            } else {
-              inbox = (Folder) o;
-              command.receiveResult(folder);
-            }
-          } catch (ClassCastException e) {
-            command.receiveException(new ClassCastException("In getLog, expected a Log, got a " + o.getClass()));
-          }
-        }
+            // fetch the folder, and then create an "inbox" folder
+            final Continuation fetch = new Continuation() {
+              public void receiveResult(Object o) {
+                try {
+                  if (folder == null) {
 
-        public void receiveException(Exception e) {
-          command.receiveException(e);
-        }
-      };      
-      
-      // build a continuation to receive the result of the log storing
-      Continuation store = new Continuation() {
-        public void receiveResult(Object o) {
-          
-          try {
-            LogReference emailLogRef = (LogReference) o;
+                    Log emailLog = (Log) o;
+                    emailLog.setPost(_post);
+
+                    folder = new Folder(emailLog, _post);
+
+                    folder.createChildFolder("inbox", this);
+                  } else {
+                    inbox = (Folder) o;
+                    command.receiveResult(folder);
+                  }
+                } catch (ClassCastException e) {
+                  command.receiveException(new ClassCastException("In getLog, expected a Log, got a " + o.getClass()));
+                }
+              }
+
+              public void receiveException(Exception e) {
+                command.receiveException(e);
+              }
+            };
+
+            // build a continuation to receive the result of the log storing
+            Continuation store = new Continuation() {
+              public void receiveResult(Object o) {
+
+                try {
+                  LogReference emailLogRef = (LogReference) o;
+                  _post.getStorageService().retrieveSigned(emailLogRef, fetch);
+                } catch (ClassCastException e) {
+                  command.receiveException(new ClassCastException("In getLog, expected a Log, got a " + o.getClass()));
+                }
+              }
+
+              public void receiveException(Exception e) {
+                command.receiveException(e);
+              }
+            };
+
+            Log emailRootLog = new Log(pca, _post.getStorageService().getRandomNodeId(), _post);
+            mainLog.addChildLog(emailRootLog, store);
+          } else {
+
+            // simply fetch the existing folder
+            Continuation fetch = new Continuation() {
+              public void receiveResult(Object o) {
+
+                try {
+                  if (folder == null) {
+                    Log emailLog = (Log) o;
+                    emailLog.setPost(_post);
+
+                    folder = new Folder(emailLog, _post);
+                    folder.getChildFolder("inbox", this);
+                  } else {
+                    inbox = (Folder) o;
+                    command.receiveResult(folder);
+                  }
+                } catch (ClassCastException e) {
+                  command.receiveException(new ClassCastException("In getLog, expected a Log, got a " + o.getClass()));
+                }
+              }
+
+              public void receiveException(Exception e) {
+                command.receiveException(e);
+              }
+            };
+
             _post.getStorageService().retrieveSigned(emailLogRef, fetch);
-          } catch (ClassCastException e) {
-            command.receiveException(new ClassCastException("In getLog, expected a Log, got a " + o.getClass()));
           }
         }
+      }
 
-        public void receiveException(Exception e) {
-          command.receiveException(e);
-        }
-      };
-      
-      Log emailRootLog = new Log(pca, _post.getStorageService().getRandomNodeId(), _post);
-      mainLog.addChildLog(emailRootLog, store);
-    } else {
-      
-      // simply fetch the existing folder
-      Continuation fetch = new Continuation() {
-        public void receiveResult(Object o) {
+      public void receiveException(Exception e) {
+        command.receiveException(e);
+      }
+    };
 
-          try {
-            if (folder == null) {
-              Log emailLog = (Log) o;
-              emailLog.setPost(_post);
-
-              folder = new Folder(emailLog, _post);
-              folder.getChildFolder("inbox", this);
-            } else {
-              inbox = (Folder) o;
-              command.receiveResult(folder);
-            }
-          } catch (ClassCastException e) {
-            command.receiveException(new ClassCastException("In getLog, expected a Log, got a " + o.getClass()));
-          }
-        }
-
-        public void receiveException(Exception e) {
-          command.receiveException(e);
-        }
-      };
-      
-      _post.getStorageService().retrieveSigned(emailLogRef, fetch);
-    }
+    _post.getPostLog(getLog);
   }
 
   /**
