@@ -41,6 +41,7 @@ import rice.pastry.join.*;
 import rice.pastry.direct.*;
 import rice.pastry.messaging.*;
 import rice.scribe.*;
+import rice.scribe.messaging.*;
 import rice.pastry.security.*;
 import rice.pastry.standard.*;
 import rice.pastry.leafset.*;
@@ -392,7 +393,7 @@ public class DirectScribeMaintenanceTest
 	    System.out.println("\n CHECK : To see if initially all the nodes were part of all the required trees - FAILED\n");
 	ok = ok && passed;
 
-
+	
 	/**
 	 * TEST 2.
 	 * First we are checking consistency of distinctChildrenTable
@@ -453,9 +454,19 @@ public class DirectScribeMaintenanceTest
 	ok = ok && passed;
 
 
+	/**
+	 * TEST 
+	 * We are going to check if anycast is doing DFS correctly.
+	 */
+	passed = true;
 
+	passed = checkAnycastDFS((NodeId)topicIds.elementAt(0));
 
-
+	if(passed)
+	    System.out.println("\n CHECK : ANYCAST--DFS  - PASSED \n");
+	else
+	    System.out.println("\n CHECK : ANYCAST--DFS  - FAILED \n");
+	ok = ok && passed;
 
 
 	/**
@@ -1057,7 +1068,29 @@ public class DirectScribeMaintenanceTest
 	}
 	return result;
     }
-    
+
+
+    public boolean checkAnycastDFS(NodeId topicId){
+	boolean result = true;
+	DirectScribeMaintenanceTestApp scribeApp;
+	MessageAnycast msg;
+	Scribe scribe;
+	int size;
+	Credentials cred = new PermissiveCredentials();
+
+	for(int x = 0; x < scribeClients.size(); x++){
+	    scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(x);
+	    scribe = scribeApp.getScribe();
+	    msg = new MessageAnycast(scribe.getAddress(), scribe.getNodeHandle(), topicId, cred);
+	    scribe.anycast(topicId, msg, cred);
+	    while(simulate());
+
+	    size = msg.alreadySeenSize();
+	    if(size < nodesCurrentlyAlive)
+		result &= false;
+	}
+	return result;
+    }
 }
  
 
