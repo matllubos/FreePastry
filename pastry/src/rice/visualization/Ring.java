@@ -22,6 +22,7 @@ import java.util.Vector;
 import rice.p2p.commonapi.Id;
 import rice.pastry.dist.DistNodeHandle;
 import rice.visualization.client.VisualizationClient;
+import java.security.*;
 
 /**
  * @author Jeff Hoye
@@ -46,10 +47,16 @@ public class Ring {
   /**
    * The ring name
    */
-  public String name;
+  public String name;  
   
-  public Ring(String name, DistNodeHandle handle) {
-    this(name,handle,null);
+  protected KeyPair pair;
+  
+  public KeyPair getKeyPair() {
+    return pair;
+  }
+  
+  public Ring(String name, KeyPair pair, DistNodeHandle handle) {
+    this(name,pair,handle,null);
   }
   
   public void setVisualization(Visualization v) {
@@ -69,8 +76,9 @@ public class Ring {
     return r;
   }
   
-  public Ring(String name, DistNodeHandle handle, Ring parent) {
+  public Ring(String name, KeyPair pair, DistNodeHandle handle, Ring parent) {
     this.name = name;
+    this.pair = pair;
     this.nodes = new Vector();
     this.clients = new Hashtable();
     //this.neighbors = new Hashtable();

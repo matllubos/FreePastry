@@ -2,11 +2,13 @@ package rice.visualization.client;
 
 import java.io.*;
 import java.net.*;
+import java.security.*;
 
 import rice.visualization.*;
 import rice.visualization.data.*;
 import rice.pastry.*;
 import rice.pastry.dist.*;
+import rice.p2p.util.*;
 
 public class VisualizationClient {
   
@@ -21,10 +23,19 @@ public class VisualizationClient {
   
   protected int state;
   
-  public VisualizationClient(InetSocketAddress address) {
+  protected PrivateKey privateKey;
+  
+  protected PublicKey publicKey;
+  
+  protected ObjectOutputStream oos;
+  
+  protected ObjectInputStream ois;
+  
+  public VisualizationClient(PrivateKey key, InetSocketAddress address) {
     this.address = address;
     this.state = STATE_ALIVE;
     this.socket = new Socket();
+    this.privateKey = key;
   }
   
   public int getState() {
@@ -36,8 +47,20 @@ public class VisualizationClient {
     if (! socket.isConnected()) {
       try {
         socket.connect(address);
+        
+        if (privateKey != null) {        
+          ois = new ObjectInputStream(new EncryptedInputStream(privateKey, socket.getInputStream()));
+          publicKey = (PublicKey) ois.readObject();        
+          oos = new ObjectOutputStream(new EncryptedOutputStream(publicKey, socket.getOutputStream()));
+        } else {
+          ois = new ObjectInputStream(socket.getInputStream());
+          oos = new ObjectOutputStream(socket.getOutputStream());
+        }
+        
         this.state = STATE_ALIVE;
       } catch (IOException e) {
+        this.state = STATE_DEAD;
+      } catch (ClassNotFoundException e) {
         this.state = STATE_DEAD;
       }
     } 
@@ -53,11 +76,10 @@ public class VisualizationClient {
   
   public synchronized DistNodeHandle[] getHandles() {
     try {
-      ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
       oos.writeObject(new NodeHandlesRequest());
-      ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+      oos.flush();
       DistNodeHandle[] result = (DistNodeHandle[]) ois.readObject();
-      
+
       this.state = STATE_ALIVE;
       return result;
     } catch (IOException e) {
@@ -81,9 +103,8 @@ public class VisualizationClient {
   
   public synchronized Data getData() {
     try {
-      ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
       oos.writeObject(new DataRequest());
-      ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+      oos.flush();      
       Data result = (Data) ois.readObject();
       
       this.state = STATE_ALIVE;
@@ -108,9 +129,8 @@ public class VisualizationClient {
   }
   
   public synchronized String executeCommand(String command) throws Exception {
-    ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
     oos.writeObject(new DebugCommandRequest(command));
-    ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+    oos.flush();
     DebugCommandResponse result = (DebugCommandResponse) ois.readObject();
     if (result.getResponseCode() == 202)
       return result.getResponse();
@@ -120,13 +140,12 @@ public class VisualizationClient {
   
   public synchronized UpdateJarResponse updateJar(File[] files, String executionString) {
     try {
-      ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
       UpdateJarRequest ujr = new UpdateJarRequest(files);
       if (executionString != null) {
         ujr.executeCommand = executionString;
       }
       oos.writeObject(ujr);
-      ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+      oos.flush();
       UpdateJarResponse result = (UpdateJarResponse) ois.readObject();
       
       this.state = STATE_ALIVE;

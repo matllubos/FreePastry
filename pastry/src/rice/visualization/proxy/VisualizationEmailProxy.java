@@ -41,7 +41,7 @@ public class VisualizationEmailProxy extends EmailProxy {
         stepDone(FAILURE, e + "");
       }
       
-      server = new VisualizationServer(serverAddress, pastry, immutableStorage, new Object[] {pastry, immutablePast, immutableStorage});
+      server = new VisualizationServer(serverAddress, pastry, immutableStorage, cert, new Object[] {pastry, immutablePast, immutableStorage});
       server.addPanelCreator(new OverviewPanelCreator(timer));
       NetworkActivityPanelCreator network = new NetworkActivityPanelCreator(timer);
       server.addPanelCreator(network);
@@ -87,7 +87,7 @@ public class VisualizationEmailProxy extends EmailProxy {
         if (parameters.getBooleanParameter("visualization_client_enable")) {
           stepStart("Launching Visualization Client");
           Ring[] r = new Ring[1];
-          r[0] = new Ring("global",(DistNodeHandle) pastry.getLocalHandle());
+          r[0] = new Ring("global", null, (DistNodeHandle) pastry.getLocalHandle());
           Visualization visualization = new Visualization(r);
           stepDone(SUCCESS);
         }
@@ -107,7 +107,7 @@ public class VisualizationEmailProxy extends EmailProxy {
           stepDone(FAILURE, e + "");
         }
         
-        globalServer = new VisualizationServer(globalServerAddress, gpastry, null, new Object[] {gpastry});
+        globalServer = new VisualizationServer(globalServerAddress, gpastry, null, globalCert, new Object[] {gpastry});
         globalServer.addPanelCreator(new OverviewPanelCreator(timer));
         NetworkActivityPanelCreator gnetwork = new NetworkActivityPanelCreator(timer);
         globalServer.addPanelCreator(gnetwork);

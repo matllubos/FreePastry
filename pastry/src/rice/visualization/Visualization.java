@@ -6,6 +6,8 @@ import java.util.Hashtable;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
+import java.security.*;
+
 
 import rice.pastry.NodeId;
 import rice.pastry.dist.DistNodeHandle;
@@ -289,7 +291,7 @@ public class Visualization implements DataProvider {
       
       if (client == null) {
         InetSocketAddress address = new InetSocketAddress(handle.handle.getAddress().getAddress(), handle.handle.getAddress().getPort() + PORT_OFFSET);
-        client = new VisualizationClient(address);
+        client = new VisualizationClient(r.getKeyPair().getPrivate(), address);
         r.clients.put(handle.handle.getId(), client);
         client.connect();
       }

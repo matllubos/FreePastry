@@ -1,7 +1,10 @@
 package rice.visualization.proxy;
 
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.security.*;
+import rice.p2p.multiring.*;
 
 import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.dist.DistPastryNodeFactory;
@@ -68,7 +71,14 @@ public class VisualizationProxy {
               bootstrap_port = tmpport;
             }
           }
-          Ring r = new Ring(ringName,(DistNodeHandle) factory.generateNodeHandle(new InetSocketAddress(bootstrap_host, bootstrap_port)), globalRing);
+
+          System.out.print("Please enter the keypair password for ring '" + ringName + "': ");
+          System.out.flush();
+          String pass = new BufferedReader(new InputStreamReader(System.in)).readLine().trim();
+          
+          KeyPair pair = RingCertificate.readKeyPair(ringName.toLowerCase(), pass);
+          
+          Ring r = new Ring(ringName, pair, (DistNodeHandle) factory.generateNodeHandle(new InetSocketAddress(bootstrap_host, bootstrap_port)), globalRing);
           rings.add(r);
           if (globalRing == null) { // this logic makes the global ring the first ring
             globalRing = r;
@@ -85,10 +95,7 @@ public class VisualizationProxy {
         System.out.println("  currently we only support a heirarchy depth of 2, global must be the first");  
         System.exit(1);
       }
-    } else { // only connect to localhost ring
-      handles = new Ring[1];
-      handles[0] = new Ring("global",(DistNodeHandle) factory.generateNodeHandle(new InetSocketAddress(bootstrap_host, bootstrap_port)));      
-    }
+    } 
   }
   
   public int findBootstrapArg(String[] args) {

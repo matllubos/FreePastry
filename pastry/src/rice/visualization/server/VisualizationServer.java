@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.*;
 
 import rice.p2p.multiring.*;
+import rice.p2p.util.*;
 import rice.p2p.commonapi.IdFactory;
 
 import rice.*;
@@ -20,6 +21,7 @@ import rice.pastry.routing.*;
 import java.awt.*;
 import java.util.*;
 import javax.swing.*;
+import java.security.*;
 
 public class VisualizationServer implements Runnable {
   
@@ -48,11 +50,16 @@ public class VisualizationServer implements Runnable {
   protected FreeDiskSpaceChecker FDSchecker;
   
   protected Random rng = new Random();
+  
+  protected RingCertificate cert;
+  
+  protected KeyPair keypair;
     
-  public VisualizationServer(InetSocketAddress address, PastryNode node, StorageManager storage, Object[] objects) {
+  public VisualizationServer(InetSocketAddress address, PastryNode node, StorageManager storage, RingCertificate cert, Object[] objects) {
     this.address = address;
     this.objects = objects;
     this.node = node;
+    this.cert = cert;
     this.storage = storage;
     this.panelCreators = new Vector();
     this.NAchecker = new NetworkActivityChecker();
@@ -60,7 +67,9 @@ public class VisualizationServer implements Runnable {
     
     ((DistPastryNode) node).addNetworkListener(NAchecker);
     this.debugCommandHandlers = new Vector();
-    addDebugCommandHandler(new FileCommandHandler());    
+    addDebugCommandHandler(new FileCommandHandler());  
+    
+    this.keypair = SecurityUtils.generateKeyAsymmetric();
   }
   
   public void addPanelCreator(PanelCreator creator) {
@@ -98,12 +107,24 @@ public class VisualizationServer implements Runnable {
   
   protected void handleConnection(Socket socket) {
     try {
+      ObjectOutputStream oos = null;
+      ObjectInputStream ois = null;
+      
+      // first, send across our public key, encrypted
+      if (socket.getInetAddress().isLoopbackAddress() || socket.getInetAddress().equals(InetAddress.getLocalHost())) {
+        oos = new ObjectOutputStream(socket.getOutputStream());
+        ois = new ObjectInputStream(socket.getInputStream());
+      } else {
+        oos = new ObjectOutputStream(new EncryptedOutputStream(cert.getKey(), socket.getOutputStream()));
+        oos.writeObject(keypair.getPublic());
+        oos.flush();
+        ois = new ObjectInputStream(new EncryptedInputStream(keypair.getPrivate(), socket.getInputStream()));
+      }
+      
       while (true) {
-        ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
         Object object = ois.readObject();
         
         if (object instanceof DataRequest) {
-          ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
           oos.writeObject(getData());          
         } else if (object instanceof NodeHandlesRequest) {
           Hashtable handles = new Hashtable();
@@ -112,19 +133,11 @@ public class VisualizationServer implements Runnable {
           addRoutingTable(handles);
           
           Collection collection = handles.values();
-          ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
           oos.writeObject(collection.toArray(new DistNodeHandle[0])); 
-//        } else if (object instanceof ErrorsRequest) {
-//          NAchecker.checkForErrors();
-//          FDSchecker.checkForErrors();
-//          ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-//          oos.writeObject(getErrors());
         } else if (object instanceof UpdateJarRequest) {
-          ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
           handleUpdateJarRequest((UpdateJarRequest)object,oos);
         } else if (object instanceof DebugCommandRequest) {
           DebugCommandRequest dcr = (DebugCommandRequest) object;
-          ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
           
           boolean responseSent = false;
           for (int i=0; (i<debugCommandHandlers.size()) && !responseSent; i++) {
@@ -139,11 +152,21 @@ public class VisualizationServer implements Runnable {
           if (!responseSent)
             oos.writeObject(new DebugCommandResponse(dcr.command, "Bad Request", 400));
         }
+        
+        oos.flush();
       }
     } catch (IOException e) {
       System.out.println("Server: Exception " + e + " thrown.");
     } catch (ClassNotFoundException e) {
       System.out.println("Server: Exception " + e + " thrown.");
+    } catch (SecurityException e) {
+      System.out.println("Server: Exception " + e + " thrown.");
+    } finally {
+      try {
+        socket.close();
+      } catch (IOException e) {
+        System.out.println("Server: Exception " + e + " thrown closing.");
+      }
     }
   }
 
@@ -211,7 +234,7 @@ public class VisualizationServer implements Runnable {
   protected void addRoutingTable(Hashtable handles) {
     RoutingTable routingTable = node.getRoutingTable();
     
-    for (int i=0; i>=routingTable.numRows(); i++) {
+    for (int i=0; i<routingTable.numRows(); i++) {
       RouteSet[] row = routingTable.getRow(i);
       
       for (int j=0; j<row.length; j++) 
