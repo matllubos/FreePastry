@@ -1,6 +1,9 @@
 SOURCE  = \
-	PersistenceManager.java \
-	PersistenceManagerImpl.java 
+	Storage.java \
+	CacheStorage.java \
+  MemoryStorage.java \
+  PersistentStorage.java \
+  StorageManager.java
 
 RMI_SOURCE =
 
