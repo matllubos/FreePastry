@@ -811,28 +811,6 @@ public class PostProxy {
       String prefix = InetAddress.getLocalHost().getHostName() + "-" + parameters.getIntParameter("pastry_port");
       VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
 
-/*      mutablePast = new AggregationImpl(
-        node, 
-        new GlacierImpl(
-          node, glacierMutableStorage, glacierNeighborStorage,
-          parameters.getIntParameter("glacier_num_fragments"),
-          parameters.getIntParameter("glacier_num_survivors"),
-          (MultiringIdFactory)FACTORY, 
-          parameters.getStringParameter("application_instance_name") + "-glacier-mutable",
-          new GlacierDefaultPolicy(
-            new ErasureCodec(
-              parameters.getIntParameter("glacier_num_fragments"),
-              parameters.getIntParameter("glacier_num_survivors")
-            )
-          )
-        ),  
-        mutablePast,
-        aggrWaitingStorage,
-        "aggregation.param",
-        (MultiringIdFactory) FACTORY,
-        parameters.getStringParameter("application_instance_name") + "-aggr-mutable"
-      ); */
-
       GlacierImpl immutableGlacier = new GlacierImpl(
         node, glacierImmutableStorage, glacierNeighborStorage,
         parameters.getIntParameter("glacier_num_fragments"),
@@ -860,7 +838,8 @@ public class PostProxy {
         aggrWaitingStorage,
         "aggregation.param",
         (MultiringIdFactory) FACTORY,
-        parameters.getStringParameter("application_instance_name") + "-aggr-immutable"
+        parameters.getStringParameter("application_instance_name") + "-aggr-immutable",
+        new PostAggregationPolicy()
       );
 
       immutableAggregation.setFlushInterval(parameters.getIntParameter("aggregation_flush_interval"));
