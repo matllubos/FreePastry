@@ -116,12 +116,14 @@ class RMINodeHandlePool extends DistNodeHandlePool {
      *
      * @param nid the node nid of the handle to lookup and mark alive.
      */
-    public void activate(NodeId nid)
+    public void activate(NodeId nid) // UNUSED RIGHT NOW
     {
 	WeakReference storedref = (WeakReference) handles.get(nid);
 	RMINodeHandle storedhandle = null;
 	if (storedref != null) {
 	    storedhandle = (RMINodeHandle) storedref.get();
+	    // IF EVER WE USE ACTIVATE, remember to check below for
+	    // storedhandle.equals(getremote) like in coalesce.
 	    if (storedhandle == null) {
 		storedref.clear();
 		handles.remove(nid); // storedref is freed
