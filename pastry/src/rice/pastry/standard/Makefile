@@ -1,6 +1,7 @@
 PACKAGE = rice.pastry.standard
 
 SOURCE  = \
+  StandardAddress.java\
 	StandardRouter.java\
 	RandomNodeIdFactory.java\
 	StandardLeafSetProtocol.java\
