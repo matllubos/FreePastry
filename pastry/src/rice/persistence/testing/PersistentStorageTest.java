@@ -60,7 +60,7 @@ public class PersistentStorageTest extends MemoryStorageTest {
    */
   public PersistentStorageTest(boolean store) {
     super(store);
-    storage = new PersistentStorage(".", 20000000);
+    storage = new PersistentStorage("PersistentStorageTest" , ".", 20000000);
   }
 
   public static void main(String[] args) {

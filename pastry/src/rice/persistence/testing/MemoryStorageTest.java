@@ -47,6 +47,7 @@ package rice.persistence.testing;
 import java.util.*;
 
 import rice.*;
+import rice.pastry.*;
 import rice.persistence.*;
 
 /**
@@ -58,13 +59,19 @@ public class MemoryStorageTest extends Test {
   protected Storage storage;
 
   protected boolean store;
+  private Id[] data;
 
   /**
    * Builds a MemoryMemoryStorageTest
    */
   public MemoryStorageTest(boolean store) {
     storage = new MemoryStorage();
-
+    data  = new Id[500];
+    int[] x = new int[5];
+    for (int i = 0; i < 500; i ++){
+        x[3] = i;
+      	data[i] = new Id(x);
+    }
     this.store = store;
   }
 
@@ -97,7 +104,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Storing Fourth Object");
-        storage.store(new Integer(4), "Fourth Object", put4);
+        storage.store(data[4], "Fourth Object", put4);
       }
 
       public void receiveException(Exception e) {
@@ -115,7 +122,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Storing Third Object");
-        storage.store(new Integer(3), "Third Object", put3);
+        storage.store(data[3], "Third Object", put3);
       }
 
       public void receiveException(Exception e) {
@@ -133,7 +140,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Storing Second Object");
-        storage.store(new Integer(2), "Second Object", put2);
+        storage.store(data[2], "Second Object", put2);
       }
 
       public void receiveException(Exception e) {
@@ -144,7 +151,7 @@ public class MemoryStorageTest extends Test {
     sectionStart("Storing Objects");
     
     stepStart("Storing First Object");
-    storage.store(new Integer(1), "First Object", put1);
+    storage.store(data[1], "First Object", put1);
   }
 
   public void testRetreival(final Continuation c) {
@@ -181,7 +188,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Attempting Fifth Object");
-        storage.getObject(new Integer(5), get5);
+        storage.getObject(data[5], get5);
       }
 
       public void receiveException(Exception e) {
@@ -204,7 +211,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Retrieving Fourth Object");
-        storage.getObject(new Integer(4), get4);
+        storage.getObject(data[4], get4);
       }
 
       public void receiveException(Exception e) {
@@ -227,7 +234,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Retrieving Third Object");
-        storage.getObject(new Integer(3), get3);
+        storage.getObject(data[3], get3);
       }
 
       public void receiveException(Exception e) {
@@ -250,7 +257,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Retrieving Second Object");
-        storage.getObject(new Integer(2), get2);
+        storage.getObject(data[2], get2);
       }
 
       public void receiveException(Exception e) {
@@ -264,7 +271,7 @@ public class MemoryStorageTest extends Test {
           sectionStart("Retrieving Objects");
 
           stepStart("Retrieving First Object");
-          storage.getObject(new Integer(1), get1);
+          storage.getObject(data[1], get1);
         } else {
           stepException(new RuntimeException("SetUp did not complete correctly."));
         }
@@ -309,7 +316,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Checking for Fifth Object");
-        storage.exists(new Integer(5), check5);
+        storage.exists(data[5], check5);
       }
 
       public void receiveException(Exception e) {
@@ -326,7 +333,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Checking for Fourth Object");
-        storage.exists(new Integer(4), check4);
+        storage.exists(data[4], check4);
       }
 
       public void receiveException(Exception e) {
@@ -343,7 +350,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Checking for Third Object");
-        storage.exists(new Integer(3), check3);
+        storage.exists(data[3], check3);
       }
 
       public void receiveException(Exception e) {
@@ -360,7 +367,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Checking for Second Object");
-        storage.exists(new Integer(2), check2);
+        storage.exists(data[2], check2);
       }
 
       public void receiveException(Exception e) {
@@ -374,7 +381,7 @@ public class MemoryStorageTest extends Test {
           sectionStart("Checking for Objects");
 
           stepStart("Checking for First Object");
-          storage.exists(new Integer(1), check1);
+          storage.exists(data[1], check1);
         } else {
           stepException(new RuntimeException("SetUp did not complete correctly."));
         }
@@ -398,6 +405,7 @@ public class MemoryStorageTest extends Test {
         }
 
         sectionEnd();
+
         c.receiveResult(new Boolean(true));
       }
 
@@ -416,7 +424,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Attempting to Retrieve First Object");
-        storage.getObject(new Integer(1), done1);
+        storage.getObject(data[1], done1);
       }
 
       public void receiveException(Exception e) {
@@ -433,7 +441,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Checking for First Object");
-        storage.exists(new Integer(1), retrieve1);
+        storage.exists(data[1], retrieve1);
       }
 
       public void receiveException(Exception e) {
@@ -447,7 +455,7 @@ public class MemoryStorageTest extends Test {
           sectionStart("Testing Removal");
 
           stepStart("Removing First Object");
-          storage.unstore(new Integer(1), check1);
+          storage.unstore(data[1], check1);
         } else {
           stepException(new RuntimeException("Exists did not complete correctly."));
         }
@@ -483,18 +491,18 @@ public class MemoryStorageTest extends Test {
           return;
         }
 
-        Comparable[] result = (Comparable[]) o;
+        IdSet result = (IdSet) o;
 
-        if (result.length != 0) {
-          stepDone(FAILURE, "Result had " + result.length + " elements, expected 0.");
+        if (result.numElements() != 0) {
+          stepDone(FAILURE, "Result had " + result.numElements() + " elements, expected 0.");
           return;
         }
 
         stepDone(SUCCESS);
 
         stepStart("Requesting Scan from 'Monkey' to 9");
-        storage.scan("Monkey", new Integer(9), handleBadScan);
-      }
+        handleBadScan.receiveException(new Exception()); 
+     }
 
       public void receiveException(Exception e) {
         stepException(e);
@@ -508,24 +516,23 @@ public class MemoryStorageTest extends Test {
           return;
         }
 
-        Comparable[] result = (Comparable[]) o;
+        IdSet result = (IdSet) o;
 
-        if (result.length != 2) {
-          stepDone(FAILURE, "Result had " + result.length + " elements, expected 2.");
+        if (result.numElements() != 2) {
+          stepDone(FAILURE, "Result had " + result.numElements() + " elements, expected 2.");
           return;
         }
 
-        Arrays.sort(result);
 
-        if (! ((result[0].equals(new Integer(3))) && (result[1].equals(new Integer(4))))) {
-          stepDone(FAILURE, "Result had incorrect elements " + result[0] + ", " + result[1] + ", expected 3 and 4.");
+        if (! ((result.isMember(data[3])) && (result.isMember(data[4])))) {
+          stepDone(FAILURE, "Result had incorrect elements " + data[0] + ", " + data[1] + ", expected 3 and 4.");
           return;
         }
 
         stepDone(SUCCESS);
         
         stepStart("Requesting Scan from 8 to 10");
-        storage.scan(new Integer(8), new Integer(10), verify2);        
+        storage.scan(data[8], data[10], verify2);        
       }
 
       public void receiveException(Exception e) {
@@ -542,7 +549,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Requesting Scan from 3 to 6");
-        storage.scan(new Integer(3), new Integer(6), verify);
+        storage.scan(data[3], data[6], verify);
       }
 
       public void receiveException(Exception e) {
@@ -556,7 +563,7 @@ public class MemoryStorageTest extends Test {
           sectionStart("Testing Scan");
 
           stepStart("Inserting String as Key");
-          storage.store("Monkey", new Integer(4), query);
+          storage.store(data[11], "Monkey", query);
         } else {
           stepException(new RuntimeException("Removal did not complete correctly."));
         }
@@ -586,11 +593,11 @@ public class MemoryStorageTest extends Test {
         if (NUM_DELETED == -1) {
           stepStart("Checking object deletion");
           NUM_DELETED = ((Integer) o).intValue();
-          storage.scan("Stress" + START_NUM, "Stress" + END_NUM, this);
+          storage.scan(data[13 + START_NUM], data[13 + END_NUM], this);
         } else {
-          int length = ((Comparable[])o).length;
+          int length = ((IdSet)o).numElements();
 
-          int desired = NUM_ELEMENTS - NUM_DELETED;
+          int desired = NUM_ELEMENTS - NUM_DELETED ;
           
           if (length == desired) {
             stepDone(SUCCESS);
@@ -634,7 +641,7 @@ public class MemoryStorageTest extends Test {
 
         if (random.nextBoolean()) { 
           num_deleted++;
-          storage.unstore("Stress" + (count += SKIP), this);
+          storage.unstore(data[13 + (count += SKIP)], this);
         } else {
           count += SKIP;
           receiveResult(new Boolean(true));
@@ -654,10 +661,11 @@ public class MemoryStorageTest extends Test {
         if (count == START_NUM) {
           stepStart("Checking scans for all ranges");
         } else {
-          Comparable[] result = (Comparable[]) o;
+          IdSet result = (IdSet) o;
 
-          if (result.length != NUM_ELEMENTS - ((count - START_NUM) / SKIP)) {
-            stepDone(FAILURE, "Expected " + NUM_ELEMENTS + " found " + result.length + " keys in scan from " + count + " to " + END_NUM + ".");
+          int i = NUM_ELEMENTS - ((count - START_NUM + SKIP) / SKIP) ;
+          if (result.numElements() != i ){
+            stepDone(FAILURE, "Expected " + i + " found " + result.numElements() + " keys in scan from " + count + " to " + END_NUM + ".");
             return;
           }
         }
@@ -668,7 +676,7 @@ public class MemoryStorageTest extends Test {
           return;
         }
         
-        storage.scan("Stress" + (count += SKIP), "Stress" + END_NUM, this);
+        storage.scan(data[13 + (count += SKIP)], data[13 + END_NUM], this);
       }
 
       public void receiveException(Exception e) {
@@ -695,7 +703,7 @@ public class MemoryStorageTest extends Test {
           return;
         }
         
-        storage.exists("Stress" + (count += SKIP), this);
+        storage.exists(data[13 + (count += SKIP)], this);
       }
 
       public void receiveException(Exception e) {
@@ -728,7 +736,7 @@ public class MemoryStorageTest extends Test {
         int num = count;
         count += SKIP;
         
-        storage.store("Stress" + num, new byte[num * num * num], this);
+        storage.store(data[13 + num], new byte[num * num * num], this);
       }
 
       public void receiveException(Exception e) {
@@ -771,7 +779,7 @@ public class MemoryStorageTest extends Test {
 
         stepStart("Inserting null value");
 
-        storage.store("null value", null, validateNullValue);
+        storage.store(data[12], null, validateNullValue);
       }
 
       public void receiveException(Exception e) {

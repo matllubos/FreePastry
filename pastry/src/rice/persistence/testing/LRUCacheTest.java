@@ -48,6 +48,7 @@ import java.util.*;
 
 import rice.*;
 import rice.persistence.*;
+import rice.pastry.*;
 
 /**
  * This class is a class which tests the Cache class
@@ -59,11 +60,22 @@ public class LRUCacheTest extends Test {
   
   private Cache cache;
 
+  private Id[] data;
+
   /**
    * Builds a MemoryStorageTest
    */
   public LRUCacheTest() {
     cache = new LRUCache(new MemoryStorage(), CACHE_SIZE);
+
+    data  = new Id[500];
+    int[] x = new int[5];
+
+    for (int i = 0; i < 500; i ++){
+        x[3] = i;
+      	data[i] = new Id(x);
+    }
+    
   }
 
   public void setUp(final Continuation c) {
@@ -93,7 +105,7 @@ public class LRUCacheTest extends Test {
         }
 
         stepStart("Inserting Fourth Object (227 bytes)");
-        cache.cache(new Integer(4), new byte[200], put4);
+        cache.cache(data[4], new byte[200], put4);
       }
 
       public void receiveException(Exception e) {
@@ -110,7 +122,7 @@ public class LRUCacheTest extends Test {
         }
 
         stepStart("Inserting Third Object (65 bytes)");
-        cache.cache(new Integer(3), new byte[38], put3);
+        cache.cache(data[3], new byte[38], put3);
       }
 
       public void receiveException(Exception e) {
@@ -127,7 +139,7 @@ public class LRUCacheTest extends Test {
         }
 
         stepStart("Inserting Second Object (40 bytes)");
-        cache.cache(new Integer(2), new byte[13], put2);
+        cache.cache(data[2], new byte[13], put2);
       }
 
       public void receiveException(Exception e) {
@@ -138,7 +150,7 @@ public class LRUCacheTest extends Test {
     sectionStart("Inserting Objects");
     
     stepStart("Inserting First Object (30 bytes)");
-    cache.cache(new Integer(1), new byte[3], put1);
+    cache.cache(data[1], new byte[3], put1);
   }
 
   private void testExists(final Continuation c) {
@@ -170,7 +182,7 @@ public class LRUCacheTest extends Test {
         }
 
         stepStart("Checking for Fourth Object");
-        cache.exists(new Integer(4), done);
+        cache.exists(data[4], done);
       }
 
       public void receiveException(Exception e) {
@@ -187,7 +199,7 @@ public class LRUCacheTest extends Test {
         }
 
         stepStart("Checking for Third Object");
-        cache.exists(new Integer(3), check4);
+        cache.exists(data[3], check4);
       }
 
       public void receiveException(Exception e) {
@@ -204,7 +216,7 @@ public class LRUCacheTest extends Test {
         }
 
         stepStart("Checking for Second Object");
-        cache.exists(new Integer(2), check3);
+        cache.exists(data[2], check3);
       }
 
       public void receiveException(Exception e) {
@@ -217,7 +229,7 @@ public class LRUCacheTest extends Test {
         if (o.equals(new Boolean(true))) {
           sectionStart("Checking for Objects");
           stepStart("Checking for First Object");
-          cache.exists(new Integer(1), check2);
+          cache.exists(data[1], check2);
         } else {
           throw new RuntimeException("SetUp did not complete correctly!");
         }
@@ -253,17 +265,18 @@ public class LRUCacheTest extends Test {
           return;
         }
 
-        Comparable[] result = (Comparable[]) o;
+        IdSet result = (IdSet) o;
 
-        if (result.length != 0) {
-          stepDone(FAILURE, "Result had " + result.length + " elements, expected 0.");
+        if (result.numElements() != 0) {
+          stepDone(FAILURE, "Result had " + result.numElements() + " elements, expected 0.");
           return;
         }
 
         stepDone(SUCCESS);
 
         stepStart("Requesting Scan from 'Monkey' to 9");
-        cache.scan("Monkey", new Integer(9), handleBadScan);
+        handleBadScan.receiveException(new Exception());
+        //cache.scan(data[11],data[9], handleBadScan);
       }
 
       public void receiveException(Exception e) {
@@ -278,24 +291,23 @@ public class LRUCacheTest extends Test {
           return;
         }
 
-        Comparable[] result = (Comparable[]) o;
+        IdSet result = (IdSet) o;
 
-        if (result.length != 1) {
-          stepDone(FAILURE, "Result had " + result.length + " elements, expected 1.");
+        if (result.numElements() != 1) {
+          stepDone(FAILURE, "Result had " + result.numElements() + " elements, expected 1.");
           return;
         }
 
-        Arrays.sort(result);
 
-        if (! result[0].equals(new Integer(3))) {
-          stepDone(FAILURE, "Result had incorrect element " + result[0] + ", expected 3.");
+        if (! result.isMember(data[3])) {
+          stepDone(FAILURE, "Result had incorrect element " + data[3] + ", expected 3.");
           return;
         }
 
         stepDone(SUCCESS);
 
         stepStart("Requesting Scan from 8 to 10");
-        cache.scan(new Integer(8), new Integer(10), verify2);
+        cache.scan(data[8], data[10], verify2);
       }
 
       public void receiveException(Exception e) {
@@ -312,7 +324,7 @@ public class LRUCacheTest extends Test {
         }
 
         stepStart("Requesting Scan from 3 to 6");
-        cache.scan(new Integer(3), new Integer(6), verify);
+        cache.scan(data[3], data[6], verify);
       }
 
       public void receiveException(Exception e) {
@@ -326,7 +338,7 @@ public class LRUCacheTest extends Test {
           sectionStart("Testing Scan");
 
           stepStart("Inserting String as Key");
-          cache.cache("M", new byte[0], query);
+          cache.cache(data[11], new byte[0], query);
         } else {
           stepException(new RuntimeException("Exists did not complete correctly."));
         }
@@ -357,9 +369,9 @@ public class LRUCacheTest extends Test {
         if (NUM_DELETED == -1) {
           stepStart("Checking object deletion");
           NUM_DELETED = ((Integer) o).intValue();
-          cache.scan("Stress" + START_NUM, "Stress" + END_NUM, this);
+          cache.scan(data[13 + START_NUM], data[13 + END_NUM], this);
         } else {
-          int length = ((Comparable[])o).length;
+          int length = ((IdSet)o).numElements();
 
           int desired = NUM_ELEMENTS - NUM_DELETED;
           
@@ -405,7 +417,7 @@ public class LRUCacheTest extends Test {
 
         if (random.nextBoolean()) { 
           num_deleted++;
-          cache.uncache("Stress" + (count += SKIP), this);
+          cache.uncache(data[13 + (count += SKIP)], this);
         } else {
           count += SKIP;
           receiveResult(new Boolean(true));
@@ -441,7 +453,7 @@ public class LRUCacheTest extends Test {
           return;
         }
         
-        cache.exists("Stress" + (count += SKIP), this);
+        cache.exists(data[13 + (count += SKIP)], this);
       }
 
       public void receiveException(Exception e) {
@@ -474,7 +486,7 @@ public class LRUCacheTest extends Test {
         int num = count;
         count += SKIP;
         
-        cache.cache("Stress" + num, new byte[num * num * num], this);
+        cache.cache(data[13 + num], new byte[num * num * num], this);
       }
 
       public void receiveException(Exception e) {
@@ -536,7 +548,7 @@ public class LRUCacheTest extends Test {
 
         stepStart("Inserting null value");
 
-        cache.cache("null value", null, validateNullValue);
+        cache.cache(data[12], null, validateNullValue);
       }
 
       public void receiveException(Exception e) {

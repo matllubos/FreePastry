@@ -76,18 +76,24 @@ public abstract class Test {
 
   protected void stepDone(String status) {
     System.out.println("[" + status + "]");
+    if(status.equals(FAILURE))
+       System.exit(0);
   }
 
   protected void stepDone(String status, String message) {
-    stepDone(status);
+    System.out.println("[" + status + "]");
     System.out.println("    " + message);
+    if(status.equals(FAILURE))
+       System.exit(0);
   }
 
   protected void stepException(Exception e) {
     System.out.println();
 
     System.out.println("Exception " + e + " occurred during testing.");
+
     e.printStackTrace();
+    System.exit(0);
   }
 
   private String pad(String start) {
