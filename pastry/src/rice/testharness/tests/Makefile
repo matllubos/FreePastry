@@ -1,11 +1,10 @@
 PACKAGE = rice.testharness.tests
 
 SOURCE  = \
-	EmailTest.java \
 	LeafSetTest.java \
 	TraceTest.java \
 	PingTest.java \
-	PostTest.java
+  SplitStreamTest.java
 
 RMI_SOURCE =
 
