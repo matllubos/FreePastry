@@ -1,0 +1,243 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amsthm, amssymb}
+
+\usepackage{psfrag,psfig,epsfig,epsf}
+\usepackage{graphics}
+\usepackage{url}
+
+%\def\thefootnote{\fnsymbol{footnote}}
+
+%\newtheorem{thm}{Theorem}%[section]
+%\newtheorem{defn}[thm]{Definition}
+%\newtheorem{lemma}[thm]{Lemma}
+%\newtheorem{corollary}[thm]{Corollary}
+%\newtheorem{conjecture}[thm]{Conjecture}
+%\newtheorem{fact}[thm]{Fact}
+%\newtheorem{proposition}[thm]{Proposition}
+%\newtheorem{prop}[thm]{Proposition}
+%\newtheorem{lem}[thm]{Lemma}
+%\newtheorem{procedure}[thm]{Procedure}
+%\newtheorem{definition}[thm]{Definition}
+%\newtheorem{claim}[thm]{Claim}
+%\newtheorem{remark}[thm]{Remark}
+%\newtheorem{invariant}[thm]{Invariant}
+%\newtheorem{recall}[thm]{Recall}
+%\newtheorem{problem}[thm]{Problem}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\title{{\large Comp 520}\\Pastry: Project Proposal}
+
+\author{Romer Gil \hspace{8mm} Andrew Ladd \hspace{8mm} Tsuen-Wan Ngan\\
+	\normalsize Department of Computer Science, Rice University\\
+	\small \tt \{rgil, aladd, twngan\}@cs.rice.edu}
+\date{}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+In this project, we design and develop a scalable, distributed 
+object location and routing substrate for wide-area peer-to-peer 
+applications based on Pastry~\cite{RoD01B}.
+Our target is to develop an Internet ready, public domain version of 
+Pastry that is free from the intellectual property issues in 
+the original implementation.
+We also plan to address several drawbacks in the existing system, such as
+network failure, a clear API, and an open wire protocol.
+\end{abstract}
+
+
+\section{Problem Statement}
+The popularity of file sharing applications like Napster, 
+Gnutella, and FreeNet~\cite{Nap,Gnu,CSW00} has brought much 
+attention to Internet peer-to-peer systems.
+Peer-to-peer systems have many interesting technical aspects 
+like decentralized control, self-organization, 
+adaptation, and scalability.
+These systems can be characterized as distributed systems 
+in which all nodes have identical capabilities and 
+responsibilities and all communication is symmetric.
+
+A Pastry system is a self-organizing overlay network of nodes, 
+where each node routes client requests and interacts with 
+local instances of one or more applications.
+Any computer that is connected to the Internet and runs the 
+Pastry node software can act as a Pastry node, subject 
+only to application-specific security policies.  The advantage of the
+Pastry network is that each node need only to maintain at most $O(\log
+n)$ connections.  This is achieved using fixed length bit string
+unique node ids and routing only to nodes within a fixed Hamming
+distance.  A routing table is dynamically maintained at each node.
+
+The existing Pastry implementation is closed source.  Development of
+applications on top of this platform is hampered by this restriction.
+Furthermore, the existing API is not sufficiently well defined. 
+
+There is currently no communication protocol for Pastry in place.  A real
+implementation would have to deal with this problem by defining a
+protocol for remote communication between nodes.
+
+Pastry is currently justified by experiments done with simulated
+networks.  The cost of communication is proportional to the Euclidean
+distance between nodes distributed uniformly on the unit square.  The
+model for undesired node behaviour is silent failure.  
+
+The model for communication cost is not realistic.  The Internet is
+known to havea very different distribution of costs.  It is not obvious how
+Pastry can deal with this issue.
+
+Our open implementation must address these issues.  Our API and
+protocol must be
+clearly and rigorously defined and our code must be well documented
+and structured.  Also, we would like to deal with the problem of
+hostile (Byzantine) nodes, the problem of locality and the problem of
+routing failure at the internet level.
+
+
+\section{Motivation}
+
+An open implementation of Pastry with clear API and communication
+protocol would make an excellent jumping point for the public at large
+to begin to develop application layers.  The resolution of the
+oustanding implementation issues would contribute to producing a
+robust, real world version of this routing scheme.
+
+In general, P2P is an exciting and useful paradigm for distributed
+communication and computation.  A system such as Pastry contributes
+towards eliminating the implementation barriers for large scale P2P.
+For further motivation, see \cite{CSW00, Nap, Gnu}.
+
+\section{Hypothesis}
+
+We believe that the locality claims made in the paper break down for
+non-metric communication (or proximity) cost functions.  
+
+The current results, however, are quite plausible.  The network constructions
+on the unit square are reminiscent of the randomized analysis of
+certain geometric algorithms and random graph results \cite{MR96}. The
+intuition is that by minimizing proximity distance over the candidates
+for routing, we can locally construct `good' networks with high
+probability.  In particular, the expected ratio of routing path cost
+to expected optimal cost converges to a constant slightly larger than
+$1$.  This kind of argument implicitly relies on the triangle
+inequality.  Without this assumption, it may not be that Pastry
+produces `good' routing paths.
+
+It is not immediately clear whether for different distributions and
+cost functions that an effective scheme for enforcing locality
+exists.  There has been some recent work on constructing
+pseudo-geometric data structures on non-metric spaces and dynamically
+maintaining them given certain assumptions about the notion of
+`distance' \cite{GXZ01}.  It may be that such a scheme exists for reasonable models
+of node proximity and distribution.
+
+Against hostile nodes \cite{RoD01B} proposes a randomized routing
+scheme and against routing failure at the Internet level, an infrequent
+multicast is proposed.  We believe that these solutions could be
+implemented and that given certain assumptions about the number of
+hostile nodes and the frequency of failures could be shown to be
+efficient and effective with high probability.
+
+\section{Method}
+
+\begin{figure}[t]
+\centerline{\psfig{figure=diagram.eps,height=6.0cm}}
+\caption{Our proposed program architecture} 
+\label{fig:structure}
+\end{figure}
+
+In figure \ref{fig:structure}, we illustrate the various components
+of our proposed architecture.  Our development approach will favour
+rapid prototyping of the various modules to speed our entry into the test
+phases of the various components.  
+
+The final code will be written in {\tt Java 1.3} and tested under
+both {\tt Linux} and {\tt Solaris}.  We will make use of {\tt CVS} and
+{\tt Javadoc}. This particular order was chosen to parallelize the
+implementation as much as possible.
+
+
+\section{Expected Results}
+
+We expect to complete our implementation and we expect that our
+routing performance will be identical to that of Pastry.  We hope that our
+network model will be richer and more realistic than that of the existing
+work.   In particular, we wish to address some or all the outstanding
+issues raised by the previous sections.
+
+\section{Related Work}
+A prototype implementation of Pastry was done in~\cite{RoD01B}.
+Existing applications built on top of Pastry include 
+PAST~\cite{DrR01,RoD01A} and SCRIBE~\cite{RKC01}.
+Beside Pastry, there are currently several other peer-to-peer 
+systems in use or under development.
+The Napster~\cite{Nap} music exchange service provided much 
+of the original motivation for peer-to-peer systems, but it 
+is not a pure peer-to-peer system because its database is 
+centralized. 
+The most prominent file sharing facilities include Gnutella~\cite{Gnu} 
+and FreeNet~\cite{CSW00}, but they are not guaranteed to 
+find an existing object in the network.
+
+The second generation of peer-to-peer routing and 
+location schemes include Pastry along with Tapestry~\cite{ZKJ01}, 
+Chord~\cite{SMK01}, and CAN~\cite{RFH01}.
+They guarantee a definite answer to a query in a bounded number 
+of network hops, while retaining the scalability of FreeNet
+and the self-organizating properties of both FreeNet and Gnutella.
+
+Pastry and Tapestry bear some similarity by routing based on 
+the landmark hierarchy.  They differ in their approach to 
+achieving network locality and to supporting replication, 
+and Pastry appears to be less complex.
+The Chord protocol forwards messages based on numerical 
+difference with the destination address and makes no 
+explicit effort to achieve good network locality.
+CAN, unlike Pastry, has a routing table with a stable size, 
+but the number of routing hops grows faster than $\log N$.
+
+\section{Timetable}
+
+Here are our milestones and timetable,
+
+\begin{enumerate}
+
+\item Create initial drafts of the internal APIs between the routing and
+protocol components. (Sep. 28th).
+
+\item Draft both ends of the client API and implement them. (Oct. 10th).
+
+\item Design the network protocol and implement it. (Oct. 13th).
+
+\item Develop and test a prototype of the routing
+implementation. (Oct. 17th).
+
+\item Write a throwaway protocol implementation which conforms to the
+internal API using RMI calls. (Oct. 17th).
+
+\item Test the correctness of the full implementation of the network
+protocol. (Oct. 20th).
+
+\item Implement a preliminary test suite for the full prototype.
+(Oct. 20th).
+
+\item Run a prototype test. (Oct. 22nd).
+
+\item Modify the test suite to test the full protocol
+implementation. (Oct. 31st).
+
+\item Run a full test. (Nov. 2nd).
+
+\item Cycle between feature implementation, test model enhancement
+and test runs.  (Nov. 20th).
+
+\end{enumerate}
+
+
+%\nocite{*}
+\bibliographystyle{plain}
+\bibliography{pastry}
+
+\end{document}
