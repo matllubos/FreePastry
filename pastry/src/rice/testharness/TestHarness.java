@@ -120,8 +120,13 @@ public class TestHarness extends PastryAppl implements IScribeApp {
 
     scribe = generateScribe();
     scribe.registerApp(this);    
+    try {
+      hostname = InetAddress.getLocalHost().getHostAddress();
+    } catch (java.net.UnknownHostException uhe) {
+      uhe.printStackTrace();
+    }
   }
-
+  String hostname;
   /**
    * Returns the address of this application.
    *
@@ -205,7 +210,8 @@ public class TestHarness extends PastryAppl implements IScribeApp {
          return;
         }
 
-        String hostname = InetAddress.getLocalHost().getHostAddress();
+        // For some reason, this can deadlock.
+        //String hostname = InetAddress.getLocalHost().getHostAddress();
         String filename = itm.getTestName() + "-" + itm.getRunName() + "-" + hostname + "-" + _pastryNode.getNodeId().toString().replace('<', '[').replace('>', ']') + ".txt";
         FileOutputStream fw = new FileOutputStream(filename);
         PrintStream ps = new PrintStream(fw);
