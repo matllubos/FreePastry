@@ -191,27 +191,27 @@ public class DistScribeRegrTestApp implements IScribeApp
     /**
      * direct call to scribe for publishing to a topic from the current node.
      */    
-    public void publish( NodeId topicId, Object data ) {
-	m_scribe.publish( topicId, data, m_credentials );
+    public void multicast( NodeId topicId, Object data ) {
+	m_scribe.multicast( topicId, data, m_credentials );
     }
     
     /**
      * direct call to scribe for subscribing to a topic from the current node.
      */    
-    public void subscribe( NodeId topicId ) {
-	m_scribe.subscribe( topicId, this, m_credentials );
+    public void join( NodeId topicId ) {
+	m_scribe.join( topicId, this, m_credentials );
     }
     
     /**
      * direct call to scribe for unsubscribing a  topic from the current node
      * The topic is chosen randomly if null is passed and topics exist.
      */    
-    public void unsubscribe(NodeId topicId) {
+    public void leave(NodeId topicId) {
 	DistTopicLog topicLog;
 	topicLog = (DistTopicLog)m_logTable.get(topicId);
 	topicLog.setUnsubscribed(true);
 	System.out.println(m_scribe.getNodeId()+" Unsubscribing from topic "+topicId);
-	m_scribe.unsubscribe( topicId, this, m_credentials );
+	m_scribe.leave( topicId, this, m_credentials );
     }
     
     /**

@@ -347,16 +347,15 @@ public class Scribe extends PastryAppl implements IScribe
     }
 
 
-
     /**
-     * Creates a topic if the credentials are valid.  Nodes must then subscribe
-     * to this topic in order to get information published to it.
+     * Creates a group/topic if the credentials are valid. Nodes must then join
+     * this group in order to get information multicast to it.
      *
      * @param    cred
-     * the credentials of the entity creating the topic  
+     * The credentials of the entity creating the group  
      *
      * @param    topicID       
-     * the ID of the topic to be created
+     * The ID of the group to be created
      *
      */
     public void create( NodeId topicId, Credentials cred) {
@@ -365,20 +364,22 @@ public class Scribe extends PastryAppl implements IScribe
 	this.routeMsg( topicId, msg, cred, m_sendOptions );
     }
     
+
     /**
-     * Subscribe to topic specified by topicId. When a node becomes subscribed 
-     * to a topic, it receives all messages published to it.
+     * Joins a multicast group/topic.  When a node joins a multicast group,
+     * it receives all messages multicast to that group.
      *
-     * @param    cred   
-     * the credentials of the entity subscribing to the topic
+     * @param    cred
+     * The credentials of the entity joining the group
      *
      * @param    topicID        
-     * the ID of the topic to subscribe to.
+     * The ID of the group to join to
      *
      * @param    subscriber
-     * The application subscribing to the topic
+     * The application joining the group
+     *
      */
-    public void subscribe( NodeId topicId, IScribeApp subscriber, 
+    public void join( NodeId topicId, IScribeApp subscriber, 
 			   Credentials cred ) {
 	Topic topic = (Topic) m_topics.get( topicId );
 	
@@ -398,22 +399,22 @@ public class Scribe extends PastryAppl implements IScribe
 	    this.routeMsg( topicId, msg, cred, m_sendOptions );
 	}
     }
-    
+
     /**
-     * Unsubscribe from a topic.  After a node is unsubscribed from a topic, it
-     * will no longer receive messages from the topic.
+     * Leaving a multicast group/topic. After a node leaves a group, it
+     * will no longer receive messages multicast to this group.
      *
-     * @param    cred    
-     * the credentials of the entity unsubscribing from the topic
+     * @param    cred
+     * The credentials of the entity leaving the group
      *
      * @param    topicID        
-     * the ID of the topic to be unsubscribed from.
+     * The ID of the group to leave
      *
      * @param    subscriber
-     * The application unsubscribing from the topic. Use null if 
-     * not directly called by application
+     * The application leaving the group.  Use null if 
+     * not directly called by an application.
      */
-    public void unsubscribe( NodeId topicId, IScribeApp subscriber, Credentials cred ) {
+    public void leave( NodeId topicId, IScribeApp subscriber, Credentials cred ) {
 	Topic topic = (Topic) m_topics.get( topicId );
 	
 	// If topic unknown, must give an error
@@ -433,23 +434,24 @@ public class Scribe extends PastryAppl implements IScribe
 	}
     }
     
+
     /**
-     * Publish information to a topic.  Data will be delivered to ALL nodes 
-     * that are subscribed to the topic. The message will trickle from
-     * the root of the multicast tree for the topic DOWN the tree, with each
-     * node sending this message to its children for the topic.
+     * Multicast information to a group/topic.  Data will be delivered 
+     * to All nodes that have joined the group.  The message will trickle from
+     * the root of the multicast tree for the group DOWN the tree, with each
+     * node sending this message to its children for the group.
      *
-     * @param   cred    
-     * the credentials of the entity publishing to the topic.
+     * @param   cred
+     * The credentials of the entity multicasting to the group
      *
      * @param   topicID         
-     * the ID of the topic to publish to.
+     * The ID of the group to multicast.
      *
-     * @param   obj
-     * The information that is to be published.
+     * @param   obj           
+     * The information that is to be multicast.
      * This should be serializable.
      */
-    public void publish( NodeId topicId, Object obj, Credentials cred ) {
+    public void multicast( NodeId topicId, Object obj, Credentials cred ) {
 	ScribeMessage msg = makePublishMessage( topicId, cred );
 
 	msg.setData( obj );

@@ -101,7 +101,7 @@ public class MessagePublish extends ScribeMessage implements Serializable
 		    topic.postponeParentHandler();
 		    // if waiting to find parent, now send unsubscription msg
 		    if ( topic.isWaitingUnsubscribe() ) {
-			scribe.unsubscribe( m_topicId, null, cred );
+			scribe.leave( m_topicId, null, cred );
 			topic.waitUnsubscribe( false );
 		    }
 		}

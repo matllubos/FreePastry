@@ -112,7 +112,7 @@ public class MessageReplyFromParent extends ScribeMessage implements Serializabl
 		    
 		    // if waiting to find parent, now send unsubscription msg
 		    if ( topic.isWaitingUnsubscribe() ) {
-			scribe.unsubscribe( topic.getTopicId(), null, cred );
+			scribe.leave( topic.getTopicId(), null, cred );
 			topic.waitUnsubscribe( false );
 		    }
 		}

@@ -51,7 +51,7 @@ import java.security.*;
  * @(#) BasicScribeRegrTest.java
  *
  * A basic scribe regression test suite for Scribe. It tests if the basic 
- * operations such as create, subscribe, publish, unsubscribe are working fine.
+ * operations such as create, join, multicast, leave are working fine.
  *
  * @author Romer Gil
  * @author Eric Engineer 
@@ -126,7 +126,7 @@ public class BasicScribeRegrTest
 	int n, a, m, t, i;
 
 
-	System.out.println(" \n\n BasicScribeRegrTest : which tests if the create, subscribe, publish and unsubscribe operations of Scribe work is about to START  \n");
+	System.out.println(" \n\n BasicScribeRegrTest : which tests if the create, join, multicast, leave operations of Scribe work is about to START  \n");
 
 	//n #nodes, a #apps per node, m #messages per topic, t #topics
 	n = 100;
@@ -190,7 +190,7 @@ public class BasicScribeRegrTest
 	    //lookin at
 	    subs = rng.nextInt( totalApps );
 	    for( j = 0; j < subs; j++ ) {
-		subscribe( rng.nextInt( totalApps ), tid);
+		join( rng.nextInt( totalApps ), tid);
 		while(simulate());
 	    }
 	}
@@ -201,7 +201,7 @@ public class BasicScribeRegrTest
 		topic = rng.nextInt( m_topics.size() );
 		app = rng.nextInt( totalApps );
 		tid = (NodeId)m_topics.get( topic );
-		publish( app, tid );
+		multicast( app, tid );
 		m_tracker.receivedMessage( tid );
 		while(simulate());
 	    }
@@ -210,7 +210,7 @@ public class BasicScribeRegrTest
 	// unsubscribe a random number of apps from random topics
 	int unsubs = rng.nextInt( totalApps );
 	for ( i = 0; i < unsubs; i++ ) {
-	    unsubscribe( rng.nextInt( totalApps ));
+	    leave( rng.nextInt( totalApps ));
 	    while(simulate());
 	}
 
@@ -220,7 +220,7 @@ public class BasicScribeRegrTest
                 topic = rng.nextInt( m_topics.size() );
                 app = rng.nextInt( totalApps );
                 tid = (NodeId)m_topics.get( topic );
-                publish( app, tid );
+                multicast( app, tid );
 		// store in second tracker instead
                 m_tracker2.receivedMessage( tid );
                 while(simulate());
@@ -256,21 +256,21 @@ public class BasicScribeRegrTest
     }
 
     //publish a msg from one of the test apps that we are keeping in the suite.
-    private void publish( int app, NodeId tid ) {
+    private void multicast( int app, NodeId tid ) {
 	BasicScribeRegrTestApp a = (BasicScribeRegrTestApp)m_scribeApps.get( app );
-	a.publish( tid );
+	a.multicast( tid );
     }
 
     //subscribe one of the suite apps to topic tid
-    private void subscribe( int app, NodeId tid ) {
+    private void join( int app, NodeId tid ) {
 	BasicScribeRegrTestApp a = (BasicScribeRegrTestApp)m_scribeApps.get( app );
-	a.subscribe( tid);
+	a.join( tid);
     }
 
     //unsubscribe one of the suite apps from a random currently subscribed topic tid 
-    private void unsubscribe( int app ) {
+    private void leave( int app ) {
 	BasicScribeRegrTestApp a = (BasicScribeRegrTestApp)m_scribeApps.get( app );
-	a.unsubscribe(null);
+	a.leave(null);
     }
 
     //create a topic tid from a given app.

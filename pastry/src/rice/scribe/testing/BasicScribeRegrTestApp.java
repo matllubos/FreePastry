@@ -160,17 +160,17 @@ public class BasicScribeRegrTestApp implements IScribeApp
     /**
      * direct call to scribe for publishing to a topic from the current node.
      */    
-    public void publish( NodeId topicId ) {
+    public void multicast( NodeId topicId ) {
 	// System.out.println("Node:" + getNodeId() + " App:" + m_app + " publishing on topic" + topicId );
-	m_scribe.publish( topicId, null, m_credentials );
+	m_scribe.multicast( topicId, null, m_credentials );
     }
 
     /**
      * direct call to scribe for subscribing to a topic from the current node.
      */    
-    public void subscribe( NodeId topicId ) {
+    public void join( NodeId topicId ) {
 	// System.out.println("Node:" + getNodeId() + " App:" + m_app + " subscribing to topic " + topicId);
-	m_scribe.subscribe( topicId, this, m_credentials);
+	m_scribe.join( topicId, this, m_credentials);
 	m_tracker.setSubscribed( topicId, true );
     }
 
@@ -178,7 +178,7 @@ public class BasicScribeRegrTestApp implements IScribeApp
      * direct call to scribe for unsubscribing a  topic from the current node
      * The topic is chosen randomly if null is passed and topics exist.
      */    
-    public void unsubscribe(NodeId topicId) {
+    public void leave(NodeId topicId) {
 	if (topicId == null) {
 	    NodeId[] topics = m_tracker.getSubscribedTopics();
 	    if (topics.length == 0) return;
@@ -186,7 +186,7 @@ public class BasicScribeRegrTestApp implements IScribeApp
 	    topicId = topics[tid];
 	}
 	// System.out.println("Node:" + getNodeId() + " App:" + m_app + " unsubscribing from topic " + topicId);
-	m_scribe.unsubscribe( topicId, this, m_credentials );
+	m_scribe.leave( topicId, this, m_credentials );
 	m_tracker.setSubscribed( topicId, false );
     }
     

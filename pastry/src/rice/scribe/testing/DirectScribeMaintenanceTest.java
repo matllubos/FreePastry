@@ -259,7 +259,7 @@ public class DirectScribeMaintenanceTest
 	    scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(i);
 	    for(j=0; j < topicIds.size() ; j++) {
 		topicId = (NodeId)topicIds.elementAt(j);
-		scribeApp.subscribe(topicId);
+		scribeApp.join(topicId);
 	    }		
 	}
 	while (simulate());
@@ -344,7 +344,7 @@ public class DirectScribeMaintenanceTest
 	    scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(i);
 	    for(j=0; j < topicIds.size() ; j++) {
 		topicId = (NodeId)topicIds.elementAt(j);
-		scribeApp.subscribe(topicId);
+		scribeApp.join(topicId);
 	    }		
 	}
 	while (simulate());
@@ -576,7 +576,7 @@ public class DirectScribeMaintenanceTest
 	    for(i=0; i< scribeClients.size() ; i++) {
 		scribeApp = ( DirectScribeMaintenanceTestApp) scribeClients.elementAt(i);
 		if(!scribeApp.m_scribe.isRoot(topicId)) {
-		    scribeApp.unsubscribe(topicId);
+		    scribeApp.leave(topicId);
 		}
 	    }
 	}

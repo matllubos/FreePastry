@@ -224,7 +224,7 @@ public class DistScribeRegrTest {
 	    for (i=0; i< DistScribeRegrTest.NUM_TOPICS; i++) {
 		topicId = (NodeId)topics.elementAt(i);
 		m_app.create(topicId);
-		m_app.subscribe(topicId);
+		m_app.join(topicId);
 	     }
 
 	    while(true){
@@ -234,7 +234,7 @@ public class DistScribeRegrTest {
 		    seq_num = topicLog.getSeqNumToPublish();
 		    count = topicLog.getCount();
 		    if( m_app.m_scribe.isRoot(topicId)){
-			m_app.publish(topicId, new Integer(seq_num));
+			m_app.multicast(topicId, new Integer(seq_num));
 			/*
 			 * We play safe in publishing the '-1' so that all nodes
 			 * which were doing a tree repair while the new root
@@ -264,7 +264,7 @@ public class DistScribeRegrTest {
 				if(lastRecv > DistScribeRegrTest.UNSUBSCRIBE_LIMIT){
 				    int n = rng.nextInt(10);
 				    if( n == 0){
-					m_app.unsubscribe(topicId);
+					m_app.leave(topicId);
 					DistScribeRegrTest.numUnsubscribed ++;
 				    }
 				}

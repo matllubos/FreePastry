@@ -63,76 +63,76 @@ public interface IScribe
 {
 
     /**
-     * Creates a topic if the credentials are valid.  Nodes must then subscribe
-     * to this topic in order to get information published to it.
+     * Creates a group/topic if the credentials are valid. Nodes must then join
+     * this group in order to get information multicast to it.
      *
      * @param    cred
-     * The credentials of the entity creating the topic  
+     * The credentials of the entity creating the group  
      *
-     * @param    topicID       
-     * The ID of the topic to be created
+     * @param    groupID       
+     * The ID of the group to be created
      *
      */
-    public void create( NodeId topicID, Credentials cred );
+    public void create( NodeId groupID, Credentials cred );
 
     
 
 
     /**
-     * Subscribe to a particular topic.  When a node becomes subscribed to a 
-     * particular topic, it receives all messages published to that topic.
+     * Joins a multicast group/topic.  When a node joins a multicast group,
+     * it receives all messages multicast to that group.
      *
      * @param    cred
-     * The credentials of the entity subscribing to the topic
+     * The credentials of the entity joining the group
      *
-     * @param    topicID        
-     * The ID of the topic to subscribe to.
+     * @param    groupID        
+     * The ID of the group to join to
      *
      * @param    subscriber
-     * The application subscribing to the topic
+     * The application joining the group
      *
      */
-    public void subscribe( NodeId topicID, IScribeApp subscriber, Credentials cred);
+    public void join( NodeId groupID, IScribeApp subscriber, Credentials cred);
 
 
 
     
     /**
-     * Unsubscribe from a topic.  After a node is unsubscribed from a topic, it
-     * will no longer receive messages from that topic.
+     * Leaving a multicast group/topic. After a node leaves a group, it
+     * will no longer receive messages multicast to this group.
      *
      * @param    cred
-     * The credentials of the entity unsubscribing from the topic
+     * The credentials of the entity leaving the group
      *
-     * @param    topicID        
-     * The ID of the topic to be unsubscribed from.
+     * @param    groupID        
+     * The ID of the group to leave
      *
      * @param    subscriber
-     * The application unsubscribing from the topic.  Use null if 
+     * The application leaving the group.  Use null if 
      * not directly called by an application.
      */
-    public void unsubscribe( NodeId topicID, IScribeApp subscriber, Credentials cred );
+    public void leave( NodeId groupID, IScribeApp subscriber, Credentials cred );
 
 
 
     
     /**
-     * Publish information to a topic.  Data will be delivered to All nodes 
-     * that are subscribed to the topic.  The message will trickle from
-     * the root of the multicast tree for the topic DOWN the tree, with each
-     * node sending this message to its children for the topic.
+     * Multicast information to a group/topic.  Data will be delivered 
+     * to All nodes that have joined the group.  The message will trickle from
+     * the root of the multicast tree for the group DOWN the tree, with each
+     * node sending this message to its children for the group.
      *
      * @param   cred
-     * The credentials of the entity publishing to the topic.
+     * The credentials of the entity multicasting to the group
      *
-     * @param   topicID         
-     * The ID of the topic to publish to.
+     * @param   groupID         
+     * The ID of the group to multicast.
      *
      * @param   obj           
-     * The information that is to be published.
+     * The information that is to be multicast.
      * This should be serializable.
      */
-    public void publish( NodeId topicID, Object obj, Credentials cred );
+    public void multicast( NodeId groupID, Object obj, Credentials cred );
     
 
 
@@ -148,8 +148,6 @@ public interface IScribe
      * topic, a tree repair event is triggered for that topic.
      */
     public void scheduleHB();
-
-
 
     /**
      * The tree repair event for a particular topic in Scribe is triggered
