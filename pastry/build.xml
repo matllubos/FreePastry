@@ -164,6 +164,7 @@
         <include name="rice/pastry/routing/**/*.java"/>
         <include name="rice/pastry/security/**/*.java"/>
         <include name="rice/pastry/socket/**/*.java"/>
+        <exclude name="rice/pastry/socket/testing/*.java"/>
         <include name="rice/pastry/standard/**/*.java"/>
         <include name="rice/pastry/testing/**/*.java"/>
    <!-- <include name="rice/pastry/wire/**/*.java"/> -->
@@ -230,6 +231,7 @@
         <include name="rice/pastry/routing/**/*.class"/>
         <include name="rice/pastry/security/**/*.class"/>
         <include name="rice/pastry/socket/**/*.class"/>
+        <exclude name="rice/pastry/socket/testing/*.class"/>
         <include name="rice/pastry/standard/**/*.class"/>
         <include name="rice/pastry/testing/**/*.class"/>
    <!-- <include name="rice/pastry/wire/**/*.class"/> -->
@@ -302,6 +304,7 @@
         <include name="rice/pastry/routing/**/*.java"/>
         <include name="rice/pastry/security/**/*.java"/>
         <include name="rice/pastry/socket/**/*.java"/>
+        <exclude name="rice/pastry/socket/testing/*.java"/>
         <include name="rice/pastry/standard/**/*.java"/>
         <include name="rice/pastry/testing/**/*.java"/>
    <!-- <include name="rice/pastry/wire/**/*.java"/> -->
@@ -317,6 +320,7 @@
       <tarfileset dir="${lib.dir}" prefix="lib">
         <include name="xmlpull*.jar"/> 
         <include name="bouncy*.jar"/> 
+        <include name="xpp*.jar"/> 
       </tarfileset> 
       <tarfileset dir="." includes="build.xml"/>
     </tar>
@@ -346,6 +350,7 @@
         <include name="rice/pastry/routing/**/*.java"/>
         <include name="rice/pastry/security/**/*.java"/>
         <include name="rice/pastry/socket/**/*.java"/>
+        <exclude name="rice/pastry/socket/testing/*.java"/>
         <include name="rice/pastry/standard/**/*.java"/>
         <include name="rice/pastry/testing/**/*.java"/>
    <!-- <include name="rice/pastry/wire/**/*.java"/> -->
@@ -361,6 +366,7 @@
       <zipfileset dir="${lib.dir}" prefix="lib">
         <include name="xmlpull*.jar"/> 
         <include name="bouncy*.jar"/> 
+        <include name="xpp*.jar"/> 
       </zipfileset> 
       <zipfileset dir="." includes="build.xml"/>
     </zip>
