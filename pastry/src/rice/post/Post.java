@@ -402,11 +402,8 @@ public class Post extends PastryAppl implements IScribeApp  {
 
   public void faultHandler(ScribeMessage msg, NodeHandle faultyParent) {}
   public void forwardHandler(ScribeMessage msg) {}
-  public void scribeIsReady(){}
-  public void subscribeHandler(ScribeMessage msg,
-                               NodeId topicId,
-                               NodeHandle child,
-                               boolean wasAdded){}
+  public void scribeIsReady() {}
+  public void subscribeHandler(NodeId topicId, NodeHandle child, boolean wasAdded, Object obj ) {}
 
   /**
    * This class is called whenever a SignedPostMessage comes in, and it
