@@ -158,7 +158,21 @@ public class MessageAnycast extends ScribeMessage implements Serializable
 	handleForwardMessage(Scribe scribe, Topic topic ) {
 	//System.out.println("MessageAnycast -- Forwarded at "+scribe.getNodeId()+" source "+m_source.getNodeId());
 
-
+	
+	// first check if local node has already been visited,
+	// if yes, then check if we know who to send this message
+	// next to otherwise keep forwording through pastry
+	if(already_seen.contains(scribe.getLocalHandle())){
+	    if(send_to.size() > 0){
+		send_to.remove(0);
+	    }
+	    if(send_to.size() > 0){
+		scribe.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
+		return false;
+	    }
+	    else
+		return true;
+	}
 	// Node is not part of the tree, and don't have a list 
 	// built up of anywhere else to forward this message to 
 	if( ( topic == null) && ( send_to.size() == 0 ) ){
@@ -238,7 +252,7 @@ public class MessageAnycast extends ScribeMessage implements Serializable
 			    scribe.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
 			}
 			else {
-			    System.out.println("WARNING -- Parent is null for non-root node.. should handle this case -- At "+scribe.getNodeId()+" for topic "+topic.getTopicId());
+			    System.out.println("WARNING -- Parent is null for non-root node.. should handle this case -- At "+scribe.getNodeId()+" for topic "+topic.getTopicId()+" already_seen_size "+alreadySeenSize());
 			    // We are not part of tree anymore, so should 
 			    // anycast furthur this message
 			    scribe.anycast(topic.getTopicId(), this, c);
