@@ -1,6 +1,0 @@
-export JAVA_DEV_ROOT=/net/madras/COMP520/atuls/scribe-fixes/pastry
-export JAVA_HOME=/usr/opt/java140
-export PATH=$JAVA_HOME/bin:$PATH
-export IS_UNIX=true
-#export CVSROOT=:ext:aladd@dosa.cs.rice.edu:/net/madras/FreePastry/cvsroot
-#export CVSRSH=ssh
