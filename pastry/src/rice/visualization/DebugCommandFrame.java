@@ -22,7 +22,12 @@ public class DebugCommandFrame extends JFrame implements ActionListener {
     if (command.equals(""))
       command = lastCommand;
 
-    responseField.setText("debug> "+command+"\n"+client.executeCommand(command));
+    try {
+      responseField.setText("debug> "+command+"\n"+client.executeCommand(command));
+    } catch (Exception ex) {
+      responseField.setText("debug> "+command+"\nException "+ex);
+    }
+    
     requestField.setText("");
     requestField.requestFocus();
     lastCommand = command;
