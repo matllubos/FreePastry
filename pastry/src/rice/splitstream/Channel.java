@@ -90,10 +90,19 @@ public class Channel {
   * @return the stripeID left 
   */
   public StripeId leaveStripe(){return null;}
-
+ 
+ /**
+  * Get the number of Stripes this channel is subscribed to.
+  * @return the number of Stripes
+  */
   public int getNumSubscribedStripes(){
      return 0;
   }
+ /**
+  * Get the total number of stripes in this channel
+  * @return the total number of stripes
+  */
+  public int getNumStripes(){return numStripes;}
 }
 
 
