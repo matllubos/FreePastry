@@ -234,6 +234,13 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp, IScribeObserv
      */
     public void isNewRoot(NodeId topicId){
     }
+
+    /**
+     * Upcall by scribe to let this application know about
+     * local node's new parent in the topic tree
+     */
+    public void newParent(NodeId topicId, NodeHandle newParent, Serializable data){
+    }
 }
 
 
