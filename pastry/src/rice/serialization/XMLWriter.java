@@ -71,11 +71,11 @@ public class XMLWriter {
    */
   public XMLWriter(Writer out) throws IOException {
     try {
-      this.writer = out;
+      this.writer = new BufferedWriter(out);
       XmlPullParserFactory factory = XmlPullParserFactory.newInstance(System.getProperty(XmlPullParserFactory.PROPERTY_NAME), null);
       serializer = factory.newSerializer();
       
-      serializer.setOutput(out);
+      serializer.setOutput(writer);
       serializer.setProperty("http://xmlpull.org/v1/doc/properties.html#serializer-indentation", " ");
       serializer.setProperty("http://xmlpull.org/v1/doc/properties.html#serializer-line-separator", "\n");
       serializer.setFeature("http://xmlpull.org/v1/doc/features.html#serializer-attvalue-use-apostrophe", true);
@@ -189,9 +189,8 @@ public class XMLWriter {
    * @throws IOException If an error occurs
    */
   public void attribute(String name, Object value) throws IOException {
-    if (value == null){
+    if (value == null)
       return;
-    }
     
     attribute(name, value.toString());
   }

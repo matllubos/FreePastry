@@ -766,7 +766,7 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
     
     if (o.getClass().getComponentType().isPrimitive()) {
       Class c = o.getClass().getComponentType();
-      
+
       for (int i=0; i<Array.getLength(o); i++) {
         if (c.equals(Integer.TYPE)) {
           writePrimitive(Array.getInt(o, i), null);
@@ -787,7 +787,7 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
         } else {
           throw new IllegalArgumentException("Class " + c + " is not primitive!");
         }
-      }
+      } 
     } else {
       for (int i=0; i<Array.getLength(o); i++) {
         if (Array.get(o, i) instanceof Serializable)

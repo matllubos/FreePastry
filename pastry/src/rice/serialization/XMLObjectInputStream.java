@@ -617,7 +617,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
    * @throws IOException If an error occurs
    */
   protected int readIntHelper() throws IOException {
-    return Integer.valueOf(readPrimitive("int")).intValue();
+    return Integer.parseInt(readPrimitive("int"));
   }
   
   /**
@@ -630,7 +630,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
    * @throws IOException If an error occurs
    */
   protected boolean readBooleanHelper() throws IOException {
-    return Boolean.valueOf(readPrimitive("boolean")).booleanValue();
+    return Boolean.getBoolean(readPrimitive("boolean"));
   }
   
   /**
@@ -643,7 +643,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
    * @throws IOException If an error occurs
    */
   protected byte readByteHelper() throws IOException {
-    return Byte.valueOf(readPrimitive("byte")).byteValue();
+    return Byte.parseByte(readPrimitive("byte"));
   }
   
   /**
@@ -669,7 +669,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
    * @throws IOException If an error occurs
    */
   protected double readDoubleHelper() throws IOException {
-    return Double.valueOf(readPrimitive("double")).doubleValue();
+    return Double.parseDouble(readPrimitive("double"));
   }
   
   /**
@@ -682,7 +682,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
    * @throws IOException If an error occurs
    */
   protected float readFloatHelper() throws IOException {
-    return Float.valueOf(readPrimitive("float")).floatValue();
+    return Float.parseFloat(readPrimitive("float"));
   }
   
   /**
@@ -695,7 +695,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
    * @throws IOException If an error occurs
    */
   protected long readLongHelper() throws IOException {
-    return Long.valueOf(readPrimitive("long")).longValue();
+    return Long.parseLong(readPrimitive("long"));
   }
   
   /**
@@ -708,7 +708,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
    * @throws IOException If an error occurs
    */
   protected short readShortHelper() throws IOException {
-    return Short.valueOf(readPrimitive("short")).shortValue();
+    return Short.parseShort(readPrimitive("short"));
   }  
     
   /**
