@@ -463,36 +463,8 @@ public class Scribe extends PastryAppl implements IScribe
      */
     public boolean join( NodeId topicId, IScribeApp subscriber, 
 			   Credentials cred ) {
-	if(!isReady()) return false;
-	Topic topic = (Topic) m_topics.get( topicId );
-	
-	if ( topic == null ) {
-	    topic = new Topic( topicId, this );
-	    // add topic to known topics
-	    topic.addToScribe();
-	}
-	
-	// Register application as a subscriber for this topic
-	topic.subscribe( subscriber );
-
-	/*
-	// If we already have a parent, we dont send a subscribe mesg.
-	if( topic.getParent() == null){
-	    ScribeMessage msg = makeSubscribeMessage( topicId, cred);
-	    topic.postponeParentHandler();
-	    this.routeMsg( topicId, msg, cred, m_sendOptions );
-	}
-	*/
-
-	if( topic.getState() == Topic.CREATED){
-	    ScribeMessage msg = makeSubscribeMessage( topicId, cred);
-	    topic.postponeParentHandler();
-	    this.routeMsg( topicId, msg, cred, m_sendOptions );
-	}
-	
-	return true;
+	return join(topicId, subscriber, cred, null);
     }
-
     /**
      * Joins a multicast group/topic.  When a node joins a multicast group,
      * it receives all messages multicast to that group. An application can
@@ -529,20 +501,11 @@ public class Scribe extends PastryAppl implements IScribe
 	// Register application as a subscriber for this topic
 	topic.subscribe( subscriber );
 
-	/*
-	// If we already have a parent, we dont send a subscribe mesg.
-	if( topic.getParent() == null){
-	    ScribeMessage msg = makeSubscribeMessage( topicId, cred);
-	    topic.postponeParentHandler();
-	    msg.setData(obj);
-	    this.routeMsg( topicId, msg, cred, m_sendOptions );
-	}
-	*/
-	
 	if( topic.getState() == Topic.CREATED){
 	    ScribeMessage msg = makeSubscribeMessage( topicId, cred);
 	    topic.postponeParentHandler();
 	    msg.setData(obj);
+	    topic.setState(Topic.JOINING);
 	    this.routeMsg( topicId, msg, cred, m_sendOptions );
 	}
 
