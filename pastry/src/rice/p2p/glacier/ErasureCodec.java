@@ -294,7 +294,7 @@ public class ErasureCodec {
       ByteArrayInputStream byteinput = new ByteArrayInputStream(bytes);
       ObjectInputStream objectInput = new ObjectInputStream(byteinput);
 
-      System.out.println(System.currentTimeMillis()+" XXX after decode("+frag[0].getPayload().length+" bytes per fragment) free="+Runtime.getRuntime().freeMemory()+" total="+Runtime.getRuntime().totalMemory());
+      System.out.println(System.currentTimeMillis()+" XXX after decode("+firstFrag.getPayload().length+" bytes per fragment) free="+Runtime.getRuntime().freeMemory()+" total="+Runtime.getRuntime().totalMemory());
  
       return (Serializable) objectInput.readObject();
     } catch (IOException ioe) {
