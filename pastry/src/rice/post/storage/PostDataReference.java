@@ -1,4 +1,4 @@
-package rice.post;
+package rice.post.storage;
 
 import java.security.*;
 

@@ -11,6 +11,7 @@ import rice.past.*;
 import rice.scribe.*;
 import rice.post.log.*;
 import rice.post.messaging.*;
+import rice.post.storage.*;
 
 /**
  * This class is the service layer which allows 

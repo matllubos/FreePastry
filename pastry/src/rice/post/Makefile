@@ -4,8 +4,6 @@ SOURCE  = \
 	Post.java \
 	PostClient.java \
 	PostClientAddress.java \
-	PostData.java \
-	PostDataReference.java \
 	PostException.java \
 	PostEntityAddress.java \
 	PostGroupAddress.java \

@@ -3,7 +3,7 @@ package rice.post.email;
 import java.security.*;
 
 import rice.pastry.*;
-import rice.post.*;
+import rice.post.storage.*;
 
 /**
  * Represents the textual body of an email message.
