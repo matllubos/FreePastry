@@ -36,6 +36,7 @@ if advised of the possibility of such damage.
 
 package rice.pastry.commonapi;
 
+import java.security.InvalidParameterException;
 import java.util.TimerTask;
 
 import rice.p2p.commonapi.*;
@@ -104,10 +105,22 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] route " + msg + " to " + key);
 
     PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg);
+    if ((key == null) && (hint == null)) {
+      throw new InvalidParameterException("key and hint are null!");
+    }
+    boolean noKey = false;
+    if (key == null) {
+      noKey = true;
+      key = hint.getId();
+    }
     rice.pastry.routing.RouteMessage rm = new rice.pastry.routing.RouteMessage((rice.pastry.Id) key,
                                                                                pm,
                                                                                (rice.pastry.NodeHandle) hint,
                                                                                getAddress());
+                                                                              
+    if (noKey) {
+      rm.getOptions().setMultipleHopsAllowed(false);                                                                               
+    }
     thePastryNode.receiveMessage(rm);
   }
 
