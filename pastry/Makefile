@@ -6,7 +6,6 @@
 
 PACKAGES = \
 	rice.pastry\
-	rice.scribe\
 	rice.pastry.messaging\
 	rice.pastry.routing\
 	rice.pastry.leafset\
@@ -14,7 +13,13 @@ PACKAGES = \
 	rice.pastry.join\
 	rice.pastry.direct\
 	rice.pastry.standard\
-	rice.pastry.testing
+	rice.pastry.testing\
+	rice.scribe\
+	rice.scribe.maintenance\
+	rice.scribe.messaging\
+	rice.scribe.security\
+	rice.scribe.testing
+
 
 NODOC_PACKAGES = 
 
