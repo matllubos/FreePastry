@@ -113,11 +113,11 @@ public class VisualizationServer implements Runnable {
           Collection collection = handles.values();
           ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
           oos.writeObject(collection.toArray(new DistNodeHandle[0])); 
-        } else if (object instanceof ErrorsRequest) {
-          NAchecker.checkForErrors();
-          FDSchecker.checkForErrors();
-          ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-          oos.writeObject(getErrors());
+//        } else if (object instanceof ErrorsRequest) {
+//          NAchecker.checkForErrors();
+//          FDSchecker.checkForErrors();
+//          ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+//          oos.writeObject(getErrors());
         } else if (object instanceof UpdateJarRequest) {
           ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
           handleUpdateJarRequest((UpdateJarRequest)object,oos);
