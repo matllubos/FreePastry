@@ -137,7 +137,7 @@ public class Email implements java.io.Serializable {
       EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.BODY, errorListener);
       storage.storeContentHash(body, command);
     }
-    else if (this.attachmentRefs == null) {
+    else if ((this.attachmentRefs == null) && (attachments.length > 0)) {      
       // make a new task to store the email's contents (body and attachments)
       EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.ATTACHMENT, errorListener);
       // begin storing the body, execute the rest of the task once this is complete
