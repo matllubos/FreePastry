@@ -36,12 +36,20 @@ if advised of the possibility of such damage.
 
 package rice.pastry.testing;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Observable;
+import java.util.Observer;
+import java.util.Random;
 
-import rice.pastry.*;
-import rice.pastry.leafset.*;
-import rice.pastry.messaging.*;
-import rice.pastry.standard.*;
+import rice.pastry.IdRange;
+import rice.pastry.NodeHandle;
+import rice.pastry.NodeId;
+import rice.pastry.NodeIdFactory;
+import rice.pastry.NodeSetUpdate;
+import rice.pastry.leafset.LeafSet;
+import rice.pastry.leafset.SimilarSet;
+import rice.pastry.messaging.Message;
+import rice.pastry.standard.RandomNodeIdFactory;
 
 /**
  * This class tests the correctness of the leafset in Pastry.
@@ -64,7 +72,106 @@ public class LeafSetTest {
   public void start() {
     testCumulativeRange();
     testNonCumulativeRange();
+    testObservers();    
   }
+
+  public void testObservers() {
+    int halfLeafSet = 3;
+    LeafSet leafset = generateLeafSet(halfLeafSet*2, halfLeafSet*2, false);
+    System.out.println(leafset);
+    leafset.addObserver(new MyObserver(leafset));
+
+
+    NodeHandle handle = leafset.get(halfLeafSet);
+    System.out.println("Removing "+handle);
+    NodeId nid = (NodeId)handle.getId();
+    leafset.remove(nid);
+
+    System.out.println("Adding "+handle);
+    leafset.put(handle);
+
+    System.out.println();
+
+    halfLeafSet = 6;
+    leafset = generateLeafSet(halfLeafSet*2, halfLeafSet, false);
+    System.out.println(leafset);
+    leafset.addObserver(new MyObserver(leafset));
+
+    for (int j = 0; j < 10; j++) {
+      System.out.println();
+      for (int i = 0; i < halfLeafSet*5; i++) {
+        handle = new TestNodeHandle(factory.generateNodeId());
+        System.out.println("Adding "+handle);
+        leafset.put(handle);
+      }
+      boolean rightSide = false;
+          
+      while (leafset.size() > 2) {
+//        System.out.println("looping");
+        rightSide=!rightSide;
+        int r;
+        if (rightSide) {
+          r = random.nextInt(leafset.cwSize());
+          if (r!=0) {
+            handle = leafset.get(r);
+            System.out.println("Removing "+handle);
+            nid = (NodeId)handle.getId();
+            leafset.remove(nid);
+  //          leafset.remove(r);
+          }
+        } else {
+          r = random.nextInt(leafset.ccwSize());
+          if (r!=0) {
+            handle = leafset.get(-r);
+            System.out.println("Removing "+handle);
+            nid = (NodeId)handle.getId();
+            leafset.remove(nid);
+  //          leafset.remove(-r);
+          }
+        }
+      }
+    }
+  }
+
+  class MyObserver implements Observer {
+    LeafSet ls;
+    
+    public MyObserver(LeafSet ls) {
+      this.ls = ls;
+    }
+    
+    public void update(Observable arg0, Object arg1) {
+      SimilarSet caller;
+      if (arg0 instanceof SimilarSet) {
+        caller = (SimilarSet)arg0;
+      }
+
+      if (ls.overlaps() && (ls.ccwSize() != ls.cwSize())) {
+        System.out.println("FAILURE: overlaps and different size"+ls);
+      }
+      if (arg1 instanceof NodeSetUpdate) {
+        NodeSetUpdate nsu = (NodeSetUpdate)arg1;
+        if (nsu.wasAdded()) {
+          boolean consistent = !ls.directTest(nsu.handle());          
+          if (!consistent) {
+            System.out.println("FAILURE:"+nsu.handle()+" was added, but ls is inconsistent.");
+            System.out.println(ls);
+          } else {
+            System.out.println("OK:"+nsu.handle()+" was added");
+          }
+        } else { // node was removed
+          boolean consistent = !ls.member(nsu.handle().getNodeId());
+          if (!consistent) {
+            System.out.println("FAILURE:"+nsu.handle()+" was removed, but ls is inconsistent.");
+            System.out.println(ls);
+          } else {
+            System.out.println("OK:"+nsu.handle()+" was removed");
+          }
+        }
+      }
+    }
+
+}
 
   /**
    * Throws an exception if the test condition is not met.
