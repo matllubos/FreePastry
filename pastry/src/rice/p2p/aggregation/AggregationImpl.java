@@ -1639,13 +1639,13 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                 return;
               } else {
                 log(3, "Refresh: Limit of "+maxReaggregationPerRefresh+" reaggregations exceeded; postponing id="+id.toStringFull());
-                receiveResult(new Boolean(true));
-                return;
+                lastResult = new Boolean(true);
+                continue;
               }
             } else {
               warn("Refresh: Refreshed object not found in any aggregate: "+id.toStringFull());
-              receiveResult(new Boolean(true));
-              return;
+              lastResult = new Boolean(true);
+              continue;
             }
           }
 
