@@ -1,6 +1,7 @@
 package rice.email.test;
 
 import rice.email.*;
+import rice.email.messaging.*;
 import rice.post.*;
 import java.util.*;
 
