@@ -58,7 +58,7 @@ import java.rmi.RMISecurityManager;
  */
 
 public class RMIPastryTest {
-    private RMIPastryNodeFactory factory;
+    private PastryNodeFactory factory;
     private Vector pastrynodes;
 
     private static int port;
@@ -68,6 +68,7 @@ public class RMIPastryTest {
 
     public RMIPastryTest() {
 	factory = new RMIPastryNodeFactory();
+	((RMIPastryNodeFactory)factory).setport(port);
 	pastrynodes = new Vector();
     }
 
@@ -78,10 +79,10 @@ public class RMIPastryTest {
      *
      * @return handle to bootstrap node, or null.
      */
-    private RMINodeHandle getBootstrapHandle() {
-	RMIPastryNode bsnode = null;
+    protected NodeHandle getBootstrapHandle() {
+	RMIRemoteNodeI bsnode = null;
 	try {
-	    bsnode = (RMIPastryNode)Naming.lookup("//:" + port + "/Pastry");
+	    bsnode = (RMIRemoteNodeI)Naming.lookup("//:" + port + "/Pastry");
 	} catch (Exception e) {
 	    System.out.println("Unable to find bootstrap node on localhost");
 	}
@@ -110,7 +111,7 @@ public class RMIPastryTest {
 
 	for (int i = 1; bsnode == null && i <= nattempts; i++) {
 	    try {
-		bsnode = (RMIPastryNode)Naming.lookup("//" + bshost
+		bsnode = (RMIRemoteNodeI)Naming.lookup("//" + bshost
 							 + ":" + bsport
 							 + "/Pastry");
 	    } catch (Exception e) {
@@ -208,9 +209,9 @@ public class RMIPastryTest {
 
     public void makePastryNode() {
 	// or, for a sweet one-liner,
-	// pastrynodes.add(new PastryNode(factory, getBootstrapHandle()));
+	// pastrynodes.add(new RMIPastryNode(factory, getBootstrapHandle()));
 
-	PastryNode pn = new PastryNode(factory, getBootstrapHandle());
+	PastryNode pn = factory.newNode(getBootstrapHandle());
 	pastrynodes.add(pn);
 	System.out.println("created " + pn);
     }
@@ -229,8 +230,7 @@ public class RMIPastryTest {
     /**
      * Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
      */
-    public static void main(String args[])
-    {
+    public static void main(String args[]) {
 	doRMIinitstuff(args);
 	RMIPastryTest pt = new RMIPastryTest();
 

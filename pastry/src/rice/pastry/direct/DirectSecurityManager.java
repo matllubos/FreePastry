@@ -107,21 +107,10 @@ public class DirectSecurityManager implements PastrySecurityManager
 	NodeId nid = handle.getNodeId();
 
 	if (local.equals(nid)) {
-	    ProxyNodeHandle lnh = new ProxyNodeHandle(local);
-	    
-	    lnh.setProxy(pnode);
-	    
-	    return lnh;
+	    return pnode.getLocalHandle();
 	}
 	else if (handle instanceof PastryNode) {
 	    DirectNodeHandle dnh = new DirectNodeHandle(pnode, (PastryNode) handle, sim);
-
-	    return dnh;
-	}
-	else if (handle instanceof ProxyNodeHandle) {
-	    ProxyNodeHandle lnh = (ProxyNodeHandle) handle;
-	    
-	    DirectNodeHandle dnh = new DirectNodeHandle(pnode, lnh.getNode(), sim);
 
 	    return dnh;
 	}

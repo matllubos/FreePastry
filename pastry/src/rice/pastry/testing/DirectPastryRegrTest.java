@@ -66,25 +66,28 @@ public class DirectPastryRegrTest extends PastryRegrTest {
     /**
      * constructor
      */
-    public DirectPastryRegrTest() {
+    private DirectPastryRegrTest() {
 	super();
-	DirectPastryNodeFactory fact = new DirectPastryNodeFactory();
-	factory = fact;
-	simulator = fact.getNetworkSimulator();
+	factory = new DirectPastryNodeFactory();
+	simulator = ((DirectPastryNodeFactory)factory).getNetworkSimulator();
     }
 
     /**
-     * lastElement that returns null if empty
+     * lastElement, or returns null if empty.
      */
-    public NodeHandle getBootstrapHandle() {
-	try { return (PastryNode) pastryNodes.lastElement(); }
-	catch (NoSuchElementException e) { return null; }
+    protected NodeHandle getBootstrapHandle() {
+	try {
+	    PastryNode pn = (PastryNode) pastryNodes.lastElement();
+	    return pn.getLocalHandle();
+	} catch (NoSuchElementException e) {
+	    return null;
+	}
     }
 
     /**
      * send one simulated message
      */
-    public boolean simulate() { 
+    protected boolean simulate() { 
 	boolean res = simulator.simulate(); 
 	if (res) msgCount++;
 	return res;
@@ -93,7 +96,7 @@ public class DirectPastryRegrTest extends PastryRegrTest {
     /**
      * get authoritative information about liveness of node.
      */
-    public boolean simIsAlive(NodeId id) {
+    protected boolean simIsAlive(NodeId id) {
 	return simulator.isAlive(id);
     }
 

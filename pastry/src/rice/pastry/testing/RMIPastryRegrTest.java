@@ -72,6 +72,7 @@ public class RMIPastryRegrTest extends PastryRegrTest {
     public RMIPastryRegrTest() {
 	super();
 	factory = new RMIPastryNodeFactory();
+	((RMIPastryNodeFactory)factory).setport(port);
     }
 
     /**
@@ -81,10 +82,10 @@ public class RMIPastryRegrTest extends PastryRegrTest {
      *
      * @return handle to bootstrap node, or null.
      */
-    private RMINodeHandle getBootstrapHandle() {
-	RMIPastryNode bsnode = null;
+    protected NodeHandle getBootstrapHandle() {
+	RMIRemoteNodeI bsnode = null;
 	try {
-	    bsnode = (RMIPastryNode)Naming.lookup("//:" + port + "/Pastry");
+	    bsnode = (RMIRemoteNodeI)Naming.lookup("//:" + port + "/Pastry");
 	} catch (Exception e) {
 	    System.out.println("Unable to find bootstrap node on localhost");
 	}
@@ -113,7 +114,7 @@ public class RMIPastryRegrTest extends PastryRegrTest {
 
 	for (int i = 1; bsnode == null && i <= nattempts; i++) {
 	    try {
-		bsnode = (RMIPastryNode)Naming.lookup("//" + bshost
+		bsnode = (RMIRemoteNodeI)Naming.lookup("//" + bshost
 							 + ":" + bsport
 							 + "/Pastry");
 	    } catch (Exception e) {
@@ -141,6 +142,11 @@ public class RMIPastryRegrTest extends PastryRegrTest {
 	    bshandle = new RMINodeHandle(bsnode, bsid);
 
 	return bshandle;
+    }
+
+    public synchronized void pause(int ms) {
+	System.out.println("waiting for " + (ms/1000) + " sec");
+	try { wait(ms); } catch (InterruptedException e) {}
     }
 
     /**

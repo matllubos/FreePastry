@@ -44,7 +44,7 @@ import java.io.*;
 import java.rmi.RemoteException;
 
 /**
- * A locally stored node handle that points to a remote RMIPastryNode.
+ * A locally stored node handle that points to a remote RMIRemoteNodeI.
  *
  * @version $Id$
  *
@@ -53,7 +53,7 @@ import java.rmi.RemoteException;
 
 public class RMINodeHandle implements NodeHandle, Serializable
 {
-    private RMIPastryNode remoteNode;
+    private RMIRemoteNodeI remoteNode;
     private NodeId remotenid;
 
     private transient boolean alive;
@@ -77,7 +77,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
      * @param nid its node id.
      */
      
-    public RMINodeHandle(RMIPastryNode rn, NodeId nid) {
+    public RMINodeHandle(RMIRemoteNodeI rn, NodeId nid) {
 	System.out.println("[rmi] creating RMI handle for node: " + nid);
 	init(rn, nid);
     }
@@ -89,13 +89,13 @@ public class RMINodeHandle implements NodeHandle, Serializable
      * @param nid its node id.
      * @param pn local Pastry node.
      */
-    public RMINodeHandle(RMIPastryNode rn, NodeId nid, PastryNode pn) {
+    public RMINodeHandle(RMIRemoteNodeI rn, NodeId nid, PastryNode pn) {
 	System.out.println("[rmi] creating RMI handle for node: " + nid + ", local = " + pn);
 	init(rn, nid);
 	setLocalNode(pn);
     }
 
-    private void init(RMIPastryNode rn, NodeId nid) {
+    private void init(RMIRemoteNodeI rn, NodeId nid) {
 	remoteNode = rn;
 	remotenid = nid;
 	alive = true;
@@ -105,15 +105,21 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	isLocal = false;
     }
 
-    public RMIPastryNode getRemote() { return remoteNode; }
-
     public NodeId getNodeId() { return remotenid; }
+
+    /**
+     * The two remotenode accessor methods.
+     */
+    public RMIRemoteNodeI getRemote() { return remoteNode; }
+    public void setRemoteNode(RMIRemoteNodeI rn) {
+	if (remoteNode != null) System.out.println("panic");
+	remoteNode = rn;
+    }
 
     /**
      * The two localnode accessor methods.
      */
-    public NodeHandle getLocalNode() { return localnode; }
-
+    public PastryNode getLocalNode() { return localnode; }
     public void setLocalNode(PastryNode ln) {
 	//System.out.println("[rmi] setlocalnode " + this + "(" + remotenid + ") " + lh);
 	localnode = ln;
@@ -159,6 +165,8 @@ public class RMINodeHandle implements NodeHandle, Serializable
     public void setIsInPool(boolean iip) { isInPool = iip; }
 
     public void receiveMessage(Message msg) {
+
+	System.out.println("local = " + localnode + " remote = " + remoteNode + " rnid = " + remotenid);
 
 	if (isLocal) {
 	    localnode.receiveMessage(msg);
@@ -232,7 +240,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
     private void readObject(ObjectInputStream in)
 	throws IOException, ClassNotFoundException 
     {
-	RMIPastryNode rn = (RMIPastryNode) in.readObject();
+	RMIRemoteNodeI rn = (RMIRemoteNodeI) in.readObject();
 	NodeId rnid = (NodeId) in.readObject();
 	init(rn, rnid); // initialize all the other elements also
     }

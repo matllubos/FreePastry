@@ -39,26 +39,28 @@ package rice.pastry.rmi;
 import rice.pastry.*;
 import rice.pastry.routing.*;
 import rice.pastry.messaging.*;
+import rice.pastry.join.*;
+import rice.pastry.client.*;
 
 import java.util.*;
 import java.rmi.server.UnicastRemoteObject;
 import java.rmi.*;
 
 /**
- * An RMI-exported proxy object associated with each Pastry node. Its remote
- * interface is exported over RMI (and not the PastryNode itself, which is
- * RMI-unaware), and acts as a proxy, explicitly calling PastryNode methods.
+ * An RMI-exported Pastry node. Its remote interface is exported over RMI.
  *
  * @version $Id$
  *
  * @author Sitaram Iyer
  */
 
-class RMIPastryNodeImpl extends UnicastRemoteObject
-	implements RMIPastryNode, Observer
+public class RMIPastryNode extends PastryNode
+	implements RMIRemoteNodeI, Observer
 {
-    private PastryNode node;
+    private RMIRemoteNodeI remotestub;
     private RMINodeHandlePool handlepool;
+    private int port;
+
     private LinkedList queue;
     private int count;
 
@@ -92,7 +94,8 @@ class RMIPastryNodeImpl extends UnicastRemoteObject
 				   (msg instanceof RouteMessage ? "route" : "direct")
 				   + " msg from " + sender + ": " + msg);
 		if (sender != null) handlepool.activate(sender);
-		node.receiveMessage(msg);
+
+		receiveMessage(msg);
 	    }
 	}
     }
@@ -100,30 +103,51 @@ class RMIPastryNodeImpl extends UnicastRemoteObject
     /**
      * Constructor
      */
-    public RMIPastryNodeImpl() throws RemoteException {
-	node = null;
+    public RMIPastryNode(NodeId id) {
+	super(id);
+	remotestub = null;
+	handlepool = null;
 	queue = new LinkedList();
 	count = 0;
-	MsgHandler handler = new MsgHandler();
-	new Thread(handler).start();
     }
 
     /**
-     * sets the local Pastry node (local method)
-     * @param n the local pastry node that this helper is associated with.
+     * accessor method for elements in RMIPastryNode, called by
+     * RMIPastryNodeFactory.
+     *
+     * @param hp Node handle pool
+     * @param p RMIregistry port
      */
-    public void setLocalPastryNode(PastryNode n) { node = n; }
+    public void setRMIElements(RMINodeHandlePool hp, int p) {
+	handlepool = hp;
+	port = p;
+    }
 
     /**
-     * sets the local handle pool (local method)
-     * @param hp the handle pool maintained by the local pastry node
+     * Called after the node is initialized.
+     *
+     * @param hp Node handle pool
      */
-    public void setHandlePool(RMINodeHandlePool hp) { handlepool = hp; }
+    public void doneNode(NodeHandle bootstrap) {
+	MsgHandler handler = new MsgHandler();
+	new Thread(handler).start();
 
-    /**
-     * Proxies to the local node to get the local NodeId.
-     */
-    public NodeId getNodeId() { return node.getNodeId(); }
+	try {
+	    remotestub = (RMIRemoteNodeI) UnicastRemoteObject.exportObject(this);
+	} catch (RemoteException e) {
+	    System.out.println("Unable to acquire stub for Pastry node: " + e.toString());
+	}
+
+	((RMINodeHandle)localhandle).setRemoteNode(remotestub);
+
+	if (bootstrap == null)
+	    nodeIsReady(); // bind now
+	else
+	    addLeafSetObserver(this); // bind when there's leafset activity
+
+	if (bootstrap != null)
+	    this.receiveMessage(new InitiateJoin(bootstrap));
+    }
 
     /**
      * Proxies to the local node to accept a message. For synchronization
@@ -141,30 +165,29 @@ class RMIPastryNodeImpl extends UnicastRemoteObject
     /**
      * Synchronously rebinds node into rmi registry.
      */
-    public void rmibind() {
+    private void nodeIsReady() {
+	// RMI bind. Happens after the registry lookup, so the node never
+	// ends up discovering itself.
+
 	try {
-	    Naming.rebind("//:" + 5009 + "/Pastry", this);
+	    Naming.rebind("//:" + port + "/Pastry", remotestub);
 	} catch (Exception e) {
 	    System.out.println("Unable to bind Pastry node in rmiregistry: " + e.toString());
 	}
+
+	// notify applications
+	Iterator it = apps.iterator();
+        while (it.hasNext())
+            ((PastryAppl)(it.next())).notifyReady();
     }
 
     /**
      * Observer on leafset. Binds node into rmi registry on any leafset
      * activity. Replaces earlier binding; turns out, this is faster than
-     * all nodes using the first virtual node to bootstrap.
+     * all nodes using the first virtual node to bootstrap. Wonder why.
      */
     public void update(Observable o, Object arg) {
-	// this bind happens after the registry lookup, so the node never
-	// ends up discovering itself
-
-	try {
-	    Naming.rebind("//:" + 5009 + "/Pastry", this);
-	// } catch (AlreadyBoundException e) { // enable for "bind"
-	} catch (Exception e) {
-	    System.out.println("Unable to bind Pastry node in rmiregistry: " + e.toString());
-	}
-
-	node.deleteLeafSetObserver(this);
+	nodeIsReady();
+	this.deleteLeafSetObserver(this);
     }
 }

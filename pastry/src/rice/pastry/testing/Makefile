@@ -2,14 +2,13 @@ PACKAGE = rice.pastry.testing
 
 SOURCE  = \
 	NodeIdUnit.java\
-	DummyNodeHandle.java\
 	PastryTest.java\
+	PingClient.java\
 	RMIPastryTest.java\
 	PastryRegrTest.java\
 	DirectPastryRegrTest.java\
+	RMIPastryRegrTest.java\
 	RegrTestApp.java
-
-	#RoutingTableUnit.java
 
 RMI_SOURCE =
 

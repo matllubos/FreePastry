@@ -1,6 +1,7 @@
 PACKAGE = rice.pastry.direct
 
 SOURCE  = \
+	DirectPastryNode.java\
 	DirectNodeHandle.java\
 	NetworkSimulator.java\
 	DirectSecurityManager.java\

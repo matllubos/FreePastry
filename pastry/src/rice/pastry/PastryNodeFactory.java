@@ -54,54 +54,8 @@ import java.util.*;
 public interface PastryNodeFactory 
 {
     /**
-     * Call this to construct the material for a node for a new Pastry network.
+     * Call this to construct a new node of the type chosen by the factory.
      */
+    public PastryNode newNode(NodeHandle bootstrap);
 
-    public void constructNode();
-        
-    /**
-     * Gets the node id from the constructed node.
-     *
-     * @return a node id.
-     */
-
-    public NodeId getNodeId();
-
-    /**
-     * Gets the security manager for the constructed node.
-     *
-     * @return the security manager.
-     */
-    
-    public PastrySecurityManager getSecurityManager();
-    
-    /**
-     * Gets the message dispatch for the constructed node.
-     *
-     * @return the message dispatch.
-     */
-    
-    public MessageDispatch getMessageDispatch();
-
-    /**
-     * Returns an observable view of the leaf set.
-     *
-     * @return the leaf set
-     */
-    
-    public LeafSet getLeafSet();
-
-    /**
-     * Returns an observable view of the route set.
-     *
-     * @return the routing table
-     */
-    
-    public RoutingTable getRouteSet();
-    
-    /**
-     * Cleans up the construction.
-     */
-
-    public void doneWithNode(PastryNode pnode, NodeHandle bootstrap);
 }

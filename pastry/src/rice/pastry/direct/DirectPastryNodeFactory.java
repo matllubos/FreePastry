@@ -51,53 +51,45 @@ import java.util.*;
  * @version $Id$
  *
  * @author Andrew Ladd
+ * @author Sitaram Iyer
  */
 
 public class DirectPastryNodeFactory implements PastryNodeFactory
 {
     private RandomNodeIdFactory nidFactory;
-    private ProxyNodeHandle lhandle;
-    
     private NetworkSimulator simulator;
-
-    private NodeId nodeId;
-    private DirectSecurityManager secureMan;
-    private MessageDispatch msgDisp;
-
-    private RoutingTable routeTable;
-    private LeafSet leafSet;
-  
-    private StandardRouter router;
-
-    private StandardLeafSetProtocol lsProtocol;
-    private StandardRouteSetProtocol rsProtocol;
-    private StandardJoinProtocol jProtocol;
 
     private static final int rtMax = 8;
     private static final int lSetSize = 24;
   
     public DirectPastryNodeFactory() {
 	nidFactory = new RandomNodeIdFactory();
-
 	simulator = new EuclideanNetwork();
     }
-    
-    public void constructNode() {
-	nodeId = nidFactory.generateNodeId();
-	
-	lhandle = new ProxyNodeHandle(nodeId);
-		
-	secureMan = new DirectSecurityManager(simulator);
-	msgDisp = new MessageDispatch();
 
-	routeTable = new RoutingTable(lhandle, rtMax);
-	leafSet = new LeafSet(lhandle, lSetSize);
+    public NetworkSimulator getNetworkSimulator() { return simulator; }
+    
+    public PastryNode newNode(NodeHandle bootstrap) {
+
+	NodeId nodeId = nidFactory.generateNodeId();
+	DirectPastryNode pn = new DirectPastryNode(nodeId);
+	
+	NodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
+
+	DirectSecurityManager secureMan = new DirectSecurityManager(simulator);
+	MessageDispatch msgDisp = new MessageDispatch();
+
+	RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
+	LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 		
-	router = new StandardRouter(lhandle, routeTable, leafSet);
-		
-	lsProtocol = new StandardLeafSetProtocol(lhandle, secureMan, leafSet, routeTable);
-	rsProtocol = new StandardRouteSetProtocol(lhandle, secureMan, routeTable);
-	jProtocol = new StandardJoinProtocol(lhandle, secureMan, routeTable, leafSet);
+	StandardRouter router =
+	    new StandardRouter(localhandle, routeTable, leafSet);
+	StandardLeafSetProtocol lsProtocol =
+	    new StandardLeafSetProtocol(localhandle, secureMan, leafSet, routeTable);
+	StandardRouteSetProtocol rsProtocol =
+	    new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
+	StandardJoinProtocol jProtocol =
+	    new StandardJoinProtocol(localhandle, secureMan, routeTable, leafSet);
 
 	simulator.registerNodeId(nodeId);
 
@@ -105,29 +97,14 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
 	msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
 	msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
-    }
-        
-    public NodeId getNodeId() { return nodeId; }
 
-    public PastrySecurityManager getSecurityManager() { return secureMan; }
-    
-    public MessageDispatch getMessageDispatch() { return msgDisp; }
+	pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
+	pn.setDirectElements(/* simulator */);
+	secureMan.setLocalPastryNode(pn);
 
-    public NetworkSimulator getNetworkSimulator() { return simulator; }
+	pn.doneNode(bootstrap);
 
-    public LeafSet getLeafSet() { return leafSet; }
-
-    public RoutingTable getRouteSet() { return routeTable; }
-
-    public void doneWithNode(PastryNode pnode, NodeHandle bsnode) {
-	lhandle.setProxy(pnode);
-	secureMan.setLocalPastryNode(pnode);
-	pnode.setLocalHandle(lhandle);
-
-	nodeId = null;
-	secureMan = null;
-	msgDisp = null;	
-	lhandle = null;
+	return pn;
     }
 }
 

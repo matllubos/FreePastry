@@ -76,8 +76,32 @@ public abstract class PastryRegrTest {
 
     int msgCount = 0;
 
-    // constructor
+    // abstract methods
 
+    /**
+     * get a node handle to bootstrap from.
+     */
+    protected abstract NodeHandle getBootstrapHandle();
+
+    /**
+     * send one simulated message, or return false for a real wire protocol.
+     */
+    protected abstract boolean simulate();
+
+    /**
+     * determine whether this node is really alive.
+     */
+    protected abstract boolean simIsAlive(NodeId id);
+
+    /**
+     * kill a given node.
+     */
+    protected abstract void killNode(PastryNode pn);
+
+
+    /**
+     * constructor
+     */
     protected PastryRegrTest() {
 	pastryNodes = new Vector();
 	pastryNodesSorted = new TreeMap();
@@ -87,15 +111,13 @@ public abstract class PastryRegrTest {
 	rng = new Random();
     }
 
-    public abstract NodeHandle getBootstrapHandle();
-
     /**
      * make a new pastry node
      */
 
     private void makePastryNode() {
 	NodeHandle bootstrap = getBootstrapHandle();
-	PastryNode pn = new PastryNode(factory, bootstrap);
+	PastryNode pn = factory.newNode(bootstrap);
 
 	pastryNodes.addElement(pn);
 	pastryNodesSorted.put(pn.getNodeId(),pn);
@@ -139,10 +161,12 @@ public abstract class PastryRegrTest {
 
 	    if (n == 0)		// first batch of nodes
 		bootstrap = getBootstrapHandle();
-	    else		// corresponding node from previous batch
-		bootstrap = (NodeHandle) pastryNodes.get(n+i - num);
+	    else {		// corresponding node from previous batch
+		PastryNode pn = (PastryNode) pastryNodes.get(n+i - num);
+		if (pn != null) bootstrap = pn.getLocalHandle();
+	    }
 
-	    PastryNode pn = new PastryNode(factory, bootstrap);
+	    PastryNode pn = factory.newNode(bootstrap);
 	    pastryNodes.addElement(pn);
 	    pastryNodesSorted.put(pn.getNodeId(),pn);
 	    pastryNodesLastAdded.addElement(pn.getNodeId());
@@ -216,17 +240,6 @@ public abstract class PastryRegrTest {
 	    //System.out.println("-------------------");
 	}
     }
-
-    /**
-     * send one simulated message, or return false for a real wire protocol.
-     */
-    public abstract boolean simulate();
-
-    /**
-     * determine whether this node is really alive.
-     */
-    public abstract boolean simIsAlive(NodeId id);
-
 
     /**
      * verify the correctness of the leaf set
@@ -393,8 +406,6 @@ public abstract class PastryRegrTest {
 	    System.out.println("Killed " + pn.getNodeId());
 	}
     }
-
-    protected abstract void killNode(PastryNode pn);
 
     /**
      * main

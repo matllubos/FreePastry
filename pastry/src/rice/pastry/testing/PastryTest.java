@@ -63,9 +63,13 @@ public class PastryTest {
     /**
      * lastElement that returns null if empty
      */
-    private PastryNode pastryNodes_lastElement() {
-	try { return (PastryNode) pastryNodes.lastElement(); }
-	catch (NoSuchElementException e) { return null; }
+    private NodeHandle pastryNodes_lastElement() {
+	try {
+	    PastryNode lastnode = (PastryNode) pastryNodes.lastElement();
+	    return lastnode.getLocalHandle();
+	} catch (NoSuchElementException e) {
+	    return null;
+	}
     }
 
     private Random rng;
@@ -80,8 +84,10 @@ public class PastryTest {
     }
 
     public void makePastryNode() {
-	PastryNode bootstrap = pastryNodes_lastElement();
-	PastryNode pn = new PastryNode(factory, bootstrap);
+	//NodeHandle bootstrap = pastryNodes_lastElement();
+	//PastryNode pn = new DirectPastryNode(factory, bootstrap);
+
+	PastryNode pn = factory.newNode(pastryNodes_lastElement());
 	pastryNodes.addElement(pn);
 	
 	//System.out.println("created " + pn);

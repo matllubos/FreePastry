@@ -1,7 +1,6 @@
 PACKAGE = rice.pastry.client
 
 SOURCE  = \
-	PastryClient.java\
 	PastryAppl.java
 
 RMI_SOURCE =

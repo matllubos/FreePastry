@@ -34,68 +34,38 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry.testing;
+package rice.pastry.direct;
 
 import rice.pastry.*;
-import rice.pastry.routing.*;
+import rice.pastry.messaging.*;
+import rice.pastry.join.*;
+import rice.pastry.client.*;
+
 import java.util.*;
 
 /**
- * RoutingTableUnit tests the RoutingTable class.
+ * Direct pastry node. Subclasses PastryNode, and does about nothing else.
  *
  * @version $Id$
  *
- * @author Andrew Ladd
+ * @author Sitaram Iyer
  */
 
-public class RoutingTableUnit {
-    private Random rng;
-    private RoutingTable rt;
-
-    public NodeId createNodeId()
-    {
-	byte raw[] = new byte[NodeId.nodeIdBitLength >> 3];
-	
-	rng.nextBytes(raw);
-
-	NodeId nodeId = new NodeId(raw);
-
-	return nodeId;
-    }
-    
-    public void createRoutingTable() 
-    {
-	NodeId nid = createNodeId();
-	
-	System.out.println("my node id: " + nid);
-
-	rt = new RoutingTable(nid, 10);	
+public class DirectPastryNode extends PastryNode
+{
+    public DirectPastryNode(NodeId id) {
+	super(id);
     }
 
-    public NodeHandle createNodeHandle()
-    {
-	return new DummyNodeHandle(createNodeId(), 1);
-    }
-    
-    public void fillRoutingTable(int num)
-    {
-	for (int i=0; i<num; i++) {
-	    rt.put(createNodeHandle());
-	}
-    }
+    public void setDirectElements(/* simulator */) { }
 
-    public RoutingTableUnit() 
-    {
-	rng = new Random();
-	createRoutingTable();
+    public void doneNode(NodeHandle bootstrap) {
+	if (bootstrap != null)
+	    this.receiveMessage(new InitiateJoin(bootstrap));
 
-	fillRoutingTable(100000);
-	
-	System.out.println(rt);
-    }
-
-    public static void main(String args[]) 
-    {
-	RoutingTableUnit rtu = new RoutingTableUnit();
+	// notify applications
+	Iterator it = apps.iterator();
+        while (it.hasNext())
+            ((PastryAppl)(it.next())).notifyReady();
     }
 }

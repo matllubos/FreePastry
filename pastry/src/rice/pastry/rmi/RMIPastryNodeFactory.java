@@ -60,91 +60,57 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
 {
     private RandomNodeIdFactory nidFactory;
     
-    private NodeId nodeId;
-    private RMIPastrySecurityManager secureMan;
-    private MessageDispatch msgDisp;
-
-    private RoutingTable routeTable;
-    private LeafSet leafSet;
-  
-    private StandardRouter router;
-
-    private StandardLeafSetProtocol lsProtocol;
-    private StandardRouteSetProtocol rsProtocol;
-    private StandardJoinProtocol jProtocol;
-
-    private RMIPastryNodeImpl rmilocalnode;
-    private RMINodeHandle localhandle;
-
-    private RMINodeHandlePool handlepool;
-
     private static final int rtMax = 8;
     private static final int lSetSize = 24;
+
+    int port;
   
     public RMIPastryNodeFactory() {
 	nidFactory = new RandomNodeIdFactory();
+	port = 0;
     }
+
+    public void setport(int p) { port = p; }
     
-    public void constructNode() {
-	nodeId = nidFactory.generateNodeId();
+    public PastryNode newNode(NodeHandle bootstrap) {
+
+	NodeId nodeId = nidFactory.generateNodeId();
+	RMIPastryNode pn = new RMIPastryNode(nodeId);
 	
-	try {
-	    rmilocalnode = new RMIPastryNodeImpl();
-	} catch (RemoteException e) {
-	    System.out.println("Unable to create RMI Pastry node: " + e.toString());
-	}
-	localhandle = new RMINodeHandle(rmilocalnode, nodeId);
+	RMINodeHandle localhandle = new RMINodeHandle(null, nodeId);
+	localhandle.setLocalNode(pn);
 
-	handlepool = new RMINodeHandlePool();
+	RMINodeHandlePool handlepool = new RMINodeHandlePool();
 	localhandle = handlepool.coalesce(localhandle); // add ourselves to pool
-	rmilocalnode.setHandlePool(handlepool);
 
-	secureMan = new RMIPastrySecurityManager(localhandle, handlepool);
-	msgDisp = new MessageDispatch();
+	RMIPastrySecurityManager secureMan =
+	    new RMIPastrySecurityManager(localhandle, handlepool);
+	MessageDispatch msgDisp = new MessageDispatch();
 
-	routeTable = new RoutingTable(localhandle, rtMax);
-	leafSet = new LeafSet(localhandle, lSetSize);
+	RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
+	LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 
-	router = new StandardRouter(localhandle, routeTable, leafSet);
-
-	lsProtocol = new StandardLeafSetProtocol(localhandle, secureMan, leafSet, routeTable);
-	rsProtocol = new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
-	jProtocol = new StandardJoinProtocol(localhandle, secureMan, routeTable, leafSet);
+	StandardRouter router =
+	    new StandardRouter(localhandle, routeTable, leafSet);
+	StandardLeafSetProtocol lsProtocol =
+	    new StandardLeafSetProtocol(localhandle, secureMan, leafSet, routeTable);
+	StandardRouteSetProtocol rsProtocol =
+	    new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
+	StandardJoinProtocol jProtocol =
+	    new StandardJoinProtocol(localhandle, secureMan, routeTable, leafSet);
 
 	msgDisp.registerReceiver(router.getAddress(), router);
 	msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
 	msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
 	msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
-    }
-        
-    public NodeId getNodeId() { return nodeId; }
 
-    public PastrySecurityManager getSecurityManager() { return secureMan; }
-    
-    public MessageDispatch getMessageDispatch() { return msgDisp; }
+	pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
+	pn.setRMIElements(handlepool, port);
+	secureMan.setLocalPastryNode(pn);
 
-    public LeafSet getLeafSet() { return leafSet; }
-    public RoutingTable getRouteSet() { return routeTable; }
+	pn.doneNode(bootstrap);
 
-    public void doneWithNode(PastryNode pnode, NodeHandle bshandle) {
-	localhandle.setLocalNode(pnode); // itself!
-	rmilocalnode.setLocalPastryNode(pnode);
-	secureMan.setLocalPastryNode(pnode);
-	pnode.setLocalHandle(localhandle);
-
-	if (bshandle == null) {
-	    rmilocalnode.rmibind(); // bind now
-	} else {
-	    // bind when there's leafset activity
-	    pnode.addLeafSetObserver(rmilocalnode);
-	}
-
-	nodeId = null;
-	secureMan = null;
-	msgDisp = null;	
-	rmilocalnode = null;
-	localhandle = null;
-	handlepool = null;
+	return pn;
     }
 }
 

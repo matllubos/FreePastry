@@ -119,11 +119,6 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
 	    System.exit(1);
 	    return null;
 	}
-	else if (handle instanceof ProxyNodeHandle) {
-	    System.out.println("[rmi] panic: Handle instanceof ProxyNodeHandle. Returning NULL.");
-	    System.exit(1);
-	    return null;
-	}
 	else if (handle instanceof RMINodeHandle) {
 	    RMINodeHandle rnh = (RMINodeHandle) handle;
 

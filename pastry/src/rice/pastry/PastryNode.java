@@ -41,7 +41,6 @@ import rice.pastry.security.*;
 import rice.pastry.client.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
-import rice.pastry.join.*;
 
 import java.util.*;
 
@@ -53,101 +52,77 @@ import java.util.*;
  * @author Andrew Ladd
  */
 
-public class PastryNode implements NodeHandle 
+public abstract class PastryNode implements MessageReceiver
 {
     private NodeId myNodeId;
     private PastrySecurityManager mySecurityManager;
     private MessageDispatch myMessageDispatch;
     private LeafSet leafSet;
     private RoutingTable routeSet;
-    private NodeHandle localhandle;
-  
-    /**
-     * Constructor.  Creates a new Pastry network.
-     *
-     * @param pFactory a Pastry node factory.
-     */
+    protected NodeHandle localhandle;
+    protected Vector apps;
 
-    public PastryNode(PastryNodeFactory pFactory) 
-    {
-	this(pFactory, null);
+    /**
+     * Constructor, with NodeId. Need to set the node's ID before this node
+     * is inserted as localHandle.localNode.
+     */
+    protected PastryNode(NodeId id) {
+	myNodeId = id;
+	apps = new Vector();
     }
 
     /**
-     * Constructor.  Creates a new Pastry network.
+     * Called by the Node factory with a basket of random arguments. Better
+     * than having umpteen accessor methods. Not to be overridden. Elements
+     * specific to a wire protocol can be passed in setRMIElements etc.
      *
-     * @param pFactory a Pastry node factory.
-     * @param bshandle a node handle to bootstrap with.
+     * @param lh Node handle corresponding to this node.
+     * @param secmgr Security manager.
+     * @param md Message dispatcher.
+     * @param ls Leaf set.
+     * @param rt Routing table.
      */
+    public final void setElements(NodeHandle lh, PastrySecurityManager secmgr,
+				  MessageDispatch md, LeafSet ls,
+				  RoutingTable rt) {
+	localhandle = lh;
+	mySecurityManager = secmgr;
+	myMessageDispatch = md;
 
-    public PastryNode(PastryNodeFactory pFactory, NodeHandle bshandle) 
-    {
-	pFactory.constructNode();
-	
-	myNodeId = pFactory.getNodeId();
-	mySecurityManager = pFactory.getSecurityManager();
-	myMessageDispatch = pFactory.getMessageDispatch();
-	
-	leafSet = pFactory.getLeafSet();
-	routeSet = pFactory.getRouteSet();
-
-	pFactory.doneWithNode(this, bshandle);
-
-	if (bshandle != null)
-	    this.receiveMessage(new InitiateJoin(bshandle));
+	leafSet = ls;
+	routeSet = rt;
     }
 
-    public NodeHandle getLocalHandle() { return localhandle; }
-    public void setLocalHandle(NodeHandle nh) { localhandle = nh; }
-
-    // node handle interface
+    public final NodeHandle getLocalHandle() { return localhandle; }
 
     public final NodeId getNodeId() { return myNodeId; }
     
-    public final boolean isAlive() { return true; }
-
-    public final boolean ping() { return true; }
-
-    public final int proximity() { return 0; }
-
     public final LeafSet getLeafSet() { return leafSet; }
 
     public final RoutingTable getRoutingTable() { return routeSet; }
 
     /**
-     * Add a leaf set observer to the Pastry node.
+     * Add/delete a leaf set observer to the Pastry node.
      *
      * @param o the observer.
      */
     
     public final void addLeafSetObserver(Observer o) { leafSet.addObserver(o); }
-    
-    /**
-     * Delete a leaf set observer from the Pastry node.
-     *
-     * @param o the observer.
-     */
-    
     public final void deleteLeafSetObserver(Observer o) { leafSet.deleteObserver(o); }
     
     /**
-     * Add a route set observer to the Pastry node.
+     * Add/delete a route set observer to the Pastry node.
      *     
      * @param o the observer.
      */
     
     public final void addRouteSetObserver(Observer o) { routeSet.addObserver(o); }
-
-    /**
-     * Delete a route set observer from the Pastry node.
-     *     
-     * @param o the observer.
-     */
-    
     public final void deleteRouteSetObserver(Observer o) { routeSet.deleteObserver(o); }
 
-    // message receiver interface
-
+    /**
+     * message receiver interface. synchronized so that the external message
+     * processing thread won't interfere with application messages.
+     */
     public final synchronized void receiveMessage(Message msg) 
     {
 	if (mySecurityManager.verifyMessage(msg) == true)
@@ -169,16 +144,8 @@ public class PastryNode implements NodeHandle
 	else throw new Error("security failure");
     }    
 
-    /**
-     * Registers a client with the Pastry network.
-     *
-     * @param client the client to register.
-     */
-
-    public final void registerClient(PastryClient client) {
-	if (client.getAddress() == null) throw new NullPointerException();
-	
-	registerReceiver(client.getCredentials(), client.getAddress(), client);
+    public final void registerApp(PastryAppl app) {
+	apps.add(app);
     }
 
     public String toString() {

@@ -1,14 +1,14 @@
 PACKAGE = rice.pastry.rmi
 
 SOURCE  = \
+	RMIPastryNode.java\
+	RMIRemoteNodeI.java\
 	RMINodeHandle.java\
 	RMINodeHandlePool.java\
-	RMIPastryNode.java\
 	RMIPastryNodeFactory.java\
-	RMIPastryNodeImpl.java\
 	RMIPastrySecurityManager.java
 
-RMI_SOURCE = RMIPastryNodeImpl.java
+RMI_SOURCE = RMIPastryNode.java
 
 MAIN       = 
 

@@ -3,11 +3,9 @@ PACKAGE = rice.pastry.standard
 SOURCE  = \
 	StandardRouter.java\
 	RandomNodeIdFactory.java\
-	ProxyNodeHandle.java\
 	StandardLeafSetProtocol.java\
 	StandardRouteSetProtocol.java\
-	StandardJoinProtocol.java\
-	PingClient.java
+	StandardJoinProtocol.java
 
 RMI_SOURCE =
 
