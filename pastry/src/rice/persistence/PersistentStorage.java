@@ -1288,39 +1288,42 @@ public class PersistentStorage implements Storage {
    * @param file The directory to read the metadata file for
    */
   private long readMetadataFile(File file) throws IOException {
-    FileInputStream fin = null;
     File metadata = new File(file, METADATA_FILENAME);
     
     if (! metadata.exists())
       return -1L;
 
+    FileInputStream fin = null;
+    
     try {
-      IdRange range = getRangeForDirectory(file);
-
       fin = new FileInputStream(metadata);
       ObjectInputStream objin = new ObjectInputStream(new BufferedInputStream(fin));
       
-      HashMap map = (HashMap) objin.readObject();
-      Iterator keys = map.keySet().iterator();
+      IdRange range = getRangeForDirectory(file);
       
-      while (keys.hasNext()) {
-        Id id = (Id) keys.next();
+      try {
+        HashMap map = (HashMap) objin.readObject();
+        Iterator keys = map.keySet().iterator();
         
-        if (range.containsId(id)) 
-          this.metadata.put(id, map.get(id));
-        else
-          dirty.add(file);
+        while (keys.hasNext()) {
+          Id id = (Id) keys.next();
+          
+          if (range.containsId(id)) 
+            this.metadata.put(id, map.get(id));
+          else
+            dirty.add(file);
+        }
+        
+        return metadata.lastModified();
+      } catch (ClassNotFoundException e) {
+        System.out.println("ERROR: Got exception " + e + " while reading metadata file " + metadata + " - rebuilding file");
+        deleteFile(metadata);
+        return 0L;
+      } catch (IOException e) {
+        System.out.println("ERROR: Got exception " + e + " while reading metadata file " + metadata + " - rebuilding file");
+        deleteFile(metadata);
+        return 0L;
       }
-      
-      return metadata.lastModified();
-    } catch (ClassNotFoundException e) {
-      System.out.println("ERROR: Got exception " + e + " while reading metadata file " + metadata + " - rebuilding file");
-      deleteFile(metadata);
-      return 0L;
-    } catch (IOException e) {
-      System.out.println("ERROR: Got exception " + e + " while reading metadata file " + metadata + " - rebuilding file");
-      deleteFile(metadata);
-      return 0L;
     } finally {
       fin.close();
     }
@@ -1333,9 +1336,10 @@ public class PersistentStorage implements Storage {
    * @param map The data to write
    */
   private static void writeMetadataFile(File file, HashMap map) throws IOException {    
-    FileOutputStream fout = new FileOutputStream(new File(file, METADATA_FILENAME));
+    FileOutputStream fout = null;
     
     try {
+      fout = new FileOutputStream(new File(file, METADATA_FILENAME));
       ObjectOutputStream objout = new ObjectOutputStream(new BufferedOutputStream(fout));
       objout.writeObject(map);
       objout.close();
@@ -1374,28 +1378,25 @@ public class PersistentStorage implements Storage {
    * @return Serializable the data stored at the offset in the file
    *
    */
-  private static Serializable readObject(File file, int offset) throws IOException {
-    Serializable toReturn = null;
-    if ((file == null) || (! file.exists()))
-      return null;
-    
-    FileInputStream fin = new FileInputStream(file);
-    ObjectInputStream objin = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fin)));
+  private static Serializable readObject(File file, int offset) throws IOException {    
+    FileInputStream fin = null;
     
     try {
-      /* skip objects */
-      for (int i=0; i<offset; i++)
-        objin.readObject(); 
-      
-      toReturn = (Serializable) objin.readObject();
-    } catch (ClassNotFoundException e) {
-      throw new IOException(e.getMessage());
+      try {
+        fin = new FileInputStream(file);
+        ObjectInputStream objin = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fin)));
+        
+        /* skip objects */
+        for (int i=0; i<offset; i++)
+          objin.readObject(); 
+        
+        return (Serializable) objin.readObject();
+      } catch (ClassNotFoundException e) {
+        throw new IOException(e.getMessage());
+      }
     } finally {
       fin.close();
-      objin.close();
     }
-    
-    return toReturn;
   }
 
   /**
@@ -1419,56 +1420,42 @@ public class PersistentStorage implements Storage {
     if (file.length() < 32) 
       return null;
         
-    RandomAccessFile ras = new RandomAccessFile(file, "r");
-    ras.seek(file.length() - 32);
-
-    if (ras.readLong() != PERSISTENCE_MAGIC_NUMBER) {
-      ras.close();
-      return null;
-    } else if (ras.readLong() != PERSISTENCE_VERSION_2) {
-      ras.close();
-      System.out.println("Persistence version did not match - exiting!");
-      return null;
-    } else if (ras.readLong() != PERSISTENCE_REVISION_2_0) {
-      ras.close();
-      System.out.println("Persistence revision did not match - exiting!");
-      return null;
-    }
-        
-    long length = ras.readLong();
-    ras.seek(file.length() - 32 - length);
- 
-    FileInputStream fis = new FileInputStream(ras.getFD());
-    ObjectInputStream objin = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
-    Serializable result = null;
+    RandomAccessFile ras = null;
     
     try {
-      try {
-        result = (Serializable) objin.readObject();
-      } finally {       
-        objin.close();
-        fis.close();
-        ras.close();
+      ras = new RandomAccessFile(file, "r");
+      ras.seek(file.length() - 32);
+
+      if (ras.readLong() != PERSISTENCE_MAGIC_NUMBER) {
+        return null;
+      } else if (ras.readLong() != PERSISTENCE_VERSION_2) {
+        System.out.println("Persistence version did not match - exiting!");
+        return null;
+      } else if (ras.readLong() != PERSISTENCE_REVISION_2_0) {
+        System.out.println("Persistence revision did not match - exiting!");
+        return null;
       }
-    } catch (ClassNotFoundException e) {
-      throw new IOException(e.getMessage());
+      
+      long length = ras.readLong();
+      ras.seek(file.length() - 32 - length);
+      
+      FileInputStream fis = null;
+      
+      try {
+        fis = = new FileInputStream(ras.getFD());
+        ObjectInputStream objin = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
+
+        try {
+          return (Serializable) objin.readObject();
+        } catch (ClassNotFoundException e) {
+          throw new IOException(e.getMessage());
+        }
+      } finally {
+        fis.close();
+      }
+    } finally {
+      ras.close();
     }
-        
-    return result;
-  }
-  
-  /**
-   * Utility method which skips the provided number of bytes forward in a
-   * file input stream.  Due to stupid contact for FIS.skip();
-   * 
-   * @param fis The input stream
-   * @param skip The number of bytes to skip
-   */
-  private static void skip(FileInputStream fis, long skip) throws IOException {
-    long skipped = 0;
-    
-    while (skipped < skip) 
-      skipped += fis.skip(skip-skipped);
   }
 
   /**
@@ -1509,27 +1496,34 @@ public class PersistentStorage implements Storage {
    * @param file The file to serialize the object to.
    * @return The object's disk space usage
    */
-  private static long writeObject(Serializable obj, Serializable metadata, Id key, long version, File file) {
-    if (obj == null || file == null)
-      return 0;
-    
+  private static long writeObject(Serializable obj, Serializable metadata, Id key, long version, File file) throws IOException {
+    FileOutputStream fout = null;
+	  
     try {
-      FileOutputStream fout = new FileOutputStream(file);
+      fout = new FileOutputStream(file);
       ObjectOutputStream objout = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fout)));
       objout.writeObject(key);
       objout.writeObject(obj);
       objout.writeObject(new Long(version));
       objout.close();
+    } finally {
       fout.close();
-      
-      long len1 = file.length();
+    }
+    
+    long len1 = file.length();
+    
+    try {
       fout = new FileOutputStream(file, true);
-      objout = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fout)));
+      ObjectOutputStream objout = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fout)));
       objout.writeObject(metadata);
       objout.close();
+    } finally {
       fout.close();
-      
-      long len2 = file.length();
+    }
+    
+    long len2 = file.length();
+    
+    try {
       fout = new FileOutputStream(file, true);
       DataOutputStream dos = new DataOutputStream(fout);
       dos.writeLong(PERSISTENCE_MAGIC_NUMBER);
@@ -1537,8 +1531,8 @@ public class PersistentStorage implements Storage {
       dos.writeLong(PERSISTENCE_REVISION_2_0);
       dos.writeLong(len2-len1);
       dos.close();
-    } catch (Throwable e) {
-      e.printStackTrace();
+    } finally {
+      fout.close();
     }
     
     return file.length();
@@ -1552,34 +1546,47 @@ public class PersistentStorage implements Storage {
    * @param metadata The metadata to write
    */
   private static void writeMetadata(File file, Serializable metadata) throws IOException {
-    RandomAccessFile ras = new RandomAccessFile(file, "rw");
-    ras.seek(file.length() - 32);
+    RandomAccessFile ras = null;
+    FileOutputStream fout = null;
     
-    if ((ras.readLong() == PERSISTENCE_MAGIC_NUMBER) && 
-        (ras.readLong() == PERSISTENCE_VERSION_2) &&
-        (ras.readLong() == PERSISTENCE_REVISION_2_0)) {
-      long length = ras.readLong();
-      ras.setLength(file.length() - 32 - length);
-    } 
-    
-    ras.close();
+    try {
+      ras = new RandomAccessFile(file, "rw");
+      ras.seek(file.length() - 32);
+      
+      if ((ras.readLong() == PERSISTENCE_MAGIC_NUMBER) && 
+          (ras.readLong() == PERSISTENCE_VERSION_2) &&
+          (ras.readLong() == PERSISTENCE_REVISION_2_0)) {
+        long length = ras.readLong();
+        ras.setLength(file.length() - 32 - length);
+      } 
+    } finally {
+      ras.close();
+    }
     
     long len1 = file.length();
-    FileOutputStream fout = new FileOutputStream(file, true);
-    ObjectOutputStream objout = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fout)));
-    objout.writeObject(metadata);
-    objout.close();
-    fout.close();
+    
+    try {
+      fout = new FileOutputStream(file, true);
+      ObjectOutputStream objout = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fout)));
+      objout.writeObject(metadata);
+      objout.close();
+    } finally {
+      fout.close();
+    }
     
     long len2 = file.length();
-    fout = new FileOutputStream(file, true);
-    DataOutputStream dos = new DataOutputStream(fout);
-    dos.writeLong(PERSISTENCE_MAGIC_NUMBER);
-    dos.writeLong(PERSISTENCE_VERSION_2);
-    dos.writeLong(PERSISTENCE_REVISION_2_0);
-    dos.writeLong(len2-len1);
-    dos.close();
-    fout.close();
+    
+    try {
+      fout = new FileOutputStream(file, true);
+      DataOutputStream dos = new DataOutputStream(fout);
+      dos.writeLong(PERSISTENCE_MAGIC_NUMBER);
+      dos.writeLong(PERSISTENCE_VERSION_2);
+      dos.writeLong(PERSISTENCE_REVISION_2_0);
+      dos.writeLong(len2-len1);
+      dos.close();
+    } finally {
+      fout.close();
+    }
   }
 
   /*****************************************************************/
