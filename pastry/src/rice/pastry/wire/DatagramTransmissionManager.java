@@ -126,10 +126,10 @@ public class DatagramTransmissionManager {
   public Iterator getReady() {
     synchronized (map) {
       LinkedList list = new LinkedList();
-      Iterator i = getEntries();
+      Object[] array = getEntries();
 
-      while (i.hasNext()) {
-        TransmissionEntry entry = (TransmissionEntry) i.next();
+      for (int i=0; i<array.length; i++) {
+        TransmissionEntry entry = (TransmissionEntry) array[i];
 
         if (entry.getState() == entry.STATE_READY) {
           list.addLast(entry.get());
@@ -169,11 +169,11 @@ public class DatagramTransmissionManager {
    */
   public void wakeup() {
     synchronized (map) {
-      Iterator i = getEntries();
+      Object[] array = getEntries();
       boolean ready = false;
 
-      while (i.hasNext()) {
-        TransmissionEntry entry = (TransmissionEntry) i.next();
+      for (int i=0; i<array.length; i++) {
+        TransmissionEntry entry = (TransmissionEntry) array[i];
         entry.wakeup();
 
         if (entry.getState() == entry.STATE_READY)
@@ -213,8 +213,8 @@ public class DatagramTransmissionManager {
    * @return An Iterator over the TransmissionEntries in the Transmission
    *         Manager.
    */
-  private Iterator getEntries() {
-    return map.values().iterator();
+  private Object[] getEntries() {
+    return map.values().toArray();
   }
 
   private void debug(String s) {
@@ -283,7 +283,7 @@ public class DatagramTransmissionManager {
     public int STATE_WAITING_TO_SEND = -5;
 
     // the default wait-time for a lost packet
-    public long SEND_TIMEOUT_DEFAULT = 1250;
+    public long SEND_TIMEOUT_DEFAULT = 1000;
 
     // the minimum wait time for a lost packet
     public long SEND_TIMEOUT_MIN = 250;
@@ -353,18 +353,19 @@ public class DatagramTransmissionManager {
           (handle.getState() == WireNodeHandle.STATE_USING_UDP)) {
         LinkedList list = new LinkedList();
 
+        debug("Queue has exceed maximum length - moving to TCP.");
+
         Iterator i = queue.iterator();
 
         while (i.hasNext()) {
           PendingWrite pw = (PendingWrite) i.next();
 
           if (! (pw.getObject() instanceof DatagramMessage)) {
+            debug("Moving message " + pw.getObject() + " to TCP queue.");
             list.addLast(new SocketTransportMessage(pw.getObject()));
             i.remove();
           }
         }
-
-        debug("Queue has exceed maximum length - moving to TCP.");
 
         if (queue.size() > 0)
           state = STATE_READY;
@@ -489,6 +490,7 @@ public class DatagramTransmissionManager {
               while (i.hasNext()) {
                 PendingWrite pw = (PendingWrite) i.next();
                 if (! (pw.getObject() instanceof DatagramMessage)) {
+                  debug("Moving message " + pw.getObject() + " to TCP queue.");
                   list.addLast(new SocketTransportMessage(pw.getObject()));
                   i.remove();
                 }

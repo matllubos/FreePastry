@@ -6,6 +6,7 @@ SOURCE  = \
 	SocketTransportMessage.java\
  	DisconnectMessage.java\
 	HelloMessage.java\
+	HelloResponseMessage.java\
 	NodeIdRequestMessage.java\
 	NodeIdResponseMessage.java
 

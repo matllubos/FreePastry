@@ -42,14 +42,14 @@ import rice.pastry.*;
 import java.net.*;
 
 /**
- * Class which represents a greeting in the socket-based pastry protocol. It contains
- * the InetSocketAddress and nodeId of the socket-initiating node.
+ * Class which represents a greeting response in the socket-based pastry protocol. It contains
+ * the InetSocketAddress and nodeId of the socket-accepting node.
  *
  * @version $Id$
  *
  * @author Alan Mislove
  */
-public class HelloMessage extends SocketCommandMessage {
+public class HelloResponseMessage extends SocketCommandMessage {
 
   private InetSocketAddress address;
 
@@ -60,7 +60,7 @@ public class HelloMessage extends SocketCommandMessage {
   /**
    * Constructor
    */
-  public HelloMessage(WirePastryNode pn, NodeId dest) {
+  public HelloResponseMessage(WirePastryNode pn, NodeId dest) {
     super();
     address = ((WireNodeHandle) pn.getLocalHandle()).getAddress();
     nodeId = pn.getNodeId();
@@ -94,17 +94,7 @@ public class HelloMessage extends SocketCommandMessage {
     return dest;
   }
 
-  /**
-   * Returns the appropriate response for this HelloMessage
-   *
-   * @param pn The local pastry node
-   * @return A response message that should be sent to sender
-   */
-  public HelloResponseMessage getResponse(WirePastryNode pn) {
-    return new HelloResponseMessage(pn, nodeId);
-  }
-
   public String toString() {
-    return "HelloMessage from " + address + "(" + nodeId + ") to " + dest;
+    return "HelloResponseMessage from " + address + "(" + nodeId + ") to " + dest;
   }
 }

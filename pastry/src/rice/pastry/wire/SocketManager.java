@@ -129,8 +129,7 @@ public class SocketManager implements SelectionKeyHandler {
           snh.disconnect();
         }
       } else {
-        System.out.println(pastryNode.getNodeId() + " (SC): ERROR: Request to open already-open socket to " + handle.getAddress());
-        (new Exception()).printStackTrace();
+        debug("ERROR: Request to open already-open socket to " + handle.getAddress());
       }
     }
   }
@@ -146,8 +145,7 @@ public class SocketManager implements SelectionKeyHandler {
       if (openSockets.contains(handle)) {
         openSockets.remove(handle);
       } else {
-        System.out.println(pastryNode.getNodeId() + " (SC): ERROR: Request to close non-open socket to " + handle.getAddress());
-        (new Exception()).printStackTrace();
+        debug("ERROR: Request to close non-open socket to " + handle.getAddress());
       }
     }
   }
@@ -165,8 +163,7 @@ public class SocketManager implements SelectionKeyHandler {
         openSockets.remove(handle);
         openSockets.addFirst(handle);
       } else {
-        System.out.println(pastryNode.getNodeId() + " (SC): ERROR: Request to update non-open socket to " + handle.getAddress());
-        (new Exception()).printStackTrace();
+        System.out.println("ERROR: Request to update non-open socket to " + handle.getAddress());
       }
     }
   }
@@ -326,9 +323,9 @@ public class SocketManager implements SelectionKeyHandler {
               handle = (WireNodeHandle) pastryNode.getNodeHandlePool().coalesce(handle);
             }
 
-            handle.setKey(key);
+            handle.setKey(key, hm.getResponse(pastryNode));
           } else {
-            System.out.println("Found socket for wrong nodeId " + hm.getDestination() + " at " + pastryNode.getNodeId() + " - killing.");
+            debug("Found socket for wrong nodeId " + hm.getDestination() + " at " + pastryNode.getNodeId() + " - killing.");
             key.interestOps(0);
 
             key.channel().close();
@@ -340,7 +337,7 @@ public class SocketManager implements SelectionKeyHandler {
         } else if (o instanceof NodeIdRequestMessage) {
           debug("Read request message " + o);
 
-          writer = new SocketChannelWriter(pastryNode);
+          writer = new SocketChannelWriter(pastryNode, null);
 
           writer.enqueue(new NodeIdResponseMessage(pastryNode.getNodeId()));
           key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);

@@ -100,7 +100,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
 
     try {
       // create reader and writer
-      SocketChannelWriter writer = new SocketChannelWriter(null);
+      SocketChannelWriter writer = new SocketChannelWriter(null, null);
       SocketChannelReader reader = new SocketChannelReader(null);
 
       // bind to the appropriate port

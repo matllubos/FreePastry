@@ -161,10 +161,15 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
         ((WirePastryNode) getLocalNode()).getSocketManager().closeSocket(this);
         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
       } else if (state == STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT) {
-        close();
+        close(null);
       } else {
         System.out.println("Recieved DisconnectMessage at non-connected socket - not fatal... (state == " + state + ")");
       }
+    } else if (message instanceof HelloResponseMessage) {
+      markAlive();
+      writer.greetingReceived();
+    } else {
+      System.out.println("Received unreconginzed SocketCommandMessage " + message + " - dropping on floor");
     }
   }
 
@@ -266,14 +271,15 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
           }
         }
 
-        setKey(key);
-        writer.enqueue(new HelloMessage((WirePastryNode) getLocalNode(), nodeId));
+        setKey(key, new HelloMessage((WirePastryNode) getLocalNode(), nodeId));
 
         if (messages != null) {
           Iterator i = messages.iterator();
 
           while (i.hasNext()) {
-            writer.enqueue(i.next());
+            Object o = i.next();
+            debug("Enqueueing message " + o + " into socket channel writer.");
+            writer.enqueue(o);
           }
         }
 
@@ -284,7 +290,10 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
         }
       } catch (IOException e) {
         debug("IOException connecting to remote node " + address);
-        close();
+
+        // mark state as TCP in order to show this was unexpeceted
+        state = STATE_USING_TCP;
+        close(messages);
       }
     }
   }
@@ -303,8 +312,9 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
    *
    * @param key The new SelectionKey
    */
-  public void setKey(SelectionKey key) {
+  public void setKey(SelectionKey key, SocketCommandMessage scm) {
     debug("Got new key  (state == " + state + ")");
+    markAlive();
 
     // if we're currently using UDP, accept the connection as usual
     if (state == STATE_USING_UDP) {
@@ -315,7 +325,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
       ((WirePastryNode) getLocalNode()).getDatagramManager().resetAckNumber(nodeId);
 
       reader = new SocketChannelReader((WirePastryNode) getLocalNode());
-      writer = new SocketChannelWriter((WirePastryNode) getLocalNode());
+      writer = new SocketChannelWriter((WirePastryNode) getLocalNode(), scm);
 
       state = STATE_USING_TCP;
     } else {
@@ -341,7 +351,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
           this.key.channel().close();
           this.key.cancel();
 
-          writer.reset();
+          writer.reset(scm);
         } catch (IOException e) {
           System.out.println("ERROR closing unnecessary socket: " + e);
         }
@@ -375,6 +385,9 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
             (((int) tmp[2]) << 8) | (((int) tmp[3]));
 
     return i;
+  }
+
+  public void sendGreetingResponse(HelloMessage hm) {
   }
 
   /**
@@ -417,8 +430,6 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
   public void connect(SelectionKey key) {
     try {
       if (((SocketChannel) key.channel()).finishConnect()) {
-        markAlive();
-
         // deregister interest in connecting to this socket
         key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
       }
@@ -426,13 +437,13 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
       debug("Found connectable channel - completed connection to " + address);
     } catch (ConnectException e) {
       debug("ERROR connecting - cancelling. " + e);
-      close();
+      close(writer.getQueue());
     } catch (SocketException e) {
       debug("ERROR connecting - cancelling. " + e);
-      close();
+      close(writer.getQueue());
     } catch (IOException e) {
       debug("ERROR connecting - cancelling. " + e);
-      close();
+      close(writer.getQueue());
     }
   }
 
@@ -451,12 +462,12 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
         key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
 
         if (state == STATE_USING_UDP_WAITING_TO_DISCONNECT) {
-          close();
+          close(null);
         }
       }
     } catch (IOException e) {
       debug("ERROR writing - cancelling. " + e);
-      close();
+      close(writer.getQueue());
     }
   }
 
@@ -494,8 +505,8 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
       System.out.println("An error occured during message deserialization - ignoring message...");
       reader.reset();
     } catch (IOException e) {
-      debug("Error occurred during reading from " + address + " closing socket. " + e);
-      close();
+      debug("Error occurred during reading from " + address + " - closing socket. " + e);
+      close(writer.getQueue());
     }
   }
 
@@ -523,9 +534,13 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
   /**
    * Private method used for closing the socket (if there is one present).
    * It also cancels the SelectionKey so that it is never called again.
+   *
+   * @param messages The messages that need to be rerouted (or null)
    */
-  private void close() {
+  private void close(LinkedList messages) {
     try {
+      debug("Closing and cleaning up socket.");
+
       if (key != null) {
         key.channel().close();
         key.cancel();
@@ -534,15 +549,17 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
 
       // unexpected disconnect
       if (state == STATE_USING_TCP) {
+        debug("Disconnect was unexpected - marking node as dead.");
         ((WirePastryNode) getLocalNode()).getSocketManager().closeSocket(this);
         markDead();
       }
 
       state = STATE_USING_UDP;
 
-      // reroute messages
-      if (writer != null) {
-        Iterator i = writer.getQueue().iterator();
+      if (messages != null) {
+        debug("Messages contains " + messages.size() + " messages.");
+
+        Iterator i = messages.iterator();
 
         while (i.hasNext()) {
           Object msg = i.next();
@@ -565,6 +582,10 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
           }
         }
       }
+
+      debug("Done rerouting messages...");
+      writer = null;
+      reader = null;
     } catch (IOException e) {
       System.out.println("IOException " + e + " disconnecting from remote node " + address);
       markDead();

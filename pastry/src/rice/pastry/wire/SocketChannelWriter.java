@@ -76,6 +76,9 @@ public class SocketChannelWriter {
   // internal list of objects waiting to be written
   private LinkedList queue;
 
+
+  private boolean waitingForGreeting = false;
+
   /**
    * Constructor which creates this SocketChannelWriter with
    * a pastry node and an object to write out.
@@ -83,11 +86,24 @@ public class SocketChannelWriter {
    * @param spn The PastryNode the SocketChannelWriter servers
    * @param o The object to be written
    */
-  public SocketChannelWriter(WirePastryNode spn) {
+  public SocketChannelWriter(WirePastryNode spn, SocketCommandMessage msg) {
     pastryNode = spn;
-    buffer = null;
+
+    try {
+      buffer = serialize(msg);
+    } catch (IOException e) {
+      System.out.println("PANIC: Error serializing message " + msg);
+    }
 
     queue = new LinkedList();
+
+    if (msg != null) {
+      if (msg instanceof HelloMessage) {
+        waitingForGreeting = true;
+      } else {
+        queue.addLast(msg);
+      }
+    }
   }
 
   /**
@@ -100,7 +116,6 @@ public class SocketChannelWriter {
   public void enqueue(Object o) {
     synchronized (queue) {
       queue.addLast(o);
-//      System.out.println("SQ: " + queue.size());
     }
   }
 
@@ -129,9 +144,22 @@ public class SocketChannelWriter {
   /**
    * Resets the SocketChannelWriter, by clearing both the buffer and the queue.
    * Should not be used except when a socket has just been opened.
+   *
+   * @param msg The greeting message that should be enqueued first
    */
-  public void reset() {
-    buffer = null;
+  public void reset(SocketCommandMessage msg) {
+    try {
+      buffer = serialize(msg);
+      greetingReceived();
+    } catch (IOException e) {
+      System.out.println("PANIC: Error serializing message " + msg);
+    }
+  }
+
+  public void greetingReceived() {
+    debug("Greeting has been received - acting normally.");
+
+    waitingForGreeting = false;
   }
 
   /**
@@ -147,7 +175,7 @@ public class SocketChannelWriter {
   public boolean write(SocketChannel sc) throws IOException {
     synchronized (queue) {
       if (buffer == null) {
-        if (queue.size() > 0) {
+        if ((! waitingForGreeting) && (queue.size() > 0)) {
           buffer = serialize(queue.getFirst());
         } else {
           return true;
@@ -163,7 +191,7 @@ public class SocketChannelWriter {
         return false;
       }
 
-      queue.removeFirst();
+      if (! waitingForGreeting) queue.removeFirst();
 
       buffer = null;
 
@@ -185,6 +213,8 @@ public class SocketChannelWriter {
    *         its size.
    */
   public static ByteBuffer serialize(Object o) throws IOException {
+    if (o == null) return null;
+
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       ObjectOutputStream oos = new ObjectOutputStream(baos);
