@@ -121,7 +121,7 @@ public class Channel implements IScribeApp {
      * @param scribe the scribe service this Channel will utilize
      * @param cred the credentials associated with this user
      * @param bandwidthManager the object that controls bw utilization
-     * @param node the pastry node associated with this local channel
+     * @param splitStream the splitStream instance for this node 
      *
      */
     public Channel(int numStripes, String name, IScribe scribe, Credentials cred,                  BandwidthManager bandwidthManager, SplitStreamImpl splitStream){
@@ -196,7 +196,7 @@ public class Channel implements IScribeApp {
      * @param scribe the scribe service this Channel will utilize
      * @param cred the credentials associated with this user
      * @param bandwidthManager the object that controls bw utilization
-     * @param node the pastry node associated with this local channel
+     * @param splitStream the splitStream instance for this node 
      */ 
     public Channel(ChannelId channelId, IScribe scribe, Credentials cred, 
 		   BandwidthManager bandwidthManager, 
@@ -228,7 +228,7 @@ public class Channel implements IScribeApp {
      * @param spareCapacityId the id for the spare capacity tree for channel
      * @param stripeIds the array of stripeIds associated with the channel
      * @param bandwidthManager the object that controls bw utilization
-     * @param node the pastry node associated with this local channel
+     * @param splitStream the splitStream instance for this node 
      */ 
     public Channel(ChannelId channelId, StripeId[] stripeIds, SpareCapacityId 
 		   spareCapacityId, IScribe scribe,
@@ -584,8 +584,9 @@ public class Channel implements IScribeApp {
 	    System.out.println("Unknown Pastry Message Type");
 	}
     }
+
     /**
-     * Upcall generate when a message is routed through this 
+     * Upcall generated when a message is routed through this 
      * node.
      *
      * @param msg the Message being routed

@@ -239,7 +239,6 @@ public class BandwidthManager{
 	int oldBandwidth = ((Integer)usedBandwidth.get(channel)).intValue();
 	int newBandwidth = oldBandwidth - 1;
 	if(newBandwidth < 0 ){
-	    //System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
 	    newBandwidth = 0;
 	}
 	usedBandwidth.put(channel,new Integer(newBandwidth));

@@ -429,7 +429,8 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     }
     /**
      * Upcall generate when a message is routed through this 
-     * node.
+     * node. Again this is ugly but only way to get around
+     * changing the  class heirarchy or adding an interface.
      *
      * @param msg the Message being routed
      * @return boolean if this method is succesful

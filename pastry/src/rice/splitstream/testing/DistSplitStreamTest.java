@@ -41,7 +41,7 @@ public class DistSplitStreamTest {
     public Vector distClients;
     public Vector localNodes;
 
-    private static int port = 5009;
+    private static int port = 5010;
     private static String bshost = null;
     private static int bsport = 5009;
     private static int numNodes = 5;
