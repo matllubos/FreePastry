@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.pastry;
 
 import java.util.*;
+import java.io.Serializable;
 
 /**
  * Represents a contiguous range of Pastry ids.
@@ -46,7 +47,7 @@ import java.util.*;
  * @author Peter Druschel
  */
 
-public class IdRange implements rice.p2p.commonapi.IdRange {
+public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
     private boolean empty;
     private Id ccw;
     private Id cw;
