@@ -16,7 +16,7 @@ import rice.p2p.scribe.*;
  *
  * @version $Id$
  * @author Ansley Post
- * @author Atul Singh
+ * @author Alan Mislove
  */
 public class Channel {
 
@@ -29,11 +29,6 @@ public class Channel {
    * ChannelId for this channel
    */
   protected ChannelId channelId;
-
-  /**
-   * The Node id the spare capacity tree is rooted at.
-   */
-  protected SpareCapacityId spareCapacityId;
 
   /**
    * The list of stripeIds for this channel
@@ -78,12 +73,6 @@ public class Channel {
     this.scribe = scribe;
     this.splitStream = splitStream;
     this.channelId = channelId;
-
-    /*
-     *  Create the Spare Capacity Group
-     */
-    spareCapacityId = null;
-    // (SpareCapacityId) splitStream.createId(name + "SPARE_CAPACITY");
 
     /*
      *  Create the stripe id and stripe arrays
@@ -135,15 +124,6 @@ public class Channel {
   protected Stripe getPrimaryStripe() {
     return null;
     //INSERT LOGIC HERE
-  }
-
-  /**
-   * The spare capacity group id.
-   *
-   * @return The address of this channel's spare capacity group
-   */
-  protected SpareCapacityId getSpareCapacityId() {
-    return spareCapacityId;
   }
 
   /**

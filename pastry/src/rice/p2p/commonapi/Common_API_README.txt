@@ -123,7 +123,7 @@ causes problems.
 SAMPLE CODE
 
 A sample of how to get a network up is shown below.  In addition, you can look at the 
-DistCommonAPITest and DistPastRegrTest for examples of building networks.  We assume that
+CommonAPITest and PastRegrTest for examples of building networks.  We assume that
 the variables BOOTSTRAP_HOST, BOOTSTRAP_PORT, PROTOCOL and PORT have been set apropriately.
 
   IPNodeIdFactory idFactory = new IPNodeIdFactory(PORT);

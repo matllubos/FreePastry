@@ -17,6 +17,7 @@ import rice.p2p.scribe.*;
  *
  * @version $Id$
  * @author Ansley Post
+ * @author Alan Mislove
  */
 public class SplitStreamImpl implements SplitStream, Application {
 
@@ -41,19 +42,14 @@ public class SplitStreamImpl implements SplitStream, Application {
   protected Hashtable channels;
 
   /**
-   * A mapping between channelId -> Vector of clients
-   */
-  protected Hashtable clients;
-
-  /**
-   * The constructor for building the splitStream object
+   * The constructor for building the splitStream object which internally
+   * creates it's own Scribe.
    *
    * @param node the pastry node that we will use
-   * @param scribe the scribe instance to use
-   * @param instance DESCRIBE THE PARAMETER
+   * @param instance The instance name for this splitstream
    */
-  public SplitStreamImpl(Node node, Scribe scribe, String instance) {
-    this.scribe = scribe;
+  public SplitStreamImpl(Node node, String instance) {
+    this.scribe = new ScribeImpl(node, new SplitStreamScribePolicy(this), instance);
     this.node = node;
     this.endpoint = node.registerApplication(this, instance);
     this.channels = new Hashtable();
@@ -85,7 +81,7 @@ public class SplitStreamImpl implements SplitStream, Application {
    * capacity. One Channel object should be created for each content distribution which wishes to
    * use SplitStream.
    *
-   * @param id DESCRIBE THE PARAMETER
+   * @param id The id of the channel to create
    * @return an instance of a Channel class.
    */
   public Channel createChannel(ChannelId id) {
@@ -103,7 +99,7 @@ public class SplitStreamImpl implements SplitStream, Application {
    * applications should wait for channelIsReady() notification made by channels when they are
    * ready.
    *
-   * @param id DESCRIBE THE PARAMETER
+   * @param id The id of the channel to create
    * @return An instance of Channel object.
    */
   public Channel attachChannel(ChannelId id) {

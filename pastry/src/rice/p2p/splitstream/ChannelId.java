@@ -9,18 +9,19 @@ import rice.p2p.commonapi.*;
  *
  * @version $Id$
  * @author Ansley Post
+ * @author Alan Mislove
  */
 public class ChannelId {
 
   /**
-   * DESCRIBE THE FIELD
+   * The underlying id for this channelid
    */
   protected Id id;
 
   /**
    * Constructor that takes in an Id and makes a ChannelId
    *
-   * @param id DESCRIBE THE PARAMETER
+   * @param id The underlying id for this channelid
    */
   public ChannelId(Id id) {
     this.id = id;
@@ -29,7 +30,7 @@ public class ChannelId {
   /**
    * Constructor that takes in a String and makes a ChannelId
    *
-   * @param name DESCRIBE THE PARAMETER
+   * @param name The name to create this channelId from
    */
   public ChannelId(String name) {
     this.id = null;

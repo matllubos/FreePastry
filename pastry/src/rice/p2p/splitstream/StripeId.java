@@ -9,6 +9,7 @@ import rice.p2p.commonapi.*;
  *
  * @version $Id$
  * @author Ansley Post
+ * @author Alan Mislove
  */
 public class StripeId {
 

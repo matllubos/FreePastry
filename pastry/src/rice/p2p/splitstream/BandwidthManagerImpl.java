@@ -15,6 +15,7 @@ import rice.p2p.scribe.*;
  *
  * @version $Id$
  * @author Ansley Post
+ * @author Alan Mislove
  */
 public class BandwidthManagerImpl implements BandwidthManager {
 

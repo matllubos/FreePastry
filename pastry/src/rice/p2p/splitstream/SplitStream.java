@@ -9,6 +9,7 @@ import rice.p2p.scribe.*;
  *
  * @version $Id$
  * @author Ansley Post
+ * @author Alan Mislove
  */
 public interface SplitStream {
 
@@ -29,7 +30,7 @@ public interface SplitStream {
   /**
    * A SplitStream application calls this method to join a channel.
    *
-   * @param id DESCRIBE THE PARAMETER
+   * @param id The id of the channel
    * @return A channel object used for subsequent operations on the desired content stream
    */
   public Channel attachChannel(ChannelId id);
@@ -38,7 +39,7 @@ public interface SplitStream {
    * A SplitStream application calls this method when it wishes to distribute content, creating a
    * new channel object.
    *
-   * @param id DESCRIBE THE PARAMETER
+   * @param id The id of the channel
    * @return A new channel object
    */
   public Channel createChannel(ChannelId id);
