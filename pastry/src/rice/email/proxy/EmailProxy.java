@@ -13,9 +13,6 @@ import rice.pastry.direct.*;
 import rice.pastry.wire.*;
 import rice.pastry.standard.*;
 
-import rice.scribe.*;
-import rice.scribe.messaging.*;
-
 import rice.p2p.past.*;
 
 import rice.persistence.*;
@@ -35,9 +32,6 @@ import rice.email.proxy.imap.*;
 import rice.email.proxy.user.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.mailbox.postbox.*;
-
-import rice.testharness.*;
-import rice.testharness.messaging.*;
 
 import java.util.*;
 import java.io.*;
