@@ -54,13 +54,14 @@ import java.rmi.RemoteException;
 class RMINodeHandlePool extends DistNodeHandlePool {
 
     private HashMap handles; // pool of RMINodeHandles
+    private static int wkrefcount = 0; // Number of weak references in system
 
     /**
      * Constructor
      */
     public RMINodeHandlePool()
     {
-  handles = new HashMap();
+	handles = new HashMap();
     }
 
     /**
@@ -73,31 +74,37 @@ class RMINodeHandlePool extends DistNodeHandlePool {
     public DistNodeHandle coalesce(DistNodeHandle nodehandle)
     {
 
-  RMINodeHandle handle = (RMINodeHandle) nodehandle;
-  NodeId nid = handle.getNodeId();
-  WeakReference storedref = (WeakReference) handles.get(nid);
-  RMINodeHandle storedhandle = null;
+	RMINodeHandle handle = (RMINodeHandle) nodehandle;
+	NodeId nid = handle.getNodeId();
+	WeakReference storedref = (WeakReference) handles.get(nid);
+	RMINodeHandle storedhandle = null;
 
-  if (storedref != null) {
-      storedhandle = (RMINodeHandle) storedref.get();
-      if (storedhandle == null)
-    storedref.clear(); // xxx need to do?
-  }
+	if (storedref != null) {
+	    storedhandle = (RMINodeHandle) storedref.get();
+	    if (storedhandle == null) {
+		storedref.clear();
+		handles.remove(nid); // storedref is freed
+		wkrefcount--;
+	    }
+	}
 
-  if (storedhandle == null) {
+	if (storedhandle == null) {
 
-      WeakReference newref = new WeakReference(handle);
-      handles.put(nid, newref);
-      handle.setIsInPool(true);
-      //System.out.println("ADDING " + handle + " with id " + nid + " to pool");
-      return handle;
+	    WeakReference newref = new WeakReference(handle);
+	    wkrefcount++;
+	    if (wkrefcount % 1000 == 0)
+		System.out.println("lots of weak references: wkrefcount = " + wkrefcount);
+	    handles.put(nid, newref);
+	    handle.setIsInPool(true);
+	    //System.out.println("ADDING " + handle + " with id " + nid + " to pool");
+	    return handle;
 
-  } else {
-      //System.out.println(storedhandle + " found, so NOT ADDING " + handle + " with id " + nid + " to pool");
-      if (storedhandle != handle)
-    handle.setIsInPool(false);
-  }
-  return storedhandle;
+	} else {
+	    //System.out.println(storedhandle + " found, so NOT ADDING " + handle + " with id " + nid + " to pool");
+	    if (storedhandle != handle)
+		handle.setIsInPool(false);
+	}
+	return storedhandle;
     }
 
     /**
@@ -108,18 +115,21 @@ class RMINodeHandlePool extends DistNodeHandlePool {
      */
     public void activate(NodeId nid)
     {
-  WeakReference storedref = (WeakReference) handles.get(nid);
-  RMINodeHandle storedhandle = null;
-  if (storedref != null) {
-      storedhandle = (RMINodeHandle) storedref.get();
-      if (storedhandle == null)
-    storedref.clear(); // xxx need to do?
-  }
+	WeakReference storedref = (WeakReference) handles.get(nid);
+	RMINodeHandle storedhandle = null;
+	if (storedref != null) {
+	    storedhandle = (RMINodeHandle) storedref.get();
+	    if (storedhandle == null) {
+		storedref.clear();
+		handles.remove(nid); // storedref is freed
+		wkrefcount--;
+	    }
+	}
 
-  if (storedhandle != null) {
-      storedhandle.markAlive();
-  } else {
-      // do nothing; ignore senders who we don't know anything about
-  }
+	if (storedhandle != null) {
+	    storedhandle.markAlive();
+	} else {
+	    // do nothing; ignore senders who we don't know anything about
+	}
     }
 }
