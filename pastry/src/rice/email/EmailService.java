@@ -39,7 +39,7 @@ public class EmailService extends PostClient {
 	public void receiveResult(Object result) {
 	    Log emailLog = (Log) result;
 	    
-	    Folder f = new Folder(emailLog, _post.getStorageService());
+	    Folder f = new Folder(emailLog, _post);
 
 	    this.resultHandler.receiveResult(f);
 	}

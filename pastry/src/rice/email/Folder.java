@@ -1,5 +1,6 @@
 package rice.email;
 
+import rice.*;
 import java.util.*;
 import rice.email.messaging.*;
 import rice.email.log.*;
@@ -23,6 +24,9 @@ public class Folder {
   // the storage service used by the Folder to fetch log contents
   private StorageService _storage;
 
+  // the post service used by the Folder to create new logs
+  private Post _post;
+
   /**
    * Constructs an empty Folder.
    * @param name The name of the folder.
@@ -37,71 +41,26 @@ public class Folder {
    * @param log the Log which contains the data for the Folder.
    * @param storage the storage service used to get log data from PAST.
    */
-  public Folder(Log log, StorageService storage) {
+  public Folder(Log log, Post post) {
     _name = (String) log.getName();
     _log = log;
-    _storage = storage;
+    _post = post;
+    _storage = post.getStorageService();
   }
 
   /**
    * Used to read the contents of the Folder and build up the array
    * of Emails stored by the Folder.
    */
-  private Email[] readContents() throws PostException {
-
-    /*
-    Vector contents = new Vector();
-    boolean finished = false;
+  private void readContents(Continuation command) throws PostException {
+    // create the state for this process
+    Vector state = new Vector();
+    // get the ref to the top entry
     LogEntryReference top = _log.getTopEntry();
-    LogEntry topEntry = null;
-    try {
-      topEntry = (LogEntry)_storage.retrieveContentHash(top);
-    } catch (StorageException s) {
-      // JM do something sensible here
-    }
-    int uncompressedEntries = 0;
-    
-    // walk through the log and build up the contents of the folder
-    while (!finished) {
-      // deal with the current LogEntry
-      if (topEntry instanceof InsertMailLogEntry) {
-        contents.add(((InsertMailLogEntry)topEntry).getEmail());
-      }
-      else if (topEntry instanceof DeleteMailLogEntry) {
-        contents.remove(((DeleteMailLogEntry)topEntry).getEmail());
-      }
-      else if (topEntry instanceof SnapShotLogEntry) {
-        Email[] rest = ((SnapShotLogEntry)topEntry).getEmails();
-        for (int i = 0; i < rest.length; i++) {
-          contents.add(rest[i]);
-        }
-        if (((SnapShotLogEntry)topEntry).isEnd()) {
-          finished = true;
-        }
-      }
-      else {
-        // throw some manner of error?
-        finished = true;
-      }
-
-      // try to move to the next LogEntry
-      top = topEntry.getPreviousEntry();
-      if (top == null) {
-        finished = true;
-      }
-      else {
-	try {
-	  topEntry = (LogEntry)_storage.retrieveContentHash(top);
-	} catch (StorageException s) {
-	  // JM do something sensible here
-	}
-      }
-      uncompressedEntries += 1;
-    }
-    snapShotUpdate(uncompressedEntries, (Email[])contents.toArray() );
-    return (Email[])contents.toArray();
-    */
-    return null;
+    // save the user's command, and make a new command to carry out.
+    FolderReadContentsTask preCommand = new FolderReadContentsTask(state, command);
+    // begin retreiving the contents and building up the list of Emails stored in the Folder
+    _storage.retrieveContentHash(top, preCommand);
   }
 
   /**
@@ -114,18 +73,18 @@ public class Folder {
    * read before the complete Folder contents can be returned.
    * @param state the current contents of the Folder
    */
-  private void snapShotUpdate(int entries, Email[] contents) {
-    /*
+  private void snapShotUpdate(int entries, Email[] contents, Continuation command) {
     // if the number of entries is greater than the compression limit,
     // add a new snapshot
+    // return the final value to the user's continuation
+    command.receiveResult(contents);
+    
     if (entries > COMPRESS_LIMIT) {
-      try {
-	_log.addLogEntry(new SnapShotLogEntry(contents));
-      } catch (StorageException s) {
-	// JM do something sensible here
-      }
+	_log.addLogEntry(new SnapShotLogEntry(contents), command);
     } 
-    */   
+    else {
+      command.receiveResult((Object)contents);
+    }
   }
 
   /**
@@ -138,12 +97,12 @@ public class Folder {
   }
 
   /**
-    * Returns the Emails contained in this Folder.
+   * Returns the Emails contained in this Folder.
    *
    * @return the stored Emails
    */
-  public Email[] getMessages() throws PostException {
-    return readContents();
+  public void getMessages(Continuation command) throws PostException {
+    readContents(new FolderNullTask(command));
   }
 
   /**
@@ -152,13 +111,8 @@ public class Folder {
    * @param email The email to insert.
    */
   public void addMessage(Email email) throws PostException {
-    /*
-    try {
-      _log.addLogEntry(new InsertMailLogEntry(email));
-    } catch (StorageException e) {
-      throw new PostException(e.getMessage());
-    }
-    */
+    Continuation command = new FolderNullTask(null);
+    _log.addLogEntry(new InsertMailLogEntry(email), command);
   }
 
   /**
@@ -167,13 +121,8 @@ public class Folder {
    * @param email The email to delete.
    */
   public void removeMessage(Email email) throws PostException {
-    /*
-    try {
-      _log.addLogEntry(new DeleteMailLogEntry(email)); 
-    } catch (StorageException e) {
-      throw new PostException(e.getMessage());
-    }
-    */
+    Continuation command = new FolderNullTask(null);
+    _log.addLogEntry(new DeleteMailLogEntry(email), command); 
   }
 
   /**
@@ -197,18 +146,12 @@ public class Folder {
    * @param name the name of the new child Folder
    * @return the newly created child Folder
    */   
-  public Folder createChildFolder(String name) throws PostException {
-    /*
-    try {
-      Log log = new Log(name, _log.getLocation());
-      _log.addChildLog(log);
-      _log.addLogEntry(new InsertFolderLogEntry(name));
-      return new Folder(log, _storage);
-    } catch (StorageException e) {
-      throw new PostException(e.getMessage());
-    }
-    */
-    return null;
+  public void createChildFolder(String name, Continuation command) throws PostException {
+    // make the log to add
+    Log log = new Log(name, _log.getLocation(), _post);
+    // make the continuation to perform after adding the log
+    Continuation preCommand = new FolderAddLogEntryTask(name, log, command);
+    _log.addChildLog(log, preCommand);    
   }
 
   /**
@@ -365,4 +308,207 @@ public class Folder {
     */
     return null;
   }  
+
+  /**
+   * Reads through each of the nodes in the log up until the end or a snapshot node.  Returns the final
+   * compilation of each of these nodes.
+   */
+  protected class FolderReadContentsTask implements Continuation {
+    Vector _contents;
+    Continuation _command;
+
+    /**
+     * Constructs a FolderReadContentsTask.
+     */
+    public FolderReadContentsTask(Vector state, Continuation command) {
+      _contents = state;
+      _command = command;
+    }
+
+    /**
+     * Starts the processing of this task.
+     */
+    public void start() {
+      // JM I don't believe anything needs to be done here
+    }
+
+    /**
+     * Takes the result of the fetch, and adds it to the current contents.  If we are finished reading the log,
+     * do the snapshot update (which will return this function's value to the user).  If we are not finished, 
+     * perform another fetch and pass the current state on to the next call.
+     */
+    public void receiveResult(Object o) {
+      LogEntryReference top = null;
+      LogEntry topEntry = (LogEntry)o;
+      boolean finished = false;
+      
+      // deal with the current LogEntry
+      if (topEntry instanceof InsertMailLogEntry) {
+        _contents.add(((InsertMailLogEntry)topEntry).getEmail());
+      }
+      else if (topEntry instanceof DeleteMailLogEntry) {
+        _contents.remove(((DeleteMailLogEntry)topEntry).getEmail());
+      }      
+      else if (topEntry instanceof SnapShotLogEntry) {
+        Email[] rest = ((SnapShotLogEntry)topEntry).getEmails();
+        for (int i = 0; i < rest.length; i++) {
+          _contents.add(rest[i]);
+        }
+        if (((SnapShotLogEntry)topEntry).isEnd()) {
+          finished = true;
+        }
+      }
+      else {
+        // throw some manner of error?
+        finished = true;
+      }
+
+      // if not finished, try to move to the next LogEntry
+      if (!finished) {
+	top = topEntry.getPreviousEntry();
+	if (top == null) {
+	  finished = true;
+	}
+      }
+
+      // if finished, check to see if a new snapshot needs to be entered and return
+      if (finished) {
+	// add a snapshot if need be.  The snapShot method will start the user task (i.e. return the result) 
+	// even if no snapshot is added
+	FolderReturnResultTask preCommand = new FolderReturnResultTask(_contents, _command);
+	snapShotUpdate(_contents.size(), (Email[])_contents.toArray(), _command);	
+      // otherwise continue building up the contents
+      } else {
+	FolderReadContentsTask preCommand = new FolderReadContentsTask(_contents, _command);
+	_storage.retrieveContentHash(top, preCommand);
+      }
+    }
+
+    /**
+     * Simply prints out an error message.
+     */  
+    public void receiveException(Exception e) {
+      System.out.println("Exception " + e + "  occured while trying to read the contents of LogEntry " + _contents.size());
+    }
+  }
+
+  /**
+   * Returns the contents to the given command.
+   */
+  protected class FolderReturnResultTask implements Continuation {
+    Object _result;
+    Continuation _command;
+
+    /**
+     * Constructs a FolderReturnResultTask.
+     */
+    public FolderReturnResultTask(Object result, Continuation command) {
+      _result = result;
+      _command = command;
+    }
+
+    /**
+     * Starts the processing of this task.
+     */
+    public void start() {
+      // JM I don't believe anything needs to be done here
+    }
+
+    /**
+     * Returns the result to the given user continuation.
+     */
+    public void receiveResult(Object o) {
+      _command.receiveResult(_result);
+    }
+
+    /**
+     * Simply prints out the error message.
+     */  
+    public void receiveException(Exception e) {
+      System.out.println("Exception " + e + "  occured while trying to return the result to the user's task");
+    }
+  }
+
+  /**
+   * Returns the contents to the given command.
+   */
+  protected class FolderAddLogEntryTask implements Continuation {
+    String _logName;
+    Log _newLog;
+    Continuation _command;
+
+    /**
+     * Constructs a FolderAddLogEntryTask.
+     */
+    public FolderAddLogEntryTask(String logName, Log newLog, Continuation command) {
+      _logName = logName;
+      _newLog = newLog;
+      _command = command;
+    }
+
+    /**
+     * Starts the processing of this task.
+     */
+    public void start() {
+      // JM I don't believe anything needs to be done here
+    }
+
+    /**
+     * Returns the contents to the given user continuation.
+     */
+    public void receiveResult(Object o) {
+      Folder result = new Folder(_newLog, _post);
+      FolderReturnResultTask preCommand = new FolderReturnResultTask(result, _command);
+      _log.addLogEntry(new InsertFolderLogEntry(_logName), preCommand);
+    }
+
+    /**
+     * Simply prints out the error message.
+     */  
+    public void receiveException(Exception e) {
+      System.out.println("Exception " + e + "  occured while trying to add a new Log entry to the log");
+    }
+  }
+
+  /**
+   * Task used for when nothing needs to be done after the initial action.
+   */
+  protected class FolderNullTask implements Continuation {
+
+    Continuation _command;
+    /**
+     * Constructs a FolderNullTask.
+     */
+    public FolderNullTask(Continuation command) {
+      _command = command;
+    }
+
+    /**
+     * Starts the processing of this task.
+     */
+    public void start() {
+      // JM I don't believe anything needs to be done here
+    }
+
+    /**
+     * Returns the contents to the given user continuation.
+     */
+    public void receiveResult(Object o) {
+      if (_command != null) {
+	_command.receiveResult(o);
+      }
+    }
+
+    /**
+     * Simply prints out the error message.
+     */  
+    public void receiveException(Exception e) {
+      System.out.println("Exception " + e + "  occured while trying peform work for Null Task");
+    }
+  }
 }
+  
+
+
+
+
