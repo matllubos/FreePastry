@@ -420,7 +420,7 @@ public class Proxy {
               
               String md5 = new String(baos1.toByteArray()).trim();
               
-              if (parameters.getBooleanParameter("proxy_show_dialog")) {
+              if (parameters.getBooleanParameter("proxy_show_dialog") && parameters.getBooleanParameter("proxy_automatic_update_ask_user")) {
                 String message = "A new version of the ePOST software has been detected.\n\n" +
                 "Would you like to automatically upgrade to '" + filename + "' and restart your proxy?";
                 int i = JOptionPane.showOptionDialog(null, message, "Updated Software Detected", 
