@@ -98,7 +98,7 @@ public class PostFolder implements MailFolder {
 
       folder.addMessage(email, c);
 
-      synchronized (wait) { if (result[0] == null) wait.wait(); }
+      synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
 
       if (exception[0] != null) {
         throw new MailboxException(exception[0]);
@@ -135,7 +135,7 @@ public class PostFolder implements MailFolder {
 
       folder.getMessages(c);
 
-      synchronized (wait) { if (result[0] == null) wait.wait(); }
+      synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
 
       if (exception[0] != null) {
         throw new MailboxException(exception[0]);

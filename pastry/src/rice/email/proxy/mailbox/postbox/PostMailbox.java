@@ -8,6 +8,8 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 
+import java.util.*;
+
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -25,6 +27,9 @@ public class PostMailbox implements Mailbox {
   // the local email service to use
   EmailService email;
 
+  // a cache of the previously-fetch folders
+  Hashtable folders;
+
   /**
    * Constructs a PostMailbox given an emailservice
    * to run off of.
@@ -36,6 +41,7 @@ public class PostMailbox implements Mailbox {
       throw new IllegalArgumentException("EmailService cannot be null in PostMailbox.");
 
     this.email = email;
+    this.folders = new Hashtable();
   }
 
   // TO DO
@@ -57,8 +63,11 @@ public class PostMailbox implements Mailbox {
    * @return The specificed MailFolder.
    */
   public MailFolder getFolder(final String name) throws MailboxException {
+    if (folders.get(name.toLowerCase()) != null) {
+      return (MailFolder) folders.get(name.toLowerCase());
+    }
+    
     try {
-      System.out.println("Fetching folder " + name);
       PostFolder root = (PostFolder) getRootFolder();
 
       final Folder[] folder = new Folder[1];
@@ -90,10 +99,9 @@ public class PostMailbox implements Mailbox {
       if (exception[0] != null)
         throw exception[0];
 
-      if (folder[0] == null)
-        System.out.println("Fetching of folder " + name + " was null");
+      folders.put(name.toLowerCase(), new PostFolder(folder[0], root.getFolder(), email));
 
-      return new PostFolder(folder[0], root.getFolder(), email);
+      return (MailFolder) folders.get(name);
     } catch (Exception e) {
       e.printStackTrace();
       throw new MailboxException(e);
@@ -175,7 +183,7 @@ public class PostMailbox implements Mailbox {
         }
       };
 
-      ((PostFolder) getRootFolder()).getFolder().createChildFolder(folder, insert);
+      ((PostFolder) getRootFolder()).getFolder().createChildFolder(folder.toLowerCase(), insert);
 
       synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
 
@@ -210,7 +218,7 @@ public class PostMailbox implements Mailbox {
         }
       };
 
-      ((PostFolder) getRootFolder()).getFolder().removeFolder(folder, insert);
+      ((PostFolder) getRootFolder()).getFolder().removeFolder(folder.toLowerCase(), insert);
 
       synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
 
