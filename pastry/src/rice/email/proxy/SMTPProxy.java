@@ -32,7 +32,7 @@ public class SMTPProxy {
   }
 
   // methods
-  /**
+ /**
    * This method binds this SMTP proxy to a post account.  In order to send through this 
    * account, the smtp client must provide the specified username and password.
    * 

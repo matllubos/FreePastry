@@ -1,6 +1,8 @@
 package rice.email.proxy;
 
 import java.util.Properties;
+import java.util.Observer;
+import java.util.Observable;
 
 import java.net.BindException;
 import java.net.InetAddress;
@@ -9,6 +11,7 @@ import javax.mail.internet.*;
 import com.sun.mail.imap.*;
 
 import rice.email.*;
+import rice.email.messaging.*;
 import rice.post.*;
 
 
@@ -20,7 +23,7 @@ import rice.post.*;
  * 
  * @author Derek Ruths
  */
-public class IMAPProxy {
+public class IMAPProxy implements Observer {
 
     InetAddress address;
     int port;
@@ -63,16 +66,20 @@ public class IMAPProxy {
       this.service = service;
 
       // Log into an IMAP server
-      URLName imapURL = new URLName("imap", address.toString(), port, "", imapUsername, imapPassword);
+      URLName imapURL = new URLName("imap", address.getHostName(), port, "", imapUsername, imapPassword);
       imapStore = new IMAPStore(session, imapURL);
       try {
 	  imapStore.connect();
       } catch (MessagingException e) {
 	  // FIXME - do something here
+	  System.err.println("Error connecting to IMAP server");
+	  System.out.println(e);
+	  e.printStackTrace();
       }
 
       // Finally add ourselves as a listener so that we hear about incoming mail.
-      //service.addEmailServiceListener(this);
+      service.addObserver(this);
+      System.out.println("IMAPProxy started successfully.");
   }
     
   /**
@@ -84,7 +91,9 @@ public class IMAPProxy {
    * 
    * @param email is the email that was received.
    */
-  public void messageReceived(Email email) {
+  public void update(Observable updater, Object emailNote) {
+
+      Email email = ((EmailNotificationMessage) emailNote).getEmail();
 	
       // FIXME: have a way to use other folders?
       try {

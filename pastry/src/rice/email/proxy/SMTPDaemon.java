@@ -34,11 +34,14 @@ class SMTPDaemon implements Runnable {
 	} catch (IOException e) {
 	    // do something sensible
 	}
+
+	System.out.println("SMTP daemon started.");
 	    
 	// Loop forever accepting connections.
 	while(true) {
 	    try {
 		Socket sessionSocket = socket.accept();
+		System.out.println("SMTP daemon saw a connection.");
 		talkSMTP(sessionSocket);
 	    } catch(Exception e) {
 		// Do something sensible
