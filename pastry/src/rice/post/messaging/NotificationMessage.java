@@ -11,19 +11,19 @@ import java.io.*;
  * message.
  */
 public abstract class NotificationMessage extends Message implements Serializable {
-  private PostClientAddress clientID = null;
+  private PostClientAddress clientId = null;
   private PostEntityAddress address = null; 
   /**
    * Constructs a NotificationMessage for the given Email.
    *
-   * @param clientID The address of the service to which this message
+   * @param clientId The address of the service to which this message
    *	    should be delivered.
    * @param address The address of the user or group to which this
    *        message should be delivered. 
    */
-  public NotificationMessage(PostClientAddress clientID, PostEntityAddress address) {
+  public NotificationMessage(PostClientAddress clientId, PostEntityAddress address) {
    super(address.getAddress());
-   this.clientID = clientID;
+   this.clientId = clientId;
    this.address = address;
   }
   /**
@@ -42,8 +42,8 @@ public abstract class NotificationMessage extends Message implements Serializabl
    * @return The address of the service to which this message
    *         should be delivered 
    */
-   public PostClientAddress getClientID(){
-     return clientID;
+   public PostClientAddress getClientId(){
+     return clientId;
    }
 
    /**
@@ -62,8 +62,8 @@ public abstract class NotificationMessage extends Message implements Serializabl
     * @param The client address to which this message should be delivered
     *
     */
-    public void setClientID(PostClientAddress clientID){
-      this.clientID = clientID;
+    public void setClientId(PostClientAddress clientId){
+      this.clientId = clientId;
     }
 
     
