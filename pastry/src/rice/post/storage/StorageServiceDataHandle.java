@@ -15,6 +15,9 @@ import rice.p2p.past.gc.*;
  * @version $Id$
  */
 class StorageServiceDataHandle implements GCPastContentHandle {
+  
+  // serialver for backwards compatibility
+  private static final long serialVersionUID = -4110663990885843864L;
 
   // the location where the data is stored
   protected Id id;

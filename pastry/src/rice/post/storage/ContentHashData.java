@@ -16,6 +16,9 @@ import rice.p2p.past.gc.*;
  */
 class ContentHashData extends StorageServiceData {
 
+  // serialver, for backwards compatibility
+  private static final long serialVersionUID = -8274270442542322772L;
+  
   /**
    * Builds a ContentHashData from a byte array and a location
    *

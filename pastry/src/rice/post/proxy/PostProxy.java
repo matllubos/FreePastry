@@ -12,6 +12,7 @@ import rice.p2p.commonapi.*;
 import rice.p2p.glacier.*;
 import rice.p2p.glacier.v2.*;
 import rice.p2p.past.*;
+import rice.p2p.past.gc.*;
 import rice.p2p.aggregation.*;
 import rice.p2p.multiring.*;
 
@@ -141,6 +142,11 @@ public class PostProxy {
   protected StorageManager deliveredStorage;
   
   /**
+   * The local trash can, if in use
+   */
+  protected StorageManager trashStorage;
+  
+  /**
    * The local storage for mutable glacier fragments
    */
   protected StorageManager glacierMutableStorage;
@@ -228,6 +234,7 @@ public class PostProxy {
   {"standard_output_redirect_filename", "nohup.out"},
   {"shutdown_hooks_enable", "true"},
   {"security_manager_install", "true"}, 
+  {"past_use_garbage_collection", "false"},
   {"post_ca_key_is_file", "false"},
   {"post_ca_key_name", "ca.publickey"}, 
   {"post_proxy_enable", "true"},
@@ -591,6 +598,14 @@ public class PostProxy {
                                               new EmptyCache(FACTORY));    
     stepDone(SUCCESS);
     
+    if (parameters.getBooleanParameter("past_use_garbage_collection")) {
+      stepStart("Starting Trashcan Storage");
+      trashStorage = new StorageManagerImpl(FACTORY,
+                                            new PersistentStorage(FACTORY, prefix + "-trash", location, diskLimit),
+                                            new EmptyCache(FACTORY));
+      stepDone(SUCCESS);
+    }
+    
     if (parameters.getBooleanParameter("glacier_enable")) {
       FragmentKeyFactory KFACTORY = new FragmentKeyFactory((MultiringIdFactory) FACTORY);
       VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
@@ -830,9 +845,19 @@ public class PostProxy {
    */  
   protected void startPast(Parameters parameters) throws Exception {
     stepStart("Starting Past services");
-    immutablePast = new PastImpl(node, immutableStorage, 
-                                 parameters.getIntParameter("past_replication_factor"), 
-                                 parameters.getStringParameter("application_instance_name") + "-immutable");
+    
+    if (parameters.getBooleanParameter("past_use_garbage_collection")) {
+      immutablePast = new GCPastImpl(node, immutableStorage, 
+                                     parameters.getIntParameter("past_replication_factor"), 
+                                     parameters.getStringParameter("application_instance_name") + "-immutable",
+                                     new PastPolicy.DefaultPastPolicy(),
+                                     trashStorage);
+    } else {
+      immutablePast = new PastImpl(node, immutableStorage, 
+                                   parameters.getIntParameter("past_replication_factor"), 
+                                   parameters.getStringParameter("application_instance_name") + "-immutable");
+    }
+      
     mutablePast = new PastImpl(node, mutableStorage, 
                                parameters.getIntParameter("past_replication_factor"), 
                                parameters.getStringParameter("application_instance_name") + "-mutable", new PostPastPolicy());

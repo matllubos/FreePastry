@@ -18,6 +18,9 @@ import rice.p2p.past.gc.*;
  * @version $Id$
  */
 public class SignedData extends StorageServiceData {
+  
+  // serialver for backwards compatibility
+  private static final long serialVersionUID = 7535493841770155095L;
 
   // The time that the data was stored.
   protected transient byte[] timestamp;

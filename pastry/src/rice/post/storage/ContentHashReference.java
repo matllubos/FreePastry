@@ -17,6 +17,9 @@ import rice.p2p.past.*;
  */
 public class ContentHashReference implements Serializable {
   
+  // serialver, for backwards compatibility
+  private static final long serialVersionUID = 5215474536871804216L;
+  
   /**
    * Location where this data is stored in PAST.
    */

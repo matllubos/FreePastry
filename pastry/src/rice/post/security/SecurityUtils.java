@@ -178,7 +178,7 @@ public class SecurityUtils {
     oos.writeObject(o);
     oos.flush();
     oos.close();
-
+    
     return baos.toByteArray();
   }
 

@@ -16,6 +16,9 @@ import rice.p2p.past.gc.*;
  */
 abstract class StorageServiceData implements GCPastContent {
   
+  // serialver for backwards compatibility
+  private static final long serialVersionUID = 2882784831315993461L;
+  
   // default version number for objects which don't have different versions
   public static final long NO_VERSION = 0L;
 

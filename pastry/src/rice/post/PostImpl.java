@@ -43,6 +43,11 @@ public class PostImpl implements Post, Application, ScribeClient {
   public static final int SYNCHRONIZE_PERIOD = 60000;
   
   /**
+    * The frequency of refreshing data items in GCPast
+   */
+  public static final int REFRESH_PERIOD = 3 * 24 * 60 * 60 * 1000;
+  
+  /**
    * The endpoint used for routing messages
    */
   protected Endpoint endpoint;
@@ -212,6 +217,7 @@ public class PostImpl implements Post, Application, ScribeClient {
   //  logger.getHandlers()[0].setLevel(Level.FINEST);
     
     endpoint.scheduleMessage(new SynchronizeMessage(), SYNCHRONIZE_PERIOD, SYNCHRONIZE_PERIOD);
+    endpoint.scheduleMessage(new RefreshMessage(), REFRESH_PERIOD, REFRESH_PERIOD);
     
     logger.fine(endpoint.getId() + ": Constructed new Post with user " + address + " and instance " + instance);
   }
@@ -259,6 +265,8 @@ public class PostImpl implements Post, Application, ScribeClient {
         processSignedPostMessage(((SignedPostMessageWrapper) message).getMessage(), new ListenerContinuation("Processing of Pastry POST Message"));
     } else if (message instanceof SynchronizeMessage) {
       processSynchronizeMessage((SynchronizeMessage) message);
+    } else if (message instanceof RefreshMessage) {
+      processRefreshMessage((RefreshMessage) message);
     } else {
       logger.warning(endpoint.getId() + ": Found unknown message " + message + " - dropping on floor.");
     }
@@ -370,15 +378,15 @@ public class PostImpl implements Post, Application, ScribeClient {
           parent.receiveException(new PostException("Found PostMessage from non-existent sender " + sender + " - dropping on floor."));
           return;
         }
+        
+        PostMessage message = signedMessage.getMessage();
 
         // verify message is signed
         if (! verifySignedPostMessage(signedMessage, senderLog.getPublicKey())) {
-          logger.warning(endpoint.getId() + ": Problem encountered verifying PostMessage from " + sender + " - dropping on floor.");
-          parent.receiveException(new PostException("Problem encountered verifying PostMessage from " + sender + " - dropping on floor."));
+          logger.warning(endpoint.getId() + ": Problem encountered verifying " + message.getClass().getName() + " from " + sender + " - dropping on floor.");
+          parent.receiveException(new PostException("Problem encountered verifying " + message.getClass().getName() + " from " + sender + " - dropping on floor."));
           return;
         }
-
-        PostMessage message = signedMessage.getMessage();
 
         if (message instanceof PresenceMessage) {
           processPresenceMessage((PresenceMessage) message, parent);
@@ -501,6 +509,31 @@ public class PostImpl implements Post, Application, ScribeClient {
     
     if (go)
       buffered.run();
+  }
+  
+  /**
+   * This method processes a message to refresh all objects in the GCPast store.
+   *
+   * @param message The incoming message.
+   */
+  private void processRefreshMessage(RefreshMessage message) {
+    final Iterator i = clients.iterator();
+    
+    Continuation c = new ListenerContinuation("Retrieval of ContentHashReferences") {
+      protected HashSet set = new HashSet();
+      
+      public void receiveResult(Object o) {
+        if (o != null) 
+          set.addAll((Set) o);
+        
+        if (i.hasNext()) 
+          ((PostClient) i.next()).getContentHashReferences(this);
+        else
+          storage.refreshContentHash((ContentHashReference[]) set.toArray(new ContentHashReference[0]), new ListenerContinuation("Refreshing of objects"));
+      }
+    };
+    
+    c.receiveResult(null);
   }
   
   /**
@@ -970,7 +1003,7 @@ public class PostImpl implements Post, Application, ScribeClient {
   private SignedPostMessage signPostMessage(PostMessage message) {
     try {
       byte[] sig = SecurityUtils.sign(SecurityUtils.serialize(message), keyPair.getPrivate());
-
+      
       return new SignedPostMessage(message, sig);
     } catch (SecurityException e) {
       logger.warning(endpoint.getId() + ": SecurityException " + e + " occured while siging PostMessage " + message + " - aborting.");
@@ -993,7 +1026,7 @@ public class PostImpl implements Post, Application, ScribeClient {
       if (key == null) {
         logger.warning(endpoint.getId() + ": Cannot verify PostMessage with null key!" + message + " " + key);
         return false;
-      }
+      } 
       
       byte[] plainText = SecurityUtils.serialize(message.getMessage());
       byte[] sig = message.getSignature();

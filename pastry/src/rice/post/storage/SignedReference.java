@@ -16,6 +16,9 @@ import rice.p2p.past.*;
  */
 public class SignedReference implements Serializable {
   
+  // serialver for backwards compatibility
+  private static final long serialVersionUID = -6793773589264272354L;
+  
   /**
    * Location where this data is stored in PAST.
    */

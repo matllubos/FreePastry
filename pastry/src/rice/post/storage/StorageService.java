@@ -160,7 +160,7 @@ public class StorageService {
   }
 
   /**
-    * Stores a PostData in the PAST store by signing the content and
+   * Stores a PostData in the PAST store by signing the content and
    * storing it at a well-known location. This method also includes
    * a timestamp, which dates this update.
    *

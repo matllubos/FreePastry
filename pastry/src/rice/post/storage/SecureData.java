@@ -15,6 +15,9 @@ import rice.p2p.past.gc.*;
  * @version $Id$
  */
 class SecureData extends StorageServiceData {
+  
+  // serialver, for backwards compatibility
+  private static final long serialVersionUID = -1514593583283068707L;
 
   /**
    * Builds a SecureData from a byte array and the credentials of data

@@ -18,6 +18,9 @@ import rice.p2p.past.*;
  * @version $Id$
  */
 public class SecureReference implements Serializable {
+  
+  // serialver, for backwards compatibility
+  private static final long serialVersionUID = -1375176213506840185L;
 
   /**
    * Location where this data is stored in PAST.
