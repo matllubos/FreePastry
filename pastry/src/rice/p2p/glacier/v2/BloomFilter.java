@@ -115,10 +115,10 @@ System.out.println(); */
   }
   
   public String toString() {
-    String result = "[BV "+(bitfield.length*8)+"bit ={";
+    String result = "[BV "+(bitfield.length*8)+"bit = { ";
     for (int i=0; i<hashParams.length; i++)
-      result = result + ((i==0) ? "" : ",") + " " +hashParams[i];
-    result = result + "}]";
+      result = result + ((i==0) ? "" : ", ") + hashParams[i];
+    result = result + " }]";
     return result;
   }
 
