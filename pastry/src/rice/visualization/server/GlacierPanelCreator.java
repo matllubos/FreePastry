@@ -64,6 +64,8 @@ public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListe
       glacierView.add("Range", ccwBoundary + " - " + cwBoundary);
       glacierView.add("Local time", (new Date()).toString());
       glacierView.add("Uptime", upDays+"d "+(upHours%24)+"h "+(upMin%60)+"m");
+      glacierView.add("Fragm. total", "" + current.fragmentStorageSize + " bytes");
+      glacierView.add("Trash total", "" + current.trashStorageSize + " bytes");
     } else {
       glacierView.add("Starting up...", "");
     }
