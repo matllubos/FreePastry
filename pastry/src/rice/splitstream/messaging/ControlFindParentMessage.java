@@ -2,6 +2,9 @@ package rice.splitstream.messaging;
 
 import rice.splitstream.*;
 import rice.scribe.messaging.*;
+import rice.scribe.*;
+import rice.pastry.*;
+import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 import java.util.Vector;
 
