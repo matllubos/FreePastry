@@ -295,7 +295,7 @@ public class StorageService {
         final ContentHashData chd = new ContentHashData(location, cipherText);
         final Continuation task = this;
 
-        immutablePast.lookupHandles(chd.getId(), immutablePast.getReplicationFactor(), new StandardContinuation(command) {
+        immutablePast.lookupHandles(chd.getId(), immutablePast.getReplicationFactor()+1, new StandardContinuation(command) {
           public void receiveResult(Object o) {
             PastContentHandle[] handles = (PastContentHandle[]) o;
             
@@ -561,7 +561,7 @@ public class StorageService {
       * Starts this task running.
      */
     protected void start() {
-      mutablePast.lookupHandles(reference.getLocation(), mutablePast.getReplicationFactor(), this);
+      mutablePast.lookupHandles(reference.getLocation(), mutablePast.getReplicationFactor()+1, this);
 
       // Now we wait until PAST calls us with the receiveResult
       // and then we continue processing this call

@@ -61,7 +61,7 @@ public class PostPastPolicy implements PastPolicy {
    * @param command The command to call with the replica to store
    */
   public void fetch(final Id id, final Past past, Continuation command) {
-    past.lookupHandles(id, past.getReplicationFactor(), new StandardContinuation(command) {
+    past.lookupHandles(id, past.getReplicationFactor()+1, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         PastContentHandle[] handles = (PastContentHandle[]) o;
       
