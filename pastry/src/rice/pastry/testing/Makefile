@@ -8,7 +8,10 @@ SOURCE  = \
 	PastryRegrTest.java DirectPastryRegrTest.java RMIPastryRegrTest.java\
 	RegrTestApp.java\
 	\
-	NodeIdUnit.java
+	NodeIdUnit.java\
+	PingMessage.java PingAddress.java Ping.java PingTestNew.java SinglePingTest.java\
+	PingTestRecord.java
+
 
 RMI_SOURCE =
 
