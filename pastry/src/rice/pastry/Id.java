@@ -69,9 +69,6 @@ public class Id implements rice.p2p.commonapi.Id {
   // serialver for backwards compatibility
   static final long serialVersionUID = 2166868464271508935L;
 
-  // serialver for backwards compatibility
-  static final long serialVersionUID = 2166868464271508935L;
-
   /**
    * Constructor.
    *
@@ -121,16 +118,6 @@ public class Id implements rice.p2p.commonapi.Id {
       return (byte) (c - '0');
     else
       return (byte) (c - 'A' + 10);
-  }
-
-  /**
-   * Constructor, which takes the output of a toStringFull() and converts it back
-   * into an Id.  Should not normally be used.
-   *
-   * @param hex The hexadeciaml representation from the toStringFull()
-   */
-  public Id(String hex) {
-    this(trans(hex));
   }
   
   /**
