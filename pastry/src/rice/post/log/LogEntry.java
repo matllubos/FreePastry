@@ -1,5 +1,6 @@
 package rice.post.log;
 
+import java.lang.ref.*;
 import java.security.*;
 
 import rice.*;
@@ -23,7 +24,7 @@ public abstract class LogEntry implements PostData {
   protected LogEntryReference previousEntryReference;
 
   // the previous entry in the log
-  private transient LogEntry previousEntry;
+  private transient SoftReference previousEntry;
 
   // the local Post service
   private transient Post post;
@@ -57,7 +58,7 @@ public abstract class LogEntry implements PostData {
    * @param ref A reference to the previous log entry
    */
   public void setPreviousEntryReference(LogEntryReference ref) {
-    if (previousEntryReference == null) {
+    if ((previousEntryReference == null) || (ref.equals(previousEntryReference))) {
       previousEntryReference = ref;
     } else {
       System.out.println("ERROR - Trying to set previous ref on already-set log.");
@@ -89,13 +90,16 @@ public abstract class LogEntry implements PostData {
       return;
     }
     
-    if ((previousEntry == null) && (previousEntryReference != null)) {
+    LogEntry prev = ((previousEntry == null) ? null : (LogEntry) previousEntry.get());
+    
+    if ((prev == null) && (previousEntryReference != null)) {
       Continuation fetch = new Continuation() {
         public void receiveResult(Object o) {
           try {
-            previousEntry = (LogEntry) o;
-            previousEntry.setPost(post);
-            command.receiveResult(previousEntry);
+            LogEntry prev = (LogEntry) o;
+            prev.setPost(post);
+            previousEntry = new SoftReference(prev);
+            command.receiveResult(prev);
           } catch (ClassCastException e) {
             command.receiveException(e);
           }
@@ -108,7 +112,7 @@ public abstract class LogEntry implements PostData {
 
       post.getStorageService().retrieveContentHash(previousEntryReference, fetch);
     } else {
-      command.receiveResult(previousEntry);
+      command.receiveResult(prev);
     }
   }
 
@@ -128,12 +132,12 @@ public abstract class LogEntry implements PostData {
   }
 
   /**
-    * Protected method which sets the post service
+    * Protected method which sets the previous entry in the log.
    *
    */
   void setPreviousEntry(LogEntry entry) {
     if (previousEntry == null) {
-      previousEntry = entry;
+      previousEntry = new SoftReference(entry);
     } else {
       System.out.println("ERROR - Attempting to set a previous entry with an existing one in LogEntry!");
     }

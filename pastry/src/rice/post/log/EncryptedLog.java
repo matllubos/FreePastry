@@ -1,9 +1,11 @@
 package rice.post.log;
 
+import java.io.*;
 import java.security.*;
 import java.util.*;
 
 import rice.*;
+import rice.Continuation.*;
 import rice.p2p.commonapi.*;
 import rice.post.*;
 import rice.post.storage.*;
@@ -23,7 +25,7 @@ public class EncryptedLog extends Log {
   protected transient byte[] key;
 
   // the ciphertext of the key encrypted under the public key
-  protected byte[] cipherKey;
+  protected transient byte[] cipherKey;
   
   /**
    * Constructs a Log for use in POST
@@ -85,25 +87,43 @@ public class EncryptedLog extends Log {
    *
    * @return A reference to the top entry in the log.
    */
-  public void getTopEntry(final Continuation command) {
-    Continuation decrypt = new Continuation() {
+  public void getTopEntry(Continuation command) {
+    super.getTopEntry(new StandardContinuation(command) {
       public void receiveResult(Object o) {
         if (o != null) {
-          EncryptedLogEntry entry = (EncryptedLogEntry) o;
-          entry.setKey(key);
-
-          command.receiveResult(entry.getEntry());
+          ((EncryptedLogEntry) o).setKey(key);
+          parent.receiveResult(((EncryptedLogEntry) o).getEntry());
         } else {
-          command.receiveResult(null);
+          parent.receiveResult(null);
         }
       }
-
-      public void receiveException(Exception e) {
-        command.receiveException(e);
-      }
-    };
-
-    super.getTopEntry(decrypt);
+    });
+  }
+  
+  /**
+   * Internal method for writing out this data object
+   *
+   * @param oos The current output stream
+   */
+  private void writeObject(ObjectOutputStream oos) throws IOException {
+    oos.defaultWriteObject();
+    
+    oos.writeInt(cipherKey.length);
+    oos.write(cipherKey);
+  }
+  
+  /**
+    * Internal method for reading in this data object
+   *
+   * @param ois The current input stream
+   */
+  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    ois.defaultReadObject();
+    
+    if (cipherKey == null) {
+      cipherKey = new byte[ois.readInt()];
+      ois.readFully(cipherKey, 0, cipherKey.length);
+    }
   }
 
   public String toString() {

@@ -15,7 +15,7 @@ import rice.post.security.*;
  * 
  * @version $Id$
  */
-class EncryptedLogEntry extends LogEntry {
+final class EncryptedLogEntry extends LogEntry {
 
   // the enclosed log entry
   protected transient LogEntry entry;
@@ -24,7 +24,7 @@ class EncryptedLogEntry extends LogEntry {
   protected transient byte[] key;
 
   // the encrypted contained log entry
-  protected byte[] cipherEntry;
+  protected transient byte[] cipherEntry;
   
   /**
    * Constructs a LogEntry
@@ -110,6 +110,32 @@ class EncryptedLogEntry extends LogEntry {
     };
 
     super.getPreviousEntry(decrypt);
+  }
+  
+  /**
+   * Internal method for writing out this data object
+   *
+   * @param oos The current output stream
+   */
+  private void writeObject(ObjectOutputStream oos) throws IOException {
+    oos.defaultWriteObject();
+    
+    oos.writeInt(cipherEntry.length);
+    oos.write(cipherEntry);
+  }
+  
+  /**
+   * Internal method for reading in this data object
+   *
+   * @param ois The current input stream
+   */
+  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    ois.defaultReadObject();
+    
+    if (cipherEntry == null) {
+      cipherEntry = new byte[ois.readInt()];
+      ois.readFully(cipherEntry, 0, cipherEntry.length);
+    }
   }
 }
 

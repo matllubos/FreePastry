@@ -380,6 +380,8 @@ public class Log implements PostData {
     public static final int STATE_2 = 2;
 
     private LogEntry entry;
+    private LogEntryReference previousTopReference;
+    private LogEntry previousTop;
     private Continuation command;
     private int state;
     
@@ -401,6 +403,8 @@ public class Log implements PostData {
     }
 
     public void start() {
+      previousTopReference = topEntryReference;
+      previousTop = topEntry;
       state = STATE_1;
       entry.setPost(post);
       entry.setUser(post.getEntityAddress());
@@ -440,6 +444,8 @@ public class Log implements PostData {
      * @param result The exception caused
      */
     public void receiveException(Exception result) {
+      topEntryReference = previousTopReference;
+      topEntry = previousTop;
       command.receiveException(result);
     }
   }
