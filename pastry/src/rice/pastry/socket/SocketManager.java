@@ -10,6 +10,7 @@ import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Iterator;
 import java.util.TimerTask;
 
 import rice.pastry.Log;
@@ -460,7 +461,7 @@ public class SocketManager implements SelectionKeyHandler {
    * @param message DESCRIBE THE PARAMETER
    */
   public void send(final Object message) {
-    System.out.println("ENQ2:@"+System.currentTimeMillis()+":"+this+":"+message);
+//    System.out.println("ENQ2:@"+System.currentTimeMillis()+":"+this+":"+message+":"+message.getClass().getName());
 
     lastWritten = message;
     
@@ -707,6 +708,10 @@ public class SocketManager implements SelectionKeyHandler {
       connectionManager.messageNotSent(o, len);
 		}
 	}
+
+  public Iterator getPendingMessages() {
+    return writer.getQueue().iterator();
+  }
 
 
 }

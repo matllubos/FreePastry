@@ -168,6 +168,7 @@ public class SocketChannelWriter {
   
   Object firstObject;
   public boolean enqueue(Object o) {
+    //System.out.println("ENQ3:@"+System.currentTimeMillis()+":"+this+":"+o);
     checkPoint(o,103);
 
     if (firstObject == null) {
@@ -289,6 +290,8 @@ public class SocketChannelWriter {
    * @param o The feature to be added to the ToQueue attribute
    */
   private void addToQueue(Object o) {
+    //System.out.println("ENQ4:@"+System.currentTimeMillis()+":"+this+":"+o);
+  	
     if (queue.size() > 2 && !(o instanceof AckMessage)) {
       //System.out.println("SCW.addToQueue("+o+"):"+o.getClass().getName());
       //Thread.dumpStack();
@@ -302,7 +305,7 @@ public class SocketChannelWriter {
 
           if ((thisObj instanceof Message) && (!((Message) thisObj).hasPriority())) {
             debug("Prioritizing socket message " + o + " over message " + thisObj);
-//            System.out.println("ENQ4.5:SCW.addToQueue("+o+"):"+i);
+				    //System.out.println("ENQ5a:@"+System.currentTimeMillis()+":"+this+":"+o);
             queue.add(i, o);
             if (manager!=null) {
               manager.registerModifyKey();            
@@ -313,7 +316,7 @@ public class SocketChannelWriter {
       }
     }
 
-//    System.out.println("ENQ4.5:SCW.addToQueue("+o+"):last");
+    //System.out.println("ENQ5b:@"+System.currentTimeMillis()+":"+this+":"+o);
     queue.addLast(o);
     if (manager!=null) {
       manager.registerModifyKey();            

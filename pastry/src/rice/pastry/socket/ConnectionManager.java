@@ -19,6 +19,7 @@ import rice.pastry.leafset.BroadcastLeafSet;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.messaging.AckMessage;
+import rice.pastry.socket.messaging.AddressMessage;
 import rice.pastry.socket.messaging.SocketTransportMessage;
 import rice.pastry.testing.HelloMsg;
 
@@ -272,6 +273,14 @@ public class ConnectionManager {
         if (!dataSocketManager.connecting || replaceExistingSocket(dataSocketManager,sm)) {
           SocketManager temp = dataSocketManager;
           dataSocketManager = sm;
+					// move all pending messages out of old dsm
+					Iterator i = temp.getPendingMessages();
+					while (i.hasNext()) {
+						Object o = i.next();
+						if (!(o instanceof AddressMessage)) {
+							dataSocketManager.send(o);	
+						}	
+					}					
           temp.close();
         } else {
           sm.close();
@@ -297,17 +306,12 @@ public class ConnectionManager {
     debug("RESOLVE: Comparing " + local + " and " + remote);
   
     if (remote.compareTo(local) < 0) {
-      //System.out.println("CM.handleSocketCollision(): RESOLVE: Cancelling existing data connection " + existing+" replacing with "+newMgr);  
+      //System.out.println("CM.replaceExistingSocket(): RESOLVE: Cancelling existing data connection " + existing+" replacing with "+newMgr);  
       debug("RESOLVE: Cancelling existing data connection to " + address);  
-      //scm.getSocketPoolManager().socketClosed(existing);
-      //scm.getSocketPoolManager().socketOpened(newMgr);
-      //existing.close();
-      //newMgr.setConnectionManager(this);
       return true;
     } else {
-      //System.out.println("CM.handleSocketCollision(): RESOLVE: Cancelling new data connection " + newMgr+" keeping "+existing);  
+      //System.out.println("CM.replaceExistingSocket(): RESOLVE: Cancelling new data connection " + newMgr+" keeping "+existing);  
       debug("RESOLVE: Cancelling new connection to " + address);
-      //newMgr.close();
       return false;
     }
   }
@@ -405,7 +409,7 @@ public class ConnectionManager {
    */
   public void send(final Message message) {    
     checkPoint(message,666);
-    System.out.println("ENQ:@"+System.currentTimeMillis()+":"+this+":"+message);
+    //System.out.println("ENQ:@"+System.currentTimeMillis()+":"+this+":"+message);
     //System.out.println("send("+message+"):"+message.getClass().getName());    
     /*
     if (message instanceof RouteMessage) {
