@@ -95,10 +95,14 @@ public class SplitStreamRegrTest extends CommonAPITest {
    * Tests routing a Past request to a particular node.
    */
   protected void testBasic() {
+     sectionStart("Basic Test");
+     stepStart("Creating Channel");
      int creator  = rng.nextInt(NUM_NODES);
      ChannelId id = new ChannelId(generateId());
      ssclients[creator].createChannel(id);
      simulate();
+     stepDone(SUCCESS);
+     stepStart("Attaching and Joining Stripes");
      for(int i = 0; i < NUM_NODES; i++){
        ssclients[i].attachChannel(id);
        simulate();
@@ -107,16 +111,32 @@ public class SplitStreamRegrTest extends CommonAPITest {
        ssclients[i].subscribeStripes();
        simulate();
      }
+     stepDone(SUCCESS);
+     stepStart("Sending Data");
      byte[] data = {0,1,0,1,1};
      ssclients[creator].publishAll(data);
      simulate();
 
      ssclients[creator].publishAll(new byte[0]);
      simulate();
-
+     int totalmsgs = 0;
      for(int i = 0; i < NUM_NODES; i++){
-        System.out.println(i + " Got " + ssclients[i].getNumMesgs());
+        totalmsgs = totalmsgs + ssclients[i].getNumMesgs(); 
      }
+
+     if(totalmsgs == (NUM_NODES * 16 * 2)){
+        stepDone(SUCCESS);
+     }
+     else{
+        stepDone(FAILURE, "Expected " + (NUM_NODES * 16 * 2) + " messages, got " + totalmsgs);
+     }
+     sectionDone();
+     testFailure(1);
+  }
+ 
+  protected void testFailure(int numnodes){
+     sectionStart("Failure Test");
+     sectionDone();
   }
 
   /**
@@ -211,7 +231,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
    }
 
    private void log(String s){
-      System.out.println("" + n + " " + s);
+      //System.out.println("" + n + " " + s);
    }
 
  }
