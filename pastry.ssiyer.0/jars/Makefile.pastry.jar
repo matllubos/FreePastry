@@ -1,0 +1,5 @@
+JAR_CONTENT = rice
+
+MANIFEST = Manifest.directory.jar
+
+include $(JAVA_DEV_ROOT)/Makefile

@@ -24,7 +24,7 @@ PACKAGES = \
 
 NODOC_PACKAGES = 
 
-JARS = 
+JARS = pastry.jar
 
 JARS_3RDPARTY = 
 

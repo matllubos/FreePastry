@@ -73,6 +73,8 @@ public class PastryRegrTest {
     public NodeId.Distance lastDist;
     public NodeId lastNode;
 
+    public int msgCount;
+
     // constructor
 
     public PastryRegrTest() {
@@ -85,9 +87,12 @@ public class PastryRegrTest {
 	rng = new Random();
     }
 
+    /**
+     * make a new pastry node
+     */
+
     public void makePastryNode() {
 	PastryNode pn = new PastryNode(factory);
-	System.out.println("created " + pn);
 	pastryNodes.addElement(pn);
 	pastryNodesSorted.put(pn.getNodeId(),pn);
 	pastryNodeLastAdded = pn.getNodeId();
@@ -96,18 +101,30 @@ public class PastryRegrTest {
 	rtApps.addElement(rta);
 
 	int n = pastryNodes.size();
+	int msgCount = 0;
 
 	if (n > 1) {
 	    PastryNode other = (PastryNode) pastryNodes.get(n - 2);
 	    
 	    pn.receiveMessage(new InitiateJoin(other));
-	    while(simulate());
+	    while(simulate()) msgCount++;
 	}
+
+	System.out.println("created " + pn + " messages: " + msgCount);
 
 	checkLeafSet(rta);
 	checkRoutingTable(rta);
 	//System.out.println("");
     }
+
+    /**
+     * Send messages among random message pairs. In each round, one
+     * message is sent from a random source node to a random
+     * destination; then, a second message is sent from a random
+     * source node with a random key (key is not necessaily the nodeId
+     * of an existing node)
+     * 
+     * @param k the number of rounds */
 
     public void sendPings(int k) {
 	int n = rtApps.size();
@@ -134,10 +151,20 @@ public class PastryRegrTest {
 	}
     }
 
+    /**
+     * send one simulated message
+     */
+
     public boolean simulate() { 
-	return simulator.simulate(); 
+	boolean res = simulator.simulate(); 
+	if (res) msgCount++;
+	return res;
     }
 
+
+    /**
+     * verify the correctness of the leaf set
+     */
 
     public void checkLeafSet(RegrTestApp rta) {
 	LeafSet ls = rta.getLeafSet();
@@ -178,6 +205,10 @@ public class PastryRegrTest {
 
     }
 
+
+    /**
+     * verify the correctness of the routing table
+     */
 
     public void checkRoutingTable(RegrTestApp rta) {
 	RoutingTable rt = rta.getRoutingTable();
@@ -246,6 +277,10 @@ public class PastryRegrTest {
 
     }
 
+    /**
+     * main
+     */
+
     public static void main(String args[]) {
 	PastryRegrTest pt = new PastryRegrTest();
 	
@@ -253,18 +288,15 @@ public class PastryRegrTest {
 	int m = 100;
 	int k = 100;
 
-	int msgCount = 0;
-
 	Date old = new Date();
 
 	for (int i=0; i<n; i++) {
 	    pt.makePastryNode();
-	    //while (pt.simulate()) msgCount++;
 
 	    if ((i + 1) % m == 0) {
 		Date now = new Date();
-		System.out.println((i + 1) + " " + (now.getTime() - old.getTime()) + " " + msgCount);
-		msgCount = 0;
+		System.out.println((i + 1) + " " + (now.getTime() - old.getTime()) + " " + pt.msgCount);
+		pt.msgCount = 0;
 		old = now;
 	    }
 
