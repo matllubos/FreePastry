@@ -9,6 +9,7 @@ import rice.post.security.*;
 
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
+import rice.p2p.past.gc.*;
 
 /**
  * This class is used internally by the storage package to
@@ -112,21 +113,18 @@ public class SignedData extends StorageServiceData {
   public boolean isMutable() {
     return true;
   }
-
+  
   /**
-   * Produces a handle for this content object. The handle is retrieved and returned to the
-   * client as a result of the Past.lookupHandles() method.
+   * Returns the version number of this object
    *
-   * @param The local Past service which the content is on.
-   * @return the handle
+   * @return The version number
    */
-  public PastContentHandle getHandle(Past local) {
-    long time = (new BigInteger(1, timestamp)).longValue();
-    return new StorageServiceDataHandle(local.getLocalNodeHandle(), location, time);
+  public long getVersion() {
+    return SecurityUtils.getLong(timestamp);
   }
   
   /**
-    * Internal method for writing out this data object
+   * Internal method for writing out this data object
    *
    * @param oos The current output stream
    */

@@ -11,6 +11,7 @@ import javax.crypto.spec.*;
 import rice.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
+import rice.p2p.past.gc.*;
 
 import rice.post.*;
 import rice.post.security.*;
@@ -24,6 +25,11 @@ import rice.post.security.*;
  * @version $Id$
  */
 public class StorageService {
+  
+  /**
+   * The default timeout period of objects (3 weeks)
+   */
+  public static long DEFAULT_TIMEOUT_PERIOD = (long) (3 * 7 * 24 * 60 * 60 * 1000);
 
   /**
    * The address of the user running this storage service.
@@ -84,6 +90,17 @@ public class StorageService {
     
     return factory.buildId(data);
   }
+  
+  /**
+   * Internal method which returns what the timeout should be for an
+   * object inserted now.  Basically, does System.currentTimeMillis() +
+   * DEFAULT_TIMEOUT_PERIOD.
+   *
+   * @return The default timeout period for an object inserted now
+   */
+  protected long getTimeout() {
+    return System.currentTimeMillis() + DEFAULT_TIMEOUT_PERIOD;
+  }
 
   /**
    * Stores a PostData in the PAST storage system, in encrypted state,
@@ -119,7 +136,28 @@ public class StorageService {
     RetrieveContentHashTask task = new RetrieveContentHashTask(reference, command);
     task.start();
   }
-
+  
+  /**
+   * This method "refreshes" a list of ContentHashReferences, which ensures that
+   * all of the referenced objects are not collected by the underlying store.
+   * This method should be invoked upon objects which the user is interested in, 
+   * but the user did not create (i.e. The parts of an email the user has recevied).
+   *
+   * @param references The references to refresh
+   * @param command The command to run once done
+   */
+  public void refreshContentHash(ContentHashReference[] references, Continuation command) {
+    if (immutablePast instanceof GCPast) {
+      Id[] ids = new Id[references.length];
+    
+      for (int i=0; i<ids.length; i++)
+        ids[i] = references[i].getLocation();
+      
+      ((GCPast) immutablePast).refresh(ids, getTimeout(), command);
+    } else {
+      command.receiveResult(Boolean.TRUE);
+    }
+  }
 
   /**
     * Stores a PostData in the PAST store by signing the content and
@@ -244,6 +282,28 @@ public class StorageService {
     RetrieveSecureTask task = new RetrieveSecureTask(reference, command);
     task.start();
   }
+  
+  /**
+   * This method "refreshes" a list of SecureReferences, which ensures that
+   * all of the referenced objects are not collected by the underlying store.
+   * This method should be invoked upon objects which the user is interested in, 
+   * but the user did not create (i.e. The parts of an email the user has recevied).
+   *
+   * @param references The references to refresh
+   * @param command The command to run once done
+   */
+  public void refreshSecure(SecureReference[] references, Continuation command) {
+    if (immutablePast instanceof GCPast) {
+      Id[] ids = new Id[references.length];
+      
+      for (int i=0; i<ids.length; i++)
+        ids[i] = references[i].getLocation();
+      
+      ((GCPast) immutablePast).refresh(ids, getTimeout(), command);
+    } else {
+      command.receiveResult(Boolean.TRUE);
+    }
+  }
 
   private void printArray(byte[] array) {
     for (int i=0; i<array.length; i++) {
@@ -307,7 +367,10 @@ public class StorageService {
             }
             
             // Store the content hash data in PAST
-            immutablePast.insert(chd, task);
+            if (immutablePast instanceof GCPast) 
+              ((GCPast) immutablePast).insert(chd, getTimeout(), task);
+            else 
+              immutablePast.insert(chd, task);
           }
         });
 
@@ -730,7 +793,10 @@ public class StorageService {
         SecureData sd = new SecureData(location, cipherText);
 
         // Store the content hash data in PAST
-        immutablePast.insert(sd, this);
+        if (immutablePast instanceof GCPast) 
+          ((GCPast) immutablePast).insert(sd, getTimeout(), this);
+        else 
+          immutablePast.insert(sd, this);
 
         // Now we wait until PAST calls us with the receiveResult
         // and then we return the address

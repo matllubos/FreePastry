@@ -1,9 +1,10 @@
 package rice.email;
 
 import java.security.*;
-import java.util.HashSet;
+import java.util.*;
 
 import rice.*;
+import rice.p2p.past.*;
 import rice.Continuation.*;
 import rice.email.log.*;
 import rice.email.messaging.*;
@@ -202,7 +203,7 @@ public class EmailService extends PostClient {
    */
   public void notificationReceived(NotificationMessage nm, Continuation command) {
     if (nm instanceof EmailNotificationMessage) {
-      EmailNotificationMessage enm = (EmailNotificationMessage) nm;
+      final EmailNotificationMessage enm = (EmailNotificationMessage) nm;
       enm.getEmail().setStorage(post.getStorageService());
 
       System.out.println("Received email from " + enm.getEmail().getSender());
@@ -212,7 +213,15 @@ public class EmailService extends PostClient {
       this.notifyObservers(enm);
 
       if (inbox != null) {
-        inbox.addMessage(enm.getEmail(), command);
+        inbox.addMessage(enm.getEmail(), new StandardContinuation(command) {
+          public void receiveResult(Object o) {
+            HashSet set = new HashSet();
+            enm.getEmail().getContentHashReferences(set);
+            ContentHashReference[] references = (ContentHashReference[]) set.toArray(new ContentHashReference[0]);
+            
+            post.getStorageService().refreshContentHash(references, parent);
+          }
+        });
       } else {
         System.out.println("Recieved message, but was unable to insert due to null inbox...");
         command.receiveResult(new Boolean(false));
@@ -221,6 +230,24 @@ public class EmailService extends PostClient {
       System.out.println("EmailService received unknown notification " + nm + " - dropping on floor.");
       command.receiveException(new PostException("EmailService received unknown notification " + nm + " - dropping on floor."));
     }
+  }
+  
+  /**
+   * This method is periodically invoked by Post in order to get a list of
+   * all handles under which the application has live objects.  This used to
+   * implement the garbage collection service, thus, the application must
+   * ensure that all data which it is still interested in is returned.
+   *
+   * The applications should return a PastContentHandle[] containing all of 
+   * the handles The application is still interested in to the provided continatuion.
+   */
+  public void getContentHashReferences(Continuation command) {
+    final Set set = new HashSet();
+    folder.getContentHashReferences(set, new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        parent.receiveResult(set.toArray(new ContentHashReference[0]));
+      }
+    });
   }
   
   /**

@@ -80,4 +80,12 @@ public abstract class EmailContentPart implements Serializable {
    * Overridden to enforce subclasses have a valid equals
    */
   public abstract boolean equals(Object o);
+  
+  /**
+   * This method returns a list of all the handles stored in this part
+   * by adding them to the specified set.
+   *
+   * @param set The set to add the PastContentHandles to.
+   */
+  public abstract void getContentHashReferences(Set set);
 }

@@ -5,6 +5,7 @@ import java.security.*;
 
 import rice.*;
 import rice.post.*;
+import rice.post.storage.*;
 import rice.post.messaging.*;
 import rice.post.security.*;
 
@@ -90,6 +91,19 @@ public class PKnoISecurityModule extends PostClient implements SecurityModule {
   public void notificationReceived(NotificationMessage nm, Continuation command) {
     command.receiveResult(new Boolean(true));
     // NOTHING NOW
+  }
+  
+  /**
+   * This method is periodically invoked by Post in order to get a list of
+   * all handles under which the application has live objects.  This used to
+   * implement the garbage collection service, thus, the application must
+   * ensure that all data which it is still interested in is returned.
+   *
+   * The applications should return a PastContentHandle[] containing all of 
+   * the handles The application is still interested in to the provided continatuion.
+   */
+  public void getContentHashReferences(Continuation command) {
+    command.receiveResult(new ContentHashReference[0]);
   }
 
   /**

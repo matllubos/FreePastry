@@ -53,6 +53,17 @@ public class EmailHeadersPart extends EmailContentPart {
     super.setStorage(storage);
     content.setStorage(storage);
   }
+  
+  /**
+   * This method returns a list of all the handles stored in this part
+   * by adding them to the specified set.
+   *
+   * @param set The set to add the PastContentHandles to.
+   */
+  public void getContentHashReferences(Set set) {
+    set.add(headersReference);
+    content.getContentHashReferences(set);
+  }
 
   /**
    * Returns the headers of this EmailPart to the continuation

@@ -126,6 +126,16 @@ public class Email implements java.io.Serializable {
    */
   protected void storeData(final Continuation command) {
     content.storeData(command);
+  }  
+  
+  /**
+   * This method returns a list of all the handles stored in this part
+   * by adding them to the specified set.
+   *
+   * @param set The set to add the PastContentHandles to.
+   */
+  public void getContentHashReferences(Set set) {
+    content.getContentHashReferences(set);
   }
 }
 

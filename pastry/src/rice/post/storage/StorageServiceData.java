@@ -6,6 +6,7 @@ import java.util.*;
 
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
+import rice.p2p.past.gc.*;
 
 /**
  * This class is the abstraction of a class used by the storage package to
@@ -13,7 +14,10 @@ import rice.p2p.past.*;
  *
  * @version $Id$
  */
-abstract class StorageServiceData implements PastContent {
+abstract class StorageServiceData implements GCPastContent {
+  
+  // default version number for objects which don't have different versions
+  public static final long NO_VERSION = 0L;
 
   // The data stored in this content hash object.
   protected transient byte[] data;
@@ -49,13 +53,26 @@ abstract class StorageServiceData implements PastContent {
   public byte[] getData() {
     return data;
   }
-
+  
   /**
-   * Force subclasses to override equals
+   * Returns the version number of this object
    *
-   * @return Whether this and o are equal
+   * @return The version number
    */
-  public abstract boolean equals(Object o);
+  public long getVersion() {
+    return NO_VERSION;
+  }
+  
+  /**
+    * Produces a handle for this content object. The handle is retrieved and returned to the
+   * client as a result of the Past.lookupHandles() method.
+   *
+   * @param The local Past service which the content is on.
+   * @return the handle
+   */
+  public PastContentHandle getHandle(Past local) {
+    return new StorageServiceDataHandle(local.getLocalNodeHandle(), location, getVersion(), GCPast.NO_EXPIRATION_SPECIFIED);
+  }
   
   /**
    * Produces a handle for this content object. The handle is retrieved and returned to the
@@ -64,9 +81,16 @@ abstract class StorageServiceData implements PastContent {
    * @param The local Past service which the content is on.
    * @return the handle
    */
-  public PastContentHandle getHandle(Past local) {
-    return new StorageServiceDataHandle(local.getLocalNodeHandle(), location);
+  public GCPastContentHandle getHandle(GCPast local, long expiration) {
+    return new StorageServiceDataHandle(local.getLocalNodeHandle(), location, getVersion(), expiration);
   }
+
+  /**
+   * Force subclasses to override equals
+   *
+   * @return Whether this and o are equal
+   */
+  public abstract boolean equals(Object o);
   
   /**
    * Internal method for writing out this data object

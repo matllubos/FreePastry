@@ -165,6 +165,47 @@ public class Folder {
   }
   
   /**
+   * This method returns a list of all the handles stored in the folder or
+   * any subfolders.
+   *
+   * Returns a PastContentHandle[] containing all of 
+   * the handles in to the provided continatuion.
+   */
+  public void getContentHashReferences(final Set set, Continuation command) {
+    getMessages(new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        StoredEmail[] emails = (StoredEmail[]) o;
+        
+        for (int i=0; i<emails.length; i++) 
+          emails[i].getEmail().getContentHashReferences(set);
+       
+        final Object[] names = _log.getChildLogNames();
+        
+        Continuation children = new StandardContinuation(parent) {
+          int index = 0;
+          
+          public void receiveResult(Object o) {
+            final Continuation thisOne = this;
+            
+            if (index < names.length) {
+              _log.getChildLog(names[index], new StandardContinuation(parent) {
+                public void receiveResult(Object o) {
+                  index++;
+                  ((Folder) o).getContentHashReferences(set, thisOne);
+                }
+              });
+            } else {
+              parent.receiveResult(Boolean.TRUE);
+            }
+          }
+        };
+        
+        children.receiveResult(null);
+      }
+    });
+  }
+  
+  /**
    * Updates an Email (flags)
    *
    * @param email The email to update.

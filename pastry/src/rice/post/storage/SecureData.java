@@ -6,6 +6,7 @@ import java.util.*;
 
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
+import rice.p2p.past.gc.*;
 
 /**
  * This class is used internally by the storage package to

@@ -40,6 +40,16 @@ public class EmailSinglePart extends EmailContentPart {
     this.content = content;
     this.lines = new String(content.getData()).split("\n").length;
   }
+  
+  /**
+   * This method returns a list of all the handles stored in this part
+   * by adding them to the specified set.
+   *
+   * @param set The set to add the PastContentHandles to.
+   */
+  public void getContentHashReferences(Set set) {
+    set.add(contentReference);
+  }
 
   /**
    * Method which writes this part's content out to disk

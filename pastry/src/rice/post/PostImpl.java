@@ -48,16 +48,6 @@ public class PostImpl implements Post, Application, ScribeClient {
   protected Endpoint endpoint;
   
   /**
-   * The local PAST service to use for persistent storage.
-   */
-  protected Past immutablePast;
-  
-  /**
-   * The local PAST service to use for persistent storage.
-   */
-  protected Past mutablePast;
-  
-  /**
    * The local Scribe service to use for notification.
    */
   protected Scribe scribe;
@@ -196,8 +186,6 @@ public class PostImpl implements Post, Application, ScribeClient {
                   PostEntityAddress previousAddress) throws PostException 
   {
     this.endpoint = node.registerApplication(this, instance);
-    this.immutablePast = immutablePast;
-    this.mutablePast = mutablePast;
     this.address = address;
     this.keyPair = keyPair;
     this.certificate = certificate;

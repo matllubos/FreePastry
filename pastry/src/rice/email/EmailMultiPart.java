@@ -55,6 +55,17 @@ public class EmailMultiPart extends EmailContentPart {
   public String getType() {
     return type;
   }
+  
+  /**
+   * This method returns a list of all the handles stored in this part
+   * by adding them to the specified set.
+   *
+   * @param set The set to add the PastContentHandles to.
+   */
+  public void getContentHashReferences(Set set) {
+    for (int i=0; i<content.length; i++)
+      content[i].getContentHashReferences(set);
+  }
 
   /**
    * Method which sets this part's storage service

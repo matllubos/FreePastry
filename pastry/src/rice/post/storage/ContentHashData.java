@@ -6,6 +6,7 @@ import java.util.*;
 
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
+import rice.p2p.past.gc.*;
 
 /**
  * This class is used internally by the storage package to
@@ -25,6 +26,12 @@ class ContentHashData extends StorageServiceData {
     super(location, data);
   }
 
+  /**
+   * Checks to see if the provided object is equal to this one
+   * 
+   * @param o The object to check
+   * @return Whether or not it's equal
+   */
   public boolean equals(Object o) {
     if (! (o instanceof ContentHashData))
       return false;
@@ -32,6 +39,11 @@ class ContentHashData extends StorageServiceData {
     return Arrays.equals(data, ((ContentHashData) o).getData());
   }
 
+  /**
+   * Returns a string represetation of this object
+   *
+   * @return A string
+   */
   public String toString() {
     return "ContentHashData[" + data.length + "]";
   }
