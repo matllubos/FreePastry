@@ -31,6 +31,15 @@ public class GroupData implements PostData {
   }
   
   /**
+   * Returns the data
+   *
+   * @returns the data
+   */
+  public PostData[] getData() {
+    return data;
+  }
+  
+  /**
   * This method dynamically builds an appropriate SignedReference
    * for this type of PostData given a location.
    *

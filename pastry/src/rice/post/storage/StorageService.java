@@ -177,8 +177,33 @@ public class StorageService {
    */
   public void backupLogs(final PostLog log, final Log[] logs, Continuation command) {
     long time = ((long) System.currentTimeMillis() / PostImpl.BACKUP_INTERVAL) * PostImpl.BACKUP_INTERVAL;
-    StoreSignedTask task = new StoreSignedTask(new GroupData(logs), log.getLocation(), command, immutablePast, time);
+    StoreSignedTask task = new StoreSignedTask(keyPair, new GroupData(logs), log.getLocation(), command, immutablePast, time);
     task.start();
+  }
+  
+  /**
+   * This method performs an emergency recovery of the logs by reinserting them into the
+   * provided PAST store.
+   *
+   */
+  public static void recoverLogs(GroupData data, final KeyPair keyPair, final Past past, Continuation command) {
+    final Log[] logs = (Log[]) data.getData();
+    
+    Continuation c = new StandardContinuation(command) {
+      int i = 0;
+      
+      public void receiveResult(Object o) {
+        if (i < logs.length) {
+          StoreSignedTask task = new StoreSignedTask(keyPair, logs[i], logs[i].getLocation(), this, past, GCPast.INFINITY_EXPIRATION);
+          task.start();
+          i++;
+        } else {
+          parent.receiveResult(Boolean.TRUE);
+        }
+      }
+    };
+    
+    c.receiveResult(null);
   }
   
   /**
@@ -205,7 +230,7 @@ public class StorageService {
    * @param command The command to run once the store has completed.
    */
   public void storeSigned(PostData data, Id location, Continuation command) {
-    StoreSignedTask task = new StoreSignedTask(data, location, command);
+    StoreSignedTask task = new StoreSignedTask(keyPair, data, location, command, mutablePast, GCPast.INFINITY_EXPIRATION);
     task.start();
   }
 
@@ -551,7 +576,7 @@ public class StorageService {
    * Class which is reposible for handling a single StoreSigned
    * task.
    */
-  protected class StoreSignedTask implements Continuation {
+  protected static class StoreSignedTask implements Continuation {
 
     public static final int STATE_1 = 1;
     public static final int STATE_2 = 2;
@@ -560,6 +585,7 @@ public class StorageService {
     private Continuation command;
     private Id location;
     private Key key;
+    private KeyPair keyPair;
     private Past past;
     private long time;
     private long expiration;
@@ -571,15 +597,12 @@ public class StorageService {
      * @param data The data to store
      * @param command The command to run once the data has been stored
      */
-    protected StoreSignedTask(PostData data, Id location, Continuation command) {
-      this(data, location, command, mutablePast, System.currentTimeMillis(), GCPast.INFINITY_EXPIRATION);
-    }
-
-    protected StoreSignedTask(PostData data, Id location, Continuation command, Past past, long time) {
-      this(data, location, command, past, time, GCPast.INFINITY_EXPIRATION);
+    protected StoreSignedTask(KeyPair keyPair, PostData data, Id location, Continuation command, Past past, long time) {
+      this(keyPair, data, location, command, past, time, GCPast.INFINITY_EXPIRATION);
     }
     
-    protected StoreSignedTask(PostData data, Id location, Continuation command, Past past, long time, long expiration) {
+    protected StoreSignedTask(KeyPair keyPair, PostData data, Id location, Continuation command, Past past, long time, long expiration) {
+      this.keyPair = keyPair;
       this.data = data;
       this.location = location;
       this.command = command;
