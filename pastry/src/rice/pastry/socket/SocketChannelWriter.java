@@ -71,11 +71,13 @@ public class SocketChannelWriter {
    * Static fields for logging based on the messages we are writing.
    * Enable logWriteTypes to turn on this output.
    */  
-  private static boolean logWriteTypes = false;
-	private static Object statLock = new Object();
+  private static boolean logWriteTypes = true;
+  private static Object statLock = new Object();
   private static HashMap msgTypes = new HashMap();
-  private static int numWrites = 0;
-  private static int numWriteModulo = 1000;
+  private static HashMap msgSizes = new HashMap();
+  private static long statsLastWritten = System.currentTimeMillis();
+  private static long statsWriteInterval = 60 * 1000;
+  private static long numWrites = 0;
 
   /**
    * the pastry node
@@ -303,39 +305,23 @@ public class SocketChannelWriter {
     if (o == null) {
       return null;
     }
+
     if (logWriteTypes) {
       synchronized(statLock) {
-        Object newO = o;
-        if (newO instanceof SocketTransportMessage) {
-          newO = ((SocketTransportMessage)newO).msg;
-        }
-  
-        if (newO instanceof RouteMessage) {
-          newO = ((RouteMessage)newO).unwrap();
-        }
-  
-        if (newO instanceof PastryEndpointMessage) {
-          newO = ((PastryEndpointMessage)newO).getMessage();
-        }
-  
-        String oType = newO.getClass().getName();
-        
-        Integer it = (Integer)msgTypes.get(oType);
-        if (it == null) {
-          msgTypes.put(oType, new Integer(1));
-        } else {
-          msgTypes.put(oType, new Integer(it.intValue()+1));        
-        }
-        numWrites++;
-        if (numWrites % numWriteModulo == 0) {
-          System.out.println("numWrites = "+numWrites);
+        long now = System.currentTimeMillis();
+        if ((statsLastWritten/statsWriteInterval) != (now/statsWriteInterval)) {
+          System.out.println("@L.TR interval="+statsLastWritten+"-"+now+" numWrites="+numWrites);
+          statsLastWritten = now;
+
           Iterator ii = msgTypes.keySet().iterator();
           while (ii.hasNext()) {
             String s = (String)ii.next();
-            System.out.println("  "+s+":"+msgTypes.get(s));
+            System.out.println("@L.TR   "+s+":"+msgTypes.get(s)+" "+msgSizes.get(s));
           }
+            
+          msgTypes.clear();
+          msgSizes.clear();
         }
-        
       }
     }
     
@@ -349,6 +335,39 @@ public class SocketChannelWriter {
       oos.close();
       int len = baos.toByteArray().length;
 
+      if (logWriteTypes) {
+        synchronized(statLock) {
+          Object newO = o;
+          if (newO instanceof SocketTransportMessage) {
+            newO = ((SocketTransportMessage)newO).msg;
+          }
+  
+          if (newO instanceof RouteMessage) {
+            newO = ((RouteMessage)newO).unwrap();
+          }
+  
+          if (newO instanceof PastryEndpointMessage) {
+            newO = ((PastryEndpointMessage)newO).getMessage();
+          }
+  
+          String oType = newO.getClass().getName();
+        
+          Integer it = (Integer)msgTypes.get(oType);
+          if (it == null) {
+            msgTypes.put(oType, new Integer(1));
+          } else {
+            msgTypes.put(oType, new Integer(it.intValue()+1));        
+          }
+          Long is = (Long)msgSizes.get(oType);
+          if (is == null) {
+            msgSizes.put(oType, new Long(len));
+          } else {
+            msgSizes.put(oType, new Long(is.longValue()+len));
+          }
+          
+          numWrites ++;
+        }
+      }
       
       if ((manager != null) &&
           (manager.getType() == ConnectionManager.TYPE_CONTROL) &&
