@@ -213,6 +213,7 @@ public class EmailProxy extends PostProxy {
         String file = parameters.getStringParameter("email_ssl_keystore_filename");
         String pass = parameters.getStringParameter("email_ssl_keystore_password");
         String sendersA = parameters.getStringParameter("email_allowed_senders");
+        String server = parameters.getStringParameter("email_smtp_server");
         String[] senders = new String[0];
         
         if ((sendersA != null) && (sendersA.length() > 0))
@@ -220,17 +221,17 @@ public class EmailProxy extends PostProxy {
         
         if (parameters.getBooleanParameter("email_smtp_ssl")) {
           stepStart("Starting SSL SMTP server on port " + port);
-          smtp = new SSLSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, file, pass);
+          smtp = new SSLSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, file, pass, server);
           smtp.start();
           stepDone(SUCCESS);
         } else if (parameters.getBooleanParameter("email_smtp_non_blocking")) {
           stepStart("Starting Non-Blocking SMTP server on port " + port);
-          smtp = new NonBlockingSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager);
+          smtp = new NonBlockingSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, server);
           smtp.start();
           stepDone(SUCCESS);
         } else {
           stepStart("Starting SMTP server on port " + port);
-          smtp = new SmtpServerImpl(port, email, gateway, address, accept, authenticate, manager);
+          smtp = new SmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, server);
           smtp.start();
           stepDone(SUCCESS);
         }

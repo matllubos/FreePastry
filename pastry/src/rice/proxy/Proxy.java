@@ -323,9 +323,11 @@ public class Proxy {
           LivenessMonitorTest test = new LivenessMonitorTest(this, process);
           test.start();
           
+          long start = System.currentTimeMillis();
+          
           Thread.sleep(timeout);
           if (! answered) {
-            System.err.println("SERIOUS ERROR: Process did not respond to liveness check - KILLING!");
+            System.err.println("SERIOUS ERROR: Process did not respond to liveness check - started at " + start + " now " + System.currentTimeMillis());
             process.destroy();
           }
           

@@ -40,7 +40,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
   
   UserManager userManager;
 
-  public SmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager) throws Exception {
+  public SmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server) throws Exception {
     super("SMTP Server Thread");
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
@@ -48,7 +48,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
     this.authenticate = authenticate;
     this.email = email;
     this.userManager = userManager;
-    this.manager = new SimpleManager(email, gateway, address);
+    this.manager = new SimpleManager(email, gateway, address, server);
     this.registry = new SmtpCommandRegistry();
     this.registry.load();
     this.workspace = new InMemoryWorkspace();

@@ -31,6 +31,9 @@ public class CoalescedLog extends EncryptedLog {
   // the decrypted list of yet-to-be-coalesed log entries
   protected transient CoalescedLogEntry pending;
   
+  // the buffer of waiting add entry tasks
+  protected transient Vector cbuffer;
+  
   /**
    * Constructs a Log for use in POST, with the provided number of 
    * coalesced log entries.
@@ -42,6 +45,7 @@ public class CoalescedLog extends EncryptedLog {
     super(name, location, post, keyPair);
     
     resetPending();
+    this.cbuffer = new Vector();
   }
   
   /**
@@ -57,29 +61,18 @@ public class CoalescedLog extends EncryptedLog {
    * @param entry The log entry to append to the log.
    * @param command The command to run once done
    */
-  public synchronized void addLogEntry(final LogEntry entry, final Continuation command) {
-    pending.appendEntry(entry);
-    regenerateCipherPending();
+  public void addLogEntry(final LogEntry entry, final Continuation command) {
+    AddCoalescedLogEntryTask aclet = new AddCoalescedLogEntryTask(entry, command);
+    boolean go = false;
     
-    if (pending.getNumEntries() == pending.getEntries().length) {
-      final CoalescedLogEntry temp = pending;
-      resetPending();
+    synchronized (cbuffer) {
+      cbuffer.add(aclet);
       
-      super.addLogEntry(temp, new ErrorContinuation(command) {
-        public void receiveException(Exception e) {
-          temp.removeEntry(entry);
-          pending = temp;
-          command.receiveException(e);
-        }
-      });
-    } else {
-      sync(new ErrorContinuation(command) {
-        public void receiveException(Exception e) {
-          pending.removeEntry(entry);
-          command.receiveException(e);
-        }
-      });
-    }
+      go = (cbuffer.size() == 1);
+    }    
+    
+    if (go)
+      aclet.go();
   }
   
   /**
@@ -196,6 +189,8 @@ public class CoalescedLog extends EncryptedLog {
       cipherPending = new byte[ois.readInt()];
       ois.readFully(cipherPending, 0, cipherPending.length);
     }
+    
+    this.cbuffer = new Vector();
   }
   
   /**
@@ -253,6 +248,86 @@ public class CoalescedLog extends EncryptedLog {
 
   public String toString() {
     return "CoalescedLog[" + name + "]";
+  }
+  
+  /**
+   * This class encapsulates the logic needed to add a log entry to
+   * the current coalesced log.
+   */
+  protected class AddCoalescedLogEntryTask {
+        
+    protected LogEntry entry;
+    protected Continuation command;
+    
+    /**
+     * This construct will build an object which will call the given
+     * command once processing has been completed, and will provide
+     * a result.
+     *
+     * @param entry The log entry to add
+     * @param command The command to call
+     */
+    protected AddCoalescedLogEntryTask(LogEntry entry, Continuation command) {
+      this.entry = entry;
+      this.command = command;
+    }
+    
+    protected void go() {
+      pending.appendEntry(entry);
+      regenerateCipherPending();
+      
+      if (pending.getNumEntries() == pending.getEntries().length) {
+        final CoalescedLogEntry temp = pending;
+        resetPending();
+        
+        CoalescedLog.super.addLogEntry(temp, new Continuation() {
+          public void receiveResult(Object o) {
+            command.receiveResult(o);
+            
+            notifyNext();
+          }
+          
+          public void receiveException(Exception e) {
+            temp.removeEntry(entry);
+            pending = temp;
+            command.receiveException(e);
+            
+            notifyNext();
+          }
+        });
+      } else {
+        sync(new Continuation() {
+          public void receiveResult(Object o) {
+            command.receiveResult(o);
+            
+            notifyNext();
+          }
+          
+          public void receiveException(Exception e) {
+            pending.removeEntry(entry);
+            command.receiveException(e);
+            
+            notifyNext();
+          }
+        });
+      }
+    }
+    
+    protected void notifyNext() {
+      AddCoalescedLogEntryTask task = null;
+      
+      synchronized (cbuffer) {
+        if ((cbuffer.size() > 0) && (cbuffer.get(0) == this)) {
+          cbuffer.remove(0);
+          
+          if (cbuffer.size() > 0) 
+            task = (AddCoalescedLogEntryTask) cbuffer.get(0);
+        }
+      }
+      
+      if (task != null)
+        task.go();
+    }      
   }
 }
 

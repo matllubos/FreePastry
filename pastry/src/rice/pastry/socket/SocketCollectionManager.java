@@ -628,40 +628,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param key The key in question
      */
     public synchronized void modifyKey(SelectionKey key) {
-      if ((! writer.isEmpty()) && ((key.interestOps() & SelectionKey.OP_WRITE) == 0)) {
+      if ((! writer.isEmpty()) && ((key.interestOps() & SelectionKey.OP_WRITE) == 0)) 
         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-        //setTimer();
-      }
-    }
-    
-    /**
-     * Internal method which sets the timer
-     */
-    private void setTimer() {
-      if (timer != null)
-        throw new IllegalArgumentException("Attempt to set timer when timer already set!");
-      
-      timer = new rice.selector.TimerTask() {
-        public void run() {
-          System.out.println("Timer to " + address + "-" + connectAddress + " expired - marking node as dead!");
-          
-          markDead(address);
-          close();
-        }
-      };
-      
-      pastryNode.getTimer().schedule(timer, TIMER_TIMEOUT);
-    }
-    
-    /**
-     * Internal method which clears the timer
-     */
-    private void clearTimer() {
-      if (timer == null)
-        throw new IllegalArgumentException("Attempt to clear timer when timer not set!");
-      
-      timer.cancel();
-      timer = null;
     }
 
     /**
@@ -730,9 +698,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param key The selection key for this manager
      */
     public synchronized void write(SelectionKey key) {
-      try {
-       // clearTimer();
-        
+      try {        
         if (writer.write((SocketChannel) key.channel())) {
           key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
           
@@ -740,8 +706,6 @@ public class SocketCollectionManager extends SelectionKeyHandler {
             System.out.println("BOOTSTRAP: DONE SENDING - CLOSING ");
             close();
           }
-        } else {
-          //setTimer();
         }
       } catch (IOException e) {
         debug("ERROR " + e + " writing - cancelling.");

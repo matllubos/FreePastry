@@ -361,11 +361,17 @@ public abstract class DistPastryNode extends PastryNode {
           public void run() {
             returnResult(result);
           }
+          public String toString(){
+            return "return ProcessingRequest for " + r + " to " + c;
+          }
         });
       } catch (final Exception e) {
         SelectorManager.getSelectorManager().invoke(new Runnable() {
           public void run() {
             returnError(e);
+          }
+          public String toString(){
+            return "return ProcessingRequest for " + r + " to " + c;
           }
         });
       }

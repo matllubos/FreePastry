@@ -17,7 +17,6 @@ public class SimpleManager implements SmtpManager {
 
   public static int MAX_SIZE = 8000000;
   public static String[] POST_HOST = new String[] {"dosa.cs.rice.edu", "thor05.cs.rice.edu", ".epostmail.org"};
-  public static String SMTP_HOST = "moe.rice.edu";
 
   private boolean gateway;
 
@@ -26,6 +25,8 @@ public class SimpleManager implements SmtpManager {
   private EmailService email;
 
   private PostEntityAddress address;
+  
+  private String server;
  
   static {
     String s = System.getProperty("POST_HOST");
@@ -36,11 +37,12 @@ public class SimpleManager implements SmtpManager {
     }
   }
 
-  public SimpleManager(EmailService email, boolean gateway, PostEntityAddress address) throws Exception {
+  public SimpleManager(EmailService email, boolean gateway, PostEntityAddress address, String server) throws Exception {
     this.email = email;
     this.dns = new DnsServiceImpl();
     this.gateway = gateway;
     this.address = address;
+    this.server = server;
   }
 
   public String checkSender(SmtpState state, MailAddress sender) {
@@ -107,23 +109,28 @@ public class SimpleManager implements SmtpManager {
 
     for (int j=0; j<nonPostRecps.size();  j++) {
       MailAddress addr = (MailAddress) nonPostRecps.elementAt(j);
-//      String[] hosts = dns.lookup(addr.getHost());
-      String[] hosts = new String[] {SMTP_HOST};
-
-      if (hosts.length == 0) {
-        System.out.println( "No MX records found for " + addr.getHost());
-      } else {
-        System.out.println("A message is headed to " + addr + " at " + hosts[0]);
-
-        try {
-          Reader content = state.getMessage().getContent();
-          SmtpClient client = new SmtpClient(hosts[0]);
-          client.connect();
-          client.send(state.getMessage().getReturnPath().toString(), addr.toString(), content);
-          client.close();
-        } catch (Exception e) {
-          System.out.println("Couldn't send a message to " + addr + " due to " + e);
-        }
+      String host = server;
+      
+      if ((host == null) || (host.equals(""))) {
+        System.out.println("WARNING: No default SMTP server specified - using DNS MX records for " + addr.getHost() + " to send email.");
+        String[] hosts = dns.lookup(addr.getHost());
+        
+        if (hosts.length == 0)
+          throw new IOException("Unable to send SMTP message to " + addr + " - no DNS records found and no default host specified.");
+        
+        host = hosts[0];
+      } 
+      
+      System.out.println("A message is headed to " + addr + " using SMTP server at " + host);
+      
+      try {
+        Reader content = state.getMessage().getContent();
+        SmtpClient client = new SmtpClient(host);
+        client.connect();
+        client.send(state.getMessage().getReturnPath().toString(), addr.toString(), content);
+        client.close();
+      } catch (Exception e) {
+        throw new IOException("Couldn't send a message to " + addr + " due to " + e);
       }
     }
   }

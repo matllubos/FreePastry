@@ -128,6 +128,7 @@ public class StorageManagerImpl implements StorageManager {
       public void receiveResult(Object o) {
         storage.rename(oldId, newId, parent);
       }
+      public String toString() { return "rename of " + oldId + " to " + newId; }
     });
   }
 
@@ -147,6 +148,7 @@ public class StorageManagerImpl implements StorageManager {
           storage.getObject(id, parent);
         }
       }
+      public String toString() { return "getObject of " + id; }
     });    
   }
   
@@ -176,6 +178,7 @@ public class StorageManagerImpl implements StorageManager {
       public void receiveResult(Object o) {
         storage.setMetadata(id, metadata, parent);
       }
+      public String toString() { return "setMetadata of " + id; }
     });
   }
 

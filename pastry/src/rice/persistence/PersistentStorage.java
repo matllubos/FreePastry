@@ -2044,11 +2044,19 @@ public class PersistentStorage implements Storage {
           public void run() {
             returnResult(result);
           }
+          
+          public String toString() {
+            return "invc result of " + c;
+          }
         });
       } catch (final Exception e) {
         SelectorManager.getSelectorManager().invoke(new Runnable() {
           public void run() {
             returnError(e);
+          }
+          
+          public String toString() {
+            return "invc error of " + c;
           }
         });
       }

@@ -50,14 +50,14 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
   
   int connections = 0;
 
-  public NonBlockingSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager) throws Exception {
+  public NonBlockingSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server) throws Exception {
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
     this.port = port;
     this.authenticate = authenticate;
     this.email = email;
     this.userManager = userManager;
-    this.manager = new SimpleManager(email, gateway, address);
+    this.manager = new SimpleManager(email, gateway, address, server);
     this.registry = new SmtpCommandRegistry();
     this.registry.load();
     this.workspace = new InMemoryWorkspace();

@@ -203,7 +203,7 @@ public class PostImpl implements Post, Application, ScribeClient {
 
     this.security = new SecurityService();
     this.security.loadModule(new CASecurityModule(caPublicKey));
-    this.storage = new StorageService(address, immutablePast, mutablePast, node.getIdFactory(), keyPair, timeoutInterval);
+    this.storage = new StorageService(endpoint, address, immutablePast, mutablePast, node.getIdFactory(), keyPair, timeoutInterval);
 
     clients = new Vector();
     clientAddresses = new Hashtable();

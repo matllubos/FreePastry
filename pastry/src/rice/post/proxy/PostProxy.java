@@ -1213,6 +1213,11 @@ public class PostProxy {
     startDialog(parameters);
     //startPastryProxy(parameters);
         
+    System.out.println("-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --");
+    
+    if (dialog != null) 
+      dialog.append("\n-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --\n");
+    
     sectionStart("Initializing Parameters");
     startRedirection(parameters);
     startShutdownHooks(parameters);

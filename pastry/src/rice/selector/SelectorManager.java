@@ -244,9 +244,11 @@ public class SelectorManager extends Thread {
     Runnable run = getInvocation();
     while (run != null) {
       try {
-      //  long start = System.currentTimeMillis();
+        long start = System.currentTimeMillis();
         run.run();
-      //  System.out.println("ST: " + (System.currentTimeMillis() - start) + " " + run.toString());
+        
+        if (System.currentTimeMillis() - start > 1000)
+          System.out.println("ST: " + (System.currentTimeMillis() - start) + " invocation " + run.toString());
       } catch (Exception e) {
         System.err.println("Invoking runnable caused exception " + e + " - continuing");
         e.printStackTrace();

@@ -70,6 +70,11 @@ public class StorageService {
    * The random number generator
    */
   private Random rng;
+  
+  /**
+   * The endpoint 
+   */
+  private Endpoint endpoint;
 
   /**
    * Lifetime of log head backups
@@ -83,13 +88,14 @@ public class StorageService {
    * @param credentials Credentials to use to store data.
    * @param keyPair The keypair to sign/verify data with
    */
-  public StorageService(PostEntityAddress address, Past immutablePast, Past mutablePast, IdFactory factory, KeyPair keyPair, long timeoutInterval) {
+  public StorageService(Endpoint endpoint, PostEntityAddress address, Past immutablePast, Past mutablePast, IdFactory factory, KeyPair keyPair, long timeoutInterval) {
     this.entity = address;
     this.immutablePast = immutablePast;
     this.mutablePast = mutablePast;
     this.keyPair = keyPair;
     this.factory = factory;
     this.timeoutInterval = timeoutInterval;
+    this.endpoint = endpoint;
     
     rng = new Random();
     pendingVerification = new Hashtable();
@@ -127,7 +133,82 @@ public class StorageService {
    * @param data The data to store.
    * @param command The command to run once the store has completed.
    */
-  public void storeContentHash(final PostData data, Continuation command) {
+  public void storeContentHash(final PostData data, final Continuation command) {
+    endpoint.process(new Executable() {
+      public Object execute() {
+        try {
+          byte[] plainText = SecurityUtils.serialize(data);
+          byte[] hash = SecurityUtils.hash(plainText);
+          byte[] cipherText = SecurityUtils.encryptSymmetric(plainText, hash);
+          return new Object[] {plainText, cipherText};
+        } catch (IOException e) {
+          return e;
+        }
+      }
+    }, new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        if (o instanceof Exception) {
+          parent.receiveException((Exception) o);
+          return;
+        }
+        
+        byte[] plainText = (byte[]) ((Object[]) o)[0];
+        byte[] cipherText = (byte[]) ((Object[]) o)[1];
+        byte[] loc = SecurityUtils.hash(cipherText);
+        
+        final Id location = factory.buildId(loc);
+        final byte[] key = SecurityUtils.hash((byte[]) plainText);
+        final ContentHashData chd = new ContentHashData(location, cipherText);
+        
+        immutablePast.lookupHandles(location, immutablePast.getReplicationFactor()+1, new StandardContinuation(command) {
+          public void receiveResult(Object o) {
+            PastContentHandle[] handles = (PastContentHandle[]) o;
+            
+            for (int i=0; i<handles.length; i++) 
+              // the object already exists - simply refresh and return a reference
+              if (handles[i] != null) {
+                final ContentHashReference ref = data.buildContentHashReference(location, key);
+                
+                refreshContentHash(new ContentHashReference[] {ref}, new StandardContinuation(parent) {
+                  public void receiveResult(Object o) {
+                    parent.receiveResult(ref);
+                  }
+                });
+                
+                return;
+              }
+                
+                Continuation result = new StandardContinuation(parent) {
+                  public void receiveResult(Object o) {
+                    Boolean[] results = (Boolean[]) o;
+                    int failed = 0;
+                    
+                    for (int i=0; i<results.length; i++) {
+                      if ((results[i] == null) || (! results[i].booleanValue())) 
+                        failed++;
+                    }
+                    
+                    if (failed <= results.length/2) 
+                      parent.receiveResult(data.buildContentHashReference(location, key));
+                    else 
+                      parent.receiveException(new IOException("Storage of content hash data into PAST failed - had " + failed + "/" + results.length + " failures."));
+                  }
+                };
+            
+            // Store the content hash data in PAST
+            if (immutablePast instanceof GCPast) 
+              ((GCPast) immutablePast).insert(chd, getTimeout(), result);
+            else 
+              immutablePast.insert(chd, result);
+          }
+        });
+      }
+    });
+  }
+        
+/*        
+    
+    
     try {
       byte[] plainText = SecurityUtils.serialize(data);
       byte[] hash = SecurityUtils.hash(plainText);
@@ -185,7 +266,7 @@ public class StorageService {
     } catch (IOException e) {
       command.receiveException(e);
     }
-  }
+  } */
 
   /**
    * This method retrieves a given PostDataReference object from the
@@ -201,35 +282,58 @@ public class StorageService {
   public void retrieveContentHash(final ContentHashReference reference, Continuation command) {
     immutablePast.lookup(reference.getLocation(), new StandardContinuation(command) {
       public void receiveResult(Object o) {
-        try {
-          ContentHashData chd = (ContentHashData) o;
-          
-          if (chd == null)
-            throw new StorageException("Content hash data not found in PAST!");
-          
-          byte[] key = reference.getKey();        
-          byte[] cipherText = chd.getData();
-          byte[] plainText = SecurityUtils.decryptSymmetric(cipherText, key);
-          Object data = SecurityUtils.deserialize(plainText);
-          
-          // Verify hash(cipher) == location
-          if (! Arrays.equals(SecurityUtils.hash(cipherText), reference.getLocation().toByteArray())) 
-            throw new StorageException("Hash of cipher text does not match location.");
-          
-          // Verify hash(plain) == key
-          if (! Arrays.equals(SecurityUtils.hash(plainText), key)) 
-            throw new StorageException("Hash of retrieved content does not match key.");
-          
-          parent.receiveResult((PostData) data);
-        } catch (ClassCastException cce) {
-          parent.receiveException(new StorageException("ClassCastException while retrieving data: " + cce));
-        } catch (IOException ioe) {
-          parent.receiveException(new StorageException("IOException while retrieving data: " + ioe));
-        } catch (ClassNotFoundException cnfe) {
-          parent.receiveException(new StorageException("ClassNotFoundException while retrieving data: " + cnfe));
-        } catch (PostException pe) {
-          parent.receiveException(pe);
+        ContentHashData chd = (ContentHashData) o;
+        
+        if (chd == null) {
+          parent.receiveException(new StorageException("Content hash data not found in PAST!"));
+          return;
         }
+        
+        final byte[] key = reference.getKey();        
+        final byte[] cipherText = chd.getData();
+        
+        // Verify hash(cipher) == location
+        if (! Arrays.equals(SecurityUtils.hash(cipherText), reference.getLocation().toByteArray())) {
+          parent.receiveResult(new StorageException("Hash of cipher text does not match location."));
+          return;
+        }
+        
+        endpoint.process(new Executable() {
+          public Object execute() {
+            return SecurityUtils.decryptSymmetric(cipherText, key);
+          }
+        }, new StandardContinuation(parent) {
+          public void receiveResult(Object o) {
+            final byte[] plainText = (byte[]) o;
+            
+            // Verify hash(plain) == key
+            if (! Arrays.equals(SecurityUtils.hash(plainText), key)) {
+              parent.receiveException(new StorageException("Hash of retrieved content does not match key."));
+              return;
+            }
+            
+            endpoint.process(new Executable() {
+              public Object execute() {
+                try {
+                  return (PostData) SecurityUtils.deserialize(plainText);
+                } catch (ClassCastException cce) {
+                  return new StorageException("ClassCastException while retrieving data: " + cce);
+                } catch (IOException ioe) {
+                  return new StorageException("IOException while retrieving data: " + ioe);
+                } catch (ClassNotFoundException cnfe) {
+                  return new StorageException("ClassNotFoundException while retrieving data: " + cnfe);
+                }                  
+              }
+            }, new StandardContinuation(parent) {
+              public void receiveResult(Object o) {
+                if (o instanceof PostData)
+                  parent.receiveResult(o);
+                else
+                  parent.receiveException((Exception) o);
+              }
+            });
+          }
+        });
       }
     });
   }
