@@ -65,6 +65,14 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    */
   private Hashtable clientAddresses;
 
+
+  // --- GROUP SUPPORT ---
+
+  /**
+   * The list of group keys known by this Post
+   */
+  private HashMap keys;
+
   
   // --- BUFFERING SUPPORT ---
   
@@ -159,6 +167,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
     clients = new Vector();
     clientAddresses = new Hashtable();
     bufferedData = new Hashtable();
+    keys = new HashMap();
   }
 
   /**
@@ -286,6 +295,16 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
   }
 
   /**
+   * This method handles an incoming group multicast message.
+   *
+   * @param message The incoming message.
+   */
+  private void processGroupMessage(GroupNotificationMessage message) {
+    ProcessGroupMessageTask task = new ProcessGroupMessageTask(message);
+    task.start();
+  }
+
+  /**
    * @return The PostLog belonging to the this entity,
    */
   public void getPostLog(Continuation command) {
@@ -381,7 +400,34 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
   public void sendNotificationDirect(NodeHandle handle, NotificationMessage message) {
     SendNotificationMessageDirectTask task = new SendNotificationMessageDirectTask(handle, message);
     task.start();
-  }    
+  }
+
+  /**
+   * This method causes the local POST service to subscribe to the specified address, and
+   * use the specified shared key in order to decrypt messages.  If the key is null, then
+   * messages are assumed to be unencrypted.  Incoming messages, once verified, will be
+   * passed up to the appropriate applciation through the notificationReceived() method.
+   *
+   * @param address The address to join
+   * @param key The shared key to use (or null, if unencrypted)
+   */
+  public void joinGroup(PostGroupAddress address, byte[] key) {
+    keys.put(address, key);
+
+    scribeService.join(address.getAddress(), this, credentials);
+  }
+
+  /**
+    * This method multicasts the provided notification message to the destination
+   * group.  However, this local node *MUST* have already joined this
+   * group (through the joinGroup method) in order for this to work properly.
+   *
+   * @param message The message to send
+   */
+  public void sendGroup(NotificationMessage message) {
+    SendGroupMessageTask task = new SendGroupMessageTask(message);
+    task.start();
+  }
 
   /**
    * Internal utility method for preparing a PostMessage for transmission.  This
@@ -493,6 +539,8 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
         processDeliveryMessage((DeliveryMessage) message);
       } else if (message instanceof ReceiptMessage) {
         processReceiptMessage((ReceiptMessage) message);
+      } else if (message instanceof GroupNotificationMessage) {
+        processGroupMessage((GroupNotificationMessage) message);
       } else {
         System.out.println("Found unknown Postmessage " + message + " - dropping on floor.");
       }
@@ -971,6 +1019,124 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
 
     public void receiveException(Exception e) {
       System.out.println("Exception " + e + "  occured during sending NotificationMessage: " + message + " - dropping on floor.");
+    }
+  }
+
+  /**
+   * This class is called whenever a PostMessage comes in, and it
+   * performs the necessary verification tasks and then handles the
+   * message.
+   */
+  protected class SendGroupMessageTask {
+
+    private NotificationMessage message;
+    private PostGroupAddress destination;
+
+    /**
+      * Constructs a ProcessPostMessageTask given a message.
+     */
+    public SendGroupMessageTask(NotificationMessage message) {
+      this.message = message;
+    }
+
+    /**
+      * Starts the processing of this message.
+     */
+    public void start() {
+      // TO DO : Assuming just a user for now, grouping crap later...
+      destination = (PostGroupAddress) message.getDestination();
+
+      if (rice.pastry.Log.ifp(6))
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: sending group message to: " + destination);
+
+      byte[] key = (byte[]) keys.get(destination);
+
+      try {
+        byte[] cipherText = null;
+
+        if (key != null) {
+          cipherText = security.encryptDES(security.serialize(message), key);
+        } else {
+          cipherText = security.serialize(message);
+        }
+        
+        if (rice.pastry.Log.ifp(6))
+          System.out.println(thePastryNode.getNodeId() + "DEBUG: built encrypted notfn msg: " + destination);
+
+        GroupNotificationMessage gnm = new GroupNotificationMessage(address, destination, cipherText);
+
+        if (rice.pastry.Log.ifp(6))
+          System.out.println(thePastryNode.getNodeId() + "DEBUG: sending notification message to : " + destination);
+
+        scribeService.multicast(destination.getAddress(), new PostScribeMessage(signPostMessage(gnm)), credentials);
+      } catch (SecurityException e) {
+        System.out.println("SecurityException occured which encrypting GroupNotificationMessage " + e + " - dropping on floor.");
+      } catch (IOException e) {
+        System.out.println("IOException occured which encrypting GroupNotificationMessage " + e + " - dropping on floor.");
+      }
+    }
+  }
+
+  /**
+   * This class is called whenever a PostMessage comes in, and it
+   * performs the necessary verification tasks and then handles the
+   * message.
+   */
+  protected class ProcessGroupMessageTask {
+
+    private GroupNotificationMessage message;
+    private PostGroupAddress destination;
+
+    /**
+      * Constructs a ProcessGroupMessageTask given a message.
+     */
+    public ProcessGroupMessageTask(GroupNotificationMessage message) {
+      this.message = message;
+    }
+
+    /**
+      * Starts the processing of this message.
+     */
+    public void start() {
+      // TO DO : Assuming just a user for now, grouping crap later...
+      destination = (PostGroupAddress) message.getGroup();
+
+      if (rice.pastry.Log.ifp(6))
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: received group message from: " + destination);
+
+      byte[] key = (byte[]) keys.get(destination);
+      
+      if (rice.pastry.Log.ifp(6))
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: using group key " + key + " for decryption.");
+
+      try {
+        byte[] plainText = null;
+
+        if (key != null) {
+          plainText = security.decryptDES(message.getData(), key);
+        } else {
+          plainText = message.getData();
+        }
+
+        NotificationMessage nm = (NotificationMessage) security.deserialize(plainText);
+
+        // deliver notification messag
+        PostClient client = (PostClient) clientAddresses.get(nm.getClientAddress());
+
+        if (client != null) {
+          client.notificationReceived(nm);
+        } else {
+          System.out.println("Found notification message for unknown client " + client + " - dropping on floor.");
+        }
+      } catch (SecurityException e) {
+        System.out.println("SecurityException occured while decrypting GroupNotificationMessage " + e + " - dropping on floor.");
+      } catch (IOException e) {
+        System.out.println("IOException occured while decrypting GroupNotificationMessage " + e + " - dropping on floor.");
+      } catch (ClassNotFoundException e) {
+        System.out.println("ClassNotFoundException occured while decrypting GroupNotificationMessage " + e + " - dropping on floor.");
+      } catch (ClassCastException e) {
+        System.out.println("ClassCastException occured while decrypting GroupNotificationMessage " + e + " - dropping on floor.");
+      }
     }
   }  
 }

@@ -53,7 +53,7 @@ public class DistPostRegrTest {
   private Random rng;
   private RandomNodeIdFactory idFactory;
 
-  private static int numNodes = 4;
+  private static int numNodes = 10;
   private static int k = 3;  // replication factor
 
   private static int port = 5009;
@@ -273,12 +273,16 @@ public class DistPostRegrTest {
     if (notificationFailed) {
       throw new TestFailedException("Notificaiton received at wrong Post!");
     }
+
+    System.out.println("Notification received successfully!");
   }
 
   public void notificationReceived(NotificationMessage nm, Post post) {
     if (! (receivingPost == post)) {
       notificationFailed = true;
     }
+
+    System.out.println("Received message " + nm + " at Pot " + post);
     
     notificationReceived = true;
 
@@ -301,6 +305,37 @@ public class DistPostRegrTest {
     DummyContentHashStorageTest test = new DummyContentHashStorageTest(storage, data);
     test.start();
   }
+
+  protected void testGroup() throws TestFailedException {
+    int sendingNode = rng.nextInt(numNodes);
+    int receivingNode1 = rng.nextInt(numNodes);
+    int receivingNode2 = rng.nextInt(numNodes);
+
+    while (receivingNode1 == sendingNode) {
+      receivingNode1 = rng.nextInt(numNodes);
+    }
+    
+    while ((receivingNode2 == sendingNode) || (receivingNode2 == receivingNode1)) {
+      receivingNode2 = rng.nextInt(numNodes);
+    }
+      
+    Post sendingPost = (Post) postNodes.elementAt(sendingNode);
+    Post receivingPost1 = (Post) postNodes.elementAt(receivingNode1);
+    Post receivingPost2 = (Post) postNodes.elementAt(receivingNode2);
+    
+    byte[] key = SecurityService.generateKeyDES();
+
+    PostGroupAddress group = new PostGroupAddress("GroupTest");
+    sendingPost.joinGroup(group, key);
+    receivingPost1.joinGroup(group, key);
+    receivingPost2.joinGroup(group, key);
+
+    DummyPostClient sendingPostClient = (DummyPostClient) postClients.elementAt(sendingNode);
+    PostClientAddress addr = PostClientAddress.getAddress(sendingPostClient);
+    DummyNotificationMessage dnm = new DummyNotificationMessage(addr, sendingPost.getEntityAddress(), group);
+
+    sendingPost.sendGroup(dnm);
+  }
   
   /**
    * Initializes and runs all regression tests.
@@ -311,6 +346,7 @@ public class DistPostRegrTest {
     try {
       // Run each test
       testNotification();
+      testGroup();
       testStorage();
 
       System.out.println("\n\nDEBUG-All tests passed!---------------------\n");

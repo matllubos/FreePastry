@@ -9,20 +9,36 @@ import rice.p2p.past.*;
  * 
  * @version $Id$
  */
-public abstract class PostGroupAddress extends PostEntityAddress {
+public class PostGroupAddress extends PostEntityAddress {
 
+  private NodeId id;
+  
   /**
    * Constructor
    */
-  public PostGroupAddress() {
+  public PostGroupAddress(String name) {
+    id = getNodeId(name);
   }
 
   /**
-   * Returns all of the contained addresses, using the PAST service
-   * if necessary.
+    * Returns the address associated with this useraddress
    *
-   * @param past The PAST service to use, if necessary
-   * @return All of the addresses in this group.
+   * @return The corresponding address
    */
-  public abstract PostEntityAddress[] getAddresses(Past past);
+  public NodeId getAddress() {
+    return id;
+  }
+
+  public boolean equals(Object o) {
+    if (o instanceof PostGroupAddress) {
+      PostGroupAddress ua = (PostGroupAddress) o;
+      return ua.getAddress().equals(id);
+    }
+
+    return false;
+  }
+
+  public int hashCode() {
+    return id.hashCode();
+  }
 }

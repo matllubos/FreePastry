@@ -4,6 +4,7 @@ SOURCE  = \
 	PostAddress.java \
 	NotificationMessage.java \
 	EncryptedNotificationMessage.java \
+	GroupNotificationMessage.java \
 	PresenceMessage.java \
 	ReceiptMessage.java \
 	DeliveryRequestMessage.java \

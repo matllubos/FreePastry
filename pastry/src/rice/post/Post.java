@@ -105,4 +105,24 @@ public interface Post {
    * are encapsulated inside the message object.
    */
   public void sendNotificationDirect(NodeHandle handle, NotificationMessage message);
+
+  /**
+   * This method causes the local POST service to subscribe to the specified address, and
+   * use the specified shared key in order to decrypt messages.  If the key is null, then
+   * messages are assumed to be unencrypted.  Incoming messages, once verified, will be
+   * passed up to the appropriate applciation through the notificationReceived() method.
+   *
+   * @param address The address to join
+   * @param key The shared key to use (or null, if unencrypted)
+   */
+  public void joinGroup(PostGroupAddress address, byte[] key);
+
+  /**
+   * This method multicasts the provided notification message to the destination
+   * group.  However, this local node *MUST* have already joined this
+   * group (through the joinGroup method) in order for this to work properly.
+   *
+   * @param message The message to send
+   */
+  public void sendGroup(NotificationMessage message);
 }
