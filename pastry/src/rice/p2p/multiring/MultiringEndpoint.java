@@ -157,6 +157,24 @@ public class MultiringEndpoint implements Endpoint {
   }
   
   /**
+   * This methods returns an ordered set of nodehandles on which replicas of an object with
+   * a given id can be stored.  The call returns nodes up to and including a node with maxRank.
+   * This call also allows the application to provide a remove "center" node, as well as
+   * other nodes in the vicinity. 
+   *
+   * @param id The object's id.
+   * @param maxRank The number of desired replicas.
+   * @param handle The root handle of the remove set
+   * @param set The set of other nodes around the root handle
+   */
+  public NodeHandleSet replicaSet(Id id, int maxRank, NodeHandle root, NodeHandleSet set) {
+    return new MultiringNodeHandleSet(node.getRingId(), endpoint.replicaSet(((RingId) id).getId(), 
+                                                                            maxRank,
+                                                                            ((MultiringNodeHandle) root).getHandle(),
+                                                                            ((MultiringNodeHandleSet) set).getSet()));
+  }
+  
+  /**
    * This operation provides information about ranges of keys for which the node is currently
    * a rank-root. The operations returns null if the range could not be determined, the range
    * otherwise. It is an error to query the range of a node not present in the neighbor set as
