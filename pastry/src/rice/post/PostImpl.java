@@ -40,8 +40,8 @@ public class PostImpl implements Post, Application, ScribeClient {
   /**
    * The interval between log refreshes
    */
-  public static int BACKUP_INTERVAL = 1000 * 60 * 60 * 24;
-  
+  public static int BACKUP_INTERVAL = 1000 * 60 * 60 * 6;
+
   /**
    * The endpoint used for routing messages
    */
@@ -214,10 +214,9 @@ public class PostImpl implements Post, Application, ScribeClient {
   //  logger.setLevel(Level.FINEST);
   //  logger.getHandlers()[0].setLevel(Level.FINEST);
     
-    BACKUP_INTERVAL = (int) refreshInterval;
-    
     endpoint.scheduleMessage(new SynchronizeMessage(), new Random().nextInt((int) synchronizeInterval), synchronizeInterval);
     endpoint.scheduleMessage(new RefreshMessage(), new Random().nextInt((int) refreshInterval), refreshInterval);
+    endpoint.scheduleMessage(new BackupMessage(), new Random().nextInt((int) BACKUP_INTERVAL), BACKUP_INTERVAL);
     
     logger.fine(endpoint.getId() + ": Constructed new Post with user " + address + " and instance " + instance);
   }
@@ -267,6 +266,8 @@ public class PostImpl implements Post, Application, ScribeClient {
       processSynchronizeMessage((SynchronizeMessage) message);
     } else if (message instanceof RefreshMessage) {
       processRefreshMessage((RefreshMessage) message);
+    } else if (message instanceof BackupMessage) {
+      processBackupMessage((BackupMessage) message);
     } else {
       logger.warning(endpoint.getId() + ": Found unknown message " + message + " - dropping on floor.");
     }
@@ -546,7 +547,14 @@ public class PostImpl implements Post, Application, ScribeClient {
     };
     
     c.receiveResult(null);
- 
+  }
+   
+  /**
+   * This method processes a message to backup the log heads.
+   *
+   * @param message The incoming message.
+   */
+  private void processBackupMessage(BackupMessage message) {
     final HashSet set = new HashSet();
     final Iterator j = clients.iterator();
     storage.setAggregate(log);
