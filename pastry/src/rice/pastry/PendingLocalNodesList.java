@@ -77,9 +77,13 @@ public class PendingLocalNodesList {
    * @param in The input stream reading the LocalNodes
    * @param node The local pastry node.
    */
-  public synchronized void setPending(ObjectInputStream in, PastryNode node) {
-    LinkedList pending = (LinkedList) map.remove(in);
-
+  public void setPending(ObjectInputStream in, PastryNode node) {
+    LinkedList pending = null;
+    
+    synchronized (this) {
+      pending = (LinkedList) map.remove(in);
+    }
+      
     if (pending != null) {
       Iterator iter = pending.iterator();
       while (iter.hasNext()) {

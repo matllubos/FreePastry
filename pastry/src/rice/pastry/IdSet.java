@@ -49,6 +49,9 @@ import java.security.*;
  */
 
 public class IdSet implements rice.p2p.commonapi.IdSet {
+  
+  
+  static final long serialVersionUID = -1565571743719309172L;
 
   private TreeSet idSet;
 
