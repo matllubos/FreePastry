@@ -40,7 +40,14 @@ PACKAGES = \
 #	rice.past.messaging\
 #	rice.past.testing\
 #	rice.past.search\
-#	rice.past.search.testing
+#	rice.past.search.testing\
+#	rice.post\
+#	rice.post.log\
+#	rice.post.messaging\
+#	rice.post.email\
+#	rice.post.email.log\
+#	rice.post.email.messaging\
+#	rice.post.email.proxy
 
 NODOC_PACKAGES = 
 
