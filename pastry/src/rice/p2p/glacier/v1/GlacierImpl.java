@@ -1110,7 +1110,8 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
       d = 0.5;
       for (int i = 0; i < realId.IdBitLength; i++) {
         if (f >= d) {
-          result.setBit((realId.IdBitLength - 1 - i), 1);
+//          result.setBit((realId.IdBitLength - 1 - i), 1);
+panic("setBit disabled");
           f -= d;
         }
         d /= 2;
