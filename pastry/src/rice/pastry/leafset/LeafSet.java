@@ -286,6 +286,17 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
 
 
     /**
+     * Delete observer method.
+     *
+     * @param o the observer to delete.  */
+
+    public void deleteObserver(Observer o) {
+	cwSet.deleteObserver(o);
+	ccwSet.deleteObserver(o);
+    }
+
+
+    /**
      * Returns a string representation of the leaf set
      *
      */

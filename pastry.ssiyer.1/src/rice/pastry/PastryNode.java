@@ -124,12 +124,28 @@ public class PastryNode implements NodeHandle
     public final void addLeafSetObserver(Observer o) { leafSet.addObserver(o); }
     
     /**
+     * Delete a leaf set observer from the Pastry node.
+     *
+     * @param o the observer.
+     */
+    
+    public final void deleteLeafSetObserver(Observer o) { leafSet.deleteObserver(o); }
+    
+    /**
      * Add a route set observer to the Pastry node.
      *     
      * @param o the observer.
      */
     
     public final void addRouteSetObserver(Observer o) { routeSet.addObserver(o); }
+
+    /**
+     * Delete a route set observer from the Pastry node.
+     *     
+     * @param o the observer.
+     */
+    
+    public final void deleteRouteSetObserver(Observer o) { routeSet.deleteObserver(o); }
 
     // message receiver interface
 
