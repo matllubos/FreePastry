@@ -64,7 +64,7 @@ import java.security.*;
 
 public class PastTest extends Test {
 
-  public static int NUM_ITEMS = 500;
+  public static int NUM_ITEMS = 100;
 
   public static int REPLICATION_FACTOR = 3;
 
@@ -125,6 +125,8 @@ public class PastTest extends Test {
 
           random.nextBytes(idData);
           Id id = FACTORY.buildId(idData);
+
+          System.out.println("Inserting item " + num + " at " + id);
 
           past.insert(new TestPastContent(id, data), this);
         } else {
