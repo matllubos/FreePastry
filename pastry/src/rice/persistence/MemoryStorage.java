@@ -19,10 +19,14 @@ import rice.pastry.*;
  */
 public class MemoryStorage implements Storage {
 
+  // the hashtable used to store the data
+  private Hashtable storage;
+  
   /**
    * Builds a MemoryStorage object.
    */
   public MemoryStorage() {
+    storage = new Hashtable();
   }
 
   /**
@@ -39,6 +43,8 @@ public class MemoryStorage implements Storage {
    * <code>false</code>.
    */
   public void store(Comparable id, Serializable obj, Continuation c) {
+    storage.put(id, obj);
+    c.receiveResult(new Boolean(true));
   }
 
   /**
@@ -55,17 +61,22 @@ public class MemoryStorage implements Storage {
    * <code>false</code>.
    */
   public void unstore(Comparable id, Continuation c) {
+    c.receiveResult(new Boolean(storage.remove(id) != null));
   }
 
   public void exists(Comparable id, Continuation c) {
+    c.receiveResult(new Boolean(storage.containsKey(id)));
   }
 
   public void getObject(Comparable id, Continuation c) {
+    c.receiveResult(storage.get(id));
   }
 
   public void scan(Comparable start, Comparable end, Continuation c) {
+    throw new UnsupportedOperationException("Method scan() is not yet implemented on MemoryStorage!.");
   }
 
   public void getTotalSize(Continuation c) {
+    throw new UnsupportedOperationException("Method getTotalSize() is not yet implemented on MemoryStorage!.");
   }
 }

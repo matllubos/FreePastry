@@ -51,7 +51,8 @@ public interface Catalog {
    * ids of both A and B would be returned.
    *
    * Note that the two Comparable objects should be of the same class
-   * (otherwise no range can be created). 
+   * (otherwise no range can be created).  Also note that the array returned
+   * is NOT guaranteed to be in any order.
    *
    * When the operation is complete, the receiveResult() method is called
    * on the provided continuation with a Comparable[] result containing the
