@@ -12,7 +12,8 @@ SOURCE  = \
 	NodeSet.java\
 	NodeSetUpdate.java \
 	Log.java \
-	PastrySeed.java
+	PastrySeed.java\
+	ScheduledMessage.java
 
 #	NodeIdI.java
 
