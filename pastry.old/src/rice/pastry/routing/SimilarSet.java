@@ -51,6 +51,11 @@ public class SimilarSet {
     private TreeSet mostSimilar;
     private TreeSet closest;
 
+    /**
+     * The Comparator used in the 
+    
+    protected Comparator theCmp;
+
     private class SMWatcher implements Observer {
 	public void update(Observable o, Object arg)
 	{	    
@@ -154,6 +159,8 @@ public class SimilarSet {
 	
 	Comparator cmp = new ReverseOrder(new SimilarityComparator(nid));
 	
+	cmp = theCmp;
+
 	theSM = new SelectiveMap(size, cmp);
 	
 	mostSimilar = new TreeSet(cmp);
