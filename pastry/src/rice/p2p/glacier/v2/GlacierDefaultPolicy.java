@@ -63,7 +63,7 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
     byte[][] fragmentHash = new byte[fragments.length][];
     for (int i = 0; i < fragments.length; i++) {
       md.reset();
-      md.update(fragments[i].payload);
+      md.update(fragments[i].getPayload());
       fragmentHash[i] = md.digest();
     }
 
