@@ -4,6 +4,7 @@ SOURCE  = \
   StandardAddress.java\
 	StandardRouter.java\
 	RandomNodeIdFactory.java\
+	IPNodeIdFactory.java\
 	StandardLeafSetProtocol.java\
 	StandardRouteSetProtocol.java\
 	StandardJoinProtocol.java
