@@ -1,0 +1,10 @@
+1) Anycast --- 
+	a) add failureHandler routine for the class, which will 
+	   be invoked when anycast fails, 
+	b) write default anycast message class, with DFS and with 
+	   empty failure handling 
+
+2) Scribe "Create" Semantics 
+
+3) Cleaning up SplitStream Code.
+
