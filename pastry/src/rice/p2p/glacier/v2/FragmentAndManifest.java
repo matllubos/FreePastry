@@ -9,12 +9,10 @@ public class FragmentAndManifest implements Serializable {
   public Fragment fragment;
   public Manifest manifest;
   public FragmentKey key;
-  public FragmentMetadata metadata;
   
-  public FragmentAndManifest(FragmentKey key, Fragment fragment, Manifest manifest, FragmentMetadata metadata) {
+  public FragmentAndManifest(FragmentKey key, Fragment fragment, Manifest manifest) {
     this.key = key;
     this.fragment = fragment;
     this.manifest = manifest;
-    this.metadata = metadata;
   }
 }
