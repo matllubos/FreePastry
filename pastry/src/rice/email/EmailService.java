@@ -3,6 +3,7 @@ package rice.email;
 import java.security.*;
 import java.util.HashSet;
 
+import rice.Continuation;
 import rice.post.*;
 import rice.post.log.*;
 import rice.post.messaging.*;
@@ -20,11 +21,44 @@ import rice.email.messaging.*;
  * {@link Email} object as its argument.
  */
 public class EmailService extends PostClient {
-  
+
+    // inner classes
+    private class ESRootFolderCont implements Continuation {
+
+	Continuation result;
+
+	ESRootFolderCont(Continuation c) {
+	    this.result = c;
+	}
+	
+	/**
+	 * Called when a previously requested result is now availble.
+	 *
+	 * @param result The result of the command.
+	 */
+	public void receiveResult(Object result) {
+	    Log emailLog = (Log) result;
+	    
+	    Folder f = new Folder(emailLog, _post.getStorageService());
+
+	    c.receiveResult(f);
+	}
+
+	/**
+	 * Called when an execption occured as a result of the
+	 * previous command.
+	 *
+	 * @param result The exception which was caused.
+	 */
+	public void receiveException(Exception result) {
+	    c.receiveException(result);
+	}
+
+    }
   
   // the name of the Inbox's log
   public static final String INBOX_NAME="Inbox";
-  
+    
   // the Emails Service's Post object
   Post _post;
   
@@ -76,28 +110,20 @@ public class EmailService extends PostClient {
    * Returns the Log for ePost's root folder.
    * JM this needs some error checking for when the given folder is not found
    *
-   * @param folderName the folder to fetch the Log for
-   * @return the fetched Log, or null if an error occured
+   * @param c is the object notified of the result of the folder retrieval.
    */
-  public Folder getRootFolder() {
+  public void getRootFolder(Continuation c) {
     
-    try {
       // find the Client Id for this client
       PostClientAddress pca = PostClientAddress.getAddress(this);
       
       // use the Id to fetch the root log
       PostLog mainLog = _post.getLog();
       LogReference emailLogRef = mainLog.getChildLog(pca);
-      Log emailLog = (Log) _post.getStorageService().retrieveSigned(emailLogRef);
-      
-      return new Folder(emailLog, _post.getStorageService());
-    } catch (StorageException e) {
-      System.out.println("An error occured while retrieveing log - " + e);
-      return null;
-    } catch (ClassCastException e) {
-      System.out.println("An error occured while retrieveing log - " + e);
-      return null;
-    }
+
+      Log emailLog = (Log)
+	  _post.getStorageService().retrieveSigned(emailLogRef,
+						   new ESRootFolderCont(c));
   }
 
   /**
@@ -114,8 +140,9 @@ public class EmailService extends PostClient {
       // notify the observers that an email has been received.
       this.notifyObservers(enm);
     } else {
-      System.out.println("EmailService received unknown notification " + nm + " - dropping on floor.");
+      System.err.println("EmailService received unknown notification "
+			 + nm +
+			 " - dropping on floor.");
     }
   }    
-
 }
