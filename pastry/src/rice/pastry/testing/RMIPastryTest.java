@@ -78,7 +78,7 @@ public class RMIPastryTest {
      *
      * @return handle to bootstrap node, or null.
      */
-    public RMINodeHandle getBootstrapHandle() {
+    private RMINodeHandle getBootstrapHandle() {
 	RMIPastryNode bsnode = null;
 	try {
 	    bsnode = (RMIPastryNode)Naming.lookup("//:" + port + "/Pastry");
@@ -140,35 +140,18 @@ public class RMIPastryTest {
 	return bshandle;
     }
 
-    public void makePastryNode() {
-	// or, for a one-liner,
-	// pastrynodes.add(new PastryNode(factory, getBootstrapHandle()));
-
-	PastryNode pn = new PastryNode(factory, getBootstrapHandle());
-	pastrynodes.add(pn);
-	System.out.println("created " + pn);
-    }
-
-    public void printLeafSets() {
-	pause(1000);
-	for (int i = 0; i < pastrynodes.size(); i++)
-	    System.out.println(((PastryNode)pastrynodes.get(i)).getLeafSet());
-    }
-
-    public synchronized void pause(int ms) {
-	System.out.println("waiting for " + (ms/1000) + " sec");
-	try { wait(ms); } catch (InterruptedException e) {}
-    }
-
     /**
-     * Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
+     * process command line args, set the RMI security manager, and start
+     * the RMI registry. Standard gunk that has to be done for all RMI apps.
      */
-    public static void main(String args[])
-    {
+    private static void doRMIinitstuff(String args[]) {
 	// defaults
+
 	bshost = "thor01";
 	port = bsport = 5009;
 	numnodes = 1;
+
+	// process command line arguments
 
 	for (int i = 0; i < args.length; i++) {
 	    if (args[i].equals("-help")) {
@@ -209,16 +192,47 @@ public class RMIPastryTest {
 	    }
 	}
 
-	RMIPastryTest pt = new RMIPastryTest();
+	// set RMI security manager
 
 	if (System.getSecurityManager() == null)
 	    System.setSecurityManager(new RMISecurityManager());
+
+	// start RMI registry
 
 	try {
 	    java.rmi.registry.LocateRegistry.createRegistry(port);
 	} catch (Exception e) {
 	    System.out.println("Error starting RMI registry: " + e);
 	}
+    }
+
+    public void makePastryNode() {
+	// or, for a sweet one-liner,
+	// pastrynodes.add(new PastryNode(factory, getBootstrapHandle()));
+
+	PastryNode pn = new PastryNode(factory, getBootstrapHandle());
+	pastrynodes.add(pn);
+	System.out.println("created " + pn);
+    }
+
+    public void printLeafSets() {
+	pause(1000);
+	for (int i = 0; i < pastrynodes.size(); i++)
+	    System.out.println(((PastryNode)pastrynodes.get(i)).getLeafSet());
+    }
+
+    public synchronized void pause(int ms) {
+	System.out.println("waiting for " + (ms/1000) + " sec");
+	try { wait(ms); } catch (InterruptedException e) {}
+    }
+
+    /**
+     * Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
+     */
+    public static void main(String args[])
+    {
+	doRMIinitstuff(args);
+	RMIPastryTest pt = new RMIPastryTest();
 
 	for (int i = 0; i < numnodes; i++)
 	    pt.makePastryNode();

@@ -39,6 +39,12 @@ package rice.pastry.testing;
 import rice.pastry.*;
 import rice.pastry.rmi.*;
 import rice.pastry.standard.*;
+import rice.pastry.join.*;
+import rice.pastry.client.*;
+import rice.pastry.messaging.*;
+import rice.pastry.security.*;
+import rice.pastry.routing.*;
+import rice.pastry.leafset.*;
 
 import java.util.*;
 import java.net.*;
@@ -46,29 +52,26 @@ import java.rmi.Naming;
 import java.rmi.RMISecurityManager;
 
 /**
- * Pastry test.
- *
- * A test case for pastry RMI. Each node currently starts one instance of
- * Pastry, but pt.makePastryNode can be called multiple times from main
- * (say for the benefit of different and incompatible p2p applications).
+ * a regression test suite for pastry with RMI.
  *
  * @version $Id$
  *
+ * @author andrew ladd
+ * @author peter druschel
  * @author sitaram iyer
  */
 
-public class RMIPastryTest {
-    private RMIPastryNodeFactory factory;
-    private Vector pastrynodes;
-
+public class RMIPastryRegrTest extends PastryRegrTest {
     private static int port;
     private static String bshost;
     private static int bsport;
     private static int numnodes;
 
-    public RMIPastryTest() {
+    // constructor
+
+    public RMIPastryRegrTest() {
+	super();
 	factory = new RMIPastryNodeFactory();
-	pastrynodes = new Vector();
     }
 
     /**
@@ -206,38 +209,27 @@ public class RMIPastryTest {
 	}
     }
 
-    public void makePastryNode() {
-	// or, for a sweet one-liner,
-	// pastrynodes.add(new PastryNode(factory, getBootstrapHandle()));
+    // do nothing in the RMI world
+    public boolean simulate() { return false; }
 
-	PastryNode pn = new PastryNode(factory, getBootstrapHandle());
-	pastrynodes.add(pn);
-	System.out.println("created " + pn);
+    public boolean simIsAlive(NodeId id) {
+	// xxx
+	return false;
     }
 
-    public void printLeafSets() {
-	pause(1000);
-	for (int i = 0; i < pastrynodes.size(); i++)
-	    System.out.println(((PastryNode)pastrynodes.get(i)).getLeafSet());
-    }
-
-    public synchronized void pause(int ms) {
-	System.out.println("waiting for " + (ms/1000) + " sec");
-	try { wait(ms); } catch (InterruptedException e) {}
+    protected void killNode(PastryNode pn) {
+	// get to the RMIPastryNode somehow! how? hmm.. kill thread?
+	// flag in PastryNode for this strange purpose?
+	// or just pretend the node has died?
     }
 
     /**
      * Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
      */
-    public static void main(String args[])
-    {
+
+    public static void main(String args[]) {
 	doRMIinitstuff(args);
-	RMIPastryTest pt = new RMIPastryTest();
-
-	for (int i = 0; i < numnodes; i++)
-	    pt.makePastryNode();
-
-	while (true)
-	    pt.printLeafSets();
+	RMIPastryRegrTest pt = new RMIPastryRegrTest();
+	mainfunc(pt, args);
     }
 }

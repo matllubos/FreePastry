@@ -6,6 +6,7 @@ SOURCE  = \
 	PastryTest.java\
 	RMIPastryTest.java\
 	PastryRegrTest.java\
+	DirectPastryRegrTest.java\
 	RegrTestApp.java
 
 	#RoutingTableUnit.java

@@ -51,7 +51,7 @@ import java.util.*;
 /**
  * PastryRegrTest
  *
- * a regression test suite for pastry.
+ * a regression test suite for pastry. abstract class.
  *
  * @version $Id$
  *
@@ -59,9 +59,8 @@ import java.util.*;
  * @author peter druschel
  */
 
-public class PastryRegrTest {
-    private DirectPastryNodeFactory factory;
-    private NetworkSimulator simulator;
+public abstract class PastryRegrTest {
+    protected PastryNodeFactory factory;
 
     public Vector pastryNodes;
     public TreeMap pastryNodesSorted;
@@ -75,22 +74,11 @@ public class PastryRegrTest {
     public NodeId.Distance lastDist;
     public NodeId lastNode;
 
-    public int msgCount;
-
-    /**
-     * lastElement that returns null if empty
-     */
-    private PastryNode pastryNodes_lastElement() {
-	try { return (PastryNode) pastryNodes.lastElement(); }
-	catch (NoSuchElementException e) { return null; }
-    }
+    int msgCount = 0;
 
     // constructor
 
-    public PastryRegrTest() {
-	factory = new DirectPastryNodeFactory();
-	simulator = factory.getNetworkSimulator();
-
+    protected PastryRegrTest() {
 	pastryNodes = new Vector();
 	pastryNodesSorted = new TreeMap();
 	pastryNodesLastAdded = new Vector();
@@ -99,12 +87,14 @@ public class PastryRegrTest {
 	rng = new Random();
     }
 
+    public abstract NodeHandle getBootstrapHandle();
+
     /**
      * make a new pastry node
      */
 
-    public void makePastryNode() {
-	PastryNode bootstrap = pastryNodes_lastElement();
+    private void makePastryNode() {
+	NodeHandle bootstrap = getBootstrapHandle();
 	PastryNode pn = new PastryNode(factory, bootstrap);
 
 	pastryNodes.addElement(pn);
@@ -135,7 +125,7 @@ public class PastryRegrTest {
      * @param num the number of nodes in a set
      */
 
-    public void makePastryNode(int num) {
+    private void makePastryNode(int num) {
 	RegrTestApp rta[] = new RegrTestApp[num];
 	pastryNodesLastAdded.clear();
 
@@ -145,12 +135,12 @@ public class PastryRegrTest {
 
 	for (int i=0; i<num; i++) {
 
-	    PastryNode bootstrap = null;
+	    NodeHandle bootstrap = null;
 
 	    if (n == 0)		// first batch of nodes
-		bootstrap = pastryNodes_lastElement();
+		bootstrap = getBootstrapHandle();
 	    else		// corresponding node from previous batch
-		bootstrap = (PastryNode) pastryNodes.get(n+i - num);
+		bootstrap = (NodeHandle) pastryNodes.get(n+i - num);
 
 	    PastryNode pn = new PastryNode(factory, bootstrap);
 	    pastryNodes.addElement(pn);
@@ -160,10 +150,12 @@ public class PastryRegrTest {
 	    rta[i] = new RegrTestApp(pn,this);
 	    rtApps.addElement(rta[i]);
 
-	    if (bootstrap != null && n == 0)
-		// we have to join the first batch of nodes sequentially,
-		// else we create multiple rings
-		while(simulate()) msgCount++;
+	    if (bootstrap != null)
+		if (n == 0) {
+		    // we have to join the first batch of nodes
+		    // sequentially, else we create multiple rings
+		    while(simulate()) msgCount++;
+		}
 	}
 	
 	int msgCount = 0;
@@ -226,21 +218,21 @@ public class PastryRegrTest {
     }
 
     /**
-     * send one simulated message
+     * send one simulated message, or return false for a real wire protocol.
      */
+    public abstract boolean simulate();
 
-    public boolean simulate() { 
-	boolean res = simulator.simulate(); 
-	if (res) msgCount++;
-	return res;
-    }
+    /**
+     * determine whether this node is really alive.
+     */
+    public abstract boolean simIsAlive(NodeId id);
 
 
     /**
      * verify the correctness of the leaf set
      */
 
-    public void checkLeafSet(RegrTestApp rta) {
+    private void checkLeafSet(RegrTestApp rta) {
 	LeafSet ls = rta.getLeafSet();
 	NodeId localId = rta.getNodeId();
 
@@ -289,7 +281,7 @@ public class PastryRegrTest {
      * verify the correctness of the routing table
      */
 
-    public void checkRoutingTable(RegrTestApp rta) {
+    private void checkRoutingTable(RegrTestApp rta) {
 	RoutingTable rt = rta.getRoutingTable();
 
 	// check routing table
@@ -339,7 +331,7 @@ public class PastryRegrTest {
 
 			// check if node exists
 			if (!pastryNodesSorted.containsKey(id)) {
-			    if (simulator.isAlive(id))
+			    if (simIsAlive(id))
 				System.out.println("checkRoutingTable failure 2, row=" + i + " column=" + j +
 						   " rank=" + k);
 			}
@@ -360,7 +352,7 @@ public class PastryRegrTest {
     /**
      * initiate leafset maintenance
      */
-    public void initiateLeafSetMaintenance() {
+    private void initiateLeafSetMaintenance() {
 
 	for (int i=0; i<pastryNodes.size(); i++) {
 	    PastryNode pn = (PastryNode)pastryNodes.get(i);
@@ -373,7 +365,7 @@ public class PastryRegrTest {
     /**
      * initiate routing table maintenance
      */
-    public void initiateRouteSetMaintenance() {
+    private void initiateRouteSetMaintenance() {
 
 	for (int i=0; i<pastryNodes.size(); i++) {
 	    PastryNode pn = (PastryNode)pastryNodes.get(i);
@@ -389,9 +381,7 @@ public class PastryRegrTest {
      * @param num the number of nodes to kill
      */
 
-    public void killNodes(int num) {
-	EuclideanNetwork enet = (EuclideanNetwork)simulator;
-
+    private void killNodes(int num) {
 	for (int i=0; i<num; i++) {
 	    int n = rng.nextInt(pastryNodes.size());
 
@@ -399,19 +389,18 @@ public class PastryRegrTest {
 	    pastryNodes.remove(n);
 	    rtApps.remove(n);
 	    pastryNodesSorted.remove(pn.getNodeId());
-	    enet.setAlive(pn.getNodeId(), false);
+	    killNode(pn);
 	    System.out.println("Killed " + pn.getNodeId());
 	}
     }
 
+    protected abstract void killNode(PastryNode pn);
 
     /**
      * main
      */
 
-    public static void main(String args[]) {
-	PastryRegrTest pt = new PastryRegrTest();
-	
+    protected static void mainfunc(PastryRegrTest pt, String args[]) {
 	int n = 100;
 	int d = 20;
 	int k = 100;
