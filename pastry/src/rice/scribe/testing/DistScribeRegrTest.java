@@ -254,7 +254,7 @@ public class DistScribeRegrTest {
     }
 
     /**
-     * Usage: DistScribeRegrTest [-nodes n] [-port p] [-bootstrap bshost[:bsport]]
+     * Usage: DistScribeRegrTest [-nodes n] [-port p] [-bootstrap bshost[:bsport]] [-protocol [wire,rmi]]
      *                      [-help].
      *
      * Ports p and bsport refer to WIRE/RMI port numbers (default = 5009).
