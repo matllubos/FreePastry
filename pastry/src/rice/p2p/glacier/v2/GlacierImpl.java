@@ -35,7 +35,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   protected final IdFactory factory;
   protected final Hashtable continuations;
   protected final Hashtable pendingTraffic;
-  protected final String debugID;
+  protected final String debugID;l
   protected final Random random;
   protected StorageManager trashStorage;
   protected long nextContinuationTimeout;
@@ -3430,7 +3430,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                     
                     String fault = null;
                     
-                    if (!thisManifest.validatesFragment(thisFragment, thisKey.getFragmentID()))
+                    if (!thisManifest.validatesFragment(fam.fragment, thisKey.getFragmentID()))
                       fault = "Update: Manifest does not validate this fragment";
                     if (!policy.checkSignature(thisManifest, thisKey.getVersionKey()))
                       fault = "Update: Manifest is not signed properly";
