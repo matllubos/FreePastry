@@ -635,8 +635,6 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @return Whether or not to forward the message further
    */
   public boolean forward(final RouteMessage message) {
-/*    log.info("Forwarding given message " + message + " to the specified next hop");
-    
     if (message.getMessage() instanceof LookupMessage) {
       final LookupMessage lmsg = (LookupMessage) message.getMessage();
       Id id = lmsg.getId();
@@ -648,16 +646,21 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
           // deliver the message, which will do what we want
           log.fine("Request for " + id + " satisfied locally - responding");
           deliver(endpoint.getId(), lmsg);
-          
           return false;
         }
       } 
+    } else if (message.getMessage() instanceof LookupHandlesMessage) {
+      LookupHandlesMessage lmsg = (LookupHandlesMessage) message.getMessage();
+      
+      if (! lmsg.isResponse()) {
+        if (endpoint.replicaSet(lmsg.getId(), lmsg.getMax()).size() == lmsg.getMax()) {          
+          log.fine("Hijacking lookup handles request for " + lmsg.getId());
+          
+          deliver(endpoint.getId(), lmsg);
+          return false;
+        }
+      }
     }
-
-    // let the message know that it was here
-    if (message.getMessage() instanceof PastMessage) {
-      ((PastMessage) message.getMessage()).addHop(getLocalNodeHandle());
-    } */
 
     return true;
   }

@@ -272,6 +272,25 @@ public class GCPastImpl extends PastImpl implements GCPast {
   }
   
   /**
+   * This method is invoked on applications when the underlying node
+   * is about to forward the given message with the provided target to
+   * the specified next hop.  Applications can change the contents of
+   * the message, specify a different nextHop (through re-routing), or
+   * completely terminate the message.
+   *
+   * @param message The message being sent, containing an internal message
+   * along with a destination key and nodeHandle next hop.
+   *
+   * @return Whether or not to forward the message further
+   */
+  public boolean forward(final RouteMessage message) {
+    if (message.getMessage() instanceof GCLookupHandlesMessage) 
+      return true;
+    else
+      return super.forward(message);
+  }
+  
+  /**
    * This method is called on the application at the destination node
    * for the given id.
    *

@@ -60,7 +60,7 @@ public class GCIdRange implements IdRange {
    * @return the id at the counterclockwise edge of the range (inclusive)
    */
   public Id getCCWId() {
-    return new GCId(range.getCCWId(), GCPast.NO_EXPIRATION_SPECIFIED);
+    return new GCId(range.getCCWId(), GCPastImpl.DEFAULT_EXPIRATION);
   }
   
   /**
@@ -69,7 +69,7 @@ public class GCIdRange implements IdRange {
    * @return the id at the clockwise edge of the range (exclusive)
    */
   public Id getCWId() {
-    return new GCId(range.getCWId(), GCPast.NO_EXPIRATION_SPECIFIED);
+    return new GCId(range.getCWId(), GCPastImpl.DEFAULT_EXPIRATION);
   }
 
   /**

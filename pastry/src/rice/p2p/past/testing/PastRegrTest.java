@@ -50,6 +50,19 @@ public class PastRegrTest extends CommonAPITest {
     pasts = new PastImpl[NUM_NODES];
     storages = new StorageManager[NUM_NODES];
     rng = new Random();
+    
+    new Thread() {
+      public void run() {
+        while (true) {
+          try {
+            sleep(50);
+            simulate();
+          } catch (Exception e) {
+            System.out.println(e + " blah");
+          }
+        }
+      }
+    }.start();
   }
 
   /**
@@ -514,15 +527,15 @@ public class PastRegrTest extends CommonAPITest {
 
             // Check file exists (at all replicas)
             stepStart("Remote Handles Lookup - All Replicas");
-            local.lookupHandles(remoteId, REPLICATION_FACTOR, new TestCommand() {
+            local.lookupHandles(remoteId, REPLICATION_FACTOR+1, new TestCommand() {
               public void receive(Object result) throws Exception {
                 assertTrue("Replicas should not be null", result != null);
                 assertTrue("Replicas should be handle[]", result instanceof PastContentHandle[]);
 
                 PastContentHandle[] handles = (PastContentHandle[]) result;
 
-                assertTrue("All replicas should be returned", (handles.length == REPLICATION_FACTOR) ||
-                           ((NUM_NODES < REPLICATION_FACTOR) && (handles.length) == NUM_NODES));
+                assertTrue("All replicas should be returned", (handles.length == REPLICATION_FACTOR+1) ||
+                           ((NUM_NODES < REPLICATION_FACTOR+1) && (handles.length) == NUM_NODES));
 
                 for (int i=0; i<handles.length; i++) {
                   assertTrue("Replica " + i + " should not be null", handles[i] != null);
@@ -549,17 +562,24 @@ public class PastRegrTest extends CommonAPITest {
 
                     PastContentHandle[] handles = (PastContentHandle[]) result;
 
-                    assertTrue("All replicas should be returned, got " + handles.length, (handles.length >= REPLICATION_FACTOR) ||
-                               ((NUM_NODES < REPLICATION_FACTOR) && (handles.length) == NUM_NODES));
+                    assertTrue("All replicas should be returned, got " + handles.length, (handles.length >= REPLICATION_FACTOR+1) ||
+                               ((NUM_NODES < REPLICATION_FACTOR+1) && (handles.length) == NUM_NODES));
 
+                    int count = 0;
+                    
                     for (int i=0; i<handles.length; i++) {
-                      assertTrue("Replica " + i + " should not be null", handles[i] != null);
-                      assertEquals("Replica " + i + " should be for right object", remoteId, handles[i].getId());
+                      if (handles[i] != null) {
+                        assertEquals("Replica " + i + " should be for right object", remoteId, handles[i].getId());
+                        count++;
+                      }
                     }
 
+                    assertTrue("All replicas should be returned (got " + count + "/" + (REPLICATION_FACTOR+1) + ")", count == REPLICATION_FACTOR+1);
+
+                    
                     for (int i=0; i<handles.length; i++) {
                       for (int j=0; j<handles.length; j++) {
-                        if (i != j) {
+                        if ((i != j) && (handles[i] != null) && (handles[j] != null)) {
                           assertTrue("Handles " + handles[i] + " and " + handles[j] + " should be different",
                                      (! handles[i].getNodeHandle().getId().equals(handles[j].getNodeHandle().getId())));
                         }
