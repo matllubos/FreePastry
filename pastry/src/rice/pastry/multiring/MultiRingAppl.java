@@ -313,19 +313,19 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp {
     return credentials;
   }
 
-  public void isNewRoot(NodeId topicId) {};
+  public void isNewRoot(NodeId topicId) {}
 
-  public void newParent(NodeId topicId, NodeHandle newParent, Serializable data) {};
+  public void newParent(NodeId topicId, NodeHandle newParent, Serializable data) {}
   
-  public void scribeIsReady() {};
+  public void scribeIsReady() {}
 
-  public void receiveMessage( ScribeMessage msg ) {};
+  public void receiveMessage( ScribeMessage msg ) {}
 
-  public void forwardHandler( ScribeMessage msg ) {};
+  public void forwardHandler( ScribeMessage msg ) {}
 
-  public void subscribeHandler(NodeId topicId, NodeHandle child, boolean wasAdded, Serializable obj ) {};
+  public void subscribeHandler(NodeId topicId, NodeHandle child, boolean wasAdded, Serializable obj ) {}
 
-  public void faultHandler( ScribeMessage msg, NodeHandle faultyParent ) {};
+  public void faultHandler( ScribeMessage msg, NodeHandle faultyParent ) {}
 }
 
 
