@@ -1,14 +1,26 @@
 package rice.splitstream;
+import rice.scribe.*;
+import rice.pastry.security.*;
+import rice.pastry.*;
 public class Channel {
 
    private ChannelId channelId = null;
    private int numStripes = 0;
    private Stripe[] stripes = null;
    private int outChannel = 0;
+   private IScribe scribe = null;
+   private Credentials cred;
+   private boolean isReady = false;
 
-   public Channel(int numStripes){
+   public Channel(int numStripes, IScribe scribe, Credentials cred){
 	this.numStripes = numStripes;
-	/* add topic creation */
+ 	this.cred = cred;
+	this.scribe = scribe;
+        NodeId topicId = null;
+        if(scribe.create(topicId, cred)){
+		isReady = true;
+		this.channelId = (ChannelId) topicId;
+        } 		
 	stripes = new Stripe[numStripes];
 	for(int i = 0; i < numStripes; i++){
 		stripes[i] = new Stripe();
@@ -52,7 +64,7 @@ public class Channel {
    * Returns whether the channel is currently ready 
    * @return boolean State of the channel 
    */
-  public boolean isReady(){return false;}
+  public boolean isReady(){return isReady;}
 
   /**
    * Returns a random stripe from this channel that the user is not

@@ -15,7 +15,7 @@ import rice.pastry.security.*;
  */
 public class SplitStreamImpl extends PastryAppl implements ISplitStream{
     private IScribe scribe = null;
-
+    private Credentials credentials = new PermissiveCredentials();
     public SplitStreamImpl(PastryNode node, IScribe scribe){
         super(node);
  	scribe = this.scribe;   
@@ -33,7 +33,9 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream{
     *        be striped, each part is a Stripe.
     * @return an instance of a Channel class. 
     */
-   public Channel createChannel(int numStripes){return null;}
+   public Channel createChannel(int numStripes){
+	return (new Channel(numStripes, scribe, getCredentials()));
+   }
    /**
     * This method is used by peers who wish to listen to content distributed 
     * by some other peer using SplitStream. It attaches the local node to the 
@@ -59,7 +61,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream{
     */
    public void handleSubscribe(ChannelId channelId){}
    public void messageForAppl(Message msg){}
-   public Credentials getCredentials(){return null;}
+   public Credentials getCredentials(){return credentials;}
    public Address getAddress(){return null;}
    public SplitStreamImpl(){super(null);}
    public BandwidthManager getBandwidthManager(){return null;}
