@@ -42,4 +42,15 @@ public interface AP3RoutingTable {
    * @param id The AP3MessageID of the entry to drop.
    */
   public AP3RoutingTableEntry getEntry(AP3MessageID id);
+
+  /**
+   * Returns the number of entries in the routing table.
+   */
+  public int getNumEntries();
+
+  /**
+   * Clears all entries in the routing table.
+   */
+  public void clear();
+
 }

@@ -181,36 +181,12 @@ public class RMIAP3Test {
 	System.out.println("created " + pn);
     }
 
-    /**
-    public void printLeafSets() {
-	pause(1000);
-	for (int i = 0; i < pastrynodes.size(); i++)
-	    System.out.println(((PastryNode)pastrynodes.get(i)).getLeafSet());
-    }
-    */
 
     public synchronized void pause(int ms) {
 	System.out.println("waiting for " + (ms/1000) + " sec");
 	try { wait(ms); } catch (InterruptedException e) {}
     }
 
-  /*
-  public void makeRequests(int k) {
-    int n = ap3Nodes.size();
-    
-    for (int i=0; i<k; i++) {
-      int nodeIndex = rng.nextInt(n);
-      
-      AP3TestingClient ap3Node = (AP3TestingClient) ap3Nodes.get(nodeIndex);
-      
-      ap3Node.getService().getAnonymizedContent("requestMsg", 0.100);
-      
-      //while(simulate());
-      
-      System.out.println("\n\n------------------- Finished making requests\n\n");
-    }
-  }
-  */
 
   public void makeRequests(int k) {
     // Send one message only, from the first node to the second one in the list
@@ -220,7 +196,7 @@ public class RMIAP3Test {
     PastryNode sourcePastryNode = (PastryNode) pastrynodes.get(0);
     PastryNode destPastryNode = (PastryNode) pastrynodes.get(1);
 
-    /**
+
     Enumeration nodes = pastrynodes.elements();
     while (nodes.hasMoreElements()) {
       PastryNode node = (PastryNode) nodes.nextElement();
@@ -229,17 +205,11 @@ public class RMIAP3Test {
         System.out.println("DEBUG ---------- Waiting for node to be ready");
       }
     }
-    */
 
-    //while(!sourcePastryNode.isReady()) {
-    //  System.out.println("DEBUG ----------------- Source node not ready");
-    //}
-    //while(!destPastryNode.isReady()) {
-    //  System.out.println("DEBUG ----------------- Dest node not ready");
-    //}
-      
-    sourceNode.getService().setRandomNode(destNode.getService().getNodeId());
-    String content = (String) sourceNode.getService().getAnonymizedContent("requestMsg", 1);
+
+    // Assume that the destination node will fetch (fetchProb == 1)
+    sourceNode.getService().setDestinationNode(destNode.getService().getNodeId());
+    String content = (String) sourceNode.getService().getAnonymizedContent("requestMsg", 1, 20000);
 
     System.out.println("\n\nDEBUG ----------- CONTENT RECEIVED: " + content);
 
@@ -252,7 +222,7 @@ public class RMIAP3Test {
    */
   public static void main(String args[]) {
     int k = 5; // number of messages to send
-    
+
     doRMIinitstuff(args);
     RMIAP3Test ap3Test = new RMIAP3Test();
     
@@ -260,14 +230,8 @@ public class RMIAP3Test {
       ap3Test.makePastryNode();
     System.out.println(numnodes + " nodes constructed");
 
-    ap3Test.pause(20000);
-    System.out.println("DEBUG ---------- Done waiting for 20 seconds\n\n");
-
     ap3Test.makeRequests(k);
-    
-    //while (true)
-    //for (int i = 0; i < 20; i++)
-    //    pt.printLeafSets();
+
     System.out.println("\n\n------------------- Finished initializing\n\n");
   }
 }

@@ -5,7 +5,8 @@ SOURCE  = \
 	AP3Test.java \
 	AP3TestingService.java \
 	AP3TestingMessage.java \
-	RMIAP3Test.java
+	RMIAP3Test.java \
+	RMIAP3RegrTest.java
 
 RMI_SOURCE =
 

@@ -70,6 +70,20 @@ public class AP3RoutingTableImpl
   public AP3RoutingTableEntry getEntry(AP3MessageID id) {
     return (AP3RoutingTableEntry) _table.get(id);
   }
+
+  /**
+   * Returns the number of entries in the routing table.
+   */
+  public int getNumEntries() {
+    return _table.size();
+  }
+
+  /**
+   * Clears all entries in the routing table.
+   */
+  public void clear() {
+    _table.clear();
+  }
 }
 
 
