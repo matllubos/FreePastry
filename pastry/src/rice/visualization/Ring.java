@@ -14,6 +14,7 @@ import java.awt.Rectangle;
 import java.awt.geom.Rectangle2D;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Vector;
@@ -623,6 +624,35 @@ public class Ring {
       default:
         throw new RuntimeException("unexpected number of children childnum:"+childNum+" numChildren:"+numChildren);    
     }   
+  }
+
+  public void touchAllNodes() {    
+    Thread touchThread = new Thread(new Runnable() {
+      public void run() {
+        boolean touchedAll = false;
+        HashSet touched = new HashSet();
+        while(!touchedAll) {
+          //System.out.println("touchAllNodes()");
+          Node[] nds = getNodes();
+          touchedAll = true;
+//          for (int i = 0; i < nds.length; i++) {
+          for (int i = nds.length-1; i >= 0; i--) {
+            if (!touched.contains(nds[i])) {
+              touchedAll = false;
+//              System.out.println("getting data from "+nds[i]);
+              touched.add(nds[i]);
+              visualization.getData(nds[i], true); 
+              //System.out.println(touched.size()+" got data from "+nds[i]+" @"+System.identityHashCode(nds[i]));
+              visualization.frame.repaint();
+              Thread.yield();
+              break;
+            }
+          }
+        }
+        System.out.println("touchAllNodes() complete");
+      }
+    },"TouchAllNodesThread");
+    touchThread.start();
   }
 
   

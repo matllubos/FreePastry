@@ -32,6 +32,7 @@ public class VisualizationClient {
   }
 
   public void connect() {
+    //System.out.println(this+".connect()");
     if (! socket.isConnected()) {
       try {
         socket.connect(address);
@@ -61,8 +62,8 @@ public class VisualizationClient {
       return result;
     } catch (IOException e) {
       this.state = STATE_DEAD;
-      System.out.println("Client: Exception " + e + " thrown.");
-      
+      System.out.println("Client ("+address+"): Exception " + e + " thrown.");
+      //e.printStackTrace();
       try {
         socket.close();
       } catch (IOException f) {

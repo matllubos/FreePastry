@@ -62,6 +62,7 @@ public class Visualization implements DataProvider {
     
     this.frame = new VisualizationFrame(this);
     
+    selectedRing.touchAllNodes();
     
     Thread t = new Thread() {
       public void run() {
@@ -280,6 +281,9 @@ public class Visualization implements DataProvider {
 //  }
 
   protected Data getData(Node handle) {
+    return getData(handle, false); 
+  }
+  protected Data getData(Node handle, boolean leafsetOnly) {
     Ring r = handle.ring;
       VisualizationClient client = (VisualizationClient) r.clients.get(handle.handle.getNodeId());
       
@@ -301,7 +305,7 @@ public class Visualization implements DataProvider {
       
         for (int i=0; i<handles.length; i++) 
           handle.neighbors.add(r.addNode(handles[i]));
-        
+        if (leafsetOnly) return null;
         data = client.getData();
       
         return data;
