@@ -168,7 +168,7 @@ public class Folder {
   }
 
   /**
-   * Appends an email to this Folder.
+   * Appends an email to this Folder, with default (no) flags set.
    * Creates a new StoredEmail instance with the given email.
    * Sets all flags to false for the new email in the folder
    *
@@ -176,9 +176,20 @@ public class Folder {
    * @param command the work to perform after this call
    */
   public void addMessage(final Email email, final Continuation command) {
+    addMessage(email, new Flags(), command);
+  }  
+
+  /**
+   * Appends an email to this Folder with the specified flags set.
+   * Creates a new StoredEmail instance with the given email.
+   * Sets all flags to false for the new email in the folder
+   *
+   * @param email The email to insert.
+   * @param command the work to perform after this call
+   */
+  public void addMessage(final Email email, final Flags flags, final Continuation command) {
     Continuation add = new Continuation() {
       public void receiveResult(Object o) {
-        Flags flags = new Flags();
         StoredEmail storedEmail = new StoredEmail(email, _log.getNextUID(), flags);
         _log.addLogEntry(new InsertMailLogEntry(storedEmail), command);
       }

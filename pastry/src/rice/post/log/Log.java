@@ -351,6 +351,7 @@ public class Log implements PostData {
 
     public void start() {
       state = STATE_1;
+      entry.setPost(post);
       entry.setUser(post.getEntityAddress());
       entry.setPreviousEntryReference(topEntryReference);
       entry.setPreviousEntry(topEntry);

@@ -43,8 +43,7 @@ public class LsubCommand
 
             for (int i = 0; i < fold.length; i++)
             {
-                untaggedSimpleResponse("() NIL \"" + fold[i] + 
-                                       "\"");
+                untaggedSimpleResponse("() NIL \"" + fold[i] + "\"");
             }
 
             taggedSimpleSuccess();

@@ -12,7 +12,7 @@ public class PostFlagList implements FlagList {
 
   private static Hashtable loc = new Hashtable();
 
-  private PostFlagList(PostMessage msg) {
+  protected PostFlagList(PostMessage msg) {
       _msg = msg;
   }
 

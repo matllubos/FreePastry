@@ -292,6 +292,16 @@ public class PostMailbox implements Mailbox {
     if (subscriptions.containsKey(conn)) {
       Vector subList = (Vector) subscriptions.get(conn);
 
+      pattern = pattern.replaceAll("\\*", ".*").replaceAll("\\%", ".*");
+
+      for (int i=subList.size()-1; i>=0; i--) {
+        String str = (String) subList.elementAt(i);
+
+        if (! str.matches(pattern)) {
+          subList.remove(str);
+        }
+      }
+        
       return (String[]) subList.toArray(new String[0]);
     } else {
       return new String[0];

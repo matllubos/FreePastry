@@ -72,9 +72,29 @@ public class PostFolder implements MailFolder {
     parent.removeFolder(getFullName());
   }
 
-  public void put(MovingMessage msg) throws MailboxException {
+  public void put(MovingMessage msg, List lflags, String date) throws MailboxException {
     try {
       Email email = PostMessage.parseEmail(msg.getResource());
+      Flags flags = new Flags();
+
+      if (flags != null) {
+        Iterator i = lflags.iterator();
+
+        while (i.hasNext()) {
+          String flag = (String) i.next();
+
+          if ("\\Deleted".equalsIgnoreCase(flag))
+            flags.setDeleted(true);
+          if ("\\Answered".equalsIgnoreCase(flag))
+            flags.setAnswered(true);
+          if ("\\Seen".equalsIgnoreCase(flag))
+            flags.setSeen(true);
+          if ("\\Flagged".equalsIgnoreCase(flag))
+            flags.setFlagged(true);
+          if ("\\Draft".equalsIgnoreCase(flag))
+            flags.setDraft(true);
+        }
+      }
 
       final Exception[] exception = new Exception[1];
       final Object[] result = new Object[1];
@@ -97,7 +117,7 @@ public class PostFolder implements MailFolder {
         }
       };
 
-      folder.addMessage(email, c);
+      folder.addMessage(email, flags, c);
 
       synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
 

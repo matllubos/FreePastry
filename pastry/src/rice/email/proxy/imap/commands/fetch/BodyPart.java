@@ -171,7 +171,6 @@ public class BodyPart extends FetchPart {
     try {
       Reader contents = msg.getMessage().getContents();
       String result = StreamUtils.toString(contents);
-      result = result.replaceAll("\n", "\r\n");
       getConn().print( "{" + result.length() + "}\r\n");
       getConn().print(result);
     } catch (MailException me) {

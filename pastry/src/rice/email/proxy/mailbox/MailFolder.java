@@ -21,6 +21,6 @@ public interface MailFolder {
 
     int getNextUID();
 
-    void put(MovingMessage msg)
+    void put(MovingMessage msg, List flags, String date)
       throws MailboxException;
 }

@@ -48,14 +48,13 @@ public class AppendCommand
         MovingMessage msg = getState().createMovingMessage();
         try
         {
-            msg.readFullContent(StreamUtils.limit(getConn().getReader(), 
-                                                  _len));
+            msg.readFullContent(StreamUtils.limit(getConn().getReader(),  _len));
 
             // skip CRLF
             getConn().readLine();
 
             Mailbox box = getState().getMailbox();
-            box.getFolder(_folder).put(msg);
+            box.getFolder(_folder).put(msg, _flags, _date);
             taggedSimpleSuccess();
         }
         catch (MailboxException me)
