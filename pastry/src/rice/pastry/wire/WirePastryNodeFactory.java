@@ -96,6 +96,8 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
     // allocate enought bytes to read a node handle
     WireNodeHandle handle = null;
 
+    System.out.println("Wire: Contacting bootstrap node " + address);
+
     try {
       // create reader and writer
       SocketChannelWriter writer = new SocketChannelWriter(null);
@@ -107,8 +109,6 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
       channel.socket().connect(address);
 
       writer.enqueue(new NodeIdRequestMessage());
-      System.out.println("Contacting boot node " + address);
-
       writer.write(channel);
       Object o = null;
 

@@ -61,7 +61,7 @@ import java.net.*;
  */
 
 public class RMIPastryNodeFactory extends DistPastryNodeFactory {
-  public static int NUM_ATTEMPTS = 3;
+  public static int NUM_ATTEMPTS = 1;
 
   private NodeIdFactory nidFactory;
   private int port;
@@ -123,7 +123,8 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
   public NodeHandle generateNodeHandle(InetSocketAddress address) {
     RMIRemoteNodeI bsnode = null;
 
-    // look at remote address
+    System.out.println("RMI: Attempting to locate bootstrap node...");
+
     for (int i = 1; bsnode == null && i <= NUM_ATTEMPTS; i++) {
       try {
         bsnode = (RMIRemoteNodeI) Naming.lookup("//" + address.getHostName()
