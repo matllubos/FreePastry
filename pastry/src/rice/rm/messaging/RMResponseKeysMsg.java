@@ -175,12 +175,6 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 		}
 	    }
 	    
-	    //for(int k=0; k<toAskFor.size(); k++) {
-	    //RMMessage.KEEntry checkEntry;
-	    //checkEntry = (RMMessage.KEEntry)toAskFor.elementAt(k);
-	    //System.out.println("entry[" + k + "] = " + checkEntry);
-	    // }
-
     
 	    RMRequestKeysMsg msg;
 	    msg = new RMRequestKeysMsg(rm.getLocalHandle(),rm.getAddress() , rm.getCredentials(), rm.m_seqno ++, toAskFor);

@@ -71,21 +71,11 @@ import rice.rm.testing.*;
 public class RMImpl extends CommonAPIAppl implements RM {
 
 
-    /**
-     * The address associated with RM. Used by lower pastry modules to 
-     * demultiplex messages having this address to this RM application.
-     */
+
     private static RMAddress _address = new RMAddress();
 
-
-    /**
-     * Credentials for this application.
-     */
     private Credentials _credentials;
 
-    /**
-     * SendOptions to be used on pastry messages.
-     */
     public SendOptions _sendOptions;
 
     private boolean m_ready;
@@ -96,14 +86,9 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
     public int rFactor; // standard rFactor to be used
 
-    public RMClient app = null; // Application that uses this Replica Manager
+    public RMClient app; // Application that uses this Replica Manager
 
     
-    // This is set to the application if the underlying pastry node
-    // was unready when the application registered.
-    public RMClient m_unreadyApp = null;
-
-
     public Hashtable m_pendingRanges;
 
 
@@ -175,14 +160,35 @@ public class RMImpl extends CommonAPIAppl implements RM {
      * @param pn the PastryNode associated with this application
      * @return void
      */
-    public RMImpl(PastryNode pn)
+    public RMImpl(PastryNode pn, RMClient _app)
     {
 	super(pn);
+	app = _app;
 	m_ready = pn.isReady();
+	rFactor = _app.getReplicaFactor();
+
 	_credentials = new PermissiveCredentials();
 	_sendOptions = new SendOptions();
 	m_seqno = 0;
 	m_pendingRanges = new Hashtable();
+	if(isReady()) {
+
+	    app.rmIsReady(this);
+	    myRange = range(getLocalHandle(), rFactor, getNodeId(), true);
+	    //System.out.println("MyRange= " + myRange);
+	    //System.out.println("Need to do initial fetching of keys from " + getNodeId());
+	    
+	    IdRange requestRange = myRange;
+	    
+	    Vector rangeSet = new Vector();
+	    if((requestRange!=null) && !requestRange.isEmpty())
+		rangeSet.add(new RMMessage.KEEntry(requestRange,true));
+	    
+	    NodeSet set = requestorSet(rangeSet);
+	    
+	    sendKeyRequestMessages(set, rangeSet);
+
+	}
     }
 
 
@@ -365,67 +371,30 @@ public class RMImpl extends CommonAPIAppl implements RM {
     }
 
   
-    /**
-     * Registers the application to the RM.
-     * @param _rFactor the replication factor 
-     * @param _app the application, which is an instance of RMClient
-     */
-    public boolean register(RMClient _app, int _rFactor) {
-	//System.out.println("register called on " + getNodeId());
-	app = _app;
-	rFactor = _rFactor;
-	if(isReady()) {
-	    app.rmIsReady();
-
-	    myRange = range(getLocalHandle(), rFactor, getNodeId(), true);
-	    //System.out.println("MyRange= " + myRange);
-	    //System.out.println("Need to do initial fetching of keys from " + getNodeId());
-	     
-
-	    IdRange requestRange = myRange;
-	    
-	    Vector rangeSet = new Vector();
-	    if((requestRange!=null) && !requestRange.isEmpty())
-		rangeSet.add(new RMMessage.KEEntry(requestRange, false));
-	    NodeSet set = requestorSet(rangeSet);
-
-	    sendKeyRequestMessages(set, rangeSet);
-
-	}
-	else
-	    m_unreadyApp = _app;
-	return true;
-    }
-
      /**
      * This is called when the underlying pastry node is ready.
      */
     public void notifyReady() {
-	//System.out.println("notifyReady called for RM application on" + getNodeId()); 
-	m_ready = true;
 
 	if(app!=null) {
-	    if(m_unreadyApp != null) {
-		m_unreadyApp.rmIsReady();
-	    }
-
+	    //System.out.println("notifyReady called for RM application on" + getNodeId()); 
+	    m_ready = true;
+	    app.rmIsReady(this);
 	    myRange = range(getLocalHandle(), rFactor, getNodeId(), true);
 	    //System.out.println("MyRange= " + myRange);
 	    //System.out.println("Need to do initial fetching of keys from " + getNodeId());
-
-
-	    IdRange requestRange = myRange;
 	    
+	    IdRange requestRange = myRange;
+	
 	    Vector rangeSet = new Vector();
 	    if((requestRange!=null) && !requestRange.isEmpty())
-		rangeSet.add(new RMMessage.KEEntry(requestRange,false));
-
+		rangeSet.add(new RMMessage.KEEntry(requestRange,true));
+	
 	    NodeSet set = requestorSet(rangeSet);
-
+	    
 	    sendKeyRequestMessages(set, rangeSet);
-
-
 	}
+
     }
 
     
@@ -477,7 +446,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
      * @return void
      */
     public void update(NodeHandle nh, boolean wasAdded) {
-	if(!isReady() || (app == null))
+	if(!isReady())
 	    return;
 
 	//System.out.println("leafsetChange(" + nh.getNodeId() + " , " + wasAdded + ")" + " at " + getNodeId());
@@ -612,6 +581,14 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	    //System.out.println(getNodeId() + "sending RequestKeys msg to " + toNode.getNodeId());
 	    route(null, msg, toNode);
 	}
+    }
+
+    public void registerKey(Id key) {
+	// Currently we do nothing here, on the assumption that 
+	// our Replica Manager is based totally on the Pull Model
+
+	// We can do something here if we want to incorporate the Push Model
+
     }
     
 }

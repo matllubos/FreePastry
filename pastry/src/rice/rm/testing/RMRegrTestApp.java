@@ -118,9 +118,8 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
      * @param rm The underlying replica manager 
      * @param cred The credentials 
      */
-    public RMRegrTestApp( PastryNode pn, RMImpl rm, Credentials cred) {
+    public RMRegrTestApp( PastryNode pn, Credentials cred) {
 	super(pn);
-	m_rm = rm;
 	_credentials = cred;
 	if(cred == null) {
 	     _credentials = new PermissiveCredentials();
@@ -132,12 +131,15 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
 	m_keys = new IdSet(); 
 	m_refreshedKeys = new IdSet();
 	m_pendingObjects = new Hashtable();
-	m_rm.register(this, rFactor);
     }
 
 
-    public void rmIsReady() {
+    public int getReplicaFactor() {
+	return RMRegrTestApp.rFactor;
+    }
 
+    public void rmIsReady(RM rm) {
+	m_rm = (RMImpl)rm;
     }
 
     public ReplicateEntry getPendingObject(Id key) {
@@ -176,21 +178,15 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
     }
 
 
-    // Call to underlying replica manager
-    public void periodicMaintenance() {
-	//System.out.println(getNodeId() + " issuing periodic maintenance ");
-	m_rm.periodicMaintenance();
-    }
-
 
     public void replicateSuccess(Id key, boolean status) {
 	//System.out.println("Replicate status for key=" + key + " is " + status);
     }
 
-
     public void remove(Id objectKey) {
 
     }
+
 
     public void fetch(IdSet keySet) {
 	// We will add these keys to m_keys
@@ -302,6 +298,13 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
 	m_refreshedKeys.addMember(objectKey);
 
     }
+
+    // Call to underlying replica manager
+    public void periodicMaintenance() {
+	//System.out.println(getNodeId() + " issuing periodic maintenance ");
+	m_rm.periodicMaintenance();
+    }
+    
 
     public boolean checkPassed() {
 	Iterator it;

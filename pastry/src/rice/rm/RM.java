@@ -53,21 +53,8 @@ import rice.pastry.security.*;
 public interface RM {
 
 
-     /**
-     * Registers the application to the RM.
-     * @param appAddress the application's address
-     * @param app the application, which is an instance of ReplicaClient
-     * @param replicaFactor is the number of additional replicas, the default
-     *  one is called 0-root, rest are called i-root (1<=i <=replicaFactor)
-     */
-    public boolean register(RMClient app, int replicaFactor);
+    public void registerKey(Id key);
 
-
-
-    /*
-     * Start the periodic maintenance 
-     */
-    public void periodicMaintenance();
 
 }
 

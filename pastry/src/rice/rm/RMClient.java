@@ -52,6 +52,12 @@ import rice.pastry.security.*;
  */
 public interface RMClient {
 
+    /* This upcall is used by the Replica Manager to get the 
+     * replica factor to associate with itself.
+     */
+    public int getReplicaFactor();
+
+
     /* This upcall is invoked to notify the application that is should
      * fetch the cooresponding keys in this set, since the node is now
      * responsible for these keys also
@@ -59,21 +65,10 @@ public interface RMClient {
     public void fetch(IdSet keySet);
 
 
-    /* This upcall is invoked when the Replica manager wants to notify the
-     * application to store an object associated with the key
-     */
-    public void store(Id key, Object object);
-
-    /* This upcall is invoked to notify the application of success/failure
-     * of a previous Replicate message
-     */
-    public void replicateSuccess(Id key, boolean status);
-    
-
     /* This upcall is simply to denote that the underlying replica manager
-     * is ready.
+     * (rm) is ready.
      */
-    public void rmIsReady();
+    public void rmIsReady(RM rm);
 
     /*
      * This upcall is to notify the application of the range of keys for 

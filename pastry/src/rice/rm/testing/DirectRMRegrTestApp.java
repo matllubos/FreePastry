@@ -59,10 +59,11 @@ public class DirectRMRegrTestApp extends RMRegrTestApp
 {
 
 
-    public DirectRMRegrTestApp( PastryNode pn, RMImpl rm, Credentials cred) {
-	super(pn, rm, cred);
+    public DirectRMRegrTestApp( PastryNode pn, Credentials cred) {
+	super(pn, cred);
 
     }
+
     
 }
 
