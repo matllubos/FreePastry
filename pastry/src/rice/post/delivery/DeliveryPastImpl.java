@@ -175,31 +175,36 @@ public class DeliveryPastImpl extends PastImpl implements DeliveryPast {
    */
   public void getMessage(final PostEntityAddress address, final Continuation command) {
     final Id[] array = scan(endpoint.range(endpoint.getLocalNodeHandle(), 0, null, true)).asArray();
-    final int start = rng.nextInt(array.length);
     
-    Continuation c = new StandardContinuation(command) {
-      int current = start;
+    if (array.length == 0) {
+      command.receiveResult(null);
+    } else {
+      final int start = rng.nextInt(array.length);
+      
+      Continuation c = new StandardContinuation(command) {
+        int current = start;
 
-      public void receiveResult(Object o) {
-        if (o != null) {
-          PostEntityAddress addr = ((Delivery) o).getMessage().getDestination();
-          
-          if (addr.equals(address)) {
-            command.receiveResult(o);
-            return;
+        public void receiveResult(Object o) {
+          if (o != null) {
+            PostEntityAddress addr = ((Delivery) o).getMessage().getDestination();
+            
+            if (addr.equals(address)) {
+              command.receiveResult(o);
+              return;
+            }
           }
+          
+          current = (current + 1) % array.length;
+          
+          if (current != start)
+            storage.getObject(array[current], this);
+          else
+            command.receiveResult(null);
         }
-        
-        current = (current + 1) % array.length;
-        
-        if (current != start)
-          storage.getObject(array[current], this);
-        else
-          command.receiveResult(null);
-      }
-    };
-    
-    storage.getObject(array[start], c);
+      };
+      
+      storage.getObject(array[start], c);
+    }
   }
   
   /**

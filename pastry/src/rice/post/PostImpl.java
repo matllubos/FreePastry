@@ -523,12 +523,15 @@ public class PostImpl implements Post, Application, ScribeClient {
       protected HashSet set = new HashSet();
       
       public void receiveResult(Object o) {
-        if (o != null) 
-          set.addAll((Set) o);
-        
+        if (o != null) {
+          Object[] a = (Object[]) o;
+          for (int i=0; i<a.length; i++)
+            set.add(a[i]);
+        }
+          
         if (i.hasNext()) 
           ((PostClient) i.next()).getContentHashReferences(this);
-        else
+        else 
           storage.refreshContentHash((ContentHashReference[]) set.toArray(new ContentHashReference[0]), new ListenerContinuation("Refreshing of objects"));
       }
     };
