@@ -119,6 +119,7 @@ public class Channel{
            stripeIdTable.put(ids[i], s);  
         }
 
+        /* verifies that everything has been created */
         channelCreationCheck();
     }
 
@@ -178,7 +179,10 @@ public class Channel{
      * @param observer the Object that is going to observe the stripe
      * @return Stripe A random stripe
      */
-    public Stripe joinAdditionalStripe(Observer observer ){return null;} 
+    public Stripe joinAdditionalStripe(Observer observer ){
+       /* Should join any stripe, not particular */
+       return null;
+    } 
 
     /**
      * Join a specific Stripe of this channel

@@ -70,14 +70,6 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 
 
     /**
-     * Flag for identifying whether the most recent drop
-     * of a node is because local node dropped it, not because
-     * that node sent unsubscription message.
-     */
-    private boolean localDrop = false;
-
-
-    /**
      * The constructor for building the splitStream object
      *
      * @param node the pastry node that we will use
@@ -151,7 +143,8 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     protected NodeId[] createIds(String s, int num){
           NodeId[] toReturn = new NodeId[num];
           for(int i = 0 ; i < num; i++){
-            createId(...)
+            /* put in some code to put in prefix differing ids */
+            //createId(...)
           } 
           return toReturn;
     }
