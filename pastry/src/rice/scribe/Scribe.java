@@ -266,10 +266,12 @@ public class Scribe extends PastryAppl implements IScribe
     /**
      * Called by pastry when the leaf set changes.
      *
-     * @param nid the id of the node that entered or left the leafset.
+     * @param nh the handle of the node that entered or left the leafset.
      * @param wasAdded true if the node was added, false if it was removed.
      */
-    public void leafSetChange( NodeId nid, boolean wasAdded ) {
+    public void leafSetChange( NodeHandle nh, boolean wasAdded ) {
+	NodeId nid = nh.getNodeId();
+
 	if( wasAdded ) {
 	    //if the node was added we must check if the new node should be
 	    //topic manager for any of our topics.

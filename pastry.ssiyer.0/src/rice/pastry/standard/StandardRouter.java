@@ -113,7 +113,8 @@ public class StandardRouter implements MessageReceiver {
 	}
 
 	else if ((lsPos > 0 && lsPos < cwSize) ||
-		 (lsPos < 0 && lsPos < ccwSize)) // message is for a node in the leaf set
+		 //		 (lsPos < 0 && lsPos < ccwSize)) // message is for a node in the leaf set
+		 (lsPos < 0 && -lsPos < ccwSize)) // message is for a node in the leaf set
 	    {
 		NodeHandle handle = leafSet.get(lsPos);
 

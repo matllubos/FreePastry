@@ -81,7 +81,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	msgDisp = new MessageDispatch();
 
 	routeTable = new RoutingTable(lhandle, rtMax);
-	leafSet = new LeafSet(nodeId, lSetSize);
+	leafSet = new LeafSet(lhandle, lSetSize);
 		
 	router = new StandardRouter(lhandle, routeTable, leafSet);
 		
@@ -106,6 +106,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
     public NetworkSimulator getNetworkSimulator() { return simulator; }
 
     public LeafSet getLeafSet() { return leafSet; }
+
     public RoutingTable getRouteSet() { return routeTable; }
 
     public void doneWithNode(PastryNode pnode) {

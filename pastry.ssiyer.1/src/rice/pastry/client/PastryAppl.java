@@ -64,7 +64,7 @@ public abstract class PastryAppl implements MessageReceiver
 	    NodeHandle handle = nsu.handle();
 	    boolean wa = nsu.wasAdded();
 
-	    leafSetChange(handle.getNodeId(), wa);
+	    leafSetChange(handle, wa);
 	}
     }
 
@@ -75,7 +75,7 @@ public abstract class PastryAppl implements MessageReceiver
 	    NodeHandle handle = nsu.handle();
 	    boolean wa = nsu.wasAdded();
 
-	    routeSetChange(handle.getNodeId(), wa);
+	    routeSetChange(handle, wa);
 	}
     }
 
@@ -272,20 +272,20 @@ public abstract class PastryAppl implements MessageReceiver
     /**
      * Called by pastry when the leaf set changes.
      *
-     * @param nid the node id.
+     * @param nh the handle of the node that was added or removed.
      * @param wasAdded true if the node was added, false if the node was removed.
      */
 
-    public void leafSetChange(NodeId nid, boolean wasAdded) {}
+    public void leafSetChange(NodeHandle nh, boolean wasAdded) {}
 
     /**
      * Called by pastry when the route set changes.
      *
-     * @param nid the node id.
+     * @param nh the handle of the node that was added or removed.
      * @param wasAdded true if the node was added, false if the node was removed.
      */
 
-    public void routeSetChange(NodeId nid, boolean wasAdded) {}
+    public void routeSetChange(NodeHandle nh, boolean wasAdded) {}
 }
 
 

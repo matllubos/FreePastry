@@ -110,7 +110,7 @@ public class StandardJoinProtocol implements MessageReceiver
 	    			
 			// now update the local leaf set
 			//System.out.println("Join ls:" + jr.getLeafSet());
-			BroadcastLeafSet bls = new BroadcastLeafSet(jh, jr.getLeafSet());
+			BroadcastLeafSet bls = new BroadcastLeafSet(jh, jr.getLeafSet(), BroadcastLeafSet.JoinInitial);
 			localHandle.receiveMessage(bls);
 		    }
 		}	    

@@ -177,7 +177,9 @@ public class RegrTestApp extends PastryAppl {
     }
 
 
-    public void leafSetChange(NodeId nid, boolean wasAdded) {
+    public void leafSetChange(NodeHandle nh, boolean wasAdded) {
+	NodeId nid = nh.getNodeId();
+
 	/*
 	System.out.println("at... " + getNodeId() + "'s leaf set");
 	System.out.print("node " + nid + " was ");
@@ -185,7 +187,7 @@ public class RegrTestApp extends PastryAppl {
 	else System.out.println("removed");
 	*/
   
-	if (!prg.pastryNodesSorted.containsKey(nid)) 
+	if (!prg.pastryNodesSorted.containsKey(nid) && nh.isAlive()) 
 	    System.out.println("at... " + getNodeId() + "leafSetChange failure 1 with " + nid);
 	
 	NodeId localId = thePastryNode.getNodeId();
@@ -214,19 +216,23 @@ public class RegrTestApp extends PastryAppl {
 
 	if ( (inBetween > lsSize && wasAdded && 
 	      !prg.pastryNodesLastAdded.contains(getNodeId()) && !prg.inConcJoin) ||
-	     (inBetween <= lsSize && !wasAdded && getLeafSet().get(nid) == null) ) {
+	     (inBetween <= lsSize && !wasAdded && getLeafSet().get(nid) == null) && prg.pastryNodes.contains(nh) ) {
 	    System.out.println("at... " + getNodeId() + "leafSetChange failure 3 with " + nid + 
 			       " wasAdded=" + wasAdded + " inBetween=" + inBetween);
 	    System.out.println(getLeafSet());
+	    /*
 	    Iterator it = prg.pastryNodesSorted.keySet().iterator();
 	    while (it.hasNext())
 		System.out.println(it.next());
+	    */
 	}
 
     }
 
 
-    public void routeSetChange(NodeId nid, boolean wasAdded) {
+    public void routeSetChange(NodeHandle nh, boolean wasAdded) {
+	NodeId nid = nh.getNodeId();
+
 	/*
 	System.out.println("at... " + getNodeId() + "'s route set");
 	System.out.print("node " + nid + " was ");

@@ -65,7 +65,7 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
 	msgDisp = new MessageDispatch();
 
 	routeTable = new RoutingTable(rmilocalhandle, rtMax);
-	leafSet = new LeafSet(nodeId, lSetSize);
+	leafSet = new LeafSet(rmilocalhandle, lSetSize);
 
 	router = new StandardRouter(rmilocalhandle, routeTable, leafSet);
 

@@ -5,7 +5,9 @@ SOURCE  = \
 	LeafSet.java\
 	RequestLeafSet.java\
 	BroadcastLeafSet.java\
-	LeafSetProtocolAddress.java
+	LeafSetProtocolAddress.java\
+	InitiateLeafSetMaintenance.java
+
 
 RMI_SOURCE =
 

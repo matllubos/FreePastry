@@ -43,18 +43,24 @@ import java.util.*;
 
 public class BroadcastLeafSet extends Message implements Serializable 
 {
+    public static final int Update = 0;
+    public static final int JoinInitial = 1;
+    public static final int JoinAdvertise = 2;
+
     private NodeHandle fromNode;
     private LeafSet theLeafSet;
-    
+    private int theType;
+
     /**
      * Constructor.
      */
     
-    public BroadcastLeafSet(NodeHandle from, LeafSet leafSet) { 
+    public BroadcastLeafSet(NodeHandle from, LeafSet leafSet, int type) { 
 	super(new LeafSetProtocolAddress()); 
 
 	fromNode = from;
 	theLeafSet = leafSet;
+	theType = type;
     }
     
     /**
@@ -63,11 +69,12 @@ public class BroadcastLeafSet extends Message implements Serializable
      * @param cred the credentials.
      */
 
-    public BroadcastLeafSet(Credentials cred, NodeHandle from, LeafSet leafSet) { 
+    public BroadcastLeafSet(Credentials cred, NodeHandle from, LeafSet leafSet, int type) { 
 	super(new LeafSetProtocolAddress(), cred); 
 
 	fromNode = from;
 	theLeafSet = leafSet;
+	theType = type;
     }
     
     /**
@@ -76,11 +83,12 @@ public class BroadcastLeafSet extends Message implements Serializable
      * @param stamp the timestamp
      */
 
-    public BroadcastLeafSet(Date stamp, NodeHandle from, LeafSet leafSet) { 
+    public BroadcastLeafSet(Date stamp, NodeHandle from, LeafSet leafSet, int type) { 
 	super(new LeafSetProtocolAddress(), stamp); 
 
 	fromNode = from;
 	theLeafSet = leafSet;
+	theType = type;
     }
 
     /**
@@ -90,11 +98,12 @@ public class BroadcastLeafSet extends Message implements Serializable
      * @param stamp the timestamp
      */    
 
-    public BroadcastLeafSet(Credentials cred, Date stamp, NodeHandle from, LeafSet leafSet) { 
+    public BroadcastLeafSet(Credentials cred, Date stamp, NodeHandle from, LeafSet leafSet, int type) { 
 	super(new LeafSetProtocolAddress(), cred, stamp); 
 
 	fromNode = from;
 	theLeafSet = leafSet;
+	theType = type;
     }
 
     /**
@@ -112,6 +121,14 @@ public class BroadcastLeafSet extends Message implements Serializable
      */
 
     public LeafSet leafSet() { return theLeafSet; }
+
+    /**
+     * Returns the type of leaf set.
+     *
+     * @return the type.
+     */
+
+    public int type() { return theType; }
 
     public String toString() {
 	String s = "";

@@ -62,7 +62,7 @@ public class PastryRegrTest {
     private DirectPastryNodeFactory factory;
     private NetworkSimulator simulator;
 
-    private Vector pastryNodes;
+    public Vector pastryNodes;
     public TreeMap pastryNodesSorted;
     public Vector pastryNodesLastAdded;
     public boolean inConcJoin;
@@ -114,7 +114,7 @@ public class PastryRegrTest {
 	    while(simulate()) msgCount++;
 	}
 
-	System.out.println("created " + pn + " messages: " + msgCount);
+	//System.out.println("created " + pn + " messages: " + msgCount);
 
 	checkLeafSet(rta);
 	checkRoutingTable(rta);
@@ -238,7 +238,7 @@ public class PastryRegrTest {
 	NodeId localId = rta.getNodeId();
 
 	// check size
-	if (ls.size() < ls.maxSize() && pastryNodesSorted.size() > ls.maxSize() / 2 + 1)
+	if (ls.size() < ls.maxSize() && pastryNodesSorted.size() > ls.size() + 1)
 	    System.out.println("checkLeafSet: too small at" + rta.getNodeId() +
 			       "ls.size()=" + ls.size() + " total nodes=" + pastryNodesSorted.size() + "\n" + ls);
 
@@ -331,15 +331,16 @@ public class PastryRegrTest {
 			NodeId id = rs.get(k).getNodeId();
 
 			// check if node exists
-			if (!pastryNodesSorted.containsKey(id))
-			    System.out.println("checkRoutingTable failure 2, row=" + i + " column=" + j +
-					       " rank=" + k);
-
-			// check if node has correct prefix
-			if ( !pastryNodesSorted.subMap(domainFirst,domainLast).containsKey(id) &&
-			     !domainLast.equals(id) )
-			    System.out.println("checkRoutingTable failure 3, row=" + i + " column=" + j +
-					       " rank=" + k);
+			if (!pastryNodesSorted.containsKey(id)) {
+			    if (simulator.isAlive(id))
+				System.out.println("checkRoutingTable failure 2, row=" + i + " column=" + j +
+						   " rank=" + k);
+			}
+			else   // check if node has correct prefix
+			    if ( !pastryNodesSorted.subMap(domainFirst,domainLast).containsKey(id) &&
+				 !domainLast.equals(id) )
+				System.out.println("checkRoutingTable failure 3, row=" + i + " column=" + j +
+						   " rank=" + k);
 		    }
 		}
 	    }		
@@ -350,6 +351,43 @@ public class PastryRegrTest {
     }
 
     /**
+     * initiate leafset maintenance
+     *
+     * @param pn the pastry node
+     */
+    public void initiateLeafSetMaintenance() {
+
+	for (int i=0; i<pastryNodes.size(); i++) {
+	    PastryNode pn = (PastryNode)pastryNodes.get(i);
+	    pn.receiveMessage(new InitiateLeafSetMaintenance());
+	    while(simulate());
+	}
+
+    }
+
+    /**
+     * kill a random number of nodes
+     *
+     * @param num the number of nodes to kill
+     */
+
+    public void killNodes(int num) {
+	EuclideanNetwork enet = (EuclideanNetwork)simulator;
+
+	for (int i=0; i<num; i++) {
+	    int n = rng.nextInt(pastryNodes.size());
+
+	    PastryNode pn = (PastryNode)pastryNodes.get(n);
+	    pastryNodes.remove(n);
+	    rtApps.remove(n);
+	    pastryNodesSorted.remove(pn.getNodeId());
+	    enet.setAlive(pn.getNodeId(), false);
+	    System.out.println("Killed " + pn.getNodeId());
+	}
+    }
+
+
+    /**
      * main
      */
 
@@ -357,6 +395,7 @@ public class PastryRegrTest {
 	PastryRegrTest pt = new PastryRegrTest();
 	
 	int n = 4000;
+	int d = 1000;
 	int k = 100;
 	int numConcJoins = 1;
 	int m = 100;
@@ -379,10 +418,32 @@ public class PastryRegrTest {
 	
 	System.out.println(n + " nodes constructed");
 
+	// kill some nodes
+	pt.killNodes(d);
+
+	System.out.println(d + " nodes killed");
+
+	// send messages
+	pt.sendPings((n-d)*k);
+	System.out.println((n-d)*k + " messages sent");
+
+	System.out.println("starting leafset maintenance");
+
+	// initiate leafset maint.
+	pt.initiateLeafSetMaintenance();
+
+	System.out.println("finished leafset maintenance");
+
+	// send messages
+	pt.sendPings((n-d)*k);
+	System.out.println((n-d)*k + " messages sent");
+
 	// print all nodeIds, sorted
 	Iterator it = pt.pastryNodesSorted.keySet().iterator();
 	while (it.hasNext())
 	    System.out.println(it.next());
+
+	System.out.println("starting RT and leafset check");
 
 	// check all routing tables, leaf sets
 	for (int i=0; i<pt.rtApps.size(); i++) {
@@ -391,7 +452,30 @@ public class PastryRegrTest {
 	}
     
 	//pt.sendPings(k);
+
+	System.out.println("Starting second leafset maintenance");
+
+	// initiate 2nd leafset maint.
+	pt.initiateLeafSetMaintenance();
+
+	System.out.println("finished second leafset maintenance");
+
+	// send messages
+	pt.sendPings((n-d)*k);
+	System.out.println((n-d)*k + " messages sent");
+
+	System.out.println("starting RT and leafset check");
+
+	// check all routing tables, leaf sets
+	for (int i=0; i<pt.rtApps.size(); i++) {
+	    pt.checkLeafSet((RegrTestApp)pt.rtApps.get(i));
+	    pt.checkRoutingTable((RegrTestApp)pt.rtApps.get(i));
+	}
+
     }
 }
+
+
+
 
 

@@ -7,6 +7,7 @@ import java.io.*;
 
 public class SimilarSet extends Observable implements NodeSet, Serializable
 {
+    private NodeHandle localNode;
     private NodeId baseId;
     private boolean clockwise;
 
@@ -29,12 +30,13 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
     /**
      * Constructor.
      *
-     * @param base the base node id.
+     * @param localNode the local node 
      * @param size the size of the similar set.
      */
 
-    public SimilarSet(NodeId base, int size, boolean cw) {
-	baseId = base;
+    public SimilarSet(NodeHandle localNode, int size, boolean cw) {
+	this.localNode = localNode;
+	baseId = localNode.getNodeId();
 	clockwise = cw;
 	theSize = 0;
 
@@ -154,16 +156,17 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
     /**
      * Gets the ith element in the set.
      *
-     * @param i an index.
+     * @param i an index. i == -1 refers to the baseiD
      * @return the handle associated with that id or null if no such handle is found.
      */
     
     public NodeHandle get(int i) {
-	if (i < 0 || i >= theSize) return null;
+	if (i < -1 || i >= theSize) return null;
+	if (i == -1) return localNode;
 	
 	return nodes[i]; 
     }
-    
+
     /**
      * Verifies if the set contains this particular id.
      * 
@@ -191,13 +194,15 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
 	    if (nodes[i].getNodeId().equals(nid)) {
 		NodeHandle handle = nodes[i];
 		
-		for (int j=i+1; j<theSize; j++)
+		for (int j=i+1; j<theSize; j++) {
 		    nodes[j - 1] = nodes[j];
+		    dist[j - 1] = dist[j];
+		}
 		
 		theSize --;
 
 		setChanged();
-		notifyObservers(new NodeSetUpdate(handle, true));
+		notifyObservers(new NodeSetUpdate(handle, false));
 		
 		return handle;
 	    }
@@ -230,7 +235,7 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
     public int size() { return theSize; }
 
     /**
-     * Most similar node to a given a node.  Returns -1 if the base id is the most similar
+     * Numerically closest node to a given a node.  Returns -1 if the base id is the most similar
      * and returns an index otherwise.
      *
      * @param nid a node id.

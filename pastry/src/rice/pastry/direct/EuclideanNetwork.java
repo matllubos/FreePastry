@@ -106,6 +106,14 @@ public class EuclideanNetwork implements NetworkSimulator
 	return nr.alive;
     }
 
+    public void setAlive(NodeId nid, boolean alive) {
+	NodeRecord nr = (NodeRecord) nodeMap.get(nid);
+	
+	if (nr == null) throw new Error("setting node alive for unknown node");
+
+	nr.alive = alive;
+    }
+
     public int proximity(NodeId a, NodeId b)
     {
 	NodeRecord nra = (NodeRecord) nodeMap.get(a);
