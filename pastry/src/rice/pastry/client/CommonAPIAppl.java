@@ -298,9 +298,6 @@ public abstract class CommonAPIAppl extends PastryAppl
     
     // hide defunct methods from PastryAppl
     public final void messageForAppl(Message msg) {}
-    public final boolean enrouteMessage(Message msg, NodeId key, NodeId nextHop, SendOptions opt) {
-	return true;
-    }
 
     /**
      * Called by pastry when the leaf set changes.

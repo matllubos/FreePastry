@@ -729,7 +729,7 @@ public class Scribe extends PastryAppl implements IScribe
      * if the message should be routed, false if the message should be 
      * cancelled.
      */
-    public boolean enrouteMessage( Message msg, NodeId target, 
+    public boolean enrouteMessage( Message msg, Id target, 
 				  NodeId nextHop, SendOptions opt ) {
 	ScribeMessage smsg = (ScribeMessage)msg;
 

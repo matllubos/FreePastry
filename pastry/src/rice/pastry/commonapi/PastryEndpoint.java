@@ -258,7 +258,7 @@ public class PastryEndpoint extends PastryAppl implements rice.p2p.commonapi.End
     }
   }
 
-  public final boolean enrouteMessage(Message msg, NodeId key, NodeId nextHop, SendOptions opt) {
+  public final boolean enrouteMessage(Message msg, Id key, NodeId nextHop, SendOptions opt) {
     if (msg instanceof RouteMessage) {
       return application.forward((RouteMessage) msg);
     } else {

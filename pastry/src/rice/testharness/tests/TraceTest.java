@@ -146,7 +146,7 @@ public class TraceTest extends Test {
   }
 
 
-  public boolean enrouteMessage(Message msg, NodeId key, NodeId nextHop, SendOptions opt) {
+  public boolean enrouteMessage(Message msg, Id key, NodeId nextHop, SendOptions opt) {
     boolean result = super.enrouteMessage(msg, key, nextHop, opt);
 
     if (msg instanceof TracePingMessage) {

@@ -106,7 +106,7 @@ public class Ping extends PastryAppl {
 
     }
     
-    public boolean enrouteMessage(Message msg, NodeId from, NodeId nextHop, SendOptions opt) {
+    public boolean enrouteMessage(Message msg, Id from, NodeId nextHop, SendOptions opt) {
 	/*
 	System.out.print(msg);
 	System.out.println(" at " + getNodeId());

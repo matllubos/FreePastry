@@ -127,7 +127,7 @@ public class HelloWorldApp extends PastryAppl {
      * @param opt send options
      * @return true if message needs to be forwarded according to plan.
      */
-    public boolean enrouteMessage(Message msg, NodeId key, NodeId nextHop, SendOptions opt) {
+    public boolean enrouteMessage(Message msg, Id key, NodeId nextHop, SendOptions opt) {
 	if (Log.ifp(5))
 	    System.out.println("Enroute " + msg + " at " + getNodeId());
 	return true;
