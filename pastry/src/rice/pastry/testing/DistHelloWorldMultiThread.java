@@ -73,8 +73,8 @@ public class DistHelloWorldMultiThread {
   private static int port = 5009;
   private static String bshost = null;
   private static int bsport = 5009;
-  private static int numnodes = 5;
-  private static int nummsgs = 100;
+  private static int numnodes = 15;
+  private static int nummsgs = 200;
   public static int protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
   private static boolean toFile = false;
 
