@@ -172,6 +172,16 @@ public class RouteSet extends Observable implements NodeSet, Serializable
     public int size() { return theSize; }
     
     /**
+     * Pings all nodes in the RouteSet. Called from RouteMaintenance.
+     */
+
+    public void pingAll() { 
+	for (int i=0; i<theSize; i++) {
+	    nodes[i].ping();
+	}
+    }
+
+    /**
      * Return the closest live node in the set.
      *
      * @return the closest node, or null if no live node exists in the set.

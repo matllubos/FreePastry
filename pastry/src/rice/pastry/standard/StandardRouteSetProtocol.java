@@ -179,8 +179,12 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver
 
 		RouteSet rs = row[col];
 
+		// ping all nodes in routeset
+		rs.pingAll();
+
 		// swap row with closest node only
 		NodeHandle nh = rs.closestNode();
+
 		if (nh != null) {
 		    //System.out.println(localHandle.getNodeId() + 
 		    //	       " swapping RT row[" + i + "," + col + "] with " + nh.getNodeId());

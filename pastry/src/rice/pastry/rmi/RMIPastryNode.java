@@ -106,24 +106,32 @@ public class RMIPastryNode extends PastryNode
 	}
     }
 
-    private class LeafSetMaintThread implements Runnable {
+    private class MaintThread implements Runnable {
 	public void run() {
-	    while (true) {
-		try {
-		    Thread.sleep(1000*leafSetMaintFreq);
-		} catch (InterruptedException e) {}
-		receiveMessage(new InitiateLeafSetMaintenance());
-	    }
-	}
-    }
 
-    private class RouteSetMaintThread implements Runnable {
-	public void run() {
+	    int leaftime = 0, routetime = 0, slptime = leafSetMaintFreq;
+
+	    if (slptime == 0 ||
+		(routeSetMaintFreq != 0 && routeSetMaintFreq < slptime))
+		    slptime = routeSetMaintFreq;
+
 	    while (true) {
 		try {
-		    Thread.sleep(1000*routeSetMaintFreq);
+		    Thread.sleep(1000 * slptime);
 		} catch (InterruptedException e) {}
-		receiveMessage(new InitiateRouteSetMaintenance());
+
+		leaftime += slptime;
+		routetime += slptime;
+
+		if (leaftime >= leafSetMaintFreq) {
+		    leaftime = 0;
+		    receiveMessage(new InitiateLeafSetMaintenance());
+		}
+
+		if (routetime >= routeSetMaintFreq) {
+		    routetime = 0;
+		    receiveMessage(new InitiateRouteSetMaintenance());
+		}
 	    }
 	}
     }
@@ -163,10 +171,8 @@ public class RMIPastryNode extends PastryNode
     public void doneNode(NodeHandle bootstrap) {
 
 	new Thread(new MsgHandler()).start();
-	if (leafSetMaintFreq > 0)
-	    new Thread(new LeafSetMaintThread()).start();
-	if (routeSetMaintFreq > 0)
-	    new Thread(new RouteSetMaintThread()).start();
+	if (leafSetMaintFreq > 0 || routeSetMaintFreq > 0)
+	    new Thread(new MaintThread()).start();
 
 	try {
 	    remotestub = (RMIRemoteNodeI) UnicastRemoteObject.exportObject(this);

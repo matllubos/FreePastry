@@ -58,7 +58,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
 
     private transient boolean alive;
     private transient int distance;
-    public static final int INFTY = 10000000;
+    public static final int INFTY = Integer.MAX_VALUE;
 
     // this is a sanity check thing: messages should never be sent to
     // unverified node handles, so this handle should be in the Pool.

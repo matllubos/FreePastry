@@ -67,8 +67,8 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
     /**
      * Large period (in seconds) means infrequent, 0 means never.
      */
-    private static final int leafSetMaintFreq = 30;
-    private static final int routeSetMaintFreq = 120;
+    private static final int leafSetMaintFreq = 60;
+    private static final int routeSetMaintFreq = 15*60;
 
     /**
      * Constructor.
