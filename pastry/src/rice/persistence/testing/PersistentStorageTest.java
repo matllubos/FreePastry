@@ -37,11 +37,11 @@ if advised of the possibility of such damage.
 package rice.persistence.testing;
 
 /*
- * @(#) StorageTest.java
+ * @(#) PersistentStorageTest.java
  *
  * @author Ansley Post
  * @author Alan Mislove
- *
+ * 
  * @version $Id$
  */
 import java.util.*;
@@ -56,11 +56,12 @@ import rice.persistence.*;
 public class PersistentStorageTest extends Test {
   
   private Storage storage;
+
   /**
-   * Builds a PersistentStorageTest
+   * Builds a MemoryStorageTest
    */
   public PersistentStorageTest() {
-    storage = new PersistentStorage(".", 1000000000);
+    storage = new PersistentStorage(".", 20000000);
   }
 
   public void setUp(final Continuation c) {
@@ -452,7 +453,21 @@ public class PersistentStorageTest extends Test {
     testExists(remove1);
   }
 
-  private void testScan() {
+  private void testScan(final Continuation c) {
+    final Continuation handleBadScan = new Continuation() {
+      public void receiveResult(Object o) {
+        stepDone(FAILURE, "Query returned; should have thrown exception");
+      }
+
+      public void receiveException(Exception e) {
+        stepDone(SUCCESS);
+
+        sectionEnd();
+
+        c.receiveResult(new Boolean(true));
+      }
+    };
+    
     final Continuation verify2 = new Continuation() {
       public void receiveResult(Object o) {
         if (o == null) {
@@ -468,6 +483,9 @@ public class PersistentStorageTest extends Test {
         }
 
         stepDone(SUCCESS);
+
+        stepStart("Requesting Scan from 'Monkey' to 9");
+        storage.scan("Monkey", new Integer(9), handleBadScan);
       }
 
       public void receiveException(Exception e) {
@@ -516,7 +534,7 @@ public class PersistentStorageTest extends Test {
         }
 
         stepStart("Requesting Scan from 3 to 6");
-        storage.scan(new Integer(3), new Integer(4), verify);
+        storage.scan(new Integer(3), new Integer(6), verify);
       }
 
       public void receiveException(Exception e) {
@@ -542,19 +560,253 @@ public class PersistentStorageTest extends Test {
     };
 
     testRemoval(insertString);
-  }    
+  }
+
+  private void testRandomInserts(final Continuation c) {
+    final Continuation checkRandom = new Continuation() {
+      private int start = 10;
+      private int end = 98;
+      private int skip = 2;
+
+      private int deleted = -1;
+
+      public void receiveResult(Object o) {
+        if (deleted == -1) {
+          stepStart("Checking object deletion");
+          deleted = ((Integer) o).intValue();
+          storage.scan("Stress" + start, "Stress" + end, this);
+        } else {
+          int length = ((Comparable[])o).length;
+
+          int desired = 1 + ((end-start)/skip) - deleted;
+          
+          if (length == desired) {
+            stepDone(SUCCESS);
+
+            sectionEnd();
+            c.receiveResult(new Boolean(true));
+          } else {
+            stepDone(FAILURE, "Expected " + desired + " objects after deletes, found " + length + ".");
+            return;
+          }
+        }
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+
+    
+    final Continuation removeRandom = new Continuation() {
+      private Random random = new Random();
+      private int start = 8;
+      private int end = 98;
+      private int count = start;
+      private int skip = 2;
+
+      private int deleted = 0;
+
+      public void receiveResult(Object o) {
+        if (count == start) {
+          stepStart("Removing random subset of objects");
+        }
+
+        if (o.equals(new Boolean(false))) {
+          stepDone(FAILURE, "Deletion of " + count + " failed.");
+          return;
+        }
+
+        if (count == end) {
+          stepDone(SUCCESS);
+          checkRandom.receiveResult(new Integer(deleted));
+          return;
+        }
+        
+        count += skip;
+
+        if (random.nextBoolean()) { 
+          deleted++;
+          storage.unstore("Stress" + count, this);
+        } else {
+          receiveResult(new Boolean(true));
+        }
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+
+    final Continuation checkScan = new Continuation() {
+      private int skip = 2;
+
+      private int start = 8;
+      private int end = 98;
+
+      public void receiveResult(Object o) {
+        if (start == 8) {
+          stepStart("Checking scans for all ranges");
+        } else {
+          Comparable[] result = (Comparable[]) o;
+          int desired = 1 + ((end - start) / skip);
+
+          if (result.length != desired) {
+            stepDone(FAILURE, "Expected " + desired + " found " + result.length + " keys in scan from " + start + " to " + end + ".");
+            return;
+          }
+        }
+        
+        if (start == end) {
+          stepDone(SUCCESS);
+          removeRandom.receiveResult(new Boolean(true));
+          return;
+        }
+
+        start += skip;
+        
+        storage.scan("Stress" + start, "Stress" + end, this);
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+    
+    final Continuation checkExists = new Continuation() {
+      private int count = 8;
+      private int skip = 2;
+      private int NUM_TO_INSERT=98;
+
+      public void receiveResult(Object o) {
+        if (o.equals(new Boolean(false))) {
+          stepDone(FAILURE);
+          return;
+        }
+        
+        if (count == 8) {
+          stepStart("Checking exists for all 50 objects");
+        }
+
+        if (count == NUM_TO_INSERT) {
+          stepDone(SUCCESS);
+          checkScan.receiveResult(new Boolean(true));
+          return;
+        }
+
+        count += skip;
+        storage.exists("Stress" + count, this);
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+    
+    
+    final Continuation insert = new Continuation() {
+      private int count = 8;
+      private int skip = 2;
+      private int NUM_TO_INSERT=98;
+
+      public void receiveResult(Object o) {
+        if (o.equals(new Boolean(false))) {
+          stepDone(FAILURE, "Insertion of " + count + " failed.");
+          return;
+        }
+        
+        if (count == 8) {
+          sectionStart("Stress Testing");
+          stepStart("Inserting 50 objects from 0 to 1000000 bytes");
+        }
+
+        if (count == NUM_TO_INSERT) {
+          stepDone(SUCCESS);
+          checkExists.receiveResult(new Boolean(true));
+          return;
+        }
+
+        count += skip;
+        storage.store("Stress" + count, new byte[count * count * count], this);
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+
+    testScan(insert);
+  }
+
+
+  private void testErrors() {
+    final Continuation validateNullValue = new Continuation() {
+
+      public void receiveResult(Object o) {
+        if (o.equals(new Boolean(true))) {
+          stepDone(FAILURE, "Null value should return false");
+          return;
+        }
+
+        stepDone(SUCCESS);
+
+        sectionEnd();        
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+
+    final Continuation insertNullValue = new Continuation() {
+
+      public void receiveResult(Object o) {
+        if (o.equals(new Boolean(true))) {
+          stepDone(FAILURE, "Null key should return false");
+          return;
+        }
+
+        stepDone(SUCCESS);
+
+        stepStart("Inserting null value");
+
+        storage.store("null value", null, validateNullValue);
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+
+    final Continuation insertNullKey = new Continuation() {
+
+      public void receiveResult(Object o) {
+        if (o.equals(new Boolean(false))) {
+          stepDone(FAILURE, "Random insert tests failed.");
+          return;
+        }
+
+        sectionStart("Testing Error Cases");
+        stepStart("Inserting null key");
+
+        storage.store(null, "null key", insertNullValue);
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+
+    testRandomInserts(insertNullKey);
+  }
   
   public void start() {
-    testScan();
+    testErrors();
   }
 
   public static void main(String[] args) {
-    PersistentStorageTest test = new PersistentStorageTest();
-    test.start();
+    StorageTest test = new StorageTest();
 
-    /* Test for a second time and see if things stick around after exit */
-    test = new PersistentStorageTest();
     test.start();
-    
   }
 }

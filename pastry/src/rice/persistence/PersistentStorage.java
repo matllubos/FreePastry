@@ -62,7 +62,7 @@ public class PersistentStorage implements Storage {
 
   private File rootDirectory;       // root directory to store stuff in
   private File backupDirectory;     // dir for storing persistent objs
-  private File transDirectory; // dir for transactions
+  private File transDirectory;      // dir for transactions
 
   private static String rootDir;                          // rootDirectory
   private static final String backupDir = "/FreePastry-Storage-Root/"; // backupDirectory
@@ -133,8 +133,6 @@ public class PersistentStorage implements Storage {
       objStream.writeObject(id);
       objStream.writeObject(obj);
 
-      /* I should look at this a little harder */
-      /* change store so that we fail if not enough space for object */
 
       decreaseUsedSpace(objFile.length()); /* decrease the amount used */
 
@@ -176,9 +174,6 @@ public class PersistentStorage implements Storage {
    * <code>false</code>.
    */
   public void unstore(Comparable id, Continuation c) {
-     /* 1. Should remove this from fileMap*/
-     /* 3. Should remove from disk */
-     /* 4. Should update the value of used space */
 
       File objFile = getFile(id); 
       if(objFile == null){
@@ -345,7 +340,6 @@ public class PersistentStorage implements Storage {
   }
 
   private String makeFileName(Comparable id){
-    /* I'm using the hashCode, hopefully this won't collide ... */
     return String.valueOf(id.hashCode());
   }
 
