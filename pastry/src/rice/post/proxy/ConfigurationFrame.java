@@ -26,12 +26,13 @@ public class ConfigurationFrame extends JFrame {
     super("ePOST Configuration");
     
     this.parameters = parameters;
-    this.panels = new ControlPanel[5];
+    this.panels = new ControlPanel[6];
     this.panels[0] = new JavaConfiguration();
     this.panels[1] = new PostConfiguration();
     this.panels[2] = new EmailConfiguration();
     this.panels[3] = new ProxyConfiguration();
-    this.panels[4] = new OtherConfiguration();
+    this.panels[4] = new GlacierConfiguration();
+    this.panels[5] = new OtherConfiguration();
     
     GridBagLayout layout = new GridBagLayout();
     getContentPane().setLayout(layout);
@@ -42,7 +43,8 @@ public class ConfigurationFrame extends JFrame {
     pane.addTab("POST", null, panels[1], "POST Configuration Pane");
     pane.addTab("Email", null, panels[2], "Email Configuration Pane");
     pane.addTab("Proxy", null, panels[3], "Proxy Configuration Pane");
-    pane.addTab("Other", null, panels[4], "Other Configuration Pane");
+    pane.addTab("Glacier", null, panels[4], "Glacier Configuration Pane");
+    pane.addTab("Other", null, panels[5], "Other Configuration Pane");
 
     ButtonPane button = new ButtonPane(new GridBagLayout());
     
@@ -148,6 +150,13 @@ public class ConfigurationFrame extends JFrame {
               new RestartConfiguration(new GridBagLayout())});
     }
   }
+
+  protected class GlacierConfiguration extends ControlPanel {
+    public GlacierConfiguration() {
+      super(new GridBagLayout(), 
+            new TitledPanel[] { new GlacierBandwidthConfiguration(new GridBagLayout()) });
+    }
+  }
   
   protected class OtherConfiguration extends ControlPanel {
     public OtherConfiguration() {
@@ -247,6 +256,14 @@ public class ConfigurationFrame extends JFrame {
       super("General", layout, 
             new ConfigurationPanel[][] { 
             { new EnableBox("email_gateway", "Serve As Gateway", new GridBagLayout(), "Whether or not this machine should serve as a gateway - this should only be done by site administrators"), new EnableBox("email_accept_nonlocal", "Non-Local Connections", new GridBagLayout(), "Whether or not the email servers should accept connections which are not from the local box") } });
+    }
+  }
+
+  protected class GlacierBandwidthConfiguration extends TitledPanel {
+    public GlacierBandwidthConfiguration(GridBagLayout layout) {      
+      super("Bandwidth limit", layout, 
+            new ConfigurationPanel[][] { 
+            { new SliderBox("glacier_max_kbytes_per_sec", "Max bytes/sec", new GridBagLayout(), new JSlider(50, 2000), "If Glacier consumes too much of your available bandwidth, you can use this slider to slow it down.") } });
     }
   }
   
@@ -523,6 +540,48 @@ public class ConfigurationFrame extends JFrame {
     }
   }
   
+  protected class SliderBox extends ConfigurationPanel {
+
+    protected String label;
+    
+    protected JSlider slider;
+    
+    public SliderBox(String parameter, String label, GridBagLayout layout, String tip) {
+      this(parameter, label, layout, new JSlider(), tip);
+    }
+    
+    public SliderBox(String parameter, String label, GridBagLayout layout, JSlider slider, String tip) {
+      super(parameter, layout);
+      this.label = label; 
+      this.slider = slider;
+      
+      JLabel sliderLabel = new JLabel(label + ": ", JLabel.TRAILING);
+      sliderLabel.setLabelFor(slider);
+      sliderLabel.setToolTipText(tip);
+      
+      setPreferredSize(TEXT_BOX_SIZE);
+      
+      GridBagConstraints gbc1 = new GridBagConstraints();
+      layout.setConstraints(sliderLabel, gbc1);      
+      add(sliderLabel);
+      
+      GridBagConstraints gbc2 = new GridBagConstraints();
+      gbc2.gridx = 1;
+      layout.setConstraints(slider, gbc2);      
+      add(slider);
+      
+      slider.setValue(parameters.getIntParameter(parameter));
+
+      int tickSpacing = slider.getMaximum() - slider.getMinimum();
+      slider.setMajorTickSpacing(tickSpacing);
+      slider.setPaintLabels(true);
+    }
+    
+    protected String getValue() {
+      return ""+slider.getValue(); 
+    }
+  }
+      
   protected class NumericBox extends TextBox {
     
     protected String mask;
