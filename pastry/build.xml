@@ -317,7 +317,7 @@
       <tarfileset dir="${lib.dir}" prefix="lib">
         <include name="xmlpull*.jar"/> 
         <include name="bouncy*.jar"/> 
-      <tarfileset/> 
+      </tarfileset> 
       <tarfileset dir="." includes="build.xml"/>
     </tar>
     <zip destfile="FreePastry-${freepastry-version}-source.zip">
@@ -361,7 +361,7 @@
       <zipfileset dir="${lib.dir}" prefix="lib">
         <include name="xmlpull*.jar"/> 
         <include name="bouncy*.jar"/> 
-      <zipfileset/> 
+      </zipfileset> 
       <zipfileset dir="." includes="build.xml"/>
     </zip>
     <tar destfile="FreePastry-${freepastry-version}-docs.tgz" compression="gzip">
