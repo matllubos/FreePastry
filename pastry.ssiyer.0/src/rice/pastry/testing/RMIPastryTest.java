@@ -42,6 +42,7 @@ import rice.pastry.standard.*;
 import rice.pastry.join.*;
 
 import java.util.*;
+import java.net.*;
 import java.rmi.Naming;
 import java.rmi.RMISecurityManager;
 
@@ -54,12 +55,12 @@ import java.rmi.RMISecurityManager;
  *
  * @version $Id$
  *
- * @author andrew ladd
  * @author sitaram iyer
  */
 
 public class RMIPastryTest {
     private RMIPastryNodeFactory factory;
+    private Vector pastrynodes;
 
     private static int port;
     private static String connecthost;
@@ -68,6 +69,7 @@ public class RMIPastryTest {
 
     public RMIPastryTest() {
 	factory = new RMIPastryNodeFactory();
+	pastrynodes = new Vector();
     }
 
     public void makePastryNode() {
@@ -79,12 +81,45 @@ public class RMIPastryTest {
 	    System.out.println("Unable to find another node on localhost");
 	}
 
-	try {
-	    other = (RMIPastryNode)Naming.lookup("//" + connecthost +
-						  ":" + connectport + "/Pastry");
-	} catch (Exception e) {
-	    System.out.println("Unable to find another node on "
-			       + connecthost + ":" + connectport);
+	int nattempts = 3;
+
+	// if connecthost:connectport == localhost:port then nattempts = 0.
+	// waiting for ourselves is not harmful, but pointless, and denies
+	// others the usefulness of symmetrically waiting for us.
+
+	if (connectport == port) {
+	    InetAddress localaddr = null, connectaddr = null;
+	    String host = null;
+
+	    try {
+		host = "localhost"; localaddr = InetAddress.getLocalHost();
+		connectaddr = InetAddress.getByName(host = connecthost);
+	    } catch (UnknownHostException e) {
+		System.out.println("[rmi] Error: Host unknown: " + host);
+		nattempts = 0;
+	    }
+
+	    if (nattempts != 0 && localaddr.equals(connectaddr))
+		nattempts = 0;
+	}
+
+	for (int i = 1; other == null && i <= nattempts; i++) {
+	    try {
+		other = (RMIPastryNode)Naming.lookup("//" + connecthost
+						    + ":" + connectport
+						    + "/Pastry");
+	    } catch (Exception e) {
+		System.out.println("Unable to find another node on "
+				   + connecthost + ":" + connectport
+				   + " (attempt " + i + "/" + nattempts + ")");
+	    }
+
+	    if (i != nattempts) {
+		// synchronized (this) {
+		    // try { wait(1000); } catch (InterruptedException e) {}
+		// }
+		pause(1000);
+	    }
 	}
 
 	/*
@@ -93,29 +128,36 @@ public class RMIPastryTest {
 	 * creating the node, so we don't find ourselves.
 	 */
 	PastryNode pn = new PastryNode(factory);
+	pastrynodes.add(pn);
 	System.out.println("created " + pn);
 
-	/*
-	 * don't know anyone else, so we return now and just hang around
-	 */
-	if (other == null) return;
-
-	NodeId otherid;
-	try {
-	    otherid = other.getNodeId();
-	} catch (Exception e) {
-	    System.out.println("[rmi] Unable to get remote node id: " + e.toString());
-	    return;
+	NodeId otherid = null;
+	if (other != null) {
+	    try {
+		otherid = other.getNodeId();
+	    } catch (Exception e) {
+		System.out.println("[rmi] Unable to get remote node id: " + e.toString());
+		other = null;
+	    }
 	}
 
-	RMINodeHandle other_handle = new RMINodeHandle(other, otherid /* , pn */);
-	pn.receiveMessage(new InitiateJoin(other_handle));
+	if (otherid != null) {
+	    RMINodeHandle other_handle = new RMINodeHandle(other, otherid /* , pn */);
+	    pn.receiveMessage(new InitiateJoin(other_handle));
+	}
+    }
 
-	System.out.println("XXX waiting one second...");
-	synchronized (this) { try { wait(1000); } catch (Exception e) {} }
+    public void printLeafSets() {
+	pause(10000);
 
-	System.out.println(pn.getLeafSet());
-	System.out.println("------------------------------------");
+	for (int i = 0; i < pastrynodes.size(); i++)
+	    System.out.println(((PastryNode)pastrynodes.get(i)).getLeafSet());
+    }
+
+    public synchronized void pause(int ms) {
+	System.out.println("waiting for " + (ms/1000) + " sec");
+	try { wait(ms); } catch (InterruptedException e) {}
+	System.out.println("done waiting.");
     }
 
     /**
@@ -173,5 +215,7 @@ public class RMIPastryTest {
 
 	for (int i = 0; i < numnodes; i++)
 	    pt.makePastryNode();
+
+	pt.printLeafSets();
     }
 }
