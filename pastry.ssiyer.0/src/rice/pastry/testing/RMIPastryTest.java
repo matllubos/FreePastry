@@ -42,7 +42,7 @@ public class RMIPastryTest {
 	    other = (RMIPastryNode)Naming.lookup("//" + connecthost +
 						  ":" + connectport + "/Pastry");
 	} catch (Exception e) {
-	    System.out.println("Unable to find another node: " + e.toString());
+	    System.out.println("Unable to find another node: " + e);
 	}
 
 	/*
