@@ -1,6 +1,7 @@
 package rice.post.storage;
 
 import java.security.*;
+import java.io.*;
 
 import rice.pastry.*;
 import rice.past.*;
@@ -13,7 +14,7 @@ import rice.past.*;
  * 
  * @version $Id$
  */
-public class ContentHashReference {
+public class ContentHashReference implements Serializable {
   
   /**
    * Location where this data is stored in PAST.
