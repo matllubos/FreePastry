@@ -96,7 +96,7 @@ public class EmailTest {
 	    // and email services
 		
 	    try {
-		Thread.sleep(5000);
+		Thread.sleep(2000);
 	    } catch(InterruptedException ie) {
 		return null;
 	    }
