@@ -77,7 +77,7 @@ public class SphereNetwork implements NetworkSimulator {
     NodeRecord nr = (NodeRecord) nodeMap.get(nid);
 
     if (nr == null) {
-      throw new Error("asking about node alive for unknown node");
+      return true; //throw new Error("asking about node alive for unknown node");
     }
 
     return nr.alive;
@@ -141,13 +141,10 @@ public class SphereNetwork implements NetworkSimulator {
 
       // notify all handles which exist on currently alive nodes
       for (int i = 0; i < handles.length; i++) {
-        if (handles[i].getLocalNode().getNodeId().equals(nid) ||
-          isAlive(handles[i].getLocalNode().getNodeId())) {
-          if (alive) {
-            handles[i].notifyObservers(NodeHandle.DECLARED_LIVE);
-          } else {
-            handles[i].notifyObservers(NodeHandle.DECLARED_DEAD);
-          }
+        if (alive) {
+          handles[i].notifyObservers(NodeHandle.DECLARED_LIVE);
+        } else {
+          handles[i].notifyObservers(NodeHandle.DECLARED_DEAD);
         }
       }
     }
@@ -205,9 +202,10 @@ public class SphereNetwork implements NetworkSimulator {
    * @param node DESCRIBE THE PARAMETER
    */
   public void deliverMessage(Message msg, PastryNode node) {
-    MessageDelivery md = new MessageDelivery(msg, node);
-
-    msgQueue.addElement(md);
+    if (isAlive(msg.getSenderId())) {
+      MessageDelivery md = new MessageDelivery(msg, node);
+      msgQueue.addElement(md);
+    }
   }
 
   /**
@@ -257,9 +255,9 @@ public class SphereNetwork implements NetworkSimulator {
       //System.out.println("delivering to " + node);
       //System.out.println(msg);
 
-      node.receiveMessage(msg);
-      //System.out.println("----------------------");
-    }
+      if (isAlive(msg.getSenderId())) 
+        node.receiveMessage(msg);
+    } 
   }
 
   /**

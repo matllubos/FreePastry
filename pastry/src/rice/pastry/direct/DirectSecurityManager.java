@@ -54,6 +54,7 @@ public class DirectSecurityManager implements PastrySecurityManager {
   
   private PastryNode pnode;
   private NetworkSimulator sim;
+  private Hashtable pool;
 
   /**
    * Constructor.
@@ -62,6 +63,7 @@ public class DirectSecurityManager implements PastrySecurityManager {
   public DirectSecurityManager(NetworkSimulator ns) {
     pnode = null;
     sim = ns;
+    pool = new Hashtable();
   }
 
   /**
@@ -106,8 +108,14 @@ public class DirectSecurityManager implements PastrySecurityManager {
     } else if (handle instanceof DirectNodeHandle) {
       DirectNodeHandle dnh = (DirectNodeHandle) handle;
 
-      DirectNodeHandle retDnh = new DirectNodeHandle(pnode, dnh.getRemote(), sim);
-      sim.registerNodeId(retDnh);
+      DirectNodeHandle retDnh = (DirectNodeHandle) pool.get(handle.getNodeId());
+
+      if (retDnh == null) {
+        retDnh = new DirectNodeHandle(pnode, dnh.getRemote(), sim);
+        pool.put(handle.getNodeId(), retDnh);
+
+        sim.registerNodeId(retDnh);
+      }
 
       return retDnh;
     } else throw new Error("node handle of unknown type");
