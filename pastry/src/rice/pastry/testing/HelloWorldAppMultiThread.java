@@ -88,7 +88,7 @@ public class HelloWorldAppMultiThread extends PastryAppl {
         Id rndid = Id.makeRandomId(rng);
 	if (Log.ifp(5))
 	    System.out.println("Sending message from " + getNodeId() + " to random dest " + rndid);
-	Message msg = new HelloMsg(addr, getNodeId(), rndid, ++msgid);
+	Message msg = new HelloMsg(addr, thePastryNode.getLocalHandle(), rndid, ++msgid);
 	routeMsg(rndid, msg, cred, new SendOptions());
     }
     
@@ -102,7 +102,7 @@ public class HelloWorldAppMultiThread extends PastryAppl {
 	if (Log.ifp(5)) {
 //	    System.out.println("Sending message # " + id + " from " + getNodeId() + " to random dest " + rndid);
     }
-	HelloMsg msg = new HelloMsg(addr, getNodeId(), rndid, id);
+	HelloMsg msg = new HelloMsg(addr, thePastryNode.getLocalHandle(), rndid, id);
         routeMsg(rndid, msg, cred, new SendOptions());
         driver.MessageSent(msg);        
     }
@@ -136,10 +136,10 @@ public class HelloWorldAppMultiThread extends PastryAppl {
                     Thread.currentThread().sleep(driver.rng.nextInt(2000));*/
                     if(msg instanceof HelloMsg){
                         HelloMsg hmsg = (HelloMsg)msg;
-                        hmsg.actualReceiver = getNodeId();
+                        hmsg.actualReceiver = thePastryNode.getLocalHandle(); //getNodeId();
                         driver.MessageRecieved(hmsg);
                         //if (Log.ifp(5))
-                            //System.out.println("Received " + msg + " at " + getNodeId());
+                          //  System.out.println("Received " + msg + " at " + getNodeId());
                             //Thread.dumpStack();
                     }
                     /*else throw new Exception("Message not recognized");
@@ -162,10 +162,12 @@ public class HelloWorldAppMultiThread extends PastryAppl {
      * @param opt send options
      * @return true if message needs to be forwarded according to plan.
      */
-    public boolean enrouteMessage(Message msg, NodeId key, NodeId nextHop, SendOptions opt) {
+    public boolean enrouteMessage(Message msg, Id key, NodeId nextHop, SendOptions opt) {
 	//if (Log.ifp(5))
+      if (msg instanceof HelloMsg)
+        driver.updateMsg((HelloMsg)msg);
 	    //System.out.println("Enroute " + msg + " at " + getNodeId());
-	return true;
+    	return true;
     }
 
     /**
@@ -209,7 +211,7 @@ public class HelloWorldAppMultiThread extends PastryAppl {
     public void notifyReady() {
         
 	//if (Log.ifp(6))
-	    System.out.println("Node " + getNodeId() + " ready, waking up any clients");
+	    System.out.println("Node " + thePastryNode.getLocalHandle() + " ready, waking up any clients");
 	//sendRndMsg(new Random());
 
     }

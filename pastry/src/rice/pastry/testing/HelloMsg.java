@@ -10,7 +10,7 @@ import java.net.InetSocketAddress;
 import java.util.Vector;
 
 import rice.p2p.commonapi.Id;
-import rice.pastry.NodeId;
+import rice.pastry.NodeHandle;
 import rice.pastry.messaging.Address;
 import rice.pastry.messaging.Message;
 import rice.pastry.socket.ConnectionManager;
@@ -27,15 +27,15 @@ public class HelloMsg extends Message {
 	//public byte[] garbage = new byte[64000];
     public int queueSize = -1;
 	public transient int state;
-	public NodeId source;
+	public NodeHandle source;
     public Id target;
-    public NodeId actualReceiver;
+    public NodeHandle actualReceiver;
     private int msgid;
     private transient Vector receivers;
     public transient ConnectionManager lastMan;
     public transient SocketManager lastSM;
 
-    public HelloMsg(Address addr, NodeId src, Id tgt, int mid) {
+    public HelloMsg(Address addr, NodeHandle src, Id tgt, int mid) {
         super(addr);
         source = src;
         target = tgt;

@@ -88,7 +88,7 @@ public class HelloWorldApp extends PastryAppl {
 	Id rndid = Id.makeRandomId(rng);
 	if (Log.ifp(5))
 	    System.out.println("Sending message from " + getNodeId() + " to random dest " + rndid);
-	Message msg = new HelloMsg(addr, getNodeId(), rndid, ++msgid);
+	Message msg = new HelloMsg(addr, thePastryNode.getLocalHandle(), rndid, ++msgid);
 	routeMsg(rndid, msg, cred, new SendOptions());
     }
 
