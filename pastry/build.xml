@@ -118,7 +118,7 @@
   </target>
 
   <target name="epost_jar" depends="compile">
-    <jar destfile="epost.jar" manifest="${jar.dir}/epost/Manifest">
+    <jar destfile="epost.jar" manifest="${jar.dir}/epost/Manifest" compress="true">
       <fileset dir="${build.dir}" includes="rice/Continuation*.class"/>
       <fileset dir="${build.dir}" includes="rice/Executable*.class"/>
       <fileset dir="${build.dir}" includes="rice/email/**/*.class"/>
@@ -143,6 +143,32 @@
 
   <target name="epost" depends="epost_jar">
     <signjar jar="epost.jar" alias="ePOST" storepass="monkey" keystore="jars/ePOST_keystore" />
+  </target>
+
+  <target name="epost-release" depends="epost">
+    <move file="epost.jar" tofile="epost-${epost-version}.jar"/>
+    <tar destfile="epost-${epost-version}-all.tgz" compression="gzip">
+      <tarfileset dir="." includes="epost-${epost-version}.jar"/>
+      <tarfileset dir="." includes="lib/activation.jar"/>
+      <tarfileset dir="." includes="lib/antlr.jar"/>
+      <tarfileset dir="." includes="lib/bouncycastle.jar"/>
+      <tarfileset dir="." includes="lib/javamail.jar"/>
+      <tarfileset dir="." includes="lib/jcommon-0.9.1.jar"/>
+      <tarfileset dir="." includes="lib/jfreechart-0.9.16.jar"/>
+      <tarfileset dir="." includes="lib/xmlpull_1_1_3_4a.jar"/>
+      <tarfileset dir="." includes="lib/xpp3-1.1.3.4d_b2.jar"/>
+    </tar>
+    <zip destfile="epost-${epost-version}-all.zip">
+      <fileset dir="." includes="epost-${epost-version}.jar"/>
+      <fileset dir="." includes="lib/activation.jar"/>
+      <fileset dir="." includes="lib/antlr.jar"/>
+      <fileset dir="." includes="lib/bouncycastle.jar"/>
+      <fileset dir="." includes="lib/javamail.jar"/>
+      <fileset dir="." includes="lib/jcommon-0.9.1.jar"/>
+      <fileset dir="." includes="lib/jfreechart-0.9.16.jar"/>
+      <fileset dir="." includes="lib/xmlpull_1_1_3_4a.jar"/>
+      <fileset dir="." includes="lib/xpp3-1.1.3.4d_b2.jar"/>
+    </zip>
   </target>
 
 </project>
