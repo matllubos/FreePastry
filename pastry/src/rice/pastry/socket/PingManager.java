@@ -286,13 +286,13 @@ public class PingManager extends SelectionKeyHandler {
       } else if (dm instanceof WrongEpochMessage) {
         WrongEpochMessage wem = (WrongEpochMessage) dm;
         
-        System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + dm.getOutboundPath().reverse());      
+        if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + dm.getOutboundPath().reverse());      
         System.out.println("----- INFO: Received wrong epoch update from " + wem.getCorrect() + " was " + wem.getIncorrect());      
 
         manager.markAlive(dm.getOutboundPath());
         manager.markDead(wem.getIncorrect());
       } else if (dm instanceof IPAddressRequestMessage) {
-        System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + SourceRoute.build(new EpochInetSocketAddress(from)));      
+        if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + SourceRoute.build(new EpochInetSocketAddress(from)));      
         
         enqueue(SourceRoute.build(new EpochInetSocketAddress(from)), new IPAddressResponseMessage(from)); 
       } else {

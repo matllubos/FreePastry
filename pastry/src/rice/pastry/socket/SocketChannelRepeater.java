@@ -215,7 +215,7 @@ public class SocketChannelRepeater {
 
     // implies that the channel is closed
     if (read == -1) 
-      throw new IOException("Error on read - the channel has been closed.");
+      throw new ClosedChannelException();
 
     // return true if we've read anything (and can therefore write something)
     if (read > 0) {

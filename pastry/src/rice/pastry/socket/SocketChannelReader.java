@@ -135,7 +135,7 @@ public class SocketChannelReader {
 
       // implies that the channel is closed
       if (read == -1) 
-        throw new IOException("Error on read - the channel has been closed.");
+        throw new ClosedChannelException();
 
       if (buffer.remaining() == 0) {
         buffer.flip();

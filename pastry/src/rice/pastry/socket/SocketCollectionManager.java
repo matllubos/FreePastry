@@ -304,15 +304,17 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   }
   
   /**
-    * Method which cloeses a socket to a given remote node handle, and updates
-   * the bookkeeping to keep track of this closing
+   * Method which cloeses a socket to a given remote node handle, and updates
+   * the bookkeeping to keep track of this closing.  Note that this method does
+   * not completely close the socket, rather,  it simply calls shutdown(), which
+   * starts the shutdown process.
    *
    * @param address The address of the remote node
    */
   protected void closeSocket(SourceRoute path) {
     synchronized (sockets) {
       if (sockets.containsKey(path)) {
-        ((SocketManager) sockets.get(path)).close();
+        ((SocketManager) sockets.get(path)).shutdown();
       } else {
         debug("SERIOUS ERROR: Request to close socket to non-open handle to path " + path);
       }
@@ -651,6 +653,23 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       if (! bootstrap)
         send(path.reverse(localAddress));
     }
+    
+    /**
+     * Method which initiates a shutdown of this socket by calling 
+     * shutdownOutput().  This has the effect of removing the manager from
+     * the open list.
+     */
+    public void shutdown() {
+      try {
+        System.out.println("SHUTDOWN OUT: Shutting down output to path " + path);
+        ((SocketChannel) key.channel()).socket().shutdownOutput();
+        socketClosed(path, this);
+        SelectorManager.getSelectorManager().modifyKey(key);
+      } catch (IOException e) {
+        System.err.println("ERROR: Received exception " + e + " while shutting down output.");
+        close();
+      }
+    }
 
     /**
      * Method which closes down this socket manager, by closing the socket,
@@ -712,7 +731,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param key The key in question
      */
     public synchronized void modifyKey(SelectionKey key) {
-      if ((! writer.isEmpty()) && ((key.interestOps() & SelectionKey.OP_WRITE) == 0)) 
+      if (((SocketChannel) key.channel()).socket().isOutputShutdown()) 
+        key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+      else if ((! writer.isEmpty()) && ((key.interestOps() & SelectionKey.OP_WRITE) == 0))
         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
     }
 
@@ -771,10 +792,12 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         }
       } catch (IOException e) {
         debug("ERROR " + e + " reading - cancelling.");
+        System.out.println("SHUTDOWN OUT: Read closing of path " + path + " " + ((SocketChannel) key.channel()).socket().isOutputShutdown());
         
-        // if it's not a bootstrap path, then check to see if the remote
-        // address is dead or just closing a socket
-        if ((path != null) && (path.getFirstHop().getAddress().getPort() != BOOTSTRAP_PORT))
+        // if it's not a bootstrap path, and we didn't close this socket's output,
+        // then check to see if the remote address is dead or just closing a socket
+        if ((path != null) && (path.getFirstHop().getAddress().getPort() != BOOTSTRAP_PORT) && 
+            (! ((SocketChannel) key.channel()).socket().isOutputShutdown()))
           checkDead(path);
         
         close();
@@ -931,6 +954,22 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     }
     
     /**
+     * Method which initiates a shutdown of this socket by calling 
+     * shutdownOutput().  This has the effect of removing the manager from
+     * the open list.
+     */
+    public void shutdown(SelectionKey key) {
+      try {
+        System.out.println("SHUTDOWN OUT: Shutting down output to SR path...");
+        ((SocketChannel) key.channel()).socket().shutdownOutput();
+        sourceRouteClosed(this);
+      } catch (IOException e) {
+        System.err.println("ERROR: Received exception " + e + " while shutting down SR output.");
+        close();
+      }
+    }
+    
+    /**
       * Method which closes down this socket manager, by closing the socket,
      * cancelling the key and setting the key to be interested in nothing
      */
@@ -949,6 +988,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           key2.attach(null);
           key2 = null;
         }
+        
+        System.out.println("SHUTDOWN OUT: Closing SR path...");
         
         sourceRouteClosed(this);
       } catch (IOException e) {
@@ -988,6 +1029,19 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
           otherKey(key).interestOps(otherKey(key).interestOps() | SelectionKey.OP_WRITE);
         }
+      } catch (ClosedChannelException e) {
+        debug("INFO " + e + " reading source route - closing other half...");
+
+        // first, deregister in reading and writing to the appropriate sockets
+        key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
+        otherKey(key).interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+
+        // then determine if the sockets are now completely shut down,
+        // or if only half is now closed
+        if (((SocketChannel) otherKey(key).channel()).socket().isInputShutdown()) 
+          close();
+        else
+          shutdown(otherKey(key));
       } catch (IOException e) {
         debug("ERROR " + e + " reading source route - cancelling.");
         close();

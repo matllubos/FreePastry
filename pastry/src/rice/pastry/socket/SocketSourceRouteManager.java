@@ -409,14 +409,15 @@ public class SocketSourceRouteManager {
     }
     
     /**
-      * This method should be called when a known route is declared
-     * alive.
+     * This method should be called when a known route is declared
+     * suspected.
      *
-     * @param route The now-live route
+     * @param route The now-suspected route
      */
     protected synchronized void markSuspected(SourceRoute route) {      
-      // mark this address as suspected
-      setSuspected();
+      // mark this address as suspected, if this is currently the best route
+      if ((best != null) && (best.equals(route)))
+          setSuspected();
     }    
     
     /**
