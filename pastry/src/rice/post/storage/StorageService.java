@@ -177,7 +177,7 @@ public class StorageService {
    */
   public void backupLogs(final PostLog log, final Log[] logs, Continuation command) {
     long time = ((long) System.currentTimeMillis() / PostImpl.BACKUP_INTERVAL) * PostImpl.BACKUP_INTERVAL;
-    StoreSignedTask task = new StoreSignedTask(keyPair, new GroupData(logs), log.getLocation(), command, immutablePast, time);
+    StoreSignedTask task = new StoreSignedTask(keyPair, new GroupData(logs), log.getLocation(), command, immutablePast, time, System.currentTimeMillis() + BACKUP_LIFETIME);
     task.start();
   }
   
