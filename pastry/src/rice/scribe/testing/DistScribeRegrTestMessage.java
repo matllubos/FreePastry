@@ -91,8 +91,16 @@ public class DistScribeRegrTestMessage extends Message implements Serializable
 	int count = 1;
 	int lastRecv;
 	NodeHandle parent;
+	boolean result;
+
+	result = distinctChildrenTableConsistencyTest(scribeApp.m_scribe);
+	if(result == false)
+	    System.out.println("Distinct Children Table consistency test FAILED at node" + scribeApp.m_scribe.getNodeId());
+
+	result = distinctParentTableConsistencyTest(scribeApp.m_scribe);
+	if(result == false)
+	    System.out.println("Distinct Parent Table consistency test FAILED at node" + scribeApp.m_scribe.getNodeId());
 	
-	//System.out.println("DistScribeRegrTest message's deliver method invoked on " + scribeApp.m_scribe.getNodeId());
 	for (i=0; i< DistScribeRegrTest.NUM_TOPICS; i++) {
 	    topicId = (NodeId) scribeApp.m_topics.elementAt(i);
 	    parent = scribeApp.m_scribe.getParent(topicId);
@@ -155,9 +163,96 @@ public class DistScribeRegrTestMessage extends Message implements Serializable
     }
     
 
+    /**
+     * Check the consistency between distinctChildrenTable maintained
+     * by scribe on a node and the children maintained by each Topic on that node.
+     *
+     * @param scribe the Scribe object residing on local node
+     *
+     * @return true if test passes, else false
+     */
+    public boolean distinctChildrenTableConsistencyTest(Scribe scribe){
+	Vector children;
+	NodeId topicId;
+	NodeHandle child;
+	Vector topics ;
+	int t, l;
+	Topic topic;
+	Vector topicsForChild;
+	Vector distinctChildrenVector;
+	boolean result = true;
 
+	topics = scribe.getTopics();
+
+	for( t = 0; t < topics.size(); t++){
+	    topic = (Topic) topics.elementAt(t);
+	    children = (Vector) topic.getChildren();
+	    for( l=0; l < children.size(); l++){
+		child = (NodeHandle) children.elementAt(l);
+		topicsForChild = (Vector) scribe.getTopicsForChild((NodeHandle)child);
+		if(!topicsForChild.contains(topic.getTopicId()))
+		    result = false;
+	    }
+	}
+	distinctChildrenVector = (Vector)scribe.getDistinctChildren();
+	for( l = 0; l < distinctChildrenVector.size(); l++){
+	    child = (NodeHandle) distinctChildrenVector.elementAt(l);
+	    topicsForChild = (Vector) scribe.getTopicsForChild((NodeHandle)child);
+	    for( t = 0; t < topicsForChild.size(); t++){
+		topicId = (NodeId) topicsForChild.elementAt(t);
+		topic = scribe.getTopic(topicId);
+		children = (Vector) topic.getChildren();
+		if( !children.contains(child))
+		    result  = false;
+	    }
+	}
+	return result;
+    }
     
-    
+
+    /**
+     * Check the consistency between distinctParentTable maintained
+     * by scribe on a node and the parent maintained by each Topic on that node.
+     *
+     * @param scribe the Scribe object residing on local node
+     *
+     * @return true if test passes, else false
+     */
+    public boolean distinctParentTableConsistencyTest(Scribe scribe){
+	NodeId topicId;
+	NodeHandle parent;
+	Vector topics;
+	Topic topic;
+	int t, l ;
+	Vector topicsForParent;
+	boolean result = true;
+	Vector distinctParentVector;
+
+	
+	topics = scribe.getTopics();
+	for( t = 0; t < topics.size(); t++){
+	    topic = (Topic) topics.elementAt(t);
+	    parent = (NodeHandle) topic.getParent();
+	    if( parent != null) {
+		topicsForParent = (Vector) scribe.getTopicsForParent((NodeHandle)parent);
+		if( !topicsForParent.contains(topic.getTopicId())) 
+		    result = false;
+	    }
+	}
+	distinctParentVector = (Vector) scribe.getDistinctParents();
+	for( l = 0; l < distinctParentVector.size(); l++) {
+	    parent = (NodeHandle) distinctParentVector.elementAt(l);
+	    topicsForParent = (Vector)scribe.getTopicsForParent((NodeHandle)parent);
+	    for( t = 0; t < topicsForParent.size(); t++){
+		topicId = (NodeId) topicsForParent.elementAt(t);
+		topic = (Topic) scribe.getTopic(topicId);
+		if( !topic.getParent().equals(parent)) 
+		    result = false;
+	    }
+	}
+	return result;
+    }
+
     public String toString() {
 	return new String( "DIST_SCRIBE_REGR_TEST  MSG:" );
     }
