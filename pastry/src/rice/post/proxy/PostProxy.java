@@ -1018,10 +1018,6 @@ public class PostProxy {
                         parameters.getLongParameter("post_synchronize_interval"),
                         parameters.getLongParameter("post_object_refresh_interval"),
                         parameters.getLongParameter("post_object_timeout_interval"));
-    
-    if (parameters.getBooleanParameter("post_allow_log_insert") && parameters.getBooleanParameter("post_allow_log_insert_reset")) {
-        parameters.setBooleanParameter("post_allow_log_insert", false);
-    }
         
     stepDone(SUCCESS);
   }
@@ -1116,9 +1112,17 @@ public class PostProxy {
     return parameters;
   }
   
+  protected void updateParameters(Parameters parameters) {
+    if (parameters.getBooleanParameter("post_allow_log_insert") && parameters.getBooleanParameter("post_allow_log_insert_reset")) {
+      parameters.setBooleanParameter("post_allow_log_insert", false);
+    }
+  }
+  
   protected void start() {
     try {
-      start(new Parameters(PROXY_PARAMETERS_NAME));
+      Parameters parameters = new Parameters(PROXY_PARAMETERS_NAME);
+      start(parameters);
+      updateParameters(parameters);
       
       if (dialog != null) 
         dialog.append("\n-- Your node is now up and running --\n");
@@ -1181,7 +1185,12 @@ public class PostProxy {
     message.append(" in your proxy.params file.\n\n");
     message.append(e.getClass().getName() + ": " + e.getMessage());
     
-    JOptionPane.showMessageDialog(null, message.toString() ,"Error: " + e.getClass().getName(), JOptionPane.ERROR_MESSAGE); 
+    if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) {
+      JOptionPane.showMessageDialog(null, message.toString() ,"Error: " + e.getClass().getName(), JOptionPane.ERROR_MESSAGE); 
+    } else {
+      System.err.println("PANIC : " + message + " --- " + e);
+    }
+    
     throw e;
   }
   

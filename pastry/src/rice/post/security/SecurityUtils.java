@@ -535,7 +535,16 @@ public class SecurityUtils {
       (testLongByte[5] == (byte) 0xAB) &&
       (testLongByte[6] == (byte) 0xCD) &&
       (testLongByte[7] == (byte) 0xEF)) {
-      System.out.println("[ PASSED ]");
+      
+      long testLong2 = getLong(testLongByte);
+      
+      if (testLong == testLong2) {
+        System.out.println("[ PASSED ]");
+      } else {
+        System.out.println("[ FAILED ]");
+        System.out.println("    Input: \t" + testLong);
+        System.out.println("    Output: \t" + testLong2);
+      }
     } else {
       System.out.println("[ FAILED ]");
       System.out.println("    Input: \t" + testLong);

@@ -63,6 +63,12 @@ import rice.p2p.util.*;
  * launching a seperate thread which is tasked with actaully
  * writing the data to disk.
  *
+ * This class was initially designed to support only Ids whose toString()
+ * method returns a String of constant length.  It has been exteneded to
+ * support variable-length toString()s, but we have the caveat that
+ * not toString() can be a substring of another toString() - this 
+ * will cause undefined behavior.
+ *
  * The serialized objects are stored on-disk in a GZIPed XML format,
  * which provides extensibility with reasonable storage and processing
  * costs.  Additionally, any metadata, if provided, is also stored
@@ -339,9 +345,16 @@ public class PersistentStorage implements Storage {
         renameFile(objFile, transcFile);
         
         /* next, write out the data to a new copy of the original file */
-        writeObject(obj, metadata, id, System.currentTimeMillis(), objFile);
+        try {
+          writeObject(obj, metadata, id, System.currentTimeMillis(), objFile);
+        } catch (IOException e) {
+          /* if an IOException is thrown, rename the files back and abort */
+          deleteFile(objFile);
+          renameFile(transcFile, objFile);
+          throw e;
+        }
         
-        /* abort, if this will put us over quota */
+        /* abort if this will put us over quota */
         if(getUsedSpace() + getFileLength(objFile) > getStorageSize()) {
           deleteFile(objFile);
           renameFile(transcFile, objFile);
@@ -508,7 +521,7 @@ public class PersistentStorage implements Storage {
   public void getObject(final Id id, Continuation c) {
     printStats();
     
-    if (! exists(id)) {
+    if (index && (! exists(id))) {
       c.receiveResult(null);
     } else {    
       QUEUE.enqueue(new WorkRequest(c) { 
@@ -529,10 +542,6 @@ public class PersistentStorage implements Storage {
               return readData(objFile);
             }
           } catch (Exception e) {
-            /* if there's a problem, move the file to the lost+found */
-            File objFile = getFile(id);
-            moveToLost(objFile);
-            
             /* remove our index for this file */
             if (index) {
               synchronized (metadata) {
@@ -541,6 +550,10 @@ public class PersistentStorage implements Storage {
               }
             }
             
+            /* if there's a problem, move the file to the lost+found */
+            File objFile = getFile(id);
+            moveToLost(objFile);
+
             throw e;
           }
         }
@@ -974,8 +987,19 @@ public class PersistentStorage implements Storage {
   private void reformatDirectory(File dir) throws IOException {
     debug("Expanding directory " + dir + " due to too many subdirectories");
     /* first, determine what directories we should create */
+    String[] newDirNames = getDirectories(dir.list(new DirectoryFilter()), 0);
+    reformatDirectory(dir, newDirNames);
+  }
+    
+  /**
+   * This method performs a directory expansion, given the names of the
+   * subdirectories to create.  
+   *
+   * @param dir The directory to expand 
+   * @param newDirNames The array containing the names of the new directories
+   */
+  private void reformatDirectory(File dir, String[] newDirNames) throws IOException {
     String[] dirNames = dir.list(new DirectoryFilter());
-    String[] newDirNames = getDirectories(dirNames, 0);
     File[] newDirs = new File[newDirNames.length];
     
     /* create the new directories, move the old ones */
@@ -1301,18 +1325,35 @@ public class PersistentStorage implements Storage {
           return getDirectoryForName(name.substring(subDirs[i].getName().length()), subDirs[i]);
       
       /* here, we must create the appropriate directory */
-      File newDir = new File(dir, name.substring(0, subDirs[0].getName().length()));
-      debug("Necessarily creating dir " + newDir.getName());
-      createDirectory(newDir);
-      this.directories.put(dir, append(subDirs, newDir));
-      this.directories.put(newDir, new File[0]);
+      if (name.length() >= subDirs[0].getName().length()) {
+        File newDir = new File(dir, name.substring(0, subDirs[0].getName().length()));
+        debug("Necessarily creating dir " + newDir.getName());
+        createDirectory(newDir);
+        this.directories.put(dir, append(subDirs, newDir));
+        this.directories.put(newDir, new File[0]);
       
-      /* finally, we must check if this caused too many dirs in one dir.  If so, we
-         simply rerun the algorithm which will reflect the new dir */
-      if (checkDirectory(dir)) {
-        return getDirectoryForName(name, dir);
+        /* finally, we must check if this caused too many dirs in one dir.  If so, we
+           simply rerun the algorithm which will reflect the new dir */
+        if (checkDirectory(dir)) {
+          return getDirectoryForName(name, dir);
+        } else {
+          return newDir;
+        }
       } else {
-        return newDir;
+        /* here, we have to handle a wierd case where the filename is less than that of
+           an existing directory.  To handle this, we pretend like we're doing a directory
+           split, and create new subdirs so we can accomidate everything. */
+        String[] dirs = new String[subDirs.length + 1];
+        
+        for (int i=0; i<subDirs.length; i++)
+          dirs[i] = subDirs[i].getName();
+        dirs[subDirs.length] = name;
+        
+        /* now reformat the directory, creating an entry for this name */
+        reformatDirectory(dir, getDirectories(dirs, 0));
+        
+        /* and finally, recurse, which should find a directory for this name */
+        return getDirectoryForName(name, dir);
       }
     }
   }
