@@ -120,6 +120,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
      for(int i = 0; i < NUM_NODES; i++){
        ssclients[i].attachChannel(id);
        ssclients[i].getStripes();
+       ssclients[i].subscribeStripes();
      }
 
   }
@@ -187,11 +188,15 @@ public class SplitStreamRegrTest extends CommonAPITest {
 
    public void getStripes(){
       log("Retrieving Stripes.");
-      
+   }
+
+   public void sbuscribeStripes(){
+      log("Subscribing to all Stripes.");
    }
 
    private void log(String s){
       System.out.println("" + n + " " + s);
    }
+
  }
 }
