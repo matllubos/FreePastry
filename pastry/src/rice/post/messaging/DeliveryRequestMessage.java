@@ -10,7 +10,11 @@ import rice.pastry.*;
  * order to inform the sender that the message has been received.
  */
 public class DeliveryRequestMessage extends PostMessage {
-    
+  
+  private PostUserAddress sender      = null;
+  private PostUserAddress destination = null;
+  private NotificationMessage message = null;    
+
   /**
    * Constructs a DeliveryRequestMessage
    *
@@ -21,6 +25,10 @@ public class DeliveryRequestMessage extends PostMessage {
   public DeliveryRequestMessage(PostUserAddress sender, 
                                 PostUserAddress destination, 
                                 NotificationMessage message) {
+     this.sender = sender;
+     this.destination = destination;
+     this.message = message;
+
   }
     
   /**
@@ -29,7 +37,7 @@ public class DeliveryRequestMessage extends PostMessage {
    * @return The address of the sender of this delivery request
    */
   public PostUserAddress getSender() {
-    return null;
+    return sender;
   }
     
   /**
@@ -38,17 +46,17 @@ public class DeliveryRequestMessage extends PostMessage {
    * @return The address of the destination of this notification
    */
   public PostUserAddress getDestination() {
-    return null;
+    return destination;
   }
     
   /**
-   * Gets the NoticifcationMessage which this ReceiptMessage is a receipt
+   * Gets the NoticifcationMessage which this is a Request for. 
    * for.
    *
    * @return The message which this receipt is for.
    */
   public NotificationMessage getNotificationMessage() {
-    return null;
+    return message;
   }
 }
 
