@@ -138,16 +138,21 @@ public class AP3ServiceImpl
       }
     }
 
+    /* Remove the thread from the thread table.
+     */
+    _threadTable.remove(requestMsg.getID());
+
     /* Thread is here because it has been notified by a thread
      * that deposited the response message in the thread table.
      * Or because it has timed out.
      */
     AP3Message responseMsg = entry._msg;
 
-    /* If it has timed out, return null.
+    /* If it has timed out, return null and remove request from routing table.
      * Need to resend request in the future.
      */
     if(responseMsg == null) {
+      _routingTable.dropEntry(requestMsg.getID());
       return null;
     } else {
       return responseMsg.getContent();
