@@ -59,17 +59,18 @@ import rice.scribe.*;
 public class DistScribeMaintenanceThread implements Runnable {
 
     IScribe m_scribe;
-    int m_sleepTime;
 
-    public DistScribeMaintenanceThread(IScribe scribe, int sleepTime) {
+    // Default maintenance period.
+    public static int m_maintPeriod = 10;
+
+    public DistScribeMaintenanceThread(IScribe scribe) {
 	m_scribe = scribe;
-	m_sleepTime = sleepTime;
     }
 
     public void run() {
 	while (true) {
 	    try {
-		    Thread.sleep(1000 * m_sleepTime);
+		    Thread.sleep(1000 * m_maintPeriod);
 	    } catch (InterruptedException e) {}
 	    m_scribe.scheduleHB();
 	}

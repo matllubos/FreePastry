@@ -48,6 +48,7 @@ import rice.pastry.leafset.*;
 import rice.pastry.dist.*;
 
 import rice.scribe.*;
+import rice.scribe.maintenance.*;
 
 import java.util.*;
 import java.net.*;
@@ -79,7 +80,7 @@ public class RMIScribeMaintenanceTest {
     private static int bsport = 5009;
     private static int numNodes = 5;
     public Integer num = new Integer(0);
-    public String publisherHost = "thor01.cs.rice.edu";
+    public static int NUM_TOPICS = 1;
 
     public RMIScribeMaintenanceTest(){
 	factory = DistPastryNodeFactory.getFactory(DistPastryNodeFactory.PROTOCOL_RMI, port);
@@ -185,43 +186,65 @@ public class RMIScribeMaintenanceTest {
 	}
 
 	public void run() {
-
+	    int i;
+	    NodeId topicId;
+	    RMITopicLog topicLog;
+	    Vector topics = new Vector();
+	    
 	    // Do application specific stuff here.
 	    System.out.println("I am up "+m_app.m_scribe.getNodeId());
-	    NodeId topicId = generateTopicId(new String("Control Channel"));
-
+	   
+	    int publish_period = DistScribeMaintenanceThread.m_maintPeriod;
 	    int threshold = m_app.m_scribe.getTreeRepairThreshold();
-
-	    m_app.create(topicId);
-	    m_app.subscribe(topicId);
 	    int seq_num = -1;
 	    int count = 1;
-	    int warningLimit = threshold * m_app.m_tolerance;
+	    for (i=0; i< RMIScribeMaintenanceTest.NUM_TOPICS; i++) {
+		topicId = generateTopicId(new String("Control Channel" + i));
+		topics.add(topicId);
+		m_app.m_logTable.put(topicId, new RMITopicLog());
+	     }
+
+	    for (i=0; i< RMIScribeMaintenanceTest.NUM_TOPICS; i++) {
+		topicId = (NodeId)topics.elementAt(i);
+		m_app.create(topicId);
+		m_app.subscribe(topicId);
+	     }
 
 	    while(true){
-		if( m_app.m_scribe.isRoot(topicId)){
-		    m_app.publish(topicId, new Integer(seq_num));
-		    if(count < warningLimit){
-			count++;
+		for (i=0; i< RMIScribeMaintenanceTest.NUM_TOPICS; i++) {
+		    topicId = (NodeId) topics.elementAt(i);
+		    topicLog = (RMITopicLog) m_app.m_logTable.get(topicId);
+		    seq_num = topicLog.getSeqNumToPublish();
+		    count = topicLog.getCount();
+		    if( m_app.m_scribe.isRoot(topicId)){
+			m_app.publish(topicId, new Integer(seq_num));
+			/*
+			 * We play safe in publishing the '-1' so that all nodes
+			 * which were doing a tree repair while the new root
+			 * came up can still see the demarcation of '-1'
+			 */
+			if(count < threshold*2){
+			    count++;
+			}
+			else
+			    seq_num ++;
 		    }
-		    else
-			seq_num ++;
-		}
-		else {
-		    count = 1;
-		    seq_num = -1;
-		}
-		pause(10*1000);
+		    else {
+			count = 1;
+			seq_num = -1;
+		    }
+		    topicLog.setCount(count);
+		    topicLog.setSeqNumToPublish(seq_num);
 
-		NodeHandle parent =  m_app.m_scribe.getTopic(topicId).getParent();
-
-		if(parent != null){
-		    if( !m_driver.localNodes.contains(parent.getNodeId()))
-			System.out.println("Yoooooo.. My "+m_app.m_scribe.getNodeId()+ " appindex=" + m_app.m_appIndex + "'s parent "+parent+"is in other machine");
-		    //else
-		    //System.out.println("My "+m_app.m_scribe.getNodeId()+" parent is in same machine");
+		    NodeHandle parent =  m_app.m_scribe.getTopic(topicId).getParent();
+		    
+		    if(parent != null){
+			if( !m_driver.localNodes.contains(parent.getNodeId()))
+			    System.out.println("Yoooooo.. My "+m_app.m_scribe.getNodeId()+ " appindex=" + m_app.m_appIndex + "'s parent "+parent+"is in other machine");
+		    }
 		}
-	       
+		pause(publish_period*1000);
+		
 	    }
 	}
     }
@@ -303,8 +326,8 @@ public class RMIScribeMaintenanceTest {
 
 	Log.init(args);
 	doRMIinitstuff(args);
-	//seed = -2127579971;
-	seed = (int)System.currentTimeMillis();
+	seed = -1347092695;
+	//seed = (int)System.currentTimeMillis();
 	PastrySeed.setSeed(seed);
 	System.out.println("seed used=" + seed); 
 	RMIScribeMaintenanceTest driver = new RMIScribeMaintenanceTest();

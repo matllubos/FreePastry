@@ -1,3 +1,39 @@
+/*************************************************************************
+
+"FreePastry" Peer-to-Peer Application Development Substrate 
+
+Copyright 2002, Rice University. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+contributors may be  used to endorse or promote  products derived from
+this software without specific prior written permission.
+
+This software is provided by RICE and the contributors on an "as is"
+basis, without any representations or warranties of any kind, express
+or implied including, but not limited to, representations or
+warranties of non-infringement, merchantability or fitness for a
+particular purpose. In no event shall RICE or contributors be liable
+for any direct, indirect, incidental, special, exemplary, or
+consequential damages (including, but not limited to, procurement of
+substitute goods or services; loss of use, data, or profits; or
+business interruption) however caused and on any theory of liability,
+whether in contract, strict liability, or tort (including negligence
+or otherwise) arising in any way out of the use of this software, even
+if advised of the possibility of such damage.
+
+********************************************************************************/
+
 package rice.scribe.testing;
 
 import rice.pastry.*;
@@ -34,12 +70,13 @@ public class RMIScribeMaintenanceTestApp implements IScribeApp
     public NodeId topicId;
     public int m_appIndex;
     public static int m_appCount = 0;
-    public int m_tolerance = 3;
+    public int lastSeqNum = -1;
+
     /**
      * The hashtable maintaining mapping from topicId to log object
      * maintained by this application for that topic.
      */
-    protected Hashtable m_logTable = null;
+    public Hashtable m_logTable = null;
 
     /**
      * The SendOptions object to be used for all messaging through Pastry
@@ -57,11 +94,10 @@ public class RMIScribeMaintenanceTestApp implements IScribeApp
      */
     protected static Address m_address = new RMIScribeControlAddress();
 
-    private File m_rmiLog;
+    private int m_rmiLogCounter ;
 
     private String  m_rmiLogName ;
 
-    private int m_rmiLogCounter ;
 
     private static class RMIScribeControlAddress implements Address {
 	private int myCode = 0x9ab4a3c;
@@ -73,29 +109,6 @@ public class RMIScribeMaintenanceTestApp implements IScribeApp
 	}
     }
 
-
-    private static class RMITopicLog{
-	protected Vector m_entries = null;
-
-	public RMITopicLog(){
-	    m_entries = new Vector();
-	}
-	
-	public Vector getLogEntries(){
-	    return (Vector)m_entries.clone();
-	}
-	
-	public void insertLogEntry(Integer seqno){
-	    m_entries.addElement(seqno);
-	    return;
-	}
-
-	public void clearLogEntries(){
-	    m_entries.clear();
-	}
-
-    }
-    
 
     public RMIScribeMaintenanceTestApp( PastryNode pn,  Scribe scribe, Credentials cred ) {
 	m_scribe = scribe;
@@ -118,16 +131,10 @@ public class RMIScribeMaintenanceTestApp implements IScribeApp
      */
     public void receiveMessage( ScribeMessage msg ) {
 	NodeId topicId;
-	RMITopicLog log;
+	RMITopicLog topicLog;
 	
 	
 	topicId = (NodeId) msg.getTopicId();
-	log = (RMITopicLog)m_logTable.get(topicId);
-	if( log == null){
-	    log = new RMITopicLog();
-	    m_logTable.put(topicId, log);
-	}
-	log.insertLogEntry((Integer)msg.getData());
 	try {
 	    BufferedWriter out = new BufferedWriter(new FileWriter(m_rmiLogName, true));
 	    m_rmiLogCounter = (int)System.currentTimeMillis();
@@ -136,23 +143,34 @@ public class RMIScribeMaintenanceTestApp implements IScribeApp
 	}
 	catch (IOException e) {
 	}
-	
+	processLog(topicId,((Integer)msg.getData()).intValue());
     }
 
-    public void processLog(NodeId topicId){
-	RMITopicLog log;
-	Vector logEntries;
+    public void processLog(NodeId topicId, int new_seqno){
+	int last_seqno_recv;
+	RMITopicLog topicLog;
+	
+	topicLog = (RMITopicLog)m_logTable.get(topicId);
+	last_seqno_recv = topicLog.getLastSeqNumRecv();
+	topicLog.setLastSeqNumRecv(new_seqno);
 
-	System.out.println("Printing Log for Node "+m_scribe.getNodeId());
+	if(last_seqno_recv == -1 || new_seqno == -1)
+	    return;
 	
-	log = (RMITopicLog)m_logTable.get(topicId);
-	if(log != null){
-	    logEntries = (Vector)log.getLogEntries();
-	    for(int i = 0; i < logEntries.size(); i++){
-		System.out.println(((Integer)logEntries.elementAt(i)).intValue());
-	    }
+	/**
+	 * Check for out-of-order sequence numbers and then
+      	 * check if the missing sequence numbers were due to tree-repair.
+	 */
+	
+	if(last_seqno_recv > new_seqno){
+	    System.out.println("\nWARNING :: "+m_scribe.getNodeId()+" Received a LESSER sequence number than last-seen for topic "+topicId + "\n");
 	}
-	
+	else if(last_seqno_recv == new_seqno){
+	    System.out.println("\nWARNING :: "+m_scribe.getNodeId()+" Received a DUPLICATE sequence number for topic "+topicId + "\n");
+	}
+	else if( (new_seqno - last_seqno_recv - 1) > m_scribe.getTreeRepairThreshold()){
+	    System.out.println("\nWARNING :: "+m_scribe.getNodeId()+" Missed MORE THAN TREE-REPAIR THRESHOLD number of sequence numbers  for topic "+topicId + "\n");
+	}
     }
 
 
@@ -186,11 +204,7 @@ public class RMIScribeMaintenanceTestApp implements IScribeApp
 	  + m_app + " child subscribed: " + msg);
 	*/
     }
-    /*
-    public NodeId getNodeId() {
-	return m_scribe.getNodeId();
-    }
-    */
+
     /**
      * direct call to scribe for creating a topic from the current node.
      */

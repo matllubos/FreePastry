@@ -280,7 +280,7 @@ public class Scribe extends PastryAppl implements IScribe
 	 */
 	if(pn.isReady()){
 	    if(thePastryNode instanceof DistPastryNode) {
-		new Thread(new DistScribeMaintenanceThread(this, 10)).start();
+		new Thread(new DistScribeMaintenanceThread(this)).start();
 	    } 
 	}
     }
@@ -315,7 +315,7 @@ public class Scribe extends PastryAppl implements IScribe
      */
     public void notifyReady() {
 	if(thePastryNode instanceof DistPastryNode) {
-	    new Thread(new DistScribeMaintenanceThread(this, 10)).start();
+	    new Thread(new DistScribeMaintenanceThread(this)).start();
 	}
     }
 
