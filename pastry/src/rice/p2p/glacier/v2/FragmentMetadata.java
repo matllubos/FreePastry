@@ -5,10 +5,12 @@ import java.io.Serializable;
 public class FragmentMetadata implements Serializable {
   protected long currentExpirationDate;
   protected long previousExpirationDate;
+  protected long storedSince;
   
-  public FragmentMetadata(long currentExpirationDate, long previousExpirationDate) {
+  public FragmentMetadata(long currentExpirationDate, long previousExpirationDate, long storedSince) {
     this.currentExpirationDate = currentExpirationDate;
     this.previousExpirationDate = previousExpirationDate;
+    this.storedSince = storedSince;
   }
   
   long getCurrentExpiration() {
@@ -17,5 +19,9 @@ public class FragmentMetadata implements Serializable {
   
   long getPreviousExpiration() {
     return previousExpirationDate;
+  }
+  
+  long getStoredSince() {
+    return storedSince;
   }
 }
