@@ -89,6 +89,7 @@
   
   <!-- We want to do this so the line numbers match up with the prefixed license -->
   <target name="beautifythencompile">    
+    <echoproperties/>
     <antcall target="beautifyandlicense"/>
     <antcall target="compile_epost"/>    
   </target>
