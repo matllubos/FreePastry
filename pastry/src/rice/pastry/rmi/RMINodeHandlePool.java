@@ -81,7 +81,9 @@ class RMINodeHandlePool extends DistNodeHandlePool {
 
 	if (storedref != null) {
 	    storedhandle = (RMINodeHandle) storedref.get();
-	    if (storedhandle == null || !storedhandle.isAlive()) {
+	    //if (storedhandle != null) System.out.println("->" + handle.getRemote().equals(storedhandle.getRemote()));
+	    //if (storedhandle == null || !storedhandle.isAlive()) {
+	    if (storedhandle == null || !handle.getRemote().equals(storedhandle.getRemote())) {
 		storedhandle = null;
 		storedref.clear();
 		handles.remove(nid); // storedref is freed
