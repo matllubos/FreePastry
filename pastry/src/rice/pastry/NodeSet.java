@@ -47,7 +47,7 @@ import java.io.Serializable;
  * @author Peter Druschel
  */
 
-public class NodeSet implements NodeSetI, implements Serializable {
+public class NodeSet implements NodeSetI, Serializable {
 
     private Vector set;
 
