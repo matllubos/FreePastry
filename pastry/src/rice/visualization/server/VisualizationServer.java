@@ -288,7 +288,7 @@ public class VisualizationServer implements Runnable {
     public void checkForErrors() {
       final rice.p2p.commonapi.Id id  = generateId();
       
-      storage.store(id, data, new Continuation() {
+      storage.store(id, null, data, new Continuation() {
         public void receiveResult(Object o) {
           if (! (o.equals(new Boolean(true)))) 
             ((DistPastryNode) node).addError("SEVERE: Attempt to store data under " + id + " failed with " + o);

@@ -170,7 +170,7 @@ public class Visualization {
 		}    
   }
 
-  int NUM_STEPS = 10;
+  int NUM_STEPS = 30;
   int curStep = NUM_STEPS;
   MyTimerTask myTask = null;
   Timer timer = new Timer();
@@ -181,7 +181,7 @@ public class Visualization {
       myTask = null;
     }
     myTask = new MyTimerTask();
-    timer.schedule(myTask,100,100);
+    timer.schedule(myTask,30,30);
   }
 
   public void selectRing(Ring r) {

@@ -128,7 +128,7 @@ public class Ring {
 
   
   // **************** Visual stuff ***************
-  public static final double[] RENDER_RADIUS = { 190.0, 90.0, 30.0 };
+  public static final double[] RENDER_RADIUS = { 160.0, 60.0, 30.0 };
   public static final double DISTANCE_BUFFER = 20.0;
   public Ring parent;
   /**
@@ -220,8 +220,16 @@ public class Ring {
     g.setColor(Color.BLACK);   
     g.drawOval(p.x-r,p.y-r,r*2,r*2);
     if (visualization.highlightedRing == this) { // render highlighted as double ring
+      g.setColor(new Color(220, 220, 255));
       int r2 = r-2;
-      g.drawOval(p.x-r2,p.y-r2,r2*2,r2*2);          
+      g.fillOval(p.x-r2,p.y-r2,r2*2,r2*2);          
+
+      g.setColor(Color.black);
+      g.setFont(new Font("Optima", Font.PLAIN, (int) getRadius()/4));
+      int fontHeight = g.getFontMetrics().getMaxAscent();
+      Rectangle2D rect = g.getFontMetrics().getStringBounds(name, g);
+
+      g.drawString(name, (int) (p.x - rect.getWidth()/2), p.y + fontHeight/2);      
     }
     prepNodes(g, p, r);        
   }
