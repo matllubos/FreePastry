@@ -19,6 +19,8 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.InternetHeaders;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMultipart;
+import javax.mail.internet.MimePart;
+import javax.mail.Multipart;
 import javax.mail.MessagingException;
 
 import javax.mail.Address;
@@ -78,105 +80,14 @@ public class PostMessage implements StoredMessage {
         c.sleep();
 
         if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
-        EmailPart part = (EmailPart) c.getResult();
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        getMessage(part).writeTo(baos);
-
-        message = new MimeMessage(new StringBufferResource(baos.toString()));
-
-        return message;
+        
+        return new MimeMessage(processEmailMessagePartSpecial((EmailMessagePart) c.getResult()));
       } catch (MailException e) {
         throw new MailboxException(e);
       } catch (MessagingException e) {
         throw new MailboxException(e);
-      } catch (IOException e) {
-        throw new MailboxException(e);
       }
     }
-  }
-
-  private Object getContent(EmailContentPart emailPart) throws MessagingException, IOException, MailboxException {
-    ExternalContinuation c = new ExternalContinuation();
-    emailPart.getContent(c);
-    c.sleep();
-
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
-    if (emailPart instanceof EmailMultiPart) {
-      MimeMultipart part = new MimeMultipart();
-
-      EmailPart[] parts = (EmailPart[]) c.getResult();
-
-      for (int i=0; i<parts.length; i++) {
-        part.addBodyPart(getPart(parts[i]));
-      }
-
-      return part;
-    } else if (emailPart instanceof EmailSinglePart) {
-      return new String(((EmailData) c.getResult()).getData());
-    } else {
-      throw new MailboxException("EmailPart " + emailPart.getClass().getName() + " not recognized!");
-    }
-  }
-
-  private MimeBodyPart getPart(EmailPart emailPart) throws MessagingException, IOException, MailboxException {
-    MimeBodyPart part = new MimeBodyPart();
-
-    ExternalContinuation c1 = new ExternalContinuation();
-    emailPart.getHeaders(c1);
-    c1.sleep();
-
-    if (c1.exceptionThrown()) { throw new MailboxException(c1.getException()); }
-
-    String headers = new String(((EmailData) c1.getResult()).getData());
-
-    ExternalContinuation c2 = new ExternalContinuation();
-    emailPart.getContent(c2);
-    c2.sleep();
-
-    if (c2.exceptionThrown()) { throw new MailboxException(c2.getException()); }
-
-    if (c2.getResult() instanceof EmailMultiPart) {
-      StringTokenizer st = new StringTokenizer(headers, "\n");
-
-      while (st.hasMoreTokens()) {
-        part.addHeaderLine(st.nextToken());
-      }
-      
-      part.setContent((MimeMultipart) getContent((EmailContentPart) c2.getResult()));
-    } else if (c2.getResult() instanceof EmailSinglePart) {
-      String result = (String) getContent((EmailContentPart) c2.getResult());
-      InternetHeaders iHeaders = new InternetHeaders(new ByteArrayInputStream(headers.getBytes()));
-      byte[] content = result.getBytes();
-      part = new MimeBodyPart(iHeaders, content);
-    } else {
-      throw new MailboxException("EmailPart " + c2.getResult().getClass().getName() + " not recognized!");
-    }
-      
-    return part;
-  }
-
-  private javax.mail.internet.MimeMessage getMessage(EmailPart emailPart) throws MessagingException, IOException, MailboxException {
-    Properties props = new Properties();
-    Session session = Session.getDefaultInstance(props, null);
-    javax.mail.internet.MimeMessage mm = new javax.mail.internet.MimeMessage(session);
-
-    MimeBodyPart part = getPart(emailPart);
-    Enumeration e = part.getAllHeaderLines();
-
-    while (e.hasMoreElements()) {
-      mm.addHeaderLine(e.nextElement().toString());
-    }
-
-    if (part.getContent() instanceof MimeMultipart) {
-      mm.setContent((MimeMultipart) part.getContent());
-    } else {
-      mm.setContent(part.getContent(), part.getContentType());
-    }
-    
-    return mm;
   }
   
   public FlagList getFlagList() {
@@ -207,7 +118,7 @@ public class PostMessage implements StoredMessage {
       if (bcc == null) bcc = new Address[0];
 
       MailAddress[] recipients = new MailAddress[to.length + cc.length + bcc.length];
-
+ 
       for (int i=0; i<recipients.length; i++) {
         if (i < to.length) {
           recipients[i] = new MailAddress(((InternetAddress) to[i]).getAddress());
@@ -241,7 +152,7 @@ public class PostMessage implements StoredMessage {
       Address froms[] = mm.getFrom();
       PostUserAddress from = new PostUserAddress("Unknown");
 
-      if (froms.length > 0) {
+      if ((froms != null) && (froms.length > 0)) {
         from = new PostUserAddress(((InternetAddress) froms[0]).getAddress());
       }
 
@@ -258,26 +169,8 @@ public class PostMessage implements StoredMessage {
       if (address != null) {
         mm.setSubject(UNSECURE_SUBJECT_TITLE + " " + mm.getSubject());
       }
-
-      Enumeration e = mm.getAllHeaderLines();
-
-      String headersText = "";
       
-      while (e.hasMoreElements()) {
-        String header = (String) e.nextElement();
-        headersText += header.replaceAll("\n", "") + "\n";
-      }
-
-      EmailData headers = new EmailData(headersText.getBytes());
-      EmailContentPart part = null;
-
-      if (mm.getContent() instanceof MimeMultipart) {
-        part = getContent(mm.getContent());
-      } else {
-        part = getContent(mm.getRawInputStream());
-      }
-      
-      return new Email(from, recipients, new EmailPart(headers, part));
+      return new Email(from, recipients, process(mm));
     } catch (IOException e) {
       throw new MailboxException(e);
     } catch (MessagingException e) {
@@ -285,44 +178,175 @@ public class PostMessage implements StoredMessage {
     }
   }
 
-  private static EmailContentPart getContent(Object o) throws MessagingException, IOException {
-    if (o instanceof MimeMultipart) {
-      MimeMultipart part = (MimeMultipart) o;
-      EmailPart[] parts = new EmailPart[part.getCount()];
-
-      for (int i=0; i<parts.length; i++) {
-        parts[i] = getPart((MimeBodyPart) part.getBodyPart(i));
-      }
-
-      return new EmailMultiPart(parts);
-    } if (o instanceof InputStream) {
-      String data = StreamUtils.toString(new InputStreamReader((InputStream) o));
-      return new EmailSinglePart(new EmailData(data.getBytes()));
+  private static EmailContentPart processContent(MimePart part) throws IOException, MessagingException {
+    Object content = part.getContent();
+    
+    if (content instanceof Multipart) {
+      return process((Multipart) content);
+    } else if (content instanceof MimePart) {
+      return process((MimePart) content);
     } else {
-      throw new MessagingException("EmailPart " + o.getClass().getName() + " not recognized!");
+      if (part instanceof MimeBodyPart) {
+        return process(part, ((MimeBodyPart) part).getRawInputStream());
+      } else {
+        return process(part, ((javax.mail.internet.MimeMessage) part).getRawInputStream());
+      }
     }
   }
 
-  private static EmailPart getPart(MimeBodyPart part) throws MessagingException, IOException {
+  private static EmailMessagePart process(MimePart mime) throws IOException, MessagingException {
+    EmailData headers = new EmailData(getHeaders(mime).getBytes());
+    EmailContentPart part = processContent(mime);
+
+    return new EmailMessagePart(headers, part);
+  }
+
+  private static EmailMultiPart process(Multipart part) throws IOException, MessagingException {
+    EmailMessagePart[] parts = new EmailMessagePart[part.getCount()];
+
+    for (int i=0; i<parts.length; i++) {
+      parts[i] = process((MimePart) part.getBodyPart(i));
+    }
+
+    return new EmailMultiPart(parts);
+  }
+
+  private static EmailSinglePart process(MimePart mime, InputStream stream) throws IOException, MessagingException {
+    EmailData headers = new EmailData(getHeaders(mime).getBytes());
+    
+    String data = StreamUtils.toString(new InputStreamReader(stream));
+    return new EmailSinglePart(headers, new EmailData(data.getBytes()));
+  }
+
+
+  
+
+  private static String getHeaders(MimePart mime) throws MessagingException {
+    Enumeration e = mime.getAllHeaderLines();
+
     String headersText = "";
-    Enumeration e = part.getAllHeaderLines();
 
     while (e.hasMoreElements()) {
       String header = (String) e.nextElement();
-      headersText += header.replaceAll("\n", "") + "\n";
+      headersText += header + "\n";
     }
 
-    EmailData headers = new EmailData(headersText.getBytes());
-    EmailContentPart content = null;
-    
-    if (part.getContent() instanceof MimeMultipart) {
-      content = getContent(part.getContent());
-    } else {
-      content = getContent(part.getRawInputStream());
-    }
-
-    return new EmailPart(headers, content);
+    return headersText;
   }
+
+  private static Object getContent(EmailContentPart part) throws MailboxException {
+    ExternalContinuation c = new ExternalContinuation();
+    part.getContent(c);
+    c.sleep();
+
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+
+    return c.getResult();
+  }
+
+  private static String getHeaders(EmailSinglePart part) throws MailboxException {
+    ExternalContinuation c = new ExternalContinuation();
+    part.getHeaders(c);
+    c.sleep();
+
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+
+    return new String(((EmailData) c.getResult()).getData());
+  }
+
+  private static String getHeaders(EmailMessagePart part) throws MailboxException {
+    ExternalContinuation c = new ExternalContinuation();
+    part.getHeaders(c);
+    c.sleep();
+
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+
+    return new String(((EmailData) c.getResult()).getData());
+  }
+
+  private static String setHeaders(String header, MimePart mm) throws MessagingException {
+    String[] headers = header.split("\n");
+    String contentType = "text/plain";
+
+    for (int i=0; i<headers.length; i++) {
+      mm.addHeaderLine(headers[i]);
+      if (headers[i].indexOf("Content-Type:") > -1) {
+        if (headers[i].indexOf(";") > -1) {
+          contentType = headers[i].substring(headers[i].indexOf(" ")+1, headers[i].indexOf(";"));
+        } else {
+          contentType = headers[i];
+        }
+      } 
+    }
+
+    return contentType;
+  }
+
+  public static javax.mail.internet.MimeMessage processEmailMessagePartSpecial(EmailMessagePart part) throws MailboxException, MessagingException {
+    Properties props = new Properties();
+    Session session = Session.getDefaultInstance(props, null);
+    javax.mail.internet.MimeMessage mm = new javax.mail.internet.MimeMessage(session);
+    
+    String contentType = setHeaders(getHeaders(part), mm);
+    EmailContentPart content = (EmailContentPart) getContent(part);
+    processEmailContentPart(mm, content, contentType);
+
+    return mm;
+  }
+
+  private static void processEmailContentPart(MimePart message, EmailContentPart part, String contentType)
+    throws MailboxException, MessagingException {
+    Object result = null;
+    
+    if (part instanceof EmailSinglePart) {
+      result = processEmailSinglePart((EmailSinglePart) part);
+    } else if (part instanceof EmailMultiPart) {
+      result = processEmailMultiPart((EmailMultiPart) part);
+    } else if (part instanceof EmailMessagePart) {
+      result = processEmailMessagePart((EmailMessagePart) part);
+    } else {
+      throw new MailboxException("Found unknown EmailContentPart subtype " + part);
+    }
+
+    if (result instanceof MimeMultipart) {
+      message.setContent((MimeMultipart) result);
+    } else {
+      message.setContent(result, contentType);
+    }
+  }
+
+  private static MimeBodyPart processEmailMessagePart(EmailMessagePart part) throws MailboxException, MessagingException {
+    MimeBodyPart body = new MimeBodyPart();
+    String contentType = setHeaders(getHeaders(part), body);
+
+    EmailContentPart content = (EmailContentPart) getContent(part);
+
+    // special thingy for embedded message
+    if (content instanceof EmailMessagePart) {
+      body.setContent(processEmailMessagePartSpecial((EmailMessagePart) content), contentType);
+    } else {
+      processEmailContentPart(body, content, contentType);
+    }
+
+    return body;
+  }
+
+  private static MimeMultipart processEmailMultiPart(EmailMultiPart part) throws MailboxException, MessagingException {
+    MimeMultipart multi = new MimeMultipart();
+    EmailMessagePart[] parts = (EmailMessagePart[]) getContent(part);
+
+    for (int i=0; i<parts.length; i++) {
+      EmailMessagePart thisPart = parts[i];
+      multi.addBodyPart(processEmailMessagePart(thisPart));
+    }
+
+    return multi;
+  }
+
+  private static String processEmailSinglePart(EmailSinglePart part) throws MailboxException, MessagingException {
+    return new String(((EmailData) getContent(part)).getData());
+  }
+      
 }
 
 

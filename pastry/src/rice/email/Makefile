@@ -8,10 +8,10 @@ SOURCE  = \
 	EmailService.java \
 	Folder.java \
 	StoredEmail.java \
-  EmailPart.java \
   EmailContentPart.java \
   EmailMultiPart.java \
-  EmailSinglePart.java
+  EmailSinglePart.java \
+  EmailMessagePart.java
 
 RMI_SOURCE =
 

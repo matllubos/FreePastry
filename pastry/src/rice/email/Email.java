@@ -24,7 +24,7 @@ public class Email implements java.io.Serializable {
 
   PostUserAddress sender;
   PostEntityAddress[] recipients;
-  EmailPart content;
+  public EmailMessagePart content;
   private transient StorageService storage;
 
   /**
@@ -36,7 +36,7 @@ public class Email implements java.io.Serializable {
    */
   public Email(PostUserAddress sender,
                PostEntityAddress[] recipients,
-               EmailPart content) {
+               EmailMessagePart content) {
     this.sender = sender;
     this.recipients = recipients;
     this.content = content;

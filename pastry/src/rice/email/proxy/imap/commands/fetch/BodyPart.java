@@ -127,7 +127,7 @@ public class BodyPart extends FetchPart {
     }
   }
 
-  protected String fetchPart(BodyPartRequest breq, List types, MimeBodyPart content, boolean topLevel) throws MailboxException {
+  protected String fetchPart(BodyPartRequest breq, List types, MimePart content, boolean topLevel) throws MailboxException {
     if (types.size() == 0) {
       return fetchAll(breq, content);
     }
@@ -216,6 +216,16 @@ public class BodyPart extends FetchPart {
         }
       } else if (data instanceof MimeBodyPart) {
         MimeBodyPart mime = (MimeBodyPart) data;
+
+        InputStream stream = mime.getRawInputStream();
+        StringWriter writer = new StringWriter();
+
+        StreamUtils.copy(new InputStreamReader(stream), writer);
+
+        String content = getRange(breq, writer.toString());
+        return "{" + content.length() + "}\r\n" + content;
+      } else if (data instanceof javax.mail.internet.MimeMessage) {
+        javax.mail.internet.MimeMessage mime = (javax.mail.internet.MimeMessage) data;
 
         InputStream stream = mime.getRawInputStream();
         StringWriter writer = new StringWriter();

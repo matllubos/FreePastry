@@ -19,12 +19,12 @@ public class EmailMultiPart extends EmailContentPart {
   /**
    * The actual content of this email part
    */
-  protected EmailPart[] content;
+  public EmailMessagePart[] content;
 
   /**
    * Constructor which takes in an Emailpart list 
    */
-  public EmailMultiPart(EmailPart[] content) {
+  public EmailMultiPart(EmailMessagePart[] content) {
     this.content = content;
 
     if ((content == null) || (content.length == 0)) {

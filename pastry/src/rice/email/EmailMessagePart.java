@@ -14,7 +14,7 @@ import rice.post.storage.*;
  *
  * @author Alan Mislove
  */
-public class EmailPart implements Serializable {
+public class EmailMessagePart extends EmailContentPart {
 
   /**
    * The data representing the haeders (transient as it is stored).
@@ -29,7 +29,7 @@ public class EmailPart implements Serializable {
   /**
    * The content of this part
    */
-  protected EmailContentPart content;
+  public EmailContentPart content;
 
   /**
    * The local storage service
@@ -43,7 +43,7 @@ public class EmailPart implements Serializable {
    * @param headers The headers of this part
    * @param content The content of this part
    */
-  public EmailPart(EmailData headers, EmailContentPart content) {
+  public EmailMessagePart(EmailData headers, EmailContentPart content) {
     this.headers = headers;
     this.content = content;
   }
