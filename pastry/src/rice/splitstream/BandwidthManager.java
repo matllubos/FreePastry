@@ -122,11 +122,8 @@ public class BandwidthManager{
     public void additionalBandwidthUsed(Channel channel){
 
 	int oldBandwidth = ((Integer)usedBandwidth.get(channel)).intValue();
-	int newBandwidth = oldBandwidth++;
+	int newBandwidth = oldBandwidth+1;
 	usedBandwidth.put(channel,new Integer(newBandwidth));
-	if(newBandwidth > ((Integer)maxBandwidth.get(channel)).intValue())
-	    System.out.println("SHOULD NOT HAPPEN ****************** bandwidth usage exceeds ");
-
     }
 
 
