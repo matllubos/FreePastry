@@ -99,7 +99,7 @@ public class MessageReplyFromParent extends ScribeMessage implements Serializabl
 	Topic topic;
 	
 	if(topicListFromParent == null){
-	    System.out.println("WARNING :: Topic List From Parent is null in MessageReplyFromParent type of message\n");
+	    //System.out.println("WARNING :: Topic List From Parent is null in MessageReplyFromParent type of message\n");
 	}
 	else {
 	    for(i=0 ; i< topicListFromParent.size(); i++ ) {
