@@ -158,7 +158,7 @@ public class MessagePropertyPart extends FetchPart {
 
       String description = getHeader(headers, "Content-Description");
 
-      result.append("(" + contentType + " " + id + " " + description + " " + encoding + " " + part.getSize());
+      result.append("(" + contentType + " " + id + " " + description + " " + encoding + " " + content.getSize());
 
       if (contentType.indexOf("TEXT") >= 0) {
         result.append(" " + ((EmailSinglePart) content).getLines());
