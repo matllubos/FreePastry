@@ -278,7 +278,7 @@ public class PastImpl implements Past, Application, RMClient {
   /**
    * Retrieves the handles of up to max replicas of the object stored
    * in this instance of Past with the given ID.  Asynchronously
-   * returns a Vector of PastContentHandles as the result to the
+   * returns an array of PastContentHandles as the result to the
    * provided Continuation, or a PastException.
    *
    * Each replica handle is obtained from a different primary storage

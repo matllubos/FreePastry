@@ -49,10 +49,16 @@ import rice.p2p.commonapi.*;
  * network.
  * 
  * The PAST service is event-driven, so all methods are asynchronous
- * and receive their results using the command pattern.
+ * and receive their results using the command pattern. <b>This version of Past has been
+ * deprecated - please migrate existing applications to the version in rice.p2p.past.</b>
  *
  * @version $Id$
+ *
+ * @author Alan Mislove
  * @author Charles Reis
+ *
+ * @deprecated This version of PAST has been deprecated - please use the version
+ *   located in the rice.p2p.past package.
  */
 public interface PASTService {
   

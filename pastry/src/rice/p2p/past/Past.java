@@ -60,7 +60,7 @@ public interface Past {
  /**
    * Inserts an object with the given ID into this instance of Past.
    * Asynchronously returns a PastException to command, if the
-   * operation was unsuccessful.
+   * operation was unsuccessful. 
    * 
    * @param obj the object to be inserted
    * @param command Command to be performed when the result is received
@@ -93,7 +93,7 @@ public interface Past {
   /**
    * Retrieves the handles of up to max replicas of the object stored
    * in this instance of Past with the given ID.  Asynchronously
-   * returns a Vector of PastContentHandles as the result to the
+   * returns an array of PastContentHandles as the result to the
    * provided Continuation, or a PastException.  
    * 
    * Each replica handle is obtained from a different primary storage

@@ -42,7 +42,6 @@ import rice.*;
 import rice.p2p.commonapi.*;
 import rice.rm.*;
 import rice.persistence.*;
-import rice.caching.*;
 
 import java.io.*;
 import java.util.*;
@@ -51,14 +50,19 @@ import java.util.*;
  * @(#) PASTServiceImpl.java
  *
  * Implementation of PAST, which allows users to store replicated
- * copies of documents on the Pastry network.
+ * copies of documents on the Pastry network. <b>This version of Past has been
+ * deprecated - please migrate existing applications to the version in rice.p2p.past.</b>
  *
  * @version $Id$
+ *
  * @author Charles Reis
  * @author Alan Mislove
  * @author Ansley Post
+ *
+ * @deprecated This version of PAST has been deprecated - please use the version
+ *   located in the rice.p2p.past package.
  */
-public class PASTServiceImpl implements PASTService, Application, RMClient { //, CachingManagerClient {
+public class PASTServiceImpl implements PASTService, Application, RMClient {
   
   /**
    * Whether to print debugging statements.
@@ -101,11 +105,6 @@ public class PASTServiceImpl implements PASTService, Application, RMClient { //,
    * Replication Manager to use
    */
   private RM replicationManager;
-
-  /**
-   * Caching Manager to use
-   */
-  private CachingManager cachingManager;
   
   /**
    * Builds a new PASTService to run on the given PastryNode, given a
@@ -496,29 +495,6 @@ public class PASTServiceImpl implements PASTService, Application, RMClient { //,
    */
   public rice.pastry.IdSet scan(rice.pastry.IdRange range) {
     return (rice.pastry.IdSet) storage.getStorage().scan(range);
-  }
-
-  // ---------- Caching Manager Client Methods ----------
-
-  /**
-   * Upcall from the CachingManager which tells this client to locally
-   * cache the given object, under the provided key.
-   *
-   * @param key The object's key
-   * @param value The object itself.
-   */
-  public void cache(Id key, final Serializable obj) {
-    storage.cache((rice.pastry.Id) key, obj, new Continuation() {
-      public void receiveResult(Object o) {
-        if (! o.equals(new Boolean(true))) {
-          System.out.println("Caching of " + obj + " did not complete correctly.");
-        }
-      }
-
-      public void receiveException(Exception e) {
-        System.out.println("Exception " + e + " occured during caching of " + obj);
-      }
-    });
   }
 
   // ---------- Debug Methods ---------------
