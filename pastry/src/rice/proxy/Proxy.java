@@ -57,7 +57,9 @@ public class Proxy {
                                                                 {"java_debug_port", "8000"},
                                                                 {"java_profiling_enable", "false"},
                                                                 {"java_profiling_port", "31000"},
+                                                                {"java_profiling_memory_enable", "false"},
                                                                 {"java_profiling_library_directory", "lib"},
+                                                                {"java_profiling_native_library_directory", "."},
                                                                 {"java_classpath", "pastry.jar"},
                                                                 {"java_main_class", "rice.visualization.proxy.VisualizationEmailProxy"},
                                                                 {"java_main_class_parameters", ""}, 
@@ -72,11 +74,12 @@ public class Proxy {
   public void run(String params) throws IOException, InterruptedException {
     Parameters parameters = initializeParameters(params);
     String command = buildJavaCommand(parameters);
+    String[] environment = buildJavaEnvironment(parameters);
     int count = 0;
     
     while (count < parameters.getIntParameter("restart_max")) {
       System.out.println("[Loader       ]: Launching command " + command);
-      Process process = Runtime.getRuntime().exec(command);
+      Process process = Runtime.getRuntime().exec(command, environment);
       Printer error = new Printer(process.getErrorStream(), "[Error Stream ]: ");
       Printer standard = new Printer(process.getInputStream(), "[Output Stream]: ");
       
@@ -107,6 +110,14 @@ public class Proxy {
     
     return result;
   }
+
+  protected String[] buildJavaEnvironment(Parameters parameters) {
+    if (parameters.getBooleanParameter("java_profiling_enable"))  {
+      return new String[] {"LD_LIBRARY_PATH=" + parameters.getStringParameter("java_profiling_native_library_directory")};
+    } else {
+      return new String[0];
+    }
+  }   
   
   protected String buildJavaCommand(Parameters parameters) {
     StringBuffer result = new StringBuffer();
@@ -124,7 +135,11 @@ public class Proxy {
     }
     
     if (parameters.getBooleanParameter("java_profiling_enable"))  {
-      result.append(" -Xrunpri -Xbootclasspath/a:");
+      result.append(" -Xrunpri");
+      if (! parameters.getBooleanParameter("java_profiling_memory_enable"))
+          result.append(":dmp=1");
+          
+      result.append(" -Xbootclasspath/a:");
       result.append(parameters.getStringParameter("java_profiling_library_directory"));
       result.append(System.getProperty("file.separator"));
       result.append("oibcp.jar -cp ");
