@@ -12,11 +12,16 @@ import rice.pastry.*;
  * @author Ansley Post
  */
 public class ChannelId extends NodeId{
-
+    private NodeId nodeId;
  /**
   * Constructor that takes in a nodeId and makes a ChannelId
   */
  public ChannelId(NodeId node){
 	super(node.copy()); 
+	nodeId = node;
  }	
+
+    public NodeId getNodeId(){
+	return nodeId;
+    }
 }
