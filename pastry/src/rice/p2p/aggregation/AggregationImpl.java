@@ -1421,25 +1421,33 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       refreshInObjectStore(id, expiration, command);
     } else {
     
+      boolean foundWaiting = false;
       IdSet waitingIds = waitingList.scan();
-      if (waitingIds.isMemberId(id)) {
-        ObjectDescriptor thisObject = (ObjectDescriptor) waitingList.getMetadata(id);
-        log(2, "Refreshing in waiting list");
+      Iterator iter = waitingIds.getIterator();
+      
+      while (iter.hasNext()) {
+        final VersionKey vkey = (VersionKey) iter.next();
+        if (vkey.getId().equals(id)) {
+          ObjectDescriptor thisObject = (ObjectDescriptor) waitingList.getMetadata(vkey);
+          log(2, "Refreshing in waiting list: " + vkey.toStringFull());
 
-        if (thisObject.refreshedLifetime < expiration) {
-          thisObject.refreshedLifetime = expiration;
-          waitingList.setMetadata(id, thisObject, new Continuation() {
-            public void receiveResult(Object o) {
-              log(3, "Refreshed metadata written ok for "+id.toStringFull());
-            }
-            public void receiveException(Exception e) {
-              warn("Cannot refresh waiting object "+id.toStringFull()+", e="+e);
-              e.printStackTrace();
-            }
-          });
-          
+          if (thisObject.refreshedLifetime < expiration) {
+            thisObject.refreshedLifetime = expiration;
+            waitingList.setMetadata(vkey, thisObject, new Continuation() {
+              public void receiveResult(Object o) {
+                log(3, "Refreshed metadata written ok for "+vkey.toStringFull());
+              }
+              public void receiveException(Exception e) {
+                warn("Cannot refresh waiting object "+vkey.toStringFull()+", e="+e);
+                e.printStackTrace();
+              }
+            });
+          }
         }
-        
+      }
+      
+      if (foundWaiting) {
+        log(2, "Found waiting -- returning");
         refreshInObjectStore(id, expiration, command);
         return;
       }
