@@ -11,6 +11,7 @@ import rice.email.proxy.*;
 /**
  * Test class for dealing with proxies, ensuring that they work
  * and make the appropriate connections.
+ * @author Dave Price <dwp@rice.edu>
  */
 
 class EmailReceiver implements Observer {
