@@ -4,6 +4,8 @@ import rice.email.*;
 import rice.post.*;
 import rice.post.messaging.*;
 
+import java.io.*;
+
 /**
  * This class represents an notification in the email service that
  * a new email is available for the recipient of this email.
@@ -33,4 +35,12 @@ public class EmailNotificationMessage extends NotificationMessage {
   public Email getEmail() {
     return _email;
   }
+
+    private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+	ois.defaultReadObject();
+
+	if (getClientAddress() == null) {
+	    System.out.println("MONKEYS IN THE CODE!");
+	}
+    }
 }

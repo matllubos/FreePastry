@@ -11,7 +11,7 @@ public class SendEmailTest extends EmailTest {
 		public void update(Observable src, Object args) {
 			System.out.println("SRC: " + src + ", ARG: " + args);
 
-			if(args instanceof Email) {
+			if(args instanceof EmailNotificationMessage) {
 				System.out.println("Email received");
 			} else {
 				System.out.println("Not an email");
@@ -29,11 +29,19 @@ public class SendEmailTest extends EmailTest {
 		EmailService[] services;
 
 		services = this.createEmailServices(new String[]
-		    {"user1", "user2"});
+		    {"user1", "user2"}, 2000);
+		
+		try {
+		    Thread.sleep(2000);
+		} catch(InterruptedException ie) {
+		    System.out.println("INTERRUPTED!: " + ie);
+		    return;
+		}
 
 		sender = services[0];
 		receiver = services[1];
 
+		sender.addObserver(new EmailReceiver());
 		receiver.addObserver(new EmailReceiver());
 
 		// create an email to send

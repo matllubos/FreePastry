@@ -69,6 +69,8 @@ public class EmailService extends PostClient {
    */  
   public EmailService(Post post) {
     _post = post;
+
+    post.addClient(this);
   }
   
   /**
@@ -132,11 +134,13 @@ public class EmailService extends PostClient {
    * @param nm The incoming notification.
    */
   public void notificationReceived(NotificationMessage nm) {
-    
+      System.out.println("Received notification message " + nm);
+
     if(nm instanceof EmailNotificationMessage) {
-      EmailNotificationMessage enm = (EmailNotificationMessage) nm;
+	EmailNotificationMessage enm = (EmailNotificationMessage) nm;
 
       // notify the observers that an email has been received.
+	this.setChanged();
       this.notifyObservers(enm);
     } else {
       System.err.println("EmailService received unknown notification "
