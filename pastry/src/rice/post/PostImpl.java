@@ -939,18 +939,20 @@ public class PostImpl implements Post, Application, ScribeClient {
    *
    * @param message The notification message to be sent.  Destination parameters
    * are encapsulated inside the message object.
+   * @param command The command to run once the operation is complete
    */
-  public void sendNotification(final NotificationMessage message) {
+  public void sendNotification(final NotificationMessage message, Continuation command) {
     final PostUserAddress destination = (PostUserAddress) message.getDestination();
 
     System.out.println("POST: " + endpoint.getId() + ": Sending notification message " + message + " to: " + destination + " addr: " + destination.getAddress());
 
-    getPostLog(destination, new ListenerContinuation("Send Notification to " + destination) {
+    getPostLog(destination, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         PostLog destinationLog = (PostLog) o;
 
         if (destinationLog == null) {
           logger.warning(endpoint.getId() + ": Could not send notification message to non-existant user " + destination);
+          parent.receiveException(new RuntimeException("Could not send notification, because destination user '" + destination + "' could not be found!"));
           return;
         }
 
@@ -963,9 +965,14 @@ public class PostImpl implements Post, Application, ScribeClient {
 
           EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, destination, keyCipherText, cipherText);
 
-          delivery.deliver(signPostMessage(enm), new ListenerContinuation("Delivery of message " + message));
+          delivery.deliver(signPostMessage(enm), new StandardContinuation(parent) {
+            public void receiveResult(Object o) {
+              parent.receiveResult(Boolean.TRUE);
+            }
+          });
         } catch (Exception e) {
           logger.warning(endpoint.getId() + ": Exception occured which encrypting NotificationMessage " + e + " - aborting.");
+          parent.receiveException(e);
         }
       }
     });
@@ -984,18 +991,20 @@ public class PostImpl implements Post, Application, ScribeClient {
    *
    * @param message The notification message to be sent.  Destination parameters
    * are encapsulated inside the message object.
+   * @param command The command to run once the operation is complete
    */
-  public void sendNotificationDirect(final NodeHandle handle, final NotificationMessage message) {
+  public void sendNotificationDirect(final NodeHandle handle, final NotificationMessage message, Continuation command) {
     final PostUserAddress destination = (PostUserAddress) message.getDestination();
 
     logger.fine(endpoint.getId() + ": Sending notification message " + message + " directly to " + destination + " via " + handle);
 
-    getPostLog(destination, new ListenerContinuation("Send Notification Direct to " + destination + " via " + handle) {
+    getPostLog(destination, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         PostLog destinationLog = (PostLog) o;
 
         if (destinationLog == null) {
           logger.warning(endpoint.getId() + ": Could not send notification message to non-existant user " + destination);
+          parent.receiveException(new RuntimeException("Could not send notification, because destination user '" + destination + "' could not be found!"));
           return;
         }
 
@@ -1010,8 +1019,10 @@ public class PostImpl implements Post, Application, ScribeClient {
           logger.finer(endpoint.getId() + ": Sending notification message directly to : " + handle);
 
           endpoint.route(handle.getId(), new PostPastryMessage(signPostMessage(enm)), handle);
+          parent.receiveResult(Boolean.TRUE);
         } catch (Exception e) {
           logger.warning(endpoint.getId() + ": Exception occured which encrypting NotificationMessage " + e + " - dropping on floor.");
+          parent.receiveException(e);
         } 
       }
     });
@@ -1038,8 +1049,9 @@ public class PostImpl implements Post, Application, ScribeClient {
    * group (through the joinGroup method) in order for this to work properly.
    *
    * @param message The message to send
+   * @param command The command to execute once done
    */
-  public void sendGroup(NotificationMessage message) {
+  public void sendGroup(NotificationMessage message, Continuation command) {
     PostGroupAddress destination = (PostGroupAddress) message.getDestination();
     byte[] key = (byte[]) keys.get(destination);
 
@@ -1059,8 +1071,10 @@ public class PostImpl implements Post, Application, ScribeClient {
       logger.finer(endpoint.getId() + ": Built encrypted notfn msg " + gnm + " for destination " + destination);
 
       scribe.publish(new Topic(destination.getAddress()), new PostScribeMessage(signPostMessage(gnm)));
+      command.receiveResult(Boolean.TRUE);
     } catch (Exception e) {
       logger.warning(endpoint.getId() + ": Exception occured while encrypting GroupNotificationMessage " + e + " - dropping on floor.");
+      command.receiveException(e);
     } 
   }  
 

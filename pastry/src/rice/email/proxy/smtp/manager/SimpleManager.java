@@ -119,7 +119,11 @@ public class SimpleManager implements SmtpManager {
     this.email.sendMessage(email, d);
     d.sleep();
 
-    if (d.exceptionThrown()) { throw d.getException(); } 
+    if (d.exceptionThrown())
+      throw d.getException(); 
+    
+    if (! d.getResult().equals(Boolean.TRUE)) 
+      throw new RuntimeException("Sending of email did not succeed: " + d.getResult());
 
     Iterator it = nonPostRecps.iterator();
     

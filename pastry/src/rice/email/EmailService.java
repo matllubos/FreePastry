@@ -255,19 +255,16 @@ public class EmailService extends PostClient {
     email.storeData(new StandardContinuation(command) {
       public void receiveResult(Object o) {
         if (o.equals(new Boolean(true))) {
-          // send the notification messages to each of the recipients
-          PostEntityAddress[] recipients = email.getRecipients();
-
-          for (int i = 0; i < recipients.length; i++) {
-            // create the Notification message, notification should go to ePost
-            EmailNotificationMessage msg = new EmailNotificationMessage(email, recipients[i], EmailService.this);
-
-            // use POST to send the Delivery message
-            post.sendNotification(msg);
-          }
-
-          // pass any result from the Store Data (there should be none) to the handler.
-          command.receiveResult(new Boolean(true));
+          new StandardContinuation(parent) {
+            protected int i=0;
+            
+            public void receiveResult(Object o) {
+              if (i < email.getRecipients().length) 
+                post.sendNotification(new EmailNotificationMessage(email, email.getRecipients()[i++], EmailService.this), this);
+              else
+                parent.receiveResult(Boolean.TRUE);
+            }
+          }.receiveResult(null);
         } else {
           command.receiveException(new Exception("Storing of Email did not succeed: " + o));
         }

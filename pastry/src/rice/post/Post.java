@@ -89,8 +89,9 @@ public interface Post {
    *
    * @param message The notification message to be sent.  Destination parameters
    * are encapsulated inside the message object.
+   * @param command The command to execute once done
    */
-  public void sendNotification(NotificationMessage message);
+  public void sendNotification(NotificationMessage message, Continuation command);
 
   /**
    * Sends a notification message with destination specified by the members
@@ -105,8 +106,9 @@ public interface Post {
    *
    * @param message The notification message to be sent.  Destination parameters
    * are encapsulated inside the message object.
+   * @param command The command to execute once done
    */
-  public void sendNotificationDirect(NodeHandle handle, NotificationMessage message);
+  public void sendNotificationDirect(NodeHandle handle, NotificationMessage message, Continuation command);
 
   /**
    * This method causes the local POST service to subscribe to the specified address, and
@@ -125,6 +127,7 @@ public interface Post {
    * group (through the joinGroup method) in order for this to work properly.
    *
    * @param message The message to send
+   * @param command The command to execute once done
    */
-  public void sendGroup(NotificationMessage message);
+  public void sendGroup(NotificationMessage message, Continuation command);
 }
