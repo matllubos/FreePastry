@@ -36,16 +36,30 @@ if advised of the possibility of such damage.
 
 package rice.pastry.testing;
 
-import rice.pastry.*;
-import rice.pastry.wire.*;
-import rice.pastry.wire.exception.NodeIsDeadException;
-import rice.pastry.standard.*;
-import rice.pastry.dist.*;
-
-import java.util.*;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
-import java.net.*;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Random;
+import java.util.Set;
+import java.util.Vector;
+
+import rice.pastry.Log;
+import rice.pastry.NodeHandle;
+import rice.pastry.PastryNode;
+import rice.pastry.PastryNodeFactory;
+import rice.pastry.PastrySeed;
+import rice.pastry.dist.DistPastryNode;
+import rice.pastry.dist.DistPastryNodeFactory;
+import rice.pastry.socket.SocketNodeHandle;
+import rice.pastry.socket.SocketPastryNode;
+import rice.pastry.standard.RandomNodeIdFactory;
+import rice.pastry.wire.Wire;
+import rice.pastry.wire.exception.NodeIsDeadException;
 
 /**
  * A hello world example for pastry. This is the distributed driver.
@@ -75,8 +89,8 @@ public class DistHelloWorldMultiThread {
   private static int bsport = 5009;
   private static int numnodes = 15;
   private static int nummsgs = 200;
-  public static int protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
-  private static boolean toFile = false;
+  public static int protocol = DistPastryNodeFactory.PROTOCOL_SOCKET;
+  private static boolean toFile = true;
 
   /**
    * Constructor
@@ -210,7 +224,10 @@ public class DistHelloWorldMultiThread {
     NodeHandle bootstrap = getBootstrap(firstNode);
     PastryNode pn = factory.newNode(bootstrap); // internally initiateJoins
     pastryNodes.addElement(pn);
-
+    if (protocol == DistPastryNodeFactory.PROTOCOL_SOCKET) {
+      SocketNodeHandle snh = (SocketNodeHandle)pn.getLocalHandle();
+      System.out.println(snh.getAddress());
+    }
     HelloWorldAppMultiThread app = new HelloWorldAppMultiThread(pn, this);
     helloClients.addElement(app);
     //if (Log.ifp(5)) System.out.println("created " + pastryNodes.size()+ "th pastry node " + pn);
@@ -241,7 +258,8 @@ public class DistHelloWorldMultiThread {
     if (toFile) {
       try {
         PrintStream ps =
-          new PrintStream(new FileOutputStream("/home/jeffh/moo.txt"));
+//        new PrintStream(new FileOutputStream("/home/jeffh/moo.txt"));
+        new PrintStream(new FileOutputStream("c:/moo.txt"));
         System.setOut(ps);
         System.setErr(ps);
       } catch (Exception e) {
@@ -321,10 +339,11 @@ public class DistHelloWorldMultiThread {
                         Iterator i = list.iterator();
                         while (i.hasNext()) {
                             HelloMsg m = (HelloMsg)i.next();
-                            System.out.println("  Missing msg: "+m);                            
+//                            System.out.println("  Missing msg: "+m);                            
                         }
         if (kill_counter < numnodes*2/3) {
-          driver.killPastryNode();
+          driver.stallPastryNode();
+          //driver.killPastryNode();
           kill_counter++;
           System.out.println("KillCounter:" + kill_counter);
         } else {
@@ -368,9 +387,9 @@ public class DistHelloWorldMultiThread {
           app.sendRndMsg(rng, msgId);
         } catch (Exception e) {
           //System.out.println("Error Creating a new client thread for "+app.getNodeId()+" " + e);
-          if (!(e instanceof NodeIsDeadException)) {
+          //if (!(e instanceof NodeIsDeadException)) {
             e.printStackTrace();
-          }
+          //}
         }
       }
     };
@@ -448,6 +467,19 @@ public class DistHelloWorldMultiThread {
     HelloWorldAppMultiThread app = (HelloWorldAppMultiThread)helloClients.remove(killNum);      
     System.out.println("***********************   killing pastry node:" + pn + ","+app);
     pn.kill();
+  }
+  
+  public void stallPastryNode() {
+      int killNum = rng.nextInt(pastryNodes.size());
+      DistPastryNode pn =
+        (DistPastryNode) pastryNodes.remove(killNum);
+      HelloWorldAppMultiThread app = (HelloWorldAppMultiThread)helloClients.remove(killNum);      
+      System.out.println("***********************   stalling pastry node:" + pn + ","+app);
+      if (pn instanceof SocketPastryNode) {
+          ((SocketPastryNode)pn).stall();   
+      } else {
+          pn.kill();   
+      }
   }
 
 }
