@@ -17,7 +17,7 @@ public class CertificateAuthorityKeyGenerator {
 
   public static int MIN_PASSWORD_LENGTH = 4;
   
-  protected static String fetchPassword(String prompt) throws IOException {
+  public static String fetchPassword(String prompt) throws IOException {
     System.out.print(prompt + ": ");
     return password.getPassword();
   }
