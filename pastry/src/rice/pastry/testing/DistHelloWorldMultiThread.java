@@ -445,8 +445,8 @@ public class DistHelloWorldMultiThread {
     int killNum = rng.nextInt(pastryNodes.size());
     DistPastryNode pn =
       (DistPastryNode) pastryNodes.remove(killNum);
-      helloClients.remove(killNum);      
-    System.out.println("***********************   killing pastry node:" + pn);
+    HelloWorldAppMultiThread app = (HelloWorldAppMultiThread)helloClients.remove(killNum);      
+    System.out.println("***********************   killing pastry node:" + pn + ","+app);
     pn.kill();
   }
 

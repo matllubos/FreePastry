@@ -225,6 +225,10 @@ public class HelloWorldAppMultiThread extends PastryAppl {
         driver.node_created();
 
     }
+    
+    public String toString() {
+      return new String("DistHWMTApp:"+thePastryNode);
+    }
 }
 
 
