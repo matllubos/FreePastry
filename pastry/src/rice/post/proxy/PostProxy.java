@@ -166,7 +166,7 @@ public class PostProxy {
       sectionStart("Creating and Initializing Services");
       stepStart("Retrieving CA public key");
       FileInputStream fis = new FileInputStream("ca.publickey");
-      ObjectInputStream ois = new ObjectInputStream(fis);
+      ObjectInputStream ois = new JSX.ObjectReader(fis);
 
       caPublic = (PublicKey) ois.readObject();
       ois.close();
@@ -174,7 +174,7 @@ public class PostProxy {
 
       stepStart("Retrieving " + name + "'s certificate");
       fis = new FileInputStream(name + ".certificate");
-      ois = new ObjectInputStream(fis);
+      ois = new JSX.ObjectReader(fis);
 
       certificate = (PostCertificate) ois.readObject();
       ois.close();
@@ -221,7 +221,7 @@ public class PostProxy {
       address = (PostUserAddress) certificate.getAddress();
 
       fis = new FileInputStream(name + ".keypair.enc");
-      ois = new ObjectInputStream(fis);
+      ois = new JSX.ObjectReader(fis);
 
       stepStart("Reading in encrypted keypair");
       byte[] cipher = (byte[]) ois.readObject();
@@ -266,8 +266,8 @@ public class PostProxy {
 
       stepStart("Starting StorageManager");
       storage = new StorageManager(FACTORY,
-                                                  new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + ":" + PORT, ".", DISK_SIZE),
-                                                  new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE));
+                                   new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + ":" + PORT, ".", DISK_SIZE),
+                                   new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE));
       stepDone(SUCCESS);
       
       stepStart("Creating Pastry node");
