@@ -86,7 +86,7 @@ public class GCPanelCreator implements PanelCreator {
       e.printStackTrace();
     }
     
-    try {      
+ /*   try {      
       GridBagConstraints cacheCons = new GridBagConstraints();
       cacheCons.gridx = 2;
       cacheCons.gridy = 0;
@@ -99,7 +99,7 @@ public class GCPanelCreator implements PanelCreator {
     } catch (Exception e) {
       System.out.println("Exceptoin " + e + " thrown.");
       e.printStackTrace();
-    }
+    } */
     
     return pastPanel;
   }

@@ -52,8 +52,7 @@ public class PASTPanelCreator implements PanelCreator {
     rice.p2p.commonapi.IdRange total = past.getEndpoint().range(past.getEndpoint().getLocalNodeHandle(), past.getReplicationFactor(), null, true);
     pastView.add("Prim. Range", (prim == null ? "All" : prim.getCCWId() + " -> " + prim.getCWId()));
     pastView.add("Total Range", (total == null ? "All" : total.getCCWId() + " -> " + total.getCWId()));
-    pastView.add("# Prim. Keys", past.scan(prim).numElements() + "");
-    pastView.add("# Total Keys", past.scan(total).numElements() + "");
+    pastView.add("# Keys", past.getStorageManager().getSize() + "");
     pastView.add("SM", past.getStorageManager().getClass().getName());
     pastView.add("Storage", past.getStorageManager().getStorage().getClass().getName());
     pastView.add("Cache", past.getStorageManager().getCache().getClass().getName());
