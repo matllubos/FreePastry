@@ -38,7 +38,7 @@ public class MemoryStorage implements Storage {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>.
    */
-  public void store(NodeId id, Serializable obj, Continuation c) {
+  public void store(Comparable id, Serializable obj, Continuation c) {
   }
 
   /**
@@ -54,49 +54,18 @@ public class MemoryStorage implements Storage {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>.
    */
-  public void unstore(NodeId id, Continuation c) {
+  public void unstore(Comparable id, Continuation c) {
   }
 
-  /**
-   * Returns whether or not an object is stored in the location <code>id</code>.
-   *
-   * @param id The id of the object in question.
-   * @return Whether or not an object is stored at id.
-   */
-  public boolean isStored(NodeId id) {
-    return false;
+  public void exists(Comparable id, Continuation c) {
   }
 
-  /**
-   * Return the object identified by the given id.
-   *
-   * This method completes by calling recieveResult() of the provided continuation
-   * with the result object.
-   *
-   * @param id The id of the object in question.
-   * @param c The command to run once the operation is complete
-   * @return The object, or <code>null</code> if the pid is invalid.
-   */
-  public void getObject(NodeId id, Continuation c) {
+  public void getObject(Comparable id, Continuation c) {
   }
 
-  /**
-   * Return the objects identified by the given range of ids.
-   *
-   * @param start The staring id of the range.
-   * @param end The ending id of the range.
-   * @return The nodeIds of objects stored within the given range.
-   */
-  public NodeId[] getObject(NodeId start, NodeId end) {
-    return new NodeId[0];
+  public void scan(Comparable start, Comparable end, Continuation c) {
   }
 
-  /**
-  * Returns the total size of the stored data in bytes.
-   *
-   * @return The total size, in bytes, of data stored.
-   */
-  public int getTotalSize() {
-    return 0;
+  public void getTotalSize(Continuation c) {
   }
 }

@@ -79,7 +79,7 @@ public class PersistentStorage implements Storage {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>.
    */
-  public void store(NodeId id, Serializable obj, Continuation c) {
+  public void store(Comparable id, Serializable obj, Continuation c) {
     try {
       if (id == null || obj == null) {
         System.out.println("ERROR: MakePersistent called with null arguments.");
@@ -137,43 +137,63 @@ public class PersistentStorage implements Storage {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>.
    */
-  public void unstore(NodeId id, Continuation c) {
+  public void unstore(Comparable id, Continuation c) {
   }
 
   /**
-   * Returns whether or not an object is stored in the location <code>id</code>.
+   * Returns whether or not an object is present in the location <code>id</code>.
+   * The result is returned via the receiveResult method on the provided
+   * Continuation with an Boolean represnting the result.
    *
+   * @param c The command to run once the operation is complete
    * @param id The id of the object in question.
-   * @return Whether or not an object is stored at id.
+   * @return Whether or not an object is present at id.
    */
-  public boolean isStored(NodeId id) {
-    return false;
+  public void exists(Comparable id, Continuation c) {
   }
 
   /**
-   * Return the object identified by the given id.
-   *
-   * This method completes by calling recieveResult() of the provided continuation
-   * with the result object.
+   * Returns the object identified by the given id.
    *
    * @param id The id of the object in question.
    * @param c The command to run once the operation is complete
-   * @return The object, or <code>null</code> if the pid is invalid.
+   * @return The object, or <code>null</code> if there is no cooresponding
+   * object (through receiveResult on c).
    */
-  public void getObject(NodeId id, Continuation c) {
+  public void getObject(Comparable id, Continuation c){
   }
 
   /**
-   * Return the nodeIds of objects identified by the given range of ids
+   * Return the objects identified by the given range of ids. The array
+   * returned contains the Comparable ids of the stored objects. The range is
+   * completely inclusive, such that if the range is (A,B), objects with
+   * ids of both A and B would be returned.
+   *
+   * Note that the two Comparable objects should be of the same class
+   * (otherwise no range can be created).
+   *
+   * When the operation is complete, the receiveResult() method is called
+   * on the provided continuation with a Comparable[] result containing the
+   * resulting IDs.
    *
    * @param start The staring id of the range.
    * @param end The ending id of the range.
-   * @return The nodeIds of objects lying within the given range.
+   * @param c The command to run once the operation is complete
+   * @return The objects
    */
-  public NodeId[] getObject(NodeId start, NodeId end) {
-    return new NodeId[0];
+  public void scan(Comparable start, Comparable end, Continuation c) {
   }
 
+  /**
+   * Returns the total size of the stored data in bytes.The result
+   * is returned via the receiveResult method on the provided
+   * Continuation with an Integer representing the size.
+   *
+   * @param c The command to run once the operation is complete
+   * @return The total size, in bytes, of data stored.
+   */
+  public void getTotalSize(Continuation c) {
+  }
 
   /*****************************************************************/
   /* Helper functions for Directory Management                     */
@@ -234,7 +254,7 @@ public class PersistentStorage implements Storage {
     return directory.isDirectory();
   }
 
-  private String makeFileName(NodeId id){
+  private String makeFileName(Comparable id){
     return id.toString();
   }
 
@@ -283,15 +303,5 @@ public class PersistentStorage implements Storage {
    */
   public boolean setStorageSize(int size) {
     return true;
-  }
-
-  /**
-   * gets the amount of storage that the persistence Manager has
-   * allocated to be used for storage of persisted object
-   *
-   * @return int the amount of storage in bytes used for storing objects
-   */
-  public int getTotalSize() {
-    return 0;
   }
 }

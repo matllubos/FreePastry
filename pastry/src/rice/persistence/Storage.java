@@ -16,7 +16,7 @@ import rice.pastry.*;
  * an in-memory storage service.  Two implementations are provided,
  * the PersistentStorage and MemoryStorage, respsectively.
  */
-public interface Storage {
+public interface Storage extends Catalog {
 
   /**
    * Stores an object in this storage. This method is non-blocking.
@@ -32,7 +32,7 @@ public interface Storage {
    * @return <code>True</code> if the action succeeds, else
    * <code>False</code> (through receiveResult on c).
    */
-  public void store(NodeId id, Serializable obj, Continuation c);
+  public void store(Comparable id, Serializable obj, Continuation c);
 
   /**
    * Removes the object from the list of stored objects. This method is
@@ -44,40 +44,5 @@ public interface Storage {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>  (through receiveResult on c).
    */
-  public void unstore(NodeId id, Continuation c);
-
-  /**
-   * Returns whether or not an object is stored in the location <code>id</code>.
-   *
-   * @param id The id of the object in question.
-   * @return Whether or not an object is stored at id.
-   */
-  public boolean isStored(NodeId id);
-
-  /**
-   * Returns the object identified by the given id.
-   *
-   * @param id The id of the object in question.
-   * @param c The command to run once the operation is complete
-   * @return The object, or <code>null</code> if there is no cooresponding
-   * object (through receiveResult on c).
-   */
-  public void getObject(NodeId id, Continuation c);
-
-  /**
-   * Return the objects identified by the given range of ids. The array
-   * returned contains StorageObjects, with the NodeId and Serializable pairs.
-   *
-   * @param start The staring id of the range.
-   * @param end The ending id of the range.
-   * @return The objects
-   */
-  public NodeId[] getObject(NodeId start, NodeId end);
-
-  /**
-   * Returns the total size of the stored data in bytes.
-   *
-   * @return The total size, in bytes, of data stored.
-   */
-  public int getTotalSize();
+  public void unstore(Comparable id, Continuation c);
 }

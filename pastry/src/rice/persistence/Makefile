@@ -1,8 +1,10 @@
 SOURCE  = \
+  Catalog.java \
 	Storage.java \
-	CacheStorage.java \
   MemoryStorage.java \
   PersistentStorage.java \
+  Cache.java \
+  LRUCache.java \
   StorageManager.java
 
 RMI_SOURCE =
