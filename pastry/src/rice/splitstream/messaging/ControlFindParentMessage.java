@@ -70,27 +70,65 @@ public class ControlFindParentMessage extends Message implements Serializable
     }
 
     /**
-     * This method returns the total number of children of this node, over all topics.
-     */
-    private int aggregateNumChildren( Scribe scribe )
+     * This method is called when the current node cannot take on the message originator
+     * as a child.  It initiates a DFS of the spare capacity tree.
+     *
+     * @param channel The channel this message is relevant to
+     * @param scribe The scribe group associated with this node
+     * @param topic The scribe topic this message pertains to (should always be the spare capacity id)
+     * @param c Credentials used to send messages from this node
+     */  
+    private void startDFS( Channel channel, Scribe scribe, Topic topic, Credentials c )
     {
-        Vector topics = scribe.getTopics();
-        int total = 0;
-
-        for (int i=0; i<topics.size(); i++)
+	Vector v = scribe.getChildren( topic.getTopicId() );
+	//System.out.println( "Children of node "+ scribe.getNodeId() + " are " + v );
+	if ( v != null )
+	{
+	    send_to.addAll( 0, scribe.getChildren( topic.getTopicId() ) );
+	}
+	while ( ( send_to.size() > 0 ) &&
+		( already_seen.contains( send_to.get(0) ) ) )
+	{
+	    send_to.remove( 0 );
+	}
+        if ( send_to.size() > 0 )
+	{
+	    channel.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
+	}
+	else
+	{
+	    if ( !scribe.isRoot( topic.getTopicId() ) )
 	    {
-		total += scribe.numChildren( ((Topic)topics.get(i)).getTopicId() );
+	        channel.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
+		//System.out.println( "Forwarding to parent at node "+scribe.getNodeId() );
 	    }
-
-        return total;
+	    else
+	    {
+	        //System.out.println( "No suitable parent found" );
+		channel.routeMsgDirect( originalSource,
+					new ControlFindParentResponseMessage( channel.getAddress(),
+									      scribe.getNodeHandle(),
+									      channel_id,
+									      c,
+									      new Boolean( false ), stripe_id ),
+					c,
+					null );
+	    }
+	}
     }
 
     /**
-     * This is the callback method for when this message should be forwarded to another
-     * node in the spare capacity tree.  This node does not have any spare capacity
-     * and is unable to take on the message originator as a child.
-     * @param scribe The SplitStream application
-     * @param topic The stripe that this message is relevant to
+     * This method is called when the FindParentMessage is received by a node.  The node should
+     * determine whether it is able to handle an additional child.  If so, it adds the message
+     * originator as a child and sends a FindParentResponse message back to the originator.  If
+     * not, it initiates a DFS of the spare capacity tree.
+     *
+     * @param scribe The scribe group associated with this node
+     * @param topic The scribe topic this message pertains to (should always be the spare capacity id)
+     * @param channel The channel this message is relevant to
+     * @param stripe The splitstream stripe this message pertains to
+     * @return Should always return false, as message forwarding does not need to be done by
+     * scribe from this point on
      */
     public boolean handleMessage( Scribe scribe, Topic topic, Channel channel, Stripe stripe )
     {
@@ -98,63 +136,23 @@ public class ControlFindParentMessage extends Message implements Serializable
         //System.out.println("Forwarding at " + scribe.getNodeId()+" for stipe "+stripe.getStripeId());
         Credentials c = new PermissiveCredentials();
 	Topic stripeTopic = scribe.getTopic(recv_stripe.getStripeId());
+
+        if ( send_to.size() != 0 )
+	{
+	    already_seen.add( 0, send_to.remove(0) );
+	}
+	else
+	{
+            already_seen.add( 0, scribe.getNodeHandle() );
+	}
+
         if ( stripeTopic == null )
 	    {
 		//System.out.println("Topic is null for stripe "+recv_stripe.getStripeId());
-		if ( send_to.size() != 0 )
-		    {
-			already_seen.add( 0, send_to.remove(0) );
-		    }
-		else
-		    {
-			already_seen.add( 0, scribe.getNodeHandle() );
-		    }
-		Vector v = scribe.getChildren( topic.getTopicId() );
-		//System.out.println( "Children of node "+ scribe.getNodeId() + " are " + v );
-		if ( v != null )
-		    {
-			send_to.addAll( 0, scribe.getChildren( topic.getTopicId() ) );
-		    }
-		while ( ( send_to.size() > 0 ) &&
-			( already_seen.contains( send_to.get(0) ) ) )
-		    {
-			send_to.remove( 0 );
-		    }
-		if ( send_to.size() > 0 )
-		    {
-			channel.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
-		    }
-		else
-		    {
-			if ( !scribe.isRoot( topic.getTopicId() ) )
-			    {
-				channel.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
-				//System.out.println( "Forwarding to parent at node "+scribe.getNodeId() );
-			    }
-			else
-			    {
-				System.out.println( "You're screwed, we're at the root" );
-				channel.routeMsgDirect( originalSource,
-							new ControlFindParentResponseMessage( channel.getAddress(),
-											      scribe.getNodeHandle(),
-											      channel_id,
-											      c,
-											      new Boolean( false ), stripe_id ),
-							c,
-							null );
-			    }
-		    }
+                startDFS( channel, scribe, topic, c );
 	    }
 	else
 	    {
-		if ( send_to.size() != 0 )
-		    {
-			already_seen.add( 0, send_to.remove(0) );
-		    }
-		else
-		    {
-			already_seen.add( 0, scribe.getNodeHandle() );
-		    }
 		BandwidthManager bandwidthManager = channel.getBandwidthManager();
 		
 		if ( ( bandwidthManager.canTakeChild( channel ) ) &&
@@ -187,43 +185,10 @@ public class ControlFindParentMessage extends Message implements Serializable
 
 		    }
 		else
-		    {   if(topic == null) System.out.println("TOPIC IS NULL");
-		    Vector v = scribe.getChildren( topic.getTopicId() );
-		    //System.out.println( "Children of node "+ scribe.getNodeId() + " are " + v );
-		    if ( v != null )
-			{
-			    send_to.addAll( 0, scribe.getChildren( topic.getTopicId() ) );
-			}
-		    while ( ( send_to.size() > 0 ) &&
-			    ( already_seen.contains( send_to.get(0) ) ) )
-			{
-			    send_to.remove( 0 );
-			}
-		    if ( send_to.size() > 0 )
-			{
-			    channel.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
-			}
-		    else
-			{
-			    if ( !scribe.isRoot( topic.getTopicId() ) )
-				{
-				    channel.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
-				    //System.out.println( "Forwarding to parent at node "+scribe.getNodeId() );
-				}
-			    else
-				{
-				    System.out.println( "You're screwed, we're at the root" );
-				    channel.routeMsgDirect( originalSource,
-							    new ControlFindParentResponseMessage( channel.getAddress(),
-												  scribe.getNodeHandle(),
-												  channel_id,
-												  c,
-												  new Boolean( false ), stripe_id ),
-							    c,
-							    null );
-				}
-			}
-		    }
+		{   
+                    //if(topic == null) System.out.println("TOPIC IS NULL");
+                    startDFS( channel, scribe, topic, c );
+		}
 	    }
 	return false;
     }
