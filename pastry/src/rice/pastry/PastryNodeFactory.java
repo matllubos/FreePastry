@@ -259,7 +259,7 @@ public abstract class PastryNodeFactory {
     for (int i=0; i < handles.length; i++) {
       NodeHandle tempNode = handles[i];
 
-      if (proximity(local, tempNode) < nearestdist) {
+      if ((proximity(local, tempNode) < nearestdist) && tempNode.isAlive()) {
         nearestdist = proximity(local, tempNode);
         closestNode = tempNode;
       }
