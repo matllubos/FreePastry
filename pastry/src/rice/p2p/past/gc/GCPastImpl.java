@@ -227,6 +227,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param command The command to return the result to
    */
   protected void refresh(final GCIdSet ids, Continuation command) {
+    System.out.println("REFRESH: CALLED WITH "+ ids.numElements() + " ELEMENTS");
+
     if (ids.numElements() == 0) {
       command.receiveResult(new Object[0]);
       return;
@@ -234,19 +236,24 @@ public class GCPastImpl extends PastImpl implements GCPast {
     
     final Id[] array = ids.asArray();
     GCId start = (GCId) array[0];
+    System.out.println("REFRESH: GETTINGS ALL HANDLES OF " + start);
+
     
     sendRequest(start.getId(), new GCLookupHandlesMessage(getUID(), start.getId(), getLocalNodeHandle(), start.getId()), 
                 new NamedContinuation("GCLookupHandles for " + start.getId(), command) {
       public void receiveResult(Object o) {
         NodeHandleSet set = (NodeHandleSet) o;
+        System.out.println("REFRESH: GOT " + set + " SET OF HANDLES!");
         final ReplicaMap map = new ReplicaMap();
         
         for (int i=0; i<array.length; i++) {
           GCId id = (GCId) array[i];
 
           NodeHandleSet replicas = endpoint.replicaSet(id.getId(), replicationFactor+1, set.getHandle(set.size()-1), set);
-          
-          if ((replicas != null) && (replicas.size() > 0)) {
+          System.out.println("REFRESH: ID " + id + " IS MAPPED TO REPLICAS " + replicas);
+
+          // if we have all of the replicas, go ahead and refresh this item
+          if ((replicas != null) && ((replicas.size() == set.size()) || (replicas.size() == replicationFactor+1))) {
             for (int j=0; j<replicas.size(); j++) 
               map.addReplica(replicas.getHandle(j), id);
             
@@ -262,12 +269,21 @@ public class GCPastImpl extends PastImpl implements GCPast {
             if (iterator.hasNext()) {
               NodeHandle next = (NodeHandle) iterator.next();
               GCIdSet ids = map.getIds(next);
+              System.out.println("REFRESH: SENDING REQUEST TO " + next + " FOR IDSET " + ids);
+
               
               sendRequest(next, new GCRefreshMessage(getUID(), ids, getLocalNodeHandle(), next.getId()), 
                           new NamedContinuation("GCRefresh to " + next, this));
             } else {
+              System.out.println("REFRESH: DONE SENDING REQUESTS, RECURSING");
+
               refresh(ids, parent);
             }
+          }
+          
+          public void receiveException(Exception e) {
+            System.out.println("GOT EXCEPTION " + e + " REFRESHING ITEMS - CONTINUING");
+            receiveResult(null);
           }
         };
         
@@ -344,11 +360,11 @@ public class GCPastImpl extends PastImpl implements GCPast {
         process.receiveResult(null);
       } else if (msg instanceof GCLookupHandlesMessage) {
         GCLookupHandlesMessage lmsg = (GCLookupHandlesMessage) msg;
-        NodeHandleSet set = endpoint.replicaSet(lmsg.getId(), lmsg.getMax());
+        NodeHandleSet set = endpoint.neighborSet(lmsg.getMax());
         set.removeHandle(getLocalNodeHandle().getId());
         set.putHandle(getLocalNodeHandle());
         
-        log.finer("Returning replica set " + set + " for lookup handles of id " + lmsg.getId() + " max " + lmsg.getMax() + " at " + endpoint.getId());
+        log.finer("Returning neighbor set " + set + " for lookup handles of id " + lmsg.getId() + " max " + lmsg.getMax() + " at " + endpoint.getId());
         getResponseContinuation(msg).receiveResult(set);
       } else if (msg instanceof GCCollectMessage) {
         // get all ids which expiration before now

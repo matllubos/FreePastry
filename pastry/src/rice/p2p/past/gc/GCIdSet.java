@@ -89,6 +89,9 @@ public class GCIdSet implements IdSet {
    */
   public void addId(Id id) {
     GCId gcid = (GCId) id;
+    if (ids.isMemberId(gcid.getId()))
+      System.out.println("REFRESH: ADDING ALREADY-EXISTING ID " + gcid.getId());
+    
     ids.addId(gcid.getId());
     timeouts.put(gcid.getId(), new GCPastMetadata(gcid.getExpiration()));
   }
