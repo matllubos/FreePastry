@@ -23,4 +23,7 @@ public interface MailFolder {
 
     void put(MovingMessage msg, List flags, String date)
       throws MailboxException;
+
+    void put(MovingMessage msg)
+      throws MailboxException;
 }
