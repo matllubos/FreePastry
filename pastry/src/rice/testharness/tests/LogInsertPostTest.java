@@ -35,11 +35,12 @@ met:
 
 package rice.testharness.tests;
 
+import rice.*;
+
 import rice.pastry.client.*;
 import rice.pastry.leafset.*;
 import rice.pastry.security.*;
 import rice.pastry.messaging.*;
-import rice.pastry.multiring.*;
 import rice.pastry.routing.*;
 import rice.pastry.*;
 import rice.pastry.direct.*;
@@ -54,6 +55,7 @@ import rice.past.*;
 import rice.persistence.*;
 
 import rice.post.*;
+import rice.post.log.*;
 
 import rice.testharness.*;
 import rice.testharness.messaging.*;
@@ -64,33 +66,10 @@ import java.net.*;
 import java.security.*;
 
 
-/**
-* A test class which picks a number of random node IDs and
-* tests a pastry and direct ping to that NodeId.
-*
-* @version $Id$
-*
-* @author Alan Mislove
-*/
+public class LogInsertPostTest extends PostTest {
 
-public class PostTest extends Test {
-
-  public static int NUM_TRIALS = 50;
-
-  protected Credentials _credentials = new PermissiveCredentials();
-
-  protected Scribe scribe;
-
-  protected PASTService past;
-
-  protected Post post;
-
-  protected PostUserAddress address;
-
-  protected KeyPair pair;
-
-  protected KeyPair caPair;
-
+  public static int LOG_ENTRY_SIZE = 10000;
+  
   /**
     * Constructor which takes the local node this test is on,
     * an array of all the nodes in the network, and a printwriter
@@ -101,42 +80,8 @@ public class PostTest extends Test {
     * @param nodes NodeHandles to all of the other participating
     *              TestHarness nodes (this test class ignores these)
     */
-  public PostTest(PrintStream out, PastryNode localNode, TestHarness harness) {
+  public LogInsertPostTest(PrintStream out, PastryNode localNode, TestHarness harness) {
     super(out, localNode, harness);
-
-    try {
-      System.out.println("Post Test Suite");
-      System.out.println("------------------------------------------------------------------");
-      System.out.println("  Initializing Test");
-      System.out.print("    Retrieving CA key pair\t\t\t\t\t");
-
-      KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-      FileInputStream fis = new FileInputStream("capair.txt");
-      ObjectInputStream ois = new ObjectInputStream(fis);
-
-      caPair = (KeyPair) ois.readObject();
-      System.out.println("[ DONE ]");
-      
-      System.out.print("    Generating user key pair\t\t\t\t\t");
-      pair = kpg.generateKeyPair();
-      System.out.println("[ DONE ]");
-
-      if (localNode.getNodeId() instanceof RingNodeId) {
-        address = new PostUserAddress("test"+localNode.getNodeId(), ((RingNodeId) localNode.getNodeId()).getRingId());
-      } else {
-        address = new PostUserAddress("test"+localNode.getNodeId());
-      }
-      
-      StorageManager storage = new StorageManager(new PersistentStorage(".", 100000000), new LRUCache(new MemoryStorage(), 1000000));
-      
-      System.out.print("    Starting PAST service\t\t\t\t\t");
-      past = new PASTServiceImpl(localNode, storage);
-      System.out.println("[ DONE ]");  
-
-    } catch (Exception e) {
-      System.out.println("Exception occured during construction " + e + " " + e.getMessage());
-      e.printStackTrace();
-    }
   }	
 
   /**
@@ -144,43 +89,75 @@ public class PostTest extends Test {
     * Test to begin testing.
     */
   public void startTest(NodeHandle[] nodes) {
-    try {
-      System.out.print("    Starting POST service\t\t\t\t\t");
-      post = new Post(thePastryNode, past, _harness.getScribe(), address, pair, null, caPair.getPublic());
-      System.out.println("[ DONE ]");
+    super.startTest(nodes);
+    
+    Continuation run = new Continuation() {
+      int i=-1;
+      long[] times = new long[NUM_TRIALS];
+      long beginTime;
+      PostLog log;
+      
+      public void receiveResult(Object o) {
+        if (i == -1) {
+          log = (PostLog) o;
+          i++;
+        } else {
+          times[i] = System.currentTimeMillis() - beginTime;
+          i++;
+        }
+          
+        if (i < NUM_TRIALS) {
+          beginTime = System.currentTimeMillis();
+          log.addLogEntry(new LogInsertLogEntry(i), this);
+        } else {
+          System.out.println("Log Entry:");
+          
+          for (int j=0; j<NUM_TRIALS; j++) {
+            System.out.println(j + ":\t" + times[j]);
+          }
+        }
+      }
 
-      System.out.println("Post test for node " + _localNode.getNodeId() + " completed successfully.");
+      public void receiveException(Exception e) {
+        System.out.println("Exception " + e + " occurred while fetching log.");
+      }
+    };
 
-    } catch (Exception e) {
-      System.out.println("Exception occured during construction " + e + " " + e.getMessage());
-      e.printStackTrace();
+    if (nodes[0].getNodeId().equals(_localNode.getNodeId())) {
+      post.getPostLog(run);
     }
   }
  
   public Address getAddress() {
-    return PostTestAddress.instance();
+    return LogInsertPostTestAddress.instance();
   }
 
-  public Credentials getCredentials() {
-    return _credentials;
+  public static class LogInsertLogEntry extends LogEntry {
+
+    private byte[] data;
+    
+    private int num;
+
+    public LogInsertLogEntry(int num) {
+      this.num = num;
+      this.data = new byte[LOG_ENTRY_SIZE];
+    }
+    
   }
 
-  public void messageForAppl(Message msg) {
-  }
-
-  public static class PostTestAddress implements Address {
+  public static class LogInsertPostTestAddress implements Address {
 
     /**
-    * The only instance of DumbTestAddress ever created.
+    * The only instance of LogInsertPostTestAddress ever created.
      */
-    private static PostTestAddress _instance;
+    private static LogInsertPostTestAddress _instance;
 
     /**
-    * Returns the single instance of TestHarnessAddress.
+    * Returns the single instance of LogInsertPostTestAddress.
      */
-    public static PostTestAddress instance() {
+    public static LogInsertPostTestAddress instance() {
       if(null == _instance) {
-        _instance = new PostTestAddress();
+        _instance = new LogInsertPostTestAddress();
       }
       return _instance;
     }
@@ -188,12 +165,12 @@ public class PostTest extends Test {
     /**
       * Code representing address.
      */
-    public int _code = 0x98834c66;
+    public int _code = 0x98834c96;
 
     /**
       * Private constructor for singleton pattern.
      */
-    private PostTestAddress() {}
+    private LogInsertPostTestAddress() {}
 
     /**
       * Returns the code representing the address.
@@ -202,11 +179,11 @@ public class PostTest extends Test {
 
     /**
       * Determines if another object is equal to this one.
-     * Simply checks if it is an instance of AP3Address
+     * Simply checks if it is an instance of LogInsertPostTestAddress
      * since there is only one instance ever created.
      */
     public boolean equals(Object obj) {
-      return (obj instanceof PostTestAddress);
+      return (obj instanceof LogInsertPostTestAddress);
     }
   }  
 }

@@ -35,6 +35,8 @@ met:
 
 package rice.testharness.tests;
 
+import rice.*;
+
 import rice.pastry.client.*;
 import rice.pastry.leafset.*;
 import rice.pastry.security.*;
@@ -54,6 +56,8 @@ import rice.past.*;
 import rice.persistence.*;
 
 import rice.post.*;
+import rice.post.log.*;
+import rice.post.storage.*;
 
 import rice.testharness.*;
 import rice.testharness.messaging.*;
@@ -64,33 +68,14 @@ import java.net.*;
 import java.security.*;
 
 
-/**
-* A test class which picks a number of random node IDs and
-* tests a pastry and direct ping to that NodeId.
-*
-* @version $Id$
-*
-* @author Alan Mislove
-*/
+public class SignedInsertPostTest extends PostTest {
 
-public class PostTest extends Test {
+  public static int[] FILE_SIZES = {1000, 1000, 10000, 100000, 1000000};
 
-  public static int NUM_TRIALS = 50;
+  private Random rng;
 
-  protected Credentials _credentials = new PermissiveCredentials();
-
-  protected Scribe scribe;
-
-  protected PASTService past;
-
-  protected Post post;
-
-  protected PostUserAddress address;
-
-  protected KeyPair pair;
-
-  protected KeyPair caPair;
-
+  private RandomRingNodeIdFactory factory;
+  
   /**
     * Constructor which takes the local node this test is on,
     * an array of all the nodes in the network, and a printwriter
@@ -101,42 +86,11 @@ public class PostTest extends Test {
     * @param nodes NodeHandles to all of the other participating
     *              TestHarness nodes (this test class ignores these)
     */
-  public PostTest(PrintStream out, PastryNode localNode, TestHarness harness) {
+  public SignedInsertPostTest(PrintStream out, PastryNode localNode, TestHarness harness) {
     super(out, localNode, harness);
 
-    try {
-      System.out.println("Post Test Suite");
-      System.out.println("------------------------------------------------------------------");
-      System.out.println("  Initializing Test");
-      System.out.print("    Retrieving CA key pair\t\t\t\t\t");
-
-      KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-      FileInputStream fis = new FileInputStream("capair.txt");
-      ObjectInputStream ois = new ObjectInputStream(fis);
-
-      caPair = (KeyPair) ois.readObject();
-      System.out.println("[ DONE ]");
-      
-      System.out.print("    Generating user key pair\t\t\t\t\t");
-      pair = kpg.generateKeyPair();
-      System.out.println("[ DONE ]");
-
-      if (localNode.getNodeId() instanceof RingNodeId) {
-        address = new PostUserAddress("test"+localNode.getNodeId(), ((RingNodeId) localNode.getNodeId()).getRingId());
-      } else {
-        address = new PostUserAddress("test"+localNode.getNodeId());
-      }
-      
-      StorageManager storage = new StorageManager(new PersistentStorage(".", 100000000), new LRUCache(new MemoryStorage(), 1000000));
-      
-      System.out.print("    Starting PAST service\t\t\t\t\t");
-      past = new PASTServiceImpl(localNode, storage);
-      System.out.println("[ DONE ]");  
-
-    } catch (Exception e) {
-      System.out.println("Exception occured during construction " + e + " " + e.getMessage());
-      e.printStackTrace();
-    }
+    rng = new Random();
+    factory = new RandomRingNodeIdFactory(((RingNodeId) localNode.getNodeId()).getRingId());
   }	
 
   /**
@@ -144,43 +98,100 @@ public class PostTest extends Test {
     * Test to begin testing.
     */
   public void startTest(NodeHandle[] nodes) {
-    try {
-      System.out.print("    Starting POST service\t\t\t\t\t");
-      post = new Post(thePastryNode, past, _harness.getScribe(), address, pair, null, caPair.getPublic());
-      System.out.println("[ DONE ]");
+    super.startTest(nodes);
+    
+    Continuation run = new Continuation() {
+      int i=-1;
+      int size=0;
+      long[][] times = new long[FILE_SIZES.length][NUM_TRIALS];
+      long beginTime;
+      
+      public void receiveResult(Object o) {
+        if (i == -1) {
+          i++;
+        } else {
+          times[size][i] = System.currentTimeMillis() - beginTime;
+          System.out.println("Set " + FILE_SIZES[size] + " " + i + " to be " + times[size][i]);
+          i++;
+        }
+          
+        if (i < NUM_TRIALS) {
+          byte[] data = new byte[FILE_SIZES[size]];
+          rng.nextBytes(data);
+          PostData postData = new SignedTestData(data);
+          beginTime = System.currentTimeMillis();
+          post.getStorageService().storeSigned(postData, factory.generateNodeId(), this);
+        } else if (size < FILE_SIZES.length - 1) {
+          size++;
+          i=0;
+          
+          byte[] data = new byte[FILE_SIZES[size]];
+          rng.nextBytes(data);
+          PostData postData = new SignedTestData(data);
+          beginTime = System.currentTimeMillis();
+          post.getStorageService().storeSigned(postData, factory.generateNodeId(), this);
+        } else {
+          System.out.println("Signed:");
 
-      System.out.println("Post test for node " + _localNode.getNodeId() + " completed successfully.");
+          for (int k=0; k<NUM_TRIALS; k++) {
+            for (int j=0; j<FILE_SIZES.length; j++) {
+              System.out.print(times[j][k] + "\t");
+            }
 
-    } catch (Exception e) {
-      System.out.println("Exception occured during construction " + e + " " + e.getMessage());
-      e.printStackTrace();
+            System.out.println();
+          }
+        }
+      }
+
+      public void receiveException(Exception e) {
+        System.out.println("Exception " + e + " occurred while testing.");
+        e.printStackTrace();
+      }
+    };
+
+    if (nodes[0].getNodeId().equals(_localNode.getNodeId())) {
+      run.receiveResult(null);
     }
   }
  
   public Address getAddress() {
-    return PostTestAddress.instance();
+    return SignedInsertPostTestAddress.instance();
   }
 
-  public Credentials getCredentials() {
-    return _credentials;
-  }
+  public static class SignedTestData implements PostData {
 
-  public void messageForAppl(Message msg) {
-  }
+    private byte[] data;
+    
+    public SignedTestData(byte[] data) {
+      this.data = data;
+    }
 
-  public static class PostTestAddress implements Address {
+    public SignedReference buildSignedReference(NodeId location) {
+      return new SignedReference(location);
+    }
+
+    public ContentHashReference buildContentHashReference(NodeId location, Key key) {
+      throw new IllegalArgumentException("moNKEYS!");    }
+
+    public SecureReference buildSecureReference(NodeId location, Key key) {
+      throw new IllegalArgumentException("moNKEYS!");
+    }
+  }
+    
+
+  public static class SignedInsertPostTestAddress implements Address {
 
     /**
-    * The only instance of DumbTestAddress ever created.
+    * The only instance of SignedInsertPostTestAddress ever created.
      */
-    private static PostTestAddress _instance;
+    private static SignedInsertPostTestAddress _instance;
 
     /**
-    * Returns the single instance of TestHarnessAddress.
+    * Returns the single instance of SignedInsertPostTestAddress.
      */
-    public static PostTestAddress instance() {
+    public static SignedInsertPostTestAddress instance() {
       if(null == _instance) {
-        _instance = new PostTestAddress();
+        _instance = new SignedInsertPostTestAddress();
       }
       return _instance;
     }
@@ -188,12 +199,12 @@ public class PostTest extends Test {
     /**
       * Code representing address.
      */
-    public int _code = 0x98834c66;
+    public int _code = 0x98834c98;
 
     /**
       * Private constructor for singleton pattern.
      */
-    private PostTestAddress() {}
+    private SignedInsertPostTestAddress() {}
 
     /**
       * Returns the code representing the address.
@@ -202,11 +213,11 @@ public class PostTest extends Test {
 
     /**
       * Determines if another object is equal to this one.
-     * Simply checks if it is an instance of AP3Address
+     * Simply checks if it is an instance of SignedInsertPostTestAddress
      * since there is only one instance ever created.
      */
     public boolean equals(Object obj) {
-      return (obj instanceof PostTestAddress);
+      return (obj instanceof SignedInsertPostTestAddress);
     }
   }  
 }

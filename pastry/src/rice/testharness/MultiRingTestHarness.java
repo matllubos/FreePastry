@@ -96,7 +96,6 @@ public class MultiRingTestHarness extends TestHarness {
 
       for (int i=0; i<others.length; i++) {
         if (others[i].node.getNodeId().equals(node.getNodeId())) {
-          System.out.println("MONEKY! vbdovbdoosbvo");
           others[i].sendToAll((Message) msg.getData());
         }
       }

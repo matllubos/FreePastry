@@ -7,7 +7,11 @@ SOURCE  = \
   SplitStreamTest.java \
   Pinger.java \
   PastryPinger.java\
-  PostTest.java
+  PostTest.java\
+  LogInsertPostTest.java\
+  ContentHashInsertPostTest.java\
+  ContentHashFetchPostTest.java\
+  SignedInsertPostTest.java
 
 RMI_SOURCE =
 
