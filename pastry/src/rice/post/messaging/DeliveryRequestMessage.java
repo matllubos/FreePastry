@@ -6,40 +6,29 @@ import rice.post.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import java.io.*;
+
 /**
  * This message is broadcast to the sender of a NotificationMessage in
  * order to inform the sender that the message has been received.
  */
-public class DeliveryRequestMessage extends Message implements Serializable {
+public class DeliveryRequestMessage extends PostMessage {
   
-  private PostUserAddress sender      = null;
-  private PostUserAddress destination = null;
-  private NotificationMessage message = null;    
+  private PostUserAddress destination;
+  private EncryptedNotificationMessage message;    
 
   /**
    * Constructs a DeliveryRequestMessage
    *
    * @param sender The sender of this delivery request
    * @param destination The destination address to deliver the notification to
-   * @param message The message to deliver 
+   * @param message The message to deliver, in encrypted state
    */
   public DeliveryRequestMessage(PostUserAddress sender, 
                                 PostUserAddress destination, 
-                                NotificationMessage message) {
-     super(PostAddress.instance());
-     this.sender = sender;
-     this.destination = destination;
-     this.message = message;
-
-  }
-    
-  /**
-   * Gets the sender of this delivery request
-   *
-   * @return The address of the sender of this delivery request
-   */
-  public PostUserAddress getSender() {
-    return sender;
+                                EncryptedNotificationMessage message) {
+    super(sender);
+    this.destination = destination;
+    this.message = message;
   }
     
   /**
@@ -47,17 +36,17 @@ public class DeliveryRequestMessage extends Message implements Serializable {
    *
    * @return The address of the destination of this notification
    */
-  public PostUserAddress getUserDestination() {
+  public PostUserAddress getDestination() {
     return destination;
   }
     
   /**
-   * Gets the NoticifcationMessage which this is a Request for. 
+   * Gets the EncryptedNotificationMessage which this is a Request for. 
    * for.
    *
-   * @return The message which this receipt is for.
+   * @return The internal message, in encrypted state
    */
-  public NotificationMessage getNotificationMessage() {
+  public EncryptedNotificationMessage getEncryptedMessage() {
     return message;
   }
 }

@@ -171,46 +171,202 @@ public class Post extends PastryAppl implements IScribeApp  {
      return credentials;
    }
 
+  
   /**
    * The method by which Pastry passes a message up to POST
    *
    * @param message The message which has arrived
    */
   public void messageForAppl(Message message) {
-    if(message instanceof NotificationMessage)
-         handleNotificationMessage(message); 
-    else if( message instanceof DeliveryRequestMessage)
-         handleDeliveryRequestMessage(message); 
-    else if( message instanceof ReceiptMessage ) {
-         handleRecieptMessage(message);
+    if (message instanceof PostMessageWrapper) {
+      handlePostMessage(((PostMessageWrapper) message).getMessage());
+    } else {
+      System.out.println("Found unknown pastry message " + message + " - dropping on floor.");
     }
-   
   }
-  private void handleNotificationMessage(Message message){
-        NotificationMessage nmessage = (NotificationMessage) message;
-        PostClient client = (PostClient) clientAddresses.get(nmessage.getClientId());
-        if(client != null){
-          client.notificationReceived(nmessage);
-     }
+
+  /**
+   * Method by which Scribe delivers a message to this client.
+   *
+   * @param msg The incoming message.
+   */
+  public void receiveMessage(ScribeMessage msg) {
+    if (msg.getData() instanceof PostMessageWrapper) {
+      handlePostMessage(((PostMessageWrapper) msg.getData()).getMessage());
+    } else {
+      System.out.println("Found unknown Scribe message " + msg.getData() + " - dropping on floor.");
+    }
+  }
+
+  /**
+   * Internal method for processing incoming PostMessage.  This
+   * method performs all verification checks and processes the
+   * message appropriately.
+   *
+   * @param message The incoming message.
+   */
+  private	void handlePostMessage(PostMessage message) {
+    PostEntityAddress sender = message.getSender();
+    PostLog senderLog = null;
+
+    try {
+      senderLog = getPostLog(sender);
+    } catch (PostException e) {
+      System.out.println("PostException occured while retrieving PostLog for " + sender + " - aborting.");
+      return;
+    }      
+
+    // look up sender
+    if (senderLog == null) {
+      System.out.println("Found PostMessage from non-existent sender " + sender + " - dropping on floor.");
+      return;
+    }
+
+    // verify messag is signed
+    if (! verifyPostMessage(message, senderLog.getPublicKey())) {
+      System.out.println("Problem encountered verifying PostMessage from " + sender + " - dropping on floor.");
+      return;
+    }
+
+    if (message instanceof DeliveryRequestMessage) {
+      handleDeliveryRequestMessage((DeliveryRequestMessage) message);
+    } else if (message instanceof PresenceMessage) {
+      handlePresenceMessage((PresenceMessage) message);
+    } else if (message instanceof EncryptedNotificationMessage) {
+      handleEncryptedNotificationMessage((EncryptedNotificationMessage) message);
+    } else if (message instanceof ReceiptMessage) {
+      handleRecieptMessage((ReceiptMessage) message);
+    } else {
+      System.out.println("Found unknown Postmessage " + message + " - dropping on floor.");
+    }
   }
   
-  private void handleRecieptMessage(Message message){
-
-  }
-
-  private void handleDeliveryRequestMessage(Message message){
+  /**
+   * This method handles the processing of a delivery
+   * request message by subscribing the appriate scribe
+   * group.
+   *
+   * @param message The incoming message.
+   */
+  private void handleDeliveryRequestMessage(DeliveryRequestMessage message){
     /* Buffer this for Delivery */
-    DeliveryRequestMessage dmessage = (DeliveryRequestMessage) message;
-    synchronized(bufferedData){
-    Vector userQueue = (Vector) bufferedData.get(dmessage.getDestination());
-    if(userQueue == null){
-       userQueue = new Vector();
-       bufferedData.put(dmessage.getDestination(), userQueue);
+
+    synchronized(bufferedData) {
+      Vector userQueue = (Vector) bufferedData.get(message.getDestination());
+
+      if (userQueue == null) {
+        userQueue = new Vector();
+        bufferedData.put(message.getDestination(), userQueue);
+        scribeService.join(message.getDestination().getAddress(), this, credentials);
+      }
+
+      userQueue.addElement(message.getEncryptedMessage());
     }
-    userQueue.addElement(dmessage.getNotificationMessage());
   }
 
+  /**
+   * This method handles the receipt of a presence message, which
+   * involves routing all pending notification messages to the
+   * location advertised in the message.
+   *
+   * @param message The incoming message
+   */
+  private void handlePresenceMessage(PresenceMessage message) {
+    synchronized (bufferedData) {
 
+      Vector userQueue = (Vector) bufferedData.get(message.getSender());
+
+      if (userQueue != null) {
+        for (int i=0; i<userQueue.size(); i++) {
+          EncryptedNotificationMessage enm = (EncryptedNotificationMessage) userQueue.elementAt(i);
+
+          signAndPreparePostMessage(enm);
+          
+          routeMsg(message.getLocation(), new PostPastryMessage(enm), getCredentials(), new SendOptions());
+        }
+      }
+    }
+  }
+    
+  
+  /**
+   * This method processes a notification message by passing it up
+   * to the appropriate application.
+   *
+   * @param message The incoming message.
+   */
+  private void handleEncryptedNotificationMessage(EncryptedNotificationMessage message) {
+    // send receipt
+    ReceiptMessage rm = new ReceiptMessage(address, message);
+    signAndPreparePostMessage(rm);
+    routeMsg(message.getSender().getAddress(), new PostPastryMessage(rm), getCredentials(), new SendOptions());
+
+    NotificationMessage nm = null;
+    
+    // decrypt and verify notification message
+    try {
+      nm = (NotificationMessage) security.deserialize(security.decryptRSA(message.getData()));
+    } catch (SecurityException e) {
+      System.out.println("SecurityException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
+      return;
+    } catch (IOException e) {
+      System.out.println("IOException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
+      return;
+    } catch (ClassNotFoundException e) {
+      System.out.println("ClassNotFoundException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
+      return;
+    } catch (ClassCastException e) {
+      System.out.println("ClassCastException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
+      return;
+    }
+    
+    PostUserAddress sender = nm.getSender();
+    PostLog senderLog = null;
+
+    try {
+      senderLog = getPostLog(sender);
+    } catch (PostException e) {
+      System.out.println("PostException occured while retrieving PostLog for " + sender + " - aborting.");
+      return;
+    }    
+    
+    // look up sender
+    if (senderLog == null) {
+      System.out.println("Found NotificationMessage from non-existent sender " + sender + " - dropping on floor.");
+      return;
+    }
+    
+    if (! verifyPostMessage(nm, senderLog.getPublicKey())) {
+      System.out.println("Error occured during verification of notification message " + nm + " - dropping on floor.");
+      return;
+    }
+
+    // deliver notification messag
+    PostClient client = (PostClient) clientAddresses.get(nm.getClientAddress());
+
+    if (client != null) {
+      client.notificationReceived(nm);
+    } else {
+      System.out.println("Found notification message for unknown client " + client + " - dropping on floor.");
+    }	
+  }
+
+  /**
+   * This method handles an incoming receipt message by
+   * removing the soft state associated with the delivery
+   * request.
+   *
+   * @param message The incoming message.
+   */
+  private void handleRecieptMessage(ReceiptMessage message) {
+    EncryptedNotificationMessage enm = message.getEncryptedNotificationMessage();
+    PostUserAddress sender = message.getSender();
+
+    // remove message
+    synchronized (bufferedData) {
+      Vector userQueue = (Vector) bufferedData.get(sender);
+      userQueue.remove(enm);
+    }
   }
 
   /**
@@ -287,14 +443,12 @@ public class Post extends PastryAppl implements IScribeApp  {
   
   /**
    * This method announce's our presence via our scribe tree
-   * 
    */
   private void announcePresence(){
-     NodeHandle nodeId = thePastryNode.getLocalHandle();
-     NodeId topicId = null; /* fix this to be the topic id of the user's scribe group */
-     MessagePublish sMessage = 
-                  new MessagePublish(getAddress(), nodeId, topicId, getCredentials());
-    routeMsg(topicId, sMessage, getCredentials(), new SendOptions());
+    PresenceMessage pm = new PresenceMessage(address, getNodeId());
+    signAndPreparePostMessage(pm);
+
+    scribeService.multicast(address.getAddress(), new PostScribeMessage(pm), getCredentials());
   }
 
   /**
@@ -319,38 +473,89 @@ public class Post extends PastryAppl implements IScribeApp  {
    * @param message The notification message to be sent.  Destination parameters
    * are encapsulated inside the message object.
    */
-
- // Notice:  This is not encrypted!!  (Fixme)
   public void sendNotification(NotificationMessage message) {
-     NodeId destination = (new RandomNodeIdFactory()).generateNodeId();
-     DeliveryRequestMessage drmessage = 
-                   new DeliveryRequestMessage(address, (PostUserAddress) message.getAddress(), message);
-     routeMsg(destination, drmessage, getCredentials(),
-              new SendOptions());
-  }  
+    NodeId random = (new RandomNodeIdFactory()).generateNodeId();
+
+    // TO DO : Assuming just a user for now, grouping crap later...
+    PostUserAddress destination = (PostUserAddress) message.getDestination();
+    PostLog destinationLog = null;
+
+    try {
+      destinationLog = getPostLog(destination);
+    } catch (PostException e) {
+      System.out.println("PostException occured while retrieving PostLog for " + destination + " - aborting.");
+      return;
+    }   	 	
+    
+    signAndPreparePostMessage(message);
+
+    byte[] cipherText = null;
+    
+    try {
+      cipherText = security.encryptRSA(security.serialize(message), destinationLog.getPublicKey());
+    } catch (SecurityException e) {
+      System.out.println("SecurityException occured which encrypting NotificationMessage " + e + " - dropping on floor.");
+      return;
+    } catch (IOException e) {
+      System.out.println("IOException occured which encrypting NotificationMessage " + e + " - dropping on floor.");
+      return;
+    } 
+
+    EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, cipherText);
+    DeliveryRequestMessage drm = new DeliveryRequestMessage(address, destination, enm);
+
+    signAndPreparePostMessage(drm);
+    
+    routeMsg(random, new PostPastryMessage(drm), getCredentials(), new SendOptions());
+  }
+
+  /**
+   * Internal utility method for preparing a PostMessage for transmission.  This
+   * method signs the message and tells the message that it is about to be sent
+   * across the wire.  NOTE: The message should NOT be changes after calling this
+   * method, and this method should ALWAYS be called before transmitting a PostMessage.
+   *
+   * @param message The message to prepare.
+   */
+  private void signAndPreparePostMessage(PostMessage message) {
+    try {
+      byte[] sig = security.sign(security.serialize(message));
+
+      message.setSignature(sig);
+      message.prepareForSend();
+    } catch (SecurityException e) {
+      System.out.println("SecurityException " + e + " occured while siging PostMessage " + message + " - aborting.");
+      return;
+    } catch (IOException e) {
+      System.out.println("IOException " + e + " occured while siging PostMessage " + message + " - aborting.");
+      return;
+    } 
+  }
+
+  /**
+   * This method verifies that a given post message was signed by the user
+   * corresponding the to given public key.
+   *
+   * @param message The message to verify.
+   * @param key The key to verify against.
+   */
+  private boolean verifyPostMessage(PostMessage message, PublicKey key) {
+    try {
+      byte[] plainText = security.serialize(message);
+      byte[] sig = message.getSignature();
+
+      return security.verify(plainText, sig, key);
+    } catch (SecurityException e) {
+      System.out.println("SecurityException " + e + " occured while verifiying PostMessage " + message + " - aborting.");
+      return false;
+    } catch (IOException e) {
+      System.out.println("IOException " + e + " occured while verifiying PostMessage " + message + " - aborting.");
+      return false;
+    }
+  }
 
   public void faultHandler(ScribeMessage msg, NodeHandle faultyParent) {}
   public void forwardHandler(ScribeMessage msg) {}
-  public void receiveMessage(ScribeMessage msg) {
-
-     synchronized(bufferedData){
- 
-          Vector userQueue = (Vector) bufferedData.get(msg.getDestination());
-          if(userQueue != null){
-  while(!userQueue.isEmpty()){
-             NotificationMessage message = (NotificationMessage) userQueue.elementAt(0);
-       userQueue.removeElementAt(0);  
-                    routeMsg(message.getAddress().getAddress(), message, getCredentials(),
-                             new SendOptions());
-       userQueue.removeElementAt(0);  
-  }
-          }
-     }
-     /* Check and see if I have any messages for this person */
-     /* If I do then call sendNotification over and over again */
-     /* Until they are all delivered */
-
-  }
   public void scribeIsReady(){}
   public void subscribeHandler(ScribeMessage msg,
                                NodeId topicId,

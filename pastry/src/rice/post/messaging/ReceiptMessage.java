@@ -10,25 +10,27 @@ import rice.pastry.messaging.*;
  * This message is broadcast to the sender of a NotificationMessage in
  * order to inform the sender that the message has been received.
  */
-public class ReceiptMessage extends Message implements Serializable{
-   private NotificationMessage message = null; 
+public class ReceiptMessage extends PostMessage {
+  
+  private EncryptedNotificationMessage message;
+  
   /**
    * Constructs a PresenceMessage
    *
    * @param message The notification message which this is a receipt for
    */
-  public ReceiptMessage(NotificationMessage message) {
-     super(PostAddress.instance());
-     this.message = message;
+  public ReceiptMessage(PostUserAddress sender, EncryptedNotificationMessage message) {
+    super(sender);
+    this.message = message;
   }
     
   /**
-   * Gets the NoticifcationMessage which this ReceiptMessage is a receipt
+   * Gets the EncryptedNotificationMessage which this ReceiptMessage is a receipt
    * for.
    *
    * @return The message which this receipt is for.
    */
-  public NotificationMessage getNotificationMessage() {
+  public EncryptedNotificationMessage getEncryptedNotificationMessage() {
     return message;
   }
 }

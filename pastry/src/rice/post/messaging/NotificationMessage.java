@@ -11,31 +11,35 @@ import rice.post.messaging.*;
  * extend this class with each type of relevant notification 
  * message.
  */
-public abstract class NotificationMessage extends Message implements Serializable {
-  private PostClientAddress clientId = null;
-  private PostEntityAddress address = null; 
+public abstract class NotificationMessage extends PostMessage {
+  
+  private PostClientAddress clientAddress;
+  private PostEntityAddress destination;
+  
   /**
    * Constructs a NotificationMessage for the given Email.
    *
-   * @param clientId The address of the service to which this message
+   * @param clientAddress The address of the service to which this message
    *	    should be delivered.
-   * @param address The address of the user or group to which this
+   * @param destination The address of the user or group to which this
    *        message should be delivered. 
    */
-  public NotificationMessage(PostClientAddress clientId, PostEntityAddress address) {
-   super(PostAddress.instance());
-   this.clientId = clientId;
-   this.address = address;
+  public NotificationMessage(PostClientAddress clientAddress, PostUserAddress sender, PostEntityAddress destination) {
+    super(sender);
+    this.clientAddress = clientAddress;
+    this.destination = destination;
   }
+  
   /**
    * Returns the PostEntityAddress of the user or group 
    * to which this noticiation should be delivered.
    *
    * @return The address of the user or group to which this should be delivered
    */
-  public PostEntityAddress getAddress() {
-    return address;
+  public PostEntityAddress getDestination() {
+    return destination;
   }
+  
   /**
    * Returns the PostClientAddress of the application to 
    * which this message should be delievered
@@ -43,29 +47,8 @@ public abstract class NotificationMessage extends Message implements Serializabl
    * @return The address of the service to which this message
    *         should be delivered 
    */
-   public PostClientAddress getClientId(){
-     return clientId;
+   public PostClientAddress getClientAddress(){
+     return clientAddress;
    }
-
-   /**
-    * Sets the PostEntityAddress to which this message should be delivered
-    *
-    * @param The address of the user or group to which this message should be delivered
-    *
-    */
-    public void setAddress(PostEntityAddress address){
-       this.address = address;
-    }
-  
-   /**
-    * Sets the PostClientAddress to which this message should be delivered
-    *
-    * @param The client address to which this message should be delivered
-    *
-    */
-    public void setClientId(PostClientAddress clientId){
-      this.clientId = clientId;
-    }
-
     
 }
