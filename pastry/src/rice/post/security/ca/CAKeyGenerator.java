@@ -84,6 +84,15 @@ public class CAKeyGenerator {
     frame.setResizable(false);
     frame.setVisible(true);
 
+    field.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent arg0) {
+        synchronized(prompt) {
+          prompt.notify();  
+        }
+      }
+    });
+
+
     button.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
         synchronized (prompt) {
