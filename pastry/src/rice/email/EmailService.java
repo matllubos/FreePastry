@@ -25,10 +25,10 @@ public class EmailService extends PostClient {
     // inner classes
     private class ESRootFolderCont implements Continuation {
 
-	Continuation result;
+	Continuation resultHandler;
 
 	ESRootFolderCont(Continuation c) {
-	    this.result = c;
+	    this.resultHandler = c;
 	}
 	
 	/**
@@ -41,7 +41,7 @@ public class EmailService extends PostClient {
 	    
 	    Folder f = new Folder(emailLog, _post.getStorageService());
 
-	    result.receiveResult(f);
+	    this.resultHandler.receiveResult(f);
 	}
 
 	/**
@@ -51,7 +51,7 @@ public class EmailService extends PostClient {
 	 * @param result The exception which was caused.
 	 */
 	public void receiveException(Exception result) {
-	    result.receiveException(result);
+	    this.resultHandler.receiveException(result);
 	}
 
     }
@@ -121,9 +121,7 @@ public class EmailService extends PostClient {
       PostLog mainLog = _post.getLog();
       LogReference emailLogRef = mainLog.getChildLog(pca);
 
-      Log emailLog = (Log)
-	  _post.getStorageService().retrieveSigned(emailLogRef,
-						   new ESRootFolderCont(c));
+      _post.getStorageService().retrieveSigned(emailLogRef, new ESRootFolderCont(c));
   }
 
   /**
