@@ -224,10 +224,12 @@ public abstract class PastryNode implements MessageReceiver {
    * @param app the application
    */
 
-  public final void registerApp(PastryAppl app) {
-    apps.add(app);
-  }
-
+   public final void registerApp(PastryAppl app) {
+      if(isReady())
+	app.notifyReady();
+      apps.add(app);
+    }
+    
 
   /**
    * Schedule the specified message to be sent to the local node after a specified delay.
