@@ -96,7 +96,7 @@ public class LRUCache implements Cache {
    * @return <code>True</code> if the cache actaully stores the object, else
    * <code>False</code> (through receiveResult on c).
    */
-  public synchronized void cache(final Comparable id, final Serializable obj, final Continuation c) {
+  public synchronized void cache(final Id id, final Serializable obj, final Continuation c) {
     final int size = getSize(obj);
 
     if (size > maximumSize) {
@@ -147,7 +147,7 @@ public class LRUCache implements Cache {
    * @return <code>True</code> if the action succeeds, else
    * <code>False</code>  (through receiveResult on c).
    */
-  public synchronized void uncache(Comparable id, Continuation c) {
+  public synchronized void uncache(Id id, Continuation c) {
     order.remove(id);
     storage.unstore(id, c);
   }
@@ -161,7 +161,7 @@ public class LRUCache implements Cache {
    * @param id The id of the object in question.
    * @return Whether or not an object is present at id.
    */
-  public void exists(Comparable id, Continuation c) {
+  public void exists(Id id, Continuation c) {
     c.receiveResult(new Boolean(order.contains(id)));
   }
 
@@ -173,7 +173,7 @@ public class LRUCache implements Cache {
    * @return The object, or <code>null</code> if there is no cooresponding
    * object (through receiveResult on c).
    */
-  public synchronized void getObject(Comparable id, Continuation c) {
+  public synchronized void getObject(Id id, Continuation c) {
     if (! order.contains(id)) {
       c.receiveResult(null);
       return;
@@ -203,7 +203,7 @@ public class LRUCache implements Cache {
    * @param c The command to run once the operation is complete
    * @return The objects
    */
-  public synchronized void scan(Comparable start, Comparable end, Continuation c) {
+  public synchronized void scan(Id start, Id end, Continuation c) {
     storage.scan(start, end, c);
   }
 
@@ -282,7 +282,7 @@ public class LRUCache implements Cache {
 
          //   System.out.println("Evicting object with ID " + thisID);
 
-            uncache(thisID, this);
+            uncache((Id) thisID, this);
           } else {
             c.receiveResult(new Boolean(true));
           }

@@ -71,7 +71,7 @@ public interface Storage extends Catalog {
    * @return <code>True</code> if the action succeeds, else
    * <code>False</code> (through receiveResult on c).
    */
-  public void store(Comparable id, Serializable obj, Continuation c);
+  public void store(Id id, Serializable obj, Continuation c);
 
   /**
    * Removes the object from the list of stored objects. This method is
@@ -83,5 +83,5 @@ public interface Storage extends Catalog {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>  (through receiveResult on c).
    */
-  public void unstore(Comparable id, Continuation c);
+  public void unstore(Id id, Continuation c);
 }

@@ -71,7 +71,7 @@ public interface Catalog {
    * @param id The id of the object in question.
    * @return Whether or not an object is present at id.
    */
-  public void exists(Comparable id, Continuation c);
+  public void exists(Id id, Continuation c);
 
   /**
    * Returns the object identified by the given id.
@@ -81,7 +81,7 @@ public interface Catalog {
    * @return The object, or <code>null</code> if there is no cooresponding
    * object (through receiveResult on c).
    */
-  public void getObject(Comparable id, Continuation c);
+  public void getObject(Id id, Continuation c);
 
   /**
    * Return the objects identified by the given range of ids. The array
@@ -102,7 +102,7 @@ public interface Catalog {
    * @param c The command to run once the operation is complete
    * @return The objects
    */
-  public void scan(Comparable start, Comparable end, Continuation c);
+  public void scan(Id start, Id end, Continuation c);
 
   /**
    * Returns the total size of the stored data in bytes.The result

@@ -88,7 +88,7 @@ public class StorageManager implements Cache, Storage {
    * @param id The id of the object in question.
    * @return Whether or not an object is present at id.
    */
-  public void exists(final Comparable id, final Continuation c) {
+  public void exists(final Id id, final Continuation c) {
     Continuation inCache = new Continuation() {
       public void receiveResult(Object o) {
         if (o.equals(new Boolean(true))) {
@@ -114,7 +114,7 @@ public class StorageManager implements Cache, Storage {
    * @return The object, or <code>null</code> if there is no cooresponding
    * object (through receiveResult on c).
    */
-  public void getObject(final Comparable id, final Continuation c) {
+  public void getObject(final Id id, final Continuation c) {
     Continuation inCache = new Continuation() {
       public void receiveResult(Object o) {
         if (o != null) {
@@ -151,7 +151,7 @@ public class StorageManager implements Cache, Storage {
    * @param c The command to run once the operation is complete
    * @return The objects
    */
-  public void scan(final Comparable start, final Comparable end, final Continuation c) {
+  public void scan(final Id start, final Id end, final Continuation c) {
     Continuation scanner = new Continuation() {
       private Comparable[] fromCache;
       
@@ -232,7 +232,7 @@ public class StorageManager implements Cache, Storage {
    * @return <code>True</code> if the action succeeds, else
    * <code>False</code> (through receiveResult on c).
    */
-  public void store(Comparable id, Serializable obj, Continuation c) {
+  public void store(Id id, Serializable obj, Continuation c) {
     storage.store(id, obj, c);
   }
 
@@ -246,7 +246,7 @@ public class StorageManager implements Cache, Storage {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>  (through receiveResult on c).
    */
-  public void unstore(Comparable id, Continuation c) {
+  public void unstore(Id id, Continuation c) {
     storage.unstore(id, c);
   }
   
@@ -265,7 +265,7 @@ public class StorageManager implements Cache, Storage {
    * @return <code>True</code> if the cache actaully stores the object, else
    * <code>False</code> (through receiveResult on c).
    */
-  public void cache(Comparable id, Serializable obj, Continuation c) {
+  public void cache(Id id, Serializable obj, Continuation c) {
     cache.cache(id, obj, c);
   }
 
@@ -279,7 +279,7 @@ public class StorageManager implements Cache, Storage {
    * @return <code>True</code> if the action succeeds, else
    * <code>False</code>  (through receiveResult on c).
    */
-  public void uncache(Comparable id, Continuation c) {
+  public void uncache(Id id, Continuation c) {
     cache.uncache(id, c);
   }
 

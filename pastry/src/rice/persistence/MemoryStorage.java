@@ -61,6 +61,7 @@ public class MemoryStorage implements Storage {
   // the hashtable used to store the data
   private Hashtable storage;
 
+  private IdSet idSet;
   // the current total size
   private int currentSize;
   
@@ -68,6 +69,7 @@ public class MemoryStorage implements Storage {
    * Builds a MemoryStorage object.
    */
   public MemoryStorage() {
+    idSet = new IdSet();
     storage = new Hashtable();
     currentSize = 0;
   }
@@ -85,7 +87,7 @@ public class MemoryStorage implements Storage {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>.
    */
-  public void store(Comparable id, Serializable obj, Continuation c) {
+  public void store(Id id, Serializable obj, Continuation c) {
     if (id == null || obj == null) {
       c.receiveResult(new Boolean(false));
       return;
@@ -94,6 +96,7 @@ public class MemoryStorage implements Storage {
     currentSize += getSize(obj);
     
     storage.put(id, obj);
+    idSet.addMember(id);
     c.receiveResult(new Boolean(true));
   }
 
@@ -110,8 +113,9 @@ public class MemoryStorage implements Storage {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>.
    */
-  public void unstore(Comparable id, Continuation c) {
+  public void unstore(Id id, Continuation c) {
     Object stored = storage.remove(id);
+    idSet.removeMember(id);
 
     if (stored != null) {
       currentSize -= getSize(stored);
@@ -121,43 +125,16 @@ public class MemoryStorage implements Storage {
     }
   }
 
-  public void exists(Comparable id, Continuation c) {
+  public void exists(Id id, Continuation c) {
     c.receiveResult(new Boolean(storage.containsKey(id)));
   }
 
-  public void getObject(Comparable id, Continuation c) {
+  public void getObject(Id id, Continuation c) {
     c.receiveResult(storage.get(id));
   }
 
-  public void scan(Comparable start, Comparable end, Continuation c) {
-    try {
-      start.compareTo(end);
-      end.compareTo(start);
-    } catch (ClassCastException e) {
-      c.receiveException(new IllegalArgumentException("start and end passed into scan are not co-comparable!"));
-      return;
-    }
-
-    Vector result = new Vector();
-    Iterator i = storage.keySet().iterator();
-
-    while (i.hasNext()) {
-      try {
-        Comparable thisID = (Comparable) i.next();
-        if ((start.compareTo(thisID) <= 0) &&
-            (end.compareTo(thisID) >= 0))
-          result.addElement(thisID);
-      } catch (ClassCastException e) {
-      }
-    }
-
-    Comparable[] array = new Comparable[result.size()];
-
-    for (int j=0; j<result.size(); j++) {
-      array[j] = (Comparable) result.elementAt(j);
-    }
-
-    c.receiveResult(array);    
+  public void scan(Id start, Id end, Continuation c) {
+    c.receiveResult(idSet.subSet(start,end));    
   }
 
   public void getTotalSize(Continuation c) {

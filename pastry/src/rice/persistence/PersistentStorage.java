@@ -20,7 +20,7 @@ contributors may be  used to endorse or promote  products derived from
 this software without specific prior written permission.
 
 This software is provided by RICE and the contributors on an "as is"
-basis, without any representations or warranties of any kind, express
+Basis, without any representations or warranties of any kind, express
 or implied including, but not limited to, representations or
 warranties of non-infringement, merchantability or fitness for a
 particular purpose. In no event shall RICE or contributors be liable
@@ -59,16 +59,22 @@ import rice.pastry.*;
  * writing the data to disk.
  */
 public class PersistentStorage implements Storage {
-
+ 
+  private String name;
   private File rootDirectory;       // root directory to store stuff in
   private File backupDirectory;     // dir for storing persistent objs
+  private File appDirectory;        // dir for storing persistent objs
+  private File lostDirectory;       // dir for lost objects
 
   private static String rootDir;                          // rootDirectory
   private static final String backupDir = "/FreePastry-Storage-Root/"; // backupDirectory
 
   private long storageSize; /* The amount of storage allowed to be used */
   private long usedSize; /* The amount of storage currently in use */
-  private Hashtable fileMap; /* Mapds Id -> Files */
+  private IdSet idSet;
+  
+  private final int MAX_FILES = 1000; /* The maximum number of files in a dir */
+  private final boolean DEBUG = true;
   /**
    * Builds a PersistentStorage given a root directory in which to
    * persist the data.
@@ -76,14 +82,15 @@ public class PersistentStorage implements Storage {
    * @param rootDir The root directory of the persisted disk.
    */
   public PersistentStorage(String rootDir, int size) {
+    this("default", rootDir, size);
+  }
+ 
+  public PersistentStorage(String name, String rootDir, int size){
+    this.name = name;
     this.rootDir = rootDir;
+    storageSize = size; 
 
-    if(! this.initDirectories())
-      System.out.println("ERROR: Failed to Initialized Directories");
-   storageSize = size; 
-   fileMap = new Hashtable();
-   initFileMap();
-
+    init();
   }
 
   /**
@@ -105,7 +112,7 @@ public class PersistentStorage implements Storage {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>.
    */
-  public void store(Comparable id, Serializable obj, Continuation c) {
+  public void store(Id id, Serializable obj, Continuation c) {
 
     try {
       if (id == null || obj == null) {
@@ -116,7 +123,7 @@ public class PersistentStorage implements Storage {
       /* Create a file representation and then transactionally write it */
       File objFile = getFile(id); 
       /* change the name here */
-      File transcFile = makeFile(id);
+      File transcFile = makeFile((Id) id);
       writeObject(obj, id, readVersion(objFile) + 1, transcFile);
 
 
@@ -131,8 +138,11 @@ public class PersistentStorage implements Storage {
         decreaseUsedSpace(getFileLength(objFile)); /* decrease amount used */
         deleteFile(objFile);
         increaseUsedSpace(transcFile.length()); /* increase the amount used */
-        createMapping(id, transcFile);
-       } 
+        idSet.addMember(id); 
+        if(numFilesDir(transcFile.getParentFile()) > MAX_FILES){
+            expandDirectory(transcFile.getParentFile());
+        }
+      } 
 
       c.receiveResult(new Boolean(true));
 
@@ -159,14 +169,14 @@ public class PersistentStorage implements Storage {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>.
    */
-  public void unstore(Comparable id, Continuation c) {
+  public void unstore(Id id, Continuation c) {
 
       File objFile = getFile(id); 
       if(objFile == null){
        c.receiveResult(new Boolean(false));
        return;
       } 
-      removeMapping(id);
+      idSet.removeMember((Id) id);
       decreaseUsedSpace(objFile.length());
       objFile.delete();
        
@@ -182,8 +192,8 @@ public class PersistentStorage implements Storage {
    * @param id The id of the object in question.
    * @return Whether or not an object is present at id.
    */
-  public void exists(Comparable id, Continuation c) {
-     c.receiveResult(new Boolean(fileMap.containsKey(id))); 
+  public void exists(Id id, Continuation c) {
+     c.receiveResult(new Boolean(idSet.isMember((Id) id))); 
   }
 
   /**
@@ -194,8 +204,12 @@ public class PersistentStorage implements Storage {
    * @return The object, or <code>null</code> if there is no cooresponding
    * object (through receiveResult on c).
    */
-  public void getObject(Comparable id, Continuation c){
+  public void getObject(Id id, Continuation c){
       File objFile = getFile(id);
+      if(objFile == null){
+         c.receiveResult(null);
+         return;
+      }
       Object toReturn = null;
       try{ 
         toReturn = readData(objFile);
@@ -224,35 +238,20 @@ public class PersistentStorage implements Storage {
    * @param c The command to run once the operation is complete
    * @return The objects
    */
-  public void scan(Comparable start, Comparable end, Continuation c) {
+  public void scan(Id start, Id end, Continuation c) {
+    Id startId;
+    Id endId;
     try {
-      start.compareTo(end);
-      end.compareTo(start);
+      startId = (Id) start;
+      endId = (Id) end;
     } catch (ClassCastException e) {
-        c.receiveException(new IllegalArgumentException("start and end passed into scan are not co-comparable!"));
+        c.receiveException(new IllegalArgumentException("start and end passed into scan are not id!"));
         return;
     }
 
-    Vector result = new Vector();
-    Iterator i = fileMap.keySet().iterator();
+    IdSet toReturn = idSet.subSet(startId, endId); 
 
-    while (i.hasNext()) {
-      try {
-        Comparable thisID = (Comparable) i.next();
-        if ((start.compareTo(thisID) <= 0) &&
-            (end.compareTo(thisID) >= 0))
-          result.addElement(thisID);
-      } catch (ClassCastException e) {
-     }
-    }
-
-    Comparable[] array = new Comparable[result.size()];
-
-    for (int j=0; j<result.size(); j++) {
-      array[j] = (Comparable) result.elementAt(j);
-    }
-
-    c.receiveResult(array);
+    c.receiveResult(toReturn);
    }
 
   /**
@@ -267,9 +266,29 @@ public class PersistentStorage implements Storage {
     c.receiveResult(new Long(usedSize));
   }
 
+
   /*****************************************************************/
-  /* Helper functions for Directory Management                     */
+  /* Functions for init/crash recovery                             */
   /*****************************************************************/
+
+  /**
+   * Perform all the miscealanious house keeping that must be done
+   * when we start up
+   */
+  private void init(){
+    if(! this.initDirectories())
+      System.out.println("ERROR: Failed to Initialized Directories");
+
+    if(numFilesDir(appDirectory) > MAX_FILES)
+            expandDirectory(appDirectory);
+
+    idSet = new IdSet();
+
+    if(directoryTransactionInProgress()){
+      directoryCleanUp(appDirectory);
+    }
+    initFileMap(backupDirectory);
+  }
 
   /**
    * Verify that the directory name passed to the
@@ -277,10 +296,11 @@ public class PersistentStorage implements Storage {
    * creates the necessary subdirectories.
    *
    * @return Whether the directories are successfully initialized.
-   */ private boolean initDirectories()
-  {
+   */
+   private boolean initDirectories()
+   {
     rootDirectory = new File(rootDir);
-    if (createDir(rootDirectory) == false) {
+    if(createDir(rootDirectory) == false) {
       return false;
     }
 
@@ -289,9 +309,18 @@ public class PersistentStorage implements Storage {
       return false;
     }
 
-     
+    appDirectory = new File(backupDirectory, getName());
+    if (createDir(appDirectory) == false) {
+      return false;
+    }
+    
+    lostDirectory = new File(backupDirectory, "lost+found"); 
+    if (createDir(lostDirectory) == false){
+       return false;
+    }
+ 
     return true;
-  }
+   }
 
 
   /**
@@ -302,9 +331,8 @@ public class PersistentStorage implements Storage {
    * state should be restored
    *
    */
-  private void initFileMap(){
-
-    File[] files = backupDirectory.listFiles();
+  private void initFileMap(File dir){
+    File[] files = dir.listFiles();
     int numFiles = files.length;
 
     for ( int i = 0; i < numFiles; i++){
@@ -317,27 +345,29 @@ public class PersistentStorage implements Storage {
             long version = readVersion(files[i]);
             Object key = readKey(files[i]);
 
-            if(!fileMap.containsKey(key)){
-              fileMap.put(key , files[i]);
+            if(!idSet.isMember((Id) key)){
+              idSet.addMember((Id) key);
               increaseUsedSpace(files[i].length()); /* increase amount used */
             }
             else{
                /* resolve conflict due to unfinished trans */
-              fileMap.put(key, resolveConflict((File) fileMap.get(key), files[i]));
+              resolveConflict(files[i]);
               System.out.println("Resolving Conflicting Versions");
             }
           }
           catch(java.io.EOFException e){
               System.out.println("Recovering From Incomplete Write");
-              files[i].delete();
+              moveToLost(files[i]);
           }
           catch(java.io.IOException e){
             System.out.println("Caught File Exception");
-            /* handle the case where there is an uncompleted trans */
           }
           catch(Exception e){
             System.out.println("Caught OTHER EXCEPTION");
           }
+       }
+       else if(files[i].isDirectory()){
+          initFileMap(files[i]);
        }
     }
   
@@ -356,19 +386,145 @@ public class PersistentStorage implements Storage {
    * @return File the correct file
    *
    */
-  private File resolveConflict(File oldFile, File newFile) throws Exception{
-     if(readVersion(oldFile) > readVersion(newFile)){
-        newFile.delete();
-        return oldFile;
-     }
-     else{
-        decreaseUsedSpace(oldFile.length());
-        oldFile.delete();
-        increaseUsedSpace(newFile.length());
-        return newFile;
-     }
+  private File resolveConflict(File conflictFile) throws Exception{
+        //decreaseUsedSpace(oldFile.length());
+        //oldFile.delete();
+        //increaseUsedSpace(newFile.length());
+        //return newFile;
+        /* should get a list of all files with substring */
+        /* find one with the newest version */
+        /* delete all others and then return newest */
+
+        return conflictFile;
   }
 
+  
+  private void moveToLost(File file){
+      File newFile = new File(lostDirectory, file.getName());
+      file.renameTo(newFile);
+  }
+ 
+  /*****************************************************************/
+  /* Helper functions for Directory  Transaction Management        */
+  /*****************************************************************/
+
+  /**
+   * Creates a record saying there is a directory transaction
+   * In progress.
+   *
+   * In reality creates a file which exists for the duration of
+   * the time we are altering the directory. This allows us to
+   * recover from a crash.
+   *
+   */ 
+  private void beginDirectoryTransaction(){
+    File f  = new File(backupDirectory, "dir-inprogress");
+    try{
+      f.createNewFile();
+    }
+    catch(IOException ioe){
+      ioe.printStackTrace();
+    }
+  }
+
+  /**
+   * Destroys the record saying there is a directory transaction 
+   * in progress.
+   *
+   * Removes the file which exists for the duration of the transaction.
+   * 
+   */
+  private void endDirectoryTransaction(){
+    File f  = new File(backupDirectory, "dir-inprogress");
+    deleteFile(f);
+  }
+
+  /**
+   * Checks to see if there is a transaction progress.
+   *
+   * Is used to check if we crashed in the middle of a directory
+   * operation.
+   *
+   */
+   private boolean directoryTransactionInProgress(){
+    File f  = new File(backupDirectory, "dir-inprogress");
+    return f.exists();
+   }
+
+   /**
+    *
+    * This cleans up if a directory operation is in progress if
+    * when a crash occurs.
+    *
+    */
+   private void directoryCleanUp(File dir){
+     DirectoryFilter df = new DirectoryFilter();
+     FileFilter ff = new FileFilter(); 
+    
+     File [] files = dir.listFiles(ff);
+     File [] dirs = dir.listFiles(df);
+     
+     if(dirs.length == 0){
+        /* this is the base case */ 
+        /* if dir contains only files do nothing */
+     }
+     else if(dirs.length > 0){
+        /* else if contains only dirs recurse */
+        /* if contains both find appropriate places for files and move them*/
+        /* then recurse */
+
+        if(files.length > 0){
+          moveFilesToCorrectDir(dir);
+        }
+
+        for(int i = 0 ; i < dirs.length; i++){
+          directoryCleanUp(dir);         
+        }
+
+     } 
+     endDirectoryTransaction();
+   }
+
+  private void expandDirectory(File dir){
+     HashSet h = new HashSet();
+     FileFilter ff = new FileFilter();
+     String[] fileNames = dir.list(ff);
+
+     for(int i = 0; i < fileNames.length; i++){
+        if(dir.equals(appDirectory))
+           h.add(fileNames[i].substring(0, 1));
+        else
+           h.add(fileNames[i].substring(0, dir.getName().length() + 1));
+     }
+
+     beginDirectoryTransaction(); 
+
+     Iterator i = h.iterator();
+     while(i.hasNext()){
+       String newDir = (String) i.next(); 
+       File newDirectory = new File(dir, newDir);
+       createDir(newDirectory); 
+     }
+
+     moveFilesToCorrectDir(dir);
+
+     endDirectoryTransaction();
+  } 
+
+  private void moveFilesToCorrectDir(File dir){
+     FileFilter ff = new FileFilter();
+     File[] files = dir.listFiles(ff);
+
+     for(int i = 0; i < files.length; i++){
+        File newFile = new File(getDirectoryForId(files[i].getName()), files[i].getName());
+        files[i].renameTo(newFile);
+     }
+
+  }
+   
+  /*****************************************************************/
+  /* Helper functions for File Management                          */
+  /*****************************************************************/
 
   /**
    * Create a directory given its name
@@ -403,35 +559,59 @@ public class PersistentStorage implements Storage {
    * This method will return the hashcode of the object used as the id
    * unless there is a collision, in which case it will return a random number
    * Since this mapping is only needed once it does not matter what number
-   * is used to generate the filename, the hashcode is the first try fo
+   * is used to generate the filename, the hashcode is the first try for
    * effeciency.
    */
-  private File makeFile(Comparable id){
-    File file = new File(backupDirectory, String.valueOf(id.hashCode()));
-    while(fileMap.contains(file)){
-      file = new File(backupDirectory, String.valueOf(new Random().nextInt()));
+  private File makeFile(Id cid){
+    Id id = (Id) cid;
+    /* change here to put in right directory */
+    Random rnd = new Random();
+    File file = new File(getDirectoryForId(id.toStringFull()), id.toStringFull() + "." + rnd.nextInt() % 100);
+    while(file.exists()){
+      file = new File(getDirectoryForId(id.toStringFull()), id.toStringFull() + "." + rnd.nextInt() % 100);
     }
     return file;
   }
 
-  /*****************************************************************/
-  /* Helper functions for Managing/Using FileMap                   */
-  /*****************************************************************/
-  private File getFile(Comparable id){
-     return (File) fileMap.get(id);
+  private File getFile(Id id){
+     File dir = getDirectoryForId(id.toStringFull());
+     SubStringFilter ssf = new SubStringFilter(id.toStringFull());
+     File[] results = dir.listFiles(ssf);
+     if(results.length == 0)
+        return null;
+     else
+        return results[0];
   }
-  
-  private void createMapping(Comparable id, File file){
-     synchronized(fileMap){
-       /* create a file */
-       fileMap.put(id, file);
-     }
+
+  private File getDirectoryForId(String id){
+    return getDirectoryForIdHelper(id, appDirectory);
   }
-  
-  private void removeMapping(Comparable id){
-     synchronized(fileMap){
-       fileMap.remove(id);
-     }
+
+  private File getDirectoryForIdHelper(String id, File root){
+      if(!containsDir(root)){
+        return root; 
+      }
+      else{
+        /* recurse and find the file */
+        if(root == appDirectory)
+             return getDirectoryForIdHelper(id, new File(root, id.substring(0, 1 )));
+        else{
+             File dir = new File(root, id.substring(0, root.getName().length() + 1));
+             if(!dir.exists())
+                createDir(dir);
+             return getDirectoryForIdHelper(id, dir);
+        }
+      }
+  }
+
+  private int numFilesDir(File dir){
+     FileFilter ff = new FileFilter();
+     return dir.listFiles(ff).length;
+  }
+
+  private boolean containsDir(File dir){
+    DirectoryFilter df = new DirectoryFilter();
+    return( dir.listFiles(df).length != 0);
   }
 
   /*****************************************************************/
@@ -511,7 +691,7 @@ public class PersistentStorage implements Storage {
    * @param file The file to serialize the object to.
    * @return The object's disk space usage
    */
-   private static long writeObject(Serializable obj, Comparable key, long version, File file)     {
+   private static long writeObject(Serializable obj, Id key, long version, File file)     {
        if (obj == null || file == null)
             return 0;
 
@@ -614,4 +794,63 @@ public class PersistentStorage implements Storage {
   private long getUsedSpace(){
     return usedSize;
   }
+
+  private String getName(){
+    return name;
+  }
+
+  private void debug(String s){
+    if(DEBUG)
+       System.out.println(s);
+  }
+
+/**********************************************************************/
+  /*****************************************************************/
+  /* Inner Classes for FileName filtering                          */
+  /*****************************************************************/
+
+  private class DirectoryFilter implements FilenameFilter{
+
+   public boolean accept(File dir, String name){
+     File temp = new File(dir, name);
+     if(temp.isDirectory()){
+        return true;
+     }
+     else{
+       return false;
+     }
+   }
+  }
+
+  private class FileFilter implements FilenameFilter{
+
+   public boolean accept(File dir, String name){
+     File temp = new File(dir, name);
+     if(temp.isDirectory()){
+        return false;
+     }
+     else{
+       return true;
+     }
+   }
+  }
+
+  private class SubStringFilter implements FilenameFilter{
+    String s;
+
+    public SubStringFilter(String s){
+      this.s = s;    
+    }
+
+    public boolean accept(File dir, String Name){
+      if(Name.startsWith(s)){
+        return true;
+      }
+      else{
+        return false;
+      }
+    }
+  }
+/**********************************************************************/
 }
+
