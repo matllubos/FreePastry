@@ -122,8 +122,8 @@ public class LeafSet extends Observable implements Serializable {
    * @return true if the most distant cw member appears in the ccw set or vice versa, false otherwise
    */
   public boolean overlaps() {
-    if (size() > 0 && ( ccwSet.member(cwSet.get(cwSet.size()-1).getNodeId()) ||
-                        cwSet.member(ccwSet.get(ccwSet.size()-1).getNodeId()) ) )
+    if (size() > 0 && ( ccwSet.member(cwSet.get(cwSet.size()-1)) ||
+                        cwSet.member(ccwSet.get(ccwSet.size()-1)) ) )
       return true;
 
     else return false;
@@ -799,6 +799,12 @@ public class LeafSet extends Observable implements Serializable {
     s = s + " [ " + baseId + " ] ";
     for (int i=1; i<=cwSet.size(); i++)
       s = s + get(i).getNodeId();
+
+    s+=" complete:"+isComplete();
+    s+=" size:"+size();
+    if (size() > 0)    
+    s+=" s1:"+ ccwSet.member(cwSet.get(cwSet.size()-1));
+    s+=" s2:"+ cwSet.member(ccwSet.get(ccwSet.size()-1));
 
     return s;
   }

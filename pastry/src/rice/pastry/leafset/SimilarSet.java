@@ -198,7 +198,7 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
       if (((Integer) arg) == NodeHandle.DECLARED_DEAD) {
 
 	//System.out.println("SimilarSet:update(), removing dead node");
-        remove(((NodeHandle) o).getNodeId());
+        remove((NodeHandle) o);
       }
 
     }
@@ -241,10 +241,10 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
      * @return true if that node id is in the set, false otherwise.
      */
     public boolean member(NodeHandle nid) {
-	for (int i=0; i<theSize; i++)
-	    if (nodes[i].equals(nid)) return true;
-
-	return false;
+    	for (int i=0; i<theSize; i++)
+  	    if (nodes[i].equals(nid)) return true;
+    
+    	return false;
     }
 
 		/**
