@@ -1,7 +1,9 @@
 PACKAGE = rice.post.testing
 
 SOURCE  = \
-	DistPostRegrTest.java
+	DistPostRegrTest.java \
+  PostTest.java \
+  LogTest.java
 
 RMI_SOURCE =
 

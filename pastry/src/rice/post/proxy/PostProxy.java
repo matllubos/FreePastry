@@ -72,12 +72,12 @@ public class PostProxy {
   /**
    * The default size of the cache to use (in bytes)
    */
-  static int CACHE_SIZE = 100000;
+  static int CACHE_SIZE = 1000000;
 
   /**
    * The default size of the disk storage to use (in bytes)
    */
-  static int DISK_SIZE = 10000000;
+  static int DISK_SIZE = 100000000;
 
   /**
    * The IdFactory to use (for protocol independence)
