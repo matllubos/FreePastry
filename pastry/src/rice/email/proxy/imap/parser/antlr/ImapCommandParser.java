@@ -212,13 +212,13 @@ public ImapCommandParser(ParserSharedInputState state) {
 		
 		
 		{
-		_loop25:
+		_loop27:
 		do {
 			if (((LA(1) >= CHECK && LA(1) <= UNKNOWN))) {
 				matchNot(EOF);
 			}
 			else {
-				break _loop25;
+				break _loop27;
 			}
 			
 		} while (true);
@@ -437,28 +437,72 @@ public ImapCommandParser(ParserSharedInputState state) {
 		List flags;
 		
 		Token  ff = null;
+		Token  fg = null;
 		Token  lf = null;
+		Token  lg = null;
 		flags = new ArrayList();
 		
 		match(LPAREN);
-		ff = LT(1);
-		match(FLAG);
-		if ( inputState.guessing==0 ) {
-			flags.add(ff.getText());
+		{
+		switch ( LA(1)) {
+		case FLAG:
+		{
+			ff = LT(1);
+			match(FLAG);
+			if ( inputState.guessing==0 ) {
+				flags.add(ff.getText());
+			}
+			break;
+		}
+		case ATOM:
+		{
+			fg = LT(1);
+			match(ATOM);
+			if ( inputState.guessing==0 ) {
+				flags.add(fg.getText());
+			}
+			break;
+		}
+		default:
+		{
+			throw new NoViableAltException(LT(1), getFilename());
+		}
+		}
 		}
 		{
-		_loop18:
+		_loop20:
 		do {
 			if ((LA(1)==SPACE)) {
 				match(SPACE);
-				lf = LT(1);
-				match(FLAG);
-				if ( inputState.guessing==0 ) {
-					flags.add(lf.getText());
+				{
+				switch ( LA(1)) {
+				case FLAG:
+				{
+					lf = LT(1);
+					match(FLAG);
+					if ( inputState.guessing==0 ) {
+						flags.add(lf.getText());
+					}
+					break;
+				}
+				case ATOM:
+				{
+					lg = LT(1);
+					match(ATOM);
+					if ( inputState.guessing==0 ) {
+						flags.add(lg.getText());
+					}
+					break;
+				}
+				default:
+				{
+					throw new NoViableAltException(LT(1), getFilename());
+				}
+				}
 				}
 			}
 			else {
-				break _loop18;
+				break _loop20;
 			}
 			
 		} while (true);
@@ -481,7 +525,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 			list.add(fa.getText());
 		}
 		{
-		_loop21:
+		_loop23:
 		do {
 			if ((LA(1)==SPACE)) {
 				match(SPACE);
@@ -492,7 +536,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 				}
 			}
 			else {
-				break _loop21;
+				break _loop23;
 			}
 			
 		} while (true);
@@ -735,14 +779,14 @@ public ImapCommandParser(ParserSharedInputState state) {
 			match(LPAREN);
 			fetch_part(cmd);
 			{
-			_loop53:
+			_loop55:
 			do {
 				if ((LA(1)==SPACE)) {
 					match(SPACE);
 					fetch_part(cmd);
 				}
 				else {
-					break _loop53;
+					break _loop55;
 				}
 				
 			} while (true);
@@ -1311,7 +1355,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 					breq.addPart(a.getText());
 				}
 				{
-				_loop68:
+				_loop70:
 				do {
 					if ((LA(1)==SPACE)) {
 						match(SPACE);
@@ -1322,7 +1366,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 						}
 					}
 					else {
-						break _loop68;
+						break _loop70;
 					}
 					
 				} while (true);

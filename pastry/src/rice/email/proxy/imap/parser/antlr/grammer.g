@@ -96,8 +96,8 @@ range [boolean isUID] returns [MsgFilter range] {range=null;}:
 	;
 
 flags returns [List flags] {flags = new ArrayList();} :
-	LPAREN ff:FLAG {flags.add(ff.getText());}
-		(SPACE lf:FLAG {flags.add(lf.getText());})* RPAREN
+	LPAREN (ff:FLAG {flags.add(ff.getText());} | fg:ATOM {flags.add(fg.getText());})
+		(SPACE (lf:FLAG {flags.add(lf.getText());} | lg:ATOM {flags.add(lg.getText());}))* RPAREN
 	;
 
 atom_list returns [List list] {list = new ArrayList();} :
