@@ -160,32 +160,41 @@ public class Stripe extends Observable implements IScribeApp{
      public void subscribeHandler(NodeId topicId,
                                   NodeHandle child, boolean wasAdded, Serializable data){
 	    BandwidthManager bandwidthManager = getChannel().getBandwidthManager();
-	    if(bandwidthManager.canTakeChild(getChannel())){
-	        channel.stripeSubscriberAdded();
-                Credentials credentials = new PermissiveCredentials();
-                Vector child_root_path = root_path;
-                child_root_path.add( ((Scribe)scribe).getLocalHandle() );
-                channel.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
-                                                                                channel.getNodeHandle(),
-                                                                                topicId,
-                                                                                credentials,
-                                                                                child_root_path ),
-                                        credentials, null );
-            }
-	    else{
-                /* THIS IS WHERE THE DROP SHOULD OCCUR */
-                Credentials credentials = new PermissiveCredentials();
-                channel.routeMsgDirect( child, new ControlDropMessage( channel.getAddress(),
-                                                                       channel.getNodeHandle(),
-                                                                       topicId,
-                                                                       credentials,
-                                                                       channel.getSpareCapacityId(), channel.getChannelId() ),
-                                        credentials, null );
-                //System.out.println("SHOULD NOT TAKE CHILD");
-	   }
-	/* We should check if we can take this child on */
-     }
 
+	    if(wasAdded){
+		//System.out.println("Child was added ");
+		if(bandwidthManager.canTakeChild(getChannel())){
+		    channel.stripeSubscriberAdded();
+		    Credentials credentials = new PermissiveCredentials();
+		    Vector child_root_path = root_path;
+		    child_root_path.add( ((Scribe)scribe).getLocalHandle() );
+		    channel.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
+										    channel.getNodeHandle(),
+										    topicId,
+										    credentials,
+										    child_root_path ),
+					    credentials, null );
+		}
+		else{
+		    /* THIS IS WHERE THE DROP SHOULD OCCUR */
+		    Credentials credentials = new PermissiveCredentials();
+		    channel.routeMsgDirect( child, new ControlDropMessage( channel.getAddress(),
+									   channel.getNodeHandle(),
+									   topicId,
+									   credentials,
+									   channel.getSpareCapacityId(), channel.getChannelId() ),
+					    credentials, null );
+		    scribe.removeChild(child, topicId);
+		    //System.out.println("SHOULD NOT TAKE CHILD");
+		}
+		/* We should check if we can take this child on */
+	    }
+	    else {
+		// child was dropped
+		//System.out.println("Child was dropped ");
+		bandwidthManager.additionalBandwidthFreed(channel);
+	    }
+     }
     public static final int STRIPE_SUBSCRIBED = 0;
     public static final int STRIPE_UNSUBSCRIBED = 1;
     public static final int STRIPE_DROPPED = 2;
