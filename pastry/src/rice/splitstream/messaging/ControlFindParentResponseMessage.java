@@ -19,8 +19,9 @@ import rice.scribe.messaging.*;
  * will be sent by the root of the spare capacity tree.
  *
  * @(#) ControlFindParentResponseMessage.java
- * @version $Id:
+ * @version $Id$
  * @author briang
+ * @author Atul Singh
  */
 
 
@@ -103,10 +104,27 @@ public class ControlFindParentResponseMessage extends Message
         }
         else
 	    {
-		System.out.println("CFPResponse -- failed, should retry");
+		System.out.println("CFPResponse -- failed, should retry. Source "+source.getNodeId()+" Topic "+stripe.getStripeId());
+		
 		Channel channel = stripe.getChannel();
 		int num_fails = stripe.num_fails;
 		Credentials c = new PermissiveCredentials();
+
+		// Policy for handling failures in FindParentMessage
+		// Now, no-one could take me as a child in spare-capacity tree,
+		// so now should go back to the first node in stripe it contacted
+		// first, go down that stripe tree to the leaves, and ask them
+		// (if they have positive outgoing capacity) to drop one of their
+		// primary children and take me.
+
+		System.out.println("Sending controlFinalFindParentMessage from "+scribe.getNodeId()+" for stripe "+stripe.getStripeId());
+		ControlFinalFindParentMessage cffpMsg = new ControlFinalFindParentMessage(scribe.getAddress(),
+											 scribe.getLocalHandle(),
+											 stripe.getStripeId(), 
+											 c, 
+											 channel.getChannelId() );
+		scribe.anycast(stripe.getStripeId(), cffpMsg, c);
+		/*
 		if(scribe.getPastryNode() instanceof DirectPastryNode){
 		    System.out.println("DirectNodeHandle -----------");
 		    if(num_fails < channel.getTimeouts()){
@@ -130,6 +148,10 @@ public class ControlFindParentResponseMessage extends Message
 		    }
 		}
 		stripe.setIgnoreTimeout( false );
+		*/
+		stripe.setIgnoreTimeout( true );
+		
+		
             /* generate upcall */
         }
     }
