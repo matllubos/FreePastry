@@ -66,6 +66,9 @@ public class Id implements rice.p2p.commonapi.Id {
   private final static int nlen = IdBitLength / 32;
   private int Id[];
 
+  // serialver for backwards compatibility
+  static final long serialVersionUID = 2166868464271508935L;
+
   /**
    * Constructor.
    *
@@ -79,6 +82,34 @@ public class Id implements rice.p2p.commonapi.Id {
       Id[j / 4] |= k << ((j % 4) * 8);
     }
   }
+
+  /**
+   * Constructor, which takes the output of a toStringFull() and converts it back
+   * into an Id.  Should not normally be used.
+   *
+   * @param hex The hexadeciaml representation from the toStringFull()
+   */
+  public Id(String hex) {
+    this(trans(hex));
+  }
+  
+  /**
+   * Static method for converting the hex representation into an array of
+   * ints.
+   *
+   * @param hex The hexadecimal represetnation
+   * @return The cooresponding int array
+   */
+  public static int[] trans(String hex) {
+    int[] ints = new int[nlen];
+    
+    for (int i=0; i<nlen; i++) {
+      String s = hex.substring(i*8, (i+1)*8);
+      ints[nlen-1-i] = new java.math.BigInteger(s, 16).intValue();
+    }
+    
+    return ints;
+  } 
 
   /**
    * Constructor.
@@ -329,8 +360,8 @@ public class Id implements rice.p2p.commonapi.Id {
    * @return true if they are equal, false otherwise.
    */
   public boolean equals(Object obj) {
-    if (obj == null)
-      return false; 
+    if ((obj == null) || (! (obj instanceof Id)))
+      return false;
     
     Id nid = (Id) obj;
 
@@ -615,11 +646,26 @@ public class Id implements rice.p2p.commonapi.Id {
   /**
    * Returns a string representation of the Id in base 16. The string is a byte string from most to
    * least significant.
+   * 
+   * This was updated by Jeff because it was becomming a performance bottleneck.
    *
    * @return A String representation of this Id, abbreviated
    */
   public String toString() {
-    return "<0x" + toStringFull().substring(0, 6) + "..>";
+    StringBuffer buffer = new StringBuffer();
+
+    String tran[] = {"0", "1", "2", "3", "4", "5", "6", "7",
+      "8", "9", "A", "B", "C", "D", "E", "F"};
+
+    int n = IdBitLength / 4;
+    for (int i = n - 1; i >= n-6; i--) {
+      int d = getDigit(i, 4);
+
+      buffer.append(tran[d]);
+    }
+    return "<0x" + buffer.toString() + "..>";
+
+//    return "<0x" + toStringFull().substring(0, 6) + "..>";
   }
 
   /**
