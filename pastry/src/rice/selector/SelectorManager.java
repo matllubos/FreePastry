@@ -71,10 +71,12 @@ public class SelectorManager extends Thread {
 
   private TimerThread timerThread;
   
+  boolean alive = true;
+
   /**
    * Constructor, which is private since there is only one selector per JVM.
    */
-  private SelectorManager() {
+  protected SelectorManager() {
     super("Main Selector Thread");
     this.invocations = new LinkedList();
     this.modifyKeys = new HashSet();
@@ -103,7 +105,13 @@ public class SelectorManager extends Thread {
       if (manager != null)
         return manager;
 
-      manager = new SelectorManager();
+      String s = System.getProperty("PROFILE_SELECTOR_MANAGER");
+      if ((s != null) && (s != "")) {
+        System.out.println("Using Profile Selector");
+        manager = new ProfileSelector();        
+      } else {
+        manager = new SelectorManager();
+      }
       return manager;
     }
   }
@@ -146,6 +154,12 @@ public class SelectorManager extends Thread {
     modifyKeys.add(key);
     selector.wakeup();
   }
+  
+  /**
+   * This method is to be implemented by a subclass to do some task each loop.
+   */
+  protected void onLoop() {
+  }
 
   /**
    * This method starts the socket manager listening for events. It is designed
@@ -155,18 +169,12 @@ public class SelectorManager extends Thread {
     try {
       debug("SelectorManager starting...");
 
-      long lastHeartBeat = 0;
-      boolean alive = true;
       // loop while waiting for activity
       while (alive) {
 //        doSelect
 //        select();
         timerThread.mainLoopHelper(this);
-        long curTime = System.currentTimeMillis();
-        if ((curTime - lastHeartBeat) > 60000) {
-          System.out.println("selector heartbeat "+new Date());
-          lastHeartBeat = curTime;          
-        }
+        onLoop();
         doInvocations();
 
         SelectionKey[] keys = selectedKeys();
