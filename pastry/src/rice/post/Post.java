@@ -241,7 +241,6 @@ public class Post extends PastryAppl implements IScribeApp  {
                              new SendOptions());
  		    userQueue.removeElementAt(0);		
 		}
-            /* Iterate and send */ 
           }
      }
      /* Check and see if I have any messages for this person */
