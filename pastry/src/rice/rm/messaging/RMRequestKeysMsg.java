@@ -35,136 +35,79 @@ if advised of the possibility of such damage.
 ********************************************************************************/
 
 
-package rice.rm;
+package rice.rm.messaging;
 
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
+import rice.pastry.routing.*;
+
+import rice.rm.*;
+
+import java.util.*;
+import java.io.*;
 
 /**
- * @(#) RMClient.java
+ * @(#) RMRequestKeysMsg.java
  *
- * This interface should be implemented by all applications that interact
- * with the Replica Manager.
+ * A RM message. These messages are exchanged between the RM modules on the pastry nodes. 
  *
  * @version $Id$
  * @author Animesh Nandi
  */
-public interface RMClient {
+public class RMRequestKeysMsg extends RMMessage implements Serializable{
 
-    /* This upcall is invoked to notify the application that is should
-     * fetch the cooresponding keys in this set, since the node is now
-     * responsible for these keys also
+
+    private boolean keySetStamp;
+
+    private Vector rangeSet;
+
+
+    /**
+     * Constructor : Builds a new RM Message
      */
-    public void fetch(IdSet keySet);
+    public RMRequestKeysMsg(NodeHandle source, Address address, Credentials authorCred, int seqno, Vector _rangeSet, boolean _keySetStamp) {
+	super(source,address, authorCred, seqno);
+	this.keySetStamp = _keySetStamp;
+	this.rangeSet = _rangeSet;
+	
+    }
 
 
-    /* This upcall is invoked when the Replica manager wants to notify the
-     * application to store an object associated with the key
+
+    /**
+     * This method is called whenever the rm node receives a message for 
+     * itself and wants to process it. The processing is delegated by rm 
+     * to the message.
+     * 
      */
-    public void store(Id key, Object object);
+    public void handleDeliverMessage( RMImpl rm) {
+	//System.out.println(rm.getNodeId() + "received RequestKeysMsg from " + getSource().getNodeId() + " with rangeSet.size = " + rangeSet.size());
+	Vector keySetSet = new Vector();
+	Vector stampSet = new Vector();
+	for(int i=0; i< rangeSet.size(); i++) {
+	    IdRange reqRange;
+	    reqRange = (IdRange)rangeSet.elementAt(i);
+	    IdSet keySet = rm.app.scan(reqRange);
+	    keySetSet.add(keySet);
+	    //System.out.println("Range= " +reqRange);
+	    //System.out.println("IdSet= " + keySet);
+	    Id stamp =null;
+	    // Compute the stamp here
+	    if(keySetStamp) {
+		// Compute the stamp
+		stampSet.add(stamp);
+	    }
+	}
+	
+	RMResponseKeysMsg msg;
+	msg = new RMResponseKeysMsg(rm.getLocalHandle(),rm.getAddress() , rm.getCredentials(), rm.m_seqno ++, rangeSet, rm.myRange,keySetSet, stampSet, keySetStamp );
+	rm.route(null, msg, getSource());
+    }
 
-    /* This upcall is invoked to notify the application of success/failure
-     * of a previous Replicate message
-     */
-    public void replicateSuccess(Id key, boolean status);
     
-
-    /* This upcall is simply to denote that the underlying replica manager
-     * is ready.
-     */
-    public void rmIsReady();
-
-    /*
-     * This upcall is to notify the application of the range of keys for 
-     * which it is responsible. The application might choose to react to 
-     * call by calling a scan(complement of this range) to the persistance
-     * manager and get the keys for which it is not responsible and
-     * call delete on the persistance manager for those objects
-     */
-    public void isResponsible(IdRange range);
-
-
-    // This upcall should return the set of keys that the application
-    // currently stores in this range. Should return a empty IdSet (not null), in 
-    // the case that no keys belong to this range
-    public IdSet scan(IdRange range);
-
+    
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

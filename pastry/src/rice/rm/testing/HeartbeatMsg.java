@@ -35,136 +35,93 @@ if advised of the possibility of such damage.
 ********************************************************************************/
 
 
-package rice.rm;
+package rice.rm.testing;
 
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
+import rice.pastry.leafset.*;
+import rice.pastry.routing.*;
+
+import rice.rm.*;
+
+import java.util.Vector;
+import java.io.*;
 
 /**
- * @(#) RMClient.java
+ * @(#) HeartbeatMsg.java
  *
- * This interface should be implemented by all applications that interact
- * with the Replica Manager.
+ * Used for testing purposes.
  *
  * @version $Id$
  * @author Animesh Nandi
  */
-public interface RMClient {
-
-    /* This upcall is invoked to notify the application that is should
-     * fetch the cooresponding keys in this set, since the node is now
-     * responsible for these keys also
-     */
-    public void fetch(IdSet keySet);
+public class HeartbeatMsg extends TestMessage implements Serializable{
 
 
-    /* This upcall is invoked when the Replica manager wants to notify the
-     * application to store an object associated with the key
-     */
-    public void store(Id key, Object object);
+    private Id objectKey;
 
-    /* This upcall is invoked to notify the application of success/failure
-     * of a previous Replicate message
-     */
-    public void replicateSuccess(Id key, boolean status);
     
 
-    /* This upcall is simply to denote that the underlying replica manager
-     * is ready.
+    /**
+     * Constructor : Builds a new Heartbeat Message
+     * 
      */
-    public void rmIsReady();
+    public HeartbeatMsg(NodeHandle source, Address address, Id _objectKey, Credentials authorCred) {
+	super(source,address, authorCred);
+	this.objectKey = _objectKey;
+      
+    }
+    
 
-    /*
-     * This upcall is to notify the application of the range of keys for 
-     * which it is responsible. The application might choose to react to 
-     * call by calling a scan(complement of this range) to the persistance
-     * manager and get the keys for which it is not responsible and
-     * call delete on the persistance manager for those objects
+    /**
+     * This method is called whenever the rm node receives a message for 
+     * itself and wants to process it. The processing is delegated by rm 
+     * to the message.
+     * 
      */
-    public void isResponsible(IdRange range);
+    public void 
+	handleDeliverMessage( RMRegrTestApp testApp) {
+
+	
+	int replicaFactor;
+	Id objectKey;
+
+	NodeSet replicaSet;
+
+	
+	objectKey = getObjectKey();
+	replicaFactor = RMRegrTestApp.rFactor;
+	// replicaset includes this node also
+	//System.out.println(testApp.getLeafSet());
+	replicaSet = testApp.replicaSet(objectKey,replicaFactor + 1);
+	
+	// We send a Refresh message to each node in this set for this object
+	for(int i=0; i<replicaSet.size(); i++) {
+	    NodeHandle toNode;
+	    RefreshMsg msg;
+
+	    toNode = replicaSet.get(i);
+	    msg = new RefreshMsg(testApp.getLocalHandle(),testApp.getAddress(), objectKey,testApp.getCredentials());
+	    
+	    testApp.route(null, msg, toNode);
+	}
+	
+    }
+    
 
 
-    // This upcall should return the set of keys that the application
-    // currently stores in this range. Should return a empty IdSet (not null), in 
-    // the case that no keys belong to this range
-    public IdSet scan(IdRange range);
+    /**
+     * Gets the objectKey of the object.
+     * @return objectKey
+     */
+    public Id getObjectKey(){
+	return objectKey;
+    }
+    
 
+    
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

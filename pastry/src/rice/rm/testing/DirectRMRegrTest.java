@@ -64,7 +64,7 @@ import java.security.*;
 public class DirectRMRegrTest
 {
     private DirectPastryNodeFactory factory;
-    private NetworkSimulator simulator;
+    public static NetworkSimulator simulator;
     private Vector pastryNodes;
     public Vector rmClients;
     public Hashtable nodeIdToApp;
@@ -72,28 +72,37 @@ public class DirectRMRegrTest
     private int appCount = 0;
     private Vector objectKeys;
 
+    
+
     // Total nodes in the system
-    private int n = 20;
+    private int n = 50;
     public static boolean setupDone = false;
 
 
     // The number of iterations of node failures and joins. 
     // In each iteration we fail 'concurrentFailures' number of nodes 
     // and make 'concurrentJoins' number of nodes join the network.
-    private int numIterations = 5; 
+    private int numIterations = 10; 
 
     // The number of nodes that fail concurrently. This step of failing
     // nodes concurrently is repeated till the desired number of totalFailures
     // number of nodes has been killed.   
-    private int concurrentFailures =  2; 
+    private int concurrentFailures =  3; 
 
 
     // The number of nodes that join concurrently.
-    private int concurrentJoins = 2;
+    private int concurrentJoins = 3;
 
     // Since we experiment with node failures and node joins, this keeps
     // track of the number of nodes currently alive in the Pastry network.
     private int nodesCurrentlyAlive = 0;
+
+
+    private int numObjects = 50;
+    
+    private int numDeleted = 0;
+
+    private int replicaFactor = RMRegrTestApp.rFactor;
 
     
     public DirectRMRegrTest() {
@@ -119,12 +128,13 @@ public class DirectRMRegrTest
     public void makeRMNode() {
 	PastryNode pn = factory.newNode(getBootstrap());
 	pastryNodes.addElement(pn);
-	
+
+	System.out.println("NewNode" + pn.getNodeId());	
 	Credentials cred = new PermissiveCredentials();
 	RM rm = new RMImpl(pn);
 	DirectRMRegrTestApp rmApp = new DirectRMRegrTestApp(pn, rm, cred);
 	rmApp.m_appCount = appCount;
-	System.out.println("NewNode" + pn.getNodeId());
+
 	nodeIdToApp.put(pn.getNodeId(), rmApp);
 	rmClients.addElement(rmApp);
 	appCount ++;
@@ -142,8 +152,8 @@ public class DirectRMRegrTest
 
 	// Setting the seed helps to reproduce the results of the run and 
 	// thus aids debugging incase the regression test fails.
-	//seed  = -1327173166 ;
-	seed = (int)System.currentTimeMillis();
+	seed  = -1327173166 ;
+	//seed = (int)System.currentTimeMillis();
 	PastrySeed.setSeed(seed);
 	System.out.println("******************************");
 	System.out.println("seed= " + seed);
@@ -172,12 +182,12 @@ public class DirectRMRegrTest
      */
     public boolean doTesting() {
 	int i;
-	int numObjects = 100;
-	int numDeleted = 20;
-	int replicaFactor = 4;
+	//int numObjects = 1;
+	//int numDeleted = 0;
+	//int replicaFactor = DirectRMRegrTestApp.rFactor;
 	int index;
 	DirectRMRegrTestApp rmApp;
-	NodeId objectKey;
+	Id objectKey;
 	boolean passed = true;
 	int pos;
 
@@ -199,64 +209,56 @@ public class DirectRMRegrTest
 	for(i=0; i< numObjects; i ++) {
 	    objectKey = generateTopicId( new String( "Object" + i ) );
 	    objectKeys.add(objectKey);
-	    rmApp.replicate(objectKey, replicaFactor);
+	    rmApp.replicate(objectKey);
 	    while(simulate());
 	}
 
-	System.out.println("We will now join a few nodes");
-	joinNodes(concurrentJoins);
+
+
 	
-	System.out.println("We will now kill a few nodes");
-	killNodes(concurrentFailures);
-
-
 	// We will now remove 'numDeleted' number of objects from the system
 	index = rng.nextInt(n);
 	rmApp = (DirectRMRegrTestApp)rmClients.elementAt(index);
 	for(i=0; i< numDeleted; i ++) {
 	    pos = rng.nextInt(numObjects);
 	    objectKey = (NodeId)objectKeys.elementAt(pos);
-	    rmApp.remove(objectKey, replicaFactor);
+	    rmApp.remove(objectKey);
 	    objectKeys.remove(pos);
 	    numObjects --;
 	    while(simulate());
 	}
 	
+	
 	for(i=0; i< numIterations; i++) {
-	    System.out.println("We will now join a few nodes");
+	    //System.out.println("We will now join a few nodes");
 	    joinNodes(concurrentJoins);
 	    
-	    System.out.println("We will now kill a few nodes");
+	    //System.out.println("We will now kill a few nodes");
 	    killNodes(concurrentFailures);
 	    
 	}
-	
 
-
-	// We will now check the system's invariants with respect to the 
-	// location of replicas
-
+	// We will now send heartbeat messages
 	index = rng.nextInt(n);
 	rmApp = (DirectRMRegrTestApp)rmClients.elementAt(index);
-	for(i=0; i< objectKeys.size(); i ++) {
-	    objectKey = (NodeId)objectKeys.elementAt(i);
-	    rmApp.heartbeat(objectKey, replicaFactor);
-	    while(simulate());
-	}
-	// At this point the refreshCount of all objects in the different nodes 
-	// should be zero and we should not have got any ERROR messages telling
-	// us that refresh() was called on a node for an object that did not exist
+	for(i=0; i< numObjects; i ++) {
+            objectKey = (NodeId)objectKeys.elementAt(i);
+            rmApp.heartbeat(objectKey);
+            while(simulate());
+        }
+
 	
-	for(i=0; i< rmClients.size(); i ++) {
+	// We will now do the invariant checking
+	for(i=0; i< rmClients.size(); i++) {
 	    rmApp = (DirectRMRegrTestApp)rmClients.elementAt(i);
-	    passed &= rmApp.check();
+	    passed = passed & rmApp.checkPassed();
+
 	}
-	
 	
 	return passed;
     }
 
-    public NodeId generateTopicId( String topicName ) { 
+    public Id generateTopicId( String topicName ) { 
 	MessageDigest md = null;
 
 	try {
@@ -342,7 +344,7 @@ public class DirectRMRegrTest
 	
 	// We will now initiate the leafset and routeset maintenance to 
 	// make the presence of the newly killed nodes reflected. 
-	System.out.println("Initiating leafset/routeset maintenance");
+	//System.out.println("Initiating leafset/routeset maintenance");
 	initiateLeafSetMaintenance();
 	initiateRouteSetMaintenance();
 
@@ -381,7 +383,7 @@ public class DirectRMRegrTest
 
 	// We will now initiate the leafset and routeset maintenance to 
 	// make the presence of the newly joined nodes reflected. 
-	System.out.println("Initiating leafset/routeset maintenance");	
+	//System.out.println("Initiating leafset/routeset maintenance");	
 	initiateLeafSetMaintenance();
 	initiateRouteSetMaintenance();
 

@@ -48,7 +48,6 @@ import rice.pastry.security.*;
  * replicate objects across k closest nodes in the NodeId space.
  *
  * @version $Id$
- * @author Atul Singh
  * @author Animesh Nandi
  */
 public interface RM {
@@ -58,47 +57,24 @@ public interface RM {
      * Registers the application to the RM.
      * @param appAddress the application's address
      * @param app the application, which is an instance of ReplicaClient
+     * @param replicaFactor is the number of additional replicas, the default
+     *  one is called 0-root, rest are called i-root (1<=i <=replicaFactor)
      */
-    public boolean register(Address appAddress, RMClient app);
+    public boolean register(RMClient app, int replicaFactor);
 
 
     /**
      * Called by the application when it needs to replicate an object into k nodes
      * closest to the object key.
      *
-     * @param appAddress applications address which calls this method
      * @param objectKey  the pastry key for the object
      * @param object the object
-     * @param replicaFactor the number of nodes k into which the object is replicated
      * @return true if operation successful else false
      */
-    public boolean replicate(Address appAddress, NodeId objectKey, Object object, int replicaFactor);
+    public boolean replicate( Id objectKey, Object object);
 
-    /**
-     * Called by the application when it needs to refresh an object into k nodes
-     * closest to the object key. This mechanism is used to ensure that stsle objects
-     * do not persist by any chance and that replicas of an object are maintained
-     * under all circumstances.
-     *
-     * @param appAddress applications address which calls this method
-     * @param objectKey  the pastry key for the object
-     * @param replicaFactor the number of nodes k into which the object is replicated
-     * @return true if operation successful else false
-     */
-    public boolean heartbeat(Address appAddress, NodeId objectKey, int replicaFactor);
-
-
-
-    /**
-     * Called by applications when it needs to remove this object from k nodes 
-     * closest to the objectKey. 
-     *
-     * @param appAddress applications address
-     * @param objectKey  the pastry key for the object
-     * @param replicaFactor the replication factor of the object
-     * @return true if operation successful
-     */
-    public boolean remove(Address appAddress, NodeId objectKey, int replicaFactor);
-
+   
 
 }
+
+

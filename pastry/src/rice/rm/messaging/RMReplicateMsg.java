@@ -40,78 +40,92 @@ package rice.rm.messaging;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
+import rice.pastry.leafset.*;
+import rice.pastry.routing.*;
 
 import rice.rm.*;
 
-import java.util.Random;
+import java.util.Vector;
 import java.io.*;
 
 /**
- * @(#) RMMessage.java
+ * @(#) RMReplicate.java
  *
- * A RM message. These messages are exchanged between the RM modules on the pastry nodes. 
+ * A RM message. These messages are exchanged between the RM modules on the pastry nodes. This message gets the list of Nodehandles which will be responsible
+ * for storing the object. This set is obtained from the root of the object. 
  *
  * @version $Id$
- * @author Atul Singh
  * @author Animesh Nandi
  */
-public abstract class RMMessage extends Message implements Serializable{
+public class RMReplicateMsg extends RMMessage implements Serializable{
 
 
-    /**
-     * The credentials of the author for the object contained in this object
-     */
-    private Credentials _authorCred;
-     
-   
-    /**
-     * The ID of the source of this message.
-     * Should be serializable.
-     */
-    protected NodeHandle _source;
+    private Id objectKey;
 
-    // for debugging purposes
-    private int _seqno;
-
+    
 
     /**
      * Constructor : Builds a new RM Message
      * @param address RM Application address
+     * @param content the object to be inserted or updated, null for DELETE type of message
+     * @param objectKey the pastry key of the object
+     * @param messageType either RM_INSERT, RM_DELETE, RM_UPDATE
+     * @param replicaFactor the number of replicas required for the object
+     * 
      */
-    public RMMessage(NodeHandle source, Address address, Credentials authorCred, int seqno) {
-	super(address);
-	this._source = source; 
-	this._authorCred = authorCred;
-	this._seqno = seqno;
+    public RMReplicateMsg(NodeHandle source, Address address, Id _objectKey, Credentials authorCred, int seqno) {
+	super(source,address, authorCred, seqno);
+	this.objectKey = _objectKey;
+      
     }
     
 
-     /**
+    /**
      * This method is called whenever the rm node receives a message for 
      * itself and wants to process it. The processing is delegated by rm 
      * to the message.
      * 
      */
-    public abstract void 
-	handleDeliverMessage( RMImpl rm);
+    public void 
+	handleDeliverMessage( RMImpl rm) {
+
+	//System.out.println("RMReplicateMsg received");
+	int replicaFactor;
+	Id objectKey;
+
+
+	// This a a message(asking for Replicating an object) that
+	// was routed through pastry and delivered to this node
+	// which is the closest to the objectKey
+	
+	NodeSet replicaSet;
+
+	
+	objectKey = getObjectKey();
+	replicaFactor = rm.rFactor;
+	//rm.app.store(objectKey, object);
+	// replicaset includes this node also
+	replicaSet = rm.replicaSet(objectKey,replicaFactor + 1);
+	
+	// We reply back with this NodeSet
+       
+	//System.out.println(rm.getNodeId() + "received replicatemsg");
+	RMReplicateResponseMsg msg;
+	msg = new RMReplicateResponseMsg(rm.getLocalHandle(),rm.getAddress(), objectKey, replicaSet, rm.getCredentials(), rm.m_seqno ++);
+
+	rm.route(null, msg, getSource());
+	
+    }
     
 
-    public int getSeqno() {
-	return _seqno;
-    }
-
-    public NodeHandle getSource() {
-	return _source;
-    }
-    
-    
     /**
-     * Gets the author's credentials associated with this object
-     * @return credentials
+     * Gets the objectKey of the object.
+     * @return objectKey
      */
-    public Credentials getCredentials(){
-	return _authorCred;
+    public Id getObjectKey(){
+	return objectKey;
     }
+    
 
     
 }

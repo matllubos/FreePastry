@@ -38,83 +38,94 @@ if advised of the possibility of such damage.
 package rice.rm.messaging;
 
 import rice.pastry.*;
+import rice.pastry.dist.*;
+
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 
 import rice.rm.*;
 
-import java.util.Random;
+import java.util.*;
 import java.io.*;
 
 /**
- * @(#) RMMessage.java
+ * @(#) RMReplicateResponseMsg.java
  *
  * A RM message. These messages are exchanged between the RM modules on the pastry nodes. 
  *
  * @version $Id$
- * @author Atul Singh
  * @author Animesh Nandi
  */
-public abstract class RMMessage extends Message implements Serializable{
+public class RMReplicateResponseMsg extends RMMessage implements Serializable{
 
 
-    /**
-     * The credentials of the author for the object contained in this object
-     */
-    private Credentials _authorCred;
-     
-   
-    /**
-     * The ID of the source of this message.
-     * Should be serializable.
-     */
-    protected NodeHandle _source;
+    private NodeSet replicaSet;
 
-    // for debugging purposes
-    private int _seqno;
+    private Id objectKey;
 
+    // this timeout will be used only by the distributed test
+    private static int TIMEOUT = 30*1000; 
 
     /**
      * Constructor : Builds a new RM Message
-     * @param address RM Application address
      */
-    public RMMessage(NodeHandle source, Address address, Credentials authorCred, int seqno) {
-	super(address);
-	this._source = source; 
-	this._authorCred = authorCred;
-	this._seqno = seqno;
+    public RMReplicateResponseMsg(NodeHandle source, Address address, Id _key, NodeSet _replicaSet, Credentials authorCred, int seqno) {
+	super(source,address, authorCred, seqno);
+	this.replicaSet = _replicaSet;
+	this.objectKey = _key;
     }
-    
 
-     /**
+
+
+    /**
      * This method is called whenever the rm node receives a message for 
      * itself and wants to process it. The processing is delegated by rm 
      * to the message.
      * 
      */
-    public abstract void 
-	handleDeliverMessage( RMImpl rm);
-    
+    public void handleDeliverMessage( RMImpl rm) {
+	NodeSet set = getReplicaSet() ;
+	Id key = getObjectKey();
+	Object object = rm.getPendingObject(key).getObject();
 
-    public int getSeqno() {
-	return _seqno;
+
+	//System.out.println(rm.getNodeId() + "received response to replicatemsg"+ "replicaSet=" + set);
+	// We will now send object insertion messages to each of these nodes 
+	// and wait for the response messages
+
+	for(int i=0; i<set.size(); i++) {
+	    NodeHandle toNode;
+	    RMInsertMsg msg;
+
+	    toNode = set.get(i);
+	    msg = new RMInsertMsg(rm.getLocalHandle(),rm.getAddress(), key, object, rm.getCredentials(), rm.m_seqno ++);
+	    rm.route(null, msg, toNode);
+	}
+	
+
+	if(rm.getPastryNode() instanceof DistPastryNode) {
+	    RMReplicateTimeoutMsg msg;
+	    msg = new RMReplicateTimeoutMsg(rm.getLocalHandle(),rm.getAddress(), key, rm.getCredentials(), rm.m_seqno ++);
+	    rm.getPastryNode().scheduleMsg(msg, TIMEOUT);
+	}
+	
     }
 
-    public NodeHandle getSource() {
-	return _source;
-    }
-    
-    
-    /**
-     * Gets the author's credentials associated with this object
-     * @return credentials
-     */
-    public Credentials getCredentials(){
-	return _authorCred;
-    }
 
     
+    public Id getObjectKey() {
+	return objectKey;
+    }
+
+    public NodeSet getReplicaSet() {
+	return replicaSet;
+    }
+
 }
+
+
+
+
 
 
 

@@ -52,65 +52,78 @@ import java.io.*;
  * A RM message. These messages are exchanged between the RM modules on the pastry nodes. 
  *
  * @version $Id$
- * @author Atul Singh
  * @author Animesh Nandi
  */
-public abstract class RMMessage extends Message implements Serializable{
+public class RMInsertMsg extends RMMessage implements Serializable{
 
+
+    private Id objectKey;
 
     /**
-     * The credentials of the author for the object contained in this object
+     * The object that needs to be inserted. 
      */
-    private Credentials _authorCred;
-     
-   
-    /**
-     * The ID of the source of this message.
-     * Should be serializable.
-     */
-    protected NodeHandle _source;
-
-    // for debugging purposes
-    private int _seqno;
+    private Object object;
 
 
     /**
      * Constructor : Builds a new RM Message
      * @param address RM Application address
+     * @param content the object to be inserted or updated, null for DELETE type of message
+     * @param objectKey the pastry key of the object
+     * @param messageType either RM_INSERT, RM_DELETE, RM_UPDATE
+     * @param replicaFactor the number of replicas required for the object
+     * 
      */
-    public RMMessage(NodeHandle source, Address address, Credentials authorCred, int seqno) {
-	super(address);
-	this._source = source; 
-	this._authorCred = authorCred;
-	this._seqno = seqno;
+    public RMInsertMsg(NodeHandle source, Address address, Id _objectKey,Object _content, Credentials authorCred, int seqno) {
+	super(source,address, authorCred, seqno);
+	this.object = _content;
+	this.objectKey = _objectKey;
     }
-    
 
-     /**
+
+
+    /**
      * This method is called whenever the rm node receives a message for 
      * itself and wants to process it. The processing is delegated by rm 
      * to the message.
      * 
      */
-    public abstract void 
-	handleDeliverMessage( RMImpl rm);
+    public void handleDeliverMessage( RMImpl rm) {
+	Id objectKey;
+	Object object;
+
+	//System.out.println(rm.getNodeId() + " received RMInsert msg ");
+	// This is a local insert 
+	objectKey = getObjectKey();
+	object = getObject();
+	//System.out.println("RM_INSERT:: received replica message for objectKey "+ objectKey+" at local node "+rm.getNodeId() + "from " + rmmsg.getSource().getNodeId() + "MessageId= " + rmmsg.getSeqno());
+	rm.app.store(objectKey, object);
+
+	// We now send a Ack
+	RMInsertResponseMsg msg;
+	msg = new RMInsertResponseMsg(rm.getLocalHandle(),rm.getAddress(), objectKey, rm.getCredentials(), rm.m_seqno ++);
+
+	rm.route(null, msg, getSource());
+	
+    }
     
 
-    public int getSeqno() {
-	return _seqno;
-    }
-
-    public NodeHandle getSource() {
-	return _source;
-    }
-    
-    
     /**
-     * Gets the author's credentials associated with this object
-     * @return credentials
+     * Gets the objectKey of the object.
+     * @return objectKey
      */
-    public Credentials getCredentials(){
-	return _authorCred;
+    public Id getObjectKey(){
+	return objectKey;
+    }
+    
+
+
+    /**
+     * Gets the object contained in this message
+     * @return object 
+     */
+    public Object getObject(){
+	return object;
     }
 
     

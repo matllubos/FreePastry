@@ -35,132 +35,82 @@ if advised of the possibility of such damage.
 ********************************************************************************/
 
 
-package rice.rm;
+package rice.rm.messaging;
 
 import rice.pastry.*;
-import rice.pastry.messaging.*;
 import rice.pastry.security.*;
+import rice.pastry.routing.*;
+import rice.pastry.messaging.*;
+
+import rice.rm.*;
+import rice.rm.messaging.*;
+
+import java.io.*;
+import java.util.*;
 
 /**
- * @(#) RMClient.java
  *
- * This interface should be implemented by all applications that interact
- * with the Replica Manager.
- *
- * @version $Id$
+ * RMReplicateTimeoutMsg is used to implement the timeout mechanism
+ * in the insertion of object in the replication manager. This message
+ * is delivered internally. 
+ * 
+ * @version $Id$ 
+ * 
  * @author Animesh Nandi
  */
-public interface RMClient {
-
-    /* This upcall is invoked to notify the application that is should
-     * fetch the cooresponding keys in this set, since the node is now
-     * responsible for these keys also
-     */
-    public void fetch(IdSet keySet);
 
 
-    /* This upcall is invoked when the Replica manager wants to notify the
-     * application to store an object associated with the key
-     */
-    public void store(Id key, Object object);
+public class RMReplicateTimeoutMsg extends RMMessage implements Serializable
+{
 
-    /* This upcall is invoked to notify the application of success/failure
-     * of a previous Replicate message
-     */
-    public void replicateSuccess(Id key, boolean status);
+    private Id objectKey;
     
 
-    /* This upcall is simply to denote that the underlying replica manager
-     * is ready.
+    /**
+     * Constructor
      */
-    public void rmIsReady();
+    public 
+	RMReplicateTimeoutMsg(NodeHandle source, Address address, Id _objectKey, Credentials authorCred, int seqno) {
+	super(source, address, authorCred, seqno);
+	objectKey = _objectKey;
+	
+    }
+    
+    public void handleDeliverMessage( RMImpl rm) {
+	System.out.println("Timeout message: at " + rm.getNodeId());
+	Id key = getObjectKey();
+	RMImpl.ReplicateEntry entry;
 
-    /*
-     * This upcall is to notify the application of the range of keys for 
-     * which it is responsible. The application might choose to react to 
-     * call by calling a scan(complement of this range) to the persistance
-     * manager and get the keys for which it is not responsible and
-     * call delete on the persistance manager for those objects
-     */
-    public void isResponsible(IdRange range);
+	entry = rm.getPendingObject(key);
+	if(entry == null) {
+	    // It means that we received all the Acks before the timeout
+	    return;
+	}
+	// On the assumption that atleast one node in the replicaSet
+	// is a good node and replies within the Timeout period
+	if(entry.getNumAcks()==0) {
+	    // Notify application of failure
+	    rm.app.replicateSuccess(key,false);
+	}
+	else {
+	    // Notify application of success
+	    rm.app.replicateSuccess(key,true);
+	}
+	// We also get rid of the state associated with this object from
+	// the pendingObjectList
+	rm.removePendingObject(key);
+    }
+   
+
+    public Id getObjectKey() {
+	return objectKey;
+    }
 
 
-    // This upcall should return the set of keys that the application
-    // currently stores in this range. Should return a empty IdSet (not null), in 
-    // the case that no keys belong to this range
-    public IdSet scan(IdRange range);
-
+    public String toString() {
+	return new String( "RM_REPLICATE_TIMEOUT  MSG:" );
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

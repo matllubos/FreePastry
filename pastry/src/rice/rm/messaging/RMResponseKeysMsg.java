@@ -43,77 +43,91 @@ import rice.pastry.security.*;
 
 import rice.rm.*;
 
-import java.util.Random;
+import java.util.*;
 import java.io.*;
 
 /**
- * @(#) RMMessage.java
+ * @(#) RMResponseKeysMsg.java
  *
  * A RM message. These messages are exchanged between the RM modules on the pastry nodes. 
  *
  * @version $Id$
- * @author Atul Singh
  * @author Animesh Nandi
  */
-public abstract class RMMessage extends Message implements Serializable{
+public class RMResponseKeysMsg extends RMMessage implements Serializable{
 
 
-    /**
-     * The credentials of the author for the object contained in this object
-     */
-    private Credentials _authorCred;
-     
-   
-    /**
-     * The ID of the source of this message.
-     * Should be serializable.
-     */
-    protected NodeHandle _source;
+    private Vector reqRangeSet;
 
-    // for debugging purposes
-    private int _seqno;
+    // This range is the range of keys that the node requring to 
+    // respond with the set of keys is responsible for
+    private IdRange availRange;
+
+
+    //private IdSet keySet;
+    private Vector keySetSet;
+
+    private boolean keySetStamp;
+
+    //private Id stamp;
+    private Vector stampSet;
 
 
     /**
      * Constructor : Builds a new RM Message
-     * @param address RM Application address
      */
-    public RMMessage(NodeHandle source, Address address, Credentials authorCred, int seqno) {
-	super(address);
-	this._source = source; 
-	this._authorCred = authorCred;
-	this._seqno = seqno;
+    public RMResponseKeysMsg(NodeHandle source, Address address, Credentials authorCred, int seqno, Vector _reqRangeSet, IdRange _availRange, Vector _keySetSet, Vector _stampSet, boolean _keySetStamp ) {
+	super(source,address, authorCred, seqno);
+	this.reqRangeSet = _reqRangeSet;
+	this.availRange = _availRange;
+	this.keySetSet = _keySetSet;
+	this.stampSet = _stampSet;
+	this.keySetStamp = _keySetStamp;
     }
-    
 
-     /**
+
+
+    /**
      * This method is called whenever the rm node receives a message for 
      * itself and wants to process it. The processing is delegated by rm 
      * to the message.
      * 
      */
-    public abstract void 
-	handleDeliverMessage( RMImpl rm);
+    public void handleDeliverMessage( RMImpl rm) {
+	//System.out.println(rm.getNodeId() + " received ResponseKeys msg from" + getSource().getNodeId());
+	// We will see the keys sent, filter them on the basis of 
+	// (myRange) and call fetch(IdSet) on the corresponding application
+
+	IdSet fetchSet = new IdSet();
+	IdSet keySet;
+	if(!keySetStamp) {
+	    for(int i=0; i< keySetSet.size(); i++) {
+		keySet = (IdSet)keySetSet.elementAt(i);
+		//System.out.println("keySet= " + keySet);
+		Iterator it = keySet.getIterator();
+		while(it.hasNext()) {
+		    Id key = (Id)it.next();
+		    Id ccw = rm.myRange.getCCW();
+		    Id cw = rm.myRange.getCW();
+		    if(key.isBetween(ccw, cw)) {
+			fetchSet.addMember(key);
+		    }
+		    else {
+			System.out.println("Warning: RMResponseKeysMsg has key not in the desired range");
+		    }
+		}
+	    }
+	    rm.app.fetch(fetchSet);
+	}
+	else {
+	    // Should check if the stamps match. If not generate
+	    // message to fetch keys with keySetStamp set to false
+
+	}
+	
+    }
     
 
-    public int getSeqno() {
-	return _seqno;
-    }
-
-    public NodeHandle getSource() {
-	return _source;
-    }
-    
-    
-    /**
-     * Gets the author's credentials associated with this object
-     * @return credentials
-     */
-    public Credentials getCredentials(){
-	return _authorCred;
-    }
-
-    
 }
 
 
