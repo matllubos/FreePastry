@@ -173,8 +173,12 @@ public class SocketChannelReader {
         buffer = null;
         //   int size = objectSize + MAGIC_NUMBER.length + 4;
         Object obj = deserialize(objectArray);
-        spn.broadcastReceivedListeners(obj, (InetSocketAddress) sc.socket().getRemoteSocketAddress(), objectSize+8);
         debug("Deserialized bytes into object " + obj);
+
+        if (spn != null) {
+          spn.broadcastReceivedListeners(obj, (InetSocketAddress) sc.socket().getRemoteSocketAddress(), objectSize+8);
+        }
+
         if (!(obj instanceof AddressMessage)) {
           readOnce = true;
         }

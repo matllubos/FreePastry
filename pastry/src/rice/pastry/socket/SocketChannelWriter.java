@@ -228,7 +228,10 @@ public class SocketChannelWriter {
 
           Object first = queue.getFirst();
           buffer = serialize(first);
-          spn.broadcastSentListeners(first, address, buffer.limit());
+
+          if ((buffer != null) && (spn != null)) {
+            spn.broadcastSentListeners(first, address, buffer.limit());
+          }
           
           if ((first != null) && (buffer == null)) {
             // we got a message that was too big
