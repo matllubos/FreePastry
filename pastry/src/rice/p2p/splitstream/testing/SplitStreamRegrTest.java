@@ -136,7 +136,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
     return FACTORY.buildId(data);
   }
  
-  private class SplitStreamTestClient{
+  private class SplitStreamTestClient implements SplitStreamClient{
   
    /** 
     * The underlying common api node
@@ -188,10 +188,14 @@ public class SplitStreamRegrTest extends CommonAPITest {
 
    public void getStripes(){
       log("Retrieving Stripes.");
+      channel.getStripes();
    }
 
-   public void sbuscribeStripes(){
+   public void subscribeStripes(){
       log("Subscribing to all Stripes.");
+      for(int i = 0; i < stripes.length ; i ++){
+         stripes[i].subscribe(this);
+      } 
    }
 
    private void log(String s){
