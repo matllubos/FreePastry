@@ -192,7 +192,7 @@ public class MessageAnycast extends ScribeMessage implements Serializable
 		System.out.println("DFS FAILED :: No spare capacity");
 		// Call the fault handler, since no one could satisfy 
 		// the anycast request.
-		faultHandler();
+		faultHandler(scribe);
 	    }
 	}
 	else {
@@ -263,7 +263,7 @@ public class MessageAnycast extends ScribeMessage implements Serializable
 			// call the fault handler to notify that DFS
 			// has failed.
 			System.out.println("DFS Failed at"+scribe.getNodeId()+" for topic "+m_topicId);
-			this.faultHandler();
+			this.faultHandler(scribe);
 		    }						
 		}
 	    }
@@ -283,7 +283,7 @@ public class MessageAnycast extends ScribeMessage implements Serializable
      * Derived classes can do more application-specific handling
      * of such cases.
      */
-    public void faultHandler(){
+    public void faultHandler(Scribe scribe){
 	System.out.println("ANYCAST FAILED !!"+toString());
     }
 
