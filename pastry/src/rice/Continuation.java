@@ -48,6 +48,7 @@ package rice;
  * @version $Id$
  *
  * @author Alan Mislove
+ * @author Andreas Haeberlen
  */
 public interface Continuation {
 
@@ -242,6 +243,59 @@ public interface Continuation {
     
     public boolean exceptionThrown() {
       return (exception != null);
+    }
+  }
+  
+  public static class MultiContinuationHandle implements Continuation {
+  
+    protected MultiContinuation parent;
+    int myIndex;
+    
+    protected MultiContinuationHandle(MultiContinuation parent, int myIndex) {
+      this.myIndex = myIndex;
+      this.parent = parent;
+    }
+    
+    public void receiveResult(Object o) {
+      parent.receive(myIndex, o);
+    }
+    
+    public void receiveException(Exception e) {
+      parent.receive(myIndex, e);
+    }
+  }
+  
+  public static class MultiContinuation {
+  
+    protected Object result[];
+    protected boolean haveResult[];
+    protected Continuation parent;
+    protected int resultsAvailable;
+    
+    public MultiContinuation(Continuation parent, int numResults) {
+      this.parent = parent;
+      this.resultsAvailable = 0;
+      this.result = new Object[numResults];
+      this.haveResult = new boolean[numResults];
+      for (int i=0; i<numResults; i++)
+        this.haveResult[i] = false;
+    }
+    
+    public Continuation getSubContinuation(int index) {
+      if ((index<0) || (index>=result.length))
+        return null;
+        
+      return new MultiContinuationHandle(this, index);
+    }
+    
+    protected synchronized void receive(int index, Object o) {
+      result[index] = o;
+      if (!haveResult[index]) {
+        haveResult[index] = true;
+        resultsAvailable ++;
+        if (resultsAvailable == result.length)
+          parent.receiveResult(result);
+      }
     }
   }
 }
