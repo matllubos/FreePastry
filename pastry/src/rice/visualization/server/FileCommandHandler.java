@@ -12,6 +12,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
+
+import rice.p2p.util.DebugCommandHandler;
 import rice.post.proxy.PostProxy;
 
 /**

@@ -11,6 +11,7 @@ import rice.pastry.dist.DistPastryNode;
 import rice.proxy.Parameters;
 import rice.p2p.glacier.v2.GlacierImpl;
 import rice.p2p.past.*;
+import rice.p2p.util.DebugCommandHandler;
 import rice.p2p.aggregation.AggregationImpl;
 import rice.persistence.*;
 import rice.visualization.*;

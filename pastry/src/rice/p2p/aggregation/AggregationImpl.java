@@ -33,8 +33,8 @@ import rice.p2p.past.PastContentHandle;
 import rice.p2p.past.gc.GCPast;
 import rice.p2p.past.gc.GCPastContent;
 import rice.p2p.past.gc.GCPastContentHandle;
+import rice.p2p.util.DebugCommandHandler;
 import rice.persistence.StorageManager;
-import rice.visualization.server.DebugCommandHandler;
 import rice.p2p.glacier.v2.GlacierContentHandle;
 
 public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregation, Application, DebugCommandHandler {

@@ -1,4 +1,4 @@
-package rice.visualization.server;
+package rice.p2p.util;
 
 public interface DebugCommandHandler {
   

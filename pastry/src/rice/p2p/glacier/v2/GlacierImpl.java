@@ -14,10 +14,10 @@ import rice.p2p.past.PastContent;
 import rice.p2p.past.PastContentHandle;
 import rice.p2p.past.gc.GCPast;
 import rice.p2p.past.gc.GCPastContent;
+import rice.p2p.util.DebugCommandHandler;
 import rice.persistence.Storage;
 import rice.persistence.StorageManager;
 import rice.persistence.PersistentStorage;
-import rice.visualization.server.DebugCommandHandler;
 
 import rice.pastry.commonapi.PastryIdFactory;
 import rice.p2p.multiring.*;
