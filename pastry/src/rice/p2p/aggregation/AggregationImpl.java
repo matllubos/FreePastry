@@ -636,7 +636,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                 public void receiveResult(Object o) {
                   if (remainingHere > 0) {
                     log("Continuing burst insert, "+remainingHere+" remaining");
-                    int thisAvgSize = (rand.nextDouble() < sizeSkew) ? smallSize : largeSize;
+                    int thisAvgSize = ((0.0001*rand.nextInt(1000)) < sizeSkew) ? smallSize : largeSize;
                     int thisSize = (int)(0.3*thisAvgSize + rand.nextInt((int)(1.4*thisAvgSize)));
                     Id randomID = factory.buildRandomId(rand);
                     remainingHere --;
@@ -788,7 +788,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     }
   }
 
-  private synchronized Id[] getSomePointers(int referenceThreshold) {
+  private Id[] getSomePointers(int referenceThreshold) {
     if (rootKey == null)
       return new Id[] {};
       
@@ -848,7 +848,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       aggregateStore.insert(aggr, c);
   }
 
-  private synchronized VersionKey getMostCurrentWaiting(IdSet waitingKeys, Id id) {
+  private VersionKey getMostCurrentWaiting(IdSet waitingKeys, Id id) {
 
     VersionKey highestVersion = null;
     if (id != null) {
@@ -866,7 +866,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     return highestVersion;
   }    
 
-  private synchronized void flushComplete(Object o) {
+  private void flushComplete(Object o) {
     if (flushWait != null) {
       Continuation c = flushWait;
       flushWait = null;
@@ -877,7 +877,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     }
   }
 
-  private synchronized void formAggregates(final Continuation command) {
+  private void formAggregates(final Continuation command) {
     if (flushWait != null) {
       log("Flush in progress... daisy-chaining continuation");
       final Continuation parent = flushWait;
@@ -1022,7 +1022,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     return maxLifetime;
   }
 
-  private synchronized void refreshAggregates() {
+  private void refreshAggregates() {
     Enumeration enum = aggregateList.elements();
     long now = System.currentTimeMillis();
     Vector removeList = new Vector();
@@ -1490,25 +1490,21 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         boolean otherFailed = false;
 
         public void receiveResult(Object o) {
-          synchronized (this) {
-            log("INSERT "+obj.getId()+" receiveResult("+o+"), otherSucc="+otherSucceeded+" otherFail="+otherFailed);
-            if (otherSucceeded) {
-              if (!otherFailed) {
-                log("--reporting Success");
-                command.receiveResult(new Boolean[] { new Boolean(true) });
-              }
-            } else {
-              otherSucceeded = true;
+          log("INSERT "+obj.getId()+" receiveResult("+o+"), otherSucc="+otherSucceeded+" otherFail="+otherFailed);
+          if (otherSucceeded) {
+            if (!otherFailed) {
+              log("--reporting Success");
+              command.receiveResult(new Boolean[] { new Boolean(true) });
             }
+          } else {
+            otherSucceeded = true;
           }
         }
         public void receiveException(Exception e) {
-          synchronized (this) {
-            log("INSERT "+obj.getId()+" receiveException("+e+"), otherSucc="+otherSucceeded+" otherFail="+otherFailed);
-            log("--reporting Failure");
-            command.receiveException(e);
-            otherFailed = true;
-          }
+          log("INSERT "+obj.getId()+" receiveException("+e+"), otherSucc="+otherSucceeded+" otherFail="+otherFailed);
+          log("--reporting Failure");
+          command.receiveException(e);
+          otherFailed = true;
         }
       };
       
@@ -1700,7 +1696,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     objectStore.fetch(handle, command);
   }
 
-  public synchronized void flush(Id id, Continuation command) {
+  public void flush(Id id, Continuation command) {
     Iterator iter = waitingList.scan().getIterator();
     boolean objectIsWaiting = false;
 
@@ -1741,7 +1737,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     command.receiveResult(null);
   }
   
-  public synchronized void reset(Continuation command) {
+  public void reset(Continuation command) {
     rootKey = null;
     aggregateList.clear();
 
