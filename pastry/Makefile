@@ -4,7 +4,7 @@
 #***************************************************************************
 
 # Note:
-#  The "past" and "storage" packages require ObjectWeb.
+#  The "storage" package requires ObjectWeb.
 #  Instructions for setting the OBJECTWEB_DIR environment
 #  variable can be found in README.ObjectWeb.
 
@@ -43,11 +43,13 @@ PACKAGES = \
 	rice.email.messaging\
 	rice.email.test\
 	rice.email.proxy \
+	rice.past\
+	rice.past.messaging\
+	rice.past.testing\
+	rice.persistence\
+	rice.persistence.testing
 #	rice.storage\
 #	rice.storage.testing\
-#	rice.past\
-#	rice.past.messaging\
-#	rice.past.testing\
 #	rice.past.search\
 #	rice.past.search.testing
 #	rice.ap3\

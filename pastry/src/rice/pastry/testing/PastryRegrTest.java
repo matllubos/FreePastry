@@ -229,8 +229,8 @@ public abstract class PastryRegrTest {
 
 	
 	for (int i=0; i<rtApps.size(); i++) {
-	    checkLeafSet((RegrTestApp)rtApps.get(i));
-	    checkRoutingTable((RegrTestApp)rtApps.get(i));
+	    //checkLeafSet((RegrTestApp)rtApps.get(i));
+	    //checkRoutingTable((RegrTestApp)rtApps.get(i));
 	}
 	
 

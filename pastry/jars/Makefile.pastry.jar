@@ -1,5 +1,8 @@
-JAR_CONTENT = rice/pastry \
-	 rice/scribe
+JAR_CONTENT = rice/Continuation.class \
+	rice/pastry \
+	rice/scribe \
+	rice/past \
+	rice/persistence
 
 MANIFEST = Manifest.directory.jar
 
