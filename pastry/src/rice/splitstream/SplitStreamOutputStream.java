@@ -73,9 +73,10 @@ public class SplitStreamOutputStream extends ByteArrayOutputStream{
     */
    public void write(int b){
 	super.write(b); 
-	System.out.println("Attempting to Send Data");
-	//if(scribe.multicast(stripeId, b, cred))
-	System.out.println("Attempting to Send Data");
+        /* This is used because byte[] can be serialized but byte cannot */
+        byte[] temp = new byte[1];
+        temp[0] = (byte) b;
+	if(scribe.multicast(stripeId, temp, cred)){}
 	/* Do splitstream stuff */
    } 
 
