@@ -857,8 +857,13 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       }
       
       int numObjectsInAggregate = currentAggregate.size();
-      ObjectDescriptor[] desc = new ObjectDescriptor[numObjectsInAggregate];
+      if (numObjectsInAggregate < 1) {
+        warn("Waiting list seems to consist entirely of damaged objects -- please remove!");
+        flushComplete(new Boolean(true));
+        return;
+      }
 
+      ObjectDescriptor[] desc = new ObjectDescriptor[numObjectsInAggregate];
       for (int i=0; i<numObjectsInAggregate; i++) {
         desc[i] = (ObjectDescriptor) currentAggregate.elementAt(i);
         log(3, "#"+i+": "+desc[i].key+" "+desc[i].size+" bytes");
