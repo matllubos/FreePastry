@@ -97,8 +97,8 @@ public class Pinger extends Test {
    * @param nodes NodeHandles to all of the other participating
    *              TestHarness nodes (this test class ignores these)
    */
-  public Pinger(PrintStream out, PastryNode localNode) {
-    super(out, localNode);
+  public Pinger(PrintStream out, PastryNode localNode, TestHarness harness) {
+    super(out, localNode, harness);
 
     nodeId = localNode.getNodeId();
     handle = localNode.getLocalHandle();
@@ -108,7 +108,7 @@ public class Pinger extends Test {
    * Method which is called when the TestHarness wants this
    * Test to begin testing.
    */
-  public void startTest(final TestHarness thl, NodeHandle[] nodes) {
+  public void startTest(NodeHandle[] nodes) {
     total = new long[nodes.length];
     min = new long[nodes.length];
 

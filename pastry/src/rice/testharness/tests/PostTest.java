@@ -50,7 +50,7 @@ import rice.scribe.messaging.*;
 
 import rice.past.*;
 
-import rice.storage.*;
+import rice.persistence.*;
 
 import rice.post.*;
 
@@ -102,8 +102,8 @@ public class PostTest extends Test {
     * @param nodes NodeHandles to all of the other participating
     *              TestHarness nodes (this test class ignores these)
     */
-  public PostTest(PrintStream out, PastryNode localNode) {
-    super(out, localNode);
+  public PostTest(PrintStream out, PastryNode localNode, TestHarness harness) {
+    super(out, localNode, harness);
 
     try {
       System.out.println("Post Test Suite");
@@ -119,19 +119,19 @@ public class PostTest extends Test {
       pair = kpg.generateKeyPair();
       System.out.println("[ DONE ]");
 
-      address = new PostUserAddress("test");                                              
+      address = new PostUserAddress("test"+localNode.getNodeId());                                              
 
       nodeId = localNode.getNodeId();
 
-      StorageManager storage = new MemoryStorageManager();
-
-      System.out.print("    Starting SCRIBE service\t\t\t\t\t");
-      scribe = new Scribe(localNode, _credentials);
-      System.out.println("[ DONE ]");
+      StorageManager storage = new StorageManager(new PersistentStorage(".", 100000), new LRUCache(new MemoryStorage(), 1000000));
       
       System.out.print("    Starting PAST service\t\t\t\t\t");
       past = new PASTServiceImpl(localNode, storage);
       System.out.println("[ DONE ]");
+
+      System.out.print("    Starting POST service\t\t\t\t\t");
+      post = new Post(thePastryNode, past, harness.getScribe(), address, pair, null, caPair.getPublic());
+      System.out.println("[ DONE ]");      
 
     } catch (Exception e) {
       System.out.println("Exception occured during construction " + e + " " + e.getMessage());
@@ -143,16 +143,8 @@ public class PostTest extends Test {
     * Method which is called when the TestHarness wants this
     * Test to begin testing.
     */
-  public void startTest(final TestHarness thl, NodeHandle[] nodes) {
-    try {
-      System.out.print("    Starting POST service\t\t\t\t\t");
-      post = new Post(thePastryNode, past, scribe, address, pair, null, caPair.getPublic());
-      System.out.println("[ DONE ]");
-
-      System.out.println("Post test for node " + nodeId + " completed successfully.");
-    } catch (Exception e) {
-      System.out.println("Exception occured during testing: " + e + " " + e.getMessage());
-    }
+  public void startTest(NodeHandle[] nodes) {
+    System.out.println("Post test for node " + nodeId + " completed successfully.");
   }
  
   public Address getAddress() {

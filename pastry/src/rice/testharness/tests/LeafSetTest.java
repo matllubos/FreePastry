@@ -84,8 +84,8 @@ public class LeafSetTest extends Test {
    * @param nodes NodeHandles to all of the other participating
    *              TestHarness nodes (this test class ignores these)
    */
-  public LeafSetTest(PrintStream out, PastryNode localNode) {
-    super(out, localNode);
+  public LeafSetTest(PrintStream out, PastryNode localNode, TestHarness harness) {
+    super(out, localNode, harness);
 
     nodeId = localNode.getNodeId();
   }
@@ -94,7 +94,7 @@ public class LeafSetTest extends Test {
    * Method which is called when the TestHarness wants this
    * Test to begin testing.
    */
-  public void startTest(final TestHarness thl, NodeHandle[] nodes) {
+  public void startTest(NodeHandle[] nodes) {
     LeafSet ls = _localNode.getLeafSet();
     TreeMap pastryNodesSorted = new TreeMap();
     boolean success = true;

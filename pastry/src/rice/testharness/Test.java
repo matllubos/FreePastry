@@ -68,6 +68,8 @@ public abstract class Test extends PastryAppl implements Serializable {
 
   protected PrintStream _out;
 
+  protected TestHarness _harness;
+
   /**
    * Constructor which takes the local node this test is on,
    * an array of all the nodes in the network, and a printwriter
@@ -78,16 +80,17 @@ public abstract class Test extends PastryAppl implements Serializable {
    * @param nodes NodeHandles to all of the other participating
    *              TestHarness nodes.
    */
-  public Test(PrintStream out, PastryNode localNode) {
+  public Test(PrintStream out, PastryNode localNode, TestHarness harness) {
     super(localNode);
     _localNode = localNode;
     _out = out;
+    _harness = harness;
   }
 
   /**
    * Method which is called when the TestHarness wants this
    * Test to begin testing.
    */
-  public abstract void startTest(TestHarness th, NodeHandle[] nodes);
+  public abstract void startTest(NodeHandle[] nodes);
 
 }

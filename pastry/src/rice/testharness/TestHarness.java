@@ -118,8 +118,8 @@ public class TestHarness extends PastryAppl implements IScribeApp {
     _testObjects = new Hashtable();
     _subscribedNodes = new Vector();
 
-    scribe = new Scribe(pn, _credentials);
-    scribe.registerApp(this);
+    scribe = generateScribe();
+    scribe.registerApp(this);    
   }
 
   /**
@@ -140,6 +140,14 @@ public class TestHarness extends PastryAppl implements IScribeApp {
     return _credentials;
   }
 
+  public Scribe generateScribe() {
+    return new Scribe(_pastryNode, _credentials);
+  }
+
+  public Scribe getScribe() {
+    return scribe;
+  }
+  
   /**
    * This method is called when the TestHarness boots, and it
    * sends a message to the root node (<0x0000..>) informing that
@@ -148,7 +156,7 @@ public class TestHarness extends PastryAppl implements IScribeApp {
   public void initialize(boolean root) {
     if (root) {
       System.out.println("Joining scribe group rooted at : " + scribe.generateTopicId(this.getClass().getName() + "-ROOT"));
-      scribe.create(scribe.generateTopicId(this.getClass().getName() + "-ROOT"), _credentials);
+      //scribe.create(scribe.generateTopicId(this.getClass().getName() + "-ROOT"), _credentials);
       scribe.join(scribe.generateTopicId(this.getClass().getName() + "-ROOT"), this, _credentials);
     }
 
@@ -202,8 +210,8 @@ public class TestHarness extends PastryAppl implements IScribeApp {
         FileOutputStream fw = new FileOutputStream(filename);
         PrintStream ps = new PrintStream(fw);
 
-        Class[] classes = {PrintStream.class, PastryNode.class};
-        Object[] objects = {ps, _pastryNode};
+        Class[] classes = {PrintStream.class, PastryNode.class, TestHarness.class};
+        Object[] objects = {ps, _pastryNode, this};
 
         Test test = (Test) cls.getConstructor(classes).newInstance(objects);
 
@@ -211,8 +219,12 @@ public class TestHarness extends PastryAppl implements IScribeApp {
         _files.put(itm.getRunName(), filename);
         _streams.put(itm.getRunName(), fw);
 
+      } catch (InvocationTargetException e) {
+        System.out.println("InvocationTargetException occurred during initing of test: " + e.getTargetException());
+        e.getTargetException().printStackTrace();
       } catch (Exception e) {
         System.out.println("Exception occurred during initing of test: " + e);
+        e.printStackTrace();
       }
     } else if (msg instanceof StartTestMessage) {
       StartTestMessage stm = (StartTestMessage) msg;
@@ -223,7 +235,7 @@ public class TestHarness extends PastryAppl implements IScribeApp {
         return;
       }
 
-      test.startTest(this, stm.getNodes());
+      test.startTest(stm.getNodes());
     } else if (msg instanceof CollectResultsMessage) {
       CollectResultsMessage crm = (CollectResultsMessage) msg;
 
@@ -300,14 +312,10 @@ public class TestHarness extends PastryAppl implements IScribeApp {
   }
 
   public void receiveMessage( ScribeMessage msg ) {
-    System.out.println("GOT AN MULTICAST! HOLY SHIT!");
-    
     messageForAppl((Message) msg.getData());
   }
 
   public boolean anycastHandler(ScribeMessage msg) {
-    System.out.println("GOT AN ANYCAST! HOLY SHIT!");
-    
     messageForAppl((Message) msg.getData());
 
     return false;

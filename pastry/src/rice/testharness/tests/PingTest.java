@@ -103,8 +103,8 @@ public class PingTest extends Test {
    * @param nodes NodeHandles to all of the other participating
    *              TestHarness nodes (this test class ignores these)
    */
-  public PingTest(PrintStream out, PastryNode localNode) {
-    super(out, localNode);
+  public PingTest(PrintStream out, PastryNode localNode, TestHarness harness) {
+    super(out, localNode, harness);
 
     _random = new Random(System.currentTimeMillis());
 
@@ -118,7 +118,7 @@ public class PingTest extends Test {
    * Method which is called when the TestHarness wants this
    * Test to begin testing.
    */
-  public void startTest(final TestHarness thl, NodeHandle[] nodes) {
+  public void startTest(NodeHandle[] nodes) {
     trial++;
   
     // pick random NodeId
@@ -202,7 +202,7 @@ public class PingTest extends Test {
           System.out.println("" + directTime);
           
           if (trial < NUM_TRIALS) 
-            startTest(null, null);
+            startTest(null);
         }
       }
     }

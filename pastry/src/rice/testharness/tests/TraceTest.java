@@ -81,8 +81,6 @@ public class TraceTest extends Test {
 
   private static int NUM_NODES_TO_PING = 50;
 
-  private TestHarness thl;
-
   /**
    * Constructor which takes the local node this test is on,
    * an array of all the nodes in the network, and a printwriter
@@ -93,8 +91,8 @@ public class TraceTest extends Test {
    * @param nodes NodeHandles to all of the other participating
    *              TestHarness nodes (this test class ignores these)
    */
-  public TraceTest(PrintStream out, PastryNode localNode) {
-    super(out, localNode);
+  public TraceTest(PrintStream out, PastryNode localNode, TestHarness harness) {
+    super(out, localNode, harness);
     _total = NUM_NODES_TO_PING;
     _random = new Random(System.currentTimeMillis());
   }
@@ -103,7 +101,7 @@ public class TraceTest extends Test {
    * Method which is called when the TestHarness wants this
    * Test to begin testing.
    */
-  public void startTest(TestHarness thl, NodeHandle[] nodes) {
+  public void startTest(NodeHandle[] nodes) {
     NodeId nid = nidf.generateNodeId();
 
     // create a PingMessage, and timestamp with the current time

@@ -6,7 +6,8 @@ SOURCE  = \
 	PingTest.java \
   SplitStreamTest.java \
   Pinger.java \
-  PastryPinger.java
+  PastryPinger.java\
+  PostTest.java
 
 RMI_SOURCE =
 

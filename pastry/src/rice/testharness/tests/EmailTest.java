@@ -108,7 +108,7 @@ public class EmailTest extends Test {
    * @param nodes NodeHandles to all of the other participating
    *              TestHarness nodes (this test class ignores these)
    */
-  public EmailTest(PrintStream out, PastryNode localNode) {
+  public EmailTest(PrintStream out, PastryNode localNode, TestHarness harness) {
     super(out, localNode);
 
     try {

@@ -83,11 +83,15 @@ public class MultiRingTestHarness extends TestHarness {
     this.node = (MultiRingPastryNode) pn;
     this.runner = runner;
   }
+
+  public Scribe generateScribe() {
+    return ((MultiRingPastryNode) _pastryNode).getScribe();
+  }
   
   public void receiveMessage( ScribeMessage msg ) {
     messageForAppl((Message) msg.getData());
 
-    if (node.getMultiRingAppl().getRingId().equals(MultiRingPastryNode.GLOBAL_RING_ID)) {
+    if (node.getRingId().equals(MultiRingPastryNode.GLOBAL_RING_ID)) {
       MultiRingTestHarness[] others = runner.getOthers();
 
       for (int i=0; i<others.length; i++) {

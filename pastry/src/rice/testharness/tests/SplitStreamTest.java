@@ -113,8 +113,8 @@ public class SplitStreamTest extends Test implements ISplitStreamApp, Observer {
     * @param nodes NodeHandles to all of the other participating
     *              TestHarness nodes (this test class ignores these)
     */
-  public SplitStreamTest(PrintStream out, PastryNode localNode) {
-    super(out, localNode);
+  public SplitStreamTest(PrintStream out, PastryNode localNode, TestHarness harness) {
+    super(out, localNode, harness);
 
     ChannelId channelId;
 
@@ -133,7 +133,7 @@ public class SplitStreamTest extends Test implements ISplitStreamApp, Observer {
     * Method which is called when the TestHarness wants this
     * Test to begin testing.
     */
-  public void startTest(final TestHarness thl, NodeHandle[] nodes) {
+  public void startTest(NodeHandle[] nodes) {
     if(getNodeId().equals(new NodeId(new byte[NodeId.nodeIdBitLength]))) {
       // creator of channel
 	//_out.println("Creating channel at " + getNodeId() + " with name " + m_name);
