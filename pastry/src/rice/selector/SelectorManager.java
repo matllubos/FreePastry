@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate 
+"FreePastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -50,14 +50,14 @@ import java.util.*;
  * @author Alan Mislove
  */
 public class SelectorManager extends Thread {
-  
+
   public static int TIMEOUT = 500;
 
   /**
    * The static selector which is used by all applications
    */
   private static SelectorManager manager;
-  
+
   // the underlying selector used
   private Selector selector;
 
@@ -72,7 +72,7 @@ public class SelectorManager extends Thread {
    */
   private SelectorManager() {
     super("Main Selector Thread");
-    
+
     this.invocations = new LinkedList();
     this.modifyKeys = new HashSet();
 
@@ -82,10 +82,10 @@ public class SelectorManager extends Thread {
     } catch (IOException e) {
       System.out.println("SEVERE ERROR (SelectorManager): Error creating selector " + e);
     }
-    
+
     start();
   }
-  
+
   /**
    * Returns the SelectorManager applications should use.
    *
@@ -94,16 +94,16 @@ public class SelectorManager extends Thread {
   public static SelectorManager getSelectorManager() {
     if (manager != null)
       return manager;
-    
+
     synchronized (SelectorManager.class) {
       if (manager != null)
         return manager;
-      
+
       manager = new SelectorManager();
       return manager;
     }
   }
-  
+
   /**
    * Registers a new channel with the selector, and attaches the given SelectionKeyHandler
    * as the handler for the newly created key.  Operations which the hanlder is interested
@@ -115,7 +115,7 @@ public class SelectorManager extends Thread {
    * @return The SelectionKey which uniquely identifies this channel
    */
   public SelectionKey register(SelectableChannel channel, SelectionKeyHandler handler, int ops) throws IOException {
-    return channel.register(selector, ops, handler);    
+    return channel.register(selector, ops, handler);
   }
 
   /**
@@ -151,13 +151,18 @@ public class SelectorManager extends Thread {
     try {
       debug("SelectorManager starting...");
 
+      long lastHeartBeat = 0;
       // loop while waiting for activity
       while (select() >= 0) {
-
+        long curTime = System.currentTimeMillis();
+        if ((curTime - lastHeartBeat) > 60000) {
+          System.out.println("selector heartbeat "+new Date());
+          lastHeartBeat = curTime;          
+        }
         doInvocations();
 
         SelectionKey[] keys = selectedKeys();
-        
+
         for (int i = 0; i < keys.length; i++) {
           selector.selectedKeys().remove(keys[i]);
 
@@ -228,13 +233,13 @@ public class SelectorManager extends Thread {
 
     SelectionKey key = getModifyKey();
     while (key != null) {
-      if (key.isValid() && (key.attachment() != null)) 
+      if (key.isValid() && (key.attachment() != null))
         ((SelectionKeyHandler) key.attachment()).modifyKey(key);
-      
+
       key = getModifyKey();
     }
   }
-  
+
   /**
    * Method which synchroniously returns the first element off of the
    * invocations list.
@@ -247,7 +252,7 @@ public class SelectorManager extends Thread {
     else
       return null;
   }
-  
+
   /**
    * Method which synchroniously returns on element off
    * of the modifyKeys list
