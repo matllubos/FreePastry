@@ -69,7 +69,7 @@ public class RMIHelloWorld {
     private Random rng;
 
     private static int port = 5009;
-    private static String bshost = "thor03";
+    private static String bshost = "none";
     private static int bsport = 5009;
     private static int numnodes = 1;
     private static int nummsgs = 2; // per virtual node
@@ -93,6 +93,7 @@ public class RMIHelloWorld {
      */
     protected NodeHandle getBootstrap() {
 	RMIRemoteNodeI bsnode = null;
+
 	try {
 	    bsnode = (RMIRemoteNodeI)Naming.lookup("//:" + port + "/Pastry");
 	} catch (Exception e) {
@@ -163,7 +164,14 @@ public class RMIHelloWorld {
 
 	for (int i = 0; i < args.length; i++) {
 	    if (args[i].equals("-help")) {
-		System.out.println("Usage: RMIHelloWorld [-msgs m] [-port p] [-nodes n] [-bootstrap host[:port]] [-help]");
+		System.out.println("Usage: RMIHelloWorld [-msgs m] [-port p] [-nodes n]");
+		System.out.println("                     [-verbose|-silent|-verbosity v]");
+		System.out.println("                     [-bootstrap host[:port]|none] [-help]");
+		System.out.println("");
+		System.out.println("       Ports refer to RMI registry port numbers");
+		System.out.println("       Without -bootstrap host[:port], it tries to bootstrap from localhost only");
+		System.out.println("       With -bootstrap none, it doesn't even try that");
+		System.out.println("       Default verbosity is 5, -verbose is 10 and -silent is -1");
 		System.exit(1);
 	    }
 	}
@@ -319,7 +327,9 @@ public class RMIHelloWorld {
     }
 
     /**
-     * Usage: RMIHelloWorld [-msgs m] [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
+     *	Usage: RMIHelloWorld [-msgs m] [-port p] [-nodes n]
+     *			     [-verbose|-silent|-verbosity v]
+     *			     [-bootstrap host[:port]|none] [-help]
      */
     public static void main(String args[]) {
 	doRMIinitstuff(args);

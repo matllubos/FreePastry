@@ -133,7 +133,8 @@ public class HelloWorld {
     }
 
     /**
-     * Usage: HelloWorld [-msgs m] [-nodes n] [-simultaneous_joins] [-simultaneous_msgs] [-help]
+     * Usage: HelloWorld [-msgs m] [-nodes n] [-verbose|-silent|-verbosity v]
+     *		         [-simultaneous_joins] [-simultaneous_msgs] [-help]
      */
     public static void main(String args[]) {
 
@@ -151,7 +152,8 @@ public class HelloWorld {
 		simultaneous_msgs = true;
 
 	    if (args[i].equals("-help")) {
-		System.out.println("Usage: HelloWorld [-msgs m] [-port p] [-nodes n] [-bootstrap host[:port]] [-help]");
+		System.out.println("Usage: HelloWorld [-msgs m] [-nodes n] [-verbose|-silent|-verbosity v]");
+		System.out.println("                  [-simultaneous_joins] [-simultaneous_msgs] [-help]");
 		System.exit(1);
 	    }
 	}
