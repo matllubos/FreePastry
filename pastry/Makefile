@@ -34,7 +34,9 @@ PACKAGES = \
 #	rice.storage.testing\
 #	rice.past\
 #	rice.past.messaging\
-#	rice.past.testing
+#	rice.past.testing\
+#	rice.past.search\
+#	rice.past.search.testing
 
 NODOC_PACKAGES = 
 
