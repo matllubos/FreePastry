@@ -155,25 +155,6 @@ public interface Past {
    * @param command Command to be performed when the result is received 
    */
   public void fetch(PastContentHandle handle, Continuation command);
-
-  /**
-   * Return the ids of objects stored in this instance of Past on the
-   * *local* node, with ids in a given range. The IdSet returned
-   * contains the Ids of the stored objects.
-   *
-   * @param range The range to query  
-   * @return The set of ids
-   */
-  public IdSet scan(IdRange range);
-  
-  /**
-   * Return the ids of objects stored in this instance of Past on the
-   * *local* node. The IdSet returned
-   * contains the Ids of the stored objects.
-   *
-   * @return The set of ids
-   */
-  public IdSet scan();
   
   /**
    * get the nodeHandle of the local Past node
