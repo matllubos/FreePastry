@@ -90,20 +90,15 @@ public class VisualizationClient {
     }
   }
   
-  public synchronized String executeCommand(String command) {
-    try {
-      ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-      oos.writeObject(new DebugCommandRequest(command));
-      ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-      DebugCommandResponse result = (DebugCommandResponse) ois.readObject();
-      if (result.getResponseCode() == 202)
-        return result.getResponse();
+  public synchronized String executeCommand(String command) throws Exception {
+    ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+    oos.writeObject(new DebugCommandRequest(command));
+    ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+    DebugCommandResponse result = (DebugCommandResponse) ois.readObject();
+    if (result.getResponseCode() == 202)
+      return result.getResponse();
         
-      return "*** Error code "+result.getResponseCode()+" ***\n"+result.getResponse();
-    } catch (Exception e) {
-      System.out.println("Client: Exception " + e + " thrown.");
-      return "Exception: "+e;
-    }
+    return "*** Error code "+result.getResponseCode()+" ***\n"+result.getResponse();
   }
   
   public synchronized UpdateJarResponse updateJar(File[] files, String executionString) {
