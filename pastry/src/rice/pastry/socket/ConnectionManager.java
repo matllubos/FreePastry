@@ -706,7 +706,7 @@ public class ConnectionManager {
     int i = stp.seqNumber;
     RouteMessage rm = (RouteMessage)stp.msg;
     Message m = rm.unwrap();
-    messageNotSent(m,SocketNodeHandle.REASON_TOO_LARGE);
+    messageNotSent(m,SocketPastryNode.EC_MSG_TOO_LARGE);
 //    System.err.println(this+"WARNING: Message "+o+" dropped because it was too big.  Size = "+len+" max size ="+ConnectionManager.MAX_ROUTE_MESSAGE_SIZE);
 
     // pull the ate out of the queue
@@ -718,8 +718,8 @@ public class ConnectionManager {
     ate.cancel();
   }
   
-  void messageNotSent(Message m, String reason) {
-    scm.messageNotSent(m,reason);    
+  void messageNotSent(Message m, int errorCode) {
+    scm.pastryNode.messageNotSent(m,errorCode);    
   }
 
   /**
@@ -1181,7 +1181,7 @@ public class ConnectionManager {
         case NodeHandle.LIVENESS_SUSPECTED:
           return false; // don't throw out anything except route messages
         case NodeHandle.LIVENESS_FAULTY:
-          messageNotSent(o,SocketNodeHandle.REASON_CONNECTION_FAULTY);
+          messageNotSent(o,SocketPastryNode.EC_CONNECTION_FAULTY);
           return true; // throw out junk in the queue
         default:
           return false; // not supposed to reroute if alive

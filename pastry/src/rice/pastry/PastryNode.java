@@ -54,6 +54,8 @@ import java.util.*;
 
 public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.Node {
 
+    public static String EC_NO_CODE_AVAILABLE = "no error code available";
+
     protected NodeId myNodeId;
     private PastrySecurityManager mySecurityManager;
     private MessageDispatch myMessageDispatch;
@@ -318,6 +320,20 @@ public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.
      */
     public rice.p2p.commonapi.IdFactory getIdFactory() {
       return new rice.pastry.commonapi.PastryIdFactory();
+    }
+ 
+    public void messageNotSent(Message m, int errorCode) {
+      MessageReceiver mr = getMessageDispatch().getDestination(m);
+      if ((mr != null) && (mr instanceof PastryAppl)) {
+        PastryAppl a = (PastryAppl)mr;
+        a.messageNotDelivered(m, errorCode);
+      } else {
+        System.out.println("WARNING: message not sent "+m+":"+getErrorString(errorCode));
+      }
+    }
+    
+    public String getErrorString(int errorCode) {
+      return EC_NO_CODE_AVAILABLE;
     }
 }
 

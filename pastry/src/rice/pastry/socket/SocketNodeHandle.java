@@ -53,12 +53,6 @@ public class SocketNodeHandle extends DistNodeHandle {
    */
   public static int DEFAULT_PROXIMITY = Integer.MAX_VALUE;
   
-  public static String REASON_TOO_LARGE = "message size was too large";
-
-  public static String REASON_CONNECTION_FAULTY = "connection was faulty";
-
-  public static String REASON_TOO_MANY_MESSAGES_QUEUED = "too many messages enqueued";
-
   /**
    * Constructor
    *
@@ -152,7 +146,7 @@ public class SocketNodeHandle extends DistNodeHandle {
       try {        
         spn.getSocketCollectionManager().send(this, msg);
       } catch (TooManyMessagesException tmme) {
-        spn.sManager.messageNotSent(msg, REASON_TOO_MANY_MESSAGES_QUEUED);
+        spn.messageNotSent(msg, SocketPastryNode.EC_QUEUE_FULL);
 //        throw tmme;
       }
     }

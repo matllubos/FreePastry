@@ -42,6 +42,15 @@ import rice.pastry.dist.NodeIsDeadException;
  * @author Alan Mislove
  */
 public class SocketPastryNode extends DistPastryNode {
+  
+  public static final String EC_REASON_MSG_TOO_LARGE = "message size was too large";
+  public static final String EC_REASON_CONNECTION_FAULTY = "connection was faulty";
+  public static final String EC_REASON_QUEUE_FULL = "too many messages enqueued";
+
+  public static final int EC_MSG_TOO_LARGE = 78001;
+  public static final int EC_CONNECTION_FAULTY = 78002;
+  public static final int EC_QUEUE_FULL = 78003;
+
 
   // The address (ip + port) of this pastry node
   private InetSocketAddress address;
@@ -203,4 +212,16 @@ public class SocketPastryNode extends DistPastryNode {
       }
     }
   }  
+  
+  public String getErrorString(int errorCode) {
+    switch (errorCode) {
+      case EC_MSG_TOO_LARGE:
+        return EC_REASON_MSG_TOO_LARGE;
+      case EC_CONNECTION_FAULTY:
+        return EC_REASON_CONNECTION_FAULTY;
+      case EC_QUEUE_FULL:
+        return EC_REASON_QUEUE_FULL;
+    }
+    return super.getErrorString(errorCode);      
+  }
 }

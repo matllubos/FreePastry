@@ -427,14 +427,4 @@ public class SocketCollectionManager implements SelectionKeyHandler {
 	public InetSocketAddress getAddress() {
 		return getLocalNodeHandle().getAddress();		
 	}
-
-	public void messageNotSent(Message m, String reason) {
-    MessageReceiver mr = pastryNode.getMessageDispatch().getDestination(m);
-    if ((mr != null) && (mr instanceof PastryAppl)) {
-      PastryAppl a = (PastryAppl)mr;
-      a.messageNotDelivered(m, reason);
-    } else {
-      debug("WARNING: message not sent "+m+":"+reason);
-    }
-	}
 }
