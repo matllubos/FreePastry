@@ -100,30 +100,33 @@ public class PostMessage implements StoredMessage {
       Properties props = new Properties();
       Session session = Session.getDefaultInstance(props, null);
       javax.mail.internet.MimeMessage mm = new javax.mail.internet.MimeMessage(session, content.getInputStream());
-
       
-
+      
+      
       Address froms[] = null;
       Address to[] = null;
       Address cc[] = null;
       Address bcc[] = null;
-	  
-	  InternetAddress[] fallback = new InternetAddress[1];
-	  fallback[0] = new InternetAddress("malformed@cs.rice.edu","MalformedAddress");
-	  /* Ugly fix for malformed addreses ABP4 */
-	  try{
-	     froms = mm.getFrom();
-	  } catch (AddressException ae) { froms = fallback;}
-	  try{
-		 to = mm.getRecipients(Message.RecipientType.TO);
-	  }catch (AddressException ae) { to = fallback;}
-	  try{
-         cc = mm.getRecipients(Message.RecipientType.CC);
-	  }catch (AddressException ae) { cc = fallback;}
-	  try{
-         bcc = mm.getRecipients(Message.RecipientType.BCC);
-	  }catch (AddressException ae) { bcc = fallback;}
-	 
+      
+      InternetAddress[] fallback = new InternetAddress[1];
+      fallback[0] = new InternetAddress("malformed@cs.rice.edu","MalformedAddress");
+      /* Ugly fix for malformed addreses ABP4 */
+      try{
+        froms = mm.getFrom();
+      } catch (AddressException ae) { froms = fallback;}
+      
+      try{
+        to = mm.getRecipients(Message.RecipientType.TO);
+      } catch (AddressException ae) { to = fallback;}
+      
+      try{
+        cc = mm.getRecipients(Message.RecipientType.CC);
+      } catch (AddressException ae) { cc = fallback;}
+      
+      try{
+        bcc = mm.getRecipients(Message.RecipientType.BCC);
+      } catch (AddressException ae) { bcc = fallback;}
+      
       if (to == null) to = new Address[0];
       if (cc == null) cc = new Address[0];
       if (bcc == null) bcc = new Address[0];
@@ -144,13 +147,13 @@ public class PostMessage implements StoredMessage {
     } catch (IOException e) {
       throw new MailboxException(e);
     } catch(AddressException ae){
-	  System.out.println("***********************");
-	  ae.printStackTrace();
-	  System.out.println(ae.getRef());
-	  System.out.println(ae.getPos());
-	  System.out.println("***********************");
-	  throw new MailboxException(ae);
-	}catch (MessagingException e) {
+      System.out.println("***********************");
+      ae.printStackTrace();
+      System.out.println(ae.getRef());
+      System.out.println(ae.getPos());
+      System.out.println("***********************");
+      throw new MailboxException(ae);
+    } catch (MessagingException e) {
       throw new MailboxException(e);
     } catch (MalformedAddressException e) {
       throw new MailboxException(e);
@@ -162,6 +165,11 @@ public class PostMessage implements StoredMessage {
   }
   
   public static Email parseEmail(MailAddress[] addresses, Resource content, PostEntityAddress address) throws MailboxException {
+    PostEntityAddress[] recipients = new PostEntityAddress[addresses.length];
+    
+    for (int i=0; i<recipients.length; i++) 
+      recipients[i] = new PostUserAddress(factory, addresses[i].toString());
+    
     try {
       Properties props = new Properties();
       Session session = Session.getDefaultInstance(props, null);
@@ -178,21 +186,39 @@ public class PostMessage implements StoredMessage {
         from = (PostUserAddress) address;
       }
 
-      PostEntityAddress[] recipients = new PostEntityAddress[addresses.length];
-
-      for (int i=0; i<recipients.length; i++) {
-        recipients[i] = new PostUserAddress(factory, addresses[i].toString());
-      }
-
       if (address != null) {
         mm.addHeaderLine(UNSECURE_HEADER_LINE);
       }
       
       return new Email(from, recipients, (EmailMessagePart) process(mm));
-    } catch (IOException e) {
-      throw new MailboxException(e);
-    } catch (MessagingException e) {
-      throw new MailboxException(e);
+    } catch (Exception e) {
+      try {
+        System.out.println("ERROR: Got Exception " + e + " while parsing message - defaulting to dumb parsing.");
+        BufferedReader r = new BufferedReader(new InputStreamReader(content.getInputStream()));
+        
+        StringBuffer headers = new StringBuffer();
+        StringBuffer body = new StringBuffer();
+        String line = null;
+        boolean done = false;
+        
+        while ((line = r.readLine()) != null) {
+          if (done) {
+            body.append(line + "\r\n");
+          } else {
+            if (line.trim().equals("")) {
+              done = true;
+            } else {
+              headers.append(line + "\r\n");
+            }
+          }
+        }
+        
+        EmailSinglePart esp = new EmailSinglePart(new EmailData(body.toString().getBytes()));
+        EmailMessagePart emp = new EmailMessagePart(new EmailData(headers.toString().getBytes()), esp);
+        return new Email((PostUserAddress) address, recipients, emp);
+      } catch (IOException ioe) {
+        throw new MailboxException(ioe);
+      }
     }
   }
   

@@ -62,8 +62,16 @@ public class SmtpConnection {
 
     public String readLine() throws IOException {
       int result = in.nextToken();
-      System.out.println("C: " + in.sval);
-      return in.sval;
+      
+      if (result == in.TT_WORD) {
+        System.out.println("C: " + in.sval);
+        return in.sval;
+      } else if (result == in.TT_NUMBER) {
+        System.out.println("C*:" + in.nval);
+        return "" + in.nval;
+      } else {
+        return null;
+      }
     }
 
     public String getClientAddress() {

@@ -179,6 +179,9 @@ public class PostFolder implements MailFolder {
   }
   
   public void copy(MovingMessage[] messages, List[] flags, long[] internaldates) throws MailboxException {
+    if (messages.length == 0)
+      return;
+    
     Email[] emails = new Email[flags.length];
     Flags[] realFlags = new Flags[flags.length];
     
@@ -207,6 +210,9 @@ public class PostFolder implements MailFolder {
   }
   
   public void update(StoredMessage[] messages) throws MailboxException {
+    if (messages.length == 0)
+      return;
+    
     StoredEmail[] emails = new StoredEmail[messages.length];
     
     for (int i=0; i<messages.length; i++)
@@ -220,6 +226,9 @@ public class PostFolder implements MailFolder {
   }
   
   public void purge(StoredMessage[] messages) throws MailboxException {
+    if (messages.length == 0)
+      return;
+    
     StoredEmail[] emails = new StoredEmail[messages.length];
     
     for (int i=0; i<messages.length; i++)

@@ -13,7 +13,7 @@ public class PostFlagList implements FlagList {
    * The static hashtable mapping message -> flag list, ensuring that
    * there is only ever one list per message
    */
-  private static Hashtable FLAG_MAP = new Hashtable();
+  private static WeakHashMap FLAG_MAP = new WeakHashMap();
 
   /**
    * The internal message which the flag list holds the flags for
@@ -44,11 +44,14 @@ public class PostFlagList implements FlagList {
    * @return The flag list for the message
    */
   public static PostFlagList get(PostMessage msg) {
-    if (FLAG_MAP.get(msg.getStoredEmail()) == null) {
-      FLAG_MAP.put(msg.getStoredEmail(), new PostFlagList(msg));
+    PostFlagList result = (PostFlagList) FLAG_MAP.get(msg.getStoredEmail());
+    
+    if (result == null) {
+      result = new PostFlagList(msg);
+      FLAG_MAP.put(msg.getStoredEmail(), result);
     }
 
-    return (PostFlagList) FLAG_MAP.get(msg.getStoredEmail());
+    return result;
   }
 
   /**

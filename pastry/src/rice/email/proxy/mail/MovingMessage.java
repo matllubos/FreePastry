@@ -127,29 +127,25 @@ public class MovingMessage
      * it hardly seems worth 30 seconds of effort.
      * </p>
      */
-    public void readDotTerminatedContent(SmtpConnection conn)
-                                  throws IOException
-    {
-        _content = _workspace.getTmpFile();
-        Writer data = _content.getWriter();
-        PrintWriter dataWriter = new PrintWriter(data);
-
-        while (true)
-        {
-          String line = conn.readLine();
-            if (line == null)
-                throw new EOFException("Did not receive <CRLF>.<CRLF>");
-
-            if (".".equals(line.trim()))
-            {
-                dataWriter.close();
-
-                break;
-            }
-            else
-            {
-                dataWriter.println(line);
-            }
+    public void readDotTerminatedContent(SmtpConnection conn) throws IOException {
+      _content = _workspace.getTmpFile();
+      Writer data = _content.getWriter();
+      PrintWriter dataWriter = new PrintWriter(data);
+      
+      while (true) {
+        String line = conn.readLine();
+        if (line == null) {
+          System.out.println("Did not receive <CRLF>.<CRLF> - Accepting anyway...");
+          dataWriter.close();
+          break;
         }
+        
+        if (".".equals(line.trim())) {
+          dataWriter.close();
+          break;
+        } else {
+          dataWriter.println(line);
+        }
+      }
     }
 }
