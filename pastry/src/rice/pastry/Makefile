@@ -7,7 +7,6 @@ SOURCE  = \
 	NodeId.java\
 	NodeIdFactory.java\
 	NodeHandle.java\
-	OrderedNodeSet.java\
 	LocalNode.java\
 	LocalNodeI.java\
 	PendingLocalNodesList.java\

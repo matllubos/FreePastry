@@ -34,7 +34,7 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.commonapi;
+package rice.p2p.commonapi;
 
 /**
  * Interface which represents a node in a peer-to-peer system, regardless of
