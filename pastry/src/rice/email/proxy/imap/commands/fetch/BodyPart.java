@@ -22,6 +22,10 @@ public class BodyPart
         return req instanceof BodyPartRequest;
     }
 
+  private String toSentenceCase(String s) {
+    return s.substring(0,1).toUpperCase() + s.substring(1, s.length());
+  }
+
     public void fetch(StoredMessage msg, Object part) throws MailboxException
     {
         try
@@ -31,23 +35,18 @@ public class BodyPart
 
           if (req.getPartIterator().hasNext()) {
             Iterator i = req.getPartIterator();
-            getConn().print("[(");
+            String data = "";
 
             while (i.hasNext()) {
               String next = (String) i.next();
               String[] headers = msg.getMessage().getHeader(next);
 
-              getConn().print("\"");
-
-              if (headers.length > 0)
-                getConn().print(headers[0]);
-
-              getConn().print("\"");
-
-              if (i.hasNext()) getConn().print(" ");
+              for (int j=0; j<headers.length; j++) {
+                data += toSentenceCase(next) + ": " + headers[j] + "\r\n";
+              }
             }
 
-            getConn().print(")] ");
+            getConn().print("{" + data.length() + "}\r\n" + data);
           } else if (req.getType().equals("HEADER.FIELDS")) {
             fetchHeaders(msg, req);
           } else {

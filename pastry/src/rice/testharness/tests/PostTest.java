@@ -77,6 +77,8 @@ public class PostTest extends Test {
 
   public static int NUM_TRIALS = 50;
 
+  public static String INSTANCE_NAME = "PostTest";
+
   protected Credentials _credentials = new PermissiveCredentials();
 
   protected Scribe scribe;
@@ -130,7 +132,7 @@ public class PostTest extends Test {
       StorageManager storage = new StorageManager(new PersistentStorage(".", 100000000), new LRUCache(new MemoryStorage(), 1000000));
       
       System.out.print("    Starting PAST service\t\t\t\t\t");
-      past = new PASTServiceImpl(localNode, storage);
+      past = new PASTServiceImpl(localNode, storage,INSTANCE_NAME);
       System.out.println("[ DONE ]");  
 
     } catch (Exception e) {
@@ -146,7 +148,7 @@ public class PostTest extends Test {
   public void startTest(NodeHandle[] nodes) {
     try {
       System.out.print("    Starting POST service\t\t\t\t\t");
-      post = new Post(thePastryNode, past, _harness.getScribe(), address, pair, null, caPair.getPublic());
+      post = new Post(thePastryNode, past, _harness.getScribe(), address, pair, null, caPair.getPublic(), INSTANCE_NAME);
       System.out.println("[ DONE ]");
 
       System.out.println("Post test for node " + _localNode.getNodeId() + " completed successfully.");

@@ -399,7 +399,7 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
      * @param s The message to print.
      */
     protected void debug(String s) {
-      if (Log.ifp(6)) {
+      if (Log.ifp(8)) {
        if (getLocalNode() != null)
          System.out.println(getLocalNode().getNodeId() + " (" + nodeId + "): " + s);
        else

@@ -382,7 +382,7 @@ public class DatagramManager implements SelectionKeyHandler {
   }
 
   private void debug(String s) {
-    if (Log.ifp(6))
+    if (Log.ifp(8))
       System.out.println(pastryNode.getNodeId() + " (DM): " + s);
   }
 }

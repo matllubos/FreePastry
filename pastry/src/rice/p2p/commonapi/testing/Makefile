@@ -1,8 +1,8 @@
-PACKAGE = rice.p2p.past.testing
+PACKAGE = rice.p2p.commonapi.testing
 
 SOURCE  = \
-  DistPastRegrTest.java
-
+  DistCommonAPITest.java
+  
 RMI_SOURCE =
 
 MAIN       = 

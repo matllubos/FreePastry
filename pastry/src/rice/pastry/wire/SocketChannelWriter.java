@@ -245,7 +245,7 @@ public class SocketChannelWriter {
   }
 
   private void debug(String s) {
-    if (Log.ifp(6)) {
+    if (Log.ifp(8)) {
       if (pastryNode == null) {
         System.out.println("(W): " + s);
       } else {

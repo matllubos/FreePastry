@@ -54,7 +54,7 @@ public class DistPostRegrTest {
   private Random rng;
   private RandomNodeIdFactory idFactory;
 
-  private static int numNodes = 10;
+  private static int numNodes = 4;
   private static int k = 3;  // replication factor
 
   private static int port = 5009;
@@ -249,6 +249,7 @@ public class DistPostRegrTest {
       public void run() {
         try {
           while (true) {
+            System.out.println("Publishing presence...");
             receivingPost.announcePresence();
             Thread.sleep(2000);
           }
@@ -412,6 +413,14 @@ public class DistPostRegrTest {
     
     public DummyPostClient(Post p) {
       this.post = p;
+
+      post.getPostLog(new Continuation() {
+        public void receiveResult(Object o) {
+        }
+
+        public void receiveException(Exception e) {
+        }
+      });
     }
 
     public void notificationReceived(NotificationMessage nm) {

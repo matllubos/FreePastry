@@ -214,7 +214,7 @@ public class MessagePropertyPart
     void msgUID(StoredMessage msg)
          throws MailboxException
     {
-        getConn().print("\"" + msg.getUID() + "\"");
+        getConn().print("" + msg.getUID());
     }
 
     void msgFlags(StoredMessage msg)

@@ -207,7 +207,7 @@ public class SocketChannelReader {
   }
 
   private void debug(String s) {
-    if (Log.ifp(6)) {
+    if (Log.ifp(8)) {
       if (spn == null) {
         System.out.println("(R): " + s);
       } else {
