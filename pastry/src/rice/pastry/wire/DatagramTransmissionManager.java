@@ -423,7 +423,8 @@ public class DatagramTransmissionManager {
             list.addLast(new SocketTransportMessage(pw.getObject()));
             i.remove();
           }
-          
+
+          wnh.markDead();
           wnh.connectToRemoteNode(list);
         }
           
