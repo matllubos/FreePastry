@@ -139,6 +139,6 @@ public class IMAPProxy {
   }    
     
   private String toInetEmail(PostUserAddress address) {
-      return "dummy@cant.get.address.yet";
+      return address.getName();
   }
 }

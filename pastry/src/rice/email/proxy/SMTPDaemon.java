@@ -94,7 +94,7 @@ class SMTPDaemon implements Runnable {
 	}
 	
 	// FIXME: Build this PostUserAddress from fromAddress
-	PostUserAddress sender = null; //new PostUserAddress();
+	PostUserAddress sender = new PostUserAddress(fromAddress);
 
 	LinkedList recipients = new LinkedList();
 	String subject = "No subject provided";
@@ -117,8 +117,8 @@ class SMTPDaemon implements Runnable {
 		}
 
 		// FIXME: build this from recip
-		//PostUserAddress thisRecip = new PostUserAddress();
-		//recipients.add(thisRecip);
+		PostUserAddress thisRecip = new PostUserAddress("recip");
+		recipients.add(thisRecip);
 		
 	    }
 	    else {
