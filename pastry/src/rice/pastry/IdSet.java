@@ -282,6 +282,10 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
   public rice.p2p.commonapi.Id hash() {
     return getHash();
   }
+  
+  public Object clone(){
+	return new IdSet(this);
+  }
 
 
 }
