@@ -1,14 +1,25 @@
 package rice.splitstream;
-import rice.pastry.standard.*;
+
 import java.io.Serializable;
 import java.util.*;
+
 import rice.scribe.*;
 import rice.scribe.messaging.*;
-import rice.pastry.security.*;
+
 import rice.pastry.*;
 import rice.pastry.client.*;
 import rice.pastry.messaging.*;
+import rice.pastry.standard.*;
+import rice.pastry.security.*;
+
 import rice.splitstream.messaging.*;
+
+/**
+ * This is the channel object that represents a group of stripes in
+ * SplitStream.
+ *
+ * @author Ansley Post
+ */
 public class Channel extends PastryAppl implements IScribeApp {
    /**
     * ChannelId for this channel 
@@ -82,13 +93,13 @@ public class Channel extends PastryAppl implements IScribeApp {
         /* Send a create message to the node with responsible with the stripes*/
         /* Also select the primary stripe */
    	NodeId[] subInfo = new NodeId[numStripes + 2]; 
-	subInfo[0] = topicId;
+	subInfo[0] = channelId;
 	for(int i = 1; i < subInfo.length -1; i++){
 		subInfo[i] = getStripes()[i - 1];
 	}
-	subInfo[subInfo.length-1] = topicId;
-	if(scribe.join(topicId, this, cred, subInfo)){
-		System.out.println("Joined Group");
+	subInfo[subInfo.length-1] = spareCapacityId;
+	if(scribe.join(channelId, this, cred, subInfo)){
+		System.out.println("Creator Joined Group" + getNodeId());
 	}		
    	isReady = true;
    }
@@ -105,9 +116,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	this.scribe = scribe;
         scribe.registerApp(this);
 	ControlAttachMessage attachMessage = new ControlAttachMessage();
-        /* is this right? */
-        /* Change the data to be the message we want to send */
-        System.out.println("Sending Anycast Message ");
+        System.out.println("Sending Anycast Message from " + getNodeId());
         scribe.anycast(channelId, attachMessage, cred );
 
    }
@@ -128,6 +137,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	this.scribe = scribe;
 	this.bandwidthManager = bandwidthManager;
 	if(scribe.join(channelId, this, cred)){
+		System.out.println("Intermediate Node joined");
 	}
 	
 	/* Subscribe to a primary stripe */

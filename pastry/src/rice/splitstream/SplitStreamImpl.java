@@ -96,7 +96,7 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
                                boolean wasAdded,  
                                Serializable data){
      NodeId[] nodeData = (NodeId[]) data;
-     if(nodeData.length > 1){
+     if(nodeData!=null){
    			
 	/* Clean This up */
 	StripeId[] stripeId = new StripeId[nodeData.length - 2];
@@ -113,7 +113,7 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
 
      }
      else
-	System.out.println("Stripe Subscription Message");
+	System.out.println("Data in Packet is null!");
  
    }
 }
