@@ -115,30 +115,39 @@ public class Post extends PastryAppl implements IScribeApp  {
    * @param message The message which has arrived
    */
   public void messageForAppl(Message message) {
-    if(message instanceof NotificationMessage){
+    if(message instanceof NotificationMessage)
+         handleNotificationMessage(message); 
+    else if( message instanceof DeliveryRequestMessage)
+         handleDeliveryRequestMessage(message); 
+    else if( message instanceof ReceiptMessage ) {
+         handleRecieptMessage(message);
+    }
+		 
+  }
+  private void handleNotificationMessage(Message message){
         NotificationMessage nmessage = (NotificationMessage) message;
         PostClient client = (PostClient) clientAddresses.get(nmessage.getClientId());
         if(client != null){
           client.notificationReceived(nmessage);
     	}
+  }
+  
+  private void handleRecieptMessage(message){}
+
+  private void handlePresenceMessage(Message message){
+    /* Buffer this for Delivery */
+    DeliveryRequestMessage dmessage = (DeliveryRequestMessage) message;
+    synchronized(bufferedData){
+    Vector userQueue = (Vector) bufferedData.get(dmessage.getDestination());
+    if(userQueue == null){
+       userQueue = new Vector();
+       bufferedData.put(dmessage.getDestination(), userQueue);
     }
-    else if( message instanceof DeliveryRequestMessage){
-        /* Buffer this for Delivery */
-        DeliveryRequestMessage dmessage = (DeliveryRequestMessage) message;
-        synchronized(bufferedData){
-          Vector userQueue = (Vector) bufferedData.get(dmessage.getDestination());
-          if(userQueue == null){
-            userQueue = new Vector();
-            bufferedData.put(dmessage.getDestination(), userQueue);
-          }
-          userQueue.addElement(dmessage.getNotificationMessage());
-        }
-    }
-    else if( message instanceof ReceiptMessage ) {
-    }
-		 
+    userQueue.addElement(dmessage.getNotificationMessage());
   }
 
+
+  }
   /**
    * This method returns this user's PostLog, which is the root of all of
    * the user's application logs.
@@ -208,9 +217,11 @@ public class Post extends PastryAppl implements IScribeApp  {
 
  // Notice:  This is not encrypted!!  (Fixme)
   public void sendNotification(NotificationMessage message) {
-     routeMsg(message.getAddress().getAddress(), message, getCredentials(), new SendOptions());
-     // This is from the PastryAppl interface which Post inherits - notice that we're
-     // using default SendOptions, which at some point we may want to vary
+     NodeId destination = (new RandomNodeIdFactory()).generateNodeId();
+     DeliveryRequestMessage drmessage = 
+                   new DeliveryRequestMessage(getNodeId(), destination, message);
+     routeMsg(destination, drmessage, getCredentials(),
+              new SendOptions());
   }  
 
   public void faultHandler(ScribeMessage msg, NodeHandle faultyParent) {}
