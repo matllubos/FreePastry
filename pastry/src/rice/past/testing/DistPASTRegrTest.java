@@ -69,7 +69,7 @@ public class DistPASTRegrTest {
   private Random rng;
   private RandomNodeIdFactory idFactory;
 
-  private static int numNodes = 10;
+  private static int numNodes = 20;
   private static int k = 3;  // replication factor
 
   private static int port = 5009;
@@ -126,7 +126,7 @@ public class DistPASTRegrTest {
                                                 new LRUCache(new MemoryStorage(), 10000));
 
     PASTServiceImpl past = new PASTServiceImpl(pn, storage, "PAST");
-    past.DEBUG = true;
+    past.DEBUG = false;
     pastNodes.add(past);
     System.out.println("created " + pn);
 
@@ -157,7 +157,7 @@ public class DistPASTRegrTest {
       PastryNode node = (PastryNode) nodes.nextElement();
       while (!node.isReady()) {
         System.out.println("DEBUG ---------- Waiting for node to be ready");
-        pause(1000);
+        pause(2000);
       }
     }
   }
@@ -172,6 +172,7 @@ public class DistPASTRegrTest {
     throws TestFailedException
   {
     if (!test) {
+       System.exit(0);
       throw new TestFailedException("\nAssertion failed in '" + name +
                                     "'\nExpected: " + intention);
     }
@@ -340,6 +341,7 @@ public class DistPASTRegrTest {
     protected void runInsertChecks() {
       // "Loop" to perform a check on each node
       //   (Runs the same command several times, incrementing currentIndex field)
+                         pause(200000);
       localCount = 0;
       currentIndex = 0;
       remote = (PASTServiceImpl) pastNodes.elementAt(currentIndex);
@@ -374,8 +376,6 @@ public class DistPASTRegrTest {
                 remote = (PASTServiceImpl) pastNodes.elementAt(currentIndex);
                 remote.lookup(fileId, MONKEY);
               } else {
-                // We've seen all the nodes, so move on
-                // TO DO: Make this k instead of 1 when ReplicationManager is used
                 assertEquals("PASTFunctions",
                              "File should have been found " + remote.getReplicaFactor() + " time after insert",
                              new Integer(remote.getReplicaFactor()), new Integer(localCount));
