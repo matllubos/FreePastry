@@ -264,7 +264,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * @param range the requested range
    */
   public IdSet scan(IdRange range) {
-    return ReplicationImpl.merge(factory, client.scan(range), helper.scan(range));
+    return client.scan(range);
   }
   
   
