@@ -372,6 +372,10 @@ public class Channel extends PastryAppl implements IScribeApp {
     else if(msg instanceof ControlFindParentMessage){
         handleControlFindParentMessage(msg); 
     }
+    else if ( msg instanceof ControlPropogatePathMessage )
+    {
+       handleControlPropogatePathMessage( msg );
+    }
     else{
         System.out.println("Unknown Pastry Message Type");
     }
@@ -429,8 +433,18 @@ public class Channel extends PastryAppl implements IScribeApp {
       parentMessage.handleMessage((Scribe ) scribe, ((Scribe)scribe).getTopic(getSpareCapacityId()), this); 
 
    }
-  
-/**
+   
+   private void handleControlPropogatePathMessage( Message msg )
+   {
+      ControlPropogatePathMessage ppMessage = (ControlPropogatePathMessage)msg;
+      Stripe stripe = (Stripe)stripeIdTable.get( ppMessage.getStripeId() );
+      if ( stripe != null )
+      {
+         ppMessage.handleMessage( (Scribe)scribe, this, stripe );
+      }
+   }
+ 
+  /**
    * This returns a string representation of the channel.
    * @return String String representation of the object.
    */

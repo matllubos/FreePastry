@@ -49,7 +49,7 @@ public class Stripe extends Observable implements IScribeApp{
    /**
     * The path from this node to the root
     */
-   private Vector root_path = null;
+   private Vector root_path = new Vector();
 
    /**
     * The constructor used when creating a stripe from scratch.
@@ -161,6 +161,15 @@ public class Stripe extends Observable implements IScribeApp{
 	    BandwidthManager bandwidthManager = getChannel().getBandwidthManager();
 	    if(bandwidthManager.canTakeChild(getChannel())){
 	        channel.stripeSubscriberAdded();
+                Credentials credentials = new PermissiveCredentials();
+                Vector child_root_path = root_path;
+                child_root_path.add( ((Scribe)scribe).getLocalHandle() );
+                channel.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
+                                                                                channel.getNodeHandle(),
+                                                                                topicId,
+                                                                                credentials,
+                                                                                child_root_path ),
+                                        credentials, null );
             }
 	    else{
                 /* THIS IS WHERE THE DROP SHOULD OCCUR */

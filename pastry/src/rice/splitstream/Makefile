@@ -9,7 +9,6 @@ SOURCE  = \
 	StripeId.java\
 	SplitStreamOutputStream.java\
 	BandwidthManager.java\
-	OutputStreamTest.java\
 	SplitStreamTest.java
 
 RMI_SOURCE =
