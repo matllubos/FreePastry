@@ -63,7 +63,7 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp, IScribeObserv
     private Credentials m_credentials;
     public Scribe m_scribe;
     public int m_appCount;
-  
+    public Hashtable joinData = new Hashtable();
     /**
      * Constructor
      * @param node The local PastryNode
@@ -129,7 +129,19 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp, IScribeObserv
      * up-call invoked by scribe when a node is added/removed  to the multicast tree.
      */
     public void subscribeHandler( NodeId topicId, NodeHandle child, boolean wasAdded, Serializable obj ) {
-	    
+	//System.out.println("subscribeHandler called at "+getNodeId()+" for topic "+topicId+" obj "+obj);
+ 	if(obj != null){
+	    if( obj instanceof Integer){
+		Integer data = (Integer)obj;
+		//System.out.println("SubscribeHandler recv "+data.intValue()+" for topic "+topicId);
+		joinData.put(topicId, data);
+	    } 
+	    if( obj instanceof NodeId){ 
+		NodeId nid = (NodeId)obj; 
+		joinData.put(topicId, nid); 
+	    } 
+	} 
+	
 	/*
 	System.out.println("Node:" + getNodeId() + " App:"
                                 + m_app + " child subscribed: " + msg);
@@ -206,10 +218,15 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp, IScribeObserv
      */
     public void update(Object obj){
 	NodeId topicId = (NodeId) obj;
-	
+	join(topicId);
 	//System.out.println("At "+getNodeId()+" topic "+ topicId+" is implicitly created \n");
     }
-
+    
+    public Object getJoinData(NodeId topicId){
+	Object data = joinData.get(topicId);
+	return data;
+	
+    }
 }
 
 

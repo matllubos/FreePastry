@@ -365,18 +365,32 @@ public class DirectScribeMaintenanceTest
 	while (simulate());
 
 	/**
-	 * TEST 0
+	 * TEST 0a
 	 * Checks the functionality of addChild and setParent 
 	 * interface methods.
 	 */
 
 	passed = setParentAndaddChildTest();
-	System.out.print("\n\nSET-PARENT_&_ADD-CHILD TEST:\t\t\t\t\t\t");
+	System.out.print("\nSET-PARENT_&_ADD-CHILD TEST:\t\t\t\t\t");
 	if(passed)
 	    System.out.print("[ PASSED ]\n");
 	else
 	    System.out.print("[ FAILED ]\n");
+	
+	ok &= passed;
 	   
+	/**
+	 * TEST 0b
+	 * Checks the functionality of new join method, which takes serializable
+	 * data to be propogated along the subscribe method.
+	 */
+	topicId = generateTopicId( new String( "New Join with Data" ));
+	passed = checkNewJoin(topicId);
+	System.out.print("\nNEW JOIN WITH DATA TEST:\t\t\t\t\t");
+	if(passed)
+	    System.out.print("[ PASSED ]\n");
+	else
+	    System.out.print("[ FAILED ]\n");
 
 
 	/**
@@ -387,7 +401,7 @@ public class DirectScribeMaintenanceTest
 	 * activity started.
 	 */
 	passed = checkAllTrees();
-	System.out.print("\n\nMEMBERSHIP TEST FOR ALL TREES:\t\t\t\t\t\t");
+	System.out.print("\nMEMBERSHIP TEST FOR ALL TREES:\t\t\t\t\t");
 	if(passed)
 	    System.out.print("[ PASSED ]\n");
 	else
@@ -403,7 +417,7 @@ public class DirectScribeMaintenanceTest
 	for(i=0; i< scribeClients.size(); i++) {
 	    passed = distinctChildrenTableConsistencyTest(i);
 	}
-	System.out.print("\n\nDISTINCT CHILDREN TABLE CONSISTENCY:\t\t\t\t\t\t");
+	System.out.print("\nDISTINCT CHILDREN TABLE CONSISTENCY:\t\t\t\t");
 	if ( passed == true)
 	    System.out.print("[ PASSED ]\n");
 	else
@@ -422,7 +436,7 @@ public class DirectScribeMaintenanceTest
 	for(i=0; i< scribeClients.size(); i++) {
 	    passed = distinctParentTableConsistencyTest(i);
 	}
-	System.out.print("\n DISTINCT PARENT TABLE CONSISTENCY:\t\t\t\t\t\t");
+	System.out.print("\nDISTINCT PARENT TABLE CONSISTENCY:\t\t\t\t");
 	if ( passed == true)
 	    System.out.print("[ PASSED ]\n");
 	else
@@ -450,7 +464,7 @@ public class DirectScribeMaintenanceTest
 	for(i=0; i< scribeClients.size(); i++) {
 	    passed = checkParentPointerForAllTopics(i);
 	}
-	System.out.print("\n\nPARENT POINTER SET TEST:\t\t\t\t\t\t");
+	System.out.print("\nPARENT POINTER SET TEST:\t\t\t\t\t");
 	if(passed)
 	    System.out.print("[ PASSED ]\n");
 	else
@@ -493,9 +507,9 @@ public class DirectScribeMaintenanceTest
 	
 
 	if(passed)
-	    System.out.println("\n CHECK : MessageAckOnSubscribe - Parent-Child relationship is consistent from view of PARENT as well as CHILD - PASSED \n");
+	    System.out.println("\n CHECK : MessageAckOnSubscribe - Parent-Child relationship is consistent from view of PARENT as well as CHILD - [ PASSED ]\n");
 	else
-	    System.out.println("\n CHECK : MessageAckOnSubscribe - Parent-Child relationship is consistent from view of PARENT as well as CHILD - FAILED \n");
+	    System.out.println("\n CHECK : MessageAckOnSubscribe - Parent-Child relationship is consistent from view of PARENT as well as CHILD - [ FAILED ]\n");
 	ok = ok && passed;
 
 	// Sanity check.
@@ -503,9 +517,9 @@ public class DirectScribeMaintenanceTest
 
 	passed = checkAllTrees();
 	if(passed)
-	    System.out.println("\n CHECK : MessageAckOnSubscribe - ALL the nodes are part of the required multicast trees - PASSED \n");
+	    System.out.println("\n CHECK : MessageAckOnSubscribe - ALL the nodes are part of the required multicast trees - [ PASSED ]\n");
 	else
-	    System.out.println("\n CHECK : MessageAckOnSubscribe - All the nodes are part of the required multicast trees - FAILED \n");
+	    System.out.println("\n CHECK : MessageAckOnSubscribe - All the nodes are part of the required multicast trees - [ FAILED ]\n");
 	ok = ok && passed;
 
 	// Sanity check.
@@ -516,9 +530,9 @@ public class DirectScribeMaintenanceTest
 	}	   
 	
 	if(passed)
-	    System.out.println("\n CHECK : MessageAckOnSubscribe - Parent pointers are not-null - PASSED \n");
+	    System.out.println("\n CHECK : MessageAckOnSubscribe - Parent pointers are not-null - [ PASSED ]\n");
 	else
-	    System.out.println("\n CHECK : MessageAckOnSubscribe - Parent pointers are not-null - FAILED \n");
+	    System.out.println("\n CHECK : MessageAckOnSubscribe - Parent pointers are not-null - [ FAILED ]\n");
 	ok = ok && passed;
 
 
@@ -547,9 +561,9 @@ public class DirectScribeMaintenanceTest
 	// Check if all nodes are part of all multicast trees.
 	passed = checkAllTrees();
 	if(passed)
-	    System.out.println("\n CHECK : MessageHeartBeat correctly removes dangling child pointers - PASSED \n");
+	    System.out.println("\n CHECK : MessageHeartBeat correctly removes dangling child pointers - [ PASSED ]\n");
 	else
-	    System.out.println("\n CHECK : MessageHeartBeat correctly removes dangling child pointers - FAILED \n");
+	    System.out.println("\n CHECK : MessageHeartBeat correctly removes dangling child pointers - [ FAILED ]\n");
 	ok = ok && passed;
 
 
@@ -561,9 +575,9 @@ public class DirectScribeMaintenanceTest
 	}
 
 	if(passed)
-	    System.out.println("\n CHECK : MessageHeartBeat correctly sets parent pointers - PASSED \n");
+	    System.out.println("\n CHECK : MessageHeartBeat correctly sets parent pointers - [ PASSED ]\n");
 	else
-	    System.out.println("\n CHECK : MessageHeartBeat correctly sets parent pointers - FAILED \n");
+	    System.out.println("\n CHECK : MessageHeartBeat correctly sets parent pointers - [ FAILED ]\n");
 	ok = ok && passed;
 
 
@@ -593,9 +607,9 @@ public class DirectScribeMaintenanceTest
 	    // check if all nodes are part of all multicast groups.
 	    passed = checkAllTrees();
 	    if(passed)
-		System.out.println("CHECK : to see if after concurrent node failures and node joins the remaning nodes reconfigure to become part of the appropriate trees" +  "- PASSED\n");
+		System.out.println("CHECK : to see if after concurrent node failures and node joins the remaning nodes reconfigure to become part of the appropriate trees" +  "-[ PASSED ]\n");
 	    else
-		System.out.println("CHECK : to see if after concurrent node failures and node joins the remaning nodes reconfigure to become part of the appropriate trees" +  " - FAILED\n");
+		System.out.println("CHECK : to see if after concurrent node failures and node joins the remaning nodes reconfigure to become part of the appropriate trees" +  "-[ FAILED ]\n");
 	    ok = ok && passed;
 
 	}
@@ -627,9 +641,9 @@ public class DirectScribeMaintenanceTest
 	passed = checkUnsubscribeTest();
 	
 	if(passed)
-	    System.out.println("CHECK : to see if after Unsubscribing each node, no one is part of multicast tree  - PASSED\n");
+	    System.out.println("CHECK : to see if after Unsubscribing each node, no one is part of multicast tree  - [ PASSED ]\n");
 	else
-	    System.out.println("CHECK : to see if after Unsubscribing each node, no one is part of multicast tree  - FAILED\n");
+	    System.out.println("CHECK : to see if after Unsubscribing each node, no one is part of multicast tree  - [ FAILED ]\n");
 	
 	ok = ok && passed;
 
@@ -1111,6 +1125,36 @@ public class DirectScribeMaintenanceTest
 	}
     }
 
+    public boolean checkNewJoin(NodeId topicId){
+	int check = 5000;
+	int value = -1;
+	Integer data =  new Integer(check);
+	DirectScribeMaintenanceTestApp scribeApp;
+	int i;
+
+	scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(0);
+	if(scribeApp.m_scribe.isRoot(topicId))
+	    scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(1);
+	scribeApp.join(topicId, data);
+	while(simulate());
+	//System.out.println("NEW JOINE TEST -- topicId "+topicId+" from node "+scribeApp.getNodeId());
+	// Root for this topic calls join for the topic
+	for(i = 0; i < scribeClients.size(); i++){
+	    scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(i);
+	    if(scribeApp.m_scribe.isRoot(topicId))
+		break;
+	}	
+	
+	Object recvData = scribeApp.getJoinData(topicId);
+	if(recvData instanceof Integer){
+	    Integer integer = (Integer)recvData;
+	    value = integer.intValue();
+	}
+	if(value == check)
+	    return true;
+	else
+	    return false;
+    }
 }
  
 
