@@ -19,18 +19,8 @@ import java.util.TreeSet;
 import java.util.Vector;
 
 import rice.Continuation;
-import rice.p2p.aggregation.messaging.AggregationMessage;
-import rice.p2p.aggregation.messaging.AggregationTimeoutMessage;
-import rice.p2p.commonapi.Application;
-import rice.p2p.commonapi.CancellableTask;
-import rice.p2p.commonapi.Endpoint;
-import rice.p2p.commonapi.Id;
-import rice.p2p.commonapi.IdFactory;
-import rice.p2p.commonapi.IdSet;
-import rice.p2p.commonapi.Message;
-import rice.p2p.commonapi.Node;
-import rice.p2p.commonapi.NodeHandle;
-import rice.p2p.commonapi.RouteMessage;
+import rice.p2p.aggregation.messaging.*;
+import rice.p2p.commonapi.*;
 import rice.p2p.glacier.VersionKey;
 import rice.p2p.glacier.VersioningPast;
 import rice.p2p.glacier.v2.DebugContent;
@@ -125,24 +115,26 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   protected Continuation flushWait;
   protected boolean rebuildInProgress;
 
-  private final int loglevel = 3;
+  private final int loglevel = 2;
 
-  private static final int SECONDS = 1000;
-  private static final int MINUTES = 60 * SECONDS;
-  private static final int HOURS = 60 * MINUTES;
+  private static final long SECONDS = 1000;
+  private static final long MINUTES = 60 * SECONDS;
+  private static final long HOURS = 60 * MINUTES;
+  private static final long DAYS = 24 * HOURS;
+  private static final long WEEKS = 7 * DAYS;
 
-  private static final int flushDelayAfterJoin = 5 * SECONDS;
-  private static final int flushInterval = 30 * SECONDS;
+  private static final long flushDelayAfterJoin = 30 * SECONDS;
+  private static final long flushInterval = 3 * MINUTES;
 
   private static final int maxAggregateSize = 1024*1024;
   
   private static final boolean addMissingAfterRefresh = false;
   private static final int nominalReferenceCount = 2;
   private static final int maxPointersPerAggregate = 100;
-  private static final long pointerArrayLifetime = 14L*7*24*HOURS;
+  private static final long pointerArrayLifetime = 2 * WEEKS;
 
-  private static final int expirationInterval = 30 * SECONDS;
-  private static final int expirationRenewThreshold = 30 * SECONDS;
+  private static final long expirationInterval = 5 * MINUTES;
+  private static final long expirationRenewThreshold = 1 * DAYS;
 
   public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance) {
     this(node, aggregateStore, objectStore, waitingList, configFileName, factory, instance, getDefaultPolicy());
@@ -354,7 +346,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
    * @param timeoutMsec Length of the delay (in milliseconds)
    * @param timeoutID Identifier (to distinguish between multiple timers)
    */
-  private void addTimer(int timeoutMsec, char timeoutID) {
+  private void addTimer(long timeoutMsec, char timeoutID) {
     /*
      *  We schedule a GlacierTimeoutMessage with the ID of the
      *  requested timer. This message will be delivered if the
@@ -1079,7 +1071,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         if (aggr.currentLifetime < (now + expirationRenewThreshold)) {
           long newLifetime = chooseAggregateLifetime(aggr.objects, now, aggr.currentLifetime);
           if (newLifetime > aggr.currentLifetime) {
-            log(3, "Refreshing "+aggr.key+", new expiration is "+newLifetime);
+            log(2, "Refreshing "+aggr.key+", new expiration is "+newLifetime);
             isBeingRefreshed = true;
 
             if (aggregateStore instanceof GCPast) {
@@ -1124,7 +1116,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     boolean deletedOne = false;
     while (!removeList.isEmpty()) {
       AggregateDescriptor aggr = (AggregateDescriptor) removeList.elementAt(0);
-      log(3, "Removing expired aggregate "+aggr.key.toStringFull()+" from list");
+      log(2, "Removing expired aggregate "+aggr.key.toStringFull()+" from list");
       removeList.removeElementAt(0);
       deletedOne = true;
       removeAggregateDescriptor(aggr);
@@ -1172,7 +1164,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
 
   private void timerExpired(char timerID) {
-    log(2, "TIMER EXPIRED: #" + (int) timerID);
+    log(3, "TIMER EXPIRED: #" + (int) timerID);
 
     switch (timerID) {
       case tiFlush :
@@ -1188,7 +1180,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         };
         
         if ((--expirationCounter) < 1) {
-          expirationCounter = expirationInterval / flushInterval;
+          expirationCounter = (int)(expirationInterval / flushInterval);
           refreshAggregates();
           formAggregates(doNothing);
           reconnectTree();
@@ -1517,7 +1509,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     final int theSize = getSize(obj);
 
     if (policy.shouldBeAggregated(obj, theSize)) {
-      log(2, "AGGREGATE INSERT: "+obj.getId());
+      log(2, "AGGREGATE INSERT: "+obj.getId()+" size="+theSize+" class="+obj.getClass().getName());
 
       if (objectStore instanceof GCPast) 
         ((GCPast)objectStore).insert(obj, lifetime, command);
