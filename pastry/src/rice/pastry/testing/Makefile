@@ -18,7 +18,8 @@ SOURCE  = \
 	Ping.java \
 	SinglePingTest.java \
 	PingTestRecord.java \
-	DirectPastryPingTest.java 
+	DirectPastryPingTest.java \
+  LeafSetTest.java
 
 
 RMI_SOURCE =

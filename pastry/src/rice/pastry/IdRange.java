@@ -300,7 +300,7 @@ public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
      */
      public IdRange diff(IdRange o) {
 	 IdRange res = intersect(o.complement());
-	 if (res.isEmpty()) res = o.intersect(complement());
+	 if (res.isEmpty()) res = complement().intersect(o);
 	 return res;
      }
 
