@@ -354,8 +354,8 @@ public class Channel extends PastryAppl implements IScribeApp {
 	Object tableEntry = stripeIdTable.get(stripeId);
 	Stripe stripe = null; 
 	stripe = (Stripe) tableEntry;
-	if(subscribedStripes.contains(stripe))
-	    return stripe;
+	//if(subscribedStripes.contains(stripe))
+	//  return stripe;
 
 	stripe.joinStripe();	
 	stripe.addObserver(observer);
@@ -469,7 +469,12 @@ public class Channel extends PastryAppl implements IScribeApp {
 	}
     }
   
-
+    public boolean enrouteMessage(Message msg){
+	if(msg instanceof ControlFindParentMessage){
+	    return handleControlFindParentMessage(msg); 
+	}
+	return true;
+    }
 
     private void handleControlAttachResponseMessage(Message msg){
         //System.out.println(getNodeId() + " recieved a response to anycast ");
@@ -502,8 +507,11 @@ public class Channel extends PastryAppl implements IScribeApp {
 	ControlDropMessage dropMessage = (ControlDropMessage) msg;
 	Stripe stripe = (Stripe) stripeIdTable.get(dropMessage.getStripeId());
 	if(stripe != null)
-	    stripe.dropped();
-	dropMessage.handleDeliverMessage((Scribe)scribe, ((Scribe) scribe).getTopic(dropMessage.getStripeId())); 
+	    {
+		stripe.dropped();
+		stripe.setRootPath( null );
+	    }
+	dropMessage.handleDeliverMessage((Scribe)scribe, ((Scribe) scribe).getTopic(dropMessage.getStripeId()));
     }
 
     private void handleChannelMessage(ScribeMessage msg){
@@ -517,15 +525,19 @@ public class Channel extends PastryAppl implements IScribeApp {
 	//System.out.println("SpareCapacity Message from " + msg.getSource().getNodeId() + " at " + getNodeId());
 	Stripe stripe = null;
 	ControlFindParentMessage parentMessage = (ControlFindParentMessage) msg.getData();
-	parentMessage.handleMessage((Scribe) scribe, ((Scribe)scribe).getTopic(getSpareCapacityId()), this);
-	//if(stripeIdTable.get(parentMessage.getStripeId()) instanceof Stripe){
-	//  stripe = (Stripe) stripeIdTable.get(parentMessage.getStripeId());	
-	//}
+	if(stripeIdTable.get(parentMessage.getStripeId()) instanceof Stripe){
+	  stripe = (Stripe) stripeIdTable.get(parentMessage.getStripeId());	
+	}
+	parentMessage.handleMessage((Scribe) scribe, ((Scribe)scribe).getTopic(getSpareCapacityId()), this, stripe);
     }
 
-    private void handleControlFindParentMessage(Message msg){
+    private boolean handleControlFindParentMessage(Message msg){
+	Stripe stripe = null;
 	ControlFindParentMessage parentMessage = (ControlFindParentMessage) msg;
-	parentMessage.handleMessage((Scribe ) scribe, ((Scribe)scribe).getTopic(getSpareCapacityId()), this); 
+	if(stripeIdTable.get(parentMessage.getStripeId()) instanceof Stripe){
+	   stripe = (Stripe) stripeIdTable.get(parentMessage.getStripeId());	
+	}
+	return parentMessage.handleMessage((Scribe ) scribe, ((Scribe)scribe).getTopic(getSpareCapacityId()), this, stripe); 
 
     }
    
