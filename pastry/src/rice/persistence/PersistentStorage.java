@@ -60,31 +60,40 @@ import rice.pastry.*;
  */
 public class PersistentStorage implements Storage {
  
-  private String name;
+  private String name;              // the name of this instance
   private File rootDirectory;       // root directory to store stuff in
   private File backupDirectory;     // dir for storing persistent objs
   private File appDirectory;        // dir for storing persistent objs
   private File lostDirectory;       // dir for lost objects
 
-  private static String rootDir;                          // rootDirectory
+  private static String rootDir;    // rootDirectory
   private static final String backupDir = "/FreePastry-Storage-Root/"; // backupDirectory
 
-  private long storageSize; /* The amount of storage allowed to be used */
-  private long usedSize; /* The amount of storage currently in use */
-  private IdSet idSet;
+  private long storageSize;         // The amount of storage allowed to be used 
+  private long usedSize;            // The amount of storage currently in use
+  private IdSet idSet;              // In memory store of all keys
   
-  private final int MAX_FILES = 1000; /* The maximum number of files in a dir */
-  private final boolean DEBUG = true;
-  /**
-   * Builds a PersistentStorage given a root directory in which to
-   * persist the data.
-   *
-   * @param rootDir The root directory of the persisted disk.
-   */
+  private final int MAX_FILES = 1000; // The maximum number of files in a dir
+  private final boolean DEBUG = true; // Turn on and off debug prints 
+
+ /**
+  * Builds a PersistentStorage given a root directory in which to
+  * persist the data. Uses a default instance name.
+  *
+  * @param rootDir The root directory of the persisted disk.
+  */
   public PersistentStorage(String rootDir, int size) {
     this("default", rootDir, size);
   }
- 
+   
+ /**
+  * Builds a PersistentStorage given and an instance name
+  *  and a root directoy in which to persist the data. 
+  *
+  * @param name the name of this instance
+  * @param rootDir The root directory of the persisted disk.
+  * @param size the size of the storage in bytes
+  */
   public PersistentStorage(String name, String rootDir, int size){
     this.name = name;
     this.rootDir = rootDir;
@@ -221,22 +230,20 @@ public class PersistentStorage implements Storage {
   }
 
   /**
-   * Return the objects identified by the given range of ids. The array
-   * returned contains the Comparable ids of the stored objects. The range is
-   * completely inclusive, such that if the range is (A,B), objects with
-   * ids of both A and B would be returned.
+   * Return the objects identified by the given range of ids. The IdSet 
+   * returned contains the Ids of the stored objects. The range is
+   * partially inclusive, the lower range is inclusive, and the upper
+   * exclusive.
    *
-   * Note that the two Comparable objects should be of the same class
-   * (otherwise no range can be created).
    *
    * When the operation is complete, the receiveResult() method is called
    * on the provided continuation with a Comparable[] result containing the
    * resulting IDs.
    *
-   * @param start The staring id of the range.
-   * @param end The ending id of the range.
+   * @param start The staring id of the range. (inclusive)
+   * @param end The ending id of the range. (exclusive) 
    * @param c The command to run once the operation is complete
-   * @return The objects
+   * @return The idset containg the keys 
    */
   public void scan(IdRange range , Continuation c) {
     Id startId;
@@ -275,7 +282,7 @@ public class PersistentStorage implements Storage {
    * Perform all the miscealanious house keeping that must be done
    * when we start up
    */
-  private void init(){
+   private void init(){
     if(! this.initDirectories())
       System.out.println("ERROR: Failed to Initialized Directories");
 
@@ -288,7 +295,7 @@ public class PersistentStorage implements Storage {
       directoryCleanUp(appDirectory);
     }
     initFileMap(backupDirectory);
-  }
+   }
 
   /**
    * Verify that the directory name passed to the
@@ -324,7 +331,7 @@ public class PersistentStorage implements Storage {
 
 
   /**
-   * Inititializes the FileMap data structure
+   * Inititializes the idSet data structure
    * 
    * In doing this it must resolve conflicts and aborted
    * transactions. After this is run the most current stable
@@ -387,22 +394,27 @@ public class PersistentStorage implements Storage {
    *
    */
   private void resolveConflict(File conflictFile) throws Exception{
-        //String id = conflictFile.getName().split(".")[0];
-        //SubStringFilter ssf = new SubStringFilter(id);
-        //File[] files = conflictFile.getParent().listFiles(ssf);
-        //File correctFile = files[0];
-        //for(int i = 1 ; i < files.length; i ++){
-         //   if(getVersion(correctFile) < getVersion(files[i])){
-          //     moveToLost(correctFile);
-           //    correctFile = files[i];
-           // }
-           // else{
-            //   moveToLost(files[i]); 
-           // }
-        //}
+        String id = conflictFile.getName().split(".")[0];
+        PrefixFilter ssf = new PrefixFilter(id);
+        File[] files = conflictFile.getParentFile().listFiles(ssf);
+        File correctFile = files[0];
+        for(int i = 1 ; i < files.length; i ++){
+            if(readVersion(correctFile) < readVersion(files[i])){
+               moveToLost(correctFile);
+               correctFile = files[i];
+            }
+            else{
+               moveToLost(files[i]); 
+            }
+        }
   }
 
-  
+  /**
+   * Moves a file to the lost and found directory for this instance
+   *
+   * @param file the file to be moved
+   *
+   */ 
   private void moveToLost(File file){
       File newFile = new File(lostDirectory, file.getName());
       file.renameTo(newFile);
@@ -489,6 +501,19 @@ public class PersistentStorage implements Storage {
      endDirectoryTransaction();
    }
 
+
+  /**
+   *
+   * This method expands the directory in to a subdirectory
+   * for each prefix, contained in the directory
+   * 
+   * This is used to keep less then NUM_FILES in any directory
+   * at one time. This speeds up look up time in a particular directory
+   * under certain circumstances.
+   *
+   * @param dir the directory to expand 
+   *
+   */
   private void expandDirectory(File dir){
      HashSet h = new HashSet();
      FileFilter ff = new FileFilter();
@@ -515,6 +540,18 @@ public class PersistentStorage implements Storage {
      endDirectoryTransaction();
   } 
 
+
+
+  /**
+   *
+   * Takes a file and moves all files in it to the correct directory
+   * this is used in cojunction with expand to move files to their correct
+   * subdirectories below the expanded directory
+   *
+   * @param dir the directory in which files should be moved.
+   *
+   */
+  
   private void moveFilesToCorrectDir(File dir){
      FileFilter ff = new FileFilter();
      File[] files = dir.listFiles(ff);
@@ -543,6 +580,12 @@ public class PersistentStorage implements Storage {
     return directory.isDirectory();
   }
 
+  /**
+   *
+   * Returns the length of a file in bytes
+   *
+   * @param file file whose length to get
+   */
   private long getFileLength(File file){
    if (file == null)
       return 0;
@@ -550,10 +593,18 @@ public class PersistentStorage implements Storage {
       return file.length();
   }
 
+  /**
+   * deletes a given file from disk
+   *
+   * @param file file to be deleted.
+   *
+   */
   private void deleteFile(File file){
     if(file != null)
        file.delete();
   }
+
+
   /**
    * Generates a new file name to assign for a given id
    *
@@ -577,20 +628,45 @@ public class PersistentStorage implements Storage {
     return file;
   }
 
+  /**
+   * Gets the file for a certain id from the disk
+   *
+   * @param id the id to get a file for
+   * @return File the file for the id
+   *
+   */
   private File getFile(Id id){
      File dir = getDirectoryForId(id.toStringFull());
-     SubStringFilter ssf = new SubStringFilter(id.toStringFull());
+     PrefixFilter ssf = new PrefixFilter(id.toStringFull());
+
      File[] results = dir.listFiles(ssf);
+
      if(results.length == 0)
         return null;
      else
         return results[0];
   }
 
+  /**
+   * Gets the directory an id should be stored in
+   *
+   * @param id the string representation of the id
+   * @return File the directory that should contain an id
+   *
+   */
   private File getDirectoryForId(String id){
     return getDirectoryForIdHelper(id, appDirectory);
   }
 
+  /**
+   * Helper function to recuresively descend the directory
+   * structure.
+   *
+   * @param id the id to check
+   * @param root the current directory
+   * @return the directory and id should be in
+   *
+   */ 
   private File getDirectoryForIdHelper(String id, File root){
       if(!containsDir(root)){
         return root; 
@@ -608,11 +684,25 @@ public class PersistentStorage implements Storage {
       }
   }
 
+  /**
+   * Gets the number of files in directory (excluding directories)
+   *
+   * @param dir the directory to check
+   * @return int the number of files
+   *
+   */
   private int numFilesDir(File dir){
      FileFilter ff = new FileFilter();
      return dir.listFiles(ff).length;
   }
-
+  
+  /**
+   * Returns whether a directory contains subdirectories 
+   *
+   * @param dir the directory to check
+   * @return boolean whether directory contains subdirectories
+   *
+   */
   private boolean containsDir(File dir){
     DirectoryFilter df = new DirectoryFilter();
     return( dir.listFiles(df).length != 0);
@@ -622,6 +712,14 @@ public class PersistentStorage implements Storage {
   /* Helper functions for Object Input/Output                      */
   /*****************************************************************/
 
+  /**
+   * Basic function to read an object from the persisted file.
+   *
+   * @param file the file to read from
+   * @param offset the offset to read from
+   * @return Serializable the data stored at the offset in the file
+   *
+   */
   private static Serializable readObject(File file , int offset) throws Exception  {
 
     Serializable toReturn = null;
@@ -795,14 +893,32 @@ public class PersistentStorage implements Storage {
      usedSize = usedSize - i;
   }
 
+  /**
+   * 
+   * Gets the amound of space currently being used on disk
+   *
+   * @return long the amount of space being used
+   *
+   */
   private long getUsedSpace(){
     return usedSize;
   }
 
+  /**
+   * Gets the name of this instance
+   * 
+   * @return String the name of the instance
+   *
+   */
   private String getName(){
     return name;
   }
 
+  /**
+   * Prints out debug statements
+   *
+   * @param s the string to print out
+   */
   private void debug(String s){
     if(DEBUG)
        System.out.println(s);
@@ -813,8 +929,13 @@ public class PersistentStorage implements Storage {
   /* Inner Classes for FileName filtering                          */
   /*****************************************************************/
 
+  /**
+   * 
+   * A class that filters out the files in a directory to return
+   * only subdirectories.
+   */ 
   private class DirectoryFilter implements FilenameFilter{
-
+   
    public boolean accept(File dir, String name){
      File temp = new File(dir, name);
      if(temp.isDirectory()){
@@ -826,6 +947,11 @@ public class PersistentStorage implements Storage {
    }
   }
 
+  /**
+   *
+   * A classs that filters out the files in a directory to return
+   * only files ( no directories )
+   */
   private class FileFilter implements FilenameFilter{
 
    public boolean accept(File dir, String name){
@@ -839,10 +965,16 @@ public class PersistentStorage implements Storage {
    }
   }
 
-  private class SubStringFilter implements FilenameFilter{
+  /**
+   *
+   * A class that filters out all files from a directroy except those
+   * with a certain prefix 
+   *
+   */
+  private class PrefixFilter implements FilenameFilter{
     String s;
 
-    public SubStringFilter(String s){
+    public PrefixFilter(String s){
       this.s = s;    
     }
 

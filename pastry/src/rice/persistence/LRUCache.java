@@ -186,26 +186,24 @@ public class LRUCache implements Cache {
   }
 
   /**
-   * Returns the keys of cached objects identified by the given range of ids. The array
-   * returned contains the Comparable ids of the stored objects. The range is
-   * completely inclusive, such that if the range is (A,B), objects with
-   * ids of both A and B would be returned.
+   * Return the objects identified by the given range of ids. The IdSet 
+   * returned contains the Ids of the stored objects. The range is
+   * partially inclusive, the lower range is inclusive, and the upper
+   * exclusive.
    *
-   * Note that the two Comparable objects should be of the same class
-   * (otherwise no range can be created).
    *
    * When the operation is complete, the receiveResult() method is called
    * on the provided continuation with a Comparable[] result containing the
    * resulting IDs.
    *
-   * @param start The staring id of the range.
-   * @param end The ending id of the range.
+   * @param start The staring id of the range. (inclusive)
+   * @param end The ending id of the range. (exclusive) 
    * @param c The command to run once the operation is complete
-   * @return The objects
+   * @return The idset containg the keys 
    */
-  public synchronized void scan(IdRange range, Continuation c) {
-    storage.scan(range, c);
-  }
+   public synchronized void scan(IdRange range, Continuation c) {
+     storage.scan(range, c);
+   }
 
   /**
    * Returns the maximum size of the cache, in bytes. The result
