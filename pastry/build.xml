@@ -169,11 +169,65 @@
       <fileset dir="." includes="lib/xmlpull_1_1_3_4a.jar"/>
       <fileset dir="." includes="lib/xpp3-1.1.3.4d_b2.jar"/>
     </zip>
+    <tar destfile="epost-${epost-version}-source.tgz" compression="gzip">
+      <tarfileset dir="${src.dir}" prefix="src">
+        <include name="rice/*.java"/>
+        <include name="rice/email/**/*.java"/>
+        <include name="rice/p2p/commonapi/**/*.java"/>
+        <include name="rice/p2p/glacier/**/*.java"/>
+        <include name="rice/p2p/aggregation/**/*.java"/>
+        <include name="rice/p2p/multiring/**/*.java"/>
+        <include name="rice/p2p/past/**/*.java"/>
+        <include name="rice/p2p/replication/**/*.java"/>
+        <include name="rice/p2p/scribe/**/*.java"/>
+        <include name="rice/p2p/util/**/*.java"/>
+        <include name="rice/pastry/**/*.java"/>
+        <include name="rice/persistence/**/*.java"/>
+        <include name="rice/post/**/*.java"/>
+        <include name="rice/proxy/**/*.java"/>
+        <include name="rice/selector/**/*.java"/>
+        <include name="rice/serialization/**/*.java"/>
+        <include name="rice/visualization/**/*.java"/>
+      </tarfileset>
+      <tarfileset dir="ant" includes="**/*" prefix="ant"/>
+      <tarfileset dir="${lib.dir}" includes="*.jar" prefix="lib"/>
+      <tarfileset dir="${jar.dir}" includes="**/*" prefix="jars"/>
+      <tarfileset dir="license" includes="**/*" prefix="license"/>
+      <tarfileset dir="." includes="build.xml"/>
+    </tar>
+    <zip destfile="epost-${epost-version}-source.zip">
+      <fileset dir="${src.dir}">
+        <include name="rice/*.java"/>
+        <include name="rice/email/**/*.java"/>
+        <include name="rice/p2p/commonapi/**/*.java"/>
+        <include name="rice/p2p/glacier/**/*.java"/>
+        <include name="rice/p2p/aggregation/**/*.java"/>
+        <include name="rice/p2p/multiring/**/*.java"/>
+        <include name="rice/p2p/past/**/*.java"/>
+        <include name="rice/p2p/replication/**/*.java"/>
+        <include name="rice/p2p/scribe/**/*.java"/>
+        <include name="rice/p2p/util/**/*.java"/>
+        <include name="rice/pastry/**/*.java"/>
+        <include name="rice/persistence/**/*.java"/>
+        <include name="rice/post/**/*.java"/>
+        <include name="rice/proxy/**/*.java"/>
+        <include name="rice/selector/**/*.java"/>
+        <include name="rice/serialization/**/*.java"/>
+        <include name="rice/visualization/**/*.java"/>
+      </fileset>
+      <fileset dir="ant" includes="**/*"/>
+      <fileset dir="${lib.dir}" includes="*.jar"/>
+      <fileset dir="${jar.dir}" includes="**/*"/>
+      <fileset dir="license" includes="**/*"/>
+      <fileset dir="." includes="build.xml"/>
+    </zip>
     <checksum fileext=".md5sum" todir="." algorithm="MD5">
       <fileset dir=".">
         <include name="epost-${epost-version}.jar"/>
         <include name="epost-${epost-version}-all.tgz"/>
         <include name="epost-${epost-version}-all.zip"/>
+        <include name="epost-${epost-version}-source.tgz"/>
+        <include name="epost-${epost-version}-source.zip"/>
       </fileset>
     </checksum>
   </target>

@@ -115,6 +115,7 @@ post_proxy_enable=true
 post_redundancy_factor=1
 post_synchronize_interval=60000
 post_username=
+proxy_automatic_update_ask_user=true
 proxy_automatic_update_enable=true
 proxy_automatic_update_interval=86400000
 proxy_automatic_update_latest_filename=latest.txt
