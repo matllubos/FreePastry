@@ -263,7 +263,12 @@ public class ScribeImpl implements Scribe, Application {
 
       sendSubscribe(topic, client);
     } else {
-      ((TopicManager) topics.get(topic)).addClient(client);
+      TopicManager manager = (TopicManager) topics.get(topic);
+      manager.addClient(client);
+
+      if ((manager.getParent() == null) && (! isRoot(topic))) {
+        sendSubscribe(topic, client);
+      }
     }
   }
 
