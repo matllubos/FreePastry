@@ -673,7 +673,7 @@ public class MemoryStorageTest extends Test {
           }
         }
         
-        if (count == END_NUM) {
+        if (count >= END_NUM - SKIP) {
           stepDone(SUCCESS);
           removeRandom.receiveResult(new Boolean(true));
           return;
