@@ -56,7 +56,7 @@ import java.io.*;
  * @author Sitaram Iyer
  */
 
-public class HelloWorldApp extends PastryAppl {
+public class HelloWorldAppMultiThread extends PastryAppl {
 
     private int msgid = 0;
 
@@ -74,22 +74,37 @@ public class HelloWorldApp extends PastryAppl {
 
 	public String toString() { return "[HelloAddress]"; }
     }
-
+    /*
     public HelloWorldApp(PastryNode pn) {
 	super(pn);
     }
-
+    */
     /**
      * Sends a message to a randomly chosen node. Yeah, for fun.
      *
      * @param rng Random number generator.
      */
     public void sendRndMsg(Random rng) {
-	Id rndid = Id.makeRandomId(rng);
+        Id rndid = Id.makeRandomId(rng);
 	if (Log.ifp(5))
 	    System.out.println("Sending message from " + getNodeId() + " to random dest " + rndid);
 	Message msg = new HelloMsg(addr, getNodeId(), rndid, ++msgid);
 	routeMsg(rndid, msg, cred, new SendOptions());
+    }
+    
+    /**
+     * Sends a message to a randomly chosen node. Yeah, for fun.
+     *
+     * @param rng Random number generator.
+     */
+    public void sendRndMsg(Random rng, int id) {
+	Id rndid = Id.makeRandomId(rng);
+	if (Log.ifp(5)) {
+//	    System.out.println("Sending message # " + id + " from " + getNodeId() + " to random dest " + rndid);
+    }
+	HelloMsg msg = new HelloMsg(addr, getNodeId(), rndid, id);
+        routeMsg(rndid, msg, cred, new SendOptions());
+        driver.MessageSent(msg);        
     }
 
     // The remaining methods override abstract methods in the PastryAppl API.
@@ -113,9 +128,29 @@ public class HelloWorldApp extends PastryAppl {
      *
      * @param msg Message being routed around
      */
-    public void messageForAppl(Message msg) {
-	if (Log.ifp(5))
-	    System.out.println("Received " + msg + " at " + getNodeId());
+    public void messageForAppl(final Message msg) {
+   /*     
+        Thread t = new Thread(){
+            public void run(){
+                try{
+                    Thread.currentThread().sleep(driver.rng.nextInt(2000));*/
+                    if(msg instanceof HelloMsg){
+                        HelloMsg hmsg = (HelloMsg)msg;
+                        hmsg.actualReceiver = getNodeId();
+                        driver.MessageRecieved(hmsg);
+                        //if (Log.ifp(5))
+                            //System.out.println("Received " + msg + " at " + getNodeId());
+                            //Thread.dumpStack();
+                    }
+                    /*else throw new Exception("Message not recognized");
+
+                }catch(Exception e){
+                    System.out.println("Error Recieving an appl message");
+                }
+            }
+        };
+        t.start();*/
+        return;
     }
     
     /**
@@ -127,9 +162,9 @@ public class HelloWorldApp extends PastryAppl {
      * @param opt send options
      * @return true if message needs to be forwarded according to plan.
      */
-    public boolean enrouteMessage(Message msg, Id key, NodeId nextHop, SendOptions opt) {
-	if (Log.ifp(5))
-	    System.out.println("Enroute " + msg + " at " + getNodeId());
+    public boolean enrouteMessage(Message msg, NodeId key, NodeId nextHop, SendOptions opt) {
+	//if (Log.ifp(5))
+	    //System.out.println("Enroute " + msg + " at " + getNodeId());
 	return true;
     }
 
@@ -140,12 +175,15 @@ public class HelloWorldApp extends PastryAppl {
      * @param wasAdded added (true) or removed (false)
      */
     public void leafSetChange(NodeHandle nh, boolean wasAdded) {
-	if (Log.ifp(5)) {
-	    System.out.print("In " + getNodeId() + "'s leaf set, " +
-			     "node " + nh.getNodeId() + " was ");
-	    if (wasAdded) System.out.println("added");
-	    else System.out.println("removed");
-	}
+        /*
+        if(driver.allNodesCreated()){
+            if (Log.ifp(5)) {
+                System.out.print("In " + getNodeId() + "'s leaf set, " +
+                    	     "node " + nh.getNodeId() + " was ");
+                if (wasAdded) System.out.println("added");
+                else System.out.println("removed");
+            }   
+        }*/
     }
 
     /**
@@ -155,12 +193,13 @@ public class HelloWorldApp extends PastryAppl {
      * @param wasAdded added (true) or removed (false)
      */
     public void routeSetChange(NodeHandle nh, boolean wasAdded) {
+        /*
 	if (Log.ifp(5)) {
 	    System.out.print("In " + getNodeId() + "'s route set, " +
 			     "node " + nh.getNodeId() + " was ");
 	    if (wasAdded) System.out.println("added");
 	    else System.out.println("removed");
-	}
+	}*/
     }
 
     /**
@@ -168,10 +207,24 @@ public class HelloWorldApp extends PastryAppl {
      * leaf set, and has become ready to receive application messages.
      */
     public void notifyReady() {
-	if (true /*Log.ifp(6)*/)
+        
+	//if (Log.ifp(6))
 	    System.out.println("Node " + getNodeId() + " ready, waking up any clients");
-	sendRndMsg(new Random());
+	//sendRndMsg(new Random());
+
+    }
+   
+    //For the purpose of global bookKeeping, we are allowing
+    //every PastryAppl access to the driver
+    private DistHelloWorldMultiThread driver;
+    
+   
+    public HelloWorldAppMultiThread(PastryNode pn, DistHelloWorldMultiThread drv) {
+	super(pn);
+        driver = drv;
+        driver.node_created();
 
     }
 }
+
 
