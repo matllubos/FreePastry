@@ -85,23 +85,33 @@ public class RMRequestKeysMsg extends RMMessage implements Serializable{
 	//System.out.println(rm.getNodeId() + "received RequestKeysMsg from " + getSource().getNodeId() + " with rangeSet.size = " + rangeSet.size());
 	Vector keySetSet = new Vector();
 	Vector stampSet = new Vector();
+
+	Vector returnedRangeSet = new Vector();
+
 	for(int i=0; i< rangeSet.size(); i++) {
 	    IdRange reqRange;
+	    IdRange iRange;
 	    reqRange = (IdRange)rangeSet.elementAt(i);
-	    IdSet keySet = rm.app.scan(reqRange);
-	    keySetSet.add(keySet);
-	    //System.out.println("Range= " +reqRange);
-	    //System.out.println("IdSet= " + keySet);
-	    Id stamp =null;
-	    // Compute the stamp here
+	    //System.out.println("myRange= " + rm.myRange);
+	    //System.out.println("reqRange= " + reqRange);
+	    iRange = reqRange.intersect(rm.myRange);
+	    //System.out.println("iRange= " + iRange);
+	    if(iRange.isEmpty())
+		continue;
+	    IdSet keySet = rm.app.scan(iRange);
+	    if(keySet.numElements()==0)
+		continue;
+	    returnedRangeSet.add(iRange);
 	    if(keySetStamp) {
-		// Compute the stamp
-		stampSet.add(stamp);
+		stampSet.add(keySet.getHash());
+	    }
+	    else {
+		keySetSet.add(keySet);
 	    }
 	}
 	
 	RMResponseKeysMsg msg;
-	msg = new RMResponseKeysMsg(rm.getLocalHandle(),rm.getAddress() , rm.getCredentials(), rm.m_seqno ++, rangeSet, rm.myRange,keySetSet, stampSet, keySetStamp );
+	msg = new RMResponseKeysMsg(rm.getLocalHandle(),rm.getAddress() , rm.getCredentials(), rm.m_seqno ++, returnedRangeSet, rm.myRange, keySetSet, stampSet, keySetStamp );
 	rm.route(null, msg, getSource());
     }
 

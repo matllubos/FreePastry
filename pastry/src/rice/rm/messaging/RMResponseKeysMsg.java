@@ -122,7 +122,27 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 	else {
 	    // Should check if the stamps match. If not generate
 	    // message to fetch keys with keySetStamp set to false
+	    Id oHash, myHash;
+	    Vector toAskFor = new Vector();
+	    for(int i=0; i< stampSet.size(); i++) {
+		oHash = (Id)stampSet.elementAt(i);
+		//System.out.println("oHash= " + oHash);
+		IdRange iRange = (IdRange) reqRangeSet.elementAt(i);
+		IdSet myKeySet = rm.app.scan(iRange);
+		myHash = myKeySet.getHash();
+		if(!oHash.equals(myHash)) {
+		    // We neeed to explicitly ask for keys in this range
+		    toAskFor.add(iRange);
+		}
+	    }
 
+	    if(toAskFor.size()!=0) {
+		RMRequestKeysMsg msg;
+		msg = new RMRequestKeysMsg(rm.getLocalHandle(),rm.getAddress() , rm.getCredentials(), rm.m_seqno ++, toAskFor, false);
+		rm.route(null, msg, getSource());
+		//System.out.println(rm.getNodeId() + "explicitly asking for keys");
+
+	    }
 	}
 	
     }

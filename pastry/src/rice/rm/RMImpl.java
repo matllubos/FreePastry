@@ -401,7 +401,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
 		if(toNode.getNodeId().equals(getNodeId()))
 		   continue;
 		//System.out.println(getNodeId() + " sending requestkeys msg to" + toNode.getNodeId());
-		msg = new RMRequestKeysMsg(getLocalHandle(),getAddress(), getCredentials(), m_seqno ++, rangeSet, false);
+		msg = new RMRequestKeysMsg(getLocalHandle(),getAddress(), getCredentials(), m_seqno ++, rangeSet, true);
 		
 		route(null, msg, toNode);
 	    }
