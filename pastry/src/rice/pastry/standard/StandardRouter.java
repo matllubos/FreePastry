@@ -103,95 +103,108 @@ public class StandardRouter implements MessageReceiver {
 	}
     }
     
-    /**
-     * Receive and process a route message.
-     *
-     * @param msg the message.
-     */
+  /**
+   * Receive and process a route message.
+   *
+   * @param msg the message.
+   */
 
-    public void receiveRouteMessage(RouteMessage msg) 
-    {
-	Id target = msg.getTarget();
+  /**
+   * Receive and process a route message.
+   *
+   * @param msg the message.
+   */
 
-	if(target == null)
-	  target = localId;
-	
-	
-	int cwSize = leafSet.cwSize();
-	int ccwSize = leafSet.ccwSize();
+	private void receiveRouteMessage(RouteMessage msg) {
+		Id target = msg.getTarget();
 
-	int lsPos = leafSet.mostSimilar(target);
+		if (target == null)
+			target = localId;
 
-	if (lsPos == 0) // message is for the local node so deliver it
-	    msg.nextHop = localHandle;
+		int cwSize = leafSet.cwSize();
+		int ccwSize = leafSet.ccwSize();
 
-	else if ( (lsPos>0 && (lsPos<cwSize || !leafSet.get(lsPos).getNodeId().clockwise(target))) ||
-		  (lsPos<0 && (-lsPos<ccwSize || leafSet.get(lsPos).getNodeId().clockwise(target))) )
-	    // the target is within range of the leafset, deliver it directly 
-	    {
-		NodeHandle handle = leafSet.get(lsPos);
+		int lsPos = leafSet.mostSimilar(target);
 
-		if (handle.isAlive() == false) {   // node is dead - get rid of it and try again
-		    leafSet.remove(handle.getNodeId());
-		    receiveRouteMessage(msg);
-		    return;
-		} else {
-		    msg.nextHop = handle;
-        msg.getOptions().setRerouteIfSuspected(false);
-		}
-	    }
-	else {
-	    // use the routing table
-	    RouteSet rs = routeTable.getBestEntry(target);
-	    NodeHandle handle = null;
+		if (lsPos == 0) // message is for the local node so deliver it
+			msg.nextHop = localHandle;
 
-	    if (rs == null ||
-		// get the closest alive node
-		(handle = rs.closestNode()) == null) {
-		
-		// no live routing table entry matching the next digit
-		// get best alternate RT entry
-
-		handle = routeTable.bestAlternateRoute(target);
-
-		if (handle == null) {
-		    // no alternate in RT, take leaf set
-		    handle = leafSet.get(lsPos);
-
-		    if (handle.isAlive() == false) {
-			leafSet.remove(handle.getNodeId());
-			receiveRouteMessage(msg);
-			return;
-		    }
-		} else {
-		    NodeId.Distance altDist = handle.getNodeId().distance(target);
-		    NodeId.Distance lsDist = leafSet.get(lsPos).getNodeId().distance(target);
-
-		    if (lsDist.compareTo(altDist) < 0) {
-			// closest leaf set member is closer
-			//System.out.println("forw to edge leaf set member, alt=" + handle.getNodeId() + 
-			//" lsm=" + leafSet.get(lsPos).getNodeId());
-			handle = leafSet.get(lsPos);
+		else if (
+			(lsPos > 0
+				&& (lsPos < cwSize || !leafSet.get(lsPos).getNodeId().clockwise(target)))
+				|| (lsPos < 0
+					&& (-lsPos < ccwSize
+						|| leafSet.get(lsPos).getNodeId().clockwise(target))))
+			// the target is within range of the leafset, deliver it directly 
+			{
+			NodeHandle handle = leafSet.get(lsPos);
 
 			if (handle.isAlive() == false) {
-			    leafSet.remove(handle.getNodeId());
-			    receiveRouteMessage(msg);
-			    return;
+				// node is dead - get rid of it and try again
+				leafSet.remove(handle.getNodeId());
+				receiveRouteMessage(msg);
+				return;
+			} else {
+				msg.nextHop = handle;
+				msg.getOptions().setRerouteIfSuspected(false);
 			}
-		    }
+		} else {
+			// use the routing table
+			RouteSet rs = routeTable.getBestEntry(target);
+			NodeHandle handle = null;
+
+			if (rs == null
+				|| // get the closest alive node
+			 (handle = rs.closestNode(NodeHandle.LIVENESS_ALIVE))
+					== null) {
+
+				// no live routing table entry matching the next digit
+				// get best alternate RT entry
+
+				handle = routeTable.bestAlternateRoute(NodeHandle.LIVENESS_ALIVE, target);
+
+				if (handle == null) {
+					// no alternate in RT, take leaf set
+					handle = leafSet.get(lsPos);
+
+					if (handle.isAlive() == false) {
+						leafSet.remove(handle.getNodeId());
+						receiveRouteMessage(msg);
+						return;
+					} else {
+						msg.getOptions().setRerouteIfSuspected(false);
+					}
+				} else {
+					NodeId.Distance altDist = handle.getNodeId().distance(target);
+					NodeId.Distance lsDist =
+						leafSet.get(lsPos).getNodeId().distance(target);
+
+					if (lsDist.compareTo(altDist) < 0) {
+						// closest leaf set member is closer
+						//System.out.println("forw to edge leaf set member, alt=" + handle.getNodeId() + 
+						//" lsm=" + leafSet.get(lsPos).getNodeId());
+						handle = leafSet.get(lsPos);
+
+						if (handle.isAlive() == false) {
+							leafSet.remove(handle.getNodeId());
+							receiveRouteMessage(msg);
+							return;
+						} else {
+							msg.getOptions().setRerouteIfSuspected(false);
+						}
+					}
+				}
+			} else {
+				// we found an appropriate RT entry, check for RT holes at previous node
+				checkForRouteTableHole(msg, handle);
+			}
+
+			msg.nextHop = handle;
 		}
-	    }
-	    else {
-		// we found an appropriate RT entry, check for RT holes at previous node
-		checkForRouteTableHole(msg, handle);
-	    }
 
-	    msg.nextHop = handle;
+		msg.setPrevNode(localHandle);
+		localHandle.receiveMessage(msg);
 	}
-
-	msg.setPrevNode(localHandle);
-	localHandle.receiveMessage(msg);
-    }
 
     
     /**

@@ -118,8 +118,13 @@ public class StandardJoinProtocol implements MessageReceiver
 		    
 		    jh = security.verifyNodeHandle(jh);
 
-		    if ( jh.getNodeId().equals(localHandle.getNodeId()) && !localNode.isReady() ) {
-			System.out.println("NodeId collision, unable to join: " + localHandle.getNodeId());
+//      System.out.println("SJP1:"+jh.equals(localHandle)+":"+jh.getNodeId().equals(localHandle.getNodeId()));
+//      System.out.println("jh1:"+jh+" lh:"+localHandle);
+//      if ( jh.getNodeId().equals(localHandle.getNodeId()) && !localNode.isReady() ) {
+      if ( jh.equals(localHandle) && !localNode.isReady() ) {
+//        System.out.println("SJP2:"+jh.equals(localHandle)+":"+jh.getNodeId().equals(localHandle.getNodeId()));
+//        System.out.println("jh2:"+jh+" lh:"+localHandle);
+  			System.out.println("NodeId collision, unable to join: " + localHandle+":"+jh);
       //Thread.dumpStack();
 		    }
 		    else if (jh.isAlive() == true) { // the join handle is alive
