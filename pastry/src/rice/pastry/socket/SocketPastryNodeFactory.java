@@ -322,10 +322,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       bootstrap.setLocalNode(pn);
     }
     
-//    System.out.println("SPNF.getNearest():begin");
+    System.out.println("SPNF.getNearest():begin");
     if (useNearest)
       bootstrap = getNearest(localhandle, bootstrap);
-//    System.out.println("SPNF.getNearest():end");
+    System.out.println("SPNF.getNearest():end");
 
     final NodeHandle theBootstrap = bootstrap;
 
@@ -333,9 +333,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     SelectorManager.getSelectorManager().invoke(
       new Runnable() {
         public void run() {
-//          System.out.println("SPNF.run():begin");
+          System.out.println(pn+" SPNF.run():begin");
           pn.doneNode(theBootstrap);
-//          System.out.println("SPNF.run():end");
+          System.out.println(pn+" SPNF.run():end");
         }
       });
 

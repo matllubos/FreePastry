@@ -30,6 +30,7 @@ public class AddressMessage extends SocketControlMessage {
 	public AddressMessage(SocketNodeHandle sender, SocketNodeHandle receiver, int type) {
     this.sender = sender;
     this.receiver = receiver;
+    if (receiver == null) Thread.dumpStack();
     this.type = type;
 	}
   

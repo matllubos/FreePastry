@@ -301,27 +301,32 @@ public class ConnectionManager {
       checkDead();
       return;
     }
-    final SocketManager sm = new SocketManager(address, scm, this, type);
-      if (type == TYPE_DATA) {
-        dataSocketManager = sm;
-      } else {
-        controlSocketManager = sm;
-      }
-      if (!failedDuringOpen) {
-        if (liveness != NodeHandle.LIVENESS_UNKNOWN) {
-          sm.tryToCreateConnection(); 
+    SocketNodeHandle remoteHandle = getNodeHandle();
+    if (remoteHandle != null) {
+      final SocketManager sm = new SocketManager(address, scm, this, type, remoteHandle);
+        if (type == TYPE_DATA) {
+          dataSocketManager = sm;
         } else {
-          addLivenessListener(new LivenessListener() {
-						public void updateLiveness(NodeHandle nh, int liveness) {
-              if (liveness != NodeHandle.LIVENESS_UNKNOWN) {
-                if ((!sm.closed) && (!sm.connecting))
-                  sm.tryToCreateConnection();
-                removeLivenessListener(this);
-              }
-						}
-					});
+          controlSocketManager = sm;
         }
-      }
+        if (!failedDuringOpen) {
+          if (liveness != NodeHandle.LIVENESS_UNKNOWN) {
+            sm.tryToCreateConnection(); 
+          } else {
+            addLivenessListener(new LivenessListener() {
+  						public void updateLiveness(NodeHandle nh, int liveness) {
+                if (liveness != NodeHandle.LIVENESS_UNKNOWN) {
+                  if ((!sm.closed) && (!sm.connecting))
+                    sm.tryToCreateConnection();
+                  removeLivenessListener(this);
+                }
+  						}
+  					});
+          }
+        }
+     } else {
+       System.out.println(this+" remote node handle is null");
+     }
       checkDead();
   }
 
@@ -1023,8 +1028,12 @@ public class ConnectionManager {
     updateLivenessListeners();  
   }
   
-  boolean failedDuringOpen = false;
+  private boolean failedDuringOpen = false;
 
+  protected void failedDuringOpen() {
+    failedDuringOpen = true;
+    checkDead();
+  }
 
   /**
    * Starts pinging the remote node if we're not already pinging them.

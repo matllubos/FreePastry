@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.NoRouteToHostException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
@@ -164,7 +165,7 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
    * @param address DESCRIBE THE PARAMETER
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  public SocketManager(InetSocketAddress address, SocketCollectionManager scm, ConnectionManager cm, int type) {
+  public SocketManager(InetSocketAddress address, SocketCollectionManager scm, ConnectionManager cm, int type, SocketNodeHandle remoteNodeHandle) {
     this(scm,type);    
     ctor = 2;
     setConnectionManager(cm);
@@ -394,7 +395,11 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
       debug("Found connectable channel - completed connection");
     } catch (IOException e) {   
       if (!tryToHandleIOException(e)) {
-        e.printStackTrace();
+        if (e instanceof NoRouteToHostException) {
+          System.out.println("SocketManager.connect():"+e);
+        } else {
+          e.printStackTrace();                    
+        }
         if (connectionManager != null) {
           connectionManager.checkDead(); //markDead();
         }
@@ -473,6 +478,11 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
    * cancelling the key and setting the key to be interested in nothing
    */
   public void close() {
+    if (connectionManager != null) {
+      if ((!connected) || (!reader.readOnce))
+        connectionManager.failedDuringOpen();
+    }
+
     if (ConnectionManager.LOG_LOW_LEVEL)
       System.out.println(this+".close()");
     snh = null;
@@ -598,7 +608,9 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
 
         if (o instanceof AddressMessage) {
           AddressMessage am = (AddressMessage) o;
-          if (!am.receiver.equals(scm.getLocalNodeHandle())) {
+          SocketNodeHandle localHandle = scm.getLocalNodeHandle();
+          SocketNodeHandle receiver = am.receiver;
+          if (!receiver.equals(localHandle)) {
             //System.out.println("ERROR: SocketManager recieved connection for incorrect NodeId expected "+scm.getLocalNodeHandle()+" received "+am.receiver);
             close();
           } else {
@@ -630,22 +642,12 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
       }
     } catch (SocketClosedByRemoteHostException se) {
 //      System.out.println("SocketManager.read() " + e + " - closing."+this);
-      if (connectionManager != null) {
-        if (!reader.readOnce)
-          connectionManager.failedDuringOpen = true;
-        connectionManager.checkDead();
-      }
       close();      
     } catch (IOException e) {
       if (ConnectionManager.LOG_LOW_LEVEL)
         System.out.println("SocketManager.read() " + e + " - closing."+this);
       //e.printStackTrace();
       debug("ERROR " + e + " reading - cancelling.");
-      if (connectionManager != null) {
-        if (!reader.readOnce)
-          connectionManager.failedDuringOpen = true;
-        connectionManager.checkDead();
-      }
       close(); 
     }
     //System.out.println("SM<"+type+">.read():3");

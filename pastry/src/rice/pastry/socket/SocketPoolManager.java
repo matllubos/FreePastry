@@ -191,7 +191,7 @@ public class SocketPoolManager extends SelectionKeyHandler {
         toOpen.openSocket();
       } catch (IOException ioe) {
         relenquishPermit(toOpen);
-        ioe.printStackTrace();
+        ioe.printStackTrace();        
         toOpen.close();
       }    
     }
