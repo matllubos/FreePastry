@@ -17,6 +17,9 @@ PACKAGES = \
 	rice.pastry.join\
 	rice.pastry.direct\
 	rice.pastry.dist\
+	rice.pastry.multiring\
+	rice.pastry.multiring.messaging\
+	rice.pastry.multiring.testing\
 	rice.pastry.rmi\
 	rice.pastry.standard\
 	rice.pastry.security\
