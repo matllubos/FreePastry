@@ -452,7 +452,7 @@ public class LeafSet extends Observable implements Serializable {
 	// get n's position in the leafset
 	try {
 	    pos = getIndex(n.getNodeId());
-	} catch(NoSuchElementException e) {
+	} catch(Exception e) {
 	    // argument n invalid
 	    return null;
 	}
