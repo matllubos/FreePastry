@@ -12,7 +12,10 @@ public interface Mailbox
                          throws MailboxException;
 
     public void createFolder(String folder)
-                      throws MailboxException;
+      throws MailboxException;
+
+    public void deleteFolder(String folder)
+      throws MailboxException;
 
     public MailFolder[] listFolders(String pattern)
                              throws MailboxException;

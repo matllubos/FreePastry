@@ -176,6 +176,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 			break;
 		}
 		case CREATE:
+		case DELETE:
 		case LIST:
 		case SUBSCRIBE:
 		case UNSUBSCRIBE:
@@ -277,6 +278,11 @@ public ImapCommandParser(ParserSharedInputState state) {
 		case CREATE:
 		{
 			create();
+			break;
+		}
+		case DELETE:
+		{
+			delete();
 			break;
 		}
 		case SUBSCRIBE:
@@ -527,6 +533,22 @@ public ImapCommandParser(ParserSharedInputState state) {
 		}
 	}
 	
+	public final void delete() throws RecognitionException, TokenStreamException {
+		
+		Token folder;
+		
+		match(DELETE);
+		match(SPACE);
+		folder=astring();
+		if ( inputState.guessing==0 ) {
+			
+				  DeleteCommand cmd = new DeleteCommand();
+				  cmd.setFolder(folder.getText());
+				  command = cmd;
+				
+		}
+	}
+	
 	public final void subscribe() throws RecognitionException, TokenStreamException {
 		
 		Token folder;
@@ -709,14 +731,14 @@ public ImapCommandParser(ParserSharedInputState state) {
 			match(LPAREN);
 			fetch_part(cmd);
 			{
-			_loop51:
+			_loop52:
 			do {
 				if ((LA(1)==SPACE)) {
 					match(SPACE);
 					fetch_part(cmd);
 				}
 				else {
-					break _loop51;
+					break _loop52;
 				}
 				
 			} while (true);
@@ -936,7 +958,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 							breq.addPart(a.getText());
 						}
 						{
-						_loop57:
+						_loop58:
 						do {
 							if ((LA(1)==SPACE)) {
 								match(SPACE);
@@ -947,7 +969,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 								}
 							}
 							else {
-								break _loop57;
+								break _loop58;
 							}
 							
 						} while (true);
@@ -1036,7 +1058,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 							breq.addPart(ap.getText());
 						}
 						{
-						_loop62:
+						_loop63:
 						do {
 							if ((LA(1)==SPACE)) {
 								match(SPACE);
@@ -1047,7 +1069,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 								}
 							}
 							else {
-								break _loop62;
+								break _loop63;
 							}
 							
 						} while (true);
@@ -1187,6 +1209,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		"\"LOGOUT\"",
 		"\"CAPABILITY\"",
 		"\"CREATE\"",
+		"\"DELETE\"",
 		"\"LIST\"",
 		"\"SUBSCRIBE\"",
 		"\"UNSUBSCRIBE\"",
@@ -1229,7 +1252,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 	};
 	
 	private static final long[] mk_tokenSet_0() {
-		long[] data = { 281474976710642L, 0L, 0L, 0L};
+		long[] data = { 562949953421298L, 0L, 0L, 0L};
 		return data;
 	}
 	public static final BitSet _tokenSet_0 = new BitSet(mk_tokenSet_0());

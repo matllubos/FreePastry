@@ -120,7 +120,7 @@ unknown : (.)* EOF
  */
 
 command_auth :
-create |
+create | delete |
 subscribe | unsubscribe | list | lsub |
 examine | status | select |
 uid | fetch[false] | copy[false] | store[false] |
@@ -131,6 +131,14 @@ expunge | close
 create	{Token folder;}:	CREATE SPACE folder=astring
 	{
 	  CreateCommand cmd = new CreateCommand();
+	  cmd.setFolder(folder.getText());
+	  command = cmd;
+	}
+	;
+	
+delete	{Token folder;}:	DELETE SPACE folder=astring
+	{
+	  DeleteCommand cmd = new DeleteCommand();
 	  cmd.setFolder(folder.getText());
 	  command = cmd;
 	}

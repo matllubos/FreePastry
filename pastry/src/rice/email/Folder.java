@@ -303,8 +303,12 @@ public class Folder {
    */
   public void getChildFolder(String name, Continuation command) {
     if (_children.get(name) == null) {
-      FolderGetLogTask preCommand = new FolderGetLogTask(name, command);
-      _storage.retrieveSigned(_log.getChildLog(name), preCommand);
+      if (_log.getChildLog(name) != null) {
+        FolderGetLogTask preCommand = new FolderGetLogTask(name, command);
+        _storage.retrieveSigned(_log.getChildLog(name), preCommand);
+      } else {
+        command.receiveResult(null);
+      }
     } else {
       command.receiveResult(_children.get(name));
     }

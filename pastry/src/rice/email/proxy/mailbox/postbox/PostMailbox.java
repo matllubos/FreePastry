@@ -17,7 +17,7 @@ import rice.email.EmailService;
 import rice.email.Folder;
 
 /**
-* This class serves as the main "glue" code between foedus and
+ * This class serves as the main "glue" code between foedus and
  * the POST-based email implementation.
  */
 public class PostMailbox implements Mailbox {
@@ -26,7 +26,7 @@ public class PostMailbox implements Mailbox {
   EmailService email;
 
   /**
-  * Constructs a PostMailbox given an emailservice
+   * Constructs a PostMailbox given an emailservice
    * to run off of.
    *
    * @param email The email service on the local pastry node.
@@ -58,6 +58,7 @@ public class PostMailbox implements Mailbox {
    */
   public MailFolder getFolder(final String name) throws MailboxException {
     try {
+      System.out.println("Fetching folder " + name);
       PostFolder root = (PostFolder) getRootFolder();
 
       final Folder[] folder = new Folder[1];
@@ -84,13 +85,17 @@ public class PostMailbox implements Mailbox {
 
       root.getFolder().getChildFolder(name.toLowerCase(), fetch);
 
-      synchronized (wait) { if(folder[0] == null) wait.wait(); }
+      synchronized (wait) { if ((folder[0] == null) && (exception[0] == null)) wait.wait(); }
 
       if (exception[0] != null)
         throw exception[0];
 
+      if (folder[0] == null)
+        System.out.println("Fetching of folder " + name + " was null");
+
       return new PostFolder(folder[0], root.getFolder(), email);
     } catch (Exception e) {
+      e.printStackTrace();
       throw new MailboxException(e);
     }
   }
@@ -171,6 +176,41 @@ public class PostMailbox implements Mailbox {
       };
 
       ((PostFolder) getRootFolder()).getFolder().createChildFolder(folder, insert);
+
+      synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
+
+      if (exception[0] != null)
+        throw new MailboxException(exception[0]);
+    } catch (Exception e) {
+      throw new MailboxException(e);
+    }
+  }
+
+  public void deleteFolder(String folder) throws MailboxException {
+    try {
+      final Object[] result = new Object[1];
+      final Exception[] exception = new Exception[1];
+
+      final Object wait = "wait";
+
+      Continuation insert = new Continuation() {
+        public void receiveResult(Object o) {
+          synchronized (wait) {
+            result[0] = o;
+            wait.notifyAll();
+          }
+        }
+
+        public void receiveException(Exception e) {
+          System.out.println("Could not create folder " + e);
+          synchronized (wait) {
+            exception[0] = e;
+            wait.notifyAll();
+          }
+        }
+      };
+
+      ((PostFolder) getRootFolder()).getFolder().removeFolder(folder, insert);
 
       synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
 

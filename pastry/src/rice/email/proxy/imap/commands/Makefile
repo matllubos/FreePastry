@@ -9,6 +9,7 @@ SOURCE  = \
   	CloseCommand.java	 \
   	CopyCommand.java	 \
   	CreateCommand.java	 \
+  	DeleteCommand.java	 \
   	ExamineCommand.java	 \
   	ExpungeCommand.java	 \
   	FetchCommand.java	 \

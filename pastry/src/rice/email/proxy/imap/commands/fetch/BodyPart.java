@@ -89,6 +89,7 @@ public class BodyPart extends FetchPart {
 
       if ((! breq.getPeek()) &&	(! msg.getFlagList().isSeen())) {
         msg.getFlagList().addFlag("\\SEEN");
+        msg.getFlagList().commit();
         getConn().print(" ");
         
         FetchPart handler = FetchCommand.regestry.getHandler("FLAGS");

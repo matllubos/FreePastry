@@ -8,7 +8,7 @@ import java.util.*;
 
 public class PostFlagList implements FlagList {
 
-    PostMessage _msg;
+  PostMessage _msg;
 
   private static Hashtable loc = new Hashtable();
 
@@ -34,18 +34,12 @@ public class PostFlagList implements FlagList {
     setFlag(flag, false);
   }
 
-  public void setFlag(String flag, boolean value) {
-    if ("\\Deleted".equalsIgnoreCase(flag))
-      _msg.getStoredEmail().getFlags().setDeleted(value);
-    if ("\\Answered".equalsIgnoreCase(flag))
-      _msg.getStoredEmail().getFlags().setAnswered(value);
-    if ("\\Seen".equalsIgnoreCase(flag))
-      _msg.getStoredEmail().getFlags().setSeen(value);
-    if ("\\Flagged".equalsIgnoreCase(flag))
-      _msg.getStoredEmail().getFlags().setFlagged(value);
-    if ("\\Draft".equalsIgnoreCase(flag))
-      _msg.getStoredEmail().getFlags().setDraft(value);
-
+  /**
+   * Causes any changes in this FlagList's state to be written to
+   * the associated Mailbox. This allows colapsing several changes
+   * into one disk write, one SQL command, etc.
+   */
+  public void commit() throws MailboxException {
     try {
       final Exception[] exception = new Exception[1];
       final Object[] result = new Object[1];
@@ -73,84 +67,84 @@ public class PostFlagList implements FlagList {
         throw new Exception(exception[0]);
       }
     } catch (Exception e) {
-      // XXX NEED TO DO SOMETHING HERE!
+      throw new MailboxException(e);
     }
-  }
+  }      
   
-
-  public void commit()
-  {
+  public void setFlag(String flag, boolean value) {
+    if ("\\Deleted".equalsIgnoreCase(flag))
+      _msg.getStoredEmail().getFlags().setDeleted(value);
+    if ("\\Answered".equalsIgnoreCase(flag))
+      _msg.getStoredEmail().getFlags().setAnswered(value);
+    if ("\\Seen".equalsIgnoreCase(flag))
+      _msg.getStoredEmail().getFlags().setSeen(value);
+    if ("\\Flagged".equalsIgnoreCase(flag))
+      _msg.getStoredEmail().getFlags().setFlagged(value);
+    if ("\\Draft".equalsIgnoreCase(flag))
+      _msg.getStoredEmail().getFlags().setDraft(value);
   }
 
-  public boolean isRecent()
-  {
-      return _msg.getStoredEmail().getFlags().isRecent();
+  public boolean isRecent() {
+    return _msg.getStoredEmail().getFlags().isRecent();
   }
 
-    public boolean isDeleted() {
-      return _msg.getStoredEmail().getFlags().isDeleted();
+  public boolean isDeleted() {
+    return _msg.getStoredEmail().getFlags().isDeleted();
   }
 
-    public boolean isSeen() {
-      return _msg.getStoredEmail().getFlags().isSeen();
+  public boolean isSeen() {
+    return _msg.getStoredEmail().getFlags().isSeen();
   }
 
-    public boolean isAnswered() {
-	return _msg.getStoredEmail().getFlags().isAnswered();
-    }
+  public boolean isAnswered() {
+    return _msg.getStoredEmail().getFlags().isAnswered();
+  }
 
-    public boolean isFlagged() {
-	return _msg.getStoredEmail().getFlags().isFlagged();
-    }
+  public boolean isFlagged() {
+    return _msg.getStoredEmail().getFlags().isFlagged();
+  }
 
-    public boolean isDraft() {
-	return _msg.getStoredEmail().getFlags().isDraft();
-    }
+  public boolean isDraft() {
+    return _msg.getStoredEmail().getFlags().isDraft();
+  }
 
+  /**
+    * Returns a Vector representation of the flagList
+   * @return the Vector of the set flags
+   */
+  public Vector flagList() {
+    Vector flaglist= new Vector();
+    if (isRecent())
+      flaglist.add("\\Recent");
+    if (isSeen())
+      flaglist.add("\\Seen");
+    if (isDeleted())
+      flaglist.add("\\Deleted");
+    if (isAnswered())
+      flaglist.add("\\Answered");
+    if (isFlagged())
+      flaglist.add("\\Flagged");
+    if (isDraft())
+      flaglist.add("\\Draft");
 
-    /** 
-     * Returns a Vector representation of the flagList
-     * @return the Vector of the set flags
-     */
-    public Vector flagList() {
-	Vector flaglist= new Vector();
-	if (isRecent())
-	    flaglist.add("\\Recent");
-	if (isSeen())
-	    flaglist.add("\\Seen");
-	if (isDeleted())
-	    flaglist.add("\\Deleted");
-	if (isAnswered())
-	    flaglist.add("\\Answered");
-	if (isFlagged())
-	    flaglist.add("\\Flagged");
-	if (isDraft())
-	    flaglist.add("\\Draft");
+    return flaglist;
+  }
 
-	return flaglist;
-    }
-
-  public String toFlagString()
-  {
+  public String toFlagString() {
     StringBuffer flagBuffer = new StringBuffer();
 
     if (isSeen())
       flagBuffer.append("\\Seen ");
-
     if (isRecent())
       flagBuffer.append("\\Recent ");
-
     if (isDeleted())
       flagBuffer.append("\\Deleted ");
-
     if (isAnswered())
-	flagBuffer.append("\\Answered ");
-
+      flagBuffer.append("\\Answered ");
     if (isFlagged())
-	flagBuffer.append("\\Flagged ");
-
+      flagBuffer.append("\\Flagged ");
     if (isDraft())
-	flagBuffer.append("\\Draft ");
+      flagBuffer.append("\\Draft ");
 
     return "(" + flagBuffer.toString().trim() + ")";
   }

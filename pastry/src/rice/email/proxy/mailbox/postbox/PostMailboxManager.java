@@ -34,7 +34,6 @@ public class PostMailboxManager implements MailboxManager {
    *
    * @param email The email service on the local pastry node.
    */
-  
   public PostMailboxManager(EmailService email) {
     if (email == null)
       throw new IllegalArgumentException("EmailService cannot be null in PostMailbox.");
@@ -43,8 +42,7 @@ public class PostMailboxManager implements MailboxManager {
     this.mailbox = new PostMailbox(email);
   }
 
-  public String getMailboxType()
-  {
+  public String getMailboxType() {
     return PostMailboxManager.class.getName();
   }
 
