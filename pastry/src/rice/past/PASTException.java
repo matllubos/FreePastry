@@ -36,12 +36,34 @@ if advised of the possibility of such damage.
 
 package rice.past;
 
-import java.io.Serializable;
-
 import rice.*;
 import rice.p2p.commonapi.*;
 
-public abstract class SignedPASTContent extends PASTContent{
 
+/**
+ * @(#) PASTException.java
+ * 
+ * Any exception specific to PAST.
+ *
+ * @version $Id$
+ * @author Peter Druschel 
+ * 
+ */
+
+public class PASTException {
+
+  /**
+   * Constructor.
+   *
+   * @param msg The string representing the error.
+   */
+  public PASTException(String msg) {
+    super(msg);
+  }
 
 }
+
+
+
+
+

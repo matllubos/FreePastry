@@ -65,65 +65,71 @@ public interface PAST {
    * Asynchronously returns a boolean as the result to the provided
    * Continuation, indicating whether the insert was successful.
    * 
-   * @param id key identifying the object to be inserted
    * @param obj the object to be inserted
    * @param command Command to be performed when the result is received
    */
  
-  public void insert(Id id, PASTContent obj, Continuation command);
+  protected void insert(PASTContent obj, Continuation command);
+
  
   /**
    * Retrieves the object stored in this instance of PAST with the
    * given ID.  Asynchronously returns a PASTContent object as the
    * result to the provided Continuation.
    * 
+   * This method is not safe if the object is immutable and storage
+   * nodes are not trusted. In this case, clients should used the
+   * lookUpHandles method to obtains the handles of all primary
+   * replicas and determine which replica is fresh in an
+   * application-specific manner.
+   *
    * @param id the key to be queried
-   * @param command Command to be performed when the result is received 
-   */
+   * @param command Command to be performed when the result is received */
 
   public void lookup(Id id, Continuation command);
 
+
   /**
-   * Retrieves up to maxReplicas replicas of the object stored in this
-   * instance of PAST with the given ID. Each replica is obtained from
-   * a different primary storage root for the the given key. If
-   * maxReplicas exceeds the replication factor r of this PAST
-   * instance, only r replicas are returned.
+   * Retrieves the handles of up to max replicas of the object stored
+   * in this instance of PAST with the given ID. Each replica handle
+   * is obtained from a different primary storage root for the the
+   * given key. If max exceeds the replication factor r of
+   * this PAST instance, only r replicas are returned.
    *
    * This method is useful when the PASTContent objects stored in this
    * PAST instance are not self-authenticating, and storage nodes are
    * not trusted.
    * 
-   * Asynchronously returns a Vector of PASTContent objects as the
+   * Asynchronously returns a Vector of PASTContentHandles as the
    * result to the provided Continuation.
    * 
    * @param id the key to be queried
-   * @param maxReplicas the maximal number of replicas requested
+   * @param max the maximal number of replicas requested
    * @param command Command to be performed when the result is received 
    */
 
-  public void lookupReplicas(Id id, int maxReplicas, Continuation command);
+  public void lookupHandles(Id id, int max, Continuation command);
   
+
   /**
-   * Determines whether an object is stored in the instance of PAST
-   * with the given ID.  Asynchronously returns a boolean as the
-   * result to the provided Continuation, indicating whether the
-   * object exists.
+   * Retrieves the object associated with a given content handle.
+   * Asynchronously returns a PASTContent object as the result to the
+   * provided Continuation.
    * 
    * @param id the key to be queried
    * @param command Command to be performed when the result is received 
    */
 
-  public void exists(Id id, Continuation command);
+  public void fetch(PASTContentHandle id, Continuation command);
 
 
   /**
-   * Return the objects stored in this instance of PAST on the *local*
-   * node, with ids in a given range. The IdSet returned contains the
-   * Ids of the stored objects. 
+   * Return the ids of objects stored in this instance of PAST on the
+   * *local* node, with ids in a given range. The IdSet returned
+   * contains the Ids of the stored objects.
    *
    * @param range The range to query  
-   * @return The idset containg the keys 
+   * @return The set of ids
    */
     
   public IdSet scan(IdRange range);

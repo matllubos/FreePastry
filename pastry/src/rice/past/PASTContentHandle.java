@@ -39,18 +39,24 @@ package rice.past;
 import rice.*;
 import rice.p2p.commonapi.*;
 
-public interface GenericPAST extends PAST{
-  
-  /**
-   * Inserts an object with the given ID into distributed storage.
-   * Asynchronously returns a boolean as the result to the provided
-   * Continuation, indicating whether the insert was successful.
-   * 
-   * @param id Pastry key identifying the object to be stored
-   * @param obj Persistable object to be stored
-   * @param command Command to be performed when the result is received
-   */
-  public void insert(Id id, PASTObject obj, Continuation command);
-  
-  
+
+/**
+ * @(#) PASTContentHandle.java
+ * 
+ * This interface must be implemented by all content object handles.
+ *
+ * @version $Id$
+ * @author Alan Mislove
+ * @author Ansley Post
+ * @author Peter Druschel 
+ * 
+ */
+
+public interface PASTContentHandle {
+    // empty interface
 }
+
+
+
+
+
