@@ -4,7 +4,14 @@
 	b) write default anycast message class, with DFS and with 
 	   empty failure handling 
 
+
 2) Scribe "Create" Semantics 
 
 3) Cleaning up SplitStream Code.
 
+4) ControlFindParentMessage - Send list of stripe id's which local node
+   	can subscribe to, instead of commiting for one
+
+
+5) Scribe - Regression test suites for addChild, removeChild, setData method
+	for ScribeMessages etc.
