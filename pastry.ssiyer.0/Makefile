@@ -13,6 +13,7 @@ PACKAGES = \
 	rice.pastry.join\
 	rice.pastry.direct\
 	rice.pastry.standard\
+	rice.pastry.rmi\
 	rice.pastry.testing\
 	rice.scribe\
 	rice.scribe.maintenance\
