@@ -158,12 +158,12 @@ public class RMINodeHandle extends DistNodeHandle
                  + " msg to " + nodeId + ": " + msg);
 
       try {
-        remoteNode.remoteReceiveMessage(msg);
+        remoteNode.remoteReceiveMessage(msg, nodeId);
         //System.out.println("message sent successfully");
 
         markAlive();
       } catch (RemoteException e) { // failed; mark it dead
-        if (Log.ifp(6)) System.out.println("message failed: " + msg + e);
+	  if (Log.ifp(6)) System.out.println("message failed: " + msg + e);
         if (isLocal) System.out.println("panic; local message failed: " + msg);
 
         markDead();
@@ -219,10 +219,13 @@ public class RMINodeHandle extends DistNodeHandle
 
         if (Log.ifp(7)) System.out.println("proximity metric = " + proximity());
 
-        if (tryid.equals(nodeId) == false)
-          System.out.println("PANIC: remote node has changed its ID from "
-                             + nodeId + " to " + tryid);
-        markAlive();
+        if (!tryid.equals(nodeId)) {
+	    System.out.println("PANIC: remote node has changed its ID from "
+			       + nodeId + " to " + tryid);
+	    markDead();
+	} else
+	    markAlive();
+
       } catch (RemoteException e) {
         if (alive) if (Log.ifp(6)) System.out.println("ping failed on live node: " + e);
         markDead();

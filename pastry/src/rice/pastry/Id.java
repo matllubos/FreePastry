@@ -875,12 +875,8 @@ public class Id implements rice.p2p.commonapi.Id
 
     public String toString() 
     {
-	
-	
-
 	return "<0x" + toStringFull().substring(0,6) + "..>";
-	//return "<" + s.substring(0,5)+"..." + ">";
-	//return "< Id " + s + " >";
+	//return "<0x" + toStringFull();
     }
 
     public String toStringFull(){

@@ -55,7 +55,7 @@ public class IPNodeIdFactory implements NodeIdFactory
     private static int nextInstance = 0;
     private InetAddress localIP;
     private int port;
-
+    private Random rng;
 
     /**
      * Constructor.
@@ -68,14 +68,12 @@ public class IPNodeIdFactory implements NodeIdFactory
 
 	try {
 	    localIP = InetAddress.getLocalHost();
-	    if (localIP.isLoopbackAddress()) throw new Exception("got loopback address");
+	    if (localIP.isLoopbackAddress()) throw new Exception("got loopback address: nodeIds will not be unique across computers!");
 	} catch (Exception e) {
-	    System.out.println("ALERT: IPNodeIdFactory cannot determine local IP address!");
-
-	    // generate random ids instead
-	    Random rng = new Random(PastrySeed.getSeed());
-	    nextInstance = rng.nextInt();	    
+	    System.out.println("ALERT: IPNodeIdFactory cannot determine local IP address: " + e);
 	}
+
+	rng = new Random(PastrySeed.getSeed());
     }
 
     /**
@@ -114,7 +112,14 @@ public class IPNodeIdFactory implements NodeIdFactory
 	md.update(rawPort);
 	md.update(raw);
 	byte[] digest = md.digest();
-	
+
+	// now, we randomize the least significant 32 bits to ensure
+	// that stale node handles are detected reliably.
+	byte rand[] = new byte[4];
+	rng.nextBytes(rand);
+	for (int i=0; i<4; i++)
+	    digest[i] = rand[i];
+
 	NodeId nodeId = new NodeId(digest);
 
 	return nodeId;

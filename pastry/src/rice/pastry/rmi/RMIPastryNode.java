@@ -1,5 +1,6 @@
 /*************************************************************************
 
+
 "FreePastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
@@ -95,7 +96,7 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
 		    System.out.println("received " +
 				       (msg instanceof RouteMessage ? "route" : "direct")
 				       + " msg from " + sender + ": " + msg);
-		//if (sender != null) handlepool.activate(sender);
+		if (sender != null) handlepool.activate(sender);
 
 		receiveMessage(msg);
 	    }
@@ -104,7 +105,7 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
 
 
     /**
-    * Constructor
+     * Constructor
      */
     public RMIPastryNode(NodeId id) {
 	super(id);
@@ -181,7 +182,14 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
     * purposes, it only adds the message to the queue and signals the
     * message handler thread.
      */
-    public void remoteReceiveMessage(Message msg) {
+    public void remoteReceiveMessage(Message msg, NodeId hopDest) throws java.rmi.RemoteException {
+	if (!hopDest.equals(getNodeId())) {
+	    // message arrived here erroneously, probably due to a stale handle
+	    // throw an exception
+	    //System.out.println("RMI: wrong receiver" + hopDest + getNodeId());
+	    throw new java.rmi.RemoteException("RMI: wrong receiver");
+	}
+	
 	synchronized (queue) {
 	    queue.add(msg);
 	    count++;
@@ -202,3 +210,4 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
 	}
     }
 }
+

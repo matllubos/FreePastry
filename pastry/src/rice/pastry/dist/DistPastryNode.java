@@ -55,14 +55,16 @@ import rice.pastry.join.*;
 
 public abstract class DistPastryNode extends PastryNode {
 
-    /**
-     * Period (in seconds) at which the leafset and routeset maintenance tasks, respectively, are invoked.
-     * 0 means never.
-     */
+    // Period (in seconds) at which the leafset and routeset maintenance tasks, respectively, are invoked.
+    // 0 means never.
     protected int leafSetMaintFreq, routeSetMaintFreq;
-    private Timer timer;
-    private ScheduledMessage joinEvent;
 
+    // timer that supports scheduled messages
+    private Timer timer;
+
+    // join retransmission stuff
+    private ScheduledMessage joinEvent;
+    
     /**
      * Constructor, with NodeId. Need to set the node's ID before this node
      * is inserted as localHandle.localNode.
@@ -182,5 +184,4 @@ public abstract class DistPastryNode extends PastryNode {
     }
 
 }
-
 

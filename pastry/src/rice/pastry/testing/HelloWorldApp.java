@@ -168,7 +168,7 @@ public class HelloWorldApp extends PastryAppl {
      * leaf set, and has become ready to receive application messages.
      */
     public void notifyReady() {
-	if (Log.ifp(6))
+	if (true /*Log.ifp(6)*/)
 	    System.out.println("Node " + getNodeId() + " ready, waking up any clients");
 	sendRndMsg(new Random());
 

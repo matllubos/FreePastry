@@ -118,8 +118,8 @@ public class StandardJoinProtocol implements MessageReceiver
 		    
 		    jh = security.verifyNodeHandle(jh);
 
-		    if (jh.getNodeId().equals(localHandle.getNodeId())) {
-			System.out.println("NodeId collision, join failed!");
+		    if ( jh.getNodeId().equals(localHandle.getNodeId()) && !localNode.isReady() ) {
+			System.out.println("NodeId collision, unable to join: " + localHandle.getNodeId());
 		    }
 		    else if (jh.isAlive() == true) { // the join handle is alive
 			routeTable.put(jh); // add the num. closest node to the routing table
