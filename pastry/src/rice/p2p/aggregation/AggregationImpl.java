@@ -1655,7 +1655,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     final int theSize = getSize(obj);
 
     if (policy.shouldBeAggregated(obj, theSize)) {
-      log(2, "AGGREGATE INSERT: "+obj.getId()+" size="+theSize+" class="+obj.getClass().getName());
+      log(2, "AGGREGATE INSERT: "+obj.getId()+" version="+theVersion+" size="+theSize+" class="+obj.getClass().getName());
 
       if (objectStore instanceof GCPast)
         ((GCPast)objectStore).insert(obj, lifetime, command);
@@ -1671,7 +1671,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         }
       });
     } else {
-      log(2, "INSERT WITHOUT AGGREGATION: "+obj.getId());
+      log(2, "INSERT WITHOUT AGGREGATION: "+obj.getId()+" version="+theVersionF+" size="+theSize+" class="+obj.getClass().getName());
       
       Continuation c = new Continuation() {
         boolean otherSucceeded = false;
