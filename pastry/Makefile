@@ -14,7 +14,7 @@ PACKAGES = \
 	rice.p2p.past\
 	rice.p2p.past.messaging\
 	rice.p2p.past.testing\
-	rice.p2p.replication\	
+	rice.p2p.replication\
 	rice.p2p.replication.manager\
 	rice.p2p.replication.manager.messaging\
 	rice.p2p.replication.manager.testing\
