@@ -116,6 +116,24 @@ public class Topic
      */
     public Scribe m_scribe;
 
+    /**
+     * The two states in which Topic can be.
+     * CREATED means that topic object is just created, and a
+     * subscription message was not sent to subscribe to the topicId.
+     *
+     * JOINING means topic object is created and also a subscribe message
+     * was also sent to subscribe to the topicId.
+     */
+    public static final int CREATED = 0;
+    public static final int JOINING = 1;
+
+    /**
+     * Current state of Topic.
+     * Can be either of these:
+     * 1) Created 
+     * 2) Joining 
+     */
+    public int  m_state;
 
     /* -------------------------------------
      * CONSTRUCTORS
@@ -132,6 +150,7 @@ public class Topic
 	m_scribe = scribe;
 	if(m_scribe.isRoot(topicId))
 	    m_topicManager = true;
+	m_state = Topic.CREATED;
     }
     
     
@@ -147,6 +166,24 @@ public class Topic
 	return m_topicId;
     }
     
+    /**
+     * Set the state of topic to state
+     *
+     * @param state The state to which current topic should be set to.
+     */
+    public void setState(int state){
+	m_state = state;
+	return;
+    }
+
+    /**
+     * Gets the current state of topic.
+     *
+     * @param The current state of topic.
+     */
+    public int getState(){
+	return m_state;
+    }
 
     /** 
      * Adds a node to the Set of children in

@@ -475,12 +475,21 @@ public class Scribe extends PastryAppl implements IScribe
 	// Register application as a subscriber for this topic
 	topic.subscribe( subscriber );
 
+	/*
 	// If we already have a parent, we dont send a subscribe mesg.
 	if( topic.getParent() == null){
 	    ScribeMessage msg = makeSubscribeMessage( topicId, cred);
 	    topic.postponeParentHandler();
 	    this.routeMsg( topicId, msg, cred, m_sendOptions );
 	}
+	*/
+
+	if( topic.getState() == Topic.CREATED){
+	    ScribeMessage msg = makeSubscribeMessage( topicId, cred);
+	    topic.postponeParentHandler();
+	    this.routeMsg( topicId, msg, cred, m_sendOptions );
+	}
+	
 	return true;
     }
 
@@ -520,6 +529,7 @@ public class Scribe extends PastryAppl implements IScribe
 	// Register application as a subscriber for this topic
 	topic.subscribe( subscriber );
 
+	/*
 	// If we already have a parent, we dont send a subscribe mesg.
 	if( topic.getParent() == null){
 	    ScribeMessage msg = makeSubscribeMessage( topicId, cred);
@@ -527,6 +537,14 @@ public class Scribe extends PastryAppl implements IScribe
 	    msg.setData(obj);
 	    this.routeMsg( topicId, msg, cred, m_sendOptions );
 	}
+	*/
+	
+	if( topic.getState() == Topic.CREATED){
+	    ScribeMessage msg = makeSubscribeMessage( topicId, cred);
+	    topic.postponeParentHandler();
+	    this.routeMsg( topicId, msg, cred, m_sendOptions );
+	}
+
 	return true;
     }
 

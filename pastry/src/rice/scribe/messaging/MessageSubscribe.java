@@ -124,10 +124,10 @@ public class MessageSubscribe extends ScribeMessage implements Serializable
 	
 	if ( topic == null ) {
 	    topic = new Topic( topicId, scribe );
-	    
+	    topic.setState(Topic.JOINING);
 	    // add topic to known topics
 	    topic.addToScribe();
-
+	    
 	    ScribeMessage msg = scribe.makeSubscribeMessage( m_topicId, cred);
 	    
 	    topic.postponeParentHandler();
