@@ -637,7 +637,6 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public void shutdown() {
       try {
-        System.out.println("SHUTDOWN OUT: " + localAddress + " Shutting down output to path " + path);
         ((SocketChannel) key.channel()).socket().shutdownOutput();
         socketClosed(path, this);
         SelectorManager.getSelectorManager().modifyKey(key);
