@@ -80,21 +80,28 @@ class RMIPastryNodeImpl extends UnicastRemoteObject implements RMIPastryNode
      */
     public NodeId getNodeId() { return node.getNodeId(); }
 
+    private class MsgHandler implements Runnable {
+	private Message msg;
+	MsgHandler(Message m) { msg = m; }
+	public void run() {
+	    /*
+	    * The sender of this message is alive. So if we have a handle in
+	    * our pool with this Id, then it should be reactivated.
+	     */
+	    NodeId sender = msg.getSenderId();
+	    System.out.println("[rmi] received " +
+			       (msg instanceof RouteMessage ? "route" : "direct")
+			       + " msg from " + sender + ": " + msg);
+	    if (sender != null) handlepool.activate(sender);
+	    node.receiveMessage(msg);
+	}
+    }
+
     /**
      * Proxies to the local node to accept a message.
      */
-    public void receiveMessage(Message msg) {
-	/*
-	 * The sender of this message is alive. So if we have a handle in
-	 * our pool with this Id, then it should be reactivated.
-	 */
-	NodeId sender = msg.getSenderId();
-	if (sender != null) handlepool.activate(sender);
-
-	System.out.println("[rmi] received " +
-			   (msg instanceof RouteMessage ? "route" : "direct")
-			   + " msg from " + sender + ": " + msg);
-
-	node.receiveMessage(msg);
+    public synchronized void receiveMessage(Message msg) {
+	MsgHandler handler = new MsgHandler(msg);
+	new Thread(handler).start();
     }
 }

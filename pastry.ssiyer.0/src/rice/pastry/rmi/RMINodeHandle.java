@@ -56,8 +56,9 @@ public class RMINodeHandle implements NodeHandle, Serializable
     private RMIPastryNode remoteNode;
     private NodeId remotenid;
 
-    private transient boolean alive;	// don't serialize
-    private transient int distance;	// don't serialize
+    private transient boolean alive;
+    private transient int distance;
+    public static final int INFTY = 10000000;
 
     // this is a sanity check thing: messages should never be sent to
     // unverified node handles, so this handle should be in the Pool.
@@ -91,7 +92,6 @@ public class RMINodeHandle implements NodeHandle, Serializable
     public RMINodeHandle(RMIPastryNode rn, NodeId nid, PastryNode pn) {
 	System.out.println("[rmi] creating RMI handle for node: " + nid + ", local = " + pn);
 	init(rn, nid);
-	//setLocalHandle(pn.getLocalHandle());
 	setLocalHandle(pn);
     }
 
@@ -99,7 +99,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	remoteNode = rn;
 	remotenid = nid;
 	alive = true;
-	distance = 42;
+	distance = INFTY;
 	isInPool = false;
 	localhandle = null;
 	isLocal = false;
@@ -115,8 +115,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
     public NodeHandle getLocalHandle() { return localhandle; }
 
     public void setLocalHandle(NodeHandle lh) {
-	System.out.println("[rmi] setlocalhandle "
-			   + this + "(" + remotenid + " ) " + lh);
+	//System.out.println("[rmi] setlocalhandle " + this + "(" + remotenid + ") " + lh);
 	localhandle = lh;
 	if (localhandle.getNodeId().equals(remotenid))
 	    isLocal = true;
@@ -135,20 +134,27 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	if (alive == false) {
 	    System.out.println("[rmi] remote node became alive: " + remotenid);
 	    alive = true;
-	    // xxx reset distance to zero, or infinity, or recompute it now
+	    distance = INFTY; // reset to infinity. alternatively, recompute.
 	}
     }
 
     public void markDead() {
 	if (alive == true) {
 	    System.out.println("[rmi] remote node declared dead: " + remotenid);
+	    alive = false;
+	    distance = INFTY;
 	}
-	alive = false;
     }
 
+    /*
+     * * proximity metric: does currently hardcoded ten pings. (todo:
+     *   separate it into a Proximity class with ping and proximity methods)
+     * * proximity is set to INFTY initially (and when received from another
+     *   node), updated on every ping() or proximity()
+     */
     public int proximity() {
 	if (isLocal) return 0;
-	/* do a few pings */
+	for (int i = 0; i < 10; i++) if (!ping()) break;
 	return distance;
     }
 
@@ -194,7 +200,15 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	NodeId tryid;
 	if (isLocal) return alive;
 	try {
+
+	    long starttime = System.currentTimeMillis();
+
 	    tryid = remoteNode.getNodeId();
+
+	    long stoptime = System.currentTimeMillis();
+	    if (distance > (int)(stoptime - starttime))
+		distance = (int)(stoptime - starttime);
+
 	    if (tryid.equals(remotenid) == false) {
 		System.out.println("[rmi] PANIC: remote node has changed its ID from "
 				   + remotenid + " to " + tryid);
@@ -219,8 +233,8 @@ public class RMINodeHandle implements NodeHandle, Serializable
     private void writeObject(ObjectOutputStream out)
 	throws IOException, ClassNotFoundException 
     {
-	if (isLocal) System.out.println("[rmi] possible error; writeObject from " + localhandle.getNodeId() + " to local node " + remotenid);
-	System.out.println("[rmi] writeobject RMI handle for node: " + remotenid);
+	if (isLocal) System.out.println("[rmi] writeObject from " + localhandle.getNodeId() + " to local node " + remotenid);
+	else System.out.println("[rmi] writeobject RMI handle for node: " + remotenid);
 	out.writeObject(remoteNode);
 	out.writeObject(remotenid);
     } 

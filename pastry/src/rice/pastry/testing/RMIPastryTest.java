@@ -64,6 +64,7 @@ public class RMIPastryTest {
     private static int port;
     private static String connecthost;
     private static int connectport;
+    private static int numnodes;
 
     public RMIPastryTest() {
 	factory = new RMIPastryNodeFactory();
@@ -71,16 +72,19 @@ public class RMIPastryTest {
 
     public void makePastryNode() {
 
-	pause();
-
-	// PingClient pc = new PingClient(pn);
-
 	RMIPastryNode other = null;
+	try {
+	    other = (RMIPastryNode)Naming.lookup("//:" + port + "/Pastry");
+	} catch (Exception e) {
+	    System.out.println("Unable to find another node on localhost");
+	}
+
 	try {
 	    other = (RMIPastryNode)Naming.lookup("//" + connecthost +
 						  ":" + connectport + "/Pastry");
 	} catch (Exception e) {
-	    System.out.println("Unable to find another node: " + e);
+	    System.out.println("Unable to find another node on "
+			       + connecthost + ":" + connectport);
 	}
 
 	/*
@@ -107,18 +111,22 @@ public class RMIPastryTest {
 	RMINodeHandle other_handle = new RMINodeHandle(other, otherid /* , pn */);
 	pn.receiveMessage(new InitiateJoin(other_handle));
 
+	System.out.println("XXX waiting one second...");
+	synchronized (this) { try { wait(1000); } catch (Exception e) {} }
+
 	System.out.println(pn.getLeafSet());
-	//System.out.println(pn.getRoutingTable());
+	System.out.println("------------------------------------");
     }
 
     /**
-     * Usage: RMIPastryTest [-port n] [-connect host[:port]]
+     * Usage: RMIPastryTest [-port n] [-connect host[:port]] [-nodes n]
      */
     public static void main(String args[])
     {
 	// defaults
 	connecthost = "thor05";
 	port = connectport = 5009;
+	numnodes = 1;
 
 	for (int i = 0; i < args.length; i++) {
 	    if (args[i].equals("-port") && i+1 < args.length) {
@@ -144,27 +152,26 @@ public class RMIPastryTest {
 	    }
 	}
 	
+	for (int i = 0; i < args.length; i++) {
+	    if (args[i].equals("-nodes") && i+1 < args.length) {
+		int n = Integer.parseInt(args[i+1]);
+		if (n > 0) numnodes = n;
+		break;
+	    }
+	}
+
 	RMIPastryTest pt = new RMIPastryTest();
 
 	if (System.getSecurityManager() == null)
 	    System.setSecurityManager(new RMISecurityManager());
 
 	try {
-	    Runtime.getRuntime().exec("rmiregistry " + port);
+	    java.rmi.registry.LocateRegistry.createRegistry(port);
 	} catch (Exception e) {
-	    System.out.println("Unable to start rmiregistry: " + e.toString());
+	    System.out.println("Error starting RMI registry: " + e);
 	}
 
-	pt.makePastryNode();
-	//pt.sendPings(k);
-    }
-
-    private synchronized void pause() {
-	try {
-	    System.err.print("wait for rmiregistry to start..");
-	    wait(1000);
-	    System.err.println("okay.");
-	} catch (InterruptedException e) {
-	}
+	for (int i = 0; i < numnodes; i++)
+	    pt.makePastryNode();
     }
 }
