@@ -47,6 +47,13 @@ package rice.p2p.commonapi;
  * @author Peter Druschel
  */
 public interface Endpoint {
+
+  /**
+   * Returns this node's id, which is its identifier in the namespace.
+   *
+   * @return The local node's id
+   */
+  public Id getId();
   
   /**
    * This method makes an attempt to route the message to the root of the given id.

@@ -40,9 +40,7 @@ import rice.*;
 
 import rice.past.*;
 
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.pastry.security.Credentials;
+import rice.p2p.commonapi.*;
 
 import java.util.Random;
 import java.io.*;
@@ -67,8 +65,8 @@ public class MessageExists extends PASTMessage {
    * @param nodeId Source Pastry node's ID
    * @param fileId Pastry key of desired file
    */
-  public MessageExists(Address address, NodeId nodeId, Id fileId) {
-    super(address, nodeId, fileId);
+  public MessageExists(Id nodeId, Id fileId) {
+    super(nodeId, fileId);
   }
   
   /**
@@ -84,13 +82,13 @@ public class MessageExists extends PASTMessage {
    */
   public void performAction(final PASTServiceImpl service) {
     debug("  Seeing if file " + getFileId() + " exists, at node " +
-          service.getPastryNode().getNodeId());
+          service.getId());
 
     Continuation c = new Continuation() {
       public void receiveResult(Object o) {
         _exists = ((Boolean) o).booleanValue();
 
-        debug("File was found (" + _exists + ") at " + service.getPastryNode().getNodeId());
+        debug("File was found (" + _exists + ") at " + service.getId());
         
         setType(RESPONSE);
         service.sendMessage(MessageExists.this);
@@ -101,7 +99,7 @@ public class MessageExists extends PASTMessage {
       }
     };
 
-    service.getStorage().exists(getFileId(), c);
+    service.getStorage().exists((rice.pastry.Id) getFileId(), c);
   }
   
   /**

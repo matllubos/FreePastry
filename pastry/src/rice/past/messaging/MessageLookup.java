@@ -40,9 +40,7 @@ import rice.*;
 
 import rice.past.*;
 
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.pastry.security.Credentials;
+import rice.p2p.commonapi.*;
 
 import java.util.Random;
 import java.io.*;
@@ -67,8 +65,8 @@ public class MessageLookup extends PASTMessage {
    * @param nodeId Source Pastry node's ID
    * @param fileId Pastry key of desired file
    */
-  public MessageLookup(Address address, NodeId nodeId, Id fileId) {
-    super(address, nodeId, fileId);
+  public MessageLookup(Id nodeId, Id fileId) {
+    super(nodeId, fileId);
   }
   
   /**
@@ -84,7 +82,7 @@ public class MessageLookup extends PASTMessage {
    */
   public void performAction(final PASTServiceImpl service) {
     debug("  Looking up file " + getFileId() + " at node " +
-          service.getPastryNode().getNodeId());
+          service.getId());
 
     Continuation lookup = new Continuation() {
       public void receiveResult(Object o) {
@@ -98,7 +96,7 @@ public class MessageLookup extends PASTMessage {
       }
     };
     
-    service.getStorage().getObject(getFileId(), lookup);
+    service.getStorage().getObject((rice.pastry.Id) getFileId(), lookup);
   }
   
   /**

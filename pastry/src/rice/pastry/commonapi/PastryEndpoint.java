@@ -74,6 +74,15 @@ public class PastryEndpoint extends PastryAppl implements rice.p2p.commonapi.End
   // API methods to be invoked by applications
 
   /**
+   * Returns this node's id, which is its identifier in the namespace.
+   *
+   * @return The local node's id
+   */
+  public Id getId() {
+    return thePastryNode.getNodeId();
+  }
+  
+  /**
    * This operation forwards a message towards the root of
    * key.  The optional hint argument specifies a node
    * that should be used as a first hop in routing the message. A

@@ -39,9 +39,7 @@ package rice.past;
 import java.io.Serializable;
 
 import rice.*;
-import rice.pastry.*;
-import rice.pastry.security.Credentials;
-
+import rice.p2p.commonapi.*;
 
 /**
  * @(#) PASTService.java
@@ -65,11 +63,9 @@ public interface PASTService {
    * 
    * @param id Pastry key identifying the object to be stored
    * @param obj Persistable object to be stored
-   * @param authorCred Author's credentials
    * @param command Command to be performed when the result is received
    */
-  public void insert(Id id, Serializable obj, Credentials authorCred,
-                     Continuation command);
+  public void insert(Id id, Serializable obj, Continuation command);
   
   /**
    * Retrieves the object and all associated updates with the given ID.
@@ -95,11 +91,10 @@ public interface PASTService {
    * Reclaims the storage used by the object with the given ID.
    * Asynchronously returns a boolean as the result to the provided
    * Continuation, indicating whether the delete was successful.
-   * 
+   *
    * @param id Pastry key of original object
-   * @param authorCred Author's credentials
+   * @param command Command to be performed when the result is received
    */
-  public void delete(Id id, Credentials authorCred,
-                     Continuation command);
+  public void delete(Id id, Continuation command);
   
 }

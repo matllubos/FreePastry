@@ -48,7 +48,7 @@ package rice.p2p.commonapi;
  * @author Peter Druschel
  */
 public interface Node {
-
+  
   /**
    * This returns a VirtualizedNode specific to the given application and
    * instance name to the application, which the application can then use

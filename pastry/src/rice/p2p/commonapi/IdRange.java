@@ -47,7 +47,7 @@ import java.util.*;
  * @author Peter Druschel
  */
 public interface IdRange {
-
+  
   /**
    * test if a given key lies within this range
    *
@@ -58,15 +58,24 @@ public interface IdRange {
 
   /**
    * get counterclockwise edge of range
+   *
    * @return the id at the counterclockwise edge of the range (inclusive)
    */
   public Id getCCWId();
 
   /**
    * get clockwise edge of range
+   *
    * @return the id at the clockwise edge of the range (exclusive)
    */
   public Id getCWId();
+
+  /**
+   * get the complement of this range
+   *
+   * @return This range's complement
+   */
+  public IdRange getComplementRange();
 }
 
 

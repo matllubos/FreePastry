@@ -36,8 +36,7 @@ if advised of the possibility of such damage.
 
 package rice.pastry.commonapi;
 
-import rice.p2p.commonapi.IdFactory;
-import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.*;
 
 import java.lang.Comparable;
 import java.io.*;
@@ -97,6 +96,26 @@ public class PastryIdFactory implements IdFactory {
   public Id buildId(String string) {
     md.update(string.getBytes());
     return buildId(md.digest());
+  }
+
+  /**
+   * Creates an IdRange given the CW and CCW ids.
+   *
+   * @param cw The clockwise Id
+   * @param ccw The counterclockwise Id
+   * @return An IdRange with the appropriate delimiters.
+   */
+  public IdRange buildIdRange(Id cw, Id ccw) {
+    return new rice.pastry.IdRange((rice.pastry.Id) cw, (rice.pastry.Id) ccw);
+  }
+
+  /**
+   * Creates an empty IdSet.
+   *
+   * @return an empty IdSet
+   */
+  public IdSet buildIdSet() {
+    return new rice.pastry.IdSet();
   }
 }
 

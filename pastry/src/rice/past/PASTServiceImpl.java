@@ -39,11 +39,7 @@ package rice.past;
 import rice.past.messaging.*;
 
 import rice.*;
-import rice.pastry.*;
-import rice.pastry.client.*;
-import rice.pastry.security.*;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
+import rice.p2p.commonapi.*;
 import rice.rm.*;
 import rice.persistence.*;
 import rice.caching.*;
@@ -62,7 +58,7 @@ import java.util.*;
  * @author Alan Mislove
  * @author Ansley Post
  */
-public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient, CachingManagerClient {
+public class PASTServiceImpl implements PASTService, Application { //RMClient, CachingManagerClient {
   
   /**
    * Whether to print debugging statements.
@@ -70,24 +66,19 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
   public static boolean DEBUG = false;
   
   /**
-   * PastryNode this service is running on.
+   * Node this service is running on.
    */
-  private PastryNode pastry;
+  private Node node;
+
+  /**
+   * Endpoint which this application uses
+   */
+  private Endpoint endpoint;
   
   /**
    * Storage used to store objects (persistedly).
    */
   private StorageManager storage;
-    
-  /**
-   * Credentials for this application
-   */
-  private Credentials credentials;
-  
-  /**
-   * SendOptions to be used on the Pastry messages.
-   */
-  private SendOptions sendOptions;
   
   /**
    * The table used to store commands waiting for a response.
@@ -124,15 +115,10 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * @param pastry PastryNode to run on
    * @param storage The Storage object to use for storage and caching
    */
-  public PASTServiceImpl(PastryNode pastry, StorageManager storage, String instance) {
-    super(pastry, instance);
-    this.pastry = pastry;
-    this.storage = storage;
-    credentials = new PermissiveCredentials();
-    sendOptions = new SendOptions();
+  public PASTServiceImpl(Node node, StorageManager storage, String instance) {
+    this.node = node;
     commandTable = new Hashtable();
-    replicationManager = new RMImpl(pastry, this, instance);
-    cachingManager = new CachingManager(pastry, this, instance);
+    this.endpoint = node.registerApplication(this, instance);
   }
 
   /**
@@ -145,31 +131,22 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
   }
 
   /**
-   * Returns the PastryNode 
+   * Returns the Node 
    *
-   * @return This PAST's Pastry Node
+   * @return This PAST's Node
    */
-  public PastryNode getPastryNode() {
-    return pastry;
+  public Id getId() {
+    return endpoint.getId();
   }
   
   // ---------- PastryAppl Methods ----------
-  
-  /**
-   * Returns the credentials of this application.
-   *
-   * @return the credentials.
-   */
-  public Credentials getCredentials() {
-    return credentials;
-  }
   
   /**
    * Called by pastry when a message arrives for this application.
    *
    * @param msg the message that is arriving.
    */
-  public void messageForAppl(Message msg) {
+  public void deliver(Id id, Message msg) {
     if (msg instanceof PASTMessage) {
       PASTMessage pmsg = (PASTMessage) msg;
       
@@ -182,6 +159,33 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
       System.err.println("PAST Error: Received a non-PAST message:" + msg + " - dropping on floor.");
     }
   }
+
+  /**
+   * This method is invoked on applications when the underlying node
+   * is about to forward the given message with the provided target to
+   * the specified next hop.  Applications can change the contents of
+   * the message, specify a different nextHop (through re-routing), or
+   * completely terminate the message.
+   *
+   * @param message The message being sent, containing an internal message
+   * along with a destination key and nodeHandle next hop.
+   *
+   * @return Whether or not to forward the message further
+   */
+  public boolean forward(RouteMessage message) {
+    return true;
+  }
+
+  /**
+   * This method is invoked to inform the application that the given node
+   * has either joined or left the neighbor set of the local node, as the set
+   * would be returned by the neighborSet call.
+   *
+   * @param handle The handle that has joined/left
+   * @param joined Whether the node has joined or left
+   */
+  public void update(NodeHandle handle, boolean joined) {
+  }
   
   /**
    * Sends a message to a remote PAST node (either a request or response).
@@ -190,9 +194,9 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    */
   public void sendMessage(PASTMessage msg) {
     if (msg.getType() == PASTMessage.REQUEST) {
-      routeMsg(msg.getFileId(), msg, credentials, sendOptions);
+      endpoint.route(msg.getFileId(), msg, null);
     } else {
-      routeMsg(msg.getSource(), msg, credentials, sendOptions);
+      endpoint.route(msg.getSource(), msg, null);
     }
   }
   
@@ -202,9 +206,7 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * @param msg Request to send
    * @param command Command to execute when the result is received
    */
-  protected void _sendRequestMessage(PASTMessage msg, 
-                                     Continuation command)
-  {
+  protected void _sendRequestMessage(PASTMessage msg, Continuation command) {
     // Update the command table so that this command can collect its
     // response when it arrives.
     commandTable.put(msg.getID(), command);
@@ -219,14 +221,12 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    */
   protected void _handleResponseMessage(PASTMessage msg) {
     // Look up the command waiting for this response
-    Continuation command = 
-      (Continuation) commandTable.get(msg.getID());
+    Continuation command = (Continuation) commandTable.get(msg.getID());
         
     if (command != null) {
       // Give response to the command
       command.receiveResult(msg);
-    }
-    else {
+    } else {
       // We don't recognize this response message, so ignore it.
     }
   }
@@ -243,12 +243,10 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * @param authorCred Author's credentials
    * @param command Command to be performed when the result is received
    */
-  public void insert(Id id, Serializable obj, Credentials authorCred,
-                     final Continuation command)
-  {
-    NodeId nodeId = pastry.getNodeId();
+  public void insert(Id id, Serializable obj, final Continuation command) {
+    Id nodeId = endpoint.getId();
     debug("Insert request for file " + id + " at node " + nodeId);
-    MessageInsert request = new MessageInsert(getAddress(), nodeId, id, obj, authorCred);
+    MessageInsert request = new MessageInsert(nodeId, id, obj);
     
     // Send the request
     _sendRequestMessage(request, new Continuation() {
@@ -288,9 +286,9 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * @param command Command to be performed when the result is received
    */
   public void lookup(Id id, final Continuation command) {
-    NodeId nodeId = pastry.getNodeId();
+    Id nodeId = endpoint.getId();
     debug("Request to look up file " + id + " at node " + nodeId);
-    MessageLookup request = new MessageLookup(getAddress(), nodeId, id);
+    MessageLookup request = new MessageLookup(nodeId, id);
     
     // Send the request
     _sendRequestMessage(request, new Continuation() {
@@ -323,9 +321,9 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * @param command Command to be performed when the result is received
    */
   public void exists(Id id, final Continuation command) {
-    NodeId nodeId = pastry.getNodeId();
+    Id nodeId = endpoint.getId();
     debug("Request to determine if file " + id + " exists, at node " + nodeId);
-    MessageExists request = new MessageExists(getAddress(), nodeId, id);
+    MessageExists request = new MessageExists(nodeId, id);
     
     // Send the request
     _sendRequestMessage(request, new Continuation() {
@@ -358,12 +356,10 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * @param id Pastry key of original object
    * @param authorCred Author's credentials
    */
-  public void delete(Id id, Credentials authorCred,
-                     final Continuation command) {
-    NodeId nodeId = pastry.getNodeId();
+  public void delete(Id id, final Continuation command) {
+    Id nodeId = endpoint.getId();
     System.out.println("Deleting the file with ID: " + id);
-    MessageReclaim request = 
-      new MessageReclaim(getAddress(), pastry.getNodeId(), id, authorCred);
+    MessageReclaim request = new MessageReclaim(nodeId, id);
     
     // Send the request
     _sendRequestMessage(request, new Continuation() {
@@ -395,14 +391,14 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * @param id Pastry key of original object
    */
   private void fetch(final Id id) {
-    NodeId nodeId = pastry.getNodeId();
+    Id nodeId = endpoint.getId();
     debug("Request to fetch up file " + id + " at node " + nodeId);
-    MessageFetch request = new MessageFetch(getAddress(), nodeId, id);
+    MessageFetch request = new MessageFetch(nodeId, id);
 
     // Send the request
     _sendRequestMessage(request, new Continuation() {
       public void receiveResult(final Object result) {
-        storage.store(id, ((MessageFetch)result).getContent(), new Continuation() {
+        storage.store((rice.pastry.Id) id, ((MessageFetch)result).getContent(), new Continuation() {
           public void receiveResult(Object o) {
             if (! o.equals(new Boolean(true))) {
               System.out.println("Storage of object " + result + " failed!");
@@ -459,17 +455,20 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * call delete on the persistance manager for those objects
    */
   public void isResponsible(IdRange range) {
-    IdRange notRange = range.complement();
-    final Iterator notIds = storage.getStorage().scan(range).getIterator();
+    IdRange notRange = range.getComplementRange();
 
     Continuation c = new Continuation() {
+      private Iterator notIds;
+      
       public void receiveResult(Object o) {
-        if (! o.equals(new Boolean(true))) {
+        if (o instanceof IdSet) {
+          notIds = ((IdSet) o).getIterator();
+        } else if (! o.equals(new Boolean(true))) {
           System.out.println("Unstore of Id did not succeed!");
         }
 
         if (notIds.hasNext()) {
-          storage.unstore((Id) notIds.next(), this);
+          storage.unstore((rice.pastry.Id) notIds.next(), this);
         }
       }
 
@@ -478,7 +477,7 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
       }
     };
 
-    c.receiveResult(new Boolean(true));
+    storage.getStorage().scan((rice.pastry.IdRange) range, c);
   }
 
   /**
@@ -486,8 +485,8 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * currently stores in this range. Should return a empty IdSet (not null), in
    * the case that no keys belong to this range
    */
-  public IdSet scan(IdRange range) {
-    return storage.getStorage().scan(range);
+  public void scan(IdRange range, Continuation c) {
+    storage.getStorage().scan((rice.pastry.IdRange) range, c);
   }
 
   // ---------- Caching Manager Client Methods ----------
@@ -500,7 +499,7 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * @param value The object itself.
    */
   public void cache(Id key, final Serializable obj) {
-    storage.cache(key, obj, new Continuation() {
+    storage.cache((rice.pastry.Id) key, obj, new Continuation() {
       public void receiveResult(Object o) {
         if (! o.equals(new Boolean(true))) {
           System.out.println("Caching of " + obj + " did not complete correctly.");

@@ -368,8 +368,15 @@ public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
     public rice.p2p.commonapi.Id getCWId() {
       return getCW();
     }
-    
 
+    /**
+     * get the complement of this range
+     *
+     * @return This range's complement
+     */
+    public rice.p2p.commonapi.IdRange getComplementRange() {
+      return complement();
+    }
 }
 
 

@@ -74,5 +74,21 @@ public interface IdFactory {
    * @return The built Id.
    */
   public Id buildId(String string);
+
+  /**
+   * Creates an IdRange given the CW and CCW ids.
+   *
+   * @param cw The clockwise Id
+   * @param ccw The counterclockwise Id
+   * @return An IdRange with the appropriate delimiters.
+   */
+  public IdRange buildIdRange(Id cw, Id ccw);
+
+  /**
+   * Creates an empty IdSet.
+   *
+   * @return an empty IdSet
+   */
+  public IdSet buildIdSet();
 }
 

@@ -38,8 +38,7 @@ package rice.past.messaging;
 
 import rice.past.*;
 
-import rice.pastry.*;
-import rice.pastry.messaging.*;
+import rice.p2p.commonapi.*;
 
 import java.util.Random;
 import java.io.*;
@@ -52,7 +51,7 @@ import java.io.*;
  * @version $Id$
  * @author Charles Reis
  */
-public abstract class PASTMessage extends Message implements Serializable {
+public abstract class PASTMessage implements Message {
   
   // ----- Message Types -----
   
@@ -75,28 +74,32 @@ public abstract class PASTMessage extends Message implements Serializable {
    * The fileId of the file, to be used as destination.
    */
   protected Id _fileId;
+
+  /**
+   * The id of the sender
+   */
+  protected Id _senderId;
   
   /**
    * Constructor
-   * @param source NodeId of source Pastry node
-   * @param fileId NodeId of file (destination node)
+   * @param source Id of source Pastry node
+   * @param fileId Id of file (destination node)
    * @param messageType whether this is a request or a response
    */
-  public PASTMessage(Address address, NodeId source, Id fileId, int messageType) {
-    super(address);
+  public PASTMessage(Id source, Id fileId, int messageType) {
     _messageID = new PASTMessageIDImpl();
     _messageType = messageType;
     _fileId = fileId;
-    setSenderId(source);
+    _senderId = source;
   }
   
   /**
    * Constructor
-   * @param source NodeId of source Pastry node
-   * @param fileId NodeId of file (destination node)
+   * @param source Id of source Pastry node
+   * @param fileId Id of file (destination node)
    */
-  public PASTMessage(Address address, NodeId source, Id fileId) {
-    this(address, source, fileId, REQUEST);
+  public PASTMessage(Id source, Id fileId) {
+    this(source, fileId, REQUEST);
   }
   
   /**
@@ -130,10 +133,10 @@ public abstract class PASTMessage extends Message implements Serializable {
   }
   
   /**
-   * Gets the source NodeId for this message.
+   * Gets the source Id for this message.
    */
-  public NodeId getSource() {
-    return getSenderId();
+  public Id getSource() {
+    return _senderId;
   }
   
   /**

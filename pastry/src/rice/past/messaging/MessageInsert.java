@@ -40,9 +40,7 @@ import rice.*;
 
 import rice.past.*;
 
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.pastry.security.Credentials;
+import rice.p2p.commonapi.*;
 
 import java.util.Random;
 import java.io.*;
@@ -63,11 +61,6 @@ public class MessageInsert extends PASTMessage {
   protected Serializable _file;
   
   /**
-   * The credentials of the author of the file.
-   */
-  protected Credentials _cred;
-  
-  /**
    * Whether the insert was successful (on a response).
    */
   protected boolean _success = false;
@@ -79,14 +72,11 @@ public class MessageInsert extends PASTMessage {
    * @param update File to be stored
    * @param authorCred Credentials of the author of the file
    */
-  public MessageInsert(Address address, 
-                       NodeId nodeId, 
+  public MessageInsert(Id nodeId, 
                        Id fileId, 
-                       Serializable file, 
-                       Credentials authorCred) {
-    super(address, nodeId, fileId);
+                       Serializable file) {
+    super(nodeId, fileId);
     _file = file;
-    _cred = authorCred;
   }
   
   /**
@@ -102,7 +92,7 @@ public class MessageInsert extends PASTMessage {
    */
   public void performAction(final PASTServiceImpl service) {
     debug("  Inserting file " + getFileId() + " at node " +
-          service.getPastryNode().getNodeId());
+          service.getId());
 
     final Continuation insert = new Continuation() {
       public void receiveResult(Object o) {
@@ -119,7 +109,7 @@ public class MessageInsert extends PASTMessage {
     Continuation check = new Continuation() {
       public void receiveResult(Object o) {
         if (! ((Boolean) o).booleanValue()) {
-          service.getStorage().store(getFileId(), _file, insert);
+          service.getStorage().store((rice.pastry.Id) getFileId(), _file, insert);
         } else {
           // Already exists, return false
           _success = false;
@@ -133,7 +123,7 @@ public class MessageInsert extends PASTMessage {
       }
     };
 
-    service.getStorage().exists(getFileId(), check);
+    service.getStorage().exists((rice.pastry.Id) getFileId(), check);
   }
   
   /**

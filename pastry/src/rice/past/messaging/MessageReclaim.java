@@ -40,9 +40,7 @@ import rice.*;
 
 import rice.past.*;
 
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.pastry.security.Credentials;
+import rice.p2p.commonapi.*;
 
 import java.util.Random;
 import java.io.*;
@@ -64,19 +62,13 @@ public class MessageReclaim extends PASTMessage {
   protected boolean _success = false;
   
   /**
-   * The credentials of the user trying to delete
-   */
-  protected Credentials _cred;
-  
-  /**
    * Builds a new request to reclaim space used by an existing file.
    * @param nodeId Source Pastry node's ID
    * @param fileId Pastry key of desired file
    * @param cred Credentials of user requesting the reclaim
    */
-  public MessageReclaim(Address address, NodeId nodeId, Id fileId, Credentials cred) {
-    super(address, nodeId, fileId);
-    _cred = cred;
+  public MessageReclaim(Id nodeId, Id fileId) {
+    super(nodeId, fileId);
   }
   
   /**
@@ -92,7 +84,7 @@ public class MessageReclaim extends PASTMessage {
    */
   public void performAction(final PASTServiceImpl service) {
     debug("  Reclaiming file " + getFileId() + " at node " +
-          service.getPastryNode().getNodeId());
+          service.getId());
 
     Continuation reclaim = new Continuation() {
       public void receiveResult(Object o) {
@@ -106,7 +98,7 @@ public class MessageReclaim extends PASTMessage {
       }
     };
 
-    service.getStorage().unstore(getFileId(), reclaim);
+    service.getStorage().unstore((rice.pastry.Id) getFileId(), reclaim);
   }
   
   /**
