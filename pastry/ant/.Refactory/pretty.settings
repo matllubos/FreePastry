@@ -7,7 +7,7 @@ version=2.8
 # Twice this number is the amount of space used for
 # unexpected carrage returns. Use the word "tab" for tabs
 # and the word "space" for spaces.
-indent=2
+indent=4
 indent.char=space
 
 # Style for { and }
