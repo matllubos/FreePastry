@@ -46,8 +46,14 @@ public class EmailLog extends CoalescedLog {
   // the most recent snapshot for this log (null if unsupported)
   private ContentHashReference snapshot;
   
+  // the most recent snapshot array for this log (null if unsupported)
+  private ContentHashReference[] snapshots;
+  
   // the cached version of the most recent snapshot
   private transient SnapShot cachedSnapshot;
+  
+  // the cached versions of the snapshot array
+  private transient SnapShot[] cachedSnapshots;
 
   /**
    * Constructor for SnapShot.
@@ -74,6 +80,15 @@ public class EmailLog extends CoalescedLog {
    */
   public ContentHashReference getSnapshotReference() {
     return snapshot;
+  }
+  
+  /**
+   * Returns the reference to the most recent snapshot array
+   *
+   * @return The most recent log snapshot ref
+   */
+  public ContentHashReference[] getSnapshotReferences() {
+    return snapshots;
   }
   
   /**
@@ -168,17 +183,30 @@ public class EmailLog extends CoalescedLog {
    *
    * @param snapshot The snapshot
    */
-  public void setSnapshot(final SnapShot snapshot, Continuation command) {
-    post.getStorageService().storeContentHash(snapshot, new StandardContinuation(command) {
-      public void receiveResult(Object o) {
-        cachedSnapshot = snapshot;
-    
-        resetEntries();
-        EmailLog.this.snapshot = (ContentHashReference) o;
-    
-        sync(parent);
-      }
-    });
+  public void setSnapshot(final SnapShot[] newsnapshots, Continuation command) {
+    if (newsnapshots.length > 0) {
+      post.getStorageService().storeContentHash(newsnapshots[0], new StandardContinuation(command) {
+        int i = 0;
+        ContentHashReference[] result = new ContentHashReference[newsnapshots.length];
+
+        public void receiveResult(Object o) {
+          result[i++] = (ContentHashReference) o;
+          
+          if (i == newsnapshots.length) { 
+            resetEntries();
+            EmailLog.this.snapshot = null;
+            EmailLog.this.cachedSnapshot = null;
+            EmailLog.this.snapshots = result;
+            EmailLog.this.cachedSnapshots = newsnapshots;
+            sync(parent);
+          } else {
+            post.getStorageService().storeContentHash(newsnapshots[i], this);
+          }
+        }
+      });
+    } else {
+      command.receiveResult(Boolean.TRUE);
+    }
   }
   
   /**
@@ -188,10 +216,10 @@ public class EmailLog extends CoalescedLog {
    */
   public void getSnapshot(Continuation command) {
     if (cachedSnapshot != null) {
-      command.receiveResult(cachedSnapshot);
-    } else if (snapshot == null) {
-      command.receiveResult(null);
-    } else {
+      command.receiveResult(new SnapShot[] {cachedSnapshot});
+    } else if (cachedSnapshots != null) {
+      command.receiveResult(cachedSnapshots);
+    } else if (snapshot != null) {
       post.getStorageService().retrieveContentHash(snapshot, new StandardContinuation(command) {
         public void receiveResult(Object o) {
           cachedSnapshot = (SnapShot) o;
@@ -199,6 +227,24 @@ public class EmailLog extends CoalescedLog {
           parent.receiveResult(o);
         }
       });
+    } else if (snapshots != null) {
+      post.getStorageService().retrieveContentHash(snapshots[0], new StandardContinuation(command) {
+        SnapShot[] result = new SnapShot[snapshots.length];
+        int i = 0;
+        
+        public void receiveResult(Object o) {
+          result[i++] = (SnapShot) o;
+          
+          if (i == snapshots.length) {
+            cachedSnapshots = result;
+            parent.receiveResult(result);
+          } else {
+            post.getStorageService().retrieveContentHash(snapshots[i], this);
+          }
+        }
+      });
+    } else {
+      command.receiveResult(null);
     }
   }
 

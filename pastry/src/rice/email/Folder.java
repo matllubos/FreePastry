@@ -18,8 +18,11 @@ import rice.post.storage.*;
  */
 public class Folder {
   
-  // maximum entry limit for our primitive snapshot policy
+  // The number of log entries before a snapshot is pushed out
   public static final int COMPRESS_LIMIT = 500;
+  
+  // the maximum number of emails in a snapshot
+  public static final int MAX_SNAPSHOT_ENTRIES = 500;
   
   // the static name of the root folder
   public static String ROOT_FOLDER_NAME = "Root";
@@ -617,6 +620,34 @@ public class Folder {
       command.receiveResult(_children.get(name));
     }
   }
+  
+  /**
+   * Splits the emails into a bunch of snapshots, for a memory cap
+   *
+   * @param emails The emails
+   * @return The sepeated emails
+   */
+  protected SnapShot[] splitEmails(StoredEmail[] emails, LogEntry entry) {
+    int i = 0;
+    Vector result = new Vector();
+    Vector temp = new Vector();
+    
+    while (i < emails.length) {
+      temp.add(emails[i]);
+      
+      if (i % MAX_SNAPSHOT_ENTRIES == 0) {
+        result.add(new SnapShot((StoredEmail[]) temp.toArray(new StoredEmail[0]), entry));
+        temp = new Vector();
+      }
+      
+      i++;
+    }
+    
+    if (temp.size() > 0)
+      result.add(new SnapShot((StoredEmail[]) temp.toArray(new StoredEmail[0]), entry));
+    
+    return (SnapShot[]) result.toArray(new SnapShot[0]);
+  }
 
   /**
    * Creates and inserts a snapshot for the current folder
@@ -634,7 +665,7 @@ public class Folder {
           getMessages(new StandardContinuation(parent) {
             public void receiveResult(Object o) {
               if (_log.getEntries() == entries) {
-                _log.setSnapshot(new SnapShot((StoredEmail[]) o, entry), parent);
+                _log.setSnapshot(splitEmails((StoredEmail[]) o, entry), parent);
               } else {
                 System.out.println("INFO: Was unable to create snapshot - other log entry in progress.  Not bad, but a little unexpected.");
                 parent.receiveResult(Boolean.TRUE);
@@ -672,7 +703,7 @@ public class Folder {
   public void getMessages(Continuation command) {
     _log.getSnapshot(new StandardContinuation(command) {
       public void receiveResult(Object o) {
-        getMessages((SnapShot) o, parent);
+        getMessages((SnapShot[]) o, parent);
       }
     });
   }
@@ -683,14 +714,14 @@ public class Folder {
    * @param command the work to perform after this call
    * @return the stored Emails
    */
-  public void getMessages(final SnapShot snapshot, Continuation command) {
-    System.out.println("GET MESSAGES: " + snapshot + " TOP IS " + (snapshot == null ? null : snapshot.getTopEntry()));
+  public void getMessages(final SnapShot[] snapshots, Continuation command) {
+    System.out.println("GET MESSAGES: " + snapshots + " TOP IS " + (snapshots == null ? null : snapshots[0].getTopEntry()));
     
     _log.getTopEntry(new StandardContinuation(command) {
       private Vector emails = new Vector();
       private HashSet seen = new HashSet();
       private HashSet deleted = new HashSet();
-      private LogEntry top = (snapshot == null ? null : snapshot.getTopEntry());
+      private LogEntry top = (snapshots == null ? null : snapshots[0].getTopEntry());
 
       protected void insert(StoredEmail[] emails) {
         for (int i=0; i<emails.length; i++)
@@ -748,8 +779,9 @@ public class Folder {
           // break if we've just processed the top entry
           if ((top != null) && (entry.equals(top))) {
             // if there is a snapshot in the log, add it in
-            if (snapshot != null) 
-              insert(snapshot.getStoredEmails());
+            if (snapshots != null) 
+              for (int i=0; i<snapshots.length; i++)
+                insert(snapshots[i].getStoredEmails());
             
             break;
           }
