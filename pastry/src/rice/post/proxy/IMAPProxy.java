@@ -3,7 +3,9 @@ package rice.post.proxy;
 import java.net.BindException;
 import java.net.InetAddress;
 
+import rice.post.Email;
 import rice.post.PostClient;
+import rice.post.PostClientListener;
 
 /**
  * This class provides an IMAP interface into the POST pastry-based email system.  This will
