@@ -131,7 +131,7 @@ public class DirectRMRegrTest
 
 	System.out.println("NewNode" + pn.getNodeId());	
 	Credentials cred = new PermissiveCredentials();
-	RM rm = new RMImpl(pn);
+	RMImpl rm = new RMImpl(pn);
 	DirectRMRegrTestApp rmApp = new DirectRMRegrTestApp(pn, rm, cred);
 	rmApp.m_appCount = appCount;
 
@@ -152,8 +152,8 @@ public class DirectRMRegrTest
 
 	// Setting the seed helps to reproduce the results of the run and 
 	// thus aids debugging incase the regression test fails.
-	//seed  = -1327173166 ;
-	seed = (int)System.currentTimeMillis();
+	seed  = -1327173166 ;
+	//seed = (int)System.currentTimeMillis();
 	PastrySeed.setSeed(seed);
 	System.out.println("******************************");
 	System.out.println("seed= " + seed);
@@ -256,12 +256,23 @@ public class DirectRMRegrTest
 	}
 
 	// We will now invoke the periodic maintenance protocol
-	System.out.println("Starting the periodic maintenance protocol");
+	System.out.println("Starting the periodic maintenance protocol:");
 	for(i=0; i< rmClients.size(); i++) {
 	    rmApp = (DirectRMRegrTestApp)rmClients.elementAt(i);
 	    rmApp.periodicMaintenance();
 	    while(simulate());
 	}
+
+
+	// We will also check to see if the m_pendingRanges hashtable is empty
+	System.out.println("Checking to see if m_pendingRangesHashtable is empty:");
+	for(i=0; i< rmClients.size(); i++) {
+	    rmApp = (DirectRMRegrTestApp)rmClients.elementAt(i);
+	    if(!rmApp.m_rm.m_pendingRanges.isEmpty())
+		System.out.println("Warning: m_pendingRanges hashtable is not empty"); 
+
+	}
+
 	
 	return passed;
     }

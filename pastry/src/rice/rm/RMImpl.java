@@ -466,10 +466,12 @@ public class RMImpl extends CommonAPIAppl implements RM {
 		//System.out.println("checking subtract calculation");
 		//System.out.println("MyRange= " + myRange);
 		//System.out.println("PrevRange= " + prev_Range);
-		requestRange1 = myRange.subtract_old(prev_Range, true);
+		requestRange1 = myRange.subtract(prev_Range, true);
 		//System.out.println("request Range1 " + requestRange1);
-		requestRange2 = myRange.subtract_old(prev_Range, false);
+		requestRange2 = myRange.subtract(prev_Range, false);
 		//System.out.println("request Range2 " + requestRange2);
+		if(requestRange2.equals(requestRange1))
+		    requestRange2 = new IdRange();
 		if(!requestRange1.isEmpty())
 		    rangeSet.add(new RMMessage.KEEntry(requestRange1, true));
 		if(!requestRange2.isEmpty())

@@ -62,7 +62,7 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
     private PastryNode m_pastryNode ;
     private Credentials _credentials;
     public SendOptions _sendOptions;
-    public RM m_rm;
+    public RMImpl m_rm;
     public int m_appCount;
     //public Hashtable m_objects;
 
@@ -95,7 +95,7 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
      * @param rm The underlying replica manager 
      * @param cred The credentials 
      */
-    public RMRegrTestApp( PastryNode pn, RM rm, Credentials cred) {
+    public RMRegrTestApp( PastryNode pn, RMImpl rm, Credentials cred) {
 	super(pn);
 	m_rm = rm;
 	_credentials = cred;
