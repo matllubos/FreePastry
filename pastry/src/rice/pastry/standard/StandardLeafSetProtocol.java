@@ -259,15 +259,14 @@ public class StandardLeafSetProtocol implements MessageReceiver {
     }
 
     /**
-     *
-     * Maintain the leaf set. This method checks for dead leafset entries and replaces them as needed. It is 
-     * assumed that this method be invoked periodically.
-     *
+     * Maintain the leaf set. This method checks for dead leafset entries
+     * and replaces them as needed. It is assumed that this method be
+     * invoked periodically.
      */
     
     public void maintainLeafSet() {	
 
-	//System.out.println("maintainLeafSet");
+	System.out.println("maintainLeafSet " + localHandle.getNodeId());
 
 	boolean lostMembers = false;
 

@@ -62,6 +62,12 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
     private static final int rtMax = 8;
     private static final int lSetSize = 24;
   
+    /**
+     * Large value means infrequent, 0 means never
+     */
+    private static final int leafSetMaintFreq = 1000;
+    private static final int routeSetMaintFreq = 3000;
+
     public DirectPastryNodeFactory() {
 	nidFactory = new RandomNodeIdFactory();
 	simulator = new EuclideanNetwork();
@@ -69,6 +75,11 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 
     public NetworkSimulator getNetworkSimulator() { return simulator; }
     
+    /**
+     * Manufacture a new Pastry node.
+     *
+     * @return a new PastryNode
+     */
     public PastryNode newNode(NodeHandle bootstrap) {
 
 	NodeId nodeId = nidFactory.generateNodeId();
@@ -98,7 +109,8 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
 	msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
 
-	pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
+	pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable,
+		       leafSetMaintFreq, routeSetMaintFreq);
 	pn.setDirectElements(/* simulator */);
 	secureMan.setLocalPastryNode(pn);
 
@@ -107,5 +119,3 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	return pn;
     }
 }
-
-

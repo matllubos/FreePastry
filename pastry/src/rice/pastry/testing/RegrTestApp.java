@@ -68,30 +68,13 @@ public class RegrTestApp extends PastryAppl {
 	public boolean equals(Object obj) {
 	    return (obj instanceof RTAddress);
 	}
+
+	public String toString() { return "[RTAddress]"; }
     }
 
 	
     private static Credentials cred = new PermissiveCredentials();
     private static Address addr = new RTAddress();
-
-    private class RTMessage extends Message {
-	public NodeId source;
-	public NodeId target;
-
-	public RTMessage(NodeId src, NodeId tgt) {
-	    super(addr);
-
-	    source = src;
-	    target = tgt;
-	}
-	
-	public String toString() {
-	    String s="";
-	    
-	    s += "RTMsg from " + source + " to " + target;
-	    return s;
-	}
-    }
 
     private PastryRegrTest prg;
     
@@ -105,12 +88,14 @@ public class RegrTestApp extends PastryAppl {
     public Credentials getCredentials() { return cred; }
 
     public void sendMsg(NodeId nid) {
-	routeMsg(nid, new RTMessage(getNodeId(), nid), cred, new SendOptions());
+	routeMsg(nid, new RTMessage(addr, getNodeId(), nid),
+		 cred, new SendOptions());
     }
 
     public void sendTrace(NodeId nid) {
 	//System.out.println("sending a trace from " + getNodeId() + " to " + nid);
-	routeMsg(nid, new RTMessage(getNodeId(), nid), cred, new SendOptions());
+	routeMsg(nid, new RTMessage(addr, getNodeId(), nid),
+		 cred, new SendOptions());
     }
 
     public void messageForAppl(Message msg) {
@@ -244,4 +229,24 @@ public class RegrTestApp extends PastryAppl {
 	*/
     }
 
+}
+
+/**
+ * DO NOT declare this inside PingClient; see HelloWorldApp for details.
+ */
+class RTMessage extends Message {
+    public NodeId source;
+    public NodeId target;
+
+    public RTMessage(Address addr, NodeId src, NodeId tgt) {
+	super(addr);
+	source = src;
+	target = tgt;
+    }
+
+    public String toString() {
+	String s="";
+	s += "RTMsg from " + source + " to " + target;
+	return s;
+    }
 }

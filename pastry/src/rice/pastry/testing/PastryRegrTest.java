@@ -81,7 +81,16 @@ public abstract class PastryRegrTest {
     /**
      * get a node handle to bootstrap from.
      */
-    protected abstract NodeHandle getBootstrapHandle();
+    protected abstract NodeHandle getBootstrap();
+
+    /**
+     * wire protocol specific handling of the application object
+     * e.g., RMI may launch a new thread
+     *
+     * @param pn pastry node
+     * @param app newly created application
+     */
+    protected abstract void registerapp(PastryNode pn, RegrTestApp app);
 
     /**
      * send one simulated message, or return false for a real wire protocol.
@@ -91,7 +100,7 @@ public abstract class PastryRegrTest {
     /**
      * determine whether this node is really alive.
      */
-    protected abstract boolean simIsAlive(NodeId id);
+    protected abstract boolean isReallyAlive(NodeId id);
 
     /**
      * kill a given node.
@@ -116,7 +125,7 @@ public abstract class PastryRegrTest {
      */
 
     private void makePastryNode() {
-	NodeHandle bootstrap = getBootstrapHandle();
+	NodeHandle bootstrap = getBootstrap();
 	PastryNode pn = factory.newNode(bootstrap);
 
 	pastryNodes.addElement(pn);
@@ -126,6 +135,8 @@ public abstract class PastryRegrTest {
 
 	RegrTestApp rta = new RegrTestApp(pn,this);
 	rtApps.addElement(rta);
+
+	registerapp(pn,rta);
 
 	int msgCount = 0;
 
@@ -160,7 +171,7 @@ public abstract class PastryRegrTest {
 	    NodeHandle bootstrap = null;
 
 	    if (n == 0)		// first batch of nodes
-		bootstrap = getBootstrapHandle();
+		bootstrap = getBootstrap();
 	    else {		// corresponding node from previous batch
 		PastryNode pn = (PastryNode) pastryNodes.get(n+i - num);
 		if (pn != null) bootstrap = pn.getLocalHandle();
@@ -173,6 +184,8 @@ public abstract class PastryRegrTest {
 
 	    rta[i] = new RegrTestApp(pn,this);
 	    rtApps.addElement(rta[i]);
+
+	    registerapp(pn,rta[i]);
 
 	    if (bootstrap != null)
 		if (n == 0) {
@@ -344,7 +357,7 @@ public abstract class PastryRegrTest {
 
 			// check if node exists
 			if (!pastryNodesSorted.containsKey(id)) {
-			    if (simIsAlive(id))
+			    if (isReallyAlive(id))
 				System.out.println("checkRoutingTable failure 2, row=" + i + " column=" + j +
 						   " rank=" + k);
 			}
@@ -411,12 +424,8 @@ public abstract class PastryRegrTest {
      * main
      */
 
-    protected static void mainfunc(PastryRegrTest pt, String args[]) {
-	int n = 4000;
-	int d = 1000;
-	int k = 100;
-	int numConcJoins = 1;
-	int m = 100;
+    protected static void mainfunc(PastryRegrTest pt, String args[],
+		    int n, int d, int k, int m, int numConcJoins) {
 
 	Date old = new Date();
 

@@ -73,15 +73,26 @@ public class DirectPastryRegrTest extends PastryRegrTest {
     }
 
     /**
-     * lastElement, or returns null if empty.
+     * Get pastryNodes.last() to bootstrap with, or return null.
      */
-    protected NodeHandle getBootstrapHandle() {
+    protected NodeHandle getBootstrap() {
+	NodeHandle bootstrap = null;
 	try {
-	    PastryNode pn = (PastryNode) pastryNodes.lastElement();
-	    return pn.getLocalHandle();
+	    PastryNode lastnode = (PastryNode) pastryNodes.lastElement();
+	    bootstrap = lastnode.getLocalHandle();
 	} catch (NoSuchElementException e) {
-	    return null;
 	}
+	return bootstrap;
+    }
+
+    /**
+     * wire protocol specific handling of the application object
+     * e.g., RMI may launch a new thread
+     * 
+     * @param pn pastry node
+     * @param app newly created application
+     */
+    protected void registerapp(PastryNode pn, RegrTestApp app) {
     }
 
     /**
@@ -96,7 +107,7 @@ public class DirectPastryRegrTest extends PastryRegrTest {
     /**
      * get authoritative information about liveness of node.
      */
-    protected boolean simIsAlive(NodeId id) {
+    protected boolean isReallyAlive(NodeId id) {
 	return simulator.isAlive(id);
     }
 
@@ -113,6 +124,6 @@ public class DirectPastryRegrTest extends PastryRegrTest {
      */
     public static void main(String args[]) {
 	DirectPastryRegrTest pt = new DirectPastryRegrTest();
-	mainfunc(pt, args);
+	mainfunc(pt, args, 100 /*n*/, 20/*d*/, 100/*k*/, 100/*m*/, 4/*conc*/);
     }
 }

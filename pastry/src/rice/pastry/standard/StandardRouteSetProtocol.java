@@ -155,13 +155,13 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver
 
     /**
      * performs periodic maintenance of the routing table
-     * for each populated row of the routing table, it picks a random column and swaps routing table rows
-     * with the closest entry in that column
+     * for each populated row of the routing table, it picks a random column
+     * and swaps routing table rows with the closest entry in that column
      */
 
     private void maintainRouteSet() {
 
-	//System.out.println("maintainRouteSet");
+	System.out.println("maintainRouteSet " + localHandle.getNodeId());
 
 	// for each populated row in our routing table
 	for (int i=routeTable.numRows()-1; i>=0; i--) {

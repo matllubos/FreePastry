@@ -248,7 +248,7 @@ public class RouteMessage extends Message implements Serializable {
 	//str += "\n";
 
 	str += ", wraps ";
-	str += internalMsg.toString();
+	str += internalMsg;
 
 	if (nextHop != null)
 	    str += ", nexthop = " + nextHop.getNodeId();

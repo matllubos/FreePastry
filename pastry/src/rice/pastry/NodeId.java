@@ -38,6 +38,7 @@ package rice.pastry;
 
 import java.lang.Comparable;
 import java.io.*;
+import java.util.*;
 
 /**
  * A single node identifier and the bit length for nodes is stored in this class.
@@ -612,6 +613,17 @@ public class NodeId implements Comparable, Serializable
 	return res;
     }
 
+
+    /**
+     * Creates a random nodeId.
+     *
+     * @param rng random number generator
+     */
+    public static NodeId makeRandomId(Random rng) {
+	byte material[] = new byte[nodeIdBitLength >> 3];
+	rng.nextBytes(material);
+	return new NodeId(material);
+    }
 
     /**
      * Returns a string representation of the nodeId.

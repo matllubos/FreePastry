@@ -49,7 +49,7 @@ import java.io.*;
  * @author Andrew Ladd
  */
 
-public class LeafSetProtocolAddress implements Address, Serializable {
+public class LeafSetProtocolAddress implements Address {
     private static final int myCode = 0xf921def1;
 
     /**

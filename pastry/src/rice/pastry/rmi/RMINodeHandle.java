@@ -166,28 +166,26 @@ public class RMINodeHandle implements NodeHandle, Serializable
 
     public void receiveMessage(Message msg) {
 
-	System.out.println("local = " + localnode + " remote = " + remoteNode + " rnid = " + remotenid);
-
 	if (isLocal) {
 	    localnode.receiveMessage(msg);
 	    return;
 	}
 
+	if (alive == false)
+	    System.out.println("[rmi] warning: trying to send msg to dead node "
+			       + remotenid + ": " + msg);
+
+	if (isInPool == false)
+	    System.out.println("panic: sending message to unverified handle "
+			       + this + " for " + remotenid + ": " + msg);
+
+	msg.setSenderId(localnode.getNodeId());
+
+	System.out.println("[rmi] sending " +
+			   (msg instanceof RouteMessage ? "route" : "direct")
+			   + " msg to " + remotenid + ": " + msg);
+
 	try {
-
-	    if (alive == false)
-		System.out.println("[rmi] warning: trying to send msg to dead node "
-				   + remotenid + ": " + msg);
-
-	    if (isInPool == false)
-		System.out.println("panic: sending message to unverified handle "
-				   + this + " for " + remotenid + ": " + msg);
-
-	    msg.setSenderId(localnode.getNodeId());
-
-	    System.out.println("[rmi] sending " +
-			       (msg instanceof RouteMessage ? "route" : "direct")
-			       + " msg to " + remotenid + ": " + msg);
 
 	    remoteNode.remoteReceiveMessage(msg);
 	    //System.out.println("[rmi] message sent successfully");

@@ -49,7 +49,7 @@ import java.io.*;
  * @author Andrew Ladd
  */
 
-public class JoinAddress implements Address, Serializable {
+public class JoinAddress implements Address {
     private static final int myCode = 0xe80c17e8;
 
     /**

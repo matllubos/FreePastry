@@ -61,30 +61,13 @@ public class PingClient extends PastryAppl {
 	public boolean equals(Object obj) {
 	    return (obj instanceof PingAddress);
 	}
+
+	public String toString() { return "[PingAddress]"; }
     }
         
     private static Address pingAddress = new PingAddress();
     private Credentials pingCred = new PermissiveCredentials();
 
-    private class PingMessage extends Message {
-	private NodeId source;
-	private NodeId target;
-
-	public PingMessage(NodeId src, NodeId tgt) {
-	    super(pingAddress);
-
-	    source = src;
-	    target = tgt;
-	}
-	
-	public String toString() {
-	    String s="";
-	    
-	    s += "ping from " + source + " to " + target;
-	    return s;
-	}
-    }
-    
     public PingClient(PastryNode pn) {
 	super(pn);
     }
@@ -95,13 +78,15 @@ public class PingClient extends PastryAppl {
 
     public void sendPing(NodeId nid) {
 	// routeMessage, sans the getAddress() in the RouteMessage constructor
-	routeMsg(nid, new PingMessage(getNodeId(), nid), pingCred, new SendOptions());
+	routeMsg(nid, new PingMessage(pingAddress, getNodeId(), nid),
+		 pingCred, new SendOptions());
     }
 
     public void sendTrace(NodeId nid) {
 	System.out.println("sending a trace from " + getNodeId() + " to " + nid);
 	// sendEnrouteMessage
-	routeMsg(nid, new PingMessage(getNodeId(), nid), pingCred, new SendOptions());
+	routeMsg(nid, new PingMessage(pingAddress, getNodeId(), nid),
+		 pingCred, new SendOptions());
     }
 
     public void messageForAppl(Message msg) {
@@ -116,7 +101,6 @@ public class PingClient extends PastryAppl {
 	return true;
     }
 
-
     public void leafSetChange(NodeHandle nh, boolean wasAdded) {
 	System.out.println("at... " + getNodeId() + "'s leaf set");
 	System.out.print("node " + nh.getNodeId() + " was ");
@@ -124,12 +108,31 @@ public class PingClient extends PastryAppl {
 	else System.out.println("removed");
     }
 
-
     public void routeSetChange(NodeHandle nh, boolean wasAdded) {
 	System.out.println("at... " + getNodeId() + "'s route set");
 	System.out.print("node " + nh.getNodeId() + " was ");
 	if (wasAdded) System.out.println("added");
 	else System.out.println("removed");
     }
-
 }
+
+/**
+ * DO NOT declare this inside PingClient; see HelloWorldApp for details.
+ */
+class PingMessage extends Message {
+    private NodeId source;
+    private NodeId target;
+
+    public PingMessage(Address pingAddress, NodeId src, NodeId tgt) {
+	super(pingAddress);
+	source = src;
+	target = tgt;
+    }
+
+    public String toString() {
+	String s="";
+	s += "ping from " + source + " to " + target;
+	return s;
+    }
+}
+

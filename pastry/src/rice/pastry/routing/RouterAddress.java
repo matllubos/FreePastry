@@ -49,7 +49,7 @@ import java.io.*;
  * @author Andrew Ladd
  */
 
-public class RouterAddress implements Address, Serializable {
+public class RouterAddress implements Address {
     private static final int myCode = 0xACBDFE17;
 
     /**

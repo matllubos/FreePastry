@@ -1,14 +1,14 @@
 PACKAGE = rice.pastry.testing
 
 SOURCE  = \
-	NodeIdUnit.java\
-	PastryTest.java\
-	PingClient.java\
-	RMIPastryTest.java\
-	PastryRegrTest.java\
-	DirectPastryRegrTest.java\
-	RMIPastryRegrTest.java\
-	RegrTestApp.java
+	HelloWorld.java RMIHelloWorld.java HelloWorldApp.java \
+	\
+	PastryTest.java RMIPastryTest.java PingClient.java\
+	\
+	PastryRegrTest.java DirectPastryRegrTest.java RMIPastryRegrTest.java\
+	RegrTestApp.java\
+	\
+	NodeIdUnit.java
 
 RMI_SOURCE =
 

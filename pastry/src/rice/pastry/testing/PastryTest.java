@@ -51,6 +51,7 @@ import java.util.*;
  * @version $Id$
  *
  * @author andrew ladd
+ * @author sitaram iyer
  */
 
 public class PastryTest {
@@ -59,18 +60,6 @@ public class PastryTest {
 
     private Vector pastryNodes;
     private Vector pingClients;
-
-    /**
-     * lastElement that returns null if empty
-     */
-    private NodeHandle pastryNodes_lastElement() {
-	try {
-	    PastryNode lastnode = (PastryNode) pastryNodes.lastElement();
-	    return lastnode.getLocalHandle();
-	} catch (NoSuchElementException e) {
-	    return null;
-	}
-    }
 
     private Random rng;
 
@@ -83,19 +72,22 @@ public class PastryTest {
 	rng = new Random();
     }
 
-    public void makePastryNode() {
-	//NodeHandle bootstrap = pastryNodes_lastElement();
-	//PastryNode pn = new DirectPastryNode(factory, bootstrap);
+    private NodeHandle getBootstrap() {
+	NodeHandle bootstrap = null;
+	try {
+	    PastryNode lastnode = (PastryNode) pastryNodes.lastElement();
+	    bootstrap = lastnode.getLocalHandle();
+	} catch (NoSuchElementException e) {
+	}
+	return bootstrap;
+    }
 
-	PastryNode pn = factory.newNode(pastryNodes_lastElement());
+    public void makePastryNode() {
+	PastryNode pn = factory.newNode(getBootstrap());
 	pastryNodes.addElement(pn);
 	
-	//System.out.println("created " + pn);
-
 	PingClient pc = new PingClient(pn);
 	pingClients.addElement(pc);
-
-	//System.out.println("");
     }
 
     public void sendPings(int k) {

@@ -62,17 +62,16 @@ import java.rmi.RMISecurityManager;
  */
 
 public class RMIPastryRegrTest extends PastryRegrTest {
-    private static int port;
-    private static String bshost;
-    private static int bsport;
-    private static int numnodes;
+    private static int port = 5009;
+    private static String bshost = "thor03";
+    private static int bsport = 5009;
+    private static int numnodes = 1;
 
     // constructor
 
     public RMIPastryRegrTest() {
 	super();
-	factory = new RMIPastryNodeFactory();
-	((RMIPastryNodeFactory)factory).setport(port);
+	factory = new RMIPastryNodeFactory(port);
     }
 
     /**
@@ -82,7 +81,7 @@ public class RMIPastryRegrTest extends PastryRegrTest {
      *
      * @return handle to bootstrap node, or null.
      */
-    protected NodeHandle getBootstrapHandle() {
+    protected NodeHandle getBootstrap() {
 	RMIRemoteNodeI bsnode = null;
 	try {
 	    bsnode = (RMIRemoteNodeI)Naming.lookup("//:" + port + "/Pastry");
@@ -154,12 +153,6 @@ public class RMIPastryRegrTest extends PastryRegrTest {
      * the RMI registry. Standard gunk that has to be done for all RMI apps.
      */
     private static void doRMIinitstuff(String args[]) {
-	// defaults
-
-	bshost = "thor01";
-	port = bsport = 5009;
-	numnodes = 1;
-
 	// process command line arguments
 
 	for (int i = 0; i < args.length; i++) {
@@ -215,27 +208,60 @@ public class RMIPastryRegrTest extends PastryRegrTest {
 	}
     }
 
+    private class ApplThread implements Runnable {
+	PastryNode pn;
+	RegrTestApp app;
+	ApplThread(PastryNode n, RegrTestApp a) { pn = n; app = a; }
+
+	public void run() {
+
+	    // wait till node is ready to accept application messages.
+	    if (pn.isReady() == false) {
+		synchronized (app) {
+		    //System.out.println(pn + " isn't ready yet. Waiting.");
+		    try { app.wait(); } catch (InterruptedException e) { }
+		}
+		if (pn.isReady() == false) System.out.println("panic");
+		//System.out.println(pn + " is ready now. Proceeding to send messages.");
+	    } else {
+		//System.out.println(pn + " is ready at the time this client is starting.");
+	    }
+
+	    //doappstuff();
+	}
+    }
+
+    /**
+     * wire protocol specific handling of the application object
+     * e.g., RMI may launch a new thread
+     * 
+     * @param pn pastry node
+     * @param app newly created application
+     */
+    protected void registerapp(PastryNode pn, RegrTestApp app) {
+	ApplThread thread = new ApplThread(pn, app);
+	new Thread(thread).start();
+    }
+
     // do nothing in the RMI world
     public boolean simulate() { return false; }
 
-    public boolean simIsAlive(NodeId id) {
+    public boolean isReallyAlive(NodeId id) {
 	// xxx
 	return false;
     }
 
     protected void killNode(PastryNode pn) {
-	// get to the RMIPastryNode somehow! how? hmm.. kill thread?
-	// flag in PastryNode for this strange purpose?
-	// or just pretend the node has died?
+	((RMIPastryNode)pn).KILLNODE();
     }
 
     /**
-     * Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
+     * Usage: RMIRegrPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
      */
 
     public static void main(String args[]) {
 	doRMIinitstuff(args);
 	RMIPastryRegrTest pt = new RMIPastryRegrTest();
-	mainfunc(pt, args);
+	mainfunc(pt, args, 10 /*n*/, 4/*d*/, 10/*k*/, 10/*m*/, 4/*conc*/);
     }
 }

@@ -256,12 +256,6 @@ public abstract class PastryAppl implements MessageReceiver
     public abstract void messageForAppl(Message msg);
 
     /**
-     * Invoked when the Pastry node is ready to receive application messages.
-     */
-    
-    public void notifyReady() {}
-
-    /**
      * Called by pastry when a message is enroute and is passing through this node.  If this
      * method is not overridden, the default behaviour is to let the message pass through.
      *
@@ -294,6 +288,12 @@ public abstract class PastryAppl implements MessageReceiver
      */
 
     public void routeSetChange(NodeHandle nh, boolean wasAdded) {}
+
+    /**
+     * Invoked when the Pastry node is ready to receive application messages.
+     */
+    
+    public void notifyReady() {}
 
 }
 

@@ -46,35 +46,47 @@ import java.rmi.Naming;
 import java.rmi.RMISecurityManager;
 
 /**
- * Pastry test.
+ * A hello world example for pastry. This is the "RMI" driver.
  *
- * A test case for pastry RMI. Each node currently starts one instance of
- * Pastry, but pt.makePastryNode can be called multiple times from main
- * (say for the benefit of different and incompatible p2p applications).
+ * For example, run with default arguments on two machines, both with args
+ * -bootstrap firstmachine. Read the messages and follow the protocols.
+ *
+ * Either separately or with the above, try -nodes 3 and -nodes 20.
+ * Try -msgs 100. Try the two machine configuration, kill it, restart, and
+ * watch it join as a different node. Do that a few times, watch LeafSet
+ * entries accumulate, then in 30 seconds, watch the maintenance take over.
  *
  * @version $Id$
  *
- * @author sitaram iyer
+ * @author Sitaram Iyer
  */
 
-public class RMIPastryTest {
+public class RMIHelloWorld {
     private PastryNodeFactory factory;
-    private Vector pastrynodes;
+    private Vector pastryNodes;
+    private Vector helloClients;
+    private Random rng;
 
     private static int port = 5009;
     private static String bshost = "thor03";
     private static int bsport = 5009;
     private static int numnodes = 1;
+    private static int nummsgs = 2; // per virtual node
 
-    public RMIPastryTest() {
+    /**
+     * Constructor
+     */
+    public RMIHelloWorld() {
 	factory = new RMIPastryNodeFactory(port);
-	pastrynodes = new Vector();
+	pastryNodes = new Vector();
+	helloClients = new Vector();
+	rng = new Random();
     }
 
     /**
-     * Gets a handle to a bootstrap node. First tries localhost, to see
-     * whether a previous virtual node has already bound itself. Then it
-     * tries nattempts times on bshost:bsport.
+     * Gets a handle to a bootstrap node. First we try localhost, to see
+     * whether a previous virtual node has already bound itself there.
+     * Then we try nattempts times on bshost:bsport. Then we fail.
      *
      * @return handle to bootstrap node, or null.
      */
@@ -145,15 +157,21 @@ public class RMIPastryTest {
      * the RMI registry. Standard gunk that has to be done for all RMI apps.
      */
     private static void doRMIinitstuff(String args[]) {
+
 	// process command line arguments
 
 	for (int i = 0; i < args.length; i++) {
 	    if (args[i].equals("-help")) {
-		System.out.println("Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]");
+		System.out.println("Usage: RMIHelloWorld [-msgs m] [-port p] [-nodes n] [-bootstrap host[:port]] [-help]");
 		System.exit(1);
 	    }
 	}
 	
+	for (int i = 0; i < args.length; i++) {
+	    if (args[i].equals("-msgs") && i+1 < args.length)
+		nummsgs = Integer.parseInt(args[i+1]);
+	}
+
 	for (int i = 0; i < args.length; i++) {
 	    if (args[i].equals("-port") && i+1 < args.length) {
 		int p = Integer.parseInt(args[i+1]);
@@ -200,37 +218,85 @@ public class RMIPastryTest {
 	}
     }
 
-    public void makePastryNode() {
-	// or, for a sweet one-liner,
-	// pastrynodes.add(new RMIPastryNode(factory, getBootstrap()));
+    /**
+     * This application spawns a thread for each virtual node. While this is
+     * convenient, note that multithreadedness is not a requirement for RMI
+     * applications, especially those with only one virtual node per host.
+     * However, it _is_ essential for RMI applications to not send messages
+     * till Node.isReady() becomes true (and app.notifyReady() gets called).
+     *
+     * This example demonstrates how to write HelloWorldApp in a wire
+     * protocol independent fashion, catering to both multithreaded and
+     * event-driven execution models.
+     */
 
+    private class ApplThread implements Runnable {
+	PastryNode pn;
+	HelloWorldApp app;
+	ApplThread(PastryNode n, HelloWorldApp a) { pn = n; app = a; }
+
+	public void run() {
+
+	    // wait till node is ready to accept application messages.
+
+	    if (pn.isReady() == false) {
+		synchronized (app) {
+		    System.out.println(pn + " isn't ready yet. Waiting.");
+		    // waiting to be signalled by HelloWorldApp.notifyAll()
+		    try { app.wait(); } catch (InterruptedException e) { }
+		}
+		if (pn.isReady() == false) System.out.println("panic");
+		System.out.println(pn + " is ready now. Proceeding to send messages.");
+	    } else {
+		System.out.println(pn + " is ready at the time this client is starting.");
+	    }
+
+	    // okay. now print the leaf set and send some messages.
+
+	    System.out.println(pn.getLeafSet());
+
+	    for (int i = 0; i < nummsgs; i++)
+		app.sendRndMsg(rng);
+	}
+    }
+
+    /**
+     * Create a Pastry node and add it to pastryNodes. Also create a client
+     * application for this node, and spawn off a separate thread for it.
+     */
+    public void makePastryNode() {
 	PastryNode pn = factory.newNode(getBootstrap());
-	pastrynodes.add(pn);
+	pastryNodes.addElement(pn);
+
+	HelloWorldApp app = new HelloWorldApp(pn);
+	helloClients.addElement(app);
+
+	ApplThread thread = new ApplThread(pn, app);
+	new Thread(thread).start();
+
 	System.out.println("created " + pn);
     }
 
-    public void printLeafSets() {
-	pause(1000);
-	for (int i = 0; i < pastrynodes.size(); i++)
-	    System.out.println(((PastryNode)pastrynodes.get(i)).getLeafSet());
-    }
-
+    /**
+     * Poz.
+     *
+     * @param ms milliseconds.
+     */
     public synchronized void pause(int ms) {
 	System.out.println("waiting for " + (ms/1000) + " sec");
 	try { wait(ms); } catch (InterruptedException e) {}
     }
 
     /**
-     * Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
+     * Usage: RMIHelloWorld [-msgs m] [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
      */
     public static void main(String args[]) {
 	doRMIinitstuff(args);
-	RMIPastryTest pt = new RMIPastryTest();
+	RMIHelloWorld driver = new RMIHelloWorld();
 
 	for (int i = 0; i < numnodes; i++)
-	    pt.makePastryNode();
+	    driver.makePastryNode();
 
-	while (true)
-	    pt.printLeafSets();
+	System.out.println(numnodes + " nodes constructed");
     }
 }

@@ -85,9 +85,9 @@ public class RMIPastryNode extends PastryNode
 		}
 
 		/*
-		* The sender of this message is alive. So if we have a
-		* handle in our pool with this Id, then it should be
-		* reactivated.
+		 * The sender of this message is alive. So if we have a
+		 * handle in our pool with this Id, then it should be
+		 * reactivated.
 		 */
 		NodeId sender = msg.getSenderId();
 		System.out.println("[rmi] received " +
@@ -175,10 +175,23 @@ public class RMIPastryNode extends PastryNode
 	    System.out.println("Unable to bind Pastry node in rmiregistry: " + e.toString());
 	}
 
+	setReady();
+
 	// notify applications
 	Iterator it = apps.iterator();
         while (it.hasNext())
             ((PastryAppl)(it.next())).notifyReady();
+    }
+
+    /**
+     * Testing purposes only!
+     */
+    public void KILLNODE() {
+	try {
+	    UnicastRemoteObject.unexportObject(this, true); // force
+	} catch (NoSuchObjectException e) {
+	    System.out.println("Unable to unbind Pastry node from rmiregistry: " + e.toString());
+	}
     }
 
     /**

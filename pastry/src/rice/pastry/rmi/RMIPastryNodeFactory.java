@@ -59,19 +59,39 @@ import java.rmi.Naming;
 public class RMIPastryNodeFactory implements PastryNodeFactory
 {
     private RandomNodeIdFactory nidFactory;
-    
+
     private static final int rtMax = 8;
     private static final int lSetSize = 24;
 
+    /**
+     * Large value means infrequent, 0 means never
+     */
+    private static final int leafSetMaintFreq = 100;
+    private static final int routeSetMaintFreq = 300;
+
     int port;
   
-    public RMIPastryNodeFactory() {
+    /**
+     * Constructor.
+     *
+     * @param p RMI registry port.
+     */
+    public RMIPastryNodeFactory(int p) {
 	nidFactory = new RandomNodeIdFactory();
-	port = 0;
+	port = p;
     }
 
-    public void setport(int p) { port = p; }
-    
+    /**
+     * Makes many policy choices and manufactures a new RMIPastryNode.
+     * Creates a series of artifacts to adorn the node, like a security
+     * manager, a leafset, etc. with hand-picked parameters like the leaf
+     * set size. Finally calls the respective setElements to pass these on
+     * to the {,RMI,Direct}PastryNode as appropriate, and then calls
+     * node.doneNode() (which internally performs mechanisms like exporting
+     * the node and notifying applications).
+     *
+     * @param bootstrap Node handle to bootstrap from.
+     */
     public PastryNode newNode(NodeHandle bootstrap) {
 
 	NodeId nodeId = nidFactory.generateNodeId();
@@ -104,7 +124,8 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
 	msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
 	msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
 
-	pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
+	pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable,
+		       leafSetMaintFreq, routeSetMaintFreq);
 	pn.setRMIElements(handlepool, port);
 	secureMan.setLocalPastryNode(pn);
 

@@ -36,6 +36,8 @@ if advised of the possibility of such damage.
 
 package rice.pastry.messaging;
 
+import java.io.*;
+
 /**
  * The address interface.  Addresses are used by Pastry to route messages
  * internally.
@@ -45,4 +47,4 @@ package rice.pastry.messaging;
  * @author Andrew Ladd
  */
 
-public interface Address {}
+public interface Address extends Serializable {}
