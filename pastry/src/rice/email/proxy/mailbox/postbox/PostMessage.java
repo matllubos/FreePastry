@@ -132,15 +132,15 @@ public class PostMessage implements StoredMessage {
       if (cc == null) cc = new Address[0];
       if (bcc == null) bcc = new Address[0];
 
-      MailAddress[] recipients = new MailAddress[to.length + cc.length + bcc.length];
+      PostUserAddress[] recipients = new PostUserAddress[to.length + cc.length + bcc.length];
  
       for (int i=0; i<recipients.length; i++) {
         if (i < to.length) {
-          recipients[i] = new MailAddress(((InternetAddress) to[i]).getAddress());
+          recipients[i] = new PostUserAddress(factory, ((InternetAddress) to[i]).getAddress());
         } else if (i < to.length + cc.length) {
-          recipients[i] = new MailAddress(((InternetAddress) cc[i-to.length]).getAddress());
+          recipients[i] = new PostUserAddress(factory, ((InternetAddress) cc[i-to.length]).getAddress());
         } else {
-          recipients[i] = new MailAddress(((InternetAddress) bcc[i-cc.length-to.length]).getAddress());
+          recipients[i] = new PostUserAddress(factory, ((InternetAddress) bcc[i-cc.length-to.length]).getAddress());
         }
       }
 
@@ -156,21 +156,14 @@ public class PostMessage implements StoredMessage {
       throw new MailboxException(ae);
     } catch (MessagingException e) {
       throw new MailboxException(e);
-    } catch (MalformedAddressException e) {
-      throw new MailboxException(e);
     }
   }
 
-  public static Email parseEmail(InetAddress remote, MailAddress[] addresses, Resource content) throws MailboxException {
+  public static Email parseEmail(InetAddress remote, PostEntityAddress[] addresses, Resource content) throws MailboxException {
     return parseEmail(remote, addresses, content, null);
   }
   
-  public static Email parseEmail(InetAddress remote, MailAddress[] addresses, Resource content, PostEntityAddress address) throws MailboxException {
-    PostEntityAddress[] recipients = new PostEntityAddress[addresses.length];
-    
-    for (int i=0; i<recipients.length; i++) 
-      recipients[i] = new PostUserAddress(factory, addresses[i].toString());
-    
+  public static Email parseEmail(InetAddress remote, PostEntityAddress[] recipients, Resource content, PostEntityAddress address) throws MailboxException {    
     try {
       Properties props = new Properties();
       Session session = Session.getDefaultInstance(props, null);
