@@ -51,8 +51,8 @@ public class SplitStreamRegrTest extends CommonAPITest {
   public SplitStreamRegrTest() {
     splitstreams = new SplitStreamImpl[NUM_NODES];
     ssclients = new SplitStreamTestClient[NUM_NODES];
-    rng = new Random(PastrySeed.getSeed());
-    generateIdRng = new Random(PastrySeed.getSeed());
+    rng = new Random(PastrySeed.getSeed()+2);
+    generateIdRng = new Random(PastrySeed.getSeed()+3);
 
   }
 
@@ -64,7 +64,11 @@ public class SplitStreamRegrTest extends CommonAPITest {
    * @param args DESCRIBE THE PARAMETER
    */
   public static void main(String args[]) {
-      //PastrySeed.setSeed(922063158);
+      int seed;
+      //seed = (int)System.currentTimeMillis();
+      seed = 935441300;
+      PastrySeed.setSeed(seed);
+      System.out.println("Seed= " + PastrySeed.getSeed());
       parseArgs(args);
     SplitStreamRegrTest splitstreamTest = new SplitStreamRegrTest();
     splitstreamTest.start();
