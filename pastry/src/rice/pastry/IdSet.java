@@ -146,9 +146,11 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
     if (from.compareTo(to) <= 0) {
       res = new IdSet( (TreeSet) idSet.subSet(from, to));
     } else {
-      SortedSet ss = idSet.tailSet(from);
-      ss.addAll(idSet.headSet(to));
-      res = new IdSet( (TreeSet) ss);
+      res = new IdSet( (TreeSet) idSet.tailSet(from));
+      //SortedSet ss = idSet.tailSet(from);
+      //ss.addAll(idSet.headSet(to));
+      //res = new IdSet( (TreeSet) ss);
+      res.idSet.addAll(idSet.headSet(to));
     }
 
     return res;
