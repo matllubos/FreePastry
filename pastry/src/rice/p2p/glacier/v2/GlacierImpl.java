@@ -41,9 +41,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   protected GlacierStatistics statistics;
   protected Vector listeners;
 
-  private int loglevel = 3;
+  private int loglevel = 2;
   private final boolean logStatistics = true;
-  private final boolean faultInjectionEnabled = true;
+  private final boolean faultInjectionEnabled = false;
 
   private final long SECONDS = 1000;
   private final long MINUTES = 60 * SECONDS;
@@ -80,7 +80,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private final long overallRestoreTimeout = 3 * MINUTES;
   
   private final long handoffDelayAfterJoin = 45 * SECONDS;
-  private final long handoffInterval = 2 * MINUTES;
+  private final long handoffInterval = 4 * MINUTES;
   private final int handoffMaxFragments = 100;
 
   private final long garbageCollectionInterval = 10 * MINUTES;
@@ -193,8 +193,6 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         terminate();
       }
       public void timeoutExpired() {
-        nextTimeout += expireNeighborsInterval;
-
         final long earliestAcceptableDate = System.currentTimeMillis() - neighborTimeout;
         IdSet allNeighbors = neighborStorage.scan();
         Iterator iter = allNeighbors.getIterator();
@@ -239,6 +237,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         }
         
         determineResponsibleRange();
+        nextTimeout = System.currentTimeMillis() + expireNeighborsInterval;
       }
       public long getTimeout() {
         return nextTimeout;
@@ -324,7 +323,6 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       }
       public void timeoutExpired() {
         offset = 1+random.nextInt(numFragments-1);
-        nextTimeout += jitterTerm(syncInterval);
 
         Id dest = getFragmentLocation(getLocalNodeHandle().getId(), offset, 0);
         Id ccwId = getFragmentLocation(responsibleRange.getCCWId(), offset, 0);
@@ -337,6 +335,8 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           new GlacierRangeQueryMessage(getMyUID(), requestedRange, getLocalNodeHandle(), dest, tagSync),
           null
         );
+
+        nextTimeout = System.currentTimeMillis() + jitterTerm(syncInterval);
       }
       public long getTimeout() {
         return nextTimeout;
@@ -475,7 +475,6 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         e.printStackTrace();
       }
       public void timeoutExpired() {
-        nextTimeout += jitterTerm(handoffInterval);
         log(2, "Checking fragment storage for fragments to hand off...");
         log(3, "Currently responsible for: "+responsibleRange);
         Iterator iter = fragmentStorage.scan().getIterator();
@@ -515,6 +514,8 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           new GlacierQueryMessage(getMyUID(), keys, getLocalNodeHandle(), destination, tagHandoff),
           null
         );
+
+        nextTimeout = System.currentTimeMillis() + jitterTerm(handoffInterval);
       }
       public long getTimeout() {
         return nextTimeout;
@@ -574,7 +575,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         
         log(2, "Garbage collection completed at "+System.currentTimeMillis());
         log(2, "Found "+candidates+" candidate(s), collected "+doneSoFar);
-        nextTimeout += garbageCollectionInterval;
+        nextTimeout = System.currentTimeMillis() + garbageCollectionInterval;
       }
     });
     
@@ -718,7 +719,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           log(2, "Local scan completed; no missing fragments");
         }
 
-        nextTimeout += jitterTerm(localScanInterval);
+        nextTimeout = System.currentTimeMillis() + jitterTerm(localScanInterval);
       }
     });
 
