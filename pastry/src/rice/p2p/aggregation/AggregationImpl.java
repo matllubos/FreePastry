@@ -85,7 +85,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private static final long monitorRefreshInterval = 10 * MINUTES;
 
   private static final long consolidationDelayAfterJoin = 5 * MINUTES;
-  private static final long consolidationInterval = 15 * MINUTES;
+  private static long consolidationInterval = 15 * MINUTES;
   private static long consolidationThreshold = 14 * DAYS;
   private static int consolidationMinObjectsInAggregate = 20;
   private static double consolidationMinComponentsAlive = 0.8;
@@ -242,7 +242,12 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         "maxPointersPerAggregate = " + maxPointersPerAggregate + "\n" +
         "pointerArrayLifetime = " + (int)(pointerArrayLifetime / DAYS) + " days\n" +
         "expirationInterval = " + (int)(expirationInterval / SECONDS) + " sec\n" +
-        "expirationRenewThreshold = " + (int)(expirationRenewThreshold / HOURS) + " hrs\n";
+        "expirationRenewThreshold = " + (int)(expirationRenewThreshold / HOURS) + " hrs\n" +
+        "consolidationDelayAfterJoin = " + (int)(consolidationDelayAfterJoin / SECONDS) + " sec\n" +
+        "consolidationInterval = " + (int)(consolidationInterval / SECONDS) + " sec\n" +
+        "consolidationThreshold = " + (int)(consolidationThreshold / HOURS) + " hrs\n" +
+        "consolidationMinObjectsInAggregate = " + consolidationMinObjectsInAggregate + "\n" +
+        "consolidationMinComponentsAlive = " + consolidationMinComponentsAlive + "\n";
     }    
 
     if (cmd.startsWith("ls")) {
@@ -1890,6 +1895,22 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   public void setRenewThreshold(int expirationRenewThresholdHrs) {
     this.expirationRenewThreshold = expirationRenewThresholdHrs * HOURS;
   }
+  
+  public void setConsolidationInterval(long consolidationIntervalSec) {
+    this.consolidationInterval = consolidationIntervalSec * SECONDS;
+  }
+  
+  public void setConsolidationThreshold(long consolidationThresholdSec) {
+    this.consolidationThreshold = consolidationThresholdSec * SECONDS;
+  }
+  
+  public void setConsolidationMinObjectsPerAggregate(int minObjectsInAggregateArg) {
+    this.consolidationMinObjectsInAggregate = minObjectsInAggregateArg;
+  }
+  
+  public void setConsolidationMinUtilization(double minUtilization) {
+    this.consolidationMinComponentsAlive = minUtilization;
+  }
 
   public Past getAggregateStore() {
     return aggregateStore;
@@ -1906,4 +1927,5 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   public AggregationStatistics getStatistics() {
     return stats;
   }
+
 }
