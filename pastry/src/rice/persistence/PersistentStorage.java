@@ -95,23 +95,38 @@ public class PersistentStorage implements Storage {
   /**
    * Static variables which define the location of the storage root
    */
-  private static final String BACKUP_DIRECTORY = "/FreePastry-Storage-Root/";
-  private static final String LOST_AND_FOUND_DIRECTORY = "lost+found";
+  public static final String BACKUP_DIRECTORY = "/FreePastry-Storage-Root/";
+  public static final String LOST_AND_FOUND_DIRECTORY = "lost+found";
   
   /**
    * The splitting factor, or the number of files in one directory
    */
-  private static final int MAX_FILES = 256;
+  public static final int MAX_FILES = 256;
   
   /**
    * The maximum number of subdirectories in a directory before splitting
    */
-  private static final int MAX_DIRECTORIES = 32;
+  public static final int MAX_DIRECTORIES = 32;
   
   /**
    * Whether or not to print debug output 
    */
-  private static final boolean DEBUG = false;
+  public static final boolean DEBUG = false;
+  
+  /**
+   * The static work queue, which all of the persistence roots use
+   */
+  protected static WorkQueue QUEUE = new WorkQueue();
+  
+  /**
+   * The static worker thread, which services all disk requests for all roots
+   */
+  protected static Thread WORK_THREAD = new PersistenceThread(QUEUE);
+  
+  /* now, start the worker thread at class-load time */
+  static {
+    WORK_THREAD.start();
+  }
 
   private IdFactory factory;			  // the factory used for creating ids
   
@@ -131,9 +146,6 @@ public class PersistentStorage implements Storage {
   private long usedSize;            // The amount of storage currently in use
   private IdSet idSet;              // In memory store of all keys
   private Random rng;               // random number generator
-
-  private WorkQ workQ;              // A work Queue for all currently pending requests
-  private Thread workThread;        // The thread that does the work
 
  /**
   * Builds a PersistentStorage given a root directory in which to
@@ -162,8 +174,6 @@ public class PersistentStorage implements Storage {
     this.rootDir = rootDir;
     this.storageSize = size; 
     this.rng = new Random();
-    this.workQ = new WorkQ();
-    this.workThread = new PersistenceThread(workQ, name);
     this.idSet = factory.buildIdSet();
     this.directories = new HashMap();
     this.metadata = new HashMap();
@@ -171,8 +181,6 @@ public class PersistentStorage implements Storage {
     debug("Launching persistent storage in " + rootDir + " with name " + name + " spliting factor " + MAX_FILES);
     
     init();
-    
-    workThread.start();
   } 
   
   /**
@@ -184,7 +192,7 @@ public class PersistentStorage implements Storage {
    * @param c The command to run once the operation is complete
    */
   public void rename(final Id oldId, final Id newId, Continuation c) {
-    workQ.enqueue(new WorkRequest(c) {
+    QUEUE.enqueue(new WorkRequest(c) {
       public Object doWork() throws Exception {
         File f = getFile(oldId);
         
@@ -228,7 +236,7 @@ public class PersistentStorage implements Storage {
    * <code>false</code>.
    */
   public void store(final Id id, final Serializable metadata, final Serializable obj, Continuation c) {
-    workQ.enqueue(new WorkRequest(c) { 
+    QUEUE.enqueue(new WorkRequest(c) { 
       public Object doWork() throws Exception {
         /* first, rename the current file to a temporary name */
         File objFile = getFile(id); 
@@ -287,7 +295,7 @@ public class PersistentStorage implements Storage {
    * <code>false</code>.
    */
   public void unstore(final Id id, Continuation c) {
-    workQ.enqueue(new WorkRequest(c) { 
+    QUEUE.enqueue(new WorkRequest(c) { 
       public Object doWork() throws Exception {
         /* first get the file */
         File objFile = getFile(id); 
@@ -352,7 +360,7 @@ public class PersistentStorage implements Storage {
     if (! exists(id)) {
       c.receiveResult(new Boolean(false));
     } else {    
-      workQ.enqueue(new WorkRequest(c) { 
+      QUEUE.enqueue(new WorkRequest(c) { 
         public Object doWork() throws Exception {
           /* write the metadata to the file */
           writeMetadata(getFile(id), metadata);
@@ -380,7 +388,7 @@ public class PersistentStorage implements Storage {
     if (! exists(id)) {
       c.receiveResult(null);
     } else {    
-      workQ.enqueue(new WorkRequest(c) { 
+      QUEUE.enqueue(new WorkRequest(c) { 
         public Object doWork() throws Exception {
           try { 
             /* get the file */
@@ -1511,30 +1519,30 @@ public class PersistentStorage implements Storage {
   /* Inner Classes for Worker Thread                               */
   /*****************************************************************/
 
-  private class PersistenceThread extends Thread {
-    WorkQ workQ;
+  private static class PersistenceThread extends Thread {
+    WorkQueue workQ;
 	   
-	   public PersistenceThread(WorkQ workQ, String name){
-       super("Persistence Worker Thread for " + name);
+	   public PersistenceThread(WorkQueue workQ){
+       super("Persistence Worker Thread");
        this.workQ = workQ;
 	   }
 	   
 	   public void run() {
-       while(true)
+       while (true)
          workQ.dequeue().run();
 	   }
   }
   
-  private class WorkQ {
+  private static class WorkQueue {
     List q = new LinkedList();
 	  /* A negative capacity, is equivalent to infinted capacity */
 	  int capacity = -1;
 	  
-	  public WorkQ() {
+	  public WorkQueue() {
 	     /* do nothing */
 	  }
 	  
-	  public WorkQ(int capacity) {
+	  public WorkQueue(int capacity) {
 	     this.capacity = capacity;
 	  }
 	  
@@ -1600,12 +1608,12 @@ public class PersistentStorage implements Storage {
 	}
 	
 	
-	private class PersistenceException extends Exception {
+	private static class PersistenceException extends Exception {
 	}
 	
-	private class OutofDiskSpaceException extends PersistenceException {
+	private static class OutofDiskSpaceException extends PersistenceException {
 	}
 	
-	private class WorkQueueOverflowException extends PersistenceException {
+	private static class WorkQueueOverflowException extends PersistenceException {
 	}
 }
