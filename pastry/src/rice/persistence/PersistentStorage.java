@@ -1442,7 +1442,7 @@ public class PersistentStorage implements Storage {
       FileInputStream fis = null;
       
       try {
-        fis = = new FileInputStream(ras.getFD());
+        fis = new FileInputStream(ras.getFD());
         ObjectInputStream objin = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
 
         try {
