@@ -73,26 +73,34 @@ public class Channel extends PastryAppl implements IScribeApp {
 	this.scribe = scribe;
 	this.bandwidthManager = bandwidthManager;
 	this.numStripes = numStripes;
+	PastrySeed.setSeed((int)System.currentTimeMillis());
+	RandomNodeIdFactory random = new RandomNodeIdFactory();
 	/* register this channel with the bandwidthManager */
 	this.bandwidthManager.registerChannel(this);
 	scribe.registerApp(this);
-        NodeId topicId = (new RandomNodeIdFactory()).generateNodeId();
+        NodeId topicId = random.generateNodeId();
         if(scribe.create(topicId, cred)){
 		System.out.println("Channel Topic Created");
 		this.channelId = new ChannelId(topicId);
         }
-        topicId = (new RandomNodeIdFactory()).generateNodeId();
+        topicId = random.generateNodeId();
         if(scribe.create(topicId, cred)){
 		this.spareCapacityId = new SpareCapacityId(topicId);
         }
-        NodeId baseId = (new RandomNodeIdFactory()).generateNodeId();
-	for(int i = 0; i < numStripes; i++){
-		StripeId stripeId = new StripeId(baseId.getAlternateId(numStripes, 4, i));
-		stripeIdTable.put(stripeId, new Stripe(stripeId, this, scribe,cred,true));
+        NodeId baseId = random.generateNodeId();
+	for(int i = 0; i < this.numStripes; i++){
+		StripeId stripeId = new StripeId(baseId.getAlternateId(numStripes, 4, i)); 
+		Stripe stripe = new Stripe(stripeId, this, scribe,cred,true);
+		stripeIdTable.put(stripeId, stripe);
+	/*	if(stripeId.getDigit(getRoutingTable().numRows() -1, 4) 
+		    == getNodeId().getDigit(getRoutingTable().numRows() -1,4))
+			primaryStripe = stripe; 
+	*/
+        primaryStripe = stripe;	
 	}
-        /* Send a create message to the node with responsible with the stripes*/
+	//primaryStripe.joinStripe(observer);
         /* Also select the primary stripe */
-   	NodeId[] subInfo = new NodeId[numStripes + 2]; 
+   	NodeId[] subInfo = new NodeId[this.numStripes + 2]; 
 	subInfo[0] = channelId;
 	for(int i = 1; i < subInfo.length -1; i++){
 		subInfo[i] = getStripes()[i - 1];
@@ -100,6 +108,9 @@ public class Channel extends PastryAppl implements IScribeApp {
 	subInfo[subInfo.length-1] = spareCapacityId;
 	if(scribe.join(channelId, this, cred, subInfo)){
 		System.out.println("Creator Joined Group" + getNodeId());
+	}		
+	if(scribe.join(spareCapacityId, this, cred, subInfo)){
+		System.out.println("Creator Joined Spare Capacity Group" + getNodeId());
 	}		
    	isReady = true;
    }
@@ -131,19 +142,20 @@ public class Channel extends PastryAppl implements IScribeApp {
 	for(int i = 0 ; i < stripeIds.length ; i++){
 		if(stripeIdTable == null) {System.out.println("NULL");}
 		stripeIdTable.put(stripeIds[i], "NULL");
+		
 	}
 
 	this.numStripes = stripeIds.length;
 	this.scribe = scribe;
 	this.bandwidthManager = bandwidthManager;
 	if(scribe.join(channelId, this, cred)){
-		System.out.println("Intermediate Node joined");
 	}
 	
+	if(scribe.join(spareCapacityId, this, cred)){
+	}		
 	/* Subscribe to a primary stripe */
 	isReady = true;
 	System.out.println("A Channel Object is being created (In Path) at " + getNodeId());
-	System.out.println(this);
     }
  
   /**
@@ -206,8 +218,19 @@ public class Channel extends PastryAppl implements IScribeApp {
    * currently subscribed to
    * @return Stripe A random stripe
    */
-  public Stripe joinAdditionalStripe(){
-        return null;
+  public Stripe joinAdditionalStripe(Observer observer ){
+	if(getNumSubscribedStripes() == getNumStripes())
+		return null;
+	boolean found= false;
+	Stripe toReturn = null;
+        for(int i = 0 ; i < getStripes().length && !found; i ++){
+	  	if(stripeIdTable.get(getStripes()[i]) instanceof String){
+			toReturn = joinStripe(getStripes()[i], observer);
+			found = true;
+		}
+	}
+	return toReturn;
+				
   }
 
   /**
@@ -216,9 +239,14 @@ public class Channel extends PastryAppl implements IScribeApp {
    * @return boolean Success of the join operation
    */ 
   public Stripe joinStripe(StripeId stripeId, Observer observer){
-		Stripe stripe = (Stripe) stripeIdTable.get(stripeId);
-		if(stripe == null){
+		Object tableEntry = stripeIdTable.get(stripeId);
+		Stripe stripe = null; 
+		if(tableEntry instanceof String){
 		   stripe = new Stripe(stripeId, this, scribe, cred, false);
+		   stripeIdTable.put(stripeId, stripe);
+		}
+		else{
+		   stripe = (Stripe) tableEntry;
 		}
 		stripe.joinStripe();	
 		stripe.addObserver(observer);
@@ -237,7 +265,7 @@ public class Channel extends PastryAppl implements IScribeApp {
   * @return the number of Stripes
   */
   public int getNumSubscribedStripes(){
-     return numSubscribedStripes;
+     return subscribedStripes.size();
   }
 
  /**
@@ -258,9 +286,18 @@ public class Channel extends PastryAppl implements IScribeApp {
   public void receiveMessage(ScribeMessage msg){
      /* Check the type of message */
      /* then make call accordingly */
-	System.out.println("Recieved Message in Channel");
-	ControlAttachMessage attachMessage =(ControlAttachMessage) msg.getData();
-	attachMessage.handleMessage(this, scribe, msg.getSource());
+	if(msg.getTopicId() == channelId){
+	 	ControlAttachMessage attachMessage =(ControlAttachMessage) msg.getData();
+		attachMessage.handleMessage(this, scribe, msg.getSource());
+	}
+	else if(msg.getTopicId() == spareCapacityId){
+		Stripe stripe = null;
+		ControlFindParentMessage parentMessage = (ControlFindParentMessage) msg;
+		if(stripeIdTable.get(parentMessage.getStripeId()) instanceof Stripe){
+			stripe = (Stripe) stripeIdTable.get(parentMessage.getStripeId());	
+		}
+		parentMessage.handleForwardWrapper((Scribe) scribe,((Scribe) scribe).getTopic(parentMessage.getTopicId()), stripe );
+	}
   }
   public void scribeIsReady(){
   }
@@ -280,12 +317,14 @@ public class Channel extends PastryAppl implements IScribeApp {
 	spareCapacityId = new SpareCapacityId(subInfo[subInfo.length-1]);
 	/* Fill in all instance variable for channel */
 	for(int i = 1 ; i < subInfo.length-1 ; i++){
+		this.numStripes = subInfo.length -2 ;
 		stripeIdTable.put(new StripeId(subInfo[i]), "NULL");
 	}
         if(scribe.join(channelId, this, cred, subInfo)){
 	}
+	if(scribe.join(spareCapacityId, this, cred, subInfo)){
+	}		
 	isReady = true;
-	System.out.println("Channel is now ready!");
   }
   public String toString(){
 	String toReturn = "Channel: " + getChannelId() + "\n";

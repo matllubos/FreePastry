@@ -5,7 +5,7 @@ import rice.pastry.*;
 import rice.pastry.standard.*;
 import rice.pastry.security.*;
 import java.io.*; 
-import java.util.Observable;
+import java.util.*;
 /**
  * This class encapsulates all data about an individual stripe.
  */
@@ -26,7 +26,7 @@ public class Stripe extends Observable implements IScribeApp{
     * The input stream used to get data from this stripe.
     */
    private InputStream inputStream = null;
-   private byte[] inputBuffer = null;  
+   private byte[] inputBuffer = new byte[1];  
    /**
     * The output stream used to give date to this stripe.
     */
@@ -64,6 +64,8 @@ public class Stripe extends Observable implements IScribeApp{
 		stripeState = STRIPE_UNSUBSCRIBED;
       	}
       }
+	//System.out.println("Stripe Created");
+	outputStream = new SplitStreamOutputStream(stripeId, scribe, credentials);
     }
 
    /**
@@ -121,7 +123,6 @@ public class Stripe extends Observable implements IScribeApp{
 	if(scribe.join(stripeId, this, credentials)){
  		stripeState = STRIPE_SUBSCRIBED;
 		inputStream = new ByteArrayInputStream(inputBuffer);
-		outputStream = new ByteArrayOutputStream();
 	}
      }	
      public void backdoorSend(Serializable data){
