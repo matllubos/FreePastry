@@ -8,7 +8,9 @@ SOURCE  = \
 	MRTracker.java \
 	CSPair.java \
 	ScribeMaintenanceTestApp.java \
-	DirectScribeMaintenanceTest.java 
+	DirectScribeMaintenanceTest.java \
+	RMIScribeMaintenanceTestApp.java \
+	RMIScribeMaintenanceTest.java
 
 RMI_SOURCE =
 
