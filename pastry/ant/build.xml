@@ -1,7 +1,7 @@
 <project name="testant" default="compile" basedir="../">
 
-  <property name="src_dir" value="src"/> 
-  <property name="build_dir" value="classes"/>  
+  <property name="src_dir" value="src" /> 
+  <property name="build_dir" value="classes" />  
   <property name="lib_dir" value="lib" />
   <property name="ant_dir" value="ant" />
   <property name="ant_lib_dir" value="${ant_dir}/lib" />
@@ -30,8 +30,13 @@
                  pathsep="${path.separator}" />
                  
   </target>
+  
+  <target name="imap-parser" depends="init">
+    <antlr target="${src_dir}/rice/email/proxy/imap/parser/antlr/lexer.g" />
+    <antlr target="${src_dir}/rice/email/proxy/imap/parser/antlr/grammer.g" />
+  </target>
 
-  <target name="compile" depends="init">    
+  <target name="compile" depends="imap-parser">    
     <javac srcdir="${src_dir}" 
            destdir="${build_dir}"
            classpath="${classpath_text}" 
@@ -45,13 +50,13 @@
     <taskdef name="pretty" classname="org.acm.seguin.ant.Pretty" classpath="${ant_lib_dir}/jrefactory.jar:${ant_lib_dir}/JRefactoryModule.jar:${ant_lib_dir}/JavaStyle.jar" />
 
     <pretty settingsDir="${ant_dir}" cvs="true">      
-      <fileset dir="${src_dir}" includes="**/*.java" excludes="${exclude_files_text}"/>
+      <fileset dir="${src_dir}" includes="**/*.java" excludes="${exclude_files_text}" />
     </pretty>  
   </target> 
 
   <target name="jar" depends="compile">   
-    <jar destfile="${build_dir}/pastry.jar" basedir="${build_dir}">
-      <fileset dir="${build_dir}/**/*.class"/>
+    <jar destfile="${build_dir}/pastry.jar">
+      <fileset dir="${build_dir}" includes="**/*.class" excludes="${exclude_files_text}" />
     </jar>
   </target>
 </project>
