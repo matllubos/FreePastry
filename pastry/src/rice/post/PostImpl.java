@@ -198,9 +198,9 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
     receivedMessages = new Vector();
     reverseMap = new Hashtable();
     
-    logger.addHandler(new ConsoleHandler());
-    logger.setLevel(Level.FINE);
-    logger.getHandlers()[0].setLevel(Level.FINE);
+    //logger.addHandler(new ConsoleHandler());
+    //logger.setLevel(Level.FINE);
+    //logger.getHandlers()[0].setLevel(Level.FINE);
     
     logger.fine(endpoint.getId() + ": Constructed new Post with user " + address + " and instance " + instance);
   }
