@@ -826,7 +826,10 @@ public class PostImpl implements Post, Application, ScribeClient {
       }
       
       public void receiveException(Exception e) {
-        passException(e, parent);          
+        if (e instanceof StorageException) 
+          receiveResult(null);
+        else
+          passException(e, parent);          
       }
       
       protected void passException(Exception e, Continuation command) {

@@ -97,6 +97,13 @@ public class EmailService extends PostClient {
           command.receiveException(new Exception("PostLog was null - aborting."));
         } else {
           mainLog.getChildLog(getAddress(), new StandardContinuation(parent) {
+            public void receiveException(Exception e) {
+              if (e instanceof StorageException)
+                receiveResult(null);
+              else
+                parent.receiveException(e);
+            }
+            
             public void receiveResult(Object o) {
               EmailLog log = (EmailLog) o;
 
