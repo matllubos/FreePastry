@@ -34,42 +34,43 @@ import rice.pastry.*;
  * protocol. Each DatagramMessage is assigned a integer number (increasing), and
  * each "ack" packet sent back contains that number.
  *
- * @version $Id$
+ * @version $Id: AcknowledgementMessage.java,v 1.3 2004/01/06 19:53:52 jeffh Exp
+ *      $
  * @author jeffh
  */
 public class AcknowledgementMessage extends DatagramMessage {
 
-    // the address the ack in going to be sent to
-    private InetSocketAddress address;
+  // the address the ack in going to be sent to
+  private InetSocketAddress address;
 
-    /**
-     * Constructor.
-     *
-     * @param address The destination of the "ack" packet
-     * @param num The number of the original DatagramMessage.
-     * @param source DESCRIBE THE PARAMETER
-     * @param destination DESCRIBE THE PARAMETER
-     */
-    public AcknowledgementMessage(NodeId source, NodeId destination, int num, InetSocketAddress address) {
-        super(source, destination, num);
-        this.address = address;
-    }
+  /**
+   * Constructor.
+   *
+   * @param address The destination of the "ack" packet
+   * @param num The number of the original DatagramMessage.
+   * @param source DESCRIBE THE PARAMETER
+   * @param destination DESCRIBE THE PARAMETER
+   */
+  public AcknowledgementMessage(NodeId source, NodeId destination, int num, InetSocketAddress address) {
+    super(source, destination, num);
+    this.address = address;
+  }
 
-    /**
-     * Returns the address of the destination of this ack message.
-     *
-     * @return The destination address of the ack message.
-     */
-    public InetSocketAddress getAddress() {
-        return address;
-    }
+  /**
+   * Returns the address of the destination of this ack message.
+   *
+   * @return The destination address of the ack message.
+   */
+  public InetSocketAddress getAddress() {
+    return address;
+  }
 
-    /**
-     * DESCRIBE THE METHOD
-     *
-     * @return DESCRIBE THE RETURN VALUE
-     */
-    public String toString() {
-        return "AckMsg to " + getDestination() + " from " + getSource() + " num " + num;
-    }
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @return DESCRIBE THE RETURN VALUE
+   */
+  public String toString() {
+    return "AckMsg to " + getDestination() + " from " + getSource() + " num " + num;
+  }
 }

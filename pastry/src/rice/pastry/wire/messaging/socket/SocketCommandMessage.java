@@ -36,11 +36,11 @@ import java.io.*;
  */
 public abstract class SocketCommandMessage extends SocketMessage {
 
-    /**
-     * Constructor for SocketCommandMessage.
-     */
-    public SocketCommandMessage() {
-        super();
-    }
+  /**
+   * Constructor for SocketCommandMessage.
+   */
+  public SocketCommandMessage() {
+    super();
+  }
 
 }

@@ -37,10 +37,10 @@ import rice.pastry.*;
  */
 public abstract class SocketMessage implements Serializable {
 
-    /**
-     * Constructor for SocketMessage.
-     */
-    public SocketMessage() {
-    }
+  /**
+   * Constructor for SocketMessage.
+   */
+  public SocketMessage() {
+  }
 
 }

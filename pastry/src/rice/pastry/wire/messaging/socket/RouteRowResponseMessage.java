@@ -40,23 +40,23 @@ import rice.pastry.routing.*;
  */
 public class RouteRowResponseMessage extends SocketCommandMessage {
 
-    private RouteSet[] set;
+  private RouteSet[] set;
 
-    /**
-     * Constructor
-     *
-     * @param set DESCRIBE THE PARAMETER
-     */
-    public RouteRowResponseMessage(RouteSet[] set) {
-        this.set = set;
-    }
+  /**
+   * Constructor
+   *
+   * @param set DESCRIBE THE PARAMETER
+   */
+  public RouteRowResponseMessage(RouteSet[] set) {
+    this.set = set;
+  }
 
-    /**
-     * Returns the routeset of the receiver.
-     *
-     * @return The RouteSet of the receiver node.
-     */
-    public RouteSet[] getRouteRow() {
-        return set;
-    }
+  /**
+   * Returns the routeset of the receiver.
+   *
+   * @return The RouteSet of the receiver node.
+   */
+  public RouteSet[] getRouteRow() {
+    return set;
+  }
 }

@@ -41,146 +41,146 @@ import rice.pastry.*;
  */
 public class SelectorManager {
 
-    // the amount of time to wait during a selection (ms)
-    /**
-     * DESCRIBE THE FIELD
-     */
-    public int SELECT_WAIT_TIME = 100;
+  // the amount of time to wait during a selection (ms)
+  /**
+   * DESCRIBE THE FIELD
+   */
+  public int SELECT_WAIT_TIME = 100;
 
-    // the selector used
-    private Selector selector;
+  // the selector used
+  private Selector selector;
 
-    // the pastry node
-    private WirePastryNode pastryNode;
+  // the pastry node
+  private WirePastryNode pastryNode;
 
-    // used for testing (simulating killing a node)
-    private boolean alive = true;
+  // used for testing (simulating killing a node)
+  private boolean alive = true;
 
-    /**
-     * Constructor.
-     *
-     * @param node The pastry node this SocketManager is serving
-     */
-    public SelectorManager(WirePastryNode node) {
-        pastryNode = node;
+  /**
+   * Constructor.
+   *
+   * @param node The pastry node this SocketManager is serving
+   */
+  public SelectorManager(WirePastryNode node) {
+    pastryNode = node;
 
-        // attempt to create selector
-        try {
-            selector = Selector.open();
-        } catch (IOException e) {
-            System.out.println("ERROR (SocketClient): Error creating selector " + e);
+    // attempt to create selector
+    try {
+      selector = Selector.open();
+    } catch (IOException e) {
+      System.out.println("ERROR (SocketClient): Error creating selector " + e);
+    }
+  }
+
+  /**
+   * Returns the selector used by this SelectorManager. NOTE: All operations
+   * using the selector which change the Selector's keySet MUST synchronize on
+   * the Selector itself. (i.e.: synchronized (selector) {
+   * channel.register(selector, ...); } ).
+   *
+   * @return The Selector used by this object.
+   */
+  public Selector getSelector() {
+    return selector;
+  }
+
+  /**
+   * This method starts the datagram manager listening for incoming datagrams.
+   * It is designed to be started when this thread's start() method is invoked.
+   * In this method, the DatagramManager blocks while waiting for activity. It
+   * listens on its specified port for incoming datagrams, and processes any
+   * write() requests from pastry node handles.
+   */
+  public void run() {
+    try {
+      debug("Manager starting...");
+
+      // loop while waiting for activity
+      while (alive && (selector.select(SELECT_WAIT_TIME) >= 0)) {
+        Object[] keys = null;
+
+        synchronized (selector) {
+          keys = selector.selectedKeys().toArray();
         }
-    }
 
-    /**
-     * Returns the selector used by this SelectorManager. NOTE: All operations
-     * using the selector which change the Selector's keySet MUST synchronize on
-     * the Selector itself. (i.e.: synchronized (selector) {
-     * channel.register(selector, ...); } ).
-     *
-     * @return The Selector used by this object.
-     */
-    public Selector getSelector() {
-        return selector;
-    }
+        for (int i = 0; i < keys.length; i++) {
+          SelectionKey key = (SelectionKey) keys[i];
+          selector.selectedKeys().remove(key);
 
-    /**
-     * This method starts the datagram manager listening for incoming datagrams.
-     * It is designed to be started when this thread's start() method is
-     * invoked. In this method, the DatagramManager blocks while waiting for
-     * activity. It listens on its specified port for incoming datagrams, and
-     * processes any write() requests from pastry node handles.
-     */
-    public void run() {
-        try {
-            debug("Manager starting...");
+          SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
 
-            // loop while waiting for activity
-            while (alive && (selector.select(SELECT_WAIT_TIME) >= 0)) {
-                Object[] keys = null;
-
-                synchronized (selector) {
-                    keys = selector.selectedKeys().toArray();
-                }
-
-                for (int i = 0; i < keys.length; i++) {
-                    SelectionKey key = (SelectionKey) keys[i];
-                    selector.selectedKeys().remove(key);
-
-                    SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
-
-                    if (skh != null) {
-                        // accept
-                        if (key.isValid() && key.isAcceptable()) {
-                            skh.accept(key);
-                        }
-
-                        // connect
-                        if (key.isValid() && key.isConnectable()) {
-                            skh.connect(key);
-                        }
-
-                        // read
-                        if (key.isValid() && key.isReadable()) {
-                            skh.read(key);
-                        }
-
-                        // write
-                        if (key.isValid() && key.isWritable()) {
-                            skh.write(key);
-                        }
-                    } else {
-                        key.cancel();
-                    }
-                }
-
-                // wake up all SelectionKeyManagers
-                synchronized (selector) {
-                    keys = selector.keys().toArray();
-                }
-
-                for (int i = 0; i < keys.length; i++) {
-                    SelectionKey key = (SelectionKey) keys[i];
-                    SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
-
-                    if (skh != null) {
-                        skh.wakeup();
-                    }
-                }
+          if (skh != null) {
+            // accept
+            if (key.isValid() && key.isAcceptable()) {
+              skh.accept(key);
             }
 
-            Object[] keys = selector.keys().toArray();
-
-            for (int i = 0; i < keys.length; i++) {
-                SelectionKey key = (SelectionKey) keys[i];
-                key.channel().close();
-                key.cancel();
+            // connect
+            if (key.isValid() && key.isConnectable()) {
+              skh.connect(key);
             }
 
-            selector.close();
-        } catch (Throwable e) {
-            System.out.println("ERROR (run): " + e);
-            e.printStackTrace();
-        }
-    }
+            // read
+            if (key.isValid() && key.isReadable()) {
+              skh.read(key);
+            }
 
-    /**
-     * To be used for testing purposes only - kills the socket client by
-     * shutting down all outgoing sockets and stopping the client thread.
-     */
-    public void kill() {
-        // mark socketmanager as dead
-        alive = false;
-    }
-
-    /**
-     * DESCRIBE THE METHOD
-     *
-     * @param s DESCRIBE THE PARAMETER
-     */
-    private void debug(String s) {
-        if (Log.ifp(8)) {
-            System.out.println(pastryNode.getNodeId() + " (M): " + s);
+            // write
+            if (key.isValid() && key.isWritable()) {
+              skh.write(key);
+            }
+          } else {
+            key.cancel();
+          }
         }
+
+        // wake up all SelectionKeyManagers
+        synchronized (selector) {
+          keys = selector.keys().toArray();
+        }
+
+        for (int i = 0; i < keys.length; i++) {
+          SelectionKey key = (SelectionKey) keys[i];
+          SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
+
+          if (skh != null) {
+            skh.wakeup();
+          }
+        }
+      }
+
+      Object[] keys = selector.keys().toArray();
+
+      for (int i = 0; i < keys.length; i++) {
+        SelectionKey key = (SelectionKey) keys[i];
+        key.channel().close();
+        key.cancel();
+      }
+
+      selector.close();
+    } catch (Throwable e) {
+      System.out.println("ERROR (run): " + e);
+      e.printStackTrace();
     }
+  }
+
+  /**
+   * To be used for testing purposes only - kills the socket client by shutting
+   * down all outgoing sockets and stopping the client thread.
+   */
+  public void kill() {
+    // mark socketmanager as dead
+    alive = false;
+  }
+
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @param s DESCRIBE THE PARAMETER
+   */
+  private void debug(String s) {
+    if (Log.ifp(8)) {
+      System.out.println(pastryNode.getNodeId() + " (M): " + s);
+    }
+  }
 }

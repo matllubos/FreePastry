@@ -38,9 +38,9 @@ import rice.pastry.leafset.*;
  */
 public class LeafSetRequestMessage extends SocketCommandMessage {
 
-    /**
-     * Constructor
-     */
-    public LeafSetRequestMessage() {
-    }
+  /**
+   * Constructor
+   */
+  public LeafSetRequestMessage() {
+  }
 }

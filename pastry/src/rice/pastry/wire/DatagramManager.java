@@ -1,60 +1,47 @@
-/**************************************************************************
-
-"FreePastry" Peer-to-Peer Application Development Substrate
-
-Copyright 2002, Rice University. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-- Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-
-- Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
-documentation and/or other materials provided with the distribution.
-
-- Neither  the name  of Rice  University (RICE) nor  the names  of its
-contributors may be  used to endorse or promote  products derived from
-this software without specific prior written permission.
-
-This software is provided by RICE and the contributors on an "as is"
-basis, without any representations or warranties of any kind, express
-or implied including, but not limited to, representations or
-warranties of non-infringement, merchantability or fitness for a
-particular purpose. In no event shall RICE or contributors be liable
-for any direct, indirect, incidental, special, exemplary, or
-consequential damages (including, but not limited to, procurement of
-substitute goods or services; loss of use, data, or profits; or
-business interruption) however caused and on any theory of liability,
-whether in contract, strict liability, or tort (including negligence
-or otherwise) arising in any way out of the use of this software, even
-if advised of the possibility of such damage.
-
-********************************************************************************/
+/**
+ * "FreePastry" Peer-to-Peer Application Development Substrate Copyright 2002,
+ * Rice University. All rights reserved. Redistribution and use in source and
+ * binary forms, with or without modification, are permitted provided that the
+ * following conditions are met: - Redistributions of source code must retain
+ * the above copyright notice, this list of conditions and the following
+ * disclaimer. - Redistributions in binary form must reproduce the above
+ * copyright notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution. -
+ * Neither the name of Rice University (RICE) nor the names of its contributors
+ * may be used to endorse or promote products derived from this software without
+ * specific prior written permission. This software is provided by RICE and the
+ * contributors on an "as is" basis, without any representations or warranties
+ * of any kind, express or implied including, but not limited to,
+ * representations or warranties of non-infringement, merchantability or fitness
+ * for a particular purpose. In no event shall RICE or contributors be liable
+ * for any direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute goods or
+ * services; loss of use, data, or profits; or business interruption) however
+ * caused and on any theory of liability, whether in contract, strict liability,
+ * or tort (including negligence or otherwise) arising in any way out of the use
+ * of this software, even if advised of the possibility of such damage.
+ */
 
 package rice.pastry.wire;
 
-import rice.pastry.*;
-import rice.pastry.routing.*;
-import rice.pastry.messaging.*;
-import rice.pastry.wire.exception.*;
-import rice.pastry.wire.messaging.datagram.*;
-
 import java.io.*;
+import java.net.*;
 import java.nio.*;
 import java.nio.channels.*;
 import java.util.*;
-import java.net.*;
+
+import rice.pastry.*;
+import rice.pastry.messaging.*;
+import rice.pastry.routing.*;
+import rice.pastry.wire.exception.*;
+import rice.pastry.wire.messaging.datagram.*;
 
 /**
  * This class is an implementation of a UDP-based Pastry protocol. All messages
- * are sent across the network as datagrams. It uses a TransmissionManager in order
- * to ensure (ordered) delivery.
+ * are sent across the network as datagrams. It uses a TransmissionManager in
+ * order to ensure (ordered) delivery.
  *
  * @version $Id$
- *
  * @author Alan Mislove
  */
 public class DatagramManager implements SelectionKeyHandler {
@@ -74,14 +61,6 @@ public class DatagramManager implements SelectionKeyHandler {
   // the channel used from talking to the network
   private DatagramChannel channel;
 
-  // the size of the buffer used to read incoming datagrams
-  // must be big enough to encompass multiple datagram packets
-  public static int DATAGRAM_RECEIVE_BUFFER_SIZE = 131072;
-
-  // the size of the buffer used to send outgoing datagrams
-  // this is also the largest message size than can be sent via UDP
-  public static int DATAGRAM_SEND_BUFFER_SIZE = 65536;
-
   // the key used to determine what has taken place
   private SelectionKey key;
 
@@ -94,11 +73,26 @@ public class DatagramManager implements SelectionKeyHandler {
   // the queue of pending acks waiting to be sent
   private LinkedList ackQueue;
 
+  // the size of the buffer used to read incoming datagrams
+  // must be big enough to encompass multiple datagram packets
+  /**
+   * DESCRIBE THE FIELD
+   */
+  public static int DATAGRAM_RECEIVE_BUFFER_SIZE = 131072;
+
+  // the size of the buffer used to send outgoing datagrams
+  // this is also the largest message size than can be sent via UDP
+  /**
+   * DESCRIBE THE FIELD
+   */
+  public static int DATAGRAM_SEND_BUFFER_SIZE = 65536;
+
   /**
    * Constructor.
    *
-   * @param node The pastry node this SocketManager is serving
    * @param port The port number this Datagram Manager should run on
+   * @param pastryNode DESCRIBE THE PARAMETER
+   * @param manager DESCRIBE THE PARAMETER
    */
   public DatagramManager(WirePastryNode pastryNode, SelectorManager manager, int port) {
     this.port = port;
@@ -147,12 +141,13 @@ public class DatagramManager implements SelectionKeyHandler {
   }
 
   /**
-   * Method designed for node handles to use when they wish to
-   * write to their remote node. This method enqueues their message,
-   * and will eventually send the message to the remote node.
+   * Method designed for node handles to use when they wish to write to their
+   * remote node. This method enqueues their message, and will eventually send
+   * the message to the remote node.
    *
    * @param address The remote address to send the message to.
    * @param o The object that should be sent.
+   * @param destination DESCRIBE THE PARAMETER
    */
   public void write(NodeId destination, InetSocketAddress address, Object o) {
     debug("Enqueueing write to " + destination + " of " + o);
@@ -167,7 +162,7 @@ public class DatagramManager implements SelectionKeyHandler {
    * @param key The SelectionKey which is readable.
    */
   public void read(SelectionKey key) {
-     WireNodeHandle handle = null;
+    WireNodeHandle handle = null;
 
     try {
       InetSocketAddress address = null;
@@ -211,11 +206,11 @@ public class DatagramManager implements SelectionKeyHandler {
               }
             } else {
               debug("ERROR: Recieved message " + message + " at " + pastryNode.getNodeId() +
-                    " for dest " + message.getDestination() + " - dropping on floor.");
+                " for dest " + message.getDestination() + " - dropping on floor.");
             }
           } else {
             System.out.println("ERROR: Received unrecognized message " + o + " at " + pastryNode.getNodeId() +
-                               " - dropping on floor.");
+              " - dropping on floor.");
           }
         } else {
           debug("Read from datagram channel, but no bytes were there - no bad, but wierd.");
@@ -228,8 +223,8 @@ public class DatagramManager implements SelectionKeyHandler {
   }
 
   /**
-   * Specified by the SelectionKeyHandler interface - is called when there
-   * is space in the DatagramChannel's buffer to write some data.
+   * Specified by the SelectionKeyHandler interface - is called when there is
+   * space in the DatagramChannel's buffer to write some data.
    *
    * @param key The key which is writable
    */
@@ -241,13 +236,14 @@ public class DatagramManager implements SelectionKeyHandler {
       while (i.hasNext()) {
         AcknowledgementMessage ack = (AcknowledgementMessage) i.next();
 
-        if (channel.send(serialize(ack), ack.getAddress()) > 0)
+        if (channel.send(serialize(ack), ack.getAddress()) > 0) {
           i.remove();
-        else
+        } else {
           System.out.println("ERROR: 0 bytes written of ack (not fatal, but bad)");
+        }
       }
 
-     // last, write all pending datagrams
+      // last, write all pending datagrams
       i = transmissionManager.getReady();
 
       while (i.hasNext()) {
@@ -255,8 +251,9 @@ public class DatagramManager implements SelectionKeyHandler {
 
         int num = channel.send(serialize(write.getObject()), write.getAddress());
 
-        if (num == 0)
+        if (num == 0) {
           System.out.println("ERROR: 0 bytes were written (not fatal, but bad) - full buffer.");
+        }
 
         debug("Wrote message " + write.getObject() + " to " + write.getDestination());
       }
@@ -266,9 +263,9 @@ public class DatagramManager implements SelectionKeyHandler {
   }
 
   /**
-   * Called by the SelectorManager whenever it is awoken.  This allows the
-   * TransmissionManager to check and make sure that if we are waiting to
-   * write, we are registered as being interested in writing.
+   * Called by the SelectorManager whenever it is awoken. This allows the
+   * TransmissionManager to check and make sure that if we are waiting to write,
+   * we are registered as being interested in writing.
    */
   public void wakeup() {
     // wakeup the transmission manager, which checks to see if any packets have
@@ -276,94 +273,8 @@ public class DatagramManager implements SelectionKeyHandler {
     transmissionManager.wakeup();
 
     // if there are pending acks/pings, make sure that we are interested in writing
-    if (ackQueue.size() > 0)
+    if (ackQueue.size() > 0) {
       key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-  }
-
-  /**
-   * Method which prepares and enqueues an ack for an incoming message.
-   * If we have already seen the incoming data (i.e. it was a retransmission)
-   * this method returns false, signifying that the packet should be
-   * dropped.
-   *
-   * @param address The desintation address of the ack.
-   * @param ackNum The number of the incoming packet.
-   */
-  private boolean sendAck(InetSocketAddress address, DatagramMessage message)
-    throws IOException {
-    if (channel.send(serialize(message.getAck(address)), address) == 0)
-      ackQueue.add(message.getAck(address));
-
-    Integer num = (Integer) lastAckNum.get(message.getSource());
-
-    // if we have not seen this node before, accept the packet
-    if ((num == null) || (num.intValue() < message.getNum())) {
-      lastAckNum.put(message.getSource(), new Integer(message.getNum()));
-      return true;
-    }
-
-    if (num.intValue() > message.getNum())
-      debug(pastryNode.getNodeId() + " (M): ERROR: Got transmission with ack less than the last ack - ignoring message." +
-            " This is probably becuase a socket is being opened, but we haven't yet noticed it.");
-
-    return false;
-  }
-
-  /**
-   * Method which serializes a given object into a ByteBuffer,
-   * in order to prepare it for writing.
-   *
-   * @param o The object to serialize
-   * @return A ByteBuffer containing the object
-   */
-  public static ByteBuffer serialize(Object o) throws IOException {
-    try {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      ObjectOutputStream oos = new ObjectOutputStream(baos);
-
-      // write out object and find its length
-      oos.writeObject(o);
-      
-      int len = baos.toByteArray().length;
-      //System.out.println("serializingD " + o + " len=" + len);
-
-      return ByteBuffer.wrap(baos.toByteArray());
-    } catch (InvalidClassException e) {
-      System.out.println("PANIC: Object to be serialized was an invalid class!");
-      throw new SerializationException("Invalid class during attempt to serialize.");
-    } catch (NotSerializableException e) {
-      System.out.println("PANIC: Object to be serialized was not serializable! [" + o + "]");
-      throw new SerializationException("Unserializable class " + o + " during attempt to serialize.");
-    }
-  }
-
-  /**
-   * Method which takes in a ByteBuffer read from a datagram, and
-   * deserializes the contained object.
-   *
-   * @param buffer The buffer read from the datagram.
-   * @return The deserialized object.
-   */
-  public static Object deserialize(ByteBuffer buffer) throws IOException {
-    int len = buffer.remaining();
-    byte[] array = new byte[len];
-
-    // copy the data into the buffer
-    buffer.get(array);
-    buffer.clear();
-
-    ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(array));
-
-    try {
-      Object o = ois.readObject();
-
-      return o;
-    } catch (ClassNotFoundException e) {
-      System.out.println("PANIC: Unknown class type in serialized message!");
-      throw new ImproperlyFormattedMessageException("Unknown class type in message - closing channel.");
-    } catch (InvalidClassException e) {
-      System.out.println("PANIC: Serialized message was an invalid class!");
-      throw new DeserializationException("Invalid class in message - closing channel.");
     }
   }
 
@@ -387,8 +298,106 @@ public class DatagramManager implements SelectionKeyHandler {
     System.out.println("PANIC: connect was called on the DatagramManager!");
   }
 
+  /**
+   * Method which prepares and enqueues an ack for an incoming message. If we
+   * have already seen the incoming data (i.e. it was a retransmission) this
+   * method returns false, signifying that the packet should be dropped.
+   *
+   * @param address The desintation address of the ack.
+   * @param message DESCRIBE THE PARAMETER
+   * @return DESCRIBE THE RETURN VALUE
+   * @exception IOException DESCRIBE THE EXCEPTION
+   */
+  private boolean sendAck(InetSocketAddress address, DatagramMessage message)
+     throws IOException {
+    if (channel.send(serialize(message.getAck(address)), address) == 0) {
+      ackQueue.add(message.getAck(address));
+    }
+
+    Integer num = (Integer) lastAckNum.get(message.getSource());
+
+    // if we have not seen this node before, accept the packet
+    if ((num == null) || (num.intValue() < message.getNum())) {
+      lastAckNum.put(message.getSource(), new Integer(message.getNum()));
+      return true;
+    }
+
+    if (num.intValue() > message.getNum()) {
+      debug(pastryNode.getNodeId() + " (M): ERROR: Got transmission with ack less than the last ack - ignoring message." +
+        " This is probably becuase a socket is being opened, but we haven't yet noticed it.");
+    }
+
+    return false;
+  }
+
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @param s DESCRIBE THE PARAMETER
+   */
   private void debug(String s) {
-    if (Log.ifp(8))
+    if (Log.ifp(8)) {
       System.out.println(pastryNode.getNodeId() + " (DM): " + s);
+    }
+  }
+
+  /**
+   * Method which serializes a given object into a ByteBuffer, in order to
+   * prepare it for writing.
+   *
+   * @param o The object to serialize
+   * @return A ByteBuffer containing the object
+   * @exception IOException DESCRIBE THE EXCEPTION
+   */
+  public static ByteBuffer serialize(Object o) throws IOException {
+    try {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      ObjectOutputStream oos = new ObjectOutputStream(baos);
+
+      // write out object and find its length
+      oos.writeObject(o);
+
+      int len = baos.toByteArray().length;
+      //System.out.println("serializingD " + o + " len=" + len);
+
+      return ByteBuffer.wrap(baos.toByteArray());
+    } catch (InvalidClassException e) {
+      System.out.println("PANIC: Object to be serialized was an invalid class!");
+      throw new SerializationException("Invalid class during attempt to serialize.");
+    } catch (NotSerializableException e) {
+      System.out.println("PANIC: Object to be serialized was not serializable! [" + o + "]");
+      throw new SerializationException("Unserializable class " + o + " during attempt to serialize.");
+    }
+  }
+
+  /**
+   * Method which takes in a ByteBuffer read from a datagram, and deserializes
+   * the contained object.
+   *
+   * @param buffer The buffer read from the datagram.
+   * @return The deserialized object.
+   * @exception IOException DESCRIBE THE EXCEPTION
+   */
+  public static Object deserialize(ByteBuffer buffer) throws IOException {
+    int len = buffer.remaining();
+    byte[] array = new byte[len];
+
+    // copy the data into the buffer
+    buffer.get(array);
+    buffer.clear();
+
+    ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(array));
+
+    try {
+      Object o = ois.readObject();
+
+      return o;
+    } catch (ClassNotFoundException e) {
+      System.out.println("PANIC: Unknown class type in serialized message!");
+      throw new ImproperlyFormattedMessageException("Unknown class type in message - closing channel.");
+    } catch (InvalidClassException e) {
+      System.out.println("PANIC: Serialized message was an invalid class!");
+      throw new DeserializationException("Invalid class in message - closing channel.");
+    }
   }
 }

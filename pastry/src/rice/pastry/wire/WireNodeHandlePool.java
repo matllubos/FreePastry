@@ -47,81 +47,81 @@ import rice.pastry.routing.*;
  */
 public class WireNodeHandlePool extends DistNodeHandlePool {
 
-    private HashMap handles;
+  private HashMap handles;
 
-    private WirePastryNode pastryNode;
+  private WirePastryNode pastryNode;
 
-    /**
-     * Constructor.
-     *
-     * @param spn The WirePastryNode this pool will serve.
-     */
-    public WireNodeHandlePool(WirePastryNode spn) {
-        super();
+  /**
+   * Constructor.
+   *
+   * @param spn The WirePastryNode this pool will serve.
+   */
+  public WireNodeHandlePool(WirePastryNode spn) {
+    super();
 
-        pastryNode = spn;
-        handles = new HashMap();
+    pastryNode = spn;
+    handles = new HashMap();
+  }
+
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @param nodeId DESCRIBE THE PARAMETER
+   * @return DESCRIBE THE RETURN VALUE
+   */
+  public WireNodeHandle get(NodeId nodeId) {
+    return (WireNodeHandle) handles.get(nodeId);
+  }
+
+  /**
+   * The method verifies a WireNodeHandle. If a node handle to the pastry node
+   * has never been seen before, an entry is added, and this node handle is
+   * referred to in the future. Otherwise, this method returns the previously
+   * verified node handle to the pastry node.
+   *
+   * @param han DESCRIBE THE PARAMETER
+   * @return The node handle to use to talk to the pastry node.
+   */
+  public synchronized DistNodeHandle coalesce(DistNodeHandle han) {
+    DistCoalesedNodeHandle handle = (DistCoalesedNodeHandle) han;
+    if ((handles.get(handle.getNodeId()) == null) || (handles.get(handle.getNodeId()) == handle)) {
+      handles.put(handle.getNodeId(), handle);
+      handle.setIsInPool(true);
+    } else {
+      handle.setIsInPool(false);
     }
 
-    /**
-     * DESCRIBE THE METHOD
-     *
-     * @param nodeId DESCRIBE THE PARAMETER
-     * @return DESCRIBE THE RETURN VALUE
-     */
-    public WireNodeHandle get(NodeId nodeId) {
-        return (WireNodeHandle) handles.get(nodeId);
+    DistNodeHandle response = (DistNodeHandle) handles.get(handle.getNodeId());
+
+    return response;
+  }
+
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @return DESCRIBE THE RETURN VALUE
+   */
+  public String toString() {
+    String response = "";
+
+    Iterator i = handles.keySet().iterator();
+
+    while (i.hasNext()) {
+      Object o = i.next();
+      response += o + "\t->\t" + handles.get(o) + "\n";
     }
 
-    /**
-     * The method verifies a WireNodeHandle. If a node handle to the pastry node
-     * has never been seen before, an entry is added, and this node handle is
-     * referred to in the future. Otherwise, this method returns the previously
-     * verified node handle to the pastry node.
-     *
-     * @param han DESCRIBE THE PARAMETER
-     * @return The node handle to use to talk to the pastry node.
-     */
-    public synchronized DistNodeHandle coalesce(DistNodeHandle han) {
-        DistCoalesedNodeHandle handle = (DistCoalesedNodeHandle) han;
-        if ((handles.get(handle.getNodeId()) == null) || (handles.get(handle.getNodeId()) == handle)) {
-            handles.put(handle.getNodeId(), handle);
-            handle.setIsInPool(true);
-        } else {
-            handle.setIsInPool(false);
-        }
+    return response;
+  }
 
-        DistNodeHandle response = (DistNodeHandle) handles.get(handle.getNodeId());
-
-        return response;
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @param s DESCRIBE THE PARAMETER
+   */
+  private void debug(String s) {
+    if (Log.ifp(6)) {
+      System.out.println(pastryNode.getNodeId() + " (P): " + s);
     }
-
-    /**
-     * DESCRIBE THE METHOD
-     *
-     * @return DESCRIBE THE RETURN VALUE
-     */
-    public String toString() {
-        String response = "";
-
-        Iterator i = handles.keySet().iterator();
-
-        while (i.hasNext()) {
-            Object o = i.next();
-            response += o + "\t->\t" + handles.get(o) + "\n";
-        }
-
-        return response;
-    }
-
-    /**
-     * DESCRIBE THE METHOD
-     *
-     * @param s DESCRIBE THE PARAMETER
-     */
-    private void debug(String s) {
-        if (Log.ifp(6)) {
-            System.out.println(pastryNode.getNodeId() + " (P): " + s);
-        }
-    }
+  }
 }

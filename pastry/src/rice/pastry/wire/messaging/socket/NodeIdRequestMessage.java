@@ -40,9 +40,9 @@ import rice.pastry.*;
  */
 public class NodeIdRequestMessage extends SocketCommandMessage {
 
-    /**
-     * Constructor
-     */
-    public NodeIdRequestMessage() {
-    }
+  /**
+   * Constructor
+   */
+  public NodeIdRequestMessage() {
+  }
 }

@@ -31,18 +31,19 @@ import java.io.*;
  * Class which represents an exception occuring during the deserialization of a
  * Pastry message.
  *
- * @version $Id$
+ * @version $Id: DeserializationException.java,v 1.2 2004/01/06 19:53:52 jeffh
+ *      Exp $
  * @author jeffh
  */
 public class DeserializationException extends IOException {
 
-    /**
-     * Constructs an DeserializationException with a given message
-     *
-     * @param message The message of this exception
-     */
-    public DeserializationException(String message) {
-        super(message);
-    }
+  /**
+   * Constructs an DeserializationException with a given message
+   *
+   * @param message The message of this exception
+   */
+  public DeserializationException(String message) {
+    super(message);
+  }
 }
 

@@ -38,23 +38,23 @@ import rice.pastry.*;
  */
 public class NodeIdResponseMessage extends SocketCommandMessage {
 
-    private NodeId nid;
+  private NodeId nid;
 
-    /**
-     * Constructor
-     *
-     * @param nid The nodeId of the receiver of the NodeIdRequestMessage.
-     */
-    public NodeIdResponseMessage(NodeId nid) {
-        this.nid = nid;
-    }
+  /**
+   * Constructor
+   *
+   * @param nid The nodeId of the receiver of the NodeIdRequestMessage.
+   */
+  public NodeIdResponseMessage(NodeId nid) {
+    this.nid = nid;
+  }
 
-    /**
-     * Returns the nodeId of the receiver.
-     *
-     * @return The NodeId of the receiver node.
-     */
-    public NodeId getNodeId() {
-        return nid;
-    }
+  /**
+   * Returns the nodeId of the receiver.
+   *
+   * @return The NodeId of the receiver node.
+   */
+  public NodeId getNodeId() {
+    return nid;
+  }
 }

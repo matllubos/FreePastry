@@ -39,23 +39,23 @@ import rice.pastry.leafset.*;
  */
 public class LeafSetResponseMessage extends SocketCommandMessage {
 
-    private LeafSet leafset;
+  private LeafSet leafset;
 
-    /**
-     * Constructor
-     *
-     * @param leafset The leafset of the receiver of the LeafSetRequestMessage.
-     */
-    public LeafSetResponseMessage(LeafSet leafset) {
-        this.leafset = leafset;
-    }
+  /**
+   * Constructor
+   *
+   * @param leafset The leafset of the receiver of the LeafSetRequestMessage.
+   */
+  public LeafSetResponseMessage(LeafSet leafset) {
+    this.leafset = leafset;
+  }
 
-    /**
-     * Returns the leafset of the receiver.
-     *
-     * @return The LeafSet of the receiver node.
-     */
-    public LeafSet getLeafSet() {
-        return leafset;
-    }
+  /**
+   * Returns the leafset of the receiver.
+   *
+   * @return The LeafSet of the receiver node.
+   */
+  public LeafSet getLeafSet() {
+    return leafset;
+  }
 }

@@ -38,26 +38,26 @@ import rice.pastry.leafset.*;
  */
 public class RouteRowRequestMessage extends SocketCommandMessage {
 
-    /**
-     * DESCRIBE THE FIELD
-     */
-    protected int row;
+  /**
+   * DESCRIBE THE FIELD
+   */
+  protected int row;
 
-    /**
-     * Constructor
-     *
-     * @param row DESCRIBE THE PARAMETER
-     */
-    public RouteRowRequestMessage(int row) {
-        this.row = row;
-    }
+  /**
+   * Constructor
+   *
+   * @param row DESCRIBE THE PARAMETER
+   */
+  public RouteRowRequestMessage(int row) {
+    this.row = row;
+  }
 
-    /**
-     * Returns the row which this a request for
-     *
-     * @return The Row value
-     */
-    public int getRow() {
-        return row;
-    }
+  /**
+   * Returns the row which this a request for
+   *
+   * @return The Row value
+   */
+  public int getRow() {
+    return row;
+  }
 }

@@ -38,47 +38,47 @@ import rice.pastry.*;
  */
 public class SocketTransportMessage extends SocketMessage {
 
-    private Object o;
+  private Object o;
 
-    private NodeId destination;
+  private NodeId destination;
 
-    /**
-     * Constructs a new message wrapping another object.
-     *
-     * @param o The object to be wrapped.
-     * @param destination DESCRIBE THE PARAMETER
-     */
-    public SocketTransportMessage(Object o, NodeId destination) {
-        super();
-        this.o = o;
-        this.destination = destination;
-    }
+  /**
+   * Constructs a new message wrapping another object.
+   *
+   * @param o The object to be wrapped.
+   * @param destination DESCRIBE THE PARAMETER
+   */
+  public SocketTransportMessage(Object o, NodeId destination) {
+    super();
+    this.o = o;
+    this.destination = destination;
+  }
 
-    /**
-     * Returns the wrapped message
-     *
-     * @return The internally wrapped message.
-     */
-    public Object getObject() {
-        return o;
-    }
+  /**
+   * Returns the wrapped message
+   *
+   * @return The internally wrapped message.
+   */
+  public Object getObject() {
+    return o;
+  }
 
-    /**
-     * Returns the destination node id
-     *
-     * @return The destination node id
-     */
-    public NodeId getDestination() {
-        return destination;
-    }
+  /**
+   * Returns the destination node id
+   *
+   * @return The destination node id
+   */
+  public NodeId getDestination() {
+    return destination;
+  }
 
-    /**
-     * DESCRIBE THE METHOD
-     *
-     * @return DESCRIBE THE RETURN VALUE
-     */
-    public String toString() {
-        return "{" + o + "}";
-    }
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @return DESCRIBE THE RETURN VALUE
+   */
+  public String toString() {
+    return "{" + o + "}";
+  }
 
 }

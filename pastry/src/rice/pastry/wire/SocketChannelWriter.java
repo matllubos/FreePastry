@@ -53,246 +53,246 @@ import rice.pastry.wire.messaging.socket.*;
  */
 public class SocketChannelWriter {
 
-    // the pastry node
-    private WirePastryNode pastryNode;
+  // the pastry node
+  private WirePastryNode pastryNode;
 
-    // internal buffer for storing the serialized object
-    private ByteBuffer buffer;
+  // internal buffer for storing the serialized object
+  private ByteBuffer buffer;
 
-    // internal list of objects waiting to be written
-    private LinkedList queue;
+  // internal list of objects waiting to be written
+  private LinkedList queue;
 
-    private boolean waitingForGreeting = false;
+  private boolean waitingForGreeting = false;
 
-    // the maximum length of the queue
-    /**
-     * DESCRIBE THE FIELD
-     */
-    public static int MAXIMUM_QUEUE_LENGTH = 256;
+  // the maximum length of the queue
+  /**
+   * DESCRIBE THE FIELD
+   */
+  public static int MAXIMUM_QUEUE_LENGTH = 256;
 
-    // the magic number array which is written first
-    /**
-     * DESCRIBE THE FIELD
-     */
-    protected static byte[] MAGIC_NUMBER = new byte[]{0x45, 0x79, 0x12, 0x0D};
+  // the magic number array which is written first
+  /**
+   * DESCRIBE THE FIELD
+   */
+  protected static byte[] MAGIC_NUMBER = new byte[]{0x45, 0x79, 0x12, 0x0D};
 
-    /**
-     * Constructor which creates this SocketChannelWriter with a pastry node and
-     * an object to write out.
-     *
-     * @param spn The PastryNode the SocketChannelWriter servers
-     * @param msg DESCRIBE THE PARAMETER
-     */
-    public SocketChannelWriter(WirePastryNode spn, SocketCommandMessage msg) {
-        pastryNode = spn;
+  /**
+   * Constructor which creates this SocketChannelWriter with a pastry node and
+   * an object to write out.
+   *
+   * @param spn The PastryNode the SocketChannelWriter servers
+   * @param msg DESCRIBE THE PARAMETER
+   */
+  public SocketChannelWriter(WirePastryNode spn, SocketCommandMessage msg) {
+    pastryNode = spn;
 
-        try {
-            buffer = serialize(msg);
-        } catch (IOException e) {
-            System.out.println("PANIC: Error serializing message " + msg);
-        }
-
-        queue = new LinkedList();
-
-        if (msg != null) {
-            if (msg instanceof HelloMessage) {
-                waitingForGreeting = true;
-            } else {
-                queue.addLast(msg);
-            }
-        }
+    try {
+      buffer = serialize(msg);
+    } catch (IOException e) {
+      System.out.println("PANIC: Error serializing message " + msg);
     }
 
-    /**
-     * Returns whether or not there are objects in the queue on in writing. If
-     * the result is true, it the safe to mark the SelectionKey as not being
-     * interested in writing.
-     *
-     * @return Whether or not there are objects still to be written.
-     */
-    public boolean isEmpty() {
-        synchronized (queue) {
-            return ((buffer == null) && ((queue.size() == 0) || waitingForGreeting));
+    queue = new LinkedList();
+
+    if (msg != null) {
+      if (msg instanceof HelloMessage) {
+        waitingForGreeting = true;
+      } else {
+        queue.addLast(msg);
+      }
+    }
+  }
+
+  /**
+   * Returns whether or not there are objects in the queue on in writing. If the
+   * result is true, it the safe to mark the SelectionKey as not being
+   * interested in writing.
+   *
+   * @return Whether or not there are objects still to be written.
+   */
+  public boolean isEmpty() {
+    synchronized (queue) {
+      return ((buffer == null) && ((queue.size() == 0) || waitingForGreeting));
+    }
+  }
+
+  /**
+   * Returns the queue of writes for the remote address
+   *
+   * @return the queue of writes for the remote address
+   */
+  public LinkedList getQueue() {
+    return queue;
+  }
+
+  /**
+   * Adds an object to this SocketChannelWriter's queue of pending objects to
+   * write. This methos is synchronized and therefore safe for use by multiple
+   * threads.
+   *
+   * @param o The object to be written.
+   */
+  public void enqueue(Object o) {
+    synchronized (queue) {
+      if (queue.size() < MAXIMUM_QUEUE_LENGTH) {
+        addToQueue(o);
+      } else {
+        System.err.println("Maximum TCP queue length reached - message " + o + " will be dropped.");
+      }
+    }
+  }
+
+  /**
+   * Resets the SocketChannelWriter, by clearing both the buffer and the queue.
+   * Should not be used except when a socket has just been opened.
+   *
+   * @param msg The greeting message that should be enqueued first
+   */
+  public void reset(SocketCommandMessage msg) {
+    try {
+      buffer = serialize(msg);
+      greetingReceived();
+    } catch (IOException e) {
+      System.out.println("PANIC: Error serializing message " + msg);
+    }
+  }
+
+  /**
+   * DESCRIBE THE METHOD
+   */
+  public void greetingReceived() {
+    debug("Greeting has been received - acting normally.");
+
+    waitingForGreeting = false;
+  }
+
+  /**
+   * Method which is designed to be called when this writer should write out its
+   * data. Returns whether or not the message was completely written. If false
+   * is returns, write() will need to be called again when the SocketChannel is
+   * ready for data to be written.
+   *
+   * @param sc The SocketChannel to write to
+   * @return true if this output stream is done, false otherwise
+   * @exception IOException DESCRIBE THE EXCEPTION
+   */
+  public boolean write(SocketChannel sc) throws IOException {
+    synchronized (queue) {
+      if (buffer == null) {
+        if ((!waitingForGreeting) && (queue.size() > 0)) {
+          debug("About to serialize object " + queue.getFirst());
+          buffer = serialize(queue.getFirst());
+        } else {
+          return true;
         }
-    }
+      }
 
-    /**
-     * Returns the queue of writes for the remote address
-     *
-     * @return the queue of writes for the remote address
-     */
-    public LinkedList getQueue() {
-        return queue;
-    }
+      int j = buffer.limit();
+      int i = sc.write(buffer);
 
-    /**
-     * Adds an object to this SocketChannelWriter's queue of pending objects to
-     * write. This methos is synchronized and therefore safe for use by multiple
-     * threads.
-     *
-     * @param o The object to be written.
-     */
-    public void enqueue(Object o) {
-        synchronized (queue) {
-            if (queue.size() < MAXIMUM_QUEUE_LENGTH) {
-                addToQueue(o);
-            } else {
-                System.err.println("Maximum TCP queue length reached - message " + o + " will be dropped.");
-            }
+      debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
+
+      if (buffer.remaining() != 0) {
+        return false;
+      }
+
+      if (!waitingForGreeting) {
+        queue.removeFirst();
+      }
+
+      buffer = null;
+
+      // if there are more objects in the queue, try writing those
+      // otherwise, return saying all objects have been written
+      return write(sc);
+    }
+  }
+
+  /**
+   * Adds an entry into the queue, taking message prioritization into account
+   *
+   * @param o The feature to be added to the ToQueue attribute
+   */
+  private void addToQueue(Object o) {
+    if (o instanceof SocketTransportMessage) {
+      boolean priority = ((Message) ((SocketTransportMessage) o).getObject()).hasPriority();
+
+      if ((priority) && (queue.size() > 0)) {
+        for (int i = 1; i < queue.size(); i++) {
+          Object thisObj = queue.get(i);
+
+          if ((thisObj instanceof SocketTransportMessage) &&
+            (!((Message) ((SocketTransportMessage) thisObj).getObject()).hasPriority())) {
+            debug("Prioritizing socket message " + o + " over message " + thisObj);
+
+            queue.add(i, o);
+            return;
+          }
         }
+      }
     }
 
-    /**
-     * Resets the SocketChannelWriter, by clearing both the buffer and the
-     * queue. Should not be used except when a socket has just been opened.
-     *
-     * @param msg The greeting message that should be enqueued first
-     */
-    public void reset(SocketCommandMessage msg) {
-        try {
-            buffer = serialize(msg);
-            greetingReceived();
-        } catch (IOException e) {
-            System.out.println("PANIC: Error serializing message " + msg);
-        }
+    queue.addLast(o);
+  }
+
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @param s DESCRIBE THE PARAMETER
+   */
+  private void debug(String s) {
+    if (Log.ifp(8)) {
+      if (pastryNode == null) {
+        System.out.println("(W): " + s);
+      } else {
+        System.out.println(pastryNode.getNodeId() + " (W): " + s);
+      }
+    }
+  }
+
+  /**
+   * Method which serializes a given object into a ByteBuffer, in order to
+   * prepare it for writing. This is necessary because the size of the object
+   * must be prepended to the to the front of the buffer in order to tell the
+   * reciever how long the object is.
+   *
+   * @param o The object to serialize
+   * @return A ByteBuffer containing the object prepended with its size.
+   * @exception IOException DESCRIBE THE EXCEPTION
+   */
+  public static ByteBuffer serialize(Object o) throws IOException {
+    if (o == null) {
+      return null;
     }
 
-    /**
-     * DESCRIBE THE METHOD
-     */
-    public void greetingReceived() {
-        debug("Greeting has been received - acting normally.");
+    try {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      ObjectOutputStream oos = new ObjectOutputStream(baos);
 
-        waitingForGreeting = false;
+      // write out object and find its length
+      oos.writeObject(o);
+      int len = baos.toByteArray().length;
+
+      //System.out.println("serializingS " + o + " len=" + len);
+
+      ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
+      DataOutputStream dos = new DataOutputStream(baos2);
+
+      // write out length of the object, followed by the object itself
+      dos.write(MAGIC_NUMBER);
+      dos.writeInt(len);
+      dos.flush();
+      dos.write(baos.toByteArray());
+      dos.flush();
+
+      return ByteBuffer.wrap(baos2.toByteArray());
+    } catch (InvalidClassException e) {
+      System.out.println("PANIC: Object to be serialized was an invalid class!");
+      throw new SerializationException("Invalid class during attempt to serialize.");
+    } catch (NotSerializableException e) {
+      System.out.println("PANIC: Object to be serialized was not serializable! [" + o + "]");
+      throw new SerializationException("Unserializable class during attempt to serialize.");
     }
-
-    /**
-     * Method which is designed to be called when this writer should write out
-     * its data. Returns whether or not the message was completely written. If
-     * false is returns, write() will need to be called again when the
-     * SocketChannel is ready for data to be written.
-     *
-     * @param sc The SocketChannel to write to
-     * @return true if this output stream is done, false otherwise
-     * @exception IOException DESCRIBE THE EXCEPTION
-     */
-    public boolean write(SocketChannel sc) throws IOException {
-        synchronized (queue) {
-            if (buffer == null) {
-                if ((!waitingForGreeting) && (queue.size() > 0)) {
-                    debug("About to serialize object " + queue.getFirst());
-                    buffer = serialize(queue.getFirst());
-                } else {
-                    return true;
-                }
-            }
-
-            int j = buffer.limit();
-            int i = sc.write(buffer);
-
-            debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
-
-            if (buffer.remaining() != 0) {
-                return false;
-            }
-
-            if (!waitingForGreeting) {
-                queue.removeFirst();
-            }
-
-            buffer = null;
-
-            // if there are more objects in the queue, try writing those
-            // otherwise, return saying all objects have been written
-            return write(sc);
-        }
-    }
-
-    /**
-     * Adds an entry into the queue, taking message prioritization into account
-     *
-     * @param o The feature to be added to the ToQueue attribute
-     */
-    private void addToQueue(Object o) {
-        if (o instanceof SocketTransportMessage) {
-            boolean priority = ((Message) ((SocketTransportMessage) o).getObject()).hasPriority();
-
-            if ((priority) && (queue.size() > 0)) {
-                for (int i = 1; i < queue.size(); i++) {
-                    Object thisObj = queue.get(i);
-
-                    if ((thisObj instanceof SocketTransportMessage) &&
-                        (!((Message) ((SocketTransportMessage) thisObj).getObject()).hasPriority())) {
-                        debug("Prioritizing socket message " + o + " over message " + thisObj);
-
-                        queue.add(i, o);
-                        return;
-                    }
-                }
-            }
-        }
-
-        queue.addLast(o);
-    }
-
-    /**
-     * DESCRIBE THE METHOD
-     *
-     * @param s DESCRIBE THE PARAMETER
-     */
-    private void debug(String s) {
-        if (Log.ifp(8)) {
-            if (pastryNode == null) {
-                System.out.println("(W): " + s);
-            } else {
-                System.out.println(pastryNode.getNodeId() + " (W): " + s);
-            }
-        }
-    }
-
-    /**
-     * Method which serializes a given object into a ByteBuffer, in order to
-     * prepare it for writing. This is necessary because the size of the object
-     * must be prepended to the to the front of the buffer in order to tell the
-     * reciever how long the object is.
-     *
-     * @param o The object to serialize
-     * @return A ByteBuffer containing the object prepended with its size.
-     * @exception IOException DESCRIBE THE EXCEPTION
-     */
-    public static ByteBuffer serialize(Object o) throws IOException {
-        if (o == null) {
-            return null;
-        }
-
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(baos);
-
-            // write out object and find its length
-            oos.writeObject(o);
-            int len = baos.toByteArray().length;
-
-            //System.out.println("serializingS " + o + " len=" + len);
-
-            ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
-            DataOutputStream dos = new DataOutputStream(baos2);
-
-            // write out length of the object, followed by the object itself
-            dos.write(MAGIC_NUMBER);
-            dos.writeInt(len);
-            dos.flush();
-            dos.write(baos.toByteArray());
-            dos.flush();
-
-            return ByteBuffer.wrap(baos2.toByteArray());
-        } catch (InvalidClassException e) {
-            System.out.println("PANIC: Object to be serialized was an invalid class!");
-            throw new SerializationException("Invalid class during attempt to serialize.");
-        } catch (NotSerializableException e) {
-            System.out.println("PANIC: Object to be serialized was not serializable! [" + o + "]");
-            throw new SerializationException("Unserializable class during attempt to serialize.");
-        }
-    }
+  }
 }
 

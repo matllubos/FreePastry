@@ -33,19 +33,19 @@ package rice.pastry.wire.messaging.socket;
  */
 public class DisconnectMessage extends SocketCommandMessage {
 
-    /**
-     * Constructor
-     */
-    public DisconnectMessage() {
-        super();
-    }
+  /**
+   * Constructor
+   */
+  public DisconnectMessage() {
+    super();
+  }
 
-    /**
-     * DESCRIBE THE METHOD
-     *
-     * @return DESCRIBE THE RETURN VALUE
-     */
-    public String toString() {
-        return "DisconnectMessage";
-    }
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @return DESCRIBE THE RETURN VALUE
+   */
+  public String toString() {
+    return "DisconnectMessage";
+  }
 }

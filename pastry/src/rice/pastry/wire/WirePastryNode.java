@@ -47,144 +47,144 @@ import rice.pastry.routing.*;
 
 public class WirePastryNode extends DistPastryNode {
 
-    // The address (ip + port) of this pastry node
-    private InetSocketAddress _address;
+  // The address (ip + port) of this pastry node
+  private InetSocketAddress _address;
 
-    // The SelectorManager, controlling the selector
-    private SelectorManager _manager;
+  // The SelectorManager, controlling the selector
+  private SelectorManager _manager;
 
-    // The DatagramManager, controlling the datagrams
-    private DatagramManager _dManager;
+  // The DatagramManager, controlling the datagrams
+  private DatagramManager _dManager;
 
-    // The SocketManager, controlling the sockets
-    private SocketManager _sManager;
+  // The SocketManager, controlling the sockets
+  private SocketManager _sManager;
 
-    // The pool of all node handles
-    private WireNodeHandlePool _pool;
+  // The pool of all node handles
+  private WireNodeHandlePool _pool;
 
-    // The thread in which the SelectorManager is running
-    private Thread _executionThread;
+  // The thread in which the SelectorManager is running
+  private Thread _executionThread;
 
 
-    /**
-     * Constructor
-     *
-     * @param id The NodeId of this Pastry node.
-     */
-    public WirePastryNode(NodeId id) {
-        super(id);
-    }
+  /**
+   * Constructor
+   *
+   * @param id The NodeId of this Pastry node.
+   */
+  public WirePastryNode(NodeId id) {
+    super(id);
+  }
 
-    /**
-     * Returns the SelectorManager for this pastry node.
-     *
-     * @return The SelectorManager for this pastry node.
-     */
-    public SelectorManager getSelectorManager() {
-        return _manager;
-    }
+  /**
+   * Returns the SelectorManager for this pastry node.
+   *
+   * @return The SelectorManager for this pastry node.
+   */
+  public SelectorManager getSelectorManager() {
+    return _manager;
+  }
 
-    /**
-     * Returns the DatagramManager for this pastry node.
-     *
-     * @return The DatagramManager for this pastry node.
-     */
-    public DatagramManager getDatagramManager() {
-        return _dManager;
-    }
+  /**
+   * Returns the DatagramManager for this pastry node.
+   *
+   * @return The DatagramManager for this pastry node.
+   */
+  public DatagramManager getDatagramManager() {
+    return _dManager;
+  }
 
-    /**
-     * Returns the SocketManager for this pastry node.
-     *
-     * @return The SocketManager for this pastry node.
-     */
-    public SocketManager getSocketManager() {
-        return _sManager;
-    }
+  /**
+   * Returns the SocketManager for this pastry node.
+   *
+   * @return The SocketManager for this pastry node.
+   */
+  public SocketManager getSocketManager() {
+    return _sManager;
+  }
 
-    /**
-     * Returns the WireNodeHandlePool for this pastry node.
-     *
-     * @return The WireNodeHandlePool for this pastry node.
-     */
-    public DistNodeHandlePool getNodeHandlePool() {
-        return _pool;
-    }
+  /**
+   * Returns the WireNodeHandlePool for this pastry node.
+   *
+   * @return The WireNodeHandlePool for this pastry node.
+   */
+  public DistNodeHandlePool getNodeHandlePool() {
+    return _pool;
+  }
 
-    /**
-     * Helper method which allows the WirePastryNodeFactory to initialize a
-     * number of the pastry node's elements.
-     *
-     * @param address The address of this pastry node.
-     * @param manager The socket manager for this pastry node.
-     * @param pool The node handle pool for this pastry node.
-     * @param lsmf Leaf set maintenance frequency. 0 means never.
-     * @param rsmf Route set maintenance frequency. 0 means never.
-     * @param dManager The new SocketElements value
-     * @param sManager The new SocketElements value
-     */
-    public void setSocketElements(InetSocketAddress address,
-                                  SelectorManager manager,
-                                  DatagramManager dManager,
-                                  SocketManager sManager,
-                                  WireNodeHandlePool pool,
-                                  int lsmf,
-                                  int rsmf) {
-        _address = address;
-        _manager = manager;
-        _dManager = dManager;
-        _sManager = sManager;
-        _pool = pool;
-        leafSetMaintFreq = lsmf;
-        routeSetMaintFreq = rsmf;
-    }
+  /**
+   * Helper method which allows the WirePastryNodeFactory to initialize a number
+   * of the pastry node's elements.
+   *
+   * @param address The address of this pastry node.
+   * @param manager The socket manager for this pastry node.
+   * @param pool The node handle pool for this pastry node.
+   * @param lsmf Leaf set maintenance frequency. 0 means never.
+   * @param rsmf Route set maintenance frequency. 0 means never.
+   * @param dManager The new SocketElements value
+   * @param sManager The new SocketElements value
+   */
+  public void setSocketElements(InetSocketAddress address,
+                                SelectorManager manager,
+                                DatagramManager dManager,
+                                SocketManager sManager,
+                                WireNodeHandlePool pool,
+                                int lsmf,
+                                int rsmf) {
+    _address = address;
+    _manager = manager;
+    _dManager = dManager;
+    _sManager = sManager;
+    _pool = pool;
+    leafSetMaintFreq = lsmf;
+    routeSetMaintFreq = rsmf;
+  }
 
-    /**
-     * Sets the thread which the pastry node is running in.
-     *
-     * @param t The thread
-     */
-    public void setThread(Thread t) {
-        _executionThread = t;
-    }
+  /**
+   * Sets the thread which the pastry node is running in.
+   *
+   * @param t The thread
+   */
+  public void setThread(Thread t) {
+    _executionThread = t;
+  }
 
-    /**
-     * Checks whether the current thread is the execution thread.
-     *
-     * @return whether or not the current thread is the executing thread
-     */
-    public boolean inThread() {
-        return _executionThread.equals(Thread.currentThread());
-    }
+  /**
+   * Checks whether the current thread is the execution thread.
+   *
+   * @return whether or not the current thread is the executing thread
+   */
+  public boolean inThread() {
+    return _executionThread.equals(Thread.currentThread());
+  }
 
-    /**
-     * Called after the node is initialized.
-     *
-     * @param bootstrap The node which this node should boot off of.
-     */
-    public void doneNode(NodeHandle bootstrap) {
-        super.doneNode(bootstrap);
+  /**
+   * Called after the node is initialized.
+   *
+   * @param bootstrap The node which this node should boot off of.
+   */
+  public void doneNode(NodeHandle bootstrap) {
+    super.doneNode(bootstrap);
 
-        //if (leafSetMaintFreq > 0 || routeSetMaintFreq > 0)
-        //new Thread(new MaintThread()).start();
+    //if (leafSetMaintFreq > 0 || routeSetMaintFreq > 0)
+    //new Thread(new MaintThread()).start();
 
-        initiateJoin(bootstrap);
-        _manager.run();
-    }
+    initiateJoin(bootstrap);
+    _manager.run();
+  }
 
-    /**
-     * DESCRIBE THE METHOD
-     */
-    public void nodeIsReady() {
-        super.nodeIsReady();
-    }
+  /**
+   * DESCRIBE THE METHOD
+   */
+  public void nodeIsReady() {
+    super.nodeIsReady();
+  }
 
-    /**
-     * Method for simulating the death of this node. Should only be used for
-     * testing purposes.
-     */
-    public void kill() {
-        super.kill();
-        _manager.kill();
-    }
+  /**
+   * Method for simulating the death of this node. Should only be used for
+   * testing purposes.
+   */
+  public void kill() {
+    super.kill();
+    _manager.kill();
+  }
 }

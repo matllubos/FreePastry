@@ -41,38 +41,38 @@ import java.nio.channels.*;
  */
 public interface SelectionKeyHandler {
 
-    /**
-     * Method which is called when the key becomes acceptable.
-     *
-     * @param key The key which is acceptable.
-     */
-    public void accept(SelectionKey key);
+  /**
+   * Method which is called when the key becomes acceptable.
+   *
+   * @param key The key which is acceptable.
+   */
+  public void accept(SelectionKey key);
 
-    /**
-     * Method which is called when the key becomes connectable.
-     *
-     * @param key The key which is connectable.
-     */
-    public void connect(SelectionKey key);
+  /**
+   * Method which is called when the key becomes connectable.
+   *
+   * @param key The key which is connectable.
+   */
+  public void connect(SelectionKey key);
 
-    /**
-     * Method which is called when the key becomes readable.
-     *
-     * @param key The key which is readable.
-     */
-    public void read(SelectionKey key);
+  /**
+   * Method which is called when the key becomes readable.
+   *
+   * @param key The key which is readable.
+   */
+  public void read(SelectionKey key);
 
-    /**
-     * Method which is called when the key becomes writable.
-     *
-     * @param key The key which is writable.
-     */
-    public void write(SelectionKey key);
+  /**
+   * Method which is called when the key becomes writable.
+   *
+   * @param key The key which is writable.
+   */
+  public void write(SelectionKey key);
 
-    /**
-     * Method which is called when every time the SelectorManager is woken up.
-     * It allows SelectionKeyHandlers to check for lost packets, etc...
-     */
-    public void wakeup();
+  /**
+   * Method which is called when every time the SelectorManager is woken up. It
+   * allows SelectionKeyHandlers to check for lost packets, etc...
+   */
+  public void wakeup();
 
 }
