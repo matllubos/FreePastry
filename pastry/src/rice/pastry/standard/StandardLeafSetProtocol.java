@@ -57,14 +57,15 @@ public class StandardLeafSetProtocol implements MessageReceiver {
     private final boolean failstop = true;  // nodes are assumed to fail silently
 
     private NodeHandle localHandle;
-
+    private PastryNode localNode;
     private PastrySecurityManager security;
     private LeafSet leafSet;
     private RoutingTable routeTable;
 
     private Address address;
     
-    public StandardLeafSetProtocol(NodeHandle local, PastrySecurityManager sm, LeafSet ls, RoutingTable rt) {
+    public StandardLeafSetProtocol(PastryNode ln, NodeHandle local, PastrySecurityManager sm, LeafSet ls, RoutingTable rt) {
+	localNode = ln;
 	localHandle = local;
 	security = sm;
 	leafSet = ls;
@@ -100,7 +101,12 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 
 	    // first, merge the received leaf set into our own
 	    boolean changed = mergeLeafSet(remotels, from);
-	    
+
+	    if (type == BroadcastLeafSet.JoinInitial) {
+		// we have now successfully joined the ring, set the local node ready
+		localNode.setReady();
+	    }
+
 	    if (!failstop) {
 		// with arbitrary node failures, we need to broadcast whenever we learn something new
 		if (changed) broadcast();   

@@ -187,7 +187,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	StandardRouter router =
 	    new StandardRouter(localhandle, routeTable, leafSet, secureMan);
 	StandardLeafSetProtocol lsProtocol =
-	    new StandardLeafSetProtocol(localhandle, secureMan, leafSet, routeTable);
+	    new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
 	StandardRouteSetProtocol rsProtocol =
 	    new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
 	StandardJoinProtocol jProtocol =

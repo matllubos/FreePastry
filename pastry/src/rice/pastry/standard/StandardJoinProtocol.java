@@ -133,7 +133,7 @@ public class StandardJoinProtocol implements MessageReceiver
 			localHandle.receiveMessage(bls);
 			
 			// we have now successfully joined the ring, set the local node ready
-			localNode.setReady();
+			//localNode.setReady();
 		    }
 		}	    
 	}
