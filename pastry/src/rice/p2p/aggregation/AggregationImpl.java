@@ -73,7 +73,7 @@ class AggregateDescriptor {
   }
 }  
 
-public class AggregationImpl implements Past, GCPast, VersioningPast, Application, DebugCommandHandler {
+public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregation, Application, DebugCommandHandler {
 
   protected final Past aggregateStore;
   protected final StorageManager waitingList;
@@ -547,7 +547,6 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Applicatio
       String expirationArg = args.substring(args.lastIndexOf(' ') + 1);
       String keyArg = args.substring(0, args.lastIndexOf(' '));
 
-System.out.println("|"+expirationArg+"|"+keyArg+"|");
       Id id = factory.buildIdFromToString(keyArg);
       long expiration = System.currentTimeMillis() + Long.parseLong(expirationArg);
 
@@ -957,7 +956,7 @@ System.out.println("|"+expirationArg+"|"+keyArg+"|");
       refresh(id[i], expiration, mc.getSubContinuation(i));
   }
 
-  public void refresh(final Id id, final long expiration, final Continuation command) {
+  private void refresh(final Id id, final long expiration, final Continuation command) {
     AggregateDescriptor adc = (AggregateDescriptor) aggregateList.get(id);
     log("AGGR: Refresh("+id+", expiration="+expiration+")");
     
@@ -1065,12 +1064,12 @@ System.out.println("|"+expirationArg+"|"+keyArg+"|");
     }
   }
 
-  public long getCurrentExpiration(Id vkey) {
+  private long getCurrentExpiration(Id vkey) {
     return System.currentTimeMillis() + 30 * MINUTES; /* YYY */
     /*********** IMPLEMENT ME ************/
   }
 
-  public void rebuildAggregateList(final Continuation command) {
+  private void rebuildAggregateList(final Continuation command) {
     log("AGGR rebuildAggregateList");
     if (rootKey == null) {
       warn("rebuildAggregateList invoked while rootKey is null");
@@ -1391,7 +1390,27 @@ System.out.println("|"+expirationArg+"|"+keyArg+"|");
   
     objectStore.fetch(handle, command);
   }
+
+  public void flush(Id id, Continuation command) {
+    command.receiveResult(new Boolean(true));
+    /* YYY */
+  }
   
+  public void flush(Continuation command) {
+    command.receiveResult(new Boolean(true));
+    /* YYY */
+  }
+  
+  public void rollback(Id id, Continuation command) {
+    command.receiveResult(new Boolean(true));
+    /* YYY */
+  }
+  
+  public void reset(Continuation command) {
+    command.receiveResult(new Boolean(true));
+    /* YYY */
+  }
+
   public NodeHandle getLocalNodeHandle() {
     return objectStore.getLocalNodeHandle();
   }
