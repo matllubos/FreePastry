@@ -1,7 +1,8 @@
 PACKAGE = rice.scribe.maintenance
 
 SOURCE  = \
-	ScribeMaintainer.java
+	ScribeMaintainer.java\
+	DistScribeMaintenanceThread.java
 
 RMI_SOURCE =
 
