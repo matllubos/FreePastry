@@ -180,11 +180,12 @@ public class SelectorManager extends Thread implements Timer {
    */
   public void run() {
     try {
-      System.out.println("SelectorManager starting...");
+      //System.out.println("SelectorManager starting...");
       debug("SelectorManager starting...");
 
       // loop while waiting for activity
       while (alive) {
+        // NOTE: This is so we aren't always holding the selector lock when we get context switched 
         Thread.yield();
 //        try { Thread.sleep(100); } catch (Exception ioe) {}
         executeDueTasks();
