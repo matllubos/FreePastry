@@ -9,7 +9,8 @@ import rice.post.*;
  * message.
  */
 public abstract class NotificationMessage extends PostMessage {
-
+  private PostClientAddress address = null;
+ 
   /**
    * Constructs a NotificationMessage for the given Email.
    *
@@ -17,8 +18,8 @@ public abstract class NotificationMessage extends PostMessage {
    *        should be delivered.
    */
   public NotificationMessage(PostClientAddress address) {
+    this.address = address;
   }
-
   /**
    * Returns the PostApplicationAddress of the application
    * to which this noticiation should be delivered.
@@ -26,7 +27,7 @@ public abstract class NotificationMessage extends PostMessage {
    * @return The address of the application to which this should be delivered
    */
   public PostClientAddress getAddress() {
-    return null;
+    return address;
   }
 
 }
