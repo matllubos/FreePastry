@@ -210,7 +210,7 @@ public class DistScribeRegrTestApp implements IScribeApp
 	DistTopicLog topicLog;
 	topicLog = (DistTopicLog)m_logTable.get(topicId);
 	topicLog.setUnsubscribed(true);
-	//System.out.println(m_scribe.getNodeId()+" Unsubscribing from topic "+topicId);
+	System.out.println(m_scribe.getNodeId()+" Unsubscribing from topic "+topicId);
 	m_scribe.unsubscribe( topicId, this, m_credentials );
     }
     
