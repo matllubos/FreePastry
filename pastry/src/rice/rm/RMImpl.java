@@ -659,6 +659,14 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
  8. Set the appropriate value of Maintenance Freq;
 
+ 9. Use the IPNodeIdFactory instead of RandomNodeIdFactory in the Dist driver
+
+ 10. Implement the timeout/message mechanism
+
+ 11. Implement PAST optimization
+
+ 12. Use the new Address mechanism
+
 */
 
 
