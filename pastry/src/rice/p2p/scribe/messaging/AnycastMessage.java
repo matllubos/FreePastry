@@ -96,8 +96,8 @@ public class AnycastMessage extends ScribeMessage {
 
 
     public void setContent(ScribeContent content){
-	if(this.content != null)
-	    System.out.println("Over-writing the content of message");
+	//if(this.content != null)
+	// System.out.println("Over-writing the content of message"+ topic.getId());
 	this.content = content;
     }
 
@@ -110,7 +110,7 @@ public class AnycastMessage extends ScribeMessage {
     if (toVisit.size() == 0) {
       return null;
     }
-
+    
     return (NodeHandle) toVisit.removeFirst();
   }
 

@@ -196,7 +196,7 @@ public class ScribeRegrTest extends CommonAPITest {
     for (int i=0; i < NUM_NODES/SKIP; i++) {
       if (clients[i].equals(client)) {
         if (clients[i].getAnycastMessages().length != 1) {
-          stepDone(FAILURE, "Expected node to accept anycast at " + client);
+          stepDone(FAILURE, "Expected node to accept anycast at " + client+" accepted "+clients[i].getAnycastMessages().length);
           failed = true;
         }
       } else {
@@ -286,10 +286,12 @@ public class ScribeRegrTest extends CommonAPITest {
     TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
 
     stepStart("Tree Construction");
+    for(int i = 0; i < NUM_NODES; i++)
+	policies[i].allowSubscribe(false);
+
     for (int i = 0; i < NUM_NODES/2; i++) {
       clients[i] = new TestScribeClient(scribes[i], topic, i);
       scribes[i].subscribe(topic, clients[i]);
-      policies[i].allowSubscribe(false);
       simulate();
     }
 
@@ -707,7 +709,8 @@ public class ScribeRegrTest extends CommonAPITest {
     }
 
     public boolean allowSubscribe(SubscribeMessage message, ScribeClient[] clients, NodeHandle[] children) {
-      return (! neverAllowSubscribe) && (allowSubscribe || (clients.length > 0));
+	//System.out.println("Allow subscribe , client.size "+clients.length+", children "+children.length+" for subscriber "+message.getSubscriber());
+      return (! neverAllowSubscribe) && (allowSubscribe || (clients.length > 0) || this.scribe.isRoot(message.getTopic()));
     }
   }
 }
