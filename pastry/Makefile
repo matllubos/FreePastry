@@ -13,9 +13,12 @@ PACKAGES = \
 	rice.pastry.join\
 	rice.pastry.direct\
 	rice.pastry.standard\
-	rice.pastry.security\
 	rice.pastry.rmi\
 	rice.pastry.testing\
+	rice.ap3\
+	rice.ap3.routing\
+	rice.ap3.messaging\
+	rice.ap3.testing\
 	rice.scribe\
 	rice.scribe.maintenance\
 	rice.scribe.messaging\

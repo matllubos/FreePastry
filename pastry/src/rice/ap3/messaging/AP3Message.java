@@ -18,28 +18,28 @@ public class AP3Message extends Message {
   /**
    * A key for uniquely identifying the message.
    */
-  private AP3MessageID _messageID;
+  protected AP3MessageID _messageID;
 
   /**
    * The type of the message.
    */
-  private int _messageType;
+  protected int _messageType;
 
   /**
    * The content of the message.
    */
-  private Object _content;
+  protected Object _content;
 
   /**
    * The fetch probability that the server fetching
    * the request should use.
    */
-  private double _fetchProbability;
+  protected double _fetchProbability;
 
   /**
    * The source of the message.
    */
-  private NodeId _source;
+  protected NodeId _source;
 
   /**
    * Constructor
@@ -54,6 +54,20 @@ public class AP3Message extends Message {
     this._content = content;
     this._fetchProbability = fetchProbability;
     this._messageID = new AP3MessageIDImpl();
+  }
+
+  public String toString() {
+    String msgType;
+    if(_messageType == AP3MessageType.REQUEST) {
+      msgType = "REQUEST";
+    } else {
+      msgType = "RESPONSE";
+    }
+    return "msg.type = " + msgType + "\n" + 
+      "msg.id = " + _messageID + "\n" +
+      "msg.content = " + _content + "\n" +
+      "msg.prob = " + _fetchProbability + "\n" +
+      "msg.source = " + _source + "\n";
   }
 
   public double getFetchProbability() {

@@ -29,42 +29,42 @@ public class AP3ServiceImpl
   /**
    * The credentials for the AP3 system.
    */
-  private Credentials _credentials;
+  protected Credentials _credentials;
 
   /**
    * Used for routing a message through Pastry.
    * Specifies options, which are currently
    * the default routing options.
    */
-  private SendOptions _sendOptions;
+  protected SendOptions _sendOptions;
 
   /**
    * The routing table.
    */
-  private AP3RoutingTable _routingTable;
+  protected AP3RoutingTable _routingTable;
 
   /**
    * The table used to store information for blocked threads
    * waiting for a response.
    */
-  private Hashtable _threadTable;
+  protected Hashtable _threadTable;
 
   /**
    * Used to determine whether to fetch requested
    * content or not.
    */
-  private Random _random;
+  protected Random _random;
 
   /**
    * The AP3Client using the system.
    */
-  private AP3Client _client;
+  protected AP3Client _client;
 
   /**
    * Used for generating random node ids
    * when forwarding requests.
    */
-  private RandomNodeIdFactory _randomNodeIDFactory;
+  protected RandomNodeIdFactory _randomNodeIDFactory;
 
   /**
    * Constructor
@@ -76,6 +76,8 @@ public class AP3ServiceImpl
     this._sendOptions = new SendOptions();
     this._routingTable = new AP3RoutingTableImpl();
     this._randomNodeIDFactory = new RandomNodeIdFactory();
+    this._threadTable = new Hashtable();
+    this._random = new Random();
   }
 
   /**
@@ -94,10 +96,10 @@ public class AP3ServiceImpl
 
     while(messageIDCollided) {
       try {
-	requestMsg = new AP3Message(this.getNodeId(),
-				    request,
-				    AP3MessageType.REQUEST,
-				    fetchProbability);
+	requestMsg = _createAP3Message(this.getNodeId(),
+				       request,
+				       AP3MessageType.REQUEST,
+				       fetchProbability);
 	_routingTable.addEntry(requestMsg);
 	messageIDCollided = false;
       } catch(Exception e) {
@@ -110,15 +112,19 @@ public class AP3ServiceImpl
 		     new ThreadTableEntry(Thread.currentThread(), null));
 
     /* In the future, change wait() to be wait(timeout) 
-     * so that the thread can waken after a timeout period to handle the
+     * so that the thread can wake after a timeout period to handle the
      * timeout. 
      */
-    try {
-      Thread.currentThread().wait();
-    } catch (Exception e) {
-      /* If the thread is interrupted, continue.
-       * This shouldn't happen.
-       */
+    while(((ThreadTableEntry) _threadTable.get(requestMsg.getID()))._msg ==
+	  null) {
+      System.out.println("waiting...");
+      try {
+	//wait();
+	Thread.currentThread().wait();
+      } catch (Exception e) {
+	/* If the thread is interrupted, continue.
+	 */
+      }
     }
 
     /* Thread is here because it has been notified by a thread
@@ -185,7 +191,7 @@ public class AP3ServiceImpl
   /**
    * Handles response messages.
    */
-  private void _handleResponse(AP3Message msg) {
+  protected void _handleResponse(AP3Message msg) {
 
     AP3RoutingTableEntry routeInfo = _routingTable.getEntry(msg.getID());
     _routingTable.dropEntry(msg.getID());
@@ -225,7 +231,7 @@ public class AP3ServiceImpl
   /**
    * Handles request messages.
    */
-  private void _handleRequest(AP3Message msg) {
+  protected void _handleRequest(AP3Message msg) {
     
     AP3RoutingTableEntry routeInfo = _routingTable.getEntry(msg.getID());
     if(routeInfo != null) {
@@ -263,9 +269,20 @@ public class AP3ServiceImpl
   }
 
   /**
+   * Helper function used to create an AP3Message. Useful when
+   * subclassing this class, such as for testing.
+   */
+  protected AP3Message _createAP3Message(NodeId source,
+					 Object content,
+					 int messageType,
+					 double fetchProbability) {
+    return new AP3Message(source, content, messageType, fetchProbability);
+  }
+
+  /**
    * Helper function used to route messages in the AP3 system.
    */
-  private void _routeMsg(NodeId dest, AP3Message msg) {
+  protected void _routeMsg(NodeId dest, AP3Message msg) {
     this.routeMsg(dest, msg, _credentials, _sendOptions);
   }
 
@@ -273,25 +290,25 @@ public class AP3ServiceImpl
    * Helper function to determine if this node should fetch
    * the requested content or not.
    */
-  private boolean _shouldFetch(double prob) {
+  protected boolean _shouldFetch(double prob) {
     return (_random.nextDouble() < prob);
   }
 
   /**
    * Helper function used to generate random node ids.
    */
-  private NodeId _generateRandomNodeID() {
+  protected NodeId _generateRandomNodeID() {
     return _randomNodeIDFactory.generateNodeId();
   }
 
   /**
    * Helper function used to return response messages
    */
-  private void _sendResponse(NodeId dest, Object responseContent) {
-    AP3Message responseMsg = new AP3Message(null,
-					    responseContent,
-					    AP3MessageType.RESPONSE,
-					    -1.0);
+  protected void _sendResponse(NodeId dest, Object responseContent) {
+    AP3Message responseMsg = _createAP3Message(null,
+					       responseContent,
+					       AP3MessageType.RESPONSE,
+					       -1.0);
     this._routeMsg(dest, responseMsg);
   }
 
@@ -299,17 +316,17 @@ public class AP3ServiceImpl
    * Helper class used to store information on blocked threads
    * waiting for a response.
    */
-  private class ThreadTableEntry {
+  protected class ThreadTableEntry {
     /**
      * The blocked thread itself.
      */
-    private Thread _thread;
+    protected Thread _thread;
 
     /**
      * The resposne message for the blocked thread
      * to pick up when its woken up.
      */
-    private AP3Message _msg;
+    protected AP3Message _msg;
 
     /**
      * Constructor.
@@ -320,4 +337,11 @@ public class AP3ServiceImpl
     }
   }
 }
+
+
+
+
+
+
+
 
