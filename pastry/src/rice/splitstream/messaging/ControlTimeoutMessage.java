@@ -106,38 +106,56 @@ public class ControlTimeoutMessage extends Message implements Serializable
      */
     public void handleMessage( Channel channel, PastryNode thePastryNode, Scribe scribe )
     {
-        if ( num_fails > channel.getTimeouts() )
+        boolean ignore;
+        if ( msg_type == ATTACH )
         {
-            /* Exceeded allowable number of retries; generate app-level upcall(?) */
+            ignore = channel.getIgnoreTimeout();
+        }
+        else if ( msg_type == FIND_PARENT )
+        {
+            ignore = channel.getStripe( stripe_id ).getIgnoreTimeout();
         }
         else
         {
-            if ( msg_type == ATTACH )
-            {
-        	ControlAttachMessage attachMessage = new ControlAttachMessage();
-                scribe.anycast( dest, attachMessage, c );
+            System.out.println( "Timeout message received from unknown source" );
+            ignore = true;
+        }
 
-                ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( channel.getAddress(),
-                                                                                  num_fails+1,
-                                                                                  dest,
-                                                                                  c );
-	        thePastryNode.scheduleMsg( timeoutMessage, channel.getTimeoutLen() );
-                
-            }
-            else if ( msg_type == FIND_PARENT )
+        if ( !ignore )
+        {
+            if ( num_fails > channel.getTimeouts() )
             {
-                ControlFindParentMessage msg = new ControlFindParentMessage( SplitStreamAddress.instance(), 
-                                                                             scribe.getLocalHandle(),
-                                                                             dest,
-                                                                             c,
-                                                                             stripe_id, channel_id );
-                scribe.anycast( dest, msg, c ); 
-                ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( SplitStreamAddress.instance(),
-                                                                                  num_fails+1,
-                                                                                  dest,
-                                                                                  c, stripe_id, channel_id );
-                thePastryNode.scheduleMsg( timeoutMessage, channel.getTimeoutLen() );
-           }
-       }
+                /* Exceeded allowable number of retries; generate app-level upcall(?) */
+            }
+            else
+            {
+                if ( msg_type == ATTACH )
+                {
+        	    ControlAttachMessage attachMessage = new ControlAttachMessage();
+                    scribe.anycast( dest, attachMessage, c );
+
+                    ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( channel.getAddress(),
+                                                                                      num_fails+1,
+                                                                                      dest,
+                                                                                      c );
+	            thePastryNode.scheduleMsg( timeoutMessage, channel.getTimeoutLen() );
+                
+                }
+                else if ( msg_type == FIND_PARENT )
+                {
+                    ControlFindParentMessage msg = new ControlFindParentMessage( SplitStreamAddress.instance(), 
+                                                                                 scribe.getLocalHandle(),
+                                                                                 dest,
+                                                                                 c,
+                                                                                 stripe_id, channel_id );
+                    scribe.anycast( dest, msg, c ); 
+                    ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( SplitStreamAddress.instance(),
+                                                                                      num_fails+1,
+                                                                                      dest,
+                                                                                      c, stripe_id, channel_id );
+                    thePastryNode.scheduleMsg( timeoutMessage, channel.getTimeoutLen() );
+                }
+            }
+        }
     }	
 }

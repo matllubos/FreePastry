@@ -106,10 +106,9 @@ public class Channel extends PastryAppl implements IScribeApp {
     private long timeoutLen = 5000;
 
     /**
-     * Should we ignore any timeout messages received
-     * <CLEAN THIS UP>
+     * Should we ignore any attach-related timeout messages received
      */
-    private boolean timeoutIgnore = true;
+    private boolean ignore_timeout = true;
 
     /**
      * Constructor to create a new channel from scratch
@@ -210,7 +209,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	ControlAttachMessage attachMessage = new ControlAttachMessage();
         //System.out.println("Sending Anycast Message from " + getNodeId());
         scribe.anycast(channelId, attachMessage, cred );
-        timeoutIgnore = false;
+        ignore_timeout = false;
         ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( this.getAddress(),
                                                                           0,
                                                                           channelId,
@@ -347,6 +346,24 @@ public class Channel extends PastryAppl implements IScribeApp {
     public long getTimeoutLen()
     {
         return timeoutLen;
+    }
+
+    /**
+     * Sets the channel-specific timeout message ignoring
+     * @param ignore The new state of the channel-specific ignore
+     */
+    public void setIgnoreTimeout( boolean ignore )
+    {
+        ignore_timeout = ignore;
+    }
+
+    /**
+     * Should channel-relevant timeout messages be ignored?
+     * @return The current state of channel's ignoring timeouts
+     */
+    public boolean getIgnoreTimeout()
+    {
+        return ignore_timeout;
     }
 
     /**
@@ -582,7 +599,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	if(scribe.join(spareCapacityId, this, cred)){
 	}	
 	isReady = true;
-        timeoutIgnore = true;
+        ignore_timeout = true;
 	notifyApps();
     }
 
@@ -592,7 +609,6 @@ public class Channel extends PastryAppl implements IScribeApp {
      * @param msg the ControlFindParentMessage to handle
      */ 
     private void handleControlFindParentResponseMessage(Message msg){
-
 	ControlFindParentResponseMessage prmessage = 
             (ControlFindParentResponseMessage) msg;
 	Stripe stripe = (Stripe) stripeIdTable.get(prmessage.getStripeId());
@@ -602,6 +618,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	    path.addElement(prmessage.getSource());
 	    stripe.setRootPath( path );
         }
+        stripe.setIgnoreTimeout( true );
 	prmessage.handleMessage((Scribe) scribe, 
           ((Scribe) scribe).getTopic(prmessage.getStripeId()));
     }
@@ -714,10 +731,7 @@ public class Channel extends PastryAppl implements IScribeApp {
     {
         //System.out.println( "Received a scheduled timeout message" );
         ControlTimeoutMessage timeoutMessage = (ControlTimeoutMessage)msg;
-        if ( !timeoutIgnore )
-        {
-            timeoutMessage.handleMessage( this, this.thePastryNode, (Scribe)this.scribe );
-        }
+        timeoutMessage.handleMessage( this, this.thePastryNode, (Scribe)this.scribe );
     }
  
     /**

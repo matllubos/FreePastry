@@ -85,6 +85,10 @@ public class Stripe extends Observable implements IScribeApp{
     */
    private Vector root_path = new Vector();
 
+    /**
+     * Ignore FindParent timeout message scheduled when this stripe was dropped
+     */
+    private boolean ignore_timeout = true;
 
     /**
      * Flag for identifying whether the most recent drop
@@ -136,6 +140,24 @@ public class Stripe extends Observable implements IScribeApp{
    public Vector getRootPath()
    {
       return root_path;
+   }
+
+   /**
+    * Sets the timeout ignore value for this stripe
+    * @param ignore Messages should/should not be ignored
+    */
+   public void setIgnoreTimeout( boolean ignore )
+   {
+      ignore_timeout = ignore;
+   }
+
+   /**
+    * Should a timeout message pertaining to this stripe be ignored?
+    * @return The ignore timeout value for this stripe
+    */
+   public boolean getIgnoreTimeout()
+   {
+      return ignore_timeout;
    }
 
    /**
