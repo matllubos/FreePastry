@@ -53,6 +53,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private final int fragmentRequestMaxAttempts = 3;
   private final long fragmentRequestTimeout = 20 * SECONDS;
 
+  private final long manifestRequestTimeout = 10 * SECONDS;
+  private final long manifestRequestInitialBurst = 3;
+  private final long manifestRequestRetryBurst = 5;
+
   private final long overallRestoreTimeout = 2 * MINUTES;
   
   private final long handoffDelayAfterJoin = 45 * SECONDS;
@@ -606,7 +610,32 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       
       return result + numObjects + " object(s) created\n";
     }
-    
+
+    if ((cmd.length() >= 8) && cmd.substring(0, 8).equals("manifest")) {
+      String[] vkeyS = cmd.substring(9).split("v");
+      Id key = factory.buildIdFromToString(vkeyS[0]);
+      long version = Long.parseLong(vkeyS[1]);
+      VersionKey vkey = new VersionKey(key, version);
+
+      final String[] ret = new String[] { null };
+      retrieveManifest(vkey, new Continuation() {
+        public void receiveResult(Object o) {
+          if (o instanceof Manifest)
+            ret[0] = ((Manifest)o).toStringFull();
+          else 
+            ret[0] = "result("+o+")";
+        }
+        public void receiveException(Exception e) {
+          ret[0] = "exception("+e+")";
+        }
+      });
+      
+      while (ret[0] == null)
+        Thread.currentThread().yield();
+      
+      return "manifest("+vkey+")="+ret[0];
+    }
+
     return null;
   }
 
@@ -631,7 +660,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       return;
     }
 
-    final StorageManifest[] manifests = policy.createManifests(vkey, obj, fragments, expiration);
+    final Manifest[] manifests = policy.createManifests(vkey, obj, fragments, expiration);
     if (manifests == null) {
       command.receiveException(new GlacierException("Cannot create manifests"));
       return;
@@ -878,7 +907,98 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     panic("fetch("+handle+") called on Glacier");
   }
 
-  public void retrieveObject(final VersionKey key, final StorageManifest manifest, final boolean beStrict, final Continuation c) {
+  public void retrieveManifest(final VersionKey key, final Continuation command) {
+    addContinuation(new GlacierContinuation() {
+      protected boolean checkedFragment[];
+      protected long timeout;
+      
+      public String toString() {
+        return "retrieveManifest("+key+")";
+      }
+      public void init() {
+        checkedFragment = new boolean[numFragments];
+        Arrays.fill(checkedFragment, false);
+        timeout = System.currentTimeMillis() + manifestRequestTimeout;
+        for (int i=0; i<manifestRequestInitialBurst; i++)
+          sendRandomRequest();
+      }
+      public int numCheckedFragments() {
+        int result = 0;
+        for (int i=0; i<checkedFragment.length; i++)
+          if (checkedFragment[i])
+            result ++;
+        return result;
+      }
+      public void sendRandomRequest() {
+        if (numCheckedFragments() >= numFragments)
+          return;
+      
+        Random rand = new Random();
+        int nextID;
+        do {
+          nextID = rand.nextInt(numFragments);
+        } while (checkedFragment[nextID]);
+     
+        checkedFragment[nextID] = true;
+        FragmentKey nextKey = new FragmentKey(key, nextID);
+        Id nextLocation = getFragmentLocation(nextKey);
+        log("retrieveManifest: Asking "+nextLocation+" for "+nextKey);
+        endpoint.route(
+          nextLocation,
+          new GlacierFetchMessage(getMyUID(), nextKey, GlacierFetchMessage.FETCH_MANIFEST, getLocalNodeHandle(), nextLocation),
+          null
+        );
+      }
+      public synchronized void receiveResult(Object o) {
+        if (o instanceof GlacierDataMessage) {
+          GlacierDataMessage gdm = (GlacierDataMessage) o;
+          
+          if ((gdm.numKeys() > 0) && (gdm.getManifest(0) != null)) {
+            log("retrieveManifest("+key+") received manifest");
+            if (policy.checkSignature(gdm.getManifest(0), key)) {
+              command.receiveResult(gdm.getManifest(0));
+              terminate();
+            } else {
+              warn("retrieveManifest("+key+"): invalid signature in "+gdm.getKey(0));
+            }
+          } else warn("retrieveManifest("+key+") retrieved GDM without a manifest?!?");
+        } else if (o instanceof GlacierResponseMessage) {
+          log("retrieveManifest("+key+"): Fragment not available:" + ((GlacierResponseMessage)o).getKey(0));
+          if (numCheckedFragments() < numFragments) {
+            sendRandomRequest();
+          } else {
+            warn("retrieveManifest("+key+"): giving up");
+            command.receiveResult(null);
+            terminate();
+          }
+        } else {
+          warn("retrieveManifest("+key+") received unexpected object: "+o);
+        }
+      }
+      public void receiveException(Exception e) {
+        warn("retrieveManifest("+key+") received exception: "+e);
+        e.printStackTrace();
+      }
+      public void timeoutExpired() {
+        log("retrieveManifest("+key+"): Timeout ("+numCheckedFragments()+" fragments checked)");
+        if (numCheckedFragments() < numFragments) {
+          log("retrying...");
+          for (int i=0; i<manifestRequestRetryBurst; i++)
+            sendRandomRequest();
+          timeout += manifestRequestTimeout;
+        } else {
+          warn("retrieveManifest("+key+"): giving up");
+          command.receiveResult(null);
+          terminate();
+        }
+      }
+      public long getTimeout() {
+        return timeout;
+      }
+    });
+  }
+        
+  public void retrieveObject(final VersionKey key, final Manifest manifest, final boolean beStrict, final Continuation c) {
     addContinuation(new GlacierContinuation() {
       protected boolean checkedFragment[];
       protected Fragment haveFragment[];
@@ -1005,7 +1125,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         log("retrieveObject: Asking "+nextLocation+" for "+nextKey);
         endpoint.route(
           nextLocation,
-          new GlacierFetchMessage(getMyUID(), nextKey, getLocalNodeHandle(), nextLocation),
+          new GlacierFetchMessage(getMyUID(), nextKey, GlacierFetchMessage.FETCH_FRAGMENT, getLocalNodeHandle(), nextLocation),
           null
         );
       }
@@ -1034,7 +1154,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     });
   }
           
-  public void retrieveFragment(final FragmentKey key, final StorageManifest manifest, final GlacierContinuation c) {
+  public void retrieveFragment(final FragmentKey key, final Manifest manifest, final GlacierContinuation c) {
     addContinuation(new GlacierContinuation() {
       protected int attemptsLeft;
       protected boolean inPhaseTwo;
@@ -1105,7 +1225,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           attemptsLeft --;
           endpoint.route(
             key.getVersionKey().getId(),
-            new GlacierFetchMessage(getMyUID(), key, getLocalNodeHandle(), key.getVersionKey().getId()),
+            new GlacierFetchMessage(getMyUID(), key, GlacierFetchMessage.FETCH_FRAGMENT, getLocalNodeHandle(), key.getVersionKey().getId()),
             null
           );
         } else {
@@ -1295,7 +1415,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         int currentLookup = 0;
         int manifestIndex = 0;
         final int numLookups = missing.size();
-        StorageManifest[] manifests = new StorageManifest[Math.min(numLookups, manifestAggregationFactor)];
+        Manifest[] manifests = new Manifest[Math.min(numLookups, manifestAggregationFactor)];
         Fragment[] fragments = new Fragment[Math.min(numLookups, manifestAggregationFactor)];
         FragmentKey[] keys = new FragmentKey[Math.min(numLookups, manifestAggregationFactor)];
         
@@ -1338,7 +1458,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             );
 
             manifestIndex = 0;
-            manifests = new StorageManifest[Math.min(numLookups - currentLookup, manifestAggregationFactor)];
+            manifests = new Manifest[Math.min(numLookups - currentLookup, manifestAggregationFactor)];
             keys = new FragmentKey[Math.min(numLookups - currentLookup, manifestAggregationFactor)];
             fragments = new Fragment[Math.min(numLookups - currentLookup, manifestAggregationFactor)];
           }
@@ -1464,9 +1584,12 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             if (o != null) {
               log("Fragment "+gfm.getKey()+" found ("+o+"), returning...");
               FragmentAndManifest fam = (FragmentAndManifest) o;
+              Fragment fragment = ((gfm.getRequest() & GlacierFetchMessage.FETCH_FRAGMENT)!=0) ? fam.fragment : null;
+              Manifest manifest = ((gfm.getRequest() & GlacierFetchMessage.FETCH_MANIFEST)!=0) ? fam.manifest : null;
+              
               endpoint.route(
                 null,
-                new GlacierDataMessage(gfm.getUID(), gfm.getKey(), fam.fragment, null, getLocalNodeHandle(), gfm.getSource().getId(), true),
+                new GlacierDataMessage(gfm.getUID(), gfm.getKey(), fragment, manifest, getLocalNodeHandle(), gfm.getSource().getId(), true),
                 gfm.getSource()
               );
             } else {
@@ -1478,19 +1601,17 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                       long theVersion = (o instanceof GCPastContent) ? ((GCPastContent)o).getVersion() : 0;
                       if (theVersion == gfm.getKey().getVersionKey().getVersion()) {
                         log("Original of "+gfm.getKey()+" found ("+o+", ts="+theVersion+", expected="+gfm.getKey().getVersionKey().getVersion()+") Recoding...");
-                        Fragment[] frags = policy.encodeObject((Serializable) o);
                         
-                        log("Fragments recoded ok. Returning fragment "+gfm.getKey()+"...");
-                        FragmentKey[] keys = new FragmentKey[1];
-                        keys[0] = gfm.getKey();
-                        Fragment[] fragments = new Fragment[1];
-                        fragments[0] = frags[gfm.getKey().getFragmentID()];
-                        StorageManifest[] manifests = new StorageManifest[1];
-                        manifests[0] = null;
-
+                        Fragment fragment = null;
+                        if ((gfm.getRequest() & GlacierFetchMessage.FETCH_FRAGMENT)!=0) {
+                          Fragment[] frags = policy.encodeObject((Serializable) o);
+                          log("Fragments recoded ok. Returning "+gfm.getKey()+"...");
+                          fragment = frags[gfm.getKey().getFragmentID()];
+                        }
+                          
                         endpoint.route(
                           null,
-                          new GlacierDataMessage(gfm.getUID(), keys, fragments, manifests, getLocalNodeHandle(), gfm.getSource().getId(), true),
+                          new GlacierDataMessage(gfm.getUID(), gfm.getKey(), fragment, null, getLocalNodeHandle(), gfm.getSource().getId(), true),
                           gfm.getSource()
                         );
                       } else {
@@ -1530,7 +1651,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       for (int i=0; i<gdm.numKeys(); i++) {
         final FragmentKey thisKey = gdm.getKey(i);
         final Fragment thisFragment = gdm.getFragment(i);
-        final StorageManifest thisManifest = gdm.getManifest(i);
+        final Manifest thisManifest = gdm.getManifest(i);
         
         if ((thisFragment != null) && (thisManifest != null)) {
           log("Got Fragment+Manifest for "+thisKey);
