@@ -65,7 +65,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   protected Vector monitorIDs;
   protected AggregationStatistics stats;
 
-  private final int loglevel = 2;
+  private int loglevel = 3;
   private final boolean logStatistics = true;
 
   private static final long SECONDS = 1000;
@@ -87,6 +87,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private static final int nominalReferenceCount = 2;
   private static final int maxPointersPerAggregate = 100;
   private static final long pointerArrayLifetime = 2 * WEEKS;
+  private static final long aggregateGracePeriod = 1 * DAYS;
 
   private static final long aggrRefreshInterval = 15 * MINUTES;
   private static final long aggrRefreshDelayAfterJoin = 70 * SECONDS;
@@ -135,6 +136,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       warn("Failed to read configuration file; aggregate list must be rebuilt!");
     else 
       log(2, "Aggregate list read OK -- current root: " + ((aggregateList.getRoot() == null) ? "null" : aggregateList.getRoot().toStringFull()));
+
+    removeDeadAggregates();
 
     addTimer(jitterTerm(flushDelayAfterJoin), tiFlush);
     addTimer(jitterTerm(aggrRefreshDelayAfterJoin), tiExpire);
@@ -246,6 +249,11 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       }
       
       return result + numObjects + " object(s) created\n";
+    }
+
+    if (cmd.startsWith("set loglevel")) {
+      loglevel = Integer.parseInt(cmd.substring(13));
+      return "Log level set to "+loglevel;
     }
 
     if (cmd.startsWith("show config")) {
@@ -706,6 +714,28 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     }
     
     return null;
+  }
+
+  private void removeDeadAggregates() {
+    Vector toRemove = new Vector();
+    Enumeration enum = aggregateList.elements();
+    long now = System.currentTimeMillis();
+    
+    while (enum.hasMoreElements()) {
+      AggregateDescriptor adc = (AggregateDescriptor) enum.nextElement();
+      if (adc.currentLifetime < (now - aggregateGracePeriod)) {
+        toRemove.add(adc);
+        warn("Scheduling dead aggregate for removal: "+adc.key.toStringFull()+"(expired "+adc.currentLifetime+")");
+      }
+    }
+    
+    if (toRemove.size() > 0) {
+      log(2, "Removing "+toRemove.size()+" dead aggregates...");
+      
+      Enumeration rem = toRemove.elements();
+      while (rem.hasMoreElements())
+        aggregateList.removeAggregateDescriptor((AggregateDescriptor) rem.nextElement());
+    }
   }
 
   private void storeAggregate(final Aggregate aggr, final long expiration, final ObjectDescriptor[] desc, final Id[] pointers, final Continuation command) {
@@ -1324,6 +1354,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       command.receiveResult(new Boolean[] {});
       return;
     }
+
+    log(2, "Refreshing "+ids.length+" keys");
 
     refreshInObjectStore(ids, expirations, new Continuation() {
       Object[] result;
