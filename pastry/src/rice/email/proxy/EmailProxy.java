@@ -293,6 +293,9 @@ public class EmailProxy extends PostProxy {
   public Parameters start(Parameters parameters) throws Exception {
     initializeParameters(super.start(parameters), DEFAULT_PARAMETERS);
 
+    if (System.getProperty("RECOVER") != null)
+      return parameters;
+
     sectionStart("Starting Email services");
     startMailcap(parameters);
        
@@ -310,6 +313,7 @@ public class EmailProxy extends PostProxy {
     
     return parameters;
   }    
+
 
   /**
    * Usage:
