@@ -239,7 +239,7 @@ version.descr=$Id$
 space.before.javadoc=true
 
 # Should we sort the types and imports?
-sort.top=true
+#sort.top=true
 
 # Should catch statements look like
 # (true) is:
