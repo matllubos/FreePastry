@@ -167,19 +167,6 @@ public class DistHelloWorld {
     }
     
     /**
-     * Invoke a HelloWorldApp method called sendRndMsg. First choose a
-     * random application from helloClients.
-     */
-    private void sendRandomMessage() {
-  int n = helloClients.size();
-  int client = rng.nextInt(n);
-  HelloWorldApp app = (HelloWorldApp) helloClients.get(client);
-  app.sendRndMsg(rng);
-    }
-
-
-
-    /**
      * Usage: DistHelloWorld [-msgs m] [-nodes n] [-port p] [-bootstrap bshost[:bsport]]
      *                      [-verbose|-silent|-verbosity v] [-help].
      *
@@ -219,13 +206,17 @@ public class DistHelloWorld {
         }
     }   
   }
-
-  for (int i = 0; i < nummsgs; i++) {
-    driver.sendRandomMessage();
-  }
   
-	if (Log.ifp(5)) System.out.println(numnodes + " nodes constructed");
-    }
+    if (Log.ifp(5)) System.out.println(numnodes + " nodes constructed");
+ 
+    Random rng = new Random();
+    for (int i = 0; i < nummsgs; i++) {
+      for (int client = 0; client < driver.helloClients.size(); client++) {
+        HelloWorldApp app = (HelloWorldApp) driver.helloClients.get(client);
+        app.sendRndMsg(rng);
+      }
+    }  
+  }
 }
 
 

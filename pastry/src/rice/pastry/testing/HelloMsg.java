@@ -17,15 +17,17 @@ public class HelloMsg extends Message {
   public Id target;
   private int msgid;
   public boolean messageDirect = false;
-
+  private NodeHandle src;
+  
   public HelloMsg(Address addr, NodeHandle src, Id tgt, int mid) {
     super(addr);
     target = tgt;
     msgid = mid;
+    this.src = src;
   }
 
   public String toString() {
-    return "Hello #" + msgid;
+    return "Hello #" + msgid+ " from "+src.getId();
   }
 
   public String getInfo() {
