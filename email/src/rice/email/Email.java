@@ -1,11 +1,20 @@
 package rice.email;
 
+import rice.post.*;
+
 /**
  * Represents a notion of a message in the POST system.  This class is designed 
  * to be a small representation of an Email, with pointers to all of the content.
  */
-public class Email {
+public class Email implements java.io.Serializable {
 
+    private PostUserAddress sender;
+    private PostUserAddress[] recipientUsers;
+    private PostGroupAddress[] recipientGroups;
+    private String subject;
+    private EmailDataReference body;
+    private EmailDataReference[] attachments;
+    
   /**
    * Constructs an Email.
    *
@@ -16,12 +25,19 @@ public class Email {
    * @param body The body of the message.
    * @param attachments The attachments to the message (could be zero-length.)
    */
-  public Email(EmailUserAddress sender, 
-               EmailUserAddress[] recipientUsers, 
-               EmailGroupAddress[] recipientGroups, 
+  public Email(PostUserAddress sender, 
+               PostUserAddress[] recipientUsers, 
+               PostGroupAddress[] recipientGroups, 
                String subject, 
                EmailDataReference body, 
                EmailDataReference[] attachments) {
+                
+     this.sender = sender;
+     this.recipientUsers = recipientUsers;
+     this.recipientGroups = recipientGroups;
+     this.subject = subject;
+     this.body = body;
+     this.attachments = attachments;
   }
     
   /**
@@ -29,8 +45,8 @@ public class Email {
    *
    * @return The sender of this email.
    */
-  public EmailUserAddress getSender() {
-    return null;
+  public PostUserAddress getSender() {
+    return this.sender;
   }
     
   /**
@@ -38,8 +54,8 @@ public class Email {
    *
    * @return The recipient users of this email.
    */
-  public EmailUserAddress[] getRecipientUsers() {
-    return null;
+  public PostUserAddress[] getRecipientUsers() {
+    return this.recipientUsers;
   }
     
   /**
@@ -47,8 +63,8 @@ public class Email {
    *
    * @return The recipient users of this email.
    */
-  public EmailGroupAddress[] getRecipientGroups() {
-    return null;
+  public PostGroupAddress[] getRecipientGroups() {
+    return this.recipientGroups;
   }
      
   /**
@@ -57,7 +73,7 @@ public class Email {
    * @return The subject of this email.
    */
   public String getSubject() {
-    return null;
+    return this.subject;
   }
      
   /**
@@ -66,7 +82,7 @@ public class Email {
    * @return The body of this email.
    */
   public EmailDataReference getBody() {
-    return null;
+    return this.body;
   }
      
   /**
@@ -75,6 +91,6 @@ public class Email {
    * @return The attachments of this email.
    */
   public EmailDataReference[] getAttachments() {
-    return null;
+    return this.attachments;
   }
 }
