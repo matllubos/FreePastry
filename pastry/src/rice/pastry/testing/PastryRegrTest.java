@@ -380,6 +380,12 @@ public abstract class PastryRegrTest {
 		}
 		else {
 		    // check entries
+
+		    // check if closest entry has valid proximity
+		    if (rs.closestNode().proximity() ==  Integer.MAX_VALUE) {
+			System.out.println("checkRoutingTable failure 0, row=" + i + " column=" + j);
+		    }
+
 		    int lastProximity = 0;
 		    for (int k=0; k<rs.size(); k++) {
 
