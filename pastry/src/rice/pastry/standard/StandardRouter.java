@@ -47,6 +47,7 @@ import rice.pastry.leafset.*;
  * @version $Id$
  *
  * @author Andrew Ladd
+ * @author Rongmei Zhang/Y.Charlie Hu
  */
 
 public class StandardRouter implements MessageReceiver {
@@ -122,7 +123,7 @@ public class StandardRouter implements MessageReceiver {
 		 (lsPos==cwSize && !leafSet.get(lsPos).getNodeId().clockwise(target)) ||
 		 (lsPos<0 && -lsPos<ccwSize) ||
 		 (-lsPos==ccwSize && leafSet.get(lsPos).getNodeId().clockwise(target)) )
-
+	    // for the two boundary cases we further check the msg is inside the boundary node
 	    {
 		NodeHandle handle = leafSet.get(lsPos);
 
