@@ -331,6 +331,22 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
      */
 
     public int mostSimilar(Id nid) {
+	if (theSize == 0) return -1;
+
+	NodeId.Distance minDist = baseId.distance(nid);
+	int min = -1;
+
+	for (int i=0; i<theSize; i++) {
+	    NodeId.Distance d = nodes[i].getNodeId().distance(nid);
+	    if (d.compareTo(minDist) < 0) {
+		minDist = d;
+		min = i;
+	    }
+	}
+
+	return min;
+
+	/*
 	NodeId.Distance baseDist = baseId.distance(nid);
 	NodeId.Distance d;
 
@@ -349,6 +365,8 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
 	}
 
 	return theSize - 1;
+	*/
+
     }
 }
 
