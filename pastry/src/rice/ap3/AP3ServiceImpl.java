@@ -66,14 +66,6 @@ public class AP3ServiceImpl
    */
   protected RandomNodeIdFactory _randomNodeIDFactory;
 
-  /**
-   * Timeout on waiting for a response in
-   * milliseconds.
-   *
-   * Needs accessors and exported out through
-   * the AP3Service interface.
-   */
-  protected long _timeout;
 
 
   /**
@@ -88,7 +80,6 @@ public class AP3ServiceImpl
     this._randomNodeIDFactory = new RandomNodeIdFactory();
     this._threadTable = new Hashtable();
     this._random = new Random();
-    this._timeout = 2000;
   }
 
   /**
@@ -98,9 +89,13 @@ public class AP3ServiceImpl
    * @param request Request object for content, as recognized by the AP3Client
    * @param fetchProbability The probability used by intermediate nodes to
    * determine whether to fetch or forward a request.
+   * @param timeout Number of milliseconds to wait for a response before
+   * declaring a failed request.
    * @return Corresponding response object
    */
-  public Object getAnonymizedContent(Object request, double fetchProbability) {
+  public Object getAnonymizedContent(Object request,
+                                     double fetchProbability,
+                                     long timeout) {
 
     boolean messageIDCollided = true;
     AP3Message requestMsg = null;
@@ -121,8 +116,8 @@ public class AP3ServiceImpl
     /* Update the thread table so that this thread can collect its
      * response when it arrives.
      */
-    _threadTable.put(requestMsg.getID(),
-	 	     new ThreadTableEntry(Thread.currentThread(), null));
+    ThreadTableEntry entry = new ThreadTableEntry();
+    _threadTable.put(requestMsg.getID(), entry);
 
     /* Route the message and begin the anonymization process!
      */
@@ -134,10 +129,11 @@ public class AP3ServiceImpl
      * subclassing Thread and giving us something that can
      * be suspended and resumed.
      */
-    if(((ThreadTableEntry) _threadTable.get(requestMsg.getID()))._msg ==
-       null) {
+    if(entry._msg == null) {
       try {
-	Thread.sleep(_timeout);
+	synchronized (entry._waitObject) {
+	  entry._waitObject.wait(timeout);
+	}
       } catch (InterruptedException e) {
       }
     }
@@ -146,8 +142,7 @@ public class AP3ServiceImpl
      * that deposited the response message in the thread table.
      * Or because it has timed out.
      */
-    AP3Message responseMsg = 
-      ((ThreadTableEntry) _threadTable.get(requestMsg.getID()))._msg;
+    AP3Message responseMsg = entry._msg;
 
     /* If it has timed out, return null.
      * Need to resend request in the future.
@@ -212,7 +207,7 @@ public class AP3ServiceImpl
   /**
    * Handles response messages.
    */
-  protected void _handleResponse(AP3Message msg) {
+  protected synchronized void _handleResponse(AP3Message msg) {
     AP3RoutingTableEntry routeInfo = _routingTable.getEntry(msg.getID());
     _routingTable.dropEntry(msg.getID());
 
@@ -240,6 +235,9 @@ public class AP3ServiceImpl
 	 * to wake up and return the content to the user.
 	 */
 	threadInfo._msg = msg;
+	synchronized (threadInfo._waitObject) {
+	  threadInfo._waitObject.notify();
+	}
       } else {
 	/* Route response back towards originator after 
 	 * letting the client cache it 
@@ -253,7 +251,7 @@ public class AP3ServiceImpl
   /**
    * Handles request messages.
    */
-  protected void _handleRequest(AP3Message msg) {
+  protected synchronized void _handleRequest(AP3Message msg) {
     
     AP3RoutingTableEntry routeInfo = _routingTable.getEntry(msg.getID());
     Object content = null;
@@ -275,6 +273,7 @@ public class AP3ServiceImpl
        * the content. 
        */
       content = _client.fetchContent(msg.getContent());
+      _client.cacheResponse(content);
       _sendResponse(msg.getSource(), msg.getID(), content);
     } else {
       /* We're supposed to forward the request to a randomly chosen
@@ -287,6 +286,7 @@ public class AP3ServiceImpl
 	this._routeMsg(_generateRandomNodeID(), msg);
       } catch (Exception e) {
 	/* A message id collision occurred, drop the request */
+	return;
       }
     }
   }
@@ -336,6 +336,7 @@ public class AP3ServiceImpl
     this._routeMsg(dest, responseMsg);
   }
 
+
   /**
    * Helper class used to store information on blocked threads
    * waiting for a response.
@@ -355,9 +356,9 @@ public class AP3ServiceImpl
     /**
      * Constructor.
      */
-    ThreadTableEntry(Object waitObject, AP3Message msg) {
-      this._waitObject = waitObject;
-      this._msg = msg;
+    ThreadTableEntry() {
+      this._waitObject = new Object();
+      this._msg = null;
     }
   }
 }

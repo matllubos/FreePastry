@@ -18,13 +18,18 @@ package rice.ap3;
 public interface AP3Service {
 
   /**
-   * Called by an AP3Client to initiate a new request for content. It specifies
-   * the fetch probability to be used by each intermediate hop in the network.
+   * Called by an AP3Client to initiate a new request for content.
+   * This method blocks the incoming thread until a response message is received.
+   *
    * @param request Request object for content, as recognized by the AP3Client
-   * @param fetchProbability For intermediate nodes to decide on whether to
-   * forward or fetch.
+   * @param fetchProbability The probability used by intermediate nodes to
+   * determine whether to fetch or forward a request.
+   * @param timeout Number of milliseconds to wait for a response before
+   * declaring a failed request.
    * @return Corresponding response object
    */
-  Object getAnonymizedContent(Object request, double fetchProbability);
+  public Object getAnonymizedContent(Object request,
+                                     double fetchProbability,
+                                     long timeout);
 
 }
