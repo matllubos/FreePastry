@@ -59,7 +59,7 @@ public class SimpleFolderTest extends Thread {
   public static final int DELETE_2A = 110;
   public static final int DELETE_2B = 113;
   public static final int DELETE_2C = 116;
-  public static final int DELETE_3  = 120;  
+  public static final int DONE  = 120;  
 
   // constants for deciding the size of the test
   public static final int MAX_SUB_FOLDERS = 2;
@@ -114,32 +114,50 @@ public class SimpleFolderTest extends Thread {
   public void run() {
     // start the thread from at the appropriate start in the execution
     if (state == START) {
-      buffer.append("Starting tests");
+      buffer.append("Starting tests\n");
       startTest();
     }
     else if (state == SNAPSHOT_1) {
-      buffer.append("Doing snapshots");
+      buffer.append("Starting snapshots\n");
       testSnapShot1();
     }
     else if (state == ROTATE_A) {
-      buffer.append("Rotating messages");
+      buffer.append("Staring to Rotate messages\n");
       rotateMessages();
     }
-    else {
-      buffer.append("deleting messages and folders");
+    else if ((state == DELETE_1C) || (state == DELETE_2C)) {
+      buffer.append("Deleting messages and folders\n");
       deleteMessages();
+    } else if (state == DONE) {
+      buffer.append("Done!\n");
+      
+      // get the output string, and remove the eol's from it.
+      String original = buffer.toString();
+      String result = buffer.toString();
+      int base = 0;
+      int target = result.indexOf('\n', base);
+      int offset = 0;
+      while (target >= 0) {
+	//System.out.println("Target: " + target + " base: " + base + " offset: " + offset);
+	buffer.deleteCharAt(target - offset);
+	base = target+1;
+	offset += 1;
+	target = result.indexOf('\n', base);
+      }
+      result = buffer.toString();
+      
+      // check to see if we have gotten the right print outs
+      if (result.equals(theAnswer)) {
+	System.out.println("Passed the SimpleFolderTest");
+      } else {
+	System.out.println("Failed the SimpleFolderTest");
+	System.out.println(original);
+      }
     }
-    
-    // check to see if we have gotten the right print outs
-    System.out.println(buffer.toString());
-    /*
-    if (buffer.toString().equals(theAnswer)) {
-      System.out.println("Passed the SimpleFolderTest");
-    } else {
-      System.out.println("Failed the SimpleFolderTest");
-      System.out.println(buffer.toString());
+    else {
+      buffer.append("Error, invalid state " + state + " when starting thread\n");
     }
-    */
+    return;
   }
 
   /**
@@ -172,7 +190,6 @@ public class SimpleFolderTest extends Thread {
 
       // JM just until we get some more continuations into the system
       try{
-	buffer.append("Waiting...");
 	Thread.sleep(3000);
       } catch (InterruptedException e) {
 	buffer.append("INTERRUPTED: " + e);
@@ -186,7 +203,7 @@ public class SimpleFolderTest extends Thread {
 
     else if (state == GOT_ROOT) {
       if (_rootFolder == null) {
-	buffer.append("Root Folder was null after getRoot. Very bad, exitting.");
+	buffer.append("Error: Root Folder was null after the call to getRoot(). Very bad, exitting.");
 	return;
       }
 
@@ -210,7 +227,7 @@ public class SimpleFolderTest extends Thread {
       if (subFolderState >= MAX_SUB_FOLDERS) { 
 	// if there are folders left to create,  change the state to start the next subFolder
 	if (currentSubFolder < MAX_SUB_FOLDERS) {
-	  buffer.append("Moving on to making subSubFolder " + currentSubFolder);
+	  buffer.append("Creating subSubFolder " + currentSubFolder + "\n");
 	  subFolderState = 0;
 	  tempFolder = subFolders[currentSubFolder];
 	  currentSubFolder = currentSubFolder + 1;
@@ -226,7 +243,7 @@ public class SimpleFolderTest extends Thread {
     // add a new folder
     if (state == MAKING_SUBS) {	
       // make a subFolder for the current root
-      buffer.append("Making subFolder " + subFolderState);
+      buffer.append("Creating subFolder " + subFolderState + "\n");
       Continuation command = new SimpleFolderCont();
       String newFolderName = folderName + " " +  (new Integer(subFolderState)).toString();
       subFolderState = subFolderState + 1;
@@ -235,27 +252,25 @@ public class SimpleFolderTest extends Thread {
 
     // otherwise, print result and move to next section
     else if (state == EMAIL_INIT) {
-      // or if finished, move on to the next test
-      buffer.append("Finished Creating the Folders");
       // print out the names of the subFolders
       String[] childNames = _rootFolder.getChildren();
-      buffer.append("Number of sub folders is " + childNames.length);
-      for (int i = 0; i < childNames.length; i++) {
-	buffer.append(childNames[i]);
-      }
+      //buffer.append("Number of sub folders is " + childNames.length);
+      //for (int i = 0; i < childNames.length; i++) {
+      //buffer.append(childNames[i] + "\n");
+      //}
       
       // print out the names of the subSubFolders
       for (int i = 0; i < subFolders.length; i++) {
 	childNames = subFolders[i].getChildren();
-	buffer.append("Number of subSub folders is " + childNames.length);
-	for (int j = 0; j < childNames.length; j++) {
-	  buffer.append(childNames[j]);
-	}
+	//buffer.append("Number of subSub folders is " + childNames.length);
+	//for (int j = 0; j < childNames.length; j++) {
+	//buffer.append(childNames[j] + "\n");
+	//}
       }
       testEmailStorage();
     }
     else {
-      buffer.append("Invalid state in testFolderCreation");
+      buffer.append("Invalid state in testFolderCreation\n");
     }
   }
 
@@ -266,7 +281,7 @@ public class SimpleFolderTest extends Thread {
   public void testEmailStorage() {
     // do initialization if necesary
     if (state == EMAIL_INIT) {
-      buffer.append("Initializing the EmailStorage state");
+      //buffer.append("Initializing the EmailStorage state");
       // make a nice list of the Folders to add to
       emailCount = 0;
       targets = new Vector();
@@ -283,7 +298,7 @@ public class SimpleFolderTest extends Thread {
     if (state == EMAIL_ADD) {
       // if there is room for another email, add one
       if (emailCount < targets.size()) {
-	buffer.append("Adding email " + emailCount);
+	//buffer.append("Adding email " + emailCount);
 
 	// make the Email  and add it to the current Folder
 	String postFix = (new Integer(emailCount)).toString();
@@ -296,16 +311,8 @@ public class SimpleFolderTest extends Thread {
       }
       // otherwise change the state and go on to the next test
       else {
-	buffer.append("Finished adding the emails to each Folder, moving on to Snapshot");
-	state = SNAPSHOT_1;
-	emailCount = 0;
-	SimpleFolderTest nextTest = new SimpleFolderTest("SFT2");
-	nextTest.start();
-	try {
-	  stop();
-	  wait();
-	} catch (Exception e) {
-	}
+	//buffer.append("Finished adding the emails to each Folder, moving on to Snapshot");
+	spawnChild(SNAPSHOT_1, 0);	
       }
     }
   }
@@ -320,7 +327,7 @@ public class SimpleFolderTest extends Thread {
       String postFix = (new Integer(emailCount)).toString();
       Email newEmail = makeEmail("SS-Sender " + postFix, "SS-Receiver " + postFix, "SS message " + postFix, "Make me a snapshot!");
       Continuation cont = new AddEmailCont();
-      buffer.append("Adding snapshot email " + emailCount);
+      buffer.append("Adding snapshot email " + emailCount + "\n");
       subFolders[0].addMessage(newEmail, cont);
     }
     // otherwise we are done, and ready to move to the next test
@@ -335,7 +342,7 @@ public class SimpleFolderTest extends Thread {
    * Checks that each of the folders contains the appropriate emails.
    */
   public void testEmails1() {
-    buffer.append("Entering testEmails1. EmailCount is: " + emailCount + ", and state is:" + state);
+    //buffer.append("Entering testEmails1. EmailCount is: " + emailCount + ", and state is:" + state);
     if (state == CHECK_EMAILS_1A) {
       // if we are done with the root folder
       if (emailCount > 0) {
@@ -343,7 +350,7 @@ public class SimpleFolderTest extends Thread {
 	state = CHECK_EMAILS_1B;
 	testEmails1();
       } else {
-	buffer.append("\nRoot Folder contains the emails:" );
+	buffer.append("\nRoot Folder contains the emails:\n" );
 	_rootFolder.getMessages(new AddEmailCont());
       }
       
@@ -354,7 +361,7 @@ public class SimpleFolderTest extends Thread {
 	emailCount = 0;
 	testEmails1();
       } else {
-	buffer.append("\nSub Folder " + emailCount + "  contains the emails:" );
+	buffer.append("\nSub Folder " + emailCount + "  contains the emails:\n" );
 	subFolders[emailCount].getMessages(new AddEmailCont());
       }
       
@@ -363,12 +370,12 @@ public class SimpleFolderTest extends Thread {
       if (emailCount >= subSubFolders.length) {
 	state = CHECK_EVENTS_1A;
 	emailCount = 0;
-	buffer.append("Done with testEmails1, emailCount is " + emailCount + 
-			   ", subFolder length is " + subFolders.length + 
-			   ", and subSubFolder length is " + subSubFolders.length);	
+	//buffer.append("Done with testEmails1, emailCount is " + emailCount + 
+	//	   ", subFolder length is " + subFolders.length + 
+	//	   ", and subSubFolder length is " + subSubFolders.length);	
 	testEvents1();
       } else {
-	buffer.append("\nSub Sub Folder " + emailCount + "  contains the emails:" );
+	buffer.append("\nSub Sub Folder " + emailCount + "  contains the emails:\n" );
 	subSubFolders[emailCount].getMessages(new AddEmailCont());
       }
     }
@@ -379,7 +386,7 @@ public class SimpleFolderTest extends Thread {
    * log.
    */
   public void testEvents1() {
-    buffer.append("Entering testEvents1. EmailCount is: " + emailCount + ", and state is:" + state);
+    //buffer.append("Entering testEvents1. EmailCount is: " + emailCount + ", and state is:" + state);
     if (state == CHECK_EVENTS_1A) {
       // if we are done with the root folder
       if (emailCount > 0) {
@@ -387,7 +394,7 @@ public class SimpleFolderTest extends Thread {
 	state = CHECK_EVENTS_1B;
 	testEvents1();
       } else {
-	buffer.append("\nRoot Folder contains the following events:" );
+	buffer.append("\nRoot Folder contains the following events:\n" );
 	_rootFolder.getCompleteEventLog(new AddEmailCont());
       }
       
@@ -398,7 +405,7 @@ public class SimpleFolderTest extends Thread {
 	emailCount = 0;
 	testEvents1();
       } else {
-	buffer.append("\nSub Folder " + emailCount + "  contains the events:" );
+	buffer.append("\nSub Folder " + emailCount + "  contains the events:\n" );
 	subFolders[emailCount].getCompleteEventLog(new AddEmailCont());
       }
       
@@ -407,12 +414,12 @@ public class SimpleFolderTest extends Thread {
       if (emailCount >= subSubFolders.length) {
 	state = CHECK_FOLDERS;
 	emailCount = 0;
-	buffer.append("Done with testEvents1, emailCount is " + emailCount + 
-			   ", subFolder length is " + subFolders.length + 
-			   ", and subSubFolder length is " + subSubFolders.length);	
+	//buffer.append("Done with testEvents1, emailCount is " + emailCount + 
+	//		   ", subFolder length is " + subFolders.length + 
+	//		   ", and subSubFolder length is " + subSubFolders.length);	
 	testFolders();
       } else {
-	buffer.append("\nSub Sub Folder " + emailCount + "  contains the events:" );
+	buffer.append("\nSub Sub Folder " + emailCount + "  contains the events:\n" );
 	subSubFolders[emailCount].getCompleteEventLog(new AddEmailCont());
       }
     }
@@ -424,43 +431,35 @@ public class SimpleFolderTest extends Thread {
    */
   private void printChildFolders(String[] children) {
     for (int i = 0; i < children.length; i++) {
-      buffer.append(children[i]);
+      buffer.append(children[i] + "\n");
     }
-    buffer.append("");
+    buffer.append("\n");
   }
 
   /**
    * Prints out the child Folders that belong to each of the folders.
    */
   public void testFolders() {
-    buffer.append("\n\nEntering testFolders!!! ");
+    //buffer.append("\n\nEntering testFolders!!! ");
     // check the root Folder
-    buffer.append("RootFolder's child folders");
+    buffer.append("RootFolder's child folders\n");
     printChildFolders(_rootFolder.getChildren());
 
     // check the subFolders
-    buffer.append("subFolder's child folders");
+    buffer.append("subFolder's child folders\n");
     for (int i = 0; i < subFolders.length; i++) {
       printChildFolders(subFolders[i].getChildren());
     }
 
     // check the subSubFolders
-    buffer.append("subSubFolder's child folders");
+    buffer.append("subSubFolder's child folders\n");
     for (int i = 0; i < subSubFolders.length; i++) {
       printChildFolders(subSubFolders[i].getChildren());
     }
 
     // start a new thread to continue the work.  This allows us to
     // reset the stack frame and avoid stack overflow errors    
-    emailCount = 0;
-    state = ROTATE_A;
-    SimpleFolderTest nextTest = new SimpleFolderTest("SFT3");
-    nextTest.start();
-    try {
-      stop();
-      wait();
-    } catch (Exception e) {
-    }
+    spawnChild(ROTATE_A, 0);
   }
 
   /**
@@ -468,11 +467,11 @@ public class SimpleFolderTest extends Thread {
    * at its level in the tree.
    */
   public void rotateMessages() {
-    buffer.append("entering rotate messages. State: " + state + " emailCount: " + emailCount+"\n");
+    //buffer.append("entering rotate messages. State: " + state + " emailCount: " + emailCount+"\n");
 
     // rotate messages among the subFolder's
     if (state == ROTATE_A) {
-      buffer.append("rotating subFolder message " + emailCount);
+      //buffer.append("rotating subFolder message " + emailCount);
       // if we are done with the subFolder's, move on to the subSubFolders
       if (emailCount >= subFolders.length) {
 	emailCount = 0;
@@ -484,18 +483,18 @@ public class SimpleFolderTest extends Thread {
 	Email sourceEmail = (Email)addedEmails.get(emailCount+1);
 	Folder sourceFolder = subFolders[emailCount];
 	Folder targetFolder = subFolders[(emailCount+1) % subFolders.length];
-	buffer.append("SourceEmail: " + sourceEmail + "  sourceFolder: " + sourceFolder + "  targetFolder: " + targetFolder);
+	//buffer.append("SourceEmail: " + sourceEmail + "  sourceFolder: " + sourceFolder + "  targetFolder: " + targetFolder);
 	sourceFolder.moveMessage(sourceEmail, targetFolder, new AddEmailCont());
       }
 
     // rotate messages among the subSubFolder's
     } else {
-      buffer.append("rotating subSubFolder message " + emailCount);
+      //buffer.append("rotating subSubFolder message " + emailCount);
       // if we are done with the subSubFolder's, move on to the next test
       if (emailCount >= subSubFolders.length) {
 	emailCount = 0;
 	state = DELETE_1A;
-	buffer.append("\n\n\n\n");
+	//buffer.append("\n\n\n\n");
 	deleteMessages();
 
       // otherwise perform an actual rotation
@@ -512,7 +511,7 @@ public class SimpleFolderTest extends Thread {
    * Deletes the messages and Folders, printing contents as it goes along.
    */
   public void deleteMessages() {
-    buffer.append("Deleting messages.  State is " + state + "  emailCount is " + emailCount+"\n");
+    //buffer.append("Deleting messages.  State is " + state + "  emailCount is " + emailCount+"\n");
     // first remove the messages from the subSubFolders
     if (state == DELETE_1A) {
       // if we are done with this part, move on to the next
@@ -531,7 +530,7 @@ public class SimpleFolderTest extends Thread {
 	}
 	// get the email from the list of stored emails
 	Email targetEmail = (Email)addedEmails.get(offset + 1 + subFolders.length);
-	buffer.append("Deleting message " + offset);	
+	buffer.append("Deleting message " + offset + "\n");	
 	// remove the email
 	subSubFolders[emailCount].removeMessage(targetEmail, new AddEmailCont());
       }
@@ -540,17 +539,9 @@ public class SimpleFolderTest extends Thread {
     } else if (state == DELETE_1B) {      
       // if we are done with this part, move on to the next
       if (emailCount >= subSubFolders.length) {
-	emailCount = 0;
-	state = DELETE_1C;
-	SimpleFolderTest nextTest = new SimpleFolderTest("SFT4");
-	nextTest.start();
-	try {
-	  stop();
-	  wait();
-	} catch (Exception e) {
-	}
+	spawnChild(DELETE_1C, 0);
       } else {
-	buffer.append("Checking Folder " + emailCount);
+	buffer.append("Checking Folder " + emailCount + "\n");
 	subSubFolders[emailCount].getCompleteEventLog(new AddEmailCont());
       }
     // then remove the subFolders themselves    
@@ -561,7 +552,7 @@ public class SimpleFolderTest extends Thread {
 	state = DELETE_2A;
 	deleteMessages();
       } else {
-	buffer.append("Removing Folder " + emailCount);	
+	buffer.append("Removing Folder " + emailCount + "\n");	
 	subFolders[(emailCount / 2)].removeFolder(subSubFolders[emailCount].getName(), new AddEmailCont());
       }
     
@@ -583,7 +574,7 @@ public class SimpleFolderTest extends Thread {
 	}
 	// get the email from the list of stored emails
 	Email targetEmail = (Email)addedEmails.get(offset + 1);
-	buffer.append("Deleting message " + offset);	
+	buffer.append("Deleting message " + offset + "\n");	
 	// remove the email
 	subFolders[emailCount].removeMessage(targetEmail, new AddEmailCont());
       }
@@ -592,33 +583,21 @@ public class SimpleFolderTest extends Thread {
     } else if (state == DELETE_2B) {      
       // if we are done with this part, move on to the next
       if (emailCount >= subFolders.length) {
-	emailCount = 0;
-	state = DELETE_2C;
-	SimpleFolderTest nextTest = new SimpleFolderTest("SFT5");
-	nextTest.start();
-	try {
-	  stop();
-	  wait();
-	} catch (Exception e) {
-	}
+	spawnChild(DELETE_2C, 0);
       } else {
-	buffer.append("Checking Folder " + emailCount);
+	buffer.append("Checking Folder " + emailCount + "\n");
 	subFolders[emailCount].getCompleteEventLog(new AddEmailCont());
       }
     // then remove the subFolders themselves    
     } else if (state == DELETE_2C) {      
       // if we are done with this part, move on to the next
       if (emailCount >= subFolders.length) {
-	emailCount = 0;
-	state = DELETE_3;
-	deleteMessages();
+	spawnChild(DONE, 0);
       } else {
-	buffer.append("Removing Folder " + emailCount);	
+	buffer.append("Removing Folder " + emailCount + "\n");	
 	_rootFolder.removeFolder(subFolders[emailCount].getName(), new AddEmailCont());
       }    
-    } else {
-      buffer.append("Done!");
-    }
+    } 
   }
     
   /**
@@ -642,14 +621,31 @@ public class SimpleFolderTest extends Thread {
   } 
 
   /**
+   * Creates a new child thread to continue on the work.  Is used so
+   * that the stack will be reset and not overflow.  Note that this
+   * should not be called if the current thread has any more work to
+   * do, i.e. this call should be the current thread's last act.
+   * @param newState the state for the newThread to start in
+   * @param newEmailCount the value that emailCount should start at
+   */
+  private void spawnChild(int newState, int newEmailCount) {
+    state = newState;
+    emailCount = newEmailCount;
+    SimpleFolderTest nextTest = new SimpleFolderTest("SFT");
+    nextTest.start();
+    return;
+  }
+  
+  
+  /**
    * Gets the RootFolder and subFolders.
    */
   protected class SimpleFolderCont implements Continuation {
     public SimpleFolderCont() {}
     public void start() {}
     public void receiveResult(Object o) {      
-      buffer.append("SimpleFolderCont received result. State is " + state + " " + currentSubFolder + " " + subFolderState);
-      buffer.append("Adding new Folder " + (Folder)o);
+      //buffer.append("SimpleFolderCont received result. State is " + state + " " + currentSubFolder + " " + subFolderState);
+      //buffer.append("Adding new Folder " + (Folder)o);
 
       if (state == GOT_ROOT) {
 	_rootFolder = (Folder)o;
@@ -665,13 +661,13 @@ public class SimpleFolderTest extends Thread {
 	testFolderCreation();
       }
       else {
-	buffer.append("invalid state in SimpleFolderCount: " + state);
+	buffer.append("invalid state in SimpleFolderCount: " + state + "\n");
       }
     }
 
     public void receiveException(Exception e) {
       e.printStackTrace();
-      buffer.append("Exception " + e + "  occured while trying to get Folder for SimpleFolderTest.");
+      buffer.append("Exception " + e + "  occured while trying to get Folder for SimpleFolderTest.\n");
     }
   }
 
@@ -693,41 +689,41 @@ public class SimpleFolderTest extends Thread {
       else if ((state == CHECK_EMAILS_1A) || (state == CHECK_EMAILS_1B) || (state == CHECK_EMAILS_1C)) {
 	Email[] results = (Email[])o;
 	for (int i = 0; i < results.length; i++) {
-	  buffer.append(results[i]);
+	  buffer.append(results[i] + "\n");
 	}
 	testEmails1();
       }
       else if ((state == CHECK_EVENTS_1A) || (state == CHECK_EVENTS_1B) || (state == CHECK_EVENTS_1C)) {
 	Object[] results = (Object[])o;
 	for (int i = 0; i < results.length; i++) {
-	  buffer.append(results[i]);
+	  buffer.append(results[i] + "\n");
 	}
 	testEvents1();
       }
       else if ((state == ROTATE_A) || (state == ROTATE_B)) {
-	buffer.append("rotated message " + emailCount);
+	//buffer.append("rotated message " + emailCount);
 	rotateMessages();
       }
       else if ((state == DELETE_1A) || (state == DELETE_1B) || (state == DELETE_1C) ||
 	       (state == DELETE_2A) || (state == DELETE_2B) || (state == DELETE_2C) ||
-	       (state == DELETE_3)) {
-	buffer.append("delete message cont");
+	       (state == DONE)) {
+	//buffer.append("delete message cont");
 	if ((state == DELETE_1B) || (state == DELETE_2B)) {
 	  Object[] results = (Object[])o;
 	  for (int i = 0; i < results.length; i++) {
-	    buffer.append(results[i]);
+	    buffer.append(results[i] + "\n");
 	  }
 	}
 	deleteMessages();
       }
       else {
-	buffer.append("Invalid state: " + state);
+	buffer.append("Invalid state: " + state + "\n");
       }
     }
 
     public void receiveException(Exception e) {
       e.printStackTrace();
-      buffer.append("Exception " + e + "  occured while trying to get Folder for SimpleFolderTest.");
+      buffer.append("Exception " + e + "  occured while trying to get Folder for SimpleFolderTest.\n");
     }
   }
 
@@ -742,304 +738,5 @@ public class SimpleFolderTest extends Thread {
     Thread.sleep(4000);
   }
   
-  public static String theAnswer = 
-"Starting tests\n" +
-"PostLog lookup for user user1 failed.\n" +
-"Waiting...\n" +
-"Starting to get root Folder\n" +
-"Fetched the initial emailLogRef\n" +
-"Email Root Log did not exist, adding one\n" +
-"Starting a new ESAddRootFolderCont\n" +
-"ESAddRootFolderCont received a result.\n" +
-"Result is: rice.post.log.LogReference@bb0d0d\n" +
-"Starting a new ESRootFolderCont\n" +
-"ESRootFolderCont received a result.\n" +
-"Result is: rice.post.log.Log@958bb8\n" +
-"SimpleFolderCont received result. State is 10 0 0\n" +
-"Adding new Folder Root\n" +
-"Name of the root Folder: Root\n" +
-"Making subFolder 0\n" +
-"SimpleFolderCont received result. State is 20 0 1\n" +
-"Adding new Folder Folder 0\n" +
-"Making subFolder 1\n" +
-"SimpleFolderCont received result. State is 20 0 2\n" +
-"Adding new Folder Folder 1\n" +
-"Moving on to making subSubFolder 0\n" +
-"Making subFolder 0\n" +
-"SimpleFolderCont received result. State is 20 1 1\n" +
-"Adding new Folder Folder 1 0\n" +
-"Making subFolder 1\n" +
-"SimpleFolderCont received result. State is 20 1 2\n" +
-"Adding new Folder Folder 1 1\n" +
-"Moving on to making subSubFolder 1\n" +
-"Making subFolder 0\n" +
-"SimpleFolderCont received result. State is 20 2 1\n" +
-"Adding new Folder Folder 2 0\n" +
-"Making subFolder 1\n" +
-"SimpleFolderCont received result. State is 20 2 2\n" +
-"Adding new Folder Folder 2 1\n" +
-"Finished Creating the Folders\n" +
-"Number of sub folders is 2\n" +
-"Folder 1\n" +
-"Folder 0\n" +
-"Number of subSub folders is 2\n" +
-"Folder 1 0\n" +
-"Folder 1 1\n" +
-"Number of subSub folders is 2\n" +
-"Folder 2 1\n" +
-"Folder 2 0\n" +
-"Initializing the EmailStorage state\n" +
-"Adding email 0\n" +
-"Adding email 1\n" +
-"Adding email 2\n" +
-"Adding email 3\n" +
-"Adding email 4\n" +
-"Adding email 5\n" +
-"Adding email 6\n" +
-"Finished adding the emails to each Folder, moving on to Snapshot\n" +
-"Doing snapshots\n" +
-"Adding snapshot email 0\n" +
-"Adding snapshot email 1\n" +
-"Entering testEmails1. EmailCount is: 0, and state is:60\n" +
-
-"Root Folder contains the emails:\n" +
-"Subject: First Email for Folder 0\n" +
-"Send To: TestReciever 0\n" +
-"Entering testEmails1. EmailCount is: 1, and state is:60\n" +
-"Entering testEmails1. EmailCount is: 0, and state is:63\n" +
-
-"Sub Folder 0  contains the emails:\n" +
-"Subject: SS message 1\n" +
-"Send To: SS-Receiver 1\n" +
-"Subject: SS message 0\n" +
-"Send To: SS-Receiver 0\n" +
-"Subject: First Email for Folder 1\n" +
-"Send To: TestReciever 1\n" +
-"Entering testEmails1. EmailCount is: 1, and state is:63\n" +
-
-"Sub Folder 1  contains the emails:\n" +
-"Subject: First Email for Folder 2\n" +
-"Send To: TestReciever 2\n" +
-"Entering testEmails1. EmailCount is: 2, and state is:63\n" +
-"Entering testEmails1. EmailCount is: 0, and state is:66\n" +
-
-"Sub Sub Folder 0  contains the emails:\n" +
-"Subject: First Email for Folder 3\n" +
-"Send To: TestReciever 3\n" +
-"Entering testEmails1. EmailCount is: 1, and state is:66\n" +
-
-"Sub Sub Folder 1  contains the emails:\n" +
-"Subject: First Email for Folder 4\n" +
-"Send To: TestReciever 4\n" +
-"Entering testEmails1. EmailCount is: 2, and state is:66\n" +
-
-"Sub Sub Folder 2  contains the emails:\n" +
-"Subject: First Email for Folder 5\n" +
-"Send To: TestReciever 5\n" +
-"Entering testEmails1. EmailCount is: 3, and state is:66\n" +
-
-"Sub Sub Folder 3  contains the emails:\n" +
-"Subject: First Email for Folder 6\n" +
-"Send To: TestReciever 6\n" +
-"Entering testEmails1. EmailCount is: 4, and state is:66\n" +
-"Done with testEmails1, emailCount is 0, subFolder length is 2, and subSubFolder length is 4\n" +
-"Entering testEvents1. EmailCount is: 0, and state is:70\n" +
-
-"Root Folder contains the following events:\n" +
-"Insert Email Event for: First Email for Folder 0\n" +
-"Insert Folder Event for: Folder 1\n" +
-"Insert Folder Event for: Folder 0\n" +
-"Entering testEvents1. EmailCount is: 1, and state is:70\n" +
-"Entering testEvents1. EmailCount is: 0, and state is:73\n" +
-
-"Sub Folder 0  contains the events:\n" +
-"Insert Email Event for: SS message 1\n" +
-"Insert Email Event for: SS message 0\n" +
-"Insert Email Event for: First Email for Folder 1\n" +
-"Insert Folder Event for: Folder 1 1\n" +
-"Insert Folder Event for: Folder 1 0\n" +
-"Entering testEvents1. EmailCount is: 1, and state is:73\n" +
-
-"Sub Folder 1  contains the events:\n" +
-"Insert Email Event for: First Email for Folder 2\n" +
-"Insert Folder Event for: Folder 2 1\n" +
-"Insert Folder Event for: Folder 2 0\n" +
-"Entering testEvents1. EmailCount is: 2, and state is:73\n" +
-"Entering testEvents1. EmailCount is: 0, and state is:76\n" +
-
-"Sub Sub Folder 0  contains the events:\n" +
-"Insert Email Event for: First Email for Folder 3\n" +
-"Entering testEvents1. EmailCount is: 1, and state is:76\n" +
-
-"Sub Sub Folder 1  contains the events:\n" +
-"Insert Email Event for: First Email for Folder 4\n" +
-"Entering testEvents1. EmailCount is: 2, and state is:76\n" +
-
-"Sub Sub Folder 2  contains the events:\n" +
-"Insert Email Event for: First Email for Folder 5\n" +
-"Entering testEvents1. EmailCount is: 3, and state is:76\n" +
-
-"Sub Sub Folder 3  contains the events:\n" +
-"Insert Email Event for: First Email for Folder 6\n" +
-"Entering testEvents1. EmailCount is: 4, and state is:76\n" +
-"Done with testEvents1, emailCount is 0, subFolder length is 2, and subSubFolder length is 4\n" +
-
-
-"Entering testFolders!!! \n" +
-"RootFolder's child folders\n" +
-"Folder 1\n" +
-"Folder 0\n" +
-
-"subFolder's child folders\n" +
-"Folder 1 0\n" +
-"Folder 1 1\n" +
-
-"Folder 2 1\n" +
-"Folder 2 0\n" +
-
-"subSubFolder's child folders\n" +
-
-
-
-
-"Rotating messages\n" +
-"entering rotate messages. State: 90 emailCount: 0\n" +
-
-"rotating subFolder message 0\n" +
-"SourceEmail: Subject: First Email for Folder 1\n" +
-"Send To: TestReciever 1  sourceFolder: Folder 0  targetFolder: Folder 1\n" +
-"rotated message 1\n" +
-"entering rotate messages. State: 90 emailCount: 1\n" +
-
-"rotating subFolder message 1\n" +
-"SourceEmail: Subject: First Email for Folder 2\n" +
-"Send To: TestReciever 2  sourceFolder: Folder 1  targetFolder: Folder 0\n" +
-"rotated message 2\n" +
-"entering rotate messages. State: 90 emailCount: 2\n" +
-
-"rotating subFolder message 2\n" +
-"entering rotate messages. State: 95 emailCount: 0\n" +
-
-"rotating subSubFolder message 0\n" +
-"rotated message 1\n" +
-"entering rotate messages. State: 95 emailCount: 1\n" +
-
-"rotating subSubFolder message 1\n" +
-"rotated message 2\n" +
-"entering rotate messages. State: 95 emailCount: 2\n" +
-
-"rotating subSubFolder message 2\n" +
-"rotated message 3\n" +
-"entering rotate messages. State: 95 emailCount: 3\n" +
-
-"rotating subSubFolder message 3\n" +
-"rotated message 4\n" +
-"entering rotate messages. State: 95 emailCount: 4\n" +
-
-"rotating subSubFolder message 4\n" +
-
-
-
-
-
-"Deleting messages.  State is 100  emailCount is 0\n" +
-"Deleting message 3\n" +
-"delete message cont\n" +
-"Deleting messages.  State is 100  emailCount is 1\n" +
-"Deleting message 0\n" +
-"delete message cont\n" +
-"Deleting messages.  State is 100  emailCount is 2\n" +
-"Deleting message 1\n" +
-"delete message cont\n" +
-"Deleting messages.  State is 100  emailCount is 3\n" +
-"Deleting message 2\n" +
-"delete message cont\n" +
-"Deleting messages.  State is 100  emailCount is 4\n" +
-"Deleting messages.  State is 103  emailCount is 0\n" +
-"Checking Folder 0\n" +
-"delete message cont\n" +
-"Delete Email Event for: First Email for Folder 6\n" +
-"Insert Email Event for: First Email for Folder 6\n" +
-"Delete Email Event for: First Email for Folder 3\n" +
-"Insert Email Event for: First Email for Folder 3\n" +
-"Deleting messages.  State is 103  emailCount is 1\n" +
-"Checking Folder 1\n" +
-"delete message cont\n" +
-"Delete Email Event for: First Email for Folder 3\n" +
-"Delete Email Event for: First Email for Folder 4\n" +
-"Insert Email Event for: First Email for Folder 3\n" +
-"Insert Email Event for: First Email for Folder 4\n" +
-"Deleting messages.  State is 103  emailCount is 2\n" +
-"Checking Folder 2\n" +
-"delete message cont\n" +
-"Delete Email Event for: First Email for Folder 4\n" +
-"Delete Email Event for: First Email for Folder 5\n" +
-"Insert Email Event for: First Email for Folder 4\n" +
-"Insert Email Event for: First Email for Folder 5\n" +
-"Deleting messages.  State is 103  emailCount is 3\n" +
-"Checking Folder 3\n" +
-"delete message cont\n" +
-"Delete Email Event for: First Email for Folder 5\n" +
-"Delete Email Event for: First Email for Folder 6\n" +
-"Insert Email Event for: First Email for Folder 5\n" +
-"Insert Email Event for: First Email for Folder 6\n" +
-"Deleting messages.  State is 103  emailCount is 4\n" +
-"deleting messages and folders\n" +
-"Deleting messages.  State is 106  emailCount is 0\n" +
-"Removing Folder 0\n" +
-"delete message cont\n" +
-"Deleting messages.  State is 106  emailCount is 1\n" +
-"Removing Folder 1\n" +
-"delete message cont\n" +
-"Deleting messages.  State is 106  emailCount is 2\n" +
-"Removing Folder 2\n" +
-"delete message cont\n" +
-"Deleting messages.  State is 106  emailCount is 3\n" +
-"Removing Folder 3\n" +
-"delete message cont\n" +
-"Deleting messages.  State is 106  emailCount is 4\n" +
-"Deleting messages.  State is 110  emailCount is 0\n" +
-"Deleting message 1\n" +
-"delete message cont\n" +
-"Deleting messages.  State is 110  emailCount is 1\n" +
-"Deleting message 0\n" +
-"delete message cont\n" +
-"Deleting messages.  State is 110  emailCount is 2\n" +
-"Deleting messages.  State is 113  emailCount is 0\n" +
-"Checking Folder 0\n" +
-"delete message cont\n" +
-"Delete Email Event for: First Email for Folder 2\n" +
-"Delete Folder Event for: Folder 1 1\n" +
-"Delete Folder Event for: Folder 1 0\n" +
-"Insert Email Event for: First Email for Folder 2\n" +
-"Delete Email Event for: First Email for Folder 1\n" +
-"Insert Email Event for: SS message 1\n" +
-"Insert Email Event for: SS message 0\n" +
-"Insert Email Event for: First Email for Folder 1\n" +
-"Insert Folder Event for: Folder 1 1\n" +
-"Insert Folder Event for: Folder 1 0\n" +
-"Deleting messages.  State is 113  emailCount is 1\n" +
-"Checking Folder 1\n" +
-"delete message cont\n" +
-"Delete Email Event for: First Email for Folder 1\n" +
-"Delete Folder Event for: Folder 2 1\n" +
-"Delete Folder Event for: Folder 2 0\n" +
-"Delete Email Event for: First Email for Folder 2\n" +
-"Insert Email Event for: First Email for Folder 1\n" +
-"Insert Email Event for: First Email for Folder 2\n" +
-"Insert Folder Event for: Folder 2 1\n" +
-"Insert Folder Event for: Folder 2 0\n" +
-"Deleting messages.  State is 113  emailCount is 2\n" +
-"deleting messages and folders\n" +
-"Deleting messages.  State is 116  emailCount is 0\n" +
-"Removing Folder 0\n" +
-"delete message cont\n" +
-"Deleting messages.  State is 116  emailCount is 1\n" +
-"Removing Folder 1\n" +
-"delete message cont\n" +
-"Deleting messages.  State is 116  emailCount is 2\n" +
-"Deleting messages.  State is 120  emailCount is 0\n" +
-"Done!\n" +
-      "Finished with Folder Tests";
-
+  public static String theAnswer = "Starting testsName of the root Folder: RootCreating subFolder 0Creating subFolder 1Creating subSubFolder 0Creating subFolder 0Creating subFolder 1Creating subSubFolder 1Creating subFolder 0Creating subFolder 1Starting snapshotsAdding snapshot email 0Adding snapshot email 1Root Folder contains the emails:Subject: First Email for Folder 0Send To: TestReciever 0Sub Folder 0  contains the emails:Subject: SS message 1Send To: SS-Receiver 1Subject: SS message 0Send To: SS-Receiver 0Subject: First Email for Folder 1Send To: TestReciever 1Sub Folder 1  contains the emails:Subject: First Email for Folder 2Send To: TestReciever 2Sub Sub Folder 0  contains the emails:Subject: First Email for Folder 3Send To: TestReciever 3Sub Sub Folder 1  contains the emails:Subject: First Email for Folder 4Send To: TestReciever 4Sub Sub Folder 2  contains the emails:Subject: First Email for Folder 5Send To: TestReciever 5Sub Sub Folder 3  contains the emails:Subject: First Email for Folder 6Send To: TestReciever 6Root Folder contains the following events:Insert Email Event for: First Email for Folder 0Insert Folder Event for: Folder 1Insert Folder Event for: Folder 0Sub Folder 0  contains the events:Insert Email Event for: SS message 1Insert Email Event for: SS message 0Insert Email Event for: First Email for Folder 1Insert Folder Event for: Folder 1 1Insert Folder Event for: Folder 1 0Sub Folder 1  contains the events:Insert Email Event for: First Email for Folder 2Insert Folder Event for: Folder 2 1Insert Folder Event for: Folder 2 0Sub Sub Folder 0  contains the events:Insert Email Event for: First Email for Folder 3Sub Sub Folder 1  contains the events:Insert Email Event for: First Email for Folder 4Sub Sub Folder 2  contains the events:Insert Email Event for: First Email for Folder 5Sub Sub Folder 3  contains the events:Insert Email Event for: First Email for Folder 6RootFolder's child foldersFolder 1Folder 0subFolder's child foldersFolder 1 0Folder 1 1Folder 2 1Folder 2 0subSubFolder's child foldersStaring to Rotate messagesDeleting message 3Deleting message 0Deleting message 1Deleting message 2Checking Folder 0Delete Email Event for: First Email for Folder 6Insert Email Event for: First Email for Folder 6Delete Email Event for: First Email for Folder 3Insert Email Event for: First Email for Folder 3Checking Folder 1Delete Email Event for: First Email for Folder 3Delete Email Event for: First Email for Folder 4Insert Email Event for: First Email for Folder 3Insert Email Event for: First Email for Folder 4Checking Folder 2Delete Email Event for: First Email for Folder 4Delete Email Event for: First Email for Folder 5Insert Email Event for: First Email for Folder 4Insert Email Event for: First Email for Folder 5Checking Folder 3Delete Email Event for: First Email for Folder 5Delete Email Event for: First Email for Folder 6Insert Email Event for: First Email for Folder 5Insert Email Event for: First Email for Folder 6Deleting messages and foldersRemoving Folder 0Removing Folder 1Removing Folder 2Removing Folder 3Deleting message 1Deleting message 0Checking Folder 0Delete Email Event for: First Email for Folder 2Delete Folder Event for: Folder 1 1Delete Folder Event for: Folder 1 0Insert Email Event for: First Email for Folder 2Delete Email Event for: First Email for Folder 1Insert Email Event for: SS message 1Insert Email Event for: SS message 0Insert Email Event for: First Email for Folder 1Insert Folder Event for: Folder 1 1Insert Folder Event for: Folder 1 0Checking Folder 1Delete Email Event for: First Email for Folder 1Delete Folder Event for: Folder 2 1Delete Folder Event for: Folder 2 0Delete Email Event for: First Email for Folder 2Insert Email Event for: First Email for Folder 1Insert Email Event for: First Email for Folder 2Insert Folder Event for: Folder 2 1Insert Folder Event for: Folder 2 0Deleting messages and foldersRemoving Folder 0Removing Folder 1Done!";
 }
