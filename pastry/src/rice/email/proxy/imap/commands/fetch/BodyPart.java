@@ -33,72 +33,62 @@ public class BodyPart
           BodyPartRequest req = (BodyPartRequest) part;
           getConn().print(req.toString() + " ");
 
-          if (req.getPartIterator().hasNext()) {
-            Iterator i = req.getPartIterator();
-            String data = "";
+          if (req.getType().equals("HEADER.FIELDS")) {
+            if (req.getPartIterator().hasNext()) {
+              Iterator i = req.getPartIterator();
+              String data = "";
 
-            while (i.hasNext()) {
-              String next = (String) i.next();
-              String[] headers = msg.getMessage().getHeader(next);
+              while (i.hasNext()) {
+                String next = (String) i.next();
+                String[] headers = msg.getMessage().getHeader(next);
 
-              for (int j=0; j<headers.length; j++) {
-                data += toSentenceCase(next) + ": " + headers[j] + "\n";
+                for (int j=0; j<headers.length; j++) {
+                  data += toSentenceCase(next) + ": " + headers[j] + "\r\n";
+                }
               }
+
+              data += "\n";
+
+              getConn().print("{" + data.length() + "}\r\n" + data);
+            } else {
+              fetchHeaders(msg, req);
             }
-
-            data += "\n";
-
-            getConn().print("{" + data.length() + "}\n" + data);
-          } else if (req.getType().equals("HEADER.FIELDS")) {
+          } else if (req.getType().equals("HEADER")) {
             fetchHeaders(msg, req);
           } else {
             Object data = msg.getMessage().getContent();
 
+            int i = 1;
+
             try {
-              int i = Integer.parseInt(req.getType());
-
-              if (data instanceof String) {
-                System.out.println("Found a string...");
-
-                String content = "" + data;
-                getConn().print("{" + content.length() + "}\r\n");
-                getConn().print(content);
-              } else if (data instanceof MimeMultipart) {
-                System.out.println("Found a multipart...");
-
-                MimeMultipart mime = (MimeMultipart) data;
-                MimeBodyPart thisPart = (MimeBodyPart) mime.getBodyPart(i-1);
-
-                //      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                //      thisPart.writeTo(baos);
-
-                //  Object result = thisPart.getContent(); //new String(baos.toByteArray());
-
-                InputStream stream = thisPart.getInputStream();
-                StringWriter writer = new StringWriter();
-
-                StreamUtils.copy(new InputStreamReader(stream), writer);
-
-                String content = writer.toString();
-                getConn().print("{" + content.length() + "}\r\n");
-                getConn().print(content);
-
-                /*
-                 if (result instanceof String) {
-                   System.out.println("It's a String!" + mime.getCount() + " " + );
-                   String content = (String) result;
-                   getConn().print("{" + content.length() + "}\r\n");
-                   getConn().print(content);
-                 } else {
-                   System.out.println("It's a " + result.getClass().getName());
-                 } */
-              } else {
-                getConn().print("NIL");
-              }
+              i = Integer.parseInt(req.getType());
             } catch (NumberFormatException e) {
+            }
+
+            if (data instanceof String) {
+              System.out.println("Found a string...");
+
+              String content = "" + data;
+              getConn().print("{" + content.length() + "}\r\n");
+              getConn().print(content);
+            } else if (data instanceof MimeMultipart) {
+              System.out.println("Found a multipart...");
+
+              MimeMultipart mime = (MimeMultipart) data;
+              MimeBodyPart thisPart = (MimeBodyPart) mime.getBodyPart(i-1);
+
+              InputStream stream = thisPart.getInputStream();
+              StringWriter writer = new StringWriter();
+
+              StreamUtils.copy(new InputStreamReader(stream), writer);
+
+              String content = writer.toString();
+              getConn().print("{" + content.length() + "}\r\n");
+              getConn().print(content);
+            } else {
               getConn().print("NIL");
             }
-            }
+          }
         } catch (IOException ioe) {
           throw new MailboxException(ioe);
         } catch (MailException me) {

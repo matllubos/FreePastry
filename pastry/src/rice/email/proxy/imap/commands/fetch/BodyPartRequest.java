@@ -26,6 +26,10 @@ public class BodyPartRequest
     public void setName(String name)
     {
         _name = name;
+
+      if (_name.indexOf(".") >= 0) {
+        _name = _name.substring(0, _name.indexOf("."));
+      }
     }
 
     public void setType(String type)
@@ -50,8 +54,8 @@ public class BodyPartRequest
         result.append(_name);
         result.append("[");
         result.append(_type);
-        
-        if (_parts != null)
+
+        if ((_parts != null) && (_parts.iterator().hasNext())) 
         {
           result.append(" (");
           

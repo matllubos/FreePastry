@@ -35,7 +35,7 @@ public class ListCommand
     {
         if ("".equals(_folder))
         {
-            untaggedSimpleResponse("(\\Noselect) NIL \"\"");
+            untaggedSimpleResponse("(\\Noselect) \"/\" \"\"");
             taggedSimpleSuccess();
 
             return;
@@ -49,7 +49,7 @@ public class ListCommand
             for (int i = 0; i < fold.length; i++)
             {
                 untaggedSimpleResponse(
-                        "() NIL \"" + fold[i].getFullName() + "\"");
+                        "() \"/\" \"" + fold[i].getFullName() + "\"");
             }
 
             taggedSimpleSuccess();
