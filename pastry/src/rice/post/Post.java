@@ -660,7 +660,7 @@ public class Post extends PastryAppl implements IScribeApp  {
   }
 
   /**
-   * This class is a task which returns a PostLog to te callee.
+   * This class is a task which returns a PostLog to the callee.
    */
   protected class RetrievePostLogTask implements Continuation {
 
@@ -742,7 +742,6 @@ public class Post extends PastryAppl implements IScribeApp  {
     public static final int STATE_2 = 2;
 
     private int state;
-    private PostLog log;
     
     /**
      * Constructs a task which will call the given command once the result
@@ -759,21 +758,19 @@ public class Post extends PastryAppl implements IScribeApp  {
       getPostLog(address, this);
     }
 
-    private void startState1(PostLog log) {
-      this.log = log;
-      
-      if (log == null) {
+    private void startState1(PostLog logNew) {
+      Post.this.log = logNew;
+
+      if (logNew == null) {
         state = STATE_2;
         
         // None found, so create a new one
-        log = new PostLog(address, publicKey, certificate, Post.this, this);
+        Post.this.log = new PostLog(address, publicKey, certificate, Post.this, this);
       }
     }
 
     private void startState2(Boolean b) {
-      if (b.booleanValue()) {
-        Post.this.log = log;
-      } else {
+      if (! b.booleanValue()) {
         System.out.println("Error occured storing log " + b);
       }
     }    
@@ -839,6 +836,10 @@ public class Post extends PastryAppl implements IScribeApp  {
 
     public void receiveResult(Object o) {
       PostLog destinationLog = (PostLog) o;
+
+      if (destinationLog == null) {
+	System.out.println("ERROR - Could not send notification message to non-existant user " + destination);
+      }
       
       System.out.println(thePastryNode.getNodeId() + "DEBUG: received destination log");
       

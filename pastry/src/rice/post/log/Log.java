@@ -403,6 +403,7 @@ public class Log implements PostData {
     }
 
     public void receiveResult(Object o) {
+      command.receiveResult(new Boolean(true));
     }
 
     /**
