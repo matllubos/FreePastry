@@ -111,7 +111,7 @@ public class DistScribeRegrTestApp implements IScribeApp
 	DistTopicLog topicLog;
 	
 	topicId = (NodeId) msg.getTopicId();
-	//System.out.println("Node "+m_scribe.getNodeId()+" received seqno "+((Integer)msg.getData()).intValue()+" for topic "+topicId);
+	System.out.println("Node "+m_scribe.getNodeId()+ "appindex=" + m_appIndex + " received seqno "+((Integer)msg.getData()).intValue()+" for topic "+topicId);
 	processLog(topicId,((Integer)msg.getData()).intValue());
     }
 
