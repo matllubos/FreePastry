@@ -26,6 +26,9 @@ public class EmailLog extends EncryptedLog {
   // the number of recent messages in this folder
   private int numRecent;
 
+  // the number of log entries since a snapshot
+  private int numEntries;
+
   // the creation time of this email log
   private long creation; 
 
@@ -43,6 +46,30 @@ public class EmailLog extends EncryptedLog {
     creation = System.currentTimeMillis();
     numExist = 0;
     numRecent = 0;
+    numEntries = 0;
+  }
+
+  /**
+   * Returns the number of log entries since a snapshot
+   *
+   * @return The number of log entries since a snapshot
+   */
+  public int getEntries() {
+    return numEntries;
+  }
+
+  /**
+   * Increments the number of entries since a snapshot
+   */
+  public void incrementEntries() {
+    numEntries++;
+  }
+
+  /**
+   * Resets the number of entries since a snapshot
+   */
+  public void resetEntries() {
+    numEntries = 0;
   }
 
   /**

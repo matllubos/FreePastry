@@ -8,7 +8,7 @@ import rice.email.*;
  * to the next LogEntry.
  * @author Joe Montgomery
  */
-public class InsertMailLogEntry extends LogEntry {
+public class InsertMailLogEntry extends EmailLogEntry {
   
   StoredEmail _storedEmail;
     

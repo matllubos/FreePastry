@@ -9,7 +9,8 @@ import rice.email.*;
  * through the entire chain.
  * @author Joe Montgomery
  */
-public class SnapShotLogEntry extends LogEntry {
+public class SnapShotLogEntry extends EmailLogEntry {
+  
   // stores the emails of the current folder
   private StoredEmail[] _emails;
     
@@ -30,14 +31,5 @@ public class SnapShotLogEntry extends LogEntry {
    */
   public StoredEmail[] getStoredEmails() {
     return _emails;
-  }
-      
-  /**
-   * Returns whether this is the last node in the current snapshot.
-   * Is provided in case the snapshot covers multiple nodes.
-   * @return whether this is the last snapshot node.
-   */
-  public boolean isEnd() {
-    return true;
   }
 }

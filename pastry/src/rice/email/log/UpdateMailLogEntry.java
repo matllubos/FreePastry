@@ -7,7 +7,7 @@ import rice.email.*;
  * Adds the flags to the log entry
  * @author 
  */
-public class UpdateMailLogEntry extends LogEntry {
+public class UpdateMailLogEntry extends EmailLogEntry {
 
     StoredEmail _storedEmail;
 

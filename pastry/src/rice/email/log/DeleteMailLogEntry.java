@@ -8,7 +8,7 @@ import rice.email.*;
  * matches up to.
  * @author Joe Montgomery
  */
-public class DeleteMailLogEntry extends LogEntry {
+public class DeleteMailLogEntry extends EmailLogEntry {
   StoredEmail _storedEmail ;
     
   /**

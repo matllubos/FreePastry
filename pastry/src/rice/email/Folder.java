@@ -17,8 +17,9 @@ import rice.post.storage.*;
  * @author Joe Montgomery
  */
 public class Folder {
+  
   // maximum entry limit for our primitive snapshot policy
-  public static final int COMPRESS_LIMIT = 5;
+  public static final int COMPRESS_LIMIT = 20;
 
   // name of the folder
   private String _name;
@@ -125,7 +126,7 @@ public class Folder {
   public long getCreationTime() {
     return _log.getCreationTime();
   }
-
+  
   /**
    * Updates an Email (flags)
    *
@@ -133,7 +134,16 @@ public class Folder {
    * @param command the work to perform after this call.
    */
   public void updateMessage(StoredEmail email, Continuation command) {
-    _log.addLogEntry(new UpdateMailLogEntry(email), command);
+    _log.incrementEntries();
+    _log.addLogEntry(new UpdateMailLogEntry(email), new StandardContinuation(command) {
+      public void receiveResult(final Object result) {
+        createSnapShot(new StandardContinuation(parent) {
+          public void receiveResult(Object o) {
+            parent.receiveResult(result);
+          }
+        });
+      }
+    });
   }
 
   /**
@@ -159,11 +169,20 @@ public class Folder {
    */
   public void addMessage(final Email email, final Flags flags, final Continuation command) {
     _log.incrementExists();
+    _log.incrementEntries();
     email.setStorage(_storage);
     email.storeData(new StandardContinuation(command) {
       public void receiveResult(Object o) {
         StoredEmail storedEmail = new StoredEmail(email, _log.getNextUID(), flags);
-        _log.addLogEntry(new InsertMailLogEntry(storedEmail), command);
+        _log.addLogEntry(new InsertMailLogEntry(storedEmail), new StandardContinuation(parent) {
+          public void receiveResult(final Object result) {
+            createSnapShot(new StandardContinuation(parent) {
+              public void receiveResult(Object o) {
+                command.receiveResult(result);
+              }
+            });
+          }
+        });
       }
     });
   }
@@ -193,7 +212,16 @@ public class Folder {
    */
   public void removeMessage(StoredEmail email, Continuation command) {
     _log.decrementExists();
-    _log.addLogEntry(new DeleteMailLogEntry(email), command);
+    _log.incrementEntries();
+    _log.addLogEntry(new DeleteMailLogEntry(email), new StandardContinuation(command) {
+      public void receiveResult(final Object result) {
+        createSnapShot(new StandardContinuation(parent) {
+          public void receiveResult(Object o) {
+            parent.receiveResult(result);
+          }
+        });
+      }
+    });
   }
 
   /**
@@ -249,6 +277,24 @@ public class Folder {
       });
     } else {
       command.receiveResult(_children.get(name));
+    }
+  }
+
+  /**
+   * Creates and inserts a snapshot for the current folder
+   *
+   * @param command The command to run once the result is received
+   */
+  public void createSnapShot(Continuation command) {
+    if (_log.getEntries() >= COMPRESS_LIMIT) {
+      getMessages(new StandardContinuation(command) {
+        public void receiveResult(Object o) {
+          _log.resetEntries();
+          _log.addLogEntry(new SnapShotLogEntry((StoredEmail[]) o), parent);
+        }
+      });
+    } else {
+      command.receiveResult(new Boolean(true));
     }
   }
 

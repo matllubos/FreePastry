@@ -151,30 +151,19 @@ public class MimeMessage {
 
   public String getInternalDate() {
     try {
-      String[] result = _message.getHeader("Received");
+      Date date = _message.getReceivedDate();
 
-      if ((result == null) || (result.length == 0)) {
-        result = _message.getHeader("Date");
-      }
+      if (date == null)
+        date = _message.getSentDate();
+
+      if (date == null)
+        return "null";
       
-      String[] stuff = result[0].split(";");
-
-      Date date = null;
-      int i=0;
-
-      while ((date == null) && (i < stuff.length)) {
-        try {
-          i++;
-          date = dateReader.parse(stuff[i].trim());
-        } catch (ParseException e) {
-        }
-      }
-
       if (date.getDate() < 10)
         return " " + dateWriter.format(date);
       else
         return dateWriter.format(date);
-    } catch (Exception e) {
+    } catch (MessagingException e) {
     }
 
     return null;
