@@ -63,8 +63,8 @@ public class RMIPastryTest {
     private Vector pastrynodes;
 
     private static int port;
-    private static String connecthost;
-    private static int connectport;
+    private static String bshost;
+    private static int bsport;
     private static int numnodes;
 
     public RMIPastryTest() {
@@ -72,29 +72,34 @@ public class RMIPastryTest {
 	pastrynodes = new Vector();
     }
 
-    public void makePastryNode() {
-
-	RMIPastryNode other = null;
+    /**
+     * Gets a handle to a bootstrap node. First tries localhost, to see
+     * whether a previous virtual node has already bound itself. Then it
+     * tries nattempts times on bshost:bsport.
+     *
+     * @return handle to bootstrap node, or null.
+     */
+    public RMINodeHandle getBootstrapHandle() {
+	RMIPastryNode bsnode = null;
 	try {
-	    other = (RMIPastryNode)Naming.lookup("//:" + port + "/Pastry");
-	    //pause(1000);
+	    bsnode = (RMIPastryNode)Naming.lookup("//:" + port + "/Pastry");
 	} catch (Exception e) {
-	    System.out.println("Unable to find another node on localhost");
+	    System.out.println("Unable to find bootstrap node on localhost");
 	}
 
 	int nattempts = 3;
 
-	// if connecthost:connectport == localhost:port then nattempts = 0.
+	// if bshost:bsport == localhost:port then nattempts = 0.
 	// waiting for ourselves is not harmful, but pointless, and denies
 	// others the usefulness of symmetrically waiting for us.
 
-	if (connectport == port) {
+	if (bsport == port) {
 	    InetAddress localaddr = null, connectaddr = null;
 	    String host = null;
 
 	    try {
 		host = "localhost"; localaddr = InetAddress.getLocalHost();
-		connectaddr = InetAddress.getByName(host = connecthost);
+		connectaddr = InetAddress.getByName(host = bshost);
 	    } catch (UnknownHostException e) {
 		System.out.println("[rmi] Error: Host unknown: " + host);
 		nattempts = 0;
@@ -104,14 +109,14 @@ public class RMIPastryTest {
 		nattempts = 0;
 	}
 
-	for (int i = 1; other == null && i <= nattempts; i++) {
+	for (int i = 1; bsnode == null && i <= nattempts; i++) {
 	    try {
-		other = (RMIPastryNode)Naming.lookup("//" + connecthost
-						    + ":" + connectport
-						    + "/Pastry");
+		bsnode = (RMIPastryNode)Naming.lookup("//" + bshost
+							 + ":" + bsport
+							 + "/Pastry");
 	    } catch (Exception e) {
-		System.out.println("Unable to find another node on "
-				   + connecthost + ":" + connectport
+		System.out.println("Unable to find bootstrap node on "
+				   + bshost + ":" + bsport
 				   + " (attempt " + i + "/" + nattempts + ")");
 	    }
 
@@ -119,30 +124,31 @@ public class RMIPastryTest {
 		pause(1000);
 	}
 
-	NodeId otherid = null;
-	if (other != null) {
+	NodeId bsid = null;
+	if (bsnode != null) {
 	    try {
-		otherid = other.getNodeId();
+		bsid = bsnode.getNodeId();
 	    } catch (Exception e) {
 		System.out.println("[rmi] Unable to get remote node id: " + e.toString());
-		other = null;
+		bsnode = null;
 	    }
 	}
 
-	/*
-	 * This creates a PastryNode and an associated RMIPastryNode, and
-	 * binds the latter to the registry. We do the above lookup prior to
-	 * creating the node, so we don't find ourselves.
-	 */
-	boolean syncinit = (otherid == null);
-	PastryNode pn = new PastryNode(factory, syncinit);
-	pastrynodes.add(pn);
-	System.out.println("created " + pn);
+	RMINodeHandle bshandle = null;
+	if (bsid != null)
+	    bshandle = new RMINodeHandle(bsnode, bsid);
 
-	if (otherid != null) {
-	    RMINodeHandle other_handle = new RMINodeHandle(other, otherid);
-	    pn.receiveMessage(new InitiateJoin(other_handle));
-	}
+	return bshandle;
+    }
+
+    public void makePastryNode() {
+	NodeHandle bshandle = getBootstrapHandle();
+	PastryNode pn = new PastryNode(factory, (bshandle == null));
+	System.out.println("created " + pn);
+	pastrynodes.add(pn);
+
+	if (bshandle != null)
+	    pn.receiveMessage(new InitiateJoin(bshandle));
     }
 
     public void printLeafSets() {
@@ -157,15 +163,22 @@ public class RMIPastryTest {
     }
 
     /**
-     * Usage: RMIPastryTest [-port n] [-connect host[:port]] [-nodes n]
+     * Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
      */
     public static void main(String args[])
     {
 	// defaults
-	connecthost = "thor05";
-	port = connectport = 5009;
+	bshost = "thor01";
+	port = bsport = 5009;
 	numnodes = 1;
 
+	for (int i = 0; i < args.length; i++) {
+	    if (args[i].equals("-help")) {
+		System.out.println("Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]");
+		System.exit(1);
+	    }
+	}
+	
 	for (int i = 0; i < args.length; i++) {
 	    if (args[i].equals("-port") && i+1 < args.length) {
 		int p = Integer.parseInt(args[i+1]);
@@ -175,16 +188,16 @@ public class RMIPastryTest {
 	}
 	
 	for (int i = 0; i < args.length; i++) {
-	    if (args[i].equals("-connect") && i+1 < args.length) {
+	    if (args[i].equals("-bootstrap") && i+1 < args.length) {
 		String str = args[i+1];
 		int index = str.indexOf(':');
 		if (index == -1) {
-		    connecthost = str;
-		    connectport = port;
+		    bshost = str;
+		    bsport = port;
 		} else {
-		    connecthost = str.substring(0, index);
-		    connectport = Integer.parseInt(str.substring(index + 1));
-		    if (connectport <= 0) connectport = port;
+		    bshost = str.substring(0, index);
+		    bsport = Integer.parseInt(str.substring(index + 1));
+		    if (bsport <= 0) bsport = port;
 		}
 		break;
 	    }
