@@ -14,6 +14,8 @@ import rice.p2p.aggregation.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
+import rice.p2p.glacier.VersioningPast;
+import rice.p2p.glacier.v2.GlacierContentHandle;
 
 import rice.post.*;
 import rice.post.log.*;
@@ -276,15 +278,16 @@ public class StorageService {
    * provided PAST store.
    *
    */
-  public static void recoverLogs(final Id location, final KeyPair keyPair, final Past immutablePast, final Past mutablePast, Continuation command) {
-    immutablePast.lookupHandles(location, immutablePast.getReplicationFactor()+1, new StandardContinuation(command) {
+  public static void recoverLogs(final Id location, final long timestamp, final KeyPair keyPair, final Past immutablePast, final Past mutablePast, Continuation command) {
+    final long version = (timestamp / PostImpl.BACKUP_INTERVAL) * PostImpl.BACKUP_INTERVAL;
+    System.out.println("COUNT: "+System.currentTimeMillis()+" Timestamp is "+timestamp+", using version "+version);
+    ((VersioningPast)immutablePast).lookupHandles(location, version, immutablePast.getReplicationFactor()+1, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         PastContentHandle[] handles = (PastContentHandle[]) o;
-        
-        StorageServiceDataHandle handle = null;
-        
+        GlacierContentHandle handle = null;
+
         for (int i=0; i<handles.length; i++) {
-          StorageServiceDataHandle thisH = (StorageServiceDataHandle) handles[i];
+          GlacierContentHandle thisH = (GlacierContentHandle) handles[i];
           
           if ((thisH != null) && ((handle == null) || (thisH.getVersion() > handle.getVersion())))
             handle = thisH;
@@ -302,9 +305,10 @@ public class StorageService {
               
               if (data == null) 
                 throw new StorageException("Log backup not found!");
-              
+
+              System.out.println("COUNT: "+System.currentTimeMillis()+" Log backup found!");
+
               GroupData group = (GroupData) SecurityUtils.deserialize(data.getData());
-              
               final Log[] logs = (Log[]) group.getData();
               
               Continuation c = new StandardContinuation(parent) {

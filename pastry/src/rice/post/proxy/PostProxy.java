@@ -969,10 +969,28 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startPost(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("post_emergency_recover_logs")) {
+    if (System.getProperty("RECOVER") != null) {
       stepStart("Recovering/Restoring POST Logs backup");
       ExternalContinuation d = new ExternalContinuation();
-      StorageService.recoverLogs(address.getAddress(), pair, immutablePast, mutablePast, d);
+      
+      String[] pieces = System.getProperty("RECOVER").split("/|:| ");
+      if (pieces.length != 5) {
+        System.err.println("Usage: -DRECOVER=\"mm/dd/yyyy hh:mm\" (use 24h format)");
+        System.exit(1);
+      }
+      
+      int month = Integer.parseInt(pieces[0]) - 1;  /* month is 0-based */
+      int day = Integer.parseInt(pieces[1]);
+      int year = Integer.parseInt(pieces[2]);
+      int hour = Integer.parseInt(pieces[3]);
+      int minute = Integer.parseInt(pieces[4]);
+      if (year < 100)
+        year += 2000;
+        
+      Calendar cal = Calendar.getInstance();
+      System.out.println("COUNT: "+System.currentTimeMillis()+" Recovery: Using timestamp "+(month+1)+"/"+day+"/"+year+" "+hour+":"+minute);
+      cal.set(year, month, day, hour, minute, 0);
+      StorageService.recoverLogs(address.getAddress(), cal.getTimeInMillis(), pair, immutablePast, mutablePast, d);
       d.sleep();
       
       if (d.exceptionThrown())
@@ -1092,6 +1110,7 @@ public class PostProxy {
     startPost(parameters);
     startInsertLog(parameters);
     startFetchLog(parameters);
+    
     sectionDone();
     
     return parameters;
@@ -1101,10 +1120,12 @@ public class PostProxy {
     try {
       start(new Parameters(PROXY_PARAMETERS_NAME));
       
-      dialog.append("\n-- Your node is now up and running --\n");
+      if (dialog != null) 
+        dialog.append("\n-- Your node is now up and running --\n");
     } catch (Exception e) {
       System.err.println("ERROR: Found Exception while start proxy - exiting - " + e);
-      dialog.append("\n-- ERROR: Found Exception while start proxy - exiting - " + e + " --\n");
+      if (dialog != null)
+        dialog.append("\n-- ERROR: Found Exception while start proxy - exiting - " + e + " --\n");
       e.printStackTrace();
       System.exit(-1);
     }
