@@ -38,14 +38,14 @@ public class PersistentStorage implements Storage {
    *
    * @param rootDir The root directory of the persisted disk.
    */
-  public PersistentStorage(String rootDir) {
+  public PersistentStorage(String rootDir, int size) {
     this.rootDir = rootDir;
 
     if(this.initDirectories())
       System.out.println("Succesfully Initialized Directories");
     else
       System.out.println("ERROR: Failed to Initialized Directories");
-    
+   storageSize = size; 
    fileMap = new Hashtable();
    initFileMap();
 
@@ -74,6 +74,8 @@ public class PersistentStorage implements Storage {
     try {
       if (id == null || obj == null) {
         System.out.println("ERROR: MakePersistent called with null arguments.");
+        c.receiveResult(new Boolean(false));
+        return;
       }
 
       if(!fileMap.containsKey(id)){
@@ -93,15 +95,21 @@ public class PersistentStorage implements Storage {
       objStream.writeObject(obj);
 
       /* I should look at this a little harder */
+      /* change store so that we fail if not enough space for object */
 
       decreaseUsedSpace(objFile.length()); /* decrease the amount used */
 
-      transcFile.renameTo(objFile); /* Assume Atomic */
-
-      /* maybe i should combine this increase and decrease */
-  
-      increaseUsedSpace(objFile.length()); /* increase the amount used */
-      
+      if( getUsedSpace() + objFile.length() > getStorageSize()){
+         /* abort, this will put us over quota */
+         transcFile.delete(); /* Assume Atomic */
+         c.receiveResult(new Boolean(false));
+         return;
+      }
+      else{
+        /* complete transaction */
+        transcFile.renameTo(objFile); /* Assume Atomic */
+        increaseUsedSpace(objFile.length()); /* increase the amount used */
+       } 
 
       c.receiveResult(new Boolean(true));
 
@@ -134,6 +142,10 @@ public class PersistentStorage implements Storage {
      /* 4. Should update the value of used space */
 
       File objFile = getFile(id); 
+      if(objFile == null){
+       c.receiveResult(new Boolean(false));
+       return;
+      } 
       removeMapping(id);
       decreaseUsedSpace(objFile.length());
       objFile.delete();
@@ -450,8 +462,8 @@ public class PersistentStorage implements Storage {
    *
    * @return int the amount of storage in MB allocated for use
    */
-  public int getStorageSize() {
-    return 0;
+  public long getStorageSize() {
+    return storageSize;
   }
 
   /**
@@ -493,5 +505,9 @@ public class PersistentStorage implements Storage {
    */
   private void decreaseUsedSpace(long i){
      usedSize = usedSize - i;
+  }
+
+  private long getUsedSpace(){
+    return usedSize;
   }
 }

@@ -22,7 +22,7 @@ public class PersistentStorageTest extends Test {
    * Builds a PersistentStorageTest
    */
   public PersistentStorageTest() {
-    storage = new PersistentStorage(".");
+    storage = new PersistentStorage(".", 1000000000);
   }
 
   public void setUp(final Continuation c) {
