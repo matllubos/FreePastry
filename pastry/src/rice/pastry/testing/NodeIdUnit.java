@@ -153,9 +153,15 @@ public class NodeIdUnit {
 
 	a = new NodeId(t1/*raw80*/);
 	b = new NodeId(t2/*raw7f*/);
-	NodeId c = new NodeId(raw0);
+	NodeId n0 = new NodeId(raw0);
+	NodeId n7f = new NodeId(raw7f);
+	NodeId n80 = new NodeId(raw80);
+	NodeId c = n0;
+
 	System.out.println("a=" + a + "b=" + b + "c=" + c);
 	System.out.println("a.clockwise(b)=" + a.clockwise(b));
+	System.out.println("a.clockwise(a)=" + a.clockwise(a));
+	System.out.println("b.clockwise(b)=" + b.clockwise(b));
 
 	if (a.clockwise(c))
 	    System.out.println("c is clockwise from a");
@@ -169,7 +175,12 @@ public class NodeIdUnit {
 	
 	System.out.println("a.distance(b)" + a.distance(b) + "b.distance(a)=" + b.distance(a));
 	System.out.println("a.longDistance(b)" + a.longDistance(b) + "b.longDistance(a)=" + b.longDistance(a));
-			  
+	System.out.println("a.distance(a)" + a.distance(a) + "a.longDistance(a)=" + a.longDistance(a));
+
+	System.out.println("a.isBetween(n0,n7f)=" + a.isBetween(n0,n7f));
+	System.out.println("b.isBetween(n0,n80)=" + b.isBetween(n0,n80));
+	System.out.println("a.isBetween(a,n80)=" + a.isBetween(a,n80));
+	System.out.println("b.isBetween(n0,b)=" + b.isBetween(n0,b));
 
 
 

@@ -333,47 +333,79 @@ public abstract class PastryRegrTest {
 	}
 
 
-	// now check the replicaSet
+	// now check the replicaSet and range method
 
 	// a comparator that orders nodeIds by distance from the localId
 	class DistComp implements Comparator {
-	    NodeId localId;
+	    NodeId id;
 
-	    public DistComp(NodeId localId) {this.localId = localId;}
+	    public DistComp(NodeId id) {this.id = id;}
 
 	    public int compare(Object o1, Object o2) {
 		NodeId nid1 = (NodeId)o1;
 		NodeId nid2 = (NodeId)o2;
-		return nid1.distance(localId).compareTo(nid2.distance(localId));
+		return nid1.distance(id).compareTo(nid2.distance(id));
 	    }
 	}
 
+	for (int k=-ls.ccwSize(); k<=ls.cwSize(); k++) {
+	    // for each id in the leafset
+	    NodeId id = ls.get(k).getNodeId();
+	    TreeSet distanceSet = new TreeSet(new DistComp(id));
 
-	TreeMap distanceMap = new TreeMap(new DistComp(localId));
+	    // compute a representation of the leafset, sorted by distance from the id
+	    for (int i=-ls.ccwSize(); i<=ls.cwSize(); i++) {
+		NodeHandle nh = ls.get(i);
+		distanceSet.add(nh.getNodeId());
+	    }
 
-	// compute a representation of the leafset, sorted by distance from the localId
-	for (int i=-ls.ccwSize(); i<=ls.cwSize(); i++) {
-	    NodeHandle nh = ls.get(i);
-	    distanceMap.put(nh.getNodeId(), nh);
+	    NodeSet rs = ls.replicaSet(id, ls.size()*2+1);
+	    // now verify the replicaSet
+	    for (int i=0; i<rs.size(); i++) {
+		NodeHandle nh = rs.get(i);
+		NodeId nid = nh.getNodeId();
+		int inBetween = distanceSet.subSet(id, nid).size();
+
+		if (inBetween != i)
+		    System.out.println("checkLeafSet: replicaSet failure at" + rta.getNodeId() +
+				       " i=" + i + " k=" + k + " inBetween=" + inBetween + "\n" + rs + "\n" + ls);
+	    }
+
+	    // check size 
+	    NodeHandle nh = rs.get(rs.size()-1);
+	    if ( (nh == null && k != -ls.ccwSize() && k != ls.cwSize()) ||
+		 (nh != null && nh != ls.get(-ls.ccwSize()) && nh != ls.get(ls.cwSize()) && 
+		  rs.size() != distanceSet.size()) ||
+		 (nh != null && ls.overlaps() && rs.size() != distanceSet.size()) ) 
+		System.out.println("checkLeafSet: replicaSet size failure at " + rta.getNodeId() + " " +
+				   rs + "\n" + ls);
+
+
+	    // now check the range method
+	    
+	    IdRange range = rta.range(ls.get(k), rs.size()-1, null, true);
+	    
+	    if (range == null && rs.size() > 0) {
+		System.out.println("checkLeafSet: range size failure at " + rta.getNodeId() + " k=" + k + " " +
+				   rs + "\n" + ls);
+		continue;
+	    }
+	    
+	    NodeId nearest = ls.get(ls.mostSimilar(range.getCCW())).getNodeId();
+	    if ( !rs.member(nearest)) {
+		System.out.println("checkLeafSet: range failure 1 at " + rta.getNodeId() + " k=" + k + " " +
+				   rs + "\n" + ls + range + " nearest=" + nearest);
+	    }
+
+	    nearest = ls.get(ls.mostSimilar(range.getCW())).getNodeId();
+	    if ( !rs.member(nearest)) {
+		System.out.println("checkLeafSet: range failure 2 at " + rta.getNodeId() + " k=" + k + " " +
+				   rs + "\n" + ls + range + " nearest=" + nearest);
+	    }
+										  
+
 	}
 
-	NodeSet rs = ls.replicaSet(localId, ls.size()*2+1);
-	// now verify the replicaSet
-	for (int i=0; i<rs.size(); i++) {
-	    NodeHandle nh = rs.get(i);
-	    NodeId nid = nh.getNodeId();
-	    int inBetween = distanceMap.subMap(localId, nid).size();
-
-	    if (inBetween != i)
-		System.out.println("checkLeafSet: replicaSet failure at" + rta.getNodeId() +
-				   "i=" + i + " inBetween=" + inBetween + "\n" + rs + "\n" + ls);
-	}
-
-	// check size 
-	NodeHandle nh = rs.get(rs.size()-1);
-	if (ls.size() > 0 && nh != ls.get(-ls.ccwSize()) && nh != ls.get(ls.cwSize())) 
-	    System.out.println("checkLeafSet: replicaSet size failure at" + rta.getNodeId() +
-			       rs + "\n" + ls);
 
     }
 
