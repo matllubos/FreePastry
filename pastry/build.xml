@@ -88,12 +88,12 @@
   <!-- Beautify -->
   
   <!-- We want to do this so the line numbers match up with the prefixed license -->
-  <target name="beautifythencompile">
+  <target name="beautifythencompile">    
     <antcall target="beautifyandlicense"/>
     <antcall target="compile_epost"/>    
   </target>
   
-  <target name="beautifyandlicense">
+  <target name="beautifyandlicense" unless="dontbeautify">
     <antcall target="beautify"/>
     <antcall target="appendlicense"/>
   </target>  
@@ -143,7 +143,7 @@
    <!-- <include name="rice/email/**/*.java"/> -->
         <include name="rice/p2p/commonapi/**/*.java"/>
         <include name="rice/p2p/glacier/*.java"/>
-        <include name="rice/p2p/glacier/v1/**/*.java"/>
+        <include name="rice/p2p/glacier/v2/**/*.java"/>
         <include name="rice/p2p/aggregation/**/*.java"/>
         <include name="rice/p2p/multiring/**/*.java"/>
         <include name="rice/p2p/past/**/*.java"/>
@@ -154,6 +154,7 @@
         <include name="rice/pastry/*.java"/>
         <include name="rice/pastry/client/**/*.java"/>
         <include name="rice/pastry/commonapi/**/*.java"/>
+        <include name="rice/pastry/direct/**/*.java"/>
         <include name="rice/pastry/dist/**/*.java"/>
         <include name="rice/pastry/join/**/*.java"/>
         <include name="rice/pastry/leafset/**/*.java"/>
@@ -207,7 +208,7 @@
    <!-- <include name="rice/email/**/*.class"/> -->
         <include name="rice/p2p/commonapi/**/*.class"/>
         <include name="rice/p2p/glacier/*.class"/>
-        <include name="rice/p2p/glacier/v1/**/*.class"/>
+        <include name="rice/p2p/glacier/v2/**/*.class"/>
         <include name="rice/p2p/aggregation/**/*.class"/>
         <include name="rice/p2p/multiring/**/*.class"/>
         <include name="rice/p2p/past/**/*.class"/>
@@ -218,6 +219,7 @@
         <include name="rice/pastry/*.class"/>
         <include name="rice/pastry/client/**/*.class"/>
         <include name="rice/pastry/commonapi/**/*.class"/>
+        <include name="rice/pastry/direct/**/*.class"/>
         <include name="rice/pastry/dist/**/*.class"/>
         <include name="rice/pastry/join/**/*.class"/>
         <include name="rice/pastry/leafset/**/*.class"/>
@@ -241,7 +243,7 @@
       <fileset dir="${build.dir}" includes="rice/email/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/p2p/commonapi/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/p2p/glacier/*.class"/>
-      <fileset dir="${build.dir}" includes="rice/p2p/glacier/v1/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/p2p/glacier/v2/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/p2p/aggregation/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/p2p/multiring/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/p2p/past/**/*.class"/>
@@ -277,7 +279,7 @@
    <!-- <include name="rice/email/**/*.java"/> -->
         <include name="rice/p2p/commonapi/**/*.java"/>
         <include name="rice/p2p/glacier/*.java"/>
-        <include name="rice/p2p/glacier/v1/**/*.java"/>
+        <include name="rice/p2p/glacier/v2/**/*.java"/>
         <include name="rice/p2p/aggregation/**/*.java"/>
         <include name="rice/p2p/multiring/**/*.java"/>
         <include name="rice/p2p/past/**/*.java"/>
@@ -288,6 +290,7 @@
         <include name="rice/pastry/*.java"/>
         <include name="rice/pastry/client/**/*.java"/>
         <include name="rice/pastry/commonapi/**/*.java"/>
+        <include name="rice/pastry/direct/**/*.java"/>
         <include name="rice/pastry/dist/**/*.java"/>
         <include name="rice/pastry/join/**/*.java"/>
         <include name="rice/pastry/leafset/**/*.java"/>
@@ -315,7 +318,7 @@
    <!-- <include name="rice/email/**/*.java"/> -->
         <include name="rice/p2p/commonapi/**/*.java"/>
         <include name="rice/p2p/glacier/*.java"/>
-        <include name="rice/p2p/glacier/v1/**/*.java"/>
+        <include name="rice/p2p/glacier/v2/**/*.java"/>
         <include name="rice/p2p/aggregation/**/*.java"/>
         <include name="rice/p2p/multiring/**/*.java"/>
         <include name="rice/p2p/past/**/*.java"/>
@@ -326,6 +329,7 @@
         <include name="rice/pastry/*.java"/>
         <include name="rice/pastry/client/**/*.java"/>
         <include name="rice/pastry/commonapi/**/*.java"/>
+        <include name="rice/pastry/direct/**/*.java"/>
         <include name="rice/pastry/dist/**/*.java"/>
         <include name="rice/pastry/join/**/*.java"/>
         <include name="rice/pastry/leafset/**/*.java"/>
