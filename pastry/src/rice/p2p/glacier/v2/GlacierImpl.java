@@ -75,9 +75,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   
 //  private final int fragmentRequestMaxAttempts = 3;
   private final int fragmentRequestMaxAttempts = 0;
-  private final long fragmentRequestTimeout = 30 * SECONDS;
+  private final long fragmentRequestTimeout = 10 * SECONDS;
 
-  private final long manifestRequestTimeout = 30 * SECONDS;
+  private final long manifestRequestTimeout = 10 * SECONDS;
   private final long manifestRequestInitialBurst = 3;
   private final long manifestRequestRetryBurst = 5;
   private final int manifestAggregationFactor = 5;
@@ -1828,6 +1828,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       boolean doInsert = (fragments != null);
       boolean doRefresh = !doInsert;
       boolean answered = false;
+      boolean inhibitInsertions = true;
       int minAcceptable = (int)(numSurvivors * minFragmentsAfterInsert);
       
       public String toString() {
@@ -1837,6 +1838,13 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         int result = 0;
         for (int i=0; i<receiptReceived.length; i++)
           if (receiptReceived[i])
+            result ++;
+        return result;
+      }
+      private int numHoldersKnown() {
+        int result = 0;
+        for (int i=0; i<holder.length; i++)
+          if (holder[i] != null)
             result ++;
         return result;
       }
@@ -1872,22 +1880,56 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             return;
           }
 
+          /* Sanity checks */
+
           int fragmentID = grm.getKey(0).getFragmentID();
           if (fragmentID < numFragments) {
             if (grm.getAuthoritative(0)) {
+
+              /* OK, so the message makes sense. Let's see... */
+            
               if (doInsert && !grm.getHaveIt(0)) {
+              
+                /* If this is an insertion, and the holder is telling us that he does not
+                   have the fragment, we send it to him */
+              
                 if (holder[fragmentID] == null) {
                   holder[fragmentID] = grm.getSource();
-                  log(3, "Got insert response, sending fragment "+grm.getKey(0));
-                  sendMessage(
-                    null,
-                    new GlacierDataMessage(getMyUID(), grm.getKey(0), fragments[fragmentID], manifests[fragmentID], getLocalNodeHandle(), grm.getSource().getId(), false, tag),
-                    grm.getSource()
-                  );
+                  if (!inhibitInsertions) {
+                    log(3, "Got insert response, sending fragment "+grm.getKey(0));
+                    sendMessage(
+                      null,
+                      new GlacierDataMessage(getMyUID(), grm.getKey(0), fragments[fragmentID], manifests[fragmentID], getLocalNodeHandle(), grm.getSource().getId(), false, tag),
+                      grm.getSource()
+                    );
+                  } else {
+                    if (numHoldersKnown() >= minAcceptable) {
+                      log(3, "Got "+numHoldersKnown()+" insert responses, sending fragments...");
+                      inhibitInsertions = false;
+                      for (int i=0; i<holder.length; i++) {
+                        if (holder[i] != null) {
+                          log(3, "Sending fragment #"+i);
+                          sendMessage(
+                            null,
+                            new GlacierDataMessage(getMyUID(), new FragmentKey(key, i), fragments[i], manifests[i], getLocalNodeHandle(), holder[i].getId(), false, tag),
+                            holder[i]
+                          );
+                        }
+                      }
+                      
+                      log(3, "Done sending fragments, now accepting further responses");
+                    } else {
+                      log(3, "Got insert response #"+numHoldersKnown()+" ("+minAcceptable+" needed to start insertion)");
+                    }
+                  }
                 } else {
                   warn("Received two insert responses for the same fragment -- discarded");
                 }
+                
               } else if (grm.getHaveIt(0) && (grm.getExpiration(0) < expiration)) {
+              
+                /* If the holder has an old version of the fragment, we send the manifest only. */
+              
                 if (holder[fragmentID] == null) {
                   holder[fragmentID] = grm.getSource();
                   log(3, "Got refresh response (exp="+grm.getExpiration(0)+"<"+expiration+"), sending manifest "+grm.getKey(0));
@@ -1910,7 +1952,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                   warn("Received two refresh responses for the same fragment -- discarded");
                 }
               } else if (grm.getHaveIt(0) && (grm.getExpiration(0) >= expiration)) {
-                /* Check sender of the receipt? */
+              
+                /* If the holder has a current version of the fragment, we are happy */
+              
                 log(3, "Receipt received after "+whoAmI()+": "+grm.getKey(0));
                 receiptReceived[fragmentID] = true;
                 if ((numReceiptsReceived() >= minAcceptable) && !answered) {
@@ -2146,20 +2190,28 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     log(2, "lookupHandles("+id+"v"+version+", n="+num+")");
     
     retrieveManifest(new VersionKey(id, version), tagLookupHandles, new Continuation() {
+      boolean haveAnswered = false;
       public void receiveResult(Object o) {
+        if (haveAnswered) {
+          log(3, "lookupHandles("+id+"): received manifest "+o+" but has already answered. Discarding...");
+          return;
+        }
         if (o instanceof Manifest) {
           log(3, "lookupHandles("+id+"): received manifest "+o+", returning handle...");
+          haveAnswered = true;
           command.receiveResult(new PastContentHandle[] {
             new GlacierContentHandle(id, version, getLocalNodeHandle(), (Manifest) o)
           });
         } else {
           warn("lookupHandles("+id+"): Cannot retrieve manifest");
+          haveAnswered = true;
           command.receiveResult(new PastContentHandle[] { null });
         }
       }
       public void receiveException(Exception e) {
         warn("lookupHandles("+id+"): Exception "+e);
         e.printStackTrace();
+        haveAnswered = true;
         command.receiveException(e);
       }
     });
@@ -2186,12 +2238,15 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       command.receiveException(new GlacierException("Unknown handle type"));
       return;
     }
-    
+
     GlacierContentHandle gch = (GlacierContentHandle) handle;
+    log(3, "exact: fetch("+gch.getId()+"v"+gch.getVersion()+")");
+    
     retrieveObject(new VersionKey(gch.getId(), gch.getVersion()), gch.getManifest(), true, tagFetch, command);
   }
 
   public void retrieveManifest(final VersionKey key, final char tag, final Continuation command) {
+    log(3, "retrieveManifest(key="+key+" tag="+tag+")");
     addContinuation(new GlacierContinuation() {
       protected boolean checkedFragment[];
       protected long timeout;
