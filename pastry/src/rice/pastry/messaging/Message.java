@@ -55,7 +55,7 @@ import rice.pastry.*;
 public abstract class Message implements Serializable 
 {
     private Address destination;
-    private NodeId senderId;
+    private NodeHandle sender;
     private boolean priority;
 
     private transient Credentials credentials;
@@ -91,9 +91,15 @@ public abstract class Message implements Serializable
      * 
      * @return the immediate sender's NodeId.
      */
-
-    public NodeId getSenderId() { return senderId; }
+    public NodeId getSenderId() { return sender.getNodeId(); }
     
+    /**
+     * Get sender.
+     * 
+     * @return the immediate sender's NodeId.
+     */
+    public NodeHandle getSender() { return sender; }
+      
     /**
      * Set sender Id. Called by NodeHandle just before dispatch, so that
      * this Id is guaranteed to belong to the immediate sender.
@@ -101,7 +107,7 @@ public abstract class Message implements Serializable
      * @param the immediate sender's NodeId.
      */
 
-    public void setSenderId(NodeId id) { senderId = id; }
+    public void setSender(NodeHandle nh) { sender = nh; }
 
     /**
      * Get priority
@@ -155,7 +161,7 @@ public abstract class Message implements Serializable
     public Message(Address dest) 
     {
 	destination = dest;
-	senderId = null;
+	sender = null;
 	credentials = null;
 	theStamp = null;
 	priority = false;
@@ -171,7 +177,7 @@ public abstract class Message implements Serializable
     public Message(Address dest, Credentials cred) 
     {
 	destination = dest;
-	senderId = null;
+	sender = null;
 	credentials = cred;
 	theStamp = null;
 	priority = false;
@@ -188,7 +194,7 @@ public abstract class Message implements Serializable
     public Message(Address dest, Credentials cred, Date timestamp) 
     {
 	destination = dest;
-	senderId = null;
+	sender = null;
 	credentials = cred;
 	this.theStamp = timestamp;
 	priority = false;
@@ -205,7 +211,7 @@ public abstract class Message implements Serializable
     {
 	destination = dest;
 	this.theStamp = timestamp;
-	senderId = null;
+	sender = null;
 	priority = false;
     }
 

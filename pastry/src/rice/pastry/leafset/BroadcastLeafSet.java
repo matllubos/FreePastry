@@ -68,7 +68,6 @@ public class BroadcastLeafSet extends Message implements Serializable
     
     public BroadcastLeafSet(NodeHandle from, LeafSet leafSet, int type) { 
 	super(new LeafSetProtocolAddress()); 
-
 	fromNode = from;
 	theLeafSet = leafSet;
 	theType = type;

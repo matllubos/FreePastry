@@ -151,7 +151,7 @@ public class RMINodeHandle extends DistCoalesedNodeHandle
           System.out.println("panic: sending message to unverified handle "
                  + this + " for " + nodeId + ": " + msg);
 
-      msg.setSenderId(getLocalNode().getNodeId());
+      msg.setSender(getLocalNode().getLocalHandle());
 
       if (Log.ifp(6))
           System.out.println("sending " +

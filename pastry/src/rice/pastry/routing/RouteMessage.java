@@ -191,22 +191,22 @@ public class RouteMessage extends Message implements Serializable, rice.p2p.comm
      * @return true if the message got routed, false otherwise.
      */
 
-    public boolean routeMessage(NodeId localId) {
+    public boolean routeMessage(NodeHandle localHandle) {
 	if (nextHop == null) return false;
-      setSenderId(localId);
+      setSender(localHandle);
 
 	NodeHandle handle = nextHop;
 	nextHop = null;
 
-	if (localId.equals(handle.getNodeId())) {
-	    //System.out.println("[RTR] " + localId +
-	    //"is receiving internal message " + internalMsg);
-	} else {
-	    //System.out.println("[RTR] " + localId + "is forwarding to nexthop = "
-	    //+ handle + " (" + handle.getNodeId() + ")");
-	}
+//	if (localHandle.equals(handle)) {
+//	    //System.out.println("[RTR] " + localId +
+//	    //"is receiving internal message " + internalMsg);
+//	} else {
+//	    //System.out.println("[RTR] " + localId + "is forwarding to nexthop = "
+//	    //+ handle + " (" + handle.getNodeId() + ")");
+//	}
 
-	if (localId.equals(handle.getNodeId())) {
+	if (localHandle.equals(handle)) {
     handle.receiveMessage(internalMsg);
   }      
 	else handle.receiveMessage(this);

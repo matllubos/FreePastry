@@ -59,6 +59,15 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
     private int theSize;
     private LeafSet leafSet;
 
+    private SimilarSet(SimilarSet that, LeafSet ls) {
+      this.ln = that.ln;
+      this.clockwise = that.clockwise;
+      this.nodes = new NodeHandle[that.nodes.length];
+      System.arraycopy(that.nodes,0,nodes,0,nodes.length);
+      this.theSize = that.theSize;
+      this.leafSet = ls;
+    }
+
     /**
      * swap two elements
      *
@@ -254,16 +263,25 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
      * @param nid the node to remove.
      * @return the node handle removed or null if nothing.
      */
-
-    public NodeHandle remove(NodeId nid) {
-	for (int i=0; i<theSize; i++) {
-	    if (nodes[i].getNodeId().equals(nid)) {
-		return remove(i);
-	    }
-	}
-
-	return null;
+  public NodeHandle remove(NodeId nid) {
+for (int i=0; i<theSize; i++) {
+    if (nodes[i].getNodeId().equals(nid)) {
+  return remove(i);
     }
+}
+
+return null;
+  }
+
+  public NodeHandle remove(NodeHandle nh) {
+for (int i=0; i<theSize; i++) {
+    if (nodes[i].equals(nh)) {
+  return remove(i);
+    }
+}
+
+return null;
+  }
 
 
     /**
@@ -406,6 +424,10 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
      */
     public int getIndexHandle(rice.p2p.commonapi.Id id) throws NoSuchElementException {
       return getIndex((NodeId) id);
+    }
+    
+    SimilarSet copy(LeafSet newLeafSet) {
+      return new SimilarSet(this, newLeafSet);
     }
 }
 

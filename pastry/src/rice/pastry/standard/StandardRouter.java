@@ -96,7 +96,7 @@ public class StandardRouter implements MessageReceiver {
 	if (msg instanceof RouteMessage) {
 	    RouteMessage rm = (RouteMessage) msg;
 
-	    if (rm.routeMessage(localHandle.getNodeId()) == false) receiveRouteMessage(rm);
+	    if (rm.routeMessage(localHandle) == false) receiveRouteMessage(rm);
 	}
 	else {
 	    throw new Error("message " + msg + " bounced at StandardRouter");
@@ -141,7 +141,7 @@ public class StandardRouter implements MessageReceiver {
 
 			if (handle.isAlive() == false) {
 				// node is dead - get rid of it and try again
-				leafSet.remove(handle.getNodeId());
+				leafSet.remove(handle);
 				receiveRouteMessage(msg);
 				return;
 			} else {
@@ -168,7 +168,7 @@ public class StandardRouter implements MessageReceiver {
 					handle = leafSet.get(lsPos);
 
 					if (handle.isAlive() == false) {
-						leafSet.remove(handle.getNodeId());
+						leafSet.remove(handle);
 						receiveRouteMessage(msg);
 						return;
 					} else {
@@ -186,7 +186,7 @@ public class StandardRouter implements MessageReceiver {
 						handle = leafSet.get(lsPos);
 
 						if (handle.isAlive() == false) {
-							leafSet.remove(handle.getNodeId());
+							leafSet.remove(handle);
 							receiveRouteMessage(msg);
 							return;
 						} else {

@@ -335,7 +335,7 @@ public abstract class CommonAPIAppl extends PastryAppl
 		}
 		else {
 		    // route the message
-		    rm.routeMessage(getNodeId());
+		    rm.routeMessage(getNodeHandle());
 		}
 		
 	    }

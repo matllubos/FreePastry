@@ -172,7 +172,7 @@ public abstract class PastryAppl implements MessageReceiver
       RouteMessage rm = (RouteMessage) msg;
 
       if (enrouteMessage(rm.unwrap(), rm.getTarget(), rm.nextHop.getNodeId(), rm.getOptions()))
-        rm.routeMessage(thePastryNode.getNodeId());
+        rm.routeMessage(thePastryNode.getLocalHandle());
     }
     else messageForAppl(msg);
   }

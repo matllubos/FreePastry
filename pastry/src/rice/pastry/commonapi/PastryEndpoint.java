@@ -368,7 +368,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
           }
           else {
             // route the message
-            rm.routeMessage(getNodeId());
+            rm.routeMessage((rice.pastry.NodeHandle)getLocalNodeHandle());
           }
         }
       }

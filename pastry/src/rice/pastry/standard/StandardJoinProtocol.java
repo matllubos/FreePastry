@@ -182,7 +182,7 @@ public class StandardJoinProtocol implements MessageReceiver {
 
 			//System.out.println("done");
 
-			rm.routeMessage(localId);
+			rm.routeMessage(localHandle);
 		} else if (
 			msg instanceof InitiateJoin) { // request from the local node to join
 			InitiateJoin ij = (InitiateJoin) msg;

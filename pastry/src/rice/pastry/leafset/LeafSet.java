@@ -61,6 +61,14 @@ public class LeafSet extends Observable implements Serializable {
 
   private int theSize;
 
+  private LeafSet(LeafSet that) {
+    this.baseId = that.baseId;
+    this.baseHandle = that.baseHandle;
+    this.ccwSet = that.ccwSet.copy(this);
+    this.cwSet = that.cwSet.copy(this);
+    this.theSize = that.theSize;
+  }
+
   /**
    * Constructor.
    *
@@ -119,6 +127,12 @@ public class LeafSet extends Observable implements Serializable {
       return true;
 
     else return false;
+  }
+
+  public boolean isComplete() {
+    if (size() == maxSize()) return true;
+    if (overlaps()) return true;
+    return false;
   }
 
   /**
@@ -199,12 +213,12 @@ public class LeafSet extends Observable implements Serializable {
    * @param nid the node to remove.
    * @return the node handle removed or null if nothing.
    */
-  public NodeHandle remove(NodeId nid)
+  public NodeHandle remove(NodeHandle nh)
   {
     //System.out.println("Removing " + nid + " from " + this);
 
-    NodeHandle res1 = cwSet.remove(nid);
-    NodeHandle res2 = ccwSet.remove(nid);
+    NodeHandle res1 = cwSet.remove(nh);
+    NodeHandle res2 = ccwSet.remove(nh);
     if (res1 != null) {
       //System.out.println("removed " + res1.getNodeId());
       return res1;
@@ -214,6 +228,28 @@ public class LeafSet extends Observable implements Serializable {
       return res2;
     }
   }
+
+  /**
+   * Removes a node id and its handle from the set.
+   *
+   * @param nid the node to remove.
+   * @return the node handle removed or null if nothing.
+   */
+//  public NodeHandle remove(NodeId nid)
+//  {
+//    //System.out.println("Removing " + nid + " from " + this);
+//
+//    NodeHandle res1 = cwSet.remove(nid);
+//    NodeHandle res2 = ccwSet.remove(nid);
+//    if (res1 != null) {
+//      //System.out.println("removed " + res1.getNodeId());
+//      return res1;
+//    }
+//    else {
+//      //System.out.println("removed " + res2.getNodeId());
+//      return res2;
+//    }
+//  }
 
   /**
    * Gets the maximal size of the leaf set.
@@ -784,6 +820,10 @@ public class LeafSet extends Observable implements Serializable {
   
   public boolean directTest(NodeHandle handle) {
     return cwSet.test(handle) || ccwSet.test(handle);
+  }
+  
+  public LeafSet copy() {
+    return new LeafSet(this);
   }
 }
 
