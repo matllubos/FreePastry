@@ -4,7 +4,9 @@ SOURCE  = \
 	PostData.java \
 	ContentHashReference.java \
 	SignedReference.java \
-	StorageService.java 
+	StorageService.java \
+	ContentHashData.java \
+	SignedData.java
 
 RMI_SOURCE =
 
