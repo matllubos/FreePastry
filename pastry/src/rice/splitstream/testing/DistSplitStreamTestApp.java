@@ -13,6 +13,7 @@ import rice.scribe.messaging.*;
 
 import rice.splitstream.*;
 import rice.splitstream.messaging.*;
+import rice.splitstream.testing.*;
 
 import java.util.*;
 import java.security.*;
@@ -44,7 +45,7 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
     private int m_numStripes;
     private String m_name;
     private ChannelId m_channelId;
-    private int OUT_BW = 20;
+    private int OUT_BW = 16;
     /**
      * The hashtable maintaining mapping from topicId to log object
      * maintained by this application for that topic.
@@ -86,6 +87,8 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
     public int last_recv_time = 0;
 
     public DistSplitStreamTest m_driver;
+
+    public DistStripeLog stripeLog = new DistStripeLog();
 
     private static class DistSplitStreamTestAppAddress implements Address {
 	private int myCode = 0x8abc796c;
@@ -217,105 +220,70 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
 
 	m_numRecv++;
 	byte[] data = (byte [])arg;
-	Byte bt = new Byte(data[0]);
+	//Byte bt = new Byte(data[0]);
+	String ds = new String(data);
 	StripeId stripeId = (StripeId)((Stripe)o).getStripeId();
 	String str = stripeId.toString().substring(3,4);
 	int recv_time = (int)System.currentTimeMillis();
 	int diff;
-	
-	if(last_recv_time == 0)
-	    diff = 0;
+	char [] c = str.toString().toCharArray();
+	int stripe_int = c[0] - '0';
+	if(stripe_int > 9)
+	    stripe_int = 10 + c[0] - 'A';
 	else
-	    diff = recv_time - last_recv_time;
-	last_recv_time = recv_time;
-
-	//System.out.println("Application "+m_appIndex+" received data "+m_numRecv);
-	/**
-	 * Logging style
-	 * <App_Index> <Host-name> <Stripe_num> <Seq_num> <Diff>
-	 */
-	try{
-	    System.out.println(m_appIndex+"\t"+InetAddress.getLocalHost().getHostName()+"\t"+str+"\t"+bt.intValue()+"\t"+diff);
-	} catch(UnknownHostException e){
-	    System.out.println(e);
-	}
+	    stripe_int = c[0] - '0';
+	System.out.println("Stripe "+stripe_int+" for "+str+" c[0] ="+c[0]);
 	
-    }    
+
+	System.out.println(stripe_int+"\t"+Integer.valueOf(ds).intValue()+"\t"+recv_time);
+    }
 
     public void splitstreamIsReady(){
-	if(m_appIndex == 0){
-	    // creator of channel
-	    System.out.println("Creating channel at "+m_appIndex+" with name "+m_name+" with "+m_numStripes+" stripes");
-	    createChannel(m_numStripes, m_name);
-	}
-	else{
-	    System.out.println("Attaching channel at "+m_appIndex);
-	    attachChannel(m_channelId);
-	}
+        if(m_appIndex == 0){
+            // creator of channel
+            System.out.println("Creating channel at "+m_appIndex+" with name "+m_name+" with "+m_numStripes+" stripes");
+            createChannel(m_numStripes, m_name);
+        }
+        else{
+            System.out.println("Attaching channel at "+m_appIndex);
+            attachChannel(m_channelId);
+        }
 
     }
 
-    /**
-     * Create a channel with given channelId
-     *
-     */
-    public ChannelId createChannel(int numStripes, String name){
-	Channel channel = m_splitstream.createChannel(numStripes, name);
-	m_channels.put(channel.getChannelId(), channel);
-	channel.registerApp((ISplitStreamApp)this);	
-	channel.configureChannel(OUT_BW);
-	if(channel.isReady())
-	    channelIsReady(channel.getChannelId());
-	return channel.getChannelId();
-    }
 
-    public void attachChannel(ChannelId channelId){
-	Channel channel = m_splitstream.attachChannel(channelId);
-	m_channels.put(channel.getChannelId(), channel);
-	channel.registerApp((ISplitStreamApp)this);	
-	channel.configureChannel(OUT_BW);
-	if(channel.isReady())
-	    channelIsReady(channel.getChannelId());
-	return;
-    }
-
-    public void showBandwidth(ChannelId channelId){
-	Channel channel = (Channel)m_channels.get(channelId);
-	BandwidthManager bandwidthManager = channel.getBandwidthManager();
-	System.out.println("Channel " + channelId + " has " +
-			   bandwidthManager.getUsedBandwidth(channel) + " children "); 
-	return;
-    }
-
-    /**
-     * Sends data on all the stripes of channel represented by channelId.
-     */
     public void sendData(ChannelId channelId){
-	Channel send = (Channel) m_channels.get(channelId);
-
-	for(int i = 0; i < send.getNumStripes(); i++){
-	    StripeId stripeId = send.getStripes()[i];
-	    Stripe stripe = send.joinStripe(stripeId, this);
-	    OutputStream out = stripe.getOutputStream();
+        Channel send = (Channel) m_channels.get(channelId);
+	
+        for(int i = 0; i < send.getNumStripes(); i++){
+            StripeId stripeId = send.getStripes()[i];
+            Stripe stripe = send.joinStripe(stripeId, this);
+            OutputStream out = stripe.getOutputStream();
+            System.out.println("Sending on Stripe " + stripeId);
+            //      byte[] toSend = "Hello".getBytes() ;
+	    
+	    
 	    System.out.println("Sending on Stripe " + stripeId);
 	    //	    byte[] toSend = "Hello".getBytes() ;
-
+	    
 	    Integer seq = (Integer)m_stripe_seq.get((StripeId)stripeId);
 	    if(seq == null)
 		seq = new Integer(0);
-	    byte[] toSend = new byte[1];
-	    toSend[0] = seq.byteValue();
+	    String str = seq.toString();
+	    byte[] toSend = str.getBytes();
+	    //toSend[0] = seq.byteValue();
 	    int seq_num = seq.intValue();
 	    seq = new Integer(seq_num + 1);
 	    m_stripe_seq.put(stripeId, seq);
 	    try{
-		out.write(toSend, 0, 1 );
+		out.write(toSend, 0, toSend.length );
 	    }
 	    catch(IOException e){
 		e.printStackTrace();
 	    }
 	}
     }
+
 
     /**
      * Join all stripes associated with the given channeld
@@ -354,6 +322,31 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
 	Channel channel = (Channel) m_channels.get(channelId);
 	return channel.getNumStripes();
     }
+
+     /**
+     * Create a channel with given channelId
+     *
+     */
+    public ChannelId createChannel(int numStripes, String name){
+        Channel channel = m_splitstream.createChannel(numStripes, name);
+        m_channels.put(channel.getChannelId(), channel);
+        channel.registerApp((ISplitStreamApp)this);
+        channel.configureChannel(OUT_BW);
+        if(channel.isReady())
+            channelIsReady(channel.getChannelId());
+        return channel.getChannelId();
+    }
+
+    public void attachChannel(ChannelId channelId){
+        Channel channel = m_splitstream.attachChannel(channelId);
+        m_channels.put(channel.getChannelId(), channel);
+        channel.registerApp((ISplitStreamApp)this);
+        channel.configureChannel(OUT_BW);
+        if(channel.isReady())
+            channelIsReady(channel.getChannelId());
+        return;
+    }
+
 }
 
 
