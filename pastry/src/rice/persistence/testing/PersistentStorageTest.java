@@ -19,10 +19,10 @@ public class PersistentStorageTest extends Test {
   private Storage storage;
 
   /**
-   * Builds a MemoryStorageTest
+   * Builds a PersistentStorageTest
    */
   public PersistentStorageTest() {
-    storage = new MemoryStorage();
+    storage = new PersistentStorage(".");
   }
 
   public void setUp(final Continuation c) {
@@ -511,7 +511,7 @@ public class PersistentStorageTest extends Test {
   }
 
   public static void main(String[] args) {
-    StorageTest test = new StorageTest();
+    PersistentStorageTest test = new PersistentStorageTest();
 
     test.start();
   }
