@@ -9,7 +9,9 @@ import rice.pastry.standard.*;
 
 import rice.p2p.commonapi.*;
 import rice.p2p.glacier.*;
+import rice.p2p.glacier.v2.*;
 import rice.p2p.past.*;
+import rice.p2p.aggregation.*;
 import rice.p2p.multiring.*;
 
 import rice.persistence.*;
@@ -68,11 +70,6 @@ public class PostProxy {
   protected IdFactory FACTORY;
   
   /**
-    * The IdFactory to use for glacier fragments
-   */
-  protected FragmentKeyFactory KFACTORY;
-  
-  /**
    * The node the services should use
    */
   protected Node node;
@@ -85,12 +82,12 @@ public class PostProxy {
   /**
    * The local Past service, for immutable objects
    */
-  protected PastImpl immutablePast;
+  protected Past immutablePast;
   
   /**
    * The local Past service, for mutable objects
    */
-  protected PastImpl mutablePast;
+  protected Past mutablePast;
   
   /**
     * The local Past service for delivery requests
@@ -128,9 +125,24 @@ public class PostProxy {
   protected StorageManager deliveredStorage;
   
   /**
-   * The local storage for glacier fragments
+   * The local storage for mutable glacier fragments
    */
-  protected StorageManager glacierStorage;
+  protected StorageManager glacierMutableStorage;
+
+  /**
+   * The local storage for immutable glacier fragments
+   */
+  protected StorageManager glacierImmutableStorage;
+
+  /**
+   * The local storage for glacier neighbor certificates
+   */
+  protected StorageManager glacierNeighborStorage;
+
+  /**
+   * The local storage for objects waiting to be aggregated
+   */
+  protected StorageManager aggrWaitingStorage;
   
   /**
    * The name of the local user
@@ -551,10 +563,22 @@ public class PostProxy {
     stepDone(SUCCESS);
     
     if (parameters.getBooleanParameter("glacier_enable")) {
-      KFACTORY = new FragmentKeyFactory((MultiringIdFactory) FACTORY);
-      glacierStorage = new StorageManagerImpl(KFACTORY,
-                                              new PersistentStorage(KFACTORY, prefix + "-glacier", location, diskLimit),
+      FragmentKeyFactory KFACTORY = new FragmentKeyFactory((MultiringIdFactory) FACTORY);
+      VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
+      PastryIdFactory PFACTORY = new PastryIdFactory();
+      
+      glacierMutableStorage = new StorageManagerImpl(KFACTORY,
+                                              new PersistentStorage(KFACTORY, prefix + "-glacier-mutable", location, diskLimit),
                                               new EmptyCache(KFACTORY));
+      glacierImmutableStorage = new StorageManagerImpl(KFACTORY,
+                                              new PersistentStorage(KFACTORY, prefix + "-glacier-immutable", location, diskLimit),
+                                              new EmptyCache(KFACTORY));
+      glacierNeighborStorage = new StorageManagerImpl(PFACTORY,
+                                              new PersistentStorage(PFACTORY, prefix + "-glacier-neighbor", location, diskLimit),
+                                              new EmptyCache(PFACTORY));
+      aggrWaitingStorage = new StorageManagerImpl(VFACTORY,
+                                              new PersistentStorage(VFACTORY, prefix + "-aggr-waiting", location, diskLimit),
+                                              new EmptyCache(VFACTORY));
     }
   }
   
@@ -691,15 +715,32 @@ public class PostProxy {
   protected void startGlacier(Parameters parameters) throws Exception {
     if (parameters.getBooleanParameter("glacier_enable")) {
       stepStart("Starting Glacier service");
-      String prefix = InetAddress.getLocalHost().getHostName() + "-" + parameters.getIntParameter("pastry_port");
 
-      
-      immutablePast = new GlacierImpl(node, ".", immutableStorage, glacierStorage, new GlacierDefaultPolicy(), 
-                                      parameters.getIntParameter("past_replication_factor"), 
-                                      parameters.getIntParameter("glacier_num_fragments"), 
-                                      parameters.getIntParameter("glacier_num_survivors"), 
-                                      (MultiringIdFactory) FACTORY, 
-                                      parameters.getStringParameter("application_instance_name"));
+      String prefix = InetAddress.getLocalHost().getHostName() + "-" + parameters.getIntParameter("pastry_port");
+      VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
+
+      mutablePast = new AggregationImpl(
+        node, 
+        new GlacierImpl(
+          node, glacierMutableStorage, glacierNeighborStorage,
+          parameters.getIntParameter("glacier_num_fragments"),
+          parameters.getIntParameter("glacier_num_survivors"),
+          (MultiringIdFactory)FACTORY, 
+          parameters.getStringParameter("application_instance_name") + "-glacier-mutable",
+          new GlacierDefaultPolicy(
+            new ErasureCodec(
+              parameters.getIntParameter("glacier_num_fragments"),
+              parameters.getIntParameter("glacier_num_survivors")
+            )
+          )
+        ),  
+        mutablePast,
+        aggrWaitingStorage,
+        "aggregation.param",
+        (MultiringIdFactory) FACTORY,
+        parameters.getStringParameter("application_instance_name") + "-aggr"
+      );
+
       stepDone(SUCCESS);
     }
   }
@@ -710,17 +751,10 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startPast(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("glacier_enable")) {
-      startGlacier(parameters);
-    } else {
-      stepStart("Starting Immutable Past service");
-      immutablePast = new PastImpl(node, immutableStorage, 
-                                   parameters.getIntParameter("past_replication_factor"), 
-                                   parameters.getStringParameter("application_instance_name") + "-immutable");
-      stepDone(SUCCESS);
-    }
-    
-    stepStart("Starting Other Past services");
+    stepStart("Starting Past services");
+    immutablePast = new PastImpl(node, immutableStorage, 
+                                 parameters.getIntParameter("past_replication_factor"), 
+                                 parameters.getStringParameter("application_instance_name") + "-immutable");
     mutablePast = new PastImpl(node, mutableStorage, 
                                parameters.getIntParameter("past_replication_factor"), 
                                parameters.getStringParameter("application_instance_name") + "-mutable", new PostPastPolicy());
@@ -824,6 +858,7 @@ public class PostProxy {
     
     sectionStart("Bootstrapping Local Post Applications");
     startPast(parameters);
+    startGlacier(parameters);
     startPost(parameters);
     startInsertLog(parameters);
     startFetchLog(parameters);
