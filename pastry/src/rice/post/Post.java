@@ -2,6 +2,7 @@ package rice.post;
 
 import java.security.*;
 import java.util.*;
+import java.io.*;
 
 import rice.pastry.security.*;
 import rice.pastry.client.*;
@@ -37,7 +38,6 @@ public class Post extends PastryAppl implements IScribeApp  {
 
   // the credentials of POST
   private Credentials credentials = new PermissiveCredentials();
-
   
   // --- CLIENT SUPPORT ---
   
@@ -47,9 +47,20 @@ public class Post extends PastryAppl implements IScribeApp  {
   // the map of PostClientAddress -> PostClient
   private Hashtable clientAddresses;
 
-  //--- Buffering Support ---
+  // --- BUFFERING SUPPORT ---
+  
   // The data structure to hold the packets
   private Hashtable bufferedData;
+
+  // --- LOGGING SUPPORT ---
+
+  // This user's log
+  private PostLog log;
+
+  // --- STORAGE SUPPORT ---
+
+  // The storage service
+  private StorageService storage;
 
   /**
    * Builds a PostService to run on the given pastry node,
@@ -72,6 +83,8 @@ public class Post extends PastryAppl implements IScribeApp  {
     scribeService = scribe;
     this.address = address;
     this.keyPair = keyPair;
+
+    storage = new StorageService(past, credentials, keyPair);
     
     clients = new Vector();
     clientAddresses = new Hashtable();
@@ -121,11 +134,31 @@ public class Post extends PastryAppl implements IScribeApp  {
           userQueue.addElement(dmessage.getNotificationMessage());
         }
     }
-    else if( message instanceof ReceiptMessage ){
+    else if( message instanceof ReceiptMessage ) {
     }
 		 
   }
 
+  /**
+   * This method returns this user's PostLog, which is the root of all of
+   * the user's application logs.
+   *
+   * @return This user's PostLog
+   */
+  public PostLog getLog() {
+    return null;
+  }
+
+  /**
+   * This method returns the local storage service, which writes data securely
+   * to PAST.
+   *
+   * @return This POST's StorageService.
+   */
+  public StorageService getStorageService() {
+    return storage;
+  }    
+  
   /**
    * Registers a client with this Post 
    *
@@ -160,31 +193,6 @@ public class Post extends PastryAppl implements IScribeApp  {
     clientAddresses.remove(client.getAddress());
   }
 
-  /**
-   * Inserts data into the Post system using persistent storage.
-   * This first encrypts the PostData using it's hash value as the
-   * key, and then stores the ciphertext at the value of the hash of
-   * the ciphertext.
-   *
-   * @param message The PostData to store.
-   * @return A reference to the stored PostData, containing both the key
-   *         and address.
-   */
-  public PostDataReference insertData(PostData data) {
-    return null;
-  }
-  
-  /**
-   * The method retrieves a given PostDataReference object from the
-   * network. This method also performs the verification checks and
-   * decryption necessary.
-   *
-   * @param reference The reference to the PostDataObject
-   * @return The corresponding PostData object
-   */
-  public PostData retrieveData(PostDataReference reference) {
-    return null;
-  }
   
   /**
    * Sends a notification message with destination specified by the members
@@ -203,58 +211,11 @@ public class Post extends PastryAppl implements IScribeApp  {
      routeMsg(message.getAddress().getAddress(), message, getCredentials(), new SendOptions());
      // This is from the PastryAppl interface which Post inherits - notice that we're
      // using default SendOptions, which at some point we may want to vary
-  }
+  }  
 
-  /**
-   * This method appends an entry into the user's log, and updates the user's
-   * LogHead in order to reflect the new object. This method returns a LogEntryReference
-   * which is a pointer to the LogEntry in PAST.
-   *
-   * @param entry The log entry to append to the log.
-   */
-  public LogEntryReference addLogEntry(LogEntry entry) {
-    return null;
-  }
-  
-  /**
-   * This method retrievess a log entry given a reference to the log entry.
-   * This method also performs the appropriate verification checks and decryption
-   * necessary.
-   *
-   * @param reference The reference to the log entry
-   * @return The log entry referenced
-   */
-  public LogEntry retrieveLogEntry(LogEntryReference reference) {
-    return null;
-  }
-
-  /**
-   * This method retrievess a log head given a reference to the log head.
-   * This method also performs the appropriate verification checks and decryption
-   * necessary.
-   *
-   * @param reference The reference to the log head
-   * @return The log head referenced
-   */
-  public LogHead retrieveLogHead(LogHeadReference reference) {
-    return null;
-  }
-  
-  /**
-   * This method returns the header of the current user's logs, which
-   * is represented by a UserBlockLogEntry.  This block has methods which
-   * return the user's public key, identity, and pointers to all of the
-   * user's logs.
-   *
-   * @return The UserBlockLogEntry which is currently at the top of the user's log
-   */
-  public UserBlock getUserBlock() {
-    return null;
-  }
-
-  public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){}
-  public void forwardHandler(ScribeMessage msg){}
-  public void receiveMessage(ScribeMessage msg){
+  public void faultHandler(ScribeMessage msg, NodeHandle faultyParent) {}
+  public void forwardHandler(ScribeMessage msg) {}
+  public void receiveMessage(ScribeMessage msg) {
 
      synchronized(bufferedData){
 	
@@ -269,5 +230,8 @@ public class Post extends PastryAppl implements IScribeApp  {
 
   }
   public void scribeIsReady(){}
-  public void subscribeHandler(ScribeMessage msg, NodeId topicId, NodeHandle child, boolean wasAdded){}
+  public void subscribeHandler(ScribeMessage msg,
+                               NodeId topicId,
+                               NodeHandle child,
+                               boolean wasAdded){}
 }

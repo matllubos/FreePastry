@@ -2,8 +2,10 @@ PACKAGE = rice.post.log
 
 SOURCE  = \
 	LogEntry.java \
-	LogHead.java \
-	LogEntryReference.java
+	LogEntryReference.java \
+	Log.java \
+	LogReference.java \
+	PostLog.java
 
 RMI_SOURCE =
 

@@ -4,30 +4,19 @@ import java.security.*;
 
 import rice.pastry.*;
 import rice.past.*;
+import rice.post.storage.*;
 
 /**
  * This class serves as a reference to a LogEntry
  * stored in the Post system.  This class knows the
- * location in the network of the LogEntry object.
+ * location in the network of the LogEntry object and
+ * the encryption key.
  */
-public class LogEntryReference {
+public class LogEntryReference extends ContentHashReference {
 
-  /**
-   * Constructs a LogEntryReference given a pointer to object
-   *
-   * @param location The location of the object
-   */
-  protected LogEntryReference(NodeId location) {
+  public LogEntryReference(NodeId location, Key key) {
+    super(location, key);
   }
 
-  /**
-   * Returns the location of the entry referenced by this object
-   *
-   * @return The location of the entry
-   */
-  public NodeId getLocation() {
-    return null;
-  }
-  
 }
 
