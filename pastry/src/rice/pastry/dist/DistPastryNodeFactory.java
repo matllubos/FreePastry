@@ -131,6 +131,8 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
       return new RMIPastryNodeFactory(nf, port);
     } else if (protocol == PROTOCOL_WIRE) {
       return new WirePastryNodeFactory(nf, port);
+    } else if (protocol == PROTOCOL_SOCKET) {
+      return new SocketPastryNodeFactory(nf, port);
     }
 
     throw new IllegalArgumentException("Unsupported Protocol " + protocol);
