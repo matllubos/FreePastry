@@ -8,13 +8,13 @@ import java.io.*;
  * are transmitted in Post are PostWrappers, each with a different
  * transport mechanism.
  */
-public interface PostMessageWrapper extends Serializable {
+public interface SignedPostMessageWrapper extends Serializable {
 
   /**
-   * Returns the internal PostMessage.
+   * Returns the internal SignedPostMessage.
    *
-   * @return The contained PostMessage.
+   * @return The contained SignedPostMessage.
    */
-  public PostMessage getMessage();
+  public SignedPostMessage getMessage();
   
 }

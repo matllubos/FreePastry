@@ -136,8 +136,9 @@ public class DistPostRegrTest {
       
       post.addClient(dpc);
       System.out.println("built POST at " + pn);
-    } catch (PostException e) {
+    } catch (Throwable e) {
       System.out.println("ERROR BUILDING POST: " + e);
+      e.printStackTrace();
     }
   }
   
@@ -251,7 +252,10 @@ public class DistPostRegrTest {
     }
     
     notificationReceived = true;
-    waitObject.notify();
+
+    synchronized(waitObject) {
+      waitObject.notify();
+    }
   }
 
   /**

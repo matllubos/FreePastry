@@ -45,4 +45,17 @@ public class PostUserAddress extends PostEntityAddress {
   public String toString() {
     return name;
   }
+
+  public boolean equals(Object o) {
+    if (o instanceof PostUserAddress) {
+      PostUserAddress ua = (PostUserAddress) o;
+      return ua.getName().equals(name);
+    }
+
+    return false;
+  }
+
+  public int hashCode() {
+    return name.hashCode();
+  }
 }

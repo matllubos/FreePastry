@@ -14,7 +14,7 @@ import java.io.*;
 public class DeliveryRequestMessage extends PostMessage {
   
   private PostUserAddress destination;
-  private EncryptedNotificationMessage message;    
+  private SignedPostMessage message;    
 
   /**
    * Constructs a DeliveryRequestMessage
@@ -25,7 +25,7 @@ public class DeliveryRequestMessage extends PostMessage {
    */
   public DeliveryRequestMessage(PostEntityAddress sender, 
                                 PostUserAddress destination, 
-                                EncryptedNotificationMessage message) {
+                                SignedPostMessage message) {
     super(sender);
     this.destination = destination;
     this.message = message;
@@ -46,7 +46,7 @@ public class DeliveryRequestMessage extends PostMessage {
    *
    * @return The internal message, in encrypted state
    */
-  public EncryptedNotificationMessage getEncryptedMessage() {
+  public SignedPostMessage getEncryptedMessage() {
     return message;
   }
 }

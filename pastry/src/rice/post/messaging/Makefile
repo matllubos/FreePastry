@@ -8,7 +8,8 @@ SOURCE  = \
 	ReceiptMessage.java \
 	DeliveryRequestMessage.java \
 	PostMessage.java \
-	PostMessageWrapper.java \
+	SignedPostMessage.java \
+	SignedPostMessageWrapper.java \
 	PostPastryMessage.java \
 	PostScribeMessage.java
 

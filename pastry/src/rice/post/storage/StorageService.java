@@ -286,14 +286,10 @@ public class StorageService {
      * @param result The result of the command.
      */
     public void receiveResult(Object result) {
-      if (result instanceof Boolean) {
-        if (((Boolean) result).booleanValue()) {
-          command.receiveResult(data.buildContentHashReference(location, key));
-        } else {
-          command.receiveException(new IOException("Storage of content hash into PAST failed."));
-        }
+      if (((Boolean) result).booleanValue()) {
+        command.receiveResult(data.buildContentHashReference(location, key));
       } else {
-        command.receiveException(new IllegalArgumentException("Received unknown value " + result + " as a result of storeContentHash."));
+        command.receiveException(new IOException("Storage of content hash into PAST failed."));
       }
     }
 
@@ -480,19 +476,14 @@ public class StorageService {
     public void receiveResult(Object result) {
       switch (state) {
         case STATE_1:
-          if (result instanceof Boolean) {
-            startState1(((Boolean) result).booleanValue());
-          } else {
-            command.receiveException(new IllegalArgumentException("Received unknown value " + result + " as a result of storeSigned."));
-          }
+          startState1(((Boolean) result).booleanValue());
+          break;
         case STATE_2:
-          if (result instanceof Boolean) {
-            startState1(((Boolean) result).booleanValue());
-          } else {
-            command.receiveException(new IllegalArgumentException("Received unknown value " + result + " as a result of storeSigned."));
-          }
+          startState2(((Boolean) result).booleanValue());
+          break;
         default:
           command.receiveException(new IllegalArgumentException("Received unknown value " + result + " as a result of storeSigned."));
+          break;
       }
     }
 
@@ -628,14 +619,10 @@ public class StorageService {
      * @param result The result of the command.
      */
     public void receiveResult(Object result) {
-      if (result instanceof PostData) {
-        if (verifySigned((PostData) result, key)) {
-          command.receiveResult(result);
-        } else {
-          command.receiveException(new SecurityException("Verification of SignedData failed."));
-        }
+      if (verifySigned((PostData) result, key)) {
+        command.receiveResult(result);
       } else {
-        command.receiveException(new IllegalArgumentException("Received unknown value " + result + " as a result of retrieveSigned."));
+        command.receiveException(new SecurityException("Verification of SignedData failed."));
       }
     }
 
@@ -705,14 +692,10 @@ public class StorageService {
      * @param result The result of the command.
      */
     public void receiveResult(Object result) {
-      if (result instanceof Boolean) {
-        if (((Boolean) result).booleanValue()) {
-          command.receiveResult(data.buildSecureReference(location, key));
-        } else {
-          command.receiveException(new StorageException("Storage of content hash into PAST failed."));
-        }
+      if (((Boolean) result).booleanValue()) {
+        command.receiveResult(data.buildSecureReference(location, key));
       } else {
-        command.receiveException(new IllegalArgumentException("Received unknown value " + result + " as a result of storeSecure."));
+        command.receiveException(new StorageException("Storage of content hash into PAST failed."));
       }
     }
 
@@ -763,43 +746,39 @@ public class StorageService {
      * @param result The result of the command.
      */
     public void receiveResult(Object result) {
-      if (result instanceof StorageObject) {
-        try {
-          StorageObject so = (StorageObject) result;
+      try {
+        StorageObject so = (StorageObject) result;
 
-          if (so == null) {
-            command.receiveResult(null);
-            return;
-          }
-
-          SecureData sd = (SecureData) so.getOriginal();
-          byte[] keyBytes = reference.getKey().getEncoded();
-
-          byte[] cipherText = sd.getData();
-          byte[] plainText = security.decryptDES(cipherText, keyBytes);
-          Object data = security.deserialize(plainText);
-
-          // Verify hash(cipher) == location
-          byte[] hashCipher = security.hash(cipherText);
-          byte[] loc = reference.getLocation().copy();
-          if (! Arrays.equals(hashCipher, loc)) {
-            command.receiveException(new StorageException("Hash of cipher text does not match location."));
-            return;
-          }
-
-          command.receiveResult((PostData) data);
+        if (so == null) {
+          command.receiveResult(null);
+          return;
         }
-        catch (ClassCastException cce) {
-          command.receiveException(new StorageException("ClassCastException while retrieving data: " + cce));
+
+        SecureData sd = (SecureData) so.getOriginal();
+        byte[] keyBytes = reference.getKey().getEncoded();
+
+        byte[] cipherText = sd.getData();
+        byte[] plainText = security.decryptDES(cipherText, keyBytes);
+        Object data = security.deserialize(plainText);
+
+        // Verify hash(cipher) == location
+        byte[] hashCipher = security.hash(cipherText);
+        byte[] loc = reference.getLocation().copy();
+        if (! Arrays.equals(hashCipher, loc)) {
+          command.receiveException(new StorageException("Hash of cipher text does not match location."));
+          return;
         }
-        catch (IOException ioe) {
-          command.receiveException(new StorageException("IOException while retrieving data: " + ioe));
-        }
-        catch (ClassNotFoundException cnfe) {
-          command.receiveException(new StorageException("ClassNotFoundException while retrieving data: " + cnfe));
-        }
-      } else {
-        command.receiveException(new IllegalArgumentException("Received unknown value " + result + " as a result of retrieveSecure."));
+
+        command.receiveResult((PostData) data);
+      }
+      catch (ClassCastException cce) {
+        command.receiveException(new StorageException("ClassCastException while retrieving data: " + cce));
+      }
+      catch (IOException ioe) {
+        command.receiveException(new StorageException("IOException while retrieving data: " + ioe));
+      }
+      catch (ClassNotFoundException cnfe) {
+        command.receiveException(new StorageException("ClassNotFoundException while retrieving data: " + cnfe));
       }
     }
 

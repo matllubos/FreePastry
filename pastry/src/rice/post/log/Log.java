@@ -282,23 +282,18 @@ public class Log implements PostData {
     public void receiveResult(Object o) {
       switch(state) {
         case STATE_1:
-          if (o instanceof LogReference) {
-            startState1((LogReference) o);
-          } else {
-            command.receiveException(new StorageException("Received unexpected response for storeSigned on addChildLog:" + o));
-          }
+          startState1((LogReference) o);
+          break;
         case STATE_2:
-          if (o instanceof Boolean) {
-            if (((Boolean)o).booleanValue()) {
-              startState2();
-            } else {
-              command.receiveException(new StorageException("Sync of Log Failed on addChildLog:" + o));
-            }
+          if (((Boolean)o).booleanValue()) {
+            startState2();
           } else {
-            command.receiveException(new StorageException("Received unexpected response for sync on addChildLog:" + o));
+            command.receiveException(new StorageException("Sync of Log Failed on addChildLog:" + o));
           }
+          break;
         default:
           command.receiveException(new StorageException("Received unexpected state: " + state));
+          break;
       }
     }
 
@@ -359,23 +354,18 @@ public class Log implements PostData {
     public void receiveResult(Object o) {
       switch(state) {
         case STATE_1:
-          if (o instanceof LogEntryReference) {
-            startState1((LogEntryReference) o);
-          } else {
-            command.receiveException(new StorageException("Received unexpected response for storeSigned on addLogEntry:" + o));
-          }
+          startState1((LogEntryReference) o);
+          break;
         case STATE_2:
-          if (o instanceof Boolean) {
-            if (((Boolean)o).booleanValue()) {
-              startState2();
-            } else {
-              command.receiveException(new StorageException("Sync of Log Failed on addLogEntry:" + o));
-            }
+          if (((Boolean)o).booleanValue()) {
+            startState2();
           } else {
-            command.receiveException(new StorageException("Received unexpected response for sync on addLogEntry:" + o));
+            command.receiveException(new StorageException("Sync of Log Failed on addLogEntry:" + o));
           }
+          break;
         default:
           command.receiveException(new StorageException("Received unexpected state on addLogEntry: " + state));
+          break;
       }
     }
 
@@ -413,15 +403,6 @@ public class Log implements PostData {
     }
 
     public void receiveResult(Object o) {
-      if (o instanceof Boolean) {
-        if (((Boolean)o).booleanValue()) {
-          command.receiveResult(o);
-        } else {
-          command.receiveException(new StorageException("Sync of Log Failed:" + o));
-        }
-      } else {
-        command.receiveException(new StorageException("Received unexpected response for sync:" + o));
-      }
     }
 
     /**

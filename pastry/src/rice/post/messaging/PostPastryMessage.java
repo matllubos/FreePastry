@@ -8,27 +8,27 @@ import rice.pastry.messaging.*;
  * This is a wrapper message for all Post messages which
  * are to be sent over the Pastry messaging system.
  */
-public class PostPastryMessage extends Message implements PostMessageWrapper {
+public class PostPastryMessage extends Message implements SignedPostMessageWrapper {
 
-  private PostMessage message;
+  private SignedPostMessage message;
   
   /**
    * Builds a PostPastryMessage given a PostMessage.
    *
    * @param message The internal message.
    */
-  public PostPastryMessage(PostMessage message) {
+  public PostPastryMessage(SignedPostMessage message) {
     super(PostAddress.instance());
 
     this.message = message;
   }
 
   /**
-   * Returns the internal PostMessage.
+   * Returns the internal SignedPostMessage.
    *
-   * @return The contained PostMessage.
+   * @return The contained SignedPostMessage.
    */
-  public PostMessage getMessage() {
+  public SignedPostMessage getMessage() {
     return message;
   }
   

@@ -21,6 +21,7 @@ public final class PostClientAddress implements Serializable {
    * Constructor
    */
   private PostClientAddress(String name) {
+    this.name = name;
   }
 
   public boolean equals(Object o) {
@@ -43,4 +44,7 @@ public final class PostClientAddress implements Serializable {
     return new PostClientAddress(client.getClass().getName());
   }
 
+  public int hashCode() {
+    return name.hashCode();
+  }
 }

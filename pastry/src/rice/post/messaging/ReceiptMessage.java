@@ -12,25 +12,25 @@ import rice.pastry.messaging.*;
  */
 public class ReceiptMessage extends PostMessage {
   
-  private EncryptedNotificationMessage message;
+  private SignedPostMessage message;
   
   /**
    * Constructs a PresenceMessage
    *
    * @param message The notification message which this is a receipt for
    */
-  public ReceiptMessage(PostEntityAddress sender, EncryptedNotificationMessage message) {
+  public ReceiptMessage(PostEntityAddress sender, SignedPostMessage message) {
     super(sender);
     this.message = message;
   }
     
   /**
-   * Gets the EncryptedNotificationMessage which this ReceiptMessage is a receipt
+   * Gets the SignedPostMessage which this ReceiptMessage is a receipt
    * for.
    *
    * @return The message which this receipt is for.
    */
-  public EncryptedNotificationMessage getEncryptedNotificationMessage() {
+  public SignedPostMessage getEncryptedMessage() {
     return message;
   }
 }

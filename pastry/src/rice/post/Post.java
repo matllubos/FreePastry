@@ -151,14 +151,14 @@ public class Post extends PastryAppl implements IScribeApp  {
     security = new SecurityService(keyPair, caPublicKey);
     storage = new StorageService(past, credentials, security);
     factory = new RandomNodeIdFactory();
+
+    clients = new Vector();
+    clientAddresses = new Hashtable();
+    bufferedData = new Hashtable();
     
     // Try to get the post log
     this.log = null;
     retrievePostLog();
-    
-    clients = new Vector();
-    clientAddresses = new Hashtable();
-    bufferedData = new Hashtable();
   }
 
   /**
@@ -189,8 +189,8 @@ public class Post extends PastryAppl implements IScribeApp  {
    * @param message The message which has arrived
    */
   public void messageForAppl(Message message) {
-    if (message instanceof PostMessageWrapper) {
-      processPostMessage(((PostMessageWrapper) message).getMessage());
+    if (message instanceof SignedPostMessageWrapper) {
+      processSignedPostMessage(((SignedPostMessageWrapper) message).getMessage());
     } else {
       System.out.println("Found unknown pastry message " + message + " - dropping on floor.");
     }
@@ -202,22 +202,22 @@ public class Post extends PastryAppl implements IScribeApp  {
    * @param msg The incoming message.
    */
   public void receiveMessage(ScribeMessage msg) {
-    if (msg.getData() instanceof PostMessageWrapper) {
-      processPostMessage(((PostMessageWrapper) msg.getData()).getMessage());
+    if (msg.getData() instanceof SignedPostMessageWrapper) {
+      processSignedPostMessage(((SignedPostMessageWrapper) msg.getData()).getMessage());
     } else {
       System.out.println("Found unknown Scribe message " + msg.getData() + " - dropping on floor.");
     }
   }
 
   /**
-   * Internal method for processing incoming PostMessage.  This
+   * Internal method for processing incoming SignedPostMessage.  This
    * method performs all verification checks and processes the
    * message appropriately.
    *
    * @param message The incoming message.
    */
-  private	void processPostMessage(PostMessage message) {
-    ProcessPostMessageTask task = new ProcessPostMessageTask(message);
+  private	void processSignedPostMessage(SignedPostMessage message) {
+    ProcessSignedPostMessageTask task = new ProcessSignedPostMessageTask(message);
     task.start();
   }
   
@@ -252,8 +252,8 @@ public class Post extends PastryAppl implements IScribeApp  {
    *
    * @param message The incoming message.
    */
-  private void processEncryptedNotificationMessage(EncryptedNotificationMessage message) {
-    ProcessEncryptedNotificationMessageTask task = new ProcessEncryptedNotificationMessageTask(message);
+  private void processEncryptedNotificationMessage(EncryptedNotificationMessage message, SignedPostMessage source) {
+    ProcessEncryptedNotificationMessageTask task = new ProcessEncryptedNotificationMessageTask(message, source);
     task.start();
   }
 
@@ -321,9 +321,7 @@ public class Post extends PastryAppl implements IScribeApp  {
    */
   public void announcePresence() {
     PresenceMessage pm = new PresenceMessage(address, getNodeId());
-    signAndPreparePostMessage(pm);
-
-    scribeService.multicast(address.getAddress(), new PostScribeMessage(pm), getCredentials());
+    scribeService.multicast(address.getAddress(), new PostScribeMessage(signPostMessage(pm)), getCredentials());
   }
 
   /**
@@ -361,18 +359,17 @@ public class Post extends PastryAppl implements IScribeApp  {
    *
    * @param message The message to prepare.
    */
-  private void signAndPreparePostMessage(PostMessage message) {
+  private SignedPostMessage signPostMessage(PostMessage message) {
     try {
       byte[] sig = security.sign(security.serialize(message));
 
-      message.setSignature(sig);
-      message.prepareForSend();
+      return new SignedPostMessage(message, sig);
     } catch (SecurityException e) {
       System.out.println("SecurityException " + e + " occured while siging PostMessage " + message + " - aborting.");
-      return;
+      return null;
     } catch (IOException e) {
       System.out.println("IOException " + e + " occured while siging PostMessage " + message + " - aborting.");
-      return;
+      return null;
     } 
   }
 
@@ -383,9 +380,14 @@ public class Post extends PastryAppl implements IScribeApp  {
    * @param message The message to verify.
    * @param key The key to verify against.
    */
-  private boolean verifyPostMessage(PostMessage message, PublicKey key) {
+  private boolean verifySignedPostMessage(SignedPostMessage message, PublicKey key) {
     try {
-      byte[] plainText = security.serialize(message);
+      if (key == null) {
+        System.out.println("Cannot verify PostMessage with null key!" + message + " " + key);
+        return false;
+      }
+      
+      byte[] plainText = security.serialize(message.getMessage());
       byte[] sig = message.getSignature();
 
       return security.verify(plainText, sig, key);
@@ -407,28 +409,28 @@ public class Post extends PastryAppl implements IScribeApp  {
                                boolean wasAdded){}
 
   /**
-   * This class is called whenever a PostMessage comes in, and it
+   * This class is called whenever a SignedPostMessage comes in, and it
    * performs the necessary verification tasks and then handles the
    * message.
    */
-  protected class ProcessPostMessageTask implements ReceiveResultCommand {
+  protected class ProcessSignedPostMessageTask implements ReceiveResultCommand {
 
-    private PostMessage message;
+    private SignedPostMessage signedMessage;
     private PostEntityAddress sender;
     private PostLog senderLog;
 
     /**
      * Constructs a ProcessPostMessageTask given a message.
      */
-    public ProcessPostMessageTask(PostMessage message) {
-      this.message = message;
+    public ProcessSignedPostMessageTask(SignedPostMessage signedMessage) {
+      this.signedMessage = signedMessage;
     }
 
     /**
      * Starts the processing of this message.
      */
     public void start() {
-      sender = message.getSender();
+      sender = signedMessage.getMessage().getSender();
       getPostLog(sender, this);
     }
 
@@ -442,17 +444,19 @@ public class Post extends PastryAppl implements IScribeApp  {
       }
 
       // verify message is signed
-      if (! verifyPostMessage(message, senderLog.getPublicKey())) {
+      if (! verifySignedPostMessage(signedMessage, senderLog.getPublicKey())) {
         System.out.println("Problem encountered verifying PostMessage from " + sender + " - dropping on floor.");
         return;
       }
 
+      PostMessage message = signedMessage.getMessage();
+      
       if (message instanceof DeliveryRequestMessage) {
         processDeliveryRequestMessage((DeliveryRequestMessage) message);
       } else if (message instanceof PresenceMessage) {
         processPresenceMessage((PresenceMessage) message);
       } else if (message instanceof EncryptedNotificationMessage) {
-        processEncryptedNotificationMessage((EncryptedNotificationMessage) message);
+        processEncryptedNotificationMessage((EncryptedNotificationMessage) message, signedMessage);
       } else if (message instanceof ReceiptMessage) {
         processReceiptMessage((ReceiptMessage) message);
       } else {
@@ -461,7 +465,7 @@ public class Post extends PastryAppl implements IScribeApp  {
     }
 
     public void receiveException(Exception e) {
-      System.out.println("Exception " + e + "  occured during handling of PostMessage: " + message + " - dropping on floor.");
+      System.out.println("Exception " + e + "  occured during handling of SignedPostMessage: " + signedMessage + " - dropping on floor.");
     }
   }
 
@@ -492,6 +496,8 @@ public class Post extends PastryAppl implements IScribeApp  {
         Vector userQueue = (Vector) bufferedData.get(message.getDestination());
 
         if (userQueue == null) {
+          System.out.println(thePastryNode.getNodeId() + "DEBUG: creating entry for: " + message.getDestination());
+          
           userQueue = new Vector();
           bufferedData.put(message.getDestination(), userQueue);
           scribeService.join(message.getDestination().getAddress(), Post.this, credentials);
@@ -529,13 +535,16 @@ public class Post extends PastryAppl implements IScribeApp  {
         Vector userQueue = (Vector) bufferedData.get(message.getSender());
 
         if (userQueue != null) {
-          for (int i=0; i<userQueue.size(); i++) {
-            EncryptedNotificationMessage enm = (EncryptedNotificationMessage) userQueue.elementAt(i);
-
-            signAndPreparePostMessage(enm);
-
-            routeMsg(message.getLocation(), new PostPastryMessage(enm), getCredentials(), new SendOptions());
+          if (userQueue.size() == 0) {
+            System.out.println(thePastryNode.getNodeId() + "DEBUG: ERROR - presence message from : " + message.getSender() + " has empty vector.");
           }
+          
+          for (int i=0; i<userQueue.size(); i++) {
+            SignedPostMessage spm = (SignedPostMessage) userQueue.elementAt(i);
+            routeMsg(message.getLocation(), new PostPastryMessage(spm), getCredentials(), new SendOptions());
+          }
+        } else {
+          System.out.println(thePastryNode.getNodeId() + "DEBUG: ERROR - presence message from : " + message.getSender() + " should not be received here.");
         }
       }
     }
@@ -546,27 +555,31 @@ public class Post extends PastryAppl implements IScribeApp  {
    * This class is called whenever a EncryptedNotificationMessage comes in, and it
    *  handles the message.
    */
-  protected class ProcessEncryptedNotificationMessageTask implements ReceiveResultCommand {
+  protected class ProcessEncryptedNotificationMessageTask {
 
     private EncryptedNotificationMessage message;
+    private SignedPostMessage source;
     private NotificationMessage nm;
     private PostEntityAddress sender;
 
     /**
     * Constructs a ProcessEncryptedNotificationMessageTask given a message.
      */
-    public ProcessEncryptedNotificationMessageTask(EncryptedNotificationMessage message) {
+    public ProcessEncryptedNotificationMessageTask(EncryptedNotificationMessage message, SignedPostMessage source) {
       this.message = message;
+      this.source = source;
     }
 
     /**
       * Starts the processing of this message.
      */
     public void start() {
+
+      System.out.println(thePastryNode.getNodeId() + "DEBUG: encrypted notification message from : " + message.getSender());
+      
       // send receipt
-      ReceiptMessage rm = new ReceiptMessage(address, message);
-      signAndPreparePostMessage(rm);
-      routeMsg(message.getSender().getAddress(), new PostPastryMessage(rm), getCredentials(), new SendOptions());
+      ReceiptMessage rm = new ReceiptMessage(address, source);
+      routeMsg(message.getSender().getAddress(), new PostPastryMessage(signPostMessage(rm)), getCredentials(), new SendOptions());
 
       // decrypt and verify notification message
       try {
@@ -586,26 +599,13 @@ public class Post extends PastryAppl implements IScribeApp  {
         return;
       }
 
-      sender = nm.getSender();
-      getPostLog(sender, this);
+      System.out.println(thePastryNode.getNodeId() + "DEBUG: successfully deserialized notification message from : " + nm.getSender());
 
-      // now we wait until the log is retrieved
-    }
-
-    public void receiveResult(Object o) {
-      PostLog senderLog = (PostLog) o;
-
-      // look up sender
-      if (senderLog == null) {
-        System.out.println("Found NotificationMessage from non-existent sender " + sender + " - dropping on floor.");
-        return;
+      if (! (nm.getSender().equals(message.getSender()))) {
+        System.out.println("PANIC - Found ENM from " + message.getSender() + " with internal NM from different sender " +
+                           nm.getSender() + " - dropping on floor.");
       }
-
-      if (! verifyPostMessage(nm, senderLog.getPublicKey())) {
-        System.out.println("Error occured during verification of notification message " + nm + " - dropping on floor.");
-        return;
-      }
-
+      
       // deliver notification messag
       PostClient client = (PostClient) clientAddresses.get(nm.getClientAddress());
 
@@ -614,10 +614,6 @@ public class Post extends PastryAppl implements IScribeApp  {
       } else {
         System.out.println("Found notification message for unknown client " + client + " - dropping on floor.");
       }
-    }
-
-    public void receiveException(Exception e) {
-      System.out.println("Exception " + e + "  occured during processing of EncryptedNotificationMessage: " + message + " - dropping on floor.");
     }
   }
 
@@ -642,13 +638,21 @@ public class Post extends PastryAppl implements IScribeApp  {
       * Starts the processing of this message.
      */
     public void start() {
-      EncryptedNotificationMessage enm = message.getEncryptedNotificationMessage();
+
+      System.out.println(thePastryNode.getNodeId() + "DEBUG: received receipt message from : " + message.getSender());
+      
+      SignedPostMessage sm = message.getEncryptedMessage();
       PostEntityAddress sender = message.getSender();
 
       // remove message
       synchronized (bufferedData) {
         Vector userQueue = (Vector) bufferedData.get(sender);
-        userQueue.remove(enm);
+        userQueue.remove(sm);
+
+        if (userQueue.size() == 0) {
+          bufferedData.remove(sender);
+          scribeService.leave(sender.getAddress(), Post.this, credentials);
+        }
       }
     }
   }
@@ -693,7 +697,7 @@ public class Post extends PastryAppl implements IScribeApp  {
 
         if (log == null) {
           System.out.println("PostLog lookup for user " + address + " failed.");
-          command.receiveException(new PostException("Could not find PostLog for user " + address));
+          command.receiveResult(null);
           return;
         }
 
@@ -780,17 +784,14 @@ public class Post extends PastryAppl implements IScribeApp  {
     public void receiveResult(Object o) {
       switch(state) {
         case STATE_1:
-          if (o instanceof PostLog) {
-            startState1((PostLog) o);
-          } else {
-            System.out.println("Received unknown response " + o + " from getPostLog()");
-          }
+          startState1((PostLog) o);
+          break;
         case STATE_2:
-          if (o instanceof Boolean) {
-            startState2((Boolean) o);
-          }
+          startState2((Boolean) o);
+          break;
         default:
           System.out.println("In unknown State in RetrieveLocalPostLogTask: " + state);
+          break;
       }
     }
 
@@ -800,12 +801,12 @@ public class Post extends PastryAppl implements IScribeApp  {
      * @param result The exception caused
      */
     public void receiveException(Exception result) {
-      startState1(null);
+      System.out.println("Exception occured in in RetrieveLocalPostLogTask: " + result);
     }
   }
 
   /**
-    * This class is called whenever a PostMessage comes in, and it
+   * This class is called whenever a PostMessage comes in, and it
    * performs the necessary verification tasks and then handles the
    * message.
    */
@@ -835,7 +836,6 @@ public class Post extends PastryAppl implements IScribeApp  {
 
     public void receiveResult(Object o) {
       PostLog destinationLog = (PostLog) o;
-      signAndPreparePostMessage(message);
       
       System.out.println(thePastryNode.getNodeId() + "DEBUG: received destination log");
       
@@ -853,13 +853,11 @@ public class Post extends PastryAppl implements IScribeApp  {
         System.out.println(thePastryNode.getNodeId() + "DEBUG: built encrypted notfn msg: " + destination);
 
         EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, keyCipherText, cipherText);
-        DeliveryRequestMessage drm = new DeliveryRequestMessage(address, destination, enm);
-
-        signAndPreparePostMessage(drm);
+        DeliveryRequestMessage drm = new DeliveryRequestMessage(address, destination, signPostMessage(enm));
 
         System.out.println(thePastryNode.getNodeId() + "DEBUG: sending delivery request to : " + random);
 
-        routeMsg(random, new PostPastryMessage(drm), getCredentials(), new SendOptions());
+        routeMsg(random, new PostPastryMessage(signPostMessage(drm)), getCredentials(), new SendOptions());
       } catch (SecurityException e) {
         System.out.println("SecurityException occured which encrypting NotificationMessage " + e + " - dropping on floor.");
       } catch (IOException e) {
