@@ -104,6 +104,10 @@ public class DirectPastryRegrTest extends PastryRegrTest {
 	if (res) msgCount++;
 	return res;
     }
+    
+    // do nothing in the simulated world
+    public void pause(int ms) {
+    }
 
     /**
      * get authoritative information about liveness of node.
@@ -126,7 +130,7 @@ public class DirectPastryRegrTest extends PastryRegrTest {
     public static void main(String args[]) {
 	Log.init(args);
 	DirectPastryRegrTest pt = new DirectPastryRegrTest();
-	mainfunc(pt, args, 100000 /*n*/, 1/*d*/, 10/*k*/, 100/*m*/, 10/*conc*/);
+	mainfunc(pt, args, 100 /*n*/, 20/*d*/, 10/*k*/, 100/*m*/, 10/*conc*/);
     }
 }
 

@@ -145,7 +145,7 @@ public class RouteSet extends Observable implements NodeSet, Serializable, Obser
       // if the proximity is initialized for the time, insert the handle
       if (((Integer) arg) == NodeHandle.PROXIMITY_CHANGED) {
 
-	//System.out.println("RouteSet:update(), inserting pinged node");
+	System.out.println("RouteSet:update(), inserting pinged node");
         put((NodeHandle) o);   
 
 	// we're no longer interested in this handle

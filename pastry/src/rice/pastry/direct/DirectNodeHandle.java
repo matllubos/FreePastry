@@ -94,8 +94,9 @@ public class DirectNodeHandle extends NodeHandle
      * @return true if they are equal, false otherwise.
      */
     public boolean equals(Object obj) {
-	    if(obj == null)
-	      return false;
+	    if (obj == null) return false;
+	    //if (! (obj instanceof DirectNodeHandle) )
+	    //System.out.println("class is " + obj.getClass().getName());
 	    NodeHandle nh = (NodeHandle)obj;
 
 	    if(this.getNodeId().equals(nh.getNodeId()))

@@ -63,7 +63,7 @@ public abstract class PastryRegrTest {
     protected PastryNodeFactory factory;
 
     public Vector pastryNodes;
-    public TreeMap pastryNodesSorted;
+    public SortedMap pastryNodesSorted;
     public Vector pastryNodesLastAdded;
     public boolean inConcJoin;
     private Vector rtApps;
@@ -131,7 +131,7 @@ public abstract class PastryRegrTest {
 	pastryNodes.addElement(pn);
 	pastryNodesSorted.put(pn.getNodeId(),pn);
 	pastryNodesLastAdded.clear();
-	pastryNodesLastAdded.addElement(pn.getNodeId());
+	pastryNodesLastAdded.addElement(pn);
 
 	RegrTestApp rta = new RegrTestApp(pn,this);
 	rtApps.addElement(rta);
@@ -187,23 +187,23 @@ public abstract class PastryRegrTest {
 	    PastryNode pn = generateNode(bootstrap);
 	    pastryNodes.addElement(pn);
 	    pastryNodesSorted.put(pn.getNodeId(),pn);
-	    pastryNodesLastAdded.addElement(pn.getNodeId());
+	    pastryNodesLastAdded.addElement(pn);
 
 	    rta[i] = new RegrTestApp(pn,this);
 	    rtApps.addElement(rta[i]);
 	    
 	    registerapp(pn,rta[i]);
 
-	    // ADDED FOR SOCKET PROTOCOL...
-	    while (!pn.isReady()) {
-		pause(500);
-	    }
-
 	    if (bootstrap != null)
 		if (n == 0) {
 		    // we have to join the first batch of nodes
 		    // sequentially, else we create multiple rings
 		    while(simulate()) msgCount++;
+
+		    // ADDED FOR WIRE PROTOCOL...
+		    while (!pn.isReady()) {
+			pause(500);
+		    }
 		}
 	}
 
@@ -211,6 +211,16 @@ public abstract class PastryRegrTest {
 
 	// now simulate concurrent joins
 	while(simulate()) msgCount++;
+
+	// ADDED FOR WIRE PROTOCOL...
+	// wait until all nodes are ready
+	for (int i=0; i<pastryNodesLastAdded.size(); i++) {
+	    PastryNode pn = (PastryNode)pastryNodesLastAdded.get(i);
+	    while (!pn.isReady()) {
+		pause(500);
+	    }
+	}
+	pause(1000);
 
 	inConcJoin = false;
 
@@ -223,19 +233,18 @@ public abstract class PastryRegrTest {
 
 	System.out.println("messages: " + msgCount);
 
-	/*
-	  for (int i=0; i<rtApps.size(); i++) {
-	  checkLeafSet((RegrTestApp)rtApps.get(i));
-	  checkRoutingTable((RegrTestApp)rtApps.get(i));
-	  }
-	*/
+	
+	for (int i=0; i<rtApps.size(); i++) {
+	    checkLeafSet((RegrTestApp)rtApps.get(i));
+	    checkRoutingTable((RegrTestApp)rtApps.get(i));
+	}
+	
 
     }
 
-    public synchronized void pause(int ms) {
-	System.out.println("Waiting for pastry node to be ready...");
-	try { wait(ms); } catch (InterruptedException e) {}
-    }
+    // wait for a specified amount of time if we're distributed
+    public abstract void pause(int ms);
+
 
     /**
      * Send messages among random message pairs. In each round, one
@@ -498,10 +507,13 @@ public abstract class PastryRegrTest {
 	pt.initiateRouteSetMaintenance();
 
 	System.out.println("finished leafset/RT maintenance");
-
+	
 	// send messages
 	pt.sendPings((n-d)*k);
 	System.out.println((n-d)*k + " messages sent");
+
+	// Dist: wait until everyone detects failed nodes
+	pt.pause(30000);
 
 	// print all nodeIds, sorted
 	//Iterator it = pt.pastryNodesSorted.keySet().iterator();

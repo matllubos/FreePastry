@@ -6,12 +6,11 @@ GENERAL CLEANUP
 
 CORRECTNESS
 
-    Leaf set consistency on massive concurrent joins.
+#    Leaf set consistency on massive concurrent joins.
 
 FUNCTIONALITY
 
-    Transparent handle verification, and setLocalHandle.
-    Not sure this will work; perhaps just add an API call to allows Handle import.
+#    Transparent handle verification, and setLocalHandle.
 
     A real Log class; probably use the Log support in Java 1.4.
 
@@ -22,10 +21,10 @@ FUNCTIONALITY
 PERFORMANCE
 
     Do some memory tuning to allow simulations with larger numbers of nodes.
-    Improve efficiency if NodeIds.
+    Improve efficiency of NodeIds.
     Improve serialization efficiency of leafsets.
     Implement find-nearby-node algorithm.
-    Socket based wire protocol; use scalable non-blocking I/O support from Java 1.4.
+#    Socket based wire protocol; use scalable non-blocking I/O support from Java 1.4.
 
 SECURITY
 
@@ -35,13 +34,12 @@ SECURITY
 
 APPLICATIONS
 
-    RoundTrip (or HelloWorld with flags) to measure the real latency diff.
+#    RoundTrip (or HelloWorld with flags) to measure the real latency diff.
 
 LONG-TERM
 
-    When the Socket interface is being implemented:
-
-    Consider moving stuff common to all wire protocols to base. This
-    includes significant stuff from RMINodeHandle{,Pool}. Make NodeHandle
-    an abstract class (a la PastryNode), rather than an interface.
+#    When the Socket interface is being implemented:
+#    Consider moving stuff common to all wire protocols to base. This
+#    includes significant stuff from RMINodeHandle{,Pool}. Make NodeHandle
+#    an abstract class (a la PastryNode), rather than an interface.
 

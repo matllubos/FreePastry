@@ -54,7 +54,9 @@ import java.rmi.RMISecurityManager;
 import java.rmi.RemoteException;
 
 /**
- * a regression test suite for pastry with distributed nodes
+ * a regression test suite for pastry with "distributed" nodes. All nodes are 
+ * on one physical machine, but they communicate through one of the network
+ * transport protocols, i.e., RMI or WIRE.
  *
  * See the usage for more information, the -protocol option can be
  * used to specify which protocol to run the test with.
@@ -70,7 +72,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
     private static String bshost;
     private static int bsport = 5009;
     private static int numnodes = 1;
-    private static int protocol = DistPastryNodeFactory.PROTOCOL_RMI;
+    private static int protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
 
     private InetSocketAddress bsaddress;
 
@@ -86,6 +88,11 @@ public class DistPastryRegrTest extends PastryRegrTest {
 
     public DistPastryRegrTest() {
       super();
+
+      // we need to wrap the TreeMap to synchronize it
+      // -- it is shared among multiple virtual nodes
+      pastryNodesSorted = Collections.synchronizedSortedMap(pastryNodesSorted);
+
       factory = DistPastryNodeFactory.getFactory(protocol, port);
 
       try {
@@ -106,7 +113,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
 
     /**
      * process command line args, set the RMI security manager, and start
-     * the RMI registry. Standard gunk that has to be done for all RMI apps.
+     * the RMI registry. Standard gunk that has to be done for all Dist apps.
      */
     private static void doInitstuff(String args[]) {
       // process command line arguments
@@ -189,8 +196,13 @@ public class DistPastryRegrTest extends PastryRegrTest {
     protected void registerapp(PastryNode pn, RegrTestApp app) {
     }
 
-    // do nothing in the RMI world
+    // do nothing in the DIST world
     public boolean simulate() { return false; }
+
+    public synchronized void pause(int ms) {
+	System.out.println("Waiting " + ms + "ms...");
+	try { wait(ms); } catch (InterruptedException e) {}
+    }
 
     public boolean isReallyAlive(NodeId id) {
       // xxx
@@ -202,7 +214,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
     }
 
     /**
-     * Usage: RMIRegrPastryTest [-port p] [-protocol (wire|rmi)] [-nodes n] [-bootstrap host[:port]] [-help]
+     * Usage: DistRegrPastryTest [-port p] [-protocol (wire|rmi)] [-nodes n] [-bootstrap host[:port]] [-help]
      */
 
     public static void main(String args[]) {
