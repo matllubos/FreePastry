@@ -73,42 +73,6 @@ public class DirectPastryPingTest {
 	if( token.startsWith( "q" ) ) { 			//quit
 	    return true;
 	}
-	else if ( token.startsWith( "i" ) ) {			 //interactive
-	    token = (String)tokened.nextToken();
-	    try {
-		n = Integer.parseInt( token );
-	    }
-	    catch( Exception e ) {
-		System.out.println( e );
-	    }
-
-	    if( n < 0 ) {
-		System.out.println( "Bad Node Number" );
-		return false;
-	    }
-
-	    token = (String)tokened.nextToken( );
-	    try {
-		k = Integer.parseInt( token );
-	    }
-	    catch( Exception e ) {
-		System.out.println( e );
-	    }
-
-            if( k < 0 ) {
-		System.out.println( "Bad Lookup Number" );
-		return false;
-	    }
-	    PingTestRecord tr = new PingTestRecord( n, k );
-	    spt = new SinglePingTest( tr );
-	    spt.test();
-            System.out.println( "----------------------" );
-	    System.out.println( tr.getNodeNumber() + "\t" + tr.getAveHops() +"\t"+ tr.getAveDistance() );
-	    for ( i=0; i<tr.getProbability().length; i++ ) {
-		System.out.println( "probability of " + i + " hops: " + tr.getProbability()[i] );
-	    }
-
-	}
 	else if ( token.startsWith( "s" ) ) {	   	//standalone
 	    Vector trlist = new Vector();
 
@@ -133,25 +97,6 @@ public class DirectPastryPingTest {
 	    }
 */	    
 	}
-	else if ( token.startsWith( "c" ) ) {	   	//check routing table
-	    token = (String)tokened.nextToken();
-	    try {
-		n = Integer.parseInt( token );
-	    }
-	    catch( Exception e ) {
-		System.out.println( e );
-	    }
-
-	    if( n < 0 ) {
-		System.out.println( "Bad Node Number" );
-		return false;
-	    }
-
-	    PingTestRecord tr = new PingTestRecord( n, 0 );
-	    spt = new SinglePingTest( tr );
-	    spt.checkRoutingTable();
-            System.out.println( "----------------------" );
-	}
 	return false;
     }
 
@@ -160,6 +105,9 @@ public class DirectPastryPingTest {
 	BufferedReader input
 	    = new BufferedReader( new InputStreamReader(System.in));
 	String command = null;
+
+	System.out.println( "Usage: s - standalone" );
+	System.out.println( "       q - quit" );
 
 	while( !quit ) {
 	    try {
