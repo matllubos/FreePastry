@@ -352,7 +352,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param content The content to cache
    * @param command The command to run once done
    */
-  private void cache(final PastContent content, final Continuation command) {   
+  public void cache(final PastContent content, final Continuation command) {   
     log.finer("Inserting PastContent object " + content + " into cache");
     
     if ((content != null) && (! content.isMutable())) 

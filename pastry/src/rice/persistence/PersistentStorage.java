@@ -337,6 +337,8 @@ public class PersistentStorage implements Storage {
       public Object doWork() throws Exception {
         synchronized(statLock) { numWrites++; }
         
+        debug("Storing object " + obj + " under id " + id + " in root " + appDirectory);
+        
         /* first, create a temporary file */
         File objFile = getFile(id);
         File transcFile = makeTemporaryFile(id);
@@ -344,7 +346,8 @@ public class PersistentStorage implements Storage {
         /* next, write out the data to a new copy of the original file */
         try {
           writeObject(obj, metadata, id, System.currentTimeMillis(), transcFile);
-          
+          debug("Done writing object " + obj + " under id " + id + " in root " + appDirectory);
+
           /* abort if this will put us over quota */
           if (getUsedSpace() + getFileLength(transcFile) > getStorageSize()) 
             throw new OutofDiskSpaceException();
@@ -370,7 +373,7 @@ public class PersistentStorage implements Storage {
             dirty.add(objFile.getParentFile());
           }
         }
-        
+                
         /* finally, check to see if this directory needs to be split */
         checkDirectory(objFile.getParentFile());
         
@@ -927,6 +930,8 @@ public class PersistentStorage implements Storage {
    * @return Whether or not the directory was modified
    */
   private boolean checkDirectory(File directory) throws IOException {
+    debug("Checking directory " + directory + " for oversize");
+
     if (numFilesDir(directory) > MAX_FILES) {
       expandDirectory(directory);
       return true;
@@ -956,6 +961,7 @@ public class PersistentStorage implements Storage {
     /* first, determine what directories we should create */
     String[] newDirNames = getDirectories(dir.list(new DirectoryFilter()), 0);
     reformatDirectory(dir, newDirNames);
+    debug("Done expanding directory " + dir);
   }
     
   /**
@@ -1054,6 +1060,8 @@ public class PersistentStorage implements Storage {
     
     /* and remove the metadata file */
     deleteFile(new File(dir, METADATA_FILENAME));
+    
+    debug("Done expanding directory " + dir);
   } 
   
   /**
@@ -1443,11 +1451,11 @@ public class PersistentStorage implements Storage {
         }
       } catch (FileNotFoundException f) {
         try {
-          System.err.println("ERROR: Could not find directory while writing out metadata in '" + files[i].getCanonicalPath() + "' - removing from dirty list and continuing!");
-
           synchronized (metadata) {
             dirty.remove(files[i]);
           }
+          
+          System.err.println("ERROR: Could not find directory while writing out metadata in '" + files[i].getCanonicalPath() + "' - removing from dirty list and continuing!");
         } catch (IOException g) {
           System.err.println("PANIC: Got IOException " + g + " trying to detail FNF exception " + f + " while writing out file " + files[i]);
         }
@@ -1689,7 +1697,8 @@ public class PersistentStorage implements Storage {
       objout.writeObject(new Long(version));
       objout.close();
     } finally {
-      fout.close();
+      if (fout != null)
+        fout.close();
     }
     
     long len1 = file.length();

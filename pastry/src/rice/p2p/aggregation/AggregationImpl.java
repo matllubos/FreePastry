@@ -27,6 +27,7 @@ import rice.p2p.glacier.VersionKey;
 import rice.p2p.glacier.VersioningPast;
 import rice.p2p.glacier.v2.DebugContent;
 import rice.p2p.past.Past;
+import rice.p2p.past.PastImpl;
 import rice.p2p.past.PastContent;
 import rice.p2p.past.PastContentHandle;
 import rice.p2p.past.gc.GCPast;
@@ -1559,6 +1560,14 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
                     waitingList.store(vkey, new ObjectDescriptor(obj.getId(), theVersionF, expiration, expiration, theSize), obj, new Continuation() {
                       public void receiveResult(Object o) {
+                        ((PastImpl) objectStore).cache(obj, new Continuation() {
+                          public void receiveResult(Object o) {
+                          }       
+                          public void receiveException(Exception e) { 
+                            warn("Exception while precaching aggregate: "+obj.getId()+" (e="+e+")");
+                            e.printStackTrace();
+                          }
+                        });
                       }
                       public void receiveException(Exception e) { 
                         warn("Exception while refreshing aggregate: "+obj.getId()+" (e="+e+")");
