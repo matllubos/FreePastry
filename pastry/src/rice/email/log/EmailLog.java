@@ -224,7 +224,7 @@ public class EmailLog extends CoalescedLog {
         public void receiveResult(Object o) {
           cachedSnapshot = (SnapShot) o;
           
-          parent.receiveResult(o);
+          parent.receiveResult(new SnapShot[] {cachedSnapshot});
         }
       });
     } else if (snapshots != null) {
