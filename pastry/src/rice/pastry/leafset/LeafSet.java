@@ -321,15 +321,23 @@ public class LeafSet extends Observable implements Serializable {
 	NodeSet set = new NodeSet();
 	if (max < 1) return set;
 
+	if ( !overlaps() && 
+	     !key.isBetween(get(-ccwSet.size()).getNodeId(), get(cwSet.size()).getNodeId()) &&
+	     !key.equals(get(cwSet.size()).getNodeId()) )
+	    // can't determine root of key, return empty set
+	    return set;
+	
 	// compute the nearest node
 	int nearest = mostSimilar(key);
 	//System.out.println("nearest=" + nearest + " key=" + key);
 
+	/*
 	if ( (nearest == cwSet.size() || nearest == -ccwSet.size()) && 
 	     complement(nearest) == nearest && size() > 0) {
 	    // can't determine root of key, return empty set
 	    return set;
 	}
+	*/
 	
 	// add the key's root
 	set.put(get(nearest));
@@ -340,12 +348,6 @@ public class LeafSet extends Observable implements Serializable {
 	for (int i=1; i<max; i++) {
 	    int tmp;
 
-	    tmp = cw;
-	    if (cw == cwSet.size() && (cw = complement(cw)) == tmp) return set;
-
-	    tmp = ccw;
-	    if (-ccw == ccwSet.size() && (ccw = complement(ccw)) == tmp) return set;
-
 	    // determine next nearest node
 	    NodeHandle cwNode = get(cw);
 	    NodeHandle ccwNode = get(ccw);
@@ -355,10 +357,16 @@ public class LeafSet extends Observable implements Serializable {
 	    if (cwDist.compareTo(ccwDist) <= 0) {
 		// cwNode is closer to key
 		set.put(cwNode);
+
+		tmp = cw;
+		if (cw == cwSet.size() && (cw = complement(cw)) == tmp) return set;
 		cw++;
 	    } else {
 		// ccwNode is closer to key
 		set.put(ccwNode);
+
+		tmp = ccw;
+		if (-ccw == ccwSet.size() && (ccw = complement(ccw)) == tmp) return set;
 		ccw--;
 	    }
 	}
@@ -385,7 +393,7 @@ public class LeafSet extends Observable implements Serializable {
 	    return null;
 	}
 
-	System.out.println("Hi");
+	if (r<0) return null;
 	if (size() == 0 && r == 0) return new IdRange(n.getNodeId(), n.getNodeId());
 	
 	// get edge nodes for range calculation
@@ -404,11 +412,11 @@ public class LeafSet extends Observable implements Serializable {
 	if (minN == null || maxN == null) return null;
 	
 	if (cumulative) {
-	    System.out.println("minN=" + minN.getNodeId() + "n=" + n.getNodeId() + "maxN=" + maxN.getNodeId());
+	    //System.out.println("minN=" + minN.getNodeId() + "n=" + n.getNodeId() + "maxN=" + maxN.getNodeId());
 
 	    IdRange cw = (new IdRange(n.getNodeId(), maxN.getNodeId())).ccwHalf();
 	    IdRange ccw = (new IdRange(minN.getNodeId(), n.getNodeId())).cwHalf();
-	    System.out.println("ccw=" + ccw + " cw=" + cw);
+	    //System.out.println("ccw=" + ccw + " cw=" + cw);
 	    return ccw.merge(cw);
 	}
 	else {

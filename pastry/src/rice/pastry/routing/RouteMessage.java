@@ -219,7 +219,9 @@ public class RouteMessage extends Message implements Serializable {
 
     public NodeHandle getPrevNode() { return prevNode; }
     public void setPrevNode(NodeHandle n) { prevNode = n;}
-    
+    public NodeHandle getNextHop() { return nextHop; }
+    public void setNextHop(NodeHandle nh) { nextHop = nh; }
+
 
     /**
      * Get receiver address.

@@ -131,12 +131,12 @@ public abstract class PastryAppl implements MessageReceiver
     }
 
     /**
-     * Called by pastry to deliver a message to this client.  Not to be overridden.
+     * Called by pastry to deliver a message to this client. 
      *
      * @param msg the message that is arriving.
      */
 
-    public final void receiveMessage(Message msg) {
+    public void receiveMessage(Message msg) {
 	if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] recv " + msg);
 	if (msg instanceof RouteMessage) {
 	    RouteMessage rm = (RouteMessage) msg;

@@ -98,7 +98,9 @@ public class RegrTestApp extends CommonAPIAppl {
 		 cred, new SendOptions());
     }
 
-    public void messageForAppl(Message msg) {
+    //public void messageForAppl(Message msg) {
+    public void deliver(Id key, Message msg) {
+
 	/*
 	System.out.print(msg);
 	System.out.println(" received at " + getNodeId());
@@ -106,7 +108,7 @@ public class RegrTestApp extends CommonAPIAppl {
 
 	// check if numerically closest
 	RTMessage rmsg = (RTMessage)msg;
-	NodeId key = rmsg.target;
+	//NodeId key = rmsg.target;
 	NodeId localId = getNodeId();
 
 	if (localId != key) {
@@ -135,11 +137,15 @@ public class RegrTestApp extends CommonAPIAppl {
 	}
     }
     
-    public boolean enrouteMessage(Message msg, NodeId key, NodeId nextHop, SendOptions opt) {
+    //public boolean enrouteMessage(Message msg, NodeId key, NodeId nextHop, SendOptions opt) {
+    public void forward(RouteMessage rm) {
 	/*
 	System.out.print(msg);
 	System.out.println(" at " + getNodeId());
 	*/
+	Message msg = rm.unwrap();
+	Id key = rm.getTarget();
+	NodeId nextHop = rm.getNextHop().getNodeId();
 
 	NodeId localId = getNodeId();
 	NodeId.Distance dist = localId.distance(key);
@@ -162,11 +168,12 @@ public class RegrTestApp extends CommonAPIAppl {
 	prg.lastDist = dist;
 	prg.lastNode = localId;
 
-	return true;
+	//return true;
     }
 
 
-    public void leafSetChange(NodeHandle nh, boolean wasAdded) {
+    //public void leafSetChange(NodeHandle nh, boolean wasAdded) {
+    public void update(NodeHandle nh, boolean wasAdded) {
 	NodeId nid = nh.getNodeId();
 
 	/*
@@ -239,6 +246,17 @@ public class RegrTestApp extends CommonAPIAppl {
 	}
 
     }
+
+
+    /**
+     * Invoked when the Pastry node has joined the overlay network and
+     * is ready to send and receive messages
+     */
+    
+    public void notifyReady() {
+	//if (getLeafSet().size() == 0) System.out.println("notifyReady at " + getNodeId() + " : leafset is empty!!");
+    }
+
 
 }
 

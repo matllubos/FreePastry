@@ -228,7 +228,7 @@ public abstract class CommonAPIAppl extends PastryAppl
      * @param msg the message that is arriving.
      */
 
-    public /*abstract*/ void deliver(Id key, Message msg) {}
+    public abstract void deliver(Id key, Message msg);
 
     /**
      * Called by pastry when a message is enroute and is passing through this node.  If this
@@ -238,7 +238,6 @@ public abstract class CommonAPIAppl extends PastryAppl
      * @param key the key
      * @param nextHop the default next hop for the message.
      *
-     * @return true if the message should be routed, false if the message should be cancelled.
      */
      
     public void forward(RouteMessage msg) {
@@ -261,6 +260,64 @@ public abstract class CommonAPIAppl extends PastryAppl
      */
     
     public void notifyReady() {}
+
+
+
+    /*
+     * internal methods
+     */ 
+
+    
+    // hide defunct methods from PastryAppl
+    public final void messageForAppl(Message msg) {}
+    public final boolean enrouteMessage(Message msg, NodeId key, NodeId nextHop, SendOptions opt) {
+	return true;
+    }
+
+    /**
+     * Called by pastry when the leaf set changes.
+     *
+     * @param nh the handle of the node that was added or removed.
+     * @param wasAdded true if the node was added, false if the node was removed.
+     */
+
+    public final void leafSetChange(NodeHandle nh, boolean wasAdded) {
+	update(nh, wasAdded);
+    }
+
+
+    /**
+     * Called by pastry to deliver a message to this client.  Not to be overridden.
+     *
+     * @param msg the message that is arriving.
+     */
+
+    public void receiveMessage(Message msg) {
+	if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] recv " + msg);
+
+	if (msg instanceof RouteMessage) {
+	    RouteMessage rm = (RouteMessage) msg;
+
+	    // call application
+	    forward(rm);
+	    
+	    if (rm.nextHop != null) {
+		NodeHandle nextHop = rm.nextHop;
+
+		// route the message
+		rm.routeMessage(getNodeId());
+		
+		// if the message is for the local node, deliver it here
+		if (getNodeId().equals(nextHop.getNodeId()))
+		    deliver(rm.getTarget(), rm.unwrap());
+	    }
+	}
+	else {
+	    // if the message is not a RouteMessage, then it is for the local node
+	    // we ignore this and instead deliver the message above, 
+	    // because deliver requires access to the message's key
+	}
+    }
 
 }
 

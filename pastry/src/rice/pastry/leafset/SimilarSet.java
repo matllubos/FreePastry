@@ -338,7 +338,8 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
 
 	for (int i=0; i<theSize; i++) {
 	    NodeId.Distance d = nodes[i].getNodeId().distance(nid);
-	    if (d.compareTo(minDist) < 0) {
+	    int cmp = d.compareTo(minDist);
+	    if ( (!clockwise && cmp < 0) || (clockwise && cmp <= 0) ) {
 		minDist = d;
 		min = i;
 	    }
