@@ -106,41 +106,6 @@ public class MessageAnycast extends ScribeMessage implements Serializable
 
 	handleForwardMessage(scribe, topic);
 	return;
-	/*
-	if ( topic != null ) {
-	    IScribeApp[] apps = topic.getApps();
-	    boolean result = true;
-	    
-	    for (int i=0; i<apps.length && result; i++) {
-		result = apps[i].anycastHandler(this);
-	    }
-	    // if result == false, then that means one of registered
-	    // application was able to satisfy the request, and hence
-	    // anycast message should not be routed furthur for DFS.
-	    if(result == false)
-		return;
-	    else {
-		already_seen.add(scribe.getLocalHandle());
-		if(send_to.contains(scribe.getLocalHandle())){
-		    //System.out.println("Send to contains local node -- FINE");
-		    send_to.remove(0);
-		}
-		if(send_to.size() > 0)
-		    scribe.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
-		else {
-		    //Sending to parent if not root
-		    if ( !scribe.isRoot( topic.getTopicId() ) )
-			scribe.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
-		    //This node is the root, which means DFS failed
-		    else {						
-			// call the fault handler to notify that DFS
-			// has failed.
-			System.out.println("DFS FAILED ");
-			faultHandler();
-		    }						
-		}
-	    }
-	    }*/
     }
     
 
