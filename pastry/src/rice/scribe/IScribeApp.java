@@ -106,10 +106,10 @@ public interface IScribeApp
      *
      * @param obj 
      * The additional data associated with the subscription message, SUBSCRIBE
-     * msg, sent by child.
+     * msg, sent by the "original" child, not the forwarding node.
      *
      */
-    public void subscribeHandler(NodeId topicId, NodeHandle child, boolean wasAdded, Object obj );
+    public void subscribeHandler(NodeId topicId, NodeHandle child, boolean wasAdded, Serializable obj );
     
 
     /**

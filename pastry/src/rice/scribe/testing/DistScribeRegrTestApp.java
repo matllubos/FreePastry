@@ -247,7 +247,7 @@ public class DistScribeRegrTestApp extends PastryAppl implements IScribeApp
     /**
      * up-call invoked by scribe when a node is added/removed to the multicast tree.
      */
-    public void subscribeHandler( NodeId topicId, NodeHandle child, boolean wasAdded, Object obj ) {
+    public void subscribeHandler( NodeId topicId, NodeHandle child, boolean wasAdded, Serializable obj ) {
 	/*
 	  System.out.println("Node:" + getNodeId() + " App:"
 	  + m_app + " child subscribed: " + msg);

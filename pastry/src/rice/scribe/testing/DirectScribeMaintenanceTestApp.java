@@ -56,7 +56,7 @@ import java.io.*;
  * @author Animesh Nandi 
  */
 
-public class DirectScribeMaintenanceTestApp implements IScribeApp
+public class DirectScribeMaintenanceTestApp implements IScribeApp, IScribeObserver
 {
 
     private PastryNode m_pastryNode ;
@@ -121,12 +121,12 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp
     /**
      * up-call invoked by scribe when a node is added/removed  to the multicast tree.
      */
-    public void subscribeHandler( NodeId topicId, NodeHandle child, boolean wasAdded, Object obj ) {
+    public void subscribeHandler( NodeId topicId, NodeHandle child, boolean wasAdded, Serializable obj ) {
 	    
 	/*
 	System.out.println("Node:" + getNodeId() + " App:"
                                 + m_app + " child subscribed: " + msg);
-
+	
 	if(obj == null)
 	    System.out.println("Node:" + getNodeId() + 
 			       " child subscribed: "+ child.getNodeId() +
@@ -135,7 +135,7 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp
 	    System.out.println("Node:" + getNodeId() + 
 			       " child subscribed: "+ child.getNodeId() +
 			       " for topicId "+ topicId + " data "+obj);
-	*/	    
+	*/
     }
 
     public NodeId getNodeId() {
@@ -190,6 +190,19 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp
     public NodeHandle getLocalHandle(){
 	return m_pastryNode.getLocalHandle();
     }
+
+    /** 
+     * Method called by underlying scribe whenever a topic object is created
+     * impliclity.
+     *
+     * @param obj The topicId.
+     */
+    public void update(Object obj){
+	NodeId topicId = (NodeId) obj;
+	
+	//System.out.println("At "+getNodeId()+" topic "+ topicId+" is implicitly created \n");
+    }
+
 }
 
 
