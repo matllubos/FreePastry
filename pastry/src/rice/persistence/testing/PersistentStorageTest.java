@@ -553,7 +553,7 @@ public class PersistentStorageTest extends Test {
     test.start();
 
     /* Test for a second time and see if things stick around after exit */
-    PersistentStorageTest test = new PersistentStorageTest();
+    test = new PersistentStorageTest();
     test.start();
     
   }

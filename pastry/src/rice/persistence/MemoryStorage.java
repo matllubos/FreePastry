@@ -86,6 +86,11 @@ public class MemoryStorage implements Storage {
    * <code>false</code>.
    */
   public void store(Comparable id, Serializable obj, Continuation c) {
+    if (id == null || obj == null) {
+      c.receiveResult(new Boolean(false));
+      return;
+    }
+    
     currentSize += getSize(obj);
     
     storage.put(id, obj);

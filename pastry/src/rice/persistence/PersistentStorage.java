@@ -113,7 +113,6 @@ public class PersistentStorage implements Storage {
   public void store(Comparable id, Serializable obj, Continuation c) {
     try {
       if (id == null || obj == null) {
-        System.out.println("ERROR: MakePersistent called with null arguments.");
         c.receiveResult(new Boolean(false));
         return;
       }

@@ -109,8 +109,8 @@ public class CacheTest extends Test {
           stepDone(FAILURE);
         }
 
-        stepStart("Inserting Third Object (77 bytes)");
-        cache.cache(new Integer(3), new byte[50], put3);
+        stepStart("Inserting Third Object (65 bytes)");
+        cache.cache(new Integer(3), new byte[38], put3);
       }
 
       public void receiveException(Exception e) {
@@ -126,8 +126,8 @@ public class CacheTest extends Test {
           stepDone(FAILURE);
         }
 
-        stepStart("Inserting Second Object (37 bytes)");
-        cache.cache(new Integer(2), new byte[10], put2);
+        stepStart("Inserting Second Object (40 bytes)");
+        cache.cache(new Integer(2), new byte[13], put2);
       }
 
       public void receiveException(Exception e) {
@@ -137,11 +137,11 @@ public class CacheTest extends Test {
 
     sectionStart("Inserting Objects");
     
-    stepStart("Inserting First Object (27 bytes)");
-    cache.cache(new Integer(1), new byte[0], put1);
+    stepStart("Inserting First Object (30 bytes)");
+    cache.cache(new Integer(1), new byte[3], put1);
   }
 
-  private void testExists() {
+  private void testExists(final Continuation c) {
     final Continuation done = new Continuation() {
       public void receiveResult(Object o) {
         if (o.equals(new Boolean(false))) {
@@ -151,6 +151,8 @@ public class CacheTest extends Test {
         }
 
         sectionEnd();
+
+        c.receiveResult(new Boolean(true));
       }
 
       public void receiveException(Exception e) {
@@ -227,10 +229,117 @@ public class CacheTest extends Test {
     };
 
     setUp(check1);
-  }  
+  }
+
+  private void testScan() {
+    final Continuation handleBadScan = new Continuation() {
+      public void receiveResult(Object o) {
+        stepDone(FAILURE, "Query returned; should have thrown exception");
+      }
+
+      public void receiveException(Exception e) {
+        stepDone(SUCCESS);
+
+        sectionEnd();
+      }
+    };
+    
+    final Continuation verify2 = new Continuation() {
+      public void receiveResult(Object o) {
+        if (o == null) {
+          stepDone(FAILURE, "Result of query was null");
+          return;
+        }
+
+        Comparable[] result = (Comparable[]) o;
+
+        if (result.length != 0) {
+          stepDone(FAILURE, "Result had " + result.length + " elements, expected 0.");
+          return;
+        }
+
+        stepDone(SUCCESS);
+
+        stepStart("Requesting Scan from 'Monkey' to 9");
+        cache.scan("Monkey", new Integer(9), handleBadScan);
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+
+    final Continuation verify = new Continuation() {
+      public void receiveResult(Object o) {
+        if (o == null) {
+          stepDone(FAILURE, "Result of query was null");
+          return;
+        }
+
+        Comparable[] result = (Comparable[]) o;
+
+        if (result.length != 1) {
+          stepDone(FAILURE, "Result had " + result.length + " elements, expected 1.");
+          return;
+        }
+
+        Arrays.sort(result);
+
+        if (! result[0].equals(new Integer(3))) {
+          stepDone(FAILURE, "Result had incorrect element " + result[0] + ", expected 3.");
+          return;
+        }
+
+        stepDone(SUCCESS);
+
+        stepStart("Requesting Scan from 8 to 10");
+        cache.scan(new Integer(8), new Integer(10), verify2);
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+
+    final Continuation query = new Continuation() {
+      public void receiveResult(Object o) {
+        if (o.equals(new Boolean(true))) {
+          stepDone(SUCCESS);
+        } else {
+          stepDone(FAILURE);
+        }
+
+        stepStart("Requesting Scan from 3 to 6");
+        cache.scan(new Integer(3), new Integer(6), verify);
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+
+    Continuation insertString = new Continuation() {
+      public void receiveResult(Object o) {
+        if (o.equals(new Boolean(true))) {
+          sectionStart("Testing Scan");
+
+          stepStart("Inserting String as Key");
+          cache.cache("M", new byte[0], query);
+        } else {
+          stepException(new RuntimeException("Exists did not complete correctly."));
+        }
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+
+    testExists(insertString);
+  }    
   
   public void start() {
-    testExists();
+    testScan();
   }
 
   public static void main(String[] args) {

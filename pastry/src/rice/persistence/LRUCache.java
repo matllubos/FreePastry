@@ -105,7 +105,7 @@ public class LRUCache implements Cache {
     }
 
     
-   // System.out.println("\nCaching object of size " + size + " with ID " + id);
+ //   System.out.println("\nCaching object of size " + size + " with ID " + id);
     
     final Continuation store = new Continuation() {
       public void receiveResult(Object o) {
@@ -268,7 +268,7 @@ public class LRUCache implements Cache {
           if (((Integer) o).intValue() > size) {
             Comparable thisID = (Comparable) order.getLast();
 
-      //      System.out.println("Evicting object with ID " + thisID);
+         //   System.out.println("Evicting object with ID " + thisID);
 
             uncache(thisID, this);
           } else {
