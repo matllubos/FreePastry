@@ -74,11 +74,11 @@ public class DirectScribeMaintenanceTest
 
 
     // Total nodes in the system
-    private int n = 50;
+    private int n = 100;
 
     // The number of topics to which each of the live nodes in the 
     // system subscribe to.
-    private int numTopics = 1;
+    private int numTopics = 5;
 
     // The number of iterations of node failures and joins. 
     // In each iteration we fail 'concurrentFailures' number of nodes 
@@ -92,7 +92,7 @@ public class DirectScribeMaintenanceTest
 
 
     // The number of nodes that join concurrently.
-    private int concurrentJoins = 10;
+    private int concurrentJoins = 5;
 
     // Variable representing the threshold number of heartbeat messages 
     // that when missed will trigger a tree repair for a topic.
