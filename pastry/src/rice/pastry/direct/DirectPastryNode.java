@@ -55,8 +55,11 @@ public class DirectPastryNode extends PastryNode
 {
     private NetworkSimulator simulator;
 
+    protected Timer timer;
+
     public DirectPastryNode(NodeId id, NetworkSimulator sim) {
 	super(id);
+        timer = new Timer(true);
 	simulator = sim;
     }
 
@@ -96,6 +99,7 @@ public class DirectPastryNode extends PastryNode
      */
     public ScheduledMessage scheduleMsg(Message msg, long delay) {
 	ScheduledMessage sm = new ScheduledMessage(this, msg);
+        timer.schedule(sm, delay);
 	return sm;
     }
 
@@ -112,6 +116,7 @@ public class DirectPastryNode extends PastryNode
      */
     public ScheduledMessage scheduleMsg(Message msg, long delay, long period) {
 	ScheduledMessage sm = new ScheduledMessage(this, msg);
+        timer.schedule(sm, delay, period);
 	return sm;
     }
 
@@ -128,6 +133,7 @@ public class DirectPastryNode extends PastryNode
      */
     public ScheduledMessage scheduleMsgAtFixedRate(Message msg, long delay, long period) {
 	ScheduledMessage sm = new ScheduledMessage(this, msg);
+        timer.scheduleAtFixedRate(sm, delay, period);
 	return sm;
     }
 }
