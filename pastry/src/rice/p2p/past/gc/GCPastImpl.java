@@ -196,7 +196,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
           NodeHandleSet replicas = endpoint.replicaSet(array[i], replicationFactor+1, set.getHandle(set.size()-1), set);
           
           if ((replicas != null) && (replicas.size() > 0)) {
-            for (int j=0; j<replicas.size(); i++) 
+            for (int j=0; j<replicas.size(); j++) 
               map.addReplica(replicas.getHandle(j), array[i]);
             
             ids.removeId(array[i]);
