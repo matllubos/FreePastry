@@ -75,6 +75,10 @@ public class PublishMessage extends ScribeMessage {
   public ScribeContent getContent() {
     return content;
   }
+  
+  public String toString() {
+    return "PublishMessage"+topic+":"+content;
+  }
 
 }
 
