@@ -60,7 +60,7 @@ public class PersistentStorage implements Storage {
    * Static fields for logging based on the requests we are writing.
    * Enable logWriteTypes to turn on this output.
    */  
-  private static boolean logWriteTypes = true;
+  private static boolean logWriteTypes = false;
   private Object statLock = new Object();
   private long statsLastWritten = System.currentTimeMillis();
   private long statsWriteInterval = 60 * 1000;
@@ -375,7 +375,7 @@ public class PersistentStorage implements Storage {
         /* first get the file */
         File objFile = getFile(id); 
         
-        System.out.println("COUNT: " + System.currentTimeMillis() + " Unstoring data under " + id.toStringFull() + " of size " + objFile.length() + " in " + name);
+        if (PersistentStorage.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Unstoring data under " + id.toStringFull() + " of size " + objFile.length() + " in " + name);
         
         /* remove id from stored list */
         if (index) {
@@ -452,7 +452,7 @@ public class PersistentStorage implements Storage {
         public Object doWork() throws Exception {
           synchronized(statLock) { numMetadataWrites++; }
           
-          System.out.println("COUNT: " + System.currentTimeMillis() + " Updating metadata for " + id.toStringFull() + " in " + name);
+          if (PersistentStorage.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Updating metadata for " + id.toStringFull() + " in " + name);
           
           /* write the metadata to the file */
           File objFile = getFile(id);
@@ -499,7 +499,7 @@ public class PersistentStorage implements Storage {
             if ((objFile == null) || (! objFile.exists())) 
               return null;
 
-            System.out.println("COUNT: " + System.currentTimeMillis() + " Fetching data under " + id + " of size " + objFile.length() + " in " + name);
+            if (PersistentStorage.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Fetching data under " + id + " of size " + objFile.length() + " in " + name);
             return readData(objFile);
           } catch (Exception e) {
             /* remove our index for this file */
