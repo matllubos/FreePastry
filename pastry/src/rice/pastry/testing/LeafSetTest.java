@@ -87,7 +87,7 @@ public class LeafSetTest {
   }
 
   public void testCumulativeRange() {
-    for (int nodes=1; nodes<20; nodes++) {
+    for (int nodes=2; nodes<20; nodes++) {
       for (int size=2; size<17; size+=2) {
         LeafSet leafset = generateLeafSet(size, nodes, false);
 
@@ -131,6 +131,9 @@ public class LeafSetTest {
             IdRange range = leafset.range(leafset.get(pos), q, true);
 
             if ((q < size/2 - abs(pos)) || (size + 1 > nodes)) {
+              assertTrue("Range of node " + pos + " with q " + q + " nodes " + nodes + " size " + size +
+                         " should not be null in leafset " + leafset, range != null);
+              
               if (q >= nodes) {
                 assertTrue("Range of node " + pos + " with q " + q + " nodes " + nodes + " size " + size +
                            " should be empty in leafset " + leafset, range.isEmpty());

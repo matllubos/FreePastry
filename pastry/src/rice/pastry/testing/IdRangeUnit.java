@@ -86,6 +86,14 @@ public class IdRangeUnit {
 	return r;
     }
 
+    public Id createIdWithPrefix(byte b) {
+      byte[] data = new byte[Id.IdBitLength / 8];
+
+      data[data.length-1] = b;
+      return new Id(data);
+    }
+      
+
 
     public void equalityTest(IdRange r1, IdRange r2) 
     {
@@ -167,11 +175,17 @@ public class IdRangeUnit {
 	IdRange d2 = r2.diff(r1);
 
 	IdRange i1 = r1.intersect(r2);
-	IdRange i2 = r2.intersect(r1);
+  IdRange i2 = r2.intersect(r1);
 
 	if ( !d1.intersect(i1).isEmpty() || !d1.intersect(i2).isEmpty() ||
 	     !d2.intersect(i1).isEmpty() || !d2.intersect(i2).isEmpty() ) 
 	     System.out.println("ALERT: diff error 1." + r1 + r2 + d1 + d2 + i1 + i2);
+
+  if (! i1.equals(i2)) {
+    if (d1.equals(d2)) {
+	     System.out.println("ALERT: diff error 15." + r1 + r2 + d1 + d2 + i1 + i2);
+    }
+  }
 
 	// try to reconstitute
 	IdRange re1 = d1;
@@ -278,7 +292,7 @@ public class IdRangeUnit {
 	rng = new Random(PastrySeed.getSeed());
 
 	System.out.println("IdRangeUnit test starting...");
-
+  
 	for (int i=0; i<1000; i++) {
 	    IdRange r1 = createEmptyIdRange();
 	    IdRange r2 = createEmptyIdRange();
@@ -443,6 +457,13 @@ public class IdRangeUnit {
 	    diffSubtractTest(r1, r2);
 	    mergeTest(r1, r2);
 
+      r1 = new IdRange(createIdWithPrefix((byte) 0xC0), createIdWithPrefix((byte) 0x40));
+      r2 = new IdRange(createIdWithPrefix((byte) 0xE0), createIdWithPrefix((byte) 0x20));
+
+      equalityTest(r1, r2);
+      mergeIntersectTest(r1, r2);
+      diffSubtractTest(r1, r2);
+      mergeTest(r1, r2);
 	}
 
 	System.out.println("IdRangeUnit test finished.");

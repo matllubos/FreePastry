@@ -451,59 +451,8 @@ public class LeafSet extends Observable implements Serializable {
    * @return the range of keys, or null if n is not a member of the leafset, or if the range cannot be computed
    */
   public IdRange range(NodeHandle n, int r) { 
-   int pos;
-   NodeHandle minN = null, maxN = null;
-
-   // get n's position in the leafset
-   try {
-	    pos = getIndex(n.getNodeId());
-   } catch(Exception e) {
-	    // argument n invalid
-	    return null;
-   }
-
-   if (r<0) return null;
-   if (size() == 0 && r == 0) return new IdRange(n.getNodeId(), n.getNodeId());
-
-   // get edge nodes for range calculation
-   int min = pos;
-   int max = pos;
-   for (int i=0; i<r+1; i++) {
-	    if (min == -ccwSize() && (min = complement(min)) == -ccwSize()) return null;
-	    if (max == cwSize() && (max = complement(max)) == cwSize()) return null;
-      min--;
-      max++;
-
-      minN = get(min);
-      maxN = get(max);
-
-      if ( !n.getNodeId().isBetween(minN.getNodeId(), maxN.getNodeId()) &&
-           !minN.getNodeId().equals(maxN.getNodeId()) ) {
-        // we have wrapped the leafset, result is the full range
-        //System.out.println("full range:" + this + "r=" + r + " pos=" + pos);
-        return new IdRange(n.getNodeId(), n.getNodeId());
-      }
-   }
-
-   // see if we can compute range for n
-   //if (minN == null || maxN == null) return null;
-
-   //System.out.println("minN=" + minN.getNodeId() + "n=" + n.getNodeId() + "maxN=" + maxN.getNodeId());
-
-   //System.out.print("maxN= " + maxN.getNodeId());
-   //System.out.println("minN= " + minN.getNodeId());
-
-   IdRange cw = (new IdRange(n.getNodeId(), maxN.getNodeId())).ccwHalf();
-   IdRange ccw = (new IdRange(minN.getNodeId(), n.getNodeId())).cwHalf();
-   //System.out.println("ccw=" + ccw + " cw=" + cw);
-   return ccw.merge(cw); 
-  }
-
-  /*
-   r++;
-
    // first, we check the arguments
-   if (r < 1) return null;
+   if (r < 0) return null;
    if (! (member(n.getNodeId()) || baseId.equals(n.getNodeId()))) return null;
 
    // get the position of the node and the number of nodes in the network
@@ -518,7 +467,7 @@ public class LeafSet extends Observable implements Serializable {
 
      // if the rank is more than the number of nodes in the network, then we return
      // the whole range.
-     if (r >= num) {
+     if (r+1 >= num) {
        return new IdRange(n.getNodeId(), n.getNodeId());
      }
 
@@ -532,12 +481,12 @@ public class LeafSet extends Observable implements Serializable {
      //   num (as this will result in the range [0 .. num-1] as
      //   desired.  Last, we shift the range back down by substracting
      //   ccwSize.
-     ccw = get(mod(pos - r + ccwSet.size(), num) - ccwSet.size());
-     cw = get(mod(pos + r + ccwSet.size(), num) - ccwSet.size()); 
+     ccw = get(mod(pos - r - 1 + ccwSet.size(), num) - ccwSet.size());
+     cw = get(mod(pos + r + 1 + ccwSet.size(), num) - ccwSet.size()); 
     } else {
       // now, we need to find the pair nodes for this node range
-      ccw = get(pos - r);
-      cw = get(pos + r);
+      ccw = get(pos - r - 1);
+      cw = get(pos + r + 1);
     }
 
    // if either of it's pair nodes are null, then we cannot determine the range
@@ -550,7 +499,8 @@ public class LeafSet extends Observable implements Serializable {
    IdRange cwRange = (new IdRange(n.getNodeId(), cw.getNodeId())).ccwHalf();
    IdRange ccwRange = (new IdRange(ccw.getNodeId(), n.getNodeId())).cwHalf();
 
-   return ccwRange.merge(cwRange); */
+   return ccwRange.merge(cwRange);
+  }
 
   /**
    * range
