@@ -65,6 +65,7 @@ public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListe
       glacierView.add("Uptime", upDays+"d "+(upHours%24)+"h "+(upMin%60)+"m");
       glacierView.add("Fragm. total", "" + current.fragmentStorageSize + " bytes");
       glacierView.add("Trash total", "" + current.trashStorageSize + " bytes");
+      glacierView.add("Bandw. limit", "" + current.bucketTokensPerSecond + " / " + current.bucketMaxBurstSize);
     } else {
       glacierView.add("Starting up...", "");
     }
@@ -105,7 +106,7 @@ public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListe
     DataPanel glacierPanel2 = new DataPanel("Queue");
 
     Constraints graph2Cons = new Constraints();
-    graph2Cons.gridx = 2;
+    graph2Cons.gridx = 0;
     graph2Cons.gridy = 0;
     graph2Cons.fill = Constraints.HORIZONTAL;
 
@@ -122,6 +123,41 @@ public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListe
     fetchView.addSeries("F", timeSeries, activeSeries, Color.green);
     fetchView.addSeries("F", timeSeries, pendingSeries, Color.blue);
     glacierPanel2.addDataView(fetchView);
+
+    Constraints bucketCons = new Constraints();
+    bucketCons.gridx = 1;
+    bucketCons.gridy = 0;
+    bucketCons.fill = Constraints.HORIZONTAL;
+
+    LineGraphView bucketView = new LineGraphView("Token bucket", 380, 200, bucketCons, "Minutes", "Tokens", false, false);
+    timeSeries = new double[HISTORY];
+    double[] minSeries = new double[HISTORY];
+    double[] maxSeries = new double[HISTORY];
+    for (int j=0; j<HISTORY; j++) {
+      GlacierStatistics statJ = history[(historyPtr+j) % HISTORY];
+      timeSeries[j] = j;
+      minSeries[j] = (statJ == null) ? 0 : statJ.bucketMin;
+      maxSeries[j] = (statJ == null) ? 0 : statJ.bucketMax;
+    }
+    bucketView.addSeries("F", timeSeries, minSeries, Color.green);
+    bucketView.addSeries("F", timeSeries, maxSeries, Color.red);
+    glacierPanel2.addDataView(bucketView);
+
+    Constraints consumedCons = new Constraints();
+    consumedCons.gridx = 2;
+    consumedCons.gridy = 0;
+    consumedCons.fill = Constraints.HORIZONTAL;
+
+    LineGraphView consumedView = new LineGraphView("Bandwidth", 380, 200, consumedCons, "Minutes", "Bytes/sec", false, false);
+    timeSeries = new double[HISTORY];
+    double[] consumedSeries = new double[HISTORY];
+    for (int j=0; j<HISTORY; j++) {
+      GlacierStatistics statJ = history[(historyPtr+j) % HISTORY];
+      timeSeries[j] = j;
+      consumedSeries[j] = (statJ == null) ? 0 : (statJ.bucketConsumed / 60);
+    }
+    consumedView.addSeries("F", timeSeries, consumedSeries, Color.orange);
+    glacierPanel2.addDataView(consumedView);
 
     MultiDataPanel thePanel = new MultiDataPanel("Glacier");
     thePanel.addDataPanel(glacierPanel);
