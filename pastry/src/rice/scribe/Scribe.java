@@ -191,6 +191,11 @@ public class Scribe extends PastryAppl implements IScribe
      */
     public ScribeMaintainer m_maintainer;
 
+
+    /**
+     * The time period determining Scribe Tree Maintenance Activity
+     * frequency
+     */
     public static int m_scribeMaintFreq = 10; // seconds
 
 
@@ -349,7 +354,9 @@ public class Scribe extends PastryAppl implements IScribe
 
     /** 
      * Registers the application that implements the IScribeObserver 
-     * interface. Whenever a topic is implicitly created, these registered
+     * interface. Whenever a topic is implicitly created, (i.e. a node 
+     * receives SUBSCRIBE message for a topic it hasnt subscribed to, 
+     * thereby creating a topic data structure at local node) these registered
      * applications would be notified.
      *
      * @param app The application interested in getting notified whenever
@@ -449,14 +456,15 @@ public class Scribe extends PastryAppl implements IScribe
      * Joins a multicast group/topic.  When a node joins a multicast group,
      * it receives all messages multicast to that group.
      *
-     * @param    cred
-     * The credentials of the entity joining the group
      *
      * @param    topicID        
      * The ID of the group to join to
      *
      * @param    subscriber
      * The application joining the group
+     *
+     * @param    cred
+     * The credentials of the entity joining the group
      *
      * @return true if the operation was successful, false if the operation
      *         failed because the underlying Scribe substrate was not ready. 
@@ -466,6 +474,9 @@ public class Scribe extends PastryAppl implements IScribe
 			   Credentials cred ) {
 	return join(topicId, subscriber, cred, null);
     }
+
+
+
     /**
      * Joins a multicast group/topic.  When a node joins a multicast group,
      * it receives all messages multicast to that group. An application can
@@ -582,12 +593,13 @@ public class Scribe extends PastryAppl implements IScribe
 	return true;
     }
 
+
     /**
      * Anycast to a group/topic. Data will be delivered to 'ANY' one node
      * which has joined the group. The handling of anycast message is 
-     * left to the application. The applications may do DFS of its subtree
-     * to evaluate some predicates to find out a node having desirable
-     * properties.
+     * left to the application. Default implementation of anycast message
+     * implements DFS of the tree, looking for nodes in the tree which 
+     * can satisfy the request of the anycast message.
      *
      * @param   groupID         
      * The ID of the group to anycast.
@@ -614,11 +626,10 @@ public class Scribe extends PastryAppl implements IScribe
 
     /**
      * An application can create sub-classes of MessageAnycast type of
-     * messages and write their own handling functions (like handleForward
-     * and handleDeliver) so as to take care of routing of these messages
-     * and also to handle cases where the anycast message reaches an 
-     * intermediate node where there is no application running to take care 
-     * of it.
+     * messages and write their own handling functions so as to do
+     * some application-specific predicate searching. Also, by this mean
+     * they can modify the default DFS satisfying their own conditions and
+     * predicates.
      *
      * @param   groupID         
      * The ID of the group to anycast.
@@ -808,6 +819,8 @@ public class Scribe extends PastryAppl implements IScribe
 	    }
 	}
     }
+
+
 
     /**
      * Returns the handle of the local node on which this Scribe 
@@ -1502,6 +1515,13 @@ public class Scribe extends PastryAppl implements IScribe
 	    return false;
     }
 
+    /**
+     * Notifies the applications on top of scribe who are interested
+     * in knowing the events of implicit topic creation.
+     *
+     * @param topicId topicId for which Topic data structure is 
+     *        created (implicitly)
+     */
     public void notifyScribeObservers(NodeId topicId){
 	IScribeObserver app;
 	Iterator it = m_scribeObservers.iterator();

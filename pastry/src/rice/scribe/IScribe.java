@@ -223,9 +223,9 @@ public interface IScribe
 
     /**
      * An application can create sub-classes of MessageAnycast type of
-     * messages and write their own handling functions (like handleForward
-     * and handleDeliver) so as to take care of routing of these messages
-     * and also to handle cases where the anycast message reaches an 
+     * messages and write their own handling functions so as to take care 
+     * of routing of these messages and also to handle cases where the 
+     * anycast message reaches an 
      * intermediate node where there is no application running to take care 
      * of it.
      *

@@ -54,11 +54,8 @@ import java.util.*;
  * 
  * @version $Id$ 
  *
- * @author Animesh Nandi
  * @author Atul Singh
  */
-
-
 public class MessageAnycast extends ScribeMessage implements Serializable
 {
     /**
@@ -113,8 +110,20 @@ public class MessageAnycast extends ScribeMessage implements Serializable
      * This method is called whenever the scribe node forwards a message in 
      * the scribe network. The processing is delegated by scribe to the 
      * message.
+     *
+     * This method implements the DFS of the scribe topic tree. Applications
+     * which want different handling of anycast messages, should overwrite 
+     * this method.
+     *
+     * Implementation policy --- The anycast message is routed first to the leaves
+     * of the topic tree and there applications are given upcalls (in form of 
+     * anycastHandler() upcalls) and checked to see if furthur DFS has to be
+     * carried out. Then, message is routed to other nodes of the tree. If a 
+     * node doesnt have application registered for this topic, then message
+     * is routed furthur.
      * 
      * @param scribe the scribe application.
+     *
      * @param topic the topic within the scribe application.
      *
      * @return true if the message should be routed further, false otherwise.
@@ -154,7 +163,7 @@ public class MessageAnycast extends ScribeMessage implements Serializable
             // Something broke along the way, and we can't find our way back to the
 	    // spare capacity tree 
 	    else{
-		System.out.println("DFS FAILED :: No spare capacity");
+		//System.out.println("Message Anycast -- DFS FAILED ");
 		// Call the fault handler, since no one could satisfy 
 		// the anycast request.
 		faultHandler(scribe);
@@ -217,7 +226,7 @@ public class MessageAnycast extends ScribeMessage implements Serializable
 			    scribe.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
 			}
 			else {
-			    System.out.println("WARNING -- Parent is null for non-root node.. should handle this case -- At "+scribe.getNodeId()+" for topic "+topic.getTopicId()+" already_seen_size "+alreadySeenSize());
+			    //System.out.println("WARNING -- Parent is null for non-root node.. should handle this case -- At "+scribe.getNodeId()+" for topic "+topic.getTopicId()+" already_seen_size "+alreadySeenSize());
 			    // We are not part of tree anymore, so should 
 			    // anycast furthur this message
 			    scribe.anycast(topic.getTopicId(), this, c);
@@ -227,7 +236,7 @@ public class MessageAnycast extends ScribeMessage implements Serializable
 		    else {						
 			// call the fault handler to notify that DFS
 			// has failed.
-			System.out.println("DFS Failed at"+scribe.getNodeId()+" for topic "+m_topicId);
+			//System.out.println("DFS Failed at"+scribe.getNodeId()+" for topic "+m_topicId);
 			this.faultHandler(scribe);
 		    }						
 		}
@@ -239,14 +248,20 @@ public class MessageAnycast extends ScribeMessage implements Serializable
     /**
      * Method returns the number of nodes visited during
      * the DFS.
+     * 
+     * @return number of nodes already seen during the DFS
      */
     public int alreadySeenSize(){
 	return already_seen.size();
     }
+
+
     /**
      * Method to notify that anycast has failed.
      * Derived classes can do more application-specific handling
      * of such cases.
+     *
+     * @param scribe The scribe object present on the local node
      */
     public void faultHandler(Scribe scribe){
 	System.out.println("ANYCAST FAILED !!"+toString());

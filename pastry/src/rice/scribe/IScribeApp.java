@@ -126,8 +126,9 @@ public interface IScribeApp
 
 
     /**
-     * Invoked by Anycast Message at local node, to check if there is a 
-     * local application which can take care of this anycast message.
+     * Invoked by underlying scribe when it receives a anycast Message, 
+     * to check if there is a local application which can take care of 
+     * this anycast message.
      * If application can service the request of anycast message, the
      * anycast message is not routed furthur(for DFS), else the anycast
      * message will be furthur routed following DFS.

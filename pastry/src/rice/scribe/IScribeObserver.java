@@ -44,16 +44,21 @@ import java.lang.Object;
  * @(#) IScribeObserver.java
  *
  * This interface should be implemented by applications which want to
- * be notified when the local node becomes a forwarder for a topic.
+ * be notified when the local node becomes a "forwarder" for a topic, i.e.
+ * there is no local application subscribed to this topic already.
+ *
  * This interface provides the observer pattern for applications built
- * on top of Scribe Layer. Whenever a topic is created implicitly inside
+ * on top of Scribe Layer. 
+ *
+ * Whenever a topic is created (referring to Topic data structure that is created,
+ * and not the Scribe's create method) implicitly inside
  * the scribe layer (when a node becomes an intermediate node for a topic)
  * the Scribe object will inform all observers which implement this interface.
  * Application then can take appropriate action depending on the functionality
  * of the application.
  *
  * @version $Id$
- *
+ * @author Atul Singh
  */
 
 public interface IScribeObserver
@@ -62,7 +67,8 @@ public interface IScribeObserver
      * Method called by underlying scribe layer whenever a topic
      * data structure is created implicitly.
      * 
-     * @param obj The object associated with the topic creation event.
+     * @param obj The object associated with the topic creation event,
+     *            here it is the topicId of the topic created.
      */
     public void update(Object obj);
    

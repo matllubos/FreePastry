@@ -371,11 +371,11 @@ public class DirectScribeMaintenanceTest
 	 */
 
 	passed = setParentAndaddChildTest();
-
+	System.out.print("\n\nSET-PARENT_&_ADD-CHILD TEST:\t\t\t\t\t\t");
 	if(passed)
-	    System.out.println("\n\nSET-PARENT_&_ADD-CHILD TEST:  PASSED \n");
+	    System.out.print("[ PASSED ]\n");
 	else
-	    System.out.println("\n\nSET-PARENT_&_ADD-CHILD TEST:  FAILED \n");
+	    System.out.print("[ FAILED ]\n");
 	   
 
 
@@ -387,10 +387,11 @@ public class DirectScribeMaintenanceTest
 	 * activity started.
 	 */
 	passed = checkAllTrees();
+	System.out.print("\n\nMEMBERSHIP TEST FOR ALL TREES:\t\t\t\t\t\t");
 	if(passed)
-	    System.out.println("\n CHECK : To see if initially all the nodes were part of all the required trees - PASSED\n");
+	    System.out.print("[ PASSED ]\n");
 	else
-	    System.out.println("\n CHECK : To see if initially all the nodes were part of all the required trees - FAILED\n");
+	    System.out.print("[ FAILED ]\n");
 	ok = ok && passed;
 
 	
@@ -402,10 +403,11 @@ public class DirectScribeMaintenanceTest
 	for(i=0; i< scribeClients.size(); i++) {
 	    passed = distinctChildrenTableConsistencyTest(i);
 	}
+	System.out.print("\n\nDISTINCT CHILDREN TABLE CONSISTENCY:\t\t\t\t\t\t");
 	if ( passed == true)
-	    System.out.println("\n CHECK : DISTINCT CHILDREN TABLE CONSISTENCY - PASSED \n");
+	    System.out.print("[ PASSED ]\n");
 	else
-	    System.out.println("\n CHECK : DISTINCT CHILDREN TABLE CONSISTENCY - FAILED \n");
+	    System.out.print("[ FAILED ]\n");
 
 	ok = ok && passed;
 
@@ -420,10 +422,11 @@ public class DirectScribeMaintenanceTest
 	for(i=0; i< scribeClients.size(); i++) {
 	    passed = distinctParentTableConsistencyTest(i);
 	}
+	System.out.print("\n DISTINCT PARENT TABLE CONSISTENCY:\t\t\t\t\t\t");
 	if ( passed == true)
-	    System.out.println("\n CHECK : DISTINCT PARENT TABLE CONSISTENCY - PASSED \n");
+	    System.out.print("[ PASSED ]\n");
 	else
-	    System.out.println("\n CHECK : DISTINCT PARENT TABLE CONSISTENCY - FAILED \n");
+	    System.out.print("[ FAILED ]\n");
 
 	ok = ok && passed;
 
@@ -447,10 +450,11 @@ public class DirectScribeMaintenanceTest
 	for(i=0; i< scribeClients.size(); i++) {
 	    passed = checkParentPointerForAllTopics(i);
 	}
+	System.out.print("\n\nPARENT POINTER SET TEST:\t\t\t\t\t\t");
 	if(passed)
-	    System.out.println("\n CHECK : Parent pointers are not-null - PASSED \n");
+	    System.out.print("[ PASSED ]\n");
 	else
-	    System.out.println("\n CHECK : Parent pointers are not null - FAILED \n");
+	    System.out.print("[ FAILED ]\n");
 	ok = ok && passed;
 
 
@@ -462,10 +466,11 @@ public class DirectScribeMaintenanceTest
 
 	passed = checkAnycastDFS((NodeId)topicIds.elementAt(0));
 
+	System.out.print("\nANYCAST--DFS TEST:\t\t\t\t\t\t");
 	if(passed)
-	    System.out.println("\n CHECK : ANYCAST--DFS  - PASSED \n");
+	    System.out.print("[ PASSED ]\n");
 	else
-	    System.out.println("\n CHECK : ANYCAST--DFS  - FAILED \n");
+	    System.out.print("[ FAILED ]\n");
 	ok = ok && passed;
 
 
@@ -478,7 +483,7 @@ public class DirectScribeMaintenanceTest
 	 */
 	currentAckFlagState = true;
 	joinNodes(concurrentJoins);
-	System.out.println("Total Nodes currently alive = " + nodesCurrentlyAlive);
+	//System.out.println("Total Nodes currently alive = " + nodesCurrentlyAlive);
 	// schedule TreeRepair on all nodes.
 	scheduleTROnAllNodes();
 	passed = true;
@@ -486,6 +491,7 @@ public class DirectScribeMaintenanceTest
 	    passed = childParentViewConsistencyTest(i);
 	}
 	
+
 	if(passed)
 	    System.out.println("\n CHECK : MessageAckOnSubscribe - Parent-Child relationship is consistent from view of PARENT as well as CHILD - PASSED \n");
 	else
@@ -1081,7 +1087,8 @@ public class DirectScribeMaintenanceTest
 	for(int x = 0; x < scribeClients.size(); x++){
 	    scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(x);
 	    scribe = scribeApp.getScribe();
-	    msg = new MessageAnycast(scribe.getAddress(), scribe.getNodeHandle(), topicId, cred);
+	    //msg = new MessageAnycast(scribe.getAddress(), scribe.getNodeHandle(), topicId, cred);
+	    msg = new TestAnycastMessage(scribe.getAddress(), scribe.getNodeHandle(), topicId, cred);
 	    scribe.anycast(topicId, msg, cred);
 	    while(simulate());
 
@@ -1091,6 +1098,19 @@ public class DirectScribeMaintenanceTest
 	}
 	return result;
     }
+
+    /**
+     * A dummy test message used for checking if anycast is doing
+     * DFS correctly.
+     */
+    public class TestAnycastMessage extends MessageAnycast{
+	public TestAnycastMessage(Address address, NodeHandle nh, NodeId topicId, Credentials credentials){
+	    super(address, nh, topicId, credentials);
+	}
+	public void faultHandler(Scribe scribe){
+	}
+    }
+
 }
  
 
