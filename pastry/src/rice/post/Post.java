@@ -151,7 +151,7 @@ public class Post extends PastryAppl implements IScribeApp  {
     this.caPublicKey = caPublicKey;
 
     security = new SecurityService(keyPair, caPublicKey);
-    storage = new StorageService(past, credentials, security);
+    storage = new StorageService(address, past, credentials, security);
     factory = new RandomNodeIdFactory();
 
     clients = new Vector();

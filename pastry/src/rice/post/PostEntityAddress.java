@@ -4,6 +4,7 @@ import java.security.*;
 import java.io.*;
 
 import rice.pastry.*;
+import rice.pastry.multiring.*;
 
 /**
  * This class represents the abstract notion of the address
@@ -42,8 +43,20 @@ public abstract class PostEntityAddress implements Serializable {
       System.err.println("No SHA support!");
     }
 
-    md.update(string.getBytes());
-    return new NodeId(md.digest());
-  }
+    if (string.indexOf("@") == -1) {
+      md.update(string.getBytes());
+      NodeId userNodeId = new NodeId(md.digest());
+      return new RingNodeId(userNodeId, MultiRingPastryNode.GLOBAL_RING_ID);
+    } else {
+      String user = string.substring(0, string.indexOf("@"));
+      String domain = string.substring(string.indexOf("@") + 1);
+      
+      md.update(user.getBytes());
+      NodeId userNodeId = new NodeId(md.digest());
 
+      md.update(domain.getBytes());
+      RingId domainRingId = new RingId(md.digest());
+      return new RingNodeId(userNodeId, domainRingId);
+    }
+  }
 }

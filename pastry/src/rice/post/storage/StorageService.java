@@ -13,6 +13,7 @@ import rice.past.*;
 import rice.post.*;
 import rice.post.security.*;
 import rice.pastry.*;
+import rice.pastry.multiring.*;
 import rice.pastry.standard.*;
 import rice.pastry.security.*;
 
@@ -25,6 +26,11 @@ import rice.pastry.security.*;
  * @version $Id$
  */
 public class StorageService {
+
+  /**
+   * The address of the user running this storage service.
+   */
+  private PostEntityAddress entity;
   
   /**
    * The PAST service used for distributed persistant storage.
@@ -58,12 +64,18 @@ public class StorageService {
    * @param credentials Credentials to use to store data.
    * @param security SecurityService to handle all security related tasks
    */
-  public StorageService(PASTService past, Credentials credentials, SecurityService security) {
+  public StorageService(PostEntityAddress address, PASTService past, Credentials credentials, SecurityService security) {
+    this.entity = address;
     this.past = past;
     this.credentials = credentials;
     this.security = security;
 
-    factory = new RandomNodeIdFactory();
+    if (entity.getAddress() instanceof RingNodeId) {
+      factory = new RandomRingNodeIdFactory(((RingNodeId) entity.getAddress()).getRingId());
+    } else {
+      factory = new RandomNodeIdFactory();
+    }
+    
     pendingVerification = new Hashtable();
   }
 
@@ -274,7 +286,12 @@ public class StorageService {
         byte[] cipherText = security.encryptDES(plainText, hash);
         byte[] loc = security.hash(cipherText);
 
-        location = new NodeId(loc);
+        if (entity.getAddress() instanceof RingNodeId) {
+          location = new RingNodeId(new NodeId(loc), ((RingNodeId) entity.getAddress()).getRingId());
+        } else {
+          location = new NodeId(loc);
+        }
+        
         key = new SecretKeySpec(hash, "DES");
 
         ContentHashData chd = new ContentHashData(cipherText);
@@ -662,7 +679,12 @@ public class StorageService {
         byte[] cipherText = security.encryptDES(plainText, keyByte);
         byte[] loc = security.hash(cipherText);
 
-        location = new NodeId(loc);
+        if (entity.getAddress() instanceof RingNodeId) {
+          location = new RingNodeId(new NodeId(loc), ((RingNodeId) entity.getAddress()).getRingId());
+        } else {
+          location = new NodeId(loc);
+        }
+        
         key = new SecretKeySpec(keyByte, "DES");
 
         SecureData sd = new SecureData(cipherText);
