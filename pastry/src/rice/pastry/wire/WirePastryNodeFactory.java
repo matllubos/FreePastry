@@ -270,8 +270,8 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
             System.err.println("Interrupted in newNode!");
           }
 
-          //pn.doneNode(getNearest(localhandle, bootstrap));
-          pn.doneNode(bootstrap);
+          pn.doneNode(getNearest(localhandle, bootstrap));
+          //pn.doneNode(bootstrap);
         }
       };
 
