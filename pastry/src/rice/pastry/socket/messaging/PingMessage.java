@@ -60,10 +60,10 @@ public class PingMessage extends SocketMessage implements Probe {
   /**
    * Constructor
    */
-  public PingMessage(SocketNodeHandle sender, SocketNodeHandle receiver) {
+  public PingMessage(SocketNodeHandle sender, SocketNodeHandle receiver, long startTime) {
     this.sender = sender;
     this.receiver = receiver;
-    start = System.currentTimeMillis();
+    start = startTime;
   }
   
   public long getStartTime() {
@@ -74,12 +74,13 @@ public class PingMessage extends SocketMessage implements Probe {
     return "PingMessage";
   }
 
-  private void writeObject(ObjectOutputStream oos)
-    throws IOException {
+//  private void writeObject(ObjectOutputStream oos)
+//    throws IOException {
+//
+//    start = System.currentTimeMillis();
+//    oos.defaultWriteObject();
+//  }
 
-    start = System.currentTimeMillis();
-    oos.defaultWriteObject();
-  }
 	/* (non-Javadoc)
 	 * @see rice.pastry.socket.messaging.Probe#getFaildset()
 	 */

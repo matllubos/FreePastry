@@ -48,6 +48,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.Vector;
 
+import rice.p2p.commonapi.Id;
 import rice.pastry.Log;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeId;
@@ -58,7 +59,6 @@ import rice.pastry.PastrySeed;
 import rice.pastry.dist.DistPastryNode;
 import rice.pastry.dist.DistPastryNodeFactory;
 import rice.pastry.leafset.LeafSet;
-import rice.pastry.messaging.Message;
 import rice.pastry.socket.ConnectionManager;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketPastryNode;
@@ -97,12 +97,14 @@ public class DistHelloWorldMultiThread {
   public static int protocol = DistPastryNodeFactory.PROTOCOL_SOCKET;
   private static boolean toFile = true;
   private static boolean useTempStall = false;
-  private static boolean useStall = false;
+  private static boolean useStall = true;
   private static boolean useKill = true;
   private static boolean useRegen = true;
   private static boolean noKilling = false;
   private static boolean oneThreadPerMessage = false;
-  private static boolean limitedSockets = true;
+  public static boolean useDirect = false;
+  private static boolean limitedSockets = !useDirect;
+  public static boolean useNonDirect = true; //!useDirect; //true;
   
   public static DistPastryNodeFactory getSameFactory() {
     DistPastryNodeFactory sameNodeFactory = 
@@ -367,21 +369,22 @@ public class DistHelloWorldMultiThread {
   public static void createSameNode(DistHelloWorldMultiThread driver) {
     if (noKilling) return;
     driver.ready_nodes = numnodes-1;
-    System.out.println("creatingSamenode():1");
+    double beginTime = System.currentTimeMillis();
+    System.out.println("creatingSamenode():1  "+(System.currentTimeMillis()-beginTime));
     sameNode = (DistPastryNode)driver.makePastryNode(false, getSameFactory());
-    System.out.println("creatingSamenode():2");
+    System.out.println("creatingSamenode():2  "+(System.currentTimeMillis()-beginTime));
     waitUntilReady(sameNode);
     //sleep(5000);
-    System.out.println("creatingSamenode():3");
+    System.out.println("creatingSamenode():3  "+(System.currentTimeMillis()-beginTime));
 
     // wait until they are all created
     while (!driver.allNodesCreated()) {
-      System.out.println("creatingSamenode():4");
+      System.out.println("creatingSamenode():4  "+(System.currentTimeMillis()-beginTime));
       //sleep(5000);
     }
-    System.out.println("creatingSamenode():5");
+    System.out.println("creatingSamenode():5  "+(System.currentTimeMillis()-beginTime));
     waitForLeafSetsToStabalize(driver);
-    System.out.println("creatingSamenode():6");
+    System.out.println("creatingSamenode():6  "+(System.currentTimeMillis()-beginTime));
   }
   
   public void killSameNode() {
@@ -467,16 +470,18 @@ public class DistHelloWorldMultiThread {
       Iterator i = list.iterator();
       while (i.hasNext()) {
         HelloMsg m = (HelloMsg) i.next();
-        if ((m.lastMan == null) || !driver.killedNodes.contains(m.lastMan.getLocalNodeHandle())) {
+        if (!driver.killedNodes.contains(m.intermediateSource)) {
           // if the source is not dead
           boolean onlyPrintLiveFailures = useKill || useStall;
           if (onlyPrintLiveFailures) {
             // check to see if last address is a dead node
-            InetSocketAddress lastAddr = m.getLastAddress();
-            if (lastAddr == null) {
-              numMissing++;
-              System.out.println("  Missing msg1: " + m.getInfo());
-            } else {
+            //InetSocketAddress lastAddr = m.getLastAddress();
+//            Id lastAddr = m.lastNextHop;
+//            if (lastAddr == null) {
+//              numMissing++;
+//              // due to no next hop
+//              System.out.println("  Missing msg1: " + m.getInfo());
+//            } else {
               Iterator it = driver.killedNodes.iterator();
               boolean print = false;
               boolean missing = true;
@@ -484,8 +489,17 @@ public class DistHelloWorldMultiThread {
                 //PastryNode pn1 = (PastryNode) it.next();
                 SocketNodeHandle snh = (SocketNodeHandle)it.next();
 //                  (SocketNodeHandle) pn1.getLocalHandle();
-                if (m.ackReceived && snh.getAddress().equals(lastAddr)) {
-                  missing = false;
+                if (m.messageDirect) {
+                  if (m.intermediateSource.equals(snh)) { // the last known sender is dead
+                    missing = false;
+                  }
+                  if (m.nextHop.equals(snh.getId())) { // the intended receiver is dead
+                    missing = false;
+                  }
+                } else { // we're not using direct, and we got an ack and the lastNexthop is now dead
+                  if (snh.getId().equals(m.nextHop)) {
+                    missing = false;
+                  }                  
                 }
               }
               if (missing) {
@@ -493,7 +507,7 @@ public class DistHelloWorldMultiThread {
                 //System.out.println("     Pre Missing");
                 System.out.println("  Missing msg2: " + m.getInfo());
               }
-            }
+            //}
           } else {
             numMissing++;
             System.out.println("  Missing msg: " + m.getInfo());
@@ -617,7 +631,7 @@ public class DistHelloWorldMultiThread {
 							iters++;
 						}
 
-						Thread.currentThread().sleep(15000);
+						Thread.currentThread().sleep(5000);
 
 					} catch (DoneException de) {
 						throw de;
@@ -718,11 +732,17 @@ public class DistHelloWorldMultiThread {
   private int ready_nodes = 0;
 
   public void updateMsg(HelloMsg helloMsg) {
+//    System.out.println("updateMsg("+helloMsg+")");
     SentMessageLog.put(new Integer(helloMsg.getId()), helloMsg);    
+//    System.out.println("updateMsg2("+SentMessageLog.get(new Integer(helloMsg.getId()))+")");
   }
 
   public synchronized void MessageSent(HelloMsg helloMsg) { // int messageId, NodeId node){
-    SentMessageLog.put(new Integer(helloMsg.getId()), helloMsg);
+    if (SentMessageLog.get(new Integer(helloMsg.getId())) == null) {    
+//      System.out.println("msgSent("+helloMsg+")");    
+//      Thread.dumpStack();
+      SentMessageLog.put(new Integer(helloMsg.getId()), helloMsg);
+    }
   }
 
   public synchronized void MessageRecieved(HelloMsg helloMsg) {

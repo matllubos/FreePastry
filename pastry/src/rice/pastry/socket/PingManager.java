@@ -11,7 +11,6 @@ import java.io.NotSerializableException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.BindException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
@@ -19,9 +18,9 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.WeakHashMap;
 
-import rice.pastry.NodeId;
 import rice.pastry.socket.exception.DeserializationException;
 import rice.pastry.socket.exception.ImproperlyFormattedMessageException;
 import rice.pastry.socket.exception.SerializationException;
@@ -61,6 +60,9 @@ import rice.pastry.socket.messaging.PingResponseMessage;
  *   EVERYTHING is called on the SelectorThread.
  * ping() may be called on a different thread, but is "invoked" on the SelectorThread.  
  * 
+ * PingManager guarantees that Ping Responses have a valid Ping Sent time to help prevent
+ * forging of proximity().  See pingSentTimes for the record of sent pings.
+ * 
  * @author Jeff Hoye, Alan Mislove
  */
 public class PingManager implements SelectionKeyHandler {
@@ -85,6 +87,11 @@ public class PingManager implements SelectionKeyHandler {
    */
   public static int PING_THROTTLE = 10000;
 
+  /**
+   * The number of sent pings that we remember for each connection.  This is security so nobody can alter their proximity by sending a newer message.
+   */
+  private int NUM_PINGS_TO_REMEMBER = 5;
+
 
   // ************* Fields to handle notification/recording *******
   /**
@@ -99,7 +106,7 @@ public class PingManager implements SelectionKeyHandler {
 
   /**
    * the list of the last time a ping was sent
-   * SocketNodeHandle -> Long
+   * SocketNodeHandle -> LinkedList of Long
    */
   private WeakHashMap pingSentTimes;
 
@@ -221,7 +228,9 @@ public class PingManager implements SelectionKeyHandler {
    * @return The LastTimePinged value
    */
   public long getLastTimePinged(SocketNodeHandle snh) {
-    return ((Long) pingSentTimes.get(snh)).longValue();
+    LinkedList ll = (LinkedList)pingSentTimes.get(snh);
+    Long l = (Long)ll.getLast();
+    return l.longValue();
   }
   
   /**
@@ -291,16 +300,30 @@ public class PingManager implements SelectionKeyHandler {
    * @param force bypass the PING_THROTTLE rule.
    */
   private void ping(final SocketNodeHandle snh, final PingResponseListener prl, final boolean force) {
-    //final InetSocketAddress address = snh.getAddress();
-    manager.invoke(new Runnable() {
+    if (snh.equals(localHandle)) {
+//      Thread.dumpStack();
+      return;
+    }
+    Runnable r = new Runnable() {
 			public void run() {
         long curTime = System.currentTimeMillis();
+        LinkedList pstList = (LinkedList)pingSentTimes.get(snh);
         if (force ||
-          (pingSentTimes.get(snh) == null) ||
-          (curTime - getLastTimePinged(snh) > PING_THROTTLE)) {
-          pingSentTimes.put(snh, new Long(curTime));
+          (pstList == null) ||
+          (pstList.size() == 0) ||
+          (curTime - ((Long)pstList.getLast()).longValue() > PING_THROTTLE)) {
+          
+          LinkedList ll = pstList; //pingSentTimes.get(snh);
+          if(ll == null) {
+            ll = new LinkedList();
+            pingSentTimes.put(snh, ll);
+          }
+          ll.addLast(new Long(curTime));
+          while (ll.size() > NUM_PINGS_TO_REMEMBER) {
+            ll.removeFirst();
+          }
           addPingResponseListener(snh, prl);
-          enqueue(snh, new PingMessage(localHandle, snh));        
+          enqueue(snh, new PingMessage(localHandle, snh, curTime));        
         } else {
           if (getLastTimePingReceived(snh) >= getLastTimePinged(snh)) {
             // we just pinged them, and got a response
@@ -313,7 +336,8 @@ public class PingManager implements SelectionKeyHandler {
           }
         }
 			}
-		});
+		};
+    manager.invoke(r);      
   }
 
   /**
@@ -429,12 +453,22 @@ public class PingManager implements SelectionKeyHandler {
       long curTime = System.currentTimeMillis();
       long startTime = prm.getStartTime();
       int time = (int) (curTime - startTime);
+      LinkedList ll = (LinkedList)pingSentTimes.get(prm.sender);
+      if (ll == null) {
+        System.out.println("WARNING: "+this+" received unexpected ping response from "+prm.sender+" with unexpected starttime "+startTime);
+        return;
+      }
+
+      if (!ll.contains(new Long(startTime))) {
+        System.out.println("WARNING: "+this+" received ping response from "+prm.sender+" with unexpected starttime "+startTime);
+        return;
+      }
 
       if ((proximity.get(prm.sender) == null) || (((Integer) proximity.get(prm.sender)).intValue() > time)) {
         proximity.put(prm.sender, new Integer(time));
         pool.update(prm.sender, SocketNodeHandle.PROXIMITY_CHANGED);
       }
-      pingResponse(prm.sender, curTime);
+      pingResponse(prm.sender, curTime, startTime);
     }
   }
 
@@ -445,7 +479,7 @@ public class PingManager implements SelectionKeyHandler {
    * @param address DESCRIBE THE PARAMETER
    * @param curTime DESCRIBE THE PARAMETER
    */
-  public void pingResponse(SocketNodeHandle snh, long curTime) {
+  public void pingResponse(SocketNodeHandle snh, long curTime, long timeSentPing) {
     pingResponseTimes.put(snh, new Long(curTime));
     notifyPingResponseListeners(snh, proximity(snh), curTime);
   }
@@ -606,4 +640,8 @@ public class PingManager implements SelectionKeyHandler {
       ioe.printStackTrace();
     }
 	}
+  
+  public String toString() {
+    return "PingManger for "+localHandle;
+  }
 }

@@ -68,7 +68,7 @@ public class SelectorManager {
   public int numTimesNotRemoveKey = 0;
   public int totalNumTimesNotRemoveKey = 0;
   public static boolean recordStats = false;
-  public static boolean useHeartbeat = false;
+  public static boolean useHeartbeat = true;
 
 
   // *********************** debugging statistics ****************
@@ -438,5 +438,12 @@ public class SelectorManager {
       STALL_TIME = time;
         stall = true;
     }
+
+		/**
+		 * @return true if the current thread == the selectorThread
+		 */
+		public boolean isSelectorThread() {
+      return (Thread.currentThread() == selectorThread);
+		}
 
 }

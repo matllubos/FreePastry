@@ -27,9 +27,10 @@ import rice.pastry.socket.messaging.NodeIdResponseMessage;
 import rice.pastry.socket.messaging.RouteRowRequestMessage;
 import rice.pastry.socket.messaging.RouteRowResponseMessage;
 import rice.pastry.socket.messaging.SocketControlMessage;
+import rice.pastry.socket.messaging.SocketTransportMessage;
 
 /**
- * Private class which manages a single sockt.  It can be used in 3 instances:
+ * Private class which manages a single socket.  It can be used in 3 instances:
  * 1) control/routing traffic for a ConnectionManager
  * 2) data traffic for a ConnectionManager
  * 3) A temporary socket for the SocketPastryNodeFactory
@@ -39,11 +40,15 @@ import rice.pastry.socket.messaging.SocketControlMessage;
  * 
  * It can be closed() if it is idle().  It is idle() if it hasn't been used for 
  * 
+ * It is a liveness listener so that it will not read unless the node was able to
+ * respond to a ping, thus elevating the liveness to above UNKNOWN.
+ * 
  * @author Jeff Hoye, Alan Mislove
  */
-public class SocketManager implements SelectionKeyHandler {
+public class SocketManager implements SelectionKeyHandler, LivenessListener {
 
-  boolean nagle = true;
+
+	boolean nagle = true;
 
 	// the key to read/write from/to
   private SelectionKey key;
@@ -64,7 +69,7 @@ public class SocketManager implements SelectionKeyHandler {
    */
   private TimerTask checkDeadTask = null;
 
-  Exception closedTrace;
+  public Exception closedTrace;
   Exception openedTrace;
   Exception cmSet;
 
@@ -93,6 +98,11 @@ public class SocketManager implements SelectionKeyHandler {
    * This variable is true when the socket has been closed.
    */
   boolean closed = false;
+
+  /**
+   * This variable is true when the output channel has been closed.
+   */
+  private boolean halfClosed = false;
 
   /**
    * This variable keeps track of how many times we've tried to connect.  It is the 
@@ -156,7 +166,8 @@ public class SocketManager implements SelectionKeyHandler {
     markActive();
     this.scm = scm;
     this.type = type;
-    //System.out.println("SM.ctor("+type+")");
+//    if (type == ConnectionManager.TYPE_DATA)
+//      System.out.println("SM.ctor("+type+")");
     //sThread.dumpStack();
     reader = new SocketChannelReader(scm.pastryNode, this);
     writer = new SocketChannelWriter(scm.pastryNode, this);
@@ -428,38 +439,23 @@ public class SocketManager implements SelectionKeyHandler {
     key.attach(this);
   }
 
-//  
-//  boolean thisHalfClosed = false;
-//  boolean thatHalfClosed = false;
-//
-//  void closeThisHalf() {
-//    if (thisHalfClosed) {
-//      return;
-//    }
-//    if (thatHalfClosed) {
-//      close();
-//    } else {
-//      try {
-//        SocketChannel sc = (SocketChannel)key.channel();
-//        sc.socket().shutdownOutput();    
-//      } catch (IOException e) {
-//        System.out.println("ERROR: Recevied exception " + e + " while closing this half of socket!");
-//      }
-//    }
-//    thisHalfClosed = true;
-//  }  
-//  
-//  void thatHalfClosed() {
-//    if (thatHalfClosed) {
-//      throw new RuntimeException("That half already closed.");
-//    }
-//    if (writer.isEmpty()) {
-//      close();
-//    } else {
-////      if (connectionManager.)
-//      thatHalfClosed = true;
-//    }
-//  }
+  public void closeHalf() {
+    if (ConnectionManager.LOG_LOW_LEVEL)
+      System.out.println(this+".closeHalf()");
+    try {
+      halfClosed = true;
+      try {
+        ((SocketChannel)key.channel()).socket().shutdownOutput();
+      } catch (NullPointerException npe) {
+        npe.printStackTrace();
+        System.out.println(this+".closeHalf():"+key+","+closed+","+ctor);
+        //closedTrace.printStackTrace();
+      }
+      IDLE_THRESHOLD = HALF_CLOSED_IDLE_THRESHOLD;  // this code says that if we don't hear anything from the node for the HALF_CLOSED threshold, then the socket can be collected.
+    } catch (IOException e) {
+      System.out.println("ERROR: Recevied exception " + e + " while closing socket!");
+    }
+  }
 
   /**
    * Method which closes down this socket manager, by closing the socket,
@@ -473,7 +469,6 @@ public class SocketManager implements SelectionKeyHandler {
     cancelCheckDeadTask(); // stop checking dead on my account
     //Thread.dumpStack();
     try {
-//      synchronized (scm.manager.getSelector()) {
         if (key != null) {
           SocketChannel sc = (SocketChannel)key.channel();
           key.channel().close();
@@ -483,7 +478,6 @@ public class SocketManager implements SelectionKeyHandler {
           key.attach(null);
           key = null;
         }
-//      }
     } catch (IOException e) {
       System.out.println("ERROR: Recevied exception " + e + " while closing socket!");
     }
@@ -491,6 +485,7 @@ public class SocketManager implements SelectionKeyHandler {
     //System.out.println("SM.close()"+this+" @"+System.identityHashCode(this));
     if (connectionManager != null) {
 //      System.out.println("Closing socket");
+      connectionManager.removeLivenessListener(this);
       connectionManager.socketClosed(this);    
     } else {        
       scm.socketPoolManager.socketClosed(this);    
@@ -603,10 +598,19 @@ public class SocketManager implements SelectionKeyHandler {
               }
   //            System.out.println("SM<"+type+">.read("+o+") -> "+am.type);
               type = am.type;
+              
               scm.newSocketManager(am.sender, this);
-              if (connectionManager != null) {
-                connectionManager.markAlive();
-              }
+              //if (connectionManager != null) {
+              // socket could have been closed if there was already a connection pending going the other way
+                if (!closed && connectionManager.liveness == NodeHandle.LIVENESS_UNKNOWN) {
+                  if (ConnectionManager.LOG_LOW_LEVEL)
+                    System.out.println(this+".read(): disabled read ops");
+                  key.interestOps((key.interestOps() & ~SelectionKey.OP_READ));  // turn off read ops
+                  connectionManager.addLivenessListener(this);
+                }
+                //connectionManager.markAlive();
+              //}
+              
             } else {
               System.out.println("SERIOUS ERROR: Received duplicate address assignments: " + this.address + " and " + o);
             }
@@ -622,7 +626,7 @@ public class SocketManager implements SelectionKeyHandler {
           connectionManager.failedDuringOpen = true;
         connectionManager.checkDead();
       }
-      close();//thatHalfClosed();      
+      close();      
     } catch (IOException e) {
       if (ConnectionManager.LOG_LOW_LEVEL)
         System.out.println("SocketManager.read() " + e + " - closing."+this);
@@ -721,6 +725,7 @@ public class SocketManager implements SelectionKeyHandler {
 
   long lastTimeActive = 0;
   long IDLE_THRESHOLD = 1000;
+  long HALF_CLOSED_IDLE_THRESHOLD = 60000;
   
   void markActive() {
     lastTimeActive = System.currentTimeMillis();
@@ -773,7 +778,7 @@ public class SocketManager implements SelectionKeyHandler {
       s = ""+key.isWritable();
     } catch (Exception e) {}
     
-    return "{"+s1+",ctor:"+ctor+",conn1:"+connecting+",conn2:"+connected+",idle:"+isIdle()+",clos:"+closed+",numTries:"+numTriesToConnect+",deadChecker:"+cd /*+",w.q:"+writer.getSize()+",w.e:"+writer.isEmpty()+",w.k:"+s*/+"}";
+    return "{"+s1+",ctor:"+ctor+",conn1:"+connecting+",conn2:"+connected+",idle:"+isIdle()+",clos:"+closed+",halfclosed:"+halfClosed+",numTries:"+numTriesToConnect+",deadChecker:"+cd /*+",w.q:"+writer.getSize()+",w.e:"+writer.isEmpty()+",w.k:"+s*/+"}";
   }
 
 	/**
@@ -786,9 +791,9 @@ public class SocketManager implements SelectionKeyHandler {
 	/**
 	 * @param o
 	 */
-	public void messageNotSent(Object o, int len) {
+	public void messageTooLarge(SocketTransportMessage stm, int len) {
 		if (connectionManager != null) {
-      connectionManager.messageNotSent(o, len);
+      connectionManager.messageTooLarge(stm, len);
 		}
 	}
 
@@ -800,6 +805,13 @@ public class SocketManager implements SelectionKeyHandler {
     return writer.getQueue().size();    
   }
 
-
+	public void updateLiveness(NodeHandle nh, int liveness) {
+    if (liveness != NodeHandle.LIVENESS_UNKNOWN) {
+      if (ConnectionManager.LOG_LOW_LEVEL)
+        System.out.println(this+".updateLiveness():enabling read ops");
+      key.interestOps(key.interestOps() | SelectionKey.OP_READ);      
+      connectionManager.removeLivenessListener(this);
+    }    
+  }
 
 }

@@ -29,9 +29,12 @@ import java.util.TimerTask;
 
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeId;
+import rice.pastry.client.PastryAppl;
 import rice.pastry.dist.DistNodeHandlePool;
 import rice.pastry.dist.DistPastryNode;
 import rice.pastry.dist.NodeIsDeadException;
+import rice.pastry.messaging.Message;
+import rice.pastry.messaging.MessageReceiver;
 
 /**
  * An Socket-based Pastry node, which has two threads - one thread for
@@ -213,6 +216,9 @@ public class SocketPastryNode extends DistPastryNode {
     }
   }  
   
+  /** 
+   * Returns the available error code strings.
+   */
   public String getErrorString(int errorCode) {
     switch (errorCode) {
       case EC_MSG_TOO_LARGE:
@@ -223,5 +229,20 @@ public class SocketPastryNode extends DistPastryNode {
         return EC_REASON_QUEUE_FULL;
     }
     return super.getErrorString(errorCode);      
+  }
+
+  public void messageNotSent(Message m, int errorCode) {
+    MessageReceiver mr = getMessageDispatch().getDestination(m);
+    if ((mr != null) && (mr instanceof PastryAppl)) {
+      PastryAppl a = (PastryAppl)mr;
+      a.messageNotDelivered(m, errorCode);
+    } else {
+      if ((errorCode == EC_CONNECTION_FAULTY) && (manager.isSelectorThread())) {
+        // don't print anything 
+      } else {
+        System.out.println("WARNING: message not sent "+m+":"+getErrorString(errorCode));    
+        Thread.dumpStack();
+      }
+    }
   }
 }

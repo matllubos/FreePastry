@@ -410,7 +410,11 @@ public class SocketCollectionManager implements SelectionKeyHandler {
 	 * @return
 	 */
 	public String addressString() {
-    return ((SocketNodeHandle)pastryNode.getLocalHandle()).getAddress()+"@"+bindAddress;      
+    InetSocketAddress a = ((SocketNodeHandle)pastryNode.getLocalHandle()).getAddress();
+    if (a.equals(bindAddress)) {
+      return bindAddress.toString();
+    }
+    return a+"@"+bindAddress;      
 	}
   
   public Iterator getConnections() {

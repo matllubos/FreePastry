@@ -1,8 +1,6 @@
 /*
  * Created on Dec 22, 2003
  *
- * To change the template for this generated file go to
- * Window>Preferences>Java>Code Generation>Code and Comments
  */
 package rice.pastry.testing;
 
@@ -17,27 +15,27 @@ import rice.pastry.socket.ConnectionManager;
 import rice.pastry.socket.SocketManager;
 
 /**
- * @author jeffh
+ * @author Jeff Hoye
  *
- * To change the template for this generated type comment go to
- * Window>Preferences>Java>Code Generation>Code and Comments
  */
 public class HelloMsg extends Message {
-  public transient boolean ackReceived = false;
-	//public byte[] garbage = new byte[64000];
-    public int queueSize = -1;
+  private transient boolean ackReceived = false;
 	public transient int state;
-	public NodeHandle source;
+  public NodeHandle source;
+  public NodeHandle intermediateSource;
     public Id target;
     public NodeHandle actualReceiver;
     private int msgid;
-    private transient Vector receivers;
-    public transient ConnectionManager lastMan;
-    public transient SocketManager lastSM;
+//    private transient Vector receivers;
+//    private transient ConnectionManager lastMan;
+//    public transient SocketManager lastSM;
+    public transient NodeHandle nextHop = null;
+    public boolean messageDirect = false;
 
     public HelloMsg(Address addr, NodeHandle src, Id tgt, int mid) {
         super(addr);
         source = src;
+        intermediateSource = src;
         target = tgt;
         msgid = mid;
     }
@@ -49,7 +47,12 @@ public class HelloMsg extends Message {
   public String getInfo() {
     
     String s=toString();
-    s += " from " + source + " to " + target +"<"+state+"> {"+queueSize+"}";// + " received by "+actualReceiver+"}";
+    if (messageDirect) {
+      s+=" direct";
+    } else {
+      s+=" routed";
+    }
+    s += " lastAt:"+intermediateSource+" nextHop:"+nextHop+" from:" + source + " to:" + target +"<"+state+">"; // + " received by "+actualReceiver+"}";
 //    System.out.println("HM.getInfo():1");
     /*
     if (receivers != null) {
@@ -61,12 +64,14 @@ public class HelloMsg extends Message {
     }
     */
 //    System.out.println("HM.getInfo():2");
-    if (lastMan != null) {
-      s += ","+lastMan.getStatus();
-    }
-    if (lastSM != null) {
-      s += ","+System.identityHashCode(lastSM);
-    }
+//    if (lastMan != null) {
+//      s += ","+lastMan.getStatus();
+//    }
+//    if (lastSM != null) {
+//      s += ", lastSM:"+lastSM;
+////      if (lastSM.closedTrace != null)
+////        lastSM.closedTrace.printStackTrace();
+//    }
   //  System.out.println("HM.getInfo():3");
     return s;
     }
@@ -78,21 +83,21 @@ public class HelloMsg extends Message {
 		/**
 		 * @param address
 		 */
-		public void addReceiver(InetSocketAddress address) {
-      if (receivers == null) {
-        receivers = new Vector();
-      }
-      receivers.add(address);
-		}
+//		public void addReceiver(InetSocketAddress address) {
+//      if (receivers == null) {
+//        receivers = new Vector();
+//      }
+//      receivers.add(address);
+//		}
 
 		/**
 		 * 
 		 */
-		public InetSocketAddress getLastAddress() {
-      if (receivers == null) {
-        return null;
-      }
-			return (InetSocketAddress)receivers.lastElement();			
-		}
+//		public InetSocketAddress getLastAddress() {
+//      if (receivers == null) {
+//        return null;
+//      }
+//			return (InetSocketAddress)receivers.lastElement();			
+//		}
 
 }

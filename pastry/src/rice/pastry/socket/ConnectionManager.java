@@ -6,13 +6,14 @@ package rice.pastry.socket;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.TimerTask;
 
 import rice.pastry.NodeHandle;
-import rice.pastry.NodeId;
 import rice.pastry.commonapi.PastryEndpointMessage;
 import rice.pastry.dist.NodeIsDeadException;
 import rice.pastry.leafset.BroadcastLeafSet;
@@ -85,11 +86,25 @@ import rice.pastry.testing.HelloMsg;
  */
 public class ConnectionManager {
 
+  // various pointers   
   SocketManager controlSocketManager;
   SocketManager dataSocketManager;
   PingManager pingManager;
   SocketCollectionManager scm;
+
+  /**
+   * A handle to the remote node.
+   */
+  public SocketNodeHandle snh;
+  
+  /**
+   * The remote node's address.
+   */
   InetSocketAddress address;
+
+  /**
+   * Enable to turn on additional debugging.
+   */
   public static final boolean LOG_LOW_LEVEL = false;
   
   /**
@@ -218,8 +233,6 @@ public class ConnectionManager {
    */
   private DeadChecker deadChecker;
 
-  SocketNodeHandle snh;
-
 	/**
 	 * Constructs a new ConnectionManager.  
    * This does NOT automatically open TCP connections for control or data traffic.  
@@ -233,6 +246,7 @@ public class ConnectionManager {
     pendingAcks = new HashMap();
     controlQueue = new LinkedList();    
     liveness = NodeHandle.LIVENESS_UNKNOWN; 
+    checkDead();
 	}
 
   //********************** Socket Lifecycle ***********************
@@ -260,15 +274,26 @@ public class ConnectionManager {
       checkDead();
       return;
     }
-    SocketManager sm = null;
-      sm = new SocketManager(address, scm, this, type);
+    final SocketManager sm = new SocketManager(address, scm, this, type);
       if (type == TYPE_DATA) {
         dataSocketManager = sm;
       } else {
         controlSocketManager = sm;
       }
       if (!failedDuringOpen) {
-        sm.tryToCreateConnection(); 
+        if (liveness != NodeHandle.LIVENESS_UNKNOWN) {
+          sm.tryToCreateConnection(); 
+        } else {
+          addLivenessListener(new LivenessListener() {
+						public void updateLiveness(NodeHandle nh, int liveness) {
+              if (liveness != NodeHandle.LIVENESS_UNKNOWN) {
+                if ((!sm.closed) && (!sm.connecting))
+                  sm.tryToCreateConnection();
+                removeLivenessListener(this);
+              }
+						}
+					});
+        }
       }
       checkDead();
   }
@@ -279,13 +304,12 @@ public class ConnectionManager {
    * @param sm The new SocketManager opened by the remote node
    */
   public void acceptSocket(SocketManager sm) {
-//    addLastFxn("acceptSocket()");
     if (sm.closed) {
       Thread.dumpStack();
     }
-//    markAlive();
     sm.setConnectionManager(this);
-    //scm.getSocketPoolManager().socketOpened(sm);
+    if (liveness != NodeHandle.LIVENESS_ALIVE)
+      checkDead();
     if (sm.getType() == TYPE_CONTROL) {
       if (controlSocketManager == null) {
         controlSocketManager = sm;
@@ -304,7 +328,7 @@ public class ConnectionManager {
           temp.close();
         } else {
 //          System.out.println(controlSocketManager+" collided with "+sm+" due to replacement, closed:"+sm);            
-          sm.close();
+          sm.closeHalf();
         }
       }
     } else {
@@ -325,22 +349,22 @@ public class ConnectionManager {
 					}					
           temp.close();
         } else {
-          sm.close();
+          sm.closeHalf();
         }
       }
     }
   }
 
   /**
-   * Called when there are 2 connections of the same type opened to the same node.  It closes the 
-   * one with the lower hashcode for the address/port
+   * Called when there are 2 connections of the same type opened to the same node.  
+   * It returns wether to close the existing socket and use the new one.
+   * The algorithm is symmetric so both sides will calculate the same decision.
+   * The one with the lower hashcode for the string version of address/port
    * @param existing My existing SocketManager
    * @param newMgr The new one trying to be opened.
-   * @return the socket manager that we both want to keep open.
+   * @return true if the existing one should be replaced.
    */
   private boolean replaceExistingSocket(SocketManager existing, SocketManager newMgr) {
-//    if (existing.getType() == TYPE_DATA)
-//      System.out.println("CM.handleSocketCollision("+existing.getType()+":"+newMgr.getType()+")");
     debug("ERROR: Request to record socket opening for already-open socket to " + address + " of type:"+existing.getType());
     String local = "" + scm.getAddress().getAddress().getHostAddress() + scm.getAddress().getPort();
     String remote = "" + address.getAddress().getHostAddress() + address.getPort();
@@ -421,7 +445,6 @@ public class ConnectionManager {
   }  
 
   private void requeueMessagesPendingAck() {
-//    addLastFxn("requeueMessagesPendingAck()");
 
     Iterator i = pendingAcks.keySet().iterator();
     while (i.hasNext()) {                    
@@ -451,9 +474,11 @@ public class ConnectionManager {
    * @param message The message to send.
    * @param type SocketCollectionManager.TYPE_CONTROL, SocketCollectionManager.TYPE_DATA
    */
-  public void send(final Message message) throws TooManyMessagesException {    
-    checkPoint(message,666);
-    assertNotTooManyMessages(message);
+  public void send(final Message message) {    
+    checkPoint(message,666);    
+    if (errors(message)) {
+      return;
+    }
 //    if (Thread.currentThread() == scm.manager.selectorThread) {
 //      Thread.dumpStack();
 //    }
@@ -475,19 +500,34 @@ public class ConnectionManager {
 		});    
   }
   
-  public void assertNotTooManyMessages(Message message) throws TooManyMessagesException {
-    int numMessages = 0;
+  private Object invokeLock = new Object();
+  
+  private boolean errors(Message message) {
+    if (getLiveness() == NodeHandle.LIVENESS_FAULTY) {
+      messageNotSent(message, SocketPastryNode.EC_CONNECTION_FAULTY);
+      return true;
+    }
+    int numMessages = 0;    
     if (getMessageType(message) == TYPE_CONTROL) {
       if (getNumberMessagesAllowedToSend(TYPE_CONTROL) < 0) {
-        throw new TooManyMessagesException("Message "+message+" was not enqueued.  "+numMessages+" control/routing messages already pending.");
+        messageNotSent(message, SocketPastryNode.EC_QUEUE_FULL);
+        return true;
+      } else {
+        synchronized(invokeLock) {
+          invokedControlMessages++;       
+        }
       }
-      invokedControlMessages++;       
     } else {
       if (getNumberMessagesAllowedToSend(TYPE_DATA) < 0) {
-        throw new TooManyMessagesException("Message "+message+" was not enqueued.  "+numMessages+" data messages already pending.");
+        messageNotSent(message, SocketPastryNode.EC_QUEUE_FULL);
+        return true;
+      } else {
+        synchronized(invokeLock) {
+          invokedDataMessages++;       
+        }
       }
-      invokedDataMessages++;       
     }    
+    return false;
   }
   
   /**
@@ -537,22 +577,29 @@ public class ConnectionManager {
    */
   private void sendNow(Message message) {    
 //    System.out.println(this+".sendNow("+message+"):"+message.getClass().getName());    
-//    addLastFxn("sendNow()");
     checkPoint(message,1);
 
     int type = getMessageType(message);
     if (type == TYPE_CONTROL) {  
-      invokedControlMessages--;
+      synchronized(invokeLock) {
+        invokedControlMessages--;
+      }
       // Check to see if we should reroute this
       if (!reroute(message)) {
         enqueue(message);
         moveMessagesToControlSM();
       }
     } else { // type == TYPE_DATA
-      invokedDataMessages--;
-      openSocket(TYPE_DATA);        
-      checkPoint(message,101);
-      dataSocketManager.send(message);        
+      synchronized(invokeLock) {
+        invokedDataMessages--;
+      }
+      if (liveness < NodeHandle.LIVENESS_FAULTY) {
+        openSocket(TYPE_DATA);        
+        checkPoint(message,101);
+        dataSocketManager.send(message);        
+      } else {
+        messageNotSent(message, SocketPastryNode.EC_CONNECTION_FAULTY);
+      }
     }
   } // sendNow()
 
@@ -567,11 +614,11 @@ public class ConnectionManager {
    */
   int getMessageType(Message m) {
     
-    if (m instanceof RouteMessage) {
-      if (((RouteMessage)m).unwrap() instanceof HelloMsg) {
-        return TYPE_DATA;        
-      }
-    }
+//    if (m instanceof RouteMessage) {
+//      if (((RouteMessage)m).unwrap() instanceof HelloMsg) {
+//        return TYPE_DATA;        
+//      }
+//    }
 
     if (m.hasPriority() || 
          ((m instanceof RouteMessage) && ((RouteMessage)m).getOptions().multipleHopsAllowed())) {         
@@ -631,7 +678,6 @@ public class ConnectionManager {
    * @param o the message to queue.
    */
   private void addToQueuePriority(Message o) {
-//    addLastFxn("addToQPri()");
     if (controlQueue.size() > 0) {
       for (int i = 1; i < controlQueue.size(); i++) {
         Object thisObj = ((MsgEntry)controlQueue.get(i)).message;
@@ -653,7 +699,6 @@ public class ConnectionManager {
    * a message in a SocketTransportMessage.
    */
   private void moveMessagesToControlSM() {
-    //addLastFxn("moveMessagesToControlSM()");
     openSocket(TYPE_CONTROL);
     while (!controlQueue.isEmpty() && canWrite()) {      
       Object message = ((MsgEntry)controlQueue.removeFirst()).message;
@@ -672,7 +717,6 @@ public class ConnectionManager {
    * @return wether we can schedule inflight messages.
    */
   private boolean canWrite() {
-//    addLastFxn("canWrite()");
     if (pendingAcks.size() > MAX_PENDING_ACKS) {
       debug("WARNING: CM.canWrite() found pendingAcks.size to be greater than MAX_PENDING_ACKS:"+pendingAcks.size()+" > "+MAX_PENDING_ACKS);
     }
@@ -694,17 +738,14 @@ public class ConnectionManager {
   
  
   /**
-   * Called when a message couldn't be sent.  At this time
-   * the only reason this is called is if a RouteMessage is too large.
-   * 
-   * @param o
-   * @param len
+   * Called when a message couldn't be sent becasue the message was too large.
+   *
+   * @param stp SocketTransportMessage that couldn't be sent.
+   * @param len the length of the serialized message.
    */  
-  void messageNotSent(Object o, int len) {
-//    addLastFxn("messageNotSent()");
-    SocketTransportMessage stp = (SocketTransportMessage)o;
-    int i = stp.seqNumber;
-    RouteMessage rm = (RouteMessage)stp.msg;
+  void messageTooLarge(SocketTransportMessage stm, int len) {
+    int i = stm.seqNumber;
+    RouteMessage rm = (RouteMessage)stm.msg;
     Message m = rm.unwrap();
     messageNotSent(m,SocketPastryNode.EC_MSG_TOO_LARGE);
 //    System.err.println(this+"WARNING: Message "+o+" dropped because it was too big.  Size = "+len+" max size ="+ConnectionManager.MAX_ROUTE_MESSAGE_SIZE);
@@ -712,12 +753,17 @@ public class ConnectionManager {
     // pull the ate out of the queue
     AckTimeoutEvent ate = (AckTimeoutEvent)pendingAcks.remove(new Integer(i));    
     if (ate == null) {
-      debug("ERROR: ConnectionManager.registerMessageForAck(): messageNotSent, but message was not in pendingAcks "+ o+":"+len);
+      debug("ERROR: ConnectionManager.registerMessageForAck(): messageNotSent, but message was not in pendingAcks "+ stm+":"+len);
       return;
     }
     ate.cancel();
   }
   
+  /**
+   * Method to notify connection manager that a message was not sent.
+   * @param m The unsent message.
+   * @param errorCode the reason.
+   */
   void messageNotSent(Message m, int errorCode) {
     scm.pastryNode.messageNotSent(m,errorCode);    
   }
@@ -792,7 +838,6 @@ public class ConnectionManager {
    * @param am the AckMessage that came off the wire.
    */
   private void ackReceived(AckMessage am) {
-//    addLastFxn("ackReceived()");
     int i = am.seqNumber;
     //System.out.println(this+" SM.ackReceived("+i+") on type :"+type);
 //    markAlive(); //setLiveness(NodeHandle.LIVENESS_ALIVE);
@@ -816,7 +861,6 @@ public class ConnectionManager {
    * @param ate The timeout event.
    */
   private void ackNotReceived(AckTimeoutEvent ate, int powerOffset) {
-//    addLastFxn("ackNotReceived()");
     //System.out.println(this+" SM.ackNotReceived("+ate+")");    
     AckTimeoutEvent nate = (AckTimeoutEvent)pendingAcks.get(new Integer(ate.ackNum));
     if (nate == null) {
@@ -933,7 +977,8 @@ public class ConnectionManager {
           Thread.dumpStack();
       return;  
     } 
-    liveness = newLiveness;      
+    liveness = newLiveness;    
+    updateLivenessListeners();  
   }
   
   boolean failedDuringOpen = false;
@@ -948,7 +993,6 @@ public class ConnectionManager {
   }
   
   public void checkDead(int powerOffset) {
-//    addLastFxn("checkDead()");
     //assertSelectorThread();
     if (powerOffset < 1) {
       throw new RuntimeException("Invalid Power Offset "+powerOffset);
@@ -978,12 +1022,11 @@ public class ConnectionManager {
    *
    */
   protected void markSuspected() {
-//    addLastFxn("markSuspected()");
     markSuspectedTime = System.currentTimeMillis();
     timesMarkedSuspected++;
 //    System.out.println(this+"markSuspected()");
     setLiveness(NodeHandle.LIVENESS_SUSPECTED);
-    
+
     rerouteApropriateMessagesFromQueueAndPendingAcks(); // will only reroute route messages, and not delete anything else
   }
   
@@ -994,7 +1037,6 @@ public class ConnectionManager {
    *
    */
   protected void markDead() {
-//    addLastFxn("markDead()");
     long susTime = System.currentTimeMillis() - markSuspectedTime;
     if (LOG_LOW_LEVEL)
       System.out.println(this+"markDead() after being suspected for "+susTime);
@@ -1024,13 +1066,11 @@ public class ConnectionManager {
   }
   
   protected void markAlive(int powerOffset) {    
-//    addLastFxn("markAlive()");
     failedDuringOpen = false;
     initializeSocketsIfNeeded();
     if (liveness > NodeHandle.LIVENESS_SUSPECTED) {
       System.out.println(this+"markAlive()");
     }
-    
 
     if (deadChecker != null) {
       deadChecker.cancel();
@@ -1050,7 +1090,6 @@ public class ConnectionManager {
     if (needToNotifySCM) {
       scm.markAlive(snh);
     }
-    
   }
   
   private void initializeSocketsIfNeeded() {
@@ -1089,8 +1128,6 @@ public class ConnectionManager {
    * reroute() returns true;
    */  
   private void rerouteApropriateMessagesFromQueueAndPendingAcks() {
-//    addLastFxn("rerouteAprop()");
-
     Iterator i = pendingAcks.keySet().iterator();
     ArrayList list = new ArrayList();
     while (i.hasNext()) {
@@ -1313,7 +1350,7 @@ public class ConnectionManager {
                              SocketNodeHandle snh,
                              long RTT,
                              long timeHeardFrom) {
-      //System.out.println("Terminated DeadChecker(" + address + ") due to ping.");      
+      //System.out.println("Terminated DeadChecker(" + address + ") due to ping.");     
       markAlive(powerOffset); // will terminate this deadchecker      
     }
 
@@ -1382,7 +1419,7 @@ public class ConnectionManager {
         } else {
           powerOffset++;
         }
-        pingManager.forcePing(snh, DeadChecker.this);       
+        pingManager.forcePing(snh, DeadChecker.this);
         schedule(powerOffset);
       } else {
         markDead();
@@ -1391,26 +1428,57 @@ public class ConnectionManager {
   }
     
   /**
-   * A wrapper for a SocketTransportMessage and a TimerTask that listens for an ack.
+   * A wrapper for a SocketTransportMessage and a TimerTask that waits for an ack.
    * Constructed in registerMessageForAck.  Removed on ackReceived.  Note: don't
    * remove the message on AckFailed.  We don't want to send more messages, and we may
-   * need to reroute this one.  Wait until SUSPECTED(_FAULTY)
+   * need to reroute this one.  Wait until SUSPECTED(_FAULTY) to remove the message.
    * 
    * @author Jeff Hoye
    */
   class AckTimeoutEvent {
+    /**
+     * The ack number we are waiting for.
+     */
     public int ackNum;
+
+    /**
+     * The message we sent.
+     */
     SocketTransportMessage msg;
+
+    /**
+     * When we sent it.
+     */
     public long startTime;
+
+    /**
+     * The TimerTask to call runOnSelector.
+     */
     public AckTimeoutTimer myTimer;
+
+    /** 
+     * Whether the task has been cancelled.
+     */
     boolean cancelled = false;
+
+    /**
+     * When we expect to get the run method called.
+     */
     long nextTime = 0;
+    
+    /**
+     * The RTO powerOffset associated with this task.
+     */
     int powerOffset = 0;
 
+    /** 
+     * We need to reschedule this task multiple times, but a TimerTask 
+     * can only be scheduled once.  So we have to use the has-a pattern.
+     * @author Jeff Hoye
+     */
     class AckTimeoutTimer extends TimerTask {
       /**
-       * Main processing method for the DeadChecker object gets called by the
-       * timer.
+       * Reschedules the task onto the selector thread.
        */
       public void run() {
         scm.manager.invoke(new Runnable() {
@@ -1446,6 +1514,10 @@ public class ConnectionManager {
       ackNotReceived(AckTimeoutEvent.this, powerOffset);
     }
       
+    /**
+     * Schedules this task based on the RTO and powerOffset.
+     * @param powerOffset
+     */
     private void schedule(int powerOffset) {
       if (myTimer != null) return;
 
@@ -1456,6 +1528,9 @@ public class ConnectionManager {
       nextTime = delay+System.currentTimeMillis();
     }
 
+    /**
+     * Cancels this task.
+     */
     public void cancel() {
       cancelled = true;
       if (myTimer != null) {
@@ -1472,6 +1547,10 @@ public class ConnectionManager {
       return System.currentTimeMillis() - startTime;
     }
     
+    /**
+     * Returns how long until we expect to hear about a failure.
+     * @return
+     */
     public long timeToFailure() {
       return nextTime - System.currentTimeMillis();
     }
@@ -1506,18 +1585,19 @@ public class ConnectionManager {
       HelloMsg hm = (HelloMsg)m;
       hm.state = state;
       if (state == 1) {
-        hm.addReceiver(address);
-        hm.lastMan = this;
+        //hm.addReceiver(address);
+        //hm.lastMan = this;
         //Thread.dumpStack();
       }
       if (state == 45) {
-        hm.ackReceived = true;
+        //hm.ackReceived = true;
       }
       if (state == 555) {
-        hm.lastMan = this;
+        //hm.lastMan = this;
       }
       if (state == 666) {
-        hm.lastMan = this;
+        //System.out.println(m+"@"+System.identityHashCode(m)+" at "+state+" "+this);
+        //hm.lastMan = this;
       }
     }
     /*
@@ -1572,11 +1652,11 @@ public class ConnectionManager {
     String s1 = null;
     String s2 = null;
     if (controlSocketManager != null) {
-      s1 = controlSocketManager.getStatus();
+      s1 = controlSocketManager.toString();
     }
     
     if (dataSocketManager != null) {
-      s2 = dataSocketManager.getStatus();
+      s2 = dataSocketManager.toString();
     }
     
     
@@ -1619,8 +1699,9 @@ public class ConnectionManager {
 		return this+":"+s3+",  control:"+s1+",  data:"+s2+"  "+scm.socketPoolManager;
 	}
 
-  
-
+  /**
+   * closes the socketManagers, called by finalize()
+   */
   public void close() {
     if (dataSocketManager!=null) {
       dataSocketManager.close();
@@ -1630,11 +1711,17 @@ public class ConnectionManager {
     }
   }
   
+  /**
+   * accessor for the local handle
+   * @return SocketNodeHandle of the local node
+   */
   public SocketNodeHandle getLocalNodeHandle() {
     return scm.getLocalNodeHandle();
   }
 
-  
+  /**
+   * needs to close down remaining connections
+   */
 	protected void finalize() throws Throwable {
     if (LOG_LOW_LEVEL)
       System.out.println(this+".finalize()");
@@ -1642,6 +1729,26 @@ public class ConnectionManager {
 		super.finalize();
 	}
 
+  LinkedList livenessListeners = new LinkedList();
+	public void removeLivenessListener(LivenessListener ll) {
+    livenessListeners.remove(ll);		
+	}
+
+	/**
+	 * @param manager
+	 */
+	public void addLivenessListener(LivenessListener ll) {
+    livenessListeners.add(ll);
+	}
+  
+  private void updateLivenessListeners() {
+    if (livenessListeners.size() == 0) return;
+    Iterator i = ((Collection)livenessListeners.clone()).iterator();
+    while(i.hasNext()) {
+      LivenessListener ll = (LivenessListener)i.next();
+      ll.updateLiveness(snh,liveness);
+    }
+  }
 }
 
   

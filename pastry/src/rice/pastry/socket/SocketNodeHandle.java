@@ -26,14 +26,14 @@ package rice.pastry.socket;
 
 import java.net.InetSocketAddress;
 import java.util.Observable;
-import java.util.Random;
 
 import rice.pastry.Log;
 import rice.pastry.NodeId;
 import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.messaging.Message;
-import rice.pastry.messaging.MessageReceiver;
+import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.exception.TooManyMessagesException;
+import rice.pastry.testing.HelloMsg;
 
 /**
  * Represents a remote node for a "real" IP network.
@@ -140,13 +140,18 @@ public class SocketNodeHandle extends DistNodeHandle {
 
     if (spn.getNodeId().equals(nodeId)) {
       //debug("Sending message " + msg + " locally");
-        spn.receiveMessage(msg);
+//      if ((msg instanceof HelloMsg) || (msg instanceof RouteMessage))
+//        System.out.println("Sending message " + msg + " locally");
+      spn.receiveMessage(msg);
     } else {
       debug("Passing message " + msg + " to the socket controller for writing");
+//      if ((msg instanceof HelloMsg) || (msg instanceof RouteMessage))
+//        System.out.println("Passing message " + msg + " to the socket controller for writing");
       try {        
         spn.getSocketCollectionManager().send(this, msg);
       } catch (TooManyMessagesException tmme) {
         spn.messageNotSent(msg, SocketPastryNode.EC_QUEUE_FULL);
+//        System.out.println("tmme "+msg);
 //        throw tmme;
       }
     }

@@ -144,8 +144,9 @@ public class SocketChannelWriter {
     if (m instanceof HelloMsg) {
       HelloMsg hm = (HelloMsg)m;
       hm.state = state;
-      if (state == 1) {
-        hm.addReceiver(address);
+      if (state == 104) {
+        //hm.addReceiver(address);
+        //hm.lastSM = manager;
         //Thread.dumpStack();
       }
     }
@@ -408,7 +409,7 @@ public class SocketChannelWriter {
       if ((manager != null) &&
           (manager.getType() == ConnectionManager.TYPE_CONTROL) &&
           (len > ConnectionManager.MAX_ROUTE_MESSAGE_SIZE)) {
-            manager.messageNotSent(o, len);
+            manager.messageTooLarge((SocketTransportMessage)o, len);
             return null;
       }
 
