@@ -92,10 +92,7 @@ public class EuclideanNetwork implements NetworkSimulator
 	    int dx = x - nr.x;
 	    int dy = y - nr.y;
 
-	    if (dx < 0) dx = -dx;
-	    if (dy < 0) dy = -dy;
-
-	    return dx + dy;
+	    return( (int)Math.sqrt(dx*dx + dy*dy) );
 	}
     }
 
