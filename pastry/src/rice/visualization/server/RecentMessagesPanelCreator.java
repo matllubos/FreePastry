@@ -13,8 +13,8 @@ public class RecentMessagesPanelCreator implements PanelCreator, NetworkListener
   
   public static int NUM_MESSAGES = 11;
   
-  public static String[] TYPES = new String[] {"Pastry", "Past", "Scribe", "Replication", "Post", "ePost", "Other"};
-  public static String[] TYPE_PREFIXES = new String[] {"rice.pastry.", "rice.p2p.past.", "rice.p2p.scribe.", "rice.p2p.replication.", "rice.post.", "rice.email.", ""};
+  public static String[] TYPES = new String[] {"Pastry", "Past", "Scribe", "Replication", "Post", "ePost", "Glacier", "Other"};
+  public static String[] TYPE_PREFIXES = new String[] {"rice.pastry.", "rice.p2p.past.", "rice.p2p.scribe.", "rice.p2p.replication.", "rice.post.", "rice.email.", "rice.p2p.glacier.", ""};
   
   protected Vector sentMessages = new Vector();
   protected Vector sentMessageAddresses = new Vector();
