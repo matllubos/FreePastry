@@ -179,7 +179,7 @@ public interface IScribe
      * @return true if the operation was successful, false if the operation
      *         failed because the underlying Scribe substrate was not ready.
      */
-    public boolean multicast( NodeId groupID, Object obj, Credentials cred );
+    public boolean multicast( NodeId groupID, Serializable obj, Credentials cred );
     
 
 
@@ -204,7 +204,7 @@ public interface IScribe
      * @return true if the operation was successful, false if the operation
      *         failed because the underlying Scribe substrate was not ready.
      */
-    public boolean anycast( NodeId groupID, Object obj, Credentials cred );
+    public boolean anycast( NodeId groupID, Serializable obj, Credentials cred );
     
 
 

@@ -570,7 +570,7 @@ public class Scribe extends PastryAppl implements IScribe
      * @return true if the operation was successful, false if the operation
      *         failed because the underlying Scribe substrate was not ready. 
      */
-    public boolean multicast( NodeId topicId, Object obj, Credentials cred ) {
+    public boolean multicast( NodeId topicId, Serializable obj, Credentials cred ) {
 	if(!isReady()) return false;
 	ScribeMessage msg = makePublishMessage( topicId, cred );
 	msg.setData( obj );
@@ -598,7 +598,7 @@ public class Scribe extends PastryAppl implements IScribe
      * @return true if the operation was successful, false if the operation
      *         failed because the underlying Scribe substrate was not ready.
      */
-    public boolean anycast( NodeId groupID, Object obj, Credentials cred ){
+    public boolean anycast( NodeId groupID, Serializable obj, Credentials cred ){
 	if(!isReady()) return false;
 	//System.out.println("Sending anycast message from "+getNodeId());
 	ScribeMessage msg = makeAnycastMessage( groupID, cred );
