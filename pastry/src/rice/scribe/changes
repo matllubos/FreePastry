@@ -2,10 +2,5 @@
 
 2) Remove extra testing from ScribeRegrTest
 
-3) ScribeInteractiveTest should go out.
-
-4) Starting of DistMaintenanceThread in Scribe constructor.
-
 5) Adding of UNSUBSCRIBE in regr test.
 
-6) remove getApps from pastryNode.java
