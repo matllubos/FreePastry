@@ -613,30 +613,36 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         nextTimeout = System.currentTimeMillis() + jitterTerm(localScanInterval);
 
         final IdSet fragments = fragmentStorage.scan();
+        final long now = System.currentTimeMillis();
         java.util.TreeSet queries = new java.util.TreeSet();
 
         log(2, "Performing local scan over "+fragments.numElements()+" fragment(s)...");
         Iterator iter = fragments.getIterator();
         while (iter.hasNext()) {
           final FragmentKey thisKey = (FragmentKey) iter.next();
-          final Id thisObjectKey = thisKey.getVersionKey().getId();
-          final long thisVersion = thisKey.getVersionKey().getVersion();
-          final int thisFragmentID = thisKey.getFragmentID();
-          final int fidLeft = (thisFragmentID + numFragments - 1) % numFragments;
-          final int fidRight = (thisFragmentID + 1) % numFragments;
+          FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(thisKey);
+          if ((metadata != null) && (metadata.currentExpirationDate >= now)) {
+            final Id thisObjectKey = thisKey.getVersionKey().getId();
+            final long thisVersion = thisKey.getVersionKey().getVersion();
+            final int thisFragmentID = thisKey.getFragmentID();
+            final int fidLeft = (thisFragmentID + numFragments - 1) % numFragments;
+            final int fidRight = (thisFragmentID + 1) % numFragments;
           
-          if (responsibleRange.containsId(getFragmentLocation(thisObjectKey, fidLeft, thisVersion))) {
-            if (!fragments.isMemberId(thisKey.getPeerKey(fidLeft))) {
-              log(4, "Missing: "+thisKey+" L="+fidLeft);
-              queries.add(thisKey.getVersionKey());
+            if (responsibleRange.containsId(getFragmentLocation(thisObjectKey, fidLeft, thisVersion))) {
+              if (!fragments.isMemberId(thisKey.getPeerKey(fidLeft))) {
+                log(4, "Missing: "+thisKey+" L="+fidLeft);
+                queries.add(thisKey.getVersionKey());
+              }
             }
-          }
           
-          if (responsibleRange.containsId(getFragmentLocation(thisObjectKey, fidRight, thisVersion))) {
-            if (!fragments.isMemberId(thisKey.getPeerKey(fidRight))) {
-              log(4, "Missing: "+thisKey+" R="+fidRight);
-              queries.add(thisKey.getVersionKey());
+            if (responsibleRange.containsId(getFragmentLocation(thisObjectKey, fidRight, thisVersion))) {
+              if (!fragments.isMemberId(thisKey.getPeerKey(fidRight))) {
+                log(4, "Missing: "+thisKey+" R="+fidRight);
+                queries.add(thisKey.getVersionKey());
+              }
             }
+          } else {
+            log(4, "Expired, ignoring in local scan: "+thisKey);
           }
         }
         
@@ -2299,7 +2305,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           
           Fragment thisFragment = gdm.getFragment(0);
           if (thisFragment == null) {
-            warn("retrieveObject: No fragment -- discarded");
+            warn("retrieveObject: DataMessage does not contain any fragments -- discarded");
             return;
           }
           
@@ -2451,7 +2457,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           
           Fragment thisFragment = gdm.getFragment(0);
           if (thisFragment == null) {
-            warn("retrieveFragment: Manifest only?!?");
+            warn("retrieveFragment: DataMessage does not contain any fragments -- discarded");
             return;
           }
           
@@ -2895,7 +2901,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         public void receiveResult(Object o) {
           if (currentPhase == phaseFetch) {
             log(3, "AR Patch: Got FAM for "+currentKey);
-          
+         
             FragmentAndManifest fam = (FragmentAndManifest) o;
             fam.manifest.update(grpm.getLifetime(currentIndex), grpm.getSignature(currentIndex));
             
@@ -2907,10 +2913,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                   if (metadata.currentExpirationDate == grpm.getLifetime(currentIndex)) {
                     log(3, "AR Duplicate refresh request (prev="+metadata.previousExpirationDate+" cur="+metadata.currentExpirationDate+" updated="+grpm.getLifetime(currentIndex)+") -- ignoring");
                   } else {
-                    metadata.previousExpirationDate = metadata.currentExpirationDate;
-                    metadata.currentExpirationDate = grpm.getLifetime(currentIndex);
-                    log(3, "AR FAM "+currentKey+" updated ("+metadata.previousExpirationDate+" -> "+metadata.currentExpirationDate+"), writing to disk...");
-                    fragmentStorage.store(currentKey, metadata, fam, this);
+                    FragmentMetadata newMetadata = new FragmentMetadata(grpm.getLifetime(currentIndex), metadata.currentExpirationDate, metadata.storedSince);
+                    log(3, "AR FAM "+currentKey+" updated ("+newMetadata.previousExpirationDate+" -> "+newMetadata.currentExpirationDate+"), writing to disk...");
+                    fragmentStorage.store(currentKey, newMetadata, fam, this);
                     return;
                   }
                 } else {
@@ -3040,12 +3045,16 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         int numFragments = 0, numManifests = 0;
         
         public void returnResponse() {
-          log(3, "Returning response with "+numFragments+" fragments, "+numManifests+" manifests ("+gfm.getNumKeys()+" queries originally)");
-          sendMessage(
-            null,
-            new GlacierDataMessage(gfm.getUID(), gfm.getAllKeys(), fragment, manifest, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
-            gfm.getSource()
-          );
+          if ((numFragments>0) || (numManifests>0)) {
+            log(3, "Returning response with "+numFragments+" fragments, "+numManifests+" manifests ("+gfm.getNumKeys()+" queries originally)");
+            sendMessage(
+              null,
+              new GlacierDataMessage(gfm.getUID(), gfm.getAllKeys(), fragment, manifest, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
+              gfm.getSource()
+            );
+          } else {
+            log(3, "No fragments and no manifests match query, omitting response");
+          }
         }
         public void receiveResult(Object o) {
           if (o != null) {
