@@ -45,6 +45,8 @@ import java.io.*;
 
 /**
  * A class for representing and manipulating the leaf set.
+ *
+ * The leafset is not strictly a set: when the ring is small, a node may appear in both the cw and the ccw half of the "set".
  *  
  * @version $Id$
  *
@@ -268,7 +270,7 @@ public class LeafSet extends Observable implements Serializable {
      * @return the index of the numerically closest node (0 if baseId is the closest).
      */
 
-    public int mostSimilar(NodeId nid) {
+    public int mostSimilar(Id nid) {
 	NodeId.Distance cwMinDist;
 	NodeId.Distance ccwMinDist;
 	int cwMS;
@@ -297,6 +299,58 @@ public class LeafSet extends Observable implements Serializable {
 	else
 	    return -ccwMS - 1;
 
+    }
+
+
+    /**
+     * compute an ordered set of nodes, in order of numerical closeness to a given key
+     *
+     * @param key the key
+     * @param max the maximal size of the set requestes
+     * @return the ordered set of nodehandles
+     */
+
+    public NodeSet replicaSet(Id key, int max) {
+	NodeSet set = new NodeSet();
+	if (max < 1) return set;
+
+	// compute the nearest node
+	int nearest = mostSimilar(key);
+	if (nearest == cwSet.size() || nearest == -ccwSet.size()) {
+	    // can't determine root of key, return empty set
+	    return set;
+	}
+	    
+	// add the key's root
+	set.put(get(nearest));
+
+	int cw = nearest+1;
+	int ccw = nearest-1;
+
+	for (int i=1; i<max; i++) {
+	    // determine next nearest node
+	    NodeHandle cwNode = get(cw);
+	    NodeHandle ccwNode = get(ccw);
+	    NodeId.Distance cwDist = cwNode.getNodeId().distance(key);
+	    NodeId.Distance ccwDist = ccwNode.getNodeId().distance(key);
+
+	    if (cwDist.compareTo(ccwDist) <= 0) {
+		// cwNode is closer to key
+		set.put(cwNode);
+		cw++;
+		if (cw > cwSet.size()) return set;
+
+	    } else {
+		// ccwNode is closer to key
+		set.put(ccwNode);
+		ccw--;
+		if (-ccw > ccwSet.size()) return set;
+
+	    }
+	}
+
+
+	return set;
     }
 
 

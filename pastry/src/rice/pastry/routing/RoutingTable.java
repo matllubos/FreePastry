@@ -183,15 +183,16 @@ public class RoutingTable extends Observable implements Observer {
      * Determines a set of alternate hops towards a given key.
      * 
      * @param key the key
-     * @param set a set of nodehandles (result)
      * @param max the maximal number of alternate hops requested
+     * @return a set of nodehandles, or null if no alternate hops exist
      */
 
-    public void alternateRoutes(Id key, NodeSet set, int max)
+    public NodeSet alternateRoutes(Id key, int max)
     {
+	NodeSet set = new NodeSet();
 	final int cols = 1 << idBaseBitLength;
 	int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
-	if (diffDigit < 0) return;
+	if (diffDigit < 0) return set;
 	int keyDigit = key.getDigit(diffDigit, idBaseBitLength);
 	int myDigit = myNodeId.getDigit(diffDigit, idBaseBitLength);
 	Id.Distance myDistance = myNodeId.distance(key);
@@ -220,6 +221,8 @@ public class RoutingTable extends Observable implements Observer {
 		if (digit == myDigit) finished = true;
 	    }
 	}
+
+	return set;
     }
 
     /**

@@ -330,7 +330,7 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
      * @return -1 if the base id is most similar, else the index of the most similar node.
      */
 
-    public int mostSimilar(NodeId nid) {
+    public int mostSimilar(Id nid) {
 	NodeId.Distance baseDist = baseId.distance(nid);
 	NodeId.Distance d;
 

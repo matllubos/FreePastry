@@ -221,7 +221,7 @@ public abstract class PastryRegrTest {
 	for (int i=0; i<num; i++) {
 	    System.out.println("created " + rta[i].getNodeId());
 
-	    //checkLeafSet(rta[i]);
+	    checkLeafSet(rta[i]);
 	    //checkRoutingTable(rta[i]);
 	}
 
@@ -331,6 +331,49 @@ public abstract class PastryRegrTest {
 		System.out.println("checkLeafSet: failure at" + rta.getNodeId() +
 				   "i=" + i + " inBetween=" + inBetween + "\n" + ls);
 	}
+
+
+	// now check the replicaSet
+
+	// a comparator that orders nodeIds by distance from the localId
+	class DistComp implements Comparator {
+	    NodeId localId;
+
+	    public DistComp(NodeId localId) {this.localId = localId;}
+
+	    public int compare(Object o1, Object o2) {
+		NodeId nid1 = (NodeId)o1;
+		NodeId nid2 = (NodeId)o2;
+		return nid1.distance(localId).compareTo(nid2.distance(localId));
+	    }
+	}
+
+
+	TreeMap distanceMap = new TreeMap(new DistComp(localId));
+
+	// compute a representation of the leafset, sorted by distance from the localId
+	for (int i=-ls.ccwSize(); i<=ls.cwSize(); i++) {
+	    NodeHandle nh = ls.get(i);
+	    distanceMap.put(nh.getNodeId(), nh);
+	}
+
+	NodeSet rs = ls.replicaSet(localId, ls.size()*2+1);
+	// now verify the replicaSet
+	for (int i=0; i<rs.size(); i++) {
+	    NodeHandle nh = rs.get(i);
+	    NodeId nid = nh.getNodeId();
+	    int inBetween = distanceMap.subMap(localId, nid).size();
+
+	    if (inBetween != i)
+		System.out.println("checkLeafSet: replicaSet failure at" + rta.getNodeId() +
+				   "i=" + i + " inBetween=" + inBetween + "\n" + rs + "\n" + ls);
+	}
+
+	// check size 
+	NodeHandle nh = rs.get(rs.size()-1);
+	if (ls.size() > 0 && nh != ls.get(-ls.ccwSize()) && nh != ls.get(ls.cwSize())) 
+	    System.out.println("checkLeafSet: replicaSet size failure at" + rta.getNodeId() +
+			       rs + "\n" + ls);
 
     }
 

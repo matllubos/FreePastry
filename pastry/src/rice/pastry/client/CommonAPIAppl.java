@@ -123,12 +123,9 @@ public abstract class CommonAPIAppl extends PastryAppl
 
     public NodeSet local_lookup(Id key, int num, boolean safe) {
 	// safe ignored until we have the secure routing support
-	NodeSet nSet = new NodeSet();
 
 	// get the nodes from the routing table
-	getRoutingTable().alternateRoutes(key, nSet, num);
-	
-	return nSet;
+	return getRoutingTable().alternateRoutes(key, num);
     }
 
 
@@ -161,8 +158,7 @@ public abstract class CommonAPIAppl extends PastryAppl
      */
 
     public NodeSet replicaSet(Id key, int max_rank) {
-	return null;
-
+	return getLeafSet().replicaSet(key, max_rank);
     }
 
    
@@ -190,7 +186,6 @@ public abstract class CommonAPIAppl extends PastryAppl
      */
     boolean range(NodeHandle n, int r, IdRange range) {
 	return false;
-
     }
 
 
@@ -237,7 +232,6 @@ public abstract class CommonAPIAppl extends PastryAppl
      * @param msg the message that is passing through.
      * @param key the key
      * @param nextHop the default next hop for the message.
-     * @param opt the send options the message was sent with.
      *
      * @return true if the message should be routed, false if the message should be cancelled.
      */

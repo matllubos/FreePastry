@@ -267,6 +267,21 @@ public class NodeSet implements NodeSetI {
 	return set.iterator();
     }
 
+    /**
+     * Returns a string representation of the leaf set
+     *
+     */
+
+    public String toString() 
+    {
+	String s = "NodeSet: ";
+	for (int i=0; i<size(); i++)
+	    s = s + get(i).getNodeId();
+
+	return s;
+    }
+
+
 }
 
 
