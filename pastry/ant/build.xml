@@ -5,14 +5,18 @@
   <property name="lib_dir" value="lib" />
   <property name="ant_dir" value="ant" />
   <property name="ant_lib_dir" value="${ant_dir}/lib" />
+  <property name="docs_dir" value="docs" />
+  <property name="javadoc_dir" value="${docs_dir}/javadoc" />
   <property name="exclude_files_text" value="rice/past/search/** 
                                              rice/ap3/** 
                                              rice/nls/** 
-                                             rice/rm/testing/** 
+                                             rice/rm/testing/**
+                                             rice/im/**
                                              rice/bscribe/** 
                                              rice/storage/** 
                                              rice/caching/** 
                                              rice/email/test/** 
+                                             rice/testharness/**
                                              rice/splitstream/testing/**" />
 
   <target name="init">   
@@ -44,12 +48,17 @@
            deprecation="yes" />
   </target> 
   
-  <target name="insertheader">  
-  </target> 
+  <target name="copyright">
+    <taskdef name="append" classname="Append" classpath="${ant_lib_dir}" />
+    <append srcfile="${ant_dir}/copyright.txt">
+      <fileset dir="${src_dir}">
+        <include name="**/*.java" />
+      </fileset>
+    </append>
+  </target>
 
   <target name="beautify" depends="compile">
     <taskdef name="pretty" classname="org.acm.seguin.ant.Pretty" classpath="${ant_lib_dir}/jrefactory.jar:${ant_lib_dir}/JRefactoryModule.jar:${ant_lib_dir}/JavaStyle.jar" />
-
     <pretty settingsDir="${ant_dir}" cvs="true">      
       <fileset dir="${src_dir}" includes="**/*.java" excludes="${exclude_files_text}" />
     </pretty>  
@@ -60,4 +69,17 @@
       <fileset dir="${build_dir}" includes="**/*.class" excludes="${exclude_files_text}" />
     </jar>
   </target>
+        
+  <target name="javadoc" depends="init">
+    <javadoc destdir="${javadoc_dir}"
+             classpath="${classpath_text}" 
+             windowtitle="Rice Pastry - API Specifications"
+             use="true">
+       <fileset dir="${src_dir}" includes="**/*.java" excludes="${exclude_files_text}" />
+       <doctitle>Rice Pastry API</doctitle>
+       <header>Rice Pastry API</header>
+       <bottom><![CDATA[<i>Copyright &#169; 2001 - Rice Pastry.</i>]]></bottom>
+    </javadoc>
+  </target>
+  
 </project>
