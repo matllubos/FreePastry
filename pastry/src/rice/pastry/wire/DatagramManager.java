@@ -24,17 +24,40 @@
 
 package rice.pastry.wire;
 
-import java.io.*;
-import java.net.*;
-import java.nio.*;
-import java.nio.channels.*;
-import java.util.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InvalidClassException;
+import java.io.NotSerializableException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.PrintStream;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
-import rice.pastry.wire.exception.*;
-import rice.pastry.wire.messaging.datagram.*;
+import rice.pastry.Log;
+import rice.pastry.NodeId;
+import rice.pastry.join.JoinRequest;
+import rice.pastry.leafset.BroadcastLeafSet;
+import rice.pastry.leafset.RequestLeafSet;
+import rice.pastry.messaging.Message;
+import rice.pastry.routing.BroadcastRouteRow;
+import rice.pastry.routing.RouteMessage;
+import rice.pastry.testing.HelloMsg;
+import rice.pastry.wire.exception.DeserializationException;
+import rice.pastry.wire.exception.ImproperlyFormattedMessageException;
+import rice.pastry.wire.exception.SerializationException;
+import rice.pastry.wire.messaging.datagram.AcknowledgementMessage;
+import rice.pastry.wire.messaging.datagram.DatagramMessage;
+import rice.pastry.wire.messaging.datagram.DatagramTransportMessage;
+import rice.pastry.wire.messaging.datagram.PingMessage;
 
 /**
  * This class is an implementation of a UDP-based Pastry protocol. All messages
@@ -130,6 +153,11 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
     transmissionManager = new DatagramTransmissionManager(pastryNode, key,this);
   }
 
+  public void notifyKilled() {
+    transmissionManager.notifyKilled();
+  }
+
+
   /**
    * Designed to be called by a node handle when a socket is open in order to
    * reset the seqence number of UDP.
@@ -151,6 +179,7 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
    * @param destination DESCRIBE THE PARAMETER
    */
   public void write(NodeId destination, InetSocketAddress address, Object o) {
+    //System.out.println("Enqueueing write to " + destination + " of " + o);
     debug("Enqueueing write to " + destination + " of " + o);
     transmissionManager.add(new PendingWrite(destination, address, o));
   }
@@ -175,6 +204,7 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
 
         if (buffer.remaining() > 0) {
           Object o = deserialize(buffer);       
+//          System.out.println("REC:"+o);
           if (o instanceof DatagramMessage) {
             DatagramMessage message = (DatagramMessage) o;
             if (message instanceof DatagramTransportMessage) {
@@ -222,11 +252,13 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
           }
         } else {
           debug("Read from datagram channel, but no bytes were there - no bad, but wierd.");
+          buffer.clear();
 //          System.out.println("Read from datagram channel, but no bytes were there - no bad, but wierd.");
           break;
         }
       }
     } catch (IOException e) {
+      System.out.println("ERROR (datagrammanager:read): " + e);
       debug("ERROR (datagrammanager:read): " + e);
       e.printStackTrace();
     }
@@ -250,6 +282,7 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
       }
     }
   }
+
   /**
    * Specified by the SelectionKeyHandler interface - is called when there is
    * space in the DatagramChannel's buffer to write some data.
@@ -283,19 +316,22 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
           packetNum = dtm.getNum();
           oo = dtm.getObject();
         }
+        //System.out.println(write.getDestination()+":"+"SEN:"+oo);
         wireDebug(write.getDestination()+":"+"SEN:"+oo);
         wireDebug(write.getDestination()+":"+"DBG:"+packetNum+":"+oo);
-        
-        int num = channel.send(serialize(write.getObject()), write.getAddress());
+        ByteBuffer buf = serialize(write.getObject());
+        //System.out.println("buf:"+buf.remaining());
+        int num = channel.send(buf, write.getAddress());
+        //System.out.println("num:"+num);
 
         if (num == 0) {
           System.out.println("ERROR: 0 bytes were written (not fatal, but bad) - full buffer.");
         }
-
+        
         debug("Wrote message " + write.getObject() + " to " + write.getDestination());
       }
     } catch (IOException e) {
-      System.out.println("ERROR (datagrammanager:write): " + e);
+      System.err.println("ERROR (datagrammanager:write): " + e);
     }
   }
 
