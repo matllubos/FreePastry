@@ -6,7 +6,7 @@ import java.util.StringTokenizer;
 
 public class ProcessLog{
     private static Vector file_names = new Vector();
-    private static int MAX_SEQ = 512;
+    private static int MAX_SEQ = 10240;
     private static int NUM_STRIPE = 16;
     public ProcessLog(){
     }
@@ -21,15 +21,19 @@ public class ProcessLog{
     public void processFile(String filename){
 	File log = new File(filename + ".Processed");
 	File log2 = new File(filename + ".Total");
+	File log3 = new File(filename + ".Jitter");
 	FileInputStream fis = null;
 	FileOutputStream fos = null;
 	FileOutputStream fos2 = null;
+	FileOutputStream fos3 = null;
 	int dump[][] = new int[MAX_SEQ][];
 
 	try{
 	    if(!log.createNewFile())
 		System.out.println("Error.. could not create log file for file "+filename);
 	    if(!log2.createNewFile())
+		System.out.println("Error.. could not create log file for file "+filename);
+	    if(!log3.createNewFile())
 		System.out.println("Error.. could not create log file for file "+filename);
 	    
 	}catch(Exception ec){
@@ -40,15 +44,18 @@ public class ProcessLog{
 	    fis = new FileInputStream(filename);
 	    fos = new FileOutputStream(log);
 	    fos2 = new FileOutputStream(log2);
+	    fos3 = new FileOutputStream(log3);
 	}catch(FileNotFoundException e){
 	    e.printStackTrace();
 	}
 	InputStreamReader in = new InputStreamReader(fis);
 	OutputStreamWriter out = new OutputStreamWriter(fos);
 	OutputStreamWriter out2 = new OutputStreamWriter(fos2);
+	OutputStreamWriter out3 = new OutputStreamWriter(fos3);
 	BufferedReader br = new BufferedReader((Reader)in);
 	BufferedWriter bw = new BufferedWriter((Writer) out);
 	BufferedWriter bw2 = new BufferedWriter((Writer) out2);
+	BufferedWriter bw3 = new BufferedWriter((Writer) out3);
 
 
 	String line = null;
@@ -59,12 +66,12 @@ public class ProcessLog{
 	    i.printStackTrace();
 	}
 	while(line != null){
-	    System.out.println("Read "+line);
+	    //System.out.println("Read "+line);
 	    StringTokenizer tk = new StringTokenizer(line);
 	    int index1 = Integer.valueOf(tk.nextToken()).intValue();
 	    int index2 = Integer.valueOf(tk.nextToken()).intValue();
 	    int value = Integer.valueOf(tk.nextToken()).intValue();
-	    System.out.println("index1 "+index1+" index2 "+index2+" value "+value);
+	    //System.out.println("index1 "+index1+" index2 "+index2+" value "+value);
 	    if(dump[index2] == null){
 		//System.out.println("nullllllll for "+index1+ ", index 2 "+index2 +" value "+value);
 		dump[index2] = new int[NUM_STRIPE];
@@ -87,6 +94,7 @@ public class ProcessLog{
 	// now dump this info
 	String string;
 	String string2;
+	String string3;
 	int diff = 0;
 	int max =0;
 	int min = 0;
@@ -94,6 +102,7 @@ public class ProcessLog{
 	    Integer intg = new Integer(j);
 	    int count = 0;
 	    string2 = intg.toString();
+	    string3 = intg.toString();	    
 	    if(dump[j] != null){
 		for(int k = 0; k < 16; k++){
 		    string = intg.toString();
@@ -116,6 +125,18 @@ public class ProcessLog{
 		    }catch(IOException i){
 			i.printStackTrace();
 		    } 
+		  
+
+		}
+
+		try{
+		    Integer l3 = new Integer(max - min);
+		    string3 += "\t" + l3.toString();
+		    bw3.write(string3, 0, string3.length());
+		    bw3.newLine();
+		    bw3.flush();
+		}catch(IOException i){
+		    i.printStackTrace();
 		}
 		//string += "\t"+(max - min);
 		max = min = 0;
