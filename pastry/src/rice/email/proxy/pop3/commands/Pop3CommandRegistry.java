@@ -12,7 +12,7 @@ public class Pop3CommandRegistry {
   {"PASS", PassCommand.class}, {"LIST", ListCommand.class}, 
   {"UIDL", UidlCommand.class}, {"TOP", TopCommand.class}, 
   {"RETR", RetrCommand.class}, {"DELE", DeleCommand.class},
-  {"NOOP", NoopCommand.class} };
+  {"NOOP", NoopCommand.class}, {"CAPA", CapaCommand.class} };
   
   public void load() {
     for (int i = 0; i < COMMANDS.length; i++) {
