@@ -138,7 +138,10 @@ public class Id implements rice.p2p.commonapi.Id {
    * @param hex The hexadeciaml representation from the toStringFull()
    */
   public static Id build(String hex) {
-    return build(hex.toCharArray(), 0, hex.length());
+    while (hex.length() < IdBitLength/4) 
+      hex = hex + "0";
+    
+    return build(hex.toUpperCase().toCharArray(), 0, hex.length());
   }
   
   /**

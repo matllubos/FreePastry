@@ -53,7 +53,12 @@ import sun.misc.SignalHandler;
 public abstract class DistPastryNode extends PastryNode {
   
   // the queue used for processing requests
-  protected ProcessingQueue processingQueue = new ProcessingQueue();
+  public static ProcessingQueue QUEUE = new ProcessingQueue();
+  public static ProcessingThread THREAD = new ProcessingThread(QUEUE);
+  
+  static {
+    THREAD.start();
+  }
   
   // Period (in seconds) at which the leafset and routeset maintenance tasks, respectively, are invoked.
   // 0 means never.
@@ -85,10 +90,6 @@ public abstract class DistPastryNode extends PastryNode {
     // uses deamon thread, so it terminates once other threads have terminated
     
     this.listeners = new Vector();
-    
-    this.processingQueue = new ProcessingQueue();
-    ProcessingThread thread = new ProcessingThread(processingQueue);
-    thread.start();
   }
   
   public Timer getTimer() {
@@ -272,7 +273,7 @@ public abstract class DistPastryNode extends PastryNode {
    * @param command The command to return the result to once it's done
    */
   public void process(Executable task, Continuation command) {
-    processingQueue.enqueue(new ProcessingRequest(task, command));
+    QUEUE.enqueue(new ProcessingRequest(task, command));
   }
   
   private static class ProcessingThread extends Thread {
@@ -294,7 +295,7 @@ public abstract class DistPastryNode extends PastryNode {
 	   }
   }
   
-  private static class ProcessingQueue {
+  public static class ProcessingQueue {
     
     List q = new LinkedList();
 	  int capacity = -1;
@@ -306,6 +307,10 @@ public abstract class DistPastryNode extends PastryNode {
 	  public ProcessingQueue(int capacity) {
 	     this.capacity = capacity;
 	  }
+    
+    public synchronized int getLength() {
+      return q.size();
+    }
 	  
 	  public synchronized void enqueue(ProcessingRequest request) {
       if (capacity < 0 || q.size() < capacity) {

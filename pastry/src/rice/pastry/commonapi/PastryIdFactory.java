@@ -131,6 +131,24 @@ public class PastryIdFactory implements IdFactory {
    */
   public Id buildIdFromToString(char[] chars, int offset, int length) {
     return rice.pastry.Id.build(chars, offset, length);
+  } 
+  
+  /**
+   * Builds an IdRange based on a prefix.  Any id which has this prefix should
+   * be inside this IdRange, and any id which does not share this prefix should
+   * be outside it.
+   *
+   * @param string The toString() representation of an Id
+   * @return The built Id.
+   */
+  public IdRange buildIdRangeFromPrefix(String string) {
+    rice.pastry.Id start = rice.pastry.Id.build(string);
+    
+    rice.pastry.Id end = rice.pastry.Id.build(string + "ffffffffffffffffffffffffffffffffffffffff");
+        
+    end = end.getCW();
+    
+    return new rice.pastry.IdRange(start, end);
   }
   
   /**
