@@ -113,7 +113,7 @@ public class StoredEmail implements Serializable, Comparable, Cloneable {
   public boolean equals(Object o) {
     StoredEmail se = (StoredEmail) o;
 
-    return (se._email.equals(_email) && se._flags.equals(_flags) &&
+    return (se._email.equals(_email) && //se._flags.equals(_flags) &&
             (se._uid == _uid) && (se.internaldate == internaldate));
   }
 

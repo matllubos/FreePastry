@@ -684,11 +684,13 @@ public class Folder {
    * @return the stored Emails
    */
   public void getMessages(final SnapShot snapshot, Continuation command) {
+    System.out.println("GET MESSAGES: " + snapshot + " TOP IS " + snapshot.getTopEntry());
+    
     _log.getTopEntry(new StandardContinuation(command) {
       private Vector emails = new Vector();
       private HashSet seen = new HashSet();
       private HashSet deleted = new HashSet();
-      private LogEntry top = null;
+      private LogEntry top = (snapshot == null ? null : snapshot.getTopEntry());
       
       protected void insert(StoredEmail email) {
         Integer uid = new Integer(email.getUID());
@@ -704,13 +706,12 @@ public class Folder {
         deleted.add(new Integer(email.getUID()));
       }
 
-      public void receiveResult(Object o) {
-        if ((top == null) && (snapshot != null))
-          top = snapshot.getTopEntry();
-        
+      public void receiveResult(Object o) {        
         EmailLogEntry entry = (EmailLogEntry) o;
-        
+
         while (entry != null) {
+       //   System.out.println("GOT ENTRY..." + entry);
+
           if (entry instanceof InsertMailLogEntry) {
             insert(((InsertMailLogEntry) entry).getStoredEmail());
           } else if (entry instanceof InsertMailsLogEntry) {
@@ -769,6 +770,7 @@ public class Folder {
             if (tmp != null) {
               entry = tmp;
             } else {
+        //      System.out.println("GETTING UNCACHED PREVIOUS ENTRY...");
               entry.getPreviousEntry(this);
               return;
             }
