@@ -12,11 +12,11 @@ SOURCE  = \
 	SocketChannelWriter.java\
 	SocketManager.java\
 	Wire.java\
-	WireLimitationListener.java\
+	WireLimitatioinListener.java\
 	WireNodeHandle.java\
 	WireNodeHandlePool.java\
-	WirePastryNodeFactory.java\
 	WirePastryNode.java\
+	WirePastryNodeFactory.java\
 	WirePastrySecurityManager.java
 
 MAIN       = 

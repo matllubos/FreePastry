@@ -9,79 +9,55 @@
 #  variable can be found in README.ObjectWeb.
 
 PACKAGES = \
-	rice.pastry\
-	rice.pastry.messaging\
-	rice.pastry.routing\
-	rice.pastry.leafset\
-	rice.pastry.client\
-	rice.pastry.join\
-	rice.pastry.direct\
-	rice.pastry.dist\
-	rice.pastry.multiring\
-	rice.pastry.multiring.messaging\
-	rice.pastry.multiring.testing\
-	rice.pastry.rmi\
-	rice.pastry.standard\
-	rice.pastry.security\
-	rice.pastry.testing\
-	rice.pastry.wire\
-	rice.pastry.wire.exception\
-	rice.pastry.wire.messaging.datagram\
-	rice.pastry.wire.messaging.socket\
 	rice.p2p.commonapi\
 	rice.p2p.commonapi.testing\
 	rice.p2p.past\
 	rice.p2p.past.messaging\
 	rice.p2p.past.testing\
-	rice.scribe\
-	rice.scribe.maintenance\
-	rice.scribe.messaging\
-	rice.scribe.security\
-	rice.scribe.testing\
-	rice.splitstream\
-	rice.splitstream.messaging\
-	rice.splitstream.testing\
+	rice.p2p.replication\	
+	rice.p2p.replication.manager\
+	rice.p2p.replication.manager.messaging\
+	rice.p2p.replication.manager.testing\
+	rice.p2p.replication.messaging\
+	rice.p2p.replication.testing\
+	rice.p2p.scribe\
+	rice.p2p.scribe.messaging\
+	rice.p2p.scribe.testing\
+	rice.p2p.splitstream\
+	rice.p2p.splitstream.messaging\
+	rice.p2p.splitstream.testing\
 	rice.past\
 	rice.past.messaging\
 	rice.past.testing\
+	rice.pastry\
+	rice.pastry.client\
+	rice.pastry.commonapi\
+	rice.pastry.direct\
+	rice.pastry.dist\
+	rice.pastry.join\
+	rice.pastry.leafset\
+	rice.pastry.messaging\
+	rice.pastry.rmi\
+	rice.pastry.routing\
+	rice.pastry.security\
+	rice.pastry.socket\
+	rice.pastry.standard\
+	rice.pastry.testing\
+	rice.pastry.wire\
+	rice.pastry.wire.exception\
+	rice.pastry.wire.messaging.datagram\
+	rice.pastry.wire.messaging.socket\
+	rice.pastry.wire.messaging.testing\
 	rice.persistence\
 	rice.persistence.testing\
 	rice.rm\
 	rice.rm.messaging\
 	rice.rm.testing\
-	rice.post\
-	rice.post.log\
-	rice.post.messaging\
-	rice.post.storage\
-	rice.post.security\
-	rice.post.security.ca\
-	rice.post.testing\
-	rice.email\
-	rice.email.log\
-	rice.email.messaging\
-	rice.email.proxy\
-	rice.email.proxy.imap\
-	rice.email.proxy.imap.commands\
-	rice.email.proxy.imap.commands.fetch\
-	rice.email.proxy.imap.parser.antlr\
-	rice.email.proxy.mail\
-	rice.email.proxy.mailbox\
-	rice.email.proxy.mailbox.postbox\
-	rice.email.proxy.smtp\
-	rice.email.proxy.smtp.manager\
-	rice.email.proxy.smtp.commands\
-	rice.email.proxy.user
-#	rice.testharness\
-#	rice.testharness.messaging\
-#	rice.testharness.tests
-#	rice.storage\
-#	rice.storage.testing\
-#	rice.past.search\
-#	rice.past.search.testing
-#	rice.ap3\
-#	rice.ap3.routing\
-#	rice.ap3.messaging\
-#	rice.ap3.testing\
+	rice.scribe\
+	rice.scribe.maintenance\
+	rice.scribe.messaging\
+	rice.scribe.security\
+	rice.scribe.testing
 
 NODOC_PACKAGES = 
 
