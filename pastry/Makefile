@@ -28,6 +28,11 @@ PACKAGES = \
 	rice.pastry.wire.exception\
 	rice.pastry.wire.messaging.datagram\
 	rice.pastry.wire.messaging.socket\
+	rice.p2p.commonapi\
+	rice.p2p.commonapi.testing\
+	rice.p2p.past\
+	rice.p2p.past.messaging\
+	rice.p2p.past.testing\
 	rice.scribe\
 	rice.scribe.maintenance\
 	rice.scribe.messaging\
@@ -48,11 +53,12 @@ PACKAGES = \
 	rice.post.log\
 	rice.post.messaging\
 	rice.post.storage\
+	rice.post.security\
+	rice.post.security.ca\
 	rice.post.testing\
 	rice.email\
 	rice.email.log\
 	rice.email.messaging\
-	rice.email.test\
 	rice.email.proxy\
 	rice.email.proxy.imap\
 	rice.email.proxy.imap.commands\
@@ -64,10 +70,10 @@ PACKAGES = \
 	rice.email.proxy.smtp\
 	rice.email.proxy.smtp.manager\
 	rice.email.proxy.smtp.commands\
-	rice.email.proxy.user\
-	rice.testharness\
-	rice.testharness.messaging\
-	rice.testharness.tests
+	rice.email.proxy.user
+#	rice.testharness\
+#	rice.testharness.messaging\
+#	rice.testharness.tests
 #	rice.storage\
 #	rice.storage.testing\
 #	rice.past.search\
@@ -81,7 +87,7 @@ NODOC_PACKAGES =
 
 JARS = pastry.jar
 
-JARS_LIB       = javamail.jar bouncycastle.jar antlr.jar
+JARS_LIB       = javamail.jar bouncycastle.jar antlr.jar activation.jar
 
 JARS_3RDPARTY = 
 
