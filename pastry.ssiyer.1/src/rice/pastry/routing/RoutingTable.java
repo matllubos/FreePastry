@@ -61,6 +61,7 @@ public class RoutingTable extends Observable {
     public final static int idBaseBitLength = 4;
 
     private NodeId myNodeId;
+    private NodeHandle myNodeHandle;
     private RouteSet routingTable[][];
     
     private int maxEntries;
@@ -72,8 +73,9 @@ public class RoutingTable extends Observable {
      * @param max the maximum number of entries at each table slot.
      */
 
-    public RoutingTable(NodeId me, int max) {
-	myNodeId = me;
+    public RoutingTable(NodeHandle me, int max) {
+	myNodeId = me.getNodeId();
+	myNodeHandle = me;
 	maxEntries = max;
 	
 	int cols = 1 << idBaseBitLength;
@@ -83,8 +85,15 @@ public class RoutingTable extends Observable {
 	
 	routingTable = new RouteSet[rows][cols];
 
-	for (int i=0; i<rows; i++)
-	    for (int j=0; j<cols; j++) routingTable[i][j] = new RouteSet(maxEntries);
+	for (int i=0; i<rows; i++) {
+	    int myCol = myNodeId.getDigit(i,idBaseBitLength);
+
+	    for (int j=0; j<cols; j++) {
+		routingTable[i][j] = new RouteSet(maxEntries);
+		// enter local handle
+		if (j == myCol) routingTable[i][j].put(myNodeHandle);
+	    }
+	}
     }
 
     public int numRows() { return routingTable.length; }

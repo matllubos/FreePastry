@@ -80,7 +80,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	secureMan = new DirectSecurityManager(simulator);
 	msgDisp = new MessageDispatch();
 
-	routeTable = new RoutingTable(nodeId, rtMax);
+	routeTable = new RoutingTable(lhandle, rtMax);
 	leafSet = new LeafSet(nodeId, lSetSize);
 		
 	router = new StandardRouter(lhandle, routeTable, leafSet);

@@ -120,7 +120,7 @@ public class PastryRegrTest {
 		// next column
 
 		// skip if local nodeId digit
-		if (j == rta.getNodeId().getDigit(i,4)) continue;
+		// if (j == rta.getNodeId().getDigit(i,4)) continue;
 
 		RouteSet rs = rt.getRouteSet(i,j);
 
