@@ -95,6 +95,12 @@ public class Post extends PastryAppl {
    * @param message The message which has arrived
    */
   public void messageForAppl(Message message) {
+    if(message instanceof NotificationMessage){
+        PostClient client = hash.get(message.getClientId());
+        if(client != null){
+          client.notificationReceived(message);
+    	}
+		 
   }
 
   /**
