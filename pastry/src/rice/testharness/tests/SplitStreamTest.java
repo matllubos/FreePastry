@@ -183,7 +183,10 @@ public class SplitStreamTest extends Test{
   /**
    * Sends data on all the stripes of channel represented by channelId.
    */
+  
+  int MAX_SEND_NUM = 30;
     public void sendData(){
+     // if (sequenceNum > MAX_SEND_NUM) return;
 	String str = (new Integer(sequenceNum)).toString();
 	str += "\t" + (new Integer((int)System.currentTimeMillis()).toString());
 	str += "\t";
