@@ -6,11 +6,21 @@ import rice.p2p.glacier.*;
 
 public class GlacierFetchMessage extends GlacierMessage {
   protected FragmentKey key;
+  protected int request;
 
-  public GlacierFetchMessage(int uid, FragmentKey key, NodeHandle source, Id dest) {
+  public static final int FETCH_FRAGMENT = 1;
+  public static final int FETCH_MANIFEST = 2;
+  public static final int FETCH_FRAGMENT_AND_MANIFEST = FETCH_FRAGMENT | FETCH_MANIFEST;
+
+  public GlacierFetchMessage(int uid, FragmentKey key, int request, NodeHandle source, Id dest) {
     super(uid, source, dest, false);
 
     this.key = key;
+    this.request = request;
+  }
+
+  public int getRequest() {
+    return request;
   }
 
   public FragmentKey getKey() {
@@ -18,7 +28,7 @@ public class GlacierFetchMessage extends GlacierMessage {
   }
 
   public String toString() {
-    return "[GlacierFetch for " + key + "]";
+    return "[GlacierFetch for " + key + ", req="+request+"]";
   }
 }
 
