@@ -236,7 +236,12 @@ public class Post extends PastryAppl implements IScribeApp  {
 
   public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){}
   public void forwardHandler(ScribeMessage msg){}
-  public void receiveMessage(ScribeMessage msg){}
+  public void receiveMessage(ScribeMessage msg){
+     /* Check and see if I have any messages for this person */
+     /* If I do then call sendNotification over and over again */
+     /* Until they are all delivered */
+
+  }
   public void scribeIsReady(){}
   public void subscribeHandler(ScribeMessage msg){}
 }
