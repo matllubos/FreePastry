@@ -93,11 +93,11 @@ public class SocketNodeHandlePool extends DistNodeHandlePool {
    * @param handle The newly created/deserialized handle
    */
   protected void record(SocketNodeHandle handle) {
-    Vector vector = (Vector) handles.get(handle.getAddress());
+    Vector vector = (Vector) handles.get(handle.getEpochAddress());
 
     if (vector == null) {
       vector = new Vector();
-      handles.put(handle.getAddress(), vector);
+      handles.put(handle.getEpochAddress(), vector);
     }
 
     vector.addElement(new WeakReference(handle));
