@@ -100,7 +100,7 @@ public class StorageService {
     NodeId location = new NodeId(loc);
     SecretKeySpec secretKey = new SecretKeySpec(hash, "DES");
 
-    ContentHashData chd = new ContentHashData(cipherText, credentials);
+    ContentHashData chd = new ContentHashData(cipherText, null);
     
     // Store the content hash data in PAST
     past.insert(location, chd, credentials);
@@ -143,7 +143,7 @@ public class StorageService {
     long timestamp = System.currentTimeMillis();
     byte[] signature = sign(plainText, timestamp);
 
-    SignedData sd = new SignedData(plainText, timestamp, signature, credentials);
+    SignedData sd = new SignedData(plainText, timestamp, signature, null);
 
     // Store the signed data in PAST
     past.insert(location, sd, credentials);
