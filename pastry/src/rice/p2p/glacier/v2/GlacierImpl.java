@@ -531,7 +531,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
               doneSoFar ++;
               deleteFragment(thisKey, new Continuation() {
                 public void receiveResult(Object o) {
-                  log(3, "GC collected "+thisKey.toStringFull()+", expired "+(now-metadata.getCurrentExpiration())+" msec ago");
+                  log(2, "GC collected "+thisKey.toStringFull()+", expired "+(now-metadata.getCurrentExpiration())+" msec ago");
                 }
                 public void receiveException(Exception e) {
                   log(3, "GC cannot collect "+thisKey.toStringFull());
