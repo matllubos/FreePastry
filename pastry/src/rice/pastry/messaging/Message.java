@@ -55,10 +55,11 @@ import rice.pastry.*;
 public abstract class Message implements Serializable 
 {
     private Address destination;
+    private NodeId senderId;
+    private boolean priority;
+
     private transient Credentials credentials;
     private transient Date theStamp;
-    private NodeId senderId;
-    
     private transient ObjectInputStream stream;
 
     /**
@@ -103,6 +104,22 @@ public abstract class Message implements Serializable
     public void setSenderId(NodeId id) { senderId = id; }
 
     /**
+     * Get priority
+     * 
+     * @return the priority of this message.
+     */
+
+   public boolean hasPriority() { return priority; }
+    
+    /**
+     * Set priority.
+     * 
+     * @param the new priority.
+     */
+
+    protected void setPriority(boolean prio) { priority = prio; }
+
+    /**
      * Get stream over which the object was deserialized. Used for indexing
      * into the LocalNode.pending hashmap. See README.handle_localnode.
      * 
@@ -138,9 +155,10 @@ public abstract class Message implements Serializable
     public Message(Address dest) 
     {
 	destination = dest;
+	senderId = null;
 	credentials = null;
 	theStamp = null;
-	senderId = null;
+	priority = false;
     }
 
     /**
@@ -153,9 +171,10 @@ public abstract class Message implements Serializable
     public Message(Address dest, Credentials cred) 
     {
 	destination = dest;
+	senderId = null;
 	credentials = cred;
 	theStamp = null;
-	senderId = null;
+	priority = false;
     }
 
     /**
@@ -169,9 +188,10 @@ public abstract class Message implements Serializable
     public Message(Address dest, Credentials cred, Date timestamp) 
     {
 	destination = dest;
+	senderId = null;
 	credentials = cred;
 	this.theStamp = timestamp;
-	senderId = null;
+	priority = false;
     }
 
     /**
@@ -186,6 +206,7 @@ public abstract class Message implements Serializable
 	destination = dest;
 	this.theStamp = timestamp;
 	senderId = null;
+	priority = false;
     }
 
     private void readObject(ObjectInputStream in)

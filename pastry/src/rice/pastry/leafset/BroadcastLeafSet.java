@@ -72,6 +72,7 @@ public class BroadcastLeafSet extends Message implements Serializable
 	fromNode = from;
 	theLeafSet = leafSet;
 	theType = type;
+	setPriority(true);
     }
     
     /**
@@ -86,6 +87,7 @@ public class BroadcastLeafSet extends Message implements Serializable
 	fromNode = from;
 	theLeafSet = leafSet;
 	theType = type;
+	setPriority(true);
     }
     
     /**
@@ -100,6 +102,7 @@ public class BroadcastLeafSet extends Message implements Serializable
 	fromNode = from;
 	theLeafSet = leafSet;
 	theType = type;
+	setPriority(true);
     }
 
     /**
@@ -115,6 +118,7 @@ public class BroadcastLeafSet extends Message implements Serializable
 	fromNode = from;
 	theLeafSet = leafSet;
 	theType = type;
+	setPriority(true);
     }
 
     /**

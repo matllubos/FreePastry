@@ -61,6 +61,11 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
     // size of the thread pool for asynchronous RMI sends
     // if RMISendHandlerPoolSize == 0, all RMI calls are blocking
     private static final int RMISendHandlerPoolSize = 8;
+    
+    // maximal size of the send queue in messages
+    private static final int RMISendQueueMaxSize = 256;
+    // maximal size of the receive queue in messages
+    private static final int RMIRcvQueueMaxSize = 16;
 
     private RMIRemoteNodeI remotestub;
     private RMINodeHandlePool handlepool;
@@ -230,8 +235,17 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
 	}
 	
 	synchronized (rcvQueue) {
-	    rcvQueue.add(msg);
-	    rcvQueue.notify();
+	    if (msg.hasPriority()) 
+		rcvQueue.addFirst(msg);
+	    else
+		rcvQueue.add(msg);
+	    
+	    if (rcvQueue.size() > RMIRcvQueueMaxSize) {
+		msg = (Message) rcvQueue.removeLast();
+		System.out.println("RMI: rcv queue at limit, dropping message.." + msg);
+	    }
+	    else
+		rcvQueue.notify();
 	}
     }
 
@@ -253,10 +267,22 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
 	  int len;
 
 	  synchronized (sendQueue) {
-	      sendQueue.add(msg);
-	      sendQueue.add(handle);
+	      if (msg != null && msg.hasPriority()) {
+		  sendQueue.addFirst(handle);
+		  sendQueue.addFirst(msg);
+	      } else {
+		  sendQueue.add(msg);
+		  sendQueue.add(handle);
+	      }
+
 	      len = sendQueue.size() / 2;
-	      sendQueue.notify();
+	      if (len > RMISendQueueMaxSize) {
+		  sendQueue.removeLast();
+		  msg = (Message) sendQueue.removeLast();
+		  System.out.println("RMI: send queue at limit, dropping message.." + msg);
+	      }
+	      else
+		  sendQueue.notify();
 	  }
 	  
 	  if (Log.ifp(8)) System.out.println("RMI: sendQueue len=" + len);

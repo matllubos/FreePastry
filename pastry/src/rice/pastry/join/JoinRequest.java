@@ -69,10 +69,9 @@ public class JoinRequest extends Message implements Serializable
 
     public JoinRequest(NodeHandle nh) {
 	super(new JoinAddress());
-
 	handle = nh;
-
 	initialize();
+	setPriority(true);
     }
 
     /**
@@ -84,10 +83,9 @@ public class JoinRequest extends Message implements Serializable
 
     public JoinRequest(NodeHandle nh, Date stamp) {
 	super(new JoinAddress(), stamp);
-
 	handle = nh;
-
 	initialize();
+	setPriority(true);
     }
 
     /**
@@ -99,10 +97,9 @@ public class JoinRequest extends Message implements Serializable
 
     public JoinRequest(NodeHandle nh, Credentials cred) {
 	super(new JoinAddress(), cred);
-
 	handle = nh;
-
 	initialize();
+	setPriority(true);
     }
 
     /**
@@ -115,10 +112,9 @@ public class JoinRequest extends Message implements Serializable
 
     public JoinRequest(NodeHandle nh, Credentials cred, Date stamp) {
 	super(new JoinAddress(), cred, stamp);
-	
 	handle = nh;
-
 	initialize();
+	setPriority(true);
     }
 
 

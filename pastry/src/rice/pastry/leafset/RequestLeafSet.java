@@ -64,6 +64,7 @@ public class RequestLeafSet extends Message implements Serializable
     public RequestLeafSet(NodeHandle nh) { 
 	super(new LeafSetProtocolAddress()); 
 	handle = nh;
+	setPriority(true);
     }
     
     /**
@@ -76,6 +77,7 @@ public class RequestLeafSet extends Message implements Serializable
     public RequestLeafSet(Credentials cred, NodeHandle nh) { 
 	super(new LeafSetProtocolAddress(), cred); 
 	handle = nh;
+	setPriority(true);
     }
     
     /**
@@ -88,6 +90,7 @@ public class RequestLeafSet extends Message implements Serializable
     public RequestLeafSet(Date stamp, NodeHandle nh) { 
 	super(new LeafSetProtocolAddress(), stamp); 
 	handle = nh;
+	setPriority(true);
     }
 
     /**
@@ -101,6 +104,7 @@ public class RequestLeafSet extends Message implements Serializable
     public RequestLeafSet(Credentials cred, Date stamp, NodeHandle nh) { 
 	super(new LeafSetProtocolAddress(), cred, stamp); 
 	handle = nh;
+	setPriority(true);
     }
 
     /**

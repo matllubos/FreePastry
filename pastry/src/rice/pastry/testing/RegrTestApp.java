@@ -88,13 +88,13 @@ public class RegrTestApp extends CommonAPIAppl {
     public Credentials getCredentials() { return cred; }
 
     public void sendMsg(NodeId nid) {
-	routeMsg(nid, new RTMessage(addr, getNodeId(), nid),
+	routeMsg(nid, new RTMessage(addr, getNodeHandle(), nid),
 		 cred, new SendOptions());
     }
 
     public void sendTrace(NodeId nid) {
 	//System.out.println("sending a trace from " + getNodeId() + " to " + nid);
-	routeMsg(nid, new RTMessage(addr, getNodeId(), nid),
+	routeMsg(nid, new RTMessage(addr, getNodeHandle(), nid),
 		 cred, new SendOptions());
     }
 
@@ -264,18 +264,20 @@ public class RegrTestApp extends CommonAPIAppl {
  * DO NOT declare this inside PingClient; see HelloWorldApp for details.
  */
 class RTMessage extends Message {
-    public NodeId source;
+    public NodeHandle sourceNode;
+    //public NodeId source;
     public NodeId target;
 
-    public RTMessage(Address addr, NodeId src, NodeId tgt) {
+    public RTMessage(Address addr, NodeHandle src, NodeId tgt) {
 	super(addr);
-	source = src;
+	sourceNode = src;
+	//source = src.getNodeId();
 	target = tgt;
     }
 
     public String toString() {
 	String s="";
-	s += "RTMsg from " + source + " to " + target;
+	s += "RTMsg from " + sourceNode + " to " + target;
 	return s;
     }
 }

@@ -226,6 +226,14 @@ public class RouteMessage extends Message implements Serializable, rice.p2p.comm
 
 
     /**
+     * Get priority
+     * 
+     * @return the priority of this message.
+     */
+
+   public boolean hasPriority() { return internalMsg.hasPriority(); }
+    
+    /**
      * Get receiver address.
      * 
      * @return the address.
@@ -252,22 +260,6 @@ public class RouteMessage extends Message implements Serializable, rice.p2p.comm
      */
 
     public SendOptions getOptions() { return opts; }
-
-    /*
-    private void readObject(ObjectInputStream in)
-	throws IOException, ClassNotFoundException 
-    {
-	target = (NodeId) in.readObject();
-	internalMsg = (Message) in.readObject();
-    }
-
-    private void writeObject(ObjectOutputStream out)
-	throws IOException, ClassNotFoundException 
-    {
-	out.writeObject(target);
-	out.writeObject(internalMsg);
-    }
-    */
 
     public String toString() {
 	String str = "";
