@@ -776,16 +776,16 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private void formAggregates(final Continuation command) {
     if (flushWait != null) {
-      log(3, "Flush in progress... daisy-chaining continuation");
+      log(2, "Flush in progress... daisy-chaining continuation");
       final Continuation parent = flushWait;
       flushWait = new Continuation() {
         public void receiveResult(Object o) {
-          log(3, "Daisy-chain receiveResult(), restarting "+command);
+          log(2, "Daisy-chain receiveResult(), restarting "+command);
           parent.receiveResult(o);
           formAggregates(command);
         }
         public void receiveException(Exception e) {
-          log(3, "Daisy-chain receiveException(), restarting "+command);
+          log(2, "Daisy-chain receiveException(), restarting "+command);
           parent.receiveException(e);
           formAggregates(command);
         }
@@ -1218,6 +1218,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     switch (timerID) {
       case tiFlush :
       {
+        log(2, "Scheduled flush, waiting list: "+waitingList.getSize());
+        
         formAggregates(new Continuation() {
           public void receiveResult(Object o) { 
             log(3, "Scheduled flush: Success (o="+o+")");
@@ -1228,10 +1230,16 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
           }
         });
         
-        if (waitingList.getSize() >= (maxObjectsInAggregate * maxAggregatesPerRun))
+        log(2, "Waiting list: "+waitingList.getSize()+" Scan: "+getNumObjectsWaiting()+" Max: "+(maxObjectsInAggregate * maxAggregatesPerRun));
+        
+        if (getNumObjectsWaiting() >= (maxObjectsInAggregate * maxAggregatesPerRun)) {
+          log(2, "Retrying later");
           addTimer(jitterTerm(flushStressInterval), tiFlush);
-        else
+        } else {
+          log(2, "OK, waiting for next deadline");
           addTimer(jitterTerm(flushInterval), tiFlush);
+        }
+        
         break;
       }
       case tiExpire :
@@ -1980,6 +1988,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     Iterator iter = waitingList.scan().getIterator();
     boolean objectIsWaiting = false;
 
+    log(2, "flush("+id+") invoked");
+    
     while (iter.hasNext()) {
       VersionKey thisKey = (VersionKey) iter.next();
       if (thisKey.getId().equals(id)) {
