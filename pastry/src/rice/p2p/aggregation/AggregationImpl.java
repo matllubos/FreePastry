@@ -1222,7 +1222,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     
     Continuation.MultiContinuation mc = new Continuation.MultiContinuation(command, ids.length);
     for (int i=0; i<ids.length; i++)
-      refresh(ids[i], expiration, mc.getSubContinuation(i++));
+      refresh(ids[i], expiration, mc.getSubContinuation(i));
   }
   
   public void refresh(final Id[] ids, final long[] versions, final long expiration, final Continuation command) {
@@ -1281,7 +1281,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         command.receiveException(new AggregationException("Inconsistency detected in aggregate list -- try restarting the application"));
         return;
       }
-      
+
       if (adc.objects[objDescIndex].refreshedLifetime < expiration)
         adc.objects[objDescIndex].refreshedLifetime = expiration;
         
@@ -1303,7 +1303,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                 theVersion = ((GCPastContent)obj).getVersion();
               } else {
                 theVersion = 0;
-              }
+              } 
 
               final VersionKey vkey = new VersionKey(obj.getId(), theVersion);
               final long theVersionF = theVersion;
