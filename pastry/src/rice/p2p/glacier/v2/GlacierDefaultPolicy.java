@@ -83,7 +83,7 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
     return manifests;
   }
   
-  public Fragment[] encodeObject(Serializable obj) {
+  public Fragment[] encodeObject(Serializable obj, boolean[] generateFragment) {
     System.out.println("Serialize object: " + obj);
 
     byte bytes[] = null;
@@ -101,7 +101,7 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
     }
 
     System.out.println("Create fragments: " + obj);
-    Fragment[] fragments = codec.encode(bytes);
+    Fragment[] fragments = codec.encode(bytes, generateFragment);
     System.out.println("Completed: " + obj);
     
     return fragments;

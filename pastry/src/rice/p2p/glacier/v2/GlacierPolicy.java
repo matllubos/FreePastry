@@ -10,7 +10,7 @@ public interface GlacierPolicy {
 
   public boolean checkSignature(Manifest manifest, VersionKey key);
   
-  public Fragment[] encodeObject(Serializable obj);
+  public Fragment[] encodeObject(Serializable obj, boolean[] generateFragment);
   
   public Manifest[] createManifests(VersionKey key, Serializable obj, Fragment[] fragments, long expiration);
 
