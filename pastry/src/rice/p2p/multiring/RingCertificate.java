@@ -440,8 +440,9 @@ public class RingCertificate implements Serializable {
       ringData[i] = 0;
     
     
-    if (ring.equals("Global"))
-      ringData[ringData.length-1] = 0;
+    if (s.toLowerCase().equals("global"))
+      for (int i=0; i<ringData.length; i++) 
+        ringData[i] = 0;
     
     return pif.buildId(ringData);
   }
