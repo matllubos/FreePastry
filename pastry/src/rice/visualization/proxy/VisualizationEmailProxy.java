@@ -65,7 +65,8 @@ public class VisualizationEmailProxy extends EmailProxy {
       }
       
       server.addPanelCreator(new QueuePanelCreator(timer, DistPastryNode.QUEUE, rice.persistence.PersistentStorage.QUEUE));
-      server.addPanelCreator(new EmailPanelCreator(timer, smtp));
+      if (smtp != null)
+        server.addPanelCreator(new EmailPanelCreator(timer, smtp));
       
       if (immutablePast instanceof DebugCommandHandler)
         server.addDebugCommandHandler((DebugCommandHandler)immutablePast);
