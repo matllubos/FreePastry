@@ -18,23 +18,13 @@ package rice.ap3;
 public interface AP3Service {
 
   /**
-   * Called by an AP3Client to initiate a new request for content.
+   * Called by an AP3Client to initiate a new request for content. It specifies
+   * the fetch probability to be used by each intermediate hop in the network.
    * @param request Request object for content, as recognized by the AP3Client
+   * @param fetchProbability For intermediate nodes to decide on whether to
+   * forward or fetch.
    * @return Corresponding response object
    */
-  Object getAnonymizedContent(Object request);
-
-  /**
-   * Gets the fetch probability used on requested messages.
-   * @return Probability between 0 and 0.5
-   */
-  public double getFetchProbability();
-
-  /**
-   * Sets the fetch probability to be used on requested messages.
-   * Must be less than one half, for anonymity purposes.
-   * @param prob Probability between 0 and 0.5
-   */
-  public void setFetchProbability(double prob);
+  Object getAnonymizedContent(Object request, double fetchProbability);
 
 }

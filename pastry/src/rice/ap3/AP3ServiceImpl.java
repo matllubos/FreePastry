@@ -39,14 +39,6 @@ public class AP3ServiceImpl
   private SendOptions _sendOptions;
 
   /**
-   * The fetch probability is used to determine
-   * whether whether a given node should fetch
-   * content or not. It should always be below 
-   * 50%.
-   */
-  private double _fetchProbability;
-
-  /**
    * The routing table.
    */
   private AP3RoutingTable _routingTable;
@@ -91,9 +83,11 @@ public class AP3ServiceImpl
    * This method blocks the incoming thread until a response message is received.
    *
    * @param request Request object for content, as recognized by the AP3Client
+   * @param fetchProbability The probability used by intermediate nodes to
+   * determine whether to fetch or forward a request.
    * @return Corresponding response object
    */
-  public Object getAnonymizedContent(Object request) {
+  public Object getAnonymizedContent(Object request, double fetchProbability) {
 
     boolean messageIDCollided = true;
     AP3Message requestMsg = null;
@@ -103,7 +97,7 @@ public class AP3ServiceImpl
 	requestMsg = new AP3Message(this.getNodeId(),
 				    request,
 				    AP3MessageType.REQUEST,
-				    this.getFetchProbability());
+				    fetchProbability);
 	_routingTable.addEntry(requestMsg);
 	messageIDCollided = false;
       } catch(Exception e) {
@@ -135,23 +129,6 @@ public class AP3ServiceImpl
       ((ThreadTableEntry) _threadTable.get(requestMsg.getID()))._msg;
 
     return responseMsg.getContent();
-  }
-
-  /**
-   * Gets the fetch probability used on requested messages.
-   * @return Probability between 0 and 0.5
-   */
-  public double getFetchProbability() {
-    return this._fetchProbability;
-  }
-
-  /**
-   * Sets the fetch probability to be used on requested messages.
-   * Must be less than one half, for anonymity purposes.
-   * @param prob Probability between 0 and 0.5
-   */
-  public void setFetchProbability(double prob) {
-    this._fetchProbability = prob;
   }
 
   /**
