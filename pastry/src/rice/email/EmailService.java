@@ -13,7 +13,11 @@ import rice.email.messaging.*;
 
 /**
  * This class serves as the entry point into the email service written
- * on top of Post.
+ * on top of Post.<br>
+ * <br>
+ * The EmailService uses the observer pattern to notify other objects
+ * of newly received emails.  The event generated will contain an
+ * {@link Email} object as its argument.
  */
 public class EmailService extends PostClient {
   // the name for ePOST's root log
