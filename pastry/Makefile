@@ -44,6 +44,7 @@ PACKAGES = \
 #	rice.post\
 #	rice.post.log\
 #	rice.post.messaging\
+#	rice.post.storage\
 #	rice.post.email\
 #	rice.post.email.log\
 #	rice.post.email.messaging\
