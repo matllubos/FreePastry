@@ -143,6 +143,7 @@ public class SocketChannelReader {
         final byte[] objectArray = new byte[objectSize];
         buffer.get(objectArray);
         final int size = objectSize + 4;
+        reset();
 
         if (size < SELECTOR_DESERIALIZATION_MAX_SIZE) {
           Object obj = deserialize(objectArray);
@@ -257,8 +258,6 @@ public class SocketChannelReader {
     Object o = null;
 
     try {
-      reset();
-
       return ois.readObject();
     } catch (ClassCastException e) {
       System.out.println("PANIC: Serialized message was not a pastry message!");
