@@ -23,6 +23,8 @@ public class LocalVisualization implements DataProvider {
   
   protected VisualizationClient client;
 
+  protected boolean die = false;
+  
   public LocalVisualization(DistNodeHandle handle) {
     this.handle = handle;
     this.frame = new LocalVisualizationFrame(this);
@@ -30,7 +32,7 @@ public class LocalVisualization implements DataProvider {
     Thread t = new Thread() {
       public void run() {
         try {
-          while (true) {
+          while (! die) {
             Thread.currentThread().sleep(REFRESH_TIME);
             updateData();
             frame.repaint();
@@ -46,6 +48,10 @@ public class LocalVisualization implements DataProvider {
   
   public Data getData() {
     return data;
+  }
+  
+  public void exit() {
+    die = true; 
   }
   
   protected void updateData() throws IOException {

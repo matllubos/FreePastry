@@ -12,9 +12,9 @@ public class LocalVisualizationFrame extends JFrame {
   
   protected PastryNodePanel pastryNodePanel;
   
-  protected DataProvider visualization;
+  protected LocalVisualization visualization;
   
-  protected LocalVisualizationFrame(DataProvider visualization) {
+  protected LocalVisualizationFrame(LocalVisualization visualization) {
     super("Local Node Visualization"); 
     
     this.visualization = visualization;
@@ -33,6 +33,19 @@ public class LocalVisualizationFrame extends JFrame {
     //Display the window.
     pack();
     setVisible(true);
+    
+    addWindowListener(new WindowListener() {
+  public void windowActivated(WindowEvent e) {}      
+  public void windowClosed(WindowEvent e) {
+  LocalVisualizationFrame.this.visualization.exit();
+  }      
+  public void windowClosing(WindowEvent e) {}
+  public void windowDeactivated(WindowEvent e) {}      
+  public void windowDeiconified(WindowEvent e) {}      
+  public void windowIconified(WindowEvent e) {}      
+  public void windowOpened(WindowEvent e) {}
+    });
+      
   }
   
   public void nodeSelected(Node node, Data data) {
