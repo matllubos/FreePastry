@@ -21,6 +21,11 @@ import rice.post.security.*;
 public class PostLog extends Log {
 
   /**
+   * Serialver for backwards compatibility
+   */
+  public static final long serialVersionUID = 5516854362333868152L;
+
+  /**
    * The user of this log.
    */
   private PostEntityAddress user;
@@ -42,6 +47,8 @@ public class PostLog extends Log {
    * @param user The user whom this PostLog is for
    * @param key The user's public key.
    * @param cert This user's certification
+   * @param post The local Post service
+   * @param command The command to call once done
    */
   PostLog(PostEntityAddress user, PublicKey key, PostCertificate cert, Post post, Continuation command) {
     super("User " + user.toString() + "'s log", user.getAddress(), post);
@@ -49,6 +56,31 @@ public class PostLog extends Log {
     this.user = user;
     this.key = key;
     this.certificate = cert;
+    
+    sync(command);
+  }
+  
+  /**
+   * Constructor for PostLog, which effectively renames a previous user to a new username.  
+   * All of the user's metadata is taken from the the provided PostLog.
+   *
+   * @param user The user whom this PostLog is for
+   * @param key The user's public key.
+   * @param cert This user's certification
+   * @param post The local Post service
+   * @param previous The previous PostLog of the user
+   * @param command The command to call once done
+   */
+  PostLog(PostEntityAddress user, PublicKey key, PostCertificate cert, Post post, PostLog previous, Continuation command) {
+    super("User " + user.toString() + "'s log", user.getAddress(), post);
+    
+    this.user = user;
+    this.key = key;
+    this.certificate = cert;
+    
+    // now, we copy the necessary metadata over
+    this.children = previous.children;
+    this.topEntryReference = previous.topEntryReference;
     
     sync(command);
   }

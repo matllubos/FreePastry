@@ -162,6 +162,11 @@ public class PostImpl implements Post, Application, ScribeClient {
    */
   private boolean logRewrite;
   
+  /**
+   * The previous address of the user, only used when re-inserting the new log
+   */
+  private PostEntityAddress previousAddress;
+  
 
   /**
    * Builds a PostImpl to run on the given pastry node,
@@ -187,7 +192,8 @@ public class PostImpl implements Post, Application, ScribeClient {
                   PostCertificate certificate,
                   PublicKey caPublicKey,
                   String instance,
-                  boolean logRewrite) throws PostException 
+                  boolean logRewrite,
+                  PostEntityAddress previousAddress) throws PostException 
   {
     this.endpoint = node.registerApplication(this, instance);
     this.immutablePast = immutablePast;
@@ -197,6 +203,7 @@ public class PostImpl implements Post, Application, ScribeClient {
     this.certificate = certificate;
     this.caPublicKey = caPublicKey;
     this.logRewrite = logRewrite;
+    this.previousAddress = previousAddress;
     
     this.scribe = new ScribeImpl(node, instance);
     this.delivery = new DeliveryService(this, deliveryPast, deliveredPast, scribe, node.getIdFactory());
@@ -619,6 +626,33 @@ public class PostImpl implements Post, Application, ScribeClient {
     } 
   }
   
+  /**
+   * Internal method which builds a new PostLog for the log user.  If a previous post log has been specified, 
+   * it uses that to clone, otherwise, it simply creates a blank log.  *DO NOT USE!*
+   *
+   * @param command The command to call once done
+   * @return The new post log
+   */
+  public void createPostLog(Continuation command) {
+    if (previousAddress != null) {
+      getPostLog(previousAddress, new StandardContinuation(command) {
+        public void receiveResult(Object o) {
+          PostLog previous = (PostLog) o;
+          
+          if (previous != null) {
+            logger.info(endpoint.getId() + ": Creating new log at " + getEntityAddress() + " based off of address at " + previousAddress);
+            
+            log = new PostLog(getEntityAddress(), keyPair.getPublic(), certificate, PostImpl.this, previous, parent);
+            parent.receiveResult(new Boolean(true));
+          } else {
+            parent.receiveException(new PostException("Unable to find previous log - aborting!"));
+          }
+        }
+      });
+    } else {
+      log = new PostLog(getEntityAddress(), keyPair.getPublic(), certificate, this, command);
+    }
+  }
 
   /**
    * @return The PostLog belonging to the this entity,
@@ -666,33 +700,38 @@ public class PostImpl implements Post, Application, ScribeClient {
           if (entity.equals(getEntityAddress())) {
             if (logRewrite) {
               logger.warning(endpoint.getId() + ": Reinserting log head for entity " + entity);
-              PostImpl.this.log = new PostLog(entity, keyPair.getPublic(), certificate, PostImpl.this, parent);
+              createPostLog(new StandardContinuation(parent) {
+                public void receiveResult(Object o) {
+                  passResult(o, parent);
+                }
+              });
+              
               return;
             } else {
               logger.warning(endpoint.getId() + ": Unable to fetch local POST log - aborting");
-              parent.receiveException(new PostException("Unable to locate POST log"));
+              passException(new PostException("Unable to locate POST log"), parent);
               return;
             }
           } else {
             logger.warning(endpoint.getId() + ": PostLog lookup for user " + entity + " failed.");
-            parent.receiveResult(null);
+            passResult(null, parent);
             return;
           }
         }
 
         if ((log.getPublicKey() == null) || (log.getEntityAddress() == null)) {
-          parent.receiveException(new PostException("Malformed PostLog: " + log.getPublicKey() + " " + log.getEntityAddress()));
+          passException(new PostException("Malformed PostLog: " + log.getPublicKey() + " " + log.getEntityAddress()), parent);
           return;
         }
 
         if (! log.getEntityAddress().equals(entity)) {
-          parent.receiveException(new PostException("Wrong PostLog: Asked for PostLog for " + entity + ", got " + log.getEntityAddress()));
+          passException(new PostException("Wrong PostLog: Asked for PostLog for " + entity + ", got " + log.getEntityAddress()), parent);
           return;
         }
         
         if (! (log.getEntityAddress().equals(log.getCertificate().getAddress()) &&
                log.getPublicKey().equals(log.getCertificate().getKey()))) {
-          parent.receiveException(new PostException("Malformed PostLog: Certificate does not match log owner."));
+          passException(new PostException("Malformed PostLog: Certificate does not match log owner."), parent);
           return;
         }
 
@@ -710,26 +749,25 @@ public class PostImpl implements Post, Application, ScribeClient {
 
               logger.fine(endpoint.getId() + ": Successfully retrieved postlog for: " + entity);
 
-              parent.receiveResult(log);
-              
-              Vector v = null;
-              synchronized (pendingLogs) {
-                v = (Vector) pendingLogs.remove(entity);
-              }
-                
-              if (v != null)
-                for (int i=0; i<v.size(); i++) 
-                  ((Continuation) v.elementAt(i)).receiveResult(log);
-            } else  {
+              passResult(log, parent);
+            } else {
               logger.warning(endpoint.getId() + ": Ceritficate of PostLog could not be verified for entity " + entity);
-              parent.receiveException(new PostException("Certificate of PostLog could not verified for entity: " + entity));
+              passException(new PostException("Certificate of PostLog could not verified for entity: " + entity), parent);
             }
+          }
+          
+          public void receiveException(Exception e) {
+            passException(e, parent);          
           }
         });
       }
       
       public void receiveException(Exception e) {
-        parent.receiveException(e);
+        passException(e, parent);          
+      }
+      
+      protected void passException(Exception e, Continuation command) {
+        command.receiveException(e);
         
         Vector v = null;
         synchronized (pendingLogs) {
@@ -738,7 +776,20 @@ public class PostImpl implements Post, Application, ScribeClient {
         
         if (v != null)
           for (int i=0; i<v.size(); i++) 
-            ((Continuation) v.elementAt(i)).receiveException(e);            
+            ((Continuation) v.elementAt(i)).receiveException(e);        
+      }
+      
+      protected void passResult(Object o, Continuation command) {
+        command.receiveResult(o);
+        
+        Vector v = null;
+        synchronized (pendingLogs) {
+          v = (Vector) pendingLogs.remove(entity);
+        }
+        
+        if (v != null)
+          for (int i=0; i<v.size(); i++) 
+            ((Continuation) v.elementAt(i)).receiveResult(log);
       }
     });
   }

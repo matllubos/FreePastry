@@ -44,6 +44,7 @@ import rice.post.messaging.*;
 import rice.post.security.*;
 import rice.p2p.past.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.multiring.*;
 
 /**
  * The delivery stored in Past
@@ -69,7 +70,14 @@ public class Delivery extends ContentHashPastContent {
     this.message = message;
     
     try {
-      this.myId = factory.buildId(SecurityUtils.hash(SecurityUtils.serialize(message)));
+      if (factory instanceof MultiringIdFactory) {
+        MultiringIdFactory mFactory = (MultiringIdFactory) factory;
+        EncryptedNotificationMessage enm = (EncryptedNotificationMessage) message.getMessage();
+        this.myId = mFactory.buildRingId(((RingId) enm.getDestination().getAddress()).getRingId(), 
+                                         SecurityUtils.hash(SecurityUtils.serialize(message)));
+      } else {
+        this.myId = factory.buildId(SecurityUtils.hash(SecurityUtils.serialize(message)));
+      }
     } catch (IOException e) {
       throw new IllegalArgumentException("Setting myId caused: " + e);
     }

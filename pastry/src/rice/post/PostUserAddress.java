@@ -10,6 +10,9 @@ import rice.p2p.commonapi.*;
  */
 public class PostUserAddress extends PostEntityAddress {
 
+  // serialver for backward compatibility
+  static final long serialVersionUID = -5468003419549068547L;
+  
   // the name of this user
   private String name;
   
@@ -24,7 +27,7 @@ public class PostUserAddress extends PostEntityAddress {
     address = getId(factory, name);
   }
   
-  /**ú
+  /**
    * Returns the address associated with this useraddress
    *
    * @return The corresponding address
