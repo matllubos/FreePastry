@@ -87,8 +87,12 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
    * are ready.
    */
   protected void runTest() {
+    for (int i=0; i<NUM_NODES; i++)
+      simulate(); 
+    
     testBasic();
     testOverload();
+    testStress();
     testMaintenance();
   }
 
@@ -116,7 +120,9 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
     stepStart("Initiating Maintenance");
     
     runMaintenance();
-    simulate();
+    
+    for (int i=0; i<NUM_NODES; i++)
+      simulate();
     
     int count = 0;
     
@@ -248,6 +254,60 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
     sectionDone();
   }
   
+  /**
+    * Tests basic functionality
+   */
+  public void testStress() {
+    int NUM_TO_INSERT = 45;
+    Id[] ids = new Id[NUM_TO_INSERT];
+    int num = rng.nextInt(NUM_NODES);
+    Id id = nodes[num].getId();
+    
+    IdRange all = FACTORY.buildIdRange(FACTORY.buildId(new byte[20]), FACTORY.buildId(new byte[20]));
+    
+    sectionStart("Testing Stressed Functionality");
+    
+    stepStart("Inserting " + NUM_TO_INSERT + " Objects");
+    
+    for (int i=0; i<NUM_TO_INSERT; i++) {
+      ids[i] = addToId(id, i);
+      clients[num].insert(ids[i]);
+    }
+    
+    stepDone(SUCCESS);
+    
+    stepStart("Initiating Maintenance");
+    
+    runMaintenance();
+    simulate();
+    
+    try {
+      Thread.sleep(25000);
+    } catch (InterruptedException e) {
+      System.out.println(e.toString());
+    }
+    
+    simulate();
+    
+    for (int j=0; j<NUM_TO_INSERT; j++) {
+      int count = 0;
+      
+      Id thisId = ids[j];
+      
+      for (int i=0; i<NUM_NODES; i++)  {
+        if (clients[i].scan(all).isMemberId(thisId)) 
+          count++;
+      }
+      
+      assertTrue("Correct number of replicas for " + j + " " + thisId + " should be " + (REPLICATION_FACTOR + 1) + " was " + count, 
+                 count == REPLICATION_FACTOR + 1);
+    }
+    
+    stepDone(SUCCESS);
+    
+    sectionDone();
+  }
+  
   public void runMaintenance() {
     for (int i=0; i<NUM_NODES; i++) {
       replications[i].getReplication().sendRequests();
@@ -281,34 +341,36 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
    * @author amislove
    */
   protected class TestReplicationManagerClient implements ReplicationManagerClient {
-    
-    public MemoryStorage storage;
-    
+        
     public Node node;
     
+    public IdSet set;
+    
     public TestReplicationManagerClient(Node node) {
-      this.storage = new MemoryStorage(FACTORY);
+      this.set = node.getIdFactory().buildIdSet();
       this.node = node;
     }
     
     public void fetch(Id id, Continuation command) {
-      storage.store(id, id, command);
+      set.addId(id);
+      command.receiveResult(new Boolean(true));
     }
     
     public void remove(Id id, Continuation command) {
-      storage.unstore(id, command);
+      set.removeId(id);
+      command.receiveResult(new Boolean(true));
     }
     
     public IdSet scan(IdRange range) {
-      return storage.scan(range);
+      return set.subSet(range);
     }
     
     public void insert(Id id) {
-      storage.store(id, id, new ListenerContinuation("Insertion of id " + id));
+      set.addId(id);
     }
     
     public boolean exists(Id id) {
-      return storage.exists(id);
+      return set.isMemberId(id);
     }
   }
 }

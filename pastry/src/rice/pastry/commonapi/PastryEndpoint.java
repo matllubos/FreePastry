@@ -122,6 +122,19 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), message);
     return thePastryNode.scheduleMsg(pm, delay);
   }
+  
+  /**
+   * Schedules a message to be delivered to this application every period number of 
+   * milliseconds, after delay number of miliseconds have passed.
+   *
+   * @param message The message to be delivered
+   * @param delay The number of milliseconds to wait before delivering the fist message
+   * @param delay The number of milliseconds to wait before delivering subsequent messages
+   */
+  public TimerTask scheduleMessage(Message message, long delay, long period) {
+    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), message);
+    return thePastryNode.scheduleMsg(pm, delay, period);
+  }
 
   /**
    * This method produces a list of nodes that can be used as next

@@ -154,6 +154,16 @@ public interface Endpoint {
    */
   TimerTask scheduleMessage(Message message, long delay);
   
+  /**
+   * Schedules a message to be delivered to this application every period number of 
+   * milliseconds, after delay number of miliseconds have passed.
+   *
+   * @param message The message to be delivered
+   * @param delay The number of milliseconds to wait before delivering the fist message
+   * @param delay The number of milliseconds to wait before delivering subsequent messages
+   */
+  TimerTask scheduleMessage(Message message, long delay, long period);
+  
 }
 
 

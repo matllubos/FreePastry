@@ -112,7 +112,7 @@ public class ReplicationImpl implements Replication, Application {
     
     // inject the first reminder message, which will cause the replication to begin
     // and the next maintenance message to be scheduled
-    deliver(handle.getId(), new ReminderMessage(handle));
+    endpoint.scheduleMessage(new ReminderMessage(handle), MAINTENANCE_INTERVAL, MAINTENANCE_INTERVAL);
   }
   
   /**
@@ -263,7 +263,6 @@ public class ReplicationImpl implements Replication, Application {
         client.fetch(fetch);
     } else if (message instanceof ReminderMessage) {
       sendRequests(); 
-      endpoint.scheduleMessage(message, MAINTENANCE_INTERVAL);
       updateClient(); 
     } else {
       log.warning(endpoint.getId() + ": Received unknown message " + message + " - dropping on floor.");

@@ -99,12 +99,6 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
   protected Logger log = Logger.getLogger(this.getClass().getName());
   
   /**
-   * The current outstanding reminder task - used to cancel it if we
-   * receive a response
-   */
-  protected TimerTask timer;
-  
-  /**
    * Constructor
    *
    * @param node The node below this Replication implementation
@@ -156,7 +150,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
   protected void informClient(final Id id, final int uid) {
     log.fine(endpoint.getId() + ": Telling client to fetch id " + id);
   
-    timer = endpoint.scheduleMessage(new TimeoutMessage(uid), TIMEOUT_DELAY);
+    final TimerTask timer = endpoint.scheduleMessage(new TimeoutMessage(uid), TIMEOUT_DELAY);
     
     client.fetch(id, new Continuation() {
       public void receiveResult(Object o) {
@@ -211,8 +205,8 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * @param range the range of keys for which the local node is currently 
    *              responsible  
    */
-  public void setRange(IdRange range) {
-    log.finer(endpoint.getId() + ": Removing range " + range + " from the list of pending ids");
+  public void setRange(final IdRange range) {
+    log.finest(endpoint.getId() + ": Removing range " + range + " from the list of pending ids");
 
     /* First, tell the helper that the range has changed */
     helper.setRange(range);
@@ -231,7 +225,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
         if (i.hasNext()) {
           Id id = (Id) i.next();
           
-          log.finer(endpoint.getId() + ": Telling client to delete id " + id);
+          log.finer(endpoint.getId() + ": Telling client to delete id " + id + " range " + range);
           client.remove(id, this);
         }
       }
@@ -380,16 +374,11 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
       IdRange notRange = range.getComplementRange();
       
       /* first, we remove any non-relevant keys from the list of pending keys */
-      Iterator i = ReplicationManagerImpl.this.clone(set).getIterator();
+      Iterator i = set.subSet(notRange).getIterator();
       
       /* now look for any matching ids */
-      while (i.hasNext()) {
-        Id id = (Id) i.next();
-        
-        if (notRange.containsId(id)) {
-          set.removeId(id);
-        }
-      }
+      while (i.hasNext())
+        set.removeId((Id) i.next());
     }
     
     /**
@@ -420,14 +409,14 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
      * @return The next key to be fetched
      */
     protected synchronized Id getNextId() {
-      Iterator i = set.getIterator();
+      Iterator i = ReplicationManagerImpl.this.clone(set).getIterator();
       
       if (! i.hasNext()) {
         log.warning(endpoint.getId() + ": GetNextId called without any ids available - aborting");
         return null;
       }
       
-      Id result = (Id) set.getIterator().next();  
+      Id result = (Id) i.next();  
       set.removeId(result);
       
       log.finer(endpoint.getId() + ": Returing next id to fetch " + result);
