@@ -58,7 +58,7 @@ import java.util.*;
  * @author Alan Mislove
  * @author Ansley Post
  */
-public class PASTServiceImpl implements PASTService, Application { //RMClient, CachingManagerClient {
+public class PASTServiceImpl implements PASTService, Application, RMClient { //, CachingManagerClient {
   
   /**
    * Whether to print debugging statements.
@@ -116,9 +116,12 @@ public class PASTServiceImpl implements PASTService, Application { //RMClient, C
    * @param storage The Storage object to use for storage and caching
    */
   public PASTServiceImpl(Node node, StorageManager storage, String instance) {
+    this.storage = storage;
     this.node = node;
     commandTable = new Hashtable();
     this.endpoint = node.registerApplication(this, instance);
+
+    replicationManager = new RMImpl((rice.pastry.PastryNode) node, this, REPLICATION_FACTOR, instance);
   }
 
   /**
@@ -244,6 +247,8 @@ public class PASTServiceImpl implements PASTService, Application { //RMClient, C
    * @param command Command to be performed when the result is received
    */
   public void insert(Id id, Serializable obj, final Continuation command) {
+    replicationManager.registerKey((rice.pastry.Id) id);
+    
     Id nodeId = endpoint.getId();
     debug("Insert request for file " + id + " at node " + nodeId);
     MessageInsert request = new MessageInsert(nodeId, id, obj);
@@ -431,7 +436,7 @@ public class PASTServiceImpl implements PASTService, Application { //RMClient, C
    * fetch the cooresponding keys in this set, since the node is now
    * responsible for these keys also
    */
-  public void fetch(IdSet keySet) {
+  public void fetch(rice.pastry.IdSet keySet) {
     Iterator i = keySet.getIterator();
 
     while (i.hasNext()) {
@@ -454,7 +459,7 @@ public class PASTServiceImpl implements PASTService, Application { //RMClient, C
    * manager and get the keys for which it is not responsible and
    * call delete on the persistance manager for those objects
    */
-  public void isResponsible(IdRange range) {
+  public void isResponsible(rice.pastry.IdRange range) {
     IdRange notRange = range.getComplementRange();
 
     Continuation c = new Continuation() {
@@ -477,7 +482,7 @@ public class PASTServiceImpl implements PASTService, Application { //RMClient, C
       }
     };
 
-    storage.getStorage().scan((rice.pastry.IdRange) range, c);
+    storage.getStorage().scan((rice.pastry.IdRange) notRange, c);
   }
 
   /**
@@ -485,8 +490,8 @@ public class PASTServiceImpl implements PASTService, Application { //RMClient, C
    * currently stores in this range. Should return a empty IdSet (not null), in
    * the case that no keys belong to this range
    */
-  public void scan(IdRange range, Continuation c) {
-    storage.getStorage().scan((rice.pastry.IdRange) range, c);
+  public rice.pastry.IdSet scan(rice.pastry.IdRange range) {
+    return storage.getStorage().scan(range);
   }
 
   // ---------- Caching Manager Client Methods ----------

@@ -40,10 +40,12 @@ import rice.Continuation;
 import rice.past.*;
 import rice.past.messaging.*;
 
-import rice.pastry.*;
+import rice.pastry.PastryNode;
 import rice.pastry.dist.*;
 import rice.pastry.standard.*;
 import rice.pastry.security.*;
+
+import rice.p2p.commonapi.*;
 
 import rice.persistence.*;
 
@@ -117,7 +119,7 @@ public class DistPASTRegrTest {
    * Creates a pastryNode with a PASTService running on it.
    */
   protected PASTService makePASTNode() {
-    PastryNode pn = factory.newNode(getBootstrap());
+    PastryNode pn = factory.newNode((rice.pastry.NodeHandle) getBootstrap());
     pastrynodes.add(pn);
 
     StorageManager storage = new StorageManager(new MemoryStorage(),
@@ -203,8 +205,7 @@ public class DistPASTRegrTest {
       (PASTService) pastNodes.elementAt(rng.nextInt(numNodes));
     final PASTServiceImpl remote = 
       (PASTServiceImpl) pastNodes.elementAt(rng.nextInt(numNodes));
-    final NodeId remoteId = 
-      remote.getPastryNode().getNodeId();
+    final Id remoteId = remote.getId();
     final String file = "test file";
 
     // Check file does not exist
@@ -227,7 +228,7 @@ public class DistPASTRegrTest {
                            ((Boolean)result).booleanValue());
 
                 // Lookup file locally
-                remote.getStorage().getObject(remoteId, new TestCommand() {
+                remote.getStorage().getObject((rice.pastry.Id) remoteId, new TestCommand() {
                   public void receive(Object result) throws Exception {
                     assertTrue("RouteRequest", "File should be inserted at known node",
                                result != null);
@@ -253,7 +254,7 @@ public class DistPASTRegrTest {
   protected class TestPASTFunctions {
     final Credentials userCred;
     final PASTService local;
-    final NodeId fileId;
+    final Id fileId;
     final String file;
     final String update;
     
@@ -356,7 +357,7 @@ public class DistPASTRegrTest {
           final TestCommand MONKEY = this;
          
           // Lookup file locally (using Storage)
-          remote.getStorage().getObject(fileId, new TestCommand() {
+          remote.getStorage().getObject((rice.pastry.Id) fileId, new TestCommand() {
             public void receive(Object result) throws Exception {
               if (result != null) {
                 System.out.println("TEST: Found file locally on node " + currentIndex);
