@@ -231,12 +231,21 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
      * @param nid a node id.
      * @return true if that node id is in the set, false otherwise.
      */
-
-    public boolean member(NodeId nid) {
+    public boolean member(NodeHandle nid) {
 	for (int i=0; i<theSize; i++)
-	    if (nodes[i].getNodeId().equals(nid)) return true;
+	    if (nodes[i].equals(nid)) return true;
 
 	return false;
+    }
+
+		/**
+		 * 
+		 */
+    public boolean member(NodeId nid) {
+			for (int i=0; i<theSize; i++)
+			    if (nodes[i].getId().equals(nid)) return true;
+		
+			return false;
     }
     
     /**

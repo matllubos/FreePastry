@@ -87,7 +87,7 @@ public class LeafSet extends Observable implements Serializable {
   {
     NodeId nid = handle.getNodeId();
     if (nid.equals(baseId)) return false;
-    if (member(nid)) return false;
+    if (member(handle)) return false;
 
     boolean res = cwSet.put(handle) | ccwSet.put(handle);
     return res;
@@ -103,7 +103,7 @@ public class LeafSet extends Observable implements Serializable {
   {
     NodeId nid = handle.getNodeId();
     if (nid.equals(baseId)) return false;
-    if (member(nid)) return false;
+    if (member(handle)) return false;
 
     return cwSet.test(handle) | ccwSet.test(handle);
   }
@@ -169,6 +169,17 @@ public class LeafSet extends Observable implements Serializable {
     else return ccwSet.get(- index - 1);
   }
 
+
+  /**
+   * Verifies if the set contains this particular handle.
+   *
+   * @param nid a NodeHandle.
+   * @return true if that NodeHandle is in the set, false otherwise.
+   */
+  public boolean member(NodeHandle nid)
+  {
+    return cwSet.member(nid) || ccwSet.member(nid);
+  }
 
   /**
    * Verifies if the set contains this particular id.
@@ -453,7 +464,7 @@ public class LeafSet extends Observable implements Serializable {
   public IdRange range(NodeHandle n, int r) { 
    // first, we check the arguments
    if (r < 0) return null;
-   if (! (member(n.getNodeId()) || baseId.equals(n.getNodeId()))) return null;
+   if (! (member(n) || baseId.equals(n))) return null;
 
    // get the position of the node and the number of nodes in the network
    int pos = getIndex(n.getNodeId());
@@ -758,7 +769,7 @@ public class LeafSet extends Observable implements Serializable {
 
   protected boolean isProperlyRemoved(NodeHandle handle) {
     //if (true) return true;
-    return !member(handle.getNodeId());
+    return !member(handle);
   }
 
   protected boolean testOtherSet(SimilarSet set, NodeHandle handle) {
