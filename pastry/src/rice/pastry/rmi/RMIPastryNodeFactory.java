@@ -42,10 +42,12 @@ import rice.pastry.security.*;
 import rice.pastry.standard.*;
 import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
+import rice.pastry.dist.*;
 
 import java.util.*;
 import java.rmi.RemoteException;
 import java.rmi.Naming;
+import java.net.*;
 
 /**
  * Pastry node factory for RMI-linked nodes.
@@ -56,98 +58,158 @@ import java.rmi.Naming;
  * @author Sitaram Iyer
  */
 
-public class RMIPastryNodeFactory implements PastryNodeFactory
-{
-    private RandomNodeIdFactory nidFactory;
-    private int port;
+public class RMIPastryNodeFactory extends DistPastryNodeFactory {
+  public static int NUM_ATTEMPTS = 3;
 
-    private static final int rtMax = 8;
-    private static final int lSetSize = 24;
+  private RandomNodeIdFactory nidFactory;
+  private int port;
 
-    /**
-     * Large period (in seconds) means infrequent, 0 means never.
-     */
-    private static final int leafSetMaintFreq = 60;
-    private static final int routeSetMaintFreq = 15*60;
+  private static final int rtMax = 8;
+  private static final int lSetSize = 24;
 
-    /**
-     * Constructor.
-     *
-     * @param p RMI registry port.
-     */
-    public RMIPastryNodeFactory(int p) {
- nidFactory = new RandomNodeIdFactory();
- port = p;
+  /**
+   * Large period (in seconds) means infrequent, 0 means never.
+   */
+  private static final int leafSetMaintFreq = 60;
+  private static final int routeSetMaintFreq = 15*60;
+
+  /**
+   * Constructor.
+   *
+   * @param p RMI registry port.
+   */
+  public RMIPastryNodeFactory(int p) {
+    nidFactory = new RandomNodeIdFactory();
+    port = p;
+  }
+
+
+  /**
+   * Specified by the DistPastryNodeFactory class.  The first looks on the
+   * local machine (at the port p) to determine if there is an node bound
+   * there.  If so, it retrieves the rmiNodeHanlde from that node.  If not,
+   * this method then looks at the address address to see if there is a
+   * pastry node bound there.
+   *
+   * @param address The address to look for the node.
+   * @return A NodeHandle cooresponding to the remote node at address, or null
+   *         if none is found.
+   */
+  public NodeHandle generateNodeHandle(InetSocketAddress address) {
+    RMIRemoteNodeI bsnode = null;
+
+    // look on local machine
+    for (int i = 1; bsnode == null && i <= NUM_ATTEMPTS; i++) {
+      try {
+        bsnode = (RMIRemoteNodeI) Naming.lookup("//:" + address.getPort() + "/Pastry");
+      } catch (Exception e) {
+        System.out.println("Unable to find bootstrap node on local node"
+                            + " (attempt " + i + "/" + NUM_ATTEMPTS + ")");
+      }
+
+      if ((bsnode == null) && (i != NUM_ATTEMPTS))
+        pause(1000);
     }
 
-    /**
-     * Makes many policy choices and manufactures a new RMIPastryNode.
-     * Creates a series of artifacts to adorn the node, like a security
-     * manager, a leafset, etc. with hand-picked parameters like the leaf
-     * set size. Finally calls the respective setElements to pass these on
-     * to the {,RMI,Direct}PastryNode as appropriate, and then calls
-     * node.doneNode() (which internally performs mechanisms like exporting
-     * the node and notifying applications).
-     *
-     * @param bootstrap Node handle to bootstrap from.
-     */
-    public PastryNode newNode(NodeHandle bootstrap) {
-      return newNode(bootstrap, nidFactory.generateNodeId());
+    // look at remote address
+    if (bsnode == null) {
+      for (int i = 1; bsnode == null && i <= NUM_ATTEMPTS; i++) {
+        try {
+          bsnode = (RMIRemoteNodeI) Naming.lookup("//" + address.getAddress()
+                    + ":" + address.getPort() + "/Pastry");
+        } catch (Exception e) {
+          System.out.println("Unable to find bootstrap node on "
+                              + address
+                              + " (attempt " + i + "/" + NUM_ATTEMPTS + ")");
+        }
+
+        if ((bsnode == null) && (i != NUM_ATTEMPTS))
+          pause(1000);
+      }
     }
 
-    /**
-     * Makes many policy choices and manufactures a new RMIPastryNode.
-     * Creates a series of artifacts to adorn the node, like a security
-     * manager, a leafset, etc. with hand-picked parameters like the leaf
-     * set size. Finally calls the respective setElements to pass these on
-     * to the {,RMI,Direct}PastryNode as appropriate, and then calls
-     * node.doneNode() (which internally performs mechanisms like exporting
-     * the node and notifying applications).
-     *
-     * @param bootstrap Node handle to bootstrap from.
-     * @param nodeId The new node's ID.
-     */
-    public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId) {
-
- RMIPastryNode pn = new RMIPastryNode(nodeId);
-
- if (bootstrap != null)
-     bootstrap.setLocalNode(pn);
-
- RMINodeHandle localhandle = new RMINodeHandle(null, nodeId);
- localhandle.setLocalNode(pn);
-
- RMINodeHandlePool handlepool = new RMINodeHandlePool();
- localhandle = (RMINodeHandle) handlepool.coalesce(localhandle); // add ourselves to pool
-
- RMIPastrySecurityManager secureMan =
-     new RMIPastrySecurityManager(localhandle, handlepool);
- MessageDispatch msgDisp = new MessageDispatch();
-
- RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
- LeafSet leafSet = new LeafSet(localhandle, lSetSize);
-
- StandardRouter router =
-     new StandardRouter(localhandle, routeTable, leafSet, secureMan);
- StandardLeafSetProtocol lsProtocol =
-     new StandardLeafSetProtocol(localhandle, secureMan, leafSet, routeTable);
- StandardRouteSetProtocol rsProtocol =
-     new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
- StandardJoinProtocol jProtocol =
-     new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
-
- msgDisp.registerReceiver(router.getAddress(), router);
- msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
- msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
- msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
-
- pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
- pn.setRMIElements(handlepool, port, leafSetMaintFreq, routeSetMaintFreq);
- secureMan.setLocalPastryNode(pn);
-
- pn.doneNode(bootstrap);
-
- return pn;
+    // grab node id
+    NodeId bsid = null;
+    if (bsnode != null) {
+      try {
+        bsid = bsnode.getNodeId();
+      } catch (RemoteException e) {
+        System.out.println("[rmi] Unable to get remote node id: " + e.toString());
+        bsnode = null;
+      }
     }
+
+    // build node handle
+    RMINodeHandle bshandle = null;
+    if (bsid != null)
+      bshandle = new RMINodeHandle(bsnode, bsid);
+
+    return bshandle;
+  }
+
+  /**
+   * Pauses the current thread for ms milliseconds.
+   *
+   * @param ms The number of milliseconds to pause.
+   */
+  public synchronized void pause(int ms) {
+    System.out.println("waiting for " + (ms/1000) + " sec");
+    try { wait(ms); } catch (InterruptedException e) {}
+  }
+
+  /**
+   * Makes many policy choices and manufactures a new RMIPastryNode.
+   * Creates a series of artifacts to adorn the node, like a security
+   * manager, a leafset, etc. with hand-picked parameters like the leaf
+   * set size. Finally calls the respective setElements to pass these on
+   * to the {,RMI,Direct}PastryNode as appropriate, and then calls
+   * node.doneNode() (which internally performs mechanisms like exporting
+   * the node and notifying applications).
+   *
+   * @param bootstrap Node handle to bootstrap from.
+   */
+  public PastryNode newNode(NodeHandle bootstrap) {
+    NodeId nodeId = nidFactory.generateNodeId();
+
+    RMIPastryNode pn = new RMIPastryNode(nodeId);
+
+    RMINodeHandle localhandle = new RMINodeHandle(null, nodeId);
+
+    RMINodeHandlePool handlepool = new RMINodeHandlePool();
+    localhandle = (RMINodeHandle) handlepool.coalesce(localhandle); // add ourselves to pool
+
+    RMIPastrySecurityManager secureMan =
+      new RMIPastrySecurityManager(localhandle, handlepool);
+    MessageDispatch msgDisp = new MessageDispatch();
+
+    RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
+    LeafSet leafSet = new LeafSet(localhandle, lSetSize);
+
+    StandardRouter router =
+      new StandardRouter(localhandle, routeTable, leafSet, secureMan);
+    StandardLeafSetProtocol lsProtocol =
+      new StandardLeafSetProtocol(localhandle, secureMan, leafSet, routeTable);
+    StandardRouteSetProtocol rsProtocol =
+      new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
+    StandardJoinProtocol jProtocol =
+      new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
+
+    msgDisp.registerReceiver(router.getAddress(), router);
+    msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
+    msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
+    msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
+
+    pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
+    pn.setRMIElements(handlepool, port, leafSetMaintFreq, routeSetMaintFreq);
+    secureMan.setLocalPastryNode(pn);
+
+    if (bootstrap != null)
+      bootstrap.setLocalNode(pn);
+
+    localhandle.setLocalNode(pn);
+
+    pn.doneNode(bootstrap);
+
+    return pn;
+  }
 }
-

@@ -3,7 +3,8 @@ PACKAGE = rice.pastry.dist
 SOURCE	= \
 	DistNodeHandle.java\
 	DistNodeHandlePool.java\
-	DistPastryNode.java 
+	DistPastryNode.java\
+	DistPastryNodeFactory.java
 
 MAIN	= 
 

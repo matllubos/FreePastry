@@ -89,7 +89,7 @@ public abstract class DistNodeHandle extends LocalNode implements NodeHandle, Se
      * this node handle in inserted into the pool, and all methods are executed on
      * this node handle.
      */
-    private void verify() {
+    private final void verify() {
       if (! verified) {
         if (getLocalNode() != null) {
           DistNodeHandle nh = ((DistPastryNode) getLocalNode()).getNodeHandlePool().coalesce(this);
@@ -119,13 +119,15 @@ public abstract class DistNodeHandle extends LocalNode implements NodeHandle, Se
     public void afterSetLocalNode() {
       alive = true;
 
-      if (getLocalNode().getNodeId().equals(nodeId)) {
-        debug("AfterSetLocalNode called, isLocal true.");
+      if ((nodeId != null) && getLocalNode().getNodeId().equals(nodeId)) {
+  //      debug("AfterSetLocalNode called, isLocal true.");
         isLocal = true;
       } else {
-        debug("AfterSetLocalNode called, isLocal false.");
+  //      debug("AfterSetLocalNode called, isLocal false.");
         isLocal = false;
       }
+
+      verify();
     }
 
     /**
@@ -314,6 +316,7 @@ public abstract class DistNodeHandle extends LocalNode implements NodeHandle, Se
     private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
       ois.defaultReadObject();
 
+      verified = false;
       isInPool = false;
       alive = true;
       distance = Integer.MAX_VALUE;
@@ -329,9 +332,9 @@ public abstract class DistNodeHandle extends LocalNode implements NodeHandle, Se
     protected void debug(String s) {
     if (Log.ifp(6)) {
       if (getLocalNode() != null)
-        System.out.println(getLocalNode().getNodeId() + " (" + nodeId + "): " + s + " in thread " + Thread.currentThread());
+        System.out.println(getLocalNode().getNodeId() + " (" + nodeId + "): " + s);
       else
-        System.out.println(getLocalNode() + " (" + nodeId + "): " + s + " in thread " + Thread.currentThread());
+        System.out.println(getLocalNode() + " (" + nodeId + "): " + s);
     }
   }
 }
