@@ -73,7 +73,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		Token t; command = null;
 		
 		boolean synPredMatched3 = false;
-		if (((LA(1)==ATOM))) {
+		if (((_tokenSet_0.member(LA(1))))) {
 			int _m3 = mark();
 			synPredMatched3 = true;
 			inputState.guessing++;
@@ -104,7 +104,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		}
 		else {
 			boolean synPredMatched6 = false;
-			if (((LA(1)==ATOM))) {
+			if (((_tokenSet_0.member(LA(1))))) {
 				int _m6 = mark();
 				synPredMatched6 = true;
 				inputState.guessing++;
@@ -131,7 +131,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 				}
 				}
 			}
-			else if ((_tokenSet_0.member(LA(1)))) {
+			else if ((_tokenSet_1.member(LA(1)))) {
 				unknown();
 				if ( inputState.guessing==0 ) {
 					
@@ -148,16 +148,15 @@ public ImapCommandParser(ParserSharedInputState state) {
 	public final Token  tag() throws RecognitionException, TokenStreamException {
 		Token ret;
 		
-		Token  at = null;
-		ret=null;
+		Token at; ret=null;
 		
-		at = LT(1);
-		match(ATOM);
+		at=astring();
 		if ( inputState.guessing==0 ) {
 			
-				  //if (at.getText().indexOf('+') != -1)
-				  //    throw new SemanticException("'+' not allowed in tags");
-				  ret = at;
+				  if (at.getText().indexOf('+') >= 0)
+				      throw new SemanticException("'+' not allowed in tags");
+			
+			ret=at;
 				
 		}
 		return ret;
@@ -380,6 +379,73 @@ public ImapCommandParser(ParserSharedInputState state) {
 		
 		Token  a = null;
 		Token  b = null;
+		Token  c = null;
+		Token  d = null;
+		Token  e = null;
+		Token  f = null;
+		Token  g = null;
+		Token  h = null;
+		Token  i = null;
+		Token  j = null;
+		Token  k = null;
+		Token  l = null;
+		Token  m = null;
+		Token  n = null;
+		Token  o = null;
+		Token  p = null;
+		Token  q = null;
+		Token  r = null;
+		Token  s = null;
+		Token  t = null;
+		Token  u = null;
+		Token  v = null;
+		Token  w = null;
+		Token  x = null;
+		Token  y = null;
+		Token  z = null;
+		Token  aa = null;
+		Token  ab = null;
+		Token  ac = null;
+		Token  ad = null;
+		Token  ae = null;
+		Token  af = null;
+		Token  ag = null;
+		Token  ah = null;
+		Token  ai = null;
+		Token  aj = null;
+		Token  ak = null;
+		Token  al = null;
+		Token  am = null;
+		Token  an = null;
+		Token  ao = null;
+		Token  ap = null;
+		Token  aq = null;
+		Token  ar = null;
+		Token  as = null;
+		Token  at = null;
+		Token  au = null;
+		Token  av = null;
+		Token  aw = null;
+		Token  ax = null;
+		Token  ay = null;
+		Token  az = null;
+		Token  ba = null;
+		Token  bb = null;
+		Token  bc = null;
+		Token  bd = null;
+		Token  be = null;
+		Token  bf = null;
+		Token  bg = null;
+		Token  bh = null;
+		Token  bi = null;
+		Token  bj = null;
+		Token  bk = null;
+		Token  bl = null;
+		Token  bm = null;
+		Token  bn = null;
+		Token  bo = null;
+		Token  bp = null;
+		Token  bq = null;
 		ret=null;
 		
 		switch ( LA(1)) {
@@ -398,6 +464,609 @@ public ImapCommandParser(ParserSharedInputState state) {
 			match(STRING);
 			if ( inputState.guessing==0 ) {
 				ret = b;
+			}
+			break;
+		}
+		case CHECK:
+		{
+			c = LT(1);
+			match(CHECK);
+			if ( inputState.guessing==0 ) {
+				ret = c;
+			}
+			break;
+		}
+		case NOOP:
+		{
+			d = LT(1);
+			match(NOOP);
+			if ( inputState.guessing==0 ) {
+				ret = d;
+			}
+			break;
+		}
+		case LOGOUT:
+		{
+			e = LT(1);
+			match(LOGOUT);
+			if ( inputState.guessing==0 ) {
+				ret = e;
+			}
+			break;
+		}
+		case CAPABILITY:
+		{
+			f = LT(1);
+			match(CAPABILITY);
+			if ( inputState.guessing==0 ) {
+				ret = f;
+			}
+			break;
+		}
+		case CREATE:
+		{
+			g = LT(1);
+			match(CREATE);
+			if ( inputState.guessing==0 ) {
+				ret = g;
+			}
+			break;
+		}
+		case DELETE:
+		{
+			h = LT(1);
+			match(DELETE);
+			if ( inputState.guessing==0 ) {
+				ret = h;
+			}
+			break;
+		}
+		case LIST:
+		{
+			i = LT(1);
+			match(LIST);
+			if ( inputState.guessing==0 ) {
+				ret = i;
+			}
+			break;
+		}
+		case SUBSCRIBE:
+		{
+			j = LT(1);
+			match(SUBSCRIBE);
+			if ( inputState.guessing==0 ) {
+				ret = j;
+			}
+			break;
+		}
+		case UNSUBSCRIBE:
+		{
+			k = LT(1);
+			match(UNSUBSCRIBE);
+			if ( inputState.guessing==0 ) {
+				ret = k;
+			}
+			break;
+		}
+		case LSUB:
+		{
+			l = LT(1);
+			match(LSUB);
+			if ( inputState.guessing==0 ) {
+				ret = l;
+			}
+			break;
+		}
+		case EXAMINE:
+		{
+			m = LT(1);
+			match(EXAMINE);
+			if ( inputState.guessing==0 ) {
+				ret = m;
+			}
+			break;
+		}
+		case LOGIN:
+		{
+			n = LT(1);
+			match(LOGIN);
+			if ( inputState.guessing==0 ) {
+				ret = n;
+			}
+			break;
+		}
+		case SELECT:
+		{
+			o = LT(1);
+			match(SELECT);
+			if ( inputState.guessing==0 ) {
+				ret = o;
+			}
+			break;
+		}
+		case FETCH:
+		{
+			p = LT(1);
+			match(FETCH);
+			if ( inputState.guessing==0 ) {
+				ret = p;
+			}
+			break;
+		}
+		case UID:
+		{
+			q = LT(1);
+			match(UID);
+			if ( inputState.guessing==0 ) {
+				ret = q;
+			}
+			break;
+		}
+		case APPEND:
+		{
+			r = LT(1);
+			match(APPEND);
+			if ( inputState.guessing==0 ) {
+				ret = r;
+			}
+			break;
+		}
+		case COPY:
+		{
+			s = LT(1);
+			match(COPY);
+			if ( inputState.guessing==0 ) {
+				ret = s;
+			}
+			break;
+		}
+		case STORE:
+		{
+			t = LT(1);
+			match(STORE);
+			if ( inputState.guessing==0 ) {
+				ret = t;
+			}
+			break;
+		}
+		case STATUS:
+		{
+			u = LT(1);
+			match(STATUS);
+			if ( inputState.guessing==0 ) {
+				ret = u;
+			}
+			break;
+		}
+		case EXPUNGE:
+		{
+			v = LT(1);
+			match(EXPUNGE);
+			if ( inputState.guessing==0 ) {
+				ret = v;
+			}
+			break;
+		}
+		case CLOSE:
+		{
+			w = LT(1);
+			match(CLOSE);
+			if ( inputState.guessing==0 ) {
+				ret = w;
+			}
+			break;
+		}
+		case BODY:
+		{
+			x = LT(1);
+			match(BODY);
+			if ( inputState.guessing==0 ) {
+				ret = x;
+			}
+			break;
+		}
+		case RFC822:
+		{
+			y = LT(1);
+			match(RFC822);
+			if ( inputState.guessing==0 ) {
+				ret = y;
+			}
+			break;
+		}
+		case PEEK:
+		{
+			z = LT(1);
+			match(PEEK);
+			if ( inputState.guessing==0 ) {
+				ret = z;
+			}
+			break;
+		}
+		case HEADER:
+		{
+			aa = LT(1);
+			match(HEADER);
+			if ( inputState.guessing==0 ) {
+				ret = aa;
+			}
+			break;
+		}
+		case FIELDS:
+		{
+			ab = LT(1);
+			match(FIELDS);
+			if ( inputState.guessing==0 ) {
+				ret = ab;
+			}
+			break;
+		}
+		case NOT:
+		{
+			ac = LT(1);
+			match(NOT);
+			if ( inputState.guessing==0 ) {
+				ret = ac;
+			}
+			break;
+		}
+		case TEXT:
+		{
+			ad = LT(1);
+			match(TEXT);
+			if ( inputState.guessing==0 ) {
+				ret = ad;
+			}
+			break;
+		}
+		case MIME:
+		{
+			ae = LT(1);
+			match(MIME);
+			if ( inputState.guessing==0 ) {
+				ret = ae;
+			}
+			break;
+		}
+		case SIZE:
+		{
+			af = LT(1);
+			match(SIZE);
+			if ( inputState.guessing==0 ) {
+				ret = af;
+			}
+			break;
+		}
+		case ALL:
+		{
+			ag = LT(1);
+			match(ALL);
+			if ( inputState.guessing==0 ) {
+				ret = ag;
+			}
+			break;
+		}
+		case FAST:
+		{
+			ah = LT(1);
+			match(FAST);
+			if ( inputState.guessing==0 ) {
+				ret = ah;
+			}
+			break;
+		}
+		case FULL:
+		{
+			ai = LT(1);
+			match(FULL);
+			if ( inputState.guessing==0 ) {
+				ret = ai;
+			}
+			break;
+		}
+		case BODYSTRUCTURE:
+		{
+			aj = LT(1);
+			match(BODYSTRUCTURE);
+			if ( inputState.guessing==0 ) {
+				ret = aj;
+			}
+			break;
+		}
+		case ENVELOPE:
+		{
+			ak = LT(1);
+			match(ENVELOPE);
+			if ( inputState.guessing==0 ) {
+				ret = ak;
+			}
+			break;
+		}
+		case FLAGS:
+		{
+			al = LT(1);
+			match(FLAGS);
+			if ( inputState.guessing==0 ) {
+				ret = al;
+			}
+			break;
+		}
+		case INTERNALDATE:
+		{
+			am = LT(1);
+			match(INTERNALDATE);
+			if ( inputState.guessing==0 ) {
+				ret = am;
+			}
+			break;
+		}
+		case SEARCH:
+		{
+			an = LT(1);
+			match(SEARCH);
+			if ( inputState.guessing==0 ) {
+				ret = an;
+			}
+			break;
+		}
+		case ANSWERED:
+		{
+			ao = LT(1);
+			match(ANSWERED);
+			if ( inputState.guessing==0 ) {
+				ret = ao;
+			}
+			break;
+		}
+		case BCC:
+		{
+			ap = LT(1);
+			match(BCC);
+			if ( inputState.guessing==0 ) {
+				ret = ap;
+			}
+			break;
+		}
+		case BEFORE:
+		{
+			aq = LT(1);
+			match(BEFORE);
+			if ( inputState.guessing==0 ) {
+				ret = aq;
+			}
+			break;
+		}
+		case CC:
+		{
+			ar = LT(1);
+			match(CC);
+			if ( inputState.guessing==0 ) {
+				ret = ar;
+			}
+			break;
+		}
+		case DELETED:
+		{
+			as = LT(1);
+			match(DELETED);
+			if ( inputState.guessing==0 ) {
+				ret = as;
+			}
+			break;
+		}
+		case DRAFT:
+		{
+			at = LT(1);
+			match(DRAFT);
+			if ( inputState.guessing==0 ) {
+				ret = at;
+			}
+			break;
+		}
+		case FLAGGED:
+		{
+			au = LT(1);
+			match(FLAGGED);
+			if ( inputState.guessing==0 ) {
+				ret = au;
+			}
+			break;
+		}
+		case FROM:
+		{
+			av = LT(1);
+			match(FROM);
+			if ( inputState.guessing==0 ) {
+				ret = av;
+			}
+			break;
+		}
+		case KEYWORD:
+		{
+			aw = LT(1);
+			match(KEYWORD);
+			if ( inputState.guessing==0 ) {
+				ret = aw;
+			}
+			break;
+		}
+		case LARGER:
+		{
+			ax = LT(1);
+			match(LARGER);
+			if ( inputState.guessing==0 ) {
+				ret = ax;
+			}
+			break;
+		}
+		case NEW:
+		{
+			ay = LT(1);
+			match(NEW);
+			if ( inputState.guessing==0 ) {
+				ret = ay;
+			}
+			break;
+		}
+		case OLD:
+		{
+			az = LT(1);
+			match(OLD);
+			if ( inputState.guessing==0 ) {
+				ret = az;
+			}
+			break;
+		}
+		case ON:
+		{
+			ba = LT(1);
+			match(ON);
+			if ( inputState.guessing==0 ) {
+				ret = ba;
+			}
+			break;
+		}
+		case OR:
+		{
+			bb = LT(1);
+			match(OR);
+			if ( inputState.guessing==0 ) {
+				ret = bb;
+			}
+			break;
+		}
+		case RECENT:
+		{
+			bc = LT(1);
+			match(RECENT);
+			if ( inputState.guessing==0 ) {
+				ret = bc;
+			}
+			break;
+		}
+		case SEEN:
+		{
+			bd = LT(1);
+			match(SEEN);
+			if ( inputState.guessing==0 ) {
+				ret = bd;
+			}
+			break;
+		}
+		case SENTBEFORE:
+		{
+			be = LT(1);
+			match(SENTBEFORE);
+			if ( inputState.guessing==0 ) {
+				ret = be;
+			}
+			break;
+		}
+		case SENTON:
+		{
+			bf = LT(1);
+			match(SENTON);
+			if ( inputState.guessing==0 ) {
+				ret = bf;
+			}
+			break;
+		}
+		case SENTSINCE:
+		{
+			bg = LT(1);
+			match(SENTSINCE);
+			if ( inputState.guessing==0 ) {
+				ret = bg;
+			}
+			break;
+		}
+		case SINCE:
+		{
+			bh = LT(1);
+			match(SINCE);
+			if ( inputState.guessing==0 ) {
+				ret = bh;
+			}
+			break;
+		}
+		case SMALLER:
+		{
+			bi = LT(1);
+			match(SMALLER);
+			if ( inputState.guessing==0 ) {
+				ret = bi;
+			}
+			break;
+		}
+		case SUBJECT:
+		{
+			bj = LT(1);
+			match(SUBJECT);
+			if ( inputState.guessing==0 ) {
+				ret = bj;
+			}
+			break;
+		}
+		case TO:
+		{
+			bk = LT(1);
+			match(TO);
+			if ( inputState.guessing==0 ) {
+				ret = bk;
+			}
+			break;
+		}
+		case UNANSWERED:
+		{
+			bl = LT(1);
+			match(UNANSWERED);
+			if ( inputState.guessing==0 ) {
+				ret = bl;
+			}
+			break;
+		}
+		case UNDELETED:
+		{
+			bm = LT(1);
+			match(UNDELETED);
+			if ( inputState.guessing==0 ) {
+				ret = bm;
+			}
+			break;
+		}
+		case UNDRAFT:
+		{
+			bn = LT(1);
+			match(UNDRAFT);
+			if ( inputState.guessing==0 ) {
+				ret = bn;
+			}
+			break;
+		}
+		case UNFLAGGED:
+		{
+			bo = LT(1);
+			match(UNFLAGGED);
+			if ( inputState.guessing==0 ) {
+				ret = bo;
+			}
+			break;
+		}
+		case UNKEYWORD:
+		{
+			bp = LT(1);
+			match(UNKEYWORD);
+			if ( inputState.guessing==0 ) {
+				ret = bp;
+			}
+			break;
+		}
+		case UNSEEN:
+		{
+			bq = LT(1);
+			match(UNSEEN);
+			if ( inputState.guessing==0 ) {
+				ret = bq;
 			}
 			break;
 		}
@@ -443,30 +1112,98 @@ public ImapCommandParser(ParserSharedInputState state) {
 	public final List  flags() throws RecognitionException, TokenStreamException {
 		List flags;
 		
-		Token  ff = null;
-		Token  fg = null;
-		Token  lf = null;
-		Token  lg = null;
+		Token  f = null;
+		Token  l = null;
+		
 		flags = new ArrayList();
+		Token fs;
+		
 		
 		match(LPAREN);
 		{
 		switch ( LA(1)) {
 		case FLAG:
 		{
-			ff = LT(1);
+			f = LT(1);
 			match(FLAG);
 			if ( inputState.guessing==0 ) {
-				flags.add(ff.getText());
+				flags.add(f.getText());
 			}
 			break;
 		}
+		case CHECK:
+		case NOOP:
+		case LOGOUT:
+		case CAPABILITY:
+		case CREATE:
+		case DELETE:
+		case LIST:
+		case SUBSCRIBE:
+		case UNSUBSCRIBE:
+		case LSUB:
+		case EXAMINE:
+		case LOGIN:
+		case SELECT:
+		case FETCH:
+		case UID:
+		case APPEND:
+		case COPY:
+		case STORE:
+		case STATUS:
+		case EXPUNGE:
+		case CLOSE:
+		case BODY:
+		case RFC822:
+		case PEEK:
+		case HEADER:
+		case FIELDS:
+		case NOT:
+		case TEXT:
+		case MIME:
+		case SIZE:
+		case ALL:
+		case FAST:
+		case FULL:
+		case BODYSTRUCTURE:
+		case ENVELOPE:
+		case FLAGS:
+		case INTERNALDATE:
+		case SEARCH:
+		case ANSWERED:
+		case BCC:
+		case BEFORE:
+		case CC:
+		case DELETED:
+		case DRAFT:
+		case FLAGGED:
+		case FROM:
+		case KEYWORD:
+		case LARGER:
+		case NEW:
+		case OLD:
+		case ON:
+		case OR:
+		case RECENT:
+		case SEEN:
+		case SENTBEFORE:
+		case SENTON:
+		case SENTSINCE:
+		case SINCE:
+		case SMALLER:
+		case SUBJECT:
+		case TO:
+		case UNANSWERED:
+		case UNDELETED:
+		case UNDRAFT:
+		case UNFLAGGED:
+		case UNKEYWORD:
+		case UNSEEN:
 		case ATOM:
+		case STRING:
 		{
-			fg = LT(1);
-			match(ATOM);
+			fs=astring();
 			if ( inputState.guessing==0 ) {
-				flags.add(fg.getText());
+				flags.add(fs.getText());
 			}
 			break;
 		}
@@ -485,19 +1222,86 @@ public ImapCommandParser(ParserSharedInputState state) {
 				switch ( LA(1)) {
 				case FLAG:
 				{
-					lf = LT(1);
+					l = LT(1);
 					match(FLAG);
 					if ( inputState.guessing==0 ) {
-						flags.add(lf.getText());
+						flags.add(l.getText());
 					}
 					break;
 				}
+				case CHECK:
+				case NOOP:
+				case LOGOUT:
+				case CAPABILITY:
+				case CREATE:
+				case DELETE:
+				case LIST:
+				case SUBSCRIBE:
+				case UNSUBSCRIBE:
+				case LSUB:
+				case EXAMINE:
+				case LOGIN:
+				case SELECT:
+				case FETCH:
+				case UID:
+				case APPEND:
+				case COPY:
+				case STORE:
+				case STATUS:
+				case EXPUNGE:
+				case CLOSE:
+				case BODY:
+				case RFC822:
+				case PEEK:
+				case HEADER:
+				case FIELDS:
+				case NOT:
+				case TEXT:
+				case MIME:
+				case SIZE:
+				case ALL:
+				case FAST:
+				case FULL:
+				case BODYSTRUCTURE:
+				case ENVELOPE:
+				case FLAGS:
+				case INTERNALDATE:
+				case SEARCH:
+				case ANSWERED:
+				case BCC:
+				case BEFORE:
+				case CC:
+				case DELETED:
+				case DRAFT:
+				case FLAGGED:
+				case FROM:
+				case KEYWORD:
+				case LARGER:
+				case NEW:
+				case OLD:
+				case ON:
+				case OR:
+				case RECENT:
+				case SEEN:
+				case SENTBEFORE:
+				case SENTON:
+				case SENTSINCE:
+				case SINCE:
+				case SMALLER:
+				case SUBJECT:
+				case TO:
+				case UNANSWERED:
+				case UNDELETED:
+				case UNDRAFT:
+				case UNFLAGGED:
+				case UNKEYWORD:
+				case UNSEEN:
 				case ATOM:
+				case STRING:
 				{
-					lg = LT(1);
-					match(ATOM);
+					fs=astring();
 					if ( inputState.guessing==0 ) {
-						flags.add(lg.getText());
+						flags.add(fs.getText());
 					}
 					break;
 				}
@@ -521,25 +1325,24 @@ public ImapCommandParser(ParserSharedInputState state) {
 	public final List  atom_list() throws RecognitionException, TokenStreamException {
 		List list;
 		
-		Token  fa = null;
-		Token  la = null;
+		
+		Token f;
 		list = new ArrayList();
 		
+		
 		match(LPAREN);
-		fa = LT(1);
-		match(ATOM);
+		f=astring();
 		if ( inputState.guessing==0 ) {
-			list.add(fa.getText());
+			list.add(f.getText());
 		}
 		{
 		_loop23:
 		do {
 			if ((LA(1)==SPACE)) {
 				match(SPACE);
-				la = LT(1);
-				match(ATOM);
+				f=astring();
 				if ( inputState.guessing==0 ) {
-					list.add(la.getText());
+					list.add(f.getText());
 				}
 			}
 			else {
@@ -949,6 +1752,73 @@ public ImapCommandParser(ParserSharedInputState state) {
 			match(SPACE);
 			break;
 		}
+		case CHECK:
+		case NOOP:
+		case LOGOUT:
+		case CAPABILITY:
+		case CREATE:
+		case DELETE:
+		case LIST:
+		case SUBSCRIBE:
+		case UNSUBSCRIBE:
+		case LSUB:
+		case EXAMINE:
+		case LOGIN:
+		case SELECT:
+		case FETCH:
+		case UID:
+		case APPEND:
+		case COPY:
+		case STORE:
+		case STATUS:
+		case EXPUNGE:
+		case CLOSE:
+		case BODY:
+		case RFC822:
+		case PEEK:
+		case HEADER:
+		case FIELDS:
+		case NOT:
+		case TEXT:
+		case MIME:
+		case SIZE:
+		case ALL:
+		case FAST:
+		case FULL:
+		case BODYSTRUCTURE:
+		case ENVELOPE:
+		case FLAGS:
+		case INTERNALDATE:
+		case SEARCH:
+		case ANSWERED:
+		case BCC:
+		case BEFORE:
+		case CC:
+		case DELETED:
+		case DRAFT:
+		case FLAGGED:
+		case FROM:
+		case KEYWORD:
+		case LARGER:
+		case NEW:
+		case OLD:
+		case ON:
+		case OR:
+		case RECENT:
+		case SEEN:
+		case SENTBEFORE:
+		case SENTON:
+		case SENTSINCE:
+		case SINCE:
+		case SMALLER:
+		case SUBJECT:
+		case TO:
+		case UNANSWERED:
+		case UNDELETED:
+		case UNDRAFT:
+		case UNFLAGGED:
+		case UNKEYWORD:
+		case UNSEEN:
 		case ATOM:
 		case STRING:
 		case LITERAL_START:
@@ -963,6 +1833,73 @@ public ImapCommandParser(ParserSharedInputState state) {
 		}
 		{
 		switch ( LA(1)) {
+		case CHECK:
+		case NOOP:
+		case LOGOUT:
+		case CAPABILITY:
+		case CREATE:
+		case DELETE:
+		case LIST:
+		case SUBSCRIBE:
+		case UNSUBSCRIBE:
+		case LSUB:
+		case EXAMINE:
+		case LOGIN:
+		case SELECT:
+		case FETCH:
+		case UID:
+		case APPEND:
+		case COPY:
+		case STORE:
+		case STATUS:
+		case EXPUNGE:
+		case CLOSE:
+		case BODY:
+		case RFC822:
+		case PEEK:
+		case HEADER:
+		case FIELDS:
+		case NOT:
+		case TEXT:
+		case MIME:
+		case SIZE:
+		case ALL:
+		case FAST:
+		case FULL:
+		case BODYSTRUCTURE:
+		case ENVELOPE:
+		case FLAGS:
+		case INTERNALDATE:
+		case SEARCH:
+		case ANSWERED:
+		case BCC:
+		case BEFORE:
+		case CC:
+		case DELETED:
+		case DRAFT:
+		case FLAGGED:
+		case FROM:
+		case KEYWORD:
+		case LARGER:
+		case NEW:
+		case OLD:
+		case ON:
+		case OR:
+		case RECENT:
+		case SEEN:
+		case SENTBEFORE:
+		case SENTON:
+		case SENTSINCE:
+		case SINCE:
+		case SMALLER:
+		case SUBJECT:
+		case TO:
+		case UNANSWERED:
+		case UNDELETED:
+		case UNDRAFT:
+		case UNFLAGGED:
+		case UNKEYWORD:
+		case UNSEEN:
 		case ATOM:
 		case STRING:
 		{
@@ -1988,8 +2925,9 @@ public ImapCommandParser(ParserSharedInputState state) {
 		BodyPartRequest breq
 	) throws RecognitionException, TokenStreamException {
 		
-		Token  a = null;
-		Token  at = null;
+		
+		Token a;
+		
 		
 		switch ( LA(1)) {
 		case HEADER:
@@ -2030,8 +2968,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 				}
 				match(SPACE);
 				match(LPAREN);
-				a = LT(1);
-				match(ATOM);
+				a=astring();
 				if ( inputState.guessing==0 ) {
 					breq.addPart(a.getText());
 				}
@@ -2040,10 +2977,9 @@ public ImapCommandParser(ParserSharedInputState state) {
 				do {
 					if ((LA(1)==SPACE)) {
 						match(SPACE);
-						at = LT(1);
-						match(ATOM);
+						a=astring();
 						if ( inputState.guessing==0 ) {
-							breq.addPart(at.getText());
+							breq.addPart(a.getText());
 						}
 					}
 					else {
@@ -2207,9 +3143,14 @@ public ImapCommandParser(ParserSharedInputState state) {
 	};
 	
 	private static final long[] mk_tokenSet_0() {
-		long[] data = { -14L, 536870911L, 0L, 0L};
+		long[] data = { -16L, 1050751L, 0L, 0L};
 		return data;
 	}
 	public static final BitSet _tokenSet_0 = new BitSet(mk_tokenSet_0());
+	private static final long[] mk_tokenSet_1() {
+		long[] data = { -14L, 536870911L, 0L, 0L};
+		return data;
+	}
+	public static final BitSet _tokenSet_1 = new BitSet(mk_tokenSet_1());
 	
 	}

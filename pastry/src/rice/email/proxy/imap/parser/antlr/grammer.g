@@ -71,15 +71,85 @@ command_any:
 	)
 	;
 
-tag returns [Token ret]	{ret=null;}:	at:ATOM
+tag returns [Token ret]	{Token at; ret=null;}:	at=astring
 	{
-	  //if (at.getText().indexOf('+') != -1)
-	  //    throw new SemanticException("'+' not allowed in tags");
-	  ret = at;
+	  if (at.getText().indexOf('+') >= 0)
+	      throw new SemanticException("'+' not allowed in tags");
+    
+    ret=at;
 	}
 	;
 	
-astring	returns [Token ret] {ret=null;}:	a:ATOM {ret = a;} | b:STRING {ret = b;}
+astring	returns [Token ret] {ret=null;}:
+												a:ATOM {ret = a; } |
+												b:STRING {ret = b; } |
+												c:CHECK {ret = c; } |
+												d:NOOP {ret = d; } |
+												e:LOGOUT {ret = e; } |
+												f:CAPABILITY {ret = f; } |
+												g:CREATE {ret = g; } |
+												h:DELETE {ret = h; } |
+												i:LIST {ret = i; } |
+												j:SUBSCRIBE {ret = j; } |
+												k:UNSUBSCRIBE {ret = k; } |
+												l:LSUB {ret = l; } |
+												m:EXAMINE {ret = m; } |
+												n:LOGIN {ret = n; } |
+												o:SELECT {ret = o; } |
+												p:FETCH {ret = p; } |
+												q:UID {ret = q; } |
+												r:APPEND {ret = r; } |
+												s:COPY {ret = s; } |
+												t:STORE {ret = t; } |
+												u:STATUS {ret = u; } |
+												v:EXPUNGE {ret = v; } |
+												w:CLOSE {ret = w; } |
+												x:BODY {ret = x; } |
+												y:RFC822 {ret = y; } |
+												z:PEEK {ret = z; } |
+												aa:HEADER {ret = aa; } |
+												ab:FIELDS {ret = ab; } |
+												ac:NOT {ret = ac; } |
+												ad:TEXT {ret = ad; } |
+												ae:MIME {ret = ae; } |
+												af:SIZE {ret = af; } |
+												ag:ALL {ret = ag; } |
+												ah:FAST {ret = ah; } |
+												ai:FULL {ret = ai; } |
+												aj:BODYSTRUCTURE {ret = aj; } |
+												ak:ENVELOPE {ret = ak; } |
+												al:FLAGS {ret = al; } |
+												am:INTERNALDATE {ret = am; } |
+												an:SEARCH {ret = an; } |
+												ao:ANSWERED {ret = ao; } |
+												ap:BCC {ret = ap; } |
+												aq:BEFORE {ret = aq; } |
+												ar:CC {ret = ar; } |
+												as:DELETED {ret = as; } |
+												at:DRAFT {ret = at; } |
+												au:FLAGGED {ret = au; } |
+												av:FROM {ret = av; } |
+												aw:KEYWORD {ret = aw; } |
+												ax:LARGER {ret = ax; } |
+												ay:NEW {ret = ay; } |
+												az:OLD {ret = az; } |
+												ba:ON {ret = ba; } |
+												bb:OR {ret = bb; } |
+												bc:RECENT {ret = bc; } |
+												bd:SEEN {ret = bd; } |
+												be:SENTBEFORE {ret = be; } |
+												bf:SENTON {ret = bf; } |
+												bg:SENTSINCE {ret = bg; } |
+												bh:SINCE {ret = bh; } |
+												bi:SMALLER {ret = bi; } |
+												bj:SUBJECT {ret = bj; } |
+												bk:TO {ret = bk; } |
+												bl:UNANSWERED {ret = bl; } |
+												bm:UNDELETED {ret = bm; } |
+												bn:UNDRAFT {ret = bn; } |
+												bo:UNFLAGGED {ret = bo; } |
+												bp:UNKEYWORD {ret = bp; } |
+												bq:UNSEEN {ret = bq; }
 	;
 
 pattern returns [Token ret] {ret=null;}:	ret=astring
@@ -96,14 +166,22 @@ range [boolean isUID] returns [MsgFilter range] {range=null;}:
 	}
 	;
 
-flags returns [List flags] {flags = new ArrayList();} :
-	LPAREN (ff:FLAG {flags.add(ff.getText());} | fg:ATOM {flags.add(fg.getText());})
-		(SPACE (lf:FLAG {flags.add(lf.getText());} | lg:ATOM {flags.add(lg.getText());}))* RPAREN
+flags returns [List flags]
+  {
+    flags = new ArrayList();
+    Token fs;
+  }:
+	LPAREN (f:FLAG {flags.add(f.getText());} | fs=astring {flags.add(fs.getText());})
+		(SPACE (l:FLAG {flags.add(l.getText());} | fs=astring {flags.add(fs.getText());}))* RPAREN
 	;
 
-atom_list returns [List list] {list = new ArrayList();} :
-	LPAREN fa:ATOM {list.add(fa.getText());}
-		(SPACE la:ATOM {list.add(la.getText());})* RPAREN
+atom_list returns [List list]
+  {
+    Token f;
+    list = new ArrayList();
+  }:
+	LPAREN f=astring {list.add(f.getText());}
+		(SPACE f=astring {list.add(f.getText());})* RPAREN
 	;
 
 literal returns [int len] {len = -1;} :
@@ -502,14 +580,17 @@ fetch [boolean isUID]
     num:ATOM {breq.appendType(num.getText());}
   ;
   
-  final_body_part[BodyPartRequest breq] :
+  final_body_part[BodyPartRequest breq] 
+    {
+      Token a;
+    }:
     HEADER {breq.appendType("HEADER");}
       (PERIOD FIELDS {breq.reAppendType("HEADER.FIELDS");}
         (PERIOD NOT {breq.reAppendType("HEADER.FIELDS.NOT");})?
 
         SPACE LPAREN 
-          a:ATOM {breq.addPart(a.getText());} 
-            (SPACE at:ATOM {breq.addPart(at.getText());})*
+          a=astring {breq.addPart(a.getText());} 
+            (SPACE a=astring {breq.addPart(a.getText());})*
           RPAREN
       )?
     |
