@@ -523,7 +523,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       
     if ((cmd.length() >= 11) && cmd.substring(0, 11).equals("refresh all")) {
       long expiration = System.currentTimeMillis() + Long.parseLong(cmd.substring(12));
-      IdSet ids = factory.buildIdSet();
+      TreeSet ids = new TreeSet();
       String result;
       
       resetMarkers();
@@ -534,19 +534,19 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         if (!aggr.marker) {
           aggr.marker = true;
           for (int i=0; i<aggr.objects.length; i++)
-            ids.addId(aggr.objects[i].key);
+            ids.add(aggr.objects[i].key);
         }
       }
       
-      if (ids.numElements() > 0) {
-        result = "Refreshing " + ids.numElements() + " keys...\n";
-        Iterator iter = ids.getIterator();
-        int i = 0;
-        while (iter.hasNext())
-          result = result + "#" + (i++) + " " + ((Id)iter.next()).toStringFull() + "\n";
+      if (!ids.isEmpty()) {
+        Id[] allIds = (Id[]) ids.toArray(new Id[] {});
+        result = "Refreshing " + allIds.length + " keys...\n";
+
+        for (int i=0; i<allIds.length; i++)
+          result = result + "#" + i + " " + allIds[i].toStringFull() + "\n";
       
         final String[] ret = new String[] { null };
-        refresh(ids, expiration, new Continuation() {
+        refresh(allIds, expiration, new Continuation() {
           public void receiveResult(Object o) {
             ret[0] = "result("+o+")";
           };
@@ -570,12 +570,10 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       String keyArg = args.substring(0, args.lastIndexOf(' '));
 
       Id id = factory.buildIdFromToString(keyArg);
-      IdSet idSet = factory.buildIdSet();
       long expiration = System.currentTimeMillis() + Long.parseLong(expirationArg);
-      idSet.addId(id);
 
       final String[] ret = new String[] { null };
-      refresh(idSet, expiration, new Continuation() {
+      refresh(new Id[] { id }, expiration, new Continuation() {
         public void receiveResult(Object o) {
           ret[0] = "result("+o+")";
         }
@@ -789,12 +787,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       final ObjectDescriptor[] desc = new ObjectDescriptor[numObjectsInAggregate];
       final GCPastContent[] obj = new GCPastContent[numObjectsInAggregate];
       boolean useContinuationHere = false;
-      long aggrExpiration = 0;
 
       for (int i=0; i<numObjectsInAggregate; i++) {
         desc[i] = (ObjectDescriptor) currentAggregate.elementAt(i);
-        if (desc[i].currentLifetime > aggrExpiration)
-          aggrExpiration = desc[i].currentLifetime;
         if ((watchIdV != null) && (desc[i].key.equals(watchIdV.getId())) &&
             (desc[i].version == watchIdV.getVersion()) && !usedContinuation) {
           usedContinuation = true;
@@ -804,7 +799,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         log("#"+i+": "+desc[i].key+" "+desc[i].size+" bytes");
       }
       
-      final long aggrExpirationF = aggrExpiration;
+      final long aggrExpirationF = chooseAggregateLifetime(desc, System.currentTimeMillis(), 0);
       final Continuation thisCommand = useContinuationHere ? command : null;
       log("AGGR: Retrieving #0: "+desc[0].key);
       waitingList.getObject(new VersionKey(desc[0].key, desc[0].version), new Continuation() {
@@ -870,6 +865,20 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       command.receiveResult(new Boolean(true));
   }
 
+  private long chooseAggregateLifetime(ObjectDescriptor[] components, long now, long currentLifetime) {
+    long maxLifetime = 0;
+
+    for (int i=0; i<components.length; i++)
+      if (components[i].refreshedLifetime > maxLifetime)
+        maxLifetime = components[i].refreshedLifetime;
+
+    if (maxLifetime > (now + 60 * SECONDS))
+      maxLifetime = now + 60 * SECONDS;
+
+    return maxLifetime;
+  }
+
+
   private void refreshAggregates() {
     Enumeration enum = aggregateList.elements();
     long now = System.currentTimeMillis();
@@ -885,26 +894,21 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         
         boolean isBeingRefreshed = false;
         if (aggr.currentLifetime < (now + expirationRenewThreshold)) {
-          long maxLifetime = 0;
-          for (int i=0; i<aggr.objects.length; i++)
-            if (aggr.objects[i].refreshedLifetime > maxLifetime)
-              maxLifetime = aggr.objects[i].refreshedLifetime;
-          if (maxLifetime > aggr.currentLifetime) {
-            log("Refreshing "+aggr.key+", new expiration is "+maxLifetime);
+          long newLifetime = chooseAggregateLifetime(aggr.objects, now, aggr.currentLifetime);
+          if (newLifetime > aggr.currentLifetime) {
+            log("Refreshing "+aggr.key+", new expiration is "+newLifetime);
             isBeingRefreshed = true;
 
             if (aggregateStore instanceof GCPast) {
               final AggregateDescriptor aggrF = aggr;
-              final long maxLifetimeF = maxLifetime;
-              final IdSet idSet = factory.buildIdSet();
-              idSet.addId(aggr.key);
-              ((GCPast)aggregateStore).refresh(idSet, maxLifetime, new Continuation() {
+              final long newLifetimeF = newLifetime;
+              ((GCPast)aggregateStore).refresh(new Id[] { aggr.key }, newLifetime, new Continuation() {
                 public void receiveResult(Object o) {
                   if (o instanceof Object[]) {
                     Object[] oA = (Object[]) o;
                     if ((oA[0] instanceof Boolean) && ((Boolean)oA[0]).booleanValue()) {
                       log("Aggregate successfully refreshed: "+aggrF.key);
-                      aggrF.currentLifetime = maxLifetimeF;
+                      aggrF.currentLifetime = newLifetimeF;
                       for (int i=0; i<aggrF.objects.length; i++) 
                         aggrF.objects[i].currentLifetime = aggrF.objects[i].refreshedLifetime;
                       writeAggregateList();
@@ -922,7 +926,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
               });
             } else {
               log("Aggregate store does not support GC; refreshing directly");
-              aggr.currentLifetime = maxLifetime;
+              aggr.currentLifetime = newLifetime;
             }
           }
         }
@@ -1015,26 +1019,66 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private void refreshInObjectStore(Id id, long expiration, Continuation command) {
     if (objectStore instanceof GCPast) {
-      IdSet idSet = factory.buildIdSet();
-      idSet.addId(id);
-      ((GCPast)objectStore).refresh(idSet, expiration, command);
+      ((GCPast)objectStore).refresh(new Id[] { id }, expiration, command);
     } else {
       command.receiveResult(new Boolean(true));
     }
   }
   
-  public void refresh(final IdSet idSet, final long expiration, final Continuation command) {
-    if (idSet.numElements() < 1) {
+  public void refresh(final Id[] ids, final long expiration, final Continuation command) {
+    if (ids.length < 1) {
       command.receiveResult(new Boolean[] {});
       return;
     }
     
-    Continuation.MultiContinuation mc = new Continuation.MultiContinuation(command, idSet.numElements());
-    Iterator iter = idSet.getIterator();
-    int i = 0;
+    Continuation.MultiContinuation mc = new Continuation.MultiContinuation(command, ids.length);
+    for (int i=0; i<ids.length; i++)
+      refresh(ids[i], expiration, mc.getSubContinuation(i++));
+  }
+  
+  public void refresh(final Id[] ids, final long[] versions, final long expiration, final Continuation command) {
+    final Object result[] = new Object[ids.length];
     
-    while (iter.hasNext())
-      refresh((Id) iter.next(), expiration, mc.getSubContinuation(i++));
+    for (int i=0; i<ids.length; i++) {
+      log("AGGR: Refresh("+ids[i]+"v"+versions[i]+", expiration="+expiration+")");
+
+      AggregateDescriptor adc = (AggregateDescriptor) aggregateList.get(new VersionKey(ids[i], versions[i]));
+      if (adc!=null) {
+        int objDescIndex = adc.lookupSpecific(ids[i], versions[i]);
+        if (objDescIndex < 0) {
+          result[i] = new AggregationException("Inconsistency detected in aggregate list -- try restarting the application");
+        } else {
+          if (adc.objects[objDescIndex].refreshedLifetime < expiration)
+            adc.objects[objDescIndex].refreshedLifetime = expiration;
+
+          result[i] = new Boolean(true);
+        }
+      } else result[i] = new AggregationException("Not found");
+    }
+      
+    if (objectStore instanceof VersioningPast) {
+      ((VersioningPast)objectStore).refresh(ids, versions, expiration, new Continuation() {
+        public void receiveResult(Object o) {
+          if (o instanceof Object[]) {
+            Object[] subresult = (Object[]) o;
+            for (int i=0; i<result.length; i++)
+              if ((result[i] instanceof Boolean) && !(subresult[i] instanceof Boolean))
+                result[i] = subresult[i];
+          } else {
+            Exception e = new AggregationException("Object sture returns unexpected result: "+o);
+            for (int i=0; i<result.length; i++)
+              result[i] = e;
+          }
+          
+          command.receiveResult(result);
+        }
+        public void receiveException(Exception e) {
+          command.receiveException(e);
+        }
+      });
+    } else {
+      command.receiveResult(result);
+    }
   }
 
   private void refresh(final Id id, final long expiration, final Continuation command) {
@@ -1052,8 +1096,6 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       if (adc.objects[objDescIndex].refreshedLifetime < expiration)
         adc.objects[objDescIndex].refreshedLifetime = expiration;
         
-      /* YYY maybe re-insert object if objectstore.refresh fails? */
-
       refreshInObjectStore(id, expiration, command);
     } else {
     
@@ -1407,6 +1449,10 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   
   public void lookup(Id id, Continuation command) {
     lookup(id, true, command);
+  }
+  
+  public void lookupHandles(final Id id, final long version, final int max, final Continuation command) {
+    panic("lookupHandles invoked with version number!");
   }
   
   public void lookupHandles(final Id id, final int max, final Continuation command) {
