@@ -349,4 +349,11 @@ public class SelectorManager extends Thread {
 	public Timer getTimer() {
 		return timer;
 	}
+
+	/**
+	 * @return
+	 */
+	public static boolean isSelectorThread() {
+    return Thread.currentThread() == manager;
+	}
 }

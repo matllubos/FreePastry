@@ -81,7 +81,7 @@ public class Timer {
      */
     private Object threadReaper = new Object() {
         protected void finalize() throws Throwable {
-            synchronized(selector) {
+            synchronized(queue) {
                 thread.newTasksMayBeScheduled = false;
                 queue.notify(); // In case queue is empty.
             }
@@ -312,7 +312,7 @@ public class Timer {
     private void sched(TimerTask task, long time, long period) {
         if (time < 0)
             throw new IllegalArgumentException("Illegal execution time.");
-        synchronized(selector) {
+        synchronized(queue) {
             if (!thread.newTasksMayBeScheduled)
                 throw new IllegalStateException("Timer already cancelled.");
 

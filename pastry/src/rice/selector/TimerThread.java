@@ -66,16 +66,18 @@ public class TimerThread /*extends Thread*/ {
     void mainLoopHelper(SelectorManager s) throws IOException {
       TimerTask task;
       boolean taskFired;
-      synchronized(selector) {
+      
+//      synchronized(queue) {
           // Wait for queue to become non-empty
           if (queue.isEmpty() && newTasksMayBeScheduled)
 //              queue.wait();
-            s.select(0);
+              s.select(0);
           if (queue.isEmpty())
               return; // Queue is empty and will forever remain; die
 
           // Queue nonempty; look at first evt and do the right thing
           long currentTime, executionTime;
+       synchronized (queue) {
           task = queue.getMin();
           synchronized(task.lock) {
               if (task.state == TimerTask.CANCELLED) {
@@ -95,10 +97,12 @@ public class TimerThread /*extends Thread*/ {
                   }
               }
           }
-          if (!taskFired) // Task hasn't yet fired; wait
-              s.select((int)(executionTime - currentTime));
+        }
+       
+        if (!taskFired) // Task hasn't yet fired; wait
+          s.select((int)(executionTime - currentTime));
               //queue.wait(executionTime - currentTime);
-      } // synchronized
+     //} // synchronized
       if (taskFired)  // Task fired; run it, holding no locks
           task.run();
     }

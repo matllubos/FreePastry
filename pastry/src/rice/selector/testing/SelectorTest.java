@@ -17,9 +17,10 @@ import rice.selector.TimerTask;
  * Window>Preferences>Java>Code Generation>Code and Comments
  */
 public class SelectorTest {
-    
+    public static boolean log = true;
 
 	public static void main(String[] args) {
+    System.out.println("hello world <selector test>");
     SelectorManager sman = SelectorManager.getSelectorManager();
     Timer timer = sman.getTimer();
     scheduleRepeated(timer,sman);
@@ -41,7 +42,7 @@ public class SelectorTest {
         long curTime = System.currentTimeMillis();
         long delay = curTime-lastTime;
         lastTime = curTime;
-        if ((delay-t1Delay) > 100)
+        if ((log == true) || (delay-t1Delay) > 100)
           System.out.println("Scheduled many times for delay "+t1Delay+" actual delay "+delay);
       }
     },t1Delay, t1Delay);
@@ -54,7 +55,7 @@ public class SelectorTest {
       public void run() {
         long curTime = System.currentTimeMillis();
         curTime-=t1Start;
-        if ((curTime-t1Delay) > 100)
+        if ((log == true) ||(curTime-t1Delay) > 100)
           System.out.println("Scheduled once for delay "+t1Delay+" actual delay "+curTime);
       }
     },t1Delay);
@@ -64,7 +65,7 @@ public class SelectorTest {
       public void run() {
         long curTime = System.currentTimeMillis();
         curTime-=i1Start;
-        if (curTime > 100)
+        if ((log == true) || curTime > 100)
           System.out.println("invoked after "+curTime+" millis.");
       }
     });    
