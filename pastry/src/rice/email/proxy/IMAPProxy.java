@@ -15,6 +15,7 @@ import com.sun.mail.imap.*;
 import rice.email.*;
 import rice.email.messaging.*;
 import rice.post.*;
+import rice.post.log.*;
 import rice.Continuation;
 
 
@@ -29,7 +30,11 @@ public class IMAPProxy implements Observer, MessageCountListener {
     private final int STATE_INITIAL = 1;
     private final int STATE_GETTING_BODY = 2;
     private final int STATE_GETTING_ATTACHMENTS = 3;
-    private final int STATE_FINISHED = 4;
+    private final int STATE_GETTING_ROOT = 6;
+    private final int STATE_GETTING_INBOX = 4;
+    private final int STATE_CREATING_INBOX = 5;
+    private final int STATE_ADDING_TO_INBOX = 7;
+    private final int STATE_FINISHED = 128;
 
     InetAddress address;
     int port;
@@ -39,6 +44,8 @@ public class IMAPProxy implements Observer, MessageCountListener {
     IMAPStore imapStore;
 
     Session session;
+
+    Folder inbox;
 
     
     /**
@@ -88,8 +95,20 @@ public class IMAPProxy implements Observer, MessageCountListener {
 	    case STATE_GETTING_ATTACHMENTS:
 		_parent.update_gotattachments(this, (EmailData[]) o);
 		break;
+	    case STATE_GETTING_ROOT:
+		_parent.update_got_root(this, (Folder) o);
+		break;
+	    case STATE_GETTING_INBOX:
+		_parent.update_got_inbox(this, (Folder) o);
+		break;
+	    case STATE_CREATING_INBOX:
+		_parent.update_created_inbox(this);
+		break;
+	    case STATE_ADDING_TO_INBOX:
+		_parent.update_added_to_inbox(this);
+		break;
 	    case STATE_FINISHED:
-		System.err.println("Received a result in final  state!");
+		System.err.println("Received a result in final state!");
 		break;
 	    }
 	    
@@ -112,6 +131,7 @@ public class IMAPProxy implements Observer, MessageCountListener {
     public IMAPProxy(InetAddress address, int port) {
 	this.address = address;
 	this.port = port;
+	this.inbox = null;
     }
     
   // methods
@@ -211,7 +231,6 @@ public class IMAPProxy implements Observer, MessageCountListener {
     {
 
 	try {
-    System.out.println("Got  the body...");
 	    
 	    MimeBodyPart mimeBody = new MimeBodyPart();
 	    mimeBody.setText(new String(body.getData()));
@@ -240,7 +259,6 @@ public class IMAPProxy implements Observer, MessageCountListener {
 					 EmailData[] attachments)
     {
 	try {
-    System.out.println("Got the attachments...");
 
     if (attachments != null) {
 
@@ -253,15 +271,69 @@ public class IMAPProxy implements Observer, MessageCountListener {
       }
     }
 
-    ic.setState(STATE_FINISHED);
     // Deliver the message
     deliverMessage(ic.getMessage());	    
+
+    // Begin putting the message in a folder
+    ic.setState(STATE_GETTING_ROOT);
+    service.getRootFolder(ic);
+    
+
 	} catch (MessagingException e) {
 	    System.err.println("IMAP proxy: messaging exception " +
 			       e);
 	} catch (IOException e) {
 	    System.err.println("IMAP proxy: IO exception " + e);
 	}
+    }
+
+    /**
+     * Called when the message has been placed into the inbox folder.
+     */
+    protected void update_got_root(IMAPContinuation ic, Folder rootFolder) {
+	
+	// Do we already have a folder called INBOX? If so, get it
+	String[] subfolders = rootFolder.getChildren();
+	boolan hasInbox = false;
+	for (int i = 0; i < subfolders.length) {
+	    if (subfolders[i].equals("INBOX")) {
+		hasInbox = true;
+		break;
+	    }
+	}
+	
+	if (hasInbox) {
+	    ic.setState(STATE_GETTING_INBOX);
+	    rootFolder.getChildFolder("INBOX", ic);
+	}
+	else { // We have to create INBOX
+	    ic.setState(STATE_CREATING_INBOX);
+	    rootFolder.createChildFolder("INBOX", ic);
+	}
+    }
+
+    /**
+     * Called when the INBOX folder is created.
+     */
+    protected void update_created_inbox(IMAPContinuation ic) {
+	// Backtrack and start again.
+	ic.setState(STATE_GETTING_ROOT);
+	service.getRootFolder(ic);
+    }
+
+    protected void update_got_inbox(IMAPContinuation ic, Folder thisBox) {
+	this.inbox = thisBox;
+
+	ic.setState(STATE_ADDING_TO_INBOX);
+	this.inbox.addMessage(ic.getEmail(), ic);
+    }
+
+    /**
+     * Call when the message has been added to the inbox.
+     */
+    protected void update_added_to_inbox(IMAPContinuation ic) {
+	// There's nothing else to do.
+	ic.setState(STATE_FINISHED);
     }
 
     /**
