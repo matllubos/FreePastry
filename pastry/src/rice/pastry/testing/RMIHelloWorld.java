@@ -239,16 +239,16 @@ public class RMIHelloWorld {
 
 	    // wait till node is ready to accept application messages.
 
-	    if (pn.isReady() == false) {
-		synchronized (app) {
+	    synchronized (app) {
+		if (pn.isReady() == false) {
 		    System.out.println(pn + " isn't ready yet. Waiting.");
 		    // waiting to be signalled by HelloWorldApp.notifyAll()
 		    try { app.wait(); } catch (InterruptedException e) { }
+		    if (pn.isReady() == false) System.out.println("panic");
+		    System.out.println(pn + " is ready now. Proceeding to send messages.");
+		} else {
+		    System.out.println(pn + " is ready at the time this client is starting.");
 		}
-		if (pn.isReady() == false) System.out.println("panic");
-		System.out.println(pn + " is ready now. Proceeding to send messages.");
-	    } else {
-		System.out.println(pn + " is ready at the time this client is starting.");
 	    }
 
 	    // okay. now print the leaf set and send some messages.
