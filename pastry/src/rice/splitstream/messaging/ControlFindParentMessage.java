@@ -141,8 +141,8 @@ public class ControlFindParentMessage extends MessageAnycast
 	if((stripeTopic != null) && ( bandwidthManager.canTakeChild( channel ) ) &&
 	   ( !isInRootPath( scribe, originalSource ) ) &&  
 	   ( !originalSource.equals( scribe.getLocalHandle())) &&
-	   //recv_stripe.getState() != Stripe.STRIPE_DROPPED){
-	   recv_stripe.getState() == Stripe.STRIPE_SUBSCRIBED){
+	   recv_stripe.getState() != Stripe.STRIPE_DROPPED){
+	   //recv_stripe.getState() == Stripe.STRIPE_SUBSCRIBED){
 	    Vector subscribedStripes = channel.getSubscribedStripes();
 	    //System.out.println("NODE "+scribe.getNodeId()+" TAKING ON CHILD "  + originalSource.getNodeId()+" for stripe " +recv_stripe.getStripeId());
 	    if(!subscribedStripes.contains(recv_stripe))
@@ -150,7 +150,7 @@ public class ControlFindParentMessage extends MessageAnycast
 	    if ( !scribe.addChild( originalSource, recv_stripe.getStripeId() ) )
 		{
 		    System.out.println( "Failure adding child "+originalSource.getNodeId()+" at "+
-					scribe.getNodeHandle().getNodeId() );
+					scribe.getNodeHandle().getNodeId()+" for topic "+recv_stripe.getStripeId() );
 		}
 	    Vector sendPath = (Vector)recv_stripe.getRootPath().clone();
 	    sendPath.add(scribe.getLocalHandle());
