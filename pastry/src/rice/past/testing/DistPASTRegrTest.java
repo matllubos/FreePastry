@@ -376,8 +376,8 @@ public class DistPASTRegrTest {
                 // We've seen all the nodes, so move on
                 // TO DO: Make this k instead of 1 when ReplicationManager is used
                 assertEquals("PASTFunctions",
-                             "File should have been found 1 time after insert",
-                             new Integer(1), new Integer(localCount));
+                             "File should have been found " + remote.getReplicationFactor() + " time after insert",
+                             new Integer(remote.getReplicationFactor()), new Integer(localCount));
 
                 runReclaimTests();
               }
