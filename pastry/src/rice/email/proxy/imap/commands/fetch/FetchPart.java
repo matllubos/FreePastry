@@ -13,7 +13,7 @@ public abstract class FetchPart
 
     public abstract boolean canHandle(Object req);
 
-    public abstract void fetch(StoredMessage msg, Object part) throws MailboxException;
+    public abstract String fetch(StoredMessage msg, Object part) throws MailboxException;
 
     public ImapConnection getConn()
     {

@@ -12,8 +12,8 @@ public class NilPart
         return false;
     }
 
-    public void fetch(StoredMessage msg, Object part)
+    public String fetch(StoredMessage msg, Object part)
     {
-        getConn().print(part + " NIL");
+        return part + " NIL";
     }
 }

@@ -24,53 +24,43 @@ public class MessagePropertyPart extends FetchPart {
         return supportedParts.contains(req);
     }
 
-    public void fetch(StoredMessage msg, Object part)  {
-      try {
-        getConn().print(part + " ");
+    public String fetch(StoredMessage msg, Object part) throws MailboxException {
+      return part + " " + fetchHandler(msg, part);
+    }
 
+    public String fetchHandler(StoredMessage msg, Object part) throws MailboxException {
         if ("ALL".equals(part)) {
-          fetch(msg, "FLAGS");
-          getConn().print(" ");
-          fetch(msg, "INTERNALDATE");
-          getConn().print(" ");
-          fetch(msg, "RFC822.SIZE");
-          getConn().print(" ");
-          fetch(msg, "ENVELOPE");
+          return fetch(msg, "FLAGS") + " " +
+                 fetch(msg, "INTERNALDATE") + " " +
+                 fetch(msg, "RFC822.SIZE") + " " +
+                 fetch(msg, "ENVELOPE");
         } else if ("FAST".equals(part)) {
-          fetch(msg, "FLAGS");
-          getConn().print(" ");
-          fetch(msg, "INTERNALDATE");
-          getConn().print(" ");
-          fetch(msg, "RFC822.SIZE");
+          return fetch(msg, "FLAGS") + " " +
+                 fetch(msg, "INTERNALDATE") + " " +
+                 fetch(msg, "RFC822.SIZE");
         } else if ("FULL".equals(part)) {
-          fetch(msg, "FLAGS");
-          getConn().print(" ");
-          fetch(msg, "INTERNALDATE");
-          getConn().print(" ");
-          fetch(msg, "RFC822.SIZE");
-          getConn().print(" ");
-          fetch(msg, "ENVELOPE");
-          getConn().print(" ");
-          fetch(msg, "BODY");
+          return fetch(msg, "FLAGS") + " " +
+                 fetch(msg, "INTERNALDATE") + " " +
+                 fetch(msg, "RFC822.SIZE") + " " +
+                 fetch(msg, "ENVELOPE") + " " +
+                 fetch(msg, "BODY");
         } else if ("BODY".equals(part)) {
-          getConn().print(fetchBodystructure(msg.getMessage().getMessage(), false));
+          return fetchBodystructure(msg.getMessage().getMessage(), false);
         } else if ("BODYSTRUCTURE".equals(part)) {
-          getConn().print(fetchBodystructure(msg.getMessage().getMessage(), true));
+          return fetchBodystructure(msg.getMessage().getMessage(), true);
         } else if ("ENVELOPE".equals(part)) {
-          getConn().print(fetchEnvelope(msg.getMessage().getMessage()));
+          return fetchEnvelope(msg.getMessage().getMessage());
         } else if ("FLAGS".equals(part)) {
-          fetchFlags(msg);
+          return fetchFlags(msg);
         } else if ("INTERNALDATE".equals(part)) {
-          fetchInternaldate(msg);
+          return fetchInternaldate(msg);
         } else if ("RFC822.SIZE".equals(part)) {
-          fetchSize(msg);
+          return fetchSize(msg);
         } else if ("UID".equals(part)) {
-          fetchUID(msg);
+          return fetchUID(msg);
+        } else {
+          throw new MailboxException("Unknown part type specifier");
         }
-      } catch (Exception me) {
-        System.out.println("Exception " + me + " thrown while fetching " + part);
-        me.printStackTrace();
-      }
     }
     
     String fetchBodystructure(MimePart mime, boolean bodystructure) throws MailboxException {
@@ -324,24 +314,28 @@ public class MessagePropertyPart extends FetchPart {
       return len;
     }
 
-    void fetchSize(StoredMessage msg) throws MailboxException, MailException {
-        getConn().print("" + msg.getMessage().getSize());
+    String fetchSize(StoredMessage msg) throws MailboxException {
+      try {
+        return "" + msg.getMessage().getSize();
+      } catch (MailException e) {
+        throw new MailboxException(e);
+      }
     }
 
-    void fetchUID(StoredMessage msg) throws MailboxException {
-        getConn().print("" + msg.getUID());
+    String fetchUID(StoredMessage msg) throws MailboxException {
+        return "" + msg.getUID();
     }
 
-    void fetchID(StoredMessage msg) throws MailboxException {
-      getConn().print("\"" + msg.getSequenceNumber() + "\"");
+    String fetchID(StoredMessage msg) throws MailboxException {
+      return "\"" + msg.getSequenceNumber() + "\"";
     }
 
-    void fetchFlags(StoredMessage msg) throws MailboxException {
-        getConn().print(msg.getFlagList().toFlagString());
+    String fetchFlags(StoredMessage msg) throws MailboxException {
+        return msg.getFlagList().toFlagString();
     }
 
-    void fetchInternaldate(StoredMessage msg) throws MailboxException {
-        getConn().print("\"" + msg.getMessage().getInternalDate() + "\"");
+    String fetchInternaldate(StoredMessage msg) throws MailboxException {
+        return "\"" + msg.getMessage().getInternalDate() + "\"";
     }
 
     private String addresses(InternetAddress[] addresses) {

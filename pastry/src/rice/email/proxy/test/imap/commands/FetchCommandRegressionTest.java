@@ -7,9 +7,11 @@ import rice.email.proxy.imap.commands.fetch.*;
 import rice.email.proxy.imap.parser.antlr.*;
 import rice.email.proxy.mail.*;
 import rice.email.proxy.mailbox.*;
+import rice.email.proxy.test.mailbox.*;
 import rice.email.proxy.util.*;
 
 import java.io.*;
+import java.util.*;
 
 public class FetchCommandRegressionTest
 extends AbstractCommandTest
@@ -60,6 +62,10 @@ extends AbstractCommandTest
         setUp();
         setUp(cmd);
         getDefaultMailbox().put(msg);
+        List list = getDefaultMailbox().getFolder("INBOX").getMessages(MsgFilter.ALL);
+        MockFlagList flags = (MockFlagList) ((MockMail) list.get(0)).getFlagList();
+        flags.setFlag("\\Seen", true);
+        
         getState().enterFolder("INBOX");
         execute();
 
