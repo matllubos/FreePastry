@@ -466,18 +466,23 @@ public class PostImpl implements Post, Application, ScribeClient {
               
               processSignedPostMessage(message.getEncryptedMessage(), new StandardContinuation(parent) {
                 public void receiveResult(Object o) {
-                  byte[] sig = signPostMessage(message.getEncryptedMessage().getMessage()).getSignature();
-                  delivery.delivered(message.getEncryptedMessage(), sig, new StandardContinuation(parent) {
-                    public void receiveResult(Object o) {
-                      parent.receiveResult(o);
-                      next();
-                    }
-                    
-                    public void receiveException(Exception e) {
-                      parent.receiveException(e);
-                      next();
-                    }
-                  });
+                  if (o.equals(Boolean.TRUE)) {
+                    byte[] sig = signPostMessage(message.getEncryptedMessage().getMessage()).getSignature();
+                    delivery.delivered(message.getEncryptedMessage(), sig, new StandardContinuation(parent) {
+                      public void receiveResult(Object o) {
+                        parent.receiveResult(o);
+                        next();
+                      }
+                      
+                      public void receiveException(Exception e) {
+                        parent.receiveException(e);
+                        next();
+                      }
+                    });
+                  } else {
+                    System.out.println("Was told not to accept Notification message " + message.getEncryptedMessage() + " - skipping (val " + o + ")");
+                    next();
+                  }
                 }
                 
                 public void receiveException(final Exception e) {
@@ -779,7 +784,7 @@ public class PostImpl implements Post, Application, ScribeClient {
               logger.warning(endpoint.getId() + ": Reinserting log head for entity " + entity);
               createPostLog(new StandardContinuation(parent) {
                 public void receiveResult(Object o) {
-                  passResult(o, parent);
+                  passResult(PostImpl.this.log, parent);
                 }
               });
               
