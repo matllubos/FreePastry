@@ -132,6 +132,10 @@ public class MessageSubscribe extends ScribeMessage implements Serializable
 	    
 	    topic.postponeParentHandler();
 
+	    // pass the application specific data along the path
+	    // toward the root.
+	    msg.setData(getData());
+
 	    // join multicast tree by routing subscribe message thru pastry
 	    scribe.routeMsg( m_topicId, msg, cred, opt );
 	}
