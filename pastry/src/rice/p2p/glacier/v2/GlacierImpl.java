@@ -22,7 +22,6 @@ import rice.pastry.commonapi.PastryIdFactory;
 import rice.pastry.dist.DistPastryNode;
 import rice.pastry.NodeId;
 import rice.post.storage.SignedData;
-import rice.post.storage.ContentHashData;
 
 public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Application, DebugCommandHandler {
 
