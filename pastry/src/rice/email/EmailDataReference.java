@@ -21,7 +21,7 @@ public class EmailDataReference extends ContentHashReference {
    * @param location The location in PAST of the PostData object
    * @param key The encryption key of the PostData object
    */
-  protected EmailDataReference(Id location, Key key) {
+  protected EmailDataReference(Id location, byte[] key) {
     super(location, key);
   }
 }

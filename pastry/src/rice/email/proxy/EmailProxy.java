@@ -22,6 +22,7 @@ import rice.persistence.*;
 
 import rice.post.*;
 import rice.post.security.*;
+import rice.post.security.ca.*;
 
 import rice.email.*;
 import rice.email.proxy.smtp.*;
@@ -43,42 +44,12 @@ import java.security.*;
  * boots up the PAST, Scribe, POST, and Emails services, and then
  * starts the Foedus IMAP and SMTP servers.
  */
-public class EmailProxy {
+public class EmailProxy extends PostProxy {
 
-  static final int DEFAULT_PORT = 10001;
-  static final int DEFAULT_IMAP_PORT = 1143;
-  static final int DEFAULT_SMTP_PORT = 1025;
-  static final String DEFAULT_BOOTSTRAP_HOST = "localhost";
-  static final int DEFAULT_BOOTSTRAP_PORT = 10001;
-
-  static final int DEFAULT_CACHE_SIZE = 100000;
-  static final int DEFAULT_DISK_SIZE = 10000000;
-
-  static final IdFactory FACTORY = new PastryIdFactory();
-
-  static final String INSTANCE_NAME = "EmailProxy";
-
-  static final int REPLICATION_FACTOR = 3;
-  
-  private Credentials _credentials = new PermissiveCredentials();
-
-  private WirePastryNode pastry;
-
-  private Scribe scribe;
-
-  private Past past;
-
-  private Post post;
-
+  static int IMAP_PORT = 1143;
+  static int SMTP_PORT = 1025;
+ 
   private EmailService email;
-
-  private PostUserAddress address;
-
-  private PostCertificate certificate;
-
-  private KeyPair pair;
-
-  private PublicKey caPublic;
 
   private UserManagerImpl manager;
 
@@ -86,120 +57,33 @@ public class EmailProxy {
 
   private ImapServerImpl imap;
 
-  public EmailProxy (String userid, String bootstrapHost, int bootstrapPort, int port, int imapport, int smtpport) {
-    try {
-      System.out.println("Email Proxy");
-      System.out.println("-----------------------------------------------------------------------");
-      System.out.println("  Creating and Initializing Services");
-      System.out.print("    Creating Pastry node\t\t\t\t\t");
-      WirePastryNodeFactory factory = new WirePastryNodeFactory(new IPNodeIdFactory(port), port);
-      InetSocketAddress bootAddress = new InetSocketAddress(bootstrapHost, bootstrapPort);
+  public EmailProxy(String userid) {
+      super(userid);
+  }
 
-      pastry = (WirePastryNode) factory.newNode(factory.getNodeHandle(bootAddress));
-      System.out.println("[ DONE ]");
-
-      System.out.print("    Retrieving CA public key\t\t\t\t\t");
-      FileInputStream fis = new FileInputStream("ca.publickey");
-      ObjectInputStream ois = new ObjectInputStream(fis);
-
-      caPublic = (PublicKey) ois.readObject();
-      ois.close();
-      System.out.println("[ DONE ]");
-
-      System.out.print("    Retrieving " + userid + "'s certificate\t\t\t\t");
-      fis = new FileInputStream(userid + ".certificate");
-      ois = new ObjectInputStream(fis);
-
-      certificate = (PostCertificate) ois.readObject();
-      ois.close();
-      System.out.println("[ DONE ]");
-
-      System.out.print("    Verifying " + userid + "'s certificate\t\t\t\t");
-      if (! SecurityService.verifyCertificate(caPublic, certificate)) {
-        System.out.println("Certificate could not be verified.");
-        System.exit(0);
-      }
-      System.out.println("[ DONE ]");
-
-      address = (PostUserAddress) certificate.getAddress();
-
-      fis = new FileInputStream(userid + ".keypair.enc");
-      ois = new ObjectInputStream(fis);
-
-      System.out.print("    Reading in encrypted keypair\t\t\t\t");
-      byte[] cipher = (byte[]) ois.readObject();
-      ois.close();
-      System.out.println("[ DONE ]");
-
-      String pass = CertificateAuthorityKeyGenerator.fetchPassword(userid + "'s password");
-      byte[] key = null;
-      byte[] data = null;
-
-      try {
-        System.out.print("    Decrypting " + userid + "'s keypair\t\t\t\t");
-        key = SecurityService.hash(pass.getBytes());
-        data = SecurityService.decryptDES(cipher, key);
-      } catch (SecurityException e) {
-        System.out.println("[FAILED]");
-        System.out.println("Incorrect password.  Please try again.");
-
-        pass = CertificateAuthorityKeyGenerator.fetchPassword(userid + "'s password");
-
-        try {
-          System.out.print("    Decrypting " + userid + "'s keypair\t\t\t\t");
-          key = SecurityService.hash(pass.getBytes());
-          data = SecurityService.decryptDES(cipher, key);
-        } catch (SecurityException se) {
-          System.out.println("[FAILED]");
-          System.out.println("Incorrect password.  Exiting.");
-          System.exit(-1);
-        }
-      }
+  public void start() {
+    super.start();
       
-      pair = (KeyPair) SecurityService.deserialize(data);
-      System.out.println("[ DONE ]");
-
-      System.out.print("    Verifying " + userid + "'s keypair\t\t\t\t");
-      if (! pair.getPublic().equals(certificate.getKey())) {
-        System.out.println("KeyPair could not be verified.");
-        System.exit(0);
-      }
-      System.out.println("[ DONE ]");
-
-      System.out.print("    Starting StorageManager\t\t\t\t\t");
-      StorageManager storage = new StorageManager(FACTORY,
-                                                  new PersistentStorage(FACTORY, pastry.getNodeId().toString(), ".", DEFAULT_DISK_SIZE),
-                                                  new LRUCache(new MemoryStorage(FACTORY), DEFAULT_CACHE_SIZE));
-      System.out.println("[ DONE ]");
-
-      System.out.print("    Starting SCRIBE service\t\t\t\t\t");
-      scribe = new Scribe(pastry, _credentials);
-      System.out.println("[ DONE ]");
-
-      System.out.print("    Starting PAST service\t\t\t\t\t");
-      past = new PastImpl(pastry, storage, REPLICATION_FACTOR, INSTANCE_NAME);
-      System.out.println("[ DONE ]");
-
-      System.out.print("    Starting POST service\t\t\t\t\t");
-      post = new PostImpl(pastry, past, scribe, address, pair, certificate, caPublic, INSTANCE_NAME);
-      System.out.println("[ DONE ]");
-
-      System.out.print("    Starting Email service\t\t\t\t\t");
+    try {
+      sectionStart("Starting Email services");
+      stepStart("Starting Email service");
       email = new EmailService(post, pair);
       manager = new UserManagerImpl(email, new PostMailboxManager(email));
       String addr = address.toString();
       manager.createUser(addr.substring(0, addr.indexOf("@")), null, pass);
-      System.out.println("[ DONE ]");
+      stepDone(SUCCESS);
 
-      System.out.print("    Starting SMTP server on port " + smtpport + "\t\t\t\t");
-      smtp = new SmtpServerImpl(smtpport, email);
+      stepStart("Starting SMTP server on port " + SMTP_PORT);
+      smtp = new SmtpServerImpl(SMTP_PORT, email);
       smtp.start();
-      System.out.println("[ DONE ]");
+      stepDone(SUCCESS);
 
-      System.out.print("    Starting IMAP server on port " + imapport + "\t\t\t\t");
-      imap = new ImapServerImpl(imapport, email, manager);
+      stepStart("Starting IMAP server on port " + IMAP_PORT);
+      imap = new ImapServerImpl(IMAP_PORT, email, manager);
       imap.start();
-      System.out.println("[ DONE ]");
+      stepDone(SUCCESS);
+
+      sectionDone();
 
       while (true) {
         Thread.sleep(5000);
@@ -216,58 +100,12 @@ public class EmailProxy {
    * java rice.email.proxy.EmailProxy userid [-bootstrap hostname[:port]] [-port port] [-imapport port] [-smtpport port]
    */
   public static void main(String[] args) {
-    int port = DEFAULT_PORT;
-    int imapport = DEFAULT_IMAP_PORT;
-    int smtpport = DEFAULT_SMTP_PORT;
-    String bootstrapHost = DEFAULT_BOOTSTRAP_HOST;
-    int bootstrapPort = DEFAULT_BOOTSTRAP_PORT;
-
-    if (args.length < 1) {
-      System.out.println("Usage: java rice.email.proxy.EmailProxy userid [-bootstrap hostname[:port]] [-port port] [-imapport port] [-smtpport port] [-help]");
-      System.exit(0);
-    }
-
-    String userid = args[0];
-    
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-bootstrap") && i+1 < args.length) {
-        String str = args[i+1];
-        int index = str.indexOf(':');
-        if (index == -1) {
-          bootstrapHost = str;
-          bootstrapPort = port;
-        } else {
-          bootstrapHost = str.substring(0, index);
-          int tmpport = Integer.parseInt(str.substring(index + 1));
-          if (tmpport > 0) {
-            bootstrapPort = tmpport;
-            port = tmpport;
-          }
-        }
-
-        break;
-      }
-    }
-
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-port") && i+1 < args.length) {
-        int n = Integer.parseInt(args[i+1]);
-        if (n > 0) port = n;
-        break;
-      }
-    }
-
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-help")) {
-        System.out.println("Usage: java rice.email.proxy.EmailProxy userid [-bootstrap hostname[:port]] [-port port] [-imapport port] [-smtpport port] [-help]");
-        System.exit(0);
-      }
-    }
+    String userid = PostProxy.parseArgs(args);
 
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-imapport") && i+1 < args.length) {
         int n = Integer.parseInt(args[i+1]);
-        if (n > 0) imapport = n;
+        if (n > 0) IMAP_PORT = n;
         break;
       }
     }
@@ -275,11 +113,12 @@ public class EmailProxy {
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-smtpport") && i+1 < args.length) {
         int n = Integer.parseInt(args[i+1]);
-        if (n > 0) smtpport = n;
+        if (n > 0) SMTP_PORT = n;
         break;
       }
     }
   
-    EmailProxy proxy = new EmailProxy(userid, bootstrapHost, bootstrapPort, port, imapport, smtpport);
+    EmailProxy proxy = new EmailProxy(userid);
+    proxy.start();
   }
 }

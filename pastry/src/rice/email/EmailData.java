@@ -30,7 +30,7 @@ public class EmailData implements PostData {
    * @param location the location of the data
    * @param key the key of the data
    */
-  public ContentHashReference buildContentHashReference(Id location, Key key) {
+  public ContentHashReference buildContentHashReference(Id location, byte[] key) {
     return new EmailDataReference(location, key);
   }
 
@@ -53,7 +53,7 @@ public class EmailData implements PostData {
    * @param key The for the data
    * @throws IllegalArgumentException Always
    */
-  public SecureReference buildSecureReference(Id location, Key key) {
+  public SecureReference buildSecureReference(Id location, byte[] key) {
     throw new IllegalArgumentException("Email data is only stored as content-hash blocks.");
   }  
   
