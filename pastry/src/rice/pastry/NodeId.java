@@ -103,8 +103,6 @@ public class NodeId implements Comparable, Serializable
 	for (int i=0; i<nlen; i++) nodeId[i] = 0;
     }
     
-
-
     /**
      * Blits the nodeId into a target array.
      *
@@ -215,7 +213,6 @@ public class NodeId implements Comparable, Serializable
 	 *
 	 * @param mag the absolute magnitude of the distance.
 	 */
-
 	public Distance(int diff[]) 
 	{
 	    difference = diff;
@@ -226,7 +223,6 @@ public class NodeId implements Comparable, Serializable
 	 *
 	 * @param target an array of length at least nodeIdBitLength/8 for the distance to be stored in.
 	 */
-    
 	public void blit(byte target[]) 
 	{
 	    for (int j=0; j<nodeIdBitLength/8; j++) {
@@ -240,7 +236,6 @@ public class NodeId implements Comparable, Serializable
 	 *
 	 * @return a fresh copy of the distance material
 	 */
-
 	public byte [] copy() 
 	{
 	    byte target[] = new byte[nodeIdBitLength/8];
@@ -256,7 +251,6 @@ public class NodeId implements Comparable, Serializable
 	 * @param obj the Distance to compare with.
 	 * @return negative if this < obj, 0 if they are equal and positive if this > obj.
 	 */
-	
 	public int compareTo(Object obj) 
 	{
 	    Distance oth = (Distance) obj;
@@ -278,7 +272,6 @@ public class NodeId implements Comparable, Serializable
 	 * @param obj another Distance.
 	 * @return true if they are the same, false otherwise.
 	 */
-	
 	public boolean equals(Object obj) 
 	{
 	    if (compareTo(obj) == 0) return true;
@@ -286,11 +279,45 @@ public class NodeId implements Comparable, Serializable
 	}
 
 	/**
+	 * Shift operator. 
+	 * shift(-1,0) multiplies value of this by two, shift(1,0) divides by 2
+	 *
+	 * @param cnt the number of bits to shift, negative shifts left, positive shifts right
+	 * @param fill value of bit shifted in (0 if fill == 0, 1 otherwise)
+	 */
+	public void shift(int cnt, int fill) 
+	{
+	    int carry, bit;
+
+	    if (cnt > 0) {	  
+		for (int j=0; j<cnt; j++) {
+		    // shift right one bit
+		    carry = (fill == 0) ? 0 : 0x80000000;
+		    for (int i=nlen-1; i>=0; i--) {
+			bit = difference[i] & 1;
+			difference[i] = (difference[i] >>> 1) | carry;
+			carry = (bit == 0) ? 0 : 0x80000000;
+		    }
+		}
+	    }
+	    else {
+		for (int j=0; j<-cnt; j++) {
+		    // shift left one bit
+		    carry = (fill == 0) ? 0 : 1;
+		    for (int i=0; i<nlen; i++) {
+			bit = difference[i] & 0x80000000;
+			difference[i] = (difference[i] << 1) | carry;
+			carry = (bit == 0) ? 0 : 1;
+		    }
+		}
+	    }
+	}
+
+	/**
 	 * Hash codes.
 	 *
 	 * @return a hash code.
 	 */
-	
 	public int hashCode()
 	{
 	    int h = 0;
@@ -307,7 +334,6 @@ public class NodeId implements Comparable, Serializable
 	 *
 	 * The string is a byte string from most to least significant.
 	 */
-
 	public String toString() 
 	{
 	    String s = "0x";

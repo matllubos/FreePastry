@@ -126,6 +126,14 @@ public class NodeIdUnit {
 	    if (abs.compareTo(abl) != -1)
 		System.out.println("ERROR: abs.compareTo(abl)=" + abs.compareTo(abl));
 
+	    System.out.println("abs=" + abs);	    
+	    abs.shift(-1, 1);
+	    System.out.println("abs.shift(-1)=" + abs);	    
+	    abs.shift(1, 0);
+	    System.out.println("abs.shift(1)=" + abs);	    
+	    if (!abs.equals(a.distance(b))) 
+		System.out.println("SHIFT ERROR!");
+
 	    a = createNodeId();
 	    b = createNodeId();
 	}
