@@ -1,5 +1,0 @@
-1) Handle null pointer exception in MessageReplyFromParent.
-
-2) Remove extra testing from ScribeRegrTest
-
-6) remove the code corresponding to writing to the logFile (do this at the complete end)
