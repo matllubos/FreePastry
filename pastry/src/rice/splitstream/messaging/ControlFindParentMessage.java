@@ -92,7 +92,27 @@ public class ControlFindParentMessage extends MessageAnycast
         if(topic == null) System.out.println("TOPIC IS NULL");
         System.out.println("Forwarding at " + scribe.getNodeId());
         Credentials c = new PermissiveCredentials();
-        
+        if ( topic == null )
+        {
+           if ( send_to.size() != 0 )
+           {
+              already_seen.add( 0, send_to.remove(0) );
+           }
+           else
+           {
+              already_seen.add( 0, scribe.getNodeHandle() );
+           }
+           if ( send_to.size() != 0 )
+           {
+              scribe.routeMsgDirect( send_to.get(0), this, c, null );
+           }
+           else
+           {
+              scribe.routeMsgDirect( this.getSource(), this, c, null );
+           }
+        }
+        else
+        {
         if ( send_to.size() != 0 )
         {
             already_seen.add( 0, send_to.remove(0) );
@@ -151,6 +171,7 @@ public class ControlFindParentMessage extends MessageAnycast
                                            null );
                 }
             }
+        }
         }
         return true;
     }
