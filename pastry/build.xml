@@ -24,28 +24,6 @@
     <pathelement path="${build.dir}"/>
   </path>
   
-  <!-- The source -->
-  <path id="project.excluded.source">
-    <fileset dir="${src.dir}">
-      <!-- Excludes go here -->
-      <include name="rice/ap3/**/*.java"/>
-      <include name="rice/email/**/*.java"/>
-      <include name="rice/fs/**/*.java"/>
-      <include name="rice/im/**/*.java"/>
-      <include name="rice/nls/**/*.java"/>
-      <include name="rice/p2p/**/*.java"/>
-      <include name="rice/pastry/**/*.java"/>
-      <include name="rice/persistence/**/*.java"/>
-      <include name="rice/post/**/*.java"/>
-      <include name="rice/proxy/**/*.java"/>
-      <include name="rice/rm/**/*.java"/>
-      <include name="rice/storage/**/*.java"/>
-      <include name="rice/testharness/**/*.java"/>
-      <include name="rice/visualization/**/*.java"/>
-      <include name="rice/watchdog/**/*.java"/>
-    </fileset>
-  </path>
-
   <!-- Source we need to build RMIC stubs for -->
   <path id="project.rmic.files">
     <fileset dir="${build.dir}">
@@ -63,11 +41,6 @@
   <target name="init">
     <!-- make the directory to put all classes in -->
     <mkdir dir="${build.dir}"/>
-
-    <!-- make a list of the excluded source -->
-    <pathconvert refid="project.excluded.source"
-                 pathsep=","
-		 property="project.excluded.src.list"/>
   </target>
 
   <target name="make_rmic_stubs" depends="init">
@@ -88,24 +61,18 @@
            destdir="${build.dir}"
 	   classpathref="project.classpath"
 	   includes="**/*.java"
-           deprecation="yes">
+           deprecation="yes"
+	   debug="true">
 
       <!-- Compilation problems :( -->
       <exclude name="rice/ap3/**/*.java"/>
       <exclude name="rice/fs/**/*.java"/>
       <exclude name="rice/im/**/*.java"/>
 
-      <!-- Depends on rice.past (which was removed) -->
-      <!-- Evaluate this package later -->
-      <exclude name="rice/testharness/**/*.java"/>
-
       <!-- Projects waiting to be fixed -->
 
       <!-- 23 errors ... emailed Alan -->      
       <exclude name="rice/email/test/**/*.java"/>
-
-      <!-- 14 errors.  Emailed Animesh -->
-      <exclude name="rice/rm/**/*.java"/>
 
       <!-- Waiting on two bug fixes from Alan -->
       <exclude name="rice/post/**/*.java"/>
@@ -134,8 +101,7 @@
              windowtitle="Rice Pastry - API Specifications"
              use="true">
        <fileset dir="${src.dir}"
-                includes="**/*.java"
-                excludes="${project.excluded.src.list}"/>
+                includes="**/*.java"/>
        <doctitle>Rice Pastry API</doctitle>
        <header>Rice Pastry API</header>
        <bottom><![CDATA[<i>Copyright &#169; 2001 - Rice Pastry.</i>]]></bottom>
