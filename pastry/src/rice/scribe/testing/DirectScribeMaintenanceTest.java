@@ -83,7 +83,7 @@ public class DirectScribeMaintenanceTest
     // The number of iterations of node failures and joins. 
     // In each iteration we fail 'concurrentFailures' number of nodes 
     // and make 'concurrentJoins' number of nodes join the network.
-    private int numIterations = 2; 
+    private int numIterations = 5; 
 
     // The number of nodes that fail concurrently. This step of failing
     // nodes concurrently is repeated till the desired number of totalFailures

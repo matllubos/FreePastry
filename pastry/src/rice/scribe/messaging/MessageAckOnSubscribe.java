@@ -47,13 +47,14 @@ import rice.scribe.maintenance.*;
 
 import java.io.*;
 import java.util.*;
+
 /**
  * @(#) MessageAckOnSubscribe.java
  *
  * MessageAckOnSubscribe is used so that whenever a new subscriber joins the
- * multicast tree for that topic, an immediate ACK is sent to it in the form of
- * this type of message. It sets the parent pointer for a given topic on the
- * destination node.
+ * multicast tree for that topic, an immediate ACK is sent to it by its parent
+ * in the form of this type of message. It sets the parent pointer for a given
+ * topic on the subscriber node.
  * 
  * @version $Id$ 
  * 
@@ -88,7 +89,6 @@ public class MessageAckOnSubscribe extends ScribeMessage implements Serializable
      */
     public void 
 	handleDeliverMessage( Scribe scribe, Topic topic ) {
-	// This message was send for us.
 	NodeId topicId = m_topicId;
 	Credentials cred = scribe.getCredentials();
 	SendOptions opt = scribe.getSendOptions();

@@ -57,19 +57,19 @@ public abstract class ScribeMessage extends Message implements Serializable
 {
     /**
      * This is the information inside the message.
-     * @serial
+     * Should be serializable.
      */
     private Object m_data;
 
     /**
      * The ID of the topic that this message refers to.
-     * @serial
+     * Should be serializable.
      */
     protected NodeId m_topicId;
 
     /**
      * The ID of the source of this message.
-     * @serial
+     * Should be serializable.
      */
     protected NodeHandle m_source;
 

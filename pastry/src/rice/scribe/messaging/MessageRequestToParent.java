@@ -79,11 +79,7 @@ public class MessageRequestToParent extends ScribeMessage implements Serializabl
     /**
      * This method is called whenever the scribe node receives a message for 
      * itself and wants to process it. The processing is delegated by scribe 
-     * to the message. If a node has a common parent for some number of topics,
-     * then it is going to receive a common HeartBeat message for all those
-     * topics. So, it will find out all topics for which this message's source
-     * is its parent and consider this message as a HeartBeat message for all
-     * those topics. 
+     * to the message. 
      * 
      * @param scribe the scribe application.
      * @param tp the dummy topic ( = null), used because MessageRequestToParent

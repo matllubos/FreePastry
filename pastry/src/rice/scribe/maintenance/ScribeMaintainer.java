@@ -116,17 +116,16 @@ public class ScribeMaintainer
 	     * different topics. 
 	     */
 	    if(topic.m_heartBeatsMissed > m_scribe.getTreeRepairThreshold()){
-		//System.out.println("Scheduling TR for topic "+topic.getTopicId()+" at "+m_scribe.getNodeId());
 		scheduleTR(topic);
 	    }
 	}
 
 
 	/**
-	 * We send this heartbeat message to th set of distinct children 
+	 * We send this heartbeat message to the set of distinct children 
 	 * for this node.
-	 * By this, we avoid sending multiple HeartBeat messages to a single node
-	 * if it our child for multiple topics.
+	 * By this, we avoid sending multiple HeartBeat messages to a 
+	 * single node if it our child for multiple topics.
 	 */
 
 	Vector distinctChildren = m_scribe.getDistinctChildren();
@@ -189,16 +188,12 @@ public class ScribeMaintainer
 	Credentials cred ;
 	SendOptions opt ;
 	ScribeMessage msgs, msgu ; 
-	
-	// If local node is TopicManager(a node closest to 
-	// topicId in nodeId space), it doesnt have a parent
-	// hence no need to do any Tree repair.
+
 	if(topic.isTopicManager()) {
-	    // System.out.println("This node need not start a tree repair since it is the topic manager for the topic");
+	    // This node need not start a tree repair since it is the topic manager for the topic (currently the root for the topic's multicast tree).
 	    return;
 	}
 
-	//System.out.println("Tree repair started for topic "+topic.getTopicId()+" at "+m_scribe.getNodeId());
 	topicId = topic.getTopicId();
 	cred = m_scribe.getCredentials();
 	opt = m_scribe.getSendOptions();
@@ -206,7 +201,7 @@ public class ScribeMaintainer
 	// Now, we should set the parent for this topic to null, as 
 	// most probably we are going to get a new parent for this
 	// topic. So, if we have a non-null parent right now, we
-	// should send a UNSUBSCRIBE message to currnet non-null parent
+	// should send a UNSUBSCRIBE message to that non-null parent.
 
 	NodeHandle prev_parent;
 	prev_parent = topic.getParent();
@@ -231,6 +226,8 @@ public class ScribeMaintainer
     }
     
 }
+
+
 
 
 

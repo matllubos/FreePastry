@@ -76,9 +76,9 @@ public class MessageHeartBeat extends ScribeMessage implements Serializable
 			  Credentials c ) {
 	super( addr, source, null, c );
 
-	// we pass null for topicId, as a child will find out 
-	//for which topics topics this node is its parent and 
-	//will do processing accordingly
+	// We pass null for topicId, the child on receiving this message
+	// will find out for which topics this sender node is its parent and 
+	// will do processing accordingly.
 
     }
     
@@ -87,7 +87,8 @@ public class MessageHeartBeat extends ScribeMessage implements Serializable
     /**
      * This method is called whenever the scribe node receives a message for 
      * itself and wants to process it. The processing is delegated by scribe 
-     * to the message. If a node has a common parent for some number of topics,
+     * to the message. 
+     * If a node has a common parent for some number of topics,
      * then it is going to receive a common HeartBeat message for all those
      * topics. So, it will find out all topics for which this message's source
      * is its parent and consider this message as a HeartBeat message for all
@@ -95,9 +96,7 @@ public class MessageHeartBeat extends ScribeMessage implements Serializable
      * 
      * @param scribe the scribe application.
      * @param tp the dummy topic ( = null), used because MessageHeartBeat
-     *           extends ScribeMessage. Instead, we use a local hashtable
-     *           having mapping from parent node -> list of topics for which
-     *           it is our parent.
+     *           extends ScribeMessage. 
      */
     public void 
 	handleDeliverMessage( Scribe scribe, Topic tp ) {
@@ -132,8 +131,8 @@ public class MessageHeartBeat extends ScribeMessage implements Serializable
 		    topicId = (NodeId)topics.elementAt(i);
 		    i++;
 		    topic = scribe.getTopic(topicId);
-		    // take note of the parent for this topic and tell the failure 
-		    // handler that the parent is ok
+		    // take note of the parent for this topic and tell the
+		    // failure handler that the parent is ok
 		    if( topic.getParent() != m_source)
 			System.out.println("Error:: Inconsistency in distinctParentTable found"); 
 		    topic.postponeParentHandler();

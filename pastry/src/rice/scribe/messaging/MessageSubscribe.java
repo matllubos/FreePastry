@@ -117,7 +117,6 @@ public class MessageSubscribe extends ScribeMessage implements Serializable
 	}
 
 	if( m_source.getNodeId().equals( scribe.getNodeId() ) ) {
-	    //This should not happen, we should probably throw an error
 	    return true;
 	}
 	else {
@@ -151,7 +150,6 @@ public class MessageSubscribe extends ScribeMessage implements Serializable
 	 * If the ackOnSubscribeSwitch is set to true, we
 	 * should now send an immediate ACK.
 	 */
-	
 	if( scribe.m_ackOnSubscribeSwitch ) {
 	    /** 
 	     * Send a AckOnSubscribeMessage to the new subscriber so that

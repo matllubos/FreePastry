@@ -109,7 +109,8 @@ public class Scribe extends PastryAppl implements IScribe
      * HeartBeat message from a node, it calls the postponeParentHandler 
      * method for all topics for which that node is its parent.
      * By having this data structure locally, we avoid sending lists
-     * of topics for which a node is parent, which may be very large.
+     * of topics for which a node is parent in the HeartBeat message (this 
+     * would cause the Heartbeat message to grow very large).
      */
     protected Hashtable m_distinctParentTable;
 
@@ -128,10 +129,10 @@ public class Scribe extends PastryAppl implements IScribe
 
 
     /**
-     * The AckOnSubscribe switch for this scribe. It activates the immediate
-     * sending of ACK by a node when it receives a SUBSCRIBE message from its
-     * child for a topic. Otherwise, this immediate ACK is not sent. This flag
-     * is set to TRUE.
+     * The AckOnSubscribe switch if true activates the immediate sending 
+     * of ACK by a node when it receives a SUBSCRIBE message from its
+     * child for a topic. Otherwise, this immediate ACK is not sent.
+     * This flag is set to TRUE.
      * Setting it to false will cause several more messages in the form of
      * MessageRequestToParent and MessageReplyFromParent to be exchanged 
      * between the child node and the parent node, when the child node 
@@ -159,7 +160,7 @@ public class Scribe extends PastryAppl implements IScribe
     protected SendOptions m_sendOptions = null;
 
     /**
-     * The SendOptions object to be used for all messaging through Pastry.
+     * The Credentials object to be used for all messaging through Pastry.
      */
     protected static Credentials m_credentials = null;
 
@@ -214,8 +215,8 @@ public class Scribe extends PastryAppl implements IScribe
 	 * a failure to receive HeartBeat messages in time or loss of other 
 	 * types of messages.
 	 * On a fingerprint mismatch,the child node sends a
-	 * MessageRequestToParent to the parent node requesting for the list of 
-	 * topics for which the parent node has it as a child.
+	 * MessageRequestToParent to the parent node requesting for the list
+	 * of topics for which the parent node has it as a child.
 	 */
         private NodeId fingerprint ;
 
@@ -637,7 +638,6 @@ public class Scribe extends PastryAppl implements IScribe
      *
      * @param tid the topic id the message reffers to.
      * @param c the credentials that will be associated with the message
-     *
      * @return the ScribeMessage.
      */
     public ScribeMessage makeUnsubscribeMessage( NodeId tid, Credentials c ) {
@@ -649,6 +649,7 @@ public class Scribe extends PastryAppl implements IScribe
      *
      * @param tid the topic id the message reffers to.
      * @param c the credentials that will be associated with the message
+     *
      * @return the ScribeMessage.
      */
     public ScribeMessage makeCreateMessage( NodeId tid, Credentials c) {
@@ -660,7 +661,6 @@ public class Scribe extends PastryAppl implements IScribe
      *
      * @param tid the topic id the message reffers to.
      * @param c the credentials that will be associated with the message
-     *
      * @return the ScribeMessage.
      */
     public ScribeMessage makePublishMessage( NodeId tid, Credentials c ) {
@@ -671,7 +671,6 @@ public class Scribe extends PastryAppl implements IScribe
      * Makes a heart-beat message using the current Pastry node as the source.
      *
      * @param c the credentials that will be associated with the message
-     *
      * @return the ScribeMessage.
      */
     public ScribeMessage makeHeartBeatMessage( Credentials c ) {
@@ -795,8 +794,8 @@ public class Scribe extends PastryAppl implements IScribe
      * Removes a child for a topic from the distinctChildrenTable.
      * See if we already have it as a child for some other
      * topic , if yes then remove this topicId from the list of topics
-     * for which this node is our child. We also remove the entry from the 
-     * hashtable if the list of topics becomes empty.
+     * for which this node is our child. Otherwise, we remove the entry
+     * from the hashtable since the list of topics becomes empty.
      *
      * @param child The NodeHandle of Child
      * @param topicId The topicId for the topic for which we are
@@ -869,8 +868,8 @@ public class Scribe extends PastryAppl implements IScribe
      * Removes a parent for a topic fromthe distinctParentTable.
      * See if we already have it as a parent for some other
      * topic , if yes then remove this topicId from the list of topics
-     * for which this node is our parent. We also remove the entry from the 
-     * hashtable if the list of topics becomes empty.
+     * for which this node is our parent. Otherwise, we remove the entry
+     * from the hashtable since the list of topics becomes empty.
      *
      * @param parent The NodeHandle of Parent
      * @param topicId The topicId for the topic for which we are
@@ -947,7 +946,8 @@ public class Scribe extends PastryAppl implements IScribe
     }
 
 
-    /* Gets the fingerprint corresponding to a key in the m_DistinctParentTable.
+    /* Gets the fingerprint corresponding to a key in the 
+     * m_DistinctParentTable.
      *
      * @param parent the key
      * @return the fingerprint corresponding to this key
@@ -965,7 +965,8 @@ public class Scribe extends PastryAppl implements IScribe
 	return fingerprint;
     }
 
-    /* Gets the fingerprint corresponding to a key in the m_DistinctChildrenTable.
+    /* Gets the fingerprint corresponding to a key in the 
+     * m_DistinctChildrenTable.
      *
      * @param parent the key
      * @return the fingerprint corresponding to this key
@@ -988,7 +989,7 @@ public class Scribe extends PastryAppl implements IScribe
     /**
      * Adds a child to the list of nodes to which this node
      * has already send a implicit HeartBeat message in the form of 
-     * Publish message.
+     * Publish message in this Heartbeat period.
      *
      * @param childId NodeId of child.
      * @return true if child already exists else false

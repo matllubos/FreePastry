@@ -48,7 +48,9 @@ import java.util.*;
 /**
  *
  * MessageReplyFromParent is a message sent by the PARENT node to a node
- * as a response to a MessageRequestToParent type of message. We send 
+ * as a response to a MessageRequestToParent type of message. We send the list
+ * of topics for which the sender of the MessageRequestToParent message is the 
+ * PARENT node's CHILD.
  *
  * @version $Id$ 
  * 
@@ -169,4 +171,7 @@ public class MessageReplyFromParent extends ScribeMessage implements Serializabl
 	return new String( "REQUESTTOPARENT MSG:" + m_source );
     }
 }
+
+
+
 

@@ -46,12 +46,13 @@ import rice.scribe.maintenance.*;
 
 import java.io.*;
 import java.util.*;
+
 /**
  *
  * MessageCreate is used whenever a Scribe node wants to create a
- * new topic. The message makes its way to the root(TO BE) for the topic and
- * takes care of instantiating the appropriate data structures on that node 
- * to keep track of the topic. 
+ * new topic. The message makes its way to the root (the node currently
+ * closest to the topic Id) for the topic and takes care of instantiating 
+ * the appropriate data structures on that node to keep track of the topic. 
  *
  * @version $Id$ 
  *
