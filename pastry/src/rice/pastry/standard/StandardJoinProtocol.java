@@ -148,7 +148,8 @@ public class StandardJoinProtocol implements MessageReceiver
 
 	    jh = security.verifyNodeHandle(jh);
 
-	    if (jh.isAlive() == true) routeTable.put(jh);
+	    // can't insert a joining handle, else it might be routed to itself!!
+	    //if (jh.isAlive() == true) routeTable.put(jh);
 
 	    int base = RoutingTable.idBaseBitLength;
 		
