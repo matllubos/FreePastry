@@ -99,6 +99,16 @@ public class PastryIdFactory implements IdFactory {
   }
 
   /**
+   * Builds a protocol-specific Id.Distance given the source data.
+   *
+   * @param material The material to use
+   * @return The built Id.Distance.
+   */
+  public Id.Distance buildIdDistance(byte[] material) {
+    return new rice.pastry.Id.Distance(material);
+  }
+
+  /**
    * Creates an IdRange given the CW and CCW ids.
    *
    * @param cw The clockwise Id
