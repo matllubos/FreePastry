@@ -117,6 +117,7 @@ public class ScribeRegrTest extends CommonAPITest {
     testBasic(4, "Partial (2)");
     testSingleRoot("Single rooted Trees");
     testAPI();
+    testFailureNotification();
     testMaintenance();
 
   }
@@ -375,6 +376,49 @@ public class ScribeRegrTest extends CommonAPITest {
       
     sectionDone();
   }
+
+  /**
+    * Tests failure notification
+   */
+  protected void testFailureNotification() {
+    sectionStart("Subscribe Failure Notification");
+    Topic topic = new Topic(generateId());
+    TestScribeClient client;
+
+    stepStart("Policy Change");
+    for (int i=0; i < NUM_NODES; i++) {
+      policies[i].neverAllowSubscribe(true);
+    }
+
+    stepDone(SUCCESS);
+    
+    stepStart("Subscribe Attempt");
+    int i = rng.nextInt(NUM_NODES);
+
+    while (scribes[i].isRoot(topic))
+      i = rng.nextInt(NUM_NODES);
+    
+    client = new TestScribeClient(scribes[i], topic, i);
+    scribes[i].subscribe(topic, client);
+    simulate();
+
+    stepDone(SUCCESS);
+
+    stepStart("Failure Notification Delivered");
+    if (! client.getSubscribeFailed())
+      stepDone(FAILURE, "Expected subscribe to fail, but did not.");
+    else
+      stepDone(SUCCESS);
+
+    stepStart("Policy Reset");
+    for (int j=0; j < NUM_NODES; j++) {
+      policies[j].neverAllowSubscribe(false);
+    }
+
+    stepDone(SUCCESS);
+
+    sectionDone();
+  }    
 
 
     protected void testSingleRoot(String name) {
@@ -659,6 +703,11 @@ public class ScribeRegrTest extends CommonAPITest {
     protected boolean acceptAnycast;
 
     /**
+     * Whether this client has had a subscribe fail
+     */
+    protected boolean subscribeFailed;
+
+    /**
      * Constructor for TestScribeClient.
      *
      * @param scribe DESCRIBE THE PARAMETER
@@ -671,6 +720,7 @@ public class ScribeRegrTest extends CommonAPITest {
       this.publishMessages = new Vector();
       this.anycastMessages = new Vector();
       this.acceptAnycast = false;
+      this.subscribeFailed = false;
     }
 
     public ScribeContent[] getPublishMessages() {
@@ -730,6 +780,11 @@ public class ScribeRegrTest extends CommonAPITest {
     }
 
     public void subscribeFailed(Topic topic) {
+      subscribeFailed = true;
+    }
+
+    public boolean getSubscribeFailed() {
+      return subscribeFailed;
     }
   }
 
