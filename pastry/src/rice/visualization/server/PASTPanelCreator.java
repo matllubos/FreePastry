@@ -23,7 +23,7 @@ public class PASTPanelCreator implements PanelCreator {
   protected StorageManager manager;
   
   public PASTPanelCreator() {
-    Thread t = new Thread() {
+    Thread t = new Thread("PAST Panel Monitor Thread") {
       public void run() {
         while (true) {
           try {
@@ -40,13 +40,13 @@ public class PASTPanelCreator implements PanelCreator {
   
   public DataPanel createPanel(Object[] objects) {
     PastryNode node = null;
-    Past past = null;
+    PastImpl past = null;
     
     for (int i=0; i<objects.length; i++) {
       if (objects[i] instanceof PastryNode)
         node = (PastryNode) objects[i];
       else if (objects[i] instanceof Past)
-        past = (Past) objects[i];
+        past = (PastImpl) objects[i];
       else if (objects[i] instanceof StorageManager)
         manager = (StorageManager) objects[i];
       
@@ -57,7 +57,7 @@ public class PASTPanelCreator implements PanelCreator {
     return null;
   }
   
-  protected DataPanel createPanel(PastryNode node, Past past, StorageManager manager) {
+  protected DataPanel createPanel(PastryNode node, PastImpl past, StorageManager manager) {
     DataPanel pastPanel = new DataPanel("PAST");
     
     GridBagConstraints pastCons = new GridBagConstraints();
@@ -66,10 +66,10 @@ public class PASTPanelCreator implements PanelCreator {
     pastCons.fill = GridBagConstraints.HORIZONTAL;
     
     KeyValueListView pastView = new KeyValueListView("Overview", 380, 200, pastCons);
-    IdRange prim = node.getLeafSet().range(node.getLocalHandle(), 0);
-    IdRange total = node.getLeafSet().range(node.getLocalHandle(), past.getReplicationFactor());
-    pastView.add("Prim. Range", prim.getCCW() + " -> " + prim.getCW());
-    pastView.add("Total Range", total.getCCW() + " -> " + total.getCW());
+    rice.p2p.commonapi.IdRange prim = past.getEndpoint().range(past.getEndpoint().getLocalNodeHandle(), 0, null, true);
+    rice.p2p.commonapi.IdRange total = past.getEndpoint().range(past.getEndpoint().getLocalNodeHandle(), past.getReplicationFactor(), null, true);
+    pastView.add("Prim. Range", prim.getCCWId() + " -> " + prim.getCWId());
+    pastView.add("Total Range", total.getCCWId() + " -> " + total.getCWId());
     pastView.add("# Prim. Keys", past.scan(prim).numElements() + "");
     pastView.add("# Total Keys", past.scan(total).numElements() + "");
     
