@@ -99,8 +99,8 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp {
   }
 
   public void addRing(RingId ringId) {
-    System.out.println("Joining SCRIBE group " + ringId.getRingId() + " at " + thePastryNode.getNodeId() + " (" + this.ringId + ")");
-    scribe.join(ringId.getRingId(), this, credentials, null);
+    System.out.println("Joining SCRIBE group " + ringId + " at " + thePastryNode.getNodeId() + " (" + this.ringId + ")");
+    scribe.join(ringId.toNodeId(), this, credentials, null);
   }
 
   public void messageForAppl(Message msg) {
@@ -139,9 +139,15 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp {
 
       RouteMessage[] messages = pending.get(reminder.getRingId());
 
-      System.out.println("Could not find direct route to " + reminder.getRingId());
+      if (ringId.equals(MultiRingPastryNode.GLOBAL_RING_ID)) {
+        System.out.println("ERROR - Could not find a node in ring " + reminder.getRingId() + " in the global ring - dropping messages on floor.");
+      } else {
+        System.out.println("Could not find direct route to " + reminder.getRingId() + " - rerouting via global ring.");
 
-      // NEED TO ROUTE TO GLOBAL RING HERE...
+        for (int i=0; i<messages.length; i++) {
+          routeMultiRingMessage(messages[i], MultiRingPastryNode.GLOBAL_RING_ID);
+        }
+      }
     } else {
       System.out.println("Received unknown message " + msg + " - ignoring.");
     } 
@@ -150,7 +156,7 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp {
   public void setBootstrap(NodeHandle bootstrap) {
     if (bootstrap == null) {
       if (((MultiRingPastryNode) thePastryNode).getParent() != null) {
-        ringId = new RingId((new RandomNodeIdFactory()).generateNodeId());
+        ringId = new RingId((new RandomNodeIdFactory()).generateNodeId().copy());
 
         System.out.println("Generated new random ring ID: " + ringId);
 
@@ -166,23 +172,28 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp {
     }
   }
 
+
   protected void routeMultiRingMessage(RouteMessage rm) {
-    System.out.println("Received request to route message to " + rm.getTarget());
-    NodeHandle handle = cache.get((RingId) rm.getTarget());
+    routeMultiRingMessage(rm, ((RingNodeId) rm.getTarget()).getRingId());
+  }
+    
+  protected void routeMultiRingMessage(RouteMessage rm, RingId ringId) {
+    NodeHandle handle = cache.get(ringId);
+    
+    System.out.println("Received request to route message " + rm + " to ring " + ringId);
 
     if (handle == null) {
-      System.out.println("No cached handle to " + rm.getTarget() + " is available - enqueueing.");
-      boolean send = pending.add(rm);
+      System.out.println("No cached handle to " + ringId + " is available - enqueueing.");
+      boolean send = pending.add(rm, ringId);
 
       if (send) {
-        System.out.println("Sending lookup message via anycast to ringId " + rm.getTarget());
-        RingId ringId = (RingId) rm.getTarget();
-        scribe.anycast(ringId.getRingId(), new RingLookupRequestMessage(ringId), credentials);
+        System.out.println("Sending lookup message via anycast to ringId " + ringId);
+        scribe.anycast(ringId.toNodeId(), new RingLookupRequestMessage(ringId), credentials);
 
         thePastryNode.scheduleMsg(new RingLookupReminderMessage(ringId), REMINDER_TIMEOUT);
       }
     } else {
-      System.out.println("Found cached handle " + handle + " to " + rm.getTarget() + " forwarding.");
+      System.out.println("Found cached handle " + handle + " to ring " + ringId + " - forwarding.");
 
       forwardMessage(handle, rm);
     }
@@ -196,8 +207,9 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp {
 
   public boolean anycastHandler(ScribeMessage msg) {
     MessageAnycast anycast = (MessageAnycast) msg;
-    System.out.println("Received anycast for ringId " + ringId + " from " + anycast.getSource() + " - responding.");
     RingLookupRequestMessage request = (RingLookupRequestMessage) anycast.getData();
+    System.out.println("Received anycast for ringId " + request.getRingId() + " in ringId " + ringId + " at nodeId " + thePastryNode.getNodeId() +
+                       " from " + anycast.getSource() + " - responding.");
     RingLookupResponseMessage response = new RingLookupResponseMessage(getNodeHandle(), request.getRingId());
 
     routeMsgDirect(anycast.getSource(), response, credentials, null);
@@ -214,13 +226,16 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp {
     }
 
     public boolean add(RouteMessage m) {
-      RingId ringId = (RingId) m.getTarget();
-      Vector v = (Vector) table.get(ringId.getRingId());
+      return add(m, ((RingNodeId) m.getTarget()).getRingId());
+    }
+      
+    public boolean add(RouteMessage m, RingId ringId) {
+      Vector v = (Vector) table.get(ringId);
       boolean result = false;
       
       if (v == null) {
         v = new Vector();
-        table.put(ringId.getRingId(), v);
+        table.put(ringId, v);
         result = true;
       }
 
@@ -230,7 +245,7 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp {
     }
 
     public RouteMessage[] get(RingId ringId) {
-      Vector v = (Vector) table.remove(ringId.getRingId());
+      Vector v = (Vector) table.remove(ringId);
 
       if (v == null) {
         return new RouteMessage[0];
@@ -255,18 +270,18 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp {
     }
 
     public void put(RingId ringId, NodeHandle handle) {
-      Vector v = (Vector) table.get(ringId.getRingId());
+      Vector v = (Vector) table.get(ringId);
 
       if (v == null) {
         v = new Vector();
-        table.put(ringId.getRingId(), v);
+        table.put(ringId, v);
       }
 
       v.addElement(handle);
     }
 
     public NodeHandle get(RingId ringId) {
-      Vector v = (Vector) table.get(ringId.getRingId());
+      Vector v = (Vector) table.get(ringId);
 
       if (v == null) {
         return null;
@@ -280,7 +295,7 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp {
         v.remove(handle);
 
         if (v.size() == 0) {
-          table.remove(ringId.getRingId());
+          table.remove(ringId);
         }
         
         return get(ringId);

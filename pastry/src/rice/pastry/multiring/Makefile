@@ -4,7 +4,8 @@ SOURCE	= \
 	MultiRingPastryNode.java\
 	MultiRingPastryNodeFactory.java\
   MultiRingAppl.java\
-  RingId.java
+  RingId.java\
+  RingNodeId.java
 
 MAIN	= 
 

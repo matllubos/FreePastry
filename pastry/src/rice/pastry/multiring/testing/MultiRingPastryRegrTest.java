@@ -79,12 +79,12 @@ public class MultiRingPastryRegrTest {
   }
 
   public void startTest() {
-    RingId dest = new RingId(nodes[NUM_SUBRINGS-1][NUM_GLOBAL_NODES_PER_SUBRING].getNodeId(),
-                             ringIds[NUM_SUBRINGS-1].getRingId());
+    RingNodeId dest = new RingNodeId(nodes[NUM_SUBRINGS-1][NUM_GLOBAL_NODES_PER_SUBRING].getNodeId(),
+                                     ringIds[NUM_SUBRINGS-1]);
 
     System.out.println("Sending message from " + globalNodes[0][0].getNodeId() + " to " + dest);
 
-    globalApps[0][0].sendTo(dest);
+    apps[0][NUM_GLOBAL_NODES_PER_SUBRING].sendTo(dest);
   }
 
   public void createPastryNodes() {
@@ -194,22 +194,22 @@ public class MultiRingPastryRegrTest {
       System.out.println("Received message " + m + " at " + thePastryNode);
     }
 
-    public void sendTo(RingId ringId) {
+    public void sendTo(RingNodeId ringId) {
       routeMsg(ringId, new MultiRingTestAppMessage(ringId), credentials, null);
     }
   }
 
   public static class MultiRingTestAppMessage extends Message implements Serializable {
 
-    private RingId ringId;
+    private RingNodeId ringId;
     
-    public MultiRingTestAppMessage(RingId ringId) {
+    public MultiRingTestAppMessage(RingNodeId ringId) {
       super(MultiRingTestAppAddress.instance());
 
       this.ringId = ringId;
     }
 
-    public RingId getRingId() {
+    public RingNodeId getRingNodeId() {
       return ringId;
     }
   }

@@ -58,8 +58,7 @@ import rice.pastry.security.*;
 
 public class MultiRingPastryNode extends PastryNode {
 
-  public static RingId GLOBAL_RING_ID = new RingId(new byte[NodeId.nodeIdBitLength],
-                                                   new NodeId(new byte[NodeId.nodeIdBitLength]));
+  public static RingId GLOBAL_RING_ID = new RingId();
   
   private MultiRingAppl appl;
   
@@ -87,9 +86,9 @@ public class MultiRingPastryNode extends PastryNode {
     if (msg instanceof RouteMessage) {
       RouteMessage rm = (RouteMessage) msg;
 
-      if (rm.getTarget() instanceof RingId) {
-        if (! ((RingId) rm.getTarget()).getRingId().equals(appl.getRingId().getRingId())) {
-          MultiRingPastryNode node = getNextHop((RingId) rm.getTarget());
+      if (rm.getTarget() instanceof RingNodeId) {
+        if (! ((RingNodeId) rm.getTarget()).getRingId().equals(appl.getRingId())) {
+          MultiRingPastryNode node = getNextHop(((RingNodeId) rm.getTarget()).getRingId());
 
           if (node != null) {
             System.out.println("Handing message for " + rm.getTarget() + " to other node " + node + " from " + this);
@@ -159,12 +158,10 @@ public class MultiRingPastryNode extends PastryNode {
   }
   
   private MultiRingPastryNode getNextHop(RingId ringId) {
-    NodeId ring = ringId.getRingId();
-
     for (int i=0; i<children.size(); i++) {
       MultiRingPastryNode node = (MultiRingPastryNode) children.elementAt(i);
 
-      if (node.getMultiRingAppl().getRingId().getRingId().equals(ring)) {
+      if (node.getMultiRingAppl().getRingId().equals(ringId)) {
         return node;
       }
     }
