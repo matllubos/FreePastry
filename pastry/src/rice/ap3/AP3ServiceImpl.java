@@ -198,11 +198,11 @@ public class AP3ServiceImpl
 	{
 	    try
 		{
-		    callbackMsg = _createAP3Message( this.getNodeID(),
+		    callbackMsg = _createAP3Message( this.getNodeId(),
 						     null,
 						     AP3MessageType.CALLBACK,
 						     fetchProbability );
-		    _routingTable.addEntry( requestMsg );
+		    _routingTable.addEntry( callbackMsg );
 		    callbackIDCollided = false;
 		}
 	    catch ( Exception e )
@@ -447,7 +447,7 @@ public class AP3ServiceImpl
     /**
      * Helper function used to route a message directly to the target node
      */
-    protected void _routeMsgDirect( NodeId dest, AP3Message msg ) throws java.lang.Exception
+    protected void _routeMsgDirect( NodeHandle dest, AP3Message msg ) throws java.lang.Exception
     {
 	boolean found = this.routeMsgDirect( dest, msg, _credentials, _sendOptions );
 
