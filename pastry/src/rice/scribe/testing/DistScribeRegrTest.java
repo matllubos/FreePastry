@@ -294,7 +294,9 @@ public class DistScribeRegrTest {
 			
 		    }
 		}
-		pause(publish_period*1000);
+		try {
+		    Thread.sleep(publish_period*1000);
+		}catch (InterruptedException e) {}
 	    }
 	}
     }
@@ -336,30 +338,16 @@ public class DistScribeRegrTest {
 	DistScribeRegrTestApp app = new DistScribeRegrTestApp(pn, scribe, cred);
 	distClients.addElement(app);
 
-	synchronized (pn) {
-	    while (pn.isReady() == false) {
-		try{
-		    if (pn.isReady() == false)
-			pn.wait(joinTimeout * 1000);
-		} catch (InterruptedException e) { }
-		if (pn.isReady() == false) System.out.println("retrying");
-	    }
-	}
-	
+	while(pn.isReady() == false) {
+	    try {
+		Thread.sleep(2000); // 2 sec polling interval
+	    } catch (InterruptedException e) {}
+	} 
+
 	ApplThread thread = new ApplThread(pn, app, this);
 	new Thread(thread).start();
 
 
-    }
-
-    /**
-     * Poz.
-     *
-     * @param ms milliseconds.
-     */
-    public synchronized void pause(int ms) {
-	//if (Log.ifp(5)) System.out.println("waiting for " + (ms/1000) + " sec");
-	try { wait(ms); } catch (InterruptedException e) {}
     }
 
     /**
@@ -383,11 +371,16 @@ public class DistScribeRegrTest {
 
 	for (int i = 0; i < numNodes; i++){
 	    driver.makeScribeNode();
-	    driver.pause(5*1000);
 	}
 	if (Log.ifp(5)) System.out.println(numNodes + " nodes constructed");
     }
 }
+
+
+
+
+
+
 
 
 
