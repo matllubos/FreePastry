@@ -104,6 +104,8 @@ public class Append extends Task
           outstreamcheck.close();
           if (!outstream.toString().startsWith(outstreamcheck.toString()))
           {
+            System.out.println("appending " + sourcefile + " to " + destfile) ;
+            
             // reads the text from the sourcefile and overwrites it over the java code
             // in the destination file
             in = new FileReader(sourcefile);
