@@ -78,14 +78,14 @@ public class XMLReader {
    * @throws IOException If an error occurs
    */
   public XMLReader(Reader in) throws IOException {  
-    this.in = in;
+    this.in = new BufferedReader(in);
     
     try {
       XmlPullParserFactory factory = XmlPullParserFactory.newInstance(System.getProperty(XmlPullParserFactory.PROPERTY_NAME), null);
       factory.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true);
     
       xpp = factory.newPullParser();
-      xpp.setInput(in);
+      xpp.setInput(this.in);
     } catch (XmlPullParserException e) {
       throw new IOException("XML Exception thrown: " + e);
     }
@@ -99,6 +99,27 @@ public class XMLReader {
    */
   public void close() throws IOException {
     in.close(); 
+  }
+  
+  /**
+   * Method which writes a sequence of base64 encoded bytes to the output stream
+   *
+   * @param bytes The bytes to write
+   */
+  public byte[] readBase64() throws IOException {
+    byte[] bytes = new byte[0];
+    
+    assertStartTag("base64");
+    step();
+    
+    if (isText()) {
+      bytes = xpp.getText().getBytes();
+      bytes = Base64.decode(bytes, 0, bytes.length);
+      step();
+    } 
+    
+    assertEndTag("base64");
+    return bytes;
   }
   
   /**
@@ -273,6 +294,15 @@ public class XMLReader {
    */
   public boolean isEndTag() {
     return (eventType == xpp.END_TAG);
+  }
+  
+  /**
+   * Returns whether or not a end tag just happened
+   *
+   * @return Whether or not a end tag just happened
+   */
+  public boolean isText() {
+    return (eventType == xpp.TEXT);
   }
   
   /**

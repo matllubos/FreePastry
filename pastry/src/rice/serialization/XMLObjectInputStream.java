@@ -179,10 +179,13 @@ public class XMLObjectInputStream extends ObjectInputStream {
    * @throws IOException If an error occurs
    */
   public int read(byte[] b, int offset, int length) throws IOException {
-    for (int i=offset; i<offset+length; i++)
-      b[i] = readByte();
+    reader.readStartTag("base64");
+    byte[] bytes = reader.readBase64();
     
-    return length;
+    int written = (length < bytes.length ? length : bytes.length);
+    System.arraycopy(bytes, 0, b, offset, written);
+    
+    return written;
   }
   
   /**
@@ -630,7 +633,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
    * @throws IOException If an error occurs
    */
   protected boolean readBooleanHelper() throws IOException {
-    return Boolean.getBoolean(readPrimitive("boolean"));
+    return readPrimitive("boolean").equals("true");
   }
   
   /**
@@ -1080,6 +1083,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
    */
   protected void readField(Object o, Class c) throws IOException, ClassNotFoundException {
     reader.assertStartTag();
+    String field = reader.getAttribute("field");
         
     try {
       Field f = c.getDeclaredField(reader.getAttribute("field"));
@@ -1102,7 +1106,10 @@ public class XMLObjectInputStream extends ObjectInputStream {
       }    
     } catch (IllegalAccessException e) {
       throw new IOException("Field.set() caused " + e);
-    } 
+    } catch (IllegalArgumentException e) {
+      System.err.println("COULD NOT SET FIELD " + field + " OF " + o.getClass().getName() + " - SKIPPING.  THIS SHOULD NOT HAPPEN!" + e);
+      e.printStackTrace();
+    }
   }
   
   /**

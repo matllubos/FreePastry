@@ -58,7 +58,7 @@ public class XMLWriter {
   protected XmlSerializer serializer;
   
   /**
-   * The underlying writing which the serializer uses
+   * The underlying writer which the serializer uses
    */
   protected Writer writer;
   
@@ -69,13 +69,13 @@ public class XMLWriter {
    * @param out The writer to base this XML writer off of
    * @throws IOException If an error occurs
    */
-  public XMLWriter(Writer out) throws IOException {
+  public XMLWriter(OutputStream out) throws IOException {
     try {
-      this.writer = new BufferedWriter(out);
+      this.writer = new BufferedWriter(new OutputStreamWriter(out));
       XmlPullParserFactory factory = XmlPullParserFactory.newInstance(System.getProperty(XmlPullParserFactory.PROPERTY_NAME), null);
       serializer = factory.newSerializer();
       
-      serializer.setOutput(writer);
+      serializer.setOutput(this.writer);
       serializer.setProperty("http://xmlpull.org/v1/doc/properties.html#serializer-indentation", " ");
       serializer.setProperty("http://xmlpull.org/v1/doc/properties.html#serializer-line-separator", "\n");
       serializer.setFeature("http://xmlpull.org/v1/doc/features.html#serializer-attvalue-use-apostrophe", true);
@@ -103,6 +103,16 @@ public class XMLWriter {
     serializer.text("\n");
     serializer.flush();
     writer.close();
+  }
+  
+  /**
+   * Method which writes a sequence of base64 encoded bytes to the output stream
+   *
+   * @param bytes The bytes to write
+   */
+  public void writeBase64(byte[] bytes, int off, int len) throws IOException {
+    flush();
+    writer.write(Base64.encodeBytes(bytes, off, len));
   }
 
   /**

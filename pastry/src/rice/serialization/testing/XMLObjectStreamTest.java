@@ -38,6 +38,7 @@ package rice.serialization.testing;
 
 import java.io.*;
 import java.util.*;
+import java.util.zip.*;
 import rice.serialization.*;
 
 public class XMLObjectStreamTest {
@@ -56,7 +57,8 @@ public class XMLObjectStreamTest {
   
   protected void reset() throws IOException {
     baos = new ByteArrayOutputStream();
-    xoos = new XMLObjectOutputStream(baos);
+ //   xoos = new XMLObjectOutputStream(new GZIPOutputStream(new BufferedOutputStream(baos)));
+    xoos = new XMLObjectOutputStream(new BufferedOutputStream(baos));
     bais = null;
     xois = null;
   }
@@ -64,6 +66,7 @@ public class XMLObjectStreamTest {
   protected void flip() throws IOException {
     xoos.close();
     bais = new ByteArrayInputStream(baos.toByteArray());
+ //   xois = new XMLObjectInputStream(new GZIPInputStream(bais));
     xois = new XMLObjectInputStream(bais);
   }
   
@@ -87,10 +90,11 @@ public class XMLObjectStreamTest {
       xoos.writeBoolean(b);
       flip();
       boolean c = xois.readBoolean();
+      String xml = new String(baos.toByteArray());
       reset();
       
       if (b != c)
-        throw new IOException("boolean " + c + " was not equal to " + b);
+        throw new IOException("boolean " + c + " was not equal to " + b + ". XML: " + xml);
     } catch (IOException e) {
       System.out.println("test produced exception " + e);
       e.printStackTrace();
@@ -209,15 +213,20 @@ public class XMLObjectStreamTest {
   
   protected void test(Object o) {
     try {
+      long start = System.currentTimeMillis();
       xoos.writeObject(o);
       flip();
+      long mid = System.currentTimeMillis();
       Object o2 = xois.readObject();
+      long end = System.currentTimeMillis();
+
+      System.out.println("WRITE: " + (mid - start) + " READ: " + (end - mid));
       
       if (o == o2)
         throw new IOException("Returned object is identicial to first!");
       
       if (! (o.equals(o2)))
-        throw new IOException("Object " + o2 + " was not equal to " + o + "\nSerialized was: " + (new String(baos.toByteArray())));
+        throw new IOException("Object " + o2 + " was not equal to " + o);
 
       reset();
     } catch (IOException e) {
@@ -291,6 +300,38 @@ public class XMLObjectStreamTest {
       System.out.println("test produced exception " + e);
       e.printStackTrace();
     } 
+  }
+  
+  protected void testByteCustomSerializer() {
+    try {
+      TestByteSerialization object = new TestByteSerialization();
+      xoos.writeObject(object);
+      flip();
+      System.out.println("XML IS: " + (new String(baos.toByteArray())));
+      
+      TestByteSerialization object2 = (TestByteSerialization) xois.readObject();
+
+      if (object2 == null)
+        throw new IOException("Object was null!");
+      
+      if (object2.bytes() == null)
+        throw new IOException("Object bytes was null!");
+      
+      if (object2.bytes().length != 5)
+        throw new IOException("Object did not have correct length " + object2.bytes().length);
+      
+      for (int i=0; i<4; i++) 
+        if (object.bytes()[i] != object2.bytes()[i])
+          throw new IOException("Object did not have correct byte!"); 
+
+      reset();
+    } catch (IOException e) {
+      System.out.println("test produced exception " + e);
+      e.printStackTrace();
+    } catch (ClassNotFoundException e) {
+      System.out.println("test produced exception " + e);
+      e.printStackTrace();
+    }
   }
   
   protected void testCustomSerializer() {
@@ -619,6 +660,7 @@ public class XMLObjectStreamTest {
     testHashtable();
     testMultipleObjects();
     testUnserializableObject();
+    testByteCustomSerializer();
     testCustomSerializer();
     testBrokenCustomSerializer();
     testSerialPersistentFields();
@@ -633,11 +675,30 @@ public class XMLObjectStreamTest {
     testReadResolve();
     testInheritedWriteReplace();
     testInheritedReadResolve();
+    test(new byte[7847]);
   }
   
   public static void main(String[] args) throws IOException {
     XMLObjectStreamTest test = new XMLObjectStreamTest();
     test.start();
+  }
+  
+  public static class TestByteSerialization implements Serializable {
+    private transient byte[] bytes = new byte[] {23, 19, 49, 0};
+    
+    public byte[] bytes() {
+      return bytes;
+    }
+    
+    private void readObject(ObjectInputStream oos) throws IOException, ClassNotFoundException {
+      bytes = new byte[5];
+      oos.read(bytes, 0, 5);
+    }
+    
+    private void writeObject(ObjectOutputStream oos) throws IOException {
+      oos.write(bytes);
+    }
+    
   }
   
   public static class TestExternalizable implements Externalizable {

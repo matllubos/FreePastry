@@ -70,7 +70,8 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
   protected XMLWriter writer;
   
   /**
-   * The collection of references stored in the stream so far
+   * The collection of references stored in the stream so far, 
+   * maps Integer(hash) -> reference name.
    */
   protected Hashtable references;
   
@@ -111,7 +112,7 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
   public XMLObjectOutputStream(OutputStream out) throws IOException {
     super();
     
-    this.writer = new XMLWriter(new OutputStreamWriter(out));
+    this.writer = new XMLWriter(out);
     this.references = new Hashtable();
     this.writeReplaces = new HashMap();
     this.currentObjects = new Stack();
@@ -187,8 +188,7 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
    * @throws IOException If an error occurs
    */
   public void write(byte[] b) throws IOException {
-    for (int i=0; i<b.length; i++)
-      writeByte(b[i]);
+    write(b, 0, b.length);
   }
   
   /**
@@ -198,8 +198,10 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
    * @throws IOException If an error occurs
    */
   public void write(byte[] b, int offset, int length) throws IOException {
-    for (int i=offset; i<offset+length; i++)
-      writeByte(b[i]);
+    writer.start("base64");
+    writer.attribute("length", length);
+    writer.writeBase64(b, offset, length);
+    writer.end("base64");
   }
   
   /**
@@ -592,8 +594,8 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
    *
    * @return An integer, representing a unqiue hash value
    */
-  protected Object hash(Object o) {
-    return new Integer(System.identityHashCode(o));
+  protected int hash(Object o) {
+    return System.identityHashCode(o) & 0x7FFFFFFF;
   }
   
   /**
@@ -604,7 +606,15 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
    * @param reference The reference name to use
    */
   protected void putReference(Object o, String reference) {
-    references.put(hash(o), reference);
+    Reference ref = new Reference(o);
+    
+    if (references.get(ref) == null) {
+      references.put(ref, reference);
+    } else {
+      System.out.println("SERIOUS ERROR: Attempt to re-store reference: " + 
+                         "EXISTING: " + ((Reference) references.get(ref)).object + " " + references.get(ref).hashCode() + 
+                         "NEW: " + o + " " + o.hashCode());
+    }
   }
   
   /**
@@ -615,7 +625,7 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
    * @return The reference name, or null if none is found
    */
   protected String getReference(Object o) {
-    return (String) references.get(hash(o));
+    return (String) references.get(new Reference(o));
   }
   
   /**
@@ -1273,6 +1283,25 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
     public void write(ObjectOutput output) throws IOException {
       XMLObjectOutputStream xoos = (XMLObjectOutputStream) output;
       xoos.writeFields();
+    }
+  }
+  
+  // Internal class for maintaining references
+  
+  private class Reference {
+   
+    private Object object;
+    
+    public Reference(Object object) {
+      this.object = object;
+    }
+    
+    public int hashCode() {
+      return hash(object);
+    }
+    
+    public boolean equals(Object o) {
+      return (((Reference) o).object == object); 
     }
   }
 }
