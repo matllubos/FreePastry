@@ -174,7 +174,7 @@ public class RegrTestApp extends CommonAPIAppl {
 
     //public void leafSetChange(NodeHandle nh, boolean wasAdded) {
     public void update(NodeHandle nh, boolean wasAdded) {
-	NodeId nid = nh.getNodeId();
+	final NodeId nid = nh.getNodeId();
 
 	/*
 	System.out.println("at... " + getNodeId() + "'s leaf set");
@@ -212,7 +212,7 @@ public class RegrTestApp extends CommonAPIAppl {
 
 	if ( (inBetween > lsSize && wasAdded && 
 	      !prg.pastryNodesLastAdded.contains(thePastryNode) && !prg.inConcJoin) ||
-	     (inBetween <= lsSize && !wasAdded && getLeafSet().get(nid) == null) && 
+	     (inBetween <= lsSize && !wasAdded && !getLeafSet().member(nh)) && 
 	      prg.pastryNodesSorted.containsKey(nh.getNodeId()) ) {
 
 	    System.out.println("at... " + getNodeId() + "leafSetChange failure 3 with " + nid + 

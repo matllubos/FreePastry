@@ -136,9 +136,9 @@ public class NodeSet implements NodeSetI, Serializable {
      * @return true of NodeHandle associated with id is a member, false otherwise
      */ 
 
-    public boolean member(NodeId nid) {
-	return (getIndex(nid) >= 0);
-    }
+//    public boolean member(NodeId nid) {
+//	return (getIndex(nid) >= 0);
+//    }
 
     private boolean memberId(rice.p2p.commonapi.Id id) {
 	return (getIndexId(id) >= 0);
@@ -179,9 +179,23 @@ public class NodeSet implements NodeSetI, Serializable {
      * @return the index or -1 if no such element
      */
 
-    public int getIndex(NodeId nid) {
-        return getIndexId(nid);
+  public int getIndex(NodeId nid) {
+      return getIndexId(nid);
+  }
+
+  public int getIndex(NodeHandle nh) {
+    NodeHandle h; 
+
+    for (int i=0; i<set.size(); i++) {
+        try {
+      h = (NodeHandle) set.elementAt(i);
+      if (h.equals(nh)) 
+                      return i;
+        } catch (Exception e) {}
     }
+  
+    return -1;
+  }
 
     private int getIndexId(rice.p2p.commonapi.Id nid) {
 	NodeHandle h;	
@@ -220,8 +234,11 @@ public class NodeSet implements NodeSetI, Serializable {
      * remove a member
      * @param handle the handle to remove
      */ 
-    public void remove(NodeHandle handle) {
-	set.remove(handle);
+    public NodeHandle remove(NodeHandle handle) {
+	    if (set.remove(handle)) {
+        return handle;
+      } 
+      return null;
     }
 
     /**

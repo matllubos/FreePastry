@@ -250,7 +250,7 @@ public abstract class PastryAppl implements MessageReceiver
    * @return the local node's leaf set
    */
   public LeafSet getLeafSet() {
-    return thePastryNode.getLeafSet();
+    return thePastryNode.getLeafSet().copy();
   }
 
   /**

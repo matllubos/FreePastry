@@ -165,25 +165,45 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
      * @return the removed handle or null.
      */
 
-    public NodeHandle remove(NodeId nid) {
-      for (int i=0; i<theSize; i++) {
-        if (nodes[i].getNodeId().equals(nid)) {
-          NodeHandle handle = nodes[i];
+  public NodeHandle remove(NodeId nid) {
+    for (int i=0; i<theSize; i++) {
+      if (nodes[i].getNodeId().equals(nid)) {
+        NodeHandle handle = nodes[i];
 
-          nodes[i] = nodes[--theSize];
+        nodes[i] = nodes[--theSize];
 
-          setChanged();
-          notifyObservers(new NodeSetUpdate(handle, false));
+        setChanged();
+        notifyObservers(new NodeSetUpdate(handle, false));
 
-	  // in case we observe this handle, stop doing so
-	  handle.deleteObserver(this);
+  // in case we observe this handle, stop doing so
+  handle.deleteObserver(this);
 
-          return handle;
-        }
+        return handle;
       }
-
-      return null;
     }
+
+    return null;
+  }
+
+  public NodeHandle remove(NodeHandle nh) {
+    for (int i=0; i<theSize; i++) {
+      if (nodes[i].equals(nh)) {
+        NodeHandle handle = nodes[i];
+
+        nodes[i] = nodes[--theSize];
+
+        setChanged();
+        notifyObservers(new NodeSetUpdate(handle, false));
+
+  // in case we observe this handle, stop doing so
+  handle.deleteObserver(this);
+
+        return handle;
+      }
+    }
+
+    return null;
+  }
 
     /**
      * Membership test.
@@ -193,12 +213,19 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
      * @return true if it is a member, false otherwise.
      */
 
-    public boolean member(NodeId nid) {
-      for (int i=0; i<theSize; i++)
-        if (nodes[i].getNodeId().equals(nid)) return true;
+  public boolean member(NodeHandle nh) {
+    for (int i=0; i<theSize; i++)
+      if (nodes[i].equals(nh)) return true;
 
-      return false;
-    }
+    return false;
+  }
+
+  public boolean member(NodeId nid) {
+    for (int i=0; i<theSize; i++)
+      if (nodes[i].getNodeId().equals(nid)) return true;
+
+    return false;
+  }
 
     /**
      * Return the current size of the set.
@@ -290,12 +317,19 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
      * @return the node.
      */
 
-    public int getIndex(NodeId nid) {
-      for (int i=0; i<theSize; i++)
-        if (nodes[i].getNodeId().equals(nid)) return i;
+  public int getIndex(NodeId nid) {
+    for (int i=0; i<theSize; i++)
+      if (nodes[i].getNodeId().equals(nid)) return i;
 
-      return -1;
-    }
+    return -1;
+  }
+
+  public int getIndex(NodeHandle nh) {
+    for (int i=0; i<theSize; i++)
+      if (nodes[i].equals(nh)) return i;
+
+    return -1;
+  }
 
     /**
      * deserialize the routeSet

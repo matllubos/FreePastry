@@ -338,14 +338,23 @@ public class RoutingTable extends Observable implements Observer {
      * @return the handle that was removed, or null if it did not exist.
      */
     
-    public NodeHandle remove(NodeId nid) 
-    {
-	RouteSet ns = getBestEntry(nid);
-	
-	if (ns == null) return null;
+//  public NodeHandle remove(NodeId nid) 
+//  {
+//RouteSet ns = getBestEntry(nid);
+//  
+//if (ns == null) return null;
+//
+//return ns.remove(nid);
+//  }
 
-	return ns.remove(nid);
-    }
+  public NodeHandle remove(NodeHandle nh) 
+  {
+RouteSet ns = getBestEntry(nh.getNodeId());
+  
+if (ns == null) return null;
+
+return ns.remove(nh);
+  }
 
 
     /**

@@ -141,12 +141,12 @@ public class LeafSet extends Observable implements Serializable {
    * @param nid a node id.
    * @return the handle associated with that id or null if no such handle is found.
    */
-  public NodeHandle get(NodeId nid)
-  {
-    NodeHandle res = cwSet.get(nid);
-    if (res != null) return res;
-    return ccwSet.get(nid);
-  }
+//  public NodeHandle get(NodeId nid, int foo)
+//  {
+//    NodeHandle res = cwSet.get(nid);
+//    if (res != null) return res;
+//    return ccwSet.get(nid);
+//  }
 
 
   /**
@@ -156,14 +156,27 @@ public class LeafSet extends Observable implements Serializable {
    *
    * @return the index or throws a NoSuchElementException
    */
-  public int getIndex(NodeId nid) throws NoSuchElementException {
+//  public int getIndex(NodeId nid, int foo) throws NoSuchElementException {
+//    int index;
+//
+//    if (baseId.equals(nid)) return 0;
+//
+//    index = cwSet.getIndex(nid);
+//    if (index >= 0) return index + 1;
+//    index = ccwSet.getIndex(nid);
+//    if (index >= 0) return -index - 1;
+//
+//    throw new NoSuchElementException();
+//  }
+
+  public int getIndex(NodeHandle nh) throws NoSuchElementException {
     int index;
 
-    if (baseId.equals(nid)) return 0;
+    if (baseId.equals(nh.getId())) return 0;
 
-    index = cwSet.getIndex(nid);
+    index = cwSet.getIndex(nh);
     if (index >= 0) return index + 1;
-    index = ccwSet.getIndex(nid);
+    index = ccwSet.getIndex(nh);
     if (index >= 0) return -index - 1;
 
     throw new NoSuchElementException();
@@ -293,11 +306,11 @@ public class LeafSet extends Observable implements Serializable {
     if (inx == 0) return 0;
     if (inx < 0) {
       if (inx < -ccwSize()) return inx;
-      res = cwSet.getIndex(ccwSet.get(-inx - 1).getNodeId()) + 1;
+      res = cwSet.getIndex(ccwSet.get(-inx - 1)) + 1;
     }
     else {
       if (inx > cwSize()) return inx;
-      res = -ccwSet.getIndex(cwSet.get(inx - 1).getNodeId()) - 1;
+      res = -ccwSet.getIndex(cwSet.get(inx - 1)) - 1;
     }
 
     if (res == 0) res = inx;
@@ -366,19 +379,19 @@ public class LeafSet extends Observable implements Serializable {
     NodeHandle cwExtreme = get(cwSize);
     NodeHandle ccwExtreme = get(-ccwSize);
     set = replicaSet(baseId,max);
-    if(!set.member(cwExtreme.getNodeId()) && !set.member(ccwExtreme.getNodeId())) {
+    if(!set.member(cwExtreme) && !set.member(ccwExtreme)) {
       // the value of max did not cause us to reach either end of the leafset
       // in the method replicaSet
       return set;
     }
     else {
-      if(!set.member(cwExtreme.getNodeId())) {
+      if(!set.member(cwExtreme)) {
         // All the nodes in the ccwSet are already members
         for(int i=1; i <= cwSize; i++) {
           set.put(get(i));
         }
       }
-      if(!set.member(ccwExtreme.getNodeId())) {
+      if(!set.member(ccwExtreme)) {
         // All the nodes in the cwSet are already members
         for(int i=1; i <= ccwSize; i++) {
           set.put(get(-i));
@@ -503,7 +516,7 @@ public class LeafSet extends Observable implements Serializable {
    if (! (member(n) || baseId.equals(n))) return null;
 
    // get the position of the node and the number of nodes in the network
-   int pos = getIndex(n.getNodeId());
+   int pos = getIndex(n);
    int num = getUniqueCount();
    NodeHandle cw, ccw;
 

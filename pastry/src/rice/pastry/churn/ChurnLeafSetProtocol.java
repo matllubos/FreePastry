@@ -281,7 +281,7 @@ public class ChurnLeafSetProtocol extends StandardLeafSetProtocol implements Pro
 //  for each n in L0 - Li do { probei(n) }
     for (int i=-lsprime.ccwSize(); i<=lsprime.cwSize(); i++) {
       SocketNodeHandle snh = (SocketNodeHandle)lsprime.get(i); 
-      if (leafSet.get((NodeId)snh.getId()) == null) {
+      if (!leafSet.member(snh)) {
         probe(snh, true);
       }
     }    

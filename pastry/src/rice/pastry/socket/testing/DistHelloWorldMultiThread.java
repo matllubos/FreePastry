@@ -96,7 +96,7 @@ public class DistHelloWorldMultiThread {
   private static int port = 5009;
   private static String bshost = null;
   private static int bsport = 5009;
-  private static int numnodes = 8;
+  private static int numnodes = 30;
   private static int nummsgs = 50;
   public static int protocol = DistPastryNodeFactory.PROTOCOL_SOCKET;
   private static boolean toFile = true;
@@ -106,9 +106,11 @@ public class DistHelloWorldMultiThread {
   public static boolean useDirect = true;
   private static boolean limitedSockets = false; 
   public static boolean useNonDirect = true; 
-  public static boolean useRandChoices = false;
+  public static boolean useRandChoices = true;
   public static boolean testSelector = true;
   public static boolean printConnectionManagers = false;
+  public static boolean logLowLevel = false;
+  public static boolean useChurn = false;
   static int NUM_ITERS = 30;
   public static int numSockets = 10;
 
@@ -619,6 +621,9 @@ public class DistHelloWorldMultiThread {
 	public static void main(String args[]) {
 		initialize(args);
     ConnectionManager.MAXIMUM_QUEUE_LENGTH *= 100; // becasue leaf set protocol explodes
+    ConnectionManager.LOG_LOW_LEVEL = logLowLevel;
+    SocketPastryNodeFactory.churn = useChurn;
+    
     if (printConnectionManagers) {
       SocketCollectionManager.printConnectionManagers = printConnectionManagers;
     }

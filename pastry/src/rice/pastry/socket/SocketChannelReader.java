@@ -205,7 +205,8 @@ public class SocketChannelReader {
     } else if (obj instanceof rice.pastry.socket.messaging.SocketTransportMessage) {
       record(((rice.pastry.socket.messaging.SocketTransportMessage) obj).msg, size, address);
     } else {
-      System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + obj.getClass() + " of size " + size + " from " + address);
+      if (ConnectionManager.LOG_LOW_LEVEL)
+        System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + obj.getClass() + " of size " + size + " from " + address);
     }
   }
 

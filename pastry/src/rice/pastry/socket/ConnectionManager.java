@@ -106,7 +106,7 @@ public class ConnectionManager {
   /**
    * Enable to turn on additional debugging.
    */
-  public static boolean LOG_LOW_LEVEL = false;
+  public static boolean LOG_LOW_LEVEL = true;
   
   /**
    * Kept for debugging.

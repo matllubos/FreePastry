@@ -84,7 +84,7 @@ public interface NodeSetI extends rice.p2p.commonapi.NodeHandleSet
      * @return true if that node id is in the set, false otherwise.
      */
 
-    public boolean member(NodeId nid);
+    public boolean member(NodeHandle nh);
     
     /**
      * Removes a node id and its handle from the set.
@@ -94,7 +94,7 @@ public interface NodeSetI extends rice.p2p.commonapi.NodeHandleSet
      * @return the node handle removed or null if nothing.
      */
 
-    public NodeHandle remove(NodeId nid);
+    public NodeHandle remove(NodeHandle nh);
         
     /**
      * Gets the size of the set.
@@ -112,5 +112,7 @@ public interface NodeSetI extends rice.p2p.commonapi.NodeHandleSet
      * @return the index or throws a NoSuchElementException.
      */
 
-    public int getIndex(NodeId nid) throws NoSuchElementException;
+  public int getIndex(NodeId nid) throws NoSuchElementException;
+
+  public int getIndex(NodeHandle nh) throws NoSuchElementException;
 }
