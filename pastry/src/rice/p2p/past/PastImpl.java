@@ -526,9 +526,6 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   public void lookupHandles(final Id id, int max, final Continuation command) {
     log.fine("Retrieving handles of up to " + max + " replicas of the object stored in Past with id " + id);
 
-    if (max > replicationFactor+1)
-      max = replicationFactor+1;
-
     getHandles(id, max, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         NodeHandleSet replicas = (NodeHandleSet) o;
@@ -547,11 +544,24 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
         };
         
         for (int i=0; i<replicas.size(); i++) 
-          sendRequest(replicas.getHandle(i), 
-                      new FetchHandleMessage(getUID(), id, getLocalNodeHandle(), replicas.getHandle(i).getId()), 
-                      multi.getSubContinuation(i));
+          lookupHandle(id, replicas.getHandle(i), multi.getSubContinuation(i));
       }
     });
+  }
+  
+  /**
+   * Retrieves the handle for the given object stored on the requested 
+   * node.  Asynchronously returns a PostContentHandle (or null) to
+   * the provided continuation.
+   *
+   * @param id the key to be queried
+   * @param handle The node on which the handle is requested
+   * @param command Command to be performed when the result is received 
+   */
+  public void lookupHandle(Id id, NodeHandle handle, Continuation command) {
+    log.fine("Retrieving handle for id " + id + " from node " + handle);
+    
+    sendRequest(handle, new FetchHandleMessage(getUID(), id, getLocalNodeHandle(), handle.getId()), command);
   }
 
   /**
@@ -568,10 +578,9 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    */
   public void fetch(PastContentHandle handle, Continuation command) {
     log.fine("Retrieving object associated with content handle " + handle);
-    
-    sendRequest(handle.getNodeHandle(),
-                new FetchMessage(getUID(), handle, getLocalNodeHandle(), handle.getNodeHandle().getId()),
-                command);
+
+    NodeHandle han = handle.getNodeHandle();
+    sendRequest(han, new FetchMessage(getUID(), handle, getLocalNodeHandle(), han.getId()), command);
   }
 
   /**
@@ -746,10 +755,10 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    *
    * @param id The id to fetch
    */
-  public void fetch(final Id id, Continuation command) {
+  public void fetch(final Id id, NodeHandle hint, Continuation command) {
     log.finer("Sending out replication fetch request for the id " + id);
     
-    policy.fetch(id, this, new StandardContinuation(command) {
+    policy.fetch(id, hint, this, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         if (o == null) {
           log.warning("Could not fetch id " + id + " - policy returned null in namespace " + instance);

@@ -358,7 +358,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    *
    * @param id The id to fetch
    */
-  public void fetch(final Id id, Continuation command) {
+  public void fetch(final Id id, NodeHandle hint, Continuation command) {
     log.finer("Sending out replication fetch request for the id " + id);
     final GCId gcid = (GCId) id;
     
@@ -372,7 +372,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
       else
         command.receiveResult(Boolean.TRUE);
     } else {
-      policy.fetch(gcid.getId(), this, new StandardContinuation(command) {
+      policy.fetch(gcid.getId(), hint, this, new StandardContinuation(command) {
         public void receiveResult(Object o) {
           if (o == null) {
             log.warning("Could not fetch id " + id + " - policy returned null in namespace " + instance);

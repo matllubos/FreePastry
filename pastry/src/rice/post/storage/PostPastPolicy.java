@@ -57,17 +57,18 @@ public class PostPastPolicy implements PastPolicy {
    * This method fetches the object via a lookup() call.
    *
    * @param id The id to fetch
+   * @param hint A hint where the key may be
    * @param past The local past instance 
    * @param command The command to call with the replica to store
    */
-  public void fetch(final Id id, final Past past, Continuation command) {
+  public void fetch(final Id id, final NodeHandle hint, final Past past, Continuation command) {
     past.lookupHandles(id, past.getReplicationFactor()+1, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         PastContentHandle[] handles = (PastContentHandle[]) o;
       
         if ((handles == null) || (handles.length == 0)) {
           System.out.println("ERROR: Unable to fetch replica of id " + id + " - handles:" + handles);
-          parent.receiveException(new PostException("Unable to fetch data - returned null."));
+          parent.receiveException(new PostException("Unable to fetch data - returned unexpected null."));
           return;
         }
         
@@ -83,19 +84,17 @@ public class PostPastPolicy implements PastPolicy {
           }
         }
         
-        if (handle != null) {
+        if (handle != null) 
           past.fetch(handle, parent);
-        } else {
-          System.out.println("ERROR: Unable to fetch replica of id " + id + " - handles:");
-          for (int i=0; i<handles.length; i++) {
-            System.out.print("       " + handles[i] + " ");
-            if (handles[i] != null) 
-              System.out.print(((StorageServiceDataHandle) handles[i]).getId() + " " + ((StorageServiceDataHandle) handles[i]).getNodeHandle() + " " + ((StorageServiceDataHandle) handles[i]).getTimestamp());
-            
-            System.out.println();
-          }
-          parent.receiveException(new PostException("Unable to fetch data - all replicas were null."));
-        }
+        else 
+          past.lookupHandle(id, hint, new StandardContinuation(parent) {
+            public void receiveResult(Object o) {
+              if (o != null) 
+                past.fetch((PastContentHandle) o, parent);
+              else
+                parent.receiveResult(null);
+            }
+          });
       }
     });
   }

@@ -54,13 +54,20 @@ import rice.p2p.commonapi.*;
 public class GCIdSet implements IdSet {
   
   // internal representation of the ids
-  protected Vector ids;
+  protected TreeSet ids;
   
   /**
    * Constructor
    */
   protected GCIdSet() {
-    this.ids = new Vector();
+    this.ids = new TreeSet();
+  }
+  
+  /**
+   * Constructor
+   */
+  protected GCIdSet(TreeSet set) {
+    this.ids = set;
   }
   
   /**
@@ -75,8 +82,7 @@ public class GCIdSet implements IdSet {
    * @param id the id to add
    */
   public void addId(Id id) {
-    if (! ids.contains(id))
-      ids.add(id);
+    ids.add(id);
   }
   
   /**
@@ -103,13 +109,16 @@ public class GCIdSet implements IdSet {
    * @return the subset
    */
   public IdSet subSet(IdRange range) {
-    GCIdSet result = new GCIdSet();
+    GCIdSet res;
     
-    for (int i=0; i<ids.size(); i++) 
-      if (range.containsId(((GCId) ids.elementAt(i)).getId())) 
-        result.addId((GCId) ids.elementAt(i));
+    if (range.getCCWId().compareTo(range.getCWId()) <= 0) {
+      res = new GCIdSet((TreeSet) ids.subSet(range.getCCWId(), range.getCWId()));
+    } else {
+      res = new GCIdSet((TreeSet) ids.tailSet(range.getCCWId()));
+      res.ids.addAll(ids.headSet(range.getCWId()));
+    }
     
-    return result;
+    return res;
   }
   
   /**
@@ -166,8 +175,9 @@ public class GCIdSet implements IdSet {
     if (numElements() != other.numElements())
       return false;
     
-    for (int i=0; i<ids.size(); i++)
-      if (! other.isMemberId((Id) ids.elementAt(i)))
+    Iterator i = ids.iterator();
+    while (i.hasNext())
+      if (! other.isMemberId((Id) i.next()))
         return false;
     
     return true;

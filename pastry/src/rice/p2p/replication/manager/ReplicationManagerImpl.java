@@ -159,14 +159,14 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * Internal method which informs the client of the next id to fetch
    *
    * @param id The id which the client should fetch
-   * @param uid The unique id for this message
+   * @param hint The hint where the id may be
    */
-  protected void informClient(final Id id) {
+  protected void informClient(final Id id, NodeHandle hint) {
     log.fine(endpoint.getId() + ": Telling client to fetch id " + id);
   
     final CancellableTask timer = endpoint.scheduleMessage(new TimeoutMessage(id), TIMEOUT_DELAY);
     
-    client.fetch(id, new Continuation() {
+    client.fetch(id, hint, new Continuation() {
       public void receiveResult(Object o) {
         if (! (new Boolean(true)).equals(o)) {
           log.warning(endpoint.getId() + ": Fetching of id " + id + " failed with " + o);
@@ -204,9 +204,9 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    *
    * @param keySet set containing the keys that needs to be fetched
    */
-  public void fetch(IdSet keySet) {
+  public void fetch(IdSet keySet, NodeHandle hint) {
    // log.finer(endpoint.getId() + ": Adding keyset " + keySet + " to the list of pending ids");
-    helper.fetch(keySet);
+    helper.fetch(keySet, hint);
   }
   
   /**
@@ -357,10 +357,16 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     protected Id current;
     
     /**
+     * A cache of hints, mapping Id -> NodeHandle
+     */
+    protected HashMap hints;
+    
+    /**
      * Constructor 
      */
     public ReplicationManagerHelper() {
       set = factory.buildIdSet();
+      hints = new HashMap();
       state = STATE_NOTHING;
     }
     
@@ -369,7 +375,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
      *
      * @param keySet The keys to add
      */
-    public synchronized void fetch(IdSet keySet) {
+    public synchronized void fetch(IdSet keySet, NodeHandle hint) {
       Iterator i = keySet.getIterator();
 
       while (i.hasNext()) {
@@ -377,6 +383,8 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
         
         if (! (set.isMemberId(id) || client.exists(id)))
           set.addId(id);
+        
+        hints.put(id, hint);
       }
         
       if ((state == STATE_NOTHING) && (set.numElements() > 0)) {
@@ -397,8 +405,12 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
       Iterator i = set.subSet(notRange).getIterator();
       
       /* now look for any matching ids */
-      while (i.hasNext())
-        set.removeId((Id) i.next());
+      while (i.hasNext()) {
+        Id id = (Id) i.next();
+        
+        set.removeId(id);
+        hints.remove(id);
+      }
     }    
     
     /**
@@ -417,10 +429,11 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     protected synchronized void send() {
       if ((state != STATE_WAITING) && (set.numElements() > 0)) {
         Id id = getNextId();
+        NodeHandle hint = (NodeHandle) hints.remove(id);
         
         if (id != null) {
           state = STATE_WAITING;
-          informClient(id);
+          informClient(id, hint);
         } else {
           state = STATE_NOTHING;
         }

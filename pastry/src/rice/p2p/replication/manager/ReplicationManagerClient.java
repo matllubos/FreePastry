@@ -59,8 +59,11 @@ public interface ReplicationManagerClient {
    * future, as the manager waits for the command to return before continuing.
    *
    * @param id The id to fetch
+   * @param hint A hint where to find the key from.  This is where the local node
+   *           heard about the key.
+   * @param command The command to return the result to
    */
-  public void fetch(Id id, Continuation command);
+  public void fetch(Id id, NodeHandle hint, Continuation command);
   
   /**
    * This upcall is to notify the client that the given id can be safely removed

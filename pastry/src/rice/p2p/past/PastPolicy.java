@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.p2p.past;
 
 import rice.*;
+import rice.Continuation.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.messaging.*;
 
@@ -62,7 +63,7 @@ public interface PastPolicy {
    * @param past The local past instance 
    * @param command The command to call with the replica to store
    */
-  public void fetch(Id id, Past past, Continuation command);
+  public void fetch(Id id, NodeHandle hint, Past past, Continuation command);
   
   /**
    * This method is call before an insert() is processed on the local node.  This allows applications
@@ -86,11 +87,26 @@ public interface PastPolicy {
      * This method fetches the object via a lookup() call.
      *
      * @param id The id to fetch
+     * @param hint A hint as to where the key might be
      * @param past The local past instance 
      * @param command The command to call with the replica to store
      */
-    public void fetch(Id id, Past past, Continuation command) {
-      past.lookup(id, false, command); 
+    public void fetch(final Id id, final NodeHandle hint, final Past past, Continuation command) {
+      past.lookup(id, false, new StandardContinuation(command) {
+        public void receiveResult(Object o) {
+          if (o != null) 
+            parent.receiveResult(o);
+          else 
+            past.lookupHandle(id, hint, new StandardContinuation(parent) {
+              public void receiveResult(Object o) {
+                if (o != null) 
+                  past.fetch((PastContentHandle) o, parent);
+                else
+                  parent.receiveResult(null);
+              }
+            });
+        }
+      });
     }
     
     /**

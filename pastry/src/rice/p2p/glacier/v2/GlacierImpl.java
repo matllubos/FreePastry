@@ -1593,6 +1593,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     neighborSeen(handle.getId(), System.currentTimeMillis());
   }
 
+  public void lookupHandle(Id id, NodeHandle handle, Continuation command) {
+    command.receiveException(new UnsupportedOperationException("LookupHandle() is not supported on Glacier"));
+  }    
+  
   public void lookupHandles(Id id, int num, Continuation command) {
     lookupHandles(id, 0, num, command);
   }

@@ -1829,6 +1829,10 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     panic("lookupHandles invoked with version number!");
   }
   
+  public void lookupHandle(final Id id, final NodeHandle handle, final Continuation command) {
+    command.receiveException(new UnsupportedOperationException("LookupHandle() is not supported on Aggregation"));
+  }
+  
   public void lookupHandles(final Id id, final int max, final Continuation command) {
     log(2, "lookupHandles("+id+","+max+")");
     objectStore.lookupHandles(id, max, new Continuation() {

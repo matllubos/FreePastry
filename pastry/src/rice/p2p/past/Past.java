@@ -143,6 +143,17 @@ public interface Past {
   public void lookupHandles(Id id, int max, Continuation command);
   
   /**
+   * Retrieves the handle for the given object stored on the requested 
+   * node.  Asynchronously returns a PostContentHandle (or null) to
+   * the provided continuation.
+   *
+   * @param id the key to be queried
+   * @param handle The node on which the handle is requested
+   * @param command Command to be performed when the result is received 
+   */
+  public void lookupHandle(Id id, NodeHandle handle, Continuation command);
+  
+  /**
    * Retrieves the object associated with a given content handle.
    * Asynchronously returns a PastContent object as the result to the
    * provided Continuation, or a PastException.

@@ -351,7 +351,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
       this.node = node;
     }
     
-    public void fetch(Id id, Continuation command) {
+    public void fetch(Id id, NodeHandle hint, Continuation command) {
       set.addId(id);
       command.receiveResult(new Boolean(true));
     }

@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.p2p.past.gc;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.util.*;
 
 /**
  * @(#) GCId.java
@@ -49,7 +50,7 @@ import rice.p2p.commonapi.*;
  *
  * @author Alan Mislove
  */
-class GCId implements Id {
+public class GCId implements Id {
   
   /**
    * The id which this ringId represents
@@ -66,7 +67,7 @@ class GCId implements Id {
    *
    * @param node The node to base this node off of
    */
-  protected GCId(Id id, long expiration) {
+  public GCId(Id id, long expiration) {
     this.id = id;
     this.expiration = expiration;
   }
@@ -148,7 +149,14 @@ class GCId implements Id {
    * @return A byte[] representing this Id
    */
   public byte[] toByteArray() {
-    return id.toByteArray();
+    byte[] bytes = id.toByteArray();
+    byte[] expiration = MathUtils.getByteArray(this.expiration);
+    byte[] result = new byte[bytes.length+expiration.length];
+    
+    System.arraycopy(bytes, 0, result, 0, bytes.length);
+    System.arraycopy(expiration, 0, result, bytes.length, expiration.length);
+    
+    return result;
   }
   
   /**

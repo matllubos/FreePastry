@@ -234,7 +234,7 @@ public class ReplicationRegrTest extends CommonAPITest {
      *
      * @param keySet set containing the keys that needs to be fetched
      */
-    public void fetch(IdSet keySet) {
+    public void fetch(IdSet keySet, NodeHandle hint) {
       Iterator i = keySet.getIterator();
       
       while (i.hasNext()) {

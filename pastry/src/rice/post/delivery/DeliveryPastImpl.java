@@ -91,7 +91,7 @@ public class DeliveryPastImpl extends PastImpl implements DeliveryPast {
    *
    * @param id The id to fetch
    */
-  public void fetch(Id id, Continuation command) {
+  public void fetch(Id id, NodeHandle hint, Continuation command) {
     log.finer(endpoint.getId() + ": Told to fetch Id " + id);
     
     if (delivered.exists(id)) {
@@ -99,7 +99,7 @@ public class DeliveryPastImpl extends PastImpl implements DeliveryPast {
       command.receiveResult(new Boolean(true));
     } else {
       log.finer(endpoint.getId() + ": Actually fetching Id " + id);
-      super.fetch(id, command);
+      super.fetch(id, hint, command);
     }
   }
   

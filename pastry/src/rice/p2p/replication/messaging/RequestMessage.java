@@ -38,6 +38,7 @@ package rice.p2p.replication.messaging;
 
 import rice.p2p.commonapi.*;
 import rice.p2p.replication.*;
+import rice.p2p.util.*;
 
 /**
  * @(#) RequestMessage.java
@@ -55,7 +56,7 @@ public class RequestMessage extends ReplicationMessage {
   protected IdRange[] ranges;
   
   // the list of hashes for this message
-  protected byte[][] hashes;
+  protected IdBloomFilter[] filters;
   
   /**
    * Constructor which takes a unique integer Id
@@ -63,11 +64,11 @@ public class RequestMessage extends ReplicationMessage {
    * @param source The source address
    * @param topic The topic
    */
-  public RequestMessage(NodeHandle source, IdRange[] ranges, byte[][] hashes) {
+  public RequestMessage(NodeHandle source, IdRange[] ranges, IdBloomFilter[] filters) {
     super(source);
     
     this.ranges = ranges;
-    this.hashes = hashes;
+    this.filters = filters;
   }
   
   /**
@@ -80,12 +81,12 @@ public class RequestMessage extends ReplicationMessage {
   }
   
   /**
-   * Method which returns this messages' hashes
+   * Method which returns this messages' bloom filters
    *
-   * @return The ranges of this message
+   * @return The bloom filters of this message
    */
-  public byte[][] getHashes() {
-    return hashes;
+  public IdBloomFilter[] getFilters() {
+    return filters;
   }
 }
 

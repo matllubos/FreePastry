@@ -42,6 +42,7 @@ import java.util.logging.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.replication.ReplicationPolicy.*;
 import rice.p2p.replication.messaging.*;
+import rice.p2p.util.*;
 
 /**
  * @(#) ReplicationImpl.java
@@ -193,7 +194,7 @@ public class ReplicationImpl implements Replication, Application {
     log.finer(endpoint.getId() + ": Sending out requests"); 
     NodeHandleSet handles = endpoint.neighborSet(Integer.MAX_VALUE);
     IdRange ourRange = endpoint.range(handle, 0, handle.getId());
-    byte[] ourHash = client.scan(ourRange).hash();
+    IdBloomFilter ourFilter = new IdBloomFilter(client.scan(ourRange));
     
     for (int i=0; i<handles.size(); i++) {
       NodeHandle handle = handles.getHandle(i);
@@ -201,11 +202,11 @@ public class ReplicationImpl implements Replication, Application {
 
       if (handleRange != null) {
         IdRange range = handleRange.intersectRange(getTotalRange());
-        byte[] hash = client.scan(range).hash();
+        IdBloomFilter filter = new IdBloomFilter(client.scan(range));
 
         if ((range != null) && (! range.intersectRange(getTotalRange()).isEmpty())) {
           log.finer(endpoint.getId() + ": Sending request to " + handle + " for range " + range);
-          RequestMessage request = new RequestMessage(this.handle, new IdRange[] {range, ourRange}, new byte[][] {hash, ourHash});
+          RequestMessage request = new RequestMessage(this.handle, new IdRange[] {range, ourRange}, new IdBloomFilter[] {filter, ourFilter});
           endpoint.route(null, request, handle);
         }
       }
@@ -247,10 +248,14 @@ public class ReplicationImpl implements Replication, Application {
       IdSet response = factory.buildIdSet();
       
       for (int i=0; i<rm.getRanges().length; i++) {
-        IdSet set = client.scan(rm.getRanges()[i]);
+        Iterator it = client.scan(rm.getRanges()[i]).getIterator();
         
-        if (! Arrays.equals(set.hash(), rm.getHashes()[i]))
-          response = merge(factory, response, set);
+        while (it.hasNext()) {
+          Id next = (Id) it.next();
+          
+          if (! rm.getFilters()[i].check(next))
+            response.addId(next);
+        }
       }
         
       if (response.numElements() > 0)
@@ -260,7 +265,7 @@ public class ReplicationImpl implements Replication, Application {
       IdSet fetch = policy.difference(client.scan(getTotalRange()), rm.getIdSet(), factory);
         
       if (fetch.numElements() > 0) 
-        client.fetch(fetch);
+        client.fetch(fetch, rm.getSource());
     } else if (message instanceof ReminderMessage) {
       replicate(); 
       updateClient(); 

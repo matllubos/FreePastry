@@ -56,8 +56,10 @@ public interface ReplicationClient {
    * responsible for these keys also.
    *
    * @param keySet set containing the keys that needs to be fetched
+   * @param hint A hint as to where to find the ids in the key set.  This
+   *           is where the local node heard about the keys from.
    */
-  public void fetch(IdSet keySet);
+  public void fetch(IdSet keySet, NodeHandle hint);
   
   /**
    * This upcall is to notify the application of the range of keys for 
