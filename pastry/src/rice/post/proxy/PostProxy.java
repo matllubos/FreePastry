@@ -234,7 +234,8 @@ public class PostProxy {
   {"standard_output_redirect_filename", "nohup.out"},
   {"shutdown_hooks_enable", "true"},
   {"security_manager_install", "true"}, 
-  {"past_use_garbage_collection", "false"},
+  {"past_garbage_collection_enable", "true"},
+  {"past_garbage_collection_interval", "300000"},
   {"post_ca_key_is_file", "false"},
   {"post_ca_key_name", "ca.publickey"}, 
   {"post_proxy_enable", "true"},
@@ -246,6 +247,9 @@ public class PostProxy {
   {"post_force_log_reinsert", "false"}, 
   {"post_fetch_log", "true"}, 
   {"post_fetch_log_retries", "3"}, 
+  {"post_synchronize_interval", "60000"},
+  {"post_object_refresh_interval", "259200000"},
+  {"post_object_timeout_interval", "1814400000"},
   {"storage_root_location", "."}, 
   {"storage_disk_limit", "2000000000"},
   {"storage_cache_limit", "50000000"},
@@ -598,7 +602,7 @@ public class PostProxy {
                                               new EmptyCache(FACTORY));    
     stepDone(SUCCESS);
     
-    if (parameters.getBooleanParameter("past_use_garbage_collection")) {
+    if (parameters.getBooleanParameter("past_garbage_collection_enable")) {
       stepStart("Starting Trashcan Storage");
       trashStorage = new StorageManagerImpl(FACTORY,
                                             new PersistentStorage(FACTORY, prefix + "-trash", location, diskLimit),
@@ -846,11 +850,12 @@ public class PostProxy {
   protected void startPast(Parameters parameters) throws Exception {
     stepStart("Starting Past services");
     
-    if (parameters.getBooleanParameter("past_use_garbage_collection")) {
+    if (parameters.getBooleanParameter("past_garbage_collection_enable")) {
       immutablePast = new GCPastImpl(node, immutableStorage, 
                                      parameters.getIntParameter("past_replication_factor"), 
                                      parameters.getStringParameter("application_instance_name") + "-immutable",
                                      new PastPolicy.DefaultPastPolicy(),
+                                     parameters.getLongParameter("past_garbage_collection_interval"),
                                      trashStorage);
     } else {
       immutablePast = new PastImpl(node, immutableStorage, 
@@ -879,7 +884,10 @@ public class PostProxy {
     stepStart("Starting POST service");
     post = new PostImpl(node, immutablePast, mutablePast, pendingPast, deliveredPast, address, pair, certificate, caPublic, 
                         parameters.getStringParameter("application_instance_name"), 
-                        parameters.getBooleanParameter("post_allow_log_insert"), clone);
+                        parameters.getBooleanParameter("post_allow_log_insert"), clone,
+                        parameters.getLongParameter("post_synchronize_interval"),
+                        parameters.getLongParameter("post_object_refresh_interval"),
+                        parameters.getLongParameter("post_object_timeout_interval"));
     stepDone(SUCCESS);
   }
   

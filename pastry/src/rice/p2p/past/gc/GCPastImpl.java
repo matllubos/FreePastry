@@ -60,11 +60,6 @@ import rice.persistence.*;
 public class GCPastImpl extends PastImpl implements GCPast {
   
   /**
-   * The interval at which expired objects are removed from the store
-   */
-  public static int COLLECTION_INTERVAL = 5 * 60 * 1000;
-  
-  /**
    * The trash can, or where objects should go once expired.  If null, they are deleted
    */
   protected StorageManager trash;
@@ -81,9 +76,11 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param manager The storage manager to be used by Past
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
+   * @param policy The policy this past instance should use
+   * @param collectionInterval The frequency with which GCPast should collection local expired objects
    */
-  public GCPastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy) {
-    this(node, manager, replicas, instance, policy, null);
+  public GCPastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy, long collectionInterval) {
+    this(node, manager, replicas, instance, policy, collectionInterval, null);
   }
   
   
@@ -95,13 +92,15 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
    * @param trash The storage manager to place the deleted objects into (if null, they are removed)
+   * @param policy The policy this past instance should use
+   * @param collectionInterval The frequency with which GCPast should collection local expired objects
    */
-  public GCPastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy, StorageManager trash) {
+  public GCPastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy, long collectionInterval, StorageManager trash) {
     super(new GCNode(node), manager, replicas, instance, policy);
     this.trash = trash;
     this.realFactory = node.getIdFactory();
     
-    endpoint.scheduleMessage(new GCCollectMessage(0, getLocalNodeHandle(), node.getId()), COLLECTION_INTERVAL, COLLECTION_INTERVAL);
+    endpoint.scheduleMessage(new GCCollectMessage(0, getLocalNodeHandle(), node.getId()), collectionInterval, collectionInterval);
   }
     
   /**

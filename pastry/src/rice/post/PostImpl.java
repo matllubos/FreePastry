@@ -38,16 +38,6 @@ public class PostImpl implements Post, Application, ScribeClient {
   public static final int REPLICATION_FACTOR = 3;
   
   /**
-   * The frequency of synchronization with on-disk delivery messages
-   */
-  public static final int SYNCHRONIZE_PERIOD = 60000;
-  
-  /**
-    * The frequency of refreshing data items in GCPast
-   */
-  public static final int REFRESH_PERIOD = 3 * 24 * 60 * 60 * 1000;
-  
-  /**
    * The endpoint used for routing messages
    */
   protected Endpoint endpoint;
@@ -188,7 +178,10 @@ public class PostImpl implements Post, Application, ScribeClient {
                   PublicKey caPublicKey,
                   String instance,
                   boolean logRewrite,
-                  PostEntityAddress previousAddress) throws PostException 
+                  PostEntityAddress previousAddress,
+                  long synchronizeInterval,
+                  long refreshInterval,
+                  long timeoutInterval) throws PostException 
   {
     this.endpoint = node.registerApplication(this, instance);
     this.address = address;
@@ -204,7 +197,7 @@ public class PostImpl implements Post, Application, ScribeClient {
 
     this.security = new SecurityService();
     this.security.loadModule(new CASecurityModule(caPublicKey));
-    this.storage = new StorageService(address, immutablePast, mutablePast, node.getIdFactory(), keyPair);
+    this.storage = new StorageService(address, immutablePast, mutablePast, node.getIdFactory(), keyPair, timeoutInterval);
 
     clients = new Vector();
     clientAddresses = new Hashtable();
@@ -216,8 +209,8 @@ public class PostImpl implements Post, Application, ScribeClient {
   //  logger.setLevel(Level.FINEST);
   //  logger.getHandlers()[0].setLevel(Level.FINEST);
     
-    endpoint.scheduleMessage(new SynchronizeMessage(), SYNCHRONIZE_PERIOD, SYNCHRONIZE_PERIOD);
-    endpoint.scheduleMessage(new RefreshMessage(), REFRESH_PERIOD, REFRESH_PERIOD);
+    endpoint.scheduleMessage(new SynchronizeMessage(), synchronizeInterval, synchronizeInterval);
+    endpoint.scheduleMessage(new RefreshMessage(), refreshInterval, refreshInterval);
     
     logger.fine(endpoint.getId() + ": Constructed new Post with user " + address + " and instance " + instance);
   }

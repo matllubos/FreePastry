@@ -29,7 +29,7 @@ public class StorageService {
   /**
    * The default timeout period of objects (3 weeks)
    */
-  public static long DEFAULT_TIMEOUT_PERIOD = (long) (3 * 7 * 24 * 60 * 60 * 1000);
+  protected long timeoutInterval;
 
   /**
    * The address of the user running this storage service.
@@ -73,12 +73,13 @@ public class StorageService {
    * @param credentials Credentials to use to store data.
    * @param keyPair The keypair to sign/verify data with
    */
-  public StorageService(PostEntityAddress address, Past immutablePast, Past mutablePast, IdFactory factory, KeyPair keyPair) {
+  public StorageService(PostEntityAddress address, Past immutablePast, Past mutablePast, IdFactory factory, KeyPair keyPair, long timeoutInterval) {
     this.entity = address;
     this.immutablePast = immutablePast;
     this.mutablePast = mutablePast;
     this.keyPair = keyPair;
     this.factory = factory;
+    this.timeoutInterval = timeoutInterval;
     
     rng = new Random();
     pendingVerification = new Hashtable();
@@ -94,12 +95,12 @@ public class StorageService {
   /**
    * Internal method which returns what the timeout should be for an
    * object inserted now.  Basically, does System.currentTimeMillis() +
-   * DEFAULT_TIMEOUT_PERIOD.
+   * timeoutInterval.
    *
    * @return The default timeout period for an object inserted now
    */
   protected long getTimeout() {
-    return System.currentTimeMillis() + DEFAULT_TIMEOUT_PERIOD;
+    return System.currentTimeMillis() + timeoutInterval;
   }
 
   /**
