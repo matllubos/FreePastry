@@ -79,6 +79,15 @@ public class SubscribeAckMessage extends AbstractSubscribeMessage {
   public Id[] getPathToRoot() {
     return pathToRoot;
   }
+  
+  /**
+   * Returns a String representation of this ack
+   *
+   * @return A String
+   */
+  public String toString() {
+    return "SubscribeAckMessage " + topic + " ID: " + id; 
+  }
 
 }
 

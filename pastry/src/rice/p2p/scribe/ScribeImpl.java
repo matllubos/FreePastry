@@ -116,7 +116,11 @@ public class ScribeImpl implements Scribe, Application {
     this.policy = policy;
     this.handle = endpoint.getLocalNodeHandle();
     this.id = Integer.MIN_VALUE;
-
+    
+    //log.addHandler(new ConsoleHandler());
+    //log.setLevel(Level.FINEST);
+    //log.getHandlers()[0].setLevel(Level.FINEST);
+    
     log.finer(endpoint.getId() + ": Starting up Scribe");
   }
 
@@ -236,7 +240,8 @@ public class ScribeImpl implements Scribe, Application {
    * @param message The ackMessage
    */
   private void ackMessageReceived(SubscribeAckMessage message) {
-    outstanding.remove(new Integer(message.getId()));
+    ScribeClient client = (ScribeClient) outstanding.remove(new Integer(message.getId()));
+    log.finer(endpoint.getId() + ": Removing client " + client + " from list of outstanding for ack " + message.getId());
   }
 
   /**
@@ -247,6 +252,8 @@ public class ScribeImpl implements Scribe, Application {
   private void failedMessageReceived(SubscribeFailedMessage message) {
     ScribeClient client = (ScribeClient) outstanding.remove(new Integer(message.getId()));
 
+    log.finer(endpoint.getId() + ": Telling client " + client + " about FAILURE for outstanding ack " + message.getId());
+    
     if (client != null)
       client.subscribeFailed(message.getTopic());
   }
@@ -259,6 +266,8 @@ public class ScribeImpl implements Scribe, Application {
   private void lostMessageReceived(SubscribeLostMessage message) {
     ScribeClient client = (ScribeClient) outstanding.remove(new Integer(message.getId()));
 
+    log.finer(endpoint.getId() + ": Telling client " + client + " about LOSS for outstanding ack " + message.getId());
+    
     if (client != null)
       client.subscribeFailed(message.getTopic());
   }
@@ -360,6 +369,18 @@ public class ScribeImpl implements Scribe, Application {
    * @param child The child to add
    */
   public void addChild(Topic topic, NodeHandle child) {
+    addChild(topic, child, Integer.MAX_VALUE);
+  }
+   
+  /**
+   * Adds a child to the given topic, using the specified sequence number in the ack message
+   * sent to the child.
+   *
+   * @param topic The topic
+   * @param child THe child to add
+   * @param id THe seuqnce number
+   */
+  protected void addChild(Topic topic, NodeHandle child, int id) {
     log.finer(endpoint.getId() + ": Adding child " + child + " to topic " + topic);
     TopicManager manager = (TopicManager) topics.get(topic);
 
@@ -376,7 +397,7 @@ public class ScribeImpl implements Scribe, Application {
     }
 
     // we send a confirmation back to the child
-    endpoint.route(child.getId(), new SubscribeAckMessage(handle, topic, manager.getPathToRoot(), Integer.MAX_VALUE), child);
+    endpoint.route(child.getId(), new SubscribeAckMessage(handle, topic, manager.getPathToRoot(), id), child);
 
     // and lastly notify all of the clients
     ScribeClient[] clients = manager.getClients();
@@ -503,7 +524,7 @@ public class ScribeImpl implements Scribe, Application {
             sMessage.getSubscriber() + " for topic " + sMessage.getTopic());
 
           // if so, add the child
-          addChild(sMessage.getTopic(), sMessage.getSubscriber());
+          addChild(sMessage.getTopic(), sMessage.getSubscriber(), sMessage.getId());
           return false;
         }
 
@@ -637,14 +658,11 @@ public class ScribeImpl implements Scribe, Application {
 
       ackMessageReceived(saMessage);
 
-      log.finer(endpoint.getId() + ": Received subscribe ack message from " + saMessage.getSource() + " for topic " + saMessage.getTopic());
+      log.fine(endpoint.getId() + ": Received subscribe ack message from " + saMessage.getSource() + " for topic " + saMessage.getTopic());
 
       if (! saMessage.getSource().isAlive()) {
         log.warning(endpoint.getId() + ": Received subscribe ack message from " + saMessage.getSource() + " for topic " + saMessage.getTopic());
-        (new Exception()).printStackTrace();
-        System.exit(-1);
       }
-        
       
       // if we're the root, reject the ack message
       if (isRoot(saMessage.getTopic())) {
@@ -670,6 +688,7 @@ public class ScribeImpl implements Scribe, Application {
         } else {
           log.warning(endpoint.getId() + ": Received unexpected subscribe ack message from " +
                       saMessage.getSource() + " for unknown topic " + saMessage.getTopic());
+              
           endpoint.route(saMessage.getSource().getId(), new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
         }
       }

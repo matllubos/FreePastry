@@ -125,7 +125,7 @@ public class SubscribeMessage extends AnycastMessage {
    * @return A String of this message
    */
   public String toString() {
-    return "[SubscribeMessage " + topic + " subscriber " + subscriber + "]";
+    return "[SubscribeMessage " + topic + " subscriber " + subscriber + " ID " + id + "]";
   }
 
 }
