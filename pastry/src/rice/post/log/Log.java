@@ -1,5 +1,6 @@
 package rice.post.log;
 
+import java.io.*;
 import java.security.*;
 import java.util.*;
 
@@ -13,6 +14,9 @@ import rice.post.storage.*;
  * this log in order to get lists of sublogs, or walk backwards down
  * all of the entries.  Log classes are stored in PAST at specific
  * locations, and are updated whenever a change is made to the log.
+ *
+ * This class also provides the proper synchronization so that quick calls to
+ * the addLogEntry() method do not overwrite each other.
  * 
  * @version $Id$
  */
@@ -39,12 +43,12 @@ public class Log implements PostData {
    */
   protected transient Post post;
 
-    /**
-     * A vector of ongoing buffered tasks
-     */
-    protected transient Vector buffer;  
-
-    protected transient boolean bufferFlag;
+  /**
+   * A vector of ongoing buffered tasks - in case two addLogEntries() are
+   * called in quick succession.  Note that the first element in the buffer
+   * is the current outstanding task.
+   */
+  protected transient Vector buffer;
 
   /**
    * A reference to the most recent entry in this log.
@@ -69,10 +73,7 @@ public class Log implements PostData {
     children = new HashMap();
 
     setPost(post);
-    buffer = new Vector();
-    System.out.println ("Created log: " + this.toString());
-    bufferFlag = false;
-    System.out.println("LN30: " + bufferFlag);    
+    buffer = new Vector(); 
   }
   
   /**
@@ -117,14 +118,13 @@ public class Log implements PostData {
    * of logs.
    *
    * Once this method is finished, it will call the command.receiveResult()
-   * method with a LogReference for the new log, or it may call
+   * method with the new Log (ready to go), or it may call
    * receiveExcception if an exception occurred.
    *
    * @param log The log to add as a child.
    * @param command The command to run once done
    */
   public void addChildLog(Log log, Continuation command) {
-      System.out.println("Added new childlog: " + log.toString());
     AddChildLogTask task = new AddChildLogTask(log, command);
     task.start();
   }
@@ -223,54 +223,34 @@ public class Log implements PostData {
    * @param command The command to run once done
    */
   public void addLogEntry(LogEntry entry, final Continuation command) {
-  	
-	  if (buffer == null) {
-	      System.out.println("Null buffer. creating a new one");
-	      buffer = new Vector();
-	      bufferFlag = false;
-	  }
-	//     if (bufferFlag) {
-//  	  System.out.println("DEBUG: BufferFlag: " + bufferFlag + " " + this.toString());
-	  Continuation comm = new Continuation() {
-		  public void receiveResult(Object o) {
-		      try {
-			  command.receiveResult(o);
-			  if (!(buffer.isEmpty())) {
-			      System.out.println("DEBUG: In while, Size: " +  buffer.size());
-			      AddLogEntryTask alet = (AddLogEntryTask) buffer.firstElement();
-			      System.out.println(alet);
-			      buffer.remove(alet);
-			      System.out.println("DEBUG: removed, size: "  + buffer.size());
-			      alet.start();
-			  }
+    Continuation comm = new Continuation() {
+      public void receiveResult(Object o) {
+        command.receiveResult(o);
 
-			  System.out.println("Receive result: " + ((LogEntry)o).toString());
-			  bufferFlag = false;
-			
-		      }catch (Exception e) {
-			  command.receiveException(e);
-		      }   
-		  }
-	         
-		  public void receiveException(Exception e) {
-		      command.receiveException(e);
-		  }
-	      };
-	 
-   if (bufferFlag) {
-	  System.out.println("DEBUG: BufferFlag: " + bufferFlag + " " + this.toString());
-	  System.out.println("SIZE: " + this.buffer.size());
-	  AddLogEntryTask alet2 = new AddLogEntryTask(entry, comm);
-	  this.buffer.add(alet2);
-	System.out.println("SIZE: " + this.buffer.size());  
-	  System.out.println("DEBUG: added task to buffer " + entry);
-	  }
-        else { 
-	  System.out.println("DEBUG: No need of buffer: running task " + entry + " Size: " + buffer.size() + " " + this.toString());
-	  AddLogEntryTask task = new AddLogEntryTask(entry, comm);
-	  bufferFlag = true;
-	  task.start();
+        synchronized (buffer) {
+          buffer.remove(0);
+
+          if (buffer.size() > 0) {
+            AddLogEntryTask alet = (AddLogEntryTask) buffer.get(0);
+            alet.start();
+          }
+        }
       }
+
+      public void receiveException(Exception e) {
+        command.receiveException(e);
+      }
+    };
+    
+    AddLogEntryTask task = new AddLogEntryTask(entry, comm);
+
+    synchronized (buffer) {
+      buffer.add(task);
+      
+      if (buffer.size() == 1) {
+        task.start();
+      }
+    }
   }
     
   /**
@@ -340,6 +320,18 @@ public class Log implements PostData {
   }
 
   /**
+   * Custom readObject to allow the buffer to be initialized
+   * upon deserialization
+   *
+   * @param ois The object input stream
+   */
+  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    ois.defaultReadObject();
+
+    buffer = new Vector();
+  }
+
+  /**
    * This class encapsulates the logic needed to add a child log to
    * the current log.
    */
@@ -384,7 +376,7 @@ public class Log implements PostData {
     }
 
       private void startState2() {
-      command.receiveResult(reference);
+      command.receiveResult(log);
     }
 
     /**
@@ -441,22 +433,16 @@ public class Log implements PostData {
     }
 
     public void start() {
-	System.out.println("DEBUG: In start: BufferFlag = " + bufferFlag + " " + entry);
-	
       state = STATE_1;
       entry.setPost(post);
       entry.setUser(post.getEntityAddress());
       entry.setPreviousEntryReference(topEntryReference);
-      System.out.println("set PEF for entry: " + topEntryReference);
       entry.setPreviousEntry(topEntry);
       post.getStorageService().storeContentHash(entry, this);
-	
     }
 
     private void startState1(LogEntryReference reference) {
-	System.out.println("DEBUG: In state1 " + entry);
       topEntryReference = reference;
-      System.out.println("TEF: "  + topEntryReference);      
       topEntry = entry;
       state = STATE_2;
       SyncTask task = new SyncTask(this);
@@ -464,20 +450,7 @@ public class Log implements PostData {
     }
 
     private void startState2() {
-	System.out.println("DEBUG: In state2 " + entry + " Size: " + buffer.size());
-	//bufferFlag = false;
-	//command.receiveResult(topEntry);
-	//  if (!(buffer.isEmpty())) { 
-//  		    System.out.println("DEBUG: In while, Size: " +  buffer.size());
-//  	    AddLogEntryTask alet = (AddLogEntryTask) buffer.firstElement();
-//  	    System.out.println(alet);
-//  	    buffer.remove(alet);
-//  	    System.out.println("DEBUG: removed, size: "  + buffer.size());
-//  	    alet.start();
-//  	}
-//  	bufferFlag = false;
-	command.receiveResult(topEntry);
-	System.out.println("done " + bufferFlag + " " + entry + " Size: " + buffer.size());
+      command.receiveResult(topEntry);
     }
 
     public void receiveResult(Object o) {

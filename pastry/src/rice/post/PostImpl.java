@@ -23,10 +23,10 @@ import rice.post.security.ca.*;
 /**
  * This class is the service layer which allows 
  * Post applications to use Post functionality.
- * 
+ *
  * @version $Id$
- * @author Ansley Post
  * @author Alan Mislove
+ * @author Ansley Post
  */
 public class PostImpl extends PastryAppl implements Post, IScribeApp  {
   
