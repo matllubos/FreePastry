@@ -172,8 +172,7 @@ public class ControlFindParentMessage extends MessageAnycast
                                null );
         if ( recv_stripe != null )
         {
-           BandwidthManager bandwidthManager = recv_stripe.getChannel().getBand\
-widthManager();
+           BandwidthManager bandwidthManager = recv_stripe.getChannel().getBandwidthManager();
            int default_children = bandwidthManager.getDefaultChildren();
         }
         else
