@@ -99,6 +99,7 @@ public class MessagePublish extends ScribeMessage implements Serializable
 		    // This could be because we missed an MessageAckOnSubscribe.
 		    topic.setParent(m_source);
 		    topic.postponeParentHandler();
+
 		    // if waiting to find parent, now send unsubscription msg
 		    if ( topic.isWaitingUnsubscribe() ) {
 			scribe.leave( m_topicId, null, cred );

@@ -72,11 +72,13 @@ public class MessageAckOnSubscribe extends ScribeMessage implements Serializable
      * @param source the node generating the message.
      * @param tid the topic to which this message refers to.
      * @param c the credentials associated with the mesasge.
+     * @param data the data to be sent along the message
      */
     public 
 	MessageAckOnSubscribe( Address addr, NodeHandle source, 
-			  NodeId tid, Credentials c ) {
+			  NodeId tid, Credentials c, Serializable data ) {
 	super( addr, source, tid, c );
+	this.setData(data);
     }
     
     /**
@@ -111,6 +113,12 @@ public class MessageAckOnSubscribe extends ScribeMessage implements Serializable
 
 	topic.setParent(m_source);
 	topic.postponeParentHandler();
+
+	System.out.println("DEBUG :: Node "+scribe.getNodeId()+" received ACK for topic "+m_topicId+" from "+m_source.getNodeId()+" at "+(int)System.currentTimeMillis());
+	IScribeApp[] apps = topic.getApps();
+	for ( int i=0; i<apps.length; i++ ) {
+	    apps[i].newParent( m_topicId, m_source, getData());
+	}
 
 	// if waiting to find parent, now send unsubscription msg
 	if ( topic.isWaitingUnsubscribe() ) {
