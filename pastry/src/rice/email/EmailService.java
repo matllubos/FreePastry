@@ -124,7 +124,7 @@ public class EmailService extends PostClient {
     PostClientAddress pca = PostClientAddress.getAddress(this);
 
     // use the Id to fetch the root log
-    PostLog mainLog = _post.getLog();
+    PostLog mainLog = null;  //_post.getPostLog(null);
     
     // use the main root log to try to fetch the ePost root log
     LogReference emailLogRef = mainLog.getChildLog(pca);
