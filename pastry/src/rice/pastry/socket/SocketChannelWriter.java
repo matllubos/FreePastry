@@ -292,6 +292,33 @@ public class SocketChannelWriter {
   }
 
   /**
+   * Records that a message of a certain type and size has been sent
+   * by this node.
+   *
+   * @param className The name of the message class being sent.
+   * @param sizeInBytes The number of bytes after serialization
+   */
+  static void logMessageSent(String className, int sizeInBytes) {
+    synchronized(statLock) {
+      Integer it = (Integer)msgTypes.get(className);
+      if (it == null) {
+        msgTypes.put(className, new Integer(1));
+      } else {
+        msgTypes.put(className, new Integer(it.intValue()+1));        
+      }
+
+      Long is = (Long)msgSizes.get(className);
+      if (is == null) {
+        msgSizes.put(className, new Long(sizeInBytes));
+      } else {
+        msgSizes.put(className, new Long(is.longValue() + sizeInBytes));
+      }
+          
+      numWrites ++;
+    }
+  }
+
+  /**
    * Method which serializes a given object into a ByteBuffer, in order to
    * prepare it for writing. This is necessary because the size of the object
    * must be prepended to the to the front of the buffer in order to tell the
@@ -336,37 +363,21 @@ public class SocketChannelWriter {
       int len = baos.toByteArray().length;
 
       if (logWriteTypes) {
-        synchronized(statLock) {
-          Object newO = o;
-          if (newO instanceof SocketTransportMessage) {
-            newO = ((SocketTransportMessage)newO).msg;
-          }
-  
-          if (newO instanceof RouteMessage) {
-            newO = ((RouteMessage)newO).unwrap();
-          }
-  
-          if (newO instanceof PastryEndpointMessage) {
-            newO = ((PastryEndpointMessage)newO).getMessage();
-          }
-  
-          String oType = newO.getClass().getName();
-        
-          Integer it = (Integer)msgTypes.get(oType);
-          if (it == null) {
-            msgTypes.put(oType, new Integer(1));
-          } else {
-            msgTypes.put(oType, new Integer(it.intValue()+1));        
-          }
-          Long is = (Long)msgSizes.get(oType);
-          if (is == null) {
-            msgSizes.put(oType, new Long(len));
-          } else {
-            msgSizes.put(oType, new Long(is.longValue()+len));
-          }
-          
-          numWrites ++;
+        Object newO = o;
+        if (newO instanceof SocketTransportMessage) {
+          newO = ((SocketTransportMessage)newO).msg;
         }
+  
+        if (newO instanceof RouteMessage) {
+          newO = ((RouteMessage)newO).unwrap();
+        }
+  
+        if (newO instanceof PastryEndpointMessage) {
+          newO = ((PastryEndpointMessage)newO).getMessage();
+        }
+  
+        String oType = newO.getClass().getName();
+        logMessageSent(oType, len);
       }
       
       if ((manager != null) &&
