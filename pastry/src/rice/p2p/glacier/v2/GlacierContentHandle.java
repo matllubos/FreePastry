@@ -18,6 +18,7 @@ public class GlacierContentHandle implements PastContentHandle, GCPastContentHan
     this.id = id;
     this.nodeHandle = nodeHandle;
     this.manifest = manifest;
+    this.version = version;
   }
 
   public Id getId() {
