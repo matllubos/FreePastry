@@ -90,10 +90,12 @@ public class DistScribeRegrTestMessage extends Message implements Serializable
 	int seq_num = -1;
 	int count = 1;
 	int lastRecv;
+	NodeHandle parent;
 	
 	//System.out.println("DistScribeRegrTest message's deliver method invoked on " + scribeApp.m_scribe.getNodeId());
 	for (i=0; i< DistScribeRegrTest.NUM_TOPICS; i++) {
 	    topicId = (NodeId) scribeApp.m_topics.elementAt(i);
+	    parent = scribeApp.m_scribe.getParent(topicId);
 	    topicLog = (DistTopicLog) scribeApp.m_logTable.get(topicId);
 	    seq_num = topicLog.getSeqNumToPublish();
 	    count = topicLog.getCount();
@@ -142,8 +144,11 @@ public class DistScribeRegrTestMessage extends Message implements Serializable
 		long prevTime = topicLog.getLastRecvTime();
 		int diff = (int)((currentTime - prevTime)/ 1000.0);
 		
-		if( diff > DistScribeRegrTest.IDLE_TIME)
-		    System.out.println("\nWARNING :: "+scribeApp.m_scribe.getNodeId()+" DID NOT  Receive a message on the topic "+topicId + " for "+diff+" secs \n");
+		
+
+		if( diff > DistScribeRegrTest.IDLE_TIME) {
+		    System.out.println("\nWARNING :: "+scribeApp.m_scribe.getNodeId()+" DID NOT  Receive a message on the topic "+topicId + " for "+diff+" secs , it current parent =" + parent + "\n");
+		}
 		
 	    }
 	}

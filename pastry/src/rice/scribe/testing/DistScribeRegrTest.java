@@ -84,7 +84,7 @@ public class DistScribeRegrTest {
 
     // number of message received before a node tries 
     //to unsubscribe with random probability
-    public static int UNSUBSCRIBE_LIMIT = 50; 
+    public static int UNSUBSCRIBE_LIMIT = 100; 
     public static int numUnsubscribed = 0;
 
     // fraction of total virtual nodes on this host allowed to unsubscribe
@@ -93,7 +93,7 @@ public class DistScribeRegrTest {
 
     // Time a node waits for messages after subscribing, if no messages
     // received in this period, warning mesg is printed.
-    public static int IDLE_TIME = 50; // in seconds
+    public static int IDLE_TIME = 120; // in seconds
 
     public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
 
@@ -173,20 +173,21 @@ public class DistScribeRegrTest {
     /**
      * Create a Pastry node and add it to pastryNodes. Also create a client
      * application for this node, and spawn off a separate thread for it.
+     *
+     * @return the PastryNode on which the Scribe application exists
      */
-    public void makeScribeNode() {
+    public PastryNode makeScribeNode() {
 	NodeHandle bootstrap = getBootstrap();
 	PastryNode pn = factory.newNode(bootstrap); // internally initiateJoins
-	int joinTimeout = 300;
 	pastryNodes.addElement(pn);
 	localNodes.addElement(pn.getNodeId());
-	
 	
 	Credentials cred = new PermissiveCredentials();
 	Scribe scribe = new Scribe(pn, cred );
 	scribe.setTreeRepairThreshold(3);
 	DistScribeRegrTestApp app = new DistScribeRegrTestApp(pn, scribe, cred, this);
 	distClients.addElement(app);
+	return pn;
 
     }
 
@@ -199,6 +200,7 @@ public class DistScribeRegrTest {
      */
     public static void main(String args[]) {
 	int seed;
+	PastryNode pn;
 
 	Log.init(args);
 	doInitstuff(args);
@@ -206,7 +208,11 @@ public class DistScribeRegrTest {
 	PastrySeed.setSeed(seed);
 	System.out.println("seed used=" + seed); 
 	DistScribeRegrTest driver = new DistScribeRegrTest();
-	for (int i = 0; i < numNodes; i++){
+	pn = driver.makeScribeNode();
+	// We wait till one PastryNode on this host is ready so that the 
+	// rest of the nodes can find a bootstrap node on the local host
+	while(!pn.isReady()) {;}
+	for (int i = 1; i < numNodes ; i++){
 	    driver.makeScribeNode();
 	}
 	if (Log.ifp(5)) System.out.println(numNodes + " nodes constructed");
