@@ -211,6 +211,11 @@ public class RingId implements Id {
   public int compareTo(Object o) {
     return id.compareTo(((RingId)o).id);
   }
+  
+  public static RingId build(String s) {
+    String[] sArray = s.split("\\(|\\)| |,");
+    return new RingId(rice.pastry.Id.build(sArray[1]), rice.pastry.Id.build(sArray[3]));
+  }
 }
 
 
