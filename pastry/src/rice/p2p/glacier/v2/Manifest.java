@@ -54,6 +54,8 @@ public class Manifest implements Serializable {
     try {
       md = MessageDigest.getInstance("SHA");
     } catch (NoSuchAlgorithmException e) {
+      System.out.println("*** SHA-1 not supported ***");
+      System.out.println(toStringFull());
       return false;
     }
 
@@ -62,12 +64,23 @@ public class Manifest implements Serializable {
     
     byte[] thisHash = md.digest();
     
-    if (thisHash.length != fragmentHash[fragmentID].length)
+    if (thisHash.length != fragmentHash[fragmentID].length) {
+      System.out.println("*** LENGTH MISMATCH: "+thisHash.length+" != "+fragmentHash[fragmentID].length+" ***");
+      System.out.println(toStringFull());
       return false;
+    }
       
-    for (int i=0; i<thisHash.length; i++)
-      if (thisHash[i] != fragmentHash[fragmentID][i])
+    for (int i=0; i<thisHash.length; i++) {
+      if (thisHash[i] != fragmentHash[fragmentID][i]) {
+        System.out.println("*** HASH MISMATCH: POS#"+i+", "+thisHash[i]+" != "+fragmentHash[fragmentID][i]+" ***");
+        System.out.print("Hash: ");
+        for (int i=0; i<thisHash.length; i++)
+          System.out.print(thisHash[i]);
+        System.out.println();
+        System.out.println(toStringFull());
         return false;
+      }
+    }
         
     return true;
   }
