@@ -552,7 +552,7 @@ public class SocketManager implements SelectionKeyHandler {
       }
       close();      
     } catch (IOException e) {
-      //System.out.println("SocketManager " + e + " reading - cancelling.");
+      System.out.println("SocketManager " + e + " reading - cancelling.");
       //e.printStackTrace();
       debug("ERROR " + e + " reading - cancelling.");
       if (connectionManager != null) {
