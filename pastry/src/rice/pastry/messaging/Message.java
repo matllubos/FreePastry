@@ -54,9 +54,14 @@ import rice.pastry.*;
 
 public abstract class Message implements Serializable 
 {
+  private static final long serialVersionUID = 8921944904321235696L;
+  
+  public static final int DEFAULT_PRIORITY_LEVEL = 5;
+  
     private Address destination;
     private NodeHandle sender;
     private boolean priority;
+    private int priorityLevel = DEFAULT_PRIORITY_LEVEL;
 
     private transient Credentials credentials;
     private transient Date theStamp;
@@ -67,7 +72,6 @@ public abstract class Message implements Serializable
      *
      * @return the destination id.
      */
-    
     public Address getDestination() { return destination; }
 
     /**
@@ -75,7 +79,6 @@ public abstract class Message implements Serializable
      *
      * @return credentials or null if the sender has no credentials.
      */
-
     public Credentials getCredentials() { return credentials; }
 
     /**
@@ -83,7 +86,6 @@ public abstract class Message implements Serializable
      *
      * @return a timestamp or null if the sender did not specify one.
      */
-
     public Date getDate() { return theStamp; }
 
     /**
@@ -106,7 +108,6 @@ public abstract class Message implements Serializable
      * 
      * @param the immediate sender's NodeId.
      */
-
     public void setSender(NodeHandle nh) { sender = nh; }
 
     /**
@@ -114,16 +115,14 @@ public abstract class Message implements Serializable
      * 
      * @return the priority of this message.
      */
-
-   public boolean hasPriority() { return priority; }
+    public int getPriority() { return priorityLevel; }
     
     /**
      * Set priority.
      * 
      * @param the new priority.
      */
-
-    protected void setPriority(boolean prio) { priority = prio; }
+    protected void setPriority(int prio) { priorityLevel = prio; }
 
     /**
      * Get stream over which the object was deserialized. Used for indexing
@@ -131,7 +130,6 @@ public abstract class Message implements Serializable
      * 
      * @return the object input stream
      */
-
     public ObjectInputStream getStream() { return stream; }
     
     /**
@@ -142,9 +140,7 @@ public abstract class Message implements Serializable
      * @return true if the message was stamped, false if the message already had 
      * a timestamp.
      */
-
-    public boolean stamp(Date time) 
-    {
+    public boolean stamp(Date time) {
 	if (theStamp.equals(null)) {
 	    theStamp = time;
 	    return true;

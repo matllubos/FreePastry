@@ -71,7 +71,7 @@ public class JoinRequest extends Message implements Serializable
 	super(new JoinAddress());
 	handle = nh;
 	initialize();
-	setPriority(true);
+	setPriority(0);
     }
 
     /**
@@ -85,7 +85,7 @@ public class JoinRequest extends Message implements Serializable
 	super(new JoinAddress(), stamp);
 	handle = nh;
 	initialize();
-	setPriority(true);
+	setPriority(0);
     }
 
     /**
@@ -99,7 +99,7 @@ public class JoinRequest extends Message implements Serializable
 	super(new JoinAddress(), cred);
 	handle = nh;
 	initialize();
-	setPriority(true);
+	setPriority(0);
     }
 
     /**
@@ -114,7 +114,7 @@ public class JoinRequest extends Message implements Serializable
 	super(new JoinAddress(), cred, stamp);
 	handle = nh;
 	initialize();
-	setPriority(true);
+	setPriority(0);
     }
 
 

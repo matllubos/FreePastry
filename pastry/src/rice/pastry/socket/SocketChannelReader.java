@@ -153,7 +153,7 @@ public class SocketChannelReader {
             
             if ((spn != null) && (spn instanceof SocketPastryNode))
               ((SocketPastryNode) spn).broadcastReceivedListeners(obj, (path == null ? new InetSocketAddress[] {(InetSocketAddress) sc.socket().getRemoteSocketAddress()} : path.toArray()), size);
-            
+
             record(obj, size, path);
             
             return obj;
@@ -161,6 +161,7 @@ public class SocketChannelReader {
         } else {
           if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message, but too big to deserialize on Selector thread");
           ((SocketPastryNode) spn).process(new Executable() {
+            public String toString() { return "Deserialization of message of size " + size + " from " + path; }
             public Object execute() {
               if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Starting deserialization on message on processing thread");
               try {

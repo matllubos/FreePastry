@@ -67,7 +67,7 @@ public class RequestRouteRow extends Message implements Serializable
 	super(new RouteProtocolAddress()); 
 	handle = nh;
 	row = r;
-	setPriority(true);
+	setPriority(0);
     }
     
     /**
@@ -82,7 +82,7 @@ public class RequestRouteRow extends Message implements Serializable
 	super(new RouteProtocolAddress(), cred); 
 	handle = nh;
 	row = r;
-	setPriority(true);
+	setPriority(0);
     }
     
     /**
@@ -97,7 +97,7 @@ public class RequestRouteRow extends Message implements Serializable
 	super(new RouteProtocolAddress(), stamp); 
 	handle = nh;
 	row = r;
-	setPriority(true);
+	setPriority(0);
     }
 
     /**
@@ -113,7 +113,7 @@ public class RequestRouteRow extends Message implements Serializable
 	super(new RouteProtocolAddress(), cred, stamp); 
 	handle = nh;
 	row = r;
-	setPriority(true);
+	setPriority(0);
     }
 
     /**

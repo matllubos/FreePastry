@@ -54,6 +54,8 @@ import java.io.*;
  */
 
 public class RouteMessage extends Message implements Serializable, rice.p2p.commonapi.RouteMessage {
+  private static final long serialVersionUID = 3492981895989180093L;
+  
     private Id target;
     private Message internalMsg;
 
@@ -234,7 +236,7 @@ public class RouteMessage extends Message implements Serializable, rice.p2p.comm
      * @return the priority of this message.
      */
 
-   public boolean hasPriority() { return internalMsg.hasPriority(); }
+   public int getPriority() { return internalMsg.getPriority(); }
     
     /**
      * Get receiver address.

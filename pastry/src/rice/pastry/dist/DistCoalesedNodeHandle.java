@@ -204,7 +204,7 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
           }
         }
 
-        status = LIVENESS_FAULTY;
+        status = LIVENESS_DEAD;
         distance = Integer.MAX_VALUE;
 
         setChanged();

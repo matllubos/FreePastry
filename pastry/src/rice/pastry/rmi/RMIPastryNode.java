@@ -243,7 +243,7 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI {
     }
 
     synchronized (rcvQueue) {
-      if (msg.hasPriority())
+      if (msg.getPriority() == 0)
         rcvQueue.addFirst(msg);
       else
         rcvQueue.add(msg);
@@ -273,7 +273,7 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI {
       int len;
 
       synchronized (sendQueue) {
-        if (msg != null && msg.hasPriority()) {
+        if (msg != null && (msg.getPriority() == 0)) {
           sendQueue.addFirst(handle);
           sendQueue.addFirst(msg);
         } else {

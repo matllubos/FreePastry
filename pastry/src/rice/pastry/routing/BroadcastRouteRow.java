@@ -71,7 +71,7 @@ public class BroadcastRouteRow extends Message implements Serializable {
 
 	fromNode = from;
 	row = r;
-	setPriority(true);
+	setPriority(0);
     }
 
 
@@ -88,7 +88,7 @@ public class BroadcastRouteRow extends Message implements Serializable {
 
 	fromNode = from;
 	row = r;
-	setPriority(true);
+	setPriority(0);
     }
 
 
@@ -105,7 +105,7 @@ public class BroadcastRouteRow extends Message implements Serializable {
 
 	fromNode = from;
 	row = r;
-	setPriority(true);
+	setPriority(0);
     }
 
 
@@ -121,7 +121,7 @@ public class BroadcastRouteRow extends Message implements Serializable {
 
 	fromNode = from;
 	row = r;
-	setPriority(true);
+	setPriority(0);
     }
 
     /**

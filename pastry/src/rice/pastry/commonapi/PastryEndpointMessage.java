@@ -67,6 +67,7 @@ public class PastryEndpointMessage extends rice.pastry.messaging.Message {
     super(address);
 
     this.message = message;
+    setPriority(message.getPriority());
   }
 
   /**

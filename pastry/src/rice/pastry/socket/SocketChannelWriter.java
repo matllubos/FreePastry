@@ -145,20 +145,19 @@ public class SocketChannelWriter {
    */
   public boolean enqueue(Object o) {
     synchronized (queue) {
-      if (queue.size() < MAXIMUM_QUEUE_LENGTH) {
-        addToQueue(o);
-        
-        if (queue.size() > 20) {
-          System.err.println(spn.getNodeId() + "  ERROR: Queue to " + path + " has more than 20 elements - probably a bad sign - enqueue of " + o);
-          rice.pastry.dist.DistPastryNode.addError("WARNING: Outgoing queue has " + queue.size() + " elements, enqueuing " + o);
-        }
-        
-        return true;
-      } else {
-        System.err.println(spn.getNodeId() + " (W): Maximum TCP queue length reached to " + path + " - message " + o + " will be dropped.");
+      addToQueue(o);
+
+      if (queue.size() > MAXIMUM_QUEUE_LENGTH) {
+        Object remove = queue.removeLast();
+        System.err.println(spn.getNodeId() + " (W): Maximum TCP queue length reached to " + path + " - message " + remove + " will be dropped.");
         return false;
-      }
+      } else if (queue.size() > 20) {
+        System.err.println(spn.getNodeId() + "  ERROR: Queue to " + path + " has more than 20 elements - probably a bad sign - enqueue of " + o);
+        rice.pastry.dist.DistPastryNode.addError("WARNING: Outgoing queue has " + queue.size() + " elements, enqueuing " + o);
+      }        
     }
+
+    return true;
   }
 
   /**
@@ -246,24 +245,24 @@ public class SocketChannelWriter {
   private void addToQueue(Object o) {
     record("Enqueued", o, -1, path);
 
-    if (o instanceof Message) {
-      boolean priority = ((Message) o).hasPriority();
+    if ((queue.size() > 0) && (o instanceof Message)) {
+      int i=1;
+      
+      while (i < queue.size()) {
+        Object obj = queue.get(i);
 
-      if ((priority) && (queue.size() > 0)) {
-        for (int i = 1; i < queue.size(); i++) {
-          Object thisObj = queue.get(i);
-
-          if ((thisObj instanceof Message) && (!((Message) thisObj).hasPriority())) {
-            debug("Prioritizing socket message " + o + " over message " + thisObj);
-
-            queue.add(i, o);
-            return;
-          }
-        }
+        if ((obj instanceof Message) && (((Message) obj).getPriority() > ((Message) o).getPriority()))
+          break;
+        
+        i++;
       }
+      
+      System.out.println("COUNT: " + System.currentTimeMillis() + " Enqueueing message " + o.getClass().getName() + " at location " + i + " in the pending queue (priority " + ((Message) o).getPriority() + ")");
+    
+      queue.add(i, o);
+    } else {
+      queue.addLast(o);
     }
-
-    queue.addLast(o);
   }
 
   /**
