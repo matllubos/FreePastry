@@ -96,28 +96,34 @@ public class MessageReplyFromParent extends ScribeMessage implements Serializabl
 	Vector topicListLocal = scribe.getTopicsForParent(m_source);
 	NodeId topicId;
 	Topic topic;
-
-	for(i=0 ; i< topicListFromParent.size(); i++ ) {
-	    topicId = (NodeId)topicListFromParent.elementAt(i);
-	    topic = scribe.getTopic(topicId);
-	    if(topic != null && topic.getParent()== null) {
-		// This could be because we missed an MessageAckOnSubscribe.
-		topic.setParent(m_source);
-		topic.postponeParentHandler();
-
-		// if waiting to find parent, now send unsubscription msg
-		if ( topic.isWaitingUnsubscribe() ) {
-		    scribe.unsubscribe( topic.getTopicId(), null, cred );
-		    topic.waitUnsubscribe( false );
+	
+	if(topicListFromParent == null){
+	    System.out.println("WARNING :: Topic List From Parent is null in MessageReplyFromParent type of message\n");
+	}
+	else {
+	    for(i=0 ; i< topicListFromParent.size(); i++ ) {
+		topicId = (NodeId)topicListFromParent.elementAt(i);
+		topic = scribe.getTopic(topicId);
+		if(topic != null && topic.getParent()== null) {
+		    // This could be because we missed an MessageAckOnSubscribe.
+		    topic.setParent(m_source);
+		    topic.postponeParentHandler();
+		    
+		    // if waiting to find parent, now send unsubscription msg
+		    if ( topic.isWaitingUnsubscribe() ) {
+			scribe.unsubscribe( topic.getTopicId(), null, cred );
+			topic.waitUnsubscribe( false );
+		    }
 		}
-	    }
-	    else {
-		if(topicListLocal== null || !topicListLocal.contains(topicId)) {
-		    ScribeMessage msg = scribe.makeUnsubscribeMessage( topicId, cred );
-		    scribe.routeMsgDirect( m_source, msg, cred, opt );
+		else {
+		    if(topicListLocal== null || !topicListLocal.contains(topicId)) {
+			ScribeMessage msg = scribe.makeUnsubscribeMessage( topicId, cred );
+			scribe.routeMsgDirect( m_source, msg, cred, opt );
+		    }
 		}
 	    }
 	}
+
 	if(topicListLocal != null) {    
 	    for(i=0 ; i< topicListLocal.size(); i++ ) {
 		topicId = (NodeId)topicListLocal.elementAt(i);
