@@ -2,8 +2,4 @@
 
 2) Remove extra testing from ScribeRegrTest
 
-5) Adding of UNSUBSCRIBE in regr test.
-
 6) remove the code corresponding to writing to the logFile (do this at the complete end)
-
-7) check for the case nodes are immediately repairing
