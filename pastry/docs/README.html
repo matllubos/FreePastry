@@ -6,13 +6,25 @@
 <h1><font size="+4">FreePastry release notes</font></h1>
 <hr size="2" width="100%"></center>
 </h2>
-Release 1.3.2,&nbsp; 2/26/04.
+Release 1.4,&nbsp; 3/15/05.
 <p>FreePastry is a modular, open source implementation of the <a href="http://www.cs.rice.edu/CS/Systems/Pastry/"> Pastry</a> p2p routing
 and location substrate. <br>
 &nbsp; </p>
 <h3> Contributors</h3>
-<a href="http://www.cs.rice.edu/%7Edruschel/">Peter Druschel</a> , Eric
-Engineer, <a href="http://www.cs.rice.edu/%7Ergil">Romer Gil</a> , <a href="http://www.cs.rice.edu/%7Ejeffh/">Jeff Hoye</a> , <a href="http://www.cs.rice.edu/%7Eychu/">Y. Charlie Hu</a> , <a href="http://www.cs.rice.edu/%7Essiyer/">Sitaram Iyer</a> , <a href="http://www.cs.rice.edu/%7Ealadd/">Andrew Ladd</a> ,&nbsp;<a href="http://www.cs.rice.edu/%7Eamislove">Alan Mislove</a> , <a href="http://www.cs.rice.edu/%7Eanimesh">Animesh Nandi</a> , <a href="http://www.cs.rice.edu/%7Eabpost">Ansley Post</a>, <a href="http://www.cs.rice.edu/%7Ecreis">Charlie Reis</a>, <a href="http://www.cs.rice.edu/%7Eatuls">Atul Singh</a> , and <a href="http://composer.ecn.purdue.edu/%7Erongmei/">RongMei Zhang</a>
+<a href="http://www.cs.rice.edu/%7Edruschel/">Peter Druschel</a> , 
+Eric Engineer , 
+<a href="http://www.cs.rice.edu/%7Ergil">Romer Gil</a> , 
+<a href="http://www.cs.rice.edu/%7Ejeffh/">Jeff Hoye</a> , 
+<a href="http://www.cs.rice.edu/%7Eychu/">Y. Charlie Hu</a> , 
+<a href="http://www.cs.rice.edu/%7Essiyer/">Sitaram Iyer</a> , 
+<a href="http://www.cs.rice.edu/%7Ealadd/">Andrew Ladd</a> ,
+<a href="http://www.cs.rice.edu/%7Eamislove">Alan Mislove</a> , 
+<a href="http://www.cs.rice.edu/%7Eanimesh">Animesh Nandi</a> , 
+<a href="http://www.cs.rice.edu/%7Eabpost">Ansley Post</a> , 
+<a href="http://www.cs.rice.edu/%7Ecreis">Charlie Reis</a> , 
+<a href="http://www.cs.rice.edu/%7Edsandler">Dan Sandler</a> ,
+<a href="http://www.cs.rice.edu/%7Eatuls">Atul Singh</a> , and 
+<a href="http://composer.ecn.purdue.edu/%7Erongmei/">RongMei Zhang</a>
 contributed to the FreePastry code. The code is based on algorithms and
 protocols described in the following papers: <br>
 &nbsp;
@@ -81,10 +93,66 @@ Miguel Castro, Peter Druschel, Anne-Marie Kermarrec, Animesh Nandi, Antony Rowst
 
 <br>
 <h3>Requirements</h3>
-The software requires a Java runtime, version 1.4. The software was
-developed using Sun's SDK, version 1.4.1. <br>
+The software requires a Java runtime, version 1.4.2. The software was
+developed using Sun's SDK, version 1.4.2_03+ <br>
 <br>
 &nbsp;<br>
+<h3>Changes since release 1.3.2</h3>
+<ul>
+  <li>Single threaded:&nbsp;
+  We have adapted a single threaded model to improve performance. Calls into Pastry are still properly synchronized.  In fact if you run multiple nodes within the same JVM they will execute on the same thread.  The scheduler is implemented in rice.selector.</li><br>
+
+<li>Transport Layer/Routing:</li><br>
+<ul>
+  <li>Removed rice.pastry.RMI, rice.pastry.Wire -- Use rice.pastry.Socket</li><br>
+
+  <li>Simplified transport layer.  The Socket transport layer uses TCP for <i>all</i> messaging except liveness.</li><br>
+
+  <li>Improved liveness checking, better support for churn.  The Socket transport layer uses UDP only for liveness checks, and they are sent using random exponential backoff.</li><br>
+  
+  <li>Improved support for PlanetLab and the Internet.  Gracefully handles temporary and permanent routing anomalies by using sourceroutes.  The sourceroutes are selected from nodes within the leafset.</li><br>
+
+  <li>Improved routing performance.  Aggressive routing around nodes that may have stalled.  We now use per hop acks to rapidly route around stalled or congested nodes.</li><br>
+
+  <li>Support for a fixed file descriptor limit on sockets.  This is used for nodes that need to fix the maximum number of concurrently opened sockets.  Typically this is used if you don't have sufficient privilege to raise the maximum number of open file descriptors for a process. (See ulimit -n).</li><br>
+
+  <li>Support for fine grained prioritization of message delivery.  We added <code>int getPriority()</code> to the message interface.  The transport will prioritize higher priority messages over low priority.</li><br>
+
+  <li>Support for multiple bootstrap nodes.  The socket transport layer can take a list of IP addresses to try to boot off of.  It will attempt to connect to them in random order and return the first one it is able to connect to.  (See <code>DistPastryNodeFactory.getNodeHandle(InetSocketAddress[])</code>)</li><br/>
+
+  <li>Support for NodeId reuse.  Previous versions randomized the last 32 bits of a NodeId.  The new version uses an epoch to determine if a node has rebooted since you last talked to it.</li><br/>
+</ul>
+<li>Modules:</li><br>
+<ul>
+  <li>p2p.commonapi -- Added priority to messages.</li><br/>
+  <li>p2p.past -- Added lease-based past version in p2p.past.gc - extends the PAST interface.</li><br/>
+  <li>p2p.scribe -- Minor changes.</li><br/>
+  <li>p2p.replication -- This has been modified to use bloom filters instead of key lists for replication.</li><br/>
+  <li>p2p.splitstream -- Minor scalability improvements based on planetlab deployment.</li><br>
+  <li>(NEW) p2p.util -- Various utilites for p2p packages, including Cryptography and XML.</li><br>
+  <li>(NEW) p2p.multiring -- An implementation of the IPTPS paper, complete with optional RingCertificates.</li><br>
+  <li>(NEW) p2p.aggregation -- Improves DHT efficiency by aggregating small objects</li><br>
+<ul>
+<li>Aggregation:  This module can increase the efficiency of a DHT by bundling several small
+  objects into a larger aggregate. It is used by Glacier, but can also be
+  combined with other DHTs such as PAST. </li><br>
+</ul>
+  <li>(NEW) p2p.glacier -- Protects against data loss during large-scale correlated failures</li><br>
+<ul>
+<li>Glacier:  Distributed storage systems can suffer data loss when a large fraction
+  of the storage nodes fail simultaneously, e.g. during a worm attack.
+  Glacier protects against this by spreading redundant data fragments
+  throughout the system. It can reconstruct the data with high probability
+  even after disastrous failures that may affect 60% of the nodes or more.
+  Please see our NSDI paper on Glacier for a more detailed description.</li><br>
+</ul>
+  
+  <li>persistence -- Many improvements and bug fixes.  Basically the same interface.  Should be now *MUCH* more robust.  Also added metadata support to the rice.persistence package classes.</li><br>
+  <li>(NEW) selector -- Allows pastry to run on a single thread.</li><br>
+</ul>
+</ul>
+
+
 <h3>Changes since release 1.3.1</h3>
 <ul>
   <li>Overhaul of the wire package. The new version is higher
@@ -293,7 +361,7 @@ content into your home directory: </p>
 1. To run a HelloWorld example:
 <pre><b>
      java [-cp pastry.jar] rice.pastry.testing.DistHelloWorld
-          [-msgs m] [-nodes n] [-port p] [-bootstrap bshost[:bsport]] [-protocol [wire,rmi]]
+          [-msgs m] [-nodes n] [-port p] [-bootstrap bshost[:bsport]] [-protocol [socket]]
           [-verbose|-silent|-verbosity v] [-help]
 
         Without -bootstrap bshost[:bsport], only localhost:p is used for bootstrap.
