@@ -2,12 +2,10 @@ PACKAGE = rice.past.search
 
 SOURCE  = \
 	IndexEntry.java \
-	IndexKey.java \
 	IndexKeyString.java \
 	Searchable.java \
 	SearchService.java \
-	SearchServiceImpl.java \
-	SearchTest.java
+	SearchServiceImpl.java 
 
 RMI_SOURCE =
 
