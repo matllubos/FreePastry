@@ -19,10 +19,12 @@ public class EmailNotificationMessage extends NotificationMessage {
    * @param service the EmailService to use to send the message
    */
   public EmailNotificationMessage(Email email, PostUserAddress recipient, EmailService service) {
-    super(service.getAddress(), recipient);
+    super(service.getAddress(), email.getSender(), recipient);
     _email = email;
   }
-    
+
+  //public NotificationMessage(PostClientAddress clientAddress, PostUserAddress sender, PostEntityAddress destination) {
+  
   /**
    * Returns the email which this notification is for.
    *

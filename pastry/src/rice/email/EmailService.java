@@ -53,8 +53,9 @@ public class EmailService extends PostClient {
     email.storeData();
 
     // send the notification messages to each of the recipients
-    EmailUserAddress[] recipients = (EmailUserAddress[])email.getRecipientUsers();
+    PostUserAddress[] recipients = (PostUserAddress[])email.getRecipientUsers();
     EmailNotificationMessage msg;
+
     for (int i = 0; i < recipients.length; i++) {
       // create the Notification message, notification should go to ePost
       msg = new EmailNotificationMessage(email, recipients[i], this);

@@ -5,8 +5,6 @@ SOURCE  = \
 	EmailData.java \
 	EmailDataReference.java \
 	EmailService.java \
-	EmailServiceListener.java \
-	EmailUserAddress.java \
 	Folder.java
 
 RMI_SOURCE =

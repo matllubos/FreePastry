@@ -39,7 +39,7 @@ public class Folder {
    * @param storage the storage service used to get log data from PAST.
    */
   public Folder(Log log, StorageService storage) {
-    _name = log.getName();
+    _name = (String)log.getName();
     _log = log;
     _storage = storage;
   }
@@ -112,7 +112,7 @@ public class Folder {
    *
    * @param email The email to insert.
    */
-  public void addMessage(Email email) throws PostException {
+  public void addMessage(Email email) throws PostException, StorageException {
     _log.addLogEntry(new InsertMailLogEntry(email));
   }
 
@@ -121,7 +121,7 @@ public class Folder {
    *
    * @param email The email to delete.
    */
-  public void removeMessage(Email email) throws PostException {
+  public void removeMessage(Email email) throws PostException, StorageException {
     _log.addLogEntry(new DeleteMailLogEntry(email));
   }
 
@@ -134,12 +134,12 @@ public class Folder {
    * @param srcFolder The source folder for the message.
    * @param destFolder The destination folder for the message.
    */
-  public void moveMessage(Email email, Folder folder) throws PostException {
+  public void moveMessage(Email email, Folder folder) throws PostException, StorageException  {
     folder.addMessage(email);
     removeMessage(email);
   }
   
-  public Folder createChildFolder(String name) throws PostException {
+  public Folder createChildFolder(String name) throws PostException, StorageException {
     Log log = new Log(name, _log.getLocation());    
     _log.addChildLog(log);
     return new Folder(log, _storage);
@@ -159,7 +159,7 @@ public class Folder {
    *
    * @param name The name of the folder to delete.
    */
-  public void removeFolder(String name) throws PostException {
+  public void removeFolder(String name) throws PostException, StorageException {
     _log.removeChildLog(name);
   }
 }
