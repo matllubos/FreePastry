@@ -2,6 +2,7 @@ package rice.p2p.glacier;
 
 import java.io.*;
 import java.util.Arrays;
+import java.util.Random;
 
 /**
  * DESCRIBE THE CLASS
@@ -11,20 +12,12 @@ import java.util.Arrays;
  */
 public class ErasureCodec {
 
-  /**
-   * DESCRIBE THE FIELD
-   */
   protected int numFragments;
-  /**
-   * DESCRIBE THE FIELD
-   */
   protected int numSurvivors;
 
   final static int Lfield = 10;
   final static int MultField = (1 << Lfield) - 1;
-  /*
-   *  bytes
-   */
+
   static int[] ExpToFieldElt;
   static int[] FieldEltToExp;
   static boolean isEltInitialized = false;
@@ -39,9 +32,8 @@ public class ErasureCodec {
     numFragments = _numFragments;
     numSurvivors = _numSurvivors;
 
-    if (!isEltInitialized) {
+    if (!isEltInitialized)
       initElt();
-    }
   }
 
   public void dump(byte[] data) {
@@ -61,13 +53,7 @@ public class ErasureCodec {
     }
   }
 
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @param obj DESCRIBE THE PARAMETER
-   * @return DESCRIBE THE RETURN VALUE
-   */
-  public Fragment[] encodeObject(Serializable obj) {
+  public Fragment[] encodeObject(Serializable obj, boolean[] generateFragment) {
     byte bytes[];
 
     try {
@@ -84,82 +70,108 @@ public class ErasureCodec {
       return null;
     }
 
-    return encode(bytes);
+    return encode(bytes, generateFragment);
   }
 
   /**
-   * DESCRIBE THE METHOD
-   *
-   * @param bytes DESCRIBE THE PARAMETER
-   * @return DESCRIBE THE RETURN VALUE
+   * Input: buffer of size <numFragments*Lfield>; first <numSurvivors*Lfield> words contain message, rest is zeroes
+   * Output: buffer contains fragments
    */
-  public Fragment[] encode(byte[] bytes) {
+  protected void encodeChunk(int[] buffer) {
+    for (int row = 0; row < (numFragments - numSurvivors); row++) {
+      for (int col = 0; col < numSurvivors; col++) {
+        int exponent = (MultField - FieldEltToExp[(row ^ col) ^ (1 << (Lfield - 1))]) % MultField;
+        for (int row_bit = 0; row_bit < Lfield; row_bit ++) 
+          for (int col_bit = 0; col_bit < Lfield; col_bit ++) 
+            if ((ExpToFieldElt[exponent + row_bit] & (1 << col_bit)) != 0) 
+              buffer[numSurvivors * Lfield + row * Lfield + row_bit] ^= buffer[col_bit + col * Lfield];
+      }
+    }
+  }
+
+  public Fragment[] encode(byte[] bytes, boolean[] generateFragment) {
     int numWords = (bytes.length + 3) / 4;
     int wordsPerGroup = (numSurvivors * Lfield);
     int numGroups = (numWords + (wordsPerGroup - 1)) / wordsPerGroup;
     int wordsPerFragment = numGroups * Lfield;
+    int buffer[] = new int[numFragments * Lfield];
+    Fragment frag[] = new Fragment[numFragments];
 
-    int message[] = new int[numFragments * wordsPerFragment];
-    Arrays.fill(message, 0);
-
-    int s = bytes.length / 4;
-    for (int i = 0; i < s; i++) {
-      message[i] = (bytes[4 * i] << 24) | ((bytes[4 * i + 1] << 16) & 0xFF0000) | ((bytes[4 * i + 2] << 8) & 0xFF00) | (bytes[4 * i + 3] & 0xFF);
+    for (int i = 0; i < numFragments; i++) {
+      if (generateFragment[i])
+        frag[i] = new Fragment(wordsPerFragment * 4);
+      else
+        frag[i] = null;
     }
 
-    if (bytes.length > 4 * s) {
-      message[s] = bytes[4 * s] << 24;
-      if (bytes.length > (4 * s + 1)) {
-        message[s] |= (bytes[4 * s + 1] << 16) & 0xFF0000;
-      }
-      if (bytes.length > (4 * s + 2)) {
-        message[s] |= (bytes[4 * s + 2] << 8) & 0xFF00;
-      }
-    }
+    //System.out.println(bytes.length+" bytes => "+numFragments+" fragments with "+wordsPerFragment+" words ("+numGroups+" groups)");
+    
+    for (int g=0; g<numGroups; g++) {
+      int offset = g * wordsPerGroup * 4;
+      int wordsHere = Math.min((bytes.length - offset + 3)/4, wordsPerGroup);
 
-//        System.out.println(bytes.length+" bytes => "+numFragments+" fragments with "+wordsPerFragment+" words ("+numGroups+" groups)");
-
-    for (int g = 0; g < numGroups; g++) {
-      for (int row = 0; row < (numFragments - numSurvivors); row++) {
-        for (int col = 0; col < numSurvivors; col++) {
-          int exponent = (MultField - FieldEltToExp[(row ^ col) ^ (1 << (Lfield - 1))]) % MultField;
-          for (int row_bit = 0; row_bit < Lfield; row_bit++) {
-            for (int col_bit = 0; col_bit < Lfield; col_bit++) {
-              if ((ExpToFieldElt[exponent + row_bit] & (1 << col_bit)) != 0) {
-                message[(numSurvivors * Lfield + row * Lfield + row_bit) * numGroups + g] ^=
-                  message[(col_bit + col * Lfield) * numGroups + g];
-              }
-            }
+      Arrays.fill(buffer, 0);
+      for (int i=0; i<wordsHere; i++) {
+        byte b0 = (offset+4*i+0 < bytes.length) ? bytes[offset+4*i+0] : 0;
+        byte b1 = (offset+4*i+1 < bytes.length) ? bytes[offset+4*i+1] : 0;
+        byte b2 = (offset+4*i+2 < bytes.length) ? bytes[offset+4*i+2] : 0;
+        byte b3 = (offset+4*i+3 < bytes.length) ? bytes[offset+4*i+3] : 0;
+        buffer[i] = (b0<<24) | ((b1<<16)&0xFF0000) | ((b2<<8)&0xFF00) | (b3&0xFF);
+      }
+      
+      encodeChunk(buffer);
+      
+      for (int i=0; i<numFragments; i++) {
+        if (generateFragment[i]) {
+          for (int j=0; j<Lfield; j++) {
+            frag[i].payload[4*(g*Lfield + j) + 0] = (byte) ((buffer[i * Lfield + j]      ) & 0xFF);
+            frag[i].payload[4*(g*Lfield + j) + 1] = (byte) ((buffer[i * Lfield + j] >>  8) & 0xFF);
+            frag[i].payload[4*(g*Lfield + j) + 2] = (byte) ((buffer[i * Lfield + j] >> 16) & 0xFF);
+            frag[i].payload[4*(g*Lfield + j) + 3] = (byte) ((buffer[i * Lfield + j] >> 24) & 0xFF);
           }
         }
-      }
-    }
-
-    Fragment frag[] = new Fragment[numFragments];
-    for (int i = 0; i < numFragments; i++) {
-      frag[i] = new Fragment(wordsPerFragment * 4);
-    }
-
-    for (int i = 0; i < numFragments; i++) {
-      for (int j = 0; j < wordsPerFragment; j++) {
-        frag[i].payload[4 * j + 0] = (byte) ((message[i * wordsPerFragment + j]) & 0xFF);
-        frag[i].payload[4 * j + 1] = (byte) ((message[i * wordsPerFragment + j] >> 8) & 0xFF);
-        frag[i].payload[4 * j + 2] = (byte) ((message[i * wordsPerFragment + j] >> 16) & 0xFF);
-        frag[i].payload[4 * j + 3] = (byte) ((message[i * wordsPerFragment + j] >> 24) & 0xFF);
       }
     }
 
     return frag;
   }
 
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @param frag DESCRIBE THE PARAMETER
-   * @return DESCRIBE THE RETURN VALUE
-   */
-  public Serializable decode(Fragment frag[]) {
+  protected void decodeChunk(int[] buffer, int nExtra, int[] RowInd, boolean[] haveFragment, long[][] InvMat, int[] ColInd) {
+
+    // *** Second last step ***
   
+    int M[] = new int[(numFragments - numSurvivors) * Lfield];
+    for (int i = 0; i < nExtra; i++)
+      for (int j = 0; j < Lfield; j++)
+        M[i * Lfield + j] = buffer[(RowInd[i] + numSurvivors) * Lfield + j];
+
+    for (int row = 0; row < nExtra; row++) {
+      for (int col = 0; col < numSurvivors; col++) {
+        if (haveFragment[col]) {
+          int exponent = (MultField - FieldEltToExp[RowInd[row] ^ col ^ (1 << (Lfield - 1))]) % MultField;
+          for (int row_bit = 0; row_bit < Lfield; row_bit++) 
+            for (int col_bit = 0; col_bit < Lfield; col_bit++) 
+              if ((ExpToFieldElt[exponent + row_bit] & (1 << col_bit)) != 0)
+                M[row_bit + row * Lfield] ^= buffer[col_bit + col * Lfield];
+        }
+      }
+    }
+
+    // *** Last step ***
+
+    for (int row = 0; row < nExtra; row++) {
+      for (int col = 0; col < nExtra; col++) {
+        int exponent = (int) InvMat[row][col];
+        for (int row_bit = 0; row_bit < Lfield; row_bit++)
+          for (int col_bit = 0; col_bit < Lfield; col_bit++) 
+            if ((ExpToFieldElt[exponent + row_bit] & (1 << col_bit)) != 0) 
+              buffer[row_bit + ColInd[row] * Lfield] ^= M[col_bit + col * Lfield];
+      }
+    }
+  }
+
+  public Serializable decode(Fragment frag[]) {
+
     if (frag.length != numFragments)
       return null;
   
@@ -169,25 +181,14 @@ public class ErasureCodec {
         firstFragment = i;
   
     int wordsPerFragment = (frag[firstFragment].payload.length + 3) / 4;
-    int message[] = new int[numFragments * wordsPerFragment];
     int numGroups = wordsPerFragment / Lfield;
-    Arrays.fill(message, 0);
 
     boolean haveFragment[] = new boolean[numFragments];
     Arrays.fill(haveFragment, false);
 
-    for (int i = 0; i < numFragments; i++) {
-      if (frag[i] != null) {
+    for (int i = 0; i < numFragments; i++)
+      if (frag[i] != null)
         haveFragment[i] = true;
-        for (int j = 0; j < wordsPerFragment; j++) {
-          message[i * wordsPerFragment + j] =
-            ((frag[i].payload[4 * j + 0]) & 0xFF) +
-            ((frag[i].payload[4 * j + 1] << 8) & 0xFF00) +
-            ((frag[i].payload[4 * j + 2] << 16) & 0xFF0000) +
-            (frag[i].payload[4 * j + 3] << 24);
-        }
-      }
-    }
 
     int ColInd[] = new int[numSurvivors];
     int RowInd[] = new int[numFragments - numSurvivors];
@@ -195,32 +196,22 @@ public class ErasureCodec {
     int nMissing = 0;
 
     int nExtra = 0;
-    for (int i = 0; i < numSurvivors; i++) {
-      if (!haveFragment[i]) {
+    for (int i = 0; i < numSurvivors; i++) 
+      if (!haveFragment[i]) 
         ColInd[nMissing++] = i;
-      }
-    }
-    for (int i = 0; i < (numFragments - numSurvivors); i++) {
-      if (haveFragment[numSurvivors + i]) {
+
+    for (int i = 0; i < (numFragments - numSurvivors); i++) 
+      if (haveFragment[numSurvivors + i])
         RowInd[nExtra++] = i;
-      }
-    }
 
-    if (nMissing > nExtra) {
+    if (nMissing > nExtra)
       return null;
-    }
 
-    if (nMissing < nExtra) {
+    if (nMissing < nExtra)
       nExtra = nMissing;
-    }
 
-    int[] C;
 
-    int[] D;
-
-    int[] E;
-
-    int[] F;
+    int[] C, D, E, F;
     C = new int[numFragments - numSurvivors];
     Arrays.fill(C, 0);
     D = new int[numFragments - numSurvivors];
@@ -258,52 +249,30 @@ public class ErasureCodec {
 
     // *** Second last step ***
 
-    int M[] = new int[(numFragments - numSurvivors) * Lfield * numGroups];
-    for (int g = 0; g < numGroups; g++) {
-      for (int i = 0; i < nExtra; i++) {
-        for (int j = 0; j < Lfield; j++) {
-          M[(i * Lfield + j) * numGroups + g] = message[(j + (RowInd[i] + numSurvivors) * Lfield) * numGroups + g];
-        }
-      }
-
-      for (int row = 0; row < nExtra; row++) {
-        for (int col = 0; col < numSurvivors; col++) {
-          if (haveFragment[col]) {
-            int exponent = (MultField - FieldEltToExp[RowInd[row] ^ col ^ (1 << (Lfield - 1))]) % MultField;
-            for (int row_bit = 0; row_bit < Lfield; row_bit++) {
-              for (int col_bit = 0; col_bit < Lfield; col_bit++) {
-                if ((ExpToFieldElt[exponent + row_bit] & (1 << col_bit)) != 0) {
-                  M[(row_bit + row * Lfield) * numGroups + g] ^= message[(col_bit + col * Lfield) * numGroups + g];
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // *** Last step ***
-
-      for (int row = 0; row < nExtra; row++) {
-        for (int col = 0; col < nExtra; col++) {
-          int exponent = (int) InvMat[row][col];
-          for (int row_bit = 0; row_bit < Lfield; row_bit++) {
-            for (int col_bit = 0; col_bit < Lfield; col_bit++) {
-              if ((ExpToFieldElt[exponent + row_bit] & (1 << col_bit)) != 0) {
-                message[(row_bit + ColInd[row] * Lfield) * numGroups + g] ^=
-                  M[(col_bit + col * Lfield) * numGroups + g];
-              }
-            }
-          }
-        }
-      }
-    }
-
     byte[] bytes = new byte[numSurvivors * wordsPerFragment * 4];
-    for (int i = 0; i < (bytes.length / 4); i++) {
-      bytes[4 * i + 0] = (byte) (message[i] >> 24);
-      bytes[4 * i + 1] = (byte) ((message[i] >> 16) & 0xFF);
-      bytes[4 * i + 2] = (byte) ((message[i] >> 8) & 0xFF);
-      bytes[4 * i + 3] = (byte) (message[i] & 0xFF);
+    int[] buffer = new int[numFragments * Lfield];
+    for (int g=0; g<numGroups; g++) {
+      Arrays.fill(buffer, 0);
+      for (int i=0; i<numFragments; i++) {
+        if (haveFragment[i]) {
+          for (int j=0; j < Lfield; j++) {
+            buffer[i*Lfield + j] = 
+              ((frag[i].payload[4*(g*Lfield + j) + 0]      ) & 0x0000FF) +
+              ((frag[i].payload[4*(g*Lfield + j) + 1] <<  8) & 0x00FF00) +
+              ((frag[i].payload[4*(g*Lfield + j) + 2] << 16) & 0xFF0000) +
+               (frag[i].payload[4*(g*Lfield + j) + 3] << 24);
+          }
+        }
+      }
+      
+      decodeChunk(buffer, nExtra, RowInd, haveFragment, InvMat, ColInd);
+      
+      for (int i=0; i<(numSurvivors*Lfield); i++) {
+        bytes[4*(g*(numSurvivors*Lfield) + i) + 0] = (byte)  (buffer[i] >> 24);
+        bytes[4*(g*(numSurvivors*Lfield) + i) + 1] = (byte) ((buffer[i] >> 16) & 0xFF);
+        bytes[4*(g*(numSurvivors*Lfield) + i) + 2] = (byte) ((buffer[i] >>  8) & 0xFF);
+        bytes[4*(g*(numSurvivors*Lfield) + i) + 3] = (byte) ((buffer[i]      ) & 0xFF);
+      }
     }
 
     try {
@@ -320,9 +289,6 @@ public class ErasureCodec {
     return null;
   }
 
-  /**
-   * DESCRIBE THE METHOD
-   */
   protected void initElt() {
     final int polymask[] = {
       0x0000, 0x0003, 0x0007, 0x000B, 0x0013, 0x0025, 0x0043, 0x0083,
@@ -351,27 +317,71 @@ public class ErasureCodec {
     }
   }
 
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @param args DESCRIBE THE PARAMETER
-   */
   public static void main(String args[]) {
-    ErasureCodec codec = new ErasureCodec(30, 4);
-    Serializable s = new String("Habe Mut, Dich Deines eigenen Verstandes zu bedienen! Aufklaerung ist der Ausgang aus Deiner selbstverschuldeten Unmuendigkeit! 12345678dsksclsncksjncksj");
+    ErasureCodec codec = new ErasureCodec(48, 5);
+    Serializable s = new String("Habe Mut, Dich Deines eigenen Verstandes zu bedienen! Aufklaerung ist der Ausgang aus Deiner selbstverschuldeten Unmuendigkeit!");
 
     System.out.println("Encoding...");
-    Fragment frag[] = codec.encodeObject(s);
+    
+    boolean generateFragment[] = new boolean[48];
+    Arrays.fill(generateFragment, true);
+    
+    Fragment frag[] = codec.encodeObject(s, generateFragment);
 
-    Fragment frag2[] = new Fragment[4];
-    frag2[0] = frag[9];
-    frag2[1] = frag[11];
-    frag2[2] = frag[12];
-    frag2[3] = frag[17];
+    Fragment frag2[] = new Fragment[48];
+    frag2[9] = frag[9];
+    frag2[11] = frag[11];
+    frag2[12] = frag[12];
+    frag2[17] = frag[17];
+    frag2[33] = frag[33];
 
     System.out.println("Decoding...");
     Object d = codec.decode(frag2);
 
     System.out.println(d);
+    
+    Random rng = new Random();
+    for (int i=0; i<100; i++) {
+      int[] theObject = new int[rng.nextInt(100000)];
+      for (int j=0; j<theObject.length; j++)
+        theObject[j] = rng.nextInt(2000000000);
+      
+      System.out.println("#"+i+": "+(theObject.length*4)+" bytes");
+        
+      int fid[] = new int[5];
+      for (int j=0; j<5; j++) {
+        boolean again = true;
+        while (again) {
+          fid[j] = rng.nextInt(48);
+          again = false;
+          for (int k=0; k<j; k++)
+            if (fid[k] == fid[j])
+              again = true;
+        }
+      }
+      
+      generateFragment = new boolean[48];
+      for (int j=0; j<48; j++)
+        generateFragment[j] = false;
+      for (int j=0; j<5; j++)
+        generateFragment[fid[j]] = true;
+      
+      Fragment xf[] = codec.encodeObject(theObject, generateFragment);
+      
+      Fragment yf[] = new Fragment[48];
+      for (int j=0; j<5; j++)
+        yf[fid[j]] = xf[fid[j]];
+      
+      int[] decodedObject = (int[]) codec.decode(yf);
+
+      for (int j=0; j<theObject.length; j++) {
+        if (decodedObject[j] != theObject[j]) {
+          System.err.println("FAIL: Run #"+i+" offset "+j+" decoded="+decodedObject[j]+" original="+theObject[j]);
+          System.exit(1);
+        }
+      }
+    }
+    
+    System.out.println("PASS");
   }
 }
