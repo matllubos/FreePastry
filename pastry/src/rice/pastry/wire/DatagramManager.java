@@ -127,7 +127,7 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
     }
 
     // instanciate the transmission manager
-    transmissionManager = new DatagramTransmissionManager(pastryNode, key);
+    transmissionManager = new DatagramTransmissionManager(pastryNode, key,this);
   }
 
   /**
@@ -174,10 +174,15 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
         buffer.flip();
 
         if (buffer.remaining() > 0) {
-          Object o = deserialize(buffer);
-
+          Object o = deserialize(buffer);       
           if (o instanceof DatagramMessage) {
             DatagramMessage message = (DatagramMessage) o;
+            if (message instanceof DatagramTransportMessage) {
+              DatagramTransportMessage dtm = (DatagramTransportMessage)message;              
+              wireDebug(message.getSource()+":REC:"+dtm.getObject());
+            } else {
+              wireDebug(message.getSource()+":REC:"+message);
+            }
 
             // make sure message is for us
             if (message.getDestination().equals(pastryNode.getNodeId())) {
@@ -226,6 +231,23 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
       e.printStackTrace();
     }
   }
+  transient PrintStream outputStream = null;
+  synchronized void wireDebug(String s) {
+    if (!Wire.outputDebug) return;
+    try {
+      if (outputStream == null) {
+        String r = null;
+        if (pastryNode != null) {
+          r = pastryNode.getId().toString();
+        }
+        String t = "DM "+r+".txt";
+        outputStream = new PrintStream(new FileOutputStream(t)); 
+      }
+      outputStream.println(s);
+    } catch (IOException ioe) {
+      ioe.printStackTrace();
+    }
+  }
 
   /**
    * Specified by the SelectionKeyHandler interface - is called when there is
@@ -253,7 +275,16 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
 
       while (i.hasNext()) {
         PendingWrite write = (PendingWrite) i.next();
-
+        Object oo = write.getObject();
+        int packetNum = 0;
+        if (oo instanceof DatagramTransportMessage) {
+          DatagramTransportMessage dtm = (DatagramTransportMessage)oo;
+          packetNum = dtm.getNum();
+          oo = dtm.getObject();
+        }
+        wireDebug(write.getDestination()+":"+"SEN:"+oo);
+        wireDebug(write.getDestination()+":"+"DBG:"+packetNum+":"+oo);
+        
         int num = channel.send(serialize(write.getObject()), write.getAddress());
 
         if (num == 0) {

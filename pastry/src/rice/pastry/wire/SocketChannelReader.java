@@ -68,6 +68,8 @@ public class SocketChannelReader {
   // for reading the size of the object (header)
   private ByteBuffer magicBuffer;
 
+  protected WireNodeHandle handle;
+
   // the magic number array which is written first
   /**
    * DESCRIBE THE FIELD
@@ -81,10 +83,10 @@ public class SocketChannelReader {
    *
    * @param spn The PastryNode the SocketChannelReader serves.
    */
-  public SocketChannelReader(WirePastryNode spn) {
+  public SocketChannelReader(WirePastryNode spn, WireNodeHandle _handle) {
     this.spn = spn;
     initialized = false;
-
+    this.handle = _handle;
     sizeBuffer = ByteBuffer.allocateDirect(4);
     magicBuffer = ByteBuffer.allocateDirect(MAGIC_NUMBER.length);
   }
@@ -136,14 +138,16 @@ public class SocketChannelReader {
       int read = sc.read(buffer);
 
       debug("Read " + read + " bytes of object..." + buffer.remaining());
-
+      wireDebug("DBG:Read " + read + " bytes of object..." + buffer.remaining());
       if (read == -1) {
         // implies that the channel is closed
         throw new IOException("Error on read - the channel has been closed.");
       }
 
       if (buffer.remaining() == 0) {
+        wireDebug("DBG:buffer.preFlip()" + buffer.remaining());
         buffer.flip();
+        wireDebug("DBG:buffer.postFlip()" + buffer.remaining());
 
         byte[] objectArray = new byte[objectSize];
         buffer.get(objectArray);
@@ -155,6 +159,18 @@ public class SocketChannelReader {
 
     return null;
   }
+  
+  private void wireDebug(String s) {
+    try {
+      if (handle!=null) {
+          handle.wireDebug(s);
+      }
+    
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
 
   /**
    * Resets this input stream so that it is ready to read another object off of
@@ -267,5 +283,4 @@ public class SocketChannelReader {
       }
     }
   }
-
 }

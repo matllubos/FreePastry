@@ -91,7 +91,11 @@ public class SocketChannelWriter {
    */
   protected static byte[] MAGIC_NUMBER = new byte[]{0x45, 0x79, 0x12, 0x0D};
 
+  protected WireNodeHandle handle;
 
+  public SocketChannelWriter(WirePastryNode spn, SocketCommandMessage msg, SelectionKey key) {
+    this(spn,msg,key,null);
+  }
   /**
    * Constructor which creates this SocketChannelWriter with a pastry node and
    * an object to write out.
@@ -100,12 +104,13 @@ public class SocketChannelWriter {
    * @param msg DESCRIBE THE PARAMETER
    * @param key DESCRIBE THE PARAMETER
    */
-  public SocketChannelWriter(WirePastryNode spn, SocketCommandMessage msg, SelectionKey key) {
+  public SocketChannelWriter(WirePastryNode spn, SocketCommandMessage msg, SelectionKey key, WireNodeHandle wnh) {
     pastryNode = spn;
     this.key = key;
+    this.handle = wnh;
 
     try {
-      buffer = serialize(msg);
+      buffer = serialize(msg,null);
     } catch (IOException e) {
       System.out.println("PANIC: Error serializing message " + msg);
     }
@@ -177,6 +182,14 @@ public class SocketChannelWriter {
     }
   }
 
+  public void setKey(SelectionKey key) {
+    synchronized(queue) {
+      this.key = key;
+      interestedInWriting = false;
+      updateSelectionKeyBasedOnQueue(true);
+    }
+  }
+
   /**
    * DESCRIBE THE METHOD
    *
@@ -194,7 +207,7 @@ public class SocketChannelWriter {
    */
   public void reset(SocketCommandMessage msg) {
     try {
-      buffer = serialize(msg);
+      buffer = serialize(msg, buffer);
       greetingReceived();
     } catch (IOException e) {
       System.out.println("PANIC: Error serializing message " + msg);
@@ -230,11 +243,17 @@ public class SocketChannelWriter {
     } 
     
     try {
+      // one message was getting lost after a call to reset
+      // because it was being deleted even though we weren't
+      // pulling the message off of the front of the queue
+      boolean allowedToDeleteFirstOffOfQueue = false;
       synchronized (queue) {
         if (buffer == null) {
           if ((!waitingForGreeting) && (queue.size() > 0)) {
+            wireDebug("SEN:"+queue.getFirst().toString());
             debug("About to serialize object " + queue.getFirst());
-            buffer = serialize(queue.getFirst());
+            buffer = serialize(queue.removeFirst(),null);
+            allowedToDeleteFirstOffOfQueue = true;
           } else {
             updateSelectionKeyBasedOnQueue();
             return true;
@@ -244,15 +263,16 @@ public class SocketChannelWriter {
         int j = buffer.limit();
         int i = sc.write(buffer);
   
+        wireDebug("DBG:Wrote " + i + " of " + j + " bytes");
         debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
   
         if (buffer.remaining() != 0) {
           return false;
         }
   
-        if (!waitingForGreeting) {
-          queue.removeFirst();
-        }
+//        if (allowedToDeleteFirstOffOfQueue && (!waitingForGreeting)) {
+//          queue.removeFirst();
+//        }
   
         buffer = null;
   
@@ -271,12 +291,24 @@ public class SocketChannelWriter {
     }
   }
 
+  private void wireDebug(String s) {
+    try {
+      if (handle!=null) {
+          handle.wireDebug(s);
+      }
+    
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
   /**
    * Adds an entry into the queue, taking message prioritization into account
    *
    * @param o The feature to be added to the ToQueue attribute
    */
   private void addToQueue(Object o) {
+    wireDebug("DBG:addToQueue("+o+")");
     if (o instanceof SocketTransportMessage) {
       boolean priority = ((Message) ((SocketTransportMessage) o).getObject()).hasPriority();
 
@@ -298,18 +330,23 @@ public class SocketChannelWriter {
     queue.addLast(o);
   }
 
+  private void updateSelectionKeyBasedOnQueue() {
+    updateSelectionKeyBasedOnQueue(false);
+  }
+
+
   /**
    * only stops writing if queue is empty for performance reasons, it is
    * required that the caller is synchronized on the queue
    */
-  private void updateSelectionKeyBasedOnQueue() {
+  private void updateSelectionKeyBasedOnQueue(boolean ignoreInterested) {
     if (queue.size() == 0) {
-      if (interestedInWriting) {
+      if ((interestedInWriting) || (ignoreInterested)) {
         enableWrite(false);
       }
     } else {
       // there are items in the queue
-      if (!interestedInWriting) {
+      if ((!interestedInWriting) || (ignoreInterested)){
         enableWrite(true);
       }
     }
@@ -339,7 +376,9 @@ public class SocketChannelWriter {
         if (!selMgr.isAlive()) {
           throw new NodeIsDeadException(cke);
         } else {
-          throw cke;
+          WireNodeHandle wnh = (WireNodeHandle)key.attachment();
+          wnh.closeDueToError();
+//          throw cke;
         }
       }
     } else {
@@ -377,7 +416,7 @@ public class SocketChannelWriter {
    * @return A ByteBuffer containing the object prepended with its size.
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  public static ByteBuffer serialize(Object o) throws IOException {
+  public static ByteBuffer serialize(Object o, ByteBuffer oldBuf) throws IOException {
     if (o == null) {
       return null;
     }
@@ -401,8 +440,16 @@ public class SocketChannelWriter {
       dos.flush();
       dos.write(baos.toByteArray());
       dos.flush();
-
-      return ByteBuffer.wrap(baos2.toByteArray());
+      
+      byte[] newBytes = baos2.toByteArray();
+      if (oldBuf != null) {
+        byte[] oldBytes = oldBuf.array();
+        byte[] combined = new byte[newBytes.length+oldBytes.length];
+        System.arraycopy(newBytes,0,combined,0,newBytes.length);
+        System.arraycopy(oldBytes,0,combined,newBytes.length,oldBytes.length);        
+        newBytes = combined;
+      } 
+      return ByteBuffer.wrap(newBytes);
     } catch (InvalidClassException e) {
       System.out.println("PANIC: Object to be serialized was an invalid class!");
       throw new SerializationException("Invalid class during attempt to serialize.");

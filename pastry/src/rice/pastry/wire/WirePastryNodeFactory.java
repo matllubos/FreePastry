@@ -186,6 +186,9 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    * @return A node with a random ID and next port number.
    */
   public PastryNode newNode(NodeHandle bootstrap) {
+    if (bootstrap == null) {
+      return newNode(bootstrap,new NodeId(new byte[8]));
+    }
     return newNode(bootstrap, nidFactory.generateNodeId());
   }
 
@@ -304,7 +307,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
       // create reader and writer
       SocketChannelWriter writer =
         new SocketChannelWriter(null, null, null);
-      SocketChannelReader reader = new SocketChannelReader(null);
+      SocketChannelReader reader = new SocketChannelReader(null,null);
 
       Wire.acquireFileDescriptor();
 

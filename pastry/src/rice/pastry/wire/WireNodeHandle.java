@@ -24,20 +24,37 @@
 
 package rice.pastry.wire;
 
-import java.io.*;
-import java.net.*;
-import java.nio.*;
-import java.nio.channels.*;
-import java.nio.charset.*;
-import java.util.*;
+import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.PrintStream;
+import java.net.ConnectException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketException;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
+import java.util.Iterator;
+import java.util.LinkedList;
 
-import rice.pastry.*;
-import rice.pastry.dist.*;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
-import rice.pastry.wire.exception.*;
-import rice.pastry.wire.messaging.datagram.*;
-import rice.pastry.wire.messaging.socket.*;
+import rice.pastry.NodeId;
+import rice.pastry.PastryNode;
+import rice.pastry.dist.DistCoalesedNodeHandle;
+import rice.pastry.messaging.Message;
+import rice.pastry.routing.RouteMessage;
+import rice.pastry.wire.exception.DeserializationException;
+import rice.pastry.wire.exception.ImproperlyFormattedMessageException;
+import rice.pastry.wire.exception.NodeIsDeadException;
+import rice.pastry.wire.messaging.datagram.PingMessage;
+import rice.pastry.wire.messaging.socket.DisconnectMessage;
+import rice.pastry.wire.messaging.socket.HelloMessage;
+import rice.pastry.wire.messaging.socket.HelloResponseMessage;
+import rice.pastry.wire.messaging.socket.SocketCommandMessage;
+import rice.pastry.wire.messaging.socket.SocketTransportMessage;
 
 /**
  * Class which represents a node handle in the socket-based pastry protocol.
@@ -108,7 +125,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
 
     lastpingtime = 0;
 
-    setState(STATE_USING_UDP);
+    setState(STATE_USING_UDP,"ctor");
   }
 
   /**
@@ -125,9 +142,10 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
 
     lastpingtime = 0;
 
-    setState(STATE_USING_UDP);
+    setState(STATE_USING_UDP,"ctor");
 
     setLocalNode(pn);
+
   }
 
   /**
@@ -165,7 +183,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
    */
   public synchronized void setKey(SelectionKey key, SocketCommandMessage scm) {
     debug("Got new key  (state == " + state + ")");
-
+    
     // if we're currently using UDP, accept the connection as usual
     if (state == STATE_USING_UDP) {
       this.key = key;
@@ -174,10 +192,10 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
       ((WirePastryNode) getLocalNode()).getSocketManager().openSocket(this);
       ((WirePastryNode) getLocalNode()).getDatagramManager().resetAckNumber(nodeId);
 
-      reader = new SocketChannelReader((WirePastryNode) getLocalNode());
-      writer = new SocketChannelWriter((WirePastryNode) getLocalNode(), scm, key);
+      reader = new SocketChannelReader((WirePastryNode) getLocalNode(),this);
+      writer = new SocketChannelWriter((WirePastryNode) getLocalNode(), scm, key, this);
 
-      setState(STATE_USING_TCP);
+      setState(STATE_USING_TCP,"setKey1:"+scm);
     } else {
       markAlive();
 
@@ -207,14 +225,15 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
         } catch (IOException e) {
           System.out.println("ERROR closing unnecessary socket: " + e);
         }
-
+        writer.setKey(key);
         // use new socket
         this.key = key;
-        setState(STATE_USING_TCP);
+        setState(STATE_USING_TCP,"setKey2a:"+scm);
         key.attach(this);
 
         debug("Killing our socket, using new one...");
       } else {
+        wireDebug("setKey2b:"+scm);
 
         // use our socket and ignore the new one
         key.attach(null);
@@ -234,7 +253,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
       debug("Received DisconnectMessage (state == " + state + ")");
 
       if (state == STATE_USING_TCP) {
-        setState(STATE_USING_UDP_WAITING_TO_DISCONNECT);
+        setState(STATE_USING_UDP_WAITING_TO_DISCONNECT,"recSockMsg");
         ((WirePastryNode) getLocalNode()).getSocketManager().closeSocket(this);
 //        enableWrite(true);
 // TODO: find out why we enabledWriting here
@@ -266,6 +285,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
   public void receiveMessageImpl(Message msg) {
     assertLocalNode();
 
+
     WirePastryNode spn = (WirePastryNode) getLocalNode();
 
     if (isLocal) {
@@ -273,6 +293,27 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
       spn.receiveMessage(msg);
     } else {
       debug("Passing message " + msg + " to the socket controller for writing (state == " + state + ")");
+
+      wireDebug("ENQ:"+msg);
+
+      String s1 = null;
+      if (writer!=null) {
+        s1 = ""+writer.queueSize(); 
+      }
+      try {
+        String s2 = null;
+        if (key!=null) {
+          s2 = ""+key.interestOps(); 
+        }
+        wireDebug("DBG:"+s1+","+s2);
+      } catch (CancelledKeyException cke) {
+        SelectorManager selMgr = ((WirePastryNode)getLocalNode()).getSelectorManager();
+        if (!selMgr.isAlive()) {
+          throw new NodeIsDeadException(cke);
+        } else {
+          closeDueToError(); 
+        }       
+      }
 
       switch (state) {
         case STATE_USING_TCP:
@@ -443,7 +484,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
 
 
         // mark state as TCP in order to show this was unexpeceted
-        setState(STATE_USING_TCP);
+        setState(STATE_USING_TCP,"connToRemoteNode, exception");
         close(messages);
       }
     } else {
@@ -472,7 +513,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     debug("Received disconnect request... (state == " + state + ")");
 
     if (state == STATE_USING_TCP) {
-      setState(STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT);
+      setState(STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT,"disconnect()");
 
       writer.enqueue(new DisconnectMessage());
 
@@ -549,6 +590,27 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     }
   }
   
+  transient PrintStream outputStream = null;
+  synchronized void wireDebug(String s) {
+    if (!Wire.outputDebug) return;
+    
+    try {
+      if (outputStream == null) {
+        String r = null;
+        if (localnode != null) {
+          r = localnode.getId().toString();
+        } else {
+          return;
+        }
+        String t = "WNH "+r+"->"+getNodeId().toString()+".txt";
+        outputStream = new PrintStream(new FileOutputStream(t)); 
+      }
+      outputStream.println(s);
+    } catch (IOException ioe) {
+      ioe.printStackTrace();
+    }
+  }
+  
 
   /**
    * Called by the socket manager whenever there is data to be read from this
@@ -572,8 +634,11 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
         // inform reader that data is available
         Object o = null;
       
-        while ((o = tempReader.read((SocketChannel) key.channel())) != null) {
+        while ((o = tempReader.read((SocketChannel) key.channel())) != null) {                    
           if (o != null) {
+//            if (getNodeId().toString().startsWith("<0x5")) {
+//              System.out.println("A.read");
+//            }
             if (o instanceof SocketCommandMessage) {
               debug("Read socket message " + o + " - passing to node handle.");
               receiveSocketMessage((SocketCommandMessage) o);
@@ -581,7 +646,10 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
               SocketTransportMessage stm = (SocketTransportMessage) o;
   
               if (stm.getDestination().equals(getLocalNode().getNodeId())) {
+//                System.err.println("Read message " + o + " - passing to pastry node.");
                 debug("Read message " + o + " - passing to pastry node.");
+                wireDebug("DBG:"+System.identityHashCode(stm.getObject())+","+stm.getObject());
+                wireDebug("REC:"+stm.getObject());
                 getLocalNode().receiveMessage((Message) stm.getObject());
               } else {
                 debug("Read message " + o + " at " + nodeId + " for wrong nodeId " + stm.getDestination() + " - killing connection.");
@@ -697,7 +765,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
    *
    * @param newState The new State value
    */
-  private void setState(int newState) {
+  private void setState(int newState, String reason) {
     if ((state == STATE_USING_UDP) && (newState == STATE_USING_TCP)) {
       Wire.acquireFileDescriptor();
     }
@@ -715,23 +783,23 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     }
 
     state = newState;
-    /*
-     *  String newStateString = "unknown";
-     *  switch (newState) {
-     *  case STATE_USING_TCP:
-     *  newStateString = "USING_TCP";
-     *  break;
-     *  case STATE_USING_UDP:
-     *  newStateString = "USING_UDP";
-     *  break;
-     *  case STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT:
-     *  newStateString = "USING_UDP_WAITING_FOR_TCP_DISCONNECT";
-     *  break;
-     *  case STATE_USING_UDP_WAITING_TO_DISCONNECT:
-     *  newStateString = "USING_UDP_WAITING_TO_DISCONNECT";
-     *  }
-     *  System.out.println("WireNodeHandle"+nodeId+".setState("+newStateString+")");
-     */
+    
+     String newStateString = "unknown";
+     switch (newState) {
+     case STATE_USING_TCP:
+     newStateString = "USING_TCP";
+     break;
+     case STATE_USING_UDP:
+     newStateString = "USING_UDP";
+     break;
+     case STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT:
+     newStateString = "USING_UDP_WAITING_FOR_TCP_DISCONNECT";
+     break;
+     case STATE_USING_UDP_WAITING_TO_DISCONNECT:
+     newStateString = "USING_UDP_WAITING_TO_DISCONNECT";
+     }
+     wireDebug("DBG:setState("+newStateString+"):"+reason);
+     
   }
 
   /**
@@ -755,6 +823,13 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     return array.length;
   }
 
+  void closeDueToError() {
+    if (writer != null) {
+      close(writer.getQueue());
+    } else {
+      close(null);
+    }
+  }
 
   /**
    * Private method used for closing the socket (if there is one present). It
@@ -782,7 +857,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
           markDead();
         }
   
-        setState(STATE_USING_UDP);
+        setState(STATE_USING_UDP,"close()");
   
         if (messages != null) {
           debug("Messages contains " + writer.queueSize() + " messages.");
@@ -803,10 +878,12 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
   
                 debug("Rerouted message " + rmsg);
               } else {
+                wireDebug("DRP:"+smsg);
                 debug("Dropped message " + smsg + " on floor.");
               }
             } else {
               debug("Dropped message " + msg + " on floor.");
+              wireDebug("DRP:"+msg);
             }
           }
         }
@@ -831,6 +908,6 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
   private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
     ois.defaultReadObject();
 
-    setState(STATE_USING_UDP);
+    setState(STATE_USING_UDP,"readObject()");
   }
 }

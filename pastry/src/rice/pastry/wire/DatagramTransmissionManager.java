@@ -69,14 +69,17 @@ public class DatagramTransmissionManager {
    */
   public static int BEGIN_ACK_NUM = Integer.MIN_VALUE;
 
+  private DatagramManager datagramManager;
+
   /**
    * Builds a transmission manager for a given pastry node using a given key.
    *
    * @param spn The pastry node this manager serves.
    * @param key The key used by the datagram manager.
    */
-  public DatagramTransmissionManager(WirePastryNode spn, SelectionKey key) {
+  public DatagramTransmissionManager(WirePastryNode spn, SelectionKey key, DatagramManager dm) {
     map = new HashMap();
+    this.datagramManager = dm;
     this.key = key;
     pastryNode = spn;
 
@@ -464,6 +467,7 @@ public class DatagramTransmissionManager {
           PendingWrite pw = (PendingWrite) i.next();
 
           if (!(pw.getObject() instanceof DatagramMessage)) {
+            handle.wireDebug("DBG:Q 2 Long" + pw.getObject() + " to TCP queue.");
             debug("Moving message " + pw.getObject() + " to TCP queue.");
             list.addLast(new SocketTransportMessage(pw.getObject(), pw.getDestination()));
             i.remove();
@@ -539,6 +543,7 @@ public class DatagramTransmissionManager {
         long timeout = System.currentTimeMillis() - sendTime;
 
         if (timeout > sendTimeoutTime) {
+          DatagramTransmissionManager.this.datagramManager.wireDebug("DBG:WARNING: It has been too long (" + timeout + ") - packet lost. Resending in " + resendWaitTime + " milliseconds. (" + numRetries + " try)");
           debug("WARNING: It has been too long (" + timeout + ") - packet lost. Resending in " + resendWaitTime + " milliseconds. (" + numRetries + " try)");
 
           state = STATE_WAITING_FOR_RESEND;
@@ -558,6 +563,7 @@ public class DatagramTransmissionManager {
               while (i.hasNext()) {
                 PendingWrite pw = (PendingWrite) i.next();
                 if (!(pw.getObject() instanceof DatagramMessage)) {
+                  handle.wireDebug("DBG:Wait 2 Long" + pw.getObject() + " to TCP queue.");
                   debug("Moving message " + pw.getObject() + " to TCP queue.");
                   list.addLast(new SocketTransportMessage(pw.getObject(), pw.getDestination()));
                   i.remove();

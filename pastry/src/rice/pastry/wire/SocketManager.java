@@ -195,6 +195,8 @@ public class SocketManager implements SelectionKeyHandler {
       channel.socket().setReceiveBufferSize(WireNodeHandle.SOCKET_BUFFER_SIZE);
       channel.configureBlocking(false);
 
+      wireDebug("DBG:accept("+key+")");
+
       Selector selector = pastryNode.getSelectorManager().getSelector();
 
       synchronized (selector) {
@@ -291,6 +293,24 @@ public class SocketManager implements SelectionKeyHandler {
     }
   }
   
+  transient PrintStream outputStream = null;
+  synchronized void wireDebug(String s) {
+    if (!Wire.outputDebug) return;
+    try {
+      if (outputStream == null) {
+        String r = null;
+        if (pastryNode != null) {
+          r = pastryNode.getId().toString();
+        }
+        String t = "SM "+r+".txt";
+        outputStream = new PrintStream(new FileOutputStream(t)); 
+      }
+      outputStream.println(s);
+    } catch (IOException ioe) {
+      ioe.printStackTrace();
+    }
+  }
+
   /**
    * Private class which is tasked with reading the greeting message off of a
    * newly connected socket. This greeting message says who the socket is coming
@@ -318,7 +338,7 @@ public class SocketManager implements SelectionKeyHandler {
      */
     public SocketConnector(SelectionKey key) {
       this.key = key;
-      reader = new SocketChannelReader(pastryNode);
+      reader = new SocketChannelReader(pastryNode,null);
     }
 
     /**
@@ -330,10 +350,10 @@ public class SocketManager implements SelectionKeyHandler {
      */
     public void read() throws IOException {
       Object o = reader.read((SocketChannel) key.channel());
-
       if (o != null) {
         if (o instanceof HelloMessage) {
           HelloMessage hm = (HelloMessage) o;
+          wireDebug("DBG:read("+hm+")");
 
           debug("Read header message " + hm);
 
@@ -385,6 +405,7 @@ public class SocketManager implements SelectionKeyHandler {
         }
       }
     }
+
 
     /**
      * @exception IOException DESCRIBE THE EXCEPTION
