@@ -1,5 +1,6 @@
 package rice.post.messaging;
 
+import rice.post.*;
 import rice.pastry.*;
 
 /**
@@ -12,21 +13,27 @@ public class PresenceMessage extends PostMessage {
   /**
    * Constructs a PresenceMessage
    *
-   * @param eaddr The EmailAddress of the user asserted to be present.
-   * @param nodeid The user's asserted location.
+   * @param address The address of the user asserted to be present.
+   * @param location The user's asserted location.
    */
-  public PresenceMessage(EmailAddress eaddr, NodeId nodeid) {
+  public PresenceMessage(PostUserAddress address, NodeId location) {
   }
     
   /**
-   * Gets the EmailAddress of the user.
+   * Gets the PostUserAddress of the user.
+   *
+   * @return The address of the user who sent this message.
    */
-  public EmailAddress getEmailAddress() {
+  public PostUserAddress getUserAddress() {
+    return null;
   }
     
   /**
-   * Gets the NodeId where the user is.
+   * Gets the location of the user.
+   *
+   * @return The location in the Pastry ring of the user.
    */
-  public NodeId getNodeId() {
+  public NodeId getLocation() {
+    return null;
   }
 }

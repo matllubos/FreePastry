@@ -1,20 +1,32 @@
 package rice.post.messaging;
 
+import rice.post.*;
+
 /**
- * Message serving as notification that the given email is
- * ready for delivery.
+ * This class represents an abstract message in the Post system
+ * which serves as a notification.  Each Post application should
+ * extend this class with each type of relevant notification 
+ * message.
  */
-public class NotificationMessage extends PostMessage {
+public abstract class NotificationMessage extends PostMessage {
 
   /**
    * Constructs a NotificationMessage for the given Email.
+   *
+   * @param address The address of the service to which this message
+   *        should be delivered.
    */
-  public NotificationMessage(Email email) {
+  public NotificationMessage(PostClientAddress address) {
   }
 
   /**
-   * Gets the Email out of the message.
+   * Returns the PostApplicationAddress of the application
+   * to which this noticiation should be delivered.
+   *
+   * @return The address of the application to which this should be delivered
    */
-  public Email getEmail() {
+  public PostClientAddress getAddress() {
+    return null;
   }
+
 }

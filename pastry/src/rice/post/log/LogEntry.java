@@ -3,33 +3,27 @@ package rice.post.log;
 import java.security.*;
 
 /**
- * Abstract class for all entries in the log.
+ * Abstract class for all entries in the log. Each application using post should
+ * implement a class hierarchy of log entries relevant to the semantics of that
+ * system.
  */
 public abstract class LogEntry {
 
-    /**
-     * Signs the LogEntry with the owner's private key.
-     * @param signWith the owner's private key with which to sign the LogEntry
-     */
-    public abstract void sign(PrivateKey signWith) throws CryptoException;
-
-    /**
-     * Verifies that the LogEntry was signed by the owner of the mailbox.
-     * @param verifyWith the owner's public key with which to verify the email's signature
-     * @return if the LogEntry was validly signed
-     */
-    public abstract boolean verify(PublicKey verifyWith) throws CryptoException;
-
-    /**
-     * Returns whether this LogEntry has been signed or not.
-     * @return whether the message is signed.
-     */
-    public abstract boolean isSigned();
-    
-    /**
-     * Returns the next LogEntry.
-     * @return the next LogEntry
-     */
-    public abstract LogEntry getNext();
+  /**
+   * Constructs a LogEntry given a pointer to the previous entry
+   *
+   * @param prev A reference to the previous entry.
+   */
+  public LogEntry(LogEntryReference prev) {
+  }
+  
+  /**
+   * Returns the reference to the previous entry in the log
+   *
+   * @return A reference to the previous log entry
+   */
+  public LogEntryReference getPreviousEntry() {
+    return null;
+  }
 }
 
