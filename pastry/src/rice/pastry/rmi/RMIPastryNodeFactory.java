@@ -63,7 +63,7 @@ import java.net.*;
 public class RMIPastryNodeFactory extends DistPastryNodeFactory {
   public static int NUM_ATTEMPTS = 3;
 
-  private RandomNodeIdFactory nidFactory;
+  private NodeIdFactory nidFactory;
   private int port;
 
   private static final int rtMax = 8;
@@ -89,8 +89,8 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
    *
    * @param p RMI registry port.
    */
-  public RMIPastryNodeFactory(int p) {
-    nidFactory = new RandomNodeIdFactory();
+  public RMIPastryNodeFactory(NodeIdFactory nf, int p) {
+    nidFactory = nf;
     port = p;
 
     if( rmiRegistry == null){

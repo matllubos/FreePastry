@@ -38,7 +38,7 @@ public class RMIAP3RegrTest {
   private static int bsport = 5009;
 
   public RMIAP3RegrTest() {
-    factory = new RMIPastryNodeFactory(port);
+    factory = new RMIPastryNodeFactory(new RandomNodeIdFactory(), port);
     pastrynodes = new Vector();
     ap3Nodes = new Vector();
     rng = new Random();

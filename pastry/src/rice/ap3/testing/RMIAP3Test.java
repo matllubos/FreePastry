@@ -34,7 +34,7 @@ public class RMIAP3Test {
     private static int numnodes = 50;
 
     public RMIAP3Test() {
-	factory = new RMIPastryNodeFactory(port);
+	factory = new RMIPastryNodeFactory(new RandomNodeIdFactory(), port);
 	pastrynodes = new Vector();
 	ap3Nodes = new Vector();
 	rng = new Random();

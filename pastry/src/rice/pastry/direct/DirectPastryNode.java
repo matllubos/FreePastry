@@ -81,8 +81,8 @@ public class DirectPastryNode extends PastryNode
      * @return the scheduled event object; can be used to cancel the message
      */
     public ScheduledMessage scheduleMsg(Message msg, long delay) {
-	// XXX - implement!
-	return new ScheduledMessage(this, msg);
+	ScheduledMessage sm = new ScheduledMessage(this, msg);
+	return sm;
     }
 
 
@@ -97,8 +97,8 @@ public class DirectPastryNode extends PastryNode
      * @return the scheduled event object; can be used to cancel the message 
      */
     public ScheduledMessage scheduleMsg(Message msg, long delay, long period) {
-	// XXX - implement!
-	return new ScheduledMessage(this, msg);
+	ScheduledMessage sm = new ScheduledMessage(this, msg);
+	return sm;
     }
 
 
@@ -113,8 +113,8 @@ public class DirectPastryNode extends PastryNode
      * @return the scheduled event object; can be used to cancel the message 
      */
     public ScheduledMessage scheduleMsgAtFixedRate(Message msg, long delay, long period) {
-	// XXX - implement!
-	return new ScheduledMessage(this, msg);
+	ScheduledMessage sm = new ScheduledMessage(this, msg);
+	return sm;
     }
 }
 

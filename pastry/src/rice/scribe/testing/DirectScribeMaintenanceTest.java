@@ -42,6 +42,7 @@ import rice.pastry.direct.*;
 import rice.pastry.messaging.*;
 import rice.scribe.*;
 import rice.pastry.security.*;
+import rice.pastry.standard.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
 
@@ -106,7 +107,7 @@ public class DirectScribeMaintenanceTest
     
     public DirectScribeMaintenanceTest() {
 	simulator = new EuclideanNetwork();
-	factory = new DirectPastryNodeFactory(simulator);
+	factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator);
 	pastryNodes = new Vector();
 	scribeClients = new Vector();
 	nodeIdToApp = new Hashtable();

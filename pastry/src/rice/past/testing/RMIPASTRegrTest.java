@@ -42,7 +42,7 @@ public class RMIPASTRegrTest {
   private static int bsport = 5009;
   
   public RMIPASTRegrTest() {
-    factory = new RMIPastryNodeFactory(port);
+    factory = new RMIPastryNodeFactory(new RandomNodeIdFactory(), port);
     pastrynodes = new Vector();
     pastNodes = new Vector();
     rng = new Random(5);

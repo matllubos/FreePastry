@@ -112,11 +112,11 @@ public abstract class DistPastryNodeFactory implements PastryNodeFactory {
    * @return A DistPastryNodeFactory using the given protocol and port.
    * @throws IllegalArgumentException If protocol is an unsupported port.
    */
-  public static DistPastryNodeFactory getFactory(int protocol, int port) {
+  public static DistPastryNodeFactory getFactory(NodeIdFactory nf, int protocol, int port) {
     if (protocol == PROTOCOL_RMI)
-      return new RMIPastryNodeFactory(port);
+      return new RMIPastryNodeFactory(nf, port);
     else if (protocol == PROTOCOL_WIRE)
-      return new WirePastryNodeFactory(port);
+      return new WirePastryNodeFactory(nf, port);
 
     throw new IllegalArgumentException("Unsupported Protocol " + protocol);
   }

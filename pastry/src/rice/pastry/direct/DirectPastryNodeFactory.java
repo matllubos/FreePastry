@@ -57,7 +57,7 @@ import java.util.*;
 
 public class DirectPastryNodeFactory implements PastryNodeFactory
 {
-    private RandomNodeIdFactory nidFactory;
+    private NodeIdFactory nidFactory;
     private NetworkSimulator simulator;
 
     // max number of handles stored per routing table entry
@@ -66,8 +66,8 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
     // leafset size
     private static final int lSetSize = 24;
   
-    public DirectPastryNodeFactory(NetworkSimulator sim) {
-	nidFactory = new RandomNodeIdFactory();
+    public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim) {
+	nidFactory = nf;
 	simulator = sim;
     }
 

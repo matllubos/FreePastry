@@ -68,8 +68,7 @@ public class HelloWorld {
      */
     public HelloWorld() {
 	simulator = new EuclideanNetwork();
-	factory = new DirectPastryNodeFactory(simulator);
-	//simulator = ((DirectPastryNodeFactory)factory).getNetworkSimulator();
+	factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator);
 
 	pastryNodes = new Vector();
 	helloClients = new Vector();

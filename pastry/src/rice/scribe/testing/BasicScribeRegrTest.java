@@ -42,6 +42,7 @@ import rice.pastry.direct.*;
 import rice.pastry.messaging.*;
 import rice.scribe.*;
 import rice.pastry.security.*;
+import rice.pastry.standard.*;
 
 import java.util.*;
 import java.io.*;
@@ -77,7 +78,7 @@ public class BasicScribeRegrTest
     
     public BasicScribeRegrTest() {
 	m_simulator = new EuclideanNetwork();
-	m_factory = new DirectPastryNodeFactory(m_simulator);
+	m_factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), m_simulator);
 	
 	m_pastryNodes = new LinkedList();
 	m_scribeApps = new LinkedList();

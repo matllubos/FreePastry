@@ -29,7 +29,7 @@ public class AP3Test {
 
     public AP3Test() {
 	simulator = new EuclideanNetwork();
-	factory = new DirectPastryNodeFactory(simulator);
+	factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator);
 
 	pastryNodes = new Vector();
 	ap3Nodes = new Vector();

@@ -60,7 +60,7 @@ import rice.pastry.wire.messaging.socket.*;
  */
 public class WirePastryNodeFactory extends DistPastryNodeFactory {
 
-  private RandomNodeIdFactory nidFactory;
+  private NodeIdFactory nidFactory;
 
   private int port;
 
@@ -79,8 +79,8 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    *
    * @param p RMI registry port.
    */
-  public WirePastryNodeFactory(int startPort) {
-    nidFactory = new RandomNodeIdFactory();
+  public WirePastryNodeFactory(NodeIdFactory nf, int startPort) {
+    nidFactory = nf;
     port = startPort;
   }
 

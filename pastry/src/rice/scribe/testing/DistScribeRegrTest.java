@@ -98,7 +98,7 @@ public class DistScribeRegrTest {
     public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
 
     public DistScribeRegrTest(){
-	factory = DistPastryNodeFactory.getFactory(PROTOCOL, port);
+	factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(), PROTOCOL, port);
 	pastryNodes = new Vector();
 	distClients = new Vector();
 	rng = new Random(PastrySeed.getSeed());

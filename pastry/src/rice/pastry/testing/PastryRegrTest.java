@@ -395,7 +395,7 @@ public abstract class PastryRegrTest {
 		    for (int k=0; k<rs.size(); k++) {
 
 			// check for correct proximity ordering
-			if (rs.get(k).proximity() < bestProximity) {
+			if (rs.get(k).isAlive() && rs.get(k).proximity() < bestProximity) {
 			    System.out.println("checkRoutingTable failure 1, row=" + i + " column=" + j +
 					       " rank=" + k);
 

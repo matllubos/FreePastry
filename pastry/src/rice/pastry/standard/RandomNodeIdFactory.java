@@ -50,7 +50,7 @@ import java.security.*;
  * @author Peter Druschel
  */
 
-public class RandomNodeIdFactory 
+public class RandomNodeIdFactory implements NodeIdFactory
 {
     private Random rng;
     private long next;

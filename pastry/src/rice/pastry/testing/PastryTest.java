@@ -65,8 +65,7 @@ public class PastryTest {
 
     public PastryTest() {
 	simulator = new EuclideanNetwork();
-	factory = new DirectPastryNodeFactory(simulator);
-	//simulator = factory.getNetworkSimulator();
+	factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator);
 
 	pastryNodes = new Vector();
 	pingClients = new Vector();

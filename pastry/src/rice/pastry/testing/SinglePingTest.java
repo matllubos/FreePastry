@@ -68,8 +68,7 @@ public class SinglePingTest {
 
     public SinglePingTest( TestRecord tr ) {
 	simulator = new SphereNetwork();
-	factory = new DirectPastryNodeFactory(simulator);
-	//simulator = factory.getNetworkSimulator();
+	factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator);
 	simulator.setTestRecord( tr );
 	testRecord = tr;
 
