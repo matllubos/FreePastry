@@ -101,9 +101,29 @@ public class PostProxy {
   protected PastryNode pastryNode;
   
   /**
+   * The ring certificate for the pastry node
+   */
+  protected RingCertificate cert;
+  
+  /**
     * The node running in the global ring (if one exists)
    */
   protected PastryNode globalPastryNode;
+  
+  /**
+   * The ring certificate for the global node (if one exists)
+   */
+  protected RingCertificate globalCert;
+  
+  /**
+   * The port number for the Pastry node
+   */
+  protected int port;
+  
+  /**
+   * The port number for the global Pastry node
+   */
+  protected int globalPort;
   
   /**
    * The node the services should use
@@ -268,6 +288,21 @@ public class PostProxy {
   protected Parameters parameters;
   
   /**
+   * The RNG
+   */
+  protected Random random = new Random();
+  
+  /**
+   * The fetched POST log
+   */
+  protected PostLog log;
+  
+  /**
+   * The fetched forward log
+   */
+  protected ForwardLog forwardLog;
+  
+  /**
     * Method which sees if we are using a liveness monitor, and if so, sets up this
    * VM to have a client liveness monitor.
    *
@@ -296,9 +331,9 @@ public class PostProxy {
                         "for both TCP and UDP to your internal address '" + address + "'.\n\n" +
                         "If you have set up your NAT box, select 'NAT is Set Up' to test your\n" + 
                         "connection, otherwise, select 'Kill ePOST Proxy'.", 
-                        new String[] {"NAT is Set Up", "Kill ePOST Proxy"}, "Kill ePOST Proxy");
+                        new String[] {"Kill ePOST Proxy", "NAT is Set Up"}, "Kill ePOST Proxy");
         
-        if (i == 1) {
+        if (i == 0) {
           System.exit(-1);
         } else {
           startCheckNAT(parameters);
@@ -339,6 +374,22 @@ public class PostProxy {
   }
   
   /**
+   * Internal method which returns a random subset of the address to ping in parallel
+   *
+   * @param array The list of all hosts
+   * @param num The number of hosts to return
+   * @return A subset of the specified length
+   */
+  protected InetSocketAddress[] randomSubset(InetSocketAddress[] array, int num) {
+    InetSocketAddress[] result = new InetSocketAddress[num];
+    
+    for (int i=0; i<result.length; i++)
+      result[i] = array[random.nextInt(array.length)];
+    
+    return result;
+  }
+  
+  /**
    * Method which checks the NAT connection
    *
    * @param parameters The parameters to use
@@ -347,26 +398,25 @@ public class PostProxy {
     System.err.println("Starting parsing...");
     InetSocketAddress[] addresses = parameters.getInetSocketAddressArrayParameter("pastry_proxy_connectivity_hosts");
     System.err.println("Done parsing...");
-    Random random = new Random();
     
     try {
       natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getIntParameter("pastry_proxy_connectivity_timeout")/4,
                                                             new InetSocketAddress(InetAddress.getLocalHost(), parameters.getIntParameter("pastry_proxy_connectivity_port")),
-                                                            addresses[random.nextInt(addresses.length)]).getAddress();
+                                                            randomSubset(addresses, 5)).getAddress();
     } catch (SocketTimeoutException e) {}
   
     if (natAddress == null) 
       try {
         natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getIntParameter("pastry_proxy_connectivity_timeout")/2,
                                                               new InetSocketAddress(InetAddress.getLocalHost(), parameters.getIntParameter("pastry_proxy_connectivity_port")),
-                                                              addresses[random.nextInt(addresses.length)]).getAddress();
+                                                              randomSubset(addresses, 5)).getAddress();
       } catch (SocketTimeoutException e) {}
     
     if (natAddress == null) 
       try {
         natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getIntParameter("pastry_proxy_connectivity_timeout"),
                                                               new InetSocketAddress(InetAddress.getLocalHost(), parameters.getIntParameter("pastry_proxy_connectivity_port")),
-                                                              addresses[random.nextInt(addresses.length)]).getAddress();
+                                                              randomSubset(addresses, 5)).getAddress();
       } catch (SocketTimeoutException e) {}
     
     if (natAddress == null) {
@@ -658,16 +708,22 @@ public class PostProxy {
     if (! file.exists()) 
       panic("ERROR: ePOST could not find the keypair for user " + parameters.getStringParameter("post_username"));
     
-    if ((parameters.getStringParameter("post_password") == null) || (parameters.getStringParameter("post_password").equals("")))
-      parameters.setStringParameter("post_password", CAKeyGenerator.fetchPassword(parameters.getStringParameter("post_username") + "'s password"));
+    String password = parameters.getStringParameter("post_password");
+    
+    if ((password == null) || (password.equals(""))) {
+      password = new PasswordFrame(parameters).getPassword();
+      
+      if (parameters.getBooleanParameter("post_password_remember"))
+        parameters.setStringParameter("post_password", password);
+    }
     
     try {
-      pair = CACertificateGenerator.readKeyPair(file, parameters.getStringParameter("post_password"));
+      pair = CACertificateGenerator.readKeyPair(file, password);
       stepDone(SUCCESS);
     } catch (SecurityException e) {
       parameters.removeParameter("post_password");
       parameters.writeFile();
-//      panic(e, "The password for the certificate was incorrect - please try again.", new String[] {"post_password"});
+      stepDone(FAILURE);
       startRetrieveUserKey(parameters);
     }
   }
@@ -694,7 +750,7 @@ public class PostProxy {
    */  
   protected void startRetrieveUserClone(Parameters parameters) throws Exception {
     if (parameters.getBooleanParameter("post_log_clone_enable")) {
-      stepStart("Creating PostLog for previous address " + parameters.getStringParameter("post_log_clone_username"));
+      stepStart("Creating log for previous address " + parameters.getStringParameter("post_log_clone_username"));
       clone = new PostUserAddress(new MultiringIdFactory(generateRingId("Rice"), new PastryIdFactory()), parameters.getStringParameter("post_log_clone_username"));
       stepDone(SUCCESS);
     }
@@ -720,7 +776,47 @@ public class PostProxy {
   }
   
   /**
-    * Method which creates the IdFactory to use
+   * Method which loads the ring certificates ports to use
+   *
+   * @param parameters The parameters to use
+   */
+  protected void startLoadRingCertificates(Parameters parameters) throws Exception {
+    stepStart("Loading Signed Ring Certificates");
+    cert = RingCertificate.getCertificate(((RingId) address.getAddress()).getRingId());
+    
+    if (cert == null)
+      throw new RuntimeException("Could not find a ring certificate for ring '" + ((RingId) address.getAddress()).getRingId() + "'\n" +
+                                 "Please make sure you have the latest code from www.epostmail.org.");
+    
+    globalCert = RingCertificate.getCertificate(generateRingId(null));
+    
+    if ((globalCert == null) && (parameters.getBooleanParameter("multiring_global_enable")))
+        throw new RuntimeException("Could not find a ring certificate for the global ring.\n" +
+                                   "Please make sure you have the latest code from www.epostmail.org.");
+        
+        stepDone(SUCCESS);
+  }
+
+  /**
+   * Method which determines the local ports to use
+   *
+   * @param parameters The parameters to use
+   */
+  protected void startDeterminePorts(Parameters parameters) throws Exception {
+    stepStart("Determining Local Ports");
+    String parameter = "pastry_ring_" + ((RingId) address.getAddress()).getRingId().toStringFull() + "_port";
+    port = (parameters.containsParameter(parameter) ? parameters.getIntParameter(parameter) : cert.getPort());
+    
+    if (parameters.getBooleanParameter("multiring_global_enable")) {
+      parameter = "pastry_ring_" + generateRingId(null).toStringFull()+ "_port";
+      globalPort = (parameters.containsParameter(parameter) ? parameters.getIntParameter(parameter) : globalCert.getPort());
+    }
+    
+    stepDone(SUCCESS);
+  }
+
+  /**
+   * Method which creates the IdFactory to use
    *
    * @param parameters The parameters to use
    */  
@@ -729,7 +825,7 @@ public class PostProxy {
     FACTORY = new MultiringIdFactory(ringId, new PastryIdFactory());
     stepDone(SUCCESS);
   }
-  
+    
   /**
    * Method which initializes the storage managers
    *
@@ -742,7 +838,6 @@ public class PostProxy {
       hostname = InetAddress.getLocalHost().getHostName();
     } catch (UnknownHostException e) {}
     
-    String port = parameters.getStringParameter("pastry_ring_" + ((RingId) address.getAddress()).getRingId().toStringFull()+ "_port");
     String prefix = hostname + "-" + port;
     String location = parameters.getStringParameter("storage_root_location");
     int diskLimit = parameters.getIntParameter("storage_disk_limit");
@@ -834,41 +929,24 @@ public class PostProxy {
   protected void startPastryNode(Parameters parameters) throws Exception {    
     stepStart("Creating Pastry node");
     String prefix = ((RingId) address.getAddress()).getRingId().toStringFull();
-
-    String protocol = parameters.getStringParameter("pastry_ring_" + prefix+ "_protocol");
-    int protocolId = 0;
-    int port = parameters.getIntParameter("pastry_ring_" + prefix+ "_port");
     
     if (logManager instanceof NetworkLogManager)
-      ((NetworkLogManager) logManager).setPastryPort(port);
+      ((NetworkLogManager) logManager).setInfo(port, cert.getKey(), cert.getLogServer());
     
-    if (protocol.equalsIgnoreCase("wire")) {
-      protocolId = DistPastryNodeFactory.PROTOCOL_WIRE;
-    } else if (protocol.equalsIgnoreCase("rmi")) {
-      protocolId = DistPastryNodeFactory.PROTOCOL_RMI;
-    } else if (protocol.equalsIgnoreCase("socket")) {
-      protocolId = DistPastryNodeFactory.PROTOCOL_SOCKET;
-    } else {
-      panic(new RuntimeException(), "The pastry protocol " + protocol + " is unknown.", "pastry_protocol");
-    }
-    
-    factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port), protocolId, port);
-    InetSocketAddress[] bootAddresses = parameters.getInetSocketAddressArrayParameter("pastry_ring_" + prefix+ "_bootstraps");
+    factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port), cert.getProtocol(), port);
     InetSocketAddress proxyAddress = null;
         
- /*   if (parameters.getBooleanParameter("pastry_ring_" + prefix+ "_proxy_enable"))
-      proxyAddress = parameters.getInetSocketAddressParameter("pastry_ring_" + prefix+ "_proxy_address"); */
     if (natAddress != null)
       proxyAddress = new InetSocketAddress(natAddress, port);
     
-    rice.pastry.NodeHandle bootHandle = factory.getNodeHandle(bootAddresses);
+    rice.pastry.NodeHandle bootHandle = factory.getNodeHandle(cert.getBootstraps());
     
     if ((bootHandle == null) && (! parameters.getBooleanParameter("pastry_ring_" + prefix+ "_allow_new_ring")))
       panic(new RuntimeException(), 
             "Could not contact existing ring and not allowed to create a new ring. This\n" +
             "is likely because your computer is not properly connected to the Internet\n" +
             "or the ring you are attempting to connect to is off-line.  Please check\n" +
-            "your connection and try again later.", "pastry_ring_" + prefix+ "_bootstraps");
+            "your connection and try again later.", "pastry_ring_" + prefix + "_allow_new_ring");
 
     node = factory.newNode(bootHandle, proxyAddress);
     pastryNode = (PastryNode) node;
@@ -903,7 +981,7 @@ public class PostProxy {
               "ring - it is highly likely that there is a problem preventing the connection.\n" + 
               "The most common error is a firewall which is preventing incoming connections - \n" +
               "please ensure that any firewall protecting you machine allows incoming traffic \n" +
-              "in both UDP and TCP on port " + parameters.getIntParameter("pastry_ring_" + prefix+ "_port"));
+              "in both UDP and TCP on port " + port);
       }
     } while ((! parameters.getBooleanParameter("pastry_ring_" + prefix+ "_allow_new_ring")) &&
              (pastryNode.getLeafSet().size() == 0));
@@ -958,29 +1036,14 @@ public class PostProxy {
   protected void startGlobalPastryNode(Parameters parameters) throws Exception {    
     stepStart("Creating Global Pastry node");
     String prefix = generateRingId(null).toStringFull();
-    
-    String protocol = parameters.getStringParameter("pastry_ring_" + prefix + "_protocol");
-    int protocolId = 0;
-    int port = parameters.getIntParameter("pastry_ring_" + prefix + "_port");
-    
-    if (protocol.equalsIgnoreCase("wire")) {
-      protocolId = DistPastryNodeFactory.PROTOCOL_WIRE;
-    } else if (protocol.equalsIgnoreCase("rmi")) {
-      protocolId = DistPastryNodeFactory.PROTOCOL_RMI;
-    } else if (protocol.equalsIgnoreCase("socket")) {
-      protocolId = DistPastryNodeFactory.PROTOCOL_SOCKET;
-    } else {
-      panic(new RuntimeException(), "The global pastry protocol " + protocol + " is unknown.", "pastry_ring_" + prefix + "_protocol");
-    }
-    
-    DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port), protocolId, port);
-    InetSocketAddress[] bootAddresses = parameters.getInetSocketAddressArrayParameter("pastry_ring_" + prefix + "_bootstraps");
+        
+    DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port), globalCert.getProtocol(), globalPort);
     InetSocketAddress proxyAddress = null;
     
     if (parameters.getBooleanParameter("pastry_ring_" + prefix+ "_proxy_enable"))
       proxyAddress = parameters.getInetSocketAddressParameter("pastry_ring_" + prefix+ "_proxy_address");
     
-    globalNode = factory.newNode(factory.getNodeHandle(bootAddresses), (rice.pastry.NodeId) ((RingId) node.getId()).getId(), proxyAddress);
+    globalNode = factory.newNode(factory.getNodeHandle(globalCert.getBootstraps()), (rice.pastry.NodeId) ((RingId) node.getId()).getId(), proxyAddress);
     globalPastryNode = (PastryNode) globalNode;
 
     int count = 0;
@@ -995,7 +1058,7 @@ public class PostProxy {
               "ring - it is highly likely that there is a problem preventing the connection.\n" + 
               "The most common error is a firewall which is preventing incoming connections - \n" +
               "please ensure that any firewall protecting you machine allows incoming traffic \n" +
-              "in both UDP and TCP on port " + parameters.getIntParameter("pastry_ring_" + prefix + "_port"));
+              "in both UDP and TCP on port " + globalPort);
       }
     } while ((! parameters.getBooleanParameter("pastry_ring_" + prefix + "_allow_new_ring")) &&
              (globalPastryNode.getLeafSet().size() == 0));
@@ -1036,8 +1099,6 @@ public class PostProxy {
   protected void startGlacier(Parameters parameters) throws Exception {
     if (parameters.getBooleanParameter("glacier_enable")) {
       stepStart("Starting Glacier service");
-      String port = parameters.getStringParameter("pastry_ring_" + ((RingId) address.getAddress()).getRingId().toStringFull()+ "_port");
-
 
       String prefix = InetAddress.getLocalHost().getHostName() + "-" + port;
       VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
@@ -1255,11 +1316,72 @@ public class PostProxy {
           }
         } else {
           done = true;
+          System.out.println("LOG IS A " + c.getResult() + " " + c.getResult().getClass().getName());
+          log = (PostLog) c.getResult();
         }
       }
       
       
       stepDone(SUCCESS);
+    }
+  }
+  
+  /**
+   * Method which fetches the local user's forwarding log
+   *
+   * @param parameters The parameters to use
+   */  
+  protected void startFetchForwardingLog(Parameters parameters) throws Exception {
+    if (parameters.getBooleanParameter("post_proxy_enable") &&
+        parameters.getBooleanParameter("post_fetch_log")) {
+      
+      stepStart("Fetching POST forwarding log");
+      
+      ExternalContinuation c = new ExternalContinuation();
+      log.getChildLog(ForwardLog.FORWARD_NAME, c);
+      c.sleep();
+      
+      if (c.exceptionThrown()) { 
+        stepDone(FAILURE, "Fetching POST forward log caused exception " + c.getException());
+        throw c.getException(); 
+      } else {
+        forwardLog = (ForwardLog) c.getResult();
+      }
+      
+      stepDone(SUCCESS);
+    }
+  }
+  
+  /**
+   * Method which updates the local user's forward log
+   *
+   * @param parameters The parameters to use
+   */  
+  protected void startUpdateForwardingLog(Parameters parameters) throws Exception {
+    if (parameters.getBooleanParameter("post_proxy_enable") &&
+        parameters.getBooleanParameter("post_fetch_log")) {
+      String[] addresses = parameters.getStringArrayParameter("post_forward_addresses");
+      
+      if (((forwardLog == null) && (addresses.length > 0)) ||
+          ((forwardLog != null) && (! Arrays.equals(forwardLog.getAddresses(), addresses)))) {
+        stepStart("Updating POST forwarding log");
+        ExternalContinuation c = new ExternalContinuation();
+        
+        if (forwardLog == null) {
+          forwardLog = new ForwardLog(log, addresses, post.getStorageService().getRandomNodeId(), post, c);
+        } else {   
+          forwardLog.setAddresses(addresses, c);
+        }
+
+        c.sleep();
+        
+        if (c.exceptionThrown()) { 
+          stepDone(FAILURE, "Updating POST forward log caused exception " + c.getException());
+          throw c.getException(); 
+        } 
+        
+        stepDone(SUCCESS);
+      }
     }
   }
   
@@ -1280,6 +1402,8 @@ public class PostProxy {
     startSecurityManager(parameters);
     startRetrieveCAKey(parameters);
     startRetrieveUser(parameters);
+    startLoadRingCertificates(parameters);
+    startDeterminePorts(parameters);
     sectionDone();
     
     sectionStart("Initializing Disk Storage");
@@ -1302,6 +1426,8 @@ public class PostProxy {
     startPost(parameters);
     startInsertLog(parameters);
     startFetchLog(parameters);
+    startFetchForwardingLog(parameters);
+    startUpdateForwardingLog(parameters);
     
     sectionDone();
     
@@ -1580,7 +1706,23 @@ public class PostProxy {
       
       configuration.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          new ConfigurationFrame(parameters);
+          final ConfigurationFrame frame = new ConfigurationFrame(parameters);
+          
+          Thread t = new Thread() {
+            public void run() {
+              try {
+                synchronized (frame) {
+                  frame.wait();
+                }
+                
+                startUpdateForwardingLog(parameters);
+              } catch (Exception f) {
+                System.err.println("Got Exception e waiting for config frame" + f);
+              }
+            }
+          };
+          
+          t.start();
         }
       });
       
@@ -1707,5 +1849,109 @@ public class PostProxy {
     }
   }
   
+  public class PasswordFrame extends JFrame {
+    
+    protected JPasswordField field;
+    
+    protected JCheckBox box;
+    
+    protected Parameters parameters;
+    
+    protected boolean submitted = false;
+    
+    public PasswordFrame(Parameters p) {
+      super("Password");
+      this.parameters = p;
+      this.field = new JPasswordField(20);
+      this.box = new JCheckBox((javax.swing.Icon) null, parameters.getBooleanParameter("post_password_remember"));
+      GridBagLayout layout = new GridBagLayout();
+      
+      addWindowListener(new WindowListener() {
+        public void windowActivated(WindowEvent e) {}      
+        public void windowClosed(WindowEvent e) {
+          done();
+        }      
+        public void windowClosing(WindowEvent e) {
+          done();
+        }      
+        public void windowDeactivated(WindowEvent e) {}      
+        public void windowDeiconified(WindowEvent e) {}      
+        public void windowIconified(WindowEvent e) {}      
+        public void windowOpened(WindowEvent e) {}
+      });
+      
+      getContentPane().setLayout(layout);
+      
+      JLabel fieldLabel = new JLabel("Please enter your password: ", JLabel.TRAILING);
+      fieldLabel.setLabelFor(field);
+      
+      JLabel boxLabel = new JLabel("Remember password: ", JLabel.TRAILING);
+      boxLabel.setLabelFor(box);
+      
+      GridBagConstraints gbc1 = new GridBagConstraints();
+      layout.setConstraints(fieldLabel, gbc1);      
+      getContentPane().add(fieldLabel);
+      
+      GridBagConstraints gbc2 = new GridBagConstraints();
+      gbc2.gridx = 1;
+      layout.setConstraints(field, gbc2);      
+      getContentPane().add(field);
+      
+      GridBagConstraints gbc5 = new GridBagConstraints();
+      gbc5.gridy = 1;
+      layout.setConstraints(boxLabel, gbc5);      
+      getContentPane().add(boxLabel);
+      
+      GridBagConstraints gbc6 = new GridBagConstraints();
+      gbc6.gridx = 1;
+      gbc6.gridy = 1;
+      layout.setConstraints(box, gbc6);      
+      getContentPane().add(box);
+      
+      JButton submit = new JButton("Submit");
+      
+      GridBagConstraints gbc3 = new GridBagConstraints();
+      gbc3.gridx = 1;
+      gbc3.gridy = 2;
+      layout.setConstraints(submit, gbc3);      
+      getContentPane().add(submit);
+      
+      final JFrame frame = this;
+      
+      getRootPane().setDefaultButton(submit);
+      
+      submit.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          done();
+        }
+      });
+      
+      pack();
+      show();
+    }
+    
+    protected void done() {
+      if (! submitted) {
+        dispose();
+        submitted = true;
+
+        parameters.setBooleanParameter("post_password_remember", box.isSelected());
+        parameters.writeFile();
+    
+        synchronized (parameters) {
+          parameters.notifyAll();
+        } 
+      }
+    }
+    
+    protected String getPassword() throws Exception {
+      synchronized (parameters) {
+        if (! submitted)
+          parameters.wait();
+      }
+      
+      return this.field.getText();
+    }
+  }
 
 }
