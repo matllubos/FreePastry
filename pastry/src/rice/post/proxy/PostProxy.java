@@ -10,6 +10,7 @@ import rice.pastry.standard.*;
 
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
+import rice.p2p.past.gc.*;
 import rice.p2p.multiring.*;
 
 import rice.persistence.*;
@@ -110,6 +111,11 @@ public class PostProxy {
   static int REPLICATION_FACTOR = 3;
   
   /**
+   * The number of retries to fetch a log
+   */
+  public static int NUM_RETRIES = 3;
+  
+  /**
     * Whether to allow insert from POST log
    */
   public static boolean ALLOW_LOG_INSERT = false;
@@ -145,9 +151,14 @@ public class PostProxy {
   protected Node node;
 
   /**
-   * The local Past service
+   * The local Past service, for immutable objects
    */
-  protected PastImpl past;
+  protected PastImpl immutablePast;
+  
+  /**
+   * The local Past service, for mutable objects
+   */
+  protected PastImpl mutablePast;
   
   /**
     * The local Past service for delivery requests
@@ -165,9 +176,14 @@ public class PostProxy {
   protected Post post;
   
   /**
-   * The local storage manager
+   * The local storage manager, for immutable objects
    */
-  protected StorageManager storage;
+  protected StorageManager immutableStorage;
+  
+  /**
+   * The local storage manager, for mutable objects
+   */
+  protected StorageManager mutableStorage;
   
   /**
    * The local storage for pending deliveries
@@ -358,13 +374,16 @@ public class PostProxy {
     stepDone(SUCCESS);
     
     stepStart("Starting StorageManager");
-    storage = new StorageManager(FACTORY,
-                                 new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT, ".", DISK_SIZE),
-                                 new LRUCache(new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-cache", ".", DISK_SIZE), CACHE_SIZE));
-    pendingStorage = new StorageManager(FACTORY,
+    immutableStorage = new StorageManagerImpl(FACTORY,
+                                             new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT , ".", DISK_SIZE),  // + "-immutable"
+                                             new LRUCache(new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-cache", ".", DISK_SIZE), CACHE_SIZE));
+//    mutableStorage = new StorageManagerImpl(FACTORY,
+//                                           new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-mutable", ".", DISK_SIZE),
+//                                           new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE));    
+    pendingStorage = new StorageManagerImpl(FACTORY,
                                         new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-pending", ".", DISK_SIZE),
                                         new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE));
-    deliveredStorage = new StorageManager(FACTORY,
+    deliveredStorage = new StorageManagerImpl(FACTORY,
                                           new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-delivered", ".", DISK_SIZE),
                                           new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE));
     stepDone(SUCCESS);
@@ -393,22 +412,37 @@ public class PostProxy {
     stepDone(SUCCESS); 
     
     stepStart("Starting PAST service");
-    past = new PastImpl(node, storage, REPLICATION_FACTOR, INSTANCE_NAME);
+    immutablePast = new PastImpl(node,immutableStorage, REPLICATION_FACTOR, INSTANCE_NAME); // + "-immutable"
+//    mutablePast = new PastImpl(node, mutableStorage, REPLICATION_FACTOR, INSTANCE_NAME + "-mutable"); //, new MutablePastPolicy());
     deliveredPast = new PastImpl(node, deliveredStorage, REPLICATION_FACTOR, INSTANCE_NAME + "-delivered");
     pendingPast = new DeliveryPastImpl(node, pendingStorage, REPLICATION_FACTOR, INSTANCE_NAME + "-pending", deliveredPast);
     stepDone(SUCCESS);
     
     stepStart("Starting POST service");
-    post = new PostImpl(node, past, pendingPast, deliveredPast, address, pair, certificate, caPublic, INSTANCE_NAME, ALLOW_LOG_INSERT);
+    post = new PostImpl(node, immutablePast, immutablePast, pendingPast, deliveredPast, address, pair, certificate, caPublic, INSTANCE_NAME, ALLOW_LOG_INSERT);
     stepDone(SUCCESS);
     
     if (name != null) {
-      stepStart("Fetching POST log at " + address.getAddress());
-      ExternalContinuation c = new ExternalContinuation();
-      post.getPostLog(c);
-      c.sleep();
+      int retries = 0;
       
-      if (c.exceptionThrown()) { throw c.getException(); }
+      stepStart("Fetching POST log at " + address.getAddress());
+      boolean done = false;
+      
+      while (!done) {
+        ExternalContinuation c = new ExternalContinuation();
+        post.getPostLog(c);
+        c.sleep();
+      
+       if (c.exceptionThrown()) { 
+         if (retries < NUM_RETRIES) {
+           retries++;
+         } else {
+           throw c.getException(); 
+         }
+       } else {
+         done = true;
+       }
+      }
       stepDone(SUCCESS);
     }
     
@@ -574,6 +608,7 @@ public class PostProxy {
       proxy.start();
     } catch (Exception e) {
       System.err.println("ERROR: Found Exception while start proxy - exiting - " + e);
+      e.printStackTrace();
       System.exit(-1);
     }
   }
