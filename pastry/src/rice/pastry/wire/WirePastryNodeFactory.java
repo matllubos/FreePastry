@@ -334,7 +334,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
 
       if (ex == null) {
       } else {
-        System.out.println("not registering bogus channel:"+ex);
+        debug("not registering bogus channel:"+ex);
       }
 
       channel.close();
