@@ -1,7 +1,8 @@
 package rice.p2p.glacier;
-import java.io.Serializable;
 
+import java.io.Serializable;
 import rice.p2p.commonapi.Id;
+import rice.p2p.multiring.RingId;
 
 /**
  * DESCRIBE THE CLASS
@@ -9,7 +10,7 @@ import rice.p2p.commonapi.Id;
  * @version $Id$
  * @author ahae
  */
-public class VersionKey implements Serializable, Comparable {
+public class VersionKey implements Id, Serializable, Comparable {
   /**
    * DESCRIBE THE FIELD
    */
@@ -17,7 +18,7 @@ public class VersionKey implements Serializable, Comparable {
   /**
    * DESCRIBE THE FIELD
    */
-  protected int version;
+  protected long version;
 
   /**
    * Constructor for VersionKey.
@@ -25,7 +26,7 @@ public class VersionKey implements Serializable, Comparable {
    * @param id DESCRIBE THE PARAMETER
    * @param version DESCRIBE THE PARAMETER
    */
-  public VersionKey(Id id, int version) {
+  public VersionKey(Id id, long version) {
     this.id = id;
     this.version = version;
   }
@@ -35,7 +36,7 @@ public class VersionKey implements Serializable, Comparable {
    *
    * @return The Version value
    */
-  public int getVersion() {
+  public long getVersion() {
     return version;
   }
 
@@ -69,7 +70,7 @@ public class VersionKey implements Serializable, Comparable {
    * @return DESCRIBE THE RETURN VALUE
    */
   public String toString() {
-    return id.toString() + "v" + version;
+    return id.toString() + "v" + (version%1000);
   }
 
   /**
@@ -93,7 +94,13 @@ public class VersionKey implements Serializable, Comparable {
       return idResult;
     }
 
-    return version - ((VersionKey) o).version;
+    if ((version - ((VersionKey) o).version)<0)
+      return -1;
+
+    if ((version - ((VersionKey) o).version)>0)
+      return 1;
+      
+    return 0;
   }
 
   /**
@@ -102,6 +109,60 @@ public class VersionKey implements Serializable, Comparable {
    * @return DESCRIBE THE RETURN VALUE
    */
   public int hashCode() {
-    return (id.hashCode() + version);
+    return (id.hashCode() + (new Long(version).hashCode()));
+  }
+  
+  public byte[] toByteArray() {
+    byte[] v = id.toByteArray();
+    byte[] result = new byte[v.length + 8];
+
+    for (int i=0; i<v.length; i++)
+      result[i] = v[i];
+
+    result[v.length + 0] = (byte)(0xFF & (version>>56));
+    result[v.length + 1] = (byte)(0xFF & (version>>48));
+    result[v.length + 2] = (byte)(0xFF & (version>>40));
+    result[v.length + 3] = (byte)(0xFF & (version>>32));
+    result[v.length + 4] = (byte)(0xFF & (version>>24));
+    result[v.length + 5] = (byte)(0xFF & (version>>16));
+    result[v.length + 6] = (byte)(0xFF & (version>>8));
+    result[v.length + 7] = (byte)(0xFF & (version));
+
+    return result;
+  }
+
+  public boolean isBetween(Id ccw, Id cw) {
+    System.err.println("VersionKey::isBetween() called");
+    System.exit(1);
+    return false;
+  }
+  
+  public Distance longDistanceFromId(Id nid) {
+    System.err.println("VersionKey::longDistanceFromId() called");
+    System.exit(1);
+    return null;
+  }
+
+  public Distance distanceFromId(Id nid) {
+    System.err.println("VersionKey::distanceFromId() called");
+    System.exit(1);
+    return null;
+  }
+  
+  public Id addToId(Distance offset) {
+    System.err.println("VersionKey::addToId() called");
+    System.exit(1);
+    return null;
+  }
+  
+  public boolean clockwise(Id nid) {
+    System.err.println("VersionKey::clockwise() called");
+    System.exit(1);
+    return false;
+  }
+  
+  public static VersionKey build(String s) {
+    String[] sArray = s.split("v");
+    return new VersionKey(RingId.build(sArray[0]), Long.parseLong(sArray[1]));
   }
 }
