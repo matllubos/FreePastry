@@ -1089,7 +1089,13 @@ public class DirectScribeMaintenanceTest
 	return result;
     }
 
-
+    /**
+     * Checks the DFS implemented by MessageAnycast class. Every node sends
+     * a dummy anycast message to a topic (and we make sure that no one responds
+     * to it, i.e. no node is able to satisfy the request). Now, after it fails,
+     * we print how many nodes did it travelled, which should be equal to number
+     * of nodes alive in system, since every node subscribes to all topics.
+     */
     public boolean checkAnycastDFS(NodeId topicId){
 	boolean result = true;
 	DirectScribeMaintenanceTestApp scribeApp;
@@ -1125,6 +1131,12 @@ public class DirectScribeMaintenanceTest
 	}
     }
 
+
+
+    /**
+     * A test for checking if data was correctly propogated along subscribe
+     * messages if new join method was used, which takes data as a parameter.
+     */
     public boolean checkNewJoin(NodeId topicId){
 	int check = 5000;
 	int value = -1;
