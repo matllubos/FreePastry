@@ -113,6 +113,24 @@ public class ScribeImpl implements Scribe, Application {
   }
 
   /**
+   * Returns the current policy for this scribe object
+   *
+   * @return The current policy for this scribe
+   */
+  public ScribePolicy getPolicy() {
+    return policy;
+  }
+
+  /**
+   * Sets the current policy for this scribe object
+   *
+   * @param policy The current policy for this scribe
+   */
+  public void setPolicy(ScribePolicy policy) {
+    this.policy = policy;
+  }
+
+  /**
    * Returns the Id of the local node
    *
    * @return The Id of the local node

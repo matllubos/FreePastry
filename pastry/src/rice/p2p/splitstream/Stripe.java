@@ -21,34 +21,14 @@ import rice.p2p.scribe.*;
 public class Stripe implements ScribeClient {
 
   /**
-   * The constant status code associated with the subscribed state
-   */
-  public final static int STRIPE_SUBSCRIBED = 0;
-
-  /**
-   * The constant status code associated with the unsubscribed state
-   */
-  public final static int STRIPE_UNSUBSCRIBED = 1;
-
-  /**
-   * The constant status code associated with the dropped state
-   */
-  public final static int STRIPE_DROPPED = 2;
-
-  /**
    * The stripeId for this stripe
    */
   protected StripeId stripeId;
 
   /**
-    * The channel this stripe is a part of.
+   * The topic corresponding to this stripeId
    */
-  protected SplitStream splitStream;
-
-  /**
-   * The channel this stripe is a part of.
-   */
-  protected Channel channel;
+  protected Topic topic;
 
   /**
    * The scribe object
@@ -61,31 +41,30 @@ public class Stripe implements ScribeClient {
   protected boolean isPrimary;
 
   /**
+   * The stripe state, whether it is dropped, connected, etc.
+   */
+  protected boolean subscribed;
+
+  /**
    * The list of SplitStreamClients interested in data from this client
    */
   protected Vector clients;
 
   /**
-   * The stripe state, whether it is dropped, connected, etc.
-   */
-  protected int stripeState = STRIPE_UNSUBSCRIBED;
-
-  /**
    * The constructor used when creating a stripe from scratch.
    *
    * @param stripeId the stripeId that this stripe will be rooted at
-   * @param channel the channel this stripe belongs to
-   * @param scribe DESCRIBE THE PARAMETER
+   * @param scribe the scribe the stripe is running on top of
    */
-  public Stripe(StripeId stripeId, Scribe scribe, Channel channel, SplitStream splitStream) {
-    this.channel = channel;
+  public Stripe(StripeId stripeId, Scribe scribe) {
     this.stripeId = stripeId;
     this.scribe = scribe;
-    this.splitStream = splitStream;
-    this.stripeState = STRIPE_UNSUBSCRIBED;
+    this.subscribed = false;
     this.isPrimary = false;
+    // NEED TO ADD PRIMARY LOGIC HERE
 
     this.clients = new Vector();
+    this.topic = new Topic(stripeId.getId());
   }
 
   /**
@@ -98,27 +77,27 @@ public class Stripe implements ScribeClient {
   }
 
   /**
-   * gets the Channel that this stripe is a part of
+   * Returns whether or not this stripe is the primary stripe for the local node
    *
-   * @return Channel Object
+   * @return Whether or not this stripe is primary
    */
-  public Channel getChannel() {
-    return channel;
+  public boolean isPrimary() {
+    return isPrimary;
   }
 
   /**
    * get the state of the Stripe
    *
-   * @return int the State the stripe is in
+   * @return the State the stripe is in
    */
-  public int getState() {
-    return stripeState;
+  public boolean isSubscribed() {
+    return subscribed;
   }
 
   /**
-   * Adds a client to this stripe - the client will be informed whenever data arrives for this strip
+   * Adds a client to this stripe - the client will be informed whenever data arrives for this stripe
    *
-   * @param client DESCRIBE THE PARAMETER
+   * @param client The client to add
    */
   public void subscribe(SplitStreamClient client) {
     if (!clients.contains(client)) {
@@ -127,9 +106,9 @@ public class Stripe implements ScribeClient {
   }
 
   /**
-   * Adds a client to this stripe - the client will be informed whenever data arrives for this strip
+   * Removes a client from this stripe - the client will no longer be informed whenever data arrives for this stripe
    *
-   * @param client DESCRIBE THE PARAMETER
+   * @param client The client to remove
    */
   public void unsubscribe(SplitStreamClient client) {
     clients.remove(client);
@@ -139,7 +118,10 @@ public class Stripe implements ScribeClient {
    * Leaves this stripe This causes us to stop getting data and to leave the scribe topic group
    */
   public void leaveStripe() {
-    scribe.unsubscribe(new Topic(stripeId.getId()), this);
+    if (subscribed) {
+      scribe.unsubscribe(topic, this);
+      subscribed = false;
+    }
   }
 
   /**
@@ -147,7 +129,10 @@ public class Stripe implements ScribeClient {
    * received
    */
   public void joinStripe() {
-    scribe.subscribe(new Topic(stripeId.getId()), this);
+    if (! subscribed) {
+      scribe.subscribe(topic, this);
+      subscribed = true;
+    }
   }
 
   /**
@@ -156,7 +141,7 @@ public class Stripe implements ScribeClient {
    * @param data The data to publish
    */
   public void publish(byte[] data) {
-    // do stuff here
+    scribe.publish(topic, new SplitStreamContent(data)); 
   }
 
   /**
@@ -178,7 +163,21 @@ public class Stripe implements ScribeClient {
    * @param content The content which was published
    */
   public void deliver(Topic topic, ScribeContent content) {
-    // deliver the content here
+    if (this.topic.equals(topic)) {
+      if (content instanceof SplitStreamContent) {
+        byte[] data = ((SplitStreamContent) content).getData();
+
+        SplitStreamClient[] clients = (SplitStreamClient[]) this.clients.toArray(new SplitStreamClient[0]);
+
+        for (int i=0; i<clients.length; i++) {
+          clients[i].deliver(this, data);
+        }
+      } else {
+        System.out.println("Received unexpected content " + content);
+      }
+    } else {
+      System.out.println("Received update for unexcpected topic " + topic + " content " + content);
+    }
   }
 
   /**
@@ -188,7 +187,6 @@ public class Stripe implements ScribeClient {
    * @param child The child that was added
    */
   public void childAdded(Topic topic, NodeHandle child) {
-    // do some stuff
   }
 
   /**
@@ -198,24 +196,6 @@ public class Stripe implements ScribeClient {
    * @param child The child that was removed
    */
   public void childRemoved(Topic topic, NodeHandle child) {
-    // do stuff here
   }
-
-  /**
-   * Sets the State attribute of the Stripe object
-   *
-   * @param state The new State value
-   */
-  protected void setState(int state) {
-    stripeState = state;
-  }
-
-  /**
-   * Method called when this stripe is dropped
-   */
-  protected void dropped() {
-    stripeState = STRIPE_DROPPED;
-  }
-
 }
 

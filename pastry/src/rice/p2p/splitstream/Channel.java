@@ -33,29 +33,7 @@ public class Channel {
   /**
    * The list of stripeIds for this channel
    */
-  protected StripeId[] stripeIds;
-
-  /**
-   * The list of stripeIds for this channel
-   */
   protected Stripe[] stripes;
-
-  /**
-   * The scribe object associated with this node
-   */
-  protected Scribe scribe;
-
-  /**
-   * The splitStreamImpl object associated with this node, this is needed to have access to the
-   * pastry messages
-   */
-  protected SplitStream splitStream;
-
-  /**
-   * The bandwidth manager for this channel, responsible for keeping track of the number of
-   * children, and then deciding when to take on children.
-   */
-  protected BandwidthManager bandwidthManager;
 
   /**
    * Constructor to create a new channel from scratch
@@ -64,37 +42,25 @@ public class Channel {
    * @param channelId DESCRIBE THE PARAMETER
    * @param scribe DESCRIBE THE PARAMETER
    */
-  public Channel(ChannelId channelId, Scribe scribe, SplitStream splitStream) {
+  public Channel(ChannelId channelId, Scribe scribe, IdFactory factory) {
 
     /*
      *  Initialize Member variables
      */
-    this.bandwidthManager = new BandwidthManagerImpl();
-    this.scribe = scribe;
-    this.splitStream = splitStream;
     this.channelId = channelId;
 
     /*
      *  Create the stripe id and stripe arrays
      */
-    stripeIds = generateStripeIds(channelId, splitStream.getNode().getIdFactory());
+    StripeId[] stripeIds = generateStripeIds(channelId, factory);
     stripes = new Stripe[stripeIds.length];
 
     /*
      *  Create the stripes
      */
     for (int i = 0; i < stripeIds.length; i++) {
-      stripes[i] = new Stripe(stripeIds[i], scribe, this, splitStream);
+      stripes[i] = new Stripe(stripeIds[i], scribe);
     }
-  }
-
-  /**
-   * Gets the bandwidth manager for this channel.
-   *
-   * @return BandwidthManager the BandwidthManager for this channel
-   */
-  public BandwidthManager getBandwidthManager() {
-    return bandwidthManager;
   }
 
   /**

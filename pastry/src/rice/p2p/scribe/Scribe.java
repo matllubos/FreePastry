@@ -105,5 +105,19 @@ public interface Scribe {
    * @param child The child to remove
    */
   public void removeChild(Topic topic, NodeHandle child);
+
+  /**
+   * Returns the current policy for this scribe object
+   *
+   * @return The current policy for this scribe
+   */
+  public ScribePolicy getPolicy();
+
+  /**
+   * Sets the current policy for this scribe object
+   *
+   * @param policy The current policy for this scribe
+   */
+  public void setPolicy(ScribePolicy policy);
 }
 

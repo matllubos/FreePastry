@@ -19,7 +19,7 @@ import rice.p2p.scribe.*;
  * @author Ansley Post
  * @author Alan Mislove
  */
-public class SplitStreamImpl implements SplitStream, Application {
+public class SplitStreamImpl implements SplitStream {
 
   /**
    * The scribe instance for this SplitStream Object
@@ -30,11 +30,6 @@ public class SplitStreamImpl implements SplitStream, Application {
    * The node that this application is running on
    */
   protected Node node;
-
-  /**
-   * The endpoint that this application is running on
-   */
-  protected Endpoint endpoint;
 
   /**
    * Hashtable of all the channels currently created on this node implicitly or explicitly.
@@ -49,28 +44,10 @@ public class SplitStreamImpl implements SplitStream, Application {
    * @param instance The instance name for this splitstream
    */
   public SplitStreamImpl(Node node, String instance) {
-    this.scribe = new ScribeImpl(node, new SplitStreamScribePolicy(this), instance);
+    this.scribe = new ScribeImpl(node, instance);
+    scribe.setPolicy(new SplitStreamScribePolicy(scribe, this));
     this.node = node;
-    this.endpoint = node.registerApplication(this, instance);
     this.channels = new Hashtable();
-  }
-
-  /**
-   * Method which returns the underlying node for this splitstream object
-   *
-   * @return The node underlying this splitstream
-   */
-  public Node getNode() {
-    return node;
-  }
-
-  /**
-   * Method which returns the underlying endpoint for this splitstream object
-   *
-   * @return The endpoint underlying this splitstream
-   */
-  public Endpoint getEndpoint() {
-    return endpoint;
   }
 
   /**
@@ -85,8 +62,7 @@ public class SplitStreamImpl implements SplitStream, Application {
    * @return an instance of a Channel class.
    */
   public Channel createChannel(ChannelId id) {
-    Channel channel = new Channel(id, scribe, this);
-    return channel;
+    return attachChannel(id);
   }
 
   /**
@@ -106,45 +82,21 @@ public class SplitStreamImpl implements SplitStream, Application {
     Channel channel = (Channel) channels.get(id);
 
     if (channel == null) {
-      channel = new Channel(id, scribe, this);
+      channel = new Channel(id, scribe, node.getIdFactory());
       channels.put(id, channel);
     }
 
     return channel;
   }
 
-  /**
-   * This method is invoked on applications when the underlying node is about to forward the given
-   * message with the provided target to the specified next hop. Applications can change the
-   * contents of the message, specify a different nextHop (through re-routing), or completely
-   * terminate the message.
-   *
-   * @param message The message being sent, containing an internal message along with a destination
-   *      key and nodeHandle next hop.
-   * @return Whether or not to forward the message further
-   */
-  public boolean forward(RouteMessage message) {
-    return true;
-  }
 
   /**
-   * This method is called on the application at the destination node for the given id.
+    * Returns all of the channels on this local splitstream
    *
-   * @param id The destination id of the message
-   * @param message The message being sent
+   * @return All of the channels currently being received by this splitstream
    */
-  public void deliver(Id id, Message message) {
-    // DO stuff here
-  }
-
-  /**
-   * This method is invoked to inform the application that the given node has either joined or left
-   * the neighbor set of the local node, as the set would be returned by the neighborSet call.
-   *
-   * @param handle The handle that has joined/left
-   * @param joined Whether the node has joined or left
-   */
-  public void update(NodeHandle handle, boolean joined) {
+  public Channel[] getChannels() {
+    return (Channel[]) channels.values().toArray(new Channel[0]);
   }
 }
 
