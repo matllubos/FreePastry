@@ -706,6 +706,7 @@ public class Channel extends PastryAppl implements IScribeApp {
      */
     private void handleControlTimeoutMessage( Message msg )
     {
+        //System.out.println( "Received a scheduled timeout message" );
         ControlTimeoutMessage timeoutMessage = (ControlTimeoutMessage)msg;
         if ( !timeoutIgnore )
         {
