@@ -339,6 +339,20 @@ public class Channel implements IScribeApp {
 	return (temp);
     }
 
+    public void setStripes( StripeId[] s){
+        for(int i = 0; i < s.length; i++){
+	  Stripe stripe = new Stripe(s[i], this, scribe,cred,true);
+	  stripeIdTable.put(s[i], stripe);
+	    if(s[i].getDigit(getSplitStream().getRoutingTable().numRows() -1, 4) 
+		== getSplitStream().getNodeId().getDigit(getSplitStream().getRoutingTable().numRows() -1,4))
+		primaryStripe = stripe; 
+        }
+    }
+
+    public void setSpareCapacityId(SpareCapacityId spareCapacityId){
+      this.spareCapacityId = spareCapacityId;
+    }
+
     /**
      * At any moment a node is subscribed to at least 1 but possibly
      * more stripes. They will always be subscribed to their primary
@@ -630,6 +644,7 @@ public class Channel implements IScribeApp {
             handleControlTimeoutMessage( msg );
         }
         else if( msg instanceof ControlAttachMessage){
+            System.out.println("Delivering Attach Message");
             handleAttachMessage(msg); 
         }
 	else{
@@ -649,6 +664,7 @@ public class Channel implements IScribeApp {
 	    return handleControlFindParentMessage(msg); 
 	}
         else if(msg instanceof ControlAttachMessage){
+            System.out.println("Enrouting Attach Message");
             return handleAttachMessage(msg);
         }
 	return true;
