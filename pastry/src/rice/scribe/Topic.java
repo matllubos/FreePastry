@@ -41,6 +41,7 @@ import rice.pastry.*;
 import rice.scribe.maintenance.*;
 import rice.scribe.messaging.*;
 
+import java.io.*;
 /**
  * @(#) Topic.java
  *
@@ -198,14 +199,41 @@ public class Topic
      * @return true if the child was NOT already in the Set of children.
      */
     public boolean addChild( NodeHandle child, ScribeMessage msg ) {
+
+	return addChild(child, msg, null);
+    }
+
+
+     /** 
+     * Adds a node to the Set of children in
+     * this topic's multicast subtree rooted at this node.
+     * Also takes in a serializable data which will be sent along
+     * with the ACK to the child.
+     * 
+     * @param child the node to be added as a child.
+     * 
+     * @param msg the ScribeMessage which triggered this action,
+     *            it can be SUBSCRIBE msg, or null if application 
+     *            on top of Scribe called addChild()
+     *
+     * @param data The serializable data.
+     *
+     * @return true if the child was NOT already in the Set of children.
+     */
+    public boolean addChild( NodeHandle child, ScribeMessage msg, Serializable data ) {
 	boolean result;
 
 	result = m_children.add( child );
 
+	if(result == false){
+	    System.out.println("DEBUG :: addChild FAILED .. because child already existed at "+m_scribe.getNodeId() + "for child "+child.getNodeId());
+	    return result;
+	}
+	
 	// Reflect this child in the distinctChildrenTable
 	// maintained by scribe.
 	m_scribe.addChildForTopic(child, this.getTopicId());
-	m_scribe.childObserver(child, this.getTopicId(), true, msg);
+	m_scribe.childObserver(child, this.getTopicId(), true, msg, data);
 	return result;
     }
     
@@ -230,7 +258,7 @@ public class Topic
 	// Reflect this child in the distinctChildrenTable
 	// maintained by scribe.
 	m_scribe.removeChildForTopic(child, this.getTopicId());
-	m_scribe.childObserver(child, this.getTopicId(), false, msg);
+	m_scribe.childObserver(child, this.getTopicId(), false, msg, null);
 	return result ;
     }
     
