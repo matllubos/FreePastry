@@ -167,6 +167,6 @@ public class VersionKeyFactory implements IdFactory {
   }
   
   public int getIdToStringLength() {
-    return FACTORY.getIdToStringLength() + 2;
+    return FACTORY.getIdToStringLength() + 13;
   }
 }
