@@ -30,12 +30,12 @@ import java.io.IOException;
 import java.io.InvalidClassException;
 import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
-import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 
@@ -108,7 +108,7 @@ public class SocketChannelWriter {
     pastryNode = spn;
     this.key = key;
     this.handle = wnh;
-
+    //System.out.println("SCW.ctor("+msg+","+key+")");
     try {
       buffer = serialize(msg,null);
     } catch (IOException e) {
@@ -121,12 +121,15 @@ public class SocketChannelWriter {
       if (msg instanceof HelloMessage) {
         waitingForGreeting = true;
       } else {
+        /*// handled by pre-setting the buffer
         synchronized (queue) {
           queue.addLast(msg);
-          updateSelectionKeyBasedOnQueue();
-        }
+//          updateSelectionKeyBasedOnQueue();
+        }*/
       }
     }
+    
+    updateSelectionKeyBasedOnQueue(true);
   }
 
   /**
@@ -161,7 +164,10 @@ public class SocketChannelWriter {
    * @return the queue of writes for the remote address
    */
   public Iterator getQueue() {
-    return queue.iterator();
+    synchronized(queue) {
+      return ((Collection)queue.clone()).iterator();
+    }
+//    return queue.iterator();
   }
 
   /**
@@ -172,6 +178,7 @@ public class SocketChannelWriter {
    * @param o The object to be written.
    */
   public void enqueue(Object o) {
+    //System.out.println("SCW.enque("+o+")");
     synchronized (queue) {
       if (queue.size() < MAXIMUM_QUEUE_LENGTH) {
         addToQueue(o);
@@ -182,10 +189,12 @@ public class SocketChannelWriter {
     }
   }
 
+
+  
   public void setKey(SelectionKey key) {
     synchronized(queue) {
       this.key = key;
-      interestedInWriting = false;
+      //interestedInWriting = false;
       updateSelectionKeyBasedOnQueue(true);
     }
   }
@@ -250,9 +259,11 @@ public class SocketChannelWriter {
       synchronized (queue) {
         if (buffer == null) {
           if ((!waitingForGreeting) && (queue.size() > 0)) {
-            wireDebug("SEN:"+queue.getFirst().toString());
-            debug("About to serialize object " + queue.getFirst());
-            buffer = serialize(queue.removeFirst(),null);
+            //System.out.println("SEN:"+queue.getFirst().toString());
+            Object o = queue.removeFirst();
+            wireDebug("SEN:"+o.toString());
+            debug("About to serialize object " + o);
+            buffer = serialize(o,null);
             allowedToDeleteFirstOffOfQueue = true;
           } else {
             updateSelectionKeyBasedOnQueue();
@@ -263,7 +274,7 @@ public class SocketChannelWriter {
         int j = buffer.limit();
         int i = sc.write(buffer);
   
-        wireDebug("DBG:Wrote " + i + " of " + j + " bytes");
+        wireDebug("DBG:Wrote " + i + " of " + j + " bytes, buf.remaining():"+buffer.remaining());
         debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
   
         if (buffer.remaining() != 0) {
@@ -340,7 +351,7 @@ public class SocketChannelWriter {
    * required that the caller is synchronized on the queue
    */
   private void updateSelectionKeyBasedOnQueue(boolean ignoreInterested) {
-    if (queue.size() == 0) {
+    if ((buffer == null) && (queue.size() == 0)) {
       if ((interestedInWriting) || (ignoreInterested)) {
         enableWrite(false);
       }
@@ -358,6 +369,7 @@ public class SocketChannelWriter {
    * @param write
    */
   private void enableWrite(boolean write) {
+    //System.out.println("SCW:enableWrite("+write+")");
     if (key == null) {
       return;
     }
@@ -374,6 +386,7 @@ public class SocketChannelWriter {
       } catch (CancelledKeyException cke) {
         SelectorManager selMgr = pastryNode.getSelectorManager();
         if (!selMgr.isAlive()) {
+          notifyKilled();
           throw new NodeIsDeadException(cke);
         } else {
           WireNodeHandle wnh = (WireNodeHandle)key.attachment();
@@ -443,6 +456,8 @@ public class SocketChannelWriter {
       
       byte[] newBytes = baos2.toByteArray();
       if (oldBuf != null) {
+        System.err.println("OldBuf != null:"+oldBuf.limit()+","+oldBuf.remaining());        
+        oldBuf.rewind();
         byte[] oldBytes = oldBuf.array();
         byte[] combined = new byte[newBytes.length+oldBytes.length];
         System.arraycopy(newBytes,0,combined,0,newBytes.length);
@@ -456,6 +471,18 @@ public class SocketChannelWriter {
     } catch (NotSerializableException e) {
       System.out.println("PANIC: Object to be serialized was not serializable! [" + o + "]");
       throw new SerializationException("Unserializable class during attempt to serialize.");
+    }
+  }
+  /**
+   * 
+   */
+  public void notifyKilled() {
+    synchronized(queue) {
+      Iterator i = queue.iterator();
+      while (i.hasNext()) {
+        Object o = i.next();
+        System.err.println("SCW: Potentially lost the message:"+o);
+      }
     }
   }
 }
