@@ -166,7 +166,7 @@ public class GCIdFactory implements IdFactory {
    * @return An IdRange with the appropriate delimiters.
    */
   public IdRange buildIdRange(Id cw, Id ccw) {
-    return factory.buildIdRange(cw, ccw);
+    return new GCIdRange(factory.buildIdRange(cw, ccw));
   }
   
   /**

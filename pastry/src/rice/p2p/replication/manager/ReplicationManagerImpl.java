@@ -381,10 +381,12 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
       while (i.hasNext()) {
         Id id = (Id) i.next();
         
-        if (! (set.isMemberId(id) || client.exists(id)))
+        if (! (set.isMemberId(id) || 
+               client.exists(id) || 
+               ((current != null) && (id.equals(current))))) {
           set.addId(id);
-        
-        hints.put(id, hint);
+          hints.put(id, hint);
+        }
       }
         
       if ((state == STATE_NOTHING) && (set.numElements() > 0)) {
@@ -402,14 +404,12 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
       IdRange notRange = range.getComplementRange();
       
       /* first, we remove any non-relevant keys from the list of pending keys */
-      Iterator i = set.subSet(notRange).getIterator();
+      Id[] array = set.subSet(notRange).asArray();
       
       /* now look for any matching ids */
-      while (i.hasNext()) {
-        Id id = (Id) i.next();
-        
-        set.removeId(id);
-        hints.remove(id);
+      for (int i=0; i<array.length; i++) {
+        set.removeId(array[i]);
+        hints.remove(array[i]);
       }
     }    
     
@@ -443,20 +443,20 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     }
     
     /**
-      * Interal method which safely takes the next id to be fetched
+     * Interal method which safely takes the next id to be fetched
      * from the set of pending keys
      *
      * @return The next key to be fetched
      */
     protected synchronized Id getNextId() {
-      Iterator i = ReplicationManagerImpl.this.clone(set).getIterator();
+      Id[] array = set.asArray();
       
-      if (! i.hasNext()) {
+      if (array.length == 0) {
         log.warning(endpoint.getId() + ": GetNextId called without any ids available - aborting");
         return null;
       }
       
-      current = (Id) i.next();  
+      current = array[0];  
       set.removeId(current);
       
       log.finer(endpoint.getId() + ": Returing next id to fetch " + current);

@@ -60,6 +60,12 @@ import rice.persistence.*;
 public class GCPastImpl extends PastImpl implements GCPast {
   
   /**
+   * The default expiration, or when objects inserted with no timeout will expire
+   * 11:00 AM, 8/30/2004
+   */
+  public static final long DEFAULT_EXPIRATION = 1096560000000L;
+  
+  /**
    * The trash can, or where objects should go once expired.  If null, they are deleted
    */
   protected StorageManager trash;
@@ -336,7 +342,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
               if (metadata != null) 
                 parent.receiveResult(content.getHandle(GCPastImpl.this, metadata.getExpiration()));
               else
-                parent.receiveResult(content.getHandle(GCPastImpl.this, NO_EXPIRATION_SPECIFIED));
+                parent.receiveResult(content.getHandle(GCPastImpl.this, DEFAULT_EXPIRATION));
             } else {
               parent.receiveResult(null);
             }
@@ -405,7 +411,10 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param range the requested range
    */
   public IdSet scan(IdRange range) {
-    return buildGCIdSet(storage.getStorage().scan(range));
+    if (range != null)
+      return buildGCIdSet(storage.getStorage().scan(((GCIdRange) range).getRange()).asArray());
+    else
+      return buildGCIdSet(storage.getStorage().scan(range).asArray());
   }
   
   /**
@@ -416,7 +425,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param range the requested range
    */
   public IdSet scan() {
-    return buildGCIdSet(storage.getStorage().scan());
+    return buildGCIdSet(storage.getStorage().scan().asArray());
   }
   
   /**
@@ -425,18 +434,16 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param set The set ot base it off of
    * @return The set
    */
-  protected IdSet buildGCIdSet(IdSet set) {
+  protected IdSet buildGCIdSet(Id[] ids) {
     GCIdSet result = new GCIdSet();
-    Iterator i = set.getIterator();
     
-    while (i.hasNext()) {
-      Id next = (Id) i.next();
-      GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(next);
+    for (int i=0; i<ids.length; i++) {
+      GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(ids[i]);
       
       if (metadata != null) 
-        result.addId(new GCId(next, metadata.getExpiration()));
+        result.addId(new GCId(ids[i], metadata.getExpiration()));
       else
-        result.addId(new GCId(next, NO_EXPIRATION_SPECIFIED));
+        result.addId(new GCId(ids[i], DEFAULT_EXPIRATION));
     }
     
     return result;

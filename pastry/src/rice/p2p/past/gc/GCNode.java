@@ -75,9 +75,14 @@ public class GCNode implements Node {
    * for message sending/receiving.
    */
   public Endpoint registerApplication(Application application, String instance) {
-    return node.registerApplication(application, instance);
+    return new GCEndpoint(node.registerApplication(application, instance));
   }
   
+  /**
+   * Method which returns the node handle to the local node
+   *
+   * @return A handle to the local node
+   */
   public NodeHandle getLocalNodeHandle() {
     return node.getLocalNodeHandle();
   }
