@@ -38,7 +38,7 @@ package rice.pastry.dist;
 
 import rice.pastry.*;
 import rice.pastry.rmi.*;
-import rice.pastry.wire.*;
+/** import rice.pastry.wire.*; */
 
 import java.net.*;
 
@@ -115,8 +115,8 @@ public abstract class DistPastryNodeFactory implements PastryNodeFactory {
   public static DistPastryNodeFactory getFactory(int protocol, int port) {
     if (protocol == PROTOCOL_RMI)
       return new RMIPastryNodeFactory(port);
-    else if (protocol == PROTOCOL_WIRE)
-      return new WirePastryNodeFactory(port);
+/*    else if (protocol == PROTOCOL_WIRE)
+      return new WirePastryNodeFactory(port); */
 
     throw new IllegalArgumentException("Unsupported Protocol " + protocol);
   }
