@@ -167,9 +167,10 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
 	    theSize --;
 	    
 	    setChanged();
-	    notifyObservers(new NodeSetUpdate(nodes[theSize - 1], false));
+	   
+	    notifyObservers(new NodeSetUpdate(nodes[theSize], false));
 
-	    nodes[theSize-1].deleteObserver(this);
+	    nodes[theSize].deleteObserver(this);
 	    
 	    theSize++;
 
@@ -370,6 +371,9 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
 
     }
 }
+
+
+
 
 
 
