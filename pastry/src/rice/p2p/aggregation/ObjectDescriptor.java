@@ -29,15 +29,34 @@ public class ObjectDescriptor implements Serializable, Comparable {
     return (currentLifetime > pointInTime) || (refreshedLifetime > pointInTime);
   }
 
-  public int compareTo(Object object) {
-    ObjectDescriptor metadata = (ObjectDescriptor) object;
+  public int compareTo(Object other) {
+    ObjectDescriptor metadata = (ObjectDescriptor) other;
     
-    if (metadata.currentLifetime > currentLifetime) 
+    int result = this.key.compareTo(metadata.key);
+    if (result != 0)
+      return result;
+      
+    if (metadata.version > this.version)
       return -1;
-    else if (metadata.currentLifetime < currentLifetime) 
+    if (metadata.version < this.version)
       return 1;
-    else
-      return 0;
+    
+    if (metadata.currentLifetime > this.currentLifetime) 
+      return -1;
+    if (metadata.currentLifetime < this.currentLifetime) 
+      return 1;
+
+    if (metadata.refreshedLifetime > this.refreshedLifetime) 
+      return -1;
+    if (metadata.refreshedLifetime < this.refreshedLifetime) 
+      return 1;
+
+    if (metadata.size > this.size) 
+      return -1;
+    else if (metadata.size < this.size) 
+      return 1;
+
+    return 0;
   }
 };
 
