@@ -172,39 +172,13 @@ public class Folder {
    * the handles in to the provided continatuion.
    */
   public void getContentHashReferences(final Set set, Continuation command) {
-    getMessages(new StandardContinuation(command) {
+    getMessageReferences(set, new StandardContinuation(command) {
       public void receiveResult(Object o) {
-        StoredEmail[] emails = (StoredEmail[]) o;
-        
-        for (int i=0; i<emails.length; i++) 
-          emails[i].getEmail().getContentHashReferences(set);
-        
-        getBottomEntry(new StandardContinuation(parent) {
+        getLogReferences(set, new StandardContinuation(parent) {
           public void receiveResult(Object o) {
-            _log.getLogEntryReferences(set, (LogEntry) o, new StandardContinuation(parent) {
+            getChildReferences(set, new StandardContinuation(parent) {
               public void receiveResult(Object o) {
-                final Object[] names = _log.getChildLogNames();
-                
-                Continuation children = new StandardContinuation(parent) {
-                  int index = 0;
-                  
-                  public void receiveResult(Object o) {
-                    final Continuation thisOne = this;
-                    
-                    if (index < names.length) {
-                      getChildFolder((String) names[index], new StandardContinuation(parent) {
-                        public void receiveResult(Object o) {
-                          index++;
-                          ((Folder) o).getContentHashReferences(set, thisOne);
-                        }
-                      });
-                    } else {
-                      parent.receiveResult(Boolean.TRUE);
-                    }
-                  }
-                };
-                
-                children.receiveResult(null);
+                parent.receiveResult(Boolean.TRUE);
               }
             });
           }
@@ -213,6 +187,83 @@ public class Folder {
     });
   }
   
+  protected void getMessageReferences(final Set set, Continuation command) {
+    getMessages(new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        StoredEmail[] emails = (StoredEmail[]) o;
+        
+        for (int i=0; i<emails.length; i++) 
+          emails[i].getEmail().getContentHashReferences(set);
+        
+        parent.receiveResult(Boolean.TRUE);
+      }
+    });
+  }
+   
+  protected void getLogReferences(final Set set, Continuation command) {
+    if (_log.getTopEntryReference() != null) 
+      set.add(_log.getTopEntryReference());
+    
+    _log.getTopEntry(new StandardContinuation(command) {
+      LogEntry top = null;
+      
+      public void receiveResult(Object o) {
+        if (o == null) {
+          parent.receiveResult(Boolean.TRUE);
+          return;
+        }
+        
+        if (o instanceof SnapShotLogEntry) {
+          SnapShotLogEntry sEntry = (SnapShotLogEntry) o;
+          
+          if (sEntry.getTopEntry() == null) {
+            parent.receiveResult(Boolean.TRUE);
+            return;
+          } else {
+            top = sEntry.getTopEntry();
+          }
+        } 
+        
+        LogEntry entry = (LogEntry) o;
+        
+        if ((top != null) && (top.equals(entry))) {
+          parent.receiveResult(Boolean.TRUE);
+          return;
+        }
+        
+        if (entry.getPreviousEntryReference() != null) 
+          set.add(entry.getPreviousEntryReference());
+        
+        entry.getPreviousEntry(this);
+      }
+    });
+  }
+  
+  protected void getChildReferences(final Set set, Continuation command) {
+    final Object[] names = _log.getChildLogNames();
+    
+    Continuation children = new StandardContinuation(command) {
+      int index = 0;
+      
+      public void receiveResult(Object o) {
+        final Continuation thisOne = this;
+        
+        if (index < names.length) {
+          getChildFolder((String) names[index], new StandardContinuation(parent) {
+            public void receiveResult(Object o) {
+              index++;
+              ((Folder) o).getContentHashReferences(set, thisOne);
+            }
+          });
+        } else {
+          parent.receiveResult(Boolean.TRUE);
+        }
+      }
+    };
+    
+    children.receiveResult(null);
+  }
+    
   /**
    * Updates an Email (flags)
    *
@@ -624,38 +675,6 @@ public class Folder {
           parent.receiveResult(result);
         } else {
           entry.getPreviousEntry(this);
-        }
-      }
-    });
-  }
-
-  /**
-   * Returns the last live log entry in this log
-   *
-   * @param command the work to perform after this call
-   * @return the stored Emails
-   */
-  public void getBottomEntry(Continuation command) {
-    _log.getTopEntry(new StandardContinuation(command) {
-      public void receiveResult(Object o) {
-        EmailLogEntry entry = (EmailLogEntry) o;
-        
-        if (entry == null) {
-          parent.receiveResult(null);
-        } else {
-          if (entry instanceof SnapShotLogEntry) {
-            SnapShotLogEntry sEntry = (SnapShotLogEntry) entry;
-            
-            if (sEntry.getTopEntry() == null) 
-              parent.receiveResult(sEntry);
-            else 
-              parent.receiveResult(sEntry.getTopEntry());
-          } else {
-            if (entry.getPreviousEntryReference() == null) 
-              parent.receiveResult(entry);
-            else 
-              entry.getPreviousEntry(this);
-          }
         }
       }
     });

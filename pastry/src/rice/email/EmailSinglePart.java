@@ -48,7 +48,7 @@ public class EmailSinglePart extends EmailContentPart {
    * @param set The set to add the PastContentHandles to.
    */
   public void getContentHashReferences(Set set) {
-    set.add(contentReference);
+    set.add(contentReference);    
   }
 
   /**
