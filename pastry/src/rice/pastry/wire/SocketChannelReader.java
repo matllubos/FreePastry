@@ -65,9 +65,6 @@ public class SocketChannelReader {
   // the pastry node
   private WirePastryNode spn;
 
-  // the node handle which the reader serves
-  private WireNodeHandle handle;
-
   // whether or not the reader has read the message header
   private boolean initialized;
 
@@ -87,9 +84,8 @@ public class SocketChannelReader {
    *
    * @param spn The PastryNode the SocketChannelReader serves.
    */
-  public SocketChannelReader(WirePastryNode spn, WireNodeHandle handle) {
+  public SocketChannelReader(WirePastryNode spn) {
     this.spn = spn;
-    this.handle = handle;
     initialized = false;
 
     sizeBuffer = ByteBuffer.allocateDirect(4);
@@ -101,8 +97,10 @@ public class SocketChannelReader {
    * the object is done being read, it is parsed.
    *
    * @param sc The channel to read from.
+   * @return The object read off the stream, or null if no object has
+   *         been completely read yet
    */
-  public void read(SocketChannel sc) throws IOException {
+  public Object read(SocketChannel sc) throws IOException {
     if (! initialized) {
       int read = sc.read(sizeBuffer);
 
@@ -132,10 +130,11 @@ public class SocketChannelReader {
 
         byte[] objectArray = new byte[objectSize];
         buffer.get(objectArray);
-        performFinalOperations(objectArray);
-        reset();
+        return deserialize(objectArray);
       }
     }
+
+    return null;
   }
 
   /**
@@ -174,25 +173,15 @@ public class SocketChannelReader {
    * Method which parses an object once it is ready, and
    * notifies the pastry node of the message.
    *
-   * @return whether or not more should be read off the stream
+   * @return the deserialized object
    */
-  private void performFinalOperations(byte[] array) throws IOException {
+  private Object deserialize(byte[] array) throws IOException {
     ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(array));
     Object o = null;
 
     try {
-      o = ois.readObject();
-
-      if (o instanceof SocketCommandMessage) {
-        debug("Read socket message " + o + " - passing to node handle.");
-        handle.receiveSocketMessage((SocketCommandMessage) o);
-      } else if (o instanceof SocketTransportMessage) {
-        debug("Read message " + o + " - passing to pastry node.");
-        SocketTransportMessage stm = (SocketTransportMessage) o;
-        spn.receiveMessage((Message) stm.getObject());
-      } else {
-        throw new IllegalArgumentException("Message " + o + " was not correctly wrapped.");
-      }
+      reset();
+      return ois.readObject();
     } catch (ClassCastException e) {
       System.out.println("PANIC: Serialized message was not a pastry message!");
       throw new ImproperlyFormattedMessageException("Message recieved " + o + " was not a pastry message - closing channel.");

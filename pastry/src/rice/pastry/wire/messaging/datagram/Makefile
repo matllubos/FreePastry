@@ -5,9 +5,7 @@ SOURCE  = \
 	PingResponseMessage.java\
 	AcknowledgementMessage.java\
 	DatagramMessage.java\
-	DatagramTransportMessage.java\
-	NodeIdRequestMessage.java\
-	NodeIdResponseMessage.java
+	DatagramTransportMessage.java
 
 MAIN       = 
 

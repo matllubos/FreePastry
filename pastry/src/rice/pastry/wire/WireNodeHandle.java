@@ -235,13 +235,13 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
   public void connectToRemoteNode(LinkedList messages) {
     if (state == STATE_USING_UDP) {
       try {
-        InetSocketAddress tcpAddress = new InetSocketAddress(address.getAddress(), address.getPort() + 1);
+      //  InetSocketAddress tcpAddress = new InetSocketAddress(address.getAddress(), address.getPort());// + 1);
 
         SocketChannel channel = SocketChannel.open();
         channel.configureBlocking(false);
-        boolean done = channel.connect(tcpAddress);
+        boolean done = channel.connect(address);
 
-        debug("Opening socket to " + tcpAddress);
+        debug("Opening socket to " + address);
 
         Selector selector = ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector();
 
@@ -297,13 +297,14 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
     // if we're currently using UDP, accept the connection as usual
     if (state == STATE_USING_UDP) {
       this.key = key;
-      state = STATE_USING_TCP;
       key.attach(this);
 
       ((WirePastryNode) getLocalNode()).getSocketManager().openSocket(this);
 
-      reader = new SocketChannelReader((WirePastryNode) getLocalNode(), this);
+      reader = new SocketChannelReader((WirePastryNode) getLocalNode());
       writer = new SocketChannelWriter((WirePastryNode) getLocalNode());
+
+      state = STATE_USING_TCP;
     } else {
       // otherwise, we have problems!
       InetSocketAddress local = ((WireNodeHandle) getLocalNode().getLocalHandle()).getAddress();
@@ -461,7 +462,20 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
 
     try {
       // inform reader that data is available
-      reader.read((SocketChannel) key.channel());
+      Object o = reader.read((SocketChannel) key.channel());
+
+      if (o != null) {
+        if (o instanceof SocketCommandMessage) {
+          debug("Read socket message " + o + " - passing to node handle.");
+          receiveSocketMessage((SocketCommandMessage) o);
+        } else if (o instanceof SocketTransportMessage) {
+          debug("Read message " + o + " - passing to pastry node.");
+          SocketTransportMessage stm = (SocketTransportMessage) o;
+          getLocalNode().receiveMessage((Message) stm.getObject());
+        } else {
+          throw new IllegalArgumentException("Message " + o + " was not correctly wrapped.");
+        }
+      }
     } catch (ImproperlyFormattedMessageException e) {
       System.out.println("Improperly formatted message found during parsing - ignoring message... " + e);
       reader.reset();
@@ -564,19 +578,6 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
     debug("Received ping - proximity is " + proximity());
 
     markAlive();
-  }
-
-  /**
-   * Method by which the DatagramManager sets our nodeId as a result of a NodeIdRequestMessage.
-   *
-   * @param nid The node id of the remote node this node handle represents.
-   */
-  public void setNodeId(NodeId nid) {
-    if (nodeId == null) {
-      nodeId = nid;
-    } else {
-      System.out.println("PANIC: Attempt to set node more than once! was " + nodeId + " attempt " + nid);
-    }
   }
 
   /**

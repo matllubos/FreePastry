@@ -235,7 +235,25 @@ public class SocketManager implements SelectionKeyHandler {
    * @param key The key which is writable.
    */
   public void write(SelectionKey key) {
-    System.out.println("PANIC: write() called on SocketManager!");
+    SocketConnector connector = (SocketConnector) connectors.get(key);
+
+    debug("Found channel ready for data to " + ((SocketChannel) key.channel()).socket().getRemoteSocketAddress());
+
+    try {
+      connector.write();
+    } catch (IOException e) {
+      debug("ERROR " + e + " writing connnector - cancelling.");
+      connectors.remove(key);
+
+      try {
+        key.channel().close();
+      } catch (IOException f) {
+        System.out.println("ERROR " + f + " occured while closing socket.");
+      }
+
+      key.cancel();
+    }
+
   }
 
   /**
@@ -268,14 +286,11 @@ public class SocketManager implements SelectionKeyHandler {
     // the key to read from
     private SelectionKey key;
 
-    // a buffer containing the size (number) of the greeting message
-    private ByteBuffer sizeBuffer;
+    // the reader reading data off of the stream
+    private SocketChannelReader reader;
 
-    // a buffer containing the greeting message itself
-    private ByteBuffer objectBuffer;
-
-    // the size of the greeting message in bytes
-    private int objectSize;
+    // the writer (in case it is necessary)
+    private SocketChannelWriter writer;
 
     /**
      * Constructor
@@ -284,7 +299,7 @@ public class SocketManager implements SelectionKeyHandler {
      */
     public SocketConnector(SelectionKey key) {
       this.key = key;
-      sizeBuffer = ByteBuffer.allocateDirect(4);
+      reader = new SocketChannelReader(pastryNode);
     }
 
     /**
@@ -293,62 +308,40 @@ public class SocketManager implements SelectionKeyHandler {
      * enough space to read the greeting message, and does so.
      */
     public void read() throws IOException {
-      if (objectBuffer == null) {
-        ((SocketChannel) key.channel()).read(sizeBuffer);
-        sizeBuffer.flip();
+      Object o = reader.read((SocketChannel) key.channel());
 
-        if (sizeBuffer.remaining() == 4) {
-          // allocate space for the header
-          byte[] sizeArray = new byte[4];
-          sizeBuffer.get(sizeArray, 0, 4);
+      if (o != null) {
+        if (o instanceof HelloMessage) {
+          HelloMessage hm = (HelloMessage) o;
 
-          // read the object size
-          DataInputStream dis = new DataInputStream(new ByteArrayInputStream(sizeArray));
-          objectSize = dis.readInt();
+          debug("Read header message " + hm);
 
-          if (objectSize <= 0) {
-            throw new ImproperlyFormattedMessageException("Found message of improper number of bytes - " + objectSize + " bytes");
-          }
+          WireNodeHandle wnh = new WireNodeHandle(hm.getAddress(), hm.getNodeId(), pastryNode);
+          wnh = (WireNodeHandle) pastryNode.getNodeHandlePool().coalesce(wnh);
 
-          debug("Found header of size " + objectSize);
-
-          // allocate the appropriate space
-          objectBuffer = ByteBuffer.allocateDirect(objectSize);
-        }
-      } else {
-        ((SocketChannel) key.channel()).read(objectBuffer);
-        objectBuffer.flip();
-
-        if (objectBuffer.remaining() == objectSize) {
-          byte[] objectArray = new byte[objectSize];
-          objectBuffer.get(objectArray);
-          ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(objectArray));
-          Object o = null;
-
-          try {
-            o = ois.readObject();
-            HelloMessage hm = (HelloMessage) o;
-
-            debug("Read header message " + hm);
-
-            WireNodeHandle wnh = new WireNodeHandle(hm.getAddress(), hm.getNodeId(), pastryNode);
-            wnh = (WireNodeHandle) pastryNode.getNodeHandlePool().coalesce(wnh);
-
-            wnh.setKey(key);
-          } catch (ClassCastException e) {
-            System.out.println("PANIC: Serialized message was not a pastry message!");
-            throw new ImproperlyFormattedMessageException("Message recieved " + o + " was not a pastry message - closing channel.");
-          } catch (ClassNotFoundException e) {
-            System.out.println("PANIC: Unknown class type in serialized message!");
-            throw new ImproperlyFormattedMessageException("Unknown class type in message - closing channel.");
-          } catch (InvalidClassException e) {
-            System.out.println("PANIC: Serialized message was an invalid class!");
-            throw new DeserializationException("Invalid class in message - closing channel.");
-          }
+          wnh.setKey(key);
 
           // since we're done, remove this entry
           connectors.remove(key);
+        } else if (o instanceof NodeIdRequestMessage) {
+          writer = new SocketChannelWriter(pastryNode);
+
+          writer.enqueue(new NodeIdResponseMessage(pastryNode.getNodeId()));
+          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
         }
+      }
+    }
+
+    /**
+     *
+     */
+    public void write() throws IOException {
+      boolean done = writer.write((SocketChannel) key.channel());
+
+      if (done) {
+        // since we're done, remove this entry
+        connectors.remove(key);
+        key.attach(null);
       }
     }
 

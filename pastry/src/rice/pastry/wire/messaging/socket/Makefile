@@ -5,7 +5,9 @@ SOURCE  = \
 	SocketCommandMessage.java\
 	SocketTransportMessage.java\
  	DisconnectMessage.java\
-	HelloMessage.java
+	HelloMessage.java\
+	NodeIdRequestMessage.java\
+	NodeIdResponseMessage.java
 
 MAIN       = 
 

@@ -95,9 +95,6 @@ public class DatagramManager implements SelectionKeyHandler {
 
   // the queue of pending pings
   private LinkedList pingResponseQueue;
-  
-  // the queue of pending nodeId request responses
-  private LinkedList nodeIdResponseQueue;
 
   /**
    * Constructor.
@@ -112,7 +109,6 @@ public class DatagramManager implements SelectionKeyHandler {
     ackQueue = new LinkedList();
     pingQueue = new LinkedList();
     pingResponseQueue = new LinkedList();
-    nodeIdResponseQueue = new LinkedList();
     lastAckNum = new HashMap();
 
     // allocate enought bytes to read a node handle
@@ -194,9 +190,6 @@ public class DatagramManager implements SelectionKeyHandler {
       } else if (o instanceof PingResponseMessage) {
         // notify node handle of ping response
         ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address).pingResponse();
-      } else if (o instanceof NodeIdRequestMessage) {
-        // send response to node Id request
-        nodeIdResponseQueue.add(address);
       } else if (o instanceof DatagramMessage) {
         DatagramMessage message = (DatagramMessage) o;
 
@@ -207,7 +200,7 @@ public class DatagramManager implements SelectionKeyHandler {
           if (o instanceof DatagramTransportMessage) {
             // hand off to pastry node if a transport message is received
             DatagramTransportMessage dtm = (DatagramTransportMessage) o;
-            
+
             pastryNode.receiveMessage((Message) dtm.getObject());
           } else {
             System.out.println("ERROR: Recieved unreccognized datagrammessage: " + o);
@@ -239,18 +232,6 @@ public class DatagramManager implements SelectionKeyHandler {
         else
           System.out.println("ERROR: 0 bytes written of ack (not fatal, but bad)");
       }
-      
-      // next, write all pending node id request responses
-      i = nodeIdResponseQueue.iterator();
-
-      while (i.hasNext()) {
-        InetSocketAddress address = (InetSocketAddress) i.next();
-        if (channel.send(serialize(new NodeIdResponseMessage(pastryNode.getNodeId())), address) > 0)
-          i.remove();
-        else
-          System.out.println("ERROR: 0 bytes written of node id response (not fatal, but bad)");
-      }      
-
 
       synchronized (pingQueue) {
         // next, write all pending pings
@@ -302,10 +283,10 @@ public class DatagramManager implements SelectionKeyHandler {
   public void wakeup() {
     // wakeup the transmission manager, which checks to see if any packets have
     // been lost
-    transmissionManager.wakeup(); 
+    transmissionManager.wakeup();
 
     // if there are pending acks/pings, make sure that we are interested in writing
-    if ((ackQueue.size() > 0) || (pingQueue.size() > 0) || (pingResponseQueue.size() > 0) || (nodeIdResponseQueue.size() > 0))
+    if ((ackQueue.size() > 0) || (pingQueue.size() > 0) || (pingResponseQueue.size() > 0))
       key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
   }
 

@@ -34,39 +34,29 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry.wire.messaging.datagram;
+package rice.pastry.wire.messaging.socket;
 
 import java.io.*;
 
 import rice.pastry.*;
 
 /**
- * A response message to a NodeIdRequestMessage, containing the remote
- * node's nodeId.
+ * Message which represents a request to get a node Id from the remote node.
+ * This is necessary because even though a client might know the address of a
+ * remote node, it does not know it's node Id.  Therefore, the first message
+ * that is sent across the wire is the NodeIdRequestMessage.
  *
  * @version $Id$
  *
  * @author Alan Mislove
  */
-public class NodeIdResponseMessage implements Serializable {
-
-  private NodeId nid;
+public class NodeIdRequestMessage extends SocketCommandMessage {
 
   /**
    * Constructor
    *
-   * @param nid The nodeId of the receiver of the NodeIdRequestMessage.
+   * @param nodeId The nodeId of the node requesting.
    */
-  public NodeIdResponseMessage(NodeId nid) {
-    this.nid = nid;
-  }
-
-  /**
-   * Returns the nodeId of the receiver.
-   *
-   * @return The NodeId of the receiver node.
-   */
-  public NodeId getNodeId() {
-    return nid;
+  public NodeIdRequestMessage() {
   }
 }

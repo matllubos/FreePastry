@@ -49,7 +49,7 @@ import java.net.*;
 import java.io.*;
 import java.nio.channels.*;
 import java.nio.*;
-import rice.pastry.wire.messaging.datagram.*;
+import rice.pastry.wire.messaging.socket.*;
 
 /**
  * Pastry node factory for Wire-linked nodes.
@@ -73,9 +73,6 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    */
   private static final int leafSetMaintFreq = 5*60;
   private static final int routeSetMaintFreq = 15*60;
-  
-  private static final int BUFFER_SIZE = 1024;
-  private static final int NUM_TRIALS = 3;
 
   /**
    * Constructor.
@@ -94,53 +91,40 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    * @param address The address of the remote node.
    * @return A NodeHandle cooresponding to that address
    */
-  public NodeHandle generateNodeHandle(InetSocketAddress address) {  
+  public NodeHandle generateNodeHandle(InetSocketAddress address) {
     // send nodeId request to remote node, wait for response
     // allocate enought bytes to read a node handle
-    ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
     WireNodeHandle handle = null;
 
     try {
+      // create reader and writer
+      SocketChannelWriter writer = new SocketChannelWriter(null);
+      SocketChannelReader reader = new SocketChannelReader(null);
+
       // bind to the appropriate port
-      DatagramChannel channel = DatagramChannel.open();
-      channel.configureBlocking(false);
-      channel.socket().bind(null);
+      SocketChannel channel = SocketChannel.open();
+      channel.configureBlocking(true);
+      channel.socket().connect(address);
 
-      Selector selector = Selector.open();
-      SelectionKey key = channel.register(selector, SelectionKey.OP_READ);
-      
-      channel.send(DatagramManager.serialize(new NodeIdRequestMessage()), address);
-      System.out.println("Contacting boot node " + address + " (1/" + NUM_TRIALS + ")");
-      
-      int count = 1;
-      
-      while ((selector.select(1000) >= 0) && (count < NUM_TRIALS) && (handle == null)) {
-        if (key.isReadable()) {
-          channel.receive(buffer);
-          buffer.flip();
+      writer.enqueue(new NodeIdRequestMessage());
+      System.out.println("Contacting boot node " + address);
 
-          if (buffer.remaining() > 0) {
-            NodeIdResponseMessage rm = (NodeIdResponseMessage) DatagramManager.deserialize(buffer);
-            handle = new WireNodeHandle(address, rm.getNodeId());
-            
-            break;
-          }
-        } 
-        
-        count++;
-        channel.send(DatagramManager.serialize(new NodeIdRequestMessage()), address);
-        System.out.println("Contacting boot node " + address + " (" + count + "/" + NUM_TRIALS + ")");
+      writer.write(channel);
+      Object o = null;
+
+      while (o == null) {
+        o = reader.read(channel);
       }
-       
+
+      NodeIdResponseMessage rm = (NodeIdResponseMessage) o;
+      handle = new WireNodeHandle(address, rm.getNodeId());
+
       channel.socket().close();
       channel.close();
-      key.cancel();
-      selector.close();
-      
+
       return handle;
     } catch (IOException e) {
-      System.out.println("PANIC: Error binding datagram (nodeIdRequest): " + e);
-      e.printStackTrace();
+      System.out.println("Error connecting to address " + address + ": " + e);
       return null;
     }
   }
@@ -168,7 +152,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
 
     DatagramManager dManager = new DatagramManager(pn, sManager, port);
 
-    SocketManager socketManager = new SocketManager(pn, port + 1, sManager.getSelector());
+    SocketManager socketManager = new SocketManager(pn, port , sManager.getSelector());
 
     InetSocketAddress address = getAddress(port);
 
@@ -218,7 +202,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
 
     t.start();
 
-    port+=2;
+    port++;
 
     return pn;
   }
