@@ -5,11 +5,10 @@ import java.math.*;
 import java.security.*;
 import java.util.*;
 
-import rice.post.security.*;
-
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
+import rice.p2p.util.*;
 
 /**
  * This class is used internally by the storage package to
@@ -123,7 +122,7 @@ public class SignedData extends StorageServiceData {
    * @return The version number
    */
   public long getVersion() {
-    return SecurityUtils.getLong(timestamp);
+    return MathUtils.byteArrayToLong(timestamp);
   }
   
   /**

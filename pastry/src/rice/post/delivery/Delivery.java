@@ -11,6 +11,7 @@ import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.multiring.*;
+import rice.p2p.util.*;
 
 /**
  * The delivery stored in Past
@@ -21,6 +22,9 @@ import rice.p2p.multiring.*;
  * @author Peter Druschel
  */
 public class Delivery extends ContentHashPastContent implements GCPastContent {
+  
+  // serialver for backward compatibility
+  private static final long serialVersionUID = 5154309973324809945L;
   
   /**
    * The internal encrypted message

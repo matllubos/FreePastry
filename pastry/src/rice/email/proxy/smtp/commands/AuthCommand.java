@@ -2,13 +2,12 @@ package rice.email.proxy.smtp.commands;
 
 import java.io.*;
 import java.net.*;
-import rice.serialization.*;
+import rice.p2p.util.*;
 
 import rice.email.proxy.smtp.SmtpConnection;
 import rice.email.proxy.smtp.SmtpState;
 import rice.email.proxy.smtp.manager.SmtpManager;
 import rice.email.proxy.user.*;
-import rice.post.security.*;
 
 /**
  * AUTH command.
@@ -48,7 +47,7 @@ public class AuthCommand extends SmtpCommand {
         String username = response.substring(0, response.indexOf(" "));
         String password = state.getPassword(username);        
         String authentication = response.substring(response.indexOf(" ") + 1).toLowerCase();
-        String digest = SecurityUtils.toHex(SecurityUtils.hmac(password.getBytes(), text.getBytes())).toLowerCase();
+        String digest = MathUtils.toHex(SecurityUtils.hmac(password.getBytes(), text.getBytes())).toLowerCase();
         
         if (! digest.equals(authentication)) {
           conn.println("535 Incorrect password");

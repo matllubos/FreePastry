@@ -6,6 +6,7 @@ import java.security.*;
 import rice.*;
 import rice.Continuation.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.util.*;
 import rice.post.*;
 import rice.post.storage.*;
 import rice.post.security.*;

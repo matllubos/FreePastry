@@ -11,8 +11,6 @@ import java.util.zip.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 
-import rice.serialization.*;
-
 /**
  * This class contains a large number of static methods for performing
  * security-related primitives, such as encrypt, decrypt, etc...

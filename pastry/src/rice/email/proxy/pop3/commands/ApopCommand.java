@@ -4,7 +4,7 @@ import rice.email.proxy.mailbox.*;
 import rice.email.proxy.pop3.*;
 import rice.email.proxy.user.*;
 
-import rice.post.security.*;
+import rice.p2p.util.*;
 
 public class ApopCommand extends Pop3Command {
   
@@ -19,7 +19,7 @@ public class ApopCommand extends Pop3Command {
       String authentication = arguments[2].toLowerCase();
 
       String password = state.getPassword(username);
-      String digest = SecurityUtils.toHex(SecurityUtils.apop(state.getChallenge().getBytes(), password.getBytes())).toLowerCase();
+      String digest = MathUtils.toHex(SecurityUtils.apop(state.getChallenge().getBytes(), password.getBytes())).toLowerCase();
             
       if (! digest.equals(authentication))
         throw new UserException("Incorrect password");

@@ -12,7 +12,6 @@ import rice.p2p.multiring.*;
 import rice.p2p.util.*;
 import rice.pastry.commonapi.*;
 import rice.pastry.dist.*;
-import rice.serialization.*;
 
 /**
  * @(#) RingCertificate.java

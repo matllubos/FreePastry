@@ -16,65 +16,117 @@ import rice.pastry.socket.*;
  */
 public class PastryNetworkTest {
   
-  protected PastryNodeFactory factory;
+  protected SocketPastryNodeFactory factory;
   
   protected InetSocketAddress bootstrap;
   
   protected HashSet nodes;
   
-  public PastryNetworkTest(PastryNodeFactory factory, InetSocketAddress bootstrap) {
+  protected HashSet dead;
+  
+  protected HashSet unknown;
+  
+  public PastryNetworkTest(SocketPastryNodeFactory factory, InetSocketAddress bootstrap) {
     this.factory = factory;
     this.bootstrap = bootstrap;
     this.nodes = new HashSet();
+    this.dead = new HashSet();
+    this.unknown = new HashSet();
   }
   
-  protected HashMap fetchLeafSets() throws IOException {
-    HashMap leafsets = new HashMap();
-    HashSet unseen = new HashSet();
+  int numThreads = 0;
+  
+  protected HashMap fetchLeafSets() throws Exception {
+    final HashMap leafsets = new HashMap();
+    final HashSet unseen = new HashSet();
     
     unseen.add(((DistPastryNodeFactory) factory).getNodeHandle(bootstrap));
-    
-    while (unseen.size() > 0) {
-      NodeHandle handle = (NodeHandle) unseen.iterator().next(); 
-      unseen.remove(handle);
-      nodes.add(handle);
-      
-      System.out.println("Fetching leafset of " + handle);
 
-      try {
-        LeafSet ls = factory.getLeafSet(handle);
-        leafsets.put(handle, ls);
+    synchronized (unseen) {
+      while (true) {
+        if (numThreads > 20) 
+          unseen.wait();
         
-        NodeSet ns = ls.neighborSet(Integer.MAX_VALUE);
-        
-        for (int i=0; i<ns.size(); i++) {
-          if (! nodes.contains(ns.get(i)))
-            unseen.add(ns.get(i));
+        if (unseen.size() > 0) {
+          numThreads++;
+          
+          final SocketNodeHandle handle = (SocketNodeHandle) unseen.iterator().next();          
+          unseen.remove(handle);
+          nodes.add(handle);
+          System.out.println("Fetching leafset of " + handle + " (thread " + numThreads + " of 20)");
+          
+          Thread t = new Thread() {
+            public void run() {  
+              try {
+                LeafSet ls = factory.getLeafSet(handle);
+        //        SourceRoute[] routes = factory.getRoutes(handle);
+                
+        //        for (int i=0; i<routes.length; i++) 
+        //          System.out.println("ROUTE:\t" + routes[i].prepend(handle.getEpochAddress()));
+                
+                leafsets.put(handle, ls);
+                
+                NodeSet ns = ls.neighborSet(Integer.MAX_VALUE);
+                
+                if (! ns.get(0).equals(handle)) {
+                  dead.add(handle); 
+                  nodes.remove(handle);
+                  leafsets.remove(handle);
+                  leafsets.put(ns.get(0), ls);
+                }
+                
+                for (int i=1; i<ns.size(); i++) 
+                  if ((! nodes.contains(ns.get(i))) && (! dead.contains(ns.get(i))))
+                    unseen.add(ns.get(i));
+              
+              } catch (java.net.ConnectException e) {
+                dead.add(handle);
+              } catch (java.net.SocketTimeoutException e) {
+                unknown.add(handle);
+              } catch (IOException e) {
+                System.err.println("GOT OTHER ERROR CONNECTING TO " + handle + " - " + e);
+              } finally {
+                synchronized (unseen) {
+                  numThreads--;
+                  unseen.notifyAll();
+                }
+              }
+            }
+          };
+          
+          t.start();
+        } else if (numThreads > 0) {
+          unseen.wait();
+        } else {
+          break;
         }
-      } catch (IOException ioe) {
-        ioe.printStackTrace();
       }
     }
     
-    System.out.println("Fetched all leafsets - return...");
+    System.out.println("Fetched all leafsets - return...  Found " + nodes.size() + " nodes.");
     
     return leafsets;
   }
   
-  protected void testLeafSets() throws IOException {
+  protected void testLeafSets() throws Exception {
     HashMap leafsets = fetchLeafSets();
+
+    Iterator sets = leafsets.values().iterator();
     
-    Iterator nodes = leafsets.keySet().iterator();
-    
-    while (nodes.hasNext()) {
-      NodeHandle node = (NodeHandle) nodes.next();
-      Iterator sets = leafsets.values().iterator();
+    while (sets.hasNext()) {
+      Iterator nodes = leafsets.keySet().iterator();
+      LeafSet set = (LeafSet) sets.next();
       
-      while (sets.hasNext()) {
-        LeafSet set = (LeafSet) sets.next();
-        
-        if (set.test(node)) 
-          System.err.println("LEAFSET ERROR: " + node + " should appear in leafset for " + set.get(0));
+      if (set != null) {
+        while (nodes.hasNext()) {
+          NodeHandle node = (NodeHandle) nodes.next();
+          
+          if (dead.contains(node) && set.member(node)) {
+            System.err.println("LEAFSET ERROR: Leafset for " + set.get(0) + " contains dead node " + node);
+          } else if ((! dead.contains(node)) && set.isComplete() && set.test(node)) {
+            System.err.println("LEAFSET ERROR: Leafset for " + set.get(0) + " is missing " + node);
+          }
+        }
       }
     }
     
@@ -91,13 +143,11 @@ public class PastryNetworkTest {
       NodeHandle handle = (NodeHandle) i.next(); 
       
       System.out.println("Fetching route row " + row + " of " + handle);
-      try {
-        RouteSet[] set = factory.getRouteRow(handle, row);
-        
-        routerows.put(handle, set);      
-      } catch (IOException ioe) {
-        ioe.printStackTrace();
-      }
+      
+      RouteSet[] set = factory.getRouteRow(handle, row);
+      
+      if (set != null)
+        routerows.put(handle, set);        
     }
     
     System.out.println("Fetched all route rows - return...");

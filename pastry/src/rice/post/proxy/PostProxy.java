@@ -16,6 +16,7 @@ import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
 import rice.p2p.aggregation.*;
 import rice.p2p.multiring.*;
+import rice.p2p.util.*;
 
 import rice.persistence.*;
 import rice.visualization.LocalVisualization;
@@ -27,7 +28,6 @@ import rice.post.security.ca.*;
 import rice.post.storage.*;
 
 import rice.selector.*;
-import rice.serialization.*;
 import rice.proxy.*;
 
 import rice.email.*;
@@ -308,6 +308,24 @@ public class PostProxy {
   protected ForwardLog forwardLog;
   
   /**
+   * Method which redirects standard output and error, if desired.
+   *
+   * @param parameters The parameters to use
+   */  
+  protected void startRedirection(Parameters parameters) throws Exception {
+    if (parameters.getBooleanParameter("standard_output_network_enable")) {
+      logManager = new NetworkLogManager(parameters);
+    } else if (parameters.getBooleanParameter("standard_output_redirect_enable")) {
+      logManager = new StandardLogManager(parameters);
+    } else {
+      logManager = new ConsoleLogManager(parameters);
+    }
+    
+    System.setOut(new PrintStream(logManager));
+    System.setErr(new PrintStream(logManager));
+  }
+  
+  /**
     * Method which sees if we are using a liveness monitor, and if so, sets up this
    * VM to have a client liveness monitor.
    *
@@ -475,26 +493,6 @@ public class PostProxy {
       sectionDone();
     } */
   } 
-  
-  /**
-   * Method which redirects standard output and error, if desired.
-   *
-   * @param parameters The parameters to use
-   */  
-  protected void startRedirection(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("standard_output_network_enable")) {
-      logManager = new NetworkLogManager(parameters);
-    } else if (parameters.getBooleanParameter("standard_output_redirect_enable")) {
-      logManager = new StandardLogManager(parameters);
-    } else {
-      logManager = new ConsoleLogManager(parameters);
-    }
-    
-    stepStart("Redirecting Standard Output and Error");
-    System.setOut(new PrintStream(logManager));
-    System.setErr(new PrintStream(logManager));
-    stepDone(SUCCESS);
-  }
   
   /**
    * Method which installs shutdown hooks
@@ -1383,6 +1381,7 @@ public class PostProxy {
   
   protected Parameters start(Parameters parameters) throws Exception {
     startLivenessMonitor(parameters);
+    startRedirection(parameters);
     startCheckBoot(parameters);    
     startDialog(parameters);
     //startPastryProxy(parameters);
@@ -1393,7 +1392,6 @@ public class PostProxy {
       dialog.append("\n-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --\n");
     
     sectionStart("Initializing Parameters");
-    startRedirection(parameters);
     startShutdownHooks(parameters);
     startSecurityManager(parameters);
     startRetrieveCAKey(parameters);

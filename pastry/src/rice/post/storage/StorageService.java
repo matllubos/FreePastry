@@ -16,6 +16,7 @@ import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
 import rice.p2p.glacier.VersioningPast;
 import rice.p2p.glacier.v2.GlacierContentHandle;
+import rice.p2p.util.*;
 
 import rice.post.*;
 import rice.post.log.*;
@@ -535,7 +536,7 @@ public class StorageService {
   protected static void storeSigned(final PostData data, final Id location, long time, long expiration, KeyPair keyPair, Past past, Continuation command) {
     try {
       byte[] plainText = SecurityUtils.serialize(data);
-      byte[] timestamp = SecurityUtils.getByteArray(time);
+      byte[] timestamp = MathUtils.longToByteArray(time);
       
       SignedData sd = new SignedData(location, plainText, timestamp);
       sd.setSignature(SecurityUtils.sign(sd.getDataAndTimestamp(), keyPair.getPrivate()));

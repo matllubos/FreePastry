@@ -3,8 +3,7 @@ package rice.email.proxy.imap.commands;
 import java.io.*;
 import java.net.*;
 
-import rice.serialization.*;
-import rice.post.security.*;
+import rice.p2p.util.*;
 import rice.email.proxy.imap.ImapState;
 import rice.email.proxy.user.User;
 import rice.email.proxy.user.UserException;
@@ -47,7 +46,7 @@ public class AuthenticateCommand extends AbstractImapCommand {
       username = response.substring(0, response.indexOf(" "));
       String password = getState().getPassword(username);
       String authentication = response.substring(response.indexOf(" ") + 1).toLowerCase();
-      String digest = SecurityUtils.toHex(SecurityUtils.hmac(password.getBytes(), text.getBytes())).toLowerCase();
+      String digest = MathUtils.toHex(SecurityUtils.hmac(password.getBytes(), text.getBytes())).toLowerCase();
       
       if (! digest.equals(authentication))
         throw new UserException("Incorrect password");

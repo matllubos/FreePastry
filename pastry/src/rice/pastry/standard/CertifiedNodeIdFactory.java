@@ -12,7 +12,6 @@ import javax.crypto.spec.*;
 
 import rice.pastry.*;
 import rice.p2p.util.*;
-import rice.serialization.*;
 
 /**
  * Builds nodeIds in a certified manner, guaranteeing that a given node will always

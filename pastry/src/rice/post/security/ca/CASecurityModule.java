@@ -6,6 +6,7 @@ import java.security.*;
 import rice.*;
 import rice.post.*;
 import rice.post.security.*;
+import rice.p2p.util.*;
 
 /**
  * This class is the security module which implements the PKI (CA) based

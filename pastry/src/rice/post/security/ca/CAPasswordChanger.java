@@ -14,7 +14,7 @@ import rice.post.*;
 import rice.post.security.*;
 
 import rice.pastry.commonapi.*;
-import rice.serialization.*;
+import rice.p2p.util.*;
 
 /**
  * This class starts changes the password on an existing certificate

@@ -12,6 +12,7 @@ import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 import rice.p2p.replication.manager.*;
 import rice.p2p.scribe.*;
+import rice.p2p.util.*;
 
 import rice.persistence.*;
 

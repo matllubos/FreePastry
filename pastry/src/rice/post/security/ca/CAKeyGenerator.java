@@ -12,7 +12,7 @@ import java.util.zip.*;
 
 import rice.post.*;
 import rice.post.security.*;
-import rice.serialization.*;
+import rice.p2p.util.*;
 
 /**
  * This class starts generates a new keypair for the certificate authority, asks

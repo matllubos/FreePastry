@@ -8,6 +8,8 @@ import java.util.*;
 import java.awt.*;
 import javax.swing.*;
 
+import rice.p2p.util.*;
+
 /**
  * This class represents a generic Java process launching program which reads in
  * preferences from a preferences file and then invokes another JVM using those
@@ -229,7 +231,7 @@ public class Proxy {
       
     Certificate cert = oldJar */
     
-    return rice.post.security.SecurityUtils.toHex(hash).trim().equalsIgnoreCase(md5.trim());
+    return MathUtils.toHex(hash).trim().equalsIgnoreCase(md5.trim());
   }
   
   public static void main(String[] args) throws IOException, InterruptedException {
@@ -426,11 +428,11 @@ public class Proxy {
                   if (verifyJar(filename, bytes, md5)) {
                     restart();
                   } else {
-                    System.err.println("ERROR - Corrupted download detected on file " + filename + " - hash " + rice.post.security.SecurityUtils.toHex(bytes) + " required " + md5);
+                    System.err.println("ERROR - Corrupted download detected on file " + filename + " - hash " + MathUtils.toHex(bytes) + " required " + md5);
 
                     JOptionPane.showMessageDialog(null, "It appears that your update download was corrupted - ePOST will try \n" + 
                                                         "again at the next update interval.\n\n" +
-                                                  "Hash: " + rice.post.security.SecurityUtils.toHex(bytes) + " Required: " + md5,
+                                                  "Hash: " + MathUtils.toHex(bytes) + " Required: " + md5,
                                                   "Corrupted Download Detected", JOptionPane.WARNING_MESSAGE, null);
                     
                     new File(".", filename).delete();
@@ -443,7 +445,7 @@ public class Proxy {
                 if (verifyJar(filename, bytes, md5)) {
                   restart();   
                 } else {
-                  System.err.println("ERROR - Corrupted download detected on file " + filename + " - hash " + rice.post.security.SecurityUtils.toHex(bytes) + " required " + md5);
+                  System.err.println("ERROR - Corrupted download detected on file " + filename + " - hash " + MathUtils.toHex(bytes) + " required " + md5);
                   new File(".", filename).delete();
                 }
               }

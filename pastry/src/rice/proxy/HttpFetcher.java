@@ -4,6 +4,8 @@ import java.io.*;
 import java.net.*;
 import java.security.*;
 
+import rice.p2p.util.*;
+
 public class HttpFetcher {
   
   protected URL url;
@@ -65,7 +67,7 @@ public class HttpFetcher {
     
     byte[] bytes = f.fetch();
 
-    System.out.println("HASH: " + rice.post.security.SecurityUtils.toHex(bytes));
+    System.out.println("HASH: " + MathUtils.toHex(bytes));
   }
 }
 
