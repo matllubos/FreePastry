@@ -64,15 +64,10 @@ public class DirectPastryNode extends PastryNode
 	    this.receiveMessage(new InitiateJoin(bootstrap));
 	else
 	    setReady();
-
-	/* 
-	setReady();
-
-	// notify applications
-	Iterator it = apps.iterator();
-        while (it.hasNext())
-            ((PastryAppl)(it.next())).notifyReady();
-	*/
-
     }
+
+    /**
+     * Called from PastryNode after the join succeeds.
+     */
+    protected final void nodeIsReady() { }
 }

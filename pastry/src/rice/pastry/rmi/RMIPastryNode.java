@@ -56,7 +56,7 @@ import java.rmi.*;
  */
 
 public class RMIPastryNode extends PastryNode
-	implements RMIRemoteNodeI, Observer
+	implements RMIRemoteNodeI
 {
     private RMIRemoteNodeI remotestub;
     private RMINodeHandlePool handlepool;
@@ -182,13 +182,23 @@ public class RMIPastryNode extends PastryNode
 
 	((RMINodeHandle)localhandle).setRemoteNode(remotestub);
 
-	if (bootstrap == null)
-	    nodeIsReady(); // bind now
-	else
-	    addLeafSetObserver(this); // bind when there's leafset activity
-
 	if (bootstrap != null)
 	    this.receiveMessage(new InitiateJoin(bootstrap));
+	else
+	    setReady();
+    }
+
+    /**
+     * Called from PastryNode when the join succeeds, whereupon it rebinds
+     * the node into the RMI registry. Happens after the registry lookup, so
+     * the node never ends up discovering itself.
+     */
+    protected final void nodeIsReady() {
+	try {
+	    Naming.rebind("//:" + port + "/Pastry", remotestub);
+	} catch (Exception e) {
+	    System.out.println("Unable to bind Pastry node in rmiregistry: " + e.toString());
+	}
     }
 
     /**
@@ -204,30 +214,6 @@ public class RMIPastryNode extends PastryNode
 	}
     }
 
-    /**
-     * Synchronously rebinds node into rmi registry.
-     */
-    private void nodeIsReady() {
-	// RMI bind. Happens after the registry lookup, so the node never
-	// ends up discovering itself.
-
-	try {
-	    Naming.rebind("//:" + port + "/Pastry", remotestub);
-	} catch (Exception e) {
-	    System.out.println("Unable to bind Pastry node in rmiregistry: " + e.toString());
-	}
-
-	/*
-	setReady();
-
-	// notify applications
-	Iterator it = apps.iterator();
-        while (it.hasNext())
-            ((PastryAppl)(it.next())).notifyReady();
-	*/
-  
-    }
-
 //    /**
 //     * Testing purposes only!
 //     */
@@ -238,14 +224,4 @@ public class RMIPastryNode extends PastryNode
 //	    System.out.println("Unable to unbind Pastry node from rmiregistry: " + e.toString());
 //	}
 //    }
-
-    /**
-     * Observer on leafset. Binds node into rmi registry on any leafset
-     * activity. Replaces earlier binding; turns out, this is faster than
-     * all nodes using the first virtual node to bootstrap. Wonder why.
-     */
-    public void update(Observable o, Object arg) {
-	nodeIsReady();
-	this.deleteLeafSetObserver(this);
-    }
 }
