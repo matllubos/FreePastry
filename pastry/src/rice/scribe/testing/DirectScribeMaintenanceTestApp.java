@@ -118,7 +118,13 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp, IScribeObserv
                                 + m_app + " handling fault: " + msg);
 	*/
     }
-
+    
+    /**
+     * up-call invoked by Scribe when an anycast message is being handled.
+     */
+    public boolean anycastHandler(ScribeMessage msg){
+	return true;
+    }
     /**
      * up-call invoked by scribe when a node is added/removed  to the multicast tree.
      */

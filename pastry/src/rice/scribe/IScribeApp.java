@@ -123,7 +123,23 @@ public interface IScribeApp
      * The suspected faulty parent.
      */
     public void faultHandler( ScribeMessage msg, NodeHandle faultyParent );
-    
+
+
+    /**
+     * Invoked by Anycast Message at local node, to check if there is a 
+     * local application which can take care of this anycast message.
+     * If application can service the request of anycast message, the
+     * anycast message is not routed furthur(for DFS), else the anycast
+     * message will be furthur routed following DFS.
+     *
+     * @param msg The corresponding Anycast message
+     *
+     * @return Whether local application was able to satisfy the
+     *         request of anycast message.
+     */
+    public boolean anycastHandler(ScribeMessage msg);
+
+
 }
 
 
