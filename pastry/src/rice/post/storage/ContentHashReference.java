@@ -62,4 +62,8 @@ public class ContentHashReference implements Serializable {
     return (location.equals(ref.getLocation()) &&
             Arrays.equals(key, ref.getKey()));
   }
+
+  public String toString() {
+    return "[ContentHashRef " + location + "]";
+  }
 }

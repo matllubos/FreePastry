@@ -183,6 +183,8 @@ public class DistPostRegrTest {
         pause(1000);
       }
     }
+
+    pause(3000);
   }
 
 

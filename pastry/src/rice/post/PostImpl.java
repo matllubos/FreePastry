@@ -5,6 +5,7 @@ import java.util.*;
 import java.io.*;
 
 import rice.*;
+import rice.Continuation.*;
 import rice.pastry.security.*;
 import rice.pastry.client.*;
 import rice.pastry.messaging.*;
@@ -234,9 +235,45 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    *
    * @param message The incoming message.
    */
-  private void processSignedPostMessage(SignedPostMessage message) {
-    ProcessSignedPostMessageTask task = new ProcessSignedPostMessageTask(message);
-    task.start();
+  private void processSignedPostMessage(final SignedPostMessage signedMessage) {
+    final PostEntityAddress sender = signedMessage.getMessage().getSender();
+    debug("Processing signed message " + signedMessage + " from sender " + sender);
+    
+    getPostLog(sender, new ListenerContinuation("Process Signed Post Message") {
+      public void receiveResult(Object o) {
+        PostLog senderLog = (PostLog) o;
+
+        // look up sender
+        if (senderLog == null) {
+          System.out.println("Found PostMessage from non-existent sender " + sender + " - dropping on floor.");
+          return;
+        }
+
+        // verify message is signed
+        if (! verifySignedPostMessage(signedMessage, senderLog.getPublicKey())) {
+          System.out.println("Problem encountered verifying PostMessage from " + sender + " - dropping on floor.");
+          return;
+        }
+
+        PostMessage message = signedMessage.getMessage();
+
+        if (message instanceof DeliveryRequestMessage) {
+          processDeliveryRequestMessage((DeliveryRequestMessage) message);
+        } else if (message instanceof PresenceMessage) {
+          processPresenceMessage((PresenceMessage) message);
+        } else if (message instanceof EncryptedNotificationMessage) {
+          processEncryptedNotificationMessage((EncryptedNotificationMessage) message);
+        } else if (message instanceof DeliveryMessage) {
+          processDeliveryMessage((DeliveryMessage) message);
+        } else if (message instanceof ReceiptMessage) {
+          processReceiptMessage((ReceiptMessage) message);
+        } else if (message instanceof GroupNotificationMessage) {
+          processGroupMessage((GroupNotificationMessage) message);
+        } else {
+          System.out.println("Found unknown Postmessage " + message + " - dropping on floor.");
+        }
+      }
+    });
   }
   
   /**
@@ -247,8 +284,23 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    * @param message The incoming message.
    */
   private void processDeliveryRequestMessage(DeliveryRequestMessage message){
-    ProcessDeliveryRequestMessageTask task = new ProcessDeliveryRequestMessageTask(message);
-    task.start();
+    debug("Received delivery request from : " + message.getSender() + " to: " + message.getDestination());
+
+    synchronized(bufferedData) {
+      Vector userQueue = (Vector) bufferedData.get(message.getDestination());
+
+      if (userQueue == null) {
+        debug("Creating entry for: " + message.getDestination());
+
+        userQueue = new Vector();
+        bufferedData.put(message.getDestination(), userQueue);
+        scribeService.join(message.getDestination().getAddress(), PostImpl.this, credentials);
+
+        debug("Joined Scribe group rooted at " + message.getDestination().getAddress());
+      }
+
+      userQueue.addElement(message.getEncryptedMessage());
+    }
   }
 
   /**
@@ -259,8 +311,25 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    * @param message The incoming message
    */
   private void processPresenceMessage(PresenceMessage message) {
-    ProcessPresenceMessageTask task = new ProcessPresenceMessageTask(message);
-    task.start();
+    debug("Presence message from : " + message.getSender());
+
+    synchronized (bufferedData) {
+      Vector userQueue = (Vector) bufferedData.get(message.getSender());
+
+      if (userQueue != null) {
+        if (userQueue.size() == 0) {
+          System.out.println(thePastryNode.getNodeId() + "DEBUG: ERROR - presence message from : " + message.getSender() + " has empty vector.");
+        }
+
+        for (int i=0; i<userQueue.size(); i++) {
+          SignedPostMessage spm = (SignedPostMessage) userQueue.elementAt(i);
+          DeliveryMessage dm = new DeliveryMessage(address, getNodeId(), spm);
+          routeMsg(message.getLocation(), new PostPastryMessage(signPostMessage(dm)), getCredentials(), new SendOptions());
+        }
+      } else {
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: ERROR - presence message from : " + message.getSender() + " should not be received here.");
+      }
+    }
   }
 
   /**
@@ -269,8 +338,14 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    * @param message The incoming message.
    */
   private void processDeliveryMessage(DeliveryMessage message) {
-    ProcessDeliveryMessageTask task = new ProcessDeliveryMessageTask(message);
-    task.start();
+    debug("Delivery message from : " + message.getSender());
+
+    // send receipt
+    ReceiptMessage rm = new ReceiptMessage(address, message.getEncryptedMessage());
+    routeMsg(message.getLocation(), new PostPastryMessage(signPostMessage(rm)), getCredentials(), new SendOptions());
+
+    // process internal message
+    processSignedPostMessage(message.getEncryptedMessage());
   }
   
   /**
@@ -280,10 +355,40 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    * @param message The incoming message.
    */
   private void processEncryptedNotificationMessage(EncryptedNotificationMessage message) {
-    ProcessEncryptedNotificationMessageTask task = new ProcessEncryptedNotificationMessageTask(message);
-    task.start();
-  }
+    debug("Encrypted notification message from : " + message.getSender());
+    NotificationMessage nm = null;
 
+    // decrypt and verify notification message
+    try {
+      byte[] key = SecurityUtils.decryptAsymmetric(message.getKey(), keyPair.getPrivate());
+      nm = (NotificationMessage) SecurityUtils.deserialize(SecurityUtils.decryptSymmetric(message.getData(), key));
+    } catch (Exception e) {
+      System.out.println("yException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
+      return;
+    }
+
+    debug("Successfully deserialized notification message from : " + nm.getSender());
+
+    if (! (nm.getSender().equals(message.getSender()))) {
+      System.out.println("PANIC - Found ENM from " + message.getSender() + " with internal NM from different sender " +
+                         nm.getSender() + " - dropping on floor.");
+      return;
+    }
+
+    if (rice.pastry.Log.ifp(6))
+      System.out.println(thePastryNode.getNodeId() + "DEBUG: successfully verified ENM with NM: " + nm);
+
+    // deliver notification messag
+    PostClient client = (PostClient) clientAddresses.get(nm.getClientAddress());
+
+    if (client != null) {
+      client.notificationReceived(nm);
+    } else {
+      System.out.println("Found notification message for unknown client " + client + " - dropping on floor.");
+    }
+  }
+  
+  
   /**
    * This method handles an incoming receipt message by
    * removing the soft state associated with the delivery
@@ -292,8 +397,30 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    * @param message The incoming message.
    */
   private void processReceiptMessage(ReceiptMessage message) {
-    ProcessReceiptMessageTask task = new ProcessReceiptMessageTask(message);
-    task.start();
+    debug("Received receipt message from : " + message.getSender());
+
+    SignedPostMessage sm = message.getEncryptedMessage();
+    PostEntityAddress sender = message.getSender();
+
+    // remove message
+    synchronized (bufferedData) {
+      Vector userQueue = (Vector) bufferedData.get(sender);
+
+      if (userQueue != null) {
+        boolean success = userQueue.remove(sm);
+
+        if (! success) {
+          System.out.println("ERROR - Received receiptmessage for unknown message " + sm);
+        }
+
+        if (userQueue.size() == 0) {
+          bufferedData.remove(sender);
+          scribeService.leave(sender.getAddress(), PostImpl.this, credentials);
+        }
+      } else {
+        scribeService.leave(sender.getAddress(), PostImpl.this, credentials);
+      }
+    }
   }
 
   /**
@@ -302,9 +429,38 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    * @param message The incoming message.
    */
   private void processGroupMessage(GroupNotificationMessage message) {
-    ProcessGroupMessageTask task = new ProcessGroupMessageTask(message);
-    task.start();
+    PostGroupAddress destination = (PostGroupAddress) message.getGroup();
+
+    debug("Received group message from: " + destination);
+
+    byte[] key = (byte[]) keys.get(destination);
+
+    debug("Using group key " + key + " for decryption.");
+
+    try {
+      byte[] plainText = null;
+
+      if (key != null) {
+        plainText = SecurityUtils.decryptSymmetric(message.getData(), key);
+      } else {
+        plainText = message.getData();
+      }
+
+      NotificationMessage nm = (NotificationMessage) SecurityUtils.deserialize(plainText);
+
+      // deliver notification message
+      PostClient client = (PostClient) clientAddresses.get(nm.getClientAddress());
+
+      if (client != null) {
+        client.notificationReceived(nm);
+      } else {
+        System.out.println("Found notification message for unknown client " + client + " - dropping on floor.");
+      }
+    } catch (Exception e) {
+      System.out.println("Exception occured while decrypting GroupNotificationMessage " + e + " - dropping on floor.");
+    } 
   }
+  
 
   /**
    * @return The PostLog belonging to the this entity,
@@ -317,13 +473,63 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    * @return The PostLog belonging to the given entity, eg. to acquire
    * another user's public key.
    */
-  public void getPostLog(PostEntityAddress entity, Continuation command) {
+  public void getPostLog(final PostEntityAddress entity, Continuation command) {
     if ((entity.equals(getEntityAddress())) && (log != null)) {
       command.receiveResult(log);
-    } else {
-      RetrievePostLogTask task = new RetrievePostLogTask(entity, command);
-      task.start();
+      return;
     }
+
+    debug("Looking up postlog for : " + entity);
+
+    storage.retrieveSigned(new SignedReference(entity.getAddress()), new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        final PostLog log = (PostLog) o;
+
+        if (log == null) {
+          debug("Could not find postlog for: " + entity);
+
+          if (entity.equals(getEntityAddress())) {
+            PostImpl.this.log = new PostLog(entity, keyPair.getPublic(), certificate, PostImpl.this, parent);
+            return;
+          } else {
+            System.out.println("PostLog lookup for user " + entity + " failed.");
+            
+            parent.receiveResult(null);
+            return;
+          }
+        }
+
+        if ((log.getPublicKey() == null) || (log.getEntityAddress() == null)) {
+          parent.receiveException(new PostException("Malformed PostLog: " + log.getPublicKey() + " " + log.getEntityAddress()));
+          return;
+        }
+
+        if (! (log.getEntityAddress().equals(log.getCertificate().getAddress()) &&
+               log.getPublicKey().equals(log.getCertificate().getKey()))) {
+          parent.receiveException(new PostException("Malformed PostLog: Certificate does not match log owner."));
+          return;
+        }
+
+        security.verify(log.getCertificate(), new StandardContinuation(parent) {
+          public void receiveResult(Object o) {
+            if ((new Boolean(true)).equals(o)) {
+              storage.verifySigned(log, log.getPublicKey());
+              log.setPost(PostImpl.this);
+
+              if (entity.equals(getEntityAddress())) {
+                PostImpl.this.log = log;
+              }
+
+              debug("Successfully retrieved postlog for: " + entity);
+
+              parent.receiveResult(log);
+            } else  {
+              parent.receiveException(new PostException("Certificate of PostLog could not verified for entity: " + entity));
+            }
+          }
+        });
+      }
+    });
   }
   
   /**
@@ -380,9 +586,46 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    * @param message The notification message to be sent.  Destination parameters
    * are encapsulated inside the message object.
    */
-  public void sendNotification(NotificationMessage message) {
-    SendNotificationMessageTask task = new SendNotificationMessageTask(message);
-    task.start();
+  public void sendNotification(final NotificationMessage message) {
+    final PostUserAddress destination = (PostUserAddress) message.getDestination();
+
+    debug("Sending notification message " + message + " to: " + destination);
+
+    getPostLog(destination, new ListenerContinuation("Send Notification to " + destination) {
+      public void receiveResult(Object o) {
+        PostLog destinationLog = (PostLog) o;
+
+        if (destinationLog == null) {
+          System.out.println("ERROR - Could not send notification message to non-existant user " + destination);
+          return;
+        }
+
+        debug("Received destination log " + destinationLog);
+
+        NodeId random = factory.generateNodeId();
+
+        debug("Picked random node: " + random);
+
+        byte[] cipherText = null;
+
+        try {
+          byte[] key = SecurityUtils.generateKeySymmetric();
+          byte[] keyCipherText = SecurityUtils.encryptAsymmetric(key, destinationLog.getPublicKey());
+          cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
+
+          debug("Built encrypted notfn msg: " + destination);
+
+          EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, keyCipherText, cipherText);
+          DeliveryRequestMessage drm = new DeliveryRequestMessage(address, destination, signPostMessage(enm));
+
+          debug("Sending delivery request to : " + random);
+
+          routeMsg(random, new PostPastryMessage(signPostMessage(drm)), getCredentials(), new SendOptions());
+        } catch (Exception e) {
+          System.out.println("Exception occured which encrypting NotificationMessage " + e + " - aborting.");
+        }
+      }
+    });
   }
 
   /**
@@ -399,9 +642,46 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    * @param message The notification message to be sent.  Destination parameters
    * are encapsulated inside the message object.
    */
-  public void sendNotificationDirect(NodeHandle handle, NotificationMessage message) {
-    SendNotificationMessageDirectTask task = new SendNotificationMessageDirectTask(handle, message);
-    task.start();
+  public void sendNotificationDirect(final NodeHandle handle, final NotificationMessage message) {
+    final PostUserAddress destination = (PostUserAddress) message.getDestination();
+
+    debug("Sending notification message " + message + " directly to " + destination + " via " + handle);
+
+    getPostLog(destination, new ListenerContinuation("Send Notification Direct to " + destination + " via " + handle) {
+      public void receiveResult(Object o) {
+        PostLog destinationLog = (PostLog) o;
+
+        if (destinationLog == null) {
+          System.out.println("ERROR - Could not send notification message to non-existant user " + destination);
+          return;
+        }
+
+        debug("Received destination log " + destinationLog);
+
+        NodeId random = factory.generateNodeId();
+
+        debug("Picked random node: " + random);
+
+        byte[] cipherText = null;
+
+        try {
+          byte[] key = SecurityUtils.generateKeySymmetric();
+          byte[] keyCipherText = SecurityUtils.encryptAsymmetric(key, destinationLog.getPublicKey());
+          cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
+
+          if (rice.pastry.Log.ifp(6))
+            System.out.println(thePastryNode.getNodeId() + "DEBUG: built encrypted notfn msg: " + destination);
+
+          EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, keyCipherText, cipherText);
+
+          debug("Sending notification message directly to : " + handle);
+
+          routeMsgDirect(handle, new PostPastryMessage(signPostMessage(enm)), getCredentials(), new SendOptions());
+        } catch (Exception e) {
+          System.out.println("Exception occured which encrypting NotificationMessage " + e + " - dropping on floor.");
+        } 
+      }
+    });
   }
 
   /**
@@ -427,9 +707,30 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    * @param message The message to send
    */
   public void sendGroup(NotificationMessage message) {
-    SendGroupMessageTask task = new SendGroupMessageTask(message);
-    task.start();
-  }
+    PostGroupAddress destination = (PostGroupAddress) message.getDestination();
+
+    debug("Sending message " + message + " to group " + destination);
+
+    byte[] key = (byte[]) keys.get(destination);
+
+    try {
+      byte[] cipherText = null;
+
+      if (key != null) {
+        cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
+      } else {
+        cipherText = SecurityUtils.serialize(message);
+      }
+
+      GroupNotificationMessage gnm = new GroupNotificationMessage(address, destination, cipherText);
+
+      debug("Built encrypted notfn msg " + gnm + " for destination " + destination);
+
+      scribeService.multicast(destination.getAddress(), new PostScribeMessage(signPostMessage(gnm)), credentials);
+    } catch (Exception e) {
+      System.out.println("Exception occured while encrypting GroupNotificationMessage " + e + " - dropping on floor.");
+    } 
+  }  
 
   /**
    * Internal utility method for preparing a PostMessage for transmission.  This
@@ -488,678 +789,12 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
   public void isNewRoot(NodeId topicId) {}
   public void newParent(NodeId topicId, NodeHandle newParent, Serializable data) {}
 
-  /**
-   * This class is called whenever a SignedPostMessage comes in, and it
-   * performs the necessary verification tasks and then handles the
-   * message.
-   */
-  protected class ProcessSignedPostMessageTask implements Continuation {
-
-    private SignedPostMessage signedMessage;
-    private PostEntityAddress sender;
-    private PostLog senderLog;
-
-    /**
-     * Constructs a ProcessPostMessageTask given a message.
-     */
-    public ProcessSignedPostMessageTask(SignedPostMessage signedMessage) {
-      this.signedMessage = signedMessage;
-    }
-
-    /**
-     * Starts the processing of this message.
-     */
-    public void start() {
-      sender = signedMessage.getMessage().getSender();
-      getPostLog(sender, this);
-    }
-
-    public void receiveResult(Object o) {
-      senderLog = (PostLog) o;
-
-      // look up sender
-      if (senderLog == null) {
-        System.out.println("Found PostMessage from non-existent sender " + sender + " - dropping on floor.");
-        return;
-      }
-
-      // verify message is signed
-      if (! verifySignedPostMessage(signedMessage, senderLog.getPublicKey())) {
-        System.out.println("Problem encountered verifying PostMessage from " + sender + " - dropping on floor.");
-        return;
-      }
-
-      PostMessage message = signedMessage.getMessage();
-      
-      if (message instanceof DeliveryRequestMessage) {
-        processDeliveryRequestMessage((DeliveryRequestMessage) message);
-      } else if (message instanceof PresenceMessage) {
-        processPresenceMessage((PresenceMessage) message);
-      } else if (message instanceof EncryptedNotificationMessage) {
-        processEncryptedNotificationMessage((EncryptedNotificationMessage) message);
-      } else if (message instanceof DeliveryMessage) {
-        processDeliveryMessage((DeliveryMessage) message);
-      } else if (message instanceof ReceiptMessage) {
-        processReceiptMessage((ReceiptMessage) message);
-      } else if (message instanceof GroupNotificationMessage) {
-        processGroupMessage((GroupNotificationMessage) message);
-      } else {
-        System.out.println("Found unknown Postmessage " + message + " - dropping on floor.");
-      }
-    }
-
-    public void receiveException(Exception e) {
-      System.out.println("Exception " + e + "  occured during handling of SignedPostMessage: " + signedMessage + " - dropping on floor.");
-    }
-  }
-
-  /**
-   * This class is called whenever a DeliveryRequestMessage comes in, and it
-   *  handles the message.
-   */
-  protected class ProcessDeliveryRequestMessageTask {
-
-    private DeliveryRequestMessage message;
-
-    /**
-      * Constructs a ProcessPostMessageTask given a message.
-     */
-    public ProcessDeliveryRequestMessageTask(DeliveryRequestMessage message) {
-      this.message = message;
-    }
-
-    /**
-      * Starts the processing of this message.
-     */
-    public void start() {
-      /* Buffer this for Delivery */
-
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: received delivery request from : " + message.getSender() + " to: " + message.getDestination());
-
-      synchronized(bufferedData) {
-        Vector userQueue = (Vector) bufferedData.get(message.getDestination());
-
-        if (userQueue == null) {
-          if (rice.pastry.Log.ifp(6))
-            System.out.println(thePastryNode.getNodeId() + "DEBUG: creating entry for: " + message.getDestination());
-          
-          userQueue = new Vector();
-          bufferedData.put(message.getDestination(), userQueue);
-          scribeService.join(message.getDestination().getAddress(), PostImpl.this, credentials);
-
-          if (rice.pastry.Log.ifp(6))
-            System.out.println(thePastryNode.getNodeId() + "DEBUG: joined Scribe group rooted at " + message.getDestination().getAddress());
-        }
-
-        userQueue.addElement(message.getEncryptedMessage());
-      }
-    }
-  }
-
-  /**
-   * This class is called whenever a PresenceMessage comes in, and it
-   *  handles the message.
-   */
-  protected class ProcessPresenceMessageTask {
-
-    private PresenceMessage message;
-
-    /**
-      * Constructs a ProcessPostMessageTask given a message.
-     */
-    public ProcessPresenceMessageTask(PresenceMessage message) {
-      this.message = message;
-    }
-
-    /**
-      * Starts the processing of this message.
-     */
-    public void start() {
-
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: presence message from : " + message.getSender());
-
-      synchronized (bufferedData) {
-
-        Vector userQueue = (Vector) bufferedData.get(message.getSender());
-
-        if (userQueue != null) {
-          if (userQueue.size() == 0) {
-            System.out.println(thePastryNode.getNodeId() + "DEBUG: ERROR - presence message from : " + message.getSender() + " has empty vector.");
-          }
-          
-          for (int i=0; i<userQueue.size(); i++) {
-            SignedPostMessage spm = (SignedPostMessage) userQueue.elementAt(i);
-            DeliveryMessage dm = new DeliveryMessage(address, getNodeId(), spm);
-            routeMsg(message.getLocation(), new PostPastryMessage(signPostMessage(dm)), getCredentials(), new SendOptions());
-          }
-        } else {
-          System.out.println(thePastryNode.getNodeId() + "DEBUG: ERROR - presence message from : " + message.getSender() + " should not be received here.");
-        }
-      }
-    }
-  }
-
-  /**
-   * This class is called whenever a DeliveryMessage comes in, and it
-   *  handles the message.
-   */
-  protected class ProcessDeliveryMessageTask {
-
-    private DeliveryMessage message;
-
-    /**
-      * Constructs a ProcessDeliveryMessageTask given a message.
-     */
-    public ProcessDeliveryMessageTask(DeliveryMessage message) {
-      this.message = message;
-    }
-
-    /**
-      * Starts the processing of this message.
-     */
-    public void start() {
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: delivery message from : " + message.getSender());
-
-      // send receipt
-      ReceiptMessage rm = new ReceiptMessage(address, message.getEncryptedMessage());
-      routeMsg(message.getLocation(), new PostPastryMessage(signPostMessage(rm)), getCredentials(), new SendOptions());
-
-      // process internal message
-      processSignedPostMessage(message.getEncryptedMessage());
-    }
-  }
-      
-
-  /**
-   * This class is called whenever a EncryptedNotificationMessage comes in, and it
-   *  handles the message.
-   */
-  protected class ProcessEncryptedNotificationMessageTask {
-
-    private EncryptedNotificationMessage message;
-    private NotificationMessage nm;
-    private PostEntityAddress sender;
-
-    /**
-    * Constructs a ProcessEncryptedNotificationMessageTask given a message.
-     */
-    public ProcessEncryptedNotificationMessageTask(EncryptedNotificationMessage message) {
-      this.message = message;
-    }
-
-    /**
-      * Starts the processing of this message.
-     */
-    public void start() {
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: encrypted notification message from : " + message.getSender());
-
-      // decrypt and verify notification message
-      try {
-        byte[] key = SecurityUtils.decryptAsymmetric(message.getKey(), keyPair.getPrivate());
-        nm = (NotificationMessage) SecurityUtils.deserialize(SecurityUtils.decryptSymmetric(message.getData(), key));
-      } catch (SecurityException e) {
-        System.out.println("SecurityException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
-        return;
-      } catch (IOException e) {
-        System.out.println("IOException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
-        return;
-      } catch (ClassNotFoundException e) {
-        System.out.println("ClassNotFoundException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
-        return;
-      } catch (ClassCastException e) {
-        System.out.println("ClassCastException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
-        return;
-      }
-
-      //System.out.println(thePastryNode.getNodeId() + "DEBUG: successfully deserialized notification message from : " + nm.getSender());
-
-      if (! (nm.getSender().equals(message.getSender()))) {
-        System.out.println("PANIC - Found ENM from " + message.getSender() + " with internal NM from different sender " +
-                           nm.getSender() + " - dropping on floor.");
-        return;
-      }
-
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: successfully verified ENM with NM: " + nm);
-      
-      // deliver notification messag
-      PostClient client = (PostClient) clientAddresses.get(nm.getClientAddress());
-
-      if (client != null) {
-        client.notificationReceived(nm);
-      } else {
-        System.out.println("Found notification message for unknown client " + client + " - dropping on floor.");
-      }
-    }
-  }
-
-  /**
-    * This class is called whenever a RecieptMessage comes in, and it
-   *  handles the message.
-   */
-  protected class ProcessReceiptMessageTask {
-
-    private ReceiptMessage message;
-    private NotificationMessage nm;
-    private PostEntityAddress sender;
-
-    /**
-      * Constructs a ProcessRecieptMessageTask given a message.
-     */
-    public ProcessReceiptMessageTask(ReceiptMessage message) {
-      this.message = message;
-    }
-
-    /**
-      * Starts the processing of this message.
-     */
-    public void start() {
-
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: received receipt message from : " + message.getSender());
-      
-      SignedPostMessage sm = message.getEncryptedMessage();
-      PostEntityAddress sender = message.getSender();
-
-      // remove message
-      synchronized (bufferedData) {
-        Vector userQueue = (Vector) bufferedData.get(sender);
-
-        if (userQueue != null) {
-          boolean success = userQueue.remove(sm);
-
-          if (! success) {
-            System.out.println("ERROR - Received receiptmessage for unknown message " + sm);
-          }
-          
-          if (userQueue.size() == 0) {
-            bufferedData.remove(sender);
-            scribeService.leave(sender.getAddress(), PostImpl.this, credentials);
-          }
-        } else {
-          scribeService.leave(sender.getAddress(), PostImpl.this, credentials);
-        }
-      }
-    }
-  }
-
-  /**
-   * This class is a task which returns a PostLog to the callee.
-   */
-  protected class RetrievePostLogTask implements Continuation {
-
-    private PostEntityAddress address;
-    private Continuation command;
-
-    /**
-     * Constructs a task which will call the given command once the result
-     * is available.
-     */
-    public RetrievePostLogTask(PostEntityAddress address, Continuation command) {
-      this.address = address;
-      this.command = command;
-    }
-
-    /**
-     * Starts this task running.
-     */
-    public void start() {
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: looking up postlog for : " + address);
-      
-      SignedReference logRef = new SignedReference(address.getAddress());
-      storage.retrieveSigned(logRef, this);
-
-      // Now we wait for the storage service to return the result
-      // to us.
-    }
-
-    /**
-     * Called when the result of a previous call is ready for
-     * processing.
-     *
-     * @param o The result.
-     */
-    public void receiveResult(Object o) {
-        final PostLog log = (PostLog) o;
-
-        if (log == null) {
-          if (rice.pastry.Log.ifp(6))
-            System.out.println(thePastryNode.getNodeId() + "DEBUG: could not find postlog for: " + address);
-          
-          if (address.equals(getEntityAddress())) {
-            PostImpl.this.log = new PostLog(address, keyPair.getPublic(), certificate, PostImpl.this, command);
-            return;
-          } else {
-            if (rice.pastry.Log.ifp(5))
-              System.out.println("PostLog lookup for user " + address + " failed.");
-            command.receiveResult(null);
-            return;
-          }
-        }
-
-        if ((log.getPublicKey() == null) || (log.getEntityAddress() == null)) {
-          command.receiveException(new PostException("Malformed PostLog: " + log.getPublicKey() + " " + log.getEntityAddress()));
-          return;
-        }
-
-        if (! (log.getEntityAddress().equals(log.getCertificate().getAddress()) &&
-               log.getPublicKey().equals(log.getCertificate().getKey()))) {
-          command.receiveException(new PostException("Malformed PostLog: Certificate does not match log owner."));
-          return;
-        }
-
-        Continuation verify = new Continuation() {
-          public void receiveResult(Object o) {
-            if ((new Boolean(true)).equals(o)) {
-              storage.verifySigned(log, log.getPublicKey());
-              log.setPost(PostImpl.this);
-
-              if (address.equals(getEntityAddress())) {
-                PostImpl.this.log = log;
-              }
-
-              if (rice.pastry.Log.ifp(6))
-                System.out.println(thePastryNode.getNodeId() + "DEBUG: successfully retrieved postlog for: " + address);
-              
-              command.receiveResult(log);
-            } else  {
-              command.receiveException(new PostException("Certificate of PostLog could not verified for entity: " + address));
-            }
-          }
-
-          public void receiveException(Exception e) {
-            command.receiveException(e);
-          }
-        };
-              
-        security.verify(log.getCertificate(), verify);
-    }
-
-    /**
-      * Called when a previously requested result causes an exception
-     *
-     * @param result The exception caused
-     */
-    public void receiveException(Exception result) {
-      command.receiveException(result);
-    }
-  }
-
-  /**
-   * This class is called whenever a PostMessage comes in, and it
-   * performs the necessary verification tasks and then handles the
-   * message.
-   */
-  protected class SendNotificationMessageTask implements Continuation {
-
-    private NotificationMessage message;
-    private PostUserAddress destination;
-    
-    /**
-      * Constructs a ProcessPostMessageTask given a message.
-     */
-    public SendNotificationMessageTask(NotificationMessage message) {
-      this.message = message;
-    }
-
-    /**
-      * Starts the processing of this message.
-     */
-    public void start() {
-      // TO DO : Assuming just a user for now, grouping crap later...
-      destination = (PostUserAddress) message.getDestination();
-
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: sending message to: " + destination);
-
-      getPostLog(destination, this);
-    }
-
-    public void receiveResult(Object o) {
-      PostLog destinationLog = (PostLog) o;
-
-      if (destinationLog == null) {
-        System.out.println("ERROR - Could not send notification message to non-existant user " + destination);
-        return;
-      }
-
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: received destination log");
-      
-      NodeId random = factory.generateNodeId();
-
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: picked random node: " + random);
-
-      byte[] cipherText = null;
-
-      try {
-        byte[] key = SecurityUtils.generateKeySymmetric();
-        byte[] keyCipherText = SecurityUtils.encryptAsymmetric(key, destinationLog.getPublicKey());
-        cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
-
-        if (rice.pastry.Log.ifp(6))
-          System.out.println(thePastryNode.getNodeId() + "DEBUG: built encrypted notfn msg: " + destination);
-
-        EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, keyCipherText, cipherText);
-        DeliveryRequestMessage drm = new DeliveryRequestMessage(address, destination, signPostMessage(enm));
-
-        if (rice.pastry.Log.ifp(6))
-          System.out.println(thePastryNode.getNodeId() + "DEBUG: sending delivery request to : " + random);
-
-        routeMsg(random, new PostPastryMessage(signPostMessage(drm)), getCredentials(), new SendOptions());
-      } catch (SecurityException e) {
-        System.out.println("SecurityException occured which encrypting NotificationMessage " + e + " - dropping on floor.");
-      } catch (IOException e) {
-        System.out.println("IOException occured which encrypting NotificationMessage " + e + " - dropping on floor.");
-      }
-    }
-
-    public void receiveException(Exception e) {
-      System.out.println("Exception " + e + "  occured during sending NotificationMessage: " + message + " - dropping on floor.");
-    }
-  }
-
-  /**
-    * This class is called whenever a PostMessage comes in, and it
-   * performs the necessary verification tasks and then handles the
-   * message.
-   */
-  protected class SendNotificationMessageDirectTask implements Continuation {
-
-    private NotificationMessage message;
-    private NodeHandle handle;
-    private PostUserAddress destination;
-
-    /**
-      * Constructs a ProcessPostMessageTask given a message.
-     */
-    public SendNotificationMessageDirectTask(NodeHandle handle, NotificationMessage message) {
-      this.message = message;
-      this.handle = handle;
-    }
-
-    /**
-      * Starts the processing of this message.
-     */
-    public void start() {
-      // TO DO : Assuming just a user for now, grouping crap later...
-      destination = (PostUserAddress) message.getDestination();
-
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: sending message to: " + destination);
-
-      getPostLog(destination, this);
-    }
-
-    public void receiveResult(Object o) {
-      PostLog destinationLog = (PostLog) o;
-
-      if (destinationLog == null) {
-        System.out.println("ERROR - Could not send notification message to non-existant user " + destination);
-        return;
-      }
-
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: received destination log");
-
-      NodeId random = factory.generateNodeId();
-
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: picked random node: " + random);
-
-      byte[] cipherText = null;
-
-      try {
-        byte[] key = SecurityUtils.generateKeySymmetric();
-        byte[] keyCipherText = SecurityUtils.encryptAsymmetric(key, destinationLog.getPublicKey());
-        cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
-
-        if (rice.pastry.Log.ifp(6))
-          System.out.println(thePastryNode.getNodeId() + "DEBUG: built encrypted notfn msg: " + destination);
-
-        EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, keyCipherText, cipherText);
-
-        if (rice.pastry.Log.ifp(6))
-          System.out.println(thePastryNode.getNodeId() + "DEBUG: sending notification message directly to : " + handle);
-
-        routeMsgDirect(handle, new PostPastryMessage(signPostMessage(enm)), getCredentials(), new SendOptions());
-      } catch (SecurityException e) {
-        System.out.println("SecurityException occured which encrypting NotificationMessage " + e + " - dropping on floor.");
-      } catch (IOException e) {
-        System.out.println("IOException occured which encrypting NotificationMessage " + e + " - dropping on floor.");
-      }
-    }
-
-    public void receiveException(Exception e) {
-      System.out.println("Exception " + e + "  occured during sending NotificationMessage: " + message + " - dropping on floor.");
-    }
-  }
-
-  /**
-   * This class is called whenever a PostMessage comes in, and it
-   * performs the necessary verification tasks and then handles the
-   * message.
-   */
-  protected class SendGroupMessageTask {
-
-    private NotificationMessage message;
-    private PostGroupAddress destination;
-
-    /**
-      * Constructs a ProcessPostMessageTask given a message.
-     */
-    public SendGroupMessageTask(NotificationMessage message) {
-      this.message = message;
-    }
-
-    /**
-      * Starts the processing of this message.
-     */
-    public void start() {
-      // TO DO : Assuming just a user for now, grouping crap later...
-      destination = (PostGroupAddress) message.getDestination();
-
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: sending group message to: " + destination);
-
-      byte[] key = (byte[]) keys.get(destination);
-
-      try {
-        byte[] cipherText = null;
-
-        if (key != null) {
-          cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
-        } else {
-          cipherText = SecurityUtils.serialize(message);
-        }
-        
-        if (rice.pastry.Log.ifp(6))
-          System.out.println(thePastryNode.getNodeId() + "DEBUG: built encrypted notfn msg: " + destination);
-
-        GroupNotificationMessage gnm = new GroupNotificationMessage(address, destination, cipherText);
-
-        if (rice.pastry.Log.ifp(6))
-          System.out.println(thePastryNode.getNodeId() + "DEBUG: sending notification message to : " + destination);
-
-        scribeService.multicast(destination.getAddress(), new PostScribeMessage(signPostMessage(gnm)), credentials);
-      } catch (SecurityException e) {
-        System.out.println("SecurityException occured which encrypting GroupNotificationMessage " + e + " - dropping on floor.");
-      } catch (IOException e) {
-        System.out.println("IOException occured which encrypting GroupNotificationMessage " + e + " - dropping on floor.");
-      }
-    }
-  }
-
-  /**
-   * This class is called whenever a PostMessage comes in, and it
-   * performs the necessary verification tasks and then handles the
-   * message.
-   */
-  protected class ProcessGroupMessageTask {
-
-    private GroupNotificationMessage message;
-    private PostGroupAddress destination;
-
-    /**
-      * Constructs a ProcessGroupMessageTask given a message.
-     */
-    public ProcessGroupMessageTask(GroupNotificationMessage message) {
-      this.message = message;
-    }
-
-    /**
-      * Starts the processing of this message.
-     */
-    public void start() {
-      // TO DO : Assuming just a user for now, grouping crap later...
-      destination = (PostGroupAddress) message.getGroup();
-
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: received group message from: " + destination);
-
-      byte[] key = (byte[]) keys.get(destination);
-      
-      if (rice.pastry.Log.ifp(6))
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: using group key " + key + " for decryption.");
-
-      try {
-        byte[] plainText = null;
-
-        if (key != null) {
-          plainText = SecurityUtils.decryptSymmetric(message.getData(), key);
-        } else {
-          plainText = message.getData();
-        }
-
-        NotificationMessage nm = (NotificationMessage) SecurityUtils.deserialize(plainText);
-
-        // deliver notification messag
-        PostClient client = (PostClient) clientAddresses.get(nm.getClientAddress());
-
-        if (client != null) {
-          client.notificationReceived(nm);
-        } else {
-          System.out.println("Found notification message for unknown client " + client + " - dropping on floor.");
-        }
-      } catch (SecurityException e) {
-        System.out.println("SecurityException occured while decrypting GroupNotificationMessage " + e + " - dropping on floor.");
-      } catch (IOException e) {
-        System.out.println("IOException occured while decrypting GroupNotificationMessage " + e + " - dropping on floor.");
-      } catch (ClassNotFoundException e) {
-        System.out.println("ClassNotFoundException occured while decrypting GroupNotificationMessage " + e + " - dropping on floor.");
-      } catch (ClassCastException e) {
-        System.out.println("ClassCastException occured while decrypting GroupNotificationMessage " + e + " - dropping on floor.");
-      }
-    }
-  }
-
   public String toString() {
     return "PostImpl[" + address + "]";
+  }
+
+  public void debug(String message) {
+    if (rice.pastry.Log.ifp(6))
+      System.out.println(thePastryNode.getNodeId() + " DEBUG: " + message);
   }
 }

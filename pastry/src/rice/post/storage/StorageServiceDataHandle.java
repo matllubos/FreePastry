@@ -21,6 +21,9 @@ class StorageServiceDataHandle implements PastContentHandle {
   // the handle where the data is locationed
   protected NodeHandle handle;
 
+  // the time at which the handle was created
+  protected long timestamp;
+
   /**
    * Contstructor
    *
@@ -30,6 +33,8 @@ class StorageServiceDataHandle implements PastContentHandle {
   public StorageServiceDataHandle(NodeHandle handle, Id id) {
     this.id = id;
     this.handle = handle;
+
+    this.timestamp = System.currentTimeMillis();
   }
   
   /**
@@ -46,6 +51,15 @@ class StorageServiceDataHandle implements PastContentHandle {
    */
   public NodeHandle getNodeHandle() {
     return handle;
+  }
+
+  /**
+   * Returns the timestamp of this handle
+   *
+   * @return The timestamp for thsi handle
+   */
+  public long getTimestamp() {
+    return timestamp;
   }
 
 }

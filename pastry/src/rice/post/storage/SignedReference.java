@@ -47,4 +47,8 @@ public class SignedReference implements Serializable {
     return location.equals(ref.getLocation());
   }
 
+  public String toString() {
+    return "[SignedRef " + location + "]";
+  }
+
 }

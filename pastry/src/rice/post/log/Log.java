@@ -56,9 +56,14 @@ public class Log implements PostData {
   protected LogEntryReference topEntryReference;
 
   /**
-    * The most recent entry in this log.
+   * The most recent entry in this log.
    */
   protected transient LogEntry topEntry;
+
+  /**
+   * A cache of references to our children
+   */
+  protected transient HashMap childrenCache;
   
   /**
    * Constructs a Log for use in POST
@@ -71,6 +76,7 @@ public class Log implements PostData {
     this.location = location;
 
     children = new HashMap();
+    childrenCache = new HashMap();
 
     setPost(post);
     buffer = new Vector(); 
@@ -190,15 +196,26 @@ public class Log implements PostData {
 
     if (ref == null) {
       command.receiveResult(null);
-        return;
+      return;
+    }
+
+    if (childrenCache.get(name) != null) {
+      command.receiveResult(childrenCache.get(name));
+      return;
     }
 
     Continuation fetch = new Continuation() {
       public void receiveResult(Object o) {
-        Log log = (Log) o;
-        log.setPost(post);
+        if (o == null) {
+          command.receiveResult(o);
+        } else {
+          Log log = (Log) o;
+          log.setPost(post);
 
-        command.receiveResult(o);
+          childrenCache.put(log.getName(), log);
+
+          command.receiveResult(o);
+        }
       }
 
       public void receiveException(Exception e) {
@@ -329,6 +346,7 @@ public class Log implements PostData {
     ois.defaultReadObject();
 
     buffer = new Vector();
+    childrenCache = new HashMap();
   }
 
   /**
@@ -363,6 +381,7 @@ public class Log implements PostData {
      */
     public void start() {
       state = STATE_1;
+      childrenCache.put(log.getName(), log);
       post.getStorageService().storeSigned(log, log.getLocation(), this);
     }
 
@@ -375,7 +394,7 @@ public class Log implements PostData {
       task.start();
     }
 
-      private void startState2() {
+    private void startState2() {
       command.receiveResult(log);
     }
 

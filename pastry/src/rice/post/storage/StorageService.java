@@ -521,6 +521,7 @@ public class StorageService {
 
     private SignedReference reference;
     private Continuation command;
+    private PastContentHandle[] handles;
 
     /**
      * This contructs creates a task to store a given data and call the
@@ -538,7 +539,7 @@ public class StorageService {
       * Starts this task running.
      */
     protected void start() {
-      past.lookup(reference.getLocation(), this);
+      past.lookupHandles(reference.getLocation(), past.getReplicationFactor(), this);
 
       // Now we wait until PAST calls us with the receiveResult
       // and then we continue processing this call
@@ -550,26 +551,53 @@ public class StorageService {
      * @param result The result of the command.
      */
     public void receiveResult(Object result) {
-      Object data = null;
-      
-      try {
-        SignedData sd = (SignedData) result;
+      if (handles == null) {
+        handles = (PastContentHandle[]) result;
 
-        if (sd == null) {
+        if ((handles == null) || (handles.length == 0)) {
           command.receiveResult(null);
           return;
         }
-      
-        byte[] plainText = sd.getData();
-        data = SecurityUtils.deserialize(plainText);
+          
+        long latest = 0;
+        StorageServiceDataHandle handle = null;
 
-        pendingVerification.put(data, sd);
+        for (int i=0; i<handles.length; i++) {
+          StorageServiceDataHandle thisH = (StorageServiceDataHandle) handles[i];
 
-        command.receiveResult((PostData) data);
-      } catch (IOException ioe) {
-        command.receiveException(new StorageException("IOException while retrieving data: " + ioe));
-      } catch (ClassNotFoundException cnfe) {
-        command.receiveException(new StorageException("ClassNotFoundException while retrieving data: " + cnfe));
+          if ((thisH != null) && (thisH.getTimestamp() > latest)) {
+            latest = thisH.getTimestamp();
+            handle = thisH;
+          }
+        }
+
+        if (handle != null) {
+          past.fetch(handle, this);
+        } else {
+          command.receiveResult(null);
+        }
+      } else {
+        Object data = null;
+
+        try {
+          SignedData sd = (SignedData) result;
+
+          if (sd == null) {
+            command.receiveResult(null);
+            return;
+          }
+
+          byte[] plainText = sd.getData();
+          data = SecurityUtils.deserialize(plainText);
+
+          pendingVerification.put(data, sd);
+
+          command.receiveResult((PostData) data);
+        } catch (IOException ioe) {
+          command.receiveException(new StorageException("IOException while retrieving data: " + ioe));
+        } catch (ClassNotFoundException cnfe) {
+          command.receiveException(new StorageException("ClassNotFoundException while retrieving data: " + cnfe));
+        }
       }
     }
 

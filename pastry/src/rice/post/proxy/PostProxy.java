@@ -45,7 +45,7 @@ import java.security.*;
  * This class starts up everything on the Pastry side, and then
  * boots up the PAST, Scribe, POST.
  */
-public abstract class PostProxy {
+public class PostProxy {
 
   // ----- PASTRY CONFIGURATION VARIABLES
 
@@ -159,8 +159,8 @@ public abstract class PostProxy {
    */
   protected PublicKey caPublic;
 
-  public PostProxy(String userid) {
-    name = userid;
+  public PostProxy(String[] args) {
+    parseArgs(args);
   }
 
   protected void start() {
@@ -239,7 +239,10 @@ public abstract class PostProxy {
       ois.close();
       stepDone(SUCCESS);
 
-      pass = CAKeyGenerator.fetchPassword(name + "'s password");
+      if (pass == null) {
+        pass = CAKeyGenerator.fetchPassword(name + "'s password");
+      }
+        
       byte[] key = null;
       byte[] data = null;
 
@@ -305,11 +308,13 @@ public abstract class PostProxy {
    * @param args The arguments from the main() method
    * @return The name of the user
    */
-  protected static String parseArgs(String[] args) {
+  protected void parseArgs(String[] args) {
     if (args.length < 1) {
-      System.out.println("Usage: java rice.post.proxy.PostProxy userid [-bootstrap hostname[:port]] [-port port] [-imapport port] [-smtpport port] [-help]");
+      System.out.println("Usage: java rice.post.proxy.PostProxy userid [-password password] [-bootstrap hostname[:port]] [-port port] [-help]");
       System.exit(0);
     }
+
+    name = args[0];
     
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-bootstrap") && i+1 < args.length) {
@@ -332,6 +337,13 @@ public abstract class PostProxy {
     }
 
     for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-password") && i+1 < args.length) {
+        pass = args[i+1];
+        break;
+      }
+    }
+
+    for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-port") && i+1 < args.length) {
         int n = Integer.parseInt(args[i+1]);
         if (n > 0) PORT = n;
@@ -341,7 +353,7 @@ public abstract class PostProxy {
 
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-help")) {
-        System.out.println("Usage: java rice.post.proxy.EmailProxy userid [-bootstrap hostname[:port]] [-port port] [-imapport port] [-smtpport port] [-help]");
+        System.out.println("Usage: java rice.post.proxy.PostProxy userid [-password password] [-bootstrap hostname[:port]] [-port port] [-help]");
         System.exit(0);
       }
     }
@@ -360,8 +372,11 @@ public abstract class PostProxy {
         break;
       }
     }    
+  }
 
-    return args[0];
+  public static void main(String[] args) {
+    PostProxy proxy = new PostProxy(args);
+    proxy.start();
   }
 
   protected void sectionStart(String name) {

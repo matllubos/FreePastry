@@ -59,4 +59,8 @@ public final class SignedPostMessage implements Serializable {
     return false;
   }
 
+  public String toString() {
+    return "[SignedPM " + message + "]";
+  }
+
 }

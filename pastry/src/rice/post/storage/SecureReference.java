@@ -65,4 +65,8 @@ public class SecureReference implements Serializable {
             Arrays.equals(key, ref.getKey()));
   }
 
+  public String toString() {
+    return "[SecureRef " + location + "]";
+  }
+
 }
