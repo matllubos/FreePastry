@@ -138,8 +138,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private static final int maxPointersPerAggregate = 100;
   private static final long pointerArrayLifetime = 2 * WEEKS;
 
-  private static final long expirationInterval = 5 * MINUTES;
-  private static long expirationRenewThreshold = 1 * DAYS;
+  private static final long expirationInterval = 15 * MINUTES;
+  private static long expirationRenewThreshold = 3 * DAYS;
 
   private static final boolean monitorEnabled = false;
   private static final long monitorRefreshInterval = 10 * MINUTES;
@@ -1106,6 +1106,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
       aggregates.add(desc);
       currentAggregate.clear();
+      currentObjectsInAggregate = 0;
       currentAggregateSize = 0;
         
       if (mustAddObject) {
