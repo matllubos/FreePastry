@@ -2295,6 +2295,10 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     this.consolidationMinComponentsAlive = minUtilization;
   }
 
+  public void setLogLevel(int newLevel) {
+    this.loglevel = newLevel;
+  }
+
   public Past getAggregateStore() {
     return aggregateStore;
   }
