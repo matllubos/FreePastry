@@ -391,10 +391,12 @@ public class Channel extends PastryAppl implements IScribeApp {
     /* Should call stripe.drop() */
   }
   private void handleChannelMessage(ScribeMessage msg){
+    /* this case is when we get an attach message */
     ControlAttachMessage attachMessage =(ControlAttachMessage) msg.getData();
     attachMessage.handleMessage(this, scribe, msg.getSource());
   }
   private void handleSpareCapacityMessage(ScribeMessage msg){
+    /* This is when we get a spare capacity request */
     System.out.println("SpareCapacity Message");
     Stripe stripe = null;
     ControlFindParentMessage parentMessage = (ControlFindParentMessage) msg;
@@ -403,6 +405,11 @@ public class Channel extends PastryAppl implements IScribeApp {
     }
     parentMessage.handleForwardWrapper((Scribe) scribe,((Scribe) scribe).getTopic(parentMessage.getTopicId()), stripe );
   }
+  
+/**
+   * This returns a string representation of the channel.
+   * @return String String representation of the object.
+   */
   public String toString(){
 	String toReturn = "Channel: " + getChannelId() + "\n";
 	toReturn = toReturn + "Stripes: \n";
