@@ -146,6 +146,7 @@ public class ImapConnection
      * @throws DisconnectedException If the socket has been disconnected
      */
     public String readLine() throws IOException {
+      try {
         String line = _in.readLine();
 
         /* if client has disconnected, make sure socket is closed and throw exception */
@@ -160,6 +161,11 @@ public class ImapConnection
 
             return line;
         }
+      } catch (java.net.SocketException e) {
+        close();
+        
+        throw new DisconnectedException();
+      }
     }
 
     /**

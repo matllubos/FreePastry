@@ -145,7 +145,7 @@ public class MovingMessage
           dataWriter.close();
           break;
         } else {
-          dataWriter.println(line);
+          dataWriter.print(line + "\n");
         }
       }
     }
