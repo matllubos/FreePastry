@@ -1262,9 +1262,9 @@ public class XMLObjectInputStream extends ObjectInputStream {
    */
   public class GetField extends ObjectInputStream.GetField {
     
-    protected Hashtable primitives = new Hashtable();
+    protected HashMap primitives = new HashMap();
     
-    protected Hashtable objects = new Hashtable();
+    protected HashMap objects = new HashMap();
     
     public boolean defaulted(String name) {
       return (! (primitives.containsKey(name) || objects.containsKey(name)));
