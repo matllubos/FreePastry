@@ -267,7 +267,12 @@ public class Folder {
           getChildFolder((String) names[index], new StandardContinuation(parent) {
             public void receiveResult(Object o) {
               index++;
-              ((Folder) o).getContentHashReferences(set, thisOne);
+              
+              if (o != null) {
+                ((Folder) o).getContentHashReferences(set, thisOne);
+              } else {
+                thisOne.receiveResult(Boolean.TRUE);
+              }
             }
           });
         } else {
@@ -301,7 +306,12 @@ public class Folder {
           getChildFolder((String) names[index], new StandardContinuation(parent) {
             public void receiveResult(Object o) {
               index++;
-              ((Folder) o).getLogs(set, thisOne);
+
+              if (o != null) {
+                ((Folder) o).getLogs(set, thisOne);
+              } else {
+                thisOne.receiveResult(Boolean.TRUE);
+              }
             }
           });
         } else {
