@@ -8,7 +8,7 @@ import rice.splitstream.*;
 public class ControlFindParentResponseMessage extends ControlMessage
 {
 
-    public ControlFindParentMessage()
+    public ControlFindParentResponseMessage()
     {
     }
 

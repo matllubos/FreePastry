@@ -1,3 +1,4 @@
+package rice.splitstream;
 /**
  *
  * This interface allows an application running on top of SplitStream 
