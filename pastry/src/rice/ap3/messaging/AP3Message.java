@@ -1,6 +1,6 @@
 package rice.ap3.messaging;
 
-import rice.pastry.NodeId;
+import rice.pastry.NodeHandle;
 import rice.pastry.messaging.Message;
 
 import java.util.Random;
@@ -40,12 +40,12 @@ public class AP3Message extends Message {
   /**
    * The source of the message.
    */
-  protected NodeId _source;
+  protected NodeHandle _source;
 
   /**
    * Constructor
    */
-  public AP3Message(NodeId source,
+  public AP3Message(NodeHandle source,
 		    Object content,
 		    int messageType,
 		    double fetchProbability) {
@@ -132,11 +132,11 @@ public class AP3Message extends Message {
     }
   }
 
-  public NodeId getSource() {
+  public NodeHandle getSource() {
     return _source;
   }
 
-  public void setSource(NodeId source) {
+  public void setSource(NodeHandle source) {
     _source = source;
   }
 }

@@ -1,6 +1,6 @@
 package rice.ap3.routing;
 
-import rice.pastry.NodeId;
+import rice.pastry.NodeHandle;
 import rice.ap3.messaging.*;
 
 import java.util.Date;
@@ -29,7 +29,7 @@ public class AP3RoutingTableEntryImpl implements AP3RoutingTableEntry {
   /**
    * The node from which the message was received
    */
-  private NodeId _source;
+  private NodeHandle _source;
 
   /**
    * Constructor. Extracts all relevant information from
@@ -51,7 +51,7 @@ public class AP3RoutingTableEntryImpl implements AP3RoutingTableEntry {
   /**
    * Returns the source of the message as a NodeId.
    */
-  public NodeId getSource() {
+  public NodeHandle getSource() {
     return _source;
   }
 
@@ -71,3 +71,7 @@ public class AP3RoutingTableEntryImpl implements AP3RoutingTableEntry {
     _timeStamp = new Date().getTime();
   }
 }
+
+
+
+

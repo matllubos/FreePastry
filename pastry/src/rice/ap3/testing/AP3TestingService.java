@@ -115,7 +115,7 @@ public class AP3TestingService extends AP3ServiceImpl {
   /**
    * Overriden to return an AP3TestingMessage.
    */
-  protected AP3Message _createAP3Message(NodeId source,
+  protected AP3Message _createAP3Message(NodeHandle source,
 					 Object content,
 					 int messageType,
 					 double fetchProbability) {

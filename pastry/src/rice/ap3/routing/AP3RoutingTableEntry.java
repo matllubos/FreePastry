@@ -1,6 +1,6 @@
 package rice.ap3.routing;
 
-import rice.pastry.NodeId;
+import rice.pastry.NodeHandle;
 import rice.ap3.messaging.*;
 
 /**
@@ -21,7 +21,7 @@ public interface AP3RoutingTableEntry {
   /**
    * Returns the source of the message as a NodeId.
    */
-  public NodeId getSource();
+  public NodeHandle getSource();
 
   /**
    * Returns the timestamp indicating the last time
@@ -35,3 +35,7 @@ public interface AP3RoutingTableEntry {
    */
   public void stamp();
 }
+
+
+
+

@@ -21,6 +21,7 @@ import java.util.*;
 public class AP3Test {
     private DirectPastryNodeFactory factory;
     private NetworkSimulator simulator;
+    private RandomNodeIdFactory nodeFactory;
 
     private Vector pastryNodes;
     private Vector ap3Nodes;
@@ -28,8 +29,9 @@ public class AP3Test {
     private Random rng;
 
     public AP3Test() {
+        nodeFactory = new RandomNodeIdFactory();
 	simulator = new EuclideanNetwork();
-	factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator);
+	factory = new DirectPastryNodeFactory(nodeFactory, simulator);
 
 	pastryNodes = new Vector();
 	ap3Nodes = new Vector();
@@ -81,7 +83,7 @@ public class AP3Test {
 	    int nodeIndex = rng.nextInt(n);
 
 	    AP3TestingClient ap3Node = (AP3TestingClient) ap3Nodes.get(nodeIndex);
-
+            ap3Node.getService().setDestinationNode(nodeFactory.generateNodeId());
 	    ap3Node.getService().getAnonymizedContent("requestMsg", 0.50, 10000);
 
 	    while(simulate());

@@ -3,6 +3,7 @@ package rice.ap3.testing;
 import rice.ap3.messaging.AP3Message;
 
 import rice.pastry.NodeId;
+import rice.pastry.NodeHandle;
 import rice.pastry.messaging.Message;
 
 import java.util.*;
@@ -26,7 +27,7 @@ public class AP3TestingMessage extends AP3Message {
   /**
    * Constructor.
    */
-  public AP3TestingMessage(NodeId source,
+  public AP3TestingMessage(NodeHandle source,
 			   Object content,
 			   int messageType,
 			   double fetchProbability) {
@@ -78,3 +79,10 @@ public class AP3TestingMessage extends AP3Message {
     return super.toString() + "msg.route: " + routeStr + "\n";
   }
 }
+
+
+
+
+
+
+
