@@ -24,18 +24,24 @@
 
 package rice.pastry.wire;
 
-import java.io.*;
-import java.net.*;
-import java.nio.*;
-import java.nio.channels.*;
-import java.util.*;
+import java.net.InetSocketAddress;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Random;
 
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
-import rice.pastry.wire.exception.*;
-import rice.pastry.wire.messaging.datagram.*;
-import rice.pastry.wire.messaging.socket.*;
+import rice.pastry.Log;
+import rice.pastry.NodeId;
+import rice.pastry.dist.NodeIsDeadException;
+import rice.pastry.messaging.Message;
+import rice.pastry.wire.messaging.datagram.AcknowledgementMessage;
+import rice.pastry.wire.messaging.datagram.DatagramMessage;
+import rice.pastry.wire.messaging.datagram.DatagramTransportMessage;
+import rice.pastry.wire.messaging.datagram.PingMessage;
+import rice.pastry.wire.messaging.socket.SocketTransportMessage;
 
 /**
  * Class which controls which object should be transmitted in the UPD version of

@@ -40,8 +40,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 
 import rice.pastry.Log;
+import rice.pastry.dist.NodeIsDeadException;
 import rice.pastry.messaging.Message;
-import rice.pastry.wire.exception.NodeIsDeadException;
 import rice.pastry.wire.exception.SerializationException;
 import rice.pastry.wire.messaging.socket.HelloMessage;
 import rice.pastry.wire.messaging.socket.SocketCommandMessage;
