@@ -85,7 +85,7 @@ public class GlacierTest {
             new LRUCache(new MemoryStorage(FACTORY), 1000000)
         );
 
-	GlacierImpl glac = new GlacierImpl(pn, "glacier-"+i, pastStor, glacierStor, REPLICATION_FACTOR, numFragments, numSurvivors, null, INSTANCE);
+	GlacierImpl glac = new GlacierImpl(pn, "glacier-"+i, pastStor, glacierStor, new GlacierDefaultPolicy(), REPLICATION_FACTOR, numFragments, numSurvivors, null, INSTANCE);
 	glaciers.addElement(glac);
 	if (Log.ifp(5)) System.out.println("created " + pn);
     }
