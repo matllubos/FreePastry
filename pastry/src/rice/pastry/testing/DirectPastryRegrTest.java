@@ -75,7 +75,7 @@ public class DirectPastryRegrTest extends PastryRegrTest {
     /**
      * Get pastryNodes.last() to bootstrap with, or return null.
      */
-    protected NodeHandle getBootstrap() {
+    protected NodeHandle getBootstrap(boolean firstNode) {
 	NodeHandle bootstrap = null;
 	try {
 	    PastryNode lastnode = (PastryNode) pastryNodes.lastElement();
