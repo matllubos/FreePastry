@@ -165,18 +165,18 @@ while(!node.isReady()) {
 <h3>Let's examine each line:</h3>
 
 <ol>
-  <li>This line parses the first command line argument into an int.<br/><br/>
+  <li>This line parses the first command line argument into an int.
 <pre>
 int bindport = Integer.parseInt(args[0]);
 </pre></li>
 
-  <li>These lines parse the IP and port and turn them into an InetSocketAddress.<br/>
+  <li>These lines parse the IP and port and turn them into an InetSocketAddress.
 <pre>
 InetAddress bootaddr = InetAddress.getByName(args[1]);
 int bootport = Integer.parseInt(args[2]);
 InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
 </pre></li>
-  <li>Finally we execute our constructor.<br/><br/>
+  <li>Finally we execute our constructor.
 <pre>
 DistTutorial dt = new DistTutorial(bindport, bootaddress);
 </pre></li>
@@ -207,21 +207,23 @@ rice/tutorial/lesson1/DistTutorial.java
       </li>
       <li>Compile the Java sources:
 	  <pre><span class="input">javac -cp pastry.jar rice/tutorial/lesson1/*.java</span></pre></li>
-    </ol><br/>
-  <li><b>Step 2:</b> Launch the bootstrap node.<br/>
-Even though this is the first node, and therefore we know the bootstrap will not work, you need to place in a bogus ip/port.  A smarter main() method in DistTutorial.java could fix this problem.
+    </ol>
+  <li><b>Step 2:</b> Launch the bootstrap node.
+Even though this is the first node, and therefore we know the bootstrap will
+not work, you need to place in a bogus ip/port.  A smarter <code>main()</code> method in DistTutorial.java could fix this problem.
 <pre><span class="input">java -cp .:pastry.jar rice.tutorial.lesson.DistTutorial 9001 <i>yourhost.domain</i> 9001</span></pre>
-<p/>
+<p>
 (In the above command, <i>yourhost.domain</i> can be the DNS name of your
-host or its IP address.)  Your output will look something like this:    
+host or its IP address.)  Your output will look something like this:</p>
 <pre>
 <span class="input">java rice.tutorial.lesson1.DistTutorial 9001 10.9.8.7 9001</span>
 <span class="output">Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
 Couldn't find a bootstrap node, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0xB7E151..&gt;/FOO/10.9.8.7:9001 [-4233509936758121968])</span></pre></li>
-  <li><b>Step 3:</b> Launch another node.<br/>
+  <li><b>Step 3:</b> Launch another node.
+  <p>
   You can do this on another computer but make sure you fill in the name of
-  the computer from step 2 in <i>bootstraphost.domain</i>.
+  the computer from step 2 in <i>bootstraphost.domain</i>.</p>
 <pre><span class="input">java -cp .:pastry.jar rice.tutorial.lesson.DistTutorial 9002 <i>bootstraphost.domain</i> 9001</span></pre>
 <p/> Your output will look something like this:    
 <pre>
@@ -337,22 +339,26 @@ Finally we have the constructor that loads the payload.
 
 Note that <code>Endpoint.route()</code> takes 3 arguments.  They are:
 <ol>
-  <li><b>Id</b>&mdash;the destination</li>
+  <li><b>Id</b>&mdash;the destination of the message <em>(optional)</em></li>
   <li><b>Message</b>&mdash;the message to send</li>
-  <li><b>NodeHandle</b>&mdash;a "hint" this means a first node to try</li>
+  <li><b>NodeHandle</b>&mdash;a "hint": the node to route to first <em>(optional)</em></li>
 </ol>
 
-Sometimes you need to send messages to a particular Node in the network, not just to the nearest key.  For example, if you need to send messages that are large, they are going to take up a lot of bandwidth, it is more efficient to <i>not</i> route the messages through the overlay, but rather send directly to the node.  You can also use the <code>Endpoint.route()</code> method to do this by giving a null argument to the Id and your target NodeHandle as the "hint" argument.
+Sometimes you need to send messages to a particular Node in the network, not
+just to the nearest key.  For example, if you need to send messages that are
+large, they are going to take up a lot of bandwidth; it is more efficient to
+<i>not</i> route the messages through the overlay, but rather send directly to
+the node.  You can use the <code>Endpoint.route()</code> method to accomplish
+this by passing a <code>null</code> argument as the Id and the target node's NodeHandle as the "hint" argument.
 <pre>
   /**
    * Called to directly send a message to the nh
    */
   public void routeMyMsgDirect(NodeHandle nh) {
-    System.out.println(this+" sending direct to "+nh);    
+    System.out.println(this+" sending direct to "+nh);
     Message msg = new MyMsg(endpoint.getId(), nh.getId());
     endpoint.route(null, msg, nh);
-  }
-</pre>
+  }</pre>
 
 <h4>Receiving a message:</h4>
 <p/>Simply implement the <code>deliver()</code> method as is specified by the Application interface.
