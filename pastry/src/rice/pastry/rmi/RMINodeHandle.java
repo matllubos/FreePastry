@@ -146,15 +146,12 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	}
     }
 
-    /*
-     * * proximity metric: does currently hardcoded ten pings. (todo:
-     *   separate it into a Proximity class with ping and proximity methods)
-     * * proximity is set to INFTY initially (and when received from another
-     *   node), updated on every ping() or proximity()
+    /**
+     * @return the cached proximity value, INFTY initially, 0 if its local.
      */
     public int proximity() {
 	if (isLocal) return 0;
-	for (int i = 0; i < 10; i++) if (!ping()) break;
+	// for (int i = 0; i < 10; i++) if (!ping()) break;
 	return distance;
     }
 
@@ -190,9 +187,13 @@ public class RMINodeHandle implements NodeHandle, Serializable
 
 	    // bounce back to local dispatcher
 	    System.out.println("[rmi] bouncing message back to self at " + localhandle);
-	    RouteMessage rmsg = (RouteMessage) msg;
-	    rmsg.setNextHop(null);
-	    localhandle.receiveMessage(rmsg);
+	    if (msg instanceof RouteMessage) {
+		RouteMessage rmsg = (RouteMessage) msg;
+		rmsg.setNextHop(null);
+		localhandle.receiveMessage(rmsg);
+	    } else {
+		localhandle.receiveMessage(msg);
+	    }
 	}
     }
 
