@@ -37,6 +37,12 @@ public class EmailService extends PostClient {
   }
 
   /**
+   * @return the post object this serivce is using.
+   */
+  public Post getPost() {
+    return _post;
+  }
+  /**
    * Sends the email to the recipient. The Email object has a notion
    * of who its recipients are.
    *
