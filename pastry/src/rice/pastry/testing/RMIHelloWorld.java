@@ -232,9 +232,29 @@ public class RMIHelloWorld {
      */
 
     private class ApplThread implements Runnable {
-	PastryNode pn;
-	HelloWorldApp app;
-	ApplThread(PastryNode n, HelloWorldApp a) { pn = n; app = a; }
+
+	private PastryNode pn;
+	private HelloWorldApp app;
+	private NodeHandle bootstrap;
+
+	/**
+	 * Number of times to try joining, in case join messages are lost,
+	 * and the retry timeout period.
+	 */
+	private static final int nJoinTries = 3, joinTimeout = 30 /* sec */;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param n this pastrynode
+	 * @param a application object
+	 * @param bs bootstrap handle
+	 */
+	ApplThread(PastryNode n, HelloWorldApp a, NodeHandle bs) {
+	    pn = n;
+	    app = a;
+	    bootstrap = bs;
+	}
 
 	public void run() {
 
@@ -243,10 +263,19 @@ public class RMIHelloWorld {
 	    synchronized (app) {
 		if (pn.isReady() == false) {
 		    System.out.println(pn + " isn't ready yet. Waiting.");
-		    // waiting to be signalled by HelloWorldApp.notifyAll()
-		    try { app.wait(); } catch (InterruptedException e) { }
-		    if (pn.isReady() == false) System.out.println("panic");
-		    System.out.println(pn + " is ready now. Proceeding to send messages.");
+
+		    for (int n = 0; n < nJoinTries; n++) {
+			try {
+			    if (pn.isReady() == false)
+				app.wait(joinTimeout * 1000);
+				// to be signalled by HelloWorldApp.notifyAll()
+			} catch (InterruptedException e) { }
+			if (pn.isReady()) break;
+			System.out.println(pn + " timed out while trying to join. Retrying initiateJoin.");
+			pn.initiateJoin(bootstrap);
+		    }
+		    if (!pn.isReady()) System.out.println("Panic: unable to join!");
+		    else System.out.println(pn + " is ready now. Proceeding to send messages.");
 		} else {
 		    System.out.println(pn + " is ready at the time this client is starting.");
 		}
@@ -266,13 +295,14 @@ public class RMIHelloWorld {
      * application for this node, and spawn off a separate thread for it.
      */
     public void makePastryNode() {
-	PastryNode pn = factory.newNode(getBootstrap());
+	NodeHandle bootstrap = getBootstrap();
+	PastryNode pn = factory.newNode(bootstrap); // internally initiateJoins
 	pastryNodes.addElement(pn);
 
 	HelloWorldApp app = new HelloWorldApp(pn);
 	helloClients.addElement(app);
 
-	ApplThread thread = new ApplThread(pn, app);
+	ApplThread thread = new ApplThread(pn, app, bootstrap);
 	new Thread(thread).start();
 
 	System.out.println("created " + pn);

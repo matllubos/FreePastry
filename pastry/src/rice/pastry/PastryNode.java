@@ -41,6 +41,7 @@ import rice.pastry.security.*;
 import rice.pastry.client.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
+import rice.pastry.join.*;
 
 import java.util.*;
 
@@ -60,7 +61,7 @@ public abstract class PastryNode implements MessageReceiver
     private LeafSet leafSet;
     private RoutingTable routeSet;
     protected NodeHandle localhandle;
-    protected boolean ready;
+    private boolean ready;
     protected Vector apps;
 
     /**
@@ -121,6 +122,18 @@ public abstract class PastryNode implements MessageReceiver
     public final LeafSet getLeafSet() { return leafSet; }
 
     public final RoutingTable getRoutingTable() { return routeSet; }
+
+    /**
+     * Sends an InitiateJoin message to itself.
+     *
+     * @param bootstrap Node handle to bootstrap with.
+     */
+    public final void initiateJoin(NodeHandle bootstrap) {
+	if (bootstrap != null)
+	    this.receiveMessage(new InitiateJoin(bootstrap));
+	else
+	    setReady(); // no bootstrap node, so ready immediately
+    }
 
     /**
      * Add/delete a leaf set observer to the Pastry node.

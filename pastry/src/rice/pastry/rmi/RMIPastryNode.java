@@ -182,10 +182,7 @@ public class RMIPastryNode extends PastryNode
 
 	((RMINodeHandle)localhandle).setRemoteNode(remotestub);
 
-	if (bootstrap != null)
-	    this.receiveMessage(new InitiateJoin(bootstrap));
-	else
-	    setReady();
+	initiateJoin(bootstrap);
     }
 
     /**

@@ -60,10 +60,7 @@ public class DirectPastryNode extends PastryNode
     public void setDirectElements(/* simulator */) { }
 
     public void doneNode(NodeHandle bootstrap) {
-	if (bootstrap != null)
-	    this.receiveMessage(new InitiateJoin(bootstrap));
-	else
-	    setReady();
+	initiateJoin(bootstrap);
     }
 
     /**
