@@ -51,7 +51,19 @@ import java.util.*;
  *
  * MessageAnycast is used whenever a Scribe node wishes to anycast 
  * to a particular topic. 
- * 
+ *
+ * This method implements the DFS of the scribe topic tree. Applications
+ * which want different handling of anycast messages, might sub-class
+ * this class to write their own tree traversal algorithms.
+ *
+ * Whenever a local node receives anycast message for a topic after doing
+ * the DFS, it invokes the anycastHandler() on applications registered for
+ * this topic. If local applications can satisfy the request of anycast,
+ * then anycast message is not routed furthur otherwise tree traversal is 
+ * continued. If no node is able to satisfy the anycast request, the 
+ * faultHandler() method is invoked, where application specific handling 
+ * can be done.
+ *
  * @version $Id$ 
  *
  * @author Atul Singh
