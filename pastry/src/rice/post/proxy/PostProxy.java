@@ -1306,6 +1306,9 @@ public class PostProxy {
       if (dialog != null)
         dialog.append("\n-- ERROR: Found Exception while start proxy - exiting - " + e + " --\n");
       e.printStackTrace();
+      
+      panic("An error occurred while starting the proxy - the proxy is now exiting.\n" + e.toString());
+      
       System.exit(-1);
     }
   }

@@ -299,7 +299,7 @@ public class ConfigurationFrame extends JFrame {
     public UpdateConfiguration(GridBagLayout layout) {      
       super("Automatic Updating", layout, 
             new ConfigurationPanel[][] { 
-            { new EnableBox("proxy_automatic_update_enable", "Enable Updating", new GridBagLayout(), "Whether or not the proxy should periodically check for updated ePOST software") },
+            { new EnableBox("proxy_automatic_update_enable", "Enable Updating", new GridBagLayout(), "Whether or not the proxy should periodically check for updated ePOST software"), new EnableBox("proxy_automatic_update_ask_user", "Ask Before Updating", new GridBagLayout(), "Whether or not you would like ePOST to automatically download and install new updates") },
             { new TextBox("proxy_automatic_update_interval", "Updating Interval", new GridBagLayout(), "The interval, in milliseconds, with which ePOST should check for updates") } });
     }
   }
