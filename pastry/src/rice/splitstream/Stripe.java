@@ -32,7 +32,7 @@ public class Stripe extends Observable implements IScribeApp{
    /**
     * The stripe state, whether it is dropped, connected, etc.
     */
-   private int stripeState = 0;
+   private int stripeState = 1;
 
    /**
     * The stripeId for this stripe
