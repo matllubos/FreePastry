@@ -8,7 +8,7 @@ import java.util.List;
 public class BodyPartRequest {
 
   String _name;
-  String _type = "";
+  List _type = new ArrayList();
   boolean _peek = false;
   List _parts = new ArrayList();
 
@@ -16,7 +16,7 @@ public class BodyPartRequest {
     return _name;
   }
 
-  public String getType() {
+  public List getType() {
     return _type;
   }
 
@@ -28,8 +28,13 @@ public class BodyPartRequest {
     _name = name;
   }
 
-  public void setType(String type) {
-    _type = type;
+  public void appendType(String type) {
+    _type.addLast(type);
+  }
+
+  public void reAppendType(String type) {
+    _type.removeLast();
+    _type.addLast(type);
   }
 
   public void setPeek(boolean peek) {

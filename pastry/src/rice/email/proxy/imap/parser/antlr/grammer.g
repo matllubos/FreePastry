@@ -284,7 +284,7 @@ fetch [boolean isUID]
 	}
 	;
 	
-fetch_part[FetchCommand cmd]
+  fetch_part[FetchCommand cmd]
 	{
     boolean realBody = false;
     BodyPartRequest breq = new BodyPartRequest();
@@ -292,12 +292,13 @@ fetch_part[FetchCommand cmd]
 	}
 	:
 	b:BODY {breq.setName(b.getText());}
-	  (LSBRACKET {realBody = true;}
-	    (h:ATOM {breq.setType(h.getText());}
-	      (SPACE LPAREN 
-          a:ATOM {breq.addPart(a.getText());} (SPACE at:ATOM {breq.addPart(at.getText());})*
-	      RPAREN)?)?
-	  RSBRACKET)?
+    (PERIOD PEEK {breq.setPeek(true);})?
+	  (LSBRACKET {realBody = true;} 
+      (body_part[breq])?
+	  RSBRACKET
+    
+      (LSANGLE a1:ATOM PERIOD a2:ATOM RSANGLE)?
+    )?
   {
     if (realBody) {
       cmd.appendPartRequest(breq);
@@ -306,34 +307,58 @@ fetch_part[FetchCommand cmd]
     }  
   }
   |
-  bp:BODYPEEK {breq.setName("BODY"); breq.setPeek(true);}
-	  (LSBRACKET
-	    (hp:ATOM {breq.setType(hp.getText());}
-	      (SPACE LPAREN 
-          ap:ATOM {breq.addPart(ap.getText());} (SPACE atp:ATOM {breq.addPart(atp.getText());})*
-	      RPAREN)?)?
-	  RSBRACKET)?
-  {
-    cmd.appendPartRequest(breq);
-  }
-  |
 	r:RFC822 {rreq.setName(r.getText());}
+    (PERIOD (HEADER {rreq.setType("HEADER");} |
+             TEXT {rreq.setType("TEXT");} |
+             SIZE {rreq.setType("SIZE");}))?
   {
     cmd.appendPartRequest(rreq);
   }
   |
-	rh:RFC822HEADER {rreq.setName("RFC822"); rreq.setType("HEADER");}
-  {
-    cmd.appendPartRequest(rreq);
-  }
+  flags:FLAGS { cmd.appendPartRequest(flags.getText());} 
   |
-	rt:RFC822TEXT {rreq.setName("RFC822"); rreq.setType("TEXT");}
-  {
-    cmd.appendPartRequest(rreq);
-  }
+  uid:UID { cmd.appendPartRequest(uid.getText());} 
   |
-	p:ATOM { cmd.appendPartRequest(p.getText());} 
-;
+  all:ALL { cmd.appendPartRequest(all.getText());} 
+  |
+  fast:FAST { cmd.appendPartRequest(fast.getText());} 
+  |
+  full:FULL { cmd.appendPartRequest(full.getText());} 
+  |
+  bodystructure:BODYSTRUCTURE { cmd.appendPartRequest(bodystructure.getText());} 
+  |
+  envelope:ENVELOPE { cmd.appendPartRequest(envelope.getText());} 
+  |
+  internaldate:INTERNALDATE { cmd.appendPartRequest(internaldate.getText());}
+  ;
+
+
+  body_part[BodyPartRequest breq] :
+    non_final_body_part[breq] (PERIOD body_part[breq])?
+    |
+    final_body_part[breq]
+  ;
+  
+  non_final_body_part[BodyPartRequest breq] :
+    num:ATOM {breq.appendType(num.getText());}
+  ;
+  
+  final_body_part[BodyPartRequest breq] :
+    HEADER {breq.appendType("HEADER");}
+      (PERIOD FIELDS {breq.reAppendType("HEADER.FIELDS");}
+        (PERIOD NOT {breq.reAppendType("HEADER.FIELDS.NOT");})?
+
+        SPACE LPAREN 
+          a:ATOM {breq.addPart(a.getText());} 
+            (SPACE at:ATOM {breq.addPart(at.getText());})*
+          RPAREN
+      )?
+    |
+    MIME {breq.appendType("MIME");}
+    |
+    TEXT {breq.appendType("TEXT");}
+  ; 
+
 /*
  * Commands for unauthorized people
  */

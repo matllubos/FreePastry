@@ -41,16 +41,27 @@ tokens {
 	EXPUNGE="EXPUNGE";
 	CLOSE="CLOSE";
 	BODY="BODY";
-	BODYPEEK="BODY.PEEK";
   RFC822="RFC822";
-  RFC822HEADER="RFC822.HEADER";
-  RFC822TEXT="RFC822.TEXT";
+  PEEK="PEEK";
+  HEADER="HEADER";
+  FIELDS="FIELDS";
+  NOT="NOT";
+  TEXT="TEXT";
+  MIME="MIME";
+  SIZE="SIZE";
+  ALL="ALL";
+  FAST="FAST";
+  FULL="FULL"; 
+  BODYSTRUCTURE="BODYSTRUCTURE";
+  ENVELOPE="ENVELOPE";
+  FLAGS="FLAGS";
+  INTERNALDATE="INTERNALDATE";
 }
 
 {
 	boolean expectingCommand = true;
 	
-	public int testLiteralsTable(int ttype) {
+/*	public int testLiteralsTable(int ttype) {
 		if (expectingCommand) {
 		  int value = super.testLiteralsTable(ttype);
 		  if (value != ttype) {
@@ -64,11 +75,14 @@ tokens {
 		  if (text.equals("BODY.PEEK")) return BODYPEEK;
 		  if (text.equals("RFC822")) return RFC822;
 		  if (text.equals("RFC822.HEADER")) return RFC822HEADER;
-		  if (text.equals("RFC822.TEXT")) return RFC822TEXT;
+		  if (text.equals("RFC822.TEXT")) return RFC822TEXT; 
 		  return ttype;
 		}
-	}
+	} */
 }
+
+PERIOD : '.'
+  ;
 
 SPACE	:	' '
 	;
@@ -80,7 +94,7 @@ RPAREN	:	')'
 	;
 
 ATOM :
-		(ATOM_CHAR | '%' | '*')+
+  (ATOM_CHAR)+
 	; 
 
 FLAG :	'\\' ATOM
@@ -90,6 +104,17 @@ LSBRACKET : '['
 	;
 
 RSBRACKET : ']'
+	;
+  
+LSANGLE : '<'
+  ;
+  
+RSANGLE : '>'
+  ;
+
+protected
+NUMBER	:	
+  ('0'..'9')+
 	;
 
 protected
@@ -113,7 +138,7 @@ QUOTED_SPECIALS :	'\"' | '\\'
 	;
   
 protected
-ATOM_CHAR : ~('(' | ')' | '{' | '[' | ']' | ' ' | '*' | '%' | '\\' | '\"' | '\u007f'..'\u00FF' | '\u0000'..'\u001f')
+ATOM_CHAR : ~('<' | '>' | '.' | '(' | ')' | '{' | '[' | ']' | ' ' | '\\' | '\"' | '\u007f'..'\u00FF' | '\u0000'..'\u001f')
   ;
 
 protected
@@ -126,10 +151,6 @@ CTL	:	('\u0000'..'\u001f' | '\u007f')
 
 protected
 PLUS	:	'+'
-	;
-
-protected
-NUMBER	:	('0'..'9')+
 	;
 
 LITERAL_START	:	'{'! NUMBER '}'!
