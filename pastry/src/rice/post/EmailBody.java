@@ -3,6 +3,8 @@ package rice.post;
 import rice.pastry.*;
 import java.security.*;
 
+import ObjectWeb.Persistence.*;
+
 /**
  * Represents the textual (or whatever) body of an email message.
  * Provides two things: a NodeID where this body may be found, and
@@ -26,5 +28,8 @@ public class EmailBody {
      * Returns the Key that decrypts this email body.
      */
     public Key getDecryptKey();
+
+    /**
+     * Returns the content 
 
 }
