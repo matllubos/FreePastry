@@ -4,7 +4,7 @@ import java.security.*;
 
 import rice.post.*;
 import rice.pastry.*;
-import rice.pastry.message.*;
+import rice.pastry.messaging.*;
 import java.io.*;
 /**
  * This message is broadcast to the sender of a NotificationMessage in

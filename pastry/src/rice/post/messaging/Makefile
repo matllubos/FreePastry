@@ -7,7 +7,7 @@ SOURCE  = \
 	PresenceMessage.java \
 	ReceiptMessage.java \
 	DeliveryRequestMessage.java 
-	
+
 RMI_SOURCE =
 
 MAIN       = 
