@@ -17,6 +17,8 @@ FUNCTIONALITY
 
     Let PastryNodeFactory constructors take as argument a NodeIdFactory.
 
+    Implement support for automatic deployment and experimentation in a testbed.
+
 PERFORMANCE
 
     Do some memory tuning to allow simulations with larger numbers of nodes.
