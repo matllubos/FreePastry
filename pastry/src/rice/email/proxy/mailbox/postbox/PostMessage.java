@@ -233,7 +233,13 @@ public class PostMessage implements StoredMessage {
       Enumeration e = mm.getAllHeaderLines();
 
       while (e.hasMoreElements()) {
-        headersText += e.nextElement() + "\n";
+        String header = (String) e.nextElement();
+        
+	if (header.charAt(header.length()-1) == '\n') {
+          headersText += e.nextElement();
+        } else {
+          headersText += e.nextElement() + "\n";
+        }
       }
 
       headers = new EmailData(headersText.getBytes());
