@@ -52,7 +52,7 @@ import java.util.*;
  * @author Andrew Ladd
  */
 
-public abstract class PastryNode implements MessageReceiver {
+public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.Node {
 
     protected NodeId myNodeId;
     private PastrySecurityManager mySecurityManager;
@@ -284,6 +284,30 @@ public abstract class PastryNode implements MessageReceiver {
     public String toString() {
 	return "Pastry node " + myNodeId.toString();
     }
-    
+
+    // Common API Support
+
+    /**
+     * This returns a VirtualizedNode specific to the given application and
+     * instance name to the application, which the application can then use
+     * in order to send an receive messages.
+     *
+     * @param application The Application
+     * @param instance An identifier for a given instance
+     * @return The endpoint specific to this applicationk, which can be used
+     * for message sending/receiving.
+     */
+    public rice.p2p.commonapi.Endpoint registerApplication(rice.p2p.commonapi.Application application, String instance) {
+      return new rice.pastry.commonapi.PastryEndpoint(this, application, instance);
+    }
+
+    /**
+     * Returns a factory for Ids specific to this node's protocol.
+     *
+     * @return A factory for creating Ids.
+     */
+    public rice.p2p.commonapi.IdFactory getIdFactory() {
+      return new rice.pastry.commonapi.PastryIdFactory();
+    }
 }
 

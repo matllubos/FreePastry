@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate
+"Free Pastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -34,75 +34,69 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.p2p.commonapi;
+package rice.pastry.commonapi;
 
+import rice.p2p.commonapi.IdFactory;
+import rice.p2p.commonapi.Id;
+
+import java.lang.Comparable;
+import java.io.*;
 import java.util.*;
+import java.security.*;
 
 /**
- * An interface to a generic set of node handles.
+ * This class provides applications with a way of genertating
+ * pastry Ids.
  *
  * @version $Id$
  *
  * @author Alan Mislove
+ * @author Peter Druschel
  */
-public interface NodeHandleSet {
+public class PastryIdFactory implements IdFactory {
+
+  private MessageDigest md;
+
+  /**
+   * Constructor
+   */
+  public PastryIdFactory() {
+    try {
+      md = MessageDigest.getInstance("SHA");
+    } catch ( NoSuchAlgorithmException e ) {
+      System.err.println( "No SHA support!" );
+    }
+  }
   
   /**
-   * Puts a NodeHandle into the set.
+   * Builds a protocol-specific Id given the source data.
    *
-   * @param handle the handle to put.
-   *
-   * @return true if the put succeeded, false otherwise.
+   * @param material The material to use
+   * @return The built Id.
    */
-  public boolean putHandle(NodeHandle handle);
+  public Id buildId(byte[] material) {
+    return new rice.pastry.Id(material);
+  }
 
   /**
-   * Finds the NodeHandle associated with the NodeId.
+   * Builds a protocol-specific Id given the source data.
    *
-   * @param id a node id.
-   * @return the handle associated with that id or null if no such handle is found.
+   * @param material The material to use
+   * @return The built Id.
    */
-  public NodeHandle getHandle(Id id);
+  public Id buildId(int[] material) {
+    return new rice.pastry.Id(material);
+  }
 
   /**
-   * Gets the ith element in the set.
+   * Builds a protocol-specific Id by using the hash of the given string as source data.
    *
-   * @param i an index.
-   * @return the handle associated with that id or null if no such handle is found.
+   * @param string The string to use as source data
+   * @return The built Id.
    */
-  public NodeHandle getHandle(int i);
-
-  /**
-   * Verifies if the set contains this particular id.
-   *
-   * @param id a node id.
-   * @return true if that node id is in the set, false otherwise.
-   */
-  public boolean memberHandle(Id id);
-
-  /**
-   * Removes a node id and its handle from the set.
-   *
-   * @param nid the node to remove.
-   *
-   * @return the node handle removed or null if nothing.
-   */
-  public NodeHandle removeHandle(Id id);
-
-  /**
-   * Gets the size of the set.
-   *
-   * @return the size.
-   */
-  public int size();
-
-  /**
-   * Gets the index of the element with the given node id.
-   *
-   * @param id the id.
-   *
-   * @return the index or throws a NoSuchElementException.
-   */
-  public int getIndexHandle(Id id) throws NoSuchElementException;
-  
+  public Id buildId(String string) {
+    md.update(string.getBytes());
+    return buildId(md.digest());
+  }
 }
+

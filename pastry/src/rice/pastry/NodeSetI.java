@@ -46,7 +46,7 @@ import java.util.*;
  * @author Andrew Ladd
  */
 
-public interface NodeSetI 
+public interface NodeSetI extends rice.p2p.commonapi.NodeHandleSet
 {       
     /**
      * Puts a NodeHandle into the set.

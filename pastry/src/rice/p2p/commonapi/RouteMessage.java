@@ -49,15 +49,15 @@ import java.io.*;
  */
 public interface RouteMessage extends Serializable {
 
-  public Id getDestination();
+  public Id getDestinationId();
 
-  public NodeHandle getNextHop();
+  public NodeHandle getNextHopHandle();
 
   public Message getMessage();
 
-  public void setDestination(Id id);
+  public void setDestinationId(Id id);
 
-  public void setNextHop(NodeHandle nextHop);
+  public void setNextHopHandle(NodeHandle nextHop);
 
   public void setMessage(Message message);
   

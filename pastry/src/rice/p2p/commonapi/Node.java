@@ -60,7 +60,13 @@ public interface Node {
    * for message sending/receiving.
    */
   public Endpoint registerApplication(Application application, String instance);
-  
+
+  /**
+   * Returns a factory for Ids specific to this node's protocol.
+   *
+   * @return A factory for creating Ids.
+   */
+  public IdFactory getIdFactory();
 }
 
 

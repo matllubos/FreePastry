@@ -74,7 +74,7 @@ public interface Id extends Comparable, Serializable {
    * @param offset the distance to add
    * @return the new Id
    */
-  public Id add(Distance offset);
+  public Id addToId(Distance offset);
 
   /**
    * Returns the shorter numerical distance on the ring between a pair of Ids.
@@ -82,7 +82,7 @@ public interface Id extends Comparable, Serializable {
    * @param nid the other node id.
    * @return the distance between this and nid.
    */
-  public Distance distance(Id nid);
+  public Distance distanceFromId(Id nid);
 
   /**
    * Returns the longer numerical distance on the ring between a pair of Ids.
@@ -90,7 +90,7 @@ public interface Id extends Comparable, Serializable {
    * @param nid the other node id.
    * @return the distance between this and nid.
    */
-  public Distance longDistance(Id nid);
+  public Distance longDistanceFromId(Id nid);
   
   /**
    * A class for representing and manipulating the distance between two Ids on the circle.
@@ -105,7 +105,7 @@ public interface Id extends Comparable, Serializable {
      * @param fill value of bit shifted in (0 if fill == 0, 1 otherwise)
      * @return this
      */
-    public Distance shift(int cnt, int fill);
+    public Distance shiftDistance(int cnt, int fill);
   }
 
 }

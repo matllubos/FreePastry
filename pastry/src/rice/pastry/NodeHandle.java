@@ -48,7 +48,7 @@ import java.util.*;
  *
  * @author Andrew Ladd
  */
-public abstract class NodeHandle extends Observable implements MessageReceiver, LocalNodeI {
+public abstract class NodeHandle extends Observable implements MessageReceiver, LocalNodeI, rice.p2p.commonapi.NodeHandle {
 
   // constants defining types of observable events
   public static final Integer PROXIMITY_CHANGED = new Integer(1); 
@@ -64,6 +64,10 @@ public abstract class NodeHandle extends Observable implements MessageReceiver, 
    * @return the node id.
    */
   public abstract NodeId getNodeId();
+
+  public rice.p2p.commonapi.Id getId() {
+    return getNodeId();
+  }
 
   /**
    * Returns the last known liveness information about the Pastry node associated with this handle.

@@ -52,7 +52,7 @@ import java.util.*;
  * @author Peter Druschel
  */
 
-public class Id implements Comparable, Serializable 
+public class Id implements rice.p2p.commonapi.Id
 {
     // Distance constants
     private static int[] One = {1,0,0,0,0};
@@ -209,7 +209,7 @@ public class Id implements Comparable, Serializable
      * A class for representing and manipulating the distance between two Ids on the circle.
      */
     
-    public class Distance implements Comparable, Serializable {
+    public class Distance implements rice.p2p.commonapi.Id.Distance {
 	private int difference[];
 
 	/**
@@ -403,6 +403,19 @@ public class Id implements Comparable, Serializable
 	    return "< Id.distance " + s + " >";
 	}
 
+  // common API Support
+
+  /**
+    * Shift operator.
+   * shift(-1,0) multiplies value of this by two, shift(1,0) divides by 2
+   *
+   * @param cnt the number of bits to shift, negative shifts left, positive shifts right
+   * @param fill value of bit shifted in (0 if fill == 0, 1 otherwise)
+   * @return this
+   */
+  public rice.p2p.commonapi.Id.Distance shiftDistance(int cnt, int fill) {
+    return shift(cnt, fill);
+  }
 
 
     }
@@ -882,6 +895,60 @@ public class Id implements Comparable, Serializable
 	}
         return s;
 
+    }
+
+    // Common API Support
+
+    /**
+      * Checks if this Id is between two given ids ccw (inclusive) and cw (exclusive) on the circle
+     *
+     * @param ccw the counterclockwise id
+     * @param cw the clockwise id
+     * @return true if this is between ccw (inclusive) and cw (exclusive), false otherwise
+     */
+    public boolean isBetween(rice.p2p.commonapi.Id ccw, rice.p2p.commonapi.Id cw) {
+      return isBetween((Id) ccw, (Id) cw);
+    }
+
+    /**
+      * Checks to see if the Id nid is clockwise or counterclockwise from this, on the ring.
+     * An Id is clockwise if it is within the half circle clockwise from this on the ring.
+     * An Id is considered counter-clockwise from itself.
+     *
+     * @return true if clockwise, false otherwise.
+     */
+    public boolean clockwise(rice.p2p.commonapi.Id nid) {
+      return clockwise((Id) nid);
+    }
+
+    /**
+      * Returns an Id corresponding to this Id plus a given distance
+     *
+     * @param offset the distance to add
+     * @return the new Id
+     */
+    public rice.p2p.commonapi.Id addToId(rice.p2p.commonapi.Id.Distance offset) {
+      return add((Id.Distance) offset);
+    }
+
+    /**
+      * Returns the shorter numerical distance on the ring between a pair of Ids.
+     *
+     * @param nid the other node id.
+     * @return the distance between this and nid.
+     */
+    public rice.p2p.commonapi.Id.Distance distanceFromId(rice.p2p.commonapi.Id nid) {
+      return distance((Id) nid);
+    }
+
+    /**
+      * Returns the longer numerical distance on the ring between a pair of Ids.
+     *
+     * @param nid the other node id.
+     * @return the distance between this and nid.
+     */
+    public rice.p2p.commonapi.Id.Distance longDistanceFromId(rice.p2p.commonapi.Id nid) {
+      return longDistance((Id) nid);
     }
 
 }

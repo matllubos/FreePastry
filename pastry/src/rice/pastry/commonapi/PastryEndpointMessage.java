@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate
+"Free Pastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -15,8 +15,8 @@ notice, this list of conditions and the following disclaimer.
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
 
-- Neither  the name  of Rice  University (RICE) nor  the names  of its
-contributors may be  used to endorse or promote  products derived from
+- Neither the name of Rice University (RICE) nor the names of its
+contributors may be used to endorse or promote products derived from
 this software without specific prior written permission.
 
 This software is provided by RICE and the contributors on an "as is"
@@ -34,75 +34,62 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.p2p.commonapi;
+package rice.pastry.commonapi;
 
-import java.util.*;
+import rice.p2p.commonapi.*;
+
+import rice.pastry.Log;
+import rice.pastry.NodeId;
+import rice.pastry.PastryNode;
+import rice.pastry.client.CommonAPIAppl;
+import rice.pastry.security.*;
+import rice.pastry.routing.SendOptions;
+import rice.pastry.messaging.Address;
 
 /**
- * An interface to a generic set of node handles.
+ * This class is an internal message to the commonapi gluecode.
  *
  * @version $Id$
  *
  * @author Alan Mislove
+ * @author Peter Druschel
  */
-public interface NodeHandleSet {
+public class PastryEndpointMessage extends rice.pastry.messaging.Message {
+
+  protected Message message;
   
   /**
-   * Puts a NodeHandle into the set.
+    * Constructor.
    *
-   * @param handle the handle to put.
-   *
-   * @return true if the put succeeded, false otherwise.
+   * @param pn the pastry node that the application attaches to.
    */
-  public boolean putHandle(NodeHandle handle);
+  public PastryEndpointMessage(Address address, Message message) {
+    super(address);
+
+    this.message = message;
+  }
 
   /**
-   * Finds the NodeHandle associated with the NodeId.
+   * Returns the internal message
    *
-   * @param id a node id.
-   * @return the handle associated with that id or null if no such handle is found.
+   * @return the credentials.
    */
-  public NodeHandle getHandle(Id id);
+  public Message getMessage() {
+    return message;
+  }
+
 
   /**
-   * Gets the ith element in the set.
+    * Returns the internal message
    *
-   * @param i an index.
-   * @return the handle associated with that id or null if no such handle is found.
+   * @return the credentials.
    */
-  public NodeHandle getHandle(int i);
+  public void setMessage(Message message) {
+    this.message = message;
+  }
 
-  /**
-   * Verifies if the set contains this particular id.
-   *
-   * @param id a node id.
-   * @return true if that node id is in the set, false otherwise.
-   */
-  public boolean memberHandle(Id id);
-
-  /**
-   * Removes a node id and its handle from the set.
-   *
-   * @param nid the node to remove.
-   *
-   * @return the node handle removed or null if nothing.
-   */
-  public NodeHandle removeHandle(Id id);
-
-  /**
-   * Gets the size of the set.
-   *
-   * @return the size.
-   */
-  public int size();
-
-  /**
-   * Gets the index of the element with the given node id.
-   *
-   * @param id the id.
-   *
-   * @return the index or throws a NoSuchElementException.
-   */
-  public int getIndexHandle(Id id) throws NoSuchElementException;
-  
 }
+
+
+
+

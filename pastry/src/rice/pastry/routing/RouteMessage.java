@@ -36,6 +36,8 @@ if advised of the possibility of such damage.
 
 package rice.pastry.routing;
 
+import rice.pastry.commonapi.*;
+
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
@@ -51,7 +53,7 @@ import java.io.*;
  * @author Andrew Ladd
  */
 
-public class RouteMessage extends Message implements Serializable {
+public class RouteMessage extends Message implements Serializable, rice.p2p.commonapi.RouteMessage {
     private NodeId target;
     private Message internalMsg;
 
@@ -287,5 +289,31 @@ public class RouteMessage extends Message implements Serializable {
 	}
 
 	return str;
+    }
+
+    // Common API Support
+
+    public rice.p2p.commonapi.Id getDestinationId() {
+      return getTarget();
+    }
+
+    public rice.p2p.commonapi.NodeHandle getNextHopHandle() {
+      return nextHop;
+    }
+
+    public rice.p2p.commonapi.Message getMessage() {
+      return ((PastryEndpointMessage) unwrap()).getMessage();
+    }
+
+    public void setDestinationId(rice.p2p.commonapi.Id id) {
+      target = (NodeId) id;
+    }
+
+    public void setNextHopHandle(rice.p2p.commonapi.NodeHandle nextHop) {
+      nextHop = (NodeHandle) nextHop;
+    }
+
+    public void setMessage(rice.p2p.commonapi.Message message) {
+      ((PastryEndpointMessage) unwrap()).setMessage(message);
     }
 }

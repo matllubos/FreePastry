@@ -70,6 +70,14 @@ public abstract class CommonAPIAppl extends PastryAppl
 	super(pn);
     }
 
+    /**
+     * Constructor.
+     *
+     * @param pn the pastry node that the application attaches to.
+     */
+    public CommonAPIAppl(PastryNode pn, String instance) {
+      super(pn, instance);
+    }
 
     // API methods to be invoked by applications
 
@@ -233,15 +241,6 @@ public abstract class CommonAPIAppl extends PastryAppl
      * implementations, upcall handlers must not block and should not
      * perform long-running computations.
      */
-
-
-    /**
-     * Returns the address of this application.
-     *
-     * @return the address.
-     */
-    
-    public abstract Address getAddress();
 
     /**
      * Returns the credentials of this application.

@@ -54,7 +54,7 @@ import rice.pastry.routing.SendOptions;
  * @author Alan Mislove
  * @author Peter Druschel
  */
-public class PastryEndpoint extends PastryAppl {
+public class PastryEndpoint extends PastryAppl implements rice.p2p.commonapi.Endpoint {
 
   protected Credentials credentials = new PermissiveCredentials();
 
@@ -92,8 +92,11 @@ public class PastryEndpoint extends PastryAppl {
   public void route(Id key, Message msg, NodeHandle hint) {
     if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] route " + msg + " to " + key);
 
-    PastryMessage pm = new PastryMessage(this.getAddress(), msg);
-    rice.pastry.routing.RouteMessage rm = new rice.pastry.routing.RouteMessage(key, pm, hint, getAddress());
+    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg);
+    rice.pastry.routing.RouteMessage rm = new rice.pastry.routing.RouteMessage((rice.pastry.Id) key,
+                                                                               pm,
+                                                                               (rice.pastry.NodeHandle) hint,
+                                                                               getAddress());
     thePastryNode.receiveMessage(rm);
   }
 
@@ -124,7 +127,7 @@ public class PastryEndpoint extends PastryAppl {
     // safe ignored until we have the secure routing support
 
     // get the nodes from the routing table
-    return getRoutingTable().alternateRoutes(key, num);
+    return getRoutingTable().alternateRoutes((rice.pastry.Id) key, num);
   }
 
   /**
@@ -153,7 +156,7 @@ public class PastryEndpoint extends PastryAppl {
    * @return the replica set
    */
   public NodeHandleSet replicaSet(Id key, int max_rank) {
-    return getLeafSet().replicaSet(key, max_rank);
+    return getLeafSet().replicaSet((rice.pastry.Id) key, max_rank);
   }
 
   /**
@@ -178,13 +181,15 @@ public class PastryEndpoint extends PastryAppl {
    * @return the range of keys, or null if range could not be determined for the given node and rank
    */
   public IdRange range(NodeHandle n, int r, Id key, boolean cumulative) {
+    rice.pastry.Id pKey = (rice.pastry.Id) key;
+    
     if (cumulative)
       return getLeafSet().range((rice.pastry.NodeHandle) n, r);
 
-    IdRange ccw = getLeafSet().range((rice.pastry.NodeHandle) n, r, false);
-    IdRange cw = getLeafSet().range((rice.pastry.NodeHandle) n, r, true);
+    rice.pastry.IdRange ccw = getLeafSet().range((rice.pastry.NodeHandle) n, r, false);
+    rice.pastry.IdRange cw = getLeafSet().range((rice.pastry.NodeHandle) n, r, true);
 
-    if (cw == null || ccw.contains(key) || key.isBetween(cw.getCW(), ccw.getCCW())) return ccw;
+    if (cw == null || ccw.contains(pKey) || pKey.isBetween(cw.getCW(), ccw.getCCW())) return ccw;
     else return cw;
   }
 
@@ -215,9 +220,9 @@ public class PastryEndpoint extends PastryAppl {
   // Upcall to Application support
 
   public final void messageForAppl(rice.pastry.messaging.Message msg) {
-    if (msg instanceof PastryMessage) {
+    if (msg instanceof PastryEndpointMessage) {
       // null for now, when RouteMessage stuff is completed, then it will be different!
-      application.deliver(null, ((PastryMessage) msg).getMessage());
+      application.deliver(null, ((PastryEndpointMessage) msg).getMessage());
     } else {
       System.out.println("Received unknown message " + msg + " - dropping on floor");
     }
@@ -244,6 +249,40 @@ public class PastryEndpoint extends PastryAppl {
    */
   public Credentials getCredentials() {
     return credentials;
+  }
+
+  /**
+   * Called by pastry to deliver a message to this client.  Not to be overridden.
+   *
+   * @param msg the message that is arriving.
+   */
+  public void receiveMessage(rice.pastry.messaging.Message msg) {
+    if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] recv " + msg);
+
+    if (msg instanceof rice.pastry.routing.RouteMessage) {
+      rice.pastry.routing.RouteMessage rm = (rice.pastry.routing.RouteMessage) msg;
+
+      // call application
+      if (application.forward(rm)) {
+        if (rm.nextHop != null) {
+          rice.pastry.NodeHandle nextHop = rm.nextHop;
+
+          // if the message is for the local node, deliver it here
+          if (getNodeId().equals(nextHop.getNodeId())) {
+            PastryEndpointMessage pMsg = (PastryEndpointMessage) rm.unwrap();
+            application.deliver(rm.getTarget(), pMsg.getMessage());
+          }
+          else {
+            // route the message
+            rm.routeMessage(getNodeId());
+          }
+        }
+      }
+    } else {
+      // if the message is not a RouteMessage, then it is for the local node and
+      // was sent with a PastryAppl.routeMsgDirect(); we deliver it for backward compatibility
+      messageForAppl(msg);
+    }
   }
 
 }

@@ -1,7 +1,9 @@
 PACKAGE = rice.pastry.commonapi
 
 SOURCE  = \
-	PastryEndpoint.java
+	PastryEndpoint.java\
+  PastryEndpointMessage.java\
+  PastryIdFactory.java
 
 RMI_SOURCE =
 

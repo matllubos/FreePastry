@@ -46,7 +46,7 @@ import java.util.*;
  * @author Peter Druschel
  */
 
-public class IdRange {
+public class IdRange implements rice.p2p.commonapi.IdRange {
     private boolean empty;
     private Id ccw;
     private Id cw;
@@ -406,6 +406,35 @@ public class IdRange {
 	if (empty) return "IdRange: empty";
 	else return "IdRange: from:" + ccw + " to:" + cw;
     }
+
+    // Common API Support
+
+    /**
+      * test if a given key lies within this range
+     *
+     * @param key the key
+     * @return true if the key lies within this range, false otherwise
+     */
+    public boolean containsId(rice.p2p.commonapi.Id key) {
+      return contains((Id) key);
+    }
+
+    /**
+      * get counterclockwise edge of range
+     * @return the id at the counterclockwise edge of the range (inclusive)
+     */
+    public rice.p2p.commonapi.Id getCCWId() {
+      return getCCW();
+    }
+
+    /**
+      * get clockwise edge of range
+     * @return the id at the clockwise edge of the range (exclusive)
+     */
+    public rice.p2p.commonapi.Id getCWId() {
+      return getCW();
+    }
+    
 
 }
 
