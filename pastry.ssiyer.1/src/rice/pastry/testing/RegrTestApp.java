@@ -37,8 +37,8 @@ public class RegrTestApp extends PastryAppl {
     private static Address addr = new RTAddress();
 
     private class RTMessage extends Message {
-	private NodeId source;
-	private NodeId target;
+	public NodeId source;
+	public NodeId target;
 
 	public RTMessage(NodeId src, NodeId tgt) {
 	    super(addr);
@@ -77,22 +77,35 @@ public class RegrTestApp extends PastryAppl {
 
     public void messageForAppl(Message msg) {
 	System.out.print(msg);
-	System.out.println(" received");
+	System.out.println(" received at " + getNodeId());
 
 	// check if numerically closest
+	RTMessage rmsg = (RTMessage)msg;
+	NodeId key = rmsg.target;
+	NodeId localId = getNodeId();
 
+	if (localId != key) {
+	    int inBetween;
+	    if (localId.compareTo(key) < 0)
+		inBetween = prg.pastryNodesSorted.subMap(localId,key).size();
+	    else
+		inBetween = prg.pastryNodesSorted.subMap(key,localId).size();
+
+	    if (inBetween > 0) 
+		System.out.println("messageForAppl failure, inBetween=" + inBetween);
+	}
     }
     
-    public boolean enrouteMessage(Message msg, NodeId from, NodeId nextHop, SendOptions opt) {
+    public boolean enrouteMessage(Message msg, NodeId key, NodeId nextHop, SendOptions opt) {
 	System.out.print(msg);
 	System.out.println(" at " + getNodeId());
 	
 	NodeId localId = getNodeId();
-	NodeId.Distance dist = localId.distance(from);
+	NodeId.Distance dist = localId.distance(key);
 
 	if (prg.lastMsg == msg) {
-	    if (dist.compareTo(prg.lastDist) <= 0)
-		System.out.println("at... " + getNodeId() + "enrouteMessage failure with " + msg +
+	    if (dist.compareTo(prg.lastDist) > 0)
+		System.out.println("at... " + getNodeId() + " enrouteMessage failure with " + msg +
 				   " lastDist=" + prg.lastDist + " dist=" + dist);
 	    prg.lastDist = dist;
 	}
@@ -123,19 +136,27 @@ public class RegrTestApp extends PastryAppl {
 
 	if (localId.clockwise(nid)) {
 	    // nid is clockwise from this node
-	    if (localId.compareTo(nid) < 0)  // localId < nid?
+	    if (localId.compareTo(nid) < 0)  { // localId < nid?
 		inBetween = prg.pastryNodesSorted.subMap(localId,nid).size();
-	    else 
+		System.out.println("c1");
+	    }
+	    else {
 		inBetween = prg.pastryNodesSorted.tailMap(localId).size() + 
 		    prg.pastryNodesSorted.headMap(nid).size();
+		System.out.println("c2");
+	    }
 	}
 	else {
 	    // nid is counter-clockwise from this node
-	    if (localId.compareTo(nid) > 0) // localId > nid?
+	    if (localId.compareTo(nid) > 0) { // localId > nid?
 		inBetween = prg.pastryNodesSorted.subMap(nid,localId).size();
-	    else 
+		System.out.println("c3");
+	    }
+	    else {
 		inBetween = prg.pastryNodesSorted.tailMap(nid).size() + 
 		    prg.pastryNodesSorted.headMap(localId).size();	    
+		System.out.println("c4");
+	    }
 	}    
 
 	if ( (inBetween > 4 && wasAdded) ||

@@ -249,7 +249,7 @@ public class NodeId implements Comparable, Serializable
 	    int n = nodeIdBitLength >> 3;
 
 	    for (int i=n-1; i>=0; i--) {
-		s = s + tran[(difference[i] >> 4) & 0xf0] + tran[difference[i] & 0x0f];
+		s = s + tran[(difference[i] >> 4) & 0x0f] + tran[difference[i] & 0x0f];
 	    }
 
 	    return "< nodeId.distance " + s + " >";
@@ -274,7 +274,8 @@ public class NodeId implements Comparable, Serializable
 	int x, y;
 	int carry = 0;
 
-	if (clockwise(nid)) 
+	// if (clockwise(nid)) 
+	if (compareTo(nid) > 0)
 	    for (int i=0; i<n; i++) {
 		x = nodeId[i];
 		y = nid.nodeId[i];
@@ -307,7 +308,21 @@ public class NodeId implements Comparable, Serializable
 		else carry = 0;
 	    }	       
 
-	return new Distance(diff);
+	if ( (diff[n-1] & 0x80) != 0 ) {
+	    carry = 0;
+	    for (int i=0; i<n; i++) {
+		diff[i] = 0 - diff[i] - carry;
+		if (diff[i] < 0) {
+		    diff[i] += 256;
+		    carry = 1;
+		}
+	    }
+	}
+
+	Distance d = new Distance(diff);
+	//System.out.println("Diff:" + this + nid + d); 
+
+	return d;
     }
 
     /**
@@ -346,7 +361,7 @@ public class NodeId implements Comparable, Serializable
 	if (i >= 0) {
 	    int x, y;
 	    x = (nodeId[i] < 0 ? (nodeId[i] + 256) : nodeId[i]);
-	    y = (nodeId[i] < 0 ? (nid.nodeId[i] + 256) : nid.nodeId[i]);
+	    y = (nid.nodeId[i] < 0 ? (nid.nodeId[i] + 256) : nid.nodeId[i]);
 
 	    if (i == n - 1) {
 		x &= 0x7f;

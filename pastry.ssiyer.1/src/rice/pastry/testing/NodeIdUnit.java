@@ -91,8 +91,9 @@ public class NodeIdUnit {
 	NodeId b = createNodeId();
 
 	NodeId.Distance adist = nid.distance(a);
-	NodeId.Distance adist2 = nid.distance(a);
+	NodeId.Distance adist2 = a.distance(nid);
 	NodeId.Distance bdist = nid.distance(b);
+	System.out.println("adist =" + adist + "\n bdist=" + bdist);
 
 	if (adist.equals(adist2) == true) System.out.println("distance seems reflexive");
 	else System.out.println("ALERT: distance is non-reflexive.");
@@ -102,6 +103,14 @@ public class NodeIdUnit {
 
 	System.out.println("result of comparison with a and b " + adist.compareTo(bdist));
 	System.out.println("result of comparison with a to itself " + adist.compareTo(adist2));
+
+	byte[] raw0 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-128};
+	byte[] rawf = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,127};
+
+	a = new NodeId(raw0);
+	b = new NodeId(rawf);
+	a.distance(b);
+	
 
 	System.out.println("--------------------------");
     }
