@@ -253,7 +253,7 @@ public class RMIPastryRegrTest extends PastryRegrTest {
     }
 
     protected void killNode(PastryNode pn) {
-	((RMIPastryNode)pn).KILLNODE();
+//	((RMIPastryNode)pn).KILLNODE();
     }
 
     /**
