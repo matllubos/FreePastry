@@ -41,6 +41,9 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
 
     public int OUT_BW = 16;
 
+    // time out limit --- 0 because it doesnt matter in simulations
+    public int TIME_OUT_LIMIT = 0;
+
     public DirectSplitStreamTest m_driver;
 
     public DirectSplitStreamTestApp(ISplitStream splitstream, int index, DirectSplitStreamTest driver){
@@ -79,6 +82,7 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
 	Channel channel = m_splitstream.createChannel(numStripes, name);
 	m_channels.put(channel.getChannelId(), channel);
 	channel.configureChannel(OUT_BW);
+	channel.setMaxTimeout(TIME_OUT_LIMIT);
 	return channel.getChannelId();
     }
 
@@ -86,6 +90,7 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
 	Channel channel = m_splitstream.attachChannel(channelId);
 	m_channels.put(channel.getChannelId(), channel);
 	channel.configureChannel(OUT_BW);
+	channel.setMaxTimeout(TIME_OUT_LIMIT);
 	return;
     }
 

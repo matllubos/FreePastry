@@ -40,7 +40,7 @@ public class DirectSplitStreamTest{
     private Vector channelIds;
     private Random rng;
     private RandomNodeIdFactory idFactory;
-    private static int numNodes = 1000;
+    private static int numNodes = 100;
     private static int port = 5009;
     private static String bshost;
     private static int bsport = 5009;
@@ -90,6 +90,7 @@ public class DirectSplitStreamTest{
 	PastrySeed.setSeed((int)System.currentTimeMillis());
 	//PastrySeed.setSeed(-30786261);
 	//PastrySeed.setSeed(-239023564);
+	//PastrySeed.setSeed(149147680);
 	System.out.println(PastrySeed.getSeed() );
 	DirectSplitStreamTest test = new DirectSplitStreamTest();
 	test.init();
@@ -193,7 +194,7 @@ public class DirectSplitStreamTest{
 	    System.out.println("\n\nSEND-DATA TEST : FAILED \n\n");
 
 	result &= passed;
-	/*	
+	/*
 	test.send(content);
 	while(test.simulate());
 	test.send(content);
@@ -218,10 +219,7 @@ public class DirectSplitStreamTest{
 
 	result &= passed;
 	
-	if(result)
-	    System.out.println("\n\n Direct Simulation Test ----------  PASSED");
-	else
-	    System.out.println("\n\n Direct Simulation Test ----------  FAILED");
+	
 	//test.printParents(channelId);
 
 	/**
@@ -242,18 +240,25 @@ public class DirectSplitStreamTest{
 	
 	result &= passed; 
 
- 	test.killNodes(test.concurrentFailures); 
-	test.joinNodes(test.concurrentJoins, channelId); 
- 	for(int i = 0; i <= test.trThreshold; i++) 
- 	    test.scheduleHBOnAllNodes(); 
-
- 	passed =  test.checkAllStripeTrees(channelId); 
-
-	if(passed) 
-	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP TEST : PASSED \n\n"); 
- 	else 
- 	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP FAILED \n\n"); 
-
+	for(int k = 0; k < test.numIterations; k++){
+	    test.killNodes(test.concurrentFailures); 
+	    test.joinNodes(test.concurrentJoins, channelId); 
+	    for(int i = 0; i <= test.trThreshold; i++) 
+		test.scheduleHBOnAllNodes(); 
+	    
+	    passed =  test.checkAllStripeTrees(channelId); 
+	    
+	    if(passed) 
+		System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP TEST : PASSED \n\n"); 
+	    else 
+		System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP FAILED \n\n"); 
+	    
+	    result &= passed;
+	}
+	if(result)
+	    System.out.println("\n\n Direct Simulation Test ----------  PASSED");
+	else
+	    System.out.println("\n\n Direct Simulation Test ----------  FAILED");
 	System.out.println(PastrySeed.getSeed() );
 
     }
@@ -671,7 +676,7 @@ public class DirectSplitStreamTest{
 	    while(simulate());
 	    
 	    if(!app.channelReady((ChannelId)channelId)){
-		System.out.println("Application "+(nodesCurrentlyAlive - 1)+" could not attach. PROBLEM!! ");
+		System.out.println("Application "+(nodesCurrentlyAlive - 1)+", "+app.getNodeId()+" could not attach. PROBLEM!! ");
 	    }
 
 	    app.joinChannelStripes((ChannelId)channelId);
