@@ -123,36 +123,19 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
   public NodeHandle generateNodeHandle(InetSocketAddress address) {
     RMIRemoteNodeI bsnode = null;
 
-    /*
-    // look on local machine
+    // look at remote address
     for (int i = 1; bsnode == null && i <= NUM_ATTEMPTS; i++) {
       try {
-        bsnode = (RMIRemoteNodeI) Naming.lookup("//:" + address.getPort() + "/Pastry");
+        bsnode = (RMIRemoteNodeI) Naming.lookup("//" + address.getHostName()
+						+ ":" + address.getPort() + "/Pastry");
       } catch (Exception e) {
-        System.out.println("Unable to find bootstrap node on local node"
-                            + " (attempt " + i + "/" + NUM_ATTEMPTS + ")");
+        System.out.println("Unable to find bootstrap node on "
+			   + address
+			   + " (attempt " + i + "/" + NUM_ATTEMPTS + ")");
       }
 
       if ((bsnode == null) && (i != NUM_ATTEMPTS))
         pause(1000);
-    }
-    */
-
-    // look at remote address
-    if (bsnode == null) {
-      for (int i = 1; bsnode == null && i <= NUM_ATTEMPTS; i++) {
-        try {
-          bsnode = (RMIRemoteNodeI) Naming.lookup("//" + address.getHostName()
-                    + ":" + address.getPort() + "/Pastry");
-        } catch (Exception e) {
-          System.out.println("Unable to find bootstrap node on "
-                              + address
-                              + " (attempt " + i + "/" + NUM_ATTEMPTS + ")");
-        }
-
-        if ((bsnode == null) && (i != NUM_ATTEMPTS))
-          pause(1000);
-      }
     }
 
     // grab node id
@@ -170,6 +153,8 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
     RMINodeHandle bshandle = null;
     if (bsid != null)
       bshandle = new RMINodeHandle(bsnode, bsid);
+    else
+      System.out.println("Couldn't find a bootstrap node, starting a new ring...");
 
     return bshandle;
   }

@@ -127,6 +127,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
       return handle;
     } catch (IOException e) {
       System.out.println("Error connecting to address " + address + ": " + e);
+      System.out.println("Couldn't find a bootstrap node, starting a new ring...");
       return null;
     }
   }
