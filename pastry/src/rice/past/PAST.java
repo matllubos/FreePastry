@@ -62,20 +62,26 @@ public interface PAST {
   
  /**
    * Inserts an object with the given ID into this instance of PAST.
-   * Asynchronously returns a boolean as the result to the provided
-   * Continuation, indicating whether the insert was successful.
+   * Asynchronously returns a PASTException to command, if the
+   * operation was unsuccessful.
    * 
    * @param obj the object to be inserted
-   * @param command Command to be performed when the result is received
-   */
+   * @param command Command to be performed when the result is received */
  
-  protected void insert(PASTContent obj, Continuation command);
+  public void insert(PASTContent obj, Continuation command);
 
  
   /**
    * Retrieves the object stored in this instance of PAST with the
    * given ID.  Asynchronously returns a PASTContent object as the
-   * result to the provided Continuation.
+   * result to the provided Continuation, or a PASTException. This
+   * method is provided for convenience; its effect is identical to a
+   * lookupHandles() and a subsequent fetch() to the handle that is
+   * nearest in the network.
+   * 
+   * The client must authenticate the object. In case of failure, an
+   * alternate replica of the object can be obtained via
+   * lookupHandles() and fetch().
    * 
    * This method is not safe if the object is immutable and storage
    * nodes are not trusted. In this case, clients should used the
@@ -91,18 +97,14 @@ public interface PAST {
 
   /**
    * Retrieves the handles of up to max replicas of the object stored
-   * in this instance of PAST with the given ID. Each replica handle
-   * is obtained from a different primary storage root for the the
-   * given key. If max exceeds the replication factor r of
-   * this PAST instance, only r replicas are returned.
+   * in this instance of PAST with the given ID.  Asynchronously
+   * returns a Vector of PASTContentHandles as the result to the
+   * provided Continuation, or a PASTException.  
+   * 
+   * Each replica handle is obtained from a different primary storage
+   * root for the the given key. If max exceeds the replication factor
+   * r of this PAST instance, only r replicas are returned.
    *
-   * This method is useful when the PASTContent objects stored in this
-   * PAST instance are not self-authenticating, and storage nodes are
-   * not trusted.
-   * 
-   * Asynchronously returns a Vector of PASTContentHandles as the
-   * result to the provided Continuation.
-   * 
    * @param id the key to be queried
    * @param max the maximal number of replicas requested
    * @param command Command to be performed when the result is received 
@@ -114,7 +116,11 @@ public interface PAST {
   /**
    * Retrieves the object associated with a given content handle.
    * Asynchronously returns a PASTContent object as the result to the
-   * provided Continuation.
+   * provided Continuation, or a PASTException.
+   * 
+   * The client must authenticate the object. In case of failure, an
+   * alternate replica can be obtained using a different handle obtained via
+   * lookupHandles().
    * 
    * @param id the key to be queried
    * @param command Command to be performed when the result is received 
@@ -133,6 +139,15 @@ public interface PAST {
    */
     
   public IdSet scan(IdRange range);
+
+
+  /**
+   * get the nodeHandle of the local PAST node
+   *
+   * @return the nodehandle
+   */
+    
+  public NodeHandle getNodeHandle();
 
 }
 

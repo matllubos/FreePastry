@@ -36,32 +36,65 @@ if advised of the possibility of such damage.
 
 package rice.past;
 
+import java.io.Serializable;
+
 import rice.*;
 import rice.p2p.commonapi.*;
 
-
 /**
- * @(#) PASTException.java
- * 
- * Any exception specific to PAST.
+ * A handle class for content-hash objects stored in PAST.
  *
  * @version $Id$
- * @author Peter Druschel 
- * 
+ * @author Peter Druschel
  */
 
-public class PASTException extends Exception {
+public class ContentHashPASTContentHandle implements PASTContentHandle {
 
-  /**
-   * Constructor.
-   *
-   * @param msg The string representing the error.
-   */
-  public PASTException(String msg) {
-    super(msg);
-  }
+    // the node on which the content object resides
+    private NodeHandle storageNode;
+
+    // the object's id
+    private Id myId;
+
+
+    /**
+     * Constructor
+     *
+     * @param id key identifying the object to be inserted
+     * @param obj the object to be inserted
+     * @param command Command to be performed when the result is received
+     */
+ 
+    public ContentHashPASTContentHandle(NodeHandle nh, Id id) {
+	storageNode = nh;
+	myId = id;
+    }
+
+
+    /*
+     * PASTContentHandle methods
+     */
+
+    /**
+     * get the id of the PASTContent object associated with this handle
+     * @return the id
+     */
+
+    public Id getId() {return myId;}
+
+    /**
+     * get the NodeHandle of the PAST node on which the object associated with this handle is stored
+     * @return the id
+     */
+
+    public NodeHandle getNode() {return storageNode;}
 
 }
+
+
+
+
+
 
 
 

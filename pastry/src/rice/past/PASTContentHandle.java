@@ -36,6 +36,7 @@ if advised of the possibility of such damage.
 
 package rice.past;
 
+import java.io.Serializable;
 import rice.*;
 import rice.p2p.commonapi.*;
 
@@ -52,8 +53,22 @@ import rice.p2p.commonapi.*;
  * 
  */
 
-public interface PASTContentHandle {
-    // empty interface
+public interface PASTContentHandle extends Serializable {
+
+    /**
+     * get the id of the PASTContent object associated with this handle
+     * @return the id
+     */
+
+    public Id getId();
+
+    /**
+     * get the NodeHandle of the PAST node on which the object associated with this handle is stored
+     * @return the id
+     */
+
+    public NodeHandle getNode();
+
 }
 
 

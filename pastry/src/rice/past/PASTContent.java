@@ -36,6 +36,7 @@ if advised of the possibility of such damage.
 
 package rice.past;
 
+import java.io.Serializable;
 import rice.*;
 import rice.p2p.commonapi.*;
 
@@ -59,7 +60,7 @@ import rice.p2p.commonapi.*;
  * 
  */
 
-public interface PASTContent {
+public interface PASTContent extends Serializable {
 
     /**
      * Checks if a insert operation should be allowed.  Invoked when a

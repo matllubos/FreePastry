@@ -2,12 +2,12 @@ PACKAGE = rice.past
 
 SOURCE  = \
 	PAST.java \
-	ContentHashPAST.java \
-	SignedPAST.java \
 	PASTContent.java\
+	PASTContentHandle.java\
+	PASTException.java \
 	ContentHashPASTContent.java\
-	PASTPolicy.java\
-	SignedPASTContent.java
+	PASTService.java\
+	PASTServiceImpl.java
 
 RMI_SOURCE =
 

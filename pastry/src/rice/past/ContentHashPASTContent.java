@@ -44,13 +44,19 @@ import rice.p2p.commonapi.*;
 /**
  * An abstract class for content-hash objects stored in PAST.
  *
- * content-hash keyed objects are immutable and thus cacheable
+ * Provided as a convenience.
+ *
+ * @version $Id$
+ * @author Peter Druschel
  */
 
-public abstract class ContentHashPASTContent implements CacheablePASTContent {
+public abstract class ContentHashPASTContent implements PASTContent {
 
     // the local PAST instance used with this class; to be set by derived classes
     protected transient PAST myPAST;
+
+    // to be set by derived classes
+    protected Id myId;
 
 
     /**
@@ -65,7 +71,7 @@ public abstract class ContentHashPASTContent implements CacheablePASTContent {
  
     public void insert(Continuation command) {
 	Id myId = getContentHash();
-	myPAST.insert(myId, this, command);
+	myPAST.insert(this, command);
     }
 
 
@@ -89,14 +95,49 @@ public abstract class ContentHashPASTContent implements CacheablePASTContent {
      * object to be stored on the local node.  
      */
 
-    public PASTContent checkInsert(Id id, PASTContent existingContent) {
+    public PASTContent checkInsert(Id id, PASTContent existingContent) throws PASTException {
 	// can't overwrite content hash objects
-	if (existingContent != null) return null;
+	if (existingContent != null) throw new PASTException("ContentHashPASTContent: can't insert, object already exists");
 
 	// only allow correct content hash key
-	if (!id.equals(getContentHash())) return null;
+	if (!id.equals(getContentHash())) throw new PASTException("ContentHashPASTContent: can't insert, content hash incorrect");
 
 	return this;
+    }
+
+
+    /**
+     * Produces a handle for this content object. The handle is retrieved and returned to the
+     * client as a result of the PAST.lookupHandles() method.
+     * 
+     * @return the handle
+     */
+
+    public PASTContentHandle getHandle() {
+	return new ContentHashPASTContentHandle(myPAST.getNodeHandle(), myId);
+    }
+
+
+    /**
+     * Returns the Id under which this object is stored in PAST.
+     * 
+     * @return the id
+     */
+
+    public Id getId() {
+	return myId;
+    }
+
+
+    /**
+     * States if this content object is mutable. Mutable objects are not subject to dynamic caching in PAST.
+     * 
+     * @return true if this object is mutable, else false
+     */
+
+    public boolean isMutable() {
+	// content hash objects are immutable
+	return false;
     }
 
 
