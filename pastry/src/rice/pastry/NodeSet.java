@@ -264,7 +264,7 @@ public class NodeSet implements NodeSetI, Serializable {
      * return an iterator that iterates over the elements of this set
      * @return the interator
      */
-    Iterator getIterator() {
+    public Iterator getIterator() {
 	return set.iterator();
     }
 
