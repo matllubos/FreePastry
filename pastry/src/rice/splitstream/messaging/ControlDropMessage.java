@@ -71,8 +71,8 @@ public class ControlDropMessage extends ControlMessage{
       scribe.setParent(null, topic.getTopicId());
       ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( this.getDestination(),
                                                                         0,
-                                                                        channel_id,
-                                                                        c );
+                                                                        spare_id,
+                                                                        c, stripe_id, channel_id );
       thePastryNode.scheduleMsg( timeoutMessage, timeout_len );
       //System.out.println("setParent set to null called ");
       //System.out.println("Node "+scribe.getNodeId()+ " dropped for "+topic.getTopicId());

@@ -82,6 +82,8 @@ public class ControlTimeoutMessage extends Message implements Serializable
      * @param num_fails The number of times the bound message has timed out thus far
      * @param dest The destination of the bound message
      * @param c The sending credentials of the bound message
+     * @param stripe_id The stripe id the bound message pertains to
+     * @param channel_id The channel id the bound message pertains to
      */
     public ControlTimeoutMessage( Address addr, int num_fails, NodeId dest, Credentials c, 
                                   StripeId stripe_id, ChannelId channel_id )
@@ -122,6 +124,20 @@ public class ControlTimeoutMessage extends Message implements Serializable
 	        thePastryNode.scheduleMsg( timeoutMessage, channel.getTimeoutLen() );
                 
             }
-    	}
+            else if ( msg_type == FIND_PARENT )
+            {
+                ControlFindParentMessage msg = new ControlFindParentMessage( SplitStreamAddress.instance(), 
+                                                                             scribe.getLocalHandle(),
+                                                                             dest,
+                                                                             c,
+                                                                             stripe_id, channel_id );
+                scribe.anycast( dest, msg, c ); 
+                ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( SplitStreamAddress.instance(),
+                                                                                  num_fails+1,
+                                                                                  dest,
+                                                                                  c, stripe_id, channel_id );
+                thePastryNode.scheduleMsg( timeoutMessage, channel.getTimeoutLen() );
+           }
+       }
     }	
 }
