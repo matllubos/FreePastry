@@ -26,14 +26,13 @@ package rice.pastry.dist;
 
 import java.net.InetSocketAddress;
 
-import rice.pastry.NodeHandle;
-import rice.pastry.NodeId;
-import rice.pastry.NodeIdFactory;
-import rice.pastry.PastryNode;
-import rice.pastry.PastryNodeFactory;
-import rice.pastry.rmi.RMIPastryNodeFactory;
-import rice.pastry.socket.SocketPastryNodeFactory;
-import rice.pastry.wire.WirePastryNodeFactory;
+import rice.*;
+import rice.Continuation.*;
+import rice.pastry.*;
+import rice.pastry.messaging.*;
+import rice.pastry.rmi.*;
+import rice.pastry.socket.*;
+import rice.pastry.wire.*;
 
 /**
  * An abstraction of the nodeId factory for distributed nodes. In order to
@@ -82,6 +81,26 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
   public final NodeHandle getNodeHandle(InetSocketAddress address) {
     return generateNodeHandle(address);
   }
+  
+  /**
+   * Method which a client should use in order to get a bootstrap node from the
+   * factory. In the wire protocol, this method will generate a node handle
+   * corresponding to the pastry node at location address. In the rmi protocol,
+   * this method will generate a node handle for the pastry node bound to
+   * address.
+   *
+   * @param address The address of the remote node.
+   * @return The NodeHandle value
+   */
+  public final NodeHandle getNodeHandle(InetSocketAddress[] addresses) {
+    for (int i=0; i<addresses.length; i++) {
+      NodeHandle result = getNodeHandle(addresses[i]);
+      if (result != null)
+        return result;
+    }
+    
+    return null;
+  }
 
   /**
    * Method which all subclasses should implement allowing the client to
@@ -112,6 +131,26 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * @return DESCRIBE THE RETURN VALUE
    */
   public abstract PastryNode newNode(NodeHandle bootstrap, NodeId nodeId);
+  
+  /**
+   * Generates a new pastry node with the specified NodeId using the bootstrap
+   * bootstrap.
+   *
+   * @param bootstrap Node handle to bootstrap from.
+   * @param nodeId DESCRIBE THE PARAMETER
+   * @return DESCRIBE THE RETURN VALUE
+   */
+  public abstract PastryNode newNode(NodeHandle bootstrap, NodeId nodeId, InetSocketAddress proxy);
+  
+  /** 
+   * Generates a new pastry node with the specified NodeId using the bootstrap
+   * bootstrap.
+   *
+   * @param bootstrap Node handle to bootstrap from.
+   * @param nodeId DESCRIBE THE PARAMETER
+   * @return DESCRIBE THE RETURN VALUE
+   */
+  public abstract PastryNode newNode(NodeHandle bootstrap, InetSocketAddress proxy);
 
   /**
    * Static method which is designed to be used by clients needing a distrubuted
