@@ -28,6 +28,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   protected final Endpoint endpoint;
   protected final IdFactory factory;
   protected final Hashtable continuations;
+  protected final String debugID;
   protected long nextContinuationTimeout;
   protected IdRange responsibleRange;
   protected int nextUID;
@@ -37,10 +38,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private final long MINUTES = 60 * SECONDS;
   private final long HOURS = 60 * MINUTES;
 
-  private final long insertTimeout = 10 * SECONDS;
+  private final long insertTimeout = 20 * SECONDS;
   private final double minFragmentsAfterInsert = 2.0;
 
-  private final long refreshTimeout = 10 * SECONDS;
+  private final long refreshTimeout = 20 * SECONDS;
 
   private final long expireNeighborsDelayAfterJoin = 5 * SECONDS;
   private final long expireNeighborsInterval = 20 * SECONDS;
@@ -48,6 +49,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   
   private final long syncDelayAfterJoin = 15 * SECONDS;
   private final long syncInterval = 60 * SECONDS;
+  private final long syncMinRemainingLifetime = 60 * SECONDS;
   private final int syncPartnersPerTrial = 1;
 
   private final int manifestAggregationFactor = 5;
@@ -86,6 +88,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     this.continuations = new Hashtable();
     this.timer = null;
     this.nextContinuationTimeout = -1;
+    this.debugID = "G" + Character.toUpperCase(instance.charAt(instance.lastIndexOf('-')+1));
     determineResponsibleRange();
 
     /* Neighbor requests */
@@ -484,31 +487,25 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     log("New range: "+responsibleRange);
   }
 
-  private void log(String str) {
+  private String getLogPrefix() {
     Calendar c = Calendar.getInstance();
     c.setTime(new Date());
     int h = c.get(Calendar.HOUR);
     int m = c.get(Calendar.MINUTE);
     int s = c.get(Calendar.SECOND);
-    System.out.println(h + ":" + m + ":" + s + " @" + node.getId() + " " + str);
+
+    return ((h<10) ? "0" : "") + Integer.toString(h) + ":" +
+           ((m<10) ? "0" : "") + Integer.toString(m) + ":" +
+           ((s<10) ? "0" : "") + Integer.toString(s) + " @" +
+           node.getId() + " " + debugID;
+  }
+
+  private void log(String str) {
+    System.out.println(getLogPrefix() + " " + str);
   }
 
   private void warn(String str) {
-    Calendar c = Calendar.getInstance();
-    c.setTime(new Date());
-    int h = c.get(Calendar.HOUR);
-    int m = c.get(Calendar.MINUTE);
-    int s = c.get(Calendar.SECOND);
-    System.out.println(h + ":" + m + ":" + s + " @" + node.getId() + " *** WARNING *** " + str);
-  }
-
-  private void unusual(String str) {
-    Calendar c = Calendar.getInstance();
-    c.setTime(new Date());
-    int h = c.get(Calendar.HOUR);
-    int m = c.get(Calendar.MINUTE);
-    int s = c.get(Calendar.SECOND);
-    System.out.println(h + ":" + m + ":" + s + " @" + node.getId() + " *** UNUSUAL *** " + str);
+    System.out.println(getLogPrefix() + " *** WARNING *** " + str);
   }
 
   protected synchronized int getUID() {
@@ -661,7 +658,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         Id randomID = factory.buildRandomId(new Random());
         result = result + randomID.toStringFull() + "\n";
         insert(
-          new DebugContent(randomID, false, 0),
+          new DebugContent(randomID, false, 0, new byte[] {}),
           System.currentTimeMillis() + 30*SECONDS,
           new Continuation() {
             public void receiveResult(Object o) {
@@ -1541,6 +1538,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       final IdRange range = gsm.getRange();
       final int offset = gsm.getOffsetFID();
       final BloomFilter bv = gsm.getBloomFilter();
+      final long earliestAcceptableExpiration = System.currentTimeMillis() + syncMinRemainingLifetime;
       
       final Vector missing = new Vector();
       
@@ -1549,8 +1547,13 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         Id thisPos = getFragmentLocation(fkey);
         if (range.containsId(thisPos)) {
           if (!bv.contains(fkey.getVersionKey().toByteArray())) {
-            log(fkey+" @"+thisPos+" - MISSING");
-            missing.add(fkey);
+            FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(fkey);
+            if (metadata.getCurrentExpiration() >= earliestAcceptableExpiration) {
+              log(fkey+" @"+thisPos+" - MISSING");
+              missing.add(fkey);
+            } else {
+              log(fkey+" @"+thisPos+" - EXPIRES SOON");
+            }
           } else {
             log(fkey+" @"+thisPos+" - OK");
           }
@@ -1939,7 +1942,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
               }
             }
             public void receiveException(Exception e) {
-              warn("Exception while inserting "+thisKey+": "+e);
+              warn("Exception while recovering synced fragment "+thisKey+": "+e);
               e.printStackTrace();
               terminate();
             }
