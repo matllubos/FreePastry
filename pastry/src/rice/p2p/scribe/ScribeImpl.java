@@ -36,6 +36,7 @@ if advised of the possibility of such damage.
 
 package rice.p2p.scribe;
 
+import java.io.*;
 import java.util.*;
 import java.util.logging.*;
 import java.util.prefs.*;
@@ -384,11 +385,12 @@ public class ScribeImpl implements Scribe, Application {
 
         if (manager != null) {
           // first, we have to make sure that we don't create a loop, which would occur
-          // if the subcribing node's previous parent is on our path to the root
+	  // if the subcribing node's previous parent is on our path to the root
+	  
           Id previousParent = sMessage.getPreviousParent();
           List path = Arrays.asList(manager.getPathToRoot());
 
-          if (path.contains(previousParent)) {
+          if (path.contains(previousParent) || path.contains(sMessage.getSubscriber().getId())) {
             log.info(endpoint.getId() + ": Rejecting subscribe message from " +
                       sMessage.getSubscriber() + " for topic " + sMessage.getTopic() +
                       " because we are on the subscriber's path to the root.");
@@ -474,6 +476,7 @@ public class ScribeImpl implements Scribe, Application {
 
       if (handle == null) {
         log.fine(endpoint.getId() + ": Anycast " + aMessage + " failed.");
+	return true;
       } else {
         endpoint.route(handle.getId(), aMessage, handle);
       }
@@ -514,28 +517,32 @@ public class ScribeImpl implements Scribe, Application {
       SubscribeAckMessage saMessage = (SubscribeAckMessage) message;
       TopicManager manager = (TopicManager) topics.get(saMessage.getTopic());
 
-      log.finer(endpoint.getId() + ": Received subscribe ack message from " +
-        saMessage.getSource() + " for topic " + saMessage.getTopic());
-
-      // if we don't know about this topic, then we unsubscribe
-      // if we already have a parent, then this is either an errorous
-      // subscribe ack, or our path to the root has changed.
-      if (manager != null) {
-        if (manager.getParent() == null) {
-          manager.setParent(saMessage.getSource());
-        }
-          
-        if (manager.getParent().equals(saMessage.getSource())) {
-          manager.setPathToRoot(saMessage.getPathToRoot());
-        } else {
-          log.warning(endpoint.getId() + ": Received unexpected subscribe ack message (already have a parent) from " +
-                      saMessage.getSource() + " for topic " + saMessage.getTopic());
-          endpoint.route(saMessage.getSource().getId(), new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
-        }
-      } else {
-        log.warning(endpoint.getId() + ": Received unexpected subscribe ack message from " +
-          saMessage.getSource() + " for unknown topic " + saMessage.getTopic());
-        endpoint.route(saMessage.getSource().getId(), new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
+      if(isRoot(saMessage.getTopic()))
+	  System.out.println("Root received subscribeAck Message");
+      else{
+	  log.finer(endpoint.getId() + ": Received subscribe ack message from " +
+		    saMessage.getSource() + " for topic " + saMessage.getTopic());
+	  
+	  // if we don't know about this topic, then we unsubscribe
+	  // if we already have a parent, then this is either an errorous
+	  // subscribe ack, or our path to the root has changed.
+	  if (manager != null) {
+	      if (manager.getParent() == null || (manager.getParent() != null && !manager.getParent().isAlive())) {
+		  manager.setParent(saMessage.getSource());
+	      }
+	      
+	      if (manager.getParent() != null && manager.getParent().equals(saMessage.getSource())) {
+		  manager.setPathToRoot(saMessage.getPathToRoot());
+	      } else {
+		  log.warning(endpoint.getId() + ": Received unexpected subscribe ack message (already have a parent"+manager.getParent()+") from " +
+			      saMessage.getSource() + " for topic " + saMessage.getTopic());
+		  endpoint.route(saMessage.getSource().getId(), new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
+	      }
+	  } else {
+	      log.warning(endpoint.getId() + ": Received unexpected subscribe ack message from " +
+			  saMessage.getSource() + " for unknown topic " + saMessage.getTopic());
+	      endpoint.route(saMessage.getSource().getId(), new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
+	  }
       }
     } else if (message instanceof PublishRequestMessage) {
       PublishRequestMessage prMessage = (PublishRequestMessage) message;
@@ -599,12 +606,12 @@ public class ScribeImpl implements Scribe, Application {
       TopicManager manager = (TopicManager) topics.get(dMessage.getTopic());
 
       if (manager != null) {
-        if (manager.getParent().equals(dMessage.getSource())) {
+        if (manager.getParent() != null && manager.getParent().equals(dMessage.getSource())) {
           // we set the parent to be null, and then send out another subscribe message
-          manager.setParent(null);
+	    manager.setParent(null);
           endpoint.route(dMessage.getTopic().getId(), new SubscribeMessage(handle, dMessage.getTopic()), null);
         } else {
-          log.warning(endpoint.getId() + ": Received unexpected drop message from non-parent " +
+	    log.warning(endpoint.getId() + ": Received unexpected drop message from non-parent " +
                       dMessage.getSource() + " for topic " + dMessage.getTopic() + " - ignoring");
         }
       } else {
@@ -621,7 +628,32 @@ public class ScribeImpl implements Scribe, Application {
    * @param handle The handle that has joined/left
    * @param joined Whether the node has joined or left
    */
-  public void update(NodeHandle handle, boolean joined) {
+  public void update(NodeHandle nh, boolean joined) {
+      Set set = topics.keySet();
+      Iterator e = set.iterator();
+      TopicManager manager;
+      Topic topic;
+
+      while(e.hasNext()){
+	  topic = (Topic)e.next();
+	  manager = (TopicManager)topics.get(topic);
+	  
+	  if(joined){
+	      if(manager.getParent() == null){
+		  // send subscribe message
+		  endpoint.route(topic.getId(), new SubscribeMessage(handle, topic), null);
+	      }
+	  }
+	  else {
+	      //System.out.println("############ Node died "+nh.getId());
+	      if(isRoot(manager.getTopic()) && manager.getParent() != null){
+		  //System.out.println(handle.getId()+" sending unsubscribe message "+manager.getParent().getId()+" for topic "+topic.getId());
+		  endpoint.route(manager.getParent().getId(), new UnsubscribeMessage(handle, topic), manager.getParent());
+		  manager.setParent(null);
+	      }
+	  }
+      }
+      
   }
 
   /**
@@ -730,6 +762,10 @@ public class ScribeImpl implements Scribe, Application {
       return pathToRoot;
     }
 
+      public Topic getTopic(){
+	  return topic;
+      }
+
     /**
      * Sets the PathToRoot attribute of the TopicManager object
      *
@@ -787,10 +823,13 @@ public class ScribeImpl implements Scribe, Application {
           log.fine(endpoint.getId() + ": Parent " + parent + " for topic " + topic + " has died - resubscribing.");
 
           setParent(null);
+	   // set path to contain only us and update the children.
+	  this.setPathToRoot(new Id[0]);
           endpoint.route(topic.getId(), new SubscribeMessage(endpoint.getLocalNodeHandle(), topic, ((NodeHandle)o).getId()), null);
+	 
         } else {
-          log.warning(endpoint.getId() + ": Received unexpected update from " + o);
-          o.deleteObserver(this);
+	    log.warning(endpoint.getId() + ": Received unexpected update from " + o);
+	    o.deleteObserver(this);
         }
       }
     }
