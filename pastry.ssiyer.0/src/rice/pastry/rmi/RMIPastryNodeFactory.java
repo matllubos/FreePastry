@@ -132,12 +132,12 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
 	secureMan.setLocalPastryNode(pnode);
 	pnode.setLocalHandle(localhandle);
 
-	// this bind happens after the registry lookup, so the node never
-	// ends up discovering itself
-	try {
-	    Naming.rebind("//:" + 5009 + "/Pastry", rmilocalnode);
-	} catch (Exception e) {
-	    System.out.println("Unable to bind Pastry node in rmiregistry: " + e.toString());
+	if (pnode.syncinit) {
+	    // bind now
+	    rmilocalnode.update(null, null);
+	} else {
+	    // bind when there's leafset activity
+	    pnode.addLeafSetObserver(rmilocalnode);
 	}
 
 	nodeId = null;

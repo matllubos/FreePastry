@@ -60,6 +60,7 @@ public class PastryNode implements NodeHandle
     private LeafSet leafSet;
     private RoutingTable routeSet;
     private NodeHandle localhandle;
+    private boolean syncinit;
   
     /**
      * Constructor.  Creates a new Pastry network.
@@ -77,6 +78,22 @@ public class PastryNode implements NodeHandle
 	
 	leafSet = pFactory.getLeafSet();
 	routeSet = pFactory.getRouteSet();
+	syncinit = false;
+
+	pFactory.doneWithNode(this);
+    }
+
+    public PastryNode(PastryNodeFactory pFactory, boolean si) 
+    {
+	pFactory.constructNode();
+	
+	myNodeId = pFactory.getNodeId();
+	mySecurityManager = pFactory.getSecurityManager();
+	myMessageDispatch = pFactory.getMessageDispatch();
+	
+	leafSet = pFactory.getLeafSet();
+	routeSet = pFactory.getRouteSet();
+	syncinit = si;
 
 	pFactory.doneWithNode(this);
     }

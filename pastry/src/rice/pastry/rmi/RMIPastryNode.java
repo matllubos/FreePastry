@@ -43,6 +43,7 @@ import rice.pastry.messaging.*;
 import java.util.*;
 import java.rmi.server.UnicastRemoteObject;
 import java.rmi.RemoteException;
+import java.rmi.Naming;
 
 /**
  * An RMI-exported proxy object associated with each Pastry node. Its remote
@@ -54,12 +55,15 @@ import java.rmi.RemoteException;
  * @author Sitaram Iyer
  */
 
-class RMIPastryNodeImpl extends UnicastRemoteObject implements RMIPastryNode
+class RMIPastryNodeImpl extends UnicastRemoteObject
+	implements RMIPastryNode, Observer
 {
     private PastryNode node;
     private RMINodeHandlePool handlepool;
     private LinkedList queue;
-    int count;
+    private int count;
+
+    private boolean binddone;
 
     private class MsgHandler implements Runnable {
 	public void run() {
@@ -103,6 +107,7 @@ class RMIPastryNodeImpl extends UnicastRemoteObject implements RMIPastryNode
 	node = null;
 	queue = new LinkedList();
 	count = 0;
+	binddone = false;
 	MsgHandler handler = new MsgHandler();
 	new Thread(handler).start();
     }
@@ -132,6 +137,30 @@ class RMIPastryNodeImpl extends UnicastRemoteObject implements RMIPastryNode
 	    queue.add(msg);
 	    count++;
 	    queue.notify();
+	}
+    }
+
+    /**
+     * Observer on leafset. Binds node into registry when leafset activity
+     * first happens.
+     */
+    public void update(Observable o, Object arg) {
+	//NodeSetUpdate nsu = (NodeSetUpdate) arg;
+
+	//NodeHandle handle = nsu.handle();
+	//boolean wa = nsu.wasAdded();
+
+	// XXX replace binddone by unregister. method doesn't exist yet.
+
+	// this bind happens after the registry lookup, so the node never
+	// ends up discovering itself
+	if (binddone == false) {
+	    try {
+		Naming.rebind("//:" + 5009 + "/Pastry", this);
+	    } catch (Exception e) {
+		System.out.println("Unable to bind Pastry node in rmiregistry: " + e.toString());
+	    }
+	    binddone = true;
 	}
     }
 }

@@ -119,15 +119,6 @@ public class RMIPastryTest {
 		pause(1000);
 	}
 
-	/*
-	 * This creates a PastryNode and an associated RMIPastryNode, and
-	 * binds the latter to the registry. We do the above lookup prior to
-	 * creating the node, so we don't find ourselves.
-	 */
-	PastryNode pn = new PastryNode(factory);
-	pastrynodes.add(pn);
-	System.out.println("created " + pn);
-
 	NodeId otherid = null;
 	if (other != null) {
 	    try {
@@ -138,11 +129,20 @@ public class RMIPastryTest {
 	    }
 	}
 
+	/*
+	 * This creates a PastryNode and an associated RMIPastryNode, and
+	 * binds the latter to the registry. We do the above lookup prior to
+	 * creating the node, so we don't find ourselves.
+	 */
+	boolean syncinit = (otherid == null);
+	PastryNode pn = new PastryNode(factory, syncinit);
+	pastrynodes.add(pn);
+	System.out.println("created " + pn);
+
 	if (otherid != null) {
-	    RMINodeHandle other_handle = new RMINodeHandle(other, otherid /* , pn */);
+	    RMINodeHandle other_handle = new RMINodeHandle(other, otherid);
 	    pn.receiveMessage(new InitiateJoin(other_handle));
 	}
-	// else pause(1000);
     }
 
     public void printLeafSets() {
