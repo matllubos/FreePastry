@@ -318,14 +318,22 @@ public class SocketManager implements SelectionKeyHandler {
 
           debug("Read header message " + hm);
 
-          WireNodeHandle handle = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(hm.getNodeId());
+          if (hm.getDestination().equals(pastryNode.getNodeId())) {
+            WireNodeHandle handle = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(hm.getNodeId());
 
-          if (handle == null) {
-            handle = new WireNodeHandle(hm.getAddress(), hm.getNodeId(), pastryNode);
-            handle = (WireNodeHandle) pastryNode.getNodeHandlePool().coalesce(handle);
+            if (handle == null) {
+              handle = new WireNodeHandle(hm.getAddress(), hm.getNodeId(), pastryNode);
+              handle = (WireNodeHandle) pastryNode.getNodeHandlePool().coalesce(handle);
+            }
+
+            handle.setKey(key);
+          } else {
+            System.out.println("Found socket for wrong nodeId " + hm.getDestination() + " at " + pastryNode.getNodeId() + " - killing.");
+            key.interestOps(0);
+
+            key.channel().close();
+            key.cancel();
           }
-
-          handle.setKey(key);
 
           // since we're done, remove this entry
           connectors.remove(key);

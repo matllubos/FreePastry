@@ -55,13 +55,16 @@ public class HelloMessage extends SocketCommandMessage {
 
   private NodeId nodeId;
 
+  private NodeId dest;
+
   /**
    * Constructor
    */
-  public HelloMessage(WirePastryNode pn) {
+  public HelloMessage(WirePastryNode pn, NodeId dest) {
     super();
     address = ((WireNodeHandle) pn.getLocalHandle()).getAddress();
     nodeId = pn.getNodeId();
+    this.dest = dest;
   }
 
   /**
@@ -82,7 +85,16 @@ public class HelloMessage extends SocketCommandMessage {
     return nodeId;
   }
 
+  /**
+   * Returns the NodeId of the source
+   *
+   * @return The NodeId of the source of this message.
+   */
+  public NodeId getDestination() {
+    return dest;
+  }
+
   public String toString() {
-    return "HelloMessage from " + address + "(" + nodeId + ")";
+    return "HelloMessage from " + address + "(" + nodeId + ") to " + dest;
   }
 }
