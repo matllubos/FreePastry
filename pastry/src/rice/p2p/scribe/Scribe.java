@@ -59,6 +59,16 @@ public interface Scribe {
   public void subscribe(Topic topic, ScribeClient client);
 
   /**
+   * Subscribes the given client to the provided topic.  Any message published
+   * to the topic will be delivered to the Client via the deliver() method.
+   *
+   * @param topic The topic to subscribe to
+   * @param client The client to give messages to
+   * @param content The content to include in the subscribe
+   */
+  public void subscribe(Topic topic, ScribeClient client, ScribeContent content);
+
+  /**
    * Unsubscribes the given client from the provided topic. 
    *
    * @param topic The topic to unsubscribe from

@@ -67,21 +67,25 @@ public class SubscribeMessage extends AnycastMessage {
    * Constructor which takes a unique integer Id
    *
    * @param source The source address
-   * @param topic DESCRIBE THE PARAMETER
+   * @param topic The topic
+   * @param id The UID for this message
+   * @param content The content
    */
-  public SubscribeMessage(NodeHandle source, Topic topic, int id) {
-    this(source, topic, null, id);
+  public SubscribeMessage(NodeHandle source, Topic topic, int id, ScribeContent content) {
+    this(source, topic, null, id, content);
   }
 
   /**
    * Constructor which takes a unique integer Id
    *
    * @param source The source address
-   * @param topic DESCRIBE THE PARAMETER
+   * @param topic The topic
+   * @param id The UID for this message
+   * @param content The content
    * @param previousParent The parent on this topic who died
    */
-  public SubscribeMessage(NodeHandle source, Topic topic, Id previousParent, int id) {
-    super(source, topic, null);
+  public SubscribeMessage(NodeHandle source, Topic topic, Id previousParent, int id, ScribeContent content) {
+    super(source, topic, content);
 
     this.id = id;
     this.subscriber = source;

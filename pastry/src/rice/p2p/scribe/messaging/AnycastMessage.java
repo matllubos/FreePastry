@@ -50,21 +50,18 @@ import rice.p2p.scribe.*;
  */
 public class AnycastMessage extends ScribeMessage {
 
-  // the content of this message
   /**
-   * DESCRIBE THE FIELD
+   * the content of this message
    */
   protected ScribeContent content;
 
-  // the list of nodes which we have visited
   /**
-   * DESCRIBE THE FIELD
+   * the list of nodes which we have visited
    */
   protected Vector visited;
 
-  // the list of nodes which we are going to visit
   /**
-   * DESCRIBE THE FIELD
+   * the list of nodes which we are going to visit
    */
   protected LinkedList toVisit;
 
@@ -72,8 +69,8 @@ public class AnycastMessage extends ScribeMessage {
    * Constructor which takes a unique integer Id
    *
    * @param source The source address
-   * @param topic DESCRIBE THE PARAMETER
-   * @param content DESCRIBE THE PARAMETER
+   * @param topic The topic
+   * @param content The content
    */
   public AnycastMessage(NodeHandle source, Topic topic, ScribeContent content) {
     super(source, topic);
@@ -94,15 +91,31 @@ public class AnycastMessage extends ScribeMessage {
     return content;
   }
 
-
-    public void setContent(ScribeContent content){
-	//if(this.content != null)
-	// System.out.println("Over-writing the content of message"+ topic.getId());
-	this.content = content;
-    }
+  /**
+   * Sets the content
+   *
+   * @param content The content
+   */
+  public void setContent(ScribeContent content) {
+    this.content = content;
+  }
 
   /**
    * Returns the next handle to visit
+   *
+   * @return The next handle to visit
+   */
+  public NodeHandle peekNext() {
+    if (toVisit.size() == 0) {
+      return null;
+    }
+
+    return (NodeHandle) toVisit.getFirst();
+  }
+
+  /**
+   * Returns the next handle to visit and removes the
+   * node from the list.
    *
    * @return The next handle to visit
    */
@@ -163,13 +176,18 @@ public class AnycastMessage extends ScribeMessage {
     }
   }
 
-    public void remove(NodeHandle handle){
-	if(handle == null)
-	    return;
-	if(toVisit.contains(handle))
-	    toVisit.remove(handle);
-	if(visited.contains(handle))
-	    visited.remove(handle);
+  /**
+   * Removes the node handle from the to visit and visited lists
+   *
+   * @param handle The handle to remove
+   */
+  public void remove(NodeHandle handle) {
+    if (handle == null) {
+      return;
     }
+
+    toVisit.remove(handle);
+    visited.remove(handle);
+  }
 }
 
