@@ -1430,6 +1430,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         if (vkey.getId().equals(id)) {
           ObjectDescriptor thisObject = (ObjectDescriptor) waitingList.getMetadata(vkey);
           log(2, "Refreshing in waiting list: " + vkey.toStringFull());
+          foundWaiting = true;
 
           if (thisObject.refreshedLifetime < expiration) {
             thisObject.refreshedLifetime = expiration;
