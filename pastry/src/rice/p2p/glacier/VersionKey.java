@@ -70,7 +70,7 @@ public class VersionKey implements Id, Serializable, Comparable {
    * @return DESCRIBE THE RETURN VALUE
    */
   public String toString() {
-    return id.toString() + "v" + (version%1000);
+    return id.toString() + "v" + version;
   }
 
   /**
