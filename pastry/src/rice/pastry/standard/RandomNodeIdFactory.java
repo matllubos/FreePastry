@@ -93,7 +93,7 @@ public class RandomNodeIdFactory implements NodeIdFactory
 	md.update(raw);
 	byte[] digest = md.digest();
 	
-	NodeId nodeId = new NodeId(digest);
+	NodeId nodeId = NodeId.buildNodeId(digest);
 
 	return nodeId;
     }

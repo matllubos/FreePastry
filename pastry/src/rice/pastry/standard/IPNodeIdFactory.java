@@ -120,7 +120,7 @@ public class IPNodeIdFactory implements NodeIdFactory
 //	for (int i=0; i<4; i++)
 //	    digest[i] = rand[i];
 
-	NodeId nodeId = new NodeId(digest);
+	NodeId nodeId = NodeId.buildNodeId(digest);
 
 	return nodeId;
     }
