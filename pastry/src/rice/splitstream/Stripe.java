@@ -90,6 +90,8 @@ public class Stripe extends Observable implements IScribeApp{
      */
     private boolean ignore_timeout = true;
 
+
+    public int num_fails;
     /**
      * Flag for identifying whether the most recent drop
      * of a node is because local node dropped it, not because
@@ -230,6 +232,9 @@ public class Stripe extends Observable implements IScribeApp{
        return stripeState;
     }
 
+    public void setState(int state){
+	stripeState = state;
+    }
 
     /**
      * Scribe Implementation Methods
@@ -373,7 +378,7 @@ public class Stripe extends Observable implements IScribeApp{
 										     channel.getChannelId(),
      channel.getTimeoutLen())
      , credentials, null ); 
-		    //System.out.println(" STRIPE "+this+" Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+ " at "+channel.getNodeId());
+		    //System.out.println(" STRIPE "+this+" Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+ " at "+((Scribe)scribe).getNodeId());
 
 		    victimStripe.setLocalDrop(true);
 		    scribe.removeChild(victimChild, (NodeId)victimStripeId);
