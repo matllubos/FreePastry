@@ -1,0 +1,48 @@
+<project name="testant" default="compile" basedir="../">
+
+  <property name="src" value="src"/> 
+  <property name="build" value="classes"/>  
+  <property name="lib" value="lib" />
+  <property name="ant-lib" value="ant/lib" />
+
+  <target name="init">   
+    <mkdir dir="${build}" />
+    
+    <path id="classpath">
+      <fileset dir="${lib}">
+        <include name="*.jar" />
+      </fileset>
+      <pathelement path="${built}" />
+    </path>
+
+    <pathconvert refid="classpath"
+                 property="classpath_text"
+                 pathsep="${path.separator}" />
+  </target>
+
+  <target name="beautify">
+    <taskdef name="pretty" classname="org.acm.seguin.ant.Pretty" classpath="${ant-lib}/jrefactory.jar:${ant-lib}/JRefactoryModule.jar:${ant-lib}/JavaStyle.jar" />
+
+    <pretty settingsDir="." cvs="true">      
+      <fileset dir="."> 
+        <include name="**/*.java" />      
+      </fileset>    
+    </pretty>  
+  </target> 
+
+  <target name="compile" depends="init">    
+    <javac srcdir="${src}" 
+           destdir="${build}"
+           classpath="${classpath_text}" 
+           excludes="rice/past/search/** rice/nls/** rice/rm/testing/**" />  
+  </target> 
+  
+  <target name="insertheader">  
+  </target> 
+
+  <target name="jar" depends="compile">   
+    <jar destfile="${build}/app.jar" basedir="${build}">
+      <fileset dir="${build}/classes/**/*.class"/>
+    </jar>
+  </target>
+</project>
