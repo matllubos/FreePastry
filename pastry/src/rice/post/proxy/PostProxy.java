@@ -9,6 +9,7 @@ import rice.pastry.commonapi.*;
 import rice.pastry.standard.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.glacier.*;
 import rice.p2p.past.*;
 import rice.p2p.multiring.*;
 
@@ -65,6 +66,16 @@ public class PostProxy {
     PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT};
   
   /**
+   * The number of fragments Glacier should maintain for each immutable file
+   */
+  static int NUM_FRAGMENTS = 30;
+  
+  /**
+   * The number of different fragments that should be sufficient to restore a file in Glacier
+   */
+  static int NUM_SURVIVORS = 4;
+
+  /**
    * The username for the proxy
    */
   static String PROXY_USERNAME;
@@ -84,6 +95,11 @@ public class PostProxy {
    */
   static int PROXY_PORT;
   
+  /**
+   * Whether we are using Glacier instead of PAST
+   */
+  static boolean USE_GLACIER = false;
+
   /**
    * The procotol to use when creating nodes
    */
@@ -409,9 +425,25 @@ public class PostProxy {
     node = new MultiringNode(ringId, pastry);
     Thread.sleep(3000);
     stepDone(SUCCESS); 
+
+    if (USE_GLACIER) {
+      stepStart("Starting Glacier service");
+
+      FragmentKeyFactory KFACTORY = new FragmentKeyFactory((MultiringIdFactory) FACTORY);
+      StorageManager glacierStorage = new StorageManagerImpl(
+        KFACTORY,
+        new PersistentStorage(KFACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-glacier", ".", DISK_SIZE),
+        new LRUCache(new MemoryStorage(KFACTORY), CACHE_SIZE)
+      );
+
+      immutablePast = new GlacierImpl(node, ".", immutableStorage, glacierStorage, new GlacierDefaultPolicy(), REPLICATION_FACTOR, NUM_FRAGMENTS, NUM_SURVIVORS, (MultiringIdFactory)FACTORY, INSTANCE_NAME);
+      stepDone(SUCCESS);
+      stepStart("Starting PAST service");
+    } else {
+      stepStart("Starting PAST service");
+      immutablePast = new PastImpl(node,immutableStorage, REPLICATION_FACTOR, INSTANCE_NAME); // + "-immutable"
+    }
     
-    stepStart("Starting PAST service");
-    immutablePast = new PastImpl(node,immutableStorage, REPLICATION_FACTOR, INSTANCE_NAME); // + "-immutable"
 //    mutablePast = new PastImpl(node, mutableStorage, REPLICATION_FACTOR, INSTANCE_NAME + "-mutable"); //, new MutablePastPolicy());
     deliveredPast = new PastImpl(node, deliveredStorage, REPLICATION_FACTOR, INSTANCE_NAME + "-delivered");
     pendingPast = new DeliveryPastImpl(node, pendingStorage, REPLICATION_FACTOR, INSTANCE_NAME + "-pending", deliveredPast);
@@ -550,6 +582,13 @@ public class PostProxy {
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-noredirect")) {
         REDIRECT_OUTPUT = false;
+        break;
+      }
+    }
+    
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-glacier")) {
+        USE_GLACIER = true;
         break;
       }
     }
