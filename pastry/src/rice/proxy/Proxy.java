@@ -165,6 +165,12 @@ public class Proxy {
       result.append(" -Xint");
     }
     
+    if (parameters.getBooleanParameter("java_prefer_select") ||
+        (parameters.getBooleanParameter("java_prefer_select_automatic_osx") && 
+         System.getProperty("os.arch").toLowerCase().indexOf("mac os x") >= 0)) {
+      result.append(" -Djava.nio.preferSelect=true");
+    }
+    
     if (parameters.getBooleanParameter("java_debug_enable")) {
       result.append(" -Xdebug -Djava.compiler=NONE -Xnoagent -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=");
       result.append(parameters.getStringParameter("java_debug_port"));
@@ -378,7 +384,10 @@ public class Proxy {
         System.err.println("ERROR: Got IOException while checking liveness!" + e + " This is usually an unrecoverable JVM crash - we're going to exit now.");
         e.printStackTrace();
         System.exit(-1);
-      } 
+      } catch (NullPointerException e) {
+        System.out.println("Liveness test ended in NullPointerExceptin " + e);
+        e.printStackTrace();
+      }
     }
   }
   
