@@ -27,7 +27,7 @@ public class Stripe extends Observable implements IScribeApp{
 
       NodeId topicId = (new RandomNodeIdFactory()).generateNodeId();
       if(scribe.create(topicId, credentials)){
-	stripeState = STRIPE_VALID;
+	stripeState = STRIPE_SUBSCRIBED;
         this.stripeId = (StripeId) topicId;
       }
     }
@@ -35,7 +35,9 @@ public class Stripe extends Observable implements IScribeApp{
     * gets the StripeID for this stripe
     * @return theStripeID 
     */
-   public StripeId getStripeId(){return stripeId;}
+   public StripeId getStripeId(){
+     return stripeId;
+   }
    /**
     * gets the Channel that this stripe is a part of 
     * @return Channel Object 
@@ -55,7 +57,7 @@ public class Stripe extends Observable implements IScribeApp{
       * Leaves this stripe
       */
      public void leaveStripe(){
-       stripeState = STRIPE_INVALID;
+       stripeState = STRIPE_UNSUBSCRIBED;
      }
     /**
     * get the state of the Stripe 
@@ -68,11 +70,15 @@ public class Stripe extends Observable implements IScribeApp{
 
      public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){}
      public void forwardHandler(ScribeMessage msg){}
-     public void receiveMessage(ScribeMessage msg){}
+     public void receiveMessage(ScribeMessage msg){
+       /* Check the type of message */
+       /* then make call accordingly */
+     }
      public void scribeIsReady(){}
      public void subscribeHandler(ScribeMessage msg, NodeId topicId, 
                                   NodeHandle child, boolean wasAdded){}
-    public static final int STRIPE_VALID = 0;
-    public static final int STRIPE_INVALID = 1;
+
+    public static final int STRIPE_SUBSCRIBED = 0;
+    public static final int STRIPE_UNSUBSCRIBED = 1;
     public static final int STRIPE_DROPPED = 2;
 }

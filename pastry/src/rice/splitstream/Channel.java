@@ -9,12 +9,12 @@ public class Channel {
    private int numStripes = 0;
    private int subscribedStripes = 0;
    private Stripe[] stripes = null;
-   private StripeId stripeIds = null;
+   private StripeId[] stripeIds = null;
    private int outChannel = 0;
    private IScribe scribe = null;
    private Credentials cred;
    private boolean isReady = false;
-   private BandwidthManager = null;
+   private BandwidthManager bandwidthManager = null;
    /**
     * Constructor to Create a new channel
     *
@@ -26,7 +26,7 @@ public class Channel {
 	this.scribe = scribe;
 	this.bandwidthManager = bandwidthManager;
 	/* register this channel with the bandwidthManager */
-	this.bandwidthManager.register(this);
+	this.bandwidthManager.registerChannel(this);
         NodeId topicId = (new RandomNodeIdFactory()).generateNodeId();
         if(scribe.create(topicId, cred)){
 		isReady = true;
@@ -41,6 +41,7 @@ public class Channel {
    /**
     * Constructor to create a Channel when a channelID is known
     */ 
+  
    public Channel(ChannelId channelId, IScribe scribe, BandwidthManager bandwidthManager){
 	this.channelId = channelId;
 	this.bandwidthManager = bandwidthManager;
@@ -62,7 +63,6 @@ public class Channel {
   public void configureChannel(int outChannel){
     this.outChannel = outChannel;
     bandwidthManager.adjustBandwidth(this, outChannel); 
-    /* link this in with the bandwidth manager */
   }
   /** 
    * A channel consists of a number of stripes. This number is determined
@@ -86,7 +86,13 @@ public class Channel {
    * The primary stripe is the stripe that the user must have.
    * @return Stripe The Strip object that is the primary stripe.
    */ 
-  public Stripe getPrimaryStripe(){return null;}
+  public Stripe getPrimaryStripe(){
+   /** 
+    * GO THROUGH AND LOOK AT THE STRIPES AND FIGURE OUT WHICH
+    * ONE IS THE PRIMARY
+    */
+    return null;
+  }
   /**
    * Returns whether the channel is currently ready 
    * @return boolean State of the channel 

@@ -1,4 +1,5 @@
 package rice.splitstream;
+import java.util.*;
 /**
  * This class is responsible for freeing bandwidth
  * when it is needed. Right now the notion of bandwidth
@@ -14,6 +15,10 @@ package rice.splitstream;
  * class is abstract. The behavior will be decided at a later point
  */
 public abstract class BandwidthManager{
+     private Hashtable channelBandwidth = null;
+     public BandwidthManager(){
+	channelBandwidth = new Hashtable();
+     }
      /**
       * This method makes an attempt to free up bandwidth
       * when it is needed. It follows the basic outline as
@@ -52,6 +57,11 @@ public abstract class BandwidthManager{
      * Registers a channel within the system with the bandwidth manager
      * @param the channel to be added
      */
-      public void registerChannel(Channel channel){}
-     private static int DEFAULT_CHILDREN = 20;
+      public void registerChannel(Channel channel){
+	channelBandwidth.put(channel, new Integer(DEFAULT_CHILDREN)); 
+
+      }
+
+      public void adjustBandwidth(Channel channel, int outbandwidth){}
+      private static int DEFAULT_CHILDREN = 20;
 } 
