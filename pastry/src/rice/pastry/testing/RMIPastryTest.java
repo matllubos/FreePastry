@@ -161,7 +161,7 @@ public class RMIPastryTest {
 
 	for (int i = 0; i < args.length; i++) {
 	    if (args[i].equals("-help")) {
-		System.out.println("Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap bshost[:bsport]]");
+		System.out.println("Usage: RMIPastryTest [-msgs m] [-nodes n] [-port p] [-bootstrap bshost[:bsport]]");
 		System.out.println("                     [-verbose|-silent|-verbosity v] [-help]");
 		System.out.println("");
 		System.out.println("  Ports p and bsport refer to RMI registry port numbers (default = 5009).");
@@ -256,7 +256,7 @@ public class RMIPastryTest {
     }
 
     /**
-     * Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap bshost[:bsport]]
+     * Usage: RMIPastryTest [-msgs m] [-nodes n] [-port p] [-bootstrap bshost[:bsport]]
      *                      [-verbose|-silent|-verbosity v] [-help].
      *
      * Ports p and bsport refer to RMI registry port numbers (default = 5009).
