@@ -75,7 +75,7 @@ public class SinglePingTest {
 
 	pastryNodes = new Vector();
 	pingClients = new Vector();
-	rng = new Random(1000);
+	rng = new Random(PastrySeed.getSeed());
     }
     private NodeHandle getBootstrap() {
 	NodeHandle bootstrap = null;

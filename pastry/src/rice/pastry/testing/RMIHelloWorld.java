@@ -81,7 +81,7 @@ public class RMIHelloWorld {
 	factory = new RMIPastryNodeFactory(port);
 	pastryNodes = new Vector();
 	helloClients = new Vector();
-	rng = new Random();
+	rng = new Random(PastrySeed.getSeed());
     }
 
     /**

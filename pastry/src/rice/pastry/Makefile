@@ -9,7 +9,8 @@ SOURCE  = \
 	PastryNodeFactory.java\
 	NodeSet.java\
 	NodeSetUpdate.java \
-	Log.java
+	Log.java \
+	PastrySeed.java
 
 #	NodeIdI.java
 

@@ -212,7 +212,7 @@ public class NodeIdUnit {
 
     public NodeIdUnit() 
     {
-	rng = new Random();
+	rng = new Random(PastrySeed.getSeed());
 
 	System.out.println("Creating nid");
 	nid = createNodeId();

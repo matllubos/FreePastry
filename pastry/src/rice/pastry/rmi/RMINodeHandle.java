@@ -57,6 +57,9 @@ public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
     private RMIRemoteNodeI remoteNode;
     private NodeId remotenid;
 
+    public static int index=0;
+    public int id;
+
     /**
      * Cached liveness bit, updated by any message, including ping.
      */
@@ -116,6 +119,7 @@ public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
 	isInPool = false;
 	isLocal = false;
 	lastpingtime = 0;
+	id = index++;
     }
 
     public NodeId getNodeId() { return remotenid; }

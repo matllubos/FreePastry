@@ -117,7 +117,7 @@ public abstract class PastryRegrTest {
 	pastryNodesLastAdded = new Vector();
 	inConcJoin = false;
 	rtApps = new Vector();
-	rng = new Random();
+	rng = new Random(PastrySeed.getSeed());
     }
 
     /**

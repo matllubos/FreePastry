@@ -231,6 +231,7 @@ public class StandardJoinProtocol implements MessageReceiver
 		    nh = rs.closestNode();
 		else
 		    nh = nhMyCol;
+		if (nh != null) nh = security.verifyNodeHandle(nh);
 		if (nh != null) nh.receiveMessage(brr);
 
 		/*

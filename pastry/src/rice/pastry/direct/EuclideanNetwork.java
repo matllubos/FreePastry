@@ -110,7 +110,7 @@ public class EuclideanNetwork implements NetworkSimulator
      */
 
     public EuclideanNetwork() {
-	rng = new Random();
+	rng = new Random(PastrySeed.getSeed());
 	nodeMap = new HashMap();
 	msgQueue = new Vector();
 	testRecord = null;

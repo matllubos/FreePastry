@@ -109,7 +109,7 @@ public class SphereNetwork implements NetworkSimulator
      */
 
     public SphereNetwork() {
-	rng = new Random();
+	rng = new Random(PastrySeed.getSeed());
 	nodeMap = new HashMap();
 	msgQueue = new Vector();
     }

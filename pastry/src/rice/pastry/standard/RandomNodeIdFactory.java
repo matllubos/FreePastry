@@ -61,7 +61,7 @@ public class RandomNodeIdFactory
      */
     
     public RandomNodeIdFactory() {
-	rng = new Random();
+	rng = new Random(PastrySeed.getSeed());
 	next = rng.nextLong();
     }
 

@@ -72,7 +72,7 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver
 	localHandle = lh;
 	security = sm;
 	routeTable = rt;
-	rng = new Random();
+	rng = new Random(PastrySeed.getSeed());
 	address = new RouteProtocolAddress();
 
 	rt.addObserver(this);

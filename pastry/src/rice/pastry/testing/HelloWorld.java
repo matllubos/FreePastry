@@ -73,7 +73,7 @@ public class HelloWorld {
 
 	pastryNodes = new Vector();
 	helloClients = new Vector();
-	rng = new Random();
+	rng = new Random(PastrySeed.getSeed());
     }
 
     /**

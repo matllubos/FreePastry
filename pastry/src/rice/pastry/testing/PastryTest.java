@@ -70,7 +70,7 @@ public class PastryTest {
 
 	pastryNodes = new Vector();
 	pingClients = new Vector();
-	rng = new Random();
+	rng = new Random(PastrySeed.getSeed());
     }
 
     private NodeHandle getBootstrap() {
