@@ -48,7 +48,7 @@ import java.lang.*;
  * @version $Id$
  *
  * @author Andrew Ladd
- * @author Rongmei Zhang/Y. Charlie Hu
+ * @author Rongmei Zhang
  */
 
 public class EuclideanNetwork implements NetworkSimulator 
@@ -80,12 +80,14 @@ public class EuclideanNetwork implements NetworkSimulator
     private class NodeRecord {
 	public int x, y;
 	public boolean alive;
+	public NodeHandle handle;
 
-	public NodeRecord() {
+	public NodeRecord(NodeHandle nh) {
 	    x = rng.nextInt() % 10000;
 	    y = rng.nextInt() % 10000;
 	    
 	    alive = true;
+	    handle = nh;
 	}
 
 	public int proximity(NodeRecord nr) {
@@ -103,10 +105,12 @@ public class EuclideanNetwork implements NetworkSimulator
 	testRecord = null;
     }
     
-    public void registerNodeId(NodeId nid)
+    public void registerNodeId(NodeHandle nh)
     {
+	NodeId nid = nh.getNodeId();
+
 	if (nodeMap.get(nid) != null) throw new Error("collision creating network stats for " + nid);
-	nodeMap.put(nid, new NodeRecord());
+	nodeMap.put(nid, new NodeRecord(nh));
     }
 
     public boolean isAlive(NodeId nid) {
@@ -158,5 +162,26 @@ public class EuclideanNetwork implements NetworkSimulator
     }
     public TestRecord getTestRecord(){
 	return testRecord;
+    }
+    public NodeHandle getClosest(NodeId nid) {
+	Iterator it = nodeMap.values().iterator();
+	NodeHandle bestHandle = null;
+	int bestProx = Integer.MAX_VALUE;
+	NodeHandle itHandle;
+	NodeId	itId;
+	NodeRecord itRecord;
+
+	while( it.hasNext() ){
+	    itRecord = (NodeRecord)it.next();
+	    itHandle = itRecord.handle;
+	    itId = itHandle.getNodeId();
+	    if( nid == itId )
+		continue;
+	    if( proximity(nid,itId) < bestProx ){
+		bestProx = proximity(nid,itId);
+		bestHandle = itHandle;
+	    }
+	}
+	return bestHandle;
     }
 }

@@ -71,7 +71,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 
     public DirectPastryNodeFactory() {
 	nidFactory = new RandomNodeIdFactory();
-	//	simulator = new EuclideanNetwork();
+//	simulator = new EuclideanNetwork();
 	simulator = new SphereNetwork();
     }
 
@@ -189,7 +189,8 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	StandardJoinProtocol jProtocol =
 	    new StandardJoinProtocol(localhandle, secureMan, routeTable, leafSet);
 
-	simulator.registerNodeId(nodeId);
+//	simulator.registerNodeId(nodeId);
+	simulator.registerNodeId( localhandle );
 
 	msgDisp.registerReceiver(router.getAddress(), router);
 	msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
@@ -202,7 +203,8 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	secureMan.setLocalPastryNode(pn);
 
 //	pn.doneNode(bootstrap);
-	pn.doneNode( discover(localhandle,bootstrap) );
+//	pn.doneNode( discover(localhandle,bootstrap) );
+	pn.doneNode( simulator.getClosest(nodeId) );
 
 	return pn;
     }

@@ -48,6 +48,7 @@ import java.lang.*;
  * @version $Id$
  *
  * @author Y. Charlie Hu
+ * @author Rongmei Zhang
  */
 
 public class SphereNetwork implements NetworkSimulator 
@@ -79,12 +80,14 @@ public class SphereNetwork implements NetworkSimulator
     private class NodeRecord {
         public double theta, phi;
 	public boolean alive;
+	public NodeHandle handle;
 
-	public NodeRecord() {
+	public NodeRecord(NodeHandle nh) {
   	    theta = Math.asin(2.0 * rng.nextDouble() - 1.0);
 	    phi   = 2.0 * Math.PI * rng.nextDouble();
 	    
 	    alive = true;
+	    handle = nh;
 	}
 
 	public int proximity(NodeRecord nr) {
@@ -99,10 +102,12 @@ public class SphereNetwork implements NetworkSimulator
 	msgQueue = new Vector();
     }
     
-    public void registerNodeId(NodeId nid)
+    public void registerNodeId(NodeHandle nh)
     {
+	NodeId nid = nh.getNodeId();
+
 	if (nodeMap.get(nid) != null) throw new Error("collision creating network stats for " + nid);
-	nodeMap.put(nid, new NodeRecord());
+	nodeMap.put(nid, new NodeRecord(nh));
     }
 
     public boolean isAlive(NodeId nid) {
@@ -154,5 +159,27 @@ public class SphereNetwork implements NetworkSimulator
     }
     public TestRecord getTestRecord(){
 	return testRecord;
+    }
+
+    public NodeHandle getClosest(NodeId nid) {
+	Iterator it = nodeMap.values().iterator();
+	NodeHandle bestHandle = null;
+	int bestProx = Integer.MAX_VALUE;
+	NodeHandle itHandle;
+	NodeId	itId;
+	NodeRecord itRecord;
+
+	while( it.hasNext() ){
+	    itRecord = (NodeRecord)it.next();
+	    itHandle = itRecord.handle;
+	    itId = itHandle.getNodeId();
+	    if( nid == itId )
+		continue;
+	    if( proximity(nid,itId) < bestProx ){
+		bestProx = proximity(nid,itId);
+		bestHandle = itHandle;
+	    }
+	}
+	return bestHandle;
     }
 }

@@ -45,18 +45,17 @@ import rice.pastry.messaging.*;
  * @version $Id$
  *
  * @author Andrew Ladd
- * @author Rongmei Zhang/Y. Charlie Hu
  */
 
 public interface NetworkSimulator 
 {
     /**
-     * Registers a node id with the simulator.
+     * Registers a node handle with the simulator.
      *
-     * @param nid the node id to register.
+     * @param nh the node handle to register.
      */
 
-    public void registerNodeId(NodeId nid);
+    public void registerNodeId(NodeHandle nh);
 
     /**
      * Checks to see if a node id is alive.
@@ -96,6 +95,7 @@ public interface NetworkSimulator
 
     public void setTestRecord( TestRecord tr );
     public TestRecord getTestRecord();
+    public NodeHandle getClosest(NodeId nid);
 
     public boolean simulate();
 }
