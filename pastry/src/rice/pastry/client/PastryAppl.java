@@ -334,7 +334,9 @@ public abstract class PastryAppl implements MessageReceiver
    */
   public void notifyReady() {}
   
-//  public abstract void messageNotDelivered(Message msg, String s);
+  public void messageNotDelivered(Message msg, String reason) {
+    System.out.println("messageNotDelivered("+msg+"):"+reason);     
+  }
 
 }
 
