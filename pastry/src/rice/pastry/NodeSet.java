@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.pastry;
 
 import java.util.*;
+import java.io.Serializable;
 
 /**
  * Represents an ordered set of NodeHandles.
@@ -46,7 +47,7 @@ import java.util.*;
  * @author Peter Druschel
  */
 
-public class NodeSet implements NodeSetI {
+public class NodeSet implements NodeSetI, implements Serializable {
 
     private Vector set;
 

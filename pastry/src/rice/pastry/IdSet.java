@@ -36,6 +36,7 @@ if advised of the possibility of such damage.
 
 package rice.pastry;
 
+import java.io.Serializable;
 import java.util.*;
 import java.security.*;
 
@@ -47,7 +48,7 @@ import java.security.*;
  * @author Peter Druschel
  */
 
-public class IdSet {
+public class IdSet implements Serializable {
 
     private SortedSet idSet;
 
