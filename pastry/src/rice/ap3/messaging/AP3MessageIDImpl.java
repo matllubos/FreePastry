@@ -1,6 +1,7 @@
 package rice.ap3.messaging;
 
 import java.util.Random;
+import java.io.Serializable;
 
 /**
  * @(#) AP3MessageIDImpl.java
@@ -12,7 +13,7 @@ import java.util.Random;
  * @author Gaurav Oberoi
  */
 public class AP3MessageIDImpl 
-  implements AP3MessageID {
+  implements AP3MessageID, Serializable {
 
   /**
    * Internally, the ID is represented by a 
