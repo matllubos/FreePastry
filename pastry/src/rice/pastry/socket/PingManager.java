@@ -21,10 +21,10 @@ import java.util.LinkedList;
 import java.util.WeakHashMap;
 
 import rice.pastry.PastryObjectInputStream;
-import rice.pastry.churn.*;
 import rice.pastry.churn.FailedSetManager;
 import rice.pastry.churn.NullFailedSetManager;
 import rice.pastry.churn.Probe;
+import rice.pastry.churn.ProbeListener;
 import rice.pastry.socket.exception.DeserializationException;
 import rice.pastry.socket.exception.ImproperlyFormattedMessageException;
 import rice.pastry.socket.exception.SerializationException;
