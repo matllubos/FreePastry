@@ -21,15 +21,15 @@ PACKAGES = \
 	rice.pastry.rmi\
 	rice.pastry.security\
 	rice.pastry.testing
-#	rice.ap3\
-#	rice.ap3.routing\
-#	rice.ap3.messaging\
-#	rice.ap3.testing\
 #	rice.scribe\
 #	rice.scribe.maintenance\
 #	rice.scribe.messaging\
 #	rice.scribe.security\
-#	rice.scribe.testing\
+#	rice.scribe.testing
+#	rice.ap3\
+#	rice.ap3.routing\
+#	rice.ap3.messaging\
+#	rice.ap3.testing\
 #	rice.storage\
 #	rice.storage.testing\
 #	rice.past\
