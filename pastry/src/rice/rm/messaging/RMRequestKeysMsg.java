@@ -57,18 +57,14 @@ import java.io.*;
  */
 public class RMRequestKeysMsg extends RMMessage implements Serializable{
 
-
-    private boolean keySetStamp;
-
     private Vector rangeSet;
 
 
     /**
      * Constructor : Builds a new RM Message
      */
-    public RMRequestKeysMsg(NodeHandle source, Address address, Credentials authorCred, int seqno, Vector _rangeSet, boolean _keySetStamp) {
+    public RMRequestKeysMsg(NodeHandle source, Address address, Credentials authorCred, int seqno, Vector _rangeSet) {
 	super(source,address, authorCred, seqno);
-	this.keySetStamp = _keySetStamp;
 	this.rangeSet = _rangeSet;
 	
     }
@@ -83,35 +79,49 @@ public class RMRequestKeysMsg extends RMMessage implements Serializable{
      */
     public void handleDeliverMessage( RMImpl rm) {
 	//System.out.println(rm.getNodeId() + "received RequestKeysMsg from " + getSource().getNodeId() + " with rangeSet.size = " + rangeSet.size());
-	Vector keySetSet = new Vector();
-	Vector stampSet = new Vector();
 
 	Vector returnedRangeSet = new Vector();
+	RMMessage.KEEntry entry;
+	RMMessage.KEEntry returnedEntry;
 
 	for(int i=0; i< rangeSet.size(); i++) {
+	    entry = (RMMessage.KEEntry) rangeSet.elementAt(i);
 	    IdRange reqRange;
 	    IdRange iRange;
-	    reqRange = (IdRange)rangeSet.elementAt(i);
+	    int numKeys = 0;
+	    boolean hashEnabled;
+	    Id hash = null;
+	    IdSet keySet = null;
+
+
+	    reqRange = entry.getReqRange();
+	    hashEnabled = entry.getHashEnabled();
 	    //System.out.println("myRange= " + rm.myRange);
 	    //System.out.println("reqRange= " + reqRange);
 	    iRange = reqRange.intersect(rm.myRange);
 	    //System.out.println("iRange= " + iRange);
-	    if(iRange.isEmpty())
-		continue;
-	    IdSet keySet = rm.app.scan(iRange);
-	    if(keySet.numElements()==0)
-		continue;
-	    returnedRangeSet.add(iRange);
-	    if(keySetStamp) {
-		stampSet.add(keySet.getHash());
+	    if(iRange.isEmpty()) {
+		// To notify the requestor that no keys were 
+		// found in this range
+		numKeys = 0;
+		keySet = new IdSet();
+		
 	    }
 	    else {
-		keySetSet.add(keySet);
+		keySet = rm.app.scan(iRange);
+		numKeys = keySet.numElements();
 	    }
+	    if(hashEnabled ) {
+		hash = keySet.getHash();
+		keySet = null;
+	    }
+	    returnedEntry = new RMMessage.KEEntry(reqRange, iRange, numKeys, hashEnabled, hash, keySet);
+	    returnedRangeSet.add(returnedEntry);
+
 	}
 	
 	RMResponseKeysMsg msg;
-	msg = new RMResponseKeysMsg(rm.getLocalHandle(),rm.getAddress() , rm.getCredentials(), rm.m_seqno ++, returnedRangeSet, rm.myRange, keySetSet, stampSet, keySetStamp );
+	msg = new RMResponseKeysMsg(rm.getLocalHandle(),rm.getAddress() , rm.getCredentials(), rm.m_seqno ++, returnedRangeSet);
 	rm.route(null, msg, getSource());
     }
 

@@ -73,6 +73,72 @@ public abstract class RMMessage extends Message implements Serializable{
     // for debugging purposes
     private int _seqno;
 
+    public static int MAXKEYSINRANGE = 10;
+
+    public static int MAXRANGESREQUESTED = 5;
+
+    // This class will be used by the messaging system
+    public static class KEEntry {
+	private IdRange reqRange;
+	private boolean hashEnabled;
+	private IdSet keySet;
+	private Id hash;
+	private int numKeys;
+	// This range is got by the intersection of the reqRange and the responsible
+	// range on the responder side
+	private IdRange range;
+
+	// This constructor is to be used by the requestor for keys
+	public KEEntry(IdRange _range, boolean _hEnabled) {
+	    reqRange = _range;
+	    hashEnabled = _hEnabled;
+	    numKeys = 0;
+	    keySet = null;
+	    hash = null;
+	    range = null;
+	}
+
+	// This constructor is to be used when the responder 
+	public KEEntry(IdRange _reqRange, IdRange _range, int _numKeys, boolean _hashEnabled, Id _hash, IdSet _keySet ) {
+	    reqRange = _reqRange;
+	    range = _range;
+	    numKeys = _numKeys;	    
+	    hashEnabled = _hashEnabled;
+	    hash = _hash;
+	    keySet = _keySet;
+
+	} 
+
+	public IdRange getReqRange() {
+	    return reqRange;
+	}
+
+	public IdRange getRange() {
+	    return range;
+	}
+
+	public IdSet getKeySet() {
+	    return keySet;
+	}
+
+	public boolean getHashEnabled() {
+	    return hashEnabled;
+	}
+	
+	public Id getHash() {
+	    return hash;
+	}
+
+	public int getNumKeys() {
+	    return numKeys;
+	}
+
+    }
+
+    // Stands for the Keys Exchange protocol Pending Entry
+    // this class will be used to keep track of the pending entries on the requestor side
+   
+
 
     /**
      * Constructor : Builds a new RM Message

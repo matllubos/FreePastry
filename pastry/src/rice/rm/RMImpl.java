@@ -48,9 +48,8 @@ import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
 
 import java.lang.*;
-import java.util.Vector;
-import java.util.Hashtable;
-import java.util.Enumeration;
+import java.util.*;
+
 
 import rice.rm.messaging.*;
 import rice.rm.testing.*;
@@ -108,7 +107,8 @@ public class RMImpl extends CommonAPIAppl implements RM {
     public Hashtable m_pendingObjects;
 
 
-    private static final int NSMAXSIZE = 24;
+    public Hashtable m_pendingRanges;
+
 
     public static class ReplicateEntry{
 	private int numAcks;
@@ -142,6 +142,53 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	}
     }
 
+    public static class KEPenEntry {
+	private IdRange reqRange;
+	private int numKeys;
+
+	
+	public KEPenEntry(IdRange _reqRange) {
+	    reqRange = _reqRange;
+	    numKeys = -1;
+	}
+    
+	public KEPenEntry(IdRange _reqRange, int _numKeys) {
+	    reqRange = _reqRange;
+	    numKeys = _numKeys;
+	}
+
+	public IdRange getReqRange() {
+	    return reqRange;
+	}
+
+	public int getNumKeys() {
+	    return numKeys;
+	}
+
+	// Equality is based only on the reqRange part, does not care
+	// about the numKeys argument
+	public boolean equals(Object obj) {
+	    KEPenEntry oEntry;
+	    oEntry = (KEPenEntry)obj;
+	    if (reqRange.equals(oEntry.getReqRange())) 
+		return true;
+	    else 
+		return false;
+	}
+
+
+	public String toString() {
+	  String s = "PE(";
+	  s = s + reqRange + numKeys;
+	  s = s + ")";
+	  return s;
+
+	}
+
+
+    }
+
+
 
     /**
      * Constructor : Builds a new ReplicaManager(RM) associated with this 
@@ -157,7 +204,9 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	_sendOptions = new SendOptions();
 	m_seqno = 0;
 	m_pendingObjects = new Hashtable();
+	m_pendingRanges = new Hashtable();
     }
+
 
     /** 
      * Returns true if the RM substrate is ready. The RM substrate is
@@ -177,6 +226,46 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
     public PastryNode getPastryNode() {
 	return thePastryNode;
+    }
+
+
+    public void addPendingRange(NodeId toNode, IdRange reqRange) {
+	//System.out.println("addPendingRange( " + toNode + " , " + reqRange + " ) ");
+	RMImpl.KEPenEntry entry= new RMImpl.KEPenEntry(reqRange); 
+	Vector setOfRanges;
+	if(m_pendingRanges.containsKey(toNode)) {
+	    setOfRanges = (Vector) m_pendingRanges.get(toNode);
+	    if(!setOfRanges.contains(entry))
+		setOfRanges.add(entry);
+	}
+	else {
+	    setOfRanges = new Vector();
+	    setOfRanges.add(entry);
+	    m_pendingRanges.put(toNode, setOfRanges);
+	}
+	
+    }
+
+
+    public void removePendingRange(NodeId toNode, IdRange reqRange) {
+	//System.out.println("removePendingRange( " + toNode + " , " + reqRange + " ) ");
+
+	Vector setOfRanges;
+	if(m_pendingRanges.containsKey(toNode)) {
+	    setOfRanges = (Vector) m_pendingRanges.get(toNode);
+	    if(setOfRanges.contains(new RMImpl.KEPenEntry(reqRange))) {
+		setOfRanges.remove(new RMImpl.KEPenEntry(reqRange));
+		if(setOfRanges.isEmpty())
+		    m_pendingRanges.remove(toNode);
+	    }
+	    else 
+		System.out.println("Warning1:: Should not happen");
+	     
+	}
+	else {
+	    System.out.println("Warning2:: Should not happen");
+	} 
+
     }
 
 
@@ -214,21 +303,10 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	    
 	    Vector rangeSet = new Vector();
 	    if((requestRange!=null) && !requestRange.isEmpty())
-		rangeSet.add(requestRange);
+		rangeSet.add(new RMMessage.KEEntry(requestRange, false));
 	    NodeSet set = requestorSet(rangeSet);
-	    for(int i=0; i<set.size(); i++) {
-	       
-		NodeHandle toNode;
-		RMRequestKeysMsg msg;
-		
-		toNode = set.get(i);
-		if(toNode.getNodeId().equals(getNodeId()))
-		   continue;
-		msg = new RMRequestKeysMsg(getLocalHandle(),getAddress(), getCredentials(), m_seqno ++, rangeSet, false);
-		//System.out.println(getNodeId() + "sending RequestKeys msg to " + toNode.getNodeId());
-		route(null, msg, toNode);
-	    }
 
+	    sendKeyRequestMessages(set, rangeSet);
 
 	}
 	else
@@ -257,20 +335,12 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	    
 	    Vector rangeSet = new Vector();
 	    if((requestRange!=null) && !requestRange.isEmpty())
-		rangeSet.add(requestRange);
+		rangeSet.add(new RMMessage.KEEntry(requestRange,false));
+
 	    NodeSet set = requestorSet(rangeSet);
-	    for(int i=0; i<set.size(); i++) {
-	       
-		NodeHandle toNode;
-		RMRequestKeysMsg msg;
-		
-		toNode = set.get(i);
-		if(toNode.getNodeId().equals(getNodeId()))
-		   continue;
-		msg = new RMRequestKeysMsg(getLocalHandle(),getAddress(), getCredentials(), m_seqno ++, rangeSet, false);
-		//System.out.println(getNodeId() + "sending RequestKeys msg to " + toNode.getNodeId());
-		route(null, msg, toNode);
-	    }
+
+	    sendKeyRequestMessages(set, rangeSet);
+
 
 	}
     }
@@ -304,22 +374,9 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	
 	Vector rangeSet = new Vector();
 	if((requestRange!=null) && !requestRange.isEmpty())
-	    rangeSet.add(requestRange);
+	    rangeSet.add(new RMMessage.KEEntry(requestRange,true));
 	NodeSet set = requestorSet(rangeSet);
-	for(int i=0; i<set.size(); i++) {
-	    
-	    NodeHandle toNode;
-	    RMRequestKeysMsg msg;
-	    
-	    toNode = set.get(i);
-	    if(toNode.getNodeId().equals(getNodeId()))
-		continue;
-	    msg = new RMRequestKeysMsg(getLocalHandle(),getAddress(), getCredentials(), m_seqno ++, rangeSet, true);
-	    //System.out.println(getNodeId() + "sending Periodic Maintenance RequestKeys msg to " + toNode.getNodeId());
-	    route(null, msg, toNode);
-	}
-	
-	
+	sendKeyRequestMessages(set, rangeSet);
 
     }
 
@@ -402,42 +459,31 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	    Vector rangeSet = new Vector();
 	    if(prev_Range == null) {
 		requestRange1 = myRange;
-		rangeSet.add(requestRange1);
+		rangeSet.add(new RMMessage.KEEntry(requestRange1,true));
 	    }
 	    else {
 		// Compute the diff of the two ranges
 		//System.out.println("checking subtract calculation");
 		//System.out.println("MyRange= " + myRange);
 		//System.out.println("PrevRange= " + prev_Range);
-		requestRange1 = myRange.subtract(prev_Range, true);
+		requestRange1 = myRange.subtract_old(prev_Range, true);
 		//System.out.println("request Range1 " + requestRange1);
-		requestRange2 = myRange.subtract(prev_Range, false);
+		requestRange2 = myRange.subtract_old(prev_Range, false);
 		//System.out.println("request Range2 " + requestRange2);
 		if(!requestRange1.isEmpty())
-		    rangeSet.add(requestRange1);
+		    rangeSet.add(new RMMessage.KEEntry(requestRange1, true));
 		if(!requestRange2.isEmpty())
-		    rangeSet.add(requestRange2);
+		    rangeSet.add(new RMMessage.KEEntry(requestRange2, true));
 
 	    }
 	    
 	    NodeSet set = requestorSet(rangeSet);
-	    //System.out.println("requestorset= " + set);
-	    for(int i=0; i<set.size(); i++) {
-		NodeHandle toNode;
-		RMRequestKeysMsg msg;
-		
-		toNode = set.get(i);
-		if(toNode.getNodeId().equals(getNodeId()))
-		   continue;
-		//System.out.println(getNodeId() + " sending requestkeys msg to" + toNode.getNodeId());
-		msg = new RMRequestKeysMsg(getLocalHandle(),getAddress(), getCredentials(), m_seqno ++, rangeSet, true);
-		
-		route(null, msg, toNode);
-	    }
+
+	    sendKeyRequestMessages(set, rangeSet);
 
 	}
 	
-
+	
     }
 
 
@@ -463,7 +509,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	NodeSet requestors = new NodeSet();
 	for(int i=0; i<rangeSet.size(); i++) {
 	    IdRange range;
-	    range = (IdRange)rangeSet.elementAt(i);
+	    range = ((RMMessage.KEEntry)rangeSet.elementAt(i)).getReqRange();
 	    if(!range.isEmpty()) {
 		Id ccw, cw;
 		NodeSet set;
@@ -486,8 +532,29 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	}
 	return requestors;
     }
-    
 
+
+    public void sendKeyRequestMessages(NodeSet set, Vector rangeSet) {
+	for(int i=0; i<set.size(); i++) {
+	    
+	    NodeHandle toNode;
+	    RMRequestKeysMsg msg;
+	    
+	    toNode = set.get(i);
+	    if(toNode.getNodeId().equals(getNodeId()))
+		continue;
+	    for(int j=0; j< rangeSet.size(); j++) {
+		RMMessage.KEEntry entry = (RMMessage.KEEntry) rangeSet.elementAt(j);
+		IdRange reqRange = entry.getReqRange();
+		addPendingRange(toNode.getNodeId(),reqRange);
+
+	    }
+	    msg = new RMRequestKeysMsg(getLocalHandle(),getAddress(), getCredentials(), m_seqno ++, rangeSet);
+	    //System.out.println(getNodeId() + "sending RequestKeys msg to " + toNode.getNodeId());
+	    route(null, msg, toNode);
+	}
+    }
+    
 }
 
 

@@ -57,32 +57,14 @@ import java.io.*;
 public class RMResponseKeysMsg extends RMMessage implements Serializable{
 
 
-    private Vector reqRangeSet;
-
-    // This range is the range of keys that the node requring to 
-    // respond with the set of keys is responsible for
-    private IdRange availRange;
-
-
-    //private IdSet keySet;
-    private Vector keySetSet;
-
-    private boolean keySetStamp;
-
-    //private Id stamp;
-    private Vector stampSet;
-
+    private Vector rangeSet;
 
     /**
      * Constructor : Builds a new RM Message
      */
-    public RMResponseKeysMsg(NodeHandle source, Address address, Credentials authorCred, int seqno, Vector _reqRangeSet, IdRange _availRange, Vector _keySetSet, Vector _stampSet, boolean _keySetStamp ) {
+    public RMResponseKeysMsg(NodeHandle source, Address address, Credentials authorCred, int seqno, Vector _rangeSet) {
 	super(source,address, authorCred, seqno);
-	this.reqRangeSet = _reqRangeSet;
-	this.availRange = _availRange;
-	this.keySetSet = _keySetSet;
-	this.stampSet = _stampSet;
-	this.keySetStamp = _keySetStamp;
+	rangeSet = _rangeSet;
     }
 
 
@@ -95,15 +77,29 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
      */
     public void handleDeliverMessage( RMImpl rm) {
 	//System.out.println(rm.getNodeId() + " received ResponseKeys msg from" + getSource().getNodeId());
-	// We will see the keys sent, filter them on the basis of 
-	// (myRange) and call fetch(IdSet) on the corresponding application
-
+	
+	// This vector starts a new round of ranges that this node requests
+	Vector toAskFor = new Vector();
 	IdSet fetchSet = new IdSet();
-	IdSet keySet;
-	if(!keySetStamp) {
-	    for(int i=0; i< keySetSet.size(); i++) {
-		keySet = (IdSet)keySetSet.elementAt(i);
-		//System.out.println("keySet= " + keySet);
+	RMMessage.KEEntry entry;
+	RMMessage.KEEntry toAskForEntry;
+
+	for(int i=0; i< rangeSet.size(); i++) {
+	    entry = (RMMessage.KEEntry) rangeSet.elementAt(i);
+	    IdRange reqRange = entry.getReqRange();
+	    IdRange iRange = entry.getRange();
+	    int numKeys = entry.getNumKeys();
+	    boolean hashEnabled = entry.getHashEnabled();
+	    Id hash = entry.getHash();
+	    IdSet keySet = entry.getKeySet();
+
+	    if(numKeys == 0) {
+		rm.removePendingRange(getSource().getNodeId(), reqRange);
+		continue;
+	    }
+	    if(!hashEnabled) {
+		
+		// We simple add these keys to the fetchSet
 		Iterator it = keySet.getIterator();
 		while(it.hasNext()) {
 		    Id key = (Id)it.next();
@@ -116,40 +112,40 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 			System.out.println("Warning: RMResponseKeysMsg has key not in the desired range");
 		    }
 		}
+		rm.removePendingRange(getSource().getNodeId(), reqRange);
+		continue;
 	    }
-	    rm.app.fetch(fetchSet);
-	}
-	else {
-
-	    //System.out.println("checking the stamped version of protocol");
-	    // Should check if the stamps match. If not generate
-	    // message to fetch keys with keySetStamp set to false
-	    Id oHash, myHash;
-	    Vector toAskFor = new Vector();
-	    for(int i=0; i< stampSet.size(); i++) {
-		oHash = (Id)stampSet.elementAt(i);
+	    else {
+		Id oHash , myHash;
+		oHash = hash;
 		//System.out.println("oHash= " + oHash);
-		IdRange iRange = (IdRange) reqRangeSet.elementAt(i);
 		IdSet myKeySet = rm.app.scan(iRange);
 		myHash = myKeySet.getHash();
-		if(!oHash.equals(myHash)) {
-		    // We neeed to explicitly ask for keys in this range
-		    toAskFor.add(iRange);
+		if(oHash.equals(myHash)) {
+		    rm.removePendingRange(getSource().getNodeId(), reqRange);
 		}
-	    }
+		else {
+		    // For the Time being we do the version we had earlier
+		    // in which we simply disable the hash
+		    toAskForEntry = new RMMessage.KEEntry(reqRange, false);
+		    toAskFor.add(toAskForEntry);
+		}
 
-	    if(toAskFor.size()!=0) {
-		RMRequestKeysMsg msg;
-		msg = new RMRequestKeysMsg(rm.getLocalHandle(),rm.getAddress() , rm.getCredentials(), rm.m_seqno ++, toAskFor, false);
-		rm.route(null, msg, getSource());
-		//System.out.println(rm.getNodeId() + "explicitly asking for keys");
-
 	    }
+	    
 	}
-	
-    }
-    
+	    
+	rm.app.fetch(fetchSet);
 
+	if(toAskFor.size()!=0) {
+	    RMRequestKeysMsg msg;
+	    msg = new RMRequestKeysMsg(rm.getLocalHandle(),rm.getAddress() , rm.getCredentials(), rm.m_seqno ++, toAskFor);
+	    rm.route(null, msg, getSource());
+	    System.out.println(rm.getNodeId() + "explicitly asking for keys");
+	    
+	}
+    }
+	
 }
 
 
