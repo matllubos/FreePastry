@@ -83,6 +83,9 @@ hr {
 }
 .frontmatter h1 {
 	margin-bottom: 0.5em;
+	font-size: 400%;
+	letter-spacing: -3px;
+	color: #666;
 }
 .frontmatter h3 {
 	font-size: 120%;
