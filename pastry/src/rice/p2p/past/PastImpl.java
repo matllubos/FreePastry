@@ -104,11 +104,12 @@ public class PastImpl implements Past, Application, RMClient {
     endpoint = node.registerApplication(this, instance);
     factory = node.getIdFactory();
 
-    replicaManager = new RMImpl((rice.pastry.PastryNode) node, this, replicas, instance);
     id = Integer.MIN_VALUE;
     outstanding = new Hashtable();
     replicationFactor = replicas;
     pending = factory.buildIdSet();
+
+    replicaManager = new RMImpl((rice.pastry.PastryNode) node, this, replicas, instance);
   }
   
 
@@ -765,7 +766,10 @@ public class PastImpl implements Past, Application, RMClient {
 
       public void receiveResult(Object o) {
         if (o instanceof IdSet) {
-          notIds = ((IdSet) o).getIterator();
+          Iterator i = ((IdSet) o).getIterator();
+          Vector v = new Vector();
+          while (i.hasNext()) v.add(i.next());
+          notIds = v.iterator();
         } else if (! o.equals(new Boolean(true))) {
           System.out.println("Unstore of Id did not succeed!");
         }

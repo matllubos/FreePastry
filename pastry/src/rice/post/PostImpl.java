@@ -722,6 +722,9 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
                            nm.getSender() + " - dropping on floor.");
         return;
       }
+
+      if (rice.pastry.Log.ifp(6))
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: successfully verified ENM with NM: " + nm);
       
       // deliver notification messag
       PostClient client = (PostClient) clientAddresses.get(nm.getClientAddress());
@@ -805,6 +808,9 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
      * Starts this task running.
      */
     public void start() {
+      if (rice.pastry.Log.ifp(6))
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: looking up postlog for : " + address);
+      
       SignedReference logRef = new SignedReference(address.getAddress());
       storage.retrieveSigned(logRef, this);
 
@@ -822,6 +828,9 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
         final PostLog log = (PostLog) o;
 
         if (log == null) {
+          if (rice.pastry.Log.ifp(6))
+            System.out.println(thePastryNode.getNodeId() + "DEBUG: could not find postlog for: " + address);
+          
           if (address.equals(getEntityAddress())) {
             PostImpl.this.log = new PostLog(address, keyPair.getPublic(), certificate, PostImpl.this, command);
             return;
@@ -854,6 +863,9 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
                 PostImpl.this.log = log;
               }
 
+              if (rice.pastry.Log.ifp(6))
+                System.out.println(thePastryNode.getNodeId() + "DEBUG: successfully retrieved postlog for: " + address);
+              
               command.receiveResult(log);
             } else  {
               command.receiveException(new PostException("Certificate of PostLog could not verified for entity: " + address));

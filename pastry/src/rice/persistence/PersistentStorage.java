@@ -263,7 +263,7 @@ public class PersistentStorage implements Storage {
    * @return The idset containg the keys 
    */
   public void scan(IdRange range , Continuation c) {
-    IdSet toReturn = idSet.subSet(factory.buildIdRange(range.getCCWId(), range.getCWId())); 
+    IdSet toReturn = idSet.subSet(range); 
     c.receiveResult(toReturn);
   }
 
@@ -281,7 +281,7 @@ public class PersistentStorage implements Storage {
    * @return The idset containg the keys 
    */
   public IdSet scan(IdRange range){
-    IdSet toReturn = idSet.subSet(factory.buildIdRange(range.getCCWId(), range.getCWId())); 
+    IdSet toReturn = idSet.subSet(range); 
     return(toReturn);
   }
 

@@ -180,7 +180,7 @@ public class MemoryStorage implements Storage {
    * @param c The command to run once the operation is complete
    */
   public void scan(IdRange range , Continuation c) {
-    c.receiveResult(idSet.subSet(factory.buildIdRange(range.getCCWId(), range.getCWId())));    
+    c.receiveResult(idSet.subSet(range));    
   }
 
   /**
@@ -197,7 +197,7 @@ public class MemoryStorage implements Storage {
    * @return The idset containg the keys 
    */
   public IdSet scan(IdRange range){
-    IdSet toReturn = idSet.subSet(factory.buildIdRange(range.getCCWId(), range.getCWId())); 
+    IdSet toReturn = idSet.subSet(range); 
     return(toReturn);
   }
 

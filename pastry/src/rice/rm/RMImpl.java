@@ -696,7 +696,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	myRange = range(getLocalHandle(), rFactor, getNodeId(), true);
 
 
-	
+  
 	if((myRange== null) || (prev_Range == null) || myRange.equals(prev_Range))
 	    return;
 

@@ -178,9 +178,7 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 		while(it.hasNext()) {
 		    if(rm.myRange!=null) {
 			Id key = (Id)it.next();
-			Id ccw = rm.myRange.getCCW();
-			Id cw = rm.myRange.getCW();
-			if(key.isBetween(ccw, cw)) {
+			if(rm.myRange.contains(key)) {
 			    fetchSet.addMember(key);
 			}
 			else {

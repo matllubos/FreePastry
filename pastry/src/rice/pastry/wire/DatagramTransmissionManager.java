@@ -523,8 +523,6 @@ public class DatagramTransmissionManager {
                 }
               }
 
-              handle.markDead();
-
               if (queue.size() > 0)
                 state = STATE_READY;
               else

@@ -143,6 +143,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
    */
   public IdSet subSet(Id from, Id to) {
     IdSet res;
+
     if (from.compareTo(to) <= 0) {
       res = new IdSet( (TreeSet) idSet.subSet(from, to));
     } else {
@@ -162,7 +163,13 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
    * @return the subset
    */
   public IdSet subSet(IdRange range) {
-    return subSet(range.getCCW(), range.getCW());
+    if (range.isEmpty()) {
+      return new IdSet();
+    } else if (range.getCCW().equals(range.getCW())) {
+      return this;
+    } else {
+      return subSet(range.getCCW(), range.getCW());
+    }
   }
 
   /**

@@ -12,7 +12,7 @@ import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.*;
 import rice.pastry.direct.*;
-import rice.pastry.wire.*;
+import rice.pastry.dist.*;
 import rice.pastry.standard.*;
 
 import rice.scribe.*;
@@ -63,6 +63,11 @@ public abstract class PostProxy {
    * The default port on the remote host to boot off of
    */
   static int BOOTSTRAP_PORT = PORT;
+
+  /**
+   * The procotol to use when creating nodes
+   */
+  static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
 
   /**
    * The default size of the cache to use (in bytes)
@@ -161,8 +166,10 @@ public abstract class PostProxy {
   protected void start() {
     try {
       sectionStart("Creating and Initializing Services");
-      stepStart("Creating Pastry node");
-      WirePastryNodeFactory factory = new WirePastryNodeFactory(new IPNodeIdFactory(PORT), PORT);
+      stepStart("Creating Pastry node"); 
+      DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new IPNodeIdFactory(PORT),
+                                                                       PROTOCOL,
+                                                                       PORT);	
       InetSocketAddress bootAddress = new InetSocketAddress(BOOTSTRAP_HOST, BOOTSTRAP_PORT);
 
       pastry = factory.newNode(factory.getNodeHandle(bootAddress));
@@ -246,7 +253,7 @@ public abstract class PostProxy {
         pass = CAKeyGenerator.fetchPassword(name + "'s password");
 
         try {
-          System.out.print("    Decrypting " + name + "'s keypair");
+          stepStart("Decrypting " + name + "'s keypair");
           key = SecurityUtils.hash(pass.getBytes());
           data = SecurityUtils.decryptSymmetric(cipher, key);
         } catch (SecurityException se) {
@@ -338,6 +345,21 @@ public abstract class PostProxy {
         System.exit(0);
       }
     }
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-protocol") && i+1 < args.length) {
+        String s = args[i+1];
+
+        if (s.equalsIgnoreCase("wire"))
+          PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
+        else if (s.equalsIgnoreCase("rmi"))
+          PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
+        else
+          System.out.println("ERROR: Unsupported protocol: " + s);
+
+        break;
+      }
+    }    
 
     return args[0];
   }

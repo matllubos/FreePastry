@@ -47,7 +47,7 @@ import java.security.*;
  */
 public class EmailProxy extends PostProxy {
 
-  static int IMAP_PORT = 1143;
+  static int IMAP_PORT = 1143; 
   static int SMTP_PORT = 1025;
  
   private EmailService email;
