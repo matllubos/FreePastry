@@ -606,6 +606,13 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
       return alive;
     }
 
+    if (getLocalNode() != null) {
+      if (((WireNodeHandle) getLocalNode().getLocalHandle()).getAddress().getAddress().equals(address.getAddress())) {
+        setProximity(1);
+        return alive;
+      }
+    }
+      
     long now = System.currentTimeMillis();
     if (now - lastpingtime < PING_THROTTLE*1000)
         return alive;
@@ -658,9 +665,6 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
   }
 
   public String toStringImpl() {
-    return (isLocal ? "(local " : "") + "handle " + nodeId
-            + (alive ? "" : ":dead")
-            + ", localnode = " + getLocalNode()
-            + " " + address + ")";
+    return nodeId + " (" + address.getAddress().getHostAddress() + ":" + address.getPort() + ")";
   }
 }
