@@ -35,7 +35,7 @@ public class SplitStreamContent implements ScribeContent {
   public byte[] getData() {
     return data;
   }
-
+/*
   public String toString() {
 
 
@@ -58,6 +58,6 @@ public class SplitStreamContent implements ScribeContent {
       return seqNumber+"\t"+"\t"+sentTime;
   }
   
-  
+  */
 }
 

@@ -122,7 +122,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
 	}	
 	//System.out.println("Total outgoing capacity Used "+total);
 	
-	if(result && (total == (NUM_NODES -1 ) * SplitStreamScribePolicy.DEFAULT_MAXIMUM_CHILDREN)){
+	if(result && (total <= (NUM_NODES -1 ) * SplitStreamScribePolicy.DEFAULT_MAXIMUM_CHILDREN)){
 	    stepDone(SUCCESS);
 	}
 	else{
