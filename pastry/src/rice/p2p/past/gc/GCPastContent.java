@@ -47,10 +47,8 @@ import rice.p2p.past.*;
  *
  * This interface represents an object which is storable in the GCPast
  * system.  This interface adds on methods which return the object's 
- * intial expiration time as well as version number.  NOTE:  The expiration
- * time returned by this object is only the initial expiration time with
- * which the object was inserted.  If the object was extended via a refresh()
- * call, the new expiration time will not be reflected here.
+ * version number, which to used to disambiguate multiple versions of
+ * the same object.
  *
  * @version $Id$
  * @author Alan Mislove
@@ -66,14 +64,6 @@ public interface GCPastContent extends PastContent {
    * @return The version number of this object
    */
   public long getVersion();
-  
-  /**
-   * Returns the initial expiration time of this object.  Note that if the object's
-   * life has been extended, it will not be reflected in this method.
-   *
-   * @return The initial expiration time of this object
-   */
-  public long getInitialExpiration();
 
 }
 

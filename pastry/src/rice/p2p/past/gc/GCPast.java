@@ -58,6 +58,49 @@ import rice.p2p.past.*;
  * @author Andreas Haeberlen
  */
 public interface GCPast extends Past {
+  
+  /**
+   * Timeout valid which indicates that the object should never expire
+   */
+  public static final long INFINITY_EXPIRATION = -1L;
+  
+  /**
+   * Inserts an object with the given ID into this instance of Past.
+   * Asynchronously returns a PastException to command, if the
+   * operation was unsuccessful.  If the operation was successful, a
+   * Boolean[] is returned representing the responses from each of
+   * the replicas which inserted the object.
+   *
+   * This method is equivalent to 
+   *
+   * insert(obj, INFINITY_EXPIRATION, command)
+   *
+   * as it inserts the object with a timeout value of infinity.  This
+   * is done for simplicity, as well as backwards-compatibility for 
+   * applications.
+   * 
+   * @param obj the object to be inserted
+   * @param command Command to be performed when the result is received
+   */
+  public void insert(PastContent obj, Continuation command);
+  
+  /**
+   * Inserts an object with the given ID into this instance of Past.
+   * Asynchronously returns a PastException to command, if the
+   * operation was unsuccessful.  If the operation was successful, a
+   * Boolean[] is returned representing the responses from each of
+   * the replicas which inserted the object.
+   *
+   * The contract for this method is that the provided object will be 
+   * stored until the provided expiration time.  Thus, if the application
+   * determines that it is still interested in this object, it must refresh
+   * the object via the refresh() method.
+   * 
+   * @param obj the object to be inserted
+   * @param expiration the time until which the object must be stored
+   * @param command Command to be performed when the result is received
+   */
+  public void insert(PastContent obj, long expiration, Continuation command);
 
   /**
    * Updates the objects stored under the provided key id to expire no

@@ -40,13 +40,14 @@ import java.io.Serializable;
 
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.past.*;
 
 /**
  * @(#) PastContentHandle.java
  * 
  * This interface represents a content handle which is used in the versioned and
  * garbage-collected version of Past.  It adds support for a version number as 
- * well as the current timestamp.
+ * well as the current expiration time.
  *
  * @version $Id$
  * @author Alan Mislove
@@ -64,8 +65,7 @@ public interface GCPastContentHandle extends PastContentHandle {
   public long getVersion();
   
   /**
-   * Returns the expiration time of this object.  This returns the *current* expiration
-   * time of the object, which may not match the PastContent's getInitialExpiration()
+   * Returns the current expiration time of this object.
    *
    * @return The current expiration time of this object
    */
