@@ -345,6 +345,14 @@ public abstract class DistCommonAPITest {
     }
 
     for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-nodes") && i+1 < args.length) {
+        int p = Integer.parseInt(args[i+1]);
+        if (p > 0) NUM_NODES = p;
+        break;
+      }
+    }
+
+    for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-port") && i+1 < args.length) {
         int p = Integer.parseInt(args[i+1]);
         if (p > 0) PORT = p;
