@@ -59,7 +59,7 @@ public class SplitStreamScribePolicy implements ScribePolicy {
   /**
    * The default maximum number of children per channel
    */
-  public static int DEFAULT_MAXIMUM_CHILDREN = 16;
+  public static int DEFAULT_MAXIMUM_CHILDREN = 24;
 
   /**
    * A reference to this policy's splitstream object
