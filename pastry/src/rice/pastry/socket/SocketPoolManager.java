@@ -20,6 +20,8 @@ import rice.selector.TimerTask;
  * This class is in charge of "enforcing" the limitiaton on the number 
  * of sockets specified in SocketCollectionManager.MAX_OPEN_SOCKETS.
  * 
+ * see transferIdleToWaiting() for the core logic.
+ * 
  * @author Jeff Hoye
  */
 public class SocketPoolManager {
@@ -50,8 +52,15 @@ public class SocketPoolManager {
    */
   private LinkedList queue = new LinkedList(); // last is most recently used
 
+  /**
+   * Backpointer.
+   */
   SocketCollectionManager scm;
 
+  /**
+   * Constructor for the SocketPoolManager
+   * @param scm the SocketCollectionManager associated with this SPM
+   */
 	public SocketPoolManager(SocketCollectionManager scm) {
     this.scm = scm;
 	}
@@ -104,6 +113,11 @@ public class SocketPoolManager {
 //    return false;
   }
 
+  /**
+   * Returns up to numIdles idle SocketManagers
+   * @param numIdles the maximum number of idle SocketManagers you want
+   * @return a collection of idle SocketManagers
+   */
   public Collection getIdles(int numIdles) {
     LinkedList idles = new LinkedList();
     Iterator i = queue.iterator();
@@ -119,10 +133,18 @@ public class SocketPoolManager {
     return idles;
   }
   
+  /**
+   * Returns the number of idle connections.
+   * @return the number of idle connections.
+   */
   public int countIdles() {
     return getIdles(queue.size()).size();
   }
   
+  /**
+   * Closes the first idle SocketManager it finds.
+   * @return true if it closed an idle SocketManager
+   */
   public boolean closeNextIdle() {
     Iterator i = queue.iterator();
     while(i.hasNext()) {
@@ -168,12 +190,20 @@ public class SocketPoolManager {
     transferIdleToWaiting();
   }
 
+  /**
+   * Throws an exception if the SocketManger is closed.
+   * @param sm the assumedly open SocketManager
+   */
   private void assertNotClosed(SocketManager sm) {
     if (sm.closed) {
       throw new RuntimeException("Socket is closed");
     }
   }
 
+  /**
+   * This is a SocketManager that needs to be added to the permitted set.
+   * @param sm the newly permitted SocketManager
+   */
   public void addPermitted(SocketManager sm) {
     if (permittedSet.contains(sm)) {
       throw new RuntimeException("SocketManager already given permit");
@@ -181,10 +211,20 @@ public class SocketPoolManager {
     permittedSet.add(sm);    
   }
 
+  /**
+   * Returns the number of sockets that are permitted to be opened.
+   * This is the MAX_OPEN_SOCKETS-the queue and permittedSet
+   * @return the number of sockets we are permitting to open.
+   */
   private int availablePermits() {
     return MAX_OPEN_SOCKETS-(queue.size()+permittedSet.size());
   }
 
+  /**
+   * Adds the SocketManager to the queue of SocketManagers waiting to 
+   * have openSocket() called on them.
+   * @param sm the SocketManager requesting to open a socket.
+   */
   private void addWaiting(SocketManager sm) {
 //    if (printMe(sm))
       //System.out.println("  ** addWaiting("+sm+")");
@@ -192,6 +232,9 @@ public class SocketPoolManager {
     waitingQueue.add(sm);            
   }
 
+  /**
+   * Prints out all of the idle SocketManagers.
+   */
   private void printIdleSockets() {
     Iterator i = getIdles(queue.size()).iterator();
     while(i.hasNext()) {
@@ -199,6 +242,9 @@ public class SocketPoolManager {
     }
   }
 
+  /**
+   * Prints out all of the non-idle SocketManagers.
+   */
   public void printBusySockets() {
     Iterator i = queue.iterator();
     while(i.hasNext()) {
@@ -209,6 +255,10 @@ public class SocketPoolManager {
     }
   }
 
+  /**
+   * Prints out all of the SocketManagers who are waiting to have 
+   * openSocket() called on them.
+   */
   private void printWaitingSockets() {
     Iterator i = waitingQueue.iterator();
     while(i.hasNext()) {
@@ -216,6 +266,10 @@ public class SocketPoolManager {
     }
   }
 
+  /**
+   * Returns the next SocketManager waiting to have openSocket() called on it.
+   * @return a SocketManger to cal openSocket() on.
+   */
   private SocketManager removeNextWaiting() {
     SocketManager sm = (SocketManager)waitingQueue.removeFirst();
     waitingSet.remove(sm);
@@ -249,19 +303,18 @@ public class SocketPoolManager {
     }
   }  
 
+  /**
+   * This method closes idle sockets and opens waiting sockets if there are 
+   * sockets waiting to be opened.  This method is the heart of the logic 
+   * for SocketPoolManager
+   * 
+   * TODO, explain recursion
+   */
   private void transferIdleToWaiting() {
     if (!scm.pastryNode.isAlive()) return;
     //System.out.println("transferIdleToWaiting():"+this);
     
     closeSocketsIfNecessary();
-    if (printMe(null)) {
-      //System.out.println("transferIdleToWaiting():"+this);
-      Iterator i = queue.iterator();
-      while(i.hasNext()) {
-        SocketManager sm = (SocketManager)i.next();
-        //System.out.println("  queue:"+sm);
-      }
-    }
     
     while (scm.pastryNode.isAlive() && itemsAreWaiting() && (availablePermits() > 0)) {
       openNextWaiting();
@@ -355,20 +408,27 @@ public class SocketPoolManager {
   }
 
 
-  private boolean printMe(SocketManager sm) {
-    //if (true) return false;
-    if (scm.getAddress().getPort() == 5009) {
-      //System.out.println(this);
-      return true;
-    }
-    return false;
-  }
+//  private boolean printMe(SocketManager sm) {
+//    //if (true) return false;
+//    if (scm.getAddress().getPort() == 5009) {
+//      //System.out.println(this);
+//      return true;
+//    }
+//    return false;
+//  }
 
+  /**
+   * Yee ol' toString()
+   */
   public String toString() {
     String s = "M:"+MAX_OPEN_SOCKETS+" p:"+availablePermits()+" q:"+queue.size()+" w:"+waitingSet.size()+" w2:"+waitingQueue.size()+" myTimer:"+myTimer;
     return s;
   }
 
+  /**
+   * A debugging method.
+   * @return
+   */
   public String getStatus() {
     String s = "";
     Iterator i = queue.iterator();
