@@ -91,6 +91,16 @@ public interface Catalog {
    * @param c The command to run once the operation is complete
    */
   public void getObject(Id id, Continuation c);
+  
+  /**
+   * Renames the given object to the new id.  This method is potentially faster
+   * than store/cache and unstore/uncache.
+   *
+   * @param oldId The id of the object in question.
+   * @param newId The new id of the object in question.
+   * @param c The command to run once the operation is complete
+   */
+  public void rename(Id oldId, Id newId, Continuation c);
 
   /**
    * Return the objects identified by the given range of ids. The IdSet 

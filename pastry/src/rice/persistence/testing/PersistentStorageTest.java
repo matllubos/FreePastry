@@ -44,6 +44,7 @@ package rice.persistence.testing;
  * 
  * @version $Id$
  */
+import java.io.*;
 import java.util.*;
 
 import rice.*;
@@ -62,12 +63,12 @@ public class PersistentStorageTest extends MemoryStorageTest {
   /**
    * Builds a MemoryStorageTest
    */
-  public PersistentStorageTest(boolean store) {
+  public PersistentStorageTest(boolean store) throws IOException {
     super(store);
     storage = new PersistentStorage(FACTORY, "PersistentStorageTest" , ".", 20000000);
   }
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
     boolean store = true;
 
     if (args.length > 0) {

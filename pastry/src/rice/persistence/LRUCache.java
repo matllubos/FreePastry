@@ -49,6 +49,7 @@ import java.util.*;
 import java.util.zip.*;
 
 import rice.*;
+import rice.Continuation.*;
 import rice.p2p.commonapi.*;
 
 import rice.serialization.*;
@@ -86,6 +87,25 @@ public class LRUCache implements Cache {
     
     while (i.hasNext())
       order.addLast(i.next());
+  }
+  
+  /**
+   * Renames the given object to the new id.  This method is potentially faster
+   * than store/cache and unstore/uncache.
+   *
+   * @param oldId The id of the object in question.
+   * @param newId The new id of the object in question.
+   * @param c The command to run once the operation is complete
+   */
+  public void rename(final Id oldId, final Id newId, Continuation c) {
+    storage.rename(oldId, newId, new StandardContinuation(c) {
+      public void receiveResult(Object o) {
+        synchronized (order) {
+          order.remove(oldId);
+          order.addFirst(newId);
+        }
+      }
+    });
   }
 
   /**
@@ -371,7 +391,7 @@ public class LRUCache implements Cache {
   private int getSize(Object obj) {
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      ObjectOutputStream oos = new ObjectOutputStream(baos);
+      ObjectOutputStream oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(baos)));
 
       oos.writeObject(obj);
       oos.flush();

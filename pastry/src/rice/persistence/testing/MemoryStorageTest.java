@@ -44,6 +44,7 @@ package rice.persistence.testing;
  * 
  * @version $Id$
  */
+import java.io.*;
 import java.util.*;
 
 import rice.*;
@@ -817,7 +818,7 @@ public class MemoryStorageTest extends Test {
 	try{	Thread.sleep(20000);}catch(InterruptedException ie){;}
   }
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
     MemoryStorageTest test = new MemoryStorageTest(true);
 
     test.start();

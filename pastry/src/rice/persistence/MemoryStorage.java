@@ -83,8 +83,31 @@ public class MemoryStorage implements Storage {
     idSet = factory.buildIdSet();
     storage = new Hashtable();
     currentSize = 0;
+  } 
+  
+  /**
+   * Renames the given object to the new id.  This method is potentially faster
+   * than store/cache and unstore/uncache.
+   *
+   * @param oldId The id of the object in question.
+   * @param newId The new id of the object in question.
+   * @param c The command to run once the operation is complete
+   */
+  public void rename(Id oldId, Id newId, Continuation c) {
+    if (! idSet.isMemberId(oldId)) {
+      c.receiveResult(new Boolean(false));
+      return;
+    }
+    
+    idSet.removeId(oldId);
+    idSet.addId(newId);
+    
+    storage.put(newId, storage.get(oldId));
+    storage.remove(oldId);
+    
+    c.receiveResult(new Boolean(true));
   }
-
+    
   /**
    * Stores the object under the key <code>id</code>.  If there is already
    * an object under <code>id</code>, that object is replaced.
@@ -235,7 +258,7 @@ public class MemoryStorage implements Storage {
   private int getSize(Object obj) {
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      ObjectOutputStream oos = new ObjectOutputStream(baos);
+      ObjectOutputStream oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(baos)));
 
       oos.writeObject(obj);
       oos.close();
