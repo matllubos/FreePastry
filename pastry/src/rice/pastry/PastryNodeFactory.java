@@ -56,6 +56,12 @@ import java.util.*;
 public abstract class PastryNodeFactory {
 
   /**
+   * Hashtable which keeps track of temporary ping values, which are
+   * only used during the getNearest() method
+   */
+  private Hashtable pingCache = new Hashtable();
+
+  /**
    * Call this to construct a new node of the type chosen by the factory.
    *
    * @param bootstrap The node handle to bootstrap off of
@@ -72,16 +78,25 @@ public abstract class PastryNodeFactory {
   public abstract PastryNode newNode(NodeHandle bootstrap, NodeId nodeId);
 
   /**
-   * This method sends the given message across the wire to the remote
-   * node specified by the given node handle, and then blocks waiting
-   * for a response to come back.  Once the response is recieved, this
-   * method unblocks and the result is returned to the caller.  This
-   * should be done in a protocol-specific manner.
+   * This method returns the remote leafset of the provided handle
+   * to the caller, in a protocol-dependent fashion.  Note that this method
+   * may block while sending the message across the wire.
    *
-   * @param message The message to send
-   * @return The first message to come back
+   * @param handle The node to connect to
+   * @return The leafset of the remote node
    */
-  protected abstract Message getResponse(NodeHandle handle, Message message);
+  public abstract LeafSet getLeafSet(NodeHandle handle);
+
+  /**
+   * This method returns the remote route row of the provided handle
+   * to the caller, in a protocol-dependent fashion.  Note that this method
+   * may block while sending the message across the wire.
+   *
+   * @param handle The node to connect to
+   * @param row The row number to retrieve
+   * @return The route row of the remote node
+   */
+  public abstract RouteSet[] getRouteRow(NodeHandle handle, int row);
 
   /**
    * This method determines and returns the proximity of the current local
@@ -91,8 +106,26 @@ public abstract class PastryNodeFactory {
    * @param handle The handle to determine the proximity of
    * @return The proximity of the provided handle
    */
-  protected abstract int getProximity(NodeHandle handle);
+  public abstract int getProximity(NodeHandle local, NodeHandle handle);
 
+  /**
+   * Method which checks to see if we have a cached value of the remote ping, and
+   * if not, initiates a ping and then caches the value
+   *
+   * @param handle The handle to ping
+   * @return The proximity of the handle
+   */
+  private int proximity(NodeHandle local, NodeHandle handle) {
+    if (pingCache.get(handle.getNodeId()) == null) {
+      int value = getProximity(local, handle);
+      pingCache.put(handle.getNodeId(), new Integer(value));
+
+      return value;
+    } else {
+      return ((Integer) pingCache.get(handle.getNodeId())).intValue();
+    }
+  }
+  
   /**
    * This method implements the algorithm in the Pastry locality paper
    * for finding a close node the the current node through iterative
@@ -104,45 +137,56 @@ public abstract class PastryNodeFactory {
    * @param seed Any member of the pastry ring
    * @return A node suitable to boot off of (which is close the this node)
    */
-  public NodeHandle getNearest(NodeHandle seed) {
+  public NodeHandle getNearest(NodeHandle local, NodeHandle seed) {
+    System.out.println("GET NEAREST STARTED WITH " + local + " SEED " + seed);
+    
+    // if the seed is null, we can't do anything
+    if (seed == null)
+      return null;
+    
     // seed is the bootstrap node that we use to enter the pastry ring
     NodeHandle currentClosest = seed;
     NodeHandle nearNode = seed;
 
-    // get the leaf set of the remote node
-    BroadcastLeafSet leafBroadcast = (BroadcastLeafSet) getResponse(nearNode, new RequestLeafSet(nearNode));
+    System.out.println("GETTING LEAFSET");
     
     // get closest node in leafset
-    nearNode = closestToMe(nearNode, leafBroadcast.leafSet());
+    nearNode = closestToMe(local, nearNode, getLeafSet(nearNode));
+
+    System.out.println("GOT LEAFSET");
 
     // get the number of rows in a routing table
     // -- Here, we're going to be a little inefficient now.  It doesn't
     // -- impact correctness, but we're going to walk up from the bottom
     // -- of the routing table, even through some of the rows are probably
     // -- unfilled.  We'll optimize this in a later iteration.
-    int depth = NodeId.nodeIdBitLength / RoutingTable.idBaseBitLength;
-    BroadcastRouteRow routeBroadcast ;
-    RouteSet[] sets ;
+    int depth = (NodeId.nodeIdBitLength / RoutingTable.idBaseBitLength);
+    int i = 0;
 
     // now, iteratively walk up the routing table, picking the closest node
     // each time for the next request
-    while (depth > 0) {
-      routeBroadcast = (BroadcastRouteRow)getResponse(nearNode, new RequestRouteRow(nearNode, depth--));
-      sets = routeBroadcast.getRow();
-      nearNode = closestToMe(nearNode, sets);
+    while (i < depth) {
+      System.out.println("GETTING ROW "  + i);
+      nearNode = closestToMe(local, nearNode, getRouteRow(nearNode, i));
+      i++;
     }
 
     // finally, recursively examine the top level routing row of the nodes
     // until no more progress can be made
     do {
-      routeBroadcast = (BroadcastRouteRow)getResponse(nearNode, new RequestRouteRow(nearNode, 0));
-      sets = routeBroadcast.getRow();
+      System.out.println("RUNNING LAST STEP");
       currentClosest = nearNode;
-      nearNode = closestToMe(nearNode, sets);
-    } while (currentClosest != nearNode);
+      nearNode = closestToMe(local, nearNode, getRouteRow(nearNode, depth-1));
+    } while (! currentClosest.equals(nearNode));
+    
+    System.out.println("DONE - RETURNING NODE " + nearNode + " FROM SEED " + seed);
+
+    if (nearNode.getLocalNode() == null) {
+      nearNode.setLocalNode(local.getLocalNode());
+    }
 
     // return the resulting closest node
-    return nearNode ;
+    return nearNode;
   }
 
   /**
@@ -154,13 +198,16 @@ public abstract class PastryNodeFactory {
    * @param leafSet The leafset to include
    * @return The closest node out of handle union leafset
    */
-  private NodeHandle closestToMe(NodeHandle handle, LeafSet leafSet) {
+  private NodeHandle closestToMe(NodeHandle local, NodeHandle handle, LeafSet leafSet) {
     Vector handles = new Vector();
 
-    for (int i = 0 ; i < leafSet.size() ; i++)
+    for (int i = 1; i <= leafSet.cwSize() ; i++)
       handles.add(leafSet.get(i));
 
-    return closestToMe(handle, (NodeHandle[]) handles.toArray(new NodeHandle[0]));
+    for (int i = -leafSet.ccwSize(); i < 0; i++)
+      handles.add(leafSet.get(i));
+
+    return closestToMe(local, handle, (NodeHandle[]) handles.toArray(new NodeHandle[0]));
   }
 
   /**
@@ -172,18 +219,19 @@ public abstract class PastryNodeFactory {
    * @param routeSet The routeset to include
    * @return The closest node out of handle union routeset
    */
-  private NodeHandle closestToMe(NodeHandle handle, RouteSet[] routeSets) {
+  private NodeHandle closestToMe(NodeHandle local, NodeHandle handle, RouteSet[] routeSets) {
     Vector handles = new Vector();
-    RouteSet set ;
 
     for (int i=0 ; i<routeSets.length ; i++) {
-      set=routeSets[i];
-      
-      for (int j=0; j<set.size(); j++) 
-        handles.add(set.get(j));
+      RouteSet set = routeSets[i];
+
+      if (set != null) {
+        for (int j=0; j<set.size(); j++)
+          handles.add(set.get(j));
+      }
     }
 
-    return closestToMe(handle, (NodeHandle[]) handles.toArray(new NodeHandle[0]));
+    return closestToMe(local, handle, (NodeHandle[]) handles.toArray(new NodeHandle[0]));
   }
 
   /**
@@ -195,17 +243,17 @@ public abstract class PastryNodeFactory {
    * @param handles The array to include
    * @return The closest node out of handle union array
    */
-  private NodeHandle closestToMe(NodeHandle handle, NodeHandle[] handles) {
+  private NodeHandle closestToMe(NodeHandle local, NodeHandle handle, NodeHandle[] handles) {
     NodeHandle closestNode = handle;
 
     // shortest distance found till now    
-    int nearestdist = getProximity(closestNode);  
+    int nearestdist = proximity(local, closestNode);  
 
     for (int i=0; i < handles.length; i++) {
       NodeHandle tempNode = handles[i];
-      
-      if (getProximity(tempNode) < nearestdist) {
-        nearestdist = getProximity(tempNode);
+
+      if (getProximity(local, tempNode) < nearestdist) {
+        nearestdist = proximity(local, tempNode);
         closestNode = tempNode;
       }
     }

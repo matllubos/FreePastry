@@ -611,14 +611,16 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
         return alive;
       }
     }
-      
-    long now = System.currentTimeMillis();
-    if (now - lastpingtime < PING_THROTTLE*1000)
-        return alive;
-
-    lastpingtime = now;
 
     if (getLocalNode() != null) {
+
+      long now = System.currentTimeMillis();
+      
+      if (now - lastpingtime < PING_THROTTLE*1000)
+        return alive;
+
+      lastpingtime = now;
+      
       // always send ping over UDP
       ((WirePastryNode) getLocalNode()).getDatagramManager().write(nodeId, address, new PingMessage(getLocalNode().getNodeId(), nodeId, 0, this));
     }
@@ -640,7 +642,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
    *
    * @param starttime The time at which this ping was initiated.
    */
-  public void pingResponse() {
+  public void pingResponse() {    
     if (isLocal) {
       debug("ERROR (pingResponse): Ping should never be sent to local node...");
       return;
@@ -664,6 +666,6 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
   }
 
   public String toStringImpl() {
-    return nodeId + " (" + address.getAddress().getHostAddress() + ":" + address.getPort() + ")";
+    return "[" + nodeId + " (" + address.getAddress().getHostAddress() + ":" + address.getPort() + ") on " + localnode + "]";
   }
 }

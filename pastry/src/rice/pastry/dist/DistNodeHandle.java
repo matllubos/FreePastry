@@ -54,6 +54,8 @@ import java.util.*;
  */
 public abstract class DistNodeHandle extends NodeHandle implements Observer {
 
+    public static int DEFAULT_DISTANCE = Integer.MAX_VALUE;
+
     // the nodeId of this node handle's remote node
     protected NodeId nodeId;
 
@@ -85,7 +87,7 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
 
       isInPool = false;
       alive = true;
-      distance = Integer.MAX_VALUE;
+      distance = DEFAULT_DISTANCE;
       isLocal = false;
     }
 
@@ -194,6 +196,8 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
         return;
       }
 
+      (new Exception()).printStackTrace();
+
       if (alive == true) {
         if (Log.ifp(5)) {
           if (getLocalNode() == null) {
@@ -244,8 +248,6 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
      */
     protected final void setProximity(int value) {
       distance = value;
-
-      //System.out.println("prox=" + value);
       setChanged();
       notifyObservers(PROXIMITY_CHANGED);
     }
@@ -388,7 +390,7 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
       verified = false;
       isInPool = false;
       alive = true;
-      distance = Integer.MAX_VALUE;
+      distance = DEFAULT_DISTANCE;
       isLocal = false;
     }
 

@@ -1,6 +1,7 @@
 PACKAGE = rice.pastry.testing
 
 SOURCE  = \
+        ClosestRegrTest.java \
 	HelloWorld.java \
 	HelloWorldApp.java \
 	PastryTest.java \

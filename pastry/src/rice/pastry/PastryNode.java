@@ -169,7 +169,7 @@ public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.
     }
     
     public LeafSet getLeafSet() { return leafSet; }
-    
+
     public RoutingTable getRoutingTable() { return routeSet; }
     
     /**

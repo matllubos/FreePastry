@@ -37,7 +37,9 @@ if advised of the possibility of such damage.
 package rice.pastry.rmi;
 
 import rice.pastry.*;
+import rice.pastry.leafset.*;
 import rice.pastry.messaging.*;
+import rice.pastry.routing.*;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
@@ -52,6 +54,8 @@ import java.rmi.RemoteException;
  */
 public interface RMIRemoteNodeI extends Remote
 {
+    public LeafSet getLeafSet() throws java.rmi.RemoteException;
+    public RouteSet[] getRouteRow(int row) throws java.rmi.RemoteException;
     public NodeId getNodeId() throws java.rmi.RemoteException;
     public void remoteReceiveMessage(Message msg, NodeId hopDest) throws java.rmi.RemoteException;
 }

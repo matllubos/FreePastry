@@ -36,12 +36,15 @@ if advised of the possibility of such damage.
 
 package rice.pastry.dist;
 
+import rice.*;
+import rice.Continuation.*;
 import rice.pastry.*;
 import rice.pastry.rmi.*;
 import rice.pastry.wire.*;
 import rice.pastry.messaging.*;
 
 import java.net.*;
+import java.util.*;
 
 /**
  * An abstraction of the nodeId factory for distributed nodes. In order to
@@ -126,14 +129,6 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
       return new WirePastryNodeFactory(nf, port);
 
     throw new IllegalArgumentException("Unsupported Protocol " + protocol);
-  }
-  
-  protected Message getResponse(NodeHandle handle, Message message) {
-    return null ;
-  }
-  
-  protected int getProximity(NodeHandle handle) {
-    return 0 ;
   }
 }
 

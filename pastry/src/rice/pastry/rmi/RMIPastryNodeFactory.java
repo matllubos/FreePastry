@@ -59,8 +59,8 @@ import java.net.*;
  * @author Andrew Ladd
  * @author Sitaram Iyer
  */
-
 public class RMIPastryNodeFactory extends DistPastryNodeFactory {
+  
   public static int NUM_ATTEMPTS = 2;
   public static int DEFAULT_REGISTRY_PORT = 1099;
 
@@ -76,14 +76,11 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
   private static final int leafSetMaintFreq = 60;
   private static final int routeSetMaintFreq = 15*60;
 
-
-    /**
-     * Instance of RMI registry ever-created when using this
-     * factory.
-     */
-
-    public static Registry rmiRegistry = null;
-
+  /**
+   * Instance of RMI registry ever-created when using this
+   * factory.
+   */
+  public static Registry rmiRegistry = null;
 
   /**
    * Constructor.
@@ -95,21 +92,19 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
     port = p;
 
     if( rmiRegistry == null){
- // set RMI security manager
- if (System.getSecurityManager() == null)
-     System.setSecurityManager(new RMISecurityManager());
- 
- // start RMI registry
- try {
-     rmiRegistry = java.rmi.registry.LocateRegistry.createRegistry(port);
- } catch (Exception e) {
-     System.out.println("Error starting RMI registry: " + e);
-     System.exit(-1);
- }
+      // set RMI security manager
+      if (System.getSecurityManager() == null)
+        System.setSecurityManager(new RMISecurityManager());
+
+      // start RMI registry
+      try {
+        rmiRegistry = java.rmi.registry.LocateRegistry.createRegistry(port);
+      } catch (Exception e) {
+        System.out.println("Error starting RMI registry: " + e);
+        System.exit(-1);
+      }
     }
-
   }
-
 
   /**
    * Specified by the DistPastryNodeFactory class.  The first looks on the
@@ -130,11 +125,11 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
     for (int i = 1; bsnode == null && i <= NUM_ATTEMPTS; i++) {
       try {
         bsnode = (RMIRemoteNodeI) Naming.lookup("//" + address.getHostName()
-      + ":" + address.getPort() + "/Pastry");
+                                                + ":" + address.getPort() + "/Pastry");
       } catch (Exception e) {
         System.out.println("Unable to find bootstrap node on "
-      + address
-      + " (attempt " + i + "/" + NUM_ATTEMPTS + ")");
+                           + address
+                           + " (attempt " + i + "/" + NUM_ATTEMPTS + ")");
       }
 
       if ((bsnode == null) && (i != NUM_ATTEMPTS))
@@ -198,7 +193,7 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
       System.out.println("ERROR (newNode): " + e);
     }
     
-    RMINodeHandle localhandle = new RMINodeHandle(null, nodeId, address);
+    final RMINodeHandle localhandle = new RMINodeHandle(null, nodeId, address);
 
     RMINodeHandlePool handlepool = new RMINodeHandlePool();
     //localhandle = (RMINodeHandle) handlepool.coalesce(localhandle); // add ourselves to pool
@@ -236,6 +231,7 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
     // launch thread to handle the sockets
     Thread t = new Thread("Thread for node " + nodeId) {
       public void run() {
+        //pn.doneNode(getNearest(localhandle, bootstrap));
         pn.doneNode(bootstrap);
       }
     };
@@ -244,12 +240,70 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
 
     return pn;
   }
-  
-  protected Message getResponse(NodeHandle handle, Message message) {
-      return null ;
+
+  /**
+   * This method returns the remote leafset of the provided handle
+   * to the caller, in a protocol-dependent fashion.  Note that this method
+   * may block while sending the message across the wire.
+   *
+   * @param handle The node to connect to
+   * @return The leafset of the remote node
+   */
+  public LeafSet getLeafSet(NodeHandle handle) {
+    try {
+      RMINodeHandle rHandle = (RMINodeHandle) handle;
+      RMIRemoteNodeI rNode = rHandle.getRemote();
+
+      LeafSet leafSet = rNode.getLeafSet();
+      
+      return leafSet;
+    } catch (java.rmi.RemoteException e) {
+      System.out.println("Exception " + e + " was thrown while fetching leafset remotely.");
+      return null;
     }
-  
-  protected int getProximity(NodeHandle handle) {
-    return 0 ;
+  }
+
+  /**
+   * This method returns the remote route row of the provided handle
+   * to the caller, in a protocol-dependent fashion.  Note that this method
+   * may block while sending the message across the wire.
+   *
+   * @param handle The node to connect to
+   * @param row The row number to retrieve
+   * @return The route row of the remote node
+   */
+  public RouteSet[] getRouteRow(NodeHandle handle, int row) {
+    try {
+      RMINodeHandle rHandle = (RMINodeHandle) handle;
+      RMIRemoteNodeI rNode = rHandle.getRemote();
+
+      return rNode.getRouteRow(row);
+    } catch (java.rmi.RemoteException e) {
+      System.out.println("Exception " + e + " was thrown while fetching routerow remotely.");
+      return new RouteSet[0];
+    }
+  }
+
+  /**
+   * This method determines and returns the proximity of the current local
+   * node the provided NodeHandle.  This will need to be done in a protocol-
+   * dependent fashion and may need to be done in a special way.
+   *
+   * @param handle The handle to determine the proximity of
+   * @return The proximity of the provided handle
+   */
+  public int getProximity(NodeHandle local, NodeHandle handle) {
+    try {
+      RMINodeHandle rHandle = (RMINodeHandle) handle;
+      RMIRemoteNodeI rNode = rHandle.getRemote();
+
+      long startTime = System.currentTimeMillis();
+      rNode.getNodeId();
+
+      return (int) (System.currentTimeMillis() - startTime);
+    } catch (java.rmi.RemoteException e) {
+      System.out.println("Exception " + e + " was thrown while pinging remote node.");
+      return DistNodeHandle.DEFAULT_DISTANCE;
+    }
   }
 }

@@ -36,20 +36,39 @@ if advised of the possibility of such damage.
 
 package rice.pastry.wire.messaging.socket;
 
-import rice.pastry.*;
-
 import java.io.*;
 
+import rice.pastry.*;
+import rice.pastry.leafset.*;
+import rice.pastry.routing.*;
+
 /**
- * Class which abstracts out a message sent across the
- * socket-based pastry protocol.
- *
- * @version $Id$
- *
- * @author Alan Mislove
- */
-public abstract class SocketMessage implements Serializable {
+* A response message to a RouteRowRequestMessage, containing the remote
+* node's routerow.
+*
+* @version $Id$
+*
+* @author Alan Mislove
+*/
+public class RouteRowResponseMessage extends SocketCommandMessage {
 
-  public SocketMessage() {}
+  private RouteSet[] set;
 
+  /**
+  * Constructor
+  *
+  * @param leafset The leafset of the receiver of the RouteRowRequestMessage.
+  */
+  public RouteRowResponseMessage(RouteSet[] set) {
+    this.set = set;
+  }
+
+  /**
+    * Returns the routeset of the receiver.
+    *
+    * @return The RouteSet of the receiver node.
+    */
+  public RouteSet[] getRouteRow() {
+    return set;
+  }
 }

@@ -94,37 +94,12 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
   public NodeHandle generateNodeHandle(InetSocketAddress address) {
     // send nodeId request to remote node, wait for response
     // allocate enought bytes to read a node handle
-    WireNodeHandle handle = null;
-
     System.out.println("Wire: Contacting bootstrap node " + address);
 
     try {
-      // create reader and writer
-      SocketChannelWriter writer = new SocketChannelWriter(null, null);
-      SocketChannelReader reader = new SocketChannelReader(null);
-
-      // bind to the appropriate port
-      SocketChannel channel = SocketChannel.open();
-      channel.configureBlocking(true);
-      channel.socket().connect(address);
-
-      writer.enqueue(new NodeIdRequestMessage());
-      writer.write(channel);
-      Object o = null;
-
-      while (o == null) {
-        o = reader.read(channel);
-      }
-
-      debug("Read " + o + " from remote node...");
-
-      NodeIdResponseMessage rm = (NodeIdResponseMessage) o;
-      handle = new WireNodeHandle(address, rm.getNodeId());
-
-      channel.socket().close();
-      channel.close();
-
-      return handle;
+      NodeIdResponseMessage rm = (NodeIdResponseMessage) getResponse(address, new NodeIdRequestMessage());
+      
+      return new WireNodeHandle(address, rm.getNodeId());
     } catch (IOException e) {
       System.out.println("Error connecting to address " + address + ": " + e);
       System.out.println("Couldn't find a bootstrap node, starting a new ring...");
@@ -169,7 +144,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
       port++;
     }
       
-    WireNodeHandle localhandle = new WireNodeHandle(address, nodeId);
+    final WireNodeHandle localhandle = new WireNodeHandle(address, nodeId);
 
     WireNodeHandlePool pool = new WireNodeHandlePool(pn);
 
@@ -214,6 +189,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
         }
 
         
+        //pn.doneNode(getNearest(localhandle, bootstrap));
         pn.doneNode(bootstrap);
       }
     };
@@ -248,12 +224,106 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
     if (Log.ifp(8))
       System.out.println(" (F): " + s);
   }
-  
-  protected Message getResponse(NodeHandle handle, Message message) {
-    return null ;
+
+  /**
+   * This method returns the remote leafset of the provided handle
+   * to the caller, in a protocol-dependent fashion.  Note that this method
+   * may block while sending the message across the wire.
+   *
+   * @param handle The node to connect to
+   * @return The leafset of the remote node
+   */
+  public LeafSet getLeafSet(NodeHandle handle) {
+    WireNodeHandle wHandle = (WireNodeHandle) handle;
+
+    try {
+      LeafSetResponseMessage lm = (LeafSetResponseMessage) getResponse(wHandle.getAddress(), new LeafSetRequestMessage());
+
+      return lm.getLeafSet();
+    } catch (IOException e) {
+      System.out.println("Error connecting to (leafset) address " + wHandle.getAddress() + ": " + e);
+      return null;
+    }    
   }
-  
-  protected int getProximity(NodeHandle handle) {
-    return 0 ;
+
+  /**
+   * This method returns the remote route row of the provided handle
+   * to the caller, in a protocol-dependent fashion.  Note that this method
+   * may block while sending the message across the wire.
+   *
+   * @param handle The node to connect to
+   * @param row The row number to retrieve
+   * @return The route row of the remote node
+   */
+  public RouteSet[] getRouteRow(NodeHandle handle, int row) {
+    WireNodeHandle wHandle = (WireNodeHandle) handle;
+
+    try {
+      RouteRowResponseMessage rm = (RouteRowResponseMessage) getResponse(wHandle.getAddress(), new RouteRowRequestMessage(row));
+
+      return rm.getRouteRow();
+    } catch (IOException e) {
+      System.out.println("Error connecting to (routerow) address " + wHandle.getAddress() + ": " + e);
+      return new RouteSet[0];
+    }   
+  }
+
+  /**
+   * This method determines and returns the proximity of the current local
+   * node the provided NodeHandle.  This will need to be done in a protocol-
+   * dependent fashion and may need to be done in a special way.
+   *
+   * @param handle The handle to determine the proximity of
+   * @return The proximity of the provided handle
+   */
+  public int getProximity(NodeHandle local, NodeHandle handle) {
+    WireNodeHandle wHandle = (WireNodeHandle) handle;
+
+    if (wHandle.proximity() == DistNodeHandle.DEFAULT_DISTANCE) {
+      try {
+        long startTime = System.currentTimeMillis();
+        getResponse(wHandle.getAddress(), new NodeIdRequestMessage());
+        long ping = System.currentTimeMillis() - startTime;
+
+        return (int) ping;
+      } catch (IOException e) {
+        System.out.println("Error pinging address " + wHandle.getAddress() + ": " + e);
+        return wHandle.DEFAULT_DISTANCE;
+      }
+    } else {
+      return wHandle.proximity();
+    }
+  }
+
+  /**
+   * This method anonymously sends the given message to the remote address, blocks until
+   * a response is received, and then closes the socket and returns the response.
+   *
+   * @param address The address to send to
+   * @param message The message to send
+   * @return The response
+   */
+  protected SocketCommandMessage getResponse(InetSocketAddress address, SocketCommandMessage message) throws IOException {
+    // create reader and writer
+    SocketChannelWriter writer = new SocketChannelWriter(null, null);
+    SocketChannelReader reader = new SocketChannelReader(null);
+
+    // bind to the appropriate port
+    SocketChannel channel = SocketChannel.open();
+    channel.configureBlocking(true);
+    channel.socket().connect(address);
+
+    writer.enqueue(message);
+    writer.write(channel);
+    Object o = null;
+
+    while (o == null) {
+      o = reader.read(channel);
+    }
+
+    channel.socket().close();
+    channel.close();
+
+    return (SocketCommandMessage) o;
   }
 }

@@ -335,12 +335,29 @@ public class SocketManager implements SelectionKeyHandler {
           // since we're done, remove this entry
           connectors.remove(key);
         } else if (o instanceof NodeIdRequestMessage) {
-          debug("Read request message " + o);
+          debug("Read nodeId request message " + o);
 
           writer = new SocketChannelWriter(pastryNode, null);
 
           writer.enqueue(new NodeIdResponseMessage(pastryNode.getNodeId()));
           key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        } else if (o instanceof LeafSetRequestMessage) {
+          debug("Read leafset request message " + o);
+
+          writer = new SocketChannelWriter(pastryNode, null);
+
+          writer.enqueue(new LeafSetResponseMessage(pastryNode.getLeafSet()));
+          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        } else if (o instanceof RouteRowRequestMessage) {
+          debug("Read route row request message " + o);
+
+          RouteRowRequestMessage message = (RouteRowRequestMessage) o;
+          writer = new SocketChannelWriter(pastryNode, null);
+
+          writer.enqueue(new RouteRowResponseMessage(pastryNode.getRoutingTable().getRow(message.getRow())));
+          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        } else {
+          System.out.println("Read unknown message " + o + " - dropping on floor.");
         }
       }
     }

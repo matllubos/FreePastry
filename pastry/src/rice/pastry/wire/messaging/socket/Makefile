@@ -8,7 +8,12 @@ SOURCE  = \
 	HelloMessage.java\
 	HelloResponseMessage.java\
 	NodeIdRequestMessage.java\
-	NodeIdResponseMessage.java
+	NodeIdResponseMessage.java\
+	LeafSetRequestMessage.java\
+	LeafSetResponseMessage.java\
+	RouteRowRequestMessage.java\
+	RouteRowResponseMessage.java\
+  
 
 MAIN       = 
 

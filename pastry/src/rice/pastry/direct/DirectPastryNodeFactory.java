@@ -54,166 +54,113 @@ import java.util.*;
  * @author Sitaram Iyer
  * @author Rongmei Zhang/Y. Charlie Hu
  */
+public class DirectPastryNodeFactory extends PastryNodeFactory {
 
-public class DirectPastryNodeFactory extends PastryNodeFactory
-{
-    private NodeIdFactory nidFactory;
-    private NetworkSimulator simulator;
+  private NodeIdFactory nidFactory;
+  private NetworkSimulator simulator;
 
-    // max number of handles stored per routing table entry
-    private static final int rtMax = 1;
+  // max number of handles stored per routing table entry
+  private static final int rtMax = 1;
 
-    // leafset size
-    private static final int lSetSize = 24;
-  
-    public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim) {
- nidFactory = nf;
- simulator = sim;
-    }
+  // leafset size
+  private static final int lSetSize = 24;
 
-    public NetworkSimulator getNetworkSimulator() { return simulator; }
-    
-    /**
-     * Get the closest node from a RouteSet
-     */
-
-    private NodeHandle getClosest( NodeHandle local, RouteSet rs ){
- NodeHandle nh = null;
- NodeHandle nearHandle = null;
- double dist = Double.MAX_VALUE;
- double newdist;
-
- for ( int i=0; i<rs.size(); i++ ) {
-     nh = rs.get(i);
-     newdist = simulator.proximity( local.getNodeId(), nh.getNodeId() );
-     if( dist >= newdist  ){
-  nearHandle = nh;
-  dist = newdist;
-     }
- }
- return nearHandle;
-    }
-
-    /**
-     * The discovery algorithm to find a nearby node
-     */
-
-    private NodeHandle discover( NodeHandle localhandle, NodeHandle bootstrap ){
- if( bootstrap == null )
-     return null;
-
- PastryNode nearNode = ((DirectNodeHandle)bootstrap).getLocalNode();
- LeafSet  ls = nearNode.getLeafSet();
- NodeHandle  nearHandle = bootstrap;
- double  dist = simulator.proximity( localhandle.getNodeId(), bootstrap.getNodeId() );
- double  newdist;
- int  i;
- NodeHandle nh, currentClosest;
-
- for( i=0; i<ls.size(); i++ ){
-     nh = ls.get( i );
-     if( nh == null )
-  continue;
-     newdist = simulator.proximity( localhandle.getNodeId(), nh.getNodeId() );
-     if( dist >= newdist  ){
-  nearHandle = nh;
-  dist = newdist;
-     }
- }
-
- nearNode = ((DirectNodeHandle)nearHandle).getLocalNode();
- RoutingTable rt = nearNode.getRoutingTable();
- int depth = rt.numRows();
-
- while( depth -- > 0 ){
-     for( i=0; i<rt.numColumns(); i++ ){
-  nh = getClosest( localhandle, rt.getRow(depth)[i] );
-  if( nh == null )
-      continue;
-  newdist = simulator.proximity( localhandle.getNodeId(), nh.getNodeId() );
-  if( dist >= newdist  ){
-      nearHandle = nh;
-      dist = newdist;
+  public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim) {
+    nidFactory = nf;
+    simulator = sim;
   }
-     }
-     nearNode = ((DirectNodeHandle)nearHandle).getLocalNode();
-     rt = nearNode.getRoutingTable();
- }
- 
- do{
-     currentClosest = nearHandle;
-     for( i=0; i<rt.numColumns(); i++ ){
-  nh = getClosest( localhandle, rt.getRow(0)[i] );
-  if( nh == null )
-      continue;
-  newdist = simulator.proximity( localhandle.getNodeId(), nh.getNodeId() );
-  if( dist >= newdist  ){
-      nearHandle = nh;
-      dist = newdist;
-  }
-     }
-     nearNode = ((DirectNodeHandle)nearHandle).getLocalNode();
-     rt = nearNode.getRoutingTable();
- }while( currentClosest != nearHandle );
- return nearHandle;
-    }
 
-    /**
-     * Manufacture a new Pastry node.
-     *
-     * @return a new PastryNode
-     */
-    public PastryNode newNode(NodeHandle bootstrap) {
-      return newNode(bootstrap, nidFactory.generateNodeId());
-    }
-
-    /**
-     * Manufacture a new Pastry node.
-     *
-     * @return a new PastryNode
-     */
-    public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId) {
- DirectPastryNode pn = new DirectPastryNode(nodeId, simulator);
- 
- DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
- simulator.registerNodeId( localhandle );
-
- DirectSecurityManager secureMan = new DirectSecurityManager(simulator);
- MessageDispatch msgDisp = new MessageDispatch();
-
- RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
- LeafSet leafSet = new LeafSet(localhandle, lSetSize);
+  public NetworkSimulator getNetworkSimulator() { return simulator; }
   
- StandardRouter router =
-     new StandardRouter(localhandle, routeTable, leafSet, secureMan);
- StandardLeafSetProtocol lsProtocol =
-     new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
- StandardRouteSetProtocol rsProtocol =
-     new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
- StandardJoinProtocol jProtocol =
-     new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
+  /**
+   * Manufacture a new Pastry node.
+   *
+   * @return a new PastryNode
+   */
+  public PastryNode newNode(NodeHandle bootstrap) {
+    return newNode(bootstrap, nidFactory.generateNodeId());
+  }
 
- msgDisp.registerReceiver(router.getAddress(), router);
- msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
- msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
- msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
+  /**
+   * Manufacture a new Pastry node.
+   *
+   * @return a new PastryNode
+   */
+  public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId) {
+    DirectPastryNode pn = new DirectPastryNode(nodeId, simulator);
 
- pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
- pn.setDirectElements(/* simulator */);
- secureMan.setLocalPastryNode(pn);
+    DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
+    simulator.registerNodeId( localhandle );
 
- // pn.doneNode(bootstrap);
- // pn.doneNode( discover(localhandle,bootstrap) );
- pn.doneNode( simulator.getClosest(nodeId) );
+    DirectSecurityManager secureMan = new DirectSecurityManager(simulator);
+    MessageDispatch msgDisp = new MessageDispatch();
 
- return pn;
-    }
-    
-    protected Message getResponse(NodeHandle handle, Message message) {
-      return null ;
-    }
+    RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
+    LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 
-    protected int getProximity(NodeHandle handle) {
-      return 0 ;
-    }
+    StandardRouter router =
+      new StandardRouter(localhandle, routeTable, leafSet, secureMan);
+    StandardLeafSetProtocol lsProtocol =
+      new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
+    StandardRouteSetProtocol rsProtocol =
+      new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
+    StandardJoinProtocol jProtocol =
+      new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
+
+    msgDisp.registerReceiver(router.getAddress(), router);
+    msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
+    msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
+    msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
+
+    pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
+    pn.setDirectElements(/* simulator */);
+    secureMan.setLocalPastryNode(pn);
+
+    // pn.doneNode(bootstrap);
+    // pn.doneNode( simulator.getClosest(nodeId) );
+    pn.doneNode(getNearest(localhandle, bootstrap));
+      
+    return pn;
+  }
+
+  /**
+   * This method returns the remote leafset of the provided handle
+   * to the caller, in a protocol-dependent fashion.  Note that this method
+   * may block while sending the message across the wire.
+   *
+   * @param handle The node to connect to
+   * @return The leafset of the remote node
+   */
+  public LeafSet getLeafSet(NodeHandle handle) {
+    DirectNodeHandle dHandle = (DirectNodeHandle) handle;
+
+    return dHandle.getRemote().getLeafSet();
+  }
+
+  /**
+   * This method returns the remote route row of the provided handle
+   * to the caller, in a protocol-dependent fashion.  Note that this method
+   * may block while sending the message across the wire.
+   *
+   * @param handle The node to connect to
+   * @param row The row number to retrieve
+   * @return The route row of the remote node
+   */
+  public RouteSet[] getRouteRow(NodeHandle handle, int row) {
+    DirectNodeHandle dHandle = (DirectNodeHandle) handle;
+
+    return dHandle.getRemote().getRoutingTable().getRow(row);
+  }
+
+  /**
+   * This method determines and returns the proximity of the current local
+   * node the provided NodeHandle.  This will need to be done in a protocol-
+   * dependent fashion and may need to be done in a special way.
+   *
+   * @param handle The handle to determine the proximity of
+   * @return The proximity of the provided handle
+   */
+  public int getProximity(NodeHandle local, NodeHandle remote) {
+    return simulator.proximity(local.getNodeId(), remote.getNodeId());
+  }
 }

@@ -37,6 +37,8 @@ if advised of the possibility of such damage.
 package rice.pastry.multiring;
 
 import rice.pastry.*;
+import rice.pastry.leafset.*;
+import rice.pastry.routing.*;
 import rice.pastry.messaging.*;
 
 import java.net.*;
@@ -93,13 +95,42 @@ public class MultiRingPastryNodeFactory extends PastryNodeFactory {
     
     return childNode;
   }
-  
-  protected Message getResponse(NodeHandle handle, Message message) {
-      return null ;
-    }
-  
-  protected int getProximity(NodeHandle handle) {
-    return 0 ;
+
+  /**
+   * This method returns the remote leafset of the provided handle
+   * to the caller, in a protocol-dependent fashion.  Note that this method
+   * may block while sending the message across the wire.
+   *
+   * @param handle The node to connect to
+   * @return The leafset of the remote node
+   */
+  public LeafSet getLeafSet(NodeHandle handle) {
+    return factory.getLeafSet(handle);
+  }
+
+  /**
+   * This method returns the remote route row of the provided handle
+   * to the caller, in a protocol-dependent fashion.  Note that this method
+   * may block while sending the message across the wire.
+   *
+   * @param handle The node to connect to
+   * @param row The row number to retrieve
+   * @return The route row of the remote node
+   */
+  public RouteSet[] getRouteRow(NodeHandle handle, int row) {
+    return factory.getRouteRow(handle, row);
+  }
+
+  /**
+   * This method determines and returns the proximity of the current local
+   * node the provided NodeHandle.  This will need to be done in a protocol-
+   * dependent fashion and may need to be done in a special way.
+   *
+   * @param handle The handle to determine the proximity of
+   * @return The proximity of the provided handle
+   */
+  public int getProximity(NodeHandle local, NodeHandle handle) {
+    return factory.getProximity(local, handle);
   }
 }
 

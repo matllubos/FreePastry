@@ -36,20 +36,25 @@ if advised of the possibility of such damage.
 
 package rice.pastry.wire.messaging.socket;
 
-import rice.pastry.*;
-
 import java.io.*;
 
+import rice.pastry.*;
+import rice.pastry.leafset.*;
+
 /**
- * Class which abstracts out a message sent across the
- * socket-based pastry protocol.
- *
- * @version $Id$
- *
- * @author Alan Mislove
- */
-public abstract class SocketMessage implements Serializable {
+* Message which represents a request to get the leafset from the remote node.
+*
+* @version $Id$
+*
+* @author Alan Mislove
+*/
+public class LeafSetRequestMessage extends SocketCommandMessage {
 
-  public SocketMessage() {}
-
+  /**
+  * Constructor
+  *
+  * @param nodeId The nodeId of the node requesting.
+  */
+  public LeafSetRequestMessage() {
+  }
 }

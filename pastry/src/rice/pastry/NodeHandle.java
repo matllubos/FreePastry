@@ -56,7 +56,7 @@ public abstract class NodeHandle extends Observable implements MessageReceiver, 
   public static final Integer DECLARED_LIVE = new Integer(3);
 
   // the local pastry node
-  private transient PastryNode localnode;
+  protected transient PastryNode localnode;
 
   /**
    * Gets the nodeId of this Pastry node.

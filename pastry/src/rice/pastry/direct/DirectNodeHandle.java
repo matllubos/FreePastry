@@ -71,7 +71,7 @@ public class DirectNodeHandle extends NodeHandle
     	assertLocalNode();
     	int result = simulator.proximity(getLocalNode().getNodeId(), remoteNode.getNodeId());
       notifyObservers();
-
+        
       return result;
     }
 
