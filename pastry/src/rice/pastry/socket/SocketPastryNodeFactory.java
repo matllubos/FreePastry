@@ -34,7 +34,7 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry.wire;
+package rice.pastry.socket;
 
 import rice.pastry.*;
 import rice.pastry.messaging.*;
@@ -43,22 +43,22 @@ import rice.pastry.standard.*;
 import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
 import rice.pastry.dist.*;
+import rice.pastry.socket.messaging.*;
 
 import java.util.*;
 import java.net.*;
 import java.io.*;
 import java.nio.channels.*;
 import java.nio.*;
-import rice.pastry.wire.messaging.socket.*;
 
 /**
- * Pastry node factory for Wire-linked nodes.
+ * Pastry node factory for Socket-linked nodes.
  *
  * @version $Id$
  *
  * @author Alan Mislove
  */
-public class WirePastryNodeFactory extends DistPastryNodeFactory {
+public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
   private NodeIdFactory nidFactory;
 
@@ -77,15 +77,16 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
   /**
    * Constructor.
    *
-   * @param p RMI registry port.
+   * @param nf The factory for building node ids
+   * @param startPort The port to start creating nodes on
    */
-  public WirePastryNodeFactory(NodeIdFactory nf, int startPort) {
+  public SocketPastryNodeFactory(NodeIdFactory nf, int startPort) {
     nidFactory = nf;
     port = startPort;
   }
 
   /**
-   * Method which contructs a node handle (using the wire protocol) for the
+   * Method which contructs a node handle (using the socket protocol) for the
    * node at address NodeHandle.
    *
    * @param address The address of the remote node.
@@ -94,12 +95,12 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
   public NodeHandle generateNodeHandle(InetSocketAddress address) {
     // send nodeId request to remote node, wait for response
     // allocate enought bytes to read a node handle
-    System.out.println("Wire: Contacting bootstrap node " + address);
+    System.out.println("Socket: Contacting bootstrap node " + address);
 
     try {
       NodeIdResponseMessage rm = (NodeIdResponseMessage) getResponse(address, new NodeIdRequestMessage());
       
-      return new WireNodeHandle(address, rm.getNodeId());
+      return new SocketNodeHandle(address, rm.getNodeId());
     } catch (IOException e) {
       System.out.println("Error connecting to address " + address + ": " + e);
       System.out.println("Couldn't find a bootstrap node, starting a new ring...");
@@ -126,43 +127,30 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    * @return A node with a random ID and next port number.
    */
   public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId) {
-    final WirePastryNode pn = new WirePastryNode(nodeId);
+    final SocketPastryNode pn = new SocketPastryNode(nodeId);
 
     SelectorManager sManager = new SelectorManager(pn);
 
-    DatagramManager dManager = null;
-    SocketManager socketManager = null;
+    SocketCollectionManager socketManager = null;
     InetSocketAddress address = null;
+    SocketNodeHandlePool pool = new SocketNodeHandlePool(pn);
     
-    synchronized (this) {
-      dManager = new DatagramManager(pn, sManager, port);
-      
-      socketManager = new SocketManager(pn, port , sManager.getSelector());
-
+    synchronized (this) {      
+      socketManager = new SocketCollectionManager(pn, pool, port, sManager.getSelector());
       address = getAddress(port);
-
       port++;
     }
       
-    final WireNodeHandle localhandle = new WireNodeHandle(address, nodeId);
-
-    WireNodeHandlePool pool = new WireNodeHandlePool(pn);
-
-    WirePastrySecurityManager secureMan = new WirePastrySecurityManager(localhandle, pool);
-
+    final SocketNodeHandle localhandle = new SocketNodeHandle(address, nodeId);
+    SocketPastrySecurityManager secureMan = new SocketPastrySecurityManager(localhandle, pool);
     MessageDispatch msgDisp = new MessageDispatch();
-
     RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 
-    StandardRouter router =
-       new StandardRouter(localhandle, routeTable, leafSet, secureMan);
-    StandardLeafSetProtocol lsProtocol =
-       new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
-    StandardRouteSetProtocol rsProtocol =
-       new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
-    StandardJoinProtocol jProtocol =
-       new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
+    StandardRouter router = new StandardRouter(localhandle, routeTable, leafSet, secureMan);
+    StandardLeafSetProtocol lsProtocol = new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
+    StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
+    StandardJoinProtocol jProtocol = new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
 
     msgDisp.registerReceiver(router.getAddress(), router);
     msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
@@ -170,7 +158,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
     msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
 
     pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
-    pn.setSocketElements(address, sManager, dManager, socketManager, pool, leafSetMaintFreq, routeSetMaintFreq);
+    pn.setSocketElements(address, sManager, socketManager, pool, leafSetMaintFreq, routeSetMaintFreq);
     secureMan.setLocalPastryNode(pn);
 
     pool.coalesce(localhandle);
@@ -188,13 +176,10 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
           System.err.println("Interrupted in newNode!");
         }
 
-        
-        pn.doneNode(getNearest(localhandle, bootstrap));
-        //pn.doneNode(bootstrap);
+        //pn.doneNode(getNearest(localhandle, bootstrap));
+        pn.doneNode(bootstrap);
       }
     };
-
-    pn.setThread(t);
 
     t.start();
 
@@ -234,7 +219,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    * @return The leafset of the remote node
    */
   public LeafSet getLeafSet(NodeHandle handle) {
-    WireNodeHandle wHandle = (WireNodeHandle) handle;
+    SocketNodeHandle wHandle = (SocketNodeHandle) handle;
 
     try {
       LeafSetResponseMessage lm = (LeafSetResponseMessage) getResponse(wHandle.getAddress(), new LeafSetRequestMessage());
@@ -256,7 +241,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    * @return The route row of the remote node
    */
   public RouteSet[] getRouteRow(NodeHandle handle, int row) {
-    WireNodeHandle wHandle = (WireNodeHandle) handle;
+    SocketNodeHandle wHandle = (SocketNodeHandle) handle;
 
     try {
       RouteRowResponseMessage rm = (RouteRowResponseMessage) getResponse(wHandle.getAddress(), new RouteRowRequestMessage(row));
@@ -277,15 +262,15 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    * @return The proximity of the provided handle
    */
   public int getProximity(NodeHandle local, NodeHandle handle) {
-    WireNodeHandle lHandle = (WireNodeHandle) local;
-    WireNodeHandle wHandle = (WireNodeHandle) handle;
+    SocketNodeHandle lHandle = (SocketNodeHandle) local;
+    SocketNodeHandle wHandle = (SocketNodeHandle) handle;
 
     // if this is a request for an old version of us, then we return
     // infinity as an answer
     if (lHandle.getAddress().equals(wHandle.getAddress()))
       return Integer.MAX_VALUE;
     
-    if (wHandle.proximity() == DistCoalesedNodeHandle.DEFAULT_DISTANCE) {
+    if (wHandle.proximity() == SocketNodeHandle.DEFAULT_PROXIMITY) {
       try {
         long startTime = System.currentTimeMillis();
         getResponse(wHandle.getAddress(), new NodeIdRequestMessage());
@@ -294,7 +279,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
         return (int) ping;
       } catch (IOException e) {
         System.out.println("Error pinging address " + wHandle.getAddress() + ": " + e);
-        return wHandle.DEFAULT_DISTANCE;
+        return wHandle.DEFAULT_PROXIMITY;
       }
     } else {
       return wHandle.proximity();
@@ -309,9 +294,9 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    * @param message The message to send
    * @return The response
    */
-  protected SocketCommandMessage getResponse(InetSocketAddress address, SocketCommandMessage message) throws IOException {
+  protected Message getResponse(InetSocketAddress address, Message message) throws IOException {
     // create reader and writer
-    SocketChannelWriter writer = new SocketChannelWriter(null, null);
+    SocketChannelWriter writer = new SocketChannelWriter(null);
     SocketChannelReader reader = new SocketChannelReader(null);
 
     // bind to the appropriate port
@@ -330,6 +315,6 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
     channel.socket().close();
     channel.close();
 
-    return (SocketCommandMessage) o;
+    return (Message) o;
   }
 }

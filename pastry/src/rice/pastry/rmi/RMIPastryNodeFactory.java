@@ -303,7 +303,7 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
       return (int) (System.currentTimeMillis() - startTime);
     } catch (java.rmi.RemoteException e) {
       System.out.println("Exception " + e + " was thrown while pinging remote node.");
-      return DistNodeHandle.DEFAULT_DISTANCE;
+      return DistCoalesedNodeHandle.DEFAULT_DISTANCE;
     }
   }
 }

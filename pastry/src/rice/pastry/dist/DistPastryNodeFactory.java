@@ -40,6 +40,7 @@ import rice.*;
 import rice.Continuation.*;
 import rice.pastry.*;
 import rice.pastry.rmi.*;
+import rice.pastry.socket.*;
 import rice.pastry.wire.*;
 import rice.pastry.messaging.*;
 
@@ -63,6 +64,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
   // choices of protocols
   public static int PROTOCOL_RMI = 0;
   public static int PROTOCOL_WIRE = 1;
+  public static int PROTOCOL_SOCKET = 2;
 
   /**
    * Constructor. Protected - one should use the getFactory method.
@@ -127,6 +129,8 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
       return new RMIPastryNodeFactory(nf, port);
     else if (protocol == PROTOCOL_WIRE)
       return new WirePastryNodeFactory(nf, port);
+    else if (protocol == PROTOCOL_SOCKET)
+      return new SocketPastryNodeFactory(nf, port);
 
     throw new IllegalArgumentException("Unsupported Protocol " + protocol);
   }

@@ -71,7 +71,7 @@ public class RoutingTable extends Observable implements Observer {
     public static int idBaseBitLength = 4;
 
     private NodeId myNodeId;
-    private NodeHandle myNodeHandle;
+    public NodeHandle myNodeHandle;
     private RouteSet routingTable[][];
     
     private int maxEntries;

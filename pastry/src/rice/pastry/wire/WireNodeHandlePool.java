@@ -85,7 +85,8 @@ public class WireNodeHandlePool extends DistNodeHandlePool {
    * @param handle The node handle to verify.
    * @return The node handle to use to talk to the pastry node.
    */
-  public synchronized DistNodeHandle coalesce(DistNodeHandle handle) {
+  public synchronized DistNodeHandle coalesce(DistNodeHandle han) {
+    DistCoalesedNodeHandle handle = (DistCoalesedNodeHandle) han;
     if ((handles.get(handle.getNodeId()) == null) || (handles.get(handle.getNodeId()) == handle)) {
       handles.put(handle.getNodeId(), handle);
       handle.setIsInPool(true);

@@ -59,12 +59,16 @@ import java.util.*;
  */
 public class ClosestRegrTest {
 
-  public static int NUM_NODES = 10000;
+  public static int NUM_NODES = 1000;
   public static int NUM_TRIALS = 1000;
 
   private PastryNodeFactory factory;
   private NetworkSimulator simulator;
   private Vector pastryNodes;
+  
+  Random random = new Random();
+  int incorrect = 0;
+  double sum = 0;
 
   /**
    * constructor
@@ -93,9 +97,11 @@ public class ClosestRegrTest {
   /**
    * initializes the network and prepares for testing
    */
-  protected void initialize() {
+  protected void run() {
     for (int i=0; i<NUM_NODES; i++) {
       PastryNode node = factory.newNode(getBootstrap());
+      if (i > 0)
+        test(i, node.getLocalHandle());
 
       while (simulator.simulate()) {}
 
@@ -108,28 +114,21 @@ public class ClosestRegrTest {
   /**
    * starts the testing process
    */
-  protected void start() {
-    Random random = new Random();
-    int incorrect = 0;
-    double sum = 0;
-
-    for (int i=0; i<NUM_TRIALS; i++) {
-      PastryNode node = (PastryNode) pastryNodes.elementAt(random.nextInt(NUM_NODES));
-      NodeId nodeId = node.getNodeId();
-      NodeHandle handle = node.getLocalHandle();
-
-      PastryNode bootNode = (PastryNode) pastryNodes.elementAt(random.nextInt(NUM_NODES));
-      NodeHandle bootstrap = bootNode.getLocalHandle();
-
-      NodeHandle closest = factory.getNearest(handle, bootstrap);
-      NodeHandle realClosest = simulator.getClosest(nodeId);
-
-      if (! closest.getNodeId().equals(realClosest.getNodeId())) {
-        incorrect++;
-        sum += (simulator.proximity(closest.getNodeId(), nodeId) / simulator.proximity(realClosest.getNodeId(), nodeId));
-
-        System.out.println("SO FAR: " + incorrect + "/" + i + " PERCENTAGE: " + (sum/incorrect));
-      }
+  protected void test(int i, NodeHandle handle) {
+    NodeId nodeId = handle.getNodeId();
+    
+    PastryNode bootNode = (PastryNode) pastryNodes.elementAt(random.nextInt(i));
+    NodeHandle bootstrap = bootNode.getLocalHandle();
+    
+    NodeHandle closest = factory.getNearest(handle, bootstrap);
+    NodeHandle realClosest = simulator.getClosest(nodeId);
+    
+    if (! closest.getNodeId().equals(realClosest.getNodeId())) {
+      incorrect++;
+      sum += (simulator.proximity(closest.getNodeId(), nodeId) / simulator.proximity(realClosest.getNodeId(), nodeId));
+      
+      System.out.println("ERROR: CLOSEST TO " + nodeId + " WAS " + closest.getNodeId() + " REAL CLOSEST: " + realClosest.getNodeId());
+      System.out.println("SO FAR: " + incorrect + "/" + i + " PERCENTAGE: " + (sum/incorrect));
     }
   }
 
@@ -138,8 +137,7 @@ public class ClosestRegrTest {
    */
   public static void main(String args[]) {
     ClosestRegrTest pt = new ClosestRegrTest();
-    pt.initialize();
-    pt.start();
+    pt.run();
   }
 }
 

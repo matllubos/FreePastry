@@ -60,7 +60,7 @@ import java.rmi.RemoteException;
  * @author Peter Druschel
  */
 
-public class RMINodeHandle extends DistNodeHandle
+public class RMINodeHandle extends DistCoalesedNodeHandle
 {
     private RMIRemoteNodeI remoteNode;
 

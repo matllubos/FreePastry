@@ -132,7 +132,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
 
       for (int i = 0; i < args.length; i++) {
         if (args[i].equals("-help")) {
-          System.out.println("Usage: DistPastryRegrTest [-port p] [-protocol (rmi|wire)] [-nodes n] [-bootstrap host[:port]] [-help]");
+          System.out.println("Usage: DistPastryRegrTest [-port p] [-protocol (rmi|wire|socket)] [-nodes n] [-bootstrap host[:port]] [-help]");
           System.exit(1);
         }
       }
@@ -178,6 +178,8 @@ public class DistPastryRegrTest extends PastryRegrTest {
             protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
           else if (s.equalsIgnoreCase("rmi"))
             protocol = DistPastryNodeFactory.PROTOCOL_RMI;
+          else if (s.equalsIgnoreCase("socket"))
+            protocol = DistPastryNodeFactory.PROTOCOL_SOCKET;
           else
             System.out.println("ERROR: Unsupported protocol: " + s);
 

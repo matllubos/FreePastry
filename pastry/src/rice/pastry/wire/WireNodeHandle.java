@@ -61,7 +61,7 @@ import java.net.*;
  *
  * @author Alan Mislove
  */
-public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandler {
+public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionKeyHandler {
 
   // possible states of the WireNodeHandle
   public static int STATE_USING_UDP = -1;

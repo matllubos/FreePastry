@@ -236,6 +236,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 
 	int cwSize = leafSet.cwSize();
 	int ccwSize = leafSet.ccwSize();
+  IdSet sent = new IdSet();
 	
 	for (int i=-ccwSize; i<=cwSize; i++) {
 	    if (i == 0) continue;
@@ -243,8 +244,11 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	    NodeHandle nh = leafSet.get(i);
 	    if (nh == null || nh.isAlive() == false) continue;
 	    
-	    nh.receiveMessage(bls);
-	}
+      if (! sent.isMember(nh.getNodeId())) {
+        nh.receiveMessage(bls);
+        sent.addMember(nh.getNodeId());
+      }
+  }
     }
 
 

@@ -262,7 +262,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
   public boolean isMemberId(rice.p2p.commonapi.Id id) {
     return isMember((Id) id);
   }
-
+  
   /**
    * return a subset of this set, consisting of the member ids in a given range
    * @param from the lower end of the range (inclusive)
@@ -272,6 +272,15 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
   public rice.p2p.commonapi.IdSet subSet(rice.p2p.commonapi.IdRange range) {
     //return subSet((Id) range.getCWId(), (Id) range.getCCWId());
     return subSet((IdRange)range);
+  }
+  
+  /**
+   * return a hash of this set
+   *
+   * @return the hash of this set
+   */
+  public rice.p2p.commonapi.Id hash() {
+    return getHash();
   }
 
 
