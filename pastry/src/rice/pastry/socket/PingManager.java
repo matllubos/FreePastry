@@ -420,7 +420,9 @@ public class PingManager implements SelectionKeyHandler {
       } else {
         if (getLastTimeHeardFrom(address) >= getLastTimePinged(address)) {
           // we just pinged them, and got a response
-          prl.pingResponse(address, proximity(address), getLastTimeHeardFrom(address));
+          if (prl != null) {
+            prl.pingResponse(address, proximity(address), getLastTimeHeardFrom(address));
+          }
         } else {
           // we are still waiting to hear from someone
           addPingResponseListener(address, prl);
