@@ -3,6 +3,7 @@ PACKAGE = rice.persistence.testing
 SOURCE  = \
   Test.java \
   StorageTest.java \
+  PersistentStorageTest.java \
   CacheTest.java
 
 RMI_SOURCE =
