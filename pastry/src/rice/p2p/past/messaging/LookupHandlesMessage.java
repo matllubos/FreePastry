@@ -99,7 +99,7 @@ public class LookupHandlesMessage extends ContinuationMessage {
    * @return A string representing this message
    */
   public String toString() {
-    return "[LookupHandlesMessage for " + id + " max " + max + "]";
+    return "[LookupHandlesMessage (response " + isResponse() + " " + response + ") for " + id + " max " + max + "]";
   }
 }
 

@@ -55,10 +55,10 @@ import rice.p2p.past.*;
 public abstract class ContinuationMessage extends PastMessage implements Continuation {
 
   // the response data
-  private Object response;
+  protected Object response;
 
   // the response exception, if one is thrown
-  private Exception exception;
+  protected Exception exception;
 
   /**
     * Constructor which takes a unique integer Id, as well as the

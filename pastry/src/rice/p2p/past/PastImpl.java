@@ -115,6 +115,10 @@ public class PastImpl implements Past, Application, RMClient {
     replicationFactor = replicas;
     pending = factory.buildIdSet();
 
+  //  log.addHandler(new ConsoleHandler());
+  //  log.setLevel(Level.FINEST);
+  //  log.getHandlers()[0].setLevel(Level.FINEST);
+
     replicaManager = new RMImpl((rice.pastry.PastryNode) node, this, replicas, instance);
   }
   
@@ -699,12 +703,13 @@ public class PastImpl implements Past, Application, RMClient {
    * @param message The message being sent
    */
   public void deliver(Id id, Message message) {
-    log.info("Received message " + message + " with destination " + id);
     final PastMessage msg = (PastMessage) message;
 
     if (msg.isResponse()) {
       handleResponse((PastMessage) message);
     } else {
+      log.info("Received message " + message + " with destination " + id);
+      
       if (msg instanceof InsertMessage) {
         final InsertMessage imsg = (InsertMessage) msg;
         pending.removeId(imsg.getContent().getId());
@@ -757,7 +762,9 @@ public class PastImpl implements Past, Application, RMClient {
         storage.getObject(lmsg.getId(), forward);
       } else if (msg instanceof LookupHandlesMessage) {
         LookupHandlesMessage lmsg = (LookupHandlesMessage) msg;
-        getResponseContinuation(msg).receiveResult(endpoint.replicaSet(lmsg.getId(), lmsg.getMax()));
+        NodeHandleSet set = endpoint.replicaSet(lmsg.getId(), lmsg.getMax());
+        log.finer("Returning replica set " + set + " for lookup handles of id " + lmsg.getId() + " max " + lmsg.getMax() + " at " + endpoint.getId());
+        getResponseContinuation(msg).receiveResult(set);
       } else if (msg instanceof FetchMessage) {
         FetchMessage fmsg = (FetchMessage) msg;
         storage.getObject(fmsg.getHandle().getId(), getResponseContinuation(msg));
