@@ -188,7 +188,7 @@ public class ScribeMaintainer
 	prev_parent = topic.getParent();
 	if( prev_parent != null){
 	    msgu = m_scribe.makeUnsubscribeMessage( topicId, cred);
-	    m_scribe.routeMsgDirect(prev_parent, msgu, cred, opt);
+	    //m_scribe.routeMsgDirect(prev_parent, msgu, cred, opt);
 	}
 	topic.setParent(null);
 
@@ -202,6 +202,10 @@ public class ScribeMaintainer
 	}
 
 	// now, send a subscribe message
+	if(prev_parent != null)
+	    System.out.println("DEBUG :: TREE REPAIR FOR "+topicId+" previous parent "+prev_parent.getNodeId()+" at "+(int)System.currentTimeMillis()+" at node "+m_scribe.getNodeId());
+	else
+	    System.out.println("DEBUG :: TREE REPAIR FOR "+topicId+" previous parent is null, at "+(int)System.currentTimeMillis()+ " at node "+m_scribe.getNodeId());
 	m_scribe.routeMsg( topicId, msgs, cred, opt );
 
     }
