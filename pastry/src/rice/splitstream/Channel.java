@@ -157,12 +157,12 @@ public class Channel extends PastryAppl implements IScribeApp {
 	    stripeIdTable.put(stripeId, stripe);
 
             /* This is the code to select the primary stripe, check it */ 
-	    /*	if(stripeId.getDigit(getRoutingTable().numRows() -1, 4) 
+	    if(stripeId.getDigit(getRoutingTable().numRows() -1, 4) 
 		== getNodeId().getDigit(getRoutingTable().numRows() -1,4))
 		primaryStripe = stripe; 
-	    */
+	    
 
-	    primaryStripe = stripe;	
+	    //primaryStripe = stripe;	
 	}
         sendSubscribeMessage();
 	if(scribe.join(spareCapacityId, this, cred)){
@@ -214,7 +214,7 @@ public class Channel extends PastryAppl implements IScribeApp {
                                                                           0,
                                                                           channelId,
                                                                           cred );
-	//this.thePastryNode.scheduleMsg( timeoutMessage, timeoutLen );
+	this.thePastryNode.scheduleMsg( timeoutMessage, timeoutLen );
 
     }
 
@@ -237,9 +237,14 @@ public class Channel extends PastryAppl implements IScribeApp {
 
 	for(int i = 0 ; i < stripeIds.length ; i++){
 	    if(stripeIdTable == null) {System.out.println("NULL");}
-	    stripeIdTable.put(stripeIds[i],
-			      new Stripe( stripeIds[i], this, scribe, cred, false));
-		
+            Stripe stripe = new Stripe( stripeIds[i], this, scribe, cred, false);
+	    stripeIdTable.put(stripeIds[i], stripe);
+	    /* Subscribe to a primary stripe */
+            /* This is the code to select the primary stripe, check it */ 
+	    if( stripeIds[i].getDigit(getRoutingTable().numRows() -1, 4) 
+	        == getNodeId().getDigit(getRoutingTable().numRows() -1,4) )
+	        primaryStripe = stripe; 
+	
 	}
 
 	this.numStripes = stripeIds.length;
@@ -251,7 +256,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	
 	if(scribe.join(spareCapacityId, this, cred)){
 	}		
-	/* Subscribe to a primary stripe */
+
 	isReady = true;
 	notifyApps();
 	System.out.println("A Channel Object is being created (In Path) at " + getNodeId());
@@ -591,8 +596,14 @@ public class Channel extends PastryAppl implements IScribeApp {
 	for(int i = 1 ; i < subInfo.length-1 ; i++){
 	    this.numStripes = subInfo.length -2 ;
 	    StripeId stripeId = new StripeId(subInfo[i]);
-	    stripeIdTable.put(stripeId, 
-			      new Stripe( stripeId, this, scribe, cred, false));
+            Stripe stripe = new Stripe( stripeId, this, scribe, cred, false);
+	    stripeIdTable.put(stripeId, stripe);
+	    /* Subscribe to a primary stripe */
+            /* This is the code to select the primary stripe, check it */ 
+	    if( stripeId.getDigit(getRoutingTable().numRows() -1, 4) 
+	        == getNodeId().getDigit(getRoutingTable().numRows() -1,4) )
+	        primaryStripe = stripe;
+
 	}
         if(scribe.join(channelId, this, cred, subInfo)){
 	}
