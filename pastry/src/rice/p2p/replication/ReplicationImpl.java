@@ -183,6 +183,7 @@ public class ReplicationImpl implements Replication, Application {
   public void sendRequests() {
     log.finer(endpoint.getId() + ": Sending out requests"); 
     NodeHandleSet handles = endpoint.neighborSet(Integer.MAX_VALUE);
+    IdRange ourRange = endpoint.range(handle, 0, handle.getId());
     
     for (int i=0; i<handles.size(); i++) {
       NodeHandle handle = handles.getHandle(i);
@@ -190,7 +191,7 @@ public class ReplicationImpl implements Replication, Application {
 
       if ((range != null) && (! range.intersectRange(getTotalRange()).isEmpty())) {
         log.finer(endpoint.getId() + ": Sending request to " + handle + " for range " + range);
-        RequestMessage request = new RequestMessage(this.handle, new IdRange[] {range.intersectRange(getTotalRange())});
+        RequestMessage request = new RequestMessage(this.handle, new IdRange[] {range.intersectRange(getTotalRange()), ourRange});
         endpoint.route(handle.getId(), request, handle);
       }
     }

@@ -46,6 +46,7 @@ import rice.Continuation.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.messaging.*;
 import rice.p2p.replication.*;
+import rice.p2p.replication.manager.*;
 
 import rice.persistence.*;
 
@@ -59,7 +60,7 @@ import rice.persistence.*;
  * @author Ansley Post
  * @author Peter Druschel
  */
-public class PastImpl implements Past, Application, ReplicationClient {
+public class PastImpl implements Past, Application, ReplicationManagerClient {
 
   
   // ----- STATIC FIELDS -----
@@ -80,7 +81,7 @@ public class PastImpl implements Past, Application, ReplicationClient {
   protected int replicationFactor;
 
   // the replica manager used by Past
-  protected Replication replicaManager;
+  protected ReplicationManagerImpl replicaManager;
 
   // the unique ids used by the messages sent across the wire
   private int id;
@@ -90,9 +91,6 @@ public class PastImpl implements Past, Application, ReplicationClient {
 
   // the factory for manipulating ids
   protected IdFactory factory;
-
-  // the set of Ids which we need to fetch
-  protected IdSet pending;
 
   // the logger which we will use
   protected Logger log = Logger.getLogger(this.getClass().getName());
@@ -114,9 +112,12 @@ public class PastImpl implements Past, Application, ReplicationClient {
     id = Integer.MIN_VALUE;
     outstanding = new Hashtable();
     replicationFactor = replicas;
-    pending = factory.buildIdSet();
+    
+ //   log.addHandler(new ConsoleHandler());
+ //   log.setLevel(Level.WARNING);
+ //   log.getHandlers()[0].setLevel(Level.WARNING);
 
-    replicaManager = new ReplicationImpl(node, this, replicas, instance);
+    replicaManager = new ReplicationManagerImpl(node, this, replicas, instance);
   }
   
 
@@ -239,112 +240,6 @@ public class PastImpl implements Past, Application, ReplicationClient {
           log.warning("Caching of " + content + " caused exception " + e);
         }
       });
-    }
-  }
-
-  /**
-   * Method which adds a set of Ids to the list of pending
-   * ids to be fetched.
-   *
-   * @param set The keys to fetch
-   */
-  private void addToPending(IdSet set) {
-    log.finer("Adding ids " + set + " to the list of pending");
-    Iterator i = set.getIterator();
-
-    while (i.hasNext()) {
-      Id id = (Id) i.next();
-
-      if ((! pending.isMemberId(id)) &&
-          (! storage.getStorage().exists(id))) {
-        pending.addId(id);
-      }
-    }
-  }
-
-  /**
-   * Sends out the request for the next pending id. 
-   */
-  private void fetchNextPending() {
-    final Id id = (Id) pending.getIterator().next();
-    log.finer("Sending out request for the next pending id " + id);
-    
-    log.finest("inserting replica of id " + id);
-    final Continuation receive = new Continuation() {
-      public void receiveResult(Object o) {
-        if (! (o.equals(new Boolean(true)))) {
-          log.warning("Insertion of replica of id " + id + " failed.");
-        }
-        fetchPendingCompleted(id);
-      }
-
-      public void receiveException(Exception e) {
-        log.warning("Insertion of replica id " + id + " caused exception " + e);
-        fetchPendingCompleted(id);
-      }
-    };
-
-    log.finest("retrieving replica id " + id);
-    final Continuation insert = new Continuation() {
-      public void receiveResult(Object o) {
-        if (o == null) {
-          log.warning("Could not fetch id " + id + " - replica returned null");
-          fetchPendingCompleted(id);
-        } else {
-          PastContent content = (PastContent) o;
-          storage.store(content.getId(), content, receive);
-        }
-      }
-
-      public void receiveException(Exception e) {
-        log.warning("Retrieval of replica id " + id + " caused exception " + e);
-        fetchPendingCompleted(id);
-      }
-    };
-
-    log.finest("fetching handles of replicas of id" + id);
-    Continuation fetch = new Continuation() {
-      public void receiveResult(Object o) {
-        if (o != null) {
-          PastContentHandle[] handles = (PastContentHandle[]) o;
-          PastContentHandle handle = null;
-          int i=0;
-
-          while ((handle == null) && (i<handles.length)) {
-            handle = handles[i];
-            i++;
-          }
-
-          if (handle == null) {
-            log.warning("Could not fetch object of id " + id + " - all replicas were null");
-            fetchPendingCompleted(id);
-          } else {
-            fetch(handle, insert);
-          }
-        }
-      }
-
-      public void receiveException(Exception e) {
-        log.warning("Fetch handles of replica of id " + id + " caused exception " + e + ".");
-        fetchPendingCompleted(id);
-      }
-    };
-    
-    lookupHandles(id, replicationFactor, fetch);
-  }
-
-  /**
-   * Method which is called once a fetch of a pending id has been completed, regardless
-   * of failure or not.
-   *
-   * @param id The id which the fetch of has completed
-   */
-  private void fetchPendingCompleted(Id id) {
-    log.finer("Fetch of pending id " + id + " has been completed");
-    pending.removeId(id);
-
-    if (pending.getIterator().hasNext()) {
-      fetchNextPending();
     }
   }
 
@@ -697,7 +592,6 @@ public class PastImpl implements Past, Application, ReplicationClient {
       
       if (msg instanceof InsertMessage) {
         final InsertMessage imsg = (InsertMessage) msg;
-        pending.removeId(imsg.getContent().getId());
         
         log.fine("Received insert message with id " + imsg.getContent().getId());
         
@@ -791,88 +685,71 @@ public class PastImpl implements Past, Application, ReplicationClient {
   }
 
   
-  // ----- REPLICA MANAGER METHODS -----
+  // ----- REPLICATION MANAGER METHODS -----
 
   /**
-   * This upcall is invoked to notify the application that is should
-   * fetch the cooresponding keys in this set, since the node is now
-   * responsible for these keys also.
+   * This upcall is invoked to tell the client to fetch the given id, 
+   * and to call the given command with the boolean result once the fetch
+   * is completed.  The client *MUST* call the command at some point in the
+   * future, as the manager waits for the command to return before continuing.
    *
-   * @param keySet set containing the keys that needs to be fetched
+   * @param id The id to fetch
    */
-  public void fetch(IdSet keySet) {
-    log.fine("Got fetch for key set " + keySet);
-    if (pending.getIterator().hasNext()) {
-      addToPending(keySet);
-    } else {
-      addToPending(keySet);
-
-      if (pending.getIterator().hasNext()) {
-        fetchNextPending();
-      }
-    }
-  }
-
-  /**
-   * This upcall is to notify the application of the range of keys for
-   * which it is responsible. The application might choose to react to
-   * call by calling a scan(complement of this range) to the persistance
-   * manager and get the keys for which it is not responsible and
-   * call delete on the persistance manager for those objects.
-   *
-   * @param range the range of keys for which the local node is currently
-   * responsible
-   */
-  public void setRange(IdRange range) {
-    IdRange notRange = range.getComplementRange();
-
-    log.finer("Got new responsible range " + range);
-    final Continuation c = new Continuation() {
-      private Iterator notIds;
-
+  public void fetch(final Id id, Continuation command) {
+    log.finer("Sending out replication fetch request for the id " + id);
+    
+    lookup(id, new StandardContinuation(command) {
       public void receiveResult(Object o) {
-        if (o instanceof IdSet) {
-          Iterator i = ((IdSet) o).getIterator();
-          Vector v = new Vector();
-          while (i.hasNext()) v.add(i.next());
-          notIds = v.iterator();
-        } else if (! o.equals(new Boolean(true))) {
-          log.warning("Unstore of id did not succeed!");
-        }
-
-        if (notIds.hasNext()) {
-          final Id id = (Id) notIds.next();
-          log.finer("Unstoring id " + id);
-
-          storage.getStorage().getObject(id, new StandardContinuation(this) {
-            public void receiveResult(Object o) {
-              PastContent content = (PastContent) o;
-
-              cache(content);
-              storage.getStorage().unstore(id, parent);
-            }
-          });
+        log.finest("retrieving replica id " + id);
+        
+        if (o == null) {
+          log.warning("Could not fetch id " + id + " - replica returned null");
+          parent.receiveResult(new Boolean(false));
+        } else {
+          log.finest("inserting replica of id " + id);
+          PastContent content = (PastContent) o;
+          storage.getStorage().store(content.getId(), content, parent);
         }
       }
-
-      public void receiveException(Exception e) {
-        log.warning("Exception " + e + " occured during removal of objects.");
-      }
-    };
-
-    storage.getStorage().scan(notRange, c);
+    });
   }
-
+  
   /**
-   * This upcall should return the set of keys that the application
+    * This upcall is to notify the client that the given id can be safely removed
+   * from the storage.  The client may choose to perform advanced behavior, such
+   * as caching the object, or may simply delete it.
+   *
+   * @param id The id to remove
+   */
+  public void remove(Id id, Continuation command) {
+    storage.getStorage().unstore(id, command);
+  }
+  
+  /**
+    * This upcall should return the set of keys that the application
    * currently stores in this range. Should return a empty IdSet (not null),
    * in the case that no keys belong to this range.
+   *
    * @param range the requested range
    */
   public IdSet scan(IdRange range) {
-    return storage.scan(range);
+    return storage.getStorage().scan(range);
+  }
+  
+  /**
+    * This upcall should return whether or not the given id is currently stored
+   * by the client.
+   *
+   * @param id The id in question
+   * @return Whether or not the id exists
+   */
+  public boolean exists(Id id) {
+    return storage.getStorage().exists(id);
   }
 
+
+  // ----- UTILITY METHODS -----
+  
   /**
    * Returns the replica manager for this Past instance.  Should *ONLY* be used
    * for testing.  Messing with this will cause unknown behavior.
@@ -880,14 +757,12 @@ public class PastImpl implements Past, Application, ReplicationClient {
    * @return This Past's replica manager
    */
   public Replication getReplicaManager() {
-    return replicaManager;
+    return replicaManager.getReplication();
   }
 
-
-  // ----- UTILITY METHODS -----
-
   /**
-   * Returns this Past's storage manager.
+   * Returns this Past's storage manager. Should *ONLY* be used
+   * for testing.  Messing with this will cause unknown behavior.
    *
    * @return This Past's storage manager.
    */
