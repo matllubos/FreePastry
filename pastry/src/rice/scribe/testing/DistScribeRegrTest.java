@@ -366,7 +366,7 @@ public class DistScribeRegrTest {
 
 	Log.init(args);
 	doInitstuff(args);
-	//seed = -1347092695;
+	//seed = -1089549604;
 	seed = (int)System.currentTimeMillis();
 	PastrySeed.setSeed(seed);
 	System.out.println("seed used=" + seed); 
