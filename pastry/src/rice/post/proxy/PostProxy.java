@@ -102,6 +102,11 @@ public class PostProxy {
   protected Past immutablePast;
   
   /**
+    * The local Past service, for immutable objects
+   */
+  protected Past realImmutablePast;
+  
+  /**
    * The local Past service, for mutable objects
    */
   protected Past mutablePast;
@@ -120,6 +125,11 @@ public class PostProxy {
    * The local Post service
    */
   protected Post post;
+  
+  /**
+   * The global timer used for scheduling events
+   */
+  protected rice.selector.Timer timer;
   
   /**
    * The local storage manager, for immutable objects
@@ -671,7 +681,7 @@ public class PostProxy {
     
     node = factory.newNode(factory.getNodeHandle(bootAddresses), proxyAddress);
     pastryNode = (PastryNode) node;
-    rice.selector.Timer timer = ((DistPastryNode) node).getTimer();
+    timer = ((DistPastryNode) node).getTimer();
     
     ((PersistentStorage) immutableStorage.getStorage()).setTimer(timer);
     ((PersistentStorage) ((LRUCache) immutableStorage.getCache()).getStorage()).setTimer(timer);
@@ -880,6 +890,8 @@ public class PostProxy {
                                    parameters.getIntParameter("past_replication_factor"), 
                                    parameters.getStringParameter("application_instance_name") + "-immutable");
     }
+    
+    realImmutablePast = immutablePast;
       
     mutablePast = new PastImpl(node, mutableStorage, 
                                parameters.getIntParameter("past_replication_factor"), 

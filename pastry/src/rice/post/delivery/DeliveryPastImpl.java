@@ -196,31 +196,22 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
     if (array.length == 0) {
       command.receiveResult(null);
     } else {
-      final int start = rng.nextInt(array.length);
+      int start = rng.nextInt(array.length);
+      int current = (start + 1) % array.length;
       
-      Continuation c = new StandardContinuation(command) {
-        int current = start;
-
-        public void receiveResult(Object o) {
-          if (o != null) {
-            PostEntityAddress addr = ((Delivery) o).getMessage().getDestination();
-            
-            if (addr.equals(address)) {
-              command.receiveResult(o);
-              return;
-            }
-          }
-          
+      while (current != start) { 
+        GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(array[current]);
+        
+        if ((metadata != null) && (metadata instanceof DeliveryMetadata) && 
+            ((DeliveryMetadata) metadata).getDestination().equals(address)) {
+          storage.getObject(array[current], command);
+          return;
+        } else {
           current = (current + 1) % array.length;
-          
-          if (current != start)
-            storage.getObject(array[current], this);
-          else
-            command.receiveResult(null);
         }
-      };
+      }
       
-      storage.getObject(array[start], c);
+      command.receiveResult(null);
     }
   }
   

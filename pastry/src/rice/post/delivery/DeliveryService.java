@@ -161,22 +161,44 @@ public class DeliveryService implements ScribeClient {
     cache.add(receipt.getId());
     
     if (delivered instanceof GCPast) {
-      ((GCPast) delivered).insert(receipt, getTimeout(), new StandardContinuation(command) {
-        public void receiveResult(Object o) {
-          parent.receiveResult(o);
-        }
-        
+      ((GCPast) delivered).insert(receipt, getTimeout(), new ErrorContinuation(command) {
         public void receiveException(Exception e) {
           cache.remove(receipt.getId());
           parent.receiveException(e);
         }
       });
     } else {
-      delivered.insert(receipt, new StandardContinuation(command) {
-        public void receiveResult(Object o) {
-          parent.receiveResult(o);
+      delivered.insert(receipt, new ErrorContinuation(command) {
+        public void receiveException(Exception e) {
+          cache.remove(receipt.getId());
+          parent.receiveException(e);
         }
-        
+      });
+    }
+  }
+  
+  /**
+   * Records a message as being undeliverable, which will ensure that delivery won't be attempted
+   * again, but does not provide a receipt.
+   *
+   * @param message The message that was delivered
+   * @param command The command to run once finished
+   */
+  public void undeliverable(SignedPostMessage message, Continuation command) { 
+    post.getLogger().finer(post.getEndpoint().getId() + ": Inserting undeliverable for " + message);
+    final Undeliverable receipt = new Undeliverable(message, factory);
+    
+    cache.add(receipt.getId());
+    
+    if (delivered instanceof GCPast) {
+      ((GCPast) delivered).insert(receipt, getTimeout(), new ErrorContinuation(command) {
+        public void receiveException(Exception e) {
+          cache.remove(receipt.getId());
+          parent.receiveException(e);
+        }
+      });
+    } else {
+      delivered.insert(receipt, new ErrorContinuation(command) {
         public void receiveException(Exception e) {
           cache.remove(receipt.getId());
           parent.receiveException(e);

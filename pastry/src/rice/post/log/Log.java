@@ -312,6 +312,15 @@ public class Log implements PostData {
    * @return A reference to the top entry in the log.
    */
   public void getTopEntry(Continuation command) {
+    getRealTopEntry(command);   
+  }
+  
+  /**
+   * Internal method to get the *actual* top entry
+   *
+   * @return The top entry which is actually an entry
+   */
+  protected final void getRealTopEntry(Continuation command) {
     if ((topEntry == null) && (topEntryReference != null)) {
       post.getStorageService().retrieveContentHash(topEntryReference, new StandardContinuation(command) {
         public void receiveResult(Object o) {
@@ -326,7 +335,36 @@ public class Log implements PostData {
       });
     } else {
       command.receiveResult(topEntry);
-    }    
+    }
+  }
+  
+  /**
+   * This method returns a list of all the handles stored in the folder or
+   * any subfolders.
+   *
+   * Returns a PastContentHandle[] containing all of 
+   * the handles in to the provided continatuion.
+   */
+  public void getLogEntryReferences(final Set set, final LogEntry entry, Continuation command) {
+    if (topEntryReference == null) {
+      command.receiveResult(Boolean.TRUE);
+    } else {
+      set.add(topEntryReference);
+
+      getRealTopEntry(new StandardContinuation(command) {
+        public void receiveResult(Object o) {
+          LogEntry thisEntry = (LogEntry) o;
+          
+          if (((entry != null) && (entry.equals(thisEntry))) ||
+              (thisEntry.getPreviousEntryReference() == null)) {
+            parent.receiveResult(Boolean.TRUE);
+          } else {
+            set.add(thisEntry.getPreviousEntryReference());
+            thisEntry.getRealPreviousEntry(this);
+          }
+        }
+      });
+    }
   }
 
   /**

@@ -471,9 +471,18 @@ public class PostImpl implements Post, Application, ScribeClient {
                   });
                 }
                 
-                public void receiveException(Exception e) {
-                  parent.receiveException(e);
-                  next();
+                public void receiveException(final Exception e) {
+                  delivery.undeliverable(message.getEncryptedMessage(), new StandardContinuation(parent) {
+                    public void receiveResult(Object o) {
+                      parent.receiveException(e);
+                      next();
+                    }
+                    
+                    public void receiveException(Exception e) {
+                      parent.receiveException(e);
+                      next();
+                    }
+                  });
                 }
               });
             } else {

@@ -78,13 +78,22 @@ public abstract class LogEntry implements PostData {
     
     return previousEntryReference;
   }
-
+  
   /**
    * Returns the reference to the previous entry in the log
    *
    * @return A reference to the previous log entry
    */
   public void getPreviousEntry(final Continuation command) {
+    getRealPreviousEntry(command);
+  }
+
+  /**
+   * Returns the reference to the previous entry in the log
+   *
+   * @return A reference to the previous log entry
+   */
+  protected final void getRealPreviousEntry(final Continuation command) {
     if (parent != null) {
       parent.getPreviousEntry(command);
       return;
