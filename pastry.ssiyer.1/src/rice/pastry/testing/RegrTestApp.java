@@ -201,9 +201,10 @@ public class RegrTestApp extends PastryAppl {
 	    inBetween = (i1 < i2) ? i1 : i2;
 	}
 
+	int lsSize = getLeafSet().maxSize() / 2;
 
-	if ( (inBetween > 4 && wasAdded && !prg.pastryNodeLastAdded.equals(getNodeId())) ||
-	     (inBetween <= 4 && !wasAdded && getLeafSet().get(nid) == null) ) {
+	if ( (inBetween > lsSize && wasAdded && !prg.pastryNodeLastAdded.equals(getNodeId())) ||
+	     (inBetween <= lsSize && !wasAdded && getLeafSet().get(nid) == null) ) {
 	    System.out.println("at... " + getNodeId() + "leafSetChange failure 3 with " + nid + 
 			       " wasAdded=" + wasAdded + " inBetween=" + inBetween);
 	    System.out.println(getLeafSet());

@@ -64,9 +64,11 @@ public class PastryRegrTest {
 	    PastryNode other = (PastryNode) pastryNodes.get(n - 2);
 	    
 	    pn.receiveMessage(new InitiateJoin(other));
+	    while(simulate());
 	}
 
 	checkLeafSet(rta);
+	checkRoutingTable(rta);
 	//System.out.println("");
     }
 
@@ -104,10 +106,73 @@ public class PastryRegrTest {
 
 	// XXX
 
-
     }
 
 
+    public void checkRoutingTable(RegrTestApp rta) {
+	RoutingTable rt = rta.getRoutingTable();
+
+	// XXX 
+
+	for (int i=rt.numRows()-1; i>=0; i--) {
+	  // next row 
+	    for (int j=0; j<rt.numColumns(); j++) {
+		// next column
+
+		// skip if local nodeId digit
+		if (j == rta.getNodeId().getDigit(i,4)) continue;
+
+		RouteSet rs = rt.getRouteSet(i,j);
+
+		NodeId domainFirst = rta.getNodeId().getDomainPrefix(i,j,0);
+		NodeId domainLast = rta.getNodeId().getDomainPrefix(i,j,0xf);
+		//System.out.println("prefixes " + rta.getNodeId() + domainFirst + domainLast);
+
+		if (rs.size() == 0) {
+		    // no entry
+		    
+		    // check if no nodes with appropriate prefix exist
+		    int inBetween = pastryNodesSorted.subMap(domainFirst,domainLast).size() +
+			(pastryNodesSorted.containsKey(domainLast) ? 1 : 0);
+
+		    if (inBetween > 0) {
+
+			System.out.println("checkRoutingTable: missing RT entry at" + rta.getNodeId() +
+					   "row=" + i + " column=" + j + " inBetween=" + inBetween);
+			//System.out.println("prefixes " + rta.getNodeId() + domainFirst + domainLast);
+		    }
+		}
+		else {
+		    // check entries
+		    int lastProximity = 0;
+		    for (int k=0; k<rs.size(); k++) {
+
+			// check for correct proximity ordering
+			if (rs.get(k).proximity() < lastProximity) {
+			    System.out.println("checkRoutingTable failure 1, row=" + i + " column=" + j +
+					       " rank=" + k);
+			}
+			
+			NodeId id = rs.get(k).getNodeId();
+
+			// check if node exists
+			if (!pastryNodesSorted.containsKey(id))
+			    System.out.println("checkRoutingTable failure 2, row=" + i + " column=" + j +
+					       " rank=" + k);
+
+			// check if node has correct prefix
+			if ( !pastryNodesSorted.subMap(domainFirst,domainLast).containsKey(id) &&
+			     !domainLast.equals(id) )
+			    System.out.println("checkRoutingTable failure 3, row=" + i + " column=" + j +
+					       " rank=" + k);
+		    }
+		}
+	    }		
+	}
+
+	//System.out.println(rt);
+
+    }
 
     public static void main(String args[]) {
 	PastryRegrTest pt = new PastryRegrTest();
@@ -122,7 +187,7 @@ public class PastryRegrTest {
 
 	for (int i=0; i<n; i++) {
 	    pt.makePastryNode();
-	    while (pt.simulate()) msgCount++;
+	    //while (pt.simulate()) msgCount++;
 
 	    if ((i + 1) % m == 0) {
 		Date now = new Date();

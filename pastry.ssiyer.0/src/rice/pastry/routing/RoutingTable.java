@@ -87,6 +87,9 @@ public class RoutingTable extends Observable {
 	    for (int j=0; j<cols; j++) routingTable[i][j] = new RouteSet(maxEntries);
     }
 
+    public int numRows() { return routingTable.length; }
+    public int numColumns() { return routingTable[0].length; }
+
     /**
      * Determines a hop strictly better than the one we are at.
      *
@@ -200,7 +203,7 @@ public class RoutingTable extends Observable {
     {
 	String s = "routing table: \n";
 
-	for (int i=0; i<routingTable.length; i++) {
+	for (int i=routingTable.length-1; i>=0; i--) {
 	    for (int j=0; j<routingTable[i].length; j++) {
 		s += ("" + routingTable[i][j].size() + "\t");
 	    }		

@@ -160,7 +160,15 @@ public class LeafSet extends Observable implements NodeSet {
     }
 
     /**
-     * Gets the size of the leaf set.
+     * Gets the maximal size of the leaf set.
+     *
+     * @return the size.
+     */
+
+    public int maxSize() { return theSize * 2; }
+
+    /**
+     * Gets the current size of the leaf set.
      *
      * @return the size.
      */
@@ -168,7 +176,7 @@ public class LeafSet extends Observable implements NodeSet {
     public int size() { return cwSet.size() + ccwSet.size(); }
 
     /**
-     * Gets the clockwise size.
+     * Gets the current clockwise size.
      *
      * @return the size.
      */
@@ -176,7 +184,7 @@ public class LeafSet extends Observable implements NodeSet {
     public int cwSize() { return cwSet.size(); }
     
     /**
-     * Gets the counterclockwise size.
+     * Gets the current counterclockwise size.
      *
      * @return the size.
      */

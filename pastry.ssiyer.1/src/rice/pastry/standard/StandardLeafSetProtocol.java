@@ -32,6 +32,7 @@ import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 import rice.pastry.leafset.*;
+import rice.pastry.routing.*;
 
 import java.util.*;
 
@@ -46,17 +47,19 @@ public class StandardLeafSetProtocol implements Observer, MessageReceiver {
 
     private PastrySecurityManager security;
     private LeafSet leafSet;
+    private RoutingTable routeTable;
 
     private Address address;
 
     private boolean noBroadcast;
     private boolean dirty;
     
-    public StandardLeafSetProtocol(NodeHandle local, PastrySecurityManager sm, LeafSet ls) {
+    public StandardLeafSetProtocol(NodeHandle local, PastrySecurityManager sm, LeafSet ls, RoutingTable rt) {
 	localHandle = local;
 	security = sm;
 	leafSet = ls;
-	
+	routeTable = rt;
+
 	address = new LeafSetProtocolAddress();
 
 	ls.addObserver(this);
@@ -102,6 +105,8 @@ public class StandardLeafSetProtocol implements Observer, MessageReceiver {
 		if (nh.isAlive() == false) continue;
 		
 		leafSet.put(nh);
+		// update RT as well - PD
+		routeTable.put(nh);
 	    }
 	    
 	    if (dirty) broadcast();

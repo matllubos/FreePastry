@@ -64,7 +64,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
     private StandardJoinProtocol jProtocol;
 
     private static final int rtMax = 8;
-    private static final int lSetSize = 4;
+    private static final int lSetSize = 8;
   
     public DirectPastryNodeFactory() {
 	nidFactory = new RandomNodeIdFactory();
@@ -85,7 +85,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 		
 	router = new StandardRouter(lhandle, routeTable, leafSet);
 		
-	lsProtocol = new StandardLeafSetProtocol(lhandle, secureMan, leafSet);
+	lsProtocol = new StandardLeafSetProtocol(lhandle, secureMan, leafSet, routeTable);
 	rsProtocol = new StandardRouteSetProtocol(lhandle, secureMan, routeTable);
 	jProtocol = new StandardJoinProtocol(lhandle, secureMan, routeTable, leafSet);
 

@@ -458,15 +458,37 @@ public class NodeId implements Comparable, Serializable
     {
 	int index = i / 8;
 	int shift = i % 8;
-
 	int val = nodeId[index];
-
 	if (val < 0) val += 256;
-
 	int mask = (1 << shift);
 
 	if ((val & mask) != 0) return true;
 	else return false;
+    }
+
+
+    /**
+     * Sets the ith bit to a given value
+     *
+     * i = 0 is the least significant bit.
+     *
+     * @param i which bit to set.
+     * @param v new value of bit
+     *
+     */
+
+    public void setBit(int i, int v) 
+    {
+	int index = i / 8;
+	int shift = i % 8;
+	int val = nodeId[index];
+	if (val < 0) val += 256;
+	int mask = (1 << shift);
+	
+	if (v == 1)
+	    nodeId[index] = (byte)(val | mask);
+	else
+	    nodeId[index] = (byte)(val & ~mask);
     }
 
     /**
@@ -483,9 +505,7 @@ public class NodeId implements Comparable, Serializable
     public int getDigit(int i, int b) 
     {
 	int base = 1 << b;
-	
 	int index = b * i;
-	
 	int val = 0;
 	int mask = 1;
 
@@ -495,6 +515,29 @@ public class NodeId implements Comparable, Serializable
 	}
 
 	return val;
+    }
+
+
+    /**
+     * Sets the ith digit in base 2^b.
+     *
+     * i = 0 is the least significant digit.
+     * 
+     * @param i which digit to get.
+     * @param v the new value of the digit
+     * @param b which power of 2 is the base to get it in.
+     */
+
+    public void setDigit(int i, int v, int b) 
+    {
+	int base = 1 << b;
+	int index = b * i;
+	int mask = 1;
+
+	for (int j=0; j<b; j++) {
+	    setBit(j + index, v & 1);
+	    v >>= 1;
+	}
     }
 
     /**
@@ -547,6 +590,18 @@ public class NodeId implements Comparable, Serializable
 
 	return ind / base;
     }
+
+
+    public NodeId getDomainPrefix(int row, int column, int suffixDigit) {
+	NodeId res = new NodeId(nodeId);
+	
+	res.setDigit(row, column, 4);
+	for (int i=0; i<row; i++)
+	    res.setDigit(i, suffixDigit, 4);
+
+	return res;
+    }
+
 
     /**
      * Returns a string representation of the nodeId.
