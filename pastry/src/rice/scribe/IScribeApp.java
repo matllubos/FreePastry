@@ -40,6 +40,8 @@ import rice.pastry.NodeHandle;
 import rice.pastry.NodeId;
 import rice.scribe.messaging.ScribeMessage;
 
+import java.io.*;
+
 /**
  * @(#) IScribeApp.java
  *
@@ -102,8 +104,12 @@ public interface IScribeApp
      *
      * @param wasAdded true if child was added and false if child was removed.
      *
+     * @param obj 
+     * The additional data associated with the subscription message, SUBSCRIBE
+     * msg, sent by child.
+     *
      */
-    public void subscribeHandler( ScribeMessage msg, NodeId topicId, NodeHandle child, boolean wasAdded );
+    public void subscribeHandler(NodeId topicId, NodeHandle child, boolean wasAdded, Object obj );
     
 
     /**
