@@ -242,7 +242,7 @@ public class AggregateList {
   }
 
   public void refreshAggregate(AggregateDescriptor adc, long lifetime) {
-    logEntry("refresh|"+adc.key.toStringFull());
+    logEntry("refresh|"+adc.key.toStringFull()+"|"+lifetime);
     adc.currentLifetime = lifetime;
     for (int i=0; i<adc.objects.length; i++) 
       adc.objects[i].currentLifetime = adc.objects[i].refreshedLifetime;
