@@ -167,8 +167,9 @@ public abstract class PastryRegrTest {
 
     private void makePastryNode(int num) {
 	RegrTestApp rta[] = new RegrTestApp[num];
-	pastryNodesLastAdded.clear();
 
+	pause(1000);
+	pastryNodesLastAdded.clear();
 	inConcJoin = true;
 
 	int n = pastryNodes.size(); // n will be a multiple of num
@@ -423,9 +424,10 @@ public abstract class PastryRegrTest {
 		// fetch the replicaSet of the key at the ccw edge of the range
 		NodeSet cs = ls.replicaSet(range.getCCW(), maxRank+1);
 
-		if ( (j>=0 && cs.get(j/2).getNodeId() != nearest) ||
-		     (j<0 && !ls.overlaps() && cs.get(maxRank).getNodeId() != nearest) ||
-		     (j<0 && ls.overlaps() && !range.isFull() /*cs.get(0).getNodeId() != nearest*/) ) {
+		if ( (j>=0 && cs.get(j/2) == null) ||
+		     (j>=0 && !cs.get(j/2).getNodeId().equals(nearest)) ||
+		     (j<0 && !ls.overlaps() && !cs.get(maxRank).getNodeId().equals(nearest)) ||
+		     (j<0 && ls.overlaps() && !range.isFull()) ) {
 		    System.out.println("checkLeafSet: range failure 1 at " + rta.getNodeId() + " k=" + k + " j=" + j +
 				       " maxRank=" + maxRank + "\n" + cs + "\n" + ls + "\n" + range + "\nnearest=" + nearest);
 		    
@@ -442,9 +444,10 @@ public abstract class PastryRegrTest {
 		// fetch the replicaSet of the key at the cw edge of the range
 		cs = ls.replicaSet(range.getCW().getCCW(), maxRank+1);
 
-		if ( (j>= 0 && cs.get(j/2).getNodeId() != nearest) ||
-		     (j<0 && !ls.overlaps() && cs.get(maxRank).getNodeId() != nearest) ||
-		     (j<0 && ls.overlaps() && !range.isFull()/*cs.get(0).getNodeId() != nearest*/) ) {
+		if ( (j>= 0 && cs.get(j/2) == null) ||
+		     (j>= 0 && !cs.get(j/2).getNodeId().equals(nearest)) ||
+		     (j<0 && !ls.overlaps() && !cs.get(maxRank).getNodeId().equals(nearest)) ||
+		     (j<0 && ls.overlaps() && !range.isFull()) ) {
 		    System.out.println("checkLeafSet: range failure 2 at " + rta.getNodeId() + " k=" + k + " j=" + j +
 				       " maxRank=" + maxRank + "\n" + cs + "\n" + ls + "\n" + range + "\nnearest=" + nearest);
 
@@ -691,6 +694,8 @@ public abstract class PastryRegrTest {
 		pt.checkLeafSet((RegrTestApp)pt.rtApps.get(j));
 		pt.checkRoutingTable((RegrTestApp)pt.rtApps.get(j));
 	    }
+	    
+	    pt.pause(1000);
 	}
 
 	pt.pause(5000);

@@ -1,6 +1,5 @@
 /*************************************************************************
 
-
 "FreePastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
@@ -59,29 +58,34 @@ import java.rmi.*;
 
 public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
 {
+    // size of the thread pool for asynchronous RMI sends
+    // if RMISendHandlerPoolSize == 0, all RMI calls are blocking
+    private static final int RMISendHandlerPoolSize = 8;
+
     private RMIRemoteNodeI remotestub;
     private RMINodeHandlePool handlepool;
     private int port;
 
-    private LinkedList queue;
-    private int count;
+    private LinkedList rcvQueue;
+    private LinkedList sendQueue;
 
-    private class MsgHandler implements Runnable {
+    // a thread class that handles incoming messages
+    //
+    private class RcvMsgHandler implements Runnable {
 	public void run() {
 	    while (true) {
 		Message msg = null;
-		synchronized (queue) {
-		    while (count == 0) {
+		synchronized (rcvQueue) {
+		    while (rcvQueue.size() == 0) {
 			try {
-			    queue.wait();
+			    rcvQueue.wait();
 			} catch (InterruptedException e) {}
 		    }
 
 		    try {
-			msg = (Message) queue.removeFirst();
-			count--;
+			msg = (Message) rcvQueue.removeFirst();
 		    } catch (NoSuchElementException e) {
-			System.out.println("no msg despite count = " + count);
+			System.out.println("no msg despite size = " + rcvQueue.size());
 			continue;
 		    }
 		}
@@ -103,6 +107,39 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
 	}
     }
 
+    // a thread class that handles outgoing messages
+    //
+    private class SendMsgHandler implements Runnable {
+	public void run() {
+	    Message msg = null;
+	    RMINodeHandle handle = null;
+
+	    while (true) {
+		synchronized (sendQueue) {
+		    while (sendQueue.size() == 0) {
+			try {
+			    sendQueue.wait();
+			} catch (InterruptedException e) {}
+		    }
+
+		    try {
+			msg = (Message) sendQueue.removeFirst();
+			handle = (RMINodeHandle) sendQueue.removeFirst();
+		    } catch (NoSuchElementException e) {
+			System.out.println("no msg despite size = " + rcvQueue.size());
+			continue;
+		    }
+		}
+		
+		// do the blocking RMI call
+		if (msg == null) 
+		    handle.doPing();
+		else
+		    handle.doSend(msg);
+	    }
+	}
+    }
+
 
     /**
      * Constructor
@@ -111,8 +148,8 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
 	super(id);
 	remotestub = null;
 	handlepool = null;
-	queue = new LinkedList();
-	count = 0;
+	rcvQueue = new LinkedList();
+	sendQueue = new LinkedList();
     }
 
     /**
@@ -146,10 +183,10 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
     public void doneNode(NodeHandle bootstrap) {
 	super.doneNode(bootstrap);
 
-	new Thread(new MsgHandler()).start();
-	//if (leafSetMaintFreq > 0 || routeSetMaintFreq > 0)
-	//  new Thread(new MaintThread()).start();
-
+	new Thread(new RcvMsgHandler()).start();
+	for (int i=0; i<RMISendHandlerPoolSize; i++)
+	    new Thread(new SendMsgHandler()).start();
+	
 	try {
 	    remotestub = (RMIRemoteNodeI) UnicastRemoteObject.exportObject(this);
 	} catch (RemoteException e) {
@@ -178,9 +215,11 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
     }
 
     /**
-    * Proxies to the local node to accept a message. For synchronization
-    * purposes, it only adds the message to the queue and signals the
-    * message handler thread.
+     * Proxies to the local node to accept a message. For synchronization
+     * purposes, it only adds the message to the rcvQueue and signals the
+     * message handler thread.
+     * @param msg the message 
+     * @param the expected id of the this node
      */
     public void remoteReceiveMessage(Message msg, NodeId hopDest) throws java.rmi.RemoteException {
 	if (!hopDest.equals(getNodeId())) {
@@ -190,11 +229,38 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
 	    throw new java.rmi.RemoteException("RMI: wrong receiver");
 	}
 	
-	synchronized (queue) {
-	    queue.add(msg);
-	    count++;
-	    queue.notify();
+	synchronized (rcvQueue) {
+	    rcvQueue.add(msg);
+	    rcvQueue.notify();
 	}
+    }
+
+    /**
+     * Enqueues a message for asynchronous transmission
+     * @param msg the message (if msg == null, do a ping)
+     * @param handle the nodeHandle to which the message should be sent
+     */
+    public void enqueueSendMsg(Message msg, RMINodeHandle handle) {
+      if (RMISendHandlerPoolSize == 0) {
+	  // do a blocking RMI call
+	  if (msg == null)
+	      handle.doPing();
+	  else
+	      handle.doSend(msg);
+      }
+      else {
+	  // enqueue the message
+	  int len;
+
+	  synchronized (sendQueue) {
+	      sendQueue.add(msg);
+	      sendQueue.add(handle);
+	      len = sendQueue.size() / 2;
+	      sendQueue.notify();
+	  }
+	  
+	  if (Log.ifp(8)) System.out.println("RMI: sendQueue len=" + len);
+      }
     }
 
     /**

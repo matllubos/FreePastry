@@ -47,16 +47,17 @@ import java.util.*;
 import java.rmi.RemoteException;
 
 /**
-* A locally stored node handle that points to a remote RMIRemoteNodeI.
-*
-* Need localnode within handle for three reasons: to determine isLocal
-* (thus alive and proximity() = 0), to set senderId in messages (used for
-* coalescing on the other end), and to bounce messages back to self on
-* failure.
-*
-* @version $Id$
-*
-* @author Sitaram Iyer
+ * A locally stored node handle that points to a remote RMIRemoteNodeI.
+ *
+ * Need localnode within handle for three reasons: to determine isLocal
+ * (thus alive and proximity() = 0), to set senderId in messages (used for
+ * coalescing on the other end), and to bounce messages back to self on
+ * failure.
+ *
+ * @version $Id$
+ *
+ * @author Sitaram Iyer
+ * @author Peter Druschel
  */
 
 public class RMINodeHandle extends DistNodeHandle
@@ -87,11 +88,11 @@ public class RMINodeHandle extends DistNodeHandle
     }
 
     /**
-    * Alternate constructor with local Pastry node.
-    *
-    * @param rn pastry node for whom we're constructing a handle.
-    * @param nid its node id.
-    * @param pn local Pastry node.
+     * Alternate constructor with local Pastry node.
+     *
+     * @param rn pastry node for whom we're constructing a handle.
+     * @param nid its node id.
+     * @param pn local Pastry node.
      */
     public RMINodeHandle(RMIRemoteNodeI rn, NodeId nid, PastryNode pn, InetSocketAddress address) {
       super(nid, address);
@@ -143,8 +144,8 @@ public class RMINodeHandle extends DistNodeHandle
 
       if (alive == false)
           if (Log.ifp(6))
-        System.out.println("warning: trying to send msg to dead node "
-               + nodeId + ": " + msg);
+	      System.out.println("warning: trying to send msg to dead node "
+				 + nodeId + ": " + msg);
 
       if (isInPool == false)
           System.out.println("panic: sending message to unverified handle "
@@ -157,54 +158,75 @@ public class RMINodeHandle extends DistNodeHandle
                  (msg instanceof RouteMessage ? "route" : "direct")
                  + " msg to " + nodeId + ": " + msg);
 
-      try {
-        remoteNode.remoteReceiveMessage(msg, nodeId);
-        //System.out.println("message sent successfully");
+      RMIPastryNode ln = (RMIPastryNode) getLocalNode();
+      ln.enqueueSendMsg(msg, this);
 
-        markAlive();
-      } catch (RemoteException e) { // failed; mark it dead
-	  if (Log.ifp(6)) System.out.println("message failed: " + msg + e);
-        if (isLocal) System.out.println("panic; local message failed: " + msg);
-
-        markDead();
-
-        // bounce back to local dispatcher
-        if (Log.ifp(6)) System.out.println("bouncing message back to self at " + getLocalNode());
-        if (msg instanceof RouteMessage) {
-          RouteMessage rmsg = (RouteMessage) msg;
-          rmsg.nextHop = null;
-          if (Log.ifp(6)) System.out.println("this msg bounced is " + rmsg);
-          getLocalNode().receiveMessage(rmsg);
-        } else {
-          // drop these on floor --
-          // these are either routemessagedirect (XXX eventually)
-          // or leafsetbroadcast or other internal pastry msgs
-
-          // getLocalNode().receiveMessage(msg);
-          if (Log.ifp(6)) System.out.println("msg dropped on floor due to dead node " + msg);
-        }
-      }
     }
 
     /**
-    * Ping the remote node now, and update the proximity metric.
-    *
-    * @return liveness of remote node.
+     * Do the actual (blocking) RMI call to the remote node
+     * @param msg Message to be delivered, may or may not be routeMessage.
+     */
+    public void doSend(Message msg) {
+	try {
+	    remoteNode.remoteReceiveMessage(msg, nodeId);
+	    //System.out.println("message sent successfully");
+
+	    markAlive();
+	} catch (RemoteException e) { // failed; mark it dead
+	    if (Log.ifp(6)) System.out.println("message failed: " + msg + e);
+	    if (isLocal) System.out.println("panic; local message failed: " + msg);
+
+	    markDead();
+
+	    // bounce back to local dispatcher
+	    if (Log.ifp(6)) System.out.println("bouncing message back to self at " + getLocalNode());
+	    if (msg instanceof RouteMessage) {
+		RouteMessage rmsg = (RouteMessage) msg;
+		rmsg.nextHop = null;
+		if (Log.ifp(6)) System.out.println("this msg bounced is " + rmsg);
+		getLocalNode().receiveMessage(rmsg);
+	    } else {
+		// drop these on floor --
+		// these are either routemessagedirect (XXX eventually)
+		// or leafsetbroadcast or other internal pastry msgs
+
+		// getLocalNode().receiveMessage(msg);
+		if (Log.ifp(6)) System.out.println("msg dropped on floor due to dead node " + msg);
+	    }
+	}
+    }
+
+    /**
+     * Ping the remote node now, and update the proximity metric.
+     *
+     * @return liveness of remote node.
      */
     public boolean pingImpl() {
-      NodeId tryid;
 
       // don't ping local nodes or during node construction
       if (isLocal || getLocalNode() == null) return alive;
 
       /*
-      * throttle super-rapid pings
+       * throttle super-rapid pings
        */
       long now = System.currentTimeMillis();
       if (now - lastpingtime < pingthrottle*1000)
         return alive;
 
       lastpingtime = now;
+
+      RMIPastryNode ln = (RMIPastryNode) getLocalNode();
+      ln.enqueueSendMsg(null, this);
+
+      return alive;
+    }
+
+    /**
+     * Do the (blocking) ping
+     */
+    public void doPing() {
+      NodeId tryid;
 
       if (Log.ifp(7)) System.out.println(getLocalNode() + " pinging " + nodeId);
 
@@ -230,8 +252,6 @@ public class RMINodeHandle extends DistNodeHandle
         if (alive) if (Log.ifp(6)) System.out.println("ping failed on live node: " + e);
         markDead();
       }
-
-      return alive;
     }
 
     private void readObject(ObjectInputStream in)
