@@ -201,7 +201,14 @@ public class SelectorManager {
           key.cancel();
         }
 
-        selector.close();
+//        System.out.println("Selector:open:"+selector.isOpen()+","+selector);
+        if (selector.isOpen()) {
+          try {
+            selector.close();
+          } catch (IOException ioe) {
+            System.out.println("SelectorManager:closing:"+ioe);
+          }
+        }
       }
     } catch (Throwable e) {
       System.out.println("ERROR (run): " + e);
