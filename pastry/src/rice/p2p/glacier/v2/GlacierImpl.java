@@ -579,7 +579,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           final Id thisKey = (Id) iter.next();
           final FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(thisKey);
           if (metadata != null) {
-            if (metadata.getCurrentExpiration() < now) {
+            if ((metadata.getCurrentExpiration() < now) || /* delete old log head backups with infinity expiration */
+                ((((FragmentKey)thisKey).getVersionKey().getVersion() != 0) && (metadata.getCurrentExpiration() == GCPast.INFINITY_EXPIRATION)))
+            {
               candidates ++;
               if (doneSoFar < garbageCollectionMaxFragmentsPerRun) {
                 doneSoFar ++;
