@@ -42,7 +42,12 @@ public class Folder {
    * @param storage the storage service used to get log data from PAST.
    */
   public Folder(Log log, Post post) {
-    _name = (String) log.getName();
+    if (log.getName() instanceof String) {
+      _name = (String) log.getName();
+    } else {
+      _name = "Root";
+    }
+    
     _log = log;
     _post = post;
     _storage = post.getStorageService();
@@ -149,7 +154,7 @@ public class Folder {
   public void createChildFolder(String name, Continuation command) {
     System.out.println("Creating child Folder");
     // make the log to add
-    Log log = new Log(name, _log.getLocation(), _post);
+    Log log = new Log(name, _storage.getRandomNodeId(), _post);
     // make the entry to insert after the new log has been added
     LogEntry entry = new InsertFolderLogEntry(name);
     // make the continuation to perform after adding the log.  This takes in the entry to insert
@@ -193,7 +198,14 @@ public class Folder {
    * @return an array of the names of the child Folders
    */
   public String[] getChildren() {
-    return (String[])_log.getChildLogNames();    
+    Object[] resultO = _log.getChildLogNames();
+    String[] result = new String[resultO.length];
+
+    for (int i=0; i<result.length; i++) {
+      result[i] = (String) resultO[i];
+    }
+    
+    return result;    
   }
 
   /**

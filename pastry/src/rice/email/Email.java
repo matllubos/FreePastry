@@ -101,6 +101,8 @@ public class Email implements java.io.Serializable {
       EmailGetBodyTask preCommand = new EmailGetBodyTask(command);
       // start the fetching process
       storage.retrieveContentHash(bodyRef, preCommand);
+    } else {
+      command.receiveResult(this.body);
     }
   }
      
@@ -118,6 +120,8 @@ public class Email implements java.io.Serializable {
       EmailGetAttachmentsTask preCommand = new EmailGetAttachmentsTask(0, command);
       // start the fetching process
       storage.retrieveContentHash(attachmentRefs[0], preCommand);
+    } else {
+      command.receiveResult(this.attachments);
     }
   }
 
@@ -281,11 +285,12 @@ public class Email implements java.io.Serializable {
       System.out.println("received result was " + o); 
       // save the returned reference
       if (_index == BODY) {
-	bodyRef = (EmailDataReference)o;
+        bodyRef = (EmailDataReference)o;
+        _resultListener.receiveResult(new Boolean(true));
       } else {
-	attachmentRefs[_index] = (EmailDataReference)o;
+        attachmentRefs[_index] = (EmailDataReference)o;
       }
-      
+
       // store the next data item in the email
       _index = _index + 1;      
       if ((attachments != null) && (_index < attachments.length)) {

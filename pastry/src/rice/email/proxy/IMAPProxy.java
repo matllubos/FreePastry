@@ -211,6 +211,7 @@ public class IMAPProxy implements Observer, MessageCountListener {
     {
 
 	try {
+    System.out.println("Got  the body...");
 	    
 	    MimeBodyPart mimeBody = new MimeBodyPart();
 	    mimeBody.setText(new String(body.getData()));
@@ -239,18 +240,22 @@ public class IMAPProxy implements Observer, MessageCountListener {
 					 EmailData[] attachments)
     {
 	try {
+    System.out.println("Got the attachments...");
 
-	    for (int i = 0; i < attachments.length; i++) {
+    if (attachments != null) {
 
-		MimeBodyPart mimeBody = new MimeBodyPart();
-		mimeBody.setText(new String(attachments[i].getData()));
-		((Multipart)
-		 ic.getMessage().getContent()).addBodyPart(mimeBody);
-	    }
+      for (int i = 0; i < attachments.length; i++) {
 
-	    ic.setState(STATE_FINISHED);
-	    // Deliver the message
-	    deliverMessage(ic.getMessage());	    
+        MimeBodyPart mimeBody = new MimeBodyPart();
+        mimeBody.setText(new String(attachments[i].getData()));
+        ((Multipart)
+         ic.getMessage().getContent()).addBodyPart(mimeBody);
+      }
+    }
+
+    ic.setState(STATE_FINISHED);
+    // Deliver the message
+    deliverMessage(ic.getMessage());	    
 	} catch (MessagingException e) {
 	    System.err.println("IMAP proxy: messaging exception " +
 			       e);
@@ -265,6 +270,8 @@ public class IMAPProxy implements Observer, MessageCountListener {
      */
     private void deliverMessage(MimeMessage message) {
 	try {
+    System.out.println("Delivering message.");
+    
 	    javax.mail.Folder thisFolder =
 		imapStore.getFolder("INBOX");
 	    Message[] messageArray = new Message[1];
