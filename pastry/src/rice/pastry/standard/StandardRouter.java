@@ -137,6 +137,7 @@ public class StandardRouter implements MessageReceiver {
 		    return;
 		} else {
 		    msg.nextHop = handle;
+        msg.getOptions().setRerouteIfSuspected(false);
 		}
 	    }
 	else {
