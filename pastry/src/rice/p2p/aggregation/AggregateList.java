@@ -3,6 +3,7 @@ package rice.p2p.aggregation;
 import java.util.Hashtable;
 import java.util.Enumeration;
 import java.util.Date;
+import java.util.Vector;
 import java.io.*;
 import rice.p2p.commonapi.Id;
 import rice.p2p.commonapi.IdFactory;
@@ -17,8 +18,6 @@ public class AggregateList {
   protected final IdFactory factory;
   protected final PrintStream logFile;
   protected final boolean loggingEnabled;
-  protected int numAggregates;
-  protected int numObjectsInAggregates;
   protected Id rootKey;
   protected boolean wasReadOK;
   protected long nextSerial;
@@ -29,8 +28,6 @@ public class AggregateList {
     this.factory = factory;
     this.label = label;
     this.rootKey = null;
-    this.numAggregates = 0;
-    this.numObjectsInAggregates = 0;
     this.nextSerial = 0;
     this.wasReadOK = readFromDisk();
     this.loggingEnabled = loggingEnabled;
@@ -50,14 +47,6 @@ public class AggregateList {
 
   public Enumeration elements() {
     return aggregateList.elements();
-  }
-  
-  public int getNumAggregates() {
-    return numAggregates;
-  }
-  
-  public int getNumObjects() {
-    return numObjectsInAggregates;
   }
   
   public void recoverLog() {
@@ -96,28 +85,28 @@ public class AggregateList {
           System.out.println("Replaying log entry #"+thisSerial);
           entriesReplayed ++;
         
-          if (parts[2].equals("setRoot")) {
-            if (parts[3].equals("null")) {
+          if (parts[3].equals("setRoot")) {
+            if (parts[4].equals("null")) {
               rootKey = null;
               System.out.println("  - rootKey = null");
             } else {
-              rootKey = factory.buildIdFromToString(parts[3]);
+              rootKey = factory.buildIdFromToString(parts[4]);
               System.out.println("  - rootKey = "+rootKey.toStringFull());
             }
             
-          } else if (parts[2].equals("setAL")) {
-            Id adcKey = factory.buildIdFromToString(parts[3]);
-            long lifetime = Long.parseLong(parts[4]);
+          } else if (parts[3].equals("setAL")) {
+            Id adcKey = factory.buildIdFromToString(parts[4]);
+            long lifetime = Long.parseLong(parts[5]);
             AggregateDescriptor adc = (AggregateDescriptor) aggregateList.get(adcKey);
             if (adc == null)
               throw new AggregationException("Cannot find aggregate ("+adcKey.toStringFull()+": "+line);
             adc.currentLifetime = lifetime;
             System.out.println("  - lifetime="+lifetime+" in ADC "+adcKey.toStringFull());
             
-          } else if (parts[2].equals("setOCL")) {
-            Id adcKey = factory.buildIdFromToString(parts[3]);
-            int index = Integer.parseInt(parts[4]);
-            long lifetime = Long.parseLong(parts[5]);
+          } else if (parts[3].equals("setOCL")) {
+            Id adcKey = factory.buildIdFromToString(parts[4]);
+            int index = Integer.parseInt(parts[5]);
+            long lifetime = Long.parseLong(parts[6]);
             AggregateDescriptor adc = (AggregateDescriptor) aggregateList.get(adcKey);
             if (adc == null)
               throw new AggregationException("Cannot find aggregate ("+adcKey.toStringFull()+": "+line);
@@ -126,10 +115,10 @@ public class AggregateList {
             adc.objects[index].currentLifetime = lifetime;
             System.out.println("  - currentLifetime="+lifetime+" in ADC "+adcKey.toStringFull()+" index "+index);
             
-          } else if (parts[2].equals("setORL")) {
-            Id adcKey = factory.buildIdFromToString(parts[3]);
-            int index = Integer.parseInt(parts[4]);
-            long lifetime = Long.parseLong(parts[5]);
+          } else if (parts[3].equals("setORL")) {
+            Id adcKey = factory.buildIdFromToString(parts[4]);
+            int index = Integer.parseInt(parts[5]);
+            long lifetime = Long.parseLong(parts[6]);
             AggregateDescriptor adc = (AggregateDescriptor) aggregateList.get(adcKey);
             if (adc == null)
               throw new AggregationException("Cannot find aggregate ("+adcKey.toStringFull()+": "+line);
@@ -138,9 +127,9 @@ public class AggregateList {
             adc.objects[index].refreshedLifetime = lifetime;
             System.out.println("  - refreshedLifetime="+lifetime+" in ADC "+adcKey.toStringFull()+" index "+index);
             
-          } else if (parts[2].equals("refresh")) {
-            Id adcKey = factory.buildIdFromToString(parts[3]);
-            long lifetime = Long.parseLong(parts[4]);
+          } else if (parts[3].equals("refresh")) {
+            Id adcKey = factory.buildIdFromToString(parts[4]);
+            long lifetime = Long.parseLong(parts[5]);
             AggregateDescriptor adc = (AggregateDescriptor) aggregateList.get(adcKey);
             if (adc == null)
               throw new AggregationException("Cannot find aggregate ("+adcKey.toStringFull()+": "+line);
@@ -150,8 +139,8 @@ public class AggregateList {
               adc.objects[i].currentLifetime = adc.objects[i].refreshedLifetime;
             System.out.println(" - refresh="+lifetime+" in ADC "+adcKey.toStringFull());
           
-          } else if (parts[2].equals("removeAggregate")) {
-            Id adcKey = factory.buildIdFromToString(parts[3]);
+          } else if (parts[3].equals("removeAggregate")) {
+            Id adcKey = factory.buildIdFromToString(parts[4]);
             AggregateDescriptor adc = (AggregateDescriptor) aggregateList.get(adcKey);
             if (adc == null)
               throw new AggregationException("Cannot find aggregate ("+adcKey.toStringFull()+": "+line);
@@ -159,8 +148,8 @@ public class AggregateList {
             removeAggregateDescriptor(adc, false);
             System.out.println(" - remove ADC "+adcKey.toStringFull());
           
-          } else if (parts[2].equals("addAggregate")) {
-            Id adcKey = factory.buildIdFromToString(parts[3]);
+          } else if (parts[3].equals("addAggregate")) {
+            Id adcKey = factory.buildIdFromToString(parts[4]);
             AggregateDescriptor adc = (AggregateDescriptor) aggregateList.get(adcKey);
             if (adc != null)
               throw new AggregationException("Aggregate already present ("+adcKey.toStringFull()+": "+line);
@@ -169,15 +158,15 @@ public class AggregateList {
             addAggregateDescriptor(adc, false);
             System.out.println(" - add ADC "+adcKey.toStringFull());
           } else {
-            throw new AggregationException("Unknown command ("+parts[2]+"): "+line);
+            throw new AggregationException("Unknown command ("+parts[3]+"): "+line);
           } 
           
           nextSerial ++;
         } else {
           /* skip addAggregate if necessary */
           
-          if (parts[2].equals("addAggregate")) {
-            readAggregate(logFile, factory.buildIdFromToString(parts[3]));
+          if (parts[3].equals("addAggregate")) {
+            readAggregate(logFile, factory.buildIdFromToString(parts[4]));
           }
         }
       }
@@ -203,7 +192,7 @@ public class AggregateList {
   public void logEntry(String entry) {
     if (loggingEnabled) {
       if (logFile != null) {
-        logFile.println("$|"+(nextSerial++)+"|"+entry+"|@");
+        logFile.println("$|"+(nextSerial++)+"|"+System.currentTimeMillis()+"|"+entry+"|@");
         logFile.flush();
       } else {
         System.out.println("*** WARNING *** Aggregation cannot write to log: "+entry);
@@ -271,14 +260,12 @@ public class AggregateList {
     }
     
     aggregateList.put(aggr.key, aggr);
-    numAggregates ++;
 
     for (int i=0; i<aggr.objects.length; i++) {
       aggregateList.put(new VersionKey(aggr.objects[i].key, aggr.objects[i].version), aggr);
-      numObjectsInAggregates ++;
       AggregateDescriptor prevDesc = (AggregateDescriptor) aggregateList.get(aggr.objects[i].key);
       int objDescIndex = (prevDesc == null) ? -1 : prevDesc.lookupNewest(aggr.objects[i].key);
-      if ((objDescIndex < 0) || (prevDesc.objects[objDescIndex].version < aggr.objects[i].version)) {
+      if ((objDescIndex < 0) || (prevDesc.objects[objDescIndex].version <= aggr.objects[i].version)) {
         aggregateList.put(aggr.objects[i].key, aggr);
       }
     }
@@ -299,13 +286,14 @@ public class AggregateList {
       logEntry("removeAggregate|"+aggr.key.toStringFull());
     
     aggregateList.remove(aggr.key);
-    numAggregates --;
     
     for (int i=0; i<aggr.objects.length; i++) {
-      aggregateList.remove(new VersionKey(aggr.objects[i].key, aggr.objects[i].version));
-      numObjectsInAggregates --;
-      AggregateDescriptor prevDesc = (AggregateDescriptor) aggregateList.get(aggr.objects[i].key);
-      if (prevDesc.key.equals(aggr.key))
+      VersionKey vkey = new VersionKey(aggr.objects[i].key, aggr.objects[i].version);
+      AggregateDescriptor prevDesc1 = (AggregateDescriptor) aggregateList.get(vkey);
+      if ((prevDesc1 != null) && prevDesc1.key.equals(aggr.key))
+        aggregateList.remove(vkey);
+      AggregateDescriptor prevDesc2 = (AggregateDescriptor) aggregateList.get(aggr.objects[i].key);
+      if ((prevDesc2 != null) && prevDesc2.key.equals(aggr.key))
         aggregateList.remove(aggr.objects[i].key);
     }
     
@@ -313,12 +301,19 @@ public class AggregateList {
       System.out.println("*** WARNING *** Removal from aggregate list incomplete: "+aggr.key.toStringFull());
   }
   
-  public void recalculateReferenceCounts() {
+  public void recalculateReferenceCounts(Id[] excludes) {
     Enumeration enum = aggregateList.elements();
     while (enum.hasMoreElements()) {
       AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
       aggr.referenceCount = 0;
       aggr.marker = false;
+      
+      /* References from excluded aggregates don't count */
+      
+      if (excludes != null)
+        for (int i=0; i<excludes.length; i++)
+          if (excludes[i].equals(aggr.key))
+            aggr.marker = true;
     }
     
     enum = aggregateList.elements();
@@ -386,8 +381,6 @@ public class AggregateList {
   public boolean readFromDisk() {
     rootKey = null;
     aggregateList.clear();
-    numAggregates = 0;
-    numObjectsInAggregates = 0;
   
     String fileName;
     if ((new File(configFileName)).exists())
@@ -441,8 +434,6 @@ public class AggregateList {
     if (!readSuccessful) {
       rootKey = null;
       aggregateList.clear();
-    } else {
-      recalculateReferenceCounts();
     }
     
     return readSuccessful;
@@ -497,5 +488,84 @@ public class AggregateList {
       System.err.println("AggregationImpl cannot write to its aggregate list: " + configFileName + " (" + ioe + ")");
       ioe.printStackTrace();
     }
+  }
+
+  public Id[] getSomePointers(int referenceThreshold, int max, Id[] excludes) {
+    if (rootKey == null)
+      return new Id[] {};
+      
+    if (excludes != null)
+      recalculateReferenceCounts(excludes);
+  
+    Vector pointers = new Vector();
+    Enumeration enum = elements();
+
+    resetMarkers();
+    while (enum.hasMoreElements()) {
+      AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
+      if (!aggr.marker) {
+        aggr.marker = true;
+        
+        boolean isExcluded = false;
+        if (excludes != null)
+          for (int i=0; i<excludes.length; i++)
+            if (excludes[i].equals(aggr.key))
+              isExcluded = true;
+              
+        if ((aggr.referenceCount < referenceThreshold) && (pointers.size() < max) && !isExcluded)
+          pointers.add(aggr.key);
+      }
+    }
+    
+    return (Id[]) pointers.toArray(new Id[] {});
+  }
+
+  public AggregationStatistics getStatistics(long granularity, long range, int nominalReferenceCount) {
+    final int maxHistoIndex = (int)(range/granularity);
+    final long now = System.currentTimeMillis();
+    AggregationStatistics stats = new AggregationStatistics(1+maxHistoIndex, granularity);
+    Enumeration enum = elements();
+    
+    recalculateReferenceCounts(null);
+    resetMarkers();
+    
+    while (enum.hasMoreElements()) {
+      AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
+      if (!aggr.marker) {
+        aggr.marker = true;
+    
+        stats.numAggregatesTotal ++;
+        stats.numObjectsTotal += aggr.objects.length;
+        if (aggr.objects.length == 0)
+          stats.numPointerArrays ++;
+        if (aggr.referenceCount < nominalReferenceCount)
+          stats.criticalAggregates ++;
+        if (aggr.referenceCount < 1)
+          stats.orphanedAggregates ++;
+          
+        int aggrPos = (int)((aggr.currentLifetime - now) / granularity);
+        if (aggrPos < 0) 
+          aggrPos = 0;
+        if (aggrPos > maxHistoIndex)
+          aggrPos = maxHistoIndex;
+        stats.aggregateLifetimeHisto[aggrPos] ++;
+        
+        for (int i=0; i<aggr.objects.length; i++) {
+          stats.totalObjectsSize += aggr.objects[i].size;
+          if (aggr.objects[i].isAliveAt(now)) {
+            stats.numObjectsAlive ++;
+            stats.liveObjectsSize += aggr.objects[i].size;
+          }
+          int objPos = (int)((aggr.objects[i].refreshedLifetime - now) / granularity);
+          if (objPos < 0)
+            objPos = 0;
+          if (objPos > maxHistoIndex)
+            objPos = maxHistoIndex;
+          stats.objectLifetimeHisto[objPos] ++;
+        }
+      }
+    }
+    
+    return stats;
   }
 }
