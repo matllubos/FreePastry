@@ -1,0 +1,50 @@
+Update:
+
+Begin refactoring the whole thing. 
+
+Todo:
+
+- Lots of coding to get everything working again
+- Fix the test classes to work with new stuff ( this should be easy )
+- Fix the messaging to work with everything ( this should be a bit harder )
+- Anything else?
+
+Old Notes:
+
+**********************************
+
+
+1) Anycast --- 
+
+	a) add failureHandler routine for the class, which will 
+	   be invoked when anycast fails, --- DONE
+	b) write default anycast message class, with DFS and with 
+	   empty failure handling ----- DONE
+
+
+2) Scribe "Create" Semantics 
+
+3) Cleaning up SplitStream Code.
+
+4) ControlFindParentMessage - Send list of stripe id's which local node
+   	can subscribe to, instead of commiting for one
+
+
+5) Scribe - Regression test suites for addChild, removeChild, setData method
+	for ScribeMessages etc. -- DONE
+
+Changes made to Scribe after Release 
+************************************
+
+1)Added interface method to IScribeApp - isNewRoot() , to let applications 
+ know when they have become root for some topic.
+
+
+
+Splitstream Issues:
+
+1) CHange the timeouts to have backoffs, num of retries = 6
+
+2) Catch the kill exception and dump the time when a local node was killed
+
+3) Chagne the time out mechanism to backoff in Scribe for HB
