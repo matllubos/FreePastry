@@ -42,7 +42,7 @@ public class PostLog extends Log {
    * @param key The user's public key.
    * @param cert This user's certification
    */
-  PostLog(PostEntityAddress user, PublicKey key, java.security.cert.Certificate cert, Post post, ReceiveResultCommand command) {
+  PostLog(PostEntityAddress user, PublicKey key, java.security.cert.Certificate cert, Post post, Continuation command) {
     super("User " + user.toString() + "'s log", user.getAddress(), post);
 
     this.user = user;

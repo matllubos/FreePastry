@@ -281,7 +281,7 @@ public class Post extends PastryAppl implements IScribeApp  {
    * @return The PostLog belonging to the given entity, eg. to acquire
    * another user's public key.
    */
-  public void getPostLog(PostEntityAddress entity, ReceiveResultCommand command) {
+  public void getPostLog(PostEntityAddress entity, Continuation command) {
     RetrievePostLogTask task = new RetrievePostLogTask(entity, command);
     task.start();
   }
@@ -413,7 +413,7 @@ public class Post extends PastryAppl implements IScribeApp  {
    * performs the necessary verification tasks and then handles the
    * message.
    */
-  protected class ProcessSignedPostMessageTask implements ReceiveResultCommand {
+  protected class ProcessSignedPostMessageTask implements Continuation {
 
     private SignedPostMessage signedMessage;
     private PostEntityAddress sender;
@@ -665,16 +665,16 @@ public class Post extends PastryAppl implements IScribeApp  {
   /**
    * This class is a task which returns a PostLog to te callee.
    */
-  protected class RetrievePostLogTask implements ReceiveResultCommand {
+  protected class RetrievePostLogTask implements Continuation {
 
     private PostEntityAddress address;
-    private ReceiveResultCommand command;
+    private Continuation command;
 
     /**
      * Constructs a task which will call the given command once the result
      * is available.
      */
-    public RetrievePostLogTask(PostEntityAddress address, ReceiveResultCommand command) {
+    public RetrievePostLogTask(PostEntityAddress address, Continuation command) {
       this.address = address;
       this.command = command;
     }
@@ -738,7 +738,7 @@ public class Post extends PastryAppl implements IScribeApp  {
   /**
     * This class is a task which returns a PostLog to te callee.
    */
-  protected class RetrieveLocalPostLogTask implements ReceiveResultCommand {
+  protected class RetrieveLocalPostLogTask implements Continuation {
 
     public static final int STATE_1 = 1;
     public static final int STATE_2 = 2;
@@ -815,7 +815,7 @@ public class Post extends PastryAppl implements IScribeApp  {
    * performs the necessary verification tasks and then handles the
    * message.
    */
-  protected class SendNotificationMessageTask implements ReceiveResultCommand {
+  protected class SendNotificationMessageTask implements Continuation {
 
     private NotificationMessage message;
     private PostUserAddress destination;

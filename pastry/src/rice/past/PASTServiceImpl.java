@@ -54,7 +54,7 @@ public class PASTServiceImpl
   
   /**
    * The table used to store commands waiting for a response.
-   * Maps PASTMessageID to ReceiveResultCommand.
+   * Maps PASTMessageID to Continuation.
    */
   protected final Hashtable _commandTable;
   
@@ -173,7 +173,7 @@ public class PASTServiceImpl
    * @param command Command to execute when the result is received
    */
   protected void _sendRequestMessage(PASTMessage msg, 
-                                     ReceiveResultCommand command)
+                                     Continuation command)
   {
     // Update the command table so that this command can collect its
     // response when it arrives.
@@ -189,8 +189,8 @@ public class PASTServiceImpl
    */
   protected void _handleResponseMessage(PASTMessage msg) {
     // Look up the command waiting for this response
-    ReceiveResultCommand command = 
-      (ReceiveResultCommand) _commandTable.get(msg.getID());
+    Continuation command = 
+      (Continuation) _commandTable.get(msg.getID());
         
     if (command != null) {
       // Give response to the command
@@ -214,14 +214,14 @@ public class PASTServiceImpl
    * @param command Command to be performed when the result is received
    */
   public void insert(NodeId id, Serializable obj, Credentials authorCred,
-                     final ReceiveResultCommand command)
+                     final Continuation command)
   {
     NodeId nodeId = _pastryNode.getNodeId();
     debug("Insert request for file " + id + " at node " + nodeId);
     MessageInsert request = new MessageInsert(nodeId, id, obj, authorCred);
     
     // Send the request
-    _sendRequestMessage(request, new ReceiveResultCommand() {
+    _sendRequestMessage(request, new Continuation() {
       public void receiveResult(Object result) {
         if (result == null) {
           // Not successful
@@ -254,14 +254,14 @@ public class PASTServiceImpl
    * @param command Command to be performed when the result is received
    */
   public void update(NodeId id, Serializable update, Credentials authorCred, 
-                     final ReceiveResultCommand command)
+                     final Continuation command)
   {
     NodeId nodeId = _pastryNode.getNodeId();
     debug("Request to append to file " + id + " at node " + nodeId);
     MessageAppend request = new MessageAppend(nodeId, id, update, authorCred);
     
     // Send the request
-    _sendRequestMessage(request, new ReceiveResultCommand() {
+    _sendRequestMessage(request, new Continuation() {
       public void receiveResult(Object result) {
         if (result == null) {
           // Not successful
@@ -286,18 +286,18 @@ public class PASTServiceImpl
   /**
    * Retrieves the object and all associated updates with the given ID.
    * Asynchronously returns a StorageObject as the result to the provided
-   * ReceiveResultCommand.
+   * Continuation.
    * 
    * @param id Pastry key of original object
    * @param command Command to be performed when the result is received
    */
-  public void lookup(NodeId id, final ReceiveResultCommand command) {
+  public void lookup(NodeId id, final Continuation command) {
     NodeId nodeId = _pastryNode.getNodeId();
     debug("Request to look up file " + id + " at node " + nodeId);
     MessageLookup request = new MessageLookup(nodeId, id);
     
     // Send the request
-    _sendRequestMessage(request, new ReceiveResultCommand() {
+    _sendRequestMessage(request, new Continuation() {
       public void receiveResult(Object result) {
         if (result == null) {
           // Null result
@@ -321,18 +321,18 @@ public class PASTServiceImpl
   /**
    * Determines whether an object is currently stored at the given ID.
    * Asynchronously returns a boolean as the result to the provided
-   * ReceiveResultCommand, indicating whether the object exists.
+   * Continuation, indicating whether the object exists.
    * 
    * @param id Pastry key of original object
    * @param command Command to be performed when the result is received
    */
-  public void exists(NodeId id, final ReceiveResultCommand command) {
+  public void exists(NodeId id, final Continuation command) {
     NodeId nodeId = _pastryNode.getNodeId();
     debug("Request to determine if file " + id + " exists, at node " + nodeId);
     MessageExists request = new MessageExists(nodeId, id);
     
     // Send the request
-    _sendRequestMessage(request, new ReceiveResultCommand() {
+    _sendRequestMessage(request, new Continuation() {
       public void receiveResult(Object result) {
         if (result == null) {
           // Not successful
@@ -357,13 +357,13 @@ public class PASTServiceImpl
   /**
    * Reclaims the storage used by the object with the given ID.
    * Asynchronously returns a boolean as the result to the provided
-   * ReceiveResultCommand, indicating whether the delete was successful.
+   * Continuation, indicating whether the delete was successful.
    * 
    * @param id Pastry key of original object
    * @param authorCred Author's credentials
    */
   public void delete(NodeId id, Credentials authorCred,
-                     final ReceiveResultCommand command)
+                     final Continuation command)
   {
     NodeId nodeId = _pastryNode.getNodeId();
     System.out.println("Deleting the file with ID: " + id);
@@ -371,7 +371,7 @@ public class PASTServiceImpl
       new MessageReclaim(_pastryNode.getNodeId(), id, authorCred);
     
     // Send the request
-    _sendRequestMessage(request, new ReceiveResultCommand() {
+    _sendRequestMessage(request, new Continuation() {
       public void receiveResult(Object result) {
         if (result == null) {
           // Not successful

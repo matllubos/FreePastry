@@ -91,7 +91,7 @@ public class Log implements PostData {
    *
    * @param command The command to run once done
    */
-  protected void sync(ReceiveResultCommand command) {
+  protected void sync(Continuation command) {
     SyncTask task = new SyncTask(command);
     task.start();
   }
@@ -107,7 +107,7 @@ public class Log implements PostData {
    * @param log The log to add as a child.
    * @param command The command to run once done
    */
-  public void addChildLog(Log log, ReceiveResultCommand command) {
+  public void addChildLog(Log log, Continuation command) {
     AddChildLogTask task = new AddChildLogTask(log, command);
     task.start();
   }
@@ -122,7 +122,7 @@ public class Log implements PostData {
    * @param log The log to remove
    * @param command The command to run once done
    */
-  public void removeChildLog(Object name, ReceiveResultCommand command) {
+  public void removeChildLog(Object name, Continuation command) {
     children.remove(name);
     sync(command);
   }
@@ -162,7 +162,7 @@ public class Log implements PostData {
    * @param entry The log entry to append to the log.
    * @param command The command to run once done
    */
-  public void addLogEntry(LogEntry entry, ReceiveResultCommand command) {
+  public void addLogEntry(LogEntry entry, Continuation command) {
     AddLogEntryTask task = new AddLogEntryTask(entry, command);
     task.start();
   }
@@ -179,7 +179,7 @@ public class Log implements PostData {
    * @param reference The reference to the log entry
    * @param command The command to run once a result is available
    */
-  public void retrieveLogEntry(LogEntryReference reference, ReceiveResultCommand command) {
+  public void retrieveLogEntry(LogEntryReference reference, Continuation command) {
     post.getStorageService().retrieveContentHash(reference, command);
   }
 
@@ -232,14 +232,14 @@ public class Log implements PostData {
    * This class encapsulates the logic needed to add a child log to
    * the current log.
    */
-  protected class AddChildLogTask implements ReceiveResultCommand {
+  protected class AddChildLogTask implements Continuation {
 
     public static final int STATE_1 = 1;
     public static final int STATE_2 = 2;
     
     private Log log;
     private LogReference reference;
-    private ReceiveResultCommand command;
+    private Continuation command;
     private int state;
 
     /**
@@ -250,7 +250,7 @@ public class Log implements PostData {
      * @param log The log to add
      * @param command The command to call
      */
-    protected AddChildLogTask(Log log, ReceiveResultCommand command) {
+    protected AddChildLogTask(Log log, Continuation command) {
       this.log = log;
       this.command = command;
     }
@@ -311,13 +311,13 @@ public class Log implements PostData {
    * This class encapsulates the logic needed to add a log entry to
    * the current log.
    */
-  protected class AddLogEntryTask implements ReceiveResultCommand {
+  protected class AddLogEntryTask implements Continuation {
 
     public static final int STATE_1 = 1;
     public static final int STATE_2 = 2;
 
     private LogEntry entry;
-    private ReceiveResultCommand command;
+    private Continuation command;
     private int state;
     
     /**
@@ -328,7 +328,7 @@ public class Log implements PostData {
      * @param entry The log entry to add
      * @param command The command to call
      */
-    protected AddLogEntryTask(LogEntry entry, ReceiveResultCommand command) {
+    protected AddLogEntryTask(LogEntry entry, Continuation command) {
       this.entry = entry;
       this.command = command;
     }
@@ -383,9 +383,9 @@ public class Log implements PostData {
    * This class encapsulates the logic needed to sync
    * the current log on the network.
    */
-  protected class SyncTask implements ReceiveResultCommand {
+  protected class SyncTask implements Continuation {
 
-    private ReceiveResultCommand command;
+    private Continuation command;
     
     /**
      * This construct will build an object which will call the given
@@ -394,7 +394,7 @@ public class Log implements PostData {
      *
      * @param command The command to call
      */
-    protected SyncTask(ReceiveResultCommand command) {
+    protected SyncTask(Continuation command) {
       this.command = command;
     }
 

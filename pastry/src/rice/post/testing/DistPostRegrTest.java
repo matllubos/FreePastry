@@ -428,7 +428,7 @@ public class DistPostRegrTest {
     }
   }
 
-  protected class DummyContentHashStorageTest implements ReceiveResultCommand {
+  protected class DummyContentHashStorageTest implements Continuation {
 
     public static final int STATE_1 = 1;
     public static final int STATE_2 = 2;
@@ -488,7 +488,7 @@ public class DistPostRegrTest {
     }
   }
 
-  protected class DummySecureStorageTest implements ReceiveResultCommand {
+  protected class DummySecureStorageTest implements Continuation {
 
     public static final int STATE_1 = 1;
     public static final int STATE_2 = 2;
@@ -548,7 +548,7 @@ public class DistPostRegrTest {
     }
   }
 
-  protected class DummySignedStorageTest implements ReceiveResultCommand {
+  protected class DummySignedStorageTest implements Continuation {
 
     public static final int STATE_1 = 1;
     public static final int STATE_2 = 2;

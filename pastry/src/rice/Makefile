@@ -1,7 +1,7 @@
 PACKAGE = rice
 
 SOURCE  = \
-	ReceiveResultCommand.java
+	Continuation.java
 
 RMI_SOURCE =
 

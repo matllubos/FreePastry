@@ -75,7 +75,7 @@ public class StorageService {
    * @param data The data to store.
    * @param command The command to run once the store has completed.
    */
-  public void storeContentHash(PostData data, ReceiveResultCommand command) {
+  public void storeContentHash(PostData data, Continuation command) {
     StoreContentHashTask task = new StoreContentHashTask(data, command);
     task.start();
   }
@@ -91,7 +91,7 @@ public class StorageService {
    * @param reference The reference to the PostDataObject
    * @param command The command to run once the store has completed.
    */
-  public void retrieveContentHash(ContentHashReference reference, ReceiveResultCommand command) {
+  public void retrieveContentHash(ContentHashReference reference, Continuation command) {
     RetrieveContentHashTask task = new RetrieveContentHashTask(reference, command);
     task.start();
   }
@@ -109,7 +109,7 @@ public class StorageService {
    * @param location The location where to store the data
    * @param command The command to run once the store has completed.
    */
-  public void storeSigned(PostData data, NodeId location, ReceiveResultCommand command) {
+  public void storeSigned(PostData data, NodeId location, Continuation command) {
     StoreSignedTask task = new StoreSignedTask(data, location, command);
     task.start();
   }
@@ -126,7 +126,7 @@ public class StorageService {
    * @param location The location of the data
    * @param command The command to run once the store has completed.
    */
-  public void retrieveAndVerifySigned(SignedReference reference, ReceiveResultCommand command) {
+  public void retrieveAndVerifySigned(SignedReference reference, Continuation command) {
     retrieveAndVerifySigned(reference, security.getPublicKey(), command);
   }
 
@@ -144,7 +144,7 @@ public class StorageService {
    * @param publicKey The public key matching the private key used to sign the data
    * @param command The command to run once the store has completed.
    */
-  public void retrieveAndVerifySigned(SignedReference reference, PublicKey publicKey, ReceiveResultCommand command) {
+  public void retrieveAndVerifySigned(SignedReference reference, PublicKey publicKey, Continuation command) {
     RetrieveAndVerifySignedTask task = new RetrieveAndVerifySignedTask(reference, publicKey, command);
     task.start();
   }    
@@ -162,7 +162,7 @@ public class StorageService {
    * @param location The location of the data
    * @param command The command to run once the store has completed.
    */
-  public void retrieveSigned(SignedReference reference, ReceiveResultCommand command) {
+  public void retrieveSigned(SignedReference reference, Continuation command) {
     RetrieveSignedTask task = new RetrieveSignedTask(reference, command);
     task.start();
   }
@@ -201,7 +201,7 @@ public class StorageService {
    * @param data The data to store.
    * @param command The command to run once the store has completed.
    */
-  public void storeSecure(PostData data, ReceiveResultCommand command) {
+  public void storeSecure(PostData data, Continuation command) {
     StoreSecureTask task = new StoreSecureTask(data, command);
     task.start();
   }
@@ -217,7 +217,7 @@ public class StorageService {
    * @param reference The reference to the PostDataObject
    * @param command The command to run once the store has completed.
    */
-  public void retrieveSecure(SecureReference reference, ReceiveResultCommand command) {
+  public void retrieveSecure(SecureReference reference, Continuation command) {
     RetrieveSecureTask task = new RetrieveSecureTask(reference, command);
     task.start();
   }
@@ -236,10 +236,10 @@ public class StorageService {
    * Class which is reposible for handling a single StoreContentHash
    * task.
    */
-  protected class StoreContentHashTask implements ReceiveResultCommand {
+  protected class StoreContentHashTask implements Continuation {
 
     private PostData data;
-    private ReceiveResultCommand command;
+    private Continuation command;
     private NodeId location;
     private Key key;
     
@@ -250,7 +250,7 @@ public class StorageService {
      * @param data The data to store
      * @param command The command to run once the data has been stored
      */
-    protected StoreContentHashTask(PostData data, ReceiveResultCommand command) {
+    protected StoreContentHashTask(PostData data, Continuation command) {
       this.data = data;
       this.command = command;
     }
@@ -307,10 +307,10 @@ public class StorageService {
    * Class which is reposible for handling a single StoreContentHash
    * task.
    */
-  protected class RetrieveContentHashTask implements ReceiveResultCommand {
+  protected class RetrieveContentHashTask implements Continuation {
 
     private ContentHashReference reference;
-    private ReceiveResultCommand command;
+    private Continuation command;
 
     /**
      * This contructs creates a task to store a given data and call the
@@ -319,7 +319,7 @@ public class StorageService {
      * @param reference The reference to retrieve
      * @param command The command to run once the data has been referenced
      */
-    protected RetrieveContentHashTask(ContentHashReference reference, ReceiveResultCommand command) {
+    protected RetrieveContentHashTask(ContentHashReference reference, Continuation command) {
       this.reference = reference;
       this.command = command;
     }
@@ -398,13 +398,13 @@ public class StorageService {
    * Class which is reposible for handling a single StoreSigned
    * task.
    */
-  protected class StoreSignedTask implements ReceiveResultCommand {
+  protected class StoreSignedTask implements Continuation {
 
     public static final int STATE_1 = 1;
     public static final int STATE_2 = 2;
     
     private PostData data;
-    private ReceiveResultCommand command;
+    private Continuation command;
     private NodeId location;
     private Key key;
 
@@ -417,7 +417,7 @@ public class StorageService {
      * @param data The data to store
      * @param command The command to run once the data has been stored
      */
-    protected StoreSignedTask(PostData data, NodeId location, ReceiveResultCommand command) {
+    protected StoreSignedTask(PostData data, NodeId location, Continuation command) {
       this.data = data;
       this.location = location;
       this.command = command;
@@ -501,10 +501,10 @@ public class StorageService {
    * Class which is reposible for handling a single RetrieveSigned
    * task.
    */
-  protected class RetrieveSignedTask implements ReceiveResultCommand {
+  protected class RetrieveSignedTask implements Continuation {
 
     private SignedReference reference;
-    private ReceiveResultCommand command;
+    private Continuation command;
 
     /**
      * This contructs creates a task to store a given data and call the
@@ -513,7 +513,7 @@ public class StorageService {
      * @param reference The reference to retrieve
      * @param command The command to run once the data has been referenced
      */
-    protected RetrieveSignedTask(SignedReference reference, ReceiveResultCommand command) {
+    protected RetrieveSignedTask(SignedReference reference, Continuation command) {
       this.reference = reference;
       this.command = command;
     }
@@ -583,11 +583,11 @@ public class StorageService {
    * Class which is reposible for handling a single RetrieveAndVerifySigned
    * task.
    */
-  protected class RetrieveAndVerifySignedTask implements ReceiveResultCommand {
+  protected class RetrieveAndVerifySignedTask implements Continuation {
 
     private SignedReference reference;
     private PublicKey key;
-    private ReceiveResultCommand command;
+    private Continuation command;
 
     /**
       * This contructs creates a task to store a given data and call the
@@ -597,7 +597,7 @@ public class StorageService {
      * @param key The key to verify against
      * @param command The command to run once the data has been referenced
      */
-    protected RetrieveAndVerifySignedTask(SignedReference reference, PublicKey key, ReceiveResultCommand command) {
+    protected RetrieveAndVerifySignedTask(SignedReference reference, PublicKey key, Continuation command) {
       this.reference = reference;
       this.key = key;
       this.command = command;
@@ -640,10 +640,10 @@ public class StorageService {
     * Class which is reposible for handling a single StoreSecure
    * task.
    */
-  protected class StoreSecureTask implements ReceiveResultCommand {
+  protected class StoreSecureTask implements Continuation {
 
     private PostData data;
-    private ReceiveResultCommand command;
+    private Continuation command;
     private NodeId location;
     private Key key;
 
@@ -654,7 +654,7 @@ public class StorageService {
      * @param data The data to store
      * @param command The command to run once the data has been stored
      */
-    protected StoreSecureTask(PostData data, ReceiveResultCommand command) {
+    protected StoreSecureTask(PostData data, Continuation command) {
       this.data = data;
       this.command = command;
     }
@@ -713,10 +713,10 @@ public class StorageService {
     * Class which is reposible for handling a single RetrieveSecure
    * task.
    */
-  protected class RetrieveSecureTask implements ReceiveResultCommand {
+  protected class RetrieveSecureTask implements Continuation {
 
     private SecureReference reference;
-    private ReceiveResultCommand command;
+    private Continuation command;
 
     /**
       * This contructs creates a task to store a given data and call the
@@ -725,7 +725,7 @@ public class StorageService {
      * @param reference The reference to retrieve
      * @param command The command to run once the data has been retrieved
      */
-    protected RetrieveSecureTask(SecureReference reference, ReceiveResultCommand command) {
+    protected RetrieveSecureTask(SecureReference reference, Continuation command) {
       this.reference = reference;
       this.command = command;
     }

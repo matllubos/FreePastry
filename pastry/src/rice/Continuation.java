@@ -11,7 +11,7 @@ package rice;
  *
  * @version $Id$
  */
-public interface ReceiveResultCommand  {
+public interface Continuation  {
 
   /**
    * Called when a previously requested result is now availble.
