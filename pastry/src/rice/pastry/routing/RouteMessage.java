@@ -57,7 +57,7 @@ public class RouteMessage extends Message implements Serializable {
 
     private NodeHandle prevNode;
     private transient SendOptions opts;
-    private transient Address auxAddress;
+    private Address auxAddress;
     public transient NodeHandle nextHop;
 
     /**
