@@ -43,6 +43,7 @@ import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.*;
 import rice.pastry.direct.*;
+import rice.pastry.dist.*;
 import rice.pastry.leafset.*;
 
 import java.util.*;
@@ -296,6 +297,18 @@ public class Scribe extends PastryAppl implements IScribe
     public int getTreeRepairThreshold() {
 	return m_treeRepairThreshold;
     }
+
+    /**
+     * This is called when the underlying pastry node is ready. With regard to 
+     * Scribe, we start the tree maintenance thread when the pastry network is a 
+     * Distributed network instead of a simulate network.
+     */
+    public void notifyReady() {
+	if(thePastryNode instanceof DistPastryNode) {
+	    new Thread(new DistScribeMaintenanceThread(this, 10)).start();
+	}
+    }
+
 
 
     /**
