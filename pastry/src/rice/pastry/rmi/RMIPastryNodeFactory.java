@@ -115,7 +115,7 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
     if (bsnode == null) {
       for (int i = 1; bsnode == null && i <= NUM_ATTEMPTS; i++) {
         try {
-          bsnode = (RMIRemoteNodeI) Naming.lookup("//" + address.getAddress()
+          bsnode = (RMIRemoteNodeI) Naming.lookup("//" + address.getHostName()
                     + ":" + address.getPort() + "/Pastry");
         } catch (Exception e) {
           System.out.println("Unable to find bootstrap node on "
