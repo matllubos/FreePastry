@@ -9,6 +9,7 @@ SOURCE  = \
 	MessageAckOnSubscribe.java \
 	MessageRequestToParent.java \
 	MessageReplyFromParent.java \
+	MessageAnycast.java \
 	ScribeMessage.java 
 
 
