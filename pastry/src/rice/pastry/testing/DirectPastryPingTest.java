@@ -106,7 +106,7 @@ public class DirectPastryPingTest {
 	    = new BufferedReader( new InputStreamReader(System.in));
 	String command = null;
 
-	System.out.println( "Usage: s - standalone" );
+	System.out.println( "Usage: s - run standalone test" );
 	System.out.println( "       q - quit" );
 
 	while( !quit ) {
