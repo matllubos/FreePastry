@@ -17,7 +17,6 @@ import rice.persistence.*;
 public class PersistentStorageTest extends Test {
   
   private Storage storage;
-
   /**
    * Builds a PersistentStorageTest
    */
@@ -512,7 +511,11 @@ public class PersistentStorageTest extends Test {
 
   public static void main(String[] args) {
     PersistentStorageTest test = new PersistentStorageTest();
-
     test.start();
+
+    /* Test for a second time and see if things stick around after exit */
+    PersistentStorageTest test = new PersistentStorageTest();
+    test.start();
+    
   }
 }
