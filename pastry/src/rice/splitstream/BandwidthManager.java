@@ -15,16 +15,25 @@ import java.util.*;
  * class is abstract. The behavior will be decided at a later point
  */
 public class BandwidthManager{
+
      /**
       * Hashtable to keep track of all Channels registered with the bandwidth
       * managers max bandwidth.
       */
      private Hashtable maxBandwidth = null;
+
      /**
       * Hashtable to keep track of all Channels registered with the bandwidth
       * managers used bandwidth.
       */
      private Hashtable usedBandwidth = null;
+
+     /**
+      * The number of children a channel may have, if no value has been
+      * specified. Maybe adjusted later on by calling configure channel
+      */ 
+     private int defaultChildren = DEFAULT_CHILDREN;
+
      /**
       * Constructor
       */
@@ -32,33 +41,36 @@ public class BandwidthManager{
 	maxBandwidth = new Hashtable();
 	usedBandwidth = new Hashtable();
      }
+
      /**
       * This method makes an attempt to free up bandwidth
       * when it is needed. It follows the basic outline as
       * describe above,not completely defined.
       */ 
-     public void freeBandwidth(){}
+     public void freeBandwidth(){
+        /** 
+         * This should be implemented depending upon the policies, you want
+         * to use 
+         */
+     }
+
      /**
       * Define the Default Bandwidth for a newly created Channel 
-      * @param the limit to the number of children a channel may have
+      * @param the limit to the number of children a channel may have by default
       *
       */
-     public void setDefaultChildren(int out){}
+     public void setDefaultChildren(int out){
+         this.defaultChildren = out;
+     }
+
      /**
       * Get the default number of children that a channel may have
       * @return the default number of children
       */
-     public int getDefaultChildren(){return DEFAULT_CHILDREN;}
-     /**
-      * gets current number of Children this child currently has.
-      * @return the current number of children
-      */
-      public int getNumChildren(){return 0;}
-     /**
-      * gets current number of primary Children this child currently has.
-      * @return the current number of primary children
-      */
-      public int getNumPrimaryChildren(){return 0;}
+     public int getDefaultChildren(){
+        return defaultChildren;
+     }
+     
      /**
       * Determines based upon capacity information whether the 
       * system can take on another child.
@@ -67,6 +79,7 @@ public class BandwidthManager{
       public boolean canTakeChild(Channel channel){
         return(getUsedBandwidth(channel) < getMaxBandwidth(channel)); 
       }
+
     /**
      * Registers a channel within the system with the bandwidth manager
      * @param the channel to be added
@@ -76,6 +89,7 @@ public class BandwidthManager{
 	usedBandwidth.put(channel, new Integer(0)); 
 
       }
+
       /**
        * Adjust the max bandwidth for this channel.
        * @param Channel the channel to adjust
@@ -84,6 +98,7 @@ public class BandwidthManager{
       public void adjustBandwidth(Channel channel, int outbandwidth){
         maxBandwidth.put(channel, new Integer(outbandwidth));
       }
+
       /**
        * Change the amount of bandwidth a channel is considered to be
        * using. 
@@ -95,6 +110,7 @@ public class BandwidthManager{
 	if((oldBandwidth + 1) == (DEFAULT_CHILDREN + 1))
 		System.out.println(">----------WARNING --------< ");
       }
+
       /**
        * Gets the bandwidth a channel is currently using.
        * @param Channel the channel whose bandwidth we want
@@ -104,6 +120,7 @@ public class BandwidthManager{
 	int bandwidth = ((Integer)usedBandwidth.get(channel)).intValue();
 	return bandwidth;
       }
+
       /**
        * Gets the max bandwidth for a channel.
        * @param Channel the channel whose bandwidth we want
@@ -113,5 +130,6 @@ public class BandwidthManager{
 	int bandwidth = ((Integer)maxBandwidth.get(channel)).intValue();
 	return bandwidth;
       }
+
       private static int DEFAULT_CHILDREN = 25;
 } 
