@@ -206,8 +206,6 @@ public class NetworkLogManager extends LogManager {
         return;
       } finally {
         try {
-          if (in != null) in.close();
-          if (out != null) out.close();
           if (socket != null) socket.close();
         } catch (IOException e) {
           System.err.println("PANIC: Got exception " + e + " while closing streams!");
