@@ -129,6 +129,8 @@ public class Topic
     public Topic( NodeId topicId, Scribe scribe ) {
 	m_topicId = topicId;
 	m_scribe = scribe;
+	if(m_scribe.isRoot(topicId))
+	    m_topicManager = true;
     }
     
     
