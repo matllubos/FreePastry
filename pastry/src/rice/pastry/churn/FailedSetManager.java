@@ -16,4 +16,5 @@ public interface FailedSetManager {
    * @return Collection of NodeHandle
    */
   public Collection getFailedSet();
+  public int getJoinState();
 }

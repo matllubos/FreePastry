@@ -1,12 +1,14 @@
 /*
- * Created on Aug 1, 2004
+ * Created on Aug 5, 2004
  *
  * To change the template for this generated file go to
  * Window>Preferences>Java>Code Generation>Code and Comments
  */
 package rice.pastry.churn;
 
-import java.util.Collection;
+import java.io.Serializable;
+
+import rice.pastry.NodeHandle;
 
 /**
  * @author jeffh
@@ -14,14 +16,12 @@ import java.util.Collection;
  * To change the template for this generated type comment go to
  * Window>Preferences>Java>Code Generation>Code and Comments
  */
-public class NullFailedSetManager implements FailedSetManager {
-
-	public Collection getFailedSet() {
-		return null;
-	}
-
-	public int getJoinState() {
-		return Probe.STATE_READY;
-	}
-
+public class LivenessHandle implements Serializable {
+  int liveness;
+  NodeHandle nh;
+  
+  public LivenessHandle(NodeHandle nh) {
+    this.liveness = nh.getLiveness();  
+    this.nh = nh;
+  }
 }

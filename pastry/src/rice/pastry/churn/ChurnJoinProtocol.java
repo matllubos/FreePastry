@@ -11,9 +11,9 @@ import rice.pastry.NodeId;
 import rice.pastry.PastryNode;
 import rice.pastry.join.InitiateJoin;
 import rice.pastry.join.JoinRequest;
-import rice.pastry.leafset.BroadcastLeafSet;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.Message;
+import rice.pastry.routing.BroadcastRouteRow;
 import rice.pastry.routing.RouteMessage;
 import rice.pastry.routing.RouteSet;
 import rice.pastry.routing.RoutingTable;
@@ -67,7 +67,7 @@ public class ChurnJoinProtocol extends StandardJoinProtocol {
    *   route(JOIN-REQUEST;R; ji; j)
    */
   protected void handleRouteJoinRequest(JoinRequest jr, RouteMessage rm) {
-    System.out.println(localNode+" ************ ChurnJoinProtocol.handleJoinRequest()");
+    //System.out.println(localNode+" ************ ChurnJoinProtocol.handleRouteJoinRequest()");
     NodeId localId = localHandle.getNodeId();
     NodeHandle jh = jr.getHandle();
     NodeId nid = jh.getNodeId();
@@ -93,13 +93,23 @@ public class ChurnJoinProtocol extends StandardJoinProtocol {
     }
 
 //  route(JOIN-REQUEST;R; ji; j)
-    rm.routeMessage(localId);    
+    // this is different from the regular join protocol, because the probes 
+    // are causing the leafset to be updated before the node has joined
+//    System.out.println("  CJP.handleRouteJoinRequest() "+rm.nextHop+","+rm.getTarget());
+    if (rm.nextHop.getId().equals(rm.getTarget())) {
+//      System.out.println("  CJP.handleRouteJoinRequest() 2");
+      handleJoinRequest(jr,rm.nextHop);      
+    } else {
+      rm.routeMessage(localHandle);    
+    }
   }
 
 //  receive-root(<JOIN-REQUEST, R, j>, j)
 //    if (active)
 //      send (<JOIN-REPLY, R, L,> to j)
   protected void handleJoinRequest(JoinRequest jr, NodeHandle nh) {
+    //System.out.println(localNode+" ************ ChurnJoinProtocol.handleJoinRequest()");
+    //Thread.dumpStack();
     //  receive-root(JOIN-REQUEST;R; ji; j)
     //if (activei)
       if (!localNode.isReady()) return;
@@ -113,7 +123,7 @@ public class ChurnJoinProtocol extends StandardJoinProtocol {
 //    Ri.add(R [ L); Li:add(L)
 //    for each j in Li do f probe(j) }
   protected void handleJoinResponse(JoinRequest jr) {
-    System.out.println(localNode+" ************ ChurnJoinProtocol.handleJoinResponse():"+jr.accepted());
+    //System.out.println(localNode+" ************ ChurnJoinProtocol.handleJoinResponse():"+jr.accepted());
     NodeHandle nh = jr.getHandle();
 
     nh = security.verifyNodeHandle(nh);
@@ -139,16 +149,12 @@ public class ChurnJoinProtocol extends StandardJoinProtocol {
 
           // now update the local leaf set
           //System.out.println("Join ls:" + jr.getLeafSet());
-          BroadcastLeafSet bls =
-            new BroadcastLeafSet(
-              jh,
-              jr.getLeafSet(),
-              BroadcastLeafSet.JoinInitial);
-          localHandle.receiveMessage(bls);
-
+          lsProtocol.mergeLeafSet(jr.getLeafSet());
+          
           // update local RT, then broadcast rows to our peers
-          broadcastRows(jr);
-
+          mergeRows(jr);
+//  for each j in Li do { probe(j) }
+          lsProtocol.joinState = Probe.STATE_JOINED;
           lsProtocol.probeLeafSet();
 
           // we have now successfully joined the ring, set the local node ready
@@ -156,6 +162,62 @@ public class ChurnJoinProtocol extends StandardJoinProtocol {
         }
       }    
   }
+  
+  /**
+   * Broadcasts the route table rows.
+   *
+   * @param jr the join row.
+   */
+  public void mergeRows(JoinRequest jr) {
+    //NodeId localId = localHandle.getNodeId();
+    int n = jr.numRows();
+
+    // send the rows to the RouteSetProtocol on the local node
+    for (int i = jr.lastRow(); i < n; i++) {
+      RouteSet row[] = jr.getRow(i);
+
+      if (row != null) {
+        BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
+
+        localHandle.receiveMessage(brr);
+      }
+    }
+  }
+
+  public void broadcastRows(JoinRequest jr) {
+    // now broadcast the rows to our peers in each row
+
+    int n = jr.numRows();
+    for (int i = jr.lastRow(); i < n; i++) {
+      RouteSet row[] = jr.getRow(i);
+
+      BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
+
+      for (int j = 0; j < row.length; j++) {
+        RouteSet rs = row[j];
+        if (rs == null)
+          continue;
+
+        // send to closest nodes only
+
+        NodeHandle nh = rs.closestNode();
+        if (nh != null)
+          nh = security.verifyNodeHandle(nh);
+        if (nh != null)
+          nh.receiveMessage(brr);
+
+        /*
+        int m = rs.size();
+        for (int k=0; k<m; k++) {
+            NodeHandle nh = rs.get(k);
+            
+            nh.receiveMessage(brr);
+        }
+        */
+      }
+    }
+  }
+  
 
   public void receiveMessage(Message msg) {
     if (msg instanceof JoinRequest) {      
