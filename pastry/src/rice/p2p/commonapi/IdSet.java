@@ -89,4 +89,11 @@ public interface IdSet extends Serializable {
    * @return the interator
    */
   public Iterator getIterator();
+  
+  /**
+   * return a hash of this set
+   *
+   * @return the hash of this set
+   */
+  public Id hash();
 }
