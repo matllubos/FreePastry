@@ -1,3 +1,40 @@
+/*************************************************************************
+
+"Free Pastry" Peer-to-Peer Application Development Substrate 
+
+Copyright 2002, Rice University. All rights reserved. 
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+contributors may be  used to endorse or promote  products derived from
+this software without specific prior written permission.
+
+This software is provided by RICE and the contributors on an "as is"
+basis, without any representations or warranties of any kind, express
+or implied including, but not limited to, representations or
+warranties of non-infringement, merchantability or fitness for a
+particular purpose. In no event shall RICE or contributors be liable
+for any direct, indirect, incidental, special, exemplary, or
+consequential damages (including, but not limited to, procurement of
+substitute goods or services; loss of use, data, or profits; or
+business interruption) however caused and on any theory of liability,
+whether in contract, strict liability, or tort (including negligence
+or otherwise) arising in any way out of the use of this software, even
+if advised of the possibility of such damage.
+
+********************************************************************************/
+
+
 package rice.rm.messaging;
 
 import rice.pastry.NodeId;
@@ -18,30 +55,24 @@ import java.io.*;
  */
 public class RMMessage extends Message implements Serializable{
 
-    /**
-     * Notifies that the message is of type INSERT.
-     */
+
     public static final int RM_INSERT = 1;
 
-    /**
-     * Notifies that the message is of type DELETE.
-     */
     public static final int RM_DELETE = 2;
 
-    /**
-     * Notifies that the message is of type UPDATE.
-     */
-    public static final int RM_UPDATE = 3;
+    public static final int RM_REPLICATE = 3;
 
+    public static final int RM_REMOVE = 4;
 
-    /**
-     * The pastry key of the object.
-     */
+    public static final int RM_HEARTBEAT = 5;
+
+    public static final int RM_REFRESH = 6;
+
     private NodeId _objectKey;
 
     /**
      * The object that needs to be inserted or updated. 
-     * This is null for DELETE type of RM Message.
+     * This is null for messages not required to contain the object.
      */
     private Object _object;
 
@@ -59,7 +90,10 @@ public class RMMessage extends Message implements Serializable{
      * The credentials of the author for the object contained in this object
      */
     private Credentials _authorCred;
-        
+     
+    private Address _rmdemuxAddress;
+
+
     /**
      * Constructor : Builds a new RM Message
      * @param address RM Application address
@@ -69,13 +103,14 @@ public class RMMessage extends Message implements Serializable{
      * @param replicaFactor the number of replicas required for the object
      * 
      */
-    public RMMessage(Address address, Object content, NodeId objectKey,int messageType, int replicaFactor, Credentials authorCred) {
+    public RMMessage(Address address, Object content, NodeId objectKey,int messageType, int replicaFactor, Address rmdemuxAddress, Credentials authorCred) {
 	super(address);
 	this._messageType = messageType;
 	this._object = content;
 	this._objectKey = objectKey;
 	this._replicaFactor = replicaFactor;
 	this._authorCred = authorCred;
+	this._rmdemuxAddress = rmdemuxAddress;
     }
     
 
@@ -128,9 +163,17 @@ public class RMMessage extends Message implements Serializable{
     public Object getObject(){
 	return _object;
     }
+
+    // This is the address for the demultiplexing by the Replica manager to the 
+    // appropriate Replica Client
+    public Address getAddress(){
+	return _rmdemuxAddress;
+    }
 			      
     
 }
+
+
 
 
 
