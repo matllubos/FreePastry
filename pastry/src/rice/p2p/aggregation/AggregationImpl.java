@@ -70,7 +70,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private static final long flushDelayAfterJoin = 30 * SECONDS;
   private static long flushInterval = 5 * MINUTES;
 
-  private static int maxAggregateSize = 8*1024*1024;
+  private static int maxAggregateSize = 1024*1024;
   private static int maxObjectsInAggregate = 25;
   private static int maxAggregatesPerRun = 3;
   
@@ -790,7 +790,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         Id thisId = (Id) iter.next();
         thisObject = (ObjectDescriptor) waitingList.getMetadata(thisId);
         if (thisObject != null) {
-          if (((currentAggregateSize + thisObject.size) <= maxAggregateSize) && (currentObjectsInAggregate < maxObjectsInAggregate)) {
+          if ((((currentAggregateSize + thisObject.size) <= maxAggregateSize) || currentAggregate.isEmpty()) && (currentObjectsInAggregate < maxObjectsInAggregate)) {
             currentAggregateSize += thisObject.size;
             currentObjectsInAggregate ++;
             currentAggregate.add(thisObject);

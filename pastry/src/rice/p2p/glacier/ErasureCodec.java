@@ -22,7 +22,6 @@ public class ErasureCodec {
 
   final static int Lfield = 10;
   final static int MultField = (1 << Lfield) - 1;
-  final static int MAX_OBJECT_SIZE = 10000000;
   /*
    *  bytes
    */
@@ -95,11 +94,6 @@ public class ErasureCodec {
    * @return DESCRIBE THE RETURN VALUE
    */
   public Fragment[] encode(byte[] bytes) {
-    if (bytes.length > MAX_OBJECT_SIZE) {
-      System.out.println("Object too large! Max "+MAX_OBJECT_SIZE+" bytes!");
-      return null;
-    }
-
     int numWords = (bytes.length + 3) / 4;
     int wordsPerGroup = (numSurvivors * Lfield);
     int numGroups = (numWords + (wordsPerGroup - 1)) / wordsPerGroup;
