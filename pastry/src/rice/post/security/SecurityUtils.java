@@ -712,14 +712,14 @@ public class SecurityUtils {
    * @return a long representation
    */
   public static long getLong(byte[] input) {
-    return ((input[0] << 56) & 0xFF00000000000000L) |
-           ((input[1] << 48) & 0x00FF000000000000L) |
-           ((input[2] << 40) & 0x0000FF0000000000L) |
-           ((input[3] << 32) & 0x000000FF00000000L) |
-           ((input[4] << 24) & 0x00000000FF000000L) |
-           ((input[5] << 16) & 0x0000000000FF0000L) |
-           ((input[6] <<  8) & 0x000000000000FF00L) |
-           ((input[7]      ) & 0x00000000000000FFL);
+    return ((((long)input[0]) << 56) & 0xFF00000000000000L) |
+           ((((long)input[1]) << 48) & 0x00FF000000000000L) |
+           ((((long)input[2]) << 40) & 0x0000FF0000000000L) |
+           ((((long)input[3]) << 32) & 0x000000FF00000000L) |
+           ((((long)input[4]) << 24) & 0x00000000FF000000L) |
+           ((((long)input[5]) << 16) & 0x0000000000FF0000L) |
+           ((((long)input[6]) <<  8) & 0x000000000000FF00L) |
+           ((((long)input[7])      ) & 0x00000000000000FFL);
   }
 
   /**
