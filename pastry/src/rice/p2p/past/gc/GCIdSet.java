@@ -106,7 +106,7 @@ public class GCIdSet implements IdSet {
     GCIdSet result = new GCIdSet();
     
     for (int i=0; i<ids.size(); i++) 
-      if (range.containsId(((GCId) ids.elementAt(i)))) 
+      if (range.containsId(((GCId) ids.elementAt(i)).getId())) 
         result.addId((GCId) ids.elementAt(i));
     
     return result;
