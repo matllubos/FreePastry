@@ -24,12 +24,12 @@ PACKAGES = \
 	rice.pastry.socket\
 	rice.pastry.socket.exception\
 	rice.pastry.socket.messaging\
-	rice.pastry.testing
-#	rice.scribe\
-#	rice.scribe.maintenance\
-#	rice.scribe.messaging\
-#	rice.scribe.security\
-#	rice.scribe.testing\
+	rice.pastry.testing\
+	rice.scribe\
+	rice.scribe.maintenance\
+	rice.scribe.messaging\
+	rice.scribe.security\
+	rice.scribe.testing
 #	rice.ap3\
 #	rice.ap3.routing\
 #	rice.ap3.messaging\
