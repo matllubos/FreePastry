@@ -23,21 +23,35 @@
  */
 
 package rice.pastry.socket;
-import java.io.*;
-import java.net.*;
-import java.nio.*;
-import java.nio.channels.*;
+import java.io.IOException;
+import java.net.BindException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.nio.channels.SocketChannel;
 
-import java.util.*;
-
-import rice.pastry.*;
-import rice.pastry.dist.*;
-import rice.pastry.leafset.*;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
-import rice.pastry.security.*;
-import rice.pastry.socket.messaging.*;
-import rice.pastry.standard.*;
+import rice.pastry.Log;
+import rice.pastry.NodeHandle;
+import rice.pastry.NodeId;
+import rice.pastry.NodeIdFactory;
+import rice.pastry.PastryNode;
+import rice.pastry.dist.DistPastryNodeFactory;
+import rice.pastry.leafset.LeafSet;
+import rice.pastry.messaging.Message;
+import rice.pastry.messaging.MessageDispatch;
+import rice.pastry.routing.RouteSet;
+import rice.pastry.routing.RoutingTable;
+import rice.pastry.socket.messaging.LeafSetRequestMessage;
+import rice.pastry.socket.messaging.LeafSetResponseMessage;
+import rice.pastry.socket.messaging.NodeIdRequestMessage;
+import rice.pastry.socket.messaging.NodeIdResponseMessage;
+import rice.pastry.socket.messaging.RouteRowRequestMessage;
+import rice.pastry.socket.messaging.RouteRowResponseMessage;
+import rice.pastry.standard.StandardJoinProtocol;
+import rice.pastry.standard.StandardLeafSetProtocol;
+import rice.pastry.standard.StandardRouteSetProtocol;
+import rice.pastry.standard.StandardRouter;
+import rice.selector.SelectorManager;
 
 /**
  * Pastry node factory for Socket-linked nodes.
@@ -227,14 +241,14 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress proxyAddress, InetAddress bindAddress) {
     final SocketPastryNode pn = new SocketPastryNode(nodeId);
     pn.getLocalNodeI(bootstrap); // register this nodehandle as early as we can
-    SelectorManager sManager = new SelectorManager(pn);
+    //SelectorManager sManager = new SelectorManager(pn);
 
     SocketCollectionManager socketManager = null;
     InetSocketAddress address = proxyAddress;
     SocketNodeHandlePool pool = new SocketNodeHandlePool(pn);
     PingManager pingManager = null;
     SocketNodeHandle localhandle = null;
-        
+
     synchronized (this) {
       
       boolean connected = false;
@@ -245,14 +259,14 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
         localhandle = new SocketNodeHandle(address, nodeId);
         boolean pingSuccess = false;
         try {
-          pingManager = new PingManager(port, sManager, pool, localhandle, pn);
+          pingManager = new PingManager(port, pool, localhandle, pn);
           pingSuccess = true;
         } catch (BindException be) {
                     
         }
         if (pingSuccess) {
           try {
-            socketManager = new SocketCollectionManager(pn, pool, port, sManager, pingManager, address);
+            socketManager = new SocketCollectionManager(pn, pool, port, pingManager, address);
             connected = true;
           } catch (BindException be) {
             pingManager.kill();
@@ -279,7 +293,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
 
     pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
-    pn.setSocketElements(address, sManager, socketManager, pingManager, pool, leafSetMaintFreq, routeSetMaintFreq);
+    pn.setSocketElements(address, socketManager, pingManager, pool, leafSetMaintFreq, routeSetMaintFreq);
     secureMan.setLocalPastryNode(pn);
 
     pool.coalesce(localhandle);
@@ -290,21 +304,18 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
 
     // launch thread to handle the sockets
-    Thread t =
-      new Thread("Thread for node " + nodeId) {
+//    Thread t =
+//      new Thread("Thread for node " + nodeId) {
+    SelectorManager.getSelectorManager().invoke(
+      new Runnable() {
         public void run() {
-          try {
-            sleep(250);
-          } catch (InterruptedException e) {
-            System.err.println("Interrupted in newNode!");
-          }
-
           //pn.doneNode(getNearest(localhandle, bootstrap));
           pn.doneNode(bootstrap);
         }
-      };
-
-    t.start();
+      });
+//      };
+//
+//    t.start();
 
     return pn;
   }

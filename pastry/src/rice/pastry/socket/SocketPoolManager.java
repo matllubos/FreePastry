@@ -11,10 +11,10 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.Random;
 import java.util.TimerTask;
 
 import rice.pastry.NodeHandle;
+import rice.selector.SelectorManager;
 
 /**
  * This class is in charge of "enforcing" the limitiaton on the number 
@@ -51,11 +51,9 @@ public class SocketPoolManager {
   private LinkedList queue = new LinkedList(); // last is most recently used
 
   SocketCollectionManager scm;
-  SelectorManager selectorManager;
 
-	public SocketPoolManager(SocketCollectionManager scm, SelectorManager selectorMgr) {
+	public SocketPoolManager(SocketCollectionManager scm) {
     this.scm = scm;
-    this.selectorManager = selectorMgr;
 	}
 
   // ******************** SocketManager Lifecycle *****************
@@ -93,7 +91,7 @@ public class SocketPoolManager {
    */
   public void requestAccept() {
     if (availablePermits() > 0) {
-      selectorManager.acceptSocket();
+      scm.acceptSocket();
       return;
     } else {
 //      System.out.println("SPM.requestAccept():"+this);
@@ -253,6 +251,7 @@ public class SocketPoolManager {
   }  
 
   private void transferIdleToWaiting() {
+    if (!scm.pastryNode.isAlive()) return;
     //System.out.println("transferIdleToWaiting():"+this);
     
     closeSocketsIfNecessary();
@@ -265,7 +264,7 @@ public class SocketPoolManager {
       }
     }
     
-    while (itemsAreWaiting() && (availablePermits() > 0)) {
+    while (scm.pastryNode.isAlive() && itemsAreWaiting() && (availablePermits() > 0)) {
       openNextWaiting();
     }
 
@@ -278,7 +277,7 @@ public class SocketPoolManager {
   }
 
   private boolean itemsAreWaiting() {
-    return selectorManager.waitingToAccept() || !waitingSet.isEmpty();
+    return scm.waitingToAccept() || !waitingSet.isEmpty();
   }
 
   WakeupTimerTask myTimer;
@@ -293,7 +292,7 @@ public class SocketPoolManager {
 
   class WakeupTimerTask extends TimerTask {
     public void run() {
-      selectorManager.invoke(new Runnable() {
+      SelectorManager.getSelectorManager().invoke(new Runnable() {
 				public void run() {
           myTimer = null;
           transferIdleToWaiting();
@@ -305,8 +304,8 @@ public class SocketPoolManager {
   private void openNextWaiting() {
     //System.out.println("openNextWaiting() waiting: "+waitingSet.size()+":"+waitingQueue.size()+" idle:"+idleSet.size()+" queue:"+queue.size());
     //printWaitingSockets();
-    if (selectorManager.waitingToAccept()) {
-      selectorManager.acceptSocket();
+    if (scm.waitingToAccept()) {
+      scm.acceptSocket();
     } else {
       SocketManager toOpen = removeNextWaiting();// close idle, open waiting 
       permittedSet.add(toOpen);

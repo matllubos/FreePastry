@@ -28,6 +28,8 @@ import rice.pastry.socket.messaging.RouteRowRequestMessage;
 import rice.pastry.socket.messaging.RouteRowResponseMessage;
 import rice.pastry.socket.messaging.SocketControlMessage;
 import rice.pastry.socket.messaging.SocketTransportMessage;
+import rice.selector.SelectionKeyHandler;
+import rice.selector.SelectorManager;
 
 /**
  * Private class which manages a single socket.  It can be used in 3 instances:
@@ -45,7 +47,7 @@ import rice.pastry.socket.messaging.SocketTransportMessage;
  * 
  * @author Jeff Hoye, Alan Mislove
  */
-public class SocketManager implements SelectionKeyHandler, LivenessListener {
+public class SocketManager extends SelectionKeyHandler implements LivenessListener {
 
 
 	boolean nagle = true;
@@ -206,7 +208,7 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
         scm.scheduleTask(new TimerTask() {
           public void run() {
   
-            scm.manager.invoke(new Runnable() {
+            SelectorManager.getSelectorManager().invoke(new Runnable() {
               public void run() {
   //              System.out.println("CM.retryConnectionLater():requestingToOpenSocket("+manager+")");
                 if (!closed && (connectionManager.getLiveness() < NodeHandle.LIVENESS_FAULTY)) {  // this can happen if we markDead while we are waiting to connect                  
@@ -277,11 +279,9 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
   
       debug("Initiating socket connection to " + address);
   
-      SelectionKeyHandler handler = this;
-  
       if (done) {
-        key = channel.register(scm.manager.getSelector(), SelectionKey.OP_READ);
-        //System.out.println("SM.createConnection(): Registering "+this);
+        key = SelectorManager.getSelectorManager().register(channel,this,SelectionKey.OP_READ);
+//        key = channel.register(scm.manager.getSelector(), SelectionKey.OP_READ);
       } else {
         if (connectionManager != null) {
           if (connectingCheckDeadTask == null) {
@@ -291,7 +291,7 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
                  * This runs while we are connecting every 5 seconds.  It calls checkDead() on the selector thread.
                  */
                 public void run() {
-                  scm.manager.invoke(new Runnable() {
+                  SelectorManager.getSelectorManager().invoke(new Runnable() {
                     public void run() {
                       connectionManager.checkDead();
                     }
@@ -301,11 +301,12 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
             scm.scheduleTask(connectingCheckDeadTask,5000,5000);
           }
         }
-        key = channel.register(scm.manager.getSelector(), SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
+        key = SelectorManager.getSelectorManager().register(channel,this,SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
+//        key = channel.register(scm.manager.getSelector(), SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
 //        System.out.println("SM.createConnection(): Registering(2) "+this);
       }
   
-      key.attach(handler);
+//      key.attach(handler);
       enableWriteOpIfNecessary(key);
       if (done) {
         if (numTriesToConnect > 0) {
@@ -369,10 +370,10 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
    *
    * @param key The key which is connectable.
    */
-  public boolean connect(SelectionKey key) {    
+  public void connect(SelectionKey key) {    
     if (connected) {
       Thread.dumpStack();
-      return true;
+      return;
     }
     try {
       if (((SocketChannel) key.channel()).finishConnect()) {
@@ -389,9 +390,9 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
           connectionManager.checkDead(); //markDead();
         }
         close();
-        return true;
+        return;
       } else {
-        return true;
+        return;
       }
     }
     if (numTriesToConnect > 0) {
@@ -404,7 +405,6 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
       }
     }
     scm.socketPoolManager.socketOpened(this);
-    return true;
   }
 
   
@@ -435,9 +435,10 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
 
     debug("Accepted connection from " + address);
 
-    key = channel.register(scm.manager.getSelector(), SelectionKey.OP_READ);
+    key = SelectorManager.getSelectorManager().register(channel,this,SelectionKey.OP_READ);
+//    key = channel.register(scm.manager.getSelector(), SelectionKey.OP_READ);
     //System.out.println("SM.acceptConnection(): Registering "+this);
-    key.attach(this);
+//    key.attach(this);
   }
 
   public void closeHalf() {
@@ -556,7 +557,7 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
    *
    * @param key The selection key for this manager
    */
-  public boolean write(SelectionKey key) {
+  public void write(SelectionKey key) {
     try {
       if (writer.write((SocketChannel) key.channel())) {
         key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
@@ -566,7 +567,7 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
       debug("ERROR " + e + " writing - cancelling.");
       close();
     }    
-    return true;
+    return;
   }
 
   /**
@@ -574,7 +575,7 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
    *
    * @param key The selection key for this manager
    */
-  public boolean read(SelectionKey key) {
+  public void read(SelectionKey key) {
     markActive();
     try {
       //System.out.println("SM<"+type+">.read():1");
@@ -600,8 +601,7 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
   //            System.out.println("SM<"+type+">.read("+o+") -> "+am.type);
               type = am.type;
               
-              scm.newSocketManager(am.sender, this);
-              //if (connectionManager != null) {
+              if (scm.newSocketManager(am.sender, this)) { // returns false if the node is already dead
               // socket could have been closed if there was already a connection pending going the other way
                 if (!closed && connectionManager.liveness == NodeHandle.LIVENESS_UNKNOWN) {
                   if (ConnectionManager.LOG_LOW_LEVEL)
@@ -609,8 +609,7 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
                   key.interestOps((key.interestOps() & ~SelectionKey.OP_READ));  // turn off read ops
                   connectionManager.addLivenessListener(this);
                 }
-                //connectionManager.markAlive();
-              //}
+              }
               
             } else {
               System.out.println("SERIOUS ERROR: Received duplicate address assignments: " + this.address + " and " + o);
@@ -640,23 +639,8 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
       }
       close(); 
     }
-    return true;
     //System.out.println("SM<"+type+">.read():3");
   }
-
-
-
-  /**
-   * Specified by the SelectionKeyHandler interface. Is called whenever a key
-   * has become acceptable, representing an incoming connection.
-   *
-   * @param key The key which is acceptable.
-   */
-  public boolean accept(SelectionKey key) {
-    System.out.println("PANIC: read() called on SocketCollectionManager!");
-    return true;
-  }
-
 
   /**
    * Method which is called once a message is received off of the wire If it's

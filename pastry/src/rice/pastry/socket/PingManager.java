@@ -27,6 +27,8 @@ import rice.pastry.socket.exception.ImproperlyFormattedMessageException;
 import rice.pastry.socket.exception.SerializationException;
 import rice.pastry.socket.messaging.PingMessage;
 import rice.pastry.socket.messaging.PingResponseMessage;
+import rice.selector.SelectionKeyHandler;
+import rice.selector.SelectorManager;
 
 /**
  * 
@@ -66,7 +68,7 @@ import rice.pastry.socket.messaging.PingResponseMessage;
  * 
  * @author Jeff Hoye, Alan Mislove
  */
-public class PingManager implements SelectionKeyHandler {
+public class PingManager extends SelectionKeyHandler {
 
   private SocketNodeHandle localHandle;
 
@@ -154,11 +156,6 @@ public class PingManager implements SelectionKeyHandler {
    */
   private SocketNodeHandlePool pool;
 
-  /**
-   * the selector manager to manage the worker thread
-   */
-  private SelectorManager manager;
-
   private SocketPastryNode spn;
 
   /**
@@ -168,10 +165,10 @@ public class PingManager implements SelectionKeyHandler {
    * @param manager ref to SelectorManager
    * @param pool ref to SocketNodeHandlePool
    */
-  public PingManager(int port, SelectorManager manager, SocketNodeHandlePool pool, SocketNodeHandle localHandle, SocketPastryNode spn) throws BindException {
+  public PingManager(int port, SocketNodeHandlePool pool, SocketNodeHandle localHandle, SocketPastryNode spn) throws BindException {
     this.spn = spn;
     this.port = port;
-    this.manager = manager;
+//    this.manager = manager;
     this.pool = pool;
     this.localHandle = localHandle;
     proximity = new WeakHashMap();
@@ -189,14 +186,18 @@ public class PingManager implements SelectionKeyHandler {
       channel.socket().bind(isa); // throws BindException
       channel.socket().setSendBufferSize(DATAGRAM_SEND_BUFFER_SIZE);
       channel.socket().setReceiveBufferSize(DATAGRAM_RECEIVE_BUFFER_SIZE);
+      
+      SelectorManager.getSelectorManager().invoke(new Runnable() {
+				public void run() {
+          try {
+            key = SelectorManager.getSelectorManager().register(channel,PingManager.this,SelectionKey.OP_READ);
+            key.attach(PingManager.this);
+          } catch (IOException e) {
+            System.out.println("ERROR creating server socket key " + e);
+          }
+				}
+			});
 
-      Selector selector = manager.getSelector();
-
-      synchronized (selector) {
-        key = channel.register(selector, SelectionKey.OP_READ);
-      }
-
-      key.attach(this);
     } catch (BindException be) {
       kill();
       throw be;  
@@ -341,7 +342,7 @@ public class PingManager implements SelectionKeyHandler {
         }
 			}
 		};
-    manager.invoke(r);      
+    SelectorManager.getSelectorManager().invoke(r);      
   }
 
   /**
@@ -352,6 +353,7 @@ public class PingManager implements SelectionKeyHandler {
    * @param msg the message to send to the address
    */
   private void enqueue(SocketNodeHandle snh, Object msg) {
+    if (!spn.isAlive()) return;
     pendingMsgs.add(new PendingWrite(snh, msg));
     enableWriteOpIfNecessary(key);
   }
@@ -372,7 +374,7 @@ public class PingManager implements SelectionKeyHandler {
    *
    * @param key the key that was called on.
    */
-  public boolean write(SelectionKey key) {
+  public void write(SelectionKey key) {
     try {
       // last, write all pending datagrams
       Iterator i = pendingMsgs.iterator();
@@ -395,7 +397,6 @@ public class PingManager implements SelectionKeyHandler {
     } catch (IOException e) {
       System.err.println("ERROR (PingManager:write): " + e);      
     }
-    return true;
   }
 
 	  /**
@@ -404,7 +405,7 @@ public class PingManager implements SelectionKeyHandler {
 	   *
 	   * @param key the key that was selected
 	   */
-	  public boolean read(SelectionKey key) {
+	  public void read(SelectionKey key) {
 	
 	    try {
 	      InetSocketAddress address = null;
@@ -430,7 +431,6 @@ public class PingManager implements SelectionKeyHandler {
 	//          debug("ERROR (datagrammanager:read): " + e);
 	      e.printStackTrace();
 	    }
-      return true;
 	  }
 
   /**
@@ -613,36 +613,18 @@ public class PingManager implements SelectionKeyHandler {
 
 
   // ****************** Additional (Unused) Key Handler Attributes **********************
-  /**
-   * Not used, an implementation of SelectionKeyHandler
-   *
-   * @param key 
-   */
-  public boolean accept(SelectionKey key) {
-    throw new RuntimeException("accept() should not be called on PingManager");
-  }
-
-  /**
-   * Not used, an implementation of SelectionKeyHandler
-   *
-   * @param key 
-   */
-  public boolean connect(SelectionKey key) {
-    throw new RuntimeException("connect() should not be called on PingManager");
-  }
-
 	public void kill() {
-    try {
-      Selector selector = manager.getSelector();
-
-      synchronized (selector) {
-        channel.close();
-        if (key != null) 
-          key.cancel();
+    SelectorManager.getSelectorManager().invoke(new Runnable() {
+			public void run() {
+        try {
+          channel.close();
+          if (key != null) 
+            key.cancel();
+        } catch (IOException ioe) {
+          ioe.printStackTrace();
+        }
       }
-    } catch (IOException ioe) {
-      ioe.printStackTrace();
-    }
+		});
 	}
   
   public String toString() {

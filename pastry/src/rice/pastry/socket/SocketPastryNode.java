@@ -35,6 +35,7 @@ import rice.pastry.dist.DistPastryNode;
 import rice.pastry.dist.NodeIsDeadException;
 import rice.pastry.messaging.Message;
 import rice.pastry.messaging.MessageReceiver;
+import rice.selector.SelectorManager;
 
 /**
  * An Socket-based Pastry node, which has two threads - one thread for
@@ -59,7 +60,7 @@ public class SocketPastryNode extends DistPastryNode {
   private InetSocketAddress address;
 
   // The SelectorManager, controlling the selector
-  private SelectorManager manager;
+  //private SelectorManager manager;
 
   // The SocketManager, controlling the sockets
   public SocketCollectionManager sManager;
@@ -83,9 +84,9 @@ public class SocketPastryNode extends DistPastryNode {
    *
    * @return The SelectorManager for this pastry node.
    */
-  public SelectorManager getSelectorManager() {
-    return manager;
-  }
+//  public SelectorManager getSelectorManager() {
+//    return manager;
+//  }
 
   /**
    * Returns the SocketManager for this pastry node.
@@ -126,15 +127,13 @@ public class SocketPastryNode extends DistPastryNode {
    * @param pingManager The new SocketElements value
    * @param pool The new SocketElements value
    */
-  public void setSocketElements(InetSocketAddress address,
-                                SelectorManager manager,
+  public void setSocketElements(InetSocketAddress address,                                
                                 SocketCollectionManager sManager,
                                 PingManager pingManager,
                                 SocketNodeHandlePool pool,
                                 int lsmf,
                                 int rsmf) {
     this.address = address;
-    this.manager = manager;
     this.sManager = sManager;
     this.pingManager = pingManager;
     this.pool = pool;
@@ -151,7 +150,7 @@ public class SocketPastryNode extends DistPastryNode {
     super.doneNode(bootstrap);
 
     initiateJoin(bootstrap);
-    manager.run();
+    //manager.run();
   }
 
   /**
@@ -160,14 +159,20 @@ public class SocketPastryNode extends DistPastryNode {
    */
   public void kill() {
 //    System.out.println("SPN.kill()");
-    manager.kill();
+    alive = false;
+//    manager.kill();
     super.kill();
-//    sManager.kill();
-//    pingManager.kill();
+    sManager.kill();
+    pingManager.kill();
   }
 
-  public void stall(int time) {
-      manager.stall(time);
+//  public void stall(int time) {
+//      manager.stall(time);
+//  }
+
+  private boolean alive = true;
+  public boolean isAlive() {
+    return alive;
   }
 
   /**
@@ -189,7 +194,7 @@ public class SocketPastryNode extends DistPastryNode {
     try {
       timer.schedule(task, delay);
     } catch (IllegalStateException ise) {
-      if (manager.isAlive()) {
+      if (isAlive()) {
         throw ise;
       } else {
         throw new NodeIsDeadException(ise);
@@ -208,7 +213,7 @@ public class SocketPastryNode extends DistPastryNode {
     try {
       timer.schedule(task, delay, period);
     } catch (IllegalStateException ise) {
-      if (manager.isAlive()) {
+      if (isAlive()) {
         throw ise;
       } else {
         throw new NodeIsDeadException(ise);
@@ -237,7 +242,7 @@ public class SocketPastryNode extends DistPastryNode {
       PastryAppl a = (PastryAppl)mr;
       a.messageNotDelivered(m, errorCode);
     } else {
-      if ((errorCode == EC_CONNECTION_FAULTY) && (manager.isSelectorThread())) {
+      if ((errorCode == EC_CONNECTION_FAULTY) && (Thread.currentThread() == SelectorManager.getSelectorManager())) {
         // don't print anything 
       } else {
         System.out.println("WARNING: message not sent "+m+":"+getErrorString(errorCode));    

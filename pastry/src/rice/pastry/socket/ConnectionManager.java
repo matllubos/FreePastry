@@ -24,6 +24,7 @@ import rice.pastry.socket.messaging.AckMessage;
 import rice.pastry.socket.messaging.AddressMessage;
 import rice.pastry.socket.messaging.SocketTransportMessage;
 import rice.pastry.testing.HelloMsg;
+import rice.selector.SelectorManager;
 
 /**
  * 
@@ -423,7 +424,7 @@ public class ConnectionManager {
         controlSocketManager = null;
       
         // reopen socket later if there are messages in queue
-        if (controlQueue.size() > 0 || pendingAcks.size() > 0) {
+        if (scm.pastryNode.isAlive() && (controlQueue.size() > 0 || pendingAcks.size() > 0)) {
           int q = controlQueue.size();
           int pa = pendingAcks.size();
           // move all pending acks to front of queue
@@ -493,7 +494,7 @@ public class ConnectionManager {
 //    }
     
     //Thread.dumpStack();
-    scm.manager.invoke(new Runnable() {
+    SelectorManager.getSelectorManager().invoke(new Runnable() {
 			public void run() {
         sendNow(message);
 			}
@@ -786,7 +787,7 @@ public class ConnectionManager {
         internalReceiveMsg(stm.msg);
       } catch (NodeIsDeadException nide) {
         nide.printStackTrace();
-        if (scm.manager.isAlive()) {
+        if (scm.pastryNode.isAlive()) {
           throw nide;
         }
       }
@@ -810,7 +811,7 @@ public class ConnectionManager {
     if (o2 instanceof PastryEndpointMessage) {
       o2 = ((PastryEndpointMessage)o2).getMessage();
     }
-    scm.manager.addStat(o2.getClass().getName(),endTime-beginTime);    
+//    scm.manager.addStat(o2.getClass().getName(),endTime-beginTime);    
   }
 
   SocketTransportMessage lastAckSent = null;
@@ -1249,7 +1250,7 @@ public class ConnectionManager {
    * Can be called to make sure we are on the selector thread
    */
   public void assertSelectorThread() {
-    if (Thread.currentThread() != scm.manager.selectorThread) {
+    if (Thread.currentThread() != SelectorManager.getSelectorManager()) {
       Thread.dumpStack();
     }
   }
@@ -1360,7 +1361,7 @@ public class ConnectionManager {
        * timer.
        */
       public void run() {
-        scm.manager.invoke(new Runnable() {
+        SelectorManager.getSelectorManager().invoke(new Runnable() {
           public void run() {
             runOnSelector();
           }
@@ -1481,7 +1482,7 @@ public class ConnectionManager {
        * Reschedules the task onto the selector thread.
        */
       public void run() {
-        scm.manager.invoke(new Runnable() {
+        SelectorManager.getSelectorManager().invoke(new Runnable() {
           public void run() {
             runOnSelector();
           }

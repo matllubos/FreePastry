@@ -39,6 +39,8 @@ import rice.pastry.NodeHandle;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.exception.TooManyMessagesException;
+import rice.selector.SelectionKeyHandler;
+import rice.selector.SelectorManager;
 
 /**
  * Class which maintains all outgoing open sockets. It holds a ConnectionManager 
@@ -54,10 +56,10 @@ import rice.pastry.socket.exception.TooManyMessagesException;
  *  
  * @author Alan Mislove, Jeff Hoye
  */
-public class SocketCollectionManager implements SelectionKeyHandler {
+public class SocketCollectionManager extends SelectionKeyHandler {
 
 	// the selector manager which the collection manager uses
-  SelectorManager manager;
+  //SelectorManager manager;
 
   // the pastry node which this manager serves
   SocketPastryNode pastryNode;
@@ -94,14 +96,13 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    * @param manager DESCRIBE THE PARAMETER
    * @param pingManager DESCRIBE THE PARAMETER
    */
-  public SocketCollectionManager(SocketPastryNode node, SocketNodeHandlePool pool, int port, final SelectorManager manager, PingManager pingManager, InetSocketAddress bindAddress) throws BindException {
+  public SocketCollectionManager(SocketPastryNode node, SocketNodeHandlePool pool, int port, PingManager pingManager, InetSocketAddress bindAddress) throws BindException {
     this.pingManager = pingManager;
     this.pastryNode = node;
     this.port = port;
     this.pool = pool;
     this.bindAddress = bindAddress;
     pool.scm = this;
-    this.manager = manager;
     connections = new WeakHashMap();
     
     try {
@@ -112,20 +113,16 @@ public class SocketCollectionManager implements SelectionKeyHandler {
       boolean failedOnce = false;
       channel.socket().bind(bindAddress); // can throw bind exception
       
-      this.socketPoolManager = new SocketPoolManager(this, manager);
-      manager.setSocketCollectionManager(this);
-
-
-      final SelectionKeyHandler handler = this;
+      this.socketPoolManager = new SocketPoolManager(this);
 
       final boolean fFailedOnce = failedOnce;
-      manager.invoke(
+      SelectorManager.getSelectorManager().invoke(
         new Runnable() {
           public void run() {
             if (fFailedOnce) System.out.println("SCM.ctor:4");
             try {
-              key = channel.register(manager.getSelector(), SelectionKey.OP_ACCEPT);
-              key.attach(handler);
+              key = SelectorManager.getSelectorManager().register(channel, SocketCollectionManager.this, SelectionKey.OP_ACCEPT);
+              key.attach(SocketCollectionManager.this);
             } catch (IOException e) {
               System.out.println("ERROR creating server socket key " + e);
             }
@@ -140,11 +137,22 @@ public class SocketCollectionManager implements SelectionKeyHandler {
   }
 
   public void kill() {
-    try {
-      key.channel().close();
-    } catch (IOException ioe) {
-      ioe.printStackTrace();
-    }
+    SelectorManager.getSelectorManager().invoke(new Runnable() {
+      public void run() {
+        try {
+          key.channel().close();
+        } catch (IOException ioe) {
+          ioe.printStackTrace();
+        }
+        
+        Iterator i = getConnectionManagers().iterator();
+        while (i.hasNext()) {
+          ConnectionManager cm = (ConnectionManager)i.next();
+          cm.close();
+        }
+        
+      }
+    });
   }
 
   /**
@@ -195,6 +203,7 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    */
 //  public ConnectionManager getConnectionManager(InetSocketAddress address, int foo) {
   public ConnectionManager getConnectionManager(SocketNodeHandle snh) {
+    if (!pastryNode.isAlive()) return null; // keep from creating new connection managers while we are shutting the rest down
     ConnectionManager cm = (ConnectionManager)connections.get(snh);
     if (cm == null) {
       cm = new ConnectionManager(this, snh);
@@ -206,7 +215,6 @@ public class SocketCollectionManager implements SelectionKeyHandler {
   public Collection getConnectionManagers() {
     return connections.values();
   }
-
   
   /**
    * Method which sends a message across the wire.
@@ -216,6 +224,7 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    */
   public void send(SocketNodeHandle snh, Message message) throws TooManyMessagesException {
 //    public void send(InetSocketAddress address, Message message) throws TooManyMessagesException {
+    if (!pastryNode.isAlive()) return;
     getConnectionManager(snh).send(message);
   }
 
@@ -239,46 +248,26 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    *
    * @param key The key which is acceptable.
    */
-  public boolean accept(SelectionKey key) {
+  public void accept(SelectionKey key) {
+    if (acceptorKey != null) {
+//      numTimesNotRemoveKey++;                
+      disableAccept(); // gets enabled when we acceptSocket()
+    }
+    acceptorKey = key; // gets set back to null in acceptSocket()
+    socketPoolManager.requestAccept(); // calls acceptSocket() now or later
+  }
+
+  public void doAccept(SelectionKey key) {
     try {
       socketPoolManager.socketOpened(new SocketManager(key, this));
     } catch (IOException e) {
       if (ConnectionManager.LOG_LOW_LEVEL)
         System.out.println("ERROR (accepting connection): " + e + " at "+addressString());
-    }
-    return true;
+    }    
   }
 
-  /**
-   * Specified by the SelectionKeyHandler interface - is called whenever a key
-   * has data available. The appropriate SocketConnecter is informed, and is
-   * told to read the data.
-   *
-   * @param key The key which is readable.
-   */
-  public boolean read(SelectionKey key) {
-    System.out.println("PANIC: read() called on SocketCollectionManager!");
-    return true;
-  }
-
-  /**
-   * Specified by the SelectionKeyHandler interface - should NEVER be called!
-   *
-   * @param key The key which is writable.
-   */
-  public boolean write(SelectionKey key) {
-    System.out.println("PANIC: write() called on SocketCollectionManager!");
-    return true;
-  }
-
-  /**
-   * Specified by the SelectionKeyHandler interface - should NEVER be called!
-   *
-   * @param key The key which is connectable.
-   */
-  public boolean connect(SelectionKey key) {
-    System.out.println("PANIC: connect() called on SocketCollectionManager!");
-    return true;
+  public boolean waitingToAccept() {
+    return acceptorKey != null;
   }
   
   /**
@@ -291,7 +280,7 @@ public class SocketCollectionManager implements SelectionKeyHandler {
     try {
       pastryNode.scheduleTask(task, delay, period);  
     } catch (IllegalStateException ise) {
-      if (manager.isAlive()) {
+      if (pastryNode.isAlive()) {
         throw ise;
       }
     }
@@ -306,7 +295,7 @@ public class SocketCollectionManager implements SelectionKeyHandler {
     try {
       pastryNode.scheduleTask(task, delay);
     } catch (IllegalStateException ise) {
-      if (manager.isAlive()) {
+      if (pastryNode.isAlive()) {
         throw ise;
       }
     }
@@ -384,9 +373,11 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    * socket.  Calls accept on the appropriate ConnectionManager.
 	 * @param manager
 	 */
-  public void newSocketManager(SocketNodeHandle snh, SocketManager manager) {
+  public boolean newSocketManager(SocketNodeHandle snh, SocketManager manager) {
 //    public void newSocketManager(InetSocketAddress address, SocketManager manager) {
+    if (!pastryNode.isAlive()) return false;
     getConnectionManager(snh).acceptSocket(manager);
+    return true;
 	}
 
 	/**
@@ -435,5 +426,35 @@ public class SocketCollectionManager implements SelectionKeyHandler {
 	public InetSocketAddress getAddress() {
 		return getLocalNodeHandle().getAddress();		
 	}
+
+  SelectionKey acceptorKey = null;
+  
+  public void acceptSocket() {
+    if (!pastryNode.isAlive()) return;
+    enableAccept();
+    SelectionKey tempKey = acceptorKey;
+    acceptorKey = null;
+
+    boolean removeKey = false;
+    if (tempKey != null) {
+      SelectionKeyHandler skh = (SelectionKeyHandler)tempKey.attachment();
+      if (skh != null && tempKey.isValid() && tempKey.isAcceptable()) {
+        doAccept(tempKey);
+      }
+    
+    /*
+        if (skh.accept(tempKey)) {
+          removeKey = true;
+        } 
+      } else {
+        removeKey = true;      
+      }
+  
+      if (removeKey) {
+        selector.selectedKeys().remove(tempKey);                                      
+      }*/
+    }
+  }
+
 
 }
