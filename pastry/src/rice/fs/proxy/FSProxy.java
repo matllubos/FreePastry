@@ -48,25 +48,28 @@ public class FSProxy extends PostProxy{
 
   /* The FSService the proxy uses to do things in the network */
   private FSService fsservice  = null;
-  
 
+  private String directoryString;
+  
   /* The directory in which the system is rooted from */
-  private File directory = null;
+  private File directory;
 
   private boolean shutdown = false;
  
-  private boolean interactive = false;
+  private boolean interactive;
+  
   /**
    * Constructor
    *
-   * @param userid the userid for logging in
-   * @param directory the directory the system is rooted at
-   *
    */
-  public FSProxy (String userid, String directory, boolean interactive ) {
-    super(userid);
-    this.directory = new File(directory);
-    this.interactive = interactive;
+  public FSProxy(String[] args) {
+    super(args);
+
+    if (directoryString == null) {
+      directoryString = ".";
+    }
+
+    this.directory = new File(directoryString);
   }
 
   /**
@@ -168,24 +171,26 @@ public class FSProxy extends PostProxy{
    *
    */    
   public static void main(String[] args) {
-    String directory = ".";
-    boolean interactive = false;
-    String userid = PostProxy.parseArgs(args);
+    FSProxy proxy = new FSProxy(args);
+    proxy.start();
+  }
+
+  protected void parseArgs(String[] args) {
+    super.parseArgs(args);
+
     for (int i = 0; i < args.length - 1; i++) {
       if(args[i].equals("-dir")){
-         directory = args[i+1];
-         break;
+        directoryString = args[i+1];
+        break;
       }
     }
 
     for (int i = 0; i < args.length; i++) {
       if(args[i].equals("-interactive")){
-         interactive = true;
-         break;
+        interactive = true;
+        break;
       }
     }
-    FSProxy proxy = new FSProxy("abpost", directory, interactive);
-    proxy.start();
   }
 
   /**

@@ -143,5 +143,53 @@ public interface Continuation {
       System.out.println("ERROR - Received exception " + result + " during task " + name);
     }
   }
-  
+
+  /**
+   * This class provides a continuation which is designed to be used from
+   * an external thread.  Applications should construct this continuation pass it
+   * in to the appropriate method, and then call sleep().  Once the thread is woken
+   * up, the user should check exceptionThrown() to determine if an error was
+   * caused, and then call getException() or getResult() as apprpritate.
+   */
+  public static class ExternalContinuation implements Continuation {
+
+    protected Exception exception;
+    protected Object result;
+
+    public synchronized void receiveResult(Object o) {
+      result = o;
+      notify();
+    }
+
+    public synchronized void receiveException(Exception e) {
+      exception = e;
+      notify();
+    }
+
+    public Object getResult() {
+      if (exception != null) {
+        throw new IllegalArgumentException("Exception was thrown in ExternalContinuation, but getResult() called!");
+      }
+        
+      return result;
+    }
+
+    public Exception getException() {
+      return exception;
+    }
+
+    public synchronized void sleep() {
+      try {
+        if ((result == null) && (exception == null)) {
+          wait();
+        }
+      } catch (InterruptedException e) {
+        exception = e;
+      }
+    }
+    
+    public boolean exceptionThrown() {
+      return (exception != null);
+    }
+  }
 }

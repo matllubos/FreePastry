@@ -142,5 +142,12 @@ public interface Past {
    */
   public NodeHandle getLocalNodeHandle();
 
+  /**
+   * Returns the number of replicas used in this Past
+   *
+   * @return the number of replicas for each object
+   */
+  public int getReplicationFactor();
+
 }
 

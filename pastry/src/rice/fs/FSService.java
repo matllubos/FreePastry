@@ -119,7 +119,7 @@ public class FSService extends PostClient {
       final Object[] logNames = parent.getChildLogNames(); 
       for(int i = 0 ; i < logNames.length; i ++){
            final String name = (String) logNames[i];
-           if(!proxy.existsLocally(s + File.separator + name)){
+           if(!proxy.existsLocally(s + File.separator + name)){ 
               proxy.createLocalDir(s + File.separator + (String) logNames[i]);
            }
            else{
