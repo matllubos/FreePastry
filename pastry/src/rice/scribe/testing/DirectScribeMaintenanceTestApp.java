@@ -43,6 +43,7 @@ import rice.scribe.messaging.*;
 import rice.pastry.direct.*;
 
 import java.util.*;
+import java.io.*;
 
 /**
  * @(#) DirectScribeMaintenanceTestApp.java
@@ -69,7 +70,7 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp
      * @param scribe The underlying scribe 
      * @param cred The credentials 
      */
-    public DirectScribeMaintenanceTestApp( PastryNode node, Scribe scribe, Credentials cred ) {
+    public DirectScribeMaintenanceTestApp( PastryNode node, Scribe scribe, Credentials cred) {
 	m_scribe = scribe;
 	m_credentials = cred;
 	m_pastryNode = node;
@@ -120,12 +121,21 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp
     /**
      * up-call invoked by scribe when a node is added/removed  to the multicast tree.
      */
-    public void subscribeHandler( ScribeMessage msg, NodeId topicId, NodeHandle child, boolean wasAdded ) {
+    public void subscribeHandler( NodeId topicId, NodeHandle child, boolean wasAdded, Object obj ) {
 	    
 	/*
 	System.out.println("Node:" + getNodeId() + " App:"
                                 + m_app + " child subscribed: " + msg);
-	*/
+
+	if(obj == null)
+	    System.out.println("Node:" + getNodeId() + 
+			       " child subscribed: "+ child.getNodeId() +
+			       " for topicId "+ topicId);
+	else
+	    System.out.println("Node:" + getNodeId() + 
+			       " child subscribed: "+ child.getNodeId() +
+			       " for topicId "+ topicId + " data "+obj);
+	*/	    
     }
 
     public NodeId getNodeId() {
@@ -154,6 +164,15 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp
     }
 
     /**
+     * direct call to scribe for subscribing to a topic from the current node.
+     * additional data can be sent along with subscription message
+     */    
+    public void join( NodeId topicId, Serializable obj ) {
+	m_scribe.join( topicId, this, m_credentials, obj );
+    }
+
+
+    /**
      * direct call to scribe for unsubscribing a  topic from the current node
      * The topic is chosen randomly if null is passed and topics exist.
      */    
@@ -166,6 +185,10 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp
      */
     public void anycast(NodeId topicId){
 	m_scribe.anycast(topicId, null, m_credentials);
+    }
+
+    public NodeHandle getLocalHandle(){
+	return m_pastryNode.getLocalHandle();
     }
 }
 
