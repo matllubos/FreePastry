@@ -89,7 +89,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
      */
      
     public RMINodeHandle(RMIRemoteNodeI rn, NodeId nid) {
-	if (Log.ifp(5)) System.out.println("creating RMI handle for node: " + nid);
+	if (Log.ifp(6)) System.out.println("creating RMI handle for node: " + nid);
 	init(rn, nid);
     }
 
@@ -101,7 +101,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
      * @param pn local Pastry node.
      */
     public RMINodeHandle(RMIRemoteNodeI rn, NodeId nid, PastryNode pn) {
-	if (Log.ifp(5)) System.out.println("creating RMI handle for node: " + nid + ", local = " + pn);
+	if (Log.ifp(6)) System.out.println("creating RMI handle for node: " + nid + ", local = " + pn);
 	init(rn, nid);
 	setLocalNode(pn);
     }
@@ -150,7 +150,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
 
     public void markAlive() {
 	if (alive == false) {
-	    if (Log.ifp(5)) System.out.println("remote node became alive: " + remotenid);
+	    if (Log.ifp(6)) System.out.println("remote node became alive: " + remotenid);
 	    alive = true;
 	    distance = Integer.MAX_VALUE; // reset to infinity. alternatively, recompute.
 	}
@@ -158,7 +158,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
 
     public void markDead() {
 	if (alive == true) {
-	    if (Log.ifp(5)) System.out.println("remote node declared dead: " + remotenid);
+	    if (Log.ifp(6)) System.out.println("remote node declared dead: " + remotenid);
 	    alive = false;
 	    distance = Integer.MAX_VALUE;
 	}
@@ -184,7 +184,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	}
 
 	if (alive == false)
-	    if (Log.ifp(5))
+	    if (Log.ifp(6))
 		System.out.println("warning: trying to send msg to dead node "
 				   + remotenid + ": " + msg);
 
@@ -194,7 +194,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
 
 	msg.setSenderId(localnode.getNodeId());
 
-	if (Log.ifp(5))
+	if (Log.ifp(6))
 	    System.out.println("sending " +
 			       (msg instanceof RouteMessage ? "route" : "direct")
 			       + " msg to " + remotenid + ": " + msg);
@@ -206,17 +206,17 @@ public class RMINodeHandle implements NodeHandle, Serializable
 
 	    markAlive();
 	} catch (RemoteException e) { // failed; mark it dead
-	    if (Log.ifp(5)) System.out.println("message failed: " + msg + e);
+	    if (Log.ifp(6)) System.out.println("message failed: " + msg + e);
 	    if (isLocal) System.out.println("panic; local message failed: " + msg);
 
 	    markDead();
 
 	    // bounce back to local dispatcher
-	    if (Log.ifp(5)) System.out.println("bouncing message back to self at " + localnode);
+	    if (Log.ifp(6)) System.out.println("bouncing message back to self at " + localnode);
 	    if (msg instanceof RouteMessage) {
 		RouteMessage rmsg = (RouteMessage) msg;
 		rmsg.nextHop = null;
-		if (Log.ifp(5)) System.out.println("this msg bounced is " + rmsg);
+		if (Log.ifp(6)) System.out.println("this msg bounced is " + rmsg);
 		localnode.receiveMessage(rmsg);
 	    } else {
 		localnode.receiveMessage(msg);
@@ -266,7 +266,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
 				   + remotenid + " to " + tryid);
 	    markAlive();
 	} catch (RemoteException e) {
-	    if (alive) if (Log.ifp(5)) System.out.println("ping failed on live node: " + e);
+	    if (alive) if (Log.ifp(6)) System.out.println("ping failed on live node: " + e);
 	    markDead();
 	}
 	return alive;
@@ -283,7 +283,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
     private void writeObject(ObjectOutputStream out)
 	throws IOException, ClassNotFoundException 
     {
-	if (isLocal) if (Log.ifp(6)) System.out.println("writeObject from " + localnode.getNodeId() + " to local node " + remotenid);
+	if (isLocal) if (Log.ifp(7)) System.out.println("writeObject from " + localnode.getNodeId() + " to local node " + remotenid);
 	out.writeObject(remoteNode);
 	out.writeObject(remotenid);
     } 

@@ -96,7 +96,7 @@ public class RMIPastryNode extends PastryNode
 		 * reactivated.
 		 */
 		NodeId sender = msg.getSenderId();
-		if (Log.ifp(5))
+		if (Log.ifp(6))
 		    System.out.println("received " +
 				       (msg instanceof RouteMessage ? "route" : "direct")
 				       + " msg from " + sender + ": " + msg);
