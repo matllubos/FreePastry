@@ -59,7 +59,7 @@ Before you begin, you should meet the following requirements.
 
 <h3>Download the tutorial file <a href="./src/lesson1/DistTutorial.java">DistTutorial.java</a>.</h3>
 
-In this lesson we are going to use Socket transport layer to communicate.  The Socket transport layer is a package within the pastry source tree that is used to communicate between nodes using the IP.  It is located in rice.pastry.socket.  Socket uses TCP for all messages except liveness which it uses UDP to accomplish.  Before we dive into the code lets start with a short vocabulary lesson:<br>
+In this lesson we are going to use Socket transport layer to communicate.  The Socket transport layer is a package within the pastry source tree that is used to communicate between nodes using Internet Protocol (IP).  It is located in rice.pastry.socket.  Socket uses TCP for all messages except liveness which it uses UDP to accomplish.  Before we dive into the code lets start with a short vocabulary lesson:<br>
 
 <h2>Terms:</h2>
 <ul>
@@ -203,22 +203,22 @@ Lesson 2 will aid you in running your code.</h3>
     <ol type="i">
       <li>Setup your directory as follows:
 <pre>
-pastry.jar
+FreePastry-1.4_01.jar
 rice/tutorial/lesson1/DistTutorial.java
 </pre>
       </li>
       <li>Compile the Java sources:
-	  <pre><span class="input">javac -cp pastry.jar rice/tutorial/lesson1/*.java</span></pre></li>
+	  <pre><span class="input">javac -classpath FreePastry-1.4_01.jar rice/tutorial/lesson1/*.java</span></pre></li>
     </ol>
   <li><b>Step 2:</b> Launch the bootstrap node.
 Even though this is the first node, and therefore we know the bootstrap will
 not work, you need to place in a bogus ip/port.  A smarter <code>main()</code> method in DistTutorial.java could fix this problem.
-<pre><span class="input">java -cp .:pastry.jar rice.tutorial.lesson.DistTutorial 9001 <i>yourhost.domain</i> 9001</span></pre>
+<pre><span class="input">java -cp .:FreePastry-1.4_01.jar rice.tutorial.lesson1.DistTutorial 9001 <i>yourhost.domain</i> 9001</span></pre>
 <p>
 (In the above command, <i>yourhost.domain</i> can be the DNS name of your
 host or its IP address.)  Your output will look something like this:</p>
 <pre>
-<span class="input">java rice.tutorial.lesson1.DistTutorial 9001 10.9.8.7 9001</span>
+<span class="input">java -cp .:FreePastry-1.4_01.jar rice.tutorial.lesson1.DistTutorial 9001 10.9.8.7 9001</span>
 <span class="output">Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
 Couldn't find a bootstrap node, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0xB7E151..&gt;/FOO/10.9.8.7:9001 [-4233509936758121968])</span></pre></li>
@@ -226,10 +226,10 @@ Finished creating new node SocketNodeHandle (&lt;0xB7E151..&gt;/FOO/10.9.8.7:900
   <p>
   You can do this on another computer but make sure you fill in the name of
   the computer from step 2 in <i>bootstraphost.domain</i>.</p>
-<pre><span class="input">java -cp .:pastry.jar rice.tutorial.lesson.DistTutorial 9002 <i>bootstraphost.domain</i> 9001</span></pre>
+<pre><span class="input">java -cp .:FreePastry-1.4_01.jar rice.tutorial.lesson1.DistTutorial 9002 <i>bootstraphost.domain</i> 9001</span></pre>
 <p/> Your output will look something like this:    
 <pre>
-<span class="input">java rice.tutorial.lesson1.DistTutorial 9002 10.9.8.7 9001</span>
+<span class="input">java -cp .:FreePastry-1.4_01.jar rice.tutorial.lesson1.DistTutorial 9002 10.9.8.7 9001</span>
 <span class="output">Finished creating new node SocketNodeHandle (&lt;0x74345D..&gt;/FOO/10.9.8.7:9002 [6054526012380911947])</span></pre></li>
 </ul>
 
@@ -486,7 +486,7 @@ Now if you execute this code twice you should get something like:
 
 <p><em>(for Node1)</em></p>
 <pre>
-<span class="input">java rice.tutorial.lesson3.DistTutorial 9001 10.9.8.7 9001</span>
+<span class="input">java -cp .:FreePastry-1.4_01.jar rice.tutorial.lesson3.DistTutorial 9001 10.9.8.7 9001</span>
 <span class="output">Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
 Couldn't find a bootstrap node, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0xC20545..&gt;/FOO/10.9.8.7:9001 [-4445364026872145996])
@@ -502,7 +502,7 @@ MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0xC20545.
 
 <p><em>(for Node2)</em></p>
 <pre>
-<span class="input">java rice.tutorial.lesson3.DistTutorial 9002 10.9.8.7 9001</span>
+<span class="input">java -cp .:FreePastry-1.4_01.jar rice.tutorial.lesson3.DistTutorial 9002 10.9.8.7 9001</span>
 <span class="output">Finished creating new node SocketNodeHandle (&lt;0xDD90C6..&gt;/FOO/10.9.8.7:9002 [5138450490561334965])
 
 MyApp &lt;0xDD90C6..&gt; sending to &lt;0x2E5C63..&gt;
@@ -530,7 +530,7 @@ FreePastry!</h3>
 <h3>Download the tutorial files: 
 <a href="./src/lesson4/DistTutorial.java">DistTutorial.java</a> (changed from Lesson 3!!!),
 <a href="./src/lesson4/MyApp.java">MyApp.java</a>,
-<a href="./src/lesson4/MyMsg.java">MyMsg.java</a> into a directory called rice/tutorial/lesson3/.</h3>
+<a href="./src/lesson4/MyMsg.java">MyMsg.java</a> into a directory called rice/tutorial/lesson4/.</h3>
 
 <p/>This tutorial will show you how to create and run multiple FreePastry nodes within the same JVM.  We will continue to use the Socket transport layer.  This tutorial is very simple, all we will be doing is modifying lesson 3 to have multiple nodes.<br>  
 
@@ -601,7 +601,7 @@ In the send direct loop we use our getter <code>MyApp.getNode()</code>.  This pr
 
 Other than that, we changed the delay in several locations so the program doesn't take as long to execute.  Compile and run this program as before, but make sure to specify some the number of nodes to run as the 4th argument.
 <pre>
-<span class="input">java rice.tutorial.lesson3.DistTutorial 9001 10.9.8.7 9001 10</span>
+<span class="input">java -cp .:FreePastry-1.4_01.jar rice.tutorial.lesson4.DistTutorial 9001 10.9.8.7 9001 10</span>
 <span class="output">Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
 Couldn't find a bootstrap node, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0x93426F..&gt;/FOO/10.9.8.7:9001 [6666451457797044406])
