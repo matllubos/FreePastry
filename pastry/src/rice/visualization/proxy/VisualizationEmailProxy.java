@@ -63,6 +63,8 @@ public class VisualizationEmailProxy extends EmailProxy {
         if (aggregateStore instanceof GlacierImpl)
           server.addPanelCreator(new GlacierPanelCreator((GlacierImpl) aggregateStore));
       }
+      
+      server.addPanelCreator(new QueuePanelCreator(timer, DistPastryNode.QUEUE, rice.persistence.PersistentStorage.QUEUE));
 
       if (immutablePast instanceof DebugCommandHandler)
         server.addDebugCommandHandler((DebugCommandHandler)immutablePast);

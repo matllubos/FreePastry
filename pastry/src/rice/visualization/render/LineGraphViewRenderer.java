@@ -30,6 +30,7 @@ public class LineGraphViewRenderer extends ViewRenderer {
       }
       
       public void paintComponent(Graphics g) {
+        if (visualization.getData() != null) {
         LineGraphView view = (LineGraphView) visualization.getData().getView(v.getName());
         XYSeries[] data = new XYSeries[view.getSeriesCount()];
         Color[] colors = new Color[view.getSeriesCount()];
@@ -47,6 +48,7 @@ public class LineGraphViewRenderer extends ViewRenderer {
         
         BufferedImage image = createGraph(data, view.getXLabel(), view.getYLabel(), view.getWidth() - 2*getDefaultBorder(), view.getHeight() - 2*getDefaultBorder(), colors, view.getArea(), view.getLegend());
         g.drawImage(image, getDefaultBorder(), getDefaultBorder(), null);
+        }
       }
     }; 
     

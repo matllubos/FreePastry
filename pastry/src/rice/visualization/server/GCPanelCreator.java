@@ -92,7 +92,7 @@ public class GCPanelCreator implements PanelCreator {
       cacheCons.gridy = 0;
       cacheCons.fill = GridBagConstraints.HORIZONTAL;
       
-      LineGraphView cacheView = new LineGraphView("Expiration Times", 380, 200, cacheCons, "Time (hours)", "Objects", true, false);
+      LineGraphView cacheView = new LineGraphView("Expiration Times", 380, 200, cacheCons, "Time (hours)", "Objects", false, false);
       cacheView.addSeries("Expiration Times", expirations, getExpirations(), Color.red);
       
       pastPanel.addDataView(cacheView);
