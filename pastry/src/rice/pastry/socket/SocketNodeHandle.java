@@ -112,14 +112,17 @@ public class SocketNodeHandle extends DistNodeHandle {
   public int proximity() {
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
 
+		int liveness = getLiveness();
+		if ((liveness == LIVENESS_UNKNOWN) || (liveness == LIVENESS_FAULTY))
+		  return DEFAULT_PROXIMITY;
     if (spn == null) {
-      return 0;
+      return DEFAULT_PROXIMITY;
     } else
       if (spn.getNodeId().equals(nodeId)) {
-      return 0;
-    } else {
-      return spn.getSocketCollectionManager().proximity(this);
-    }
+	      return 0;
+	    } else {
+	      return spn.getSocketCollectionManager().proximity(this);
+	    }
   }
 
   /**

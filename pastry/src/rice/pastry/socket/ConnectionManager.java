@@ -4,6 +4,7 @@
  */
 package rice.pastry.socket;
 
+import java.lang.ref.WeakReference;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -11,6 +12,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 
+import rice.p2p.commonapi.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.commonapi.PastryEndpointMessage;
 import rice.pastry.dist.NodeIsDeadException;
@@ -94,7 +96,8 @@ public class ConnectionManager {
   /**
    * A handle to the remote node.
    */
-  public SocketNodeHandle snh;
+  public WeakReference snh; // of a SocketNodeHandle
+  
   
   /**
    * The remote node's address.
@@ -252,6 +255,9 @@ public class ConnectionManager {
    */
   private DeadChecker deadChecker;
 
+	private int epoch;
+	private Id id;
+
 	/**
 	 * Constructs a new ConnectionManager.  
    * This does NOT automatically open TCP connections for control or data traffic.  
@@ -260,7 +266,9 @@ public class ConnectionManager {
 	public ConnectionManager(SocketCollectionManager scm, SocketNodeHandle snh) {
     this.scm = scm;   
     this.address = snh.getAddress();
-    this.snh = snh;
+    this.epoch = snh.getEpoch();
+    this.id = snh.getId();
+    this.snh = new WeakReference(snh);
     this.pingManager = scm.getPingManager();    
     pendingAcks = new HashMap();
     controlQueue = new LinkedList();    
@@ -834,8 +842,15 @@ public class ConnectionManager {
     }
 //    scm.manager.addStat(o2.getClass().getName(),endTime-beginTime);    
   }
-
-  SocketTransportMessage lastAckSent = null;
+	
+	/**
+	 *  of SocketTransportMessage
+	 * The need for this is that the lastAckSent may 
+	 * contain a reference to the SocketNodeHandle 
+	 * that is kept to keep us from being 
+	 * garbage collected.
+ 	 */
+  WeakReference lastAckSent = null;
 
   /**
    * Called by controlSocketManager whenever a SocketTransportMessage is received.
@@ -848,7 +863,7 @@ public class ConnectionManager {
 //    System.out.println(this+".sendAck("+smsg+")");
     if (controlSocketManager != null) {
       controlSocketManager.send(new AckMessage(smsg.seqNumber,smsg));      
-      lastAckSent = smsg;
+      lastAckSent = new WeakReference(smsg);
     } else {
       System.out.println("ERROR:ack lost for "+smsg);   
     }
@@ -1059,7 +1074,7 @@ public class ConnectionManager {
       System.out.println(this+"markDead() after being suspected for "+susTime);
     setLiveness(NodeHandle.LIVENESS_FAULTY);
     timesMarkedDead++;
-    scm.markDead(snh);
+    scm.markDead((SocketNodeHandle)snh.get());
     if (deadChecker != null) {
       deadChecker.cancel();
       deadChecker.tries = NUM_PING_TRIES;
@@ -1102,7 +1117,7 @@ public class ConnectionManager {
     }
     setLiveness(NodeHandle.LIVENESS_ALIVE);    
     if (needToNotifySCM) {
-      scm.markAlive(snh);
+      scm.markAlive((SocketNodeHandle)snh.get());
     }
   }
   
@@ -1266,7 +1281,7 @@ public class ConnectionManager {
    * yee ol' toString() method.
    */
   public String toString() {    
-    return "CM<"+scm.addressString()+">=><"+address+">";
+    return "CM<"+scm.addressString()+">=><"+address+">:"+id+"@"+epoch;
   }
 
   /**
@@ -1323,7 +1338,7 @@ public class ConnectionManager {
     int powerOffset;
     long lastTimeScheduled = 0;
     boolean alreadyRaised = false;
-    
+        
     /**
      * Constructor for DeadChecker.
      *
@@ -1343,7 +1358,22 @@ public class ConnectionManager {
       }
       tries = 1;
       schedule(powerOffset);
-      pingManager.forcePing(snh, this);
+      SocketNodeHandle snh = getNodeHandle();
+			if (snh != null) {
+	      pingManager.forcePing(snh, this);
+			} else {
+			  // we're about to be collected
+			  System.out.println("Connection manager has no node handle1.");	
+			}
+    }
+    
+    SocketNodeHandle myHandle = null;
+    void preventCollection(boolean b) {
+    	if (b) {
+    	  myHandle = getNodeHandle();	
+    	} else {
+    		myHandle = null;
+    	}
     }
 
 		/**
@@ -1430,8 +1460,15 @@ public class ConnectionManager {
           if (powerOffset > 6) 
             powerOffset = 6;
         }
-        pingManager.forcePing(snh, DeadChecker.this);
-        schedule(powerOffset);
+        
+        SocketNodeHandle snh = getNodeHandle();
+        if (snh != null) {
+	        pingManager.forcePing(snh, DeadChecker.this);
+	        schedule(powerOffset);
+        } else {
+          // we're about to be collected
+  			  System.out.println("Connection manager has no node handle2.");	
+        }
       } else {
         markDead();
       }    
@@ -1652,7 +1689,7 @@ public class ConnectionManager {
     }
     
     if (lastAckSent != null) {
-      s3+=" lastAckSent:"+lastAckSent;      
+      s3+=" lastAckSent:"+lastAckSent.get();      
     } else {
       s3+=" lastAckSent:null";
     }
@@ -1685,7 +1722,7 @@ public class ConnectionManager {
    */
 	protected void finalize() throws Throwable {
     //if (LOG_LOW_LEVEL)
-      System.out.println(this+".finalize()");
+      System.out.println(this+"CM.finalize()");
     close();
 		super.finalize();
 	}
@@ -1707,9 +1744,16 @@ public class ConnectionManager {
     Iterator i = ((Collection)livenessListeners.clone()).iterator();
     while(i.hasNext()) {
       LivenessListener ll = (LivenessListener)i.next();
-      ll.updateLiveness(snh,liveness);
+      ll.updateLiveness((SocketNodeHandle)snh.get(),liveness);
     }
   }
+
+	/**
+	 * 
+	 */
+	public SocketNodeHandle getNodeHandle() {
+    return (SocketNodeHandle)snh.get();
+	}
 }
 
   

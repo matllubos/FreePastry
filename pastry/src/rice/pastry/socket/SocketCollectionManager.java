@@ -31,6 +31,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.WeakHashMap;
 
 import rice.pastry.Log;
@@ -189,13 +190,30 @@ public class SocketCollectionManager {
    * @return the ConnectionManager correcsponding to the address.
    */
   public ConnectionManager getConnectionManager(SocketNodeHandle snh) {
+    if (snh == null) return null;
     if (!pastryNode.isAlive()) return null; // keep from creating new connection managers while we are shutting the rest down
     ConnectionManager cm = (ConnectionManager)connections.get(snh);
     if (cm == null) {
+			//addRecentConnection(snh);
       cm = new ConnectionManager(this, snh);
       connections.put(snh, cm);
     }
     return cm;
+  }
+  
+  int NUM_RECENT_CONNECTIONS = 15;
+  LinkedList recentConnections = new LinkedList();
+  /**
+   * The purpose of addRecentConnection() is to prevent
+   * a ConnectionManager from being garbage collected
+   * while it is just getting started.  The ConnectionManager
+   * can be garbage collected as soon as the SocketNodeHandle
+   * is garbage collected.  
+   */
+  public void addRecentConnection(SocketNodeHandle snh) {    
+		if (recentConnections.size() >= NUM_RECENT_CONNECTIONS-1)
+      recentConnections.removeLast();
+    recentConnections.addFirst(snh);
   }
   
   /**
@@ -384,8 +402,9 @@ public class SocketCollectionManager {
     Iterator i = getConnectionManagers().iterator();
     while (i.hasNext()) {
       ConnectionManager cm = (ConnectionManager)i.next();
-      if ((cm != null) && (cm.getLiveness() < NodeHandle.LIVENESS_FAULTY))
-        System.out.println("  "+cm+" "+cm.getStatus());
+      if (cm != null)
+//      if ((cm != null) && (cm.getLiveness() < NodeHandle.LIVENESS_FAULTY))
+        System.out.println("  "+cm.getStatus());
     }
   }
 

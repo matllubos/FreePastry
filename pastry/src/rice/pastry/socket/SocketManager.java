@@ -80,10 +80,6 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
    */
   private TimerTask connectingCheckDeadTask = null;
 
-//  public Exception closedTrace;
-//  Exception openedTrace;
-//  Exception cmSet;
-
   /**
    * The type of SocketManager this represents.  It will be 
    * ConnectionManager.TYPE_CONTROL, TYPE_DATA
@@ -171,10 +167,10 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
   public SocketManager(InetSocketAddress address, SocketCollectionManager scm, ConnectionManager cm, int type) {
     this(scm,type);    
     ctor = 2;
-    connectionManager = cm;
+    setConnectionManager(cm);
     this.address = address;
     if (!sentAddress) {
-      send(new AddressMessage(scm.getLocalNodeHandle(),connectionManager.snh,type));
+      send(new AddressMessage(scm.getLocalNodeHandle(),connectionManager.getNodeHandle(),type));
       sentAddress = true;
     }
   }
@@ -479,6 +475,7 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
   public void close() {
     if (ConnectionManager.LOG_LOW_LEVEL)
       System.out.println(this+".close()");
+    snh = null;
     closed = true;
     cancelCheckDeadTask(); // stop checking dead on my account
     //Thread.dumpStack();
@@ -749,12 +746,18 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
     return type;
   }
 
+  /**
+   * This is to keep the ConnectionManager alive until the SocketManager is collected.
+   */
+  SocketNodeHandle snh = null;
+
 	/**
    * Set's the ConnectionManager
 	 * @param manager this SM's new CM
 	 */
 	public void setConnectionManager(ConnectionManager manager) {
     connectionManager = manager;		
+    this.snh = connectionManager.getNodeHandle();
 	}   
   
   /**
