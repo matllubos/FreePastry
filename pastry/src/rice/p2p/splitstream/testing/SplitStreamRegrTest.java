@@ -107,9 +107,16 @@ public class SplitStreamRegrTest extends CommonAPITest {
        ssclients[i].subscribeStripes();
        simulate();
      }
+     byte[] data = {0,1,0,1,1};
+     ssclients[creator].publishAll(data);
+     simulate();
 
      ssclients[creator].publishAll(new byte[0]);
      simulate();
+
+     for(int i = 0; i < NUM_NODES; i++){
+        System.out.println(i + " Got " + ssclients[i].getNumMesgs());
+     }
   }
 
   /**
@@ -149,6 +156,9 @@ public class SplitStreamRegrTest extends CommonAPITest {
     */
    private SplitStream ss;
 
+
+   private int numMesgsReceived = 0;
+
    public SplitStreamTestClient(Node n, SplitStream ss){
       this.n = n;
       this.ss =ss;
@@ -160,6 +170,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
 
    public void deliver(Stripe s, byte[] data){
       log("Data recieved on " + s);
+      numMesgsReceived++;
   }
    
    public void createChannel(ChannelId cid){
@@ -193,6 +204,10 @@ public class SplitStreamRegrTest extends CommonAPITest {
    public void publish(byte[] b, Stripe s){
      log("Publishing to " + s);
        s.publish(b);
+   }
+
+   public int getNumMesgs(){
+     return numMesgsReceived;
    }
 
    private void log(String s){
