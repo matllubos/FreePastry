@@ -19,6 +19,7 @@ import java.util.TreeSet;
 import java.util.Vector;
 
 import rice.Continuation;
+import rice.Executable;
 import rice.p2p.aggregation.messaging.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.glacier.VersionKey;
@@ -696,40 +697,60 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
 
   private void storeAggregate(final Aggregate aggr, final long expiration, final ObjectDescriptor[] desc, final Id[] pointers, final Continuation command) {
-    aggr.setId(factory.buildId(aggr.getContentHash()));
-    log(2, "Storing aggregate, CH="+aggr.getId()+", expiration="+expiration+" (rel "+(expiration-System.currentTimeMillis())+") with "+desc.length+" objects:");
-    for (int j=0; j<desc.length; j++)
-      log(2, "#"+j+": "+desc[j]);
-
-    Continuation c = new Continuation() {
+    log(3, "storeAggregate() schedules content hash computation...");
+    endpoint.process(new Executable() {
+      public Object execute() {
+        log(3, "storeAggregate() starts working on content hash...");
+        return factory.buildId(aggr.getContentHash());
+      }
+    }, new Continuation() {
       public void receiveResult(Object o) {
-        AggregateDescriptor adc = new AggregateDescriptor(
-          aggr.getId(),
-          expiration,
-          desc,
-          pointers
-        );
+        if (o instanceof Id) {
+          aggr.setId((Id) o);
+          log(2, "Storing aggregate, CH="+aggr.getId()+", expiration="+expiration+" (rel "+(expiration-System.currentTimeMillis())+") with "+desc.length+" objects:");
+          for (int j=0; j<desc.length; j++)
+            log(2, "#"+j+": "+desc[j]);
 
-        if (o instanceof Boolean[]) {
-          aggregateList.addAggregateDescriptor(adc);
-          aggregateList.setRoot(aggr.getId());
-          aggregateList.writeToDisk();
-          log(3, "Aggregate inserted successfully");
-          command.receiveResult(new Boolean(true));
+          Continuation c = new Continuation() {
+            public void receiveResult(Object o) {
+              AggregateDescriptor adc = new AggregateDescriptor(
+                aggr.getId(),
+                expiration,
+                desc,
+                pointers
+              );
+
+              if (o instanceof Boolean[]) {
+                aggregateList.addAggregateDescriptor(adc);
+                aggregateList.setRoot(aggr.getId());
+                aggregateList.writeToDisk();
+                log(3, "Aggregate inserted successfully");
+                command.receiveResult(new Boolean(true));
+              } else {
+                warn("Unexpected result in aggregate insert (commit): "+o);
+                command.receiveException(new AggregationException("Unexpected result (commit): "+o));
+              }
+            }
+            public void receiveException(Exception e) {
+              command.receiveException(e);
+            }
+          };
+    
+          if (aggregateStore instanceof GCPast) 
+            ((GCPast)aggregateStore).insert(aggr, expiration, c);
+          else
+            aggregateStore.insert(aggr, c);
         } else {
-          warn("Unexpected result in aggregate insert (commit): "+o);
-          command.receiveException(new AggregationException("Unexpected result (commit): "+o));
+          warn("storeAggregate() cannot determine content hash, received "+o);
+          command.receiveException(new AggregationException("storeAggregate() cannot determine content hash"));
         }
       }
       public void receiveException(Exception e) {
+        warn("storeAggregate() cannot determine content hash, exception "+e);
+        e.printStackTrace();
         command.receiveException(e);
       }
-    };
-    
-    if (aggregateStore instanceof GCPast) 
-      ((GCPast)aggregateStore).insert(aggr, expiration, c);
-    else
-      aggregateStore.insert(aggr, c);
+    });
   }
 
   private void flushComplete(Object o) {
@@ -1640,27 +1661,44 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
   
   private void retrieveObjectFromAggregate(final AggregateDescriptor adc, final int objDescIndex, final Continuation command) {
-  
     aggregateStore.lookup(adc.key, new Continuation() {
       public void receiveResult(Object o) {
         if (o instanceof Aggregate) {
-          Aggregate aggr = (Aggregate) o;
-          Id aggrNominalKey = factory.buildId(aggr.getContentHash());
+          final Aggregate aggr = (Aggregate) o;
+          endpoint.process(new Executable() {
+            public Object execute() {
+              return factory.buildId(aggr.getContentHash());
+            }
+          }, new Continuation() {
+            public void receiveResult(Object o) {
+              if (o instanceof Id) {
+                Id aggrNominalKey = (Id) o;
 
-          if (!aggrNominalKey.equals(adc.key)) {
-            warn("Cannot validate aggregate "+adc.key+", hash="+aggrNominalKey);
-            command.receiveException(new AggregationException("Cannot validate aggregate -- retry?"));
-            return;
-          }
-          
-          log(3, "Object "+adc.objects[objDescIndex].key+" (#"+objDescIndex+") successfully retrieved from "+adc.key);
+                if (!aggrNominalKey.equals(adc.key)) {
+                  warn("Cannot validate aggregate "+adc.key+", hash="+aggrNominalKey);
+                  command.receiveException(new AggregationException("Cannot validate aggregate -- retry?"));
+                  return;
+                }
+            
+                log(3, "Object "+adc.objects[objDescIndex].key+" (#"+objDescIndex+") successfully retrieved from "+adc.key);
 
-          objectStore.insert(aggr.getComponent(objDescIndex), new Continuation() {
-            public void receiveResult(Object o) {}
-            public void receiveException(Exception e) {}
+                objectStore.insert(aggr.getComponent(objDescIndex), new Continuation() {
+                  public void receiveResult(Object o) {}
+                  public void receiveException(Exception e) {}
+                });
+
+                command.receiveResult(aggr.getComponent(objDescIndex));
+              } else {
+                warn("retrieveObjectFromAggregate cannot determine content hash, received "+o);
+                command.receiveException(new AggregationException("retrieveObjectFromAggregate cannot determine content hash"));
+              }
+            }
+            public void receiveException(Exception e) {
+              warn("retrieveObjectFromAggregate cannot determine content hash, exception "+e);
+              e.printStackTrace();
+              command.receiveException(e);
+            }
           });
-
-          command.receiveResult(aggr.getComponent(objDescIndex));
         } else {
           warn("retrieveObjectFromAggregate failed; receiveResult("+o+")");
           command.receiveResult(null);
