@@ -49,9 +49,9 @@ PACKAGES = \
 
 NODOC_PACKAGES = 
 
-JARS = pastry.ja
+JARS = pastry.jar
 
-JARS_LIB       = javamail.jar bouncycastle.jarr
+JARS_LIB       = javamail.jar bouncycastle.jar
 
 JARS_3RDPARTY = 
 
