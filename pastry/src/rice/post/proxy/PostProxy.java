@@ -121,6 +121,11 @@ public class PostProxy {
    * The local Post service
    */
   protected Post post;
+  
+  /**
+   * The local storage manager
+   */
+  protected StorageManager storage;
 
   /**
    * The name of the local user
@@ -260,7 +265,7 @@ public class PostProxy {
       stepDone(SUCCESS);
 
       stepStart("Starting StorageManager");
-      StorageManager storage = new StorageManager(FACTORY,
+      storage = new StorageManager(FACTORY,
                                                   new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + ":" + PORT, ".", DISK_SIZE),
                                                   new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE));
       stepDone(SUCCESS);

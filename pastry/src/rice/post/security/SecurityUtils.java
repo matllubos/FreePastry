@@ -30,7 +30,7 @@ public class SecurityUtils {
   /**
    * The name of the symmetric cipher to use.
    */
-  public final static String SYMMETRIC_ALGORITHM = "AES/ECB/PKCS5Padding";
+  public final static String SYMMETRIC_ALGORITHM = "Rijndael";
 
   /**
    * The name of the asymmetric generator to use.
