@@ -23,27 +23,27 @@ public class SplitStreamImpl implements SplitStream, Application {
   /**
    * The scribe instance for this SplitStream Object
    */
-  private Scribe scribe = null;
+  protected Scribe scribe;
 
   /**
    * The node that this application is running on
    */
-  private Node node;
+  protected Node node;
 
   /**
    * The endpoint that this application is running on
    */
-  private Endpoint endpoint;
+  protected Endpoint endpoint;
 
   /**
    * Hashtable of all the channels currently created on this node implicitly or explicitly.
    */
-  private Hashtable channels;
+  protected Hashtable channels;
 
   /**
    * A mapping between channelId -> Vector of clients
    */
-  private Hashtable clients;
+  protected Hashtable clients;
 
   /**
    * The constructor for building the splitStream object
@@ -57,6 +57,24 @@ public class SplitStreamImpl implements SplitStream, Application {
     this.node = node;
     this.endpoint = node.registerApplication(this, instance);
     this.channels = new Hashtable();
+  }
+
+  /**
+   * Method which returns the underlying node for this splitstream object
+   *
+   * @return The node underlying this splitstream
+   */
+  public Node getNode() {
+    return node;
+  }
+
+  /**
+   * Method which returns the underlying endpoint for this splitstream object
+   *
+   * @return The endpoint underlying this splitstream
+   */
+  public Endpoint getEndpoint() {
+    return endpoint;
   }
 
   /**

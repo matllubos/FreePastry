@@ -23,8 +23,8 @@ public class Channel {
   /**
    * The default number of stripes to create
    */
-  public static int DEFAULT_NUM_STRIPES = 16;
-
+  public static int STRIPE_BASE = 4;
+  
   /**
    * ChannelId for this channel
    */
@@ -44,11 +44,6 @@ public class Channel {
    * The list of stripeIds for this channel
    */
   protected Stripe[] stripes;
-
-  /**
-   * The number of stripes contained in this channel.
-   */
-  protected int numStripes;
 
   /**
    * The scribe object associated with this node
@@ -80,7 +75,6 @@ public class Channel {
      *  Initialize Member variables
      */
     this.bandwidthManager = new BandwidthManagerImpl();
-    this.numStripes = DEFAULT_NUM_STRIPES;
     this.scribe = scribe;
     this.splitStream = splitStream;
     this.channelId = channelId;
@@ -94,20 +88,14 @@ public class Channel {
     /*
      *  Create the stripe id and stripe arrays
      */
-    stripeIds = new StripeId[numStripes];
-    stripes = new Stripe[numStripes];
-    //(StripeId[]) splitStream.createIds(name + "STRIPES", numStripes);
-
-    /*
-     *  Generate the StripeIds
-     */
-    // generateStripeIds();
+    stripeIds = generateStripeIds(channelId, splitStream.getNode().getIdFactory());
+    stripes = new Stripe[stripeIds.length];
 
     /*
      *  Create the stripes
      */
-    for (int i = 0; i < numStripes; i++) {
-      stripes[i] = new Stripe(stripeIds[i], scribe, this);
+    for (int i = 0; i < stripeIds.length; i++) {
+      stripes[i] = new Stripe(stripeIds[i], scribe, this, splitStream);
     }
   }
 
@@ -156,5 +144,25 @@ public class Channel {
    */
   protected SpareCapacityId getSpareCapacityId() {
     return spareCapacityId;
+  }
+
+  /**
+   * Creates and returns the Ids associated with the provided channelId
+   *
+   * @param channelId The id of the channel
+   * @return The array of stripeIds based on this channelId
+   */
+  protected static StripeId[] generateStripeIds(ChannelId id, IdFactory factory) {
+/*    int num = Math.exp(2, STRIPE_BASE);
+    StripeId[] stripeIds = new StripeId[num];
+
+    for (int i=0; i<num; i++) {
+      byte[] array = id.toByteArray();
+      // NEED TO SET ARRAY HERE TO BE APPROPRIATELY PREFIXED
+      stripeIds[i] = new StripeId(array);
+    }
+
+    return stripeIds; */
+    return null;
   }
 }

@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate
+"Free Pastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -41,26 +41,22 @@ import rice.p2p.commonapi.*;
 import rice.p2p.scribe.*;
 
 /**
- * @(#) SubscribeMessage.java
- *
- * The subscribe message.
+ * @(#) SubscribeMessage.java The subscribe message.
  *
  * @version $Id$
- *
  * @author Alan Mislove
  */
-public class SubscribeMessage extends ScribeMessage {
+public class SubscribeMessage extends AnycastMessage {
 
   /**
    * Constructor which takes a unique integer Id
    *
-   * @param id The unique id
    * @param source The source address
-   * @param dest The destination address
+   * @param topic DESCRIBE THE PARAMETER
    */
   public SubscribeMessage(NodeHandle source, Topic topic) {
-    super(source, topic);
+    super(source, topic, null);
   }
-  
+
 }
 

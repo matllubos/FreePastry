@@ -35,19 +35,16 @@ if advised of the possibility of such damage.
 ********************************************************************************/
 
 package rice.p2p.commonapi;
+import java.io.*;
 
 import java.lang.Comparable;
-import java.io.*;
 import java.util.*;
 
 /**
- * @(#) IdFactory.java
- *
- * This interface provides applications with a way of generating Ids in a
+ * @(#) IdFactory.java This interface provides applications with a way of generating Ids in a
  * protocol-specific manner.
  *
  * @version $Id$
- *
  * @author Alan Mislove
  * @author Peter Druschel
  */
@@ -56,7 +53,7 @@ public interface IdFactory {
   /**
    * Builds a protocol-specific Id given the source data.
    *
-   * @param material The material to use 
+   * @param material The material to use
    * @return The built Id.
    */
   public Id buildId(byte[] material);
@@ -76,6 +73,14 @@ public interface IdFactory {
    * @return The built Id.
    */
   public Id buildId(String string);
+
+  /**
+   * Builds a protocol-specific Id.Distance given the source data.
+   *
+   * @param material The material to use
+   * @return The built Id.Distance.
+   */
+  public Id.Distance buildIdDistance(byte[] material);
 
   /**
    * Creates an IdRange given the CW and CCW ids.

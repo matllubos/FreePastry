@@ -1,8 +1,8 @@
 /*************************************************************************
 
-"Free Pastry" Peer-to-Peer Application Development Substrate 
+"Free Pastry" Peer-to-Peer Application Development Substrate
 
-Copyright 2002, Rice University. All rights reserved. 
+Copyright 2002, Rice University. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -35,18 +35,15 @@ if advised of the possibility of such damage.
 ********************************************************************************/
 
 package rice.p2p.commonapi;
+import java.io.*;
 
 import java.lang.Comparable;
-import java.io.*;
 import java.util.*;
 
 /**
- * @(#) Id.java
- *
- * This interface is an abstraction of an Id (or key) from the CommonAPI paper.
+ * @(#) Id.java This interface is an abstraction of an Id (or key) from the CommonAPI paper.
  *
  * @version $Id$
- *
  * @author Alan Mislove
  * @author Peter Druschel
  */
@@ -60,11 +57,11 @@ public interface Id extends Comparable, Serializable {
    * @return true if this is between ccw (inclusive) and cw (exclusive), false otherwise
    */
   public boolean isBetween(Id ccw, Id cw);
-  
+
   /**
-   * Checks to see if the Id nid is clockwise or counterclockwise from this, on the ring.
-   * An Id is clockwise if it is within the half circle clockwise from this on the ring.
-   * An Id is considered counter-clockwise from itself.
+   * Checks to see if the Id nid is clockwise or counterclockwise from this, on the ring. An Id is
+   * clockwise if it is within the half circle clockwise from this on the ring. An Id is considered
+   * counter-clockwise from itself.
    *
    * @param nid The id to compare to
    * @return true if clockwise, false otherwise.
@@ -94,15 +91,17 @@ public interface Id extends Comparable, Serializable {
    * @return the distance between this and nid.
    */
   public Distance longDistanceFromId(Id nid);
-  
+
   /**
    * A class for representing and manipulating the distance between two Ids on the circle.
+   *
+   * @version $Id$
+   * @author amislove
    */
   public static interface Distance extends Comparable, Serializable {
 
     /**
-     * Shift operator.
-     * shift(-1,0) multiplies value of this by two, shift(1,0) divides by 2
+     * Shift operator. shift(-1,0) multiplies value of this by two, shift(1,0) divides by 2
      *
      * @param cnt the number of bits to shift, negative shifts left, positive shifts right
      * @param fill value of bit shifted in (0 if fill == 0, 1 otherwise)
@@ -112,6 +111,13 @@ public interface Id extends Comparable, Serializable {
   }
 
   /**
+   * Returns a (mutable) byte array representing this Id
+   *
+   * @return A byte[] representing this Id
+   */
+  public byte[] toByteArray();
+
+  /**
    * Returns a string representing the full length of this Id.
    *
    * @return A string with all of this Id
@@ -119,4 +125,4 @@ public interface Id extends Comparable, Serializable {
   public String toStringFull();
 
 }
-  
+

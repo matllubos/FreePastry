@@ -20,7 +20,7 @@ import rice.p2p.scribe.*;
 public class Stripe implements ScribeClient {
 
   /**
-   * DESCRIBE THE FIELD
+   * The constant status code associated with the subscribed state
    */
   public final static int STRIPE_SUBSCRIBED = 0;
 
@@ -38,6 +38,11 @@ public class Stripe implements ScribeClient {
    * The stripeId for this stripe
    */
   protected StripeId stripeId;
+
+  /**
+    * The channel this stripe is a part of.
+   */
+  protected SplitStream splitStream;
 
   /**
    * The channel this stripe is a part of.
@@ -71,9 +76,11 @@ public class Stripe implements ScribeClient {
    * @param channel the channel this stripe belongs to
    * @param scribe DESCRIBE THE PARAMETER
    */
-  public Stripe(StripeId stripeId, Scribe scribe, Channel channel) {
+  public Stripe(StripeId stripeId, Scribe scribe, Channel channel, SplitStream splitStream) {
     this.channel = channel;
     this.stripeId = stripeId;
+    this.scribe = scribe;
+    this.splitStream = splitStream;
     this.stripeState = STRIPE_UNSUBSCRIBED;
     this.isPrimary = false;
 

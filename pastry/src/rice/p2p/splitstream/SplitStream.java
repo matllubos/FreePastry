@@ -13,6 +13,20 @@ import rice.p2p.scribe.*;
 public interface SplitStream {
 
   /**
+   * Method which returns the underlying node for this splitstream object
+   *
+   * @return The node underlying this splitstream
+   */
+  public Node getNode();
+
+  /**
+   * Method which returns the underlying endpoint for this splitstream object
+   *
+   * @return The endpoint underlying this splitstream
+   */
+  public Endpoint getEndpoint();
+
+  /**
    * A SplitStream application calls this method to join a channel.
    *
    * @param id DESCRIBE THE PARAMETER

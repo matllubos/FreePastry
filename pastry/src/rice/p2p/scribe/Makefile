@@ -3,8 +3,9 @@ PACKAGE = rice.p2p.scribe
 SOURCE  = \
 	Scribe.java \
 	ScribeImpl.java \
-	ScribeContent.java\
-	ScribeClient.java\
+	ScribeContent.java \
+	ScribeClient.java \
+  ScribePolicy.java \
   Topic.java
 
 RMI_SOURCE =
