@@ -100,7 +100,11 @@ public class RingId implements Id {
    * @return true if this is between ccw (inclusive) and cw (exclusive), false otherwise
    */
   public boolean isBetween(Id ccw, Id cw) {
-    return id.isBetween(ccw, cw);
+    if (!(ccw instanceof RingId) || (!((RingId)ccw).getRingId().equals(ringId)) ||
+        !(cw instanceof RingId) || (!((RingId)cw).getRingId().equals(ringId)))
+      throw new IllegalArgumentException("Defined only for RingIds from the same ring!");
+
+    return id.isBetween(((RingId)ccw).getId(), ((RingId)cw).getId());
   }
   
   /**
@@ -112,13 +116,10 @@ public class RingId implements Id {
    * @return true if clockwise, false otherwise.
    */
   public boolean clockwise(Id nid) {
-    if (nid instanceof RingId) {
-      RingId rnid = (RingId) nid;
-      if (!rnid.getRingId().equals(this.getRingId()))
-        throw new IllegalArgumentException("Cannot compare RingIDs from different Rings!");
-        
-      return id.clockwise(rnid.getId());
-    } else throw new IllegalArgumentException("Cannot compare RingID with another ID type!");
+    if (!(nid instanceof RingId) || (!((RingId)nid).getRingId().equals(ringId)))
+      throw new IllegalArgumentException("Defined only for RingIds from the same ring!");
+
+    return id.clockwise(((RingId)nid).getId());
   }
   
   /**
@@ -138,7 +139,10 @@ public class RingId implements Id {
    * @return the distance between this and nid.
    */
   public Distance distanceFromId(Id nid) {
-    return id.distanceFromId(nid);
+    if (!(nid instanceof RingId) || (!((RingId)nid).getRingId().equals(ringId)))
+      throw new IllegalArgumentException("Defined only for RingIds from the same ring!");
+
+    return id.distanceFromId(((RingId)nid).getId());
   }
   
   /**
@@ -148,7 +152,10 @@ public class RingId implements Id {
    * @return the distance between this and nid.
    */
   public Distance longDistanceFromId(Id nid) {
-    return id.longDistanceFromId(nid);
+    if (!(nid instanceof RingId) || (!((RingId)nid).getRingId().equals(ringId)))
+      throw new IllegalArgumentException("Defined only for RingIds from the same ring!");
+
+    return id.longDistanceFromId(((RingId)nid).getId());
   }
   
   /**
@@ -188,15 +195,6 @@ public class RingId implements Id {
    * @return A string with all of this Id
    */
   public String toString() {
-/*    String result = (String) toStringRef.get();
-    
-    if (result == null) {
-      result = "(" + ringId + ", " + id + ")";
-      toStringRef = new SoftReference(result);
-    }
-    
-    return result;*/
-    
     return "(" + ringId + ", " + id + ")";
   }
   
