@@ -15,8 +15,19 @@ import java.util.*;
  * class is abstract. The behavior will be decided at a later point
  */
 public class BandwidthManager{
+     /**
+      * Hashtable to keep track of all Channels registered with the bandwidth
+      * managers max bandwidth.
+      */
      private Hashtable maxBandwidth = null;
+     /**
+      * Hashtable to keep track of all Channels registered with the bandwidth
+      * managers used bandwidth.
+      */
      private Hashtable usedBandwidth = null;
+     /**
+      * Constructor
+      */
      public BandwidthManager(){
 	maxBandwidth = new Hashtable();
 	usedBandwidth = new Hashtable();
@@ -24,8 +35,7 @@ public class BandwidthManager{
      /**
       * This method makes an attempt to free up bandwidth
       * when it is needed. It follows the basic outline as
-      * describe above, again not completely defined so left
-      * as abstract.
+      * describe above,not completely defined.
       */ 
      public void freeBandwidth(){}
      /**
@@ -66,22 +76,40 @@ public class BandwidthManager{
 	usedBandwidth.put(channel, new Integer(0)); 
 
       }
-
+      /**
+       * Adjust the max bandwidth for this channel.
+       * @param Channel the channel to adjust
+       * @param int the new max bandwidth
+       */  
       public void adjustBandwidth(Channel channel, int outbandwidth){
         maxBandwidth.put(channel, new Integer(outbandwidth));
       }
+      /**
+       * Change the amount of bandwidth a channel is considered to be
+       * using. 
+       * @param Channel the channel whose bandwidth changed.
+       */
       public void additionalBandwidthUsed(Channel channel){
 	int oldBandwidth = ((Integer)usedBandwidth.get(channel)).intValue();
 	usedBandwidth.put(channel,new Integer(oldBandwidth + 1));
-	
       }
-     public int getUsedBandwidth(Channel channel){
+      /**
+       * Gets the bandwidth a channel is currently using.
+       * @param Channel the channel whose bandwidth we want
+       * @return int the bandwidth used
+       */
+      public int getUsedBandwidth(Channel channel){
 	int bandwidth = ((Integer)usedBandwidth.get(channel)).intValue();
 	return bandwidth;
-     }
-     public int getMaxBandwidth(Channel channel){
+      }
+      /**
+       * Gets the max bandwidth for a channel.
+       * @param Channel the channel whose bandwidth we want
+       * @return int the bandwidth used
+       */
+      public int getMaxBandwidth(Channel channel){
 	int bandwidth = ((Integer)maxBandwidth.get(channel)).intValue();
 	return bandwidth;
-     }
+      }
       private static int DEFAULT_CHILDREN = 20;
 } 

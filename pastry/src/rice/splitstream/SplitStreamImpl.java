@@ -1,13 +1,17 @@
 package rice.splitstream;
+
 import java.io.*;
 import java.util.*;
+
 import rice.scribe.*;
 import rice.scribe.messaging.*;
-import rice.splitstream.messaging.*;
+
 import rice.pastry.*;
 import rice.pastry.client.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
+
+import rice.splitstream.messaging.*;
 /*
  * @(#) SplitStream.java
  *
@@ -17,12 +21,31 @@ import rice.pastry.security.*;
  * This is the implementing class of the SplitStream service 
  */
 public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver{
+    /**
+     * The scribe instance for this SplitStream Object
+     */
     private IScribe scribe = null;
+    /**
+     * The bandwidthManger which controls bandwidth usage
+     */
     private BandwidthManager bandwidthManager = new BandwidthManager();
+    /**
+     * Credentials for this application
+     */
     private Credentials credentials = new PermissiveCredentials();
+    /**
+     * The pastry node that this application is running on
+     */
     private PastryNode node; 
+    /**
+     * Hashtable of all the channels currently created on this node implicitly
+     * or explicitly.
+     */
     private Hashtable channels;
-    public SplitStreamImpl(PastryNode node, IScribe scribe){
+    /**
+     * The constructor for building the splitStream object
+     */
+     public SplitStreamImpl(PastryNode node, IScribe scribe){
  	this.scribe = scribe;  
  	this.scribe.registerScribeObserver(this);
 	this.scribe.registerApp(this);
@@ -134,5 +157,4 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
 	//System.out.println("Data in Packet is null!" );
  
    }
-}
-
+} 

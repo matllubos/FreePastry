@@ -5,6 +5,9 @@ import rice.pastry.*;
  * we can have type checking.
  */
 public class ChannelId extends NodeId{
+ /**
+  * Constructor that takes in a nodeId and makes a ChannelId
+  */
  public ChannelId(NodeId node){
 	super(node.copy()); 
  }	
