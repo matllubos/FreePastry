@@ -19,6 +19,27 @@ public class EmailBody implements PostData {
   }
 
   /**
+   * This method dynamically builds an appropriate HashReference for
+   * this type of PostData given a location and key.  
+   *
+   * @param location the location of the data
+   * @param key the key of the data
+   */
+  public ContentHashReference buildContentHashReference(NodeId location, Key key){
+    return null;
+  }
+
+  /**
+   * This method dynamically builds an appropriate SignedReference for
+   * this type of PostData given a location and key.  
+   *
+   * @param location the location of the data
+   */
+  public SignedReference buildSignedReference(NodeId location){
+    return null;
+  }
+
+  /**
    * Returns where the email body is stored in PAST.
    */
   public String getContent() {

@@ -4,7 +4,8 @@ import java.security.*;
 
 import rice.post.*;
 import rice.post.messaging.*;
-import rice.post.email.messaging.*;
+import rice.email.messaging.*;
+
 
 /**
  * This class serves as the entry point into the email service written
