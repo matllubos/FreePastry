@@ -587,11 +587,11 @@ public class SocketSourceRouteManager {
         case SocketNodeHandle.LIVENESS_DEAD:
           liveness = SocketNodeHandle.LIVENESS_ALIVE;
           pool.update(address, SocketNodeHandle.DECLARED_LIVE);
-          System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be alive again.");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be alive again.");
           break;
         case SocketNodeHandle.LIVENESS_SUSPECTED:
           liveness = SocketNodeHandle.LIVENESS_ALIVE;
-          System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be unsuspected.");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be unsuspected.");
           break;
         case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
           System.out.println("ERROR: Found dead-forever handle to " + address + " to be alive again!");
@@ -610,7 +610,7 @@ public class SocketSourceRouteManager {
       switch (liveness) {
         case SocketNodeHandle.LIVENESS_ALIVE:
           liveness = SocketNodeHandle.LIVENESS_SUSPECTED;
-          System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be suspected.");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be suspected.");
           break;
         case SocketNodeHandle.LIVENESS_DEAD:
           System.out.println("ERROR: Found node handle " + address + " to be suspected from dead - should not happen!");
@@ -646,7 +646,7 @@ public class SocketSourceRouteManager {
           this.best = null;
           this.liveness = SocketNodeHandle.LIVENESS_DEAD;
           pool.update(address, SocketNodeHandle.DECLARED_DEAD);        
-          System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead.");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead.");
           break;
       }
       
@@ -665,13 +665,13 @@ public class SocketSourceRouteManager {
           return;
         case SocketNodeHandle.LIVENESS_DEAD:
           this.liveness = SocketNodeHandle.LIVENESS_DEAD_FOREVER;
-          System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead forever.");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead forever.");
           break;
         default:
           this.best = null;
           this.liveness = SocketNodeHandle.LIVENESS_DEAD_FOREVER;
           pool.update(address, SocketNodeHandle.DECLARED_DEAD);        
-          System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead forever.");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead forever.");
           break;
       }
     }

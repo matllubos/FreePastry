@@ -257,7 +257,7 @@ public class SocketChannelWriter {
         i++;
       }
       
-      System.out.println("COUNT: " + System.currentTimeMillis() + " Enqueueing message " + o.getClass().getName() + " at location " + i + " in the pending queue (priority " + ((Message) o).getPriority() + ")");
+      if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Enqueueing message " + o.getClass().getName() + " at location " + i + " in the pending queue (priority " + ((Message) o).getPriority() + ")");
     
       queue.add(i, o);
     } else {
