@@ -154,7 +154,7 @@ public class ControlTimeoutMessage extends Message implements Serializable
                 }
                 else if ( msg_type == FIND_PARENT )
                 {
-                    ControlFindParentMessage msg = new ControlFindParentMessage( scribe.getAddress(), //SplitStreamAddress.instance(), 
+                    ControlFindParentMessage msg = new ControlFindParentMessage( scribe.getAddress(),
                                                                                  scribe.getLocalHandle(),
                                                                                  dest,
                                                                                  c,
@@ -165,6 +165,7 @@ public class ControlTimeoutMessage extends Message implements Serializable
                                                                                       num_fails+1,
                                                                                       dest,
                                                                                       c, stripe_id, channel_id );
+		    channel.getStripe( stripe_id ).num_fails = num_fails + 1;
                     thePastryNode.scheduleMsg( timeoutMessage, channel.getTimeoutLen() );
                 }
             }
