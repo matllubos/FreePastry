@@ -40,7 +40,7 @@ public class DirectSplitStreamTest{
     private Vector channelIds;
     private Random rng;
     private RandomNodeIdFactory idFactory;
-    private static int numNodes = 500;
+    private static int numNodes = 1000;
     private static int port = 5009;
     private static String bshost;
     private static int bsport = 5009;
@@ -58,11 +58,11 @@ public class DirectSplitStreamTest{
     // The number of nodes that fail concurrently. This step of failing
     // nodes concurrently is repeated till the desired number of totalFailures
     // number of nodes has been killed.   
-    private int concurrentFailures =  20; 
+    private int concurrentFailures =  5; 
 
 
     // The number of nodes that join concurrently.
-    private int concurrentJoins = 100;
+    private int concurrentJoins = 5;
 
     // Since we experiment with node failures and node joins, this keeps
     // track of the number of nodes currently alive in the Pastry network.
@@ -228,32 +228,32 @@ public class DirectSplitStreamTest{
 	 * Now we will fail some nodes currently and then see if the system
 	 * still works.
 	 */
-	/*
-	test.killNodes(test.concurrentFailures);
- 	for(int i = 0; i <= test.trThreshold; i++)
-	     test.scheduleHBOnAllNodes();
 
- 	passed =  test.checkAllStripeTrees(channelId);
+	test.killNodes(test.concurrentFailures); 
+ 	for(int i = 0; i <= test.trThreshold; i++) 
+	     test.scheduleHBOnAllNodes(); 
 
-	if(passed )
-	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP TEST : PASSED \n\n");
-	else 
-	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP FAILED \n\n");
+ 	passed =  test.checkAllStripeTrees(channelId); 
+
+	if(passed ) 
+	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP TEST : PASSED \n\n"); 
+	else  
+	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP FAILED \n\n"); 
 	
-	result &= passed;
+	result &= passed; 
 
- 	test.killNodes(test.concurrentFailures);
-	test.joinNodes(test.concurrentJoins, channelId);
- 	for(int i = 0; i <= test.trThreshold; i++)
- 	    test.scheduleHBOnAllNodes();
+ 	test.killNodes(test.concurrentFailures); 
+	test.joinNodes(test.concurrentJoins, channelId); 
+ 	for(int i = 0; i <= test.trThreshold; i++) 
+ 	    test.scheduleHBOnAllNodes(); 
 
- 	passed =  test.checkAllStripeTrees(channelId);
+ 	passed =  test.checkAllStripeTrees(channelId); 
 
-	if(passed)
-	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP TEST : PASSED \n\n");
- 	else
- 	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP FAILED \n\n");
-	*/
+	if(passed) 
+	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP TEST : PASSED \n\n"); 
+ 	else 
+ 	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP FAILED \n\n"); 
+
 	System.out.println(PastrySeed.getSeed() );
 
     }
