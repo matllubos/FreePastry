@@ -7,16 +7,24 @@ public class Channel {
 
    private ChannelId channelId = null;
    private int numStripes = 0;
+   private int subscribedStripes = 0;
    private Stripe[] stripes = null;
+   private StripeId stripeIds = null;
    private int outChannel = 0;
    private IScribe scribe = null;
    private Credentials cred;
    private boolean isReady = false;
-
+   private BandwidthManager = null;
+   /**
+    * Constructor to Create a new channel
+    *
+    */
    public Channel(int numStripes, IScribe scribe, Credentials cred, BandwidthManager bandwidthManager){
 	this.numStripes = numStripes;
+        this.subscribedStripes = numStripes;
  	this.cred = cred;
 	this.scribe = scribe;
+	this.bandwidthManager = bandwidthManager;
         NodeId topicId = (new RandomNodeIdFactory()).generateNodeId();
         if(scribe.create(topicId, cred)){
 		isReady = true;
@@ -25,7 +33,21 @@ public class Channel {
 	stripes = new Stripe[numStripes];
 	for(int i = 0; i < numStripes; i++){
 		stripes[i] = new Stripe(this, scribe, cred);
+		stripeIds[i] = stripes[i].getStripeId();
 	}
+   }
+   /**
+    * Constructor to create a Channel when a channelID is known
+    */ 
+   public Channel(ChannelId channelId, IScribe scribe, BandwidthManager bandwidthManager){
+	this.channelId = channelId;
+	this.bandwidthManager = bandwidthManager;
+	this.scribe = scribe;
+        /* Send out a message to the scribe group */
+        /* Get back all the StripeID's and then process them */
+        /* Then we should be attached */
+ 
+
    }
   /**
    * Channel Object is responsible for managing local node's usage of
@@ -37,6 +59,7 @@ public class Channel {
    */
   public void configureChannel(int outChannel){
     this.outChannel = outChannel;
+    /* link this in with the bandwidth manager */
   }
   /** 
    * A channel consists of a number of stripes. This number is determined
@@ -45,7 +68,7 @@ public class Channel {
    * @return An array of all StripeIds associated with this channel
    */ 
   public StripeId[] getStripes(){
-	return null;
+	return stripeIds;
   }
   /**
    * At any moment a node is subscribed to at least 1 but possibly
@@ -96,13 +119,15 @@ public class Channel {
   * @return the number of Stripes
   */
   public int getNumSubscribedStripes(){
-     return 0;
+     return subscribedStripes;
   }
  /**
   * Get the total number of stripes in this channel
   * @return the total number of stripes
   */
-  public int getNumStripes(){return numStripes;}
+  public int getNumStripes(){
+     return numStripes;
+  }
 }
 
 
