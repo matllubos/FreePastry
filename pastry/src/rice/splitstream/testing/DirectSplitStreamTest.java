@@ -39,7 +39,7 @@ public class DirectSplitStreamTest{
     private Vector channelIds;
     private Random rng;
     private RandomNodeIdFactory idFactory;
-    private static int numNodes = 50;
+    private static int numNodes = 100;
     private static int port = 5009;
     private static String bshost;
     private static int bsport = 5009;
@@ -61,8 +61,8 @@ public class DirectSplitStreamTest{
 	boolean result = true;
 
 	System.out.println("SplitStream Test Program v0.4");
-	PastrySeed.setSeed((int)System.currentTimeMillis());
-	//PastrySeed.setSeed( -582060735 );
+	//PastrySeed.setSeed((int)System.currentTimeMillis());
+	PastrySeed.setSeed( -524481316 );
 	System.out.println(PastrySeed.getSeed() );
 	DirectSplitStreamTest test = new DirectSplitStreamTest();
 	test.init();
@@ -129,6 +129,7 @@ public class DirectSplitStreamTest{
 	 * First send data over the channel, and then check if everybody received
 	 * it or not? 
 	 */
+
 	test.send(channelId, 0);
 	while(test.simulate());
 	while(test.simulate());
@@ -148,6 +149,22 @@ public class DirectSplitStreamTest{
 	while(test.simulate());
 	test.showBandwidth();
 	*/
+	passed =  test.checkAllStripeTrees(channelId);
+
+	if(passed)
+	    System.out.println("\n\nSTRIPE-TREE MEMBERSHIP TEST : PASSED \n\n");
+	else
+	    System.out.println("\n\nSTRIPE-TREE MEMBERSHIP TEST : FAILED \n\n");
+
+	result &= passed;
+
+	passed = test.checkBandwidthUsage(channelId);
+
+	if(passed)
+	    System.out.println("\n\nBANDWIDTH-USAGE TEST : PASSED \n\n");
+	else
+	    System.out.println("\n\nBANDWIDTH-USAGE TEST : FAILED \n\n");
+
 	System.out.println(PastrySeed.getSeed() );
     }
 
@@ -198,6 +215,7 @@ public class DirectSplitStreamTest{
 		// Join all stripes for all channels an app has created or attached to.
 		app.joinChannelStripes(channelId);
 		while(simulate());
+		System.out.println("Node "+app.getNodeId()+" subscribed to  another stripe");
 	    }
 	    
 	}	
@@ -208,7 +226,7 @@ public class DirectSplitStreamTest{
 
     public void send(ChannelId send, int index){
 	DirectSplitStreamTestApp app = (DirectSplitStreamTestApp) splitStreamApps.elementAt(index);
-	app.sendData(send);
+	app.sendData(send, this);
     }
     
     /* ---------- Setup methods ---------- */
@@ -269,7 +287,7 @@ public class DirectSplitStreamTest{
     public boolean checkTree(NodeId topicId){
 	int num = BFS(topicId);
 
-	//System.out.println("Number of nodes in channel tree "+num);
+	System.out.println("Number of nodes in channel tree "+num);
 	if(num < splitStreamApps.size())
 	    return false;
 	return true;
@@ -347,7 +365,7 @@ public class DirectSplitStreamTest{
 	Vector traversedList = new Vector();
 	rootAppIndex = rootApp(topicId);
 	
-	//System.out.println("TREE Traversal for tree" + topicId);
+	System.out.println("\n\nTREE Traversal for tree" + topicId);
 	traversedList.add(new Integer(rootAppIndex));
 	toTraverse.add(new Integer(rootAppIndex));
 	toTraverse.add(new Integer(-1));
@@ -361,14 +379,14 @@ public class DirectSplitStreamTest{
 		continue;
 	    }
 	    app = (DirectSplitStreamTestApp) splitStreamApps.elementAt(appIndex);
-	    //System.out.println(" *** Children of " + app.getNodeId() + " ***");
+	    System.out.println(" *** Children of " + app.getNodeId() + " ***");
 	    topic = app.getScribe().getTopic(topicId);
 
 	    children = topic.getChildren();
 	    if( children.size() > 0){
 		for(i=0; i < children.size(); i++) {
 		    childId = ((NodeHandle)children.elementAt(i)).getNodeId();
-		    //System.out.print(childId + " ");
+		    System.out.print(childId + " ");
 		    app = (DirectSplitStreamTestApp)nodeIdToApp.get(childId);
 		    appIndex = ((DirectSplitStreamTestApp)nodeIdToApp.get(childId)).m_appIndex;
 		    if(!traversedList.contains(new Integer(appIndex)))
@@ -402,11 +420,28 @@ public class DirectSplitStreamTest{
 	    app = (DirectSplitStreamTestApp) splitStreamApps.elementAt(i);
 	    if(app.m_numRecv != app.getNumStripes(channelId)){
 		result &= false;
-		System.out.println("App "+i+" recv "+app.m_numRecv+" pkts, actually sent"+app.getNumStripes(channelId));
+		System.out.println("App "+i+" "+app.getNodeId()+" recv "+app.m_numRecv+" pkts, actually sent"+app.getNumStripes(channelId));
 	    }
 	}
 	
 	return result;
+    }
+
+    public boolean checkBandwidthUsage(ChannelId channelId){
+	boolean result = true;
+
+	DirectSplitStreamTestApp app;
+
+	for(int i = 0; i < splitStreamApps.size(); i++){
+	    app = (DirectSplitStreamTestApp) splitStreamApps.elementAt(i);
+	    if(app.showBandwidth(channelId) > app.OUT_BW){
+		result &= false;
+		System.out.println("App "+i+" "+ app.getNodeId()+" have used "+app.showBandwidth(channelId)+" bandwith, Allocated "+app.OUT_BW);
+	    }
+	}
+	
+	return result;
+
     }
 }
 

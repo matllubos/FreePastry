@@ -39,7 +39,7 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
      */
     private Hashtable m_channels = null;
 
-
+    public int OUT_BW = 16;
 
     public DirectSplitStreamTestApp(ISplitStream splitstream, int index){
 	m_splitstream = splitstream;
@@ -73,32 +73,38 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
     public ChannelId createChannel(int numStripes, String name){
 	Channel channel = m_splitstream.createChannel(numStripes, name);
 	m_channels.put(channel.getChannelId(), channel);
+	channel.configureChannel(OUT_BW);
 	return channel.getChannelId();
     }
 
     public void attachChannel(ChannelId channelId){
 	Channel channel = m_splitstream.attachChannel(channelId);
 	m_channels.put(channel.getChannelId(), channel);
+	channel.configureChannel(OUT_BW);
 	return;
     }
 
-    public void showBandwidth(ChannelId channelId){
+    public int showBandwidth(ChannelId channelId){
 	Channel channel = (Channel)m_channels.get(channelId);
 	BandwidthManager bandwidthManager = channel.getBandwidthManager();
-	System.out.println("Channel " + channelId + " has " +
-			   bandwidthManager.getUsedBandwidth(channel) + " children "); 
-	return;
+	//System.out.println("Channel " + channelId + " has " +
+	//			   bandwidthManager.getUsedBandwidth(channel) + " children "); 
+	return bandwidthManager.getUsedBandwidth(channel);
     }
 
     /**
      * Sends data on all the stripes of channel represented by channelId.
      */
-    public void sendData(ChannelId channelId){
+    public void sendData(ChannelId channelId, DirectSplitStreamTest test){
 	Channel send = (Channel) m_channels.get(channelId);
+	System.out.println("No of subscribed stripes "+send.getNumSubscribedStripes());
 
 	for(int i = 0; i < send.getNumStripes(); i++){
+	//for(int i = 0; i < 1; i++){
 	    StripeId stripeId = send.getStripes()[i];
 	    Stripe stripe = send.joinStripe(stripeId, this);
+	    //stripe.backdoorSend(channelId);
+	    
 	    OutputStream out = stripe.getOutputStream();
 	    System.out.println("Sending on Stripe " + stripeId);
 	    byte[] toSend = "Hello".getBytes() ;
@@ -108,7 +114,10 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
 	    catch(IOException e){
 		e.printStackTrace();
 	    }
+	    
+	    while(test.simulate());
 	}
+
     }
 
     /**
@@ -120,6 +129,7 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
 	// Join all the stripes associated with the channel
 	while(channel.getNumSubscribedStripes() < channel.getNumStripes()){
 	    Stripe stripe = channel.joinAdditionalStripe(this);
+	    //System.out.println("Joining stripe "+stripe.getStripeId()+" stripe " +stripe);
 	}
     }
 
@@ -153,6 +163,10 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
     public int getNumStripes(ChannelId channelId){
 	Channel channel = (Channel) m_channels.get(channelId);
 	return channel.getNumStripes();
+    }
+    
+    public NodeId getNodeId(){
+	return m_scribe.getNodeId();
     }
 }
 
