@@ -3,24 +3,34 @@ package rice.post;
 import rice.post.messaging.*;
 
 /**
- * This interface is a callback mechanism for clients running on top
+ * This class is a superclass mechanism for clients running on top
  * of the Post object.
  */
-public interface PostClient {
+public abstract class PostClient {
 
+  /**
+   * Builds a PostClient.
+   */
+  public PostClient() {
+  }
+  
   /**
    * This method is how the Post object informs the clients
    * that there is an incoming notification. 
    *
    * @param nm The incoming notification.
    */
-  public void notificationReceived(NotificationMessage nm);
+  public abstract void notificationReceived(NotificationMessage nm);
 
   /**
-   * This method returns the unique PostApplicationAddress
-   * of this PostClient.
+   * Returns the address of this PostClient.  This method is
+   * automatically provided in order to allow address to happen
+   * transparently.
    *
-   * @return The address of this client.
+   * @return The unique address of this PostClient.
    */
-  public PostClientAddress getAddress();
+  public final PostClientAddress getAddress() {
+    return PostClientAddress.getAddress(this);
+  }
+  
 }

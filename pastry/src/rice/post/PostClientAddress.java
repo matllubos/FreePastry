@@ -5,17 +5,28 @@ import rice.pastry.*;
 /**
  * This class represents the notion of an address, which
  * uniquely identifies an application running on top of the
- * POST service.  Each application should provide at least on
- * implementation of this class. All of the implementations should
- * implement this class as a singleton, so that the .equals method
- * returns true for all other instances of this class.
+ * POST service. This class is designed using the factory
+ * pattery, with the getAddress() method as the entrance
+ * into the factory.
  */
-public abstract class PostClientAddress {
+public final class PostClientAddress {
 
   /**
    * Constructor
    */
-  public PostClientAddress() {
+  private PostClientAddress() {
+  }
+
+  /**
+   * Method by which one can generate a PostClientAddress.  This
+   * method will always return the same address given the same
+   * PostClient class.
+   *
+   * @param client The client wanting an address
+   * @return A unique address for this class of client
+   */
+  public static PostClientAddress getAddress(PostClient client) {
+    return null;
   }
 
 }

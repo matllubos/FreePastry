@@ -1,8 +1,7 @@
 PACKAGE = rice.post.email.messaging
 
 SOURCE  = \
-	EmailNotificationMessage.java \
-	EmailAddress.java
+	EmailNotificationMessage.java
 
 RMI_SOURCE =
 

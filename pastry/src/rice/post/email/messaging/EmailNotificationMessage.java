@@ -14,8 +14,8 @@ public class EmailNotificationMessage extends NotificationMessage {
    *
    * @param email The email that is available
    */
-  public EmailNotificationMessage(Email email) {
-    super(EmailAddress.instance());
+  public EmailNotificationMessage(Email email, EmailService service) {
+    super(service.getAddress());
   }
   
   /**

@@ -10,7 +10,7 @@ import rice.post.email.messaging.*;
  * This class serves as the entry point into the email service written
  * on top of Post.
  */
-public class EmailService implements PostClient {
+public class EmailService extends PostClient {
  
   /** 
    * Constructor
@@ -77,15 +77,6 @@ public class EmailService implements PostClient {
    * @param nm The incoming notification.
    */
   public void notificationReceived(NotificationMessage nm) {
-  }
-
-  /**
-   * Returns the address of this POST application
-   *
-   * @return This application's address
-   */
-  public PostClientAddress getAddress() {
-    return EmailAddress.instance();
   }
   
   /**

@@ -179,15 +179,28 @@ public class Post extends PastryAppl {
   public LogEntry retrieveLogEntry(LogEntryReference reference) {
     return null;
   }
+
+  /**
+   * This method retrievess a log head given a reference to the log head.
+   * This method also performs the appropriate verification checks and decryption
+   * necessary.
+   *
+   * @param reference The reference to the log head
+   * @return The log head referenced
+   */
+  public LogHead retrieveLogHead(LogHeadReference reference) {
+    return null;
+  }
   
   /**
-   * This method returns the log entry which is at the top of the user's log. 
-   * Clients can then use this LogEntry in order to walk down the log by calling
-   * the previousEntry() method on the LogEntry.
+   * This method returns the header of the current user's logs, which
+   * is represented by a UserBlockLogEntry.  This block has methods which
+   * return the user's public key, identity, and pointers to all of the
+   * user's logs.
    *
-   * @return The LogEntryRefernce which is currently at the top of the user's log
+   * @return The UserBlockLogEntry which is currently at the top of the user's log
    */
-  public LogEntryReference getTopEntry() {
+  public UserBlock getUserBlock() {
     return null;
   }
 }
