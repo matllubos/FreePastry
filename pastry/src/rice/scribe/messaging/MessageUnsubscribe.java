@@ -1,3 +1,40 @@
+/*************************************************************************
+
+"Free Pastry" Peer-to-Peer Application Development Substrate 
+
+Copyright 2002, Rice University. All rights reserved. 
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+contributors may be  used to endorse or promote  products derived from
+this software without specific prior written permission.
+
+This software is provided by RICE and the contributors on an "as is"
+basis, without any representations or warranties of any kind, express
+or implied including, but not limited to, representations or
+warranties of non-infringement, merchantability or fitness for a
+particular purpose. In no event shall RICE or contributors be liable
+for any direct, indirect, incidental, special, exemplary, or
+consequential damages (including, but not limited to, procurement of
+substitute goods or services; loss of use, data, or profits; or
+business interruption) however caused and on any theory of liability,
+whether in contract, strict liability, or tort (including negligence
+or otherwise) arising in any way out of the use of this software, even
+if advised of the possibility of such damage.
+
+********************************************************************************/
+
+
 package rice.scribe.messaging;
 
 import rice.pastry.*;
@@ -10,9 +47,12 @@ import rice.scribe.maintenance.*;
 import java.io.*;
 
 /**
+ *
  * MessageUnsubscribe is used whenever a Scribe node wishes to unsubscribe 
- * from a topic. 
+ * from a topic.
  * 
+ * @version $Id$ 
+ *
  * @author Romer Gil 
  * @author Eric Engineer
  */
@@ -25,7 +65,7 @@ public class MessageUnsubscribe extends ScribeMessage implements Serializable
      *
      * @param addr the address of the scribe receiver.
      * @param source the node generating the message.
-     * @param topicId the topic to which this message refers to.
+     * @param tid the topic to which this message refers to.
      * @param c the credentials associated with the mesasge.
      */
     public 
@@ -48,13 +88,13 @@ public class MessageUnsubscribe extends ScribeMessage implements Serializable
 	NodeHandle handle = m_source;
 
 	if ( topic != null ) {
-	    // remove source node from chilren if it isnt us
+	    // remove source node from children if it isnt us
 	    if(!m_source.getNodeId().equals( scribe.getNodeId() ) ) {
 		topic.removeChild( handle );
 	    }
 	    
-	    // only if we have no subscribing apps, if we have no children then send
-	    // the unsubscribe message to the parent
+	    // only if we have no subscribing apps & if we have no children
+	    // then send the unsubscribe message to the parent
 	    if ( !topic.hasSubscribers() && !topic.hasChildren() ) {
 		// tell multicast tree parent to remove local node
 		NodeHandle parent = topic.getParent();
@@ -74,19 +114,14 @@ public class MessageUnsubscribe extends ScribeMessage implements Serializable
 		    //we no longer need the topic and is good to remove it
 		    topic.removeFromScribe();
 
-		    // stop TR and HB
-		    topic.stopTR();
-		    topic.stopHB();
 		}
 		else {
-		    // if parent unknown set waiting flag and wait until 
+		    // if parent unknown then set waiting flag and wait until 
 		    // first event arrives
 
 		    // make sure it is not Topic manager
 		    if( topic.isTopicManager() ){
 			topic.removeFromScribe();
-			topic.stopHB();
-			System.out.println( "topic " + "removed at " + scribe.getNodeId() );
 		    }
 		    else{
 			topic.waitUnsubscribe( true );

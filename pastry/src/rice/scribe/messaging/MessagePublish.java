@@ -1,3 +1,39 @@
+/*************************************************************************
+
+"Free Pastry" Peer-to-Peer Application Development Substrate 
+
+Copyright 2002, Rice University. All rights reserved. 
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+contributors may be  used to endorse or promote  products derived from
+this software without specific prior written permission.
+
+This software is provided by RICE and the contributors on an "as is"
+basis, without any representations or warranties of any kind, express
+or implied including, but not limited to, representations or
+warranties of non-infringement, merchantability or fitness for a
+particular purpose. In no event shall RICE or contributors be liable
+for any direct, indirect, incidental, special, exemplary, or
+consequential damages (including, but not limited to, procurement of
+substitute goods or services; loss of use, data, or profits; or
+business interruption) however caused and on any theory of liability,
+whether in contract, strict liability, or tort (including negligence
+or otherwise) arising in any way out of the use of this software, even
+if advised of the possibility of such damage.
+
+********************************************************************************/
+
 package rice.scribe.messaging;
 
 import rice.pastry.*;
@@ -12,10 +48,13 @@ import java.io.*;
 import java.util.*;
 
 /**
- * PublishMessages is used whenever a Scribe nodes wishes to send events 
+ *
+ * MessagePublish is used whenever a Scribe nodes wishes to send events 
  * to a particular topic. The PublishMessage takes care of forwarding itself
- * to all the nodes children of the current node and calling the event handler.
+ * to all the nodes in the topic's multicast tree.
  * 
+ * @version $Id$ 
+ *
  * @author Romer Gil 
  * @author Eric Engineer
  */
@@ -51,43 +90,76 @@ public class MessagePublish extends ScribeMessage implements Serializable
 	SendOptions opt = scribe.getSendOptions();
 	NodeId topicId;
 
-	if ( topic != null ) {
-	    // take note of the parent for this topic and tell the failure 
-	    // handler that the parent is ok
-	    if( !topic.isTopicManager() ) {
-		if(m_source != topic.getParent() && topic.getParent() != null){
-		}
-		topic.setParent( m_source );
-		topic.restartParentHandler();
-	    }
-	    else {
-		if( !scribe.getSecurityManager().
-		    verifyCanPublish( m_source, m_topicId ) ) {
 
-		    //bad permissions from publishing node
-		    return;
+	if ( topic != null ) {
+            if( !topic.isTopicManager() ) {
+		if(topic.getParent()== null) {
+		    // This could be because we missed an MessageAckOnSubscribe.
+		    topic.setParent(m_source);
+		    topic.postponeParentHandler();
+		    // if waiting to find parent, now send unsubscription msg
+		    if ( topic.isWaitingUnsubscribe() ) {
+			scribe.unsubscribe( m_topicId, null, cred );
+			topic.waitUnsubscribe( false );
+		    }
+		}
+		else {
+		    if(topic.getParent()!= m_source) {
+			ScribeMessage msg = scribe.makeUnsubscribeMessage( m_topicId, cred );
+			scribe.routeMsgDirect( m_source, msg, cred, opt );
+		    }
 		}
 	    }
+            else {
+                if( !scribe.getSecurityManager().verifyCanPublish( m_source, m_topicId ) ) {
+                    //bad permissions from publishing node
+                    return;
+                }
+            }
 
 	    // send message to all children in multicast subtree
-	    Iterator it = topic.getChildren().iterator();
-
+	    Vector childrenVector = topic.getChildren();
+	    int j = 0;
 	    ScribeMessage msg = scribe.makePublishMessage( m_topicId, cred );
-	    msg.setData( this.getData() );
-	    //	    m_source = scribe.getNodeHandle();
 	    
-	    //IScribeApp app = scribe.getScribeApp();
-	    //  app.forwardHandler( this );
-	    // Inform all interested applications
+	    msg.setData( this.getData() );
+
+	    
 	    IScribeApp[] apps = topic.getApps();
 	    for (int i=0; i<apps.length; i++) {
 		apps[i].forwardHandler(this);
 	    }
 	  
+	    while( j < childrenVector.size()){
+		NodeHandle nhandle = (NodeHandle)childrenVector.elementAt(j);
+		j ++;
 
-	    while ( it.hasNext() ) {
-		NodeHandle handle = (NodeHandle)it.next();
-		scribe.routeMsgDirect( handle, msg, cred, opt );
+		if( !scribe.routeMsgDirect( nhandle, msg, cred, opt )){
+		    int k = 0;
+		    Vector topicsForChild = (Vector)scribe.getTopicsForChild((NodeHandle)nhandle);
+
+		    while( k < topicsForChild.size()){
+			topicId = (NodeId)topicsForChild.elementAt(k);
+			Topic tp = (Topic) scribe.getTopic(topicId);
+			tp.removeChild( nhandle );
+			k++;
+			/*
+			 * only if we have no apps subscribed & if we dont have 
+			 * children we can forget about the topic
+			 */
+			
+			if( !tp.hasSubscribers() && !tp.hasChildren() ) {
+			    ScribeMessage msgu = scribe.makeUnsubscribeMessage( topicId, cred);
+			    scribe.routeMsgDirect(m_source, msgu, cred, opt);
+			}
+		    }
+		}
+		else {
+		    // Since child is alive, add it to list of children
+		    // to which we have sent a publish message in last
+		    // HeartBeat period.
+		    scribe.addChildToAlreadySentHBNodes(nhandle.getNodeId());
+		}
 	    }
 	    
 	    // if waiting to find parent, now send unsubscription msg
@@ -100,18 +172,19 @@ public class MessagePublish extends ScribeMessage implements Serializable
 	    // if local node is subscriber of this topic, pass the event to
 	    // the registered applications' event handlers
 	    if ( topic.hasSubscribers() ) {
-		// scribe.getScribeApp().receiveMessage( this );
 		for ( int i=0; i<apps.length; i++ ) {
 		    apps[i].receiveMessage( this );
 		}		
 	    }
 	    
 	}
-	else { 
-	    // if topic unknown, we do nothing to disregard it
+	else {
+	     ScribeMessage msg = scribe.makeUnsubscribeMessage( m_topicId, cred );
+	     scribe.routeMsgDirect( m_source, msg, cred, opt );
 	}
-	
+	 
     }
+
 
     /**
      * This method is called whenever the scribe node forwards a message in 
@@ -133,3 +206,9 @@ public class MessagePublish extends ScribeMessage implements Serializable
 	return new String( "PUBLISH MSG:" + m_source );
     }
 }
+
+
+
+
+
+

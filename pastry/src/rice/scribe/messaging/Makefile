@@ -6,7 +6,11 @@ SOURCE  = \
 	MessagePublish.java \
 	MessageSubscribe.java \
 	MessageUnsubscribe.java \
-	ScribeMessage.java
+	MessageAckOnSubscribe.java \
+	MessageRequestToParent.java \
+	MessageReplyFromParent.java \
+	ScribeMessage.java 
+
 
 RMI_SOURCE =
 

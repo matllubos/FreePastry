@@ -62,6 +62,8 @@ import rice.scribe.maintenance.*;
  *
  * @author Romer Gil
  * @author Eric Engineer
+ * @author Atul Singh
+ * @author Animesh Nandi
  */
 public class Scribe extends PastryAppl implements IScribe
 {
@@ -101,16 +103,42 @@ public class Scribe extends PastryAppl implements IScribe
     protected Hashtable m_distinctChildrenTable;
 
 
+    /**
+     * Hashtable having mapping from a parent node -> list of topics for 
+     * which the parent node is local node's parent in their corresponding
+     * multicast trees. Whenever local node receives a HeartBeat message
+     * from a node, it checks out all topics for which that node is its
+     * parent. Then for all those topics, it postpones the parentHandler.
+     * By having this data structure locally, we avoid sending lists
+     * of topics for which a node is parent, which may be very large.
+     *
+     */
+    protected Hashtable m_distinctParentTable;
 
-    private static class ScribeAddress implements Address {
-	private int myCode = 0x8aec747c;
-	
-	public int hashCode() { return myCode; }
 
-	public boolean equals(Object obj) {
-	    return (obj instanceof ScribeAddress);
-	}
-    }
+
+
+    /**
+     * Optimization on number of HeartBeat Messages sent. Each node keeps track
+     * of children to which it has sent a publish message in last HeartBeat
+     * period. When this HeartBeat period expires, it need not send an 
+     * explicit HeartBeat message to these 'marked' children, as publish message
+     * is an implicit keep-alive message from parent that it is alive.
+     */
+    protected Set m_alreadySentHBNodes;
+
+
+    /**
+     * The AckOnSubscribe switch for this scribe.
+     * It  activates the immediate sending of 
+     * ACK by a node when it receives a SUBSCRIBE message
+     * from its child for a topic. Otherwise, this 
+     * immediate ACK is not sent.
+     * Default is true.
+     * 
+     */
+    public  boolean m_ackOnSubscribeSwitch = true;
+
 
     /**
      * The receiver address for the scribe system.
@@ -139,14 +167,62 @@ public class Scribe extends PastryAppl implements IScribe
      */
     public ScribeMaintainer m_maintainer;
 
+    
+
+    private static class ScribeAddress implements Address {
+	private int myCode = 0x8aec747c;
+	
+	public int hashCode() { return myCode; }
+
+	public boolean equals(Object obj) {
+	    return (obj instanceof ScribeAddress);
+	}
+    }
+
+    private static class HashTableEntry {
+	private Vector topicList;
+        private NodeId fingerprint ;
+
+	public HashTableEntry() {
+	    fingerprint = new NodeId();
+	    topicList = new Vector();
+	}
+    
+
+	public void removeTopicId(NodeId topicId) {
+	    if( topicList.contains(topicId)){
+		topicList.removeElement(topicId);
+		fingerprint.xor(topicId);
+	    }
+	}
+
+	public void addTopicId(NodeId topicId) {
+	    if( !topicList.contains(topicId)){
+		topicList.addElement(topicId);
+		fingerprint.xor(topicId);
+	    }
+	}
+
+	public int size() {
+	    return topicList.size();
+	}
+	
+	public NodeId getFingerprint() {
+	    return fingerprint;
+	}
+   
+ }
+
+
     /**
      * Constructor.
      *
      * @param pn the pastry node that client will attach to.
      *
-     * @param cred the credentials associated with this scribe object. 
+     * @param cred the credentials associated with this scribe object.
+     *
      */
-    public Scribe( PastryNode pn, Credentials cred ) {
+    public Scribe( PastryNode pn, Credentials cred) {
 	super( pn );
 	m_topics = new HashMap();
 	m_sendOptions = new SendOptions();
@@ -157,6 +233,8 @@ public class Scribe extends PastryAppl implements IScribe
 	    m_credentials = new PermissiveCredentials();
 	}
 	m_distinctChildrenTable = new Hashtable();
+	m_distinctParentTable = new Hashtable();
+	m_alreadySentHBNodes = new HashSet();
     }
 
     /**
@@ -216,11 +294,9 @@ public class Scribe extends PastryAppl implements IScribe
      * @param    topicID       
      * the ID of the topic to be created
      *
-     * @param    ackSwitch
-     * the value by which ackOnSubscribeSwitch is initialised
      */
-    public void create( NodeId topicId, Credentials cred, boolean value ) {
-	ScribeMessage msg = makeCreateMessage( topicId, cred , value);
+    public void create( NodeId topicId, Credentials cred) {
+	ScribeMessage msg = makeCreateMessage( topicId, cred);
 
 	this.routeMsg( topicId, msg, cred, m_sendOptions );
     }
@@ -238,20 +314,21 @@ public class Scribe extends PastryAppl implements IScribe
      * @param    subscriber
      * The application subscribing to the topic
      */
-    public void subscribe( NodeId topicId, IScribeApp subscriber, Credentials cred ) {
+    public void subscribe( NodeId topicId, IScribeApp subscriber, 
+			   Credentials cred ) {
 	Topic topic = (Topic) m_topics.get( topicId );
 	
 	if ( topic == null ) {
 	    topic = new Topic( topicId, this );
-	    synchronized(m_topics){
-		m_topics.put( topicId, topic );
-	    }
+	    // add topic to known topics
+	    topic.addToScribe();
 	}
 	
 	// Register application as a subscriber for this topic
 	topic.subscribe( subscriber );
-	
-	ScribeMessage msg = makeSubscribeMessage( topicId, cred );
+
+	ScribeMessage msg = makeSubscribeMessage( topicId, cred);
+	topic.postponeParentHandler();
 	this.routeMsg( topicId, msg, cred, m_sendOptions );
     }
     
@@ -410,7 +487,6 @@ public class Scribe extends PastryAppl implements IScribe
 	    //topic manager for any of our topics.
 	    Topic topic;
 	    NodeId topicId, myNodeId;
-	    NodeId.Distance myDistance, distance;
 	    Credentials c = m_credentials;
 	    Vector topicVector = new Vector();
 	    int i = 0;
@@ -425,19 +501,13 @@ public class Scribe extends PastryAppl implements IScribe
 		//for all topics, if we are manager then we do more processing
 		if( topic.isTopicManager() ) {
 		    topicId = topic.getTopicId();
-		    myDistance = myNodeId.distance( topicId );
-		    distance = nid.distance( topicId );
-		    
-		    /*the distance is really the magnitude of the subtraction
-		     *of the two nodes. If our distance is greater than the 
-		     *new node's then the new node should be manager
-		     */
-		    if( myDistance.compareTo( distance ) > 0 ) {
+		    if (!isRoot(topicId)) {
 			//We have got a new topic manager.
 			topic.topicManager( false );
 
 			//send a subscribe message
-			ScribeMessage msg = makeSubscribeMessage( topicId, c );
+			ScribeMessage msg = makeSubscribeMessage( topicId, c);
+			topic.postponeParentHandler();
 			this.routeMsg( topicId, msg, c, m_sendOptions );
 		    }
 		}
@@ -484,10 +554,9 @@ public class Scribe extends PastryAppl implements IScribe
      *
      * @param tid the topic id the message refers to.
      * @param c the credentials that will be associated with the message
-     *
      * @return the ScribeMessage.
      */
-    public ScribeMessage makeSubscribeMessage( NodeId tid, Credentials c ) {
+    public ScribeMessage makeSubscribeMessage( NodeId tid, Credentials c) {
 	return new MessageSubscribe( m_address, this.thePastryNode.getLocalHandle(), tid, c );
     }
 
@@ -509,11 +578,10 @@ public class Scribe extends PastryAppl implements IScribe
      *
      * @param tid the topic id the message reffers to.
      * @param c the credentials that will be associated with the message
-     * @param ackFlag the value to initiliaze ackOnSubscribeSwitch
      * @return the ScribeMessage.
      */
-    public ScribeMessage makeCreateMessage( NodeId tid, Credentials c, boolean ackFlag) {
-	return new MessageCreate( m_address, this.thePastryNode.getLocalHandle(), tid, c, ackFlag );
+    public ScribeMessage makeCreateMessage( NodeId tid, Credentials c) {
+	return new MessageCreate( m_address, this.thePastryNode.getLocalHandle(), tid, c );
     }
 
     /**
@@ -531,27 +599,51 @@ public class Scribe extends PastryAppl implements IScribe
     /**
      * Makes a heart-beat message using the current Pastry node as the source.
      *
-     * @param tids the Vector of topic ids the message reffers to.
+     * @param tid the topic id the message reffers to.
      * @param c the credentials that will be associated with the message
      *
      * @return the ScribeMessage.
      */
-    public ScribeMessage makeHeartBeatMessage( Vector tids, Credentials c ) {
-	return new MessageHeartBeat( m_address, this.thePastryNode.getLocalHandle(), tids, c );
+    public ScribeMessage makeHeartBeatMessage( NodeId tid, Credentials c ) {
+	return new MessageHeartBeat( m_address, this.thePastryNode.getLocalHandle(), tid, c);
     }
 
-
     /**
-     * Makes a AckOnSubscribe message using the current Pastry node as the source.
+     * Makes a AckOnSubscribe message using the current Pastry node as the 
+     * source.
      *
      * @param tid the topic id the message reffers to.
      * @param c the credentials that will be associated with the message
-     * @param ackFlag the new value of ackOnSubscribeSwitch
      * @return the ScribeMessage.
      */
-    public ScribeMessage makeAckOnSubscribeMessage( NodeId tid, Credentials c, boolean ackFlag ) {
-	return new MessageAckOnSubscribe( m_address, this.thePastryNode.getLocalHandle(), tid, c , ackFlag);
+    public ScribeMessage makeAckOnSubscribeMessage( NodeId tid, Credentials c ) {
+        return new MessageAckOnSubscribe( m_address, this.thePastryNode.getLocalHandle(), tid, c);
     }
+
+    /**
+     * Makes a RequestToParent message using the current Pastry node as the 
+     * source.
+     *
+     * @param tid is null 
+     * @param c the credentials that will be associated with the message
+     * @return the ScribeMessage.
+     */
+    public ScribeMessage makeRequestToParentMessage( NodeId tid, Credentials c ) {
+        return new MessageRequestToParent( m_address, this.thePastryNode.getLocalHandle(), tid, c);
+    }
+
+     /**
+     * Makes a ReplyFromParent message using the current Pastry node as the 
+     * source.
+     *
+     * @param tid is null 
+     * @param c the credentials that will be associated with the message
+     * @return the ScribeMessage.
+     */
+    public ScribeMessage makeReplyFromParentMessage( NodeId tid, Credentials c ) {
+        return new MessageReplyFromParent( m_address, this.thePastryNode.getLocalHandle(), tid, c);
+    }
+
 
 
     /**
@@ -582,34 +674,7 @@ public class Scribe extends PastryAppl implements IScribe
 	}
 	return topicVector;
     }
-    
-    
-    
-    /**
-     * Gets the value of switch AckOnSubscribeSwitch
-     * for given topicId.
-     * 
-     * @param topicId
-     * The topic whose AckOnSubscribeSwitch we are reading.
-     *
-     * @return The value of AckOnSubscribeSwitch
-     */
-    public boolean getAckOnSubscribeSwitch(NodeId topicId){
-	Topic topic = getTopic(topicId);
-	return topic.getAckOnSubscribeSwitch();
-    }
 
-
-    /**
-     * Gets the hashtable which maintains mapping from
-     * a child node to the list of topics in which that 
-     * node is a child.
-     * @return corresponding Hashtable 
-     */
-    public Hashtable getDistinctChildrenTable(){
-	return m_distinctChildrenTable;
-    }
-    
 
     /**
      * Gets the Vector of distinct children of this local node
@@ -629,7 +694,67 @@ public class Scribe extends PastryAppl implements IScribe
 	return result;
     }
 
+    /**
+     * Adds a child for a topic into the distinctChildrenTable.
+     * If this child already exists, then we add this topic into
+     * its corresponding list of topics for which it is our child.
+     * Otherwise, we create a new entry into the hashtable.
+     * 
+     * @param child The NodeHandle of Child
+     * @param topicId The topicId for the topic for which we are
+     *                adding this child
+     */
+    public void addChildForTopic(NodeHandle child, NodeId topicId){
+
+	/**
+	 * See if we already have it as a child for some other
+	 * topic , if yes then add this topicId to list of topics
+	 * for which this node is  our child.
+	 */
+	synchronized(m_distinctChildrenTable){
+	    Set set = m_distinctChildrenTable.keySet();
+	    HashTableEntry entry;
+
+	    if( set.contains(child)){
+		entry = (HashTableEntry)m_distinctChildrenTable.get(child);
+		entry.addTopicId(topicId);
+	    }
+	    else {
+		entry = new HashTableEntry();
+		entry.addTopicId(topicId);
+		m_distinctChildrenTable.put(child, entry);
+	    }
+	    
+	}	  
+
+    }
     
+
+    public void removeChildForTopic(NodeHandle child, NodeId topicId){
+	/**
+	 * See if we already have it as a child for some other
+	 * topic , if yes then remove this topicId from the list of topics
+	 * for which this node is  our child.
+	 */
+	synchronized(m_distinctChildrenTable){
+	    Set set = m_distinctChildrenTable.keySet();
+	    HashTableEntry entry;
+
+	    if( set.contains(child)){
+		entry = (HashTableEntry)m_distinctChildrenTable.get(child);
+		entry.removeTopicId(topicId);
+
+		if(entry.size() == 0)
+		    m_distinctChildrenTable.remove(child);
+	    }
+	    else {
+		// We need not do anything here.
+	    }
+	}
+    }
+
+
+
     /**
      * Gets the vector of topicIds for which given node
      * is a children.
@@ -639,13 +764,184 @@ public class Scribe extends PastryAppl implements IScribe
      *         a child.
      */
     public Vector getTopicsForChild(NodeHandle child){
-	Vector topics;
-	
+	HashTableEntry entry;
+	Vector topics_clone = null;
+
+	if(child == null || !m_distinctChildrenTable.keySet().contains(child))
+	    return null;
 	synchronized(m_distinctChildrenTable){
-	    topics = (Vector)m_distinctChildrenTable.get((NodeHandle)child);
+	    entry = (HashTableEntry)m_distinctChildrenTable.get(child);
+	    topics_clone = (Vector)entry.topicList.clone();
 	}
-	return topics;
+	return topics_clone;
     }
+
+
+    /**
+     * Gets the Vector of distinct parent of this local node
+     * in multicast tree of all topics.
+     * @return Vector of distinct parents
+     */
+    public Vector  getDistinctParents(){
+	Set set;
+	Vector result =  new Vector();
+	synchronized(m_distinctParentTable){
+	    set = m_distinctParentTable.keySet();
+	    Iterator it = set.iterator();
+	    while(it.hasNext()){
+		result.addElement((NodeHandle)it.next());
+	    }
+	}
+	return result;
+    }
+
+    public void removeParentForTopic(NodeHandle parent, NodeId topicId){
+	synchronized(m_distinctParentTable){
+	    Set set = m_distinctParentTable.keySet();
+	    HashTableEntry entry;
+
+	    if( set.contains(parent)){
+		entry = (HashTableEntry)m_distinctParentTable.get(parent);
+		entry.removeTopicId(topicId);
+
+		if(entry.size() == 0)
+		    m_distinctParentTable.remove(parent);
+	    }
+	    else {
+		// We need not do anything here.
+	    }
+	}
+    }
+    
+
+    public void addParentForTopic(NodeHandle parent, NodeId topicId){
+
+	synchronized(m_distinctParentTable){
+	    Set set = m_distinctParentTable.keySet();
+	    HashTableEntry entry;
+
+	    if( set.contains(parent)){
+		entry = (HashTableEntry)m_distinctParentTable.get(parent);
+		entry.addTopicId(topicId);
+	    }
+	    else {
+		entry = new HashTableEntry();
+		entry.addTopicId(topicId);
+		m_distinctParentTable.put(parent, entry);
+	    }
+	    
+	}	  
+    }
+
+
+    /**
+     * Gets the vector of topicIds for which given node
+     * is our parent.
+     * @param parent  The NodeHandle of parent node.
+     *
+     * @return Vector of topicIds for which this node is 
+     *         our parent.
+     */
+    public Vector getTopicsForParent(NodeHandle parent){
+	HashTableEntry entry;
+	Vector topics_clone = null;
+	
+	if(parent == null || !m_distinctParentTable.keySet().contains(parent))
+	    return null;
+	synchronized(m_distinctParentTable){
+	    entry = (HashTableEntry)m_distinctParentTable.get(parent);
+	    topics_clone = (Vector)entry.topicList.clone();
+	}
+	return topics_clone;
+    }
+
+
+
+    public NodeId getFingerprintForParentTopics(NodeHandle parent) {
+	HashTableEntry entry;
+	NodeId fingerprint;
+	
+	if(parent == null || !m_distinctParentTable.keySet().contains(parent))
+	    return null;
+	synchronized(m_distinctParentTable){
+	    entry = (HashTableEntry)m_distinctParentTable.get(parent);
+	    fingerprint = entry.getFingerprint();
+	}
+	return fingerprint;
+    }
+
+    public NodeId getFingerprintForChildTopics(NodeHandle child) {
+	HashTableEntry entry;
+	NodeId fingerprint;
+	
+	if(child == null || !m_distinctChildrenTable.keySet().contains(child))
+	    return null;
+	synchronized(m_distinctChildrenTable){
+	    entry = (HashTableEntry)m_distinctChildrenTable.get(child);
+	    fingerprint = entry.getFingerprint();
+	}
+	return fingerprint;
+    }
+    
+    
+
+    /**
+     * Adds a child to the list of nodes to which this node
+     * has already send a HeartBeat message. (actually an 
+     * implicit HeartBeat in form of Publish message)
+     * @param childId NodeId of child.
+     *
+     * @return true if child already exists else false
+     */
+    public boolean addChildToAlreadySentHBNodes(NodeId childId){
+	boolean result;
+	synchronized(m_alreadySentHBNodes){
+	    result = m_alreadySentHBNodes.add((NodeId)childId);
+	}
+	return result;
+    }
+
+
+    /**
+     * Gets the vector of nodes to which an implicit HeartBeat
+     * was sent (in form of Publish message) in last HeartBeat
+     * period. 
+     *
+     * @return Vector of child nodes to which a publish message
+     *         was sent in last HeartBeat period.
+     */
+    public Vector getAlreadySentHBNodes(){
+	Vector list = new Vector();
+	NodeId childId ;
+
+	synchronized(m_alreadySentHBNodes){
+	    Iterator it = m_alreadySentHBNodes.iterator();
+	    while(it.hasNext()){
+		childId = (NodeId) it.next();
+		if( ! list.contains(childId))
+		    list.addElement(childId);
+	    }
+	}
+	return list;
+    }
+
+    /** 
+     * The set is made empty so that the set contains
+     * only those nodes to which Publish message was sent in
+     * last HeartBeat period.
+     */
+    public void clearAlreadySentHBNodes(){
+	synchronized(m_alreadySentHBNodes){
+	    m_alreadySentHBNodes.clear();
+	}
+	return;
+    }
+
+    public NodeHandle getLocalHandle() {
+	return thePastryNode.getLocalHandle();
+    }
+
+
 }
 
 

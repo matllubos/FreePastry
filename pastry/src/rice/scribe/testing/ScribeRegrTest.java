@@ -1,244 +1,98 @@
+/*************************************************************************
+
+"Free Pastry" Peer-to-Peer Application Development Substrate 
+
+Copyright 2002, Rice University. All rights reserved. 
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+contributors may be  used to endorse or promote  products derived from
+this software without specific prior written permission.
+
+This software is provided by RICE and the contributors on an "as is"
+basis, without any representations or warranties of any kind, express
+or implied including, but not limited to, representations or
+warranties of non-infringement, merchantability or fitness for a
+particular purpose. In no event shall RICE or contributors be liable
+for any direct, indirect, incidental, special, exemplary, or
+consequential damages (including, but not limited to, procurement of
+substitute goods or services; loss of use, data, or profits; or
+business interruption) however caused and on any theory of liability,
+whether in contract, strict liability, or tort (including negligence
+or otherwise) arising in any way out of the use of this software, even
+if advised of the possibility of such damage.
+
+********************************************************************************/
+
 package rice.scribe.testing;
 
+import rice.scribe.testing.*;
 import rice.pastry.*;
-import rice.pastry.join.*;
-import rice.pastry.direct.*;
-import rice.pastry.messaging.*;
-import rice.scribe.*;
-import rice.pastry.security.*;
-
-import java.util.*;
-import java.io.*;
-import java.security.*;
 
 /**
- * ScribeRegrTest
+ * @(#) ScribeRegrTest.java
  *
- * a regression test suite for Scribe
+ * A comprehensive regression test suite for Scribe.
  *
- * @author Romer Gil
- * @author Eric Engineer 
+ * @version $Id$
+ *
+ * @author Atul Singh
+ * @author Animesh Nandi 
  */
+
 public class ScribeRegrTest
 {
-    private DirectPastryNodeFactory m_factory;
-    private NetworkSimulator m_simulator;
-    
-    private LinkedList m_pastryNodes;
-    private LinkedList m_scribeApps;
 
-    private Vector m_topics;
-    private MRTracker m_tracker;
-    private MRTracker m_tracker2;
-    
-    private Random rng;
-    
-    public Message m_lastMsg;
-    public NodeId.Distance m_lastDist;
-    
-    // constructor
-    
-    public ScribeRegrTest() {
-	m_simulator = new EuclideanNetwork();
-	m_factory = new DirectPastryNodeFactory(m_simulator);
-	
-	m_pastryNodes = new LinkedList();
-	m_scribeApps = new LinkedList();
-
-	rng = new Random();
-	m_tracker = new MRTracker();
-	m_tracker2 = new MRTracker(); // keep track after unsubscribe
-	m_topics = new Vector();
-    }
-    
-    public void makeScribeNode(int apps) {
-
-	// create the Pastry node
-	NodeHandle bootstrap = null;
-	try {
-	    PastryNode lastnode = (PastryNode)m_pastryNodes.getLast();
-	    bootstrap = lastnode.getLocalHandle();
-	} catch (NoSuchElementException e) {
-	}
-	PastryNode pnode = m_factory.newNode(bootstrap);
-	m_pastryNodes.add(pnode);
-	
-	// Create the node's instance of Scribe
-	Credentials credentials = new PermissiveCredentials();
-	Scribe scribe = new Scribe( pnode, credentials );
-	
-	// create the node's apps
-	for (int i=0; i<apps; i++) {
-	    Credentials cred = new PermissiveCredentials();	
-	    ScribeRegrTestApp app = new ScribeRegrTestApp( pnode, scribe, i, cred );
-	    m_scribeApps.add(app);
-	}
-    }
-
-    public boolean simulate() { 
-	return m_simulator.simulate(); 
-    }
-    
-    /**
-     * Main entry point for the regression test suite.
-     */
     public static void main(String args[]) {
-	Log.init(args);
-
-	ScribeRegrTest st = new ScribeRegrTest();
-	int n, a, m, t, i;
-
-	//n #nodes, a #apps per node, m #messages per topic, t #topics
-	n = 100;
-	a = 5;
-	m = 10;
-	t = 5;
-	
-	for( i = 0; i < n; i++ ) {
-	    st.makeScribeNode(a);
-	    while (st.simulate());
-	}
-
-	System.gc();
-
-	boolean ok = st.doTheTesting(m,t);
-
-	System.out.println("\n" + n + " nodes constructed with " + a 
-			   + " applications per node.\n" + t 
-			   + " topics created, and " + m 
-			   + " messages sent per topic.");
-	String out = "\n\nREGRESSION TEST ";
-	out += ok ? "PASSED" : "FAILED (see output above for details)";
-	System.out.println(out);
-
-	System.gc();
-    }
-
-    public boolean doTheTesting( int msgs, int topics ) {
-	int i, j, k, subs, topic, app;
-	NodeId tid;
-	int totalApps = m_scribeApps.size();
-
-	//create 'topics' number of topics, from randomly selected apps
-	for( i = 0; i < topics; i++ ) {
-	    tid = generateTopicId( new String( "ScribeTest" + i ) );
-	    app = rng.nextInt( totalApps );    
-	    create( app, tid );
-	    while(simulate());	
-
-	    //let app know about the topic. For the regr.This has 
-	    //nothing to do with the actual scribe api is just stuff that is 
-	    //done to verify correctness.
-	    for ( j = 0; j < totalApps; j++ ) {	
-	    	ScribeRegrTestApp a = (ScribeRegrTestApp) m_scribeApps.get( j );
-	    	a.putTopic( tid );
-	    }
-	
-	    //now add the topics to the regr test. again just for testing. 
-	    m_topics.add( tid );
-	    m_tracker.setSubscribed( tid, true );
-	    m_tracker2.setSubscribed( tid, true ); 
-
-	    //now subscribe a random number of apps to the topic we are 
-	    //lookin at
-	    subs = rng.nextInt( totalApps );
-	    for( j = 0; j < subs; j++ ) {
-		subscribe( rng.nextInt( totalApps ), tid );
-		while(simulate());
-	    }
-	}
-
-	//start publishing stuff to all the topics, selected at random.
-	for( i = 0; i < topics; i++ ) {
-	    for( j = 0; j < msgs; j++ ) {
-		topic = rng.nextInt( m_topics.size() );
-		app = rng.nextInt( totalApps );
-		tid = (NodeId)m_topics.get( topic );
-		publish( app, tid );
-		m_tracker.receivedMessage( tid );
-		while(simulate());
-	    }
-	}
-
-	// unsubscribe a random number of apps from random topics
-	int unsubs = rng.nextInt( totalApps );
-	for ( i = 0; i < unsubs; i++ ) {
-	    unsubscribe( rng.nextInt( totalApps ));
-	    while(simulate());
-	}
-
-	//start publishing stuff to all the topics, selected at random.
-        for( i = 0; i < topics; i++ ) {
-            for( j = 0; j < msgs; j++ ) {
-                topic = rng.nextInt( m_topics.size() );
-                app = rng.nextInt( totalApps );
-                tid = (NodeId)m_topics.get( topic );
-                publish( app, tid );
-		// store in second tracker instead
-                m_tracker2.receivedMessage( tid );
-                while(simulate());
-            }
-        }
-
-
-	//verifying that what we sent was received (nothing more and nothing 
-	//less) by the correct nodes 
+	boolean ok1 = true;
+	boolean ok2 = true;
 	boolean ok = true;
-	for( i = 0; i < totalApps; i++ ) {
-	    ScribeRegrTestApp a = (ScribeRegrTestApp)m_scribeApps.get( i );
-	    ok = a.verifyApplication( m_topics, m_tracker, m_tracker2) && ok;
-	}
-	return ok;
-    }
 
-    public NodeId generateTopicId( String topicName ) { 
-	MessageDigest md = null;
+	/**
+	 * The comprehensive regression test suite comprises of mainly
+	 * two tests -
+	 * 1) BasicScribeRegrTest : which tests if the create, subscribe,
+	 *    publish and unsubscribe operations of Scribe work.
+	 * 2) DirectScribeMaintenanceTest : which tests if the tree 
+	 *    maintenance activities of Scribe are successful in repairing
+	 *    the topic trees in a scenario of concurrent node failures
+	 *    and node joins. 
+	 */
 
-	try {
-	    md = MessageDigest.getInstance( "SHA" );
-	} catch ( NoSuchAlgorithmException e ) {
-	    System.err.println( "No SHA support!" );
-	}
+	// Setting the seed helps to reproduce the results of the run and 
+	// thus aids debugging incase the regression test fails.
+	PastrySeed.setSeed((int)System.currentTimeMillis());
+	System.out.println("******************************");
+	ok1 = BasicScribeRegrTest.start();
+	System.out.println("******************************\n");
+	System.gc();
 
-	md.update( topicName.getBytes() );
-	byte[] digest = md.digest();
+	System.out.println("******************************");
+	ok2 = DirectScribeMaintenanceTest.start();
+	System.out.println("******************************\n");
 	
-	NodeId newId = new NodeId( digest );
-	
-	return newId;
+	ok = ok1 && ok2;
+
+	System.out.println("Pastry seed used for Regression test = " + PastrySeed.getSeed());
+	if(ok)
+	    System.out.println("COMPREHENSIVE SCRIBE REGRESSION TEST - PASSED");
+	else
+	    System.out.println("COMPREHENSIVE SCRIBE REGRESSION TEST - FAILED");
+	    
+	System.gc();
+
     }
 
-    //publish a msg from one of the test apps that we are keeping in the suite.
-    private void publish( int app, NodeId tid ) {
-	ScribeRegrTestApp a = (ScribeRegrTestApp)m_scribeApps.get( app );
-	a.publish( tid );
-    }
-
-    //subscribe one of the suite apps to topic tid
-    private void subscribe( int app, NodeId tid ) {
-	ScribeRegrTestApp a = (ScribeRegrTestApp)m_scribeApps.get( app );
-	a.subscribe( tid );
-    }
-
-    //unsubscribe one of the suite apps from a random currently subscribed topic tid 
-    private void unsubscribe( int app ) {
-	ScribeRegrTestApp a = (ScribeRegrTestApp)m_scribeApps.get( app );
-	a.unsubscribe(null);
-    }
-
-    //create a topic tid from a given app.
-    private void create( int app, NodeId tid ) {
-	ScribeRegrTestApp a = (ScribeRegrTestApp)m_scribeApps.get( app );
-	a.create( tid );
-    }
 }
-
-
-
-
-
-
-
-
-
-
+	
+	

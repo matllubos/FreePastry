@@ -34,6 +34,7 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
+
 package rice.scribe.messaging;
 
 import rice.pastry.*;
@@ -47,34 +48,41 @@ import rice.scribe.maintenance.*;
 import java.io.*;
 import java.util.*;
 /**
+ * @(#) MessageAckOnSubscribe.java
  *
- * MessageCreate is used whenever a Scribe node wants to create a
- * new topic. The message makes its way to the root(TO BE) for the topic and
- * takes care of instantiating the appropriate data structures on that node 
- * to keep track of the topic. 
+ * MessageAckOnSubscribe is used to modify the ackOnSubscribeSwitch for
+ * a given topic on the destination node, so that whenever a new 
+ * subscriber joins the multicast tree for that topic,
+ * an immediate ACK is sent to it in the form of
+ * MessageAckOnSubscribe type message. 
  *
+ * There are two functions of this message :
+ * 1) Sets the parent pointer for given topic on destination node.
+ * 2) Sets the ackOnSubscribeSwitch for given topic on destination node
+ * 
  * @version $Id$ 
- *
- * @author Romer Gil 
- * @author Eric Engineer
+ * 
+ * @author Animesh Nandi
+ * @author Atul Singh
  */
 
 
-public class MessageCreate extends ScribeMessage implements Serializable
+public class MessageAckOnSubscribe extends ScribeMessage implements Serializable
 {
     /**
-     * Constructor.
+     * Constructor
      *
      * @param addr the address of the scribe receiver.
      * @param source the node generating the message.
-     * @param topicId the topic to which this message refers to.
+     * @param tid the topic to which this message refers to.
      * @param c the credentials associated with the mesasge.
      */
-    public MessageCreate( Address addr, NodeHandle source, 
-			  NodeId topicId, Credentials c) {
-	super( addr, source, topicId, c );
+    public 
+	MessageAckOnSubscribe( Address addr, NodeHandle source, 
+			  NodeId tid, Credentials c ) {
+	super( addr, source, tid, c );
     }
-
+    
     /**
      * This method is called whenever the scribe node receives a message for 
      * itself and wants to process it. The processing is delegated by scribe 
@@ -85,19 +93,36 @@ public class MessageCreate extends ScribeMessage implements Serializable
      */
     public void 
 	handleDeliverMessage( Scribe scribe, Topic topic ) {
+	// This message was send for us.
+	NodeId topicId = m_topicId;
+	Credentials cred = scribe.getCredentials();
+	SendOptions opt = scribe.getSendOptions();
+	NodeHandle prev_parent = topic.getParent();
 
-	if (!scribe.getSecurityManager().verifyCanCreate(m_source,m_topicId)) {
-	    //bad permissions from source node
+	if( topic == null ){
+	    ScribeMessage msg = scribe.makeUnsubscribeMessage( m_topicId, cred );
+	    scribe.routeMsgDirect( m_source, msg, cred, opt );
 	    return;
 	}
 
-	if( topic == null ) {
-	    topic = new Topic( m_topicId, scribe );
+	if( prev_parent != null && prev_parent != m_source){
+	    // If we had non-null previous parent and it is different
+	    // from new parent, then we send an unsubscribe message
+	    // to prev parent for this topic.
+	    ScribeMessage msg = scribe.makeUnsubscribeMessage( m_topicId, cred );
+	    scribe.routeMsgDirect( prev_parent, msg, cred, opt );
+	    
 	}
-	
-	topic.addToScribe();
-	topic.topicManager( true );
-	
+
+	topic.setParent(m_source);
+	topic.postponeParentHandler();
+
+	// if waiting to find parent, now send unsubscription msg
+	if ( topic.isWaitingUnsubscribe() ) {
+	    scribe.unsubscribe( topic.getTopicId(), null, cred );
+	    topic.waitUnsubscribe( false );
+	    return;
+	}
     }
     
     /**
@@ -111,21 +136,12 @@ public class MessageCreate extends ScribeMessage implements Serializable
      * @return true if the message should be routed further, false otherwise.
      */
     public boolean 
-	handleForwardMessage( Scribe scribe, Topic topic ) {
-
+	handleForwardMessage(Scribe scribe, Topic topic ) {
 	return true;
     }
 
     public String toString() {
-	return new String( "CREATE MSG:" + m_source );
+	return new String( "ACK_ON_SUBSCRIBE MSG:" + m_source );
     }
 }
-
-
-
-
-
-
-
-
 

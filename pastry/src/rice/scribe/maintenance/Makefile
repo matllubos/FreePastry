@@ -1,10 +1,7 @@
 PACKAGE = rice.scribe.maintenance
 
 SOURCE  = \
-	HeartBeatEvent.java \
-	MaintenanceEvent.java \
-	ScribeScheduler.java \
-	TreeRepairEvent.java
+	ScribeMaintainer.java
 
 RMI_SOURCE =
 

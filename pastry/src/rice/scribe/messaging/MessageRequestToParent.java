@@ -41,91 +41,91 @@ import rice.pastry.security.*;
 import rice.pastry.routing.*;
 import rice.pastry.messaging.*;
 import rice.scribe.*;
-import rice.scribe.security.*;
 import rice.scribe.maintenance.*;
 
 import java.io.*;
 import java.util.*;
 /**
  *
- * MessageCreate is used whenever a Scribe node wants to create a
- * new topic. The message makes its way to the root(TO BE) for the topic and
- * takes care of instantiating the appropriate data structures on that node 
- * to keep track of the topic. 
+ * MessageRequestToParent is a message sent by a CHILD node to the PARENT 
+ * requesting it for the list of topics for which the PARENT node has this
+ * node as a CHILD.
  *
  * @version $Id$ 
- *
- * @author Romer Gil 
- * @author Eric Engineer
+ * 
+ * @author Atul Singh
+ * @author Animesh Nandi
  */
 
 
-public class MessageCreate extends ScribeMessage implements Serializable
+public class MessageRequestToParent extends ScribeMessage implements Serializable
 {
+
     /**
-     * Constructor.
+     * Constructor
      *
      * @param addr the address of the scribe receiver.
      * @param source the node generating the message.
-     * @param topicId the topic to which this message refers to.
+     * @param tid is null
      * @param c the credentials associated with the mesasge.
      */
-    public MessageCreate( Address addr, NodeHandle source, 
-			  NodeId topicId, Credentials c) {
-	super( addr, source, topicId, c );
+    public 
+	MessageRequestToParent( Address addr, NodeHandle source, 
+			  NodeId tid, Credentials c ) {
+	super( addr, source, null, c );
     }
+    
+   
 
     /**
      * This method is called whenever the scribe node receives a message for 
      * itself and wants to process it. The processing is delegated by scribe 
-     * to the message.
+     * to the message. If a node has a common parent for some number of topics,
+     * then it is going to receive a common HeartBeat message for all those
+     * topics. So, it will find out all topics for which this message's source
+     * is its parent and consider this message as a HeartBeat message for all
+     * those topics. 
      * 
      * @param scribe the scribe application.
-     * @param topic the topic within the scribe application.
+     * @param tp the dummy topic ( = null), used because MessageRequestToParent
+     *           extends ScribeMessage.
      */
     public void 
-	handleDeliverMessage( Scribe scribe, Topic topic ) {
-
-	if (!scribe.getSecurityManager().verifyCanCreate(m_source,m_topicId)) {
-	    //bad permissions from source node
-	    return;
-	}
-
-	if( topic == null ) {
-	    topic = new Topic( m_topicId, scribe );
-	}
+	handleDeliverMessage( Scribe scribe, Topic tp ) {
+	Credentials cred = scribe.getCredentials();
+	SendOptions opt = scribe.getSendOptions();
+	Vector topics = scribe.getTopicsForChild(m_source);
 	
-	topic.addToScribe();
-	topic.topicManager( true );
-	
+	ScribeMessage msg = scribe.makeReplyFromParentMessage( null, cred);
+	msg.setData(topics);
+	scribe.routeMsgDirect( m_source, msg, cred, opt );
+
     }
     
+
+
     /**
      * This method is called whenever the scribe node forwards a message in 
      * the scribe network. The processing is delegated by scribe to the 
      * message.
      * 
      * @param scribe the scribe application.
-     * @param topic the topic within the scribe application.
-     *
+     * @param topic the Topic is null 
      * @return true if the message should be routed further, false otherwise.
      */
     public boolean 
 	handleForwardMessage( Scribe scribe, Topic topic ) {
 
+	if( m_source.getNodeId().equals( scribe.getNodeId() ) ) {
+	    return true;
+	}
+
 	return true;
     }
 
+
     public String toString() {
-	return new String( "CREATE MSG:" + m_source );
+	return new String( "REQUESTTOPARENT MSG:" + m_source );
     }
 }
-
-
-
-
-
-
-
-
 

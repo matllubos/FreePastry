@@ -2,10 +2,13 @@ PACKAGE = rice.scribe.testing
 
 SOURCE  = \
 	ScribeInteractiveTest.java \
+	BasicScribeRegrTest.java \
+	BasicScribeRegrTestApp.java \
 	ScribeRegrTest.java \
-	ScribeRegrTestApp.java \
 	MRTracker.java \
-	CSPair.java
+	CSPair.java \
+	ScribeMaintenanceTestApp.java \
+	DirectScribeMaintenanceTest.java 
 
 RMI_SOURCE =
 
