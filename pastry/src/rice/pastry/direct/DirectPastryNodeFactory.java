@@ -70,7 +70,8 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 
     public DirectPastryNodeFactory() {
 	nidFactory = new RandomNodeIdFactory();
-	simulator = new EuclideanNetwork();
+//	simulator = new EuclideanNetwork();
+	simulator = new SphereNetwork();
     }
 
     public NetworkSimulator getNetworkSimulator() { return simulator; }
