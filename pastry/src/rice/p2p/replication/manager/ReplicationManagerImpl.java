@@ -254,7 +254,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
             count++;
             
             System.out.println("RMImpl.setRange " + instance + ": removing id " + id);
-            //client.remove(id, this);
+            client.remove(id, this);
           }
         }
       }
