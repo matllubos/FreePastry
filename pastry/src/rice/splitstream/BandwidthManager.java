@@ -57,6 +57,7 @@ public class BandwidthManager{
          * This should be implemented depending upon the policies, you want
          * to use 
          */
+       return false;
      }
 
      /**
@@ -115,6 +116,16 @@ public class BandwidthManager{
 	usedBandwidth.put(channel,new Integer(oldBandwidth + 1));
 	if((oldBandwidth + 1) == (DEFAULT_CHILDREN + 1))
 		System.out.println(">----------WARNING --------< ");
+      }
+
+      /**
+       * Change the amount of bandwidth a channel is considered to be
+       * using. 
+       * @param Channel the channel whose bandwidth changed.
+       */
+      public void additionalBandwidthFreed(Channel channel){
+	int oldBandwidth = ((Integer)usedBandwidth.get(channel)).intValue();
+	usedBandwidth.put(channel,new Integer(oldBandwidth - 1));
       }
 
       /**

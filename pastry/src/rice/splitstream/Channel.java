@@ -13,11 +13,10 @@ import rice.pastry.standard.*;
 import rice.pastry.security.*;
 
 import rice.splitstream.messaging.*;
+
 /** 
  * Add paragraph here for class information 
- */
-
-/**
+ *
  * This is the channel object that represents a group of stripes in
  * SplitStream.
  *
@@ -368,8 +367,10 @@ public class Channel extends PastryAppl implements IScribeApp {
      * @return the stripeID left 
      */
     public StripeId leaveStripe(){
-       /* This needs to be fixed */
-       return null;
+       Stripe stripe = (Stripe) subscribedStripes.firstElement();
+       subscribedStripes.removeElement(stripe);
+       stripe.leaveStripe(); 
+       return stripe.getStripeId();
     }
  
     /**
