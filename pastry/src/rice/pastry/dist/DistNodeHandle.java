@@ -471,8 +471,9 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
 
     // Observer method
     
-    public void update(Observable o, Object obj) {}
-
+    public void update(Observable o, Object obj) {
+	System.out.println("DistNodeHandle::update(): should not be here!!!!");
+    }
 
 }
 

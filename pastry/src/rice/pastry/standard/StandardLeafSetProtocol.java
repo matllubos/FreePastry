@@ -235,7 +235,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	    if (i == 0) continue;
 	    
 	    NodeHandle nh = leafSet.get(i);
-	    if (nh.isAlive() == false) continue;
+	    if (nh == null || nh.isAlive() == false) continue;
 	    
 	    nh.receiveMessage(bls);
 	}
@@ -266,7 +266,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	    else
 		nh = ls.get(i);
 
-	    if (nh.isAlive() == false) continue;
+	    if (nh == null || nh.isAlive() == false) continue;
 
 	    nh = security.verifyNodeHandle(nh);
 	    
@@ -294,7 +294,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	// ccw half
 	for (int i=-leafSet.ccwSize(); i<0; i++) {
 	    NodeHandle nh = leafSet.get(i);
-	    if (!nh.ping()) {
+	    if (nh != null && !nh.ping()) {
 		// remove the dead entry
 		leafSet.remove(nh.getNodeId());
 		lostMembers = true;
@@ -304,7 +304,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	// cw half
 	for (int i=leafSet.cwSize(); i>0; i--) {
 	    NodeHandle nh = leafSet.get(i);
-	    if (!nh.ping()) {
+	    if (nh != null && !nh.ping()) {
 		// remove the dead entry
 		leafSet.remove(nh.getNodeId());
 		lostMembers = true;

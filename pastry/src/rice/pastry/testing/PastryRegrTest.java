@@ -220,7 +220,7 @@ public abstract class PastryRegrTest {
 		pause(500);
 	    }
 	}
-	pause(1000);
+	pause(5000);
 
 	inConcJoin = false;
 
@@ -382,7 +382,8 @@ public abstract class PastryRegrTest {
 		    // check entries
 
 		    // check if closest entry has valid proximity
-		    if (rs.closestNode().proximity() ==  Integer.MAX_VALUE) {
+		    NodeHandle nh = rs.closestNode();
+		    if (nh != null && nh.proximity() ==  Integer.MAX_VALUE) {
 			System.out.println("checkRoutingTable failure 0, row=" + i + " column=" + j);
 		    }
 
@@ -519,7 +520,7 @@ public abstract class PastryRegrTest {
 	System.out.println((n-d)*k + " messages sent");
 
 	// Dist: wait until everyone detects failed nodes
-	pt.pause(30000);
+	pt.pause(100000);
 
 	// print all nodeIds, sorted
 	//Iterator it = pt.pastryNodesSorted.keySet().iterator();

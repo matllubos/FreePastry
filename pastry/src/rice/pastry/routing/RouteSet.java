@@ -109,7 +109,9 @@ public class RouteSet extends Observable implements NodeSet, Serializable, Obser
       }
       else {
         if (handle.proximity() == Integer.MAX_VALUE) {
-          // wait until the proximity value is available
+          // ping and wait until the proximity value is available
+
+	  handle.ping();
           handle.addObserver(this);
           return false;
         }
@@ -141,7 +143,6 @@ public class RouteSet extends Observable implements NodeSet, Serializable, Obser
      * @param arg the event type (PROXIMITY_CHANGE, DECLARED_LIVE, DECLARED_DEAD)
      */
     public void update(Observable o, Object arg) {
-
       // if the proximity is initialized for the time, insert the handle
       if (((Integer) arg) == NodeHandle.PROXIMITY_CHANGED) {
 
