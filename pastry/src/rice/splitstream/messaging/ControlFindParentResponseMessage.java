@@ -15,7 +15,7 @@ import rice.scribe.messaging.*;
  */
 
 
-public class ControlFindParentResponseMessage extends ControlMessage
+public class ControlFindParentResponseMessage extends Message
 {
     StripeId stripe_id;
     public ControlFindParentResponseMessage( Address addr, NodeHandle source, ChannelId topicId, Credentials c, Boolean accept, StripeId stripe_id )
@@ -37,7 +37,7 @@ public class ControlFindParentResponseMessage extends ControlMessage
      * @param scribe The Scribe group this message is relevant to
      * @param s The stripe that this message is relevant to
      */
-    public void handleDeliverMessage( Scribe scribe, Topic topic )
+    public void handleMessage( Scribe scribe, Topic topic )
     {
         if ( ((Boolean)this.getData()).booleanValue() )
         {
@@ -47,16 +47,6 @@ public class ControlFindParentResponseMessage extends ControlMessage
         {
             /* generate upcall */
         }
-    }
-
-    /**
-     * Should do nothing.
-     * @param splitStream The Scribe group this message is relevant to
-     * @param s The stripe that this message is relevant to
-     */
-    public boolean handleForwardMessage( Scribe scribe, Topic topic )
-    {
-       return true;
     }
 
     public String toString()
