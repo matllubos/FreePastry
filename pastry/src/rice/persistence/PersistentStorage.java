@@ -264,7 +264,6 @@ public class PersistentStorage implements Storage {
 
     transDirectory = new File(backupDirectory, transDir);
     if (createDir(transDirectory) == false) {
-      System.out.println("FAILING HERE!");
       return false;
     }
     else{
