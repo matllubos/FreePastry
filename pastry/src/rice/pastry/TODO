@@ -10,6 +10,8 @@ FUNCTIONALITY
 
     Transparent handle verification, and setLocalHandle.
 
+    A real Log class.
+
 PERFORMANCE
 
     Find-nearby-node algorithm.
