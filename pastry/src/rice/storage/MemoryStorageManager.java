@@ -5,8 +5,6 @@ import java.io.*;
 import rice.pastry.security.Credentials;
 import rice.pastry.NodeId;
 
-import ObjectWeb.Persistence.*;
-
 import java.util.Hashtable;
 
 /**
