@@ -30,7 +30,7 @@ public class VisualizationProxy {
   }
   
   public void parseArgs(String[] args) {
-    int protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
+    int protocol = DistPastryNodeFactory.PROTOCOL_SOCKET;
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-protocol") && i+1 < args.length) {
         String s = args[i+1];
