@@ -8,10 +8,15 @@ import rice.post.storage.*;
 
 /**
  * Represents the attachment to an email.
- * @author Joe Montgomery (?: I think, it was a while ago)
+ *
+ * @author Alan Mislove
  */
 public class EmailData implements PostData {
-  byte[] _data;
+
+  /**
+   * The data representing the stored data
+   */
+  protected byte[] _data;
   
   /**
    * Constructor. Takes in a byte[] representing the data of the
@@ -60,12 +65,17 @@ public class EmailData implements PostData {
   /**
    * Returns the data of this attachment
    *
-   * @param The data stored in this attachment
+   * @return The data stored in this attachment
    */
   public byte[] getData() {
     return _data;
   }
 
+  /**
+   * Returns whether or not this EmailData is equal to the object
+   *
+   * @return The equality of this and o
+   */
   public boolean equals(Object o) {
     if (! (o instanceof EmailData))
       return false;

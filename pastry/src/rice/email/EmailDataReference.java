@@ -11,6 +11,8 @@ import rice.post.storage.*;
  * stored in the Post system.  This class knows both the
  * location in the network and the encryption key of the
  * corresponding PostData object.
+ *
+ * @author Alan Mislove
  */
 public class EmailDataReference extends ContentHashReference {
 
