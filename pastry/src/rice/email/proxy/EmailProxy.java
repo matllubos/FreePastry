@@ -65,31 +65,6 @@ public class EmailProxy extends PostProxy {
   
   protected rice.email.Folder emailFolder;
      
-//  protected WebServer web;
-
-  public static String[][] DEFAULT_PARAMETERS = new String[][] {{"email_accept_non_local", "true"},
-    {"email_send_publish_request", "true"}, 
-    {"email_fetch_log", "true"}, 
-    {"email_fetch_log_retries", "3"}, 
-    {"email_fetch_log_retry_sleep", "30000"},
-    {"email_gateway", "false"},
-    {"email_imap_enable", "true"},
-    {"email_imap_ssl", "false"},
-    {"email_imap_port", "1143"}, 
-    {"email_imap_non_blocking", "true"},
-    {"email_pop3_enable", "true"},
-    {"email_pop3_port", "2110"}, 
-    {"email_pop3_ssl", "false"},
-    {"email_pop3_non_blocking", "true"},
-    {"email_smtp_enable", "true"},
-    {"email_smtp_port", "2025"}, 
-    {"email_smtp_ssl", "false"},
-    {"email_smtp_non_blocking", "true"},
-    {"email_smtp_gateway", "false"},
-    {"email_webmail_enable", "false"},
-    {"email_webmail_port", "1080"}
-  };
-     
   /**
    * Method which initializes the mailcap
    *
@@ -295,7 +270,7 @@ public class EmailProxy extends PostProxy {
   }
 
   public Parameters start(Parameters parameters) throws Exception {
-    initializeParameters(super.start(parameters), DEFAULT_PARAMETERS);
+    super.start(parameters);
 
     if (System.getProperty("RECOVER") != null)
       return parameters;

@@ -176,8 +176,6 @@ public class SelectorManager extends Thread {
 
       // loop while waiting for activity
       while (alive) {
-//        doSelect
-//        select();
         timerThread.mainLoopHelper(this);
         onLoop();
         doInvocations();
@@ -199,7 +197,7 @@ public class SelectorManager extends Thread {
     } catch (Throwable t) {
       System.out.println("ERROR (SelectorManager.run): " + t);
       t.printStackTrace(System.out);
-      System.exit(-1);
+      System.exit(-10);
     }
   }
 

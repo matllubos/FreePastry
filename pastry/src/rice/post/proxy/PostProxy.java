@@ -234,110 +234,37 @@ public class PostProxy {
    * The class which manages the log
    */
   protected LogManager logManager;
-  
-  protected static void initializeParameters(Parameters result, String[][] parameters) {    
-    for (int i=0; i<parameters.length; i++)
-      result.registerStringParameter(parameters[i][0], parameters[i][1]);
-  }
-  
-  public static String[][] DEFAULT_PARAMETERS = new String[][] {{"pastry_proxy_enable", "false"},
-  {"pastry_proxy", "sys01.cs.rice.edu:10001"},
-  {"pastry_allow_new_ring", "false"},
-  {"pastry_proxy_username", System.getProperty("user.name")},
-  {"pastry_proxy_password", ""}, 
-  {"pastry_protocol", "socket"},
-  {"pastry_port", "10001"},
-  {"pastry_bootstraps", "128.42.7.237:10001"}, //"sys01.cs.rice.edu:10001,sys02.cs.rice.edu:10001,sys03.cs.rice.edu:10001,sys04.cs.rice.edu:10001," + 
-                        //"sys05.cs.rice.edu:10001,sys06.cs.rice.edu:10001,sys07.cs.rice.edu:10001,sys08.cs.rice.edu:10001"},
-  {"multiring_enable", "true"},
-  {"multiring_ring_name", "Rice"},
-  {"multiring_global_enable", "false"},
-  {"multiring_global_pastry_protocol", "socket"},
-  {"multiring_global_pastry_port", "20001"},
-  {"multiring_global_pastry_bootstraps", "128.42.7.237:20001"}, //"thor05.cs.rice.edu:20001,thor06.cs.rice.edu:20001,thor07.cs.rice.edu:20001," + 
-                                                                //"thor08.cs.rice.edu:20001,thor09.cs.rice.edu:20001,thor10.cs.rice.edu:20001"},
-  {"standard_error_redirect_enable", "true"},
-  {"standard_output_network_enable", "true"},
-  {"standard_output_network_interval", "86400000"},
-  {"standard_output_network_host_name", "joshua.cs.rice.edu"},
-  {"standard_output_network_host_port", "35001"},
-  {"standard_output_network_buffer_size", "128000"}, 
-  {"standard_output_redirect_enable", "true"},
-  {"standard_output_redirect_append", "true"},
-  {"standard_output_redirect_filename", "nohup.out"},
-  {"shutdown_hooks_enable", "true"},
-  {"security_manager_install", "true"}, 
-  {"past_garbage_collection_enable", "true"},
-  {"past_garbage_collection_interval", "300000"},
-  {"post_ca_key_is_file", "false"},
-  {"post_ca_key_name", "ca.publickey"}, 
-  {"post_proxy_enable", "true"},
-  {"post_certificate_verification_enable", "true"},
-  {"post_keypair_verification_enable", "true"},
-  {"post_log_clone_enable", "false"}, 
-  {"post_log_clone_username", ""},
-  {"post_allow_log_insert", "false"}, 
-  {"post_allow_log_insert_reset", "true"},
-  {"post_emergency_recover_logs", "false"},
-  {"post_force_log_reinsert", "false"}, 
-  {"post_fetch_log", "true"}, 
-  {"post_fetch_log_retries", "10"}, 
-  {"post_fetch_log_retry_sleep", "30000"},
-  {"post_redundancy_factor", "1"},
-  {"post_synchronize_interval", "60000"},
-  {"post_object_refresh_interval", "259200000"},
-  {"post_object_timeout_interval", "1814400000"},
-  {"storage_root_location", "."}, 
-  {"storage_disk_limit", "2000000000"},
-  {"storage_cache_limit", "50000000"},
-  {"glacier_enable", "false"},
-  {"glacier_num_fragments", "30"},
-  {"glacier_num_survivors", "4"},
-  {"glacier_sync_interval", "3600"},
-  {"glacier_sync_max_fragments", "100"},
-  {"glacier_max_requests_per_second", "3"},
-  {"glacier_neighbor_timeout", "7200"},
-  {"aggregation_flush_interval", "180"},
-  {"aggregation_max_aggregate_size", "1048576"},
-  {"aggregation_max_objects_per_aggregate", "25"},
-  {"aggregation_renew_threshold", "72"},
-  {"aggregation_consolidation_interval", "900"},
-  {"aggregation_consolidation_threshold", "1209600"},
-  {"aggregation_min_objects_per_aggregate", "20"},
-  {"aggregation_min_aggregate_utilization", "0.8"},
-  {"past_replication_factor", "3"},
-  {"application_instance_name", "PostProxy"},
-  {"proxy_show_dialog", "false"}
-  };
-  
+    
   /**
    * Method which check all necessary boot conditions before starting the proxy.
    *
    * @param parameters The parameters to use
    */
   protected void startCheckBoot(Parameters parameters) throws Exception {
-    String address = InetAddress.getLocalHost().getHostAddress();
-    
-    if (! CompatibilityCheck.testIPAddress(address)) 
-      panic("You computer appears to have the non-routable address " + address + ".\n" +
-            "This is likely because (a) you are not connected to any network or\n" +
-            "(b) you are connected from behind a NAT box.  Please ensure that you have\n" +
-            "a valid, routable IP address and try again.");
-    
-    String version = System.getProperty("java.version");
-    
-    if (! CompatibilityCheck.testJavaVersion(version))
-      panic("You appear to be running an incompatible version of Java '" + System.getProperty("java.version") + "'.\n" +
-            "Currently, only Java 1.4 is supported, and you must be running a\n" +
-            "version of at least 1.4.2.  Please see http://java.sun.com in order\n" +
-            "to download a compatible version.");
-    
-    String os = System.getProperty("os.name");
-    
-    if (! CompatibilityCheck.testOS(os))
-      panic("You appear to be running an incompatible operating system '" + System.getProperty("os.name") + "'.\n" +
-            "Currently, only Windows and Linux are supported for ePOST, although\n" +
-            "we are actively trying to add support for Mac OS X.");
+    if (parameters.getBooleanParameter("proxy_compatibility_check_enable")) {
+      String address = InetAddress.getLocalHost().getHostAddress();
+      
+      if (! CompatibilityCheck.testIPAddress(address)) 
+        panic("You computer appears to have the non-routable address " + address + ".\n" +
+              "This is likely because (a) you are not connected to any network or\n" +
+              "(b) you are connected from behind a NAT box.  Please ensure that you have\n" +
+              "a valid, routable IP address and try again.");
+      
+      String version = System.getProperty("java.version");
+      
+      if (! CompatibilityCheck.testJavaVersion(version))
+        panic("You appear to be running an incompatible version of Java '" + System.getProperty("java.version") + "'.\n" +
+              "Currently, only Java 1.4 is supported, and you must be running a\n" +
+              "version of at least 1.4.2.  Please see http://java.sun.com in order\n" +
+              "to download a compatible version.");
+      
+      String os = System.getProperty("os.name");
+      
+      if (! CompatibilityCheck.testOS(os))
+        panic("You appear to be running an incompatible operating system '" + System.getProperty("os.name") + "'.\n" +
+              "Currently, only Windows and Linux are supported for ePOST, although\n" +
+              "we are actively trying to add support for Mac OS X.");
+    }
   }
   
   /**
@@ -371,7 +298,7 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startPastryProxy(Parameters parameters) throws Exception {
+ /* protected void startPastryProxy(Parameters parameters) throws Exception {
     if (parameters.getBooleanParameter("pastry_proxy_enable")) {
       sectionStart("Creating Remote Proxy");
       
@@ -380,7 +307,7 @@ public class PostProxy {
       if (parameters.getStringParameter("pastry_proxy_password") == null) {
         String password = CAKeyGenerator.fetchPassword(parameters.getStringParameter("pastry_proxy_username") + "@" + 
                                                        proxy.getAddress() + "'s SSH Password");
-        parameters.registerStringParameter("pastry_proxy_password", password);
+        parameters.setStringParameter("pastry_proxy_password", password);
       }
       
       stepStart("Launching Remote Proxy to " + proxy.getAddress());
@@ -394,7 +321,7 @@ public class PostProxy {
       
       sectionDone();
     }
-  }
+  } */
   
   /**
    * Method which redirects standard output and error, if desired.
@@ -558,7 +485,7 @@ public class PostProxy {
               "If you do not yet have a certificate, once can be created from\n" + 
               "http://www.epostmail.org/");
       } else {
-        parameters.registerStringParameter("post_username", files[0].substring(0, files[0].indexOf(".")));
+        parameters.setStringParameter("post_username", files[0].substring(0, files[0].length()-6));
         stepDone(SUCCESS);
       } 
     }
@@ -629,7 +556,7 @@ public class PostProxy {
       panic("ERROR: ePOST could not find the keypair for user " + parameters.getStringParameter("post_username"));
     
     if ((parameters.getStringParameter("post_password") == null) || (parameters.getStringParameter("post_password").equals("")))
-      parameters.registerStringParameter("post_password", CAKeyGenerator.fetchPassword(parameters.getStringParameter("post_username") + "'s password"));
+      parameters.setStringParameter("post_password", CAKeyGenerator.fetchPassword(parameters.getStringParameter("post_username") + "'s password"));
     
     try {
       pair = CACertificateGenerator.readKeyPair(file, parameters.getStringParameter("post_password"));
@@ -712,7 +639,8 @@ public class PostProxy {
       hostname = InetAddress.getLocalHost().getHostName();
     } catch (UnknownHostException e) {}
     
-    String prefix = hostname + "-" + parameters.getIntParameter("pastry_port");
+    String port = parameters.getStringParameter("pastry_ring_" + ((RingId) address.getAddress()).getRingId().toStringFull()+ "_port");
+    String prefix = hostname + "-" + port;
     String location = parameters.getStringParameter("storage_root_location");
     int diskLimit = parameters.getIntParameter("storage_disk_limit");
     int cacheLimit = parameters.getIntParameter("storage_cache_limit");
@@ -786,9 +714,14 @@ public class PostProxy {
    */  
   protected void startPastryNode(Parameters parameters) throws Exception {    
     stepStart("Creating Pastry node");
-    String protocol = parameters.getStringParameter("pastry_protocol");
+    String prefix = ((RingId) address.getAddress()).getRingId().toStringFull();
+
+    String protocol = parameters.getStringParameter("pastry_ring_" + prefix+ "_protocol");
     int protocolId = 0;
-    int port = parameters.getIntParameter("pastry_port");
+    int port = parameters.getIntParameter("pastry_ring_" + prefix+ "_port");
+    
+    if (logManager instanceof NetworkLogManager)
+      ((NetworkLogManager) logManager).setPastryPort(port);
     
     if (protocol.equalsIgnoreCase("wire")) {
       protocolId = DistPastryNodeFactory.PROTOCOL_WIRE;
@@ -801,20 +734,17 @@ public class PostProxy {
     }
     
     DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port), protocolId, port);
-    InetSocketAddress[] bootAddresses = parameters.getInetSocketAddressArrayParameter("pastry_bootstraps");
+    InetSocketAddress[] bootAddresses = parameters.getInetSocketAddressArrayParameter("pastry_ring_" + prefix+ "_bootstraps");
     InetSocketAddress proxyAddress = null;
-    
-    if (parameters.getBooleanParameter("pastry_proxy_enable"))
-      proxyAddress = parameters.getInetSocketAddressParameter("pastry_proxy");
-    
+        
     rice.pastry.NodeHandle bootHandle = factory.getNodeHandle(bootAddresses);
     
-    if ((bootHandle == null) && (! parameters.getBooleanParameter("pastry_allow_new_ring")))
+    if ((bootHandle == null) && (! parameters.getBooleanParameter("pastry_ring_" + prefix+ "_allow_new_ring")))
       panic(new RuntimeException(), 
-            "Could not contact existing ring and not allowed to create a new ring.\n" +
-            "This is likely because (a) your computer is not properly connected to the\n" +
-            "Internet or (b) the ring you are attempting to connect to is off-line.  Please\n" +
-            "check you connection and try again later.", "pastry_bootstraps");
+            "Could not contact existing ring and not allowed to create a new ring. This\n" +
+            "is likely because your computer is not properly connected to the Internet\n" +
+            "or the ring you are attempting to connect to is off-line.  Please check\n" +
+            "your connection and try again later.", "pastry_ring_" + prefix+ "_bootstraps");
 
     node = factory.newNode(bootHandle, proxyAddress);
     pastryNode = (PastryNode) node;
@@ -849,9 +779,9 @@ public class PostProxy {
               "ring - it is highly likely that there is a problem preventing the connection.\n" + 
               "The most common error is a firewall which is preventing incoming connections - \n" +
               "please ensure that any firewall protecting you machine allows incoming traffic \n" +
-              "in both UDP and TCP on port " + parameters.getIntParameter("pastry_port"));
+              "in both UDP and TCP on port " + parameters.getIntParameter("pastry_ring_" + prefix+ "_port"));
       }
-    } while ((! parameters.getBooleanParameter("pastry_allow_new_ring")) &&
+    } while ((! parameters.getBooleanParameter("pastry_ring_" + prefix+ "_allow_new_ring")) &&
              (pastryNode.getLeafSet().size() == 0));
     
     stepDone(SUCCESS);
@@ -887,8 +817,10 @@ public class PostProxy {
    */  
   protected void startMultiringNode(Parameters parameters) throws Exception { 
     if (parameters.getBooleanParameter("multiring_enable")) {
-      stepStart("Creating Multiring node in ring " + parameters.getStringParameter("multiring_ring_name"));
-      node = new MultiringNode(generateRingId(parameters.getStringParameter("multiring_ring_name")), node);
+      Id ringId = ((RingId) address.getAddress()).getRingId();
+
+      stepStart("Creating Multiring node in ring " + ringId);
+      node = new MultiringNode(ringId, node);
       Thread.sleep(3000);
       stepDone(SUCCESS); 
     }
@@ -901,9 +833,11 @@ public class PostProxy {
    */  
   protected void startGlobalPastryNode(Parameters parameters) throws Exception {    
     stepStart("Creating Global Pastry node");
-    String protocol = parameters.getStringParameter("multiring_global_pastry_protocol");
+    String prefix = ((RingId) generateRingId(null)).getRingId().toStringFull();
+    
+    String protocol = parameters.getStringParameter("pastry_ring_" + prefix + "_protocol");
     int protocolId = 0;
-    int port = parameters.getIntParameter("multiring_global_pastry_port");
+    int port = parameters.getIntParameter("pastry_ring_" + prefix + "port");
     
     if (protocol.equalsIgnoreCase("wire")) {
       protocolId = DistPastryNodeFactory.PROTOCOL_WIRE;
@@ -912,15 +846,33 @@ public class PostProxy {
     } else if (protocol.equalsIgnoreCase("socket")) {
       protocolId = DistPastryNodeFactory.PROTOCOL_SOCKET;
     } else {
-      panic(new RuntimeException(), "The global pastry protocol " + protocol + " is unknown.", "multiring_global_pastry_protocol");
+      panic(new RuntimeException(), "The global pastry protocol " + protocol + " is unknown.", "pastry_ring_" + prefix + "protocol");
     }
     
     DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port), protocolId, port);
-    InetSocketAddress[] bootAddresses = parameters.getInetSocketAddressArrayParameter("multiring_global_pastry_bootstraps");
+    InetSocketAddress[] bootAddresses = parameters.getInetSocketAddressArrayParameter("pastry_ring_" + prefix + "bootstraps");
     
     globalNode = factory.newNode(factory.getNodeHandle(bootAddresses), (rice.pastry.NodeId) ((RingId) node.getId()).getId());
     globalPastryNode = (PastryNode) globalNode;
-    Thread.sleep(3000);
+
+    int count = 0;
+    
+    do {
+      System.out.println("Sleeping to allow global node to boot into the ring");
+      Thread.sleep(3000);
+      count++;
+      
+      if (count > 10) {
+        panic("The global Pastry node has unsuccessfully tried for 30 seconds to boot into the\n" +
+              "ring - it is highly likely that there is a problem preventing the connection.\n" + 
+              "The most common error is a firewall which is preventing incoming connections - \n" +
+              "please ensure that any firewall protecting you machine allows incoming traffic \n" +
+              "in both UDP and TCP on port " + parameters.getIntParameter("pastry_ring_" + prefix + "port"));
+      }
+    } while ((! parameters.getBooleanParameter("pastry_ring_" + prefix + "allow_new_ring")) &&
+             (globalPastryNode.getLeafSet().size() == 0));
+    
+    
     stepDone(SUCCESS);
   }     
   
@@ -956,8 +908,10 @@ public class PostProxy {
   protected void startGlacier(Parameters parameters) throws Exception {
     if (parameters.getBooleanParameter("glacier_enable")) {
       stepStart("Starting Glacier service");
+      String port = parameters.getStringParameter("pastry_ring_" + ((RingId) address.getAddress()).getRingId().toStringFull()+ "_port");
 
-      String prefix = InetAddress.getLocalHost().getHostName() + "-" + parameters.getIntParameter("pastry_port");
+
+      String prefix = InetAddress.getLocalHost().getHostName() + "-" + port;
       VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
 
       GlacierImpl immutableGlacier = new GlacierImpl(
@@ -1163,13 +1117,11 @@ public class PostProxy {
   }
   
   protected Parameters start(Parameters parameters) throws Exception {
-    initializeParameters(parameters, DEFAULT_PARAMETERS);
-    
     startCheckBoot(parameters);
     
     startDialog(parameters);
     startLivenessMonitor(parameters);
-    startPastryProxy(parameters);
+    //startPastryProxy(parameters);
         
     sectionStart("Initializing Parameters");
     startRedirection(parameters);
@@ -1310,6 +1262,10 @@ public class PostProxy {
 
     e.printStackTrace();
     System.exit(0);
+  }
+  
+  protected void dialogPrint(String message) {
+    if (dialog != null) dialog.append(message);
   }
 
   private String pad(String start) {

@@ -55,49 +55,16 @@ import javax.swing.*;
 public class Proxy {
   
   public static String PROXY_PARAMETERS_NAME = "proxy";
-  public static String[][] DEFAULT_PARAMETERS = new String[][] {{"java_home", System.getProperty("java.home")},
-                                                                {"java_command", "java"},
-                                                                {"java_wrapper_command", ""},
-                                                                {"java_maximum_memory", "128M"},
-                                                                {"java_memory_free_enable", "true"},
-                                                                {"java_memory_free_maximum", "0.50"},
-                                                                {"java_debug_enable", "false"},
-                                                                {"java_debug_port", "8000"},
-                                                                {"java_stack_size", "1024K"},
-                                                                {"java_hprof_enable", "false"},
-                                                                {"java_interpreted_mode", "false"},
-                                                                {"java_profiling_enable", "false"},
-                                                                {"java_profiling_port", "31000"},
-                                                                {"java_profiling_memory_enable", "false"},
-                                                                {"java_profiling_library_directory", "lib"},
-                                                                {"java_profiling_native_library_directory", "."},
-                                                                {"java_thread_debugger_enable", "false"},
-                                                                {"java_thread_debugger_port", "31000"},
-                                                                {"java_thread_debugger_library_directory", "lib"},
-                                                                {"java_use_server_vm", "false"}, 
-                                                                {"java_classpath", "pastry.jar"},
-                                                                {"java_main_class", "rice.visualization.proxy.VisualizationEmailProxy"},
-                                                                {"java_main_class_parameters", ""}, 
-                                                                {"restart_return_value_min", "0"},
-                                                                {"restart_return_value_max", "1000"},
-                                                                {"restart_max", "5"},
-                                                                {"restart_delay", "5000"},
-                                                                {"proxy_liveness_monitor_enable", "true"},
-                                                                {"proxy_liveness_monitor_sleep", "30000"}, 
-                                                                {"proxy_liveness_monitor_timeout", "15000"},
-                                                                {"proxy_automatic_update_enable", "true"},
-                                                                {"proxy_automatic_update_root", "http://www.epostmail.org/code/"},
-                                                                {"proxy_automatic_update_latest_filename", "latest.txt"},
-                                                                {"proxy_automatic_update_interval", "86400000"}
-  };
   
   protected Process process;
+  
+  protected LivenessMonitor lm;
     
   public Proxy() {
   }
   
   public void run(String params) throws IOException, InterruptedException {
-    Parameters parameters = initializeParameters(params);
+    Parameters parameters = new Parameters(params);
     int count = 0;
     
     if (parameters.getBooleanParameter("proxy_automatic_update_enable")) {
@@ -105,7 +72,6 @@ public class Proxy {
       au.start();
     }
     
-//    while (count < parameters.getIntParameter("restart_max")) {
     while (true) {
       String command = buildJavaCommand(parameters);
       String[] environment = buildJavaEnvironment(parameters);
@@ -113,7 +79,7 @@ public class Proxy {
       System.out.println("[Loader       ]: Launching command " + command);
       
       process = (environment.length > 0 ? Runtime.getRuntime().exec(command, environment) : Runtime.getRuntime().exec(command));
-      LivenessMonitor lm = new LivenessMonitor(parameters, process);
+      lm = new LivenessMonitor(parameters, process);
 
       if (parameters.getBooleanParameter("proxy_liveness_monitor_enable"))
         lm.start();
@@ -123,7 +89,7 @@ public class Proxy {
       int exit = process.waitFor();    
       lm.die();
       
-      if (exit != -1) { //((exit >= parameters.getIntParameter("restart_return_value_min")) && (exit <= parameters.getIntParameter("restart_return_value_max"))) {
+      if (exit != -1) { 
         System.out.println("[Loader       ]: Child process exited with value " + exit + " - restarting client");
         count++;
         
@@ -138,15 +104,6 @@ public class Proxy {
     }
     
     System.exit(0);
-  }
-  
-  protected Parameters initializeParameters(String params) throws IOException {
-    Parameters result = new Parameters(params); 
-    
-    for (int i=0; i<DEFAULT_PARAMETERS.length; i++)
-      result.registerStringParameter(DEFAULT_PARAMETERS[i][0], DEFAULT_PARAMETERS[i][1]);
-    
-    return result;
   }
 
   protected String[] buildJavaEnvironment(Parameters parameters) {
@@ -170,7 +127,10 @@ public class Proxy {
       result.append(" \"");
     }
     
-    if (! ("".equals(parameters.getStringParameter("java_home")))) {
+    if ((parameters.getStringParameter("java_home") == null) && (System.getProperty("os.name").toLowerCase().indexOf("windows") < 0))
+      parameters.setStringParameter("java_home", System.getProperty("java.home"));
+    
+    if ((parameters.getStringParameter("java_home") != null) && (! ("".equals(parameters.getStringParameter("java_home"))))) {
       result.append(parameters.getStringParameter("java_home"));
       result.append(System.getProperty("file.separator"));
       result.append("bin");
@@ -246,23 +206,15 @@ public class Proxy {
       result.append(parameters.getStringParameter("java_thread_debugger_library_directory"));
       result.append(System.getProperty("file.separator"));
       result.append("optit.jar");
-      
-      String[] classpath = parameters.getStringArrayParameter("java_classpath");
-      for (int i=0; i<classpath.length; i++) {
-        result.append(System.getProperty("path.separator"));
-        result.append(classpath[i]); 
-      }
+      result.append(System.getProperty("path.separator"));
+
+      DynamicClasspath dc = new DynamicClasspath(new File("."), parameters.getStringArrayParameter("java_classpath"));
+      result.append(dc.getClasspath());
     } else {    
-      String[] classpath = parameters.getStringArrayParameter("java_classpath");
-      if (classpath.length > 0) {
-        result.append(" -cp ");
+      result.append(" -cp ");
         
-        for (int i=0; i<classpath.length; i++) {
-          result.append(classpath[i]); 
-          if (i < classpath.length-1)
-            result.append(System.getProperty("path.separator"));
-        }
-      }
+      DynamicClasspath dc = new DynamicClasspath(new File("."), parameters.getStringArrayParameter("java_classpath"));
+      result.append(dc.getClasspath());
     }
     
     result.append(" ");
@@ -278,8 +230,11 @@ public class Proxy {
   }
   
   public void restart() {
-    if (process != null)
+    if (process != null) 
       process.destroy();
+    
+    if (lm != null)
+      lm.die();
   }
   
   public static void main(String[] args) throws IOException, InterruptedException {
@@ -339,6 +294,9 @@ public class Proxy {
     
     public void run() {
       try {
+        // sleep to let JVM boot up
+        Thread.sleep(2*timeout);
+        
         while (alive) {
           this.answered = false;
           LivenessMonitorTest test = new LivenessMonitorTest(this, process);
@@ -428,7 +386,7 @@ public class Proxy {
             
             String filename = new String(baos.toByteArray()).trim();
             
-            if (parameters.getStringParameter("java_classpath").indexOf(filename) < 0) {
+            if (! new File(".", filename).exists()) {
               if (parameters.getBooleanParameter("proxy_show_dialog")) {
                 String message = "A new version of the ePOST software has been detected.\n\n" +
                 "Would you like to automatically upgrade to '" + filename + "' and restart your proxy?";
@@ -452,20 +410,14 @@ public class Proxy {
                   hf = new HttpFetcher(new URL(root + filename), new FileOutputStream(new File(".", filename)));
                   hf.fetch();
                   
-                  parameters.setStringParameter("java_classpath", filename + System.getProperty("path.separator") + parameters.getStringParameter("java_classpath"));
-                  parameters.writeFile();
-                  
                   restart();
                 }
+              } else {
+                hf = new HttpFetcher(new URL(root + filename), new FileOutputStream(new File(".", filename)));
+                hf.fetch();
+                
+                restart();   
               }
-            } else {
-              hf = new HttpFetcher(new URL(root + filename), new FileOutputStream(new File(".", filename)));
-              hf.fetch();
-              
-              parameters.setStringParameter("java_classpath", filename + System.getProperty("path.separator") + parameters.getStringParameter("java_classpath"));
-              parameters.writeFile();
-              
-              restart();     
             }
           } catch (Exception e) {
             System.out.println("ERROR: Got exception " + e + " while running automatic update - ignoring");
@@ -475,6 +427,63 @@ public class Proxy {
         }
       }
     }
+  }
+  
+  protected class DynamicClasspath {
     
+    protected File dir;
+    
+    protected File[] files;
+    
+    protected String[] other;
+    
+    public DynamicClasspath(File dir, String[] other) {
+      this.dir = dir;
+      this.other = other;
+      
+      this.files = dir.listFiles(new FilenameFilter() {
+        public boolean accept(File dir, String filename) {
+          return filename.endsWith(".jar");
+        }
+      });
+      
+      Arrays.sort(this.files, new Comparator() {
+        public int compare(Object a, Object b) {
+          long am = ((File) a).lastModified();
+          long bm = ((File) b).lastModified();
+          
+          if (am < bm) return 1;
+          else if (am > bm) return -1;
+          else return 0;
+        }
+        
+        public boolean equals(Object o) {
+          return false;
+        }
+      });
+    }
+    
+    public String getClasspath() {
+      String seperator = System.getProperty("path.separator");
+      StringBuffer buf = new StringBuffer();
+      
+      for (int i=0; i<files.length; i++) {
+        buf.append(files[i].getName());
+        
+        if ((i < files.length-1) || ((other != null) && (other.length > 0)))
+          buf.append(seperator);
+      }
+      
+      if (other != null) {
+        for (int i=0; i<other.length; i++) {
+          buf.append(other[i]);
+          
+          if (i < other.length-1)
+            buf.append(seperator);
+        }
+      }
+      
+      return buf.toString();
+    }
   }
 }

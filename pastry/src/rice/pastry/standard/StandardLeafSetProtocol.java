@@ -135,7 +135,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 
 			// if we receive a correction to a leafset we have sent out, notify the members of our new leaf set
 			if (type == BroadcastLeafSet.Correction && changed)
-				broadcast();
+	  			broadcast();
 
 			// Check if any of our local leaf set members are missing in the received leaf set
 			// if so, we send our leafset to each missing entry and to the source of the leafset

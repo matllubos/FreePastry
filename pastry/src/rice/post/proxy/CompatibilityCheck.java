@@ -5,7 +5,9 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
-public class CompatibilityCheck extends JFrame{
+public class CompatibilityCheck {
+  
+  protected JFrame frame;
   
   protected PostPanel panel;
   
@@ -16,6 +18,7 @@ public class CompatibilityCheck extends JFrame{
   protected JScrollPane scroll;
   
   public CompatibilityCheck() {
+    frame = new JFrame();
     panel = new PostPanel();
     kill = new KillPanel();
     area = new JTextArea(10,75);
@@ -23,24 +26,24 @@ public class CompatibilityCheck extends JFrame{
     scroll = new JScrollPane(area, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
     
     GridBagLayout layout = new GridBagLayout();
-    getContentPane().setLayout(layout);
+    frame.getContentPane().setLayout(layout);
     
     GridBagConstraints c = new GridBagConstraints();
     layout.setConstraints(panel, c);      
-    getContentPane().add(panel);
+    frame.getContentPane().add(panel);
     
     GridBagConstraints d = new GridBagConstraints();
     d.gridy=1;
     layout.setConstraints(scroll, d);      
-    getContentPane().add(scroll);
+    frame.getContentPane().add(scroll);
     
     GridBagConstraints e = new GridBagConstraints();
     e.gridy=2;
     layout.setConstraints(kill, e);      
-    getContentPane().add(kill);
+    frame.getContentPane().add(kill);
     
-    pack();
-    show();
+    frame.pack();
+    frame.show();
   }
   
   public void test() {

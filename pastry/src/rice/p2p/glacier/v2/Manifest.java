@@ -74,8 +74,8 @@ public class Manifest implements Serializable {
       if (thisHash[i] != fragmentHash[fragmentID][i]) {
         System.out.println("*** HASH MISMATCH: POS#"+i+", "+thisHash[i]+" != "+fragmentHash[fragmentID][i]+" ***");
         System.out.print("Hash: ");
-        for (int i=0; i<thisHash.length; i++)
-          System.out.print(thisHash[i]);
+        for (int j=0; j<thisHash.length; j++)
+          System.out.print(thisHash[j]);
         System.out.println();
         System.out.println(toStringFull());
         return false;

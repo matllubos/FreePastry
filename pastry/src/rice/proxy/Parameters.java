@@ -51,7 +51,9 @@ import java.util.*;
  */
 public class Parameters {
   
-  private MyProperties properties = new MyProperties();
+  private MyProperties properties;
+  
+  private MyProperties defaults;
 		
 	private String fileName;
 	
@@ -60,13 +62,13 @@ public class Parameters {
 	
 	public Parameters(String fileName) throws IOException {
 		this.fileName = fileName + FILENAME_EXTENSION;
+    this.properties = new MyProperties();
+    this.defaults = new MyProperties();
     
-    if (new File(this.fileName).exists()) {
+    this.defaults.load(ClassLoader.getSystemResource("default" + FILENAME_EXTENSION).openStream());
+
+    if (new File(this.fileName).exists()) 
       properties.load(new FileInputStream(this.fileName));
-    } else {
-      properties.load(ClassLoader.getSystemResource(this.fileName).openStream());
-      writeFile();
-    }
 	}
   
   protected InetSocketAddress parseInetSocketAddress(String name) throws UnknownHostException {
@@ -75,24 +77,43 @@ public class Parameters {
     return new InetSocketAddress(InetAddress.getByName(host), Integer.parseInt(port));
   }
   
+  protected String getProperty(String name) {
+    String result = properties.getProperty(name);
+    
+    if (result == null) 
+      result = defaults.getProperty(name);
+    
+    if (result == null) 
+      System.err.println("WARNING: The parameter '" + name + "' was not found - this is likely going to cause an error.  You " +
+                         "can fix this by adding this parameter (and appropriate value) to the proxy.params file in your ePOST " +
+                         "directory.");
+    
+    return result;
+  }
+  
+  protected void setProperty(String name, String value) {
+    properties.setProperty(name, value);
+    writeFile();
+  }
+  
   public void removeParameter(String name) {
     properties.remove(name); 
   }
 	
 	public int getIntParameter(String name) {
-		return Integer.parseInt(properties.getProperty(name));
+		return Integer.parseInt(getProperty(name));
 	}
 	
 	public double getDoubleParameter(String name) {
-		return Double.parseDouble(properties.getProperty(name));
+		return Double.parseDouble(getProperty(name));
 	}
 	
 	public long getLongParameter(String name) {
-		return Long.parseLong(properties.getProperty(name));
+		return Long.parseLong(getProperty(name));
 	}
   
 	public boolean getBooleanParameter(String name) {
-		return (new Boolean(properties.getProperty(name))).booleanValue();
+		return (new Boolean(getProperty(name))).booleanValue();
 	}
   
   public InetSocketAddress getInetSocketAddressParameter(String name) throws UnknownHostException {
@@ -110,11 +131,11 @@ public class Parameters {
   }
   
 	public String getStringParameter(String name) {
-		return properties.getProperty(name);
+		return getProperty(name);
 	}
   
 	public String[] getStringArrayParameter(String name) {
-		String list = properties.getProperty(name);
+		String list = getProperty(name);
     
     if (list != null)
       return list.split(ARRAY_SPACER);
@@ -123,23 +144,23 @@ public class Parameters {
 	}
   
 	public void setIntParameter(String name, int value) {
-		properties.setProperty(name, Integer.toString(value));
+		setProperty(name, Integer.toString(value));
 	}
 	
 	public void setDoubleParameter(String name, double value) {
-		properties.setProperty(name, Double.toString(value));
+		setProperty(name, Double.toString(value));
 	}
 	
 	public void setLongParameter(String name, long value) {
-		properties.setProperty(name, Long.toString(value));
+		setProperty(name, Long.toString(value));
 	}
 	
 	public void setBooleanParameter(String name, boolean value) {
-		properties.setProperty(name, "" + value);
+		setProperty(name, "" + value);
 	}
   
   public void setInetSocketAddressParameter(String name, InetSocketAddress value) {
-    properties.setProperty(name, value.getAddress().getHostAddress() + ":" + value.getPort());
+    setProperty(name, value.getAddress().getHostAddress() + ":" + value.getPort());
   }
   
   public void setInetSocketAddressArrayParameter(String name, InetSocketAddress[] value) {
@@ -151,11 +172,11 @@ public class Parameters {
         buffer.append(ARRAY_SPACER);
     }
     
-    properties.setProperty(name, buffer.toString());
+    setProperty(name, buffer.toString());
   }
 	
 	public void setStringParameter(String name, String value) {
-		properties.setProperty(name, value);
+		setProperty(name, value);
 	}
   
   public void setStringArrayParameter(String name, String[] value) {
@@ -167,64 +188,8 @@ public class Parameters {
         buffer.append(ARRAY_SPACER);
     }
     
-    properties.setProperty(name, buffer.toString());
+    setProperty(name, buffer.toString());
   }
-	
-	public void registerIntParameter(String name, int defaultValue) {
-		if (properties.getProperty(name) == null) {
-			setIntParameter(name, defaultValue);
-			writeFile();
-		}
-	}
-	
-	public void registerDoubleParameter(String name, double defaultValue) {
-		if (properties.getProperty(name) == null) {
-			setDoubleParameter(name, defaultValue);
-			writeFile();
-		}
-	}
-  
-	public void registerLongParameter(String name, long defaultValue) {
-		if (properties.getProperty(name) == null) {
-			setLongParameter(name, defaultValue);
-			writeFile();
-		}
-	}
-  
-	public void registerBooleanParameter(String name, boolean defaultValue) {
-		if (properties.getProperty(name) == null) {
-			setBooleanParameter(name, defaultValue);
-			writeFile();
-		}
-	}
-  
-	public void registerInetSocketAddressParameter(String name, InetSocketAddress defaultValue) {
-		if (properties.getProperty(name) == null) {
-			setInetSocketAddressParameter(name, defaultValue);
-			writeFile();
-		}
-	}
-  
-	public void registerInetSocketAddressArrayParameter(String name, InetSocketAddress[] defaultValue) {
-		if (properties.getProperty(name) == null) {
-			setInetSocketAddressArrayParameter(name, defaultValue);
-			writeFile();
-		}
-	}
-  
-	public void registerStringParameter(String name, String defaultValue) {
-		if (properties.getProperty(name) == null) {
-			setStringParameter(name, defaultValue);
-			writeFile();
-		}
-	}
-  
-	public void registerStringArrayParameter(String name, String[] defaultValue) {
-		if (properties.getProperty(name) == null) {
-
-			writeFile();
-		}
-	}
   
   public void writeFile() {
     try {

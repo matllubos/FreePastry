@@ -23,7 +23,7 @@ public class NetworkLogManager extends LogManager {
   public NetworkLogManager(Parameters parameters) {
     this.file = new File(parameters.getStringParameter("standard_output_redirect_filename"));
     this.interval = parameters.getLongParameter("standard_output_network_interval");
-    this.pastry_port = parameters.getIntParameter("pastry_port");
+    this.pastry_port = 10001;
     
     if (file.exists()) 
       file.renameTo(getFileName());
@@ -38,6 +38,10 @@ public class NetworkLogManager extends LogManager {
     this.thread.start();
     
     this.start = System.currentTimeMillis();
+  }
+  
+  protected void setPastryPort(int port) {
+    this.pastry_port = port;
   }
   
   protected File getFileName() {
@@ -96,6 +100,10 @@ public class NetworkLogManager extends LogManager {
     }
     
     public void run() {
+      try {
+        Thread.sleep(300000);
+      } catch (InterruptedException e) {}
+      
       while (true) {
         System.out.println("Waking up...");
         sendFiles(); 
