@@ -178,29 +178,37 @@ public class Folder {
         
         for (int i=0; i<emails.length; i++) 
           emails[i].getEmail().getContentHashReferences(set);
-       
-        final Object[] names = _log.getChildLogNames();
         
-        Continuation children = new StandardContinuation(parent) {
-          int index = 0;
-          
+        getBottomEntry(new StandardContinuation(parent) {
           public void receiveResult(Object o) {
-            final Continuation thisOne = this;
-            
-            if (index < names.length) {
-              getChildFolder((String) names[index], new StandardContinuation(parent) {
-                public void receiveResult(Object o) {
-                  index++;
-                  ((Folder) o).getContentHashReferences(set, thisOne);
-                }
-              });
-            } else {
-              parent.receiveResult(Boolean.TRUE);
-            }
+            _log.getLogEntryReferences(set, (LogEntry) o, new StandardContinuation(parent) {
+              public void receiveResult(Object o) {
+                final Object[] names = _log.getChildLogNames();
+                
+                Continuation children = new StandardContinuation(parent) {
+                  int index = 0;
+                  
+                  public void receiveResult(Object o) {
+                    final Continuation thisOne = this;
+                    
+                    if (index < names.length) {
+                      getChildFolder((String) names[index], new StandardContinuation(parent) {
+                        public void receiveResult(Object o) {
+                          index++;
+                          ((Folder) o).getContentHashReferences(set, thisOne);
+                        }
+                      });
+                    } else {
+                      parent.receiveResult(Boolean.TRUE);
+                    }
+                  }
+                };
+                
+                children.receiveResult(null);
+              }
+            });
           }
-        };
-        
-        children.receiveResult(null);
+        });
       }
     });
   }
@@ -621,6 +629,39 @@ public class Folder {
     });
   }
 
+  /**
+   * Returns the last live log entry in this log
+   *
+   * @param command the work to perform after this call
+   * @return the stored Emails
+   */
+  public void getBottomEntry(Continuation command) {
+    _log.getTopEntry(new StandardContinuation(command) {
+      
+      public void receiveResult(Object o) {
+        EmailLogEntry entry = (EmailLogEntry) o;
+        
+        if (entry == null) {
+          parent.receiveResult(null);
+        } else {
+          if (entry instanceof SnapShotLogEntry) {
+            SnapShotLogEntry sEntry = (SnapShotLogEntry) entry;
+            
+            if (sEntry.getTopEntry() == null) 
+              parent.receiveResult(sEntry);
+            else 
+              parent.receiveResult(sEntry.getTopEntry());
+          } else {
+            if (entry.getPreviousEntryReference() == null) 
+              parent.receiveResult(entry);
+            else 
+              entry.getPreviousEntry(this);
+          }
+        }
+      }
+    });
+  }
+  
   public String toString() {
     return getName();
   }

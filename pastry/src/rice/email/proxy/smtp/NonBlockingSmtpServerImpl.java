@@ -15,6 +15,8 @@ import java.nio.channels.*;
 
 public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements SmtpServer {
 
+  public static int MAX_CONNECTIONS = 6;
+  
   boolean acceptNonLocal = false;
   boolean gateway = false;
   boolean quit = false;
@@ -27,6 +29,12 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
   Workspace workspace;
 
   EmailService email;
+  
+  ServerSocketChannel channel;
+  
+  SelectionKey key;
+  
+  int connections = 0;
 
   public NonBlockingSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal) throws Exception {
     this.acceptNonLocal = acceptNonLocal;
@@ -50,27 +58,45 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
 
   public void initialize() throws IOException {
     // bind to port
-    final ServerSocketChannel channel = ServerSocketChannel.open();
+    channel = ServerSocketChannel.open();
     channel.configureBlocking(false);
     channel.socket().bind(new InetSocketAddress(getPort()));
     
-    // register interest in accepting connections
     SelectorManager.getSelectorManager().invoke(new Runnable() {
       public void run() {
         try {
-          SelectorManager.getSelectorManager().register(channel, NonBlockingSmtpServerImpl.this, SelectionKey.OP_ACCEPT);
+          key = SelectorManager.getSelectorManager().register(channel, NonBlockingSmtpServerImpl.this, SelectionKey.OP_ACCEPT);
         } catch (IOException e) {
-          System.out.println("ERROR creating SMTP server socket key " + e);
+          System.out.println("ERROR modifiying SMTP server socket key " + e);
         }
+      }
+    });
+  }
+  
+  protected void setAcceptable(final boolean acceptable) {
+    // register interest in accepting connections
+    SelectorManager.getSelectorManager().invoke(new Runnable() {
+      public void run() {
+        key.interestOps((acceptable ? SelectionKey.OP_ACCEPT : 0));
       }
     });
   }
   
   public void accept(SelectionKey key) {
     try {
+      boolean turnoff = false;
+      synchronized (this) {
+        connections++;
+      
+        turnoff = (connections >= MAX_CONNECTIONS);
+      }
+      
+      if (turnoff)
+        setAcceptable(false);
+      
       final Socket socket = ((SocketChannel) ((ServerSocketChannel) key.channel()).accept()).socket();
       
-      System.out.println("Accepted connection from " + socket.getInetAddress());
+      System.out.println("Accepted connection " + connections + " of " + MAX_CONNECTIONS + " from " + socket.getInetAddress());
       
       if (acceptNonLocal || gateway || socket.getInetAddress().isLoopbackAddress() ||
           (socket.getInetAddress().equals(InetAddress.getLocalHost()))) {
@@ -80,6 +106,13 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
               SmtpHandler handler = new SmtpHandler(registry, manager, workspace);
               handler.handleConnection(socket);
               socket.close();
+              
+              synchronized (NonBlockingSmtpServerImpl.this) {
+                connections--; 
+              }
+              
+              setAcceptable(true);
+              System.out.println("Done with connection - now at " + connections + " of " + MAX_CONNECTIONS);
             } catch (IOException e) {
               System.out.println("IOException occurred during handling of connection - " + e);
             }
