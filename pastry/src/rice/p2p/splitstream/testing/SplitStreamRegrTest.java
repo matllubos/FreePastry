@@ -203,7 +203,6 @@ public class SplitStreamRegrTest extends CommonAPITest {
 	if(checkTree(num, NUM_NODES))
 	    stepDone(SUCCESS);
 	else{
-	    //printPaths(num, NUM_NODES);
 	    stepDone(FAILURE, "not all have parent");
 
 	}
@@ -228,13 +227,11 @@ public class SplitStreamRegrTest extends CommonAPITest {
 	    if(totalmsgs != ((NUM_NODES -num)*16))
 		pass = false;
 	}
-	//printPaths(num, NUM_NODES);
 
 	if(pass){
 	    stepDone(SUCCESS);
 	}
 	else{
-	    //printPaths(num, NUM_NODES);
 	    stepDone(FAILURE);
 	}
 	
@@ -312,16 +309,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
 	return result;
     }
 
-    protected void printPaths(int startindex, int num){
-	Stripe[] stripes;
-	for(int i = startindex; i < num; i++){
-	    stripes = ssclients[i].getStripes();
-	    for(int j = 0; j < stripes.length; j++){
-		System.out.println("print path for stripe "+stripes[j].getStripeId().getId());
-		stripes[j].printPath();
-	    }
-	}
-    }
+  
  
   protected void testFailure(int numnodes){
      sectionStart("Failure Test");
