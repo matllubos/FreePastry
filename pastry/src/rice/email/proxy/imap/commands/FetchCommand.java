@@ -66,22 +66,28 @@ public class FetchCommand extends AbstractImapCommand {
     }
   }
 
-  String fetchMessage(StoredMessage msg) throws MailboxException {
-    StringBuffer result = new StringBuffer();
-    result.append("* ");
-    result.append(msg.getSequenceNumber());
-    result.append(" FETCH (");
-
-    for (Iterator i = parts.iterator(); i.hasNext();) {
-      Object part = i.next();
-      FetchPart handler = regestry.getHandler(part);
-      result.append(handler.fetch(msg, part));
-
-      if (i.hasNext())
-        result.append(" ");
+  String fetchMessage(StoredMessage msg) {
+    try {
+      StringBuffer result = new StringBuffer();
+      result.append("* ");
+      result.append(msg.getSequenceNumber());
+      result.append(" FETCH (");
+      
+      for (Iterator i = parts.iterator(); i.hasNext();) {
+        Object part = i.next();
+        FetchPart handler = regestry.getHandler(part);
+        result.append(handler.fetch(msg, part));
+        
+        if (i.hasNext())
+          result.append(" ");
+      }
+      
+      return result.toString() +")\r\n";
+    } catch (MailboxException e) {
+      System.err.println("Got exception " + e + " while fetching data - not returning anything.");
+      e.printStackTrace();
+      return "";
     }
-
-    return result.toString() +")\r\n";
   }
 
   public void appendPartRequest(String string) {

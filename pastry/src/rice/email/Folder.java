@@ -178,6 +178,10 @@ public class Folder {
     if (_log.getSnapshotReference() != null)
       set.add(_log.getSnapshotReference());
     
+    if (_log.getSnapshotReferences() != null) 
+      for (int i=0; i<_log.getSnapshotReferences().length; i++)
+        set.add(_log.getSnapshotReferences()[i]);
+    
     getMessageReferences(set, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         getLogReferences(set, new StandardContinuation(parent) {
