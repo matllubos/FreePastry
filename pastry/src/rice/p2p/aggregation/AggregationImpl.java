@@ -648,7 +648,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                   }
                 }
                 public void receiveException(Exception e) {
-                  outerContinuation.receiveException(e);
+                  warn("Monitor.add component insertion failed: "+e);
+                  e.printStackTrace();
+                  receiveResult(e);
                 }
               };
               
@@ -658,8 +660,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             }            
           }
           public void receiveException(Exception e) {
-            warn("Monitor.add failed: "+e);
+            warn("Monitor.add aggregate insertion failed: "+e);
             e.printStackTrace();
+            receiveResult(e);
           }
         };
         
