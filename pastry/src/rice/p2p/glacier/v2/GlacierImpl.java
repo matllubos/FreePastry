@@ -298,28 +298,108 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       }
       public void receiveResult(Object o) {
         if (o instanceof GlacierResponseMessage) {
-          GlacierResponseMessage grm = (GlacierResponseMessage) o;
+          final GlacierResponseMessage grm = (GlacierResponseMessage) o;
           log(3, "Received handoff response from "+grm.getSource().getId()+" with "+grm.numKeys()+" keys");
           for (int i=0; i<grm.numKeys(); i++) {
             final FragmentKey thisKey = grm.getKey(i);
-            if (grm.getHaveIt(i) && grm.getAuthoritative(i)) {
-              Id thisPos = getFragmentLocation(thisKey);
-              if (!responsibleRange.containsId(thisPos)) {
-                log(3, "Deleting fragment "+thisKey);
-                deleteFragment(thisKey, new Continuation() {
+            if (grm.getAuthoritative(i)) {
+              if (grm.getHaveIt(i)) {
+                Id thisPos = getFragmentLocation(thisKey);
+                if (!responsibleRange.containsId(thisPos)) {
+                  log(3, "Deleting fragment "+thisKey);
+                  deleteFragment(thisKey, new Continuation() {
+                    public void receiveResult(Object o) {
+                      log(3, "Handed off fragment deleted: "+thisKey+" (o="+o+")");
+                    }
+                    public void receiveException(Exception e) {
+                      warn("Delete failed during handoff: "+thisKey+", returned "+e);
+                      e.printStackTrace();
+                    }
+                  });
+                } else {
+                  warn("Handoff response for "+thisKey+", for which I am still responsible (attack?) -- ignored");
+                }
+              } else {
+                fragmentStorage.getObject(thisKey, new Continuation() {
                   public void receiveResult(Object o) {
-                    log(3, "Handed off fragment deleted: "+thisKey+" (o="+o+")");
+                    if (o != null) {
+                      log(2, "Fragment "+thisKey+" found ("+o+"), handing off...");
+                      FragmentAndManifest fam = (FragmentAndManifest) o;
+                      endpoint.route(
+                        null,
+                        new GlacierDataMessage(grm.getUID(), thisKey, fam.fragment, fam.manifest, getLocalNodeHandle(), grm.getSource().getId(), true),
+                        grm.getSource()
+                      );
+                    } else {
+                      warn("Handoff failed; fragment "+thisKey+" not found in fragment store");
+                    }
                   }
                   public void receiveException(Exception e) {
-                    warn("Delete failed during handoff: "+thisKey+", returned "+e);
+                    warn("Handoff failed; exception while fetching "+thisKey+", e="+e);
                     e.printStackTrace();
                   }
                 });
-              } else {
-                warn("Handoff response for "+thisKey+", for which I am still responsible (attack?) -- ignored");
               }
             } else {
               log(3, "Ignoring fragment "+thisKey+" (haveIt="+grm.getHaveIt(i)+", authoritative="+grm.getAuthoritative(i)+")");
+            }
+          }
+        } else if (o instanceof GlacierDataMessage) {
+          final GlacierDataMessage gdm = (GlacierDataMessage) o;
+          for (int i=0; i<gdm.numKeys(); i++) {
+            final FragmentKey thisKey = gdm.getKey(i);
+            final Fragment thisFragment = gdm.getFragment(i);
+            final Manifest thisManifest = gdm.getManifest(i);
+        
+            if ((thisFragment != null) && (thisManifest != null)) {
+              log(2, "Handoff: Received Fragment+Manifest for "+thisKey);
+
+              if (!responsibleRange.containsId(getFragmentLocation(thisKey))) {
+                warn("Handoff: Not responsible for "+thisKey+" (at "+getFragmentLocation(thisKey)+") -- discarding");
+                continue;
+              }
+          
+              if (!policy.checkSignature(thisManifest, thisKey.getVersionKey())) {
+                warn("Handoff: Manifest is not signed properly");
+                continue;
+              }   
+          
+              if (!thisManifest.validatesFragment(thisFragment, thisKey.getFragmentID())) {
+                warn("Handoff: Manifest does not validate this fragment");
+                continue;
+              }
+            
+              if (!fragmentStorage.exists(thisKey)) {
+                log(3, "Handoff: Verified ok. Storing locally.");
+            
+                FragmentAndManifest fam = new FragmentAndManifest(thisFragment, thisManifest);
+  
+                fragmentStorage.store(thisKey, new FragmentMetadata(thisManifest.getExpiration(), 0), fam,
+                  new Continuation() {
+                    public void receiveResult(Object o) {
+                      log(2, "Handoff: Stored OK, sending receipt: "+thisKey);
+
+                      endpoint.route(
+                        null,
+                        new GlacierResponseMessage(gdm.getUID(), thisKey, true, thisManifest.getExpiration(), responsibleRange.containsId(getFragmentLocation(thisKey)), getLocalNodeHandle(), gdm.getSource().getId(), true),
+                        gdm.getSource()
+                      );
+                    }
+
+                    public void receiveException(Exception e) {
+                      warn("Handoff: receiveException(" + e + ") while storing a fragment -- unexpected, ignored (key=" + thisKey + ")");
+                    }
+                  }
+                );
+              } else {
+                warn("Handoff: We already have a fragment with this key! -- discarding");
+                continue;
+              }
+          
+              continue;
+            } else {
+              warn("Handoff: Either fragment or manifest are missing!");
+              continue;
             }
           }
         } else {
@@ -503,7 +583,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   }
 
   private void determineResponsibleRange() {
-    Id cwPeer = null, ccwPeer = null, myNodeId = getLocalNodeHandle().getId();
+    Id cwPeer = null, ccwPeer = null, xcwPeer = null, xccwPeer = null, myNodeId = getLocalNodeHandle().getId();
     
     log(3, "Determining responsible range");
     
@@ -514,18 +594,22 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       if (myNodeId.clockwise(thisNeighbor)) {
         if ((cwPeer == null) || thisNeighbor.isBetween(myNodeId, cwPeer))
           cwPeer = thisNeighbor;
+        if ((xcwPeer == null) || xcwPeer.clockwise(thisNeighbor))
+          xcwPeer = thisNeighbor;
       } else {
         if ((ccwPeer == null) || thisNeighbor.isBetween(ccwPeer, myNodeId))
           ccwPeer = thisNeighbor;
+        if ((xccwPeer == null) || !xccwPeer.clockwise(thisNeighbor))
+          xccwPeer = thisNeighbor;
       }
     }
           
     if (ccwPeer == null)
-      ccwPeer = cwPeer;
+      ccwPeer = xcwPeer;
     if (cwPeer == null)
-      cwPeer = ccwPeer;
+      cwPeer = xccwPeer;
       
-    log(3, "CCW: "+ccwPeer+" CW: "+cwPeer+" ME: "+myNodeId);
+    log(3, "XCCW: "+xccwPeer+" CCW: "+ccwPeer+" ME: "+myNodeId+" CW: "+cwPeer+" XCW: "+xcwPeer);
       
     if ((ccwPeer == null) || (cwPeer == null)) {
       responsibleRange = factory.buildIdRange(myNodeId, myNodeId);
