@@ -47,6 +47,7 @@ import rice.pastry.security.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
+import rice.pastry.routing.*;
 
 import java.lang.*;
 import java.util.*;
@@ -73,8 +74,6 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
 
 
-    private static RMAddress _address = new RMAddress();
-
     private Credentials _credentials;
 
     public SendOptions _sendOptions;
@@ -100,16 +99,6 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
     public static int SPLITFACTOR = 16;
     
-
-    private static class RMAddress implements Address {
-	private int myCode = 0x8bed147c;
-	
-	public int hashCode() { return myCode; }
-
-	public boolean equals(Object obj) {
-	    return (obj instanceof RMAddress);
-	}
-    }
 
     public static class KEPenEntry {
 	private IdRange reqRange;
@@ -169,9 +158,9 @@ public class RMImpl extends CommonAPIAppl implements RM {
      * @param pn the PastryNode associated with this application
      * @return void
      */
-    public RMImpl(PastryNode pn, RMClient _app, int _rFactor)
+    public RMImpl(PastryNode pn, RMClient _app, int _rFactor, String instance)
     {
-	super(pn);
+	super(pn, instance);
 	app = _app;
 	m_ready = pn.isReady();
 	rFactor = _rFactor;
@@ -455,14 +444,6 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
     }
 
-    
-    /**
-     * Returns the address of this application.
-     * @return the address.
-     */
-    public Address getAddress() {
-	return _address;
-    }
 
     /**
      * Returns the credentials for the application
@@ -627,6 +608,12 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	// our Replica Manager is based totally on the Pull Model
 
 	// We can do something here if we want to incorporate the Push Model
+
+    }
+
+
+    public void lookupForward(RouteMessage msg) {
+	
 
     }
     

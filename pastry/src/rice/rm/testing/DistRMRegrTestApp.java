@@ -87,20 +87,9 @@ public class DistRMRegrTestApp extends RMRegrTestApp
 
     public ScheduledMessage m_objectInsertionMsg;
 
-    private static class DistRMRegrTestAppAddress implements Address {
-	private int myCode = 0x8abc848c;
-	
-	public int hashCode() { return myCode; }
 
-	public boolean equals(Object obj) {
-	    return (obj instanceof DistRMRegrTestAppAddress);
-	}
-    }
-
- 
-
-    public DistRMRegrTestApp( PastryNode pn, Credentials cred , boolean firstNodeInSystem) {
-	super(pn, cred);
+    public DistRMRegrTestApp( PastryNode pn, Credentials cred , boolean firstNodeInSystem, String instance) {
+	super(pn, cred, instance);
 	m_firstNodeInSystem = firstNodeInSystem;
 
     }

@@ -133,8 +133,8 @@ public class DirectRMRegrTest
 	System.out.println("NewNode" + pn.getNodeId());	
 	Credentials cred = new PermissiveCredentials();
 
-	DirectRMRegrTestApp rmApp = new DirectRMRegrTestApp(pn,  cred);
-	RMImpl rm = new RMImpl(pn , rmApp, RMRegrTestApp.rFactor);
+	DirectRMRegrTestApp rmApp = new DirectRMRegrTestApp(pn,  cred, "Instance1");
+	RMImpl rm = new RMImpl(pn , rmApp, RMRegrTestApp.rFactor, "Instance1");
 	rmApp.m_appCount = appCount;
 
 	nodeIdToApp.put(pn.getNodeId(), rmApp);

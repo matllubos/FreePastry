@@ -190,8 +190,8 @@ public class DistRMRegrTest {
 	
 	Credentials cred = new PermissiveCredentials();
 
-	DistRMRegrTestApp app = new DistRMRegrTestApp(pn,cred, firstNodeInSystem);
-	RMImpl rm = new RMImpl(pn, app, RMRegrTestApp.rFactor);	
+	DistRMRegrTestApp app = new DistRMRegrTestApp(pn,cred, firstNodeInSystem, "Instance1");
+	RMImpl rm = new RMImpl(pn, app, RMRegrTestApp.rFactor, "Instance1");	
 	distClients.addElement(app);
 	return pn;
 

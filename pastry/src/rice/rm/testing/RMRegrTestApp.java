@@ -78,19 +78,6 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
 
     public Hashtable m_pendingObjects;
 
-    protected static Address m_address = new RMRegrTestAppAddress();
-
-    private static class RMRegrTestAppAddress implements Address {
-	private int myCode = 0x6bec747c;
-	
-	public int hashCode() { return myCode; }
-
-	public boolean equals(Object obj) {
-	    return (obj instanceof RMRegrTestAppAddress);
-	}
-    }
-
-
     public static class ReplicateEntry{
 	private int numAcks;
 	private Object object;
@@ -119,8 +106,8 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
      * @param rm The underlying replica manager 
      * @param cred The credentials 
      */
-    public RMRegrTestApp( PastryNode pn, Credentials cred) {
-	super(pn);
+    public RMRegrTestApp( PastryNode pn, Credentials cred, String instance) {
+	super(pn, instance);
 	_credentials = cred;
 	if(cred == null) {
 	     _credentials = new PermissiveCredentials();
@@ -260,10 +247,6 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
 
     }
     
-    // abstract methods, to be overridden by the derived application object
-    public  Address getAddress() {
-	return m_address;
-    }
 
     public Credentials getCredentials() {
 	return _credentials;

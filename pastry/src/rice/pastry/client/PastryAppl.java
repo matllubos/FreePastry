@@ -112,10 +112,18 @@ public abstract class PastryAppl implements MessageReceiver
    * @param instance The instance name of this appl.
    */
   public PastryAppl(PastryNode pn, String instance) {
-    this(pn);
-    
     this.instance = instance;
     this.address = new StandardAddress(this.getClass(), instance);
+
+    thePastryNode = pn;
+    thePastryNode.registerReceiver(getCredentials(), getAddress(), this);
+
+    thePastryNode.addLeafSetObserver(new LeafSetObserver());
+    thePastryNode.addRouteSetObserver(new RouteSetObserver());
+
+    thePastryNode.registerApp(this); // just adds it to a list
+     
+
   }
 
   /**

@@ -40,6 +40,7 @@ package rice.rm;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
+import rice.pastry.routing.*;
 
 /**
  * @(#) RM.java
@@ -62,7 +63,7 @@ public interface RM {
      * does not have the desired object. This call may change the nextHop 
      * field in the RouteMessage. 
      */
-    //public void lookupForward(RouteMessage msg);
+    public void lookupForward(RouteMessage msg);
 
 
 

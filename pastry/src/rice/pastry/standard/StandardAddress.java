@@ -67,6 +67,7 @@ public class StandardAddress implements Address {
 
     myCode = (digest[0] << 24) + (digest[1] << 16) +
              (digest[2] << 8) + digest[3];
+
   }
 
   public int hashCode() {
