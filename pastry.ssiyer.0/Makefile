@@ -6,6 +6,7 @@
 
 PACKAGES = \
 	rice.pastry\
+	rice.scribe\
 	rice.pastry.messaging\
 	rice.pastry.routing\
 	rice.pastry.leafset\

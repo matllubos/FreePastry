@@ -91,7 +91,7 @@ public class PastryRegrTest {
 	    rta.sendTrace(key);
 	    while(simulate());
 	    
-	    System.out.println("-------------------");
+	    //System.out.println("-------------------");
 	}
     }
 
@@ -114,7 +114,7 @@ public class PastryRegrTest {
 	
 	int n = 4000;
 	int m = 100;
-	int k = 3;
+	int k = 100;
 
 	int msgCount = 0;
 
