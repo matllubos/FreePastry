@@ -69,7 +69,7 @@ public class DistRMRegrTestApp extends RMRegrTestApp
     
     public static int numObjectsInPeriod = 10; 
 
-    public static int numObjects = 20;
+    public static int numObjects = 50;
 
     // Should not be very high, because the idea is that every 'checkFreq', we get an
     // approximate idea of the correct state of the system(desired position of keys)

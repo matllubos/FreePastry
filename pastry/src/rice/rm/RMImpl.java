@@ -191,7 +191,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	    if(getPastryNode() instanceof DistPastryNode) {
 		RMMaintenanceMsg msg;
 		msg  = new RMMaintenanceMsg(getNodeHandle(), getAddress(), getCredentials(), m_seqno ++); 
-		getPastryNode().scheduleMsgAtFixedRate(msg, RMMaintenanceMsg.maintFreq * 1000, RMMaintenanceMsg.maintFreq * 1000);
+		getPastryNode().scheduleMsgAtFixedRate(msg, RMMaintenanceMsg.maintStart * 1000, RMMaintenanceMsg.maintFreq * 1000);
 
 	    }
 
@@ -254,13 +254,13 @@ public class RMImpl extends CommonAPIAppl implements RM {
 		actualEntry.updateNumKeys(numKeys);
 	    }
 	    else {
-		// Possible cause is Message Duplication in the underlying Wire Protocol
+		// Possible cause is Message Duplication
 		//System.out.println("At " + getNodeId() + "Warning1: In updatePendingRange(" + toNode + "," + reqRange + " , " + numKeys + " ): Should not happen");
 
 	    }
 	}
 	else {
-	    // Possible cause is Message Duplication in the underlying Wire Protocol
+	    // Possible cause is Message Duplication
 	    //System.out.println("At " + getNodeId() + "Warning2: In updatePendingRange(" + toNode + "," + reqRange + " , " + numKeys + " ): Should not happen");
 	}
 	
@@ -279,12 +279,12 @@ public class RMImpl extends CommonAPIAppl implements RM {
 		    m_pendingRanges.remove(toNode);
 	    }
 	    else {
-		// Possible cause is message duplication in underlying layer
+		// Possible cause is message duplication
 		//System.out.println("At " + getNodeId() + "Warning1: In removePendingRange(" + toNode + "," + reqRange +  " ): Should not happen");
 	    }
 	}
 	else {
-	    // Possible cause is message duplication in underlying layer
+	    // Possible cause is message duplication
 	    //System.out.println("At " + getNodeId() + "Warning2: In removePendingRange(" + toNode + "," + reqRange +  " ): Should not happen");
 	    
 	} 
@@ -412,7 +412,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	    if(getPastryNode() instanceof DistPastryNode) {
 		RMMaintenanceMsg msg;
 		msg  = new RMMaintenanceMsg(getNodeHandle(), getAddress(), getCredentials(), m_seqno ++); 
-		getPastryNode().scheduleMsgAtFixedRate(msg, RMMaintenanceMsg.maintFreq * 1000, RMMaintenanceMsg.maintFreq * 1000);
+		getPastryNode().scheduleMsgAtFixedRate(msg, RMMaintenanceMsg.maintStart * 1000, RMMaintenanceMsg.maintFreq * 1000);
 
 	    }
 
@@ -608,53 +608,43 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	// our Replica Manager is based totally on the Pull Model
 
 	// We can do something here if we want to incorporate the Push Model
+	
 
     }
 
 
     public void lookupForward(RouteMessage msg) {
-	
+	Id target = msg.getTarget();
+	int replicaFactor = rFactor;
+	NodeSet set;
+	int minProx;
+	NodeHandle closestReplica;
 
+	set = replicaSet(target, replicaFactor + 1);
+	// We choose the best replica in terms of 'proximity' other than the self node
+	set.remove(getNodeId());
+	if(set.size()==0)
+	    return;	
+	closestReplica = set.get(0);
+	minProx = closestReplica.proximity();
+	for(int i= 1; i<set.size(); i++) {
+	    NodeHandle nh;
+	    int prox;
+	    nh = set.get(i);
+	    prox = nh.proximity();
+	    if(prox < minProx) {
+		minProx = prox;
+		closestReplica = nh;
+	    }
+	}
+	// We will change the nextHop Field of the RouteMessage to reflect this closest Replica
+	msg.setNextHop(closestReplica);
+	return;
     }
     
 }
 
 
-/*
-
- Notes
-------
-
- 1. Change the values of SPLITFACTOR and MAXKEYSINRANGE to appropriate values.
-
- 2. in the generateTopicId() chenging to use Id instead of NodeId gives exception.
-
- 3. Check carefully the best way to handle the m_pendingRanges table in case
-    of loss of messages. ( since the protocol is trigger based on the response)
-    A loss of a single response may cause it to wait for the entire
-    maintenance period. 
-
- 4. During the maintainenance period, what should we do incase the 
-    pendingRanges table is not empty.
-
- 5. Modify the call to intersect() in RMRequestKeysMsg to be aware that
-    intersect can produce two ranges
-
- 6. myRange calculation when the leafset overlaps, when it returns null
-
- 7. Dont forget to enable calling of periodicMaintenance() in Maintenance msg
-
- 8. Set the appropriate value of Maintenance Freq;
-
- 9. Use the IPNodeIdFactory instead of RandomNodeIdFactory in the Dist driver
-
- 10. Implement the timeout/message mechanism
-
- 11. Implement PAST optimization
-
- 12. Use the new Address mechanism
-
-*/
 
 
 

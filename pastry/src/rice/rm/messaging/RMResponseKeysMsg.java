@@ -129,6 +129,7 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 		IdSet myKeySet = rm.app.scan(iRange);
 		myHash = myKeySet.getHash();
 		if(oHash.equals(myHash)) {
+		    System.out.print(" Hash matched ");
 		    rm.removePendingRange(getSource().getNodeId(), reqRange);
 		    continue;
 		}

@@ -97,7 +97,7 @@ public class ReplicateMsg extends TestMessage implements Serializable{
 	//rm.app.store(objectKey, object);
 	// replicaset includes this node also
 	replicaSet = testApp.replicaSet(objectKey,replicaFactor + 1);
-	
+
 	// We reply back with this NodeSet
        
 	//System.out.println(rm.getNodeId() + "received replicatemsg");
@@ -117,7 +117,7 @@ public class ReplicateMsg extends TestMessage implements Serializable{
 	return objectKey;
     }
     
-
+    
     
 }
 

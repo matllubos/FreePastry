@@ -61,7 +61,8 @@ public class RMMaintenanceMsg extends RMMessage implements Serializable
 {
 
     public static int maintFreq = 120 ; // in seconds (here it is 2 minutes)
-    
+
+    public static int maintStart = 120; // in seconds (here it is 2 minutes)
 
     /**
      * Constructor
@@ -72,6 +73,7 @@ public class RMMaintenanceMsg extends RMMessage implements Serializable
     }
     
     public void handleDeliverMessage( RMImpl rm) {
+	System.out.println("");
 	System.out.println("RMMaintenance message: at " + rm.getNodeId());
 	rm.periodicMaintenance();
     }
