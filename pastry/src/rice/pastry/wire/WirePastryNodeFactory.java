@@ -277,8 +277,14 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    * @return The proximity of the provided handle
    */
   public int getProximity(NodeHandle local, NodeHandle handle) {
+    WireNodeHandle lHandle = (WireNodeHandle) local;
     WireNodeHandle wHandle = (WireNodeHandle) handle;
 
+    // if this is a request for an old version of us, then we return
+    // infinity as an answer
+    if (lHandle.getAddress().equals(wHandle.getAddress()))
+      return Integer.MAX_VALUE;
+    
     if (wHandle.proximity() == DistNodeHandle.DEFAULT_DISTANCE) {
       try {
         long startTime = System.currentTimeMillis();

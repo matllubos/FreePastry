@@ -156,6 +156,7 @@ public class SocketChannelReader {
         byte[] objectArray = new byte[objectSize];
         buffer.get(objectArray);
         Object obj = deserialize(objectArray);
+        debug("Deserialized bytes into object " + obj);
         return obj;
       }
     }

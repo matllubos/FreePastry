@@ -370,9 +370,7 @@ public class Id implements rice.p2p.commonapi.Id {
    * @return The byte array representation of this id
    */
   public byte[] toByteArray() {
-    byte[] array = new byte[IdBitLength / 8];
-    blit(array);
-    return array;
+    return copy();
   }
 
   /**

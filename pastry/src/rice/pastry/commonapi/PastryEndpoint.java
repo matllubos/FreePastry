@@ -250,6 +250,8 @@ public class PastryEndpoint extends PastryAppl implements rice.p2p.commonapi.End
   // Upcall to Application support
 
   public final void messageForAppl(rice.pastry.messaging.Message msg) {
+    if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] deliver " + msg + " from " + msg.getSenderId());
+    
     if (msg instanceof PastryEndpointMessage) {
       // null for now, when RouteMessage stuff is completed, then it will be different!
       application.deliver(null, ((PastryEndpointMessage) msg).getMessage());
@@ -260,6 +262,7 @@ public class PastryEndpoint extends PastryAppl implements rice.p2p.commonapi.End
 
   public final boolean enrouteMessage(Message msg, Id key, NodeId nextHop, SendOptions opt) {
     if (msg instanceof RouteMessage) {
+      if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] forward " + msg);
       return application.forward((RouteMessage) msg);
     } else {
       return true;
@@ -293,6 +296,7 @@ public class PastryEndpoint extends PastryAppl implements rice.p2p.commonapi.End
       rice.pastry.routing.RouteMessage rm = (rice.pastry.routing.RouteMessage) msg;
 
       // call application
+      if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] forward " + msg);
       if (application.forward(rm)) {
         if (rm.nextHop != null) {
           rice.pastry.NodeHandle nextHop = rm.nextHop;
@@ -300,6 +304,7 @@ public class PastryEndpoint extends PastryAppl implements rice.p2p.commonapi.End
           // if the message is for the local node, deliver it here
           if (getNodeId().equals(nextHop.getNodeId())) {
             PastryEndpointMessage pMsg = (PastryEndpointMessage) rm.unwrap();
+            if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] deliver " + pMsg + " from " + pMsg.getSenderId());
             application.deliver(rm.getTarget(), pMsg.getMessage());
           }
           else {

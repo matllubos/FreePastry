@@ -212,7 +212,8 @@ public class SocketChannelWriter {
   public boolean write(SocketChannel sc) throws IOException {
     synchronized (queue) {
       if (buffer == null) {
-        if ((! waitingForGreeting) && (queue.size() > 0)) { 
+        if ((! waitingForGreeting) && (queue.size() > 0)) {
+          debug("About to serialize object " + queue.getFirst());
           buffer = serialize(queue.getFirst());
         } else {
           return true;
