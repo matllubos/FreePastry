@@ -82,7 +82,7 @@ public class EmailProxy extends PostProxy {
       stepDone(SUCCESS);
 
       stepStart("Starting IMAP server on port " + IMAP_PORT);
-      imap = new ImapServerImpl(IMAP_PORT, email, manager);
+      imap = new ImapServerImpl(IMAP_PORT, email, manager, PROXY);
       imap.start();
       stepDone(SUCCESS);
 
