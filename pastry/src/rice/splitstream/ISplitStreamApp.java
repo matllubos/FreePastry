@@ -5,6 +5,7 @@ package rice.splitstream;
  * to be notified of events.
  */
  public interface ISplitStreamApp{
+
    /**
     * This is a call back into the application
     * to notify it that one of the stripes was unable to

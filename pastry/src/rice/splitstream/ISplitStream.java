@@ -1,5 +1,6 @@
 package rice.splitstream;
 import rice.pastry.*;
+
 public interface ISplitStream{
 
    /**

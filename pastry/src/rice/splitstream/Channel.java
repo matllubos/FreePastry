@@ -4,25 +4,53 @@ import rice.scribe.*;
 import rice.pastry.security.*;
 import rice.pastry.*;
 public class Channel {
-
+   /**
+    * ChannelId for this channel 
+    */
    private ChannelId channelId = null;
-   private int numStripes = 0;
+   /**
+    * The number of stripes in this channel the node is currently
+    * subscribed to.
+    */
    private int subscribedStripes = 0;
+   /**
+    * The array of all subscribed stripes
+    */
    private Stripe[] stripes = null;
+   /**
+    * The stripeIds for all stripes in this channel.
+    */
    private StripeId[] stripeIds = null;
+   /**
+    * The total number of children on all stripes
+    * this node will support.
+    */
    private int outChannel = 0;
+   /**
+    * The instance of Scribe that this channel will use
+    * for messaging.
+    */
    private IScribe scribe = null;
-   private Credentials cred;
+   /**
+    * The credentials for this node, currently not used.
+    * Always set to null. Here as a placeholder 
+    */
+   private Credentials cred = null;
    private boolean isReady = false;
+   /**
+    * The bandwidth manager for this channel, responsible for 
+    * keeping track of the number of children, and then deciding
+    * when to take on children.
+    */
    private BandwidthManager bandwidthManager = null;
+
    /**
     * Constructor to Create a new channel
     *
     */
    public Channel(int numStripes, IScribe scribe, Credentials cred, BandwidthManager bandwidthManager){
-	this.numStripes = numStripes;
+
         this.subscribedStripes = numStripes;
- 	this.cred = cred;
 	this.scribe = scribe;
 	this.bandwidthManager = bandwidthManager;
 	/* register this channel with the bandwidthManager */
@@ -33,15 +61,17 @@ public class Channel {
 		this.channelId = (ChannelId) topicId;
         } 		
 	stripes = new Stripe[numStripes];
+        stripeIds = new StripeId[numStripes];
 	for(int i = 0; i < numStripes; i++){
 		stripes[i] = new Stripe(this, scribe, cred);
 		stripeIds[i] = stripes[i].getStripeId();
 	}
+        /* Send a create message to the node with responsible with the stripes*/
    }
+
    /**
     * Constructor to create a Channel when a channelID is known
     */ 
-  
    public Channel(ChannelId channelId, IScribe scribe, BandwidthManager bandwidthManager){
 	this.channelId = channelId;
 	this.bandwidthManager = bandwidthManager;
@@ -52,6 +82,7 @@ public class Channel {
  
 
    }
+  
   /**
    * Channel Object is responsible for managing local node's usage of
    * outgoing bandwidth and incoming bandwidth, which is indicated by number
@@ -64,6 +95,7 @@ public class Channel {
     this.outChannel = outChannel;
     bandwidthManager.adjustBandwidth(this, outChannel); 
   }
+ 
   /** 
    * A channel consists of a number of stripes. This number is determined
    * at the time of content creation. Note that a content receiver does not
@@ -73,6 +105,7 @@ public class Channel {
   public StripeId[] getStripes(){
 	return stripeIds;
   }
+
   /**
    * At any moment a node is subscribed to at least 1 but possibly
    * more stripes. They will always be subscribed to thier primary
@@ -82,6 +115,7 @@ public class Channel {
   public Stripe[] getSubscribedStripes(){
        return  stripes;
   }
+
   /**
    * The primary stripe is the stripe that the user must have.
    * @return Stripe The Strip object that is the primary stripe.
@@ -93,6 +127,7 @@ public class Channel {
     */
     return null;
   }
+
   /**
    * Returns whether the channel is currently ready 
    * @return boolean State of the channel 
@@ -130,12 +165,13 @@ public class Channel {
   public int getNumSubscribedStripes(){
      return subscribedStripes;
   }
+
  /**
   * Get the total number of stripes in this channel
   * @return the total number of stripes
   */
   public int getNumStripes(){
-     return numStripes;
+     return stripeIds.length;
   }
 }
 
