@@ -50,7 +50,7 @@ public class PostMailbox implements Mailbox {
 
   // TO DO
   public void put(MovingMessage msg) throws MailboxException {
-    getFolder("INBOX").put(msg);
+    getFolder("INBOX").put(msg, null, null);
   }
 
   /**
