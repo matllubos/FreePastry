@@ -192,7 +192,7 @@ public class PostImpl implements Post, Application, ScribeClient {
     this.previousAddress = previousAddress;
     
     this.scribe = new ScribeImpl(node, instance);
-    this.delivery = new DeliveryService(this, deliveryPast, deliveredPast, scribe, node.getIdFactory());
+    this.delivery = new DeliveryService(this, deliveryPast, deliveredPast, scribe, node.getIdFactory(), timeoutInterval);
     this.deliveryBuffer = new Vector();
 
     this.security = new SecurityService();

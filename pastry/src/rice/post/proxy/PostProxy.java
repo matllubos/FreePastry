@@ -871,7 +871,8 @@ public class PostProxy {
                                  parameters.getStringParameter("application_instance_name") + "-delivered");
     pendingPast = new DeliveryPastImpl(node, pendingStorage, 
                                        parameters.getIntParameter("past_replication_factor"), 
-                                       parameters.getStringParameter("application_instance_name") + "-pending", deliveredPast);
+                                       parameters.getStringParameter("application_instance_name") + "-pending", deliveredPast,
+                                       parameters.getLongParameter("past_garbage_collection_interval"));
     stepDone(SUCCESS);
   }
   

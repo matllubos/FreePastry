@@ -8,6 +8,7 @@ import rice.*;
 import rice.Continuation.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
+import rice.p2p.past.gc.*;
 import rice.p2p.scribe.*;
 
 import rice.post.*;
@@ -21,6 +22,11 @@ import rice.post.security.*;
  * @version $Id$
  */
 public class DeliveryService implements ScribeClient {
+  
+  /**
+   * The default timeout for delivery requests and receipts
+   */
+  protected long timeoutInterval;
 
   /**
    * The address of the user running this storage service.
@@ -59,13 +65,25 @@ public class DeliveryService implements ScribeClient {
    * @param credentials Credentials to use to store data.
    * @param keyPair The keypair to sign/verify data with
    */
-  public DeliveryService(PostImpl post, DeliveryPast pending, Past delivered, Scribe scribe, IdFactory factory) {
+  public DeliveryService(PostImpl post, DeliveryPast pending, Past delivered, Scribe scribe, IdFactory factory, long timeoutInterval) {
     this.post = post;
     this.pending = pending;
     this.delivered = delivered;
     this.scribe = scribe;
     this.factory = factory;
+    this.timeoutInterval = timeoutInterval;
     this.cache = new HashSet();
+  }
+  
+  /**
+   * Internal method which returns what the timeout should be for an
+   * object inserted now.  Basically, does System.currentTimeMillis() +
+   * timeoutInterval.
+   *
+   * @return The default timeout period for an object inserted now
+   */
+  protected long getTimeout() {
+    return System.currentTimeMillis() + timeoutInterval;
   }
   
   /**
@@ -79,7 +97,7 @@ public class DeliveryService implements ScribeClient {
   public void deliver(SignedPostMessage message, Continuation command) {
     post.getLogger().finer(post.getEndpoint().getId() + ": Delivering message " + message);
     
-    pending.insert(new Delivery(message, factory), command);
+    pending.insert(new Delivery(message, factory), getTimeout(), command);
   }
   
   /** 
@@ -136,16 +154,29 @@ public class DeliveryService implements ScribeClient {
     
     cache.add(receipt.getId());
     
-    delivered.insert(receipt, new StandardContinuation(command) {
-      public void receiveResult(Object o) {
-        parent.receiveResult(o);
-      }
-      
-      public void receiveException(Exception e) {
-        cache.remove(receipt.getId());
-        parent.receiveException(e);
-      }
-    });
+    if (delivered instanceof GCPast) {
+      ((GCPast) delivered).insert(receipt, getTimeout(), new StandardContinuation(command) {
+        public void receiveResult(Object o) {
+          parent.receiveResult(o);
+        }
+        
+        public void receiveException(Exception e) {
+          cache.remove(receipt.getId());
+          parent.receiveException(e);
+        }
+      });
+    } else {
+      delivered.insert(receipt, new StandardContinuation(command) {
+        public void receiveResult(Object o) {
+          parent.receiveResult(o);
+        }
+        
+        public void receiveException(Exception e) {
+          cache.remove(receipt.getId());
+          parent.receiveException(e);
+        }
+      });
+    }
   }
   
   /**

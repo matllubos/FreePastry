@@ -44,6 +44,7 @@ import rice.post.*;
 import rice.post.messaging.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
+import rice.p2p.past.gc.*;
 import rice.persistence.*;
 
 /**
@@ -56,7 +57,7 @@ import rice.persistence.*;
  *
  * @author Alan Mislove
  */
-public class DeliveryPastImpl extends PastImpl implements DeliveryPast {
+public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
   
   protected HashMap cache;
 
@@ -74,8 +75,8 @@ public class DeliveryPastImpl extends PastImpl implements DeliveryPast {
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
    */
-  public DeliveryPastImpl(Node node, StorageManager manager, int replicas, String instance, PastImpl delivered) {
-    super(node, manager, replicas, instance + "-delivery");
+  public DeliveryPastImpl(Node node, StorageManager manager, int replicas, String instance, PastImpl delivered, long collectionInterval) {
+    super(node, manager, replicas, instance + "-delivery", new PastPolicy.DefaultPastPolicy(), collectionInterval);
     
     this.delivered = delivered;
     this.cache = new HashMap();
@@ -118,10 +119,15 @@ public class DeliveryPastImpl extends PastImpl implements DeliveryPast {
         if (! (new Boolean(true)).equals(o))
           log.warning(endpoint.getId() + ": Removal of delivered message caused " + o);
         
-        i = scan(endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor(), null, true)).getIterator();
+        log.finer(endpoint.getId() + ": Synchronizing range " + endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor(), null, true));
+
+        
+        i = storage.getStorage().scan(endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor(), null, true)).getIterator();
         
         while (i.hasNext()) {
           Id id = (Id) i.next();
+          log.finer(endpoint.getId() + ": Synchronizing " + id);
+
           if (delivered.exists(id)) {
             log.finer(endpoint.getId() + ": Deleting id " + id + " because receipt exists");
             storage.unstore(id, this);
@@ -145,19 +151,23 @@ public class DeliveryPastImpl extends PastImpl implements DeliveryPast {
    */
   public void getGroups(final Continuation command) {
     syncCache();
+    
+    log.finer("Getting list of groups...");
   
-    final Vector result = new Vector();
-    final Iterator i = scan(endpoint.range(endpoint.getLocalNodeHandle(), 0, null, true)).getIterator();
+    final Id[] array = storage.getStorage().scan(endpoint.range(endpoint.getLocalNodeHandle(), 0, null, true)).asArray();
     
     Continuation c = new StandardContinuation(command) {
+      int i=0;
+      Vector result = new Vector();
+      
       public void receiveResult(Object o) {
-        if (o != null) {        
-          if (! result.contains(o))
-            result.add(o);
+        if ((o != null) && (! result.contains(o))) {
+          result.add(o);
+          log.finer("Adding " + o + " to the list of groups...");
         }
         
-        if (i.hasNext())
-          getUser((Id) i.next(), this);
+        if (i < array.length)
+          getUser(array[i++], this);
         else
           parent.receiveResult(result.toArray(new PostEntityAddress[0]));
       }
@@ -174,7 +184,7 @@ public class DeliveryPastImpl extends PastImpl implements DeliveryPast {
    * @param command The command to return the results to
    */
   public void getMessage(final PostEntityAddress address, final Continuation command) {
-    final Id[] array = scan(endpoint.range(endpoint.getLocalNodeHandle(), 0, null, true)).asArray();
+    final Id[] array = storage.getStorage().scan(endpoint.range(endpoint.getLocalNodeHandle(), 0, null, true)).asArray();
     
     if (array.length == 0) {
       command.receiveResult(null);
@@ -212,7 +222,7 @@ public class DeliveryPastImpl extends PastImpl implements DeliveryPast {
    * scan(disk) - cache's set.
    */
   protected void syncCache() {
-    Iterator i = difference(cache.keySet(), scan()).getIterator();
+    Iterator i = difference(cache.keySet(), storage.getStorage().scan()).getIterator();
     
     while (i.hasNext()) 
       cache.remove(i.next());

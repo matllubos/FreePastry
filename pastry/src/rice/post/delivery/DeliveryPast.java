@@ -39,6 +39,7 @@ package rice.post.delivery;
 import rice.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
+import rice.p2p.past.gc.*;
 import rice.post.*;
 
 /**
@@ -49,7 +50,7 @@ import rice.post.*;
  * @author Ansley Post
  * @author Peter Druschel
  */
-public interface DeliveryPast extends Past {
+public interface DeliveryPast extends GCPast {
   
   /**
    * Method which periodically checks to see if we've got receipts for
