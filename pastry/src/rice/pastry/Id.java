@@ -79,9 +79,8 @@ public class Id implements rice.p2p.commonapi.Id
     public Id(byte material[]) 
     {
 	Id = new int[nlen];
-	for (int i=0; i<nlen; i++) Id[i] = 0;
 
-	for (int j=0; j<IdBitLength/8; j++) {
+	for (int j=0; (j<IdBitLength/8) && (j<material.length); j++) {
 	    int k = material[j] & 0xff;
 	    Id[j / 4] |= k << ((j % 4) * 8);
 	}
@@ -95,7 +94,7 @@ public class Id implements rice.p2p.commonapi.Id
     public Id(int material[]) 
     {
 	Id = new int[nlen];
-	for (int i=0; i<nlen; i++) Id[i] = material[i];
+	for (int i=0; (i<nlen) && (i<material.length); i++) Id[i] = material[i];
     }
 
     /**
