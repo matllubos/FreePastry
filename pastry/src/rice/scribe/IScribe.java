@@ -40,6 +40,9 @@ package rice.scribe;
 import rice.pastry.security.Credentials;
 import rice.pastry.messaging.Message;
 import rice.pastry.NodeId;
+import rice.pastry.NodeHandle;
+
+import java.util.Vector;
 
 /**
  * @(#) IScribe.java
@@ -171,6 +174,28 @@ public interface IScribe
      * @return the TopicId
      */
     public NodeId generateTopicId(String topicName);
+
+
+    /** 
+     * Returns the local node's parent in this topic's multicast
+     * tree.
+     *
+     * @param topicId
+     * The id of the topic.
+     * @return the parent node.
+     */
+    public NodeHandle getParent(NodeId topicId);
+
+    /** 
+     * This returns the most current view of the children in this 
+     * topic's multicast subtree rooted at the local node. 
+     *
+     * @param topicId
+     * The id of the topic.
+     *
+     * @return vector of children nodehandles.
+     */
+    public Vector getChildren(NodeId topicId);
 
 }
 

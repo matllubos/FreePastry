@@ -36,6 +36,7 @@ if advised of the possibility of such damage.
 
 package rice.scribe;
 
+import rice.pastry.NodeHandle;
 import rice.scribe.messaging.ScribeMessage;
 
 /**
@@ -92,8 +93,11 @@ public interface IScribeApp
      *
      * @param msg 
      * The SUBSCRIBE message that is sent to repair the multicast tree.
+     *
+     * @param faultyParent
+     * The suspected faulty parent.
      */
-    public void faultHandler( ScribeMessage msg );
+    public void faultHandler( ScribeMessage msg, NodeHandle faultyParent );
     
 }
 

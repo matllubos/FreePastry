@@ -1060,6 +1060,46 @@ public class Scribe extends PastryAppl implements IScribe
     }
 
 
+    /** 
+     * Returns the local node's parent in this topic's multicast
+     * tree.
+     *
+     * @param topicId
+     * The id of the topic.
+     * @return the parent node.
+     */
+    public NodeHandle getParent(NodeId topicId) {
+	Topic topic;
+	NodeHandle parent;
+	
+	topic = getTopic(topicId);
+	if(topic == null) 
+	    return null;
+	parent = topic.getParent();
+	return parent;
+    }
+
+
+    /** 
+     * This returns the most current view of the children in this 
+     * topic's multicast subtree rooted at the local node. 
+     *
+     * @param topicId
+     * The id of the topic.
+     *
+     * @return vector of children nodehandles.
+     */
+    public Vector getChildren(NodeId topicId) {
+	Topic topic;
+	Vector children;
+
+	topic = getTopic(topicId);
+	if(topic == null)
+	    return null;
+	children = topic.getChildren();
+	return children;
+    }
+    
 }
 
 

@@ -126,6 +126,14 @@ public class MessageReplyFromParent extends ScribeMessage implements Serializabl
 		    topic = scribe.getTopic(topicId);
 		    topic.setParent(null);
 		    topic.postponeParentHandler();
+		    
+		    // Inform all interested applications
+		    IScribeApp[] apps = topic.getApps();
+		    for ( int k=0; k<apps.length; k++ ) {
+			apps[k].faultHandler( msg, m_source );
+		    } 
+
+
 		    scribe.routeMsg( topicId, msg, cred, opt );     
 		}
 	    }

@@ -217,7 +217,7 @@ public class ScribeMaintainer
 	// Inform all interested applications
 	IScribeApp[] apps = topic.getApps();
 	for ( int i=0; i<apps.length; i++ ) {
-	    apps[i].faultHandler( msgs );
+	    apps[i].faultHandler( msgs, prev_parent );
 	}
 
 	// now, send a subscribe message

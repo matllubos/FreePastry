@@ -103,7 +103,7 @@ public class ScribeMaintenanceTestApp implements IScribeApp
     /**
      * up-call invoked by scribe when a node detects a failure from its parent.
      */
-    public void faultHandler( ScribeMessage msg ) {
+    public void faultHandler( ScribeMessage msg, NodeHandle parent ) {
 	/*
 	System.out.println("Node:" + getNodeId() + " App:"
                                 + m_app + " handling fault: " + msg);
