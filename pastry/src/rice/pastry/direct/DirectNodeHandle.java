@@ -45,9 +45,10 @@ import rice.pastry.messaging.*;
  * @version $Id$
  *
  * @author Andrew Ladd
+ * @author Rongmei Zhang/Y. Charlie Hu
  */
 
-class DirectNodeHandle implements NodeHandle
+public class DirectNodeHandle implements NodeHandle
 {
     private PastryNode localNode;
     private PastryNode remoteNode;
@@ -76,5 +77,8 @@ class DirectNodeHandle implements NodeHandle
 	    System.out.println("DirectNodeHandle: attempt to send message to a dead node!");
 
 	simulator.deliverMessage(msg, remoteNode); 
+    }
+    public NetworkSimulator getSimulator(){
+	return simulator;
     }
 }

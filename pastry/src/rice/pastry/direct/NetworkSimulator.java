@@ -45,6 +45,7 @@ import rice.pastry.messaging.*;
  * @version $Id$
  *
  * @author Andrew Ladd
+ * @author Rongmei Zhang/Y. Charlie Hu
  */
 
 public interface NetworkSimulator 
@@ -92,6 +93,9 @@ public interface NetworkSimulator
      *
      * @return true if a message was delivered, false otherwise.
      */
+
+    public void setTestRecord( TestRecord tr );
+    public TestRecord getTestRecord();
 
     public boolean simulate();
 }

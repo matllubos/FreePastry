@@ -48,6 +48,7 @@ import java.lang.*;
  * @version $Id$
  *
  * @author Andrew Ladd
+ * @author Rongmei Zhang/Y. Charlie Hu
  */
 
 public class EuclideanNetwork implements NetworkSimulator 
@@ -55,6 +56,8 @@ public class EuclideanNetwork implements NetworkSimulator
     private Random rng;
     private HashMap nodeMap;
     private Vector msgQueue;
+
+    private TestRecord testRecord;
 
     private class MessageDelivery {
 	private Message msg;
@@ -100,6 +103,7 @@ public class EuclideanNetwork implements NetworkSimulator
 	rng = new Random();
 	nodeMap = new HashMap();
 	msgQueue = new Vector();
+	testRecord = null;
     }
     
     public void registerNodeId(NodeId nid)
@@ -151,5 +155,11 @@ public class EuclideanNetwork implements NetworkSimulator
 	md.deliver();
 	
 	return true;
+    }
+    public void setTestRecord( TestRecord tr ){
+	testRecord = tr;
+    }
+    public TestRecord getTestRecord(){
+	return testRecord;
     }
 }
