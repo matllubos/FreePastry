@@ -100,7 +100,7 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
 	    StripeId stripeId = send.getStripes()[i];
 	    Stripe stripe = send.joinStripe(stripeId, this);
 	    OutputStream out = stripe.getOutputStream();
-	    //System.out.println("Sending on Stripe " + stripeId);
+	    System.out.println("Sending on Stripe " + stripeId);
 	    byte[] toSend = "Hello".getBytes() ;
 	    try{
 		out.write(toSend, 0, toSend.length );
@@ -121,6 +121,14 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
 	while(channel.getNumSubscribedStripes() < channel.getNumStripes()){
 	    Stripe stripe = channel.joinAdditionalStripe(this);
 	}
+    }
+
+    public void splitstreamIsReady(){
+
+    }
+
+    public void channelIsReady(ChannelId channelId){
+	// upcall from channel object saying that it is ready.
     }
 
     public boolean channelReady(ChannelId channelId){

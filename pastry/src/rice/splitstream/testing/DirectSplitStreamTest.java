@@ -39,7 +39,7 @@ public class DirectSplitStreamTest{
     private Vector channelIds;
     private Random rng;
     private RandomNodeIdFactory idFactory;
-    private static int numNodes = 500;
+    private static int numNodes = 50;
     private static int port = 5009;
     private static String bshost;
     private static int bsport = 5009;
@@ -62,7 +62,7 @@ public class DirectSplitStreamTest{
 
 	System.out.println("SplitStream Test Program v0.4");
 	PastrySeed.setSeed((int)System.currentTimeMillis());
-	//PastrySeed.setSeed( -687899135 );
+	//PastrySeed.setSeed( -582060735 );
 	System.out.println(PastrySeed.getSeed() );
 	DirectSplitStreamTest test = new DirectSplitStreamTest();
 	test.init();
@@ -102,7 +102,7 @@ public class DirectSplitStreamTest{
 	else
 	    System.out.println("\n\nCHANNEL-TREE MEMBERSHIP TEST : Failed \n\n");
 
-
+	result &= passed;
 
 	System.out.println("All nodes are joining all stripes");
 	test.join();
@@ -112,7 +112,6 @@ public class DirectSplitStreamTest{
 	 * TEST 2
 	 * Checking if all nodes are part of all the stripes give channelId.
 	 */
-	result = passed;
 	passed =  test.checkAllStripeTrees(channelId);
 
 	if(passed)
@@ -120,6 +119,7 @@ public class DirectSplitStreamTest{
 	else
 	    System.out.println("\n\nSTRIPE-TREE MEMBERSHIP TEST : FAILED \n\n");
 
+	result &= passed;
 
 	/**
 	 * TEST 3 
@@ -131,8 +131,8 @@ public class DirectSplitStreamTest{
 	 */
 	test.send(channelId, 0);
 	while(test.simulate());
+	while(test.simulate());
 
-	result = passed;
 	passed =  test.checkSend(channelId);
 
 	if(passed)
@@ -140,7 +140,7 @@ public class DirectSplitStreamTest{
 	else
 	    System.out.println("\n\nSEND-DATA TEST : FAILED \n\n");
 
-
+	result &= passed;
 	/*	
 	test.send(content);
 	while(test.simulate());
