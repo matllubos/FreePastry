@@ -72,4 +72,5 @@ public class Stripe extends Observable implements IScribeApp{
                                   NodeHandle child, boolean wasAdded){}
     public static final int STRIPE_VALID = 0;
     public static final int STRIPE_INVALID = 1;
+    public static final int STRIPE_DROPPED = 2;
 }
