@@ -1019,24 +1019,6 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       aggregateStore.insert(aggr, c);
   }
 
-  private VersionKey getMostCurrentWaiting(IdSet waitingKeys, Id id) {
-
-    VersionKey highestVersion = null;
-    if (id != null) {
-      Iterator iter = waitingKeys.getIterator();
-
-      while (iter.hasNext()) {
-        VersionKey thisKey = (VersionKey) iter.next();
-        if (thisKey.getId().equals(id)) {
-          if ((highestVersion == null) || (highestVersion.getVersion() < thisKey.getVersion()))
-            highestVersion = thisKey;
-        }
-      }
-    }
-    
-    return highestVersion;
-  }    
-
   private void flushComplete(Object o) {
     if (flushWait != null) {
       Continuation c = flushWait;
@@ -1438,6 +1420,29 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         
       refreshInObjectStore(id, expiration, command);
     } else {
+    
+      IdSet waitingIds = waitingList.scan();
+      if (waitingIds.isMemberId(id)) {
+        ObjectDescriptor thisObject = (ObjectDescriptor) waitingList.getMetadata(id);
+        log(2, "Refreshing in waiting list");
+
+        if (thisObject.refreshedLifetime < expiration) {
+          thisObject.refreshedLifetime = expiration;
+          waitingList.setMetadata(id, thisObject, new Continuation() {
+            public void receiveResult(Object o) {
+              log(3, "Refreshed metadata written ok for "+id.toStringFull());
+            }
+            public void receiveException(Exception e) {
+              warn("Cannot refresh waiting object "+id.toStringFull()+", e="+e);
+              e.printStackTrace();
+            }
+          });
+          
+        }
+        
+        refreshInObjectStore(id, expiration, command);
+        return;
+      }
     
       /* Maybe the object is missing from the aggregate list? We attempt to fetch it 
          from PAST, and if it is found there, we add it to the waiting list */
