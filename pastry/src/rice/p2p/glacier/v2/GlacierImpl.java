@@ -1389,19 +1389,26 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                     new GlacierDataMessage(getMyUID(), grm.getKey(0), null, manifests[fragmentID], getLocalNodeHandle(), grm.getSource().getId(), false, tag),
                     grm.getSource()
                   );
+
+                  /* Refreshes are not acknowledged */
+
+                  if (doRefresh) {
+                    receiptReceived[fragmentID] = true;
+                    if ((numReceiptsReceived() >= minAcceptable) && !answered) {
+                      answered = true;
+                      reportSuccess();
+                    }
+                  }
                 } else {
                   warn("Received two refresh responses for the same fragment -- discarded");
                 }
               } else if (grm.getHaveIt(0) && (grm.getExpiration(0) >= expiration)) {
-                if ((holder[fragmentID] != null) && (holder[fragmentID].equals(grm.getSource()))) {
-                  log(3, "Receipt received after "+whoAmI()+": "+grm.getKey(0));
-                  receiptReceived[fragmentID] = true;
-                  if ((numReceiptsReceived() >= minAcceptable) && !answered) {
-                    answered = true;
-                    reportSuccess();
-                  }
-                } else { 
-                  warn("Receipt received from another source (expecting "+holder[fragmentID]+")");
+                /* Check sender of the receipt? */
+                log(3, "Receipt received after "+whoAmI()+": "+grm.getKey(0));
+                receiptReceived[fragmentID] = true;
+                if ((numReceiptsReceived() >= minAcceptable) && !answered) {
+                  answered = true;
+                  reportSuccess();
                 }
               }
             } else {
@@ -2165,7 +2172,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                 log(3, fkey+" @"+thisPos+" - TOO FRESH (stored "+(System.currentTimeMillis()-metadata.getStoredSince())+"ms)");
               }
             } else {
-              log(4, fkey+" @"+thisPos+" - EXPIRES SOON (in "+(metadata.getCurrentExpiration()-System.currentTimeMillis())+"ms)");
+              log(3, fkey+" @"+thisPos+" - EXPIRES SOON (in "+(metadata.getCurrentExpiration()-System.currentTimeMillis())+"ms)");
             }
           } else {
             log(4, fkey+" @"+thisPos+" - OK");
