@@ -8,7 +8,7 @@ import rice.pastry.NodeId;
  * This interface contains the functionality of Scribe.
  *
  * @author Romer Gil
- *
+ * @author Eric Engineer
  */
 
 public interface IScribe

@@ -18,6 +18,7 @@ import rice.scribe.maintenance.*;
  * Main entry point for the Scribe System
  *
  * @author Romer Gil
+ * @author Eric Engineer
  */
 public class Scribe extends PastryAppl implements IScribe
 {
@@ -70,15 +71,13 @@ public class Scribe extends PastryAppl implements IScribe
      */
     ScribeScheduler m_scheduler;
 
-    private NetworkSimulator m_simulator;
-
     /**
      * Constructor.
      *
      * @param pn the pastry node that client will attach to.
      * @param app the Scribe application sitting on top of the Scribe system.
      */
-    public Scribe( PastryNode pn, IScribeApp app, Credentials cred, NetworkSimulator simulator ) {
+    public Scribe( PastryNode pn, IScribeApp app, Credentials cred ) {
 	super( pn );
 	m_topics = new HashMap();
 	m_sendOptions = new SendOptions();
@@ -86,7 +85,6 @@ public class Scribe extends PastryAppl implements IScribe
 	m_scheduler = new ScribeScheduler( this, 20*1000, 30*1000 );
 	m_credentials = cred;
 	m_scribeApp = app;
-	m_simulator = simulator;
 	
 	if( cred == null ) {
 	    m_credentials = new PermissiveCredentials();
@@ -234,8 +232,6 @@ public class Scribe extends PastryAppl implements IScribe
 
 	NodeId topicId = smsg.getTopicId();
 	Topic topic = (Topic)m_topics.get( topicId );
-
-	System.out.println( "messageForAppl " + smsg );
 
 	smsg.handleDeliverMessage( this, topic );
     }
@@ -409,33 +405,5 @@ public class Scribe extends PastryAppl implements IScribe
     public ScribeMessage makeHeartBeatMessage( NodeId tid, Credentials c ) {
 	return new MessageHeartBeat( m_address, this.thePastryNode, tid, c );
     }
-
-
-    public boolean routeMsgDirect(NodeHandle dest, Message msg, Credentials cred, SendOptions opt) {
-	boolean val = super.routeMsgDirect( dest, msg, cred, opt );
-	while (m_simulator.simulate());
-	System.out.println( "routeMsgDirect: "+msg+" dest: "+dest );
-	return val;
-    }
-    
-    
-    /**
-     * Routes a message to the live node D with nodeId numerically
-     * closest to key (at the time of delivery).  The message is
-     * delivered to the application with address addr at D, and at
-     * each Pastry node encountered along the route to D.
-     *
-     * @param key the key
-     * @param msg the message to deliver.
-     * @param cred credentials that verify the authenticity of the message.
-     * @param opt send options that describe how the message is to be routed.  
-     */
-
-    public void routeMsg(NodeId key, Message msg, Credentials cred, SendOptions opt) {
-	super.routeMsg( key, msg, cred, opt );
-	while (m_simulator.simulate());
-    }
-
-
 }
 

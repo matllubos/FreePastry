@@ -8,6 +8,7 @@ import rice.scribe.messaging.ScribeMessage;
  * happens in the scribe application layer.
  *
  * @author Romer Gil
+ * @author Eric Engineer
  */
 
 public interface IScribeApp

@@ -8,6 +8,7 @@ import rice.scribe.maintenance.*;
  * Data structure used by a node to represent a topic
  *
  * @author Romer Gil
+ * @author Eric Engineer
  */
 
 public class Topic

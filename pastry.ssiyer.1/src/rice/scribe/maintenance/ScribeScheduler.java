@@ -4,6 +4,9 @@ import rice.scribe.*;
 
 import java.util.*;
 
+/**
+ * 
+ */
 class Scheduler 
 {
     protected Timer m_timer;
@@ -64,6 +67,11 @@ class Scheduler
     }
 }
 
+/**
+ * Scheduler that is used to invoke all the maintenance events in Scribe. It 
+ * is represented as two separate threads that each maintain different types
+ * of events, that occur with different frequencies.
+ */
 public class ScribeScheduler 
 {
     private HeartBeatScheduler m_hbScheduler;
@@ -76,31 +84,54 @@ public class ScribeScheduler
 	m_scribe = scribe;
     }
 
+    /**
+     * Schedules a heartbeat for the given topic.
+     */
     public void scheduleHB( Topic topic ) {
 	HeartBeatEvent ev = new HeartBeatEvent( m_scribe, topic, this );
 	m_hbScheduler.schedule( ev );
     }
 
+    /**
+     * Schedules a tree repair for the given topic.
+     */
     public void scheduleTR( Topic topic ) {
 	TreeRepairEvent ev = new TreeRepairEvent( m_scribe, topic, this );
 	m_trScheduler.schedule( ev );
     }
 
+    /**
+     * Cancels the heartbeat event related to the given topic.
+     */
     public void cancelHB( Topic topic ) {
 	HeartBeatEvent ev = new HeartBeatEvent( m_scribe, topic, this  );
 	m_hbScheduler.cancel( ev );
     }
 
+    /**
+     * Cancels the tree repair event related to the given topic.
+     */
     public void cancelTR( Topic topic ) {
 	TreeRepairEvent ev = new TreeRepairEvent( m_scribe, topic, this  );
 	m_trScheduler.cancel( ev );
     }
 
+    /**
+     * Invoked after the heartbeat is done and need to schedule the next event
+     *
+     * @param topic the topic where the event works. 
+     */
     public void heartBeatFinished( Topic topic ) {
 	HeartBeatEvent ev = new HeartBeatEvent( m_scribe, topic, this  );
 	m_hbScheduler.eventFinished( ev );
     }
 
+    /**
+     * Invoked after the tree repair is done and need to schedule the next 
+     * event
+     *
+     * @param topic the topic where the event works. 
+     */
     public void treeRepairFinished( Topic topic ) {
 	TreeRepairEvent ev = new TreeRepairEvent( m_scribe, topic, this  );
 	m_trScheduler.eventFinished( ev );

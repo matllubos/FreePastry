@@ -8,13 +8,29 @@ import rice.pastry.routing.*;
 
 import java.util.*;
 
+/**
+ * MaintenanceEvent that is invoked by every node to send the heartbeat
+ * messages to their children.
+ *
+ * @author Romer Gil
+ */
 public class HeartBeatEvent extends MaintenanceEvent
 {
+    /**
+     * Constructor
+     *
+     * @param scribe the Scribe system.
+     * @param topic the topic on which this event operates.
+     * @param the scheduler object that will reinvoke this event in the future.
+     */
     public 
 	HeartBeatEvent( Scribe scribe, Topic topic, ScribeScheduler sched ) {
 	super( scribe, topic, sched );
     }
 
+    /**
+     * Method that is invoked by the java Timer object in the scheduler.
+     */
     public void run() {
 	NodeId topicId = m_topic.getTopicId();
 	Credentials cred = m_scribe.getCredentials();
@@ -25,11 +41,9 @@ public class HeartBeatEvent extends MaintenanceEvent
 	// send message to all children in multicast subtree
 	Iterator it = m_topic.getChildren().iterator();
 
-	System.out.println( m_scribe.getNodeHandle() + "***************************************HEARTBEATEVENT**********************");
-	
 	while ( it.hasNext() ) {
 	    NodeHandle nhandle = (NodeHandle)it.next();
-	    System.out.println(m_scribe.getNodeHandle()+" HAD CHILDREN "+nhandle);
+
 	    if( !m_scribe.routeMsgDirect( nhandle, msgh, cred, opt ) ) {
 		
 		/*if we are here, the child didnt respond so it is discarded*/
