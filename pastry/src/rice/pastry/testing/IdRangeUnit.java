@@ -122,7 +122,6 @@ public class IdRangeUnit {
 	if (!m1.equals(m2) && (!i1.isEmpty() || r1.isAdjacent(r2)) && !r1.isEmpty()) 
 	    System.out.println("ALERT: merge is not symmetric 1" + r1 + r2 + m1 + m2);
 
-
 	boolean intersect = !i1.isEmpty();
 	boolean adjacent =  r1.isAdjacent(r2);
 	boolean intersectOrAdjacent = intersect || adjacent;
@@ -162,17 +161,123 @@ public class IdRangeUnit {
     }
 
 
-    public void diffSubtactTest() {
+    public void diffSubtractTest(IdRange r1, IdRange r2) {
+
+	IdRange d1 = r1.diff(r2);
+	IdRange d2 = r2.diff(r1);
+
+	IdRange i1 = r1.intersect(r2);
+	IdRange i2 = r2.intersect(r1);
+
+	if ( !d1.intersect(i1).isEmpty() || !d1.intersect(i2).isEmpty() ||
+	     !d2.intersect(i1).isEmpty() || !d2.intersect(i2).isEmpty() ) 
+	     System.out.println("ALERT: diff error 1." + r1 + r2 + d1 + d2 + i1 + i2);
+
+	// try to reconstitute
+	IdRange re1 = d1;
+	IdRange re2 = d2;
+	for (int i=0; i<3; i++) {
+	    re1 = re1.merge(d1);
+	    re1 = re1.merge(i1);
+	    re1 = re1.merge(d2);
+	    re1 = re1.merge(i2);
+	    re2 = re2.merge(d1);
+	    re2 = re2.merge(i1);
+	    re2 = re2.merge(d2);
+	    re2 = re2.merge(i2);
+	}
+	IdRange r12 = r1.merge(r2);
+
+	if ( (!re1.equals(r1) && !re1.equals(r2) && !re1.equals(r12)) ||
+	     (!re2.equals(r1) && !re2.equals(r2) && !re2.equals(r12)) )
+	    System.out.println("ALERT: diff error 2." + r1 + r2 + d1 + d2 + i1 + i2 + re1 + re2);
 
 
+	d1 = r1.subtract(r2, false);
+	d2 = r1.subtract(r2, true);
 
+	if ( !d1.intersect(i1).isEmpty() || !d1.intersect(i2).isEmpty() ||
+	     !d2.intersect(i1).isEmpty() || !d2.intersect(i2).isEmpty() ) 
+	     System.out.println("ALERT: subtract error 1." + r1 + r2 + d1 + d2 + i1 + i2);
+
+	if ( (!d1.isEmpty() && d1.intersect(r1).isEmpty()) || (!d2.isEmpty() && d2.intersect(r1).isEmpty()) ) 
+	     System.out.println("ALERT: subtract error 2." + r1 + r2 + d1 + d2);
+
+
+	// try to reconstitute
+	re1 = d1;
+	re2 = d2;
+	for (int i=0; i<3; i++) {
+	    re1 = re1.merge(d1);
+	    re1 = re1.merge(i1);
+	    re1 = re1.merge(d2);
+	    re1 = re1.merge(i2);
+	    re2 = re2.merge(d1);
+	    re2 = re2.merge(i1);
+	    re2 = re2.merge(d2);
+	    re2 = re2.merge(i2);
+	}
+	r12 = r1.merge(r2);
+
+	if ( !re1.equals(r1) && !re2.equals(r1) )
+	    System.out.println("ALERT: subtract error 25." + r1 + r2 + d1 + d2 + i1 + i2 + re1 + re2);
+
+
+	d1 = r2.subtract(r1, false);
+	d2 = r2.subtract(r1, true);
+
+	if ( !d1.intersect(i1).isEmpty() || !d1.intersect(i2).isEmpty() ||
+	     !d2.intersect(i1).isEmpty() || !d2.intersect(i2).isEmpty() ) 
+	     System.out.println("ALERT: subtract error 3." + r1 + r2 + d1 + d2 + i1 + i2);
+
+	if ( (!d1.isEmpty() && d1.intersect(r2).isEmpty()) || (!d2.isEmpty() && d2.intersect(r2).isEmpty()) ) 
+	     System.out.println("ALERT: subtract error 4." + r1 + r2 + d1 + d2);
+
+
+	// try to reconstitute
+	re1 = d1;
+	re2 = d2;
+	for (int i=0; i<3; i++) {
+	    re1 = re1.merge(d1);
+	    re1 = re1.merge(i1);
+	    re1 = re1.merge(d2);
+	    re1 = re1.merge(i2);
+	    re2 = re2.merge(d1);
+	    re2 = re2.merge(i1);
+	    re2 = re2.merge(d2);
+	    re2 = re2.merge(i2);
+	}
+	r12 = r1.merge(r2);
+
+	if ( !re1.equals(r2) && !re2.equals(r2) )
+	    System.out.println("ALERT: subtract error 5." + r1 + r2 + d1 + d2 + i1 + i2 + re1 + re2);
 
     }
+
+    public void mergeTest(IdRange r1, IdRange r2) {
+
+	IdRange ccw = r1.ccwHalf();
+	IdRange cw = r1.cwHalf();
+
+	if (!ccw.intersect(cw).isEmpty()) System.out.println("ALERT: ccw and cw halves intersect."  + r1 + ccw + cw);
+	if (!r1.equals(ccw.merge(cw))) System.out.println("ALERT: merge cw/ccw failure."  + r1 + ccw + cw);
+	    
+
+	ccw = r2.ccwHalf();
+	cw = r2.cwHalf();
+
+	if (!ccw.intersect(cw).isEmpty()) System.out.println("ALERT: ccw and cw halves intersect."  + r2 + ccw + cw);
+	if (!r2.equals(ccw.merge(cw))) System.out.println("ALERT: merge cw/ccw failure."  + r2 + ccw + cw);
+
+    }
+
 
 
     public IdRangeUnit() 
     {
 	rng = new Random(PastrySeed.getSeed());
+
+	System.out.println("IdRangeUnit test starting...");
 
 	for (int i=0; i<1000; i++) {
 	    IdRange r1 = createEmptyIdRange();
@@ -180,16 +285,22 @@ public class IdRangeUnit {
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createFullIdRange();
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createRandomIdRange();
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 	
 
 	    //
@@ -197,16 +308,22 @@ public class IdRangeUnit {
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createFullIdRange();
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createEmptyIdRange();
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 
 	    //
@@ -214,31 +331,43 @@ public class IdRangeUnit {
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createIdRangeStartingWith(r1.getCW());
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createIdRangeStartingWith(r1.getCCW());
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createIdRangeEndingIn(r1.getCW());
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createIdRangeEndingIn(r1.getCCW());
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = r1.complement();
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 
 	    //
@@ -246,55 +375,77 @@ public class IdRangeUnit {
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createIdRangeStartingWith(r1.getCW());
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createIdRangeStartingWith(r1.getCCW());
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createIdRangeEndingIn(r1.getCW());
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createIdRangeEndingIn(r1.getCCW());
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
-
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 	    
+
 	    // 
 	    r1 = createEmptyIdRange();
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createIdRangeStartingWith(r1.getCW());
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createIdRangeStartingWith(r1.getCCW());
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createIdRangeEndingIn(r1.getCW());
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	    r2 = createIdRangeEndingIn(r1.getCCW());
 
 	    equalityTest(r1, r2);
 	    mergeIntersectTest(r1, r2);
+	    diffSubtractTest(r1, r2);
+	    mergeTest(r1, r2);
 
 	}
+
+	System.out.println("IdRangeUnit test finished.");
 
     }
     

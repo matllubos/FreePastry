@@ -55,8 +55,10 @@ import java.util.*;
 public class Id implements rice.p2p.commonapi.Id
 {
     // Distance constants
-    private static int[] One = {1,0,0,0,0};
-    private static int[] NegOne = {-1,-1,-1,-1,-1};
+    public static final int[] Null = {0,0,0,0,0};
+    public static final int[] One = {1,0,0,0,0};
+    public static final int[] NegOne = {-1,-1,-1,-1,-1};
+    public static final int[] Half = {0x80,0,0,0,0};
 
     /**
      * This is the bit length of the node ids.  If it is n, then

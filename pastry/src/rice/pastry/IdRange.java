@@ -82,7 +82,6 @@ public class IdRange implements rice.p2p.commonapi.IdRange {
 	this.cw = o.cw;
     }
 
-
     /**
      * equality operator
      *
@@ -308,81 +307,13 @@ public class IdRange implements rice.p2p.commonapi.IdRange {
     }
 
     /**
-     * compute the difference between two ranges 
-     * (exclusive or of keys in the two ranges)
-     *
-     * @param o the other range
-     * @param cwPart if true, returns the clockwise part of the range difference, else the counterclockwise part
-     * @return the result range
-     */
-     public IdRange diff_old(IdRange o, boolean cwPart) {
-
-	 if (equals(o)) return new IdRange();
-
-	 if (ccw.equals(cw)) {
-	     if (empty) return o;
-	     else return o.complement();
-	 }
-
-	 if (o.ccw.equals(o.cw)) {
-	     if (o.empty) return this;
-	     else return complement();
-	 }
-
-	 if (!cwPart) {
-	     if (o.ccw.equals(ccw))
-		 return new IdRange();
-
-	     if (ccw.isBetween(o.ccw, o.cw))
-		 return new IdRange(o.ccw, ccw);
-
-	     if (o.ccw.isBetween(ccw, cw))
-		 return new IdRange(ccw, o.ccw);
-
-	     return this;
-	 }
-	 else {
-
-	     if (o.cw.equals(cw))
-		 return new IdRange();
-
-	     if (o.cw.isBetween(ccw, cw))
-		 return new IdRange(o.cw, cw);
-
-	     if (cw.isBetween(o.ccw, o.cw))
-		 return new IdRange(cw, o.cw);
-
-	     return o;
-	 }
-	
-    }
-    
-    /**
-     * subtract the other range from this
-     * computes the ranges of keys that are in this but not in o
-     *
-     * returns - an empty range if the ranges are identical
-     *         - if the subtraction results in a single range, then this method
-     * returns an empty range when called with one boolean value of 
-     * parameter 'cwPart' and returns the desired range when called with
-     * the other boolean value of parameter 'cwPart'
-     *
-     * @param o the other range
-     * @param cwPart if true, returns the clockwise part of the range subtraction, else the counterclockwise part
-     * @return the result range
-     */
-    public IdRange subtract_old(IdRange o, boolean cwPart) {
-	IdRange diffRange;
-
-	diffRange = diff_old(o, cwPart);
-	return intersect(diffRange);
-    }
-
-    /**
      * get counterclockwise half of the range
      * @return the range corresponding to the ccw half of this range
      */ 
     public IdRange ccwHalf() {
+	if (empty) return new IdRange();
+	if (isFull()) return new IdRange(new Id(Id.Null), new Id(Id.Half));
+
 	Id newCW = ccw.add(size().shift(1,0,true));
 	return new IdRange(ccw, newCW);
     }
@@ -392,10 +323,12 @@ public class IdRange implements rice.p2p.commonapi.IdRange {
      * @return the range corresponding to the cw half of this range
      */ 
     public IdRange cwHalf() {
+	if (empty) return new IdRange();
+	if (isFull()) return new IdRange(new Id(Id.Half), new Id(Id.Null));
+
 	Id newCCW = ccw.add(size().shift(1,0,true));
 	return new IdRange(newCCW, cw);
     }
-
 
     /**
      * Returns a string representation of the range.
