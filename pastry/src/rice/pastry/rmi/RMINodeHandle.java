@@ -51,7 +51,7 @@ import java.rmi.RemoteException;
  * @author Sitaram Iyer
  */
 
-public class RMINodeHandle implements NodeHandle, Serializable
+public class RMINodeHandle extends NodeHandle implements Serializable
 {
     private RMIRemoteNodeI remoteNode;
     private NodeId remotenid;
