@@ -103,6 +103,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private static int consolidationMinObjectsInAggregate = 20;
   private static double consolidationMinComponentsAlive = 0.8;
 
+  private static int reconstructionMaxConcurrentLookups = 10;
+
   private static final boolean aggregateLogEnabled = true;
 
   private static final long statsGranularity = 1 * HOURS;
@@ -1699,25 +1701,13 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     rebuildAggregateList(command);
   }
 
-  private void rebuildAggregateList(final Continuation command) {
-    log(2, "rebuildAggregateList");
-    if (aggregateList.getRoot() == null) {
-      warn("rebuildAggregateList invoked while rootKey is null");
-      command.receiveException(new AggregationException("Set handle first!"));
-      return;
-    }
+  private void rebuildRecursive(final Id fromKey, final Vector keysInProgress, final Vector keysPostponed, final Vector keysDone, final Continuation command) {
+    keysInProgress.add(fromKey);
     
-    final Vector keysToDo = new Vector();
-    final Vector keysDone = new Vector();
-    keysToDo.add(aggregateList.getRoot());
-    rebuildInProgress = true;
-    
-    log(2, "Rebuild: Fetching handles for aggregate " + aggregateList.getRoot().toStringFull());
-    aggregateStore.lookupHandles(aggregateList.getRoot(), 999, new Continuation() {
-      Id currentLookup = aggregateList.getRoot();
-      
+    log(2, "Rebuild: Fetching handles for aggregate " + fromKey.toStringFull());
+    aggregateStore.lookupHandles(fromKey, 999, new Continuation() {
       public void receiveResult(Object o) {
-        log(3, "Got handles for "+currentLookup);
+        log(3, "Got handles for "+fromKey);
 
         if (o instanceof PastContentHandle[]) {
           PastContentHandle[] pch = (PastContentHandle[]) o;
@@ -1739,10 +1729,10 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             aggregateStore.fetch(thisHandle, new Continuation() {
               public void receiveResult(Object o) {
                 if (o instanceof Aggregate) {
-                  keysToDo.remove(currentLookup);
-                  keysDone.add(currentLookup);
+                  keysInProgress.remove(fromKey);
+                  keysDone.add(fromKey);
 
-                  log(2, "Rebuild: Got aggregate " + currentLookup.toStringFull());
+                  log(2, "Rebuild: Got aggregate " + fromKey.toStringFull());
 
                   Aggregate aggr = (Aggregate) o;
                   ObjectDescriptor[] objects = new ObjectDescriptor[aggr.components.length];
@@ -1762,13 +1752,15 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                     objectStore.lookupHandles(objData.getId(), 1, new Continuation() {
                       public void receiveResult(Object o) {
 /* evil... needs pastcontenthandle */                      
-                        GCPastContentHandle[] result = (o instanceof GCPastContentHandle[]) ? ((GCPastContentHandle[])o) : new GCPastContentHandle[] {};
-                        log(3, "Handles for "+objData.getId()+"v"+objData.getVersion()+": "+result);
+                        PastContentHandle[] result = (o instanceof PastContentHandle[]) ? ((PastContentHandle[])o) : new PastContentHandle[] {};
+                        log(3, "Handles for "+objData.getId()+"v"+objData.getVersion()+": "+result+" ("+result.length+", PCH="+(o instanceof PastContentHandle[])+")");
                         boolean gotOne = false;
                         for (int i=0; i<result.length; i++) {
-                          log(3, "Have v"+result[i].getVersion());
-                          if (result[i].getVersion() >= objData.getVersion())
-                            gotOne = true;
+                          if (result[i] != null) {
+                            log(3, "Have v"+((GCPastContentHandle)result[i]).getVersion());
+                            if (((GCPastContentHandle)result[i]).getVersion() >= objData.getVersion())
+                              gotOne = true;
+                          }
                         }
                         
                         if (gotOne) {
@@ -1793,24 +1785,37 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                     });
                   }
             
-                  aggregateList.addAggregateDescriptor(new AggregateDescriptor(currentLookup, aggregateExpiration, objects, aggr.getPointers()));
+                  aggregateList.addAggregateDescriptor(new AggregateDescriptor(fromKey, aggregateExpiration, objects, aggr.getPointers()));
           
                   Id[] pointers = aggr.getPointers();
+                  int numAdded = 0;
                   if (pointers != null) {
                     for (int i=0; i<pointers.length; i++) {
                       if (pointers[i] instanceof Id) {
                         Id thisPointer = pointers[i];
-                        if (!keysDone.contains(thisPointer) && !keysToDo.contains(thisPointer))
-                          keysToDo.add(thisPointer);
+                        if (!keysDone.contains(thisPointer) && !keysPostponed.contains(thisPointer) && !keysInProgress.contains(thisPointer)) {
+                          if (keysInProgress.size() >= reconstructionMaxConcurrentLookups)  
+                            keysPostponed.add(thisPointer);
+                          else
+                            rebuildRecursive(thisPointer, keysInProgress, keysPostponed, keysDone, command);
+                            
+                          numAdded ++;
+                        }
                       }
                     }
                   }
+                  
+                  log(3, "Rebuild: Added "+numAdded+" keys, now "+keysInProgress.size()+" in progress, "+keysPostponed.size()+" postponed and "+keysDone.size()+" done");
           
-                  if (!keysToDo.isEmpty()) {
-                    log(2, "Rebuild: "+keysToDo.size()+" keys to go, "+keysDone.size()+" done");
-                    currentLookup = (Id) keysToDo.firstElement();
-                    log(2, "Rebuild: Fetching handles for aggregate " + currentLookup.toStringFull());
-                    aggregateStore.lookupHandles(currentLookup, 999, outerContinuation);
+                  if (!keysInProgress.isEmpty() || !keysPostponed.isEmpty()) {
+                    log(2, "Rebuild: "+keysInProgress.size()+" keys in progress, "+keysPostponed.size()+" postponed, "+keysDone.size()+" done");
+                    
+                    while ((keysInProgress.size() < reconstructionMaxConcurrentLookups) && (keysPostponed.size() > 0)) {
+                      Id nextKey = (Id) keysPostponed.firstElement();
+                      log(3, "Rebuild: Resuming lookup for postponed key "+nextKey.toStringFull());
+                      keysPostponed.remove(nextKey);
+                      rebuildRecursive(nextKey, keysInProgress, keysPostponed, keysDone, command);
+                    }
                   } else {
                     aggregateList.writeToDisk();
                     rebuildInProgress = false;
@@ -1818,7 +1823,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                     command.receiveResult(new Boolean(true));
                   }
                 } else {
-                  receiveException(new AggregationException("Fetch failed: "+currentLookup+", returned "+o));
+                  receiveException(new AggregationException("Fetch failed: "+fromKey+", returned "+o));
                 }
               }
               public void receiveException(Exception e) {
@@ -1826,35 +1831,52 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
               }
             });
           } else {
-            receiveException(new AggregationException("LookupHandles did not return any valid handles for "+currentLookup));
+            receiveException(new AggregationException("LookupHandles did not return any valid handles for "+fromKey));
           }
         } else {
-          receiveException(new AggregationException("LookupHandles for "+currentLookup+" failed, returned o="+o));
+          receiveException(new AggregationException("LookupHandles for "+fromKey+" failed, returned o="+o));
         }
       }
       public void receiveException(Exception e) {
         warn("Rebuild: Exception "+e);
         e.printStackTrace();
-        keysToDo.remove(currentLookup);
-        keysDone.add(currentLookup);
+        keysInProgress.remove(fromKey);
+        keysDone.add(fromKey);
         
-        if (!keysToDo.isEmpty()) {
-          log(3, "Trying next key");
-          currentLookup = (Id) keysToDo.firstElement();
-          log(2, "Rebuild: Fetching handles for aggregate " + currentLookup.toStringFull());
-          aggregateStore.lookupHandles(currentLookup, 999, this);
-        } else {
+        if (keysInProgress.isEmpty() && keysPostponed.isEmpty()) {
+          rebuildInProgress = false;
           if (aggregateList.isEmpty()) {
-            rebuildInProgress = false;
             command.receiveException(new AggregationException("Cannot read root aggregate! -- retry later"));
           } else {
             aggregateList.writeToDisk();
-            rebuildInProgress = false;
             command.receiveResult(new Boolean(true));
           }
         }
+        
+        while ((keysInProgress.size() < reconstructionMaxConcurrentLookups) && (keysPostponed.size() > 0)) {
+          Id nextKey = (Id) keysPostponed.firstElement();
+          log(3, "Rebuild: Resuming lookup for postponed key "+nextKey.toStringFull());
+          keysPostponed.remove(nextKey);
+          rebuildRecursive(nextKey, keysInProgress, keysPostponed, keysDone, command);
+        }
       }
     });
+  }
+
+  private void rebuildAggregateList(final Continuation command) {
+    Vector keysInProgress = new Vector();
+    Vector keysPostponed = new Vector();
+    Vector keysDone = new Vector();
+
+    log(2, "rebuildAggregateList("+aggregateList.getRoot()+")");
+    if (aggregateList.getRoot() == null) {
+      warn("rebuildAggregateList invoked while rootKey is null");
+      command.receiveException(new AggregationException("Set handle first!"));
+      return;
+    }
+    
+    rebuildInProgress = true;
+    rebuildRecursive(aggregateList.getRoot(), keysInProgress, keysPostponed, keysDone, command);
   }
   
   public void insert(final PastContent obj, final Continuation command) {
