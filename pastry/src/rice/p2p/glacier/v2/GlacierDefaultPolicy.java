@@ -14,14 +14,14 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
     this.codec = codec;
   }
 
-  public boolean checkSignature(StorageManifest manifest, VersionKey key) {
+  public boolean checkSignature(Manifest manifest, VersionKey key) {
     if (manifest.getSignature() == null)
       return false;
       
     return Arrays.equals(manifest.getSignature(), key.toByteArray());
   }
 
-  protected void signManifest(StorageManifest manifest, VersionKey key) {
+  protected void signManifest(Manifest manifest, VersionKey key) {
     manifest.setSignature(key.toByteArray());
   }
 
@@ -33,7 +33,7 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
     return (Serializable) codec.decode(fragments);
   }
   
-  public StorageManifest[] createManifests(VersionKey key, Serializable obj, Fragment[] fragments, long expiration) {
+  public Manifest[] createManifests(VersionKey key, Serializable obj, Fragment[] fragments, long expiration) {
     byte bytes[] = null;
     try {
       ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
@@ -72,11 +72,11 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
     md.update(bytes);
     objectHash = md.digest();
     
-    /* Create the storage manifest */
+    /* Create the manifest */
     
-    StorageManifest[] manifests = new StorageManifest[fragments.length];
+    Manifest[] manifests = new Manifest[fragments.length];
     for (int i=0; i<fragments.length; i++) {
-      manifests[i] = new StorageManifest(objectHash, fragmentHash, expiration);
+      manifests[i] = new Manifest(objectHash, fragmentHash, expiration);
       signManifest(manifests[i], key);
     }
     

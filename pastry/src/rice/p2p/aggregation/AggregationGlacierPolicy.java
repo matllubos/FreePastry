@@ -15,14 +15,14 @@ public class AggregationGlacierPolicy implements GlacierPolicy {
     this.pastStore = pastStore;
   }
 
-  public boolean checkSignature(StorageManifest manifest, VersionKey key) {
+  public boolean checkSignature(Manifest manifest, VersionKey key) {
     if (manifest.getSignature() == null)
       return false;
       
     return Arrays.equals(manifest.getSignature(), key.toByteArray());
   }
 
-  protected void signManifest(StorageManifest manifest, VersionKey key) {
+  protected void signManifest(Manifest manifest, VersionKey key) {
     manifest.setSignature(key.toByteArray());
   }
 
@@ -34,7 +34,7 @@ public class AggregationGlacierPolicy implements GlacierPolicy {
     return null;
   }
 
-  public StorageManifest[] createManifests(VersionKey key, Serializable obj, Fragment[] fragments, long expiration) {
+  public Manifest[] createManifests(VersionKey key, Serializable obj, Fragment[] fragments, long expiration) {
     return null;
   }
 
