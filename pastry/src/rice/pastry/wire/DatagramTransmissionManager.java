@@ -301,7 +301,7 @@ public class DatagramTransmissionManager {
 
     // the maximum number of retries before declaring the node to
     // be dead and attampting to open a socket
-    public int NUM_RETRIES_BEFORE_OPENING_SOCKET = 3;
+    public int NUM_RETRIES_BEFORE_OPENING_SOCKET = 2;
 
     // the maximum number of objects in the UDP queue before we
     // open a socket

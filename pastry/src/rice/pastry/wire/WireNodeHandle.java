@@ -314,7 +314,6 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
    */
   public void setKey(SelectionKey key, SocketCommandMessage scm) {
     debug("Got new key  (state == " + state + ")");
-    markAlive();
 
     // if we're currently using UDP, accept the connection as usual
     if (state == STATE_USING_UDP) {
@@ -329,6 +328,8 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
 
       state = STATE_USING_TCP;
     } else {
+      markAlive();
+
       // otherwise, we have problems!
       InetSocketAddress local = ((WireNodeHandle) getLocalNode().getLocalHandle()).getAddress();
       InetSocketAddress remote = getAddress();
