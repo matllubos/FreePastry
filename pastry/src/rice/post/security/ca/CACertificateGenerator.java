@@ -43,7 +43,7 @@ public class CACertificateGenerator {
       KeyPair caPair = (KeyPair) SecurityUtils.deserialize(data);
       System.out.println("[ DONE ]");
 
-      System.out.print("Please enter the new username (@rice.edu.post): ");
+      System.out.print("Please enter the new username (@dosa.cs.rice.edu): ");
       BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
       String userid = input.readLine();
 
@@ -52,7 +52,7 @@ public class CACertificateGenerator {
       System.out.println("[ DONE ]");
 
       System.out.print("    Generating the certificate\t\t\t\t\t");
-      PostUserAddress address = new PostUserAddress(userid + "@rice.edu.post");
+      PostUserAddress address = new PostUserAddress(userid + "@dosa.cs.rice.edu");
       PostCertificate certificate = CASecurityModule.generate(address, pair.getPublic(), caPair.getPrivate());
       System.out.println("[ DONE ]");
 
