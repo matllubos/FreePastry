@@ -88,6 +88,9 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
 
   // the hashtable of outstanding messages
   private Hashtable outstanding;
+  
+  // the hashtable of outstanding timer tasks
+  private Hashtable timers;
 
   // the factory for manipulating ids
   protected IdFactory factory;
@@ -111,11 +114,12 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
 
     id = Integer.MIN_VALUE;
     outstanding = new Hashtable();
+    timers = new Hashtable();
     replicationFactor = replicas;
     
  //   log.addHandler(new ConsoleHandler());
- //   log.setLevel(Level.WARNING);
- //   log.getHandlers()[0].setLevel(Level.WARNING);
+ //   log.setLevel(Level.FINE);
+ //   log.getHandlers()[0].setLevel(Level.FINE);
 
     replicaManager = new ReplicationManagerImpl(node, this, replicas, instance);
   }
@@ -177,10 +181,9 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    */
   private void sendRequest(Id id, PastMessage message, NodeHandle hint, Continuation command) {
     log.finer("Sending request message " + message + " to id " + id + " via " + hint);
-    insertPending(message.getUID(), command);
-    endpoint.scheduleMessage(new MessageLostMessage(message.getUID(), getLocalNodeHandle()), MESSAGE_TIMEOUT);
+    TimerTask timer = endpoint.scheduleMessage(new MessageLostMessage(message.getUID(), getLocalNodeHandle()), MESSAGE_TIMEOUT);
+    insertPending(message.getUID(), timer, command);
     endpoint.route(id, message, hint);
-    
   }
 
   /**
@@ -189,8 +192,9 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param uid The id of the message
    * @param command The continuation to run
    */
-  private void insertPending(int uid, Continuation command) {
+  private void insertPending(int uid, TimerTask timer, Continuation command) {
     log.finer("Loading continuation " + uid + " into pending table");
+    timers.put(new Integer(uid), timer);
     outstanding.put(new Integer(uid), command);
   }
 
@@ -202,6 +206,11 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    */
   private Continuation removePending(int uid) {
     log.finer("Removing and returning continuation " + uid + " from pending table");
+    TimerTask timer = (TimerTask) timers.remove(new Integer(uid));
+    
+    if (timer != null)
+      timer.cancel();
+    
     return (Continuation) outstanding.remove(new Integer(uid));
   }
 
