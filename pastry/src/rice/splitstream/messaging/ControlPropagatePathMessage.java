@@ -1,3 +1,4 @@
+package rice.splitstream.messaging;
 /**
  * This message is sent from any node whose parent has changed, to each
  * of its children and descendents.  It contains a stack with the nodeId

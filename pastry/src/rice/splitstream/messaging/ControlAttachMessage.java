@@ -1,3 +1,4 @@
+package rice.splitstream.messaging;
 /**
  * This message is anycast to the scribe group for a channel when a node
  * attaches to that channel.  The purpose is to learn which stripes are
