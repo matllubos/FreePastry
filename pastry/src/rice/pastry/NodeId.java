@@ -41,6 +41,8 @@ import java.io.*;
 import java.util.*;
 
 /**
+ * Represents a Pastry identifier for a node, object or key.
+ *
  * A single node identifier and the bit length for nodes is stored in this class.
  * nodeIds are stored little endian.
  *
@@ -602,6 +604,15 @@ public class NodeId implements Comparable, Serializable
 	return ind / base;
     }
 
+    /**
+     * produces a nodeId whose prefix up to row is identical to this, followed by digit column, followed
+     * by a suffix of digits with value suffixDigits.
+     *
+     * @param row the length of the prefix
+     * @param column the value of the following digit
+     * @param suffixDigit the value of the suffic digits
+     */
+
     public NodeId getDomainPrefix(int row, int column, int suffixDigit) {
 	NodeId res = new NodeId(nodeId);
 	
@@ -614,11 +625,14 @@ public class NodeId implements Comparable, Serializable
 
 
     /**
-     * Creates a random nodeId.
+     * Creates a random nodeId. For testing purposed only -- should
+     * NOT be used to generate real node or object identifiers (low
+     * quality of random material).
      *
      * @param rng random number generator
-     * @return a random nodeId
+     * @return a random nodeId 
      */
+
     public static NodeId makeRandomId(Random rng) {
 	byte material[] = new byte[nodeIdBitLength >> 3];
 	rng.nextBytes(material);
@@ -652,26 +666,6 @@ public class NodeId implements Comparable, Serializable
 	//return "< nodeId " + s + " >";
     }
 
-    /*
-    private void readObject(ObjectInputStream in)
-	throws IOException, ClassNotFoundException 
-    {
-	int n = nodeIdBitLength >> 3;
-	
-	nodeId = new byte[n];
-	
-	for (int i=0; i<n; i++) 
-	    nodeId[i] = in.readByte();
-    }
-
-    private void writeObject(ObjectOutputStream out)
-	throws IOException, ClassNotFoundException 
-    {
-	int n = nodeIdBitLength >> 3;
-
-	for (int i=0; i<n; i++) out.writeByte(nodeId[i]);
-    } 
-    */
 
 }
 

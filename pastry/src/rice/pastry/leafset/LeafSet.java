@@ -105,7 +105,7 @@ public class LeafSet extends Observable implements Serializable {
 	if (nid.equals(baseId)) return false;
 	if (member(nid)) return false;
 
-	return cwSet.test(handle) || ccwSet.test(handle);
+	return cwSet.test(handle) | ccwSet.test(handle);
     }
 
 
@@ -120,6 +120,7 @@ public class LeafSet extends Observable implements Serializable {
 	else return false;
     }
 
+
     /**
      * Finds the NodeHandle associated with the NodeId.
      *
@@ -133,6 +134,7 @@ public class LeafSet extends Observable implements Serializable {
 	if (res != null) return res;
 	return ccwSet.get(nid);
     }
+
 
     /**
      * Gets the index of the element with the given node id.
@@ -151,6 +153,7 @@ public class LeafSet extends Observable implements Serializable {
 	throw new NoSuchElementException();
     }
 
+
     /**
      * Finds the NodeHandle at a given index.
      *
@@ -164,6 +167,7 @@ public class LeafSet extends Observable implements Serializable {
 	else return ccwSet.get(- index - 1);
     }
     
+
     /**
      * Verifies if the set contains this particular id.
      * 
@@ -176,6 +180,7 @@ public class LeafSet extends Observable implements Serializable {
 	return cwSet.member(nid) || ccwSet.member(nid);
     }
     
+
     /**
      * Removes a node id and its handle from the set.
      *
@@ -192,6 +197,7 @@ public class LeafSet extends Observable implements Serializable {
 	if (res1 != null) return res1;
 	else return res2;
     }
+
 
     /**
      * Gets the maximal size of the leaf set.

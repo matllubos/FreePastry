@@ -63,10 +63,11 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
     private static final int rtMax = 8;
     private static final int lSetSize = 24;
   
-    public DirectPastryNodeFactory() {
+    public DirectPastryNodeFactory(NetworkSimulator sim) {
 	nidFactory = new RandomNodeIdFactory();
-//	simulator = new EuclideanNetwork();
-	simulator = new SphereNetwork();
+	//	simulator = new EuclideanNetwork();
+	//	simulator = new SphereNetwork();
+	simulator = sim;
     }
 
     public NetworkSimulator getNetworkSimulator() { return simulator; }

@@ -56,7 +56,8 @@ public interface NodeHandle extends MessageReceiver {
     public NodeId getNodeId();
 
     /**
-     * Tests if this Pastry node is still alive.
+     * Returns the last known liveness information about the Pastry node associated with this handle.
+     * Invoking this method does not cause network activity.
      *
      * @return true if the node is alive, false otherwise.
      */
@@ -64,16 +65,21 @@ public interface NodeHandle extends MessageReceiver {
     public boolean isAlive();
 
     /**
-     * Gets the proximity of this node.
+     * Returns the last known proximity information about the Pastry node associated with this handle.
+     * Invoking this method does not cause network activity.
      *
-     * @return 0 is a local node and anything larger is relative "proximity", 
-     * the larger the value the further away.
+     * Smaller values imply greater proximity. The exact nature and interpretation of the proximity metric 
+     * implementation-specific.
+     *
+     * @return the proximity metric value
      */
     
     public int proximity();
 
     /**
-     * Ping the node.
+     * Ping the node. Refreshes the cached liveness status and proximity value of the Pastry node associated
+     * with this.
+     * Invoking this method causes network activity.
      *
      * @return true if node is currently alive.
      */

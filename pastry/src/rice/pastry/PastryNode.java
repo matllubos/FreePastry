@@ -104,9 +104,10 @@ public abstract class PastryNode implements MessageReceiver
     public final boolean isReady() { return ready; }
 
     /**
-     * Overridden by {Direct,RMI}PastryNode, and invoked when the node has
+     * Overridden by derived classes, and invoked when the node has
      * joined successfully.
      */
+
     protected abstract void nodeIsReady();
 
     public final void setReady() { 

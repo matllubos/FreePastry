@@ -68,8 +68,9 @@ public class DirectPastryRegrTest extends PastryRegrTest {
      */
     private DirectPastryRegrTest() {
 	super();
-	factory = new DirectPastryNodeFactory();
-	simulator = ((DirectPastryNodeFactory)factory).getNetworkSimulator();
+	simulator = new SphereNetwork();
+	factory = new DirectPastryNodeFactory(simulator);
+	//simulator = ((DirectPastryNodeFactory)factory).getNetworkSimulator();
     }
 
     /**
