@@ -28,8 +28,8 @@ public class AP3Test {
     private Random rng;
 
     public AP3Test() {
-	factory = new DirectPastryNodeFactory();
-	simulator = factory.getNetworkSimulator();
+	simulator = new EuclideanNetwork();
+	factory = new DirectPastryNodeFactory(simulator);
 
 	pastryNodes = new Vector();
 	ap3Nodes = new Vector();
