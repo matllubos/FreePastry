@@ -342,7 +342,7 @@ public class PastRegrTest extends CommonAPITest {
             
             // Null fetch should fail
             stepStart("Fetch Of Null");
-            local.fetch(null, new TestExceptionCommand() {
+            local.fetch((PastContentHandle) null, new TestExceptionCommand() {
               public void receive(Object result) throws Exception {
                 assertTrue("Exception returned should not be null", result != null);
                 assertTrue("Exception should be return", result instanceof Exception);
