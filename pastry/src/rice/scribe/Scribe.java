@@ -362,9 +362,10 @@ public class Scribe extends PastryAppl implements IScribe
 	    while (it.hasNext())
 		((IScribeApp)(it.next())).scribeIsReady();
 	}
+
 	// Schedule the periodic tree maintenance activities.
 	if(thePastryNode instanceof DistPastryNode) {
-	    thePastryNode.scheduleMsg(makeScribeMaintenanceMessage(cred), m_scribeMaintFreq*1000, m_scribeMaintFreq*1000);
+	    thePastryNode.scheduleMsgAtFixedRate(makeScribeMaintenanceMessage(cred), m_scribeMaintFreq*1000, m_scribeMaintFreq*1000);
 	}
     }
     
