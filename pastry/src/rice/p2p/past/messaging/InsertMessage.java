@@ -79,6 +79,28 @@ public class InsertMessage extends ContinuationMessage {
   public PastContent getContent() {
     return content;
   }
+  
+  /**
+   * Method which builds a response for this message, using the provided
+   * object as a result.
+   *
+   * @param o The object argument
+   */
+  public void receiveResult(Object o) {
+    super.receiveResult(o);
+    content = null;
+  }
+  
+  /**
+   * Method which builds a response for this message, using the provided
+   * exception, which was thrown
+   *
+   * @param e The exception argument
+   */
+  public void receiveException(Exception e) {
+    super.receiveException(e);
+    content = null;
+  }
 
   /**
     * Returns a string representation of this message

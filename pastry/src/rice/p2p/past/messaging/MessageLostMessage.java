@@ -53,6 +53,8 @@ import rice.p2p.past.*;
  * @author Peter Druschel
  */
 public class MessageLostMessage extends PastMessage {
+  
+  protected NodeHandle hint;
 
   /**
    * Constructor which takes a unique integer Id and the local id
@@ -60,10 +62,11 @@ public class MessageLostMessage extends PastMessage {
    * @param uid The unique id
    * @param local The local nodehandle
    */
-  public MessageLostMessage(int uid, NodeHandle local) {
+  public MessageLostMessage(int uid, NodeHandle local, NodeHandle hint) {
     super(uid, local, local.getId());
 
     setResponse();
+    this.hint = hint;
   }
 
   /**
@@ -74,7 +77,8 @@ public class MessageLostMessage extends PastMessage {
    * @param c The continuation to return the reponse to.
    */
   public void returnResponse(Continuation c) {
-    c.receiveException(new PastException("Outgoing message was lost - please try again."));
+    rice.pastry.dist.DistPastryNode.addError("ERROR: Outgoing PAST message with UID " + id + " was lost");
+    c.receiveException(new PastException("Outgoing message to " + hint + " was lost - please try again."));
   }
 
   /**
