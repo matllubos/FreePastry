@@ -621,12 +621,15 @@ public class PersistentStorage implements Storage {
      FileFilter ff = new FileFilter();
      String[] fileNames = dir.list(ff);
 
-     for(int i = 0; i < fileNames.length; i++){
-        if(dir.equals(appDirectory))
-           h.add(fileNames[i].substring(0, 1));
-        else
-           h.add(fileNames[i].substring(0, dir.getName().length() + 1));
+     int level = 0;
+     File currentDir = dir;
+     while (!currentDir.equals(appDirectory)) {
+       level ++;
+       currentDir = currentDir.getParentFile();
      }
+
+     for(int i = 0; i < fileNames.length; i++)
+       h.add(fileNames[i].substring(level, level+1));
 
      beginDirectoryTransaction(); 
 
@@ -757,7 +760,7 @@ public class PersistentStorage implements Storage {
    *
    */
   private File getDirectoryForId(String id){
-    return getDirectoryForIdHelper(id, appDirectory);
+    return getDirectoryForIdHelper(id, appDirectory, 0);
   }
 
   /**
@@ -769,21 +772,17 @@ public class PersistentStorage implements Storage {
    * @return the directory and id should be in
    *
    */ 
-  private File getDirectoryForIdHelper(String id, File root) {
+  private File getDirectoryForIdHelper(String id, File root, int level) {
       if (!containsDir(root)) {
         return root; 
       } else {
         /* recurse and find the file */
-        File dir = new File(root, id.substring(0, 1));
-        
-        if (root != appDirectory) {
-          dir = new File(root, id.substring(0, root.getName().length() + 1));
-        }
+        File dir = new File(root, id.substring(level, level+1));
         
         if(!dir.exists())
           createDir(dir);
         
-        return getDirectoryForIdHelper(id, dir);
+        return getDirectoryForIdHelper(id, dir, level+1);
       }
   }
 
