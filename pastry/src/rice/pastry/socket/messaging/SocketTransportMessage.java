@@ -30,4 +30,8 @@ public class SocketTransportMessage extends SocketMessage {
     return msg.hasPriority();
   }
 
+  public String toString() {
+    return "["+msg.toString()+"]";
+  }
+
 }

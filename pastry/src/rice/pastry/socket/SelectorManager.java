@@ -264,6 +264,10 @@ public class SelectorManager {
   }
 
 
+  public boolean isAlive() {
+    return alive;
+  }
+
   boolean stall = false;
   int STALL_TIME = 500000;
     /**

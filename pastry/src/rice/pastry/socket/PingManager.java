@@ -19,20 +19,17 @@ import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
 
-import rice.pastry.messaging.Message;
 import rice.pastry.socket.messaging.PingMessage;
 import rice.pastry.socket.messaging.PingResponseMessage;
+import rice.pastry.socket.messaging.Probe;
 import rice.pastry.wire.WireNodeHandle;
-import rice.pastry.wire.WireNodeHandlePool;
 import rice.pastry.wire.exception.DeserializationException;
 import rice.pastry.wire.exception.ImproperlyFormattedMessageException;
 import rice.pastry.wire.exception.SerializationException;
-import rice.pastry.wire.messaging.datagram.AcknowledgementMessage;
-import rice.pastry.wire.messaging.datagram.DatagramMessage;
-import rice.pastry.wire.messaging.datagram.DatagramTransportMessage;
 
 /**
  * @version $Id$
@@ -154,6 +151,30 @@ public class PingManager implements SelectionKeyHandler {
     return ((Long) pingtimes.get(address)).longValue();
   }
 
+  ArrayList probeListeners = new ArrayList();
+
+  protected void notifyProbeListeners(Probe p) {
+    synchronized(probeListeners) {
+      Iterator i = probeListeners.iterator();
+      while(i.hasNext()) {
+        ProbeListener pl = (ProbeListener)i.next();
+        pl.probeReceived(p);
+      }
+    }
+  }
+  
+  public void addProbeListener(ProbeListener pl) {
+    synchronized(probeListeners) {
+      probeListeners.add(pl);
+    }
+  }
+
+  public void removeProbeListener(ProbeListener pl) {
+    synchronized(probeListeners) {
+      probeListeners.remove(pl);
+    }
+  }
+
   /**
    * Gets the LastTimeHeardFrom attribute of the PingManager object
    *
@@ -233,18 +254,23 @@ public class PingManager implements SelectionKeyHandler {
   public void receiveMessage(Object message, InetSocketAddress address) {
     //System.out.println("PingMgr.receiveMessage("+message.getClass().getName()+")");
     if (message instanceof PingMessage) {
-      enqueue(address, new PingResponseMessage(((PingMessage) message).getStartTime()));
+      PingMessage pm = (PingMessage) message;
+      enqueue(address, new PingResponseMessage(pm.getStartTime()));
+      notifyProbeListeners(pm);
     }
     if (message instanceof PingResponseMessage) {
+      PingResponseMessage prm = (PingResponseMessage) message;
       long curTime = System.currentTimeMillis();
-      long startTime = ((PingResponseMessage) message).getStartTime();
+      long startTime = prm.getStartTime();
       int time = (int) (curTime - startTime);
 
       if ((pings.get(address) == null) || (((Integer) pings.get(address)).intValue() > time)) {
         pings.put(address, new Integer(time));
         pool.update(address, SocketNodeHandle.PROXIMITY_CHANGED);
       }
+      doneProbing(address);
       pingResponse(address, curTime);
+      notifyProbeListeners(prm);
     }
   }
 
@@ -402,6 +428,30 @@ public class PingManager implements SelectionKeyHandler {
     }
   }
 
+//  HashMap probing = new HashMap();
+
+  HashSet probing = new HashSet();
+
+  public boolean isProbing(InetSocketAddress address) {
+    synchronized (probing) {
+      return probing.contains(address);
+    }
+  }
+
+  private void setProbing(InetSocketAddress address) {
+    synchronized (probing) {
+      probing.add(address);
+    }
+  }
+  
+  void doneProbing(InetSocketAddress address) {
+    synchronized (probing) {
+      while(probing.contains(address)) {
+        probing.remove(address); 
+      }
+    }
+  }
+  
   /**
    * DESCRIBE THE METHOD
    *
@@ -411,12 +461,16 @@ public class PingManager implements SelectionKeyHandler {
    */
   private void ping(InetSocketAddress address, PingResponseListener prl, boolean force) {
     synchronized (pingResponseTimes) {
+      if (isProbing(address)) { // enforce only one pinging the dude once
+        return;
+      }
       if (force ||
         (pingtimes.get(address) == null) ||
         (System.currentTimeMillis() - getLastTimePinged(address) > PING_THROTTLE)) {
         pingtimes.put(address, new Long(System.currentTimeMillis()));
         addPingResponseListener(address, prl);
-        enqueue(address, new PingMessage());
+        setProbing(address);
+        enqueue(address, new PingMessage());        
       } else {
         if (getLastTimeHeardFrom(address) >= getLastTimePinged(address)) {
           // we just pinged them, and got a response

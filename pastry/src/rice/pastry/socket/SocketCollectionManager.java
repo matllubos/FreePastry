@@ -29,25 +29,17 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.TimerTask;
 
 import rice.pastry.Log;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RouteMessage;
-import rice.pastry.socket.messaging.AckMessage;
-import rice.pastry.socket.messaging.LeafSetRequestMessage;
-import rice.pastry.socket.messaging.LeafSetResponseMessage;
-import rice.pastry.socket.messaging.NodeIdRequestMessage;
-import rice.pastry.socket.messaging.NodeIdResponseMessage;
-import rice.pastry.socket.messaging.RouteRowRequestMessage;
-import rice.pastry.socket.messaging.RouteRowResponseMessage;
-import rice.pastry.socket.messaging.SocketMessage;
+import rice.pastry.socket.messaging.SocketTransportMessage;
+import rice.pastry.testing.HelloMsg;
 
 /**
  * Class which maintains all outgoing open sockets. It is responsible for
@@ -63,11 +55,6 @@ import rice.pastry.socket.messaging.SocketMessage;
  */
 public class SocketCollectionManager implements SelectionKeyHandler {
 
-  long PING_DELAY = 3000;
-  int NUM_PING_TRIES = 3;
-
-  long ACK_DELAY = 1500;
-
 
   // the selector manager which the collection manager uses
   SelectorManager manager;
@@ -82,10 +69,16 @@ public class SocketCollectionManager implements SelectionKeyHandler {
   InetSocketAddress localAddress;
 
   // the linked list of open sockets
-  private LinkedList queue;
+//  private LinkedList queue;
 
-  // maps a SelectionKey -> SocketConnector
-  private Hashtable sockets;
+  // maps a Address -> SocketManager
+//  private Hashtable controlSockets;
+//  private Hashtable dataSockets;
+  
+  private SocketPoolManager socketPoolManager;
+  
+  // maps an address -> ConnectionManager
+  private Hashtable connections;
 
   // ServerSocketChannel for accepting incoming connections
   private SelectionKey key;
@@ -93,6 +86,8 @@ public class SocketCollectionManager implements SelectionKeyHandler {
   // the port number this manager is listening on
   private int port;
 
+  private Object socketLock = new Object();
+  
   /*
    *  / the list of the last time a ping was sent
    *  private Hashtable pingtimes;
@@ -108,7 +103,7 @@ public class SocketCollectionManager implements SelectionKeyHandler {
   /**
    * DESCRIBE THE FIELD
    */
-  public static int MAX_OPEN_SOCKETS = 40;
+  public static int MAX_OPEN_SOCKETS = 80;
 
   // the size of the buffers for the socket
   /**
@@ -121,6 +116,11 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    * DESCRIBE THE FIELD
    */
   public static int PING_THROTTLE = 300000;
+
+  public static final int TYPE_CONTROL = 1;
+  public static final int TYPE_DATA = 2;
+  
+  public static final int MAX_ROUTE_MESSAGE_SIZE = 64000;
 
   /**
    * Constructs a new SocketManager.
@@ -137,10 +137,8 @@ public class SocketCollectionManager implements SelectionKeyHandler {
     this.port = port;
     this.pool = pool;
     this.manager = manager;
-    queue = new LinkedList();
-    sockets = new Hashtable();
-    //pings = new Hashtable();
-    //pingtimes = new Hashtable();
+    this.socketPoolManager = new SocketPoolManager(this);
+    connections = new Hashtable();
     dead = new HashSet();
 
     try {
@@ -186,11 +184,11 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    * @return The list of all open sockets
    */
   public String toString() {
-    Enumeration i = sockets.keys();
     String result = "";
 
+    Enumeration i = connections.keys();
     while (i.hasMoreElements()) {
-      result += (i.nextElement()).toString() + "\n";
+      result += i.nextElement().toString() + "\n";
     }
 
     return result;
@@ -212,6 +210,16 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    *  }
    *  }
    */
+
+  public ConnectionManager getConnectionManager(InetSocketAddress address) {
+    ConnectionManager cm = (ConnectionManager)connections.get(address);
+    if (cm == null) {
+      cm = new ConnectionManager(this, address);
+      connections.put(address, cm);
+    }
+    return cm;
+  }
+
   /**
    * Method which sends a message across the wire.
    *
@@ -219,13 +227,30 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    * @param address DESCRIBE THE PARAMETER
    */
   public void send(InetSocketAddress address, Message message) {
-    synchronized (sockets) {
-      if (!sockets.containsKey(address)) {
+    
+//    System.out.println("ENQ:"+pastryNode+" SCM.send("+message+"):"+address);
+
+    int type = TYPE_CONTROL;
+
+    if (message instanceof RouteMessage) {
+      RouteMessage rm = (RouteMessage)message;
+//      System.out.println("SCM.send("+rm.unwrap()+"):"+rm.unwrap().getClass().getName());
+//      System.out.println("SCM.send2("+message+")");
+      if (rm.unwrap() instanceof HelloMsg) {
+        //System.out.println("SCM.send2("+rm.unwrap()+")");
+       // type = TYPE_DATA;
+      }
+    }
+    
+    getConnectionManager(address).send(message, TYPE_CONTROL);
+/*    
+    synchronized (socketLock) {
+      if (!controlSockets.containsKey(address)) {
         debug("No connection open to " + address + " - opening one");
-        openSocket(address);
+        openSocket(address, TYPE_CONTROL);
       }
 
-      SocketManager sm = (SocketManager) sockets.get(address);        
+      SocketManager sm = (SocketManager) controlSockets.get(address);        
       if (sm != null) {
         //debug("Found connection open to " + address + " - sending now");
         
@@ -233,13 +258,14 @@ public class SocketCollectionManager implements SelectionKeyHandler {
 //          reroute(address, message);
 //        } else {
           sm.send(message);        
-          socketUpdated(address);
+          socketUpdated(sm);
 //        }
       } else {
         debug("ERROR: Could not connection to remote address " + address + " rerouting message " + message);
         reroute(address, message);
       }
     }
+    */
   }
 
   /**
@@ -316,22 +342,14 @@ public class SocketCollectionManager implements SelectionKeyHandler {
     System.out.println("PANIC: connect() called on SocketCollectionManager!");
   }
 
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @param address DESCRIBE THE PARAMETER
-   */
-  protected void checkDead(InetSocketAddress address) {
-    if (address == null) {
-      System.out.println("checkDead called with null address");
-      return;
-    }
-    
-    DeadChecker checker = new DeadChecker(address, NUM_PING_TRIES, pingManager);
-    pastryNode.scheduleTask(checker, PING_DELAY, PING_DELAY);
-    pingManager.forcePing(address, checker);
+  protected void scheduleTask(TimerTask task, long delay, long period) {
+    pastryNode.scheduleTask(task, delay, period);  
   }
-
+  
+  protected void scheduleTask(TimerTask task, long delay) {
+    pastryNode.scheduleTask(task, delay);
+  }
+  
   /**
    * Method which is designed to be called by node handles when they wish to
    * open a socket to their remote node. This method will determine if another
@@ -341,104 +359,74 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    * @param address DESCRIBE THE PARAMETER
    * @param manager DESCRIBE THE PARAMETER
    */
+  /*
   protected void socketOpened(InetSocketAddress address, SocketManager manager) {
-    synchronized (sockets) {
-      if (!sockets.containsKey(address)) {
-        sockets.put(address, manager);
-        queue.addFirst(address);
+    synchronized (socketLock) {
+      if (manager.getType() == TYPE_DATA) {
+        if (!dataSockets.containsKey(address)) {
+          dataSockets.put(address, manager);
+          queue.addFirst(manager);
 
-        debug("Recorded opening of socket to " + address);
+          debug("Recorded opening of data socket to " + address);
 
-        if (sockets.size() > MAX_OPEN_SOCKETS) {
-          InetSocketAddress toClose = (InetSocketAddress) queue.removeLast();
-          debug("Too many sockets open - closing socket to " + toClose);
-          closeSocket(toClose);
-        }
-      } else {
-        debug("ERROR: Request to record socket opening for already-open socket to " + address);
-        String local = "" + localAddress.getAddress().getHostAddress() + localAddress.getPort();
-        String remote = "" + address.getAddress().getHostAddress() + address.getPort();
+          closeSocketIfNecessary();
 
-        debug("RESOLVE: Comparing " + local + " and " + remote);
-
-        if (remote.compareTo(local) < 0) {
-          debug("RESOLVE: Cancelling existing connection to " + address);
-          SocketManager toClose = (SocketManager) sockets.get(address);
-
-          socketClosed(address, toClose);
-          socketOpened(address, manager);
-          toClose.close();
         } else {
-          debug("RESOLVE: Cancelling new connection to " + address);
-        }
-      }
-    }
-  }
+          debug("ERROR: Request to record socket opening for already-open data socket to " + address);
+          String local = "" + localAddress.getAddress().getHostAddress() + localAddress.getPort();
+          String remote = "" + address.getAddress().getHostAddress() + address.getPort();
 
-  /**
-   * Method which is designed to be called *ONCE THE SOCKET HAS BEEN CLOSED*.
-   * This method simply updates the bookeeping, but does not actually close the
-   * socket.
-   *
-   * @param address DESCRIBE THE PARAMETER
-   * @param manager DESCRIBE THE PARAMETER
-   */
-  protected void socketClosed(InetSocketAddress address, SocketManager manager) {
-    synchronized (sockets) {
-      if (sockets.containsKey(address)) {
-        if (sockets.get(address) == manager) {
-          debug("Recorded closing of socket to " + address);
+          debug("RESOLVE: Comparing " + local + " and " + remote);
 
-          queue.remove(address);
-          sockets.remove(address);
+          if (remote.compareTo(local) < 0) {
+            debug("RESOLVE: Cancelling existing data connection to " + address);
+            SocketManager toClose = (SocketManager) dataSockets.get(address);
+
+            socketClosed(address, toClose);
+            socketOpened(address, manager);
+            toClose.close();
+          } else {
+            debug("RESOLVE: Cancelling new connection to " + address);
+          }
+        }            
+      } else { // manager.getType() == TYPE_CONTROL
+        if (!controlSockets.containsKey(address)) {
+          controlSockets.put(address, manager);
+          queue.addFirst(manager);
+
+          debug("Recorded opening of socket to " + address);
+
+          closeSocketIfNecessary();
         } else {
-          debug("SocketClosed called with corrent address, but incorrect manager - not a big deal.");
+          debug("ERROR: Request to record socket opening for already-open socket to " + address);
+          String local = "" + localAddress.getAddress().getHostAddress() + localAddress.getPort();
+          String remote = "" + address.getAddress().getHostAddress() + address.getPort();
+
+          debug("RESOLVE: Comparing " + local + " and " + remote);
+
+          if (remote.compareTo(local) < 0) {
+            debug("RESOLVE: Cancelling existing connection to " + address);
+            SocketManager toClose = (SocketManager) controlSockets.get(address);
+
+            socketClosed(address, toClose);
+            socketOpened(address, manager);
+            toClose.close();
+          } else {
+            debug("RESOLVE: Cancelling new connection to " + address);
+          }
         }
-      } else {
-        debug("SEROUS ERROR: Request to record socket closing for non-existant socket to " + address);
-      }
+      }      
     }
   }
 
-  /**
-   * Method which is designed to be called whenever a node has network activity.
-   * This is used to determine which nodes should be disconnected, should it be
-   * necessary (implementation of a LRU stack).
-   *
-   * @param address DESCRIBE THE PARAMETER
-   */
-  protected void socketUpdated(InetSocketAddress address) {
-    synchronized (sockets) {
-      if (sockets.containsKey(address)) {
-        queue.remove(address);
-        queue.addFirst(address);
-      } else {
-        debug("SERIOUS ERROR: Request to record update for non-existant socket to " + address);
-      }
-    }
+  protected void closeSocketIfNecessary() {
+    if (dataSockets.size()+controlSockets.size() > MAX_OPEN_SOCKETS) {
+      SocketManager toClose = (SocketManager) queue.removeLast();
+      debug("Too many sockets open - closing socket to " + toClose);
+      toClose.close();
+    }    
   }
-
-  /**
-   * Method which opens a socket to a given remote node handle, and updates the
-   * bookkeeping to keep track of this socket
-   *
-   * @param address DESCRIBE THE PARAMETER
-   */
-  protected void openSocket(InetSocketAddress address) {
-    try {
-      synchronized (sockets) {
-        if (!sockets.containsKey(address)) {
-          socketOpened(address, new SocketManager(address, this));
-        } else {
-          debug("SERIOUS ERROR: Request to open socket to already-open socket to " + address);
-        }
-      }
-    } catch (IOException e) {
-      System.out.println("GOT ERROR " + e + " OPENING SOCKET!");
-      e.printStackTrace();
-      closeSocket(address);
-    }
-  }
+*/
 
   /**
    * Method which cloeses a socket to a given remote node handle, and updates
@@ -446,16 +434,27 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    *
    * @param address DESCRIBE THE PARAMETER
    */
-  protected void closeSocket(InetSocketAddress address) {
-    synchronized (sockets) {
-      if (sockets.containsKey(address)) {
-        ((SocketManager) sockets.get(address)).close();
-      } else {
-        debug("SERIOUS ERROR: Request to close socket to non-open handle to " + address);
+  /*
+  protected void closeSocket(InetSocketAddress address, int type) {
+    if (type == TYPE_DATA) {
+      synchronized (dataSockets) {
+        if (dataSockets.containsKey(address)) {
+          ((SocketManager) dataSockets.get(address)).close();
+        } else {
+          debug("SERIOUS ERROR: Request to close data socket to non-open handle to " + address);
+        }
+      }
+    } else {  
+      synchronized (controlSockets) {
+        if (controlSockets.containsKey(address)) {
+          ((SocketManager) controlSockets.get(address)).close();
+        } else {
+          debug("SERIOUS ERROR: Request to close control socket to non-open handle to " + address);
+        }
       }
     }
   }
-
+*/
   /**
    * Reroutes the given message. If this node is alive, send() is called. If
    * this node is not alive and the message is a route message, it is rerouted.
@@ -486,6 +485,7 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    */
   protected void markDead(InetSocketAddress address) {
     if (!dead.contains(address)) {
+      //System.out.println(System.currentTimeMillis()+":"+address);
       dead.add(address);
       pool.update(address, SocketNodeHandle.DECLARED_DEAD);
     }
@@ -508,69 +508,43 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    *
    * @param s DESCRIBE THE PARAMETER
    */
-  private void debug(String s) {
+  void debug(String s) {
     if (Log.ifp(8)) {
       System.out.println(pastryNode.getNodeId() + " (SCM): " + s);
     }
   }
 
-  /**
-   * DESCRIBE THE CLASS
-   *
-   * @version $Id$
-   * @author jeffh
-   */
-  class DeadChecker extends TimerTask implements PingResponseListener {
-    int tries = 1;
-    // already called once
-    int NUM_TRIES;
-    InetSocketAddress address;
-    PingManager manager;
 
-    /**
-     * Constructor for DeadChecker.
-     *
-     * @param address DESCRIBE THE PARAMETER
-     * @param numTries DESCRIBE THE PARAMETER
-     * @param mgr DESCRIBE THE PARAMETER
-     */
-    public DeadChecker(InetSocketAddress address, int numTries, PingManager mgr) {
-      //System.out.println("Registered DeadChecker("+address+")");
-      this.address = address;
-      manager = mgr;
-      this.NUM_TRIES = numTries;
+	/**
+	 * @param address
+	 * @return
+	 */
+	public int getStatus(InetSocketAddress address) {
+    ConnectionManager cm = (ConnectionManager)connections.get(address);
+    if (cm != null) {
+      return cm.getStatus();
     }
+		return 0;
+	}
 
-    /**
-     * DESCRIBE THE METHOD
-     *
-     * @param address DESCRIBE THE PARAMETER
-     * @param RTT DESCRIBE THE PARAMETER
-     * @param timeHeardFrom DESCRIBE THE PARAMETER
-     */
-    public void pingResponse(
-                             InetSocketAddress address,
-                             long RTT,
-                             long timeHeardFrom) {
-      //System.out.println("Terminated DeadChecker(" + address + ") due to ping.");
-      cancel();
-    }
+	/**
+	 * 
+	 */
+	public SocketPoolManager getSocketPoolManager() {
+		return socketPoolManager;
+	}
 
-    /**
-     * Main processing method for the DeadChecker object
-     */
-    public void run() {
-      if (tries < NUM_TRIES) {
-        //System.out.println("DeadChecker("+address+") pinging again."+tries);
-        tries++;
-        manager.forcePing(address, this);
-      } else {
-        //System.out.println("DeadChecker("+address+") marking node dead.");
-        markDead(address);
-        cancel();
-      }
-    }
-  }
+	/**
+	 * @param manager
+	 */
+	public void newSocketManager(InetSocketAddress address, SocketManager manager) {
+    getConnectionManager(address).acceptSocket(manager);
+	}
 
-
+	/**
+	 * @return
+	 */
+	public PingManager getPingManager() {
+		return pingManager;
+	}
 }

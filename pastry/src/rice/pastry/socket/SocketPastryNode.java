@@ -24,17 +24,14 @@
 
 package rice.pastry.socket;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import java.net.InetSocketAddress;
+import java.util.TimerTask;
 
-import rice.pastry.*;
-import rice.pastry.client.*;
-import rice.pastry.dist.*;
-import rice.pastry.join.*;
-import rice.pastry.leafset.*;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
+import rice.pastry.NodeHandle;
+import rice.pastry.NodeId;
+import rice.pastry.dist.DistNodeHandlePool;
+import rice.pastry.dist.DistPastryNode;
+import rice.pastry.wire.exception.NodeIsDeadException;
 
 /**
  * An Socket-based Pastry node, which has two threads - one thread for
@@ -164,7 +161,7 @@ public class SocketPastryNode extends DistPastryNode {
    * @return a String
    */
   public String toString() {
-    return "SocketNodeHandle (" + getNodeId() + ")\n";
+    return "SocketPastryNode (" + getNodeId() + ")";
   }
 
   /**
@@ -174,7 +171,15 @@ public class SocketPastryNode extends DistPastryNode {
    * @param delay DESCRIBE THE PARAMETER
    */
   protected void scheduleTask(TimerTask task, long delay) {
-    timer.schedule(task, delay);
+    try {
+      timer.schedule(task, delay);
+    } catch (IllegalStateException ise) {
+      if (manager.isAlive()) {
+        throw ise;
+      } else {
+        throw new NodeIsDeadException(ise);
+      }
+    }
   }
 
   /**
@@ -187,4 +192,5 @@ public class SocketPastryNode extends DistPastryNode {
   protected void scheduleTask(TimerTask task, long delay, long period) {
     timer.schedule(task, delay, period);
   }
+  
 }

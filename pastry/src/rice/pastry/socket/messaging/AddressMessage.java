@@ -17,12 +17,20 @@ import java.net.InetSocketAddress;
 public class AddressMessage extends SocketControlMessage {
 
   public InetSocketAddress address;
-
+  public int type;
+  
 	/**
 	 * @param address
 	 */
-	public AddressMessage(InetSocketAddress address) {
+	public AddressMessage(InetSocketAddress address, int type) {
 		this.address = address;
+    this.type = type;
+	}
+  
+  
+
+	public boolean hasPriority() {
+		return true;
 	}
 
 }

@@ -31,6 +31,7 @@ import java.util.*;
 import rice.pastry.*;
 import rice.pastry.dist.*;
 import rice.pastry.messaging.*;
+import rice.pastry.wire.exception.NodeIsDeadException;
 
 /**
  * Abstract class for handles to "real" remote nodes. This class abstracts out
@@ -75,6 +76,16 @@ public class SocketNodeHandle extends DistNodeHandle {
     }
   }
 
+  public int getStatus() {
+    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+
+    if (spn == null) {
+      return STATUS_ALIVE;
+    } else {
+      return spn.getSocketCollectionManager().getStatus(getAddress());
+    } 
+  }
+
   /**
    * Called to send a message to the node corresponding to this handle.
    *
@@ -82,12 +93,12 @@ public class SocketNodeHandle extends DistNodeHandle {
    */
   public void receiveMessage(Message msg) {
     assertLocalNode();
-
+    
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
 
     if (spn.getNodeId().equals(nodeId)) {
       //debug("Sending message " + msg + " locally");
-      spn.receiveMessage(msg);
+        spn.receiveMessage(msg);
     } else {
       debug("Passing message " + msg + " to the socket controller for writing");
       spn.getSocketCollectionManager().send(getAddress(), msg);

@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.pastry.socket.messaging;
 
 import java.io.*;
+import java.util.Collection;
 
 import rice.pastry.socket.*;
 import rice.pastry.*;
@@ -49,7 +50,7 @@ import rice.pastry.*;
  *
  * @author Alan Mislove
  */
-public class PingMessage extends SocketMessage {
+public class PingMessage extends SocketMessage implements Probe {
 
   private long start;
 
@@ -73,4 +74,28 @@ public class PingMessage extends SocketMessage {
     start = System.currentTimeMillis();
     oos.defaultWriteObject();
   }
+	/* (non-Javadoc)
+	 * @see rice.pastry.socket.messaging.Probe#getFaildset()
+	 */
+	public Collection getFaildset() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	/* (non-Javadoc)
+	 * @see rice.pastry.socket.messaging.Probe#getLeafset()
+	 */
+	public Collection getLeafset() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	/* (non-Javadoc)
+	 * @see rice.pastry.socket.messaging.Probe#getRemoteNode()
+	 */
+	public SocketNodeHandle getRemoteNode() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

@@ -14,13 +14,20 @@ package rice.pastry.socket.messaging;
  */
 public class AckMessage extends SocketMessage {
 
+  transient SocketTransportMessage stp;
+
 	/**
 	 * 
 	 */
-	public AckMessage(int seqNum) {
+	public AckMessage(int seqNum, SocketTransportMessage stp) {
 		super();
+    this.stp = stp;
     seqNumber = seqNum;    
     setPriority(true);
 	}
+
+  public String toString() {
+    return "AckMsg<"+seqNumber+">("+stp+")";
+  }
 
 }

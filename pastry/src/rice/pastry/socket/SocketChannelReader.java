@@ -150,6 +150,7 @@ public class SocketChannelReader {
         //   int size = objectSize + MAGIC_NUMBER.length + 4;
         Object obj = deserialize(objectArray);
         debug("Deserialized bytes into object " + obj);
+//        System.out.println("SCR.read():Deserialized bytes into object " + obj);
 
         //   if (spn != null)
         //     spn.broadcastReceivedListeners(obj, (InetSocketAddress) sc.socket().getRemoteSocketAddress(), size);

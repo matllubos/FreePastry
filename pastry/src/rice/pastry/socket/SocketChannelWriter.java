@@ -24,20 +24,21 @@
 
 package rice.pastry.socket;
 
-import java.io.*;
-import java.net.*;
-import java.nio.*;
-import java.nio.channels.*;
-import java.nio.charset.*;
-import java.util.*;
-import java.util.zip.*;
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InvalidClassException;
+import java.io.NotSerializableException;
+import java.io.ObjectOutputStream;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.util.Hashtable;
+import java.util.LinkedList;
 
-import rice.pastry.wire.exception.*;
-import rice.pastry.wire.messaging.socket.*;
-import rice.serialization.*;
+import rice.pastry.Log;
+import rice.pastry.messaging.Message;
+import rice.pastry.socket.messaging.AckMessage;
 
 /**
  * Class which serves as an "writer" for all of the messages sent across the
@@ -64,9 +65,10 @@ public class SocketChannelWriter {
   // internal list of objects waiting to be written
   private LinkedList queue;
 
-  // the maximum length of the queue
+  private SocketManager manager;
+
   /**
-   * DESCRIBE THE FIELD
+   *  the maximum length of the queue
    */
   public static int MAXIMUM_QUEUE_LENGTH = 128;
 
@@ -76,14 +78,17 @@ public class SocketChannelWriter {
    */
   protected static byte[] MAGIC_NUMBER = new byte[]{0x77, 0x21, 0x25, 0x67};
 
+  InetSocketAddress address;
+
   /**
    * Constructor which creates this SocketChannelWriter with a pastry node and
    * an object to write out.
    *
    * @param spn The spn the SocketChannelWriter servers
    */
-  public SocketChannelWriter(SocketPastryNode spn) {
+  public SocketChannelWriter(SocketPastryNode spn, SocketManager sm) {
     this.spn = spn;
+    this.manager = sm;
     queue = new LinkedList();
   }
 
@@ -107,6 +112,9 @@ public class SocketChannelWriter {
     return queue;
   }
 
+  long timeEnque = 0;
+  Hashtable timeEnq = new Hashtable();
+
   /**
    * Adds an object to this SocketChannelWriter's queue of pending objects to
    * write. This methos is synchronized and therefore safe for use by multiple
@@ -116,12 +124,15 @@ public class SocketChannelWriter {
    * @return DESCRIBE THE RETURN VALUE
    */
   public boolean enqueue(Object o) {
+//    System.out.println("ENQ4:"+manager+".SCW.enqueue()" + o);
+    timeEnque = System.currentTimeMillis();
+    timeEnq.put(o,new Long(timeEnque));
     synchronized (queue) {
       if (queue.size() < MAXIMUM_QUEUE_LENGTH) {
         addToQueue(o);
         return true;
       } else {
-        System.err.println(spn.getNodeId() + " (W): Maximum TCP queue length reached - message " + o + " will be dropped.");
+        System.err.println(System.currentTimeMillis()+":"+spn.getNodeId()+"->"+ address + " (W): Maximum TCP queue length reached - message " + o + " will be dropped.");
         return false;
       }
     }
@@ -147,11 +158,27 @@ public class SocketChannelWriter {
    * @exception IOException DESCRIBE THE EXCEPTION
    */
   public boolean write(SocketChannel sc) throws IOException {
+    if (address == null) {
+      address = (InetSocketAddress) sc.socket().getRemoteSocketAddress();
+    }
     synchronized (queue) {
       if (buffer == null) {
         if (queue.size() > 0) {
+          Long lo = (Long)timeEnq.remove(queue.getFirst());
+          
+          long timeToWrite;
+          if (lo != null) {
+            timeToWrite = System.currentTimeMillis() - lo.longValue();
+          } else {
+            timeToWrite = 0;
+          }
+//          System.out.println("SEN:"+manager+".SCW.write()" + queue.getFirst() + ":"+timeToWrite);
           debug("About to serialize object " + queue.getFirst());
-          buffer = serialize(queue.getFirst());
+          Object first = queue.getFirst();
+          buffer = serialize(first);
+          if (manager != null) {
+              manager.wroteMessage(first);
+          }
 
           //    if (spn != null)
           //      spn.broadcastSentListeners(queue.getFirst(), (InetSocketAddress) sc.socket().getRemoteSocketAddress(), buffer.limit());
@@ -163,6 +190,7 @@ public class SocketChannelWriter {
       int j = buffer.limit();
       int i = sc.write(buffer);
 
+//      System.out.println("SCW.write():Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
       debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
 
       if (buffer.remaining() != 0) {
@@ -176,10 +204,20 @@ public class SocketChannelWriter {
       queue.removeFirst();
 
       buffer = null;
-
+/*
       // if there are more objects in the queue, try writing those
       // otherwise, return saying all objects have been written
-      return write(sc);
+      if ((manager != null) && (manager.getType() == SocketCollectionManager.TYPE_CONTROL)) {
+        if (manager.canWrite()) {
+          return write(sc);
+        } else {
+          return false;
+        }
+      } else { // mgr == null || TYPE_DATA
+        */
+        return write(sc);        
+      //}
+      
     }
   }
 
@@ -189,6 +227,10 @@ public class SocketChannelWriter {
    * @param o The feature to be added to the ToQueue attribute
    */
   private void addToQueue(Object o) {
+    if (queue.size() > 2 && !(o instanceof AckMessage)) {
+      //System.out.println("SCW.addToQueue("+o+"):"+o.getClass().getName());
+      //Thread.dumpStack();
+    }
     if (o instanceof Message) {
       boolean priority = ((Message) o).hasPriority();
 
@@ -198,15 +240,26 @@ public class SocketChannelWriter {
 
           if ((thisObj instanceof Message) && (!((Message) thisObj).hasPriority())) {
             debug("Prioritizing socket message " + o + " over message " + thisObj);
-
+//            System.out.println("ENQ4.5:SCW.addToQueue("+o+"):"+i);
             queue.add(i, o);
+            if (manager!=null) {
+              manager.registerModifyKey();            
+            }
             return;
           }
         }
       }
     }
 
+//    System.out.println("ENQ4.5:SCW.addToQueue("+o+"):last");
     queue.addLast(o);
+    if (manager!=null) {
+      manager.registerModifyKey();            
+    }
+  }
+
+  int getSize() {
+    return queue.size();
   }
 
   /**
