@@ -64,6 +64,15 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
      */
     private boolean m_ready = false;
 
+
+    /**
+     * Flag for identifying whether the most recent drop
+     * of a node is because local node dropped it, not because
+     * that node sent unsubscription message.
+     */
+    private boolean localDrop = false;
+
+
     /**
      * The constructor for building the splitStream object
      */
@@ -100,7 +109,8 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
     * by some other peer using SplitStream. It attaches the local node to the 
     * Channel which is being used by the source peer to distribute the content.
     * Essentially, this method finds out the different parameters of Channel
-    * object which is created by the source, (the peer distributing the content)    *, and then creates a local Channel object with these parameters and
+    * object which is created by the source, (the peer distributing the content)    
+    *, and then creates a local Channel object with these parameters and
     * returns it.  
     * This is a non-blocking call so the returned Channel object may not be 
     * initialized with all the parameters, so applications should wait for 
@@ -139,6 +149,7 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
    }
 
    /** - IScribeObserver Implementation -- */
+
    /**
     * The update method called when a new topic is created at this
     * node.  When a new topic is created we join it so we can receive
@@ -189,26 +200,94 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
                                NodeHandle child, 
                                boolean wasAdded,  
                                Serializable data){
-     //System.out.println("Subscribe Handler at " + ((Scribe) scribe).getNodeId() + " for " + topicId + " from " + child.getNodeId());
-     NodeId[] nodeData = (NodeId[]) data;
-     
-     if(nodeData!=null){
-   			
-	/* Clean This up */
-	StripeId[] stripeId = new StripeId[nodeData.length - 2];
-	ChannelId channelId = new ChannelId(nodeData[0]);
-	for(int i = 1; i < nodeData.length -1; i++){
-		stripeId[i-1] = new StripeId(nodeData[i]);
-	}
 
+       //System.out.println("Subscribe Handler at " + ((Scribe) scribe).getNodeId() + " for " + topicId + " from " + child.getNodeId());
+       NodeId[] nodeData = (NodeId[]) data;
+       
+       
+       if(nodeData!=null){
+	   /* Clean This up */
+	   StripeId[] stripeId = new StripeId[nodeData.length - 2];
+	   ChannelId channelId = new ChannelId(nodeData[0]);
+	   for(int i = 1; i < nodeData.length -1; i++){
+	       stripeId[i-1] = new StripeId(nodeData[i]);
+	   }
+	   
+	   
+	   SpareCapacityId spareCapacityId = new SpareCapacityId(nodeData[nodeData.length -1]);
+	   /* Clean This up */
+	   Channel channel = (Channel)channels.get(channelId);
+	   
+	   if(channel == null){
+	       channel = new Channel(channelId, stripeId, spareCapacityId, scribe, bandwidthManager, node);
+	       channels.put(channelId, channel);
+	   }
+	   
+	   /**
+	    * Check if this subscription is for a unsubscribed-stripe of this channel!
+	    * If so, then the splitstream object should take the responsibility
+	    * of notifying the bandwidth manager about the bandwidth usage, and additional
+	    * handling, like sending ControlPropogatePathMessage or Drop message if necessary.
+	    */
+	   if(!((NodeId)channelId).equals(topicId)){
+	       //System.out.println("SPLITSTREAM :: Subscription is for stripe"+" at "+channel.getNodeId());
+	       Vector subscribedStripes = channel.getSubscribedStripes();
+	       if(!channel.stripeAlreadySubscribed((StripeId)topicId)){
+		   if(wasAdded){
+		       //channel.stripeSubscriberAdded();
+		       //System.out.println("SPLITSTREAM ::Subscriber was added"+child.getNodeId());
+		       Stripe stripe = channel.getStripe((StripeId)topicId);
+		       if(bandwidthManager.canTakeChild(channel)){
+			   //if(bandwidthManager.getUsedBandwidth(channel) <= bandwidthManager.getMaxBandwidth(channel)){
+			   //System.out.println("SPLITSTREAM :: Subscriber can take child"+" at "+channel.getNodeId());
+			   channel.stripeSubscriberAdded();
+			   Credentials credentials = new PermissiveCredentials();
+			   Vector child_root_path = stripe.getRootPath();
+			   child_root_path.add( ((Scribe)scribe).getLocalHandle() );
+			   channel.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
+											   channel.getNodeHandle(),
+											   topicId,
+											   credentials,
+											   child_root_path ),
+						   credentials, null );
+		       }
+		       else{
+			   /* THIS IS WHERE THE DROP SHOULD OCCUR */
+			   Credentials credentials = new PermissiveCredentials();
+			   channel.routeMsgDirect( child, new ControlDropMessage( channel.getAddress(),
+										  channel.getNodeHandle(),
+										  topicId,
+										  credentials,
+										  channel.getSpareCapacityId(), channel.getChannelId(), channel.getTimeoutLen() ),
+						   credentials, null );
+			   //System.out.println("SPLITSTREAM ::SHOULD NOT TAKE CHILD - LOCAL-DROP"+" at "+channel.getNodeId());
+			   localDrop = true;
+			   scribe.removeChild(child, topicId);
+			   //bandwidthManager.additionalBandwidthUsed(channel);
 
-        SpareCapacityId spareCapacityId = new SpareCapacityId(nodeData[nodeData.length -1]);
-	/* Clean This up */
-	if(channels.get(channelId) == null)
-	channels.put(channelId, 
-	new Channel(channelId, stripeId, spareCapacityId, scribe, bandwidthManager, node));
-        }
-     }
+		       }
+		   }
+		   else{
+		       //System.out.println("SPLITSTREAM ::Subscriber was removed"+child.getNodeId()+" at "+channel.getNodeId());
+		       if(!localDrop){
+			   bandwidthManager.additionalBandwidthFreed(channel);
+		       }
+		       else {
+			   //System.out.println("SPLITSTREAM ::LOCAL-DROP -- so not freeing any bandwidth"+" at "+channel.getNodeId());
+			   localDrop = false;
+		       }
+		   }
+	       }
+	       
+	   }
+	   /**
+	    * XXX - What if this subscribeMessage is for a stripe of the channel,
+	    * so the local node might receive subscribe messages from other nodes
+	    * thereby increasing its outgoing b/w usage (since locally nobody is 
+	    * subscribed to this stripe yet).
+	    */
+       }
+   }
     
     /**
      * Returns the underlying scribe object.
@@ -225,13 +304,14 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
      * for a new parent
      * 
      * @param app the app to be registered
+     */
     public void registerApp(ISplitStreamApp app){
 	m_apps.add(app);
-    }
+    } 
    
     /**
      * called when the apps registered with this splitstream
-     * object must be notified of something
+     * object must be notified of event that splitstream is ready.
      *
      */
     public void notifyApps(){

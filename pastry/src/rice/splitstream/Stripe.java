@@ -85,6 +85,14 @@ public class Stripe extends Observable implements IScribeApp{
     */
    private Vector root_path = new Vector();
 
+
+    /**
+     * Flag for identifying whether the most recent drop
+     * of a node is because local node dropped it, not because
+     * that node sent unsubscription message.
+     */
+    private boolean localDrop = false;
+
    /**
     * The constructor used when creating a stripe from scratch.
     *
@@ -116,7 +124,10 @@ public class Stripe extends Observable implements IScribeApp{
     */
    public void setRootPath( Vector path )
    {
-      root_path = path;
+       if(path ==  null)
+	   root_path.removeAllElements();
+       else
+	   root_path = path;
    }
    /**
     * Returns the path to root for this stripe
@@ -171,7 +182,7 @@ public class Stripe extends Observable implements IScribeApp{
       * data to start being received
       */
      public void joinStripe(){
-	if(scribe.join(stripeId, this, credentials)){
+	if(scribe.join(stripeId, this, credentials, channel.getChannelMetaData())){
  		stripeState = STRIPE_SUBSCRIBED;
 		inputStream = new ByteArrayInputStream(inputBuffer);
 	}
@@ -250,8 +261,11 @@ public class Stripe extends Observable implements IScribeApp{
 	    BandwidthManager bandwidthManager = getChannel().getBandwidthManager();
 
 	    if(wasAdded){
-		//System.out.println("Child was added ");
+		//channel.stripeSubscriberAdded();
+		//System.out.println("STRIPE :: Child was added "+child.getNodeId()+" at "+getChannel().getNodeId());
 		if(bandwidthManager.canTakeChild(getChannel())){
+		    //if(bandwidthManager.getUsedBandwidth(getChannel()) <= bandwidthManager.getMaxBandwidth(getChannel())){
+		    //System.out.println("STRIPE:: can take child "+child.getNodeId()+" at "+getChannel().getNodeId());
 		    channel.stripeSubscriberAdded();
 		    Credentials credentials = new PermissiveCredentials();
 		    Vector child_root_path = root_path;
@@ -262,6 +276,7 @@ public class Stripe extends Observable implements IScribeApp{
 										    credentials,
 										    child_root_path ),
 					    credentials, null );
+		    //System.out.println("STRIPE :: Done with taking child "+getChannel().getNodeId());
 		}
 		else{
 		    /* THIS IS WHERE THE DROP SHOULD OCCUR */
@@ -274,16 +289,24 @@ public class Stripe extends Observable implements IScribeApp{
                                                                            channel.getChannelId(),
                                                                            channel.getTimeoutLen() ),
 					    credentials, null );
+		    //System.out.println("STRIPE ::SHOULD NOT TAKE CHILD - LOCALDROP"+" at "+getChannel().getNodeId());
+		    localDrop = true;
 		    scribe.removeChild(child, topicId);
 		    //bandwidthManager.additionalBandwidthFreed(channel);
-		    //System.out.println("SHOULD NOT TAKE CHILD");
+
+
 		}
 		/* We should check if we can take this child on */
 	    }
 	    else {
 		// child was dropped
-		//System.out.println("Child was dropped ");
-		//bandwidthManager.additionalBandwidthFreed(channel);
+		//System.out.println("STRIPE ::Child was removed "+child.getNodeId()+" at "+getChannel().getNodeId());
+		if(!localDrop)
+		    bandwidthManager.additionalBandwidthFreed(channel);
+		else {
+		    //System.out.println("STRIPE ::LOCAL-DROP -- so not freeing any bandwidth"+" at "+getChannel().getNodeId());
+		    localDrop = false;
+		}
 	    }
      }
 

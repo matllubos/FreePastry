@@ -215,7 +215,7 @@ public class Channel extends PastryAppl implements IScribeApp {
                                                                           0,
                                                                           channelId,
                                                                           cred );
-	this.thePastryNode.scheduleMsg( timeoutMessage, timeoutLen );
+	//this.thePastryNode.scheduleMsg( timeoutMessage, timeoutLen );
 
     }
 
@@ -386,8 +386,8 @@ public class Channel extends PastryAppl implements IScribeApp {
 	Object tableEntry = stripeIdTable.get(stripeId);
 	Stripe stripe = null; 
 	stripe = (Stripe) tableEntry;
-	//if(subscribedStripes.contains(stripe))
-	//  return stripe;
+	if(subscribedStripes.contains(stripe))
+	    return stripe;
 
 	stripe.joinStripe();	
 	stripe.addObserver(observer);
@@ -473,7 +473,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	    handleChannelMessage(msg);
 	}
 	else if(msg.getTopicId().equals(spareCapacityId)){
-	    handleSpareCapacityMessage(msg);
+	    //handleSpareCapacityMessage(msg);
 	}
 	else{
 	    System.out.println(msg.getTopicId());
@@ -595,7 +595,13 @@ public class Channel extends PastryAppl implements IScribeApp {
 
 	ControlFindParentResponseMessage prmessage = 
             (ControlFindParentResponseMessage) msg;
+	Stripe stripe = (Stripe) stripeIdTable.get(prmessage.getStripeId());
 
+	if(stripe != null){
+	    Vector path = new Vector();
+	    path.addElement(prmessage.getSource());
+	    stripe.setRootPath( path );
+        }
 	prmessage.handleMessage((Scribe) scribe, 
           ((Scribe) scribe).getTopic(prmessage.getStripeId()));
     }
@@ -614,9 +620,9 @@ public class Channel extends PastryAppl implements IScribeApp {
           stripe.dropped();
           stripe.setRootPath( null );
         }
-
+	//System.out.println("Node "+getNodeId()+" received DROP message"+" for stripe "+dropMessage.getStripeId());
 	dropMessage.handleDeliverMessage((Scribe)scribe, 
-           ((Scribe) scribe).getTopic(dropMessage.getStripeId()), this.thePastryNode);
+           ((Scribe) scribe).getTopic(dropMessage.getStripeId()), this.thePastryNode, this);
     }
 
 
