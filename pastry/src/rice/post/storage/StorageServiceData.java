@@ -85,7 +85,7 @@ abstract class StorageServiceData implements GCPastContent {
    * @return the handle
    */
   public PastContentHandle getHandle(Past local) {
-    return new StorageServiceDataHandle(local.getLocalNodeHandle(), location, getVersion(), GCPast.NO_EXPIRATION_SPECIFIED);
+    return new StorageServiceDataHandle(local.getLocalNodeHandle(), location, getVersion(), GCPastImpl.DEFAULT_EXPIRATION);
   }
   
   /**
