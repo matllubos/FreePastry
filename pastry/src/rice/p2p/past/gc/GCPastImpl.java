@@ -242,52 +242,66 @@ public class GCPastImpl extends PastImpl implements GCPast {
     sendRequest(start.getId(), new GCLookupHandlesMessage(getUID(), start.getId(), getLocalNodeHandle(), start.getId()), 
                 new NamedContinuation("GCLookupHandles for " + start.getId(), command) {
       public void receiveResult(Object o) {
-        NodeHandleSet set = (NodeHandleSet) o;
-        System.out.println("REFRESH: GOT " + set + " SET OF HANDLES!");
+        final NodeHandleSet set = (NodeHandleSet) o;
         final ReplicaMap map = new ReplicaMap();
-        
-        for (int i=0; i<array.length; i++) {
-          GCId id = (GCId) array[i];
 
-          NodeHandleSet replicas = endpoint.replicaSet(id.getId(), replicationFactor+1, set.getHandle(set.size()-1), set);
-          System.out.println("REFRESH: ID " + id + " IS MAPPED TO REPLICAS " + replicas);
-
-          // if we have all of the replicas, go ahead and refresh this item
-          if ((replicas != null) && ((replicas.size() == set.size()) || (replicas.size() == replicationFactor+1))) {
-            for (int j=0; j<replicas.size(); j++) 
-              map.addReplica(replicas.getHandle(j), id);
-            
-            refreshed++;
-            ids.removeId(id);
-          }
-        }
+        System.out.println("REFRESH: GOT " + set + " SET OF HANDLES!");
         
-        final Iterator iterator = map.getReplicas();
-        
-        Continuation send = new StandardContinuation(parent) {
-          public void receiveResult(Object o) {
-            if (iterator.hasNext()) {
-              NodeHandle next = (NodeHandle) iterator.next();
-              GCIdSet ids = map.getIds(next);
-              System.out.println("REFRESH: SENDING REQUEST TO " + next + " FOR IDSET " + ids);
+        endpoint.process(new Executable() {
+          public Object execute() {
+            System.out.println("REFRESH: ON PROCESSING THREAD!");
 
+            for (int i=0; i<array.length; i++) {
+              GCId id = (GCId) array[i];
               
-              sendRequest(next, new GCRefreshMessage(getUID(), ids, getLocalNodeHandle(), next.getId()), 
-                          new NamedContinuation("GCRefresh to " + next, this));
-            } else {
-              System.out.println("REFRESH: DONE SENDING REQUESTS, RECURSING");
-
-              refresh(ids, parent);
+              NodeHandleSet replicas = endpoint.replicaSet(id.getId(), replicationFactor+1, set.getHandle(set.size()-1), set);
+              
+              // if we have all of the replicas, go ahead and refresh this item
+              if ((replicas != null) && ((replicas.size() == set.size()) || (replicas.size() == replicationFactor+1))) {
+                for (int j=0; j<replicas.size(); j++) 
+                  map.addReplica(replicas.getHandle(j), id);
+                
+                refreshed++;
+                ids.removeId(id);
+              }
             }
+            
+            System.out.println("REFRESH: DONE WITH PROCESSING THREAD - MOVING TO NORMAL THREAD!");
+            
+            return null;
           }
-          
-          public void receiveException(Exception e) {
-            System.out.println("GOT EXCEPTION " + e + " REFRESHING ITEMS - CONTINUING");
-            receiveResult(null);
+        }, new StandardContinuation(parent) {
+          public void receiveResult(Object o) {
+            System.out.println("REFRESH: BACK ON NORMAL THREAD!");
+
+            final Iterator iterator = map.getReplicas();
+            
+            Continuation send = new StandardContinuation(parent) {
+              public void receiveResult(Object o) {
+                if (iterator.hasNext()) {
+                  NodeHandle next = (NodeHandle) iterator.next();
+                  GCIdSet ids = map.getIds(next);
+                  System.out.println("REFRESH: SENDING REQUEST TO " + next + " FOR IDSET " + ids);
+                  
+                  
+                  sendRequest(next, new GCRefreshMessage(getUID(), ids, getLocalNodeHandle(), next.getId()), 
+                              new NamedContinuation("GCRefresh to " + next, this));
+                } else {
+                  System.out.println("REFRESH: DONE SENDING REQUESTS, RECURSING");
+                  
+                  refresh(ids, parent);
+                }
+              }
+              
+              public void receiveException(Exception e) {
+                System.out.println("GOT EXCEPTION " + e + " REFRESHING ITEMS - CONTINUING");
+                receiveResult(null);
+              }
+            };
+            
+            send.receiveResult(null);
           }
-        };
-        
-        send.receiveResult(null);
+        });        
       }
     });
   }
