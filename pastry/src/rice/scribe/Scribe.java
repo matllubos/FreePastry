@@ -546,6 +546,7 @@ public class Scribe extends PastryAppl implements IScribe
 
 	// send unsubscribe message if no more applications registered
 	if ( !topic.hasSubscribers() ) {
+	    //System.out.println("Sending unsubscribe messages since no more applications at "+this.getNodeId());
 	    ScribeMessage msg = makeUnsubscribeMessage( topicId, cred );
 	    this.routeMsgDirect( thePastryNode.getLocalHandle(), msg, cred,
 				 m_sendOptions );
@@ -659,7 +660,8 @@ public class Scribe extends PastryAppl implements IScribe
 	} catch ( NoSuchAlgorithmException e ) {
 	    System.err.println( "No SHA support!" );
 	}
-
+	if(m_ready)
+	    System.out.println("Scribe is ready at"+getNodeId()+" , topic is "+topicName);
 	md.update( topicName.getBytes() );
 	byte[] digest = md.digest();
 	
@@ -799,6 +801,7 @@ public class Scribe extends PastryAppl implements IScribe
 			    ScribeMessage msgu = makeUnsubscribeMessage( topicId, c);
 			    this.routeMsgDirect(prev_parent, msgu, c, m_sendOptions);
 			}
+			//System.out.println("Scribe -- setting parent to null for topic"+topic.getTopicId()+ " at "+getNodeId());
 			topic.setParent(null);
 		    }
 		}
@@ -1299,7 +1302,7 @@ public class Scribe extends PastryAppl implements IScribe
      */
     public boolean setParent(NodeHandle parent, NodeId topicId){
 	Topic topic = getTopic(topicId);
-       
+	//System.out.println("Scribe --- caling setParent for topic "+topicId+" to parent "+parent);
 	if(topic != null){
 	    topic.setParent(parent);
 	    return true;
@@ -1360,12 +1363,14 @@ public class Scribe extends PastryAppl implements IScribe
 	if(wasAdded){
 	    // child was added
 	    if( m_ackOnSubscribeSwitch ) {
-	    /** 
-	     * Send a AckOnSubscribeMessage to the new subscriber so that
-	     * it can set its parent pointer and reset its parentHandler.
-	     */
-	    ScribeMessage amsg = makeAckOnSubscribeMessage(topicId, cred);
-	    routeMsgDirect( child, amsg, cred, opt );
+		/** 
+		 * Send a AckOnSubscribeMessage to the new subscriber so that
+		 * it can set its parent pointer and reset its parentHandler.
+		 */
+		
+		//System.out.println("Sending ACK_ON_SUBSCRIBE from "+this.getNodeId()+" for topic "+topicId+" to child "+child.getNodeId());
+		ScribeMessage amsg = makeAckOnSubscribeMessage(topicId, cred);
+		routeMsgDirect( child, amsg, cred, opt );
 	    }
 	    
 	    //notify applications about addition of this child, even if this
@@ -1506,7 +1511,15 @@ public class Scribe extends PastryAppl implements IScribe
 	    app.update((Object)topicId);
 	}
     }
-   
+    
+    /**
+     * Returns the pastryNode for this application.
+     * 
+     * @return the pastryNode
+     */
+    public PastryNode getPastryNode(){
+	return thePastryNode;
+    }
 }
 
 
