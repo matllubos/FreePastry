@@ -18,11 +18,35 @@ import java.util.Vector;
  */
 public class ControlPropogatePathMessage extends Message{
 
+   /**
+    * Cumulative path to root thus far
+    */
    private Vector path;
+   
+   /**
+    * Source of this message
+    */
    private NodeHandle source;
+
+   /**
+    * Id of the stripe this message pertains to
+    */
    private StripeId stripe_id;
+
+   /**
+    * Id of the channel this message pertains to
+    */
    private ChannelId channel_id;
 
+   /**
+    * Constructor for a ControlPropogatePath message
+    * @param addr Address of the destination application
+    * @param source The source of this message
+    * @param topicId The stripe we build the path for
+    * @param c The credentials to send under
+    * @param path Initial path starting point
+    * @param channel_id The channel this message pertains to
+    */
    public ControlPropogatePathMessage( Address addr, NodeHandle source, NodeId topicId, Credentials c, Vector path, ChannelId channel_id )
    {
       super( addr );
@@ -51,7 +75,8 @@ public class ControlPropogatePathMessage extends Message{
     * list and messages containing the new list are sent to all of this
     * node's children.
     * @param scribe The scribe group this message is relevant to
-    * @param s The specific stripe this is relevant to
+    * @param channel The channel this message is relevant to
+    * @param stripe The specific stripe this is relevant to
     */
    public void handleMessage( Scribe scribe, Channel channel, Stripe stripe )
    {

@@ -18,11 +18,36 @@ import rice.scribe.messaging.*;
  */
 public class ControlDropMessage extends ControlMessage{
 
+   /**
+    * Id of the spare capacity tree
+    */
    private NodeId spare_id;
+
+   /**
+    * Id of the stripe being dropped from
+    */
    private StripeId stripe_id;
+
+   /**
+    * Id of the channel this message pertains to
+    */
    private ChannelId channel_id;
+
+   /**
+    * Time to wait before delivery of a timeout message (in ms)
+    */
    private long timeout_len = 5000;
 
+   /**
+    * Constructor for this message type
+    * @param addr The address of the destination application
+    * @param source The origin of this message
+    * @param stripe_id The stripe being dropped from
+    * @param c Credentials to send this message under
+    * @param spare_id Id of the spare capacity tree
+    * @param channel_id Id of the channel this message pertains to
+    * @param timeout_len Length of time to wait before delivery of a timeout message
+    */
    public ControlDropMessage( Address addr, NodeHandle source, NodeId stripe_id,
                               Credentials c, NodeId spare_id, ChannelId channel_id, long timeout_len )
    {
@@ -75,7 +100,6 @@ public class ControlDropMessage extends ControlMessage{
                                                                    spare_id,
                                                                    c,
                                                                    (StripeId)topic.getTopicId(), channel_id );
-      //scribe.anycast( spare_id, msg, c ); 
       channel.getSplitStream().routeMsg(spare_id, msg, c, null);
       scribe.setParent(null, topic.getTopicId());
       ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( this.getDestination(),

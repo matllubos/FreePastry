@@ -129,15 +129,22 @@ public class ControlFindParentMessage extends Message implements Serializable
         Credentials c = new PermissiveCredentials();
 	Topic stripeTopic = scribe.getTopic(recv_stripe.getStripeId());
 
+        /*Node is not part of the spare capacity tree, and don't have a list 
+          built up of anywhere else to forward this message to */
 	if( ( topic == null) && ( send_to.size() == 0 ) ){
 	    return true;
 	}
 	
+        /*Receiving node is not part of the spare capacity tree*/
 	if( topic == null){
 	    send_to.remove(0);
+
+            /*Something in the send to list, so we can forward the message along*/
 	    if ( send_to.size() > 0 ){
 		channel.getSplitStream().routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
 	    }
+            /*Something broke along the way, and we can't find our way back to the
+              spare capacity tree */
 	    else{
 		System.out.println("DFS FAILED :: No spare capacity");
 
@@ -157,26 +164,28 @@ public class ControlFindParentMessage extends Message implements Serializable
 	    }
 	}
 
+        /*Receiving node is part of the spare capacity tree*/
 	else {
 	    Vector children = scribe.getChildren(topic.getTopicId());
 	    Vector toAdd = new Vector();
 	    NodeHandle child;
 	    
-	    // Check if all my children are already visited or not,
-	    // if visited, then i will check if i can take this child
-	    // and if not, return to parent.
+	    /*Check if all my children are already visited or not,
+	      if visited, then I will check if I can take this child
+	      and if not, return to parent.*/
 	    for(int i = 0; i < children.size(); i++){
 		child = (NodeHandle)children.elementAt(i);
 		if(!already_seen.contains(child) && !send_to.contains(child))
 		    toAdd.add(child);
 	    }
-	    // my children have not been visited, so adding them
+	    /*My children have not been visited, so adding them*/
 	    if(toAdd.size() > 0){
 		if(!send_to.contains(scribe.getLocalHandle()))
 		    send_to.add( 0, scribe.getLocalHandle());
 		send_to.addAll(0, toAdd);
 		channel.getSplitStream().routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
 	    }
+            /*Visited children, so now time to check my own compatibility*/
 	    else {
 		BandwidthManager bandwidthManager = channel.getBandwidthManager();
 		
@@ -210,9 +219,11 @@ public class ControlFindParentMessage extends Message implements Serializable
 						null );
 			//System.out.println("Node "+scribe.getNodeId()+ " taking the child "+originalSource.getNodeId());
 		}
+                /* Have not visited all children, so want to send to them before checking
+                   my own compatibility*/
 		else {
-		    // send to next node in  send_to list if this
-		    // is not empty, else to parent
+		    /*Send to next node in send_to list if this
+		      is not empty, else to parent*/
 		    already_seen.add(scribe.getLocalHandle());
 		    if(send_to.contains(scribe.getLocalHandle())){
 			//System.out.println("Send to contains local node -- FINE");
@@ -220,9 +231,11 @@ public class ControlFindParentMessage extends Message implements Serializable
 		    }
 		    if(send_to.size() > 0)
 			channel.getSplitStream().routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
+                    /*Sending to parent if not root*/
 		    else {
 			if ( !scribe.isRoot( topic.getTopicId() ) )
-			    channel.getSplitStream().routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );	  
+			    channel.getSplitStream().routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
+                        /*This node is the root, which means no spare capacity exists (DFS failed)*/	  
 			else {												
 			    System.out.println("DFS FAILED :: No spare capacity");
 

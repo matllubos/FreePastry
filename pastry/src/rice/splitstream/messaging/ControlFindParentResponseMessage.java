@@ -25,12 +25,42 @@ import rice.scribe.messaging.*;
 
 public class ControlFindParentResponseMessage extends Message
 {
+    /**
+     * Id of the stripe accepted for
+     */
     StripeId stripe_id;
+
+    /**
+     * Source of this message
+     */
     public NodeHandle source;
+
+    /**
+     * Data associated with this message (here, is
+     * this an acceptance message or a final rejection)
+     */
     Object m_data;
+
+    /**
+     * New path to root
+     */
     Vector m_rootPath;
+
+    /**
+     * Channel this message pertains to
+     */
     ChannelId channel_id;
 
+    /**
+     * Constructor for a ControlFindParentResponse
+     * @param addr Address of the destination application
+     * @param source The source of this message
+     * @param channel_id The channel this message pertains to
+     * @param c Credentials to send under
+     * @param accept Was the potential child accepted or not?
+     * @param stripe_id The stripe this message pertains to
+     * @param rootPath The new path to root for the child
+     */
     public ControlFindParentResponseMessage( Address addr, NodeHandle source, ChannelId channel_id, Credentials c, Boolean accept, StripeId stripe_id, Vector rootPath )
     {
         super( addr );
@@ -56,7 +86,7 @@ public class ControlFindParentResponseMessage extends Message
      * the Id of the originator of this message or, in the case of a "false"
      * response, generate an application-level upcall.
      * @param scribe The Scribe group this message is relevant to
-     * @param s The stripe that this message is relevant to
+     * @param topic The stripe that this message is relevant to
      */
     public void handleMessage( Scribe scribe, Topic topic )
     {

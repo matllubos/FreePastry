@@ -23,6 +23,10 @@ public class ControlAttachMessage extends Message implements Serializable {
  * NodeHandle of the source of this message
  */
 private NodeHandle m_source;
+
+/**
+ * Id of the channel this message pertains to
+ */
 private ChannelId channel_id;
 
 /**
@@ -70,7 +74,7 @@ public boolean handleMessage( Channel channel, IScribe scribe, NodeHandle source
       }else if(return_array.length <= 1){
 	System.out.println("Returning too little data");
       }
-      //((Scribe)scribe).routeMsgDirect( source, response, null, null );
+
       channel.getSplitStream().routeMsgDirect( source, response, credentials, null );
       return false;
 }
@@ -86,4 +90,7 @@ public ChannelId getChannelId()
 }
 
 }
+
+
+
 

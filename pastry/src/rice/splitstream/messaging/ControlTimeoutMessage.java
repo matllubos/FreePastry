@@ -62,10 +62,11 @@ public class ControlTimeoutMessage extends Message implements Serializable
      * This is the constructor called when the timeout message is being created on behalf of
      * an Attach message.
      *
-     * @param addr The address of the message source
+     * @param addr The address of the message destination application
      * @param num_fails The number of times the bound message has timed out thus far
      * @param dest The destination of the bound message
      * @param c The sending credentials of the bound message
+     * @param channel_id The channel id the bound message pertains to
      */
     public ControlTimeoutMessage( Address addr, int num_fails, NodeId dest, Credentials c, ChannelId channel_id )
     {
@@ -81,7 +82,7 @@ public class ControlTimeoutMessage extends Message implements Serializable
      * This is the constructor called when the timeout message is being created on behalf of
      * a FindParent message.
      *
-     * @param addr The address of the message source
+     * @param addr The address of the message destination application
      * @param num_fails The number of times the bound message has timed out thus far
      * @param dest The destination of the bound message
      * @param c The sending credentials of the bound message
@@ -111,6 +112,8 @@ public class ControlTimeoutMessage extends Message implements Serializable
      * the allowable number of retries (specified in the calling channel).
      *
      * @param channel The calling channel
+     * @param thePastryNode Pastry node to schedule another timeout for delivery to
+     * @param scribe Scribe application that exists at the destination channel
      */
     public void handleMessage( Channel channel, PastryNode thePastryNode, Scribe scribe )
     {
@@ -140,7 +143,6 @@ public class ControlTimeoutMessage extends Message implements Serializable
                 if ( msg_type == ATTACH )
                 {
         	    ControlAttachMessage attachMessage = new ControlAttachMessage( channel.getSplitStream().getAddress(), scribe.getLocalHandle(), channel_id );
-                    //scribe.anycast( dest, attachMessage, c );
                     channel.getSplitStream().routeMsg( dest, attachMessage, c, null );
                     ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( channel.getSplitStream().getAddress(),
                                                                                       num_fails+1,
@@ -156,7 +158,6 @@ public class ControlTimeoutMessage extends Message implements Serializable
                                                                                  dest,
                                                                                  c,
                                                                                  stripe_id, channel_id );
-                    //scribe.anycast( dest, msg, c );
                     channel.getSplitStream().routeMsg( dest, msg, c, null ); 
                     ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( SplitStreamAddress.instance(),
                                                                                       num_fails+1,
@@ -168,3 +169,8 @@ public class ControlTimeoutMessage extends Message implements Serializable
         }
     }	
 }
+
+
+
+
+

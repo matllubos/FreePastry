@@ -14,9 +14,23 @@ import java.io.Serializable;
  */
 public class ControlAttachResponseMessage extends Message implements Serializable
 {
+
+   /**
+    * Content to be sent in this message; here, an array of channel information
+    * (stripe id's channel id, and spare capacity id)
+    */
    private Object _content;
+
+   /**
+    * Id of the channel this message pertains to
+    */
    private ChannelId channel_id;
 
+   /**
+    * Constructor for this message type
+    * @param addr The address of the message's destination application
+    * @param channel_id The id of the channel this message pertains to
+    */
    public ControlAttachResponseMessage( Address addr, ChannelId channel_id )
    {
       super( addr );
