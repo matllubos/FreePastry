@@ -149,6 +149,30 @@ public class MultiringIdFactory implements IdFactory {
   }
   
   /**
+   * Builds an Id by converting the given toString() output back to an Id.  Should
+   * not normally be used.
+   *
+   * @param chars The character array
+   * @param offset The offset to start reading at
+   * @param length The length to read
+   * @return The built Id.
+   */
+  public Id buildIdFromToString(char[] chars, int offset, int length) {
+    Id ring = factory.buildIdFromToString(chars, 1, find(chars, ',')-1);
+    Id normal = factory.buildIdFromToString(chars, 2+find(chars, ','), find(chars, ')') - (2+find(chars, ',')));
+    
+    return new RingId(ring, normal);    
+  }
+  
+  protected static int find(char[] chars, char value) {
+    for (int i=0; i<chars.length; i++)
+      if (chars[i] == value)
+        return i;
+    
+    return chars.length;
+  }
+  
+  /**
    * Builds a protocol-specific Id.Distance given the source data.
    *
    * @param material The material to use
