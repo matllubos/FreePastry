@@ -388,7 +388,7 @@ public class Stripe extends Observable implements IScribeApp{
 										     channel.getChannelId(),
      channel.getTimeoutLen())
      , credentials, null ); 
-		    System.out.println(" STRIPE "+this+" Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+ " at "+((Scribe)scribe).getNodeId());
+		    //System.out.println(" STRIPE "+this+" Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+ " at "+((Scribe)scribe).getNodeId());
 
 		    victimStripe.setLocalDrop(true);
 		    scribe.removeChild(victimChild, (NodeId)victimStripeId);
