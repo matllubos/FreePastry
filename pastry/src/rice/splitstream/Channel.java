@@ -15,11 +15,18 @@ import rice.pastry.security.*;
 import rice.splitstream.messaging.*;
 
 /** 
- * Add paragraph here for class information 
+ * The channel controls all the meta  data assocaited with a group of 
+ * stripes. It contains the stripes themselves plus any sparacapcity groups
+ * associated with the group of stripes.  It also manages the amount of
+ * bandwidth that is used by this collection of stripes.  A Channel is 
+ * created by giving it a name which is then hashed to come up with a 
+ * channelId which uniquely identifys this channel. If other nodes want
+ * to join the channel they attach to it. ( Join the scribe group ) 
  *
  * This is the channel object that represents a group of stripes in
  * SplitStream.
  *
+ * @version $Id$
  * @author Ansley Post
  */
 public class Channel extends PastryAppl implements IScribeApp {
@@ -438,13 +445,13 @@ public class Channel extends PastryAppl implements IScribeApp {
     }
 
     /** -- Scribe Implementation -- **/
+
     /** 
      * The method called when a fault occurs
      * Currently not implemented
      *
      */
     public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){
-       /* Implement me */
     }
     
     /**
@@ -489,13 +496,29 @@ public class Channel extends PastryAppl implements IScribeApp {
 				 NodeHandle child, boolean wasAdded, Serializable data){}
 
     /** -- Pastry Implementation -- **/
-
+    
+    /**
+     * Returns the application address of this pastry application
+     * @return Address the applications address
+     */
     public Address getAddress(){
 	return address;
     }
+    
+    /**
+     * Gets the securtiy credentials for this pastry application
+     *
+     * @return Credentials the credentials
+     */
     public Credentials getCredentials(){
 	return null;
     }
+
+    /**
+     * MessageForAppl takes a message in from pastry
+     * determines what type of message it is and then 
+     * sends it to the appropriate sub routine to be handled
+     */
     public void messageForAppl (Message msg){
 	if(msg instanceof ControlAttachResponseMessage){
 	    handleControlAttachResponseMessage(msg);
@@ -521,7 +544,13 @@ public class Channel extends PastryAppl implements IScribeApp {
 	    System.out.println("Unknown Pastry Message Type");
 	}
     }
-  
+    /**
+     * Upcall generate when a message is routed through this 
+     * node.
+     *
+     * @param msg the Message being routed
+     * @return boolean if this method is succesful
+     */
     public boolean enrouteMessage(Message msg){
 	if(msg instanceof ControlFindParentMessage){
 	    return handleControlFindParentMessage(msg); 
@@ -736,10 +765,20 @@ public class Channel extends PastryAppl implements IScribeApp {
 	return subInfo;
     }
 
+    /**
+     * Returns the Stripe object associated with this stripeId
+     *
+     * @return the Stripe with StripeId equal to paramater if it exists
+     */
     public Stripe getStripe(StripeId stripeId){
 	return (Stripe)(stripeIdTable.get(stripeId));
     }
 
+    /**
+     * Checks to see if a given stripe has already been subscribed to.
+     *
+     * @return boolean whether we have subscribed or not
+     */
     public boolean stripeAlreadySubscribed(StripeId stripeId){
 	for(int i = 0; i < subscribedStripes.size(); i++){
 	    Stripe stripe = (Stripe)subscribedStripes.elementAt(i);
