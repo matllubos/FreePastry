@@ -20,7 +20,7 @@ import java.security.*;
  *
  * @author Derek Ruths
  */
-public class EmailTest {
+public abstract class EmailTest {
 
     private InetSocketAddress firstAddress = null;	
     private SecurityService securityService = new SecurityService(null, null);
@@ -133,12 +133,4 @@ public class EmailTest {
 	}
     }
 
-    public static void main(String[] args) throws Exception {
-
-	EmailTest et = new EmailTest();
-
-	// Create multiple services here to test.
-		
-	Thread.sleep(5000);
-    }
 }

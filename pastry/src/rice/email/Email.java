@@ -21,6 +21,7 @@ public class Email implements java.io.Serializable {
   private String subject;
   private transient EmailData body;
   private transient EmailData[] attachments;
+    private int attachmentCount;
   private EmailDataReference bodyRef;
   private EmailDataReference[] attachmentRefs;
   private transient StorageService storage;
@@ -121,6 +122,7 @@ public class Email implements java.io.Serializable {
       // Once the attachments have all been fetch, call the user's command
       EmailGetAttachmentsTask preCommand = new EmailGetAttachmentsTask(0, command);
       // start the fetching process
+      this.attachments = new EmailData[this.attachmentCount];
       storage.retrieveContentHash(attachmentRefs[0], preCommand);
     } else {
       command.receiveResult(this.attachments);
@@ -140,10 +142,17 @@ public class Email implements java.io.Serializable {
   protected void storeData(Continuation errorListener) {   
     // if the body has not already been inserted into PAST
     if (this.bodyRef == null) {
+	if(this.attachments != null) {
+	    this.attachmentCount = this.attachments.length;
+	    this.attachmentRefs = new EmailDataReference[this.attachmentCount];
+	}
+	
       EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.BODY, errorListener);
       storage.storeContentHash(body, command);
     }
-    else if ((this.attachmentRefs == null) && (attachments != null) && (attachments.length > 0)) {      
+    else if ((this.attachmentRefs == null) && (attachments != null) &&
+	     (attachments.length > 0)) {
+	this.attachmentRefs = new EmailDataReference[attachments.length];
       // make a new task to store the email's contents (body and attachments)
       EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.ATTACHMENT, errorListener);
       // begin storing the body, execute the rest of the task once this is complete
@@ -181,6 +190,7 @@ public class Email implements java.io.Serializable {
       try {
 	body = (EmailData)o;      
       } catch (Exception e) {
+	  e.printStackTrace();
 	System.out.println("The email body was fetched, but had problems " + o);
       }
       // pass the result along to the caller
@@ -228,7 +238,7 @@ public class Email implements java.io.Serializable {
       try {
 	attachments[_index] = (EmailData)o;  
 	// if there are more attachments, fetch the next one
-	if (_index < attachmentRefs.length) {
+	if ((_index + 1)  < attachmentRefs.length) {
 	  _index = _index + 1;
 	  EmailGetAttachmentsTask preCommand = new EmailGetAttachmentsTask(_index, _command);
 	  storage.retrieveContentHash(attachmentRefs[_index], preCommand);
@@ -237,6 +247,7 @@ public class Email implements java.io.Serializable {
 	  _command.receiveResult(attachments);
 	}    
       } catch (Exception e) {
+	  e.printStackTrace();
 	System.out.println("The email attachment " + _index + " was fetched, but had problems. " + o);
       }      
     }
