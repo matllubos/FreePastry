@@ -12,7 +12,6 @@ public interface PostServiceListener {
    *
    * @param nm The incoming notification.
    */
-  public void incomingNotification(NotificationMessage nm) {
-  }
+  public void incomingNotification(NotificationMessage nm);
 
 }
