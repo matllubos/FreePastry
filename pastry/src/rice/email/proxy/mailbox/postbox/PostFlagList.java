@@ -24,13 +24,11 @@ public class PostFlagList implements FlagList {
     return (PostFlagList) loc.get(msg.getStoredEmail().getEmail());
   }
   
-  public void addFlag(String flag)
-  {
+  public void addFlag(String flag) {
     setFlag(flag, true);
   }
 
-  public void removeFlag(String flag)
-  {
+  public void removeFlag(String flag) {
     setFlag(flag, false);
   }
 
@@ -85,34 +83,34 @@ public class PostFlagList implements FlagList {
     else	 
    	 _msg.getStoredEmail().getFlags().setFlag(flag, value);
   }
-    
-    public boolean isRecent() {
-      return _msg.getStoredEmail().getFlags().isRecent();
+  
+  public boolean isRecent() {
+    return _msg.getStoredEmail().getFlags().isRecent();
   }
-    
-    public boolean isDeleted() {
-      return _msg.getStoredEmail().getFlags().isDeleted();
+  
+  public boolean isDeleted() {
+    return _msg.getStoredEmail().getFlags().isDeleted();
   }
-    
-    public boolean isSeen() {
-      return _msg.getStoredEmail().getFlags().isSeen();
+  
+  public boolean isSeen() {
+    return _msg.getStoredEmail().getFlags().isSeen();
   }
-    
-    public boolean isAnswered() {
-      return _msg.getStoredEmail().getFlags().isAnswered();
+  
+  public boolean isAnswered() {
+    return _msg.getStoredEmail().getFlags().isAnswered();
   }
-    
-    public boolean isFlagged() {
-      return _msg.getStoredEmail().getFlags().isFlagged();
+  
+  public boolean isFlagged() {
+    return _msg.getStoredEmail().getFlags().isFlagged();
   }
-    
-    public boolean isDraft() {
-      return _msg.getStoredEmail().getFlags().isDraft();
+  
+  public boolean isDraft() {
+    return _msg.getStoredEmail().getFlags().isDraft();
   }
-    
-    public boolean isSet(String flag) {
-	return _msg.getStoredEmail().getFlags().isSet(flag);
-    }
+  
+  public boolean isSet(String flag) {
+    return _msg.getStoredEmail().getFlags().isSet(flag);
+  }
 
   /**
     * Returns a Vector representation of the flagList

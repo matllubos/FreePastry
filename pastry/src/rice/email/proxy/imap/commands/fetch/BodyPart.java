@@ -232,7 +232,8 @@ public class BodyPart extends FetchPart {
 
   public String fetchAll(EmailMultiPart part) throws MailboxException {
     String type = part.getType();
-    String seperator = type.substring(type.toLowerCase().indexOf("boundary=\"")+10, type.length()-1);
+    String seperator = type.substring(type.toLowerCase().indexOf("boundary=")+9, type.length());
+    seperator = seperator.replaceAll("\"", "").replaceAll("'", "");
     StringBuffer result = new StringBuffer();
 
     ExternalContinuation c = new ExternalContinuation();

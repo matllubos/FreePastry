@@ -4,6 +4,7 @@ import rice.email.*;
 import rice.email.proxy.util.Resource;
 import rice.email.proxy.util.StreamUtils;
 import rice.email.proxy.util.Workspace;
+import rice.email.proxy.smtp.*;
 
 import rice.post.*;
 
@@ -126,7 +127,7 @@ public class MovingMessage
      * it hardly seems worth 30 seconds of effort.
      * </p>
      */
-    public void readDotTerminatedContent(BufferedReader in)
+    public void readDotTerminatedContent(SmtpConnection conn)
                                   throws IOException
     {
         _content = _workspace.getTmpFile();
@@ -135,12 +136,11 @@ public class MovingMessage
 
         while (true)
         {
-            String line = in.readLine();
-          System.out.println(line);
+          String line = conn.readLine();
             if (line == null)
                 throw new EOFException("Did not receive <CRLF>.<CRLF>");
 
-            if (".".equals(line))
+            if (".".equals(line.trim()))
             {
                 dataWriter.close();
 

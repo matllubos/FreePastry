@@ -34,10 +34,12 @@ import javax.mail.Session;
 import javax.activation.*;
 
 import java.awt.datatransfer.*;
+import java.util.Random;
 
 public class PostMessage implements StoredMessage {
 
-  public static String UNSECURE_SUBJECT_TITLE = "[UNSECURE]";
+  public static String UNSECURE_HEADER_LINE = "X-EPost-Unsecure: True";
+  public static Random rng = new Random();
   
   private StoredEmail email;
 
@@ -182,11 +184,7 @@ public class PostMessage implements StoredMessage {
       }
 
       if (address != null) {
-        if (mm.getSubject() == null) {
-          mm.setSubject(UNSECURE_SUBJECT_TITLE + " ");
-        } else {
-          mm.setSubject(UNSECURE_SUBJECT_TITLE + " " + mm.getSubject());
-        }
+        mm.addHeaderLine(UNSECURE_HEADER_LINE);
       }
       
       return new Email(from, recipients, (EmailMessagePart) process(mm));
@@ -201,8 +199,7 @@ public class PostMessage implements StoredMessage {
     Object content = part.getContent();
     
     if (content instanceof Multipart) {
-      String type = part.getContentType();
-      return process((Multipart) content, type);
+      return process((Multipart) content, part.getContentType());
     } else if (content instanceof MimePart) {
       return process((MimePart) content);
     } else {
@@ -223,14 +220,14 @@ public class PostMessage implements StoredMessage {
       return new EmailHeadersPart(headers, part);
   }
 
-  private static EmailMultiPart process(Multipart part, String boundary) throws IOException, MessagingException {
+  private static EmailMultiPart process(Multipart part, String type) throws IOException, MessagingException {
     EmailHeadersPart[] parts = new EmailHeadersPart[part.getCount()];
 
     for (int i=0; i<parts.length; i++) {
       parts[i] = process((MimePart) part.getBodyPart(i));
     }
 
-    return new EmailMultiPart(parts, boundary);
+    return new EmailMultiPart(parts, type);
   }
 
   private static EmailSinglePart process(InputStream stream) throws IOException, MessagingException {
@@ -282,7 +279,7 @@ public class PostMessage implements StoredMessage {
       mm.addHeaderLine(headers[i]);
     }
   }
-
+  
   private static String getContentType(String header, MimePart mm) throws MessagingException {
     String[] headers = header.split("\n");
     
@@ -295,7 +292,7 @@ public class PostMessage implements StoredMessage {
         }
       }
     }
-
+    
     return "text/plain";
   }
 

@@ -506,7 +506,7 @@ search_part_date_arg returns [DateArgSearchPart part]
 
 fetch [boolean isUID]
 	{
-		FetchCommand cmd = new FetchCommand();
+		FetchCommand cmd = new FetchCommand(isUID);
 		MsgFilter range;
 	}:
 	FETCH SPACE range=range[isUID] SPACE

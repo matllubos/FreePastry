@@ -22,7 +22,10 @@ public class MockSmtpConnection
         // simulate client input
         PipedReader clientIn     = new PipedReader();
         PipedWriter clientWriter = new PipedWriter(clientIn);
-        in                       = new BufferedReader(clientIn);
+        in = new StreamTokenizer(clientIn);
+        in.eolIsSignificant(false);
+        in.wordChars(1,255);
+        in.whitespaceChars(10, 10);
         pusher                   = new PrintWriter(clientWriter);
 
         // intercept server response

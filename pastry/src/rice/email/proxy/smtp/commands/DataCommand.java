@@ -52,9 +52,7 @@ public class DataCommand
                        conn.getHeloName() + "); " + 
                        new java.util.Date() + "\r\n";
 
-        msg.readDotTerminatedContent(new BufferedReader(StreamUtils.splice(new StringReader(
-                                                                      value), 
-                                                              conn.getReader())));
+        msg.readDotTerminatedContent(conn);
 
         String err = manager.checkData(state);
         if (err != null)

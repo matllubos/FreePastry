@@ -82,6 +82,7 @@ final class ParserImapHandler
             }
         }
 
+        state.cleanup();
     }
 
     protected void sendGreetings() {

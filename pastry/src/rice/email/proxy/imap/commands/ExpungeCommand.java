@@ -48,6 +48,7 @@ public class ExpungeCommand
                 msg.purge();
                 int msgNum = msg.getSequenceNumber() - numDeleted;
                 untaggedResponse(msgNum + " EXPUNGE");
+                getState().broadcastUnsolicited(msgNum + " EXPUNGE");
                 numDeleted++;
             }
 

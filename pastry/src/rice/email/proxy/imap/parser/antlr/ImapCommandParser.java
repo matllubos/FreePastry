@@ -1,4 +1,4 @@
-// $ANTLR 2.7.2a2 (20020112-1): "grammer.g" -> "ImapCommandParser.java"$
+// $ANTLR 2.7.2: "grammer.g" -> "ImapCommandParser.java"$
 
 package rice.email.proxy.imap.parser.antlr;
 
@@ -30,8 +30,7 @@ import antlr.SemanticException;
 import antlr.ParserSharedInputState;
 import antlr.collections.impl.BitSet;
 
-public class ImapCommandParser extends antlr.LLkParser
-       implements ImapCommandParserTokenTypes
+public class ImapCommandParser extends antlr.LLkParser       implements ImapCommandParserTokenTypes
  {
 
   AbstractImapCommand command;
@@ -1564,7 +1563,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 	) throws RecognitionException, TokenStreamException {
 		
 		
-				FetchCommand cmd = new FetchCommand();
+				FetchCommand cmd = new FetchCommand(isUID);
 				MsgFilter range;
 			
 		

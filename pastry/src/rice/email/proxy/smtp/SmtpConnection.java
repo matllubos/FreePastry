@@ -1,15 +1,7 @@
 package rice.email.proxy.smtp;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import java.io.*;
+import java.net.*;
 
 public class SmtpConnection {
 
@@ -32,7 +24,8 @@ public class SmtpConnection {
     Socket sock;
     InetAddress clientAddress;
     public PrintWriter out;
-    public BufferedReader in;
+    //public BufferedReader in;
+    public StreamTokenizer in;
     SmtpHandler handler;
     String heloName;
 
@@ -46,10 +39,19 @@ public class SmtpConnection {
           OutputStream o = sock.getOutputStream();
           InputStream i = sock.getInputStream();
           out = new PrintWriter(o, true);
-          in = new BufferedReader(new InputStreamReader(i));
+          in = new StreamTokenizer(new InputStreamReader(i));
+          
+          in.resetSyntax();
+          in.eolIsSignificant(false);
+          in.wordChars(1, Integer.MAX_VALUE);
+          in.whitespaceChars(10, 10);
         }
           
         this.handler = handler;
+    }
+    
+    public StreamTokenizer getTokenizer() {
+      return in;
     }
 
     public void println(String line) {
@@ -60,16 +62,11 @@ public class SmtpConnection {
         
     }
 
-    public BufferedReader getReader() {
-
-        return in;
-    }
-
     public String readLine() throws IOException {
-        String line = in.readLine();
-
-        System.out.println("C: " + line);
-        return line;
+      int result = in.nextToken();
+      
+      System.out.println("C: " + result + ": " + in.sval);
+      return in.sval;
     }
 
     public String getClientAddress() {

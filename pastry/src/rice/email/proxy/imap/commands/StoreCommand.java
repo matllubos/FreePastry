@@ -50,8 +50,6 @@ public class StoreCommand
 
             boolean silent = _type.endsWith("SILENT");
             boolean add    = _type.startsWith("+");
-
-            System.out.println("Monkey - " + _type + " " + msgs.size());
             
             for (Iterator i = msgs.iterator(); i.hasNext();)
             {
@@ -73,8 +71,6 @@ public class StoreCommand
     {
         FlagList flags = msg.getFlagList();
 
-      System.out.println("Found message " + msg + " with list " + flags);
-
         for (Iterator i = _flags.iterator(); i.hasNext();)
         {
             String flag = (String) i.next();
@@ -82,16 +78,16 @@ public class StoreCommand
                 flags.addFlag(flag);
             else
                 flags.removeFlag(flag);
-
-            System.out.println("Found flag " + flag);
         }
 
         flags.commit();
+        
+        String update = msg.getSequenceNumber() + " FETCH (FLAGS " + flags.toFlagString() + ")";
 
         if (print)
-            untaggedResponse(
-                    msg.getSequenceNumber() + " FETCH (FLAGS " + 
-                    flags.toFlagString() + ")");
+            untaggedResponse(update);
+        
+        getState().broadcastUnsolicited(update);
     }
 
     public void setFlags(List flags)

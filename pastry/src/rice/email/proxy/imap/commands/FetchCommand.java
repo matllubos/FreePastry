@@ -30,19 +30,24 @@ public class FetchCommand extends AbstractImapCommand {
   
   public static FetchOptionRegistry regestry = new FetchOptionRegistry();
 
-  public FetchCommand() {
+  public FetchCommand(boolean isUID) {
     super("FETCH");
+    this.isUID = isUID;
   }
 
   public boolean isValidForState(ImapState state) {
     return state.isSelected();
   }
 
+  boolean isUID;
   MsgFilter _range;
   List parts = new LinkedList();
 
   public void execute() {
     try {
+      if ((isUID) && (! parts.contains("UID")))
+        parts.add("UID");
+      
       ImapState state = getState();
       MailFolder fold = state.getSelectedFolder();
       List msgs = fold.getMessages(_range);

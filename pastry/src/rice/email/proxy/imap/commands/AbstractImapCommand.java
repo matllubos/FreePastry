@@ -29,6 +29,7 @@ public abstract class AbstractImapCommand
 
     protected void taggedSimpleSuccess()
     {
+        _state.printUnsolicited(_conn);
         _conn.println(_tag + " OK " + getCmdName() + " completed");
     }
 

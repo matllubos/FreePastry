@@ -1,4 +1,4 @@
-// $ANTLR 2.7.2a2 (20020112-1): grammer.g -> ImapCommandParserTokenTypes.txt$
+// $ANTLR 2.7.2: grammer.g -> ImapCommandParserTokenTypes.txt$
 ImapCommandParser    // output token vocab name
 CHECK="CHECK"=4
 NOOP="NOOP"=5

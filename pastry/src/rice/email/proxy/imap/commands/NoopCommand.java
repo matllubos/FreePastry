@@ -12,7 +12,7 @@ import rice.email.proxy.imap.ImapState;
  * </p>
  */
 public class NoopCommand
-  extends ExamineCommand
+  extends AbstractImapCommand
 {
     public NoopCommand()
     {
@@ -21,13 +21,13 @@ public class NoopCommand
 
     public boolean isValidForState(ImapState state)
     {
-
         return true;
     }
 
     public void execute() {
-        setFolder(getState().getSelectedFolder().getFullName());
-        super.execute();
+        taggedSimpleSuccess();
+//        setFolder(getState().getSelectedFolder().getFullName());
+//        super.execute();
     }
 
     protected boolean isWritable() {

@@ -101,7 +101,7 @@ public class EmailProxy extends PostProxy {
       sectionDone();
 
       while (true) {
-        Thread.sleep(5000);
+        Thread.sleep(10000);
         post.announcePresence();
       }
     } catch (Exception e) {

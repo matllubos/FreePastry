@@ -21,7 +21,7 @@ public class FetchCommandTest
     protected void setUp()
                   throws Exception
     {
-        cmd = new FetchCommand();
+        cmd = new FetchCommand(false);
         super.setUp(cmd);
         skipAuthentication(cmd);
     }

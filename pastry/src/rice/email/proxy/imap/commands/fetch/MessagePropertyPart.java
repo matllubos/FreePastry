@@ -506,9 +506,9 @@ public class MessagePropertyPart extends FetchPart {
       if (personal == null)
         personal = "NIL";
       else
-        personal = "\"" + personal + "\"";
+        personal = "\"" + personal.replaceAll("\"", "'") + "\"";
 
-      String emailAddress = address.getAddress();
+      String emailAddress = address.getAddress().replaceAll("\"", "'");
       String user = "NIL";
       String server = "NIL";
 

@@ -58,7 +58,7 @@ class SmtpHandler {
   }
 
   protected void handleCommand() throws IOException {
-    _currentLine = _conn.readLine();
+    _currentLine = _conn.readLine().trim();
 
     if (_currentLine == null) {
       quit();
