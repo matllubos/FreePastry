@@ -26,7 +26,9 @@ import rice.splitstream.messaging.*;
  * @version $Id$
  * @author Ansley Post
  */
-public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver{
+public class SplitStreamImpl extends PastryAppl implements ISplitStream, 
+                             IScribeApp, IScribeObserver
+{
     /**
      * The scribe instance for this SplitStream Object
      */
@@ -284,13 +286,13 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
 			   }
 			   
 			   this.routeMsgDirect( victimChild, new ControlDropMessage( channel.getAddress(),
-											channel.getNodeHandle(),
-											victimStripeId,
-											credentials,
-											channel.getSpareCapacityId(), 
-											channel.getChannelId(), 
-											channel.getTimeoutLen() ),
-						   credentials, null );
+     channel.getNodeHandle(),
+     victimStripeId,
+     credentials,
+     channel.getSpareCapacityId(), 
+     channel.getChannelId(), 
+     channel.getTimeoutLen() ),
+     credentials, null );
 			   //System.out.println("Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+" at "+channel.getNodeId());
 			   victimStripe.setLocalDrop(true);
 			   scribe.removeChild(victimChild, (NodeId)victimStripeId);
@@ -345,5 +347,93 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
 	}
     }
 
+    /** -- Pastry Implementation -- **/
+    
+    /**
+     * Returns the application address of this pastry application
+     * @return Address the applications address
+     */
+    public Address getAddress(){
+	return address;
+    }
+    
+    /**
+     * Gets the securtiy credentials for this pastry application
+     *
+     * @return Credentials the credentials
+     */
+    public Credentials getCredentials(){
+	return null;
+    }
+
+    /**
+     * MessageForAppl takes a message in from pastry
+     * determines what type of message it is and then 
+     * sends it to the appropriate sub routine to be handled
+     */
+    public void messageForAppl (Message msg){
+	/**This should be cleaned up, but since we are past the
+         * Api freeze I don't want to change the class inheritance hierachy
+         */
+       if( (msg instanceof ControlAttachMessage){
+	   ChannelId channelId = ((ControlAttachMessage) msg).getChannelId();
+           Channel channel = (Channel) channels.get(channelId);
+           channel.messageForChannel(msg);
+       }
+       else if (msg instanceof ControlFindParentResponseMessage){
+	   ChannelId channelId = ((ControlFindParentMessage) msg).getChannelId();
+           Channel channel = (Channel) channels.get(channelId);
+           channel.messageForChannel(msg);
+       }
+       else if (msg instanceof ControlDropMessage){
+	   ChannelId channelId = ((ControlDropMessage) msg).getChannelId();
+           Channel channel = (Channel) channels.get(channelId);
+           channel.messageForChannel(msg);
+       }
+       else if(msg instanceof ControlFindParentMessage){
+	   ChannelId channelId = ((ControlFindParentMessage) msg).getChannelId();
+           Channel channel = (Channel) channels.get(channelId);
+           channel.messageForChannel(msg);
+       }
+       else if(msg instanceof ControlPropagatePathMessage){
+	   ChannelId channelId = ((ControlPropagetPatheMessage) msg).getChannelId();
+           Channel channel = (Channel) channels.get(channelId);
+           channel.messageForChannel(msg);
+       }
+       else if(msg instanceof ControlTimeOutMessage){
+	   ChannelId channelId = ((ControlTimeOut) msg).getChannelId();
+           Channel channel = (Channel) channels.get(channelId);
+           channel.messageForChannel(msg);
+       }
+       else if(msg instanceof ControlAttachResponseMessage){
+	   ChannelId channelId = ((ControlAttachResponseMessage) msg).getChannelId();
+           Channel channel = (Channel) channels.get(channelId);
+           channel.messageForChannel(msg);
+       } 
+
+           
+    }
+    /**
+     * Upcall generate when a message is routed through this 
+     * node.
+     *
+     * @param msg the Message being routed
+     * @return boolean if this method is succesful
+     */
+    public boolean enrouteMsg(Message msg){
+
+      if( (msg instanceof ControlFindParentMessage)
+          (msg instanceof ControlAttachMessage)){
+	
+         ChannelId channelId = msg.getChannelId();
+         Channel channel = (Channel) channels.get(channelId);
+          
+         if(channel == null)
+            this.routeMsg(channelId)
+         else
+            channel.enrouteChannel(msg);
+      }
+    }
+    
 } 
 

@@ -29,7 +29,7 @@ import rice.splitstream.messaging.*;
  * @version $Id$
  * @author Ansley Post
  */
-public class Channel extends PastryAppl implements IScribeApp {
+public class Channel implements IScribeApp {
 
     /**
      * ChannelId for this channel 
@@ -72,6 +72,13 @@ public class Channel extends PastryAppl implements IScribeApp {
      * Always set to null. Here as a placeholder 
      */
     private Credentials cred = null;
+  
+    /**
+     * The splitStreamImpl object associated with this node, this is
+     * is need to have access to the pastry messages
+     */
+    private SplitStreamImpl splitStream = null;
+
 
     /**
      * If this channel is ready for use or not 
@@ -121,14 +128,14 @@ public class Channel extends PastryAppl implements IScribeApp {
      * @param node the pastry node associated with this local channel
      *
      */
-    public Channel(int numStripes, String name, IScribe scribe, Credentials cred,                  BandwidthManager bandwidthManager, PastryNode node){
+    public Channel(int numStripes, String name, IScribe scribe, Credentials cred,                  BandwidthManager bandwidthManager, SplitStreamImpl splitStream){
 
         /* This method should probably broken down into smaller sub methods */
- 	super(node);	
         
 	this.scribe = scribe;
 	this.bandwidthManager = bandwidthManager;
 	this.numStripes = numStripes;
+        this.splitStream = splitStream;
 	
 	/* register this channel with the bandwidthManager, scribe */
 	this.bandwidthManager.registerChannel(this);
@@ -198,12 +205,13 @@ public class Channel extends PastryAppl implements IScribeApp {
      * @param node the pastry node associated with this local channel
      */ 
     public Channel(ChannelId channelId, IScribe scribe, Credentials cred, 
-		   BandwidthManager bandwidthManager, PastryNode node){
+		   BandwidthManager bandwidthManager, 
+                   SplitStreamImpl splitStream){
 	
- 	super(node);	
 	this.channelId = channelId;
 	this.bandwidthManager = bandwidthManager;
 	this.scribe = scribe;
+        this.splitStream = splitStream;
 	this.bandwidthManager.registerChannel(this);
         scribe.registerApp(this);
 	ControlAttachMessage attachMessage = new ControlAttachMessage();
@@ -214,7 +222,7 @@ public class Channel extends PastryAppl implements IScribeApp {
                                                                           0,
                                                                           channelId,
                                                                           cred );
-	this.thePastryNode.scheduleMsg( timeoutMessage, timeoutLen );
+	this.splitStream.getPastryNode().scheduleMsg( timeoutMessage, timeoutLen );
 
     }
 
@@ -228,11 +236,13 @@ public class Channel extends PastryAppl implements IScribeApp {
      * @param node the pastry node associated with this local channel
      */ 
     public Channel(ChannelId channelId, StripeId[] stripeIds, SpareCapacityId 
-		   spareCapacityId, IScribe scribe, BandwidthManager bandwidthManager, PastryNode node){
+		   spareCapacityId, IScribe scribe,
+                   BandwidthManager bandwidthManager,
+                   SplitStreamImpl splitStream ){
 
- 	super(node);
 	this.channelId = channelId;
 	this.spareCapacityId = spareCapacityId;
+        this.splitStream = splitStream;
 	
 
 	for(int i = 0 ; i < stripeIds.length ; i++){
@@ -284,6 +294,15 @@ public class Channel extends PastryAppl implements IScribeApp {
     public BandwidthManager getBandwidthManager(){
 	return bandwidthManager;
     }
+
+    /**
+     * Gets the splitStream instance that this channel was created from
+     * @retrun SplitStreamImpl the SplitStreamObject for this channel
+     */
+     public SplitStreamImpl getSplitStream(){
+        return splitStream;
+     }
+ 
 
     /**
      * Gets the channelId for this channel
@@ -560,7 +579,7 @@ public class Channel extends PastryAppl implements IScribeApp {
      * determines what type of message it is and then 
      * sends it to the appropriate sub routine to be handled
      */
-    public void messageForAppl (Message msg){
+    public void messageForChannel (Message msg){
 	if(msg instanceof ControlAttachResponseMessage){
 	    handleControlAttachResponseMessage(msg);
 	}
@@ -574,9 +593,9 @@ public class Channel extends PastryAppl implements IScribeApp {
 	    handleControlFindParentMessage(msg); 
 	}
 	else if ( msg instanceof ControlPropogatePathMessage )
-	    {
-		handleControlPropogatePathMessage( msg );
-	    }
+	{
+	   handleControlPropogatePathMessage( msg );
+	}
         else if ( msg instanceof ControlTimeoutMessage )
         {
             handleControlTimeoutMessage( msg );
@@ -592,10 +611,14 @@ public class Channel extends PastryAppl implements IScribeApp {
      * @param msg the Message being routed
      * @return boolean if this method is succesful
      */
-    public boolean enrouteMessage(Message msg){
+    public boolean enrouteChannel(Message msg){
 	if(msg instanceof ControlFindParentMessage){
 	    return handleControlFindParentMessage(msg); 
 	}
+        else if(msg instanceof ControlAttachMessage){
+            System.out.println("CONTROL ATTACH MESSAGE !!!")
+            System.out.println("CODE SHOULD BE ADDED TO MAKE ME WORK!!!")
+        }
 	return true;
     }
 
