@@ -209,7 +209,7 @@ public class MemoryStorage implements Storage {
    * @param c The command to run once the operation is complete
    */
   public void getTotalSize(Continuation c) {
-    c.receiveResult(new Integer(currentSize));
+    c.receiveResult(new Long((long) currentSize));
   }
 
   /**

@@ -127,7 +127,7 @@ public class LRUCache implements Cache {
 
     Continuation resize = new Continuation() {
       public void receiveResult(Object o) {
-        int totalSize = ((Integer) o).intValue();
+        long totalSize = ((Long) o).longValue();
 
         if (maximumSize - size < totalSize) {
           resize(maximumSize - size, store);
@@ -309,7 +309,7 @@ public class LRUCache implements Cache {
         if (waitingForSize) {
           waitingForSize = false;
           
-          if (((Integer) o).intValue() > size) {
+          if (((Long) o).longValue() > size) {
             //System.out.println("Evicting object " + size + " " + o);
             
             Comparable thisID = (Comparable) order.getLast();
