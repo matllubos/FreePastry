@@ -109,7 +109,7 @@
              classpath="${pretty.classpath.path}"/>
     <pretty settingsDir="${pretty.dir}" compileDir="${build.dir}">      
       <fileset dir="${src.dir}" includes="**/*.java"> 
-        <exclude name="rice/serialization/Base64.java"/> <!-- this file blows up Pretty -->
+        <exclude name="rice/p2p/util/Base64.java"/> <!-- this file blows up Pretty -->
       </fileset> 
     </pretty>  
   </target> 
@@ -172,7 +172,7 @@
    <!-- <include name="rice/post/**/*.java"/> -->
    <!-- <include name="rice/proxy/**/*.java"/> -->
         <include name="rice/selector/**/*.java"/>
-        <include name="rice/serialization/**/*.java"/>
+   <!-- <include name="rice/serialization/**/*.java"/> -->
    <!-- <include name="rice/visualization/**/*.java"/> -->
       </fileset>
        <doctitle>Rice Pastry API</doctitle>
@@ -239,7 +239,7 @@
    <!-- <include name="rice/post/**/*.class"/> -->
    <!-- <include name="rice/proxy/**/*.class"/> -->
         <include name="rice/selector/**/*.class"/>
-        <include name="rice/serialization/**/*.class"/>
+   <!-- <include name="rice/serialization/**/*.class"/> -->
    <!-- <include name="rice/visualization/**/*.class"/> -->
       </fileset>
    
@@ -312,7 +312,7 @@
    <!-- <include name="rice/post/**/*.java"/> -->
    <!-- <include name="rice/proxy/**/*.java"/> -->
         <include name="rice/selector/**/*.java"/>
-        <include name="rice/serialization/**/*.java"/>
+   <!-- <include name="rice/serialization/**/*.java"/> -->
    <!-- <include name="rice/visualization/**/*.java"/> -->
       </tarfileset>
       <tarfileset dir="ant" includes="**/*" prefix="ant"/>
@@ -358,7 +358,7 @@
    <!-- <include name="rice/post/**/*.java"/> -->
    <!-- <include name="rice/proxy/**/*.java"/> -->
         <include name="rice/selector/**/*.java"/>
-        <include name="rice/serialization/**/*.java"/>
+   <!-- <include name="rice/serialization/**/*.java"/> -->
    <!-- <include name="rice/visualization/**/*.java"/> -->
       </zipfileset>
       <zipfileset dir="ant" includes="**/*" prefix="ant" />
@@ -411,7 +411,6 @@
       <fileset dir="${build.dir}" includes="rice/post/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/proxy/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/selector/**/*.class"/>
-      <fileset dir="${build.dir}" includes="rice/serialization/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/visualization/**/*.class"/>
       <fileset dir="${jar.dir}/epost" includes="ca.publickey,default.params,ePOST_certificate.cer,ringcert.list,*.ringcert"/>
     </jar>
@@ -466,7 +465,6 @@
         <include name="rice/post/**/*.java"/>
         <include name="rice/proxy/**/*.java"/>
         <include name="rice/selector/**/*.java"/>
-        <include name="rice/serialization/**/*.java"/>
         <include name="rice/visualization/**/*.java"/>
       </tarfileset>
       <tarfileset dir="ant" includes="**/*" prefix="ant"/>
@@ -492,7 +490,6 @@
         <include name="rice/post/**/*.java"/>
         <include name="rice/proxy/**/*.java"/>
         <include name="rice/selector/**/*.java"/>
-        <include name="rice/serialization/**/*.java"/>
         <include name="rice/visualization/**/*.java"/>
       </fileset>
       <fileset dir="ant" includes="**/*"/>
