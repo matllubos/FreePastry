@@ -29,6 +29,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   protected final IdFactory factory;
   protected final Hashtable continuations;
   protected final String debugID;
+  protected StorageManager trashStorage;
   protected long nextContinuationTimeout;
   protected IdRange responsibleRange;
   protected int nextUID;
@@ -52,6 +53,8 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private final long syncDelayAfterJoin = 15 * SECONDS;
   private final long syncInterval = 60 * SECONDS;
   private final long syncMinRemainingLifetime = 60 * SECONDS;
+  private final int syncBloomFilterNumHashes = 3;
+  private final int syncBloomFilterBitsPerKey = 4;
   private final int syncPartnersPerTrial = 1;
 
   private final int manifestAggregationFactor = 5;
@@ -78,6 +81,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   public GlacierImpl(Node nodeArg, StorageManager fragmentStorageArg, StorageManager neighborStorageArg, int numFragmentsArg, int numSurvivorsArg, IdFactory factoryArg, String instanceArg, GlacierPolicy policyArg) {
     this.fragmentStorage = fragmentStorageArg;
     this.neighborStorage = neighborStorageArg;
+    this.trashStorage = null;
     this.policy = policyArg;
     this.node = nodeArg;
     this.instance = instanceArg;
@@ -228,16 +232,19 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           log(2, "Range response (offset: "+offset+"): "+grrm.getCommonRange()+", original="+originalRange);
         
           IdSet keySet = fragmentStorage.scan();
-          BloomFilter bv = new BloomFilter((keySet.numElements()+5)*4, 3);
+          BloomFilter bv = new BloomFilter((2*keySet.numElements()+5)*syncBloomFilterBitsPerKey, syncBloomFilterNumHashes);
           Iterator iter = keySet.getIterator();
 
           while (iter.hasNext()) {
             FragmentKey fkey = (FragmentKey)iter.next();
             Id thisPos = getFragmentLocation(fkey);
             if (originalRange.containsId(thisPos)) {
-              log(4, " - Adding "+fkey+" as "+fkey.getVersionKey().getId());
-/***********************MUST HASH SOMETHING ELSE: OBJHASH + EXPIRATION DATE?******/
-              bv.add(fkey.getVersionKey().toByteArray());
+              FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(fkey);
+              long currentExp = metadata.getCurrentExpiration();
+              long prevExp = metadata.getPreviousExpiration();
+              log(4, " - Adding "+fkey+" as "+fkey.getVersionKey().getId()+", ecur="+currentExp+", eprev="+prevExp);
+              bv.add(getHashInput(fkey.getVersionKey(), currentExp));
+              bv.add(getHashInput(fkey.getVersionKey(), prevExp));
             }
           }
         
@@ -299,7 +306,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
               Id thisPos = getFragmentLocation(thisKey);
               if (!responsibleRange.containsId(thisPos)) {
                 log(3, "Deleting fragment "+thisKey);
-                fragmentStorage.unstore(thisKey, new Continuation() {
+                deleteFragment(thisKey, new Continuation() {
                   public void receiveResult(Object o) {
                     log(3, "Handed off fragment deleted: "+thisKey+" (o="+o+")");
                   }
@@ -399,7 +406,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             candidates ++;
             if (doneSoFar < garbageCollectionMaxFragmentsPerRun) {
               doneSoFar ++;
-              fragmentStorage.unstore(thisKey, new Continuation() {
+              deleteFragment(thisKey, new Continuation() {
                 public void receiveResult(Object o) {
                   log(3, "GC collected "+thisKey.toStringFull()+", expired "+(now-metadata.getCurrentExpiration())+" msec ago");
                 }
@@ -416,6 +423,62 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         nextTimeout += garbageCollectionInterval;
       }
     });
+  }
+
+  private void deleteFragment(final Id fkey, final Continuation command) {
+    if (trashStorage != null) {
+      log(2, "Moving fragment "+fkey.toStringFull()+" to trash");
+      fragmentStorage.getObject(fkey, new Continuation() {
+        public void receiveResult(Object o) {
+          log(3, "Fragment "+fkey.toStringFull()+" retrieved, storing in trash");
+          if (o != null) {
+            trashStorage.store(fkey, null, (Serializable) o, new Continuation() {
+              public void receiveResult(Object o) {
+                log(3, "Deleting fragment "+fkey.toStringFull());
+                fragmentStorage.unstore(fkey, command);
+              }
+              public void receiveException(Exception e) {
+                warn("Cannot store in trash: "+fkey.toStringFull()+", e="+e);
+                e.printStackTrace();
+                command.receiveException(e);
+              }
+            });
+          } else {
+            receiveException(new GlacierException("Move to trash: Fragment "+fkey+" does not exist?!?"));
+          }
+        }
+        public void receiveException(Exception e) {
+          warn("Cannot retrieve fragment "+fkey+" for deletion: e="+e);
+          e.printStackTrace();
+          command.receiveException(new GlacierException("Cannot retrieve fragment "+fkey+" for deletion"));
+        }
+      });
+    } else {
+      log(2, "Deleting fragment "+fkey.toStringFull());
+      fragmentStorage.unstore(fkey, command);
+    }
+  }
+
+  public void setTrashcan(StorageManager trashStorage) {
+    this.trashStorage = trashStorage;
+  }
+
+  private byte[] getHashInput(VersionKey vkey, long expiration) {
+    byte[] a = vkey.toByteArray();
+    byte[] b = new byte[a.length + 8];
+    for (int i=0; i<a.length; i++)
+      b[i] = a[i];
+      
+    b[a.length + 0] = (byte)(0xFF & (expiration>>56));
+    b[a.length + 1] = (byte)(0xFF & (expiration>>48));
+    b[a.length + 2] = (byte)(0xFF & (expiration>>40));
+    b[a.length + 3] = (byte)(0xFF & (expiration>>32));
+    b[a.length + 4] = (byte)(0xFF & (expiration>>24));
+    b[a.length + 5] = (byte)(0xFF & (expiration>>16));
+    b[a.length + 6] = (byte)(0xFF & (expiration>>8));
+    b[a.length + 7] = (byte)(0xFF & (expiration));
+
+    return b;
   }
 
   private void addContinuation(GlacierContinuation gc) {
@@ -499,7 +562,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     return ((h<10) ? "0" : "") + Integer.toString(h) + ":" +
            ((m<10) ? "0" : "") + Integer.toString(m) + ":" +
            ((s<10) ? "0" : "") + Integer.toString(s) + " @" +
-           node.getId() + " " + debugID;
+           node.getId() + "#" + Thread.currentThread().getName() + "# " + debugID;
   }
 
   private void log(int level, String str) {
@@ -634,6 +697,30 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       return keyset.numElements()+ " objects deleted\n";
     }
 
+    if ((cmd.length() >= 7) && cmd.substring(0, 7).equals("refresh")) {
+      String args = cmd.substring(8);
+      String expirationArg = args.substring(args.lastIndexOf(' ') + 1);
+      String keyArg = args.substring(0, args.lastIndexOf(' '));
+
+      Id id = factory.buildIdFromToString(keyArg);
+      long expiration = System.currentTimeMillis() + Long.parseLong(expirationArg);
+
+      final String[] ret = new String[] { null };
+      refresh(new Id[] { id }, expiration, new Continuation() {
+        public void receiveResult(Object o) {
+          ret[0] = "result("+o+")";
+        }
+        public void receiveException(Exception e) {
+          ret[0] = "exception("+e+")";
+        }
+      });
+      
+      while (ret[0] == null)
+        Thread.currentThread().yield();
+      
+      return "refresh("+id+", "+expiration+")="+ret[0];
+    }
+
     if ((cmd.length() >= 9) && cmd.substring(0, 9).equals("neighbors")) {
       Iterator iter = neighborStorage.scan().getIterator();
       String result = "";
@@ -664,7 +751,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         result = result + randomID.toStringFull() + "\n";
         insert(
           new DebugContent(randomID, false, 0, new byte[] {}),
-          System.currentTimeMillis() + 30*SECONDS,
+          System.currentTimeMillis() + 120*SECONDS,
           new Continuation() {
             public void receiveResult(Object o) {
             }
@@ -785,7 +872,6 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           keys[0] = new FragmentKey(key, i);
       
           log(3, "Query #"+i+" to "+fragmentLoc);
-      
           endpoint.route(
             fragmentLoc,
             new GlacierQueryMessage(getMyUID(), keys, getLocalNodeHandle(), fragmentLoc),
@@ -1553,8 +1639,8 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         FragmentKey fkey = (FragmentKey)iter.next();
         Id thisPos = getFragmentLocation(fkey);
         if (range.containsId(thisPos)) {
-          if (!bv.contains(fkey.getVersionKey().toByteArray())) {
-            FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(fkey);
+          FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(fkey);
+          if (!bv.contains(getHashInput(fkey.getVersionKey(), metadata.getCurrentExpiration()))) {
             if (metadata.getCurrentExpiration() >= earliestAcceptableExpiration) {
               log(4, fkey+" @"+thisPos+" - MISSING");
               missing.add(fkey);
@@ -1911,7 +1997,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
               warn("We already have exp="+metadata.getCurrentExpiration()+", discarding manifest with exp="+thisManifest.getExpiration());
             }
             
-            return;
+            continue;
           }
 
           log(2, "Data: Manifest for: "+thisKey+", must fetch");
