@@ -13,14 +13,16 @@ import rice.pastry.messaging.*;
 public class ReceiptMessage extends PostMessage {
   
   private SignedPostMessage message;
+  private Id id;
   
   /**
    * Constructs a PresenceMessage
    *
    * @param message The notification message which this is a receipt for
    */
-  public ReceiptMessage(PostEntityAddress sender, SignedPostMessage message) {
+  public ReceiptMessage(PostEntityAddress sender, Id id, SignedPostMessage message) {
     super(sender);
+    this.id = id;
     this.message = message;
   }
     
@@ -32,6 +34,15 @@ public class ReceiptMessage extends PostMessage {
    */
   public SignedPostMessage getEncryptedMessage() {
     return message;
+  }
+
+  /**
+   * Gets the random locaiton of this drm
+   *
+   * @return The locaiton
+   */
+  public Id getId() {
+    return id;
   }
 }
 

@@ -6,6 +6,7 @@ import java.io.*;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.pastry.commonapi.*;
 import rice.pastry.security.*;
 import rice.pastry.client.*;
 import rice.pastry.messaging.*;
@@ -15,11 +16,13 @@ import rice.pastry.*;
 import rice.p2p.past.*;
 import rice.scribe.*;
 import rice.scribe.messaging.*;
+import rice.persistence.*;
 import rice.post.log.*;
 import rice.post.messaging.*;
 import rice.post.storage.*;
 import rice.post.security.*;
 import rice.post.security.ca.*;
+import rice.rm.*;
 
 /**
  * This class is the service layer which allows 
@@ -29,7 +32,12 @@ import rice.post.security.ca.*;
  * @author Alan Mislove
  * @author Ansley Post
  */
-public class PostImpl extends PastryAppl implements Post, IScribeApp  {
+public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  {
+
+  /**
+   * The replication factor to use for replicating delivery messages
+   */
+  public static final int REPLICATION_FACTOR = 3;
   
   /**
    * The local PAST service to use for persistent storage.
@@ -40,6 +48,11 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    * The local Scribe service to use for notification.
    */
   private IScribe scribeService;
+
+  /**
+   * The local replication manager for replications notifications
+   */
+  private RMImpl replicaManager;
   
   /**
    * The address of the local user.
@@ -67,6 +80,18 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    */
   private Hashtable clientAddresses;
 
+  /**
+   * A list of the notification messages which we've received, to determine
+   * if we're receiveing a message twice
+   */
+  private Vector receivedMessages;
+
+  /**
+   * A storage used to store the pending (to be sent) encrypted notification
+   * messages
+   */
+  private Storage memoryStorage;
+
 
   // --- GROUP SUPPORT ---
 
@@ -82,6 +107,11 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    * The data structure to hold the buffered packets.
    */
   private Hashtable bufferedData;
+
+  /**
+   * The data structure map DRM Id -> user
+   */
+  private Hashtable reverseMap;
 
   
   // --- LOGGING SUPPORT ---
@@ -162,6 +192,9 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
     this.certificate = certificate;
     this.caPublicKey = caPublicKey;
 
+    replicaManager = new RMImpl(node, this, REPLICATION_FACTOR, instance + "-POST");
+    memoryStorage = new MemoryStorage(new PastryIdFactory());
+
     security = new SecurityService();
     security.loadModule(new CASecurityModule(caPublicKey));
     storage = new StorageService(address, past, credentials, keyPair);
@@ -171,6 +204,8 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
     clientAddresses = new Hashtable();
     bufferedData = new Hashtable();
     keys = new HashMap();
+    receivedMessages = new Vector();
+    reverseMap = new Hashtable();
   }
 
   /**
@@ -259,6 +294,10 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
 
         if (message instanceof DeliveryRequestMessage) {
           processDeliveryRequestMessage((DeliveryRequestMessage) message);
+        } else if (message instanceof DeliveryLookupMessage) {
+          processDeliveryLookupMessage((DeliveryLookupMessage) message);
+        } else if (message instanceof DeliveryLookupResponseMessage) {
+          processDeliveryLookupResponseMessage((DeliveryLookupResponseMessage) message);
         } else if (message instanceof PresenceMessage) {
           processPresenceMessage((PresenceMessage) message);
         } else if (message instanceof EncryptedNotificationMessage) {
@@ -299,8 +338,40 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
         debug("Joined Scribe group rooted at " + message.getDestination().getAddress());
       }
 
-      userQueue.addElement(message.getEncryptedMessage());
+      userQueue.addElement(message.getId());
+      memoryStorage.store(message.getId(), message, new ListenerContinuation("Storage of ENM"));
+      reverseMap.put(message.getId(), message.getDestination());
     }
+  }
+
+  /**
+   * This method processs a lookup for a DRM
+   *
+   * @param message The incoming message.
+   */
+  private void processDeliveryLookupMessage(final DeliveryLookupMessage message){
+    debug("Received delivery lookup from : " + message.getSender() + " for: " + message.getId());
+
+    memoryStorage.getObject(message.getId(), new ListenerContinuation("Delivery Lookup Request") {
+      public void receiveResult(Object o) {
+        if (o != null) {
+          DeliveryRequestMessage drm = (DeliveryRequestMessage) o;
+          DeliveryLookupResponseMessage dlrm = new DeliveryLookupResponseMessage(address, drm);
+
+          routeMsgDirect(message.getSource(), new PostPastryMessage(signPostMessage(dlrm)), getCredentials(), new SendOptions());
+        }
+      }
+    });
+  }
+  
+  /**
+   * This method processs a lookup response for a DRM
+   *
+   * @param message The incoming message.
+   */
+  private void processDeliveryLookupResponseMessage(DeliveryLookupResponseMessage message){
+    debug("Received delivery lookup response from : " + message.getSender() + " for: " + message.getEncryptedMessage().getId());
+    processDeliveryRequestMessage(message.getEncryptedMessage());
   }
 
   /**
@@ -310,7 +381,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    *
    * @param message The incoming message
    */
-  private void processPresenceMessage(PresenceMessage message) {
+  private void processPresenceMessage(final PresenceMessage message) {
     debug("Presence message from : " + message.getSender());
 
     synchronized (bufferedData) {
@@ -322,9 +393,18 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
         }
 
         for (int i=0; i<userQueue.size(); i++) {
-          SignedPostMessage spm = (SignedPostMessage) userQueue.elementAt(i);
-          DeliveryMessage dm = new DeliveryMessage(address, getNodeId(), spm);
-          routeMsg(message.getLocation(), new PostPastryMessage(signPostMessage(dm)), getCredentials(), new SendOptions());
+          final Id id = (Id) userQueue.elementAt(i);
+
+          memoryStorage.getObject(id, new ListenerContinuation("Retrival of stored ENM") {
+            public void receiveResult(Object o) {
+              if (o != null) {
+                DeliveryRequestMessage drm = (DeliveryRequestMessage) o;
+                SignedPostMessage spm = drm.getEncryptedMessage();
+                DeliveryMessage dm = new DeliveryMessage(address, getNodeId(), id, spm);
+                routeMsg(message.getLocation(), new PostPastryMessage(signPostMessage(dm)), getCredentials(), new SendOptions());
+              } 
+            }
+          });
         }
       } else {
         System.out.println(thePastryNode.getNodeId() + "DEBUG: ERROR - presence message from : " + message.getSender() + " should not be received here.");
@@ -341,11 +421,17 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
     debug("Delivery message from : " + message.getSender());
 
     // send receipt
-    ReceiptMessage rm = new ReceiptMessage(address, message.getEncryptedMessage());
+    ReceiptMessage rm = new ReceiptMessage(address, message.getId(), message.getEncryptedMessage());
     routeMsg(message.getLocation(), new PostPastryMessage(signPostMessage(rm)), getCredentials(), new SendOptions());
 
-    // process internal message
-    processSignedPostMessage(message.getEncryptedMessage());
+    // process internal message, if we haven't seen it before
+    if (! receivedMessages.contains(message.getId())) {
+      debug("Haven't seen message " + message.getId() + " before - accepting.");
+      receivedMessages.add(message.getId());
+      processSignedPostMessage(message.getEncryptedMessage());
+    } else {
+      debug("I've seen message " + message.getId() + " before - ignoring.");
+    }
   }
   
   /**
@@ -363,7 +449,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
       byte[] key = SecurityUtils.decryptAsymmetric(message.getKey(), keyPair.getPrivate());
       nm = (NotificationMessage) SecurityUtils.deserialize(SecurityUtils.decryptSymmetric(message.getData(), key));
     } catch (Exception e) {
-      System.out.println("yException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
+      System.out.println("Exception occured which decrypting NotificationMessage " + e + " - dropping on floor.");
       return;
     }
 
@@ -399,7 +485,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
   private void processReceiptMessage(ReceiptMessage message) {
     debug("Received receipt message from : " + message.getSender());
 
-    SignedPostMessage sm = message.getEncryptedMessage();
+    Id id = message.getId();
     PostEntityAddress sender = message.getSender();
 
     // remove message
@@ -407,10 +493,10 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
       Vector userQueue = (Vector) bufferedData.get(sender);
 
       if (userQueue != null) {
-        boolean success = userQueue.remove(sm);
+        boolean success = userQueue.remove(id);
 
         if (! success) {
-          System.out.println("ERROR - Received receiptmessage for unknown message " + sm);
+          System.out.println("ERROR - Received receiptmessage for unknown message " + id);
         }
 
         if (userQueue.size() == 0) {
@@ -421,6 +507,9 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
         scribeService.leave(sender.getAddress(), PostImpl.this, credentials);
       }
     }
+
+    reverseMap.remove(id);
+    memoryStorage.unstore(id, new ListenerContinuation("Unstore of DRM"));
   }
 
   /**
@@ -602,7 +691,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
 
         debug("Received destination log " + destinationLog);
 
-        NodeId random = factory.generateNodeId();
+        Id random = factory.generateNodeId();
 
         debug("Picked random node: " + random);
 
@@ -616,7 +705,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
           debug("Built encrypted notfn msg: " + destination);
 
           EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, keyCipherText, cipherText);
-          DeliveryRequestMessage drm = new DeliveryRequestMessage(address, destination, signPostMessage(enm));
+          DeliveryRequestMessage drm = new DeliveryRequestMessage(address, destination, signPostMessage(enm), random);
 
           debug("Sending delivery request to : " + random);
 
@@ -776,7 +865,8 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
       System.out.println("SecurityException " + e + " occured while verifiying PostMessage " + message + " - aborting.");
       return false;
     } catch (IOException e) {
-      System.out.println("IOException " + e + " occured while verifiying PostMessage " + message + " - aborting.");
+      
+System.out.println("IOException " + e + " occured while verifiying PostMessage " + message + " - aborting.");
       return false;
     }
   }
@@ -789,6 +879,88 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
   public void isNewRoot(NodeId topicId) {}
   public void newParent(NodeId topicId, NodeHandle newParent, Serializable data) {}
 
+
+
+  /**
+   * This upcall is invoked to notify the application that is should
+   * fetch the cooresponding keys in this set, since the node is now
+   * responsible for these keys also.
+   * @param keySet set containing the keys that needs to be fetched
+   */
+  public void fetch(IdSet keySet) {
+    debug("I NEED TO GET " + keySet);
+    Iterator i = keySet.getIterator();
+
+    while (i.hasNext()) {
+      Id id = (Id) i.next();
+      NodeSet set = replicaManager.replicaSet(id, REPLICATION_FACTOR);
+      DeliveryLookupMessage dlm = new DeliveryLookupMessage(address, getNodeHandle(), id);
+      
+      Iterator j = set.getIterator();
+      while (j.hasNext()) {
+        routeMsgDirect((NodeHandle) j.next(), new PostPastryMessage(signPostMessage(dlm)), getCredentials(), new SendOptions());
+      }
+    }
+  }
+
+  /**
+   * This upcall is simply to denote that the underlying replica manager
+   * (rm) is ready. The 'rm' should henceforth be used by this RMClient
+   * to issue the downcalls on the RM interface.
+   * @param rm the instance of the Replica Manager
+   */
+  public void rmIsReady(RM rm) {}
+
+  /**
+   * This upcall is to notify the application of the range of keys for
+   * which it is responsible. The application might choose to react to
+   * call by calling a scan(complement of this range) to the persistance
+   * manager and get the keys for which it is not responsible and
+   * call delete on the persistance manager for those objects.
+   * @param range the range of keys for which the local node is currently
+   *              responsible
+   */
+  public void isResponsible(IdRange range) {
+    IdRange notRange = (rice.pastry.IdRange) range.getComplementRange();
+
+    Continuation c = new Continuation() {
+      private Iterator notIds;
+
+      public void receiveResult(Object o) {
+        if (o instanceof IdSet) {
+          Iterator i = ((IdSet) o).getIterator();
+          Vector v = new Vector();
+          while (i.hasNext()) v.add(i.next());
+          notIds = v.iterator();
+        } else if (! o.equals(new Boolean(true))) {
+          System.out.println("Unstore of id did not succeed!");
+        }
+
+        if (notIds.hasNext()) {
+          Id id = (Id) notIds.next();
+          processReceiptMessage(new ReceiptMessage((PostEntityAddress) reverseMap.get(id), id, null));
+        }
+      }
+
+      public void receiveException(Exception e) {
+        System.out.println("Exception " + e + " occured during removal of objects.");
+      }
+    };
+
+    memoryStorage.scan(notRange, c);
+  }
+
+  /**
+   * This upcall should return the set of keys that the application
+   * currently stores in this range. Should return a empty IdSet (not null),
+   * in the case that no keys belong to this range.
+   * @param range the requested range
+   */
+  public IdSet scan(IdRange range) {
+    return (rice.pastry.IdSet) memoryStorage.scan(range);
+  }
+  
+  
   public String toString() {
     return "PostImpl[" + address + "]";
   }

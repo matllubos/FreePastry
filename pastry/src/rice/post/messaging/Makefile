@@ -8,6 +8,8 @@ SOURCE  = \
 	PresenceMessage.java \
 	ReceiptMessage.java \
 	DeliveryRequestMessage.java \
+	DeliveryLookupMessage.java \
+	DeliveryLookupResponseMessage.java \
 	DeliveryMessage.java \
 	PostMessage.java \
 	SignedPostMessage.java \

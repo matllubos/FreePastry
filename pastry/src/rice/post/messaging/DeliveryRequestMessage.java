@@ -14,7 +14,8 @@ import java.io.*;
 public class DeliveryRequestMessage extends PostMessage {
   
   private PostUserAddress destination;
-  private SignedPostMessage message;    
+  private SignedPostMessage message;
+  private Id id;
 
   /**
    * Constructs a DeliveryRequestMessage
@@ -22,13 +23,16 @@ public class DeliveryRequestMessage extends PostMessage {
    * @param sender The sender of this delivery request
    * @param destination The destination address to deliver the notification to
    * @param message The message to deliver, in encrypted state
+   * @param location The random location of this message
    */
   public DeliveryRequestMessage(PostEntityAddress sender, 
                                 PostUserAddress destination, 
-                                SignedPostMessage message) {
+                                SignedPostMessage message,
+                                Id id) {
     super(sender);
     this.destination = destination;
     this.message = message;
+    this.id = id;
   }
     
   /**
@@ -48,6 +52,15 @@ public class DeliveryRequestMessage extends PostMessage {
    */
   public SignedPostMessage getEncryptedMessage() {
     return message;
+  }
+
+  /**
+   * Gets the random locaiton of this drm
+   *
+   * @return The locaiton
+   */
+  public Id getId() {
+    return id;
   }
 }
 

@@ -15,6 +15,7 @@ public class DeliveryMessage extends PostMessage {
 
   private SignedPostMessage message;
   private NodeId location;
+  private Id id;
 
   /**
     * Constructs a DeliveryMessage
@@ -24,10 +25,21 @@ public class DeliveryMessage extends PostMessage {
    */
   public DeliveryMessage(PostEntityAddress sender,
                          NodeId location,
+                         Id id,
                          SignedPostMessage message) {
     super(sender);
     this.location = location;
+    this.id = id;
     this.message = message;
+  }
+
+  /**
+   * Gets the location of the DRM in the ring
+   *
+   * @return The location 
+   */
+  public Id getId() {
+    return id;
   }
 
   /**
