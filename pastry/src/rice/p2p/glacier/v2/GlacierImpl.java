@@ -1298,7 +1298,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             Manifest[] manifests = new Manifest[numFragments];
             for (int i=0; i<numFragments; i++)
               manifests[i] = manifest;
-            distribute(new VersionKey(thisId, thisVersion), null, manifests, expiration, tagDebug, thisContinuation);
+            distribute(new VersionKey(thisId, thisVersion), null, manifests, expiration, tagRefresh, thisContinuation);
           } else {
             warn("refresh("+thisId+"v"+thisVersion+"): Cannot retrieve manifest");
             thisContinuation.receiveResult(new GlacierException("Cannot retrieve manifest -- retry later"));
