@@ -35,6 +35,10 @@ import rice.p2p.past.gc.GCPastContentHandle;
 import rice.persistence.StorageManager;
 import rice.visualization.server.DebugCommandHandler;
 
+import rice.post.PostEntityAddress;
+import rice.post.storage.SignedData;
+import rice.post.security.SecurityUtils;
+
 public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregation, Application, DebugCommandHandler {
 
   protected final Past aggregateStore;
@@ -1828,22 +1832,65 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         
       retrieveObjectFromAggregate(adc, objDescIndex, command);
     } else {
-      if (objectStore instanceof VersioningPast) {
-        VersioningPast vpast = (VersioningPast) objectStore;
-        vpast.lookup(id, version, new Continuation() {
+      log(3, "VL: Not found in aggregate list: "+id+"v"+version);
+      if (aggregateStore instanceof VersioningPast) {
+        VersioningPast vaggr = (VersioningPast) aggregateStore;
+        vaggr.lookup(id, version, new Continuation() {
           public void receiveResult(Object o) {
             if (o != null) {
-              log(3, "VL: Found in VersioningPAST: "+id+"v"+version);
+              log(3, "VL: Found in Aggregate.VersioningPAST: "+id+"v"+version);
               command.receiveResult(o);
             } else {
-              warn("VL: LOOKUP FAILED, OBJECT NOT FOUND: "+id+"v"+version);
-              command.receiveResult(null);
+              log(3, "VL: Not found in Aggregate.VersioningPAST: "+id+"v"+version);
+              if (objectStore instanceof VersioningPast) {
+                VersioningPast vpast = (VersioningPast) objectStore;
+                vpast.lookup(id, version, new Continuation() {
+                  public void receiveResult(Object o) {
+                    if (o != null) {
+                      log(3, "VL: Found in Object.VersioningPAST: "+id+"v"+version);
+                      command.receiveResult(o);
+                    } else {
+                      warn("VL: LOOKUP FAILED, OBJECT NOT FOUND: "+id+"v"+version);
+                      command.receiveResult(null);
+                    }
+                  }
+                  public void receiveException(Exception e) {
+                    command.receiveException(e);
+                  }
+                });
+              } else {
+                log(3, "VL: Object store does not support versioning");
+                command.receiveException(new AggregationException("Cannot find "+id+"v"+version+" -- try rebuilding aggregate list?"));
+              }   
             }
           }
           public void receiveException(Exception e) {
-            command.receiveException(e);
+            command.receiveException(new AggregationException("Aggregate.VersioningPAST returned exception for "+id+"v"+version+": "+e));
+            e.printStackTrace();
           }
         });
+      } else {
+        log(3, "VL: Aggregate store does not support versioning");
+        if (objectStore instanceof VersioningPast) {
+          VersioningPast vpast = (VersioningPast) objectStore;
+          vpast.lookup(id, version, new Continuation() {
+            public void receiveResult(Object o) {
+              if (o != null) {
+                log(3, "VL: Found in Object.VersioningPAST: "+id+"v"+version);
+                command.receiveResult(o);
+              } else {
+                warn("VL: LOOKUP FAILED, OBJECT NOT FOUND: "+id+"v"+version);
+                command.receiveResult(null);
+              }
+            }
+            public void receiveException(Exception e) {
+              command.receiveException(e);
+            }
+          });
+        }
+
+        log(3, "VL: Object store does not support versioning");
+        command.receiveResult(null);
       }
     }
   }
