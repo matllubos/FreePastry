@@ -40,6 +40,7 @@ import rice.pastry.*;
 import rice.pastry.routing.*;
 import rice.pastry.messaging.*;
 
+import java.util.*;
 import java.rmi.server.UnicastRemoteObject;
 import java.rmi.RemoteException;
 
@@ -57,11 +58,54 @@ class RMIPastryNodeImpl extends UnicastRemoteObject implements RMIPastryNode
 {
     private PastryNode node;
     private RMINodeHandlePool handlepool;
+    private LinkedList queue;
+    int count;
+
+    private class MsgHandler implements Runnable {
+	public void run() {
+	    while (true) {
+		synchronized (queue) {
+		    while (count == 0) {
+			try {
+			    queue.wait();
+			} catch (InterruptedException e) {}
+		    }
+
+		    Message msg = null;
+		    try {
+			msg = (Message) queue.removeFirst();
+			count--;
+		    } catch (NoSuchElementException e) {
+			System.out.println("no msg despite count = " + count);
+			continue;
+		    }
+
+		    /*
+		     * The sender of this message is alive. So if we have a
+		     * handle in our pool with this Id, then it should be
+		     * reactivated.
+		     */
+		    NodeId sender = msg.getSenderId();
+		    System.out.println("[rmi] received " +
+				       (msg instanceof RouteMessage ? "route" : "direct")
+				       + " msg from " + sender + ": " + msg);
+		    if (sender != null) handlepool.activate(sender);
+		    node.receiveMessage(msg);
+		}
+	    }
+	}
+    }
 
     /**
      * Constructor
      */
-    public RMIPastryNodeImpl() throws RemoteException { node = null; }
+    public RMIPastryNodeImpl() throws RemoteException {
+	node = null;
+	queue = new LinkedList();
+	count = 0;
+	MsgHandler handler = new MsgHandler();
+	new Thread(handler).start();
+    }
 
     /**
      * sets the local Pastry node (local method)
@@ -80,28 +124,14 @@ class RMIPastryNodeImpl extends UnicastRemoteObject implements RMIPastryNode
      */
     public NodeId getNodeId() { return node.getNodeId(); }
 
-    private class MsgHandler implements Runnable {
-	private Message msg;
-	MsgHandler(Message m) { msg = m; }
-	public void run() {
-	    /*
-	    * The sender of this message is alive. So if we have a handle in
-	    * our pool with this Id, then it should be reactivated.
-	     */
-	    NodeId sender = msg.getSenderId();
-	    System.out.println("[rmi] received " +
-			       (msg instanceof RouteMessage ? "route" : "direct")
-			       + " msg from " + sender + ": " + msg);
-	    if (sender != null) handlepool.activate(sender);
-	    node.receiveMessage(msg);
-	}
-    }
-
     /**
      * Proxies to the local node to accept a message.
      */
-    public synchronized void receiveMessage(Message msg) {
-	MsgHandler handler = new MsgHandler(msg);
-	new Thread(handler).start();
+    public void receiveMessage(Message msg) {
+	synchronized (queue) {
+	    queue.add(msg);
+	    count++;
+	    queue.notify();
+	}
     }
 }
