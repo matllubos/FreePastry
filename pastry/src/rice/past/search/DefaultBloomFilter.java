@@ -31,9 +31,6 @@ public class DefaultBloomFilter implements BloomFilter {
         this.size = (int) Math.pow(2, bitSize);
         this.numBytes = (int) (bitSize / 8);        
         
-        System.out.println("BLOOM FILTER ACTUAL SIZE = " + this.size); 
-        System.out.println("BLOOM FILTER BYTE SIZE = " + this.numBytes);   
-
         // initialize the filter
         this.filter = new boolean[this.size];            
     }

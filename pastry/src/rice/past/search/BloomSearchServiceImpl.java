@@ -303,8 +303,6 @@ public class BloomSearchServiceImpl
         // calculate the size
         int size = - (int) Math.round(objects.size() / BloomSearchServiceImpl.PERR_COEFF);
         
-        System.out.println("Creating a bloom filter of size = " + size);
-        
         BloomFilter bloomFilter = new DefaultBloomFilter(size);
         
         // fill the bloom filter
