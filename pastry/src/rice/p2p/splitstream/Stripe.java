@@ -143,6 +143,15 @@ public class Stripe implements ScribeClient {
   }
 
   /**
+   * Publishes the given data to this stripe
+   *
+   * @param data The data to publish
+   */
+  public void publish(byte[] data) {
+    // do stuff here
+  }
+
+  /**
    * This method is invoked when an anycast is received for a topic which this client is interested
    * in. The client should return whether or not the anycast should continue.
    *

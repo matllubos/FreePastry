@@ -14,7 +14,15 @@ public interface SplitStreamClient {
    *
    * @param s DESCRIBE THE PARAMETER
    */
-  public void handleParentFailure(Stripe s);
+  public void joinFailed(Stripe s);
+
+  /**
+   * Is called when data is received on a stripe which this client has registered interest
+   *
+   * @param data The data that was received
+   * @param s DESCRIBE THE PARAMETER
+   */
+  public void deliver(Stripe s, byte[] data);
 
 }
 
