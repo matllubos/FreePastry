@@ -84,7 +84,7 @@ public class DistTestHarnessRunner {
   /**
    * The name of the machine on which to look for the bootstrap node
    */
-  public static String BOOTSTRAP_HOST = "ron0.emulab.net";
+  public static String BOOTSTRAP_HOST = "";//ron0.emulab.net";
 
   private static byte[] bootstrapNodeIdArray = new byte[32];
 
@@ -362,6 +362,14 @@ public class DistTestHarnessRunner {
         pauseQuiet(2000);
         ((DistPastryNode) pn).kill();
 
+      } else if ( token.startsWith( "jt" ) ) {
+        String run_name = "t0";
+        String class_name = "rice.testharness.tests.SplitStreamTest";
+
+        Message m = new InitTestMessage(run_name, class_name);
+
+        ((TestHarness) testNodes.elementAt(0)).sendToAll(m);
+
       } else if ( token.startsWith( "inittest" ) ) {
         String run_name = tokened.nextToken();
         String class_name = tokened.nextToken();
@@ -435,8 +443,8 @@ public class DistTestHarnessRunner {
   }
 
   public static synchronized void pause(int ms) {
-    System.err.println("waiting for " + (ms/1000) + " sec");
-    System.out.println("waiting for " + (ms/1000) + " sec");
+    //System.err.println("waiting for " + (ms/1000) + " sec");
+    //System.out.println("waiting for " + (ms/1000) + " sec");
     try { Thread.currentThread().sleep(ms); } catch (InterruptedException e) {}
   }
 
