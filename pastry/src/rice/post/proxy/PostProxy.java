@@ -1,6 +1,7 @@
 package rice.post.proxy;
 
 import rice.*;
+import rice.Continuation.*;
 
 import rice.p2p.commonapi.IdFactory;
 
@@ -291,6 +292,16 @@ public class PostProxy {
 
       stepStart("Starting POST service");
       post = new PostImpl(pastry, past, scribe, address, pair, certificate, caPublic, INSTANCE_NAME);
+      stepDone(SUCCESS);
+
+      sectionDone();
+
+      stepStart("Fetching POST log");
+      ExternalContinuation c = new ExternalContinuation();
+      post.getPostLog(c);
+      c.sleep();
+
+      if (c.exceptionThrown()) { throw c.getException(); }
       stepDone(SUCCESS);
 
       sectionDone();

@@ -31,10 +31,19 @@ class StorageServiceDataHandle implements PastContentHandle {
    * @param handle The handle where the data is
    */
   public StorageServiceDataHandle(NodeHandle handle, Id id) {
+    this(handle, id, System.currentTimeMillis());
+  }
+
+  /**
+   * Contstructor
+   *
+   * @param id The id
+   * @param handle The handle where the data is
+   */
+  public StorageServiceDataHandle(NodeHandle handle, Id id, long timestamp) {
     this.id = id;
     this.handle = handle;
-
-    this.timestamp = System.currentTimeMillis();
+    this.timestamp = timestamp;
   }
   
   /**

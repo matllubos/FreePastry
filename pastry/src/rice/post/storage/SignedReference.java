@@ -50,5 +50,4 @@ public class SignedReference implements Serializable {
   public String toString() {
     return "[SignedRef " + location + "]";
   }
-
 }

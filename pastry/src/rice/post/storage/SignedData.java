@@ -1,6 +1,7 @@
 package rice.post.storage;
 
 import java.io.*;
+import java.math.*;
 import java.security.*;
 import java.util.*;
 
@@ -109,5 +110,17 @@ class SignedData extends StorageServiceData {
    */
   public boolean isMutable() {
     return true;
+  }
+
+  /**
+   * Produces a handle for this content object. The handle is retrieved and returned to the
+   * client as a result of the Past.lookupHandles() method.
+   *
+   * @param The local Past service which the content is on.
+   * @return the handle
+   */
+  public PastContentHandle getHandle(Past local) {
+    long time = (new BigInteger(1, timestamp)).longValue();
+    return new StorageServiceDataHandle(local.getLocalNodeHandle(), location, time);
   }
 }
