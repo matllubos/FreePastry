@@ -47,6 +47,9 @@ public class ControlDropMessage extends ControlMessage{
                                                                    c,
                                                                    (StripeId)topic.getTopicId(), channel_id );
       scribe.anycast( spare_id, msg, c ); 
+      scribe.setParent(null, topic.getTopicId());
+      //System.out.println("setParent set to null called ");
+      //System.out.println("Node "+scribe.getNodeId()+ " dropped for "+topic.getTopicId());
    }
 
    /**
