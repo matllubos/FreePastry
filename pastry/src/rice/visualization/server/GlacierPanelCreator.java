@@ -31,7 +31,7 @@ public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListe
   
   public DataPanel createPanel(Object[] objects) {
 
-    DataPanel glacierPanel = new DataPanel("Glacier");
+    DataPanel glacierPanel = new DataPanel("Traffic");
 
     GridBagConstraints glacierCons = new GridBagConstraints();
     glacierCons.gridx = 0;
@@ -101,7 +101,34 @@ public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListe
     glacierPanel.addDataView(countView);
     glacierPanel.addDataView(graphView);
 
-    return glacierPanel;
+    /* SECOND PANEL ======================================================= */
+
+    DataPanel glacierPanel2 = new DataPanel("Queue");
+
+    GridBagConstraints graph2Cons = new GridBagConstraints();
+    graph2Cons.gridx = 2;
+    graph2Cons.gridy = 0;
+    graph2Cons.fill = GridBagConstraints.HORIZONTAL;
+
+    LineGraphView fetchView = new LineGraphView("Pending fetches", 380, 200, graph2Cons, "Minutes", "Queue entries", false, false);
+    timeSeries = new double[HISTORY];
+    double[] activeSeries = new double[HISTORY];
+    double[] pendingSeries = new double[HISTORY];
+    for (int j=0; j<HISTORY; j++) {
+      GlacierStatistics statJ = history[(historyPtr+j) % HISTORY];
+      timeSeries[j] = j;
+      activeSeries[j] = (statJ == null) ? 0 : statJ.activeFetches;
+      pendingSeries[j] = (statJ == null) ? 0 : statJ.pendingRequests;
+    }
+    fetchView.addSeries("F", timeSeries, activeSeries, Color.GREEN);
+    fetchView.addSeries("F", timeSeries, pendingSeries, Color.BLUE);
+    glacierPanel2.addDataView(fetchView);
+
+    MultiDataPanel thePanel = new MultiDataPanel("Glacier");
+    thePanel.addDataPanel(glacierPanel);
+    thePanel.addDataPanel(glacierPanel2);
+
+    return thePanel;
   }
   
   public void receiveStatistics(GlacierStatistics stat) {
