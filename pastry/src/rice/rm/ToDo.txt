@@ -12,7 +12,6 @@
    join protocol bug when using IpNodeIdFactory and then use this.
  
 
-
 Notes
 ------
 
