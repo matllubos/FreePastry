@@ -1,35 +1,43 @@
-//////////////////////////////////////////////////////////////////////////////
-// Rice Open Source Pastry Implementation                  //               //
-//                                                         //  R I C E      //
-// Copyright (c)                                           //               //
-// Romer Gil                   rgil@cs.rice.edu            //   UNIVERSITY  //
-// Andrew Ladd                 aladd@cs.rice.edu           //               //
-// Tsuen Wan Ngan              twngan@cs.rice.edu          ///////////////////
-//                                                                          //
-// This program is free software; you can redistribute it and/or            //
-// modify it under the terms of the GNU General Public License              //
-// as published by the Free Software Foundation; either version 2           //
-// of the License, or (at your option) any later version.                   //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU General Public License for more details.                             //
-//                                                                          //
-// You should have received a copy of the GNU General Public License        //
-// along with this program; if not, write to the Free Software              //
-// Foundation, Inc., 59 Temple Place - Suite 330,                           //
-// Boston, MA  02111-1307, USA.                                             //
-//                                                                          //
-// This license has been added in concordance with the developer rights     //
-// for non-commercial and research distribution granted by Rice University  //
-// software and patent policy 333-99.  This notice may not be removed.      //
-//////////////////////////////////////////////////////////////////////////////
+/*************************************************************************
+
+"Free Pastry" Peer-to-Peer Application Development Substrate 
+
+Copyright 2002, Rice University. All rights reserved.  Developed by
+Andrew Ladd, Peter Druschel.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+contributors may be  used to endorse or promote  products derived from
+this software without specific prior written permission.
+
+This software is provided by RICE and the contributors on an "as is"
+basis, without any representations or warranties of any kind, express
+or implied including, but not limited to, representations or
+warranties of non-infringement, merchantability or fitness for a
+particular purpose. In no event shall RICE or contributors be liable
+for any direct, indirect, incidental, special, exemplary, or
+consequential damages (including, but not limited to, procurement of
+substitute goods or services; loss of use, data, or profits; or
+business interruption) however caused and on any theory of liability,
+whether in contract, strict liability, or tort (including negligence
+or otherwise) arising in any way out of the use of this software, even
+if advised of the possibility of such damage.
+
+********************************************************************************/
 
 package rice.pastry.routing;
 
 import rice.pastry.*;
-
 import java.util.*;
 
 /**
@@ -51,6 +59,7 @@ import java.util.*;
  *  is the least significant digit.
  *
  * @author Andrew Ladd
+ * @author Peter Druschel
  */
 
 public class RoutingTable extends Observable {
@@ -96,25 +105,73 @@ public class RoutingTable extends Observable {
 	}
     }
 
-    public int numRows() { return routingTable.length; }
-    public int numColumns() { return routingTable[0].length; }
-
     /**
-     * Determines a hop strictly better than the one we are at.
+     * return ths number of columns in the routing table
      *
-     * @param nextId the destination node id.
-     * @return a set of possible handles to the next hop or null if no strictly better hop can be found.
+     * @return number of columns
      */
 
-    public RouteSet bestRoute(NodeId nextId)
-    {
-	int diffDigit = myNodeId.indexOfMSDD(nextId, idBaseBitLength);
+    public int numRows() { return routingTable.length; }
 
+    /**
+     * return the number of rows in the routing table
+     *
+     * @return number of rows
+     */
+
+    public int numColumns() { return routingTable[0].length; }
+
+
+    /**
+     * Determines an alternate hop numerically closer to the key than the one we are at. This assumes
+     * that bestEntry did not produce a live nodeHandle that matched the next digit of the key.
+     * 
+     * @param key the key
+     * @return a nodeHandle of a numerically closer node, relative to the key
+     */
+
+    public NodeHandle bestAlternateRoute(NodeId key)
+    {
+	final int cols = 1 << idBaseBitLength;
+	int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
 	if (diffDigit < 0) return null;
+	int keyDigit = key.getDigit(diffDigit, idBaseBitLength);
+	int myDigit = myNodeId.getDigit(diffDigit, idBaseBitLength);
+	NodeId.Distance bestDistance = myNodeId.distance(key);
+	NodeHandle alt = null;
+	boolean finished = false;
+
+	for (int i=1; !finished; i++) {
+	    for (int j=0; j<2; j++) {
+		int digit = (j == 0) ? 
+		    (keyDigit + i) & (cols - 1) : (keyDigit + cols - i) & (cols - 1);
+
+		RouteSet rs = getRouteSet(diffDigit, digit);
+		for (int k=0; k<rs.size(); k++) {
+		    NodeHandle n = rs.get(k);
+		    
+		    if (n.isAlive()) {
+			NodeId.Distance nDist = n.getNodeId().distance(key);
+
+			if (bestDistance.compareTo(nDist) > 0) {
+			    bestDistance = nDist;
+			    alt = n;
+			}
+		    }
+		}
+		
+		if (digit == myDigit) finished = true;
+	    }
+	}
 	
-	int digit = nextId.getDigit(diffDigit, idBaseBitLength);
-	
-	return getRouteSet(diffDigit, digit);
+	/*
+	if (alt != null) {
+	    System.out.println("RT:bestAlternateRoute, key=" + key +
+	                       " alternate=" + alt.getNodeId());
+	}
+	*/
+
+	return alt;
     }
 
     /**
@@ -123,7 +180,7 @@ public class RoutingTable extends Observable {
      * @param index the index of the digit in base <EM> 2 <SUP> idBaseBitLength </SUP></EM>.  <EM> 0 </EM> is the least significant.
      * @param digit ranges from <EM> 0... 2 <SUP> idBaseBitLength - 1 </SUP> </EM>.  Selects which digit to use.
      *
-     * @return a read-only set of possible handles located at that position in the routing table or null if this empty.
+     * @return a read-only set of possible handles located at that position in the routing table
      */
 
     public RouteSet getRouteSet(int index, int digit) 
@@ -132,14 +189,20 @@ public class RoutingTable extends Observable {
 
 	return ns;
     }
-    
-    private RouteSet getBestEntry(NodeId nid) 
-    {
-	int diffDigit = myNodeId.indexOfMSDD(nid, idBaseBitLength);
 
+    /**
+     * Gets the set of handles that match at least more digit of the key than the local nodeId.
+     *
+     * @param key the key
+     *
+     * @return a read-only set of possible handles 
+     */
+    
+    public RouteSet getBestEntry(NodeId key) 
+    {
+	int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
 	if (diffDigit < 0) return null;
-	
-	int digit = nid.getDigit(diffDigit, idBaseBitLength);
+	int digit = key.getDigit(diffDigit, idBaseBitLength);
 
 	return routingTable[diffDigit][digit];
     }
@@ -153,7 +216,6 @@ public class RoutingTable extends Observable {
     public void put(NodeHandle handle) 
     {
 	NodeId nid = handle.getNodeId();
-
 	RouteSet ns = getBestEntry(nid);
 	
 	if (ns != null) ns.put(handle);
@@ -169,12 +231,11 @@ public class RoutingTable extends Observable {
     public NodeHandle get(NodeId nid) 
     {
 	RouteSet ns = getBestEntry(nid);
-
 	return ns.get(nid);
     }
 
     /**
-     * Get row from the routing table.
+     * Get a row from the routing table.
      *
      * @param i which row
      * @return an array which is the ith row.
@@ -192,7 +253,6 @@ public class RoutingTable extends Observable {
     public NodeHandle remove(NodeId nid) 
     {
 	RouteSet ns = getBestEntry(nid);
-
 	return ns.remove(nid);
     }
 
@@ -207,6 +267,11 @@ public class RoutingTable extends Observable {
 	    for (int j=0; j<routingTable[i].length; j++)
 		routingTable[i][j].addObserver(o);
     }
+
+    /**
+     * produces a String representation of the routing table, showing the number of node handles in each entry
+     *
+     */
 
     public String toString() 
     {

@@ -64,7 +64,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
     private StandardJoinProtocol jProtocol;
 
     private static final int rtMax = 8;
-    private static final int lSetSize = 8;
+    private static final int lSetSize = 12;
   
     public DirectPastryNodeFactory() {
 	nidFactory = new RandomNodeIdFactory();

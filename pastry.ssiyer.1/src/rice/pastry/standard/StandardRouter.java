@@ -121,28 +121,39 @@ public class StandardRouter implements MessageReceiver {
 		else msg.nextHop = handle;
 	    }
 	else {
-	    RouteSet rs = routeTable.bestRoute(target);
-	    NodeHandle handle;
+	    RouteSet rs = routeTable.getBestEntry(target);
+	    NodeHandle handle = null;
 
-	    if (rs == null) {
-		System.out.println("Empty RT entry for " + target);
-		System.out.println(localHandle.getNodeId());
+	    // get the closest alive node
+	    for (int k=0; k<rs.size(); k++) 
+		if (rs.get(k).isAlive()) {
+		    handle = rs.get(k);
+		    break;
+		}
+
+	    if (handle == null) {
+		// no live routing table entry matching the next digit
+		// get best alternate RT entry
+		handle = routeTable.bestAlternateRoute(target);
+
+		if (handle == null) {
+		    // no alternate in RT, take leaf set
+		    handle = leafSet.get(lsPos);
+		}
+		else {
+		    NodeId.Distance altDist = handle.getNodeId().distance(target);
+		    NodeId.Distance lsDist = leafSet.get(lsPos).getNodeId().distance(target);
+
+		    if (lsDist.compareTo(altDist) < 0) {
+			// closest leaf set member is closer
+			//System.out.println("forw to edge leaf set member, alt=" + handle.getNodeId() + 
+			//" lsm=" + leafSet.get(lsPos).getNodeId());
+			handle = leafSet.get(lsPos);
+		    }
+		}
 	    }
-	    
-	    if (rs.size() == 0) 
-		handle = leafSet.get(lsPos);  // can't route, route to leaf set
-	    // XXX - this is wrong
 
-	    else handle = rs.closestNode(); // route using the table
-
-	    if (handle.isAlive() == false) { // node is dead - get rid of it and try again
-		if (rs.size() == 0) leafSet.remove(handle.getNodeId());
-		else routeTable.remove(handle.getNodeId());
-
-		receiveRouteMessage(msg);
-		return;
-	    }
-	    else msg.nextHop = handle;
+	    msg.nextHop = handle;
 	}
 
 	localHandle.receiveMessage(msg);
