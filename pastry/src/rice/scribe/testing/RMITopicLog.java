@@ -51,7 +51,7 @@ public class RMITopicLog{
     private int lastSeqNumRecv = -1;
     private int seqNumToPublish = -1;
     private int count = 1;
-
+    private boolean unsubscribed = false;
 
     public RMITopicLog(){
 	}
@@ -82,4 +82,17 @@ public class RMITopicLog{
 	count = value;
 	return;
     }
+
+    public boolean getUnsubscribed(){
+	return unsubscribed;
+    }
+
+    public void setUnsubscribed(boolean value){
+	unsubscribed = value;
+	return;
+    }
 }
+
+
+
+

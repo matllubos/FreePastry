@@ -81,6 +81,10 @@ public class RMIScribeMaintenanceTest {
     private static int numNodes = 5;
     public Integer num = new Integer(0);
     public static int NUM_TOPICS = 1;
+    public static int UNSUBSCRIBE_LIMIT = 5;
+    public static int numUnsubscribed = 0;
+    public static double fractionUnsubscribedAllowed = 0.5; 
+    public static Object LOCK = new Object();
 
     public RMIScribeMaintenanceTest(){
 	factory = DistPastryNodeFactory.getFactory(DistPastryNodeFactory.PROTOCOL_RMI, port);
@@ -190,7 +194,7 @@ public class RMIScribeMaintenanceTest {
 	    NodeId topicId;
 	    RMITopicLog topicLog;
 	    Vector topics = new Vector();
-	    
+	    Random rng = new Random(PastrySeed.getSeed() + m_app.m_appIndex);
 	    // Do application specific stuff here.
 	    System.out.println("I am up "+m_app.m_scribe.getNodeId());
 	   
@@ -198,6 +202,7 @@ public class RMIScribeMaintenanceTest {
 	    int threshold = m_app.m_scribe.getTreeRepairThreshold();
 	    int seq_num = -1;
 	    int count = 1;
+	    int lastRecv;
 	    for (i=0; i< RMIScribeMaintenanceTest.NUM_TOPICS; i++) {
 		topicId = generateTopicId(new String("Control Channel" + i));
 		topics.add(topicId);
@@ -236,12 +241,34 @@ public class RMIScribeMaintenanceTest {
 		    topicLog.setCount(count);
 		    topicLog.setSeqNumToPublish(seq_num);
 
-		    NodeHandle parent =  m_app.m_scribe.getTopic(topicId).getParent();
-		    
-		    if(parent != null){
-			if( !m_driver.localNodes.contains(parent.getNodeId()))
-			    System.out.println("Yoooooo.. My "+m_app.m_scribe.getNodeId()+ " appindex=" + m_app.m_appIndex + "'s parent "+parent+"is in other machine");
+		    /* We unsubscribe with a probability of 0.1 after we have received
+		     * a sequence number 'UNSUBSCRIBE_LIMIT' for a topic.
+		     */
+		    int allowed = (int)( RMIScribeMaintenanceTest.fractionUnsubscribedAllowed * m_driver.localNodes.size());
+		    synchronized( RMIScribeMaintenanceTest.LOCK){
+			if( RMIScribeMaintenanceTest.numUnsubscribed < allowed){
+			    if(! topicLog.getUnsubscribed()){
+				lastRecv = topicLog.getLastSeqNumRecv();
+				if(lastRecv > RMIScribeMaintenanceTest.UNSUBSCRIBE_LIMIT){
+				    int n = rng.nextInt(10);
+				    if( n == 0){
+					m_app.unsubscribe(topicId);
+					RMIScribeMaintenanceTest.numUnsubscribed ++;
+				    }
+				}
+			    }
+			}
 		    }
+		    if(! topicLog.getUnsubscribed()){
+			NodeHandle parent =  m_app.m_scribe.getTopic(topicId).getParent();
+			
+			if(parent != null){
+			    if( !m_driver.localNodes.contains(parent.getNodeId()))
+				System.out.println("Yoooooo.. My "+m_app.m_scribe.getNodeId()+ " appindex=" + m_app.m_appIndex + "'s parent "+parent+"is in other machine");
+			}
+			
+		    }
+		    
 		}
 		pause(publish_period*1000);
 		
@@ -326,8 +353,8 @@ public class RMIScribeMaintenanceTest {
 
 	Log.init(args);
 	doRMIinitstuff(args);
-	seed = -1347092695;
-	//seed = (int)System.currentTimeMillis();
+	//seed = -1347092695;
+	seed = (int)System.currentTimeMillis();
 	PastrySeed.setSeed(seed);
 	System.out.println("seed used=" + seed); 
 	RMIScribeMaintenanceTest driver = new RMIScribeMaintenanceTest();

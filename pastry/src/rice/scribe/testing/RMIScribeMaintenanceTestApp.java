@@ -151,6 +151,12 @@ public class RMIScribeMaintenanceTestApp implements IScribeApp
 	RMITopicLog topicLog;
 	
 	topicLog = (RMITopicLog)m_logTable.get(topicId);
+
+	if( topicLog.getUnsubscribed()){
+	    System.out.println("\nWARNING :: "+m_scribe.getNodeId()+" Received a message for a topic "+topicId+" for which I have UNSUBSCRIBED \n");
+	    return;
+	}
+
 	last_seqno_recv = topicLog.getLastSeqNumRecv();
 	topicLog.setLastSeqNumRecv(new_seqno);
 
@@ -231,6 +237,9 @@ public class RMIScribeMaintenanceTestApp implements IScribeApp
      * The topic is chosen randomly if null is passed and topics exist.
      */    
     public void unsubscribe(NodeId topicId) {
+	RMITopicLog topicLog;
+	topicLog = (RMITopicLog)m_logTable.get(topicId);
+	topicLog.setUnsubscribed(true);
 	m_scribe.unsubscribe( topicId, this, m_credentials );
     }
     
