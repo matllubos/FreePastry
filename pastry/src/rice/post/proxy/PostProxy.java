@@ -161,6 +161,11 @@ public class PostProxy {
   protected PastImpl deliveredPast;
 
   /**
+    * The local Glacier service
+   */
+  protected GlacierImpl immutableGlacier;
+
+  /**
    * The local Post service
    */
   protected Post post;
@@ -436,7 +441,7 @@ public class PostProxy {
    */
   protected void startDialog(Parameters parameters) throws Exception {
     if (parameters.getBooleanParameter("proxy_show_dialog")) {
-      dialog = new PostDialog(); 
+      dialog = new PostDialog(this); 
     }
   }
 
@@ -1094,7 +1099,7 @@ public class PostProxy {
       String prefix = InetAddress.getLocalHost().getHostName() + "-" + port;
       VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
 
-      final GlacierImpl immutableGlacier = new GlacierImpl(
+      immutableGlacier = new GlacierImpl(
         node, glacierImmutableStorage, glacierNeighborStorage,
         parameters.getIntParameter("glacier_num_fragments"),
         parameters.getIntParameter("glacier_num_survivors"),
@@ -1569,15 +1574,19 @@ public class PostProxy {
     }
   }
   
+  public GlacierImpl getGlacier() {
+    return immutableGlacier;
+  }
+  
   protected class PostDialog extends JFrame {
     protected JTextArea area;
     protected JScrollPane scroll;
     protected JPanel panel;
     protected JPanel kill;
     
-    public PostDialog() {
+    public PostDialog(PostProxy proxy) {
       panel = new PostPanel();
-      kill = new KillPanel();
+      kill = new KillPanel(proxy);
       setResizable(false);
 
       area = new JTextArea(15,75);
@@ -1652,7 +1661,7 @@ public class PostProxy {
   }
   
   protected class KillPanel extends JPanel {
-    public KillPanel() {
+    public KillPanel(final PostProxy proxy) {
       JButton restart = new JButton("Restart");
       JButton kill = new JButton("Kill");
       JButton status = new JButton("Stats");
@@ -1697,7 +1706,7 @@ public class PostProxy {
       
       configuration.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          final ConfigurationFrame frame = new ConfigurationFrame(parameters);
+          final ConfigurationFrame frame = new ConfigurationFrame(parameters, proxy);
           
           Thread t = new Thread() {
             public void run() {
