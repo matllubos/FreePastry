@@ -521,6 +521,9 @@ public class DistPostRegrTest {
     private void startState2(PostData data) {
       if (this.data.equals(data)) {
         System.out.println("SecureTest ran successfully.");
+
+        DummySignedStorageTest test = new DummySignedStorageTest(storage, data);
+        test.start();        
       } else {
         System.out.println("SecureTest return incorrect data.");
       }
@@ -544,5 +547,93 @@ public class DistPostRegrTest {
       System.out.println("Exception occured in DummySST: " + e);
     }
   }
-  
+
+  protected class DummySignedStorageTest implements ReceiveResultCommand {
+
+    public static final int STATE_1 = 1;
+    public static final int STATE_2 = 2;
+    public static final int STATE_3 = 3;
+    public static final int STATE_4 = 4;
+
+    private StorageService storage;
+    private PostData data;
+    private PostData dataNew;
+    private SignedReference reference;
+    private int state;
+    private NodeId nodeId;
+
+    public DummySignedStorageTest(StorageService storage, PostData data) {
+      this.storage = storage;
+      this.data = data;
+    }
+
+    public void start() {
+      System.out.println("SignedTest storing data.");
+
+      nodeId = idFactory.generateNodeId();
+      
+      state = STATE_1;
+      storage.storeSigned(data, nodeId, this);
+    }
+
+    private void startState1(SignedReference ref) {
+      this.reference = ref;
+      System.out.println("SignedTest received reference - checking.");
+
+      state = STATE_2;
+      storage.retrieveAndVerifySigned(reference, this);
+    }
+
+    private void startState2(PostData data) {
+      if (this.data.equals(data)) {
+        System.out.println("SignedTest retreived successfully.");
+
+        dataNew = new DummyPostData(rng.nextLong());
+        state = STATE_3;
+        storage.storeSigned(dataNew, nodeId, this);
+      } else {
+        System.out.println("SignedTest return incorrect data.");
+      }
+    }
+
+
+    private void startState3(SignedReference ref) {
+      System.out.println("SignedTest received new reference - checking.");
+
+      state = STATE_4;
+      storage.retrieveAndVerifySigned(reference, this);
+    }
+
+    private void startState4(PostData data) {
+      if (this.dataNew.equals(data)) {
+        System.out.println("SignedTest retreived new data successfully.");
+      } else {
+        System.out.println("SignedTest return incorrect data.");
+      }
+    }
+    
+    public void receiveResult(Object o) {
+      switch (state) {
+        case STATE_1:
+          startState1((SignedReference) o);
+          break;
+        case STATE_2:
+          startState2((PostData) o);
+          break;
+        case STATE_3:
+          startState3((SignedReference) o);
+          break;
+        case STATE_4:
+          startState4((PostData) o);
+          break;
+        default:
+          System.out.println("Unknown state in DummySST:" + state);
+          break;
+      }
+    }
+
+    public void receiveException(Exception e) {
+      System.out.println("Exception occured in DummySST: " + e);
+    }
+  }  
 }
