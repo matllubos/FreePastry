@@ -65,37 +65,33 @@ import java.net.*;
  *
  * @author Alan Mislove
  */
-
 public class DistTestHarnessRunner {
 
   /**
    * The port to start the first node on.
    */
-  private static int defaultStartPort = 12000;
-
-  /**
-   * The port to start the first node on.
-   */
-  private int startPort;
+  private static int START_PORT = 12000;
 
   /**
    * The port on the bootstrapHost to look for the bootstrap node on
    */
-  public static int bootstrapPort = 12000;
+  public static int BOOTSTRAP_PORT = 12000;
 
-  public static int NUM_NODES_PER_HOST;
+  public static int NUM_NODES = 10;
+
+  public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
 
   /**
    * The name of the machine on which to look for the bootstrap node
    */
-  public static String bootstrapHost = "ron0.emulab.net";
+  public static String BOOTSTRAP_HOST = "ron0.emulab.net";
 
   private static byte[] bootstrapNodeIdArray = new byte[32];
 
-  private Vector _pastryNodes;
-  private Vector _testNodes;
+  protected Vector pastryNodes;
+  protected Vector testNodes;
 
-  private DistPastryNodeFactory _factory;
+  protected DistPastryNodeFactory factory;
 
   /**
    * Constructor which creates a TestHarness given a
@@ -103,20 +99,19 @@ public class DistTestHarnessRunner {
    *
    * @param pn The PastryNode this TestHarness is running on.
    */
-  public DistTestHarnessRunner(int num, int port) {
-    startPort = port;
+  public DistTestHarnessRunner() {
+    pastryNodes = new Vector();
+    testNodes = new Vector();
+    factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(), PROTOCOL, START_PORT);
 
-    NUM_NODES_PER_HOST = num;
-    
-    _pastryNodes = new Vector();
-    _testNodes = new Vector();
-    _factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(), DistPastryNodeFactory.PROTOCOL_WIRE, startPort);
+  }
 
+  public void run() {
     // create all of the nodes
-    for (int i=0; i<num; i++) {
+    for (int i=0; i<NUM_NODES; i++) {
       createNode(i);
     }
-
+    
     boolean quit = false;
     BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
     String command = null;
@@ -133,26 +128,20 @@ public class DistTestHarnessRunner {
         quit = true;
       }
     }
-  }
-
+  }    
+  
   /**
    * Creates a Pastry Node, Scribe Node, and TestHarness Node for
    * testing.
    *
    * @param num The index of this node.
    */
-  private void createNode(final int num) {
-    int port = startPort + num;
+  protected void createNode(final int num) {
+    int port = START_PORT + num;
 
-    DistPastryNode pn = null;
+    PastryNode pn = createPastryNode();
 
-    try {
-      pn = createPastryNode(port);
-    } catch (Exception e) {
-      System.out.println(e);
-    }
-
-    System.err.println("Created node " + num + " " + pn.getNodeId());
+    System.err.println("Created node " + num + " " + pn.getNodeId() + " on port " + port);
 
     TestHarness test = new TestHarness(pn);
 
@@ -162,8 +151,8 @@ public class DistTestHarnessRunner {
 
     test.initialize();
 
-    _pastryNodes.addElement(pn);
-    _testNodes.addElement(test);
+    pastryNodes.addElement(pn);
+    testNodes.addElement(test);
   }
 
 
@@ -177,20 +166,8 @@ public class DistTestHarnessRunner {
    * @param useDefault Whether or not we should check to see if we are the bootstrap node
    * @return a new local PastryNode
    */
-  private DistPastryNode createPastryNode(int port) throws Exception {
-    InetSocketAddress address = null;
-    InetSocketAddress bootAddress = null;
-
-    try {
-      address = new InetSocketAddress(InetAddress.getLocalHost(), port);
-      bootAddress = new InetSocketAddress(bootstrapHost, bootstrapPort);
-    } catch (Exception e) {
-      System.out.println("ERROR (doStuff): " + e);
-    }
-
-    DistPastryNode pn = null;
-
-    pn = (DistPastryNode) _factory.newNode((DistNodeHandle) getPastryBootstrap());
+  protected PastryNode createPastryNode() {
+    PastryNode pn = factory.newNode(getPastryBootstrap());
 
     return pn;
   }
@@ -204,37 +181,30 @@ public class DistTestHarnessRunner {
      *
      * @return handle to bootstrap node, or null.
      */
-  private NodeHandle getPastryBootstrap() throws Exception {
-    if (_pastryNodes.size() == 0) {
+  protected NodeHandle getPastryBootstrap() {
+    if (pastryNodes.size() == 0) {
       InetSocketAddress bootAddress = null;
 
       try {
-        bootAddress = new InetSocketAddress(bootstrapHost, bootstrapPort);
+        bootAddress = new InetSocketAddress(BOOTSTRAP_HOST, BOOTSTRAP_PORT);
       } catch (Exception e) {
         System.out.println("ERROR (getBootstrap): " + e);
       }
 
-      return _factory.getNodeHandle(bootAddress);
+      return factory.getNodeHandle(bootAddress);
     } else {
-      return _factory.getNodeHandle(((WireNodeHandle) ((PastryNode) _pastryNodes.elementAt(_pastryNodes.size() - 1)).getLocalHandle()).getAddress());
+      return factory.getNodeHandle(((WireNodeHandle) ((PastryNode) pastryNodes.elementAt(pastryNodes.size() - 1)).getLocalHandle()).getAddress());
     }
   }
 
-  /**
-   * Initializes the TestHarnesss are waits for input.
-   */
-  public static void main(String[] args) {
-    int numNodes = 10;
-
+  public static void processArgs(String[] args) {
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-nodes") && i+1 < args.length) {
         int n = Integer.parseInt(args[i+1]);
-        if (n > 0) numNodes = n;
+        if (n > 0) NUM_NODES = n;
         break;
       }
     }
-
-    int port = defaultStartPort;
 
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-b") && i+1 < args.length) {
@@ -244,21 +214,19 @@ public class DistTestHarnessRunner {
       }
     }
 
-    System.out.println("RTB is " + RoutingTable.idBaseBitLength);
-    
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-bootstrap") && i+1 < args.length) {
         String str = args[i+1];
         int index = str.indexOf(':');
         if (index == -1) {
-          bootstrapHost = str;
-          bootstrapPort = port;
+          BOOTSTRAP_HOST = str;
+          BOOTSTRAP_PORT = START_PORT;
         } else {
-          bootstrapHost = str.substring(0, index);
+          BOOTSTRAP_HOST = str.substring(0, index);
           int tmpport = Integer.parseInt(str.substring(index + 1));
           if (tmpport > 0) {
-            bootstrapPort = tmpport;
-            port = tmpport;
+            BOOTSTRAP_PORT = tmpport;
+            START_PORT = tmpport;
           }
         }
 
@@ -269,17 +237,26 @@ public class DistTestHarnessRunner {
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-port") && i+1 < args.length) {
         int n = Integer.parseInt(args[i+1]);
-        if (n > 0) port = n;
+        if (n > 0) START_PORT = n;
         break;
       }
     }
+  }
+  
+  /**
+   * Initializes the TestHarnesss are waits for input.
+   */
+  public static void main(String[] args) {
+    processArgs(args);
 
-    new DistTestHarnessRunner(numNodes, port);
+    DistTestHarnessRunner runner = new DistTestHarnessRunner();
+
+    runner.run();
   }
 
   /* Basically a big switch/case for reading the input and acting accordingly
    */
-  private boolean parseInput( String in ) {
+  protected boolean parseInput( String in ) {
     try {
       StringTokenizer tokened = new StringTokenizer( in, " \t\n" );
       if( !tokened.hasMoreTokens() ) {
@@ -294,15 +271,15 @@ public class DistTestHarnessRunner {
 
       } else if ( token.startsWith( "listnodes" ) ) {
 
-        if (((TestHarness) _testNodes.elementAt(0))._subscribedNodes.size() == 0) {
+        if (((TestHarness) testNodes.elementAt(0))._subscribedNodes.size() == 0) {
           System.out.println("ERROR: 'listallnodes' can only be run on the control node.");
           return false;
         }
 
         System.out.println("Current nodes in the system:");
 
-        for (int i=0; i<((TestHarness) _testNodes.elementAt(0))._subscribedNodes.size(); i++) {
-          NodeHandle nh = (NodeHandle) ((TestHarness) _testNodes.elementAt(0))._subscribedNodes.elementAt(i);
+        for (int i=0; i<((TestHarness) testNodes.elementAt(0))._subscribedNodes.size(); i++) {
+          NodeHandle nh = (NodeHandle) ((TestHarness) testNodes.elementAt(0))._subscribedNodes.elementAt(i);
           System.out.println("  " + i + ": " + nh.getNodeId());
         }
 
@@ -310,8 +287,8 @@ public class DistTestHarnessRunner {
 
         System.out.println("Current nodes on this host:");
 
-        for (int i=0; i<_pastryNodes.size(); i++) {
-          NodeId nh = ((PastryNode) _pastryNodes.elementAt(i)).getNodeId();
+        for (int i=0; i<pastryNodes.size(); i++) {
+          NodeId nh = ((PastryNode) pastryNodes.elementAt(i)).getNodeId();
           System.out.println("  " + i + ": " + nh);
         }
 
@@ -327,7 +304,7 @@ public class DistTestHarnessRunner {
         }
 
         for (int i=0; i<num_nodes; i++) {
-          int num = _pastryNodes.size();
+          int num = pastryNodes.size();
           createNode(num);
         }
 
@@ -335,16 +312,16 @@ public class DistTestHarnessRunner {
 
         int num = Integer.parseInt(tokened.nextToken());
 
-        if ((num < 0) || (num >= _pastryNodes.size())) {
+        if ((num < 0) || (num >= pastryNodes.size())) {
           System.out.println("ERROR: node_number out of range");
           return false;
         }
 
-        PastryNode pn = (PastryNode) _pastryNodes.elementAt(num);
-        TestHarness thi = (TestHarness) _testNodes.elementAt(num);
+        PastryNode pn = (PastryNode) pastryNodes.elementAt(num);
+        TestHarness thi = (TestHarness) testNodes.elementAt(num);
 
-        _pastryNodes.removeElementAt(num);
-        _testNodes.removeElementAt(num);
+        pastryNodes.removeElementAt(num);
+        testNodes.removeElementAt(num);
 
         thi.kill();
         pauseQuiet(2000);
@@ -356,20 +333,20 @@ public class DistTestHarnessRunner {
 
         Message m = new InitTestMessage(run_name, class_name);
 
-        ((TestHarness) _testNodes.elementAt(0)).sendToAll(m);
+        ((TestHarness) testNodes.elementAt(0)).sendToAll(m);
 
       } else if ( token.startsWith( "collect" ) ) {
         String name = tokened.nextToken();
 
-        Message m = new CollectResultsMessage(name, ((PastryNode) _pastryNodes.elementAt(0)).getLocalHandle());
+        Message m = new CollectResultsMessage(name, ((PastryNode) pastryNodes.elementAt(0)).getLocalHandle());
 
-        ((TestHarness) _testNodes.elementAt(0)).sendToAll(m);
+        ((TestHarness) testNodes.elementAt(0)).sendToAll(m);
 
       } else if ( token.startsWith( "starttest" ) ) {
         String node = tokened.nextToken();
         String name = tokened.nextToken();
 
-        Vector nodeIds = ((TestHarness) _testNodes.elementAt(0))._subscribedNodes;
+        Vector nodeIds = ((TestHarness) testNodes.elementAt(0))._subscribedNodes;
 
         NodeHandle[] nodes = new NodeHandle[nodeIds.size()];
 
@@ -380,7 +357,7 @@ public class DistTestHarnessRunner {
         Message m = new StartTestMessage(name, nodes);
 
         if (node.equals("all")) {
-          ((TestHarness) _testNodes.elementAt(0)).sendToAll(m);
+          ((TestHarness) testNodes.elementAt(0)).sendToAll(m);
         } else {
           int node_num = 0;
 
@@ -394,7 +371,7 @@ public class DistTestHarnessRunner {
             throw new NoSuchElementException("starttest syntax invalid");
           }
 
-          ((TestHarness) _testNodes.elementAt(0)).send(m, nodes[node_num]);
+          ((TestHarness) testNodes.elementAt(0)).send(m, nodes[node_num]);
         }
       } else if ( token.startsWith( "help" ) ) {
         System.out.println("COMMANDS AVAILABLE:");

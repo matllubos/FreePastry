@@ -62,6 +62,7 @@ import java.net.*;
 
 public class RMIPastryNodeFactory extends DistPastryNodeFactory {
   public static int NUM_ATTEMPTS = 2;
+  public static int DEFAULT_REGISTRY_PORT = 1099;
 
   private NodeIdFactory nidFactory;
   private int port;
@@ -153,7 +154,7 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
     // build node handle
     RMINodeHandle bshandle = null;
     if (bsid != null)
-      bshandle = new RMINodeHandle(bsnode, bsid);
+      bshandle = new RMINodeHandle(bsnode, bsid, address);
     else
       System.out.println("Couldn't find a bootstrap node, starting a new ring...");
 
@@ -188,7 +189,15 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
   public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId) {
     final RMIPastryNode pn = new RMIPastryNode(nodeId);
 
-    RMINodeHandle localhandle = new RMINodeHandle(null, nodeId);
+    InetSocketAddress address = null;
+
+    try {
+      address = new InetSocketAddress(InetAddress.getLocalHost(), DEFAULT_REGISTRY_PORT);
+    } catch (Exception e) {
+      System.out.println("ERROR (newNode): " + e);
+    }
+    
+    RMINodeHandle localhandle = new RMINodeHandle(null, nodeId, address);
 
     RMINodeHandlePool handlepool = new RMINodeHandlePool();
     localhandle = (RMINodeHandle) handlepool.coalesce(localhandle); // add ourselves to pool

@@ -42,6 +42,7 @@ import rice.pastry.routing.*;
 import rice.pastry.messaging.*;
 
 import java.io.*;
+import java.net.*;
 import java.util.*;
 import java.rmi.RemoteException;
 
@@ -78,8 +79,8 @@ public class RMINodeHandle extends DistNodeHandle
     * @param nid its node id.
      */
 
-    public RMINodeHandle(RMIRemoteNodeI rn, NodeId nid) {
-      super(nid);
+    public RMINodeHandle(RMIRemoteNodeI rn, NodeId nid, InetSocketAddress address) {
+      super(nid, address);
 
       if (Log.ifp(6)) System.out.println("creating RMI handle for node: " + nid);
       init(rn, nid);
@@ -92,8 +93,8 @@ public class RMINodeHandle extends DistNodeHandle
     * @param nid its node id.
     * @param pn local Pastry node.
      */
-    public RMINodeHandle(RMIRemoteNodeI rn, NodeId nid, PastryNode pn) {
-      super(nid);
+    public RMINodeHandle(RMIRemoteNodeI rn, NodeId nid, PastryNode pn, InetSocketAddress address) {
+      super(nid, address);
 
       if (Log.ifp(6)) System.out.println("creating RMI handle for node: " + nid + ", local = " + pn);
       init(rn, nid);

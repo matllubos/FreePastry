@@ -40,6 +40,7 @@ import rice.pastry.*;
 import rice.pastry.messaging.*;
 
 import java.io.*;
+import java.net.*;
 import java.util.*;
 
 /**
@@ -51,11 +52,13 @@ import java.util.*;
  *
  * @author Alan Mislove
  */
-
 public abstract class DistNodeHandle extends NodeHandle implements Observer {
 
     // the nodeId of this node handle's remote node
     protected NodeId nodeId;
+
+    // the address (ip + port) of this node
+    protected InetSocketAddress address;
 
     // used for ensuring there is only one active node handle per remote node
     private transient boolean verified;
@@ -74,8 +77,9 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
      *
      * @param nodeId This node handle's node Id.
      */
-    public DistNodeHandle(NodeId nodeId) {
+    public DistNodeHandle(NodeId nodeId, InetSocketAddress address) {
       this.nodeId = nodeId;
+      this.address = address;
       verified = false;
       redirect = null;
 
@@ -272,6 +276,15 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
      */
     protected abstract boolean pingImpl();
 
+    /**
+     * Returns the IP address and port of the remote node.
+     *
+     * @return The InetSocketAddress of the remote node.
+     */
+    public InetSocketAddress getAddress() {
+      return address;
+    }
+    
     /**
      * Called to send a message to the node corresponding to this handle. This method is
      * designed to be called by clients using the node handle, and is provided in order

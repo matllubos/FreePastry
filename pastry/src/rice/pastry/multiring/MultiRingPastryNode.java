@@ -82,6 +82,10 @@ public class MultiRingPastryNode extends PastryNode {
 
   // ----- INTERESTING METHODS -----
 
+  public PastryNode getPastryNode() {
+    return primaryNode;
+  }
+  
   public void receiveMessage(Message msg) {
     if (msg instanceof RouteMessage) {
       RouteMessage rm = (RouteMessage) msg;

@@ -184,7 +184,7 @@ public class Pinger extends Test {
                        ((WireNodeHandle) handles[trial]).getAddress().getAddress().getHostName() + " " + handles[trial].getNodeId() + "\t" +
                        total[trial] + "\t" + min[trial]);
           
-          trial = trial + DistTestHarnessRunner.NUM_NODES_PER_HOST;
+          trial = trial + DistTestHarnessRunner.NUM_NODES;
 
           if (trial > handles.length - 1) {
             trial = trial - handles.length;

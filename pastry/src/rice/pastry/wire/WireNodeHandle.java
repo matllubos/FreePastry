@@ -78,9 +78,6 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
   // the throttle (pings only sent this many seconds)
   public static int PING_THROTTLE = 5;
 
-  // the ip address and port of the remote node
-  private InetSocketAddress address;
-
   // the time the last ping was performed
   private transient long lastpingtime;
 
@@ -98,11 +95,10 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
    * @param nid The NodeId of this host
    */
   public WireNodeHandle(InetSocketAddress address, NodeId nid) {
-    super(nid);
+    super(nid, address);
 
     debug("creating Socket handle for node: " + nid + " address: " + address);
 
-    this.address = address;
     lastpingtime = 0;
 
     state = STATE_USING_UDP;
@@ -116,25 +112,15 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
    * @param pn The local Pastry node
    */
   public WireNodeHandle(InetSocketAddress address, NodeId nid, PastryNode pn) {
-    super(nid);
+    super(nid, address);
 
     debug("creating Socket handle for node: " + nid + ", local: " + pn + " address: " + address);
 
-    this.address = address;
     lastpingtime = 0;
 
     state = STATE_USING_UDP;
 
     setLocalNode(pn);
-  }
-
-  /**
-   * Returns the IP address and port of the remote node.
-   *
-   * @return The InetSocketAddress of the remote node.
-   */
-  public InetSocketAddress getAddress() {
-    return address;
   }
 
   /**
