@@ -193,6 +193,7 @@ public class Stripe extends Observable implements IScribeApp{
 									   channel.getSpareCapacityId(), channel.getChannelId() ),
 					    credentials, null );
 		    scribe.removeChild(child, topicId);
+		    bandwidthManager.additionalBandwidthFreed(channel);
 		    //System.out.println("SHOULD NOT TAKE CHILD");
 		}
 		/* We should check if we can take this child on */
