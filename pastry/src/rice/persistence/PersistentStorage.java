@@ -78,9 +78,7 @@ public class PersistentStorage implements Storage {
   public PersistentStorage(String rootDir, int size) {
     this.rootDir = rootDir;
 
-    if(this.initDirectories())
-      System.out.println("Succesfully Initialized Directories");
-    else
+    if(! this.initDirectories())
       System.out.println("ERROR: Failed to Initialized Directories");
    storageSize = size; 
    fileMap = new Hashtable();

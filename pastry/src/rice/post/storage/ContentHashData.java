@@ -2,6 +2,7 @@ package rice.post.storage;
 
 import java.io.*;
 import java.security.*;
+import java.util.*;
 
 import rice.pastry.*;
 
@@ -33,5 +34,12 @@ class ContentHashData implements Serializable {
    */
   public byte[] getData() {
     return data;
+  }
+
+  public boolean equals(Object o) {
+    if (! (o instanceof ContentHashData))
+      return false;
+
+    return Arrays.equals(data, ((ContentHashData) o).getData());
   }
 }

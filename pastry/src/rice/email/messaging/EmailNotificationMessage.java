@@ -35,12 +35,4 @@ public class EmailNotificationMessage extends NotificationMessage {
   public Email getEmail() {
     return _email;
   }
-
-    private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
-	ois.defaultReadObject();
-
-	if (getClientAddress() == null) {
-	    System.out.println("MONKEYS IN THE CODE!");
-	}
-    }
 }

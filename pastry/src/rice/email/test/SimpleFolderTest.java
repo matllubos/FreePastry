@@ -23,7 +23,7 @@ import java.util.*;
  * emails would have made this test take roughly an hour, and difficult
  * to debug.  So, a simpler version was created.  The simpler version
  * does the following test sequence:
- * - fetch's the root folder
+ * - fetch's the root folder 
  * - adds n subFolders to the root folder
  * - adds n subSubFolders to each of the subFolders
  * - places an email in each of the created folders

@@ -52,4 +52,12 @@ public class ContentHashReference implements Serializable {
     return key;
   }
 
+  public boolean equals(Object o) {
+    if (! (o instanceof ContentHashReference))
+      return false;
+
+    ContentHashReference ref = (ContentHashReference) o;
+
+    return (location.equals(ref.getLocation()) && key.equals(ref.getKey()));
+  }
 }

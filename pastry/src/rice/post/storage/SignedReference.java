@@ -38,4 +38,13 @@ public class SignedReference implements Serializable {
     return location;
   }
 
+  public boolean equals(Object o) {
+    if (! (o instanceof SignedReference))
+      return false;
+
+    SignedReference ref = (SignedReference) o;
+
+    return location.equals(ref.getLocation());
+  }
+
 }

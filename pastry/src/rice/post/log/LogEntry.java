@@ -2,7 +2,9 @@ package rice.post.log;
 
 import java.security.*;
 
+import rice.*;
 import rice.pastry.*;
+import rice.post.*;
 import rice.post.storage.*;
 
 /**
@@ -14,8 +16,14 @@ import rice.post.storage.*;
  */
 public abstract class LogEntry implements PostData {
 
+  // a reference to the previous entry in the log
+  private LogEntryReference previousEntryReference;
+
   // the previous entry in the log
-  private LogEntryReference previousEntry;
+  private transient LogEntry previousEntry;
+
+  // the local Post service
+  private transient Post post;
   
   /**
    * Constructs a LogEntry
@@ -28,17 +36,62 @@ public abstract class LogEntry implements PostData {
    *
    * @param ref A reference to the previous log entry
    */
-  public void setPreviousEntry(LogEntryReference ref) {
-    previousEntry = ref;
+  public void setPreviousEntryReference(LogEntryReference ref) {
+    if (previousEntryReference == null) {
+      previousEntryReference = ref;
+    } else {
+      System.out.println("ERROR - Trying to set previous ref on already-set log.");
+      (new Exception()).printStackTrace();
+    }
   }
-  
+
   /**
    * Returns the reference to the previous entry in the log
    *
    * @return A reference to the previous log entry
    */
-  public LogEntryReference getPreviousEntry() {
-    return previousEntry;
+  public void getPreviousEntry(final Continuation command) {
+    if ((previousEntry == null) && (previousEntryReference != null)) {
+      Continuation fetch = new Continuation() {
+        public void receiveResult(Object o) {
+          try {
+            previousEntry = (LogEntry) o;
+            previousEntry.setPost(post);
+            command.receiveResult(previousEntry);
+          } catch (ClassCastException e) {
+            command.receiveException(e);
+          }
+        }
+
+        public void receiveException(Exception e) {
+          command.receiveException(e);
+        }
+      };
+
+      post.getStorageService().retrieveContentHash(previousEntryReference, fetch);
+    } else {
+      command.receiveResult(previousEntry);
+    }
+  }
+
+  /**
+   * Protected method which sets the post service
+   *
+   */
+  void setPost(Post post) {
+    this.post = post;
+  }
+
+  /**
+    * Protected method which sets the post service
+   *
+   */
+  void setPreviousEntry(LogEntry entry) {
+    if (previousEntry == null) {
+      previousEntry = entry;
+    } else {
+      System.out.println("ERROR - Attempting to set a previous entry with an existing one in LogEntry!");
+    }
   }
 
   /**

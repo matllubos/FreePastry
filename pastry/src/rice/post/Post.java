@@ -422,10 +422,9 @@ public class Post extends PastryAppl implements IScribeApp  {
   public void faultHandler(ScribeMessage msg, NodeHandle faultyParent) {}
   public void forwardHandler(ScribeMessage msg) {}
   public void scribeIsReady() {}
-  public void isNewRoot(NodeId rootId){}
-  public void newParent(NodeId parentId, NodeHandle parentHandle, java.io.Serializable data){}
-  
   public void subscribeHandler(NodeId topicId, NodeHandle child, boolean wasAdded, Serializable obj ) {}
+  public void isNewRoot(NodeId topicId) {}
+  public void newParent(NodeId topicId, NodeHandle newParent, Serializable data) {}
 
   /**
    * This class is called whenever a SignedPostMessage comes in, and it
@@ -511,13 +510,15 @@ public class Post extends PastryAppl implements IScribeApp  {
     public void start() {
       /* Buffer this for Delivery */
 
-      System.out.println(thePastryNode.getNodeId() + "DEBUG: received delivery request from : " + message.getSender() + " to: " + message.getDestination());
+      if (rice.pastry.Log.ifp(6))
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: received delivery request from : " + message.getSender() + " to: " + message.getDestination());
 
       synchronized(bufferedData) {
         Vector userQueue = (Vector) bufferedData.get(message.getDestination());
 
         if (userQueue == null) {
-          System.out.println(thePastryNode.getNodeId() + "DEBUG: creating entry for: " + message.getDestination());
+          if (rice.pastry.Log.ifp(6))
+            System.out.println(thePastryNode.getNodeId() + "DEBUG: creating entry for: " + message.getDestination());
           
           userQueue = new Vector();
           bufferedData.put(message.getDestination(), userQueue);
@@ -549,7 +550,8 @@ public class Post extends PastryAppl implements IScribeApp  {
      */
     public void start() {
 
-      System.out.println(thePastryNode.getNodeId() + "DEBUG: presence message from : " + message.getSender());
+      if (rice.pastry.Log.ifp(6))
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: presence message from : " + message.getSender());
 
       synchronized (bufferedData) {
 
@@ -591,7 +593,8 @@ public class Post extends PastryAppl implements IScribeApp  {
       * Starts the processing of this message.
      */
     public void start() {
-      System.out.println(thePastryNode.getNodeId() + "DEBUG: delivery message from : " + message.getSender());
+      if (rice.pastry.Log.ifp(6))
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: delivery message from : " + message.getSender());
 
       // send receipt
       ReceiptMessage rm = new ReceiptMessage(address, message.getEncryptedMessage());
@@ -624,7 +627,8 @@ public class Post extends PastryAppl implements IScribeApp  {
       * Starts the processing of this message.
      */
     public void start() {
-      System.out.println(thePastryNode.getNodeId() + "DEBUG: encrypted notification message from : " + message.getSender());
+      if (rice.pastry.Log.ifp(6))
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: encrypted notification message from : " + message.getSender());
 
       // decrypt and verify notification message
       try {
@@ -685,7 +689,8 @@ public class Post extends PastryAppl implements IScribeApp  {
      */
     public void start() {
 
-      System.out.println(thePastryNode.getNodeId() + "DEBUG: received receipt message from : " + message.getSender());
+      if (rice.pastry.Log.ifp(6))
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: received receipt message from : " + message.getSender());
       
       SignedPostMessage sm = message.getEncryptedMessage();
       PostEntityAddress sender = message.getSender();
@@ -751,7 +756,8 @@ public class Post extends PastryAppl implements IScribeApp  {
         PostLog log = (PostLog) o;
 
         if (log == null) {
-          System.out.println("PostLog lookup for user " + address + " failed.");
+          if (rice.pastry.Log.ifp(6))
+            System.out.println("PostLog lookup for user " + address + " failed.");
           command.receiveResult(null);
           return;
         }
@@ -770,6 +776,8 @@ public class Post extends PastryAppl implements IScribeApp  {
         if (security.verifyCertificate(caPublicKey, log.getCertificate())) {
           storage.verifySigned(log, log.getPublicKey());
 
+          log.setPost(Post.this);
+          
           command.receiveResult(log);
         } else {
           command.receiveException(new PostException("Certificate of PostLog could not verified for entity: " + address));
@@ -885,7 +893,8 @@ public class Post extends PastryAppl implements IScribeApp  {
       // TO DO : Assuming just a user for now, grouping crap later...
       destination = (PostUserAddress) message.getDestination();
 
-      System.out.println(thePastryNode.getNodeId() + "DEBUG: sending message to: " + destination);
+      if (rice.pastry.Log.ifp(6))
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: sending message to: " + destination);
 
       getPostLog(destination, this);
     }
@@ -897,12 +906,14 @@ public class Post extends PastryAppl implements IScribeApp  {
         System.out.println("ERROR - Could not send notification message to non-existant user " + destination);
         return;
       }
-      
-      System.out.println(thePastryNode.getNodeId() + "DEBUG: received destination log");
+
+      if (rice.pastry.Log.ifp(6))
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: received destination log");
       
       NodeId random = factory.generateNodeId();
 
-      System.out.println(thePastryNode.getNodeId() + "DEBUG: picked random node: " + random);
+      if (rice.pastry.Log.ifp(6))
+        System.out.println(thePastryNode.getNodeId() + "DEBUG: picked random node: " + random);
 
       byte[] cipherText = null;
 
@@ -911,12 +922,14 @@ public class Post extends PastryAppl implements IScribeApp  {
         byte[] keyCipherText = security.encryptRSA(key, destinationLog.getPublicKey());
         cipherText = security.encryptDES(security.serialize(message), key);
 
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: built encrypted notfn msg: " + destination);
+        if (rice.pastry.Log.ifp(6))
+          System.out.println(thePastryNode.getNodeId() + "DEBUG: built encrypted notfn msg: " + destination);
 
         EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, keyCipherText, cipherText);
         DeliveryRequestMessage drm = new DeliveryRequestMessage(address, destination, signPostMessage(enm));
 
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: sending delivery request to : " + random);
+        if (rice.pastry.Log.ifp(6))
+          System.out.println(thePastryNode.getNodeId() + "DEBUG: sending delivery request to : " + random);
 
         routeMsg(random, new PostPastryMessage(signPostMessage(drm)), getCredentials(), new SendOptions());
       } catch (SecurityException e) {

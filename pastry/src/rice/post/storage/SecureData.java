@@ -2,6 +2,7 @@ package rice.post.storage;
 
 import java.io.*;
 import java.security.*;
+import java.util.*;
 
 import rice.pastry.*;
 
@@ -33,5 +34,12 @@ class SecureData implements Serializable {
    */
   public byte[] getData() {
     return data;
+  }
+
+  public boolean equals(Object o) {
+    if (! (o instanceof SecureData))
+      return false;
+
+    return Arrays.equals(data, ((SecureData) o).getData());
   }
 }

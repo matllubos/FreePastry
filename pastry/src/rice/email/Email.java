@@ -1,5 +1,7 @@
 package rice.email;
 
+import java.util.*;
+
 import rice.*;
 import rice.post.*;
 import rice.post.log.*;
@@ -16,14 +18,14 @@ import rice.email.messaging.*;
  */
 public class Email implements java.io.Serializable {
 
-  private PostUserAddress sender;
-  private PostEntityAddress[] recipients;
-  private String subject;
+  PostUserAddress sender;
+  PostEntityAddress[] recipients;
+  String subject;
+  EmailDataReference bodyRef;
+  EmailDataReference[] attachmentRefs;
   private transient EmailData body;
   private transient EmailData[] attachments;
-    private int attachmentCount;
-  private EmailDataReference bodyRef;
-  private EmailDataReference[] attachmentRefs;
+  private int attachmentCount;
   private transient StorageService storage;
   
   /**
@@ -49,6 +51,9 @@ public class Email implements java.io.Serializable {
     this.attachments = attachments;
     this.bodyRef = null;
     this.attachmentRefs = null;
+
+    if (attachments != null)
+      this.attachmentCount = attachments.length;
   }
     
   /**
@@ -90,20 +95,51 @@ public class Email implements java.io.Serializable {
   public String getSubject() {
     return this.subject;
   }
+
+  /**
+   * Sets the equality of this email.
+   *
+   */
+  public boolean equals(Object o) {
+    if (! (o instanceof Email))
+      return false;
+
+    Email email = (Email) o;
+
+    return (sender.equals(email.sender) &&
+            Arrays.equals(recipients, email.recipients) &&
+            subject.equals(email.subject) &&
+            bodyRef.equals(email.bodyRef) &&
+            Arrays.equals(attachmentRefs, email.attachmentRefs));
+  }
      
   /**
    * Returns the  body of this message.  Should be text.
    *
    * @return The body of this email.
    */
-  public void getBody(Continuation command) {
+  public void getBody(final Continuation command) {
     // if the body has not been fetched already, fetch it
-    if ((this.body == null) && (this.bodyRef != null)) { 
-      // make a new command to store the returned body and 
-      // then return the body once it has been stored
-      EmailGetBodyTask preCommand = new EmailGetBodyTask(command);
+    if ((this.body == null) && (this.bodyRef != null)) {
+      
+      // build a Continuation to receive the body, and process it
+      Continuation receiveBody = new Continuation() {
+        public void receiveResult(Object o) {
+          try {
+            body = (EmailData) o;
+            command.receiveResult(body);
+          } catch (ClassCastException e) {
+            command.receiveException(new ClassCastException("Expected a EmailData, got a " + o.getClass()));
+          }          
+        }
+
+        public void receiveException(Exception e) {
+          command.receiveException(e);
+        }
+      };
+      
       // start the fetching process
-      storage.retrieveContentHash(bodyRef, preCommand);
+      storage.retrieveContentHash(bodyRef, command);
     } else {
       command.receiveResult(this.body);
     }
@@ -114,16 +150,42 @@ public class Email implements java.io.Serializable {
    *
    * @return The attachments of this email.
    */
-  public void getAttachments(Continuation command) {
+  public void getAttachments(final Continuation command) {
     // if the attachments have not been fetched already, and there are refs to the attachments, 
     // fetch the attachments
     if ((this.attachments == null) && (this.attachmentRefs != null)) {
-      // make a new command to store the returned attachment and start to fetch the next attachment.
-      // Once the attachments have all been fetch, call the user's command
-      EmailGetAttachmentsTask preCommand = new EmailGetAttachmentsTask(0, command);
       // start the fetching process
       this.attachments = new EmailData[this.attachmentCount];
-      storage.retrieveContentHash(attachmentRefs[0], preCommand);
+
+      // build a Continuation to receive the attachments, and process it
+      Continuation receiveAttachments = new Continuation() {
+        private int i=0;
+        
+        public void receiveResult(Object o) {
+          try {
+            // store the fetched attachment
+            attachments[i] = (EmailData) o;
+            i++;
+            
+            // if there are more attachments, fetch the next one
+            if (i < attachmentCount) {
+              storage.retrieveContentHash(attachmentRefs[i], this);
+            } else {
+              command.receiveResult(attachments);
+            }
+          } catch (ClassCastException e) {
+            command.receiveException(new ClassCastException("Expected a EmailData in getAttachments, got a " + o.getClass()));
+          }
+        }
+
+        public void receiveException(Exception e) {
+          command.receiveException(e);
+        }
+      };
+      
+      // make a new command to store the returned attachment and start to fetch the next attachment.
+      // Once the attachments have all been fetch, call the user's command
+      storage.retrieveContentHash(attachmentRefs[0], receiveAttachments);
     } else {
       command.receiveResult(this.attachments);
     }
@@ -134,206 +196,64 @@ public class Email implements java.io.Serializable {
    * saves the references to the content in the email.  
    * Should be called before the Email is sent over the wire.
    *
-   * // JM errorListener?  Wrong, wrong, wrong. Hrumph.
-   * @param errorListener os the object notified of any errors in
-   * storage.  If the storage process is successful, then this
-   * listener will not be notified of anything.
+   * @param command This command is called when the storage is done,
+   * with the Boolean value of the success of the operation, or an
+   * exception is passed to the command.
    */
-  protected void storeData(Continuation errorListener) {   
-    // if the body has not already been inserted into PAST
-    if (this.bodyRef == null) {
-	if(this.attachments != null) {
-	    this.attachmentCount = this.attachments.length;
-	    this.attachmentRefs = new EmailDataReference[this.attachmentCount];
-	}
-	
-      EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.BODY, errorListener);
-      storage.storeContentHash(body, command);
-    }
-    else if ((this.attachmentRefs == null) && (attachments != null) &&
-	     (attachments.length > 0)) {
-	this.attachmentRefs = new EmailDataReference[attachments.length];
-      // make a new task to store the email's contents (body and attachments)
-      EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.ATTACHMENT, errorListener);
-      // begin storing the body, execute the rest of the task once this is complete
-      storage.storeContentHash(attachments[0], command);
-    }
-  }
+  protected void storeData(final Continuation command) {
+    if ((bodyRef == null) && (attachmentRefs == null)) {
+      attachmentRefs = new EmailDataReference[attachmentCount];
 
-  /**
-   * This class is used to fetch an email body, and then store the result.  
-   * To return the result to the user, the user's given command is called once
-   * the body has been stored.
-   */
-  protected class EmailGetBodyTask implements Continuation {
-    private Continuation _command;
-    
-    /**
-     * Constructs a EmailGetBodyTask given a user-command.
-     */
-    public EmailGetBodyTask(Continuation command) {
-      _command = command;
-    }
+      // build a continuation to store the data
+      Continuation store = new Continuation() {
+        private int i=0;
+        
+        public void receiveResult(Object o) {
+          try {
+            if (bodyRef == null) {
+              bodyRef = (EmailDataReference) o;
 
-    /**
-     * Starts the processing of this task.
-     */
-    public void start() {
-      // JM I don't believe anything needs to be done here
-    }
+              if (attachments != null) {
+                storage.storeContentHash(attachments[0], this);
+              } else {
+                command.receiveResult(new Boolean(true));
+              }
+            } else {
+              attachmentRefs[i] = (EmailDataReference) o;
+              i++;
 
-    /**
-     * Stores the result, and then calls the user's command.
-     */
-    public void receiveResult(Object o) {
-      // store the fetched body
-      try {
-	body = (EmailData)o;      
-      } catch (Exception e) {
-	  e.printStackTrace();
-	System.out.println("The email body was fetched, but had problems " + o);
-      }
-      // pass the result along to the caller
-      _command.receiveResult(o);
-    }
+              if (i < attachmentCount) {
+                storage.storeContentHash(attachments[i], this);
+              } else {
+                command.receiveResult(new Boolean(true));
+              }
+            }
+          } catch (ClassCastException e) {
+            command.receiveException(new ClassCastException("Expected a EmailDataReference in storeData, got a " + o.getClass()));
+          }
+        }
 
-    /**
-     * Simply prints out an error message.
-     */  
-    public void receiveException(Exception e) {
-      System.out.println("Exception " + e + "  occured while trying to fetch an email body");
-    }
-  }
+        public void receiveException(Exception e) {
+          command.receiveException(e);
+        }
+      };
 
-  /**
-   * This class is used to fetch an email attachment, and store the result,
-   * and then fetch the next attachment.  Once each of the attachments have
-   * been fetched and stored, calls the user's given command.
-   */
-  protected class EmailGetAttachmentsTask implements Continuation {
-    private int _index;
-    private Continuation _command;
-    
-    /**
-     * Constructs a EmailGetAttachmentsTask given a user-command.
-     */
-    public EmailGetAttachmentsTask(int i, Continuation command) {
-      _index = i;
-      _command = command;
-    }
-
-    /**
-     * Starts the processing of this task.
-     */
-    public void start() {
-      // JM I don't believe anything needs to be done here
-    }
-
-    /**
-     * Stores the result, and then fetches the next attachment.  If there are no more
-     * attachments, calls the user's provided command.
-     */
-    public void receiveResult(Object o) {
-      // store the fetched attachment
-      try {
-	attachments[_index] = (EmailData)o;  
-	// if there are more attachments, fetch the next one
-	if ((_index + 1)  < attachmentRefs.length) {
-	  _index = _index + 1;
-	  EmailGetAttachmentsTask preCommand = new EmailGetAttachmentsTask(_index, _command);
-	  storage.retrieveContentHash(attachmentRefs[_index], preCommand);
-	// otherwise pass the result along to the caller
-	} else {
-	  _command.receiveResult(attachments);
-	}    
-      } catch (Exception e) {
-	  e.printStackTrace();
-	System.out.println("The email attachment " + _index + " was fetched, but had problems. " + o);
-      }      
-    }
-
-    /**
-     * Simply prints out an error message.
-     */  
-    public void receiveException(Exception e) {
-      System.out.println("Exception " + e + "  occured while trying to fetch email attachment " + _index);
-    }
-  }
-
-  /**
-   * Carries out the remaining work of storing the data of an email (its body and attacments).
-   * The first call stores the email, the remaining calls store the attachments one by one.
-   */
-  protected class EmailStoreDataTask implements Continuation {
-    // looks like it can be changed, but it can't. Don't change it. Please.
-    protected static final int BODY = -1;
-    protected static final int ATTACHMENT = 0;
-
-    // the current position in the continuation
-    private int _index;
-    private Continuation _resultListener;
-      
-    /**
-     * Constructs a EmailStoreDataTask.
-     */
-    public EmailStoreDataTask(int index, Continuation resultListener) {
-      System.out.println("Created new EmailStoreDataTask");
-      _index = index;
-      _resultListener = resultListener;
-    }
-
-    /**
-     * Starts the processing of this task.
-     */
-    public void start() {
-      // JM I don't believe anything needs to be done here
-    }
-
-    /**
-     * The email body has been stored by the time the first result is finished, so go on to
-     * storing the attachments.  Once each of the attachments is stored, the method is done.
-     */
-    public void receiveResult(Object o) {
-      System.out.println("StoreDataTask received result, now storing data at index " + _index);
-      System.out.println("received result was " + o); 
-      // save the returned reference
-      if (_index == BODY) {
-        bodyRef = (EmailDataReference)o;
-        _resultListener.receiveResult(new Boolean(true));
-      } else {
-        attachmentRefs[_index] = (EmailDataReference)o;
-      }
-
-      // store the next data item in the email
-      _index = _index + 1;      
-      if ((attachments != null) && (_index < attachments.length)) {
-	EmailStoreDataTask command = new EmailStoreDataTask(_index, _resultListener);
-	storage.storeContentHash(attachments[_index], command);	
-      } 
-      // if there are no more data items, pass an empty result to the given continuation
-      else {
-	_resultListener.receiveResult(o);
-      }
-    }
-
-    /**
-     * Simply prints out an error message.
-     */  
-    public void receiveException(Exception e) {
-      System.out.println("Exception " + e +
-			 "  occured while trying to store email body or attachment " + _index);
-
-      if(_resultListener != null) {
-	  _resultListener.receiveException(e);
-      }
+      // store the body, and have the result go to the continuation
+      storage.storeContentHash(body, store);
+    } else {
+      command.receiveResult(new Boolean(true));
     }
   }
 
   public String toString() {
-    String result = "Subject: " + subject;
-    for (int i = 0; i < recipients.length; i++) {
-      result = result + "\nSend To: " + recipients[i];
+    String result = "From:\t" + sender + "\n";
+    result += "To:\t" + recipients[0];
+    for (int i=1; i < recipients.length; i++) {
+      result += "\n" + recipients[i];
     }
+
+    result += "\nSubject:\t" + subject;
+    
     return result;
   }
 }

@@ -2,6 +2,7 @@ package rice.post.storage;
 
 import java.io.*;
 import java.security.*;
+import java.util.*;
 
 import rice.pastry.*;
 import rice.post.security.*;
@@ -78,5 +79,16 @@ class SignedData implements Serializable {
 
   protected void setSignature(PostSignature sig) {
     signature = sig;
+  }
+
+  public boolean equals(Object o) {
+    if (! (o instanceof SignedData))
+      return false;
+
+    SignedData signed = (SignedData) o;
+    
+    return (Arrays.equals(data, signed.getData()) &&
+            Arrays.equals(timestamp, signed.getTimestamp()) &&
+            signature.equals(signed.getSignature()));
   }
 }

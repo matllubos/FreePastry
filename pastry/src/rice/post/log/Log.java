@@ -40,9 +40,14 @@ public class Log implements PostData {
   private transient Post post;
 
   /**
-   * The most recent entry in this log.
+   * A reference to the most recent entry in this log.
    */
-  private LogEntryReference topEntry;
+  private LogEntryReference topEntryReference;
+
+  /**
+    * The most recent entry in this log.
+   */
+  private transient LogEntry topEntry;
   
   /**
    * Constructs a Log for use in POST
@@ -189,8 +194,28 @@ public class Log implements PostData {
    *
    * @return A reference to the top entry in the log.
    */
-  public LogEntryReference getTopEntry() {
-    return topEntry;
+  public void getTopEntry(final Continuation command) {
+    if ((topEntry == null) && (topEntryReference != null)) {
+      Continuation fetch = new Continuation() {
+        public void receiveResult(Object o) {
+          try {
+            topEntry = (LogEntry) o;
+            topEntry.setPost(post);
+            command.receiveResult(topEntry);
+          } catch (ClassCastException e) {
+            command.receiveException(e);
+          }
+        }
+
+        public void receiveException(Exception e) {
+          command.receiveException(e);
+        }
+      };
+
+      post.getStorageService().retrieveContentHash(topEntryReference, fetch);
+    } else {
+      command.receiveResult(topEntry);
+    }    
   }
 
   /**
@@ -335,12 +360,14 @@ public class Log implements PostData {
 
     public void start() {
       state = STATE_1;
+      entry.setPreviousEntryReference(topEntryReference);
       entry.setPreviousEntry(topEntry);
       post.getStorageService().storeContentHash(entry, this);
     }
 
     private void startState1(LogEntryReference reference) {
-      topEntry = reference;
+      topEntryReference = reference;
+      topEntry = entry;
 
       state = STATE_2;
       SyncTask task = new SyncTask(this);

@@ -54,4 +54,13 @@ public class SecureReference implements Serializable {
     return key;
   }
 
+  public boolean equals(Object o) {
+    if (! (o instanceof SecureReference))
+      return false;
+
+    SecureReference ref = (SecureReference) o;
+
+    return (location.equals(ref.getLocation()) && key.equals(ref.getKey()));
+  }
+
 }

@@ -1,6 +1,7 @@
 package rice.email;
 
 import java.security.*;
+import java.util.*;
 
 import rice.pastry.*;
 import rice.post.storage.*;
@@ -63,6 +64,13 @@ public class EmailData implements PostData {
    */
   public byte[] getData() {
     return _data;
+  }
+
+  public boolean equals(Object o) {
+    if (! (o instanceof EmailData))
+      return false;
+
+    return Arrays.equals(_data, ((EmailData) o).getData());
   }
 
 }
