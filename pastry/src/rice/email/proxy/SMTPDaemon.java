@@ -213,7 +213,7 @@ class SMTPDaemon implements Runnable {
 
 	// For right now, we don't care about getting notification
 	try {
-	    service.sendMessage(deliverMe, null);
+	    service.sendMessage(deliverMe, new SMTPTask());
 	} catch (PostException e) {
 	    System.err.println("POST exception delivering message: " +
 			       e);
@@ -228,6 +228,13 @@ class SMTPDaemon implements Runnable {
 	w.println("221 closing connection, goodbye");
 	s.close();
 
+    }
+
+    private class SMTPTask implements rice.Continuation {
+	public SMTPTask() { }
+
+	public void receiveResult(Object o) { }
+	public void receiveException(Exception e) { }
     }
 
 }
