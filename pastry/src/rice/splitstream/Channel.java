@@ -143,6 +143,8 @@ public class Channel implements IScribeApp {
 	    System.out.println("Channel Topic Created");
 	    this.channelId = new ChannelId(topicId);
         }
+        else
+           System.out.println("ERROR: Channel Topic Creation Failed");
 
         /* Spare Capacity Id currently fixed to aid debugging */
         //topicId = random.generateNodeId();
@@ -150,6 +152,8 @@ public class Channel implements IScribeApp {
         if(scribe.create(topicId, cred)){
 	    this.spareCapacityId = new SpareCapacityId(topicId);
         }
+        else
+           System.out.println("ERROR: Spare Capacity Topic Creation Failed");
 
         /* Stripe Id base also fixed to aid debugging */
         //NodeId baseId = random.generateNodeId();
@@ -169,7 +173,10 @@ public class Channel implements IScribeApp {
 	}
         sendSubscribeMessage();
 	if(scribe.join(spareCapacityId, this, cred)){
-	}		
+	}
+        else{
+          System.out.println("ERROR: Could not join Spare Capacity Tree");
+        }
    	isReady = true;
 	notifyApps();
    }  
@@ -187,6 +194,9 @@ public class Channel implements IScribeApp {
 	subInfo[subInfo.length-1] = spareCapacityId;
 	if(scribe.join(channelId, this, cred, subInfo)){
 	}		
+        else{
+          System.out.println("ERROR: Could not join Channel Tree");
+        }
     }
 
     /**
@@ -258,9 +268,14 @@ public class Channel implements IScribeApp {
 	this.bandwidthManager.registerChannel(this);
 	if(scribe.join(channelId, this, cred)){
 	}
-	
+        else{
+          System.out.println("ERROR: Could not join Channel Tree");
+        }	
 	if(scribe.join(spareCapacityId, this, cred)){
-	}		
+	}	
+        else{	
+          System.out.println("ERROR: Could not join Spare Capacity Tree");
+        }
 
 	isReady = true;
 	notifyApps();
@@ -392,6 +407,10 @@ public class Channel implements IScribeApp {
      * @return Stripe A random stripe
      */
     public Stripe joinAdditionalStripe(Observer observer ){
+        /**
+         * Check to see if we have subscribed to all the stripes
+         * in the channel. If we have return null.
+         */
 	if(getNumSubscribedStripes() == getNumStripes())
 	    return null;
 
@@ -399,8 +418,11 @@ public class Channel implements IScribeApp {
 	Stripe toReturn = null;
         for(int i = 0 ; i < getStripes().length && !found; i ++){
 	    Stripe stripe = (Stripe) stripeIdTable.get(getStripes()[i]);
-
-	    if(stripe.getState() != Stripe.STRIPE_SUBSCRIBED){
+           
+            /**
+             * Limits the search to only nonsubscribed stripes
+             */
+    	    if(stripe.getState() != Stripe.STRIPE_SUBSCRIBED){
 		toReturn = stripe;
 		toReturn.joinStripe();	
 		toReturn.addObserver(observer);
@@ -419,9 +441,15 @@ public class Channel implements IScribeApp {
      * @return the Stripe joined
      */ 
     public Stripe joinStripe(StripeId stripeId, Observer observer){
+
 	Object tableEntry = stripeIdTable.get(stripeId);
 	Stripe stripe = null; 
 	stripe = (Stripe) tableEntry;
+
+        /** 
+         * Checks to see if we are already subscribed to this
+         * stripe, if we are just return.
+         */ 
 	if(subscribedStripes.contains(stripe))
 	    return stripe;
 
@@ -436,6 +464,11 @@ public class Channel implements IScribeApp {
      * @return the stripeID left 
      */
     public StripeId leaveStripe(){
+
+        /**
+         * If there are no subscriped stripes just return
+         * null
+         */
 	if(subscribedStripes.size() == 0)
 	    return null;
        Stripe stripe = (Stripe) subscribedStripes.firstElement();
@@ -476,10 +509,18 @@ public class Channel implements IScribeApp {
 	bandwidthManager.additionalBandwidthFreed(this);
 	int currentUsage = bandwidthManager.getUsedBandwidth(this);
 	int maxAllowed = bandwidthManager.getMaxBandwidth(this);
-	
+
+        /**
+         * Checks to see if when we remove this stripe if we can rejoin
+         * the spare capcity tree
+         */	
 	if((currentUsage + 1) == maxAllowed){
 	    System.out.println("Node " + getSplitStream().getNodeId() + " Joining Spare Capacity Tree Again");
-	    scribe.join(getSpareCapacityId(), this, cred);
+	    if(scribe.join(getSpareCapacityId(), this, cred)){
+            }
+            else{
+              System.out.println("ERROR: Failed to join Spare Capacity Tree");
+            }
 	}
     }
 
@@ -489,6 +530,10 @@ public class Channel implements IScribeApp {
     public void stripeSubscriberAdded(){
 	bandwidthManager.additionalBandwidthUsed(this);
 
+        /**
+         * If after taking on this child in can't take on another
+         * then we leave the spare capacity tree
+         */
 	if(!bandwidthManager.canTakeChild(this)){
 	    System.out.println("Node " + getSplitStream().getNodeId() + " Leaving Spare Capacity Tree");
 	    scribe.leave(getSpareCapacityId(), this, cred);
@@ -503,7 +548,12 @@ public class Channel implements IScribeApp {
      *
      */
     public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){
-	if(!msg.getTopicId().equals((NodeId)getSpareCapacityId())){
+	/**
+         * If this fault is occuring in the channel tree and not  
+         * a spare capacity tree, we must get the meta data for the
+         * channel
+         */
+        if(!msg.getTopicId().equals((NodeId)getSpareCapacityId())){
 	    NodeId[] data = getChannelMetaData();
 	    msg.setData(data);
 	}
@@ -630,8 +680,14 @@ public class Channel implements IScribeApp {
 	}
         if(scribe.join(channelId, this, cred, subInfo)){
 	}
+        else{
+           System.out.println("ERROR: Could not join channel tree");
+        }
 	if(scribe.join(spareCapacityId, this, cred)){
-	}	
+	}
+        else{	
+           System.out.println("ERROR: Could not spare capacity tree");
+        }
 	isReady = true;
         ignore_timeout = true;
 	notifyApps();

@@ -200,6 +200,9 @@ public class BandwidthManager{
      * @param the channel to be added
      */
     public void registerChannel(Channel channel){
+        /** 
+         * Checks too see if we are registering a Channel twice
+         */
         if(usedBandwidth.get(channel) != null){
 	    System.out.println("Resetting BW in error");
         }

@@ -20,7 +20,9 @@ import rice.splitstream.messaging.*;
  * creation of Channel objects in the path of the Channel tree. It 
  * also monitors the creation of stripes interior to the tree and
  * keeps track of the bandwidth used until the user subscribes to 
- * the channel. It implements the IScribeApp interface for this reason
+ * the channel. It implements the IScribeApp interface for this reason.
+ * Since it only need to keep track of these numbers it does not need 
+ * to implement the entire IScribeApp interface only the subscribe handler.
  *
  * @(#) SplitStreamImpl.java
  * @version $Id$
@@ -82,6 +84,10 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 
     /**
      * The constructor for building the splitStream object
+     *
+     * @param node the pastry node that we will use
+     * @param scribe the scribe instance to use
+     *
      */
      public SplitStreamImpl(PastryNode node, IScribe scribe){
  	super(node);
@@ -166,7 +172,10 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     * @param topicId the new topic being created
     */
     public void update(Object topicId){
-	if(scribe.join((NodeId) topicId, this, credentials)){}
+	if(scribe.join((NodeId) topicId, this, credentials)){
+        }
+        else
+          System.out.println("ERROR: Could not join Channel being created");
    } 
 
    /** - IScribeApp Implementation -- */
@@ -386,7 +395,8 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
      * sends it to the appropriate sub routine to be handled
      */
     public void messageForAppl (Message msg){
-	/**This should be cleaned up, but since we are past the
+	/**
+         * This should be cleaned up, but since we are past the
          * Api freeze I don't want to change the class inheritance hierachy
          */
        if( (msg instanceof ControlAttachMessage) ){
