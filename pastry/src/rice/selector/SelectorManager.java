@@ -57,11 +57,10 @@ import java.util.TreeSet;
  */
 public class SelectorManager extends Thread implements Timer {
 
+  // the maximal time to sleep on a select operation
   public static int TIMEOUT = 500;
 
-  /**
-   * The static selector which is used by all applications
-   */
+  // The static selector manager which is used by all applications
   private static SelectorManager manager;
 
   // the underlying selector used
@@ -73,11 +72,8 @@ public class SelectorManager extends Thread implements Timer {
   // the list of handlers which want to change their key
   protected HashSet modifyKeys;
 
-//  private Timer timer;
-
-//  private TimerThread timerThread;
-  
-  boolean alive = true;
+  // the list of keys waiting to be cancelled
+  protected HashSet cancelledKeys;
 
   /**
    * Constructor, which is private since there is only one selector per JVM.
@@ -86,16 +82,15 @@ public class SelectorManager extends Thread implements Timer {
     super("Main Selector Thread");
     this.invocations = new LinkedList();
     this.modifyKeys = new HashSet();
-
+    this.cancelledKeys = new HashSet();
+    
     // attempt to create selector
     try {
       selector = Selector.open();
     } catch (IOException e) {
       System.out.println("SEVERE ERROR (SelectorManager): Error creating selector " + e);
     }
-//    timer = new Timer(selector, profile);
-//    timerThread = timer.thread;
-    //setPriority(Thread.MAX_PRIORITY);
+
     start();
   }
 
@@ -122,6 +117,29 @@ public class SelectorManager extends Thread implements Timer {
       return manager;
     }
   }
+  
+  /**
+   * Method which asks the Selector Manager to add the given key to the cancelled 
+   * set.  If noone calls register on this key during the rest of this select() operation,
+   * the key will be cancelled.  Otherwise, it will be returned as a result of the
+   * register operation.
+   *
+   * @param key The key to cancel
+   */
+  public void cancel(SelectionKey key) {
+    cancelledKeys.add(key);
+  }
+  
+  /**
+   * Utility method which returns the SelectionKey attached to the given channel, if 
+   * one exists
+   *
+   * @param channel The channel to return the key for
+   * @return The key
+   */
+  public SelectionKey getKey(SelectableChannel channel) {
+    return channel.keyFor(selector);
+  }
 
   /**
    * Registers a new channel with the selector, and attaches the given SelectionKeyHandler
@@ -134,8 +152,10 @@ public class SelectorManager extends Thread implements Timer {
    * @return The SelectionKey which uniquely identifies this channel
    */
   public SelectionKey register(SelectableChannel channel, SelectionKeyHandler handler, int ops) throws IOException {
-//    System.out.println("SM.register("+channel.getClass().getName()+")");    
-    return channel.register(selector, ops, handler);
+    SelectionKey key = channel.register(selector, ops, handler);
+    cancelledKeys.remove(key);
+    
+    return key;
   }
 
   /**
@@ -163,7 +183,6 @@ public class SelectorManager extends Thread implements Timer {
    * @param key The key which is to be chanegd
    */
   public synchronized void modifyKey(SelectionKey key) {
-//    System.out.println("modifyKey("+key+")");
     modifyKeys.add(key);
     selector.wakeup();
   }
@@ -184,7 +203,7 @@ public class SelectorManager extends Thread implements Timer {
       debug("SelectorManager starting...");
 
       // loop while waiting for activity
-      while (alive) {
+      while (true) {
         // NOTE: This is so we aren't always holding the selector lock when we get context switched 
         Thread.yield();
 //        try { Thread.sleep(100); } catch (Exception ioe) {}
@@ -197,24 +216,23 @@ public class SelectorManager extends Thread implements Timer {
           if (timerQueue.size() > 0) {
             TimerTask first = (TimerTask)timerQueue.first(); 
             selectTime = (int)(first.nextExecutionTime - System.currentTimeMillis());
-            //System.out.println("SelectTime:"+selectTime);
           }
+          
           select(selectTime);
+          
+          if (cancelledKeys.size() > 0) {
+            Iterator i = cancelledKeys.iterator();
+          
+            while (i.hasNext())
+              ((SelectionKey) i.next()).cancel();
+          
+            cancelledKeys.clear();
+            
+            // now, hack to make sure that all cancelled keys are actually cancelled (dumb)
+            selector.selectNow();
+          }
         }
       }
-
-      SelectionKey[] keys = keys();
-
-      for (int i = 0; i < keys.length; i++) {
-        try {
-          keys[i].channel().close();
-          keys[i].cancel();
-        } catch (IOException e) {
-          System.out.println("IOException " + e + " occured while trying to close and cancel key.");
-        }
-      }
-
-      selector.close();
     } catch (Throwable t) {
       System.out.println("ERROR (SelectorManager.run): " + t);
       t.printStackTrace(System.out);
@@ -241,7 +259,7 @@ public class SelectorManager extends Thread implements Timer {
         if (keys[i].isValid() && keys[i].isConnectable()) {
           skh.connect(keys[i]);
         }
-
+        
         // read
         if (keys[i].isValid() && keys[i].isReadable()) {
           skh.read(keys[i]);
@@ -265,56 +283,30 @@ public class SelectorManager extends Thread implements Timer {
    */
   protected void doInvocations() {
     Iterator i;
-    synchronized(this) {
+    synchronized (this) {
       i = new ArrayList(invocations).iterator();
       invocations.clear();
     }
-    Runnable run;
+
     while (i.hasNext()) {
-      run = (Runnable)i.next();
+      Runnable run = (Runnable)i.next();
       try {
-      //  long start = System.currentTimeMillis();
         run.run();
-      //  System.out.println("ST: " + (System.currentTimeMillis() - start) + " " + run.toString());
       } catch (Exception e) {
         System.err.println("Invoking runnable caused exception " + e + " - continuing");
         e.printStackTrace();
       }
     }
 
-    synchronized(this) {
+    synchronized (this) {
       i = new ArrayList(modifyKeys).iterator();
       modifyKeys.clear();
     }
-    SelectionKey key;
+    
     while (i.hasNext()) {
-      key = (SelectionKey)i.next();
+      SelectionKey key = (SelectionKey)i.next();
       if (key.isValid() && (key.attachment() != null))
         ((SelectionKeyHandler) key.attachment()).modifyKey(key);
-    }
-  }
-
-  protected void doInvocations2() {
-    Runnable run = getInvocation();
-    while (run != null) {
-      try {
-      //  long start = System.currentTimeMillis();
-        run.run();
-      //  System.out.println("ST: " + (System.currentTimeMillis() - start) + " " + run.toString());
-      } catch (Exception e) {
-        System.err.println("Invoking runnable caused exception " + e + " - continuing");
-        e.printStackTrace();
-      }
-      
-      run = getInvocation();
-    }
-
-    SelectionKey key = getModifyKey();
-    while (key != null) {
-      if (key.isValid() && (key.attachment() != null))
-        ((SelectionKeyHandler) key.attachment()).modifyKey(key);
-
-      key = getModifyKey();
     }
   }
 
@@ -357,13 +349,12 @@ public class SelectorManager extends Thread implements Timer {
   int select(int time) throws IOException {
     if (time > TIMEOUT)
       time = TIMEOUT;
+    
     try {      
-      if ((time <= 0) || (invocations.size() > 0) || (modifyKeys.size() > 0)) {
+      if ((time <= 0) || (invocations.size() > 0) || (modifyKeys.size() > 0)) 
         return selector.selectNow();
-      }
-
-      wakeupTime = System.currentTimeMillis()-time;
-//      if (time < 500) System.out.println("Selecting for "+time);
+      
+      wakeupTime = System.currentTimeMillis() + time;
       return selector.select(time);
     } catch (IOException e) {
       if (e.getMessage().indexOf("Interrupted system call") >= 0) {

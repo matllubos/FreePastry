@@ -928,12 +928,12 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    * @author jeffh
    */
   protected class SourceRouteManager extends SelectionKeyHandler {
+
+    // the first channel
+    private SocketChannel channel1;
     
-    // the first key to read from
-    private SelectionKey key1;
-    
-    // the second key to read from
-    private SelectionKey key2;
+    // the second channel
+    private SocketChannel channel2;
     
     // the repeater, which does the actual byte moving from socket to socket
     private SocketChannelRepeater repeater;
@@ -960,8 +960,54 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param key The wrong key
      * @return The right key
      */
-    private SelectionKey otherKey(SelectionKey key) {
-      return ((key == key1) ? key2 : key1);
+    private SocketChannel otherChannel(SelectableChannel channel) {
+      return (channel == channel1 ? channel2 : channel1);
+    }
+    
+    /**
+     * Internal method which adds an interest op to the given channel's interest set.
+     * One should note that if the passed in key is null, it will determine which
+     * channel this is the key for, and then rebuild a key for that channel.  
+     *
+     * @param channel The channel
+     * @param op The operation to add to the key's interest set
+     */
+    protected void addInterestOp(SelectableChannel channel, int op) throws IOException {
+      String k = (channel == channel1 ? "1" : "2");
+      debug(this + "   adding interest op " + op + " to key " + k);
+
+      if (SelectorManager.getSelectorManager().getKey(channel) == null) {
+        debug(this + "   key " + k + " is null - reregistering with ops " + op);
+        SelectorManager.getSelectorManager().register(channel, this, op);
+      } else {
+        SelectorManager.getSelectorManager().register(channel, this, SelectorManager.getSelectorManager().getKey(channel).interestOps() | op);
+        debug(this + "   interest ops for key " + k + " are now " + SelectorManager.getSelectorManager().getKey(channel).interestOps());
+      }
+    }
+    
+    /**
+     * Internal method which removes an interest op to the given key's interest set.
+     * One should note that if the passed in key no longer has any interest ops,
+     * it is cancelled, removed from the selector's key set, and the corresponding
+     * key is set to null in this class.
+     *
+     * @param channel The channel
+     * @param op The operation to remove from the key's interest set
+     */
+    protected void removeInterestOp(SelectableChannel channel, int op) throws IOException {
+      String k = (channel == channel1 ? "1" : "2");
+      debug(this + "   removing interest op " + op + " from key " + k);
+
+      SelectionKey key = SelectorManager.getSelectorManager().getKey(channel);
+      
+      if (key != null) {
+        key.interestOps(key.interestOps() & ~op);
+      
+        if (key.interestOps() == 0) {
+          debug(this + "   key " + k + " has no interest ops - cancelling");
+          SelectorManager.getSelectorManager().cancel(key);
+        }
+      }
     }
     
     /**
@@ -969,10 +1015,10 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * shutdownOutput().  This has the effect of removing the manager from
      * the open list.
      */
-    public void shutdown(SelectionKey key) {
+    public void shutdown(SocketChannel channel) {
       try {
-        System.out.println("SHUTDOWN OUT: " + localAddress + " Shutting down output to SR path...");
-        ((SocketChannel) key.channel()).socket().shutdownOutput();
+        debug(this + " shutting down output to key " + (channel == channel1 ? "1" : "2"));
+        channel.socket().shutdownOutput();
         sourceRouteClosed(this);
       } catch (IOException e) {
         System.err.println("ERROR: Received exception " + e + " while shutting down SR output.");
@@ -985,22 +1031,26 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * cancelling the key and setting the key to be interested in nothing
      */
     public void close() {
+      debug(this + " closing source route");
+      
       try {
-        if (key1 != null) {
-          key1.channel().close();
-          key1.cancel();
-          key1.attach(null);
-          key1 = null;
+        if (channel1 != null) {
+          SelectionKey key = SelectorManager.getSelectorManager().getKey(channel1);
+          
+          if (key != null)
+            key.cancel();
+          channel1.close();
+          channel1 = null;
         }
         
-        if (key2 != null) {
-          key2.channel().close();
-          key2.cancel();
-          key2.attach(null);
-          key2 = null;
+        if (channel2 != null) {
+          SelectionKey key = SelectorManager.getSelectorManager().getKey(channel2);
+          
+          if (key != null)
+            key.cancel();
+          channel2.close();
+          channel2 = null;
         }
-        
-        System.out.println("SHUTDOWN OUT: " + localAddress + " Closing SR path...");
         
         sourceRouteClosed(this);
       } catch (IOException e) {
@@ -1016,14 +1066,16 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param key The key which is connectable.
      */
     public void connect(SelectionKey key) {
+      debug(this + " connecting to key " + (key.channel() == channel1 ? "1" : "2"));
+      
       try {
         // deregister interest in connecting to this socket
         if (((SocketChannel) key.channel()).finishConnect()) 
-          key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
+          removeInterestOp(key.channel(), SelectionKey.OP_CONNECT);
         
         debug("Found connectable source route channel - completed connection");
       } catch (IOException e) {
-        debug("Got exception " + e + " on connect - killing off source route");
+        System.out.println("Got exception " + e + " on connect - killing off source route");
         
         close();
       }
@@ -1035,28 +1087,38 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param key The selection key for this manager
      */
     public void read(SelectionKey key) {
+      String k = (key.channel() == channel1 ? "1" : "2");
+      debug(this + " reading from key " + k + " " + key.interestOps());
+      
       try {        
         try {
           if (repeater.read((SocketChannel) key.channel())) {
-            key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
-            otherKey(key).interestOps(otherKey(key).interestOps() | SelectionKey.OP_WRITE);
+            addInterestOp(otherChannel(key.channel()), SelectionKey.OP_WRITE);
+            removeInterestOp(key.channel(), SelectionKey.OP_READ);
           }
+
+          debug(this + " done reading from key " + k);
         } catch (ClosedChannelException e) {
-          debug("INFO " + e + " reading source route - closing other half...");
-          // first, deregister in reading and writing to the appropriate sockets
-          ((SocketChannel) key.channel()).socket().shutdownInput();
-          key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
-          otherKey(key).interestOps(otherKey(key).interestOps() & ~SelectionKey.OP_WRITE);
+          debug(this + " reading from key " + k + " returned -1 - processing shutdown");
           
           // then determine if the sockets are now completely shut down,
           // or if only half is now closed
-          if (((SocketChannel) otherKey(key).channel()).socket().isInputShutdown()) 
+          if (otherChannel(key.channel()).socket().isInputShutdown()) {
+            debug(this + " other key is shut down - closing");
             close();
-          else
-            shutdown(otherKey(key));
+          } else {
+            // first, deregister in reading and writing to the appropriate sockets
+            ((SocketChannel) key.channel()).socket().shutdownInput();
+            removeInterestOp(key.channel(), SelectionKey.OP_READ);
+            removeInterestOp(otherChannel(key.channel()), SelectionKey.OP_WRITE);
+
+            debug(this + " other key not yet closed - shutting it down");
+            shutdown(otherChannel(key.channel()));
+          }
         }
       } catch (IOException e) {
-        debug("ERROR " + e + " reading source route - cancelling.");
+        System.out.println("SRM: ERROR " + e + " reading source route - cancelling.");
+        e.printStackTrace();
         close();
       }
     }
@@ -1066,14 +1128,19 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      *
      * @param key The selection key for this manager
      */
-    public synchronized void write(SelectionKey key) {
+    public synchronized void write(SelectionKey key) { 
+      String k = (key.channel() == channel1 ? "1" : "2");
+      debug(this + " writing to key " + k + " " + key.interestOps());
+
       try {        
         if (repeater.write((SocketChannel) key.channel())) {
-          key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-          otherKey(key).interestOps(otherKey(key).interestOps() | SelectionKey.OP_READ);
+          addInterestOp(otherChannel(key.channel()), SelectionKey.OP_READ);
+          removeInterestOp(key.channel(), SelectionKey.OP_WRITE);
         }
+        
+        debug(this + " done writing to key " + k);
       } catch (IOException e) {
-        debug("ERROR " + e + " writing source route - cancelling.");
+        System.out.println("ERROR " + e + " writing source route - cancelling.");
         close();
       }
     }
@@ -1084,10 +1151,13 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param serverKey The server socket key
      * @exception IOException DESCRIBE THE EXCEPTION
      */
-    protected void acceptConnection(SelectionKey key) throws IOException {
+    protected void acceptConnection(SelectionKey key) throws IOException {   
+      debug(this + " accepted connection for key 1 as " + ((SocketChannel) key.channel()).socket().getRemoteSocketAddress());
+
       debug("Accepted source route connection from " + ((SocketChannel) key.channel()).socket().getRemoteSocketAddress());
       
-      this.key1 = SelectorManager.getSelectorManager().register(key.channel(), this, SelectionKey.OP_READ);
+      SelectorManager.getSelectorManager().register(key.channel(), this, SelectionKey.OP_READ);
+      this.channel1 = (SocketChannel) key.channel();
     }
     
     /**
@@ -1096,20 +1166,24 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param address The accress to connect to
      * @exception IOException DESCRIBE THE EXCEPTION
      */
-    protected void createConnection(final EpochInetSocketAddress address) throws IOException {
-      final SocketChannel channel = SocketChannel.open();
-      channel.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
-      channel.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
-      channel.configureBlocking(false);
+    protected void createConnection(final EpochInetSocketAddress address) throws IOException {  
+      debug(this + " creating connection for key 2 as " + address.getAddress());
+
+      channel2 = SocketChannel.open();
+      channel2.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
+      channel2.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
+      channel2.configureBlocking(false);
       
       debug("Initiating source route connection to " + address);
       
-      boolean done = channel.connect(address.getAddress());
-      
+      boolean done = channel2.connect(address.getAddress());
+
       if (done)
-        key2 = SelectorManager.getSelectorManager().register(channel, this, SelectionKey.OP_READ);
+        SelectorManager.getSelectorManager().register(channel2, this, SelectionKey.OP_READ);
       else 
-        key2 = SelectorManager.getSelectorManager().register(channel, this, SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
+        SelectorManager.getSelectorManager().register(channel2, this, SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
+      
+      debug(this + "   setting initial ops to " + SelectionKey.OP_READ + " for key 2");
     }
     
     /**
@@ -1118,7 +1192,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param s DESCRIBE THE PARAMETER
      */
     private void debug(String s) {
-      if (Log.ifp(8)) {
+      if (Log.ifp(5)) {
         System.out.println(pastryNode.getNodeId() + " (SRM): " + s);
       }
     }
