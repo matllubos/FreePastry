@@ -13,6 +13,7 @@ import rice.pastry.direct.*;
 import rice.pastry.standard.*;
 import rice.pastry.security.*;
 import rice.pastry.routing.*;
+import rice.pastry.leafset.*;
 import rice.post.*;
 import rice.post.messaging.*;
 import rice.post.storage.*;
@@ -46,6 +47,31 @@ public class DirectSplitStreamTest{
     private Credentials credentials = new PermissiveCredentials();
     private int numResponses = 0;
     private Hashtable nodeIdToApp;
+
+    private int appCount = 0;
+
+    // The number of iterations of node failures and joins. 
+    // In each iteration we fail 'concurrentFailures' number of nodes 
+    // and make 'concurrentJoins' number of nodes join the network.
+    private int numIterations = 5; 
+
+    // The number of nodes that fail concurrently. This step of failing
+    // nodes concurrently is repeated till the desired number of totalFailures
+    // number of nodes has been killed.   
+    private int concurrentFailures =  5; 
+
+
+    // The number of nodes that join concurrently.
+    private int concurrentJoins = 5;
+
+    // Since we experiment with node failures and node joins, this keeps
+    // track of the number of nodes currently alive in the Pastry network.
+    private int nodesCurrentlyAlive = 0;
+
+
+    // Tree repair threshold
+    private int trThreshold = 2;
+
 
     static {
 	try {
@@ -165,6 +191,26 @@ public class DirectSplitStreamTest{
 	else
 	    System.out.println("\n\nBANDWIDTH-USAGE TEST : FAILED \n\n");
 
+	result &= passed;
+
+	/**
+	 * Now we will fail some nodes currently and then see if the system
+	 * still works.
+	 */
+	
+	test.killNodes(test.concurrentFailures);
+	for(int i = 0; i <= test.trThreshold; i++)
+	    test.scheduleHBOnAllNodes();
+
+	passed =  test.checkAllStripeTrees(channelId);
+
+	if(passed)
+	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP TEST : PASSED \n\n");
+	else
+	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP FAILED \n\n");
+
+	
+
 	System.out.println(PastrySeed.getSeed() );
     }
 
@@ -215,7 +261,7 @@ public class DirectSplitStreamTest{
 		// Join all stripes for all channels an app has created or attached to.
 		app.joinChannelStripes(channelId);
 		while(simulate());
-		System.out.println("Node "+app.getNodeId()+" subscribed to  another stripe");
+		//System.out.println("Node "+app.getNodeId()+" subscribed to  another stripe");
 	    }
 	    
 	}	
@@ -250,16 +296,18 @@ public class DirectSplitStreamTest{
     /**
      * Creates a pastryNode with a past, scribe, and post running on it.
      */
-    protected void makeNode(int index) {
+    protected void makeNode() {
 	PastryNode pn = factory.newNode(getBootstrap());
 	pastrynodes.add(pn);
 	Scribe scribe = new Scribe(pn, credentials);
+	scribe.setTreeRepairThreshold(trThreshold);
 	scribeNodes.add(scribe);  
 	ISplitStream ss = new SplitStreamImpl(pn, scribe);
-	DirectSplitStreamTestApp app = new DirectSplitStreamTestApp(ss, index);
+	DirectSplitStreamTestApp app = new DirectSplitStreamTestApp(ss, appCount++);
 	splitStreamNodes.add(ss);
 	splitStreamApps.add(app);
 	nodeIdToApp.put(pn.getNodeId(), app);
+	nodesCurrentlyAlive++;
 	//System.out.println("created " + pn);
     }
 
@@ -268,7 +316,7 @@ public class DirectSplitStreamTest{
      */
     protected void createNodes() {
 	for (int i=0; i < numNodes; i++) {
-	    makeNode(i);
+	    makeNode();
 	    System.out.print("<"+i+">, ");
 	    while(simulate());
 	}
@@ -287,8 +335,8 @@ public class DirectSplitStreamTest{
     public boolean checkTree(NodeId topicId){
 	int num = BFS(topicId);
 
-	System.out.println("Number of nodes in channel tree "+num);
-	if(num < splitStreamApps.size())
+	System.out.println("Number of nodes in channel tree "+topicId+" is "+num);
+	if(num < nodesCurrentlyAlive)
 	    return false;
 	return true;
     }
@@ -365,7 +413,7 @@ public class DirectSplitStreamTest{
 	Vector traversedList = new Vector();
 	rootAppIndex = rootApp(topicId);
 	
-	System.out.println("\n\nTREE Traversal for tree" + topicId);
+	//System.out.println("\n\nTREE Traversal for tree" + topicId);
 	traversedList.add(new Integer(rootAppIndex));
 	toTraverse.add(new Integer(rootAppIndex));
 	toTraverse.add(new Integer(-1));
@@ -379,14 +427,14 @@ public class DirectSplitStreamTest{
 		continue;
 	    }
 	    app = (DirectSplitStreamTestApp) splitStreamApps.elementAt(appIndex);
-	    System.out.println(" *** Children of " + app.getNodeId() + " ***");
+	    //System.out.println(" *** Children of " + app.getNodeId() + " ***");
 	    topic = app.getScribe().getTopic(topicId);
 
 	    children = topic.getChildren();
 	    if( children.size() > 0){
 		for(i=0; i < children.size(); i++) {
 		    childId = ((NodeHandle)children.elementAt(i)).getNodeId();
-		    System.out.print(childId + " ");
+		    //System.out.print(childId + " ");
 		    app = (DirectSplitStreamTestApp)nodeIdToApp.get(childId);
 		    appIndex = ((DirectSplitStreamTestApp)nodeIdToApp.get(childId)).m_appIndex;
 		    if(!traversedList.contains(new Integer(appIndex)))
@@ -442,6 +490,170 @@ public class DirectSplitStreamTest{
 	
 	return result;
 
+    }
+
+
+
+    /**
+     * get authoritative information about liveness of node.
+     */
+    private boolean isReallyAlive(NodeId id) {
+	return simulator.isAlive(id);
+    }
+
+    /**
+     * murder the node. comprehensively.
+     */
+    private void killNode(PastryNode pn) {
+	NetworkSimulator enet = (NetworkSimulator) simulator;
+	enet.setAlive(pn.getNodeId(), false);
+    }
+
+
+
+    /**
+     * Kills a number of randomly chosen nodes comprehensively and acoordingly
+     * updates the data structures maintained by the test suite to keep track
+     * of the currently active applications.
+     */ 
+    private void killNodes(int num) {
+	int appcountKilled;
+	Set keySet;
+	Iterator it;
+	NodeId key;
+	int appcounter = 0;
+	DirectSplitStreamTestApp app;
+
+	if(num == 0)
+	    return;
+
+	System.out.println("Killing " + num + " nodes");
+	for (int i=0; i<num; i++) {
+	    int n = rng.nextInt(pastrynodes.size());
+
+	    PastryNode pn = (PastryNode)pastrynodes.get(n);
+	    pastrynodes.remove(n);
+	    splitStreamApps.remove(n);
+	    /**
+	     * We were maintaining a Hashtable to keep the inverse mapping 
+	     * from the NodeId to the appCount( This was mainly kept for 
+	     * the BFS tree traversal method). Now when we kill nodes we
+	     * have to keep the field appCount consistent with the 
+	     * remaining applications present.
+	     */
+	    appcountKilled = ((DirectSplitStreamTestApp)nodeIdToApp.get(pn.getNodeId())).m_appIndex;
+	    nodeIdToApp.remove(pn.getNodeId());
+	    keySet = nodeIdToApp.keySet();
+	    it = keySet.iterator();
+		
+	    while(it.hasNext()) {
+		key = (NodeId) it.next();
+		app = (DirectSplitStreamTestApp)nodeIdToApp.get(key);
+		appcounter = app.m_appIndex;
+		if(appcounter > appcountKilled) 
+		    app.m_appIndex --;
+	    }
+	    killNode(pn);
+	    //System.out.println("Killed " + pn.getNodeId());
+	}
+	nodesCurrentlyAlive = nodesCurrentlyAlive - num;
+	
+	// We will now initiate the leafset and routeset maintenance to 
+	// make the presence of the newly joined nodes reflected. 
+	System.out.println("Initiating leafset/routeset maintenance");
+	initiateLeafSetMaintenance();
+	initiateRouteSetMaintenance();
+
+
+	
+    }
+
+    /**
+     * Creates the specified number of new nodes and joins them to the
+     * existing Pastry network. We also make the nodes subscribe to all
+     * the topics. We also have to initiate leafset and routeset maintenance
+     * to make the presence of these newly created nodes be reflected in 
+     * the leafsets and routesets of other nodes as required. 
+     */ 
+    public void joinNodes(int num) {
+	int i,j;
+	DirectSplitStreamTestApp app;
+	NodeId topicId;
+
+	if(num == 0) 
+	    return;
+	
+	System.out.println("Joining " + num + " nodes");
+
+	// When we create nodes in the makeScribeNode method the variable
+	// appCount is assumed to be the index of next live application to
+	// be created.
+	appCount = nodesCurrentlyAlive;
+
+	for (i=0; i< num; i++) {
+	    makeNode();
+	    while (simulate());
+	}
+	while(simulate());
+
+	nodesCurrentlyAlive = nodesCurrentlyAlive + num;
+
+	// We will now initiate the leafset and routeset maintenance to 
+	// make the presence of the newly joined nodes reflected. 
+	System.out.println("Initiating leafset/routeset maintenance");	
+	initiateLeafSetMaintenance();
+	initiateRouteSetMaintenance();
+	
+
+	// We will make these new nodes subscribe to the topic trees
+	for(i= (nodesCurrentlyAlive - num); i< splitStreamApps.size(); i++) {
+	    app = (DirectSplitStreamTestApp)splitStreamApps.elementAt(i);
+	}
+	while (simulate());
+	System.out.println("All newly joined nodes have subscribed");
+    }
+
+    /**
+     * initiate leafset maintenance
+     */
+    private void initiateLeafSetMaintenance() {
+
+	for (int i=0; i<pastrynodes.size(); i++) {
+	    PastryNode pn = (PastryNode)pastrynodes.get(i);
+	    pn.receiveMessage(new InitiateLeafSetMaintenance());
+	    while(simulate());
+	}
+
+    }
+
+    /**
+     * initiate routing table maintenance
+     */
+    private void initiateRouteSetMaintenance() {
+
+	for (int i=0; i<pastrynodes.size(); i++) {
+	    PastryNode pn = (PastryNode)pastrynodes.get(i);
+	    pn.receiveMessage(new InitiateRouteSetMaintenance());
+	    while(simulate());
+	}
+
+    }
+
+
+    /**
+     * Schedule a HeartBeat event on all nodes for all topics.
+     */
+    public void scheduleHBOnAllNodes(){
+	int i;
+	DirectSplitStreamTestApp app;
+	Scribe scribe;
+
+	for(i= 0; i < splitStreamApps.size(); i++) {
+	    app = (DirectSplitStreamTestApp)splitStreamApps.elementAt(i);
+	    scribe = app.getScribe();
+	    scribe.scheduleHB();
+	    while (simulate());
+	}
     }
 }
 

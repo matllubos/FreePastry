@@ -62,7 +62,9 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
      */
     public void update(Observable o, Object arg){
 	//ChannelId cid = (ChannelId) arg;
-
+	//StripeId id = (StripeId)arg;
+	Stripe str = (Stripe)o;
+	//System.out.println("Node "+getNodeId()+" app "+m_appIndex+" recieved on"+str.getStripeId());
 	m_numRecv++;
     }
 
@@ -106,8 +108,10 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
 	    //stripe.backdoorSend(channelId);
 	    
 	    OutputStream out = stripe.getOutputStream();
-	    System.out.println("Sending on Stripe " + stripeId);
-	    byte[] toSend = "Hello".getBytes() ;
+	    //System.out.println("Sending on Stripe " + stripeId);
+	    String str = stripe.toString();
+	    //byte[] toSend = "Hello".getBytes() ;
+	    byte[] toSend = str.getBytes() ;
 	    try{
 		out.write(toSend, 0, toSend.length );
 	    }
@@ -129,7 +133,7 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
 	// Join all the stripes associated with the channel
 	while(channel.getNumSubscribedStripes() < channel.getNumStripes()){
 	    Stripe stripe = channel.joinAdditionalStripe(this);
-	    //System.out.println("Joining stripe "+stripe.getStripeId()+" stripe " +stripe);
+	    //System.out.println("Node "+getNodeId()+" Joining stripe "+stripe.getStripeId());
 	}
     }
 
