@@ -32,7 +32,7 @@ public class Wire {
   private static int oneOfsCalled = 0;
   private static int pendingsCalled = 0;
   
-  static boolean outputDebug = false;
+  static boolean outputDebug = true;
   
   /**
    * Automatic determination of ulimit -n

@@ -1,0 +1,52 @@
+/*
+ * Created on Feb 3, 2004
+ *
+ * To change the template for this generated file go to
+ * Window&gt;Preferences&gt;Java&gt;Code Generation&gt;Code and Comments
+ */
+package rice.pastry.wire.testing;
+
+/**
+ * @author jeffh
+ *
+ * To change the template for this generated type comment go to
+ * Window&gt;Preferences&gt;Java&gt;Code Generation&gt;Code and Comments
+ */
+public class MessageDigestFactory {
+  private static int globalMessageNum = 0;
+
+  /**
+   * @param sender
+   * @param receiver
+   * @param messageLine
+   */
+  public MessageDigest getMessageDigest(int lineNum, String local, String remote, String messageLine, int type, boolean udp) {
+    //<0xB7E51E..>:SEN:[ [PEM PublishMessage[TOPIC <0xEACAF8..>]:0            2105027332] ]
+    //ENQ:[ [PEM PublishMessage[TOPIC <0xFACAF8..>]:9         2105036629] ]
+    //SEN:{[ [PEM PublishMessage[TOPIC <0xEACAF8..>]:7                2105034628] ]}
+
+    //[ [PEM PublishMessage[TOPIC <0xEACAF8..>]:0            2105027332] ]
+    //[ [PEM PublishMessage[TOPIC <0xFACAF8..>]:9         2105036629] ]
+    //{[ [PEM PublishMessage[TOPIC <0xEACAF8..>]:7                2105034628] ]}
+
+    if (type == WireFileProcessor.TYPE_REC) {
+      String temp = local;
+      local = remote;
+      remote = temp;
+    }
+
+    try {
+      String subMsg = messageLine.substring(7,7+15);
+      if (subMsg.equals("PublishMessage[") || subMsg.equals(" PublishMessage")) {
+        return new PublishMessageDigest(lineNum, local,remote,messageLine,type,udp,globalMessageNum++);
+      }
+    } catch (StringIndexOutOfBoundsException se) {
+      
+    }
+    
+    
+    // TODO Auto-generated method stub
+    return new MessageDigest(lineNum, local,remote,messageLine,type,udp);
+  }
+
+}
