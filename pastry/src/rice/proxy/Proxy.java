@@ -245,7 +245,7 @@ public class Proxy {
       lm.die();
   }
   
-  public boolean verifyJar(String filename) {
+  public boolean verifyJar(String filename, byte[] hash, String md5) {
    /* String[] cp = new DynamicClasspath().getClasspath().split(System.getProperty("path.separator"));
     JarFile newJar = new JarFile(filename);
     int i=0;
@@ -255,7 +255,8 @@ public class Proxy {
         JarFile oldJar = new JarFile(cp[i]);
       
     Certificate cert = oldJar */
-    return true;
+    
+    return rice.post.security.SecurityUtils.toHex(hash).trim().equalsIgnoreCase(md5.trim());
   }
   
   public static void main(String[] args) throws IOException, InterruptedException {
@@ -372,7 +373,7 @@ public class Proxy {
         if (j >= 0)
           monitor.answered();
       } catch (IOException e) {
-        System.err.println("ERROR: Got IOException while checking liveness!" + e);
+        System.err.println("ERROR: Got IOException while checking liveness!" + e + " This is usually a JVM crash - we're going to exit now.");
         e.printStackTrace();
       }
     }
@@ -410,6 +411,13 @@ public class Proxy {
             String filename = new String(baos.toByteArray()).trim();
             
             if (! new File(".", filename).exists()) {
+              ByteArrayOutputStream baos1 = new ByteArrayOutputStream();
+              HttpFetcher hf1 = new HttpFetcher(new URL(root + filename + ".md5sum"), baos1);
+              
+              hf1.fetch();
+              
+              String md5 = new String(baos1.toByteArray()).trim();
+              
               if (parameters.getBooleanParameter("proxy_show_dialog")) {
                 String message = "A new version of the ePOST software has been detected.\n\n" +
                 "Would you like to automatically upgrade to '" + filename + "' and restart your proxy?";
@@ -431,17 +439,31 @@ public class Proxy {
                   }
                 } else if (i == 2) {
                   hf = new HttpFetcher(new URL(root + filename), new FileOutputStream(new File(".", filename)));
-                  hf.fetch();
+                  byte[] bytes = hf.fetch();
                   
-                  if (verifyJar(filename))
+                  if (verifyJar(filename, bytes, md5)) {
                     restart();
+                  } else {
+                    System.err.println("ERROR - Corrupted download detected on file " + filename + " - hash " + rice.post.security.SecurityUtils.toHex(bytes) + " required " + md5);
+
+                    JOptionPane.showMessageDialog(null, "It appears that your update download was corrupted - ePOST will try \n" + 
+                                                        "again at the next update interval.\n\n" +
+                                                  "Hash: " + rice.post.security.SecurityUtils.toHex(bytes) + " Required: " + md5,
+                                                  "Corrupted Download Detected", JOptionPane.WARNING_MESSAGE, null);
+                    
+                    new File(".", filename).delete();
+                  }
                 }
               } else {
                 hf = new HttpFetcher(new URL(root + filename), new FileOutputStream(new File(".", filename)));
-                hf.fetch();
+                byte[] bytes = hf.fetch();
                 
-                if (verifyJar(filename))
+                if (verifyJar(filename, bytes, md5)) {
                   restart();   
+                } else {
+                  System.err.println("ERROR - Corrupted download detected on file " + filename + " - hash " + rice.post.security.SecurityUtils.toHex(bytes) + " required " + md5);
+                  new File(".", filename).delete();
+                }
               }
             }
           } catch (Exception e) {

@@ -169,6 +169,12 @@
       <fileset dir="." includes="lib/xmlpull_1_1_3_4a.jar"/>
       <fileset dir="." includes="lib/xpp3-1.1.3.4d_b2.jar"/>
     </zip>
+    <checksum fileext=".md5sum" todir="." algorithm="MD5">
+      <fileset dir=".">
+        <include name="epost-${epost-version}.jar"/>
+        <include name="epost-${epost-version}-all.tgz"/>
+        <include name="epost-${epost-version}-all.zip"/>
+      </fileset>
+    </checksum>
   </target>
-
 </project>
