@@ -125,9 +125,10 @@ public class Channel extends PastryAppl implements IScribeApp {
 	this.channelId = channelId;
 	this.bandwidthManager = bandwidthManager;
 	this.scribe = scribe;
+	this.bandwidthManager.registerChannel(this);
         scribe.registerApp(this);
 	ControlAttachMessage attachMessage = new ControlAttachMessage();
-        System.out.println("Sending Anycast Message from " + getNodeId());
+        //System.out.println("Sending Anycast Message from " + getNodeId());
         scribe.anycast(channelId, attachMessage, cred );
 
    }
@@ -138,6 +139,7 @@ public class Channel extends PastryAppl implements IScribeApp {
  	super(node);
 	this.channelId = channelId;
 	this.spareCapacityId = spareCapacityId;
+	
 
 	for(int i = 0 ; i < stripeIds.length ; i++){
 		if(stripeIdTable == null) {System.out.println("NULL");}
@@ -148,6 +150,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	this.numStripes = stripeIds.length;
 	this.scribe = scribe;
 	this.bandwidthManager = bandwidthManager;
+	this.bandwidthManager.registerChannel(this);
 	if(scribe.join(channelId, this, cred)){
 	}
 	

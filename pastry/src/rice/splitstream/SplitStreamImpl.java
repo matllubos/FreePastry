@@ -43,7 +43,7 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
     * @return an instance of a Channel class. 
     */
    public Channel createChannel(int numStripes){
-	System.out.println("Channel: Creating a new channel, numStripes = " + numStripes);
+	//System.out.println("Channel: Creating a new channel, numStripes = " + numStripes);
 	return (new Channel(numStripes, scribe, credentials ,bandwidthManager, node));
    }
    /**
@@ -63,9 +63,9 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
     */
    public Channel attachChannel(ChannelId channelId){
      Channel channel = (Channel) channels.get(channelId);
-     System.out.println("Attempting to attach to Channel " + channelId);
+     //System.out.println("Attempting to attach to Channel " + channelId);
      if(channel == null){
-	System.out.println("Creating New Channel Object");
+	//System.out.println("Creating New Channel Object");
      	channel = new Channel(channelId, scribe, credentials, bandwidthManager, node);
 	channels.put(channelId, channel);
      }
