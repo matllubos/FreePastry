@@ -56,6 +56,34 @@ public class SecurityService {
    * The name of the hash function.
    */
   public static final String HASH_ALGORITHM = "SHA1";
+
+
+  // ----- STATIC CIPHER OBJECTS -----
+
+  /**
+    * The cipher used to encrypt/decrypt data using DES
+   */
+  private static Cipher cipherDES;
+
+  /**
+    * The cipher used to encrypt/decrypt data using RSA
+   */
+  private static Cipher cipherRSA;
+
+  /**
+    * The generator used to generate DES keys
+   */
+  private static KeyGenerator generatorDES;
+
+  /**
+    * The generator used to generate RSA keys
+   */
+  private static KeyPairGenerator generatorRSA;
+
+  /**
+    * The signature used for verification and signing data.
+   */
+  private static Signature signature;
   
 
   // ----- STATIC BLOCK TO INITIALIZE THE KEY GENERATORS -----
@@ -76,34 +104,6 @@ public class SecurityService {
       throw new SecurityException("NoSuchPaddingException on construction: " + e);
     }
   }
-
-
-  // ----- STATIC CIPHER OBJECTS -----
-
-  /**
-   * The cipher used to encrypt/decrypt data using DES
-   */
-  private static Cipher cipherDES;
-
-  /**
-   * The cipher used to encrypt/decrypt data using RSA
-   */
-  private static Cipher cipherRSA;
-
-  /**
-    * The generator used to generate DES keys
-   */
-  private static KeyGenerator generatorDES;
-
-  /**
-    * The generator used to generate RSA keys
-   */
-  private static KeyPairGenerator generatorRSA;
-
-  /**
-   * The signature used for verification and signing data.
-   */
-  private static Signature signature;
 
 
   // ----- FIELDS FOR SPECIFIC SERVICES -----
