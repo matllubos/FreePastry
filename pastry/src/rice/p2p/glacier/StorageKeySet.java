@@ -251,5 +251,7 @@ public class StorageKeySet implements rice.p2p.commonapi.IdSet {
     return getHash();
   }
 
-
+  public Object clone(){
+	return new StorageKeySet(this);
+  }
 }
