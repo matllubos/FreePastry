@@ -97,6 +97,9 @@ public abstract class LocalNode implements LocalNodeI {
    */
   private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
     in.defaultReadObject();
-    LocalNodeI.pending.addPending(in, this);
+    
+    if (! (in instanceof PastryObjectInputStream)) {
+      LocalNodeI.pending.addPending(in, this);
+    }
   }
 }
