@@ -43,7 +43,7 @@ public class DistSplitStreamTest {
     private static NodeHandle bootStrapNode;
     private static int port = 5010;
     private static String bshost = null;
-    private static int bsport = 5009;
+    private static int bsport = 5010;
     private static int numNodes = 5;
     public Integer num = new Integer(0);
     public static int NUM_TOPICS = 5;
@@ -199,8 +199,8 @@ public class DistSplitStreamTest {
      * @return the PastryNode on which the Scribe application exists
      */
     public PastryNode makeNode() {
-	//NodeHandle bootstrap = getBootstrap();
-	NodeHandle bootstrap = bootStrapNode;
+	NodeHandle bootstrap = getBootstrap();
+	//NodeHandle bootstrap = bootStrapNode;
 	PastryNode pn = factory.newNode(bootstrap); // internally initiateJoins
 	NodeId nodeId;
 	ChannelId channelId;
@@ -254,7 +254,7 @@ public class DistSplitStreamTest {
 		}
 	    }
 	}
-        bootStrapNode = pn.getLocalHandle();
+        //bootStrapNode = pn.getLocalHandle();
 
 	for (int i = 1; i < numNodes ; i++){
 	    driver.makeNode();
