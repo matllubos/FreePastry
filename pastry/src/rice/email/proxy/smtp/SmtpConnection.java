@@ -101,4 +101,9 @@ public class SmtpConnection {
     public void quit() {
         handler.quit();
     }
+
+    public boolean isLocal() throws IOException {
+      return (sock.getInetAddress().isLoopbackAddress() ||
+              sock.getInetAddress().equals(InetAddress.getLocalHost()));
+    }
 }

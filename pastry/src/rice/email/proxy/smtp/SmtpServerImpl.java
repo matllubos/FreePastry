@@ -13,7 +13,7 @@ import java.net.*;
 public class SmtpServerImpl extends Thread implements SmtpServer {
 
   private boolean acceptNonLocal = false;
-  private boolean proxy = false;
+  private boolean gateway = false;
   private boolean quit = false;
   private int port;
   private ServerSocket server;
@@ -26,12 +26,12 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
 
   private EmailService email;
 
-  public SmtpServerImpl(int port, EmailService email, boolean proxy, PostEntityAddress address, boolean acceptNonLocal) throws Exception {
+  public SmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal) throws Exception {
     this.acceptNonLocal = acceptNonLocal;
-    this.proxy = proxy;
+    this.gateway = gateway;
     this.port = port;
     this.email = email;
-    this.manager = new SimpleManager(email, proxy, address);
+    this.manager = new SimpleManager(email, gateway, address);
     this.registry = new SmtpCommandRegistry();
     this.workspace = new InMemoryWorkspace();
 
@@ -55,7 +55,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
 
         System.out.println("Accepted connection from " + socket.getInetAddress());
 
-        if (acceptNonLocal || proxy || socket.getInetAddress().isLoopbackAddress() ||
+        if (acceptNonLocal || gateway || socket.getInetAddress().isLoopbackAddress() ||
             (socket.getInetAddress().equals(InetAddress.getLocalHost()))) {
           Thread thread = new Thread() {
             public void run() {

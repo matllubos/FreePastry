@@ -66,7 +66,7 @@ public class DataCommand
 
         try
         {
-            manager.send(state);
+            manager.send(state, conn.isLocal());
             conn.println("250 Message accepted for delivery");
         }
         catch (Exception je)

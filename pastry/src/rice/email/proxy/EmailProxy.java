@@ -50,7 +50,7 @@ public class EmailProxy extends PostProxy {
   static int IMAP_PORT = 1143; 
   static int SMTP_PORT = 1025;
 
-  static boolean PROXY = false;
+  static boolean GATEWAY = false;
 
   static boolean ACCEPT_NON_LOCAL = false;
  
@@ -79,12 +79,12 @@ public class EmailProxy extends PostProxy {
       stepDone(SUCCESS);
 
       stepStart("Starting SMTP server on port " + SMTP_PORT);
-      smtp = new SmtpServerImpl(SMTP_PORT, email, PROXY, address, ACCEPT_NON_LOCAL);
+      smtp = new SmtpServerImpl(SMTP_PORT, email, GATEWAY, address, ACCEPT_NON_LOCAL);
       smtp.start();
       stepDone(SUCCESS);
 
       stepStart("Starting IMAP server on port " + IMAP_PORT);
-      imap = new ImapServerImpl(IMAP_PORT, email, manager, PROXY, ACCEPT_NON_LOCAL);
+      imap = new ImapServerImpl(IMAP_PORT, email, manager, GATEWAY, ACCEPT_NON_LOCAL);
       imap.start();
       stepDone(SUCCESS);
 
@@ -124,8 +124,8 @@ public class EmailProxy extends PostProxy {
     }
 
     for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-proxy")) {
-        PROXY = true;
+      if (args[i].equals("-gateway")) {
+        GATEWAY = true;
         break;
       }
     }

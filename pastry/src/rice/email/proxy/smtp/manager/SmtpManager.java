@@ -15,5 +15,5 @@ public interface SmtpManager
 
     String checkData(SmtpState state);
 
-    void send(SmtpState state) throws Exception;
+    void send(SmtpState state, boolean local) throws Exception;
 }

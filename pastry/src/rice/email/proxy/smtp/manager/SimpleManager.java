@@ -16,7 +16,7 @@ public class SimpleManager implements SmtpManager {
 
   public static String POST_HOST = "dosa.cs.rice.edu";
 
-  private boolean proxy;
+  private boolean gateway;
 
   private DnsService dns;
   
@@ -24,10 +24,10 @@ public class SimpleManager implements SmtpManager {
 
   private PostEntityAddress address;
 
-  public SimpleManager(EmailService email, boolean proxy, PostEntityAddress address) throws Exception {
+  public SimpleManager(EmailService email, boolean gateway, PostEntityAddress address) throws Exception {
     this.email = email;
     this.dns = new DnsServiceImpl();
-    this.proxy = proxy;
+    this.gateway = gateway;
     this.address = address;
   }
 
@@ -44,7 +44,7 @@ public class SimpleManager implements SmtpManager {
     return null;
   }
 
-  public void send(SmtpState state) throws Exception {
+  public void send(SmtpState state, boolean local) throws Exception {
     Vector postRecps = new Vector();
     Vector nonPostRecps = new Vector();
     Iterator i = state.getMessage().getRecipientIterator();
@@ -82,7 +82,7 @@ public class SimpleManager implements SmtpManager {
       }
     };
 
-    if (proxy) {
+    if (gateway && !local) {
       email.sendMessage(PostMessage.parseEmail(recipients, state.getMessage().getResource(), address), done);
     } else {
       email.sendMessage(PostMessage.parseEmail(recipients, state.getMessage().getResource()), done);
