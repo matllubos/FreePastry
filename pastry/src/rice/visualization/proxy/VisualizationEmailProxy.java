@@ -12,6 +12,7 @@ import rice.proxy.Parameters;
 import rice.p2p.glacier.v2.GlacierImpl;
 import rice.p2p.past.*;
 import rice.p2p.aggregation.AggregationImpl;
+import rice.persistence.*;
 import rice.visualization.*;
 import rice.visualization.Visualization;
 import rice.visualization.server.*;
@@ -19,8 +20,10 @@ import rice.visualization.server.*;
 public class VisualizationEmailProxy extends EmailProxy {
     
   protected VisualizationServer server;
+  protected VisualizationServer globalServer;
   
   protected InetSocketAddress serverAddress;
+  protected InetSocketAddress globalServerAddress;
 
   public static String[][] DEFAULT_PARAMETERS = new String[][] {{"visualization_enable", "false"},
   {"visualization_port", "10002"},
@@ -32,7 +35,6 @@ public class VisualizationEmailProxy extends EmailProxy {
     
     if (parameters.getBooleanParameter("visualization_enable")) {
       DistPastryNode pastry = (DistPastryNode) ((MultiringNode) node).getNode();
-      
       int visualizationPort = ((DistNodeHandle) pastry.getLocalHandle()).getAddress().getPort() + Visualization.PORT_OFFSET;
       
       sectionStart("Starting Visualization services");
@@ -53,6 +55,8 @@ public class VisualizationEmailProxy extends EmailProxy {
       RecentMessagesPanelCreator recent = new RecentMessagesPanelCreator();
       server.addPanelCreator(recent);
       server.addPanelCreator(new PastryPanelCreator());
+      server.addPanelCreator(new MultiPersistencePanelCreator(timer, new String[] {"Immutable", "Mutable", "Pending", "Delivered"},
+                                                              new StorageManagerImpl[] {immutableStorage, mutableStorage, pendingStorage, deliveredStorage}));
       server.addPanelCreator(new MultiPASTPanelCreator(timer, new String[] {"Immutable", "Mutable", "Pending", "Delivered"},
                                                        new PastImpl[] {(PastImpl) realImmutablePast, (PastImpl) mutablePast, pendingPast, deliveredPast}));
       server.addPanelCreator(new GCPanelCreator(timer, realImmutablePast));
@@ -93,6 +97,44 @@ public class VisualizationEmailProxy extends EmailProxy {
         }
       } catch (Exception e) {
         System.err.println("ERROR: Unable to launch Visualization server - continuing - " + e);
+      }
+      
+      
+      if (globalNode != null) {
+        DistPastryNode gpastry = (DistPastryNode) ((MultiringNode) globalNode).getNode();
+        int globalVisualizationPort = ((DistNodeHandle) gpastry.getLocalHandle()).getAddress().getPort() + Visualization.PORT_OFFSET;
+
+        stepStart("Creating Global Visualization Server");
+        try {
+          this.globalServerAddress = new InetSocketAddress(InetAddress.getLocalHost(), globalVisualizationPort);
+        } catch (IOException e) {
+          stepDone(FAILURE, e + "");
+        }
+        
+        globalServer = new VisualizationServer(globalServerAddress, gpastry, null, new Object[] {gpastry});
+        globalServer.addPanelCreator(new OverviewPanelCreator(timer));
+        NetworkActivityPanelCreator gnetwork = new NetworkActivityPanelCreator(timer);
+        globalServer.addPanelCreator(gnetwork);
+        MessageDistributionPanelCreator gmessage = new MessageDistributionPanelCreator();
+        globalServer.addPanelCreator(gmessage);
+        RecentMessagesPanelCreator grecent = new RecentMessagesPanelCreator();
+        globalServer.addPanelCreator(grecent);
+        globalServer.addPanelCreator(new PastryPanelCreator());
+        
+        gpastry.addNetworkListener(gnetwork);
+        gpastry.addNetworkListener(grecent);
+        gpastry.addNetworkListener(gmessage);
+        stepDone(SUCCESS);
+        
+        try {
+          stepStart("Starting Global Visualization Server on port " + globalVisualizationPort);
+          Thread t = new Thread(globalServer, "Global Visualization Server Thread");
+          t.start();
+          stepDone(SUCCESS);
+        } catch (Exception e) {
+          System.err.println("ERROR: Unable to launch Visualization server - continuing - " + e);
+          stepDone(FAILURE);
+        }
       }
     }
     

@@ -1,5 +1,6 @@
 package rice.visualization.server;
 
+import rice.*;
 import rice.visualization.data.*;
 import rice.pastry.*;
 import rice.p2p.past.*;
@@ -16,9 +17,8 @@ public class PASTPanelCreator implements PanelCreator {
   public static int NUM_DATA_POINTS = 600;
   public static int UPDATE_TIME = 1000;
   
-  Vector data = new Vector();
-  Vector cache = new Vector();
   Vector times = new Vector();
+  Vector outstanding = new Vector();
   Vector inserts = new Vector();
   Vector lookups = new Vector();
   Vector fetchHandles = new Vector();
@@ -41,25 +41,20 @@ public class PASTPanelCreator implements PanelCreator {
   public DataPanel createPanel(Object[] objects) {
     DataPanel pastPanel = new DataPanel(name + " PAST");
     
-    GridBagConstraints pastCons = new GridBagConstraints();
-    pastCons.gridx = 0;
-    pastCons.gridy = 0;
-    pastCons.fill = GridBagConstraints.HORIZONTAL;
+    GridBagConstraints pastCons2 = new GridBagConstraints();
+    pastCons2.gridx = 0;
+    pastCons2.gridy = 0;
+    pastCons2.fill = GridBagConstraints.HORIZONTAL;
     
-    KeyValueListView pastView = new KeyValueListView(name + " Overview", 380, 200, pastCons);
+    TableView pastView2 = new TableView(name + " Outstanding Messages", 380, 200, pastCons2);
+    pastView2.setSizes(new int[] {350});
+
+    Continuation[] outstanding = past.getOutstandingMessages();
     
-    rice.p2p.commonapi.IdRange prim = past.getEndpoint().range(past.getEndpoint().getLocalNodeHandle(), 0, null, true);
-    rice.p2p.commonapi.IdRange total = past.getEndpoint().range(past.getEndpoint().getLocalNodeHandle(), past.getReplicationFactor(), null, true);
-    pastView.add("Prim. Range", (prim == null ? "All" : prim.getCCWId() + " -> " + prim.getCWId()));
-    pastView.add("Total Range", (total == null ? "All" : total.getCCWId() + " -> " + total.getCWId()));
-    pastView.add("# Keys", past.getStorageManager().getSize() + "");
-    pastView.add("SM", past.getStorageManager().getClass().getName());
-    pastView.add("Storage", past.getStorageManager().getStorage().getClass().getName());
-    pastView.add("Cache", past.getStorageManager().getCache().getClass().getName());
-    pastView.add("Instance", ((PersistentStorage) past.getStorageManager().getStorage()).getName());
-    pastView.add("Size", "" +  past.getStorageManager().getStorage().getTotalSize());
-    
-    pastPanel.addDataView(pastView);
+    for (int i=0; i<outstanding.length; i++)     
+      pastView2.addRow(new String[] {outstanding[i].toString()});
+       
+    pastPanel.addDataView(pastView2);
     
     try {      
       GridBagConstraints dataStorageCons = new GridBagConstraints();
@@ -67,10 +62,9 @@ public class PASTPanelCreator implements PanelCreator {
       dataStorageCons.gridy = 0;
       dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
       
-      LineGraphView dataStorageView = new LineGraphView(name + " Storage Size", 380, 200, dataStorageCons, "Time (sec)", "Data (KB)", true, false);
-      dataStorageView.addSeries("Data Stored", getTimeArray(), getArray(data), Color.blue);
-      dataStorageView.addSeries("Cache Size", getTimeArray(), getArray(cache), Color.orange);
-            
+      LineGraphView dataStorageView = new LineGraphView(name + " Outstanding", 380, 200, dataStorageCons, "Time (sec)", "Outstanding", false, false);
+      dataStorageView.addSeries("Insert", getTimeArray(), getArray(this.outstanding), Color.red);
+      
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
       System.out.println("Exceptoin " + e + " thrown.");
@@ -127,27 +121,25 @@ public class PASTPanelCreator implements PanelCreator {
   
   protected synchronized void updateData() {
     try {
-      data.add(new Double((double) past.getStorageManager().getStorage().getTotalSize()/1000));
-      cache.add(new Double((double) past.getStorageManager().getCache().getTotalSize()/1000));
       times.add(new Long(System.currentTimeMillis()));
       inserts.add(new Double((double) past.inserts));
       lookups.add(new Double((double) past.lookups));
       fetchHandles.add(new Double((double) past.fetchHandles));
       others.add(new Double((double) past.other));
+      outstanding.add(new Double((double) past.getOutstandingMessages().length));
       
       past.inserts = 0;
       past.lookups = 0;
       past.fetchHandles = 0;
       past.other = 0;
       
-      if (data.size() > NUM_DATA_POINTS) {
-        data.removeElementAt(0); 
+      if (inserts.size() > NUM_DATA_POINTS) {
         times.removeElementAt(0);
-        cache.removeElementAt(0);
         inserts.removeElementAt(0);
         lookups.removeElementAt(0);
         fetchHandles.removeElementAt(0);
         others.removeElementAt(0);
+        outstanding.removeElementAt(0);
       }
     } catch (Exception e) {
       System.out.println("Ecception " + e + " thrown.");
