@@ -25,8 +25,9 @@
 package rice.pastry.dist;
 
 import java.net.InetSocketAddress;
-import java.util.Vector;
+import java.util.*;
 
+import rice.*;
 import rice.pastry.ExponentialBackoffScheduledMessage;
 import rice.pastry.NetworkListener;
 import rice.pastry.NodeHandle;
@@ -50,18 +51,15 @@ import sun.misc.SignalHandler;
  */
 
 public abstract class DistPastryNode extends PastryNode {
-
+  
+  // the queue used for processing requests
+  protected ProcessingQueue processingQueue = new ProcessingQueue();
+  
   // Period (in seconds) at which the leafset and routeset maintenance tasks, respectively, are invoked.
   // 0 means never.
-  /**
-   * DESCRIBE THE FIELD
-   */
   protected int leafSetMaintFreq, routeSetMaintFreq;
 
   // timer that supports scheduled messages
-  /**
-   * DESCRIBE THE FIELD
-   */
   protected static final Timer timer = SelectorManager.getSelectorManager().getTimer();//new Timer(true);
   
   // the list of network listeners
@@ -87,6 +85,10 @@ public abstract class DistPastryNode extends PastryNode {
     // uses deamon thread, so it terminates once other threads have terminated
     
     this.listeners = new Vector();
+    
+    this.processingQueue = new ProcessingQueue();
+    ProcessingThread thread = new ProcessingThread(processingQueue);
+    thread.start();
   }
   
   public Timer getTimer() {
@@ -260,6 +262,109 @@ public abstract class DistPastryNode extends PastryNode {
     timer.scheduleAtFixedRate(sm, delay, period);
     return sm;
   }
+  
+  /**
+   * Schedules a job for processing on the dedicated processing thread.  CPU intensive jobs, such
+   * as encryption, erasure encoding, or bloom filter creation should never be done in the context
+   * of the underlying node's thread, and should only be done via this method.  
+   *
+   * @param task The task to run on the processing thread
+   * @param command The command to return the result to once it's done
+   */
+  public void process(Executable task, Continuation command) {
+    processingQueue.enqueue(new ProcessingRequest(task, command));
+  }
+  
+  private static class ProcessingThread extends Thread {
+    ProcessingQueue queue;
+	   
+	   public ProcessingThread(ProcessingQueue queue){
+       super("Dedicated Processing Thread");
+       this.queue = queue;
+	   }
+	   
+	   public void run() {
+       while (true) {
+         ProcessingRequest e = queue.dequeue();
+         
+         System.out.println("COUNT: " + System.currentTimeMillis() + " Starting execution of " + e.r);
+         e.run();
+         System.out.println("COUNT: " + System.currentTimeMillis() + " Done execution of " + e.r);
+       }
+	   }
+  }
+  
+  private static class ProcessingQueue {
+    
+    List q = new LinkedList();
+	  int capacity = -1;
+	  
+	  public ProcessingQueue() {
+	     /* do nothing */
+	  }
+	  
+	  public ProcessingQueue(int capacity) {
+	     this.capacity = capacity;
+	  }
+	  
+	  public synchronized void enqueue(ProcessingRequest request) {
+      if (capacity < 0 || q.size() < capacity) {
+			  q.add(request);
+			  notifyAll();
+		  } else {
+			  request.returnError(new ProcessingQueueOverflowException());
+      }
+	  }
+	  
+	  public synchronized ProcessingRequest dequeue() {
+      while (q.isEmpty()) {
+        try {
+          wait();
+        } catch (InterruptedException e) {
+        }
+      }
+      
+      return (ProcessingRequest) q.remove(0);
+    }
+	}
 
+  private static class ProcessingRequest {
+    Continuation c;
+    Executable r;
+    
+		public ProcessingRequest(Executable r, Continuation c){
+      this.r = r;
+      this.c = c;
+		}
+    
+    public void returnResult(Object o) {
+      c.receiveResult(o); 
+    }
+    
+    public void returnError(Exception e) {
+      c.receiveException(e); 
+    }
+    
+    public void run() {
+      try {
+        final Object result = r.execute();
+        
+        SelectorManager.getSelectorManager().invoke(new Runnable() {
+          public void run() {
+            returnResult(result);
+          }
+        });
+      } catch (final Exception e) {
+        SelectorManager.getSelectorManager().invoke(new Runnable() {
+          public void run() {
+            returnError(e);
+          }
+        });
+      }
+    }
+	}
+  
+  public static class ProcessingQueueOverflowException extends Exception {
+  }
 }
 

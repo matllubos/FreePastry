@@ -38,19 +38,13 @@ package rice.pastry.commonapi;
 
 import java.security.InvalidParameterException;
 
+import rice.*;
 import rice.p2p.commonapi.*;
-import rice.p2p.commonapi.Application;
-import rice.p2p.commonapi.Endpoint;
-import rice.p2p.commonapi.Id;
-import rice.p2p.commonapi.IdRange;
-import rice.p2p.commonapi.Message;
-import rice.p2p.commonapi.NodeHandle;
-import rice.p2p.commonapi.NodeHandleSet;
-import rice.p2p.commonapi.RouteMessage;
 import rice.pastry.Log;
 import rice.pastry.NodeId;
 import rice.pastry.PastryNode;
 import rice.pastry.client.PastryAppl;
+import rice.pastry.dist.*;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.routing.SendOptions;
 import rice.pastry.security.Credentials;
@@ -377,6 +371,18 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
       // was sent with a PastryAppl.routeMsgDirect(); we deliver it for backward compatibility
       messageForAppl(msg);
     }
+  }
+  
+  /**
+   * Schedules a job for processing on the dedicated processing thread.  CPU intensive jobs, such
+   * as encryption, erasure encoding, or bloom filter creation should never be done in the context
+   * of the underlying node's thread, and should only be done via this method.  
+   *
+   * @param task The task to run on the processing thread
+   * @param command The command to return the result to once it's done
+   */
+  public void process(Executable task, Continuation command) {
+    ((DistPastryNode) thePastryNode).process(task, command);
   }
   
   /**
