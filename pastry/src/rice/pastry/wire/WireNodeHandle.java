@@ -533,6 +533,30 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
       }
 
       state = STATE_USING_UDP;
+
+      // reroute messages
+      Iterator i = writer.getQueue().iterator();
+
+      while (i.hasNext()) {
+        Object msg = i.next();
+
+        if (msg instanceof SocketTransportMessage) {
+          SocketTransportMessage smsg = (SocketTransportMessage) msg;
+
+          // if it's a routeMessage, reroute it
+          if (smsg.getObject() instanceof RouteMessage) {
+            RouteMessage rmsg = (RouteMessage) smsg.getObject();
+            rmsg.nextHop = null;
+            getLocalNode().receiveMessage(rmsg);
+
+            debug("Rerouted message " + rmsg);
+          } else {
+            debug("Dropped message " + smsg + " on floor.");
+          }
+        } else {
+          debug("Dropped message " + msg + " on floor.");
+        }
+      }
     } catch (IOException e) {
       System.out.println("IOException " + e + " disconnecting from remote node " + address);
       markDead();

@@ -141,13 +141,6 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
   public PastryNode newNode(final NodeHandle bootstrap) {
     NodeId nodeId = nidFactory.generateNodeId();
 
-    // HACKED TO MAKE TEST HARNESS WORK
-    //
-    // DO NOT CHECK IN OR USE!
-    //if (bootstrap == null) {
-    //  nodeId = new NodeId(new byte[NodeId.nodeIdBitLength]);
-    //}
-
     final WirePastryNode pn = new WirePastryNode(nodeId);
 
     SelectorManager sManager = new SelectorManager(pn);

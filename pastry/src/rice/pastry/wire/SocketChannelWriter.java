@@ -118,6 +118,15 @@ public class SocketChannelWriter {
   }
 
   /**
+   * Returns the queue of writes for the remote address
+   *
+   * @return the queue of writes for the remote address
+   */
+  public LinkedList getQueue() {
+    return queue;
+  }
+
+  /**
    * Resets the SocketChannelWriter, by clearing both the buffer and the queue.
    * Should not be used except when a socket has just been opened.
    */
