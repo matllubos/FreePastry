@@ -328,10 +328,14 @@ public class GCPastImpl extends PastImpl implements GCPast {
       } else if (msg instanceof GCRefreshMessage) {
         final GCRefreshMessage rmsg = (GCRefreshMessage) msg;        
         final Iterator i = rmsg.getKeys().getIterator();
+        final Vector result = new Vector();
         other += rmsg.getKeys().numElements();
         
         StandardContinuation process = new StandardContinuation(getResponseContinuation(msg)) {
           public void receiveResult(Object o) {
+            if (o != null)
+              result.addElement(o);
+            
             if (i.hasNext()) {
               final GCId id = (GCId) i.next();
 
@@ -349,10 +353,30 @@ public class GCPastImpl extends PastImpl implements GCPast {
                   });
                 }
               } else {
-                receiveResult(Boolean.TRUE);
+                /* but first check and see if it's in the trash, so we can uncollect it */
+                if (trash != null) {
+                  trash.getObject(id.getId(), new StandardContinuation(this) {
+                    public void receiveResult(Object o) {
+                      if ((o != null) && (o instanceof GCPastContent)) {
+                        System.out.println("GCREFRESH: Restoring object " + id + " from trash!");
+                        GCPastContent content = (GCPastContent) o;
+                        
+                        storage.store(id.getId(), content.getMetadata(id.getExpiration()), content, new StandardContinuation(parent) {
+                          public void receiveResult(Object o) {
+                            trash.unstore(id.getId(), parent);
+                          }
+                        });
+                      } else {
+                        parent.receiveResult(Boolean.FALSE);
+                      }
+                    }
+                  });
+                } else {
+                  receiveResult(Boolean.FALSE);
+                }
               }
             } else {
-              parent.receiveResult(Boolean.TRUE);
+              parent.receiveResult(result.toArray(new Boolean[0]));
             }
           }
         };

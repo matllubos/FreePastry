@@ -26,4 +26,6 @@ public class QuitCommand
                 " Service closing transmission channel");
         conn.quit();
     }
+  
+  public boolean authenticationRequired() { return false; }
 }

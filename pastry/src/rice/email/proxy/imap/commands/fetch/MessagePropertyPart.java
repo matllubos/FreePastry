@@ -381,6 +381,7 @@ public class MessagePropertyPart extends FetchPart {
         throw new MailboxException(e);
       }
     }
+    
     private String getHeader(InternetHeaders headers, String header) throws MailboxException {
       return getHeader(headers, header, true);
     }

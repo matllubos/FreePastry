@@ -34,6 +34,7 @@ public class MovingMessage
     Resource _content;
     int _references = 0;
     Email email;
+    PrintWriter dataWriter;
 
     public MovingMessage(Workspace workspace)
     {
@@ -130,7 +131,7 @@ public class MovingMessage
     public void readDotTerminatedContent(SmtpConnection conn) throws IOException {
       _content = _workspace.getTmpFile();
       Writer data = _content.getWriter();
-      PrintWriter dataWriter = new PrintWriter(data);
+      dataWriter = new PrintWriter(data);
       
       while (true) {
         String line = conn.readLine();
@@ -146,6 +147,29 @@ public class MovingMessage
         } else {
           dataWriter.println(line);
         }
+      }
+    }
+    
+    public boolean readDotTerminatedContent(String line) throws IOException {
+      if (_content == null) {
+        _content = _workspace.getTmpFile();
+        dataWriter = new PrintWriter(_content.getWriter());
+      }
+      
+      if (line == null) {
+        System.out.println("Did not receive <CRLF>.<CRLF> - Accepting anyway...");
+        dataWriter.close();
+        return true;
+      }
+        
+      if (".\r\n".equals(line) || line.endsWith("\r\n.\r\n")) {
+        dataWriter.print(line.substring(0, line.length() - 3));
+        
+        dataWriter.close();
+        return true;
+      } else {
+        dataWriter.print(line);
+        return false;
       }
     }
 }

@@ -72,7 +72,7 @@ public class StorageService {
   /**
    * Lifetime of log head backups
    */
-  private long BACKUP_LIFETIME = 1000 * 60 * 60 * 24;
+  private long BACKUP_LIFETIME = 1000 * 60 * 60 * 24 * 7;
   
   /**
    * Contructs a StorageService given a PAST to run on top of.
@@ -249,7 +249,11 @@ public class StorageService {
         ids[i] = references[i].getLocation();
       
       System.out.println("CALLING REFERSH WITH " + ids.length + " OBJECTS!");
-      ((GCPast) immutablePast).refresh(ids, getTimeout(), command);
+      ((GCPast) immutablePast).refresh(ids, getTimeout(), new StandardContinuation(command) {
+        public void receiveResult(Object o) {
+          parent.receiveResult(Boolean.TRUE);
+        }
+      });
     } else {
       command.receiveResult(Boolean.TRUE);
     }
@@ -264,14 +268,7 @@ public class StorageService {
    */
   public void backupLogs(final PostLog log, final Log[] logs, Continuation command) {
     long time = ((long) System.currentTimeMillis() / PostImpl.BACKUP_INTERVAL) * PostImpl.BACKUP_INTERVAL;
-    storeSigned(new GroupData(logs), log.getLocation(), time, System.currentTimeMillis() + BACKUP_LIFETIME, keyPair, immutablePast, new StandardContinuation(command) {
-      public void receiveResult(Object o) {
-        if (immutablePast instanceof Aggregation) 
-          ((Aggregation) immutablePast).flush(parent);
-        else
-          parent.receiveResult(o);
-      }
-    });
+    storeSigned(new GroupData(logs), log.getLocation(), time, System.currentTimeMillis() + BACKUP_LIFETIME, keyPair, immutablePast, command);
   }
   
   /**
@@ -347,9 +344,17 @@ public class StorageService {
    *
    * @param log The log to set the aggregate in
    */
-  public void setAggregate(PostLog log) {
-    if (immutablePast instanceof AggregationImpl) 
-      log.setAggregateHead(((AggregationImpl) immutablePast).getHandle());
+  public void setAggregate(final PostLog log, Continuation command) {
+    if (immutablePast instanceof AggregationImpl) {
+      ((AggregationImpl) immutablePast).flush(new StandardContinuation(command) {
+        public void receiveResult(Object o) {
+          log.setAggregateHead(((AggregationImpl) immutablePast).getHandle());
+          parent.receiveResult(Boolean.TRUE);
+        }
+      });
+    } else {
+      command.receiveResult(Boolean.TRUE);
+    }    
   }
   
   /**

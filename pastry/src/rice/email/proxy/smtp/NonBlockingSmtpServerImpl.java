@@ -5,6 +5,7 @@ import rice.post.*;
 import rice.email.*;
 import rice.email.proxy.smtp.manager.*;
 import rice.email.proxy.util.*;
+import rice.email.proxy.user.*;
 import rice.email.proxy.smtp.commands.*;
 import rice.selector.*;
 
@@ -30,6 +31,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
   boolean acceptNonLocal = false;
   boolean gateway = false;
   boolean quit = false;
+  boolean authenticate = false;
   int port;
 
   SmtpManager manager;
@@ -44,13 +46,17 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
   
   SelectionKey key;
   
+  UserManager userManager;
+  
   int connections = 0;
 
-  public NonBlockingSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal) throws Exception {
+  public NonBlockingSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager) throws Exception {
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
     this.port = port;
+    this.authenticate = authenticate;
     this.email = email;
+    this.userManager = userManager;
     this.manager = new SimpleManager(email, gateway, address);
     this.registry = new SmtpCommandRegistry();
     this.registry.load();
@@ -114,7 +120,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
         Thread thread = new Thread("SMTP Server Thread for " + socket.getInetAddress()) {
           public void run() {
             try {
-              SmtpHandler handler = new SmtpHandler(registry, manager, workspace, NonBlockingSmtpServerImpl.this);
+              SmtpHandler handler = new SmtpHandler(registry, manager, workspace, NonBlockingSmtpServerImpl.this, userManager, authenticate);
               handler.handleConnection(socket);
               
               synchronized (NonBlockingSmtpServerImpl.this) {

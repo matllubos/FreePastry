@@ -10,8 +10,7 @@ import rice.email.proxy.imap.parser.antlr.ImapLineParser;
 
 import rice.email.proxy.user.UserManager;
 
-import rice.email.proxy.util.Quittable;
-import rice.email.proxy.util.Workspace;
+import rice.email.proxy.util.*;
 
 import java.io.IOException;
 
@@ -22,63 +21,43 @@ import java.net.*;
 import java.net.SocketTimeoutException;
 
 
-final class ParserImapHandler
-    implements Quittable
-{
+final class ParserImapHandler implements Quittable {
+  
     ImapConnection conn;
     boolean quitting;
     String currentLine;
     ImapState state;
     ImapLineParser cmdParser;
 
-    public ParserImapHandler(UserManager manager, Workspace workspace)
-    {
+    public ParserImapHandler(UserManager manager, Workspace workspace) {
         state = new ImapState(manager, workspace);
     }
 
-    public void handleConnection(final Socket socket)
-                          throws IOException
-    {
+    public void handleConnection(final Socket socket) throws IOException {
         conn = new ImapConnection(this, socket);
-
         cmdParser = new ImapLineParser();
 
-        try
-        {
+        try {
             quitting = false;
 
             sendGreetings();
 
-            while (!quitting)
-            {
+            while (!quitting) 
                 handleCommand();
-            }
 
             conn.close();
-        }
-        catch (SocketTimeoutException ste)
-        {
+        } catch (SocketTimeoutException ste) {
             conn.println("* BYE Autologout; idle for too long");
-
-        }
-        catch (TokenStreamIOException tsioe)
-        {
+        } catch (TokenStreamIOException tsioe) {
             conn.println("* BYE Autologout; idle for too long");
-
-        }
-        catch (final Exception e)
-        {
+        } catch (DisconnectedException de) {
+        } catch (final Exception e) {
           e.printStackTrace();
-        }
-        finally
-        {
-            try
-            {
+        } finally {
+            try {
                 conn.close();
-            }
-            catch (final IOException ioe)
-            {
-
+            } catch (final IOException ioe) {
+              System.out.println("PANIC: Got error " + ioe + " while closing connection!");
             }
         }
 
@@ -95,9 +74,7 @@ final class ParserImapHandler
       } 
     }
 
-    protected void handleCommand()
-                          throws IOException, TokenStreamException
-    {
+    protected void handleCommand() throws IOException, TokenStreamException {
         String line = conn.readLine();
         AbstractImapCommand cmd = cmdParser.parseCommand(line);
 
@@ -112,19 +89,15 @@ final class ParserImapHandler
 
         cmd.setConn(conn);
         cmd.setState(state);
-        try
-        {
+        try {
             cmd.execute();
-        }
-        catch (RuntimeException re)
-        {
-            conn.println(cmd.getTag() + " NO internal error");
+        } catch (RuntimeException re) {
+          conn.println(cmd.getTag() + " NO internal error " + re);
           re.printStackTrace();
         }
     }
 
-    public void quit()
-    {
+    public void quit() {
         quitting = true;
     }
 }

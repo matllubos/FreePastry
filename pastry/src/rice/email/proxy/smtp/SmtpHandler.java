@@ -3,6 +3,7 @@ package rice.email.proxy.smtp;
 import rice.email.proxy.smtp.commands.*;
 import rice.email.proxy.smtp.manager.*;
 import rice.email.proxy.util.*;
+import rice.email.proxy.user.*;
 
 import java.io.IOException;
 
@@ -15,6 +16,7 @@ class SmtpHandler {
   SmtpManager _manager;
   Workspace _workspace;
   SmtpServer _server;
+  UserManager _userManager;
 
   // session stuff
   SmtpConnection _conn;
@@ -23,17 +25,20 @@ class SmtpHandler {
   // command parsing stuff
   boolean _quitting;
   String _currentLine;
+  boolean authenticate;
 
-  public SmtpHandler(SmtpCommandRegistry registry, SmtpManager manager, Workspace workspace, SmtpServer server) {
+  public SmtpHandler(SmtpCommandRegistry registry, SmtpManager manager, Workspace workspace, SmtpServer server, UserManager userManager, boolean authenticate) {
     _registry = registry;
     _manager = manager;
     _workspace = workspace;
     _server = server;
+    _userManager = userManager;
+    this.authenticate = authenticate;
   }
 
   public void handleConnection(Socket socket) throws IOException {
     _conn = new SmtpConnection(this, socket, _server);
-    _state = new SmtpState(_workspace);
+    _state = new SmtpState(_workspace, _userManager);
 
     try {
       _quitting = false;
@@ -80,7 +85,12 @@ class SmtpHandler {
       _conn.println("500 Command not recognized");
       return;
     }
-
+    
+    if (authenticate && (_state.getUser() == null) && command.authenticationRequired()) {
+      _conn.println("530 Authentication required");
+      return;
+    }
+    
     command.execute(_conn, _state, _manager, _currentLine);
   }
 

@@ -21,6 +21,9 @@ import rice.email.proxy.smtp.manager.SmtpManager;
 public class HeloCommand
     extends SmtpCommand
 {
+  
+  public boolean authenticationRequired() { return false; }
+  
     public void execute(SmtpConnection conn, SmtpState state, 
                         SmtpManager manager, String commandLine)
     {
@@ -29,7 +32,7 @@ public class HeloCommand
         conn.println("250 " + conn.getServerGreetingsName() + " Hello " + conn.getHeloName() + ", pleased to meet you");
     }
 
-    private void extractHeloName(SmtpConnection conn, 
+    protected void extractHeloName(SmtpConnection conn, 
                                  String commandLine)
     {
         String heloName;

@@ -5,6 +5,7 @@ import rice.post.*;
 import rice.email.*;
 import rice.email.proxy.smtp.manager.*;
 import rice.email.proxy.util.*;
+import rice.email.proxy.user.*;
 import rice.email.proxy.smtp.commands.*;
 
 import java.io.*;
@@ -25,6 +26,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
   boolean acceptNonLocal = false;
   boolean gateway = false;
   boolean quit = false;
+  boolean authenticate = false;
   int port;
   ServerSocket server;
 
@@ -35,13 +37,17 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
   Workspace workspace;
 
   EmailService email;
+  
+  UserManager userManager;
 
-  public SmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal) throws Exception {
+  public SmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager) throws Exception {
     super("SMTP Server Thread");
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
     this.port = port;
+    this.authenticate = authenticate;
     this.email = email;
+    this.userManager = userManager;
     this.manager = new SimpleManager(email, gateway, address);
     this.registry = new SmtpCommandRegistry();
     this.registry.load();
@@ -71,7 +77,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
           Thread thread = new Thread("SMTP Server Thread for " + socket.getInetAddress()) {
             public void run() {
               try {
-                SmtpHandler handler = new SmtpHandler(registry, manager, workspace, SmtpServerImpl.this);
+                SmtpHandler handler = new SmtpHandler(registry, manager, workspace, SmtpServerImpl.this, userManager, authenticate);
                 handler.handleConnection(socket);
                 socket.close();
               } catch (IOException e) {

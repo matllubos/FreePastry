@@ -39,6 +39,8 @@ import java.util.zip.*;
 import java.io.*;
 import java.net.*;
 import java.security.*;
+import javax.swing.*;
+import java.awt.*;
 
 /**
  * This class starts up everything on the Pastry side, and then
@@ -218,6 +220,11 @@ public class PostProxy {
   
   protected RemoteProxy remoteProxy;
   
+  /**
+   * The dialog showing the post status to users
+   */
+  protected PostDialog dialog;
+  
   protected static void initializeParameters(Parameters result, String[][] parameters) {    
     for (int i=0; i<parameters.length; i++)
       result.registerStringParameter(parameters[i][0], parameters[i][1]);
@@ -254,6 +261,7 @@ public class PostProxy {
   {"post_log_clone_enable", "false"}, 
   {"post_log_clone_username", ""},
   {"post_allow_log_insert", "false"}, 
+  {"post_allow_log_insert_reset", "true"},
   {"post_emergency_recover_logs", "false"},
   {"post_force_log_reinsert", "false"}, 
   {"post_fetch_log", "true"}, 
@@ -280,8 +288,21 @@ public class PostProxy {
   {"aggregation_min_objects_per_aggregate", "20"},
   {"aggregation_min_aggregate_utilization", "0.8"},
   {"past_replication_factor", "3"},
-  {"application_instance_name", "PostProxy"}
+  {"application_instance_name", "PostProxy"},
+  {"proxy_show_dialog", "false"}
   };
+  
+  /**
+   * Method which sees if we are going to use a proxy for the pastry node, and if so
+   * initiates the remote connection.
+   *
+   * @param parameters The parameters to use
+   */
+  protected void startDialog(Parameters parameters) throws Exception {
+    if (parameters.getBooleanParameter("proxy_show_dialog")) {
+      dialog = new PostDialog(); 
+    }
+  }
 
   /**
    * Method which sees if we are going to use a proxy for the pastry node, and if so
@@ -320,17 +341,23 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startRedirection(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("standard_output_redirect_enable")) {
-      stepStart("Redirecting Standard Output");
-      System.setOut(new PrintStream(new FileOutputStream(parameters.getStringParameter("standard_output_redirect_filename"), 
-                                                         parameters.getBooleanParameter("standard_output_redirect_append"))));
-      stepDone(SUCCESS);
-    }
+    try {
+      if (parameters.getBooleanParameter("standard_output_redirect_enable")) {
+        stepStart("Redirecting Standard Output");
+        System.setOut(new PrintStream(new FileOutputStream(parameters.getStringParameter("standard_output_redirect_filename"), 
+                                                           parameters.getBooleanParameter("standard_output_redirect_append"))));
+        stepDone(SUCCESS);
+      }
     
-    if (parameters.getBooleanParameter("standard_error_redirect_enable")) {
-      stepStart("Redirecting Standard Error");
-      System.setErr(System.out);
-      stepDone(SUCCESS);
+      if (parameters.getBooleanParameter("standard_error_redirect_enable")) {
+        stepStart("Redirecting Standard Error");
+        System.setErr(System.out);
+        stepDone(SUCCESS);
+      }
+    } catch (IOException ioe) {
+      panic(ioe, 
+            "There was an error writing to the file " + parameters.getStringParameter("standard_output_redirect_filename") + ".",
+            "standard_output_redirect_filename");
     }
   }
   
@@ -340,16 +367,20 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startShutdownHooks(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("shutdown_hooks_enable")) {
-      stepStart("Installing Shutdown Hooks");
-      Runtime.getRuntime().addShutdownHook(new Thread() {
-        public void run() {
-          int num = Thread.currentThread().getThreadGroup().activeCount();
-          System.out.println("ePOST System shutting down with " + num + " active threads");
-        }
-      });
-      stepDone(SUCCESS);
-    }    
+    try {
+      if (parameters.getBooleanParameter("shutdown_hooks_enable")) {
+        stepStart("Installing Shutdown Hooks");
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+          public void run() {
+            int num = Thread.currentThread().getThreadGroup().activeCount();
+            System.out.println("ePOST System shutting down with " + num + " active threads");
+          }
+        });
+        stepDone(SUCCESS);
+      }    
+    } catch (Exception e) {
+      panic(e, "There was an error installing the shutdown hooks.", "shutdown_hooks_enable");
+    }
   }
   
   /**
@@ -358,23 +389,27 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startSecurityManager(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("security_manager_install")) {
-      stepStart("Installing Custom System Security Manager");
-      System.setSecurityManager(new SecurityManager() {
-        public void checkPermission(java.security.Permission perm) {}
-        public void checkDelete(String file) {}
-        public void checkRead(FileDescriptor fd) {}
-        public void checkRead(String file) {}
-        public void checkRead(String file, Object context) {}
-        public void checkWrite(FileDescriptor fd) {}
-        public void checkWrite(String file) {}
-        public void checkExit(int status) {
-          System.out.println("System.exit() called with status " + status + " - dumping stack!");
-          Thread.dumpStack();
-          super.checkExit(status);
-        }
-      }); 
-      stepDone(SUCCESS);
+    try {
+      if (parameters.getBooleanParameter("security_manager_install")) {
+        stepStart("Installing Custom System Security Manager");
+        System.setSecurityManager(new SecurityManager() {
+          public void checkPermission(java.security.Permission perm) {}
+          public void checkDelete(String file) {}
+          public void checkRead(FileDescriptor fd) {}
+          public void checkRead(String file) {}
+          public void checkRead(String file, Object context) {}
+          public void checkWrite(FileDescriptor fd) {}
+          public void checkWrite(String file) {}
+          public void checkExit(int status) {
+            System.out.println("System.exit() called with status " + status + " - dumping stack!");
+            Thread.dumpStack();
+            super.checkExit(status);
+          }
+        }); 
+        stepDone(SUCCESS);
+      }
+    } catch (Exception e) {
+      panic(e, "There was an error setting the SecurityManager.", "security_manager_install");
     }
   }
   
@@ -387,17 +422,61 @@ public class PostProxy {
     stepStart("Retrieving CA public key");
     InputStream fis = null;
     
-    if (parameters.getBooleanParameter("post_ca_key_is_file")) 
-      fis = new FileInputStream(parameters.getStringParameter("post_ca_key_name"));
-    else 
-      fis = ClassLoader.getSystemResource("ca.publickey").openStream();
+    if (parameters.getBooleanParameter("post_ca_key_is_file")) {
+      try {
+        fis = new FileInputStream(parameters.getStringParameter("post_ca_key_name"));
+      } catch (Exception e) {
+        panic(e, "There was an error locating the certificate authority's public key.", new String[] {"post_ca_key_is_file", "post_ca_key_name"});
+      }
+    } else {
+      try {
+        fis = ClassLoader.getSystemResource("ca.publickey").openStream();
+      } catch (Exception e) {
+        panic(e, "There was an error locating the certificate authority's public key.", "post_ca_key_is_file");
+      }
+    }
     
-    
-    ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
-    caPublic = (PublicKey) ois.readObject();
-    ois.close();
-    stepDone(SUCCESS);
+    try {
+      ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
+      caPublic = (PublicKey) ois.readObject();
+      ois.close();
+      stepDone(SUCCESS);
+    } catch (Exception e) {
+      panic(e, "There was an error reading the certificate authority's public key.", new String[] {"post_ca_key_is_file", "post_ca_key_name"});
+    }
   }
+  
+  /**
+   * Method which updates the user certificate from userid.certificate and userid.keypair.enc
+   * to userid.epost.
+   *
+   * @param parameters The parameters to use
+   */
+  protected void startUpdateUser(Parameters parameters) throws Exception {
+    String[] files = (new File(".")).list(new FilenameFilter() {
+      public boolean accept(File dir, String name) {
+        return name.endsWith(".certificate");
+      }
+    });
+    
+    for (int i=0; i<files.length; i++) {
+      String username = files[i].substring(0, files[i].indexOf("."));
+    
+      File certificate = new File(username + ".certificate");
+      File keypair = new File(username + ".keypair.enc");
+      
+      if (keypair.exists()) {
+        stepStart("Updating " + certificate + " and " + keypair + " to " + username + ".epost");
+
+        CACertificateGenerator.updateFile(certificate, keypair, new File(username + ".epost"));
+        certificate.delete();
+        keypair.delete();
+        
+        stepDone(SUCCESS);
+      }
+    }
+  }
+    
   
   /**
    * Method which determines the username which POST should run with
@@ -405,22 +484,25 @@ public class PostProxy {
    * @param parameters The parameters to use
    */
   protected void startRetrieveUsername(Parameters parameters) throws Exception {
-    if (parameters.getStringParameter("post_username") == null) {
+    if ((parameters.getStringParameter("post_username") == null) || (parameters.getStringParameter("post_username").equals(""))) {
       stepStart("Determining Local Username");
       String[] files = (new File(".")).list(new FilenameFilter() {
         public boolean accept(File dir, String name) {
-          return name.endsWith(".certificate");
+          return name.endsWith(".epost");
         }
       });
     
       if (files.length > 1) {
-        stepDone(FAILURE, "ERROR: Expected at most one certificate, found " + files.length);
+        panic("POST could not determine which username to run with - \n" + files.length + " certificates were found in the root directory.\n" +
+              "Please remove all but the one which you want to run POST with.");
         System.exit(-13);
       } else if (files.length == 0) {
-        stepDone(FAILURE, "ERROR: Did not find any certificates, make sure you have a valid user certificate");
+        panic("POST could not determine which username to run with - \nno certificates were found in the root directory.\n" +
+              "Please place the userid.epost file you want to run POST \nwith in the root directory.");
         System.exit(-12);
       } else {
         parameters.registerStringParameter("post_username", files[0].substring(0, files[0].indexOf(".")));
+        stepDone(SUCCESS);
       } 
     }
   }
@@ -432,23 +514,26 @@ public class PostProxy {
    */  
   protected void startRetrieveUserCertificate(Parameters parameters) throws Exception {
     stepStart("Retrieving " + parameters.getStringParameter("post_username") + "'s certificate");
-    File file = new File(parameters.getStringParameter("post_username") + ".certificate");
+    File file = new File(parameters.getStringParameter("post_username") + ".epost");
 
-    if (! file.exists()) {
-      stepDone(FAILURE, "ERROR: Could not find certificate for user " + parameters.getStringParameter("post_username"));
-      System.exit(-11);
+    if (! file.exists()) 
+      panic("POST could not find the certificate file for the user '" + parameters.getStringParameter("post_username") + "'.\n" +
+            "Please place the file '" + parameters.getStringParameter("post_username") + ".epost' in the root directory.");
+    
+    try {
+      certificate = CACertificateGenerator.readCertificate(file);
+    
+      if (ringId == null) 
+        ringId = ((RingId) certificate.getAddress().getAddress()).getRingId();
+      
+      Id id = rice.pastry.Id.build(new int[] {-483279260, -1929711158, 1739364733, 601172903, 834666663});
+        
+      System.out.println("Read in " + certificate.getAddress().getAddress() + ", " + id);
+    
+      stepDone(SUCCESS);
+    } catch (Exception e) {
+      panic(e, "There was an error reading the file '" + parameters.getStringParameter("post_username") + ".certificate'.", new String[] {"post_username"});
     }
-    
-    InputStream fis = new FileInputStream(file);
-    ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
-    
-    certificate = (PostCertificate) ois.readObject();
-    
-    if (ringId == null) 
-      ringId = ((RingId) certificate.getAddress().getAddress()).getRingId();
-    
-    ois.close();
-    stepDone(SUCCESS);
   }
   
   /**
@@ -465,30 +550,13 @@ public class PostProxy {
       e.sleep();
       
       if (e.exceptionThrown())
-        throw e.getException();
+        panic(e.getException(), "Certificate for user " + parameters.getStringParameter("post_username") + " could not be verified.", new String[] {"post_username"});
       
-      if (! ((Boolean) e.getResult()).booleanValue()) {
-        System.out.println("Certificate for user " + parameters.getStringParameter("post_username") + " could not be verified.");
-        System.exit(-16);
-      }
+      if (! ((Boolean) e.getResult()).booleanValue()) 
+        panic("Certificate for user " + parameters.getStringParameter("post_username") + " could not be verified.");
       
       stepDone(SUCCESS);
     }    
-  }
-
-  /**
-   * Method which decrypt's the user's keypair
-   *
-   * @param parameters The parameters to use
-   * @param cipher The ciphertext
-   * @param pass The password user to encrypt the ciphertext
-   * @return The decrypted keypair
-   */
-  protected KeyPair decryptUserKey(Parameters parameters, byte[] cipher, byte[] pass) throws Exception {
-    byte[] key = SecurityUtils.hash(pass);
-    byte[] data = SecurityUtils.decryptSymmetric(cipher, key);
-    
-    return (KeyPair) SecurityUtils.deserialize(data);
   }
   
   /**
@@ -498,29 +566,19 @@ public class PostProxy {
    */  
   protected void startRetrieveUserKey(Parameters parameters) throws Exception {
     stepStart("Retrieving " + parameters.getStringParameter("post_username") + "'s encrypted keypair");
-    File file = new File(parameters.getStringParameter("post_username") + ".keypair.enc");
+    File file = new File(parameters.getStringParameter("post_username") + ".epost");
     
-    if (! file.exists()) {
-      stepDone(FAILURE, "ERROR: Could not find keypair for user " + parameters.getStringParameter("post_username"));
-      System.exit(-11);
-    }
+    if (! file.exists()) 
+      panic("ERROR: ePOST could not find the keypair for user " + parameters.getStringParameter("post_username"));
     
-    InputStream fis = new FileInputStream(file);  
-    ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
-    byte[] cipher = (byte[]) ois.readObject();
-    ois.close();
-    stepDone(SUCCESS);
-    
-    if (parameters.getStringParameter("post_password") == null) 
+    if ((parameters.getStringParameter("post_password") == null) || (parameters.getStringParameter("post_password").equals("")))
       parameters.registerStringParameter("post_password", CAKeyGenerator.fetchPassword(parameters.getStringParameter("post_username") + "'s password"));
     
     try {
-      stepStart("Decrypting " + parameters.getStringParameter("post_username") + "'s keypair");
-      pair = decryptUserKey(parameters, cipher, parameters.getStringParameter("post_password").getBytes());
+      pair = CACertificateGenerator.readKeyPair(file, parameters.getStringParameter("post_password"));
       stepDone(SUCCESS);
     } catch (SecurityException e) {
-      stepDone(FAILURE, "Incorrect password.  Please try again.");
-      System.exit(-19);
+      panic(e, "The password for the certificate was incorrect - please try again.", new String[] {"post_password"});
     }
   }
   
@@ -532,10 +590,9 @@ public class PostProxy {
   protected void startVerifyUserKey(Parameters parameters) throws Exception {
     if (parameters.getBooleanParameter("post_keypair_verification_enable")) {
       stepStart("Verifying " + parameters.getStringParameter("post_username") + "'s keypair");
-      if (! pair.getPublic().equals(certificate.getKey())) {
-        stepDone(FAILURE, "Keypair for user " + parameters.getStringParameter("post_username") + " did not match certificate.");
-        System.exit(-17);
-      }
+      if (! pair.getPublic().equals(certificate.getKey())) 
+        panic("Keypair for user " + parameters.getStringParameter("post_username") + " did not match certificate.");
+
       stepDone(SUCCESS);
     }
   }
@@ -560,6 +617,7 @@ public class PostProxy {
    */  
   protected void startRetrieveUser(Parameters parameters) throws Exception {
     if (parameters.getBooleanParameter("post_proxy_enable")) {
+      startUpdateUser(parameters);
       startRetrieveUsername(parameters);
       startRetrieveUserCertificate(parameters);
       startVerifyUserCertificate(parameters);
@@ -942,6 +1000,11 @@ public class PostProxy {
                         parameters.getLongParameter("post_synchronize_interval"),
                         parameters.getLongParameter("post_object_refresh_interval"),
                         parameters.getLongParameter("post_object_timeout_interval"));
+    
+    if (parameters.getBooleanParameter("post_allow_log_insert") && parameters.getBooleanParameter("post_allow_log_insert_reset")) {
+        parameters.setBooleanParameter("post_allow_log_insert", false);
+    }
+        
     stepDone(SUCCESS);
   }
   
@@ -1001,6 +1064,7 @@ public class PostProxy {
   protected Parameters start(Parameters parameters) throws Exception {
     initializeParameters(parameters, DEFAULT_PARAMETERS);
     
+    startDialog(parameters);
     startPastryProxy(parameters);
 
     sectionStart("Initializing Parameters");
@@ -1036,11 +1100,14 @@ public class PostProxy {
   protected void start() {
     try {
       start(new Parameters(PROXY_PARAMETERS_NAME));
+      
+      dialog.append("\n-- Your node is now up and running --\n");
     } catch (Exception e) {
       System.err.println("ERROR: Found Exception while start proxy - exiting - " + e);
+      dialog.append("\n-- ERROR: Found Exception while start proxy - exiting - " + e + " --\n");
       e.printStackTrace();
       System.exit(-1);
-    }    
+    }
   }
 
   /**
@@ -1065,7 +1132,42 @@ public class PostProxy {
     } else {
       name = files[0].substring(0, files[0].indexOf("."));
     }
-          }
+  }
+  
+  /**
+   * Helper method which throws an exception and tells the user a message
+   * why the error occurred.
+   *
+   * @param e The exception
+   * @param m The message why
+   */
+  public void panic(Exception e, String m, String params) throws Exception {
+    panic(e, m, new String[] {params});
+  }
+    
+  public void panic(Exception e, String m, String[] params) throws Exception {
+    StringBuffer message = new StringBuffer();
+    message.append(m + "\n\n");
+    message.append("This was most likely due to the setting ");
+    
+    for (int i=0; i<params.length; i++) {
+      message.append("'" + params[i] + "'");
+      
+      if (i < params.length-1)
+        message.append(" or ");
+    }
+    
+    message.append(" in your proxy.params file.\n\n");
+    message.append(e.getClass().getName() + ": " + e.getMessage());
+    
+    JOptionPane.showMessageDialog(null, message.toString() ,"Error: " + e.getClass().getName(), JOptionPane.ERROR_MESSAGE); 
+    throw e;
+  }
+  
+  public void panic(String m) {
+    JOptionPane.showMessageDialog(null, m, "Error Starting POST Proxy", JOptionPane.ERROR_MESSAGE); 
+    System.exit(-1);
+  }
 
   public static void main(String[] args) {
     PostProxy proxy = new PostProxy();
@@ -1074,23 +1176,30 @@ public class PostProxy {
 
   protected void sectionStart(String name) {
     System.out.println(name);
+    
+    if (dialog != null) dialog.append(name + "\n");
   }
 
   protected void sectionDone() {
     System.out.println();
+    if (dialog != null) dialog.append("\n");
   }
 
   protected void stepStart(String name) {
     System.out.print(pad("  " + name));
+    if (dialog != null) dialog.append(pad("  " + name));
   }
 
   protected void stepDone(String status) {
-    System.out.println("[" + status + "]");
+    System.out.println("[" + status + "]"); 
+    if (dialog != null) dialog.append("[" + status + "]\n");
   }
 
   protected void stepDone(String status, String message) {
     System.out.println("[" + status + "]");
     System.out.println("    " + message);
+    
+    if (dialog != null) dialog.append("[" + status + "]\n" + message + "\n");
   }
 
   protected void stepException(Exception e) {
@@ -1111,6 +1220,55 @@ public class PostProxy {
       Arrays.fill(spaces, '.');
 
       return start.concat(new String(spaces));
+    }
+  }
+  
+  protected class PostDialog extends JFrame {
+    protected JTextArea area;
+    protected JScrollPane scroll;
+    protected JPanel panel;
+    
+    public PostDialog() {
+      panel = new PostPanel();
+      area = new JTextArea(15,75);
+      area.setFont(new Font("Courier", Font.PLAIN, 10));
+      scroll = new JScrollPane(area, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+      
+      GridBagLayout layout = new GridBagLayout();
+      getContentPane().setLayout(layout);
+      
+      GridBagConstraints c = new GridBagConstraints();
+      layout.setConstraints(panel, c);      
+      getContentPane().add(panel);
+      
+      GridBagConstraints d = new GridBagConstraints();
+      d.gridy=1;
+      layout.setConstraints(scroll, d);      
+      getContentPane().add(scroll);
+      
+      pack();
+      show();
+    }
+    
+    public void append(String s) {
+      Dimension dim = area.getPreferredSize();
+      scroll.getViewport().setViewPosition(new Point(0,(int) (dim.getHeight()+20)));
+      area.append(s);
+    }
+  }
+  
+  protected class PostPanel extends JPanel {
+    public Dimension getPreferredSize() {
+      return new Dimension(300,80); 
+    }
+    
+    public void paint(Graphics g) {
+      g.setFont(new Font("Times", Font.BOLD, 24));
+      g.drawString("Welcome to ePOST!", 50, 40);
+      
+      g.setFont(new Font("Times", Font.PLAIN, 12));
+      g.drawString("The status of your node is shown below.", 52, 60);
+      
     }
   }
 }

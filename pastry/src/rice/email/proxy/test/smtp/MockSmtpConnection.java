@@ -22,7 +22,7 @@ public class MockSmtpConnection
         // simulate client input
         PipedReader clientIn     = new PipedReader();
         PipedWriter clientWriter = new PipedWriter(clientIn);
-        in = new StreamTokenizer(clientIn);
+        StreamTokenizer in = new StreamTokenizer(clientIn);
         in.eolIsSignificant(false);
         in.wordChars(1,255);
         in.whitespaceChars(10, 10);
@@ -32,7 +32,7 @@ public class MockSmtpConnection
         PipedReader serverIn     = new PipedReader();
         PipedWriter serverWriter = new PipedWriter(serverIn);
         responseIn               = new BufferedReader(serverIn);
-        out                      = new PrintWriter(serverWriter);
+        PrintWriter out                      = new PrintWriter(serverWriter);
 
         // other stuff
         servAddress = InetAddress.getLocalHost();

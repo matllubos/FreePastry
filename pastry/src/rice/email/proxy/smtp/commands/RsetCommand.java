@@ -23,4 +23,6 @@ public class RsetCommand
         state.clearMessage();
         conn.println("250 OK");
     }
+  
+  public boolean authenticationRequired() { return false; }
 }

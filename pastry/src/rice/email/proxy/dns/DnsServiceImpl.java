@@ -1,5 +1,7 @@
 package rice.email.proxy.dns;
 
+import java.io.*;
+
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
@@ -9,8 +11,12 @@ import javax.naming.directory.InitialDirContext;
 public class DnsServiceImpl implements DnsService {
   DirContext ictx;
 
-  public DnsServiceImpl() throws Exception {
-    ictx = new InitialDirContext();
+  public DnsServiceImpl() throws IOException {
+    try {
+      ictx = new InitialDirContext();
+    } catch (NamingException e) {
+      throw new IOException("Got exception " + e + " while starting DNS server.");
+    }
   }
 
   public String[] lookup(String host) {

@@ -684,13 +684,18 @@ public class Folder {
    * @return the stored Emails
    */
   public void getMessages(final SnapShot snapshot, Continuation command) {
-    System.out.println("GET MESSAGES: " + snapshot + " TOP IS " + snapshot.getTopEntry());
+    System.out.println("GET MESSAGES: " + snapshot + " TOP IS " + (snapshot == null ? null : snapshot.getTopEntry()));
     
     _log.getTopEntry(new StandardContinuation(command) {
       private Vector emails = new Vector();
       private HashSet seen = new HashSet();
       private HashSet deleted = new HashSet();
       private LogEntry top = (snapshot == null ? null : snapshot.getTopEntry());
+
+      protected void insert(StoredEmail[] emails) {
+        for (int i=0; i<emails.length; i++)
+          insert(emails[i]);
+      }
       
       protected void insert(StoredEmail email) {
         Integer uid = new Integer(email.getUID());
@@ -702,6 +707,11 @@ public class Folder {
         }
       }
       
+      protected void delete(StoredEmail[] emails) {
+        for (int i=0; i<emails.length; i++)
+          delete(emails[i]);
+      }
+      
       protected void delete(StoredEmail email) {
         deleted.add(new Integer(email.getUID()));
       }
@@ -710,41 +720,26 @@ public class Folder {
         EmailLogEntry entry = (EmailLogEntry) o;
 
         while (entry != null) {
-       //   System.out.println("GOT ENTRY..." + entry);
-
           if (entry instanceof InsertMailLogEntry) {
             insert(((InsertMailLogEntry) entry).getStoredEmail());
           } else if (entry instanceof InsertMailsLogEntry) {
-            StoredEmail[] inserts = ((InsertMailsLogEntry) entry).getStoredEmails();
-            
-            for (int i=0; i<inserts.length; i++) 
-              insert(inserts[i]);
+            insert(((InsertMailsLogEntry) entry).getStoredEmails());
           } else if (entry instanceof DeleteMailLogEntry) {
             delete(((DeleteMailLogEntry) entry).getStoredEmail());
           } else if (entry instanceof DeleteMailsLogEntry) {
-            StoredEmail[] deletes = ((DeleteMailsLogEntry) entry).getStoredEmails();
-            
-            for (int i=0; i<deletes.length; i++) 
-              delete(deletes[i]);
+            delete(((DeleteMailsLogEntry) entry).getStoredEmails());
           } else if (entry instanceof UpdateMailLogEntry) {
             insert(((UpdateMailLogEntry) entry).getStoredEmail());
           } else if (entry instanceof UpdateMailsLogEntry) {
-            StoredEmail[] updates = ((UpdateMailsLogEntry) entry).getStoredEmails();
-            
-            for (int i=0; i<updates.length; i++) 
-              insert(updates[i]);            
+            insert(((UpdateMailsLogEntry) entry).getStoredEmails());
           } else if (entry instanceof SnapShotLogEntry) {
-            StoredEmail[] rest = ((SnapShotLogEntry) entry).getStoredEmails();
-
-            for (int i = 0; i < rest.length; i++)
-              insert(rest[i]);
+            insert(((SnapShotLogEntry) entry).getStoredEmails());
 
             if (top == null)
               top = ((SnapShotLogEntry) entry).getTopEntry();
             
             // break if there's no recorded top entry: we are done
-            if (top == null)
-              break;
+            if (top == null) break;
           } else {
             // break if we don't recognize this log entry
             break;
@@ -753,12 +748,8 @@ public class Folder {
           // break if we've just processed the top entry
           if ((top != null) && (entry.equals(top))) {
             // if there is a snapshot in the log, add it in
-            if (snapshot != null) {
-              StoredEmail[] rest = snapshot.getStoredEmails();
-              
-              for (int i = 0; i < rest.length; i++)
-                insert(rest[i]);
-            }
+            if (snapshot != null) 
+              insert(snapshot.getStoredEmails());
             
             break;
           }
@@ -770,7 +761,6 @@ public class Folder {
             if (tmp != null) {
               entry = tmp;
             } else {
-        //      System.out.println("GETTING UNCACHED PREVIOUS ENTRY...");
               entry.getPreviousEntry(this);
               return;
             }

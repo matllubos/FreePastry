@@ -12,11 +12,11 @@ public class SmtpCommandRegistry {
   private static Map commands = new HashMap();
   private static Object[][] COMMANDS = new Object[][]
   {
-  {"HELO", new HeloCommand()}, {"EHLO", new HeloCommand()},
+  {"HELO", new HeloCommand()}, {"EHLO", new EhloCommand()},
   {"NOOP", new NoopCommand()}, {"RSET", new RsetCommand()},
   {"QUIT", new QuitCommand()}, {"MAIL", new MailCommand()},
   {"RCPT", new RcptCommand()}, {"DATA", new DataCommand()},
-  {"VRFY", new VrfyCommand()}
+  {"VRFY", new VrfyCommand()}, {"AUTH", new AuthCommand()}
   };
 
   public void load() {

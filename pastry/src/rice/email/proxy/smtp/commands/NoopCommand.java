@@ -22,4 +22,6 @@ public class NoopCommand
     {
         conn.println("250 Is that all?");
     }
+  
+  public boolean authenticationRequired() { return false; }
 }

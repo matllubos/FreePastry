@@ -1,8 +1,6 @@
 package rice.email.proxy.imap;
 
-import rice.email.proxy.util.Quittable;
-import rice.email.proxy.util.SpyInputStream;
-import rice.email.proxy.util.StreamUtils;
+import rice.email.proxy.util.*;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -133,9 +131,7 @@ public class ImapConnection
      * The data written will not be logged
      * </p>
      */
-    public BufferedReader getReader()
-    {
-
+    public BufferedReader getReader() {
         return _in;
     }
 
@@ -146,16 +142,24 @@ public class ImapConnection
      * The only classes with an excuse to use this method at the
      * moment are AppendCommand and ParserImapHandler.
      * </p>
+     *
+     * @throws DisconnectedException If the socket has been disconnected
      */
-    public String readLine()
-                    throws IOException
-    {
+    public String readLine() throws IOException {
         String line = _in.readLine();
 
-        /* more crude debug logging */
-        System.out.println("C: " + line);
+        /* if client has disconnected, make sure socket is closed and throw exception */
+        if (line == null) {
+            System.out.println("C: <disconnected>");
 
-        return line;
+            close();
+            throw new DisconnectedException();
+        } else {
+            /* more crude debug logging */
+            System.out.println("C: " + line);
+
+            return line;
+        }
     }
 
     /**
@@ -164,17 +168,14 @@ public class ImapConnection
      * 
      * @see rice.email.proxy.imap.Quittable#quit()
      */
-    public void quit()
-    {
+    public void quit() {
         _handler.quit();
     }
 
     /**
      * Closes the underlying socket.
      */
-    void close()
-        throws IOException
-    {
+    void close() throws IOException {
         _socket.close();
     }
 
@@ -187,9 +188,7 @@ public class ImapConnection
      * this method may change.
      * </p>
      */
-    public String getClientAddress()
-    {
-
+    public String getClientAddress() {
         return _clientAddress.toString();
     }
 }

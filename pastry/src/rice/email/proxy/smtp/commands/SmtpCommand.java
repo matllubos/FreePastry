@@ -7,6 +7,8 @@ import rice.email.proxy.smtp.SmtpState;
 import rice.email.proxy.smtp.manager.SmtpManager;
 
 public abstract class SmtpCommand {
+  
+  public abstract boolean authenticationRequired();
 
 	public abstract void execute(
 		SmtpConnection conn,

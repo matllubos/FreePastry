@@ -11,6 +11,7 @@ public class MockUserManager
     implements UserManager
 {
     Map users = new HashMap();
+    Map passwords = new HashMap();
     MockMailboxManager manager = new MockMailboxManager();
 
     public void createUser(String name, String service, 
@@ -20,6 +21,7 @@ public class MockUserManager
         User user = new MockUser(name, manager);
         user.create();
         users.put(name, user);
+        passwords.put(name, authData);
     }
 
     public void deleteUser(String name)
@@ -31,7 +33,7 @@ public class MockUserManager
     }
 
     public String getPassword(String name) {
-      return "";
+      return (String) passwords.get(name);
     }
 
     

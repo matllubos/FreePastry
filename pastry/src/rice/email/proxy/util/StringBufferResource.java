@@ -19,6 +19,10 @@ public class StringBufferResource implements Resource {
   public StringBufferResource() {
   }
   
+  public String toString() {
+    return _contentBuffer.toString();
+  }
+  
   public StringBufferResource(String initalValue) {
     _contentBuffer = new StringBuffer(initalValue);
   }

@@ -27,6 +27,7 @@ import rice.post.security.ca.*;
  
 import rice.email.*;
 import rice.email.proxy.smtp.*;
+import rice.email.proxy.web.*;
 import rice.email.proxy.pop3.*;
 import rice.email.proxy.imap.*;
 import rice.email.proxy.user.*;
@@ -60,6 +61,8 @@ public class EmailProxy extends PostProxy {
      
   protected ImapServer imap;
   
+  protected WebServer web;
+  
   protected rice.email.Folder emailFolder;
      
 //  protected WebServer web;
@@ -81,9 +84,10 @@ public class EmailProxy extends PostProxy {
     {"email_smtp_port", "2025"}, 
     {"email_smtp_ssl", "false"},
     {"email_smtp_non_blocking", "true"},
-    {"email_smtp_gateway", "false"}
+    {"email_smtp_gateway", "false"},
+    {"email_webmail_enable", "false"},
+    {"email_webmail_port", "1080"}
   };
-     
      
   /**
    * Method which initializes the mailcap
@@ -174,20 +178,26 @@ public class EmailProxy extends PostProxy {
         int port = parameters.getIntParameter("email_smtp_port");
         boolean gateway = parameters.getBooleanParameter("email_gateway");
         boolean accept = parameters.getBooleanParameter("email_accept_nonlocal");
+        boolean authenticate = parameters.getBooleanParameter("email_smtp_authenticate");
+        String sendersA = parameters.getStringParameter("email_allowed_senders");
+        String[] senders = new String[0];
+        
+        if ((sendersA != null) && (sendersA.length() > 0))
+          senders = sendersA.split(",");
         
         if (parameters.getBooleanParameter("email_smtp_ssl")) {
           stepStart("Starting SSL SMTP server on port " + port);
-          smtp = new SSLSmtpServerImpl(port, email, gateway, address, accept);
+          smtp = new SSLSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager);
           smtp.start();
           stepDone(SUCCESS);
         } else if (parameters.getBooleanParameter("email_smtp_non_blocking")) {
           stepStart("Starting Non-Blocking SMTP server on port " + port);
-          smtp = new NonBlockingSmtpServerImpl(port, email, gateway, address, accept);
+          smtp = new NonBlockingSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager);
           smtp.start();
           stepDone(SUCCESS);
         } else {
           stepStart("Starting SMTP server on port " + port);
-          smtp = new SmtpServerImpl(port, email, gateway, address, accept);
+          smtp = new SmtpServerImpl(port, email, gateway, address, accept, authenticate, manager);
           smtp.start();
           stepDone(SUCCESS);
         }
@@ -265,7 +275,6 @@ public class EmailProxy extends PostProxy {
     }
   }
 
-
   /**
    * Method which starts the local WebMail server
    *
@@ -273,11 +282,11 @@ public class EmailProxy extends PostProxy {
    */
   protected void startWebMailServer(Parameters parameters) throws Exception {    
     if (parameters.getBooleanParameter("email_webmail_enable")) {
-      int port = parameters.getIntParameter("email_pop3_port");
-      //    stepStart("Starting WebMail server on port " + WEBMAIL_PORT);
-      //    web = new WebServer();
-      //    web.start();
-      //    stepDone(SUCCESS);
+      int port = parameters.getIntParameter("email_webmail_port");
+      stepStart("Starting WebMail server on port " + port);
+      web = new WebServerImpl(port, email, manager);
+      web.start();
+      stepDone(SUCCESS);
     }
   }
 

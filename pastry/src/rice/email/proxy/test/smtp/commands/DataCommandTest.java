@@ -26,7 +26,7 @@ public class DataCommandTest extends TestCase {
   protected void setUp() throws Exception {
     cmd = new DataCommand();
     conn = new MockSmtpConnection();
-    smtpState = new SmtpState(new InMemoryWorkspace());
+    smtpState = new SmtpState(new InMemoryWorkspace(), null);
     manager = new MockSmtpManager();
 
     localAddress1 = new MailAddress("person1@localhost");

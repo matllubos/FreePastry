@@ -41,6 +41,7 @@ public class PostImpl implements Post, Application, ScribeClient {
    * The interval between log refreshes
    */
   public static int BACKUP_INTERVAL = 1000 * 60 * 60 * 6;
+  public static int SYNCHRONIZE_WAIT = 1000 * 60 * 3;
 
   /**
    * The endpoint used for routing messages
@@ -214,7 +215,7 @@ public class PostImpl implements Post, Application, ScribeClient {
   //  logger.setLevel(Level.FINEST);
   //  logger.getHandlers()[0].setLevel(Level.FINEST);
     
-    endpoint.scheduleMessage(new SynchronizeMessage(), new Random().nextInt((int) synchronizeInterval), synchronizeInterval);
+    endpoint.scheduleMessage(new SynchronizeMessage(), SYNCHRONIZE_WAIT + new Random().nextInt((int) synchronizeInterval), synchronizeInterval);
     endpoint.scheduleMessage(new RefreshMessage(), new Random().nextInt((int) refreshInterval), refreshInterval);
     endpoint.scheduleMessage(new BackupMessage(), new Random().nextInt((int) BACKUP_INTERVAL), BACKUP_INTERVAL);
     
@@ -480,17 +481,24 @@ public class PostImpl implements Post, Application, ScribeClient {
                 }
                 
                 public void receiveException(final Exception e) {
-                  delivery.undeliverable(message.getEncryptedMessage(), new StandardContinuation(parent) {
-                    public void receiveResult(Object o) {
-                      parent.receiveException(e);
-                      next();
-                    }
-                    
-                    public void receiveException(Exception e) {
-                      parent.receiveException(e);
-                      next();
-                    }
-                  });
+                  if (e instanceof PostException) {
+                    System.out.println("ERROR: Marking message " + message + " as undeliverable due to exception " + e);
+                    delivery.undeliverable(message.getEncryptedMessage(), new StandardContinuation(parent) {
+                      public void receiveResult(Object o) {
+                        parent.receiveException(e);
+                        next();
+                      }
+                      
+                      public void receiveException(Exception e) {
+                        parent.receiveException(e);
+                        next();
+                      }
+                    });
+                  } else {
+                    System.out.println("ERROR: Received exception " + e + " processing delivery " + message + " - ignoring.");
+                    parent.receiveException(e);
+                    next();
+                  }
                 }
               });
             } else {
@@ -528,6 +536,7 @@ public class PostImpl implements Post, Application, ScribeClient {
    */
   private void processRefreshMessage(RefreshMessage message) {
     final Iterator i = clients.iterator();
+    System.out.println("BEGINNING REFRESH!");
     
     Continuation c = new ListenerContinuation("Retrieval of ContentHashReferences") {
       protected HashSet set = new HashSet();
@@ -539,10 +548,12 @@ public class PostImpl implements Post, Application, ScribeClient {
             set.add(a[i]);
         }
           
-        if (i.hasNext()) 
+        if (i.hasNext()) {
           ((PostClient) i.next()).getContentHashReferences(this);
-        else 
+        } else {
+          System.out.println("REFRESHING " + set.size() + " OBJECTS!");
           storage.refreshContentHash((ContentHashReference[]) set.toArray(new ContentHashReference[0]), new ListenerContinuation("Refreshing of objects"));
+        }
       }
     };
     
@@ -555,27 +566,30 @@ public class PostImpl implements Post, Application, ScribeClient {
    * @param message The incoming message.
    */
   private void processBackupMessage(BackupMessage message) {
-    final HashSet set = new HashSet();
-    final Iterator j = clients.iterator();
-    storage.setAggregate(log);
-    set.add(log);
-    
-    Continuation d = new ListenerContinuation("Retrieval of Mutable Data") {
+    storage.setAggregate(log, new ListenerContinuation("Setting of Aggregate Head") {
       public void receiveResult(Object o) {
-        if (o != null) {
-          Object[] a = (Object[]) o;
-          for (int i=0; i<a.length; i++)
-            set.add(a[i]);
-        }
+        final Iterator j = clients.iterator();
+        final HashSet set = new HashSet();
+        set.add(log);
         
-        if (j.hasNext()) 
-          ((PostClient) j.next()).getLogs(this);
-        else 
-          storage.backupLogs(log, (Log[]) set.toArray(new Log[0]), new ListenerContinuation("Backing up of mutable objects"));
+        Continuation d = new ListenerContinuation("Retrieval of Mutable Data") {
+          public void receiveResult(Object o) {
+            if (o != null) {
+              Object[] a = (Object[]) o;
+              for (int i=0; i<a.length; i++)
+                set.add(a[i]);
+            }
+            
+            if (j.hasNext()) 
+              ((PostClient) j.next()).getLogs(this);
+            else 
+              storage.backupLogs(log, (Log[]) set.toArray(new Log[0]), new ListenerContinuation("Backing up of mutable objects"));
+          }
+        };
+        
+        d.receiveResult(null);
       }
-    };
-    
-    d.receiveResult(null);
+    });
   }
   
   /**

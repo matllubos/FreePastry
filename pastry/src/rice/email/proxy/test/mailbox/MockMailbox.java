@@ -43,7 +43,7 @@ public class MockMailbox
                              throws MailboxException
     {
 
-        return (MailFolder[]) folders.values().toArray(new String[0]);
+        return (MailFolder[]) folders.values().toArray(new MailFolder[0]);
     }
 
     public void put(MovingMessage msg)

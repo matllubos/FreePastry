@@ -5,6 +5,7 @@ import rice.post.*;
 import rice.email.*;
 import rice.email.proxy.smtp.manager.*;
 import rice.email.proxy.util.*;
+import rice.email.proxy.user.*;
 import rice.email.proxy.smtp.commands.*;
 
 import java.io.*;
@@ -15,14 +16,14 @@ import javax.net.ssl.*;
 
 public class SSLSmtpServerImpl extends SmtpServerImpl {
   
-  public SSLSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal) throws Exception {
-    super(port, email, gateway, address, acceptNonLocal);
+  public SSLSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager) throws Exception {
+    super(port, email, gateway, address, acceptNonLocal, authenticate, userManager);
   }
   
   public void initialize() throws IOException {
     try {
       //Security.addProvider(new com.sun.net.ssl.internal.ssl.Provider());
-      SSLContext con =SSLContext.getInstance("TLS");
+      SSLContext con = SSLContext.getInstance("TLS");
       SecureRandom random = SecureRandom.getInstance("SHA1PRNG", "SUN");
       
       

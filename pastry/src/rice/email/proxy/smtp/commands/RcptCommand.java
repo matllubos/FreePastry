@@ -23,6 +23,8 @@ import java.util.regex.Pattern;
 public class RcptCommand extends SmtpCommand {
   static Pattern param = Pattern.compile("RCPT TO:\\s?<([^>]+)>", Pattern.CASE_INSENSITIVE);
   
+  public boolean authenticationRequired() { return true; }
+  
   public void execute(SmtpConnection conn, SmtpState state, SmtpManager manager, String commandLine) {
     Matcher m = param.matcher(commandLine);
     

@@ -22,6 +22,9 @@ import java.io.StringReader;
  * </p>
  */
 public class DataCommand extends SmtpCommand {
+  
+  public boolean authenticationRequired() { return true; }
+  
   public void execute(SmtpConnection conn, SmtpState state, SmtpManager manager, String commandLine) throws IOException {
     MovingMessage msg = state.getMessage();
     
