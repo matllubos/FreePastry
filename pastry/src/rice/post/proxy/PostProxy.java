@@ -864,11 +864,11 @@ public class PostProxy {
    */  
   protected void startGlobalPastryNode(Parameters parameters) throws Exception {    
     stepStart("Creating Global Pastry node");
-    String prefix = ((RingId) generateRingId(null)).getRingId().toStringFull();
+    String prefix = generateRingId(null).toStringFull();
     
     String protocol = parameters.getStringParameter("pastry_ring_" + prefix + "_protocol");
     int protocolId = 0;
-    int port = parameters.getIntParameter("pastry_ring_" + prefix + "port");
+    int port = parameters.getIntParameter("pastry_ring_" + prefix + "_port");
     
     if (protocol.equalsIgnoreCase("wire")) {
       protocolId = DistPastryNodeFactory.PROTOCOL_WIRE;
@@ -877,11 +877,11 @@ public class PostProxy {
     } else if (protocol.equalsIgnoreCase("socket")) {
       protocolId = DistPastryNodeFactory.PROTOCOL_SOCKET;
     } else {
-      panic(new RuntimeException(), "The global pastry protocol " + protocol + " is unknown.", "pastry_ring_" + prefix + "protocol");
+      panic(new RuntimeException(), "The global pastry protocol " + protocol + " is unknown.", "pastry_ring_" + prefix + "_protocol");
     }
     
     DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port), protocolId, port);
-    InetSocketAddress[] bootAddresses = parameters.getInetSocketAddressArrayParameter("pastry_ring_" + prefix + "bootstraps");
+    InetSocketAddress[] bootAddresses = parameters.getInetSocketAddressArrayParameter("pastry_ring_" + prefix + "_bootstraps");
     
     globalNode = factory.newNode(factory.getNodeHandle(bootAddresses), (rice.pastry.NodeId) ((RingId) node.getId()).getId());
     globalPastryNode = (PastryNode) globalNode;
@@ -898,9 +898,9 @@ public class PostProxy {
               "ring - it is highly likely that there is a problem preventing the connection.\n" + 
               "The most common error is a firewall which is preventing incoming connections - \n" +
               "please ensure that any firewall protecting you machine allows incoming traffic \n" +
-              "in both UDP and TCP on port " + parameters.getIntParameter("pastry_ring_" + prefix + "port"));
+              "in both UDP and TCP on port " + parameters.getIntParameter("pastry_ring_" + prefix + "_port"));
       }
-    } while ((! parameters.getBooleanParameter("pastry_ring_" + prefix + "allow_new_ring")) &&
+    } while ((! parameters.getBooleanParameter("pastry_ring_" + prefix + "_allow_new_ring")) &&
              (globalPastryNode.getLeafSet().size() == 0));
     
     

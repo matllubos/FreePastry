@@ -69,7 +69,7 @@ public class OverviewPanelCreator implements PanelCreator {
     memoryCons.gridy = 0;
     memoryCons.fill = Constraints.HORIZONTAL;
     
-    LineGraphView memoryView = new LineGraphView("Memory Usage", 380, 200, memoryCons, "Time (m)", "Memory Used (B)", true, false);
+    LineGraphView memoryView = new LineGraphView("Memory Usage", 380, 200, memoryCons, "Time (m)", "Memory Used (MB)", true, false);
     memoryView.addSeries("Total Memory", getTimeArray(), getTotalMemoryArray(), Color.green);
     memoryView.addSeries("Used Memory", getTimeArray(), getUsedMemoryArray(), Color.blue);
     
@@ -101,7 +101,7 @@ public class OverviewPanelCreator implements PanelCreator {
       double[] dataA = new double[used.size()];
       
       for (int i=0; i<dataA.length; i++) 
-        dataA[i] = (double) ((Long) used.elementAt(i)).longValue();
+        dataA[i] = (double) ((Long) used.elementAt(i)).longValue() / (1024*1024);
       
       return dataA;
     } else {
@@ -114,7 +114,7 @@ public class OverviewPanelCreator implements PanelCreator {
       double[] dataA = new double[total.size()];
       
       for (int i=0; i<dataA.length; i++) 
-        dataA[i] = (double) ((Long) total.elementAt(i)).longValue();
+        dataA[i] = (double) ((Long) total.elementAt(i)).longValue() / (1024*1024);
       
       return dataA;
     } else {

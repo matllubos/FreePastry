@@ -45,7 +45,7 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
     dataSentCons.gridy = 0;
     dataSentCons.fill = Constraints.HORIZONTAL;
     
-    LineGraphView dataSentView = new LineGraphView("Data Sent", 380, 200, dataSentCons, "Time (m)", "Data (B)", false, false);
+    LineGraphView dataSentView = new LineGraphView("Data Sent", 380, 200, dataSentCons, "Time (m)", "Data (KB)", false, false);
     dataSentView.addSeries("Data Sent", getTimeArray(), getSentArray(), Color.green);
     
     Constraints dataReceivedCons = new Constraints();
@@ -53,7 +53,7 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
     dataReceivedCons.gridy = 0;
     dataReceivedCons.fill = Constraints.HORIZONTAL;
     
-    LineGraphView dataReceivedView = new LineGraphView("Data Received", 380, 200, dataReceivedCons, "Time (m)", "Data (B)", false, false);
+    LineGraphView dataReceivedView = new LineGraphView("Data Received", 380, 200, dataReceivedCons, "Time (m)", "Data (KB)", false, false);
     dataReceivedView.addSeries("Data Received", getTimeArray(), getReceivedArray(), Color.red);
     
     Constraints dataBreakdownCons = new Constraints();
@@ -106,7 +106,7 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
     double[] sentA = new double[sent.size()];
     
     for (int i=0; i<sentA.length; i++) 
-      sentA[i] = ((Double) sent.elementAt(i)).doubleValue();
+      sentA[i] = ((Double) sent.elementAt(i)).doubleValue() / 1024;
     
     return sentA;
   }
@@ -115,7 +115,7 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
     double[] receivedA = new double[received.size()];
     
     for (int i=0; i<receivedA.length; i++) 
-      receivedA[i] = ((Double) received.elementAt(i)).doubleValue();
+      receivedA[i] = ((Double) received.elementAt(i)).doubleValue() / 1024;
     
     return receivedA;
   }

@@ -195,7 +195,7 @@ public class PostMessage implements StoredMessage {
           mm.addHeaderLine(IMAGE_URL_HEADER_LINE);
 
         if (remote != null)
-          mm.addHeaderLine("Received from " + remote.getHostAddress() + " by " + InetAddress.getLocalHost().getHostAddress() + " via SMTP; " + MimeMessage.dateReader.format(new Date(System.currentTimeMillis())));
+          mm.addHeaderLine("Received: from " + remote.getHostAddress() + " by " + InetAddress.getLocalHost().getHostAddress() + " via SMTP; " + MimeMessage.dateReader.format(new Date(System.currentTimeMillis())));
       } catch (Exception e) {
         System.out.println("ERROR: Got exception " + e + " adding breadcrumb...");
       }

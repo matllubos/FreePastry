@@ -94,6 +94,9 @@ public class Proxy {
       int exit = process.waitFor();    
       lm.die();
       
+      // re-initialize parameters for debugging purposes
+      parameters = new Parameters(params);
+      
       if (exit != -1) { 
         System.out.println("[Loader       ]: Child process exited with value " + exit + " - restarting client");
         count++;
@@ -192,12 +195,10 @@ public class Proxy {
       result.append(parameters.getStringParameter("java_profiling_library_directory"));
       result.append(System.getProperty("file.separator"));
       result.append("optit.jar");
+      result.append(System.getProperty("path.separator"));
       
-      String[] classpath = parameters.getStringArrayParameter("java_classpath");
-      for (int i=0; i<classpath.length; i++) {
-        result.append(System.getProperty("path.separator"));
-        result.append(classpath[i]); 
-      }
+      DynamicClasspath dc = new DynamicClasspath(new File("."), parameters.getStringArrayParameter("java_classpath"));
+      result.append(dc.getClasspath());
       
       result.append(" intuitive.audit.Audit -port ");
       result.append(parameters.getStringParameter("java_profiling_port"));
