@@ -56,7 +56,7 @@ public class ReplicationImpl implements Replication, Application {
   /**
    * The amount of time to wait between replications
    */
-  public static int MAINTENANCE_INTERVAL = 300000;
+  public static int MAINTENANCE_INTERVAL = 600000;
   
   /**
    * this application's endpoint

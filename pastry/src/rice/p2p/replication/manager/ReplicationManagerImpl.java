@@ -71,7 +71,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
   /**
    * The number of ids to delete at a given time - others will be deleted later 
    */
-  public static int NUM_DELETE_AT_ONCE = 50;
+  public static int NUM_DELETE_AT_ONCE = 20;
   
   /**
    * The id factory used for manipulating ids
@@ -196,7 +196,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * @param keySet set containing the keys that needs to be fetched
    */
   public void fetch(IdSet keySet) {
-    log.finer(endpoint.getId() + ": Adding keyset " + keySet + " to the list of pending ids");
+   // log.finer(endpoint.getId() + ": Adding keyset " + keySet + " to the list of pending ids");
     helper.fetch(keySet);
   }
   
