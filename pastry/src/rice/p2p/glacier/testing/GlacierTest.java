@@ -103,7 +103,7 @@ public class GlacierTest {
     private Id generateId() {
       byte[] data = new byte[20];
       rng.nextBytes(data);
-      return new Id(data);
+      return Id.build(data);
     }
 
 

@@ -1099,7 +1099,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
 
       /* Convert the floating point value back to an ID */
 
-      rice.pastry.Id result = new rice.pastry.Id();
+      rice.pastry.Id result = rice.pastry.Id.build();
       d = 0.5;
       for (int i = 0; i < realId.IdBitLength; i++) {
         if (f >= d) {
