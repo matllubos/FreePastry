@@ -141,7 +141,7 @@ public class HelloWorldApp extends PastryAppl {
      */
     public void leafSetChange(NodeHandle nh, boolean wasAdded) {
 	if (Log.ifp(5)) {
-	    System.out.print("At " + getNodeId() + "'s leaf set, " +
+	    System.out.print("In " + getNodeId() + "'s leaf set, " +
 			     "node " + nh.getNodeId() + " was ");
 	    if (wasAdded) System.out.println("added");
 	    else System.out.println("removed");
@@ -156,7 +156,7 @@ public class HelloWorldApp extends PastryAppl {
      */
     public void routeSetChange(NodeHandle nh, boolean wasAdded) {
 	if (Log.ifp(5)) {
-	    System.out.print("At " + getNodeId() + "'s route set, " +
+	    System.out.print("In " + getNodeId() + "'s route set, " +
 			     "node " + nh.getNodeId() + " was ");
 	    if (wasAdded) System.out.println("added");
 	    else System.out.println("removed");

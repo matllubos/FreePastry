@@ -150,7 +150,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
 
     public void markAlive() {
 	if (alive == false) {
-	    if (Log.ifp(6)) System.out.println("remote node became alive: " + remotenid);
+	    if (Log.ifp(5)) System.out.println(localnode + "found " + remotenid + " to be alive after all");
 	    alive = true;
 	    distance = Integer.MAX_VALUE; // reset to infinity. alternatively, recompute.
 	}
@@ -158,7 +158,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
 
     public void markDead() {
 	if (alive == true) {
-	    if (Log.ifp(6)) System.out.println("remote node declared dead: " + remotenid);
+	    if (Log.ifp(5)) System.out.println(localnode + "found " + remotenid + " to be dead");
 	    alive = false;
 	    distance = Integer.MAX_VALUE;
 	}
@@ -260,6 +260,8 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	    long stoptime = System.currentTimeMillis();
 	    if (distance > (int)(stoptime - starttime))
 		distance = (int)(stoptime - starttime);
+
+	    if (Log.ifp(7)) System.out.println("proximity metric = " + distance);
 
 	    if (tryid.equals(remotenid) == false)
 		System.out.println("PANIC: remote node has changed its ID from "
