@@ -14,11 +14,18 @@ import rice.pastry.*;
  * This class provides both persistent and caching services to
  * external applications. Building the StorageManager requires a
  * Storage object, to provide the back-end storage, and a Cache
- * to serve as a cache.  Note that this implementation allows
- * the cache to use the unused storage space of cached objects.
+ * to serve as a cache.  Note that this implementation has seperate
+ * areas for the Cache and Storage, but the next version will allow
+ * the cache to use the unused storage space.
  */
-public class StorageManager implements Cache, Storage{
+public class StorageManager implements Cache, Storage {
 
+  // the storage used by this manager
+  private Storage storage;
+
+  // the cache used by this manager
+  private Cache cache;
+  
   /**
    * Builds a StorageManager given a Storage object to provide
    * storage services and a Cache object to provide caching
@@ -27,9 +34,10 @@ public class StorageManager implements Cache, Storage{
    * @param storagae The Storage object which will serve as the
    *        persistent storage.
    * @param cache The Cache object which will serve as the cache.
-   * @param size The maximum size, in bytes, of data to store.
    */
-  public StorageManager(Storage storage, Cache cache, int size) {
+  public StorageManager(Storage storage, Cache cache) {
+    this.storage = storage;
+    this.cache = cache;
   }
 
   /**
@@ -41,7 +49,22 @@ public class StorageManager implements Cache, Storage{
    * @param id The id of the object in question.
    * @return Whether or not an object is present at id.
    */
-  public void exists(Comparable id, Continuation c) {
+  public void exists(final Comparable id, final Continuation c) {
+    Continuation inCache = new Continuation() {
+      public void receiveResult(Object o) {
+        if (o.equals(new Boolean(true))) {
+          c.receiveResult(o);
+        } else {
+          storage.exists(id, c);
+        }
+      }
+
+      public void receiveException(Exception e) {
+        c.receiveException(e);
+      }
+    };
+
+    cache.exists(id, inCache);
   }
 
   /**
@@ -52,17 +75,33 @@ public class StorageManager implements Cache, Storage{
    * @return The object, or <code>null</code> if there is no cooresponding
    * object (through receiveResult on c).
    */
-  public void getObject(Comparable id, Continuation c) {
+  public void getObject(final Comparable id, final Continuation c) {
+    Continuation inCache = new Continuation() {
+      public void receiveResult(Object o) {
+        if (o != null) {
+          c.receiveResult(o);
+        } else {
+          storage.getObject(id, c);
+        }
+      }
+
+      public void receiveException(Exception e) {
+        c.receiveException(e);
+      }
+    };
+
+    cache.getObject(id, inCache);    
   }
 
   /**
    * Return the objects identified by the given range of ids. The array
    * returned contains the Comparable ids of the stored objects. The range is
    * completely inclusive, such that if the range is (A,B), objects with
-   * ids of both A and B would be returned.
+   * ids of both A and B would be returned.  The resulting array of keys in
+   * *NOT* guaranteed to be in any order.
    *
    * Note that the two Comparable objects should be of the same class
-   * (otherwise no range can be created).
+   * (otherwise no range can be created).  
    *
    * When the operation is complete, the receiveResult() method is called
    * on the provided continuation with a Comparable[] result containing the
@@ -73,18 +112,71 @@ public class StorageManager implements Cache, Storage{
    * @param c The command to run once the operation is complete
    * @return The objects
    */
-  public void scan(Comparable start, Comparable end, Continuation c) {
+  public void scan(final Comparable start, final Comparable end, final Continuation c) {
+    Continuation scanner = new Continuation() {
+      private Comparable[] fromCache;
+      
+      public void receiveResult(Object o) {
+        if (fromCache == null) {
+          fromCache = (Comparable[]) o;
+
+          storage.scan(start, end, this);
+        } else {
+          Comparable[] fromStorage = (Comparable[]) o;
+
+          Comparable[] result = new Comparable[fromCache.length + fromStorage.length];
+
+          for (int i=0; i<fromCache.length; i++) {
+            result[i] = fromCache[i];
+          }
+
+          for (int i=fromCache.length; i<result.length; i++) {
+            result[i] = fromStorage[i - fromCache.length];
+          }
+
+          c.receiveResult(result);
+        }
+      }
+
+      public void receiveException(Exception e) {
+        c.receiveException(e);
+      }
+    };
+
+    cache.scan(start, end, scanner);   
   }
 
   /**
    * Returns the total size of the stored data in bytes.The result
    * is returned via the receiveResult method on the provided
-   * Continuation with an Integer representing the size.
+   * Continuation with an Integer representing the size.  This sum is
+   * the total of the stored data and the cached data.
    *
    * @param c The command to run once the operation is complete
    * @return The total size, in bytes, of data stored.
    */
-  public void getTotalSize(Continuation c) {
+  public void getTotalSize(final Continuation c) {
+    Continuation getSize = new Continuation() {
+      private int cacheSize = -1;
+
+      public void receiveResult(Object o) {
+        if (cacheSize == -1) {
+          cacheSize = ((Integer) o).intValue();
+
+          storage.getTotalSize(this);
+        } else {
+          int storageSize = ((Integer) o).intValue();
+
+          c.receiveResult(new Integer(cacheSize + storageSize));
+        }
+      }
+
+      public void receiveException(Exception e) {
+        c.receiveException(e);
+      }
+    };
+
+    cache.getTotalSize(getSize);    
   }
 
   /**
@@ -102,6 +194,7 @@ public class StorageManager implements Cache, Storage{
    * <code>False</code> (through receiveResult on c).
    */
   public void store(Comparable id, Serializable obj, Continuation c) {
+    storage.store(id, obj, c);
   }
 
   /**
@@ -115,6 +208,7 @@ public class StorageManager implements Cache, Storage{
    * <code>false</code>  (through receiveResult on c).
    */
   public void unstore(Comparable id, Continuation c) {
+    storage.unstore(id, c);
   }
   
   /**
@@ -133,6 +227,7 @@ public class StorageManager implements Cache, Storage{
    * <code>False</code> (through receiveResult on c).
    */
   public void cache(Comparable id, Serializable obj, Continuation c) {
+    cache.cache(id, obj, c);
   }
 
   /**
@@ -146,6 +241,7 @@ public class StorageManager implements Cache, Storage{
    * <code>False</code>  (through receiveResult on c).
    */
   public void uncache(Comparable id, Continuation c) {
+    cache.uncache(id, c);
   }
 
   /**
@@ -157,6 +253,7 @@ public class StorageManager implements Cache, Storage{
    * @return The maximum size, in bytes, of the cache.
    */
   public void getMaximumSize(Continuation c) {
+    cache.getMaximumSize(c);
   }
 
   /**
@@ -170,5 +267,6 @@ public class StorageManager implements Cache, Storage{
    * (through receiveResult on c).
    */
   public void setMaximumSize(int size, Continuation c) {
+    cache.setMaximumSize(size, c);
   }
 }

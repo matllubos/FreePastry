@@ -22,17 +22,11 @@ public class LRUCache implements Cache {
   // the maximum size of the cache
   private int maximumSize;
 
-  // the current size of the cache
-  private int currentSize;
-
   // the back-end storage used by this cache
   private Storage storage;
 
   // the list of keys, in MRU -> LRU order
   private LinkedList order;
-
-  // table which maintains key -> size pairs
-  private Hashtable sizes;
 
   /**
    * Builds a LRU cache given a storage object to store the cached
@@ -45,9 +39,7 @@ public class LRUCache implements Cache {
     this.storage = storage;
     this.maximumSize = maximumSize;
 
-    this.currentSize = 0;
     this.order = new LinkedList();
-    this.sizes = new Hashtable();
   }
   
   /**
@@ -66,38 +58,19 @@ public class LRUCache implements Cache {
    * <code>False</code> (through receiveResult on c).
    */
   public synchronized void cache(final Comparable id, final Serializable obj, final Continuation c) {
-    int tmpSize = 0;
-    
-    try {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      ObjectOutputStream oos = new ObjectOutputStream(baos);
-
-      oos.writeObject(obj);
-      oos.flush();
-
-      tmpSize = baos.toByteArray().length;
-    } catch (IOException e) {
-      c.receiveException(e);
-      return;
-    }
-
-    final int size = tmpSize;
+    final int size = getSize(obj);
 
     if (size > maximumSize) {
       c.receiveResult(new Boolean(false));
       return;
     }
 
-    /*
-    System.out.println("\nCaching object of size " + size + " with ID " + id);
-    System.out.println("Current: " + currentSize + " Maximum: " + maximumSize); */
     
-    Continuation cont = new Continuation() {
+   // System.out.println("\nCaching object of size " + size + " with ID " + id);
+    
+    final Continuation store = new Continuation() {
       public void receiveResult(Object o) {
         order.addFirst(id);
-        sizes.put(id, new Integer(size));
-        currentSize += size;
-
         storage.store(id, obj, c);
       }
 
@@ -106,11 +79,23 @@ public class LRUCache implements Cache {
       }
     };
 
-    if (maximumSize - currentSize < size) {
-      resize(size - (maximumSize - currentSize), cont);
-    } else {
-      cont.receiveResult(new Boolean(true));
-    }
+    Continuation resize = new Continuation() {
+      public void receiveResult(Object o) {
+        int totalSize = ((Integer) o).intValue();
+
+        if (maximumSize - size < totalSize) {
+          resize(maximumSize - size, store);
+        } else {
+          store.receiveResult(new Boolean(true));
+        }
+      }
+
+      public void receiveException(Exception e) {
+        c.receiveException(e);
+      }
+    };
+
+    storage.getTotalSize(resize);
   }
 
   /**
@@ -124,16 +109,7 @@ public class LRUCache implements Cache {
    * <code>False</code>  (through receiveResult on c).
    */
   public synchronized void uncache(Comparable id, Continuation c) {
-    if (! sizes.containsKey(id)) {
-      c.receiveResult(new Boolean(false));
-      return;
-    }
-
-    Integer size = (Integer) sizes.remove(id);
-    currentSize -= size.intValue();
-
     order.remove(id);
-
     storage.unstore(id, c);
   }
 
@@ -147,7 +123,7 @@ public class LRUCache implements Cache {
    * @return Whether or not an object is present at id.
    */
   public void exists(Comparable id, Continuation c) {
-    c.receiveResult(new Boolean(sizes.containsKey(id)));
+    c.receiveResult(new Boolean(order.contains(id)));
   }
 
   /**
@@ -159,7 +135,7 @@ public class LRUCache implements Cache {
    * object (through receiveResult on c).
    */
   public synchronized void getObject(Comparable id, Continuation c) {
-    if (! sizes.containsKey(id)) {
+    if (! order.contains(id)) {
       c.receiveResult(null);
       return;
     }
@@ -189,34 +165,7 @@ public class LRUCache implements Cache {
    * @return The objects
    */
   public synchronized void scan(Comparable start, Comparable end, Continuation c) {
-    try {
-      start.compareTo(end);
-      end.compareTo(start);
-    } catch (ClassCastException e) {
-      c.receiveException(new IllegalArgumentException("start and end passed into scan are not co-comparable!"));
-      return;
-    }
-
-    Vector result = new Vector();
-    Iterator i = order.listIterator();
-
-    while (i.hasNext()) {
-      try {
-        Comparable thisID = (Comparable) i.next();
-        if ((start.compareTo(thisID) <= 0) &&
-            (end.compareTo(thisID) >= 0))
-          result.addElement(thisID);
-      } catch (ClassCastException e) {
-      }
-    }
-
-    Comparable[] array = new Comparable[result.size()];
-
-    for (int j=0; j<result.size(); j++) {
-      array[j] = (Comparable) result.elementAt(j);
-    }
-
-    c.receiveResult(array);
+    storage.scan(start, end, c);
   }
 
   /**
@@ -240,7 +189,7 @@ public class LRUCache implements Cache {
    * @return The total size, in bytes, of data stored.
    */
   public void getTotalSize(Continuation c) {
-    c.receiveResult(new Integer(currentSize));
+    storage.getTotalSize(c);
   }
 
   /**
@@ -255,34 +204,40 @@ public class LRUCache implements Cache {
    */
   public void setMaximumSize(int size, Continuation c) {
     if (size < maximumSize) {
-      resize(maximumSize - size, c);
+      resize(size, c);
     }
     
     maximumSize = size;
   }
 
   /**
-   * Internal method which removes from the cache object which total
-   * at least the specified number of bytes.
+   * Internal method which removes objects from the cache until the cache
+   * is smaller than the specified size
    *
-   * @param size The number of bytes to free in the cache
+   * @param size The maximum number of bytes to make the cache
    * @param c The command to run once the operation is complete
    */
   private void resize(final int size, final Continuation c) {
-    Continuation cont = new Continuation() {
-      int deleteSize = 0;
-
+    
+    final Continuation remove = new Continuation() {
+      private boolean waitingForSize = true;
+      
       public void receiveResult(Object o) {
-        if (deleteSize < size) {
-          Comparable thisID = (Comparable) order.getLast();
-          int thisSize = ((Integer) sizes.get(thisID)).intValue();
-          deleteSize += thisSize;
-
-    //      System.out.println("Evicting object of size " + thisSize + " with ID " + thisID);
+        if (waitingForSize) {
+          waitingForSize = false;
           
-          uncache(thisID, this);
+          if (((Integer) o).intValue() > size) {
+            Comparable thisID = (Comparable) order.getLast();
+
+      //      System.out.println("Evicting object with ID " + thisID);
+
+            uncache(thisID, this);
+          } else {
+            c.receiveResult(new Boolean(true));
+          }
         } else {
-          c.receiveResult(new Boolean(true));
+          waitingForSize = true;
+          storage.getTotalSize(this);
         }
       }
 
@@ -291,6 +246,26 @@ public class LRUCache implements Cache {
       }
     };
 
-    cont.receiveResult(new Boolean(true));
+    storage.getTotalSize(remove);
+  }
+
+  /**
+   * Returns the size of the given object, in bytes.
+   *
+   * @param obj The object to determine the size of
+   * @return The size, in bytes
+   */
+  private int getSize(Object obj) {
+    try {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      ObjectOutputStream oos = new ObjectOutputStream(baos);
+
+      oos.writeObject(obj);
+      oos.flush();
+
+      return baos.toByteArray().length;
+    } catch (IOException e) {
+      throw new RuntimeException("Object " + obj + " was not serialized correctly!");
+    }
   }
 }

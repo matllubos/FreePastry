@@ -39,6 +39,11 @@ public abstract class Test {
     System.out.println("[" + status + "]");
   }
 
+  protected void stepDone(String status, String message) {
+    stepDone(status);
+    System.out.println("    " + message);
+  }
+
   protected void stepException(Exception e) {
     System.out.println();
 

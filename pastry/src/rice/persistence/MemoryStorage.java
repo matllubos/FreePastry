@@ -21,12 +21,16 @@ public class MemoryStorage implements Storage {
 
   // the hashtable used to store the data
   private Hashtable storage;
+
+  // the current total size
+  private int currentSize;
   
   /**
    * Builds a MemoryStorage object.
    */
   public MemoryStorage() {
     storage = new Hashtable();
+    currentSize = 0;
   }
 
   /**
@@ -43,6 +47,8 @@ public class MemoryStorage implements Storage {
    * <code>false</code>.
    */
   public void store(Comparable id, Serializable obj, Continuation c) {
+    currentSize += getSize(obj);
+    
     storage.put(id, obj);
     c.receiveResult(new Boolean(true));
   }
@@ -61,7 +67,14 @@ public class MemoryStorage implements Storage {
    * <code>false</code>.
    */
   public void unstore(Comparable id, Continuation c) {
-    c.receiveResult(new Boolean(storage.remove(id) != null));
+    Object stored = storage.remove(id);
+
+    if (stored != null) {
+      currentSize -= getSize(stored);
+      c.receiveResult(new Boolean(true));
+    } else {
+      c.receiveResult(new Boolean(false));
+    }
   }
 
   public void exists(Comparable id, Continuation c) {
@@ -73,10 +86,57 @@ public class MemoryStorage implements Storage {
   }
 
   public void scan(Comparable start, Comparable end, Continuation c) {
-    throw new UnsupportedOperationException("Method scan() is not yet implemented on MemoryStorage!.");
+    try {
+      start.compareTo(end);
+      end.compareTo(start);
+    } catch (ClassCastException e) {
+      c.receiveException(new IllegalArgumentException("start and end passed into scan are not co-comparable!"));
+      return;
+    }
+
+    Vector result = new Vector();
+    Iterator i = storage.keySet().iterator();
+
+    while (i.hasNext()) {
+      try {
+        Comparable thisID = (Comparable) i.next();
+        if ((start.compareTo(thisID) <= 0) &&
+            (end.compareTo(thisID) >= 0))
+          result.addElement(thisID);
+      } catch (ClassCastException e) {
+      }
+    }
+
+    Comparable[] array = new Comparable[result.size()];
+
+    for (int j=0; j<result.size(); j++) {
+      array[j] = (Comparable) result.elementAt(j);
+    }
+
+    c.receiveResult(array);    
   }
 
   public void getTotalSize(Continuation c) {
-    throw new UnsupportedOperationException("Method getTotalSize() is not yet implemented on MemoryStorage!.");
+    c.receiveResult(new Integer(currentSize));
+  }
+
+  /**
+   * Returns the size of the given object, in bytes.
+   *
+   * @param obj The object to determine the size of
+   * @return The size, in bytes
+   */
+  private int getSize(Object obj) {
+    try {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      ObjectOutputStream oos = new ObjectOutputStream(baos);
+
+      oos.writeObject(obj);
+      oos.flush();
+
+      return baos.toByteArray().length;
+    } catch (IOException e) {
+      throw new RuntimeException("Object " + obj + " was not serialized correctly!");
+    }
   }
 }
