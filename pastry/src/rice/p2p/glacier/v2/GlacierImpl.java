@@ -2738,135 +2738,165 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   }
           
   public void retrieveFragment(final FragmentKey key, final Manifest manifest, final char tag, final GlacierContinuation c) {
-    addContinuation(new GlacierContinuation() {
-      protected int attemptsLeft;
-      protected boolean inPhaseTwo;
-      protected long timeout;
-      
-      public String toString() {
-        return "retrieveFragment("+key+")";
-      }
-      public void init() {
-        attemptsLeft = fragmentRequestMaxAttempts;
-        timeout = System.currentTimeMillis();
-        inPhaseTwo = false;
-        timeoutExpired();
-      }
+    Continuation c2 = new Continuation() {
       public void receiveResult(Object o) {
-        if (o instanceof GlacierResponseMessage) {
-          GlacierResponseMessage grm = (GlacierResponseMessage) o;
-          if (!grm.getKey(0).equals(key)) {
-            warn("retrieveFragment: Response does not match key "+key+" -- discarded");
-            return;
-          }
+        if (o != null) {
+          if (o instanceof FragmentAndManifest) {
+            Fragment thisFragment = ((FragmentAndManifest)o).fragment;
+            if (manifest.validatesFragment(thisFragment, key.getFragmentID())) {
+              log(3, "retrieveFragment: Found in trash: "+key.toStringFull());
+              c.receiveResult(thisFragment);
+              return;
+            }
           
-          if ((attemptsLeft > 0) && !grm.getHaveIt(0)) {
-            attemptsLeft = 0;
-            timeoutExpired();
+            warn("Fragment found in trash, but does not match manifest?!? -- fetching normally");
           } else {
-            warn("retrieveFragment: Unexpected GlacierResponseMessage: "+grm+" (key="+key+")");
+            warn("Fragment "+key.toStringFull()+" found in trash, but object is not a FAM ("+o+")?!? -- ignoring");
           }
-          
-          return;
-        } 
-        
-        if (o instanceof GlacierDataMessage) {
-          GlacierDataMessage gdm = (GlacierDataMessage) o;
-          if (!gdm.getKey(0).equals(key)) {
-            warn("retrieveFragment: Data does not match key "+key+" -- discarded");
-            return;
-          }
-          
-          Fragment thisFragment = gdm.getFragment(0);
-          if (thisFragment == null) {
-            warn("retrieveFragment: DataMessage does not contain any fragments -- discarded");
-            return;
-          }
-          
-          if (!manifest.validatesFragment(thisFragment, gdm.getKey(0).getFragmentID())) {
-            warn("Invalid fragment "+gdm.getKey(0)+" returned by primary -- ignored");
-            return;
-          }
-
-          c.receiveResult(thisFragment);
-          terminate();
-          return;
         }
         
-        warn("retrieveFragment: Unknown result "+o+" (key="+key+")");
-      }
-      public void receiveException(Exception e) {
-        warn("retrieveFragment: Exception "+e);
-        e.printStackTrace();
-        c.receiveException(e);
-        terminate();
-      }
-      public void timeoutExpired() {
-        if (attemptsLeft > 0) {
-          log(3, "retrieveFragment: Retrying ("+attemptsLeft+" attempts left)");
-          timeout = timeout + currentFragmentRequestTimeout;
-          attemptsLeft --;
-          sendMessage(
-            key.getVersionKey().getId(),
-            new GlacierFetchMessage(getMyUID(), key, GlacierFetchMessage.FETCH_FRAGMENT, getLocalNodeHandle(), key.getVersionKey().getId(), tag),
-            null
-          );
-        } else {
-          timeout = timeout + 3 * restoreMaxBoosts * currentFragmentRequestTimeout;
-          if (inPhaseTwo) {
-            warn("retrieveFragment: Already in phase two");
+        addContinuation(new GlacierContinuation() {
+          protected int attemptsLeft;
+          protected boolean inPhaseTwo;
+          protected long timeout;
+      
+          public String toString() {
+            return "retrieveFragment("+key+")";
           }
-          inPhaseTwo = true;
-          
-          retrieveObject(key.getVersionKey(), manifest, false, tag, new Continuation() {
-            public void receiveResult(Object o) {
-              if (o == null) {
-                warn("retrieveFragment: retrieveObject("+key.getVersionKey()+") failed, returns null");
-                c.receiveException(new GlacierException("Cannot restore either the object or the fragment -- try again later!"));
+          public void init() {
+            attemptsLeft = fragmentRequestMaxAttempts;
+            timeout = System.currentTimeMillis();
+            inPhaseTwo = false;
+            timeoutExpired();
+          }
+          public void receiveResult(Object o) {
+            if (o instanceof GlacierResponseMessage) {
+              GlacierResponseMessage grm = (GlacierResponseMessage) o;
+              if (!grm.getKey(0).equals(key)) {
+                warn("retrieveFragment: Response does not match key "+key+" -- discarded");
                 return;
               }
-              
-              final PastContent retrievedObject = (PastContent) o;
-              endpoint.process(new Executable() {
-                public Object execute() {
-                  log(3, "Reencode object: " + key.getVersionKey());
-                  boolean generateFragment[] = new boolean[numFragments];
-                  Arrays.fill(generateFragment, false);
-                  generateFragment[key.getFragmentID()] = true;
-                  Object result = policy.encodeObject(retrievedObject, generateFragment);
-                  log(3, "Reencode complete: " + key.getVersionKey());
-                  return result;
-                }
-              }, new Continuation() {
+          
+              if ((attemptsLeft > 0) && !grm.getHaveIt(0)) {
+                attemptsLeft = 0;
+                timeoutExpired();
+              } else {
+                warn("retrieveFragment: Unexpected GlacierResponseMessage: "+grm+" (key="+key+")");
+              }
+          
+              return;
+            } 
+        
+            if (o instanceof GlacierDataMessage) {
+              GlacierDataMessage gdm = (GlacierDataMessage) o;
+              if (!gdm.getKey(0).equals(key)) {
+                warn("retrieveFragment: Data does not match key "+key+" -- discarded");
+                return;
+              }
+            
+              Fragment thisFragment = gdm.getFragment(0);
+              if (thisFragment == null) {
+                warn("retrieveFragment: DataMessage does not contain any fragments -- discarded");
+                return;
+              }
+          
+              if (!manifest.validatesFragment(thisFragment, gdm.getKey(0).getFragmentID())) {
+                warn("Invalid fragment "+gdm.getKey(0)+" returned by primary -- ignored");
+                return;
+              }
+
+              c.receiveResult(thisFragment);
+              terminate();
+              return;
+            }
+        
+            warn("retrieveFragment: Unknown result "+o+" (key="+key+")");
+          }
+          public void receiveException(Exception e) {
+            warn("retrieveFragment: Exception "+e);
+            e.printStackTrace();
+            c.receiveException(e);
+            terminate();
+          }
+          public void timeoutExpired() {
+            if (attemptsLeft > 0) {
+              log(3, "retrieveFragment: Retrying ("+attemptsLeft+" attempts left)");
+              timeout = timeout + currentFragmentRequestTimeout;
+              attemptsLeft --;
+              sendMessage(
+                key.getVersionKey().getId(),
+                new GlacierFetchMessage(getMyUID(), key, GlacierFetchMessage.FETCH_FRAGMENT, getLocalNodeHandle(), key.getVersionKey().getId(), tag),
+                null
+              );
+            } else {
+              timeout = timeout + 3 * restoreMaxBoosts * currentFragmentRequestTimeout;
+              if (inPhaseTwo) {
+                warn("retrieveFragment: Already in phase two");
+              }
+              inPhaseTwo = true;
+          
+              retrieveObject(key.getVersionKey(), manifest, false, tag, new Continuation() {
                 public void receiveResult(Object o) {
-                  Fragment[] frag = (Fragment[]) o;
-                
-                  if (!manifest.validatesFragment(frag[key.getFragmentID()], key.getFragmentID())) {
-                    warn("Reconstructed fragment #"+key.getFragmentID()+" does not match manifest ??!?");
-                    c.receiveException(new GlacierException("Recovered object, but cannot re-encode it (strange!) -- try again later!"));
+                  if (o == null) {
+                    warn("retrieveFragment: retrieveObject("+key.getVersionKey()+") failed, returns null");
+                    c.receiveException(new GlacierException("Cannot restore either the object or the fragment -- try again later!"));
                     return;
                   }
               
-                  c.receiveResult(frag[key.getFragmentID()]);
+                  final PastContent retrievedObject = (PastContent) o;
+                  endpoint.process(new Executable() {
+                    public Object execute() {
+                      log(3, "Reencode object: " + key.getVersionKey());
+                      boolean generateFragment[] = new boolean[numFragments];
+                      Arrays.fill(generateFragment, false);
+                      generateFragment[key.getFragmentID()] = true;
+                      Object result = policy.encodeObject(retrievedObject, generateFragment);
+                      log(3, "Reencode complete: " + key.getVersionKey());
+                      return result;
+                    }
+                  }, new Continuation() {
+                    public void receiveResult(Object o) {
+                      Fragment[] frag = (Fragment[]) o;
+                  
+                      if (!manifest.validatesFragment(frag[key.getFragmentID()], key.getFragmentID())) {
+                        warn("Reconstructed fragment #"+key.getFragmentID()+" does not match manifest ??!?");
+                        c.receiveException(new GlacierException("Recovered object, but cannot re-encode it (strange!) -- try again later!"));
+                        return;
+                      }
+              
+                      c.receiveResult(frag[key.getFragmentID()]);
+                    }
+                    public void receiveException(Exception e) {
+                      c.receiveException(new GlacierException("Recovered object, but re-encode failed: "+e));
+                      e.printStackTrace();
+                    }
+                  });
                 }
                 public void receiveException(Exception e) {
-                  c.receiveException(new GlacierException("Recovered object, but re-encode failed: "+e));
-                  e.printStackTrace();
+                  c.receiveException(e);
                 }
               });
-            }
-            public void receiveException(Exception e) {
-              c.receiveException(e);
-            }
-          });
           
-          terminate();
-        }
+              terminate();
+            }
+          }
+          public long getTimeout() {
+            return timeout;
+          }
+        });
       }
-      public long getTimeout() {
-        return timeout;
+      public void receiveException(Exception e) {
+        warn("Exception while checking for "+key.toStringFull()+" in trash storage -- ignoring");
       }
-    });
+    };
+    
+    if ((trashStorage!=null) && trashStorage.exists(key)) {
+      log(3, "retrieveFragment: Key "+key.toStringFull()+" found in trash, retrieving...");
+      trashStorage.getObject(key, c2);
+    } else {
+      log(3, "retrieveFragment: Key "+key.toStringFull()+" not found in trash");
+      c2.receiveResult(null);
+    }
   }
 
   public void rateLimitedRetrieveFragment(final FragmentKey key, final Manifest manifest, final char tag, final GlacierContinuation c) {
@@ -3658,6 +3688,39 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   
   public void setLogLevel(int newLevel) {
     this.loglevel = newLevel;
+  }
+
+  public long getTrashSize() {
+    if (trashStorage == null)
+      return 0;
+      
+    return trashStorage.getStorage().getTotalSize();
+  }
+  
+  public void emptyTrash(final Continuation c) {
+    if (trashStorage != null) {
+      final IdSet trashKeys = trashStorage.scan();
+      final Iterator iter = trashKeys.getIterator();
+
+      log(2, "Emptying trash (removing "+trashKeys.numElements()+" objects)");
+
+      Continuation c2 = new Continuation() {
+        public void receiveResult(Object o) {
+          if (!iter.hasNext()) {
+            c.receiveResult(new Boolean(true));
+            return;
+          }
+          
+          final Id thisPiece = (Id) iter.next();
+          trashStorage.unstore(thisPiece, this);
+        }
+        public void receiveException(Exception e) {
+          receiveResult(e);
+        }
+      };
+      
+      c2.receiveResult(null);
+    }
   }
   
   public void addStatisticsListener(GlacierStatisticsListener gsl) {
