@@ -77,9 +77,9 @@ public class PostMailbox implements Mailbox {
       throw new MailboxException("Folder " + name + " does not exist!");
     }
     
-    if (folders.get(name) != null) {
-      return (MailFolder) folders.get(name);
-    }
+        if (folders.get(name) != null) {
+          return (MailFolder) folders.get(name);
+        }
 
     System.out.println("Getting " + name);
     

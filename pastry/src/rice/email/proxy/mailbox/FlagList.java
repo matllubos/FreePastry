@@ -6,15 +6,15 @@ public interface FlagList
 
     void removeFlag(String flag);
 
-    //    void setDeleted(boolean value);
-
+    void setFlag(String flag, boolean value);
+ 
     boolean isDeleted();
-
-    //    void setSeen(boolean value);
 
     boolean isSeen();
 
     boolean isRecent();
+
+    boolean isSet(String flag);
 
     String toFlagString();
 
@@ -26,3 +26,4 @@ public interface FlagList
     void commit()
          throws MailboxException;
 }
+
