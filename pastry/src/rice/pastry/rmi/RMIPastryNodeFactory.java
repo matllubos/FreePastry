@@ -46,7 +46,9 @@ import rice.pastry.dist.*;
 
 import java.util.*;
 import java.rmi.RemoteException;
+import java.rmi.RMISecurityManager;
 import java.rmi.Naming;
+import java.rmi.registry.*;
 import java.net.*;
 
 /**
@@ -73,6 +75,15 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
   private static final int leafSetMaintFreq = 60;
   private static final int routeSetMaintFreq = 15*60;
 
+
+    /**
+     * Instance of RMI registry ever-created when using this
+     * factory.
+     */
+
+    public static Registry rmiRegistry = null;
+
+
   /**
    * Constructor.
    *
@@ -81,6 +92,20 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
   public RMIPastryNodeFactory(int p) {
     nidFactory = new RandomNodeIdFactory();
     port = p;
+
+    if( rmiRegistry == null){
+	// set RMI security manager
+	if (System.getSecurityManager() == null)
+	    System.setSecurityManager(new RMISecurityManager());
+	
+	// start RMI registry
+	try {
+	    rmiRegistry = java.rmi.registry.LocateRegistry.createRegistry(port);
+	} catch (Exception e) {
+	    System.out.println("Error starting RMI registry: " + e);
+	}
+    }
+
   }
 
 
