@@ -1,5 +1,7 @@
 package rice.post;
 
+import java.util.Observable;
+
 import rice.post.messaging.*;
 
 /**
@@ -8,7 +10,7 @@ import rice.post.messaging.*;
  * 
  * @version $Id$
  */
-public abstract class PostClient {
+public abstract class PostClient extends Observable {
 
   /**
    * Builds a PostClient.
