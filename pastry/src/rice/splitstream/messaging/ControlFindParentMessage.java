@@ -141,7 +141,8 @@ public class ControlFindParentMessage extends MessageAnycast
 	if((stripeTopic != null) && ( bandwidthManager.canTakeChild( channel ) ) &&
 	   ( !isInRootPath( scribe, originalSource ) ) &&  
 	   ( !originalSource.equals( scribe.getLocalHandle())) &&
-	   recv_stripe.getState() != Stripe.STRIPE_DROPPED){
+	   //recv_stripe.getState() != Stripe.STRIPE_DROPPED){
+	   recv_stripe.getState() == Stripe.STRIPE_SUBSCRIBED){
 	    Vector subscribedStripes = channel.getSubscribedStripes();
 	    //System.out.println("NODE "+scribe.getNodeId()+" TAKING ON CHILD "  + originalSource.getNodeId()+" for stripe " +recv_stripe.getStripeId());
 	    if(!subscribedStripes.contains(recv_stripe))
@@ -179,12 +180,23 @@ public class ControlFindParentMessage extends MessageAnycast
 	    //System.out.println("Node "+scribe.getNodeId()+ " taking the child "+originalSource.getNodeId());
 	    return false;
 	}
-	else
+	else {
+	    /*
+	    if(!bandwidthManager.canTakeChild( channel ))
+		System.out.println("ControlFindParentMessage -- Could not satisfy the request at "+channel.getSplitStream().getNodeId()+" from "+originalSource.getNodeId()+" for "+stripe_id+" because no spare capacity");
+	    if(isInRootPath( scribe, originalSource ) )
+		System.out.println("ControlFindParentMessage -- Could not satisfy the request at "+channel.getSplitStream().getNodeId()+" from "+originalSource.getNodeId()+" for "+stripe_id+" because loops are created");
+	    if(recv_stripe.getState() == Stripe.STRIPE_DROPPED)
+		System.out.println("ControlFindParentMessage -- Could not satisfy the request at "+channel.getSplitStream().getNodeId()+" from "+originalSource.getNodeId()+" for "+stripe_id+" because local node is also dropped for this stripe");
+	    if(stripeTopic == null)
+		System.out.println("ControlFindParentMessage -- Could not satisfy the request at "+channel.getSplitStream().getNodeId()+" from "+originalSource.getNodeId()+" for "+stripe_id+" because local node is not subscribed to the stripe");
+	    */
 	    return true;
+	}
     }
 
     public void faultHandler(){
-	System.out.println("ControlFindParentMessage -- DFS Failed. Noone could take me as a child.");
+	System.out.println("ControlFindParentMessage -- DFS Failed. Noone could take me "+originalSource.getNodeId()+" as a child. - traversed "+alreadySeenSize());
 	
 	Vector sendPath = (Vector)recv_stripe.getRootPath().clone();
 	sendPath.add(((Scribe)ss.getScribe()).getLocalHandle());
