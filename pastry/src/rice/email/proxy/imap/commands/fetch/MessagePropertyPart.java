@@ -67,10 +67,11 @@ public class MessagePropertyPart extends FetchPart {
       try {
         Object data = mime.getContent();
         String result = "";
-        
-        if (data instanceof String) {
-          String content = (String) data;
 
+        if (data instanceof MimeMultipart) {
+          MimeMultipart part = (MimeMultipart) data;
+          result = parseMimeMultipart(part, bodystructure);
+        } else {
           String[] type = mime.getHeader("Content-Type");
           String contentType = "\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\")";
           
@@ -88,7 +89,7 @@ public class MessagePropertyPart extends FetchPart {
           if (mime instanceof MimeBodyPart)
             StreamUtils.copy(new InputStreamReader(((MimeBodyPart) mime).getRawInputStream()), writer);
           else
-            StreamUtils.copy(new InputStreamReader(mime.getInputStream()), writer);
+            StreamUtils.copy(new InputStreamReader(((javax.mail.internet.MimeMessage) mime).getRawInputStream()), writer);
             
           result = "(" + contentType + " NIL NIL " + encoding + " " +
                    writer.toString().length() + " " + countLines(writer.toString());
@@ -107,12 +108,6 @@ public class MessagePropertyPart extends FetchPart {
           }
 
           result += ")";
-        } else if (data instanceof MimeMultipart) {
-          MimeMultipart part = (MimeMultipart) data;
-          result = parseMimeMultipart(part, bodystructure);
-        } else {
-          String content = "" + data;
-          result = "{" + content.length() + "}\r\n" +content;
         }
 
         return result;
@@ -167,7 +162,7 @@ public class MessagePropertyPart extends FetchPart {
 
         String encoding = ("\"" + mime.getEncoding() + "\"").toUpperCase();
 
-        if (encoding.equals("\"NULL\"")) {
+        if (encoding.equals("\"NULL\"") || encoding.equals("\"\"")) {
           encoding = "\"7BIT\"";
         }
 

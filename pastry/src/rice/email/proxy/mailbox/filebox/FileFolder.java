@@ -102,6 +102,14 @@ public class FileFolder implements MailFolder {
     return new FileMessageList(_folder.listFiles(FileMessage.MSG_FILE_FILTER));
   }
 
+  public int getExists() {
+    return 0;
+  }
+
+  public int getRecent() {
+    return 0;
+  }
+
   static final FileFilter UID_FILTER = new UIDFileFilter();
   static final Pattern UID_PATTERN   = Pattern.compile("\\.uid(\\d+)");
 

@@ -40,6 +40,9 @@ import java.io.*;
 import java.net.*;
 import java.security.*;
 
+import javax.activation.*;
+import javax.mail.*;
+
 /**
 * This class starts up everything on the Pastry side, and then
  * boots up the PAST, Scribe, POST, and Emails services, and then
@@ -53,6 +56,13 @@ public class EmailProxy extends PostProxy {
   static boolean GATEWAY = false;
 
   static boolean ACCEPT_NON_LOCAL = false;
+
+  // we must set up the Data Content Handler
+  static {
+    MailcapCommandMap cmdmap = (MailcapCommandMap) CommandMap.getDefaultCommandMap();
+    cmdmap.addMailcap("application/*; ;x-java-content-handler=rice.email.proxy.mail.MailDataHandler");
+    //cmdmap.addMailcap("text/*; ;x-java-content-handler=rice.email.proxy.mail.MailDataHandler");
+  }
  
   private EmailService email;
 

@@ -64,6 +64,14 @@ public class PostFolder implements MailFolder {
     return folder.getNextUID();
   }
 
+  public int getExists() {
+    return folder.getExists();
+  }
+
+  public int getRecent() {
+    return folder.getExists();
+  }
+
   public Folder getFolder() {
     return folder;
   }

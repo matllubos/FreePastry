@@ -127,6 +127,7 @@ public class MovingMessage
         while (true)
         {
             String line = in.readLine();
+          System.out.println(line);
             if (line == null)
                 throw new EOFException("Did not receive <CRLF>.<CRLF>");
 

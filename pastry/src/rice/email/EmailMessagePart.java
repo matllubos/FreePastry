@@ -113,15 +113,15 @@ public class EmailMessagePart extends EmailContentPart {
   }
 
   /**
-   * Returns whether or not this EmailPart is equal to the object
+   * Returns whether or not this EmailMessagePart is equal to the object
    *
    * @return The equality of this and o
    */
   public boolean equals(Object o) {
-    if (! (o instanceof EmailPart))
+    if (! (o instanceof EmailMessagePart))
       return false;
 
-    EmailPart part = (EmailPart) o;
+    EmailMessagePart part = (EmailMessagePart) o;
     
     return content.equals(part.content);
   }

@@ -34,6 +34,7 @@ public class Flags implements java.io.Serializable {
     _answered = false;
     _flagged = false;
     _draft = false;
+    _recent = true;
   }
 
     /**
@@ -166,6 +167,15 @@ public class Flags implements java.io.Serializable {
    */
   public void setDraft(boolean value) {
     _draft = value;
+  }
+
+  /**
+   * Sets the Recent attribute of the Flags object
+   *
+   * @param value The new Recent value
+   */
+  public void setRecent(boolean value) {
+    _recent = value;
   }
 
 

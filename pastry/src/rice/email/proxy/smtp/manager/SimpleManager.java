@@ -83,7 +83,7 @@ public class SimpleManager implements SmtpManager {
       }
     };
 
-    if (gateway && !local) {
+    if (gateway) {
       email.sendMessage(PostMessage.parseEmail(recipients, state.getMessage().getResource(), address), done);
     } else {
       email.sendMessage(PostMessage.parseEmail(recipients, state.getMessage().getResource()), done);

@@ -20,6 +20,12 @@ public class EmailLog extends EncryptedLog {
   // the next available UID for this folder
   private int nextUID;
 
+  // the number of messages currently in this folder
+  private int numExist;
+
+  // the number of recent messages in this folder
+  private int numRecent;
+
   // the creation time of this email log
   private long creation; 
 
@@ -35,6 +41,54 @@ public class EmailLog extends EncryptedLog {
 
     nextUID = DEFAULT_UID;
     creation = System.currentTimeMillis();
+    numExist = 0;
+    numRecent = 0;
+  }
+
+  /**
+   * Returns the number of messages which exist in this folder
+   *
+   * @return The number of messages which exists in the folder
+   */
+  public int getExists() {
+    return numExist;
+  }
+
+  /**
+   * Increments the number of messages which exist in this folder
+   */
+  public void incrementExists() {
+    numExist++;
+  }
+
+  /**
+   * Decrements the number of messages which exist in this folder
+   */
+  public void decrementExists() {
+    numExist--;
+  }
+
+  /**
+   * Returns the number of messages which are recent in this folder
+   *
+   * @return The number of messages which are recent in the folder
+   */
+  public int getRecent() {
+    return numRecent;
+  }
+
+  /**
+   * Increments the number of messages which exist in this folder
+   */
+  public void incrementRecent() {
+    numRecent++;
+  }
+
+  /**
+  * Decrements the number of messages which exist in this folder
+   */
+  public void decrementRecent() {
+    numRecent--;
   }
 
   /**

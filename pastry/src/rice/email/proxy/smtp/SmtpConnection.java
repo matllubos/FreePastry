@@ -54,7 +54,7 @@ public class SmtpConnection {
 
     public void println(String line) {
 
-        System.err.println("S: " + line);
+        System.out.println("S: " + line);
         out.print(line + "\r\n");
         out.flush();
         
@@ -68,7 +68,7 @@ public class SmtpConnection {
     public String readLine() throws IOException {
         String line = in.readLine();
 
-        System.err.println("C: " + line);
+        System.out.println("C: " + line);
         return line;
     }
 

@@ -34,14 +34,10 @@ public class ExamineCommand extends AbstractImapCommand {
   public void execute() {
     try {
       if (_folder != null) {
-	  System.out.println("FOLDER NOT NULL");
         MailFolder fold = getState().getFolder(_folder);
 
-        int exists         = fold.getMessages(MsgFilter.ALL).size();
-        int recent         = fold.getMessages(MsgFilter.RECENT).size();
-
-        untaggedResponse(exists + " EXISTS");
-        untaggedResponse(recent + " RECENT");
+        untaggedResponse(fold.getExists() + " EXISTS");
+        untaggedResponse(fold.getRecent() + " RECENT");
         untaggedSuccess("[UIDVALIDITY " + fold.getUIDValidity() + "] UIDs valid ");
         untaggedSuccess("[UIDNEXT " + fold.getNextUID() + "] Predicted next UID ");
         untaggedResponse("FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)");
@@ -56,7 +52,6 @@ public class ExamineCommand extends AbstractImapCommand {
       String writeStatus = isWritable() ? "[READ-WRITE]" : "[READ-ONLY]";
 
       taggedSuccess(writeStatus + " " + getCmdName() + " completed");
-
     } catch (MailboxException e) {
       taggedExceptionFailure(e);
     }

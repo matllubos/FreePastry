@@ -100,6 +100,24 @@ public class Folder {
   }
 
   /**
+   * Returns the number of messages which exist in this folder
+   *
+   * @return The number of messages which exists in the folder
+   */
+  public int getExists() {
+    return _log.getExists();
+  }
+
+  /**
+   * Returns the number of messages which are recent in this folder
+   *
+   * @return The number of messages which are recent in the folder
+   */
+  public int getRecent() {
+    return _log.getRecent();
+  }
+
+  /**
    * Returns the time (in milliseconds) that this email log was created.
    *
    * @return The creation time
@@ -127,6 +145,7 @@ public class Folder {
    * @param command the work to perform after this call
    */
   public void addMessage(final Email email, final Continuation command) {
+    _log.incrementRecent();
     addMessage(email, new Flags(), command);
   }  
 
@@ -139,6 +158,7 @@ public class Folder {
    * @param command the work to perform after this call
    */
   public void addMessage(final Email email, final Flags flags, final Continuation command) {
+    _log.incrementExists();
     email.setStorage(_storage);
     email.storeData(new StandardContinuation(command) {
       public void receiveResult(Object o) {
@@ -172,6 +192,7 @@ public class Folder {
    * @param command the remaining work to carry out
    */
   public void removeMessage(StoredEmail email, Continuation command) {
+    _log.decrementExists();
     _log.addLogEntry(new DeleteMailLogEntry(email), command);
   }
 

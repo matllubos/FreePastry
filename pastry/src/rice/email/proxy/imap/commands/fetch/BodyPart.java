@@ -131,49 +131,66 @@ public class BodyPart extends FetchPart {
     if (types.size() == 0) {
       return fetchAll(breq, content);
     }
-
-    String type = (String) types.remove(0);
+    
     Object part = null;
+    String type = (String) types.remove(0);
 
     try {
-      part = content.getContent();
+      try {
+        part = content.getContent();
+
+        // see if the part request is a number
+        int i = Integer.parseInt(type);
+
+         if (part instanceof MimeMultipart) {
+          MimeMultipart mime = (MimeMultipart) part;
+
+          if (i-1 < mime.getCount()) {
+            return fetchPart(breq, types, (MimeBodyPart) mime.getBodyPart(i-1), false);
+          }
+        } else if (part instanceof javax.mail.internet.MimeMessage) {
+          types.add(0, type);
+          return fetchPart(breq, types, (javax.mail.internet.MimeMessage) part, topLevel);
+        } else if ((part instanceof MimeBodyPart) && (((MimeBodyPart) part).getContent() instanceof MimePart)) {
+          types.add(0, type);
+          return fetchPart(breq, types, (MimeBodyPart) part, topLevel);
+        } else if ((i == 1) && (types.size() == 0)) {
+          return fetchAll(breq, content);
+        }
+      } catch (NumberFormatException e) {
+        if (part == null)
+          throw new MailboxException("Could not properly parse content of " + content);
+
+        if (part instanceof javax.mail.internet.MimeMessage) {
+          types.add(0, type);
+          return fetchPart(breq, types, (javax.mail.internet.MimeMessage) part, topLevel);
+        } else if (content instanceof MimeBodyPart) {
+          if (type.equals("MIME")) {
+            return fetchHeader((MimePart) content);
+          }
+        } else if (content instanceof javax.mail.internet.MimeMessage) {
+          if (type.equals("HEADER")) {
+            return fetchHeader((MimePart) content);
+          } else if (type.equals("HEADER.FIELDS")) {
+            return fetchHeader((MimePart) content, split(breq.getPartIterator()));
+          } else if (type.equals("HEADER.FIELDS.NOT")) {
+            return fetchHeader((MimePart) content, split(breq.getPartIterator()), false);
+          } else if (type.equals("TEXT")) {
+            return fetchAll(breq, ((javax.mail.internet.MimeMessage) content).getRawInputStream());
+          } else if (type.equals("MIME")) {
+          } else {
+            throw new MailboxException("Unknown section text specifier");
+          }
+        }
+      }
     } catch (IOException ioe) {
       throw new MailboxException(ioe);
     } catch (MessagingException me) {
+      me.printStackTrace();
       throw new MailboxException(me);
     }
 
-    try {
-      int i = Integer.parseInt(type);
-
-      if ((part instanceof String) && (i == 1) && (types.size() == 0) && topLevel) {
-        return fetchAll(breq, content);
-      } else if (part instanceof MimeMultipart) {
-        MimeMultipart mime = (MimeMultipart) part;
-
-        if (i-1 < mime.getCount()) {
-          return fetchPart(breq, types, (MimeBodyPart) mime.getBodyPart(i-1), false);
-        }
-      }
-    } catch (NumberFormatException e) {
-      if (topLevel || (part instanceof MimePart)) {
-        if (type.equals("HEADER")) {
-          return fetchHeader((MimePart) content);
-        } else if (type.equals("HEADER.FIELDS")) {
-          return fetchHeader((MimePart) content, split(breq.getPartIterator()));
-        } else if (type.equals("HEADER.FIELDS.NOT")) {
-          return fetchHeader((MimePart) content, split(breq.getPartIterator()), false);
-        } else if (type.equals("TEXT")) {
-          return fetchAll(breq, content);
-        } else {
-          throw new MailboxException("Unknown section text specifier");
-        }
-      } else if ((type.equals("MIME")) && (!topLevel)) {
-        return fetchHeader((MimePart) content);
-      }
-    } catch (MessagingException me) {
-      throw new MailboxException(me);
-    }
+    System.out.println("DIDN'T KNOW WHAT TO DO WITH " + part.getClass().getName() + " " + type);
 
     return "\"\"";
   }
@@ -208,12 +225,7 @@ public class BodyPart extends FetchPart {
     try {
       if (data instanceof String) {
         String content = getRange(breq, "" + data);
-
-        if (content.equals("")) {
-          return "\"\"";
-        } else {
-          return "{" + content.length() + "}\r\n" + content;
-        }
+        return format(content);
       } else if (data instanceof MimeBodyPart) {
         MimeBodyPart mime = (MimeBodyPart) data;
 
@@ -223,7 +235,7 @@ public class BodyPart extends FetchPart {
         StreamUtils.copy(new InputStreamReader(stream), writer);
 
         String content = getRange(breq, writer.toString());
-        return "{" + content.length() + "}\r\n" + content;
+        return format(content);
       } else if (data instanceof javax.mail.internet.MimeMessage) {
         javax.mail.internet.MimeMessage mime = (javax.mail.internet.MimeMessage) data;
 
@@ -233,7 +245,7 @@ public class BodyPart extends FetchPart {
         StreamUtils.copy(new InputStreamReader(stream), writer);
 
         String content = getRange(breq, writer.toString());
-        return "{" + content.length() + "}\r\n" + content;
+        return format(content);
       } else if (data instanceof MimeMultipart) {
         MimeMultipart mime = (MimeMultipart) data;
 
@@ -241,7 +253,13 @@ public class BodyPart extends FetchPart {
         mime.writeTo(stream);
 
         String content = getRange(breq, stream.toString());
-        return "{" + content.length() + "}\r\n" + content;
+        return format(content);
+      } else if (data instanceof InputStream) {
+        StringWriter writer = new StringWriter();
+        StreamUtils.copy(new InputStreamReader((InputStream) data), writer);
+
+        String content = getRange(breq, writer.toString());
+        return format(content);
       } else {
         return "NIL";
       }
@@ -258,5 +276,13 @@ public class BodyPart extends FetchPart {
     }
 
     return content;
+  }
+
+  private String format(String content) {
+    if (content.equals("")) {
+      return "\"\"";
+    } else {
+      return "{" + content.length() + "}\r\n" + content;
+    }
   }
 }

@@ -6,7 +6,8 @@ SOURCE  = \
   MalformedAddressException.java \
   MimeMessage.java \
   MovingMessage.java \
-  StoredMessage.java
+  StoredMessage.java \
+  MailDataHandler.java
 
 RMI_SOURCE =
 

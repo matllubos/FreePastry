@@ -30,12 +30,11 @@ public class MimeMessage {
 
   public MimeMessage(javax.mail.internet.MimeMessage message) throws MailException {
     try {
-      _message = message;
-
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       message.writeTo(baos);
-
+      
       _resource = new StringBufferResource(baos.toString());
+      _message = new javax.mail.internet.MimeMessage(message);//parseMessage();
     } catch (IOException e) {
       throw new MailException(e);
     } catch (MessagingException e) {
@@ -46,11 +45,13 @@ public class MimeMessage {
   private void parseMessage() throws MailException {
     try {
 
-      InputStream in = _resource.getInputStream();
-      Session session = Session.getDefaultInstance(new Properties(), null);
-      _message = new javax.mail.internet.MimeMessage(session, in);
-      _message.getSize();
-      in.close();
+      if (_message == null) {
+        InputStream in = _resource.getInputStream();
+        Session session = Session.getDefaultInstance(new Properties(), null);
+        _message = new javax.mail.internet.MimeMessage(session, in);
+        _message.getSize();
+        in.close();
+      }
     } catch (Exception me) {
       throw new MailException(me);
     }
@@ -151,6 +152,11 @@ public class MimeMessage {
   public String getInternalDate() {
     try {
       String[] result = _message.getHeader("Received");
+
+      if ((result == null) || (result.length == 0)) {
+        result = _message.getHeader("Date");
+      }
+      
       String[] stuff = result[0].split(";");
 
       Date date = null;
@@ -163,8 +169,6 @@ public class MimeMessage {
         } catch (ParseException e) {
         }
       }
-
-      if (date == null) return "NIL";
 
       if (date.getDate() < 10)
         return " " + dateWriter.format(date);

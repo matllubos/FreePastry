@@ -45,6 +45,7 @@ public abstract class AbstractImapCommand
     protected void taggedExceptionFailure(Throwable exception)
     {
         _conn.println(_tag + " BAD " + exception.getMessage());
+      exception.printStackTrace();
     }
 
     protected void untaggedResponse(String s)

@@ -29,6 +29,22 @@ public class MockMailFolder
         return _name;
     }
 
+    public int getExists() {
+      try {
+        return getMsgCount();
+      } catch (MailboxException e) {
+        return 0;
+      }
+    }
+
+    public int getRecent() {
+      try {
+        return getRecentMsgCount();
+      } catch (MailboxException e) {
+        return 0;
+      }
+    }
+
     public int getMsgCount()
                     throws MailboxException
     {
