@@ -15,6 +15,7 @@ import java.util.*;
  * in the backround.  There are many ways to wiegh each of these priorities
  * and there must be some more discussion on which is best.
  *
+ * @version $Id$
  * @author Ansley Post
  */
 public class BandwidthManager{
@@ -22,8 +23,8 @@ public class BandwidthManager{
     /**
      * This is the default number of outgoing bandwidth that a channel may have
      * if no call to setDefaultBandwidth has been made. Channels may 
-     * individually call configureChannel to change the number of outgoing bandwidth
-     * it may take on.
+     * individually call configureChannel to change the number of 
+     * outgoing bandwidth it may take on.
      */
     private static int DEFAULT_BANDWIDTH = 16;
 
@@ -78,7 +79,10 @@ public class BandwidthManager{
 	this.defaultBandwidth = out;
     }
 
-
+    /**
+     * Gets the value of the default bandwidth for a newly created channel
+     * @return int the value of defaultBandwidth
+     */
     public int getDefaultBandwidth(){
         return defaultBandwidth;
     }
