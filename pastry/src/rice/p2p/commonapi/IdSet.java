@@ -97,5 +97,10 @@ public interface IdSet extends Serializable {
    */
   public Id hash();
   
+  /**
+   * Override clone() to make it publicly accessible
+   *
+   * @return A clone of this set
+   */
   public Object clone();
 }
