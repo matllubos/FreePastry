@@ -237,7 +237,18 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
     }
 
     public void splitstreamIsReady(){
-        if(m_appIndex == 0){
+	String bootHost = DistSplitStreamTest.bshost;//splitStreamApp.getDriver().getBootHost();
+	String localHost = null;
+
+	try{
+	    localHost = InetAddress.getLocalHost().getHostName();
+	}catch(UnknownHostException e){
+	    System.out.println("Error determining local host: " + e);
+	}
+	
+	System.out.println("Localhost "+localHost+", boothost "+bootHost);
+
+	if(m_appIndex == 0 && localHost.equals(bootHost)){
             // creator of channel
             System.out.println("Creating channel at "+m_appIndex+" with name "+m_name+" with "+m_numStripes+" stripes");
             createChannel(m_numStripes, m_name);

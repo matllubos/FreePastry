@@ -10,7 +10,8 @@ SOURCE  = \
 	DistSplitStreamTest.java \
 	DistSplitStreamTestApp.java \
 	DistSplitStreamTestMessage.java \
-	ProcessLog.java
+	ProcessLog.java\
+	AbsoluteDelay.java
 
 
 
