@@ -87,6 +87,7 @@ public class MessageDispatch
   } else {
     System.out.println("Could not dispatch message " + msg + " becuase the application address " + msg.getDestination() + " was unknown.");
     System.out.println("Message is going to be dropped on the floor.");
+    return false;
   }
   }
 
