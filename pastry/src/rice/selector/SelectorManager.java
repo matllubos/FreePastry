@@ -134,6 +134,7 @@ public class SelectorManager extends Thread implements Timer {
    * @return The SelectionKey which uniquely identifies this channel
    */
   public SelectionKey register(SelectableChannel channel, SelectionKeyHandler handler, int ops) throws IOException {
+//    System.out.println("SM.register("+channel.getClass().getName()+")");    
     return channel.register(selector, ops, handler);
   }
 
@@ -183,8 +184,8 @@ public class SelectorManager extends Thread implements Timer {
 
       // loop while waiting for activity
       while (alive) {
-//        doSelect
-//        select();
+        Thread.yield();
+//        try { Thread.sleep(100); } catch (Exception ioe) {}
         executeDueTasks();
         onLoop();
         doInvocations();
