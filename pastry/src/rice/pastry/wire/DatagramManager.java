@@ -267,6 +267,7 @@ public class DatagramManager implements SelectionKeyHandler {
 
       while (i.hasNext()) {
         PendingWrite write = (PendingWrite) i.next();
+
         int num = channel.send(serialize(write.getObject()), write.getAddress());
 
         if (num == 0)

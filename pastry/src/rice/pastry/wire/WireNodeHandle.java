@@ -195,7 +195,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
             } else {
               debug("Message is too large - open up socket!");
               LinkedList list = new LinkedList();
-              list.addFirst(msg);
+              list.addFirst(new SocketTransportMessage(msg));
 
               connectToRemoteNode(list);
             }
@@ -211,7 +211,11 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
           writer.enqueue(new SocketTransportMessage(msg));
           key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
         }
+
+        debug("Enqueued message " + msg + " for writing in socket writer.");
       }
+
+      ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector().wakeup();
     }
   }
 
@@ -294,7 +298,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
       InetSocketAddress local = ((WireNodeHandle) getLocalNode().getLocalHandle()).getAddress();
       InetSocketAddress remote = getAddress();
 
-      System.out.println("Found double socket... (state == " + state + ")");
+      debug("Found double socket... (state == " + state + ")");
 
       // if not currently connected (connection killing pending), we must request a new socket
       if (state != STATE_USING_TCP) {
@@ -311,6 +315,8 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
           this.key.attach(null);
           this.key.channel().close();
           this.key.cancel();
+
+          writer.reset();
         } catch (IOException e) {
           System.out.println("ERROR closing unnecessary socket: " + e);
         }
@@ -320,12 +326,12 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
         state = STATE_USING_TCP;
         key.attach(this);
 
-        System.out.println("Killing our socket, using new one...");
+        debug("Killing our socket, using new one...");
       } else {
 
         // use our socket and ignore the new one
         key.attach(null);
-        System.out.println("Using our socket, letting other socket die...");
+        debug("Using our socket, letting other socket die...");
       }
     }
   }
@@ -460,11 +466,18 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
    * interested in writing.
    */
   public void wakeup() {
-    if ((writer != null) && (! writer.isEmpty())) {
-      if (! key.isValid())
+    if (writer != null) {
+      if (! key.isValid()) {
         System.out.println("ERROR: Recieved wakeup with non-valid key! (state == " + state + ")");
-      else
-        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+      } else {
+        if (writer.isEmpty()) {
+          key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+        } else {
+          if ((key.interestOps() & SelectionKey.OP_WRITE) == 0) {
+            key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+          }
+        }
+      }
     }
   }
 
@@ -560,13 +573,13 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
    * @return true if they are equal, false otherwise.
    */
   public boolean equals(Object obj) {
-    NodeHandle nh;
+    WireNodeHandle nh;
 
-    if ((obj == null) || (! (obj instanceof NodeHandle))) return false;
+    if ((obj == null) || (! (obj instanceof WireNodeHandle))) return false;
 
-    nh = (NodeHandle) obj;
+    nh = (WireNodeHandle) obj;
 
-    return getNodeId().equals(nh.getNodeId());
+    return address.equals(nh.getAddress());
   }
 
   /**

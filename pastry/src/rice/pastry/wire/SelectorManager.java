@@ -102,7 +102,7 @@ public class SelectorManager {
       debug("Manager starting...");
 
       // loop while waiting for activity
-      while (alive && (selector.select(500) >= 0)) {
+      while (alive && (selector.select(100) >= 0)) {
 
         Iterator it = selector.selectedKeys().iterator();
 

@@ -101,9 +101,8 @@ public class WireNodeHandlePool extends DistNodeHandlePool {
 
     if ((handle.getNodeId() != null) && (response.getNodeId() != null) &&
         (! handle.getNodeId().equals(response.getNodeId()))) {
-      debug("PANIC: Coalescing of node handles has failed!");
-      debug("Node handle was " + nodehandle.getNodeId() + "/" + nodehandle.getAddress() + " is now " + response.getNodeId() + "/" + response.getAddress());
-      System.exit(0);
+      System.out.println("PANIC: Coalescing of node handles has failed!");
+      System.out.println("Node handle was " + nodehandle.getNodeId() + "/" + nodehandle.getAddress() + " is now " + response.getNodeId() + "/" + response.getAddress());
     }
 
     return response;

@@ -41,6 +41,7 @@ import rice.pastry.routing.*;
 import rice.pastry.messaging.*;
 import rice.pastry.wire.exception.*;
 import rice.pastry.wire.messaging.datagram.*;
+import rice.pastry.wire.messaging.socket.*;
 
 import java.io.*;
 import java.nio.*;
@@ -257,15 +258,15 @@ public class DatagramTransmissionManager {
 
     // the factor by which to multiply the last send time
     // to determine the next timeout time
-    public double TIMEOUT_FACTOR = 3.5;
+    public double TIMEOUT_FACTOR = 2;
 
     // the maximum number to retries before declaring the node
     // to be dead
-    public int MAX_NUM_RETRIES = 6;
+    public int MAX_NUM_RETRIES = 5;
 
     // the maximum number of objects in the UDP queue before we
     // open a socket
-    public int MAX_UDP_QUEUE_SIZE = 3;
+    public int MAX_UDP_QUEUE_SIZE = 4;
 
 
     /**
@@ -302,7 +303,7 @@ public class DatagramTransmissionManager {
 
         while (i.hasNext()) {
           PendingWrite pw = (PendingWrite) i.next();
-          list.addLast(pw.getObject());
+          list.addLast(new SocketTransportMessage(pw.getObject()));
           i.remove();
         }
 
@@ -415,6 +416,7 @@ public class DatagramTransmissionManager {
 
           state = STATE_READY;
           resendWaitTime = (long) (resendWaitTime * TIMEOUT_FACTOR);// (1.5 + random.nextDouble()));
+          sendTimeoutTime = (long) (sendTimeoutTime * TIMEOUT_FACTOR);
         }
       } else if (state == STATE_WAITING_TO_SEND) {
         long timeout = System.currentTimeMillis() - resendWaitBeginTime;
@@ -423,6 +425,9 @@ public class DatagramTransmissionManager {
           state = STATE_READY;
         }
       }
+
+     // if ((resendWaitTime > 30000) || (sendTimeoutTime > 30000))
+     //   System.out.println("RWT: " + resendWaitTime + " STT: " + sendTimeoutTime);
     }
 
     private void debug(String s) {

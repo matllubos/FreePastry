@@ -47,6 +47,7 @@ import rice.pastry.wire.exception.*;
 import rice.pastry.routing.*;
 import rice.pastry.messaging.*;
 import rice.pastry.*;
+import rice.pastry.wire.messaging.socket.*;
 
 /**
  * Class which serves as an "writer" for all of the
@@ -84,7 +85,7 @@ public class SocketChannelWriter {
    */
   public SocketChannelWriter(WirePastryNode spn) {
     pastryNode = spn;
-    reset();
+    buffer = null;
 
     queue = new LinkedList();
   }
@@ -96,6 +97,10 @@ public class SocketChannelWriter {
    * @param o The object to be written.
    */
   public void enqueue(Object o) {
+//    if ((o instanceof SocketTransportMessage) &&
+//        (((SocketTransportMessage) o).getObject() instanceof rice.testharness.messaging.SubscribedMessage))
+//      System.out.println(pastryNode.getNodeId() + " (W): Enqueuing write of SM.");
+
     queue.addLast(o);
   }
 
@@ -137,12 +142,13 @@ public class SocketChannelWriter {
       }
     }
 
+
     int j = buffer.limit();
     int i = sc.write(buffer);
 
     debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
 
-    if (i != j) {
+    if (buffer.remaining() != 0) {
       return false;
     }
 

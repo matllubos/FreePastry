@@ -68,5 +68,9 @@ public class SocketTransportMessage extends SocketMessage {
   public Object getObject() {
     return o;
   }
+  
+  public String toString() {
+    return "{"+o+"}";
+  }
 
 }

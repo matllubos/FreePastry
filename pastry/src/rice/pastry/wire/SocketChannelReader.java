@@ -115,8 +115,12 @@ public class SocketChannelReader {
         sizeBuffer.flip();
         initializeObjectBuffer();
       }
-    } else {
+    }
+
+    if (objectSize != -1) {
       int read = sc.read(buffer);
+
+      debug("Read " + read + " bytes of object..." + buffer.remaining());
 
       if (read == -1)  {
         // implies that the channel is closed
@@ -178,6 +182,7 @@ public class SocketChannelReader {
 
     try {
       o = ois.readObject();
+
       if (o instanceof SocketCommandMessage) {
         debug("Read socket message " + o + " - passing to node handle.");
         handle.receiveSocketMessage((SocketCommandMessage) o);
@@ -185,6 +190,8 @@ public class SocketChannelReader {
         debug("Read message " + o + " - passing to pastry node.");
         SocketTransportMessage stm = (SocketTransportMessage) o;
         spn.receiveMessage((Message) stm.getObject());
+      } else {
+        throw new IllegalArgumentException("Message " + o + " was not correctly wrapped.");
       }
     } catch (ClassCastException e) {
       System.out.println("PANIC: Serialized message was not a pastry message!");
