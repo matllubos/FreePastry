@@ -231,10 +231,6 @@ public class HelloWorldAppMultiThread extends PastryAppl {
     public String toString() {
       return new String("DistHWMTApp:"+thePastryNode);
     }
-
-		public void messageNotDelivered(Message msg, String reason) {
-      System.out.println("messageNotDelivered("+msg+"):"+reason);			
-		}
 }
 
 
