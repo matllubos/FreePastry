@@ -37,6 +37,7 @@ import java.io.*;
  * A class for representing and manipulating the leaf set.
  *  
  * @author Andrew Ladd
+ * @author Peter Druschel
  */
 
 public class LeafSet extends Observable implements NodeSet, Serializable {
@@ -78,11 +79,24 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
 	if (nid.equals(baseId)) return false;
 
 	//System.out.println("Inserting " + handle.getNodeId() + " into " + this);
-
-	//if (baseId.clockwise(nid) == true) return cwSet.put(handle);
-	//else return ccwSet.put(handle);
 	
 	return cwSet.put(handle) | ccwSet.put(handle);
+    }
+
+    /**
+     * Test is a put of a NodeHandle would succeed.
+     *
+     * @param handle the handle to test.
+     *
+     * @return true if a put would succeed, false otherwise.
+     */
+
+    public boolean test(NodeHandle handle) 
+    {
+	NodeId nid = handle.getNodeId();
+	if (nid.equals(baseId)) return false;
+	
+	return cwSet.test(handle) | ccwSet.test(handle);
     }
 
     /**
@@ -209,8 +223,7 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
     /**
      * Add observer method.
      *
-     * @param o the observer to add.
-     */
+     * @param o the observer to add.  */
 
     public void addObserver(Observer o) {
 	cwSet.addObserver(o);

@@ -39,6 +39,7 @@ import java.util.*;
 /**
  * An implementation of a simple leaf set protocol.
  *
+ * @author Peter Druschel
  * @author Andrew Ladd
  */
 
@@ -50,9 +51,6 @@ public class StandardLeafSetProtocol implements Observer, MessageReceiver {
     private RoutingTable routeTable;
 
     private Address address;
-
-    private boolean noBroadcast;
-    private boolean dirty;
     
     public StandardLeafSetProtocol(NodeHandle local, PastrySecurityManager sm, LeafSet ls, RoutingTable rt) {
 	localHandle = local;
@@ -63,8 +61,6 @@ public class StandardLeafSetProtocol implements Observer, MessageReceiver {
 	address = new LeafSetProtocolAddress();
 
 	ls.addObserver(this);
-
-	noBroadcast = false;
     }
 
     /**
@@ -84,16 +80,20 @@ public class StandardLeafSetProtocol implements Observer, MessageReceiver {
     public void receiveMessage(Message msg) {
 	if (msg instanceof BroadcastLeafSet) {
 	    BroadcastLeafSet bls = (BroadcastLeafSet) msg;
-	    
+	    boolean emptyLS = false;
+
 	    NodeHandle from = bls.from();
 	    LeafSet remotels = bls.leafSet();
 	    
 	    int cwSize = remotels.cwSize();
 	    int ccwSize = remotels.ccwSize();
-	    
-	    noBroadcast = true;
-	    dirty = false;
 
+	    if (leafSet.size() == 0) emptyLS = true;  // this node is just joining
+
+	    //System.out.println("received leafBC from " + from.getNodeId() + " at " + localHandle.getNodeId() + ":" +
+	    //	       remotels);
+
+	    // first, merge the received leaf set into our own
 	    for (int i=-ccwSize; i<=cwSize; i++) {
 		NodeHandle nh;
 
@@ -104,16 +104,47 @@ public class StandardLeafSetProtocol implements Observer, MessageReceiver {
 		
 		if (nh.isAlive() == false) continue;
 		
+		// merge into our leaf set
 		leafSet.put(nh);
-		// update RT as well - PD
+
+		// update RT as well
 		routeTable.put(nh);
 	    }
 	    
-	    if (dirty) broadcast();
+	    // if this node just joined, notify the members of the original leaf set
+	    if (emptyLS) broadcast(remotels,from);   
 
-	    noBroadcast = false;
+
+	    // now, check if any of our local leaf set members are missing in the received leaf set
+	    cwSize = leafSet.cwSize();
+	    ccwSize = leafSet.ccwSize();
+	    BroadcastLeafSet bl = new BroadcastLeafSet(localHandle, leafSet);
+	    boolean missing = false;
+		
+	    for (int i=-ccwSize; i<=cwSize; i++) {
+		NodeHandle nh;
+
+		if (i == 0) continue;
+		nh = leafSet.get(i);
+
+		if (nh.isAlive() == false) continue;
+		
+		if (remotels.test(nh)) {
+		    // member nh is missing from remote leafset, send local leafset
+		    System.out.println("StandardLeafsetProtocol: node " + nh.getNodeId() + " missing from " +
+				       remotels);
+		    missing = true;
+		    nh.receiveMessage(bl);		    
+		}
+	    }
+
+	    if (missing) {
+		// nodes where missing, send update to from
+		from.receiveMessage(bl);
+	    }
 	}
-	else if (msg instanceof RequestLeafSet) {
+
+	else if (msg instanceof RequestLeafSet) {    // reuqest for the leaf set from a remote node
 	    RequestLeafSet rls = (RequestLeafSet) msg;
 
 	    NodeHandle returnHandle = rls.returnHandle();
@@ -130,7 +161,7 @@ public class StandardLeafSetProtocol implements Observer, MessageReceiver {
     }
 
     /**
-     * Mass broadcast the leaf set.
+     * Broadcast the leaf set to all members of the local leaf set.
      */
     
     protected void broadcast() {
@@ -148,6 +179,32 @@ public class StandardLeafSetProtocol implements Observer, MessageReceiver {
 	}
     }
 
+
+    /**
+     * Broadcast the leaf set to all members of the given leaf set, plus the node from which the leaf set was received.
+     *
+     * @param ls the leafset whose members we send to local leaf set
+     * @param from the node from which ls was received
+     */
+    
+    protected void broadcast(LeafSet ls, NodeHandle from) {
+	BroadcastLeafSet bls = new BroadcastLeafSet(localHandle, leafSet);
+
+	int cwSize = ls.cwSize();
+	int ccwSize = ls.ccwSize();
+	
+	for (int i=-ccwSize; i<=cwSize; i++) {
+	    NodeHandle nh;
+
+	    if (i == 0) 
+		nh = from;
+	    else 
+		nh = leafSet.get(i);
+	    
+	    nh.receiveMessage(bls);
+	}
+    }
+
     /**
      * Receives updates from the leaf set.
      *
@@ -155,6 +212,7 @@ public class StandardLeafSetProtocol implements Observer, MessageReceiver {
      */
     
     public void update(Observable obs, Object arg) {	
+	/*
 	NodeSetUpdate nsu = (NodeSetUpdate) arg;
 
 	if (nsu.wasAdded()) {	    
@@ -186,5 +244,6 @@ public class StandardLeafSetProtocol implements Observer, MessageReceiver {
 		handle.receiveMessage(rls);
 	    }
 	}
+	*/
     }
 }

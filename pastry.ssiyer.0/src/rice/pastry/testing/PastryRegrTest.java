@@ -117,6 +117,56 @@ public class PastryRegrTest {
 	//System.out.println("");
     }
 
+
+    /**
+     * make a set of num new pastry nodes, concurrently
+     * this tests concurrent node joins
+     *
+     * @param num the number of nodes in a set
+     */
+
+    public void makePastryNode(int num) {
+	RegrTestApp rta[] = new RegrTestApp[num];
+
+	for (int i=0; i<num; i++) {
+	    PastryNode pn = new PastryNode(factory);
+	    pastryNodes.addElement(pn);
+	    pastryNodesSorted.put(pn.getNodeId(),pn);
+	    pastryNodeLastAdded = pn.getNodeId();
+
+	    rta[i] = new RegrTestApp(pn,this);
+	    rtApps.addElement(rta[i]);
+
+	    int n = pastryNodes.size();
+
+	    if (n > num) {
+		PastryNode other = (PastryNode) pastryNodes.get(n - num - 1);
+		pn.receiveMessage(new InitiateJoin(other));
+	    }
+	    else if (n > 1) {
+		// we have to join the first batch of nodes sequentially, else we created multiple rings
+
+		PastryNode other = (PastryNode) pastryNodes.get(n - 2);
+		pn.receiveMessage(new InitiateJoin(other));
+		while(simulate()) msgCount++;
+	    }
+	}
+
+	int msgCount = 0;
+
+	// now simulate concurrent joins
+	while(simulate()) msgCount++;
+
+	for (int i=0; i<num; i++) {
+	    System.out.println("created " + rta[i].getNodeId());
+
+	    checkLeafSet(rta[i]);
+	    checkRoutingTable(rta[i]);
+	}
+
+	System.out.println("messages: " + msgCount);
+    }
+
     /**
      * Send messages among random message pairs. In each round, one
      * message is sent from a random source node to a random
@@ -169,6 +219,11 @@ public class PastryRegrTest {
     public void checkLeafSet(RegrTestApp rta) {
 	LeafSet ls = rta.getLeafSet();
 	NodeId localId = rta.getNodeId();
+
+	// check size
+	if (ls.size() < ls.maxSize() && pastryNodesSorted.size() > ls.maxSize() / 2 + 1)
+	    System.out.println("checkLeafSet: too small at" + rta.getNodeId() +
+			       "ls.size()=" + ls.size() + " total nodes=" + pastryNodesSorted.size());
 
 	// check for correct leafset range
 	// ccw half

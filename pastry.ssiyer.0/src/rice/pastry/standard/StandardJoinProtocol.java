@@ -92,7 +92,7 @@ public class StandardJoinProtocol implements MessageReceiver
 	    
 	    if (nh.isAlive() == true)  // the handle is alive
 		if (jr.accepted() == false) {   // this the terminal node on the request path
-		    jr.acceptJoin(localHandle);
+		    jr.acceptJoin(localHandle,leafSet);
 
 		    nh.receiveMessage(jr);
 		}
@@ -103,10 +103,15 @@ public class StandardJoinProtocol implements MessageReceiver
 		    jh = security.verifyNodeHandle(jh);
 
 		    if (jh.isAlive() == true) {  // the join handle is alive
-			leafSet.put(jh); // add jh to leaf set
-			routeTable.put(jh); // and the route set
+			routeTable.put(jh); // add the num. closest node to the routing table
 
-			broadcastRows(jr);  // broadcast the route table rows
+			// update local RT, then broadcast rows to our peers
+			broadcastRows(jr);  
+	    			
+			// now update the local leaf set
+			//System.out.println("Join ls:" + jr.getLeafSet());
+			BroadcastLeafSet bls = new BroadcastLeafSet(jh, jr.getLeafSet());
+			localHandle.receiveMessage(bls);
 		    }
 		}	    
 	}

@@ -32,6 +32,7 @@ import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 import rice.pastry.routing.*;
+import rice.pastry.leafset.*;
 
 import java.io.*;
 import java.util.*;
@@ -48,7 +49,8 @@ public class JoinRequest extends Message implements Serializable
     private NodeHandle joinHandle;
     private int rowCount;
     private RouteSet rows[][];
-    
+    private LeafSet leafSet;
+
     /**
      * Constructor.
      *
@@ -127,6 +129,16 @@ public class JoinRequest extends Message implements Serializable
     
     public NodeHandle getJoinHandle() { return joinHandle; }
 
+
+    /**
+     * Gets the leafset of the node that accepted the join request;
+     *
+     * @return the leafset.
+     */
+    
+    public LeafSet getLeafSet() { return leafSet; }
+
+
     /**
      * Returns true if the request was accepted, false if it hasn't yet.
      */
@@ -139,8 +151,9 @@ public class JoinRequest extends Message implements Serializable
      * @param nh the node handle that accepts the join request.
      */
 
-    public void acceptJoin(NodeHandle nh) {
+    public void acceptJoin(NodeHandle nh, LeafSet ls) {
 	joinHandle = nh;
+	leafSet = ls;
     }
 
     /**

@@ -43,6 +43,39 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
     }
     
     /**
+     * Test is a NodeHandle belongs into the set. Predicts if a put would succeed.
+     *
+     * @param handle the handle to test.
+     *
+     * @return true if a put would succeed, false otherwise.
+     */
+
+    public boolean test(NodeHandle handle)
+    {
+	NodeId nid = handle.getNodeId();
+	NodeId.Distance d;
+
+	if (baseId.clockwise(nid) == clockwise)
+	    d = baseId.distance(nid);
+	else
+	    d = baseId.longDistance(nid);
+	
+	int n = nodes.length;
+
+	if (nid.equals(baseId)) return false;
+
+	for (int i=0; i<theSize; i++)
+	    if (nid.equals(nodes[i].getNodeId())) return false;
+
+	if (theSize < n) return true;
+	
+	if (dist[n - 1].compareTo(d) <= 0) return false;
+
+	return true;
+    }
+
+
+    /**
      * Puts a NodeHandle into the set.
      *
      * @param handle the handle to put.
@@ -101,6 +134,7 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
 	return true;
     }
     
+
     /**
      * Finds the NodeHandle associated with the NodeId.
      *
