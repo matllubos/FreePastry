@@ -93,6 +93,7 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp
      * up-call invoked by scribe when a publish message is 'delivered'.
      */
     public void receiveMessage( ScribeMessage msg ) {
+	System.out.println("Recevied "+msg+" at "+m_scribe.getNodeId());
     }
 
     /**
@@ -159,6 +160,12 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp
 	m_scribe.leave( topicId, this, m_credentials );
     }
 
+    /**
+     * direct call to scribe for anycasting to a topic from the current node
+     */
+    public void anycast(NodeId topicId){
+	m_scribe.anycast(topicId, null, m_credentials);
+    }
 }
 
 

@@ -171,6 +171,15 @@ public class BasicScribeRegrTestApp implements IScribeApp
     }
 
     /**
+     * direct call to scribe for anycasting to a topic from the current node.
+     */    
+    public void anycast( NodeId topicId ) {
+	// System.out.println("Node:" + getNodeId() + " App:" + m_app + " publishing on topic" + topicId );
+	m_scribe.anycast( topicId, null, m_credentials );
+    }
+
+
+    /**
      * direct call to scribe for subscribing to a topic from the current node.
      */    
     public void join( NodeId topicId ) {

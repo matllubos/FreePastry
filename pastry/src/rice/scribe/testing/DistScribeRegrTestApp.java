@@ -267,6 +267,13 @@ public class DistScribeRegrTestApp extends PastryAppl implements IScribeApp
     public void multicast( NodeId topicId, Object data ) {
 	m_scribe.multicast( topicId, data, m_credentials );
     }
+
+    /**
+     * direct call to scribe for anycasting to a topic from the current node.
+     */    
+    public void anycast( NodeId topicId, Object data ) {
+	m_scribe.anycast( topicId, data, m_credentials );
+    }
     
     /**
      * direct call to scribe for subscribing to a topic from the current node.
