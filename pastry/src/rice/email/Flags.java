@@ -12,6 +12,7 @@ import rice.post.log.*;
  * @version $Id$
  * @author
  */
+
 public class Flags implements java.io.Serializable {
 
   boolean _recent;
@@ -20,6 +21,9 @@ public class Flags implements java.io.Serializable {
   boolean _answered;
   boolean _flagged;
   boolean _draft;
+    //    boolean _forward;
+    Hashtable _flagList = new Hashtable();
+
 
   /**
    * Constructor for email Flags
@@ -32,6 +36,23 @@ public class Flags implements java.io.Serializable {
     _draft = false;
   }
 
+    /**
+     * Return the Hashtable of the flags
+     *
+     * @return Hashtable The mapping of the values of the flags
+     */
+    public Hashtable getFlagList() {
+	return _flagList;
+    }
+
+    /**
+     * Get the attribute for the specified Flag object
+     *
+     * @return the Flag's value
+     */
+    public boolean isSet(String flag) {
+	return ((Boolean)_flagList.get(flag)).booleanValue();
+    }
 
   /**
    * Gets the Recent attribute of the Flags object
@@ -87,6 +108,21 @@ public class Flags implements java.io.Serializable {
     return _draft;
   }
 
+    /** 
+     * Sets the specified attribute of the Flags object
+     *
+     * @param string The attribute to be set
+     * @param value The new value
+     *
+     */
+    public void setFlag(String flag, boolean value) {
+	if (_flagList.containsKey(flag)) {
+	    _flagList.remove(flag);
+	}
+	System.out.println("****Setting Flag: " + flag);
+	_flagList.put(flag, new Boolean(value));
+    }
+
   /**
    * Sets the Deleted attribute of the Flags object
    *
@@ -132,6 +168,7 @@ public class Flags implements java.io.Serializable {
     _draft = value;
   }
 
+
   /**
    * Returns a Vector representation of the flagList
    *
@@ -158,6 +195,13 @@ public class Flags implements java.io.Serializable {
       flaglist.add("\\Draft");
     }
 
+    Enumeration e = _flagList.keys();
+    while (e.hasMoreElements()) {
+	String flag = (String)e.nextElement();	
+	if (isSet(flag)) {
+	    flaglist.add(flag);
+	}
+    } 
     return flaglist;
   }
 
@@ -193,8 +237,24 @@ public class Flags implements java.io.Serializable {
       flagBuffer.append("\\Flagged");
     }
 
+    Enumeration e = _flagList.keys();
+    while (e.hasMoreElements()) {
+	String flag = (String) e.nextElement();
+	if (isSet(flag)) {
+	    flagBuffer.append(flag + " ");
+	}
+    }
+    
     return "(" + flagBuffer.toString().trim() + ")";
   }
-
+    
 }
+
+
+
+
+
+
+
+
 
