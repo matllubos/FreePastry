@@ -140,6 +140,7 @@ public class DistScribeRegrTestApp extends PastryAppl implements IScribeApp
     public void scribeIsReady() {
 	 int i;
 	 NodeId topicId;
+	 DistTopicLog topicLog;
 
 	 System.out.println("I am up " + m_scribe.getNodeId());
 
@@ -155,11 +156,15 @@ public class DistScribeRegrTestApp extends PastryAppl implements IScribeApp
 	     topicId = (NodeId)m_topics.elementAt(i);
 	     create(topicId);
 	     join(topicId);
+
+	     // We need to set the initial lastRecvTime corresponding to 
+	     // messages for this topic as the current time 
+	     topicLog = (DistTopicLog) m_logTable.get(topicId);
+	     topicLog.setLastRecvTime(System.currentTimeMillis());
 	 }
 	 
 	 // Trigger the periodic invokation of DistScribeRegrTest message
-	 m_pastryNode.scheduleMsgAtFixedRate(makeDistScribeRegrTestMessage(m_credentials), 
-					     m_testFreq*1000, m_testFreq*1000);
+	 m_pastryNode.scheduleMsgAtFixedRate(makeDistScribeRegrTestMessage(m_credentials), 0 , m_testFreq*1000);
     }
     
     public Scribe getScribe() {

@@ -49,7 +49,7 @@ package rice.scribe.testing;
 
 public class DistTopicLog{
     private int lastSeqNumRecv = -1;
-    private long lastRecvTime = System.currentTimeMillis();
+    private long lastRecvTime ;
     private int seqNumToPublish = -1;
     private int count = 1;
     private boolean unsubscribed = false;

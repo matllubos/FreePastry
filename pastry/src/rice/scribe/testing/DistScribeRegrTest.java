@@ -95,7 +95,7 @@ public class DistScribeRegrTest {
     // received in this period, warning mesg is printed.
     public static int IDLE_TIME = 50; // in seconds
 
-    public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
+    public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
 
     public DistScribeRegrTest(){
 	factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(), PROTOCOL, port);
