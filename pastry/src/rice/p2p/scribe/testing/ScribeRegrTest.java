@@ -64,6 +64,8 @@ public class ScribeRegrTest extends CommonAPITest {
    */
   protected Random rng;
 
+    protected Random generateIdRng;
+
   /**
    * Constructor which sets up all local variables
    */
@@ -71,6 +73,7 @@ public class ScribeRegrTest extends CommonAPITest {
     scribes = new ScribeImpl[NUM_NODES];
     policies = new TestScribePolicy[NUM_NODES];
     rng = new Random();
+    generateIdRng = new Random();
   }
 
 
@@ -112,8 +115,10 @@ public class ScribeRegrTest extends CommonAPITest {
     testBasic(1, "Basic");
     testBasic(2, "Partial (1)");
     testBasic(4, "Partial (2)");
+    testSingleRoot("Single rooted Trees");
     testAPI();
     testMaintenance();
+
   }
 
   /*
@@ -279,8 +284,8 @@ public class ScribeRegrTest extends CommonAPITest {
   /**
     * Tests basic publish functionality
    */
-  protected void testAPI() {
-    sectionStart("Scribe API Functionality");
+    protected void testAPI() {
+	sectionStart("Scribe API Functionality");
     int NUM_MESSAGES = 5;
     Topic topic = new Topic(generateId());
     TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
@@ -371,14 +376,53 @@ public class ScribeRegrTest extends CommonAPITest {
     sectionDone();
   }
 
+
+    protected void testSingleRoot(String name) {
+	sectionStart(name + "");
+	int numTrees = 10;
+	boolean failed = false;
+
+	for(int num=0; num<numTrees; num ++) {
+	    Topic topic = new Topic(generateId());
+	    TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
+	    
+	    stepStart(name + " TopicId=" + topic.getId());
+	    for (int i = 0; i < NUM_NODES; i++) {
+	    clients[i] = new TestScribeClient(scribes[i], topic, i);
+	    scribes[i].subscribe(topic, clients[i]);
+	    simulate();
+	    }
+	    
+	    int numRoot = 0;
+	    for (int i=0; i < NUM_NODES; i++) {
+		if (scribes[i].isRoot(topic)) {
+		    numRoot++;
+		    //System.out.println("myId= " + scribes[i].getId());
+		}
+	    }
+	    
+	    if (numRoot != 1) {
+		stepDone(FAILURE, "Number of roots= " + numRoot);
+		failed = true;
+	    }
+	    else
+		stepDone(SUCCESS);
+	    
+	}
+	sectionDone();
+	
+    }
+    
+
+
   /**
    * Tests basic publish functionality
    */
-  protected void testMaintenance() {
-    sectionStart("Tree Maintenance Under Node Death");
-    int NUM_MESSAGES = 5;
-    Topic topic = new Topic(generateId());
-    TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
+    protected void testMaintenance() {
+	sectionStart("Tree Maintenance Under Node Death");
+	int NUM_MESSAGES = 5;
+	Topic topic = new Topic(generateId());
+	TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
 
     stepStart("Tree Construction");
     for (int i = 0; i < NUM_NODES; i++) {
@@ -436,7 +480,7 @@ public class ScribeRegrTest extends CommonAPITest {
    */
   private Id generateId() {
     byte[] data = new byte[20];
-    new Random().nextBytes(data);
+    generateIdRng.nextBytes(data);
     return FACTORY.buildId(data);
   }
 
@@ -714,3 +758,17 @@ public class ScribeRegrTest extends CommonAPITest {
     }
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
