@@ -146,15 +146,22 @@ public class Post extends PastryAppl {
   }
   
   /**
-   * Sends a notification message to the specified PostAddress, whether
-   * it is a PostUserAddress or PostGroupAddress. The NotificationMessage
-   * sent is signed by the sender and is then encrypted with the 
-   * public key of each recipient.
+   * Sends a notification message with destination specified by the members
+   * of the NotificationMessage.  Destination parameters include a PostEntityAddress
+   * which specifies the group or user to which the notification should go, and a
+   * PostClientAddress which specifies the user application to which the notification
+   * should go.  The NotificationMessage sent is signed by the sender and is then 
+   * encrypted with the public key of each recipient.
    *
-   * @param address The address of the entity to send the notification to.
-   * @param message The notification message to send to the address.
+   * @param message The notification message to be sent.  Destination parameters
+   * are encapsulated inside the message object.
    */
-  public void sendNotification(PostEntityAddress address, NotificationMessage message) {
+
+ // Notice:  This is not encrypted!!  (Fixme)
+  public void sendNotification(NotificationMessage message) {
+     routeMsg(message.getAddress().getAddress(), message, getCredentials(), new SendOptions());
+     // This is from the PastryAppl interface which Post inherits - notice that we're
+     // using default SendOptions, which at some point we may want to vary
   }
 
   /**
