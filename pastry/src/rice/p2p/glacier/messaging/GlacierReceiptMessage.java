@@ -4,32 +4,48 @@ import rice.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.glacier.*;
 
-public class GlacierReceiptMessage extends GlacierMessage 
-{
-    protected FragmentKey key;
-    int fragmentID;
-    
-    public GlacierReceiptMessage(int uid, FragmentKey key, int fragmentID, NodeHandle source, Id dest) 
-    {
-        super(uid, source, dest);
+/**
+ * DESCRIBE THE CLASS
+ *
+ * @version $Id$
+ * @author ahae
+ */
+public class GlacierReceiptMessage extends GlacierMessage {
+  /**
+   * DESCRIBE THE FIELD
+   */
+  protected FragmentKey key;
 
-        this.key = key;
-        this.fragmentID = fragmentID;
-    }
+  /**
+   * Constructor for GlacierReceiptMessage.
+   *
+   * @param uid DESCRIBE THE PARAMETER
+   * @param key DESCRIBE THE PARAMETER
+   * @param source DESCRIBE THE PARAMETER
+   * @param dest DESCRIBE THE PARAMETER
+   */
+  public GlacierReceiptMessage(int uid, FragmentKey key, NodeHandle source, Id dest) {
+    super(uid, source, dest);
 
-    public String toString() 
-    {
-        return "[GlacierReceipt for "+key+":"+fragmentID+"]";
-    }
-    
-    public FragmentKey getKey() 
-    {
-        return key;
-    }
-    
-    public int getFragmentID()
-    {
-        return fragmentID;
-    }
+    this.key = key;
+  }
+
+  /**
+   * Gets the Key attribute of the GlacierReceiptMessage object
+   *
+   * @return The Key value
+   */
+  public FragmentKey getKey() {
+    return key;
+  }
+
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @return DESCRIBE THE RETURN VALUE
+   */
+  public String toString() {
+    return "[GlacierReceipt for " + key + "]";
+  }
 }
 
