@@ -148,26 +148,30 @@
   <target name="epost-release" depends="epost">
     <move file="epost.jar" tofile="epost-${epost-version}.jar"/>
     <tar destfile="epost-${epost-version}-all.tgz" compression="gzip">
-      <tarfileset dir="." includes="epost-${epost-version}.jar"/>
-      <tarfileset dir="." includes="lib/activation.jar"/>
-      <tarfileset dir="." includes="lib/antlr.jar"/>
-      <tarfileset dir="." includes="lib/bouncycastle.jar"/>
-      <tarfileset dir="." includes="lib/javamail.jar"/>
-      <tarfileset dir="." includes="lib/jcommon-0.9.1.jar"/>
-      <tarfileset dir="." includes="lib/jfreechart-0.9.16.jar"/>
-      <tarfileset dir="." includes="lib/xmlpull_1_1_3_4a.jar"/>
-      <tarfileset dir="." includes="lib/xpp3-1.1.3.4d_b2.jar"/>
+      <tarfileset dir="." includes="epost-${epost-version}.jar" prefix="epost/"/>
+      <tarfileset dir="./lib" prefix="epost/lib/">
+        <include name="activation.jar"/>
+        <include name="antlr.jar"/>
+        <include name="bouncycastle.jar"/>
+        <include name="javamail.jar"/>
+        <include name="jcommon-0.9.1.jar"/>
+        <include name="jfreechart-0.9.16.jar"/>
+        <include name="xmlpull_1_1_3_4a.jar"/>
+        <include name="xpp3-1.1.3.4d_b2.jar"/>
+      </tarfileset>
     </tar>
     <zip destfile="epost-${epost-version}-all.zip">
-      <fileset dir="." includes="epost-${epost-version}.jar"/>
-      <fileset dir="." includes="lib/activation.jar"/>
-      <fileset dir="." includes="lib/antlr.jar"/>
-      <fileset dir="." includes="lib/bouncycastle.jar"/>
-      <fileset dir="." includes="lib/javamail.jar"/>
-      <fileset dir="." includes="lib/jcommon-0.9.1.jar"/>
-      <fileset dir="." includes="lib/jfreechart-0.9.16.jar"/>
-      <fileset dir="." includes="lib/xmlpull_1_1_3_4a.jar"/>
-      <fileset dir="." includes="lib/xpp3-1.1.3.4d_b2.jar"/>
+      <zipfileset dir="." includes="epost-${epost-version}.jar" prefix="epost/"/>
+      <zipfileset dir="./lib" prefix="epost/lib/">
+        <include name="activation.jar"/>
+        <include name="antlr.jar"/>
+        <include name="bouncycastle.jar"/>
+        <include name="javamail.jar"/>
+        <include name="jcommon-0.9.1.jar"/>
+        <include name="jfreechart-0.9.16.jar"/>
+        <include name="xmlpull_1_1_3_4a.jar"/>
+        <include name="xpp3-1.1.3.4d_b2.jar"/>
+      </zipfileset>
     </zip>
     <tar destfile="epost-${epost-version}-source.tgz" compression="gzip">
       <tarfileset dir="${src.dir}" prefix="src">
