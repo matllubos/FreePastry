@@ -129,10 +129,15 @@ public class DistScribeRegrTestApp extends PastryAppl implements IScribeApp
 	// This sets the periodic rate at which the DistScribeRegrTest Messages will be 
 	// invoked.
 	m_testFreq = Scribe.m_scribeMaintFreq;
+
+	// This is done at the end of the constructor so that all the 
+	// variables are initialized before we get the call to scribeIsReady()
+	m_scribe.registerApp(this);
     }
 
 
-    public void initialize() {
+
+    public void scribeIsReady() {
 	 int i;
 	 NodeId topicId;
 

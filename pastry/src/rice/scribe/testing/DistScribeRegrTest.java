@@ -188,14 +188,6 @@ public class DistScribeRegrTest {
 	DistScribeRegrTestApp app = new DistScribeRegrTestApp(pn, scribe, cred, this);
 	distClients.addElement(app);
 
-	while(pn.isReady() == false) {
-	    try {
-		Thread.sleep(2000); // 2 sec polling interval
-	    } catch (InterruptedException e) {}
-	} 
-	
-	app.initialize();
-
     }
 
     /**
@@ -210,13 +202,10 @@ public class DistScribeRegrTest {
 
 	Log.init(args);
 	doInitstuff(args);
-	//seed = -1089549604;
 	seed = (int)System.currentTimeMillis();
 	PastrySeed.setSeed(seed);
 	System.out.println("seed used=" + seed); 
 	DistScribeRegrTest driver = new DistScribeRegrTest();
-	int count = 0;
-
 	for (int i = 0; i < numNodes; i++){
 	    driver.makeScribeNode();
 	}

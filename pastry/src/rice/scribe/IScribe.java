@@ -62,6 +62,17 @@ import java.util.Vector;
 public interface IScribe
 {
 
+    /** 
+     * Registers the IScribeApp to the Scribe substrate. This is 
+     * required for the IScribeApp to get the upcall scribeIsReady()
+     * notifying it that the underlying Scribe substrate is ready. The 
+     * IScribeApp should call create, join, leave, multicast
+     * only after they are notified that the underlying Scribe substrate
+     * is ready, otherwise these operations fail.
+     */
+    public void registerApp(IScribeApp app);
+
+
     /**
      * Creates a group/topic if the credentials are valid. Nodes must then join
      * this group in order to get information multicast to it.
@@ -72,8 +83,11 @@ public interface IScribe
      * @param    groupID       
      * The ID of the group to be created
      *
+     * @return true if the operation was successful, false if the operation
+     *         failed because the underlying Scribe substrate was not ready. 
+     *
      */
-    public void create( NodeId groupID, Credentials cred );
+    public boolean create( NodeId groupID, Credentials cred );
 
     
 
@@ -91,8 +105,11 @@ public interface IScribe
      * @param    subscriber
      * The application joining the group
      *
+     * @return true if the operation was successful, false if the operation
+     *         failed because the underlying Scribe substrate was not ready. 
+     *
      */
-    public void join( NodeId groupID, IScribeApp subscriber, Credentials cred);
+    public boolean join( NodeId groupID, IScribeApp subscriber, Credentials cred);
 
 
 
@@ -110,8 +127,11 @@ public interface IScribe
      * @param    subscriber
      * The application leaving the group.  Use null if 
      * not directly called by an application.
+     *
+     * @return true if the operation was successful, false if the operation
+     *         failed because the underlying Scribe substrate was not ready. 
      */
-    public void leave( NodeId groupID, IScribeApp subscriber, Credentials cred );
+    public boolean leave( NodeId groupID, IScribeApp subscriber, Credentials cred );
 
 
 
@@ -131,8 +151,11 @@ public interface IScribe
      * @param   obj           
      * The information that is to be multicast.
      * This should be serializable.
+     *
+     * @return true if the operation was successful, false if the operation
+     *         failed because the underlying Scribe substrate was not ready.
      */
-    public void multicast( NodeId groupID, Object obj, Credentials cred );
+    public boolean multicast( NodeId groupID, Object obj, Credentials cred );
     
 
 
@@ -146,6 +169,7 @@ public interface IScribe
      * topics on this local node. So, if it fails to receive a threshold 
      * value of such heartbeat messages from any parent for a particular
      * topic, a tree repair event is triggered for that topic.
+     *
      */
     public void scheduleHB();
 

@@ -71,6 +71,18 @@ public class Scribe extends PastryAppl implements IScribe
     /*
      * Member fields
      */
+
+    /**
+     * The set of IScribeApp's that have registered to this Scribe substrate.
+     */
+    protected Vector m_apps;
+
+    /**
+     * This flag is set to true when this Scribe substrate is ready. 
+     * The Scribe substrate is ready when the underlying Pastry Node is ready.
+     */
+    private boolean m_ready;
+
    
 
     /**
@@ -262,6 +274,7 @@ public class Scribe extends PastryAppl implements IScribe
      */
     public Scribe( PastryNode pn, Credentials cred) {
 	super( pn );
+	m_ready = pn.isReady();
 	m_topics = new HashMap();
 	m_sendOptions = new SendOptions();
 	m_securityManager = new PSecurityManager();
@@ -273,6 +286,7 @@ public class Scribe extends PastryAppl implements IScribe
 	m_distinctChildrenTable = new Hashtable();
 	m_distinctParentTable = new Hashtable();
 	m_alreadySentHBNodes = new HashSet();
+	m_apps = new Vector();
 
     }
 
@@ -299,23 +313,63 @@ public class Scribe extends PastryAppl implements IScribe
 	return m_treeRepairThreshold;
     }
 
+    /** 
+     * Returns true is the Scribe substrate is ready. The Scribe substrate is
+     * ready when underlying PastryNode is ready.
+     */
+    public boolean isReady() {
+	return m_ready;
+    }
+
+
+
+    /** 
+     * Registers the IScribeApp to the Scribe substrate. This is 
+     * required for the IScribeApp to get the upcall scribeIsReady()
+     * notifying it that the underlying Scribe substrate is ready. The 
+     * IScribeApp should call create, join, leave, multicast
+     * only after they are notified that the underlying Scribe substrate
+     * is ready, otherwise these operations fail.
+     */
+    public void registerApp(IScribeApp app) {
+	if(isReady())
+	    app.scribeIsReady();
+	m_apps.add(app);
+    }
+    
+
+
     /**
      * This is called when the underlying pastry node is ready. With regard to 
-     * Scribe, we start the tree maintenance thread when the pastry network is a 
-     * Distributed network instead of a simulate network.
+     * Scribe, we schedule the periodic tree maintenance activities when the 
+     * pastry network is a Distributed network instead of a simulate network.
      */
     public void notifyReady() {
 	Credentials cred;
 	cred = new PermissiveCredentials();
 	//System.out.println("notifyReady called for Scribe application on" + getNodeId()); 
+	
+	m_ready = true;
+	/**
+	 * Notify IScribeApp's that were previously waiting for the 
+	 * Scribe substrate to be ready.
+	 */
+
+	// m_apps could be null since the notifyReady() can be called even
+	// before the execution of the constructor of this class is complete.
+	if(m_apps != null) {
+	    Iterator it = m_apps.iterator();
+	    while (it.hasNext())
+		((IScribeApp)(it.next())).scribeIsReady();
+	}
+	// Schedule the periodic tree maintenance activities.
 	if(thePastryNode instanceof DistPastryNode) {
-	    thePastryNode.scheduleMsg(makeScribeMaintenanceMessage(cred), 
-				   m_scribeMaintFreq*1000, m_scribeMaintFreq*1000);
+	    thePastryNode.scheduleMsg(makeScribeMaintenanceMessage(cred), m_scribeMaintFreq*1000, m_scribeMaintFreq*1000);
 	}
     }
-
-
-
+    
+    
+    
     /**
      * Sends heartbeat messages to this local node's children for all the 
      * topics on this local scribe node. This method should be invoked 
@@ -326,11 +380,15 @@ public class Scribe extends PastryAppl implements IScribe
      * topics on this local node. So, if it fails to receive a threshold 
      * value of such heartbeat messages from any parent for a particular
      * topic, a tree repair event is triggered for that topic.
+     *
      */
     public void scheduleHB(){
+	if(!isReady())
+	    return;
 	m_maintainer.scheduleHB();
+	return;
     }
-
+    
     /**
      * Returns true if the local node is currently the 
      * root(the node that is closest to the topicId) of the topic.
@@ -352,11 +410,14 @@ public class Scribe extends PastryAppl implements IScribe
      * @param    topicID       
      * The ID of the group to be created
      *
+     * @return true if the operation was successful, false if the operation
+     *         failed because the underlying Scribe substrate was not ready. 
      */
-    public void create( NodeId topicId, Credentials cred) {
+    public boolean create( NodeId topicId, Credentials cred) {
+	if(!isReady()) return false;
 	ScribeMessage msg = makeCreateMessage( topicId, cred);
-
 	this.routeMsg( topicId, msg, cred, m_sendOptions );
+	return true;
     }
     
 
@@ -373,9 +434,13 @@ public class Scribe extends PastryAppl implements IScribe
      * @param    subscriber
      * The application joining the group
      *
+     * @return true if the operation was successful, false if the operation
+     *         failed because the underlying Scribe substrate was not ready. 
+     *
      */
-    public void join( NodeId topicId, IScribeApp subscriber, 
+    public boolean join( NodeId topicId, IScribeApp subscriber, 
 			   Credentials cred ) {
+	if(!isReady()) return false;
 	Topic topic = (Topic) m_topics.get( topicId );
 	
 	if ( topic == null ) {
@@ -393,6 +458,7 @@ public class Scribe extends PastryAppl implements IScribe
 	    topic.postponeParentHandler();
 	    this.routeMsg( topicId, msg, cred, m_sendOptions );
 	}
+	return true;
     }
 
     /**
@@ -408,13 +474,17 @@ public class Scribe extends PastryAppl implements IScribe
      * @param    subscriber
      * The application leaving the group.  Use null if 
      * not directly called by an application.
+     *
+     * @return true if the operation was successful, false if the operation
+     *         failed because the underlying Scribe substrate was not ready. 
      */
-    public void leave( NodeId topicId, IScribeApp subscriber, Credentials cred ) {
+    public boolean leave( NodeId topicId, IScribeApp subscriber, Credentials cred ) {
+	if(!isReady()) return false;
 	Topic topic = (Topic) m_topics.get( topicId );
 	
 	// If topic unknown, must give an error
 	if ( topic == null ) {
-	    return;
+	    return false;
 	}
 	
 	// unregister application as subscriber for this topic
@@ -427,6 +497,7 @@ public class Scribe extends PastryAppl implements IScribe
 	    this.routeMsgDirect( thePastryNode.getLocalHandle(), msg, cred,
 				 m_sendOptions );
 	}
+	return true;
     }
     
 
@@ -445,12 +516,16 @@ public class Scribe extends PastryAppl implements IScribe
      * @param   obj           
      * The information that is to be multicast.
      * This should be serializable.
+     *
+     * @return true if the operation was successful, false if the operation
+     *         failed because the underlying Scribe substrate was not ready. 
      */
-    public void multicast( NodeId topicId, Object obj, Credentials cred ) {
+    public boolean multicast( NodeId topicId, Object obj, Credentials cred ) {
+	if(!isReady()) return false;
 	ScribeMessage msg = makePublishMessage( topicId, cred );
-
 	msg.setData( obj );
 	this.routeMsg( topicId, msg, cred, m_sendOptions );
+	return true;
     }
 
     /**

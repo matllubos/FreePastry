@@ -69,6 +69,7 @@ public class BasicScribeRegrTestApp implements IScribeApp
 	m_scribe = scribe;
 	m_credentials = cred;
 	m_app = app;
+	m_scribe.registerApp(this);
     }
 
     /**
@@ -108,6 +109,10 @@ public class BasicScribeRegrTestApp implements IScribeApp
 	return ok;
     }
 
+    public void scribeIsReady() {
+	
+    }
+    
 
     /**
      * up-call invoked by scribe when a publish message is 'delivered'.
@@ -199,6 +204,15 @@ public class BasicScribeRegrTestApp implements IScribeApp
 	//	m_tracker.putTopic( tid );
     }
 }
+
+
+
+
+
+
+
+
+
 
 
 

@@ -56,6 +56,15 @@ import rice.scribe.messaging.ScribeMessage;
 
 public interface IScribeApp
 {
+
+    /**
+     * Invoked when the underlying Scribe substrate is ready. 
+     * The Scribe substrate becomes ready as soon as the local Pastry node
+     * on which it lies is ready. In order to get this upcall it is 
+     * necessary that the IScribeApp registers itself to the Scribe 
+     * substrate using the registerApp() method in IScribe interface.
+     */
+    public void scribeIsReady();
 	
     /** 
      * Called by Scribe when a multicast message arrives.

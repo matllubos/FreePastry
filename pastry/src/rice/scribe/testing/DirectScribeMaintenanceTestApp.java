@@ -73,6 +73,7 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp
 	m_scribe = scribe;
 	m_credentials = cred;
 	m_pastryNode = node;
+	m_scribe.registerApp(this);
     }
 
     /**
@@ -81,6 +82,11 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp
      */
     public Scribe getScribe() {
 	return m_scribe;
+    }
+
+
+    public void scribeIsReady() {
+
     }
 
     /**
