@@ -1115,15 +1115,37 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     }
 
     if ((cmd.length() >= 9) && cmd.substring(0, 9).equals("neighbors")) {
-      Iterator iter = neighborStorage.scan().getIterator();
-      String result = "";
+      final Iterator iter = neighborStorage.scan().getIterator();
+      final StringBuffer result = new StringBuffer();
+      final long now = (cmd.indexOf("-r") < 0) ? 0 : System.currentTimeMillis();
+      final String[] ret = new String[] { null };
 
-      result = result + neighborStorage.scan().numElements()+ " neighbor(s)\n";
+      result.append(neighborStorage.scan().numElements()+ " neighbor(s)\n");
+
+      Continuation c = new Continuation() {
+        Id currentLookup;
+        public void receiveResult(Object o) {
+          if (o != null)
+            result.append(currentLookup.toStringFull() + " " + (((Long)o).longValue() - now) + "\n");
+          
+          if (iter.hasNext()) {
+            currentLookup = (Id) iter.next();
+            neighborStorage.getObject(currentLookup, this);
+          } else {
+            ret[0] = "OK";
+          }
+        }
+        public void receiveException(Exception e) {
+          ret[0] = "Exception: "+e;
+        }
+      };
       
-      while (iter.hasNext())
-        result = result + ((Id)iter.next()).toStringFull()+"\n";
-        
-      return result;
+      c.receiveResult(null);
+      while (ret[0] == null)
+        Thread.currentThread().yield();
+
+      result.append(ret[0]+"\n");              
+      return result.toString();
     }
     
     if ((cmd.length() >= 6) && cmd.substring(0, 6).equals("status")) {
