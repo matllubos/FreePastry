@@ -119,7 +119,7 @@ public class GCIdSet implements IdSet {
    */
   public IdSet subSet(IdRange range) {
     if (range == null)
-      return this;
+      return new GCIdSet(ids);
     
     GCIdSet res;
     
@@ -219,7 +219,7 @@ public class GCIdSet implements IdSet {
    * @return a clone
    */
   public Object clone() {
-    return ids.clone();
+    return new GCIdSet(ids);
   }
   
   protected static class GCMatchingId extends GCId {

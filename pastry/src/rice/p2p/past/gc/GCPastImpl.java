@@ -80,6 +80,10 @@ public class GCPastImpl extends PastImpl implements GCPast {
    */
   protected GCIdSet set;
   
+  // internal tracing stats
+  public int collected = 0;
+  public int refreshed = 0;
+  
   /**
    * Constructor for GCPast
    *
@@ -199,6 +203,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param command The command to return the result to
    */
   protected void refresh(final IdSet ids, final long expiration, Continuation command) {
+    refreshed++;
     if (ids.numElements() == 0) {
       command.receiveResult(new Boolean(true));
       return;
@@ -287,7 +292,9 @@ public class GCPastImpl extends PastImpl implements GCPast {
 
               /* skip the object if we don't have it yet */
               if (storage.exists(id)) {
-                set.addId(new GCId(id, rmsg.getExpiration()));
+                synchronized (set) {
+                  set.addId(new GCId(id, rmsg.getExpiration()));
+                }
                 
                 GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
                 
@@ -331,9 +338,13 @@ public class GCPastImpl extends PastImpl implements GCPast {
                 break;
               
             if (index < array.length) {
+              collected++;
+              
               final GCId id = (GCId) array[index];
-              set.removeId(id);
-
+              synchronized (set) {
+                set.removeId(id);
+              }
+                
               if (trash != null) {                        
                 storage.getObject(id.getId(), new StandardContinuation(this) {
                   public void receiveResult(Object o) {
@@ -381,17 +392,19 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * Method which populates the GCIdSet
    */
   protected void loadGCIdSet() {
-    Iterator i = storage.getStorage().scan().getIterator();
+    synchronized (set) {
+      Iterator i = storage.getStorage().scan().getIterator();
     
-    while (i.hasNext()) {
-      Id id = (Id) i.next();
-      GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
+      while (i.hasNext()) {
+        Id id = (Id) i.next();
+        GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
       
-      if (metadata != null) 
-        set.doAddId(new GCId(id, metadata.getExpiration()));
-      else
-        set.doAddId(new GCId(id, DEFAULT_EXPIRATION));
-    }    
+        if (metadata != null) 
+          set.doAddId(new GCId(id, metadata.getExpiration()));
+        else
+          set.doAddId(new GCId(id, DEFAULT_EXPIRATION));
+      }    
+    }
   }
   
   // ---- REPLICATION MANAGER METHODS -----
@@ -411,7 +424,10 @@ public class GCPastImpl extends PastImpl implements GCPast {
     if (gcid.getExpiration() < System.currentTimeMillis()) {
       command.receiveResult(Boolean.TRUE);
     } else if (storage.exists(gcid.getId())) {
-      set.addId(gcid);
+      synchronized (set) {
+        set.addId(gcid);
+      }
+      
       GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(gcid.getId());
       
       if (metadata == null) {
@@ -436,7 +452,10 @@ public class GCPastImpl extends PastImpl implements GCPast {
           } else {
             GCPastContent content = (GCPastContent) o;
             log.finest("inserting replica of id " + id);
-            set.addId(gcid);
+            synchronized (set) {
+              set.addId(gcid);
+            }
+            
             storage.getStorage().store(gcid.getId(), content.getMetadata(gcid.getExpiration()), content, parent);
           }
         }
@@ -463,7 +482,9 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param range the requested range
    */
   public IdSet scan(IdRange range) {
-    return set.subSet(range);
+    synchronized (set) {
+      return set.subSet(range);
+    }
   }
   
   /**
@@ -474,7 +495,9 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param range the requested range
    */
   public IdSet scan() {
-    return set;
+    synchronized (set) {
+      return (IdSet) set.clone();
+    }
   }
   
   /**
