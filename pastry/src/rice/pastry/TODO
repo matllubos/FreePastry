@@ -14,7 +14,7 @@ FUNCTIONALITY
 
     A real Log class; probably use the Log support in Java 1.4.
 
-    Let PastryNodeFactory constructors take as argument a NodeIdFactory.
+#    Let PastryNodeFactory constructors take as argument a NodeIdFactory.
 
     Implement support for automatic deployment and experimentation in a testbed.
 
@@ -28,9 +28,7 @@ PERFORMANCE
 
 SECURITY
 
-    Consider getting rid of the security managers for a while. Or keep them
-    around, but actually verify in the verifyHandles, not duplicate or
-    coalesce handles, or set local nodes.
+    Implement security
 
 APPLICATIONS
 

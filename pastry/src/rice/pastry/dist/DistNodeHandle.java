@@ -241,6 +241,7 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
     protected final void setProximity(int value) {
       distance = value;
 
+      //System.out.println("prox=" + value);
       setChanged();
       notifyObservers(PROXIMITY_CHANGED);
     }

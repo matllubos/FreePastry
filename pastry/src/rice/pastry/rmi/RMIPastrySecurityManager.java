@@ -62,8 +62,8 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
      * Constructor.
      */
     public RMIPastrySecurityManager(RMINodeHandle rlh, RMINodeHandlePool hp) {
-  localhandle = rlh;
-  handlepool = hp; // contains only localhandle by now
+	localhandle = rlh;
+	handlepool = hp; // contains only localhandle by now
     }
 
     /**
@@ -93,7 +93,7 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
      */
 
     public boolean verifyAddressBinding(Credentials cred, Address addr) {
-  return true;
+	return true;
     }
 
     /**
@@ -106,21 +106,21 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
 
     public NodeHandle verifyNodeHandle(NodeHandle handle) {
 
-  return handle;
+	return handle;
 
-//  Autocoalescing ensures that verify needn't do anything!
+	//  Autocoalescing ensures that verify needn't do anything!
 
-//  NodeId mynid = localnode.getNodeId();
-//  NodeId nid = handle.getNodeId();
-//
-//  if (mynid.equals(nid)) {
-//      return handlepool.coalesce(localhandle);
-//  }
-//  else if (handle instanceof RMINodeHandle) {
-//      RMINodeHandle rnh = (RMINodeHandle) handle;
-//      return handlepool.coalesce(rnh);
-//  }
-//  else throw new Error("node handle of unknown type");
+	//  NodeId mynid = localnode.getNodeId();
+	//  NodeId nid = handle.getNodeId();
+	//
+	//  if (mynid.equals(nid)) {
+	//      return handlepool.coalesce(localhandle);
+	//  }
+	//  else if (handle instanceof RMINodeHandle) {
+	//      RMINodeHandle rnh = (RMINodeHandle) handle;
+	//      return handlepool.coalesce(rnh);
+	//  }
+	//  else throw new Error("node handle of unknown type");
     }
 
     /**

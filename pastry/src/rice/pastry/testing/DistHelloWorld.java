@@ -72,7 +72,7 @@ public class DistHelloWorld {
     private static int bsport = 5009;
     private static int numnodes = 5;
     private static int nummsgs = 2; // per virtual node
-    public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
+    public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
 
     /**
      * Constructor

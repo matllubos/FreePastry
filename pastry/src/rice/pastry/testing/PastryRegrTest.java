@@ -220,15 +220,15 @@ public abstract class PastryRegrTest {
 		pause(500);
 	    }
 	}
-	pause(5000);
+	pause(1000);
 
 	inConcJoin = false;
 
 	for (int i=0; i<num; i++) {
 	    System.out.println("created " + rta[i].getNodeId());
 
-	    checkLeafSet(rta[i]);
-	    checkRoutingTable(rta[i]);
+	    //checkLeafSet(rta[i]);
+	    //checkRoutingTable(rta[i]);
 	}
 
 	System.out.println("messages: " + msgCount);
@@ -477,12 +477,17 @@ public abstract class PastryRegrTest {
 
 	Date old = new Date();
   
-	for (int i=0; i<n; i += numConcJoins) {
-	    pt.makePastryNode(numConcJoins);
+	while(pt.pastryNodes.size() < n) {
+            //for (int i=0; i<n; i += numConcJoins) {
+	    int remaining = n - pt.pastryNodes.size();
+	    if (remaining > numConcJoins) remaining = numConcJoins;
 
-	    if ((i + numConcJoins) % m == 0) {
+	    pt.makePastryNode(remaining);
+
+	    if (pt.pastryNodes.size() % m == 0) {
+		//if ((i + numConcJoins) % m == 0) {
 		Date now = new Date();
-		System.out.println((i + numConcJoins) + " " + (now.getTime() - old.getTime()) +
+		System.out.println(pt.pastryNodes.size() + " " + (now.getTime() - old.getTime()) +
 				   " " + pt.msgCount);
 		pt.msgCount = 0;
 		old = now;
@@ -491,7 +496,7 @@ public abstract class PastryRegrTest {
 	    pt.sendPings(k);
 	}
 
-	System.out.println(n + " nodes constructed");
+	System.out.println(pt.pastryNodes.size() + " nodes constructed");
 
 	System.out.println("starting RT and leafset check");
 	// check all routing tables, leaf sets

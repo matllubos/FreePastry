@@ -74,4 +74,4 @@ WireNodeHandle.PING_THROTTLE
 KNOWN BUGS
 ----------
 
-All platforms require Java 1,4.  Under Windows, Java 1.4.1 is required to run.
+All platforms require Java 1.4.  Under Windows, Java 1.4.1 is required to run.
