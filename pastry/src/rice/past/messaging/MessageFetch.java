@@ -55,10 +55,15 @@ import java.io.*;
  * @version $Id$
  * @author Alan Mislove
  */
-public class MessageFetch extends MessageLookup {
+public class MessageFetch extends PASTMessage {
 
   /**
-   * Builds a new request to fetch an existing file.
+  * Content to be returned
+   */
+  protected Serializable _content = null;
+
+  /**
+  * Builds a new request to lookup an existing file.
    * @param nodeId Source Pastry node's ID
    * @param fileId Pastry key of desired file
    */
@@ -67,7 +72,37 @@ public class MessageFetch extends MessageLookup {
   }
 
   /**
-   * Display this message.
+    * Returns the located storage object.
+   */
+  public Serializable getContent() {
+    return _content;
+  }
+
+  /**
+    * Looks up the file in the given service's storage.
+   * @param service PASTService on which to act
+   */
+  public void performAction(final PASTServiceImpl service) {
+    debug("  Fetching file " + getFileId() + " at node " +
+          service.getPastryNode().getNodeId());
+
+    Continuation lookup = new Continuation() {
+      public void receiveResult(Object o) {
+        _content = (Serializable) o;
+        setType(RESPONSE);
+        service.sendMessage(MessageFetch.this);
+      }
+
+      public void receiveException(Exception e) {
+        System.out.println("Exception " + e + " occurred during a fetch!");
+      }
+    };
+
+    service.getStorage().getObject(getFileId(), lookup);
+  }
+
+  /**
+    * Display this message.
    */
   public String toString() {
     String val = "FETCH ";

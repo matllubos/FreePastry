@@ -42,6 +42,8 @@ import rice.pastry.security.*;
 
 import rice.caching.messaging.*;
 
+import java.io.*;
+
 /**
  * This interface is required for any application which wishes to use the
  * Caching Manager.
@@ -59,6 +61,6 @@ public interface CachingManagerClient {
    * @param key The object's key
    * @param value The object itself.
    */
-  public void cache(NodeId key, Object value);
+  public void cache(Id key, Serializable value);
 
 }

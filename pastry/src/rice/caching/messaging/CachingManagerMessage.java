@@ -52,15 +52,15 @@ import java.io.*;
  */
 public class CachingManagerMessage extends Message implements Serializable {
 
-  private NodeId id;
+  private Id id;
 
-  private Object obj;
+  private Serializable obj;
   
   /**
    * Constructor which takes an address (for delivery), and a corresponding key
    * and object.
    */
-  public CachingManagerMessage(Address address, NodeId id, Object obj) {
+  public CachingManagerMessage(Address address, Id id, Serializable obj) {
     super(address);
     this.id = id;
     this.obj = obj;
@@ -71,7 +71,7 @@ public class CachingManagerMessage extends Message implements Serializable {
    *
    * @return The id of this message.
    */
-  public NodeId getId() {
+  public Id getId() {
     return id;
   }
 
@@ -80,7 +80,7 @@ public class CachingManagerMessage extends Message implements Serializable {
    *
    * @return The object associated with this message.
    */
-  public Object getObject() {
+  public Serializable getObject() {
     return obj;
   }
 }

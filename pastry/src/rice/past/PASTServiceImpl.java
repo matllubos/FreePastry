@@ -46,6 +46,7 @@ import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.rm.*;
 import rice.persistence.*;
+import rice.caching.*;
 
 import java.io.*;
 import java.util.*;
@@ -61,7 +62,7 @@ import java.util.*;
  * @author Alan Mislove
  * @author Ansley Post
  */
-public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient {
+public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient, CachingManagerClient {
   
   /**
    * Whether to print debugging statements.
@@ -108,7 +109,13 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
   /**
    * Replication Manager to use
    */
-  private RM replicationManager; 
+  private RM replicationManager;
+
+  /**
+   * Caching Manager to use
+   */
+  private CachingManager cachingManager;
+  
   /**
    * Builds a new PASTService to run on the given PastryNode, given a
    * Storage object (to persistedly store objects) and a cache used
@@ -124,7 +131,8 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
     credentials = new PermissiveCredentials();
     sendOptions = new SendOptions();
     commandTable = new Hashtable();
-    replicationManager = new RMImpl(pastry, this);
+    replicationManager = new RMImpl(pastry, this, instance);
+    cachingManager = new CachingManager(pastry, this, instance);
   }
 
   /**
@@ -452,7 +460,7 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    */
   public void isResponsible(IdRange range) {
     IdRange notRange = range.complement();
-    final Iterator notIds = storage.scan(range).getIterator();
+    final Iterator notIds = storage.getStorage().scan(range).getIterator();
 
     Continuation c = new Continuation() {
       public void receiveResult(Object o) {
@@ -479,11 +487,34 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * the case that no keys belong to this range
    */
   public IdSet scan(IdRange range) {
-    // pass throght to storage!
-    return null;
+    return storage.getStorage().scan(range);
   }
+
+  // ---------- Caching Manager Client Methods ----------
+
+  /**
+   * Upcall from the CachingManager which tells this client to locally
+   * cache the given object, under the provided key.
+   *
+   * @param key The object's key
+   * @param value The object itself.
+   */
+  public void cache(Id key, final Serializable obj) {
+    storage.cache(key, obj, new Continuation() {
+      public void receiveResult(Object o) {
+        if (! o.equals(new Boolean(true))) {
+          System.out.println("Caching of " + obj + " did not complete correctly.");
+        }
+      }
+
+      public void receiveException(Exception e) {
+        System.out.println("Exception " + e + " occured during caching of " + obj);
+      }
+    });
+  }
+
+  // ---------- Debug Methods ---------------
   
- // ---------- Debug Methods ---------------   
   /**
    * Prints a debugging message to System.out if the
    * DEBUG flag is turned on.

@@ -80,6 +80,24 @@ public class StorageManager implements Cache, Storage {
   }
 
   /**
+   * Returns the permantent storage object used by this StorageManager
+   *
+   * @return The storage of this storage manager
+   */
+  public Storage getStorage() {
+    return storage;
+  }
+
+  /**
+   * Returns the cache object used by this StorageManager
+   *
+   * @return The cache of this storage manager
+   */
+  public Cache getCache() {
+    return cache;
+  }
+
+  /**
    * Returns whether or not an object is present in the location <code>id</code>.
    * The result is returned via the receiveResult method on the provided
    * Continuation with an Boolean represnting the result.

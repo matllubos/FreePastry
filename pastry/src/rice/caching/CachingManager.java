@@ -43,6 +43,8 @@ import rice.pastry.security.*;
 
 import rice.caching.messaging.*;
 
+import java.io.*;
+
 /**
  * This interface is exported by Caching Manager for any applications which need to
  * use the dynamic-caching functionality.
@@ -96,7 +98,7 @@ public class CachingManager extends PastryAppl {
    * @param id The id (or key) of the lookup
    * @param obj The resulting object
    */
-  public void cache(CacheLookupMessage message, NodeId id, Object obj) {
+  public void cache(CacheLookupMessage message, Id id, Serializable obj) {
     NodeHandle[] hops = message.getHops();
 
     if (hops.length > 1) {
