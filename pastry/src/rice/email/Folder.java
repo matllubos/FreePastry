@@ -146,7 +146,7 @@ public class Folder {
    * @param name the name of the new child Folder
    * @return the newly created child Folder
    */   
-  public void createChildFolder(String name, Continuation command) throws PostException {
+  public void createChildFolder(String name, Continuation command) {
     // make the log to add
     Log log = new Log(name, _log.getLocation(), _post);
     // make the entry to insert after the new log has been added
@@ -180,7 +180,7 @@ public class Folder {
    * @param name the name of the Folder to return
    * @return the selected child Folder
    */
-  public void getChildFolder(String name, Continuation command) throws PostException {    
+  public void getChildFolder(String name, Continuation command) {    
     FolderGetLogTask preCommand = new FolderGetLogTask(command);
     _storage.retrieveSigned(_log.getChildLog(name), preCommand);
   }
@@ -190,7 +190,7 @@ public class Folder {
    *
    * @return an array of the names of the child Folders
    */
-  public String[] getChildren(Continuation command) throws PostException {
+  public String[] getChildren() {
     return (String[])_log.getChildLogNames();    
   }
 

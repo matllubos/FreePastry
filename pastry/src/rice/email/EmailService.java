@@ -28,7 +28,8 @@ public class EmailService extends PostClient {
 	Continuation resultHandler;
 
 	ESRootFolderCont(Continuation c) {
-	    this.resultHandler = c;
+	  System.out.println("Starting a new ESRootFolderCont");
+	  this.resultHandler = c;
 	}
 	
 	/**
@@ -54,6 +55,42 @@ public class EmailService extends PostClient {
 	    this.resultHandler.receiveException(result);
 	}
 
+    }
+
+  /**
+   * Used to add a email root folder when one does not previously exist.  
+   * Calls ESRootFolderCont to returns the actual email root Folder rather 
+   * than a ref to it.
+   */
+    private class ESAddRootFolderCont implements Continuation {
+	Continuation resultHandler;
+	ESAddRootFolderCont(Continuation c) {
+	  System.out.println("Starting a new ESAddRootFolderCont");
+	  this.resultHandler = c;
+	}
+	
+	/**
+	 * Called when a previously requested result is now available.
+	 *
+	 * @param result The result of the command.
+	 */
+	public void receiveResult(Object result) {
+	  System.out.println("ESAddRootFolderCont received a result.");
+	  System.out.println("Result is: " + result);
+	  LogReference emailLogRef = (LogReference)result;
+	  StorageService storage = _post.getStorageService();
+	  storage.retrieveSigned(emailLogRef, new ESRootFolderCont(resultHandler));
+	}
+
+	/**
+	 * Called when an execption occured as a result of the previous command.
+	 *
+	 * @param result The exception which was caused.
+	 */
+	public void receiveException(Exception result) {
+	  System.out.println("ESAddRootFolderCont received an exception.");
+	  this.resultHandler.receiveException(result);
+	}
     }
   
   // the name of the Inbox's log
@@ -115,16 +152,31 @@ public class EmailService extends PostClient {
    * @param c is the object notified of the result of the folder retrieval.
    */
   public void getRootFolder(Continuation c) {
-    
-      // find the Client Id for this client
-      PostClientAddress pca = PostClientAddress.getAddress(this);
-      
-      // use the Id to fetch the root log
-      PostLog mainLog = _post.getLog();
-      LogReference emailLogRef = mainLog.getChildLog(pca);
+    System.out.println("Starting to get root Folder");
 
+    // find the Client Id for this client
+    PostClientAddress pca = PostClientAddress.getAddress(this);
+    
+    // use the Id to fetch the root log
+    PostLog mainLog = _post.getLog();
+    // use the main root log to try to fetch the ePost root log
+    LogReference emailLogRef = mainLog.getChildLog(pca);
+    
+    System.out.println("Fetched the initial emailLogRef");
+
+    // if ePost does not yet have a root log, add one
+    // JM is it correct to add the new log at the same location as the previous one?
+    if (emailLogRef == null) {
+      System.out.println("Email Root Log did not exist, adding one");
+      Log emailRootLog = new Log(pca, mainLog.getLocation(), _post);
+      mainLog.addChildLog(emailRootLog, new ESAddRootFolderCont(c));
+    }
+    // otherwise fetch and return the ePost root log
+    else {
+      System.out.println("Fetching the Email Root Log");
       StorageService storage = _post.getStorageService();
       storage.retrieveSigned(emailLogRef, new ESRootFolderCont(c));
+    }
   }
 
   /**

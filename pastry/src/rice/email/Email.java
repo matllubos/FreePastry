@@ -132,7 +132,7 @@ public class Email implements java.io.Serializable {
    */
   protected void storeData(Continuation errorListener) {   
     // if the body has not already been inserted into PAST
-    if (this.bodyRef != null) {
+    if (this.bodyRef == null) {
       //if (!(this.bodyRef instanceof EmailDataReference)) {
       EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.BODY, errorListener);
       storage.storeContentHash(body, command);

@@ -38,11 +38,27 @@ public class SimpleFolderTest extends EmailTest {
 	System.out.println("Could not create an EmailService to work with; Bailing.");
 	return;
       }
-      // get the root
+
+      // JM just until we get some more continuations into the system
+      try{
+	System.out.println("Waiting...");
+	Thread.sleep(5000);
+      } catch (InterruptedException e) {
+	System.out.println("INTERRUPTED: " + e);
+      }
+
+      // try to get the root
       _state = GOT_ROOT;
       Continuation command = new SimpleFolderCont(_rootFolder);      
       _sender.getRootFolder(command);
+      // if this does not work, make a root for the EmailApp
+      
+
+      // now get the root
+      
+
     }
+
     else if (_state == GOT_ROOT) {
       // once we have the name of the root, print it out
       System.out.println("Name of the root Folder: " + _rootFolder.getName());
@@ -90,7 +106,8 @@ public class SimpleFolderTest extends EmailTest {
       testBody();
     }
     public void receiveException(Exception e) {
-      System.out.println("Exception " + e + "  occured while trying to get Folder");
+      e.printStackTrace();
+      System.out.println("Exception " + e + "  occured while trying to get Folder for SimpleFolderTest.");
     }
   }
 
