@@ -22,7 +22,7 @@ href="mailto:jeffh@rice.edu">Jeff Hoye</a>.</h4>
 <ul>
 	<h3>Getting Started</h3>
 	<ul>
-	<li><a href="#requirements">Requirements</a></li>
+	<li><a href="#requirements">What You'll Need</a></li>
 	</ul>
 	<h3>Lessons</h3>
 	<ul>
@@ -42,7 +42,9 @@ href="mailto:jeffh@rice.edu">Jeff Hoye</a>.</h4>
 	</ul>
 </ul>
 
-<a name="requirements"></a><h2>Requirements</h2>
+<hr/>
+
+<a name="requirements"></a><h2>What You'll Need</h2>
 Before you begin, you should meet the following requirements.  
 <ol>
   <li>An intermediate level of knowledge in the Java programming language.  <a href="http://java.sun.com/docs/books/tutorial/">The Java Tutorial</a> is a good place to start. 
@@ -203,32 +205,28 @@ pastry.jar
 rice/tutorial/lesson1/DistTutorial.java
 </pre>
       </li>
-      <li><pre>javac -cp pastry.jar rice/tutorial/lesson1/*.java</pre></li>
+      <li>Compile the Java sources:
+	  <pre><span class="input">javac -cp pastry.jar rice/tutorial/lesson1/*.java</span></pre></li>
     </ol><br/>
   <li><b>Step 2:</b> Launch the bootstrap node.<br/>
 Even though this is the first node, and therefore we know the bootstrap will not work, you need to place in a bogus ip/port.  A smarter main() method in DistTutorial.java could fix this problem.
-<pre>java -cp .:pastry.jar rice.tutorial.lesson.DistTutorial 9001 <i>yourhost.domain</i> 9001
-</pre>
+<pre><span class="input">java -cp .:pastry.jar rice.tutorial.lesson.DistTutorial 9001 <i>yourhost.domain</i> 9001</span></pre>
 <p/>
 (In the above command, <i>yourhost.domain</i> can be the DNS name of your
 host or its IP address.)  Your output will look something like this:    
 <pre>
-$java rice.tutorial.lesson1.DistTutorial 9001 10.9.8.7 9001
-Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
+<span class="input">java rice.tutorial.lesson1.DistTutorial 9001 10.9.8.7 9001</span>
+<span class="output">Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
 Couldn't find a bootstrap node, starting a new ring...
-Finished creating new node SocketNodeHandle (<0xB7E151..>/FOO/10.9.8.7:9001 [-4233509936758121968])
-</pre></li>
+Finished creating new node SocketNodeHandle (&lt;0xB7E151..&gt;/FOO/10.9.8.7:9001 [-4233509936758121968])</span></pre></li>
   <li><b>Step 3:</b> Launch another node.<br/>
   You can do this on another computer but make sure you fill in the name of
   the computer from step 2 in <i>bootstraphost.domain</i>.
-<pre>  
-java -cp .:pastry.jar rice.tutorial.lesson.DistTutorial 9002 <i>bootstraphost.domain</i> 9001
-</pre>
+<pre><span class="input">java -cp .:pastry.jar rice.tutorial.lesson.DistTutorial 9002 <i>bootstraphost.domain</i> 9001</span></pre>
 <p/> Your output will look something like this:    
 <pre>
-$java rice.tutorial.lesson1.DistTutorial 9002 10.9.8.7 9001
-Finished creating new node SocketNodeHandle (<0x74345D..>/FOO/10.9.8.7:9002 [6054526012380911947])
-</pre></li>
+<span class="input">java rice.tutorial.lesson1.DistTutorial 9002 10.9.8.7 9001</span>
+<span class="output">Finished creating new node SocketNodeHandle (&lt;0x74345D..&gt;/FOO/10.9.8.7:9002 [6054526012380911947])</span></pre></li>
 </ul>
 
 <h3>Congratulations!  You have just launched your first FreePastry ring!<br>
@@ -480,8 +478,8 @@ Now if you execute this code twice you should get something like:
 
 <p><em>(for Node1)</em></p>
 <pre>
-java rice.tutorial.lesson3.DistTutorial 9001 10.9.8.7 9001
-Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
+<span class="input">java rice.tutorial.lesson3.DistTutorial 9001 10.9.8.7 9001</span>
+<span class="output">Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
 Couldn't find a bootstrap node, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0xC20545..&gt;/FOO/10.9.8.7:9001 [-4445364026872145996])
 
@@ -492,13 +490,12 @@ MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0x86ACA9.
 MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0x9906E6..&gt;
 MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0x8F5015..&gt;
 MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0xC20545..&gt;
-MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0xC20545..&gt;
-</pre>
+MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0xC20545..&gt;</span></pre>
 
 <p><em>(for Node2)</em></p>
 <pre>
-java rice.tutorial.lesson3.DistTutorial 9002 10.9.8.7 9001
-Finished creating new node SocketNodeHandle (&lt;0xDD90C6..&gt;/FOO/10.9.8.7:9002 [5138450490561334965])
+<span class="input">java rice.tutorial.lesson3.DistTutorial 9002 10.9.8.7 9001</span>
+<span class="output">Finished creating new node SocketNodeHandle (&lt;0xDD90C6..&gt;/FOO/10.9.8.7:9002 [5138450490561334965])
 
 MyApp &lt;0xDD90C6..&gt; sending to &lt;0x2E5C63..&gt;
 MyApp &lt;0xDD90C6..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0x2E5C63..&gt;
@@ -515,8 +512,7 @@ MyApp &lt;0xDD90C6..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0x41F900.
 MyApp &lt;0xDD90C6..&gt; sending to &lt;0x9906E6..&gt;
 MyApp &lt;0xDD90C6..&gt; sending to &lt;0x8F5015..&gt;
 MyApp &lt;0xDD90C6..&gt; sending direct to [SNH: &lt;0xDD90C6..&gt; -&gt; &lt;0xC20545..&gt;/FOO/10.9.8.7:9001 [-4445364026872145996]]
-MyApp &lt;0xDD90C6..&gt; sending direct to [SNH: &lt;0xDD90C6..&gt; -&gt; &lt;0xC20545..&gt;/FOO/10.9.8.7:9001 [-4445364026872145996]]
-</pre>
+MyApp &lt;0xDD90C6..&gt; sending direct to [SNH: &lt;0xDD90C6..&gt; -&gt; &lt;0xC20545..&gt;/FOO/10.9.8.7:9001 [-4445364026872145996]]</span></pre>
 
 <h3>Congratulations!  You have just sent and received your first messages in
 FreePastry!</h3>

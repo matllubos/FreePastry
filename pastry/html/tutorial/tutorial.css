@@ -44,6 +44,11 @@ pre {
 	background-color: #eee;
 	padding: 1em;
 }
+pre .input {
+	font-weight: bold;
+}
+pre .output {
+}
 acronym {
 	font-style: inherit;
 	font-variant: small-caps;
