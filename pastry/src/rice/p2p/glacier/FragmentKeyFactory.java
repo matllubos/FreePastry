@@ -81,7 +81,7 @@ public class FragmentKeyFactory implements IdFactory {
    * @return DESCRIBE THE RETURN VALUE
    */
   public rice.p2p.commonapi.Id buildIdFromToString(String string) {
-    StringTokenizer stok = new StringTokenizer(string, "(,)- :v");
+    StringTokenizer stok = new StringTokenizer(string, "(,) :v");
     if (stok.countTokens() < 4) {
       return null;
     }
