@@ -76,6 +76,12 @@ public class Channel extends PastryAppl implements IScribeApp {
     private BandwidthManager bandwidthManager = null;
 
     /**
+     * Set of ISplitStreamApps waiting for this channel to be ready.
+     */
+    private Set m_apps = new HashSet();
+
+
+    /**
      * Constructor to Create a new channel
      *
      */
@@ -128,6 +134,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	    System.out.println("Creator Joined Spare Capacity Group" + getNodeId());
 	}		
    	isReady = true;
+	notifyApps();
     }
 
     /**
@@ -176,6 +183,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	}		
 	/* Subscribe to a primary stripe */
 	isReady = true;
+	notifyApps();
 	System.out.println("A Channel Object is being created (In Path) at " + getNodeId());
     }
  
@@ -263,7 +271,8 @@ public class Channel extends PastryAppl implements IScribeApp {
 	     * (could easily happen for primary stripe), so might never subscribe 
 	     * to that stripe! - Atul.
 	     */
-	    if(!subscribedStripes.contains((Stripe)stripe) && stripe.getState() == Stripe.STRIPE_DROPPED)
+	    //if(!subscribedStripes.contains((Stripe)stripe) && stripe.getState() == Stripe.STRIPE_DROPPED)
+	    if(!subscribedStripes.contains((Stripe)stripe) && stripe.getState() != Stripe.STRIPE_UNSUBSCRIBED)
 		subscribedStripes.addElement(stripe);
 
 	    if(stripe.getState() == Stripe.STRIPE_UNSUBSCRIBED){
@@ -287,6 +296,9 @@ public class Channel extends PastryAppl implements IScribeApp {
 	Object tableEntry = stripeIdTable.get(stripeId);
 	Stripe stripe = null; 
 	stripe = (Stripe) tableEntry;
+	if(subscribedStripes.contains(stripe))
+	    return stripe;
+
 	stripe.joinStripe();	
 	stripe.addObserver(observer);
 	subscribedStripes.addElement(stripe);
@@ -411,6 +423,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	if(scribe.join(spareCapacityId, this, cred)){
 	}	
 	isReady = true;
+	notifyApps();
     }
     private void handleControlFindParentResponseMessage(Message msg){
 	ControlFindParentResponseMessage prmessage = (ControlFindParentResponseMessage) msg;
@@ -471,8 +484,21 @@ public class Channel extends PastryAppl implements IScribeApp {
 	return(toReturn);	
     }
 
+    public void registerApp(ISplitStreamApp app){
+	m_apps.add(app);
+    }
+
+    public void notifyApps(){
+	Iterator it = m_apps.iterator();
+
+	while(it.hasNext()){
+	    ISplitStreamApp app = (ISplitStreamApp)it.next();
+	    app.channelIsReady(getChannelId());
+	}
+    }
 }
   
+
 
 
 
