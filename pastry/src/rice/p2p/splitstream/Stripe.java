@@ -251,7 +251,7 @@ public class Stripe implements ScribeClient {
     if (count.intValue() < MAX_FAILED_SUBSCRIPTION) {
       count = new Integer(count.intValue() + 1);
 
-      System.out.println("Subscription failed at " + channel.getLocalId() + " for topic " + topic + " - retrying.");
+      System.out.println("DEBUG :: Subscription failed at " + channel.getLocalId() + " for topic " + topic + " - retrying.");
       scribe.subscribe(topic, this);
 
       failed.put(topic, count);
