@@ -3,19 +3,19 @@ package rice.p2p.glacier.v2;
 import java.io.Serializable;
 
 public class FragmentMetadata implements Serializable {
-  long currentExpirationDate;
-  long lastExpirationDate;
+  protected long currentExpirationDate;
+  protected long previousExpirationDate;
   
-  public FragmentMetadata(long currentExpirationDate, long lastExpirationDate) {
+  public FragmentMetadata(long currentExpirationDate, long previousExpirationDate) {
     this.currentExpirationDate = currentExpirationDate;
-    this.lastExpirationDate = lastExpirationDate;
+    this.previousExpirationDate = previousExpirationDate;
   }
   
-  long getCurrentExpirationDate() {
+  long getCurrentExpiration() {
     return currentExpirationDate;
   }
   
-  long getLastExpirationDate() {
-    return lastExpirationDate;
+  long getPreviousExpiration() {
+    return previousExpirationDate;
   }
 }
