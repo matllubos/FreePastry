@@ -206,7 +206,6 @@ public class RMIPastryRegrTest extends PastryRegrTest {
 	    java.rmi.registry.LocateRegistry.createRegistry(port);
 	} catch (RemoteException e) {
 	    System.out.println("Error starting RMI registry: " + e);
-	    System.exit(1);
 	}
     }
 

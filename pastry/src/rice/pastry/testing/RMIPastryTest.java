@@ -214,9 +214,13 @@ public class RMIPastryTest {
 	    java.rmi.registry.LocateRegistry.createRegistry(port);
 	} catch (RemoteException e) {
 	    System.out.println("Error starting RMI registry: " + e);
-	    System.exit(1);
 	}
     }
+
+    /**
+     * Is this the first virtual node being created? If so, block till ready.
+     */
+    private static boolean firstvnode = true;
 
     public void makePastryNode() {
 	// or, for a sweet one-liner,
@@ -225,6 +229,11 @@ public class RMIPastryTest {
 	PastryNode pn = factory.newNode(getBootstrap());
 	pastrynodes.add(pn);
 	if (Log.ifp(5)) System.out.println("created " + pn);
+
+	// xxx the first virtual node should block till ready.
+	if (firstvnode) {
+	    firstvnode = false;
+	}
     }
 
     public void printLeafSets() {

@@ -232,7 +232,6 @@ public class RMIHelloWorld {
 	    java.rmi.registry.LocateRegistry.createRegistry(port);
 	} catch (RemoteException e) {
 	    System.out.println("Error starting RMI registry: " + e);
-	    System.exit(1);
 	}
     }
 
@@ -311,6 +310,11 @@ public class RMIHelloWorld {
     }
 
     /**
+     * Is this the first virtual node being created? If so, block till ready.
+     */
+    private static boolean firstvnode = true;
+
+    /**
      * Create a Pastry node and add it to pastryNodes. Also create a client
      * application for this node, and spawn off a separate thread for it.
      */
@@ -326,6 +330,18 @@ public class RMIHelloWorld {
 	new Thread(thread).start();
 
 	if (Log.ifp(5)) System.out.println("created " + pn);
+
+	if (firstvnode) {
+	    firstvnode = false;
+	    if (Log.ifp(6)) System.out.println("blocking until first virtual node is ready");
+	    while (pn.isReady() == false) {
+		synchronized (app) {
+		    if (pn.isReady() == false)
+			try { app.wait(); } catch (InterruptedException e) { }
+		}
+	    }
+	    if (Log.ifp(6)) System.out.println("first virtual node is ready");
+	}
     }
 
     /**
