@@ -90,6 +90,11 @@ public class MessageDispatch {
 
     addressBook.put(address, receiver);
   }
+  
+  public MessageReceiver lookupDestination(Message msg) {
+    MessageReceiver mr = (MessageReceiver) addressBook.get(msg.getDestination());    
+    return mr;
+  }
 
   /**
    * Dispatches a message to the appropriate receiver.
