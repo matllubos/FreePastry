@@ -453,18 +453,34 @@ public class Channel extends PastryAppl implements IScribeApp {
     public SpareCapacityId getSpareCapacityId(){
 	return spareCapacityId;
     }
-
+    
     /**
      * Call used for stripes to notify channel they have taken on a subscriber.
      */
-    public void stripeSubscriberAdded(){
+    public void stripeSubscriberRemoved(){
 
+	bandwidthManager.additionalBandwidthFreed(this);
+	int currentUsage = bandwidthManager.getUsedBandwidth(this);
+	int maxAllowed = bandwidthManager.getMaxBandwidth(this);
+	
+	if((currentUsage + 1) == maxAllowed){
+	    System.out.println("Node " + getNodeId() + " Joining Spare Capacity Tree Again");
+	    scribe.join(getSpareCapacityId(), this, cred);
+	}
+    }
+
+     /**
+     * Call used for stripes to notify channel they have taken on a subscriber.
+     */
+    public void stripeSubscriberAdded(){
 	bandwidthManager.additionalBandwidthUsed(this);
+
 	if(!bandwidthManager.canTakeChild(this)){
 	    System.out.println("Node " + getNodeId() + " Leaving Spare Capacity Tree");
 	    scribe.leave(getSpareCapacityId(), this, cred);
 	}
     }
+
 
     /** -- Scribe Implementation -- **/
 
@@ -474,6 +490,10 @@ public class Channel extends PastryAppl implements IScribeApp {
      *
      */
     public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){
+	if(!msg.getTopicId().equals((NodeId)getSpareCapacityId())){
+	    NodeId[] data = getChannelMetaData();
+	    msg.setData(data);
+	}
     }
     
     /**
@@ -625,8 +645,8 @@ public class Channel extends PastryAppl implements IScribeApp {
 	Stripe stripe = (Stripe) stripeIdTable.get(prmessage.getStripeId());
 
 	if(stripe != null){
-	    Vector path = new Vector();
-	    path.addElement(prmessage.getSource());
+	    Vector path = prmessage.getPath();
+	    //System.out.println("Setting root path in controlFindparentResponse msg - setting it to "+prmessage.getSource().getNodeId()+" at "+getNodeId() + " for stripe "+stripe.getStripeId());
 	    stripe.setRootPath( path );
         }
         stripe.setIgnoreTimeout( true );
@@ -646,6 +666,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 
 	if(stripe != null){
           stripe.dropped();
+	  //System.out.println("Setting root path in controlDropMessage msg - making it empty at"+getNodeId()+" for stripe "+stripe.getStripeId());
           stripe.setRootPath( null );
         }
 	//System.out.println("Node "+getNodeId()+" received DROP message"+" for stripe "+dropMessage.getStripeId());
@@ -740,7 +761,7 @@ public class Channel extends PastryAppl implements IScribeApp {
      */
     private void handleControlTimeoutMessage( Message msg )
     {
-        //System.out.println( "Received a scheduled timeout message" );
+        System.out.println( "Received a scheduled timeout message. Ignoring? "+ignore_timeout );
         ControlTimeoutMessage timeoutMessage = (ControlTimeoutMessage)msg;
         timeoutMessage.handleMessage( this, this.thePastryNode, (Scribe)this.scribe );
     }
@@ -819,4 +840,15 @@ public class Channel extends PastryAppl implements IScribeApp {
 	}
 	return false;
     }
+
+
+    /**
+     * Return the underlying scribe object.
+     *
+     * @return Underlying scribe object
+     */
+    public Scribe getScribe(){
+	return (Scribe)scribe;
+    }
 }
+

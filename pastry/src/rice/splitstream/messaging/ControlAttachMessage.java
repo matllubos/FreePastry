@@ -2,6 +2,7 @@ package rice.splitstream.messaging;
 
 import rice.pastry.*;
 import rice.pastry.messaging.*;
+import rice.pastry.security.*;
 import rice.splitstream.*;
 import rice.scribe.*;
 import java.io.Serializable;
@@ -39,13 +40,15 @@ public void handleMessage( Channel channel, IScribe scribe, NodeHandle source )
       return_array[return_array.length-1] = (NodeId)spcapid;
 
       ControlAttachResponseMessage response = new ControlAttachResponseMessage( channel.getAddress() );
+      Credentials credentials = new PermissiveCredentials();
       response.setContent( return_array );
       if(return_array == null){
 	System.out.println("I'm not returning any data");
       }else if(return_array.length <= 1){
 	System.out.println("Returning too little data");
       }
-      ((Scribe)scribe).routeMsgDirect( source, response, null, null );
+      //((Scribe)scribe).routeMsgDirect( source, response, null, null );
+      channel.routeMsgDirect( source, response, credentials, null );
 }
 
 }

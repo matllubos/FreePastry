@@ -118,7 +118,6 @@ public class Stripe extends Observable implements IScribeApp{
       	}
       }
 	stripeState = STRIPE_UNSUBSCRIBED;
-	//System.out.println("Stripe Created");
 	outputStream = new SplitStreamOutputStream(stripeId, scribe, credentials);
     }
 
@@ -237,7 +236,18 @@ public class Stripe extends Observable implements IScribeApp{
       * @param msg the msg sent upon fault
       * @param faultyParent the parent that has become faulty
       */
-     public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){}
+     public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){
+	 /** 
+	  * Get the associated data with the Channel, eg the channelId,
+	  * the different stripeIds, the spare capacity ids and send it
+	  * along with the subscribe message.
+	  */
+	 NodeId[] data = channel.getChannelMetaData();
+	 msg.setData(data);
+	 //System.out.println("Setting root path in faultHandler to empty at "+channel.getNodeId()+" for stripe "+getStripeId());
+	 setRootPath(null);
+
+     }
   
      /**
       * Upcall generate when a message is forwarded
@@ -283,14 +293,13 @@ public class Stripe extends Observable implements IScribeApp{
 	    BandwidthManager bandwidthManager = getChannel().getBandwidthManager();
 
 	    if(wasAdded){
-		//channel.stripeSubscriberAdded();
-		//System.out.println("STRIPE :: Child was added "+child.getNodeId()+" at "+getChannel().getNodeId());
+		//System.out.println("STRIPE :: Child was added "+child.getNodeId()+" at "+getChannel().getNodeId()+" for "+topicId);
 		if(bandwidthManager.canTakeChild(getChannel())){
-		    //if(bandwidthManager.getUsedBandwidth(getChannel()) <= bandwidthManager.getMaxBandwidth(getChannel())){
-		    //System.out.println("STRIPE:: can take child "+child.getNodeId()+" at "+getChannel().getNodeId());
+		    //System.out.println("STRIPE:: can take child "+child.getNodeId()+" at "+getChannel().getNodeId()+" for "+topicId);
 		    channel.stripeSubscriberAdded();
+		    
 		    Credentials credentials = new PermissiveCredentials();
-		    Vector child_root_path = root_path;
+		    Vector child_root_path = (Vector)root_path.clone();
 		    child_root_path.add( ((Scribe)scribe).getLocalHandle() );
 		    channel.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
 										    channel.getNodeHandle(),
@@ -303,34 +312,79 @@ public class Stripe extends Observable implements IScribeApp{
 		else{
 		    /* THIS IS WHERE THE DROP SHOULD OCCUR */
 		    Credentials credentials = new PermissiveCredentials();
-		    channel.routeMsgDirect( child, new ControlDropMessage( channel.getAddress(),
-									   channel.getNodeHandle(),
-									   topicId,
-									   credentials,
-									   channel.getSpareCapacityId(),
-                                                                           channel.getChannelId(),
-                                                                           channel.getTimeoutLen() ),
-					    credentials, null );
-		    //System.out.println("STRIPE ::SHOULD NOT TAKE CHILD - LOCALDROP"+" at "+getChannel().getNodeId());
-		    localDrop = true;
-		    scribe.removeChild(child, topicId);
-		    //bandwidthManager.additionalBandwidthFreed(channel);
+		    Vector ret;
+		    NodeHandle victimChild;
+		    StripeId victimStripeId;
+		    
+		    // Now, ask the bandwidth manager to free up some bandwidth, fill up
+		    // victimChild and victimStripeId..
+		    // XXX - might want to change how freeBandwidth returns :-)
+		    ret = bandwidthManager.freeBandwidth(channel);
+		    victimChild = (NodeHandle)ret.elementAt(0);
+		    victimStripeId = (StripeId)ret.elementAt(1);
 
+		    //System.out.println("STRIPE :: victimChild "+victimChild.getNodeId()+" for stripe "+victimStripeId);
 
+		    Stripe victimStripe = channel.getStripe(victimStripeId);
+		    Vector child_root_path = (Vector)getRootPath().clone();
+
+		    child_root_path.add( ((Scribe)scribe).getLocalHandle() );
+
+		    /**
+		     * In all cases except the case that victimChild is same as recently added
+		     * child and also for the same stripe, then we need to send the propogate path
+		     * message to recently added child.
+		     */
+		    if(!(victimChild.getNodeId().equals(child.getNodeId()) &&
+				topicId.equals((NodeId)victimStripeId))){
+			channel.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
+											channel.getNodeHandle(),
+											topicId,
+											credentials,
+											child_root_path ),
+						credentials, null );
+			//System.out.println("Sending PROPOGATE message to" +child.getNodeId()+ " for stripe "+topicId);
+		    }
+
+		    channel.routeMsgDirect( victimChild, new ControlDropMessage( channel.getAddress(),
+										     channel.getNodeHandle(),
+										     victimStripeId,
+										     credentials,
+										     channel.getSpareCapacityId(),
+										     channel.getChannelId(),
+										     channel.getTimeoutLen() ),
+						credentials, null ); 
+		    //System.out.println(" STRIPE "+this+" Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+ " at "+channel.getNodeId());
+
+		    victimStripe.setLocalDrop(true);
+		    scribe.removeChild(victimChild, (NodeId)victimStripeId);
 		}
-		/* We should check if we can take this child on */
 	    }
 	    else {
 		// child was dropped
-		//System.out.println("STRIPE ::Child was removed "+child.getNodeId()+" at "+getChannel().getNodeId());
+		//System.out.println("STRIPE "+this+" ::Child was removed "+child.getNodeId()+" at "+getChannel().getNodeId()+ " for stripe "+getStripeId());
 		if(!localDrop)
-		    bandwidthManager.additionalBandwidthFreed(channel);
+		    channel.stripeSubscriberRemoved();
 		else {
-		    //System.out.println("STRIPE ::LOCAL-DROP -- so not freeing any bandwidth"+" at "+getChannel().getNodeId());
 		    localDrop = false;
 		}
 	    }
      }
+
+    /**
+     * Set whether child of this stripe was locally
+     * dropped.
+     */
+    public void setLocalDrop(boolean value){
+	localDrop = value;
+    }
+
+    /**
+     * Gets whether child was dropped locally for this stripe.
+     */
+    public boolean getLocalDrop(){
+	return localDrop;
+    }
 
     /** 
      * The constant status code associate with the subscribed state
@@ -346,5 +400,12 @@ public class Stripe extends Observable implements IScribeApp{
      * The constant status code associate with the dropped state
      */
     public static final int STRIPE_DROPPED = 2;
+
+    /**
+     * A node was locally added, in response to FindParentMessage through the
+     * spare capacity tree.
+     */
+    private boolean localChildAdded = false;
 }
+
 

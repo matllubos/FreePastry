@@ -1,5 +1,10 @@
 package rice.splitstream;
 
+import rice.pastry.*;
+import rice.pastry.routing.*;
+import rice.scribe.*;
+
+
 import java.util.*;
 
 /**
@@ -70,6 +75,100 @@ public class BandwidthManager{
 	return false;
     }
 
+     /**
+     * This method makes an attempt to free up bandwidth
+     * when it is needed. It follows the basic outline as
+     * describe above,not completely defined.
+     *
+     * @param channel The channel whose bandwidth usage needs
+     *                to be controlled.
+     *
+     * @return A vector containing the child to be dropped and
+     *         the corresponding stripeId
+     */ 
+    public Vector freeBandwidth(Channel channel){
+        /** 
+         * This should be implemented depending upon the policies, you want
+         * to use 
+         */
+	Stripe primaryStripe = channel.getPrimaryStripe();
+	StripeId[] stripeIds = channel.getStripes();
+	Vector candidateStripes = new Vector();
+	Scribe scribe = channel.getScribe();
+	Random rng = new Random(PastrySeed.getSeed());
+
+	NodeHandle victimChild;
+	StripeId victimStripeId;
+	
+	Vector returnVector;
+	/** 
+	 * Go through all non-primary stripes and find all stripes
+	 * for which local node has children, these stripes are
+	 * favorite candidates for dropping children.
+	 */
+	for(int i = 0; i < stripeIds.length; i++){
+	    //System.out.println("Primary Stripe "+primaryStripe.getStripeId()+i+"-th stripId "+stripeIds[i]);
+	    if(!stripeIds[i].equals((NodeId)primaryStripe.getStripeId())
+	       && scribe.getChildren((NodeId)stripeIds[i]) != null &&
+	       scribe.getChildren((NodeId)stripeIds[i]).size() > 0)
+		candidateStripes.addElement(stripeIds[i]);
+	}
+
+	if(candidateStripes.size() > 0){
+	    //System.out.println("FREE-BM :: Non-primary stripe children exist");
+	    // There is at least one non-primary stripe for which
+	    // local node has children, hence can drop one of its child
+	    // Randomly select one such non-primary stripe.
+	    int j = rng.nextInt(candidateStripes.size());
+	    Vector children = scribe.getChildren((NodeId)candidateStripes.elementAt(j));
+	    
+	    // Now randomly select one of its child.
+	    int k = rng.nextInt(children.size());
+	    victimChild = (NodeHandle)children.elementAt(k);
+	    victimStripeId = (StripeId)candidateStripes.elementAt(j);
+	}
+	else {
+	    // We have to drop one of child of the primary stripe.
+	    Vector children = scribe.getChildren((NodeId)primaryStripe.getStripeId());
+	    //System.out.println("FREE-BM :: Should drop primary stripe children, number of such children "+children.size());
+	    // Now, select that child which doesnt share a prefix with local
+	    // node.
+	    Vector candidateChildren = new Vector();
+	    int numDigits = channel.getRoutingTable().numRows() - 1;
+	    int digitLength = RoutingTable.baseBitLength();
+	    
+	    //System.out.println("numDigits "+numDigits+" digitLength "+digitLength);
+	    // Start comparing the children's digits with local node's
+	    // digits, starting with most significant digit going all the
+	    // way to least signifcant digit 
+	    //System.out.println("Local node "+channel.getNodeId());
+	    for(int k = 0; k < numDigits; k++){
+		for(int j = 0; j < children.size(); j++){
+		    NodeHandle c = (NodeHandle)children.elementAt(j);
+		    //System.out.println("Comparing with child "+c.getNodeId());
+		    // Compare the k-th digit from the most significant digit
+		    if(channel.getNodeId().getDigit(numDigits - k, digitLength) != 
+		       c.getNodeId().getDigit(numDigits - k, digitLength))
+			candidateChildren.add(c);
+		}
+		// If we find some children differing at kth digit, no need to look
+		// at (k-1)-th digit
+		if(candidateChildren.size() > 0)
+		    break;
+	    }
+	    
+	    int m = rng.nextInt(candidateChildren.size());
+	    victimChild = (NodeHandle)candidateChildren.elementAt(m);
+	    victimStripeId = primaryStripe.getStripeId();
+	    
+	}
+	returnVector = new Vector();
+	returnVector.add((NodeHandle)victimChild);
+	returnVector.add((StripeId)victimStripeId);
+	return returnVector;
+    }
+    
+
     /**
      * Define the Default Bandwidth for a newly created Channel 
      * @param the limit to the number of children a channel may have by default
@@ -138,7 +237,12 @@ public class BandwidthManager{
      */
     public void additionalBandwidthFreed(Channel channel){
 	int oldBandwidth = ((Integer)usedBandwidth.get(channel)).intValue();
-	usedBandwidth.put(channel,new Integer(oldBandwidth - 1));
+	int newBandwidth = oldBandwidth - 1;
+	if(newBandwidth < 0 ){
+	    //System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+	    newBandwidth = 0;
+	}
+	usedBandwidth.put(channel,new Integer(newBandwidth));
     }
 
     /**

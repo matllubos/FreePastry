@@ -123,7 +123,7 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
      Channel channel = (Channel) channels.get(channelId);
      //System.out.println("Attempting to attach to Channel " + channelId);
      if(channel == null){
-	//System.out.println("Creating New Channel Object");
+
      	channel = new Channel(channelId, scribe, credentials, bandwidthManager, node);
 	channels.put(channelId, channel);
      }
@@ -230,19 +230,17 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
 	    * handling, like sending ControlPropogatePathMessage or Drop message if necessary.
 	    */
 	   if(!((NodeId)channelId).equals(topicId)){
-	       //System.out.println("SPLITSTREAM :: Subscription is for stripe"+" at "+channel.getNodeId());
+	       //System.out.println("SPLITSTREAM :: Subscription is for stripe"+topicId+" at "+channel.getNodeId()+ " from "+child.getNodeId());
 	       Vector subscribedStripes = channel.getSubscribedStripes();
 	       if(!channel.stripeAlreadySubscribed((StripeId)topicId)){
+		   Stripe stripe = channel.getStripe((StripeId)topicId);
 		   if(wasAdded){
-		       //channel.stripeSubscriberAdded();
-		       //System.out.println("SPLITSTREAM ::Subscriber was added"+child.getNodeId());
-		       Stripe stripe = channel.getStripe((StripeId)topicId);
+		       //System.out.println("SPLITSTREAM :: Used bw "+bandwidthManager.getUsedBandwidth(channel)+" max bw "+bandwidthManager.getMaxBandwidth(channel));
 		       if(bandwidthManager.canTakeChild(channel)){
-			   //if(bandwidthManager.getUsedBandwidth(channel) <= bandwidthManager.getMaxBandwidth(channel)){
-			   //System.out.println("SPLITSTREAM :: Subscriber can take child"+" at "+channel.getNodeId());
+			   //System.out.println("SPLITSTREAM :: Subscriber can take child"+child.getNodeId()+" at "+channel.getNodeId());
 			   channel.stripeSubscriberAdded();
 			   Credentials credentials = new PermissiveCredentials();
-			   Vector child_root_path = stripe.getRootPath();
+			   Vector child_root_path = (Vector)stripe.getRootPath().clone();
 			   child_root_path.add( ((Scribe)scribe).getLocalHandle() );
 			   channel.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
 											   channel.getNodeHandle(),
@@ -254,38 +252,62 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
 		       else{
 			   /* THIS IS WHERE THE DROP SHOULD OCCUR */
 			   Credentials credentials = new PermissiveCredentials();
-			   channel.routeMsgDirect( child, new ControlDropMessage( channel.getAddress(),
-										  channel.getNodeHandle(),
-										  topicId,
-										  credentials,
-										  channel.getSpareCapacityId(), channel.getChannelId(), channel.getTimeoutLen() ),
-						   credentials, null );
-			   //System.out.println("SPLITSTREAM ::SHOULD NOT TAKE CHILD - LOCAL-DROP"+" at "+channel.getNodeId());
-			   localDrop = true;
-			   scribe.removeChild(child, topicId);
-			   //bandwidthManager.additionalBandwidthUsed(channel);
+			   NodeHandle victimChild = null;
+			   StripeId victimStripeId = null;
+			   Vector ret;
+			   
+			   // Now, ask the bandwidth manager to free up some bandwidth, fill up
+			   // victimChild and victimStripeId ..
+			   // XXX - might want to change how freeBandwidth returns :-)
+			   ret = bandwidthManager.freeBandwidth(channel);
+			   victimChild = (NodeHandle)ret.elementAt(0);
+			   victimStripeId = (StripeId)ret.elementAt(1);
 
+			   Stripe victimStripe = channel.getStripe(victimStripeId);
+			   Vector child_root_path = (Vector)stripe.getRootPath().clone();
+			   child_root_path.add( ((Scribe)scribe).getLocalHandle() );
+
+			   /**
+			    * In all cases except the case that victimChild is same as recently added
+			    * child and also for the same stripe, then we need to send the propogate path
+			    * message to recently added child.
+			    */
+			   if(!(victimChild.getNodeId().equals(child.getNodeId()) &&
+				topicId.equals((NodeId)victimStripeId))){
+			       channel.routeMsgDirect( child, new ControlPropogatePathMessage( channel.getAddress(),
+											       channel.getNodeHandle(),
+											       topicId,
+											       credentials,
+											       child_root_path ),
+						       credentials, null );
+			       //System.out.println("Sending PROPOGATE message to"+child.getNodeId()+ " for stripe "+topicId);
+			   }
+			   
+			   channel.routeMsgDirect( victimChild, new ControlDropMessage( channel.getAddress(),
+											channel.getNodeHandle(),
+											victimStripeId,
+											credentials,
+											channel.getSpareCapacityId(), 
+											channel.getChannelId(), 
+											channel.getTimeoutLen() ),
+						   credentials, null );
+			   //System.out.println("Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+" at "+channel.getNodeId());
+			   victimStripe.setLocalDrop(true);
+			   scribe.removeChild(victimChild, (NodeId)victimStripeId);
 		       }
 		   }
 		   else{
 		       //System.out.println("SPLITSTREAM ::Subscriber was removed"+child.getNodeId()+" at "+channel.getNodeId());
-		       if(!localDrop){
-			   bandwidthManager.additionalBandwidthFreed(channel);
+		       if(!stripe.getLocalDrop()){
+			   channel.stripeSubscriberRemoved();
 		       }
 		       else {
-			   //System.out.println("SPLITSTREAM ::LOCAL-DROP -- so not freeing any bandwidth"+" at "+channel.getNodeId());
-			   localDrop = false;
+			   stripe.setLocalDrop(false);
 		       }
 		   }
 	       }
 	       
 	   }
-	   /**
-	    * XXX - What if this subscribeMessage is for a stripe of the channel,
-	    * so the local node might receive subscribe messages from other nodes
-	    * thereby increasing its outgoing b/w usage (since locally nobody is 
-	    * subscribed to this stripe yet).
-	    */
        }
    }
     

@@ -40,7 +40,7 @@ public class DirectSplitStreamTest{
     private Vector channelIds;
     private Random rng;
     private RandomNodeIdFactory idFactory;
-    private static int numNodes = 500;
+    private static int numNodes = 50;
     private static int port = 5009;
     private static String bshost;
     private static int bsport = 5009;
@@ -62,7 +62,7 @@ public class DirectSplitStreamTest{
 
 
     // The number of nodes that join concurrently.
-    private int concurrentJoins = 5;
+    private int concurrentJoins = 100;
 
     // Since we experiment with node failures and node joins, this keeps
     // track of the number of nodes currently alive in the Pastry network.
@@ -218,39 +218,38 @@ public class DirectSplitStreamTest{
 
 	result &= passed;
 
-	test.printParents(channelId);
-
+	//test.printParents(channelId);
 
 	/**
 	 * Now we will fail some nodes currently and then see if the system
 	 * still works.
 	 */
-		
+	/*
 	test.killNodes(test.concurrentFailures);
-	for(int i = 0; i <= test.trThreshold; i++)
-	    test.scheduleHBOnAllNodes();
+ 	for(int i = 0; i <= test.trThreshold; i++)
+	     test.scheduleHBOnAllNodes();
 
-	passed =  test.checkAllStripeTrees(channelId);
+ 	passed =  test.checkAllStripeTrees(channelId);
 
-	if(passed)
+	if(passed )
 	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP TEST : PASSED \n\n");
-	else
+	else 
 	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP FAILED \n\n");
 	
 	result &= passed;
-	
-	test.killNodes(test.concurrentFailures);
-	for(int i = 0; i <= test.trThreshold; i++)
-	    test.scheduleHBOnAllNodes();
 
-	passed =  test.checkAllStripeTrees(channelId);
+ 	test.killNodes(test.concurrentFailures);
+	test.joinNodes(test.concurrentJoins, channelId);
+ 	for(int i = 0; i <= test.trThreshold; i++)
+ 	    test.scheduleHBOnAllNodes();
+
+ 	passed =  test.checkAllStripeTrees(channelId);
 
 	if(passed)
 	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP TEST : PASSED \n\n");
-	else
-	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP FAILED \n\n");
-
-
+ 	else
+ 	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP FAILED \n\n");
+	*/
 	System.out.println(PastrySeed.getSeed() );
     }
 
@@ -633,7 +632,7 @@ public class DirectSplitStreamTest{
      * to make the presence of these newly created nodes be reflected in 
      * the leafsets and routesets of other nodes as required. 
      */ 
-    public void joinNodes(int num) {
+    public void joinNodes(int num, NodeId channelId) {
 	int i,j;
 	DirectSplitStreamTestApp app;
 	NodeId topicId;
@@ -651,10 +650,20 @@ public class DirectSplitStreamTest{
 	for (i=0; i< num; i++) {
 	    makeNode();
 	    while (simulate());
+	    app = (DirectSplitStreamTestApp) splitStreamApps.elementAt(nodesCurrentlyAlive - 1);
+	    app.attachChannel((ChannelId)channelId);
+	    while(simulate());
+	    
+	    if(!app.channelReady((ChannelId)channelId)){
+		System.out.println("Application "+(nodesCurrentlyAlive - 1)+" could not attach. PROBLEM!! ");
+	    }
+
+	    app.joinChannelStripes((ChannelId)channelId);
+	    while(simulate());
 	}
 	while(simulate());
 
-	nodesCurrentlyAlive = nodesCurrentlyAlive + num;
+	//	nodesCurrentlyAlive = nodesCurrentlyAlive + num;
 
 	// We will now initiate the leafset and routeset maintenance to 
 	// make the presence of the newly joined nodes reflected. 

@@ -46,16 +46,16 @@ public class ControlPropogatePathMessage extends Message{
    public void handleMessage( Scribe scribe, Channel channel, Stripe stripe )
    {
        //System.out.println( "Received PROPOGATE_PATH : Setting path at node "+scribe.getNodeId() );
+
       stripe.setRootPath( path );
-      //Vector forward_path = path;
-      //forward_path.add( scribe.getLocalHandle() );
-      //System.out.println("Size of propogate path "+forward_path.size());
+
       Vector children = scribe.getChildren( stripe.getStripeId() );
       Credentials credentials = new PermissiveCredentials();
       for ( int i=0; i<children.size(); i++ )
       {
 	  if(path.contains((NodeHandle)children.get(i))){
 	      // Cycle dude..
+	      //System.out.println("PROPOGATE_PATH :: Cycle detected at "+scribe.getNodeId()+ " with child "+((NodeHandle)children.get(i)).getNodeId()+" for stripe "+stripe.getStripeId());
 	      channel.routeMsgDirect((NodeHandle)children.get(i), new ControlDropMessage( channel.getAddress(),
 								     channel.getNodeHandle(),
 								     stripe.getStripeId(),
@@ -67,7 +67,7 @@ public class ControlPropogatePathMessage extends Message{
 	      scribe.removeChild((NodeHandle)children.get(i), stripe.getStripeId());
 	  }
 	  else {
-	      Vector forward_path = path;
+	      Vector forward_path = (Vector)path.clone();
 	      forward_path.add( scribe.getLocalHandle() );
 	      channel.routeMsgDirect( (NodeHandle)children.get(i), 
 				      new ControlPropogatePathMessage( channel.getAddress(),

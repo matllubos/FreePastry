@@ -1,9 +1,13 @@
 package rice.splitstream.messaging;
 import rice.splitstream.*;
+
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
+
 import java.lang.Boolean;
+import java.util.Vector;
+
 import rice.scribe.*;
 import rice.scribe.messaging.*;
 
@@ -21,13 +25,15 @@ public class ControlFindParentResponseMessage extends Message
     StripeId stripe_id;
     public NodeHandle source;
     Object m_data;
+    Vector m_rootPath;
 
-    public ControlFindParentResponseMessage( Address addr, NodeHandle source, ChannelId topicId, Credentials c, Boolean accept, StripeId stripe_id )
+    public ControlFindParentResponseMessage( Address addr, NodeHandle source, ChannelId topicId, Credentials c, Boolean accept, StripeId stripe_id, Vector rootPath )
     {
         super( addr );
         m_data = accept;
 	this.stripe_id = stripe_id;
         this.source = source;
+	m_rootPath = rootPath;
     }
 
     public StripeId getStripeId()
@@ -60,11 +66,21 @@ public class ControlFindParentResponseMessage extends Message
 	return source;
     }
 
+    public Vector getPath(){
+	return m_rootPath;
+    }
+
     public String toString()
     {
         return null;
     }
 }
+
+
+
+
+
+
 
 
 
