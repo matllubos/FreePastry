@@ -254,14 +254,14 @@ public class Email implements java.io.Serializable {
 
     // the current position in the continuation
     private int _index;
-    private Continuation resultListener;
+    private Continuation _resultListener;
       
     /**
      * Constructs a EmailStoreDataTask.
      */
     public EmailStoreDataTask(int index, Continuation resultListener) {
       _index = index;
-      this.resultListener = resultListener;
+      _resultListener = resultListener;
     }
 
     /**
@@ -298,8 +298,8 @@ public class Email implements java.io.Serializable {
       System.out.println("Exception " + e +
 			 "  occured while trying to store email body or attachment " + _index);
 
-      if(this.resultListener != null) {
-	  this.resultListener.receiveException(e);
+      if(_resultListener != null) {
+	  _resultListener.receiveException(e);
       }
     }
   }
