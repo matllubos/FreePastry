@@ -6,23 +6,19 @@ import java.io.*;
 
 import rice.*;
 import rice.Continuation.*;
-import rice.pastry.commonapi.*;
-import rice.pastry.security.*;
-import rice.pastry.client.*;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
-import rice.pastry.standard.*;
-import rice.pastry.*;
+
+import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
-import rice.scribe.*;
-import rice.scribe.messaging.*;
+import rice.p2p.replication.*;
+import rice.p2p.scribe.*;
+
 import rice.persistence.*;
+
 import rice.post.log.*;
 import rice.post.messaging.*;
 import rice.post.storage.*;
 import rice.post.security.*;
 import rice.post.security.ca.*;
-import rice.rm.*;
 
 /**
  * This class is the service layer which allows 
@@ -32,7 +28,7 @@ import rice.rm.*;
  * @author Alan Mislove
  * @author Ansley Post
  */
-public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  {
+public class PostImpl implements Post, Application, ScribeClient, ReplicationClient {
 
   /**
    * The replication factor to use for replicating delivery messages
@@ -40,32 +36,29 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
   public static final int REPLICATION_FACTOR = 3;
   
   /**
+   * The endpoint used for routing messages
+   */
+  protected Endpoint endpoint;
+  
+  /**
    * The local PAST service to use for persistent storage.
    */
-  private Past past;
+  protected Past past;
   
   /**
    * The local Scribe service to use for notification.
    */
-  private IScribe scribeService;
+  protected Scribe scribe;
 
   /**
    * The local replication manager for replications notifications
    */
-  private RMImpl replicaManager;
+  protected Replication replication;
   
   /**
    * The address of the local user.
    */
-  private PostEntityAddress address;
-  
-  
-  // --- PASTRY SUPPORT ---
-
-  /**
-   * The credentials of POST.
-   */
-  private Credentials credentials = new PermissiveCredentials();
+  protected PostEntityAddress address;
   
   
   // --- CLIENT SUPPORT ---
@@ -131,8 +124,6 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
   
   
   // --- SECURITY SUPPORT ---
-
-  private RandomNodeIdFactory factory;
   
   /**
    * The security service for managing all security related tasks.
@@ -155,7 +146,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
   /**
    * The public key of the certificate authority.
    */
-  private PublicKey caPublicKey;
+  private PublicKey caPublicKey; 
   
 
   /**
@@ -164,7 +155,6 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
    *
    * @param node The Pastry node to run on.
    * @param past The PAST service running on this Pastry node.
-   * @param scribe The Scribe service running on this Pastry node.
    * @param address The address of the user in the system
    * @param keyPair The KeyPair of this user
    * @param certificate The certificate authenticating this user
@@ -173,32 +163,28 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
    * 
    * @throws PostException if the PostLog could not be accessed
    */
-  public PostImpl(PastryNode node,
+  public PostImpl(Node node,
                   Past past,
-                  IScribe scribe,
                   PostEntityAddress address,
                   KeyPair keyPair,
                   PostCertificate certificate,
                   PublicKey caPublicKey,
-                  String instance)
-    throws PostException
+                  String instance) throws PostException 
   {
-    super(node, instance);
-    
+    this.endpoint = node.registerApplication(this, instance);
     this.past = past;
-    this.scribeService = scribe;
     this.address = address;
     this.keyPair = keyPair;
     this.certificate = certificate;
     this.caPublicKey = caPublicKey;
+    
+    this.scribe = new ScribeImpl(node, instance);
+    this.memoryStorage = new MemoryStorage(node.getIdFactory());
+    this.replication = new ReplicationImpl(node, this, REPLICATION_FACTOR, instance + "-POST");
 
-    memoryStorage = new MemoryStorage(new PastryIdFactory());
-    replicaManager = new RMImpl(node, this, REPLICATION_FACTOR, instance + "-POST");
-
-    security = new SecurityService();
-    security.loadModule(new CASecurityModule(caPublicKey));
-    storage = new StorageService(address, past, credentials, keyPair);
-    factory = new RandomNodeIdFactory();
+    this.security = new SecurityService();
+    this.security.loadModule(new CASecurityModule(caPublicKey));
+    this.storage = new StorageService(address, past, node.getIdFactory(), keyPair);
 
     clients = new Vector();
     clientAddresses = new Hashtable();
@@ -209,25 +195,11 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
   }
 
   /**
-   * @return The PastryAddress of the POST application.
-   */
-  public Address getAddress() {
-    return PostAddress.instance();
-  }
-
-  /**
     * @return The PostEntityAddress of the local user.
    */
   public PostEntityAddress getEntityAddress() {
     return address;
   }
-  
-  /**
-   * @return The credentials of POST
-   */
-   public Credentials getCredentials() {
-     return credentials;
-   }
 
   /**
    * @return The CA's public key
@@ -235,19 +207,45 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
   public PublicKey getCAPublicKey() {
     return caPublicKey;
   }
-
   
   /**
    * The method by which Pastry passes a message up to POST
    *
    * @param message The message which has arrived
    */
-  public void messageForAppl(Message message) {
+  public void deliver(Id id, Message message) {
     if (message instanceof SignedPostMessageWrapper) {
       processSignedPostMessage(((SignedPostMessageWrapper) message).getMessage());
     } else {
-      System.out.println("Found unknown pastry message " + message + " - dropping on floor.");
+      System.out.println("Found unknown message " + message + " - dropping on floor.");
     }
+  }
+  
+  /**
+   * This method is invoked on applications when the underlying node
+   * is about to forward the given message with the provided target to
+   * the specified next hop.  Applications can change the contents of
+   * the message, specify a different nextHop (through re-routing), or
+   * completely terminate the message.
+   *
+   * @param message The message being sent, containing an internal message
+   * along with a destination key and nodeHandle next hop.
+   *
+   * @return Whether or not to forward the message further
+   */
+  public boolean forward(RouteMessage message) {
+    return true;
+  }
+  
+  /**
+   * This method is invoked to inform the application that the given node
+   * has either joined or left the neighbor set of the local node, as the set
+   * would be returned by the neighborSet call.
+   *
+   * @param handle The handle that has joined/left
+   * @param joined Whether the node has joined or left
+   */
+  public void update(NodeHandle handle, boolean joined) {
   }
 
   /**
@@ -255,12 +253,55 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
    *
    * @param msg The incoming message.
    */
-  public void receiveMessage(ScribeMessage msg) {
-    if (msg.getData() instanceof SignedPostMessageWrapper) {
-      processSignedPostMessage(((SignedPostMessageWrapper) msg.getData()).getMessage());
+  public void deliver(Topic topic, ScribeContent content) {
+    if (content instanceof SignedPostMessageWrapper) {
+      processSignedPostMessage(((SignedPostMessageWrapper) content).getMessage());
     } else {
-      System.out.println("Found unknown Scribe message " + msg.getData() + " - dropping on floor.");
+      System.out.println("Found unknown Scribe message " + content + " - dropping on floor.");
     }
+  }
+  
+  /**
+   * This method is invoked when an anycast is received for a topic
+   * which this client is interested in.  The client should return
+   * whether or not the anycast should continue.
+   *
+   * @param topic The topic the message was anycasted to
+   * @param content The content which was anycasted
+   * @return Whether or not the anycast should continue
+   */
+  public boolean anycast(Topic topic, ScribeContent content) {
+    return false;
+  }
+  
+  /**
+   * Informs this client that a child was added to a topic in
+   * which it was interested in.
+   *
+   * @param topic The topic to unsubscribe from
+   * @param child The child that was added
+   */
+  public void childAdded(Topic topic, NodeHandle child) {
+  }
+  
+  /**
+   * Informs this client that a child was removed from a topic in
+   * which it was interested in.
+   *
+   * @param topic The topic to unsubscribe from
+   * @param child The child that was removed
+   */
+  public void childRemoved(Topic topic, NodeHandle child) {
+  }
+  
+  /**
+   * Informs the client that a subscribe on the given topic failed
+   * - the client should retry the subscribe or take appropriate
+   * action.
+   *
+   * @param topic The topic which the subscribe failed on
+   */
+  public void subscribeFailed(Topic topic) {
   }
 
   /**
@@ -333,7 +374,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
 
         userQueue = new Vector();
         bufferedData.put(message.getDestination(), userQueue);
-        scribeService.join(message.getDestination().getAddress(), PostImpl.this, credentials);
+        scribe.subscribe(new Topic(message.getDestination().getAddress()), this);
 
         debug("Joined Scribe group rooted at " + message.getDestination().getAddress());
       }
@@ -358,7 +399,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
           DeliveryRequestMessage drm = (DeliveryRequestMessage) o;
           DeliveryLookupResponseMessage dlrm = new DeliveryLookupResponseMessage(address, drm);
 
-          routeMsgDirect(message.getSource(), new PostPastryMessage(signPostMessage(dlrm)), getCredentials(), new SendOptions());
+          endpoint.route(message.getSource().getId(), new PostPastryMessage(signPostMessage(dlrm)), message.getSource());
         }
       }
     });
@@ -389,7 +430,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
 
       if (userQueue != null) {
         if (userQueue.size() == 0) {
-          System.out.println(thePastryNode.getNodeId() + "DEBUG: ERROR - presence message from : " + message.getSender() + " has empty vector.");
+          System.out.println(endpoint.getId() + "DEBUG: ERROR - presence message from : " + message.getSender() + " has empty vector.");
         }
 
         for (int i=0; i<userQueue.size(); i++) {
@@ -400,14 +441,14 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
               if (o != null) {
                 DeliveryRequestMessage drm = (DeliveryRequestMessage) o;
                 SignedPostMessage spm = drm.getEncryptedMessage();
-                DeliveryMessage dm = new DeliveryMessage(address, getNodeId(), id, spm);
-                routeMsg(message.getLocation(), new PostPastryMessage(signPostMessage(dm)), getCredentials(), new SendOptions());
+                DeliveryMessage dm = new DeliveryMessage(address, endpoint.getId(), id, spm);
+                endpoint.route(message.getLocation(), new PostPastryMessage(signPostMessage(dm)), null);
               } 
             }
           });
         }
       } else {
-        System.out.println(thePastryNode.getNodeId() + "DEBUG: ERROR - presence message from : " + message.getSender() + " should not be received here.");
+        System.out.println(endpoint.getId() + "DEBUG: ERROR - presence message from : " + message.getSender() + " should not be received here.");
       }
     }
   }
@@ -422,7 +463,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
 
     // send receipt
     ReceiptMessage rm = new ReceiptMessage(address, message.getId(), message.getEncryptedMessage());
-    routeMsg(message.getLocation(), new PostPastryMessage(signPostMessage(rm)), getCredentials(), new SendOptions());
+    endpoint.route(message.getLocation(), new PostPastryMessage(signPostMessage(rm)), null);
 
     // process internal message, if we haven't seen it before
     if (! receivedMessages.contains(message.getId())) {
@@ -462,7 +503,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
     }
 
     if (rice.pastry.Log.ifp(6))
-      System.out.println(thePastryNode.getNodeId() + "DEBUG: successfully verified ENM with NM: " + nm);
+      System.out.println(endpoint.getId() + "DEBUG: successfully verified ENM with NM: " + nm);
 
     // deliver notification messag
     PostClient client = (PostClient) clientAddresses.get(nm.getClientAddress());
@@ -501,10 +542,10 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
 
         if (userQueue.size() == 0) {
           bufferedData.remove(sender);
-          scribeService.leave(sender.getAddress(), PostImpl.this, credentials);
+          scribe.unsubscribe(new Topic(sender.getAddress()), this);
         }
       } else {
-        scribeService.leave(sender.getAddress(), PostImpl.this, credentials);
+        scribe.unsubscribe(new Topic(sender.getAddress()), this);
       }
     }
 
@@ -647,10 +688,10 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
    */
   public void announcePresence() {
     if (rice.pastry.Log.ifp(6))
-      System.out.println(thePastryNode.getNodeId() + "DEBUG: publishing presence to the group " + address.getAddress());
+      System.out.println(endpoint.getId() + "DEBUG: publishing presence to the group " + address.getAddress());
 
-    PresenceMessage pm = new PresenceMessage(address, getNodeId());
-    scribeService.multicast(address.getAddress(), new PostScribeMessage(signPostMessage(pm)), getCredentials());
+    PresenceMessage pm = new PresenceMessage(address, endpoint.getId());
+    scribe.publish(new Topic(address.getAddress()), new PostScribeMessage(signPostMessage(pm)));
   }
 
   /**
@@ -691,7 +732,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
 
         debug("Received destination log " + destinationLog);
 
-        Id random = factory.generateNodeId();
+        Id random = storage.getRandomNodeId();
 
         debug("Picked random node: " + random);
 
@@ -709,7 +750,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
 
           debug("Sending delivery request to : " + random);
 
-          routeMsg(random, new PostPastryMessage(signPostMessage(drm)), getCredentials(), new SendOptions());
+          endpoint.route(random, new PostPastryMessage(signPostMessage(drm)), null);
         } catch (Exception e) {
           System.out.println("Exception occured which encrypting NotificationMessage " + e + " - aborting.");
         }
@@ -747,7 +788,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
 
         debug("Received destination log " + destinationLog);
 
-        NodeId random = factory.generateNodeId();
+        Id random = storage.getRandomNodeId();
 
         debug("Picked random node: " + random);
 
@@ -759,13 +800,13 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
           cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
 
           if (rice.pastry.Log.ifp(6))
-            System.out.println(thePastryNode.getNodeId() + "DEBUG: built encrypted notfn msg: " + destination);
+            System.out.println(endpoint.getId() + "DEBUG: built encrypted notfn msg: " + destination);
 
           EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, keyCipherText, cipherText);
 
           debug("Sending notification message directly to : " + handle);
 
-          routeMsgDirect(handle, new PostPastryMessage(signPostMessage(enm)), getCredentials(), new SendOptions());
+          endpoint.route(handle.getId(), new PostPastryMessage(signPostMessage(enm)), handle);
         } catch (Exception e) {
           System.out.println("Exception occured which encrypting NotificationMessage " + e + " - dropping on floor.");
         } 
@@ -785,7 +826,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
   public void joinGroup(PostGroupAddress address, byte[] key) {
     keys.put(address, key);
 
-    scribeService.join(address.getAddress(), this, credentials);
+    scribe.subscribe(new Topic(address.getAddress()), this);
   }
 
   /**
@@ -815,7 +856,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp, RMClient  
 
       debug("Built encrypted notfn msg " + gnm + " for destination " + destination);
 
-      scribeService.multicast(destination.getAddress(), new PostScribeMessage(signPostMessage(gnm)), credentials);
+      scribe.publish(new Topic(destination.getAddress()), new PostScribeMessage(signPostMessage(gnm)));
     } catch (Exception e) {
       System.out.println("Exception occured while encrypting GroupNotificationMessage " + e + " - dropping on floor.");
     } 
@@ -871,16 +912,6 @@ System.out.println("IOException " + e + " occured while verifiying PostMessage "
     }
   }
 
-  public boolean anycastHandler(ScribeMessage msg) { return true; }
-  public void faultHandler(ScribeMessage msg, NodeHandle faultyParent) {}
-  public void forwardHandler(ScribeMessage msg) {}
-  public void scribeIsReady() {}
-  public void subscribeHandler(NodeId topicId, NodeHandle child, boolean wasAdded, Serializable obj ) {}
-  public void isNewRoot(NodeId topicId) {}
-  public void newParent(NodeId topicId, NodeHandle newParent, Serializable data) {}
-
-
-
   /**
    * This upcall is invoked to notify the application that is should
    * fetch the cooresponding keys in this set, since the node is now
@@ -890,29 +921,20 @@ System.out.println("IOException " + e + " occured while verifiying PostMessage "
   public void fetch(IdSet keySet) {
     debug("I NEED TO GET " + keySet);
 
-    if (replicaManager != null) {
+    if (replication != null) {
       Iterator i = keySet.getIterator();
 
       while (i.hasNext()) {
         Id id = (Id) i.next();
-        NodeSet set = replicaManager.replicaSet(id, REPLICATION_FACTOR);
-        DeliveryLookupMessage dlm = new DeliveryLookupMessage(address, getNodeHandle(), id);
+        NodeHandleSet set = endpoint.replicaSet(id, REPLICATION_FACTOR);
+        DeliveryLookupMessage dlm = new DeliveryLookupMessage(address, endpoint.getLocalNodeHandle(), id);
 
-        Iterator j = set.getIterator();
-        while (j.hasNext()) {
-          routeMsgDirect((NodeHandle) j.next(), new PostPastryMessage(signPostMessage(dlm)), getCredentials(), new SendOptions());
+        for(int j=0; j<set.size(); j++) {
+          endpoint.route(set.getHandle(j).getId(), new PostPastryMessage(signPostMessage(dlm)), set.getHandle(j));
         }
       }
     }
   }
-
-  /**
-   * This upcall is simply to denote that the underlying replica manager
-   * (rm) is ready. The 'rm' should henceforth be used by this RMClient
-   * to issue the downcalls on the RM interface.
-   * @param rm the instance of the Replica Manager
-   */
-  public void rmIsReady(RM rm) {}
 
   /**
    * This upcall is to notify the application of the range of keys for
@@ -923,8 +945,8 @@ System.out.println("IOException " + e + " occured while verifiying PostMessage "
    * @param range the range of keys for which the local node is currently
    *              responsible
    */
-  public void isResponsible(IdRange range) {
-    IdRange notRange = (rice.pastry.IdRange) range.getComplementRange();
+  public void setRange(IdRange range) {
+    IdRange notRange = range.getComplementRange();
 
     Continuation c = new Continuation() {
       private Iterator notIds;
@@ -960,7 +982,7 @@ System.out.println("IOException " + e + " occured while verifiying PostMessage "
    * @param range the requested range
    */
   public IdSet scan(IdRange range) {
-    return (rice.pastry.IdSet) memoryStorage.scan(range);
+    return memoryStorage.scan(range);
   }
   
   
@@ -970,6 +992,6 @@ System.out.println("IOException " + e + " occured while verifiying PostMessage "
 
   public void debug(String message) {
     if (rice.pastry.Log.ifp(6))
-      System.out.println(thePastryNode.getNodeId() + " DEBUG: " + message);
+      System.out.println(endpoint.getId() + " DEBUG: " + message);
   }
 }

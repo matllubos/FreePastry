@@ -1,7 +1,6 @@
 package rice.post;
 
-import rice.pastry.*;
-import rice.pastry.multiring.*;
+import rice.p2p.commonapi.*;
 
 /**
  * This class represents the abstract notion of the address
@@ -15,22 +14,14 @@ public class PostUserAddress extends PostEntityAddress {
   private String name;
   
   // the address of this user
-  private NodeId address;
+  private Id address;
   
   /**
    * Constructor
    */
-  public PostUserAddress(String name) {
+  public PostUserAddress(IdFactory factory, String name) {
     this.name = name;
-    address = getNodeId(name);
-  }
-
-  /**
-   * Constructor
-   */
-  public PostUserAddress(String name, RingId ringId) {
-    this.name = name;
-    address = getNodeId(name, ringId);
+    address = getId(factory, name);
   }
   
   /**
@@ -38,7 +29,7 @@ public class PostUserAddress extends PostEntityAddress {
    *
    * @return The corresponding address
    */
-  public NodeId getAddress() {
+  public Id getAddress() {
     return address;
   }
 

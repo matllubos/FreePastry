@@ -2,8 +2,7 @@ package rice.post.messaging;
 
 import java.io.*;
 import rice.post.*;
-import rice.pastry.*;
-import rice.pastry.messaging.*;
+import rice.p2p.commonapi.*;
 
 /**
  * This is the message broadcast to the Scribe group of
@@ -12,7 +11,7 @@ import rice.pastry.messaging.*;
  */
 public class PresenceMessage extends PostMessage {
   
-  private NodeId location;
+  private Id location;
   
   /**
    * Constructs a PresenceMessage
@@ -20,7 +19,7 @@ public class PresenceMessage extends PostMessage {
    * @param sender The address of the user asserted to be present.
    * @param location The user's asserted location.
    */
-  public PresenceMessage(PostEntityAddress sender, NodeId location) {
+  public PresenceMessage(PostEntityAddress sender, Id location) {
     super(sender);
     this.location = location;
   }
@@ -30,7 +29,7 @@ public class PresenceMessage extends PostMessage {
    *
    * @return The location in the Pastry ring of the user.
    */
-  public NodeId getLocation() {
+  public Id getLocation() {
     return location;
   }
 }

@@ -2,13 +2,13 @@ package rice.post.messaging;
 
 import java.io.*;
 
-import rice.pastry.messaging.*;
+import rice.p2p.commonapi.*;
 
 /**
  * This is a wrapper message for all Post messages which
  * are to be sent over the Pastry messaging system.
  */
-public class PostPastryMessage extends Message implements SignedPostMessageWrapper {
+public class PostPastryMessage implements Message, SignedPostMessageWrapper {
 
   private SignedPostMessage message;
   
@@ -18,8 +18,6 @@ public class PostPastryMessage extends Message implements SignedPostMessageWrapp
    * @param message The internal message.
    */
   public PostPastryMessage(SignedPostMessage message) {
-    super(PostAddress.instance());
-
     this.message = message;
   }
 

@@ -4,21 +4,19 @@ import rice.*;
 
 import rice.p2p.commonapi.IdFactory;
 
+import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
+import rice.p2p.scribe.*;
 
-import rice.pastry.*;
 import rice.pastry.commonapi.*;
 import rice.pastry.dist.*;
 import rice.pastry.standard.*;
-import rice.pastry.security.*;
 
 import rice.post.*;
 import rice.post.messaging.*;
 import rice.post.storage.*;
 import rice.post.security.*;
 import rice.post.security.ca.*;
-
-import rice.scribe.*;
 
 import rice.persistence.*;
 
@@ -38,10 +36,8 @@ public class DistPostRegrTest {
   private DistPastryNodeFactory factory;
   private Vector pastrynodes;
   private Vector pastNodes;
-  private Vector scribeNodes;
   private Vector postNodes;
   private Vector postClients;
-  private Credentials credentials = new PermissiveCredentials();
   private KeyPair caPair;
   private KeyPairGenerator kpg;
 
@@ -51,7 +47,6 @@ public class DistPostRegrTest {
   private Post receivingPost = null;
 
   private Random rng;
-  private RandomNodeIdFactory idFactory;
 
   private static int numNodes = 5;
   private static int k = 3;  // replication factor
@@ -75,15 +70,13 @@ public class DistPostRegrTest {
   }
 
   public DistPostRegrTest() throws NoSuchAlgorithmException {
-    idFactory = new RandomNodeIdFactory();
-    factory = DistPastryNodeFactory.getFactory(idFactory,
+    factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(),
                                                protocol,
                                                port);
     pastrynodes = new Vector();
     pastNodes = new Vector();
     postNodes = new Vector();
-    postClients = new Vector();
-    scribeNodes = new Vector();    
+    postClients = new Vector();  
     rng = new Random();
     
     kpg = KeyPairGenerator.getInstance("RSA");
@@ -113,18 +106,16 @@ public class DistPostRegrTest {
    * Creates a pastryNode with a past, scribe, and post running on it.
    */
   protected void makeNode() {
-    PastryNode pn = factory.newNode(getBootstrap());
-    pastrynodes.add(pn);
+    Node node = factory.newNode((rice.pastry.NodeHandle) getBootstrap());
+    pastrynodes.add(node);
 
     StorageManager sm = new StorageManager(FACTORY,
                                            new MemoryStorage(FACTORY),
                                            new LRUCache(new MemoryStorage(FACTORY), 1000000));
-    PastImpl past = new PastImpl(pn, sm, k, INSTANCE_NAME);
+    PastImpl past = new PastImpl(node, sm, k, INSTANCE_NAME);
     pastNodes.add(past);
 
-    Scribe scribe = new Scribe(pn, credentials);
-    scribeNodes.add(scribe);   
-    System.out.println("created " + pn);
+    System.out.println("created " + node);
   }
   
   /**
@@ -132,17 +123,16 @@ public class DistPostRegrTest {
    */
   protected void makePOSTNode(int i) {
     try {
-      PastryNode pn = (PastryNode) pastrynodes.elementAt(i);
+      Node pn = (Node) pastrynodes.elementAt(i);
       PastImpl past = (PastImpl) pastNodes.elementAt(i);
-      Scribe scribe = (Scribe) scribeNodes.elementAt(i);
 
       KeyPair pair = kpg.generateKeyPair();
 
-      PostUserAddress address = new PostUserAddress("TEST" + i);
+      PostUserAddress address = new PostUserAddress(FACTORY, "TEST" + i);
 
       PostCertificate certificate = CASecurityModule.generate(address, pair.getPublic(), caPair.getPrivate());
       
-      Post post = new PostImpl(pn, past, scribe, address, pair, certificate, caPair.getPublic(), INSTANCE_NAME);
+      Post post = new PostImpl(pn, past, address, pair, certificate, caPair.getPublic(), INSTANCE_NAME);
       postNodes.add(post);
 
       DummyPostClient dpc = new DummyPostClient(post);
@@ -177,7 +167,7 @@ public class DistPostRegrTest {
 
     Enumeration nodes = pastrynodes.elements();
     while (nodes.hasMoreElements()) {
-      PastryNode node = (PastryNode) nodes.nextElement();
+      rice.pastry.PastryNode node = (rice.pastry.PastryNode) nodes.nextElement();
       while (!node.isReady()) {
         System.out.println("DEBUG ---------- Waiting for node to be ready");
         pause(1000);
@@ -233,10 +223,10 @@ public class DistPostRegrTest {
     receivingPost = (Post) postNodes.elementAt(receivingNode);
     
     String sender = "TEST" + sendingNode;
-    PostUserAddress senderAddr = new PostUserAddress(sender);
+    PostUserAddress senderAddr = new PostUserAddress(FACTORY, sender);
     
     String receiver = "TEST" + receivingNode;
-    PostUserAddress receiverAddr = new PostUserAddress(receiver);
+    PostUserAddress receiverAddr = new PostUserAddress(FACTORY, receiver);
 
     DummyPostClient sendingPostClient = (DummyPostClient) postClients.elementAt(sendingNode);
     PostClientAddress addr = PostClientAddress.getAddress(sendingPostClient);
@@ -326,7 +316,7 @@ public class DistPostRegrTest {
     
     byte[] key = SecurityUtils.generateKeySymmetric();
 
-    PostGroupAddress group = new PostGroupAddress("GroupTest");
+    PostGroupAddress group = new PostGroupAddress(FACTORY, "GroupTest");
     sendingPost.joinGroup(group, key);
     receivingPost1.joinGroup(group, key);
     receivingPost2.joinGroup(group, key);
@@ -419,6 +409,18 @@ public class DistPostRegrTest {
         break;
       }
     }
+  }
+  
+  
+  /**
+    * Private method which generates a random Id
+   *
+   * @return A new random Id
+   */
+  private Id generateId() {
+    byte[] data = new byte[20];
+    rng.nextBytes(data);
+    return FACTORY.buildId(data);
   }
 
 
@@ -638,7 +640,7 @@ public class DistPostRegrTest {
     private PostData dataNew;
     private SignedReference reference;
     private int state;
-    private NodeId nodeId;
+    private Id id;
 
     public DummySignedStorageTest(StorageService storage, PostData data) {
       this.storage = storage;
@@ -648,10 +650,10 @@ public class DistPostRegrTest {
     public void start() {
       System.out.println("SignedTest storing data.");
 
-      nodeId = idFactory.generateNodeId();
+      id = generateId();
       
       state = STATE_1;
-      storage.storeSigned(data, nodeId, this);
+      storage.storeSigned(data, id, this);
     }
 
     private void startState1(SignedReference ref) {
@@ -668,7 +670,7 @@ public class DistPostRegrTest {
 
         dataNew = new DummyPostData(rng.nextLong());
         state = STATE_3;
-        storage.storeSigned(dataNew, nodeId, this);
+        storage.storeSigned(dataNew, id, this);
       } else {
         System.out.println("SignedTest return incorrect data.");
       }

@@ -1,11 +1,12 @@
 package rice.post.messaging;
 
+import java.io.*;
 import java.security.*;
+
 import rice.post.messaging.*;
 import rice.post.*;
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import java.io.*;
+
+import rice.p2p.commonapi.*;
 
 /**
  * This class wraps an EncrypedNotificationMessage and is
@@ -14,7 +15,7 @@ import java.io.*;
 public class DeliveryMessage extends PostMessage {
 
   private SignedPostMessage message;
-  private NodeId location;
+  private Id location;
   private Id id;
 
   /**
@@ -24,7 +25,7 @@ public class DeliveryMessage extends PostMessage {
    * @param message The message to deliver, in encrypted state
    */
   public DeliveryMessage(PostEntityAddress sender,
-                         NodeId location,
+                         Id location,
                          Id id,
                          SignedPostMessage message) {
     super(sender);
@@ -47,7 +48,7 @@ public class DeliveryMessage extends PostMessage {
    *
    * @return The location in the Pastry ring of the user.
    */
-  public NodeId getLocation() {
+  public Id getLocation() {
     return location;
   }
 

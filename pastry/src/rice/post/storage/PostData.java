@@ -3,7 +3,8 @@ package rice.post.storage;
 import java.io.*;
 import java.security.*;
 
-import rice.pastry.*;
+import rice.p2p.commonapi.*;
+import rice.p2p.past.*;
 
 /**
  * This interface is designed to serve as an abstraction of a

@@ -9,6 +9,8 @@ import java.util.*;
 import rice.post.*;
 import rice.post.security.*;
 
+import rice.pastry.commonapi.*;
+
 /**
  * This class starts generates a new certificate for the given username using
  * the provided CA keypair.
@@ -39,14 +41,14 @@ public class CACertificateGenerator {
       byte[] data = null;
 
       try {
-	  pass = CAKeyGenerator.fetchPassword("Please enter the password");
-	  
-	  System.out.print("    Decrypting keypair\t\t\t\t\t\t");
-	  key = SecurityUtils.hash(pass.getBytes());
-	  data = SecurityUtils.decryptSymmetric(cipher, key);
+        pass = CAKeyGenerator.fetchPassword("Please enter the password");
+        
+        System.out.print("    Decrypting keypair\t\t\t\t\t\t");
+        key = SecurityUtils.hash(pass.getBytes());
+        data = SecurityUtils.decryptSymmetric(cipher, key);
       }catch (SecurityException e) {
-	  System.out.println("Incorrect Password! Exiting...");
-	  System.exit(-1);
+        System.out.println("Incorrect Password! Exiting...");
+        System.exit(-1);
       }
       
       KeyPair caPair = (KeyPair) SecurityUtils.deserialize(data);
@@ -61,7 +63,7 @@ public class CACertificateGenerator {
       System.out.println("[ DONE ]");
 
       System.out.print("    Generating the certificate\t\t\t\t\t");
-      PostUserAddress address = new PostUserAddress(userid + "@dosa.cs.rice.edu");
+      PostUserAddress address = new PostUserAddress(new PastryIdFactory(), userid + "@dosa.cs.rice.edu");
       PostCertificate certificate = CASecurityModule.generate(address, pair.getPublic(), caPair.getPrivate());
       System.out.println("[ DONE ]");
 

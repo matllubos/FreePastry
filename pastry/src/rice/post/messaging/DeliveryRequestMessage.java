@@ -1,11 +1,12 @@
 package rice.post.messaging;
 
+import java.io.*;
 import java.security.*;
+
 import rice.post.messaging.*;
 import rice.post.*;
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import java.io.*;
+
+import rice.p2p.commonapi.*;
 
 /**
  * This message is broadcast to the sender of a NotificationMessage in

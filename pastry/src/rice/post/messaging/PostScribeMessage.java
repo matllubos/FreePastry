@@ -1,12 +1,13 @@
 package rice.post.messaging;
 
 import java.io.*;
+import rice.p2p.scribe.*;
 
 /**
  * This is a wrapper message for all Post messages which
  * are to be sent over the Scribe messaging system.
  */
-public class PostScribeMessage implements SignedPostMessageWrapper {
+public class PostScribeMessage implements ScribeContent, SignedPostMessageWrapper {
 
   private SignedPostMessage message;
   

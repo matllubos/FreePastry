@@ -34,9 +34,6 @@ import rice.email.proxy.user.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.mailbox.postbox.*;
 
-import rice.testharness.*;
-import rice.testharness.messaging.*;
-
 import java.util.*;
 import java.io.*;
 import java.net.*;
@@ -114,11 +111,6 @@ public class PostProxy {
    * The local pastry node
    */
   protected PastryNode pastry;
-
-  /**
-   * The local Scribe service
-   */
-  protected Scribe scribe;
 
   /**
    * The local Past service
@@ -283,16 +275,12 @@ public class PostProxy {
       Thread.sleep(3000);
       stepDone(SUCCESS);
 
-      stepStart("Starting SCRIBE service");
-      scribe = new Scribe(pastry, _credentials);
-      stepDone(SUCCESS);
-
       stepStart("Starting PAST service");
       past = new PastImpl(pastry, storage, REPLICATION_FACTOR, INSTANCE_NAME);
       stepDone(SUCCESS);
 
       stepStart("Starting POST service");
-      post = new PostImpl(pastry, past, scribe, address, pair, certificate, caPublic, INSTANCE_NAME);
+      post = new PostImpl(pastry, past, address, pair, certificate, caPublic, INSTANCE_NAME);
       stepDone(SUCCESS);
 
       sectionDone();

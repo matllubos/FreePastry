@@ -4,8 +4,8 @@ import java.security.*;
 import java.io.*;
 import java.util.*;
 
-import rice.pastry.*;
-import rice.past.*;
+import rice.p2p.commonapi.*;
+import rice.p2p.past.*;
 
 /**
  * This class serves as a reference to a PostObject

@@ -1,6 +1,6 @@
 package rice.post;
 
-import rice.pastry.*;
+import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 
 /**
@@ -11,13 +11,13 @@ import rice.p2p.past.*;
  */
 public class PostGroupAddress extends PostEntityAddress {
 
-  private NodeId id;
+  private Id id;
   
   /**
    * Constructor
    */
-  public PostGroupAddress(String name) {
-    id = getNodeId(name);
+  public PostGroupAddress(IdFactory factory, String name) {
+    id = getId(factory, name);
   }
 
   /**
@@ -25,7 +25,7 @@ public class PostGroupAddress extends PostEntityAddress {
    *
    * @return The corresponding address
    */
-  public NodeId getAddress() {
+  public Id getAddress() {
     return id;
   }
 

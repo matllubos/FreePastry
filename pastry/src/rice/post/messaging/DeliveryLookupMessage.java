@@ -1,11 +1,11 @@
 package rice.post.messaging;
 
-import java.security.*;
-import rice.post.messaging.*;
-import rice.post.*;
-import rice.pastry.*;
-import rice.pastry.messaging.*;
 import java.io.*;
+import java.security.*;
+
+import rice.post.*;
+
+import rice.p2p.commonapi.*;
 
 /**
  * This message is a request for a replica of a DRM.
@@ -22,8 +22,8 @@ public class DeliveryLookupMessage extends PostMessage {
    * @param location The random location of this message
    */
   public DeliveryLookupMessage(PostEntityAddress sender,
-                                NodeHandle source,
-                                Id id) {
+                               NodeHandle source,
+                               Id id) {
     super(sender);
     this.source = source;
     this.id = id;

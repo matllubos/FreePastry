@@ -3,8 +3,7 @@ package rice.post;
 import java.security.*;
 import java.io.*;
 
-import rice.pastry.*;
-import rice.pastry.multiring.*;
+import rice.p2p.commonapi.*;
 
 /**
  * This class represents the abstract notion of the address
@@ -25,7 +24,7 @@ public abstract class PostEntityAddress implements Serializable {
   /**
    * @return The NodeId which this address maps to.
    */
-  public abstract NodeId getAddress();
+  public abstract Id getAddress();
 
   /**
   * Utility method for creating the nodeId associated with a
@@ -34,18 +33,7 @@ public abstract class PostEntityAddress implements Serializable {
    * @param string The string
    * @returns The corresponding nodeId.
    */
-  protected static NodeId getNodeId(String string) {
-    return getNodeId(string, MultiRingPastryNode.GLOBAL_RING_ID);
-  }
-  
-  /**
-   * Utility method for creating the nodeId associated with a
-   * specific string.
-   *
-   * @param string The string
-   * @returns The corresponding nodeId.
-   */
-  protected static NodeId getNodeId(String string, RingId ringId) {
+  protected static Id getId(IdFactory factory, String string) {
     MessageDigest md = null;
 
     try {
@@ -55,8 +43,6 @@ public abstract class PostEntityAddress implements Serializable {
     }
 
     md.update(string.getBytes());
-    NodeId userNodeId = new NodeId(md.digest());
-    //return new RingNodeId(userNodeId, ringId);
-    return userNodeId;
+    return factory.buildId(md.digest());
   }
 }

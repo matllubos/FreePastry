@@ -3,7 +3,9 @@ package rice.post;
 import java.security.*;
 
 import rice.*;
-import rice.pastry.*;
+
+import rice.p2p.commonapi.*;
+
 import rice.post.log.*;
 import rice.post.messaging.*;
 import rice.post.storage.*;

@@ -9,13 +9,11 @@ import javax.crypto.*;
 import javax.crypto.spec.*;
 
 import rice.*;
+import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
+
 import rice.post.*;
 import rice.post.security.*;
-import rice.pastry.*;
-import rice.pastry.multiring.*;
-import rice.pastry.standard.*;
-import rice.pastry.security.*;
 
 /**
  * This class represents a service which stores data in PAST.  This
@@ -43,19 +41,19 @@ public class StorageService {
   private KeyPair keyPair;
 
   /**
-   * The credentials used to store data.
-   */
-  private Credentials credentials;
-
-  /**
    * Stored data waiting for verification
    */
   private Hashtable pendingVerification;
-
+  
   /**
-   * Generates random node ids
+   * The factory for creating ids
    */
-  private RandomNodeIdFactory factory;
+  private IdFactory factory;
+  
+  /**
+   * The random number generator
+   */
+  private Random rng;
   
   /**
    * Contructs a StorageService given a PAST to run on top of.
@@ -64,23 +62,21 @@ public class StorageService {
    * @param credentials Credentials to use to store data.
    * @param keyPair The keypair to sign/verify data with
    */
-  public StorageService(PostEntityAddress address, Past past, Credentials credentials, KeyPair keyPair) {
+  public StorageService(PostEntityAddress address, Past past, IdFactory factory, KeyPair keyPair) {
     this.entity = address;
     this.past = past;
-    this.credentials = credentials;
     this.keyPair = keyPair;
-
-    if (entity.getAddress() instanceof RingNodeId) {
-      factory = new RandomRingNodeIdFactory(((RingNodeId) entity.getAddress()).getRingId());
-    } else {
-      factory = new RandomNodeIdFactory();
-    }
+    this.factory = factory;
     
+    rng = new Random();
     pendingVerification = new Hashtable();
   }
 
   public Id getRandomNodeId() {
-    return factory.generateNodeId();
+    byte[] data = new byte[20];
+    rng.nextBytes(data);
+    
+    return factory.buildId(data);
   }
 
   /**
@@ -286,11 +282,7 @@ public class StorageService {
         byte[] cipherText = SecurityUtils.encryptSymmetric(plainText, hash);
         byte[] loc = SecurityUtils.hash(cipherText);
 
-        if (entity.getAddress() instanceof RingNodeId) {
-          location = new RingNodeId(new NodeId(loc), ((RingNodeId) entity.getAddress()).getRingId());
-        } else {
-          location = new Id(loc);
-        }
+        location = factory.buildId(loc);
         
         key = hash;
 
@@ -348,7 +340,6 @@ public class StorageService {
 
     private ContentHashReference reference;
     private Continuation command;
-    private PastContentHandle[] handles;
 
     /**
      * This contructs creates a task to store a given data and call the
@@ -366,7 +357,8 @@ public class StorageService {
       * Starts this task running.
      */
     protected void start() {
-      past.lookupHandles(reference.getLocation(), past.getReplicationFactor(), this);
+      System.out.println(reference.getLocation() + " " + System.currentTimeMillis() + ": Starting PAST lookup");
+      past.lookup(reference.getLocation(), this);
 
       // Now we wait until PAST calls us with the receiveResult
       // and then we continue processing this call
@@ -378,72 +370,53 @@ public class StorageService {
      * @param result The result of the command.
      */
     public void receiveResult(Object result) {
-      if (handles == null) {
-        handles = (PastContentHandle[]) result;
-
-        if ((handles == null) || (handles.length == 0)) {
+      try {
+        System.out.println(reference.getLocation() + " " + System.currentTimeMillis() + ": Got return from PAST");
+        ContentHashData chd = (ContentHashData) result;
+        
+        if (chd == null) {
           command.receiveResult(null);
           return;
         }
-
-        StorageServiceDataHandle handle = null;
-
-        for (int i=0; i<handles.length; i++) {
-          StorageServiceDataHandle thisH = (StorageServiceDataHandle) handles[i];
-
-          if (thisH != null) {
-            handle = thisH;
-            break;
-          }
+        
+        // TO DO: fetch from multiple locations to prevent rollback attacks
+        byte[] key = reference.getKey();
+        
+        byte[] cipherText = chd.getData();
+        byte[] plainText = SecurityUtils.decryptSymmetric(cipherText, key);
+        System.out.println(reference.getLocation() + " " + System.currentTimeMillis() + ": Done decryption");
+        Object data = SecurityUtils.deserialize(plainText);
+        System.out.println(reference.getLocation() + " " + System.currentTimeMillis() + ": Done deserialization");
+        
+        // Verify hash(cipher) == location
+        byte[] hashCipher = SecurityUtils.hash(cipherText);
+        System.out.println(reference.getLocation() + " " + System.currentTimeMillis() + ": Done ciphertext hash");
+        byte[] loc = reference.getLocation().toByteArray();
+        if (! Arrays.equals(hashCipher, loc)) {
+          command.receiveException(new StorageException("Hash of cipher text does not match location."));
+          return;
         }
-
-        if (handle != null) {
-          past.fetch(handle, this);
-        } else {
-          command.receiveResult(null);
+        System.out.println(reference.getLocation() + " " + System.currentTimeMillis() + ": Done ciphertext match");
+        
+        // Verify hash(plain) == key
+        byte[] hashPlain = SecurityUtils.hash(plainText);
+        System.out.println(reference.getLocation() + " " + System.currentTimeMillis() + ": Done plaintext hash");
+        if (! Arrays.equals(hashPlain, key)) {
+          command.receiveException(new StorageException("Hash of retrieved content does not match key."));
+          return;
         }
-      } else {
-        try {
-          ContentHashData chd = (ContentHashData) result;
-
-          if (chd == null) {
-            command.receiveResult(null);
-            return;
-          }
-
-          // TO DO: fetch from multiple locations to prevent rollback attacks
-          byte[] key = reference.getKey();
-
-          byte[] cipherText = chd.getData();
-          byte[] plainText = SecurityUtils.decryptSymmetric(cipherText, key);
-          Object data = SecurityUtils.deserialize(plainText);
-
-          // Verify hash(cipher) == location
-          byte[] hashCipher = SecurityUtils.hash(cipherText);
-          byte[] loc = reference.getLocation().copy();
-          if (! Arrays.equals(hashCipher, loc)) {
-            command.receiveException(new StorageException("Hash of cipher text does not match location."));
-            return;
-          }
-
-          // Verify hash(plain) == key
-          byte[] hashPlain = SecurityUtils.hash(plainText);
-          if (! Arrays.equals(hashPlain, key)) {
-            command.receiveException(new StorageException("Hash of retrieved content does not match key."));
-            return;
-          }
-
-          command.receiveResult((PostData) data);
-        }
-        catch (ClassCastException cce) {
-          command.receiveException(new StorageException("ClassCastException while retrieving data: " + cce));
-        }
-        catch (IOException ioe) {
-          command.receiveException(new StorageException("IOException while retrieving data: " + ioe));
-        }
-        catch (ClassNotFoundException cnfe) {
-          command.receiveException(new StorageException("ClassNotFoundException while retrieving data: " + cnfe));
-        }
+        System.out.println(reference.getLocation() + " " + System.currentTimeMillis() + ": Done plaintext match");
+        
+        command.receiveResult((PostData) data);
+      }
+      catch (ClassCastException cce) {
+        command.receiveException(new StorageException("ClassCastException while retrieving data: " + cce));
+      }
+      catch (IOException ioe) {
+        command.receiveException(new StorageException("IOException while retrieving data: " + ioe));
+      }
+      catch (ClassNotFoundException cnfe) {
+        command.receiveException(new StorageException("ClassNotFoundException while retrieving data: " + cnfe));
       }
     }
 
@@ -730,11 +703,7 @@ public class StorageService {
         byte[] cipherText = SecurityUtils.encryptSymmetric(plainText, key);
         byte[] loc = SecurityUtils.hash(cipherText);
 
-        if (entity.getAddress() instanceof RingNodeId) {
-          location = new RingNodeId(new NodeId(loc), ((RingNodeId) entity.getAddress()).getRingId());
-        } else {
-          location = new Id(loc);
-        }
+        location = factory.buildId(loc);
 
         SecureData sd = new SecureData(location, cipherText);
 
@@ -835,7 +804,7 @@ public class StorageService {
 
         // Verify hash(cipher) == location
         byte[] hashCipher = SecurityUtils.hash(cipherText);
-        byte[] loc = reference.getLocation().copy();
+        byte[] loc = reference.getLocation().toByteArray();
         if (! Arrays.equals(hashCipher, loc)) {
           command.receiveException(new StorageException("Hash of cipher text does not match location."));
           return;

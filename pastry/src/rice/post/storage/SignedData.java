@@ -5,8 +5,9 @@ import java.math.*;
 import java.security.*;
 import java.util.*;
 
-import rice.pastry.*;
 import rice.post.security.*;
+
+import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 
 /**

@@ -46,11 +46,13 @@ import rice.p2p.past.*;
 
 import rice.persistence.*;
 
-import rice.pastry.*;
 import rice.pastry.commonapi.*;
 import rice.pastry.direct.*;
-import rice.pastry.standard.*;
+import rice.pastry.dist.*;
 import rice.pastry.security.*;
+import rice.pastry.standard.*;
+
+import rice.pastry.PastryNodeFactory;
 
 import rice.post.*;
 import rice.post.security.*;
@@ -71,13 +73,10 @@ public abstract class PostTest {
   // ----- VARAIBLES -----
   
   // the collection of nodes which have been created
-  protected PastryNode[] nodes;
+  protected Node[] nodes;
 
   // the collection of PAST
   protected PastImpl[] pasts;
-
-  // the collection of Scribe nodes
-  protected Scribe[] scribes;
 
   // the collection of POST nodes
   protected PostImpl[] posts;
@@ -93,9 +92,6 @@ public abstract class PostTest {
 
   // the factory for creating pastry nodes
   protected PastryNodeFactory factory;
-
-  // the factory for creating random node ids
-  protected NodeIdFactory idFactory;
 
   // the network simulator we are running on top of
   protected NetworkSimulator simulator;
@@ -120,9 +116,6 @@ public abstract class PostTest {
   // the replication factor for Past
   protected static int REPLICATION_FACTOR = 4;
 
-  // the pastry credentials
-  protected static Credentials CREDENTIALS = new PermissiveCredentials();
-
 
   // ----- TESTING SPECIFIC FIELDS -----
 
@@ -141,14 +134,12 @@ public abstract class PostTest {
    * factories in preparation for node creation.
    */
   public PostTest() {
-    idFactory = new RandomNodeIdFactory();
     simulator = new SphereNetwork();
-    factory = new DirectPastryNodeFactory(idFactory, simulator);
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator);
     keyPair = SecurityUtils.generateKeyAsymmetric();
 
-    nodes = new PastryNode[NUM_NODES];
+    nodes = new Node[NUM_NODES];
     pasts = new PastImpl[NUM_NODES];
-    scribes = new Scribe[NUM_NODES];
     posts = new PostImpl[NUM_NODES];
     addresses = new PostUserAddress[NUM_NODES];
     certificates = new PostCertificate[NUM_NODES];
@@ -169,7 +160,7 @@ public abstract class PostTest {
 
       simulate();
 
-      System.out.println("Created node " + i + " with id " + ((PastryNode) nodes[i]).getNodeId());
+      System.out.println("Created node " + i + " with id " + ((Node) nodes[i]).getId());
     }
 
     System.out.println("\nTest Beginning\n");
@@ -194,7 +185,7 @@ public abstract class PostTest {
    * @param num The number of creation order
    * @return The created node
    */
-  protected PastryNode createNode(int num) {
+  protected Node createNode(int num) {
     if (num == 0) {
       return factory.newNode(null);
     } else {
@@ -208,7 +199,7 @@ public abstract class PostTest {
    * @return handle to bootstrap node, or null.
    */
   protected rice.pastry.NodeHandle getBootstrap() {
-    return nodes[0].getLocalHandle();
+    return ((rice.pastry.PastryNode) nodes[0]).getLocalHandle();
   }
 
   /**
@@ -219,7 +210,7 @@ public abstract class PostTest {
    * @param node The node
    * @return The created node
    */
-  protected PostImpl createPostNode(int num, PastryNode node) {
+  protected PostImpl createPostNode(int num, Node node) {
     try {
       StorageManager sm = new StorageManager(FACTORY,
                                              new MemoryStorage(FACTORY),
@@ -228,16 +219,13 @@ public abstract class PostTest {
       PastImpl past = new PastImpl(node, sm, REPLICATION_FACTOR, INSTANCE_NAME);
       pasts[num] = past;
 
-      Scribe scribe = new Scribe(node, CREDENTIALS);
-      scribes[num] = scribe;
-
-      PostUserAddress address = new PostUserAddress("USER" + num);
+      PostUserAddress address = new PostUserAddress(FACTORY, "USER" + num);
       addresses[num] = address;
 
       PostCertificate certificate = CASecurityModule.generate(address, keyPair.getPublic(), keyPair.getPrivate());
       certificates[num] = certificate;
 
-      return new PostImpl(node, past, scribe, address, keyPair, certificate, keyPair.getPublic(), INSTANCE_NAME);
+      return new PostImpl(node, past, address, keyPair, certificate, keyPair.getPublic(), INSTANCE_NAME);
     } catch (PostException e) {
       System.out.println("EXCEPTION " + e + " thrown while in createPostNode.");
       return null;
