@@ -1009,6 +1009,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
 
   public String handleDebugCommand(String command)
   {
+    if (command.indexOf(" ") < 0)
+      return null;
+  
     String myInstance = "glacier."+instance.substring(instance.lastIndexOf("-") + 1);
     String requestedInstance = command.substring(0, command.indexOf(" "));
     String cmd = command.substring(requestedInstance.length() + 1);
@@ -1018,7 +1021,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   
     log(2, "Debug command: "+cmd);
   
-    if ((cmd.length() >= 2) && cmd.substring(0, 2).equals("ls")) {
+    if (cmd.startsWith("ls")) {
       FragmentKeySet keyset = (FragmentKeySet) fragmentStorage.scan();
       Iterator iter = keyset.getIterator();
       StringBuffer result = new StringBuffer();
@@ -1040,7 +1043,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       return result.toString();
     }
 
-    if ((cmd.length() >= 11) && cmd.substring(0, 11).equals("show config")) {
+    if (cmd.startsWith("show config")) {
       return 
         "numFragments = " + numFragments + "\n" +
         "numSurvivors = " + numSurvivors + "\n" +
@@ -1076,7 +1079,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         "rateLimitedRequestsPerSecond = " + rateLimitedRequestsPerSecond + "\n";
     }    
 
-    if ((cmd.length() >= 5) && cmd.substring(0, 5).equals("flush") && faultInjectionEnabled) {
+    if (cmd.startsWith("flush") && faultInjectionEnabled) {
       FragmentKeySet keyset = (FragmentKeySet) fragmentStorage.scan();
       Iterator iter = keyset.getIterator();
       
@@ -1091,7 +1094,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       return keyset.numElements()+ " objects deleted\n";
     }
 
-    if ((cmd.length() >= 7) && cmd.substring(0, 7).equals("refresh")) {
+    if (cmd.startsWith("refresh")) {
       String args = cmd.substring(8);
       String expirationArg = args.substring(args.lastIndexOf(' ') + 1);
       String keyArg = args.substring(0, args.lastIndexOf(' '));
@@ -1115,7 +1118,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       return "refresh("+id+", "+expiration+")="+ret[0];
     }
 
-    if ((cmd.length() >= 9) && cmd.substring(0, 9).equals("neighbors")) {
+    if (cmd.startsWith("neighbors")) {
       final Iterator iter = neighborStorage.scan().getIterator();
       final StringBuffer result = new StringBuffer();
       final long now = (cmd.indexOf("-r") < 0) ? 0 : System.currentTimeMillis();
@@ -1149,7 +1152,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       return result.toString();
     }
     
-    if ((cmd.length() >= 6) && cmd.substring(0, 6).equals("status")) {
+    if (cmd.startsWith("status")) {
       String result = "";
       result = result + "Responsible for: "+responsibleRange + "\n";
       result = result + "Local time: "+(new Date()) + "\n\n";
@@ -1163,7 +1166,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       return result;
     }
 
-    if ((cmd.length() >= 6) && cmd.substring(0, 6).equals("insert") && faultInjectionEnabled) {
+    if (cmd.startsWith("insert") && faultInjectionEnabled) {
       int numObjects = Integer.parseInt(cmd.substring(7));
       String result = "";
       
@@ -1185,12 +1188,12 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       return result + numObjects + " object(s) created\n";
     }
 
-    if ((cmd.length() >= 12) && cmd.substring(0, 12).equals("set loglevel")) {
+    if (cmd.startsWith("set loglevel")) {
       loglevel = Integer.parseInt(cmd.substring(13));
       return "Log level set to "+loglevel;
     }
 
-    if ((cmd.length() >= 6) && cmd.substring(0, 6).equals("delete") && faultInjectionEnabled) {
+    if (cmd.startsWith("delete") && faultInjectionEnabled) {
       String[] vkeyS = cmd.substring(7).split("[v:]");
       Id key = factory.buildIdFromToString(vkeyS[0]);
       long version = Long.parseLong(vkeyS[1]);
@@ -1213,7 +1216,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       return "delete("+id+")="+ret[0];
     }
 
-    if ((cmd.length() >= 5) && cmd.substring(0, 5).equals("burst") && faultInjectionEnabled) {
+    if (cmd.startsWith("burst") && faultInjectionEnabled) {
       String[] vkeyS = cmd.substring(6).split("[v:]");
       Id key = factory.buildIdFromToString(vkeyS[0]);
       long version = Long.parseLong(vkeyS[1]);
@@ -1263,7 +1266,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       return "burst("+id+")="+ret[0];
     }
 
-    if ((cmd.length() >= 8) && cmd.substring(0, 8).equals("manifest")) {
+    if (cmd.startsWith("manifest")) {
       String[] vkeyS = cmd.substring(9).split("v");
       Id key = factory.buildIdFromToString(vkeyS[0]);
       long version = Long.parseLong(vkeyS[1]);

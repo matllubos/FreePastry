@@ -381,6 +381,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
 
   public String handleDebugCommand(String command) {
+    if (command.indexOf(" ") < 0)
+      return null;
+  
     String requestedInstance = command.substring(0, command.indexOf(" "));
     String myInstance = "aggr."+instance.substring(instance.lastIndexOf("-") + 1);
     String cmd = command.substring(requestedInstance.length() + 1);
@@ -398,7 +401,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   
     log(2, "Debug command: "+cmd);
   
-    if ((cmd.length() >= 6) && cmd.substring(0, 6).equals("status")) {
+    if (cmd.startsWith("status")) {
       Enumeration enum = aggregateList.elements();
       int numAggr = 0, numObj = 0;
 
@@ -415,7 +418,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return numAggr + " active aggregates with " + numObj + " objects\n" + getNumObjectsWaiting() + " objects waiting";
     }
 
-    if ((cmd.length() >= 6) && cmd.substring(0, 6).equals("insert")) {
+    if (cmd.startsWith("insert")) {
       int numObjects = Integer.parseInt(cmd.substring(7));
       String result = "";
       
@@ -437,7 +440,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return result + numObjects + " object(s) created\n";
     }
 
-    if ((cmd.length() >= 11) && cmd.substring(0, 11).equals("show config")) {
+    if (cmd.startsWith("show config")) {
       return 
         "flushDelayAfterJoin = " + (int)(flushDelayAfterJoin / SECONDS) + " sec\n" +
         "flushInterval = " + (int)(flushInterval / SECONDS) + " sec\n" +
@@ -451,7 +454,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         "expirationRenewThreshold = " + (int)(expirationRenewThreshold / HOURS) + " hrs\n";
     }    
 
-    if ((cmd.length() >= 2) && cmd.substring(0, 2).equals("ls")) {
+    if (cmd.startsWith("ls")) {
       Enumeration enum = aggregateList.elements();
       StringBuffer result = new StringBuffer();
       int numAggr = 0, numObj = 0;
@@ -487,7 +490,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return result.toString();
     }
 
-    if ((cmd.length() >= 10) && cmd.substring(0, 10).equals("write list")) {
+    if (cmd.startsWith("write list")) {
       writeAggregateList();
       return "Done, new root is "+((rootKey==null) ? "null" : rootKey.toStringFull());
     }
@@ -510,7 +513,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return ret[0];
     }
 
-    if ((cmd.length() >= 5) && cmd.substring(0, 5).equals("flush")) {
+    if (cmd.startsWith("flush")) {
       final String[] ret = new String[] { null };
 
       flush(new Continuation() {
@@ -527,11 +530,12 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       
       return ret[0];
     }
-    if ((cmd.length() >= 8) && cmd.substring(0, 8).equals("get root")) {
+    
+    if (cmd.startsWith("get root")) {
       return "root="+((rootKey==null) ? "null" : rootKey.toStringFull());
     }
 
-    if ((cmd.length() >= 8) && cmd.substring(0, 8).equals("set root")) {
+    if (cmd.startsWith("set root")) {
       final String[] ret = new String[] { null };
       setHandle(factory.buildIdFromToString(cmd.substring(9)), new Continuation() {
         public void receiveResult(Object o) {
@@ -548,7 +552,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return ret[0];
     }
 
-    if ((cmd.length() >= 6) && cmd.substring(0, 6).equals("lookup")) {
+    if (cmd.startsWith("lookup")) {
       Id id = factory.buildIdFromToString(cmd.substring(7));
 
       final String[] ret = new String[] { null };
@@ -567,7 +571,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return "lookup("+id+")="+ret[0];
     }
 
-    if ((cmd.length() >= 7) && cmd.substring(0, 7).equals("handles")) {
+    if (cmd.startsWith("handles")) {
       String args = cmd.substring(8);
       Id id = factory.buildIdFromToString(args.substring(args.indexOf(' ') + 1));
       int max = Integer.parseInt(args.substring(0, args.indexOf(' ')));
@@ -594,7 +598,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return "Handles("+max+","+id+"):\n"+ret[0];
     }
       
-    if ((cmd.length() >= 11) && cmd.substring(0, 11).equals("refresh all")) {
+    if (cmd.startsWith("refresh all")) {
       long expiration = System.currentTimeMillis() + Long.parseLong(cmd.substring(12));
       TreeSet ids = new TreeSet();
       String result;
@@ -637,7 +641,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return result;
     }
       
-    if ((cmd.length() >= 7) && cmd.substring(0, 7).equals("refresh")) {
+    if (cmd.startsWith("refresh")) {
       String args = cmd.substring(8);
       String expirationArg = args.substring(args.lastIndexOf(' ') + 1);
       String keyArg = args.substring(0, args.lastIndexOf(' '));
@@ -661,7 +665,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return "refresh("+id+", "+expiration+")="+ret[0];
     }
 
-    if ((cmd.length() >= 14) && cmd.substring(0, 14).equals("monitor remove") && monitorEnabled) {
+    if (cmd.startsWith("monitor remove") && monitorEnabled) {
       String[] args = cmd.substring(15).split(" ");
       if (args.length == 1) {
         Random rand = new Random();
@@ -677,11 +681,11 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       } else return "Syntax: monitor remove <howMany>";
     }
 
-    if ((cmd.length() >= 14) && cmd.substring(0, 14).equals("monitor status") && monitorEnabled) {
+    if (cmd.startsWith("monitor status") && monitorEnabled) {
       return "Monitor is "+(monitorEnabled ? ("enabled, monitoring "+monitorIDs.size()+" objects") : "disabled");
     }
 
-    if ((cmd.length() >= 10) && cmd.substring(0, 10).equals("monitor ls") && monitorEnabled) {
+    if (cmd.startsWith("monitor ls") && monitorEnabled) {
       StringBuffer result = new StringBuffer();
       Enumeration enum = monitorIDs.elements();
       
@@ -692,7 +696,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return result.toString();
     }
 
-    if ((cmd.length() >= 13) && cmd.substring(0, 13).equals("monitor check") && monitorEnabled) {
+    if (cmd.startsWith("monitor check") && monitorEnabled) {
       final StringBuffer result = new StringBuffer();
       final String[] ret = new String[] { null };
       
@@ -768,7 +772,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return result.toString();
     }
 
-    if ((cmd.length() >= 11) && cmd.substring(0, 11).equals("monitor add") && monitorEnabled) {
+    if (cmd.startsWith("monitor add") && monitorEnabled) {
       String[] args = cmd.substring(12).split(" ");
       if (args.length == 6) {
         final int numFiles = Integer.parseInt(args[0]);
@@ -829,7 +833,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return "Syntax: monitor add <#files> <avgBurstSize> <sizeSkew> <smallSize> <largeSize> <lifetime>";
     }
       
-    if ((cmd.length() >= 7) && cmd.substring(0, 7).equals("killall")) {
+    if (cmd.startsWith("killall")) {
       String args = cmd.substring(8);
       String expirationArg = args.substring(args.lastIndexOf(' ') + 1);
       String keyArg = args.substring(0, args.lastIndexOf(' '));
@@ -850,7 +854,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return "Aggregate "+id+" not found in aggregate list";
     }
 
-    if ((cmd.length() >= 7) && cmd.substring(0, 7).equals("waiting")) {
+    if (cmd.startsWith("waiting")) {
       Iterator iter = waitingList.scan().getIterator();
       String result = "";
 
@@ -862,7 +866,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return result;
     }
       
-    if ((cmd.length() >= 7) && cmd.substring(0, 7).equals("vlookup")) {
+    if (cmd.startsWith("vlookup")) {
       String[] vkeyS = cmd.substring(8).split("v");
       Id key = factory.buildIdFromToString(vkeyS[0]);
       long version = Long.parseLong(vkeyS[1]);
