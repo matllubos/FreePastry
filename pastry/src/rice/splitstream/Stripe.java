@@ -53,9 +53,10 @@ public class Stripe extends Observable implements IScribeApp{
       this.channel = channel;
 
       NodeId topicId = (new RandomNodeIdFactory()).generateNodeId();
+      System.out.println("Trying to create stripe: " +  topicId);
       if(scribe.create(topicId, credentials)){
 	stripeState = STRIPE_SUBSCRIBED;
-        this.stripeId = (StripeId) topicId;
+        //this.stripeId = (StripeId) topicId;
       }
     }
     /**
@@ -121,7 +122,7 @@ public class Stripe extends Observable implements IScribeApp{
      }
      public void scribeIsReady(){}
      public void subscribeHandler(NodeId topicId,
-                                  NodeHandle child, boolean wasAdded, Object data){
+                                  NodeHandle child, boolean wasAdded, Serializable data){
           /* We should check if we can take this child on */
      }
 

@@ -1,5 +1,6 @@
 package rice.splitstream;
 import rice.pastry.standard.*;
+import java.io.Serializable;
 import rice.scribe.*;
 import rice.scribe.messaging.*;
 import rice.pastry.security.*;
@@ -66,7 +67,8 @@ public class Channel implements IScribeApp {
         NodeId topicId = (new RandomNodeIdFactory()).generateNodeId();
 	System.out.println("Trying to create channel : " +  topicId);
         if(scribe.create(topicId, cred)){
-		this.channelId = (ChannelId) topicId;
+		//this.channelId = (ChannelId) topicId;
+		System.out.println("Channel Topic Created");
         } 		
 	stripes = new Stripe[numStripes];
         stripeIds = new StripeId[numStripes];
@@ -195,7 +197,7 @@ public class Channel implements IScribeApp {
      isReady = true;
   }
   public void subscribeHandler(NodeId topicId, 
-                               NodeHandle child, boolean wasAdded, Object data){}
+                               NodeHandle child, boolean wasAdded, Serializable data){}
 }
 
 

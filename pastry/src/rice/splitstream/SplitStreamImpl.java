@@ -14,13 +14,13 @@ import rice.pastry.security.*;
 /**
  * This is the implementing class of the SplitStream service 
  */
-public class SplitStreamImpl implements ISplitStream, IScribeApp{
+public class SplitStreamImpl implements ISplitStream, IScribeObserver{
     private IScribe scribe = null;
     private BandwidthManager bandwidthManager = new BandwidthManager();
     private Credentials credentials = new PermissiveCredentials();
     public SplitStreamImpl(PastryNode node, IScribe scribe){
  	this.scribe = scribe;  
-    	this.scribe.registerApp(this);
+	this.scribe.registerScribeObserver(this);
    }
 
    /**
@@ -70,17 +70,8 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp{
    }
    public BandwidthManager getBandwidthManager(){return null;}
    public void setBandwidthManager(){}
-   public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){}
-   public void forwardHandler(ScribeMessage msg){}
-   public void receiveMessage(ScribeMessage msg){
-       if(msg instanceof MessageCreate){
-		System.out.println("This node has been selected to host a channel");
-       }
- 
+   public void update(java.lang.Object object){
+	System.out.println("UPDATE" + (NodeId) object);
    }
-   public void scribeIsReady(){
-   }
-   public void subscribeHandler(NodeId topicId, 
-                               NodeHandle child, boolean wasAdded, Object data){   }
 
 }
