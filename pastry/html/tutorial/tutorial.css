@@ -1,0 +1,125 @@
+body {
+	/* font-family: "Century Schoolbook", Georgia, serif; */
+	font-family: "Lucida Bright", "Century Schoolbook", Georgia, serif;
+	font-size: 76%;
+	margin: 2cm 15%;
+	text-align: center;
+}
+.content {
+	text-align: justify;
+	line-height: 140%;
+	margin: 0 auto;
+}
+sup, sub { line-height: 80%; }
+
+blockquote {
+	font-size: 90%;
+	background-color: #eee;
+	padding: 1em;
+	margin: 1em 2em;
+}
+
+ul {
+	list-style-type: square;
+}
+ul, ol {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+/* for indented paragraphs:
+
+p {
+	margin: 0;
+}
+p+p {
+	text-indent: 2.5em;
+}
+*/
+tt, pre {
+	font-family: "Lucida Sans Typewriter", monospace;
+}
+
+pre {
+	font-size: 80%;
+	background-color: #eee;
+	padding: 1em;
+}
+acronym {
+	font-style: inherit;
+	font-variant: small-caps;
+}
+li {
+	margin-bottom: 0.5em;
+}
+div.note, div.abstract {
+	font-size: 90%;
+	font-style: italic;
+	margin-top: 1em;
+	margin-bottom: 1em;
+	padding: 0.75em 1em;
+	border: 1px solid rgb(128,128,128);
+	background-color: rgb(220,220,220);
+}
+div.note em, div.abstract em {
+	font-style: normal;
+}
+hr {
+	height: 0px;
+	border: 0; background-color: none;
+	border-bottom: 1px solid black;
+	margin: 2em 0;
+}
+
+.frontmatter {
+	text-align: center;
+	margin-bottom: 2em;
+	padding-bottom: 2em;
+	border-bottom: 1px solid black;
+}
+.frontmatter h1 {
+	margin-bottom: 0.5em;
+}
+.frontmatter h3 {
+	font-size: 120%;
+	font-style: italic;
+	width: 50%;
+	margin: 1.5em auto;
+}
+.frontmatter h4 {
+	font-size: 85%;
+	margin: 0.25em;
+}
+.lede {
+	margin-right: 1em;
+}
+h1, h2, h3, h4, h5, h6 {
+	font-family: "Lucida Grande", "Lucida Sans", "Lucida Sans Unicode", sans-serif;
+	margin-top: 1.5em;
+	margin-bottom: 0.5em;
+}
+.footer {
+	border-top: 1px solid black;
+	margin-top: 2em;
+	padding-top: 2em;
+}
+
+@media print {
+	body {
+		margin-top: 4cm;
+		margin-left: auto;
+		margin-right: auto;
+	}
+	.content {
+		width: 39em;
+		font-size: 11px; /* required to get 11pt in 72ppi points */
+	}
+	.frontmatter {
+		border-bottom: 2px solid black;
+	}
+	.footer {
+		border-top: 2px solid black;
+	}
+	div.note, div.abstract {
+		border: 1px solid black;
+	}
+}
