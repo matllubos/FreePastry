@@ -88,7 +88,7 @@ public class DirectSplitStreamTest{
 
 	System.out.println("SplitStream Test Program v0.4");
 	//PastrySeed.setSeed((int)System.currentTimeMillis());
-	PastrySeed.setSeed( -140035239 );
+	PastrySeed.setSeed(-319234760);
 	System.out.println(PastrySeed.getSeed() );
 	DirectSplitStreamTest test = new DirectSplitStreamTest();
 	test.init();
@@ -217,7 +217,11 @@ public class DirectSplitStreamTest{
 	    System.out.println("\n\nBANDWIDTH-USAGE TEST : FAILED \n\n");
 
 	result &= passed;
-
+	
+	if(result)
+	    System.out.println("\n\n Direct Simulation Test ----------  PASSED");
+	else
+	    System.out.println("\n\n Direct Simulation Test ----------  FAILED");
 	//test.printParents(channelId);
 
 	/**
@@ -301,7 +305,10 @@ public class DirectSplitStreamTest{
 		// Join all stripes for all channels an app has created or attached to.
 		app.joinChannelStripes(channelId);
 		while(simulate());
-		//System.out.println("Node "+app.getNodeId()+" subscribed to  another stripe");
+		System.out.println("Node "+app.getNodeId()+" subscribed to the Channel");
+		while(simulate());
+		//System.out.println("Spare Capacity tree "+BFS(app.getSpareCapacityId(channelId)));
+		while(simulate());
 	    }
 	    
 	}	

@@ -157,6 +157,7 @@ public class Channel implements IScribeApp {
         else
            System.out.println("ERROR: Spare Capacity Topic Creation Failed");
 
+	System.out.println("Spare Capacity Id "+topicId);
         /* Stripe Id base also fixed to aid debugging */
         //NodeId baseId = random.generateNodeId();
         NodeId baseId = scribe.generateTopicId(name + "STRIPES");
@@ -221,17 +222,44 @@ public class Channel implements IScribeApp {
 	this.bandwidthManager.registerChannel(this);
         scribe.registerApp(this);
 	ControlAttachMessage attachMessage = 
-               new ControlAttachMessage(this.getSplitStream().getAddress(),
+               new ControlAttachMessage(((Scribe)this.scribe).getAddress(),
                                         this.getSplitStream().getNodeHandle(),
-                                        this.channelId
+                                        this.channelId,
+					cred
                                        );
         //System.out.println("Sending Anycast Message from " + getNodeId());
         System.out.println("Sending ControlAttach Message");
-        this.getSplitStream().routeMsg(channelId, attachMessage, cred, null );
+        //this.getSplitStream().routeMsg(channelId, attachMessage, cred, null );
+	scribe.anycast(channelId, attachMessage, cred);
         ignore_timeout = false;
         ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( getSplitStream().getAddress(), 0, channelId, cred, channelId );
 	this.splitStream.getPastryNode().scheduleMsg( timeoutMessage, timeoutLen );
 
+    }
+
+
+    void initialize(StripeId[] stripeIds, SpareCapacityId spareCapacityId){
+	this.spareCapacityId = spareCapacityId;
+
+	for(int i = 0; i < stripeIds.length; i++){
+	    if(stripeIdTable == null){
+		System.out.println("Debug :: StripeIdTable is null in Channel.java");
+	    }
+	    Stripe stripe = new Stripe( stripeIds[i], this, scribe, cred, false);
+	    stripeIdTable.put(stripeIds[i], stripe);
+	    /**
+	     * Select the primary stripe
+	     */
+	    if( stripeIds[i].getDigit(getSplitStream().getRoutingTable().numRows() -1, 4) 
+	        == getSplitStream().getNodeId().getDigit(getSplitStream().getRoutingTable().numRows() -1,4) )
+	        primaryStripe = stripe;
+	}
+
+	if(scribe.join(spareCapacityId, this, cred)){
+	}
+        else{
+	    System.out.println("ERROR: Could not join Spare Capacity Tree");
+        }
     }
 
     /**
@@ -591,6 +619,22 @@ public class Channel implements IScribeApp {
      * Currently not Implemented
      */
     public void forwardHandler(ScribeMessage msg){}
+    
+    /**
+     * up-call invoked by Scribe when an anycast message is being handled.
+     */
+    public boolean anycastHandler(ScribeMessage msg){
+	boolean result = true;
+	if(msg instanceof ControlFindParentMessage){
+	    ControlFindParentMessage pmsg = (ControlFindParentMessage)msg;
+	    result= pmsg.handleMessage(getSplitStream(), getScribe(), this, this.getStripe(pmsg.getStripeId()) );
+	}
+	if(msg instanceof ControlAttachMessage){
+	    ControlAttachMessage amsg = (ControlAttachMessage)msg;
+	    result = amsg.handleMessage(this, getScribe());
+	}
+	return result;
+    }
 
     /**
      * Handles Scribe Messages that the application recieves.
@@ -601,12 +645,38 @@ public class Channel implements IScribeApp {
     public void receiveMessage(ScribeMessage msg){
 	/* Check the type of message */
 	/* then make call accordingly */
+
+	Serializable obj = (Serializable)msg.getData();
+	/* Check the type of message */
+	/* then make call accordingly */
+	System.out.println("Channel - Recieved message through anycast");
+	if(obj instanceof ControlAttachMessage){
+	    System.out.println("Recieved ControlAttachMessage message through Anycast");
+	    ControlAttachMessage amsg = (ControlAttachMessage)obj;
+	    ChannelId channelId = amsg.getChannelId();
+	    handleAttachMessage(amsg);
+	}
+	/*
+	else if(obj instanceof ControlFindParentMessage){
+	    ControlFindParentMessage parentMessage = (ControlFindParentMessage)obj;
+	    Stripe stripe = null;
+	    
+	    if(stripeIdTable.get(parentMessage.getStripeId()) instanceof Stripe){
+		stripe = (Stripe) stripeIdTable.get(parentMessage.getStripeId());	
+	    }
+	    
+	    parentMessage.handleMessage((Scribe ) scribe,
+					       ((Scribe)scribe).getTopic(getSpareCapacityId()), this, stripe); 
+	    
+					       }*/
+	/*
 	if(msg.getTopicId().equals(channelId)){
 	    //handleChannelMessage(msg);
 	}
 	else if(msg.getTopicId().equals(spareCapacityId)){
 	    //handleSpareCapacityMessage(msg);
-	}
+	    }*/
+	
 	else{
 	    System.out.println(msg.getTopicId());
 	    System.out.println("Unknown Scribe Message");
@@ -644,6 +714,7 @@ public class Channel implements IScribeApp {
 	    handleControlDropMessage(msg);
 	}
 	else if(msg instanceof ControlFindParentMessage){
+	    System.out.println("Channel - Control Find Parent Msg should not come here ");
 	    handleControlFindParentMessage(msg); 
 	}
 	else if ( msg instanceof ControlPropogatePathMessage )
@@ -654,10 +725,12 @@ public class Channel implements IScribeApp {
         {
             handleControlTimeoutMessage( msg );
         }
+	/*
         else if( msg instanceof ControlAttachMessage){
             System.out.println("Delivering Attach Message");
             handleAttachMessage(msg); 
         }
+	*/
 	else{
 	    System.out.println("Unknown Pastry Message Type");
 	}
@@ -674,10 +747,12 @@ public class Channel implements IScribeApp {
 	if(msg instanceof ControlFindParentMessage){
 	    return handleControlFindParentMessage(msg); 
 	}
+	/*
         else if(msg instanceof ControlAttachMessage){
             System.out.println("Enrouting Attach Message");
             return handleAttachMessage(msg);
         }
+	*/
 	return true;
     }
 
@@ -735,7 +810,7 @@ public class Channel implements IScribeApp {
 
 	if(stripe != null){
 	    Vector path = prmessage.getPath();
-	    //System.out.println("Setting root path in controlFindparentResponse msg - setting it to "+prmessage.getSource().getNodeId()+" at "+getNodeId() + " for stripe "+stripe.getStripeId());
+	    //System.out.println("Setting root path in controlFindparentResponse msg - setting it to "+prmessage.getSource().getNodeId()+" at "+getSplitStream().getNodeId() + " for stripe "+stripe.getStripeId());
 	    stripe.setRootPath( path );
         }
         stripe.setIgnoreTimeout( true );
@@ -772,9 +847,11 @@ public class Channel implements IScribeApp {
      *
      * @param msg the ScribeMessage for this channel
      */
-    private boolean handleAttachMessage(Message msg){
-        ControlAttachMessage attachMsg = (ControlAttachMessage) msg;
-	return attachMsg.handleMessage(this, scribe, attachMsg.getSource());
+    private boolean handleAttachMessage(ControlAttachMessage attachMsg){
+	System.out.println("Channel - Should not receive Attach Message through Pastry");
+	return true;
+        //ControlAttachMessage attachMsg = (ControlAttachMessage) msg.getData();
+	//return attachMsg.handleMessage(this, scribe, attachMsg.getSource());
     }
 
     /**
@@ -789,7 +866,7 @@ public class Channel implements IScribeApp {
     private void handleSpareCapacityMessage(ScribeMessage msg){
 
 	//System.out.println("SpareCapacity Message from " + msg.getSource().getNodeId() + " at " + getNodeId());
-
+	/*
 	Stripe stripe = null;
 	ControlFindParentMessage parentMessage = 
           (ControlFindParentMessage) msg.getData();
@@ -800,7 +877,7 @@ public class Channel implements IScribeApp {
 
 	parentMessage.handleMessage((Scribe) scribe, 
           ((Scribe)scribe).getTopic(getSpareCapacityId()), this, stripe);
-
+	*/
     }
     
     /**
@@ -810,7 +887,8 @@ public class Channel implements IScribeApp {
      * @param msg the message to handle
      */
     private boolean handleControlFindParentMessage(Message msg){
-
+	return true;
+	/*
 	Stripe stripe = null;
 	ControlFindParentMessage parentMessage = (ControlFindParentMessage) msg;
 
@@ -820,7 +898,7 @@ public class Channel implements IScribeApp {
 
 	return parentMessage.handleMessage((Scribe ) scribe,
           ((Scribe)scribe).getTopic(getSpareCapacityId()), this, stripe); 
-
+	*/
     }
 
     /**

@@ -29,7 +29,7 @@ import rice.splitstream.messaging.*;
  * @author Ansley Post
  */
 public class SplitStreamImpl extends PastryAppl implements ISplitStream, 
-                             IScribeApp, IScribeObserver
+							   IScribeApp, IScribeObserver
 {
     /**
      * The scribe instance for this SplitStream Object
@@ -89,16 +89,16 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
      * @param scribe the scribe instance to use
      *
      */
-     public SplitStreamImpl(PastryNode node, IScribe scribe){
+    public SplitStreamImpl(PastryNode node, IScribe scribe){
  	super(node);
         this.scribe = scribe;  
  	this.scribe.registerScribeObserver(this);
 	this.scribe.registerApp(this);
         this.node = node;
 	this.channels = new Hashtable();
-   }
+    }
 
-   /**
+    /**
     * This method is used by a peer who wishes to distribute the content
     * using SplitStream. It creates a Channel Object consisting of numStripes
     * number of Stripes, one for each stripe's content. A Channel object is
@@ -110,15 +110,15 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     *        be striped, each part is a Stripe.
     * @return an instance of a Channel class. 
     */
-   public Channel createChannel(int numStripes, String name){
+    public Channel createChannel(int numStripes, String name){
 
 	Channel channel = new Channel(numStripes, name, scribe, credentials, bandwidthManager, this);
 	channels.put(channel.getChannelId(), channel);
 	return (channel);
 
-   }
+    }
 
-   /**
+    /**
     * This method is used by peers who wish to listen to content distributed 
     * by some other peer using SplitStream. It attaches the local node to the 
     * Channel which is being used by the source peer to distribute the content.
@@ -133,36 +133,36 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     *  to attach to. 
     * @return  An instance of Channel object.
     */
-   public Channel attachChannel(ChannelId channelId){
-     Channel channel = (Channel) channels.get(channelId);
-     System.out.println("Attempting to attach to Channel " + channelId);
-     if(channel == null){
+    public Channel attachChannel(ChannelId channelId){
+	Channel channel = (Channel) channels.get(channelId);
+	System.out.println("Attempting to attach to Channel " + channelId);
+	if(channel == null){
 
-     	channel = new Channel(channelId, scribe, credentials, bandwidthManager, this);
-	channels.put(channelId, channel);
-     }
+	    channel = new Channel(channelId, scribe, credentials, bandwidthManager, this);
+	    channels.put(channelId, channel);
+	}
 	return channel;
-   }
+    }
 
-   /**
+    /**
     * Gets the bandwidth manager associated with this splitstream object
     * 
     * @return BandwidthManager that is associated with this splitstream
     */ 
-   public BandwidthManager getBandwidthManager(){
-      return bandwidthManager;
-   }
+    public BandwidthManager getBandwidthManager(){
+	return bandwidthManager;
+    }
 
-   /**
+    /**
     * Sets the bandwidthManager for this splitstream
     *
     * @param bandwidthManager the new bandwidthManager
     */
-   public void setBandwidthManager(BandwidthManager bandwidthManager){
-       this.bandwidthManager = bandwidthManager;
-   }
+    public void setBandwidthManager(BandwidthManager bandwidthManager){
+	this.bandwidthManager = bandwidthManager;
+    }
 
-   /** - IScribeObserver Implementation -- */
+    /** - IScribeObserver Implementation -- */
 
    /**
     * The update method called when a new topic is created at this
@@ -175,34 +175,38 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 	if(scribe.join((NodeId) topicId, this, credentials)){
         }
         else
-          System.out.println("ERROR: Could not join Channel being created");
-   } 
+	    System.out.println("ERROR: Could not join Channel being created");
+    } 
 
-   /** - IScribeApp Implementation -- */
-   /**
-    * The method called when a fault occurs. Currently not implemented.
+    /** - IScribeApp Implementation -- */
+    /**
+     * The method called when a fault occurs. Currently not implemented.
     *
     * @param msg The message to be sent on the failure
     * @param faultyParent the node that caused the fault 
     */
     public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){}
-   public void forwardHandler(ScribeMessage msg){}
-   public void receiveMessage(ScribeMessage msg){
-     /* Check the type of message */
-     /* then make call accordingly */
-     //System.out.println("Recieved message");
-   }
+    public void forwardHandler(ScribeMessage msg){}
+    public void receiveMessage(ScribeMessage msg){
+	/* Check the type of message */
+	/* then make call accordingly */
+	//System.out.println("Recieved message");
+    }
+    // Default implementation of anycastHandler.
+    public boolean anycastHandler(ScribeMessage msg){
+	return true;
+    }
   
-   /**
+    /**
     * Upcall generated when the underlying scribe is ready
     */ 
-   public void scribeIsReady(){
-       //System.out.println("Scribe is Ready");
-       m_ready = true;
-       notifyApps();
-   }
+    public void scribeIsReady(){
+	//System.out.println("Scribe is Ready");
+	m_ready = true;
+	notifyApps();
+    }
 
-   /**
+    /**
     * The upcall generated when a subscribe message is received
     * This currently handles the  implicit creation of channel objects
     * when they don't exist at this node
@@ -213,134 +217,136 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     * @param data the data that was in the subscribe/unsubscribe message
     * 
     */
-   public void subscribeHandler(NodeId topicId, 
-                               NodeHandle child, 
-                               boolean wasAdded,  
-                               Serializable data){
+    public void subscribeHandler(NodeId topicId, 
+				 NodeHandle child, 
+				 boolean wasAdded,  
+				 Serializable data){
 
-       //System.out.println("Subscribe Handler at " + ((Scribe) scribe).getNodeId() + " for " + topicId + " from " + child.getNodeId());
-       NodeId[] nodeData = (NodeId[]) data;
+	//System.out.println("Subscribe Handler at " + ((Scribe) scribe).getNodeId() + " for " + topicId + " from " + child.getNodeId());
+	NodeId[] nodeData = (NodeId[]) data;
        
        
-       if(nodeData!=null){
-           //System.out.println("Channel Data Recieved Filling MetaData");
-           //System.out.println(nodeData.length); 
-	   /* Clean This up */
-	   StripeId[] stripeId = new StripeId[nodeData.length - 2];
-	   ChannelId channelId = new ChannelId(nodeData[0]);
-	   for(int i = 1; i < nodeData.length -1; i++){
-	       stripeId[i-1] = new StripeId(nodeData[i]);
-	   }
+	if(nodeData!=null){
+	    //System.out.println("Channel Data Recieved Filling MetaData");
+	    //System.out.println(nodeData.length); 
+	    /* Clean This up */
+	    StripeId[] stripeId = new StripeId[nodeData.length - 2];
+	    ChannelId channelId = new ChannelId(nodeData[0]);
+	    for(int i = 1; i < nodeData.length -1; i++){
+		stripeId[i-1] = new StripeId(nodeData[i]);
+	    }
 	   
 	   
-	   SpareCapacityId spareCapacityId = new SpareCapacityId(nodeData[nodeData.length -1]);
-	   /* Clean This up */
-	   Channel channel = (Channel)channels.get(channelId);
+	    SpareCapacityId spareCapacityId = new SpareCapacityId(nodeData[nodeData.length -1]);
+	    /* Clean This up */
+	    Channel channel = (Channel)channels.get(channelId);
 	   
-	   if(channel == null){
-               System.out.println("Channel is NULL , Adding");
-	       channel = new Channel(channelId, stripeId, spareCapacityId, scribe, bandwidthManager, this);
-	       channels.put(channelId, channel);
-	   }
-           else if(channel.getSpareCapacityId() == null){
-               channel.setStripes(stripeId);
-               channel.setSpareCapacityId(spareCapacityId);
-           }
-	   
-	   /**
-	    * Check if this subscription is for a unsubscribed-stripe of this channel!
-	    * If so, then the splitstream object should take the responsibility
-	    * of notifying the bandwidth manager about the bandwidth usage, and additional
-	    * handling, like sending ControlPropogatePathMessage or Drop message if necessary.
-	    */
-	   if(!((NodeId)channelId).equals(topicId)){
-	       Vector subscribedStripes = channel.getSubscribedStripes();
-	       if(!channel.stripeAlreadySubscribed((StripeId)topicId)){
-                   //System.out.println(channel);
-		   Stripe stripe = channel.getStripe((StripeId)topicId);
-		   if(wasAdded){
-		       if(bandwidthManager.canTakeChild(channel)){
-			   //System.out.println("SPLITSTREAM :: Subscriber can take child"+child.getNodeId()+" at "+channel.getNodeId());
-			   channel.stripeSubscriberAdded();
-			   Credentials credentials = new PermissiveCredentials();
-                           if(stripe == null){
-                              System.out.println("Stripe is NULL");
-                           }
-                           else{
-                              if(stripe.getRootPath() == null){
-                                 System.out.println("Get Root Path is NULL");
-                               }
-			       Vector child_root_path = (Vector)stripe.getRootPath().clone();
-			       child_root_path.add( ((Scribe)scribe).getLocalHandle() );
-			      this.routeMsgDirect( child, new ControlPropogatePathMessage( this.getAddress(),
-	   this.getNodeHandle(),
-           topicId,
-	   credentials, child_root_path, channel.getChannelId() ),
-			   credentials, null );
-                           }
-		       }
-		       else{
-			   /* THIS IS WHERE THE DROP SHOULD OCCUR */
-			   Credentials credentials = new PermissiveCredentials();
-			   NodeHandle victimChild = null;
-			   StripeId victimStripeId = null;
-			   Vector ret;
-			   
-			   // Now, ask the bandwidth manager to free up some bandwidth, fill up
-			   // victimChild and victimStripeId ..
-			   // XXX - might want to change how freeBandwidth returns :-)
-			   ret = bandwidthManager.freeBandwidth(channel);
-			   victimChild = (NodeHandle)ret.elementAt(0);
-			   victimStripeId = (StripeId)ret.elementAt(1);
+	    if(channel == null){
+		System.out.println("Channel is NULL , Adding");
+		channel = new Channel(channelId, stripeId, spareCapacityId, scribe, bandwidthManager, this);
+		channels.put(channelId, channel);
+	    }
+	    else if(!channel.isReady()){
+		channel.initialize(stripeId, spareCapacityId);
+	    }
 
-			   Stripe victimStripe = channel.getStripe(victimStripeId);
-			   Vector child_root_path = (Vector)stripe.getRootPath().clone();
-			   child_root_path.add( ((Scribe)scribe).getLocalHandle() );
-
-			   /**
-			    * In all cases except the case that victimChild is the same as the recently added
-			    * child and also for the same stripe, then we need to send the propogate path
-			    * message to recently added child.
-			    */
-			   if(!(victimChild.getNodeId().equals(child.getNodeId()) &&
-				topicId.equals((NodeId)victimStripeId))){
-			       this.routeMsgDirect( child, new ControlPropogatePathMessage( this.getAddress(),
-            this.getNodeHandle(),
-	    topicId,
-	    credentials,
-	    child_root_path,
-            channel.getChannelId() ),
-						       credentials, null );
-			       //System.out.println("Sending PROPOGATE message to"+child.getNodeId()+ " for stripe "+topicId);
-			   }
+	    /**
+	     * Check if this subscription is for a unsubscribed-stripe of this channel!
+	     * If so, then the splitstream object should take the responsibility
+	     * of notifying the bandwidth manager about the bandwidth usage, and additional
+	     * handling, like sending ControlPropogatePathMessage or Drop message if necessary.
+	     */
+	    if(!((NodeId)channelId).equals(topicId)){
+		Vector subscribedStripes = channel.getSubscribedStripes();
+		if(!channel.stripeAlreadySubscribed((StripeId)topicId)){
+		    //System.out.println(channel);
+		    Stripe stripe = channel.getStripe((StripeId)topicId);
+		    if(wasAdded){
+			if(bandwidthManager.canTakeChild(channel)){
+			    //System.out.println("SPLITSTREAM :: Subscriber can take child"+child.getNodeId()+" at "+channel.getNodeId());
+			    channel.stripeSubscriberAdded();
+			    Credentials credentials = new PermissiveCredentials();
+			    Vector child_root_path;
+			    if(stripe == null){
+				System.out.println("Stripe is NULL");
+			    }
+			    else{
+				if(stripe.getRootPath() == null){
+				    System.out.println("Get Root Path is NULL");
+				    child_root_path = new Vector();
+				}
+				else
+				    child_root_path = (Vector)stripe.getRootPath().clone();
+				child_root_path.add( ((Scribe)scribe).getLocalHandle() );
+				this.routeMsgDirect( child, new ControlPropogatePathMessage( this.getAddress(),
+											     this.getNodeHandle(),
+											     topicId,
+											     credentials, child_root_path, channel.getChannelId() ),
+						     credentials, null );
+			    }
+			}
+			else{
+			    /* THIS IS WHERE THE DROP SHOULD OCCUR */
+			    Credentials credentials = new PermissiveCredentials();
+			    NodeHandle victimChild = null;
+			    StripeId victimStripeId = null;
+			    Vector ret;
 			   
-			   this.routeMsgDirect( victimChild, new ControlDropMessage( this.getAddress(),
-     this.getNodeHandle(),
-     victimStripeId,
-     credentials,
-     channel.getSpareCapacityId(), 
-     channel.getChannelId(), 
-     channel.getTimeoutLen() ),
-     credentials, null );
-			   //System.out.println("Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+" at "+channel.getNodeId());
-			   victimStripe.setLocalDrop(true);
-			   scribe.removeChild(victimChild, (NodeId)victimStripeId);
-		       }
-		   }
-		   else{
-		       //System.out.println("SPLITSTREAM ::Subscriber was removed"+child.getNodeId()+" at "+channel.getNodeId());
-		       if(!stripe.getLocalDrop()){
-			   channel.stripeSubscriberRemoved();
-		       }
-		       else {
-			   stripe.setLocalDrop(false);
-		       }
-		   }
-	       }
+			    // Now, ask the bandwidth manager to free up some bandwidth, fill up
+			    // victimChild and victimStripeId ..
+			    // XXX - might want to change how freeBandwidth returns :-)
+			    ret = bandwidthManager.freeBandwidth(channel);
+			    victimChild = (NodeHandle)ret.elementAt(0);
+			    victimStripeId = (StripeId)ret.elementAt(1);
+
+			    Stripe victimStripe = channel.getStripe(victimStripeId);
+			    Vector child_root_path = (Vector)stripe.getRootPath().clone();
+			    child_root_path.add( ((Scribe)scribe).getLocalHandle() );
+
+			    /**
+			     * In all cases except the case that victimChild is the same as the recently added
+			     * child and also for the same stripe, then we need to send the propogate path
+			     * message to recently added child.
+			     */
+			    if(!(victimChild.getNodeId().equals(child.getNodeId()) &&
+				 topicId.equals((NodeId)victimStripeId))){
+				this.routeMsgDirect( child, new ControlPropogatePathMessage( this.getAddress(),
+											     this.getNodeHandle(),
+											     topicId,
+											     credentials,
+											     child_root_path,
+											     channel.getChannelId() ),
+						     credentials, null );
+				//System.out.println("Sending PROPOGATE message to"+child.getNodeId()+ " for stripe "+topicId);
+			    }
+			   
+			    this.routeMsgDirect( victimChild, new ControlDropMessage( this.getAddress(),
+										      this.getNodeHandle(),
+										      victimStripeId,
+										      credentials,
+										      channel.getSpareCapacityId(), 
+										      channel.getChannelId(), 
+										      channel.getTimeoutLen() ),
+						 credentials, null );
+			    //System.out.println("Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+" at "+channel.getNodeId());
+			    victimStripe.setLocalDrop(true);
+			    scribe.removeChild(victimChild, (NodeId)victimStripeId);
+			}
+		    }
+		    else{
+			//System.out.println("SPLITSTREAM ::Subscriber was removed"+child.getNodeId()+" at "+channel.getNodeId());
+			if(!stripe.getLocalDrop()){
+			    channel.stripeSubscriberRemoved();
+			}
+			else {
+			    stripe.setLocalDrop(false);
+			}
+		    }
+		}
 	       
-	   }
-       }
-   }
+	    }
+	}
+    }
     
     /**
      * Returns the underlying scribe object.
@@ -381,7 +387,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
      * @returns PastryNode the Node
      */
     public PastryNode getPastryNode(){
-      return thePastryNode;
+	return thePastryNode;
     }
 
     /** -- Pastry Implementation -- **/
@@ -413,50 +419,33 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
          * This should be cleaned up, but since we are past the
          * Api freeze I don't want to change the class inheritance hierachy
          */
-       if( (msg instanceof ControlAttachMessage) ){
-           System.out.println("Got Attach Message at Node " + getNodeId());
-	   ChannelId channelId = ((ControlAttachMessage) msg).getChannelId();
-           Channel channel = (Channel) channels.get(channelId);
-	   if(channel == null){
- 	     System.out.println("Channel is Null");
-	   }
-           else{
-             channel.messageForChannel(msg);
-           }
-       }
-       else if (msg instanceof ControlFindParentResponseMessage){
-	   ChannelId channelId = ((ControlFindParentResponseMessage) msg).getChannelId();
-           Channel channel = (Channel) channels.get(channelId);
-           channel.messageForChannel(msg);
-       }
-       else if (msg instanceof ControlDropMessage){
-	   ChannelId channelId = ((ControlDropMessage) msg).getChannelId();
-           Channel channel = (Channel) channels.get(channelId);
-           channel.messageForChannel(msg);
-       }
-       else if(msg instanceof ControlFindParentMessage){
-	   ChannelId channelId = ((ControlFindParentMessage) msg).getChannelId();
-           Channel channel = (Channel) channels.get(channelId);
-           channel.messageForChannel(msg);
-       }
-       else if(msg instanceof ControlPropogatePathMessage){
-	   ChannelId channelId = ((ControlPropogatePathMessage) msg).getChannelId();
-           Channel channel = (Channel) channels.get(channelId);
-           channel.messageForChannel(msg);
-       }
-       else if(msg instanceof ControlTimeoutMessage){
-	   ChannelId channelId = ((ControlTimeoutMessage) msg).getChannelId();
-           Channel channel = (Channel) channels.get(channelId);
-           channel.messageForChannel(msg);
-       }
-       else if(msg instanceof ControlAttachResponseMessage){
-           System.out.println("Got an Attach Response");
-	   ChannelId channelId = ((ControlAttachResponseMessage) msg).getChannelId();
-           Channel channel = (Channel) channels.get(channelId);
-           channel.messageForChannel(msg);
-       } 
+        if (msg instanceof ControlFindParentResponseMessage){
+	    ChannelId channelId = ((ControlFindParentResponseMessage) msg).getChannelId();
+	    Channel channel = (Channel) channels.get(channelId);
+	    channel.messageForChannel(msg);
+	}
+	else if (msg instanceof ControlDropMessage){
+	    ChannelId channelId = ((ControlDropMessage) msg).getChannelId();
+	    Channel channel = (Channel) channels.get(channelId);
+	    channel.messageForChannel(msg);
+	}
+	else if(msg instanceof ControlPropogatePathMessage){
+	    ChannelId channelId = ((ControlPropogatePathMessage) msg).getChannelId();
+	    Channel channel = (Channel) channels.get(channelId);
+	    channel.messageForChannel(msg);
+	}
+	else if(msg instanceof ControlTimeoutMessage){
+	    ChannelId channelId = ((ControlTimeoutMessage) msg).getChannelId();
+	    Channel channel = (Channel) channels.get(channelId);
+	    channel.messageForChannel(msg);
+	}
+	else if(msg instanceof ControlAttachResponseMessage){
+	    System.out.println("Got an Attach Response");
+	    ChannelId channelId = ((ControlAttachResponseMessage) msg).getChannelId();
+	    Channel channel = (Channel) channels.get(channelId);
+	    channel.messageForChannel(msg);
+	} 
 
-           
     }
     /**
      * Upcall generate when a message is routed through this 
@@ -468,25 +457,27 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
      */
     public boolean enrouteMsg(Message msg){
 
-      if( (msg instanceof ControlFindParentMessage) ){
-         ChannelId channelId = ((ControlFindParentMessage)msg).getChannelId();
-         Channel channel = (Channel) channels.get(channelId);
+	if( (msg instanceof ControlFindParentMessage) ){
+	    ChannelId channelId = ((ControlFindParentMessage)msg).getChannelId();
+	    Channel channel = (Channel) channels.get(channelId);
           
-         if(channel == null)
-            return true; 
-         else
-            return channel.enrouteChannel(msg);
-      }
-      else if(msg instanceof ControlAttachMessage){
-         ChannelId channelId = ((ControlAttachMessage) msg).getChannelId();
-         Channel channel = (Channel) channels.get(channelId);
+	    if(channel == null)
+		return true; 
+	    else
+		return channel.enrouteChannel(msg);
+	}
+	/*
+	else if(msg instanceof ControlAttachMessage){
+	    ChannelId channelId = ((ControlAttachMessage) msg).getChannelId();
+	    Channel channel = (Channel) channels.get(channelId);
           
-         if(channel == null || channel.getSpareCapacityId() == null)
-            return true; 
-         else
-            return channel.enrouteChannel(msg);
-      }
-      return true;
+	    if(channel == null || channel.getSpareCapacityId() == null)
+		return true; 
+	    else
+		return channel.enrouteChannel(msg);
+	}
+	*/
+	return true;
     }
     
 } 

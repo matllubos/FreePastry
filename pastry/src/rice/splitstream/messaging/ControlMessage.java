@@ -17,6 +17,8 @@ import rice.pastry.security.*;
  */
 public abstract class ControlMessage extends ScribeMessage implements SplitStreamMessage{
 
+
+
    public ControlMessage(Address addr, NodeHandle source, NodeId tid, Credentials c)
    {
       super( addr,source,tid,c);
@@ -34,6 +36,7 @@ public abstract class ControlMessage extends ScribeMessage implements SplitStrea
     * @param s The stripe that sent this message
     */
    public abstract boolean handleForwardMessage( Scribe scribe, Topic topic );
+
 
    /**
     * @return A string representation of this object

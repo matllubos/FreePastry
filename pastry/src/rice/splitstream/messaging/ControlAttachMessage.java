@@ -5,6 +5,7 @@ import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 import rice.splitstream.*;
 import rice.scribe.*;
+import rice.scribe.messaging.*;
 import java.io.Serializable;
 
 /**
@@ -17,77 +18,86 @@ import java.io.Serializable;
  * @version $Id:
  * @author briang
  */
-public class ControlAttachMessage extends Message implements Serializable {
+//public class ControlAttachMessage extends Message implements Serializable {
+//public class ControlAttachMessage implements Serializable {
+public class ControlAttachMessage extends MessageAnycast{
 
-/**
- * NodeHandle of the source of this message
- */
-private NodeHandle m_source;
+    /**
+     * NodeHandle of the source of this message
+     */
+    private NodeHandle m_source;
 
-/**
- * Id of the channel this message pertains to
- */
-private ChannelId channel_id;
+    /**
+     * Id of the channel this message pertains to
+     */
+    private ChannelId channel_id;
+    
+    /** 
+     * Credentials.
+     */
+    Credentials credentials;
 
-/**
- * Constructor
- * @param addr The receiving address
- * @param m_source The originating node's handle
- * @param channel_id The id of the channel this pertains to
- */
-public ControlAttachMessage( Address addr, NodeHandle m_source, ChannelId channel_id )
-{
-    super( addr );
-    this.m_source = m_source;
-    this.channel_id = channel_id;
-}
+    /**
+     * Constructor
+     * @param addr The receiving address
+     * @param source The originating node's handle
+     * @param channel_id The id of the channel this pertains to
+     * @param cred The credentials for the message
+     */
+    public ControlAttachMessage( Address addr, NodeHandle source, ChannelId channel_id, Credentials cred )
+    {
+	super( addr, source, (NodeId)channel_id, cred );
+	this.m_source = source;
+	this.channel_id = channel_id;
+	this.credentials = cred;
+    }
 
-/**
- * This method is called by the application (here, the channel) upon
- * receipt.  It retrieves the list of stripeIds and generates a
- * response message to the originator of the request.
- *
- * @param channel The channel receiving the message
- * @param scribe The channel's Scribe object (unused)
- * @param source The originating node's NodeHandle
- * @return boolean Returns false if the receiver can handle this message
- */
-public boolean handleMessage( Channel channel, IScribe scribe, NodeHandle source )
-{
-      SpareCapacityId spcapid = channel.getSpareCapacityId();
-      ChannelId chanid = channel.getChannelId();
-      StripeId[] stripeid_array = channel.getStripes();
+    /**
+     * This method is called by the application (here, the channel) upon
+     * receipt.  It retrieves the list of stripeIds and generates a
+     * response message to the originator of the request.
+     *
+     * @param channel The channel receiving the message
+     * @param scribe The channel's Scribe object (unused)
+     * @return boolean Returns false if the receiver can handle this message
+     */
+    public boolean handleMessage( Channel channel, IScribe scribe )
+    {
+	NodeHandle source = this.getSource();
+	SpareCapacityId spcapid = channel.getSpareCapacityId();
+	ChannelId chanid = channel.getChannelId();
+	StripeId[] stripeid_array = channel.getStripes();
       
-      NodeId[] return_array = new NodeId[stripeid_array.length+2];
-      return_array[0] = (NodeId)chanid;
-      for ( int i=0; i<stripeid_array.length; i++ )
-      {
-          return_array[i+1] = stripeid_array[i];
-      }
-      return_array[return_array.length-1] = (NodeId)spcapid;
+	NodeId[] return_array = new NodeId[stripeid_array.length+2];
+	return_array[0] = (NodeId)chanid;
+	for ( int i=0; i<stripeid_array.length; i++ )
+	    {
+		return_array[i+1] = stripeid_array[i];
+	    }
+	return_array[return_array.length-1] = (NodeId)spcapid;
 
-      ControlAttachResponseMessage response = new ControlAttachResponseMessage( channel.getSplitStream().getAddress(), channel_id );
-      Credentials credentials = new PermissiveCredentials();
-      response.setContent( return_array );
-      if(return_array == null){
-	System.out.println("I'm not returning any data");
-      }else if(return_array.length <= 1){
-	System.out.println("Returning too little data");
-      }
+	ControlAttachResponseMessage response = new ControlAttachResponseMessage( channel.getSplitStream().getAddress(), channel_id );
 
-      channel.getSplitStream().routeMsgDirect( source, response, credentials, null );
-      return false;
-}
+	response.setContent( return_array );
+	if(return_array == null){
+	    System.out.println("I'm not returning any data");
+	}else if(return_array.length <= 1){
+	    System.out.println("Returning too little data");
+	}
 
-public NodeHandle getSource()
-{
-    return m_source;
-}
+	channel.getSplitStream().routeMsgDirect( source, response, credentials, null );
+	return false;
+    }
 
-public ChannelId getChannelId()
-{
-    return channel_id;
-}
+    public NodeHandle getSource()
+    {
+	return m_source;
+    }
+
+    public ChannelId getChannelId()
+    {
+	return channel_id;
+    }
 
 }
 

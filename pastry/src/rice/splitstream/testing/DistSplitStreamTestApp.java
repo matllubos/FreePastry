@@ -17,6 +17,7 @@ import rice.splitstream.messaging.*;
 import java.util.*;
 import java.security.*;
 import java.io.*;
+import java.net.*;
 
 /**
  * @(#) DistSplitStreamTestApp.java
@@ -40,10 +41,10 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
 
     private int m_numRecv;
 
-
     private int m_numStripes;
     private String m_name;
     private ChannelId m_channelId;
+    private int OUT_BW = 16;
     /**
      * The hashtable maintaining mapping from topicId to log object
      * maintained by this application for that topic.
@@ -68,11 +69,18 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
 
     public int m_testFreq;
 
+    /**
+     * Hashtable storing sequence numbers being published per stripe
+     */
+    public Hashtable m_stripe_seq = null;
+
     /** 
      * HashTable of channels created/attached by this application.
      * Contains mapping from channelId -> Channel objects
      */
     public Hashtable m_channels = null;
+
+    public int last_recv_time = 0;
 
     private static class DistSplitStreamTestAppAddress implements Address {
 	private int myCode = 0x8abc796c;
@@ -103,7 +111,7 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
 	m_numStripes = numStripes;
 	m_name = name;
 	m_channelId = channelId;
-	
+	m_stripe_seq = new Hashtable();
 
     }
 
@@ -199,7 +207,30 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
 	//ChannelId cid = (ChannelId) arg;
 
 	m_numRecv++;
-	System.out.println("Application "+m_appIndex+" received data "+m_numRecv);
+	byte[] data = (byte [])arg;
+	Byte bt = new Byte(data[0]);
+	StripeId stripeId = (StripeId)((Stripe)o).getStripeId();
+	String str = stripeId.toString().substring(3,4);
+	int recv_time = (int)System.currentTimeMillis();
+	int diff;
+	
+	if(last_recv_time == 0)
+	    diff = 0;
+	else
+	    diff = recv_time - last_recv_time;
+	last_recv_time = recv_time;
+
+	//System.out.println("Application "+m_appIndex+" received data "+m_numRecv);
+	/**
+	 * Logging style
+	 * <App_Index> <Host-name> <Stripe_num> <Seq_num> <Diff>
+	 */
+	try{
+	    System.out.println(m_appIndex+"\t"+InetAddress.getLocalHost().getHostName()+"\t"+str+"\t"+bt.intValue()+"\t"+diff);
+	} catch(UnknownHostException e){
+	    System.out.println(e);
+	}
+	
     }    
 
     public void splitstreamIsReady(){
@@ -221,7 +252,8 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
     public ChannelId createChannel(int numStripes, String name){
 	Channel channel = m_splitstream.createChannel(numStripes, name);
 	m_channels.put(channel.getChannelId(), channel);
-	channel.registerApp((ISplitStreamApp)this);
+	channel.registerApp((ISplitStreamApp)this);	
+	channel.configureChannel(OUT_BW);
 	if(channel.isReady())
 	    channelIsReady(channel.getChannelId());
 	return channel.getChannelId();
@@ -230,7 +262,8 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
     public void attachChannel(ChannelId channelId){
 	Channel channel = m_splitstream.attachChannel(channelId);
 	m_channels.put(channel.getChannelId(), channel);
-	channel.registerApp((ISplitStreamApp)this);
+	channel.registerApp((ISplitStreamApp)this);	
+	channel.configureChannel(OUT_BW);
 	if(channel.isReady())
 	    channelIsReady(channel.getChannelId());
 	return;
@@ -255,9 +288,18 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
 	    Stripe stripe = send.joinStripe(stripeId, this);
 	    OutputStream out = stripe.getOutputStream();
 	    System.out.println("Sending on Stripe " + stripeId);
-	    byte[] toSend = "Hello".getBytes() ;
+	    //	    byte[] toSend = "Hello".getBytes() ;
+
+	    Integer seq = (Integer)m_stripe_seq.get((StripeId)stripeId);
+	    if(seq == null)
+		seq = new Integer(0);
+	    byte[] toSend = new byte[1];
+	    toSend[0] = seq.byteValue();
+	    int seq_num = seq.intValue();
+	    seq = new Integer(seq_num + 1);
+	    m_stripe_seq.put(stripeId, seq);
 	    try{
-		out.write(toSend, 0, toSend.length );
+		out.write(toSend, 0, 1 );
 	    }
 	    catch(IOException e){
 		e.printStackTrace();

@@ -66,10 +66,9 @@ public class ControlDropMessage extends ControlMessage{
       return stripe_id;
    }
 
-   public ChannelId getChannelId()
-   {
-      return channel_id;
-   }
+    public ChannelId getChannelId(){
+	return channel_id;
+    }
 
    /**
     * Does nothing; necessary for superclass compatibility
@@ -95,22 +94,24 @@ public class ControlDropMessage extends ControlMessage{
    public void handleDeliverMessage( Scribe scribe, Topic topic, PastryNode thePastryNode, Channel channel )
    {
       Credentials c = new PermissiveCredentials();
-      ControlFindParentMessage msg = new ControlFindParentMessage( SplitStreamAddress.instance(), 
+      //System.out.println("Sending FindParentMessage from "+scribe.getLocalHandle().getNodeId()+" for stripe "+topic.getTopicId());
+      ControlFindParentMessage msg = new ControlFindParentMessage( scribe.getAddress(),
                                                                    scribe.getLocalHandle(),
                                                                    spare_id,
                                                                    c,
                                                                    (StripeId)topic.getTopicId(), channel_id );
-      channel.getSplitStream().routeMsg(spare_id, msg, c, null);
+      // set the path to null and parent as null.
+      scribe.anycast(spare_id, msg, c);
+      channel.getStripe( stripe_id ).setRootPath(null);
       scribe.setParent(null, topic.getTopicId());
+
       ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( this.getDestination(),
                                                                         0,
                                                                         spare_id,
                                                                         c, stripe_id, channel_id );
+
       channel.getStripe( stripe_id ).setIgnoreTimeout( false );
-      //System.out.println("Node "+scribe.getNodeId()+" sending FIND_PARENT_MESSAGE for "+(StripeId)topic.getTopicId());
       thePastryNode.scheduleMsg( timeoutMessage, timeout_len );
-      //System.out.println("setParent set to null called ");
-      //System.out.println("Node "+scribe.getNodeId()+ " dropped for "+topic.getTopicId());
    }
 
    /**

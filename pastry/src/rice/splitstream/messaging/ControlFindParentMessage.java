@@ -16,21 +16,12 @@ import java.io.Serializable;
  * capacity tree in an attempt to find a new parent.
  *
  * @(#) ControlFindParentMessage.java
- * @version $Id:
+ * @version $Id$
  * @author briang
  */
-public class ControlFindParentMessage extends Message implements Serializable
+public class ControlFindParentMessage extends MessageAnycast
+//public class ControlFindParentMessage implements Serializable
 {
-    /**
-     * Holds the list of NodeHandles to send to (used for DFS)
-     */
-    Vector send_to;
-
-    /**
-     * Holds the list of NodeHandles already examined (used for DFS)
-     */
-    Vector already_seen;
-
     /**
      * Stripe we are trying to attach to
      */
@@ -50,6 +41,16 @@ public class ControlFindParentMessage extends Message implements Serializable
      * The primal originator of this message
      */
     NodeHandle originalSource;
+    
+    /**
+     * Splitstream object on local node.
+     */
+    SplitStreamImpl ss;
+
+    /**
+     * Credentials
+     */
+    Credentials cred;
 
     /**
      * Constructs a FindParentMessage with the apropriate parameters
@@ -62,12 +63,11 @@ public class ControlFindParentMessage extends Message implements Serializable
      */
     public ControlFindParentMessage( Address addr, NodeHandle source, NodeId topicId, Credentials c, StripeId stripe_id, ChannelId channel_id)
     {
-	super( addr );
-	send_to = new Vector();
-	already_seen = new Vector();
+	super( addr, source, topicId, c );
 	this.stripe_id = stripe_id;
 	this.channel_id = channel_id;
 	this.originalSource = source;
+	this.cred = c;
     }
 
     public StripeId getStripeId()
@@ -88,7 +88,7 @@ public class ControlFindParentMessage extends Message implements Serializable
      */
     private boolean isInRootPath( IScribe scribe, NodeHandle source )
     {
-	//System.out.println("Printing path for stripe "+recv_stripe.getStripeId() );
+	//System.out.println("Printing path for stripe "+recv_stripe.getStripeId()+ " at "+((Scribe)scribe).getNodeId() );
 	//printRootPath(recv_stripe.getRootPath());
         if ( recv_stripe != null )
 	    {
@@ -112,156 +112,94 @@ public class ControlFindParentMessage extends Message implements Serializable
     /**
      * This method is called when the FindParentMessage is received by a node.  The node should
      * determine whether it is able to handle an additional child.  If so, it adds the message
-     * originator as a child and sends a FindParentResponse message back to the originator.  If
-     * not, it initiates a DFS of the spare capacity tree.
+     * originator as a child and sends a FindParentResponse message back to the originator and 
+     * returns true.  If not, it returns false which causes
+     * furthur DFS to take place.
      *
      * @param scribe The scribe group associated with this node
-     * @param topic The scribe topic this message pertains to (should always be the spare capacity id)
      * @param channel The channel this message is relevant to
      * @param stripe The splitstream stripe this message pertains to
-     * @return Returns false unless the receiving node is not part of the spare capacity tree
-     * scribe from this point on
+     * @return Returns true if local node was able to take on the child, else false
      */
-    public boolean handleMessage( Scribe scribe, Topic topic, Channel channel, Stripe stripe )
+    public boolean handleMessage(SplitStreamImpl splitstream, Scribe scribe, Channel channel, Stripe stripe )
     {
 	recv_stripe = stripe;
+	ss = splitstream;
         //System.out.println("Forwarding at " + scribe.getNodeId()+" for stipe "+stripe.getStripeId()+" from original source "+originalSource.getNodeId()+" topic "+topic);
         Credentials c = new PermissiveCredentials();
 	Topic stripeTopic = scribe.getTopic(recv_stripe.getStripeId());
 
-        /*Node is not part of the spare capacity tree, and don't have a list 
-          built up of anywhere else to forward this message to */
-	if( ( topic == null) && ( send_to.size() == 0 ) ){
-	    return true;
-	}
+	BandwidthManager bandwidthManager = channel.getBandwidthManager();
 	
-        /*Receiving node is not part of the spare capacity tree*/
-	if( topic == null){
-	    send_to.remove(0);
-
-            /*Something in the send to list, so we can forward the message along*/
-	    if ( send_to.size() > 0 ){
-		channel.getSplitStream().routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
-	    }
-            /*Something broke along the way, and we can't find our way back to the
-              spare capacity tree */
-	    else{
-		System.out.println("DFS FAILED :: No spare capacity");
-
-		Vector sendPath = (Vector)recv_stripe.getRootPath().clone();
-		sendPath.add(scribe.getLocalHandle());
-		
-		
-		channel.getSplitStream().routeMsgDirect( originalSource,
-					new ControlFindParentResponseMessage( channel.getSplitStream().getAddress(),
-									      scribe.getNodeHandle(),
-									      channel_id,
-									      c,
-									      new Boolean( false ), stripe_id,
-									      sendPath),
-					c,
-					null );
-	    }
-	}
-
-        /*Receiving node is part of the spare capacity tree*/
-	else {
-	    Vector children = scribe.getChildren(topic.getTopicId());
-	    Vector toAdd = new Vector();
-	    NodeHandle child;
+	/**
+	 * Conditions to check
+	 * 1) Should be part of stripe tree
+	 * 2) Can take child
+	 * 3) Is not generating cycles
+	 * 4) Not attaching to itself.
+	 */
+	if((stripeTopic != null) && ( bandwidthManager.canTakeChild( channel ) ) &&
+	   ( !isInRootPath( scribe, originalSource ) ) &&  
+	   ( !originalSource.equals( scribe.getLocalHandle())) &&
+	   recv_stripe.getState() != Stripe.STRIPE_DROPPED){
+	    Vector subscribedStripes = channel.getSubscribedStripes();
+	    //System.out.println("NODE "+scribe.getNodeId()+" TAKING ON CHILD "  + originalSource.getNodeId()+" for stripe " +recv_stripe.getStripeId());
+	    if(!subscribedStripes.contains(recv_stripe))
+		channel.stripeSubscriberAdded();
+	    if ( !scribe.addChild( originalSource, recv_stripe.getStripeId() ) )
+		{
+		    System.out.println( "Failure adding child "+originalSource.getNodeId()+" at "+
+					scribe.getNodeHandle().getNodeId() );
+		}
+	    Vector sendPath = (Vector)recv_stripe.getRootPath().clone();
+	    sendPath.add(scribe.getLocalHandle());
 	    
-	    /*Check if all my children are already visited or not,
-	      if visited, then I will check if I can take this child
-	      and if not, return to parent.*/
-	    for(int i = 0; i < children.size(); i++){
-		child = (NodeHandle)children.elementAt(i);
-		if(!already_seen.contains(child) && !send_to.contains(child))
-		    toAdd.add(child);
-	    }
-	    /*My children have not been visited, so adding them*/
-	    if(toAdd.size() > 0){
-		if(!send_to.contains(scribe.getLocalHandle()))
-		    send_to.add( 0, scribe.getLocalHandle());
-		send_to.addAll(0, toAdd);
-		channel.getSplitStream().routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
-	    }
-            /*Visited children, so now time to check my own compatibility*/
-	    else {
-		BandwidthManager bandwidthManager = channel.getBandwidthManager();
-		
-		/**
-		 * Conditions to check
-		 * 1) Should be part of stripe tree
-		 * 2) Can take child
-		 * 3) Is not generating cycles
-		 * 4) Not attaching to itself.
-		 */
-		if((stripeTopic != null) && ( bandwidthManager.canTakeChild( channel ) ) &&
-		   ( !isInRootPath( scribe, originalSource ) ) &&  ( !originalSource.equals( scribe.getLocalHandle()))){
-			Vector subscribedStripes = channel.getSubscribedStripes();
-			//System.out.println("NODE "+channel.getNodeId()+" TAKING ON CHILD "  + originalSource.getNodeId()+" for stripe " +recv_stripe.getStripeId());
-			if(!subscribedStripes.contains(recv_stripe))
-			    channel.stripeSubscriberAdded();
-			if ( !scribe.addChild( originalSource, recv_stripe.getStripeId() ) )
-                        {
-                            System.out.println( "Failure adding child "+originalSource.getNodeId()+" at "+
-                                               scribe.getNodeHandle().getNodeId() );
-			}
-			Vector sendPath = (Vector)recv_stripe.getRootPath().clone();
-			sendPath.add(scribe.getLocalHandle());
+	    
+	    channel.getSplitStream().routeMsgDirect( originalSource,
+						     new ControlFindParentResponseMessage( channel.getSplitStream().getAddress(),
+											   scribe.getNodeHandle(),
+											   channel_id,
+											   c,
+											   new Boolean( true ), stripe_id,
+											   sendPath),
+						     c,
+						     null );
 
 
-			channel.getSplitStream().routeMsgDirect( originalSource,
-						new ControlFindParentResponseMessage( channel.getSplitStream().getAddress(),
-										      scribe.getNodeHandle(),
-										      channel_id,
+	    channel.getSplitStream().routeMsgDirect( originalSource,
+						     new ControlPropogatePathMessage( channel.getSplitStream().getAddress(),
+										      channel.getSplitStream().getNodeHandle(),
+										      stripe_id,
 										      c,
-										      new Boolean( true ), stripe_id,
-										      sendPath),
-						c,
-						null );
-			//System.out.println("Node "+scribe.getNodeId()+ " taking the child "+originalSource.getNodeId());
-		}
-                /* Have not visited all children, so want to send to them before checking
-                   my own compatibility*/
-		else {
-		    /*Send to next node in send_to list if this
-		      is not empty, else to parent*/
-		    already_seen.add(scribe.getLocalHandle());
-		    if(send_to.contains(scribe.getLocalHandle())){
-			//System.out.println("Send to contains local node -- FINE");
-			send_to.remove(0);
-		    }
-		    if(send_to.size() > 0)
-			channel.getSplitStream().routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
-                    /*Sending to parent if not root*/
-		    else {
-			if ( !scribe.isRoot( topic.getTopicId() ) )
-			    channel.getSplitStream().routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
-                        /*This node is the root, which means no spare capacity exists (DFS failed)*/	  
-			else {												
-			    System.out.println("DFS FAILED :: No spare capacity");
-
-			    Vector sendPath = (Vector)recv_stripe.getRootPath().clone();
-			    sendPath.add(scribe.getLocalHandle());
-			    
-			    
-			    channel.getSplitStream().routeMsgDirect( originalSource,
-						    new ControlFindParentResponseMessage( channel.getSplitStream().getAddress(),
-											  scribe.getNodeHandle(),
-											  channel_id,
-											  c,
-											  new Boolean( false ), stripe_id,
-											  sendPath),
-						    c,
-						    null );
-			}
-		    }
-		}
-	    }
+										      sendPath,
+										      channel_id ),
+						     c,
+						     null );
+	    
+	    //System.out.println("Node "+scribe.getNodeId()+ " taking the child "+originalSource.getNodeId());
+	    return false;
 	}
-	return false;
+	else
+	    return true;
     }
+
+    public void faultHandler(){
+	System.out.println("ControlFindParentMessage -- DFS Failed. Noone could take me as a child.");
+	
+	Vector sendPath = (Vector)recv_stripe.getRootPath().clone();
+	sendPath.add(((Scribe)ss.getScribe()).getLocalHandle());
+
+	ss.routeMsgDirect( originalSource,
+			   new ControlFindParentResponseMessage( ss.getAddress(),
+								 ((Scribe)ss.getScribe()).getNodeHandle(),
+								 channel_id,
+								 cred,
+								 new Boolean( false ), stripe_id,
+								 sendPath),
+			   cred,
+			   null );
+    }
+
 
     public String toString()
     {

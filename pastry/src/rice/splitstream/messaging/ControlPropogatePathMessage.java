@@ -13,7 +13,7 @@ import java.util.Vector;
  * of each node it encounters along its path.
  *
  * @(#) ControlPropogatePathMessage.java
- * @version $Id:
+ * @version $Id$
  * @author briang
  */
 public class ControlPropogatePathMessage extends Message{
@@ -49,7 +49,7 @@ public class ControlPropogatePathMessage extends Message{
     */
    public ControlPropogatePathMessage( Address addr, NodeHandle source, NodeId topicId, Credentials c, Vector path, ChannelId channel_id )
    {
-      super( addr );
+       super( addr );
       this.path = path;
       this.source = source;
       this.stripe_id = (StripeId)topicId;
@@ -90,7 +90,7 @@ public class ControlPropogatePathMessage extends Message{
       {
 	  if(path.contains((NodeHandle)children.get(i))){
 	      // Cycle dude..
-	      //System.out.println("PROPOGATE_PATH :: Cycle detected at "+scribe.getNodeId()+ " with child "+((NodeHandle)children.get(i)).getNodeId()+" for stripe "+stripe.getStripeId());
+	      System.out.println("PROPOGATE_PATH :: Cycle detected at "+scribe.getNodeId()+ " with child "+((NodeHandle)children.get(i)).getNodeId()+" for stripe "+stripe.getStripeId());
 	      channel.getSplitStream().routeMsgDirect((NodeHandle)children.get(i), new ControlDropMessage( channel.getSplitStream().getAddress(),
 								     channel.getSplitStream().getNodeHandle(),
 								     stripe.getStripeId(),

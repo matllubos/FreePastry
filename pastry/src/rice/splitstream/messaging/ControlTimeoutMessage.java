@@ -142,8 +142,9 @@ public class ControlTimeoutMessage extends Message implements Serializable
             {
                 if ( msg_type == ATTACH )
                 {
-        	    ControlAttachMessage attachMessage = new ControlAttachMessage( channel.getSplitStream().getAddress(), scribe.getLocalHandle(), channel_id );
-                    channel.getSplitStream().routeMsg( dest, attachMessage, c, null );
+        	    ControlAttachMessage attachMessage = new ControlAttachMessage( scribe.getAddress(), scribe.getLocalHandle(), channel_id, c );
+                    //channel.getSplitStream().routeMsg( dest, attachMessage, c, null );
+		    scribe.anycast(channel_id, attachMessage, c);
                     ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( channel.getSplitStream().getAddress(),
                                                                                       num_fails+1,
                                                                                       dest,
@@ -153,12 +154,13 @@ public class ControlTimeoutMessage extends Message implements Serializable
                 }
                 else if ( msg_type == FIND_PARENT )
                 {
-                    ControlFindParentMessage msg = new ControlFindParentMessage( SplitStreamAddress.instance(), 
+                    ControlFindParentMessage msg = new ControlFindParentMessage( scribe.getAddress(), //SplitStreamAddress.instance(), 
                                                                                  scribe.getLocalHandle(),
                                                                                  dest,
                                                                                  c,
                                                                                  stripe_id, channel_id );
-                    channel.getSplitStream().routeMsg( dest, msg, c, null ); 
+                    //channel.getSplitStream().routeMsg( dest, msg, c, null ); 
+		    scribe.anycast(dest, msg, c);
                     ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( SplitStreamAddress.instance(),
                                                                                       num_fails+1,
                                                                                       dest,
