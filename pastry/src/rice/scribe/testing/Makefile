@@ -8,9 +8,9 @@ SOURCE  = \
 	CSPair.java \
 	ScribeMaintenanceTestApp.java \
 	DirectScribeMaintenanceTest.java \
-	RMITopicLog.java\
-	RMIScribeMaintenanceTestApp.java \
-	RMIScribeMaintenanceTest.java
+	DistTopicLog.java\
+	DistScribeRegrTestApp.java \
+	DistScribeRegrTest.java
 
 RMI_SOURCE =
 
