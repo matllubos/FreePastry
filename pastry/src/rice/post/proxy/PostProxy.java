@@ -263,6 +263,11 @@ public class PostProxy {
   protected LogManager logManager;
   
   /**
+   * The parameters we are running with
+   */
+  protected Parameters parameters;
+  
+  /**
     * Method which sees if we are using a liveness monitor, and if so, sets up this
    * VM to have a client liveness monitor.
    *
@@ -1290,7 +1295,7 @@ public class PostProxy {
   
   protected void start() {
     try {
-      Parameters parameters = new Parameters(PROXY_PARAMETERS_NAME);
+      parameters = new Parameters(PROXY_PARAMETERS_NAME);
       start(parameters);
       updateParameters(parameters);
       
@@ -1508,7 +1513,8 @@ public class PostProxy {
     public KillPanel() {
       JButton restart = new JButton("Restart");
       JButton kill = new JButton("Kill");
-      JButton status = new JButton("Status");
+      JButton status = new JButton("Stats");
+      JButton configuration = new JButton("Prefs");
       
       restart.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
@@ -1545,20 +1551,31 @@ public class PostProxy {
         }
       });
       
+      configuration.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          new ConfigurationFrame(parameters);
+        }
+      });
+      
       GridBagLayout layout = new GridBagLayout();
       setLayout(layout);
       
+      GridBagConstraints a = new GridBagConstraints();
+      layout.setConstraints(configuration, a);      
+      add(configuration);
+      
       GridBagConstraints b = new GridBagConstraints();
-      layout.setConstraints(restart, b);      
+      b.gridx=1;
+      layout.setConstraints(status, b);      
       add(status);
       
       GridBagConstraints c = new GridBagConstraints();
-      c.gridx=1;
+      c.gridx=2;
       layout.setConstraints(restart, c);      
       add(restart);
       
       GridBagConstraints d = new GridBagConstraints();
-      d.gridx=2;
+      d.gridx=3;
       layout.setConstraints(kill, d);      
       add(kill);
     }

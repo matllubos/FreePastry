@@ -214,6 +214,7 @@ public class EmailProxy extends PostProxy {
         String pass = parameters.getStringParameter("email_ssl_keystore_password");
         String sendersA = parameters.getStringParameter("email_allowed_senders");
         String server = parameters.getStringParameter("email_smtp_server");
+        
         String[] senders = new String[0];
         
         if ((sendersA != null) && (sendersA.length() > 0))

@@ -327,9 +327,11 @@ public class Proxy {
           long start = System.currentTimeMillis();
           
           Thread.sleep(timeout);
+          
           if (! answered) {
-            System.err.println("SERIOUS ERROR: Process did not respond to liveness check - started at " + start + " now " + System.currentTimeMillis());
+            System.err.println("SERIOUS ERROR: Process did not respond to liveness check - started at " + start + " now " + System.currentTimeMillis() + " - killing process");
             process.destroy();
+            die();
           }
           
           Thread.sleep(sleep);

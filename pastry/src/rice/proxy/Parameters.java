@@ -98,8 +98,17 @@ public class Parameters {
   }
   
   protected void setProperty(String name, String value) {
-    properties.setProperty(name, value);
-    writeFile();
+    if (defaults.getProperty(name).equals(value)) {
+      if (properties.getProperty(name) != null) {
+        properties.remove(name);
+        writeFile();
+      }
+    } else {
+      if ((properties.getProperty(name) == null) || (! properties.getProperty(name).equals(value))) {
+        properties.setProperty(name, value);
+        writeFile();
+      }
+    }
   }
   
   public void removeParameter(String name) {
