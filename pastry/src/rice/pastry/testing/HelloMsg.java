@@ -20,7 +20,7 @@ import rice.pastry.socket.SocketManager;
  */
 public class HelloMsg extends Message {
   private transient boolean ackReceived = false;
-	public transient int state;
+//	public transient int state;
   public NodeHandle source;
   public NodeHandle intermediateSource;
     public Id target;
@@ -52,7 +52,7 @@ public class HelloMsg extends Message {
     } else {
       s+=" routed";
     }
-    s += " lastAt:"+intermediateSource+" nextHop:"+nextHop+" from:" + source + " to:" + target +"<"+state+">"; // + " received by "+actualReceiver+"}";
+    s += " lastAt:"+intermediateSource+" nextHop:"+nextHop+" from:" + source + " to:" + target;// +"<"+state+">"; // + " received by "+actualReceiver+"}";
 //    System.out.println("HM.getInfo():1");
     /*
     if (receivers != null) {
