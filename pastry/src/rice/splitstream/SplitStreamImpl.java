@@ -34,7 +34,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream{
     * @return an instance of a Channel class. 
     */
    public Channel createChannel(int numStripes){
-	return (new Channel(numStripes, scribe, getCredentials()));
+	return (new Channel(numStripes, scribe, getCredentials(),null));
    }
    /**
     * This method is used by peers who wish to listen to content distributed 

@@ -47,7 +47,7 @@ public abstract class BandwidthManager{
       * system can take on another child.
       * @return whether we can take on another child 
       */
-      public boolean canTakeChild(Channnel channel, Stripe s){return false;}
+      public boolean canTakeChild(Channel channel, Stripe s){return false;}
     /**
      * Registers a channel within the system with the bandwidth manager
      * @param the channel to be added
