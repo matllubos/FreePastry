@@ -170,6 +170,10 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
     try { wait(ms); } catch (InterruptedException e) {}
   }
 
+  public PastryNode newNode(NodeHandle bootstrap) {
+    return newNode(bootstrap, nidFactory.generateNodeId());
+  }
+  
   /**
    * Makes many policy choices and manufactures a new RMIPastryNode.
    * Creates a series of artifacts to adorn the node, like a security
@@ -181,9 +185,7 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
    *
    * @param bootstrap Node handle to bootstrap from.
    */
-  public PastryNode newNode(final NodeHandle bootstrap) {
-    NodeId nodeId = nidFactory.generateNodeId();
-
+  public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId) {
     final RMIPastryNode pn = new RMIPastryNode(nodeId);
 
     RMINodeHandle localhandle = new RMINodeHandle(null, nodeId);

@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate 
+"FreePastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -34,34 +34,31 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry;
+package rice.pastry.multiring.messaging;
 
-import rice.pastry.messaging.*;
-import rice.pastry.security.*;
-import rice.pastry.leafset.*;
+import rice.pastry.*;
+import rice.pastry.multiring.*;
 import rice.pastry.routing.*;
 
-import java.util.*;
-
 /**
- * The interface to an object which can construct PastryNodes.
+ * A class representing a ring forward request
  *
  * @version $Id$
  *
- * @author Andrew Ladd
+ * @author Alan Mislove
  */
+public class RingForwardMessage extends MultiRingApplMessage {
 
-public interface PastryNodeFactory {
-
-  /**
-   * Call this to construct a new node of the type chosen by the factory.
-   */
-  public PastryNode newNode(NodeHandle bootstrap);
+  private RouteMessage message;
 
   /**
-   * Call this to construct a new node of the type chosen by the factory, with
-   * the given nodeId.
+   * Constructor
    */
-  public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId);
-  
+  public RingForwardMessage(RouteMessage message) {
+    this.message = message;
+  }
+
+  public RouteMessage getMessage() {
+    return message;
+  }
 }

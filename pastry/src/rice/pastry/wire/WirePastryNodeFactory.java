@@ -133,15 +133,24 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
   }
 
   /**
+    * Method which creates a Pastry node from the next port
+    * with a randomly generated NodeId.
+    *
+    * @param bootstrap Node handle to bootstrap from.
+    * @return A node with a random ID and next port number.
+    */
+  public PastryNode newNode(NodeHandle bootstrap) {
+    return newNode(bootstrap, nidFactory.generateNodeId());
+  }
+  
+  /**
    * Method which creates a Pastry node from the next port
    * with a randomly generated NodeId.
    *
    * @param bootstrap Node handle to bootstrap from.
    * @return A node with a random ID and next port number.
    */
-  public PastryNode newNode(final NodeHandle bootstrap) {
-    NodeId nodeId = nidFactory.generateNodeId();
-
+  public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId) {
     final WirePastryNode pn = new WirePastryNode(nodeId);
 
     SelectorManager sManager = new SelectorManager(pn);

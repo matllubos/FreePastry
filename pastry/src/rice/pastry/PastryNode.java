@@ -86,7 +86,7 @@ public abstract class PastryNode implements MessageReceiver {
      * @param ls Leaf set.
      * @param rt Routing table.
      */
-    public final void setElements(NodeHandle lh,
+    public void setElements(NodeHandle lh,
 				  PastrySecurityManager sm,
 				  MessageDispatch md,
 				  LeafSet ls,
@@ -98,18 +98,18 @@ public abstract class PastryNode implements MessageReceiver {
 	routeSet = rt;
     }
     
-    public final NodeHandle getLocalHandle() { return localhandle; }
+    public NodeHandle getLocalHandle() { return localhandle; }
     
-    public final NodeId getNodeId() { return myNodeId; }
+    public NodeId getNodeId() { return myNodeId; }
     
-    public final boolean isReady() { return ready; }
+    public boolean isReady() { return ready; }
     
     /**
      * Overridden by derived classes, and invoked when the node has
      * joined successfully.
      */
     
-    protected abstract void nodeIsReady();
+    public abstract void nodeIsReady();
     
     /**
      * Overridden by derived classes to initiate the join process
@@ -118,7 +118,7 @@ public abstract class PastryNode implements MessageReceiver {
     public abstract void initiateJoin(NodeHandle bootstrap);
 
 
-    public final void setReady() {
+    public void setReady() {
 	//System.out.println("setready() called on pastry node" + getNodeId());  
 
 	// It is possible to have the setReady() invoked more than once if the message
@@ -149,7 +149,7 @@ public abstract class PastryNode implements MessageReceiver {
      *
      * @return true if the local node is currently the closest to the key.
      */
-    public final boolean isClosest(NodeId key) {
+    public boolean isClosest(NodeId key) {
 	
 	if(leafSet.mostSimilar(key) == 0)
 	    return true;
@@ -157,10 +157,9 @@ public abstract class PastryNode implements MessageReceiver {
 	    return false;
     }
     
-    public final LeafSet getLeafSet() { return leafSet; }
+    public LeafSet getLeafSet() { return leafSet; }
     
-    public final RoutingTable getRoutingTable() { return routeSet; }
-    
+    public RoutingTable getRoutingTable() { return routeSet; }
     
     /**
      * Add a leaf set observer to the Pastry node.
@@ -168,7 +167,7 @@ public abstract class PastryNode implements MessageReceiver {
      * @param o the observer.
      */
 
-    public final void addLeafSetObserver(Observer o) { leafSet.addObserver(o); }
+    public void addLeafSetObserver(Observer o) { leafSet.addObserver(o); }
     
     /**
      * Delete a leaf set observer from the Pastry node.
@@ -176,7 +175,7 @@ public abstract class PastryNode implements MessageReceiver {
      * @param o the observer.
      */
     
-    public final void deleteLeafSetObserver(Observer o) { leafSet.deleteObserver(o); }
+    public void deleteLeafSetObserver(Observer o) { leafSet.deleteObserver(o); }
     
     /**
      * Add a route set observer to the Pastry node.
@@ -184,7 +183,7 @@ public abstract class PastryNode implements MessageReceiver {
      * @param o the observer.
      */
     
-    public final void addRouteSetObserver(Observer o) { routeSet.addObserver(o); }
+    public void addRouteSetObserver(Observer o) { routeSet.addObserver(o); }
     
     
     /**
@@ -193,14 +192,14 @@ public abstract class PastryNode implements MessageReceiver {
      * @param o the observer.
      */
     
-    public final void deleteRouteSetObserver(Observer o) { routeSet.deleteObserver(o); }
+    public void deleteRouteSetObserver(Observer o) { routeSet.deleteObserver(o); }
     
     /**
      * message receiver interface. synchronized so that the external message
      * processing thread and the leafset/route maintenance thread won't
      * interfere with application messages.
      */
-    public final synchronized void receiveMessage(Message msg) {
+    public synchronized void receiveMessage(Message msg) {
 	LocalNodeI.pending.setPending(msg.getStream(), this);
 	
 	if (mySecurityManager.verifyMessage(msg) == true)
@@ -215,7 +214,7 @@ public abstract class PastryNode implements MessageReceiver {
      * @param receiver the message receiver.
      */
     
-    public final void registerReceiver(Credentials cred, Address address, MessageReceiver receiver) {
+    public void registerReceiver(Credentials cred, Address address, MessageReceiver receiver) {
 	if (mySecurityManager.verifyAddressBinding(cred, address) == true)
 	    myMessageDispatch.registerReceiver(address, receiver);
 	else throw new Error("security failure");
@@ -227,7 +226,7 @@ public abstract class PastryNode implements MessageReceiver {
      * @param app the application
      */
     
-    public final void registerApp(PastryAppl app) {
+    public void registerApp(PastryAppl app) {
 	if(isReady())
 	    app.notifyReady();
 	apps.add(app);

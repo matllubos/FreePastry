@@ -83,7 +83,7 @@ public class DirectPastryNode extends PastryNode
     /**
      * Called from PastryNode after the join succeeds.
      */
-    protected final void nodeIsReady() { }
+    public final void nodeIsReady() { }
 
 
     /**

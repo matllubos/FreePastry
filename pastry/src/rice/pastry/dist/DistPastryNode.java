@@ -99,7 +99,7 @@ public abstract class DistPastryNode extends PastryNode {
     /**
      * Called from PastryNode when the join succeeds.
      */
-    protected void nodeIsReady() {
+    public void nodeIsReady() {
 	if (joinEvent != null) joinEvent.cancel(); // cancel join retransmissions
     }
 

@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate 
+"FreePastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -34,34 +34,38 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry;
+package rice.pastry.multiring.messaging;
 
-import rice.pastry.messaging.*;
-import rice.pastry.security.*;
-import rice.pastry.leafset.*;
-import rice.pastry.routing.*;
-
-import java.util.*;
+import rice.pastry.*;
+import rice.pastry.multiring.*;
 
 /**
- * The interface to an object which can construct PastryNodes.
+ * A class representing a reponse ring lookup request, which is sent directly to
+ * the node which sent the lookup.
  *
  * @version $Id$
  *
- * @author Andrew Ladd
+ * @author Alan Mislove
  */
+public class RingLookupResponseMessage extends MultiRingApplMessage {
 
-public interface PastryNodeFactory {
+  private NodeHandle source;
 
-  /**
-   * Call this to construct a new node of the type chosen by the factory.
-   */
-  public PastryNode newNode(NodeHandle bootstrap);
-
-  /**
-   * Call this to construct a new node of the type chosen by the factory, with
-   * the given nodeId.
-   */
-  public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId);
+  private RingId ringId;
   
+  /**
+  * Constructor
+   */
+  public RingLookupResponseMessage(NodeHandle source, RingId ringId) {
+    this.source = source;
+    this.ringId = ringId;
+  }
+
+  public NodeHandle getSource() {
+    return source;
+  }
+
+  public RingId getRingId() {
+    return ringId;
+  }
 }

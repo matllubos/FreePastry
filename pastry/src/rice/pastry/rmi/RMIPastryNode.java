@@ -165,7 +165,7 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
     * the node into the RMI registry. Happens after the registry lookup, so
     * the node never ends up discovering itself.
      */
-    protected final void nodeIsReady() {
+    public final void nodeIsReady() {
 	//System.out.println("RMIPastryNode:nodeIsReady()");
 	super.nodeIsReady();
 

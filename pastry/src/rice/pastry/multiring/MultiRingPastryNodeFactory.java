@@ -1,6 +1,6 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate 
+"FreePastry" Peer-to-Peer Application Development Substrate
 
 Copyright 2002, Rice University. All rights reserved.
 
@@ -34,34 +34,59 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry;
+package rice.pastry.multiring;
 
-import rice.pastry.messaging.*;
-import rice.pastry.security.*;
-import rice.pastry.leafset.*;
-import rice.pastry.routing.*;
+import rice.pastry.*;
 
-import java.util.*;
+import java.net.*;
 
 /**
- * The interface to an object which can construct PastryNodes.
+ * This class represents a factory for MultiRing pastry nodes.  In order to
+ * use this class, one should use the static method getMultiRingFactory(),
+ * which will return a new factory ready for use.
  *
  * @version $Id$
  *
- * @author Andrew Ladd
+ * @author Alan Mislove
  */
+public class MultiRingPastryNodeFactory implements PastryNodeFactory {
 
-public interface PastryNodeFactory {
-
-  /**
-   * Call this to construct a new node of the type chosen by the factory.
-   */
-  public PastryNode newNode(NodeHandle bootstrap);
-
-  /**
-   * Call this to construct a new node of the type chosen by the factory, with
-   * the given nodeId.
-   */
-  public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId);
+  private PastryNodeFactory factory;
   
+  public MultiRingPastryNodeFactory(PastryNodeFactory factory) {
+    this.factory = factory;
+  }
+
+  public PastryNode newNode(NodeHandle bootstrap) {
+    MultiRingPastryNode node = new MultiRingPastryNode(factory.newNode(bootstrap));
+    node.setBootstrap(bootstrap);
+
+    return node;
+  }
+
+  public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId) {
+    return newNode(bootstrap, nodeId, true);
+  }
+
+  private PastryNode newNode(NodeHandle bootstrap, NodeId nodeId, boolean setDone) {
+    MultiRingPastryNode node = new MultiRingPastryNode(factory.newNode(bootstrap, nodeId));
+
+    if (setDone) {
+      node.setBootstrap(bootstrap);
+    }
+    
+    return node;
+  }
+
+  public PastryNode joinRing(MultiRingPastryNode parentNode, NodeHandle bootstrap) {
+    MultiRingPastryNode childNode = (MultiRingPastryNode) newNode(bootstrap, parentNode.getNodeId(), false);
+
+    parentNode.addChildPastryNode(childNode);
+    childNode.setParentPastryNode(parentNode);
+
+    childNode.setBootstrap(bootstrap);
+    
+    return childNode;
+  }
 }
+

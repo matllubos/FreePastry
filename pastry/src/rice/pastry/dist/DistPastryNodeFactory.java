@@ -74,7 +74,7 @@ public abstract class DistPastryNodeFactory implements PastryNodeFactory {
    *
    * @param The location of the remote node.
    */
-  protected abstract NodeHandle generateNodeHandle(InetSocketAddress address);
+  public abstract NodeHandle generateNodeHandle(InetSocketAddress address);
 
   /**
    * Method which a client should use in order to get a bootstrap node from the
@@ -99,6 +99,14 @@ public abstract class DistPastryNodeFactory implements PastryNodeFactory {
    * @param bootstrap Node handle to bootstrap from.
    */
   public abstract PastryNode newNode(NodeHandle bootstrap);
+
+  /**
+   * Generates a new pastry node with the specified NodeId using the bootstrap
+   * bootstrap.
+   *
+   * @param bootstrap Node handle to bootstrap from.
+   */
+  public abstract PastryNode newNode(NodeHandle bootstrap, NodeId nodeId);
 
   /**
    * Static method which is designed to be used by clients needing a

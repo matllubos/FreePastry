@@ -1,8 +1,8 @@
 /*************************************************************************
 
-"FreePastry" Peer-to-Peer Application Development Substrate 
+"Free Pastry" Peer-to-Peer Application Development Substrate 
 
-Copyright 2002, Rice University. All rights reserved.
+Copyright 2002, Rice University. All rights reserved. 
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -34,34 +34,50 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.pastry;
+package rice.pastry.multiring;
 
-import rice.pastry.messaging.*;
-import rice.pastry.security.*;
-import rice.pastry.leafset.*;
-import rice.pastry.routing.*;
-
-import java.util.*;
+import rice.pastry.*;
 
 /**
- * The interface to an object which can construct PastryNodes.
+ * This class represents a nodeId, combined with a ring-identfying Id.  This
+ * class is designed to be backwards-compatible with other applications, as all
+ * normal methods do what they would before.  Applications can use the
+ * getRingId() methods in order to manipulate the ring identifier.
  *
  * @version $Id$
  *
- * @author Andrew Ladd
+ * @author Alan Mislove
  */
 
-public interface PastryNodeFactory {
+public class RingId extends NodeId {
 
-  /**
-   * Call this to construct a new node of the type chosen by the factory.
-   */
-  public PastryNode newNode(NodeHandle bootstrap);
-
-  /**
-   * Call this to construct a new node of the type chosen by the factory, with
-   * the given nodeId.
-   */
-  public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId);
+  private NodeId ringId;
   
+  public RingId(byte material[], NodeId ringId) {
+    super(material);
+    this.ringId = ringId;
+  }
+
+  public RingId(int material[], NodeId ringId) {
+    super(material);
+    this.ringId = ringId;
+  }
+
+  public RingId(NodeId nodeId, NodeId ringId) {
+    super(nodeId.copy());
+    this.ringId = ringId;
+  }
+
+  public RingId(NodeId ringId) {
+    super();
+    this.ringId = ringId;
+  }
+
+  public NodeId getRingId() {
+    return ringId;
+  }
+
+  public String toString() {
+    return super.toString() + " [" + ringId + "]";
+  }
 }
