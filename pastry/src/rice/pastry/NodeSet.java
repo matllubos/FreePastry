@@ -140,6 +140,10 @@ public class NodeSet implements NodeSetI, Serializable {
 	return (getIndex(nid) >= 0);
     }
 
+    private boolean memberId(rice.p2p.commonapi.Id id) {
+	return (getIndexId(id) >= 0);
+    }
+
     
     /**
      * Removes a node id and its handle from the set.
@@ -176,18 +180,22 @@ public class NodeSet implements NodeSetI, Serializable {
      */
 
     public int getIndex(NodeId nid) {
+        return getIndexId(nid);
+    }
+
+    private int getIndexId(rice.p2p.commonapi.Id nid) {
 	NodeHandle h;	
 
 	for (int i=0; i<set.size(); i++) {
 	    try {
 		h = (NodeHandle) set.elementAt(i);
-		if (h.getNodeId().equals(nid)) return i;
+		if (h.getNodeId().equals(nid)) 
+                    return i;
 	    } catch (Exception e) {}
 	}
 	
 	return -1;
     }
-
 
     /*
      * additional methods unique to NodeSet
@@ -321,7 +329,7 @@ public class NodeSet implements NodeSetI, Serializable {
      * @return true if that node id is in the set, false otherwise.
      */
     public boolean memberHandle(rice.p2p.commonapi.Id id) {
-      return member((NodeId) id);
+      return memberId(id);
     }
     
     /**
