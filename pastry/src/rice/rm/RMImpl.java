@@ -209,14 +209,12 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	    //System.out.println("MyRange= " + myRange);
 	    //System.out.println("Need to do initial fetching of keys from " + getNodeId());
 	     
-	    if(!DirectRMRegrTest.setupDone)
-		return true;
-
 
 	    IdRange requestRange = myRange;
 	    
 	    Vector rangeSet = new Vector();
-	    rangeSet.add(requestRange);
+	    if((requestRange!=null) && !requestRange.isEmpty())
+		rangeSet.add(requestRange);
 	    NodeSet set = requestorSet(rangeSet);
 	    for(int i=0; i<set.size(); i++) {
 	       
@@ -242,9 +240,6 @@ public class RMImpl extends CommonAPIAppl implements RM {
      * This is called when the underlying pastry node is ready.
      */
     public void notifyReady() {
-	// Temporary bug-fix
-	while(simulate());
-
 	//System.out.println("notifyReady called for RM application on" + getNodeId()); 
 	m_ready = true;
 
@@ -257,14 +252,12 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	    //System.out.println("MyRange= " + myRange);
 	    //System.out.println("Need to do initial fetching of keys from " + getNodeId());
 
-	    if(!DirectRMRegrTest.setupDone)
-		return;
-
 
 	    IdRange requestRange = myRange;
 	    
 	    Vector rangeSet = new Vector();
-	    rangeSet.add(requestRange);
+	    if((requestRange!=null) && !requestRange.isEmpty())
+		rangeSet.add(requestRange);
 	    NodeSet set = requestorSet(rangeSet);
 	    for(int i=0; i<set.size(); i++) {
 	       
@@ -347,11 +340,8 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	myRange = range(getLocalHandle(), rFactor, getNodeId(), true);
 
 
-	if(!DirectRMRegrTest.setupDone)
-	    return;
-
 	
-	if(myRange.equals(prev_Range))
+	if((myRange== null) || (prev_Range == null) || myRange.equals(prev_Range))
 	    return;
 
 	
@@ -468,12 +458,6 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	return requestors;
     }
     
-
-
-
-    private boolean simulate() { 
-	return DirectRMRegrTest.simulator.simulate(); 
-    }
 
 }
 
