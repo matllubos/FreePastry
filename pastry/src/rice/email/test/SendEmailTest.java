@@ -23,10 +23,17 @@ public class SendEmailTest extends EmailTest {
 	public void runSendReceiveTest() {
 
 		// Create the sender
-		EmailService sender = this.createEmailService("user1");
+		EmailService sender;
+		EmailService receiver;
 
-		// create the receiver
-		EmailService receiver = this.createEmailService("user2");
+		EmailService[] services;
+
+		services = this.createEmailServices(new String[]
+		    {"user1", "user2"});
+
+		sender = services[0];
+		receiver = services[1];
+
 		receiver.addObserver(new EmailReceiver());
 
 		// create an email to send

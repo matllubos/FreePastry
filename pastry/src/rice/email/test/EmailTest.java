@@ -21,59 +21,86 @@ public class EmailTest {
 
 	private InetSocketAddress firstAddress = null;	
 
-	protected EmailService createEmailService(String username) {
+	protected EmailService[] createEmailServices(String[] usernames) {
 
-		try {
+	    final int nodeNum = usernames.length;
+	    
+	    PastryNode[] localNodes = new PastryNode[nodeNum];
+	    PostUserAddress[] addresses = new PostUserAddress[nodeNum];
+	    StorageManager[] sManagers = new StorageManager[nodeNum];
+	    Scribe[] scribes = new Scribe[nodeNum];
+	    PASTService[] pastServices = new PASTService[nodeNum];
+	    EmailService[] emailServices = new EmailService[nodeNum];
+	    
+	    try {
 
 		RandomNodeIdFactory rnd = new RandomNodeIdFactory();
-		int port = (int)(((double) 16000)*Math.random());
 
-		WirePastryNodeFactory idFactory = new WirePastryNodeFactory(rnd, port);
-		PastryNode localNode = null;
+		for(int i = 0; i < nodeNum; i++) {
+		    int port = (int)(((double) 16000)*Math.random());
 
+		    WirePastryNodeFactory idFactory;
+		    idFactory = new WirePastryNodeFactory(rnd, port);
+		    
 		if(this.firstAddress == null) {
-			localNode = idFactory.newNode(null);
-			this.firstAddress = ((WireNodeHandle) localNode.getLocalHandle()).getAddress();
+			localNodes[i] = idFactory.newNode(null);
+			this.firstAddress = ((WireNodeHandle)
+					     localNodes[i].getLocalHandle()).getAddress();
 		} else {
 			NodeHandle nodeHandle = idFactory.generateNodeHandle(this.firstAddress);
 			 
-			localNode = idFactory.newNode(nodeHandle);
+			localNodes[i] = idFactory.newNode(nodeHandle);
 		}
 
-		KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-		KeyPair caPair = kpg.generateKeyPair();
-		KeyPair pair = kpg.generateKeyPair();
+		addresses[i] = new PostUserAddress(usernames[i]);
 
-		PostUserAddress address = new PostUserAddress(username);
+		sManagers[i] = new MemoryStorageManager();
 
-		NodeId nodeId = localNode.getNodeId();
-
-		StorageManager storage = new MemoryStorageManager();
-
-		Scribe scribe = new Scribe(localNode, null);
-		PASTService past = new PASTServiceImpl(localNode, storage);
-		Post post = new Post(localNode, past, scribe, address, pair, null, caPair.getPublic());
-		EmailService email = new EmailService(post);
-
-		return email;
-		} catch(PostException pe) {
-			pe.printStackTrace();
-			return null;
-		} catch(NoSuchAlgorithmException nsae) {
-			nsae.printStackTrace();
-			return null;
+		scribes[i] = new Scribe(localNodes[i], null);
+		
+		pastServices[i] = new PASTServiceImpl(localNodes[i],
+						      sManagers[i]);
 		}
+
+		// now that we've cereated all those, create the post
+		// and email services
+		
+		try {
+		    Thread.sleep(2000);
+		} catch(InterruptedException ie) {
+		    return null;
+		}
+
+		for(int i = 0; i < nodeNum; i++) {
+
+		    KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
+		    KeyPair caPair = kpg.generateKeyPair();
+		    KeyPair pair = kpg.generateKeyPair();
+
+		    Post post = new Post(localNodes[i],
+					 pastServices[i],
+					 scribes[i],
+					 addresses[i], pair, null,
+					 caPair.getPublic());
+		    emailServices[i] = new EmailService(post);
+		}
+
+		return emailServices;
+	    } catch(PostException pe) {
+		pe.printStackTrace();
+		return null;
+	    } catch(NoSuchAlgorithmException nsae) {
+		nsae.printStackTrace();
+		return null;
+	    }
 	}
 
 	public static void main(String[] args) throws Exception {
 
 		EmailTest et = new EmailTest();
 
-		for(int i = 0; i < 10; i++) {
-			System.out.println("Creating " + i);
-			et.createEmailService("user" + i);
-		}
-
+		// Create multiple services here to test.
+		
 		Thread.sleep(5000);
 	}
 }
