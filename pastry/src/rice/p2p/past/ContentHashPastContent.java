@@ -53,24 +53,8 @@ import rice.p2p.commonapi.*;
  * @author Alan Mislove
  */
 public abstract class ContentHashPastContent implements PastContent {
-
-  // to be set by derived classes
-  protected Id myId;
-
   
-  /**
-   * Inserts this object into its associated Past instance.
-   * Asynchronously returns a boolean as the result to the provided
-   * Continuation, indicating whether the insert was successful.
-   *
-   * @param past The local past service
-   * @param command Command to be performed when the result is received
-   */
-  public void insert(Past past, Continuation command) {
-    Id myId = getContentHash();
-    past.insert(this, command);
-  }
-
+  protected Id myId;
 
   // ----- PastCONTENT METHODS -----
 
@@ -90,14 +74,12 @@ public abstract class ContentHashPastContent implements PastContent {
    */
   public PastContent checkInsert(Id id, PastContent existingContent) throws PastException {
     // can't overwrite content hash objects
-    if (existingContent != null)
-    {
+    if (existingContent != null) {
       throw new PastException("ContentHashPastContent: can't insert, object already exists");
     }
     
     // only allow correct content hash key
-    if (!id.equals(getContentHash()))
-    {
+    if (!id.equals(getId())) {
       throw new PastException("ContentHashPastContent: can't insert, content hash incorrect");
     }
     return this;
@@ -111,7 +93,7 @@ public abstract class ContentHashPastContent implements PastContent {
    * @return the handle
    */
   public PastContentHandle getHandle(Past local) {
-    return new ContentHashPastContentHandle(local.getLocalNodeHandle(), myId);
+    return new ContentHashPastContentHandle(local.getLocalNodeHandle(), getId());
   }
 
   /**
@@ -129,19 +111,8 @@ public abstract class ContentHashPastContent implements PastContent {
    * @return true if this object is mutable, else false
    */
   public boolean isMutable() {
-    // content hash objects are immutable
     return false;
   }
-
-
-  // ----- ABSTRACT METHODS -----
-
-  /**
-   * compute the content hash of this object
-   *
-   * @return an Id with the content hash of this object
-   */
-  abstract Id getContentHash();
 }
 
 
