@@ -1,6 +1,7 @@
 package rice.p2p.glacier.v2;
 
 import java.io.Serializable;
+import java.security.*;
 import java.util.*;
 
 import rice.Continuation;
@@ -928,6 +929,27 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     return b;
   }
 
+  private static String dump(byte[] data, boolean linebreak) {
+    final String hex = "0123456789ABCDEF";
+    String result = "";
+    
+    for (int i=0; i<data.length; i++) {
+      int d = data[i];
+      if (d<0)
+        d+= 256;
+      int hi = (d>>4);
+      int lo = (d&15);
+        
+      result = result + hex.charAt(hi) + hex.charAt(lo);
+      if (linebreak && (((i%16)==15) || (i==(data.length-1))))
+        result = result + "\n";
+      else if (i!=(data.length-1))
+        result = result + " ";
+    }
+    
+    return result;
+  }
+
   private void addContinuation(GlacierContinuation gc) {
     int thisUID = getUID();
     gc.setup(thisUID);
@@ -1286,7 +1308,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     }
 
     if (cmd.startsWith("delete") && faultInjectionEnabled) {
-      String[] vkeyS = cmd.substring(7).split("[v:]");
+      String[] vkeyS = cmd.substring(7).split("[v#]");
       Id key = factory.buildIdFromToString(vkeyS[0]);
       long version = Long.parseLong(vkeyS[1]);
       VersionKey vkey = new VersionKey(key, version);
@@ -1309,7 +1331,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     }
 
     if (cmd.startsWith("burst") && faultInjectionEnabled) {
-      String[] vkeyS = cmd.substring(6).split("[v:]");
+      String[] vkeyS = cmd.substring(6).split("[v#]");
       Id key = factory.buildIdFromToString(vkeyS[0]);
       long version = Long.parseLong(vkeyS[1]);
       VersionKey vkey = new VersionKey(key, version);
@@ -1381,6 +1403,153 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         Thread.currentThread().yield();
       
       return "manifest("+vkey+")="+ret[0];
+    }
+
+    if (cmd.startsWith("retrieve")) {
+      String[] vkeyS = cmd.substring(9).split("[v#]");
+      Id key = factory.buildIdFromToString(vkeyS[0]);
+      long version = Long.parseLong(vkeyS[1]);
+      VersionKey vkey = new VersionKey(key, version);
+      final FragmentKey id = new FragmentKey(vkey, Integer.parseInt(vkeyS[2]));
+      final FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(id);
+
+      final String[] ret = new String[] { null };
+      fragmentStorage.getObject(id, new Continuation() {
+        public void receiveResult(Object o) {
+          FragmentAndManifest fam = (FragmentAndManifest) o;
+          MessageDigest md = null;
+          try {
+            md = MessageDigest.getInstance("SHA");
+          } catch (NoSuchAlgorithmException e) {
+          }
+
+          md.reset();
+          md.update(fam.fragment.getPayload());
+
+          ret[0] = "OK\n\nFragment: "+fam.fragment.getPayload().length+" bytes, Hash=["+dump(md.digest(), false)+"], ID="+id.getFragmentID()+"\n\nValidation: " +
+                   (fam.manifest.validatesFragment(fam.fragment, id.getFragmentID()) ? "OK" : "FAIL") + "\n\n" + 
+                   fam.manifest.toStringFull()+"\n\nMetadata:\n - Stored since: "+metadata.getStoredSince()+
+                   "\n - Current expiration: "+metadata.getCurrentExpiration()+"\n - Previous expiration: "+metadata.getPreviousExpiration()+"\n";
+        }
+        public void receiveException(Exception e) {
+          ret[0] = "exception("+e+")";
+        }
+      });
+      
+      while (ret[0] == null)
+        Thread.currentThread().yield();
+      
+      return "retrieve("+id+")="+ret[0];
+    }
+
+    if (cmd.startsWith("validate")) {
+      FragmentKeySet keyset = (FragmentKeySet) fragmentStorage.scan();
+      final Iterator iter = keyset.getIterator();
+      final StringBuffer result = new StringBuffer();
+  
+      result.append(keyset.numElements()+ " fragment(s)\n");
+
+      final String[] ret = new String[] { null };
+      if (iter.hasNext()) {
+        final FragmentKey thisKey = (FragmentKey) iter.next();
+        fragmentStorage.getObject(thisKey, new Continuation() {
+          FragmentKey currentKey = thisKey;
+          int totalChecks = 0, totalFailures = 0;
+          public void receiveResult(Object o) {
+            FragmentAndManifest fam = (FragmentAndManifest) o;
+            boolean success = fam.manifest.validatesFragment(fam.fragment, currentKey.getFragmentID());
+            totalChecks ++;
+            if (!success)
+              totalFailures ++;
+            result.append(currentKey.toStringFull()+" "+ (success ? "OK" : "FAIL") + "\n");
+            if (iter.hasNext()) {
+              currentKey = (FragmentKey) iter.next();
+              fragmentStorage.getObject(currentKey, this);
+            } else {
+              if (totalFailures == 0)
+                ret[0] = "OK ("+totalChecks+" fragments checked)";
+              else
+                ret[0] = "FAIL, "+totalFailures+"/"+totalChecks+" fragments damaged"; 
+            }
+          }
+          public void receiveException(Exception e) {
+            ret[0] = "exception("+e+")";
+          }
+        });
+        
+        while (ret[0] == null)
+          Thread.currentThread().yield();
+      
+        return "validate="+ret[0]+"\n\n"+result.toString();
+      }
+
+      return "validate: no objects\n\n" + result.toString();
+    }
+
+    if (cmd.startsWith("fetch")) {
+      String[] vkeyS = cmd.substring(6).split("[v#]");
+      Id key = factory.buildIdFromToString(vkeyS[0]);
+      long version = Long.parseLong(vkeyS[1]);
+      VersionKey vkey = new VersionKey(key, version);
+      final FragmentKey id = new FragmentKey(vkey, Integer.parseInt(vkeyS[2]));
+      final long now = System.currentTimeMillis();
+      final Id fragmentLoc = getFragmentLocation(id);
+
+      final String[] ret = new String[] { null };
+      addContinuation(new GlacierContinuation() {
+        public String toString() {
+          return "DebugFetch continuation";
+        }
+        public void init() {
+          sendMessage(
+            fragmentLoc,
+            new GlacierFetchMessage(getMyUID(), id, GlacierFetchMessage.FETCH_FRAGMENT_AND_MANIFEST, getLocalNodeHandle(), fragmentLoc, tagDebug),
+            null
+          );
+        }
+        public void receiveResult(Object o) {
+          if (o instanceof GlacierDataMessage) {
+            GlacierDataMessage gdm = (GlacierDataMessage) o;
+            MessageDigest md = null;
+            try {
+              md = MessageDigest.getInstance("SHA");
+            } catch (NoSuchAlgorithmException e) {
+            }
+
+            md.reset();
+            md.update(gdm.getFragment(0).getPayload());
+
+            ret[0] = "\n\nResponse: "+gdm.getKey(0).toStringFull()+" ("+gdm.numKeys()+" keys)\n" +  "Holder: "+gdm.getSource()+"\n" +
+                     "Fragment: "+gdm.getFragment(0).getPayload().length+" bytes, Hash=["+dump(md.digest(), false)+"]\n\nValidation: " +
+                     (gdm.getManifest(0).validatesFragment(gdm.getFragment(0), gdm.getKey(0).getFragmentID()) ? "OK" : "FAIL") + "\n\n" + 
+                     gdm.getManifest(0).toStringFull();
+                     
+            terminate();
+          } else {
+            ret[0] = "Received "+o;
+            terminate();
+          }
+        }
+        public void receiveException(Exception e) {
+          ret[0] = "Exception="+e;
+          terminate();
+        }
+        public void timeoutExpired() {        
+          ret[0] = "Timeout";
+          terminate();
+        }
+        public long getTimeout() {
+          return now + 5 * SECONDS;
+        }
+      });
+        
+      while ((ret[0] == null) && (System.currentTimeMillis() < (now + 5*SECONDS)))
+        Thread.currentThread().yield();
+      
+      if (ret[0] == null)
+        ret[0] = "Timeout";
+      
+      return "fetch("+id+"@"+fragmentLoc+")="+ret[0];
     }
 
     return null;
