@@ -1,10 +1,6 @@
 PACKAGE = rice.pastry.wire.messaging.datagram
 
-SOURCE  = \
-	PingMessage.java\
-	AcknowledgementMessage.java\
-	DatagramMessage.java\
-	DatagramTransportMessage.java
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 MAIN       = 
 

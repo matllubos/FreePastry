@@ -1,16 +1,6 @@
 PACKAGE = rice.pastry.routing
 
-SOURCE  = \
-	RouteSet.java\
-	RoutingTable.java\
-	RouterAddress.java\
-	SendOptions.java\
-	RouteMessage.java\
-	BroadcastRouteRow.java\
-	RequestRouteRow.java\
-	RouteProtocolAddress.java\
-	InitiateRouteSetMaintenance.java
-
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 RMI_SOURCE =
 

@@ -1,10 +1,6 @@
 PACKAGE = rice.pastry.security
 
-SOURCE  = \
-	Credentials.java\
-	PastrySecurityManager.java\
-	PermissiveCredentials.java\
-	PermissiveSecurityManager.java
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 RMI_SOURCE =
 

@@ -1,10 +1,6 @@
 PACKAGE = rice.pastry.wire.exception
 
-SOURCE  = \
-	DeserializationException.java \
-	ImproperlyFormattedMessageException.java \
-	NodeIsDeadException.java \
-	SerializationException.java 
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 MAIN       = 
 

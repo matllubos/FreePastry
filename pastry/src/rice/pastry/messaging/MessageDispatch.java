@@ -36,7 +36,12 @@ if advised of the possibility of such damage.
 
 package rice.pastry.messaging;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.Vector;
+
+import rice.p2p.commonapi.RouteMessage;
+import rice.pastry.testing.HelloMsg;
 
 /**
  * An object which remembers the mapping from names to MessageReceivers
@@ -95,7 +100,7 @@ public class MessageDispatch {
    */
   public boolean dispatchMessage(Message msg) {
     MessageReceiver mr = (MessageReceiver) addressBook.get(msg.getDestination());
-
+        
     if (mr != null) {
       Address address = msg.getDestination();
       mr.receiveMessage(msg); 
@@ -106,15 +111,20 @@ public class MessageDispatch {
         System.out.println("Could not dispatch message " + msg + " because the application address " + msg.getDestination() + " was unknown.");
         System.out.println("Message is going to be dropped on the floor.");
       } else {
-        Vector vector = (Vector) buffer.get(msg.getDestination());
-        
-        if (vector == null) {
-          vector = new Vector();
-          buffer.put(msg.getDestination(), vector);
+        if (msg.getDestination() != null) {
+          Vector vector = (Vector) buffer.get(msg.getDestination());
+          
+          if (vector == null) {
+            vector = new Vector();
+            buffer.put(msg.getDestination(), vector);
+          }
+          
+          vector.add(msg);
+          bufferCount++;
+        } else {
+          System.out.println("Message "+msg+","+msg.getClass().getName()+" has no destination.");
+          Thread.dumpStack();
         }
-        
-        vector.add(msg);
-        bufferCount++;
       }
       
       return false;

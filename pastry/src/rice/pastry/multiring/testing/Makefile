@@ -1,7 +1,6 @@
 PACKAGE = rice.pastry.multiring.testing
 
-SOURCE	= \
-  MultiRingPastryRegrTest.java
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 MAIN	= 
 

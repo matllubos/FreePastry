@@ -1,27 +1,6 @@
 PACKAGE = rice.pastry.testing
 
-SOURCE  = \
-        ClosestRegrTest.java \
-	HelloWorld.java \
-	HelloWorldApp.java \
-	PastryTest.java \
-	PingClient.java\
-	PastryRegrTest.java \
-	DirectPastryRegrTest.java \
-	DistPastryRegrTest.java \
-	DistHelloWorld.java \
-	RegrTestApp.java\
-	NodeIdUnit.java\
-	IdRangeUnit.java\
-	PingMessage.java \
-	PingMessageNew.java \
-	PingAddress.java \
-	Ping.java \
-	SinglePingTest.java \
-	PingTestRecord.java \
-	DirectPastryPingTest.java \
-  LeafSetTest.java
-
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 RMI_SOURCE =
 

@@ -1,13 +1,6 @@
 PACKAGE = rice.pastry.standard
 
-SOURCE  = \
-  StandardAddress.java\
-	StandardRouter.java\
-	RandomNodeIdFactory.java\
-	IPNodeIdFactory.java\
-	StandardLeafSetProtocol.java\
-	StandardRouteSetProtocol.java\
-	StandardJoinProtocol.java
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 RMI_SOURCE =
 

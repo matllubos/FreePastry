@@ -1,12 +1,6 @@
 PACKAGE = rice.pastry.multiring.messaging
 
-SOURCE	= \
-	MultiRingApplAddress.java\
-  MultiRingApplMessage.java\
-  RingForwardMessage.java\
-  RingLookupRequestMessage.java\
-  RingLookupResponseMessage.java\
-  RingLookupReminderMessage.java\
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 MAIN	= 
 

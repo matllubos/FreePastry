@@ -1,13 +1,6 @@
 PACKAGE = rice.pastry.multiring
 
-SOURCE	= \
-	MultiRingPastryNode.java\
-	MultiRingPastryNodeFactory.java\
-  MultiRingAppl.java\
-  RingId.java\
-  RingNodeId.java\
-  RandomRingNodeIdFactory.java\
-  MultiRingMessageDispatch.java
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 MAIN	= 
 

@@ -1,10 +1,6 @@
 PACKAGE = rice.pastry.messaging
 
-SOURCE  = \
-	Address.java\
-	Message.java\
-	MessageDispatch.java\
-	MessageReceiver.java
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 RMI_SOURCE =
 
