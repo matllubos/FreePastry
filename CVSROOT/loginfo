@@ -25,4 +25,7 @@
 # or
 #DEFAULT (echo ""; id; echo %{sVv}; date; cat) >> $CVSROOT/CVSROOT/commitlog
 
-DEFAULT		$CVSROOT/CVSROOT/log.pl -f $CVSROOT/CVSROOT/commitlog -m dsandler@rice.epostmail.org %s
+# This one doesn't seem to work, and I have no idea why. --dsandler
+#DEFAULT		$CVSROOT/CVSROOT/log.pl -f $CVSROOT/CVSROOT/commitlog -m dsandler@rice.epostmail.org %s
+
+DEFAULT		/usr/bin/Mail -s %s dsandler@rice.epostmail.org
