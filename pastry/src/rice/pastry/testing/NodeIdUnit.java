@@ -177,6 +177,9 @@ public class NodeIdUnit {
 	System.out.println("a.longDistance(b)" + a.longDistance(b) + "b.longDistance(a)=" + b.longDistance(a));
 	System.out.println("a.distance(a)" + a.distance(a) + "a.longDistance(a)=" + a.longDistance(a));
 
+	System.out.println("a.isBetween(a,n7f)=" + a.isBetween(a,n7f));
+	System.out.println("a.isBetween(n0,a)=" + a.isBetween(n0,a));
+
 	System.out.println("a.isBetween(n0,n7f)=" + a.isBetween(n0,n7f));
 	System.out.println("b.isBetween(n0,n80)=" + b.isBetween(n0,n80));
 	System.out.println("a.isBetween(a,n80)=" + a.isBetween(a,n80));

@@ -122,7 +122,8 @@ public class IdRange {
      * @return true if the key lies within this range, false otherwise
      */
     public boolean contains(Id key) {
-	return key.isBetween(ccw, cw);
+	if (ccw.equals(cw) && !empty) return true;
+	else return key.isBetween(ccw, cw);
     }
 
     /**
@@ -147,6 +148,7 @@ public class IdRange {
      */ 
     private void setCCW(Id ccw) {
 	this.ccw = ccw;
+	empty = false;
     }
 
     /**
@@ -155,6 +157,7 @@ public class IdRange {
      */ 
     private void setCW(Id cw) {
 	this.cw = cw;
+	empty = false;
     }
 
     /**
@@ -165,64 +168,148 @@ public class IdRange {
      * @return the resulting range
      */
     public IdRange merge(IdRange o) {
-	Id newCW, newCCW;
 
-	if (ccw.isBetween(o.ccw, o.cw))
-	    newCCW = o.ccw;
-	else
-	    newCCW = ccw;
+	if (o.empty || (ccw.equals(cw) && !empty) ) return this;
+	if (empty || (o.ccw.equals(o.cw) && !o.empty) ) return o;
 
-	if (cw.isBetween(o.ccw, o.cw))
-	    newCW = o.cw;
-	else
-	    newCW = cw;
-	
-	return new IdRange(newCCW, newCW);
+	boolean ccwIn = ccw.isBetween(o.ccw, o.cw) || ccw.equals(o.cw);
+	boolean cwIn = cw.isBetween(o.ccw, o.cw);
+	boolean occwIn = o.ccw.isBetween(ccw, cw) || o.ccw.equals(cw);
+	boolean ocwIn = o.cw.isBetween(ccw, cw);
+
+	if (ccwIn && cwIn && occwIn && ocwIn) {
+	    // ranges cover entire ring
+	    return new IdRange(ccw, ccw);
+	}
+
+	if (ccwIn) {
+	    if (cwIn) return o;
+	    else return new IdRange(o.ccw, cw);
+	} 
+
+	if (cwIn) {
+	    return new IdRange(ccw, o.cw);
+	}
+
+	if (occwIn) {
+	    return this;
+	}
+
+	// no intersection
+	return this;
+
+    }
+
+    /**
+     * get the complement of this range on the ring
+     *
+     * @return the complement range
+     */
+    public IdRange complement() {
+	if (ccw.equals(cw) && !empty) 
+	    return new IdRange();
+	else 
+	    return new IdRange(cw, ccw);
     }
 
     /**
      * intersect two ranges
      * returns an empty range if the ranges don't intersect
      *
+     * two ranges may intersect in two ranges on the circle; this method produces one such range of intersection if one exists
+     * the other range of intersection can be computed by invoking o.intersect(this)
+     *
      * @param o the other range
      * @return the result range
      */
     public IdRange intersect(IdRange o) {
-	Id newCW, newCCW;
-	boolean intersect = false;
 
-	if (ccw.isBetween(o.ccw, o.cw) || ccw.equals(o.ccw)) {
-	    newCCW = ccw;
-	    intersect = true;
-	} else
-	    newCCW = o.ccw;
+	if (empty || o.empty) return new IdRange();
+	if (ccw.equals(cw)) return o;
+	if (o.ccw.equals(o.cw)) return this;
 
-	if (cw.isBetween(o.ccw, o.cw) || cw.equals(o.cw)) {
-	    newCW = cw;
-	    intersect = true;
+	boolean ccwIn = ccw.isBetween(o.ccw, o.cw);
+	boolean cwIn = cw.isBetween(o.ccw, o.cw);
+	boolean occwIn = o.ccw.isBetween(ccw, cw);
+	boolean ocwIn = o.cw.isBetween(ccw, cw);
+
+	if (ccwIn && cwIn && occwIn && ocwIn) {
+	    // ranges intersect in two ranges, return ccw range
+	    return new IdRange(ccw, o.cw);
 	}
-	else
-	    newCW = o.cw;
-	
-	if (intersect)
-	    return new IdRange(newCCW, newCW);
-	else
-	    return new IdRange();
+
+	if (ccwIn) {
+	    if (cwIn) return this;
+	    else return new IdRange(ccw, o.cw);
+	} 
+
+	if (cwIn) {
+	    return new IdRange(o.ccw, cw);
+	}
+
+	if (occwIn) {
+	    return o;
+	}
+
+	// no intersection
+	return new IdRange();
 
     }
 
     /**
-     * compute the difference between two ranges
-     * returns an empty range if the ranges are identical
+     * compute the difference between two ranges 
+     * (exclusive or of keys in the two ranges)
+     *
+     * two ranges may differ in two ranges on the circle; this method produces one such range of difference if one exists
+     * the other range of difference can be computed by invoking o.diff(this)
+     *
+     * @param o the other range
+     * @return the result range
+     */
+     public IdRange diff(IdRange o) {
+	 IdRange res = intersect(o.complement());
+	 if (res.isEmpty()) res = o.intersect(complement());
+	 return res;
+     }
+
+    /**
+     * subtract the other range from this
+     * computes the ranges of keys that are in this but not in o
+     *
+     * subtracting a range may produce two ranges on the circle; this method produces one such ranges under control
+     * of the cwPart parameter
+     *
+     * @param o the other range
+     * @param cwPart if true, returns the clockwise part of the range subtraction, else the counterclockwise part
+     * @return the result range
+     */
+    public IdRange subtract(IdRange o, boolean cwPart) {
+	if (!cwPart) return intersect(o.complement());
+	else         return o.complement().intersect(this);
+    }
+
+    /**
+     * compute the difference between two ranges 
+     * (exclusive or of keys in the two ranges)
      *
      * @param o the other range
      * @param cwPart if true, returns the clockwise part of the range difference, else the counterclockwise part
      * @return the result range
      */
-     public IdRange diff(IdRange o, boolean cwPart) {
+     public IdRange diff_old(IdRange o, boolean cwPart) {
 
 	 if (equals(o)) return new IdRange();
-	 
+
+	 if (ccw.equals(cw)) {
+	     if (empty) return o;
+	     else return o.complement();
+	 }
+
+	 if (o.ccw.equals(o.cw)) {
+	     if (o.empty) return this;
+	     else return complement();
+	 }
+
 	 if (!cwPart) {
 	     if (o.ccw.equals(ccw))
 		 return new IdRange();
@@ -250,12 +337,11 @@ public class IdRange {
 	 }
 	
     }
-
-
-    
     
     /**
      * subtract the other range from this
+     * computes the ranges of keys that are in this but not in o
+     *
      * returns - an empty range if the ranges are identical
      *         - if the subtraction results in a single range, then this method
      * returns an empty range when called with one boolean value of 
@@ -266,14 +352,12 @@ public class IdRange {
      * @param cwPart if true, returns the clockwise part of the range subtraction, else the counterclockwise part
      * @return the result range
      */
-    public IdRange subtract(IdRange o, boolean cwPart) {
+    public IdRange subtract_old(IdRange o, boolean cwPart) {
 	IdRange diffRange;
 
-	diffRange = diff(o, cwPart);
+	diffRange = diff_old(o, cwPart);
 	return intersect(diffRange);
     }
-
-
 
     /**
      * get counterclockwise half of the range

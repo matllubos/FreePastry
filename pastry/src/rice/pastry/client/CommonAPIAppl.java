@@ -121,7 +121,7 @@ public abstract class CommonAPIAppl extends PastryAppl
      * @return the nodehandle set
      */
 
-    public NodeSet local_lookup(Id key, int num, boolean safe) {
+    public NodeSet localLookup(Id key, int num, boolean safe) {
 	// safe ignored until we have the secure routing support
 
 	// get the nodes from the routing table

@@ -364,7 +364,7 @@ public abstract class PastryRegrTest {
 	    if (expectedSize1 < expectedSize) expectedSize = expectedSize1;
 	    if (ls.overlaps()) expectedSize = distanceSet.size();
 
-	    NodeSet rs = ls.replicaSet(id, expectedSize/*ls.size()*2+1*/);
+	    NodeSet rs = ls.replicaSet(id, expectedSize);
 	    // now verify the replicaSet
 	    for (int i=0; i<rs.size(); i++) {
 		NodeHandle nh = rs.get(i);
@@ -377,12 +377,6 @@ public abstract class PastryRegrTest {
 	    }
 
 	    // check size 
-	    /*
-	    NodeHandle nh = rs.get(rs.size()-1);
-	    if ( (nh == null && k != -ls.ccwSize() && k != ls.cwSize()) ||
-		 (nh != null && !ls.overlaps() && ls.size() > 0 && rs.size() != expectedSize) ||
-		 (nh != null && ls.overlaps() && rs.size() != distanceSet.size()) ) 
-	    */
 	    if (rs.size() != expectedSize)
 		System.out.println("checkLeafSet: replicaSet size failure at " + rta.getNodeId() + " k=" + k + 
 				   " expectedSize=" + expectedSize + " " +
@@ -398,16 +392,16 @@ public abstract class PastryRegrTest {
 
 
 	    int nearestPos;
-	    NodeId nearest = null;
+	    Id nearest = null;
 
-	    for (int j=-1; j<=maxRank*2; j++) {
+	    for (int j=-1; j<=maxRank*2+1; j++) {
 		IdRange range;
 
 		if (j < 0)
 		    // check the cumulative range
 		    range = rta.range(ls.get(k), maxRank, nearest, true);
 		else 
-		    // check the individual ranks
+		    // check the individual rank ranges
 		    range = rta.range(ls.get(k), j/2, nearest, false);
 
 		//System.out.println("j=" + j + " maxRank=" + maxRank + " " + range);
@@ -421,15 +415,18 @@ public abstract class PastryRegrTest {
 		    continue;
 		}
 	    
-		nearestPos = ls.mostSimilar(range.getCCW());
-		nearest = ls.get(nearestPos).getNodeId();
+		//nearestPos = ls.mostSimilar(range.getCCW());
+		//nearest = ls.get(nearestPos).getNodeId();
+		nearest = ls.get(k).getNodeId();
+		nearestPos = k;
 
 		// fetch the replicaSet of the key at the ccw edge of the range
 		NodeSet cs = ls.replicaSet(range.getCCW(), maxRank+1);
 
 		//if ( !cs.member(nearest)) {
-		if ( cs.get(0).getNodeId() != nearest ) {
-		    System.out.println("checkLeafSet: range failure 1 at " + rta.getNodeId() + " k=" + k + 
+		if ( j>=0 && cs.get(j/2).getNodeId() != nearest ||
+		     j<0 && !cs.member(ls.get(k)) ) {
+		    System.out.println("checkLeafSet: range failure 1 at " + rta.getNodeId() + " k=" + k + " j=" + j +
 				       " maxRank=" + maxRank + "\n" + cs + "\n" + ls + "\n" + range + "\nnearest=" + nearest);
 		    
 		    System.out.println("dist(nearest)=" + nearest.distance(range.getCCW()));
@@ -439,15 +436,16 @@ public abstract class PastryRegrTest {
 			System.out.println("dist(nearest+1)=" + ls.get(nearestPos+1).getNodeId().distance(range.getCCW()));
 		}
 
-		nearestPos = ls.mostSimilar(range.getCW());
-		nearest = ls.get(nearestPos).getNodeId();
+		//nearestPos = ls.mostSimilar(range.getCW());
+		//nearest = ls.get(nearestPos).getNodeId();
 
 		// fetch the replicaSet of the key at the cw edge of the range
-		cs = ls.replicaSet(range.getCW(), maxRank+1);
+		cs = ls.replicaSet(range.getCW().getCCW(), maxRank+1);
 
 		//if ( !cs.member(nearest)) {
-		if ( cs.get(0).getNodeId() != nearest ) {
-		    System.out.println("checkLeafSet: range failure 2 at " + rta.getNodeId() + " k=" + k + 
+		if ( j>= 0 && cs.get(j/2).getNodeId() != nearest ||
+		     j<0 && !cs.member(ls.get(k)) ) {
+		    System.out.println("checkLeafSet: range failure 2 at " + rta.getNodeId() + " k=" + k + " j=" + j +
 				       " maxRank=" + maxRank + "\n" + cs + "\n" + ls + "\n" + range + "\nnearest=" + nearest);
 
 		    System.out.println("dist(nearest)=" + nearest.distance(range.getCW()));
@@ -456,6 +454,8 @@ public abstract class PastryRegrTest {
 		    if (ls.get(nearestPos+1) != null)
 			System.out.println("dist(nearest+1)=" + ls.get(nearestPos+1).getNodeId().distance(range.getCW()));
 		}
+		
+		nearest = range.getCW();
 					
 	    }					  
 	    

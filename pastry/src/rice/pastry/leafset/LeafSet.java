@@ -307,10 +307,18 @@ public class LeafSet extends Observable implements Serializable {
 	cwMinDist = cwSet.get(cwMS).getNodeId().distance(nid);
 	ccwMinDist = ccwSet.get(ccwMS).getNodeId().distance(nid);
 
+	int cmp = cwMinDist.compareTo(ccwMinDist);
+	if (cmp < 0 || (cmp == 0 && nid.clockwise(cwSet.get(cwMS).getNodeId())) )
+	    return cwMS + 1;
+	else
+	    return -ccwMS - 1;
+
+	/*
 	if (cwMinDist.compareTo(ccwMinDist) <= 0) 
 	    return cwMS + 1;
 	else
 	    return -ccwMS - 1;
+	*/
 
     }
 
@@ -369,8 +377,8 @@ public class LeafSet extends Observable implements Serializable {
 	NodeSet set = new NodeSet();
 	if (max < 1) return set;
 
-	if ( !overlaps() && 
-	     !key.isBetween(get(-ccwSet.size()).getNodeId(), get(cwSet.size()).getNodeId()) &&
+	if ( !overlaps() && size() > 0 &&
+	     !key.isBetween(get(-ccwSet.size()).getNodeId(), get(cwSet.size()).getNodeId()) && 
 	     !key.equals(get(cwSet.size()).getNodeId()) )
 	    // can't determine root of key, return empty set
 	    return set;
@@ -498,7 +506,11 @@ public class LeafSet extends Observable implements Serializable {
 
 	if (rr == null || rprev == null) return rr;
 
-	IdRange res = rr.diff(rprev, cw);
+	//IdRange res = rr.diff(rprev, cw);
+	IdRange res;
+
+	if (!cw) res = rr.diff(rprev);
+	else     res = rprev.diff(rr);
 	//System.out.println("(" + rr + ").diff(" + rprev + ")=" + res);
 	return res;
     }

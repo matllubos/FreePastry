@@ -54,6 +54,10 @@ import java.util.*;
 
 public class Id implements Comparable, Serializable 
 {
+    // Distance constants
+    private static int[] One = {1,0,0,0};
+    private static int[] NegOne = {-1,-1,-1,-1};
+
     /**
      * This is the bit length of the node ids.  If it is n, then
      * there are 2^n possible different Ids.  We currently assume
@@ -207,7 +211,15 @@ public class Id implements Comparable, Serializable
     
     public class Distance implements Comparable, Serializable {
 	private int difference[];
-	
+
+	/**
+	 * Constructor.
+	 */
+	public Distance() 
+	{
+	    difference = new int[nlen];
+	}
+
 	/**
 	 * Constructor.
 	 *
@@ -217,7 +229,7 @@ public class Id implements Comparable, Serializable
 	{
 	    difference = diff;
 	}
-	
+
 	/**
 	 * Blits the distance into a target array.
 	 *
@@ -318,19 +330,8 @@ public class Id implements Comparable, Serializable
 		    if (j==0) lsb = bit;
 		}
 		
-		if (roundUp && lsb > 0) {
-		    long x, sum;
-		    // add one to round up
-		    carry = 1;
-		    for (int i=0; i<nlen; i++) {
-			x = difference[i] & 0x0ffffffffL;
-			sum = x + carry;
-			if (sum >= 0x100000000L) carry = 1;
-			else carry = 0;
+		if (roundUp && lsb > 0) inc();
 
-			difference[i] = (int)sum;
-		    }
-		}
 	    }
 	    else {
 		for (int j=0; j<-cnt; j++) {
@@ -345,6 +346,25 @@ public class Id implements Comparable, Serializable
 	    }
 	    
 	    return this;
+	}
+
+	/** 
+	 * increment this distance
+	 *
+	 */
+	private void inc() {
+	    long x, sum;
+	    int carry = 1;
+
+	    // add one
+	    for (int i=0; i<nlen; i++) {
+		x = difference[i] & 0x0ffffffffL;
+		sum = x + carry;
+		if (sum >= 0x100000000L) carry = 1;
+		else carry = 0;
+
+		difference[i] = (int)sum;
+	    }	    
 	}
 
 	/**
@@ -415,6 +435,23 @@ public class Id implements Comparable, Serializable
 	return newId;
     }
 
+    /**
+     * gets the Id just clockwise from this
+     *
+     */
+    public Id getCW() {
+	Distance one = new Distance(One);
+	return add(one);
+    }
+
+    /**
+     * gets the Id just counterclockwise from this
+     *
+     */
+    public Id getCCW() {
+	Distance negone = new Distance(NegOne);
+	return add(negone);
+    }
     
     /**
      * Returns the absolute numerical distance between a pair of Ids.
