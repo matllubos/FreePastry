@@ -64,7 +64,8 @@ public class PastryRegrTest {
 
     private Vector pastryNodes;
     public TreeMap pastryNodesSorted;
-    public NodeId pastryNodeLastAdded;
+    public Vector pastryNodesLastAdded;
+    public boolean inConcJoin;
     private Vector rtApps;
 
     private Random rng;
@@ -83,6 +84,8 @@ public class PastryRegrTest {
 
 	pastryNodes = new Vector();
 	pastryNodesSorted = new TreeMap();
+	pastryNodesLastAdded = new Vector();
+	inConcJoin = false;
 	rtApps = new Vector();
 	rng = new Random();
     }
@@ -95,7 +98,8 @@ public class PastryRegrTest {
 	PastryNode pn = new PastryNode(factory);
 	pastryNodes.addElement(pn);
 	pastryNodesSorted.put(pn.getNodeId(),pn);
-	pastryNodeLastAdded = pn.getNodeId();
+	pastryNodesLastAdded.clear();
+	pastryNodesLastAdded.addElement(pn.getNodeId());
 
 	RegrTestApp rta = new RegrTestApp(pn,this);
 	rtApps.addElement(rta);
@@ -127,12 +131,15 @@ public class PastryRegrTest {
 
     public void makePastryNode(int num) {
 	RegrTestApp rta[] = new RegrTestApp[num];
+	pastryNodesLastAdded.clear();
+
+	inConcJoin = true;
 
 	for (int i=0; i<num; i++) {
 	    PastryNode pn = new PastryNode(factory);
 	    pastryNodes.addElement(pn);
 	    pastryNodesSorted.put(pn.getNodeId(),pn);
-	    pastryNodeLastAdded = pn.getNodeId();
+	    pastryNodesLastAdded.addElement(pn.getNodeId());
 
 	    rta[i] = new RegrTestApp(pn,this);
 	    rtApps.addElement(rta[i]);
@@ -151,11 +158,13 @@ public class PastryRegrTest {
 		while(simulate()) msgCount++;
 	    }
 	}
-
+	
 	int msgCount = 0;
 
 	// now simulate concurrent joins
 	while(simulate()) msgCount++;
+
+	inConcJoin = false;
 
 	for (int i=0; i<num; i++) {
 	    System.out.println("created " + rta[i].getNodeId());
@@ -165,6 +174,14 @@ public class PastryRegrTest {
 	}
 
 	System.out.println("messages: " + msgCount);
+
+	/*
+	for (int i=0; i<rtApps.size(); i++) {
+	    checkLeafSet((RegrTestApp)rtApps.get(i));
+	    checkRoutingTable((RegrTestApp)rtApps.get(i));
+	}	
+	*/
+
     }
 
     /**
@@ -223,7 +240,7 @@ public class PastryRegrTest {
 	// check size
 	if (ls.size() < ls.maxSize() && pastryNodesSorted.size() > ls.maxSize() / 2 + 1)
 	    System.out.println("checkLeafSet: too small at" + rta.getNodeId() +
-			       "ls.size()=" + ls.size() + " total nodes=" + pastryNodesSorted.size());
+			       "ls.size()=" + ls.size() + " total nodes=" + pastryNodesSorted.size() + "\n" + ls);
 
 	// check for correct leafset range
 	// ccw half
@@ -239,7 +256,7 @@ public class PastryRegrTest {
 
 	    if (inBetween != -i)
 		System.out.println("checkLeafSet: failure at" + rta.getNodeId() +
-				   "i=" + i + " inBetween=" + inBetween);
+				   "i=" + i + " inBetween=" + inBetween + "\n" + ls);
 	}
 	
 	// cw half
@@ -255,7 +272,7 @@ public class PastryRegrTest {
 
 	    if (inBetween != i)
 		System.out.println("checkLeafSet: failure at" + rta.getNodeId() +
-				       "i=" + i + " inBetween=" + inBetween);
+				       "i=" + i + " inBetween=" + inBetween + "\n" + ls);
 	}
 
     }
@@ -340,17 +357,19 @@ public class PastryRegrTest {
 	PastryRegrTest pt = new PastryRegrTest();
 	
 	int n = 4000;
-	int m = 100;
 	int k = 100;
+	int numConcJoins = 1;
+	int m = 100;
 
 	Date old = new Date();
 
-	for (int i=0; i<n; i++) {
-	    pt.makePastryNode();
+	for (int i=0; i<n; i += numConcJoins) {
+	    pt.makePastryNode(numConcJoins);
 
-	    if ((i + 1) % m == 0) {
+	    if ((i + numConcJoins) % m == 0) {
 		Date now = new Date();
-		System.out.println((i + 1) + " " + (now.getTime() - old.getTime()) + " " + pt.msgCount);
+		System.out.println((i + numConcJoins) + " " + (now.getTime() - old.getTime()) + 
+				   " " + pt.msgCount);
 		pt.msgCount = 0;
 		old = now;
 	    }

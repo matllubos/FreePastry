@@ -173,9 +173,9 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
 
     public boolean member(NodeId nid) {
 	for (int i=0; i<theSize; i++)
-	    if (nodes[i].getNodeId().equals(nid)) return false;
+	    if (nodes[i].getNodeId().equals(nid)) return true;
 
-	return true;
+	return false;
     }
     
     /**

@@ -154,8 +154,12 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
 
     public boolean member(NodeId nid) 
     {
+	return cwSet.member(nid) | ccwSet.member(nid);
+
+	/*
 	if (baseId.clockwise(nid) == true) return cwSet.member(nid);
 	else return ccwSet.member(nid);
+	*/
     }
     
     /**

@@ -195,34 +195,6 @@ public class RegrTestApp extends PastryAppl {
 
 	int inBetween;
 
-	/*
-	if (localId.clockwise(nid)) {
-	    // nid is clockwise from this node
-	    if (localId.compareTo(nid) < 0)  { // localId < nid?
-		inBetween = prg.pastryNodesSorted.subMap(localId,nid).size();
-		//System.out.println("c1");
-	    }
-	    else {
-		inBetween = prg.pastryNodesSorted.tailMap(localId).size() + 
-		    prg.pastryNodesSorted.headMap(nid).size();
-		//System.out.println("c2");
-	    }
-	}
-	else {
-	    // nid is counter-clockwise from this node
-	    if (localId.compareTo(nid) > 0) { // localId > nid?
-		inBetween = prg.pastryNodesSorted.subMap(nid,localId).size();
-		//System.out.println("c3");
-	    }
-	    else {
-		inBetween = prg.pastryNodesSorted.tailMap(nid).size() + 
-		    prg.pastryNodesSorted.headMap(localId).size();	    
-		//System.out.println("c4");
-	    }
-	}    
-	*/
-
-	
 	if (localId.compareTo(nid) < 0)  { // localId < nid?
 	    int i1 = prg.pastryNodesSorted.subMap(localId,nid).size();
 	    int i2 = prg.pastryNodesSorted.tailMap(nid).size() + 
@@ -240,7 +212,8 @@ public class RegrTestApp extends PastryAppl {
 
 	int lsSize = getLeafSet().maxSize() / 2;
 
-	if ( (inBetween > lsSize && wasAdded && !prg.pastryNodeLastAdded.equals(getNodeId())) ||
+	if ( (inBetween > lsSize && wasAdded && 
+	      !prg.pastryNodesLastAdded.contains(getNodeId()) && !prg.inConcJoin) ||
 	     (inBetween <= lsSize && !wasAdded && getLeafSet().get(nid) == null) ) {
 	    System.out.println("at... " + getNodeId() + "leafSetChange failure 3 with " + nid + 
 			       " wasAdded=" + wasAdded + " inBetween=" + inBetween);

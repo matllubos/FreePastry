@@ -115,7 +115,7 @@ public class StandardJoinProtocol implements MessageReceiver
 		    }
 		}	    
 	}
-	else if (msg instanceof RouteMessage) { // a join request message on an intermediate node
+	else if (msg instanceof RouteMessage) { // a join request message at an intermediate node
 	    RouteMessage rm = (RouteMessage) msg;
 
 	    JoinRequest jr = (JoinRequest) rm.unwrap();
