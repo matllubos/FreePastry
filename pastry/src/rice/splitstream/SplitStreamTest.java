@@ -37,7 +37,7 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
  private Vector channels;
  private Random rng;
  private RandomNodeIdFactory idFactory;
- private static int numNodes = 64;
+ private static int numNodes = 255;
  private static int port = 5009;
  private static String bshost;
  private static int bsport = 5009;
@@ -57,8 +57,8 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
 
    public static void main(String argv[]){
       System.out.println("SplitStream Test Program v0.4");
-      //PastrySeed.setSeed((int)System.currentTimeMillis());
-      PastrySeed.setSeed( -1022990516 );
+      PastrySeed.setSeed((int)System.currentTimeMillis());
+      //PastrySeed.setSeed( -1022990516 );
       System.out.println(PastrySeed.getSeed() );
       SplitStreamTest test = new SplitStreamTest();
       test.init();
@@ -75,8 +75,13 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
        
        while(test.simulate());
        if(channel.getSpareCapacityId() == null){
-        System.out.println("Channel " + channel.getNodeId() + "Failed to Attach");
+        System.out.println("Channel " + channel.getNodeId() + "Failed to Attach");      System.out.println("Index = " + i);
+        System.exit(0);
        }
+       else{
+	//System.out.println("Channel Attached Succesfully " + channel.getNodeId());
+   } 
+       
       }
       while(test.simulate());
       System.out.println("All nodes attached to Channel");
@@ -99,7 +104,7 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
    public void init(){
       simulator = new EuclideanNetwork();
       idFactory = new RandomNodeIdFactory();
-      PastrySeed.setSeed((int)System.currentTimeMillis());
+      //PastrySeed.setSeed((int)System.currentTimeMillis());
       factory = new DirectPastryNodeFactory(idFactory, simulator);
       scribeNodes = new Vector();    
       pastrynodes = new Vector();

@@ -86,8 +86,8 @@ public class Channel extends PastryAppl implements IScribeApp {
 	this.scribe = scribe;
 	this.bandwidthManager = bandwidthManager;
 	this.numStripes = numStripes;
-	PastrySeed.setSeed((int)System.currentTimeMillis());
-	RandomNodeIdFactory random = new RandomNodeIdFactory();
+	//PastrySeed.setSeed((int)System.currentTimeMillis());
+	//RandomNodeIdFactory random = new RandomNodeIdFactory();
 	/* register this channel with the bandwidthManager */
 	this.bandwidthManager.registerChannel(this);
 	scribe.registerApp(this);
@@ -96,11 +96,13 @@ public class Channel extends PastryAppl implements IScribeApp {
 		System.out.println("Channel Topic Created");
 		this.channelId = new ChannelId(topicId);
         }
-        topicId = random.generateNodeId();
+        //topicId = random.generateNodeId();
+        topicId = scribe.generateTopicId(name + "SPARECAPACITY");
         if(scribe.create(topicId, cred)){
 		this.spareCapacityId = new SpareCapacityId(topicId);
         }
-        NodeId baseId = random.generateNodeId();
+        //NodeId baseId = random.generateNodeId();
+        NodeId baseId = scribe.generateTopicId(name + "STRIPES");
 	for(int i = 0; i < this.numStripes; i++){
 		StripeId stripeId = new StripeId(baseId.getAlternateId(numStripes, 4, i)); 
 		Stripe stripe = new Stripe(stripeId, this, scribe,cred,true);
@@ -122,7 +124,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	if(scribe.join(channelId, this, cred, subInfo)){
 		System.out.println("Creator Joined Group" + getNodeId());
 	}		
-	if(scribe.join(spareCapacityId, this, cred, subInfo)){
+	if(scribe.join(spareCapacityId, this, cred)){
 		System.out.println("Creator Joined Spare Capacity Group" + getNodeId());
 	}		
    	isReady = true;
@@ -376,6 +378,7 @@ public class Channel extends PastryAppl implements IScribeApp {
   }
   
   private void handleControlAttachResponseMessage(Message msg){
+        System.out.println(getNodeId() + " recieved a response to anycast ");
 	NodeId[] subInfo = (NodeId[]) ((ControlAttachResponseMessage) msg).getContent();	
 	channelId = new ChannelId(subInfo[0]);
 	spareCapacityId = new SpareCapacityId(subInfo[subInfo.length-1]);
@@ -388,8 +391,8 @@ public class Channel extends PastryAppl implements IScribeApp {
 	}
         if(scribe.join(channelId, this, cred, subInfo)){
 	}
-	if(scribe.join(spareCapacityId, this, cred, subInfo)){
-	}		
+	if(scribe.join(spareCapacityId, this, cred)){
+	}	
 	isReady = true;
   }
   private void handleControlFindParentResponseMessage(Message msg){

@@ -110,7 +110,7 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
    public void setBandwidthManager(){}
    /** - IScribeObserver Implementation -- */
    public void update(Object topicId){
-	//System.out.println("Topic " + topicId + " Created at " + ((Scribe)scribe).getNodeId());
+	System.out.println("Topic " + topicId + " Created at " + ((Scribe)scribe).getNodeId());
  	//Topic topic = ((Scribe)scribe).getTopic((NodeId)topicId);
 	//topic.subscribe(this);
 
@@ -133,10 +133,9 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
                                NodeHandle child, 
                                boolean wasAdded,  
                                Serializable data){
-    // System.out.println("Subscribe Handler" + ((Scribe) scribe).getNodeId());
-
+     //System.out.println("Subscribe Handler at " + ((Scribe) scribe).getNodeId() + " for " + topicId + " from " + child.getNodeId());
      NodeId[] nodeData = (NodeId[]) data;
-
+     
      if(nodeData!=null){
    			
 	/* Clean This up */
@@ -152,10 +151,6 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
 	if(channels.get(channelId) == null)
 	channels.put(channelId, 
 	new Channel(channelId, stripeId, spareCapacityId, scribe, bandwidthManager, node));
-
+        }
      }
-     //else
-	//System.out.println("Data in Packet is null!" );
- 
-   }
 } 

@@ -34,6 +34,11 @@ public void handleMessage( Channel channel, IScribe scribe, NodeHandle source )
 
       ControlAttachResponseMessage response = new ControlAttachResponseMessage( channel.getAddress() );
       response.setContent( return_array );
+      if(return_array == null){
+	System.out.println("I'm not returning any data");
+      }else if(return_array.length <= 1){
+	System.out.println("Returning too little data");
+      }
       ((Scribe)scribe).routeMsgDirect( source, response, null, null );
 }
 
