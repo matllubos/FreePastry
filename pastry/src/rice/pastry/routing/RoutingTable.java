@@ -68,7 +68,7 @@ public class RoutingTable extends Observable implements Observer {
      * The routing calculations will occur in base <EM> 2 <SUP> idBaseBitLength </SUP> </EM>
      */
     
-    private final static int idBaseBitLength = 4;
+    public static int idBaseBitLength = 4;
 
     private NodeId myNodeId;
     private NodeHandle myNodeHandle;
