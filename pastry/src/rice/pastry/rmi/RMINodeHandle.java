@@ -142,7 +142,7 @@ public class RMINodeHandle extends DistCoalesedNodeHandle
           return;
       }
 
-      if (alive == false)
+      if (!isAlive())
           if (Log.ifp(6))
 	      System.out.println("warning: trying to send msg to dead node "
 				 + nodeId + ": " + msg);
@@ -205,21 +205,21 @@ public class RMINodeHandle extends DistCoalesedNodeHandle
     public boolean pingImpl() {
 
       // don't ping local nodes or during node construction
-      if (isLocal || getLocalNode() == null) return alive;
+      if (isLocal || getLocalNode() == null) return isAlive();
 
       /*
        * throttle super-rapid pings
        */
       long now = System.currentTimeMillis();
       if (now - lastpingtime < pingthrottle*1000)
-        return alive;
+        return isAlive();
 
       lastpingtime = now;
 
       RMIPastryNode ln = (RMIPastryNode) getLocalNode();
       ln.enqueueSendMsg(null, this);
 
-      return alive;
+      return isAlive();
     }
 
     /**
@@ -249,7 +249,7 @@ public class RMINodeHandle extends DistCoalesedNodeHandle
 	    markAlive();
 
       } catch (RemoteException e) {
-        if (alive) if (Log.ifp(6)) System.out.println("ping failed on live node: " + e);
+        if (isAlive()) if (Log.ifp(6)) System.out.println("ping failed on live node: " + e);
         markDead();
       }
     }
@@ -274,7 +274,7 @@ public class RMINodeHandle extends DistCoalesedNodeHandle
 
     public String toStringImpl() {
       return (isLocal ? "(local " : "") + "handle " + nodeId
-              + (alive ? "" : ":dead")
+              + (isAlive() ? "" : ":dead")
               + ", localnode = " + getLocalNode()
               + ")";
     }

@@ -319,7 +319,7 @@ public class LeafSetTest {
 
     public NodeId getNodeId() { return id; }
 
-    public boolean isAlive() { return true; }
+    public int getLiveness() { return LIVENESS_ALIVE; }
 
     public int proximity() { return 1; }
 

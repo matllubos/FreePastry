@@ -745,13 +745,13 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
   public boolean pingImpl() {
     if (isLocal) {
       setProximity(0);
-      return alive;
+      return isAlive();
     }
 
     if (getLocalNode() != null) {
       if (((WireNodeHandle) getLocalNode().getLocalHandle()).getAddress().getAddress().equals(address.getAddress())) {
         setProximity(1);
-        return alive;
+        return isAlive();
       }
     }
 
@@ -760,7 +760,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
       long now = System.currentTimeMillis();
 
       if (now - lastpingtime < PING_THROTTLE * 1000) {
-        return alive;
+        return isAlive();
       }
 
       lastpingtime = now;
@@ -769,7 +769,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
       ((WirePastryNode) getLocalNode()).getDatagramManager().write(nodeId, address, new PingMessage(getLocalNode().getNodeId(), nodeId, 0, this));
     }
 
-    return alive;
+    return isAlive();
   }
 
   /**
