@@ -1,6 +1,7 @@
 <project name="testant" default="compile" basedir="../">
 
   <property name="src_dir" value="src" /> 
+  <property name="wire_src_dir" value="src/rice/pastry/wire" /> 
   <property name="build_dir" value="classes" />  
   <property name="lib_dir" value="lib" />
   <property name="ant_dir" value="ant" />
@@ -22,6 +23,10 @@
                                              rice/splitstream2/testing/**" />
 
   <target name="init">   
+    <rmic  base="${build_dir}"
+           classpath="${classpath_text}" 
+           includes="${rmic_includes_files_text}"
+           excludes="${exclude_files_text}" />   
     <mkdir dir="${build_dir}" />
     
     <path id="classpath">
@@ -42,11 +47,7 @@
     <antlr target="${src_dir}/rice/email/proxy/imap/parser/antlr/grammer.g" />
   </target>
   
-  <target name="compile" depends="imap-parser"> 
-    <rmic  base="${build_dir}"
-           classpath="${classpath_text}" 
-           includes="${rmic_includes_files_text}"
-           excludes="${exclude_files_text}" />   
+  <target name="compile" depends="init,imap-parser"> 
     <javac srcdir="${src_dir}" 
            destdir="${build_dir}"
            classpath="${classpath_text}" 
@@ -63,7 +64,14 @@
     </append>
   </target>
 
-  <target name="beautify" depends="compile">
+  <target name="beautifywire" depends="init">
+    <taskdef name="pretty" classname="org.acm.seguin.ant.Pretty" classpath="${ant_lib_dir}/jrefactory.jar:${ant_lib_dir}/JRefactoryModule.jar:${ant_lib_dir}/JavaStyle.jar" />
+    <pretty settingsDir="${ant_dir}" cvs="true">      
+      <fileset dir="${wire_src_dir}" includes="**/*.java" excludes="${exclude_files_text}" />
+    </pretty>      
+  </target>
+
+  <target name="beautify" depends="init">
     <taskdef name="pretty" classname="org.acm.seguin.ant.Pretty" classpath="${ant_lib_dir}/jrefactory.jar:${ant_lib_dir}/JRefactoryModule.jar:${ant_lib_dir}/JavaStyle.jar" />
     <pretty settingsDir="${ant_dir}" cvs="true">      
       <fileset dir="${src_dir}" includes="**/*.java" excludes="${exclude_files_text}" />
