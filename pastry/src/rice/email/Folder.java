@@ -201,8 +201,10 @@ public class Folder {
   }
    
   protected void getLogReferences(final Set set, Continuation command) {
-    if (_log.getTopEntryReference() != null) 
+    if (_log.getTopEntryReference() != null) {
+      System.out.println("Adding top ref " + _log.getTopEntryReference());
       set.add(_log.getTopEntryReference());
+    }
     
     _log.getTopEntry(new StandardContinuation(command) {
       LogEntry top = null;
@@ -231,8 +233,10 @@ public class Folder {
           return;
         }
         
-        if (entry.getPreviousEntryReference() != null) 
+        if (entry.getPreviousEntryReference() != null) {
+          System.out.println("Adding next ref " + entry.getPreviousEntryReference());
           set.add(entry.getPreviousEntryReference());
+        }
         
         entry.getPreviousEntry(this);
       }

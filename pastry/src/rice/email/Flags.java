@@ -15,7 +15,7 @@ import rice.post.log.*;
  * @author
  */
 
-public class Flags implements java.io.Serializable {
+public class Flags implements java.io.Serializable, Cloneable {
   
   /**
    * NOTE:  This class has changed significantly, and thus the
@@ -37,6 +37,10 @@ public class Flags implements java.io.Serializable {
    * Constructor for email Flags
    */
   public Flags() {
+  }
+  
+  protected Flags(HashSet flags) {
+    this.flags = (HashSet) flags.clone();
   }
   
   /**
@@ -76,6 +80,10 @@ public class Flags implements java.io.Serializable {
     
     return flaglist;
   }
+  
+  public boolean equals(Object o) {
+    return flags.equals(((Flags) o).flags);
+  }
     
   /**
    * ReadObject overridden in order to support translation from
@@ -112,6 +120,14 @@ public class Flags implements java.io.Serializable {
           flags.add(flag);
       }
     }
+  }
+  
+  public String toString() {
+    return flags.toString();
+  }
+  
+  public Object clone() {
+    return new Flags(flags);
   }
 }
 

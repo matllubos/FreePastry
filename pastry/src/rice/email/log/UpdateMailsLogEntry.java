@@ -22,6 +22,8 @@ public class UpdateMailsLogEntry extends EmailLogEntry {
   public UpdateMailsLogEntry(StoredEmail[] emails) {
     _storedEmails = emails; 
     
+    for (int i=0; i<_storedEmails.length; i++)
+      _storedEmails[i] = (StoredEmail) _storedEmails[i].clone();
   }
   
   /**
@@ -43,7 +45,7 @@ public class UpdateMailsLogEntry extends EmailLogEntry {
     buffer.append("UpdateMailsLogEntry[");
     
     for (int i=0; i<_storedEmails.length; i++) 
-      buffer.append(_storedEmails[i].getUID() + ", ");
+      buffer.append(_storedEmails[i] + ", ");
     
     return buffer.toString() + "]";
   }

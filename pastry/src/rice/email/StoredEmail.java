@@ -18,7 +18,7 @@ import rice.post.storage.*;
  * @version $Id$
  * @author amislove
  */
-public class StoredEmail implements Serializable, Comparable {
+public class StoredEmail implements Serializable, Comparable, Cloneable {
   
   /**
    * serial version for backwards compatibility
@@ -127,5 +127,14 @@ public class StoredEmail implements Serializable, Comparable {
     StoredEmail email = (StoredEmail) o;
     return new Integer(getUID()).compareTo(new Integer(email.getUID()));
   }
+  
+  public Object clone() {
+    return new StoredEmail(_email, _uid, (Flags) _flags.clone(), internaldate);
+  }
+  
+  public String toString() {
+    return "[StoredEmail: " + _email + " uid " + _uid  + " date " + internaldate + " flags " + _flags + " ]";
+  }
+    
 }
 

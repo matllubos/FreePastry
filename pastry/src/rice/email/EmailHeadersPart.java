@@ -62,6 +62,7 @@ public class EmailHeadersPart extends EmailContentPart {
    */
   public void getContentHashReferences(Set set) {
     set.add(headersReference);
+    System.out.println("Adding email headers " + headersReference);
     content.getContentHashReferences(set);
   }
 

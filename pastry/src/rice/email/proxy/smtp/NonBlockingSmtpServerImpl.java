@@ -105,7 +105,6 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
             try {
               SmtpHandler handler = new SmtpHandler(registry, manager, workspace);
               handler.handleConnection(socket);
-              socket.close();
               
               synchronized (NonBlockingSmtpServerImpl.this) {
                 connections--; 
@@ -115,6 +114,13 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
               System.out.println("Done with connection - now at " + connections + " of " + MAX_CONNECTIONS);
             } catch (IOException e) {
               System.out.println("IOException occurred during handling of connection - " + e);
+            } finally {
+              try {
+                socket.close();
+              } catch (IOException e) {
+                System.err.println("ERROR!!!! - Got exception " + e + " while closing socket!");
+                e.printStackTrace();
+              }
             }
           }
         };
