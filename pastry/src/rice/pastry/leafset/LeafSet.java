@@ -150,7 +150,11 @@ public class LeafSet extends Observable implements Serializable {
      */
 
     public int getIndex(NodeId nid) throws NoSuchElementException {
-	int index = cwSet.getIndex(nid);
+	int index;
+
+	if (baseId.equals(nid)) return 0;
+
+	index = cwSet.getIndex(nid);
 	if (index >= 0) return index + 1;
 	index = ccwSet.getIndex(nid);
 	if (index >= 0) return -index - 1;
@@ -279,17 +283,20 @@ public class LeafSet extends Observable implements Serializable {
 
 	if (baseId.clockwise(nid)) {
 	    cwMS = cwSet.mostSimilar(nid);
-	    ccwMS = ccwSet.size()-1;
+	    //ccwMS = ccwSet.size()-1;
 	    if (cwMS < cwSet.size()-1) 
 		return cwMS + 1;
+	    ccwMS = ccwSet.mostSimilar(nid);
 	}
 	else {
 	    ccwMS = ccwSet.mostSimilar(nid);
-	    cwMS = cwSet.size()-1;
+	    //cwMS = cwSet.size()-1;
 	    if (ccwMS < ccwSet.size()-1) 
 		return -ccwMS - 1;
+	    cwMS = cwSet.mostSimilar(nid);
 	}
 
+	//System.out.println("cwMS=" + cwMS + " ccwMS=" + ccwMS);
 
 	cwMinDist = cwSet.get(cwMS).getNodeId().distance(nid);
 	ccwMinDist = ccwSet.get(ccwMS).getNodeId().distance(nid);
@@ -316,18 +323,29 @@ public class LeafSet extends Observable implements Serializable {
 
 	// compute the nearest node
 	int nearest = mostSimilar(key);
-	if (nearest == cwSet.size() || nearest == -ccwSet.size()) {
+	//System.out.println("nearest=" + nearest + " key=" + key);
+
+	if ( (nearest == cwSet.size() || nearest == -ccwSet.size()) && 
+	     complement(nearest) == nearest && size() > 0) {
 	    // can't determine root of key, return empty set
 	    return set;
 	}
-	    
+	
 	// add the key's root
 	set.put(get(nearest));
 
-	int cw = nearest+1;
-	int ccw = nearest-1;
+	int cw = nearest;
+	int ccw = nearest;
 
 	for (int i=1; i<max; i++) {
+	    int tmp;
+
+	    tmp = cw;
+	    if (cw == cwSet.size() && (cw = complement(cw)) == tmp) return set;
+
+	    tmp = ccw;
+	    if (-ccw == ccwSet.size() && (ccw = complement(ccw)) == tmp) return set;
+
 	    // determine next nearest node
 	    NodeHandle cwNode = get(cw);
 	    NodeHandle ccwNode = get(ccw);
@@ -338,20 +356,67 @@ public class LeafSet extends Observable implements Serializable {
 		// cwNode is closer to key
 		set.put(cwNode);
 		cw++;
-		if (cw > cwSet.size()) return set;
-
 	    } else {
 		// ccwNode is closer to key
 		set.put(ccwNode);
 		ccw--;
-		if (-ccw > ccwSet.size()) return set;
-
 	    }
 	}
 
 
 	return set;
     }
+
+
+    /**
+     * range
+     *
+     */
+
+    public IdRange range(NodeHandle n, int r, Id key, boolean cumulative) {
+	int pos;
+	NodeHandle minN, maxN;
+
+	// get n's position in the leafset
+	try {
+	    pos = getIndex(n.getNodeId());
+	} catch(NoSuchElementException e) {
+	    // argument n invalid
+	    return null;
+	}
+
+	System.out.println("Hi");
+	if (size() == 0 && r == 0) return new IdRange(n.getNodeId(), n.getNodeId());
+	
+	// get edge nodes for range calculation
+	int min = pos;
+	int max = pos;
+	for (int i=0; i<r+1; i++) {
+	    if (min == -ccwSize() && (min = complement(min)) == -ccwSize()) return null;
+	    if (max == cwSize() && (max = complement(max)) == cwSize()) return null;
+	    min--;
+	    max++;
+	}
+	minN = get(min);
+	maxN = get(max);
+
+	// see if we can compute range for n
+	if (minN == null || maxN == null) return null;
+	
+	if (cumulative) {
+	    System.out.println("minN=" + minN.getNodeId() + "n=" + n.getNodeId() + "maxN=" + maxN.getNodeId());
+
+	    IdRange cw = (new IdRange(n.getNodeId(), maxN.getNodeId())).ccwHalf();
+	    IdRange ccw = (new IdRange(minN.getNodeId(), n.getNodeId())).cwHalf();
+	    System.out.println("ccw=" + ccw + " cw=" + cw);
+	    return ccw.merge(cw);
+	}
+	else {
+	    // XXX - implement
+	    return null;
+	}
+    }
+
 
 
     /**
