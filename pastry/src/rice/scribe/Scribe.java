@@ -672,7 +672,7 @@ public class Scribe extends PastryAppl implements IScribe
 	    System.err.println( "No SHA support!" );
 	}
 	if(m_ready)
-	    System.out.println("Scribe is ready at"+getNodeId()+" , topic is "+topicName);
+	    System.out.println("DEBUG :: Scribe is ready at"+getNodeId()+" , topic is "+topicName);
 	md.update( topicName.getBytes() );
 	byte[] digest = md.digest();
 	
@@ -709,8 +709,8 @@ public class Scribe extends PastryAppl implements IScribe
 	NodeId topicId = smsg.getTopicId();
 	Topic topic = (Topic)m_topics.get( topicId );
 	//if(topic == null)
-	//System.out.println("Topic is null for topic "+topicId+" at "+getNodeId());
-	//System.out.println("Received msg at "+getNodeId()+" for topic "+topicId);
+	//System.out.println("DEBUG :: Topic is null for topic "+topicId+" at "+getNodeId());
+	//System.out.println("DEBUG :: Received msg at "+getNodeId()+" for topic "+topicId);
 	smsg.handleDeliverMessage( this, topic );
     }
 
@@ -814,7 +814,7 @@ public class Scribe extends PastryAppl implements IScribe
 			    ScribeMessage msgu = makeUnsubscribeMessage( topicId, c);
 			    this.routeMsgDirect(prev_parent, msgu, c, m_sendOptions);
 			}
-			//System.out.println("Scribe -- setting parent to null for topic"+topic.getTopicId()+ " at "+getNodeId());
+			//System.out.println("DEBUG :: Scribe -- setting parent to null for topic"+topic.getTopicId()+ " at "+getNodeId());
 			topic.setParent(null);
 			IScribeApp[] apps = topic.getApps();
 			for( int l = 0; l < apps.length; l++){
@@ -936,9 +936,21 @@ public class Scribe extends PastryAppl implements IScribe
      * @return the ScribeMessage.
      */
     public ScribeMessage makeAckOnSubscribeMessage( NodeId tid, Credentials c ) {
-        return new MessageAckOnSubscribe( m_address, this.thePastryNode.getLocalHandle(), tid, c);
+        return new MessageAckOnSubscribe( m_address, this.thePastryNode.getLocalHandle(), tid, c, null);
     }
-
+    
+    /**
+     * Makes a AckOnSubscribe message using the current Pastry node as the 
+     * source. Also takes in a serializable data.
+     *
+     * @param tid the topic id the message reffers to.
+     * @param c the credentials that will be associated with the message
+     * @param data the data to be shipped along the message
+     * @return the ScribeMessage.
+     */
+    public ScribeMessage makeAckOnSubscribeMessage( NodeId tid, Credentials c, Serializable data ) {
+        return new MessageAckOnSubscribe( m_address, this.thePastryNode.getLocalHandle(), tid, c, data);
+    }
     /**
      * Makes a RequestToParent message using the current Pastry node as the 
      * source.
@@ -1321,7 +1333,7 @@ public class Scribe extends PastryAppl implements IScribe
      */
     public boolean setParent(NodeHandle parent, NodeId topicId){
 	Topic topic = getTopic(topicId);
-	//System.out.println("Scribe --- caling setParent for topic "+topicId+" to parent "+parent);
+	//System.out.println("DEBUG :: Scribe --- caling setParent for topic "+topicId+" to parent "+parent);
 	if(topic != null){
 	    topic.setParent(parent);
 	    return true;
@@ -1372,8 +1384,10 @@ public class Scribe extends PastryAppl implements IScribe
      * @param msg the ScribeMessage which triggered this action,
      *            it can be SUBSCRIBE/UNSUBSCRIBE msg, or null if application 
      *            on top of Scribe called addChild()/removeChild()
+     *
+     * @param data the data to be sent with the AckOnSubscribe Message
      */
-    public void childObserver(NodeHandle child, NodeId topicId, boolean wasAdded, ScribeMessage pmsg)
+    public void childObserver(NodeHandle child, NodeId topicId, boolean wasAdded, ScribeMessage pmsg, Serializable data)
     {
 	Credentials cred = getCredentials();
 	SendOptions opt = getSendOptions();
@@ -1387,8 +1401,8 @@ public class Scribe extends PastryAppl implements IScribe
 		 * it can set its parent pointer and reset its parentHandler.
 		 */
 		
-		//System.out.println("Sending ACK_ON_SUBSCRIBE from "+this.getNodeId()+" for topic "+topicId+" to child "+child.getNodeId());
-		ScribeMessage amsg = makeAckOnSubscribeMessage(topicId, cred);
+		//System.out.println("DEBUG :: Sending ACK_ON_SUBSCRIBE from "+this.getNodeId()+" for topic "+topicId+" to child "+child.getNodeId());
+		ScribeMessage amsg = makeAckOnSubscribeMessage(topicId, cred, data);
 		routeMsgDirect( child, amsg, cred, opt );
 	    }
 	    
@@ -1495,6 +1509,30 @@ public class Scribe extends PastryAppl implements IScribe
        
 	if(topic != null)
 	    return topic.addChild(child, null);
+	else
+	    return false;
+    }
+
+    /**
+     * Add a node as a child in the children table for
+     * a topic. Also, takes in a serializable data object
+     * to be propogated along with the ACK to the child.
+     *
+     * @param child  the child to be added
+     *
+     * @param topicId the topic for which this child is added
+     *
+     * @param data Serializable data
+     *
+     * @return true if operation was successful, false otherwise
+     *
+     */
+    public boolean addChild(NodeHandle child, NodeId topicId, Serializable data)
+    {
+	Topic topic = getTopic(topicId);
+       
+	if(topic != null)
+	    return topic.addChild(child, null, data);
 	else
 	    return false;
     }
