@@ -200,7 +200,7 @@ public class RingId implements Id {
    * @return The comparison
    */
   public int compareTo(Object o) {
-    return id.compareTo(o);
+    return id.compareTo(((RingId)o).id);
   }
 }
 
