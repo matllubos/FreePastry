@@ -36,7 +36,8 @@ if advised of the possibility of such damage.
 
 package rice.p2p.commonapi;
 
-import java.util.TimerTask;
+
+
 
 /**
  * @(#) Endpoint.java
@@ -169,7 +170,7 @@ public interface Endpoint {
    * @param message The message to be delivered
    * @param delay The number of milliseconds to wait before delivering the message
    */
-  TimerTask scheduleMessage(Message message, long delay);
+  CancellableTask scheduleMessage(Message message, long delay);
   
   /**
    * Schedules a message to be delivered to this application every period number of 
@@ -179,7 +180,7 @@ public interface Endpoint {
    * @param delay The number of milliseconds to wait before delivering the fist message
    * @param delay The number of milliseconds to wait before delivering subsequent messages
    */
-  TimerTask scheduleMessage(Message message, long delay, long period);
+  CancellableTask scheduleMessage(Message message, long delay, long period);
   
   /**
    * Returns a unique instance name of this endpoint, sort of a mailbox name for this

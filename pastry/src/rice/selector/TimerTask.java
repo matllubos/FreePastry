@@ -7,6 +7,8 @@
 
 package rice.selector;
 
+import rice.p2p.commonapi.CancellableTask;
+
 /**
  * A task that can be scheduled for one-time or repeated execution by a Timer.
  *
@@ -16,7 +18,7 @@ package rice.selector;
  * @since   1.3
  */
 
-public abstract class TimerTask implements Runnable {
+public abstract class TimerTask implements CancellableTask, Runnable {
     /**
      * This object is used to control access to the TimerTask internals.
      */
