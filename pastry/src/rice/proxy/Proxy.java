@@ -60,6 +60,9 @@ public class Proxy {
                                                                 {"java_profiling_memory_enable", "false"},
                                                                 {"java_profiling_library_directory", "lib"},
                                                                 {"java_profiling_native_library_directory", "."},
+                                                                {"java_thread_debugger_enable", "false"},
+                                                                {"java_thread_debugger_port", "31000"},
+                                                                {"java_thread_debugger_library_directory", "lib"},
                                                                 {"java_classpath", "pastry.jar"},
                                                                 {"java_main_class", "rice.visualization.proxy.VisualizationEmailProxy"},
                                                                 {"java_main_class_parameters", ""}, 
@@ -112,7 +115,8 @@ public class Proxy {
   }
 
   protected String[] buildJavaEnvironment(Parameters parameters) {
-    if (parameters.getBooleanParameter("java_profiling_enable"))  {
+    if (parameters.getBooleanParameter("java_profiling_enable") ||
+        parameters.getBooleanParameter("java_thread_debugger_enable"))  {
       return new String[] {"LD_LIBRARY_PATH=" + parameters.getStringParameter("java_profiling_native_library_directory")};
     } else {
       return new String[0];
@@ -155,6 +159,24 @@ public class Proxy {
       
       result.append(" intuitive.audit.Audit -port ");
       result.append(parameters.getStringParameter("java_profiling_port"));
+    } else if (parameters.getBooleanParameter("java_thread_debugger_enable"))  {
+      result.append(" -Xruntdi:port=");
+      result.append(parameters.getIntParameter("java_thread_debugger_port"));
+      result.append(",analyzer=t");
+      
+      result.append("-Xint -Xbootclasspath/a:");
+      result.append(parameters.getStringParameter("java_thread_debugger_library_directory"));
+      result.append(System.getProperty("file.separator"));
+      result.append("oibcp.jar -cp ");
+      result.append(parameters.getStringParameter("java_thread_debugger_library_directory"));
+      result.append(System.getProperty("file.separator"));
+      result.append("optit.jar");
+      
+      String[] classpath = parameters.getStringArrayParameter("java_classpath");
+      for (int i=0; i<classpath.length; i++) {
+        result.append(System.getProperty("path.separator"));
+        result.append(classpath[i]); 
+      }
     } else {    
       String[] classpath = parameters.getStringArrayParameter("java_classpath");
       if (classpath.length > 0) {
