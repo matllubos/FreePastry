@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -44,13 +45,8 @@ import java.util.LinkedList;
 import rice.pastry.NodeId;
 import rice.pastry.PastryNode;
 import rice.pastry.dist.DistCoalesedNodeHandle;
-import rice.pastry.join.JoinRequest;
-import rice.pastry.leafset.BroadcastLeafSet;
-import rice.pastry.leafset.RequestLeafSet;
 import rice.pastry.messaging.Message;
-import rice.pastry.routing.BroadcastRouteRow;
 import rice.pastry.routing.RouteMessage;
-import rice.pastry.testing.HelloMsg;
 import rice.pastry.wire.exception.DeserializationException;
 import rice.pastry.wire.exception.ImproperlyFormattedMessageException;
 import rice.pastry.wire.exception.NodeIsDeadException;
@@ -222,9 +218,9 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
 
         // kill our socket and use the new one
         try {
-          this.key.attach(null);
           this.key.channel().close();
           this.key.cancel();
+          this.key.attach(null);
 
           writer.reset(scm);
         } catch (IOException e) {
@@ -241,7 +237,9 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
         wireDebug("setKey2b:"+scm);
 
         // use our socket and ignore the new one
-        key.attach(null);
+//        key.cancel();
+        //key.channel().close();
+        key.attach(new StaleSKH());
         debug("Using our socket, letting other socket die...");
       }
     }
@@ -906,6 +904,8 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
         }
   
         setState(STATE_USING_UDP,"close()");
+        Exception e = new Exception("Dump");
+        e.printStackTrace(outputStream);
   
         if (messages != null) {
           debug("Messages contains " + writer.queueSize() + " messages.");
