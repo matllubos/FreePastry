@@ -52,23 +52,11 @@ import rice.pastry.*;
  */
 public class NodeIdRequestMessage implements Serializable {
 
-  private NodeId nodeId;
-
   /**
    * Constructor
    *
    * @param nodeId The nodeId of the node requesting.
    */
-  public NodeIdRequestMessage(NodeId nodeId) {
-    this.nodeId = nodeId;
-  }
-
-  /**
-   * Returns the nodeId of the requestor.
-   *
-   * @return The NodeId of the requesting node.
-   */
-  public NodeId getNodeId() {
-    return nodeId;
+  public NodeIdRequestMessage() {
   }
 }

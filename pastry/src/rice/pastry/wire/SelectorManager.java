@@ -111,51 +111,52 @@ public class SelectorManager {
       // loop while waiting for activity
       while (alive && (selector.select(100) >= 0)) {
 
+        Object[] keys = null;
+        
         synchronized (selector) {
-          Iterator it = selector.selectedKeys().iterator();
-
-          // Walk through set
-          while (it.hasNext()) {
-            SelectionKey key = (SelectionKey) it.next();
-
-            // Remove current entry
-            it.remove();
-
-            SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
-
-            if (skh != null) {
-              // accept
-              if (key.isValid() && key.isAcceptable()) {
-                skh.accept(key);
-              }
-
-              // connect
-              if (key.isValid() && key.isConnectable()) {
-                skh.connect(key);
-              }
-
-              // read
-              if (key.isValid() && key.isReadable()) {
-                skh.read(key);
-              }
-
-              // write
-              if (key.isValid() && key.isWritable()) {
-                skh.write(key);
-              }
+          keys = selector.selectedKeys().toArray();
+        }
+        
+        for (int i=0; i<keys.length; i++) {
+          SelectionKey key = (SelectionKey) keys[i];
+          selector.selectedKeys().remove(key);
+          
+          SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
+          
+          if (skh != null) {
+            // accept
+            if (key.isValid() && key.isAcceptable()) {
+              skh.accept(key);
+            }
+            
+            // connect
+            if (key.isValid() && key.isConnectable()) {
+              skh.connect(key);
+            }
+            
+            // read
+            if (key.isValid() && key.isReadable()) {
+              skh.read(key);
+            }
+            
+            // write
+            if (key.isValid() && key.isWritable()) {
+              skh.write(key);
             }
           }
-
-          // wake up all SelectionKeyManagers
-          Object[] keys = selector.keys().toArray();
-
-          for (int i=0; i<keys.length; i++) {
-            SelectionKey key = (SelectionKey) keys[i];
-            SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
-
-            if (skh != null)
-              skh.wakeup();
-          }
+        }
+        
+        // wake up all SelectionKeyManagers
+        synchronized (selector) {
+          keys = selector.keys().toArray();
+        }
+        
+        for (int i=0; i<keys.length; i++) {
+          SelectionKey key = (SelectionKey) keys[i];
+          SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
+          
+          if (skh != null)
+            skh.wakeup();
         }
       }
 

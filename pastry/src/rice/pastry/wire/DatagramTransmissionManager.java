@@ -262,7 +262,7 @@ public class DatagramTransmissionManager {
 
     // the maximum number to retries before declaring the node
     // to be dead
-    public int MAX_NUM_RETRIES = 5;
+    public int MAX_NUM_RETRIES = 4;
 
     // the maximum number of objects in the UDP queue before we
     // open a socket

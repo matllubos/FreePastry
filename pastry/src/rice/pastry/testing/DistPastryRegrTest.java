@@ -67,12 +67,20 @@ import java.rmi.RemoteException;
 public class DistPastryRegrTest extends PastryRegrTest {
 
     private static int port = 5009;
-    private static String bshost = "dosa.cs.rice.edu";
+    private static String bshost;
     private static int bsport = 5009;
     private static int numnodes = 1;
     private static int protocol = DistPastryNodeFactory.PROTOCOL_RMI;
 
     private InetSocketAddress bsaddress;
+
+    static {
+      try {
+        bshost = InetAddress.getLocalHost().getHostName();
+      } catch (UnknownHostException e) {
+        System.out.println("Error determining local host: " + e);
+      }
+    }
 
     // constructor
 

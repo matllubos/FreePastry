@@ -171,10 +171,6 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
     } else {
       debug("Passing message " + msg + " to the socket controller for writing (state == " + state + ")");
 
-      // if we don't know our node Id, we must request it
-      if (nodeId == null)
-       ((WirePastryNode) getLocalNode()).getDatagramManager().write(address, new NodeIdRequestMessage(getLocalNode().getNodeId()));
-
       // check to see if socket is open
       if (state != STATE_USING_TCP) {
         try {
@@ -581,33 +577,6 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
     } else {
       System.out.println("PANIC: Attempt to set node more than once! was " + nodeId + " attempt " + nid);
     }
-  }
-
-  /**
-   * Equivalence relation for nodehandles. They are equal if and
-   * only if their corresponding NodeIds are equal.
-   *
-   * @param obj the other nodehandle .
-   * @return true if they are equal, false otherwise.
-   */
-  public boolean equals(Object obj) {
-    WireNodeHandle nh;
-
-    if ((obj == null) || (! (obj instanceof WireNodeHandle))) return false;
-
-    nh = (WireNodeHandle) obj;
-
-    return address.equals(nh.getAddress());
-  }
-
-  /**
-   * Hash codes for node handles. It is the hashcode of
-   * their corresponding NodeId's.
-   *
-   * @return a hash code.
-   */
-  public int hashCode(){
-    return this.getNodeId().hashCode();
   }
 
   /**

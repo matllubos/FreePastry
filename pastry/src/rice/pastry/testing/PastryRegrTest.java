@@ -233,7 +233,7 @@ public abstract class PastryRegrTest {
     }
 
   public synchronized void pause(int ms) {
-    System.out.println("waiting for " + (ms/1000) + " sec");
+    System.out.println("Waiting for pastry node to be ready...");
     try { wait(ms); } catch (InterruptedException e) {}
   }
 
@@ -258,11 +258,11 @@ public abstract class PastryRegrTest {
 
       RegrTestApp rta = (RegrTestApp) rtApps.get(from);
       PastryNode pn = (PastryNode) pastryNodes.get(to);
-
+      
       // send to a  random node
       rta.sendTrace(pn.getNodeId());
       while(simulate());
-
+      
       // send to a random key
       rta.sendTrace(key);
       while(simulate());

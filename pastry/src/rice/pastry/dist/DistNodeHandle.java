@@ -164,7 +164,9 @@ public abstract class DistNodeHandle extends NodeHandle {
       }
 
       if (alive == false) {
-        if (Log.ifp(5)) System.out.println(getLocalNode() + "found " + nodeId + " to be alive after all");
+        if (Log.ifp(5)) {
+          System.out.println(getLocalNode() + "found " + nodeId + " to be alive after all");
+        }
 
         alive = true;
         distance = Integer.MAX_VALUE;
@@ -186,7 +188,13 @@ public abstract class DistNodeHandle extends NodeHandle {
       }
 
       if (alive == true) {
-        if (Log.ifp(5)) System.out.println(getLocalNode() + "found " + nodeId + " to be dead");
+        if (Log.ifp(5)) {
+          if (getLocalNode() == null) {
+            System.out.println("Incoming node handle " + nodeId + " found remote node to be dead");
+          } else {
+            System.out.println(getLocalNode() + " found " + nodeId + " to be dead");
+          }
+        }
 
         alive = false;
         distance = Integer.MAX_VALUE;
@@ -323,6 +331,32 @@ public abstract class DistNodeHandle extends NodeHandle {
     public void setIsInPool(boolean iip) {
       isInPool = iip;
     }
+    
+    /**
+     * Equivalence relation for nodehandles. They are equal if and
+     * only if their corresponding NodeIds are equal.
+     *
+     * @param obj the other nodehandle .
+     * @return true if they are equal, false otherwise.
+     */
+
+    public boolean equals(Object obj) {
+      if ((obj == null) || (! (obj instanceof NodeHandle))) return false;
+
+      NodeHandle nh = (NodeHandle) obj;
+      
+      return nodeId.equals(nh.getNodeId());
+    }
+
+    /**
+     * Hash codes for node handles. It is the hashcode of
+     * their corresponding NodeId's.
+     *
+     * @return a hash code.
+     */
+    public int hashCode(){
+      return nodeId.hashCode();
+    }    
 
     /**
      * Overridden in order to restore default values for all of the
