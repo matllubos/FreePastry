@@ -48,7 +48,7 @@ import rice.pastry.messaging.*;
  * @author Rongmei Zhang/Y. Charlie Hu
  */
 
-public class DirectNodeHandle extends NodeHandle // which extends LocalNode
+public class DirectNodeHandle extends LocalNode implements NodeHandle
 {
     private PastryNode remoteNode;
     private NetworkSimulator simulator;

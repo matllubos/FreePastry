@@ -44,20 +44,15 @@ import java.io.*;
 import java.rmi.RemoteException;
 
 /**
- * A locally stored node handle that points to a remote RMIRemoteNodeI.
- *
- * Need localnode within handle for three reasons: to determine isLocal
- * (thus alive and distance = 0), to set senderId in messages (used for
- * coalescing on the other end), and to bounce messages back to self on
- * failure.
+ * Merely a stub to a RMINodeHandleCoalesced. Indirection needed for
+ * transparent handle verification.
  *
  * @version $Id$
  *
  * @author Sitaram Iyer
  */
 
-public class RMINodeHandle extends NodeHandle // which extends LocalNode
-		    implements Serializable
+public class RMINodeHandle extends LocalNode implements NodeHandle, Serializable
 {
     private RMIRemoteNodeI remoteNode;
     private NodeId remotenid;
@@ -112,6 +107,8 @@ public class RMINodeHandle extends NodeHandle // which extends LocalNode
     }
 
     private void init(RMIRemoteNodeI rn, NodeId nid) {
+	//redirect = null;
+	//verified = false;
 	remoteNode = rn;
 	remotenid = nid;
 	alive = true;
@@ -301,6 +298,10 @@ public class RMINodeHandle extends NodeHandle // which extends LocalNode
 	}
 	return alive;
     }
+
+    //private void verify() {
+	//x
+    //}
 
     private void readObject(ObjectInputStream in)
 	throws IOException, ClassNotFoundException 

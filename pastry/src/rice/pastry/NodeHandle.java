@@ -39,21 +39,21 @@ package rice.pastry;
 import rice.pastry.messaging.*;
 
 /**
- * Abstract class for handles to remote nodes.
+ * Interface for handles to remote nodes.
  *
  * @version $Id$
  *
  * @author Andrew Ladd
  */
 
-public abstract class NodeHandle extends LocalNode implements MessageReceiver {
+public interface NodeHandle extends MessageReceiver {
     /**
      * Gets the nodeId of this Pastry node.
      *
      * @return the node id.
      */
     
-    public abstract NodeId getNodeId();
+    public NodeId getNodeId();
 
     /**
      * Returns the last known liveness information about the Pastry node associated with this handle.
@@ -62,7 +62,7 @@ public abstract class NodeHandle extends LocalNode implements MessageReceiver {
      * @return true if the node is alive, false otherwise.
      */
     
-    public abstract boolean isAlive();
+    public boolean isAlive();
 
     /**
      * Returns the last known proximity information about the Pastry node associated with this handle.
@@ -74,7 +74,7 @@ public abstract class NodeHandle extends LocalNode implements MessageReceiver {
      * @return the proximity metric value
      */
     
-    public abstract int proximity();
+    public int proximity();
 
     /**
      * Ping the node. Refreshes the cached liveness status and proximity value of the Pastry node associated
@@ -84,7 +84,15 @@ public abstract class NodeHandle extends LocalNode implements MessageReceiver {
      * @return true if node is currently alive.
      */
     
-    public abstract boolean ping();
+    public boolean ping();
+
+    /**
+     * Set the local PastryNode.
+     *
+     * @param pn local pastrynode
+     */
+    
+    public void setLocalNode(PastryNode pn);
 }
 
 

@@ -50,7 +50,7 @@ JAVA_BIN         = $(JAVA_HOME)/bin
 #***************************************************************************
 
 JAVA     = java
-JAVAC    = javac
+JAVAC    = djavac
 JAVAH    = javah
 RMIC     = rmic
 JAR      = jar

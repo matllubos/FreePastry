@@ -105,6 +105,7 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
      */
 
     public NodeHandle verifyNodeHandle(NodeHandle handle) {
+	//return true;
 	NodeId mynid = localnode.getNodeId();
 	NodeId nid = handle.getNodeId();
 
@@ -113,10 +114,6 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
 	}
 	else if (handle instanceof RMINodeHandle) {
 	    RMINodeHandle rnh = (RMINodeHandle) handle;
-
-	    // set local node, for bouncing failed RouteMessages to myself
-	    //rnh.setLocalNode(localnode);
-
 	    return handlepool.coalesce(rnh);
 	}
 	else throw new Error("node handle of unknown type");	
