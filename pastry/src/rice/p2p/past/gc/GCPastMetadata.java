@@ -112,6 +112,13 @@ public class GCPastMetadata implements Serializable, Comparable {
   public String toString() {
     return "GCPMetadata " + expiration;
   }
+  
+  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    ois.defaultReadObject();
+    
+    if (expiration == 1096560000000L)
+      expiration = GCPastImpl.DEFAULT_EXPIRATION;
+  }
 }
 
 

@@ -61,14 +61,9 @@ public class GCPastImpl extends PastImpl implements GCPast {
   
   /**
    * The default expiration, or when objects inserted with no timeout will expire
-   * 11:00 AM, 8/30/2004
+   * 11:00 AM, 8/30/2004  1095180000000  1096560000000L
    */
-  public static final long DEFAULT_EXPIRATION = 1096560000000L;
-  
-  /**
-   * The trash can, or where objects should go once expired.  If null, they are deleted
-   */
-  protected StorageManager trash;
+  public static final long DEFAULT_EXPIRATION = 1095180000000L;
   
   /**
    * The real factory, which is not wrapped with a GCIdFactory
@@ -478,7 +473,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param id The id to remove
    */
   public void remove(Id id, Continuation command) {
-    storage.getStorage().unstore(((GCId) id).getId(), command);
+    super.remove(((GCId) id).getId(), command);
   }
   
   /**

@@ -36,6 +36,7 @@ if advised of the possibility of such damage.
 
 package rice.p2p.past;
 
+import java.io.*;
 import java.util.*;
 import java.util.logging.*;
 
@@ -77,6 +78,9 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
 
   // the storage manager used by this Past
   protected StorageManager storage;
+  
+  // The trash can, or where objects should go once removed.  If null, they are deleted
+  protected StorageManager trash;
 
   // the replication factor for Past
   protected int replicationFactor;
@@ -132,12 +136,26 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param instance The unique instance name of this Past
    */
   public PastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy) {
+    this(node, manager, replicas, instance, policy, null);
+  }
+  
+  
+  /**
+   * Constructor for Past
+   *
+   * @param node The node below this Past implementation
+   * @param manager The storage manager to be used by Past
+   * @param replicas The number of object replicas
+   * @param instance The unique instance name of this Past
+   */
+  public PastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy, StorageManager trash) {
     this.log.setLevel(Level.WARNING);
     this.storage = manager;
     this.endpoint = node.registerApplication(this, instance);
     this.factory = node.getIdFactory();
     this.policy = policy;
     this.instance = instance;
+    this.trash = trash;
     
     this.id = Integer.MIN_VALUE;
     this.outstanding = new Hashtable();
@@ -777,6 +795,9 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
           parent.receiveResult(new Boolean(false));
         } else {
           log.finest("inserting replica of id " + id);
+          
+          if (! (o instanceof PastContent))
+            System.err.println("ERROR! Not PastContent " + o.getClass().getName() + " " + o);
           storage.getStorage().store(((PastContent) o).getId(), null, (PastContent) o, parent);
         }
       }
@@ -790,8 +811,20 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    *
    * @param id The id to remove
    */
-  public void remove(Id id, Continuation command) {
-    storage.getStorage().unstore(id, command);
+  public void remove(final Id id, Continuation command) {
+    if (trash != null) {                        
+      storage.getObject(id, new StandardContinuation(command) {
+        public void receiveResult(Object o) {
+          trash.store(id, storage.getMetadata(id), (Serializable) o, new StandardContinuation(parent) {
+            public void receiveResult(Object o) {
+              storage.unstore(id, parent);
+            }
+          });
+        }
+      });
+    } else {
+      storage.unstore(id, command);
+    }
   }
   
   /**
