@@ -185,12 +185,17 @@ public class SocketManager implements SelectionKeyHandler {
     try {
       SocketChannel channel = (SocketChannel) ((ServerSocketChannel) key.channel()).accept();
       channel.configureBlocking(false);
-      SelectionKey clientKey = channel.register(pastryNode.getSelectorManager().getSelector(), SelectionKey.OP_READ);
 
-      debug("Accepted connection from " + channel.socket().getRemoteSocketAddress());
+      Selector selector = pastryNode.getSelectorManager().getSelector();
 
-      clientKey.attach(this);
-      connectors.put(clientKey, new SocketConnector(clientKey));
+      synchronized (selector) {
+        SelectionKey clientKey = channel.register(selector, SelectionKey.OP_READ);
+
+        debug("Accepted connection from " + channel.socket().getRemoteSocketAddress());
+
+        clientKey.attach(this);
+        connectors.put(clientKey, new SocketConnector(clientKey));
+      }
     } catch (IOException e) {
       System.out.println("ERROR (accepting connection): " + e);
     }

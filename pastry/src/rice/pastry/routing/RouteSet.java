@@ -54,7 +54,7 @@ import java.io.*;
  * @author Peter Druschel
  */
 
-public class RouteSet extends Observable implements NodeSet, Serializable
+public class RouteSet extends Observable implements NodeSet, Serializable, Observer
 {
     private NodeHandle[] nodes;
     private int theSize;
@@ -108,7 +108,12 @@ public class RouteSet extends Observable implements NodeSet, Serializable
         return true;
       }
       else {
-        if (handle.proximity() < worstProximity) {
+        if (handle.proximity() == Integer.MAX_VALUE) {
+          handle.addObserver(this);
+
+          return false;
+        }
+        else if (handle.proximity() < worstProximity) {
           // remove handle with worst proximity
           setChanged();
           notifyObservers(new NodeSetUpdate(nodes[worstIndex], false));
@@ -122,6 +127,19 @@ public class RouteSet extends Observable implements NodeSet, Serializable
           return true;
         }
         else return false;
+      }
+    }
+
+    /**
+     * Is called by the Observer pattern whenever the liveness or
+     * proximity of a registered node handle is changed.
+     *
+     * @param o The node handle
+     * @param arg The argument (should be null)
+     */
+    public void update(Observable o, Object arg) {
+      if (o instanceof NodeHandle) {
+        put((NodeHandle) o);
       }
     }
 

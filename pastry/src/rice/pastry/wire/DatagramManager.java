@@ -121,7 +121,12 @@ public class DatagramManager implements SelectionKeyHandler {
       InetSocketAddress isa = new InetSocketAddress(port);
       channel.socket().bind(isa);
 
-      key = channel.register(manager.getSelector(), SelectionKey.OP_READ);
+      Selector selector = manager.getSelector();
+
+      synchronized (selector) {
+        key = channel.register(selector, SelectionKey.OP_READ);
+      }
+
       key.attach(this);
     } catch (IOException e) {
       System.out.println("PANIC: Error binding datagram server to port " + port + ": " + e);

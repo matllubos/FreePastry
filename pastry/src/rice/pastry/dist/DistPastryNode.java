@@ -64,4 +64,9 @@ public abstract class DistPastryNode extends PastryNode {
      * @return The node handle pool for this pastry node.
      */
     public abstract DistNodeHandlePool getNodeHandlePool();
+
+    /**
+     * Method which kills a PastryNode (used only for testing).
+     */
+    public abstract void kill();
 }

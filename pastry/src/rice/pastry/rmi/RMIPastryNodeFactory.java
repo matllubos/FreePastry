@@ -168,10 +168,10 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
    *
    * @param bootstrap Node handle to bootstrap from.
    */
-  public PastryNode newNode(NodeHandle bootstrap) {
+  public PastryNode newNode(final NodeHandle bootstrap) {
     NodeId nodeId = nidFactory.generateNodeId();
 
-    RMIPastryNode pn = new RMIPastryNode(nodeId);
+    final RMIPastryNode pn = new RMIPastryNode(nodeId);
 
     RMINodeHandle localhandle = new RMINodeHandle(null, nodeId);
 
@@ -208,7 +208,14 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
 
     localhandle.setLocalNode(pn);
 
-    pn.doneNode(bootstrap);
+    // launch thread to handle the sockets
+    Thread t = new Thread("Thread for node " + nodeId) {
+      public void run() {
+        pn.doneNode(bootstrap);
+      }
+    };
+
+    t.start();
 
     return pn;
   }

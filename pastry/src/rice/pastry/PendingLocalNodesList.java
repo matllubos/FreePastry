@@ -59,12 +59,10 @@ public class PendingLocalNodesList {
    * @param client The LocalNodeI itself
    */
   public void addPending(ObjectInputStream in, LocalNodeI client) {
-    LinkedList pendinglist = null;
-
-    if (map.containsKey(in) == false)
+    LinkedList pendinglist = (LinkedList) map.get(in);
+      
+    if (pendinglist == null)
       map.put(in, pendinglist = new LinkedList());
-    else
-      pendinglist = (LinkedList) map.get(in);
 
     if (Log.ifp(8))
       System.out.println("pending " + this + " on list " + in);

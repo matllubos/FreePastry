@@ -54,40 +54,41 @@ import java.rmi.RMISecurityManager;
 import java.rmi.RemoteException;
 
 /**
- * a regression test suite for pastry with RMI.
+ * a regression test suite for pastry with distributed nodes
+ *
+ * See the usage for more information, the -protocol option can be
+ * used to specify which protocol to run the test with.
  *
  * @version $Id$
  *
- * @author andrew ladd
- * @author peter druschel
- * @author sitaram iyer
+ * @author Alan Mislove
  */
 
-public class RMIPastryRegrTest extends PastryRegrTest {
+public class DistPastryRegrTest extends PastryRegrTest {
+
     private static int port = 5009;
-    private static String bshost = "ural.owlnet.rice.edu";
+    private static String bshost = "dosa.cs.rice.edu";
     private static int bsport = 5009;
     private static int numnodes = 1;
+    private static int protocol = DistPastryNodeFactory.PROTOCOL_RMI;
 
     private InetSocketAddress bsaddress;
 
     // constructor
 
-    public RMIPastryRegrTest() {
+    public DistPastryRegrTest() {
       super();
-      factory = DistPastryNodeFactory.getFactory(DistPastryNodeFactory.PROTOCOL_RMI, port);
+      factory = DistPastryNodeFactory.getFactory(protocol, port);
 
       try {
         bsaddress = new InetSocketAddress(bshost, bsport);
       } catch (Exception e) {
-        System.out.println("ERROR (doStuff): " + e);
+        System.out.println("ERROR (init): " + e);
       }
     }
 
     /**
-     * Gets a handle to a bootstrap node. First tries localhost, to see
-     * whether a previous virtual node has already bound itself. Then it
-     * tries nattempts times on bshost:bsport.
+     * Gets a handle to a bootstrap node.
      *
      * @return handle to bootstrap node, or null.
      */
@@ -99,12 +100,12 @@ public class RMIPastryRegrTest extends PastryRegrTest {
      * process command line args, set the RMI security manager, and start
      * the RMI registry. Standard gunk that has to be done for all RMI apps.
      */
-    private static void doRMIinitstuff(String args[]) {
+    private static void doInitstuff(String args[]) {
       // process command line arguments
 
       for (int i = 0; i < args.length; i++) {
         if (args[i].equals("-help")) {
-          System.out.println("Usage: RMIPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]");
+          System.out.println("Usage: DistPastryRegrTest [-port p] [-protocol (rmi|wire)] [-nodes n] [-bootstrap host[:port]] [-help]");
           System.exit(1);
         }
       }
@@ -141,41 +142,32 @@ public class RMIPastryRegrTest extends PastryRegrTest {
         }
       }
 
-      // set RMI security manager
+      for (int i = 0; i < args.length; i++) {
+        if (args[i].equals("-protocol") && i+1 < args.length) {
+          String s = args[i+1];
 
-      if (System.getSecurityManager() == null)
-        System.setSecurityManager(new RMISecurityManager());
+          if (s.equalsIgnoreCase("wire"))
+            protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
+          else if (s.equalsIgnoreCase("rmi"))
+            protocol = DistPastryNodeFactory.PROTOCOL_RMI;
+          else
+            System.out.println("ERROR: Unsupported protocol: " + s);
 
-      // start RMI registry
-
-      try {
-        java.rmi.registry.LocateRegistry.createRegistry(port);
-      } catch (RemoteException e) {
-        System.out.println("Error starting RMI registry: " + e);
-      }
-    }
-
-    private class ApplThread implements Runnable {
-      PastryNode pn;
-      RegrTestApp app;
-      ApplThread(PastryNode n, RegrTestApp a) { pn = n; app = a; }
-
-      public void run() {
-
-        // wait till node is ready to accept application messages.
-        if (pn.isReady() == false) {
-          synchronized (app) {
-            //System.out.println(pn + " isn't ready yet. Waiting.");
-            try { app.wait(); } catch (InterruptedException e) { }
-          }
-
-          if (pn.isReady() == false) System.out.println("panic");
-          //System.out.println(pn + " is ready now. Proceeding to send messages.");
-        } else {
-          //System.out.println(pn + " is ready at the time this client is starting.");
+          break;
         }
+      }
 
-        //doappstuff();
+      if (protocol == DistPastryNodeFactory.PROTOCOL_RMI) {
+        // set RMI security manager
+        if (System.getSecurityManager() == null)
+          System.setSecurityManager(new RMISecurityManager());
+
+        // start RMI registry
+        try {
+          java.rmi.registry.LocateRegistry.createRegistry(port);
+        } catch (RemoteException e) {
+          System.out.println("Error starting RMI registry: " + e);
+        }
       }
     }
 
@@ -187,8 +179,6 @@ public class RMIPastryRegrTest extends PastryRegrTest {
      * @param app newly created application
      */
     protected void registerapp(PastryNode pn, RegrTestApp app) {
-      ApplThread thread = new ApplThread(pn, app);
-      new Thread(thread).start();
     }
 
     // do nothing in the RMI world
@@ -200,16 +190,16 @@ public class RMIPastryRegrTest extends PastryRegrTest {
     }
 
     protected void killNode(PastryNode pn) {
-  //  ((RMIPastryNode)pn).KILLNODE();
+      ((DistPastryNode)pn).kill();
     }
 
     /**
-     * Usage: RMIRegrPastryTest [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
+     * Usage: RMIRegrPastryTest [-port p] [-protocol (wire|rmi)] [-nodes n] [-bootstrap host[:port]] [-help]
      */
 
     public static void main(String args[]) {
-      doRMIinitstuff(args);
-      RMIPastryRegrTest pt = new RMIPastryRegrTest();
+      doInitstuff(args);
+      DistPastryRegrTest pt = new DistPastryRegrTest();
       mainfunc(pt, args, 10 /*n*/, 4/*d*/, 10/*k*/, 10/*m*/, 4/*conc*/);
     }
 }

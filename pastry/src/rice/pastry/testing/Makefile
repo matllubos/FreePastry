@@ -5,13 +5,12 @@ SOURCE  = \
 	\
 	PastryTest.java RMIPastryTest.java PingClient.java\
 	\
-	PastryRegrTest.java DirectPastryRegrTest.java RMIPastryRegrTest.java\
+	PastryRegrTest.java DirectPastryRegrTest.java DistPastryRegrTest.java \
 	RegrTestApp.java\
 	\
 	NodeIdUnit.java\
 	PingMessage.java PingAddress.java Ping.java SinglePingTest.java\
-	PingTestRecord.java DirectPastryPingTest.java \
-	WirePastryRegrTest.java
+	PingTestRecord.java DirectPastryPingTest.java 
 
 
 RMI_SOURCE =

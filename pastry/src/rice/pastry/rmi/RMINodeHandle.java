@@ -190,7 +190,7 @@ public class RMINodeHandle extends DistNodeHandle
     * @return liveness of remote node.
      */
     public boolean pingImpl() {
-    	NodeId tryid;
+      NodeId tryid;
 
       /*
       * Note subtle point: When ping is called from RouteSet.readObject,
@@ -237,22 +237,22 @@ public class RMINodeHandle extends DistNodeHandle
     }
 
     private void readObject(ObjectInputStream in)
-	    throws IOException, ClassNotFoundException {
-	    RMIRemoteNodeI rn = (RMIRemoteNodeI) in.readObject();
-	    NodeId rnid = (NodeId) in.readObject();
-	    init(rn, rnid); // initialize all the other elements
-  	}
+      throws IOException, ClassNotFoundException {
+      RMIRemoteNodeI rn = (RMIRemoteNodeI) in.readObject();
+      NodeId rnid = (NodeId) in.readObject();
+      init(rn, rnid); // initialize all the other elements
+    }
 
     private void writeObject(ObjectOutputStream out)
-    	throws IOException, ClassNotFoundException {
-	    if (isLocal) if (Log.ifp(7)) {
-    		assertLocalNode();
-    		System.out.println("writeObject from " + getLocalNode().getNodeId() + " to local node " + nodeId);
-	    }
+      throws IOException, ClassNotFoundException {
+      if (isLocal) if (Log.ifp(7)) {
+        assertLocalNode();
+        System.out.println("writeObject from " + getLocalNode().getNodeId() + " to local node " + nodeId);
+      }
 
-	    out.writeObject(remoteNode);
-	    out.writeObject(nodeId);
-  	}
+      out.writeObject(remoteNode);
+      out.writeObject(nodeId);
+    }
 
     /**
      * Equivalence relation for nodehandles. They are equal if and
@@ -263,15 +263,15 @@ public class RMINodeHandle extends DistNodeHandle
      */
 
     public boolean equals(Object obj) {
-    	NodeHandle nh;
+      NodeHandle nh;
 
-    	if(obj == null) return false;
+      if ((obj == null) || (! (obj instanceof NodeHandle))) return false;
 
-    	nh = (NodeHandle)obj;
-    	if(this.getNodeId().equals(nh.getNodeId()))
-  	    return true;
-    	else
-  	    return false;
+      nh = (NodeHandle)obj;
+      if(this.getNodeId().equals(nh.getNodeId()))
+        return true;
+      else
+        return false;
     }
 
     /**
@@ -281,13 +281,13 @@ public class RMINodeHandle extends DistNodeHandle
      * @return a hash code.
      */
     public int hashCode(){
-    	return this.getNodeId().hashCode();
+      return this.getNodeId().hashCode();
     }
 
     public String toStringImpl() {
-    	return (isLocal ? "(local " : "") + "handle " + nodeId
-        	    + (alive ? "" : ":dead")
-        	    + ", localnode = " + getLocalNode()
-        	    + ")";
+      return (isLocal ? "(local " : "") + "handle " + nodeId
+              + (alive ? "" : ":dead")
+              + ", localnode = " + getLocalNode()
+              + ")";
     }
 }

@@ -228,14 +228,14 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
 	}
     }
 
-//    /**
-//     * Testing purposes only!
-//     */
-//    public void KILLNODE() {
-//	try {
-//	    UnicastRemoteObject.unexportObject(this, true); // force
-//	} catch (NoSuchObjectException e) {
-//	    System.out.println("Unable to unbind Pastry node from rmiregistry: " + e.toString());
-//	}
-//    }
+    /**
+     * Testing purposes only!
+     */
+    public void kill() {
+	try {
+	    UnicastRemoteObject.unexportObject(this, true); // force
+	} catch (NoSuchObjectException e) {
+	    System.out.println("Unable to unbind Pastry node from rmiregistry: " + e.toString());
+	}
+    }
 }

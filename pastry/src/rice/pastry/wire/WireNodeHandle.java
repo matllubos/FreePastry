@@ -73,8 +73,8 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
   public static int MAX_UDP_MESSAGE_SIZE = 8192;
 
   // the ip address and port of the remote node
-  private InetSocketAddress address;           
-  
+  private InetSocketAddress address;
+
   private int pingthrottle = 5;
 
   // the time the last ping was performed
@@ -199,34 +199,34 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
         }
       } else {
         writer.enqueue(new SocketTransportMessage(msg));
-        
+
         if (((WirePastryNode) getLocalNode()).inThread()) {
           key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
         } else {
           ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector().wakeup();
-        }        
-        
+        }
+
         debug("Enqueued message " + msg + " for writing in socket writer.");
       }
     }
   }
-  
+
   /**
    * Method which returns the size of an object about to be sent over the wire.  This size includes
    * all of the wrapper messages (such as the Socket Transport Message).
-   * 
+   *
    * @param obj The object
    * @return The total size the object and wrappers will occupy.
    */
   private int messageSize(Object obj) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     ObjectOutputStream oos = new ObjectOutputStream(baos);
-    
+
     oos.writeObject(new SocketTransportMessage(obj));
     oos.flush();
-    
-    byte[] array = baos.toByteArray();   
-    
+
+    byte[] array = baos.toByteArray();
+
     return array.length;
   }
 
@@ -247,12 +247,14 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
 
         debug("Opening socket to " + tcpAddress);
 
-        if (done) {
-          key = channel.register(((WirePastryNode) getLocalNode()).getSelectorManager().getSelector(),
-                                 SelectionKey.OP_READ);
-        } else {
-          key = channel.register(((WirePastryNode) getLocalNode()).getSelectorManager().getSelector(),
-                                 SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
+        Selector selector = ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector();
+
+        synchronized (selector) {
+          if (done) {
+            key = channel.register(selector, SelectionKey.OP_READ);
+          } else {
+            key = channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
+          }
         }
 
         setKey(key);
@@ -264,7 +266,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
           while (i.hasNext()) {
             writer.enqueue(i.next());
           }
-          
+
           if (((WirePastryNode) getLocalNode()).inThread()) {
             key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
           } else {
@@ -274,7 +276,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
       } catch (IOException e) {
         markDead();
         state = STATE_USING_UDP;
-        System.out.println("IOException connecting to remote node " + address);
+        debug("IOException connecting to remote node " + address);
       }
     }
   }
@@ -379,7 +381,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
       state = STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT;
 
       writer.enqueue(new DisconnectMessage());
-      
+
       if (((WirePastryNode) getLocalNode()).inThread()) {
         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
       } else {

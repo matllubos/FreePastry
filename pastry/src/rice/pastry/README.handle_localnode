@@ -91,3 +91,24 @@ Not completely transparent (handles and other shipped-with classes implement
 LocalNodeI, but RouteSet, HelloMsg and other containers don't). setLocalNode
 invocations on each of these little handles and stuff buried inside Messages
 is transparent.
+
+ADDENDUM 25 Aug 2002, by Alan Mislove:
+
+The LocalNode class structure has been changed a little.  There is now a class
+in pastry called PendingLocalNodesList which serves a global hashtable for all
+of the LocalNodeI classes waiting to have their local nodes set.  It is a static
+field in LocalNodeI, and as before, when the PastryNode receives a message, it 
+calls the appropriate method in this list (LocalNodeI.pending).  
+
+There is now LocalNodeI, which is designed to be an interface for all classes 
+wishing to know which pastryNode they are on.  Also provided is one implementing
+class, LocalNode, which provides the basic local node functionality as before.  
+It is preferable that a class simply extend LocalNode, which will automatically
+handle all of the bookkeeping with no intervention from the extending class. 
+If this is not possible (for reasons such as multiple inheratince), the class
+must then implement LocalNodeI, and *MUST* override the default readObject 
+method to include the following lines:
+
+  in.defaultReadObject();
+  LocalNode.pending.addPending(in, this);
+
