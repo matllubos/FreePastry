@@ -19,7 +19,7 @@ import rice.post.storage.*;
 public class Folder {
   
   // maximum entry limit for our primitive snapshot policy
-  public static final int COMPRESS_LIMIT = 50;
+  public static final int COMPRESS_LIMIT = 500;
   
   // the static name of the root folder
   public static String ROOT_FOLDER_NAME = "Root";
@@ -454,17 +454,21 @@ public class Folder {
     final int entries = _log.getEntries();
 
     if (entries >= COMPRESS_LIMIT) {
-      final LogEntryReference ref = _log.getTopEntryReference();
-      
-      getMessages(new StandardContinuation(command) {
+      _log.getTopEntry(new StandardContinuation(command) {
         public void receiveResult(Object o) {
-          if (_log.getEntries() == entries) {
-            _log.resetEntries();
-            _log.addLogEntry(new SnapShotLogEntry((StoredEmail[]) o, ref), parent);
-          } else {
-            System.out.println("INFO: Was unable to create snapshot - other log entry in progress.  Not bad, but a little unexpected.");
-            parent.receiveResult(new Boolean(true));
-          }
+          final LogEntry entry = (LogEntry) o;
+      
+          getMessages(new StandardContinuation(parent) {
+            public void receiveResult(Object o) {
+              if (_log.getEntries() == entries) {
+                _log.resetEntries();
+                _log.addLogEntry(new SnapShotLogEntry((StoredEmail[]) o, entry), parent);
+              } else {
+                System.out.println("INFO: Was unable to create snapshot - other log entry in progress.  Not bad, but a little unexpected.");
+                parent.receiveResult(new Boolean(true));
+              }
+            }
+          });
         }
       });
     } else {
@@ -498,7 +502,7 @@ public class Folder {
       private Vector emails = new Vector();
       private HashSet seen = new HashSet();
       private HashSet deleted = new HashSet();
-      private LogEntryReference top = null;
+      private LogEntry top = null;
       
       protected void insert(StoredEmail email) {
         Integer uid = new Integer(email.getUID());
@@ -519,7 +523,9 @@ public class Folder {
         boolean finished = false;
         
         if (entry != null) {
-          if (entry instanceof InsertMailLogEntry) {
+          if ((top != null) && (entry.equals(top))) {
+            finished = true;
+          } else if (entry instanceof InsertMailLogEntry) {
             insert(((InsertMailLogEntry) entry).getStoredEmail());
           } else if (entry instanceof InsertMailsLogEntry) {
             StoredEmail[] inserts = ((InsertMailsLogEntry) entry).getStoredEmails();
@@ -541,13 +547,14 @@ public class Folder {
             for (int i=0; i<updates.length; i++) 
               insert(updates[i]);            
           } else if (entry instanceof SnapShotLogEntry) {
+            System.out.println("FOUND SNAPSHOT - TOP ENTRY IS " + ((SnapShotLogEntry) entry).getTopEntry());
             StoredEmail[] rest = ((SnapShotLogEntry) entry).getStoredEmails();
 
             for (int i = 0; i < rest.length; i++)
               insert(rest[i]);
 
             if (top == null)
-              top = ((SnapShotLogEntry) entry).getTopEntryReference();
+              top = ((SnapShotLogEntry) entry).getTopEntry();
             
             if (top == null)
               finished = true;
@@ -555,17 +562,12 @@ public class Folder {
         } else {
           finished = true;
         }
-        
-        LogEntryReference next = null;
-        
-        if (entry != null)
-          next = entry.getPreviousEntryReference();
 
-        if (finished || (next == null) || (next.equals(top))) {
+        if (finished) {
           // now, sort the list (by UID)
           Collections.sort(emails);
           StoredEmail[] result = (StoredEmail[]) emails.toArray(new StoredEmail[0]);
-          System.out.println("SETTING EXISTS TO BE " + result.length + " NEXT " + next + " TOP " + top + " FINISHED " + finished);
+          System.out.println("SETTING EXISTS TO BE " + result.length + " TOP " + top + " FINISHED " + finished);
 
           if (_log.getBufferSize() == 0) 
             _log.setExists(result.length);

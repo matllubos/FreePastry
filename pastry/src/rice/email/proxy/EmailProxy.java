@@ -58,6 +58,8 @@ public class EmailProxy extends PostProxy {
   static boolean GATEWAY = false;
 
   static boolean ACCEPT_NON_LOCAL = true;
+  
+  static boolean SEND_PUBLISH = true;
 
   // we must set up the Data Content Handler
   static {
@@ -97,12 +99,27 @@ public class EmailProxy extends PostProxy {
          stepDone(SUCCESS);
          
          stepStart("Fetching Email INBOX log");
-         ExternalContinuation c = new ExternalContinuation();
-         email.getRootFolder(c);
-         c.sleep();
+         int retries = 0;
+         boolean done = false;
+         ExternalContinuation c = null;
          
-         if (c.exceptionThrown()) { throw c.getException(); }
+         while (!done) {
+           c = new ExternalContinuation();
+           email.getRootFolder(c);
+           c.sleep();
+           
+           if (c.exceptionThrown()) { 
+             if (retries < NUM_RETRIES) {
+               retries++;
+             } else {
+               throw c.getException(); 
+             }
+           } else {
+             done = true;
+           }
+         }
          stepDone(SUCCESS);
+         
          
          stepStart("Starting User Email Services");
          manager = new UserManagerImpl(email, new PostMailboxManager(email, (rice.email.Folder) c.getResult()));
@@ -181,7 +198,9 @@ public class EmailProxy extends PostProxy {
            }
          };
          
-         t.start();
+         if (SEND_PUBLISH) {
+           t.start();
+         }
        }
      }
      
@@ -225,10 +244,17 @@ public class EmailProxy extends PostProxy {
         break;
       }
     }
-
+    
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-nonlocal")) {
         ACCEPT_NON_LOCAL = true;
+        break;
+      }
+    }
+    
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-nopublish")) {
+        SEND_PUBLISH = false;
         break;
       }
     }

@@ -14,7 +14,7 @@ import rice.post.log.*;
  *
  * @author Alan Mislove
  */
-public class EmailLog extends EncryptedLog {
+public class EmailLog extends CoalescedLog {
 
   // the default initial UID
   public static int DEFAULT_UID = 1;

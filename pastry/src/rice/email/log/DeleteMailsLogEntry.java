@@ -1,5 +1,7 @@
 package rice.email.log;
 
+import java.util.*;
+
 import rice.post.log.*;
 import rice.email.*;
 
@@ -29,6 +31,34 @@ public class DeleteMailsLogEntry extends EmailLogEntry {
    */
   public StoredEmail[] getStoredEmails() {
     return _storedEmails;
+  }
+  
+  /**
+   * ToString for this entry
+   *
+   * @return A String
+   */
+  public String toString() {
+    StringBuffer buffer = new StringBuffer();
+    buffer.append("DeleteMailsLogEntry[");
+    
+    for (int i=0; i<_storedEmails.length; i++) 
+      buffer.append(_storedEmails[i].getUID() + ", ");
+    
+    return buffer.toString() + "]";
+  }
+  
+  /**
+   * Equals method
+   *
+   * @param o The object to compare to
+   * @return Whether or not we are equal
+   */
+  public boolean equals(Object o) {
+    if (! (o instanceof DeleteMailsLogEntry))
+      return false;
+    
+    return Arrays.equals(((DeleteMailsLogEntry) o)._storedEmails, _storedEmails);
   }
 }
 

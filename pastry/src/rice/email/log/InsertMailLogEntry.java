@@ -30,6 +30,28 @@ public class InsertMailLogEntry extends EmailLogEntry {
   public StoredEmail getStoredEmail() {
     return _storedEmail;
   }
+  
+  /**
+   * ToString for this entry
+   *
+   * @return A String
+   */
+  public String toString() {
+    return "InsertMailLogEntry[" + _storedEmail.getUID() + "]";
+  }
+  
+  /**
+    * Equals method
+   *
+   * @param o The object to compare to
+   * @return Whether or not we are equal
+   */
+  public boolean equals(Object o) {
+    if (! (o instanceof InsertMailLogEntry))
+      return false;
+    
+    return ((InsertMailLogEntry) o)._storedEmail.equals(_storedEmail);
+  }
 }
 
 

@@ -1,5 +1,7 @@
 package rice.email.log;
 
+import java.util.*;
+
 import rice.post.log.*;
 import rice.email.*;
 
@@ -15,7 +17,7 @@ public class SnapShotLogEntry extends EmailLogEntry {
   private StoredEmail[] _emails;
   
   // the location of the most recent log entry included in this snapshot
-  private LogEntryReference _top;
+  private LogEntry entry;
     
   /**
    * Constructor for SnapShot.  For the given email, creates an
@@ -25,9 +27,9 @@ public class SnapShotLogEntry extends EmailLogEntry {
    * @param email the email to store
    * @param top The top of the current log
    */
-  public SnapShotLogEntry(StoredEmail[] emails, LogEntryReference top) {
+  public SnapShotLogEntry(StoredEmail[] emails, LogEntry top) {
     _emails = emails;
-    _top = top;
+    entry = top;
   }
 
   /**
@@ -44,8 +46,21 @@ public class SnapShotLogEntry extends EmailLogEntry {
    *
    * @return The most recent log entry reference
    */
-  public LogEntryReference getTopEntryReference() {
-    return _top;
+  public LogEntry getTopEntry() {
+    return entry;
+  }
+  
+  /**
+   * Equals method
+   *
+   * @param o The object to compare to
+   * @return Whether or not we are equal
+   */
+  public boolean equals(Object o) {
+    if (! (o instanceof SnapShotLogEntry))
+      return false;
+    
+    return Arrays.equals(((SnapShotLogEntry) o)._emails, _emails);
   }
   
 }

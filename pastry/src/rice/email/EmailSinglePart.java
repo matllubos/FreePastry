@@ -29,7 +29,7 @@ public class EmailSinglePart extends EmailContentPart {
   /**
     * A reference to the content of this email part
    */
-  protected EmailDataReference contentReference;
+  public EmailDataReference contentReference;
 
   /**
    * Constructor which takes in an EmailData

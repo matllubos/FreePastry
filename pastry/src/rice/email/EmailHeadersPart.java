@@ -24,7 +24,7 @@ public class EmailHeadersPart extends EmailContentPart {
   /**
    * A reference to the headers of this email part
    */
-  protected EmailDataReference headersReference;
+  public EmailDataReference headersReference;
 
   /**
    * The content of this part

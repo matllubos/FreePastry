@@ -200,7 +200,7 @@ public class EmailService extends PostClient {
    *
    * @param nm The incoming notification.
    */
-  public void notificationReceived(NotificationMessage nm) {
+  public void notificationReceived(NotificationMessage nm, Continuation command) {
     if (nm instanceof EmailNotificationMessage) {
       EmailNotificationMessage enm = (EmailNotificationMessage) nm;
       enm.getEmail().setStorage(post.getStorageService());
@@ -212,12 +212,14 @@ public class EmailService extends PostClient {
       this.notifyObservers(enm);
 
       if (inbox != null) {
-        inbox.addMessage(enm.getEmail(), new ListenerContinuation("Insert message into Inbox"));
+        inbox.addMessage(enm.getEmail(), command);
       } else {
         System.out.println("Recieved message, but was unable to insert due to null inbox...");
+        command.receiveResult(new Boolean(false));
       }
     } else {
       System.out.println("EmailService received unknown notification " + nm + " - dropping on floor.");
+      command.receiveException(new PostException("EmailService received unknown notification " + nm + " - dropping on floor."));
     }
   }
   
