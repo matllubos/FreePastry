@@ -109,7 +109,7 @@ public class ControlDropMessage extends ControlMessage{
                                                                         0,
                                                                         spare_id,
                                                                         c, stripe_id, channel_id );
-
+      channel.getStripe( stripe_id ).num_fails = 0;
       channel.getStripe( stripe_id ).setIgnoreTimeout( false );
       thePastryNode.scheduleMsg( timeoutMessage, timeout_len );
    }
