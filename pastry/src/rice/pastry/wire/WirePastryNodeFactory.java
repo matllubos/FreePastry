@@ -213,8 +213,8 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
       // it must now be explicitly registered
       sManager.registerForWakeup(dManager);
       
-      socketManager = new GlobalSocketManager(pn, port, sManager.getSelector());
-//      socketManager = new SocketManager(pn, port, sManager.getSelector());
+//      socketManager = new GlobalSocketManager(pn, port, sManager.getSelector());
+      socketManager = new SocketManager(pn, port, sManager.getSelector());
 
       address = getAddress(port);
 

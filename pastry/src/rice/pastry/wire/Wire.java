@@ -105,6 +105,7 @@ public class Wire {
   
   
   public static synchronized void acquireFileDescriptor() {
+    if (true) return;
     assertInitialized();
     numUsedFileDescriptors++;
     oneOfs++;
@@ -115,6 +116,7 @@ public class Wire {
   }
 
   public static synchronized void releaseFileDescriptor() {
+    if (true) return;
     assertInitialized();
     numUsedFileDescriptors--;
     oneOfs--;
@@ -126,6 +128,7 @@ public class Wire {
   
   
   public static synchronized void acquireFileDescriptors(int numFDs) {
+    if (true) return;
     assertInitialized();
     numUsedFileDescriptors+=numFDs;
     int nl = getNotifyLimit();
@@ -136,6 +139,7 @@ public class Wire {
   }
 
   public static synchronized void releaseFileDescriptors(int numFDs) {
+    if (true) return;
     assertInitialized();
     numUsedFileDescriptors-=numFDs;
     int nl = getNotifyLimit();
@@ -146,11 +150,13 @@ public class Wire {
   }
   
   public static synchronized void releaseingFileDescriptor() {
+    if (true) return;
     numFDsPendingRelease++;
     pendingsCalled++;
   }
   
   public static synchronized void doneReleaseingFileDescriptor() {
+    if (true) return;    
     numFDsPendingRelease--;
     releaseFileDescriptor();
   }
