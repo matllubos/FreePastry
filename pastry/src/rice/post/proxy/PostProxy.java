@@ -71,7 +71,6 @@ public class PostProxy {
   protected IdFactory FACTORY;
   
   /**
-<<<<<<< PostProxy.java
     * The IdFactory to use for glacier fragments
    */
   protected FragmentKeyFactory KFACTORY;
@@ -87,8 +86,6 @@ public class PostProxy {
   protected PastryNode globalPastryNode;
   
   /**
-=======
->>>>>>> 1.19
    * The node the services should use
    */
   protected Node node;
@@ -157,6 +154,11 @@ public class PostProxy {
    * The local storage for glacier neighbor certificates
    */
   protected StorageManager glacierNeighborStorage;
+
+  /**
+   * The local storage for glacier's 'trash can'
+   */
+  protected StorageManager glacierTrashStorage;
 
   /**
    * The local storage for objects waiting to be aggregated
@@ -598,6 +600,13 @@ public class PostProxy {
       aggrWaitingStorage = new StorageManagerImpl(VFACTORY,
                                               new PersistentStorage(VFACTORY, prefix + "-aggr-waiting", location, diskLimit),
                                               new EmptyCache(VFACTORY));
+      if (parameters.getBooleanParameter("glacier_use_trashcan")) {
+        glacierTrashStorage = new StorageManagerImpl(KFACTORY,
+                                              new PersistentStorage(KFACTORY, prefix + "-glacier-trash", location, diskLimit),
+                                              new EmptyCache(KFACTORY));
+      } else {
+        glacierTrashStorage = null;
+      }
     }
   }
   
@@ -759,29 +768,33 @@ public class PostProxy {
         aggrWaitingStorage,
         "aggregation.param",
         (MultiringIdFactory) FACTORY,
-        parameters.getStringParameter("application_instance_name") + "-aggr"
+        parameters.getStringParameter("application_instance_name") + "-aggr-mutable"
       ); */
+
+      GlacierImpl immutableGlacier = new GlacierImpl(
+        node, glacierImmutableStorage, glacierNeighborStorage,
+        parameters.getIntParameter("glacier_num_fragments"),
+        parameters.getIntParameter("glacier_num_survivors"),
+        (MultiringIdFactory)FACTORY, 
+        parameters.getStringParameter("application_instance_name") + "-glacier-immutable",
+        new GlacierDefaultPolicy(
+          new ErasureCodec(
+            parameters.getIntParameter("glacier_num_fragments"),
+            parameters.getIntParameter("glacier_num_survivors")
+          )
+        )
+      );
+      
+      immutableGlacier.setTrashcan(glacierTrashStorage);
 
       immutablePast = new AggregationImpl(
         node, 
-        new GlacierImpl(
-          node, glacierImmutableStorage, glacierNeighborStorage,
-          parameters.getIntParameter("glacier_num_fragments"),
-          parameters.getIntParameter("glacier_num_survivors"),
-          (MultiringIdFactory)FACTORY, 
-          parameters.getStringParameter("application_instance_name") + "-glacier-immutable",
-          new GlacierDefaultPolicy(
-            new ErasureCodec(
-              parameters.getIntParameter("glacier_num_fragments"),
-              parameters.getIntParameter("glacier_num_survivors")
-            )
-          )
-        ),  
+        immutableGlacier,  
         immutablePast,
         aggrWaitingStorage,
         "aggregation.param",
         (MultiringIdFactory) FACTORY,
-        parameters.getStringParameter("application_instance_name") + "-aggr"
+        parameters.getStringParameter("application_instance_name") + "-aggr-immutable"
       );
 
       stepDone(SUCCESS);
