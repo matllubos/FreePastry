@@ -70,8 +70,6 @@ public class IdRange {
    */
   public IdRange() {
     empty = true;
-    this.ccw = new Id();
-    this.cw = new Id();
   }
 
   /**
@@ -93,8 +91,13 @@ public class IdRange {
   public boolean equals(Object obj) {
     IdRange o = (IdRange) obj;
 
-    if (empty == o.empty && ccw == o.ccw && cw == o.cw) return true;
-    else return false;
+    if (!empty && !o.empty) {
+      return (ccw.equals(o.ccw) && cw.equals(o.cw));
+    } else if (empty && o.empty) {
+      return true;
+    }	else {
+      return false;
+    }
   }
 
   /**

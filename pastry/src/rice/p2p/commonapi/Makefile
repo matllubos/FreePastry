@@ -4,10 +4,11 @@ SOURCE  = \
 	Application.java\
 	Id.java\
 	IdRange.java\
+	IdFactory.java\
 	Message.java\
 	Node.java\
 	NodeHandle.java\
-  NodeHandleSet.java\
+	NodeHandleSet.java\
 	RouteMessage.java\
 	Endpoint.java
 
