@@ -35,6 +35,14 @@ public class FragmentMetadata implements Serializable, Comparable {
       return -1;
     else if (metadata.currentExpirationDate < currentExpirationDate) 
       return 1;
+    else if (metadata.previousExpirationDate < previousExpirationDate)
+      return -1;
+    else if (metadata.previousExpirationDate > previousExpirationDate)
+      return 1;
+    else if (metadata.storedSince < storedSince)
+      return -1;
+    else if (metadata.storedSince > storedSince)
+      return 1;
     else
       return 0;
   }
