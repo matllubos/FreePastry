@@ -82,7 +82,7 @@ public class Log implements PostData {
   /**
    * Helper method to sync this log object on the network.
    */
-  private void sync() {
+  private void sync() throws StorageException {
     post.getStorageService().storeSigned(this, location);
   }
   
@@ -92,7 +92,7 @@ public class Log implements PostData {
    *
    * @param log The log to add as a child.
    */
-  public LogReference addChildLog(Log log) {
+  public LogReference addChildLog(Log log) throws StorageException {
     LogReference lr = (LogReference) post.getStorageService().storeSigned(log, log.getLocation());
     
     children.put(log.getName(), lr);
@@ -106,7 +106,7 @@ public class Log implements PostData {
    *
    * @param log The log to remove
    */
-  public void removeChildLog(Object name) {
+  public void removeChildLog(Object name) throws StorageException {
     children.remove(name);
     sync();
   }
@@ -141,7 +141,7 @@ public class Log implements PostData {
    *
    * @param entry The log entry to append to the log.
    */
-  public LogEntryReference addLogEntry(LogEntry entry) {
+  public LogEntryReference addLogEntry(LogEntry entry) throws StorageException {
     entry.setPreviousEntry(topEntry);
     topEntry = (LogEntryReference) post.getStorageService().storeContentHash(entry);
     sync();
@@ -157,7 +157,7 @@ public class Log implements PostData {
    * @param reference The reference to the log entry
    * @return The log entry referenced
    */
-  public LogEntry retrieveLogEntry(LogEntryReference reference) {
+  public LogEntry retrieveLogEntry(LogEntryReference reference) throws StorageException {
     return (LogEntry) post.getStorageService().retrieveContentHash(reference);
   }
 
