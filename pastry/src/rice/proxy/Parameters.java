@@ -114,6 +114,10 @@ public class Parameters {
   public void removeParameter(String name) {
     properties.remove(name); 
   }
+  
+  public boolean containsParameter(String name) {
+    return properties.containsKey(name);
+  }
 	
 	public int getIntParameter(String name) {
 		return Integer.parseInt(getProperty(name));
@@ -157,7 +161,7 @@ public class Parameters {
 		String list = getProperty(name);
     
     if (list != null)
-      return list.split(ARRAY_SPACER);
+      return (list.equals("") ? new String[0] : list.split(ARRAY_SPACER));
     else
       return null;
 	}
