@@ -97,7 +97,7 @@ public abstract class DistCommonAPITest {
   public static int BOOTSTRAP_PORT = 5009;
 
   // the procotol to use when creating nodes
-  public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
+  public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
 
   // the instance name to use
   public static String INSTANCE_NAME = "DistCommonAPITest";
@@ -131,7 +131,7 @@ public abstract class DistCommonAPITest {
    * factories in preparation for node creation.
    */
   public DistCommonAPITest() {
-    idFactory = new RandomNodeIdFactory();
+    idFactory = new IPNodeIdFactory(PORT);
     factory = DistPastryNodeFactory.getFactory(idFactory,
                                                PROTOCOL,
                                                PORT);
@@ -194,7 +194,7 @@ public abstract class DistCommonAPITest {
    * @param ms The number of milliseconds to pause
    */
   protected synchronized void pause(int ms) {
-    System.out.println("waiting for " + (ms/1000) + " sec");
+    //System.out.println("waiting for " + (ms/1000) + " sec");
     try { wait(ms); } catch (InterruptedException e) {}
   }
 
