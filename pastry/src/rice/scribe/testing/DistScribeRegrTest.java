@@ -228,7 +228,7 @@ public class DistScribeRegrTest {
 	bshost = null;
 
 	// We set bshost to null and wait till the first PastryNode on this host is ready so that the 
-	// rest of the nodes find a botstrap node on the local host
+	// rest of the nodes find a bootstrap node on the local host
 	synchronized(pn) {
 	    while (!pn.isReady()) {
 		try {

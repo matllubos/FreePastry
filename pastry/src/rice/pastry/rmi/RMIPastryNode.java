@@ -166,6 +166,7 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
     * the node never ends up discovering itself.
      */
     protected final void nodeIsReady() {
+	//System.out.println("RMIPastryNode:nodeIsReady()");
 	try {
 	    Naming.rebind("//:" + port + "/Pastry", remotestub);
 	} catch (Exception e) {
