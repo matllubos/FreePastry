@@ -219,30 +219,60 @@ public class IdRange {
      * @param cwPart if true, returns the clockwise part of the range difference, else the counterclockwise part
      * @return the result range
      */
-    public IdRange diff(IdRange o, boolean cwPart) {
+     public IdRange diff(IdRange o, boolean cwPart) {
 
-	if (equals(o)) return new IdRange();
+	 if (equals(o)) return new IdRange();
+	 
+	 if (!cwPart) {
+	     if (o.ccw.equals(ccw))
+		 return new IdRange();
 
-	if (!cwPart) {
-	    if (ccw.isBetween(o.ccw, o.cw))
-		return new IdRange(o.ccw, ccw);
+	     if (ccw.isBetween(o.ccw, o.cw))
+		 return new IdRange(o.ccw, ccw);
 
-	    if (o.cw.isBetween(ccw, cw))
-		return new IdRange(ccw, o.ccw);
+	     if (o.ccw.isBetween(ccw, cw))
+		 return new IdRange(ccw, o.ccw);
 
-	    return this;
-	}
-	else {
-	    if (o.cw.isBetween(ccw, cw))
-		return new IdRange(o.cw, cw);
+	     return this;
+	 }
+	 else {
 
-	    if (cw.isBetween(o.ccw, o.cw))
-		return new IdRange(cw, o.cw);
+	     if (o.cw.equals(cw))
+		 return new IdRange();
 
-	    return o;
-	}
+	     if (o.cw.isBetween(ccw, cw))
+		 return new IdRange(o.cw, cw);
+
+	     if (cw.isBetween(o.ccw, o.cw))
+		 return new IdRange(cw, o.cw);
+
+	     return o;
+	 }
 	
     }
+
+
+    
+    
+    /**
+     * subtract the other range from this
+     * returns - an empty range if the ranges are identical
+     *         - if the subtraction results in a single range, then this method
+     * returns an empty range when called with one boolean value of 
+     * parameter 'cwPart' and returns the desired range when called with
+     * the other boolean value of parameter 'cwPart'
+     *
+     * @param o the other range
+     * @param cwPart if true, returns the clockwise part of the range subtraction, else the counterclockwise part
+     * @return the result range
+     */
+    public IdRange subtract(IdRange o, boolean cwPart) {
+	IdRange diffRange;
+
+	diffRange = diff(o, cwPart);
+	return intersect(diffRange);
+    }
+
 
 
     /**
