@@ -42,11 +42,12 @@ import java.util.logging.* ;
 
 import rice.*;
 import rice.Continuation.*;
+
 import rice.p2p.commonapi.*;
 import rice.p2p.past.messaging.*;
-import rice.persistence.*;
+import rice.p2p.replication.*;
 
-import rice.rm.*;
+import rice.persistence.*;
 
 /**
  * @(#) PastImpl.java
@@ -58,7 +59,7 @@ import rice.rm.*;
  * @author Ansley Post
  * @author Peter Druschel
  */
-public class PastImpl implements Past, Application, RMClient {
+public class PastImpl implements Past, Application, ReplicationClient {
 
   
   // ----- STATIC FIELDS -----
@@ -79,7 +80,7 @@ public class PastImpl implements Past, Application, RMClient {
   protected int replicationFactor;
 
   // the replica manager used by Past
-  protected RM replicaManager;
+  protected Replication replicaManager;
 
   // the unique ids used by the messages sent across the wire
   private int id;
@@ -115,7 +116,7 @@ public class PastImpl implements Past, Application, RMClient {
     replicationFactor = replicas;
     pending = factory.buildIdSet();
 
-    replicaManager = new RMImpl((rice.pastry.PastryNode) node, this, replicas, instance);
+    replicaManager = new ReplicationImpl(node, this, replicas, instance);
   }
   
 
@@ -369,8 +370,6 @@ public class PastImpl implements Past, Application, RMClient {
     
     log.fine("Inserting the object " + obj + " with the id " + obj.getId());
 
-    replicaManager.registerKey((rice.pastry.Id) obj.getId());
-
     final Continuation receiveHandles = new Continuation() {
 
       // the number of handles we are waiting for
@@ -612,18 +611,6 @@ public class PastImpl implements Past, Application, RMClient {
   }
 
   /**
-   * Return the ids of objects stored in this instance of Past on the
-   * *local* node, with ids in a given range. The IdSet returned
-   * contains the Ids of the stored objects.
-   *
-   * @param range The range to query
-   * @return The set of ids
-   */
-  public IdSet scan(IdRange range) {
-    return storage.scan(range);
-  }
-
-  /**
    * get the nodeHandle of the local Past node
    *
    * @return the nodehandle
@@ -813,7 +800,7 @@ public class PastImpl implements Past, Application, RMClient {
    *
    * @param keySet set containing the keys that needs to be fetched
    */
-  public void fetch(rice.pastry.IdSet keySet) {
+  public void fetch(IdSet keySet) {
     log.fine("Got fetch for key set " + keySet);
     if (pending.getIterator().hasNext()) {
       addToPending(keySet);
@@ -827,16 +814,6 @@ public class PastImpl implements Past, Application, RMClient {
   }
 
   /**
-   * This upcall is simply to denote that the underlying replica manager
-   * (rm) is ready. The 'rm' should henceforth be used by this RMClient
-   * to issue the downcalls on the RM interface.
-   *
-   * @param rm the instance of the Replica Manager
-   */
-  public void rmIsReady(RM rm) {
-  }
-
-  /**
    * This upcall is to notify the application of the range of keys for
    * which it is responsible. The application might choose to react to
    * call by calling a scan(complement of this range) to the persistance
@@ -846,7 +823,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @param range the range of keys for which the local node is currently
    * responsible
    */
-  public void isResponsible(rice.pastry.IdRange range) {
+  public void setRange(IdRange range) {
     IdRange notRange = range.getComplementRange();
 
     log.finer("Got new responsible range " + range);
@@ -883,7 +860,7 @@ public class PastImpl implements Past, Application, RMClient {
       }
     };
 
-    storage.getStorage().scan((rice.pastry.IdRange) notRange, c);
+    storage.getStorage().scan(notRange, c);
   }
 
   /**
@@ -892,8 +869,8 @@ public class PastImpl implements Past, Application, RMClient {
    * in the case that no keys belong to this range.
    * @param range the requested range
    */
-  public rice.pastry.IdSet scan(rice.pastry.IdRange range) {
-    return (rice.pastry.IdSet) storage.scan(range);
+  public IdSet scan(IdRange range) {
+    return storage.scan(range);
   }
 
   /**
@@ -902,7 +879,7 @@ public class PastImpl implements Past, Application, RMClient {
    *
    * @return This Past's replica manager
    */
-  public RM getReplicaManager() {
+  public Replication getReplicaManager() {
     return replicaManager;
   }
 

@@ -20,7 +20,7 @@ contributors may be  used to endorse or promote  products derived from
 this software without specific prior written permission.
 
 This software is provided by RICE and the contributors on an "as is"
-basis, without any representations or warranties of any kind, express
+basis, without anyrepresentations or warranties of any kind, express
 or implied including, but not limited to, representations or
 warranties of non-infringement, merchantability or fitness for a
 particular purpose. In no event shall RICE or contributors be liable
@@ -42,8 +42,7 @@ import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.testing.*;
 import rice.p2p.past.*;
 import rice.p2p.past.messaging.*;
-
-import rice.rm.*;
+import rice.p2p.replication.*;
 
 import rice.persistence.*;
 
@@ -715,10 +714,10 @@ public class PastRegrTest extends CommonAPITest {
    */
   private void runReplicaMaintence() {
     for (int i=0; i<NUM_NODES; i++) {
-      ((RMImpl) pasts[i].getReplicaManager()).periodicMaintenance();
+      ((ReplicationImpl) pasts[i].getReplicaManager()).sendRequests();
     }
 
-    pause(500);
+    simulate();
   }
 
   /**
