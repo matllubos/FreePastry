@@ -10,13 +10,14 @@ import rice.pastry.*;
  * order to inform the sender that the message has been received.
  */
 public class ReceiptMessage extends PostMessage {
-    
+   private NotificationMessage message = null; 
   /**
    * Constructs a PresenceMessage
    *
    * @param message The notification message which this is a receipt for
    */
   public ReceiptMessage(NotificationMessage message) {
+     this.message = message;
   }
     
   /**
@@ -26,7 +27,7 @@ public class ReceiptMessage extends PostMessage {
    * @return The message which this receipt is for.
    */
   public NotificationMessage getNotificationMessage() {
-    return null;
+    return message;
   }
 }
 
