@@ -6,7 +6,6 @@ package rice.pastry.socket;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -18,12 +17,23 @@ import rice.pastry.dist.NodeIsDeadException;
 import rice.pastry.leafset.BroadcastLeafSet;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RouteMessage;
+import rice.pastry.socket.exception.TooManyMessagesException;
 import rice.pastry.socket.messaging.AckMessage;
 import rice.pastry.socket.messaging.AddressMessage;
 import rice.pastry.socket.messaging.SocketTransportMessage;
 import rice.pastry.testing.HelloMsg;
 
 /**
+ * 
+ * This class manages a connection to a single remote node.  It can potentially have 3 types of 
+ * communication with that node:
+ *   Liveness (UDP)
+ *   Control/Routing (TCP)
+ *   Data (TCP)
+ * Control/Routing and Data are specifically managed by a SocketManager.  
+ * The Liveness communication is managed via the PingManager
+ * 
+ * 
  * This class manages 2 SocketManagers for a particular address.  
  * <HR><HR>
  * 1. A control/routing connection which is acked, and has a maximum size message.
@@ -50,7 +60,8 @@ import rice.pastry.testing.HelloMsg;
  *   Timer thread calling vairous
  * 
  * After much thought, we decided to do on "EVERYTHING" on the Selector Thread.
- * To achieve this, all entry points call invoke on the selector.
+ * To achieve this, all entry points call invoke on the selector which defers 
+ * the processing of such an event on the selector queue.
  * 
  * The lifecycle of a node is:
  * UNKNOWN->ALIVE after calling first markAlive();
@@ -78,7 +89,14 @@ public class ConnectionManager {
   PingManager pingManager;
   SocketCollectionManager scm;
   InetSocketAddress address;
+  
+  /**
+   * Kept for debugging.
+   */
   int timesMarkedDead = 0;
+  /**
+   * Kept for debugging.
+   */
   int timesMarkedSuspected = 0;
 
   // ****************** Configuration ******************
@@ -96,7 +114,6 @@ public class ConnectionManager {
    * often mistake a node for suspected failure (causing message rerouting)
    */
   public static final int MAX_PENDING_ACKS = 1;
-
   
   /**
    * The maximum message size for a routing entry
@@ -126,19 +143,27 @@ public class ConnectionManager {
   int RTO = 3000; 
 
   /**
-   * RTO helpers see RFC 1122 for a detailed description of RTO calculation
+   * RTO helper see RFC 1122 for a detailed description of RTO calculation
    */
   int RTO_UBOUND = 240000; // 240 seconds
+  /**
+   * RTO helper see RFC 1122 for a detailed description of RTO calculation
+   */
   int RTO_LBOUND = 1000;
+
   /**
    * Average RTT
    */
   double RTT = 0;
 
   /**
-   * vars for 
-   */  
+   * RTO helper see RFC 1122 for a detailed description of RTO calculation
+   */
   double gainH = 0.25;
+
+  /**
+   * RTO helper see RFC 1122 for a detailed description of RTO calculation
+   */
   double gainG = 0.125;
 
   /**
@@ -147,7 +172,6 @@ public class ConnectionManager {
   double standardD = RTO/4.0;  // RFC1122 recommends choose value to target RTO = 3 seconds
   
   // *************** Control/Acking Fields *********************
-
   /**
    * The acks we are waiting for
    * Sequence Number(Integer) -> AckTimeoutEvent
@@ -165,9 +189,14 @@ public class ConnectionManager {
   private LinkedList controlQueue;
 
   /**
-   * The types of traffic that can be sent
+   * A possible value for (@see SocketManger#type).  
+   * A control/routing socket.
    */
   public static final int TYPE_CONTROL = 1;
+  /**
+   * A possible value for (@see SocketManger#type).  
+   * A data socket.
+   */
   public static final int TYPE_DATA = 2;
   
 
@@ -184,7 +213,8 @@ public class ConnectionManager {
 
 	/**
 	 * Constructs a new ConnectionManager.  
-   * This does NOT automatically open a connection for control or data traffic.
+   * This does NOT automatically open TCP connections for control or data traffic.  
+   * This is done lazilly.
 	 */
 	public ConnectionManager(SocketCollectionManager scm, InetSocketAddress address) {
     this.scm = scm;   
@@ -195,7 +225,7 @@ public class ConnectionManager {
     liveness = NodeHandle.LIVENESS_UNKNOWN; 
 	}
 
-  // ********************** Socket Lifecycle ***********************
+  //********************** Socket Lifecycle ***********************
   /**
    * Method which opens a socket manager to a given remote node handle, and updates the
    * bookkeeping to keep track of this socket.  
@@ -216,7 +246,7 @@ public class ConnectionManager {
     }
     
     if (getLiveness() >= NodeHandle.LIVENESS_FAULTY) {
-      System.out.println(this+"Attempting to open socket to faulty node");
+      debug("WARNING:"+this+"Attempting to open socket to faulty node");
       checkDead();
       return;
     }
@@ -237,7 +267,7 @@ public class ConnectionManager {
    * @param sm The new SocketManager opened by the remote node
    */
   public void acceptSocket(SocketManager sm) {
-    addLastFxn("acceptSocket()");
+//    addLastFxn("acceptSocket()");
     if (sm.closed) {
       Thread.dumpStack();
     }
@@ -250,18 +280,18 @@ public class ConnectionManager {
       } else {
         // we have to be very careful here
         if (!controlSocketManager.connecting || replaceExistingSocket(controlSocketManager,sm)) {
-          if (!controlSocketManager.connecting) {
-            System.out.println(controlSocketManager+" collided with "+sm+" due to not connected, closed"+controlSocketManager);
-          } else {
-            System.out.println(controlSocketManager+" collided with "+sm+" due to replacement, closed"+controlSocketManager);            
-          }
+//          if (!controlSocketManager.connecting) {
+//            System.out.println(controlSocketManager+" collided with "+sm+" due to not connected, closed"+controlSocketManager);
+//          } else {
+//            System.out.println(controlSocketManager+" collided with "+sm+" due to replacement, closed"+controlSocketManager);            
+//          }
           SocketManager temp = controlSocketManager;
           controlSocketManager = sm;
           requeueMessagesPendingAck();
           moveMessagesToControlSM();
           temp.close();
         } else {
-          System.out.println(controlSocketManager+" collided with "+sm+" due to replacement, closed:"+sm);            
+//          System.out.println(controlSocketManager+" collided with "+sm+" due to replacement, closed:"+sm);            
           sm.close();
         }
       }
@@ -322,7 +352,7 @@ public class ConnectionManager {
    * acks.
    * 
    * @param manager
-   * @return
+   * @return true if the socket can be considered idle
    */
   public boolean isIdleControl(SocketManager manager) {
     if (manager.getType() == TYPE_CONTROL) {
@@ -377,7 +407,7 @@ public class ConnectionManager {
   }  
 
   private void requeueMessagesPendingAck() {
-    addLastFxn("requeueMessagesPendingAck()");
+//    addLastFxn("requeueMessagesPendingAck()");
 
     Iterator i = pendingAcks.keySet().iterator();
     while (i.hasNext()) {                    
@@ -409,6 +439,7 @@ public class ConnectionManager {
    */
   public void send(final Message message) {    
     checkPoint(message,666);
+    assertNotTooManyMessages(message);
     //System.out.println("ENQ:@"+System.currentTimeMillis()+":"+this+":"+message);
     //System.out.println("send("+message+"):"+message.getClass().getName());    
     /*
@@ -426,6 +457,52 @@ public class ConnectionManager {
 		});    
   }
   
+  public void assertNotTooManyMessages(Message message) {
+    int numMessages = 0;
+    if (getMessageType(message) == TYPE_CONTROL) {
+      if (getNumberMessagesAllowedToSend(TYPE_CONTROL) < 0) {
+        throw new TooManyMessagesException("Message "+message+" was not enqueued.  "+numMessages+" control/routing messages already pending.");
+      }
+      invokedControlMessages++;       
+    } else {
+      if (getNumberMessagesAllowedToSend(TYPE_DATA) < 0) {
+        throw new TooManyMessagesException("Message "+message+" was not enqueued.  "+numMessages+" data messages already pending.");
+      }
+      invokedDataMessages++;       
+    }    
+  }
+  
+  /**
+   * Messages in the selector invoke queue.
+   */
+  int invokedControlMessages = 0;
+  /**
+   * Messages in the selector invoke queue.
+   */
+  int invokedDataMessages = 0;
+  
+  /**
+   * @param type Message type.
+   * @return remaining queue size.
+   */
+  public int getNumberMessagesAllowedToSend(int type) {
+    int numMessages = 0;
+    if (type == TYPE_CONTROL) {
+      numMessages+=controlQueue.size();
+      numMessages+=pendingAcks.size();
+      numMessages+=invokedControlMessages;      
+      return MAXIMUM_QUEUE_LENGTH - numMessages;
+    } else {
+      if (dataSocketManager != null) {
+        numMessages += dataSocketManager.getNumberPendingMessages();        
+      }
+      numMessages+=invokedDataMessages;      
+      return SocketChannelWriter.MAXIMUM_QUEUE_LENGTH - numMessages;
+    }
+  }
+
+  
+  
   /**
    * To be called only on the seletor thread, and only from the anonamous
    * inner class created in send().
@@ -442,17 +519,19 @@ public class ConnectionManager {
    */
   private void sendNow(Message message) {    
 //    System.out.println(this+".sendNow("+message+"):"+message.getClass().getName());    
-    addLastFxn("sendNow()");
+//    addLastFxn("sendNow()");
     checkPoint(message,1);
 
     int type = getMessageType(message);
     if (type == TYPE_CONTROL) {  
+      invokedControlMessages--;
       // Check to see if we should reroute this
       if (!reroute(message)) {
         enqueue(message);
         moveMessagesToControlSM();
       }
     } else { // type == TYPE_DATA
+      invokedDataMessages--;
       openSocket(TYPE_DATA);        
       checkPoint(message,101);
       dataSocketManager.send(message);        
@@ -468,7 +547,7 @@ public class ConnectionManager {
    * @param m the message
    * @return TYPE_CONTROL or TYPE_DATA
    */
-  private int getMessageType(Message m) {
+  int getMessageType(Message m) {
     /*
     if (m instanceof RouteMessage) {
       if (((RouteMessage)m).unwrap() instanceof HelloMsg) {
@@ -534,7 +613,7 @@ public class ConnectionManager {
    * @param o the message to queue.
    */
   private void addToQueuePriority(Message o) {
-    addLastFxn("addToQPri()");
+//    addLastFxn("addToQPri()");
     if (controlQueue.size() > 0) {
       for (int i = 1; i < controlQueue.size(); i++) {
         Object thisObj = ((MsgEntry)controlQueue.get(i)).message;
@@ -575,9 +654,9 @@ public class ConnectionManager {
    * @return wether we can schedule inflight messages.
    */
   private boolean canWrite() {
-    addLastFxn("canWrite()");
+//    addLastFxn("canWrite()");
     if (pendingAcks.size() > MAX_PENDING_ACKS) {
-      System.out.println("WARNING: CM.canWrite() found pendingAcks.size to be greater than MAX_PENDING_ACKS:"+pendingAcks.size()+" > "+MAX_PENDING_ACKS);
+      debug("WARNING: CM.canWrite() found pendingAcks.size to be greater than MAX_PENDING_ACKS:"+pendingAcks.size()+" > "+MAX_PENDING_ACKS);
     }
     return pendingAcks.size() < MAX_PENDING_ACKS;
   }
@@ -603,7 +682,7 @@ public class ConnectionManager {
    * @param len
    */  
   void messageNotSent(Object o, int len) {
-    addLastFxn("messageNotSent()");
+//    addLastFxn("messageNotSent()");
     SocketTransportMessage stp = (SocketTransportMessage)o;
     int i = stp.seqNumber;
     RouteMessage rm = (RouteMessage)stp.msg;
@@ -688,7 +767,7 @@ public class ConnectionManager {
    * @param am the AckMessage that came off the wire.
    */
   private void ackReceived(AckMessage am) {
-    addLastFxn("ackReceived()");
+//    addLastFxn("ackReceived()");
     int i = am.seqNumber;
     //System.out.println(this+" SM.ackReceived("+i+") on type :"+type);
     markAlive(); //setLiveness(NodeHandle.LIVENESS_ALIVE);
@@ -712,7 +791,7 @@ public class ConnectionManager {
    * @param ate The timeout event.
    */
   private void ackNotReceived(AckTimeoutEvent ate, int powerOffset) {
-    addLastFxn("ackNotReceived()");
+//    addLastFxn("ackNotReceived()");
     //System.out.println(this+" SM.ackNotReceived("+ate+")");
     AckTimeoutEvent nate = (AckTimeoutEvent)pendingAcks.get(new Integer(ate.ackNum));
     if (nate == null) {
@@ -840,7 +919,7 @@ public class ConnectionManager {
   }
   
   public void checkDead(int powerOffset) {
-    addLastFxn("checkDead()");
+//    addLastFxn("checkDead()");
     //assertSelectorThread();
     if (powerOffset < 1) {
       throw new RuntimeException("Invalid Power Offset "+powerOffset);
@@ -870,7 +949,7 @@ public class ConnectionManager {
    *
    */
   protected void markSuspected() {
-    addLastFxn("markSuspected()");
+//    addLastFxn("markSuspected()");
     markSuspectedTime = System.currentTimeMillis();
     timesMarkedSuspected++;
 //    System.out.println(this+"markSuspected()");
@@ -886,7 +965,7 @@ public class ConnectionManager {
    *
    */
   protected void markDead() {
-    addLastFxn("markDead()");
+//    addLastFxn("markDead()");
     long susTime = System.currentTimeMillis() - markSuspectedTime;
     System.out.println(this+"markDead() after being suspected for "+susTime);
     setLiveness(NodeHandle.LIVENESS_FAULTY);
@@ -894,7 +973,7 @@ public class ConnectionManager {
     scm.markDead(address);
     if (deadChecker != null) {
       deadChecker.cancel();
-      deadChecker.tries = NUM_PING_TRIES;      
+      deadChecker.tries = NUM_PING_TRIES;
     }
     rerouteApropriateMessagesFromQueueAndPendingAcks(); // will reroute all route messages and throw out everything else
     if (controlSocketManager != null) {
@@ -911,11 +990,11 @@ public class ConnectionManager {
    *
    */
   protected void markAlive() {
-    markAlive(0);    
+    markAlive(0);
   }
   
   protected void markAlive(int powerOffset) {    
-    addLastFxn("markAlive()");
+//    addLastFxn("markAlive()");
     if (liveness > NodeHandle.LIVENESS_SUSPECTED) {
       System.out.println(this+"markAlive()");
     }
@@ -963,7 +1042,7 @@ public class ConnectionManager {
    * reroute() returns true;
    */  
   private void rerouteApropriateMessagesFromQueueAndPendingAcks() {
-    addLastFxn("rerouteAprop()");
+//    addLastFxn("rerouteAprop()");
 
     Iterator i = pendingAcks.keySet().iterator();
     ArrayList list = new ArrayList();
@@ -1002,16 +1081,21 @@ public class ConnectionManager {
    * @param o the message scheduled for reroute
    * @return true if the message was rerouted and can be deleted from the queue/pendingack
    */
-  private boolean reroute(Message o) {    
-    if (o != null) {
-      //System.out.println("Should reroute "+o+" but dropping.");
-      if (o instanceof SocketTransportMessage) {
-        return rerouteExtractedMessage(((SocketTransportMessage)o).msg);
-      } else {        
-        return rerouteExtractedMessage(o);
+  private boolean reroute(Message o) {  
+    try {  
+      if (o != null) {
+        //System.out.println("Should reroute "+o+" but dropping.");
+        if (o instanceof SocketTransportMessage) {
+          return rerouteExtractedMessage(((SocketTransportMessage)o).msg);
+        } else {        
+          return rerouteExtractedMessage(o);
+        }
+      } else {
+        return true;
       }
-    } else {
-      return true;
+    } catch (TooManyMessagesException tmme) {
+      debug("WARNING dropping "+o+" because could not reroute:"+tmme);
+      return true; // throwing message away
     }
   }
   
@@ -1166,7 +1250,7 @@ public class ConnectionManager {
       }
       tries = 1;
       schedule(powerOffset);
-      pingManager.forcePing(address, this);      
+      pingManager.forcePing(address, this);
     }
 
 		/**
@@ -1391,29 +1475,40 @@ public class ConnectionManager {
     */
   }
 
-  LinkedList lastFxns = new LinkedList();
-  public void addLastFxn(String m) {
-    /*
-    if (!lastFxns.isEmpty()) {
-      String last = (String)lastFxns.getLast();
-      if (last.equals(m)) {
-        return;
-      }
-    }
-    lastFxns.add(m);
-    if (lastFxns.size() > 5) {
-      lastFxns.removeFirst();
-    }*/
-  }
+  /**
+   * For debugging.
+   * Used to store the last functions called.  (@see #addLastFxn)
+   */
+//  LinkedList lastFxns = new LinkedList();
+  /**
+   * Used for debugging.  Records the last funcitons called.
+   * @param m String name of the funciton being called.
+   */
+//  public void addLastFxn(String m) {
+//    if (!lastFxns.isEmpty()) {
+//      String last = (String)lastFxns.getLast();
+//      if (last.equals(m)) {
+//        return;
+//      }
+//    }
+//    lastFxns.add(m);
+//    if (lastFxns.size() > 5) {
+//      lastFxns.removeFirst();
+//    }
+//  }
   
-  public String getLastFxns() {
-    Iterator i = ((Collection)lastFxns.clone()).iterator();
-    String s = "";
-    while(i.hasNext()) {
-      s+=i.next()+",";
-    }
-    return s;
-  }
+  /** 
+   * For debugging.
+   * Outputs the last few funcitons called.
+   */
+//  public String getLastFxns() {
+//    Iterator i = ((Collection)lastFxns.clone()).iterator();
+//    String s = "";
+//    while(i.hasNext()) {
+//      s+=i.next()+",";
+//    }
+//    return s;
+//  }
 
 	public String getStatus() {
     String s1 = null;
@@ -1428,7 +1523,7 @@ public class ConnectionManager {
     
     
     
-    String s3 = "lastFxn:"+getLastFxns();
+    String s3 = "";//+"lastFxn:"+getLastFxns();
   
     s3+= " timesSusp:"+timesMarkedSuspected+" timesDead:"+timesMarkedDead;
     

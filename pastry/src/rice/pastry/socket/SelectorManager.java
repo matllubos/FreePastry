@@ -71,10 +71,15 @@ public class SelectorManager {
   public int numTimesNotRemoveKeyInRow = 0;
   public int numTimesNotRemoveKey = 0;
   public int totalNumTimesNotRemoveKey = 0;
+  public static boolean recordStats = false;
+  public static boolean useHeartbeat = false;
 
+
+  // *********************** debugging statistics ****************
   public Hashtable stats = new Hashtable();
   
   public void addStat(String s, long time) {
+    if (!recordStats) return;
     Stat st = (Stat)stats.get(s);
     if (st == null) {
       st = new Stat(s);
@@ -84,6 +89,7 @@ public class SelectorManager {
   }
 
   public void printStats() {
+    if (!recordStats) return;
     synchronized(stats) {
       Enumeration e = stats.elements();
       while(e.hasMoreElements()) {
@@ -210,15 +216,17 @@ public class SelectorManager {
                 stall = false;
             } catch (InterruptedException ie) {}
         }
+        if (useHeartbeat) {
         long curTime = System.currentTimeMillis();
-        if (curTime - lastHeartBeat > HEART_BEAT_TIME) {
-          long diff = (curTime-lastHeartBeat)-HEART_BEAT_TIME;
-          lastHeartBeat = curTime;
-          curTime/=1000;
-          System.out.println("SM.run(): heartbeat "+curTime+","+scm.addressString()+": lostTime:"+diff+" total:"+totalNumTimesNotRemoveKey+ " maxInvokes:"+maxInvocations+" totalInvokes:"+totalNumInvocations+" spm:"+scm.socketPoolManager+" waitingToAccept:"+waitingToAccept());
-          System.out.println(scm.socketPoolManager.getStatus());
-          printStats();
-        }        
+          if (curTime - lastHeartBeat > HEART_BEAT_TIME) {
+            long diff = (curTime-lastHeartBeat)-HEART_BEAT_TIME;
+            lastHeartBeat = curTime;
+            curTime/=1000;
+            System.out.println("SM.run(): heartbeat "+curTime+","+scm.addressString()+": lostTime:"+diff+" total:"+totalNumTimesNotRemoveKey+ " maxInvokes:"+maxInvocations+" totalInvokes:"+totalNumInvocations+" spm:"+scm.socketPoolManager+" waitingToAccept:"+waitingToAccept());
+            System.out.println(scm.socketPoolManager.getStatus());
+            printStats();
+          }        
+        }
         
         SelectionKey[] keys = selectedKeys();
         for (int i = 0; i < keys.length; i++) {

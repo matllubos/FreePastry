@@ -124,6 +124,40 @@ public class SocketManager implements SelectionKeyHandler {
     ctor = 1;
     acceptConnection(key);
   }
+  
+  /**
+   * Constructor which creates an outgoing connection to the given node
+   * handle. This creates the connection by building the socket and sending
+   * accross the greeting message. Once the response greeting message is
+   * received, everything proceeds as normal.
+   *
+   * @param address DESCRIBE THE PARAMETER
+   * @exception IOException DESCRIBE THE EXCEPTION
+   */
+  public SocketManager(InetSocketAddress address, SocketCollectionManager scm, ConnectionManager cm, int type) {
+    this(scm,type);    
+    ctor = 2;
+    connectionManager = cm;
+    cmSet = new RuntimeException("Stack Trace");
+    this.address = address;
+  }
+
+  /**
+   * Private constructor which builds the socket channel reader and writer, as
+   * well other bookkeeping objects for this socket manager.
+   */
+  private SocketManager(SocketCollectionManager scm, int type) {
+    ctor = 3;
+    markActive();
+    this.scm = scm;
+    this.type = type;
+    //System.out.println("SM.ctor("+type+")");
+    //sThread.dumpStack();
+    reader = new SocketChannelReader(scm.pastryNode, this);
+    writer = new SocketChannelWriter(scm.pastryNode, this);
+  }
+  
+  
 
   int INITIAL_CONNECTION_RETRY_WAIT_TIME = 5000;
   int MAX_NUM_RETRIES_FOR_CONNECTION = 5;
@@ -175,38 +209,6 @@ public class SocketManager implements SelectionKeyHandler {
 
 
 
-  /**
-   * Constructor which creates an outgoing connection to the given node
-   * handle. This creates the connection by building the socket and sending
-   * accross the greeting message. Once the response greeting message is
-   * received, everything proceeds as normal.
-   *
-   * @param address DESCRIBE THE PARAMETER
-   * @exception IOException DESCRIBE THE EXCEPTION
-   */
-  public SocketManager(InetSocketAddress address, SocketCollectionManager scm, ConnectionManager cm, int type) {
-    this(scm,type);    
-    ctor = 2;
-    connectionManager = cm;
-    cmSet = new RuntimeException("Stack Trace");
-    this.address = address;
-  }
-
-  /**
-   * Private constructor which builds the socket channel reader and writer, as
-   * well other bookkeeping objects for this socket manager.
-   */
-  private SocketManager(SocketCollectionManager scm, int type) {
-    ctor = 3;
-    markActive();
-    this.scm = scm;
-    this.type = type;
-    //System.out.println("SM.ctor("+type+")");
-    //sThread.dumpStack();
-    reader = new SocketChannelReader(scm.pastryNode, this);
-    writer = new SocketChannelWriter(scm.pastryNode, this);
-  }
-  
 
   boolean sentAddress = false;
 
@@ -711,6 +713,10 @@ public class SocketManager implements SelectionKeyHandler {
 
   public Iterator getPendingMessages() {
     return writer.getQueue().iterator();
+  }
+
+  public int getNumberPendingMessages() {
+    return writer.getQueue().size();    
   }
 
 

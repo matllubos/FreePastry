@@ -29,10 +29,13 @@ public class SocketPoolManager {
    */
   public static int MAX_OPEN_SOCKETS = 200;
 
-  // Set of SocketManager
-//  HashSet idleSet = new HashSet();  
-  
+  /**
+   * Sockets waiting to get opened.  We use a set and queue to get O(1) check.
+   */
   HashSet waitingSet = new HashSet();
+  /**
+   * Sockets waiting to get opened.  We use a set and queue to get O(1) check.
+   */
   LinkedList waitingQueue = new LinkedList(); 
   
   /**
@@ -87,6 +90,7 @@ public class SocketPoolManager {
   }
 
   /**
+   * Will call selectorManager.acceptSocket when it can.
    * @return
    */
   public void requestAccept() {

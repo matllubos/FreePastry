@@ -33,18 +33,20 @@ import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.messaging.Message;
 
 /**
- * Abstract class for handles to "real" remote nodes. This class abstracts out
- * the node handle verification which is necessary in the "real" pastry
- * protocols, since NodeHandles are sent across the wire.
+ * Represents a remote node for a "real" IP network.
+ * 
+ * Read the package specification for implementation details.
+ * 
+ * A feature that SocketNodeHandle has that other DistNodeHandles may not, is the 
+ * ability to introspect into the congestion level.  (@see #getNumberMessagesAllowed())
  *
  * @version $Id$
  * @author Alan Mislove, Jeff Hoye
  */
 public class SocketNodeHandle extends DistNodeHandle {
 
-  // the default distance, which is used before a ping
   /**
-   * DESCRIBE THE FIELD
+   * The default distance, which is used before a ping
    */
   public static int DEFAULT_PROXIMITY = Integer.MAX_VALUE;
 
@@ -52,7 +54,7 @@ public class SocketNodeHandle extends DistNodeHandle {
    * Constructor
    *
    * @param nodeId This node handle's node Id.
-   * @param address DESCRIBE THE PARAMETER
+   * @param address the IP address of this node.
    */
   public SocketNodeHandle(InetSocketAddress address, NodeId nodeId) {
     super(nodeId, address);
@@ -74,6 +76,53 @@ public class SocketNodeHandle extends DistNodeHandle {
     } else {
       return spn.getSocketCollectionManager().getLiveness(getAddress());
     } 
+  }
+  
+  /**
+   * Returns the number of messages that can be queued before an exception is thrown.
+   * A typical way to call this would be:
+   * <code>
+   * SocketNodeHandle snh;
+   * Message m;
+   * ...
+   * if (snh.getNumberMessagesAllowedToSend(snh.getMessageType(m) > 10) {
+   *   snh.send(m);
+   * } else {
+   *  // send it later
+   * }
+   * </code>
+   * @param type The type of message.
+   * @return the number of messages of this type that 
+   * can be sent before an exception is thrown.
+   */
+  public int getNumberMessagesAllowedToSend(int type) {
+    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+    if (spn == null) {
+      //System.out.println("SNH.getLiveness(): spn == null");
+      return -1;
+    } else {
+      ConnectionManager cm = spn.getSocketCollectionManager().getConnectionManager(getAddress());
+      return cm.getNumberMessagesAllowedToSend(type);
+    }     
+  }
+
+  /**
+   * Returns the type of message.
+   * @param m The message you want to determine the type of.
+   * @return The message type.  ConnectionManager.TYPE_CONTROL, TYPE_DATA.
+   */
+  public int getMessageType(Message m) {
+    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+    if (spn == null) {
+      //System.out.println("SNH.getLiveness(): spn == null");
+      return -1;
+    } else {
+      ConnectionManager cm = spn.getSocketCollectionManager().getConnectionManager(getAddress());
+      if (cm != null) {
+        return cm.getMessageType(m);
+      } 
+      return -1;
+    }     
   }
 
   /**

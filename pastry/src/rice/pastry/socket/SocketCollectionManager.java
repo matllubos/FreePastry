@@ -81,8 +81,6 @@ public class SocketCollectionManager implements SelectionKeyHandler {
   // the port number this manager is listening on
   private int port;
 
-  private Object socketLock = new Object();
-  
   private PingManager pingManager;
 
   /**
