@@ -93,7 +93,7 @@ public class PastRegrTest extends CommonAPITest {
    * @param num The number of this node
    */
   protected void processNode(int num, Node node) {
-    storages[num] = new StorageManager(FACTORY,
+    storages[num] = new StorageManagerImpl(FACTORY,
                                       new PersistentStorage(FACTORY, "root-" + num, ".", 1000000),
                                       new LRUCache(new MemoryStorage(FACTORY), 100000));
     pasts[num] = new PastImpl(node, storages[num], REPLICATION_FACTOR, INSTANCE);
@@ -714,7 +714,7 @@ public class PastRegrTest extends CommonAPITest {
    */
   private void runReplicaMaintence() {
     for (int i=0; i<NUM_NODES; i++) {
-      ((ReplicationImpl) pasts[i].getReplicaManager()).sendRequests();
+      pasts[i].getReplication().replicate();
     }
 
     simulate();
