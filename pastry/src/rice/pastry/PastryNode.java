@@ -8,6 +8,7 @@ import java.util.Observer;
 import java.util.Vector;
 import java.util.WeakHashMap;
 
+import rice.*;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.Address;
@@ -327,6 +328,22 @@ public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.
     
     public String getErrorString(int errorCode) {
       return EC_NO_CODE_AVAILABLE;
+    }
+    
+    /**
+     * Schedules a job for processing on the dedicated processing thread, should one exist.  CPU intensive jobs, such
+     * as encryption, erasure encoding, or bloom filter creation should never be done in the context
+     * of the underlying node's thread, and should only be done via this method.  
+     *
+     * @param task The task to run on the processing thread
+     * @param command The command to return the result to once it's done
+     */
+    public void process(Executable task, Continuation command) {
+      try {
+        command.receiveResult(task.execute());
+      } catch (final Exception e) {
+        command.receiveException(e);
+      }
     }
 }
 

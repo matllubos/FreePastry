@@ -347,7 +347,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param command The command to return the result to once it's done
    */
   public void process(Executable task, Continuation command) {
-    ((DistPastryNode) thePastryNode).process(task, command);
+    thePastryNode.process(task, command);
   }
   
   /**
