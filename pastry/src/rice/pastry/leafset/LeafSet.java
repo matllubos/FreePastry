@@ -447,7 +447,7 @@ public class LeafSet extends Observable implements Serializable {
 
     public IdRange range(NodeHandle n, int r) {
 	int pos;
-	NodeHandle minN, maxN;
+	NodeHandle minN = null, maxN = null;
 
 	// get n's position in the leafset
 	try {
@@ -468,24 +468,25 @@ public class LeafSet extends Observable implements Serializable {
 	    if (max == cwSize() && (max = complement(max)) == cwSize()) return null;
 	    min--;
 	    max++;
+
+	    minN = get(min);
+	    maxN = get(max);
+
+	    if ( !n.getNodeId().isBetween(minN.getNodeId(), maxN.getNodeId()) && 
+		 !minN.getNodeId().equals(maxN.getNodeId()) ) {
+		// we have wrapped the leafset, result is the full range
+		//System.out.println("full range:" + this + "r=" + r + " pos=" + pos);
+		return new IdRange(n.getNodeId(), n.getNodeId());
+	    }
 	}
-	minN = get(min);
-	maxN = get(max);
 
 	// see if we can compute range for n
-	if (minN == null || maxN == null) return null;
+	//if (minN == null || maxN == null) return null;
 	
 	//System.out.println("minN=" + minN.getNodeId() + "n=" + n.getNodeId() + "maxN=" + maxN.getNodeId());
 
 	//System.out.print("maxN= " + maxN.getNodeId());
 	//System.out.println("minN= " + minN.getNodeId());
-
-	if ( !n.getNodeId().isBetween(minN.getNodeId(), maxN.getNodeId()) && 
-	     !minN.getNodeId().equals(maxN.getNodeId()) ) {
-	    // we have wrapped the leafset, result is the full range
-	    //System.out.println("full range:" + this + "r=" + r + " pos=" + pos);
-	    return new IdRange(n.getNodeId(), n.getNodeId());
-	}
 
 	IdRange cw = (new IdRange(n.getNodeId(), maxN.getNodeId())).ccwHalf();
 	IdRange ccw = (new IdRange(minN.getNodeId(), n.getNodeId())).cwHalf();
