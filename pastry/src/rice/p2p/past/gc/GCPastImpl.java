@@ -261,7 +261,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
       super.deliver(id, message);
     } else {      
       if (msg instanceof GCInsertMessage) {
-        final GCInsertMessage imsg = (GCInsertMessage) msg;        
+        final GCInsertMessage imsg = (GCInsertMessage) msg;      
+        inserts++;
         
         // make sure the policy allows the insert
         if (policy.allowInsert(imsg.getContent())) {
@@ -284,6 +285,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
       } else if (msg instanceof GCRefreshMessage) {
         final GCRefreshMessage rmsg = (GCRefreshMessage) msg;        
         final Iterator i = rmsg.getKeys().getIterator();
+        other += rmsg.getKeys().numElements();
         
         StandardContinuation process = new StandardContinuation(getResponseContinuation(msg)) {
           public void receiveResult(Object o) {
@@ -364,7 +366,9 @@ public class GCPastImpl extends PastImpl implements GCPast {
           
         remove.receiveResult(null);
       } else if (msg instanceof FetchHandleMessage) {
-        final FetchHandleMessage fmsg = (FetchHandleMessage) msg;
+        final FetchHandleMessage fmsg = (FetchHandleMessage) msg;   
+        fetchHandles++;
+        
         storage.getObject(fmsg.getId(), new StandardContinuation(getResponseContinuation(msg)) {
           public void receiveResult(Object o) {
             GCPastContent content = (GCPastContent) o;

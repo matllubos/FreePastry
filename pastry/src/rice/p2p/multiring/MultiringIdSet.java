@@ -126,7 +126,7 @@ public class MultiringIdSet implements IdSet {
    */
   public IdSet subSet(IdRange range) {
     if (range == null)
-      return this;
+      return (IdSet) this.clone();
     else
       return new MultiringIdSet(ringId, set.subSet(((MultiringIdRange) range).getRange()));
   }

@@ -105,6 +105,12 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   // the instance name we are running with
   protected String instance;
   
+  // debug variables
+  public int inserts = 0;
+  public int lookups = 0;
+  public int fetchHandles = 0;
+  public int other = 0;
+  
   /**
    * Constructor for Past, using the default policy
    *
@@ -665,6 +671,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
         
         // make sure the policy allows the insert
         if (policy.allowInsert(imsg.getContent())) {
+          inserts++;
+          
           storage.getObject(imsg.getContent().getId(), new StandardContinuation(getResponseContinuation(msg)) {
             public void receiveResult(Object o) {
               try {
@@ -681,6 +689,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
         }
       } else if (msg instanceof LookupMessage) {
         final LookupMessage lmsg = (LookupMessage) msg;
+        lookups++;
         
         // if the data is here, we send the reply, as well as push a cached copy
         // back to the previous node
@@ -710,9 +719,13 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
         getResponseContinuation(msg).receiveResult(set);
       } else if (msg instanceof FetchMessage) {
         FetchMessage fmsg = (FetchMessage) msg;
+        lookups++;
+        
         storage.getObject(fmsg.getHandle().getId(), getResponseContinuation(msg));
       } else if (msg instanceof FetchHandleMessage) {
         final FetchHandleMessage fmsg = (FetchHandleMessage) msg;
+        fetchHandles++;
+        
         storage.getObject(fmsg.getId(), new StandardContinuation(getResponseContinuation(msg)) {
           public void receiveResult(Object o) {
             PastContent content = (PastContent) o;

@@ -146,7 +146,7 @@ public class ReplicationImpl implements Replication, Application {
     
     // inject the first reminder message, which will cause the replication to begin
     // and the next maintenance message to be scheduled
-    endpoint.scheduleMessage(new ReminderMessage(handle), MAINTENANCE_INTERVAL, MAINTENANCE_INTERVAL);
+    endpoint.scheduleMessage(new ReminderMessage(handle), new Random().nextInt(MAINTENANCE_INTERVAL), MAINTENANCE_INTERVAL);
   }
   
   /**
@@ -265,6 +265,7 @@ public class ReplicationImpl implements Replication, Application {
       IdSet response = factory.buildIdSet();
       int total = 0;
       
+      try {
       for (int i=0; (i<rm.getRanges().length) && (response.numElements() < MAX_KEYS_IN_MESSAGE); i++) {
         Iterator it = client.scan(rm.getRanges()[i]).getIterator();
         
@@ -275,6 +276,10 @@ public class ReplicationImpl implements Replication, Application {
           if (! rm.getFilters()[i].check(next))
             response.addId(next);
         }
+      }
+      } catch (ConcurrentModificationException e) {
+        System.out.println("ERROR!!!!: " + e + " caused by client " + client + " class " + client.getClass().getName() + " instance " + instance);
+        throw e;
       }
     
       if (response.numElements() > 0) {
