@@ -4,6 +4,9 @@ package rice.ap3.messaging;
  * @(#) AP3MessageType.java
  *
  * Defines the types a message can be.
+ * Request: content request from a node
+ * Response: generic reply to a request or callback
+ * Callback: special request for a node to respond with its NodeHandle
  *
  * @version $Id$
  * @author Gaurav Oberoi
