@@ -527,12 +527,12 @@ public class PersistentStorage implements Storage {
       QUEUE.enqueue(new WorkRequest(c) { 
         public String toString() { return "getObject " + id; }
         public Object doWork() throws Exception {
+          synchronized(statLock) { numReads++; }
+          
+          /* get the file */
+          File objFile = getFile(id);
+          
           try { 
-            synchronized(statLock) { numReads++; }
-            
-            /* get the file */
-            File objFile = getFile(id);
-                        
             /* and make sure that it exists */
             if ((objFile == null) || (! objFile.exists())) 
               return null;
@@ -551,7 +551,6 @@ public class PersistentStorage implements Storage {
             }
             
             /* if there's a problem, move the file to the lost+found */
-            File objFile = getFile(id);
             moveToLost(objFile);
 
             throw e;
