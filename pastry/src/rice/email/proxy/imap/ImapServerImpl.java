@@ -9,22 +9,23 @@ import java.io.*;
 
 import java.net.*;
 
-public final class ImapServerImpl extends Thread implements ImapServer {
-
-  private boolean quit = false;
-  private int port;
-  private ServerSocket server;
-
-  private boolean gateway;
-  private boolean acceptNonLocal;
+public class ImapServerImpl extends Thread implements ImapServer {
   
-  private UserManager manager;
-
-  private Workspace workspace;
-
-  private EmailService email;
+  boolean quit = false;
+  int port;
+  ServerSocket server;
+  
+  boolean gateway;
+  boolean acceptNonLocal;
+  
+  UserManager manager;
+  
+  Workspace workspace;
+  
+  EmailService email;
 
   public ImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal) throws IOException {
+    super("IMAP Server Thread");
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
     this.port = port;
@@ -52,7 +53,7 @@ public final class ImapServerImpl extends Thread implements ImapServer {
 
         if (acceptNonLocal || gateway || socket.getInetAddress().isLoopbackAddress() ||
             (socket.getInetAddress().equals(InetAddress.getLocalHost()))) {
-          Thread thread = new Thread() {
+          Thread thread = new Thread("IMAP Server Thread for " + socket.getInetAddress()) {
             public void run() {
               try {
                 ParserImapHandler handler = new ParserImapHandler(manager, workspace);

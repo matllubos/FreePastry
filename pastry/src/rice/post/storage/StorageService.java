@@ -286,10 +286,24 @@ public class StorageService {
         
         key = hash;
 
-        ContentHashData chd = new ContentHashData(location, cipherText);
+        final ContentHashData chd = new ContentHashData(location, cipherText);
+        final Continuation task = this;
 
-        // Store the content hash data in PAST
-        past.insert(chd, this);
+        past.lookupHandles(chd.getId(), past.getReplicationFactor(), new StandardContinuation(command) {
+          public void receiveResult(Object o) {
+            PastContentHandle[] handles = (PastContentHandle[]) o;
+            
+            for (int i=0; i<handles.length; i++) {
+              if (handles[i] != null) {
+                command.receiveResult(data.buildContentHashReference(location, key));
+                return;
+              }
+            }
+            
+            // Store the content hash data in PAST
+            past.insert(chd, task);
+          }
+        });
 
         // Now we wait until PAST calls us with the receiveResult
         // and then we return the address
@@ -305,19 +319,20 @@ public class StorageService {
      */
     public void receiveResult(Object result) {
       if (! (result instanceof Boolean[])) {
-        command.receiveException(new IOException("Storage of signed data into Past returned unknown data " + result));
+        command.receiveException(new IOException("Storage of content hash data into Past returned unknown data " + result));
       } else {
         Boolean[] results = (Boolean[]) result;
-        boolean error = false;
-
+        int failed = 0;
+        
         for (int i=0; i<results.length; i++) {
-          error = error || (results[i] == null) || (! results[i].booleanValue());
+          if ((results[i] == null) || (! results[i].booleanValue())) 
+            failed++;
         }
 
-        if (! error) {
+        if (failed <= results.length/2) {
           command.receiveResult(data.buildContentHashReference(location, key));
         } else {
-          command.receiveException(new IOException("Storage of signed data into PAST failed - replicas did not store object."));
+          command.receiveException(new IOException("Storage of content hash data into PAST failed - replicas did not store object."));
         }
       }
     }
@@ -489,13 +504,14 @@ public class StorageService {
         command.receiveException(new IOException("Storage of signed data into Past returned unknown data " + result));
       } else {
         Boolean[] results = (Boolean[]) result;
-        boolean error = false;
-
+        int failed = 0;
+        
         for (int i=0; i<results.length; i++) {
-          error = error || (results[i] == null) || (! results[i].booleanValue());
+          if ((results[i] == null) || (! results[i].booleanValue())) 
+            failed++;
         }
-
-        if (! error) {
+        
+        if (failed <= results.length/2) {          
           command.receiveResult(data.buildSignedReference(location));
         } else {
           command.receiveException(new IOException("Storage of signed data into PAST failed - replicas did not store object."));
@@ -724,19 +740,20 @@ public class StorageService {
      */
     public void receiveResult(Object result) {
       if (! (result instanceof Boolean[])) {
-        command.receiveException(new IOException("Storage of signed data into Past returned unknown data " + result));
+        command.receiveException(new IOException("Storage of secure data into Past returned unknown data " + result));
       } else {
         Boolean[] results = (Boolean[]) result;
-        boolean error = false;
-
+        int failed = 0;
+        
         for (int i=0; i<results.length; i++) {
-          error = error || (results[i] == null) || (! results[i].booleanValue());
+          if ((results[i] == null) || (! results[i].booleanValue())) 
+            failed++;
         }
-
-        if (! error) {
+        
+        if (failed <= results.length/2) {          
           command.receiveResult(data.buildSecureReference(location, key));
         } else {
-          command.receiveException(new IOException("Storage of signed data into PAST failed - replicas did not store object."));
+          command.receiveException(new IOException("Storage of secure data into PAST failed - replicas did not store object."));
         }
       }
     }

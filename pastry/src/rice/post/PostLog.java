@@ -49,7 +49,7 @@ public class PostLog extends Log {
     this.user = user;
     this.key = key;
     this.certificate = cert;
-
+    
     sync(command);
   }
     

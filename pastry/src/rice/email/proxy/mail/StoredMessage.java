@@ -8,6 +8,8 @@ public interface StoredMessage
   int getUID();
 
   int getSequenceNumber();
+  
+  long getInternalDate();
 
   Email getMessage()
     throws MailboxException;

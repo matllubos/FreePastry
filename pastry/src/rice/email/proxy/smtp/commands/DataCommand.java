@@ -69,9 +69,9 @@ public class DataCommand
         }
         catch (Exception je)
         {
-            conn.println(
-                    "451 Requested action aborted: local error in processing");
+          conn.println("451 Requested action aborted: local error in processing");
           je.printStackTrace();
+          rice.pastry.dist.DistPastryNode.addError("SEVERE: Exception " + je + " occurred while attempting to send message to " + msg.getRecipientIterator().next());
         }
 
         state.clearMessage();

@@ -51,6 +51,10 @@ public class MockMailbox
     {
         put("INBOX", msg);
     }
+    
+    public String getHierarchyDelimiter() {
+      return "/";
+    }
 
     public void put(String folder, MovingMessage msg)
              throws MailboxException
@@ -68,22 +72,26 @@ public class MockMailbox
 
     Set subscriptions = new HashSet();
 
-    public void subscribe(ImapConnection connection, String name)
+    public void subscribe(String name)
                    throws MailboxException
     {
         subscriptions.add(name);
     }
 
-    public void unsubscribe(ImapConnection connection, String name)
+    public void unsubscribe(String name)
                      throws MailboxException
     {
         subscriptions.remove(name);
     }
 
-    public String[] listSubscriptions(ImapConnection connection, String pattern)
+    public String[] listSubscriptions(String pattern)
                                throws MailboxException
     {
 
         return (String[]) subscriptions.toArray(new String[0]);
+    }
+    
+    public void renameFolder(String old_name, String new_name) throws MailboxException {
+      throw new MailboxException("FOLDERS NOT IMPLEMENTED!");
     }
 }

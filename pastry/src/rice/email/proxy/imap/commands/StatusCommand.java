@@ -63,7 +63,7 @@ public class StatusCommand
             }
 
             if (_requests.contains("UNSEEN")) {
-              int recent = fold.getMessages(MsgFilter.not(MsgFilter.SEEN)).size();
+              int recent = fold.getMessages(MsgFilter.NOT(MsgFilter.SEEN)).size();
               response += "UNSEEN " + recent + " ";
             }
             

@@ -11,7 +11,6 @@ public class MailDataHandler implements DataContentHandler {
 
   /** This is the key, it just returns the data uninterpreted. */
   public Object getContent(javax.activation.DataSource dataSource) throws java.io.IOException {
-    System.out.println("BinaryDataHandler: getContent called with: " + dataSource);
     return dataSource.getInputStream();
   }
 
@@ -19,7 +18,6 @@ public class MailDataHandler implements DataContentHandler {
                                 javax.activation.DataSource dataSource)
   throws java.awt.datatransfer.UnsupportedFlavorException,
   java.io.IOException {
-    System.out.println("BinaryDataHandler: getTransferData called with: " + dataFlavor + " " + dataSource);
     return null;
   }
 

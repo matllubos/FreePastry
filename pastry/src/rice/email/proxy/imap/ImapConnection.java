@@ -28,7 +28,7 @@ public class ImapConnection
 
     // This 5-minute timeout isn't strictly-speaking legal.
     // The specs say 30 minutes.
-    private static final int TIMEOUT_MILLIS = 1000 * 60 * 5;
+    private static final int TIMEOUT_MILLIS = 1000 * 60 * 30;
 
     // networking/io stuff
     Socket _socket;

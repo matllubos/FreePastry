@@ -1,5 +1,6 @@
 package rice.email;
 
+import java.io.*;
 import java.security.*;
 import java.util.*;
 
@@ -16,7 +17,7 @@ public class EmailData implements PostData {
   /**
    * The data representing the stored data
    */
-  protected byte[] _data;
+  protected transient byte[] _data;
   
   /**
    * Constructor. Takes in a byte[] representing the data of the
@@ -83,4 +84,27 @@ public class EmailData implements PostData {
     return Arrays.equals(_data, ((EmailData) o).getData());
   }
 
+  /**
+   * Internal method for writing out this data object
+   *
+   * @param oos The current output stream
+   */
+  private void writeObject(ObjectOutputStream oos) throws IOException {
+    oos.defaultWriteObject();
+    
+    oos.writeInt(_data.length);
+    oos.write(_data);
+  }
+  
+  /**
+   * Internal method for reading in this data object
+   *
+   * @param ois The current input stream
+   */
+  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    ois.defaultReadObject();
+    
+    _data = new byte[ois.readInt()];
+    ois.readFully(_data, 0, _data.length);
+  }
 }

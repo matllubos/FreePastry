@@ -12,27 +12,29 @@ import java.net.*;
 
 public class SmtpServerImpl extends Thread implements SmtpServer {
 
-  private boolean acceptNonLocal = false;
-  private boolean gateway = false;
-  private boolean quit = false;
-  private int port;
-  private ServerSocket server;
+  boolean acceptNonLocal = false;
+  boolean gateway = false;
+  boolean quit = false;
+  int port;
+  ServerSocket server;
 
-  private SmtpManager manager;
+  SmtpManager manager;
 
-  private SmtpCommandRegistry registry;
+  SmtpCommandRegistry registry;
 
-  private Workspace workspace;
+  Workspace workspace;
 
-  private EmailService email;
+  EmailService email;
 
   public SmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal) throws Exception {
+    super("SMTP Server Thread");
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
     this.port = port;
     this.email = email;
     this.manager = new SimpleManager(email, gateway, address);
     this.registry = new SmtpCommandRegistry();
+    this.registry.load();
     this.workspace = new InMemoryWorkspace();
 
     initialize();
@@ -44,8 +46,6 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
 
   public void initialize() throws IOException {
     server = new ServerSocket(port);
-
-    registry.load();
   }
 
   public void run() {
@@ -57,7 +57,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
 
         if (acceptNonLocal || gateway || socket.getInetAddress().isLoopbackAddress() ||
             (socket.getInetAddress().equals(InetAddress.getLocalHost()))) {
-          Thread thread = new Thread() {
+          Thread thread = new Thread("SMTP Server Thread for " + socket.getInetAddress()) {
             public void run() {
               try {
                 SmtpHandler handler = new SmtpHandler(registry, manager, workspace);

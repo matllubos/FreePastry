@@ -11,33 +11,15 @@ import rice.email.proxy.mailbox.MailboxException;
  * http://asg.web.cmu.edu/rfc/rfc2060.html#sec-6.3.1 </a>
  * </p>
  */
-public class SelectCommand
-    extends ExamineCommand
-{
-    public SelectCommand()
-    {
-        super("SELECT");
-    }
-
-    public void execute()
-    {
-        try
-        {
-            getState().enterFolder(getFolder());
-            super.execute();
-        }
-        catch (MailboxException me)
-        {
-            taggedExceptionFailure(me);
-          me.printStackTrace();
-        }
-    }
-
-    protected boolean isWritable()
-    {
-
-        return true;
-    }
+public class SelectCommand extends ExamineCommand {
+  
+  public SelectCommand() {
+    super("SELECT");
+  }
+  
+  protected boolean isWritable() {
+    return true;
+  }
 }
 
 

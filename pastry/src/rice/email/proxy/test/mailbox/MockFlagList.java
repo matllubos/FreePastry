@@ -28,9 +28,45 @@ public class MockFlagList implements FlagList
   public boolean isSet(String flag) {
     return flags.contains(flag);
   }
-
+  
+  public void setDeleted(boolean value) {
+    setFlag("\\Deleted", value);
+  }
+  
+  public void setFlagged(boolean value) {
+    setFlag("\\Flagged", value);
+  }
+  
+  public void setAnswered(boolean value) {
+    setFlag("\\Answered", value);
+  }
+  
+  public void setDraft(boolean value) {
+    setFlag("\\Draft", value);
+  }
+  
+  public void setRecent(boolean value) {
+    setFlag("\\Recent", value);
+  }
+  
+  public void setSeen(boolean value) {
+    setFlag("\\Seen", value);
+  }
+  
   public boolean isDeleted() {
     return flags.contains("\\Deleted");
+  }
+  
+  public boolean isFlagged() {
+    return flags.contains("\\Flagged");
+  }
+  
+  public boolean isAnswered() {
+    return flags.contains("\\Answered");
+  }
+  
+  public boolean isDraft() {
+    return flags.contains("\\Draft");
   }
 
   public boolean isSeen() {
@@ -39,6 +75,10 @@ public class MockFlagList implements FlagList
 
   public boolean isRecent() {
     return flags.contains("\\Recent");
+  }
+  
+  public List getFlags() {
+    return null;
   }
 
   public String toFlagString() {

@@ -111,4 +111,16 @@ public class EmailSinglePart extends EmailContentPart {
       return content.equals(part.content);
     }
   }
+    
+    /**
+      * Method which sets this part's storage service
+     *
+     * @param storage The local storage service
+     */
+    public void setStorage(StorageService storage) {
+      super.setStorage(storage);
+      
+      if ((content == null) && (contentReference == null))
+        throw new NullPointerException("Content and Reference NULL in EmailsinglePart!");
+    }
 }

@@ -29,6 +29,14 @@ public class UserManagerImpl implements UserManager {
     this.users = new Hashtable();
   }
   
+  public String getPassword(String name) throws NoSuchUserException {
+    if (users.get(name) != null) {
+      return (String) users.get(name);
+    }
+    
+    throw new NoSuchUserException("User " + name + " not found!");
+  }
+  
   public User getUser(String name) throws NoSuchUserException {
     if (users.get(name) != null) {
       return new UserImpl(name, manager, (String) users.get(name));

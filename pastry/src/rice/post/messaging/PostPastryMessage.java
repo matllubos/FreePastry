@@ -12,6 +12,8 @@ public class PostPastryMessage implements Message, SignedPostMessageWrapper {
 
   private SignedPostMessage message;
   
+  static final long serialVersionUID = 8591215136628275133L;
+  
   /**
    * Builds a PostPastryMessage given a PostMessage.
    *
@@ -28,6 +30,10 @@ public class PostPastryMessage implements Message, SignedPostMessageWrapper {
    */
   public SignedPostMessage getMessage() {
     return message;
+  }
+  
+  public String toString() {
+    return "[PPM " + message + "]"; 
   }
   
 }

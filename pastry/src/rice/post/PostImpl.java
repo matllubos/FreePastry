@@ -10,11 +10,12 @@ import rice.Continuation.*;
 
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
-import rice.p2p.replication.*;
+import rice.p2p.replication.manager.*;
 import rice.p2p.scribe.*;
 
 import rice.persistence.*;
 
+import rice.post.delivery.*;
 import rice.post.log.*;
 import rice.post.messaging.*;
 import rice.post.storage.*;
@@ -29,12 +30,17 @@ import rice.post.security.ca.*;
  * @author Alan Mislove
  * @author Ansley Post
  */
-public class PostImpl implements Post, Application, ScribeClient, ReplicationClient {
+public class PostImpl implements Post, Application, ScribeClient {
 
   /**
    * The replication factor to use for replicating delivery messages
    */
   public static final int REPLICATION_FACTOR = 3;
+  
+  /**
+   * The frequency of synchronization with on-disk delivery messages
+   */
+  public static final int SYNCHRONIZE_PERIOD = 60000;
   
   /**
    * The endpoint used for routing messages
@@ -50,11 +56,6 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
    * The local Scribe service to use for notification.
    */
   protected Scribe scribe;
-
-  /**
-   * The local replication manager for replications notifications
-   */
-  protected Replication replication;
   
   /**
    * The address of the local user.
@@ -77,19 +78,17 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
    * Maps PostClientAddress to PostClient.
    */
   private Hashtable clientAddresses;
-
+  
   /**
-   * A list of the notification messages which we've received, to determine
-   * if we're receiveing a message twice
+   * Caches PostEntityAddress to PostLog.
    */
-  private Vector receivedMessages;
-
+  private Hashtable postLogs;
+  
   /**
-   * A storage used to store the pending (to be sent) encrypted notification
-   * messages
+   * Maps PostEntityAddress to list of pending continuations
    */
-  private Storage memoryStorage;
-
+  private Hashtable pendingLogs;
+  
 
   // --- GROUP SUPPORT ---
 
@@ -99,25 +98,20 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
   private HashMap keys;
 
   
-  // --- BUFFERING SUPPORT ---
-  
-  /**
-   * The data structure to hold the buffered packets.
-   */
-  private Hashtable bufferedData;
-
-  /**
-   * The data structure map DRM Id -> user
-   */
-  private Hashtable reverseMap;
-
-  
   // --- LOGGING SUPPORT ---
 
   /**
    * The top level POST log, with pointers to the logs for each application.
    */
   private PostLog log;
+  
+  
+  // --- DELIVERY SUPPORT ---
+  
+  /**
+   * The service which maintians the list of pending deliveries, and delivers messages
+   */
+  private DeliveryService delivery;
 
   
   // --- STORAGE SUPPORT ---
@@ -153,6 +147,11 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
    */
   private PublicKey caPublicKey; 
   
+  /**
+   * Whether POST is allowed to reinsert the POST log (should not normally be set)
+   */
+  private boolean logRewrite;
+  
 
   /**
    * Builds a PostImpl to run on the given pastry node,
@@ -170,11 +169,14 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
    */
   public PostImpl(Node node,
                   Past past,
+                  DeliveryPast deliveryPast,
+                  Past deliveredPast,
                   PostEntityAddress address,
                   KeyPair keyPair,
                   PostCertificate certificate,
                   PublicKey caPublicKey,
-                  String instance) throws PostException 
+                  String instance,
+                  boolean logRewrite) throws PostException 
   {
     this.endpoint = node.registerApplication(this, instance);
     this.past = past;
@@ -182,10 +184,10 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
     this.keyPair = keyPair;
     this.certificate = certificate;
     this.caPublicKey = caPublicKey;
+    this.logRewrite = logRewrite;
     
     this.scribe = new ScribeImpl(node, instance);
-    this.memoryStorage = new MemoryStorage(node.getIdFactory());
-    this.replication = new ReplicationImpl(node, this, REPLICATION_FACTOR, instance + "-POST");
+    this.delivery = new DeliveryService(this, deliveryPast, deliveredPast, scribe, node.getIdFactory());
 
     this.security = new SecurityService();
     this.security.loadModule(new CASecurityModule(caPublicKey));
@@ -193,18 +195,33 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
 
     clients = new Vector();
     clientAddresses = new Hashtable();
-    bufferedData = new Hashtable();
+    postLogs = new Hashtable();
+    pendingLogs = new Hashtable();
     keys = new HashMap();
-    receivedMessages = new Vector();
-    reverseMap = new Hashtable();
     
-    //logger.addHandler(new ConsoleHandler());
-    //logger.setLevel(Level.FINE);
-    //logger.getHandlers()[0].setLevel(Level.FINE);
+  //  logger.addHandler(new ConsoleHandler());
+  //  logger.setLevel(Level.FINEST);
+  //  logger.getHandlers()[0].setLevel(Level.FINEST);
+    
+    endpoint.scheduleMessage(new SynchronizeMessage(), SYNCHRONIZE_PERIOD, SYNCHRONIZE_PERIOD);
     
     logger.fine(endpoint.getId() + ": Constructed new Post with user " + address + " and instance " + instance);
   }
-
+  
+  /**
+   * @return The logger, used to log messages
+   */
+  public Logger getLogger() {
+    return logger;
+  }
+  
+  /**
+    * @return The Endpoint
+   */
+  public Endpoint getEndpoint() {
+    return endpoint;
+  }
+  
   /**
     * @return The PostEntityAddress of the local user.
    */
@@ -227,7 +244,12 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
   public void deliver(Id id, Message message) {
     logger.finest(endpoint.getId() + ": Received message " + message + " with target " + id);
     if (message instanceof SignedPostMessageWrapper) {
-      processSignedPostMessage(((SignedPostMessageWrapper) message).getMessage());
+      if (((SignedPostMessageWrapper) message).getMessage().getMessage() instanceof DeliveryMessage)
+        processDeliveryMessage((DeliveryMessage) ((SignedPostMessageWrapper) message).getMessage().getMessage());
+      else  
+        processSignedPostMessage(((SignedPostMessageWrapper) message).getMessage());
+    } else if (message instanceof SynchronizeMessage) {
+      processSynchronizeMessage((SynchronizeMessage) message);
     } else {
       logger.warning(endpoint.getId() + ": Found unknown message " + message + " - dropping on floor.");
     }
@@ -326,7 +348,7 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
    */
   private void processSignedPostMessage(final SignedPostMessage signedMessage) {
     final PostEntityAddress sender = signedMessage.getMessage().getSender();
-    logger.finer(endpoint.getId() + ": Processing signed message " + signedMessage + " from sender " + sender);
+    logger.finer(endpoint.getId() + ": Processing signed message " + signedMessage + " from sender " + sender + " with address " + sender.getAddress());
     
     getPostLog(sender, new ListenerContinuation("Process Signed Post Message") {
       public void receiveResult(Object o) {
@@ -346,20 +368,10 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
 
         PostMessage message = signedMessage.getMessage();
 
-        if (message instanceof DeliveryRequestMessage) {
-          processDeliveryRequestMessage((DeliveryRequestMessage) message);
-        } else if (message instanceof DeliveryLookupMessage) {
-          processDeliveryLookupMessage((DeliveryLookupMessage) message);
-        } else if (message instanceof DeliveryLookupResponseMessage) {
-          processDeliveryLookupResponseMessage((DeliveryLookupResponseMessage) message);
-        } else if (message instanceof PresenceMessage) {
+        if (message instanceof PresenceMessage) {
           processPresenceMessage((PresenceMessage) message);
         } else if (message instanceof EncryptedNotificationMessage) {
           processEncryptedNotificationMessage((EncryptedNotificationMessage) message);
-        } else if (message instanceof DeliveryMessage) {
-          processDeliveryMessage((DeliveryMessage) message);
-        } else if (message instanceof ReceiptMessage) {
-          processReceiptMessage((ReceiptMessage) message);
         } else if (message instanceof GroupNotificationMessage) {
           processGroupMessage((GroupNotificationMessage) message);
         } else {
@@ -367,65 +379,6 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
         }
       }
     });
-  }
-  
-  /**
-   * This method processs the processing of a delivery
-   * request message by subscribing the appriate scribe
-   * group.
-   *
-   * @param message The incoming message.
-   */
-  private void processDeliveryRequestMessage(DeliveryRequestMessage message){
-    logger.fine(endpoint.getId() + ": Received delivery request from : " + message.getSender() + " to: " + message.getDestination());
-
-    synchronized(bufferedData) {
-      Vector userQueue = (Vector) bufferedData.get(message.getDestination());
-
-      if (userQueue == null) {
-        logger.finer(endpoint.getId() + ": Creating entry for: " + message.getDestination());
-
-        userQueue = new Vector();
-        bufferedData.put(message.getDestination(), userQueue);
-        scribe.subscribe(new Topic(message.getDestination().getAddress()), this);
-
-        logger.finer(endpoint.getId() + ": Joined Scribe group rooted at " + message.getDestination().getAddress());
-      }
-
-      userQueue.addElement(message.getId());
-      memoryStorage.store(message.getId(), message, new ListenerContinuation("Storage of ENM"));
-      reverseMap.put(message.getId(), message.getDestination());
-    }
-  }
-
-  /**
-   * This method processs a lookup for a DRM
-   *
-   * @param message The incoming message.
-   */
-  private void processDeliveryLookupMessage(final DeliveryLookupMessage message){
-    logger.fine(endpoint.getId() + ": Received delivery lookup from : " + message.getSender() + " for: " + message.getId());
-
-    memoryStorage.getObject(message.getId(), new ListenerContinuation("Delivery Lookup Request") {
-      public void receiveResult(Object o) {
-        if (o != null) {
-          DeliveryRequestMessage drm = (DeliveryRequestMessage) o;
-          DeliveryLookupResponseMessage dlrm = new DeliveryLookupResponseMessage(address, drm);
-
-          endpoint.route(message.getSource().getId(), new PostPastryMessage(signPostMessage(dlrm)), message.getSource());
-        }
-      }
-    });
-  }
-  
-  /**
-   * This method processs a lookup response for a DRM
-   *
-   * @param message The incoming message.
-   */
-  private void processDeliveryLookupResponseMessage(DeliveryLookupResponseMessage message){
-    logger.fine(endpoint.getId() + ": Received delivery lookup response from : " + message.getSender() + " for: " + message.getEncryptedMessage().getId());
-    processDeliveryRequestMessage(message.getEncryptedMessage());
   }
 
   /**
@@ -436,34 +389,16 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
    * @param message The incoming message
    */
   private void processPresenceMessage(final PresenceMessage message) {
-    logger.fine(endpoint.getId() + ": Presence message from : " + message.getSender());
+    logger.fine(endpoint.getId() + ": Presence message from : " + message.getSender() + " at " + message.getHandle());
 
-    synchronized (bufferedData) {
-      Vector userQueue = (Vector) bufferedData.get(message.getSender());
-
-      if (userQueue != null) {
-        if (userQueue.size() == 0) {
-          logger.warning(endpoint.getId() + ": ERROR - presence message from : " + message.getSender() + " has empty vector.");
+    delivery.presence(message, new ListenerContinuation("Processing of pesence message " + message) {
+      public void receiveResult(Object o) {
+        if (o != null) {
+          DeliveryMessage dm = new DeliveryMessage(address, message.getSender(), (SignedPostMessage) o);
+          endpoint.route(message.getLocation(), new PostPastryMessage(signPostMessage(dm)), message.getHandle());
         }
-
-        for (int i=0; i<userQueue.size(); i++) {
-          final Id id = (Id) userQueue.elementAt(i);
-
-          memoryStorage.getObject(id, new ListenerContinuation("Retrival of stored ENM") {
-            public void receiveResult(Object o) {
-              if (o != null) {
-                DeliveryRequestMessage drm = (DeliveryRequestMessage) o;
-                SignedPostMessage spm = drm.getEncryptedMessage();
-                DeliveryMessage dm = new DeliveryMessage(address, endpoint.getId(), id, spm);
-                endpoint.route(message.getLocation(), new PostPastryMessage(signPostMessage(dm)), null);
-              } 
-            }
-          });
-        }
-      } else {
-        logger.warning(endpoint.getId() + ": ERROR - presence message from : " + message.getSender() + " should not be received here.");
       }
-    }
+    });
   }
 
   /**
@@ -471,21 +406,38 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
    *
    * @param message The incoming message.
    */
-  private void processDeliveryMessage(DeliveryMessage message) {
+  private void processDeliveryMessage(final DeliveryMessage message) {
     logger.fine(endpoint.getId() + ": Delivery message from : " + message.getSender());
 
-    // send receipt
-    ReceiptMessage rm = new ReceiptMessage(address, message.getId(), message.getEncryptedMessage());
-    endpoint.route(message.getLocation(), new PostPastryMessage(signPostMessage(rm)), null);
-
-    // process internal message, if we haven't seen it before
-    if (! receivedMessages.contains(message.getId())) {
-      logger.finer(endpoint.getId() + ": Haven't seen message " + message.getId() + " before - accepting.");
-      receivedMessages.add(message.getId());
-      processSignedPostMessage(message.getEncryptedMessage());
-    } else {
-      logger.finer(endpoint.getId() + ": I've seen message " + message.getId() + " before - ignoring.");
+    if (! message.getDestination().equals(address)) {
+      logger.finer(endpoint.getId() + ": Received delivery message at "  + address + " for " + message.getDestination());
+      return;
     }
+    
+    delivery.check(message.getEncryptedMessage(), new ListenerContinuation("Processing of DeliveryMessage " + message) {
+      public void receiveResult(Object o) {
+        if (((Boolean) o).booleanValue()) {
+          logger.fine(endpoint.getId() + ": Haven't seen message " + message + " before - accepting");
+          
+          delivery.delivered(message.getEncryptedMessage(), 
+                             signPostMessage(message.getEncryptedMessage().getMessage()).getSignature(),
+                             new ListenerContinuation("Insertion of receipt for " + message));
+          
+          processSignedPostMessage(message.getEncryptedMessage());
+        } else {
+          logger.fine(endpoint.getId() + ": Seen message " + message + " before - ignoring");
+        }
+      }
+    });
+  }
+  
+  /**
+   * This method processes a message to synchronize the pending notification messages.
+   *
+   * @param message The incoming message.
+   */
+  private void processSynchronizeMessage(SynchronizeMessage message) {
+    delivery.synchronize();
   }
   
   /**
@@ -509,6 +461,13 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
 
     logger.finer(endpoint.getId() + ": Successfully deserialized notification message from : " + nm.getSender());
 
+    if (! (nm.getDestination().equals(getEntityAddress()))) {
+      logger.warning(endpoint.getId() + ": Found ENM at " + getEntityAddress() + " destined for different user " +
+                     nm.getDestination() + " - dropping on floor.");
+      return;
+    }
+    
+    
     if (! (nm.getSender().equals(message.getSender()))) {
       logger.warning(endpoint.getId() + ": Found ENM from " + message.getSender() + " with internal NM from different sender " +
                          nm.getSender() + " - dropping on floor.");
@@ -527,44 +486,6 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
     }
   }
   
-  
-  /**
-   * This method handles an incoming receipt message by
-   * removing the soft state associated with the delivery
-   * request.
-   *
-   * @param message The incoming message.
-   */
-  private void processReceiptMessage(ReceiptMessage message) {
-    logger.fine(endpoint.getId() + ": Received receipt message from : " + message.getSender());
-
-    Id id = message.getId();
-    PostEntityAddress sender = message.getSender();
-
-    // remove message
-    synchronized (bufferedData) {
-      Vector userQueue = (Vector) bufferedData.get(sender);
-
-      if (userQueue != null) {
-        boolean success = userQueue.remove(id);
-
-        if (! success) {
-          logger.warning(endpoint.getId() + ": ERROR - Received receiptmessage for unknown message " + id);
-        }
-
-        if (userQueue.size() == 0) {
-          bufferedData.remove(sender);
-          scribe.unsubscribe(new Topic(sender.getAddress()), this);
-        }
-      } else {
-        scribe.unsubscribe(new Topic(sender.getAddress()), this);
-      }
-    }
-
-    reverseMap.remove(id);
-    memoryStorage.unstore(id, new ListenerContinuation("Unstore of DRM"));
-  }
-
   /**
    * This method handles an incoming group multicast message.
    *
@@ -619,6 +540,20 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
     if ((entity.equals(getEntityAddress())) && (log != null)) {
       command.receiveResult(log);
       return;
+    } else {
+      if (postLogs.get(entity) != null) {
+        command.receiveResult(postLogs.get(entity));
+        return;
+      }
+    }
+    
+    synchronized (pendingLogs) {
+      if (pendingLogs.get(entity) == null) {
+        pendingLogs.put(entity, new Vector());
+      } else {
+        ((Vector) pendingLogs.get(entity)).add(command);
+        return;
+      }
     }
 
     logger.fine(endpoint.getId() + ": Looking up postlog for : " + entity);
@@ -627,12 +562,21 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
       public void receiveResult(Object o) {
         final PostLog log = (PostLog) o;
 
+        logger.fine(endpoint.getId() + ": Got response log " + log +  " for entity " + entity);
+
+        
         if (log == null) {
           logger.info(endpoint.getId() + ": Could not find postlog for: " + entity);
 
           if (entity.equals(getEntityAddress())) {
-            PostImpl.this.log = new PostLog(entity, keyPair.getPublic(), certificate, PostImpl.this, parent);
-            return;
+            if (logRewrite) {
+              logger.warning(endpoint.getId() + ": Reinserting log head for entity " + entity);
+              PostImpl.this.log = new PostLog(entity, keyPair.getPublic(), certificate, PostImpl.this, parent);
+              return;
+            } else {
+              logger.warning(endpoint.getId() + ": Unable to fetch local POST log - aborting");
+              parent.receiveException(new PostException("Unable to locate POST log"));
+            }
           } else {
             logger.warning(endpoint.getId() + ": PostLog lookup for user " + entity + " failed.");
             parent.receiveResult(null);
@@ -645,6 +589,11 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
           return;
         }
 
+        if (! log.getEntityAddress().equals(entity)) {
+          parent.receiveException(new PostException("Wrong PostLog: Asked for PostLog for " + entity + ", got " + log.getEntityAddress()));
+          return;
+        }
+        
         if (! (log.getEntityAddress().equals(log.getCertificate().getAddress()) &&
                log.getPublicKey().equals(log.getCertificate().getKey()))) {
           parent.receiveException(new PostException("Malformed PostLog: Certificate does not match log owner."));
@@ -659,17 +608,41 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
 
               if (entity.equals(getEntityAddress())) {
                 PostImpl.this.log = log;
+              } else {
+                postLogs.put(entity, log);
               }
 
               logger.fine(endpoint.getId() + ": Successfully retrieved postlog for: " + entity);
 
               parent.receiveResult(log);
+              
+              Vector v = null;
+              synchronized (pendingLogs) {
+                v = (Vector) pendingLogs.remove(entity);
+              }
+                
+              if (v != null)
+                for (int i=0; i<v.size(); i++) 
+                  ((Continuation) v.elementAt(i)).receiveResult(log);
             } else  {
               logger.warning(endpoint.getId() + ": Ceritficate of PostLog could not be verified for entity " + entity);
               parent.receiveException(new PostException("Certificate of PostLog could not verified for entity: " + entity));
             }
           }
         });
+      }
+      
+      public void receiveException(Exception e) {
+        parent.receiveException(e);
+        
+        Vector v = null;
+        synchronized (pendingLogs) {
+          v = (Vector) pendingLogs.remove(entity);
+        }
+        
+        if (v != null)
+          for (int i=0; i<v.size(); i++) 
+            ((Continuation) v.elementAt(i)).receiveException(e);            
       }
     });
   }
@@ -701,7 +674,7 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
   public void announcePresence() {
     logger.finer(endpoint.getId() + ": Publishing presence to the group " + address.getAddress());
 
-    PresenceMessage pm = new PresenceMessage(address, endpoint.getId());
+    PresenceMessage pm = new PresenceMessage(address, endpoint.getLocalNodeHandle());
     scribe.publish(new Topic(address.getAddress()), new PostScribeMessage(signPostMessage(pm)));
   }
 
@@ -743,23 +716,14 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
 
         logger.finer(endpoint.getId() + ": Received destination log " + destinationLog);
 
-        Id random = storage.getRandomNodeId();
-
-        logger.finer(endpoint.getId() + ": Picked random node: " + random);
-
-        byte[] cipherText = null;
-
         try {
           byte[] key = SecurityUtils.generateKeySymmetric();
           byte[] keyCipherText = SecurityUtils.encryptAsymmetric(key, destinationLog.getPublicKey());
-          cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
+          byte[] cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
 
-          EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, keyCipherText, cipherText);
-          DeliveryRequestMessage drm = new DeliveryRequestMessage(address, destination, signPostMessage(enm), random);
+          EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, destination, keyCipherText, cipherText);
 
-          logger.finer(endpoint.getId() + ": Sending delivery request to : " + random);
-
-          endpoint.route(random, new PostPastryMessage(signPostMessage(drm)), null);
+          delivery.deliver(signPostMessage(enm), new ListenerContinuation("Delivery of message " + message));
         } catch (Exception e) {
           logger.warning(endpoint.getId() + ": Exception occured which encrypting NotificationMessage " + e + " - aborting.");
         }
@@ -797,17 +761,11 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
 
         logger.finer(endpoint.getId() + ": Received destination log " + destinationLog);
 
-        Id random = storage.getRandomNodeId();
-
-        logger.finer(endpoint.getId() + ": Picked random node: " + random);
-
-        byte[] cipherText = null;
-
         try {
           byte[] key = SecurityUtils.generateKeySymmetric();
           byte[] keyCipherText = SecurityUtils.encryptAsymmetric(key, destinationLog.getPublicKey());
-          cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
-          EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, keyCipherText, cipherText);
+          byte[] cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
+          EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, destination, keyCipherText, cipherText);
 
           logger.finer(endpoint.getId() + ": Sending notification message directly to : " + handle);
 
@@ -914,78 +872,6 @@ public class PostImpl implements Post, Application, ScribeClient, ReplicationCli
       return false;
     }
   }
-
-  /**
-   * This upcall is invoked to notify the application that is should
-   * fetch the cooresponding keys in this set, since the node is now
-   * responsible for these keys also.
-   * @param keySet set containing the keys that needs to be fetched
-   */
-  public void fetch(IdSet keySet) {
-    logger.finer(endpoint.getId() + ": Was told to fetch the keyset " + keySet);
-
-    if (replication != null) {
-      Iterator i = keySet.getIterator();
-
-      while (i.hasNext()) {
-        Id id = (Id) i.next();
-        NodeHandleSet set = endpoint.replicaSet(id, REPLICATION_FACTOR);
-        DeliveryLookupMessage dlm = new DeliveryLookupMessage(address, endpoint.getLocalNodeHandle(), id);
-        logger.finer(endpoint.getId() + ": Sending delivery lookup message for id " + id);
-        
-        for(int j=0; j<set.size(); j++) {
-          endpoint.route(set.getHandle(j).getId(), new PostPastryMessage(signPostMessage(dlm)), set.getHandle(j));
-        }
-      }
-    }
-  }
-
-  /**
-   * This upcall is to notify the application of the range of keys for
-   * which it is responsible. The application might choose to react to
-   * call by calling a scan(complement of this range) to the persistance
-   * manager and get the keys for which it is not responsible and
-   * call delete on the persistance manager for those objects.
-   * @param range the range of keys for which the local node is currently
-   *              responsible
-   */
-  public void setRange(IdRange range) {
-    IdRange notRange = range.getComplementRange();
-    
-    logger.fine(endpoint.getId() + ": Removing all pending deliveries in the range " + notRange);
-
-    Continuation c = new Continuation() {
-      public void receiveResult(Object o) {
-        Iterator i = ((IdSet) o).getIterator();
-        Vector v = new Vector();
-        while (i.hasNext()) v.add(i.next());
-        Iterator notIds = v.iterator();
-
-        while (notIds.hasNext()) {
-          Id id = (Id) notIds.next();
-          logger.finer(endpoint.getId() + ": Removing deliver request with id " + id);
-          processReceiptMessage(new ReceiptMessage((PostEntityAddress) reverseMap.get(id), id, null));
-        }
-      }
-
-      public void receiveException(Exception e) {
-        logger.warning(endpoint.getId() + ": Exception " + e + " occured during removal of objects.");
-      }
-    };
-
-    memoryStorage.scan(notRange, c);
-  }
-
-  /**
-   * This upcall should return the set of keys that the application
-   * currently stores in this range. Should return a empty IdSet (not null),
-   * in the case that no keys belong to this range.
-   * @param range the requested range
-   */
-  public IdSet scan(IdRange range) {
-    return memoryStorage.scan(range);
-  }
-  
   
   public String toString() {
     return "PostImpl[" + address + "]";

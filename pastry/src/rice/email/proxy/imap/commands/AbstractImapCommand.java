@@ -45,8 +45,9 @@ public abstract class AbstractImapCommand
 
     protected void taggedExceptionFailure(Throwable exception)
     {
-        _conn.println(_tag + " BAD " + exception.getMessage());
+      _conn.println(_tag + " BAD " + exception.getMessage());
       exception.printStackTrace();
+      rice.pastry.dist.DistPastryNode.addError("SEVERE: Exception " + exception + " occurred while attempting to perform IMAP task " + _tag + " " + _cmdName);
     }
 
     protected void untaggedResponse(String s)

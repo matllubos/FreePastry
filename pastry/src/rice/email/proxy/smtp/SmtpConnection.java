@@ -55,17 +55,14 @@ public class SmtpConnection {
     }
 
     public void println(String line) {
-
         System.out.println("S: " + line);
         out.print(line + "\r\n");
         out.flush();
-        
     }
 
     public String readLine() throws IOException {
       int result = in.nextToken();
-      
-      System.out.println("C: " + result + ": " + in.sval);
+      System.out.println("C: " + in.sval);
       return in.sval;
     }
 

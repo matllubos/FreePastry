@@ -1,35 +1,54 @@
 package rice.email.proxy.mailbox.postbox;
 
 import rice.*;
+import rice.Continuation.*;
 import rice.email.*;
 import rice.email.proxy.mailbox.*;
 
 import java.util.*;
 
 public class PostFlagList implements FlagList {
+  
+  /**
+   * The static hashtable mapping message -> flag list, ensuring that
+   * there is only ever one list per message
+   */
+  private static Hashtable FLAG_MAP = new Hashtable();
 
-  PostMessage _msg;
+  /**
+   * The internal message which the flag list holds the flags for
+   */
+  protected PostMessage message;
+  
+  /**
+   * Any session flags, which are not permanently stored.  NOTE: Currently,
+   * this is not implemented on a per-session basis, so all sessions will
+   * see each other's flags.  Too bad.
+   */
+  protected HashSet sessionFlags;
 
-  private static Hashtable loc = new Hashtable();
-
-  protected PostFlagList(PostMessage msg) {
-      _msg = msg;
+  /**
+   * Protected constructor which takes in the wrapped message.
+   * This constructor does *NOT* set the recent flag.
+   */
+  protected PostFlagList(PostMessage message) {
+    this.message = message;
+    this.sessionFlags = new HashSet();
   }
 
+  /**
+   * Method by which other classes can get the flag list for a 
+   * given message
+   *
+   * @param msg The message to wrap
+   * @return The flag list for the message
+   */
   public static PostFlagList get(PostMessage msg) {
-    if (loc.get(msg.getStoredEmail().getEmail()) == null) {
-      loc.put(msg.getStoredEmail().getEmail(), new PostFlagList(msg));
+    if (FLAG_MAP.get(msg.getStoredEmail()) == null) {
+      FLAG_MAP.put(msg.getStoredEmail(), new PostFlagList(msg));
     }
 
-    return (PostFlagList) loc.get(msg.getStoredEmail().getEmail());
-  }
-  
-  public void addFlag(String flag) {
-    setFlag(flag, true);
-  }
-
-  public void removeFlag(String flag) {
-    setFlag(flag, false);
+    return (PostFlagList) FLAG_MAP.get(msg.getStoredEmail());
   }
 
   /**
@@ -38,111 +57,231 @@ public class PostFlagList implements FlagList {
    * into one disk write, one SQL command, etc.
    */
   public void commit() throws MailboxException {
-    try {
-      final Exception[] exception = new Exception[1];
-      final Object[] result = new Object[1];
-      final Object wait = "wait";
-
-      Continuation c = new Continuation() {
-        public void receiveResult(Object o) {
-          synchronized(wait) {
-            result[0] = o;
-            wait.notify();
-          }
-        }
-        public void receiveException (Exception e) {
-          synchronized (wait) {
-            exception[0] = e;
-            result[0] = "result";
-            wait.notify();
-          }
-        }
-      };
-      _msg.getFolder().updateMessage(_msg.getStoredEmail(), c);
-      synchronized (wait) { if (result[0] == null) wait.wait();}
-
-      if (exception[0] != null) {
-        throw new Exception(exception[0]);
-      }
-    } catch (Exception e) {
-      throw new MailboxException(e);
-    }
-  }      
+    ExternalContinuation c = new ExternalContinuation();
+    message.getFolder().updateMessage(message.getStoredEmail(), c);
+    c.sleep();
+    
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+  }   
   
-  public void setFlag(String flag, boolean value) {
-    if ("\\Deleted".equalsIgnoreCase(flag))
-      _msg.getStoredEmail().getFlags().setDeleted(value);
-    else if ("\\Answered".equalsIgnoreCase(flag))
-      _msg.getStoredEmail().getFlags().setAnswered(value);
-    else if ("\\Seen".equalsIgnoreCase(flag))
-      _msg.getStoredEmail().getFlags().setSeen(value);
-    else if ("\\Flagged".equalsIgnoreCase(flag))
-      _msg.getStoredEmail().getFlags().setFlagged(value);
-    else if ("\\Draft".equalsIgnoreCase(flag))
-      _msg.getStoredEmail().getFlags().setDraft(value);
-    else	 
-   	 _msg.getStoredEmail().getFlags().setFlag(flag, value);
-  }
-  
-  public boolean isRecent() {
-    return _msg.getStoredEmail().getFlags().isRecent();
-  }
-  
+  /**
+   * Gets the Deleted attribute of the Flags object
+   *
+   * @return The Deleted value
+   */
   public boolean isDeleted() {
-    return _msg.getStoredEmail().getFlags().isDeleted();
+    return isSet(DELETED_FLAG);
   }
   
-  public boolean isSeen() {
-    return _msg.getStoredEmail().getFlags().isSeen();
-  }
-  
+  /**
+   * Gets the Answered attribute of the Flags object
+   *
+   * @return The Answered value
+   */
   public boolean isAnswered() {
-    return _msg.getStoredEmail().getFlags().isAnswered();
+    return isSet(ANSWERED_FLAG);
   }
   
+  /**
+   * Gets the Seen attribute of the Flags object
+   *
+   * @return The Seen value
+   */
+  public boolean isSeen() {
+    return isSet(SEEN_FLAG);
+  }
+  
+  /**
+   * Gets the Flagged attribute of the Flags object
+   *
+   * @return The Flagged value
+   */
   public boolean isFlagged() {
-    return _msg.getStoredEmail().getFlags().isFlagged();
+    return isSet(FLAGGED_FLAG);
   }
   
+  /**
+   * Gets the Draft attribute of the Flags object
+   *
+   * @return The Draft value
+   */
   public boolean isDraft() {
-    return _msg.getStoredEmail().getFlags().isDraft();
+    return isSet(DRAFT_FLAG);
   }
   
+  /**
+   * Returns whether or not the given flag is set
+   *
+   * @param flag The flag to check
+   * @return Whether or not it is set
+   */
   public boolean isSet(String flag) {
-    return _msg.getStoredEmail().getFlags().isSet(flag);
+    if (flag.equalsIgnoreCase(RECENT_FLAG)) {
+      return isSessionFlagSet(RECENT_FLAG);
+    } else {
+      if (flag.equalsIgnoreCase(DELETED_FLAG))
+        flag = DELETED_FLAG;
+      else if (flag.equalsIgnoreCase(ANSWERED_FLAG))
+        flag = ANSWERED_FLAG;
+      else if (flag.equalsIgnoreCase(FLAGGED_FLAG))
+        flag = FLAGGED_FLAG;
+      else if (flag.equalsIgnoreCase(DRAFT_FLAG))
+        flag = DRAFT_FLAG;
+      else if (flag.equalsIgnoreCase(SEEN_FLAG))
+        flag = SEEN_FLAG;
+      
+      return message.getStoredEmail().getFlags().isSet(flag);
+    }    
+  }
+  
+  /**
+   * Sets the Deleted attribute of the Flags object
+   *
+   * @param value The new Deleted value
+   */
+  public void setDeleted(boolean value) {
+    setFlag(DELETED_FLAG, value);
+  }
+  
+  /**
+   * Sets the Answered attribute of the Flags object
+   *
+   * @param value The new Answered value
+   */
+  public void setAnswered(boolean value) {
+    setFlag(ANSWERED_FLAG, value);
+  }
+  
+  /**
+   * Sets the Seen attribute of the Flags object
+   *
+   * @param value The new Seen value
+   */
+  public void setSeen(boolean value) {
+    setFlag(SEEN_FLAG, value);
+  }
+  
+  /**
+   * Sets the Flagged attribute of the Flags object
+   *
+   * @param value The new Flagged value
+   */
+  public void setFlagged(boolean value) {
+    setFlag(FLAGGED_FLAG, value);
+  }
+  
+  /**
+   * Sets the Draft attribute of the Flags object
+   *
+   * @param value The new Draft value
+   */
+  public void setDraft(boolean value) {
+    setFlag(DRAFT_FLAG, value);
+  }
+  
+  /**
+   * Sets the given flag, if value is true, removes it 
+   * otherwise
+   *
+   * @param flag The flag
+   * @param value The value
+   */
+  public void setFlag(String flag, boolean value) {
+    if (flag.equalsIgnoreCase(RECENT_FLAG)) {
+      setSessionFlag(RECENT_FLAG, value);
+    } else {
+      if (flag.equalsIgnoreCase(DELETED_FLAG))
+        flag = DELETED_FLAG;
+      else if (flag.equalsIgnoreCase(ANSWERED_FLAG))
+        flag = ANSWERED_FLAG;
+      else if (flag.equalsIgnoreCase(FLAGGED_FLAG))
+        flag = FLAGGED_FLAG;
+      else if (flag.equalsIgnoreCase(DRAFT_FLAG))
+        flag = DRAFT_FLAG;
+      else if (flag.equalsIgnoreCase(SEEN_FLAG))
+        flag = SEEN_FLAG;
+
+      message.getStoredEmail().getFlags().setFlag(flag, value);
+    }
+  }
+  
+  /**
+   * Gets the Recent attribute of the Flags object
+   *
+   * @return The Recent value
+   */
+  public boolean isRecent() {
+    return isSessionFlagSet(RECENT_FLAG);
+  }
+  
+  /**
+   * Sets the Recent attribute of the Flags object
+   *
+   * @param value The new Recent value
+   */
+  public void setRecent(boolean value) {
+    setSessionFlag(RECENT_FLAG, value);
+  }
+  
+  /**
+   * Returns whether or not the given session flag is set
+   *
+   * @param flag The flag to check
+   * @return Whether or not it's set
+   */
+  public boolean isSessionFlagSet(String flag) {
+    return sessionFlags.contains(flag);
+  }
+  
+  /**
+   * Sets the given session flag, if value is true, removes it 
+   * otherwise
+   *
+   * @param flag The flag
+   * @param value The value
+   */
+  public void setSessionFlag(String flag, boolean value) {
+    if (value)
+      sessionFlags.add(flag);
+    else
+      sessionFlags.remove(flag);
+  }
+  
+  /**
+   * Returns a vector containing all of the flags
+   *
+   * @return A Vector containing all of the flags
+   */
+  public List getFlags() {
+    return message.getStoredEmail().getFlags().flagList();
+  }
+  
+  /**
+   * Returns a vector containing all of the session flags
+   *
+   * @return A Vector containing all of the session flags
+   */
+  public Set getSessionFlags() {
+    return sessionFlags;
   }
 
   /**
-    * Returns a Vector representation of the flagList
-   * @return the Vector of the set flags
+   * Returns a string representation of the flags
+   * 
+   * @return THe flags, in string form
    */
-  public Vector flagList() {
-      return _msg.getStoredEmail().getFlags().flagList();
-  }
-
   public String toFlagString() {
     StringBuffer flagBuffer = new StringBuffer();
-
-    if (isSeen())
-      flagBuffer.append("\\Seen ");
-    if (isRecent())
-      flagBuffer.append("\\Recent ");
-    if (isDeleted())
-      flagBuffer.append("\\Deleted ");
-    if (isAnswered())
-      flagBuffer.append("\\Answered ");
-    if (isFlagged())
-      flagBuffer.append("\\Flagged ");
-    if (isDraft())
-      flagBuffer.append("\\Draft ");
-
-    Enumeration e =  _msg.getStoredEmail().getFlags().getFlagList().keys();
-    while (e.hasMoreElements()) {
-  	String flag = (String) e.nextElement();
-  	if (isSet(flag)) {
-  	    flagBuffer.append(flag + " ");
-	}
-    }
+    Iterator i = getFlags().iterator();
+    
+    while (i.hasNext()) 
+      flagBuffer.append(i.next() + " ");
+    
+    Iterator j = getSessionFlags().iterator();
+    
+    while (j.hasNext())
+      flagBuffer.append(j.next() + " ");
+    
     return "(" + flagBuffer.toString().trim() + ")";
   }
 }

@@ -21,9 +21,7 @@ public class IllegalStateCommand
     {
         String message = "BAD illegal state";
 
-        if (getTag() == null)
-            untaggedResponse(message);
-        else
+        
             taggedResponse(message);
     }
 }

@@ -15,8 +15,7 @@ import rice.p2p.commonapi.*;
 public class DeliveryMessage extends PostMessage {
 
   private SignedPostMessage message;
-  private Id location;
-  private Id id;
+  private PostEntityAddress destination;
 
   /**
     * Constructs a DeliveryMessage
@@ -25,31 +24,20 @@ public class DeliveryMessage extends PostMessage {
    * @param message The message to deliver, in encrypted state
    */
   public DeliveryMessage(PostEntityAddress sender,
-                         Id location,
-                         Id id,
+                         PostEntityAddress destination,
                          SignedPostMessage message) {
     super(sender);
-    this.location = location;
-    this.id = id;
+    this.destination = destination;
     this.message = message;
   }
-
+  
   /**
-   * Gets the location of the DRM in the ring
+   * Returns the destination of this message.
    *
-   * @return The location 
+   * @return The destination
    */
-  public Id getId() {
-    return id;
-  }
-
-  /**
-    * Gets the location of the user.
-   *
-   * @return The location in the Pastry ring of the user.
-   */
-  public Id getLocation() {
-    return location;
+  public final PostEntityAddress getDestination() {
+    return destination;
   }
 
   /**

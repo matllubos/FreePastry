@@ -2,9 +2,12 @@ package rice.email.proxy.imap.commands;
 
 import rice.email.proxy.imap.ImapState;
 
+import rice.email.proxy.mail.StoredMessage;
 import rice.email.proxy.mailbox.MailFolder;
 import rice.email.proxy.mailbox.MailboxException;
 import rice.email.proxy.mailbox.MsgFilter;
+
+import java.util.*;
 
 
 /**
@@ -33,7 +36,18 @@ public class ExamineCommand extends AbstractImapCommand {
 
   public void execute() {
     try {
+      // first, unset any Recent messages in the old folder
+      if (getState().getSelectedFolder() != null) {
+        MailFolder folder = getState().getSelectedFolder();
+        Iterator j = folder.getMessages(MsgFilter.RECENT).iterator();
+        
+        while (j.hasNext()) 
+          ((StoredMessage) j.next()).getFlagList().setRecent(false);
+      }
+      
+      // then, select the new folder
       if (_folder != null) {
+        getState().enterFolder(getFolder());
         MailFolder fold = getState().getFolder(_folder);
 
         untaggedResponse(fold.getExists() + " EXISTS");
@@ -53,6 +67,7 @@ public class ExamineCommand extends AbstractImapCommand {
 
       taggedSuccess(writeStatus + " " + getCmdName() + " completed");
     } catch (MailboxException e) {
+      getState().unselect();
       taggedExceptionFailure(e);
     }
   }

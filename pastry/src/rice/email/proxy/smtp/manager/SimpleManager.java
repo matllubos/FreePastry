@@ -14,6 +14,7 @@ import rice.email.proxy.mailbox.postbox.*;
 
 public class SimpleManager implements SmtpManager {
 
+  public static int MAX_SIZE = 8000000;
   public static String POST_HOST = "dosa.cs.rice.edu";
   public static String SMTP_HOST = "moe.rice.edu";
 
@@ -61,6 +62,11 @@ public class SimpleManager implements SmtpManager {
     }
 
     MailAddress[] recipients = (MailAddress[]) postRecps.toArray(new MailAddress[0]);
+
+    if (state.getMessage().getResource().getSize() > MAX_SIZE)
+      throw new IOException("Messages over " + MAX_SIZE + " are not supported by ePOST - message is " + state.getMessage().getResource().getSize());
+    else
+      System.out.println("COUNT: " + System.currentTimeMillis() + " Sending message of size " + state.getMessage().getResource().getSize() + " to " + postRecps.size() + " POST recipeints and " + nonPostRecps.size() + " normal recipients.");
     
     final Exception[] exception = new Exception[1];
     final Object[] result = new Object[1];

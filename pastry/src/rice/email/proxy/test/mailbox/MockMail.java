@@ -44,6 +44,10 @@ public class MockMail
     {
         _sequenceNumber = value;
     }
+    
+    public long getInternalDate() {
+      return 0;
+    }
 
     public int getUID()
     {

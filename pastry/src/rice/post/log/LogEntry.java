@@ -17,10 +17,10 @@ import rice.post.storage.*;
 public abstract class LogEntry implements PostData {
 
   // the user in whose log this entry appears
-  private PostEntityAddress user;
+  protected PostEntityAddress user;
   
   // a reference to the previous entry in the log
-  private LogEntryReference previousEntryReference;
+  protected LogEntryReference previousEntryReference;
 
   // the previous entry in the log
   private transient LogEntry previousEntry;
@@ -63,6 +63,19 @@ public abstract class LogEntry implements PostData {
       System.out.println("ERROR - Trying to set previous ref on already-set log.");
       (new Exception()).printStackTrace();
     }
+  }
+  
+  /**
+    * Returns the reference to the previous entry in the log
+   *
+   * @return A reference to the previous log entry
+   */
+  public LogEntryReference getPreviousEntryReference() {
+    if (parent != null) {
+      return parent.getPreviousEntryReference();
+    }
+    
+    return previousEntryReference;
   }
 
   /**

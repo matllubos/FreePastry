@@ -101,7 +101,7 @@ public class BodyPart extends FetchPart {
       }
 
       if ((! breq.getPeek()) &&	(! msg.getFlagList().isSeen())) {
-        msg.getFlagList().addFlag("\\SEEN");
+        msg.getFlagList().setSeen(true);
         msg.getFlagList().commit();
         result += " ";
 
@@ -144,8 +144,10 @@ public class BodyPart extends FetchPart {
 
         EmailHeadersPart[] parts = (EmailHeadersPart[]) c.getResult();
 
-        if (i-1 < parts.length) {
+        if ((i > 0) && (i-1 < parts.length)) {
           return fetchPart(breq, types, parts[i-1]);
+        } else {
+          throw new MailboxException("Invalid body part specifier: " + i); 
         }
       } else if (content instanceof EmailMessagePart) {
         types.add(0, type);
@@ -157,11 +159,11 @@ public class BodyPart extends FetchPart {
       if (content == null)
         throw new MailboxException("Could not properly parse content of " + part);
 
-      if (content instanceof EmailMessagePart) {
+      if (type.equals("MIME") && (! (part instanceof EmailMessagePart))) {
+        return fetchHeader(part);
+      } else if (content instanceof EmailMessagePart) {
         types.add(0, type);
         return fetchPart(breq, types, (EmailMessagePart) content);
-      } else if (type.equals("MIME") && (! (part instanceof EmailMessagePart))) {
-        return fetchHeader(part);
       } else {
         if (type.equals("HEADER")) {
           return fetchHeader(part);
@@ -200,6 +202,10 @@ public class BodyPart extends FetchPart {
 
       EmailData data = (EmailData) c.getResult();
       
+      if (data == null) {
+        return "Error: Unable to fetch data - did not exist in Past!";
+      }
+      
       InternetHeaders iHeaders = new InternetHeaders(new ByteArrayInputStream(data.getData()));
       Enumeration headers;
 
@@ -233,6 +239,10 @@ public class BodyPart extends FetchPart {
   public String fetchAll(EmailMultiPart part) throws MailboxException {
     String type = part.getType();
     String seperator = type.substring(type.toLowerCase().indexOf("boundary=")+9, type.length());
+    
+    if (seperator.indexOf(";") >= 0)
+      seperator = seperator.substring(0, seperator.indexOf(";"));
+    
     seperator = seperator.replaceAll("\"", "").replaceAll("'", "");
     StringBuffer result = new StringBuffer();
 
@@ -243,6 +253,10 @@ public class BodyPart extends FetchPart {
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
     EmailContentPart[] parts = (EmailContentPart[]) c.getResult();
+    
+    if (parts == null) {
+      return "Error: Unable to fetch data - did not exist in Past!";
+    }
 
     for (int i=0; i<parts.length; i++) {
       result.append("--" + seperator + "\r\n" + fetchAll(parts[i]) + "\r\n");
@@ -260,7 +274,11 @@ public class BodyPart extends FetchPart {
 
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
-    return new String(((EmailData) c.getResult()).getData());
+    if (c.getResult() == null) {
+      return "Unable to fetch data - did not exist in Past!";
+    } else {
+      return new String(((EmailData) c.getResult()).getData());
+    }
   }
 
   public String fetchAll(EmailHeadersPart part) throws MailboxException {
@@ -271,6 +289,10 @@ public class BodyPart extends FetchPart {
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
     EmailData headers = (EmailData) c.getResult();
+    
+    if (headers == null) {
+      headers = new EmailData("Error: Unable to fetch data - did not exist in Past!".getBytes());
+    }
     
     c = new ExternalContinuation();
     part.getContent(c);
@@ -285,7 +307,13 @@ public class BodyPart extends FetchPart {
 
   private String getRange(BodyPartRequest breq, String content) {
     if (breq.hasRange()) {
-      content = content.substring(breq.getRangeStart(), breq.getRangeStart() + breq.getRangeLength());
+      if (breq.getRangeStart() > content.length()) 
+        content = "";
+      else
+        content = content.substring(breq.getRangeStart());
+      
+      if (breq.getRangeLength() < content.length())
+        content = content.substring(0, breq.getRangeLength());
     }
 
     return content;

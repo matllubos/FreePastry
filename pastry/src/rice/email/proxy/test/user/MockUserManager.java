@@ -30,6 +30,11 @@ public class MockUserManager
             user.delete();
     }
 
+    public String getPassword(String name) {
+      return "";
+    }
+
+    
     public User getUser(String name)
                  throws NoSuchUserException
     {

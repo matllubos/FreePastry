@@ -61,6 +61,10 @@ public class ImapState {
     return _user;
   }
   
+  public String getPassword(String username) throws UserException {
+    return _manager.getPassword(username);
+  }
+  
   public void setUser(User user) throws UserException {
     _box = user.getMailbox();
     _user = user;

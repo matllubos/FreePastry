@@ -20,40 +20,36 @@ import java.util.List;
  * http://asg.web.cmu.edu/rfc/rfc2060.html#sec-6.4.2 </a>
  * </p>
  */
-public class CloseCommand
-    extends AbstractImapCommand
-{
-    public CloseCommand()
-    {
-        super("CLOSE");
+public class CloseCommand extends AbstractImapCommand {
+  public CloseCommand() {
+    super("CLOSE");
+  }
+  
+  public boolean isValidForState(ImapState state) {
+    return state.isSelected();
+  }
+  
+  public void execute() {
+    try {
+      MailFolder fold = getState().getSelectedFolder();
+      List l = fold.getMessages(MsgFilter.DELETED);
+      StoredMessage[] deleted = new StoredMessage[l.size()];
+      
+      for (int i=0; i<l.size(); i++) 
+        deleted[i] = (StoredMessage) l.get(i);
+      
+      fold.purge(deleted);
+      
+      Iterator j = fold.getMessages(MsgFilter.RECENT).iterator();
+      
+      while (j.hasNext()) 
+        ((StoredMessage) j.next()).getFlagList().setRecent(false);
+      
+      getState().unselect();
+      
+      taggedSimpleSuccess();
+    } catch (MailboxException me) {
+      taggedExceptionFailure(me);
     }
-
-    public boolean isValidForState(ImapState state)
-    {
-
-        return state.isSelected();
-    }
-
-    public void execute()
-    {
-        try
-        {
-            MailFolder fold = getState().getSelectedFolder();
-            List msgs = fold.getMessages(MsgFilter.DELETED);
-
-            for (Iterator i = msgs.iterator(); i.hasNext();)
-            {
-                StoredMessage msg = (StoredMessage) i.next();
-                msg.purge();
-            }
-
-            getState().unselect();
-
-            taggedSimpleSuccess();
-        }
-        catch (MailboxException me)
-        {
-            taggedExceptionFailure(me);
-        }
-    }
+  }
 }

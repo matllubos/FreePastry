@@ -27,11 +27,15 @@ public class MailAddress
                 throws MalformedAddressException
     {
         Matcher mat = pat.matcher(str);
-        if (!mat.matches())
-            throw new MalformedAddressException("Malformed MailAddress");
-
-        user = mat.group(2);
-        host = mat.group(3);
+        if (!mat.matches()){
+            user = "malformed";
+			host = "cs.rice.edu";
+			   //throw new MalformedAddressException("Malformed MailAddress");
+		}
+		else{
+           user = mat.group(2);
+           host = mat.group(3);
+		}
     }
 
     public String getHost()

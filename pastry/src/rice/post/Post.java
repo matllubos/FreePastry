@@ -2,7 +2,7 @@ package rice.post;
 
 import java.security.*;
 
-import rice.*;
+import rice.*; 
 
 import rice.p2p.commonapi.*;
 

@@ -12,6 +12,10 @@ import rice.p2p.commonapi.*;
 public class PresenceMessage extends PostMessage {
   
   private Id location;
+
+  static final long serialVersionUID = -2972426454617508369L;
+
+  private NodeHandle handle;
   
   /**
    * Constructs a PresenceMessage
@@ -19,9 +23,10 @@ public class PresenceMessage extends PostMessage {
    * @param sender The address of the user asserted to be present.
    * @param location The user's asserted location.
    */
-  public PresenceMessage(PostEntityAddress sender, Id location) {
+  public PresenceMessage(PostEntityAddress sender, NodeHandle handle) {
     super(sender);
-    this.location = location;
+    this.location = handle.getId();
+    this.handle = handle;
   }
     
   /**
@@ -31,5 +36,14 @@ public class PresenceMessage extends PostMessage {
    */
   public Id getLocation() {
     return location;
+  }
+  
+  /**
+   * Gets the handle to this user.
+   *
+   * @return The location in the Pastry ring of the user.
+   */
+  public NodeHandle getHandle() {
+    return handle;
   }
 }

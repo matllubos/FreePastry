@@ -1,4 +1,4 @@
-// $ANTLR 2.7.2: "grammer.g" -> "ImapCommandParser.java"$
+// $ANTLR 2.7.3: "grammer.g" -> "ImapCommandParser.java"$
 
 package rice.email.proxy.imap.parser.antlr;
 
@@ -191,11 +191,13 @@ public ImapCommandParser(ParserSharedInputState state) {
 		case EXPUNGE:
 		case CLOSE:
 		case SEARCH:
+		case RENAME:
 		{
 			command_auth();
 			break;
 		}
 		case LOGIN:
+		case AUTHENTICATE:
 		{
 			command_nonauth();
 			break;
@@ -212,13 +214,13 @@ public ImapCommandParser(ParserSharedInputState state) {
 		
 		
 		{
-		_loop27:
+		_loop28:
 		do {
 			if (((LA(1) >= CHECK && LA(1) <= UNKNOWN))) {
 				matchNot(EOF);
 			}
 			else {
-				break _loop27;
+				break _loop28;
 			}
 			
 		} while (true);
@@ -283,6 +285,11 @@ public ImapCommandParser(ParserSharedInputState state) {
 		case DELETE:
 		{
 			delete();
+			break;
+		}
+		case RENAME:
+		{
+			rename();
 			break;
 		}
 		case SUBSCRIBE:
@@ -370,7 +377,22 @@ public ImapCommandParser(ParserSharedInputState state) {
 	public final void command_nonauth() throws RecognitionException, TokenStreamException {
 		
 		
-		login();
+		switch ( LA(1)) {
+		case LOGIN:
+		{
+			login();
+			break;
+		}
+		case AUTHENTICATE:
+		{
+			authenticate();
+			break;
+		}
+		default:
+		{
+			throw new NoViableAltException(LT(1), getFilename());
+		}
+		}
 	}
 	
 	public final Token  astring() throws RecognitionException, TokenStreamException {
@@ -390,6 +412,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		Token  l = null;
 		Token  m = null;
 		Token  n = null;
+		Token  n1 = null;
 		Token  o = null;
 		Token  p = null;
 		Token  q = null;
@@ -445,6 +468,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		Token  bo = null;
 		Token  bp = null;
 		Token  bq = null;
+		Token  br = null;
 		ret=null;
 		
 		switch ( LA(1)) {
@@ -571,6 +595,15 @@ public ImapCommandParser(ParserSharedInputState state) {
 			match(LOGIN);
 			if ( inputState.guessing==0 ) {
 				ret = n;
+			}
+			break;
+		}
+		case AUTHENTICATE:
+		{
+			n1 = LT(1);
+			match(AUTHENTICATE);
+			if ( inputState.guessing==0 ) {
+				ret = n1;
 			}
 			break;
 		}
@@ -1069,6 +1102,15 @@ public ImapCommandParser(ParserSharedInputState state) {
 			}
 			break;
 		}
+		case RENAME:
+		{
+			br = LT(1);
+			match(RENAME);
+			if ( inputState.guessing==0 ) {
+				ret = br;
+			}
+			break;
+		}
 		default:
 		{
 			throw new NoViableAltException(LT(1), getFilename());
@@ -1116,20 +1158,13 @@ public ImapCommandParser(ParserSharedInputState state) {
 		
 		flags = new ArrayList();
 		Token fs;
+			// XXX - Note here we're deviating from the IMAP Spec, but FireFox, or whatever
+			//       it's called does not conform...
 		
 		
 		match(LPAREN);
 		{
 		switch ( LA(1)) {
-		case FLAG:
-		{
-			f = LT(1);
-			match(FLAG);
-			if ( inputState.guessing==0 ) {
-				flags.add(f.getText());
-			}
-			break;
-		}
 		case CHECK:
 		case NOOP:
 		case LOGOUT:
@@ -1142,6 +1177,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		case LSUB:
 		case EXAMINE:
 		case LOGIN:
+		case AUTHENTICATE:
 		case SELECT:
 		case FETCH:
 		case UID:
@@ -1183,6 +1219,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		case ON:
 		case OR:
 		case RECENT:
+		case RENAME:
 		case SEEN:
 		case SENTBEFORE:
 		case SENTON:
@@ -1198,12 +1235,215 @@ public ImapCommandParser(ParserSharedInputState state) {
 		case UNKEYWORD:
 		case UNSEEN:
 		case ATOM:
+		case FLAG:
 		case STRING:
 		{
-			fs=astring();
-			if ( inputState.guessing==0 ) {
-				flags.add(fs.getText());
+			{
+			switch ( LA(1)) {
+			case FLAG:
+			{
+				f = LT(1);
+				match(FLAG);
+				if ( inputState.guessing==0 ) {
+					flags.add(f.getText());
+				}
+				break;
 			}
+			case CHECK:
+			case NOOP:
+			case LOGOUT:
+			case CAPABILITY:
+			case CREATE:
+			case DELETE:
+			case LIST:
+			case SUBSCRIBE:
+			case UNSUBSCRIBE:
+			case LSUB:
+			case EXAMINE:
+			case LOGIN:
+			case AUTHENTICATE:
+			case SELECT:
+			case FETCH:
+			case UID:
+			case APPEND:
+			case COPY:
+			case STORE:
+			case STATUS:
+			case EXPUNGE:
+			case CLOSE:
+			case BODY:
+			case RFC822:
+			case PEEK:
+			case HEADER:
+			case FIELDS:
+			case NOT:
+			case TEXT:
+			case MIME:
+			case SIZE:
+			case ALL:
+			case FAST:
+			case FULL:
+			case BODYSTRUCTURE:
+			case ENVELOPE:
+			case FLAGS:
+			case INTERNALDATE:
+			case SEARCH:
+			case ANSWERED:
+			case BCC:
+			case BEFORE:
+			case CC:
+			case DELETED:
+			case DRAFT:
+			case FLAGGED:
+			case FROM:
+			case KEYWORD:
+			case LARGER:
+			case NEW:
+			case OLD:
+			case ON:
+			case OR:
+			case RECENT:
+			case RENAME:
+			case SEEN:
+			case SENTBEFORE:
+			case SENTON:
+			case SENTSINCE:
+			case SINCE:
+			case SMALLER:
+			case SUBJECT:
+			case TO:
+			case UNANSWERED:
+			case UNDELETED:
+			case UNDRAFT:
+			case UNFLAGGED:
+			case UNKEYWORD:
+			case UNSEEN:
+			case ATOM:
+			case STRING:
+			{
+				fs=astring();
+				if ( inputState.guessing==0 ) {
+					flags.add(fs.getText());
+				}
+				break;
+			}
+			default:
+			{
+				throw new NoViableAltException(LT(1), getFilename());
+			}
+			}
+			}
+			{
+			_loop21:
+			do {
+				if ((LA(1)==SPACE)) {
+					match(SPACE);
+					{
+					switch ( LA(1)) {
+					case FLAG:
+					{
+						l = LT(1);
+						match(FLAG);
+						if ( inputState.guessing==0 ) {
+							flags.add(l.getText());
+						}
+						break;
+					}
+					case CHECK:
+					case NOOP:
+					case LOGOUT:
+					case CAPABILITY:
+					case CREATE:
+					case DELETE:
+					case LIST:
+					case SUBSCRIBE:
+					case UNSUBSCRIBE:
+					case LSUB:
+					case EXAMINE:
+					case LOGIN:
+					case AUTHENTICATE:
+					case SELECT:
+					case FETCH:
+					case UID:
+					case APPEND:
+					case COPY:
+					case STORE:
+					case STATUS:
+					case EXPUNGE:
+					case CLOSE:
+					case BODY:
+					case RFC822:
+					case PEEK:
+					case HEADER:
+					case FIELDS:
+					case NOT:
+					case TEXT:
+					case MIME:
+					case SIZE:
+					case ALL:
+					case FAST:
+					case FULL:
+					case BODYSTRUCTURE:
+					case ENVELOPE:
+					case FLAGS:
+					case INTERNALDATE:
+					case SEARCH:
+					case ANSWERED:
+					case BCC:
+					case BEFORE:
+					case CC:
+					case DELETED:
+					case DRAFT:
+					case FLAGGED:
+					case FROM:
+					case KEYWORD:
+					case LARGER:
+					case NEW:
+					case OLD:
+					case ON:
+					case OR:
+					case RECENT:
+					case RENAME:
+					case SEEN:
+					case SENTBEFORE:
+					case SENTON:
+					case SENTSINCE:
+					case SINCE:
+					case SMALLER:
+					case SUBJECT:
+					case TO:
+					case UNANSWERED:
+					case UNDELETED:
+					case UNDRAFT:
+					case UNFLAGGED:
+					case UNKEYWORD:
+					case UNSEEN:
+					case ATOM:
+					case STRING:
+					{
+						fs=astring();
+						if ( inputState.guessing==0 ) {
+							flags.add(fs.getText());
+						}
+						break;
+					}
+					default:
+					{
+						throw new NoViableAltException(LT(1), getFilename());
+					}
+					}
+					}
+				}
+				else {
+					break _loop21;
+				}
+				
+			} while (true);
+			}
+			break;
+		}
+		case RPAREN:
+		{
 			break;
 		}
 		default:
@@ -1211,111 +1451,6 @@ public ImapCommandParser(ParserSharedInputState state) {
 			throw new NoViableAltException(LT(1), getFilename());
 		}
 		}
-		}
-		{
-		_loop20:
-		do {
-			if ((LA(1)==SPACE)) {
-				match(SPACE);
-				{
-				switch ( LA(1)) {
-				case FLAG:
-				{
-					l = LT(1);
-					match(FLAG);
-					if ( inputState.guessing==0 ) {
-						flags.add(l.getText());
-					}
-					break;
-				}
-				case CHECK:
-				case NOOP:
-				case LOGOUT:
-				case CAPABILITY:
-				case CREATE:
-				case DELETE:
-				case LIST:
-				case SUBSCRIBE:
-				case UNSUBSCRIBE:
-				case LSUB:
-				case EXAMINE:
-				case LOGIN:
-				case SELECT:
-				case FETCH:
-				case UID:
-				case APPEND:
-				case COPY:
-				case STORE:
-				case STATUS:
-				case EXPUNGE:
-				case CLOSE:
-				case BODY:
-				case RFC822:
-				case PEEK:
-				case HEADER:
-				case FIELDS:
-				case NOT:
-				case TEXT:
-				case MIME:
-				case SIZE:
-				case ALL:
-				case FAST:
-				case FULL:
-				case BODYSTRUCTURE:
-				case ENVELOPE:
-				case FLAGS:
-				case INTERNALDATE:
-				case SEARCH:
-				case ANSWERED:
-				case BCC:
-				case BEFORE:
-				case CC:
-				case DELETED:
-				case DRAFT:
-				case FLAGGED:
-				case FROM:
-				case KEYWORD:
-				case LARGER:
-				case NEW:
-				case OLD:
-				case ON:
-				case OR:
-				case RECENT:
-				case SEEN:
-				case SENTBEFORE:
-				case SENTON:
-				case SENTSINCE:
-				case SINCE:
-				case SMALLER:
-				case SUBJECT:
-				case TO:
-				case UNANSWERED:
-				case UNDELETED:
-				case UNDRAFT:
-				case UNFLAGGED:
-				case UNKEYWORD:
-				case UNSEEN:
-				case ATOM:
-				case STRING:
-				{
-					fs=astring();
-					if ( inputState.guessing==0 ) {
-						flags.add(fs.getText());
-					}
-					break;
-				}
-				default:
-				{
-					throw new NoViableAltException(LT(1), getFilename());
-				}
-				}
-				}
-			}
-			else {
-				break _loop20;
-			}
-			
-		} while (true);
 		}
 		match(RPAREN);
 		return flags;
@@ -1335,7 +1470,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 			list.add(f.getText());
 		}
 		{
-		_loop23:
+		_loop24:
 		do {
 			if ((LA(1)==SPACE)) {
 				match(SPACE);
@@ -1345,7 +1480,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 				}
 			}
 			else {
-				break _loop23;
+				break _loop24;
 			}
 			
 		} while (true);
@@ -1397,6 +1532,25 @@ public ImapCommandParser(ParserSharedInputState state) {
 			
 				  DeleteCommand cmd = new DeleteCommand();
 				  cmd.setFolder(folder.getText());
+				  command = cmd;
+				
+		}
+	}
+	
+	public final void rename() throws RecognitionException, TokenStreamException {
+		
+		Token old_folder, new_folder;
+		
+		match(RENAME);
+		match(SPACE);
+		old_folder=astring();
+		match(SPACE);
+		new_folder=astring();
+		if ( inputState.guessing==0 ) {
+			
+				  RenameCommand cmd = new RenameCommand();
+				  cmd.setOldFolder(old_folder.getText());
+				  cmd.setNewFolder(new_folder.getText());
 				  command = cmd;
 				
 		}
@@ -1593,14 +1747,14 @@ public ImapCommandParser(ParserSharedInputState state) {
 			match(LPAREN);
 			fetch_part(cmd);
 			{
-			_loop74:
+			_loop76:
 			do {
 				if ((LA(1)==SPACE)) {
 					match(SPACE);
 					fetch_part(cmd);
 				}
 				else {
-					break _loop74;
+					break _loop76;
 				}
 				
 			} while (true);
@@ -1712,7 +1866,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 			part.addArgument(oPart);
 		}
 		{
-		_loop53:
+		_loop55:
 		do {
 			if ((LA(1)==SPACE)) {
 				match(SPACE);
@@ -1722,7 +1876,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 				}
 			}
 			else {
-				break _loop53;
+				break _loop55;
 			}
 			
 		} while (true);
@@ -1737,7 +1891,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 	
 	public final void append() throws RecognitionException, TokenStreamException {
 		
-		Token date, folder; int len; List flags=new ArrayList();
+		Token date=null, folder; int len; List flags=new ArrayList();
 		
 		match(APPEND);
 		match(SPACE);
@@ -1763,6 +1917,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		case LSUB:
 		case EXAMINE:
 		case LOGIN:
+		case AUTHENTICATE:
 		case SELECT:
 		case FETCH:
 		case UID:
@@ -1804,6 +1959,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		case ON:
 		case OR:
 		case RECENT:
+		case RENAME:
 		case SEEN:
 		case SENTBEFORE:
 		case SENTON:
@@ -1844,6 +2000,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		case LSUB:
 		case EXAMINE:
 		case LOGIN:
+		case AUTHENTICATE:
 		case SELECT:
 		case FETCH:
 		case UID:
@@ -1885,6 +2042,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		case ON:
 		case OR:
 		case RECENT:
+		case RENAME:
 		case SEEN:
 		case SENTBEFORE:
 		case SENTON:
@@ -1925,6 +2083,8 @@ public ImapCommandParser(ParserSharedInputState state) {
 				  AppendCommand cmd = new AppendCommand();
 				  cmd.setFolder(folder.getText());
 				  cmd.setFlags(flags);
+			if (date != null)
+			cmd.setDate(date.getText());
 				  cmd.setContentLength(len);
 				  command = cmd;
 				
@@ -2017,7 +2177,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 				part.addArgument(oPart);
 			}
 			{
-			_loop57:
+			_loop59:
 			do {
 				if ((LA(1)==SPACE)) {
 					match(SPACE);
@@ -2027,7 +2187,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 					}
 				}
 				else {
-					break _loop57;
+					break _loop59;
 				}
 				
 			} while (true);
@@ -2972,7 +3132,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 					breq.addPart(a.getText());
 				}
 				{
-				_loop89:
+				_loop91:
 				do {
 					if ((LA(1)==SPACE)) {
 						match(SPACE);
@@ -2982,7 +3142,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 						}
 					}
 					else {
-						break _loop89;
+						break _loop91;
 					}
 					
 				} while (true);
@@ -3044,6 +3204,22 @@ public ImapCommandParser(ParserSharedInputState state) {
 		}
 	}
 	
+	public final void authenticate() throws RecognitionException, TokenStreamException {
+		
+		Token type;
+		
+		match(AUTHENTICATE);
+		match(SPACE);
+		type=astring();
+		if ( inputState.guessing==0 ) {
+			
+				  AuthenticateCommand cmd = new AuthenticateCommand();
+				  cmd.setType(type.getText());
+				  command = cmd;
+				
+		}
+	}
+	
 	
 	public static final String[] _tokenNames = {
 		"<0>",
@@ -3062,6 +3238,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		"\"LSUB\"",
 		"\"EXAMINE\"",
 		"\"LOGIN\"",
+		"\"AUTHENTICATE\"",
 		"\"SELECT\"",
 		"\"FETCH\"",
 		"\"UID\"",
@@ -3103,6 +3280,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		"\"ON\"",
 		"\"OR\"",
 		"\"RECENT\"",
+		"\"RENAME\"",
 		"\"SEEN\"",
 		"\"SENTBEFORE\"",
 		"\"SENTON\"",
@@ -3121,12 +3299,12 @@ public ImapCommandParser(ParserSharedInputState state) {
 		"SPACE",
 		"LPAREN",
 		"RPAREN",
+		"LSANGLE",
+		"RSANGLE",
 		"ATOM",
 		"FLAG",
 		"LSBRACKET",
 		"RSBRACKET",
-		"LSANGLE",
-		"RSANGLE",
 		"NUMBER",
 		"QUOTE",
 		"QUOTED_CHAR",
@@ -3142,12 +3320,12 @@ public ImapCommandParser(ParserSharedInputState state) {
 	};
 	
 	private static final long[] mk_tokenSet_0() {
-		long[] data = { -16L, 1050751L, 0L, 0L};
+		long[] data = { -16L, 4227583L, 0L, 0L};
 		return data;
 	}
 	public static final BitSet _tokenSet_0 = new BitSet(mk_tokenSet_0());
 	private static final long[] mk_tokenSet_1() {
-		long[] data = { -14L, 536870911L, 0L, 0L};
+		long[] data = { -14L, 2147483647L, 0L, 0L};
 		return data;
 	}
 	public static final BitSet _tokenSet_1 = new BitSet(mk_tokenSet_1());

@@ -16,9 +16,18 @@ public class FileMailbox implements Mailbox {
 
     _folder = folder;
   }
+  
+  public String getHierarchyDelimiter() {
+    return "/";
+  }
+
 
   public void put(MovingMessage msg) throws MailboxException  {
     getFolder("INBOX").put(msg);
+  }
+  
+  public void renameFolder(String old_name, String new_name) throws MailboxException {
+    throw new MailboxException("FOLDERS NOT IMPLEMENTED!");
   }
 
   public MailFolder getFolder(String folder) throws MailboxException {
@@ -64,7 +73,7 @@ public class FileMailbox implements Mailbox {
     }
   }
 
-  public void subscribe(ImapConnection conn, String fullName) throws MailboxException {
+  public void subscribe(String fullName) throws MailboxException {
     if (!isValidFolderName(fullName))
       throw new MailboxException("Invalid folder name.");
 
@@ -78,7 +87,7 @@ public class FileMailbox implements Mailbox {
     }
   }
 
-  public void unsubscribe(ImapConnection conn, String fullName) throws MailboxException {
+  public void unsubscribe(String fullName) throws MailboxException {
     String foldName   = fullName;
     String markerName = ".sub" + foldName;
     File markerFile   = new File(_folder, markerName);
@@ -90,7 +99,7 @@ public class FileMailbox implements Mailbox {
       throw new MailboxException("Couldn't delete subscription to " + fullName);
   }
 
-  public String[] listSubscriptions(ImapConnection conn, String pattern) throws MailboxException {
+  public String[] listSubscriptions(String pattern) throws MailboxException {
     try {
       File[] files = _folder.listFiles(new LsubFilter(pattern));
       String[] subscriptions = new String[files.length];

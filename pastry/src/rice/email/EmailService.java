@@ -36,6 +36,9 @@ public class EmailService extends PostClient {
 
   // the keypair used to encrypt the log
   private KeyPair keyPair;
+  
+  // whether to allow reinsertion of log head
+  private boolean logRewrite;
 
   /**
    * the name of the Inbox's log
@@ -48,12 +51,12 @@ public class EmailService extends PostClient {
    * @param post The Post service to use
    * @param keyPair The keyPair of the local user
    */
-  public EmailService(Post post, KeyPair keyPair) {
+  public EmailService(Post post, KeyPair keyPair, boolean logRewrite) {
     this.post = post;
     this.keyPair = keyPair;
+    this.logRewrite = logRewrite;
 
     post.addClient(this);
-    getRootFolder(new ListenerContinuation("Fetch root folder"));
   }
 
   /**
@@ -62,6 +65,16 @@ public class EmailService extends PostClient {
   public Post getPost() {
     return post;
   }
+  
+  /**
+   * Reset the inbox folder to be a different folder.  This should be done only
+   * if you know what you're doing.
+   *
+   * @param folder The new inbox
+   */
+  public void setInbox(Folder folder) {
+    this.inbox = folder;
+  } 
 
   /**
    * Returns the Log for ePost's root folder.
@@ -87,25 +100,53 @@ public class EmailService extends PostClient {
               EmailLog log = (EmailLog) o;
 
               if (log == null) {
-                EmailLog emailRootLog = new EmailLog(getAddress(), post.getStorageService().getRandomNodeId(), post, keyPair);
-                mainLog.addChildLog(emailRootLog, new StandardContinuation(parent) {
-                  public void receiveResult(Object o) {
-                    folder = new Folder((EmailLog) o, post, keyPair);
-
-                    folder.createChildFolder(INBOX_NAME, new StandardContinuation(parent) {
-                      public void receiveResult(Object o) {
-                        inbox = (Folder) o;
-                        command.receiveResult(folder);
-                      }
-                    });
-                  }
-                });
+                if (logRewrite) {
+                  EmailLog emailRootLog = new EmailLog(getAddress(), post.getStorageService().getRandomNodeId(), post, keyPair);
+                  mainLog.addChildLog(emailRootLog, new StandardContinuation(parent) {
+                    public void receiveResult(Object o) {
+                      folder = new Folder((EmailLog) o, post, keyPair);
+                      
+                      folder.createChildFolder(INBOX_NAME, new StandardContinuation(parent) {
+                        public void receiveResult(Object o) {
+                          inbox = (Folder) o;
+                          
+                          if (inbox == null) {
+                            command.receiveException(new Exception("Could not create INBOX folder - got null"));
+                          } else {
+                            command.receiveResult(folder);
+                          }
+                        }
+                      });
+                    }
+                  });
+                } else {
+                  command.receiveException(new Exception("Could not find email root log - not allowed to insert.  Aborting..."));
+                }
               } else {
                 folder = new Folder(log, post, keyPair);
                 folder.getChildFolder(INBOX_NAME, new StandardContinuation(parent) {
                   public void receiveResult(Object o) {
                     inbox = (Folder) o;
-                    command.receiveResult(folder);
+                    
+                    if (inbox == null) {
+                      if (logRewrite) {
+                        folder.createChildFolder(INBOX_NAME, new StandardContinuation(parent) {
+                          public void receiveResult(Object o) {
+                            inbox = (Folder) o;
+                            
+                            if (inbox == null) {
+                              command.receiveException(new Exception("Could not create INBOX folder - got null"));
+                            } else {
+                              command.receiveResult(folder);
+                            }
+                          }
+                        });
+                      } else {
+                        command.receiveException(new Exception("Could not fetch INBOX folder - got null and not allowed to insert"));
+                      }
+                    } else {
+                      command.receiveResult(folder);
+                    }
                   }
                 });
               }
@@ -178,6 +219,33 @@ public class EmailService extends PostClient {
     } else {
       System.out.println("EmailService received unknown notification " + nm + " - dropping on floor.");
     }
+  }
+  
+  /**
+   * Returns the list of subscriptions in the log
+   *
+   * @return The subscriptions
+   */
+  public void getSubscriptions(Continuation command) {
+    folder.getSubscriptions(command);
+  }
+  
+  /**
+   * Adds a subscriptions to the log
+   *
+   * @param sub The subscription to add
+   */
+  public void addSubscription(String sub, Continuation command) {
+    folder.addSubscription(sub, command);
+  }
+  
+  /**
+   * Adds a subscriptions to the log
+   *
+   * @param sub The subscription to add
+   */
+  public void removeSubscription(String sub, Continuation command) {
+    folder.removeSubscription(sub, command);
   }
 }
 

@@ -5,7 +5,7 @@ import rice.Continuation.*;
 import rice.email.*;
 import rice.post.*;
 
-import rice.email.proxy.mail.MovingMessage;
+import rice.email.proxy.mail.*;
 
 import rice.email.proxy.mailbox.*;
 
@@ -26,18 +26,21 @@ public class PostFolder implements MailFolder {
   private Folder folder;
   
   // the parent of this folder
-  private Folder parent;
+  private PostFolder parent;
 
   // the local email service
   private EmailService email;
 
   // a cache of PostMessages
   private HashMap messageCache;
+  
+  // a cache of the previously-fetch folders
+  private Hashtable folders;
 
   /**
    * Builds a folder given a string name
    */
-  public PostFolder(Folder folder, Folder parent, EmailService email) throws MailboxException {
+  public PostFolder(Folder folder, PostFolder parent, EmailService email) throws MailboxException {
     
     if (email == null)
       throw new MailboxException("EmailService cannot be null.");
@@ -49,6 +52,7 @@ public class PostFolder implements MailFolder {
     this.parent = parent;
     this.email = email;
     this.messageCache = new HashMap();
+    this.folders = new Hashtable();
   }
 
   /**
@@ -57,7 +61,10 @@ public class PostFolder implements MailFolder {
    * @return The name of this folder.
    */
   public String getFullName() {
-    return folder.getName();
+    if (! parent.getFolder().isRoot())
+      return parent.getFullName() + PostMailbox.HIERARCHY_DELIMITER + folder.getName();
+    else
+      return folder.getName();
   }
 
   public int getNextUID() {
@@ -65,34 +72,55 @@ public class PostFolder implements MailFolder {
   }
 
   public int getExists() {
-    return folder.getExists();
+    try {
+      return getMessages(MsgFilter.ALL).size();
+    } catch (MailboxException e) {
+      return 0;
+    }  
   }
 
   public int getRecent() {
-    return folder.getExists();
+    try {
+      return getMessages(MsgFilter.RECENT).size();
+    } catch (MailboxException e) {
+      return 0;
+    }
   }
 
   public Folder getFolder() {
     return folder;
   }
 
-  public Folder getParent() {
+  public PostFolder getParent() {
     return parent;
   }
-
+  
+  public void setParent(PostFolder parent) {
+    this.parent = parent;
+  }
+  
   public void delete() throws MailboxException {
+    delete(true);
+  }
+
+  public void delete(boolean checkForInferiors) throws MailboxException {
+    if (checkForInferiors)
+      if (getChildren().length > 0)
+        throw new MailboxException("Folder contains child folders, unable to delete.");
+    
     ExternalContinuation c = new ExternalContinuation();
-    parent.removeFolder(getFullName(), c);
+    parent.folders.remove(folder.getName());
+    parent.getFolder().removeFolder(folder.getName(), c);
     c.sleep();
 
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
   }
 
   public void put(MovingMessage msg) throws MailboxException {
-    put(msg, new LinkedList(), null);
+    put(msg, new LinkedList(), System.currentTimeMillis());
   }
 
-  public void put(MovingMessage msg, List lflags, String date) throws MailboxException {
+  public void put(MovingMessage msg, List lflags, long internaldate) throws MailboxException {
     try {
       Email email = msg.getEmail();
 
@@ -105,25 +133,17 @@ public class PostFolder implements MailFolder {
       Iterator i = lflags.iterator();
 
       while (i.hasNext()) {
-        String flag = (String) i.next();
-
-        if ("\\Deleted".equalsIgnoreCase(flag))
-          flags.setDeleted(true);
-        if ("\\Answered".equalsIgnoreCase(flag))
-          flags.setAnswered(true);
-        if ("\\Seen".equalsIgnoreCase(flag))
-          flags.setSeen(true);
-        if ("\\Flagged".equalsIgnoreCase(flag))
-          flags.setFlagged(true);
-        if ("\\Draft".equalsIgnoreCase(flag))
-          flags.setDraft(true);
+        flags.setFlag((String) i.next(), true);
       }
 
       ExternalContinuation c = new ExternalContinuation();
-      folder.addMessage(email, flags, c);
+      folder.addMessage(email, flags, internaldate, c);
       c.sleep();
 
       if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+      
+      List all = getMessages(MsgFilter.ALL);
+      ((PostMessage) all.get(all.size()-1)).getFlagList().setRecent(true);
     } catch (IOException e) {
       throw new MailboxException(e);
     }
@@ -157,9 +177,109 @@ public class PostFolder implements MailFolder {
 
     return list;
   }
+  
+  public void copy(MovingMessage[] messages, List[] flags, long[] internaldates) throws MailboxException {
+    Email[] emails = new Email[flags.length];
+    Flags[] realFlags = new Flags[flags.length];
+    
+    for (int i=0; i<realFlags.length; i++) {
+      emails[i] = messages[i].getEmail();
+      Iterator j = flags[i].iterator();
+      realFlags[i] = new Flags();
+    
+      while (j.hasNext()) 
+        realFlags[i].setFlag((String) j.next(), true);
+      
+      if (internaldates[i] == 0)
+        internaldates[i] = System.currentTimeMillis();
+    }
+    
+    ExternalContinuation c = new ExternalContinuation();
+    folder.addMessages(emails, realFlags, internaldates, c);
+    c.sleep();
+    
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }    
+    
+    List all = getMessages(MsgFilter.ALL);
+    
+    for (int i=0; i<flags.length; i++)
+      ((PostMessage) all.get(all.size()-i-1)).getFlagList().setRecent(true);
+  }
+  
+  public void update(StoredMessage[] messages) throws MailboxException {
+    StoredEmail[] emails = new StoredEmail[messages.length];
+    
+    for (int i=0; i<messages.length; i++)
+      emails[i] = ((PostMessage) messages[i]).getStoredEmail();
+    
+    ExternalContinuation c = new ExternalContinuation();
+    folder.updateMessages(emails, c);
+    c.sleep();
+    
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }    
+  }
+  
+  public void purge(StoredMessage[] messages) throws MailboxException {
+    StoredEmail[] emails = new StoredEmail[messages.length];
+    
+    for (int i=0; i<messages.length; i++)
+      emails[i] = ((PostMessage) messages[i]).getStoredEmail();
+    
+    ExternalContinuation c = new ExternalContinuation();
+    folder.removeMessages(emails, c);
+    c.sleep();
+    
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }    
+  }
 
   public String getUIDValidity() throws MailboxException {
     return folder.getCreationTime() + "";
+  }
+  
+  public MailFolder createChild(String name) throws MailboxException {
+    ExternalContinuation c = new ExternalContinuation();
+    folder.createChildFolder(name, c);
+    c.sleep();
+    
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }    
+    
+    folders.put(name, new PostFolder((Folder) c.getResult(), this, email));
+    
+    return getChild(name);
+  }
+  
+  public MailFolder getChild(String name) throws MailboxException {
+    String[] names = folder.getChildren();
+    Arrays.sort(names);
+    
+    if (Arrays.binarySearch(names, name) < 0) {
+      throw new MailboxException("Folder " + name + " does not exist!");
+    }
+    
+    if (folders.get(name) != null) {
+      return (MailFolder) folders.get(name);
+    }
+    
+    ExternalContinuation c = new ExternalContinuation();
+    folder.getChildFolder(name, c);
+    c.sleep();
+    
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
+    
+    folders.put(name, new PostFolder((Folder) c.getResult(), this, email));
+    
+    return (MailFolder) folders.get(name);
+  }
+  
+  public MailFolder[] getChildren() throws MailboxException {
+    String[] names = folder.getChildren();
+    MailFolder[] result = new MailFolder[names.length];
+    Arrays.sort(names);    
+    
+    for (int i=0; i<result.length; i++) 
+      result[i] = getChild(names[i]);
+    
+    return result;
   }
 }
 

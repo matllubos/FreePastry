@@ -19,6 +19,7 @@ import java.util.*;
 
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.InternetHeaders;
+import javax.mail.internet.AddressException;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMultipart;
 import javax.mail.internet.MimePart;
@@ -39,7 +40,6 @@ import java.util.Random;
 public class PostMessage implements StoredMessage {
 
   public static String UNSECURE_HEADER_LINE = "X-EPost-Unsecure: True";
-  public static Random rng = new Random();
   
   private StoredEmail email;
 
@@ -47,9 +47,7 @@ public class PostMessage implements StoredMessage {
 
   private Folder folder;
   
-  private static IdFactory factory = new rice.pastry.commonapi.PastryIdFactory();
-
-//  private MimeMessage message;
+  public static IdFactory factory;
 
   public PostMessage(StoredEmail storedEmail, int sequence, Folder folder) {
     this.email = storedEmail;
@@ -59,6 +57,10 @@ public class PostMessage implements StoredMessage {
 
   public int getUID() {
     return email.getUID();
+  }
+  
+  public long getInternalDate() {
+    return email.getInternalDate();
   }
 
   public void setSequenceNumber(int num) {
@@ -78,32 +80,6 @@ public class PostMessage implements StoredMessage {
   }
 
   public Email getMessage() throws MailboxException {
-/*    if (message != null) {
-      return message;
-    } else {
-      try {
-        ExternalContinuation c = new ExternalContinuation();
-        email.getEmail().getContent(c);
-        c.sleep();
-
-        if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
-        message = new MimeMessage(processEmailMessagePartSpecial((EmailMessagePart) c.getResult()));
-
-        return message;
-      } catch (MailException e) {
-        throw new MailboxException(e);
-      } catch (MessagingException e) {
-        throw new MailboxException(e);
-      }
-    } */
- /*   ExternalContinuation c = new ExternalContinuation();
-    email.getEmail().getContent(c);
-    c.sleep();
-
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
-    return (EmailMessagePart) c.getResult(); */
     return email.getEmail();
   }
   
@@ -125,11 +101,29 @@ public class PostMessage implements StoredMessage {
       Session session = Session.getDefaultInstance(props, null);
       javax.mail.internet.MimeMessage mm = new javax.mail.internet.MimeMessage(session, content.getInputStream());
 
-      Address froms[] = mm.getFrom();
-      Address to[] = mm.getRecipients(Message.RecipientType.TO);
-      Address cc[] = mm.getRecipients(Message.RecipientType.CC);
-      Address bcc[] = mm.getRecipients(Message.RecipientType.BCC);
+      
 
+      Address froms[] = null;
+      Address to[] = null;
+      Address cc[] = null;
+      Address bcc[] = null;
+	  
+	  InternetAddress[] fallback = new InternetAddress[1];
+	  fallback[0] = new InternetAddress("malformed@cs.rice.edu","MalformedAddress");
+	  /* Ugly fix for malformed addreses ABP4 */
+	  try{
+	     froms = mm.getFrom();
+	  } catch (AddressException ae) { froms = fallback;}
+	  try{
+		 to = mm.getRecipients(Message.RecipientType.TO);
+	  }catch (AddressException ae) { to = fallback;}
+	  try{
+         cc = mm.getRecipients(Message.RecipientType.CC);
+	  }catch (AddressException ae) { cc = fallback;}
+	  try{
+         bcc = mm.getRecipients(Message.RecipientType.BCC);
+	  }catch (AddressException ae) { bcc = fallback;}
+	 
       if (to == null) to = new Address[0];
       if (cc == null) cc = new Address[0];
       if (bcc == null) bcc = new Address[0];
@@ -149,7 +143,14 @@ public class PostMessage implements StoredMessage {
       return parseEmail(recipients, content);
     } catch (IOException e) {
       throw new MailboxException(e);
-    } catch (MessagingException e) {
+    } catch(AddressException ae){
+	  System.out.println("***********************");
+	  ae.printStackTrace();
+	  System.out.println(ae.getRef());
+	  System.out.println(ae.getPos());
+	  System.out.println("***********************");
+	  throw new MailboxException(ae);
+	}catch (MessagingException e) {
       throw new MailboxException(e);
     } catch (MalformedAddressException e) {
       throw new MailboxException(e);
@@ -194,17 +195,46 @@ public class PostMessage implements StoredMessage {
       throw new MailboxException(e);
     }
   }
+  
+  private static void walker(EmailContentPart part, String indent) {
+    if (part instanceof EmailMultiPart) {
+      EmailMultiPart multi = (EmailMultiPart) part;
+      System.out.println(indent + "EmailMultiPart");
+      for (int i=0; i<multi.content.length; i++) 
+        walker(multi.content[i], indent + "  ");
+    } else if (part instanceof EmailSinglePart) {
+      System.out.println(indent + "EmailSinglePart");
+    } else if (part instanceof EmailMessagePart)  {
+      System.out.println(indent + "EmailMessagePart");
+      walker(((EmailHeadersPart) part).content, indent + "  ");
+    } else if (part instanceof EmailHeadersPart) {
+      System.out.println(indent + "EmailHeadersPart");
+      walker(((EmailHeadersPart) part).content, indent + "  ");
+    } 
+  }
+
 
   private static EmailContentPart processContent(MimePart part) throws IOException, MessagingException {
-    Object content = part.getContent();
+    try {
+      Object content = part.getContent();
     
-    if (content instanceof Multipart) {
-      return process((Multipart) content, part.getContentType());
-    } else if (content instanceof MimePart) {
-      return process((MimePart) content);
-    } else {
+      if (content instanceof Multipart) {
+        return process((Multipart) content, part.getContentType());
+      } else if (content instanceof MimePart) {
+        return process((MimePart) content);
+      } else {
+        if (part instanceof MimeBodyPart)
+          return process(((MimeBodyPart) part).getRawInputStream());
+        else if (part instanceof javax.mail.internet.MimeMessage)
+          return process(((javax.mail.internet.MimeMessage) part).getRawInputStream());
+        else
+          return process(part.getInputStream());
+      }
+    } catch (UnsupportedEncodingException uex) {
       if (part instanceof MimeBodyPart)
         return process(((MimeBodyPart) part).getRawInputStream());
+      else if (part instanceof javax.mail.internet.MimeMessage)
+        return process(((javax.mail.internet.MimeMessage) part).getRawInputStream());
       else
         return process(part.getInputStream());
     }
@@ -264,16 +294,12 @@ public class PostMessage implements StoredMessage {
     c.sleep();
 
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
-    //System.out.println("RETURNING MESSAGE HEADERS: " + new String(((EmailData) c.getResult()).getData()));
     
     return new String(((EmailData) c.getResult()).getData());
   }
 
   private static void setHeaders(String header, MimePart mm) throws MessagingException {
     String[] headers = header.split("\n");
-
-    //System.out.println("SETTING MESSAGE HEADERS: ");
 
     for (int i=0; i<headers.length; i++) {
       mm.addHeaderLine(headers[i]);
@@ -335,7 +361,6 @@ public class PostMessage implements StoredMessage {
     String contentType = getContentType(getHeaders(part), body);
     EmailContentPart content = (EmailContentPart) getContent(part);
     setHeaders(getHeaders(part), body);
-    
     
     // special thingy for embedded message
     if (content instanceof EmailMessagePart) {

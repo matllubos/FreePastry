@@ -12,17 +12,38 @@ import rice.post.messaging.*;
 import rice.post.storage.*;
 
 /**
- * Represents the notion of a stored email: it contains the metadata(int UID),
+ * Represents the notion of a stored email: it contains the metadata (int UID and date),
  * the email and the Flags.
  *
  * @version $Id$
  * @author amislove
  */
 public class StoredEmail implements Serializable, Comparable {
+  
+  /**
+   * serial version for backwards compatibility
+   */
+  static final long serialVersionUID = -8624697817697280715L;
 
-  Email _email;
-  int _uid;
-  Flags _flags;
+  /**
+   * The internal email
+   */
+  protected Email _email;
+  
+  /**
+   * The forever-unique identifier for this stored email
+   */
+  protected int _uid;
+  
+  /**
+   * The current flags of this email
+   */
+  protected Flags _flags;
+  
+  /**
+   * The internaldate of this email, or when it was appended to the folder
+   */
+  protected long internaldate;
 
   /**
    * Constructs a stored email
@@ -31,12 +52,13 @@ public class StoredEmail implements Serializable, Comparable {
    * @param uid The unique UID for the email.
    * @param flags The flags on the email.
    */
-  public StoredEmail(Email email, int uid, Flags flags) {
-    _uid = uid;
-    _email = email;
-    _flags = flags;
+  public StoredEmail(Email email, int uid, Flags flags, long internaldate) {
+    this._uid = uid;
+    this._email = email;
+    this._flags = flags;
+    this.internaldate = internaldate;
   }
-
+  
   /**
    * Return the UID for the current email
    *
@@ -45,12 +67,20 @@ public class StoredEmail implements Serializable, Comparable {
   public int getUID() {
     return _uid;
   }
+  
+  /**
+   * Return the internaldate for the current email
+   *
+   * @return The internaldate for the email
+   */
+  public long getInternalDate() {
+    return internaldate;
+  }
 
   /**
    * Return the flags for the email
    *
-   * @return The Flags for the email. //--Or do we want a string representation
-   *      instead of the class?
+   * @return The Flags for the email
    */
   public Flags getFlags() {
     return _flags;
@@ -64,6 +94,15 @@ public class StoredEmail implements Serializable, Comparable {
   public Email getEmail() {
     return _email;
   }
+  
+  /**
+   * Returns the hashcode of this storedemail
+   *
+   * @return The hashcode
+   */
+  public int hashCode() {
+    return _email.hashCode();
+  }
 
   /**
    * DESCRIBE THE METHOD
@@ -72,11 +111,10 @@ public class StoredEmail implements Serializable, Comparable {
    * @return DESCRIBE THE RETURN VALUE
    */
   public boolean equals(Object o) {
-    if (!(o instanceof StoredEmail)) {
-      return false;
-    } else {
-      return ((StoredEmail) o).getEmail().equals(_email);
-    }
+    StoredEmail se = (StoredEmail) o;
+
+    return (se._email.equals(_email) && se._flags.equals(_flags) &&
+            (se._uid == _uid) && (se.internaldate == internaldate));
   }
 
   /**

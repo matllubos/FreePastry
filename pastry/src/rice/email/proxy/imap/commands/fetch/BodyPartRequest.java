@@ -99,6 +99,9 @@ public class BodyPartRequest {
     }
 
     result.append("]");
+    
+    if (_rangeStart > -1)
+      result.append("<" + _rangeStart + ">");
 
     return result.toString();
   }

@@ -32,7 +32,7 @@ public class CapabilityCommand
 
     public void execute()
     {
-        getConn().print("* CAPABILITY IMAP4REV1\r\n");
+        getConn().print("* CAPABILITY IMAP4REV1 AUTH=CRAM-MD5\r\n");
         taggedSuccess("CAPABILITY completed");
     }
 }

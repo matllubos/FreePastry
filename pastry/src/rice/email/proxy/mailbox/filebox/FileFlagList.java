@@ -64,13 +64,25 @@ public class FileFlagList implements FlagList {
 
     _msg = newFile;
   }
-
+  
   public boolean isRecent() {
     return _flags.contains("\\Recent");
   }
-
+  
+  public boolean isDraft() {
+    return _flags.contains("\\Draft");
+  }
+  
+  public boolean isAnswered() {
+    return _flags.contains("\\Answered");
+  }
+  
   public boolean isDeleted() {
     return _flags.contains("\\Deleted");
+  }
+  
+  public boolean isFlagged() {
+    return _flags.contains("\\Flagged");
   }
 
   public boolean isSeen() {
@@ -80,11 +92,31 @@ public class FileFlagList implements FlagList {
   public void setDeleted(boolean deleted) {
     setFlag("\\Deleted", deleted);
   }
-
+  
   public void setSeen(boolean seen) {
     setFlag("\\Seen", seen);
   }
+  
+  public void setRecent(boolean seen) {
+    setFlag("\\Recent", seen);
+  }
+  
+  public void setDraft(boolean seen) {
+    setFlag("\\Draft", seen);
+  }
+  
+  public void setAnswered(boolean seen) {
+    setFlag("\\Answered", seen);
+  }
+  
+  public void setFlagged(boolean seen) {
+    setFlag("\\Flagged", seen);
+  }
 
+  public List getFlags() {
+    return null;
+  }
+  
   public String toFlagString() {
     StringBuffer flagBuffer = new StringBuffer();
 

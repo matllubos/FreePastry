@@ -68,6 +68,10 @@ public class FileMessage implements StoredMessage {
   public int getUID() {
     return _uid;
   }
+  
+  public long getInternalDate() {
+    return 0;
+  }
 
   public FlagList getFlagList() {
     return _flags;

@@ -2,8 +2,9 @@ package rice.email.proxy.imap.commands;
 
 import rice.email.proxy.imap.ImapState;
 
-import rice.email.proxy.mail.MovingMessage;
+import rice.email.proxy.mail.*;
 
+import rice.email.proxy.mailbox.FlagList;
 import rice.email.proxy.mailbox.Mailbox;
 import rice.email.proxy.mailbox.MailboxException;
 
@@ -52,9 +53,17 @@ public class AppendCommand
 
             // skip CRLF
             getConn().readLine();
-
+          
+            long internaldate = System.currentTimeMillis();
+            
+            try {
+              internaldate = MimeMessage.dateWriter.parse(_date).getTime();
+            } catch (Exception e) {
+              // do nothing - revert to current date/time
+            }
+            
             Mailbox box = getState().getMailbox();
-            box.getFolder(_folder).put(msg, _flags, _date);
+            box.getFolder(_folder).put(msg, _flags, internaldate);
             taggedSimpleSuccess();
         }
         catch (MailboxException me)

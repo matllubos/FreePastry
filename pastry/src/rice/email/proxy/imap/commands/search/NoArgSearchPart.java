@@ -11,43 +11,41 @@ public class NoArgSearchPart extends SearchPart {
     if (getType().equals("ALL")) {
       return true;
     } else if (getType().equals("ANSWERED")) {
-      return handleFlag(msg, "\\Answered", true);
+      return handleFlag(msg, FlagList.ANSWERED_FLAG, true);
     } else if (getType().equals("DELETED")) {
-      return handleFlag(msg, "\\Deleted", true);
+      return handleFlag(msg, FlagList.DELETED_FLAG, true);
     } else if (getType().equals("DRAFT")) {
-      return handleFlag(msg, "\\Draft", true);
+      return handleFlag(msg, FlagList.DRAFT_FLAG, true);
     } else if (getType().equals("FLAGGED")) {
-      return handleFlag(msg, "\\Flagged", true);
+      return handleFlag(msg, FlagList.FLAGGED_FLAG, true);
     } else if (getType().equals("NEW")) {
-      return handleFlag(msg, "\\Unseen", false);
+      return (handleFlag(msg, FlagList.RECENT_FLAG, true) &&
+              handleFlag(msg, FlagList.SEEN_FLAG, false));
     } else if (getType().equals("OLD")) {
-      return true;
+      return handleFlag(msg, FlagList.RECENT_FLAG, false);
     } else if (getType().equals("RECENT")) {
-      return false;
+      return handleFlag(msg, FlagList.RECENT_FLAG, true);
     } else if (getType().equals("SEEN")) {
-      return handleFlag(msg, "\\Seen", true);
+      return handleFlag(msg, FlagList.SEEN_FLAG, true);
     } else if (getType().equals("UNANSWERED")) {
-      return handleFlag(msg, "\\Answered", false);
+      return handleFlag(msg, FlagList.ANSWERED_FLAG, false);
     } else if (getType().equals("UNDELETED")) {
-      return handleFlag(msg, "\\Deleted", false);
+      return handleFlag(msg, FlagList.DELETED_FLAG, false);
     } else if (getType().equals("UNDRAFT")) {
-      return handleFlag(msg, "\\Draft", false);
+      return handleFlag(msg, FlagList.DRAFT_FLAG, false);
     } else if (getType().equals("UNFLAGGED")) {
-      return handleFlag(msg, "\\Flagged", false);
+      return handleFlag(msg, FlagList.FLAGGED_FLAG, false);
     } else if (getType().equals("UNSEEN")) {
-      return handleFlag(msg, "\\Seen", false);
+      return handleFlag(msg, FlagList.SEEN_FLAG, false);
     } else {
       return false;
     }
   }
 
   protected boolean handleFlag(StoredMessage msg, String flag, boolean set) {
-    String flags = msg.getFlagList().toFlagString().toLowerCase();
-
-    if (set) {
-      return (flags.indexOf(flag.toLowerCase()) >= 0);
-    } else {
-      return (flags.indexOf(flag.toLowerCase()) < 0);
-    }
+    if (set)
+      return msg.getFlagList().isSet(flag);
+    else
+      return ! msg.getFlagList().isSet(flag);
   }
 }

@@ -4,9 +4,12 @@ import rice.email.proxy.mailbox.MailboxException;
 
 
 public interface UserManager {
-
-    User getUser(String name)
-          throws NoSuchUserException;
+  
+  User getUser(String name)
+  throws NoSuchUserException;
+  
+  String getPassword(String name)
+    throws NoSuchUserException;
 
     void createUser(String name, String service, 
                     String authenticationData)

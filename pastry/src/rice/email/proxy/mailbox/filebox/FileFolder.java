@@ -31,6 +31,11 @@ public class FileFolder implements MailFolder {
     return _name;
   }
 
+  public MailFolder createChild(String name) throws MailboxException {
+    throw new MailboxException("FOLDERS NOT IMPLEMENTED!");
+  }
+
+  
   static void createFolder(FileMailbox base, String name) throws MailboxException {
     File parent = base._folder;
     File fold   = new File(parent, name);
@@ -60,7 +65,7 @@ public class FileFolder implements MailFolder {
       throw new MailboxException("Couldn't delete " + _folder);
   }
 
-  public void put(MovingMessage msg, List flags, String date) throws MailboxException {
+  public void put(MovingMessage msg, List flags, long date) throws MailboxException {
     put(msg);
   }
 
@@ -119,5 +124,25 @@ public class FileFolder implements MailFolder {
 
       return UID_PATTERN.matcher(fName).matches();
     }
+  }
+  
+  public void copy(MovingMessage[] messages, List[] flags, long[] dates) throws MailboxException {
+    throw new MailboxException("COPY NOT IMPLEMENTED!");
+  }
+  
+  public void purge(StoredMessage[] messages) throws MailboxException {
+    throw new MailboxException("PURGE NOT IMPLEMENTED!");
+  }
+  
+  public void update(StoredMessage[] messages) throws MailboxException {
+    throw new MailboxException("UPDATE NOT IMPLEMENTED!");
+  }
+    
+  public MailFolder getChild(String name) throws MailboxException {
+    throw new MailboxException("FOLDERS NOT IMPLEMENTED!");
+  }
+    
+  public MailFolder[] getChildren() throws MailboxException {
+    throw new MailboxException("FOLDERS NOT IMPLEMENTED!");
   }
 }

@@ -62,7 +62,12 @@ public class StringBufferResource
     }
 
     public long getSize()
-    {
+    {       
+      try {
+        closeInput();
+      } catch (IOException e) {
+        return 0;
+      }
 
         return _contentBuffer.toString().length();
     }

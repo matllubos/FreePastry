@@ -89,9 +89,9 @@ final class ParserImapHandler
       SimpleDateFormat df = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z (z)");
       
       try {
-        conn.println("* OK [CAPABILITY IMAP4REV1] " + InetAddress.getLocalHost().getHostName() + " IMAP4rev1 2001.315 at " + df.format(new Date()));
+        conn.println("* OK [CAPABILITY IMAP4REV1 AUTH=CRAM-MD5] " + InetAddress.getLocalHost().getHostName() + " IMAP4rev1 2001.315 at " + df.format(new Date()));
       } catch (UnknownHostException e) {
-        conn.println("* OK [CAPABILITY IMAP4REV1] IMAP4rev1 2001.315 at " + df.format(new Date()));
+        conn.println("* OK [CAPABILITY IMAP4REV1 AUTH=CRAM-MD5] IMAP4rev1 2001.315 at " + df.format(new Date()));
       } 
     }
 
@@ -104,8 +104,11 @@ final class ParserImapHandler
         if (cmd == null)
           throw new RuntimeException("Command was null!");
         
-        if (!cmd.isValidForState(state))
-            cmd = new IllegalStateCommand();
+        if (!cmd.isValidForState(state)) {
+            AbstractImapCommand command = new IllegalStateCommand();
+          command.setTag(cmd.getTag()); 
+          cmd = command;
+        }
 
         cmd.setConn(conn);
         cmd.setState(state);

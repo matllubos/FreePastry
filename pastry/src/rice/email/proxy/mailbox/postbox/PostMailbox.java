@@ -15,7 +15,8 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.*;
 
-import rice.Continuation;
+import rice.*;
+import rice.Continuation.*;
 
 import rice.email.EmailService;
 import rice.email.Folder;
@@ -27,12 +28,13 @@ import rice.email.Folder;
 public class PostMailbox implements Mailbox {
 
   // the local email service to use
-  EmailService email;
+  protected EmailService email;
+  
+  // the root folder for this user
+  protected PostFolder root;
 
-    Hashtable subscriptions = new Hashtable();
-
-  // a cache of the previously-fetch folders
-  Hashtable folders;
+  // the hierarchy delimiter used by ePOST
+  public static String HIERARCHY_DELIMITER = "/";
 
   /**
    * Constructs a PostMailbox given an emailservice
@@ -40,90 +42,26 @@ public class PostMailbox implements Mailbox {
    *
    * @param email The email service on the local pastry node.
    */
-  public PostMailbox(EmailService email) {
+  public PostMailbox(EmailService email, Folder root) throws MailboxException {
     if (email == null)
       throw new IllegalArgumentException("EmailService cannot be null in PostMailbox.");
+    
+    if (root == null)
+      throw new IllegalArgumentException("Root folder cannot be null in PostMailbox");
 
     this.email = email;
-    this.folders = new Hashtable();
+    this.root = new PostFolder(root, null, email);
   }
-
-  // TO DO
-  public void put(MovingMessage msg) throws MailboxException {
-    getFolder("INBOX").put(msg, null, null);
-  }
-
+  
   /**
-    * Fetches a given folder name.  Currently, the valid names are:
-   *   ""        root
-   *   "inbox"   inbox
-   *   "[\d]+"   anything else
+   * Returns the hierarchy delimiter used by this mailbox
    *
-   * Note that hierarchical folders are not supported.  Also, this
-   * method does block the current thread.
-   *
-   * @param name The name of the folder
-   * @throws MailboxException If an error occurs
-   * @return The specificed MailFolder.
+   * @return The hierarchy delimiter
    */
-  public MailFolder getFolder(String name) throws MailboxException {
-    if (name.trim().toLowerCase().equals("inbox")) {
-      name = EmailService.INBOX_NAME;
-    }
-
-    String[] names = ((PostFolder) getRootFolder()).getFolder().getChildren();
-    Arrays.sort(names);
-    if (Arrays.binarySearch(names, name) < 0) {
-      throw new MailboxException("Folder " + name + " does not exist!");
-    }
-    
-        if (folders.get(name) != null) {
-          return (MailFolder) folders.get(name);
-        }
-
-    System.out.println("Getting " + name);
-    
-    try {
-      PostFolder root = (PostFolder) getRootFolder();
-
-      final Folder[] folder = new Folder[1];
-      final Exception[] exception = new Exception[1];
-
-      final Object wait = "wait";
-
-      Continuation fetch = new Continuation() {
-        public void receiveResult(Object o) {
-          synchronized (wait) {
-            folder[0] = (Folder) o;
-            wait.notify();
-          }
-        }
-
-        public void receiveException(Exception e) {
-          System.out.println("Could not fetch folder " + e);
-          synchronized (wait) {
-            exception[0] = e;
-            wait.notify();
-          }
-        }
-      };
-
-      root.getFolder().getChildFolder(name, fetch);
-
-      synchronized (wait) { if ((folder[0] == null) && (exception[0] == null)) wait.wait(); }
-
-      if (exception[0] != null)
-        throw exception[0];
-
-      folders.put(name, new PostFolder(folder[0], root.getFolder(), email));
-      
-      return (MailFolder) folders.get(name);
-    } catch (Exception e) {
-      e.printStackTrace();
-      throw new MailboxException(e);
-    }
+  public String getHierarchyDelimiter() {
+    return HIERARCHY_DELIMITER;
   }
-
+  
   /**
    * Returns the root folder of the user's mailbox. Note that
    * this method blocks while fetching the folder.
@@ -132,180 +70,224 @@ public class PostMailbox implements Mailbox {
    * @return The root folder.
    */
   public MailFolder getRootFolder() throws MailboxException {
-    try {
-      final Folder[] folder = new Folder[1];
-      final Exception[] exception = new Exception[1];
-
-      final Object wait = "wait";
-
-      Continuation fetch = new Continuation() {
-        public void receiveResult(Object o) {
-          synchronized (wait) {
-            folder[0] = (Folder) o;
-            wait.notifyAll();
-          }
-        }
-
-        public void receiveException(Exception e) {
-          System.out.println("Could not fetch folder " + e);
-          synchronized (wait) {
-            exception[0] = e;
-            wait.notifyAll();
-          }
-        }
-      };
-
-      email.getRootFolder(fetch);
-
-      synchronized (wait) { if ((folder[0] == null) && (exception[0] == null)) wait.wait(); }
-
-      if (exception[0] != null)
-        throw new MailboxException(exception[0]);
-
-      return new PostFolder(folder[0], null, email);
-    } catch (InterruptedException e) {
-      throw new MailboxException(e);
-    }    
+    return root;
   }
 
-  private boolean isValidFolderName(String fold) {
-    return true;
+  /**
+   * Adds the given message to this folder
+   *
+   * @param msg The message to add
+   */
+  public void put(MovingMessage msg) throws MailboxException {
+    getFolder(EmailService.INBOX_NAME).put(msg);
   }
-
-  public void createFolder(String folder) throws MailboxException {
-    if (folder.trim().toLowerCase().equals("inbox")) {
-      folder = EmailService.INBOX_NAME;
-    }
-
-    System.out.println("Creating " + folder);
+  
+  /**
+   * Creates a folder with the given name.  If the name contains 
+   * the heirarchy character, it is interpreted as a hierchy and any
+   * necessary folders are created, too.
+   *
+   * @param folder The name to create
+   */
+  public void createFolder(String name) throws MailboxException {
+    if (name.trim().toLowerCase().equals("inbox")) 
+      throw new MailboxException("Cannot create folder with name '" + name + "'.");
     
-    if (!isValidFolderName(folder))
-      throw new MailboxException("Invalid folder name.");
-
-    try {
-      final Object[] result = new Object[1];
-      final Exception[] exception = new Exception[1];
-
-      final Object wait = "wait";
-
-      Continuation insert = new Continuation() {
-        public void receiveResult(Object o) {
-          synchronized (wait) {
-            result[0] = o;
-            wait.notifyAll();
-          }
-        }
-
-        public void receiveException(Exception e) {
-          System.out.println("Could not create folder " + e);
-          synchronized (wait) {
-            exception[0] = e;
-            wait.notifyAll();
-          }
-        }
-      };
-
-      ((PostFolder) getRootFolder()).getFolder().createChildFolder(folder, insert);
-
-      synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
+    String[] names = name.split(HIERARCHY_DELIMITER);
+    PostFolder folder = (PostFolder) getRootFolder();
     
-      if (exception[0] != null)
-        throw new MailboxException(exception[0]);
-    } catch (Exception e) {
-      throw new MailboxException(e);
+    for (int i=0; i<names.length; i++) {
+      try {
+        folder = (PostFolder) folder.getChild(names[i]);
+      } catch (MailboxException e) {
+        folder = (PostFolder) folder.createChild(names[i]);
+      }
     }
   }
-
- public void deleteFolder(String folder) throws MailboxException {
-    try {
-      final Object[] result = new Object[1];
-      final Exception[] exception = new Exception[1];
-
-      final Object wait = "wait";
-
-      Continuation insert = new Continuation() {
-        public void receiveResult(Object o) {
-          synchronized (wait) {
-            result[0] = o;
-            wait.notifyAll();
-          }
-        }
-
-        public void receiveException(Exception e) {
-          System.out.println("Could not create folder " + e);
-          synchronized (wait) {
-            exception[0] = e;
-            wait.notifyAll();
-          }
-        }
-      };
-
-      ((PostFolder) getRootFolder()).getFolder().removeFolder(folder.toLowerCase(), insert);
-
-      synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
-
-      if (exception[0] != null)
-        throw new MailboxException(exception[0]);
-    } catch (Exception e) {
-      throw new MailboxException(e);
-    }
+  
+  /**
+   * Fetches a given folder name. This name can represent a hierarhy, if it
+   * contains the hierarhy delimiting character.
+   *
+   * @param name The name of the folder
+   * @return The specificed MailFolder.
+   */
+  public MailFolder getFolder(String name) throws MailboxException {
+    if (name.trim().toLowerCase().equals("inbox"))
+      name = EmailService.INBOX_NAME;
+    
+    String[] names = name.split(HIERARCHY_DELIMITER);
+    PostFolder folder = (PostFolder) getRootFolder();
+    
+    for (int i=0; i<names.length; i++) 
+      folder = (PostFolder) folder.getChild(names[i]);
+    
+    return folder;
   }
-
+  
+  /**
+   * Lists all folders
+   *
+   * @return All available folders
+   */
+  protected MailFolder[] listFolders() throws MailboxException {
+    Vector result = new Vector();
+    walk((PostFolder) getRootFolder(), result);
+    
+    return (MailFolder[]) result.toArray(new MailFolder[0]);
+  }
+  
+  /**
+   * Lists all folders which match the provided pattern
+   *
+   * @param pattern The pattern to match against
+   * @return The folders which match
+   */
   public MailFolder[] listFolders(String pattern) throws MailboxException {
-    PostFolder root = (PostFolder) getRootFolder();
-    String[] names = root.getFolder().getChildren();
-    Vector folders = new Vector();
+    MailFolder[] folders = listFolders();
+    Vector result = new Vector();
+    
+    pattern = pattern.replaceAll("\\*", ".*").replaceAll("\\%", "[^" + HIERARCHY_DELIMITER + "]*");
+    
+    for (int i = 0; i < folders.length; i++) 
+      if (folders[i].getFullName().matches(pattern) || folders[i].getFullName().equals(pattern))
+        result.add(folders[i]);
+    
+    return (MailFolder[]) result.toArray(new MailFolder[0]);
+  }  
 
-    pattern = pattern.replaceAll("\\*", ".*").replaceAll("\\%", ".*");
-
-    for (int i = 0; i < names.length; i++) {
-      PostFolder folder = (PostFolder) getFolder(names[i]);
-
-      if (folder.getFullName().matches(pattern))
-        folders.add(new PostFolder(folder.getFolder(), root.getFolder(), email));
-    }
-
-    return (MailFolder[]) folders.toArray(new MailFolder[0]);
-  }    
-
-  public void subscribe(ImapConnection conn, String fullName) throws MailboxException {
+  /**
+   * Renames the given folder to the new name.  If the new name represents a hierarchy,
+   * any necessary folders are automatically created.
+   *
+   * @param old_name The current name
+   * @param new_name The new name
+   */
+  public void renameFolder(String old_name, String new_name) throws MailboxException {
+    boolean exists = true;
+    
     try {
-      if (! subscriptions.containsKey(conn)) {
-        subscriptions.put(conn, new Vector());
-      }
+      getFolder(new_name);      
+    } catch (MailboxException e) {
+      exists = false;
+    }
+    
+    if (exists)
+      throw new MailboxException("Folder " + new_name + " already exists!"); 
+    
+    PostFolder old = (PostFolder) getFolder(old_name); 
+    old.delete(false);
+    
+    String[] names = new_name.split(HIERARCHY_DELIMITER);
 
-      if (!((Vector) subscriptions.get(conn)).contains(fullName)) {
-        ((Vector)subscriptions.get(conn)).add(fullName);
+    ExternalContinuation c = new ExternalContinuation();
+    old.getFolder().setName(names[names.length-1], c);
+    c.sleep();
+    
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
+    
+    PostFolder parent = (PostFolder) getRootFolder();
+    
+    for (int i=0; i<names.length-1; i++) {
+      try {
+        parent = (PostFolder) parent.getChild(names[i]);
+      } catch (MailboxException e) {
+        parent = (PostFolder) parent.createChild(names[i]);
       }
-    } catch (Exception e) {
-      throw new MailboxException(e);
+    }
+    
+    ExternalContinuation d = new ExternalContinuation();
+    parent.getFolder().addChildFolder(old.getFolder(), d);
+    d.sleep();
+    
+    if (d.exceptionThrown()) { throw new MailboxException(d.getException()); } 
+    
+    old.setParent(parent);
+    
+    if (old_name.trim().toLowerCase().equals("inbox")) {
+      root.createChild(EmailService.INBOX_NAME);
+      email.setInbox(((PostFolder) getFolder(EmailService.INBOX_NAME)).getFolder()); 
     }
   }
 
-  public void unsubscribe(ImapConnection conn, String fullName) throws MailboxException {
-    if (((Vector) subscriptions.get(conn)).contains(fullName)) {
-      ((Vector) subscriptions.get(conn)).remove(fullName);
+  /**
+   * Deletes the folder associated with the given name.  If the folder
+   * has child folders, a MailboxException is thrown.
+   *
+   * @param name The name of the folder to delete
+   */
+  public void deleteFolder(String name) throws MailboxException {
+    if (name.trim().toLowerCase().equals(EmailService.INBOX_NAME))
+      throw new MailboxException("INBOX folder cannot be deleted.");
+    
+    ((PostFolder) getFolder(name)).delete();
+  }
+  
+  protected void walk(PostFolder folder, Vector result) throws MailboxException {
+    MailFolder[] folders = folder.getChildren();
+    
+    for (int i=0; i<folders.length; i++) {
+      result.add(folders[i]);
+      walk((PostFolder) folders[i], result);
     }
   }
 
-  public String[] listSubscriptions(ImapConnection conn, String pattern) throws MailboxException {
-    if (subscriptions.containsKey(conn)) {
-      Vector subList = (Vector) subscriptions.get(conn);
+  public void subscribe(String fullName) throws MailboxException {
+    if (listSubscriptions(fullName).length != 0)
+	  return;
+	  
+    try {
+      getFolder(fullName);
+    } catch (MailboxException e) {
+      return;
+    }
+	
+    ExternalContinuation c = new ExternalContinuation();
+    email.addSubscription(fullName, c);
+    c.sleep();
+    
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
+  }
 
-      pattern = pattern.replaceAll("\\*", ".*").replaceAll("\\%", ".*");
-
-      for (int i=subList.size()-1; i>=0; i--) {
-        String str = (String) subList.elementAt(i);
-
-        if (! str.matches(pattern)) {
-          subList.remove(str);
+  public void unsubscribe(String fullName) throws MailboxException {
+    if (listSubscriptions(fullName).length == 0)
+	  return;
+	  
+    ExternalContinuation c = new ExternalContinuation();
+    email.removeSubscription(fullName, c);
+    c.sleep();
+    
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
+  }
+  
+  public String[] listSubscriptions(String pattern) throws MailboxException {
+    ExternalContinuation c = new ExternalContinuation();
+    email.getSubscriptions(c);
+    c.sleep();
+    
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
+    
+    Vector result = new Vector();
+    String[] subscriptions = (String[]) c.getResult();
+    
+    pattern = pattern.replaceAll("\\*", ".*").replaceAll("\\%", "[^" + HIERARCHY_DELIMITER + "]*");
+    
+    for (int i=subscriptions.length-1; i>=0; i--) {
+      String str = subscriptions[i];
+      
+      /* FIX FOR FOLDERS - DON'T Touch ABP4 */
+      if (str.matches(pattern) || str.equals(pattern)) {
+        try {
+          if (getFolder(str) != null) {
+            result.add(str);
+          }
+        } catch (MailboxException me) {
+          /* do nothing */
         }
       }
-        
-      return (String[]) subList.toArray(new String[0]);
-    } else {
-      return new String[0];
     }
+    
+    return (String[]) result.toArray(new String[0]);
   }
 }
 

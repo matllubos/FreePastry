@@ -31,6 +31,7 @@ tokens {
 	LSUB="LSUB";
 	EXAMINE="EXAMINE";
 	LOGIN="LOGIN";
+	AUTHENTICATE="AUTHENTICATE";
 	SELECT="SELECT";
 	FETCH="FETCH";
 	UID="UID";
@@ -72,6 +73,7 @@ tokens {
   ON="ON";
   OR="OR";
   RECENT="RECENT";
+  RENAME="RENAME";
   SEEN="SEEN";
   SENTBEFORE="SENTBEFORE";
   SENTON="SENTON";
@@ -90,25 +92,6 @@ tokens {
 
 {
 	boolean expectingCommand = true;
-	
-/*	public int testLiteralsTable(int ttype) {
-		if (expectingCommand) {
-		  int value = super.testLiteralsTable(ttype);
-		  if (value != ttype) {
-		  	if (value != UID)
-		  	  expectingCommand = false;
-		  }
-		  return value;
-		} else {
-      String text = getText();
-		  if (text.equals("BODY")) return BODY;
-		  if (text.equals("BODY.PEEK")) return BODYPEEK;
-		  if (text.equals("RFC822")) return RFC822;
-		  if (text.equals("RFC822.HEADER")) return RFC822HEADER;
-		  if (text.equals("RFC822.TEXT")) return RFC822TEXT; 
-		  return ttype;
-		}
-	} */
 }
 
 PERIOD : '.'
@@ -121,6 +104,12 @@ LPAREN	:	'('
 	;
 	
 RPAREN	:	')'
+	;
+	
+LSANGLE	:	'<'
+	;
+	
+RSANGLE	:	'>'
 	;
 
 ATOM :
@@ -135,12 +124,6 @@ LSBRACKET : '['
 
 RSBRACKET : ']'
 	;
-  
-LSANGLE : '<'
-  ;
-  
-RSANGLE : '>'
-  ;
 
 protected
 NUMBER	:	

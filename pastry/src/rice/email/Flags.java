@@ -1,5 +1,7 @@
 package rice.email;
 
+import java.io.*;
+import java.io.ObjectInputStream.*;
 import java.util.*;
 
 import rice.*;
@@ -14,170 +16,51 @@ import rice.post.log.*;
  */
 
 public class Flags implements java.io.Serializable {
+  
+  /**
+   * NOTE:  This class has changed significantly, and thus the
+   * readObject() method is complicated, in order to support the translation
+   * from the old version to the new.
+   */
 
-  boolean _recent;
-  boolean _deleted;
-  boolean _seen;
-  boolean _answered;
-  boolean _flagged;
-  boolean _draft;
-    //    boolean _forward;
-    Hashtable _flagList = new Hashtable();
+  /**
+   * HashSet containing all of the set flags. 
+   */
+  HashSet flags = new HashSet();
 
+  /**
+   * Serial version for compatibility
+   */
+  static final long serialVersionUID = -3351853213516773179L;
 
   /**
    * Constructor for email Flags
    */
   public Flags() {
-    _deleted = false;
-    _seen = false;
-    _answered = false;
-    _flagged = false;
-    _draft = false;
-    _recent = true;
   }
-
-    /**
-     * Return the Hashtable of the flags
-     *
-     * @return Hashtable The mapping of the values of the flags
-     */
-    public Hashtable getFlagList() {
-	return _flagList;
-    }
-
-    /**
-     * Get the attribute for the specified Flag object
-     *
-     * @return the Flag's value
-     */
-    public boolean isSet(String flag) {
-	return ((Boolean)_flagList.get(flag)).booleanValue();
-    }
-
+  
   /**
-   * Gets the Recent attribute of the Flags object
+    * Get the attribute for the specified Flag object
    *
-   * @return The Recent value
+   * @return the Flag's value
    */
-  public boolean isRecent() {
-    return _recent;
+  public boolean isSet(String flag) {      
+    return flags.contains(flag);
   }
-
-  /**
-   * Gets the Deleted attribute of the Flags object
-   *
-   * @return The Deleted value
-   */
-  public boolean isDeleted() {
-    return _deleted;
+  
+  /** 
+    * Sets the specified attribute of the Flags object
+    *
+    * @param string The attribute to be set
+    * @param value The new value
+    *
+    */
+  public void setFlag(String flag, boolean value) {
+    if (value)
+      flags.add(flag);
+    else
+      flags.remove(flag);
   }
-
-  /**
-   * Gets the Answered attribute of the Flags object
-   *
-   * @return The Answered value
-   */
-  public boolean isAnswered() {
-    return _answered;
-  }
-
-  /**
-   * Gets the Seen attribute of the Flags object
-   *
-   * @return The Seen value
-   */
-  public boolean isSeen() {
-    return _seen;
-  }
-
-  /**
-   * Gets the Flagged attribute of the Flags object
-   *
-   * @return The Flagged value
-   */
-  public boolean isFlagged() {
-    return _flagged;
-  }
-
-  /**
-   * Gets the Draft attribute of the Flags object
-   *
-   * @return The Draft value
-   */
-  public boolean isDraft() {
-    return _draft;
-  }
-
-    /** 
-     * Sets the specified attribute of the Flags object
-     *
-     * @param string The attribute to be set
-     * @param value The new value
-     *
-     */
-    public void setFlag(String flag, boolean value) {
-	if (_flagList.containsKey(flag)) {
-	    _flagList.remove(flag);
-	}
-	System.out.println("****Setting Flag: " + flag);
-	_flagList.put(flag, new Boolean(value));
-    }
-
-  /**
-   * Sets the Deleted attribute of the Flags object
-   *
-   * @param value The new Deleted value
-   */
-  public void setDeleted(boolean value) {
-    _deleted = value;
-  }
-
-  /**
-   * Sets the Answered attribute of the Flags object
-   *
-   * @param value The new Answered value
-   */
-  public void setAnswered(boolean value) {
-    _answered = value;
-  }
-
-  /**
-   * Sets the Seen attribute of the Flags object
-   *
-   * @param value The new Seen value
-   */
-  public void setSeen(boolean value) {
-    _seen = value;
-  }
-
-  /**
-   * Sets the Flagged attribute of the Flags object
-   *
-   * @param value The new Flagged value
-   */
-  public void setFlagged(boolean value) {
-    _flagged = value;
-  }
-
-  /**
-   * Sets the Draft attribute of the Flags object
-   *
-   * @param value The new Draft value
-   */
-  public void setDraft(boolean value) {
-    _draft = value;
-  }
-
-  /**
-   * Sets the Recent attribute of the Flags object
-   *
-   * @param value The new Recent value
-   */
-  public void setRecent(boolean value) {
-    _recent = value;
-  }
-
 
   /**
    * Returns a Vector representation of the flagList
@@ -186,78 +69,50 @@ public class Flags implements java.io.Serializable {
    */
   public Vector flagList() {
     Vector flaglist = new Vector();
-    if (isRecent()) {
-      flaglist.add("\\Recent");
-    }
-    if (isSeen()) {
-      flaglist.add("\\Seen");
-    }
-    if (isDeleted()) {
-      flaglist.add("\\Deleted");
-    }
-    if (isAnswered()) {
-      flaglist.add("\\Answered");
-    }
-    if (isFlagged()) {
-      flaglist.add("\\Flagged");
-    }
-    if (isDraft()) {
-      flaglist.add("\\Draft");
-    }
-
-    Enumeration e = _flagList.keys();
-    while (e.hasMoreElements()) {
-	String flag = (String)e.nextElement();	
-	if (isSet(flag)) {
-	    flaglist.add(flag);
-	}
-    } 
+    Iterator i = flags.iterator();
+    
+    while (i.hasNext()) 
+      flaglist.add(i.next());
+    
     return flaglist;
   }
-
+    
   /**
-   * Returns a string representation of the flags
+   * ReadObject overridden in order to support translation from
+   * old -> new style flags.  
    *
-   * @return The string representation of the flags
+   * @param ois Object Input Stream
    */
-  public String toFlagString() {
-    StringBuffer flagBuffer = new StringBuffer();
-
-    if (_seen) {
-      flagBuffer.append("\\Seen ");
-    }
-
-    if (_recent) {
-      flagBuffer.append("\\Recent ");
-    }
-
-    if (_deleted) {
-      flagBuffer.append("\\Deleted");
-    }
-
-    if (_answered) {
-      flagBuffer.append("\\Answered");
-    }
-
-    if (_draft) {
-      flagBuffer.append("\\Draft");
-    }
-
-    if (_flagged) {
-      flagBuffer.append("\\Flagged");
-    }
-
-    Enumeration e = _flagList.keys();
-    while (e.hasMoreElements()) {
-	String flag = (String) e.nextElement();
-	if (isSet(flag)) {
-	    flagBuffer.append(flag + " ");
-	}
-    }
+  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    GetField gf = ois.readFields();
     
-    return "(" + flagBuffer.toString().trim() + ")";
+    if (! gf.defaulted("flags")) {
+      flags = (HashSet) gf.get("flags", null);
+    } else {
+      flags = new HashSet();
+      
+      if (gf.get("_deleted", false))
+        flags.add("\\Deleted");
+      if (gf.get("_answered", false))
+        flags.add("\\Answered");
+      if (gf.get("_draft", false))
+        flags.add("\\Draft");
+      if (gf.get("_flagged", false))
+        flags.add("\\Flagged");
+      if (gf.get("_seen", false))
+        flags.add("\\Seen");
+      
+      Hashtable list = (Hashtable) gf.get("_flagList", null);
+      Enumeration e = list.keys();
+      
+      while (e.hasMoreElements()) {
+        String flag = (String) e.nextElement();
+        
+        if (((Boolean) list.get(flag)).booleanValue())
+          flags.add(flag);
+      }
+    }
   }
-    
 }
 
 

@@ -95,6 +95,7 @@ astring	returns [Token ret] {ret=null;}:
 												l:LSUB {ret = l; } |
 												m:EXAMINE {ret = m; } |
 												n:LOGIN {ret = n; } |
+												n1:AUTHENTICATE {ret = n1; } |
 												o:SELECT {ret = o; } |
 												p:FETCH {ret = p; } |
 												q:UID {ret = q; } |
@@ -149,8 +150,9 @@ astring	returns [Token ret] {ret=null;}:
 												bn:UNDRAFT {ret = bn; } |
 												bo:UNFLAGGED {ret = bo; } |
 												bp:UNKEYWORD {ret = bp; } |
-												bq:UNSEEN {ret = bq; }
-	;
+												bq:UNSEEN {ret = bq; } |
+                        br:RENAME {ret = br; }
+            ;
 
 pattern returns [Token ret] {ret=null;}:	ret=astring
 	;
@@ -170,9 +172,13 @@ flags returns [List flags]
   {
     flags = new ArrayList();
     Token fs;
+	// XXX - Note here we're deviating from the IMAP Spec, but FireFox, or whatever
+	//       it's called does not conform...
   }:
-	LPAREN (f:FLAG {flags.add(f.getText());} | fs=astring {flags.add(fs.getText());})
-		(SPACE (l:FLAG {flags.add(l.getText());} | fs=astring {flags.add(fs.getText());}))* RPAREN
+	LPAREN ( 
+	        (f:FLAG {flags.add(f.getText());} | fs=astring {flags.add(fs.getText());})
+		    (SPACE (l:FLAG {flags.add(l.getText());} | fs=astring {flags.add(fs.getText());}))*
+		    )? RPAREN
 	;
 
 atom_list returns [List list]
@@ -199,7 +205,7 @@ unknown : (.)* EOF
  */
 
 command_auth :
-create | delete |
+create | delete | rename |
 subscribe | unsubscribe | list | lsub |
 examine | status | select |
 uid | fetch[false] | copy[false] | store[false] | search[false] |
@@ -219,6 +225,15 @@ delete	{Token folder;}:	DELETE SPACE folder=astring
 	{
 	  DeleteCommand cmd = new DeleteCommand();
 	  cmd.setFolder(folder.getText());
+	  command = cmd;
+	}
+	;
+  
+rename	{Token old_folder, new_folder;}:	RENAME SPACE old_folder=astring SPACE new_folder=astring
+	{
+	  RenameCommand cmd = new RenameCommand();
+	  cmd.setOldFolder(old_folder.getText());
+	  cmd.setNewFolder(new_folder.getText());
 	  command = cmd;
 	}
 	;
@@ -273,7 +288,7 @@ select	{Token folder;}:	SELECT SPACE folder=astring
 	}
 	;
 
-append	{Token date, folder; int len; List flags=new ArrayList();}:
+append	{Token date=null, folder; int len; List flags=new ArrayList();}:
 	APPEND SPACE folder=astring SPACE
 		(flags=flags SPACE)?
 		((astring SPACE)=>(date=astring SPACE len=literal)
@@ -282,6 +297,8 @@ append	{Token date, folder; int len; List flags=new ArrayList();}:
 	  AppendCommand cmd = new AppendCommand();
 	  cmd.setFolder(folder.getText());
 	  cmd.setFlags(flags);
+    if (date != null)
+      cmd.setDate(date.getText());
 	  cmd.setContentLength(len);
 	  command = cmd;
 	}
@@ -528,7 +545,7 @@ fetch [boolean isUID]
     RFC822PartRequest rreq = new RFC822PartRequest();
 	}
 	:
-	b:BODY {breq.setName(b.getText());}
+	b:BODY {breq.setName(b.getText()); }
     (PERIOD PEEK {breq.setPeek(true);})?
 	  (LSBRACKET {realBody = true;} 
       (body_part[breq])?
@@ -603,7 +620,7 @@ fetch [boolean isUID]
  * Commands for unauthorized people
  */
  
-command_nonauth :	login
+command_nonauth :	login | authenticate
 	;
 	
 login	{Token usr, pass;}:	LOGIN SPACE usr=astring SPACE pass=astring
@@ -611,6 +628,14 @@ login	{Token usr, pass;}:	LOGIN SPACE usr=astring SPACE pass=astring
 	  LoginCommand cmd = new LoginCommand();
 	  cmd.setUser(usr.getText());
 	  cmd.setPassword(pass.getText());
+	  command = cmd;
+	}
+	;
+  
+authenticate	{Token type;}:	AUTHENTICATE SPACE type=astring
+	{
+	  AuthenticateCommand cmd = new AuthenticateCommand();
+	  cmd.setType(type.getText());
 	  command = cmd;
 	}
 	;

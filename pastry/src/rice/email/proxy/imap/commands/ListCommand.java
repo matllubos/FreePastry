@@ -30,18 +30,18 @@ public class ListCommand extends AbstractImapCommand {
   String reference;
 
   public void execute() {
-    if ("".equals(_folder)) {
-      untaggedSimpleResponse("(\\Noselect) NIL \"\"");
+    if ("".equals(getFolder())) {
+      untaggedSimpleResponse("(\\Noselect) \"" + getState().getMailbox().getHierarchyDelimiter() + "\" \"\" ");
       taggedSimpleSuccess();
 
       return;
     }
 
     try {
-      MailFolder[] folders = getState().getMailbox().listFolders(_folder);
+      MailFolder[] folders = getState().getMailbox().listFolders(getReference() + getFolder());
 
       for (int i = 0; i < folders.length; i++) {
-        untaggedSimpleResponse("(\\Noinferiors) NIL \"" + folders[i].getFullName() + "\"");
+        untaggedSimpleResponse("() \"" + getState().getMailbox().getHierarchyDelimiter() + "\" \"" + folders[i].getFullName() + "\"");
       }
 
       taggedSimpleSuccess();
@@ -51,7 +51,6 @@ public class ListCommand extends AbstractImapCommand {
   }
 
   public String getFolder() {
-
     return _folder;
   }
 
@@ -60,7 +59,6 @@ public class ListCommand extends AbstractImapCommand {
   }
 
   public String getReference() {
-
     return reference;
   }
 

@@ -125,7 +125,7 @@ public class MockMailFolder
         }
     }
 
-    public void put(MovingMessage msg, List flags, String date)
+    public void put(MovingMessage msg, List flags, long date)
       throws MailboxException
     {
       try
@@ -136,5 +136,33 @@ public class MockMailFolder
     {
         throw new MailboxException(e);
     }
+    }
+    
+    public void copy(MovingMessage[] messages, List[] flags, long[] dates) throws MailboxException {
+      throw new MailboxException("COPY NOT IMPLEMENTED!");
+    }
+    
+    public void purge(StoredMessage[] messages) throws MailboxException {
+      throw new MailboxException("PURGE NOT IMPLEMENTED!");
+    }
+    
+    public void update(StoredMessage[] messages) throws MailboxException {
+      throw new MailboxException("UPDATE NOT IMPLEMENTED!");
+    }    
+    
+    public MailFolder createChild(String name) throws MailboxException {
+      throw new MailboxException("FOLDERS NOT IMPLEMENTED!");
+    }
+    
+    public MailFolder getChild(String name) throws MailboxException {
+      throw new MailboxException("FOLDERS NOT IMPLEMENTED!");
+    }
+    
+    public MailFolder[] getChildren() throws MailboxException {
+      throw new MailboxException("FOLDERS NOT IMPLEMENTED!");
+    }
+    
+    public void delete() throws MailboxException {
+      throw new MailboxException("DELTE NOT IMPLEMENTED!");
     }
 }

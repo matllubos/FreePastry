@@ -3,31 +3,24 @@ package rice.post.proxy;
 import rice.*;
 import rice.Continuation.*;
 
-import rice.p2p.commonapi.IdFactory;
-
-import rice.pastry.client.*;
-import rice.pastry.commonapi.*;
-import rice.pastry.leafset.*;
-import rice.pastry.security.*;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
 import rice.pastry.*;
-import rice.pastry.direct.*;
 import rice.pastry.dist.*;
+import rice.pastry.commonapi.*;
 import rice.pastry.standard.*;
 
-import rice.scribe.*;
-import rice.scribe.messaging.*;
-
+import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
+import rice.p2p.multiring.*;
 
 import rice.persistence.*;
 
 import rice.post.*;
+import rice.post.delivery.*;
 import rice.post.security.*;
 import rice.post.security.ca.*;
 
 import rice.serialization.*;
+import rice.proxy.*;
 
 import rice.email.*;
 import rice.email.proxy.smtp.*;
@@ -58,32 +51,53 @@ public class PostProxy {
   /**
    * The default host to boot off of.
    */
-  static String BOOTSTRAP_HOST = "localhost";
+  static String[] BOOTSTRAP_HOSTS = new String[] {"sys01.cs.rice.edu", "sys02.cs.rice.edu", "sys03.cs.rice.edu",
+    "sys04.cs.rice.edu", "sys05.cs.rice.edu", "sys06.cs.rice.edu", "sys07.cs.rice.edu", "sys08.cs.rice.edu", 
+    "thor01.cs.rice.edu", "thor02.cs.rice.edu", "thor03.cs.rice.edu", "thor04.cs.rice.edu", "thor05.cs.rice.edu", 
+    "thor06.cs.rice.edu", "thor07.cs.rice.edu", "thor08.cs.rice.edu", "thor09.cs.rice.edu", "thor10.cs.rice.edu", 
+    "thor11.cs.rice.edu",  "thor12.cs.rice.edu", "thor13.cs.rice.edu", "thor14.cs.rice.edu", "thor15.cs.rice.edu", 
+    "thor16.cs.rice.edu"};
 
   /**
    * The default port on the remote host to boot off of
    */
-  static int BOOTSTRAP_PORT = PORT;
-
+  static int[] BOOTSTRAP_PORTS = new int[] {PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT,
+    PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT, PORT};
+  
+  /**
+   * The username for the proxy
+   */
+  static String PROXY_USERNAME;
+  
+  /**
+   * The password for the proxy
+   */
+  static String PROXY_PASSWORD;
+  
+  /**
+   * The address which we are using as a proxy
+   */
+  static String PROXY_HOST;
+  
+  /**
+   * The port we are using to proxy
+   */
+  static int PROXY_PORT;
+  
   /**
    * The procotol to use when creating nodes
    */
-  static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
+  static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_SOCKET;
 
   /**
    * The default size of the cache to use (in bytes)
    */
-  static int CACHE_SIZE = 1000000;
+  static int CACHE_SIZE = 50000000;
 
   /**
    * The default size of the disk storage to use (in bytes)
    */
-  static int DISK_SIZE = 100000000;
-
-  /**
-   * The IdFactory to use (for protocol independence)
-   */
-  static IdFactory FACTORY = new PastryIdFactory();
+  static int DISK_SIZE = 2000000000;
 
   /**
    * The default instance name to use for the system
@@ -94,6 +108,16 @@ public class PostProxy {
    * The default replication factor for PAST
    */
   static int REPLICATION_FACTOR = 3;
+  
+  /**
+    * Whether to allow insert from POST log
+   */
+  public static boolean ALLOW_LOG_INSERT = false;
+  
+  /**
+   * Whether or not to redirect output to 'nohup.out'
+   */
+  public static boolean REDIRECT_OUTPUT = true;
 
   
   // ----- DISPLAY FIELDS -----
@@ -104,21 +128,36 @@ public class PostProxy {
 
 
   // ----- VARIABLE FIELDS -----
-
+  
   /**
-   * The credentials to use for Pastry
+   * The ring Id
    */
-  protected Credentials _credentials = new PermissiveCredentials();
-
+  protected rice.p2p.commonapi.Id ringId;
+  
   /**
-   * The local pastry node
+   * The IdFactory to use (for protocol independence)
    */
-  protected PastryNode pastry;
+  protected IdFactory FACTORY;
+  
+  /**
+   * The node the services should use
+   */
+  protected Node node;
 
   /**
    * The local Past service
    */
-  protected Past past;
+  protected PastImpl past;
+  
+  /**
+    * The local Past service for delivery requests
+   */
+  protected DeliveryPastImpl pendingPast;
+  
+  /**
+    * The local Past service
+   */
+  protected PastImpl deliveredPast;
 
   /**
    * The local Post service
@@ -129,6 +168,16 @@ public class PostProxy {
    * The local storage manager
    */
   protected StorageManager storage;
+  
+  /**
+   * The local storage for pending deliveries
+   */
+  protected StorageManager pendingStorage;
+  
+  /**
+   * The local storage for pending deliveries
+   */
+  protected StorageManager deliveredStorage;
 
   /**
    * The name of the local user
@@ -159,38 +208,74 @@ public class PostProxy {
    * The well-known public key of the CA
    */
   protected PublicKey caPublic;
+  
+  protected RemoteProxy remoteProxy;
 
   public PostProxy(String[] args) {
     parseArgs(args);
   }
 
-  protected void start() {
-    try {
-      sectionStart("Creating and Initializing Services");
-      stepStart("Retrieving CA public key");
-      FileInputStream fis = new FileInputStream("ca.publickey");
-      ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
-
-      caPublic = (PublicKey) ois.readObject();
-      ois.close();
+  protected void start() throws Exception {
+    if ((ringId == null) && (name == null)) {
+      System.out.println("ERROR: Without a user, you must specify the ring via the -ring option");
+      System.exit(-1);
+    }
+    
+    if (PROXY_HOST != null) {
+      sectionStart("Creating Remote Proxy");
+      
+      if (PROXY_USERNAME == null)
+        PROXY_USERNAME = System.getProperty("user.name");
+      
+      if (PROXY_PASSWORD == null)
+        PROXY_PASSWORD = CAKeyGenerator.fetchPassword(PROXY_USERNAME + "@" + PROXY_HOST + "'s SSH Password");
+      
+      stepStart("Launching Remote Proxy to " + PROXY_HOST);
+      remoteProxy = new RemoteProxy(PROXY_HOST, PROXY_USERNAME, PROXY_PASSWORD, PORT, PROXY_PORT);
+      remoteProxy.run();
       stepDone(SUCCESS);
-
+      
+      sectionDone();
+    }
+    
+    sectionStart("Creating and Initializing Services");
+    
+    if (REDIRECT_OUTPUT) {
+      stepStart("Redirecting Standard Output/Error");
+      System.setOut(new PrintStream(new FileOutputStream("nohup.out", true)));
+      System.setErr(System.out);
+      stepDone(SUCCESS);
+    }
+    
+    stepStart("Retrieving CA public key");
+    InputStream fis = ClassLoader.getSystemResource("ca.publickey").openStream();
+    ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
+    
+    caPublic = (PublicKey) ois.readObject();
+    ois.close();
+    stepDone(SUCCESS);
+    
+    if (name != null) {
       stepStart("Retrieving " + name + "'s certificate");
       fis = new FileInputStream(name + ".certificate");
       ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
-
+      
       certificate = (PostCertificate) ois.readObject();
+      
+      if (ringId == null) 
+        ringId = ((RingId) certificate.getAddress().getAddress()).getRingId();
+      
       ois.close();
       stepDone(SUCCESS);
-
+      
       stepStart("Verifying " + name + "'s certificate");
       CASecurityModule module = new CASecurityModule(caPublic);
-
+      
       final Object[] result = new Object[1];
       final Exception[] exception = new Exception[1];
-
+      
       final Object wait = "wait";
-
+      
       Continuation cont = new Continuation() {
         public void receiveResult(Object o) {
           synchronized (wait) {
@@ -198,7 +283,7 @@ public class PostProxy {
             wait.notifyAll();
           }
         }
-
+        
         public void receiveException(Exception e) {
           synchronized (wait) {
             exception[0] = e;
@@ -206,47 +291,47 @@ public class PostProxy {
           }
         }
       };
-
+      
       module.verify(certificate, cont);
-
+      
       synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
-
+      
       if (exception[0] != null)
         throw exception[0];
-        
+      
       
       if (! ((Boolean) result[0]).booleanValue()) {
         System.out.println("Certificate could not be verified.");
         System.exit(0);
       }
       stepDone(SUCCESS);
-
+      
       address = (PostUserAddress) certificate.getAddress();
-
+      
       fis = new FileInputStream(name + ".keypair.enc");
       ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
-
+      
       stepStart("Reading in encrypted keypair");
       byte[] cipher = (byte[]) ois.readObject();
       ois.close();
       stepDone(SUCCESS);
-
+      
       if (pass == null) {
         pass = CAKeyGenerator.fetchPassword(name + "'s password");
       }
-        
+      
       byte[] key = null;
       byte[] data = null;
-
+      
       try {
         stepStart("Decrypting " + name + "'s keypair");
         key = SecurityUtils.hash(pass.getBytes());
         data = SecurityUtils.decryptSymmetric(cipher, key);
       } catch (SecurityException e) {
         stepDone(FAILURE, "Incorrect password.  Please try again.");
-
+        
         pass = CAKeyGenerator.fetchPassword(name + "'s password");
-
+        
         try {
           stepStart("Decrypting " + name + "'s keypair");
           key = SecurityUtils.hash(pass.getBytes());
@@ -256,57 +341,78 @@ public class PostProxy {
           System.exit(-1);
         }
       }
-
+      
       pair = (KeyPair) SecurityUtils.deserialize(data);
       stepDone(SUCCESS);
-
+      
       stepStart("Verifying " + name + "'s keypair");
       if (! pair.getPublic().equals(certificate.getKey())) {
         System.out.println("KeyPair could not be verified.");
         System.exit(0);
       }
       stepDone(SUCCESS);
-
-      stepStart("Starting StorageManager");
-      storage = new StorageManager(FACTORY,
-                                   new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + ":" + PORT, ".", DISK_SIZE),
-                                   new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE));
-      stepDone(SUCCESS);
-      
-      stepStart("Creating Pastry node");
-      DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new IPNodeIdFactory(PORT),
-                                                                       PROTOCOL,
-                                                                       PORT);
-      InetSocketAddress bootAddress = new InetSocketAddress(BOOTSTRAP_HOST, BOOTSTRAP_PORT);
-
-      pastry = factory.newNode(factory.getNodeHandle(bootAddress));
-      Thread.sleep(3000);
-      stepDone(SUCCESS);
-
-      stepStart("Starting PAST service");
-      past = new PastImpl(pastry, storage, REPLICATION_FACTOR, INSTANCE_NAME);
-      stepDone(SUCCESS);
-
-      stepStart("Starting POST service");
-      post = new PostImpl(pastry, past, address, pair, certificate, caPublic, INSTANCE_NAME);
-      stepDone(SUCCESS);
-
-      sectionDone();
-
+    }
+    
+    stepStart("Creating Id Factory");
+    FACTORY = new MultiringIdFactory(ringId, new PastryIdFactory());
+    stepDone(SUCCESS);
+    
+    stepStart("Starting StorageManager");
+    storage = new StorageManager(FACTORY,
+                                 new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT, ".", DISK_SIZE),
+                                 new LRUCache(new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-cache", ".", DISK_SIZE), CACHE_SIZE));
+    pendingStorage = new StorageManager(FACTORY,
+                                        new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-pending", ".", DISK_SIZE),
+                                        new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE));
+    deliveredStorage = new StorageManager(FACTORY,
+                                          new PersistentStorage(FACTORY, InetAddress.getLocalHost().getHostName() + "-" + PORT + "-delivered", ".", DISK_SIZE),
+                                          new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE));
+    stepDone(SUCCESS);
+    
+    stepStart("Creating Pastry node");
+    DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(PORT),
+                                                                     PROTOCOL,
+                                                                     PORT);
+    InetSocketAddress[] bootAddresses = new InetSocketAddress[BOOTSTRAP_HOSTS.length];
+    
+    for (int i=0; i<BOOTSTRAP_HOSTS.length; i++) 
+      bootAddresses[i] = new InetSocketAddress(BOOTSTRAP_HOSTS[i], BOOTSTRAP_PORTS[i]);
+    
+    InetSocketAddress proxyAddress = null;
+    
+    if (PROXY_HOST != null)
+      proxyAddress = new InetSocketAddress(PROXY_HOST, PROXY_PORT);
+    
+    PastryNode pastry = factory.newNode(factory.getNodeHandle(bootAddresses), proxyAddress);
+    Thread.sleep(3000);
+    stepDone(SUCCESS);
+    
+    stepStart("Creating Multiring node in ring " + ringId);
+    node = new MultiringNode(ringId, pastry);
+    Thread.sleep(3000);
+    stepDone(SUCCESS); 
+    
+    stepStart("Starting PAST service");
+    past = new PastImpl(node, storage, REPLICATION_FACTOR, INSTANCE_NAME);
+    deliveredPast = new PastImpl(node, deliveredStorage, REPLICATION_FACTOR, INSTANCE_NAME + "-delivered");
+    pendingPast = new DeliveryPastImpl(node, pendingStorage, REPLICATION_FACTOR, INSTANCE_NAME + "-pending", deliveredPast);
+    stepDone(SUCCESS);
+    
+    stepStart("Starting POST service");
+    post = new PostImpl(node, past, pendingPast, deliveredPast, address, pair, certificate, caPublic, INSTANCE_NAME, ALLOW_LOG_INSERT);
+    stepDone(SUCCESS);
+    
+    if (name != null) {
       stepStart("Fetching POST log at " + address.getAddress());
       ExternalContinuation c = new ExternalContinuation();
       post.getPostLog(c);
       c.sleep();
-
+      
       if (c.exceptionThrown()) { throw c.getException(); }
       stepDone(SUCCESS);
-
-      sectionDone();
-
-    } catch (Exception e) {
-      System.out.println("Exception occured during construction " + e + " " + e.getMessage());
-      e.printStackTrace();
     }
+    
+    sectionDone();
   }
 
   /**
@@ -317,36 +423,114 @@ public class PostProxy {
    * @return The name of the user
    */
   protected void parseArgs(String[] args) {
-    if (args.length < 1) {
-      System.out.println("Usage: java rice.post.proxy.PostProxy userid [-password password] [-bootstrap hostname[:port]] [-port port] [-help]");
+    String[] files = (new File(".")).list(new FilenameFilter() {
+      public boolean accept(File dir, String name) {
+        return name.endsWith(".certificate");
+      }
+    });
+    
+    if (files.length > 1) {
+      System.out.println("ERROR: Expected at most one certificate, found " + files.length);
       System.exit(0);
+    } else if (files.length == 0) {
+      System.out.println("NOTE: Did not find certificate, running in passive mode...");
+    } else {
+      name = files[0].substring(0, files[0].indexOf("."));
     }
-
-    name = args[0];
     
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-bootstrap") && i+1 < args.length) {
-        String str = args[i+1];
-        int index = str.indexOf(':');
-        if (index == -1) {
-          BOOTSTRAP_HOST = str;
-          BOOTSTRAP_PORT = PORT;
-        } else {
-          BOOTSTRAP_HOST = str.substring(0, index);
-          int tmpport = Integer.parseInt(str.substring(index + 1));
-          if (tmpport > 0) {
-            BOOTSTRAP_PORT = tmpport;
-            PORT = tmpport;
+        String[] addresses = args[i+1].split(";");
+        String[] hosts = new String[addresses.length];
+        int[] ports = new int[addresses.length];
+        
+        for (int j=0; j<addresses.length; j++) {
+          String str = addresses[j];
+          int index = str.indexOf(':');
+          if (index == -1) {
+            hosts[j] = str;
+            ports[j] = PORT;
+          } else {
+            hosts[j] = str.substring(0, index);
+            int tmpport = Integer.parseInt(str.substring(index + 1));
+            if (tmpport > 0) 
+              ports[j] = tmpport;
+            else
+              ports[j] = PORT;
           }
         }
-
+        
+        BOOTSTRAP_HOSTS = hosts;
+        BOOTSTRAP_PORTS = ports;
+        
         break;
       }
     }
-
+    
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-proxy") && i+1 < args.length) {
+        String str = args[i+1];
+        
+        if (str.indexOf('@') >= 0) {
+          String creds = str.substring(0, str.indexOf('@'));
+          str = str.substring(str.indexOf('@')+1);
+          
+          if (creds.indexOf(':') >= 0) {
+            PROXY_PASSWORD = creds.substring(creds.indexOf(':')+1);
+            creds = creds.substring(0, creds.indexOf(':'));
+          } 
+          
+          PROXY_USERNAME = creds;
+        }
+        
+        int index = str.indexOf(':');
+        if (index == -1) {
+          PROXY_HOST = str;
+          PROXY_PORT = PORT;
+        } else {
+          PROXY_HOST = str.substring(0, index);
+          int tmpport = Integer.parseInt(str.substring(index + 1));
+          if (tmpport > 0) 
+            PROXY_PORT = tmpport;
+          else
+            PROXY_PORT = PORT;
+        }
+                
+        break;
+      }
+    }
+    
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-password") && i+1 < args.length) {
         pass = args[i+1];
+        break;
+      }
+    }
+    
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-insert")) {
+        ALLOW_LOG_INSERT = true;
+        break;
+      }
+    }
+    
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-noredirect")) {
+        REDIRECT_OUTPUT = false;
+        break;
+      }
+    }
+    
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-ring") && i+1 < args.length) {
+        IdFactory realFactory = new PastryIdFactory();
+        rice.p2p.commonapi.Id ringId = realFactory.buildId(args[i+1]);
+        byte[] ringData = ringId.toByteArray();
+        
+        for (int j=0; j<ringData.length - MultiringNodeCollection.BASE; j++) 
+          ringData[j] = 0;
+        
+        this.ringId = realFactory.buildId(ringData);
         break;
       }
     }
@@ -386,7 +570,12 @@ public class PostProxy {
 
   public static void main(String[] args) {
     PostProxy proxy = new PostProxy(args);
-    proxy.start();
+    try {
+      proxy.start();
+    } catch (Exception e) {
+      System.err.println("ERROR: Found Exception while start proxy - exiting - " + e);
+      System.exit(-1);
+    }
   }
 
   protected void sectionStart(String name) {

@@ -11,6 +11,7 @@ import java.io.*;
  * a new email is available for the recipient of this email.
  */
 public class EmailNotificationMessage extends NotificationMessage {
+  
   private Email _email;
     
   /**
@@ -24,8 +25,6 @@ public class EmailNotificationMessage extends NotificationMessage {
     super(service.getAddress(), email.getSender(), recipient);
     _email = email;
   }
-
-  //public NotificationMessage(PostClientAddress clientAddress, PostUserAddress sender, PostEntityAddress destination) {
   
   /**
    * Returns the email which this notification is for.

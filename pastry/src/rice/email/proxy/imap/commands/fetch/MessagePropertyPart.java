@@ -9,9 +9,8 @@ import rice.email.proxy.mailbox.*;
 import rice.email.proxy.util.*;
 
 import java.io.*;
-
-import java.util.Arrays;
-import java.util.List;
+import java.text.*;
+import java.util.*;
 
 import javax.mail.*;
 import javax.mail.internet.*;
@@ -65,7 +64,7 @@ public class MessagePropertyPart extends FetchPart {
       } else if ("FLAGS".equals(part)) {
         return fetchFlags(msg);
       } else if ("INTERNALDATE".equals(part)) {
-        return fetchInternaldate(message);
+        return fetchInternaldate(msg);
       } else if ("RFC822.SIZE".equals(part)) {
         return fetchSize(message);
       } else if ("UID".equals(part)) {
@@ -113,7 +112,7 @@ public class MessagePropertyPart extends FetchPart {
           type += " NIL NIL";
         }
 
-        result .append(" " + type);
+        result.append(" " + type);
       } else { 
         result.append(" \"MIXED\"");
       }
@@ -137,6 +136,9 @@ public class MessagePropertyPart extends FetchPart {
       if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
       EmailContentPart content = (EmailContentPart) c.getResult();
+      
+      if (content instanceof EmailMultiPart) 
+        return fetchBodyStructure((EmailMultiPart) content, bodystructure);
       
       StringBuffer result = new StringBuffer();
 
@@ -198,180 +200,6 @@ public class MessagePropertyPart extends FetchPart {
         return fetchBodyStructure((EmailHeadersPart) part, bodystructure);
       }
     }
-    /*
-    String fetchBodyStructure(EmailMessagePart part, boolean bodystructure) throws MailboxException {
-      try {
-        ExternalContinuation c = new ExternalContinuation();
-        part.getHeaders(c);
-        c.sleep();
-
-        if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
-        InternetHeaders headers = new InternetHeaders(new ByteArrayInputStream((EmailData) c.getResult()).getData());
-
-        c = new ExternalContinuation();
-        part.getContent(c);
-        c.sleep();
-
-        if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-        
-        EmailContentPart data = (EmailData) c.getResult();
-        String result = "";
-
-        if (data instanceof EmailMultiPart) {
-          result = parseMimeMultipart((EmailMultiPart) data, bodystructure);
-        } else {
-          String[] type = headers.getHeader("Content-Type");
-          String contentType = "\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\")";
-          
-          if ((type != null) && (type.length > 0)) {
-            contentType = handleContentType(type[0]);
-          }
-
-          String encoding = getHeader(headers, "Content-Transfer-Encoding").toUpperCase();
-
-          if (encoding.equals("NIL"))
-            encoding = "\"7BIT\"";
-            
-          result = "(" + contentType + " NIL NIL " + encoding + " " + part.getSize() + " 0";
-
-          if (bodystructure) {
-            result += " " + getHeader(headers, "Content-MD5");
-
-            String disposition = getHeader(headers, "Content-Disposition");
-
-            if (! disposition.equals("NIL"))
-              result += " (" + handleContentType(disposition, false, false) + ") ";
-            else
-              result += " NIL ";
-
-            result += getHeader(headers, "Content-Language");
-          }
-
-          result += ")";
-        }
-
-        return result;
-      } catch (MessagingException e) {
-        throw new MailboxException(e);
-      } catch (IOException ioe) {
-        throw new MailboxException(ioe);
-      }
-    }
-
-    private String parseMimeMultipart(EmailMultiPart part, boolean bodystructure) throws MessagingException, MailboxException {
-      try {
-        ExternalContinuation c = new ExternalContinuation();
-        part.getContent(c);
-        c.sleep();
-
-        if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
-        EmailContentPart[] parts = (EmailContentPart[]) c.getResult();
-        
-        String result = "(";
-
-        for (int i=0; i<parts.length; i++) {
-          EmailContentPart thisPart = (EmailContentPart) parts[i];
-
-          if (thisPart instanceof EmailMultiPart) {
-            result += parseMimeMultipart((EmailMultiPart) thisPart, bodystructure);
-          } else {
-            result += parseMimeBodyPart(thisPart, bodystructure);
-          }
-        }
-
-        if (mime.getContentType().toLowerCase().indexOf("multipart/") >= 0) {
-          String type = handleContentType(mime.getContentType());
-
-          type = type.substring(type.indexOf(" ") + 1);
-
-          if (! bodystructure) {
-            type = type.substring(0, type.indexOf(" ("));
-          } else {
-            type += " NIL NIL";
-          }
-            
-          result += " " + type;
-        } else {
-          result += " \"MIXED\"";
-        }
-        
-        return result + ")";
-      } catch (IOException ioe) {
-        throw new MailboxException(ioe);
-      }
-    }
-
-    private String parseMimeBodyPart(EmailContentPart mime, boolean bodystructure) throws MessagingException {
-      try {
-        String result = "(";
-
-        result += handleContentType(mime.getContentType()) + " ";
-
-        String encoding = ("\"" + mime.getEncoding() + "\"").toUpperCase();
-
-        if (encoding.equals("\"NULL\"") || encoding.equals("\"\"")) {
-          encoding = "\"7BIT\"";
-        }
-
-        String id = "\"" + mime.getContentID() + "\"";
-
-        if (id.equals("\"null\"")) {
-          id = "NIL";
-        }
-
-        String description = "\"" + mime.getDescription() + "\"";
-
-        if (description.equals("\"null\"")) {
-          description = "NIL";
-        }
-
-        StringWriter writer = new StringWriter();
-        StreamUtils.copy(new InputStreamReader(mime.getRawInputStream()), writer);
-        
-        result +=  id + " " + description + " " + encoding + " " + writer.toString().length();
-
-        if (handleContentType(mime.getContentType().toUpperCase()).indexOf("\"TEXT\" \"") >= 0) {
-          result += " " + countLines(writer.toString());
-        }
-
-        if (handleContentType(mime.getContentType().toUpperCase()).startsWith("\"MESSAGE\" \"RFC822\"")) {
-          javax.mail.internet.MimeMessage message = (javax.mail.internet.MimeMessage) mime.getContent();
-          result += " " + fetchEnvelope(message) + " " + fetchBodystructure(message, bodystructure) + " " +
-            countLines(writer.toString());
-        }
-
-        if (bodystructure) {
-          String md5 = mime.getContentMD5();
-          String disposition = mime.getHeader("Content-Disposition", ";");
-          String language[] = mime.getContentLanguage();
-
-          if (md5 == null)
-            result += " NIL";
-          else
-            result += " \"" + md5 + "\"";
-
-          if (disposition != null)
-            result += " (" + handleContentType(disposition, false, false) + ")";
-          else
-            result += " NIL";
-
-          if (language == null)
-            result += " NIL";
-          else
-            result += " \"" + language[0] + "\"";
-        }
-
-        result += ")";
-
-        return result;
-      } catch (IOException e) {
-        throw new MessagingException();
-      } catch (MailboxException e) {
-        throw new MessagingException();
-      }
-    } */
 
     private String handleContentType(String type) {
       return handleContentType(type, true);
@@ -474,14 +302,23 @@ public class MessagePropertyPart extends FetchPart {
       return msg.getFlagList().toFlagString();
     }
 
-    String fetchInternaldate(EmailMessagePart message) throws MailboxException {
+    String fetchInternaldate(StoredMessage msg) throws MailboxException {
+      if (msg.getInternalDate() != 0)
+        return "\"" + rice.email.proxy.mail.MimeMessage.dateWriter.format(new Date(msg.getInternalDate())) + "\"";
+      
       ExternalContinuation c = new ExternalContinuation();
-      message.getHeaders(c);
+      msg.getMessage().getContent(c);
       c.sleep();
-
+      
       if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+            
+      ExternalContinuation d = new ExternalContinuation();
+      ((EmailMessagePart) c.getResult()).getHeaders(d);
+      d.sleep();
 
-      InternetHeaders headers = getHeaders((EmailData) c.getResult());
+      if (d.exceptionThrown()) { throw new MailboxException(d.getException()); }
+
+      InternetHeaders headers = getHeaders((EmailData) d.getResult());
 
       return getHeader(headers, "Date");
     }
@@ -580,14 +417,37 @@ public class MessagePropertyPart extends FetchPart {
 
         StringBuffer result = new StringBuffer();
 
-        //from, sender, reply-to, to, cc, bcc, in-reply-to, and message-id.
-        InternetAddress[] from = InternetAddress.parse(collapse(headers.getHeader("From")));
-        InternetAddress[] sender = InternetAddress.parse(collapse(headers.getHeader("Sender")));
-        InternetAddress[] replyTo = InternetAddress.parse(collapse(headers.getHeader("Reply-To")));
-        InternetAddress[] to = InternetAddress.parse(collapse(headers.getHeader("To")));
-        InternetAddress[] cc = InternetAddress.parse(collapse(headers.getHeader("Cc")));
-        InternetAddress[] bcc = InternetAddress.parse(collapse(headers.getHeader("Bcc")));
+		InternetAddress[] from = null;
+		InternetAddress[] sender = null;
+        InternetAddress[] replyTo = null;
+		InternetAddress[] to = null;
+        InternetAddress[] cc = null;
+        InternetAddress[] bcc = null;
 
+        InternetAddress[] fallback = new InternetAddress[1];
+		fallback[0] = new InternetAddress("malformed@cs.rice.edu","MalformedAddress");
+
+        //from, sender, reply-to, to, cc, bcc, in-reply-to, and message-id.
+		try{
+			from = InternetAddress.parse(collapse(headers.getHeader("From")));
+		} catch (AddressException ae) { from = fallback;}
+		try{
+			sender = InternetAddress.parse(collapse(headers.getHeader("Sender")));
+		} catch (AddressException ae) { sender = fallback;}
+		try{
+		    replyTo = InternetAddress.parse(collapse(headers.getHeader("Reply-To")));
+		} catch (AddressException ae) { replyTo = fallback; }
+		try{
+		    to = InternetAddress.parse(collapse(headers.getHeader("To")));
+		} catch (AddressException ae) { to = fallback;}
+		try{
+		    cc = InternetAddress.parse(collapse(headers.getHeader("Cc")));
+		} catch (AddressException ae) { cc = fallback; }
+		try{
+		     bcc = InternetAddress.parse(collapse(headers.getHeader("Bcc")));
+		} catch (AddressException ae) { bcc = fallback;}
+		
+       
         if (addresses(sender).equals("NIL"))
           sender = from;
 
@@ -606,7 +466,7 @@ public class MessagePropertyPart extends FetchPart {
         result.append(getHeader(headers, "Message-ID") + ")");
 
         return result.toString();
-      } catch (AddressException ae) {
+      } catch (Exception ae) {
         throw new MailboxException(ae);
       }
     }

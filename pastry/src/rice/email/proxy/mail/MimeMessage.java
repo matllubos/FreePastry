@@ -20,8 +20,8 @@ public class MimeMessage {
 
   javax.mail.internet.MimeMessage _message;
 
-  static final SimpleDateFormat dateReader = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z");
-  static final SimpleDateFormat dateWriter = new SimpleDateFormat("d-MMM-yyyy HH:mm:ss Z");
+  public static final SimpleDateFormat dateReader = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z");
+  public static final SimpleDateFormat dateWriter = new SimpleDateFormat("d-MMM-yyyy HH:mm:ss Z");
 
   public MimeMessage(Resource file) throws MailException {
     _resource = file;

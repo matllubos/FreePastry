@@ -18,6 +18,8 @@ public final class SignedPostMessage implements Serializable {
 
   // the signature for this message
   private byte[] signature;
+  
+  static final long serialVersionUID = 7465703610144475310L;
 
   /**
    * Constructs a SignedPostMessage given the message and
@@ -60,7 +62,7 @@ public final class SignedPostMessage implements Serializable {
   }
 
   public String toString() {
-    return "[SignedPM " + message + "]";
+    return "[SPM " + message + "]";
   }
 
 }

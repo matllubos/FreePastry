@@ -7,6 +7,9 @@ import java.security.*;
 
 import java.util.*;
 
+import rice.p2p.commonapi.*;
+import rice.p2p.multiring.*;
+
 import rice.post.*;
 import rice.post.security.*;
 
@@ -59,13 +62,28 @@ public class CACertificateGenerator {
       System.out.print("Please enter the new username (@dosa.cs.rice.edu): ");
       BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
       String userid = input.readLine();
+      
+      System.out.print("Please enter the ring name [Rice]: ");
+      String ring = input.readLine();
+      
+      if (ring.equals(""))
+        ring = "Rice";
 
       System.out.print("    Generating new key pair\t\t\t\t\t");
       KeyPair pair = SecurityUtils.generateKeyAsymmetric();
       System.out.println("[ DONE ]");
 
-      System.out.print("    Generating the certificate\t\t\t\t\t");
-      PostUserAddress address = new PostUserAddress(new PastryIdFactory(), userid + "@dosa.cs.rice.edu");
+      IdFactory realFactory = new PastryIdFactory();
+      Id ringId = realFactory.buildId(ring);
+      byte[] ringData = ringId.toByteArray();
+      
+      for (int i=0; i<ringData.length - MultiringNodeCollection.BASE; i++) 
+        ringData[i] = 0;
+      
+      ringId = realFactory.buildId(ringData);
+      
+      PostUserAddress address = new PostUserAddress(new MultiringIdFactory(ringId, realFactory), userid + "@dosa.cs.rice.edu");
+      System.out.print("    Generating the certificate " + address.getAddress() + "\t");
       PostCertificate certificate = CASecurityModule.generate(address, pair.getPublic(), caPair.getPrivate());
       System.out.println("[ DONE ]");
 

@@ -1,7 +1,6 @@
 PACKAGE = rice.post.messaging
 
 SOURCE  = \
-	PostAddress.java \
 	NotificationMessage.java \
 	EncryptedNotificationMessage.java \
 	GroupNotificationMessage.java \

@@ -8,4 +8,6 @@ public interface ImapServer {
   
     public int getPort();
   
+  public void start();
+  
 }

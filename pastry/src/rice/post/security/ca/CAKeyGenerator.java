@@ -1,5 +1,9 @@
 package rice.post.security.ca;
 
+import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
+
 import java.io.*;
 import java.net.*;
 import java.security.*;
@@ -61,11 +65,43 @@ public class CAKeyGenerator {
    * @return DESCRIBE THE RETURN VALUE
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  public static String fetchPassword(String prompt) throws IOException {
-    System.out.print(prompt + ": ");
+  public static String fetchPassword(final String prompt) throws IOException {
+ /*   System.out.print(prompt + ": ");
 //    return password.getPassword();
     BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-    return reader.readLine();
+    return reader.readLine(); */
+    JFrame frame = new JFrame("Password Input");
+    JPanel panel = new JPanel(new GridLayout(2, 2));
+    JPasswordField field = new JPasswordField();
+    JLabel label = new JLabel(prompt, SwingConstants.LEFT);
+    JButton button = new JButton("Enter");
+    panel.add(label);
+    panel.add(field);
+    panel.add(new JLabel("", SwingConstants.LEFT));
+    panel.add(button);
+    frame.getContentPane().add(panel);
+    frame.setSize(400,75);
+    frame.setResizable(false);
+    frame.setVisible(true);
+
+    button.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        synchronized (prompt) {
+          prompt.notify();
+        }
+      }
+    });
+    
+    synchronized (prompt) {
+      if (field.getPassword().length == 0) 
+        try {
+          prompt.wait();
+        } catch (Exception e) {
+        }
+    }
+    
+    frame.setVisible(false);
+    return new String(field.getPassword());
   }
 
   /**

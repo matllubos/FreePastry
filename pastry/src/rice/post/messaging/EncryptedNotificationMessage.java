@@ -12,6 +12,8 @@ public class EncryptedNotificationMessage extends PostMessage {
   private byte[] key;
   
   private byte[] data;
+  
+  private PostEntityAddress destination;
 
   /**
     * Constructs a NotificationMessage for the given Email.
@@ -19,10 +21,20 @@ public class EncryptedNotificationMessage extends PostMessage {
    * @param key The encrypted key
    * @param data The encrypted NotificationMessage
    */
-  public EncryptedNotificationMessage(PostEntityAddress sender, byte[] key, byte[] data) {
+  public EncryptedNotificationMessage(PostEntityAddress sender, PostEntityAddress destination, byte[] key, byte[] data) {
     super(sender);
     this.data = data;
     this.key = key;
+    this.destination = destination;
+  }
+  
+  /**
+   * Returns the destination of this message.
+   *
+   * @return The destination
+   */
+  public final PostEntityAddress getDestination() {
+    return destination;
   }
 
   /**

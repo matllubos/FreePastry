@@ -19,10 +19,10 @@ import rice.post.storage.*;
 public class Folder {
   
   // maximum entry limit for our primitive snapshot policy
-  public static final int COMPRESS_LIMIT = 20;
-
-  // name of the folder
-  private String _name;
+  public static final int COMPRESS_LIMIT = 50;
+  
+  // the static name of the root folder
+  public static String ROOT_FOLDER_NAME = "Root";
 
   // the underlying log of the Folder
   private EmailLog _log;
@@ -39,16 +39,6 @@ public class Folder {
   // the keypair used to encrypt the log
   private KeyPair keyPair;
 
-   
-  /**
-   * Constructs an empty Folder.
-   * @param name The name of the folder.
-   */
-  public Folder(String name) {
-    _name = name;
-    _children = new Hashtable();
-  }
-
   /**
    * Constructs a Folder from a log and a storage service.
    *
@@ -56,12 +46,6 @@ public class Folder {
    * @param storage the storage service used to get log data from PAST.
    */
   public Folder(EmailLog log, Post post, KeyPair pair) {
-    if (log.getName() instanceof String) {
-      _name = (String) log.getName();
-    } else {
-      _name = "Root";
-    }
-
     this.keyPair = pair;
 
     _log = log;
@@ -71,6 +55,15 @@ public class Folder {
     
     _log.setKeyPair(keyPair);
     _log.setPost(_post);
+  }
+  
+  /**
+   * Returns whether or not this folder is the root of the email hierarchy
+   *
+   * @return Whether or not this folder is the root
+   */
+  public boolean isRoot() {
+    return getName().equals(ROOT_FOLDER_NAME);
   }
 
   /**
@@ -88,7 +81,51 @@ public class Folder {
    * @return The name of the folder
    */
   public String getName() {
-    return _name;
+    if (_log.getName() instanceof String) 
+      return (String) _log.getName();
+    else 
+      return ROOT_FOLDER_NAME;
+  }  
+  
+  /**
+   * Changes the name of this folder.  Should ONLY be used for
+   * single changes - does NOT change a hierarchy.
+   *
+   * @param name The new name to use
+   * @param command the work to perform after this call.
+   */
+  public void setName(String name, Continuation command) {
+    _log.setName(name, command); 
+  }
+  
+  /**
+   * Returns the list of subscriptions in the log
+   *
+   * @param command the work to perform after this call.
+   * @return The subscriptions
+   */
+  public void getSubscriptions(Continuation command) {
+    _log.getSubscriptions(command);
+  }
+  
+  /**
+   * Adds a subscriptions to the log
+   *
+   * @param command the work to perform after this call.
+   * @param sub The subscription to add
+   */
+  public void addSubscription(String sub, Continuation command) {
+    _log.addSubscription(sub, command);
+  }
+  
+  /**
+   * Adds a subscriptions to the log
+   *
+   * @param command the work to perform after this call.
+   * @param sub The subscription to add
+   */
+  public void removeSubscription(String sub, Continuation command) {
+    _log.removeSubscription(sub, command);
   }
 
   /**
@@ -145,6 +182,25 @@ public class Folder {
       }
     });
   }
+  
+  /**
+   * Updates a list of Emails (flags)
+   *
+   * @param email The emails to update.
+   * @param command the work to perform after this call.
+   */
+  public void updateMessages(StoredEmail[] emails, Continuation command) {
+    _log.incrementEntries();
+    _log.addLogEntry(new UpdateMailsLogEntry(emails), new StandardContinuation(command) {
+      public void receiveResult(final Object result) {
+        createSnapShot(new StandardContinuation(parent) {
+          public void receiveResult(Object o) {
+            parent.receiveResult(result);
+          }
+        });
+      }
+    });
+  }
 
   /**
    * Appends an email to this Folder, with default (no) flags set.
@@ -156,7 +212,16 @@ public class Folder {
    */
   public void addMessage(final Email email, final Continuation command) {
     _log.incrementRecent();
-    addMessage(email, new Flags(), command);
+    addMessage(email, new Flags(), System.currentTimeMillis(), new Continuation() {
+      public void receiveResult(Object o) {
+        command.receiveResult(o);
+      }
+      
+      public void receiveException(Exception e) {
+        _log.decrementRecent();
+        command.receiveException(e);
+      }
+    });
   }  
 
   /**
@@ -165,16 +230,18 @@ public class Folder {
    * Sets all flags to false for the new email in the folder
    *
    * @param email The email to insert.
+   * @param flags The flags to insert the email with
+   * @param internaldate The date to insert the email with
    * @param command the work to perform after this call
    */
-  public void addMessage(final Email email, final Flags flags, final Continuation command) {
+  public void addMessage(final Email email, final Flags flags, final long internaldate, final Continuation command) {
     _log.incrementExists();
     _log.incrementEntries();
     email.setStorage(_storage);
     email.storeData(new StandardContinuation(command) {
       public void receiveResult(Object o) {
-        StoredEmail storedEmail = new StoredEmail(email, _log.getNextUID(), flags);
-        _log.addLogEntry(new InsertMailLogEntry(storedEmail), new StandardContinuation(parent) {
+        StoredEmail storedEmail = new StoredEmail(email, _log.getNextUID(), flags, internaldate);
+        _log.addLogEntry(new InsertMailLogEntry(storedEmail), new Continuation() {
           public void receiveResult(final Object result) {
             createSnapShot(new StandardContinuation(parent) {
               public void receiveResult(Object o) {
@@ -182,7 +249,48 @@ public class Folder {
               }
             });
           }
+          
+          public void receiveException(Exception e) {
+            _log.decrementExists();
+            parent.receiveException(e);
+          }
         });
+      }
+    });
+  }  
+  
+  /**
+   * Appends an email to this Folder with the specified flags set.
+   * Creates a new StoredEmail instance with the given email.
+   * Sets all flags to false for the new email in the folder.
+   *
+   * NOTE: This method assumes that all of the emails have already stored 
+   * thier data.
+   *
+   * @param email The email to insert.
+   * @param command the work to perform after this call
+   */
+  public void addMessages(final Email[] emails, final Flags[] flags, final long[] internaldates, final Continuation command) {
+    _log.incrementExists(emails.length);
+    _log.incrementEntries();
+
+    StoredEmail[] storedEmails = new StoredEmail[emails.length];
+    
+    for (int i=0; i<storedEmails.length; i++) 
+      storedEmails[i] = new StoredEmail(emails[i], _log.getNextUID(), flags[i], internaldates[i]);
+    
+    _log.addLogEntry(new InsertMailsLogEntry(storedEmails), new Continuation() {
+      public void receiveResult(final Object result) {
+        createSnapShot(new StandardContinuation(command) {
+          public void receiveResult(Object o) {
+            command.receiveResult(result);
+          }
+        });
+      }
+      
+      public void receiveException(Exception e) {
+        _log.decrementExists(emails.length);
+        command.receiveException(e);
       }
     });
   }
@@ -221,9 +329,39 @@ public class Folder {
           }
         });
       }
+      
+      public void receiveException(Exception e) {
+        _log.incrementExists();
+        parent.receiveException(e);
+      }
     });
   }
-
+  
+  /**
+   * Deletes a list of messages from this Folder.
+   *
+   * @param emails The emails to delete.
+   * @param command the remaining work to carry out
+   */
+  public void removeMessages(final StoredEmail[] email, Continuation command) {
+    _log.decrementExists(email.length);
+    _log.incrementEntries();
+    _log.addLogEntry(new DeleteMailsLogEntry(email), new StandardContinuation(command) {
+      public void receiveResult(final Object result) {
+        createSnapShot(new StandardContinuation(parent) {
+          public void receiveResult(Object o) {
+            parent.receiveResult(result);
+          }
+        });
+      }
+      
+      public void receiveException(Exception e) {
+        _log.incrementExists(email.length);
+        parent.receiveException(e);
+      }
+    });
+  }  
+  
   /**
    * Creates a new child of the given name.  The current Folder
    * is the parent.
@@ -232,13 +370,40 @@ public class Folder {
    * @param command the work to perform after this call
    */
   public void createChildFolder(String name, Continuation command) {
+    Object[] children = _log.getChildLogNames();
+    Arrays.sort(children);
+    
+    if (Arrays.binarySearch(children, name) >= 0)
+      command.receiveException(new IllegalArgumentException("Folder " + name + " already exists."));
+    
     final EmailLog newLog = new EmailLog(name, _storage.getRandomNodeId(), _post, keyPair);
     _log.addChildLog(newLog, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         Folder result = new Folder(newLog, _post, keyPair);
-        _children.put(_name, result);
+        _children.put(result.getName(), result);
 
         parent.receiveResult(result);
+      }
+    });
+  }
+  
+  /**
+   * Adds an existing folder as a child folder of this folder
+   *
+   * @param folder The folder to add
+   * @param command The command to call once the add is done
+   */
+  public void addChildFolder(final Folder folder, Continuation command) {
+    Object[] children = _log.getChildLogNames();
+    Arrays.sort(children);
+    
+    if (Arrays.binarySearch(children, folder.getName()) >= 0)
+      command.receiveException(new IllegalArgumentException("Folder " + folder.getName() + " already exists."));
+    
+    _log.addChildLog(folder._log, new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        _children.put(folder.getName(), folder);
+        parent.receiveResult(new Boolean(true));
       }
     });
   }
@@ -286,11 +451,20 @@ public class Folder {
    * @param command The command to run once the result is received
    */
   public void createSnapShot(Continuation command) {
-    if (_log.getEntries() >= COMPRESS_LIMIT) {
+    final int entries = _log.getEntries();
+
+    if (entries >= COMPRESS_LIMIT) {
+      final LogEntryReference ref = _log.getTopEntryReference();
+      
       getMessages(new StandardContinuation(command) {
         public void receiveResult(Object o) {
-          _log.resetEntries();
-          _log.addLogEntry(new SnapShotLogEntry((StoredEmail[]) o), parent);
+          if (_log.getEntries() == entries) {
+            _log.resetEntries();
+            _log.addLogEntry(new SnapShotLogEntry((StoredEmail[]) o, ref), parent);
+          } else {
+            System.out.println("INFO: Was unable to create snapshot - other log entry in progress.  Not bad, but a little unexpected.");
+            parent.receiveResult(new Boolean(true));
+          }
         }
       });
     } else {
@@ -324,57 +498,79 @@ public class Folder {
       private Vector emails = new Vector();
       private HashSet seen = new HashSet();
       private HashSet deleted = new HashSet();
+      private LogEntryReference top = null;
+      
+      protected void insert(StoredEmail email) {
+        Integer uid = new Integer(email.getUID());
+        
+        if ((! seen.contains(uid)) && (! deleted.contains(uid))) {
+          email.getEmail().setStorage(_storage);
+          seen.add(uid);
+          emails.add(email);
+        }
+      }
+      
+      protected void delete(StoredEmail email) {
+        deleted.add(new Integer(email.getUID()));
+      }
 
       public void receiveResult(Object o) {
-        LogEntry entry = (LogEntry) o;
+        EmailLogEntry entry = (EmailLogEntry) o;
         boolean finished = false;
         
         if (entry != null) {
           if (entry instanceof InsertMailLogEntry) {
-            InsertMailLogEntry ientry = (InsertMailLogEntry) entry;
-            Integer uid = new Integer(ientry.getStoredEmail().getUID());
-
-            if ((! seen.contains(uid)) && (! deleted.contains(uid))) {
-              ientry.getStoredEmail().getEmail().setStorage(_storage);
-              seen.add(uid);
-              emails.add(ientry.getStoredEmail());
-            }
+            insert(((InsertMailLogEntry) entry).getStoredEmail());
+          } else if (entry instanceof InsertMailsLogEntry) {
+            StoredEmail[] inserts = ((InsertMailsLogEntry) entry).getStoredEmails();
+            
+            for (int i=0; i<inserts.length; i++) 
+              insert(inserts[i]);
           } else if (entry instanceof DeleteMailLogEntry) {
-            DeleteMailLogEntry dentry = (DeleteMailLogEntry) entry;
-            Integer uid = new Integer(dentry.getStoredEmail().getUID());
-
-            deleted.add(uid);
+            delete(((DeleteMailLogEntry) entry).getStoredEmail());
+          } else if (entry instanceof DeleteMailsLogEntry) {
+            StoredEmail[] deletes = ((DeleteMailsLogEntry) entry).getStoredEmails();
+            
+            for (int i=0; i<deletes.length; i++) 
+              delete(deletes[i]);
           } else if (entry instanceof UpdateMailLogEntry) {
-            UpdateMailLogEntry uentry = (UpdateMailLogEntry) entry;
-            Integer uid = new Integer(uentry.getStoredEmail().getUID());
-
-            if ((! seen.contains(uid)) && (! deleted.contains(uid))) {
-              uentry.getStoredEmail().getEmail().setStorage(_storage);
-              seen.add(uid);
-              emails.add(uentry.getStoredEmail());
-            }
+            insert(((UpdateMailLogEntry) entry).getStoredEmail());
+          } else if (entry instanceof UpdateMailsLogEntry) {
+            StoredEmail[] updates = ((UpdateMailsLogEntry) entry).getStoredEmails();
+            
+            for (int i=0; i<updates.length; i++) 
+              insert(updates[i]);            
           } else if (entry instanceof SnapShotLogEntry) {
             StoredEmail[] rest = ((SnapShotLogEntry) entry).getStoredEmails();
 
-            for (int i = 0; i < rest.length; i++) {
-              Integer uid = new Integer(rest[i].getUID());
-              
-              if ((! seen.contains(uid)) && (! deleted.contains(uid))) {
-                rest[i].getEmail().setStorage(_storage);
-                emails.add(rest[i]);
-              }
-            }
+            for (int i = 0; i < rest.length; i++)
+              insert(rest[i]);
 
-            finished = true;
+            if (top == null)
+              top = ((SnapShotLogEntry) entry).getTopEntryReference();
+            
+            if (top == null)
+              finished = true;
           }
         } else {
           finished = true;
         }
+        
+        LogEntryReference next = null;
+        
+        if (entry != null)
+          next = entry.getPreviousEntryReference();
 
-        if (finished) {
+        if (finished || (next == null) || (next.equals(top))) {
           // now, sort the list (by UID)
           Collections.sort(emails);
-          parent.receiveResult(emails.toArray(new StoredEmail[0]));
+          StoredEmail[] result = (StoredEmail[]) emails.toArray(new StoredEmail[0]);
+          System.out.println("SETTING EXISTS TO BE " + result.length + " NEXT " + next + " TOP " + top + " FINISHED " + finished);
+
+          if (_log.getBufferSize() == 0) 
+            _log.setExists(result.length);
+          
+          parent.receiveResult(result);
         } else {
           entry.getPreviousEntry(this);
         }

@@ -41,11 +41,12 @@ public class ExpungeCommand
             MailFolder fold = getState().getSelectedFolder();
             List msgs       = fold.getMessages(MsgFilter.DELETED);
 
+            StoredMessage[] messages = (StoredMessage[]) msgs.toArray(new StoredMessage[0]);
+            fold.purge(messages);
+            
             int numDeleted = 0;
-            for (Iterator i = msgs.iterator(); i.hasNext();)
-            {
+            for (Iterator i = msgs.iterator(); i.hasNext();) {
                 StoredMessage msg = (StoredMessage) i.next();
-                msg.purge();
                 int msgNum = msg.getSequenceNumber() - numDeleted;
                 untaggedResponse(msgNum + " EXPUNGE");
                 getState().broadcastUnsolicited(msgNum + " EXPUNGE");

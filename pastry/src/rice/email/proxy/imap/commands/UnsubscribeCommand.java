@@ -33,7 +33,7 @@ public class UnsubscribeCommand
     {
         try
         {
-            getState().getMailbox().unsubscribe(getConn(), getFolder());
+            getState().getMailbox().unsubscribe(getFolder());
             taggedSimpleSuccess();
         }
         catch (MailboxException e)

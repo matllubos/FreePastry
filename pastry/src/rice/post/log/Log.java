@@ -5,6 +5,7 @@ import java.security.*;
 import java.util.*;
 
 import rice.*;
+import rice.Continuation.*;
 import rice.p2p.commonapi.*;
 import rice.post.*;
 import rice.post.storage.*;
@@ -21,6 +22,8 @@ import rice.post.storage.*;
  * @version $Id$
  */
 public class Log implements PostData {
+  
+  static final long serialVersionUID = -2375808799970141618L;
 
   /**
    * The location of this log in PAST.
@@ -95,6 +98,19 @@ public class Log implements PostData {
   public Object getName() {
     return name;
   }
+  
+  /**
+   * Sets the name of this log.  If this log has a parent, it MUST be removed and
+   * re-added to the parent for this change to work.  Otherwise, BAD BAD BAD things
+   * will happen.  You've been warned.
+   *
+   * @param name The new name
+   * @param command The command to run once done
+   */
+  public void setName(Object name, Continuation command) {
+    this.name = name;
+    sync(command);
+  }
 
   /**
    * Sets the current local Post service.
@@ -115,8 +131,11 @@ public class Log implements PostData {
    * @param command The command to run once done
    */
   protected void sync(Continuation command) {
-    SyncTask task = new SyncTask(command);
-    task.start();
+    post.getStorageService().storeSigned(this, location, new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        parent.receiveResult(new Boolean(true)); 
+      }
+    });
   }
   
   /**
@@ -130,9 +149,18 @@ public class Log implements PostData {
    * @param log The log to add as a child.
    * @param command The command to run once done
    */
-  public void addChildLog(Log log, Continuation command) {
-    AddChildLogTask task = new AddChildLogTask(log, command);
-    task.start();
+  public void addChildLog(final Log log, Continuation command) {
+    childrenCache.put(log.getName(), log);
+    post.getStorageService().storeSigned(log, log.getLocation(), new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        children.put(log.getName(), o);
+        sync(new StandardContinuation(parent) {
+          public void receiveResult(Object o) {
+            parent.receiveResult(log);
+          }
+        });
+      }
+    });
   }
 
   /**
@@ -145,20 +173,9 @@ public class Log implements PostData {
    * @param log The log to remove
    * @param command The command to run once done
    */
-  public void removeChildLog(Object name, final Continuation command) {
+  public void removeChildLog(Object name, Continuation command) {
     children.remove(name);
-
-    Continuation c = new Continuation() {
-      public void receiveResult(Object o) {
-        command.receiveResult(new Boolean(true));
-      }
-
-      public void receiveException(Exception e) {
-        command.receiveException(e);
-      }
-    };
-    
-    sync(c);
+    sync(command);
   }
 
   /**
@@ -191,7 +208,7 @@ public class Log implements PostData {
    * @param name The name of the log to return.
    * @param command The command to run once done.
    */
-  public void getChildLog(Object name, final Continuation command) {
+  public void getChildLog(Object name, Continuation command) {
     LogReference ref = (LogReference) children.get(name);
 
     if (ref == null) {
@@ -204,26 +221,17 @@ public class Log implements PostData {
       return;
     }
 
-    Continuation fetch = new Continuation() {
+    post.getStorageService().retrieveSigned(ref, new StandardContinuation(command) {
       public void receiveResult(Object o) {
-        if (o == null) {
-          command.receiveResult(o);
-        } else {
+        if (o != null) {
           Log log = (Log) o;
           log.setPost(post);
-
           childrenCache.put(log.getName(), log);
-
-          command.receiveResult(o);
         }
+        
+        parent.receiveResult(o);
       }
-
-      public void receiveException(Exception e) {
-        command.receiveException(e);
-      }
-    };
-
-    post.getStorageService().retrieveSigned(ref, fetch);
+    });
   }
 
   /**
@@ -240,34 +248,53 @@ public class Log implements PostData {
    * @param command The command to run once done
    */
   public void addLogEntry(LogEntry entry, final Continuation command) {
+    final AddLogEntryTask task = new AddLogEntryTask(entry, null);
+    
     Continuation comm = new Continuation() {
       public void receiveResult(Object o) {
-        command.receiveResult(o);
-
         synchronized (buffer) {
-          buffer.remove(0);
-
-          if (buffer.size() > 0) {
-            AddLogEntryTask alet = (AddLogEntryTask) buffer.get(0);
-            alet.start();
+          if ((buffer.size() > 0) && (buffer.get(0) == task)) {
+            buffer.remove(0);
+            
+            if (buffer.size() > 0) {
+              AddLogEntryTask alet = (AddLogEntryTask) buffer.get(0);
+              alet.start();
+            }
+            
+            command.receiveResult(o);
           }
         }
       }
 
       public void receiveException(Exception e) {
-        command.receiveException(e);
+        synchronized (buffer) {
+          if ((buffer.size() > 0) && (buffer.get(0) == task)) {
+            buffer.remove(0);
+            
+            if (buffer.size() > 0) {
+              AddLogEntryTask alet = (AddLogEntryTask) buffer.get(0);
+              alet.start();
+            }
+            
+            command.receiveException(e);
+          }
+        }
       }
     };
     
-    AddLogEntryTask task = new AddLogEntryTask(entry, comm);
-
+    task.setCommand(comm);
+    
+    boolean go = false;
+    
     synchronized (buffer) {
       buffer.add(task);
       
-      if (buffer.size() == 1) {
-        task.start();
-      }
+      if (buffer.size() == 1)
+        go = true;
     }
+
+    if (go)
+      task.start();
   }
     
   /**
@@ -276,25 +303,19 @@ public class Log implements PostData {
    *
    * @return A reference to the top entry in the log.
    */
-  public void getTopEntry(final Continuation command) {
+  public void getTopEntry(Continuation command) {
     if ((topEntry == null) && (topEntryReference != null)) {
-      Continuation fetch = new Continuation() {
+      post.getStorageService().retrieveContentHash(topEntryReference, new StandardContinuation(command) {
         public void receiveResult(Object o) {
           try {
             topEntry = (LogEntry) o;
             topEntry.setPost(post);
-            command.receiveResult(topEntry);
+            parent.receiveResult(topEntry);
           } catch (ClassCastException e) {
-            command.receiveException(e);
+            parent.receiveException(e);
           }
         }
-
-        public void receiveException(Exception e) {
-          command.receiveException(e);
-        }
-      };
-
-      post.getStorageService().retrieveContentHash(topEntryReference, fetch);
+      });
     } else {
       command.receiveResult(topEntry);
     }    
@@ -350,82 +371,6 @@ public class Log implements PostData {
   }
 
   /**
-   * This class encapsulates the logic needed to add a child log to
-   * the current log.
-   */
-  protected class AddChildLogTask implements Continuation {
-
-    public static final int STATE_1 = 1;
-    public static final int STATE_2 = 2;
-    
-    private Log log;
-    private LogReference reference;
-    private Continuation command;
-    private int state;
-
-    /**
-     * This construct will build an object which will call the given
-     * command once processing has been completed, and will provide
-     * a result.
-     *
-     * @param log The log to add
-     * @param command The command to call
-     */
-    protected AddChildLogTask(Log log, Continuation command) {
-      this.log = log;
-      this.command = command;
-    }
-
-    /**
-     * Starts the process to add the child log.
-     */
-    public void start() {
-      state = STATE_1;
-      childrenCache.put(log.getName(), log);
-      post.getStorageService().storeSigned(log, log.getLocation(), this);
-    }
-
-    private void startState1(LogReference reference) {
-      this.reference = reference;
-      children.put(log.getName(), reference);
-
-      state = STATE_2;
-      SyncTask task = new SyncTask(this);
-      task.start();
-    }
-
-    private void startState2() {
-      command.receiveResult(log);
-    }
-
-    /**
-     * Receives the result of a command.
-     */
-    public void receiveResult(Object o) {
-      switch(state) {
-        case STATE_1:
-          startState1((LogReference) o);
-          break;
-        case STATE_2:
-          startState2();
-          break;
-        default:
-          command.receiveException(new StorageException("Received unexpected state: " + state));
-          break;
-      }
-    }
-
-    /**
-      * Called when a previously requested result causes an exception
-     *
-     * @param result The exception caused
-     */
-    public void receiveException(Exception result) {
-      command.receiveException(result);
-    }
-  }
-
-  /**
    * This class encapsulates the logic needed to add a log entry to
    * the current log.
    */
@@ -450,6 +395,10 @@ public class Log implements PostData {
       this.entry = entry;
       this.command = command;
     }
+    
+    public void setCommand(Continuation command) {
+      this.command = command;
+    }
 
     public void start() {
       state = STATE_1;
@@ -464,8 +413,7 @@ public class Log implements PostData {
       topEntryReference = reference;
       topEntry = entry;
       state = STATE_2;
-      SyncTask task = new SyncTask(this);
-      task.start();
+      sync(this);
     }
 
     private void startState2() {
@@ -484,43 +432,6 @@ public class Log implements PostData {
           command.receiveException(new StorageException("Received unexpected state on addLogEntry: " + state));
           break;
       }
-    }
-
-    /**
-      * Called when a previously requested result causes an exception
-     *
-     * @param result The exception caused
-     */
-    public void receiveException(Exception result) {
-      command.receiveException(result);
-    }
-  }
-
-  /**
-   * This class encapsulates the logic needed to sync
-   * the current log on the network.
-   */
-  protected class SyncTask implements Continuation {
-
-    private Continuation command;
-    
-    /**
-     * This construct will build an object which will call the given
-     * command once processing has been completed, and will provide
-     * a result.
-     *
-     * @param command The command to call
-     */
-    protected SyncTask(Continuation command) {
-      this.command = command;
-    }
-
-    public void start() {
-      post.getStorageService().storeSigned(Log.this, location, this);
-    }
-
-    public void receiveResult(Object o) {
-      command.receiveResult(Log.this);
     }
 
     /**

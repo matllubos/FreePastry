@@ -24,7 +24,7 @@ public class PostUserAddress extends PostEntityAddress {
     address = getId(factory, name);
   }
   
-  /**
+  /**ú
    * Returns the address associated with this useraddress
    *
    * @return The corresponding address

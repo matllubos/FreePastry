@@ -33,7 +33,7 @@ public class SubscribeCommand
     {
         try
         {
-            getState().getMailbox().subscribe(getConn(), getFolder());
+            getState().getMailbox().subscribe(getFolder());
             taggedSimpleSuccess();
         }
         catch (MailboxException e)
