@@ -1,5 +1,7 @@
 package rice.splitstream.messaging;
 import rice.splitstream.*;
+import rice.pastry.*;
+import rice.pastry.messaging.*;
 
 /**
  * This message is sent to the originator of a FindParent message by the
@@ -9,8 +11,8 @@ import rice.splitstream.*;
  */
 public class ControlFindParentResponseMessage extends ControlMessage
 {
-   
-    public ControlFindParentMessage( Address addr, NodeHandle source, StripeId topicId, Credentials c, Boolean accept )
+
+    public ControlFindParentResponseMessage( Address addr, NodeHandle source, StripeId topicId, Credentials c, Boolean accept )
     {
         super( addr, source, topicId, c );
         m_data = accept;
@@ -23,7 +25,7 @@ public class ControlFindParentResponseMessage extends ControlMessage
      * @param scribe The Scribe group this message is relevant to
      * @param s The stripe that this message is relevant to
      */
-    public void handleDeliverMessage( IScribe scribe, Stripe s )
+    public void handleDeliverMessage( Scribe scribe, Topic topic )
     {
         if ( (Boolean)m_data.booleanValue() )
         {
@@ -40,7 +42,7 @@ public class ControlFindParentResponseMessage extends ControlMessage
      * @param splitStream The Scribe group this message is relevant to
      * @param s The stripe that this message is relevant to
      */
-    public void handleForwardMessage( IScribe scribe, Stripe s )
+    public void handleForwardMessage( Scribe scribe, Topic topic )
     {
     }
 
@@ -49,3 +51,6 @@ public class ControlFindParentResponseMessage extends ControlMessage
         return null;
     }
 }
+
+
+
