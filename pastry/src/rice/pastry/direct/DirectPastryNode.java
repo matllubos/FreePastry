@@ -66,6 +66,20 @@ public class DirectPastryNode extends PastryNode
 	initiateJoin(bootstrap);
     }
 
+
+    /**
+     * Sends an InitiateJoin message to itself.
+     *
+     * @param bootstrap Node handle to bootstrap with.
+     */
+    public final void initiateJoin(NodeHandle bootstrap) {
+	if (bootstrap != null)
+	    this.receiveMessage(new InitiateJoin(bootstrap));
+	else
+	    setReady(); // no bootstrap node, so ready immediately
+    }
+
+
     /**
      * Called from PastryNode after the join succeeds.
      */

@@ -61,7 +61,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
     private NetworkSimulator simulator;
 
     // max number of handles stored per routing table entry
-    private static final int rtMax = 8;
+    private static final int rtMax = 1;
 
     // leafset size
     private static final int lSetSize = 24;

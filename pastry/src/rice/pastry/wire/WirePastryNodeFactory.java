@@ -64,7 +64,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
 
   private int port;
 
-  private static final int rtMax = 8;
+  private static final int rtMax = 1;
   private static final int lSetSize = 24;
   private static final int maxOpenSockets = 5;
 

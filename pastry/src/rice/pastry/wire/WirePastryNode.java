@@ -185,6 +185,7 @@ public class WirePastryNode extends DistPastryNode {
   }
 
   public void nodeIsReady() {
+      super.nodeIsReady();
   }
 
   /**

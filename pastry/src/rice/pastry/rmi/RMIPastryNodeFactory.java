@@ -66,7 +66,7 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
   private NodeIdFactory nidFactory;
   private int port;
 
-  private static final int rtMax = 8;
+  private static final int rtMax = 1;
   private static final int lSetSize = 24;
 
   /**

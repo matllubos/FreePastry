@@ -220,6 +220,6 @@ public class DistPastryRegrTest extends PastryRegrTest {
     public static void main(String args[]) {
       doInitstuff(args);
       DistPastryRegrTest pt = new DistPastryRegrTest();
-      mainfunc(pt, args, 10 /*n*/, 4 /*d*/, 50/*k*/, 10/*m*/, 4/*conc*/);
+      mainfunc(pt, args, 100 /*n*/, 40 /*d*/, 50/*k*/, 10/*m*/, 4/*conc*/);
     }
 }

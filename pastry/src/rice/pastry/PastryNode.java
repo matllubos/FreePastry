@@ -41,7 +41,6 @@ import rice.pastry.security.*;
 import rice.pastry.client.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
-import rice.pastry.join.*;
 
 import java.util.*;
 
@@ -112,6 +111,13 @@ public abstract class PastryNode implements MessageReceiver {
     
     protected abstract void nodeIsReady();
     
+    /**
+     * Overridden by derived classes to initiate the join process
+     * @param bootstrap Node handle to bootstrap with.
+     */
+    public abstract void initiateJoin(NodeHandle bootstrap);
+
+
     public final void setReady() {
 	//System.out.println("setready() called on pastry node" + getNodeId());  
 
@@ -155,17 +161,6 @@ public abstract class PastryNode implements MessageReceiver {
     
     public final RoutingTable getRoutingTable() { return routeSet; }
     
-    /**
-     * Sends an InitiateJoin message to itself.
-     *
-     * @param bootstrap Node handle to bootstrap with.
-     */
-    public final void initiateJoin(NodeHandle bootstrap) {
-	if (bootstrap != null)
-	    this.receiveMessage(new InitiateJoin(bootstrap));
-	else
-	    setReady(); // no bootstrap node, so ready immediately
-    }
     
     /**
      * Add a leaf set observer to the Pastry node.

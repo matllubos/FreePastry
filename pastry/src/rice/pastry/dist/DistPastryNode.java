@@ -41,6 +41,8 @@ import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
+import rice.pastry.join.*;
+
 
 /**
  * Class which represents the abstraction of a "real" pastry node. Designed
@@ -59,7 +61,7 @@ public abstract class DistPastryNode extends PastryNode {
      */
     protected int leafSetMaintFreq, routeSetMaintFreq;
     private Timer timer;
-
+    private ScheduledMessage joinEvent;
 
     /**
      * Constructor, with NodeId. Need to set the node's ID before this node
@@ -77,6 +79,29 @@ public abstract class DistPastryNode extends PastryNode {
      * @return The node handle pool for this pastry node.
      */
     public abstract DistNodeHandlePool getNodeHandlePool();
+
+
+    /**
+     * Sends an InitiateJoin message to itself.
+     *
+     * @param bootstrap Node handle to bootstrap with.
+     */
+    public final void initiateJoin(NodeHandle bootstrap) {
+	if (bootstrap != null) {
+	    // schedule (re-)transmission of the join message, every 5s
+	    joinEvent = scheduleMsg(new InitiateJoin(bootstrap), 0, 5000);
+	    //this.receiveMessage(new InitiateJoin(bootstrap));
+	} else
+	    setReady(); // no bootstrap node, so ready immediately
+    }
+
+
+    /**
+     * Called from PastryNode when the join succeeds.
+     */
+    protected void nodeIsReady() {
+	if (joinEvent != null) joinEvent.cancel(); // cancel join retransmissions
+    }
 
 
     /**
