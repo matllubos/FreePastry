@@ -3,6 +3,7 @@ package rice.visualization.server;
 import rice.visualization.data.*;
 import rice.pastry.*;
 import rice.p2p.glacier.v2.*;
+import rice.p2p.multiring.RingId;
 import rice.persistence.*;
 import rice.Continuation.*;
 
@@ -12,6 +13,7 @@ import java.util.*;
 public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListener {
 
   private static final int HISTORY = 300;
+  private final long startup = System.currentTimeMillis();
   
   GlacierImpl glacier;
   GlacierStatistics history[] = new GlacierStatistics[HISTORY];
@@ -39,12 +41,29 @@ public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListe
     KeyValueListView glacierView = new KeyValueListView("Glacier Overview", 380, 200, glacierCons);
     GlacierStatistics current = history[(historyPtr + HISTORY - 1) % HISTORY];
     if (current != null) {
+      rice.p2p.commonapi.IdRange responsibleRange = current.responsibleRange;
+      rice.p2p.commonapi.Id ccwBoundary = responsibleRange.getCCWId();
+      rice.p2p.commonapi.Id cwBoundary = responsibleRange.getCWId();
+      
+      if (ccwBoundary instanceof RingId)
+        ccwBoundary = ((RingId)ccwBoundary).getId();
+      if (cwBoundary instanceof RingId)
+        cwBoundary = ((RingId)cwBoundary).getId();
+        
+      long uptime = System.currentTimeMillis() - startup;
+      long upMin = uptime / (60*1000);
+      long upHours = upMin / 60;
+      long upDays = upHours / 24;
+        
       glacierView.add("Pending req", "" + current.pendingRequests);
       glacierView.add("Neighbors", "" + current.numNeighbors);
       glacierView.add("Fragments", "" + current.numFragments);
       glacierView.add("Continuations", "" + current.numContinuations);
       glacierView.add("Objs in trash", "" + current.numObjectsInTrash);
       glacierView.add("Msg sent", "" + msgSent);
+      glacierView.add("Range", ccwBoundary + " - " + cwBoundary);
+      glacierView.add("Local time", (new Date()).toString());
+      glacierView.add("Uptime", upDays+"d "+(upHours%24)+"h "+(upMin%60)+"m");
     } else {
       glacierView.add("Starting up...", "");
     }
