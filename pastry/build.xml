@@ -338,8 +338,8 @@
         <include name="rice/serialization/**/*.java"/>
    <!-- <include name="rice/visualization/**/*.java"/> -->
       </zipfileset>
-      <zipfileset dir="ant" includes="**/*"/ prefix="ant">
-      <zipfileset dir="license" includes="**/*"/ prefix="license">
+      <zipfileset dir="ant" includes="**/*" prefix="ant" />
+      <zipfileset dir="license" includes="**/*" prefix="license" />
       <zipfileset dir="." includes="build.xml"/>
     </zip>
     <tar destfile="FreePastry-${freepastry-version}-docs.tgz" compression="gzip">
