@@ -123,7 +123,7 @@ public class DistPASTRegrTest {
     StorageManager storage = new StorageManager(new MemoryStorage(),
                                                 new LRUCache(new MemoryStorage(), 10000));
 
-    PASTServiceImpl past = new PASTServiceImpl(pn, storage);
+    PASTServiceImpl past = new PASTServiceImpl(pn, storage, "PAST");
     past.DEBUG = true;
     pastNodes.add(past);
     System.out.println("created " + pn);
@@ -215,7 +215,7 @@ public class DistPASTRegrTest {
         
         // Insert file
         System.out.println("TEST: RouteRequest: Inserting file with key: " + remoteId);
-        local.insert(remoteId, file, null, new TestCommand() {
+        local.insert(remoteId, file, new TestCommand() {
           public void receive(Object result) throws Exception {
             assertTrue("RouteRequest", "Insert of file should succeed",
                        ((Boolean)result).booleanValue());
@@ -301,7 +301,7 @@ public class DistPASTRegrTest {
               
               // Insert file
               System.out.println("TEST: PASTFunctions: Inserting file with key: " + fileId);
-              local.insert(fileId, file, userCred, new TestCommand() {
+              local.insert(fileId, file,  new TestCommand() {
                 public void receive(Object success) throws Exception {
                   assertTrue("PASTFunctions", "Insert of file should succeed",
                              ((Boolean)success).booleanValue());
@@ -313,7 +313,7 @@ public class DistPASTRegrTest {
                                  ((Boolean)exists).booleanValue());
                       
                       // Try to insert again
-                      local.insert(fileId, file, userCred, new TestCommand() {
+                      local.insert(fileId, file,  new TestCommand() {
                         public void receive(Object success) throws Exception {
                           assertTrue("PASTFunctions", 
                                      "Re-insert of file should fail",
@@ -376,8 +376,8 @@ public class DistPASTRegrTest {
                 // We've seen all the nodes, so move on
                 // TO DO: Make this k instead of 1 when ReplicationManager is used
                 assertEquals("PASTFunctions",
-                             "File should have been found " + remote.getReplicationFactor() + " time after insert",
-                             new Integer(remote.getReplicationFactor()), new Integer(localCount));
+                             "File should have been found " + remote.getReplicaFactor() + " time after insert",
+                             new Integer(remote.getReplicaFactor()), new Integer(localCount));
 
                 runReclaimTests();
               }
@@ -394,7 +394,7 @@ public class DistPASTRegrTest {
       
       // Reclaim space used by file
       System.out.println("TEST: Reclaiming file with key: " + fileId);
-      local.delete(fileId, userCred, new TestCommand() {
+      local.delete(fileId, new TestCommand() {
         public void receive(Object success) throws Exception {
           assertTrue("PASTFunctions", "File should be reclaimed successfully",
                      ((Boolean)success).booleanValue());
