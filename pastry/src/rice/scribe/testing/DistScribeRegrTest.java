@@ -106,7 +106,18 @@ public class DistScribeRegrTest {
     }
 
     private NodeHandle getBootstrap() {
-	InetSocketAddress addr = new InetSocketAddress(bshost, bsport);
+	InetSocketAddress addr = null;
+	if(bshost != null )
+	    addr = new InetSocketAddress(bshost, bsport);
+	else{
+	    try{
+		addr = new InetSocketAddress(InetAddress.getLocalHost().getHostName(), bsport);
+	    }
+	    catch(UnknownHostException e){ 
+		System.out.println(e);
+	    }
+	}
+	
 	NodeHandle bshandle = ((DistPastryNodeFactory)factory).getNodeHandle(addr);
 	return bshandle;
     }
@@ -318,7 +329,6 @@ public class DistScribeRegrTest {
 	pastryNodes.addElement(pn);
 	localNodes.addElement(pn.getNodeId());
 	
-
 	
 	Credentials cred = new PermissiveCredentials();
 	Scribe scribe = new Scribe(pn, cred );
