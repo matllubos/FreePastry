@@ -69,6 +69,7 @@ public class PastryEndpoint extends PastryAppl implements rice.p2p.commonapi.End
     super(pn, application.getClass().getName() + instance);
 
     this.application = application;
+
   }
 
   // API methods to be invoked by applications
@@ -269,7 +270,7 @@ public class PastryEndpoint extends PastryAppl implements rice.p2p.commonapi.End
     }
   }
 
-  public final void leafSetChange(NodeHandle nh, boolean wasAdded) {
+  public void leafSetChange(rice.pastry.NodeHandle nh, boolean wasAdded) {
     application.update(nh, wasAdded);
   }
 
