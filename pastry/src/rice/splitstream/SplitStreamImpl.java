@@ -1,5 +1,6 @@
 package rice.splitstream;
 import rice.scribe.*;
+import rice.scribe.messaging.*;
 import rice.splitstream.messaging.*;
 import rice.pastry.*;
 import rice.pastry.client.*;
@@ -13,12 +14,11 @@ import rice.pastry.security.*;
 /**
  * This is the implementing class of the SplitStream service 
  */
-public class SplitStreamImpl extends PastryAppl implements ISplitStream{
+public class SplitStreamImpl implements ISplitStream, IScribeApp{
     private IScribe scribe = null;
     private BandwidthManager bandwidthManager = null;
     private Credentials credentials = new PermissiveCredentials();
     public SplitStreamImpl(PastryNode node, IScribe scribe){
-        super(node);
  	scribe = this.scribe;   
     }
 
@@ -35,7 +35,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream{
     * @return an instance of a Channel class. 
     */
    public Channel createChannel(int numStripes){
-	return (new Channel(numStripes, scribe, getCredentials(),bandwidthManager));
+	return (new Channel(numStripes, scribe, credentials ,bandwidthManager));
    }
    /**
     * This method is used by peers who wish to listen to content distributed 
@@ -64,12 +64,21 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream{
     */
    public void handleSubscribe(ChannelId channelId){
 	/* Does this really work on subscribe? */
-        attachChannel(channelId);
+        System.out.println("A create channel message has been recieved!");
    }
-   public void messageForAppl(Message msg){}
-   public Credentials getCredentials(){return credentials;}
-   public Address getAddress(){return null;}
-   public SplitStreamImpl(){super(null);}
    public BandwidthManager getBandwidthManager(){return null;}
    public void setBandwidthManager(){}
+   public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){}
+   public void forwardHandler(ScribeMessage msg){}
+   public void receiveMessage(ScribeMessage msg){
+       if(msg instanceof MessageCreate){
+		System.out.println("This node has been selected to host a channel");
+       }
+ 
+   }
+   public void scribeIsReady(){
+   }
+   public void subscribeHandler(NodeId topicId, 
+                               NodeHandle child, boolean wasAdded, Object data){   }
+
 }

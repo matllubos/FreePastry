@@ -62,9 +62,9 @@ public class Channel implements IScribeApp {
 	this.bandwidthManager = bandwidthManager;
 	/* register this channel with the bandwidthManager */
 	this.bandwidthManager.registerChannel(this);
+	scribe.registerApp(this);
         NodeId topicId = (new RandomNodeIdFactory()).generateNodeId();
         if(scribe.create(topicId, cred)){
-		isReady = true;
 		this.channelId = (ChannelId) topicId;
         } 		
 	stripes = new Stripe[numStripes];
@@ -86,6 +86,7 @@ public class Channel implements IScribeApp {
 	this.channelId = channelId;
 	this.bandwidthManager = bandwidthManager;
 	this.scribe = scribe;
+        scribe.registerApp(this);
         /* is this right? */
         /* Change the data to be the message we want to send */
         scribe.anycast(channelId, null, cred);
@@ -189,7 +190,9 @@ public class Channel implements IScribeApp {
      /* Check the type of message */
      /* then make call accordingly */
   }
-  public void scribeIsReady(){}
+  public void scribeIsReady(){
+     isReady = true;
+  }
   public void subscribeHandler(NodeId topicId, 
                                NodeHandle child, boolean wasAdded, Object data){}
 }
