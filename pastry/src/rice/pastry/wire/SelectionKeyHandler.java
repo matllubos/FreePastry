@@ -69,10 +69,4 @@ public interface SelectionKeyHandler {
    */
   public void write(SelectionKey key);
 
-  /**
-   * Method which is called when every time the SelectorManager is woken up. It
-   * allows SelectionKeyHandlers to check for lost packets, etc...
-   */
-  public void wakeup();
-
 }

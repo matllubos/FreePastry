@@ -49,6 +49,8 @@ import rice.pastry.wire.messaging.socket.*;
  */
 public class DatagramTransmissionManager {
 
+  boolean writing = false;
+
   // maps address -> TransmissionEntry
   private HashMap map;
 
@@ -120,11 +122,7 @@ public class DatagramTransmissionManager {
       entry.add(write);
 
       if (entry.getState() == entry.STATE_READY) {
-        if (pastryNode.inThread()) {
-          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-        } else {
-          pastryNode.getSelectorManager().getSelector().wakeup();
-        }
+        enableWrite(true, "added " + write);
       }
     }
   }
@@ -169,13 +167,45 @@ public class DatagramTransmissionManager {
         }
       }
 
-      if (ready) {
-        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+      enableWrite(ready, "wakeUp()");
+    }
+  }
+
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @param write DESCRIBE THE PARAMETER
+   * @param reason DESCRIBE THE PARAMETER
+   */
+  public void enableWrite(boolean write, String reason) {
+    //if (writing != write) {
+    //System.out.println("UDP for "+pastryNode+"enableWrite("+write+") on "+Thread.currentThread()+" because "+reason);
+    //}
+
+    writing = write;
+    try {
+      if (write) {
+        SelectorManager selMgr = pastryNode.getSelectorManager();
+        Selector selector = selMgr.getSelector();
+        synchronized (selector) {
+          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        }
       } else {
-        key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+        SelectorManager selMgr = pastryNode.getSelectorManager();
+        Selector selector = selMgr.getSelector();
+        synchronized (selector) {
+          key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+        }
+      }
+    } catch (CancelledKeyException cke) {
+      if (!key.isValid()) {
+        throw new NodeIsDeadException(cke);
+      } else {
+        throw cke;
       }
     }
   }
+
 
   /**
    * Resets the sequence number for the specified node
@@ -446,7 +476,8 @@ public class DatagramTransmissionManager {
           state = STATE_NO_DATA;
         }
 
-        handle.connectToRemoteNode(list);
+        handle.connectToRemoteNode(list.iterator());
+
       } else {
         if (state == STATE_NO_DATA) {
           state = STATE_READY;
@@ -539,7 +570,7 @@ public class DatagramTransmissionManager {
                 state = STATE_NO_DATA;
               }
 
-              handle.connectToRemoteNode(list);
+              handle.connectToRemoteNode(list.iterator());
             }
           }
         }

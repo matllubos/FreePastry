@@ -154,7 +154,9 @@ public class WirePastryNode extends DistPastryNode {
    * @return whether or not the current thread is the executing thread
    */
   public boolean inThread() {
-    return _executionThread.equals(Thread.currentThread());
+    return true;
+//    return _executionThread.equals(Thread.currentThread());
+
   }
 
   /**

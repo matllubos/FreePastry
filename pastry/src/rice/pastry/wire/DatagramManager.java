@@ -44,7 +44,8 @@ import rice.pastry.wire.messaging.datagram.*;
  * @version $Id$
  * @author Alan Mislove
  */
-public class DatagramManager implements SelectionKeyHandler {
+
+public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
 
   // the port number
   private int port;
@@ -152,7 +153,6 @@ public class DatagramManager implements SelectionKeyHandler {
   public void write(NodeId destination, InetSocketAddress address, Object o) {
     debug("Enqueueing write to " + destination + " of " + o);
     transmissionManager.add(new PendingWrite(destination, address, o));
-    manager.getSelector().wakeup();
   }
 
   /**
@@ -162,12 +162,15 @@ public class DatagramManager implements SelectionKeyHandler {
    * @param key The SelectionKey which is readable.
    */
   public void read(SelectionKey key) {
+
     WireNodeHandle handle = null;
 
     try {
       InetSocketAddress address = null;
+
       while ((address = (InetSocketAddress) channel.receive(buffer)) != null) {
-        debug("Received data from address " + address);
+
+        //debug("Received data from address " + address);
         buffer.flip();
 
         if (buffer.remaining() > 0) {
@@ -214,6 +217,8 @@ public class DatagramManager implements SelectionKeyHandler {
           }
         } else {
           debug("Read from datagram channel, but no bytes were there - no bad, but wierd.");
+//          System.out.println("Read from datagram channel, but no bytes were there - no bad, but wierd.");
+          break;
         }
       }
     } catch (IOException e) {
@@ -273,8 +278,10 @@ public class DatagramManager implements SelectionKeyHandler {
     transmissionManager.wakeup();
 
     // if there are pending acks/pings, make sure that we are interested in writing
-    if (ackQueue.size() > 0) {
-      key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+
+    int ackQueueSize = ackQueue.size();
+    if (ackQueueSize > 0) {
+      transmissionManager.enableWrite(true, "ackQueue.size() = " + ackQueueSize);
     }
   }
 

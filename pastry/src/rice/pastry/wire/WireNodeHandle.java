@@ -63,19 +63,19 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
   /**
    * DESCRIBE THE FIELD
    */
-  public static int STATE_USING_UDP = -1;
+  public final static int STATE_USING_UDP = -1;
   /**
    * DESCRIBE THE FIELD
    */
-  public static int STATE_USING_TCP = -2;
+  public final static int STATE_USING_TCP = -2;
   /**
    * DESCRIBE THE FIELD
    */
-  public static int STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT = -3;
+  public final static int STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT = -3;
   /**
    * DESCRIBE THE FIELD
    */
-  public static int STATE_USING_UDP_WAITING_TO_DISCONNECT = -4;
+  public final static int STATE_USING_UDP_WAITING_TO_DISCONNECT = -4;
 
   // the largest message size to send over UDP
   /**
@@ -108,7 +108,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
 
     lastpingtime = 0;
 
-    state = STATE_USING_UDP;
+    setState(STATE_USING_UDP);
   }
 
   /**
@@ -125,7 +125,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
 
     lastpingtime = 0;
 
-    state = STATE_USING_UDP;
+    setState(STATE_USING_UDP);
 
     setLocalNode(pn);
   }
@@ -137,6 +137,16 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
    */
   public int getState() {
     return state;
+  }
+
+
+  /**
+   * Gets the WriteEnabled attribute of the WireNodeHandle object
+   *
+   * @return The WriteEnabled value
+   */
+  public boolean isWriteEnabled() {
+    return ((key.interestOps() & SelectionKey.OP_WRITE) != 0);
   }
 
   /**
@@ -165,9 +175,9 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
       ((WirePastryNode) getLocalNode()).getDatagramManager().resetAckNumber(nodeId);
 
       reader = new SocketChannelReader((WirePastryNode) getLocalNode());
-      writer = new SocketChannelWriter((WirePastryNode) getLocalNode(), scm);
+      writer = new SocketChannelWriter((WirePastryNode) getLocalNode(), scm, key);
 
-      state = STATE_USING_TCP;
+      setState(STATE_USING_TCP);
     } else {
       markAlive();
 
@@ -200,7 +210,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
 
         // use new socket
         this.key = key;
-        state = STATE_USING_TCP;
+        setState(STATE_USING_TCP);
         key.attach(this);
 
         debug("Killing our socket, using new one...");
@@ -224,9 +234,10 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
       debug("Received DisconnectMessage (state == " + state + ")");
 
       if (state == STATE_USING_TCP) {
-        state = STATE_USING_UDP_WAITING_TO_DISCONNECT;
+        setState(STATE_USING_UDP_WAITING_TO_DISCONNECT);
         ((WirePastryNode) getLocalNode()).getSocketManager().closeSocket(this);
-        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+//        enableWrite(true);
+// TODO: find out why we enabledWriting here
       } else if (state == STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT) {
         close(null);
       } else {
@@ -263,10 +274,31 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     } else {
       debug("Passing message " + msg + " to the socket controller for writing (state == " + state + ")");
 
-      // check to see if socket is open
-      if (state != STATE_USING_TCP) {
-        try {
-          if (state == STATE_USING_UDP) {
+      switch (state) {
+        case STATE_USING_TCP:
+          writer.enqueue(new SocketTransportMessage(msg, nodeId));
+
+          // enqueue now does this for us
+          /*
+           *  if (((WirePastryNode) getLocalNode()).inThread()) {
+           *  enableWrite(true);
+           *  } else {
+           *  SelectorManager selMgr = ((WirePastryNode) getLocalNode()).getSelectorManager();
+           *  Selector sel = selMgr.getSelector();
+           *  try {
+           *  sel.wakeup();
+           *  } catch (NullPointerException npe) {
+           *  if (!selMgr.isAlive()) {
+           *  throw new NodeIsDeadException(npe);
+           *  } else {
+           *  throw npe;
+           *  }
+           *  }
+           *  }
+           */
+          break;
+        case STATE_USING_UDP:
+          try {
             // if message is small enough, send via UDP
             if (messageSize(msg) <= MAX_UDP_MESSAGE_SIZE) {
               debug("Message is small enough to go over UDP - sending.");
@@ -276,27 +308,70 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
               LinkedList list = new LinkedList();
               list.addFirst(new SocketTransportMessage(msg, nodeId));
 
-              connectToRemoteNode(list);
+              connectToRemoteNode(list.iterator());
             }
-          } else {
-            // if we're waiting to disconnect, send message over UDP anyway
-            ((WirePastryNode) getLocalNode()).getDatagramManager().write(nodeId, address, msg);
+          } catch (IOException e) {
+            System.out.println("IOException serializing message " + msg + " - cancelling message.");
           }
-        } catch (IOException e) {
-          System.out.println("IOException " + e + " serializing message " + msg + " - cancelling message.");
-        }
-      } else {
-        writer.enqueue(new SocketTransportMessage(msg, nodeId));
-
-        if (((WirePastryNode) getLocalNode()).inThread()) {
-          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-        } else {
-          ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector().wakeup();
-        }
-
-        debug("Enqueued message " + msg + " for writing in socket writer.");
+          break;
+        default:
+          // if we're waiting to disconnect, send message over UDP anyway
+          ((WirePastryNode) getLocalNode()).getDatagramManager().write(nodeId, address, msg);
+          break;
       }
+
+      /*
+       *  / check to see if socket is open
+       *  if (state != STATE_USING_TCP) {
+       *  try {
+       *  if (state == STATE_USING_UDP) {
+       *  / if message is small enough, send via UDP
+       *  if (messageSize(msg) <= MAX_UDP_MESSAGE_SIZE) {
+       *  debug("Message is small enough to go over UDP - sending.");
+       *  ((WirePastryNode) getLocalNode()).getDatagramManager().write(nodeId, address, msg);
+       *  } else {
+       *  debug("Message is too large - open up socket!");
+       *  LinkedList list = new LinkedList();
+       *  list.addFirst(new SocketTransportMessage(msg));
+       *  connectToRemoteNode(list);
+       *  }
+       *  } else {
+       *  / if we're waiting to disconnect, send message over UDP anyway
+       *  ((WirePastryNode) getLocalNode()).getDatagramManager().write(nodeId, address, msg);
+       *  }
+       *  } catch (IOException e) {
+       *  System.out.println("IOException serializing message " + msg + " - cancelling message.");
+       *  }
+       *  } else {
+       *  writer.enqueue(new SocketTransportMessage(msg));
+       *  if (((WirePastryNode) getLocalNode()).inThread()) {
+       *  enableWrite(true);
+       *  /          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+       *  } else {
+       *  SelectorManager selMgr = ((WirePastryNode) getLocalNode()).getSelectorManager();
+       *  Selector sel = selMgr.getSelector();
+       *  try {
+       *  sel.wakeup();
+       *  } catch (NullPointerException npe) {
+       *  if (!selMgr.isAlive()) {
+       *  throw new NodeIsDeadException(npe);
+       *  } else {
+       *  throw npe;
+       *  }
+       *  }
+       *  }
+       *  debug("Enqueued message " + msg + " for writing in socket writer.");
+       *  }
+       */
     }
+  }
+
+  /**
+   * Is called by the SelectorManager every time the manager is awakened. Checks
+   * to make sure that if we are waiting to write data, we are registered as
+   * being interested in writing.
+   */
+  public void wakeup() {
   }
 
   /**
@@ -307,7 +382,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
    *
    * @param messages DESCRIBE THE PARAMETER
    */
-  public void connectToRemoteNode(LinkedList messages) {
+  public void connectToRemoteNode(Iterator messages) {
     if (state == STATE_USING_UDP) {
       try {
         SocketChannel channel = SocketChannel.open();
@@ -318,20 +393,31 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
 
         debug("Opening socket to " + address);
 
-        Selector selector = ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector();
+        SelectorManager selMgr = ((WirePastryNode) getLocalNode()).getSelectorManager();
+        Selector selector = selMgr.getSelector();
 
         synchronized (selector) {
           if (done) {
             key = channel.register(selector, SelectionKey.OP_READ);
+            // | SelectionKey.OP_WRITE);
           } else {
-            key = channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
+            try {
+              key = channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
+              // | SelectionKey.OP_WRITE);
+            } catch (NullPointerException npe) {
+              if (!selMgr.isAlive()) {
+                throw new NodeIsDeadException(npe);
+              } else {
+                throw npe;
+              }
+            }
           }
         }
 
         setKey(key, new HelloMessage((WirePastryNode) getLocalNode(), nodeId));
 
         if (messages != null) {
-          Iterator i = messages.iterator();
+          Iterator i = messages;
 
           while (i.hasNext()) {
             Object o = i.next();
@@ -339,19 +425,25 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
             writer.enqueue(o);
           }
         }
-
-        if (((WirePastryNode) getLocalNode()).inThread()) {
-          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-        } else {
-          ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector().wakeup();
-        }
+        // enqueue does this for us
+        /*
+         *  if (((WirePastryNode) getLocalNode()).inThread()) {
+         *  enableWrite(true);
+         *  /          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+         *  } else {
+         *  ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector().wakeup();
+         *  }
+         */
       } catch (IOException e) {
         debug("IOException connecting to remote node " + address);
 
         // mark state as TCP in order to show this was unexpeceted
-        state = STATE_USING_TCP;
+        setState(STATE_USING_TCP);
         close(messages);
       }
+    } else {
+      // state is not udp
+      // TODO implement, or throw exception
     }
   }
 
@@ -375,15 +467,19 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     debug("Received disconnect request... (state == " + state + ")");
 
     if (state == STATE_USING_TCP) {
-      state = STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT;
+      setState(STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT);
 
       writer.enqueue(new DisconnectMessage());
 
-      if (((WirePastryNode) getLocalNode()).inThread()) {
-        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-      } else {
-        ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector().wakeup();
-      }
+      // enqueue does this automatically
+      /*
+       *  if (((WirePastryNode) getLocalNode()).inThread()) {
+       *  enableWrite(true);
+       *  /        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+       *  } else {
+       *  ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector().wakeup();
+       *  }
+       */
     } else {
       System.out.println("Recieved disconnect request at non-connected socket - very bad... (state == " + state + ")");
     }
@@ -410,7 +506,11 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     try {
       if (((SocketChannel) key.channel()).finishConnect()) {
         // deregister interest in connecting to this socket
-        key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
+        SelectorManager selMgr = ((WirePastryNode) getLocalNode()).getSelectorManager();
+        Selector selector = selMgr.getSelector();
+        synchronized (selector) {
+          key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
+        }
       }
 
       debug("Found connectable channel - completed connection to " + address);
@@ -441,8 +541,8 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     try {
       // if writer is done, remove interest from writing
       if (writer.write((SocketChannel) key.channel())) {
-        key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-
+        //key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+//        enableWrite(false);
         if (state == STATE_USING_UDP_WAITING_TO_DISCONNECT) {
           close(null);
         }
@@ -498,27 +598,6 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     } catch (IOException e) {
       debug("Error occurred during reading from " + address + " at " + getNodeId() + " - closing socket. " + e);
       close(writer.getQueue());
-    }
-  }
-
-  /**
-   * Is called by the SelectorManager every time the manager is awakened. Checks
-   * to make sure that if we are waiting to write data, we are registered as
-   * being interested in writing.
-   */
-  public void wakeup() {
-    if (writer != null) {
-      if (!key.isValid()) {
-        System.out.println("ERROR: Recieved wakeup with non-valid key! (state == " + state + ")");
-      } else {
-        if (writer.isEmpty()) {
-          key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-        } else {
-          if ((key.interestOps() & SelectionKey.OP_WRITE) == 0) {
-            key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-          }
-        }
-      }
     }
   }
 
@@ -610,6 +689,32 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
   }
 
   /**
+   * Sets the State attribute of the WireNodeHandle object
+   *
+   * @param newState The new State value
+   */
+  private void setState(int newState) {
+    state = newState;
+    /*
+     *  String newStateString = "unknown";
+     *  switch (newState) {
+     *  case STATE_USING_TCP:
+     *  newStateString = "USING_TCP";
+     *  break;
+     *  case STATE_USING_UDP:
+     *  newStateString = "USING_UDP";
+     *  break;
+     *  case STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT:
+     *  newStateString = "USING_UDP_WAITING_FOR_TCP_DISCONNECT";
+     *  break;
+     *  case STATE_USING_UDP_WAITING_TO_DISCONNECT:
+     *  newStateString = "USING_UDP_WAITING_TO_DISCONNECT";
+     *  }
+     *  System.out.println("WireNodeHandle"+nodeId+".setState("+newStateString+")");
+     */
+  }
+
+  /**
    * Method which returns the size of an object about to be sent over the wire.
    * This size includes all of the wrapper messages (such as the Socket
    * Transport Message).
@@ -636,7 +741,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
    *
    * @param messages The messages that need to be rerouted (or null)
    */
-  private void close(LinkedList messages) {
+  private void close(Iterator messages) {
     try {
       debug("Closing and cleaning up socket.");
 
@@ -653,12 +758,12 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
         markDead();
       }
 
-      state = STATE_USING_UDP;
+      setState(STATE_USING_UDP);
 
       if (messages != null) {
-        debug("Messages contains " + messages.size() + " messages.");
+        debug("Messages contains " + writer.queueSize() + " messages.");
 
-        Iterator i = messages.iterator();
+        Iterator i = messages;
 
         while (i.hasNext()) {
           Object msg = i.next();
@@ -702,6 +807,6 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
   private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
     ois.defaultReadObject();
 
-    state = STATE_USING_UDP;
+    setState(STATE_USING_UDP);
   }
 }

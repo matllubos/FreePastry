@@ -205,6 +205,10 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
     synchronized (this) {
       dManager = new DatagramManager(pn, sManager, port);
 
+      // wakeup was moved to the NeedsWakeUp interface from SelectionKeyHandler
+      // it must now be explicitly registered
+      sManager.registerForWakeup(dManager);
+
       socketManager = new SocketManager(pn, port, sManager.getSelector());
 
       address = getAddress(port);
@@ -258,8 +262,8 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
             System.err.println("Interrupted in newNode!");
           }
 
-          pn.doneNode(getNearest(localhandle, bootstrap));
-          //pn.doneNode(bootstrap);
+          //pn.doneNode(getNearest(localhandle, bootstrap));
+          pn.doneNode(bootstrap);
         }
       };
 
@@ -282,7 +286,7 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    */
   protected SocketCommandMessage getResponse(InetSocketAddress address, SocketCommandMessage message) throws IOException {
     // create reader and writer
-    SocketChannelWriter writer = new SocketChannelWriter(null, null);
+    SocketChannelWriter writer = new SocketChannelWriter(null, null, null);
     SocketChannelReader reader = new SocketChannelReader(null);
 
     // bind to the appropriate port

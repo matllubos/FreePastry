@@ -337,25 +337,25 @@ public class SocketManager implements SelectionKeyHandler {
         } else if (o instanceof NodeIdRequestMessage) {
           debug("Read nodeId request message " + o);
 
-          writer = new SocketChannelWriter(pastryNode, null);
+          writer = new SocketChannelWriter(pastryNode, null, key);
 
           writer.enqueue(new NodeIdResponseMessage(pastryNode.getNodeId()));
-          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+//          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
         } else if (o instanceof LeafSetRequestMessage) {
           debug("Read leafset request message " + o);
 
-          writer = new SocketChannelWriter(pastryNode, null);
+          writer = new SocketChannelWriter(pastryNode, null, key);
 
           writer.enqueue(new LeafSetResponseMessage(pastryNode.getLeafSet()));
-          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+//          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
         } else if (o instanceof RouteRowRequestMessage) {
           debug("Read route row request message " + o);
 
           RouteRowRequestMessage message = (RouteRowRequestMessage) o;
-          writer = new SocketChannelWriter(pastryNode, null);
+          writer = new SocketChannelWriter(pastryNode, null, key);
 
           writer.enqueue(new RouteRowResponseMessage(pastryNode.getRoutingTable().getRow(message.getRow())));
-          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+//          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
         } else {
           System.out.println("Read unknown message " + o + " - dropping on floor.");
         }
@@ -369,11 +369,33 @@ public class SocketManager implements SelectionKeyHandler {
       boolean done = writer.write((SocketChannel) key.channel());
 
       if (done) {
-        key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-
+//        key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+        enableWrite(false);
         // since we're done, remove this entry
         connectors.remove(key);
         key.attach(null);
+      }
+    }
+
+    /**
+     * DESCRIBE THE METHOD
+     *
+     * @param write DESCRIBE THE PARAMETER
+     */
+    private void enableWrite(boolean write) {
+      if (write) {
+        SelectorManager selMgr = pastryNode.getSelectorManager();
+        Selector selector = selMgr.getSelector();
+        synchronized (selector) {
+          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        }
+      } else {
+        SelectorManager selMgr = pastryNode.getSelectorManager();
+        Selector selector = selMgr.getSelector();
+
+        synchronized (selector) {
+          key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+        }
       }
     }
 

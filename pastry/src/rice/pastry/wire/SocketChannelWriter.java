@@ -62,7 +62,12 @@ public class SocketChannelWriter {
   // internal list of objects waiting to be written
   private LinkedList queue;
 
+  private SelectionKey key;
+
   private boolean waitingForGreeting = false;
+
+  // performance helper to remember the state of the selectionKey
+  private boolean interestedInWriting = false;
 
   // the maximum length of the queue
   /**
@@ -82,9 +87,11 @@ public class SocketChannelWriter {
    *
    * @param spn The PastryNode the SocketChannelWriter servers
    * @param msg DESCRIBE THE PARAMETER
+   * @param key DESCRIBE THE PARAMETER
    */
-  public SocketChannelWriter(WirePastryNode spn, SocketCommandMessage msg) {
+  public SocketChannelWriter(WirePastryNode spn, SocketCommandMessage msg, SelectionKey key) {
     pastryNode = spn;
+    this.key = key;
 
     try {
       buffer = serialize(msg);
@@ -98,9 +105,21 @@ public class SocketChannelWriter {
       if (msg instanceof HelloMessage) {
         waitingForGreeting = true;
       } else {
-        queue.addLast(msg);
+        synchronized (queue) {
+          queue.addLast(msg);
+          updateSelectionKeyBasedOnQueue();
+        }
       }
     }
+  }
+
+  /**
+   * Gets the InterestedInWriting attribute of the SocketChannelWriter object
+   *
+   * @return The InterestedInWriting value
+   */
+  public boolean isInterestedInWriting() {
+    return interestedInWriting;
   }
 
   /**
@@ -117,12 +136,16 @@ public class SocketChannelWriter {
   }
 
   /**
-   * Returns the queue of writes for the remote address
+   * Returns the queue of writes for the remote address We are only returning
+   * the iterator of the queue because we don't actually want to return the
+   * queue, as we need to control the SelectionKey state based on the queue. If
+   * we give up the queue, we don't know if someone is adding/removing items to
+   * it without properly adjusting the selection key state.
    *
    * @return the queue of writes for the remote address
    */
-  public LinkedList getQueue() {
-    return queue;
+  public Iterator getQueue() {
+    return queue.iterator();
   }
 
   /**
@@ -136,10 +159,20 @@ public class SocketChannelWriter {
     synchronized (queue) {
       if (queue.size() < MAXIMUM_QUEUE_LENGTH) {
         addToQueue(o);
+        updateSelectionKeyBasedOnQueue();
       } else {
         System.err.println("Maximum TCP queue length reached - message " + o + " will be dropped.");
       }
     }
+  }
+
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @return DESCRIBE THE RETURN VALUE
+   */
+  public int queueSize() {
+    return queue.size();
   }
 
   /**
@@ -183,6 +216,7 @@ public class SocketChannelWriter {
           debug("About to serialize object " + queue.getFirst());
           buffer = serialize(queue.getFirst());
         } else {
+          updateSelectionKeyBasedOnQueue();
           return true;
         }
       }
@@ -233,6 +267,60 @@ public class SocketChannelWriter {
     }
 
     queue.addLast(o);
+  }
+
+  /**
+   * only stops writing if queue is empty for performance reasons, it is
+   * required that the caller is synchronized on the queue
+   */
+  private void updateSelectionKeyBasedOnQueue() {
+    if (queue.size() == 0) {
+      if (interestedInWriting) {
+        enableWrite(false);
+      }
+    } else {
+      // there are items in the queue
+      if (!interestedInWriting) {
+        enableWrite(true);
+      }
+    }
+  }
+
+  /**
+   * helper method for updateSelectionKeyBasedOnQueue
+   *
+   * @param write
+   */
+  private void enableWrite(boolean write) {
+    if (key == null) {
+      return;
+    }
+    // WirePastryNodeFactory.generateNodeHandle()
+    // can create a blocking version of this (SocketChannelWriter), which doesn't have a key
+    // TODO: Get rid of the ability for WirePastryNodeFactory.generateNodeHandle()'s ability to do blocking IO
+
+    if (write) {
+      try {
+        Selector selector = key.selector();
+        synchronized (selector) {
+          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        }
+      } catch (CancelledKeyException cke) {
+        SelectorManager selMgr = pastryNode.getSelectorManager();
+        if (!selMgr.isAlive()) {
+          throw new NodeIsDeadException(cke);
+        } else {
+          throw cke;
+        }
+      }
+    } else {
+      // turn writing off
+      Selector selector = key.selector();
+      synchronized (selector) {
+        key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+      }
+    }
+    interestedInWriting = write;
   }
 
   /**

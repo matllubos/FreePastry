@@ -46,6 +46,10 @@ public class SelectorManager {
    * DESCRIBE THE FIELD
    */
   public int SELECT_WAIT_TIME = 100;
+  Object selectorLock = new Object();
+  Iterator selectorIterator;
+
+  ArrayList needToWakeUp = new ArrayList();
 
   // the selector used
   private Selector selector;
@@ -85,6 +89,37 @@ public class SelectorManager {
   }
 
   /**
+   * Gets the Alive attribute of the SelectorManager object
+   *
+   * @return The Alive value
+   */
+  public boolean isAlive() {
+    return alive;
+  }
+
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @param skh DESCRIBE THE PARAMETER
+   */
+  public void registerForWakeup(NeedsWakeUp skh) {
+    synchronized (needToWakeUp) {
+      needToWakeUp.add(skh);
+    }
+  }
+
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @param skh DESCRIBE THE PARAMETER
+   */
+  public void unregisterForWakeup(NeedsWakeUp skh) {
+    synchronized (needToWakeUp) {
+      needToWakeUp.remove(skh);
+    }
+  }
+
+  /**
    * This method starts the datagram manager listening for incoming datagrams.
    * It is designed to be started when this thread's start() method is invoked.
    * In this method, the DatagramManager blocks while waiting for activity. It
@@ -95,69 +130,79 @@ public class SelectorManager {
     try {
       debug("Manager starting...");
 
+      selectorIterator = selector.selectedKeys().iterator();
+
       // loop while waiting for activity
-      while (alive && (selector.select(SELECT_WAIT_TIME) >= 0)) {
-        Object[] keys = null;
+      Object[] keys = null;
+      SelectionKey key = null;
+      SelectionKey last = null;
+      int lastType = 0;
+      int numTimes = 0;
+      int MAXTIMES = 5;
 
-        synchronized (selector) {
-          keys = selector.selectedKeys().toArray();
+      while (alive) {
+
+        // this synchronized block prevents the user from killing the node mid send
+        key = getNextSelectedKey();
+        if (key != null) {
+
+
+          synchronized (key) {
+            SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
+            if (skh != null) {
+              // accept
+              if (key.isValid() && key.isAcceptable()) {
+                skh.accept(key);
+              }
+              // connect
+              if (key.isValid() && key.isConnectable()) {
+                skh.connect(key);
+              }
+
+              // read
+              if (key.isValid() && key.isReadable()) {
+                //System.out.println("******************* Entering Read");
+                skh.read(key);
+                //System.out.println("******************* Exiting Read");
+              }
+
+              // write
+              if (key.isValid() && key.isWritable()) {
+                //System.out.println("******************* Entering Write");
+                skh.write(key);
+                //System.out.println("******************* Exiting Write");
+              }
+            } else {
+              key.cancel();
+            }
+          }
+          // synch(key)
         }
+        // if (key != null)
 
-        for (int i = 0; i < keys.length; i++) {
-          SelectionKey key = (SelectionKey) keys[i];
-          selector.selectedKeys().remove(key);
-
-          SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
-
-          if (skh != null) {
-            // accept
-            if (key.isValid() && key.isAcceptable()) {
-              skh.accept(key);
-            }
-
-            // connect
-            if (key.isValid() && key.isConnectable()) {
-              skh.connect(key);
-            }
-
-            // read
-            if (key.isValid() && key.isReadable()) {
-              skh.read(key);
-            }
-
-            // write
-            if (key.isValid() && key.isWritable()) {
-              skh.write(key);
-            }
-          } else {
-            key.cancel();
+        synchronized (needToWakeUp) {
+          Iterator i = needToWakeUp.iterator();
+          while (i.hasNext()) {
+            NeedsWakeUp nwu = (NeedsWakeUp) i.next();
+            nwu.wakeup();
           }
         }
+        // synch (needToWakeUp)
+      }
+      // while(alive)
 
-        // wake up all SelectionKeyManagers
-        synchronized (selector) {
-          keys = selector.keys().toArray();
-        }
+      // shutdown code
+      synchronized (selectorLock) {
+        keys = selector.keys().toArray();
 
         for (int i = 0; i < keys.length; i++) {
-          SelectionKey key = (SelectionKey) keys[i];
-          SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
-
-          if (skh != null) {
-            skh.wakeup();
-          }
+          key = (SelectionKey) keys[i];
+          key.channel().close();
+          key.cancel();
         }
+
+        selector.close();
       }
-
-      Object[] keys = selector.keys().toArray();
-
-      for (int i = 0; i < keys.length; i++) {
-        SelectionKey key = (SelectionKey) keys[i];
-        key.channel().close();
-        key.cancel();
-      }
-
-      selector.close();
     } catch (Throwable e) {
       System.out.println("ERROR (run): " + e);
       e.printStackTrace();
@@ -172,6 +217,27 @@ public class SelectorManager {
     // mark socketmanager as dead
     alive = false;
   }
+
+  /**
+   * Gets the NextSelectedKey attribute of the SelectorManager object
+   *
+   * @return The NextSelectedKey value
+   * @exception IOException DESCRIBE THE EXCEPTION
+   */
+  SelectionKey getNextSelectedKey() throws IOException {
+    synchronized (selectorLock) {
+      if (selectorIterator.hasNext()) {
+        SelectionKey next = (SelectionKey) selectorIterator.next();
+        selectorIterator.remove();
+        return next;
+      } else {
+        selector.select(SELECT_WAIT_TIME);
+        selectorIterator = selector.selectedKeys().iterator();
+        return null;
+      }
+    }
+  }
+
 
   /**
    * DESCRIBE THE METHOD
