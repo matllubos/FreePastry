@@ -65,6 +65,15 @@ public interface GCPastContent extends PastContent {
    */
   public long getVersion();
 
+  /**
+   * Produces a handle for this content object. The handle is retrieved and returned to the
+   * client as a result of the Past.lookupHandles() method.
+   *
+   * @param The local GCPast service which the content is on.
+   * @return the handle
+   */
+  public GCPastContentHandle getHandle(GCPast local, long expiration);
+
 }
 
 
