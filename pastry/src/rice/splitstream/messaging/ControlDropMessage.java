@@ -15,12 +15,19 @@ import rice.scribe.messaging.*;
 public class ControlDropMessage extends ControlMessage{
 
    private NodeId spare_id;
+   private StripeId stripe_id;
 
    public ControlDropMessage( Address addr, NodeHandle source, NodeId stripe_id,
                               Credentials c, NodeId spare_id )
    {
       super( addr, source, stripe_id, c );
+      this.stripe_id = (StripeId)stripe_id;
       this.spare_id = spare_id;
+   }
+
+   public StripeId getStripeId()
+   {
+      return stripe_id;
    }
 
    /**
