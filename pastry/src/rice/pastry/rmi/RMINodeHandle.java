@@ -167,7 +167,7 @@ public class RMINodeHandle extends DistNodeHandle
 
 	    markDead();
 
-	    if (msg.getOptions().multipleHopsAllowed() == true) {
+	    if (((RouteMessage)msg).getOptions().multipleHopsAllowed() == true) {
 		// bounce back to local dispatcher
 		if (Log.ifp(6)) System.out.println("bouncing message back to self at " + getLocalNode());
 		if (msg instanceof RouteMessage) {
