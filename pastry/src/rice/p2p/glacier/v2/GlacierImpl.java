@@ -44,6 +44,12 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   protected CancellableTask timer; 
   protected GlacierStatistics statistics;
   protected Vector listeners;
+  protected long currentFragmentRequestTimeout;
+  protected long tokenBucket;
+  protected long bucketLastUpdated;
+  protected long bucketMin;
+  protected long bucketMax;
+  protected long bucketConsumed;
 
   private int loglevel = 2;
   private final boolean logStatistics = true;
@@ -76,7 +82,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   
 //  private final int fragmentRequestMaxAttempts = 3;
   private final int fragmentRequestMaxAttempts = 0;
-  private final long fragmentRequestTimeout = 10 * SECONDS;
+  private final long fragmentRequestTimeoutDefault = 10 * SECONDS;
+  private final long fragmentRequestTimeoutMin = 10 * SECONDS;
+  private final long fragmentRequestTimeoutMax = 60 * SECONDS;
+  private final long fragmentRequestTimeoutDecrement = 1 * SECONDS;
 
   private final long manifestRequestTimeout = 10 * SECONDS;
   private final long manifestRequestInitialBurst = 3;
@@ -87,7 +96,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   
   private final long handoffDelayAfterJoin = 45 * SECONDS;
   private final long handoffInterval = 4 * MINUTES;
-  private final int handoffMaxFragments = 100;
+  private final int handoffMaxFragments = 10;
 
   private final long garbageCollectionInterval = 10 * MINUTES;
   private final int garbageCollectionMaxFragmentsPerRun = 100;
@@ -109,6 +118,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private final int bulkRefreshPatchAggregationFactor = 50;
   private final long bulkRefreshPatchInterval = 3 * MINUTES;
   private final int bulkRefreshPatchRetries = 2;
+
+  private long bucketTokensPerSecond = 100000;
+  private long bucketMaxBurstSize = 2*100000;
 
   private final double jitterRange = 0.1;
 
@@ -153,7 +165,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     this.listeners = new Vector();
     this.numActiveRestores = new int[1];
     this.numActiveRestores[0] = 0;
+    this.currentFragmentRequestTimeout = fragmentRequestTimeoutDefault;
     this.debugID = "G" + Character.toUpperCase(instance.charAt(instance.lastIndexOf('-')+1));
+    this.tokenBucket = 0;
+    this.bucketLastUpdated = System.currentTimeMillis();
     determineResponsibleRange();
 
     /* Neighbor requests */
@@ -790,9 +805,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           numCurrentRestores = numActiveRestores[0];
         }
 
-        log(2, "Traffic shaper: "+pendingTraffic.size()+" jobs waiting ("+numCurrentRestores+" active jobs)");
+        log(2, "Traffic shaper: "+pendingTraffic.size()+" jobs waiting ("+numCurrentRestores+" active jobs, "+tokenBucket+" tokens)");
 
-        if (numCurrentRestores < maxActiveRestores) {
+        updateTokenBucket();
+        if ((numCurrentRestores < maxActiveRestores) && (tokenBucket>0)) {
           for (int i=0; i<rateLimitedRequestsPerSecond; i++) {
             if (!pendingTraffic.isEmpty()) {
               Enumeration keys = pendingTraffic.keys();
@@ -838,6 +854,14 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           statistics.numObjectsInTrash = (trashStorage == null) ? 0 : trashStorage.scan().numElements();
           statistics.responsibleRange = responsibleRange;
           statistics.activeFetches = numActiveRestores[0];
+          statistics.bucketMin = bucketMin;
+          statistics.bucketMax = bucketMax;
+          statistics.bucketConsumed = bucketConsumed;
+          statistics.bucketTokensPerSecond = bucketTokensPerSecond;
+          statistics.bucketMaxBurstSize = bucketMaxBurstSize;
+          bucketMin = tokenBucket;
+          bucketMax = tokenBucket;
+          bucketConsumed = 0;
           
           Storage storageF = fragmentStorage.getStorage();
           if (storageF instanceof PersistentStorage)
@@ -860,6 +884,23 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         statistics = new GlacierStatistics(tagMax);
       }
     });
+  }
+
+  protected void updateTokenBucket() {
+    final long now = System.currentTimeMillis();
+    final long contentsBefore = tokenBucket;
+    
+    while (bucketLastUpdated < now) {
+      bucketLastUpdated += SECONDS/10;
+      tokenBucket += bucketTokensPerSecond/10;
+      if (tokenBucket > bucketMaxBurstSize)
+        tokenBucket = bucketMaxBurstSize;
+    }
+
+    if (bucketMax < tokenBucket)
+      bucketMax = tokenBucket;
+      
+    log(3, "Token bucket contains "+tokenBucket+" tokens (added "+(tokenBucket-contentsBefore)+")");
   }
 
   private long jitterTerm(long basis) {
@@ -979,7 +1020,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     Iterator iter = neighborStorage.scan().getIterator();
     while (iter.hasNext()) {
       Id thisNeighbor = (Id) iter.next();
-      log(3, "Considering neighbor: "+thisNeighbor);
+      log(4, "Considering neighbor: "+thisNeighbor);
       if (myNodeId.clockwise(thisNeighbor)) {
         if ((cwPeer == null) || thisNeighbor.isBetween(myNodeId, cwPeer))
           cwPeer = thisNeighbor;
@@ -1167,7 +1208,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         "syncInterval = " + (int)(syncInterval / MINUTES) + " min\n" +
         "syncMaxFragments = " + syncMaxFragments + "\n" +
         "fragmentRequestMaxAttempts = " + fragmentRequestMaxAttempts + "\n" +
-        "fragmentRequestTimeout = " + (int)(fragmentRequestTimeout / SECONDS) + " sec\n" +
+        "fragmentRequestTimeoutDefault = " + (int)(fragmentRequestTimeoutDefault / SECONDS) + " sec\n" +
         "manifestRequestTimeout = " + (int)(manifestRequestTimeout / SECONDS) + " sec\n" +
         "manifestBurst = " + manifestRequestInitialBurst + " -> " + manifestRequestRetryBurst + "\n" +
         "manifestAggregationFactor = " + manifestAggregationFactor + "\n" +
@@ -2568,7 +2609,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           
           Fragment thisFragment = gdm.getFragment(0);
           if (thisFragment == null) {
-            warn("retrieveObject: DataMessage does not contain any fragments -- discarded");
+            log(3, "Fragment "+((GlacierDataMessage)o).getKey(0)+" not available (GDM returned null), sending another request");
+            if (numCheckedFragments() < numFragments)
+              sendRandomRequest();
             return;
           }
           
@@ -2589,6 +2632,12 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             
           log(3, "retrieveObject: Received fragment #"+fragmentID+" for "+gdm.getKey(0));
           haveFragment[fragmentID] = thisFragment;
+          
+          currentFragmentRequestTimeout -= fragmentRequestTimeoutDecrement;
+          if (currentFragmentRequestTimeout < fragmentRequestTimeoutMin)
+            currentFragmentRequestTimeout = fragmentRequestTimeoutMin;
+          log(3, "Timeout decreased to "+currentFragmentRequestTimeout);
+          
           if (numHaveFragments() >= numSurvivors) {
 
             /* Restore the object */
@@ -2654,7 +2703,14 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       public void timeoutExpired() {
         if (attemptsLeft > 0) {
           log(3, "retrieveObject: Retrying ("+attemptsLeft+" attempts left)");
-          timeout = timeout + fragmentRequestTimeout;
+          if (attemptsLeft < restoreMaxBoosts) {
+            currentFragmentRequestTimeout *= 2;
+            if (currentFragmentRequestTimeout > fragmentRequestTimeoutMax)
+              currentFragmentRequestTimeout = fragmentRequestTimeoutMax;
+            log(3, "Timeout increased to "+currentFragmentRequestTimeout);
+          }
+          
+          timeout = timeout + currentFragmentRequestTimeout;
           attemptsLeft --;
 
           int numRequests = numSurvivors - numHaveFragments();
@@ -2745,7 +2801,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       public void timeoutExpired() {
         if (attemptsLeft > 0) {
           log(3, "retrieveFragment: Retrying ("+attemptsLeft+" attempts left)");
-          timeout = timeout + fragmentRequestTimeout;
+          timeout = timeout + currentFragmentRequestTimeout;
           attemptsLeft --;
           sendMessage(
             key.getVersionKey().getId(),
@@ -2753,7 +2809,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             null
           );
         } else {
-          timeout = timeout + 3 * restoreMaxBoosts * fragmentRequestTimeout;
+          timeout = timeout + 3 * restoreMaxBoosts * currentFragmentRequestTimeout;
           if (inPhaseTwo) {
             warn("retrieveFragment: Already in phase two");
           }
@@ -2894,6 +2950,25 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
 
     final GlacierMessage msg = (GlacierMessage) message;
     log(3, "Received message " + msg + " with destination " + id + " from " + msg.getSource().getId());
+
+    if (msg instanceof GlacierDataMessage) {
+      GlacierDataMessage gdm = (GlacierDataMessage) msg;
+      long thisSize = 1000;
+      updateTokenBucket();
+      for (int i=0; i<gdm.numKeys(); i++) {
+        if (gdm.getFragment(i) != null)
+          thisSize += gdm.getFragment(i).getPayload().length;
+        if (gdm.getManifest(i) != null)
+          thisSize += numFragments * 21;
+      }
+
+      tokenBucket -= thisSize;
+      bucketConsumed += thisSize;
+      if (bucketMin > tokenBucket)
+        bucketMin = tokenBucket;
+
+      log(3, "Token bucket contains "+tokenBucket+" tokens (consumed "+thisSize+")");
+    }
 
     if (msg.isResponse()) {
       GlacierContinuation gc = (GlacierContinuation) continuations.get(new Integer(msg.getUID()));
@@ -3311,16 +3386,12 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         int numFragments = 0, numManifests = 0;
         
         public void returnResponse() {
-          if ((numFragments>0) || (numManifests>0)) {
-            log(3, "Returning response with "+numFragments+" fragments, "+numManifests+" manifests ("+gfm.getNumKeys()+" queries originally)");
-            sendMessage(
-              null,
-              new GlacierDataMessage(gfm.getUID(), gfm.getAllKeys(), fragment, manifest, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
-              gfm.getSource()
-            );
-          } else {
-            log(3, "No fragments and no manifests match query, omitting response");
-          }
+          log(3, "Returning response with "+numFragments+" fragments, "+numManifests+" manifests ("+gfm.getNumKeys()+" queries originally)");
+          sendMessage(
+            null,
+            new GlacierDataMessage(gfm.getUID(), gfm.getAllKeys(), fragment, manifest, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
+            gfm.getSource()
+          );
         }
         public void receiveResult(Object o) {
           if (o != null) {
@@ -3575,6 +3646,11 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   
   public void setNeighborTimeout(long neighborTimeoutMin) {
     this.neighborTimeout = neighborTimeoutMin * MINUTES;
+  }
+  
+  public void setBandwidthLimit(long bytesPerSecond, long maxBurst) {
+    this.bucketTokensPerSecond = bytesPerSecond;
+    this.bucketMaxBurstSize = maxBurst;
   }
   
   public void addStatisticsListener(GlacierStatisticsListener gsl) {
