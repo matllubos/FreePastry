@@ -122,11 +122,7 @@ public class WirePastryRegrTest extends PastryRegrTest {
       System.out.println("ERROR (doStuff): " + e);
     }
 
-    if (! address.equals(this.bootstrap)) {
-      pn = factory.newNode((WireNodeHandle) bootstrap);
-    } else {
-      pn = factory.newNode(null);
-    }
+    pn = factory.newNode((WireNodeHandle) bootstrap);
 
     port+=2;
 

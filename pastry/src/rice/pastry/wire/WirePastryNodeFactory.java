@@ -88,6 +88,17 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
    * @return A NodeHandle cooresponding to that address
    */
   public NodeHandle generateNodeHandle(InetSocketAddress address) {
+    // if this is the first node, return null (first node in network),
+    // otherwise, return a new node handle
+    try {
+      if (address.getAddress().equals(InetAddress.getLocalHost()) &&
+          (address.getPort() == port)) {
+        return null;
+      }
+    } catch (UnknownHostException e) {
+      System.out.println("ERROR getting local host: " + e);
+    }
+
     return new WireNodeHandle(address, null);
   }
 
