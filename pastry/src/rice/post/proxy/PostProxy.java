@@ -3,6 +3,7 @@ package rice.post.proxy;
 import rice.*;
 import rice.Continuation.*;
 
+import rice.pastry.PastryNode;
 import rice.pastry.dist.*;
 import rice.pastry.commonapi.*;
 import rice.pastry.standard.*;
@@ -70,6 +71,24 @@ public class PostProxy {
   protected IdFactory FACTORY;
   
   /**
+<<<<<<< PostProxy.java
+    * The IdFactory to use for glacier fragments
+   */
+  protected FragmentKeyFactory KFACTORY;
+  
+  /**
+    * The node the services should use
+   */
+  protected PastryNode pastryNode;
+  
+  /**
+    * The node running in the global ring (if one exists)
+   */
+  protected PastryNode globalPastryNode;
+  
+  /**
+=======
+>>>>>>> 1.19
    * The node the services should use
    */
   protected Node node;
@@ -612,6 +631,7 @@ public class PostProxy {
       proxyAddress = parameters.getInetSocketAddressParameter("pastry_proxy");
     
     node = factory.newNode(factory.getNodeHandle(bootAddresses), proxyAddress);
+    pastryNode = (PastryNode) node;
     Thread.sleep(3000);
     stepDone(SUCCESS);
   }  
@@ -679,6 +699,7 @@ public class PostProxy {
     InetSocketAddress[] bootAddresses = parameters.getInetSocketAddressArrayParameter("multiring_global_pastry_bootstraps");
     
     globalNode = factory.newNode(factory.getNodeHandle(bootAddresses), (rice.pastry.NodeId) ((RingId) node.getId()).getId());
+    globalPastryNode = (PastryNode) globalNode;
     Thread.sleep(3000);
     stepDone(SUCCESS);
   }     
