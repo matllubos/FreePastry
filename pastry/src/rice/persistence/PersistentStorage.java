@@ -39,7 +39,6 @@ public class PersistentStorage implements Storage {
    * @param rootDir The root directory of the persisted disk.
    */
   public PersistentStorage(String rootDir) {
-    System.out.println("Setting up Persistent Storage");
     this.rootDir = rootDir;
 
     if(this.initDirectories())
@@ -48,8 +47,7 @@ public class PersistentStorage implements Storage {
       System.out.println("ERROR: Failed to Initialized Directories");
     
    fileMap = new Hashtable();
-
-   /* Should read in existing objects */
+   initFileMap();
 
   }
 
@@ -78,15 +76,23 @@ public class PersistentStorage implements Storage {
         System.out.println("ERROR: MakePersistent called with null arguments.");
       }
 
+      if(!fileMap.containsKey(id)){
+         /* This is a new entry must create mapping */
+         String fileName = makeFileName(id);
+         createMapping(id, fileName);
+      }
+
       /* Create a file representation and then transactionally write it */
-      String fileName = makeFileName(id);
-      File objFile = new File(backupDirectory, fileName);
-      File transcFile = new File(transDirectory, fileName);
+      File objFile = getFile(id); 
+      File transcFile = new File(transDirectory, objFile.getName());
 
       FileOutputStream fileStream  = new FileOutputStream(transcFile);
       ObjectOutputStream objStream = new ObjectOutputStream(fileStream);
-
+       
+      objStream.writeObject(id);
       objStream.writeObject(obj);
+
+      /* I should look at this a little harder */
 
       decreaseUsedSpace(objFile.length()); /* decrease the amount used */
 
@@ -95,6 +101,7 @@ public class PersistentStorage implements Storage {
       /* maybe i should combine this increase and decrease */
   
       increaseUsedSpace(objFile.length()); /* increase the amount used */
+      
 
       c.receiveResult(new Boolean(true));
 
@@ -122,13 +129,12 @@ public class PersistentStorage implements Storage {
    * <code>false</code>.
    */
   public void unstore(Comparable id, Continuation c) {
-     /* 1. Should remove this from hashtable */
-
-
+     /* 1. Should remove this from fileMap*/
      /* 3. Should remove from disk */
      /* 4. Should update the value of used space */
-      String fileName = makeFileName(id);
-      File objFile = new File(backupDirectory, fileName);
+
+      File objFile = getFile(id); 
+      removeMapping(id);
       decreaseUsedSpace(objFile.length());
       objFile.delete();
        
@@ -145,9 +151,7 @@ public class PersistentStorage implements Storage {
    * @return Whether or not an object is present at id.
    */
   public void exists(Comparable id, Continuation c) {
-     String fileName = makeFileName(id);
-     File objFile = new File(backupDirectory, fileName);
-     c.receiveResult(new Boolean(objFile.exists())); 
+     c.receiveResult(new Boolean(fileMap.containsKey(id))); 
   }
 
   /**
@@ -159,8 +163,7 @@ public class PersistentStorage implements Storage {
    * object (through receiveResult on c).
    */
   public void getObject(Comparable id, Continuation c){
-      String fileName = makeFileName(id);
-      File objFile = new File(backupDirectory, fileName);
+      File objFile = getFile(id); 
       c.receiveResult(readObject(objFile));
   }
 
@@ -228,6 +231,7 @@ public class PersistentStorage implements Storage {
   /*****************************************************************/
   /* Helper functions for Directory Management                     */
   /*****************************************************************/
+
   /**
    * Verify that the directory name passed to the
    * PersistenceManagerImpl constructor is valid and
@@ -237,7 +241,6 @@ public class PersistentStorage implements Storage {
    */
   private boolean initDirectories()
   {
-    System.out.println("Initing Directories");
     rootDirectory = new File(rootDir);
     if (createDir(rootDirectory) == false) {
       return false;
@@ -252,8 +255,28 @@ public class PersistentStorage implements Storage {
     if (createDir(transDirectory) == false) {
       return false;
     }
-    System.out.println("Done Initing Directories");
+    else{
+      File[] files = transDirectory.listFiles();
+      int numFiles = files.length;
+      for ( int i = 0; i < numFiles; i++){
+        files[i].delete(); /* clean out all uncompleted transactions */ 
+      }
+    }
+     
     return true;
+  }
+
+  private void initFileMap(){
+
+    File[] files = backupDirectory.listFiles();
+    int numFiles = files.length;
+
+    for ( int i = 0; i < numFiles; i++){
+       /* insert keys into file Map */
+       fileMap.put(readKey(files[i]), files[i]);
+       increaseUsedSpace(files[i].length()); /* increase the amount used */
+    }
+  
   }
 
   /**
@@ -270,14 +293,76 @@ public class PersistentStorage implements Storage {
   }
 
   private String makeFileName(Comparable id){
-    return id.toString();
+    /* I'm using the hashCode, hopefully this won't collide ... */
+    return String.valueOf(id.hashCode());
+  }
+
+  /*****************************************************************/
+  /* Helper functions for Managing/Using FileMap                   */
+  /*****************************************************************/
+  private File getFile(Comparable id){
+     return (File) fileMap.get(id);
+  }
+  
+  private void createMapping(Comparable id, String fileName){
+       File objFile = new File(backupDirectory, fileName);
+     synchronized(fileMap){
+       /* create a file */
+       fileMap.put(id, objFile);
+     }
+  }
+  
+  private void removeMapping(Comparable id){
+     synchronized(fileMap){
+       fileMap.remove(id);
+     }
   }
 
   /*****************************************************************/
   /* Helper functions for Object Input/Output                      */
   /*****************************************************************/
+
+  /**
+   * Abstract over reading a single object to a file using Java
+   * serialization.
+   *
+   * @param file The file to create the object from.
+   * @return The object that was read in
+   */
   public static Serializable readObject(File file){
-    /* We should check that a file in not being read and written concurrently */
+    Serializable toReturn = null;
+    if(file == null)
+       return null;
+    if(!file.exists())
+       return null;
+
+    FileInputStream fin;
+    ObjectInputStream objin;
+
+    synchronized (file) {
+          try {
+              fin = new FileInputStream(file);
+              objin = new ObjectInputStream(fin);
+              objin.readObject(); /* skip key */
+              toReturn = (Serializable) objin.readObject();
+              fin.close();
+              objin.close();
+          }
+          catch (Exception e) {
+             e.printStackTrace();
+          }
+    }
+    return toReturn;
+  }
+
+  /**
+   * Abstract over reading a single key from a file using Java
+   * serialization.
+   *
+   * @param file The file to create the key from.
+   * @return The key that was read in
+   */
+  public static Serializable readKey(File file){
     Serializable toReturn = null;
     if(file == null)
        return null;
@@ -301,6 +386,7 @@ public class PersistentStorage implements Storage {
     }
     return toReturn;
   }
+     
      
 
   /**
@@ -388,11 +474,23 @@ public class PersistentStorage implements Storage {
     }
 
   }
-
+  
+  /**
+   * 
+   * Increases the amount of storage recorded as used 
+   *
+   * @param long i the amount to increase usage by 
+   */
   private void increaseUsedSpace(long i){
      usedSize = usedSize + i;
   }
 
+  /**
+   * 
+   * decreases the amount of storage recorded as used 
+   *
+   * @param long i the amount to decrease usage by 
+   */
   private void decreaseUsedSpace(long i){
      usedSize = usedSize - i;
   }
