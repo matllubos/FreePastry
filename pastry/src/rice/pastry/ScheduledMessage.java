@@ -41,7 +41,7 @@ import java.io.*;
 import java.util.*;
 
 /**
- * A class the represents scheduled message events
+ * A class that represents scheduled message events
  *
  * @version $Id$
  *

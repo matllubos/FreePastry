@@ -64,9 +64,6 @@ public class WirePastryNode extends DistPastryNode {
   // The address (ip + port) of this pastry node
   private InetSocketAddress _address;
 
-  // Large value (in seconds) means infrequent, 0 means never.
-  private int leafSetMaintFreq, routeSetMaintFreq;
-
   // The SelectorManager, controlling the selector
   private SelectorManager _manager;
 
@@ -82,44 +79,6 @@ public class WirePastryNode extends DistPastryNode {
   // The thread in which the SelectorManager is running
   private Thread _executionThread;
 
-  private class MaintThread implements Runnable {
-    public void run() {
-
-      int leaftime = 0, routetime = 0, slptime;
-
-      if (leafSetMaintFreq == 0)
-        slptime = routeSetMaintFreq;
-      else if (routeSetMaintFreq == 0)
-        slptime = leafSetMaintFreq;
-      else if (leafSetMaintFreq < routeSetMaintFreq)
-        slptime = leafSetMaintFreq;
-      else
-        slptime = routeSetMaintFreq;
-
-      // Assumes one of leafSetMaintFreq and routeSetMaintFreq is a
-      // multiple of the other. Generally true; else it approximates
-      // the larger one to the nearest upward multiple.
-
-      while (true) {
-        try {
-          Thread.sleep(1000 * slptime);
-        } catch (InterruptedException e) {}
-
-        leaftime += slptime;
-        routetime += slptime;
-
-        if (leafSetMaintFreq != 0 && leaftime >= leafSetMaintFreq) {
-          leaftime = 0;
-          receiveMessage(new InitiateLeafSetMaintenance());
-        }
-
-        if (routeSetMaintFreq != 0 && routetime >= routeSetMaintFreq) {
-          routetime = 0;
-          receiveMessage(new InitiateRouteSetMaintenance());
-        }
-      }
-    }
-  }
 
   /**
    * Constructor
@@ -180,8 +139,10 @@ public class WirePastryNode extends DistPastryNode {
    * @param bootstrap The node which this node should boot off of.
    */
   public void doneNode(NodeHandle bootstrap) {
-    if (leafSetMaintFreq > 0 || routeSetMaintFreq > 0)
-      new Thread(new MaintThread()).start();
+      super.doneNode(bootstrap);
+
+      //if (leafSetMaintFreq > 0 || routeSetMaintFreq > 0)
+      //new Thread(new MaintThread()).start();
 
     initiateJoin(bootstrap);
     _manager.run();

@@ -62,11 +62,6 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
     private RMINodeHandlePool handlepool;
     private int port;
 
-    /**
-    * Large value (in seconds) means infrequent, 0 means never.
-     */
-    private int leafSetMaintFreq, routeSetMaintFreq;
-
     private LinkedList queue;
     private int count;
 
@@ -107,44 +102,6 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
 	}
     }
 
-    private class MaintThread implements Runnable {
-	public void run() {
-
-	    int leaftime = 0, routetime = 0, slptime;
-
-	    if (leafSetMaintFreq == 0)
-		slptime = routeSetMaintFreq;
-	    else if (routeSetMaintFreq == 0)
-		slptime = leafSetMaintFreq;
-	    else if (leafSetMaintFreq < routeSetMaintFreq)
-		slptime = leafSetMaintFreq;
-	    else
-		slptime = routeSetMaintFreq;
-
-	    // Assumes one of leafSetMaintFreq and routeSetMaintFreq is a
-	    // multiple of the other. Generally true; else it approximates
-	    // the larger one to the nearest upward multiple.
-
-	    while (true) {
-		try {
-		    Thread.sleep(1000 * slptime);
-		} catch (InterruptedException e) {}
-
-		leaftime += slptime;
-		routetime += slptime;
-
-		if (leafSetMaintFreq != 0 && leaftime >= leafSetMaintFreq) {
-		    leaftime = 0;
-		    receiveMessage(new InitiateLeafSetMaintenance());
-		}
-
-		if (routeSetMaintFreq != 0 && routetime >= routeSetMaintFreq) {
-		    routetime = 0;
-		    receiveMessage(new InitiateRouteSetMaintenance());
-		}
-	    }
-	}
-    }
 
     /**
     * Constructor
@@ -181,15 +138,16 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
     public DistNodeHandlePool getNodeHandlePool() { return handlepool; }
 
     /**
-    * Called after the node is initialized.
-    *
-    * @param hp Node handle pool
+     * Called after the node is initialized.
+     *
+     * @param bootstrap The node which this node should boot off of.
      */
     public void doneNode(NodeHandle bootstrap) {
+	super.doneNode(bootstrap);
 
 	new Thread(new MsgHandler()).start();
-	if (leafSetMaintFreq > 0 || routeSetMaintFreq > 0)
-	    new Thread(new MaintThread()).start();
+	//if (leafSetMaintFreq > 0 || routeSetMaintFreq > 0)
+	//  new Thread(new MaintThread()).start();
 
 	try {
 	    remotestub = (RMIRemoteNodeI) UnicastRemoteObject.exportObject(this);

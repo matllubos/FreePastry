@@ -39,7 +39,8 @@ package rice.pastry.dist;
 import java.util.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-
+import rice.pastry.routing.*;
+import rice.pastry.leafset.*;
 
 /**
  * Class which represents the abstraction of a "real" pastry node. Designed
@@ -51,7 +52,14 @@ import rice.pastry.messaging.*;
  */
 
 public abstract class DistPastryNode extends PastryNode {
+
+    /**
+     * Period (in seconds) at which the leafset and routeset maintenance tasks, respectively, are invoked.
+     * 0 means never.
+     */
+    protected int leafSetMaintFreq, routeSetMaintFreq;
     private Timer timer;
+
 
     /**
      * Constructor, with NodeId. Need to set the node's ID before this node
@@ -69,6 +77,27 @@ public abstract class DistPastryNode extends PastryNode {
      * @return The node handle pool for this pastry node.
      */
     public abstract DistNodeHandlePool getNodeHandlePool();
+
+
+    /**
+     * Called after the node is initialized.
+     *
+     * @param hp Node handle pool
+     */
+    public void doneNode(NodeHandle bootstrap) {
+
+	if (leafSetMaintFreq > 0) {
+	    // schedule the leafset maintenance event
+	    scheduleMsgAtFixedRate(new InitiateLeafSetMaintenance(), 
+				   leafSetMaintFreq*1000, leafSetMaintFreq*1000);
+	}
+	if (routeSetMaintFreq > 0) {
+	    // schedule the routeset maintenance event
+	    scheduleMsgAtFixedRate(new InitiateRouteSetMaintenance(), 
+				   routeSetMaintFreq*1000, routeSetMaintFreq*1000);
+	}
+    }
+
 
     /**
      * Method which kills a PastryNode (used only for testing).
