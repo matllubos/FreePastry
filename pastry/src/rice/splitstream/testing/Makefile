@@ -1,7 +1,9 @@
-PACKAGE = rice.splitstream.test
+PACKAGE = rice.splitstream.testing
 
 SOURCE  = \
-        SplitStreamTest.java
+	DirectSplitStreamTest.java \
+	DirectSplitStreamTestApp.java
+
 
 RMI_SOURCE =
 
