@@ -250,7 +250,7 @@ public class DatagramTransmissionManager {
     public int STATE_WAITING_TO_SEND = -5;
 
     // the default wait-time for a lost packet
-    public long SEND_TIMEOUT_DEFAULT = 750;
+    public long SEND_TIMEOUT_DEFAULT = 500;
 
     // the minimum wait time for a lost packet
     public long SEND_TIMEOUT_MIN = 250;
@@ -264,15 +264,18 @@ public class DatagramTransmissionManager {
 
     // the maximum number to retries before dropping the message
     // on the floor
-    public int MAX_NUM_RETRIES = 4;
+    public int MAX_NUM_RETRIES = 5;
 
     // the maximum number of retries before declaring the node to
     // be dead and attampting to open a socket
-    public int NUM_RETRIES_BEFORE_OPENING_SOCKET = 2;
-    
+    public int NUM_RETRIES_BEFORE_OPENING_SOCKET = 3;
+
     // the maximum number of objects in the UDP queue before we
     // open a socket
     public int MAX_UDP_QUEUE_SIZE = 4;
+
+    // the node ID for this TE
+    private NodeId nodeId;
 
 
     /**
@@ -286,6 +289,8 @@ public class DatagramTransmissionManager {
       state = STATE_NO_DATA;
       resendWaitTime = (long) (INITIAL_RESEND_WAIT_TIME * (1 + random.nextDouble()));
       sendTimeoutTime = SEND_TIMEOUT_DEFAULT;
+      nodeId = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address).getNodeId();
+      numRetries = 0;
 
       this.address = address;
     }
@@ -298,11 +303,9 @@ public class DatagramTransmissionManager {
     public void add(PendingWrite write) {
       queue.addLast(write);
 
-//      System.out.println("DQ: " + queue.size());
-
       debug("Added write for object " + write.getObject());
 
-      if (queue.size() > MAX_UDP_QUEUE_SIZE) {
+      if ((queue.size() > MAX_UDP_QUEUE_SIZE) && (! (write.getObject() instanceof DatagramMessage))) {
         WireNodeHandle wnh = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address);
         LinkedList list = new LinkedList();
 
@@ -311,8 +314,11 @@ public class DatagramTransmissionManager {
 
         while (i.hasNext()) {
           PendingWrite pw = (PendingWrite) i.next();
-          list.addLast(new SocketTransportMessage(pw.getObject()));
-          i.remove();
+
+          if (! (pw.getObject() instanceof DatagramMessage)) {
+            list.addLast(new SocketTransportMessage(pw.getObject()));
+            i.remove();
+          }
         }
 
         wnh.connectToRemoteNode(list);
@@ -335,13 +341,19 @@ public class DatagramTransmissionManager {
     public PendingWrite get() {
       if (state == STATE_READY) {
         state = STATE_WAITING_FOR_ACK;
-        numRetries = 0;
         sendTime = System.currentTimeMillis();
         PendingWrite write = (PendingWrite) queue.getFirst();
 
         debug("Returning write for object " + write.getObject());
 
-        return new PendingWrite(write.getAddress(), new DatagramTransportMessage(write.getObject(), ackExpected));
+        if (write.getObject() instanceof DatagramMessage) {
+          DatagramMessage msg = (DatagramMessage) write.getObject();
+          msg.setNum(ackExpected);
+
+          return new PendingWrite(write.getAddress(), msg);
+        } else {
+          return new PendingWrite(write.getAddress(), new DatagramTransportMessage(write.getObject(), ackExpected));
+        }
       } else {
         throw new IllegalArgumentException("get() called on non-ready TransmissionEntry.");
       }
@@ -356,7 +368,12 @@ public class DatagramTransmissionManager {
     public void ackReceived(int num) {
       if (state != STATE_NO_DATA) {
         if (ackExpected == num) {
-          queue.removeFirst();
+          ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address).markAlive();
+
+          PendingWrite pw = (PendingWrite) queue.removeFirst();
+
+          if (pw.getObject() instanceof PingMessage)
+            ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address).pingResponse();
 
           long elapsedTime = System.currentTimeMillis() - sendTime;
 
@@ -366,7 +383,6 @@ public class DatagramTransmissionManager {
             sendTimeoutTime = SEND_TIMEOUT_MIN;
 
           resendWaitTime = (long) (resendWaitTime / 2);
-          ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address).markAlive();
 
           if (queue.size() > 0) {
             state = STATE_WAITING_TO_SEND;
@@ -375,6 +391,7 @@ public class DatagramTransmissionManager {
             state = STATE_NO_DATA;
           }
 
+          numRetries = 0;
           ackExpected++;
         } else {
           debug("WARNING: Got wrong ack - got " + num + " expected " + ackExpected);
@@ -403,34 +420,35 @@ public class DatagramTransmissionManager {
         long timeout = System.currentTimeMillis() - sendTime;
 
         if (timeout > sendTimeoutTime) {
-          debug("WARNING: It has been too long (" + timeout + ") - packet lost. Resending in " + resendWaitTime + " milliseconds.");
+          debug("WARNING: It has been too long (" + timeout + ") - packet lost. Resending in " + resendWaitTime + " milliseconds. (" + numRetries + " try)");
 
           state = STATE_WAITING_FOR_RESEND;
           resendWaitBeginTime = System.currentTimeMillis();
           numRetries++;
-        }
 
-        if (numRetries == NUM_RETRIES_BEFORE_OPENING_SOCKET) {
-          WireNodeHandle wnh = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address);
-     
-          LinkedList list = new LinkedList();
-          
-          Iterator i = queue.iterator();
-          i.next();
-          
-          while (i.hasNext()) {
-            PendingWrite pw = (PendingWrite) i.next();
-            list.addLast(new SocketTransportMessage(pw.getObject()));
-            i.remove();
+          if (numRetries == NUM_RETRIES_BEFORE_OPENING_SOCKET) {
+            debug("Attempting to open a socket... (" + numRetries + " try)");
+
+            WireNodeHandle wnh = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address);
+
+            LinkedList list = new LinkedList();
+
+            Iterator i = queue.iterator();
+            i.next();
+
+            while (i.hasNext()) {
+              PendingWrite pw = (PendingWrite) i.next();
+              list.addLast(new SocketTransportMessage(pw.getObject()));
+              i.remove();
+            }
+
+            wnh.connectToRemoteNode(list);
           }
-
-          wnh.markDead();
-          wnh.connectToRemoteNode(list);
         }
-          
+
         if (numRetries >= MAX_NUM_RETRIES) {
           ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address).markDead();
-          System.out.println(pastryNode.getNodeId() + " found " + address + " to be dead - cancelling all messages ");
+          debug(pastryNode.getNodeId() + " found " + address + " to be dead - cancelling all messages ");
           queue.clear();
           state = STATE_NO_DATA;
         }
@@ -451,14 +469,11 @@ public class DatagramTransmissionManager {
           state = STATE_READY;
         }
       }
-
-     // if ((resendWaitTime > 30000) || (sendTimeoutTime > 30000))
-     //   System.out.println("RWT: " + resendWaitTime + " STT: " + sendTimeoutTime);
     }
 
     private void debug(String s) {
       if (Log.ifp(7))
-        System.out.println(pastryNode.getNodeId() + " (" + address + ") (TE): " + s);
+        System.out.println(pastryNode.getNodeId() + " (" + nodeId + ") (TE): " + s);
     }
   }
 }

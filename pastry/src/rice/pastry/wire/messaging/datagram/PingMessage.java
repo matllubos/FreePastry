@@ -46,11 +46,12 @@ import java.io.*;
  *
  * @author Alan Mislove
  */
-public class PingMessage implements Serializable {
+public class PingMessage extends DatagramMessage {
 
   /**
    * Constructor
    */
-  public PingMessage() {
+  public PingMessage(int num) {
+    super(num);
   }
 }

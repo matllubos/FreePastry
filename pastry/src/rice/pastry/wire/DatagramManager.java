@@ -77,7 +77,7 @@ public class DatagramManager implements SelectionKeyHandler {
   // the size of the buffer used to read incoming datagrams
   // must be big enough to encompass multiple datagram packets
   public static int DATAGRAM_RECEIVE_BUFFER_SIZE = 131072;
-  
+
   // the size of the buffer used to send outgoing datagrams
   // this is also the largest message size than can be sent via UDP
   public static int DATAGRAM_SEND_BUFFER_SIZE = 65536;
@@ -94,12 +94,6 @@ public class DatagramManager implements SelectionKeyHandler {
   // the queue of pending acks waiting to be sent
   private LinkedList ackQueue;
 
-  // the queue of pending pings
-  private LinkedList pingQueue;
-
-  // the queue of pending pings
-  private LinkedList pingResponseQueue;
-
   /**
    * Constructor.
    *
@@ -111,8 +105,6 @@ public class DatagramManager implements SelectionKeyHandler {
     this.manager = manager;
     this.pastryNode = pastryNode;
     ackQueue = new LinkedList();
-    pingQueue = new LinkedList();
-    pingResponseQueue = new LinkedList();
     lastAckNum = new HashMap();
 
     // allocate enought bytes to read a node handle
@@ -157,22 +149,6 @@ public class DatagramManager implements SelectionKeyHandler {
   }
 
   /**
-   * Designed to be called by the node handle when it desires it's remote
-   * host to be pinged.
-   * Will eventually (if remote is alive) call the pingReceived() method
-   * on the same node handle.
-   *
-   * @param address The address to ping.
-   */
-  public void ping(InetSocketAddress address) {
-    synchronized(pingQueue) {
-      pingQueue.add(address);
-    }
-
-    manager.getSelector().wakeup();
-  }
-
-  /**
    * Specified by the SelectionKeyHandler interface - is called when there is a
    * datagram ready to be read.
    *
@@ -190,12 +166,6 @@ public class DatagramManager implements SelectionKeyHandler {
         AcknowledgementMessage message = (AcknowledgementMessage) o;
 
         transmissionManager.receivedAck(address, message.getNum());
-      } else if (o instanceof PingMessage) {
-        // send ping response
-        pingResponseQueue.add(address);
-      } else if (o instanceof PingResponseMessage) {
-        // notify node handle of ping response
-        ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address).pingResponse();
       } else if (o instanceof DatagramMessage) {
         DatagramMessage message = (DatagramMessage) o;
 
@@ -208,6 +178,8 @@ public class DatagramManager implements SelectionKeyHandler {
             DatagramTransportMessage dtm = (DatagramTransportMessage) o;
 
             pastryNode.receiveMessage((Message) dtm.getObject());
+          } else if (o instanceof PingMessage) {
+            // do nothing (ack has been sent)
           } else {
             System.out.println("ERROR: Recieved unreccognized datagrammessage: " + o);
           }
@@ -239,31 +211,7 @@ public class DatagramManager implements SelectionKeyHandler {
           System.out.println("ERROR: 0 bytes written of ack (not fatal, but bad)");
       }
 
-      synchronized (pingQueue) {
-        // next, write all pending pings
-        i = pingQueue.iterator();
-
-        while (i.hasNext()) {
-          InetSocketAddress address = (InetSocketAddress) i.next();
-          if (channel.send(serialize(new PingMessage()), address) > 0)
-            i.remove();
-          else
-            System.out.println("ERROR: 0 bytes written of ping (not fatal, but bad)");
-        }
-      }
-
-      // next, write all pending ping responses
-      i = pingResponseQueue.iterator();
-
-      while (i.hasNext()) {
-        InetSocketAddress address = (InetSocketAddress) i.next();
-        if (channel.send(serialize(new PingResponseMessage()), address) > 0)
-          i.remove();
-        else
-          System.out.println("ERROR: 0 bytes written of ping response (not fatal, but bad)");
-      }
-
-      // last, write all pending datagrams
+     // last, write all pending datagrams
       i = transmissionManager.getReady();
 
       while (i.hasNext()) {
@@ -292,7 +240,7 @@ public class DatagramManager implements SelectionKeyHandler {
     transmissionManager.wakeup();
 
     // if there are pending acks/pings, make sure that we are interested in writing
-    if ((ackQueue.size() > 0) || (pingQueue.size() > 0) || (pingResponseQueue.size() > 0))
+    if (ackQueue.size() > 0)
       key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
   }
 

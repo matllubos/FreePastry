@@ -71,13 +71,15 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
 
   // the largest message size to send over UDP
   public static int MAX_UDP_MESSAGE_SIZE = DatagramManager.DATAGRAM_SEND_BUFFER_SIZE;
-  
+
+  // the size of the "receive" buffer for the socket
   public static int SOCKET_BUFFER_SIZE = 32768;
+
+  // the throttle (pings only sent this many seconds)
+  public static int PING_THROTTLE = 5;
 
   // the ip address and port of the remote node
   private InetSocketAddress address;
-
-  private int pingthrottle = 5;
 
   // the time the last ping was performed
   private transient long lastpingtime;
@@ -550,13 +552,14 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
     }
 
     long now = System.currentTimeMillis();
-    if (now - lastpingtime < pingthrottle*1000)
+    if (now - lastpingtime < PING_THROTTLE*1000)
         return alive;
 
     lastpingtime = now;
 
     if (getLocalNode() != null) {
-      ((WirePastryNode) getLocalNode()).getDatagramManager().ping(address);
+      // always send ping over UDP
+      ((WirePastryNode) getLocalNode()).getDatagramManager().write(address, new PingMessage(0));
     }
 
     return alive;

@@ -65,7 +65,7 @@ public class SelectorManager {
 
   // the amount of time to wait during a selection (ms)
   public int SELECT_WAIT_TIME = 100;
-  
+
   /**
    * Constructor.
    *
@@ -187,7 +187,6 @@ public class SelectorManager {
   public void kill() {
     // mark socketmanager as dead
     alive = false;
-    selector.wakeup();
   }
 
   private void debug(String s) {
