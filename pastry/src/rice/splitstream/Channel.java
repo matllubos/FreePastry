@@ -28,6 +28,7 @@ import rice.splitstream.messaging.*;
  *
  * @version $Id$
  * @author Ansley Post
+ * @author Atul Singh
  */
 public class Channel implements IScribeApp {
 
@@ -102,7 +103,7 @@ public class Channel implements IScribeApp {
      * Number of timeouts allowable before generating an upcall;
      * -1 indicates an infinite number of retries
      */
-    private int max_timeouts = -1;
+    private int max_timeouts = 3;
 
     /**
      * Length of time to wait for a response before timing out
@@ -139,7 +140,7 @@ public class Channel implements IScribeApp {
 	scribe.registerApp(this);
  
         /* create the topic */
-        NodeId topicId = this.scribe.generateTopicId(name);
+        NodeId topicId = ((Scribe)this.scribe).generateTopicId(name);
         if(scribe.create(topicId, cred)){
 	    System.out.println("Channel Topic Created");
 	    this.channelId = new ChannelId(topicId);
@@ -473,16 +474,30 @@ public class Channel implements IScribeApp {
 	Stripe toReturn = null;
         for(int i = 0 ; i < getStripes().length && !found; i ++){
 	    Stripe stripe = (Stripe) stripeIdTable.get(getStripes()[i]);
-           
+
+	    //System.out.println("Stripe "+stripe.getStripeId()+" state "+stripe.getState());
             /**
              * Limits the search to only nonsubscribed stripes
              */
-    	    if(stripe.getState() != Stripe.STRIPE_SUBSCRIBED){
+    	    //if(stripe.getState() != Stripe.STRIPE_SUBSCRIBED){
+	    if(stripe.getState() == Stripe.STRIPE_UNSUBSCRIBED){
 		toReturn = stripe;
 		toReturn.joinStripe();	
 		toReturn.addObserver(observer);
 		subscribedStripes.addElement(toReturn);
 		found = true;
+	    }
+	    else {
+		// we are subscribed to this stripe,
+		// so should check if channel knows about
+		// this, if not add this to subscribedStripe
+		if(!subscribedStripes.contains(stripe)){
+		    toReturn = stripe;
+		    toReturn.joinStripe();
+		    subscribedStripes.addElement(stripe);
+		    toReturn.addObserver(observer);
+		    found = true;
+		}
 	    }
 	}
 	return toReturn;
@@ -813,9 +828,9 @@ public class Channel implements IScribeApp {
 	    //System.out.println("Setting root path in controlFindparentResponse msg - setting it to "+prmessage.getSource().getNodeId()+" at "+getSplitStream().getNodeId() + " for stripe "+stripe.getStripeId());
 	    stripe.setRootPath( path );
         }
-        stripe.setIgnoreTimeout( true );
+        //stripe.setIgnoreTimeout( true );
 	prmessage.handleMessage((Scribe) scribe, 
-          ((Scribe) scribe).getTopic(prmessage.getStripeId()));
+          ((Scribe) scribe).getTopic(prmessage.getStripeId()), stripe);
     }
 
     /**
@@ -925,7 +940,8 @@ public class Channel implements IScribeApp {
      */
     private void handleControlTimeoutMessage( Message msg )
     {
-        System.out.println( "Received a scheduled timeout message. Ignoring? "+ignore_timeout );
+	if( !ignore_timeout)
+	    System.out.println( "Received a scheduled timeout message. Ignoring? "+ignore_timeout );
         ControlTimeoutMessage timeoutMessage = (ControlTimeoutMessage)msg;
         timeoutMessage.handleMessage( this, getSplitStream().getPastryNode(), (Scribe)this.scribe );
     }
@@ -951,6 +967,8 @@ public class Channel implements IScribeApp {
      */
     public void registerApp(ISplitStreamApp app){
 	m_apps.add(app);
+	if(isReady)
+	    app.channelIsReady(getChannelId());
     }
    
     /**
