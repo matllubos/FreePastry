@@ -264,7 +264,7 @@ public class Log implements PostData {
    * @param key
    * @throws IllegalArgumentException Always
    */
-  public ContentHashReference buildContentHashReference(Id location, Key key) {
+  public ContentHashReference buildContentHashReference(Id location, byte[] key) {
     throw new IllegalArgumentException("Logs are only stored as signed blocks.");
   }
 
@@ -276,7 +276,7 @@ public class Log implements PostData {
    * @param key The for the data
    * @throws IllegalArgumentException Always
    */
-  public SecureReference buildSecureReference(Id location, Key key) {
+  public SecureReference buildSecureReference(Id location, byte[] key) {
     throw new IllegalArgumentException("Logs are only stored as signed blocks.");
   }
 

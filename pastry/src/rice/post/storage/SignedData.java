@@ -20,7 +20,7 @@ class SignedData extends StorageServiceData {
   protected byte[] timestamp;
 
   // The signature used to sign the data.
-  protected PostSignature signature;
+  protected byte[] signature;
   
   /**
    * Builds a SignedData for a byte array given a timestamp.
@@ -61,11 +61,11 @@ class SignedData extends StorageServiceData {
   /**
    * @return The signature to verify the data and timestamp
    */
-  public PostSignature getSignature() {
+  public byte[] getSignature() {
     return signature;
   }
 
-  protected void setSignature(PostSignature sig) {
+  protected void setSignature(byte[] sig) {
     signature = sig;
   }
 
@@ -77,7 +77,7 @@ class SignedData extends StorageServiceData {
     
     return (Arrays.equals(data, signed.getData()) &&
             Arrays.equals(timestamp, signed.getTimestamp()) &&
-            signature.equals(signed.getSignature()));
+            Arrays.equals(signature, signed.getSignature()));
   }
 
   public String toString() {

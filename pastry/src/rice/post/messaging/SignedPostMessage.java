@@ -1,6 +1,7 @@
 package rice.post.messaging;
 
 import java.io.*;
+import java.util.*;
 
 import rice.post.*;
 import rice.post.security.*;
@@ -16,7 +17,7 @@ public final class SignedPostMessage implements Serializable {
   private PostMessage message;
 
   // the signature for this message
-  private PostSignature signature;
+  private byte[] signature;
 
   /**
    * Constructs a SignedPostMessage given the message and
@@ -24,7 +25,7 @@ public final class SignedPostMessage implements Serializable {
    *
    * @param sender The sender of this message.
    */
-  public SignedPostMessage(PostMessage message, PostSignature signature) {
+  public SignedPostMessage(PostMessage message, byte[] signature) {
     this.message = message;
     this.signature = signature;
   }
@@ -44,7 +45,7 @@ public final class SignedPostMessage implements Serializable {
    *
    * @return The signature, or null if not yet signed.
    */
-  public PostSignature getSignature() {
+  public byte[] getSignature() {
     return signature;
   }
 
@@ -52,7 +53,7 @@ public final class SignedPostMessage implements Serializable {
     if (o instanceof SignedPostMessage) {
       SignedPostMessage spm = (SignedPostMessage) o;
       return (this.message.equals(spm.getMessage()) &&
-              this.signature.equals(spm.getSignature()));
+              Arrays.equals(signature, spm.getSignature()));
     }
 
     return false;

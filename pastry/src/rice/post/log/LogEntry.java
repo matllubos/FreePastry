@@ -145,7 +145,7 @@ public abstract class LogEntry implements PostData {
    * @param key The key used to encrypt this object
    * @return A LogEntryReference to this object
    */
-  public ContentHashReference buildContentHashReference(Id location, Key key) {
+  public ContentHashReference buildContentHashReference(Id location, byte[] key) {
     return new LogEntryReference(location, key);
   }
 
@@ -157,7 +157,7 @@ public abstract class LogEntry implements PostData {
    * @param key The for the data
    * @throws IllegalArgumentException Always
    */
-  public SecureReference buildSecureReference(Id location, Key key) {
+  public SecureReference buildSecureReference(Id location, byte[] key) {
     throw new IllegalArgumentException("Log entries are only stored as content-hash blocks.");
   }  
 }

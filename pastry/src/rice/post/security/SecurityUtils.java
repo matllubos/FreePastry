@@ -1,11 +1,11 @@
 package rice.post.security;
+import java.io.*;
+import java.math.*;
 
 import java.security.*;
 import java.security.cert.*;
 import java.security.spec.*;
 import java.util.*;
-import java.math.*;
-import java.io.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 
@@ -16,74 +16,73 @@ import rice.post.*;
  * security-related primitives, such as encrypt, decrypt, etc...
  *
  * @version $Id$
+ * @author amislove
  */
 public class SecurityUtils {
 
   // ----- STATIC CONFIGURATION FIELDS -----
-  
+
   /**
    * The name of the asymmetric cipher to use.
    */
-  public static final String ASYMMETRIC_ALGORITHM = "RSA";
+  public final static String ASYMMETRIC_ALGORITHM = "RSA";
 
   /**
    * The name of the symmetric cipher to use.
    */
-  public static final String SYMMETRIC_ALGORITHM = "AES/ECB/PKCS5Padding";
+  public final static String SYMMETRIC_ALGORITHM = "AES/ECB/PKCS5Padding";
 
   /**
    * The name of the asymmetric generator to use.
    */
-  public static final String ASYMMETRIC_GENERATOR = "RSA";
+  public final static String ASYMMETRIC_GENERATOR = "RSA";
 
   /**
    * The name of the symmetric cipher to use.
    */
-  public static final String SYMMETRIC_GENERATOR = "AES";
-  
+  public final static String SYMMETRIC_GENERATOR = "AES";
+
   /**
    * The name of the signature algorithm to use.
    */
-  public static final String SIGNATURE_ALGORITHM = "SHA1withRSA";
+  public final static String SIGNATURE_ALGORITHM = "SHA1withRSA";
 
   /**
    * The length of the symmetric keys
    */
-  public static final int SYMMETRIC_KEY_LENGTH = 16;
+  public final static int SYMMETRIC_KEY_LENGTH = 16;
 
   /**
    * The name of the hash function.
    */
-  public static final String HASH_ALGORITHM = "SHA1";
-
+  public final static String HASH_ALGORITHM = "SHA1";
 
   // ----- STATIC CIPHER OBJECTS -----
 
   /**
-    * The cipher used to encrypt/decrypt data using DES
+   * The cipher used to encrypt/decrypt data using DES
    */
   private static Cipher cipherSymmetric;
 
   /**
-    * The cipher used to encrypt/decrypt data using RSA
+   * The cipher used to encrypt/decrypt data using RSA
    */
   private static Cipher cipherAsymmetric;
 
   /**
-    * The generator used to generate DES keys
+   * The generator used to generate DES keys
    */
   private static KeyGenerator generatorSymmetric;
 
   /**
-    * The generator used to generate RSA keys
+   * The generator used to generate RSA keys
    */
   private static KeyPairGenerator generatorAsymmetric;
 
   /**
-    * The signature used for verification and signing data.
+   * The signature used for verification and signing data.
    */
   private static Signature signature;
-  
 
   // ----- STATIC BLOCK TO INITIALIZE THE KEY GENERATORS -----
 
@@ -115,6 +114,7 @@ public class SecurityUtils {
    *
    * @param o The object to serialize
    * @return The byte[] of the object
+   * @exception IOException If serialization does not happen properly
    */
   public static byte[] serialize(Object o) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -131,6 +131,8 @@ public class SecurityUtils {
    *
    * @param data The data to deserialize
    * @return The object
+   * @exception IOException If deserialization does not happen properly
+   * @exception ClassNotFoundException If the deserialized class is not found
    */
   public static Object deserialize(byte[] data) throws IOException, ClassNotFoundException {
     ByteArrayInputStream bais = new ByteArrayInputStream(data);
@@ -140,18 +142,19 @@ public class SecurityUtils {
   }
 
   /**
-    * Utility method for determining the hash of a byte[] using a secure
-   * hashing algorithm.
+   * Utility method for determining the hash of a byte[] using a secure hashing
+   * algorithm.
    *
    * @param input The input
    * @return The hash value
+   * @exception SecurityException If the hashing does not happen properly
    */
   public static byte[] hash(byte[] input) throws SecurityException {
     MessageDigest md = null;
 
     try {
       md = MessageDigest.getInstance(HASH_ALGORITHM);
-    } catch ( NoSuchAlgorithmException e ) {
+    } catch (NoSuchAlgorithmException e) {
       throw new SecurityException("Hash algorithm not found.");
     }
 
@@ -165,10 +168,12 @@ public class SecurityUtils {
    * @param data The data
    * @param key The key
    * @return The ciphertext
+   * @exception SecurityException If the encryption does not happen properly
    */
   public static byte[] encryptSymmetric(byte[] data, byte[] key) throws SecurityException {
     try {
       synchronized (cipherSymmetric) {
+        key = correctLength(key, SYMMETRIC_KEY_LENGTH);
         SecretKeySpec secretKey = new SecretKeySpec(key, SYMMETRIC_ALGORITHM);
         cipherSymmetric.init(Cipher.ENCRYPT_MODE, secretKey);
 
@@ -184,15 +189,17 @@ public class SecurityUtils {
   }
 
   /**
-    * Utility method for decrypting some data with symmetric encryption.
+   * Utility method for decrypting some data with symmetric encryption.
    *
    * @param data The data to decrypt
    * @param key The key
    * @return The decrypted data
+   * @exception SecurityException If the decryption does not happen properly
    */
   public static byte[] decryptSymmetric(byte[] data, byte[] key) throws SecurityException {
     try {
       synchronized (cipherSymmetric) {
+        key = correctLength(key, SYMMETRIC_KEY_LENGTH);
         SecretKeySpec secretKey = new SecretKeySpec(key, SYMMETRIC_ALGORITHM);
         cipherSymmetric.init(Cipher.DECRYPT_MODE, secretKey);
 
@@ -208,12 +215,14 @@ public class SecurityUtils {
   }
 
   /**
-    * Utility method for signing a block of data with the user's private key
+   * Utility method for signing a block of data with the a private key
    *
    * @param data The data
+   * @param key The key to use to sign
    * @return The signature
+   * @exception SecurityException If the signing does not happen properly
    */
-  private static byte[] sign(byte[] data, PrivateKey key) throws SecurityException {
+  public static byte[] sign(byte[] data, PrivateKey key) throws SecurityException {
     try {
       synchronized (signature) {
         signature.initSign(key);
@@ -229,12 +238,13 @@ public class SecurityUtils {
   }
 
   /**
-    * Utility method for verifying a signature
+   * Utility method for verifying a signature
    *
    * @param data The data to verify
    * @param sig The proposed signature
    * @param key The key to verify against
    * @return Whether or not the sig matches.
+   * @exception SecurityException If the verification does not happen properly
    */
   public static boolean verify(byte[] data, byte[] sig, PublicKey key) throws SecurityException {
     try {
@@ -252,13 +262,13 @@ public class SecurityUtils {
   }
 
   /**
-    * Encrypts the given byte[] using the provided public key.
-   *
-   * TO DO: Check length of input
+   * Encrypts the given byte[] using the provided public key. TO DO: Check
+   * length of input
    *
    * @param data The data to encrypt
    * @param key The key to encrypt with
    * @return The encrypted data
+   * @exception SecurityException If the encryption does not happen properly
    */
   public static byte[] encryptAsymmetric(byte[] data, PublicKey key) throws SecurityException {
     try {
@@ -277,13 +287,13 @@ public class SecurityUtils {
   }
 
   /**
-   * Decrypts the given byte[] using the provided private key.
-   *
-   * TO DO: Check length of input
+   * Decrypts the given byte[] using the provided private key. TO DO: Check
+   * length of input
    *
    * @param data The data to decrypt
    * @param key The private key to use
    * @return The decrypted data
+   * @exception SecurityException If the decryption does not happen properly
    */
   public static byte[] decryptAsymmetric(byte[] data, PrivateKey key) throws SecurityException {
     try {
@@ -302,8 +312,8 @@ public class SecurityUtils {
   }
 
   /**
-   * Utility method which will generate a non-weak DES key for
-   * applications to use.
+   * Utility method which will generate a non-weak DES key for applications to
+   * use.
    *
    * @return A new, random DES key
    */
@@ -312,8 +322,8 @@ public class SecurityUtils {
   }
 
   /**
-   * Utility method which will generate a non-weak DES key for
-   * applications to use.
+   * Utility method which will generate a non-weak DES key for applications to
+   * use.
    *
    * @return A new, random DES key
    */
@@ -321,48 +331,23 @@ public class SecurityUtils {
     return generatorAsymmetric.generateKeyPair();
   }
 
+
   /**
-   * Utility method for converting a long into a byte[]
+   * Tests the security service.
    *
-   * @param input The log to convert
-   * @return a byte[] representation
-   */
-  public static byte[] getByteArray(long input) {
-    byte[] output = new byte[8];
-
-    output[0] = (byte) (0xFF & (input >> 56));
-    output[1] = (byte) (0xFF & (input >> 48));
-    output[2] = (byte) (0xFF & (input >> 40));
-    output[3] = (byte) (0xFF & (input >> 32));
-    output[4] = (byte) (0xFF & (input >> 24));
-    output[5] = (byte) (0xFF & (input >> 16));
-    output[6] = (byte) (0xFF & (input >> 8));
-    output[7] = (byte) (0xFF & input);
-
-    return output;
-  }
-
-  /**
-    * Utility method for converting a byte[] into a long
-   *
-   * @param input The byte[] to convert
-   * @return a long representation
-   */
-  public static long getLong(byte[] input) {
-    return ((input[0] << 56) | (input[1] << 48) | (input[2] << 40) | (input[3] << 32) |
-            (input[4] << 24) | (input[5] << 16) | (input[6] << 8) | input[7]);
-  }
-
-
-  /**
-    * Tests the security service.
+   * @param argv The command line arguments
+   * @exception NoSuchAlgorithmException If the encryption does not happen
+   *      properly
+   * @exception IOException If the encryption does not happen properly
+   * @exception ClassNotFoundException If the encryption does not happen
+   *      properly
    */
   public static void main(String[] argv) throws NoSuchAlgorithmException, IOException, ClassNotFoundException {
     System.out.println("SecurityUtils Test Suite");
     System.out.println("-------------------------------------------------------------");
     System.out.println("  Initializing Tests");
     System.out.print("    Generating key pair\t\t\t\t\t");
-    
+
     KeyPair pair = generateKeyAsymmetric();
     System.out.println("[ DONE ]");
 
@@ -378,21 +363,20 @@ public class SecurityUtils {
     byte[] testLongByte = getByteArray(testLong);
 
     if ((testLongByte[0] == (byte) 0x01) &&
-        (testLongByte[1] == (byte) 0x23) &&
-        (testLongByte[2] == (byte) 0x45) &&
-        (testLongByte[3] == (byte) 0x67) &&
-        (testLongByte[4] == (byte) 0x89) &&
-        (testLongByte[5] == (byte) 0xAB) &&
-        (testLongByte[6] == (byte) 0xCD) &&
-        (testLongByte[7] == (byte) 0xEF)) {
+      (testLongByte[1] == (byte) 0x23) &&
+      (testLongByte[2] == (byte) 0x45) &&
+      (testLongByte[3] == (byte) 0x67) &&
+      (testLongByte[4] == (byte) 0x89) &&
+      (testLongByte[5] == (byte) 0xAB) &&
+      (testLongByte[6] == (byte) 0xCD) &&
+      (testLongByte[7] == (byte) 0xEF)) {
       System.out.println("[ PASSED ]");
     } else {
       System.out.println("[ FAILED ]");
       System.out.println("    Input: \t" + testLong);
-      System.out.println("    Output:\t" + testLongByte[0] + " " + testLongByte[1] + " "  +
-                         testLongByte[2] + " "  + testLongByte[3]);
+      System.out.println("    Output:\t" + testLongByte[0] + " " + testLongByte[1] + " " +
+        testLongByte[2] + " " + testLongByte[3]);
     }
-
 
     System.out.print("    Testing serialization\t\t\t\t");
     String testString = "test";
@@ -423,7 +407,6 @@ public class SecurityUtils {
     }
 
     System.out.print("    Testing symmetric encryption\t\t\t");
-
 
     byte[] key = generateKeySymmetric();
     byte[] testStringCipherText = encryptSymmetric(testStringByte, key);
@@ -456,7 +439,7 @@ public class SecurityUtils {
 
     testStringSig[0]++;
 
-    if (! verify(testStringByte, testStringSig, pair.getPublic())) {
+    if (!verify(testStringByte, testStringSig, pair.getPublic())) {
       System.out.println("[ PASSED ]");
     } else {
       System.out.println("[ FAILED ]");
@@ -480,8 +463,57 @@ public class SecurityUtils {
       System.out.println("    Dec Len:\t" + testStringDecrypted.length);
     }
 
-
-
     System.out.println("-------------------------------------------------------------");
+  }
+
+  /**
+   * Utility method for converting a long into a byte[]
+   *
+   * @param input The log to convert
+   * @return a byte[] representation
+   */
+  public static byte[] getByteArray(long input) {
+    byte[] output = new byte[8];
+
+    output[0] = (byte) (0xFF & (input >> 56));
+    output[1] = (byte) (0xFF & (input >> 48));
+    output[2] = (byte) (0xFF & (input >> 40));
+    output[3] = (byte) (0xFF & (input >> 32));
+    output[4] = (byte) (0xFF & (input >> 24));
+    output[5] = (byte) (0xFF & (input >> 16));
+    output[6] = (byte) (0xFF & (input >> 8));
+    output[7] = (byte) (0xFF & input);
+
+    return output;
+  }
+
+  /**
+   * Utility method for converting a byte[] into a long
+   *
+   * @param input The byte[] to convert
+   * @return a long representation
+   */
+  public static long getLong(byte[] input) {
+    return ((input[0] << 56) | (input[1] << 48) | (input[2] << 40) | (input[3] << 32) |
+      (input[4] << 24) | (input[5] << 16) | (input[6] << 8) | input[7]);
+  }
+
+  /**
+   * Utility method for ensuring the array is of the proper length.  THis
+   * method enforces the length by appending 0's or returning a subset of
+   * the input array.
+   *
+   * @param data The input array
+   * @param length The length the array should be
+   * @return A correct-length array
+   */
+  private static byte[] correctLength(byte[] data, int length) {
+    byte[] result = new byte[length];
+
+    for (int i=0; (i<data.length) && (i<result.length); i++) {
+      result[i] = data[i];
+    }
+
+    return result;
   }
 }

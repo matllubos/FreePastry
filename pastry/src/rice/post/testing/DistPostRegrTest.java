@@ -16,6 +16,7 @@ import rice.post.*;
 import rice.post.messaging.*;
 import rice.post.storage.*;
 import rice.post.security.*;
+import rice.post.security.ca.*;
 
 import rice.scribe.*;
 
@@ -43,7 +44,6 @@ public class DistPostRegrTest {
   private Credentials credentials = new PermissiveCredentials();
   private KeyPair caPair;
   private KeyPairGenerator kpg;
-  private SecurityService security;
 
   private Object waitObject = "waitObject";
   private boolean notificationReceived = false;
@@ -53,7 +53,7 @@ public class DistPostRegrTest {
   private Random rng;
   private RandomNodeIdFactory idFactory;
 
-  private static int numNodes = 10;
+  private static int numNodes = 5;
   private static int k = 3;  // replication factor
 
   private static int port = 5009;
@@ -88,7 +88,6 @@ public class DistPostRegrTest {
     
     kpg = KeyPairGenerator.getInstance("RSA");
     caPair = kpg.generateKeyPair();
-    security = new SecurityService(null, null);
   }
 
   /**
@@ -141,7 +140,7 @@ public class DistPostRegrTest {
 
       PostUserAddress address = new PostUserAddress("TEST" + i);
 
-      PostCertificate certificate = security.generateCertificate(address, pair.getPublic(), caPair.getPrivate());
+      PostCertificate certificate = CASecurityModule.generate(address, pair.getPublic(), caPair.getPrivate());
       
       Post post = new PostImpl(pn, past, scribe, address, pair, certificate, caPair.getPublic(), INSTANCE_NAME);
       postNodes.add(post);
@@ -282,7 +281,7 @@ public class DistPostRegrTest {
       notificationFailed = true;
     }
 
-    System.out.println("Received message " + nm + " at Pot " + post);
+    System.out.println("Received message " + nm + " at Post " + post);
     
     notificationReceived = true;
 
@@ -323,7 +322,7 @@ public class DistPostRegrTest {
     Post receivingPost1 = (Post) postNodes.elementAt(receivingNode1);
     Post receivingPost2 = (Post) postNodes.elementAt(receivingNode2);
     
-    byte[] key = SecurityService.generateKeyDES();
+    byte[] key = SecurityUtils.generateKeySymmetric();
 
     PostGroupAddress group = new PostGroupAddress("GroupTest");
     sendingPost.joinGroup(group, key);
@@ -451,9 +450,11 @@ public class DistPostRegrTest {
 
       post.getPostLog(new Continuation() {
         public void receiveResult(Object o) {
+          System.out.println("Received PostLog " + o);
         }
 
         public void receiveException(Exception e) {
+          System.out.println("Received PostLog Error " + e);
         }
       });
     }
@@ -467,6 +468,10 @@ public class DistPostRegrTest {
 
     public DummyNotificationMessage(PostClientAddress address, PostEntityAddress sender, PostEntityAddress receiver) {
       super(address, sender, receiver);
+    }
+
+    public String toString() {
+      return "DummyNM[from: " + getSender() + " to: " + getDestination() + "]";
     }
   }
 
@@ -490,11 +495,11 @@ public class DistPostRegrTest {
       return new SignedReference(location);
     }
 
-    public ContentHashReference buildContentHashReference(Id location, Key key) {
+    public ContentHashReference buildContentHashReference(Id location, byte[] key) {
       return new ContentHashReference(location, key);
     }
 
-    public SecureReference buildSecureReference(Id location, Key key) {
+    public SecureReference buildSecureReference(Id location, byte[] key) {
       return new SecureReference(location, key);
     }
   }

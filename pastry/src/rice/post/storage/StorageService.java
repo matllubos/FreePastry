@@ -38,9 +38,9 @@ public class StorageService {
   private Past past;
   
   /**
-   * Security service to handle all encryption tasks.
+   * The keyPair used to sign and verify objects
    */
-  private SecurityService security;
+  private KeyPair keyPair;
 
   /**
    * The credentials used to store data.
@@ -62,13 +62,13 @@ public class StorageService {
    *
    * @param past The PAST service to use.
    * @param credentials Credentials to use to store data.
-   * @param security SecurityService to handle all security related tasks
+   * @param keyPair The keypair to sign/verify data with
    */
-  public StorageService(PostEntityAddress address, Past past, Credentials credentials, SecurityService security) {
+  public StorageService(PostEntityAddress address, Past past, Credentials credentials, KeyPair keyPair) {
     this.entity = address;
     this.past = past;
     this.credentials = credentials;
-    this.security = security;
+    this.keyPair = keyPair;
 
     if (entity.getAddress() instanceof RingNodeId) {
       factory = new RandomRingNodeIdFactory(((RingNodeId) entity.getAddress()).getRingId());
@@ -149,7 +149,7 @@ public class StorageService {
    * @param command The command to run once the store has completed.
    */
   public void retrieveAndVerifySigned(SignedReference reference, Continuation command) {
-    retrieveAndVerifySigned(reference, security.getPublicKey(), command);
+    retrieveAndVerifySigned(reference, keyPair.getPublic(), command);
   }
 
   /**
@@ -199,7 +199,7 @@ public class StorageService {
     SignedData sd = (SignedData) pendingVerification.remove(data);
 
     // Verify signature
-    if ((sd == null) || (! security.verify(sd.getDataAndTimestamp(), sd.getSignature(), key))) {
+    if ((sd == null) || (! SecurityUtils.verify(sd.getDataAndTimestamp(), sd.getSignature(), key))) {
       System.out.println("Verification failed of signed block:");
       printArray(sd.getData());
       printArray(sd.getTimestamp());
@@ -262,7 +262,7 @@ public class StorageService {
     private PostData data;
     private Continuation command;
     private Id location;
-    private Key key;
+    private byte[] key;
     
     /**
      * This contructs creates a task to store a given data and call the
@@ -281,10 +281,10 @@ public class StorageService {
      */
     protected void start() {
       try {
-        byte[] plainText = security.serialize(data);
-        byte[] hash = security.hash(plainText);
-        byte[] cipherText = security.encryptDES(plainText, hash);
-        byte[] loc = security.hash(cipherText);
+        byte[] plainText = SecurityUtils.serialize(data);
+        byte[] hash = SecurityUtils.hash(plainText);
+        byte[] cipherText = SecurityUtils.encryptSymmetric(plainText, hash);
+        byte[] loc = SecurityUtils.hash(cipherText);
 
         if (entity.getAddress() instanceof RingNodeId) {
           location = new RingNodeId(new NodeId(loc), ((RingNodeId) entity.getAddress()).getRingId());
@@ -292,7 +292,7 @@ public class StorageService {
           location = new Id(loc);
         }
         
-        key = new SecretKeySpec(hash, "DES");
+        key = hash;
 
         ContentHashData chd = new ContentHashData(location, cipherText);
 
@@ -386,14 +386,14 @@ public class StorageService {
         }
 
         // TO DO: fetch from multiple locations to prevent rollback attacks
-        byte[] keyBytes = reference.getKey().getEncoded();
+        byte[] key = reference.getKey();
 
         byte[] cipherText = chd.getData();
-        byte[] plainText = security.decryptDES(cipherText, keyBytes);
-        Object data = security.deserialize(plainText);
+        byte[] plainText = SecurityUtils.decryptSymmetric(cipherText, key);
+        Object data = SecurityUtils.deserialize(plainText);
 
         // Verify hash(cipher) == location
-        byte[] hashCipher = security.hash(cipherText);
+        byte[] hashCipher = SecurityUtils.hash(cipherText);
         byte[] loc = reference.getLocation().copy();
         if (! Arrays.equals(hashCipher, loc)) {
           command.receiveException(new StorageException("Hash of cipher text does not match location."));
@@ -401,8 +401,8 @@ public class StorageService {
         }
 
         // Verify hash(plain) == key
-        byte[] hashPlain = security.hash(plainText);
-        if (! Arrays.equals(hashPlain, keyBytes)) {
+        byte[] hashPlain = SecurityUtils.hash(plainText);
+        if (! Arrays.equals(hashPlain, key)) {
           command.receiveException(new StorageException("Hash of retrieved content does not match key."));
           return;
         }
@@ -462,12 +462,12 @@ public class StorageService {
      */
     protected void start() {
       try {
-        byte[] plainText = security.serialize(data);
-        byte[] timestamp = security.getByteArray(System.currentTimeMillis());
+        byte[] plainText = SecurityUtils.serialize(data);
+        byte[] timestamp = SecurityUtils.getByteArray(System.currentTimeMillis());
 
         SignedData sd = new SignedData(location, plainText, timestamp);
 
-        sd.setSignature(security.sign(sd.getDataAndTimestamp()));
+        sd.setSignature(SecurityUtils.sign(sd.getDataAndTimestamp(), keyPair.getPrivate()));
 
         // Store the signed data in PAST 
         past.insert(sd, this);
@@ -561,7 +561,7 @@ public class StorageService {
         }
       
         byte[] plainText = sd.getData();
-        data = security.deserialize(plainText);
+        data = SecurityUtils.deserialize(plainText);
 
         pendingVerification.put(data, sd);
 
@@ -649,7 +649,7 @@ public class StorageService {
     private PostData data;
     private Continuation command;
     private Id location;
-    private Key key;
+    private byte[] key;
 
     /**
       * This contructs creates a task to store a given data and call the
@@ -668,20 +668,18 @@ public class StorageService {
      */
     protected void start() {
       try {
-        byte[] plainText = security.serialize(data);
+        key = SecurityUtils.generateKeySymmetric();
+        
+        byte[] plainText = SecurityUtils.serialize(data);
 
-        byte[] keyByte = security.generateKeyDES();
-
-        byte[] cipherText = security.encryptDES(plainText, keyByte);
-        byte[] loc = security.hash(cipherText);
+        byte[] cipherText = SecurityUtils.encryptSymmetric(plainText, key);
+        byte[] loc = SecurityUtils.hash(cipherText);
 
         if (entity.getAddress() instanceof RingNodeId) {
           location = new RingNodeId(new NodeId(loc), ((RingNodeId) entity.getAddress()).getRingId());
         } else {
           location = new Id(loc);
         }
-        
-        key = new SecretKeySpec(keyByte, "DES");
 
         SecureData sd = new SecureData(location, cipherText);
 
@@ -774,14 +772,14 @@ public class StorageService {
           return;
         }
 
-        byte[] keyBytes = reference.getKey().getEncoded();
+        byte[] key = reference.getKey();
 
         byte[] cipherText = sd.getData();
-        byte[] plainText = security.decryptDES(cipherText, keyBytes);
-        Object data = security.deserialize(plainText);
+        byte[] plainText = SecurityUtils.decryptSymmetric(cipherText, key);
+        Object data = SecurityUtils.deserialize(plainText);
 
         // Verify hash(cipher) == location
-        byte[] hashCipher = security.hash(cipherText);
+        byte[] hashCipher = SecurityUtils.hash(cipherText);
         byte[] loc = reference.getLocation().copy();
         if (! Arrays.equals(hashCipher, loc)) {
           command.receiveException(new StorageException("Hash of cipher text does not match location."));

@@ -43,8 +43,8 @@ class EncryptedLogEntry extends LogEntry {
     try {
       entry.setParent(this);
       
-      byte[] data = SecurityService.serialize(entry);
-      cipherEntry = SecurityService.encryptDES(data, key);
+      byte[] data = SecurityUtils.serialize(entry);
+      cipherEntry = SecurityUtils.encryptSymmetric(data, key);
     } catch (IOException e) {
       System.out.println("Exception " + e + " thrown while serializing/encrypting entry " + entry);
     }
@@ -55,8 +55,8 @@ class EncryptedLogEntry extends LogEntry {
    */
   private void retrieveEntry() {
     try {
-      byte[] data = SecurityService.decryptDES(cipherEntry, key);
-      entry = (LogEntry) SecurityService.deserialize(data);
+      byte[] data = SecurityUtils.decryptSymmetric(cipherEntry, key);
+      entry = (LogEntry) SecurityUtils.deserialize(data);
       entry.setParent(this);
     } catch (IOException e) {
       System.out.println("Exception " + e + " thrown while deserializing/decrypting entry " + entry);

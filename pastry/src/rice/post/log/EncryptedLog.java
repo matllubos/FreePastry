@@ -41,16 +41,16 @@ public class EncryptedLog extends Log {
    * Method which initializes the key, and constructs the cipherKey variables
    */
   private void initializeKey(KeyPair keyPair) {
-    key = SecurityService.generateKeyDES();
+    key = SecurityUtils.generateKeySymmetric();
 
-    cipherKey = SecurityService.encryptRSA(key, keyPair.getPublic());
+    cipherKey = SecurityUtils.encryptAsymmetric(key, keyPair.getPublic());
   }
 
   /**
    * Method which retrieves the key from the ciphertext
    */
   private void retrieveKey(KeyPair keyPair) {
-    key = SecurityService.decryptRSA(cipherKey, keyPair.getPrivate());
+    key = SecurityUtils.decryptAsymmetric(cipherKey, keyPair.getPrivate());
   }
 
   /**

@@ -2,6 +2,7 @@ package rice.post.storage;
 
 import java.security.*;
 import java.io.*;
+import java.util.*;
 
 import rice.pastry.*;
 import rice.past.*;
@@ -24,7 +25,7 @@ public class ContentHashReference implements Serializable {
   /**
    * Key used to sign the content hash.
    */
-  private Key key;
+  private byte[] key;
 
   /**
    * Contructs a PostDataReference object given
@@ -33,7 +34,7 @@ public class ContentHashReference implements Serializable {
    * @param location The location in PAST of the PostData object
    * @param key The encryption key of the PostData object
    */
-  public ContentHashReference(Id location, Key key) {
+  public ContentHashReference(Id location, byte[] key) {
     this.location = location;
     this.key = key;
   }
@@ -48,7 +49,7 @@ public class ContentHashReference implements Serializable {
   /**
    * @return The encryption key for the data
    */
-  public Key getKey() {
+  public byte[] getKey() {
     return key;
   }
 
@@ -58,6 +59,7 @@ public class ContentHashReference implements Serializable {
 
     ContentHashReference ref = (ContentHashReference) o;
 
-    return (location.equals(ref.getLocation()) && key.equals(ref.getKey()));
+    return (location.equals(ref.getLocation()) &&
+            Arrays.equals(key, ref.getKey()));
   }
 }

@@ -18,6 +18,7 @@ import rice.post.log.*;
 import rice.post.messaging.*;
 import rice.post.storage.*;
 import rice.post.security.*;
+import rice.post.security.ca.*;
 
 /**
  * This class is the service layer which allows 
@@ -113,7 +114,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
   /**
    * The user's public key.
    */
-  private PublicKey publicKey;
+  private KeyPair keyPair;
   
   /**
    * The certificate used to authenticate this user's key pair.
@@ -156,12 +157,13 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
     this.past = past;
     this.scribeService = scribe;
     this.address = address;
-    this.publicKey = keyPair.getPublic();
+    this.keyPair = keyPair;
     this.certificate = certificate;
     this.caPublicKey = caPublicKey;
 
-    security = new SecurityService(keyPair, caPublicKey);
-    storage = new StorageService(address, past, credentials, security);
+    security = new SecurityService();
+    security.loadModule(new CASecurityModule(caPublicKey));
+    storage = new StorageService(address, past, credentials, keyPair);
     factory = new RandomNodeIdFactory();
 
     clients = new Vector();
@@ -439,7 +441,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
    */
   private SignedPostMessage signPostMessage(PostMessage message) {
     try {
-      PostSignature sig = security.sign(security.serialize(message));
+      byte[] sig = SecurityUtils.sign(SecurityUtils.serialize(message), keyPair.getPrivate());
 
       return new SignedPostMessage(message, sig);
     } catch (SecurityException e) {
@@ -465,10 +467,10 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
         return false;
       }
       
-      byte[] plainText = security.serialize(message.getMessage());
-      PostSignature sig = message.getSignature();
+      byte[] plainText = SecurityUtils.serialize(message.getMessage());
+      byte[] sig = message.getSignature();
 
-      return security.verify(plainText, sig, key);
+      return SecurityUtils.verify(plainText, sig, key);
     } catch (SecurityException e) {
       System.out.println("SecurityException " + e + " occured while verifiying PostMessage " + message + " - aborting.");
       return false;
@@ -697,8 +699,8 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
 
       // decrypt and verify notification message
       try {
-        byte[] key = security.decryptRSA(message.getKey());
-        nm = (NotificationMessage) security.deserialize(security.decryptDES(message.getData(), key));
+        byte[] key = SecurityUtils.decryptAsymmetric(message.getKey(), keyPair.getPrivate());
+        nm = (NotificationMessage) SecurityUtils.deserialize(SecurityUtils.decryptSymmetric(message.getData(), key));
       } catch (SecurityException e) {
         System.out.println("SecurityException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
         return;
@@ -817,15 +819,14 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
      * @param o The result.
      */
     public void receiveResult(Object o) {
-      try {
-        PostLog log = (PostLog) o;
+        final PostLog log = (PostLog) o;
 
         if (log == null) {
           if (address.equals(getEntityAddress())) {
-            PostImpl.this.log = new PostLog(address, publicKey, certificate, PostImpl.this, command);
+            PostImpl.this.log = new PostLog(address, keyPair.getPublic(), certificate, PostImpl.this, command);
             return;
           } else {
-            if (rice.pastry.Log.ifp(6))
+            if (rice.pastry.Log.ifp(5))
               System.out.println("PostLog lookup for user " + address + " failed.");
             command.receiveResult(null);
             return;
@@ -842,23 +843,29 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
           command.receiveException(new PostException("Malformed PostLog: Certificate does not match log owner."));
           return;
         }
-        
-        if (security.verifyCertificate(caPublicKey, log.getCertificate())) {
-          storage.verifySigned(log, log.getPublicKey());
 
-          log.setPost(PostImpl.this);
+        Continuation verify = new Continuation() {
+          public void receiveResult(Object o) {
+            if ((new Boolean(true)).equals(o)) {
+              storage.verifySigned(log, log.getPublicKey());
+              log.setPost(PostImpl.this);
 
-          if (address.equals(getEntityAddress())) {
-            PostImpl.this.log = log;
+              if (address.equals(getEntityAddress())) {
+                PostImpl.this.log = log;
+              }
+
+              command.receiveResult(log);
+            } else  {
+              command.receiveException(new PostException("Certificate of PostLog could not verified for entity: " + address));
+            }
           }
-          
-          command.receiveResult(log);
-        } else {
-          command.receiveException(new PostException("Certificate of PostLog could not verified for entity: " + address));
-        }
-      } catch (ClassCastException e) {
-        command.receiveException(new PostException("Received unknown value " + o + " from retrievePostLog."));
-      }
+
+          public void receiveException(Exception e) {
+            command.receiveException(e);
+          }
+        };
+              
+        security.verify(log.getCertificate(), verify);
     }
 
     /**
@@ -920,9 +927,9 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
       byte[] cipherText = null;
 
       try {
-        byte[] key = security.generateKeyDES();
-        byte[] keyCipherText = security.encryptRSA(key, destinationLog.getPublicKey());
-        cipherText = security.encryptDES(security.serialize(message), key);
+        byte[] key = SecurityUtils.generateKeySymmetric();
+        byte[] keyCipherText = SecurityUtils.encryptAsymmetric(key, destinationLog.getPublicKey());
+        cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
 
         if (rice.pastry.Log.ifp(6))
           System.out.println(thePastryNode.getNodeId() + "DEBUG: built encrypted notfn msg: " + destination);
@@ -997,9 +1004,9 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
       byte[] cipherText = null;
 
       try {
-        byte[] key = security.generateKeyDES();
-        byte[] keyCipherText = security.encryptRSA(key, destinationLog.getPublicKey());
-        cipherText = security.encryptDES(security.serialize(message), key);
+        byte[] key = SecurityUtils.generateKeySymmetric();
+        byte[] keyCipherText = SecurityUtils.encryptAsymmetric(key, destinationLog.getPublicKey());
+        cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
 
         if (rice.pastry.Log.ifp(6))
           System.out.println(thePastryNode.getNodeId() + "DEBUG: built encrypted notfn msg: " + destination);
@@ -1055,9 +1062,9 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
         byte[] cipherText = null;
 
         if (key != null) {
-          cipherText = security.encryptDES(security.serialize(message), key);
+          cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
         } else {
-          cipherText = security.serialize(message);
+          cipherText = SecurityUtils.serialize(message);
         }
         
         if (rice.pastry.Log.ifp(6))
@@ -1113,12 +1120,12 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
         byte[] plainText = null;
 
         if (key != null) {
-          plainText = security.decryptDES(message.getData(), key);
+          plainText = SecurityUtils.decryptSymmetric(message.getData(), key);
         } else {
           plainText = message.getData();
         }
 
-        NotificationMessage nm = (NotificationMessage) security.deserialize(plainText);
+        NotificationMessage nm = (NotificationMessage) SecurityUtils.deserialize(plainText);
 
         // deliver notification messag
         PostClient client = (PostClient) clientAddresses.get(nm.getClientAddress());
@@ -1138,5 +1145,9 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
         System.out.println("ClassCastException occured while decrypting GroupNotificationMessage " + e + " - dropping on floor.");
       }
     }
-  }  
+  }
+
+  public String toString() {
+    return "PostImpl[" + address + "]";
+  }
 }
