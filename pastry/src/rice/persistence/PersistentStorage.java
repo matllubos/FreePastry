@@ -590,8 +590,7 @@ public class PersistentStorage implements Storage {
         Id id = readKey(files[i]);
         increaseUsedSpace(getFileLength(files[i]));
         idSet.addId(id);
-        // HACK AMISlOVE FOR DEMO
-        metadata.put(id, null); //readMetadata(files[i]));
+        metadata.put(id, readMetadata(files[i]));
       } else if (files[i].isDirectory()) {
         initFileMap(files[i]);
       }
