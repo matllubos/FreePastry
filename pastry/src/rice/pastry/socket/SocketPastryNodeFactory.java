@@ -315,6 +315,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     SocketChannel channel = SocketChannel.open();
     channel.configureBlocking(true);
     channel.socket().connect(address, 20000);
+    channel.socket().setSoTimeout(20000);
 
     writer.enqueue(SocketCollectionManager.HEADER_DIRECT);
     writer.enqueue(message);
