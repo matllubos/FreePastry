@@ -111,8 +111,6 @@ public abstract class PastMessage implements Message {
    * Method which builds a response for this message, using the provided
    * object as a result.  Should be overriden by subclasses, but with the
    * super.setResponse() called.
-   *
-   * @param o The object argument
    */
   protected void setResponse() {
     isResponse = true;

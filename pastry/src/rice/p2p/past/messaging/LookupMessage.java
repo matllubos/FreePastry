@@ -66,15 +66,13 @@ public class LookupMessage extends ContinuationMessage {
   private NodeHandle handle;
   
   /**
-   * Constructor which takes a unique integer Id, as well as the
-   * data to be stored
+   * Constructor
    *
    * @param uid The unique id
    * @param id The location to be stored
    * @param useReplicas Whether or not to look for nearest replicas
    * @param source The source address
    * @param dest The destination address
-   * @param content The data to be stored
    */
   public LookupMessage(int uid, Id id, boolean useReplicas, NodeHandle source, Id dest) {
     super(uid, source, dest);
@@ -86,7 +84,7 @@ public class LookupMessage extends ContinuationMessage {
   /**
    * Method which returns the id
    *
-   * @param o The contained id
+   * @return The contained id
    */
   public Id getId() {
     return id;

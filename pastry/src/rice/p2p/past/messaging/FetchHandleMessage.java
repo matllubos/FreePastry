@@ -73,7 +73,7 @@ public class FetchHandleMessage extends ContinuationMessage {
   /**
    * Method which returns the id
    *
-   * @param o The contained id
+   * @return The contained id
    */
   public Id getId() {
     return id;

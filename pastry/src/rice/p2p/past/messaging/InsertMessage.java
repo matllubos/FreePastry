@@ -74,7 +74,7 @@ public class InsertMessage extends ContinuationMessage {
   /**
    * Method which returns the content
    *
-   * @param o The contained content
+   * @return The contained content
    */
   public PastContent getContent() {
     return content;

@@ -74,7 +74,8 @@ public class StorageManager implements Cache, Storage {
    * storage services and a Cache object to provide caching
    * services.  
    *
-   * @param storagae The Storage object which will serve as the
+   * @param factory The factory to use for Id creation
+   * @param storage The Storage object which will serve as the
    *        persistent storage.
    * @param cache The Cache object which will serve as the cache.
    */
@@ -101,7 +102,7 @@ public class StorageManager implements Cache, Storage {
   public Cache getCache() {
     return cache;
   }
-  
+
   /**
    * Returns whether or not an object is present in the location <code>id</code>.
    *
@@ -117,9 +118,11 @@ public class StorageManager implements Cache, Storage {
    * The result is returned via the receiveResult method on the provided
    * Continuation with an Boolean represnting the result.
    *
+   * Returns <code>True</code> or <code>False</code> depending on whether the object
+   * exists (through receiveResult on c);
+   *
    * @param c The command to run once the operation is complete
    * @param id The id of the object in question.
-   * @return Whether or not an object is present at id.
    */
   public void exists(final Id id, final Continuation c) {
     Continuation inCache = new Continuation() {
@@ -140,12 +143,11 @@ public class StorageManager implements Cache, Storage {
   }
 
   /**
-   * Returns the object identified by the given id.
+   * Returns the object identified by the given id, or <code>null</code> if
+   * there is no cooresponding object (through receiveResult on c).
    *
    * @param id The id of the object in question.
    * @param c The command to run once the operation is complete
-   * @return The object, or <code>null</code> if there is no cooresponding
-   * object (through receiveResult on c).
    */
   public void getObject(final Id id, final Continuation c) {
     Continuation inCache = new Continuation() {
@@ -166,20 +168,18 @@ public class StorageManager implements Cache, Storage {
   }
 
   /**
-   * Return the objects identified by the given range of ids. The IdSet 
+   * Return the objects identified by the given range of ids. The IdSet
    * returned contains the Ids of the stored objects. The range is
    * partially inclusive, the lower range is inclusive, and the upper
    * exclusive.
    *
-   *
    * When the operation is complete, the receiveResult() method is called
-   * on the provided continuation with a Comparable[] result containing the
+   * on the provided continuation with a IdSet result containing the
    * resulting IDs.
    *
    * @param start The staring id of the range. (inclusive)
-   * @param end The ending id of the range. (exclusive) 
+   * @param end The ending id of the range. (exclusive)
    * @param c The command to run once the operation is complete
-   * @return The idset containg the keys 
    */
    public void scan(final IdRange range, final Continuation c) {
     Continuation scanner = new Continuation() {
@@ -217,42 +217,39 @@ public class StorageManager implements Cache, Storage {
   }
 
   /**
-   * Return the objects identified by the given range of ids. The IdSet 
+   * Return the objects identified by the given range of ids. The IdSet
    * returned contains the Ids of the stored objects. The range is
    * partially inclusive, the lower range is inclusive, and the upper
    * exclusive.
    *
-   *
    * NOTE: This method blocks so if the behavior of this method changes and
-   * uses the disk, this method may be deprecated.
+   * no longer stored in memory, this method may be deprecated.
    *
-   * @param range The range to query  
-   * @return The idset containg the keys 
+   * @param range The range to query
+   * @return The idset containg the keys
    */
   public IdSet scan(IdRange range){
-          IdSet fromStorage = storage.scan(range);
-          IdSet fromCache = cache.scan(range);  
-          IdSet toReturn = factory.buildIdSet();
-          Iterator i = fromStorage.getIterator(); 
-          while(i.hasNext()){
-             toReturn.addId((Id) i.next());
-          }
-          i = fromCache.getIterator(); 
-          while(i.hasNext()){
-             toReturn.addId((Id) i.next());
-          }
-          return(toReturn);
+    IdSet fromStorage = storage.scan(range);
+    IdSet fromCache = cache.scan(range);
+    IdSet toReturn = factory.buildIdSet();
+    
+    Iterator i = fromStorage.getIterator();
+    while(i.hasNext()){
+      toReturn.addId((Id) i.next());
+    }
+    i = fromCache.getIterator();
+    while(i.hasNext()){
+      toReturn.addId((Id) i.next());
+    }
+    return(toReturn);
   }
 
-  
   /**
    * Returns the total size of the stored data in bytes.The result
    * is returned via the receiveResult method on the provided
-   * Continuation with an Integer representing the size.  This sum is
-   * the total of the stored data and the cached data.
+   * Continuation with an Integer representing the size.
    *
    * @param c The command to run once the operation is complete
-   * @return The total size, in bytes, of data stored.
    */
   public void getTotalSize(final Continuation c) {
     Continuation getSize = new Continuation() {
@@ -286,11 +283,12 @@ public class StorageManager implements Cache, Storage {
    * receiveResult() on the provided continuation with the success
    * or failure of the store.
    *
+   * Returns <code>True</code> if the action succeeds, else
+   * <code>False</code> (through receiveResult on c).
+   *
    * @param id The object's id.
    * @param obj The object to store.
    * @param c The command to run once the operation is complete
-   * @return <code>True</code> if the action succeeds, else
-   * <code>False</code> (through receiveResult on c).
    */
   public void store(Id id, Serializable obj, Continuation c) {
     storage.store(id, obj, c);
@@ -301,15 +299,16 @@ public class StorageManager implements Cache, Storage {
    * non-blocking. If the object was not in the stored list in the first place,
    * nothing happens and <code>False</code> is returned.
    *
+   * Returns <code>True</code> if the action succeeds, else
+   * <code>False</code>  (through receiveResult on c).
+   *
    * @param pid The object's persistence id
    * @param c The command to run once the operation is complete
-   * @return <code>true</code> if the action succeeds, else
-   * <code>false</code>  (through receiveResult on c).
    */
   public void unstore(Id id, Continuation c) {
     storage.unstore(id, c);
   }
-  
+
   /**
    * Caches an object in this storage. This method is non-blocking.
    * If the object has already been stored at the location id, this
@@ -319,11 +318,12 @@ public class StorageManager implements Cache, Storage {
    * the object was cached.  Note that the object may not actually be
    * cached due to the cache replacement policy.
    *
+   * Returns <code>True</code> if the cache actaully stores the object, else
+   * <code>False</code> (through receiveResult on c).
+   *
    * @param id The object's id.
    * @param obj The object to cache.
    * @param c The command to run once the operation is complete
-   * @return <code>True</code> if the cache actaully stores the object, else
-   * <code>False</code> (through receiveResult on c).
    */
   public void cache(Id id, Serializable obj, Continuation c) {
     cache.cache(id, obj, c);
@@ -334,10 +334,11 @@ public class StorageManager implements Cache, Storage {
    * non-blocking. If the object was not in the cached list in the first place,
    * nothing happens and <code>False</code> is returned.
    *
+   * Returns <code>True</code> if the action succeeds, else
+   * <code>False</code>  (through receiveResult on c).
+   *
    * @param pid The object's id
    * @param c The command to run once the operation is complete
-   * @return <code>True</code> if the action succeeds, else
-   * <code>False</code>  (through receiveResult on c).
    */
   public void uncache(Id id, Continuation c) {
     cache.uncache(id, c);
@@ -349,7 +350,6 @@ public class StorageManager implements Cache, Storage {
    * Continuation with an Integer representing the size.
    *
    * @param c The command to run once the operation is complete
-   * @return The maximum size, in bytes, of the cache.
    */
   public void getMaximumSize(Continuation c) {
     cache.getMaximumSize(c);
@@ -360,10 +360,11 @@ public class StorageManager implements Cache, Storage {
    * value to a smaller value than the current value may result in
    * object being evicted from the cache.
    *
+   * Returns the success or failure of the setSize operation
+   * (through receiveResult on c).
+   *
    * @param size The new maximum size, in bytes, of the cache.
    * @param c The command to run once the operation is complete
-   * @return The success or failure of the setSize operation
-   * (through receiveResult on c).
    */
   public void setMaximumSize(int size, Continuation c) {
     cache.setMaximumSize(size, c);

@@ -75,19 +75,20 @@ public interface Catalog {
    * The result is returned via the receiveResult method on the provided
    * Continuation with an Boolean represnting the result.
    *
+   * Returns <code>True</code> or <code>False</code> depending on whether the object
+   * exists (through receiveResult on c);
+   *
    * @param c The command to run once the operation is complete
    * @param id The id of the object in question.
-   * @return Whether or not an object is present at id.
    */
   public void exists(Id id, Continuation c);
 
   /**
-   * Returns the object identified by the given id.
+   * Returns the object identified by the given id, or <code>null</code> if
+   * there is no cooresponding object (through receiveResult on c).
    *
    * @param id The id of the object in question.
    * @param c The command to run once the operation is complete
-   * @return The object, or <code>null</code> if there is no cooresponding
-   * object (through receiveResult on c).
    */
   public void getObject(Id id, Continuation c);
 
@@ -97,15 +98,13 @@ public interface Catalog {
    * partially inclusive, the lower range is inclusive, and the upper
    * exclusive.
    *
-   *
    * When the operation is complete, the receiveResult() method is called
-   * on the provided continuation with a Comparable[] result containing the
+   * on the provided continuation with a IdSet result containing the
    * resulting IDs.
    *
    * @param start The staring id of the range. (inclusive)
    * @param end The ending id of the range. (exclusive) 
    * @param c The command to run once the operation is complete
-   * @return The idset containg the keys 
    */
   public void scan(IdRange range , Continuation c);
 
@@ -114,7 +113,6 @@ public interface Catalog {
    * returned contains the Ids of the stored objects. The range is
    * partially inclusive, the lower range is inclusive, and the upper
    * exclusive.
-   *
    *
    * NOTE: This method blocks so if the behavior of this method changes and
    * no longer stored in memory, this method may be deprecated.
@@ -130,7 +128,6 @@ public interface Catalog {
    * Continuation with an Integer representing the size.
    *
    * @param c The command to run once the operation is complete
-   * @return The total size, in bytes, of data stored.
    */
   public void getTotalSize(Continuation c);
 }

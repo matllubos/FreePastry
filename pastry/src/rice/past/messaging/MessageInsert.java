@@ -67,10 +67,10 @@ public class MessageInsert extends PASTMessage {
   
   /**
    * Builds a new request to insert a file.
+   *
    * @param nodeId Source Pastry node's ID
    * @param fileId Pastry key of file
-   * @param update File to be stored
-   * @param authorCred Credentials of the author of the file
+   * @param file File to be stored
    */
   public MessageInsert(Id nodeId, 
                        Id fileId, 
@@ -81,6 +81,8 @@ public class MessageInsert extends PASTMessage {
   
   /**
    * Returns whether the insert was successful.
+   *
+   * @return Whether or not it was successful
    */
   public boolean getSuccess() {
     return _success;
@@ -88,6 +90,7 @@ public class MessageInsert extends PASTMessage {
   
   /**
    * Inserts this message's file into the service.
+   *
    * @param service PASTService on which to act
    */
   public void performAction(final PASTServiceImpl service) {
@@ -128,6 +131,8 @@ public class MessageInsert extends PASTMessage {
   
   /**
    * Display this message.
+   *
+   * @return The string representing this message
    */
   public String toString() {
     String val = "INSERT ";

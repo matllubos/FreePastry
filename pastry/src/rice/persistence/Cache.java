@@ -67,11 +67,12 @@ public interface Cache extends Catalog {
    * the object was cached.  Note that the object may not actually be
    * cached due to the cache replacement policy.
    *
+   * Returns <code>True</code> if the cache actaully stores the object, else
+   * <code>False</code> (through receiveResult on c).
+   *
    * @param id The object's id.
    * @param obj The object to cache.
    * @param c The command to run once the operation is complete
-   * @return <code>True</code> if the cache actaully stores the object, else
-   * <code>False</code> (through receiveResult on c).
    */
   public void cache(Id id, Serializable obj, Continuation c);
 
@@ -80,10 +81,11 @@ public interface Cache extends Catalog {
    * non-blocking. If the object was not in the cached list in the first place,
    * nothing happens and <code>False</code> is returned.
    *
+   * Returns <code>True</code> if the action succeeds, else
+   * <code>False</code>  (through receiveResult on c).
+   *
    * @param pid The object's id
    * @param c The command to run once the operation is complete
-   * @return <code>True</code> if the action succeeds, else
-   * <code>False</code>  (through receiveResult on c).
    */
   public void uncache(Id id, Continuation c);
 
@@ -93,7 +95,6 @@ public interface Cache extends Catalog {
    * Continuation with an Integer representing the size.
    *
    * @param c The command to run once the operation is complete
-   * @return The maximum size, in bytes, of the cache.
    */
   public void getMaximumSize(Continuation c);
 
@@ -102,10 +103,11 @@ public interface Cache extends Catalog {
    * value to a smaller value than the current value may result in
    * object being evicted from the cache.
    *
+   * Returns the success or failure of the setSize operation
+   * (through receiveResult on c).
+   *
    * @param size The new maximum size, in bytes, of the cache.
    * @param c The command to run once the operation is complete
-   * @return The success or failure of the setSize operation
-   * (through receiveResult on c).
    */
   public void setMaximumSize(int size, Continuation c);  
 }

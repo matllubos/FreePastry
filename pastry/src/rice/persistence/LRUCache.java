@@ -80,21 +80,22 @@ public class LRUCache implements Cache {
 
     this.order = new LinkedList();
   }
-  
+
   /**
-   * Caches an object in this Cache. This method is non-blocking.
+   * Caches an object in this storage. This method is non-blocking.
    * If the object has already been stored at the location id, this
    * method has the effect of calling <code>uncachr(id)</code> followed
    * by <code>cache(id, obj)</code>. This method finishes by calling
    * receiveResult() on the provided continuation with whether or not
    * the object was cached.  Note that the object may not actually be
-   * stored (if it is bigger than the entire cache size).
+   * cached due to the cache replacement policy.
+   *
+   * Returns <code>True</code> if the cache actaully stores the object, else
+   * <code>False</code> (through receiveResult on c).
    *
    * @param id The object's id.
    * @param obj The object to cache.
    * @param c The command to run once the operation is complete
-   * @return <code>True</code> if the cache actaully stores the object, else
-   * <code>False</code> (through receiveResult on c).
    */
   public synchronized void cache(final Id id, final Serializable obj, final Continuation c) {
     final int size = getSize(obj);
@@ -142,10 +143,11 @@ public class LRUCache implements Cache {
    * non-blocking. If the object was not in the cached list in the first place,
    * nothing happens and <code>False</code> is returned.
    *
+   * Returns <code>True</code> if the action succeeds, else
+   * <code>False</code>  (through receiveResult on c).
+   *
    * @param pid The object's id
    * @param c The command to run once the operation is complete
-   * @return <code>True</code> if the action succeeds, else
-   * <code>False</code>  (through receiveResult on c).
    */
   public synchronized void uncache(Id id, Continuation c) {
     order.remove(id);
@@ -203,7 +205,7 @@ public class LRUCache implements Cache {
    *
    *
    * When the operation is complete, the receiveResult() method is called
-   * on the provided continuation with a Comparable[] result containing the
+   * on the provided continuation with a IdSet result containing the
    * resulting IDs.
    *
    * @param start The staring id of the range. (inclusive)
@@ -238,7 +240,6 @@ public class LRUCache implements Cache {
    * Continuation with an Integer representing the size.
    *
    * @param c The command to run once the operation is complete
-   * @return The maximum size, in bytes, of the cache.
    */
   public void getMaximumSize(Continuation c) {
     c.receiveResult(new Integer(maximumSize));

@@ -55,20 +55,21 @@ import java.net.*;
 import java.io.Serializable;
 
 /**
+ * @(#) DistPASTRegrTest.java
+ *
  * Provides regression testing for the PAST service using distributed nodes.
  *
  * @version $Id$
  * @author Charles Reis
  * @author Alan Mislove
  */
-
 public class DistPASTRegrTest {
   private DistPastryNodeFactory factory;
   private Vector pastrynodes;
   private Vector pastNodes;
 
   private Random rng;
-  private RandomNodeIdFactory idFactory;
+  private IPNodeIdFactory idFactory;
 
   private static int numNodes = 20;
   private static int k = 3;  // replication factor
@@ -90,7 +91,7 @@ public class DistPASTRegrTest {
   }
 
   public DistPASTRegrTest() {
-    idFactory = new IPNodeIdFactory();
+    idFactory = new IPNodeIdFactory(port);
     factory = DistPastryNodeFactory.getFactory(idFactory,
                                                protocol,
                                                port);
@@ -381,8 +382,8 @@ public class DistPASTRegrTest {
                 remote.lookup(fileId, MONKEY);
               } else {
                 assertEquals("PASTFunctions",
-                             "File should have been found " + remote.getReplicaFactor() + " time after insert",
-                             new Integer(remote.getReplicaFactor()), new Integer(localCount));
+                             "File should have been found " + k + " time after insert",
+                             new Integer(k), new Integer(localCount));
 
                 runReclaimTests();
               }

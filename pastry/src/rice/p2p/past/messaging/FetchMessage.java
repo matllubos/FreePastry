@@ -77,7 +77,7 @@ public class FetchMessage extends ContinuationMessage {
   /**
    * Method which returns the handle
    *
-   * @param o The contained handle
+   * @return The contained handle
    */
   public PastContentHandle getHandle() {
     return handle;

@@ -58,6 +58,7 @@ public class MessageLostMessage extends PastMessage {
    * Constructor which takes a unique integer Id and the local id
    *
    * @param uid The unique id
+   * @param local The local nodehandle
    */
   public MessageLostMessage(int uid, NodeHandle local) {
     super(uid, local, local.getId());

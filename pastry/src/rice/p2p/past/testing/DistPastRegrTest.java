@@ -52,6 +52,8 @@ import java.net.*;
 import java.io.Serializable;
 
 /**
+ * @(#) DistPastRegrTest.java
+ *
  * Provides regression testing for the Past service using distributed nodes.
  *
  * @version $Id$
@@ -89,6 +91,7 @@ public class DistPastRegrTest extends DistCommonAPITest {
    * Method which should process the given newly-created node
    *
    * @param node The newly created node
+   * @param num The number of this node
    */
   protected void processNode(int num, Node node) {
     storages[num] = new StorageManager(FACTORY,
@@ -569,7 +572,11 @@ public class DistPastRegrTest extends DistCommonAPITest {
       }
     });
   }
-        
+
+  /**
+   * Private method which initiates the replica maintenance on all
+   * of the nodes
+   */
   private void runReplicaMaintence() {
     for (int i=0; i<NUM_NODES; i++) {
       ((RMImpl) pasts[i].getReplicaManager()).periodicMaintenance();
@@ -578,6 +585,11 @@ public class DistPastRegrTest extends DistCommonAPITest {
     pause(500);
   }
 
+  /**
+   * Private method which generates a random Id
+   *
+   * @return A new random Id
+   */
   private Id generateId() {
     byte[] data = new byte[20];
     new Random().nextBytes(data);

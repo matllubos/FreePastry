@@ -111,8 +111,9 @@ public class PASTServiceImpl implements PASTService, Application, RMClient {
    * Storage object (to persistedly store objects) and a cache used
    * to cache objects.
    *
-   * @param pastry PastryNode to run on
+   * @param node the node to run on
    * @param storage The Storage object to use for storage and caching
+   * @param instance The instance name for Past to use
    */
   public PASTServiceImpl(Node node, StorageManager storage, String instance) {
     this.storage = storage;
@@ -141,11 +142,12 @@ public class PASTServiceImpl implements PASTService, Application, RMClient {
     return endpoint.getId();
   }
   
-  // ---------- PastryAppl Methods ----------
+  // ---------- CommonAPI Methods ----------
   
   /**
    * Called by pastry when a message arrives for this application.
    *
+   * @param id The destination id of the incoming message
    * @param msg the message that is arriving.
    */
   public void deliver(Id id, Message msg) {
@@ -242,7 +244,6 @@ public class PASTServiceImpl implements PASTService, Application, RMClient {
    * 
    * @param id Pastry key identifying the object to be stored
    * @param obj Persistable object to be stored
-   * @param authorCred Author's credentials
    * @param command Command to be performed when the result is received
    */
   public void insert(Id id, Serializable obj, final Continuation command) {
@@ -393,6 +394,7 @@ public class PASTServiceImpl implements PASTService, Application, RMClient {
    * to be called by PAST itself in order to get objects which it is a replica for.
    *
    * @param id Pastry key of original object
+   * @param command The command to run once the object is fetched
    */
   private void fetch(final Id id, final Continuation command) {
     Id nodeId = endpoint.getId();
@@ -413,17 +415,12 @@ public class PASTServiceImpl implements PASTService, Application, RMClient {
 
  // ---------- RMClient Methods ----------
 
-  /* This upcall is used by the Replica Manager to get the
-    * replica factor to associate with itself.
-    */
-  public int getReplicaFactor() {
-    return REPLICATION_FACTOR;
-  }
-
   /**
    * This upcall is invoked to notify the application that is should
    * fetch the cooresponding keys in this set, since the node is now
    * responsible for these keys also
+   *
+   * @param keySet The keys to fetch
    */
   public void fetch(rice.pastry.IdSet keySet) {
     final Iterator i = keySet.getIterator();
@@ -451,6 +448,8 @@ public class PASTServiceImpl implements PASTService, Application, RMClient {
   /**
    * This upcall is simply to denote that the underlying replica manager
    * (rm) is ready.
+   *
+   * @param rm The rm which is now ready
    */
   public void rmIsReady(RM rm) {
   }
@@ -461,6 +460,8 @@ public class PASTServiceImpl implements PASTService, Application, RMClient {
    * call by calling a scan(complement of this range) to the persistance
    * manager and get the keys for which it is not responsible and
    * call delete on the persistance manager for those objects
+   *
+   * @param range The range this node is now responseable for
    */
   public void isResponsible(rice.pastry.IdRange range) {
     IdRange notRange = range.getComplementRange();
@@ -492,6 +493,8 @@ public class PASTServiceImpl implements PASTService, Application, RMClient {
    * This upcall should return the set of keys that the application
    * currently stores in this range. Should return a empty IdSet (not null), in
    * the case that no keys belong to this range
+   *
+   * @return The set of contained ids in the given range
    */
   public rice.pastry.IdSet scan(rice.pastry.IdRange range) {
     return (rice.pastry.IdSet) storage.getStorage().scan(range);
@@ -502,6 +505,8 @@ public class PASTServiceImpl implements PASTService, Application, RMClient {
   /**
    * Prints a debugging message to System.out if the
    * DEBUG flag is turned on.
+   *
+   * @param message The message to print
    */
   protected void debug(String message) {
     if (DEBUG) {

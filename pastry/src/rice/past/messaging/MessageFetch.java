@@ -46,7 +46,7 @@ import java.util.Random;
 import java.io.*;
 
 /**
-* @(#) MessageFetch.java
+ * @(#) MessageFetch.java
  *
  * PASTMessage requesting a file be retrieved for a replica node.
  *

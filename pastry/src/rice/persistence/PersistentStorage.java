@@ -82,7 +82,9 @@ public class PersistentStorage implements Storage {
   * Builds a PersistentStorage given a root directory in which to
   * persist the data. Uses a default instance name.
   *
+  * @param factory The factory to use for creating Ids.
   * @param rootDir The root directory of the persisted disk.
+  * @param size the size of the storage in bytes
   */
   public PersistentStorage(IdFactory factory, String rootDir, int size) {
     this(factory, "default", rootDir, size);
@@ -92,6 +94,7 @@ public class PersistentStorage implements Storage {
   * Builds a PersistentStorage given and an instance name
   *  and a root directoy in which to persist the data. 
   *
+  * @param factory The factory to use for creating Ids.
   * @param name the name of this instance
   * @param rootDir The root directory of the persisted disk.
   * @param size the size of the storage in bytes

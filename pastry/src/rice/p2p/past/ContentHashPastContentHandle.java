@@ -42,6 +42,8 @@ import rice.*;
 import rice.p2p.commonapi.*;
 
 /**
+ * @(#) ContentHashPastContentHandle.java
+ *
  * A handle class for content-hash objects stored in Past.
  *
  * @version $Id$

@@ -72,6 +72,8 @@ public class MemoryStorage implements Storage {
   
   /**
    * Builds a MemoryStorage object.
+   *
+   * @param factory The factory to build protocol-specific Ids from.
    */
   public MemoryStorage(IdFactory factory) {
     this.factory = factory;
@@ -131,18 +133,52 @@ public class MemoryStorage implements Storage {
     }
   }
 
+  /**
+   * Returns whether or not the provided id exists
+   *
+   * @param id The id to check
+   * @return Whether or not the given id is stored
+   */
   public boolean exists(Id id) {
     return storage.containsKey(id);
   }
 
+  /**
+   * Returns whether or not the provided id exists, by returning
+   * a Boolean through receiveResult on c
+   *
+   * @param id The id to check
+   * @param c The command to run once the result is available
+   */  
   public void exists(Id id, Continuation c) {
     c.receiveResult(new Boolean(storage.containsKey(id)));
   }
 
+  /**
+   * Returns the object identified by the given id, or <code>null</code> if
+   * there is no cooresponding object (through receiveResult on c).
+   *
+   * @param id The id of the object in question.
+   * @param c The command to run once the operation is complete
+   */
   public void getObject(Id id, Continuation c) {
     c.receiveResult(storage.get(id));
   }
 
+  /**
+   * Return the objects identified by the given range of ids. The IdSet
+   * returned contains the Ids of the stored objects. The range is
+   * partially inclusive, the lower range is inclusive, and the upper
+   * exclusive.
+   *
+   * When the operation is complete, the receiveResult() method is called
+   * on the provided continuation with a IdSet result containing the
+   * resulting IDs.
+   *
+   * @param start The staring id of the range. (inclusive)
+   * @param end The ending id of the range. (exclusive)
+   * @param c The command to run once the operation is complete
+   */
   public void scan(IdRange range , Continuation c) {
     c.receiveResult(idSet.subSet(factory.buildIdRange(range.getCCWId(), range.getCWId())));    
   }
@@ -165,8 +201,13 @@ public class MemoryStorage implements Storage {
     return(toReturn);
   }
 
-
-
+  /**
+   * Returns the total size of the stored data in bytes.The result
+   * is returned via the receiveResult method on the provided
+   * Continuation with an Integer representing the size.
+   *
+   * @param c The command to run once the operation is complete
+   */
   public void getTotalSize(Continuation c) {
     c.receiveResult(new Integer(currentSize));
   }
