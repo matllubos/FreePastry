@@ -20,8 +20,8 @@ public class Email {
                EmailUserAddress[] recipientUsers, 
                EmailGroupAddress[] recipientGroups, 
                String subject, 
-               EmailBody body, 
-               EmailAttachment[] attachments) {
+               EmailDataReference body, 
+               EmailDataReference[] attachments) {
   }
     
   /**
@@ -61,11 +61,11 @@ public class Email {
   }
      
   /**
-   * Returns the other body of this message.
+   * Returns the body of this message.  Should be text.
    *
    * @return The body of this email.
    */
-  public EmailBody getBody() {
+  public EmailDataReference getBody() {
     return null;
   }
      
@@ -74,7 +74,7 @@ public class Email {
    *
    * @return The attachments of this email.
    */
-  public EmailAttachment[] getAttachments() {
+  public EmailDataReference[] getAttachments() {
     return null;
   }
 }

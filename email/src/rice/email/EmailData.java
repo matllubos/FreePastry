@@ -8,16 +8,17 @@ import rice.post.storage.*;
 /**
  * Represents the attachment to an email.
  */
-
-public class EmailAttachment implements PostData {
-
+public class EmailData implements PostData {
+  byte[] _data = data;
+  
   /**
    * Constructor. Takes in a byte[] representing the data of the
    * attachment
    *
    * @param data The byte[] representation
    */
-  public EmailAttachment(byte[] data) {
+  public EmailData(byte[] data) {
+    _data = data;
   }
 
   /**
@@ -40,7 +41,6 @@ public class EmailAttachment implements PostData {
   public SignedReference buildSignedReference(NodeId location){
     return null;
   }
-
   
   /**
    * Returns the data of this attachment
@@ -48,7 +48,7 @@ public class EmailAttachment implements PostData {
    * @param The data stored in this attachment
    */
   public byte[] getData() {
-    return null;
+    return _data;
   }
 
 }

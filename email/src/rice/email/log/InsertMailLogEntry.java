@@ -8,7 +8,8 @@ import rice.email.*;
  * to the next LogEntry.
  */
 public class InsertMailLogEntry extends LogEntry {
-
+  Email _email;
+    
   /**
    * Constructor for MailEntry.  For the given email, creates an
    * entry which can be used in a log chain.  The next field is the
@@ -17,8 +18,8 @@ public class InsertMailLogEntry extends LogEntry {
    * @param email the email to store
    * @param prev The reference to previous LogEntry in the chain
    */
-  public InsertMailLogEntry(Email email, LogEntryReference prev) {
-    super(prev);
+  public InsertMailLogEntry(Email email) {
+    _email = email;
   }
   
   /**
@@ -27,6 +28,6 @@ public class InsertMailLogEntry extends LogEntry {
    * @return The email inserted
    */
   public Email getEmail() {
-    return null;
+    return _email;
   }
 }

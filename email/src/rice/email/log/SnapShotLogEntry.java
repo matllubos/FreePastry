@@ -9,17 +9,18 @@ import rice.email.*;
  * through the entire chain.
  */
 public class SnapShotLogEntry extends LogEntry {
-
+  // stores the emails of the current folder
+  private Email[] _emails;
+    
   /**
    * Constructor for SnapShot.  For the given email, creates an
    * entry which can be used in a log chain.  The next field is the
    * next LogNode in the chain.
    *
    * @param email the email to store
-   * @param prev The reference to previous LogEntry in the chain
    */
-  public SnapShotLogEntry(Email email[], LogEntryReference prev) {
-    super(prev);
+  public SnapShotLogEntry(Email[] emails) {
+    _emails = emails;
   }
 
   /**
@@ -27,9 +28,9 @@ public class SnapShotLogEntry extends LogEntry {
    * @return the valid emails at the point of the SnapShot
    */
   public Email[] getEmails() {
-    return null; 
+    return _emails;
   }
-  
+      
   /**
    * Returns whether this is the last node in the current snapshot.
    * Is provided in case the snapshot covers multiple nodes.

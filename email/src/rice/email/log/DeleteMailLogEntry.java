@@ -8,17 +8,17 @@ import rice.email.*;
  * matches up to.
  */
 public class DeleteMailLogEntry extends LogEntry {
-
+  Email _email ;
+    
   /**
    * Constructor for DeleteMailLogEntry.  For the given email, creates a node which serves
    * as a marker that the previous occurence of the email in the chain
    * should be disregarded.  The next field is the next LogNode in the chain.
    *
    * @param email the email to store
-   * @param prev The reference to previous LogEntry in the chain
    */
-  public DeleteMailLogEntry(Email email, LogEntryReference prev) {
-    super(prev);
+  public DeleteMailLogEntry(Email email) {
+    _email = email;
   }
   
   /**
@@ -27,6 +27,6 @@ public class DeleteMailLogEntry extends LogEntry {
    * @return The email inserted
    */
   public Email getEmail() {
-    return null;
+    return _email;
   }
 }
