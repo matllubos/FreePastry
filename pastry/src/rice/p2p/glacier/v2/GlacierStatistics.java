@@ -1,5 +1,7 @@
 package rice.p2p.glacier.v2;
 
+import rice.p2p.commonapi.IdRange;
+
 public class GlacierStatistics {
   public int messagesSentByTag[];
   public int pendingRequests;
@@ -7,6 +9,7 @@ public class GlacierStatistics {
   public int numFragments;
   public int numContinuations;
   public int numObjectsInTrash;
+  public IdRange responsibleRange;
   
   public GlacierStatistics(int numTags) {
     this.messagesSentByTag = new int[numTags];
