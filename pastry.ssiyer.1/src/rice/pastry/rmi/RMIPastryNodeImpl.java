@@ -42,8 +42,7 @@ import rice.pastry.messaging.*;
 
 import java.util.*;
 import java.rmi.server.UnicastRemoteObject;
-import java.rmi.RemoteException;
-import java.rmi.Naming;
+import java.rmi.*;
 
 /**
  * An RMI-exported proxy object associated with each Pastry node. Its remote
@@ -62,8 +61,6 @@ class RMIPastryNodeImpl extends UnicastRemoteObject
     private RMINodeHandlePool handlepool;
     private LinkedList queue;
     private int count;
-
-    private boolean binddone;
 
     private class MsgHandler implements Runnable {
 	public void run() {
@@ -107,7 +104,6 @@ class RMIPastryNodeImpl extends UnicastRemoteObject
 	node = null;
 	queue = new LinkedList();
 	count = 0;
-	binddone = false;
 	MsgHandler handler = new MsgHandler();
 	new Thread(handler).start();
     }
@@ -141,26 +137,32 @@ class RMIPastryNodeImpl extends UnicastRemoteObject
     }
 
     /**
-     * Observer on leafset. Binds node into registry when leafset activity
-     * first happens.
+     * Synchronously rebinds node into rmi registry.
+     */
+    public void rmibind() {
+	try {
+	    Naming.rebind("//:" + 5009 + "/Pastry", this);
+	} catch (Exception e) {
+	    System.out.println("Unable to bind Pastry node in rmiregistry: " + e.toString());
+	}
+    }
+
+    /**
+     * Observer on leafset. Binds node into rmi registry on any leafset
+     * activity. Replaces earlier binding; turns out, this is faster than
+     * all nodes using the first virtual node to bootstrap.
      */
     public void update(Observable o, Object arg) {
-	//NodeSetUpdate nsu = (NodeSetUpdate) arg;
-
-	//NodeHandle handle = nsu.handle();
-	//boolean wa = nsu.wasAdded();
-
-	// XXX replace binddone by unregister. method doesn't exist yet.
-
 	// this bind happens after the registry lookup, so the node never
 	// ends up discovering itself
-	if (binddone == false) {
-	    try {
-		Naming.rebind("//:" + 5009 + "/Pastry", this);
-	    } catch (Exception e) {
-		System.out.println("Unable to bind Pastry node in rmiregistry: " + e.toString());
-	    }
-	    binddone = true;
+
+	try {
+	    Naming.rebind("//:" + 5009 + "/Pastry", this);
+	// } catch (AlreadyBoundException e) { // enable for "bind"
+	} catch (Exception e) {
+	    System.out.println("Unable to bind Pastry node in rmiregistry: " + e.toString());
 	}
+
+	node.deleteLeafSetObserver(this);
     }
 }

@@ -133,8 +133,7 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
 	pnode.setLocalHandle(localhandle);
 
 	if (pnode.syncbind) {
-	    // bind now
-	    rmilocalnode.update(null, null);
+	    rmilocalnode.rmibind(); // bind now
 	} else {
 	    // bind when there's leafset activity
 	    pnode.addLeafSetObserver(rmilocalnode);
