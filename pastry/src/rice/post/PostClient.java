@@ -86,4 +86,24 @@ public class PostClient implements PostServiceListener {
    */
   public void incomingNotification(NotificationMessage nm) {
   }
+  
+  /**
+   * This method adds an object that will be notified of events that occur in this 
+   * post client.
+   * 
+   * @param pcl is the object that will be notified.
+   */
+  public void addPostClientListener(PostClientListener pcl) {
+    
+  }
+  
+  /**
+   * This method removes an object from the set of objects that are notified by
+   * this post client of events that occur in it.
+   * 
+   * @param pcl is the object that will no longer be notified.
+   */
+  public void removePostClientListener(PostClientListener pcl) {
+    
+  }
 }
