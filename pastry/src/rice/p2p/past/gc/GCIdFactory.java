@@ -141,6 +141,18 @@ public class GCIdFactory implements IdFactory {
   }
   
   /**
+   * Builds an IdRange based on a prefix.  Any id which has this prefix should
+   * be inside this IdRange, and any id which does not share this prefix should
+   * be outside it.
+   *
+   * @param string The toString() representation of an Id
+   * @return The built Id.
+   */
+  public IdRange buildIdRangeFromPrefix(String string) {
+    throw new UnsupportedOperationException("GCIdFactory cannot be used to build Ids!");  
+  }
+  
+  /**
    * Returns the length a Id.toString should be.
    *
    * @return The correct length;

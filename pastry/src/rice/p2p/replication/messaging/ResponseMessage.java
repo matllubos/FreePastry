@@ -51,8 +51,11 @@ import rice.p2p.replication.*;
  */
 public class ResponseMessage extends ReplicationMessage {
   
+  // the list of ranges for this message
+  protected IdRange[] ranges;
+  
   // the list of keys for this message
-  protected IdSet ids;
+  protected IdSet[] ids;
   
   /**
   * Constructor which takes a unique integer Id
@@ -60,18 +63,28 @@ public class ResponseMessage extends ReplicationMessage {
    * @param source The source address
    * @param topic The topic
    */
-  public ResponseMessage(NodeHandle source, IdSet ids) {
+  public ResponseMessage(NodeHandle source, IdRange[] ranges, IdSet[] ids) {
     super(source);
     
+    this.ranges = ranges;
     this.ids = ids;
   }
   
   /**
-    * Method which returns this messages' ranges
+   * Method which returns this messages' ranges
    *
    * @return The ranges of this message
    */
-  public IdSet getIdSet() {
+  public IdRange[] getRanges() {
+    return ranges;
+  }
+  
+  /**
+   * Method which returns this messages' ranges
+   *
+   * @return The ranges of this message
+   */
+  public IdSet[] getIdSets() {
     return ids;
   }
   

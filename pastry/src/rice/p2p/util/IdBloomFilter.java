@@ -104,4 +104,26 @@ public class IdBloomFilter implements Serializable {
   public boolean check(Id id) {
     return filter.check(id.toByteArray());
   }
+  
+  /**
+   * Method which checks an entire IdSet to see if they exist in this bloom filter, and
+   * returns the response by adding elements to the other provided id set.
+   *
+   * @param set THe set to check for
+   * @param result The set to put the non-existing objects into
+   * @param max The maximum number of keys to return
+   */
+  public void check(IdSet set, IdSet result, int max) {
+    Iterator it = set.getIterator();
+    int count = 0;
+    
+    while (it.hasNext() && (count < max)) {
+      Id next = (Id) it.next();
+      
+      if (! check(next)) {
+        result.addId(next);
+        count++;
+      }
+    }
+  }
 }

@@ -205,6 +205,27 @@ public class MultiringIdFactory implements IdFactory {
   }
   
   /**
+   * Builds an IdRange based on a prefix.  Any id which has this prefix should
+   * be inside this IdRange, and any id which does not share this prefix should
+   * be outside it.
+   *
+   * @param string The toString() representation of an Id
+   * @return The built Id.
+   */
+  public IdRange buildIdRangeFromPrefix(String string) {
+    if (string.indexOf(", ") < 0) 
+      throw new IllegalArgumentException("Prefix cannot be built from String " + string);
+    
+    string = string.substring(1);
+    Id ring = factory.buildIdFromToString(string.substring(0, string.indexOf(", ")));
+    
+    string = string.substring(string.indexOf(", ")+2);
+    IdRange range = factory.buildIdRangeFromPrefix(string);
+    
+    return new MultiringIdRange(ring, range);
+  }
+  
+  /**
    * Returns the length a Id.toString should be.
    *
    * @return The correct length;

@@ -271,7 +271,9 @@ public class GCPastImpl extends PastImpl implements GCPast {
               try {
                 // allow the object to check the insert, and then insert the data
                 GCPastContent content = (GCPastContent) imsg.getContent().checkInsert(imsg.getContent().getId(), (PastContent) o);
-                set.addId(new GCId(content.getId(), imsg.getExpiration()));
+                synchronized (set) {
+                  set.addId(new GCId(content.getId(), imsg.getExpiration()));
+                }
                 
                 storage.store(content.getId(), content.getMetadata(imsg.getExpiration()), content, parent);
               } catch (PastException e) {

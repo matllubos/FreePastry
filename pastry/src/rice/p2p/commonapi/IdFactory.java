@@ -101,6 +101,16 @@ public interface IdFactory {
   public Id buildIdFromToString(char[] chars, int offset, int length);
   
   /**
+   * Builds an IdRange based on a prefix.  Any id which has this prefix should
+   * be inside this IdRange, and any id which does not share this prefix should
+   * be outside it.
+   *
+   * @param string The toString() representation of an Id
+   * @return The built Id.
+   */
+  public IdRange buildIdRangeFromPrefix(String string);
+  
+  /**
    * Returns the length a Id.toString should be.
    *
    * @return The correct length;

@@ -39,6 +39,8 @@ package rice.p2p.replication;
 import java.util.*;
 import java.util.logging.*;
 
+import rice.*;
+import rice.Continuation.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.replication.ReplicationPolicy.*;
 import rice.p2p.replication.messaging.*;
@@ -202,33 +204,42 @@ public class ReplicationImpl implements Replication, Application {
    * which hold keys this node may be interested in
    */
   public void replicate() {
-    int total = 0;
     System.out.println("COUNT: " + System.currentTimeMillis() + " Sending out requests in instance " + instance); 
-    NodeHandleSet handles = endpoint.neighborSet(Integer.MAX_VALUE);
-    IdRange ourRange = endpoint.range(handle, 0, handle.getId());
-    IdBloomFilter ourFilter = new IdBloomFilter(client.scan(ourRange));
-    total += client.scan(ourRange).numElements();
+    final NodeHandleSet handles = endpoint.neighborSet(Integer.MAX_VALUE);
+    final IdRange ourRange = endpoint.range(handle, 0, handle.getId());
     
-    for (int i=0; i<handles.size(); i++) {
-      NodeHandle handle = handles.getHandle(i);
-      IdRange handleRange = endpoint.range(handle, 0, handle.getId());
+    endpoint.process(new BloomFilterExecutable(client.scan(ourRange)), new ListenerContinuation("Creation of our bloom filter") {
+      int total = 0;
 
-      if (handleRange != null) {
-        IdRange range = handleRange.intersectRange(getTotalRange());
-        IdBloomFilter filter = new IdBloomFilter(client.scan(range));
-        total += client.scan(range).numElements();
+      public void receiveResult(Object o) {
+        final IdBloomFilter ourFilter = (IdBloomFilter) o;
+        total += client.scan(ourRange).numElements();
+    
+        for (int i=0; i<handles.size(); i++) {
+          final NodeHandle handle = handles.getHandle(i);
+          final IdRange handleRange = endpoint.range(handle, 0, handle.getId());
 
-        if ((range != null) && (! range.intersectRange(getTotalRange()).isEmpty())) {
-          System.out.println("COUNT: " + System.currentTimeMillis() + " Sending request to " + handle + " for range " + range + " in instance " + instance);
-          RequestMessage request = new RequestMessage(this.handle, new IdRange[] {range, ourRange}, new IdBloomFilter[] {filter, ourFilter});
-          endpoint.route(null, request, handle);
+          if (handleRange != null) {
+            final IdRange range = handleRange.intersectRange(getTotalRange());
+            endpoint.process(new BloomFilterExecutable(client.scan(range)), new StandardContinuation(this) {
+              public void receiveResult(Object o) {
+                IdBloomFilter filter = (IdBloomFilter) o;
+                total += client.scan(range).numElements();
+
+                if ((range != null) && (! range.intersectRange(getTotalRange()).isEmpty())) {
+                  System.out.println("COUNT: " + System.currentTimeMillis() + " Sending request to " + handle + " for range " + range + " in instance " + instance);
+                  RequestMessage request = new RequestMessage(ReplicationImpl.this.handle, new IdRange[] {range, ourRange}, new IdBloomFilter[] {filter, ourFilter});
+                  endpoint.route(null, request, handle);
+                }
+              }
+            });
+          }
         }
+        
+        System.out.println("COUNT: " + System.currentTimeMillis() + " Done sending replications requests with " + total + " in instance " + instance);
+        log.finer(endpoint.getId() + ": Done sending out requests with " + total + " objects"); 
       }
-    }
-
-    System.out.println("COUNT: " + System.currentTimeMillis() + " Done sending replications requests with " + total + " in instance " + instance);
-
-    log.finer(endpoint.getId() + ": Done sending out requests with " + total + " objects"); 
+    });
   }
 
   
@@ -261,37 +272,39 @@ public class ReplicationImpl implements Replication, Application {
     System.out.println("COUNT: " + System.currentTimeMillis() + " Replication " + instance + " received message " + message);
     
     if (message instanceof RequestMessage) {
-      RequestMessage rm = (RequestMessage) message;
-      IdSet response = factory.buildIdSet();
-      int total = 0;
+      final RequestMessage rm = (RequestMessage) message;
       
-      try {
-      for (int i=0; (i<rm.getRanges().length) && (response.numElements() < MAX_KEYS_IN_MESSAGE); i++) {
-        Iterator it = client.scan(rm.getRanges()[i]).getIterator();
-        
-        while (it.hasNext() && (response.numElements() < MAX_KEYS_IN_MESSAGE)) {
-          Id next = (Id) it.next();
-          total++;
+      MultiContinuation continuation = new MultiContinuation(new ListenerContinuation("Processing of RequestMessage") {
+        public void receiveResult(Object o) {
+          Object[] array = (Object[]) o;
+          IdSet[] result = new IdSet[array.length];
+          System.arraycopy(array, 0, result, 0, array.length);
           
-          if (! rm.getFilters()[i].check(next))
-            response.addId(next);
+          System.out.println("COUNT: " + System.currentTimeMillis() + " Telling node " + rm.getSource() + " to fetch");
+          endpoint.route(null, new ResponseMessage(handle, rm.getRanges(), result), rm.getSource());
         }
-      }
-      } catch (ConcurrentModificationException e) {
-        System.out.println("ERROR!!!!: " + e + " caused by client " + client + " class " + client.getClass().getName() + " instance " + instance);
-        throw e;
-      }
-    
-      if (response.numElements() > 0) {
-        System.out.println("COUNT: " + System.currentTimeMillis() + " Telling node " + rm.getSource() + " to fetch " + response.numElements() + " out of " + total);
-        endpoint.route(null, new ResponseMessage(handle, response), rm.getSource());
+      }, rm.getRanges().length);
+      
+      for (int i=0; i<rm.getRanges().length; i++) {
+        final int j = i;
+        endpoint.process(new Executable() {
+          public Object execute() {
+            IdSet set = factory.buildIdSet();
+            rm.getFilters()[j].check(client.scan(rm.getRanges()[j]), set, MAX_KEYS_IN_MESSAGE);
+
+            return set;
+          }
+        }, continuation.getSubContinuation(i));
       }
     } else if (message instanceof ResponseMessage) {
       ResponseMessage rm = (ResponseMessage) message;
-      IdSet fetch = policy.difference(client.scan(getTotalRange()), rm.getIdSet(), factory);
+      
+      for (int i=0; i<rm.getIdSets().length; i++) {
+        IdSet fetch = policy.difference(client.scan(rm.getRanges()[i]), rm.getIdSets()[i], factory);
         
-      if (fetch.numElements() > 0) 
-        client.fetch(fetch, rm.getSource());
+        if (fetch.numElements() > 0) 
+          client.fetch(fetch, rm.getSource());
+      }
     } else if (message instanceof ReminderMessage) {
       replicate(); 
       updateClient(); 
@@ -311,7 +324,21 @@ public class ReplicationImpl implements Replication, Application {
   public void update(NodeHandle handle, boolean joined) {
     updateClient();
   }
-  
+
+  /**
+   * Internal class which is an executable for creating a bloom filter
+   */
+  protected class BloomFilterExecutable implements Executable {
+    protected IdSet set;
+    
+    public BloomFilterExecutable(IdSet set) {
+      this.set = set;
+    }
+    
+    public Object execute() {
+      return new IdBloomFilter(set);
+    }
+  }
 }
 
 
