@@ -35,14 +35,14 @@ public class OverviewPanelCreator implements PanelCreator {
   }
   
   protected DataPanel createPanel(PastryNode node) {
-    DataPanel nodePanel = new DataPanel("Basic Information");
+    DataPanel nodePanel = new DataPanel("Overview");
     
     Constraints nodeCons = new Constraints();
     nodeCons.gridx = 0;
     nodeCons.gridy = 0;
     nodeCons.fill = Constraints.HORIZONTAL;
     
-    KeyValueListView nodeView = new KeyValueListView("Network Information", 380, 200, nodeCons);
+    KeyValueListView nodeView = new KeyValueListView("Node Information", 380, 200, nodeCons);
     nodeView.add("NodeId", node.getId().toStringFull());
     
     InetSocketAddress address = ((DistNodeHandle) node.getLocalHandle()).getAddress();
@@ -51,18 +51,31 @@ public class OverviewPanelCreator implements PanelCreator {
     nodeView.add("TCP/IP Port", address.getPort() + "");
     nodeView.add("Domain Name", address.getAddress().getHostName());
     nodeView.add("User Language", System.getProperty("user.language"));
+    nodeView.add("JVM Version", System.getProperty("java.version"));
+    nodeView.add("JVM Provider", System.getProperty("java.vendor"));
+    nodeView.add("JVM Location", System.getProperty("java.home"));
+    nodeView.add("Op. System", System.getProperty("os.name") + " " + System.getProperty("os.version"));
+    nodeView.add("O.S. Arch.", System.getProperty("os.arch"));
     
     Constraints jvmCons = new Constraints();
     jvmCons.gridx = 1;
     jvmCons.gridy = 0;
     jvmCons.fill = Constraints.HORIZONTAL;
     
-    KeyValueListView jvmView = new KeyValueListView("JVM/System Information", 380, 200, jvmCons);
-    jvmView.add("JVM Version", System.getProperty("java.version"));
-    jvmView.add("JVM Provider", System.getProperty("java.vendor"));
-    jvmView.add("JVM Location", System.getProperty("java.home"));
-    jvmView.add("Op. System", System.getProperty("os.name") + " " + System.getProperty("os.version"));
-    jvmView.add("O.S. Arch.", System.getProperty("os.arch"));
+    TableView threadView = new TableView("Active Threads", 380, 200, jvmCons);
+    
+    ThreadGroup group = Thread.currentThread().getThreadGroup();
+    Thread[] threads = new Thread[group.activeCount()];
+    group.enumerate(threads);
+    
+    for (int i=0; i<threads.length; i++)
+      if (threads[i] != null)
+        threadView.addRow(new String[] {threads[i].getName(),  
+                                        (threads[i].isAlive() ? "live" : "dead"), 
+                                        (threads[i].isDaemon() ? "D" : ""), 
+                                        "" + threads[i].getPriority()});
+    
+    threadView.setSizes(new int[] {290, 35, 10, 10});
     
     Constraints memoryCons = new Constraints();
     memoryCons.gridx = 2;
@@ -75,7 +88,7 @@ public class OverviewPanelCreator implements PanelCreator {
     
     nodePanel.addDataView(memoryView);
     nodePanel.addDataView(nodeView);
-    nodePanel.addDataView(jvmView);
+    nodePanel.addDataView(threadView);
     
     return nodePanel;
   }

@@ -1,26 +1,38 @@
-/**
- * "FreePastry" Peer-to-Peer Application Development Substrate Copyright 2002,
- * Rice University. All rights reserved. Redistribution and use in source and
- * binary forms, with or without modification, are permitted provided that the
- * following conditions are met: - Redistributions of source code must retain
- * the above copyright notice, this list of conditions and the following
- * disclaimer. - Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer in the
- * documentation and/or other materials provided with the distribution. -
- * Neither the name of Rice University (RICE) nor the names of its contributors
- * may be used to endorse or promote products derived from this software without
- * specific prior written permission. This software is provided by RICE and the
- * contributors on an "as is" basis, without any representations or warranties
- * of any kind, express or implied including, but not limited to,
- * representations or warranties of non-infringement, merchantability or fitness
- * for a particular purpose. In no event shall RICE or contributors be liable
- * for any direct, indirect, incidental, special, exemplary, or consequential
- * damages (including, but not limited to, procurement of substitute goods or
- * services; loss of use, data, or profits; or business interruption) however
- * caused and on any theory of liability, whether in contract, strict liability,
- * or tort (including negligence or otherwise) arising in any way out of the use
- * of this software, even if advised of the possibility of such damage.
- */
+/*************************************************************************
+
+"FreePastry" Peer-to-Peer Application Development Substrate
+
+Copyright 2002, Rice University. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+  contributors may be  used to endorse or promote  products derived from
+  this software without specific prior written permission.
+
+  This software is provided by RICE and the contributors on an "as is"
+  basis, without any representations or warranties of any kind, express
+  or implied including, but not limited to, representations or
+  warranties of non-infringement, merchantability or fitness for a
+  particular purpose. In no event shall RICE or contributors be liable
+  for any direct, indirect, incidental, special, exemplary, or
+  consequential damages (including, but not limited to, procurement of
+  substitute goods or services; loss of use, data, or profits; or
+  business interruption) however caused and on any theory of liability,
+  whether in contract, strict liability, or tort (including negligence
+  or otherwise) arising in any way out of the use of this software, even
+  if advised of the possibility of such damage.
+
+********************************************************************************/
 
 package rice.pastry.socket;
 
@@ -70,11 +82,8 @@ public class SocketChannelWriter {
   // the maximum length of the queue
   public static int MAXIMUM_QUEUE_LENGTH = 128;
   
-  // the magic number array which is written first
-  protected static byte[] MAGIC_NUMBER = new byte[] {0x77, 0x21, 0x25, 0x69};
-
   // the pastry node
-  private SocketPastryNode spn;
+  private PastryNode spn;
 
   // internal buffer for storing the serialized object
   private ByteBuffer buffer;
@@ -83,7 +92,7 @@ public class SocketChannelWriter {
   private LinkedList queue;
   
   // the address this writer is writing to
-  protected InetSocketAddress address;
+  protected SourceRoute path;
 
   /**
    * Constructor which creates this SocketChannelWriter with a pastry node and
@@ -91,10 +100,19 @@ public class SocketChannelWriter {
    *
    * @param spn The spn the SocketChannelWriter servers
    */
-  public SocketChannelWriter(SocketPastryNode spn, InetSocketAddress address) {
+  public SocketChannelWriter(PastryNode spn, SourceRoute path) {
     this.spn = spn;
-    this.address = address;
+    this.path = path;
     queue = new LinkedList();
+  }
+  
+  /**
+   * Sets this writer's path
+   *
+   * @param path The path this writer is using
+   */
+  protected void setPath(SourceRoute path) {
+    this.path = path;
   }
 
   /**
@@ -131,13 +149,13 @@ public class SocketChannelWriter {
         addToQueue(o);
         
         if (queue.size() > 20) {
-          System.err.println(spn.getNodeId() + "  ERROR: Queue to " + address + " has more than 20 elements - probably a bad sign - enqueue of " + o);
+          System.err.println(spn.getNodeId() + "  ERROR: Queue to " + path + " has more than 20 elements - probably a bad sign - enqueue of " + o);
           rice.pastry.dist.DistPastryNode.addError("WARNING: Outgoing queue has " + queue.size() + " elements, enqueuing " + o);
         }
         
         return true;
       } else {
-        System.err.println(spn.getNodeId() + " (W): Maximum TCP queue length reached to " + address + " - message " + o + " will be dropped.");
+        System.err.println(spn.getNodeId() + " (W): Maximum TCP queue length reached to " + path + " - message " + o + " will be dropped.");
         return false;
       }
     }
@@ -152,15 +170,15 @@ public class SocketChannelWriter {
     buffer = null;
   }
   
-  protected void record(String action, Object obj, int size, InetSocketAddress address) {
+  protected void record(String action, Object obj, int size, SourceRoute path) {
     if (obj instanceof rice.pastry.routing.RouteMessage) {
-      record(action, ((rice.pastry.routing.RouteMessage) obj).unwrap(), size, address);
+      record(action, ((rice.pastry.routing.RouteMessage) obj).unwrap(), size, path);
     } else if (obj instanceof rice.pastry.commonapi.PastryEndpointMessage) {
-      record(action, ((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), size, address);
+      record(action, ((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), size, path);
     } else if (obj instanceof rice.post.messaging.PostPastryMessage) {
-      record(action, ((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, address);
+      record(action, ((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, path);
     } else {
-      System.out.println("COUNT: " + System.currentTimeMillis() + " " + action + " message " + obj.getClass() + " of size " + size + " to " + address);
+      System.out.println("COUNT: " + System.currentTimeMillis() + " " + action + " message " + obj.getClass() + " of size " + size + " to " + path);
     }
   }
 
@@ -174,10 +192,7 @@ public class SocketChannelWriter {
    * @return true if this output stream is done, false otherwise
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  public boolean write(SocketChannel sc) throws IOException {
-    if (address == null)
-      address = (InetSocketAddress) sc.socket().getRemoteSocketAddress();
-    
+  public boolean write(SocketChannel sc) throws IOException {    
     while (true) {
       synchronized (queue) {
         if (buffer == null) {
@@ -186,10 +201,10 @@ public class SocketChannelWriter {
             buffer = serialize(queue.getFirst());
             
             if (buffer != null) {
-              if (spn != null)
-                spn.broadcastSentListeners(queue.getFirst(), (InetSocketAddress) sc.socket().getRemoteSocketAddress(), buffer.limit());
+              if ((spn != null) && (spn instanceof SocketPastryNode))
+                ((SocketPastryNode) spn).broadcastSentListeners(queue.getFirst(), (path == null ? new InetSocketAddress[] {(InetSocketAddress) sc.socket().getRemoteSocketAddress()} : path.toArray()), buffer.limit());
             
-              record("Sent", queue.getFirst(), buffer.limit(), (InetSocketAddress) sc.socket().getRemoteSocketAddress());
+              record("Sent", queue.getFirst(), buffer.limit(), path);
             } else {
               synchronized (queue) {
                 queue.removeFirst();
@@ -204,8 +219,8 @@ public class SocketChannelWriter {
         
         int j = buffer.limit();
         int i = sc.write(buffer);
-        
-        record("Wrote " + i + " of " + j + " bytes of", queue.getFirst(), buffer.limit(), (InetSocketAddress) sc.socket().getRemoteSocketAddress());
+                
+        record("Wrote " + i + " of " + j + " bytes of", queue.getFirst(), buffer.limit(), path);
         
         debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
         
@@ -229,7 +244,7 @@ public class SocketChannelWriter {
    * @param o The feature to be added to the ToQueue attribute
    */
   private void addToQueue(Object o) {
-    record("Enqueued", o, -1, address);
+    record("Enqueued", o, -1, path);
 
     if (o instanceof Message) {
       boolean priority = ((Message) o).hasPriority();
@@ -277,9 +292,10 @@ public class SocketChannelWriter {
    * @exception IOException DESCRIBE THE EXCEPTION
    */
   public static ByteBuffer serialize(Object o) throws IOException {
-    if (o == null) {
+    if (o == null) 
       return null;
-    }
+    else if (o instanceof byte[]) 
+      return ByteBuffer.wrap((byte[]) o);
     
     if (logWriteTypes) {
       synchronized(statLock) {
@@ -328,7 +344,6 @@ public class SocketChannelWriter {
       DataOutputStream dos = new DataOutputStream(baos2);
 
       // write out length of the object, followed by the object itself
-      dos.write(MAGIC_NUMBER);
       dos.writeInt(len);
       dos.flush();
       dos.write(baos.toByteArray());

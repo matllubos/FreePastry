@@ -297,8 +297,8 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI {
   /**
    * Testing purposes only!
    */
-  public void kill() {
-    super.kill();
+  public void resign() {
+    super.resign();
 
     try {
       UnicastRemoteObject.unexportObject(this, true); // force

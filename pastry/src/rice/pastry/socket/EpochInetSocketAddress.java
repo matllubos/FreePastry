@@ -33,87 +33,100 @@ met:
   if advised of the possibility of such damage.
 
 ********************************************************************************/
+
 package rice.pastry.socket;
 
+import java.io.*;
+import java.net.*;
 import java.util.*;
 
 import rice.pastry.*;
 import rice.pastry.dist.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
-import rice.pastry.standard.*;
 
 /**
- * Security manager for socket connections between nodes.
+ * Class which represets a source route to a remote IP address.
  *
- * @version $Id: SocketPastrySecurityManager.java,v 1.5 2004/03/08 19:53:57
- *      amislove Exp $
+ * @version $Id$
  * @author Alan Mislove
  */
-public class SocketPastrySecurityManager implements PastrySecurityManager {
-
-  private PastryNode localnode;
-  private SocketNodeHandle localhandle;
-  private SocketNodeHandlePool pool;
+public class EpochInetSocketAddress implements Serializable {
+  
+  // a static epoch which indicates an unknown (and unmattering) epoch number
+  public static final long EPOCH_UNKNOWN = -1;
+    
+  // the address
+  protected InetSocketAddress address;
+  
+  // the epoch number of the remote node
+  protected long epoch;
+  
+  /**
+   * Constructor - don't use this unless you know what you are doing
+   *
+   * @param address The remote address
+   */
+  public EpochInetSocketAddress(InetSocketAddress address) {
+    this(address, EPOCH_UNKNOWN);
+  }  
+  
+  /**
+   * Constructor
+   *
+   * @param address The remote address
+   * @param epoch The remote epoch
+   */
+  public EpochInetSocketAddress(InetSocketAddress address, long epoch) {
+    this.address = address;
+    this.epoch = epoch;
+  }  
 
   /**
-   * Constructor.
+   * Returns the hashCode of this source route
    *
-   * @param snh DESCRIBE THE PARAMETER
-   * @param snhp DESCRIBE THE PARAMETER
+   * @return The hashCode
    */
-  public SocketPastrySecurityManager(SocketNodeHandle snh, SocketNodeHandlePool snhp) {
-    localhandle = snh;
-    pool = snhp;
+  public int hashCode() {
+    return (int) (address.hashCode() ^ epoch);
   }
-
+  
   /**
-   * Gets the current time for a timestamp.
+   * Checks equaltiy on source routes
    *
-   * @return the timestamp.
+   * @param o The source route to compare to
+   * @return The equality
    */
-  public Date getTimestamp() {
-    return new Date();
+  public boolean equals(Object o) {
+    return ((epoch == ((EpochInetSocketAddress) o).epoch) && address.equals(((EpochInetSocketAddress) o).address));
   }
-
+  
   /**
-   * Sets the local Pastry node after it is fully constructed.
+    * Internal method for computing the toString of an array of InetSocketAddresses
    *
-   * @param pn local Pastry node.
+   * @param path The path
+   * @return THe string
    */
-  public void setLocalPastryNode(PastryNode pn) {
-    localnode = pn;
+  public String toString() {
+    return address.toString() + " [" + epoch + "]";
   }
-
+  
   /**
-   * This method takes a message and returns true if the message is safe and
-   * false otherwise.
+   * Method which returns the address of this address
    *
-   * @param msg a message.
-   * @return if the message is safe, false otherwise.
+   * @return The address
    */
-  public boolean verifyMessage(Message msg) {
-    return true;
+  public InetSocketAddress getAddress() {
+    return address;
   }
-
+  
   /**
-   * Checks to see if these credentials can be associated with the address.
+   * Method which returns the epoch of this address
    *
-   * @param cred some credentials.
-   * @param addr an address.
-   * @return true if the credentials match the address, false otherwise.
+   * @return The epoch
    */
-  public boolean verifyAddressBinding(Credentials cred, Address addr) {
-    return true;
-  }
-
-  /**
-   * Verify node handle safety.
-   *
-   * @param handle the handle to check.
-   * @return the verified node handle
-   */
-  public NodeHandle verifyNodeHandle(NodeHandle handle) {
-    return pool.coalesce((DistNodeHandle) handle);
+  public long getEpoch() {
+    return epoch;
   }
 }
+
+

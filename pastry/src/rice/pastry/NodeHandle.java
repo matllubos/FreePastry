@@ -86,8 +86,18 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    * @return LIVENESS_UNKNOWN, LIVENESS_ALIVE, LIVENESS_SUSPECTED, LIVENESS_FAULTY
    */
   public abstract int getLiveness();
-    
-
+  
+  /**
+   * Method which FORCES a check of liveness of the remote node.  Note that
+   * this method should ONLY be called by internal Pastry maintenance algorithms - 
+   * this is NOT to be used by applications.  Doing so will likely cause a
+   * blowup of liveness traffic.
+   *
+   * @return true if node is currently alive.
+   */
+  public boolean checkLiveness() {
+    return ping();
+  }
 
   /**
    * Returns the last known proximity information about the Pastry node associated with this handle.

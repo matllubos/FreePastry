@@ -33,28 +33,42 @@ met:
   if advised of the possibility of such damage.
 
 ********************************************************************************/
-package rice.pastry.socket;
 
-import java.net.InetSocketAddress;
+package rice.pastry.socket.messaging;
+
+import java.io.*;
+
+import rice.pastry.*;
+import rice.pastry.leafset.*;
+import rice.pastry.socket.*;
 
 /**
- * Interface which represents an object interested in hearing the result
- * of a ping.  The pingResponse() method will be called only if and when
- * a ping is heard back from.
+* A response message to a RoutesRequestMessage, containing the remote
+ * node's routes.
  *
  * @version $Id$
- * @author amislove
+ *
+ * @author Alan Mislove
  */
-public interface PingResponseListener {
+public class RoutesResponseMessage extends SocketMessage {
+  
+  private SourceRoute[] routes;
   
   /**
-   * Method which is called once a previously-issued ping is
-   * responded to.
+  * Constructor
    *
-   * @param path The path of the ping
-   * @param RTT The round-trip-time along the path
-   * @param timeHeardFrom The time at which the response was received.
+   * @param leafset The leafset of the receiver of the RoutesRequestMessage.
    */
-  public void pingResponse(SourceRoute path, long RTT, long timeHeardFrom);
+  public RoutesResponseMessage(SourceRoute[] routes) {
+    this.routes = routes;
+  }
   
+  /**
+    * Returns the leafset of the receiver.
+   *
+   * @return The LeafSet of the receiver node.
+   */
+  public SourceRoute[] getRoutes() {
+    return routes;
+  }
 }

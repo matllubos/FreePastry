@@ -24,7 +24,7 @@ public class RecentMessagesPanelCreator implements PanelCreator, NetworkListener
   protected Vector receivedMessageSizes = new Vector(); 
   
   public DataPanel createPanel(Object[] objects) {
-    DataPanel networkActivityPanel = new DataPanel("Recent Messages");
+    DataPanel networkActivityPanel = new DataPanel("Recent");
     
     Constraints leafsetCons = new Constraints();
     leafsetCons.gridx = 0;

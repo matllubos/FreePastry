@@ -212,7 +212,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
     }
 
     protected void killNode(PastryNode pn) {
-      ((DistPastryNode)pn).kill();
+      ((DistPastryNode)pn).resign();
     }
 
     /**

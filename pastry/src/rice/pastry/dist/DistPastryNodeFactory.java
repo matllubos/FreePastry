@@ -24,6 +24,7 @@
 
 package rice.pastry.dist;
 
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.util.*;
 
@@ -123,7 +124,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * @return DESCRIBE THE RETURN VALUE
    */
   public abstract NodeHandle generateNodeHandle(InetSocketAddress address);
-
+  
   /**
    * Generates a new pastry node with a random NodeId using the bootstrap
    * bootstrap.

@@ -399,6 +399,18 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
 
     return result;
   }
+  
+  /**
+    * Method which can be used to test the connectivity contstrains of the local node.
+   * This (optional) method is designed to be called by applications to ensure
+   * that the local node is able to connect through the network - checks can
+   * be done to check TCP/UDP connectivity, firewall setup, etc...
+   *
+   * If the method works, then nothing should be done and the method should return.  If
+   * an error condition is detected, an exception should be thrown.
+   */
+  public void verifyConnection(InetSocketAddress local, InetSocketAddress proxy, InetSocketAddress existing) throws IOException {
+  }    
 
   /**
    * DESCRIBE THE METHOD

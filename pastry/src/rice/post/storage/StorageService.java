@@ -205,68 +205,6 @@ public class StorageService {
       }
     });
   }
-        
-/*        
-    
-    
-    try {
-      byte[] plainText = SecurityUtils.serialize(data);
-      byte[] hash = SecurityUtils.hash(plainText);
-      byte[] cipherText = SecurityUtils.encryptSymmetric(plainText, hash);
-      byte[] loc = SecurityUtils.hash(cipherText);
-      
-      final Id location = factory.buildId(loc);
-      
-      final byte[] key = hash;
-      
-      final ContentHashData chd = new ContentHashData(location, cipherText);
-      
-      immutablePast.lookupHandles(location, immutablePast.getReplicationFactor()+1, new StandardContinuation(command) {
-        public void receiveResult(Object o) {
-          PastContentHandle[] handles = (PastContentHandle[]) o;
-          
-          for (int i=0; i<handles.length; i++) 
-            // the object already exists - simply refresh and return a reference
-            if (handles[i] != null) {
-              final ContentHashReference ref = data.buildContentHashReference(location, key);
-              
-              refreshContentHash(new ContentHashReference[] {ref}, new StandardContinuation(parent) {
-                public void receiveResult(Object o) {
-                  parent.receiveResult(ref);
-                }
-              });
-              
-              return;
-            }
-          
-          Continuation result = new StandardContinuation(parent) {
-            public void receiveResult(Object o) {
-              Boolean[] results = (Boolean[]) o;
-              int failed = 0;
-              
-              for (int i=0; i<results.length; i++) {
-                if ((results[i] == null) || (! results[i].booleanValue())) 
-                  failed++;
-              }
-              
-              if (failed <= results.length/2) 
-                parent.receiveResult(data.buildContentHashReference(location, key));
-              else 
-                parent.receiveException(new IOException("Storage of content hash data into PAST failed - had " + failed + "/" + results.length + " failures."));
-            }
-          };
-          
-          // Store the content hash data in PAST
-          if (immutablePast instanceof GCPast) 
-            ((GCPast) immutablePast).insert(chd, getTimeout(), result);
-          else 
-            immutablePast.insert(chd, result);
-        }
-      });
-    } catch (IOException e) {
-      command.receiveException(e);
-    }
-  } */
 
   /**
    * This method retrieves a given PostDataReference object from the

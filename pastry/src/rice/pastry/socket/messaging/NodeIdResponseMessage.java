@@ -51,14 +51,17 @@ import rice.pastry.*;
 public class NodeIdResponseMessage extends SocketMessage {
 
   private NodeId nid;
+  
+  private long epoch;
 
   /**
    * Constructor
    *
    * @param nid The nodeId of the receiver of the NodeIdRequestMessage.
    */
-  public NodeIdResponseMessage(NodeId nid) {
+  public NodeIdResponseMessage(NodeId nid, long epoch) {
     this.nid = nid;
+    this.epoch = epoch;
   }
 
   /**
@@ -68,5 +71,14 @@ public class NodeIdResponseMessage extends SocketMessage {
    */
   public NodeId getNodeId() {
     return nid;
+  }
+  
+  /**
+   * Returns the epoch of this address
+   *
+   * @return The epoch
+   */
+  public long getEpoch() {
+    return epoch;
   }
 }

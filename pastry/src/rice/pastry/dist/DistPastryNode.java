@@ -105,18 +105,18 @@ public abstract class DistPastryNode extends PastryNode {
     return (NetworkListener[]) listeners.toArray(new NetworkListener[0]);
   }
   
-  public void broadcastSentListeners(Object message, InetSocketAddress address, int size) {
+  public void broadcastSentListeners(Object message, InetSocketAddress[] path, int size) {
     NetworkListener[] listeners = getNetworkListeners();
     
     for (int i=0; i<listeners.length; i++)
-      listeners[i].dataSent(message, address, size);
+      listeners[i].dataSent(message, path[path.length-1], size);
   }
   
-  public void broadcastReceivedListeners(Object message, InetSocketAddress address, int size) {
+  public void broadcastReceivedListeners(Object message, InetSocketAddress[] path, int size) {
     NetworkListener[] listeners = getNetworkListeners();
     
     for (int i=0; i<listeners.length; i++)
-      listeners[i].dataReceived(message, address, size);
+      listeners[i].dataReceived(message, path[path.length-1], size);
   }
 
   public static String[] getErrors() {
@@ -155,7 +155,7 @@ public abstract class DistPastryNode extends PastryNode {
       //joinEvent = scheduleMsg(new InitiateJoin(bootstrap), 0, 5000);
 
       // schedule (re-)transmission of the join message at an exponential backoff
-      joinEvent = scheduleMsgExpBackoff(new InitiateJoin(bootstrap), 0, 5000, 2);
+      joinEvent = scheduleMsgExpBackoff(new InitiateJoin(bootstrap), 0, 15000, 2);
 
     } else {
       setReady();
@@ -202,9 +202,9 @@ public abstract class DistPastryNode extends PastryNode {
   /**
    * Method which kills a PastryNode (used only for testing).
    */
-  public void kill() {
-    // cancel all scheduled messages
-    //timer.cancel();
+  public void resign() {
+    leafSetRoutineMaintenance.cancel();
+    routeSetRoutineMaintenance.cancel();
   }
 
 

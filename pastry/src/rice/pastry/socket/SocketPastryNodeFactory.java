@@ -1,28 +1,40 @@
-/**
- * "FreePastry" Peer-to-Peer Application Development Substrate Copyright 2002,
- * Rice University. All rights reserved. Redistribution and use in source and
- * binary forms, with or without modification, are permitted provided that the
- * following conditions are met: - Redistributions of source code must retain
- * the above copyright notice, this list of conditions and the following
- * disclaimer. - Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer in the
- * documentation and/or other materials provided with the distribution. -
- * Neither the name of Rice University (RICE) nor the names of its contributors
- * may be used to endorse or promote products derived from this software without
- * specific prior written permission. This software is provided by RICE and the
- * contributors on an "as is" basis, without any representations or warranties
- * of any kind, express or implied including, but not limited to,
- * representations or warranties of non-infringement, merchantability or fitness
- * for a particular purpose. In no event shall RICE or contributors be liable
- * for any direct, indirect, incidental, special, exemplary, or consequential
- * damages (including, but not limited to, procurement of substitute goods or
- * services; loss of use, data, or profits; or business interruption) however
- * caused and on any theory of liability, whether in contract, strict liability,
- * or tort (including negligence or otherwise) arising in any way out of the use
- * of this software, even if advised of the possibility of such damage.
- */
+/*************************************************************************
 
+"FreePastry" Peer-to-Peer Application Development Substrate
+
+Copyright 2002, Rice University. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+  contributors may be  used to endorse or promote  products derived from
+  this software without specific prior written permission.
+
+  This software is provided by RICE and the contributors on an "as is"
+  basis, without any representations or warranties of any kind, express
+  or implied including, but not limited to, representations or
+  warranties of non-infringement, merchantability or fitness for a
+  particular purpose. In no event shall RICE or contributors be liable
+  for any direct, indirect, incidental, special, exemplary, or
+  consequential damages (including, but not limited to, procurement of
+  substitute goods or services; loss of use, data, or profits; or
+  business interruption) however caused and on any theory of liability,
+  whether in contract, strict liability, or tort (including negligence
+  or otherwise) arising in any way out of the use of this software, even
+  if advised of the possibility of such damage.
+
+********************************************************************************/
 package rice.pastry.socket;
+
 import java.io.*;
 import java.net.*;
 import java.nio.*;
@@ -62,6 +74,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    */
   private final static int leafSetMaintFreq = 1 * 60;
   private final static int routeSetMaintFreq = 15 * 60;
+  
+  private Random random;
 
   /**
    * Constructor.
@@ -72,6 +86,21 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   public SocketPastryNodeFactory(NodeIdFactory nf, int startPort) {
     nidFactory = nf;
     port = startPort;
+    this.random = new Random();
+  }
+  
+  /**
+   * This method returns the routes a remote node is using
+   *
+   * @param handle The node to connect to
+   * @return The leafset of the remote node
+   */
+  public SourceRoute[] getRoutes(NodeHandle handle) throws IOException {
+    SocketNodeHandle wHandle = (SocketNodeHandle) handle;
+    
+    RoutesResponseMessage lm = (RoutesResponseMessage) getResponse(wHandle.getAddress(), new RoutesRequestMessage());
+    
+    return lm.getRoutes();
   }
 
   /**
@@ -82,17 +111,12 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @param handle The node to connect to
    * @return The leafset of the remote node
    */
-  public LeafSet getLeafSet(NodeHandle handle) {
+  public LeafSet getLeafSet(NodeHandle handle) throws IOException {
     SocketNodeHandle wHandle = (SocketNodeHandle) handle;
 
-    try {
-      LeafSetResponseMessage lm = (LeafSetResponseMessage) getResponse(wHandle.getAddress(), new LeafSetRequestMessage());
+    LeafSetResponseMessage lm = (LeafSetResponseMessage) getResponse(wHandle.getAddress(), new LeafSetRequestMessage());
 
-      return lm.getLeafSet();
-    } catch (IOException e) {
-      System.out.println("Error connecting to (leafset) address " + wHandle.getAddress() + ": " + e);
-      return null;
-    }
+    return lm.getLeafSet();
   }
 
   /**
@@ -104,17 +128,12 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @param row The row number to retrieve
    * @return The route row of the remote node
    */
-  public RouteSet[] getRouteRow(NodeHandle handle, int row) {
+  public RouteSet[] getRouteRow(NodeHandle handle, int row) throws IOException {
     SocketNodeHandle wHandle = (SocketNodeHandle) handle;
-
-    try {
-      RouteRowResponseMessage rm = (RouteRowResponseMessage) getResponse(wHandle.getAddress(), new RouteRowRequestMessage(row));
-
-      return rm.getRouteRow();
-    } catch (IOException e) {
-      System.out.println("Error connecting to (routerow) address " + wHandle.getAddress() + ": " + e);
-      return new RouteSet[0];
-    }
+    
+    RouteRowResponseMessage rm = (RouteRowResponseMessage) getResponse(wHandle.getAddress(), new RouteRowRequestMessage(row));
+    
+    return rm.getRouteRow();
   }
 
   /**
@@ -166,8 +185,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
     try {
       NodeIdResponseMessage rm = (NodeIdResponseMessage) getResponse(address, new NodeIdRequestMessage());
-
-      return new SocketNodeHandle(address, rm.getNodeId());
+      
+      return new SocketNodeHandle(new EpochInetSocketAddress(address, rm.getEpoch()), rm.getNodeId());
     } catch (IOException e) {
       System.out.println("Error connecting to address " + address + ": " + e);
       System.out.println("Couldn't find a bootstrap node, starting a new ring...");
@@ -218,22 +237,24 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @param address The address to claim that this node is at - used for proxies behind NATs
    * @return A node with a random ID and next port number.
    */
-  public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress proxyAddress) {
+  public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress pAddress) {
     final SocketPastryNode pn = new SocketPastryNode(nodeId);
 
-    SocketCollectionManager socketManager = null;
+    SocketSourceRouteManager srManager = null;
     SocketNodeHandlePool pool = new SocketNodeHandlePool(pn);
-    PingManager pingManager;
-    InetSocketAddress localAddress;
+    EpochInetSocketAddress localAddress = null;
+    EpochInetSocketAddress proxyAddress = null;
+    long epoch = random.nextLong();
 
     synchronized (this) {
-      localAddress = getAddress(port);
+      localAddress = getEpochAddress(port, epoch);
       
-      if (proxyAddress == null)
+      if (pAddress == null)
         proxyAddress = localAddress;
+      else
+        proxyAddress = new EpochInetSocketAddress(pAddress, epoch);
       
-      pingManager = new PingManager(port, pool, pn, localAddress);
-      socketManager = new SocketCollectionManager(pn, pool, port, pingManager, localAddress, proxyAddress);
+      srManager = new SocketSourceRouteManager(pn, pool, localAddress, proxyAddress);
       port++;
     }
 
@@ -244,7 +265,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 
     StandardRouter router = new StandardRouter(localhandle, routeTable, leafSet, secureMan);
-    StandardLeafSetProtocol lsProtocol = new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
+    PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
     StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
     StandardJoinProtocol jProtocol = new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
 
@@ -254,32 +275,20 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
 
     pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
-    pn.setSocketElements(proxyAddress, socketManager, pingManager, pool, leafSetMaintFreq, routeSetMaintFreq);
+    pn.setSocketElements(proxyAddress, srManager, pool, leafSetMaintFreq, routeSetMaintFreq);
     secureMan.setLocalPastryNode(pn);
 
     pool.coalesce(localhandle);
     localhandle.setLocalNode(pn);
 
-    if (bootstrap != null) {
+    if (bootstrap != null) 
       bootstrap.setLocalNode(pn);
-    }
-
-    // launch thread to handle the sockets
-    Thread t =
-      new Thread("Thread for node " + nodeId) {
-        public void run() {
-          try {
-            sleep(250);
-          } catch (InterruptedException e) {
-            System.err.println("Interrupted in newNode!");
-          }
-
-          //pn.doneNode(getNearest(localhandle, bootstrap));
-          pn.doneNode(bootstrap);
-        }
-      };
-
-    t.start();
+    
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {}
+    
+    pn.doneNode(bootstrap);
 
     return pn;
   }
@@ -294,16 +303,17 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @return The response
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  protected Message getResponse(InetSocketAddress address, Message message) throws IOException {
+  protected Message getResponse(InetSocketAddress address, Message message) throws IOException {    
     // create reader and writer
-    SocketChannelWriter writer = new SocketChannelWriter(null, address);
-    SocketChannelReader reader = new SocketChannelReader(null);
+    SocketChannelWriter writer = new SocketChannelWriter(null, SourceRoute.build(new EpochInetSocketAddress(address, 0)));
+    SocketChannelReader reader = new SocketChannelReader(null, SourceRoute.build(new EpochInetSocketAddress(address, 0)));
 
     // bind to the appropriate port
     SocketChannel channel = SocketChannel.open();
     channel.configureBlocking(true);
-    channel.socket().connect(address);
+    channel.socket().connect(address, 20000);
 
+    writer.enqueue(SocketCollectionManager.HEADER_DIRECT);
     writer.enqueue(message);
     writer.write(channel);
     Object o = null;
@@ -325,18 +335,18 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @param portNumber The port number to create the address at.
    * @return An InetSocketAddress at the localhost with port portNumber.
    */
-  private InetSocketAddress getAddress(int portNumber) {
-    InetSocketAddress result = null;
+  private EpochInetSocketAddress getEpochAddress(int portNumber, long epoch) {
+    EpochInetSocketAddress result = null;
 
     try {
-      result = new InetSocketAddress(InetAddress.getLocalHost(), portNumber);
+      result = new EpochInetSocketAddress(new InetSocketAddress(InetAddress.getLocalHost(), portNumber), epoch);
       ServerSocket test = new ServerSocket();
       
       try {
-        test.bind(result);
+        test.bind(result.getAddress());
       } catch (SocketException e) {
         Socket temp = new Socket("yahoo.com", 80);
-        result = new InetSocketAddress(temp.getLocalAddress(), portNumber);
+        result = new EpochInetSocketAddress(new InetSocketAddress(temp.getLocalAddress(), portNumber), epoch);
         temp.close();
         
         System.out.println("Error binding to original IP, using " + result);
@@ -351,6 +361,40 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
 
     return result;
+  }
+  
+  /**
+   * Method which can be used to test the connectivity contstrains of the local node.
+   * This (optional) method is designed to be called by applications to ensure
+   * that the local node is able to connect through the network - checks can
+   * be done to check TCP/UDP connectivity, firewall setup, etc...
+   *
+   * If the method works, then nothing should be done and the method should return.  If
+   * an error condition is detected, an exception should be thrown.
+   */
+  public static InetSocketAddress verifyConnection(int timeout, InetSocketAddress local, InetSocketAddress existing) throws IOException {
+    System.err.println("Verifying connection of local node " + local + " using " + existing);
+    DatagramSocket socket = null;
+    
+    try {
+      socket = new DatagramSocket(local);
+      socket.setSoTimeout(timeout);
+      byte[] buf = PingManager.addHeader(SourceRoute.build(new EpochInetSocketAddress(existing)), new IPAddressRequestMessage(), new EpochInetSocketAddress(local));    
+      DatagramPacket send = new DatagramPacket(buf, buf.length, existing);
+      
+      socket.send(send);
+      
+      DatagramPacket receive = new DatagramPacket(new byte[10000], 10000);
+      socket.receive(receive);
+      
+      byte[] data = new byte[receive.getLength() - 38];
+      System.arraycopy(receive.getData(), 38, data, 0, data.length);
+      
+      return ((IPAddressResponseMessage) PingManager.deserialize(data)).getAddress();
+    } finally {
+      if (socket != null)
+        socket.close();
+    }
   }
 
   /**

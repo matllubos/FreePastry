@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.pastry.socket.messaging;
 
 import java.io.*;
+import java.net.*;
 
 import rice.pastry.socket.*;
 import rice.pastry.*;
@@ -49,30 +50,16 @@ import rice.pastry.*;
  *
  * @author Alan Mislove
  */
-public class PingMessage extends SocketMessage {
-
-  static final long serialVersionUID = -5466476100301747255L;
-  
-  private long start;
+public class PingMessage extends DatagramMessage {
 
   /**
    * Constructor
    */
-  public PingMessage() {
+  public PingMessage(SourceRoute outbound, SourceRoute inbound) {
+    super(outbound, inbound);
   }
   
-  public long getStartTime() {
-    return start;
-  }
-
   public String toString() {
     return "PingMessage";
-  }
-
-  private void writeObject(ObjectOutputStream oos)
-    throws IOException {
-
-    start = System.currentTimeMillis();
-    oos.defaultWriteObject();
   }
 }

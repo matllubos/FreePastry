@@ -41,6 +41,7 @@ import rice.pastry.security.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
 
+import java.io.*;
 import java.util.*;
 
 /**
@@ -85,7 +86,7 @@ public abstract class PastryNodeFactory {
    * @param handle The node to connect to
    * @return The leafset of the remote node
    */
-  public abstract LeafSet getLeafSet(NodeHandle handle);
+  public abstract LeafSet getLeafSet(NodeHandle handle) throws IOException;
 
   /**
    * This method returns the remote route row of the provided handle
@@ -96,7 +97,7 @@ public abstract class PastryNodeFactory {
    * @param row The row number to retrieve
    * @return The route row of the remote node
    */
-  public abstract RouteSet[] getRouteRow(NodeHandle handle, int row);
+  public abstract RouteSet[] getRouteRow(NodeHandle handle, int row) throws IOException;
 
   /**
    * This method determines and returns the proximity of the current local
@@ -145,55 +146,60 @@ public abstract class PastryNodeFactory {
    * @return A node suitable to boot off of (which is close the this node)
    */
   public NodeHandle getNearest(NodeHandle local, NodeHandle seed) {
- //   System.out.println("GET NEAREST STARTED WITH " + local + " SEED " + seed);
-    
-    // if the seed is null, we can't do anything
-    if (seed == null)
-      return null;
-    
-    // seed is the bootstrap node that we use to enter the pastry ring
-    NodeHandle currentClosest = seed;
-    NodeHandle nearNode = seed;
-
- //   System.out.println("GETTING LEAFSET");
-    
-    // get closest node in leafset
-    nearNode = closestToMe(local, nearNode, getLeafSet(nearNode));
-
- //   System.out.println("GOT LEAFSET");
-
-    // get the number of rows in a routing table
-    // -- Here, we're going to be a little inefficient now.  It doesn't
-    // -- impact correctness, but we're going to walk up from the bottom
-    // -- of the routing table, even through some of the rows are probably
-    // -- unfilled.  We'll optimize this in a later iteration.
-    int depth = (NodeId.nodeIdBitLength / RoutingTable.idBaseBitLength);
-    int i = 0;
-
-    // now, iteratively walk up the routing table, picking the closest node
-    // each time for the next request
-    while (i < depth) {
- //     System.out.println("GETTING ROW "  + i);
-      nearNode = closestToMe(local, nearNode, getRouteRow(nearNode, i));
-      i++;
+    try {
+      //   System.out.println("GET NEAREST STARTED WITH " + local + " SEED " + seed);
+      
+      // if the seed is null, we can't do anything
+      if (seed == null)
+        return null;
+      
+      // seed is the bootstrap node that we use to enter the pastry ring
+      NodeHandle currentClosest = seed;
+      NodeHandle nearNode = seed;
+      
+      //   System.out.println("GETTING LEAFSET");
+      
+      // get closest node in leafset
+      nearNode = closestToMe(local, nearNode, getLeafSet(nearNode));
+      
+      //   System.out.println("GOT LEAFSET");
+      
+      // get the number of rows in a routing table
+      // -- Here, we're going to be a little inefficient now.  It doesn't
+      // -- impact correctness, but we're going to walk up from the bottom
+      // -- of the routing table, even through some of the rows are probably
+      // -- unfilled.  We'll optimize this in a later iteration.
+      int depth = (NodeId.nodeIdBitLength / RoutingTable.idBaseBitLength);
+      int i = 0;
+      
+      // now, iteratively walk up the routing table, picking the closest node
+      // each time for the next request
+      while (i < depth) {
+        //     System.out.println("GETTING ROW "  + i);
+        nearNode = closestToMe(local, nearNode, getRouteRow(nearNode, i));
+        i++;
+      }
+      
+      // finally, recursively examine the top level routing row of the nodes
+      // until no more progress can be made
+      do {
+        //     System.out.println("RUNNING LAST STEP - CLOSEST IS " + nearNode + " " + proximity(local, nearNode));
+        currentClosest = nearNode;
+        nearNode = closestToMe(local, nearNode, getRouteRow(nearNode, depth-1));
+      } while (! currentClosest.equals(nearNode));
+      
+      //   System.out.println("DONE - RETURNING NODE " + nearNode + " FROM SEED " + seed);
+      
+      if (nearNode.getLocalNode() == null) {
+        nearNode.setLocalNode(local.getLocalNode());
+      }
+      
+      // return the resulting closest node
+      return nearNode;
+    } catch (IOException e) {
+      System.out.println("ERROR: Exception " + e + " occured while finding best bootstrap.");
+      return seed;
     }
-
-    // finally, recursively examine the top level routing row of the nodes
-    // until no more progress can be made
-    do {
- //     System.out.println("RUNNING LAST STEP - CLOSEST IS " + nearNode + " " + proximity(local, nearNode));
-      currentClosest = nearNode;
-      nearNode = closestToMe(local, nearNode, getRouteRow(nearNode, depth-1));
-    } while (! currentClosest.equals(nearNode));
-    
- //   System.out.println("DONE - RETURNING NODE " + nearNode + " FROM SEED " + seed);
-
-    if (nearNode.getLocalNode() == null) {
-      nearNode.setLocalNode(local.getLocalNode());
-    }
-
-    // return the resulting closest node
-    return nearNode;
   }
 
   /**
@@ -205,7 +211,7 @@ public abstract class PastryNodeFactory {
    * @param leafSet The leafset to include
    * @return The closest node out of handle union leafset
    */
-  private NodeHandle closestToMe(NodeHandle local, NodeHandle handle, LeafSet leafSet) {
+  private NodeHandle closestToMe(NodeHandle local, NodeHandle handle, LeafSet leafSet)  {
     Vector handles = new Vector();
 
     for (int i = 1; i <= leafSet.cwSize() ; i++)

@@ -504,7 +504,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
                   command.receiveResult(o);                            
                 }
               } else {
-                lookupHandles(id, replicationFactor+1, new StandardContinuation(this) {
+                lookupHandles(id, replicationFactor+1, new Continuation() {
                   public void receiveResult(Object o) {
                     PastContentHandle[] handles = (PastContentHandle[]) o;
 
@@ -531,6 +531,10 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
 
                     // there were no replicas of the object
                     command.receiveResult(null);
+                  }
+                  
+                  public void receiveException(Exception e) {
+                    command.receiveException(e);
                   }
                 });
               }

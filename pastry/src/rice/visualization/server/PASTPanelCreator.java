@@ -14,9 +14,13 @@ import java.util.*;
 public class PASTPanelCreator implements PanelCreator {
   
   public static int NUM_DATA_POINTS = 600;
-  public static int UPDATE_TIME = 60000;
+  public static int UPDATE_TIME = 1000;
+  public static int REQUEST_UPDATE_OFFSET = 60;
+  
+  long count = 0;
   
   Vector times = new Vector();
+  Vector times2 = new Vector();
   Vector outstanding = new Vector();
   Vector inserts = new Vector();
   Vector lookups = new Vector();
@@ -77,10 +81,10 @@ public class PASTPanelCreator implements PanelCreator {
       dataStorageCons.fill = Constraints.HORIZONTAL;
       
       LineGraphView dataStorageView = new LineGraphView(name + " Requests", 380, 200, dataStorageCons, "Time (m)", "Count", false, true);
-      dataStorageView.addSeries("Insert", getTimeArray(), getArray(inserts), Color.blue);
-      dataStorageView.addSeries("Lookup", getTimeArray(), getArray(lookups), Color.red);
-      dataStorageView.addSeries("Fetch Handle", getTimeArray(), getArray(fetchHandles), Color.green);
-      dataStorageView.addSeries("Refresh", getTimeArray(), getArray(others), Color.black);
+      dataStorageView.addSeries("Insert", getTimeArray2(), getArray(inserts), Color.blue);
+      dataStorageView.addSeries("Lookup", getTimeArray2(), getArray(lookups), Color.red);
+      dataStorageView.addSeries("Fetch Handle", getTimeArray2(), getArray(fetchHandles), Color.green);
+      dataStorageView.addSeries("Refresh", getTimeArray2(), getArray(others), Color.black);
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
@@ -89,6 +93,20 @@ public class PASTPanelCreator implements PanelCreator {
     }
         
     return pastPanel;
+  }
+  
+  protected synchronized double[] getTimeArray2() {
+    if (times2.size() > 0) {
+      double[] timesA = new double[times2.size()];
+      long offset = ((Long) times2.elementAt(0)).longValue();
+      
+      for (int i=0; i<timesA.length; i++) 
+        timesA[i] = (double) ((((Long) times2.elementAt(i)).longValue() - offset) / UPDATE_TIME);
+      
+      return timesA;
+    } else {
+      return new double[0];
+    }
   }
   
   protected synchronized double[] getTimeArray() {
@@ -121,24 +139,35 @@ public class PASTPanelCreator implements PanelCreator {
   protected synchronized void updateData() {
     try {
       times.add(new Long(System.currentTimeMillis()));
-      inserts.add(new Double((double) past.inserts));
-      lookups.add(new Double((double) past.lookups));
-      fetchHandles.add(new Double((double) past.fetchHandles));
-      others.add(new Double((double) past.other));
       outstanding.add(new Double((double) past.getOutstandingMessages().length));
+
+      if (count % REQUEST_UPDATE_OFFSET == 0) {
+        times2.add(new Long(System.currentTimeMillis()));
+        inserts.add(new Double((double) past.inserts));
+        lookups.add(new Double((double) past.lookups));
+        fetchHandles.add(new Double((double) past.fetchHandles));
+        others.add(new Double((double) past.other));
+      }
+      
+      count++;
+      
       
       past.inserts = 0;
       past.lookups = 0;
       past.fetchHandles = 0;
       past.other = 0;
       
-      if (inserts.size() > NUM_DATA_POINTS) {
+      if (outstanding.size() > NUM_DATA_POINTS) {
+        outstanding.removeElementAt(0);
         times.removeElementAt(0);
+      }
+      
+      if (inserts.size() > NUM_DATA_POINTS) {
+        times2.removeElementAt(0);
         inserts.removeElementAt(0);
         lookups.removeElementAt(0);
         fetchHandles.removeElementAt(0);
         others.removeElementAt(0);
-        outstanding.removeElementAt(0);
       }
     } catch (Exception e) {
       System.out.println("Ecception " + e + " thrown.");

@@ -43,6 +43,7 @@ import rice.pastry.standard.*;
 import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
 
+import java.io.*;
 import java.util.*;
 
 /**
@@ -131,7 +132,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    * @param handle The node to connect to
    * @return The leafset of the remote node
    */
-  public LeafSet getLeafSet(NodeHandle handle) {
+  public LeafSet getLeafSet(NodeHandle handle) throws IOException {
     DirectNodeHandle dHandle = (DirectNodeHandle) handle;
 
     return dHandle.getRemote().getLeafSet();
@@ -146,7 +147,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    * @param row The row number to retrieve
    * @return The route row of the remote node
    */
-  public RouteSet[] getRouteRow(NodeHandle handle, int row) {
+  public RouteSet[] getRouteRow(NodeHandle handle, int row) throws IOException {
     DirectNodeHandle dHandle = (DirectNodeHandle) handle;
 
     return dHandle.getRemote().getRoutingTable().getRow(row);

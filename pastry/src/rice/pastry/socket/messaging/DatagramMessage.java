@@ -33,28 +33,53 @@ met:
   if advised of the possibility of such damage.
 
 ********************************************************************************/
-package rice.pastry.socket;
+package rice.pastry.socket.messaging;
 
-import java.net.InetSocketAddress;
+import java.io.*;
+import java.net.*;
+
+import rice.pastry.socket.*;
+import rice.pastry.*;
 
 /**
- * Interface which represents an object interested in hearing the result
- * of a ping.  The pingResponse() method will be called only if and when
- * a ping is heard back from.
+* Class which represents a "ping" message sent through the
+ * socket pastry system.
  *
  * @version $Id$
- * @author amislove
+ *
+ * @author Alan Mislove
  */
-public interface PingResponseListener {
+public abstract class DatagramMessage extends SocketMessage {
+  
+  protected long start;
+  
+  protected SourceRoute outbound;
+  
+  protected SourceRoute inbound;
   
   /**
-   * Method which is called once a previously-issued ping is
-   * responded to.
-   *
-   * @param path The path of the ping
-   * @param RTT The round-trip-time along the path
-   * @param timeHeardFrom The time at which the response was received.
+   * Constructor
    */
-  public void pingResponse(SourceRoute path, long RTT, long timeHeardFrom);
+  public DatagramMessage(SourceRoute outbound, SourceRoute inbound) {
+    this.outbound = outbound;
+    this.inbound = inbound;
+  }
   
+  public long getStartTime() {
+    return start;
+  }
+  
+  public SourceRoute getOutboundPath() {
+    return outbound;
+  }
+  
+  public SourceRoute getInboundPath() {
+    return inbound;
+  }
+  
+  private void writeObject(ObjectOutputStream oos) throws IOException {
+    if (start == 0)
+      start = System.currentTimeMillis();
+    oos.defaultWriteObject();
+  }
 }

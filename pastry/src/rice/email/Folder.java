@@ -218,12 +218,12 @@ public class Folder {
     
     _log.getSnapshot(new StandardContinuation(command) {
       public void receiveResult(Object o) {
-        getLogReferences(set, (SnapShot) o, parent);
+        getLogReferences(set, (SnapShot[]) o, parent);
       }
     });
   }
     
-  protected void getLogReferences(final Set set, final SnapShot snapshot, Continuation command) {
+  protected void getLogReferences(final Set set, final SnapShot[] snapshot, Continuation command) {
     _log.getTopEntry(new StandardContinuation(command) {
       LogEntry top = null;
       
@@ -233,8 +233,8 @@ public class Folder {
           return;
         }
         
-        if ((top == null) && (snapshot != null))
-          top = snapshot.getTopEntry();
+        if ((top == null) && (snapshot != null) && (snapshot.length > 0))
+          top = snapshot[0].getTopEntry();
 
         LogEntry entry = (LogEntry) o;
                 

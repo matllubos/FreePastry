@@ -50,8 +50,9 @@ public class VisualizationEmailProxy extends EmailProxy {
       RecentMessagesPanelCreator recent = new RecentMessagesPanelCreator();
       server.addPanelCreator(recent);
       server.addPanelCreator(new PastryPanelCreator());
-      server.addPanelCreator(new MultiPersistencePanelCreator(timer, new String[] {"Immutable", "Mutable", "Pending", "Delivered"},
-                                                              new StorageManagerImpl[] {immutableStorage, mutableStorage, pendingStorage, deliveredStorage}));
+      server.addPanelCreator(new SourceRoutePanelCreator());
+      server.addPanelCreator(new MultiPersistencePanelCreator(timer, new String[] {"Immutable", "Mutable", "Pending", "Delivered", "Glacier Immutable", "Glacier Mutable", "Aggregation Waiting"},
+                                                              new StorageManagerImpl[] {immutableStorage, mutableStorage, pendingStorage, deliveredStorage, glacierImmutableStorage, glacierMutableStorage, aggrWaitingStorage}));
       server.addPanelCreator(new MultiPASTPanelCreator(timer, new String[] {"Immutable", "Mutable", "Pending", "Delivered"},
                                                        new PastImpl[] {(PastImpl) realImmutablePast, (PastImpl) mutablePast, pendingPast, deliveredPast}));
       server.addPanelCreator(new GCPanelCreator(timer, realImmutablePast));
@@ -115,6 +116,7 @@ public class VisualizationEmailProxy extends EmailProxy {
         RecentMessagesPanelCreator grecent = new RecentMessagesPanelCreator();
         globalServer.addPanelCreator(grecent);
         globalServer.addPanelCreator(new PastryPanelCreator());
+        globalServer.addPanelCreator(new SourceRoutePanelCreator());
         
         gpastry.addNetworkListener(gnetwork);
         gpastry.addNetworkListener(grecent);

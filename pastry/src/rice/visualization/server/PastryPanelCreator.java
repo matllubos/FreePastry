@@ -9,7 +9,7 @@ import java.util.*;
 
 public class PastryPanelCreator implements PanelCreator {
   
-  public static int ROUTING_TABLE_NUM_ROWS_TO_SHOW = 9;
+  public static int ROUTING_TABLE_NUM_ROWS_TO_SHOW = 7;
   
   public DataPanel createPanel(Object[] objects) {
     for (int i=0; i<objects.length; i++) 
@@ -27,22 +27,28 @@ public class PastryPanelCreator implements PanelCreator {
     leafsetCons.gridy = 0;
     leafsetCons.fill = Constraints.HORIZONTAL;
     
-    TableView leafsetView = new TableView("Leafset", 1130, 40, leafsetCons);
-    Vector strings = new Vector();
+    TableView leafsetView = new TableView("Leafset", 1130, 70, leafsetCons);
+    String[] row1 = new String[12];
+    String[] row2 = new String[12];
+    String[] row3 = new String[12];
     LeafSet leafset = node.getLeafSet();
     
-    for (int i=-leafset.ccwSize(); i<=leafset.cwSize(); i++) 
-      strings.add(leafset.get(i).getNodeId() + "");
+    for (int i=0; i<12; i++) {
+      row1[i] = (leafset.get(-12 + i) == null ? "" : leafset.get(-12 + i).getNodeId() + "");   
+      row2[i] = (i == 0 ? leafset.get(0).getNodeId() + "" : "");
+      row3[i] = (leafset.get(1 + i) == null ? "" : leafset.get(1 + i).getNodeId() + "");   
+    }
     
-    
-    leafsetView.addRow((String[]) strings.toArray(new String[0]));
+    leafsetView.addRow(row1);    
+    leafsetView.addRow(row2);    
+    leafsetView.addRow(row3);    
     
     Constraints routeTableCons = new Constraints();
     routeTableCons.gridx = 0;
     routeTableCons.gridy = 1;
     routeTableCons.fill = Constraints.HORIZONTAL;
     
-    TableView routeTableView = new TableView("Routing Table", 1130, 160, routeTableCons);
+    TableView routeTableView = new TableView("Routing Table", 1130, 130, routeTableCons);
     RoutingTable routingTable = node.getRoutingTable();
       
     for (int i=routingTable.numRows()-1; i>=routingTable.numRows()-ROUTING_TABLE_NUM_ROWS_TO_SHOW; i--) {

@@ -22,7 +22,7 @@ public class MessageDistributionPanelCreator implements PanelCreator, NetworkLis
   protected Vector messageSizes = new Vector(); 
   
   public DataPanel createPanel(Object[] objects) {
-    DataPanel networkActivityPanel = new DataPanel("Message Information");
+    DataPanel networkActivityPanel = new DataPanel("Messages");
     
     Constraints dataBreakdownCons = new Constraints();
     dataBreakdownCons.gridx = 0;

@@ -1,27 +1,38 @@
-/**
- * "FreePastry" Peer-to-Peer Application Development Substrate Copyright 2002,
- * Rice University. All rights reserved. Redistribution and use in source and
- * binary forms, with or without modification, are permitted provided that the
- * following conditions are met: - Redistributions of source code must retain
- * the above copyright notice, this list of conditions and the following
- * disclaimer. - Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer in the
- * documentation and/or other materials provided with the distribution. -
- * Neither the name of Rice University (RICE) nor the names of its contributors
- * may be used to endorse or promote products derived from this software without
- * specific prior written permission. This software is provided by RICE and the
- * contributors on an "as is" basis, without any representations or warranties
- * of any kind, express or implied including, but not limited to,
- * representations or warranties of non-infringement, merchantability or fitness
- * for a particular purpose. In no event shall RICE or contributors be liable
- * for any direct, indirect, incidental, special, exemplary, or consequential
- * damages (including, but not limited to, procurement of substitute goods or
- * services; loss of use, data, or profits; or business interruption) however
- * caused and on any theory of liability, whether in contract, strict liability,
- * or tort (including negligence or otherwise) arising in any way out of the use
- * of this software, even if advised of the possibility of such damage.
- */
+/*************************************************************************
 
+"FreePastry" Peer-to-Peer Application Development Substrate
+
+Copyright 2002, Rice University. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+  contributors may be  used to endorse or promote  products derived from
+  this software without specific prior written permission.
+
+  This software is provided by RICE and the contributors on an "as is"
+  basis, without any representations or warranties of any kind, express
+  or implied including, but not limited to, representations or
+  warranties of non-infringement, merchantability or fitness for a
+  particular purpose. In no event shall RICE or contributors be liable
+  for any direct, indirect, incidental, special, exemplary, or
+  consequential damages (including, but not limited to, procurement of
+  substitute goods or services; loss of use, data, or profits; or
+  business interruption) however caused and on any theory of liability,
+  whether in contract, strict liability, or tort (including negligence
+  or otherwise) arising in any way out of the use of this software, even
+  if advised of the possibility of such damage.
+
+********************************************************************************/
 package rice.pastry.socket;
 
 import java.io.*;
@@ -48,13 +59,10 @@ import rice.selector.*;
 public class SocketPastryNode extends DistPastryNode {
 
   // The address (ip + port) of this pastry node
-  private InetSocketAddress address;
-
+  private EpochInetSocketAddress address;
+  
   // The SocketManager, controlling the sockets
-  private SocketCollectionManager sManager;
-
-  // The PingManager, which keeps track of all UDP traffic
-  private PingManager pingManager;
+  private SocketSourceRouteManager srManager;
 
   // The pool of all node handles
   private SocketNodeHandlePool pool;
@@ -67,23 +75,14 @@ public class SocketPastryNode extends DistPastryNode {
   public SocketPastryNode(NodeId id) {
     super(id);
   }
-
+  
   /**
-   * Returns the SocketManager for this pastry node.
+   * Returns the SocketSourceRouteManager for this pastry node.
    *
-   * @return The SocketManager for this pastry node.
+   * @return The SocketSourceRouteManager for this pastry node.
    */
-  public SocketCollectionManager getSocketCollectionManager() {
-    return sManager;
-  }
-
-  /**
-   * Returns the PingManager for this pastry node.
-   *
-   * @return The PingManager for this pastry node.
-   */
-  public PingManager getPingManager() {
-    return pingManager;
+  public SocketSourceRouteManager getSocketSourceRouteManager() {
+    return srManager;
   }
 
   /**
@@ -107,15 +106,13 @@ public class SocketPastryNode extends DistPastryNode {
    * @param pingManager The new SocketElements value
    * @param pool The new SocketElements value
    */
-  public void setSocketElements(InetSocketAddress address,
-                                SocketCollectionManager sManager,
-                                PingManager pingManager,
+  public void setSocketElements(EpochInetSocketAddress address,
+                                SocketSourceRouteManager srManager,
                                 SocketNodeHandlePool pool,
                                 int lsmf,
                                 int rsmf) {
     this.address = address;
-    this.sManager = sManager;
-    this.pingManager = pingManager;
+    this.srManager = srManager;
     this.pool = pool;
     this.leafSetMaintFreq = lsmf;
     this.routeSetMaintFreq = rsmf;
@@ -128,7 +125,6 @@ public class SocketPastryNode extends DistPastryNode {
    */
   public void doneNode(NodeHandle bootstrap) {
     super.doneNode(bootstrap);
-
     initiateJoin(bootstrap);
   }
 
@@ -138,6 +134,19 @@ public class SocketPastryNode extends DistPastryNode {
    * @return a String
    */
   public String toString() {
-    return "SocketNodeHandle (" + getNodeId() + ")\n";
+    return "SocketNodeHandle (" + getNodeId() + "/" + address + ")\n";
+  }
+  
+  /**
+   * Makes this node resign from the network.  Is designed to be used for
+   * debugging and testing.
+   */
+  public void resign() {
+    try {
+      super.resign();
+      srManager.resign();
+    } catch (IOException e) {
+      System.err.println("ERROR: Got exception " + e + " while resigning node!");
+    }
   }
 }

@@ -1,26 +1,38 @@
-/**
- * "FreePastry" Peer-to-Peer Application Development Substrate Copyright 2002,
- * Rice University. All rights reserved. Redistribution and use in source and
- * binary forms, with or without modification, are permitted provided that the
- * following conditions are met: - Redistributions of source code must retain
- * the above copyright notice, this list of conditions and the following
- * disclaimer. - Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer in the
- * documentation and/or other materials provided with the distribution. -
- * Neither the name of Rice University (RICE) nor the names of its contributors
- * may be used to endorse or promote products derived from this software without
- * specific prior written permission. This software is provided by RICE and the
- * contributors on an "as is" basis, without any representations or warranties
- * of any kind, express or implied including, but not limited to,
- * representations or warranties of non-infringement, merchantability or fitness
- * for a particular purpose. In no event shall RICE or contributors be liable
- * for any direct, indirect, incidental, special, exemplary, or consequential
- * damages (including, but not limited to, procurement of substitute goods or
- * services; loss of use, data, or profits; or business interruption) however
- * caused and on any theory of liability, whether in contract, strict liability,
- * or tort (including negligence or otherwise) arising in any way out of the use
- * of this software, even if advised of the possibility of such damage.
- */
+/*************************************************************************
+
+"FreePastry" Peer-to-Peer Application Development Substrate
+
+Copyright 2002, Rice University. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+  contributors may be  used to endorse or promote  products derived from
+  this software without specific prior written permission.
+
+  This software is provided by RICE and the contributors on an "as is"
+  basis, without any representations or warranties of any kind, express
+  or implied including, but not limited to, representations or
+  warranties of non-infringement, merchantability or fitness for a
+  particular purpose. In no event shall RICE or contributors be liable
+  for any direct, indirect, incidental, special, exemplary, or
+  consequential damages (including, but not limited to, procurement of
+  substitute goods or services; loss of use, data, or profits; or
+  business interruption) however caused and on any theory of liability,
+  whether in contract, strict liability, or tort (including negligence
+  or otherwise) arising in any way out of the use of this software, even
+  if advised of the possibility of such damage.
+
+********************************************************************************/
 
 package rice.pastry.socket;
 
@@ -33,9 +45,9 @@ import rice.pastry.dist.*;
 import rice.pastry.messaging.*;
 
 /**
- * Abstract class for handles to "real" remote nodes. This class abstracts out
- * the node handle verification which is necessary in the "real" pastry
- * protocols, since NodeHandles are sent across the wire.
+ * Class which represents the address and nodeId of a remote node.  In
+ * the socket protocol, it simply represents this information - all 
+ * other details are managed by the local nodes.
  *
  * @version $Id$
  * @author Alan Mislove
@@ -45,19 +57,24 @@ public class SocketNodeHandle extends DistNodeHandle {
   static final long serialVersionUID = -5452528188786429274L;
 
   // the default distance, which is used before a ping
-  /**
-   * DESCRIBE THE FIELD
-   */
   public static int DEFAULT_PROXIMITY = Integer.MAX_VALUE;
 
+  protected EpochInetSocketAddress eaddress;
+  
   /**
    * Constructor
    *
    * @param nodeId This node handle's node Id.
    * @param address DESCRIBE THE PARAMETER
    */
-  public SocketNodeHandle(InetSocketAddress address, NodeId nodeId) {
-    super(nodeId, address);
+  public SocketNodeHandle(EpochInetSocketAddress address, NodeId nodeId) {
+    super(nodeId, address.getAddress());
+    
+    this.eaddress = address;
+  }
+  
+  public EpochInetSocketAddress getEpochAddress() {
+    return eaddress;
   }
 
   /**
@@ -73,14 +90,42 @@ public class SocketNodeHandle extends DistNodeHandle {
     if (spn == null) {
       return LIVENESS_ALIVE;
     } else {
-      if (spn.getSocketCollectionManager().isAlive(getAddress())) {
+      if (isLocal() || (spn.getSocketSourceRouteManager().isAlive(getEpochAddress()))) {
         return LIVENESS_ALIVE;
       } else {
         return LIVENESS_FAULTY;
       }
     }
   }
+  
+  /**
+   * Method which FORCES a check of liveness of the remote node.  Note that
+   * this method should ONLY be called by internal Pastry maintenance algorithms - 
+   * this is NOT to be used by applications.  Doing so will likely cause a
+   * blowup of liveness traffic.
+   *
+   * @return true if node is currently alive.
+   */
+  public boolean checkLiveness() {
+    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+    
+    if (spn != null)
+      spn.getSocketSourceRouteManager().checkLiveness(getEpochAddress());
+    
+    return isAlive();
+  }
 
+  /**
+   * Method which returns whether or not this node handle is on its
+   * home node.
+   *
+   * @return Whether or not this handle is local
+   */
+  public boolean isLocal() {
+    assertLocalNode();
+    return getLocalNode().getNodeId().equals(nodeId);
+  }
+  
   /**
    * Called to send a message to the node corresponding to this handle.
    *
@@ -96,7 +141,7 @@ public class SocketNodeHandle extends DistNodeHandle {
       spn.receiveMessage(msg);
     } else {
       debug("Passing message " + msg + " to the socket controller for writing");
-      spn.getSocketCollectionManager().send(getAddress(), msg);
+      spn.getSocketSourceRouteManager().send(getEpochAddress(), msg);
     }
   }
   
@@ -110,7 +155,7 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @param msg the bootstrap message.
    */
   public void bootstrap(Message msg) {
-    ((SocketPastryNode) getLocalNode()).getSocketCollectionManager().bootstrap(getAddress(), msg);
+    ((SocketPastryNode) getLocalNode()).getSocketSourceRouteManager().bootstrap(getEpochAddress(), msg);
   }
     
   /**
@@ -122,9 +167,9 @@ public class SocketNodeHandle extends DistNodeHandle {
    */
   public String toString() {
     if (getLocalNode() == null) {
-      return "[SNH: " + nodeId + "/" + address + "]";
+      return "[SNH: " + nodeId + "/" + getEpochAddress() + "]";
     } else {
-      return "[SNH: " + getLocalNode().getNodeId() + " -> " + nodeId + "/" + address + "]";
+      return "[SNH: " + getLocalNode().getNodeId() + " -> " + nodeId + "/" + getEpochAddress() + "]";
     }
   }
 
@@ -136,11 +181,12 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @return true if they are equal, false otherwise.
    */
   public boolean equals(Object obj) {
-    if (!(obj instanceof SocketNodeHandle)) {
+    if (! (obj instanceof SocketNodeHandle)) 
       return false;
-    }
 
-    return ((SocketNodeHandle) obj).getNodeId().equals(getNodeId());
+    SocketNodeHandle other = (SocketNodeHandle) obj;
+    
+    return (other.getNodeId().equals(getNodeId()) && other.eaddress.equals(eaddress));
   }
 
   /**
@@ -150,7 +196,7 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @return a hash code.
    */
   public int hashCode() {
-    return getNodeId().hashCode();
+    return getNodeId().hashCode() ^ eaddress.hashCode();
   }
 
   /**
@@ -164,14 +210,12 @@ public class SocketNodeHandle extends DistNodeHandle {
   public int proximity() {
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
 
-    if (spn == null) {
+    if (spn == null) 
+      return DEFAULT_PROXIMITY;
+    else if (spn.getNodeId().equals(nodeId)) 
       return 0;
-    } else
-      if (spn.getNodeId().equals(nodeId)) {
-      return 0;
-    } else {
-      return spn.getSocketCollectionManager().proximity(getAddress());
-    }
+    else 
+      return spn.getSocketSourceRouteManager().proximity(getEpochAddress());
   }
 
   /**
@@ -182,53 +226,13 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @return true if node is currently alive.
    */
   public boolean ping() {
-    final SocketPastryNode spn = (SocketPastryNode) getLocalNode();
-
-    if (spn != null) {
- /*     final TimerTask task = new TimerTask() {
-        public void run() {
-          if (isAlive()) {
-            System.out.println("ERROR: Ping to " + address + " took too long to return - marking node as dead!");
-          
-            spn.getSocketCollectionManager().closeSocket(address);
-            spn.getSocketCollectionManager().markDead(address);
-          }
-        }
-      };
-      
-      spn.getTimer().schedule(task, PingManager.PING_TIMEOUT); */
-      
-      spn.getPingManager().ping(getAddress(), new PingResponseListener() {
-        public void pingResponse(InetSocketAddress address, long RTT, long timeHeardFrom) {
-          /*task.cancel();
-          
-          if (! isAlive()) {
-            System.out.println("Got ping from " + address + " - marking node as alive.");
-            
-            spn.getSocketCollectionManager().markAlive(address);
-          }*/
-        }
-      });
-    }
-
-    return isAlive();
-  }
-
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @param prl DESCRIBE THE PARAMETER
-   * @return DESCRIBE THE RETURN VALUE
-   */
-  public boolean ping(PingResponseListener prl) {
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
 
-    if (spn != null) {
-      spn.getPingManager().ping(getAddress(), prl);
-    }
+    if (spn != null) 
+      spn.getSocketSourceRouteManager().ping(getEpochAddress());
 
     return isAlive();
-  }
+  }  
 
   /**
    * Method which registers this handle with the node that it is currently on.
@@ -247,25 +251,6 @@ public class SocketNodeHandle extends DistNodeHandle {
   public void update(Observable o, Object obj) {
   }
 
-  /*
-   *  static int lastResponseListener = 0;
-   *  class TestResponseListener implements PingResponseListener {
-   *  int myName;
-   *  NodeId myId;
-   *  public TestResponseListener(InetSocketAddress address, NodeId id) {
-   *  myName = lastResponseListener++;
-   *  myId = id;
-   *  System.out.println(myName+".ping("+address+","+id+")");
-   *  }
-   *  public void pingResponse(
-   *  InetSocketAddress address,
-   *  long RTT,
-   *  long timeHeardFrom) {
-   *  System.out.println(myName+".pingResponse("+address+","+RTT+","+timeHeardFrom+")");
-   *  }
-   *  }
-   */
-
   /**
    * Method which allows the observers of this socket node handle to be updated.
    * This method sets this object as changed, and then sends out the update.
@@ -278,9 +263,9 @@ public class SocketNodeHandle extends DistNodeHandle {
   }
 
   /**
-   * DESCRIBE THE METHOD
+   * Method to print out debugging info, if required
    *
-   * @param s DESCRIBE THE PARAMETER
+   * @param s The message to print
    */
   private void debug(String s) {
     if (Log.ifp(8)) {

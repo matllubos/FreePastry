@@ -5,6 +5,7 @@ import rice.Continuation.*;
 
 import rice.pastry.PastryNode;
 import rice.pastry.dist.*;
+import rice.pastry.socket.*;
 import rice.pastry.commonapi.*;
 import rice.pastry.standard.*;
 
@@ -172,32 +173,32 @@ public class PostProxy {
   /**
    * The local trash can, if in use
    */
-  protected StorageManager trashStorage;
+  protected StorageManagerImpl trashStorage;
   
   /**
    * The local storage for mutable glacier fragments
    */
-  protected StorageManager glacierMutableStorage;
+  protected StorageManagerImpl glacierMutableStorage;
 
   /**
    * The local storage for immutable glacier fragments
    */
-  protected StorageManager glacierImmutableStorage;
+  protected StorageManagerImpl glacierImmutableStorage;
 
   /**
    * The local storage for glacier neighbor certificates
    */
-  protected StorageManager glacierNeighborStorage;
+  protected StorageManagerImpl glacierNeighborStorage;
 
   /**
    * The local storage for glacier's 'trash can'
    */
-  protected StorageManager glacierTrashStorage;
+  protected StorageManagerImpl glacierTrashStorage;
 
   /**
    * The local storage for objects waiting to be aggregated
    */
-  protected StorageManager aggrWaitingStorage;
+  protected StorageManagerImpl aggrWaitingStorage;
   
   /**
     * The local backup cache, for immutable objects
@@ -297,7 +298,7 @@ public class PostProxy {
         } else {
           startCheckNAT(parameters);
         }
-      }
+      } 
           
       
       String version = System.getProperty("java.version");
@@ -307,13 +308,28 @@ public class PostProxy {
               "Currently, only Java 1.4 is supported, and you must be running a\n" +
               "version of at least 1.4.2.  Please see http://java.sun.com in order\n" +
               "to download a compatible version.");
-      /*
+      
       String os = System.getProperty("os.name");
       
-      if (! CompatibilityCheck.testOS(os))
-        panic("You appear to be running an incompatible operating system '" + System.getProperty("os.name") + "'.\n" +
-              "Currently, only Windows and Linux are supported for ePOST, although\n" +
-              "we are actively trying to add support for Mac OS X."); */
+      if (! CompatibilityCheck.testOS(os)) {
+        String message = "You appear to be running an incompatible operating system '" + System.getProperty("os.name") + "'.\n" +
+        "Currently, only Windows and Linux are supported for ePOST, although\n" +
+        "we are actively trying to add support for Mac OS X.";
+        
+        if (System.getProperty("os.name").toLowerCase().indexOf("mac") >= 0) {
+          message += "\n\nNOTE: It looks like you're running on a Mac - we have had mixed success with\n" +
+                         "running on Macs.  On dual G5 machines, ePOST is known to cause kernel panics, \n" +
+                         "however it appears somewhat stable on G4 machines.  If you are brave, you can \n" +
+                         "choose to run ePOST, but be warned!";
+        
+          int i = message(message, new String[] {"Kill ePOST Proxy", "I'm brave! Launch ePOST!"}, "Kill ePOST Proxy");
+          
+          if (i == 0)
+            System.exit(-1);
+        } else {
+          panic(message);
+        }
+      }
     }
   }
   
@@ -323,20 +339,31 @@ public class PostProxy {
    * @param parameters The parameters to use
    */
   protected void startCheckNAT(Parameters parameters) throws Exception {
-    ConnectivityCheckClient client = new ConnectivityCheckClient(parameters.getInetSocketAddressParameter("pastry_proxy_connectivity_server"));
-    natAddress = client.check(parameters.getLongParameter("pastry_proxy_connectivity_timeout")/4, parameters.getIntParameter("pastry_proxy_connectivity_port"));
+    try {
+      natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getIntParameter("pastry_proxy_connectivity_timeout")/4,
+                                                            new InetSocketAddress(InetAddress.getLocalHost(), parameters.getIntParameter("pastry_proxy_connectivity_port")),
+                                                            parameters.getInetSocketAddressParameter("pastry_proxy_connectivity_host")).getAddress();
+    } catch (SocketTimeoutException e) {}
   
     if (natAddress == null) 
-      natAddress = client.check(parameters.getLongParameter("pastry_proxy_connectivity_timeout")/2, parameters.getIntParameter("pastry_proxy_connectivity_port"));
-
+      try {
+        natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getIntParameter("pastry_proxy_connectivity_timeout")/2,
+                                                              new InetSocketAddress(InetAddress.getLocalHost(), parameters.getIntParameter("pastry_proxy_connectivity_port")),
+                                                              parameters.getInetSocketAddressParameter("pastry_proxy_connectivity_host")).getAddress();
+      } catch (SocketTimeoutException e) {}
+    
     if (natAddress == null) 
-      natAddress = client.check(parameters.getLongParameter("pastry_proxy_connectivity_timeout"), parameters.getIntParameter("pastry_proxy_connectivity_port"));
+      try {
+        natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getIntParameter("pastry_proxy_connectivity_timeout"),
+                                                              new InetSocketAddress(InetAddress.getLocalHost(), parameters.getIntParameter("pastry_proxy_connectivity_port")),
+                                                              parameters.getInetSocketAddressParameter("pastry_proxy_connectivity_host")).getAddress();
+      } catch (SocketTimeoutException e) {}
     
     if (natAddress == null) {
       int j = message("ePOST attempted to determine the NAT IP address, but was unable to.  This\n" +
                       "is likely caused by an incorrectly configured NAT - make sure that your NAT\n" +
-                      "is set up to forward both TCP and UDP packets on port 10001 to '" + address + "'.\n\n" + 
-                      "Error: " + client.getError(), new String[] {"Kill ePOST Proxy", "Retry"}, "Kill ePOST Proxy");
+                      "is set up to forward both TCP and UDP packets on port " + parameters.getIntParameter("pastry_proxy_connectivity_port") + " to '" + address + "'.\n\n" + 
+                      "Error: java.net.SocketTimeoutException", new String[] {"Kill ePOST Proxy", "Retry"}, "Kill ePOST Proxy");
     
       if (j == 1)
         startCheckNAT(parameters);
@@ -1306,9 +1333,9 @@ public class PostProxy {
     try {
       if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) 
       JOptionPane.showMessageDialog(null, message.toString() ,"Error: " + e.getClass().getName(), JOptionPane.ERROR_MESSAGE); 
-    } catch (java.lang.InternalError f) {}
-
-    throw e;
+    } catch (Throwable f) {}
+    
+    System.exit(-1);
   }
   
   public void panic(String m) {
@@ -1317,7 +1344,7 @@ public class PostProxy {
     try {
       if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) 
         JOptionPane.showMessageDialog(null, m, "Error Starting POST Proxy", JOptionPane.ERROR_MESSAGE); 
-    } catch (java.lang.InternalError f) {}
+    } catch (Throwable f) {}
     
     System.exit(-1);
   }
@@ -1330,7 +1357,7 @@ public class PostProxy {
         return JOptionPane.showOptionDialog(null, m, "ePOST Message", 
                                              0, JOptionPane.INFORMATION_MESSAGE, null, 
                                              options, def);
-    } catch (java.lang.InternalError f) {}
+    } catch (Throwable f) {}
     
     return 0;
   }

@@ -38,7 +38,7 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
   }
   
   public DataPanel createPanel(Object[] objects) {
-    DataPanel networkActivityPanel = new DataPanel("Network Activity");
+    DataPanel networkActivityPanel = new DataPanel("Network");
     
     Constraints dataSentCons = new Constraints();
     dataSentCons.gridx = 0;

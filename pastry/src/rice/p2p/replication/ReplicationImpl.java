@@ -133,11 +133,11 @@ public class ReplicationImpl implements Replication, Application {
     this.factory = node.getIdFactory();
     this.policy = policy;
     this.instance = instance;
+    this.endpoint = node.registerApplication(this, instance);
     
     if (this.policy == null)
       this.policy = new DefaultReplicationPolicy();
     
-    this.endpoint = node.registerApplication(this, instance);
     this.handle = endpoint.getLocalNodeHandle();
     
   //  log.addHandler(new ConsoleHandler());

@@ -33,28 +33,47 @@ met:
   if advised of the possibility of such damage.
 
 ********************************************************************************/
-package rice.pastry.socket;
 
-import java.net.InetSocketAddress;
+package rice.pastry.socket.messaging;
+
+import java.net.*;
+import java.io.*;
+
+import rice.pastry.socket.*;
+import rice.pastry.*;
 
 /**
- * Interface which represents an object interested in hearing the result
- * of a ping.  The pingResponse() method will be called only if and when
- * a ping is heard back from.
+* Class which represents a "ping" message sent through the
+ * socket pastry system.
  *
  * @version $Id$
- * @author amislove
+ *
+ * @author Alan Mislove
  */
-public interface PingResponseListener {
+public class WrongEpochMessage extends DatagramMessage {
+  
+  protected EpochInetSocketAddress incorrect;
+  protected EpochInetSocketAddress correct;
   
   /**
-   * Method which is called once a previously-issued ping is
-   * responded to.
-   *
-   * @param path The path of the ping
-   * @param RTT The round-trip-time along the path
-   * @param timeHeardFrom The time at which the response was received.
+  * Constructor
    */
-  public void pingResponse(SourceRoute path, long RTT, long timeHeardFrom);
+  public WrongEpochMessage(SourceRoute outbound, SourceRoute inbound, EpochInetSocketAddress incorrect, EpochInetSocketAddress correct) {
+    super(outbound, inbound);
+    
+    this.incorrect = incorrect;
+    this.correct = correct;
+  }
   
+  public EpochInetSocketAddress getIncorrect() {
+    return incorrect;
+  }
+  
+  public EpochInetSocketAddress getCorrect() {
+    return correct;
+  }
+
+  public String toString() {
+    return "PingResponseMessage";
+  }
 }

@@ -91,6 +91,21 @@ public class NodeSet implements NodeSetI, Serializable {
 	set.add(handle);
 	return true;
     }
+    
+    /**
+     * Method which randomizes the order of this NodeSet
+     */
+    public void randomize() {
+      Random random = new Random();
+      
+      for (int i=0; i<set.size(); i++) {
+        int a = random.nextInt(set.size());
+        int b = random.nextInt(set.size());
+        Object tmp = set.elementAt(a);
+        set.setElementAt(set.elementAt(b), a);
+        set.setElementAt(tmp, b);
+      }
+    }
 
     /**
      * Finds the NodeHandle associated with a NodeId.

@@ -186,8 +186,8 @@ public class WirePastryNode extends DistPastryNode {
    * Method for simulating the death of this node. Should only be used for
    * testing purposes.
    */
-  public void kill() {
-    super.kill();
+  public void resign() {
+    super.resign();
     _dManager.notifyKilled();
     _pool.notifyKilled();
     _manager.kill();

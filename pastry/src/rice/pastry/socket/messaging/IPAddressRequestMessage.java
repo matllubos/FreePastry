@@ -33,28 +33,32 @@ met:
   if advised of the possibility of such damage.
 
 ********************************************************************************/
-package rice.pastry.socket;
 
-import java.net.InetSocketAddress;
+package rice.pastry.socket.messaging;
+
+import java.io.*;
+import java.net.*;
+
+import rice.pastry.socket.*;
+import rice.pastry.*;
 
 /**
- * Interface which represents an object interested in hearing the result
- * of a ping.  The pingResponse() method will be called only if and when
- * a ping is heard back from.
+* Class which represents a request for the external visible IP address
  *
  * @version $Id$
- * @author amislove
+ *
+ * @author Alan Mislove
  */
-public interface PingResponseListener {
+public class IPAddressRequestMessage extends DatagramMessage {
   
   /**
-   * Method which is called once a previously-issued ping is
-   * responded to.
-   *
-   * @param path The path of the ping
-   * @param RTT The round-trip-time along the path
-   * @param timeHeardFrom The time at which the response was received.
+   * Constructor
    */
-  public void pingResponse(SourceRoute path, long RTT, long timeHeardFrom);
+  public IPAddressRequestMessage() {
+    super(null, null);
+  }
   
+  public String toString() {
+    return "IPAddressRequestMessage";
+  }
 }

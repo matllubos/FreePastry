@@ -183,7 +183,7 @@ public class VisualizationServer implements Runnable {
     oos.writeObject(ujr);
 
     // kill the node
-    ((DistPastryNode)node).kill();
+    ((DistPastryNode)node).resign();
   
     // sleep for a while
     try {

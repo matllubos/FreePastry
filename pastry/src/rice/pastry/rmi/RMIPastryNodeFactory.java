@@ -50,6 +50,7 @@ import java.rmi.RMISecurityManager;
 import java.rmi.Naming;
 import java.rmi.registry.*;
 import java.net.*;
+import java.io.*;
 
 /**
  * Pastry node factory for RMI-linked nodes.
@@ -279,7 +280,7 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
    * @param handle The node to connect to
    * @return The leafset of the remote node
    */
-  public LeafSet getLeafSet(NodeHandle handle) {
+  public LeafSet getLeafSet(NodeHandle handle) throws IOException {
     try {
       RMINodeHandle rHandle = (RMINodeHandle) handle;
       RMIRemoteNodeI rNode = rHandle.getRemote();
@@ -288,8 +289,7 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
       
       return leafSet;
     } catch (java.rmi.RemoteException e) {
-      System.out.println("Exception " + e + " was thrown while fetching leafset remotely.");
-      return null;
+      throw new IOException(e.getMessage());
     }
   }
 
@@ -302,15 +302,14 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
    * @param row The row number to retrieve
    * @return The route row of the remote node
    */
-  public RouteSet[] getRouteRow(NodeHandle handle, int row) {
+  public RouteSet[] getRouteRow(NodeHandle handle, int row) throws IOException {
     try {
       RMINodeHandle rHandle = (RMINodeHandle) handle;
       RMIRemoteNodeI rNode = rHandle.getRemote();
 
       return rNode.getRouteRow(row);
     } catch (java.rmi.RemoteException e) {
-      System.out.println("Exception " + e + " was thrown while fetching routerow remotely.");
-      return new RouteSet[0];
+      throw new IOException(e.getMessage());
     }
   }
 
