@@ -98,22 +98,22 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
 
     public boolean test(NodeHandle handle)
     {
-	NodeId nid = handle.getNodeId();
-
-	if (nid.equals(ln.getNodeId())) return false;
-
-	for (int i=0; i<theSize; i++)
-	    if (nid.equals(nodes[i].getNodeId())) return false;
-
-	if (theSize < nodes.length) return true;
-
-	if (clockwise) {
-	    if (!nid.isBetween(ln.getNodeId(), nodes[theSize-1].getNodeId())) return false;
-	} else {
-	    if (!nid.isBetween(nodes[theSize-1].getNodeId(), ln.getNodeId())) return false;
-	}
-
-	return true;
+    	NodeId nid = handle.getNodeId();
+    
+    	if (nid.equals(ln.getNodeId())) return false;
+    
+    	for (int i=0; i<theSize; i++)
+    	    if (nid.equals(nodes[i].getNodeId())) return false;
+    
+    	if (theSize < nodes.length) return true;
+    
+    	if (clockwise) {
+    	    if (!nid.isBetween(ln.getNodeId(), nodes[theSize-1].getNodeId())) return false;
+    	} else {
+    	    if (!nid.isBetween(nodes[theSize-1].getNodeId(), ln.getNodeId())) return false;
+    	}
+    
+    	return true;
     }
 
 
