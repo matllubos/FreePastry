@@ -42,6 +42,8 @@ import rice.pastry.messaging.Message;
 import rice.pastry.NodeId;
 import rice.pastry.NodeHandle;
 
+import rice.scribe.messaging.MessageAnycast;
+
 import java.util.Vector;
 
 import java.io.*;
@@ -90,8 +92,6 @@ public interface IScribe
      *
      */
     public boolean create( NodeId groupID, Credentials cred );
-
-    
 
 
     /**
@@ -189,7 +189,9 @@ public interface IScribe
      * which has joined the group. The handling of anycast message is 
      * left to the application. The applications may do DFS of its subtree
      * to evaluate some predicates to find out a node having desirable
-     * properties.
+     * properties. The anycast message would be dropped on floor at an
+     * intermediate node if there is no application running on it to handle
+     * the anycast message.
      *
      * @param   groupID         
      * The ID of the group to anycast.
@@ -207,7 +209,30 @@ public interface IScribe
     public boolean anycast( NodeId groupID, Serializable obj, Credentials cred );
     
 
-
+    /**
+     * An application can create sub-classes of MessageAnycast type of
+     * messages and write their own handling functions (like handleForward
+     * and handleDeliver) so as to take care of routing of these messages
+     * and also to handle cases where the anycast message reaches an 
+     * intermediate node where there is no application running to take care 
+     * of it.
+     *
+     * @param   groupID         
+     * The ID of the group to anycast.
+     *
+     * @param   anycastMessage           
+     * The anycast message created by application specific to its needs,
+     * can decide how the message is going to be routed in the anycast 
+     * tree, how the message is going to be handled and so on.
+     *
+     * @param   cred
+     * The credentials of the entity anycasting to the group.
+     *     
+     * @return true if the operation was successful, false if the operation
+     *         failed because the underlying Scribe substrate was not ready.
+     * 
+     */
+    public boolean anycast(NodeId groupId, MessageAnycast anycastMessage, Credentials cred);
 
     /**
      * Sends heartbeat messages to this local node's children for all the 

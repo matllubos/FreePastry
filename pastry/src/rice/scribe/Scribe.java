@@ -620,6 +620,36 @@ public class Scribe extends PastryAppl implements IScribe
 
 
     /**
+     * An application can create sub-classes of MessageAnycast type of
+     * messages and write their own handling functions (like handleForward
+     * and handleDeliver) so as to take care of routing of these messages
+     * and also to handle cases where the anycast message reaches an 
+     * intermediate node where there is no application running to take care 
+     * of it.
+     *
+     * @param   groupID         
+     * The ID of the group to anycast.
+     *
+     * @param   anycastMessage           
+     * The anycast message created by application specific to its needs,
+     * can decide how the message is going to be routed in the anycast 
+     * tree, how the message is going to be handled and so on.
+     *
+     * @param   cred
+     * The credentials of the entity anycasting to the group.
+     *     
+     * @return true if the operation was successful, false if the operation
+     *         failed because the underlying Scribe substrate was not ready.
+     * 
+     */
+    public boolean anycast(NodeId groupID, MessageAnycast anycastMessage, Credentials cred){
+	if(!isReady()) return false;
+	this.routeMsg( groupID, anycastMessage, cred, m_sendOptions );
+	return true;
+    }
+
+
+    /**
      * Generate a unique id for the topic, which will determine its rendezvous
      * point.  This is a helper method. Applications can use their own 
      * methods to generate TopicId.
