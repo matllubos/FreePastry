@@ -1,11 +1,13 @@
 package rice.splitstream.messaging;
 import rice.splitstream.*;
+import rice.scribe.messaging.*;
+
 /**
- * This class represents the message sent by a node upon receiving a
+ * This class represents the anycast message sent by a node upon receiving a
  * drop notification from its former parent.  It is sent to the spare
  * capacity tree in an attempt to find a new parent.
  */
-public class ControlFindParentMessage extends ControlMessage
+public class ControlFindParentMessage extends MessageAnycast
 {
 
     public ControlFindParentMessage()
@@ -22,19 +24,7 @@ public class ControlFindParentMessage extends ControlMessage
      * @param splitStream The SplitStream application
      * @param s The stripe that this message is relevant to
      */
-    public void handleDeliverMessage( ISplitStream splitStream, Stripe s )
-    {
-    }
-
-    /**
-     * This is the callback method for when this message should be
-     * forwarded along the tree; the current node does not even have
-     * the potential to act as a parent to the node that sent the
-     * message.
-     * @param splitStream The SplitStream application
-     * @param s The stripe that this message is relevant to
-     */
-    public void handleForwardMessage( ISplitStream splitStream, Stripe s )
+    public void handleMessage( ISplitStream splitStream, Stripe s )
     {
     }
 
