@@ -8,10 +8,16 @@ public class BloomFilter implements Serializable {
   private byte bitfield[];
   private int hashParams[];
   
+  public BloomFilter(int length, int[] hashParams) {
+    bitfield = new byte[(length+7)/8];
+    Arrays.fill(bitfield, (byte)0);
+    this.hashParams = hashParams;
+  }  
+  
   public BloomFilter(int length, int numHashes) {
     bitfield = new byte[(length+7)/8];
     Arrays.fill(bitfield, (byte)0);
-    
+
     int numPrimeCandidates = numHashes*100;
     if (numPrimeCandidates >= (length - 5)) 
       numPrimeCandidates = length - 5;
