@@ -11,8 +11,6 @@ import rice.pastry.security.*;
 import rice.storage.*;
 import rice.storage.testing.*;
 
-import ObjectWeb.Persistence.*;
-
 import java.util.*;
 import java.net.*;
 import java.io.Serializable;
@@ -85,8 +83,7 @@ public class DistPASTRegrTest {
     PastryNode pn = factory.newNode(getBootstrap());
     pastrynodes.add(pn);
 
-    PersistenceManager pm = new DummyPersistenceManager();
-    StorageManager sm = new StorageManagerImpl(pm);
+    StorageManager sm = new MemoryStorageManager();
 
     PASTServiceImpl past = new PASTServiceImpl(pn, sm);
     past.DEBUG = true;
@@ -167,7 +164,7 @@ public class DistPASTRegrTest {
     PASTService local = (PASTService) pastNodes.elementAt(rng.nextInt(numNodes));
     PASTServiceImpl remote = (PASTServiceImpl) pastNodes.elementAt(rng.nextInt(numNodes));
     NodeId remoteId = remote.getPastryNode().getNodeId();
-    Persistable file = new DummyPersistable("test file");
+    String file = "test file";
 
     // Check file does not exist
     assertTrue("RouteRequest", "File should not exist before insert",
@@ -186,7 +183,7 @@ public class DistPASTRegrTest {
     StorageObject result = remote.getStorage().lookup(remoteId);
     assertTrue("RouteRequest", "File should be inserted at known node",
                result != null);
-    Persistable file2 = result.getOriginal();
+    String file2 = (String) result.getOriginal();
     assertEquals("RouteRequest", "Retrieved local file should be the same",
                  file, file2);
 
@@ -199,8 +196,8 @@ public class DistPASTRegrTest {
     Credentials userCred = null;
     PASTService local = (PASTService) pastNodes.elementAt(rng.nextInt(numNodes));
     NodeId fileId = idFactory.generateNodeId();
-    Persistable file = new DummyPersistable("test file");
-    Persistable update = new DummyPersistable("update to file");
+    String file = "test file";
+    String update = "update to file";
 
     // Try looking up before insert
     StorageObject test = local.lookup(fileId);
@@ -229,7 +226,7 @@ public class DistPASTRegrTest {
       StorageObject result = remote.lookup(fileId);
       assertTrue("PASTFunctions", "File should always be found remotely",
                  result != null);
-      Persistable file2 = result.getOriginal();
+      String file2 = (String) result.getOriginal();
       assertEquals("PASTFunctions", "Retrieved file should be the same, node " + i,
                    file, file2);
       Vector updates = result.getUpdates();
@@ -241,7 +238,7 @@ public class DistPASTRegrTest {
       if (result != null) {
         System.out.println("TEST: Found file locally on node " + i);
         localCount++;
-        file2 = result.getOriginal();
+        file2 = (String) result.getOriginal();
         assertEquals("PASTFunctions", "Retrieved local file should be the same, node " + i,
                      file, file2);
       }
@@ -266,13 +263,13 @@ public class DistPASTRegrTest {
       StorageObject result = remote.lookup(fileId);
       assertTrue("PASTFunctions", "File should always be found remotely",
                  result != null);
-      Persistable file2 = result.getOriginal();
+      String file2 = (String) result.getOriginal();
       assertEquals("PASTFunctions", "Retrieved file should be the same, node " + i,
                    file, file2);
       Vector updates = result.getUpdates();
       assertEquals("PASTFunctions", "Retrieved file should have 1 update, node " + i,
                    new Integer(1), new Integer(updates.size()));
-      Persistable update2 = (Persistable) updates.elementAt(0);
+      String update2 = (String) updates.elementAt(0);
       assertEquals("PASTFunctions", "Retrieved update should be the same, node " + i,
                    update, update2);
     }

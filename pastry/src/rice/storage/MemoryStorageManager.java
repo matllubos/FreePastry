@@ -59,7 +59,7 @@ public class MemoryStorageManager implements StorageManager {
     }
 
     so = new StorageObjectImpl(obj, authorCred);
-    keys.put(id, obj);
+    keys.put(id, so);
 
     return true;
   }
@@ -117,7 +117,7 @@ public class MemoryStorageManager implements StorageManager {
     
     // Only delete if appropriate credentials
     if (_canDelete(so, authorCred)) {
-      keys.remove(so);
+      keys.remove(id);
       return true;
     }
     
