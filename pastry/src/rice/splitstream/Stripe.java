@@ -261,6 +261,13 @@ public class Stripe extends Observable implements IScribeApp{
       */
      public void forwardHandler(ScribeMessage msg){}
        
+
+    /**
+     * up-call invoked by Scribe when an anycast message is being handled.
+     */
+    public boolean anycastHandler(ScribeMessage msg){
+	return true;
+    }
      /**
       * Upcall generated when a message is received
       * In this case it means that new data has come for the stripe
