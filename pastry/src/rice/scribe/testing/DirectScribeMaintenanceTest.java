@@ -558,6 +558,39 @@ public class DirectScribeMaintenanceTest
 
 	}
 
+
+	/**
+	 * TEST 8
+	 * We make all nodes to unsubscribe to each topic except the root.
+	 */
+
+	/**
+	 * Schedule HeartBeat event on all node, to set parent pointers
+	 * in all nodes because we previously checked with AckOnSubscribe set to 
+	 * false
+	 */
+	scheduleHBOnAllNodes();
+
+	for(j=0; j< numTopics; j ++) {
+	    topicId = (NodeId) topicIds.elementAt(j);
+	    for(i=0; i< scribeClients.size() ; i++) {
+		scribeApp = ( ScribeMaintenanceTestApp) scribeClients.elementAt(i);
+		if(!scribeApp.m_scribe.isRoot(topicId)) {
+		    scribeApp.unsubscribe(topicId);
+		}
+	    }
+	}
+	while(simulate());
+	
+	passed = checkUnsubscribeTest();
+	
+	if(passed)
+	    System.out.println("CHECK : to see if after Unsubscribing each node, no one is part of multicast tree  - PASSED\n");
+	else
+	    System.out.println("CHECK : to see if after Unsubscribing each node, no one is part of multicast tree  - FAILED\n");
+	
+	ok = ok && passed;
+
 	return ok;
 	
     }
@@ -931,6 +964,26 @@ public class DirectScribeMaintenanceTest
 		    result = false;
 	    }
 	}
+	return result;
+    }
+
+    /**
+     * Check if no node is part of a multicast trees except the root.
+     * @return true if no node except the root is part of multicast
+     *         tree for this topic
+     *          else false
+     */
+    private boolean checkUnsubscribeTest(){
+	boolean result;
+	NodeId topicId;
+	int nodesInTree;
+	result = true;
+	for(int j=0; j < topicIds.size() ; j++) {
+	    topicId = (NodeId)topicIds.elementAt(j);
+	    nodesInTree = BFS(topicId);
+	    if(nodesInTree!= 1)
+		result = false;
+	}		
 	return result;
     }
 }
