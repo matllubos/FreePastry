@@ -198,7 +198,7 @@ public class RoutingTable extends Observable {
 
     public String toString() 
     {
-	String s = "";
+	String s = "routing table: \n";
 
 	for (int i=0; i<routingTable.length; i++) {
 	    for (int j=0; j<routingTable[i].length; j++) {

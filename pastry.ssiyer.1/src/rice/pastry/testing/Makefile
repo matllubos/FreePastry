@@ -4,7 +4,10 @@ SOURCE  = \
 	NodeIdUnit.java\
 	DummyNodeHandle.java\
 	RoutingTableUnit.java\
-	PastryTest.java
+	PastryTest.java\
+	PastryRegrTest.java\
+	RegrTestApp.java
+
 
 RMI_SOURCE =
 

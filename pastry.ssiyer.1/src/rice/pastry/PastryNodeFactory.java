@@ -30,6 +30,8 @@ package rice.pastry;
 
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
+import rice.pastry.leafset.*;
+import rice.pastry.routing.*;
 
 import java.util.*;
 
@@ -74,18 +76,18 @@ public interface PastryNodeFactory
     /**
      * Returns an observable view of the leaf set.
      *
-     * @return the leaf set observer.
+     * @return the leaf set
      */
     
-    public Observable getLeafSet();
+    public LeafSet getLeafSet();
 
     /**
      * Returns an observable view of the route set.
      *
-     * @return the route set observer.
+     * @return the routing table
      */
     
-    public Observable getRouteSet();
+    public RoutingTable getRouteSet();
     
     /**
      * Cleans up the construction.

@@ -90,6 +90,26 @@ public class RouteMessage extends Message implements Serializable {
     /**
      * Constructor.
      *
+     * @param dest the node this message will be routed to
+     * @param msg the wrapped message.
+     * @param cred the credentials for the message.
+     * @param opts the send options for the message.
+     * @param aux an auxilary address which the message after each hop.
+     */
+
+    public RouteMessage(NodeHandle dest, Message msg, Credentials cred, SendOptions opts, Address aux) 
+    {
+	super(new RouterAddress());
+	this.target = dest.getNodeId();
+	internalMsg = msg;
+	this.opts = opts;
+	nextHop = dest;
+	auxAddress = aux;
+    }
+
+    /**
+     * Constructor.
+     *
      * @param target this is id of the node the message will be routed to.
      * @param msg the wrapped message.
      * @param cred the credentials for the message.

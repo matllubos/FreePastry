@@ -193,6 +193,26 @@ public class LeafSet extends Observable implements NodeSet {
 	cwSet.addObserver(o);
 	ccwSet.addObserver(o);
     }
+
+
+    /**
+     * Returns a string representation of the leaf set
+     *
+     */
+
+    public String toString() 
+    {
+	String s = "leafset: ";
+	for (int i=-theSize; i<0; i++)
+	    s = s + get(i).getNodeId();
+	s = s + " | ";
+	for (int i=1; i<=theSize; i++)
+	    s = s + get(i).getNodeId();
+
+	return s;
+    }
+
+
 }
 
 

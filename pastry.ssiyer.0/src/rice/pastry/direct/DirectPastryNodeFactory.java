@@ -105,8 +105,8 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 
     public NetworkSimulator getNetworkSimulator() { return simulator; }
 
-    public Observable getLeafSet() { return leafSet; }
-    public Observable getRouteSet() { return routeTable; }
+    public LeafSet getLeafSet() { return leafSet; }
+    public RoutingTable getRouteSet() { return routeTable; }
 
     public void doneWithNode(PastryNode pnode) {
 	lhandle.setProxy(pnode);

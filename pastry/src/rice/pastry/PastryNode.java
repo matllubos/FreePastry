@@ -31,6 +31,8 @@ package rice.pastry;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 import rice.pastry.client.*;
+import rice.pastry.leafset.*;
+import rice.pastry.routing.*;
 
 import java.util.*;
 
@@ -45,8 +47,8 @@ public class PastryNode implements NodeHandle
     private NodeId myNodeId;
     private PastrySecurityManager mySecurityManager;
     private MessageDispatch myMessageDispatch;
-    private Observable leafSet;
-    private Observable routeSet;
+    private LeafSet leafSet;
+    private RoutingTable routeSet;
   
     /**
      * Constructor.  Creates a new Pastry network.
@@ -75,6 +77,10 @@ public class PastryNode implements NodeHandle
     public final boolean isAlive() { return true; }
 
     public final int proximity() { return 0; }
+
+    public final LeafSet getLeafSet() { return leafSet; }
+
+    public final RoutingTable getRoutingTable() { return routeSet; }
 
     /**
      * Add a leaf set observer to the Pastry node.

@@ -104,7 +104,7 @@ public class PingClient extends PastryClient {
 	return true;
     }
 
-    /*
+
     public void leafSetChange(NodeId nid, boolean wasAdded) {
 	System.out.println("at... " + getNodeId() + "'s leaf set");
 	System.out.print("node " + nid + " was ");
@@ -118,6 +118,6 @@ public class PingClient extends PastryClient {
 	System.out.print("node " + nid + " was ");
 	if (wasAdded) System.out.println("added");
 	else System.out.println("removed");
-	}*/
+	}
 
 }

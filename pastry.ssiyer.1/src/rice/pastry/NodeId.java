@@ -39,7 +39,7 @@ import java.io.*;
  * @author Tsuen Wan Nguen
  */
 
-public class NodeId implements Serializable 
+public class NodeId implements Comparable, Serializable 
 {
     /**
      * This is the bit length of the node ids.  If it is n, then
@@ -115,6 +115,28 @@ public class NodeId implements Serializable
 	return true;
     }
 
+    /**
+     * Comparison operator for nodeIds.
+     *
+     * The comparison that occurs is a numerical comparison.
+     *
+     * @param obj the NodeId to compare with.
+     * @return negative if this < obj, 0 if they are equal and positive if this > obj.
+     */
+	
+    public int compareTo(Object obj) 
+    {
+	NodeId oth = (NodeId) obj;
+	
+	for (int i=nodeId.length - 1; i >= 0; i--) 
+	    if (nodeId[i] != oth.nodeId[i]) {
+		if (nodeId[i] < oth.nodeId[i]) return -1;
+		else return 1;
+	    }
+	    
+	return 0;
+    }
+    
     /**
      * Hash codes for nodeIds.
      * 
@@ -210,6 +232,31 @@ public class NodeId implements Serializable
 	    
 	    return h;		   
 	}
+
+	/**
+	 * Returns a string representation of the distance
+	 *
+	 * The string is a byte string from most to least significant.
+	 */
+
+	public String toString() 
+	{
+	    String s = "0x";
+	
+	    String tran[] = { "0", "1", "2", "3", "4", "5", "6", "7",
+			      "8", "9", "A", "B", "C", "D", "E", "F" };
+	
+	    int n = nodeIdBitLength >> 3;
+
+	    for (int i=n-1; i>=0; i--) {
+		s = s + tran[(difference[i] >> 4) & 0xf0] + tran[difference[i] & 0x0f];
+	    }
+
+	    return "< nodeId.distance " + s + " >";
+	}
+
+
+
     }
     
     /**
@@ -431,7 +478,7 @@ public class NodeId implements Serializable
 	
 	int n = nodeIdBitLength >> 2;
 
-	for (int i=0; i<n; i++) {
+	for (int i=n-1; i>=0; i--) {
 	    int d = getDigit(i, 4);
 	    	    
 	    s = s + tran[d];

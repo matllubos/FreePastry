@@ -125,12 +125,13 @@ public class StandardRouter implements MessageReceiver {
 	    NodeHandle handle;
 
 	    if (rs == null) {
-		System.out.println(target);
+		System.out.println("Empty RT entry for " + target);
 		System.out.println(localHandle.getNodeId());
 	    }
 	    
 	    if (rs.size() == 0) 
 		handle = leafSet.get(lsPos);  // can't route, route to leaf set
+	    // XXX - this is wrong
 
 	    else handle = rs.closestNode(); // route using the table
 
