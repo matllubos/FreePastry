@@ -1522,7 +1522,9 @@ public class PostProxy {
       
       restart.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          int i = JOptionPane.showConfirmDialog(KillPanel.this, "Are your sure you wish to restart your ePOST proxy?", "Restart", 
+          int i = JOptionPane.showConfirmDialog(KillPanel.this, "Are your sure you wish to restart your ePOST proxy?\n\n" +
+                                                "If you click yes, you node will die and relaunch itself\n" + 
+                                                "in 30 seconds.", "Restart", 
                                                 JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
           
           if (i == JOptionPane.YES_OPTION) 
