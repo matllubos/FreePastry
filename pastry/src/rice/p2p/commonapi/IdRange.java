@@ -78,6 +78,34 @@ public interface IdRange {
    * @return This range's complement
    */
   public IdRange getComplementRange();
+  
+  /**
+   * merges the given range with this range
+   *
+   * @return The merge
+   */
+  public IdRange mergeRange(IdRange range);
+  
+  /**
+    * diffs the given range with this range
+   *
+   * @return The merge
+   */
+  public IdRange diffRange(IdRange range);
+  
+  /**
+   * intersects the given range with this range
+   *
+   * @return The merge
+   */
+  public IdRange intersectRange(IdRange range);
+  
+  /**
+   * returns whether or not this range is empty
+   *
+   * @return Whether or not this range is empty
+   */
+  public boolean isEmpty();
 }
 
 

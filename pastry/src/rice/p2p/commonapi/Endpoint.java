@@ -67,6 +67,7 @@ public interface Endpoint {
    *
    * @param id The destination Id of the message.
    * @param message The message to deliver
+   * @param hint The first node to send this message to, optional
    */
   void route(Id id, Message message, NodeHandle hint);
 
@@ -115,6 +116,24 @@ public interface Endpoint {
    * @param lkey An "index" in case of multiple ranges.
    */
   IdRange range(NodeHandle handle, int rank, Id lkey);
+  
+  /**
+   * This operation provides information about ranges of keys for which the node is currently
+   * a rank-root. The operations returns null if the range could not be determined, the range
+   * otherwise. It is an error to query the range of a node not present in the neighbor set as
+   * returned bythe update upcall or the neighborSet call. Certain implementations may return
+   * an error if rank is greater than zero. Some protocols may have multiple, disjoint ranges
+   * of keys for which a given node is responsible. The parameter lkey allows the caller to
+   * specify which region should be returned. If the node referenced by is responsible for key
+   * lkey, then the resulting range includes lkey. Otherwise, the result is the nearest range
+   * clockwise from lkey for which is responsible.
+   *
+   * @param handle The handle whose range to check.
+   * @param rank The root rank.
+   * @param lkey An "index" in case of multiple ranges.
+   * @param cumulative Whether to return the cumulative or single range
+   */
+  IdRange range(NodeHandle handle, int rank, Id lkey, boolean cumulative);
 
   /**
    * Returns a handle to the local node below this endpoint.  This node handle is serializable,
