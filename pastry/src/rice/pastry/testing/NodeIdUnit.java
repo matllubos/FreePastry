@@ -86,9 +86,20 @@ public class NodeIdUnit {
 	System.out.println("--------------------------");
 
 	System.out.println("creating a and b respectively");
-
+	
 	NodeId a = createNodeId();
 	NodeId b = createNodeId();
+	
+	for (int i=0; i<20; i++) {
+
+	    if (a.clockwise(b))
+		System.out.println("b is clockwise from a");
+	    else
+		System.out.println("b is counter-clockwise from a");
+
+	    a = createNodeId();
+	    b = createNodeId();
+	}
 
 	NodeId.Distance adist = nid.distance(a);
 	NodeId.Distance adist2 = a.distance(nid);
@@ -104,13 +115,32 @@ public class NodeIdUnit {
 	System.out.println("result of comparison with a and b " + adist.compareTo(bdist));
 	System.out.println("result of comparison with a to itself " + adist.compareTo(adist2));
 
-	byte[] raw0 = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-128};
-	byte[] rawf = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,127};
+	byte[] raw0 = {0,0,0,0,0,0,0,0,0,0,
+		       0,0,0,0,0,0};
+	byte[] raw80 = {0,0,0,0,0,0,0,0,0,0,
+			0,0,0,0,0,-128};
+	byte[] raw7f = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+			-1,-1,-1,-1,-1,127};
 
-	a = new NodeId(raw0);
-	b = new NodeId(rawf);
+	a = new NodeId(raw80);
+	b = new NodeId(raw7f);
+	NodeId c = new NodeId(raw0);
+	System.out.println("a=" + a + "b=" + b + "c=" + c);
 	a.distance(b);
+
+	if (a.clockwise(c))
+	    System.out.println("c is clockwise from a");
+	else
+	    System.out.println("c is counter-clockwise from a");
+
+	if (b.clockwise(c))
+	    System.out.println("c is clockwise from b");
+	else
+	    System.out.println("c is counter-clockwise from b");
 	
+
+
+
 
 	System.out.println("--------------------------");
     }

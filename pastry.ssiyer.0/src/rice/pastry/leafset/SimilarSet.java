@@ -20,7 +20,7 @@ public class SimilarSet extends Observable implements NodeSet
 	nodes[i] = nodes[j];
 	dist[i] = dist[j];
 	
-	nodes[i] = handle;
+	nodes[j] = handle;
 	dist[j] = d;
     }
 

@@ -71,13 +71,15 @@ public class RegrTestApp extends PastryAppl {
     }
 
     public void sendTrace(NodeId nid) {
-	System.out.println("sending a trace from " + getNodeId() + " to " + nid);
+	//System.out.println("sending a trace from " + getNodeId() + " to " + nid);
 	routeMsg(nid, new RTMessage(getNodeId(), nid), cred, new SendOptions());
     }
 
     public void messageForAppl(Message msg) {
+	/*
 	System.out.print(msg);
 	System.out.println(" received at " + getNodeId());
+	*/
 
 	// check if numerically closest
 	RTMessage rmsg = (RTMessage)msg;
@@ -97,9 +99,11 @@ public class RegrTestApp extends PastryAppl {
     }
     
     public boolean enrouteMessage(Message msg, NodeId key, NodeId nextHop, SendOptions opt) {
+	/*
 	System.out.print(msg);
 	System.out.println(" at " + getNodeId());
-	
+	*/
+
 	NodeId localId = getNodeId();
 	NodeId.Distance dist = localId.distance(key);
 
@@ -138,33 +142,33 @@ public class RegrTestApp extends PastryAppl {
 	    // nid is clockwise from this node
 	    if (localId.compareTo(nid) < 0)  { // localId < nid?
 		inBetween = prg.pastryNodesSorted.subMap(localId,nid).size();
-		System.out.println("c1");
+		//System.out.println("c1");
 	    }
 	    else {
 		inBetween = prg.pastryNodesSorted.tailMap(localId).size() + 
 		    prg.pastryNodesSorted.headMap(nid).size();
-		System.out.println("c2");
+		//System.out.println("c2");
 	    }
 	}
 	else {
 	    // nid is counter-clockwise from this node
 	    if (localId.compareTo(nid) > 0) { // localId > nid?
 		inBetween = prg.pastryNodesSorted.subMap(nid,localId).size();
-		System.out.println("c3");
+		//System.out.println("c3");
 	    }
 	    else {
 		inBetween = prg.pastryNodesSorted.tailMap(nid).size() + 
 		    prg.pastryNodesSorted.headMap(localId).size();	    
-		System.out.println("c4");
+		//System.out.println("c4");
 	    }
 	}    
 
 	if ( (inBetween > 4 && wasAdded) ||
-	     (inBetween <= 4 && !wasAdded) )
+	     (inBetween <= 4 && !wasAdded) ) {
 	    System.out.println("at... " + getNodeId() + "leafSetChange failure 3 with " + nid + 
-			       " inBetween=" + inBetween);
-
-	//System.out.println(getLeafSet());
+			       " wasAdded=" + wasAdded + " inBetween=" + inBetween);
+	    System.out.println(getLeafSet());
+	}
 
     }
 

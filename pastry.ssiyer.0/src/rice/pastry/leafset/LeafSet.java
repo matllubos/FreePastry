@@ -75,6 +75,8 @@ public class LeafSet extends Observable implements NodeSet {
 	
 	if (nid.equals(baseId)) return false;
 
+	//System.out.println("Inserting " + handle.getNodeId() + " into " + this);
+
 	if (baseId.clockwise(nid) == true) return cwSet.put(handle);
 	else return ccwSet.put(handle);
     }
@@ -142,9 +144,12 @@ public class LeafSet extends Observable implements NodeSet {
 
     public NodeHandle remove(NodeId nid) 
     {
+	//System.out.println("Removing " + nid + " from " + this);
+
 	if (baseId.clockwise(nid) == true) return cwSet.remove(nid);
 	else return ccwSet.remove(nid);
     }
+
     /**
      * Gets the size of the leaf set.
      *
@@ -203,10 +208,10 @@ public class LeafSet extends Observable implements NodeSet {
     public String toString() 
     {
 	String s = "leafset: ";
-	for (int i=-theSize; i<0; i++)
+	for (int i=-ccwSet.size(); i<0; i++)
 	    s = s + get(i).getNodeId();
-	s = s + " | ";
-	for (int i=1; i<=theSize; i++)
+	s = s + " [ " + baseId + " ] ";
+	for (int i=1; i<=cwSet.size(); i++)
 	    s = s + get(i).getNodeId();
 
 	return s;
@@ -214,11 +219,3 @@ public class LeafSet extends Observable implements NodeSet {
 
 
 }
-
-
-
-
-
-
-
-
