@@ -1,0 +1,228 @@
+/*************************************************************************
+
+"Free Pastry" Peer-to-Peer Application Development Substrate 
+
+Copyright 2002, Rice University. All rights reserved. 
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+contributors may be  used to endorse or promote  products derived from
+this software without specific prior written permission.
+
+This software is provided by RICE and the contributors on an "as is"
+basis, without any representations or warranties of any kind, express
+or implied including, but not limited to, representations or
+warranties of non-infringement, merchantability or fitness for a
+particular purpose. In no event shall RICE or contributors be liable
+for any direct, indirect, incidental, special, exemplary, or
+consequential damages (including, but not limited to, procurement of
+substitute goods or services; loss of use, data, or profits; or
+business interruption) however caused and on any theory of liability,
+whether in contract, strict liability, or tort (including negligence
+or otherwise) arising in any way out of the use of this software, even
+if advised of the possibility of such damage.
+
+********************************************************************************/
+
+/**
+ * This document contains the design of the Scribe Tree Maintenance activity. 
+ * 
+ * @version $Id$
+ * @author Atul Singh
+ * @author Animesh Nandi
+ */
+
+ HeartBeat messages
+-------------------
+
+   HeartBeat messages are sent by the node to its children for a
+   particular topic. When the child receives such a heartbeat message
+   it knows that its parent for that topic is alive. If the child does
+   not receive a heartbeat message for a long time, it starts a tree
+   repair for that topic by resending a SUBSCRIBE message for that
+   topic.
+
+   The scheduleHB() method when invoked will initiate the sending of
+   heartbeat messages to the children for all the topics on the local
+   node. The scheduleHB() method will be invoked with a time period of
+   heartbeatperiod in all nodes.
+	    
+   We need to have some notion of time within which if a heartbeat
+   message is not received, a tree repair for that topic is
+   triggered. We do this as follows. The scheduleHB() in addition to
+   initiating sending of heartbeat messages from this node, also
+   notifies this node that it should expect a heartbeat message from
+   its parent for all the topics in the local node. It does this by
+   incrementing a heartBeatsMissed counter. Incrementing the
+   heartBeatsMissed counter is based on the assumption that when we
+   are told to issue a heartbeat , the other nodes in the system are
+   also told to issue a heartbeat. This time synchroniation assumption
+   is perfectly fine in the simulator where we can keep track of all
+   the nodes. Even in the distributed environment this assumption is
+   realistic since we take actions of Tree Repair after a time (given
+   by a treeRepairThreshold * heartbeatperiod) which should be greater
+   than the max latency between any two nodes + heartbeatperiod(due
+   to the skew in calling scheduleHB() at different nodes). Thus the
+   treeRepairThreshold should be atleast 2. Further if we have the
+   threshold as 2, the heartbeatperiod would have to be greater than
+   the max latency between any two nodes in the system.
+   
+
+   HeartBeatsMissed Counter
+---------------------------
+
+   This keeps track of the number of heartbeat messages missed
+   corresponding to a particular topic. Thus the local node has as
+   many HeartBeatsMissed counters as the number of topics on the local
+   node.
+
+   This value is INCREMENTED whenever a scheduleHB() method is invoked
+   on the scribe object. The assumption is that simultaneously the
+   scheduleHB() method is also being invoked on the other nodes. 
+
+   This value is RESET whenever the local node receives a heartbeat
+   message or a publish message from the parent for the topic. It is
+   also RESET when the local node sends a SUBSCRIBE message.
+
+
+ 
+   Tree Repair for a topic
+--------------------------
+
+   When the HeartBeatsMissed Counter reaches a value equal to the
+   treeRepairThresold value, we start the tree repair for the topic. 
+
+   Note that in a particular node, when HeartBeatsMissed counter
+   reaches the treeRepairThresold value for a particular topic, the
+   value of this counter for the other topics could be less than the
+   threshold, since the local node has potentially different parents
+   for the different topics on its local node and the failures of
+   these different parents is not correlated. From the performance
+   standpoint, it means that the tree repair activities for the
+   different topics is de-correlated and thus there is NO BURST of
+   tree repairs starting from the local node for the potentially
+   hundreds of topics that could be residing on the local node.
+
+
+   Optimizations for Scalability Issues
+----------------------------------------
+
+   There is however a concern for a sudden BURST of sending of
+   heartbeat messages when the scheduleHB() method is invoked. A node
+   could have potentially hundreds of topics and for each topic the
+   number of children could be several. But its important to note that
+   for the local node, we could have the same node as CHILD in more
+   than one topic. For this reason, it is important that we maintain a
+   set of distinct children for the local node and in the scheduleHB()
+   method we send a heartbeat message to all these distinct children.
+
+   From a performance standpoint, there is not much of a concern for
+   the burst of heartbeat messages, because the number of distinct
+   children can be as much as the INDEGREE for this node. From
+   simulation results we have seen that the INDEGREE of a node (the
+   number of nodes that have this local node as an entry in the
+   routing table) is well bounded even in a system upto several
+   thousands of nodes. 
+
+   Moreover, an Scribe node can simply enforce an upper bound on the
+   number of distinct children it has in order to set an upper bound
+   on the traffic generated during the sending of heartbeat messages. 
+
+   When the CHILD node receives a heartbeat message from a node, it
+   locally looks up a table of distinct parents that it maintains and
+   finds out the list of topics for which this heartbeat sender node
+   is a PARENT. For each topic in this list, it RESETS the
+   heartBeatsMissed counter.
+
+
+
+   Other Approach to Tree Maintenance ( Discarded for the reasons
+   mentioned below)
+----------------------------------------------------------------
+
+   Further reducing the overhead of sending of hearbeat messages to
+   this set of distinct children means that we would have to
+   decorrelate the sending of heartbeat messages for the different
+   topics. One natural way to do this is to initiate the triggering
+   of heartbeat messages from the root down the tree. This would
+   naturally decorrelate the sending of heartbeat messages for the
+   different topics on the same local node. In order to implement this
+   in the scheduleHB() method we do not do anything if we are not the
+   root for a topic. The intermediate nodes trigger sending of
+   heartbeat messages when they receive a heartbeat message. Note that
+   this intermediate node would have to send this heartbeat message to
+   all its children for the topics for which this sender node is a
+   PARENT. This approach is not lucrative for the following reasons -
+ 
+   1) This means that if the heartbeat sender is a PARENT for
+   many topics, the total number of children to whom this intermediate
+   node sends a heartbeat message could be almost as high as the set
+   of distict children for all the topics on this local node, meaning
+   that we have not gained much from this approach. 
+
+   2) In this naive approach ,there is another problem.
+   If a node high up in the tree
+   fails, then all nodes below it fail to receive the heartbeat
+   message for this topic and all of them will trigger the tree
+   maintainenace activity simultaneously. However this is
+   unacceptable. We want only the children of this failed node to
+   start the tree repair and not bother the other nodes below these
+   children with the tree repair activites. For this reason, when an
+   intermediate fails to receive two heartbeat messages (one heartbeat
+   message helps us to infer nothing because of the skew of one 
+   heartbeatperiod), it should initiate the sending of heartbeat
+   messages to its children. This would mean that the tree repair
+   activities can be triggered only when we miss 3 heartbeatmessages
+   OR in other words we can have a minimum treeRepairThreshold of
+   3. Having a higher treeRepairThreshold means that we will be able
+   to repair topic trees less aggressively than in the previous
+   approach. 
+ 
+   3) Previously we had a lower bound of max latency between any 2 nodes + 
+   heartbeatperiod for the time after which we could trigger a tree
+   repair. In this approach this lowerbound is maximum latency in the
+   path from root to a leaf + 2*heartbeatperiod. The 2*heartbeat
+   period is because of the reason described in 2) above. The 
+   time lag in the issue of a heartbeat in a leaf node as compared to
+   the root for a topic is the sum of the per hop latency in the path
+   from the root to the leaf. As a result of this, the heartbeatperiod
+   should atleast be this value, if the treeRepairThreshold is set to
+   its minimum 3. Given that a topic could be universal to all nodes
+   in the worst case, the lower bound value for the heartbeatperiod
+   increases.
+
+     	   
+   For these reasons, we discard this other approach of tree
+   maintenance.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
