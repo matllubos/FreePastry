@@ -119,7 +119,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 
     public RoutingTable getRouteSet() { return routeTable; }
 
-    public void doneWithNode(PastryNode pnode) {
+    public void doneWithNode(PastryNode pnode, NodeHandle bsnode) {
 	lhandle.setProxy(pnode);
 	secureMan.setLocalPastryNode(pnode);
 	pnode.setLocalHandle(lhandle);

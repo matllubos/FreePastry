@@ -103,5 +103,5 @@ public interface PastryNodeFactory
      * Cleans up the construction.
      */
 
-    public void doneWithNode(PastryNode pnode);
+    public void doneWithNode(PastryNode pnode, NodeHandle bootstrap);
 }

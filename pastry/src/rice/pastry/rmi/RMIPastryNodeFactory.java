@@ -126,13 +126,13 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
     public LeafSet getLeafSet() { return leafSet; }
     public RoutingTable getRouteSet() { return routeTable; }
 
-    public void doneWithNode(PastryNode pnode) {
+    public void doneWithNode(PastryNode pnode, NodeHandle bshandle) {
 	localhandle.setLocalHandle(pnode); // itself!
 	rmilocalnode.setLocalPastryNode(pnode);
 	secureMan.setLocalPastryNode(pnode);
 	pnode.setLocalHandle(localhandle);
 
-	if (pnode.syncbind) {
+	if (bshandle == null) {
 	    rmilocalnode.rmibind(); // bind now
 	} else {
 	    // bind when there's leafset activity

@@ -39,7 +39,6 @@ package rice.pastry.testing;
 import rice.pastry.*;
 import rice.pastry.rmi.*;
 import rice.pastry.standard.*;
-import rice.pastry.join.*;
 
 import java.util.*;
 import java.net.*;
@@ -142,13 +141,12 @@ public class RMIPastryTest {
     }
 
     public void makePastryNode() {
-	NodeHandle bshandle = getBootstrapHandle();
-	PastryNode pn = new PastryNode(factory, (bshandle == null));
-	System.out.println("created " + pn);
-	pastrynodes.add(pn);
+	// or, for a one-liner,
+	// pastrynodes.add(new PastryNode(factory, getBootstrapHandle()));
 
-	if (bshandle != null)
-	    pn.receiveMessage(new InitiateJoin(bshandle));
+	PastryNode pn = new PastryNode(factory, getBootstrapHandle());
+	pastrynodes.add(pn);
+	System.out.println("created " + pn);
     }
 
     public void printLeafSets() {

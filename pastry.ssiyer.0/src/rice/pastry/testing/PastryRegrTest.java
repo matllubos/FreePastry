@@ -77,6 +77,14 @@ public class PastryRegrTest {
 
     public int msgCount;
 
+    /**
+     * lastElement that returns null if empty
+     */
+    private PastryNode pastryNodes_lastElement() {
+	try { return (PastryNode) pastryNodes.lastElement(); }
+	catch (NoSuchElementException e) { return null; }
+    }
+
     // constructor
 
     public PastryRegrTest() {
@@ -96,7 +104,9 @@ public class PastryRegrTest {
      */
 
     public void makePastryNode() {
-	PastryNode pn = new PastryNode(factory);
+	PastryNode bootstrap = pastryNodes_lastElement();
+	PastryNode pn = new PastryNode(factory, bootstrap);
+
 	pastryNodes.addElement(pn);
 	pastryNodesSorted.put(pn.getNodeId(),pn);
 	pastryNodesLastAdded.clear();
@@ -105,15 +115,10 @@ public class PastryRegrTest {
 	RegrTestApp rta = new RegrTestApp(pn,this);
 	rtApps.addElement(rta);
 
-	int n = pastryNodes.size();
 	int msgCount = 0;
 
-	if (n > 1) {
-	    PastryNode other = (PastryNode) pastryNodes.get(n - 2);
-	    
-	    pn.receiveMessage(new InitiateJoin(other));
+	if (bootstrap != null)
 	    while(simulate()) msgCount++;
-	}
 
 	//System.out.println("created " + pn + " messages: " + msgCount);
 
@@ -136,8 +141,18 @@ public class PastryRegrTest {
 
 	inConcJoin = true;
 
+	int n = pastryNodes.size(); // n will be a multiple of num
+
 	for (int i=0; i<num; i++) {
-	    PastryNode pn = new PastryNode(factory);
+
+	    PastryNode bootstrap = null;
+
+	    if (n == 0)		// first batch of nodes
+		bootstrap = pastryNodes_lastElement();
+	    else		// corresponding node from previous batch
+		bootstrap = (PastryNode) pastryNodes.get(n+i - num);
+
+	    PastryNode pn = new PastryNode(factory, bootstrap);
 	    pastryNodes.addElement(pn);
 	    pastryNodesSorted.put(pn.getNodeId(),pn);
 	    pastryNodesLastAdded.addElement(pn.getNodeId());
@@ -145,19 +160,10 @@ public class PastryRegrTest {
 	    rta[i] = new RegrTestApp(pn,this);
 	    rtApps.addElement(rta[i]);
 
-	    int n = pastryNodes.size();
-
-	    if (n > num) {
-		PastryNode other = (PastryNode) pastryNodes.get(n - num - 1);
-		pn.receiveMessage(new InitiateJoin(other));
-	    }
-	    else if (n > 1) {
-		// we have to join the first batch of nodes sequentially, else we created multiple rings
-
-		PastryNode other = (PastryNode) pastryNodes.get(n - 2);
-		pn.receiveMessage(new InitiateJoin(other));
+	    if (bootstrap != null && n == 0)
+		// we have to join the first batch of nodes sequentially,
+		// else we created multiple rings
 		while(simulate()) msgCount++;
-	    }
 	}
 	
 	int msgCount = 0;

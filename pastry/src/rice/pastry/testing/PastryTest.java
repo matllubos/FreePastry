@@ -59,7 +59,15 @@ public class PastryTest {
 
     private Vector pastryNodes;
     private Vector pingClients;
-    
+
+    /**
+     * lastElement that returns null if empty
+     */
+    private PastryNode pastryNodes_lastElement() {
+	try { return (PastryNode) pastryNodes.lastElement(); }
+	catch (NoSuchElementException e) { return null; }
+    }
+
     private Random rng;
 
     public PastryTest() {
@@ -72,23 +80,14 @@ public class PastryTest {
     }
 
     public void makePastryNode() {
-	PastryNode pn = new PastryNode(factory);
+	PastryNode bootstrap = pastryNodes_lastElement();
+	PastryNode pn = new PastryNode(factory, bootstrap);
+	pastryNodes.addElement(pn);
 	
 	//System.out.println("created " + pn);
 
-	pastryNodes.addElement(pn);
-	
 	PingClient pc = new PingClient(pn);
-
 	pingClients.addElement(pc);
-
-	int n = pastryNodes.size();
-
-	if (n > 1) {
-	    PastryNode other = (PastryNode) pastryNodes.get(n - 2);
-	    
-	    pn.receiveMessage(new InitiateJoin(other));
-	}
 
 	//System.out.println("");
     }

@@ -41,6 +41,7 @@ import rice.pastry.security.*;
 import rice.pastry.client.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
+import rice.pastry.join.*;
 
 import java.util.*;
 
@@ -60,7 +61,6 @@ public class PastryNode implements NodeHandle
     private LeafSet leafSet;
     private RoutingTable routeSet;
     private NodeHandle localhandle;
-    public boolean syncbind;
   
     /**
      * Constructor.  Creates a new Pastry network.
@@ -70,20 +70,17 @@ public class PastryNode implements NodeHandle
 
     public PastryNode(PastryNodeFactory pFactory) 
     {
-	pFactory.constructNode();
-	
-	myNodeId = pFactory.getNodeId();
-	mySecurityManager = pFactory.getSecurityManager();
-	myMessageDispatch = pFactory.getMessageDispatch();
-	
-	leafSet = pFactory.getLeafSet();
-	routeSet = pFactory.getRouteSet();
-	syncbind = false;
-
-	pFactory.doneWithNode(this);
+	this(pFactory, null);
     }
 
-    public PastryNode(PastryNodeFactory pFactory, boolean si) 
+    /**
+     * Constructor.  Creates a new Pastry network.
+     *
+     * @param pFactory a Pastry node factory.
+     * @param bshandle a node handle to bootstrap with.
+     */
+
+    public PastryNode(PastryNodeFactory pFactory, NodeHandle bshandle) 
     {
 	pFactory.constructNode();
 	
@@ -93,9 +90,11 @@ public class PastryNode implements NodeHandle
 	
 	leafSet = pFactory.getLeafSet();
 	routeSet = pFactory.getRouteSet();
-	syncbind = si;
 
-	pFactory.doneWithNode(this);
+	pFactory.doneWithNode(this, bshandle);
+
+	if (bshandle != null)
+	    this.receiveMessage(new InitiateJoin(bshandle));
     }
 
     public NodeHandle getLocalHandle() { return localhandle; }

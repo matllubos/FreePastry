@@ -108,7 +108,7 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
 	NodeId mynid = localnode.getNodeId();
 	NodeId nid = handle.getNodeId();
 
-	System.out.println("[rmi] verifying " + handle + nid);
+	// System.out.println("[rmi] verifying " + handle + nid);
 
 	if (mynid.equals(nid)) {
 	    //return localhandle;
