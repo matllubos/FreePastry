@@ -399,7 +399,6 @@ public class PingManager extends SelectionKeyHandler {
         if (ConnectionManager.LOG_LOW_LEVEL)
           System.out.println("COUNT: " + System.currentTimeMillis() + " Sent message " + write.message.getClass() + " of size " + num  + " to " + write.snh.getAddress());
         i.remove();
-
         if (num == 0) {
           System.out.println("ERROR: 0 bytes were written (not fatal, but bad) - full buffer.");
         }
@@ -607,6 +606,7 @@ public class PingManager extends SelectionKeyHandler {
       oos.writeObject(o);
 
       int len = baos.toByteArray().length;
+      SocketChannelWriter.logMessageSent(o.getClass().getName(), len);
       //System.out.println("serializingD " + o + " len=" + len);
 
       return ByteBuffer.wrap(baos.toByteArray());
