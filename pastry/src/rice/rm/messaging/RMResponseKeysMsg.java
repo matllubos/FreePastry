@@ -76,12 +76,17 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
      * 
      */
     public void handleDeliverMessage( RMImpl rm) {
-	//System.out.println(rm.getNodeId() + " received ResponseKeys msg from" + getSource().getNodeId());
-	
+	//System.out.println("Start " + rm.getNodeId() + " received ResponseKeys msg from" + getSource().getNodeId() + "seq= " + getSeqno());
 
 	IdSet fetchSet = new IdSet();
 	RMMessage.KEEntry entry;
 	RMMessage.KEEntry toAskForEntry;
+
+	//for(int i=0; i< rangeSet.size(); i++) {
+	//  entry = (RMMessage.KEEntry) rangeSet.elementAt(i);
+	//  System.out.println("At " + rm.getNodeId() + "e[" + i + "]=" + entry);
+	//}
+
 
 	for(int i=0; i< rangeSet.size(); i++) {
 	    entry = (RMMessage.KEEntry) rangeSet.elementAt(i);
@@ -101,16 +106,19 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 		// We simple add these keys to the fetchSet
 		Iterator it = keySet.getIterator();
 		while(it.hasNext()) {
-		    Id key = (Id)it.next();
-		    Id ccw = rm.myRange.getCCW();
-		    Id cw = rm.myRange.getCW();
-		    if(key.isBetween(ccw, cw)) {
-			fetchSet.addMember(key);
-		    }
-		    else {
-			System.out.println("Warning: RMResponseKeysMsg has key not in the desired range");
+		    if(rm.myRange!=null) {
+			Id key = (Id)it.next();
+			Id ccw = rm.myRange.getCCW();
+			Id cw = rm.myRange.getCW();
+			if(key.isBetween(ccw, cw)) {
+			    fetchSet.addMember(key);
+			}
+			else {
+			    //System.out.println("Warning: Possible in Distributed Only due to race conditions : RMResponseKeysMsg has key not in the desired range");
+			}
 		    }
 		}
+
 		rm.removePendingRange(getSource().getNodeId(), reqRange);
 		continue;
 	    }
@@ -122,9 +130,11 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 		myHash = myKeySet.getHash();
 		if(oHash.equals(myHash)) {
 		    rm.removePendingRange(getSource().getNodeId(), reqRange);
+		    continue;
 		}
 		else {
 		    rm.updatePendingRange(getSource().getNodeId(), reqRange, numKeys);
+		    continue;
 
 		}
 	    }
@@ -146,10 +156,10 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 	    // Do Splitting of Ranges for those ranges that exceed
 	    // 'numKeys' value over the threshold
 	    
-	    //System.out.println("Before splitting");
+	    //System.out.println("At " + rm.getNodeId() + " Before splitting");
 	    //rm.printPendingRanges(getSource().getNodeId());
 	    rm.splitPendingRanges(getSource().getNodeId());
-	    //System.out.println("After splitting");
+	    //System.out.println("At " + rm.getNodeId() + "After splitting");
 	    //rm.printPendingRanges(getSource().getNodeId());
 	    Vector pendingRanges;
 	    pendingRanges = rm.getPendingRanges(getSource().getNodeId());
@@ -167,7 +177,7 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 		    int numKeys;
 		    numKeys = pendingEntry.getNumKeys();
 		    //System.out.println("numKeys= " + numKeys);
-		    if((numKeys + totalNumKeys) <= RMMessage.MAXKEYSINRANGE) {
+		    if((numKeys + totalNumKeys) <= RMImpl.MAXKEYSINRANGE) {
 			totalNumKeys = totalNumKeys + numKeys;
 			RMMessage.KEEntry toSendEntry = new RMMessage.KEEntry(pendingEntry.getReqRange(), false);
 			toAskFor.add(toSendEntry);
@@ -183,7 +193,7 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 	    
 	
 	}
-	
+	//System.out.println("Done " + rm.getNodeId() + " received ResponseKeys msg from" + getSource().getNodeId() + "seq= " + getSeqno());
     }
     
 }

@@ -105,7 +105,7 @@ public class ReplicateResponseMsg extends TestMessage implements Serializable{
 	if(testApp.getPastryNode() instanceof DistPastryNode) {
 	    ReplicateTimeoutMsg msg;
 	    msg = new ReplicateTimeoutMsg(testApp.getLocalHandle(),testApp.getAddress(), key, testApp.getCredentials());
-	    testApp.getPastryNode().scheduleMsg(msg, TIMEOUT);
+	    testApp.getPastryNode().scheduleMsg(msg, TIMEOUT * 1000);
 	}
 	
     }

@@ -73,12 +73,9 @@ public abstract class RMMessage extends Message implements Serializable{
     // for debugging purposes
     private int _seqno;
 
-    public static int MAXKEYSINRANGE = 5;
-
-    public static int SPLITFACTOR = 4;
 
     // This class will be used by the messaging system
-    public static class KEEntry {
+    public static class KEEntry implements Serializable{
 	private IdRange reqRange;
 	private boolean hashEnabled;
 	private IdSet keySet;
@@ -92,10 +89,11 @@ public abstract class RMMessage extends Message implements Serializable{
 	public KEEntry(IdRange _range, boolean _hEnabled) {
 	    reqRange = _range;
 	    hashEnabled = _hEnabled;
+	    // Other values are set to DONTCARE values
 	    numKeys = 0;
-	    keySet = null;
-	    hash = null;
-	    range = null;
+	    keySet = new IdSet();
+	    hash = new Id();
+	    range = new IdRange();
 	}
 
 	// This constructor is to be used when the responder 
@@ -135,7 +133,7 @@ public abstract class RMMessage extends Message implements Serializable{
 
 	public String toString() {
 	    String s = "KEE(";
-	    s =  s + getReqRange() + ", " + getHashEnabled();
+	    s =  s + getReqRange() + ", " + getHashEnabled() + " , " + getNumKeys();
 	    return s;
 
 	}

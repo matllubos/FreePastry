@@ -55,6 +55,16 @@ public interface RM {
 
     public void registerKey(Id key);
 
+    /**
+     * Called by client to enable optimizations to route to the nearest 
+     * replica. Should be called by client in the context of the forward 
+     * method with a lookup message. Should only be called if the local client
+     * does not have the desired object. This call may change the nextHop 
+     * field in the RouteMessage. 
+     */
+    //public void lookupForward(RouteMessage msg);
+
+
 
 }
 

@@ -59,7 +59,7 @@ import java.io.*;
 public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient 
 {
 
-    private PastryNode m_pastryNode ;
+    protected PastryNode m_pastryNode ;
     private Credentials _credentials;
     public SendOptions _sendOptions;
     public RMImpl m_rm;
@@ -73,7 +73,8 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
     // This is the set of keys for which this node receives a refresh message
     public IdSet m_refreshedKeys;
 
-    public static int rFactor = 5;
+    // This is the number of additional replicas
+    public static int rFactor = 4;
 
     public Hashtable m_pendingObjects;
 
@@ -134,10 +135,6 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
     }
 
 
-    public int getReplicaFactor() {
-	return RMRegrTestApp.rFactor;
-    }
-
     public void rmIsReady(RM rm) {
 	m_rm = (RMImpl)rm;
     }
@@ -180,7 +177,10 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
 
 
     public void replicateSuccess(Id key, boolean status) {
-	//System.out.println("Replicate status for key=" + key + " is " + status);
+	if(status)
+	    System.out.println("Object " + key + " successfully replicated");
+	else
+	    System.out.println("Object " + key + " unsuccessfully replicated");
     }
 
     public void remove(Id objectKey) {

@@ -78,7 +78,14 @@ public class RMRequestKeysMsg extends RMMessage implements Serializable{
      * 
      */
     public void handleDeliverMessage( RMImpl rm) {
-	//System.out.println(rm.getNodeId() + "received RequestKeysMsg from " + getSource().getNodeId() + " with rangeSet.size = " + rangeSet.size());
+	//System.out.println("At " + rm.getNodeId() + "received RequestKeysMsg from " + getSource().getNodeId() + " seqno= " + getSeqno());
+
+	//for(int i=0; i< rangeSet.size(); i++) {
+	//  RMMessage.KEEntry entry;
+	//  entry = (RMMessage.KEEntry) rangeSet.elementAt(i);
+	//  IdRange range = entry.getReqRange();
+	//  System.out.println("At " + rm.getNodeId() + "e[" + i + "]=" + range);
+	//	}
 
 	Vector returnedRangeSet = new Vector();
 	RMMessage.KEEntry entry;
@@ -90,22 +97,25 @@ public class RMRequestKeysMsg extends RMMessage implements Serializable{
 	    IdRange iRange;
 	    int numKeys = 0;
 	    boolean hashEnabled;
-	    Id hash = null;
-	    IdSet keySet = null;
+	    Id hash = new Id();
+	    IdSet keySet = new IdSet();
+	    // The values that will not be required to be filled
+	    // will remain as the above DONTCARE values
 
 
 	    reqRange = entry.getReqRange();
 	    hashEnabled = entry.getHashEnabled();
 	    //System.out.println("myRange= " + rm.myRange);
 	    //System.out.println("reqRange= " + reqRange);
-	    iRange = reqRange.intersect(rm.myRange);
+	    if(rm.myRange == null) 
+		iRange = reqRange;
+	    else
+		iRange = reqRange.intersect(rm.myRange);
 	    //System.out.println("iRange= " + iRange);
 	    if(iRange.isEmpty()) {
 		// To notify the requestor that no keys were 
 		// found in this range
 		numKeys = 0;
-		keySet = new IdSet();
-		
 	    }
 	    else {
 		keySet = rm.app.scan(iRange);
@@ -113,7 +123,6 @@ public class RMRequestKeysMsg extends RMMessage implements Serializable{
 	    }
 	    if(hashEnabled ) {
 		hash = keySet.getHash();
-		keySet = null;
 	    }
 	    returnedEntry = new RMMessage.KEEntry(reqRange, iRange, numKeys, hashEnabled, hash, keySet);
 	    returnedRangeSet.add(returnedEntry);

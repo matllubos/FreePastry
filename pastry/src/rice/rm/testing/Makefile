@@ -11,11 +11,12 @@ SOURCE  = \
 	ReplicateResponseMsg.java \
 	ReplicateTimeoutMsg.java \
 	InsertMsg.java \
-	InsertResponseMsg.java
-	#DistRMRegrTest.java \
-	#DistRMRegrTestApp.java \
-	#DistRMRegrTestMessage.java \
-	#DistRMRegrTestReplicateMessage.java \
+	InsertResponseMsg.java \
+	ObjectInsertionMsg.java \
+	ObjectRefreshMsg.java \
+	InvariantCheckMsg.java \
+	DistRMRegrTest.java \
+	DistRMRegrTestApp.java 
 	#ObjectState.java
 
 RMI_SOURCE =

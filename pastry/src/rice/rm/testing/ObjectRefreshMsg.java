@@ -35,121 +35,64 @@ if advised of the possibility of such damage.
 ********************************************************************************/
 
 
-package rice.rm;
+package rice.rm.testing;
 
 import rice.pastry.*;
-import rice.pastry.messaging.*;
 import rice.pastry.security.*;
+import rice.pastry.routing.*;
+import rice.pastry.messaging.*;
+
+import rice.rm.*;
+import rice.rm.messaging.*;
+
+import java.io.*;
+import java.util.*;
 
 /**
- * @(#) RMClient.java
  *
- * This interface should be implemented by all applications that interact
- * with the Replica Manager.
- *
- * @version $Id$
+ * 
+ * @version $Id$ 
+ * 
  * @author Animesh Nandi
  */
-public interface RMClient {
 
-    /* This upcall is invoked to notify the application that is should
-     * fetch the cooresponding keys in this set, since the node is now
-     * responsible for these keys also
+
+public class ObjectRefreshMsg extends TestMessage implements Serializable
+{
+
+
+    /**
+     * Constructor
      */
-    public void fetch(IdSet keySet);
+    public ObjectRefreshMsg(NodeHandle source, Address address,  Credentials authorCred) {
+	super(source, address, authorCred);
+	
+    }
+    
+    public void handleDeliverMessage( RMRegrTestApp _testApp) {
+	/*
+	DistRMRegrTestApp testApp = (DistRMRegrTestApp) _testApp; 
+	System.out.println("ObjectRefresh message: at " + testApp.getNodeId());
+	
+	if(testApp.numRefreshed < DistRMRegrTestApp.numObjects) {
+	    for(int i=0; i< DistRMRegrTestApp.numObjectsInPeriod; i++) {
+		testApp.numRefreshed ++;
+		String objName = "Object" + testApp.numRefreshed;
+		Id objKey = testApp.generateTopicId(objName);
+		testApp.heartbeat(objKey); 
+	    }
+	} 
+	else {
+	    testApp.numRefreshed = 0;
+	}
+	*/
+	
+    }
 
-
-    /* This upcall is simply to denote that the underlying replica manager
-     * (rm) is ready.
-     */
-    public void rmIsReady(RM rm);
-
-    /*
-     * This upcall is to notify the application of the range of keys for 
-     * which it is responsible. The application might choose to react to 
-     * call by calling a scan(complement of this range) to the persistance
-     * manager and get the keys for which it is not responsible and
-     * call delete on the persistance manager for those objects
-     */
-    public void isResponsible(IdRange range);
-
-
-    // This upcall should return the set of keys that the application
-    // currently stores in this range. Should return a empty IdSet (not null), in 
-    // the case that no keys belong to this range
-    public IdSet scan(IdRange range);
-
+    public String toString() {
+	return new String( "OBJECTREFRESH_MSG:" );
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -78,9 +78,8 @@ public class DistRMRegrTest {
     private static String bshost = null;
     private static int bsport = 5009;
     private static int numNodes = 5;
-    public static int protocol = DistPastryNodeFactory.PROTOCOL_RMI;
+    public static int protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
 
-    public static int rmMaintFreq = 60; // seconds
 
     public DistRMRegrTest(){
 	int i;
@@ -108,24 +107,6 @@ public class DistRMRegrTest {
 	
 	NodeHandle bshandle = ((DistPastryNodeFactory)factory).getNodeHandle(addr);
 	return bshandle;
-    }
-
-
-    public static NodeId generateTopicId( String topicName ) { 
-	MessageDigest md = null;
-	
-	try {
-	    md = MessageDigest.getInstance( "SHA" );
-	} catch ( NoSuchAlgorithmException e ) {
-	    System.err.println( "No SHA support!" );
-	}
-
-	md.update( topicName.getBytes() );
-	byte[] digest = md.digest();
-	
-	NodeId newId = new NodeId( digest );
-	
-	return newId;
     }
 
 
@@ -208,8 +189,9 @@ public class DistRMRegrTest {
 	localNodes.addElement(pn.getNodeId());
 	
 	Credentials cred = new PermissiveCredentials();
-	RMImpl rm = new RMImpl(pn);
-	DistRMRegrTestApp app = new DistRMRegrTestApp(pn, rm, cred, firstNodeInSystem);
+
+	DistRMRegrTestApp app = new DistRMRegrTestApp(pn,cred, firstNodeInSystem);
+	RMImpl rm = new RMImpl(pn, app, RMRegrTestApp.rFactor);	
 	distClients.addElement(app);
 	return pn;
 

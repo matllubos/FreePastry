@@ -38,6 +38,7 @@ if advised of the possibility of such damage.
 package rice.rm;
 
 import rice.pastry.*;
+import rice.pastry.dist.*;
 import rice.pastry.direct.*;
 import rice.pastry.standard.*;
 import rice.pastry.join.*;
@@ -84,6 +85,9 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
     public IdRange myRange;
 
+    // rFactor stands for the number of additonal replicas
+    // the promary replica is denoted a 0-root, other replcas are
+    // denoted as i-root , 1<i<rFactor
     public int rFactor; // standard rFactor to be used
 
     public RMClient app; // Application that uses this Replica Manager
@@ -91,6 +95,11 @@ public class RMImpl extends CommonAPIAppl implements RM {
     
     public Hashtable m_pendingRanges;
 
+    
+    public static int MAXKEYSINRANGE = 1024;
+
+    public static int SPLITFACTOR = 16;
+    
 
     private static class RMAddress implements Address {
 	private int myCode = 0x8bed147c;
@@ -160,12 +169,12 @@ public class RMImpl extends CommonAPIAppl implements RM {
      * @param pn the PastryNode associated with this application
      * @return void
      */
-    public RMImpl(PastryNode pn, RMClient _app)
+    public RMImpl(PastryNode pn, RMClient _app, int _rFactor)
     {
 	super(pn);
 	app = _app;
 	m_ready = pn.isReady();
-	rFactor = _app.getReplicaFactor();
+	rFactor = _rFactor;
 
 	_credentials = new PermissiveCredentials();
 	_sendOptions = new SendOptions();
@@ -173,10 +182,11 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	m_pendingRanges = new Hashtable();
 	if(isReady()) {
 
-	    app.rmIsReady(this);
+	    
 	    myRange = range(getLocalHandle(), rFactor, getNodeId(), true);
+	    app.rmIsReady(this);
 	    //System.out.println("MyRange= " + myRange);
-	    //System.out.println("Need to do initial fetching of keys from " + getNodeId());
+	    //System.out.println(" Constructor::Need to do initial fetching of keys from " + getNodeId());
 	    
 	    IdRange requestRange = myRange;
 	    
@@ -187,6 +197,14 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	    NodeSet set = requestorSet(rangeSet);
 	    
 	    sendKeyRequestMessages(set, rangeSet);
+
+	    // We trigger the periodic Maintenance protocol
+	    if(getPastryNode() instanceof DistPastryNode) {
+		RMMaintenanceMsg msg;
+		msg  = new RMMaintenanceMsg(getNodeHandle(), getAddress(), getCredentials(), m_seqno ++); 
+		getPastryNode().scheduleMsgAtFixedRate(msg, RMMaintenanceMsg.maintFreq * 1000, RMMaintenanceMsg.maintFreq * 1000);
+
+	    }
 
 	}
     }
@@ -214,7 +232,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
 
     public void addPendingRange(NodeId toNode, IdRange reqRange) {
-	//System.out.println("addPendingRange( " + toNode + " , " + reqRange + " ) ");
+	//System.out.println("At " + getNodeId() + "addPendingRange( " + toNode + " , " + reqRange + " ) ");
 	RMImpl.KEPenEntry entry= new RMImpl.KEPenEntry(reqRange); 
 	Vector setOfRanges;
 	if(m_pendingRanges.containsKey(toNode)) {
@@ -231,7 +249,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
     }
 
      public void updatePendingRange(NodeId toNode, IdRange reqRange, int numKeys) {
-	 //System.out.println("updatePendingRange( " + toNode + " , " + reqRange + " , " + numKeys + " ) ");
+	 //System.out.println("At " + getNodeId() + "updatePendingRange( " + toNode + " , " + reqRange + " , " + numKeys + " ) ");
 	RMImpl.KEPenEntry entry= new RMImpl.KEPenEntry(reqRange); 
 	Vector setOfRanges;
 	if(m_pendingRanges.containsKey(toNode)) {
@@ -246,18 +264,22 @@ public class RMImpl extends CommonAPIAppl implements RM {
 		actualEntry = (RMImpl.KEPenEntry) setOfRanges.elementAt(index);
 		actualEntry.updateNumKeys(numKeys);
 	    }
-	    else
-		System.out.println("Warning1: In updatePendingRange(): Should not happen");
+	    else {
+		// Possible cause is Message Duplication in the underlying Wire Protocol
+		//System.out.println("At " + getNodeId() + "Warning1: In updatePendingRange(" + toNode + "," + reqRange + " , " + numKeys + " ): Should not happen");
+
+	    }
 	}
 	else {
-	    System.out.println("Warning2:: In updatePendingRange() : Should not happen");
+	    // Possible cause is Message Duplication in the underlying Wire Protocol
+	    //System.out.println("At " + getNodeId() + "Warning2: In updatePendingRange(" + toNode + "," + reqRange + " , " + numKeys + " ): Should not happen");
 	}
 	
     }
 
 
     public void removePendingRange(NodeId toNode, IdRange reqRange) {
-	//System.out.println("removePendingRange( " + toNode + " , " + reqRange + " ) ");
+	//System.out.println("At " + getNodeId() + "removePendingRange( " + toNode + " , " + reqRange + " ) ");
 
 	Vector setOfRanges;
 	if(m_pendingRanges.containsKey(toNode)) {
@@ -267,12 +289,15 @@ public class RMImpl extends CommonAPIAppl implements RM {
 		if(setOfRanges.isEmpty())
 		    m_pendingRanges.remove(toNode);
 	    }
-	    else 
-		System.out.println("Warning1:: In removePendingRange() : Should not happen");
-	     
+	    else {
+		// Possible cause is message duplication in underlying layer
+		//System.out.println("At " + getNodeId() + "Warning1: In removePendingRange(" + toNode + "," + reqRange +  " ): Should not happen");
+	    }
 	}
 	else {
-	    System.out.println("Warning2:: In removePendingRange() : Should not happen");
+	    // Possible cause is message duplication in underlying layer
+	    //System.out.println("At " + getNodeId() + "Warning2: In removePendingRange(" + toNode + "," + reqRange +  " ): Should not happen");
+	    
 	} 
 
     }
@@ -287,7 +312,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	    for(int i=0; i< setOfRanges.size(); i++) {
 		RMImpl.KEPenEntry entry;
 		entry = (RMImpl.KEPenEntry)setOfRanges.elementAt(i);
-		if(entry.getNumKeys() > RMMessage.MAXKEYSINRANGE) {
+		if(entry.getNumKeys() > MAXKEYSINRANGE) {
 		    setOfRanges.remove(i);
 		    // We split this range
 		    Vector allParts = splitRange(entry.getReqRange());
@@ -312,7 +337,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
     private Vector splitRange(IdRange bigRange) {
 	Vector parts = new Vector();
 	parts.add(bigRange);
-	while(parts.size() < RMMessage.SPLITFACTOR ) {
+	while(parts.size() < SPLITFACTOR ) {
 	    IdRange range;
 	    IdRange ccwHalf;
 	    IdRange cwHalf;
@@ -343,7 +368,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	Vector setOfRanges;
 	if(m_pendingRanges.containsKey(toNode)) {
 	    setOfRanges = (Vector) m_pendingRanges.get(toNode);
-	    System.out.print("Pending Ranges= ");
+	    //System.out.print("At " + getNodeId() + " Pending Ranges= ");
 	    for(int i=0; i< setOfRanges.size(); i++) {
 		RMImpl.KEPenEntry entry;
 		entry = (RMImpl.KEPenEntry)setOfRanges.elementAt(i);
@@ -375,14 +400,14 @@ public class RMImpl extends CommonAPIAppl implements RM {
      * This is called when the underlying pastry node is ready.
      */
     public void notifyReady() {
-
+	//System.out.println(getLeafSet());
 	if(app!=null) {
 	    //System.out.println("notifyReady called for RM application on" + getNodeId()); 
 	    m_ready = true;
-	    app.rmIsReady(this);
 	    myRange = range(getLocalHandle(), rFactor, getNodeId(), true);
+	    app.rmIsReady(this);
 	    //System.out.println("MyRange= " + myRange);
-	    //System.out.println("Need to do initial fetching of keys from " + getNodeId());
+	    //System.out.println("notifyReady()::Need to do initial fetching of keys from " + getNodeId());
 	    
 	    IdRange requestRange = myRange;
 	
@@ -391,8 +416,17 @@ public class RMImpl extends CommonAPIAppl implements RM {
 		rangeSet.add(new RMMessage.KEEntry(requestRange,true));
 	
 	    NodeSet set = requestorSet(rangeSet);
-	    
 	    sendKeyRequestMessages(set, rangeSet);
+
+
+	    // We trigger the periodic Maintenance protocol
+	    if(getPastryNode() instanceof DistPastryNode) {
+		RMMaintenanceMsg msg;
+		msg  = new RMMaintenanceMsg(getNodeHandle(), getAddress(), getCredentials(), m_seqno ++); 
+		getPastryNode().scheduleMsgAtFixedRate(msg, RMMaintenanceMsg.maintFreq * 1000, RMMaintenanceMsg.maintFreq * 1000);
+
+	    }
+
 	}
 
     }
@@ -403,8 +437,11 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
 
     public void periodicMaintenance() {
+
+	
 	// Remove stale objects
-	app.isResponsible(myRange);
+	if(myRange!=null)
+	    app.isResponsible(myRange);
 	
 	
 	// Fetch missing objects
@@ -447,7 +484,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
      */
     public void update(NodeHandle nh, boolean wasAdded) {
 	if(!isReady())
-	    return;
+	  return;
 
 	//System.out.println("leafsetChange(" + nh.getNodeId() + " , " + wasAdded + ")" + " at " + getNodeId());
 
@@ -563,6 +600,8 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
 
     public void sendKeyRequestMessages(NodeSet set, Vector rangeSet) {
+	if(rangeSet.size() == 0)
+	    return;
 	for(int i=0; i<set.size(); i++) {
 	    
 	    NodeHandle toNode;
@@ -578,7 +617,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
 
 	    }
 	    msg = new RMRequestKeysMsg(getLocalHandle(),getAddress(), getCredentials(), m_seqno ++, rangeSet);
-	    //System.out.println(getNodeId() + "sending RequestKeys msg to " + toNode.getNodeId());
+	    //System.out.println("At " + getNodeId() + "sending RequestKeys msg to " + toNode.getNodeId());
 	    route(null, msg, toNode);
 	}
     }
@@ -600,6 +639,23 @@ public class RMImpl extends CommonAPIAppl implements RM {
 ------
 
  1. Change the values of SPLITFACTOR and MAXKEYSINRANGE to appropriate values.
+
+ 2. in the generateTopicId() chenging to use Id instead of NodeId gives exception.
+
+ 3. Check carefully the best way to handle the m_pendingRanges table in case
+    of loss of messages. ( since the protocol is trigger based on the response)
+    A loss of a single response may cause it to wait for the entire
+    maintenance period. 
+
+ 4. During the maintainenance period, what should we do incase the 
+    pendingRanges table is not empty.
+
+ 5. Modify the call to intersect() in RMRequestKeysMsg to be aware that
+    intersect can produce two ranges
+
+ 6. myRange calculation when the leafset overlaps, when it returns null
+
+ 7. Dont forget to enable calling of periodicMaintenance() in Maintenance msg
 
 
 */

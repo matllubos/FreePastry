@@ -35,121 +35,51 @@ if advised of the possibility of such damage.
 ********************************************************************************/
 
 
-package rice.rm;
+package rice.rm.messaging;
 
 import rice.pastry.*;
-import rice.pastry.messaging.*;
 import rice.pastry.security.*;
+import rice.pastry.routing.*;
+import rice.pastry.messaging.*;
+
+import rice.rm.*;
+import rice.rm.messaging.*;
+
+import java.io.*;
+import java.util.*;
 
 /**
- * @(#) RMClient.java
  *
- * This interface should be implemented by all applications that interact
- * with the Replica Manager.
- *
- * @version $Id$
+ * 
+ * @version $Id$ 
+ * 
  * @author Animesh Nandi
  */
-public interface RMClient {
 
-    /* This upcall is invoked to notify the application that is should
-     * fetch the cooresponding keys in this set, since the node is now
-     * responsible for these keys also
+
+public class RMMaintenanceMsg extends RMMessage implements Serializable
+{
+
+    public static int maintFreq = 30 ; // in seconds
+    
+
+    /**
+     * Constructor
      */
-    public void fetch(IdSet keySet);
+    public RMMaintenanceMsg(NodeHandle source, Address address,  Credentials authorCred, int seqno) {
+	super(source, address, authorCred, seqno);
+	
+    }
+    
+    public void handleDeliverMessage( RMImpl rm) {
+	System.out.println("RMMaintenance message: at " + rm.getNodeId());
+	rm.periodicMaintenance();
+    }
 
-
-    /* This upcall is simply to denote that the underlying replica manager
-     * (rm) is ready.
-     */
-    public void rmIsReady(RM rm);
-
-    /*
-     * This upcall is to notify the application of the range of keys for 
-     * which it is responsible. The application might choose to react to 
-     * call by calling a scan(complement of this range) to the persistance
-     * manager and get the keys for which it is not responsible and
-     * call delete on the persistance manager for those objects
-     */
-    public void isResponsible(IdRange range);
-
-
-    // This upcall should return the set of keys that the application
-    // currently stores in this range. Should return a empty IdSet (not null), in 
-    // the case that no keys belong to this range
-    public IdSet scan(IdRange range);
-
+    public String toString() {
+	return new String( "MAINTENANCE_MSG:" );
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

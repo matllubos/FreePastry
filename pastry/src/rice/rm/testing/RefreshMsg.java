@@ -68,9 +68,9 @@ public class RefreshMsg extends TestMessage implements Serializable{
 
     public void handleDeliverMessage( RMRegrTestApp testApp) {
 	Id objectKey;
-
 	// This is a local refresh 
 	objectKey = getObjectKey();
+	//System.out.println(testApp.getNodeId() + " received a Refresh msg for " + objectKey);
 	testApp.refresh(objectKey);
 
     }

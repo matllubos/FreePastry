@@ -66,8 +66,8 @@ public class ObjectState {
     private int missingCount;
     private boolean present;
 
-    private final int STALE_LIMIT = 1;
-    private final int MISSING_LIMIT = 1;
+    private final int STALE_LIMIT = 5;
+    private final int MISSING_LIMIT = 5;
     
     public ObjectState(boolean val1, int val2, int val3){
 	present = val1;
