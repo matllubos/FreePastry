@@ -9,9 +9,7 @@ import rice.*;
 import rice.Continuation.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.rmi.*;
 import rice.pastry.socket.*;
-import rice.pastry.wire.*;
 
 /**
  * An abstraction of the nodeId factory for distributed nodes. In order to
@@ -155,11 +153,12 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * @throws IllegalArgumentException If protocol is an unsupported port.
    */
   public static DistPastryNodeFactory getFactory(NodeIdFactory nf, int protocol, int port) {
-    if (protocol == PROTOCOL_RMI) {
-      return new RMIPastryNodeFactory(nf, port);
-    } else if (protocol == PROTOCOL_WIRE) {
-      return new WirePastryNodeFactory(nf, port);
-    } else if (protocol == PROTOCOL_SOCKET) {
+//    if (protocol == PROTOCOL_RMI) {
+//      return new RMIPastryNodeFactory(nf, port);
+//    } else if (protocol == PROTOCOL_WIRE) {
+//      return new WirePastryNodeFactory(nf, port);
+//    } else 
+      if (protocol == PROTOCOL_SOCKET) {
       return new SocketPastryNodeFactory(nf, port);
     }
 

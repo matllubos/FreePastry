@@ -12,8 +12,6 @@ import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 
-import rice.pastry.wire.exception.*;
-import rice.pastry.wire.messaging.socket.*;
 import rice.serialization.*;
 
 /**
