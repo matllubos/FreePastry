@@ -1,1 +1,6 @@
 1) Handle null pointer exception in MessageReplyFromParent.
+
+2) Remove extra testing from ScribeRegrTest
+
+3) ScribeInteractiveTest should go out.
+
