@@ -14,6 +14,8 @@ public interface GlacierPolicy {
   
   public Manifest[] createManifests(VersionKey key, Serializable obj, Fragment[] fragments, long expiration);
 
+  public Manifest updateManifest(VersionKey key, Manifest manifest, long newExpiration);
+
   public Serializable decodeObject(Fragment[] fragments);
  
   public void prefetchLocalObject(VersionKey key, Continuation command);

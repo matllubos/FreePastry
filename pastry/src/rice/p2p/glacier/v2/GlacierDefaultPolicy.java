@@ -107,4 +107,13 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
     return fragments;
   }
 
+  public Manifest updateManifest(VersionKey key, Manifest manifest, long newExpiration) {
+    if (!checkSignature(manifest, key))
+      return null;
+
+    Manifest newManifest = new Manifest(manifest.getObjectHash(), manifest.getFragmentHashes(), newExpiration);
+    signManifest(newManifest, key);
+    
+    return newManifest;
+  }
 }
