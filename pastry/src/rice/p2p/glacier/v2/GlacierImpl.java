@@ -670,11 +670,11 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       for (int i=0; i<timestamp.length; i++)
         ts = (ts<<8) + ((timestamp[i]<0) ? (256+timestamp[i]) : timestamp[i]);
       return ts;
-    } else if (o instanceof ContentHashData) {
-      return 0;
     } else if (o instanceof DebugContent) {
       return ((DebugContent) o).getVersion();
-    } else throw new RuntimeException("Glacier: Unknown type inserted, cannot extract timestamp!");
+    } else {
+      return 0;
+    }
   }
 
   public void refresh(final Id[] id, final long expiration, final Continuation command) {
