@@ -178,12 +178,45 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param expiration The time to extend the lifetime to
    * @param command Command to be performed when the result is received
    */
-  public void refresh(Id[] array, final long expiration, Continuation command) {
-    IdSet set = realFactory.buildIdSet();
-    for (int i=0; i<array.length; i++)
-      set.addId(array[i]);
+  public void refresh(Id[] array, long expiration, Continuation command) {
+    long[] expirations = new long[array.length];
+    Arrays.fill(expirations, expiration);
     
-    refresh(set, expiration, command);
+    refresh(array, expirations, command);
+  }
+  
+  /**
+    * Updates the objects stored under the provided keys id to expire no
+   * earlier than the provided expiration time.  Asyncroniously returns
+   * the result to the caller via the provided continuation.  
+   *
+   * The result of this operation is an Object[], which is the same length
+   * as the input array of Ids.  Each element in the array is either 
+   * Boolean(true), representing that the refresh succeeded for the 
+   * cooresponding Id, or an Exception describing why the refresh failed.  
+   * Specifically, the possible exceptions which can be returned are:
+   * 
+   * ObjectNotFoundException - if no object was found under the given key
+   * RefreshFailedException - if the refresh operation failed for any other
+   *   reason (the getMessage() will describe the failure)
+   * 
+   * @param id The keys which to refresh
+   * @param expiration The time to extend the lifetime to
+   * @param command Command to be performed when the result is received
+   */
+  public void refresh(final Id[] array, long[] expirations, Continuation command) {
+    GCIdSet set = new GCIdSet(realFactory);
+    for (int i=0; i<array.length; i++)
+      set.addId(new GCId(array[i], expirations[i]));
+    
+    refresh(set, new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        Boolean[] result = new Boolean[array.length];
+        Arrays.fill(result, Boolean.TRUE);
+        
+        parent.receiveResult(result);
+      }
+    });
   }
   
   /**
@@ -194,28 +227,31 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param expiration The time to extend the lifetime until
    * @param command The command to return the result to
    */
-  protected void refresh(final IdSet ids, final long expiration, Continuation command) {
-    refreshed++;
+  protected void refresh(final GCIdSet ids, Continuation command) {
     if (ids.numElements() == 0) {
-      command.receiveResult(new Boolean(true));
+      command.receiveResult(new Object[0]);
       return;
     }
     
     final Id[] array = ids.asArray();
+    GCId start = (GCId) array[0];
     
-    sendRequest(array[0], new GCLookupHandlesMessage(getUID(), array[0], getLocalNodeHandle(), array[0]), new StandardContinuation(command) {
+    sendRequest(start.getId(), new GCLookupHandlesMessage(getUID(), start.getId(), getLocalNodeHandle(), start.getId()), new StandardContinuation(command) {
       public void receiveResult(Object o) {
         NodeHandleSet set = (NodeHandleSet) o;
         final ReplicaMap map = new ReplicaMap();
         
         for (int i=0; i<array.length; i++) {
-          NodeHandleSet replicas = endpoint.replicaSet(array[i], replicationFactor+1, set.getHandle(set.size()-1), set);
+          GCId id = (GCId) array[i];
+
+          NodeHandleSet replicas = endpoint.replicaSet(id.getId(), replicationFactor+1, set.getHandle(set.size()-1), set);
           
           if ((replicas != null) && (replicas.size() > 0)) {
             for (int j=0; j<replicas.size(); j++) 
-              map.addReplica(replicas.getHandle(j), array[i]);
+              map.addReplica(replicas.getHandle(j), id);
             
-            ids.removeId(array[i]);
+            refreshed++;
+            ids.removeId(id);
           }
         }
         
@@ -225,11 +261,11 @@ public class GCPastImpl extends PastImpl implements GCPast {
           public void receiveResult(Object o) {
             if (iterator.hasNext()) {
               NodeHandle next = (NodeHandle) iterator.next();
-              IdSet ids = map.getIds(next);
+              GCIdSet ids = map.getIds(next);
               
-              sendRequest(next, new GCRefreshMessage(getUID(), ids, expiration, getLocalNodeHandle(), next.getId()), this);
+              sendRequest(next, new GCRefreshMessage(getUID(), ids, getLocalNodeHandle(), next.getId()), this);
             } else {
-              refresh(ids, expiration, parent);
+              refresh(ids, parent);
             }
           }
         };
@@ -280,19 +316,18 @@ public class GCPastImpl extends PastImpl implements GCPast {
         StandardContinuation process = new StandardContinuation(getResponseContinuation(msg)) {
           public void receiveResult(Object o) {
             if (i.hasNext()) {
-              final Id id = (Id) i.next();
+              final GCId id = (GCId) i.next();
 
               /* skip the object if we don't have it yet */
-              if (storage.exists(id)) {
-                GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
+              if (storage.exists(id.getId())) {
+                GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id.getId());
                 
                 if (metadata != null) {
-                  metadata.setExpiration(rmsg.getExpiration());
-                  storage.setMetadata(id, storage.getMetadata(id), this);
+                  storage.setMetadata(id.getId(), metadata.setExpiration(id.getExpiration()), this);
                 } else {
-                  storage.getObject(id, new StandardContinuation(this) {
+                  storage.getObject(id.getId(), new StandardContinuation(this) {
                     public void receiveResult(Object o) {
-                      storage.setMetadata(id, ((GCPastContent) o).getMetadata(rmsg.getExpiration()), parent);
+                      storage.setMetadata(id.getId(), ((GCPastContent) o).getMetadata(id.getExpiration()), parent);
                     }
                   });
                 }
@@ -315,43 +350,13 @@ public class GCPastImpl extends PastImpl implements GCPast {
         log.finer("Returning replica set " + set + " for lookup handles of id " + lmsg.getId() + " max " + lmsg.getMax() + " at " + endpoint.getId());
         getResponseContinuation(msg).receiveResult(set);
       } else if (msg instanceof GCCollectMessage) {
-        final Iterator i = storage.scanMetadata().keySet().iterator();  
-        
-        Continuation remove = new ListenerContinuation("Removal of expired ids") {          
+        // get all ids which expiration before now
+        collect(storage.scanMetadataValuesHead(new GCPastMetadata(System.currentTimeMillis())), new ListenerContinuation("Removal of expired ids") {
           public void receiveResult(Object o) {
-            Id id = null;
-            GCPastMetadata metadata = null;
-            
-            while (i.hasNext()) {
-              id = (Id) i.next();
-              metadata = (GCPastMetadata) storage.getMetadata(id);
-              
-              if ((metadata != null) && (metadata.getExpiration() < System.currentTimeMillis()) ||
-                  (metadata == null) && (DEFAULT_EXPIRATION < System.currentTimeMillis())) {
-                collected++;
-                final Id gid = id;
-                
-                if (trash != null) {                        
-                  storage.getObject(gid, new StandardContinuation(this) {
-                    public void receiveResult(Object o) {
-                      trash.store(gid, storage.getMetadata(gid), (Serializable) o, new StandardContinuation(parent) {
-                        public void receiveResult(Object o) {
-                          storage.unstore(gid, parent);
-                        }
-                      });
-                    }
-                  });
-                } else {
-                  storage.unstore(gid, this);
-                }
-                
-                return;
-              }
-            }
+            if (System.currentTimeMillis() > DEFAULT_EXPIRATION) 
+              collect(storage.scanMetadataValuesNull(), new ListenerContinuation("Removal of default expired ids"));
           }
-        };
-          
-        remove.receiveResult(null);
+        });
       } else if (msg instanceof FetchHandleMessage) {
         final FetchHandleMessage fmsg = (FetchHandleMessage) msg;   
         fetchHandles++;
@@ -377,6 +382,44 @@ public class GCPastImpl extends PastImpl implements GCPast {
         super.deliver(id, message);
       }
     }
+  }
+  
+  /**
+   * Internal method which collects all of the objects in the given set
+   * 
+   * @param set THe set to collect
+   * @param command The command to call once done
+   */
+  protected void collect(SortedMap map, Continuation command) {
+    final Iterator i = map.keySet().iterator();  
+    
+    Continuation remove = new StandardContinuation(command) {          
+      public void receiveResult(Object o) {
+        if (i.hasNext()) {
+          final Id gid = (Id) i.next();
+          GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(gid);
+          collected++;
+          
+          if (trash != null) {                        
+            storage.getObject(gid, new StandardContinuation(this) {
+              public void receiveResult(Object o) {
+                trash.store(gid, storage.getMetadata(gid), (Serializable) o, new StandardContinuation(parent) {
+                  public void receiveResult(Object o) {
+                    storage.unstore(gid, parent);
+                  }
+                });
+              }
+            });
+          } else {
+            storage.unstore(gid, this);
+          }
+        } else {
+          parent.receiveResult(Boolean.TRUE);
+        }
+      }
+    };
+    
+    remove.receiveResult(null); 
   }
   
   // ---- REPLICATION MANAGER METHODS -----
@@ -406,8 +449,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
           }
         });
       } else if (metadata.getExpiration() < gcid.getExpiration()) {
-        metadata.setExpiration(gcid.getExpiration());
-        storage.setMetadata(gcid.getId(), metadata, command);
+        storage.setMetadata(gcid.getId(), metadata.setExpiration(gcid.getExpiration()), command);
       } else {
         command.receiveResult(Boolean.TRUE);
       }
@@ -478,11 +520,11 @@ public class GCPastImpl extends PastImpl implements GCPast {
   
   protected class ReplicaMap {
     protected HashMap map = new HashMap();
-    public void addReplica(NodeHandle handle, Id id) {
+    public void addReplica(NodeHandle handle, GCId id) {
       IdSet set = (IdSet) map.get(handle);
       
       if (set == null) {
-        set = realFactory.buildIdSet();
+        set = new GCIdSet(realFactory);
         map.put(handle, set);
       }
       
@@ -493,8 +535,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
       return map.keySet().iterator();
     }
     
-    public IdSet getIds(NodeHandle replica) {
-      return (IdSet) map.get(replica);
+    public GCIdSet getIds(NodeHandle replica) {
+      return (GCIdSet) map.get(replica);
     }
   }
 }

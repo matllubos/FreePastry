@@ -3,6 +3,7 @@ import java.io.Serializable;
 import java.security.*;
 import java.util.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.util.*;
 
 import rice.p2p.glacier.*;
 
@@ -14,7 +15,7 @@ import rice.p2p.glacier.*;
  */
 public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
 
-  private TreeSet idSet;
+  private SortedMap idSet;
 
   // a cache of the fingerprint hash
   private FragmentKey cachedHash;
@@ -24,7 +25,7 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    * Constructor.
    */
   public FragmentKeySet() {
-    idSet = new TreeSet();
+    idSet = new RedBlackMap();
     validHash = false;
   }
 
@@ -34,7 +35,7 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    * @param o the IdSet to copy
    */
   public FragmentKeySet(FragmentKeySet o) {
-    idSet = new TreeSet(o.idSet);
+    idSet = new RedBlackMap(o.idSet);
     cachedHash = o.cachedHash;
     validHash = o.validHash;
   }
@@ -44,8 +45,8 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    *
    * @param s the TreeSet based on which we construct a new IdSet
    */
-  protected FragmentKeySet(TreeSet s) {
-    idSet = new TreeSet(s);
+  protected FragmentKeySet(SortedMap s) {
+    idSet = s;
     validHash = false;
   }
 
@@ -56,7 +57,7 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    * @return true of id is a member, false otherwise
    */
   public boolean isMember(rice.p2p.commonapi.Id id) {
-    return idSet.contains(id);
+    return idSet.containsKey(id);
   }
 
   /**
@@ -65,7 +66,7 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    * @return the interator
    */
   public Iterator getIterator() {
-    return idSet.iterator();
+    return idSet.keySet().iterator();
   }
 
   /**
@@ -129,7 +130,7 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    * @param id the id to add
    */
   public void addMember(rice.p2p.commonapi.Id id) {
-    idSet.add(id);
+    idSet.put(id, null);
     validHash = false;
   }
 
@@ -149,7 +150,7 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    * @return the smallest id in the set
    */
   public FragmentKey minMember() {
-    return (FragmentKey) idSet.first();
+    return (FragmentKey) idSet.firstKey();
   }
 
   /**
@@ -158,7 +159,7 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    * @return the largest id in the set
    */
   public FragmentKey maxMember() {
-    return (FragmentKey) idSet.last();
+    return (FragmentKey) idSet.lastKey();
   }
 
   /**
@@ -169,14 +170,7 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    * @return the subset
    */
   public FragmentKeySet subSet(Id from, Id to) {
-    FragmentKeySet res;
-    if(from.compareTo(to) <= 0) {
-      res = new FragmentKeySet((TreeSet)idSet.subSet(from, to));
-    } else {
-      res = new FragmentKeySet((TreeSet)idSet.tailSet(from));
-      res.idSet.addAll(idSet.headSet(to));
-    }
-    return res;
+    return new FragmentKeySet(idSet.subMap(from, to));
   }
 
   /**
@@ -189,7 +183,7 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
     if(range.isEmpty())
       return new FragmentKeySet();
     if(range.getCCWId().equals(range.getCWId()))
-      return (FragmentKeySet)clone();
+      return this;
     else
       return subSet(range.getCCWId(), range.getCWId());
   }
@@ -276,7 +270,7 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    * @return the array
    */
   public rice.p2p.commonapi.Id[] asArray() {
-    return (rice.p2p.commonapi.Id[]) idSet.toArray(new rice.p2p.commonapi.Id[0]);
+    return (rice.p2p.commonapi.Id[]) idSet.keySet().toArray(new rice.p2p.commonapi.Id[0]);
   }
   
 }

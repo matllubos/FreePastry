@@ -17,7 +17,7 @@ public class MockSmtpConnection
     public MockSmtpConnection()
                        throws IOException
     {
-        super(null, null);
+        super(null, null, null);
 
         // simulate client input
         PipedReader clientIn     = new PipedReader();

@@ -5,6 +5,7 @@ import java.util.*;
 import rice.p2p.commonapi.*;
 
 import rice.p2p.glacier.*;
+import rice.p2p.util.*;
 
 /**
  * DESCRIBE THE CLASS
@@ -14,7 +15,7 @@ import rice.p2p.glacier.*;
  */
 public class VersionKeySet implements rice.p2p.commonapi.IdSet {
 
-  private TreeSet idSet;
+  private SortedMap idSet;
 
   // a cache of the fingerprint hash
   private VersionKey cachedHash;
@@ -24,7 +25,7 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
    * Constructor.
    */
   public VersionKeySet() {
-    idSet = new TreeSet();
+    idSet = new RedBlackMap();
     validHash = false;
   }
 
@@ -34,7 +35,7 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
    * @param o the IdSet to copy
    */
   public VersionKeySet(VersionKeySet o) {
-    idSet = new TreeSet(o.idSet);
+    idSet = new RedBlackMap(o.idSet);
     cachedHash = o.cachedHash;
     validHash = o.validHash;
   }
@@ -44,8 +45,8 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
    *
    * @param s the TreeSet based on which we construct a new IdSet
    */
-  protected VersionKeySet(TreeSet s) {
-    idSet = new TreeSet(s);
+  protected VersionKeySet(SortedMap s) {
+    idSet = s;
     validHash = false;
   }
 
@@ -56,7 +57,7 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
    * @return true of id is a member, false otherwise
    */
   public boolean isMember(rice.p2p.commonapi.Id id) {
-    return idSet.contains(id);
+    return idSet.containsKey(id);
   }
 
   /**
@@ -65,7 +66,7 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
    * @return the interator
    */
   public Iterator getIterator() {
-    return idSet.iterator();
+    return idSet.keySet().iterator();
   }
 
   /**
@@ -129,7 +130,7 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
    * @param id the id to add
    */
   public void addMember(rice.p2p.commonapi.Id id) {
-    idSet.add(id);
+    idSet.put(id, null);
     validHash = false;
   }
 
@@ -149,7 +150,7 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
    * @return the smallest id in the set
    */
   public VersionKey minMember() {
-    return (VersionKey) idSet.first();
+    return (VersionKey) idSet.firstKey();
   }
 
   /**
@@ -158,7 +159,7 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
    * @return the largest id in the set
    */
   public VersionKey maxMember() {
-    return (VersionKey) idSet.last();
+    return (VersionKey) idSet.lastKey();
   }
 
   /**
@@ -169,14 +170,7 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
    * @return the subset
    */
   public VersionKeySet subSet(Id from, Id to) {
-    VersionKeySet res;
-    if (from.compareTo(to) <= 0) {
-      res = new VersionKeySet((TreeSet)idSet.subSet(from, to));
-    } else {
-      res = new VersionKeySet((TreeSet)idSet.tailSet(from));
-      res.idSet.addAll(idSet.headSet(to));
-    }
-    return res;
+    return new VersionKeySet(idSet.subMap(from, to));
   }
 
   /**
@@ -189,7 +183,7 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
     if(range.isEmpty())
       return new VersionKeySet();
     if(range.getCCWId().equals(range.getCWId()))
-      return (VersionKeySet)clone();
+      return this;
     else
       return subSet(range.getCCWId(), range.getCWId());
   } 
@@ -271,6 +265,6 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
    * @return the array
    */
   public rice.p2p.commonapi.Id[] asArray() {
-    return (rice.p2p.commonapi.Id[]) idSet.toArray(new rice.p2p.commonapi.Id[0]);
+    return (rice.p2p.commonapi.Id[]) idSet.keySet().toArray(new rice.p2p.commonapi.Id[0]);
   }
 }

@@ -251,6 +251,22 @@ public class EmailService extends PostClient {
   }
   
   /**
+    * This method is periodically invoked by Post in order to get a list of
+   * all mutable data which the application is interested in.
+   *
+   * The applications should return a Log[] containing all of 
+   * the data The application is still interested in to the provided continatuion.
+   */
+  public void getLogs(Continuation command) {
+    final Set set = new HashSet();
+    folder.getLogs(set, new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        parent.receiveResult(set.toArray(new Log[0]));
+      }
+    });
+  }
+  
+  /**
    * Returns the list of subscriptions in the log
    *
    * @return The subscriptions

@@ -6,6 +6,7 @@ import rice.p2p.multiring.MultiringIdFactory;
 import rice.p2p.multiring.RingId;
 import rice.pastry.Id;
 import java.util.Random;
+import java.util.SortedMap;
 
 /**
  * DESCRIBE THE CLASS
@@ -142,6 +143,16 @@ public class FragmentKeyFactory implements IdFactory {
    */
   public IdSet buildIdSet() {
     return new FragmentKeySet();
+  }
+  
+  /**
+   * Creates an empty IdSet.
+   *
+   * @Param map The map which to take the keys from to create the IdSet's elements
+   * @return an empty IdSet
+   */
+  public IdSet buildIdSet(SortedMap map) {
+    return new FragmentKeySet(map);
   }
 
   /**

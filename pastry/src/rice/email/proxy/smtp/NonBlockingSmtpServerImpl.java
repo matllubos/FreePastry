@@ -17,6 +17,16 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
 
   public static int MAX_CONNECTIONS = 6;
   
+  public int connections1 = 0;
+  public int success = 0;
+  public int fail = 0;
+  
+  public int getConnections() { return connections1; }
+  public int getSuccess() { int result = success; success = 0; return result; }
+  public int getFail() { int result = fail; fail = 0; return result; }
+  public void incrementSuccess() { success++; }
+  public void incrementFail() { fail++; }
+  
   boolean acceptNonLocal = false;
   boolean gateway = false;
   boolean quit = false;
@@ -95,6 +105,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
         setAcceptable(false);
       
       final Socket socket = ((SocketChannel) ((ServerSocketChannel) key.channel()).accept()).socket();
+      connections1++;
       
       System.out.println("Accepted connection " + connections + " of " + MAX_CONNECTIONS + " from " + socket.getInetAddress());
       
@@ -103,11 +114,12 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
         Thread thread = new Thread("SMTP Server Thread for " + socket.getInetAddress()) {
           public void run() {
             try {
-              SmtpHandler handler = new SmtpHandler(registry, manager, workspace);
+              SmtpHandler handler = new SmtpHandler(registry, manager, workspace, NonBlockingSmtpServerImpl.this);
               handler.handleConnection(socket);
               
               synchronized (NonBlockingSmtpServerImpl.this) {
                 connections--; 
+                connections1--;
               }
               
               setAcceptable(true);

@@ -5,6 +5,7 @@ import java.security.*;
 
 import rice.*;
 import rice.post.*;
+import rice.post.log.*;
 import rice.post.storage.*;
 import rice.post.messaging.*;
 import rice.post.security.*;
@@ -104,6 +105,17 @@ public class PKnoISecurityModule extends PostClient implements SecurityModule {
    */
   public void getContentHashReferences(Continuation command) {
     command.receiveResult(new ContentHashReference[0]);
+  }
+  
+  /**
+    * This method is periodically invoked by Post in order to get a list of
+   * all mutable data which the application is interested in.
+   *
+   * The applications should return a Log[] containing all of 
+   * the data The application is still interested in to the provided continatuion.
+   */
+  public void getLogs(Continuation command) {
+    command.receiveResult(new Log[0]);
   }
 
   /**

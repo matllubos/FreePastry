@@ -40,6 +40,7 @@ import java.security.*;
 import java.util.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.util.*;
 
 /**
  * @(#) GCIdSet.java
@@ -57,22 +58,22 @@ public class GCIdSet implements IdSet {
   protected IdSet ids;
   
   // interal list of the timeouts
-  protected TreeMap timeouts;
+  protected SortedMap timeouts;
   
   /**
    * Constructor
    */
   protected GCIdSet(IdFactory factory) {
     this.ids = factory.buildIdSet();
-    this.timeouts = new TreeMap();
+    this.timeouts = new RedBlackMap();
   }
   
   /**
    * Constructor
    */
-  protected GCIdSet(IdSet set, TreeMap timeouts) {
+  protected GCIdSet(IdSet set, SortedMap timeouts) {
     this.ids = set;
-    this.timeouts = new TreeMap(timeouts);
+    this.timeouts = timeouts;
   }
   
   /**
@@ -119,21 +120,7 @@ public class GCIdSet implements IdSet {
    * @return the subset
    */
   public IdSet subSet(IdRange range) {
-    if (range == null)
-      return build();
-    
-    GCIdRange gcRange = (GCIdRange) range;
-    
-    TreeMap map = null;
-    
-    if (gcRange.getRange().getCCWId().compareTo(gcRange.getRange().getCWId()) <= 0) {
-      map = new TreeMap(timeouts.subMap(gcRange.getRange().getCCWId(), gcRange.getRange().getCWId()));
-    } else {
-      map = new TreeMap(timeouts.tailMap(gcRange.getRange().getCCWId()));
-      map.putAll(timeouts.headMap(gcRange.getRange().getCWId()));
-    }
-
-    return new GCIdSet(ids.subSet(gcRange.getRange()), map);
+    return new GCIdSet(ids.subSet(((GCIdRange) range).getRange()), timeouts);
   }
   
   /**
@@ -234,6 +221,6 @@ public class GCIdSet implements IdSet {
    * @return A new IdSet
    */
   public IdSet build() {
-    return new GCIdSet(ids.build(), new TreeMap());
+    return new GCIdSet(ids.build(), new RedBlackMap());
   }
 }

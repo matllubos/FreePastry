@@ -89,6 +89,7 @@ public class SelectorManager extends Thread {
     }
     timer = new Timer(selector, profile);
     timerThread = timer.thread;
+    setPriority(Thread.MAX_PRIORITY);
     start();
   }
 
@@ -245,7 +246,9 @@ public class SelectorManager extends Thread {
     Runnable run = getInvocation();
     while (run != null) {
       try {
+      //  long start = System.currentTimeMillis();
         run.run();
+      //  System.out.println("ST: " + (System.currentTimeMillis() - start) + " " + run.toString());
       } catch (Exception e) {
         System.err.println("Invoking runnable caused exception " + e + " - continuing");
         e.printStackTrace();

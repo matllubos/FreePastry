@@ -56,6 +56,8 @@ import rice.p2p.multiring.*;
  */
 public class DeliveryMetadata extends GCPastMetadata {
   
+  private static final long serialVersionUID = -8357987542721320878L;
+  
   protected PostEntityAddress destination;
   
   public DeliveryMetadata(long expiration, PostEntityAddress address) {
@@ -65,5 +67,17 @@ public class DeliveryMetadata extends GCPastMetadata {
   
   public PostEntityAddress getDestination() {
     return destination;
+  }
+  
+  public GCPastMetadata setExpiration(long expiration) {
+    return new DeliveryMetadata(expiration, destination);
+  }
+  
+  public boolean equals(Object o) {
+    return super.equals(o) && ((DeliveryMetadata) o).destination.equals(destination);
+  }
+  
+  public int hashCode() {
+    return super.hashCode() ^ destination.hashCode();
   }
 }

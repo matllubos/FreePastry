@@ -278,6 +278,40 @@ public class Folder {
     
     children.receiveResult(null);
   }
+  
+  /**
+   * This method is periodically invoked by Post in order to get a list of
+   * all mutable data which the application is interested in.
+   *
+   * The applications should return a PostData[] containing all of 
+   * the data The application is still interested in to the provided continatuion.
+   */
+  public void getLogs(final Set set, Continuation command) {
+    set.add(_log);
+    
+    final Object[] names = _log.getChildLogNames();
+    
+    Continuation children = new StandardContinuation(command) {
+      int index = 0;
+      
+      public void receiveResult(Object o) {
+        final Continuation thisOne = this;
+        
+        if (index < names.length) {
+          getChildFolder((String) names[index], new StandardContinuation(parent) {
+            public void receiveResult(Object o) {
+              index++;
+              ((Folder) o).getLogs(set, thisOne);
+            }
+          });
+        } else {
+          parent.receiveResult(Boolean.TRUE);
+        }
+      }
+    };
+    
+    children.receiveResult(null);
+  }
     
   /**
    * Updates an Email (flags)

@@ -53,8 +53,11 @@ public class Proxy {
   public static String[][] DEFAULT_PARAMETERS = new String[][] {{"java_home", System.getProperty("java.home")},
                                                                 {"java_command", "java"},
                                                                 {"java_maximum_memory", "128M"},
+                                                                {"java_memory_free_enable", "true"},
+                                                                {"java_memory_free_maximum", "0.50"},
                                                                 {"java_debug_enable", "false"},
                                                                 {"java_debug_port", "8000"},
+                                                                {"java_hprof_enable", "false"},
                                                                 {"java_interpreted_mode", "false"},
                                                                 {"java_profiling_enable", "false"},
                                                                 {"java_profiling_port", "31000"},
@@ -64,6 +67,7 @@ public class Proxy {
                                                                 {"java_thread_debugger_enable", "false"},
                                                                 {"java_thread_debugger_port", "31000"},
                                                                 {"java_thread_debugger_library_directory", "lib"},
+                                                                {"java_use_server_vm", "true"}, 
                                                                 {"java_classpath", "pastry.jar"},
                                                                 {"java_main_class", "rice.visualization.proxy.VisualizationEmailProxy"},
                                                                 {"java_main_class_parameters", ""}, 
@@ -134,6 +138,14 @@ public class Proxy {
     result.append(" -Xmx");
     result.append(parameters.getStringParameter("java_maximum_memory"));
     
+    if (parameters.getBooleanParameter("java_memory_free_enable")) {
+      result.append(" -Xmaxf" + parameters.getDoubleParameter("java_memory_free_maximum"));
+    }
+    
+    if (parameters.getBooleanParameter("java_use_server_vm")) {
+      result.append(" -server");
+    }
+    
     if (parameters.getBooleanParameter("java_interpreted_mode")) {
       result.append(" -Xint");
     }
@@ -141,6 +153,10 @@ public class Proxy {
     if (parameters.getBooleanParameter("java_debug_enable")) {
       result.append(" -Xdebug -Djava.compiler=NONE -Xnoagent -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=");
       result.append(parameters.getStringParameter("java_debug_port"));
+    }
+    
+    if (parameters.getBooleanParameter("java_hprof_enable")) {
+      result.append(" -Xrunhprof");
     }
     
     if (parameters.getBooleanParameter("java_profiling_enable"))  {

@@ -38,6 +38,15 @@ public abstract class PostClient extends Observable {
    * the handles The application is still interested in to the provided continatuion.
    */
   public abstract void getContentHashReferences(Continuation command);
+  
+  /**
+   * This method is periodically invoked by Post in order to get a list of
+   * all mutable data which the application is interested in.
+   *
+   * The applications should return a Log[] containing all of 
+   * the data The application is still interested in to the provided continatuion.
+   */
+  public abstract void getLogs(Continuation command);
 
   /**
    * Returns the address of this PostClient.  This method is

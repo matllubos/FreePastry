@@ -191,6 +191,15 @@ public class PastryIdFactory implements IdFactory {
   }
   
   /**
+    * Creates an empty IdSet.
+   *
+   * @return an empty IdSet
+   */
+  public IdSet buildIdSet(SortedMap map) {
+    return new rice.pastry.IdSet(map);
+  }
+  
+  /**
    * Creates an empty NodeHandleSet.
    *
    * @return an empty NodeHandleSet

@@ -9,11 +9,14 @@ import javax.crypto.*;
 import javax.crypto.spec.*;
 
 import rice.*;
+import rice.Continuation.*;
+import rice.p2p.aggregation.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
 
 import rice.post.*;
+import rice.post.log.*;
 import rice.post.security.*;
 
 /**
@@ -158,6 +161,43 @@ public class StorageService {
     } else {
       command.receiveResult(Boolean.TRUE);
     }
+  }
+  
+  /**
+   * This method backs up all of the provided logs by inserting them into the immutable
+   * store with appropriate version numbers.
+   *
+   * @param references The references to refresh
+   * @param command The command to run once done
+   */
+  public void backupLogs(final Log[] logs, Continuation command) {
+    final long time = ((long) System.currentTimeMillis() / PostImpl.BACKUP_INTERVAL) * PostImpl.BACKUP_INTERVAL;
+    Continuation c = new StandardContinuation(command) {
+      int i = 0;
+      
+      public void receiveResult(Object o) {
+        if (i < logs.length) {
+          StoreSignedTask task = new StoreSignedTask(logs[i], logs[i].getLocation(), this, immutablePast, time);
+          task.start();
+          i++;
+        } else {
+          parent.receiveResult(Boolean.TRUE);
+        }
+      }
+    };
+    
+    c.receiveResult(null);
+  }
+  
+  /**
+   * Method which sets the aggregate head, if we are using a Aggregation as
+   * the immutable past store.
+   *
+   * @param log The log to set the aggregate in
+   */
+  public void setAggregate(PostLog log) {
+    if (immutablePast instanceof AggregationImpl) 
+      log.setAggregateHead(((AggregationImpl) immutablePast).getHandle());
   }
 
   /**
@@ -528,6 +568,8 @@ public class StorageService {
     private Continuation command;
     private Id location;
     private Key key;
+    private Past past;
+    private long time;
 
     /**
      * This contructs creates a task to store a given data and call the
@@ -537,9 +579,15 @@ public class StorageService {
      * @param command The command to run once the data has been stored
      */
     protected StoreSignedTask(PostData data, Id location, Continuation command) {
+      this(data, location, command, mutablePast, System.currentTimeMillis());
+    }
+    
+    protected StoreSignedTask(PostData data, Id location, Continuation command, Past past, long time) {
       this.data = data;
       this.location = location;
       this.command = command;
+      this.past = past;
+      this.time = time;
     }
 
     /**
@@ -548,14 +596,14 @@ public class StorageService {
     protected void start() {
       try {
         byte[] plainText = SecurityUtils.serialize(data);
-        byte[] timestamp = SecurityUtils.getByteArray(System.currentTimeMillis());
+        byte[] timestamp = SecurityUtils.getByteArray(time);
         
         SignedData sd = new SignedData(location, plainText, timestamp);
 
         sd.setSignature(SecurityUtils.sign(sd.getDataAndTimestamp(), keyPair.getPrivate()));
 
         // Store the signed data in PAST 
-        mutablePast.insert(sd, this);
+        past.insert(sd, this);
 
         // Now we wait to make sure that the update or insert worked, and
         // then return the reference.

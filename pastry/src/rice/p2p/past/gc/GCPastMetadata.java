@@ -49,7 +49,7 @@ import rice.p2p.past.*;
  * @version $Id$
  * @author Peter Druschel 
  */
-public class GCPastMetadata implements Serializable {
+public class GCPastMetadata implements Serializable, Comparable {
   
   // serialver for backwards compatibility
   private static final long serialVersionUID = -2432306227012003387L;
@@ -80,8 +80,37 @@ public class GCPastMetadata implements Serializable {
    *
    * @param The new expiration time
    */
-  public void setExpiration(long expiration) {
-    this.expiration = expiration;
+  public GCPastMetadata setExpiration(long expiration) {
+    return new GCPastMetadata(expiration);
+  }
+  
+  public boolean equals(Object o) {
+    return ((GCPastMetadata) o).expiration == expiration;
+  }
+  
+  public int hashCode() {
+    return (int) expiration;
+  }
+  
+  /**
+   * Comparable, returns -1 if less, 0 if equal, and 1 if greater
+   *
+   * @param other The object ot compare to
+   * @return the comparison
+   */
+  public int compareTo(Object other) {
+    GCPastMetadata metadata = (GCPastMetadata) other;
+    
+    if (metadata.expiration > expiration) 
+      return -1;
+    else if (metadata.expiration < expiration) 
+      return 1;
+    else
+      return 0;
+  }
+  
+  public String toString() {
+    return "GCPMetadata " + expiration;
   }
 }
 

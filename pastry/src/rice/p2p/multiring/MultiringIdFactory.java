@@ -37,7 +37,7 @@ if advised of the possibility of such damage.
 package rice.p2p.multiring;
 
 import rice.p2p.commonapi.*;
-import java.util.Random;
+import java.util.*;
 
 /**
  * @(#) IdFactory.java 
@@ -265,12 +265,124 @@ public class MultiringIdFactory implements IdFactory {
   }
   
   /**
+   * Creates an empty IdSet.
+   *
+   * @return an empty IdSet
+   */
+  public IdSet buildIdSet(SortedMap map) {
+    return new MultiringIdSet(getRingId(), factory.buildIdSet(new MultiringSortedMap(map)));
+  }
+  
+  /**
    * Creates an empty NodeHandleSet.
    *
    * @return an empty NodeHandleSet
    */
   public NodeHandleSet buildNodeHandleSet() {
     return new MultiringNodeHandleSet(getRingId(), factory.buildNodeHandleSet());
+  }
+  
+  protected class MultiringSortedMap implements SortedMap {
+    protected SortedMap map;
+    
+    public MultiringSortedMap(SortedMap map) {
+      this.map = map;
+    }
+    
+    public Comparator comparator() { return null; }
+    public Object firstKey() { return (map.firstKey() == null ? null : ((RingId) map.firstKey()).getId()); }
+    public SortedMap headMap(Object toKey) { return map.headMap(new RingId(ringId, (Id) toKey)); }
+    public Object lastKey() { return (map.lastKey() == null ? null : ((RingId) map.lastKey()).getId()); }
+    public SortedMap subMap(Object fromKey, Object toKey) { return map.subMap(new RingId(ringId, (Id) fromKey), new RingId(ringId, (Id) toKey)); }
+    public SortedMap tailMap(Object fromKey) { return map.tailMap(new RingId(ringId, (Id) fromKey)); }
+    public void clear() { throw new UnsupportedOperationException("clear not supported!"); }
+    public boolean containsKey(Object key) { return map.containsKey(new RingId(ringId, (Id) key)); }
+    public boolean containsValue(Object value) { throw new UnsupportedOperationException("containsValue not supported!"); }
+    public Set entrySet() { return new MultiringEntrySet(map.entrySet()); }
+    public boolean equals(Object o) { throw new UnsupportedOperationException("equals not supported!"); }
+    public Object get(Object key) { throw new UnsupportedOperationException("get not supported!"); }
+    public int hashCode() { throw new UnsupportedOperationException("hashCode not supported!");  }
+    public boolean isEmpty() { throw new UnsupportedOperationException("isEmpty not supported!");  }
+    public Set keySet() { return new MultiringKeySet(map.keySet()); }
+    public Object put(Object key, Object value) { return map.put(new RingId(ringId, (Id) key), value); }
+    public void putAll(Map t) { throw new UnsupportedOperationException("putAll not supported!"); }
+    public Object remove(Object key) { return map.remove(new RingId(ringId, (Id) key)); }
+    public int size() { return map.size(); }
+    public Collection values() { throw new UnsupportedOperationException("values not supported!"); }
+  }
+
+  protected class MultiringEntrySet implements Set {
+    protected Set set;
+    
+    public MultiringEntrySet(Set set) {
+      this.set = set;
+    }
+    
+    public boolean add(Object o) { throw new UnsupportedOperationException("add not supported!"); }
+    public boolean addAll(Collection c) { throw new UnsupportedOperationException("addAll not supported!"); }
+    public void clear() { throw new UnsupportedOperationException("clear not supported!"); }
+    public boolean contains(Object o) { throw new UnsupportedOperationException("contains not supported!"); }
+    public boolean containsAll(Collection c) { throw new UnsupportedOperationException("containsAll not supported!"); }
+    public boolean equals(Object o) { throw new UnsupportedOperationException("equals not supported!"); }
+    public int hashCode() { throw new UnsupportedOperationException("hashCode not supported!"); }
+    public boolean isEmpty() { throw new UnsupportedOperationException("isEmpty not supported!"); }
+    public Iterator iterator() { return new Iterator() {
+      protected Iterator i = set.iterator();
+      public boolean hasNext() { return i.hasNext(); }
+      public Object next() { return new MultiringMapEntry((Map.Entry) i.next()); }
+      public void remove() { i.remove(); }
+    };
+    }
+    public boolean remove(Object o) { throw new UnsupportedOperationException("remove not supported!"); }
+    public boolean removeAll(Collection c) { throw new UnsupportedOperationException("removeAll not supported!"); }
+    public boolean retainAll(Collection c) { throw new UnsupportedOperationException("retainAll not supported!"); }
+    public int size() { throw new UnsupportedOperationException("size not supported!"); }
+    public Object[] toArray() { throw new UnsupportedOperationException("toArray not supported!"); }
+    public Object[] toArray(Object[] a) { throw new UnsupportedOperationException("toArray not supported!"); }
+  }
+  
+  protected class MultiringKeySet implements Set {
+    protected Set set;
+    
+    public MultiringKeySet(Set set) {
+      this.set = set;
+    }
+    
+    public boolean add(Object o) { throw new UnsupportedOperationException("add not supported!"); }
+    public boolean addAll(Collection c) { throw new UnsupportedOperationException("addAll not supported!"); }
+    public void clear() { throw new UnsupportedOperationException("clear not supported!"); }
+    public boolean contains(Object o) { throw new UnsupportedOperationException("contains not supported!"); }
+    public boolean containsAll(Collection c) { throw new UnsupportedOperationException("containsAll not supported!"); }
+    public boolean equals(Object o) { throw new UnsupportedOperationException("equals not supported!"); }
+    public int hashCode() { throw new UnsupportedOperationException("hashCode not supported!"); }
+    public boolean isEmpty() { throw new UnsupportedOperationException("isEmpty not supported!"); }
+    public Iterator iterator() { return new Iterator() {
+      protected Iterator i = set.iterator();
+      public boolean hasNext() { return i.hasNext(); }
+      public Object next() { return ((RingId) i.next()).getId(); }
+      public void remove() { i.remove(); }
+    };
+    }
+    public boolean remove(Object o) { throw new UnsupportedOperationException("remove not supported!"); }
+    public boolean removeAll(Collection c) { throw new UnsupportedOperationException("removeAll not supported!"); }
+    public boolean retainAll(Collection c) { throw new UnsupportedOperationException("retainAll not supported!"); }
+    public int size() { throw new UnsupportedOperationException("size not supported!"); }
+    public Object[] toArray() { throw new UnsupportedOperationException("toArray not supported!"); }
+    public Object[] toArray(Object[] a) { throw new UnsupportedOperationException("toArray not supported!"); }
+  }
+    
+  protected class MultiringMapEntry implements Map.Entry {
+    protected Map.Entry entry;
+    
+    public MultiringMapEntry(Map.Entry entry) {
+      this.entry = entry;
+    }
+    
+    public boolean equals(Object o) { throw new UnsupportedOperationException("equals not supported!"); }
+    public Object getKey() { return ((RingId) entry.getKey()).getId(); }
+    public Object getValue() { return entry.getValue(); }
+    public int hashCode() { throw new UnsupportedOperationException("hashCode not supported!"); }
+    public Object setValue(Object value) { throw new UnsupportedOperationException("setValue not supported!"); }
   }
 }
 

@@ -71,7 +71,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
   /**
    * The number of ids to delete at a given time - others will be deleted later 
    */
-  public static int NUM_DELETE_AT_ONCE = 20;
+  public static int NUM_DELETE_AT_ONCE = 100;
   
   /**
    * The id factory used for manipulating ids
@@ -103,6 +103,8 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    */
   protected Logger log = Logger.getLogger(this.getClass().getName());
   
+  protected String instance;
+  
   /**
     * Constructor
    *
@@ -129,6 +131,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     this.factory = node.getIdFactory();
     this.endpoint = node.registerApplication(this, instance);
     this.helper = new ReplicationManagerHelper();
+    this.instance = instance;
     
     log.finer(endpoint.getId() + ": Starting up ReplicationManagerImpl with client " + client);
     
@@ -227,6 +230,8 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     
     IdRange notRange = range.getComplementRange();
     
+    System.out.println("RMImpl.setRange " + instance + ": " + range + " notRange " + notRange);
+    
     /* Next, we delete any unrelevant keys from the client */
     final Iterator i = client.scan(notRange).getIterator();
     
@@ -240,13 +245,16 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
           log.warning(endpoint.getId() + ": Unstore of id " + id + " did not succeed!");
         }
         
+        
         if (count < NUM_DELETE_AT_ONCE) {
           while (i.hasNext() && (! client.exists((id = (Id) i.next())))) {}
           
           if (i.hasNext()) {
             log.finer(endpoint.getId() + ": Telling client to delete id " + id + " range " + range);
             count++;
-            client.remove(id, this);
+            
+            System.out.println("RMImpl.setRange " + instance + ": removing id " + id);
+            //client.remove(id, this);
           }
         }
       }
@@ -406,12 +414,13 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
       IdRange notRange = range.getComplementRange();
       
       /* first, we remove any non-relevant keys from the list of pending keys */
-      Id[] array = set.subSet(notRange).asArray();
+      Iterator i = set.subSet(notRange).getIterator();
       
       /* now look for any matching ids */
-      for (int i=0; i<array.length; i++) {
-        set.removeId(array[i]);
-        hints.remove(array[i]);
+      while (i.hasNext()) {
+        Id id = (Id) i.next();
+        set.removeId(id);
+        hints.remove(id);
       }
     }    
     
@@ -450,15 +459,13 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
      *
      * @return The next key to be fetched
      */
-    protected synchronized Id getNextId() {
-      Id[] array = set.asArray();
-      
-      if (array.length == 0) {
+    protected synchronized Id getNextId() {      
+      if (set.numElements() == 0) {
         log.warning(endpoint.getId() + ": GetNextId called without any ids available - aborting");
         return null;
       }
       
-      current = array[0];  
+      current = (Id) set.getIterator().next();  
       set.removeId(current);
       
       log.finer(endpoint.getId() + ": Returing next id to fetch " + current);

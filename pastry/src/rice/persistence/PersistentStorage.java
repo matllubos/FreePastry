@@ -53,6 +53,7 @@ import rice.Continuation.*;
 import rice.p2p.commonapi.*;
 import rice.serialization.*;
 import rice.selector.*;
+import rice.p2p.util.*;
 
 /**
  * This class is an implementation of Storage which provides
@@ -84,6 +85,20 @@ import rice.selector.*;
  * operation.  
  */
 public class PersistentStorage implements Storage {
+  
+  /**
+   * Static fields for logging based on the requests we are writing.
+   * Enable logWriteTypes to turn on this output.
+   */  
+  private static boolean logWriteTypes = true;
+  private Object statLock = new Object();
+  private long statsLastWritten = System.currentTimeMillis();
+  private long statsWriteInterval = 60 * 1000;
+  private long numWrites = 0;
+  private long numReads = 0;
+  private long numRenames = 0;
+  private long numDeletes = 0;
+  private long numMetadataWrites = 0;
   
   /**
    * Static variables defining the layout of the on-disk storage 
@@ -146,13 +161,12 @@ public class PersistentStorage implements Storage {
   private HashMap directories;      // the in-memory map of directories (for efficiency)
   private HashSet dirty;            // the list of directories which have dirty metadata
 
-  private TreeMap metadata;         // the in-memory cache of object metadata
+  private ReverseTreeMap metadata;  // the in-memory cache of object metadata
 
   private String rootDir;           // rootDirectory
 
   private long storageSize;         // The amount of storage allowed to be used 
   private long usedSize;            // The amount of storage currently in use
-  private IdSet idSet;              // In memory store of all keys
   private Random rng;               // random number generator
 
  /**
@@ -182,15 +196,30 @@ public class PersistentStorage implements Storage {
     this.rootDir = rootDir;
     this.storageSize = size; 
     this.rng = new Random();
-    this.idSet = factory.buildIdSet();
     this.directories = new HashMap();
     this.dirty = new HashSet();
-    this.metadata = new TreeMap();
+    this.metadata = new ReverseTreeMap();
     
     debug("Launching persistent storage in " + rootDir + " with name " + name + " spliting factor " + MAX_FILES);
     
     init();
   } 
+  
+  private void printStats() {
+    if (logWriteTypes) {
+      synchronized(statLock) {
+        long now = System.currentTimeMillis();
+        if ((statsLastWritten/statsWriteInterval) != (now/statsWriteInterval)) {
+          System.out.println("@L.PE name=" + name + " interval="+statsLastWritten+"-"+now);
+          statsLastWritten = now;
+          
+          System.out.println("@L.PE   objsTotal=" + metadata.keySet().size() + " objsBytesTotal=" + getTotalSize());
+          System.out.println("@L.PE   numWrites=" + numWrites + " numReads=" + numReads + " numDeletes=" + numDeletes);
+          System.out.println("@L.PE   numMetadataWrites=" + numMetadataWrites + " numRenames=" + numRenames);
+        }
+      }
+    }
+  }
   
   /**
    * Method which allows the persistence root to schedle an event which will tell it to 
@@ -201,8 +230,10 @@ public class PersistentStorage implements Storage {
    */
   public void setTimer(rice.selector.Timer timer) {
     timer.scheduleAtFixedRate(new rice.selector.TimerTask() {
+      public String toString() { return "persistence dirty purge enqueue"; }
       public void run() {
         QUEUE.enqueue(new WorkRequest(new ListenerContinuation("Enqueue of writeMetadataFile")) {
+          public String toString() { return "persistence dirty purge"; }
           public Object doWork() throws Exception {
             writeDirty();
             return Boolean.TRUE;
@@ -221,8 +252,13 @@ public class PersistentStorage implements Storage {
    * @param c The command to run once the operation is complete
    */
   public void rename(final Id oldId, final Id newId, Continuation c) {
+    printStats();
+    
     QUEUE.enqueue(new WorkRequest(c) {
+      public String toString() { return "rename " + oldId + " " + newId; }
       public Object doWork() throws Exception {
+        synchronized(statLock) { numRenames++; }
+        
         File f = getFile(oldId);
         
         if ((f != null) && (f.exists())) {
@@ -231,9 +267,9 @@ public class PersistentStorage implements Storage {
           
           checkDirectory(g.getParentFile());
           
-          synchronized (idSet) {
-            idSet.addId(newId); 
-            idSet.removeId(oldId); 
+          synchronized (metadata) {
+            metadata.put(newId, metadata.get(oldId));
+            metadata.remove(oldId); 
           }
           
           return Boolean.TRUE;
@@ -265,8 +301,13 @@ public class PersistentStorage implements Storage {
    * <code>false</code>.
    */
   public void store(final Id id, final Serializable metadata, final Serializable obj, Continuation c) {
+    printStats();
+    
     QUEUE.enqueue(new WorkRequest(c) { 
+      public String toString() { return "store " + id; }
       public Object doWork() throws Exception {
+        synchronized(statLock) { numWrites++; }
+        
         /* first, rename the current file to a temporary name */
         File objFile = getFile(id); 
         File transcFile = makeTemporaryFile(id);
@@ -293,8 +334,7 @@ public class PersistentStorage implements Storage {
         /* now, delete the old file */
         deleteFile(transcFile);
         
-        synchronized (idSet) {
-          idSet.addId(id); 
+        synchronized (PersistentStorage.this.metadata) {
           PersistentStorage.this.metadata.put(id, metadata);
           dirty.add(objFile.getParentFile());
         }
@@ -325,16 +365,20 @@ public class PersistentStorage implements Storage {
    * <code>false</code>.
    */
   public void unstore(final Id id, Continuation c) {
+    printStats();
+    
     QUEUE.enqueue(new WorkRequest(c) { 
+      public String toString() { return "unstore " + id; }
       public Object doWork() throws Exception {
+        synchronized(statLock) { numDeletes++; }
+        
         /* first get the file */
         File objFile = getFile(id); 
         
         System.out.println("COUNT: " + System.currentTimeMillis() + " Unstoring data under " + id.toStringFull() + " of size " + objFile.length() + " in " + name);
         
         /* remove id from stored list */
-        synchronized (idSet) { 
-          idSet.removeId(id);
+        synchronized (metadata) { 
           metadata.remove(id);
           dirty.add(objFile.getParentFile());
         }
@@ -359,8 +403,8 @@ public class PersistentStorage implements Storage {
    * @return Whether or not an object is present at id.
    */
   public boolean exists(Id id) {
-    synchronized (idSet) {
-      return idSet.isMemberId(id);
+    synchronized (metadata) {
+      return metadata.containsKey(id);
     }
   }
   
@@ -373,7 +417,7 @@ public class PersistentStorage implements Storage {
    * @return The metadata, or null of non exists
    */
   public Serializable getMetadata(Id id) {
-    synchronized (idSet) {
+    synchronized (metadata) {
       return (Serializable) metadata.get(id);
     }
   }
@@ -388,11 +432,16 @@ public class PersistentStorage implements Storage {
    * @param c The command to run once the operation is complete
    */
   public void setMetadata(final Id id, final Serializable metadata, Continuation c) {
+    printStats();
+    
     if (! exists(id)) {
       c.receiveResult(new Boolean(false));
     } else {    
       QUEUE.enqueue(new WorkRequest(c) { 
+        public String toString() { return "setMetadata " + id; }
         public Object doWork() throws Exception {
+          synchronized(statLock) { numMetadataWrites++; }
+          
           /* write the metadata to the file */
           File objFile = getFile(id);
           writeMetadata(objFile, metadata);
@@ -400,7 +449,7 @@ public class PersistentStorage implements Storage {
           System.out.println("COUNT: " + System.currentTimeMillis() + " Updating metadata for " + id.toStringFull() + " in " + name);
           
           /* then update our cache */
-          synchronized (idSet) {
+          synchronized (PersistentStorage.this.metadata) {
             PersistentStorage.this.metadata.put(id, metadata);
             dirty.add(objFile.getParentFile());
           }
@@ -420,12 +469,17 @@ public class PersistentStorage implements Storage {
    * object (through receiveResult on c).
    */
   public void getObject(final Id id, Continuation c) {
+    printStats();
+    
     if (! exists(id)) {
       c.receiveResult(null);
     } else {    
       QUEUE.enqueue(new WorkRequest(c) { 
+        public String toString() { return "getObject " + id; }
         public Object doWork() throws Exception {
           try { 
+            synchronized(statLock) { numReads++; }
+            
             /* get the file */
             File objFile = getFile(id);
                         
@@ -443,8 +497,7 @@ public class PersistentStorage implements Storage {
             moveToLost(objFile);
             
             /* remove our index for this file */
-            synchronized (idSet) {
-              idSet.removeId(id); 
+            synchronized (metadata) {
               metadata.remove(id);
               dirty.add(objFile.getParentFile());
             }
@@ -470,8 +523,13 @@ public class PersistentStorage implements Storage {
    * @return The idset containg the keys 
    */
   public IdSet scan(IdRange range){
-    synchronized (idSet) {
-      return idSet.subSet(range); 
+    synchronized (metadata) {
+      if (range.isEmpty())
+        return factory.buildIdSet();
+      else if (range.getCCWId().equals(range.getCWId())) 
+        return scan();
+      else
+        return factory.buildIdSet(new ImmutableSortedMap(metadata.keySubMap(range.getCCWId(), range.getCWId())));
     }
   }
 
@@ -487,8 +545,8 @@ public class PersistentStorage implements Storage {
    * @return The idset containg the keys 
    */
   public IdSet scan() {
-    synchronized (idSet){
-      return (IdSet) idSet.clone();
+    synchronized (metadata){
+      return factory.buildIdSet(new ImmutableSortedMap(metadata.keyMap()));
     }
   }
   
@@ -499,18 +557,14 @@ public class PersistentStorage implements Storage {
    * @param range The range to query  
    * @return The map containg the keys 
    */
-  public TreeMap scanMetadata(IdRange range) {
-    synchronized (idSet) {
-      TreeMap map = null;
-      
-      if (range.getCCWId().compareTo(range.getCWId()) <= 0) {
-        map = new TreeMap(metadata.subMap(range.getCCWId(), range.getCWId()));
-      } else {
-        map = new TreeMap(metadata.tailMap(range.getCCWId()));
-        map.putAll(metadata.headMap(range.getCWId()));
-      }
-      
-      return map;
+  public SortedMap scanMetadata(IdRange range) {
+    synchronized (metadata) {
+      if (range.isEmpty()) 
+        return new RedBlackMap();
+      else if (range.getCCWId().equals(range.getCWId())) 
+        return scanMetadata();
+      else 
+        return new ImmutableSortedMap(metadata.keySubMap(range.getCCWId(), range.getCWId()));
     }
   }
   
@@ -520,10 +574,28 @@ public class PersistentStorage implements Storage {
    *
    * @return The treemap mapping ids to metadata 
    */
-  public TreeMap scanMetadata() {
-    synchronized (idSet) {
-      return new TreeMap(metadata);
-    }
+  public SortedMap scanMetadata() {
+    return new ImmutableSortedMap(metadata.keyMap());
+  }
+  
+  /**
+   * Returns the submapping of ids which have metadata less than the provided
+   * value.
+   *
+   * @param value The maximal metadata value 
+   * @return The submapping
+   */
+  public SortedMap scanMetadataValuesHead(Object value) {
+    return new ImmutableSortedMap(metadata.valueHeadMap(value));
+  }
+  
+  /**
+   * Returns the submapping of ids which have metadata null
+   *
+   * @return The submapping
+   */
+  public SortedMap scanMetadataValuesNull() {
+    return new ImmutableSortedMap(metadata.valueNullMap());
   }
   
   /**
@@ -544,7 +616,7 @@ public class PersistentStorage implements Storage {
    * @return The number of ids in the catalog
    */
   public int getSize() {
-    return idSet.numElements();
+    return metadata.size();
   }
 
 
@@ -687,7 +759,13 @@ public class PersistentStorage implements Storage {
     checkDirectory(dir);
     
     /* now, read the metadata file in this directory */
-    long modified = readMetadataFile(dir);
+    long modified = 0;
+    
+    try {
+      modified = readMetadataFile(dir);
+    } catch (IOException e) {
+      System.out.println("ERROR: Got exception " + e + " reading metadata file - regenerating");
+    }
     
     /* next, start processing by listing the number of files and going from there */
     File[] files = dir.listFiles();
@@ -699,7 +777,6 @@ public class PersistentStorage implements Storage {
         
         if (len > 0) {
           increaseUsedSpace(len);
-          idSet.addId(id);
         
           /* if the file is newer than the metadata file, update the metadata 
             if we don't have the metadata for this file, update it */
@@ -725,13 +802,13 @@ public class PersistentStorage implements Storage {
    * Removes any entries in the metadata file which do not have files
    */
   private void initMetadata() throws IOException {
-    Id[] ids = (Id[])  metadata.keySet().toArray(new Id[0]);
+    /*Id[] ids = (Id[])  metadata.keySet().toArray(new Id[0]);
     
     for (int i=0; i<ids.length; i++)
       if (! idSet.isMemberId(ids[i])) {
         metadata.remove(ids[i]);
         dirty.add(getDirectoryForId(ids[i]));
-      }
+      } */
   }
 
   /**
@@ -1261,7 +1338,13 @@ public class PersistentStorage implements Storage {
     
     for (int i=0; i<files.length; i++) {
       HashMap map = new HashMap();
-      Iterator keys = idSet.subSet(getRangeForDirectory(files[i])).getIterator();
+      IdRange range = getRangeForDirectory(files[i]);
+      Iterator keys = null;
+      
+      if (range.getCCWId().compareTo(range.getCWId()) <= 0)
+        keys = metadata.keySubMap(range.getCCWId(), range.getCWId()).keySet().iterator();
+      else
+        keys = metadata.keyTailMap(range.getCCWId()).keySet().iterator();
       
       while (keys.hasNext()) {
         Id next = (Id) keys.next();
@@ -1271,7 +1354,7 @@ public class PersistentStorage implements Storage {
       try {
         writeMetadataFile(files[i], map);
         
-        synchronized (idSet) {
+        synchronized (metadata) {
           dirty.remove(files[i]);
         }
       } catch (IOException e) {
@@ -1308,7 +1391,7 @@ public class PersistentStorage implements Storage {
         while (keys.hasNext()) {
           Id id = (Id) keys.next();
           
-          if (range.containsId(id)) 
+          if ((range.containsId(id)) && (new File(file, id.toStringFull()).exists()))
             this.metadata.put(id, map.get(id));
           else
             dirty.add(file);
@@ -1868,8 +1951,10 @@ public class PersistentStorage implements Storage {
     
     public void run() {
       try {
+       // long start = System.currentTimeMillis();
         final Object result = doWork();
-      
+       // System.out.println("PT: " + (System.currentTimeMillis() - start) + " " + toString());
+        
         SelectorManager.getSelectorManager().invoke(new Runnable() {
           public void run() {
             returnResult(result);

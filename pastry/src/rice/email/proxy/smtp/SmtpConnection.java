@@ -8,6 +8,7 @@ public class SmtpConnection {
     // TODO: clean up getting localhost name
     private static final int TIMEOUT_MILLIS = 1000 * 30;
     private InetAddress serverAddress;
+    private SmtpServer server;
 
 
     {
@@ -29,7 +30,7 @@ public class SmtpConnection {
     SmtpHandler handler;
     String heloName;
 
-    public SmtpConnection(SmtpHandler handler, Socket sock) throws IOException {
+    public SmtpConnection(SmtpHandler handler, Socket sock, SmtpServer server) throws IOException {
         if (sock != null) {
           this.sock = sock;
           sock.setSoTimeout(TIMEOUT_MILLIS);
@@ -45,7 +46,12 @@ public class SmtpConnection {
           in.whitespaceChars(10, 10);
         }
           
+      this.server = server;
         this.handler = handler;
+    }
+    
+    public SmtpServer getServer() {
+      return server;
     }
     
     public StreamTokenizer getTokenizer() {

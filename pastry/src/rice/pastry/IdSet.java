@@ -39,6 +39,7 @@ package rice.pastry;
 import java.io.Serializable;
 import java.util.*;
 import java.security.*;
+import rice.p2p.util.*;
 
 /**
  * Represents a set of Pastry ids.
@@ -53,7 +54,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
   
   static final long serialVersionUID = -1565571743719309172L;
 
-  private TreeSet idSet;
+  private SortedMap idSet;
 
   // a cache of the fingerprint hash
   private byte[] cachedHash;
@@ -63,17 +64,17 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
    * Constructor.
    */
   public IdSet() {
-    idSet = new TreeSet();
+    idSet = new RedBlackMap();
     validHash = false;
   }
 
   /**
    * Constructor.
-   * constructs a shallow copy of the given TreeSet s.
+   * constructs 
    * @param s the TreeSet based on which we construct a new IdSet
    */
-  protected IdSet(TreeSet s) {
-    idSet = new TreeSet(s);
+  public IdSet(SortedMap s) {
+    idSet = s;
     validHash = false;
   }
 
@@ -82,11 +83,11 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
    * constructs a shallow copy of the given IdSet o.
    * @param o the IdSet to copy
    */
-  public IdSet(IdSet o) {
-    idSet = new TreeSet(o.idSet);
-    cachedHash = o.cachedHash;
-    validHash = o.validHash;
-  }
+//  public IdSet(IdSet o) {
+//    idSet = o.idSet;
+//    cachedHash = o.cachedHash;
+//    validHash = o.validHash;
+//  }
 
   /**
    * return the number of elements
@@ -100,7 +101,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
    * @param id the id to add
    */
   public void addMember(Id id) {
-    idSet.add(id);
+    idSet.put(id, null);
     validHash = false;
   }
 
@@ -119,7 +120,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
    * @return true of id is a member, false otherwise
    */
   public boolean isMember(Id id) {
-    return idSet.contains(id);
+    return idSet.containsKey(id);
   }
 
   /**
@@ -127,7 +128,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
    * @return the smallest id in the set
    */
   public Id minMember() {
-    return (Id) idSet.first();
+    return (Id) idSet.firstKey();
   }
 
   /**
@@ -135,7 +136,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
    * @return the largest id in the set
    */
   public Id maxMember() {
-    return (Id) idSet.last();
+    return (Id) idSet.lastKey();
   }
 
   /**
@@ -145,19 +146,20 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
    * @return the subset
    */
   public IdSet subSet(Id from, Id to) {
-    IdSet res;
+    return new IdSet(idSet.subMap(from, to));
+/*    IdSet res;
 
     if (from.compareTo(to) <= 0) {
-      res = new IdSet( (TreeSet) idSet.subSet(from, to));
+      res = new IdSet(idSet.subMap(from, to));
     } else {
-      res = new IdSet( (TreeSet) idSet.tailSet(from));
+      res = new IdSet(idSet.tailMap(from));
       //SortedSet ss = idSet.tailSet(from);
       //ss.addAll(idSet.headSet(to));
       //res = new IdSet( (TreeSet) ss);
-      res.idSet.addAll(idSet.headSet(to));
+      res.idSet.putAll(idSet.headMap(to));
     }
 
-    return res;
+    return res; */
   }
 
   /**
@@ -169,7 +171,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
     if (range.isEmpty()) {
       return new IdSet();
     } else if (range.getCCW().equals(range.getCW())) {
-      return (IdSet) this.clone();
+      return this;
     } else {
       return subSet(range.getCCW(), range.getCW());
     }
@@ -180,7 +182,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
    * @return the interator
    */
   public Iterator getIterator() {
-    return idSet.iterator();
+    return idSet.keySet().iterator();
   }
 
   /**
@@ -200,7 +202,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
       return null;
     }
 
-    Iterator it = idSet.iterator();
+    Iterator it = getIterator();
     byte[] raw = new byte[Id.IdBitLength / 8];
     Id id;
 
@@ -293,11 +295,11 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
    * @return the array
    */
   public rice.p2p.commonapi.Id[] asArray() {
-    return (rice.p2p.commonapi.Id[]) idSet.toArray(new rice.p2p.commonapi.Id[0]);
+    return (rice.p2p.commonapi.Id[]) idSet.keySet().toArray(new rice.p2p.commonapi.Id[0]);
   }
   
   public Object clone(){
-	return new IdSet(this);
+    return new IdSet(idSet);
   }
 
 

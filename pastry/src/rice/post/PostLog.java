@@ -1,5 +1,6 @@
 package rice.post;
 
+import java.io.*;
 import java.security.*;
 import java.security.cert.*;
 
@@ -39,6 +40,11 @@ public class PostLog extends Log {
    * The certificate of the user.
    */
   private PostCertificate certificate;
+  
+  /**
+   * Any extra data, or specifically, the head of one's aggregation log
+   */
+  protected Serializable aggregate;
   
   /**
    * Constructor for PostLog.  Package protected: only Post can create
@@ -83,6 +89,22 @@ public class PostLog extends Log {
     this.topEntryReference = previous.topEntryReference;
     
     sync(command);
+  }
+  
+  /**
+   * @return THe head of the aggregation log
+   */
+  public Serializable getAggregateHead() {
+    return aggregate;
+  }
+  
+  /**
+   * Updates the head of the aggregation log
+   *
+   * @param aggregate The current head of the aggregation log
+   */
+  public void setAggregateHead(Serializable aggregate) {
+    this.aggregate = aggregate;
   }
     
   /**

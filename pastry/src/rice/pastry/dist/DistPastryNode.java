@@ -58,6 +58,7 @@ public abstract class DistPastryNode extends PastryNode {
   
   static {
     THREAD.start();
+    THREAD.setPriority(Thread.MIN_PRIORITY);
   }
   
   // Period (in seconds) at which the leafset and routeset maintenance tasks, respectively, are invoked.
@@ -352,8 +353,10 @@ public abstract class DistPastryNode extends PastryNode {
     
     public void run() {
       try {
+      //  long start = System.currentTimeMillis();
         final Object result = r.execute();
-        
+      //  System.out.println("QT: " + (System.currentTimeMillis() - start) + " " + r.toString());
+
         SelectorManager.getSelectorManager().invoke(new Runnable() {
           public void run() {
             returnResult(result);

@@ -11,6 +11,16 @@ import java.io.*;
 import java.net.*;
 
 public class SmtpServerImpl extends Thread implements SmtpServer {
+  
+  public int connections = 0;
+  public int success = 0;
+  public int fail = 0;
+  
+  public int getConnections() { return connections; }
+  public int getSuccess() { int result = success; success = 0; return result; }
+  public int getFail() { int result = fail; fail = 0; return result; }
+  public void incrementSuccess() { success++; }
+  public void incrementFail() { fail++; }
 
   boolean acceptNonLocal = false;
   boolean gateway = false;
@@ -52,6 +62,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
     try {
       while (! quit) {
         final Socket socket = server.accept();
+        connections++;
 
         System.out.println("Accepted connection from " + socket.getInetAddress());
 
@@ -60,12 +71,14 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
           Thread thread = new Thread("SMTP Server Thread for " + socket.getInetAddress()) {
             public void run() {
               try {
-                SmtpHandler handler = new SmtpHandler(registry, manager, workspace);
+                SmtpHandler handler = new SmtpHandler(registry, manager, workspace, SmtpServerImpl.this);
                 handler.handleConnection(socket);
                 socket.close();
               } catch (IOException e) {
                 System.out.println("IOException occurred during handling of connection - " + e);
               }
+              
+              connections--;
             }
           };
 

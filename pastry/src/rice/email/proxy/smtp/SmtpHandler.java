@@ -14,6 +14,7 @@ class SmtpHandler {
   SmtpCommandRegistry _registry;
   SmtpManager _manager;
   Workspace _workspace;
+  SmtpServer _server;
 
   // session stuff
   SmtpConnection _conn;
@@ -23,14 +24,15 @@ class SmtpHandler {
   boolean _quitting;
   String _currentLine;
 
-  public SmtpHandler(SmtpCommandRegistry registry, SmtpManager manager, Workspace workspace) {
+  public SmtpHandler(SmtpCommandRegistry registry, SmtpManager manager, Workspace workspace, SmtpServer server) {
     _registry = registry;
     _manager = manager;
     _workspace = workspace;
+    _server = server;
   }
 
   public void handleConnection(Socket socket) throws IOException {
-    _conn = new SmtpConnection(this, socket);
+    _conn = new SmtpConnection(this, socket, _server);
     _state = new SmtpState(_workspace);
 
     try {

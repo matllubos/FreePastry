@@ -145,20 +145,18 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
     log.finer("Getting list of groups...");
     GCIdRange range = (GCIdRange) endpoint.range(endpoint.getLocalNodeHandle(), 0, null, true);
 
-    final Id[] array = storage.getStorage().scan(range.getRange()).asArray();
+    final Iterator i = storage.getStorage().scan(range.getRange()).getIterator();
     
     Continuation c = new StandardContinuation(command) {
-      int i=0;
       HashSet result = new HashSet();
       
       public void receiveResult(Object o) {
-        while (i < array.length) {
-          Id id = array[i];
+        while (i.hasNext()) {
+          Id id = (Id) i.next();
           GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
 
           if ((metadata != null) && (metadata instanceof DeliveryMetadata)) {
             result.add(((DeliveryMetadata) metadata).getDestination());
-            i++;
           } else {
             setMetadata(id, this);
             return;
@@ -182,7 +180,26 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
    */
   public void getMessage(final PostEntityAddress address, final Continuation command) {
     GCIdRange range = (GCIdRange) endpoint.range(endpoint.getLocalNodeHandle(), 0, null, true);
-    final Id[] array = storage.getStorage().scan(range.getRange()).asArray();
+    Iterator i = storage.getStorage().scan(range.getRange()).getIterator();
+    
+    while (i.hasNext()) {
+      Id id = (Id) i.next();
+      GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
+        
+      if ((metadata != null) && (metadata instanceof DeliveryMetadata) && 
+          ((DeliveryMetadata) metadata).getDestination().equals(address)) {
+        storage.getObject(id, command);
+        return;
+      }
+    }      
+     
+    System.out.println("Could not find any messages for user " + address + " - not tragic, but strange...");
+      
+    command.receiveResult(null);
+  }
+      
+    
+/*    final Id[] array = storage.getStorage().scan(range.getRange()).asArray();
     
     if (array.length == 0) {
       command.receiveResult(null);
@@ -205,8 +222,7 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
       System.out.println("Could not find any messages for user " + address + " - not tragic, but strange...");
       
       command.receiveResult(null);
-    }
-  }
+    } */
   
   /**
    * Either returns the userid associated with the given id by looking in the cache,

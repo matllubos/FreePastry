@@ -20,6 +20,7 @@ public class QueuePanelCreator implements PanelCreator {
   
   Vector processing = new Vector();
   Vector persistence = new Vector();
+  Vector invocations = new Vector();
   Vector times = new Vector();
   
   protected ProcessingQueue processingQ;
@@ -61,7 +62,22 @@ public class QueuePanelCreator implements PanelCreator {
       dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
       
       LineGraphView dataStorageView = new LineGraphView("Persistence Queue", 380, 200, dataStorageCons, "Time (sec)", "Queue Size", false, false);
-      dataStorageView.addSeries("Insert", getTimeArray(), getArray(persistence), Color.blue);
+      dataStorageView.addSeries("Insert", getTimeArray(), getArray(persistence), Color.green);
+      
+      pastPanel.addDataView(dataStorageView);
+    } catch (Exception e) {
+      System.out.println("Exceptoin " + e + " thrown.");
+      e.printStackTrace();
+    }
+    
+    try {      
+      GridBagConstraints dataStorageCons = new GridBagConstraints();
+      dataStorageCons.gridx = 0;
+      dataStorageCons.gridy = 0;
+      dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
+      
+      LineGraphView dataStorageView = new LineGraphView("Selector Queue", 380, 200, dataStorageCons, "Time (sec)", "Queue Size", false, false);
+      dataStorageView.addSeries("Insert", getTimeArray(), getArray(invocations), Color.orange);
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
@@ -103,11 +119,13 @@ public class QueuePanelCreator implements PanelCreator {
     try {
       processing.add(new Double((double) processingQ.getLength()));
       persistence.add(new Double((double) persistenceQ.getLength()));
+      invocations.add(new Double((double) SelectorManager.getSelectorManager().getNumInvocations()));
       times.add(new Long(System.currentTimeMillis()));
       
       if (processing.size() > NUM_DATA_POINTS) {
         processing.removeElementAt(0); 
         times.removeElementAt(0);
+        invocations.removeElementAt(0);
         persistence.removeElementAt(0);
       }
     } catch (Exception e) {

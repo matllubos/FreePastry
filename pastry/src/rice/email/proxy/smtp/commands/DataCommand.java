@@ -61,8 +61,10 @@ public class DataCommand extends SmtpCommand {
     try {
       manager.send(state, conn.isLocal());
       conn.println("250 Message accepted for delivery");
+      conn.getServer().incrementSuccess();
     } catch (Exception je) {
       conn.println("451 Requested action aborted: local error in processing");
+      conn.getServer().incrementFail();
       je.printStackTrace();
       rice.pastry.dist.DistPastryNode.addError("SEVERE: Exception " + je + " occurred while attempting to send message to " + msg.getRecipientIterator().next());
     }

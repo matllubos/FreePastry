@@ -50,6 +50,7 @@ import java.util.zip.*;
 
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.util.*;
 
 import rice.serialization.*;
 
@@ -65,7 +66,7 @@ public class MemoryStorage implements Storage {
   private HashMap storage;
   
   // the map used to store the metadata
-  private TreeMap metadata;
+  private ReverseTreeMap metadata;
 
   // the current list of Ids
   private IdSet idSet;
@@ -85,7 +86,7 @@ public class MemoryStorage implements Storage {
     this.factory = factory;
     idSet = factory.buildIdSet();
     storage = new HashMap();
-    metadata = new TreeMap();
+    metadata = new ReverseTreeMap();
     currentSize = 0;
   } 
   
@@ -254,8 +255,13 @@ public class MemoryStorage implements Storage {
    * @param range The range to query  
    * @return The map containg the keys 
    */
-  public TreeMap scanMetadata(IdRange range) {
-    return new TreeMap(metadata.subMap(range.getCCWId(), range.getCWId()));
+  public SortedMap scanMetadata(IdRange range) {    
+    if (range.isEmpty()) 
+      return new RedBlackMap();
+    else if (range.getCCWId().equals(range.getCWId())) 
+      return scanMetadata();
+    else 
+      return new ImmutableSortedMap(metadata.keySubMap(range.getCCWId(), range.getCWId()));
   }
   
   /**
@@ -264,8 +270,28 @@ public class MemoryStorage implements Storage {
    *
    * @return The treemap mapping ids to metadata 
    */
-  public TreeMap scanMetadata() {
-    return new TreeMap(metadata);
+  public SortedMap scanMetadata() {
+    return new ImmutableSortedMap(metadata.keyMap());
+  }
+  
+  /**
+   * Returns the submapping of ids which have metadata less than the provided
+   * value.
+   *
+   * @param value The maximal metadata value 
+   * @return The submapping
+   */
+  public SortedMap scanMetadataValuesHead(Object value) {
+    return new ImmutableSortedMap(metadata.valueHeadMap(value));
+  }
+  
+  /**
+    * Returns the submapping of ids which have metadata null
+   *
+   * @return The submapping
+   */
+  public SortedMap scanMetadataValuesNull() {
+    return new ImmutableSortedMap(metadata.valueNullMap());
   }
 
   /**

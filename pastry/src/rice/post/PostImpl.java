@@ -38,6 +38,11 @@ public class PostImpl implements Post, Application, ScribeClient {
   public static final int REPLICATION_FACTOR = 3;
   
   /**
+   * The interval between log refreshes
+   */
+  public static int BACKUP_INTERVAL = 1000 * 60 * 60 * 24;
+  
+  /**
    * The endpoint used for routing messages
    */
   protected Endpoint endpoint;
@@ -208,6 +213,8 @@ public class PostImpl implements Post, Application, ScribeClient {
   //  logger.addHandler(new ConsoleHandler());
   //  logger.setLevel(Level.FINEST);
   //  logger.getHandlers()[0].setLevel(Level.FINEST);
+    
+    BACKUP_INTERVAL = (int) refreshInterval;
     
     endpoint.scheduleMessage(new SynchronizeMessage(), new Random().nextInt((int) synchronizeInterval), synchronizeInterval);
     endpoint.scheduleMessage(new RefreshMessage(), new Random().nextInt((int) refreshInterval), refreshInterval);
@@ -539,6 +546,28 @@ public class PostImpl implements Post, Application, ScribeClient {
     };
     
     c.receiveResult(null);
+ 
+    final HashSet set = new HashSet();
+    final Iterator j = clients.iterator();
+    storage.setAggregate(log);
+    set.add(log);
+    
+    Continuation d = new ListenerContinuation("Retrieval of Mutable Data") {
+      public void receiveResult(Object o) {
+        if (o != null) {
+          Object[] a = (Object[]) o;
+          for (int i=0; i<a.length; i++)
+            set.add(a[i]);
+        }
+        
+        if (j.hasNext()) 
+          ((PostClient) j.next()).getLogs(this);
+        else 
+          storage.backupLogs((Log[]) set.toArray(new Log[0]), new ListenerContinuation("Backing up of mutable objects"));
+      }
+    };
+    
+    d.receiveResult(null);
   }
   
   /**
@@ -847,8 +876,16 @@ public class PostImpl implements Post, Application, ScribeClient {
   public void announcePresence() {
     logger.finer(endpoint.getId() + ": Publishing presence to the group " + address.getAddress());
 
-    PresenceMessage pm = new PresenceMessage(address, endpoint.getLocalNodeHandle());
-    scribe.publish(new Topic(address.getAddress()), new PostScribeMessage(signPostMessage(pm)));
+    final PresenceMessage pm = new PresenceMessage(address, endpoint.getLocalNodeHandle());
+    endpoint.process(new Executable() {
+      public Object execute() {
+        return signPostMessage(pm);
+      }
+    }, new ListenerContinuation("Sending of PresnceMessage") {
+      public void receiveResult(Object o) {
+        scribe.publish(new Topic(address.getAddress()), new PostScribeMessage((SignedPostMessage) o));
+      }
+    });
   }
 
   /**

@@ -51,6 +51,7 @@ import java.util.zip.*;
 import rice.*;
 import rice.Continuation.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.util.*;
 
 import rice.serialization.*;
 
@@ -288,7 +289,7 @@ public class LRUCache implements Cache {
    * @param range The range to query  
    * @return The map containg the keys 
    */
-  public TreeMap scanMetadata(IdRange range) {
+  public SortedMap scanMetadata(IdRange range) {
     return storage.scanMetadata(range);
   }
   
@@ -298,8 +299,28 @@ public class LRUCache implements Cache {
    *
    * @return The treemap mapping ids to metadata 
    */
-  public TreeMap scanMetadata() {
+  public SortedMap scanMetadata() {
     return storage.scanMetadata();
+  }
+  
+  /**
+   * Returns the submapping of ids which have metadata less than the provided
+   * value.
+   *
+   * @param value The maximal metadata value 
+   * @return The submapping
+   */
+  public SortedMap scanMetadataValuesHead(Object value) {
+    return storage.scanMetadataValuesHead(value);
+  }
+  
+  /**
+    * Returns the submapping of ids which have metadata null
+   *
+   * @return The submapping
+   */
+  public SortedMap scanMetadataValuesNull() {
+    return storage.scanMetadataValuesNull();
   }
 
   /**
