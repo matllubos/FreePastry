@@ -21,6 +21,7 @@ import rice.p2p.past.*;
 import rice.persistence.*;
 
 import rice.post.*;
+import rice.post.proxy.*;
 import rice.post.security.*;
 import rice.post.security.ca.*;
 
