@@ -226,7 +226,8 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
 	// We will go through the m_keys set and remove those keys
 	// that do not lie within this range
 
-	//System.out.println("isResponsible called on " + getNodeId() + " with range= " + range); 
+	//System.out.println("isResponsible called on " + getNodeId() + " with range= " + range + range.isEmpty());
+	
 	Vector toRemove = new Vector();
 	Iterator it = m_keys.getIterator();
 	while(it.hasNext()) {

@@ -193,8 +193,47 @@ public class DirectRMRegrTest
 	boolean passed = true;
 	int pos;
 
+
+	// We will first check to see if the Range calculations work fine
+	// when the network size is smaller than the Replication factor
+	// and when nodes should be responsible for the entire range
+
+	
+	// We will form a small Pastry network less than Replication factor
+	for (i=0; i< RMRegrTestApp.rFactor; i++) {
+	    makeRMNode();
+	    while (simulate());
+	    //System.out.println("Node" + i + "created");
+	}
+	while (simulate());
+
+
+	// We will now check the range calculations to ensure that their 
+	// 'myRange' is the full Pastry ring
+	
+	for(i=0; i< rmClients.size(); i++) {
+	    rmApp = (DirectRMRegrTestApp)rmClients.elementAt(i);
+	    boolean ok = true;
+	    Id ccw = rmApp.m_rm.myRange.getCCW();
+	    Id cw = rmApp.m_rm.myRange.getCW();
+	    if(rmApp.m_rm.myRange.isEmpty() || !ccw.equals(cw)) {
+		ok = false;
+		System.out.println("ERROR:: Node " + rmApp.m_rm.getNodeId() + " is not responsible for full Pastry Ring");
+	    }
+	    passed = passed & ok;
+
+	    
+	}
+
+	if(!passed) {
+	    System.out.println("");
+	    System.out.println("ERROR:: DirectRMRegrTest failed at this point itself when the network size was smaller than the replicationFactor. At this point all the nodes should be responsible for the entire Pastry ring");
+
+	    System.out.println("");
+	}
+
 	// We will form the Pastry network of all the nodes
-	for (i=0; i<n; i++) {
+	for (i= RMRegrTestApp.rFactor; i<n; i++) {
 	    makeRMNode();
 	    while (simulate());
 	    //System.out.println("Node" + i + "created");
