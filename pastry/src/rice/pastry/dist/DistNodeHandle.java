@@ -179,7 +179,7 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
         alive = true;
         distance = Integer.MAX_VALUE;
 
-	setChanged();
+        setChanged();
         notifyObservers(DECLARED_LIVE);
       }
     }
@@ -196,8 +196,6 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
         return;
       }
 
-      (new Exception()).printStackTrace();
-
       if (alive == true) {
         if (Log.ifp(5)) {
           if (getLocalNode() == null) {
@@ -210,8 +208,8 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
         alive = false;
         distance = Integer.MAX_VALUE;
 
-	setChanged();
-  notifyObservers(DECLARED_DEAD);
+        setChanged();
+        notifyObservers(DECLARED_DEAD);
       }
     }
 
@@ -414,83 +412,82 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
     //
 
     public void addObserver(Observer o) {
-	verify();
-	if (redirect != null)
-	    redirect.addObserver(o);
-	else
-	    super.addObserver(o);
+      verify();
+      if (redirect != null)
+        redirect.addObserver(o);
+      else
+        super.addObserver(o);
     }
 
     public int countObservers() {
-	verify();
-	if (redirect != null)
-	    return redirect.countObservers();
-	else
-	    return super.countObservers();
+      verify();
+      if (redirect != null)
+        return redirect.countObservers();
+      else
+        return super.countObservers();
     }
 
     public void deleteObserver(Observer o) {
-	verify();
-	if (redirect != null)
-	    redirect.deleteObserver(o);
-	else
-	    super.deleteObserver(o);
+      verify();
+      if (redirect != null)
+        redirect.deleteObserver(o);
+      else
+        super.deleteObserver(o);
     }
 
     public void deleteObservers() {
-	verify();
-	if (redirect != null)
-	    redirect.deleteObservers();
-	else
-	    super.deleteObservers();
+      verify();
+      if (redirect != null)
+        redirect.deleteObservers();
+      else
+        super.deleteObservers();
     }
 
     public boolean hasChanged() {
-	verify();
-	if (redirect != null)
-	    return redirect.hasChanged();
-	else
-	    return super.hasChanged();
+      verify();
+      if (redirect != null)
+        return redirect.hasChanged();
+      else
+        return super.hasChanged();
     }
 
     public void notifyObservers() {
-	verify();
-	if (redirect != null)
-	    redirect.notifyObservers();
-	else
-	    super.notifyObservers();
+      verify();
+      if (redirect != null)
+        redirect.notifyObservers();
+      else
+        super.notifyObservers();
     }
 
     public void notifyObservers(Object arg) {
-	verify();
-	if (redirect != null)
-	    redirect.notifyObservers(arg);
-	else
-	    super.notifyObservers(arg);
+      verify();
+      if (redirect != null)
+        redirect.notifyObservers(arg);
+      else
+        super.notifyObservers(arg);
     }
 
     protected void setChanged() {
-	verify();
-	if (redirect != null)
-	    redirect.setChanged();
-	else
-	    super.setChanged();
+      verify();
+      if (redirect != null)
+        redirect.setChanged();
+      else
+        super.setChanged();
     }
 
     protected void clearChanged() {
-	verify();
-	if (redirect != null)
-	    redirect.clearChanged();
-	else
-	    super.clearChanged();
+      verify();
+      if (redirect != null)
+        redirect.clearChanged();
+      else
+        super.clearChanged();
     }
 
     // Observer method
-    
-    public void update(Observable o, Object obj) {
-	System.out.println("DistNodeHandle::update(): should not be here!!!!");
-    }
 
+    public void update(Observable o, Object obj) {
+      System.out.println("DistNodeHandle::update(): should not be here!!!!");
+    }
 }
 
 
