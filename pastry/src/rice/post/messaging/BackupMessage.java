@@ -9,4 +9,8 @@ import rice.p2p.commonapi.*;
  */
 public class BackupMessage implements Message {
   
+  public int getPriority() {
+    return MEDIUM_PRIORITY;
+  }
+  
 }
