@@ -111,7 +111,6 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     * @return an instance of a Channel class. 
     */
     public Channel createChannel(int numStripes, String name){
-
 	Channel channel = new Channel(numStripes, name, scribe, credentials, bandwidthManager, this);
 	channels.put(channel.getChannelId(), channel);
 	return (channel);
@@ -328,7 +327,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 										      channel.getChannelId(), 
 										      channel.getTimeoutLen() ),
 						 credentials, null );
-			    //System.out.println("Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+" at "+channel.getNodeId());
+			    //System.out.println("SPLITSTREAM -- Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+" at "+((Scribe)scribe).getNodeId()+" when child"+child.getNodeId()+" for topic"+topicId+" contacted");
 			    victimStripe.setLocalDrop(true);
 			    scribe.removeChild(victimChild, (NodeId)victimStripeId);
 			}
@@ -366,6 +365,8 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
      */
     public void registerApp(ISplitStreamApp app){
 	m_apps.add(app);
+	if(m_ready)
+	    app.splitstreamIsReady();
     } 
    
     /**
