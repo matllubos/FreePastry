@@ -794,6 +794,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           
           if (bootstrap) 
             close();
+        }
       } catch (IOException e) {
         debug("ERROR " + e + " writing - cancelling.");
         close();
