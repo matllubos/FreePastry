@@ -207,6 +207,13 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
     // launch thread to handle the sockets
     Thread t = new Thread("Thread for node " + nodeId) {
       public void run() {
+        try {
+          sleep(250);
+        } catch (InterruptedException e) {
+          System.err.println("Interrupted in newNode!");
+        }
+
+        
         pn.doneNode(bootstrap);
       }
     };
