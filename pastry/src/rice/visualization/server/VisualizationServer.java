@@ -60,6 +60,7 @@ public class VisualizationServer implements Runnable {
     
     ((DistPastryNode) node).addNetworkListener(NAchecker);
     this.debugCommandHandlers = new Vector();
+    addDebugCommandHandler(new FileCommandHandler());    
   }
   
   public void addPanelCreator(PanelCreator creator) {
@@ -191,11 +192,11 @@ public class VisualizationServer implements Runnable {
       ie.printStackTrace();
     }    
     
-    System.out.println("restarting with command:\""+restartCommand+"\"");
+//    System.out.println("restarting with command:\""+restartCommand+"\"");
           
-    Process p = Runtime.getRuntime().exec(restartCommand);
+//    Process p = Runtime.getRuntime().exec(restartCommand);
 //    System.out.println("Process:"+p);
-    System.exit(0);
+    System.exit(2);
     
     
   }

@@ -43,7 +43,7 @@ public class Node {
   }
     
   public String toString() {
-    return ring.name+":"+handle.toString();
+    return ring.name+":"+handle;
   }
   
   public void addAssociation(Node n) {

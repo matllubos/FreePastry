@@ -16,7 +16,7 @@ import rice.pastry.dist.DistNodeHandle;
 public class InformationPanel extends JPanel {
   
   public static int INFORMATION_PANEL_WIDTH = 350;
-  public static int INFORMATION_PANEL_HEIGHT = PastryRingPanel.PASTRY_RING_PANEL_HEIGHT/2;
+  public static int INFORMATION_PANEL_HEIGHT = PastryRingPanel.PASTRY_RING_PANEL_HEIGHT/3;
   
   protected Visualization visualization;
   

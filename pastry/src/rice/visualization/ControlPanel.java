@@ -79,7 +79,7 @@ public class ControlPanel extends JPanel implements ActionListener {
 */
     fileList = new JList(selectedFiles);
 
-    selectJarsButton = new JButton("Add Jars");
+    selectJarsButton = new JButton("Add Jars/props");
     removeJarsButton = new JButton("Remove Jars");
     debugCommandButton = new JButton("Debug Command");
     updateJarsButton = new JButton("Update and Restart");
@@ -95,35 +95,37 @@ public class ControlPanel extends JPanel implements ActionListener {
       BorderFactory.createEmptyBorder(5,5,5,5))
     );
 
+    int gridY = 0;
+
     GridBagConstraints c = new GridBagConstraints();
     c.fill = GridBagConstraints.BOTH;
     c.weightx = 1.0;
     c.weighty = 0.0;
     c.gridx = 0;
     
-    c.gridy = 0;
+    c.gridy = gridY++;
     centerPanelLayout.setConstraints(selectJarsButton, c);
     centerPanel.add(selectJarsButton);
 
-    c.gridy = 1;
+    c.gridy = gridY++;
     c.weighty = 4.0;
     centerPanelLayout.setConstraints(jarsPane, c);
     centerPanel.add(jarsPane);
     c.weighty = 0.0;
 
-    c.gridy = 2;
+    c.gridy = gridY++;
     centerPanelLayout.setConstraints(removeJarsButton, c);
     centerPanel.add(removeJarsButton);
 
-    c.gridy = 3;
-    centerPanelLayout.setConstraints(commandLineField, c);
-    centerPanel.add(commandLineField);
+//    c.gridy = gridY++;
+//    centerPanelLayout.setConstraints(commandLineField, c);
+//    centerPanel.add(commandLineField);
 
-    c.gridy = 4;
+    c.gridy = gridY++;
     centerPanelLayout.setConstraints(updateJarsButton, c);
     centerPanel.add(updateJarsButton);
 
-    c.gridy = 5;
+    c.gridy = gridY++;
     centerPanelLayout.setConstraints(debugCommandButton, c);
     centerPanel.add(debugCommandButton);
 
@@ -135,7 +137,7 @@ public class ControlPanel extends JPanel implements ActionListener {
     debugCommandButton.addActionListener(this);
 
     chooser = new JFileChooser();
-    JarFileFilter filter = new JarFileFilter();
+    VizFileFilter filter = new VizFileFilter();
     chooser.setFileFilter(filter);
     chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
     chooser.setApproveButtonText("Add");
@@ -143,18 +145,19 @@ public class ControlPanel extends JPanel implements ActionListener {
 
   }
 
-  class JarFileFilter extends FileFilter {
-    public boolean accept(File arg0) {
-      return arg0.getName().endsWith(".jar");
+  class VizFileFilter extends FileFilter {
+    public boolean accept(File arg0) {      
+      return ((arg0.getName().endsWith(".jar")) ||
+              (arg0.getName().endsWith(".params")));
     }
 
     public String getDescription() {
-      return "Jar Files";    
+      return "Jar/Param Files";    
     }
   }
 
   public Dimension getPreferredSize() {
-    return new Dimension(InformationPanel.INFORMATION_PANEL_WIDTH, InformationPanel.INFORMATION_PANEL_HEIGHT);
+    return new Dimension(InformationPanel.INFORMATION_PANEL_WIDTH, InformationPanel.INFORMATION_PANEL_HEIGHT*2);
   }
 
   public void nodeSelected(Node node) {
