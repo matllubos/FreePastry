@@ -58,8 +58,7 @@ public interface IScribeApp
 {
 	
     /** 
-     * Called by Scribe on a PUBLISH event when a message arrives to its 
-     * destination.
+     * Called by Scribe when a multicast message arrives.
      * 
      * @param msg 
      * The message sent in the PUBLISH message.
