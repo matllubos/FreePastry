@@ -54,11 +54,6 @@ import java.security.*;
  * @author Peter Druschel
  */
 public class PastryIdFactory implements IdFactory {
-  
-  /**
-   * Static hashtable of ringIds, for coalescing multiple ids
-   */
-  protected static WeakHashMap ID_CACHE = new WeakHashMap();
 
   private MessageDigest md;
 
@@ -72,24 +67,6 @@ public class PastryIdFactory implements IdFactory {
       System.err.println( "No SHA support!" );
     }
   }
-  
-  /**
-   * Method which ensures that only one copy of each thingy is ever stored
-   *
-   * @param input The Id to be returned
-   * @return THe canocotial object
-   */
-  protected Id process(Id input) {
-    WeakReference ref = (WeakReference) ID_CACHE.get(input);
-    Id result = null;
-    
-    if ((ref != null) && ((result = (Id) ref.get()) != null)) {
-      return result;
-    } else {
-      ID_CACHE.put(input, new WeakReference(input));
-      return input;
-    }
-  }
       
   /**
    * Builds a protocol-specific Id given the source data.
@@ -98,7 +75,7 @@ public class PastryIdFactory implements IdFactory {
    * @return The built Id.
    */
   public Id buildId(byte[] material) {
-    return process(new rice.pastry.Id(material));
+    return rice.pastry.Id.build(material);
   }
 
   /**
@@ -108,7 +85,7 @@ public class PastryIdFactory implements IdFactory {
    * @return The built Id.
    */
   public Id buildId(int[] material) {
-    return process(new rice.pastry.Id(material));
+    return rice.pastry.Id.build(material);
   }
 
   /**
@@ -130,7 +107,7 @@ public class PastryIdFactory implements IdFactory {
    * @return The built Id.
    */
   public Id buildIdFromToString(String string) {
-    return process(new rice.pastry.Id(string));
+    return rice.pastry.Id.build(string);
   }
   
   /**
@@ -143,7 +120,16 @@ public class PastryIdFactory implements IdFactory {
    * @return The built Id.
    */
   public Id buildIdFromToString(char[] chars, int offset, int length) {
-    return process(new rice.pastry.Id(chars, offset, length));
+    return rice.pastry.Id.build(chars, offset, length);
+  }
+  
+  /**
+   * Returns the length a Id.toString should be.
+   *
+   * @return The correct length;
+   */
+  public int getIdToStringLength() {
+    return rice.pastry.Id.IdBitLength/4;
   }
   
   /**

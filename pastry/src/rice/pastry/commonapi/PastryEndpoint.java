@@ -63,6 +63,8 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
 
   protected Application application;
   
+  protected String instance;
+  
   /**
    * Constructor.
    *
@@ -70,7 +72,8 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    */
   public PastryEndpoint(PastryNode pn, Application application, String instance) {
     super(pn, application.getClass().getName() + instance);
-
+    
+    this.instance = application.getClass().getName() + instance;
     this.application = application;
   }
 
@@ -346,6 +349,16 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
       // was sent with a PastryAppl.routeMsgDirect(); we deliver it for backward compatibility
       messageForAppl(msg);
     }
+  }
+  
+  /**
+   * Returns a unique instance name of this endpoint, sort of a mailbox name for this
+   * application.
+   * 
+   * @return The unique instance name of this application
+   */
+  public String getInstance() {
+    return instance;
   }
 
 }
