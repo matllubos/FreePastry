@@ -1,8 +1,10 @@
 PACKAGE = rice.past.search
 
 SOURCE  = \
+	Combinator.java \
 	IndexEntry.java \
 	IndexKeyString.java \
+	IndexPlaceholder.java \
 	Searchable.java \
 	SearchService.java \
 	SearchServiceImpl.java 
