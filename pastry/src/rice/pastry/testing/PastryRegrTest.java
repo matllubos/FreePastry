@@ -394,10 +394,10 @@ public class PastryRegrTest {
     public static void main(String args[]) {
 	PastryRegrTest pt = new PastryRegrTest();
 	
-	int n = 4000;
-	int d = 1000;
+	int n = 500;
+	int d = 200;
 	int k = 100;
-	int numConcJoins = 1;
+	int numConcJoins = 2;
 	int m = 100;
 
 	Date old = new Date();
@@ -453,29 +453,27 @@ public class PastryRegrTest {
     
 	//pt.sendPings(k);
 
-	System.out.println("Starting second leafset maintenance");
+	for (int i=0; i<4; i++) {
 
-	// initiate 2nd leafset maint.
-	pt.initiateLeafSetMaintenance();
+	    System.out.println("Starting leafset maintenance, round " + (i+2));
 
-	System.out.println("finished second leafset maintenance");
+	    // initiate leafset maint.
+	    pt.initiateLeafSetMaintenance();
 
-	// send messages
-	pt.sendPings((n-d)*k);
-	System.out.println((n-d)*k + " messages sent");
+	    System.out.println("finished leafset maintenance, round " + (i+2));
 
-	System.out.println("starting RT and leafset check");
+	    // send messages
+	    pt.sendPings((n-d)*k);
+	    System.out.println((n-d)*k + " messages sent");
 
-	// check all routing tables, leaf sets
-	for (int i=0; i<pt.rtApps.size(); i++) {
-	    pt.checkLeafSet((RegrTestApp)pt.rtApps.get(i));
-	    pt.checkRoutingTable((RegrTestApp)pt.rtApps.get(i));
+	    System.out.println("starting RT and leafset check, round " + (i+2));
+
+	    // check all routing tables, leaf sets
+	    for (int j=0; j<pt.rtApps.size(); j++) {
+		pt.checkLeafSet((RegrTestApp)pt.rtApps.get(j));
+		pt.checkRoutingTable((RegrTestApp)pt.rtApps.get(j));
+	    }
 	}
 
     }
 }
-
-
-
-
-

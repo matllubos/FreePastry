@@ -90,31 +90,13 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 
 	    NodeHandle from = bls.from();
 	    LeafSet remotels = bls.leafSet();
-	    
-	    int cwSize = remotels.cwSize();
-	    int ccwSize = remotels.ccwSize();
 
 	    //System.out.println("received leafBC from " + from.getNodeId() + " at " + 
 	    //	       localHandle.getNodeId() + "type=" + type + " :" + remotels);
 
 	    // first, merge the received leaf set into our own
-	    for (int i=-ccwSize; i<=cwSize; i++) {
-		NodeHandle nh;
+	    mergeLeafSet(remotels, from);
 
-		if (i == 0) nh = from;
-		else nh = remotels.get(i);
-		
-		nh = security.verifyNodeHandle(nh);
-		
-		if (nh.isAlive() == false) continue;
-		
-		// merge into our leaf set
-		leafSet.put(nh);
-
-		// update RT as well
-		routeTable.put(nh);
-	    }
-	    
 	    // if this node just joined, notify the members of the original leaf set
 	    if (type == BroadcastLeafSet.JoinInitial) broadcast(remotels,from);   
 
@@ -123,14 +105,14 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	    //maintainLeafSet();
 
 	    // if this is not a join advertisement, then we are done
-	    // if "from" dropped from our leafset, then we leave the following check for another node
+	    // or, if "from" dropped from our leafset, then we leave the following check for another node
 	    if (type != BroadcastLeafSet.JoinAdvertise || !leafSet.member(from.getNodeId())) return;
 
 	    // now, check if any of our local leaf set members are missing in the received leaf set
 	    // if so, we send our leafset to each missing entry and to the source of the leafset
 	    // this guarantees correctness in the event of concurrent node joins in the same leaf set
-	    cwSize = leafSet.cwSize();
-	    ccwSize = leafSet.ccwSize();
+	    int cwSize = leafSet.cwSize();
+	    int ccwSize = leafSet.ccwSize();
 	    BroadcastLeafSet bl = new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update);
 	    boolean missing = false;
 		
@@ -186,6 +168,57 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	else throw new Error("message received is of unknown type");
     }
 
+    /**
+     * Merge a remote leafset into our own
+     
+     * @param remotels the remote leafset
+     * @param from the node from which we received the leafset
+     */
+
+    protected void mergeLeafSet(LeafSet remotels, NodeHandle from) {
+	int cwSize = remotels.cwSize();
+	int ccwSize = remotels.ccwSize();
+	
+	// merge the received leaf set into our own
+	// to minimize inserts/removes, we do this from nearest to farthest nodes
+
+	// get index of entry closest to local nodeId
+	int closest = remotels.mostSimilar(localHandle.getNodeId());
+
+	for (int i=closest; i<=cwSize; i++) {
+	    NodeHandle nh;
+
+	    if (i == 0) nh = from;
+	    else nh = remotels.get(i);
+		
+	    nh = security.verifyNodeHandle(nh);
+	    if (nh.isAlive() == false) continue;
+		
+	    // merge into our leaf set
+	    leafSet.put(nh);
+
+	    // update RT as well
+	    routeTable.put(nh);
+	}
+
+	for (int i=closest-1; i>= -ccwSize; i--) {
+	    NodeHandle nh;
+
+	    if (i == 0) nh = from;
+	    else nh = remotels.get(i);
+		
+	    nh = security.verifyNodeHandle(nh);
+	    if (nh.isAlive() == false) continue;
+		
+	    // merge into our leaf set
+	    leafSet.put(nh);
+
+	    // update RT as well
+	    routeTable.put(nh);
+	}
+
+    }
+    
     /**
      * Broadcast the leaf set to all members of the local leaf set.
      */
@@ -247,7 +280,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
     
     public void maintainLeafSet() {	
 
-	System.out.println("maintainLeafSet");
+	//System.out.println("maintainLeafSet");
 
 	boolean lostMembers = false;
 
@@ -290,7 +323,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 
     private void requestLeafSet() {
 
-	System.out.println("requestLeafSet");
+	//System.out.println("requestLeafSet");
 
 	RequestLeafSet rls = new RequestLeafSet(localHandle);
 	int cwSize = leafSet.cwSize();
