@@ -1,7 +1,8 @@
 PACKAGE = rice.email.test
 
 SOURCE  = \
-	EmailTest.java
+	EmailTest.java \
+	SendEmailTest.java
 
 RMI_SOURCE =
 
