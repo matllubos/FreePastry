@@ -92,6 +92,13 @@ public class Stripe extends Observable implements IScribeApp{
 
 
     public int num_fails;
+
+    /**
+     * Denotes whether local node has sent ControlFinalFindParentMessage
+     * as a final resort to attach to this stripe tree.
+     */
+    public boolean finalTry = false;
+
     /**
      * Flag for identifying whether the most recent drop
      * of a node is because local node dropped it, not because
@@ -119,7 +126,7 @@ public class Stripe extends Observable implements IScribeApp{
       	if(scribe.create(stripeId, credentials)){
       	}
         else{
-          System.out.println("ERROR: Failed to create Stripe ID");
+          System.out.println("DEBUG :: ERROR: Failed to create Stripe ID");
         }
       }
 	stripeState = STRIPE_UNSUBSCRIBED;
@@ -213,7 +220,7 @@ public class Stripe extends Observable implements IScribeApp{
 		inputStream = new ByteArrayInputStream(inputBuffer);
 	}
         else{
-          System.out.println("ERROR: Failed to join Stripe");
+          System.out.println("DEBUG :: ERROR: Failed to join Stripe");
         }
      }
 
@@ -254,7 +261,7 @@ public class Stripe extends Observable implements IScribeApp{
 	  */
 	 NodeId[] data = channel.getChannelMetaData();
 	 msg.setData(data);
-	 //System.out.println("Setting root path in faultHandler to empty at "+channel.getNodeId()+" for stripe "+getStripeId());
+	 //System.out.println("DEBUG :: Setting root path in faultHandler to empty at "+channel.getNodeId()+" for stripe "+getStripeId());
 	 setRootPath(null);
 
      }
@@ -324,9 +331,9 @@ public class Stripe extends Observable implements IScribeApp{
              * was we don't need to adjust the bandwidth usage.
              */
 	    if(wasAdded){
-		//System.out.println("STRIPE :: Child was added "+child.getNodeId()+" at "+getChannel().getNodeId()+" for "+topicId);
+		System.out.println("DEBUG :: STRIPE :: Child was added "+child.getNodeId()+" at "+((Scribe)scribe).getNodeId()+" for "+topicId);
 		if(bandwidthManager.canTakeChild(getChannel())){
-		    //System.out.println("STRIPE:: can take child "+child.getNodeId()+" at "+getChannel().getNodeId()+" for "+topicId);
+		    //System.out.println("DEBUG :: STRIPE:: can take child "+child.getNodeId()+" at "+getChannel().getNodeId()+" for "+topicId);
 		    channel.stripeSubscriberAdded();
 		    
 		    Credentials credentials = new PermissiveCredentials();
@@ -340,7 +347,7 @@ public class Stripe extends Observable implements IScribeApp{
     channel.getChannelId() 
   ),
     credentials, null );
-		    //System.out.println("STRIPE :: Done with taking child "+getChannel().getNodeId());
+		    //System.out.println("DEBUG :: STRIPE :: Done with taking child "+getChannel().getNodeId());
 		}
 		else{
 		    /* THIS IS WHERE THE DROP SHOULD OCCUR */
@@ -356,7 +363,7 @@ public class Stripe extends Observable implements IScribeApp{
 		    victimChild = (NodeHandle)ret.elementAt(0);
 		    victimStripeId = (StripeId)ret.elementAt(1);
 
-		    //System.out.println("STRIPE :: victimChild "+victimChild.getNodeId()+" for stripe "+victimStripeId);
+		    //System.out.println("DEBUG :: STRIPE :: victimChild "+victimChild.getNodeId()+" for stripe "+victimStripeId);
 
 		    Stripe victimStripe = channel.getStripe(victimStripeId);
 		    Vector child_root_path = (Vector)getRootPath().clone();
@@ -377,7 +384,7 @@ public class Stripe extends Observable implements IScribeApp{
 	child_root_path,
         channel.getChannelId() ),
 						credentials, null );
-			//System.out.println("Sending PROPOGATE message to" +child.getNodeId()+ " for stripe "+topicId);
+			//System.out.println("DEBUG :: Sending PROPOGATE message to" +child.getNodeId()+ " for stripe "+topicId);
 		    }
 
 		    channel.getSplitStream().routeMsgDirect( victimChild, new ControlDropMessage( channel.getSplitStream().getAddress(),
@@ -388,7 +395,7 @@ public class Stripe extends Observable implements IScribeApp{
 										     channel.getChannelId(),
      channel.getTimeoutLen())
      , credentials, null ); 
-		    //System.out.println(" STRIPE "+this+" Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+ " at "+((Scribe)scribe).getNodeId());
+		    System.out.println("DEBUG ::  STRIPE Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+ " at "+((Scribe)scribe).getNodeId());
 
 		    victimStripe.setLocalDrop(true);
 		    scribe.removeChild(victimChild, (NodeId)victimStripeId);
@@ -396,9 +403,11 @@ public class Stripe extends Observable implements IScribeApp{
 	    }
 	    else {
 		// child was dropped
-		//System.out.println("STRIPE "+this+" ::Child was removed "+child.getNodeId()+" at "+getChannel().getNodeId()+ " for stripe "+getStripeId());
-		if(!localDrop)
+
+		if(!localDrop){
+		    System.out.println("DEBUG :: STRIPE :: Child was removed "+child.getNodeId()+" at "+((Scribe)scribe).getNodeId()+ " for stripe "+getStripeId()+" child is alive? "+child.isAlive());
 		    channel.stripeSubscriberRemoved();
+		}
 		else {
 		    localDrop = false;
 		}
@@ -427,8 +436,46 @@ public class Stripe extends Observable implements IScribeApp{
     public void isNewRoot(NodeId tid){
 	NodeId topicId = (NodeId)getStripeId();
 	if(!topicId.equals(tid))
-	    System.out.println("ERROR --- isNewRoot upcall failure");
+	    System.out.println("DEBUG :: ERROR --- isNewRoot upcall failure");
 	setRootPath(null);
+    }
+
+    /**
+     * Upcall by scribe to let this application know about
+     * local node's new parent in the topic tree
+     */
+    public void newParent(NodeId topicId, NodeHandle newParent, Serializable data){
+	if(data != null){
+	    AckData ackData = (AckData)data;
+	    ControlFindParentResponseMessage cfprmsg = ackData.getFindParentResponseMessage();
+	    ControlPropogatePathMessage cpgmsg = ackData.getPropogatePathMessage();
+	    
+	    if(cfprmsg != null){
+		Vector path = cfprmsg.getPath();
+		this.setRootPath(path);
+		cfprmsg.handleMessage((Scribe)scribe, ((Scribe)scribe).getTopic(cfprmsg.getStripeId()),
+				      this);
+	    }
+	    
+	    if(cpgmsg != null){
+		cpgmsg.handleMessage((Scribe)scribe, channel, this);
+	    }
+	}
+	else{
+	    // data can be null when normal subscription through 
+	    // scribe succeded.
+	    Vector path = new Vector();
+	    path.addElement(newParent);
+	    this.setRootPath(path);
+	}
+    }
+
+    public void setFinalTry(boolean value){
+	finalTry = value;
+    }
+
+    public boolean getFinalTry(){
+	return finalTry;
     }
     /** 
      * The constant status code associated with the subscribed state

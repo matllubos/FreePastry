@@ -134,7 +134,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     */
     public Channel attachChannel(ChannelId channelId){
 	Channel channel = (Channel) channels.get(channelId);
-	System.out.println("Attempting to attach to Channel " + channelId);
+	System.out.println("DEBUG :: Attempting to attach to Channel " + channelId);
 	if(channel == null){
 
 	    channel = new Channel(channelId, scribe, credentials, bandwidthManager, this);
@@ -174,7 +174,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 	if(scribe.join((NodeId) topicId, this, credentials)){
         }
         else
-	    System.out.println("ERROR: Could not join Channel being created");
+	    System.out.println("DEBUG :: ERROR: Could not join Channel being created");
     } 
 
     /** - IScribeApp Implementation -- */
@@ -189,7 +189,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     public void receiveMessage(ScribeMessage msg){
 	/* Check the type of message */
 	/* then make call accordingly */
-	//System.out.println("Recieved message");
+	//System.out.println("DEBUG :: Recieved message");
     }
     // Default implementation of anycastHandler.
     public boolean anycastHandler(ScribeMessage msg){
@@ -199,7 +199,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 	    StripeId stripeId = pmsg.getStripeId();
 	    Channel channel = (Channel)channels.get(pmsg.getChannelId());
 	    if(channel == null){
-		System.out.println("ERROR -- Should never happen");
+		System.out.println("DEBUG :: ERROR -- Should never happen");
 		return true;
 	    }
 	    if(!channel.stripeAlreadySubscribed(stripeId)){
@@ -217,7 +217,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     * Upcall generated when the underlying scribe is ready
     */ 
     public void scribeIsReady(){
-	//System.out.println("Scribe is Ready");
+	//System.out.println("DEBUG :: Scribe is Ready");
 	m_ready = true;
 	notifyApps();
     }
@@ -238,12 +238,12 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 				 boolean wasAdded,  
 				 Serializable data){
 
-	//System.out.println("Subscribe Handler at " + ((Scribe) scribe).getNodeId() + " for " + topicId + " from " + child.getNodeId());
+	System.out.println("DEBUG :: Subscribe Handler at " + ((Scribe) scribe).getNodeId() + " for " + topicId + " from " + child.getNodeId());
 	NodeId[] nodeData = (NodeId[]) data;
        
        
 	if(nodeData!=null){
-	    //System.out.println("Channel Data Recieved Filling MetaData");
+	    //System.out.println("DEBUG :: Channel Data Recieved Filling MetaData");
 	    //System.out.println(nodeData.length); 
 	    /* Clean This up */
 	    StripeId[] stripeId = new StripeId[nodeData.length - 2];
@@ -258,7 +258,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 	    Channel channel = (Channel)channels.get(channelId);
 	   
 	    if(channel == null){
-		System.out.println("Channel is NULL , Adding");
+		System.out.println("DEBUG :: Channel is NULL , Adding");
 		channel = new Channel(channelId, stripeId, spareCapacityId, scribe, bandwidthManager, this);
 		channels.put(channelId, channel);
 	    }
@@ -279,16 +279,16 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 		    Stripe stripe = channel.getStripe((StripeId)topicId);
 		    if(wasAdded){
 			if(bandwidthManager.canTakeChild(channel)){
-			    //System.out.println("SPLITSTREAM :: Subscriber can take child"+child.getNodeId()+" at "+channel.getNodeId());
+			    //System.out.println("DEBUG :: SPLITSTREAM :: Subscriber can take child"+child.getNodeId()+" at "+channel.getNodeId());
 			    channel.stripeSubscriberAdded();
 			    Credentials credentials = new PermissiveCredentials();
 			    Vector child_root_path;
 			    if(stripe == null){
-				System.out.println("Stripe is NULL");
+				System.out.println("DEBUG :: Stripe is NULL");
 			    }
 			    else{
 				if(stripe.getRootPath() == null){
-				    System.out.println("Get Root Path is NULL");
+				    System.out.println("DEBUG :: Get Root Path is NULL");
 				    child_root_path = new Vector();
 				}
 				else
@@ -333,7 +333,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 											     child_root_path,
 											     channel.getChannelId() ),
 						     credentials, null );
-				//System.out.println("Sending PROPOGATE message to"+child.getNodeId()+ " for stripe "+topicId);
+				//System.out.println("DEBUG :: Sending PROPOGATE message to"+child.getNodeId()+ " for stripe "+topicId);
 			    }
 			   
 			    this.routeMsgDirect( victimChild, new ControlDropMessage( this.getAddress(),
@@ -344,14 +344,15 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 										      channel.getChannelId(), 
 										      channel.getTimeoutLen() ),
 						 credentials, null );
-			    //System.out.println("SPLITSTREAM -- Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+" at "+((Scribe)scribe).getNodeId()+" when child"+child.getNodeId()+" for topic"+topicId+" contacted");
+			    System.out.println("DEBUG :: SPLITSTREAM -- Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+" at "+((Scribe)scribe).getNodeId()+" when child"+child.getNodeId()+" for topic"+topicId+" contacted");
 			    victimStripe.setLocalDrop(true);
 			    scribe.removeChild(victimChild, (NodeId)victimStripeId);
 			}
 		    }
 		    else{
-			//System.out.println("SPLITSTREAM ::Subscriber was removed"+child.getNodeId()+" at "+channel.getNodeId());
+			
 			if(!stripe.getLocalDrop()){
+			    System.out.println("DEBUG :: SPLITSTREAM ::Subscriber was removed"+child.getNodeId()+" at "+getNodeId()+" child was alive?"+child.isAlive());
 			    channel.stripeSubscriberRemoved();
 			}
 			else {
@@ -458,7 +459,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 	    channel.messageForChannel(msg);
 	}
 	else if(msg instanceof ControlAttachResponseMessage){
-	    System.out.println("Got an Attach Response");
+	    System.out.println("DEBUG :: Got an Attach Response");
 	    ChannelId channelId = ((ControlAttachResponseMessage) msg).getChannelId();
 	    Channel channel = (Channel) channels.get(channelId);
 	    channel.messageForChannel(msg);
@@ -503,6 +504,35 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
      * it is the new root.
      */
     public void isNewRoot(NodeId topicId){
+    }
+
+    /**
+     * Upcall by scribe to let this application know about
+     * local node's new parent in the topic tree
+     */
+    public void newParent(NodeId topicId, NodeHandle newParent, Serializable data){
+	if(data != null){
+	    AckData ackData = (AckData)data;
+	    ControlFindParentResponseMessage cfprmsg = ackData.getFindParentResponseMessage();
+	    ControlPropogatePathMessage cpgmsg = ackData.getPropogatePathMessage();
+	    ChannelId channelId = cfprmsg.getChannelId();
+	    Channel channel = (Channel)channels.get(channelId);
+	    
+	    if(channel != null && !channel.stripeAlreadySubscribed((StripeId)topicId)){
+		//System.out.println(channel);
+		Stripe stripe = channel.getStripe((StripeId)topicId);
+		if(cfprmsg != null && stripe != null){
+		    Vector path = cfprmsg.getPath();
+		    stripe.setRootPath(path);
+		    cfprmsg.handleMessage((Scribe)scribe, ((Scribe)scribe).getTopic(cfprmsg.getStripeId()),
+					  stripe);
+		}
+		
+		if(cpgmsg != null && stripe != null){
+		    cpgmsg.handleMessage((Scribe)scribe, channel, stripe);
+		}
+	    }
+	}
     }
 } 
 
