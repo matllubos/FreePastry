@@ -166,7 +166,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	NodeId nodeId = nidFactory.generateNodeId();
 	DirectPastryNode pn = new DirectPastryNode(nodeId);
 	
-	NodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
+	DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
 
 	DirectSecurityManager secureMan = new DirectSecurityManager(simulator);
 	MessageDispatch msgDisp = new MessageDispatch();
@@ -181,7 +181,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	StandardRouteSetProtocol rsProtocol =
 	    new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
 	StandardJoinProtocol jProtocol =
-	    new StandardJoinProtocol(localhandle, secureMan, routeTable, leafSet);
+	    new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
 
 //	simulator.registerNodeId(nodeId);
 	simulator.registerNodeId( localhandle );
@@ -195,8 +195,8 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	pn.setDirectElements(/* simulator */);
 	secureMan.setLocalPastryNode(pn);
 
-//	pn.doneNode(bootstrap);
-//	pn.doneNode( discover(localhandle,bootstrap) );
+	// pn.doneNode(bootstrap);
+	//	pn.doneNode( discover(localhandle,bootstrap) );
 	pn.doneNode( simulator.getClosest(nodeId) );
 
 	return pn;

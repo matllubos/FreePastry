@@ -217,12 +217,15 @@ public class RMIPastryNode extends PastryNode
 	    System.out.println("Unable to bind Pastry node in rmiregistry: " + e.toString());
 	}
 
+	/*
 	setReady();
 
 	// notify applications
 	Iterator it = apps.iterator();
         while (it.hasNext())
             ((PastryAppl)(it.next())).notifyReady();
+	*/
+  
     }
 
 //    /**

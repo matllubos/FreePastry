@@ -55,7 +55,7 @@ public interface NetworkSimulator
      * @param nh the node handle to register.
      */
 
-    public void registerNodeId(NodeHandle nh);
+    public void registerNodeId(DirectNodeHandle nh);
 
     /**
      * Checks to see if a node id is alive.
@@ -93,10 +93,12 @@ public interface NetworkSimulator
      * @return true if a message was delivered, false otherwise.
      */
 
+    public boolean simulate();
+
+
     public void setTestRecord( TestRecord tr );
     public TestRecord getTestRecord();
-    public NodeHandle getClosest(NodeId nid);
+    public DirectNodeHandle getClosest(NodeId nid);
     public void setAlive(NodeId nid, boolean alive);
 
-    public boolean simulate();
 }

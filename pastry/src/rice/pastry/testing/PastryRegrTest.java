@@ -445,6 +445,14 @@ public abstract class PastryRegrTest {
 	
 	System.out.println(n + " nodes constructed");
 
+	System.out.println("starting RT and leafset check");
+	// check all routing tables, leaf sets
+	for (int j=0; j<pt.rtApps.size(); j++) {
+	    pt.checkLeafSet((RegrTestApp)pt.rtApps.get(j));
+	    pt.checkRoutingTable((RegrTestApp)pt.rtApps.get(j));
+	}
+	System.out.println("finished RT and leafset check");
+
 	// kill some nodes
 	pt.killNodes(d);
 

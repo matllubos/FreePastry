@@ -177,7 +177,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 		//	   ", node " + nh.getNodeId() + " missing from " + remotels);
 		missing = true;
 		nh.receiveMessage(bl);		    
-		System.out.println("sending ls to " + nh.getNodeId());
+		//System.out.println("sending ls to " + nh.getNodeId());
 	    }
 	}
 
@@ -185,7 +185,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	    // nodes where missing, send update to "from"
 	    from = security.verifyNodeHandle(from);
 	    from.receiveMessage(bl);
-	    System.out.println("sending ls to src " + from.getNodeId());
+	    //System.out.println("sending ls to src " + from.getNodeId());
 	}
 
     }
@@ -266,7 +266,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
     
     public void maintainLeafSet() {	
 
-	System.out.println("maintainLeafSet " + localHandle.getNodeId());
+	//System.out.println("maintainLeafSet " + localHandle.getNodeId());
 
 	boolean lostMembers = false;
 

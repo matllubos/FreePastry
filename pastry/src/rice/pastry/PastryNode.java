@@ -101,7 +101,15 @@ public abstract class PastryNode implements MessageReceiver
     public final NodeId getNodeId() { return myNodeId; }
     
     public final boolean isReady() { return ready; }
-    protected final void setReady() { ready = true; }
+
+    public final void setReady() { 
+	ready = true; 
+
+	// notify applications
+	Iterator it = apps.iterator();
+        while (it.hasNext())
+            ((PastryAppl)(it.next())).notifyReady();
+    }
     
     public final LeafSet getLeafSet() { return leafSet; }
 

@@ -116,7 +116,7 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
 	StandardRouteSetProtocol rsProtocol =
 	    new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
 	StandardJoinProtocol jProtocol =
-	    new StandardJoinProtocol(localhandle, secureMan, routeTable, leafSet);
+	    new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
 
 	msgDisp.registerReceiver(router.getAddress(), router);
 	msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);

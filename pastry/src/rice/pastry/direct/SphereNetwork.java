@@ -85,9 +85,9 @@ public class SphereNetwork implements NetworkSimulator
     private class NodeRecord {
         public double theta, phi;
 	public boolean alive;
-	public NodeHandle handle;
+	public DirectNodeHandle handle;
 
-	public NodeRecord(NodeHandle nh) {
+	public NodeRecord(DirectNodeHandle nh) {
   	    theta = Math.asin(2.0 * rng.nextDouble() - 1.0);
 	    phi   = 2.0 * Math.PI * rng.nextDouble();
 	    
@@ -115,10 +115,10 @@ public class SphereNetwork implements NetworkSimulator
     /**
      * register a new node
      *
-     * @param nh the NodeHandle being registered
+     * @param nh the DirectNodeHandle being registered
      */
 
-    public void registerNodeId(NodeHandle nh)
+    public void registerNodeId(DirectNodeHandle nh)
     {
 	NodeId nid = nh.getNodeId();
 
@@ -220,11 +220,11 @@ public class SphereNetwork implements NetworkSimulator
      * @return the NodeId closest to the input NodeId in the network
      */
 
-    public NodeHandle getClosest(NodeId nid) {
+    public DirectNodeHandle getClosest(NodeId nid) {
 	Iterator it = nodeMap.values().iterator();
-	NodeHandle bestHandle = null;
+	DirectNodeHandle bestHandle = null;
 	int bestProx = Integer.MAX_VALUE;
-	NodeHandle itHandle;
+	DirectNodeHandle itHandle;
 	NodeId	itId;
 	NodeRecord itRecord;
 
@@ -232,7 +232,7 @@ public class SphereNetwork implements NetworkSimulator
 	    itRecord = (NodeRecord)it.next();
 	    itHandle = itRecord.handle;
 	    itId = itHandle.getNodeId();
-	    if( nid == itId )
+	    if( !itHandle.getLocal().isReady() || nid == itId )
 		continue;
 	    if( proximity(nid,itId) < bestProx ){
 		bestProx = proximity(nid,itId);

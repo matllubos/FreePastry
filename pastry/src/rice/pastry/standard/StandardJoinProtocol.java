@@ -56,6 +56,7 @@ import java.util.*;
 
 public class StandardJoinProtocol implements MessageReceiver 
 {
+    private PastryNode localNode;
     private NodeHandle localHandle;
     private PastrySecurityManager security;
     private RoutingTable routeTable;
@@ -70,7 +71,9 @@ public class StandardJoinProtocol implements MessageReceiver
      * @param sm the Pastry security manager.
      */
 
-    public StandardJoinProtocol(NodeHandle lh, PastrySecurityManager sm, RoutingTable rt, LeafSet ls) {
+    public StandardJoinProtocol(PastryNode ln, NodeHandle lh, PastrySecurityManager sm, 
+				RoutingTable rt, LeafSet ls) {
+	localNode = ln;
 	localHandle = lh;
 	security = sm;
 	address = new JoinAddress();
@@ -126,6 +129,9 @@ public class StandardJoinProtocol implements MessageReceiver
 			//System.out.println("Join ls:" + jr.getLeafSet());
 			BroadcastLeafSet bls = new BroadcastLeafSet(jh, jr.getLeafSet(), BroadcastLeafSet.JoinInitial);
 			localHandle.receiveMessage(bls);
+			
+			// we have now successfully joined the ring, set the local node ready
+			localNode.setReady();
 		    }
 		}	    
 	}

@@ -331,8 +331,7 @@ public class LeafSet extends Observable implements Serializable {
 		    NodeId closestId = remotels.get(closest).getNodeId();
 		    
 		    if (closest == -remotels.ccwSize() || closest == remotels.cwSize()) {
-			System.out.println("LeafSet::merge at " + this + " received an out of range leafset from " + 
-					   remotels);
+			//System.out.println("LeafSet::merge at " + this + " received an out of range leafset from " + remotels);
 			// doesn't hurt to merge it anyways
 			//return;
 		    }
