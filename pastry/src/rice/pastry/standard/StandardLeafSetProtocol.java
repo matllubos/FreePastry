@@ -101,9 +101,9 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 
 	    // first, merge the received leaf set into our own
 	    boolean changed = mergeLeafSet(remotels, from);
-      if (changed)
-        System.out.println("received leafBC from " + from.getNodeId() + " at " + 
-               localHandle.getNodeId() + "type=" + type + " :" + remotels);
+//      if (changed)
+//        System.out.println("received leafBC from " + from.getNodeId() + " at " + 
+//               localHandle.getNodeId() + "type=" + type + " :" + remotels);
 
 	    if (type == BroadcastLeafSet.JoinInitial) {
 		// we have now successfully joined the ring, set the local node ready
