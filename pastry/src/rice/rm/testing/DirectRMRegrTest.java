@@ -142,8 +142,8 @@ public class DirectRMRegrTest
 
 	// Setting the seed helps to reproduce the results of the run and 
 	// thus aids debugging incase the regression test fails.
-	seed  = -1327173166 ;
-	//seed = (int)System.currentTimeMillis();
+	//seed  = -1327173166 ;
+	seed = (int)System.currentTimeMillis();
 	PastrySeed.setSeed(seed);
 	System.out.println("******************************");
 	System.out.println("seed= " + seed);
