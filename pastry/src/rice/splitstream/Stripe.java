@@ -10,6 +10,7 @@ import java.util.Observable;
  * This class encapsulates all data about an individual stripe.
  */
 public class Stripe extends Observable implements IScribeApp{
+
     private int stripeState = 0;
     private StripeId stripeId = null;
     private Channel channel =  null;
@@ -17,7 +18,8 @@ public class Stripe extends Observable implements IScribeApp{
     private OutputStream outputStream = null;
     private Credentials credentials = null;
     private IScribe scribe = null;
-   
+    private boolean isPrimary = false;  
+ 
     public Stripe(Channel channel, IScribe scribe, Credentials credentials){
       this.scribe = scribe;
       this.credentials = credentials;

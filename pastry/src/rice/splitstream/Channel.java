@@ -25,6 +25,8 @@ public class Channel {
  	this.cred = cred;
 	this.scribe = scribe;
 	this.bandwidthManager = bandwidthManager;
+	/* register this channel with the bandwidthManager */
+	this.bandwidthManager.register(this);
         NodeId topicId = (new RandomNodeIdFactory()).generateNodeId();
         if(scribe.create(topicId, cred)){
 		isReady = true;
@@ -59,6 +61,7 @@ public class Channel {
    */
   public void configureChannel(int outChannel){
     this.outChannel = outChannel;
+    bandwidthManager.adjustBandwidth(this, outChannel); 
     /* link this in with the bandwidth manager */
   }
   /** 
