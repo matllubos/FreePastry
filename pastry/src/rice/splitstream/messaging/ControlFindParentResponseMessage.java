@@ -29,19 +29,26 @@ public class ControlFindParentResponseMessage extends Message
     public NodeHandle source;
     Object m_data;
     Vector m_rootPath;
+    ChannelId channel_id;
 
-    public ControlFindParentResponseMessage( Address addr, NodeHandle source, ChannelId topicId, Credentials c, Boolean accept, StripeId stripe_id, Vector rootPath )
+    public ControlFindParentResponseMessage( Address addr, NodeHandle source, ChannelId channel_id, Credentials c, Boolean accept, StripeId stripe_id, Vector rootPath )
     {
         super( addr );
         m_data = accept;
 	this.stripe_id = stripe_id;
         this.source = source;
 	m_rootPath = rootPath;
+        this.channel_id = channel_id;
     }
 
     public StripeId getStripeId()
     {
         return stripe_id;
+    }
+
+    public ChannelId getChannelId()
+    {
+        return channel_id;
     }
 
     /**

@@ -15,10 +15,12 @@ import java.io.Serializable;
 public class ControlAttachResponseMessage extends Message implements Serializable
 {
    private Object _content;
+   private ChannelId channel_id;
 
-   public ControlAttachResponseMessage( Address addr )
+   public ControlAttachResponseMessage( Address addr, ChannelId channel_id )
    {
       super( addr );
+      this.channel_id = channel_id;
    }
 
    /**
@@ -41,6 +43,11 @@ public class ControlAttachResponseMessage extends Message implements Serializabl
    public Object getContent()
    {
       return _content;
-   } 
+   }
+
+   public ChannelId getChannelId()
+   {
+      return channel_id;
+   }
 }
 

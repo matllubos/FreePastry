@@ -67,13 +67,14 @@ public class ControlTimeoutMessage extends Message implements Serializable
      * @param dest The destination of the bound message
      * @param c The sending credentials of the bound message
      */
-    public ControlTimeoutMessage( Address addr, int num_fails, NodeId dest, Credentials c )
+    public ControlTimeoutMessage( Address addr, int num_fails, NodeId dest, Credentials c, ChannelId channel_id )
     {
         super( addr );
         this.num_fails = num_fails;
 	this.msg_type = ATTACH;
 	this.dest = dest;
 	this.c = c;
+        this.channel_id = channel_id;
     }
 
     /**
@@ -97,6 +98,11 @@ public class ControlTimeoutMessage extends Message implements Serializable
 	this.c = c;
         this.stripe_id = stripe_id;
         this.channel_id = channel_id;
+    }
+
+    public ChannelId getChannelId()
+    {
+        return channel_id;
     }
 
     /**
@@ -133,13 +139,13 @@ public class ControlTimeoutMessage extends Message implements Serializable
             {
                 if ( msg_type == ATTACH )
                 {
-        	    ControlAttachMessage attachMessage = new ControlAttachMessage();
-                    scribe.anycast( dest, attachMessage, c );
-
+        	    ControlAttachMessage attachMessage = new ControlAttachMessage( addr, scribe.getLocalHandle(), channel_id );
+                    //scribe.anycast( dest, attachMessage, c );
+                    channel.getSplitStream().routeMsg( dest, attachMessage, c, null );
                     ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( channel.getAddress(),
                                                                                       num_fails+1,
                                                                                       dest,
-                                                                                      c );
+                                                                                      c, channel_id );
 	            thePastryNode.scheduleMsg( timeoutMessage, channel.getTimeoutLen() );
                 
                 }
@@ -150,7 +156,8 @@ public class ControlTimeoutMessage extends Message implements Serializable
                                                                                  dest,
                                                                                  c,
                                                                                  stripe_id, channel_id );
-                    scribe.anycast( dest, msg, c ); 
+                    //scribe.anycast( dest, msg, c );
+                    channel.getSplitStream().routeMsg( dest, msg, c, null ); 
                     ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( SplitStreamAddress.instance(),
                                                                                       num_fails+1,
                                                                                       dest,

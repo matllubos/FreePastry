@@ -41,6 +41,11 @@ public class ControlDropMessage extends ControlMessage{
       return stripe_id;
    }
 
+   public ChannelId getChannelId()
+   {
+      return channel_id;
+   }
+
    /**
     * Does nothing; necessary for superclass compatibility
     * 
@@ -71,7 +76,7 @@ public class ControlDropMessage extends ControlMessage{
                                                                    c,
                                                                    (StripeId)topic.getTopicId(), channel_id );
       //scribe.anycast( spare_id, msg, c ); 
-      channel.routeMsg(spare_id, msg, c, null);
+      channel.getSplitStream().routeMsg(spare_id, msg, c, null);
       scribe.setParent(null, topic.getTopicId());
       ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( this.getDestination(),
                                                                         0,

@@ -17,7 +17,26 @@ import java.io.Serializable;
  * @version $Id:
  * @author briang
  */
-public class ControlAttachMessage implements Serializable {
+public class ControlAttachMessage extends Message implements Serializable {
+
+/**
+ * NodeHandle of the source of this message
+ */
+private NodeHandle m_source;
+private ChannelId channel_id;
+
+/**
+ * Constructor
+ * @param addr The receiving address
+ * @param m_source The originating node's handle
+ * @param channel_id The id of the channel this pertains to
+ */
+public ControlAttachMessage( Address addr, NodeHandle m_source, ChannelId channel_id )
+{
+    super( addr );
+    this.m_source = m_source;
+    this.channel_id = channel_id;
+}
 
 /**
  * This method is called by the application (here, the channel) upon
@@ -27,8 +46,9 @@ public class ControlAttachMessage implements Serializable {
  * @param channel The channel receiving the message
  * @param scribe The channel's Scribe object (unused)
  * @param source The originating node's NodeHandle
+ * @return boolean Returns false if the receiver can handle this message
  */
-public void handleMessage( Channel channel, IScribe scribe, NodeHandle source )
+public boolean handleMessage( Channel channel, IScribe scribe, NodeHandle source )
 {
       SpareCapacityId spcapid = channel.getSpareCapacityId();
       ChannelId chanid = channel.getChannelId();
@@ -42,7 +62,7 @@ public void handleMessage( Channel channel, IScribe scribe, NodeHandle source )
       }
       return_array[return_array.length-1] = (NodeId)spcapid;
 
-      ControlAttachResponseMessage response = new ControlAttachResponseMessage( channel.getAddress() );
+      ControlAttachResponseMessage response = new ControlAttachResponseMessage( channel.getAddress(), channel_id );
       Credentials credentials = new PermissiveCredentials();
       response.setContent( return_array );
       if(return_array == null){
@@ -51,7 +71,17 @@ public void handleMessage( Channel channel, IScribe scribe, NodeHandle source )
 	System.out.println("Returning too little data");
       }
       //((Scribe)scribe).routeMsgDirect( source, response, null, null );
-      channel.routeMsgDirect( source, response, credentials, null );
+      channel.getSplitStream().routeMsgDirect( source, response, credentials, null );
+}
+
+public NodeHandle getSource()
+{
+    return m_source;
+}
+
+public ChannelId getChannelId()
+{
+    return channel_id;
 }
 
 }

@@ -75,6 +75,11 @@ public class ControlFindParentMessage extends Message implements Serializable
 	return stripe_id;
     }
 
+    public ChannelId getChannelId()
+    {
+        return channel_id;
+    }
+
     /**
      * This method determines whether a given source node is in the path to root of this node for a
      * given stripe tree.
@@ -131,7 +136,7 @@ public class ControlFindParentMessage extends Message implements Serializable
 	if( topic == null){
 	    send_to.remove(0);
 	    if ( send_to.size() > 0 ){
-		channel.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
+		channel.getSplitStream().routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
 	    }
 	    else{
 		System.out.println("DFS FAILED :: No spare capacity");
@@ -140,7 +145,7 @@ public class ControlFindParentMessage extends Message implements Serializable
 		sendPath.add(scribe.getLocalHandle());
 		
 		
-		channel.routeMsgDirect( originalSource,
+		channel.getSplitStream().routeMsgDirect( originalSource,
 					new ControlFindParentResponseMessage( channel.getAddress(),
 									      scribe.getNodeHandle(),
 									      channel_id,
@@ -170,7 +175,7 @@ public class ControlFindParentMessage extends Message implements Serializable
 		if(!send_to.contains(scribe.getLocalHandle()))
 		    send_to.add( 0, scribe.getLocalHandle());
 		send_to.addAll(0, toAdd);
-		channel.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
+		channel.getSplitStream().routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
 	    }
 	    else {
 		BandwidthManager bandwidthManager = channel.getBandwidthManager();
@@ -194,7 +199,7 @@ public class ControlFindParentMessage extends Message implements Serializable
 			sendPath.add(scribe.getLocalHandle());
 
 
-			channel.routeMsgDirect( originalSource,
+			channel.getSplitStream().routeMsgDirect( originalSource,
 						new ControlFindParentResponseMessage( channel.getAddress(),
 										      scribe.getNodeHandle(),
 										      channel_id,
@@ -214,10 +219,10 @@ public class ControlFindParentMessage extends Message implements Serializable
 			send_to.remove(0);
 		    }
 		    if(send_to.size() > 0)
-			channel.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
+			channel.getSplitStream().routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
 		    else {
 			if ( !scribe.isRoot( topic.getTopicId() ) )
-			    channel.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );	  
+			    channel.getSplitStream().routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );	  
 			else {												
 			    System.out.println("DFS FAILED :: No spare capacity");
 
@@ -225,7 +230,7 @@ public class ControlFindParentMessage extends Message implements Serializable
 			    sendPath.add(scribe.getLocalHandle());
 			    
 			    
-			    channel.routeMsgDirect( originalSource,
+			    channel.getSplitStream().routeMsgDirect( originalSource,
 						    new ControlFindParentResponseMessage( channel.getAddress(),
 											  scribe.getNodeHandle(),
 											  channel_id,

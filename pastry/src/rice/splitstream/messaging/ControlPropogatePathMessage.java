@@ -21,13 +21,15 @@ public class ControlPropogatePathMessage extends Message{
    private Vector path;
    private NodeHandle source;
    private StripeId stripe_id;
+   private ChannelId channel_id;
 
-   public ControlPropogatePathMessage( Address addr, NodeHandle source, NodeId topicId, Credentials c, Vector path )
+   public ControlPropogatePathMessage( Address addr, NodeHandle source, NodeId topicId, Credentials c, Vector path, ChannelId channel_id )
    {
       super( addr );
       this.path = path;
       this.source = source;
       this.stripe_id = (StripeId)topicId;
+      this.channel_id = channel_id;
    }
 
    /**
@@ -36,6 +38,11 @@ public class ControlPropogatePathMessage extends Message{
    public StripeId getStripeId()
    {
       return stripe_id;
+   }
+
+   public ChannelId getChannelId()
+   {
+      return channel_id;
    }
 
    /**
@@ -59,7 +66,7 @@ public class ControlPropogatePathMessage extends Message{
 	  if(path.contains((NodeHandle)children.get(i))){
 	      // Cycle dude..
 	      //System.out.println("PROPOGATE_PATH :: Cycle detected at "+scribe.getNodeId()+ " with child "+((NodeHandle)children.get(i)).getNodeId()+" for stripe "+stripe.getStripeId());
-	      channel.routeMsgDirect((NodeHandle)children.get(i), new ControlDropMessage( channel.getAddress(),
+	      channel.getSplitStream().routeMsgDirect((NodeHandle)children.get(i), new ControlDropMessage( channel.getAddress(),
 								     channel.getNodeHandle(),
 								     stripe.getStripeId(),
 								     credentials,
@@ -72,12 +79,13 @@ public class ControlPropogatePathMessage extends Message{
 	  else {
 	      Vector forward_path = (Vector)path.clone();
 	      forward_path.add( scribe.getLocalHandle() );
-	      channel.routeMsgDirect( (NodeHandle)children.get(i), 
+	      channel.getSplitStream().routeMsgDirect( (NodeHandle)children.get(i), 
 				      new ControlPropogatePathMessage( channel.getAddress(),
 								       channel.getNodeHandle(),
 								       stripe.getStripeId(),
 								       credentials,
-								       forward_path ),
+								       forward_path,
+                                                                       channel_id ),
 				      credentials, null );
 	  }
       }
