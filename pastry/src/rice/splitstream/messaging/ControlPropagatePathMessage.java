@@ -12,12 +12,12 @@ public class ControlPropagatePathMessage extends ControlMessage{
     * @param splitStream The SplitStream app
     * @param s The specific stripe this is relevant to
     */
-   public void handleForwardMessage( ISplitStream splitStream, Stripe s){}
+   public void handleForwardMessage( SplitStreamImpl splitStream, Stripe s){}
 
    /**
     * Handles delivery of the message: should do nothing
     * @param splitStream The SplitStream app
     * @param s The specific stripe this is relevant to
     */
-   public void handleDeliverMessage( ISplitStream splitStream, Stripe s){}
+   public void handleDeliverMessage( SplitStreamImpl splitStream, Stripe s){}
 }
