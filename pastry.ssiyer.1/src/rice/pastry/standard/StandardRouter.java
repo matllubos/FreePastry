@@ -115,10 +115,8 @@ public class StandardRouter implements MessageReceiver {
 
 	int lsPos = leafSet.mostSimilar(target);
 
-	if (lsPos == 0) { // message is for the local node so deliver it
+	if (lsPos == 0) // message is for the local node so deliver it
 	    msg.nextHop = localHandle;
-	    if (msg.nextHop != null) System.out.println("3. nexthop = " + msg.nextHop.getNodeId());
-	}
 
 	else if ((lsPos > 0 && lsPos < cwSize) ||
 		 //		 (lsPos < 0 && lsPos < ccwSize)) // message is for a node in the leaf set
@@ -127,15 +125,11 @@ public class StandardRouter implements MessageReceiver {
 		NodeHandle handle = leafSet.get(lsPos);
 
 		if (handle.isAlive() == false) {   // node is dead - get rid of it and try again
-
 		    leafSet.remove(handle.getNodeId());
-
 		    receiveRouteMessage(msg);
 		    return;
-		}
-		else {
+		} else {
 		    msg.nextHop = handle;
-		    if (msg.nextHop != null) System.out.println("4. nexthop = " + msg.nextHop.getNodeId());
 		}
 	    }
 	else {
@@ -153,8 +147,13 @@ public class StandardRouter implements MessageReceiver {
 		if (handle == null) {
 		    // no alternate in RT, take leaf set
 		    handle = leafSet.get(lsPos);
-		}
-		else {
+
+		    if (handle.isAlive() == false) {
+			leafSet.remove(handle.getNodeId());
+			receiveRouteMessage(msg);
+			return;
+		    }
+		} else {
 		    NodeId.Distance altDist = handle.getNodeId().distance(target);
 		    NodeId.Distance lsDist = leafSet.get(lsPos).getNodeId().distance(target);
 
@@ -163,12 +162,17 @@ public class StandardRouter implements MessageReceiver {
 			//System.out.println("forw to edge leaf set member, alt=" + handle.getNodeId() + 
 			//" lsm=" + leafSet.get(lsPos).getNodeId());
 			handle = leafSet.get(lsPos);
+
+			if (handle.isAlive() == false) {
+			    leafSet.remove(handle.getNodeId());
+			    receiveRouteMessage(msg);
+			    return;
+			}
 		    }
 		}
 	    }
 
 	    msg.nextHop = handle;
-	    if (msg.nextHop != null) System.out.println("5. nexthop = " + msg.nextHop.getNodeId());
 	}
 
 	localHandle.receiveMessage(msg);

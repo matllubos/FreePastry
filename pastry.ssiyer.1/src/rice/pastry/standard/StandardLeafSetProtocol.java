@@ -236,6 +236,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	    if (i == 0) continue;
 	    
 	    NodeHandle nh = leafSet.get(i);
+	    if (nh.isAlive() == false) continue;
 	    
 	    nh.receiveMessage(bls);
 	}
@@ -263,8 +264,10 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 
 	    if (i == 0) 
 		nh = from;
-	    else 
+	    else
 		nh = ls.get(i);
+
+	    if (nh.isAlive() == false) continue;
 
 	    nh = security.verifyNodeHandle(nh);
 	    
