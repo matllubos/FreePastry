@@ -335,18 +335,12 @@ public class Channel extends PastryAppl implements IScribeApp {
    public void receiveMessage(ScribeMessage msg){
      /* Check the type of message */
      /* then make call accordingly */
-	//if(msg.getTopicId() == channelId){
-	 	ControlAttachMessage attachMessage =(ControlAttachMessage) msg.getData();
-		attachMessage.handleMessage(this, scribe, msg.getSource());
-	//}
-	/*else if(msg.getTopicId() == spareCapacityId){
-		Stripe stripe = null;
-		ControlFindParentMessage parentMessage = (ControlFindParentMessage) msg;
-		if(stripeIdTable.get(parentMessage.getStripeId()) instanceof Stripe){
-			stripe = (Stripe) stripeIdTable.get(parentMessage.getStripeId());	
-		}
-		parentMessage.handleForwardWrapper((Scribe) scribe,((Scribe) scribe).getTopic(parentMessage.getTopicId()), stripe );
-	}*/
+	if(msg.getTopicId().equals(channelId)){
+		handleChannelMessage(msg);
+	}
+	else if(msg.getTopicId() == spareCapacityId){
+		handleSpareCapacityMessage(msg);
+	}
   }
   public void scribeIsReady(){
   }
@@ -361,6 +355,21 @@ public class Channel extends PastryAppl implements IScribeApp {
 	return null;
   }
   public void messageForAppl (Message msg){
+    if(msg instanceof ControlAttachResponseMessage){
+	handleControlAttachResponseMessage(msg);
+    }
+    else if(msg instanceof ControlFindParentResponseMessage){
+        handleControlFindParentResponseMessage(msg);
+    }
+    else if(msg instanceof ControlDropMessage){
+        handleControlDropMessage(msg);
+    }
+    else{
+        System.out.println("Unknown Pastry Message Type");
+    }
+  }
+  
+  private void handleControlAttachResponseMessage(Message msg){
 	NodeId[] subInfo = (NodeId[]) ((ControlAttachResponseMessage) msg).getContent();	
 	channelId = new ChannelId(subInfo[0]);
 	spareCapacityId = new SpareCapacityId(subInfo[subInfo.length-1]);
@@ -375,6 +384,20 @@ public class Channel extends PastryAppl implements IScribeApp {
 	}		
 	isReady = true;
   }
+  private void handleControlFindParentResponseMessage(Message msg){}
+  private void handleControlDropMessage(Message msg){}
+  private void handleChannelMessage(ScribeMessage msg){
+	 	ControlAttachMessage attachMessage =(ControlAttachMessage) msg.getData();
+		attachMessage.handleMessage(this, scribe, msg.getSource());
+  }
+  private void handleSpareCapacityMessage(ScribeMessage msg){
+		Stripe stripe = null;
+		ControlFindParentMessage parentMessage = (ControlFindParentMessage) msg;
+		if(stripeIdTable.get(parentMessage.getStripeId()) instanceof Stripe){
+			stripe = (Stripe) stripeIdTable.get(parentMessage.getStripeId());	
+		}
+		parentMessage.handleForwardWrapper((Scribe) scribe,((Scribe) scribe).getTopic(parentMessage.getTopicId()), stripe );
+  }
   public String toString(){
 	String toReturn = "Channel: " + getChannelId() + "\n";
 	toReturn = toReturn + "Stripes: \n";
@@ -384,6 +407,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	toReturn = toReturn + "Spare Capacity Id: " + getSpareCapacityId();
 	return(toReturn);	
   }
+
 }
   
 

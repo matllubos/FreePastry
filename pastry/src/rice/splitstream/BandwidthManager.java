@@ -111,5 +111,5 @@ public class BandwidthManager{
 	int bandwidth = ((Integer)maxBandwidth.get(channel)).intValue();
 	return bandwidth;
       }
-      private static int DEFAULT_CHILDREN = 20;
+      private static int DEFAULT_CHILDREN = 16;
 } 

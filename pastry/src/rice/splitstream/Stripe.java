@@ -159,12 +159,12 @@ public class Stripe extends Observable implements IScribeApp{
 	    else{
                 /* THIS IS WHERE THE DROP SHOULD OCCUR */
                 Credentials credentials = new PermissiveCredentials();
-                channel.routeMsgDirect( child, new ControlDropMessage( channel.getAddress(),
+                /*channel.routeMsgDirect( child, new ControlDropMessage( channel.getAddress(),
                                                                        channel.getNodeHandle(),
                                                                        topicId,
                                                                        credentials,
                                                                        channel.getSpareCapacityId() ),
-                                        credentials, null );
+                                        credentials, null );*/
                 //System.out.println("SHOULD NOT TAKE CHILD");
 	   }
 	/* We should check if we can take this child on */
