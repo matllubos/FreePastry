@@ -8,7 +8,9 @@ SOURCE  = \
 	PublishRequestMessage.java \
 	SubscribeMessage.java \
 	SubscribeAckMessage.java \
-	UnsubscribeMessage.java
+	UnsubscribeMessage.java \
+  AbstractSubscribeMessage.java \
+	SubscribeLostMessage.java 
 
 RMI_SOURCE =
 

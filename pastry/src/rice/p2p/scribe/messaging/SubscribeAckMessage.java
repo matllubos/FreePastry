@@ -49,7 +49,7 @@ import rice.p2p.scribe.*;
  *
  * @author Alan Mislove
  */
-public class SubscribeAckMessage extends ScribeMessage {
+public class SubscribeAckMessage extends AbstractSubscribeMessage {
 
   /**
    * The contained path to the root
@@ -63,8 +63,8 @@ public class SubscribeAckMessage extends ScribeMessage {
    * @param source The source address
    * @param dest The destination address
    */
-  public SubscribeAckMessage(NodeHandle source, Topic topic, Id[] pathToRoot) {
-    super(source, topic);
+  public SubscribeAckMessage(NodeHandle source, Topic topic, Id[] pathToRoot, int id) {
+    super(source, topic, id);
 
     this.pathToRoot = pathToRoot;
   }

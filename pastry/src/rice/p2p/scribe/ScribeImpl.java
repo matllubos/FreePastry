@@ -52,35 +52,45 @@ import rice.p2p.scribe.messaging.*;
  */
 public class ScribeImpl implements Scribe, Application {
 
-  // the hashtable of topic -> TopicManager
   /**
-   * DESCRIBE THE FIELD
+   * the timeout for a subscribe message
+   */
+  public static int MESSAGE_TIMEOUT = 15000;
+
+  /**
+   * the hashtable of topic -> TopicManager
    */
   public Hashtable topics;
 
-  // this scribe's policy
   /**
-   * DESCRIBE THE FIELD
+   * this scribe's policy
    */
   protected ScribePolicy policy;
 
-  // this application's endpoint
   /**
-   * DESCRIBE THE FIELD
+   * this application's endpoint
    */
   protected Endpoint endpoint;
 
-  // the logger which we will use
   /**
-   * DESCRIBE THE FIELD
+   * the logger which we will use
    */
   protected Logger log = Logger.getLogger(this.getClass().getName());
 
-  // the local node handle
   /**
-   * DESCRIBE THE FIELD
+   * the local node handle
    */
   protected NodeHandle handle;
+
+  /**
+   * the hashtable of outstanding messages
+   */
+  private Hashtable outstanding;
+
+  /**
+   * the next unique id
+   */
+  private int id;
 
   /**
    * Constructor for Scribe, using the default policy.
@@ -102,9 +112,11 @@ public class ScribeImpl implements Scribe, Application {
   public ScribeImpl(Node node, ScribePolicy policy, String instance) {
     this.endpoint = node.registerApplication(this, instance);
     this.topics = new Hashtable();
+    this.outstanding = new Hashtable();
     this.policy = policy;
     this.handle = endpoint.getLocalNodeHandle();
-
+    this.id = Integer.MIN_VALUE;
+    
 //   log.addHandler(new ConsoleHandler());
 //   log.setLevel(Level.FINEST);
 //   log.getHandlers()[0].setLevel(Level.FINEST);
@@ -196,6 +208,42 @@ public class ScribeImpl implements Scribe, Application {
       return set.getHandle(0).getId().equals(endpoint.getId());
   }
 
+  /**
+   * Internal method for sending a subscribe message
+   *
+   * @param Topic topic
+   */
+  private void sendSubscribe(Topic topic, ScribeClient client) {
+    id++;
+
+    if (client != null)
+      outstanding.put(new Integer(id), client);
+
+    endpoint.route(topic.getId(), new SubscribeMessage(handle, topic, id), null);
+    endpoint.scheduleMessage(new SubscribeLostMessage(handle, topic, id), MESSAGE_TIMEOUT);
+  }
+
+  /**
+   * Internal method which processes an ack message
+   *
+   * @param message The ackMessage
+   */
+  private void ackMessageReceived(SubscribeAckMessage message) {
+    outstanding.remove(new Integer(message.getId()));
+  }
+
+  /**
+   * Internal method which processes a subscribe lost message
+   *
+   * @param message THe lost message
+   */
+  private void lostMessageReceived(SubscribeLostMessage message) {
+    ScribeClient client = (ScribeClient) outstanding.remove(new Integer(message.getId()));
+
+    if (client != null)
+      client.subscribeFailed(message.getTopic());
+  }
+
   // ----- SCRIBE METHODS -----
 
   /**
@@ -213,7 +261,7 @@ public class ScribeImpl implements Scribe, Application {
     if (topics.get(topic) == null) {
       topics.put(topic, new TopicManager(topic, client));
 
-      endpoint.route(topic.getId(), new SubscribeMessage(handle, topic), null);
+      sendSubscribe(topic, client);
     } else {
       ((TopicManager) topics.get(topic)).addClient(client);
     }
@@ -287,13 +335,13 @@ public class ScribeImpl implements Scribe, Application {
       topics.put(topic, manager);
 
       log.finer(endpoint.getId() + ": Implicitly subscribing to topic " + topic);
-      endpoint.route(topic.getId(), new SubscribeMessage(handle, topic), null);
+      sendSubscribe(topic, null);
     } else {
       manager.addChild(child);
     }
 
     // we send a confirmation back to the child
-    endpoint.route(child.getId(), new SubscribeAckMessage(handle, topic, manager.getPathToRoot()), child);
+    endpoint.route(child.getId(), new SubscribeAckMessage(handle, topic, manager.getPathToRoot(), Integer.MAX_VALUE), child);
 
     // and lastly notify all of the clients
     ScribeClient[] clients = manager.getClients();
@@ -506,6 +554,9 @@ public class ScribeImpl implements Scribe, Application {
       // the root
       if (aMessage.getSource().getId().equals(endpoint.getId())) {
         if (aMessage instanceof SubscribeMessage) {
+          SubscribeMessage sMessage = (SubscribeMessage) message;
+
+          outstanding.remove(new Integer(sMessage.getId()));
           log.fine(endpoint.getId() + ": Received our own subscribe message " + aMessage + " for topic " +
             aMessage.getTopic() + " - we are the root.");
         } else {
@@ -519,6 +570,8 @@ public class ScribeImpl implements Scribe, Application {
     } else if (message instanceof SubscribeAckMessage) {
       SubscribeAckMessage saMessage = (SubscribeAckMessage) message;
       TopicManager manager = (TopicManager) topics.get(saMessage.getTopic());
+
+      ackMessageReceived(saMessage);
 
       log.finer(endpoint.getId() + ": Received subscribe ack message from " +
         saMessage.getSource() + " for topic " + saMessage.getTopic());
@@ -548,6 +601,10 @@ public class ScribeImpl implements Scribe, Application {
           endpoint.route(saMessage.getSource().getId(), new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
         }
       }
+    } else if (message instanceof SubscribeLostMessage) {
+      SubscribeLostMessage slMessage = (SubscribeLostMessage) message;
+
+      lostMessageReceived(slMessage);
     } else if (message instanceof PublishRequestMessage) {
       PublishRequestMessage prMessage = (PublishRequestMessage) message;
       TopicManager manager = (TopicManager) topics.get(prMessage.getTopic());
@@ -613,7 +670,12 @@ public class ScribeImpl implements Scribe, Application {
         if ((manager.getParent() != null) && manager.getParent().equals(dMessage.getSource())) {
           // we set the parent to be null, and then send out another subscribe message
           manager.setParent(null);
-          endpoint.route(dMessage.getTopic().getId(), new SubscribeMessage(handle, dMessage.getTopic()), null);
+          ScribeClient[] clients = manager.getClients();
+
+          if (clients.length > 0)
+            sendSubscribe(dMessage.getTopic(), clients[0]);
+          else
+            sendSubscribe(dMessage.getTopic(), null);
         } else {
           log.warning(endpoint.getId() + ": Received unexpected drop message from non-parent " +
                       dMessage.getSource() + " for topic " + dMessage.getTopic() + " - ignoring");
@@ -646,7 +708,7 @@ public class ScribeImpl implements Scribe, Application {
         // check if new guy is root, we were old root, then subscribe
         if (manager.getParent() == null){
           // send subscribe message
-          endpoint.route(topic.getId(), new SubscribeMessage(handle, topic), null);
+          sendSubscribe(topic, null);
         }
       } else {
         if (isRoot(topic) && (manager.getParent() != null)) {
@@ -781,7 +843,7 @@ public class ScribeImpl implements Scribe, Application {
           endpoint.route(children[i].getId(), new DropMessage(handle, topic), children[i]);
           removeChild(children[i]);
         } else {
-          endpoint.route(children[i].getId(), new SubscribeAckMessage(handle, topic, getPathToRoot()), children[i]);
+          endpoint.route(children[i].getId(), new SubscribeAckMessage(handle, topic, getPathToRoot(), Integer.MAX_VALUE), children[i]);
         }
       }
     }
@@ -825,7 +887,11 @@ public class ScribeImpl implements Scribe, Application {
           log.fine(endpoint.getId() + ": Parent " + parent + " for topic " + topic + " has died - resubscribing.");
 
           setParent(null);
-          endpoint.route(topic.getId(), new SubscribeMessage(endpoint.getLocalNodeHandle(), topic, ((NodeHandle)o).getId()), null);
+
+          if (clients.size() > 0)
+            sendSubscribe(topic, (ScribeClient) clients.elementAt(0));
+          else
+            sendSubscribe(topic, null);
         } else {
           log.warning(endpoint.getId() + ": Received unexpected update from " + o);
           o.deleteObserver(this);
