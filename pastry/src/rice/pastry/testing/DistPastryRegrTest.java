@@ -172,19 +172,6 @@ public class DistPastryRegrTest extends PastryRegrTest {
           break;
         }
       }
-
-      if (protocol == DistPastryNodeFactory.PROTOCOL_RMI) {
-        // set RMI security manager
-        if (System.getSecurityManager() == null)
-          System.setSecurityManager(new RMISecurityManager());
-
-        // start RMI registry
-        try {
-          java.rmi.registry.LocateRegistry.createRegistry(port);
-        } catch (RemoteException e) {
-          System.out.println("Error starting RMI registry: " + e);
-        }
-      }
     }
 
     /**

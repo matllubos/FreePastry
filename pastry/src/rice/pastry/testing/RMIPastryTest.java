@@ -39,6 +39,7 @@ package rice.pastry.testing;
 import rice.pastry.*;
 import rice.pastry.rmi.*;
 import rice.pastry.standard.*;
+import rice.pastry.dist.*;
 
 import java.util.*;
 import java.net.*;
@@ -65,10 +66,11 @@ public class RMIPastryTest {
     private static int port = 5009;
     private static String bshost = null;
     private static int bsport = 5009;
-    private static int numnodes = 1;
+    private static int numnodes = 5;
+    private static int protocol = DistPastryNodeFactory.PROTOCOL_RMI;
 
     public RMIPastryTest() {
-	factory = new RMIPastryNodeFactory(port);
+	factory = DistPastryNodeFactory.getFactory(protocol, port);
 	pastrynodes = new Vector();
     }
 
@@ -80,76 +82,18 @@ public class RMIPastryTest {
      * @return handle to bootstrap node, or null.
      */
     protected NodeHandle getBootstrap() {
-	RMIRemoteNodeI bsnode = null;
-
-	try {
-	    bsnode = (RMIRemoteNodeI)Naming.lookup("//:" + port + "/Pastry");
-	    if (bsnode != null) if (Log.ifp(5)) System.out.println("Bootstrapping from localhost:" + port);
-	} catch (Exception e) {
-	    if (Log.ifp(5)) System.out.println("Unable to find bootstrap node on localhost");
-	}
-
-	if (bshost == null && bsnode == null) {
-	    if (Log.ifp(5)) System.out.println("Not using any bootstrap node");
-	    return null;
-	}
-
-	int nattempts = 3;
-
-	// if bshost:bsport == localhost:port then nattempts = 0.
-	// waiting for ourselves is not harmful, but pointless, and denies
-	// others the usefulness of symmetrically waiting for us.
-
-	if (bsport == port) {
-	    InetAddress localaddr = null, connectaddr = null;
-	    String host = null;
-
-	    try {
-		host = "localhost"; localaddr = InetAddress.getLocalHost();
-		connectaddr = InetAddress.getByName(host = bshost);
-	    } catch (UnknownHostException e) {
-		System.out.println("Error: Host unknown: " + host);
-		nattempts = 0;
+	InetSocketAddress addr = null;
+	if(bshost != null )
+	    addr = new InetSocketAddress(bshost, bsport);
+	else{
+	    try{
+		addr = new InetSocketAddress(InetAddress.getLocalHost().getHostName(), bsport);
 	    }
-
-	    if (nattempts != 0 && localaddr.equals(connectaddr))
-		nattempts = 0;
-	}
-
-	for (int i = 1; bsnode == null && i <= nattempts; i++) {
-	    try {
-		bsnode = (RMIRemoteNodeI)Naming.lookup("//" + bshost
-							 + ":" + bsport
-							 + "/Pastry");
-		if (bsnode != null) if (Log.ifp(5)) System.out.println("Bootstrapping from " + bshost + ":" + bsport);
-	    } catch (Exception e) {
-		if (Log.ifp(5))
-		    System.out.println("Unable to find bootstrap node on "
-				       + bshost + ":" + bsport
-				       + " (attempt " + i + "/" + nattempts + ")");
-	    }
-
-	    if (bsnode == null && i != nattempts)
-		pause(1000);
-	}
-
-	NodeId bsid = null;
-	if (bsnode != null) {
-	    try {
-		bsid = bsnode.getNodeId();
-	    } catch (RemoteException e) {
-		if (Log.ifp(5)) System.out.println("Unable to get remote node id: " + e.toString());
-		bsnode = null;
+	    catch(UnknownHostException e){ 
+		System.out.println(e);
 	    }
 	}
-
-	RMINodeHandle bshandle = null;
-	if (bsid != null)
-	    bshandle = new RMINodeHandle(bsnode, bsid);
-
-	if (bsnode == null) if (Log.ifp(5)) System.out.println("Not using any bootstrap node");
-
-	return bshandle;
+	return ((DistPastryNodeFactory) factory).getNodeHandle(addr);
     }
 
     /**
@@ -202,19 +146,6 @@ public class RMIPastryTest {
 		break;
 	    }
 	}
-
-	// set RMI security manager
-
-	if (System.getSecurityManager() == null)
-	    System.setSecurityManager(new RMISecurityManager());
-
-	// start RMI registry
-
-	try {
-	    java.rmi.registry.LocateRegistry.createRegistry(port);
-	} catch (RemoteException e) {
-	    System.out.println("Error starting RMI registry: " + e);
-	}
     }
 
     /**
@@ -230,17 +161,10 @@ public class RMIPastryTest {
 	pastrynodes.add(pn);
 	if (Log.ifp(5)) System.out.println("created " + pn);
 
-	// the first virtual node blocks till ready.
-	if (firstvnode) {
-	    firstvnode = false;
-	    if (Log.ifp(6)) System.out.println("blocking until first virtual node is ready");
-	    while (pn.isReady() == false) {
-		synchronized (pn) {
-		    if (pn.isReady() == false)
-			try { pn.wait(); } catch (InterruptedException e) { }
-		}
-	    }
-	    if (Log.ifp(6)) System.out.println("first virtual node is ready");
+	while( pn.isReady() == false){
+	    try{
+		Thread.sleep(2000);
+	    }catch (InterruptedException e) {}
 	}
     }
 
