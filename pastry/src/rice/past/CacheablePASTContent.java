@@ -41,70 +41,70 @@ import rice.p2p.commonapi.*;
 
 
 /**
- * @(#) PASTContent.java
+ * @(#) CacheablePASTContent.java
  * 
- * This interface must be implemented by all content objects stored in
- * PAST.
- *
- * The interface allows applications to control the semantics of an
- * instance of PAST. For instance, it allows applications to control
- * which objects can be inserted (e.g., content-hash objects only),
- * what happens when an object is inserted that already exists in
- * PAST, etc.
- *
- * It is assumed that an instance of PAST is used to store objects of
- * the same type.  Multiple instance of PAST should be created when
- * storing objects with different semantics.
+ * This interface must be implemented by all cacheable content objects
+ * stored in PAST. PAST content objects that implement this interface
+ * a subject to dynamic caching on storage nodes other than the
+ * storage roots associated with an object's key.
  *
  * @version $Id$
  * @author Alan Mislove
  * @author Ansley Post
  * @author Peter Druschel 
- * 
- */
+ *  */
 
-public interface PASTContent {
+public interface CacheablePASTContent extends PASTContent {
 
   /**
-   * Checks if a insert operation should be allowed.  Invoked when a
-   * PAST node receives an insert request and it is a replica root for
-   * the id; invoked on the object to be inserted.  This method
-   * determines the effect of an insert operation on an object that
-   * already exists: it computes the new value of the stored object,
-   * as a function of the new and the existing object.
+   * Checks if an object should be cached on the local node object.
+   * Invoked when a PAST node receives an object and it is NOT a
+   * replica root for the id; invoked on the object to be cached.
+   * This method determines the effect of an insert operation on a
+   * cached object that already exists: it computes the new value of
+   * the cached object, as a function of the new and the existing
+   * object.
    * 
    * @param id the key identifying the object
-   * @param newObj the new object to be stored
-   * @param existingObj the existing object stored on this node (null if no object associated with id is stored on this node)
+   * @param newObj the new object to be cached
+   * @param existingObj the existing object cached on this node (null if no object associated with id is cached on this node)
    * @return null, if the operation is not allowed; else, the new
-   * object to be stored on the local node.  
+   * object to be cached on the local node.  
    */
 
-  public PASTContent checkInsert(Id id, PASTContent existingContent);
+  public CacheablePASTContent checkCacheInsert(Id id, CacheablePASTContent existingContent);
 
   /**
-   * Checks if a lookup operation should be allowed.  Invoked when a
-   * PAST node receives a lookup request and it is a replica root for
-   * the id; invoked on the object that is locally stored.
+   * Checks if a lookup operation should be allowed of a cached
+   * object.  Invoked when a PAST node receives a lookup request, it
+   * has the object cached, and it is NOT replica root for the id;
+   * invoked on the object that is locally cached.
    * 
    * @param id the key identifying the object
    * @param clCred credential object provided by the principal who initiated the operation
-   * @return null, if the operation is not allowed; else, the object to be returned to the client 
+   * @return if null, the request is forwarded towards a replica root; else, the object to be returned to the client 
    */
 
-  public PASTContent checkLookup(Id id, Credential clCred);
+  public PASTContent checkCacheLookup(Id id, Credential clCred);
 
   /**
-   * Checks if an exists operation should be allowed.  Invoked when a
-   * PAST node receives an insert request and it is a replica root for
-   * the id; invoked on the object that is locally stored.
+   * Checks if an exists operation should be allowed of a cache
+   * object.  Invoked when a PAST node receives an insert request, it
+   * has the object and it is NOT a replica root for the id; invoked
+   * on the object that is cached stored.
    * 
    * @param id Pastry key identifying the object
    * @param clCred credential object provided by the principal who initiated the operation
-   * @return the result returned to the client 
+   * @return if true, the result returned to the client; if false, the request is forwarded towards a replica root for the key
    */
 
-  public boolean checkExists(Id id, Credential clCred);
+  public boolean checkCacheExists(Id id, Credential clCred);
+
+  /**
+   * Invoked by PAST to notify the object that is it about to be evicted from the local cache
+   */
+
+  public void notifyEvict();
 
 }
 

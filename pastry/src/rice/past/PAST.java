@@ -39,26 +39,94 @@ package rice.past;
 import rice.*;
 import rice.p2p.commonapi.*;
 
-public interface PAST{
+/**
+ * @(#) PAST.java
+ * 
+ * This interface is exported by all instances of PAST.  An instance
+ * of PAST provides a distributed hash table (DHT) service.  Each
+ * instance stores tuples consisting of a key and an object of a
+ * particular type, which must implement the interface PASTContent.
+ *  
+ *
+ * PAST is event-driven, so all methods are asynchronous
+ * and receive their results using the command pattern.
+ *
+ * @version $Id$
+ * @author Alan Mislove
+ * @author Ansley Post
+ * @author Peter Druschel
+ *
+ */
+
+public interface PAST {
   
-  /**
-   * Retrieves the object and all associated updates with the given ID.
-   * Asynchronously returns a StorageObject as the result to the provided
-   * Continuation.
-   * 
-   * @param id Pastry key of original object
-   * @param command Command to be performed when the result is received
-   */
-  public void lookup(Id id, Continuation command);
-  
-  /**
-   * Determines whether an object is currently stored at the given ID.
+ /**
+   * Inserts an object with the given ID into this instance of PAST.
    * Asynchronously returns a boolean as the result to the provided
-   * Continuation, indicating whether the object exists.
+   * Continuation, indicating whether the insert was successful.
    * 
-   * @param id Pastry key of original object
+   * @param id key identifying the object to be inserted
+   * @param obj the object to be inserted
    * @param command Command to be performed when the result is received
    */
-  public void exists(Id id, Continuation command);
+ 
+  public void insert(Id id, PASTContent obj, Continuation command);
+ 
+  /**
+   * Retrieves the object stored in this instance of PAST with the
+   * given ID.  Asynchronously returns a PASTContent object as the
+   * result to the provided Continuation.
+   * 
+   * @param id the key to be queried
+   * @param command Command to be performed when the result is received 
+   */
+
+  public void lookup(Id id, Continuation command);
+
+  /**
+   * Retrieves up to maxReplicas replicas of the object stored in this
+   * instance of PAST with the given ID. Each replica is obtained from
+   * a different primary storage root for the the given key. If
+   * maxReplicas exceeds the replication factor r of this PAST
+   * instance, only r replicas are returned.
+   *
+   * This method is useful when the PASTContent objects stored in this
+   * PAST instance are not self-authenticating, and storage nodes are
+   * not trusted.
+   * 
+   * Asynchronously returns a Vector of PASTContent objects as the
+   * result to the provided Continuation.
+   * 
+   * @param id the key to be queried
+   * @param maxReplicas the maximal number of replicas requested
+   * @param command Command to be performed when the result is received 
+   */
+
+  public void lookupReplicas(Id id, int maxReplicas, Continuation command);
   
+  /**
+   * Determines whether an object is stored in the instance of PAST
+   * with the given ID.  Asynchronously returns a boolean as the
+   * result to the provided Continuation, indicating whether the
+   * object exists.
+   * 
+   * @param id the key to be queried
+   * @param command Command to be performed when the result is received 
+   */
+
+  public void exists(Id id, Continuation command);
+
+
+  /**
+   * Return the objects stored in this instance of PAST on the *local*
+   * node, with ids in a given range. The IdSet returned contains the
+   * Ids of the stored objects. 
+   *
+   * @param range The range to query  
+   * @return The idset containg the keys 
+   */
+    
+  public IdSet scan(IdRange range);
+
 }
+
