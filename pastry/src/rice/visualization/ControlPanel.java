@@ -7,6 +7,8 @@
 package rice.visualization;
 
 import java.awt.BorderLayout;
+import java.awt.GridBagLayout;
+import java.awt.GridBagConstraints;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -41,8 +43,9 @@ public class ControlPanel extends JPanel implements ActionListener {
   JPanel centerPanel;
   JList fileList; 
   JButton removeJarsButton;
+  JButton debugCommandButton;
+  GridBagLayout centerPanelLayout;
 
-  JPanel southPanel;
   JTextField commandLineField;  
   JButton updateJarsButton;
 
@@ -58,12 +61,10 @@ public class ControlPanel extends JPanel implements ActionListener {
                                                BorderFactory.createEmptyBorder(5,5,5,5)));
     this.setLayout(new BorderLayout());
   
-    selectJarsButton = new JButton("Add Jars");
-
     centerPanel = new JPanel();
-    centerPanel.setLayout(new BorderLayout());
+    centerPanelLayout = new GridBagLayout();
+    centerPanel.setLayout(centerPanelLayout);
 
-//    jarsPane = new JTextPane();
     selectedFiles = new DefaultListModel();
 /*
     selectedFiles.addElement("one");
@@ -77,36 +78,61 @@ public class ControlPanel extends JPanel implements ActionListener {
     selectedFiles.addElement("oneqwer");
 */
     fileList = new JList(selectedFiles);
+
+    selectJarsButton = new JButton("Add Jars");
     removeJarsButton = new JButton("Remove Jars");
-    
-    
-//    fileList.setListData(selectedFiles);
-    JScrollPane jarsPane = new JScrollPane(); //fileList);
-    jarsPane.getViewport().setView(fileList); 
-
-    centerPanel.add(jarsPane,BorderLayout.CENTER);
-    centerPanel.add(removeJarsButton,BorderLayout.SOUTH);
- 
-    southPanel = new JPanel();
-    southPanel.setLayout(new BorderLayout());
-
-    commandLineField = new JTextField();
+    debugCommandButton = new JButton("Debug Command");
     updateJarsButton = new JButton("Update and Restart");
     updateJarsButton.setEnabled(false);
+      
+    JScrollPane jarsPane = new JScrollPane();
+    jarsPane.getViewport().setView(fileList); 
+
+    commandLineField = new JTextField();
     commandLineField.setBorder(
       BorderFactory.createCompoundBorder(
       BorderFactory.createTitledBorder("Command Line"),
-      BorderFactory.createEmptyBorder(5,5,5,5)));
-    southPanel.add(commandLineField,BorderLayout.CENTER);
-    southPanel.add(updateJarsButton,BorderLayout.SOUTH);
+      BorderFactory.createEmptyBorder(5,5,5,5))
+    );
 
-    add(selectJarsButton,BorderLayout.NORTH);  
+    GridBagConstraints c = new GridBagConstraints();
+    c.fill = GridBagConstraints.BOTH;
+    c.weightx = 1.0;
+    c.weighty = 0.0;
+    c.gridx = 0;
+    
+    c.gridy = 0;
+    centerPanelLayout.setConstraints(selectJarsButton, c);
+    centerPanel.add(selectJarsButton);
+
+    c.gridy = 1;
+    c.weighty = 4.0;
+    centerPanelLayout.setConstraints(jarsPane, c);
+    centerPanel.add(jarsPane);
+    c.weighty = 0.0;
+
+    c.gridy = 2;
+    centerPanelLayout.setConstraints(removeJarsButton, c);
+    centerPanel.add(removeJarsButton);
+
+    c.gridy = 3;
+    centerPanelLayout.setConstraints(commandLineField, c);
+    centerPanel.add(commandLineField);
+
+    c.gridy = 4;
+    centerPanelLayout.setConstraints(updateJarsButton, c);
+    centerPanel.add(updateJarsButton);
+
+    c.gridy = 5;
+    centerPanelLayout.setConstraints(debugCommandButton, c);
+    centerPanel.add(debugCommandButton);
+
     add(centerPanel,BorderLayout.CENTER);                  
-    add(southPanel,BorderLayout.SOUTH);                    
   
     selectJarsButton.addActionListener(this);
     updateJarsButton.addActionListener(this);
     removeJarsButton.addActionListener(this);
+    debugCommandButton.addActionListener(this);
 
     chooser = new JFileChooser();
     JarFileFilter filter = new JarFileFilter();
@@ -188,6 +214,10 @@ public class ControlPanel extends JPanel implements ActionListener {
           JOptionPane.showMessageDialog(this, ujr.getException(), "Error", JOptionPane.ERROR_MESSAGE);
         }      
       }
+    }
+
+    if (arg0.getSource() == debugCommandButton) {
+      visualization.openDebugConsole();
     }
   }
   
