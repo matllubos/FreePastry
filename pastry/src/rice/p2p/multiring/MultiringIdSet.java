@@ -185,4 +185,13 @@ public class MultiringIdSet implements IdSet {
   public String toString() {
     return "{RingId " + ringId + " " + set.toString() + "}";
   }
+  
+  /**
+   * Clones this object
+   *
+   * @return a clone
+   */
+  public Object clone() {
+    return new MultiringIdSet(ringId, (IdSet) set.clone());
+  }
 }
