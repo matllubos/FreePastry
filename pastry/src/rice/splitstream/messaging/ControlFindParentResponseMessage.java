@@ -87,17 +87,21 @@ public class ControlFindParentResponseMessage extends Message
      * response, generate an application-level upcall.
      * @param scribe The Scribe group this message is relevant to
      * @param topic The stripe that this message is relevant to
+     * @param stripe The stripe associated with the message
      */
-    public void handleMessage( Scribe scribe, Topic topic )
+    public void handleMessage( Scribe scribe, Topic topic, Stripe stripe )
     {
         if ( ((Boolean)m_data).booleanValue() )
         {
             scribe.setParent( source, topic.getTopicId() );
+	    stripe.setIgnoreTimeout( true );
 	    //System.out.println("setparent set");
 	    //System.out.println("Node "+scribe.getNodeId()+" received response to FindParent from "+source.getNodeId()+ " for stripe "+topic.getTopicId());
         }
         else
-        {
+	    {
+		System.out.println("CFPResponse -- failed, should retry");
+		stripe.setIgnoreTimeout( false );
             /* generate upcall */
         }
     }
