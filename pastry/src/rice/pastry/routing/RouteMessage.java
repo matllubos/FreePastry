@@ -114,7 +114,7 @@ public class RouteMessage extends Message implements Serializable {
 	internalMsg = msg;
 	this.opts = opts;
 	nextHop = dest;
-	if (nextHop != null) System.out.println("2. nexthop = " + nextHop.getNodeId());
+	//if (nextHop != null) System.out.println("2. nexthop = " + nextHop.getNodeId());
 	auxAddress = aux;
     }
 

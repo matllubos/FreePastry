@@ -35,8 +35,11 @@ public interface IScribe
      *
      * @param    topicID        
      * The ID of the topic to subscribe to.
+     *
+     * @param    subscriber
+     * The application subscribing to the topic
      */
-    public void subscribe( NodeId topicID, Credentials cred );
+    public void subscribe( NodeId topicID, IScribeApp subscriber, Credentials cred );
     
     /**
      * Unsubscribe from a topic.  After a node is unsubscribed from a topic, it
@@ -48,8 +51,11 @@ public interface IScribe
      * @param    topicID        
      * The ID of the topic to be unsubscribed from.
      *
+     * @param    subscriber
+     * The application unsubscribing from the topic.  Use null if 
+     * not directly called by an application.
      */
-    public void unsubscribe( NodeId topicID, Credentials cred );
+    public void unsubscribe( NodeId topicID, IScribeApp subscriber, Credentials cred );
     
     /**
      * Publish information to a topic.  Data will be delivered to All nodes 
@@ -76,6 +82,6 @@ public interface IScribe
      * The name of the topic (unique to the local node)
      */
     public NodeId generateTopicId(String topicName);
-    
+
 }
 

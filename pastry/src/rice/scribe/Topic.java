@@ -38,7 +38,8 @@ public class Topic
     /** 
      * Flag indicating if the local node subscribes to this topic
      */
-    protected boolean m_subscribed = false;
+    //    protected boolean m_subscribed = false;
+    // replaced by (m_topics.size() > 0)
     
     /** 
      * Flag indicating if the local node is waiting to be unsubscribed
@@ -60,6 +61,12 @@ public class Topic
      *
      */
     protected ScribeScheduler m_scheduler = null;
+
+    /**
+     * Set of IScribeApps that have subscribed to this Topic.
+     */
+    protected Set m_apps = new HashSet();
+
 
     /* -------------------------------------
      * CONSTRUCTORS
@@ -155,22 +162,37 @@ public class Topic
 	return m_parent;
     }
     
-    /** 
-     * Sets flag indicating if the local node is subscribed to this topic.
+  
+    /**
+     * Register an application as a subscriber to this Topic, so 
+     * that the application receives events regarding the Topic.
      *
-     * @param subscribed value to set flag
+     * @param app The application to be registered.
      */
-    public void subscribe( boolean subscribed ) {
-	m_subscribed = subscribed;
+    public void subscribe(IScribeApp app)
+    {
+	m_apps.add(app);
+    }
+    
+    /**
+     * Unregister an application as a Subscriber to this Topic,
+     * so that the application no longer receives events regarding
+     * this Topic.
+     *
+     * @param app The application to be unregistered.
+     */
+    public void unsubscribe(IScribeApp app)
+    {
+	m_apps.remove(app);
     }
     
     /** 
-     * If the local node is subscribed to this topic
+     * If this topic has any applications registered as subscribers.
      *
-     * @return true if local node is subscribed to this topic.
+     * @return true if there is at least one application subscribed to this topic.
      */
-    public boolean isSubscribed() {
-	return m_subscribed;
+    public boolean hasSubscribers() {
+	return m_apps.size() > 0;
     }
     
     /** 
@@ -248,4 +270,22 @@ public class Topic
     public void removeFromScribe() {
 	m_topics.remove( m_topicId );
     }
+
+    /**
+     * Gets all the applications that wish to receive events regarding 
+     * this Topic.
+     * @return The applications currently registered with this Topic
+     */
+    public IScribeApp[] getApps()
+    {
+	IScribeApp[] apps = new IScribeApp[m_apps.size()]; 
+	m_apps.toArray(apps);
+	return apps;
+    }
+
+    
 }
+
+
+
+

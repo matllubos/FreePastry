@@ -76,8 +76,14 @@ public class MessagePublish extends ScribeMessage implements Serializable
 	    msg.setData( this.getData() );
 	    //	    m_source = scribe.getNodeHandle();
 	    
-	    IScribeApp app = scribe.getScribeApp();
-	    app.forwardHandler( this );
+	    //IScribeApp app = scribe.getScribeApp();
+	    //  app.forwardHandler( this );
+	    // Inform all interested applications
+	    IScribeApp[] apps = topic.getApps();
+	    for (int i=0; i<apps.length; i++) {
+		apps[i].forwardHandler(this);
+	    }
+	  
 
 	    while ( it.hasNext() ) {
 		NodeHandle handle = (NodeHandle)it.next();
@@ -87,14 +93,17 @@ public class MessagePublish extends ScribeMessage implements Serializable
 	    // if waiting to find parent, now send unsubscription msg
 	    if ( topic.isWaitingUnsubscribe() ) {
 		topicId = topic.getTopicId();
-		scribe.unsubscribe( topicId, cred );
+		scribe.unsubscribe( topicId, null, cred );
 		topic.waitUnsubscribe( false );
 	    }
 	    
 	    // if local node is subscriber of this topic, pass the event to
-	    // the application's event handler
-	    if ( topic.isSubscribed() ) {
-		scribe.getScribeApp().receiveMessage( this );
+	    // the registered applications' event handlers
+	    if ( topic.hasSubscribers() ) {
+		// scribe.getScribeApp().receiveMessage( this );
+		for ( int i=0; i<apps.length; i++ ) {
+		    apps[i].receiveMessage( this );
+		}		
 	    }
 	    
 	}

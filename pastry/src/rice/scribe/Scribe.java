@@ -25,11 +25,7 @@ public class Scribe extends PastryAppl implements IScribe
     /*
      * Member fields
      */
-
-    /**
-     * Application implementing IScribeApp and using scribe.
-     */
-    protected IScribeApp m_scribeApp = null;
+   
 
     /**
      * Set of topics on the local scribe node. 
@@ -75,16 +71,15 @@ public class Scribe extends PastryAppl implements IScribe
      * Constructor.
      *
      * @param pn the pastry node that client will attach to.
-     * @param app the Scribe application sitting on top of the Scribe system.
      */
-    public Scribe( PastryNode pn, IScribeApp app, Credentials cred ) {
+    public Scribe( PastryNode pn, Credentials cred ) {
 	super( pn );
 	m_topics = new HashMap();
 	m_sendOptions = new SendOptions();
 	m_securityManager = new PSecurityManager();
 	m_scheduler = new ScribeScheduler( this, 20*1000, 30*1000 );
 	m_credentials = cred;
-	m_scribeApp = app;
+	//	m_scribeApp = app;
 	
 	if( cred == null ) {
 	    m_credentials = new PermissiveCredentials();
@@ -117,8 +112,11 @@ public class Scribe extends PastryAppl implements IScribe
      *
      * @param    topicID        
      * the ID of the topic to subscribe to.
+     *
+     * @param    subscriber
+     * The application subscribing to the topic
      */
-    public void subscribe( NodeId topicId, Credentials cred ) {
+    public void subscribe( NodeId topicId, IScribeApp subscriber, Credentials cred ) {
 	Topic topic = (Topic) m_topics.get( topicId );
 	
 	if ( topic == null ) {
@@ -126,8 +124,8 @@ public class Scribe extends PastryAppl implements IScribe
 	    m_topics.put( topicId, topic );
 	}
 	
-	// mark self as subscribed
-	topic.subscribe( true );	
+	// Register application as a subscriber for this topic
+	topic.subscribe( subscriber );
 	topic.restartParentHandler();
 	
 	ScribeMessage msg = makeSubscribeMessage( topicId, cred );
@@ -143,8 +141,12 @@ public class Scribe extends PastryAppl implements IScribe
      *
      * @param    topicID        
      * the ID of the topic to be unsubscribed from.
+     *
+     * @param    subscriber
+     * The application unsubscribing from the topic. Use null if 
+     * not directly called by application
      */
-    public void unsubscribe( NodeId topicId, Credentials cred ) {
+    public void unsubscribe( NodeId topicId, IScribeApp subscriber, Credentials cred ) {
 	Topic topic = (Topic) m_topics.get( topicId );
 	
 	// If topic unknown, must give an error
@@ -152,11 +154,16 @@ public class Scribe extends PastryAppl implements IScribe
 	    return;
 	}
 	
-	// locally unsubscribe
-	topic.subscribe( false );
+	// unregister application as subscriber for this topic
+	if (subscriber != null)
+	    topic.unsubscribe( subscriber );
 
-	ScribeMessage msg = makeUnsubscribeMessage( topicId, cred );
-	this.routeMsgDirect( thePastryNode.getLocalHandle(), msg, cred, m_sendOptions );
+	// send unsubscribe message if no more applications registered
+	if ( !topic.hasSubscribers() ) {
+	    ScribeMessage msg = makeUnsubscribeMessage( topicId, cred );
+	    this.routeMsgDirect( thePastryNode.getLocalHandle(), msg, cred,
+				 m_sendOptions );
+	}
     }
     
     /**
@@ -325,9 +332,9 @@ public class Scribe extends PastryAppl implements IScribe
      *
      * @return the scribe application.
      */
-    public IScribeApp getScribeApp() { 
-	return m_scribeApp; 
-    }
+    // public IScribeApp getScribeApp() { 
+    //	return m_scribeApp; 
+    //}
 
     /**
      * Returns the send options in the Scribe system.
@@ -408,4 +415,13 @@ public class Scribe extends PastryAppl implements IScribe
 	return new MessageHeartBeat( m_address, this.thePastryNode.getLocalHandle(), tid, c );
     }
 }
+
+
+
+
+
+
+
+
+
 

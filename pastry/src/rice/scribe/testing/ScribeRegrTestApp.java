@@ -21,48 +21,60 @@ public class ScribeRegrTestApp implements IScribeApp
     private Credentials m_credentials;
     private Scribe m_scribe;
     MRTracker m_tracker = new MRTracker();
+    int m_app = 0; // used to id the app within a node
+    Random m_rng = new Random();
     
-    public ScribeRegrTestApp( PastryNode node, Credentials cred ) {
-	m_scribe = new Scribe( node, this, cred );
+    public ScribeRegrTestApp( PastryNode node, Scribe scribe, int app, Credentials cred ) {
+	m_scribe = scribe;
 	m_credentials = cred;
+	m_app = app;
     }
 
     /**
      * This makes sure that if the current app was subscribed to a topic,
      * it received all the messages published to it.
      */
-    public boolean verifyApplication( List topics, MRTracker trk ) {
+    public boolean verifyApplication( List topics, MRTracker trk, MRTracker trkAfter ) {
 	Iterator it = topics.iterator();
 	NodeId tid;
 
+	boolean ok = true;
+
 	while( it.hasNext() ) {
 	    tid = (NodeId)it.next();
-	    if( !m_tracker.isSubscribed( tid ) )
-		continue;
-	    if( trk.getMessagesReceived( tid ) != 
-		m_tracker.getMessagesReceived( tid ) ) {
-		System.err.print( "Node:" + getNodeId() + " doesnt verify ");
-		int sent, rec;
-		sent = trk.getMessagesReceived( tid );
-		rec = m_tracker.getMessagesReceived( tid );
-		System.err.println( " sent: " + sent + " rec " + rec  + tid );
+	    
+	    if (!m_tracker.knows(tid)) continue;
+	    
+	    int shouldReceive = trk.getMessagesReceived( tid );
+	    int received = m_tracker.getMessagesReceived( tid );
+	    if( m_tracker.isSubscribed( tid ))
+		shouldReceive += trkAfter.getMessagesReceived( tid );
+	    
+	    if ( shouldReceive != received ) {
+		System.out.print( "**** Node:" + getNodeId() + " App:"
+				  + m_app + " does *NOT* verify topic " + tid );
+		ok = false;
 	    }
-	    else {
-		System.out.print( "Node:" + getNodeId() + " verifies ");
-		int sent, rec;
-		sent = trk.getMessagesReceived( tid );
-		rec = m_tracker.getMessagesReceived( tid );
-		System.out.println( " sent: " + sent + " rec " + rec + tid );
-	    }
+	    else
+		System.out.print( "Node:" + getNodeId() + "App:"
+				  + m_app +  " verifies topic " + tid);
+	    
+	    System.out.println( " Should receive: " + shouldReceive 
+				+ " Actually received: " + received );
 	}
-	return true;
+	return ok;
     }
+
 
     /**
      * up-call invoked by scribe when a publish message is 'delivered'.
      */
     public void receiveMessage( ScribeMessage msg ) {
 	m_tracker.receivedMessage( msg.getTopicId() );
+	/*
+	System.out.println("Node:" + getNodeId() + " App:" 	
+				+ m_app + " received msg: " + msg); 
+	*/
     }
 
     /**
@@ -70,21 +82,30 @@ public class ScribeRegrTestApp implements IScribeApp
      * the multicast tree.
      */
     public void forwardHandler( ScribeMessage msg ) {
-
+	/*
+	System.out.println("Node:" + getNodeId() + " App:"
+                                + m_app + " forwarding: "+ msg);
+	*/
     }
     
     /**
      * up-call invoked by scribe when a node detects a failure from its parent.
      */
     public void faultHandler( ScribeMessage msg ) {
-
+	/*
+	System.out.println("Node:" + getNodeId() + " App:"
+                                + m_app + " handling fault: " + msg);
+	*/
     }
 
     /**
      * up-call invoked by scribe when a node is added to the multicast tree.
      */
     public void subscribeHandler( ScribeMessage msg ) {
-
+	/*
+	System.out.println("Node:" + getNodeId() + " App:"
+                                + m_app + " child subscribed: " + msg);
+	*/
     }
 
     public NodeId generateTopicId( String topicName ) {
@@ -99,6 +120,11 @@ public class ScribeRegrTestApp implements IScribeApp
      * direct call to scribe for creating a topic from the current node.
      */
     public void create( NodeId topicId ) {
+	/*
+	System.out.println("Node:" + getNodeId() + " App:"
+                                + m_app + " creating topic " + topicId );
+	*/
+
 	m_scribe.create( topicId, m_credentials );
     }
 
@@ -106,6 +132,10 @@ public class ScribeRegrTestApp implements IScribeApp
      * direct call to scribe for publishing to a topic from the current node.
      */    
     public void publish( NodeId topicId ) {
+	/*
+	System.out.println("Node:" + getNodeId() + " App:"
+                                + m_app + " publishing on topic" + topicId );
+	*/
 	m_scribe.publish( topicId, null, m_credentials );
     }
 
@@ -113,15 +143,31 @@ public class ScribeRegrTestApp implements IScribeApp
      * direct call to scribe for subscribing to a topic from the current node.
      */    
     public void subscribe( NodeId topicId ) {
-	m_scribe.subscribe( topicId, m_credentials );
+	/*
+	System.out.println("Node:" + getNodeId() + " App:"
+                                + m_app + " subscribing to topic " + topicId);
+	*/
+	m_scribe.subscribe( topicId, this, m_credentials );
 	m_tracker.setSubscribed( topicId, true );
     }
 
     /**
-     * direct call to scribe for unsubscribing to a topic from the current node
+     * direct call to scribe for unsubscribing a  topic from the current node
+     * The topic is chosen randomly if null is passed and topics exist.
      */    
-    public void unsubscribe( NodeId topicId ) {
-	m_scribe.unsubscribe( topicId, m_credentials );
+    public void unsubscribe(NodeId topicId) {
+	if (topicId == null) {
+	    NodeId[] topics = m_tracker.getSubscribedTopics();
+	    if (topics.length == 0) return;
+	    int tid = m_rng.nextInt(topics.length);
+	    topicId = topics[tid];
+	}
+	/*
+	System.out.println("Node:" + getNodeId() + " App:"
+                                + m_app + " unsubscribing from topic " + topicId);
+	*/
+	m_scribe.unsubscribe( topicId, this, m_credentials );
+	m_tracker.setSubscribed( topicId, false );
     }
     
     /**
@@ -130,6 +176,13 @@ public class ScribeRegrTestApp implements IScribeApp
      * after the regr test that all messages to all topics where received.
      */
     public void putTopic( NodeId tid ) {
-	m_tracker.putTopic( tid );
+	//	m_tracker.putTopic( tid );
     }
 }
+
+
+
+
+
+
+

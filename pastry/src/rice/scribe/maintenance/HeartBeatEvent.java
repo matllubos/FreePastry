@@ -13,6 +13,7 @@ import java.util.*;
  * messages to their children.
  *
  * @author Romer Gil
+ * @author Eric Engineer
  */
 public class HeartBeatEvent extends MaintenanceEvent
 {
@@ -50,10 +51,10 @@ public class HeartBeatEvent extends MaintenanceEvent
 		m_topic.removeChild( nhandle );
 		
 		/*
-		 * only if we arent subscribed, if we dont have children we 
+		 * only if we have no apps subscribed, if we dont have children we 
 		 * can forget about the topic
 		 */
-		if( !m_topic.isSubscribed() && !m_topic.hasChildren() ) {
+		if( !m_topic.hasSubscribers() && !m_topic.hasChildren() ) {
 		    if ( m_topic.getParent() != null ) {
 			ScribeMessage msgu = m_scribe.
 			    makeUnsubscribeMessage( topicId, cred );

@@ -14,22 +14,22 @@ import java.security.*;
 /**
  * ScribeRegrTest
  *
- * a regression test suite for pastry.
+ * a regression test suite for Scribe
  *
  * @author Romer Gil
+ * @author Eric Engineer 
  */
 public class ScribeRegrTest
 {
     private DirectPastryNodeFactory m_factory;
     private NetworkSimulator m_simulator;
     
-    private LinkedList m_scribeNodes;
+    private LinkedList m_pastryNodes;
     private LinkedList m_scribeApps;
-    public TreeMap m_scribeNodesSorted;
-    //    private Vector m_rtApps;
 
     private Vector m_topics;
     private MRTracker m_tracker;
+    private MRTracker m_tracker2;
     
     private Random rng;
     
@@ -42,35 +42,37 @@ public class ScribeRegrTest
 	m_simulator = new EuclideanNetwork();
 	m_factory = new DirectPastryNodeFactory(m_simulator);
 	
-	m_scribeNodes = new LinkedList();
+	m_pastryNodes = new LinkedList();
 	m_scribeApps = new LinkedList();
-	m_scribeNodesSorted = new TreeMap();
+
 	rng = new Random();
 	m_tracker = new MRTracker();
+	m_tracker2 = new MRTracker(); // keep track after unsubscribe
 	m_topics = new Vector();
     }
     
-    public void makeScribeNode() {
+    public void makeScribeNode(int apps) {
 
+	// create the Pastry node
 	NodeHandle bootstrap = null;
 	try {
-	    PastryNode lastnode = (PastryNode)m_scribeNodes.getLast();
+	    PastryNode lastnode = (PastryNode)m_pastryNodes.getLast();
 	    bootstrap = lastnode.getLocalHandle();
 	} catch (NoSuchElementException e) {
 	}
-
 	PastryNode pnode = m_factory.newNode(bootstrap);
-
-	Credentials cred = new PermissiveCredentials();
-
-	ScribeRegrTestApp app = new ScribeRegrTestApp( pnode, cred );
-
-	m_scribeNodes.add(pnode);
-	m_scribeApps.add(app);
-	m_scribeNodesSorted.put(app.getNodeId(),app);
+	m_pastryNodes.add(pnode);
 	
-	int n = m_scribeNodes.size();
+	// Create the node's instance of Scribe
+	Credentials credentials = new PermissiveCredentials();
+	Scribe scribe = new Scribe( pnode, credentials );
 	
+	// create the node's apps
+	for (int i=0; i<apps; i++) {
+	    Credentials cred = new PermissiveCredentials();	
+	    ScribeRegrTestApp app = new ScribeRegrTestApp( pnode, scribe, i, cred );
+	    m_scribeApps.add(app);
+	}
     }
 
     public boolean simulate() { 
@@ -84,75 +86,109 @@ public class ScribeRegrTest
 	Log.init(args);
 
 	ScribeRegrTest st = new ScribeRegrTest();
-	int n, m, t, i;
+	int n, a, m, t, i;
 
-	//n #nodes, m #messages per topic, t #topics
+	//n #nodes, a #apps per node, m #messages per topic, t #topics
 	n = 100;
+	a = 5;
 	m = 10;
-	t = 3;
+	t = 5;
 	
 	for( i = 0; i < n; i++ ) {
-	    st.makeScribeNode();
+	    st.makeScribeNode(a);
 	    while (st.simulate());
 	}
 
-	st.doTheTesting(n,m,t);
+	System.gc();
 
-	System.out.println(n + " nodes constructed");
+	boolean ok = st.doTheTesting(m,t);
+
+	System.out.println("\n" + n + " nodes constructed with " + a 
+			   + " applications per node.\n" + t 
+			   + " topics created, and " + m 
+			   + " messages sent per topic.");
+	String out = "\n\nREGRESSION TEST ";
+	out += ok ? "PASSED" : "FAILED (see output above for details)";
+	System.out.println(out);
+
 	System.gc();
     }
 
-    public void doTheTesting( int nodes, int msgs, int topics ) {
-	int i, j, k, subs, node, topic;
+    public boolean doTheTesting( int msgs, int topics ) {
+	int i, j, k, subs, topic, app;
 	NodeId tid;
-	ScribeRegrTestApp app;
+	int totalApps = m_scribeApps.size();
 
-	//create 'topics' number of topics, from randomly selected nodes.
+	//create 'topics' number of topics, from randomly selected apps
 	for( i = 0; i < topics; i++ ) {
 	    tid = generateTopicId( new String( "ScribeTest" + i ) );
-	    node = rng.nextInt( nodes );
-	    create( node, tid );
-	    //let all the apps know about the topic. For the regr.This has 
+	    app = rng.nextInt( totalApps );    
+	    create( app, tid );
+	    while(simulate());	
+
+	    //let app know about the topic. For the regr.This has 
 	    //nothing to do with the actual scribe api is just stuff that is 
 	    //done to verify correctness.
-	    for( j = 0; j < nodes; j++ ) {
-		app = (ScribeRegrTestApp)m_scribeApps.get( j );
-		app.putTopic( tid );
+	    for ( j = 0; j < totalApps; j++ ) {	
+	    	ScribeRegrTestApp a = (ScribeRegrTestApp) m_scribeApps.get( j );
+	    	a.putTopic( tid );
 	    }
+	
 	    //now add the topics to the regr test. again just for testing. 
 	    m_topics.add( tid );
 	    m_tracker.setSubscribed( tid, true );
+	    m_tracker2.setSubscribed( tid, true ); 
 
-	    //now subscribe a random number of nodes to the topic we are 
+	    //now subscribe a random number of apps to the topic we are 
 	    //lookin at
-	    subs = rng.nextInt( nodes );
+	    subs = rng.nextInt( totalApps );
 	    for( j = 0; j < subs; j++ ) {
-		subscribe( rng.nextInt( nodes ), tid );
+		subscribe( rng.nextInt( totalApps ), tid );
+		while(simulate());
 	    }
 	}
-
-	while (simulate());
 
 	//start publishing stuff to all the topics, selected at random.
 	for( i = 0; i < topics; i++ ) {
 	    for( j = 0; j < msgs; j++ ) {
-		topic = rng.nextInt( topics );
-		node = rng.nextInt( nodes );
+		topic = rng.nextInt( m_topics.size() );
+		app = rng.nextInt( totalApps );
 		tid = (NodeId)m_topics.get( topic );
-		publish( node, tid );
+		publish( app, tid );
 		m_tracker.receivedMessage( tid );
+		while(simulate());
 	    }
 	}
 
-	while (simulate());
+	// unsubscribe a random number of apps from random topics
+	int unsubs = rng.nextInt( totalApps );
+	for ( i = 0; i < unsubs; i++ ) {
+	    unsubscribe( rng.nextInt( totalApps ));
+	    while(simulate());
+	}
+
+	//start publishing stuff to all the topics, selected at random.
+        for( i = 0; i < topics; i++ ) {
+            for( j = 0; j < msgs; j++ ) {
+                topic = rng.nextInt( m_topics.size() );
+                app = rng.nextInt( totalApps );
+                tid = (NodeId)m_topics.get( topic );
+                publish( app, tid );
+		// store in second tracker instead
+                m_tracker2.receivedMessage( tid );
+                while(simulate());
+            }
+        }
+
 
 	//verifying that what we sent was received (nothing more and nothing 
 	//less) by the correct nodes 
-	for( i = 0; i < nodes; i++ ) {
-	    app = (ScribeRegrTestApp)m_scribeApps.get( i );
-	    app.verifyApplication( m_topics, m_tracker );
+	boolean ok = true;
+	for( i = 0; i < totalApps; i++ ) {
+	    ScribeRegrTestApp a = (ScribeRegrTestApp)m_scribeApps.get( i );
+	    ok = a.verifyApplication( m_topics, m_tracker, m_tracker2) && ok;
 	}
-
+	return ok;
     }
 
     public NodeId generateTopicId( String topicName ) { 
@@ -173,26 +209,36 @@ public class ScribeRegrTest
     }
 
     //publish a msg from one of the test apps that we are keeping in the suite.
-    private void publish( int node, NodeId tid ) {
-	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeApps.get( node );
-	app.publish( tid );
+    private void publish( int app, NodeId tid ) {
+	ScribeRegrTestApp a = (ScribeRegrTestApp)m_scribeApps.get( app );
+	a.publish( tid );
     }
 
     //subscribe one of the suite apps to topic tid
-    private void subscribe( int node, NodeId tid ) {
-	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeApps.get( node );
-	app.subscribe( tid );
+    private void subscribe( int app, NodeId tid ) {
+	ScribeRegrTestApp a = (ScribeRegrTestApp)m_scribeApps.get( app );
+	a.subscribe( tid );
     }
 
-    //unsubscribe one of the suite apps to topic tid
-    private void unsubscribe( int node, NodeId tid ) {
-	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeApps.get( node );
-	app.unsubscribe( tid );
+    //unsubscribe one of the suite apps from a random currently subscribed topic tid 
+    private void unsubscribe( int app ) {
+	ScribeRegrTestApp a = (ScribeRegrTestApp)m_scribeApps.get( app );
+	a.unsubscribe(null);
     }
 
     //create a topic tid from a given app.
-    private void create( int node, NodeId tid ) {
-	ScribeRegrTestApp app = (ScribeRegrTestApp)m_scribeApps.get( node );
-	app.create( tid );
+    private void create( int app, NodeId tid ) {
+	ScribeRegrTestApp a = (ScribeRegrTestApp)m_scribeApps.get( app );
+	a.create( tid );
     }
 }
+
+
+
+
+
+
+
+
+
+

@@ -53,9 +53,9 @@ public class MessageUnsubscribe extends ScribeMessage implements Serializable
 		topic.removeChild( handle );
 	    }
 	    
-	    // only if we are not subscribed, if we have no children then send
+	    // only if we have no subscribing apps, if we have no children then send
 	    // the unsubscribe message to the parent
-	    if ( !topic.isSubscribed() && !topic.hasChildren() ) {
+	    if ( !topic.hasSubscribers() && !topic.hasChildren() ) {
 		// tell multicast tree parent to remove local node
 		NodeHandle parent = topic.getParent();
 

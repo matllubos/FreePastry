@@ -70,8 +70,16 @@ public class MessageSubscribe extends ScribeMessage implements Serializable
 	    topic.addChild( m_source );
 
 	    //make the subscribe handler upcall to the scribe app
-	    IScribeApp app = scribe.getScribeApp();
-	    app.subscribeHandler( this );
+	    //IScribeApp app = scribe.getScribeApp();
+	    //app.subscribeHandler( this );
+
+	    // Make the subscribe handler upcall to all interested apps
+	    IScribeApp[] apps = topic.getApps();
+	    for ( int i=0; i<apps.length; i++ ) {
+		apps[i].subscribeHandler( this );
+	    }
+
+	    
 	}
     }
     
@@ -126,8 +134,14 @@ public class MessageSubscribe extends ScribeMessage implements Serializable
 	// make the source a child for this topic
 	topic.addChild( nhandle );
 
-	IScribeApp app = scribe.getScribeApp();
-	app.subscribeHandler( this );
+	//IScribeApp app = scribe.getScribeApp();
+	//app.subscribeHandler( this );
+	// Inform all interested applications
+	IScribeApp[] apps = topic.getApps();
+	for ( int i=0; i<apps.length; i++ ) {
+	    apps[i].subscribeHandler( this );
+	}
+
 	
 	// stop routing the original message
 	return false;

@@ -11,6 +11,7 @@ import rice.pastry.routing.*;
  * has failed so that the local node has to resubscribe.
  *
  * @author Romer Gil
+ * @author Eric Engineer
  */
 public class TreeRepairEvent extends MaintenanceEvent
 {
@@ -37,8 +38,14 @@ public class TreeRepairEvent extends MaintenanceEvent
 	
 	ScribeMessage msg = m_scribe.makeSubscribeMessage( topicId, cred );
 
-	IScribeApp app = m_scribe.getScribeApp();
-	app.faultHandler( msg );
+	// IScribeApp app = m_scribe.getScribeApp();
+	// app.faultHandler( msg );
+	
+	// Inform all interested applications
+	IScribeApp[] apps = m_topic.getApps();
+	for ( int i=0; i<apps.length; i++ ) {
+	    apps[i].faultHandler( msg );
+	}
 
 	m_scribe.routeMsg( topicId, msg, cred, opt );
 	

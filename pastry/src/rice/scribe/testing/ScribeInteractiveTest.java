@@ -22,6 +22,7 @@ public class ScribeInteractiveTest
     private NetworkSimulator m_simulator;
     
     private LinkedList m_scribeNodes;
+    private LinkedList m_scribeApps;
     public TreeMap m_scribeNodesSorted;
     //    private Vector m_rtApps;
     
@@ -38,6 +39,7 @@ public class ScribeInteractiveTest
 	m_factory = new DirectPastryNodeFactory(m_simulator);
 	
 	m_scribeNodes = new LinkedList();
+	m_scribeApps = new LinkedList();
 	m_scribeNodesSorted = new TreeMap();
 	m_tracker = new MRTracker();
 	//	rtApps = new Vector();
@@ -48,9 +50,7 @@ public class ScribeInteractiveTest
 
 	NodeHandle bootstrap = null;
 	try {
-	    ScribeRegrTestApp otherApp = 
-		(ScribeRegrTestApp)m_scribeNodes.getLast();
-	    PastryNode lastnode = (PastryNode)otherApp.getPastryNode();
+	    PastryNode lastnode = (PastryNode) m_scribeNodes.getLast();
 	    bootstrap = lastnode.getLocalHandle();
 	} catch (NoSuchElementException e) {
 	}
@@ -58,10 +58,12 @@ public class ScribeInteractiveTest
 	PastryNode pnode = m_factory.newNode(bootstrap);
 
 	Credentials cred = new PermissiveCredentials();
+	Scribe scribe = new Scribe(pnode, cred);
 
-	ScribeRegrTestApp app = new ScribeRegrTestApp( pnode, cred );
+	ScribeRegrTestApp app = new ScribeRegrTestApp( pnode,scribe,0, cred );
 
-	m_scribeNodes.add(app);
+	m_scribeNodes.add(pnode);
+	m_scribeApps.add(app);
 	m_scribeNodesSorted.put(app.getNodeId(),app);
 	
 	//	RegrTestApp rta = new RegrTestApp(pn,this);
@@ -132,7 +134,7 @@ public class ScribeInteractiveTest
 	    }
 
 	    token = tokened.nextToken( "\n" );
-	    app = (ScribeRegrTestApp)m_scribeNodes.get( node );
+	    app = (ScribeRegrTestApp)m_scribeApps.get( node );
 
 	    topicId = app.generateTopicId( token );
 	    app.create( topicId );
@@ -147,7 +149,7 @@ public class ScribeInteractiveTest
 	    }
 
 	    token = tokened.nextToken( "\n" );
-	    app = (ScribeRegrTestApp)m_scribeNodes.get( node );
+	    app = (ScribeRegrTestApp)m_scribeApps.get( node );
 
 	    topicId = app.generateTopicId( token );
 	    app.publish( topicId );
@@ -162,7 +164,7 @@ public class ScribeInteractiveTest
 	    }
 
 	    token = tokened.nextToken( "\n" );
-	    app = (ScribeRegrTestApp)m_scribeNodes.get( node );
+	    app = (ScribeRegrTestApp)m_scribeApps.get( node );
 
 	    topicId = app.generateTopicId( token );
 	    app.subscribe( topicId );
@@ -177,7 +179,7 @@ public class ScribeInteractiveTest
 	    }
 
 	    token = tokened.nextToken( "\n" );
-	    app = (ScribeRegrTestApp)m_scribeNodes.get( node );
+	    app = (ScribeRegrTestApp)m_scribeApps.get( node );
 
 	    topicId = app.generateTopicId( token );
 	    app.unsubscribe( topicId );
