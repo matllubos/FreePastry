@@ -81,12 +81,31 @@ public class BloomFilter implements Serializable {
   
   public void add(byte[] data) {
     int[] hash = getHashes(data);
+
+/*System.out.print("Adding ");
+for (int i=0; i<data.length; i++)
+  System.out.print(data[i]+" ");
+System.out.println();
+System.out.print("  => ");
+for (int i=0; i<hash.length; i++)
+  System.out.print(hash[i]+" ");
+System.out.println(); */
+  
     for (int i=0; i<hashParams.length; i++)
       bitfield[hash[i]/8] |= (1<<(hash[i]&7));
   }
   
   public boolean contains(byte[] data) {
     int[] hash = getHashes(data);
+
+/* System.out.print("Checking ");
+for (int i=0; i<data.length; i++)
+  System.out.print(data[i]+" ");
+System.out.println();
+System.out.print("  => ");
+for (int i=0; i<hash.length; i++)
+  System.out.print(hash[i]+" ");
+System.out.println(); */
     
     for (int i=0; i<hashParams.length; i++)
       if ((bitfield[hash[i]/8] & (1<<(hash[i]&7))) == 0)
@@ -95,6 +114,14 @@ public class BloomFilter implements Serializable {
     return true;
   }
   
+  public String toString() {
+    String result = "[BV "+(bitfield.length*8)+"bit ={";
+    for (int i=0; i<hashParams.length; i++)
+      result = result + ((i==0) ? "" : ",") + " " +hashParams[i];
+    result = result + "}]";
+    return result;
+  }
+
   public static void main(String arg[]) {
     BloomFilter b = new BloomFilter(20, 4);
     
