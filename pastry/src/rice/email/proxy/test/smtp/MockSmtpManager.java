@@ -8,6 +8,12 @@ import rice.email.proxy.smtp.manager.*;
 public class MockSmtpManager
     implements SmtpManager
 {
+  
+    public boolean isPostAddress(String addr) 
+    {
+        return false;
+    }
+      
     public String checkSender(SmtpState state, MailAddress sender)
     {
 

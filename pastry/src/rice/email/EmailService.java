@@ -8,6 +8,7 @@ import rice.p2p.past.*;
 import rice.Continuation.*;
 import rice.email.log.*;
 import rice.email.messaging.*;
+import rice.email.proxy.smtp.manager.*;
 import rice.post.*;
 import rice.post.log.*;
 import rice.post.messaging.*;
@@ -168,6 +169,74 @@ public class EmailService extends PostClient {
       }
     });
   }
+  
+  /**
+   * Method which expands the given list of PostUserAddresses by recursively checking
+   * for forwarding lists
+   *
+   * @param list The list
+   * @param command The command to return the result to (a String[])
+   */
+  public void expand(PostUserAddress[] list, final SmtpManager manager, Continuation command) {
+    final HashSet expanded = new HashSet();
+    final HashSet toExpand = new HashSet();
+    
+    for (int i=0; i<list.length; i++) 
+      toExpand.add(list[i]);
+    
+    final Continuation c = new StandardContinuation(command) {
+      public void next() {
+        receiveResult(null);
+      }
+      
+      public void receiveResult(Object o) {
+        Iterator i = toExpand.iterator();
+        
+        if (i.hasNext()) {
+          final PostUserAddress address = (PostUserAddress) i.next();
+          toExpand.remove(address);
+          expanded.add(address);
+          
+          // and finally check for any forwarding addresses
+          post.getPostLog(address, new StandardContinuation(parent) {
+            public void receiveResult(Object o) {    
+              if (o != null) {
+                ((Log) o).getChildLog(ForwardLog.FORWARD_NAME, new StandardContinuation(parent) {
+                  public void receiveResult(Object o) {
+                    if (o != null) {
+                      String[] addresses = ((ForwardLog) o).getAddresses();
+                      
+                      if (addresses != null) {
+                        for (int j=0; j<addresses.length; j++) {
+                          if (manager.isPostAddress(addresses[j])) {
+                            PostUserAddress pua = new PostUserAddress(rice.email.proxy.mailbox.postbox.PostMessage.factory, addresses[j]);
+                            if (! expanded.contains(pua))
+                              toExpand.add(pua);
+                          } else {
+                            expanded.add(addresses[j]);
+                          }
+                        } 
+                      }
+                    }
+                    
+                    next();
+                  }
+                });
+              } else {
+                System.err.println("WARNING: Could not find PostLog for forwarding for " + address);
+                next();
+              }
+            }
+          });
+        } else {       
+          // pass any result from the Store Data (there should be none) to the handler.
+          parent.receiveResult(expanded.toArray());
+        }
+      }
+    };
+    
+    c.receiveResult(null);
+  }
 
   /**
    * Sends the email to the recipient. The Email object has a notion of who its
@@ -218,7 +287,7 @@ public class EmailService extends PostClient {
       
       // in case we've already received it, just say ok
       if (received.contains(enm.getEmail())) {
-        System.out.println("Received duplicate email from " + enm.getEmail().getSender() + " - silenlty accepting");
+        System.out.println("Received duplicate email from " + enm.getEmail().getSender() + " - silently accepting");
         command.receiveResult(Boolean.TRUE);
         return;
       }
@@ -244,7 +313,11 @@ public class EmailService extends PostClient {
             ContentHashReference[] references = (ContentHashReference[]) set.toArray(new ContentHashReference[0]);
             received.add(enm.getEmail());
             
-            post.getStorageService().refreshContentHash(references, parent);
+            post.getStorageService().refreshContentHash(references, new StandardContinuation(parent) {
+              public void receiveResult(Object o) {
+                parent.receiveResult(Boolean.TRUE);
+              }
+            });
           }
         });
       } else {

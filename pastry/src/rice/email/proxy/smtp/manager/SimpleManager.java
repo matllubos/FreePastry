@@ -62,6 +62,14 @@ public class SimpleManager implements SmtpManager {
     return null;
   }
   
+  public boolean isPostAddress(String string) {
+    try {
+      return isPostAddress(new MailAddress(string));
+    } catch (MalformedAddressException e) {
+      return false;
+    }
+  }
+  
   public boolean isPostAddress(MailAddress addr) {
     for (int i=0; i<POST_HOST.length; i++) 
       if (addr.getHost().toLowerCase().endsWith(POST_HOST[i].toLowerCase()))
@@ -71,34 +79,52 @@ public class SimpleManager implements SmtpManager {
   }
 
   public void send(SmtpState state, boolean local) throws Exception {
-    Vector postRecps = new Vector();
-    Vector nonPostRecps = new Vector();
+    HashSet postRecps = new HashSet();
+    HashSet nonPostRecps = new HashSet();
     Iterator i = state.getMessage().getRecipientIterator();
 
     while (i.hasNext()) {
       MailAddress addr = (MailAddress) i.next();
 
       if (isPostAddress(addr)) {
-        postRecps.add(addr);
+        postRecps.add(new PostUserAddress(PostMessage.factory, addr.toString()));
       } else {
         nonPostRecps.add(addr);
       }
     }
 
-    MailAddress[] recipients = (MailAddress[]) postRecps.toArray(new MailAddress[0]);
-
+    // now, do the expansion to the full mailing lists    
+    ExternalContinuation c = new ExternalContinuation();
+    this.email.expand((PostUserAddress[]) postRecps.toArray(new PostUserAddress[0]), this, c);
+    c.sleep();
+    
+    if (c.exceptionThrown())
+      throw c.getException();
+    
+    Object[] all = (Object[]) c.getResult();
+    
+    for (int j=0; j<all.length; j++) 
+      if (all[j] instanceof PostUserAddress)
+        postRecps.add(all[j]);
+      else
+        nonPostRecps.add(new MailAddress((String) all[j]));
+    
+    PostUserAddress[] recipients = (PostUserAddress[]) postRecps.toArray(new PostUserAddress[0]);
+    
     System.out.println("COUNT: " + System.currentTimeMillis() + " Sending message of size " + state.getMessage().getResource().getSize() + " to " + postRecps.size() + " POST recipeints and " + nonPostRecps.size() + " normal recipients.");
     
     Email email = PostMessage.parseEmail(state.getRemote(), recipients, state.getMessage().getResource(), address);
     
-    ExternalContinuation c = new ExternalContinuation();
-    this.email.sendMessage(email, c);
-    c.sleep();
+    ExternalContinuation d = new ExternalContinuation();
+    this.email.sendMessage(email, d);
+    d.sleep();
 
-    if (c.exceptionThrown()) { throw c.getException(); } 
+    if (d.exceptionThrown()) { throw d.getException(); } 
 
-    for (int j=0; j<nonPostRecps.size();  j++) {
-      MailAddress addr = (MailAddress) nonPostRecps.elementAt(j);
+    Iterator it = nonPostRecps.iterator();
+    
+    while (it.hasNext()) {
+      MailAddress addr = (MailAddress) it.next();
       String host = server;
       
       if ((host == null) || (host.equals(""))) {

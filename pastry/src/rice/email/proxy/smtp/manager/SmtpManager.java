@@ -16,4 +16,6 @@ public interface SmtpManager
     String checkData(SmtpState state);
 
     void send(SmtpState state, boolean local) throws Exception;
+    
+    boolean isPostAddress(String string);
 }
