@@ -94,13 +94,14 @@ public class MessageAckOnSubscribe extends ScribeMessage implements Serializable
 	NodeId topicId = m_topicId;
 	Credentials cred = scribe.getCredentials();
 	SendOptions opt = scribe.getSendOptions();
-	NodeHandle prev_parent = topic.getParent();
 
 	if( topic == null ){
 	    ScribeMessage msg = scribe.makeUnsubscribeMessage( m_topicId, cred );
 	    scribe.routeMsgDirect( m_source, msg, cred, opt );
 	    return;
-	}
+  }
+  
+  NodeHandle prev_parent = topic.getParent();
 
 	if( prev_parent != null && !prev_parent.equals(m_source)){
 	    // If we had non-null previous parent and it is different
