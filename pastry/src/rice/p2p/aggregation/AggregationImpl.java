@@ -124,9 +124,10 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private static final long WEEKS = 7 * DAYS;
 
   private static final long flushDelayAfterJoin = 30 * SECONDS;
-  private static final long flushInterval = 3 * MINUTES;
+  private static long flushInterval = 3 * MINUTES;
 
-  private static final int maxAggregateSize = 1024*1024;
+  private static int maxAggregateSize = 1024*1024;
+  private static int maxObjectsInAggregate = 20;
   
   private static final boolean addMissingAfterRefresh = false;
   private static final int nominalReferenceCount = 2;
@@ -134,7 +135,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private static final long pointerArrayLifetime = 2 * WEEKS;
 
   private static final long expirationInterval = 5 * MINUTES;
-  private static final long expirationRenewThreshold = 1 * DAYS;
+  private static long expirationRenewThreshold = 1 * DAYS;
 
   public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance) {
     this(node, aggregateStore, objectStore, waitingList, configFileName, factory, instance, getDefaultPolicy());
@@ -430,6 +431,20 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       
       return result + numObjects + " object(s) created\n";
     }
+
+    if ((cmd.length() >= 11) && cmd.substring(0, 11).equals("show config")) {
+      return 
+        "flushDelayAfterJoin = " + (int)(flushDelayAfterJoin / SECONDS) + " sec\n" +
+        "flushInterval = " + (int)(flushInterval / SECONDS) + " sec\n" +
+        "maxAggregateSize = " + maxAggregateSize + " bytes\n" +
+        "maxObjectsInAggregate = " + maxObjectsInAggregate + " objects\n" +
+        "addMissingAfterRefresh = " + addMissingAfterRefresh + "\n" +
+        "nominalReferenceCount = " + nominalReferenceCount + "\n" +
+        "maxPointersPerAggregate = " + maxPointersPerAggregate + "\n" +
+        "pointerArrayLifetime = " + (int)(pointerArrayLifetime / DAYS) + " days\n" +
+        "expirationInterval = " + (int)(expirationInterval / SECONDS) + " sec\n" +
+        "expirationRenewThreshold = " + (int)(expirationRenewThreshold / HOURS) + " hrs\n";
+    }    
 
     if ((cmd.length() >= 2) && cmd.substring(0, 2).equals("ls")) {
       Enumeration enum = aggregateList.elements();
@@ -943,6 +958,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     Vector aggregates = new Vector();
     Iterator iter = waitingKeys.getIterator();
     long currentAggregateSize = 0;
+    int currentObjectsInAggregate = 0;
     
     while (true) {
       ObjectDescriptor thisObject = null;
@@ -950,8 +966,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       
       while (iter.hasNext()) {
         thisObject = (ObjectDescriptor) waitingList.getMetadata((Id) iter.next());
-        if ((currentAggregateSize + thisObject.size) <= maxAggregateSize) {
+        if (((currentAggregateSize + thisObject.size) <= maxAggregateSize) && (currentObjectsInAggregate < maxObjectsInAggregate)) {
           currentAggregateSize += thisObject.size;
+          currentObjectsInAggregate ++;
           currentAggregate.add(thisObject);
         } else {
           mustAddObject = true;
@@ -1826,5 +1843,21 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     } else {
       panic("AGGREGATION ERROR - Received message " + msg + " of unknown type.");
     }
+  }
+
+  public void setFlushInterval(int flushIntervalSec) {
+    flushInterval = flushIntervalSec * SECONDS;
+  }
+  
+  public void setMaxAggregateSize(int maxAggregateSize) {
+    this.maxAggregateSize = maxAggregateSize;
+  }
+
+  public void setMaxObjectsInAggregate(int maxObjectsInAggregate) {
+    this.maxObjectsInAggregate = maxObjectsInAggregate;
+  }
+
+  public void setRenewThreshold(int expirationRenewThresholdHrs) {
+    this.expirationRenewThreshold = expirationRenewThresholdHrs * HOURS;
   }
 }
