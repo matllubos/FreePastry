@@ -1,4 +1,4 @@
-package rice.splitstream.testing;
+package rice.splitstream;
 
 
 import rice.*;
@@ -26,6 +26,10 @@ import java.net.*;
 import java.io.Serializable;
 import java.security.*;
 
+/**
+ *
+ * @author Ansley Post
+ */
 
 public class SplitStreamTest implements ISplitStreamApp, Observer{
 
@@ -37,7 +41,7 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
  private Vector channels;
  private Random rng;
  private RandomNodeIdFactory idFactory;
- private static int numNodes = 50;
+ private static int numNodes = 500;
  private static int port = 5009;
  private static String bshost;
  private static int bsport = 5009;
@@ -58,7 +62,8 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
    public static void main(String argv[]){
       System.out.println("SplitStream Test Program v0.4");
       PastrySeed.setSeed((int)System.currentTimeMillis());
-      //PastrySeed.setSeed( -1194350751);
+      //PastrySeed.setSeed( -1022990516 );
+      System.out.println(PastrySeed.getSeed() );
       SplitStreamTest test = new SplitStreamTest();
       test.init();
       test.createNodes();
@@ -74,8 +79,13 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
        
        while(test.simulate());
        if(channel.getSpareCapacityId() == null){
-        System.out.println("Channel " + channel.getNodeId() + "Failed to Attach");
+        System.out.println("Channel " + channel.getNodeId() + "Failed to Attach");      System.out.println("Index = " + i);
+        System.exit(0);
        }
+       else{
+	//System.out.println("Channel Attached Succesfully " + channel.getNodeId());
+   } 
+       
       }
       while(test.simulate());
       System.out.println("All nodes attached to Channel");
@@ -98,7 +108,7 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
    public void init(){
       simulator = new EuclideanNetwork();
       idFactory = new RandomNodeIdFactory();
-      PastrySeed.setSeed((int)System.currentTimeMillis());
+      //PastrySeed.setSeed((int)System.currentTimeMillis());
       factory = new DirectPastryNodeFactory(idFactory, simulator);
       scribeNodes = new Vector();    
       pastrynodes = new Vector();
@@ -122,7 +132,7 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
 	for(int i = 0; i < channels.size(); i ++){
 	  Channel channel = (Channel) channels.elementAt(i);
 	  while(channel.getNumSubscribedStripes() < channel.getNumStripes()){
-		Stripe stripe = channel.joinAdditionalStripe(this);
+                Stripe stripe = channel.joinAdditionalStripe(this);
 	  }
 	
 	}
@@ -210,6 +220,8 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
   protected void createNodes() {
     for (int i=0; i < numNodes; i++) {
       makeNode();
+      System.out.print("<"+i+">");
+      while(simulate());
     }
     while(simulate());
     System.out.println("All Nodes Created Succesfully");
@@ -218,5 +230,10 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
 	return simulator.simulate(); 
   }
 
+    public void channelIsReady(ChannelId channelId){
+    }
+
+    public void splitstreamIsReady(){
+    }
 
 }

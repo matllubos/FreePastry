@@ -1,6 +1,10 @@
 PACKAGE = rice.splitstream.testing
 
 SOURCE  = \
+	BandwidthUnitTest.java \
+	StripeUnitTest.java \
+	ChannelUnitTest.java \
+	SplitStreamUnitTest.java \
 	DirectSplitStreamTest.java \
 	DirectSplitStreamTestApp.java
 
