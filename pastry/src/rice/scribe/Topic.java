@@ -226,7 +226,7 @@ public class Topic
 	result = m_children.add( child );
 
 	if(result == false){
-	    System.out.println("DEBUG :: addChild FAILED .. because child already existed at "+m_scribe.getNodeId() + "for child "+child.getNodeId());
+	    //System.out.println("DEBUG :: addChild FAILED .. because child already existed at "+m_scribe.getNodeId() + "for child "+child.getNodeId());
 	    return result;
 	}
 	

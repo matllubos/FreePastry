@@ -115,7 +115,7 @@ public class MessageAckOnSubscribe extends ScribeMessage implements Serializable
 	topic.setParent(m_source);
 	topic.postponeParentHandler();
 
-	System.out.println("DEBUG :: Node "+scribe.getNodeId()+" received ACK for topic "+m_topicId+" from "+m_source.getNodeId()+" at "+(int)System.currentTimeMillis());
+	//System.out.println("DEBUG :: Node "+scribe.getNodeId()+" received ACK for topic "+m_topicId+" from "+m_source.getNodeId()+" at "+(int)System.currentTimeMillis());
 	IScribeApp[] apps = topic.getApps();
 	for ( int i=0; i<apps.length; i++ ) {
 	    apps[i].newParent( m_topicId, m_source, getData());
