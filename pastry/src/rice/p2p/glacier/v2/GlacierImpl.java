@@ -765,6 +765,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           statistics.numFragments = fragmentStorage.scan().numElements();
           statistics.numContinuations = continuations.size();
           statistics.numObjectsInTrash = (trashStorage == null) ? 0 : trashStorage.scan().numElements();
+          statistics.responsibleRange = responsibleRange;
           log(2, "Statistics: "+statistics);
           
           Enumeration enum = listeners.elements();
