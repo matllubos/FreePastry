@@ -54,12 +54,12 @@ import java.util.*;
  */
 
 public class StandardLeafSetProtocol implements MessageReceiver {
-    private final boolean failstop = true;  // nodes are assumed to fail silently
+    protected final boolean failstop = true;  // nodes are assumed to fail silently
 
-    private NodeHandle localHandle;
-    private PastryNode localNode;
-    private PastrySecurityManager security;
-    private LeafSet leafSet;
+    protected NodeHandle localHandle;
+    protected PastryNode localNode;
+    protected PastrySecurityManager security;
+    protected LeafSet leafSet;
     private RoutingTable routeTable;
 
     private Address address;
