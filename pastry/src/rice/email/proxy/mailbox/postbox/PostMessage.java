@@ -40,7 +40,8 @@ import java.util.Random;
 
 public class PostMessage implements StoredMessage {
 
-  public static String UNSECURE_HEADER_LINE = "X-EPost-Unsecure: True";
+  public static String UNSECURE_HEADER_LINE = "X-ePOST-Secure: False";
+  public static String SECURE_HEADER_LINE = "X-ePOST-Secure: True";
   public static String IMAGE_URL_HEADER_LINE = "X-Image-Url: http://www.epostmail.org/images/epost-badge.png";
   
   private StoredEmail email;
@@ -180,8 +181,10 @@ public class PostMessage implements StoredMessage {
 
       if ((froms != null) && (froms.length > 0)) 
         from = new PostUserAddress(factory, ((InternetAddress) froms[0]).getAddress());
-
-      if ((address != null) && (! address.equals(from))) 
+      
+      if ((address != null) && (address.equals(from))) 
+        mm.addHeaderLine(SECURE_HEADER_LINE);
+      else
         mm.addHeaderLine(UNSECURE_HEADER_LINE);
 
       if (address != null) 
