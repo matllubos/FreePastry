@@ -93,7 +93,7 @@ public class Email implements java.io.Serializable {
    *
    * @return The body of this email.
    */
-  public void getBody(ReceiveResultCommand command) {
+  public void getBody(Continuation command) {
     // if the body has not been fetched already, fetch it
     if (this.body == null) {
       // make a new command to store the returned body and 
@@ -109,7 +109,7 @@ public class Email implements java.io.Serializable {
    *
    * @return The attachments of this email.
    */
-  public void getAttachments(ReceiveResultCommand command) {
+  public void getAttachments(Continuation command) {
     // if the attachments have not been fetched already, and there are refs to the attachments, 
     // fetch the attachments
     if ((this.attachments == null) && (this.attachmentRefs != null)) {
@@ -127,27 +127,17 @@ public class Email implements java.io.Serializable {
    * Should be called before the Email is sent over the wire.
    */
   protected void storeData() {   
-    if (this.attachmentRefs == null) {
-      attachmentRefs = new EmailDataReference[attachments.length];
-      // insert the email attachments into PAST, store their references
-      for (int i = 0; i < attachments.length; i++) {
-	try {
-	attachmentRefs[i] = (EmailDataReference)storage.storeContentHash(attachments[i]); 
-	} catch (StorageException s) {
-	// JM do something sensible here
-	}
-      }
-    }
-
     // if the body has not already been inserted into PAST
     // JM try replacing this with "if (bodyRef == null) { " for a laugh
     if (!(this.bodyRef instanceof EmailDataReference)) {
-      // insert the email body into PAST, store the reference
-      try {
-	bodyRef = (EmailDataReference)storage.storeContentHash(body);
-	} catch (StorageException s) {
-	// JM do something sensible here
-      }
+      EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.BODY);
+      storage.storeContentHash(body, command);
+    }
+    else if (this.attachmentRefs == null) {
+      // make a new task to store the email's contents (body and attachments)
+      EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.ATTACHMENT);
+      // begin storing the body, execute the rest of the task once this is complete
+      storage.storeContentHash(attachments[0], command);
     }
   }
 
@@ -156,13 +146,13 @@ public class Email implements java.io.Serializable {
    * To return the result to the user, the user's given command is called once
    * the body has been stored.
    */
-  protected class EmailGetBodyTask implements ReceiveResultCommand {
-    private ReceiveResultCommand _command;
+  protected class EmailGetBodyTask implements Continuation {
+    private Continuation _command;
     
     /**
      * Constructs a EmailGetBodyTask given a user-command.
      */
-    public EmailGetBodyTask(ReceiveResultCommand command) {
+    public EmailGetBodyTask(Continuation command) {
       _command = command;
     }
 
@@ -188,7 +178,7 @@ public class Email implements java.io.Serializable {
     }
 
     /**
-     * Simply prints out the error,
+     * Simply prints out an error message.
      */  
     public void receiveException(Exception e) {
       System.out.println("Exception " + e + "  occured while trying to fetch an email body");
@@ -200,14 +190,14 @@ public class Email implements java.io.Serializable {
    * and then fetch the next attachment.  Once each of the attachments have
    * been fetched and stored, calls the user's given command.
    */
-  protected class EmailGetAttachmentsTask implements ReceiveResultCommand {
+  protected class EmailGetAttachmentsTask implements Continuation {
     private int _index;
-    private ReceiveResultCommand _command;
+    private Continuation _command;
     
     /**
      * Constructs a EmailGetAttachmentsTask given a user-command.
      */
-    public EmailGetAttachmentsTask(int i, ReceiveResultCommand command) {
+    public EmailGetAttachmentsTask(int i, Continuation command) {
       _index = i;
       _command = command;
     }
@@ -242,10 +232,52 @@ public class Email implements java.io.Serializable {
     }
 
     /**
-     * Simply prints out the error,
+     * Simply prints out an error message.
      */  
     public void receiveException(Exception e) {
       System.out.println("Exception " + e + "  occured while trying to fetch email attachment " + _index);
+    }
+  }
+
+  /**
+   * Carries out the remaining work of storing the data of an email (its body and attacments).
+   * The first call stores the email, the remaining calls store the attachments one by one.
+   */
+  protected class EmailStoreDataTask implements Continuation {
+    // looks like it can be changed, but it can't. Don't change it. Please.
+    protected static final int BODY = -1;
+    protected static final int ATTACHMENT = 0;
+
+    int _index;
+    /**
+     * Constructs a EmailStoreDataTask.
+     */
+    public EmailStoreDataTask(int index) {
+      _index = index;
+    }
+
+    /**
+     * Starts the processing of this task.
+     */
+    public void start() {
+      // JM I don't believe anything needs to be done here
+    }
+
+    /**
+     * The email body has been stored by the time the first result is finished, so go on to
+     * storing the attachments.  Once each of the attachments is stored, the method is done.
+     */
+    public void receiveResult(Object o) {
+      _index = _index + 1;      
+      EmailStoreDataTask command = new EmailStoreDataTask(_index);
+      storage.storeContentHash(attachments[_index], command);
+    }
+
+    /**
+     * Simply prints out an error message.
+     */  
+    public void receiveException(Exception e) {
+      System.out.println("Exception " + e + "  occured while trying to store email body or attachment " + _index);
     }
   }
 }
