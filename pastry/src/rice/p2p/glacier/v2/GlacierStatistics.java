@@ -27,6 +27,7 @@ public class GlacierStatistics {
   };
   
   public void dump() {
+    System.out.println("@L.ME free="+Runtime.getRuntime().freeMemory()+" max="+Runtime.getRuntime().maxMemory()+" total="+Runtime.getRuntime().totalMemory());
     System.out.println("@L.GL interval="+tbegin+"-"+System.currentTimeMillis()+" range="+responsibleRange);
     System.out.println("@L.GL   neighbors="+numNeighbors+" fragments="+numFragments+" trash="+numObjectsInTrash);
     System.out.println("@L.GL   continuations="+numContinuations+" pending="+pendingRequests);
