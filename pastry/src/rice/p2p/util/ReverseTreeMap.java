@@ -154,8 +154,8 @@ public class ReverseTreeMap implements Serializable {
    * @param value The value
    */
   public void put(Object key, Object value) {
-    if (reverse instanceof RedBlackMap)
-      value = (((RedBlackMap) reverse).getKey(value) == null ? value : ((RedBlackMap) reverse).getKey(value));
+ //   if (reverse instanceof RedBlackMap)
+ //     value = (((RedBlackMap) reverse).getKey(value) == null ? value : ((RedBlackMap) reverse).getKey(value));
     
     Object old = normal.put(key, value);
     
