@@ -48,8 +48,7 @@ public class Folder {
    * Used to read the contents of the Folder and build up the array
    * of Emails stored by the Folder.
    */
-  private Email[] readContents()
-  {
+  private Email[] readContents() throws PostException, StorageException {
     Vector contents = new Vector();
     boolean finished = false;
     LogEntryReference top = _log.getTopEntry();
@@ -104,10 +103,9 @@ public class Folder {
    *
    * @return the stored Emails
    */
-  public Email[] getMessages() {
+  public Email[] getMessages() throws PostException, StorageException {
     return readContents();
   }
-
 
   /**
    * Appends an email to this Folder.
@@ -141,18 +139,18 @@ public class Folder {
     removeMessage(email);
   }
   
-  public Folder createChildFolder(String name) {
+  public Folder createChildFolder(String name) throws PostException {
     Log log = new Log(name, _log.getLocation());    
     _log.addChildLog(log);
     return new Folder(log, _storage);
   }
   
-  public Folder getChildFolder(String name) {
+  public Folder getChildFolder(String name) throws PostException, StorageException {
     Log log = (Log)_storage.retrieveSigned(_log.getChildLog(name));
     return new Folder(log, _storage);
   }
   
-  public String[] getChildren() {
+  public String[] getChildren() throws PostException {
     return (String[])_log.getChildLogNames();
   }
   
