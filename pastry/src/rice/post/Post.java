@@ -223,7 +223,7 @@ public class Post extends PastryAppl implements IScribeApp  {
    *
    * @param message The incoming message.
    */
-  private	void processSignedPostMessage(SignedPostMessage message) {
+  private void processSignedPostMessage(SignedPostMessage message) {
     ProcessSignedPostMessageTask task = new ProcessSignedPostMessageTask(message);
     task.start();
   }
@@ -416,6 +416,7 @@ public class Post extends PastryAppl implements IScribeApp  {
     }
   }
 
+  public boolean anycastHandler(ScribeMessage msg) { return true; }
   public void faultHandler(ScribeMessage msg, NodeHandle faultyParent) {}
   public void forwardHandler(ScribeMessage msg) {}
   public void scribeIsReady() {}
