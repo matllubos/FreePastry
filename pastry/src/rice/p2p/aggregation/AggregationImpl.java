@@ -1508,7 +1508,6 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
           /* If the aggregate is not in the list, check whether it is still in the waiting list */
         
-          boolean foundWaiting = false;
           IdSet waitingIds = waitingList.scan();
           Iterator iter = waitingIds.getIterator();
       
@@ -1517,7 +1516,6 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             if (vkey.getId().equals(id)) {
               ObjectDescriptor thisObject = (ObjectDescriptor) waitingList.getMetadata(vkey);
               log(2, "Refreshing in waiting list: " + vkey.toStringFull());
-              foundWaiting = true;
           
               if (thisObject == null) {
                 warn("Broken object in waiting list: " + vkey.toStringFull() + ", removing...");
@@ -1554,6 +1552,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                     myParent.receiveResult(new AggregationException("Cannot refresh waiting object "+vkey.toStringFull()+", setMetadata() failed (e="+e+")"));
                   }
                 });
+                return;
               } else {
                 log(3, "Object found in waiting list and no update needed: "+vkey.toStringFull());
                 receiveResult(new Boolean(true));
