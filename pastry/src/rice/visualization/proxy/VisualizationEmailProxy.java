@@ -9,16 +9,12 @@ import rice.p2p.multiring.MultiringNode;
 import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.dist.DistPastryNode;
 import rice.proxy.Parameters;
+import rice.p2p.glacier.v2.GlacierImpl;
+import rice.p2p.past.Past;
+import rice.p2p.aggregation.AggregationImpl;
 import rice.visualization.*;
 import rice.visualization.Visualization;
-import rice.visualization.server.MessageDistributionPanelCreator;
-import rice.visualization.server.NetworkActivityPanelCreator;
-import rice.visualization.server.OverviewPanelCreator;
-import rice.visualization.server.PASTPanelCreator;
-import rice.visualization.server.PastryPanelCreator;
-import rice.visualization.server.RecentMessagesPanelCreator;
-import rice.visualization.server.VisualizationServer;
-import rice.visualization.server.DebugCommandHandler;
+import rice.visualization.server.*;
 
 public class VisualizationEmailProxy extends EmailProxy {
     
@@ -58,6 +54,14 @@ public class VisualizationEmailProxy extends EmailProxy {
       server.addPanelCreator(recent);
       server.addPanelCreator(new PastryPanelCreator());
       server.addPanelCreator(new PASTPanelCreator());
+
+      if (immutablePast instanceof AggregationImpl) {
+        server.addPanelCreator(new AggregationPanelCreator((AggregationImpl) immutablePast)); 
+        Past aggregateStore = ((AggregationImpl)immutablePast).getAggregateStore();
+        if (aggregateStore instanceof GlacierImpl)
+          server.addPanelCreator(new GlacierPanelCreator((GlacierImpl) aggregateStore));
+      }
+
       if (immutablePast instanceof DebugCommandHandler)
         server.addDebugCommandHandler((DebugCommandHandler)immutablePast);
       if (mutablePast instanceof DebugCommandHandler)
