@@ -38,7 +38,7 @@ public class PersistentStorage implements Storage {
   private static final String transDir = "/transaction";  // transDirectory
 
   private int storageSize;
-  private int usedSize;
+  private long usedSize;
   private Hashtable persistentObjects;
 
   /**
@@ -93,12 +93,6 @@ public class PersistentStorage implements Storage {
         //      return true;
       }
 
-      /* If we are trying to persist two different objects with the same */
-      /* id then we should fail under non-mutble assumption   */
-      if(storedObj != null && !storedObj.equals(obj)){
-        System.out.println("ERROR: Tried to Mutate an Object");
-      }
-
       /* Create a file representation and then transactionally write it */
       String fileName = makeFileName(id);
       File objFile = new File(backupDirectory, fileName);
@@ -113,8 +107,11 @@ public class PersistentStorage implements Storage {
 
 
       persistentObjects.put(obj, id);
+  
+      increaseUsedSpace(objFile.length());
 
       writePersistentTable();
+
     } catch (Exception e) {
     }
   }
@@ -138,7 +135,9 @@ public class PersistentStorage implements Storage {
    */
   public void unstore(Comparable id, Continuation c) {
      /* 1. Should remove this from hashtable */
+     persistentObjects.remove(id);
      /* 2. Should write hashtable atomically */
+     writePersistentTable();
      /* 3. Should remove from disk */
      /* 4. Should update the value of used space */
   }
@@ -227,7 +226,7 @@ public class PersistentStorage implements Storage {
    * @return The total size, in bytes, of data stored.
    */
   public void getTotalSize(Continuation c){
-    c.receiveResult(new Integer(usedSize));
+    c.receiveResult(new Long(usedSize));
   }
 
   /*****************************************************************/
@@ -390,5 +389,9 @@ public class PersistentStorage implements Storage {
        return false;
     }
 
+  }
+
+  private void increaseUsedSpace(long i){
+     usedSize = usedSize + i;
   }
 }
