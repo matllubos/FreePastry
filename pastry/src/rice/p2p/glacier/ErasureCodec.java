@@ -22,7 +22,7 @@ public class ErasureCodec {
 
   final static int Lfield = 10;
   final static int MultField = (1 << Lfield) - 1;
-  final static int MAX_OBJECT_SIZE = 500000;
+  final static int MAX_OBJECT_SIZE = 2000000;
   /*
    *  bytes
    */
@@ -80,7 +80,8 @@ public class ErasureCodec {
 
       bytes = byteStream.toByteArray();
     } catch (IOException ioe) {
-      System.err.println(ioe);
+      System.out.println("encodeObject: "+ioe);
+      ioe.printStackTrace();
       return null;
     }
 
@@ -95,6 +96,7 @@ public class ErasureCodec {
    */
   public Fragment[] encode(byte[] bytes) {
     if (bytes.length > MAX_OBJECT_SIZE) {
+      System.out.println("Object too large! Max "+MAX_OBJECT_SIZE+" bytes!");
       return null;
     }
 
