@@ -387,7 +387,7 @@ public abstract class PastryRegrTest {
 	    // now check the range method
 	    int maxRank;
 	    if (ls.overlaps() || ls.size() == 0)
-		maxRank = rs.size()-1;
+		maxRank = rs.size() / 2;
 	    else
 		maxRank = (k > 0) ? (ls.cwSize() - k - 1) : (ls.ccwSize() + k - 1);
 

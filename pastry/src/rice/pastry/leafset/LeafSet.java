@@ -461,32 +461,13 @@ public class LeafSet extends Observable implements Serializable {
 	if (size() == 0 && r == 0) return new IdRange(n.getNodeId(), n.getNodeId());
 	
 	// get edge nodes for range calculation
-	int wrappedCount= 0;
 	int min = pos;
 	int max = pos;
-
 	for (int i=0; i<r+1; i++) {
-	    if (min == -ccwSize()) {
-		if((min = complement(min)) == -ccwSize()) 
-		    return null;
-		else 
-		    wrappedCount++;
-	    }
-	    if (max == cwSize()) {
-		if((max = complement(max)) == cwSize())
-		    return null;
-		else 
-		    wrappedCount++;
-	    }
-
+	    if (min == -ccwSize() && (min = complement(min)) == -ccwSize()) return null;
+	    if (max == cwSize() && (max = complement(max)) == cwSize()) return null;
 	    min--;
 	    max++;
-	    if((wrappedCount==2) || ((wrappedCount == 1) && (max >= min))) {
-		// Return a full range
-		IdRange fullRange;
-		fullRange = new IdRange(false);
-		return fullRange;
-	    }
 	}
 	minN = get(min);
 	maxN = get(max);
@@ -498,6 +479,14 @@ public class LeafSet extends Observable implements Serializable {
 
 	//System.out.print("maxN= " + maxN.getNodeId());
 	//System.out.println("minN= " + minN.getNodeId());
+
+	if ( !n.getNodeId().isBetween(minN.getNodeId(), maxN.getNodeId()) && 
+	     !minN.getNodeId().equals(maxN.getNodeId()) ) {
+	    // we have wrapped the leafset, result is the full range
+	    //System.out.println("full range:" + this + "r=" + r + " pos=" + pos);
+	    return new IdRange(n.getNodeId(), n.getNodeId());
+	}
+
 	IdRange cw = (new IdRange(n.getNodeId(), maxN.getNodeId())).ccwHalf();
 	IdRange ccw = (new IdRange(minN.getNodeId(), n.getNodeId())).cwHalf();
 	//System.out.println("ccw=" + ccw + " cw=" + cw);
