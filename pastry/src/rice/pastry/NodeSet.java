@@ -268,8 +268,7 @@ public class NodeSet implements NodeSetI {
     }
 
     /**
-     * Returns a string representation of the leaf set
-     *
+     * Returns a string representation of the NodeSet
      */
 
     public String toString() 

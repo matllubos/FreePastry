@@ -164,30 +164,59 @@ public abstract class CommonAPIAppl extends PastryAppl
    
     /**
      * This method provides information about ranges of keys for which
-     * the node n is currently a r-root. The operations returns
-     * false if the range could not be determined, true
-     * otherwise. It is an error to query the range of a node not
-     * present in the neighbor set as returned by the update
-     * upcall or the neighborSet call.  Certain implementations
-     * may return an error if r is greater than zero.
+     * the node n is currently a r-root. The operations returns null
+     * if the range could not be determined. It is an error to query
+     * the range of a node not present in the neighbor set as returned
+     * by the update upcall or the neighborSet call.
      *
      * Some implementations may have multiple, disjoint ranges of keys
-     * for which a given node is responsible. The parameter key
-     * allows the caller to specify which region should be returned.
-     * If the node referenced by n is responsible for key, then
-     * the resulting range includes key. Otherwise, the result is the
-     * nearest range clockwise from key for which n is responsible.
+     * for which a given node is responsible (Pastry has two). The
+     * parameter key allows the caller to specify which range should
+     * be returned.  If the node referenced by n is the r-root for
+     * key, then the resulting range includes key. Otherwise, the
+     * result is the nearest range clockwise from key for which n is
+     * responsible.
      *
      * @param n nodeHandle of the node whose range is being queried
      * @param r the rank
      * @param key the key
      * @param cumulative if true, returns ranges for which n is an i-root for 0<i<=r
-     * @return the range of keys, or null if range could not be determined for the given node and rank
+     * @return the range of keys, or null if range could not be determined for the given node and rank 
      */
+
     public IdRange range(NodeHandle n, int r, Id key, boolean cumulative) {
-	return getLeafSet().range(n, r, key, cumulative);
+
+	if (cumulative)
+	    return getLeafSet().range(n, r);
+
+	IdRange ccw = getLeafSet().range(n, r, false);
+	IdRange cw = getLeafSet().range(n, r, true);
+
+	if (cw == null || ccw.contains(key) || key.isBetween(cw.getCW(), ccw.getCCW())) return ccw;
+	else return cw;
+
     }
 
+    /**
+     * This method provides information about ranges of keys for which
+     * the node n is currently a r-root. The operations returns null
+     * if the range could not be determined. It is an error to query
+     * the range of a node not present in the neighbor set as returned
+     * by the update upcall or the neighborSet call.
+     *
+     * Some implementations may have multiple, disjoint ranges of keys
+     * for which a given node is responsible (Pastry has two). The
+     * parameter key allows the caller to specify which range should
+     * be returned.  If the node referenced by n is the r-root for
+     * key, then the resulting range includes key. Otherwise, the
+     * result is the nearest range clockwise from key for which n is
+     * responsible.
+     *
+     * @param n nodeHandle of the node whose range is being queried
+     * @param r the rank
+     * @param key the key
+     * @return the range of keys, or null if range could not be determined for the given node and rank 
+     */
 
     public IdRange range(NodeHandle n, int r, Id key) {
 	return range(n, r, key, false);

@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.pastry;
 
 import java.util.*;
+import java.security.*;
 
 /**
  * Represents a set of Pastry ids.
@@ -50,11 +51,24 @@ public class IdSet {
 
     private SortedSet idSet;
 
+    // a cache of the fingerprint hash
+    private Id cachedHash;
+    private boolean validHash;
+
     /**
      * Constructor.
      */
     public IdSet() {
 	idSet = new TreeSet();
+	validHash = false;
+    }
+
+    /**
+     * Constructor.
+     */
+    public IdSet(SortedSet s) {
+	idSet = s;
+	validHash = false;
     }
 
     /**
@@ -62,6 +76,8 @@ public class IdSet {
      */
     public IdSet(IdSet o) {
 	idSet = new TreeSet(idSet);
+	cachedHash = o.cachedHash;
+	validHash = o.validHash;
     }
 
     /**
@@ -77,6 +93,7 @@ public class IdSet {
      */ 
     public void addMember(Id id) {
 	idSet.add(id);
+	validHash = false;
     }
 
     /**
@@ -85,6 +102,7 @@ public class IdSet {
      */ 
     public void removeMember(Id id) {
 	idSet.remove(id);
+	validHash = false;
     }
 
     /**
@@ -119,9 +137,7 @@ public class IdSet {
      * @return the subset
      */ 
     public IdSet subSet(Id from, Id to) {
-	IdSet res = new IdSet();
-
-	res.idSet = idSet.subSet(from, to);
+	IdSet res = new IdSet(idSet.subSet(from, to));
 	return res;
     }
 
@@ -133,8 +149,40 @@ public class IdSet {
 	return idSet.iterator();
     }
 
+    /**
+     * compute a fingerprint of the members in this IdSet
+     *
+     * @return an Id containing the secure hash of this set
+     */
+
+    public Id getHash() {
+
+	if (validHash) return cachedHash;
+
+	// recompute the hash
+	MessageDigest md = null;
+	try {
+	    md = MessageDigest.getInstance("SHA");
+	} catch ( NoSuchAlgorithmException e ) {
+	    System.err.println( "No SHA support!" );
+	    return null;
+	}
+
+	Iterator it = idSet.iterator();
+	byte[] raw = new byte[Id.IdBitLength / 8];
+	Id id;
+
+	while (it.hasNext()) {
+	    id = (Id) it.next();
+	    id.blit(raw);
+	    md.update(raw);
+	}
+
+	byte[] digest = md.digest();
+	cachedHash = new Id(digest);
+	validHash = true;
+
+	return cachedHash;
+    }
+
 }
-
-
-
-

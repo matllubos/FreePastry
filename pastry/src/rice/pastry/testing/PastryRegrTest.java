@@ -396,52 +396,67 @@ public abstract class PastryRegrTest {
 	    else
 		maxRank = (k > 0) ? (ls.cwSize() - k - 1) : (ls.ccwSize() + k - 1);
 
-	    IdRange range = rta.range(ls.get(k), maxRank, null, true);
-	    
-	    //if ( (range != null) != (rs.size() >= 1) ) {
-	    if (range == null) {
-		if (maxRank >= 0) {
-		    System.out.println("checkLeafSet: range size failure at " + rta.getNodeId() + " k=" + k + 
-				   " maxRank=" + maxRank + "\n" + rs + "\n" + ls);
+
+	    int nearestPos;
+	    NodeId nearest = null;
+
+	    for (int j=-1; j<=maxRank*2; j++) {
+		IdRange range;
+
+		if (j < 0)
+		    // check the cumulative range
+		    range = rta.range(ls.get(k), maxRank, nearest, true);
+		else 
+		    // check the individual ranks
+		    range = rta.range(ls.get(k), j/2, nearest, false);
+
+		//System.out.println("j=" + j + " maxRank=" + maxRank + " " + range);
+
+		//if ( (range != null) != (rs.size() >= 1) ) {
+		if (range == null) {
+		    if (maxRank >= 0) {
+			System.out.println("checkLeafSet: range size failure at " + rta.getNodeId() + " k=" + k + 
+					   " maxRank=" + maxRank + "\n" + rs + "\n" + ls);
+		    }
+		    continue;
 		}
-		continue;
-	    }
 	    
-	    int nearestPos = ls.mostSimilar(range.getCCW());
-	    NodeId nearest = ls.get(nearestPos).getNodeId();
+		nearestPos = ls.mostSimilar(range.getCCW());
+		nearest = ls.get(nearestPos).getNodeId();
 
-	    // fetch the replicaSet of the key at the ccw edge of the range
-	    NodeSet cs = ls.replicaSet(range.getCCW(), maxRank+1);
+		// fetch the replicaSet of the key at the ccw edge of the range
+		NodeSet cs = ls.replicaSet(range.getCCW(), maxRank+1);
 
-	    if ( !cs.member(nearest)) {
-		System.out.println("checkLeafSet: range failure 1 at " + rta.getNodeId() + " k=" + k + 
-				   " maxRank=" + maxRank + "\n" + cs + "\n" + ls + "\n" + range + "\nnearest=" + nearest);
+		if ( !cs.member(nearest)) {
+		    System.out.println("checkLeafSet: range failure 1 at " + rta.getNodeId() + " k=" + k + 
+				       " maxRank=" + maxRank + "\n" + cs + "\n" + ls + "\n" + range + "\nnearest=" + nearest);
+		    
+		    System.out.println("dist(nearest)=" + nearest.distance(range.getCCW()));
+		    if (ls.get(nearestPos-1) != null)
+			System.out.println("dist(nearest-1)=" + ls.get(nearestPos-1).getNodeId().distance(range.getCCW()));
+		    if (ls.get(nearestPos+1) != null)
+			System.out.println("dist(nearest+1)=" + ls.get(nearestPos+1).getNodeId().distance(range.getCCW()));
+		}
 
-		System.out.println("dist(nearest)=" + nearest.distance(range.getCCW()));
-		if (ls.get(nearestPos-1) != null)
-		    System.out.println("dist(nearest-1)=" + ls.get(nearestPos-1).getNodeId().distance(range.getCCW()));
-		if (ls.get(nearestPos+1) != null)
-		    System.out.println("dist(nearest+1)=" + ls.get(nearestPos+1).getNodeId().distance(range.getCCW()));
-	    }
+		nearestPos = ls.mostSimilar(range.getCW());
+		nearest = ls.get(nearestPos).getNodeId();
 
-	    nearestPos = ls.mostSimilar(range.getCW());
-	    nearest = ls.get(nearestPos).getNodeId();
+		// fetch the replicaSet of the key at the cw edge of the range
+		cs = ls.replicaSet(range.getCW(), maxRank+1);
 
-	    // fetch the replicaSet of the key at the cw edge of the range
-	    cs = ls.replicaSet(range.getCW(), maxRank+1);
+		if ( !cs.member(nearest)) {
+		    System.out.println("checkLeafSet: range failure 2 at " + rta.getNodeId() + " k=" + k + 
+				       " maxRank=" + maxRank + "\n" + cs + "\n" + ls + "\n" + range + "\nnearest=" + nearest);
 
-	    if ( !cs.member(nearest)) {
-		System.out.println("checkLeafSet: range failure 2 at " + rta.getNodeId() + " k=" + k + 
-				   " maxRank=" + maxRank + "\n" + cs + "\n" + ls + "\n" + range + "\nnearest=" + nearest);
-
-		System.out.println("dist(nearest)=" + nearest.distance(range.getCW()));
-		if (ls.get(nearestPos-1) != null)
-		    System.out.println("dist(nearest-1)=" + ls.get(nearestPos-1).getNodeId().distance(range.getCW()));
-		if (ls.get(nearestPos+1) != null)
-		    System.out.println("dist(nearest+1)=" + ls.get(nearestPos+1).getNodeId().distance(range.getCW()));
-	    }
-										  
-
+		    System.out.println("dist(nearest)=" + nearest.distance(range.getCW()));
+		    if (ls.get(nearestPos-1) != null)
+			System.out.println("dist(nearest-1)=" + ls.get(nearestPos-1).getNodeId().distance(range.getCW()));
+		    if (ls.get(nearestPos+1) != null)
+			System.out.println("dist(nearest+1)=" + ls.get(nearestPos+1).getNodeId().distance(range.getCW()));
+		}
+					
+	    }					  
+	    
 	}
 
 

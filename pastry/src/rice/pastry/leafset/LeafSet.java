@@ -331,13 +331,6 @@ public class LeafSet extends Observable implements Serializable {
 	int nearest = mostSimilar(key);
 	//System.out.println("nearest=" + nearest + " key=" + key);
 
-	/*
-	if ( (nearest == cwSet.size() || nearest == -ccwSet.size()) && 
-	     complement(nearest) == nearest && size() > 0) {
-	    // can't determine root of key, return empty set
-	    return set;
-	}
-	*/
 	
 	// add the key's root
 	set.put(get(nearest));
@@ -387,10 +380,16 @@ public class LeafSet extends Observable implements Serializable {
 
     /**
      * range
+     * computes the range of keys for which node n is a i-root, 0<=i<=r
+     * a node is the r-root for a key of the node becomes the numerically closest node to the key when
+     * i-roots for the key fail, O<=i<r, where a key's 0-root is the numerically closest node to the key.
      *
+     * @param n the nodehandle
+     * @param r
+     * @return the range of keys, or null if n is not a member of the leafset, or if the range cannot be computed
      */
 
-    public IdRange range(NodeHandle n, int r, Id key, boolean cumulative) {
+    public IdRange range(NodeHandle n, int r) {
 	int pos;
 	NodeHandle minN, maxN;
 
@@ -420,20 +419,39 @@ public class LeafSet extends Observable implements Serializable {
 	// see if we can compute range for n
 	if (minN == null || maxN == null) return null;
 	
-	if (cumulative) {
-	    //System.out.println("minN=" + minN.getNodeId() + "n=" + n.getNodeId() + "maxN=" + maxN.getNodeId());
+	//System.out.println("minN=" + minN.getNodeId() + "n=" + n.getNodeId() + "maxN=" + maxN.getNodeId());
 
-	    IdRange cw = (new IdRange(n.getNodeId(), maxN.getNodeId())).ccwHalf();
-	    IdRange ccw = (new IdRange(minN.getNodeId(), n.getNodeId())).cwHalf();
-	    //System.out.println("ccw=" + ccw + " cw=" + cw);
-	    return ccw.merge(cw);
-	}
-	else {
-	    // XXX - implement
-	    return null;
-	}
+	IdRange cw = (new IdRange(n.getNodeId(), maxN.getNodeId())).ccwHalf();
+	IdRange ccw = (new IdRange(minN.getNodeId(), n.getNodeId())).cwHalf();
+	//System.out.println("ccw=" + ccw + " cw=" + cw);
+	return ccw.merge(cw);
+
     }
 
+
+    /**
+     * range
+     * computes the ranges of keys for which node n is a r-root
+     * a node is the r-root for a key of the node becomes the numerically closest node to the key when
+     * i-roots for the key fail, O<=i<r, where a key's 0-root is the numerically closest node to the key.
+     * there can be two contiguous ranges of keys; the cw parameter selects which one is returned.
+     *
+     * @param n the nodehandle
+     * @param r
+     * @param cw if true returns the clockwise range, else the counterclockwise range
+     * @return the range of keys, or null if n is not a member of the leafset, or if the range cannot be computed
+     */
+
+    public IdRange range(NodeHandle n, int r, boolean cw) {
+	IdRange rr = range(n, r);
+	IdRange rprev = range(n, r-1);
+
+	if (rr == null || rprev == null) return rr;
+
+	IdRange res = rr.diff(rprev, cw);
+	//System.out.println("(" + rr + ").diff(" + rprev + ")=" + res);
+	return res;
+    }
 
 
     /**

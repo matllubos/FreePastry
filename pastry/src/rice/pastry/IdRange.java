@@ -82,6 +82,20 @@ public class IdRange {
 	this.cw = o.cw;
     }
 
+
+    /**
+     * equality operator
+     *
+     * @param obj the other IdRange
+     * @return true if the IdRanges are equal
+     */
+    public boolean equals(Object obj) {
+	IdRange o = (IdRange) obj;
+
+	if (empty == o.empty && ccw == o.ccw && cw == o.cw) return true;
+	else return false;
+    }
+        
     /**
      * return the size of the range
      * @return the numerical distance of the range
@@ -99,6 +113,16 @@ public class IdRange {
      */ 
     public boolean isEmpty() {
 	return empty;
+    }
+
+    /**
+     * test if a given key lies within this range
+     *
+     * @param key the key
+     * @return true if the key lies within this range, false otherwise
+     */
+    public boolean contains(Id key) {
+	return key.isBetween(ccw, cw);
     }
 
     /**
@@ -187,6 +211,39 @@ public class IdRange {
 
     }
 
+    /**
+     * compute the difference between two ranges
+     * returns an empty range if the ranges are identical
+     *
+     * @param o the other range
+     * @param cwPart if true, returns the clockwise part of the range difference, else the counterclockwise part
+     * @return the result range
+     */
+    public IdRange diff(IdRange o, boolean cwPart) {
+
+	if (equals(o)) return new IdRange();
+
+	if (!cwPart) {
+	    if (ccw.isBetween(o.ccw, o.cw))
+		return new IdRange(o.ccw, ccw);
+
+	    if (o.cw.isBetween(ccw, cw))
+		return new IdRange(ccw, o.ccw);
+
+	    return this;
+	}
+	else {
+	    if (o.cw.isBetween(ccw, cw))
+		return new IdRange(o.cw, cw);
+
+	    if (cw.isBetween(o.ccw, o.cw))
+		return new IdRange(cw, o.cw);
+
+	    return o;
+	}
+	
+    }
+
 
     /**
      * get counterclockwise half of the range
@@ -213,7 +270,8 @@ public class IdRange {
 
     public String toString() 
     {
-	return "IdRange: from:" + ccw + " to:" + cw + " empty=" + empty;
+	if (empty) return "IdRange: empty";
+	else return "IdRange: from:" + ccw + " to:" + cw;
     }
 
 }
