@@ -4,6 +4,7 @@ import rice.pastry.NodeId;
 import rice.pastry.messaging.Message;
 
 import java.util.Random;
+import java.io.*;
 
 /**
  * @(#) AP3Message.java
@@ -26,9 +27,9 @@ public class AP3Message extends Message {
   protected int _messageType;
 
   /**
-   * The content of the message.
+   * The content of the message as a byte array.
    */
-  protected Object _content;
+  protected byte[] _contentBytes;
 
   /**
    * The fetch probability that the server fetching
@@ -51,7 +52,7 @@ public class AP3Message extends Message {
     super(AP3Address.instance());
     this._source = source;
     this._messageType = messageType;
-    this._content = content;
+    this.setContent(content);
     this._fetchProbability = fetchProbability;
     this._messageID = new AP3MessageIDImpl();
   }
@@ -65,7 +66,7 @@ public class AP3Message extends Message {
     }
     return "\n" + "msg.type = " + msgType + "\n" + 
       "msg.id = " + _messageID + "\n" +
-      "msg.content = " + _content + "\n" +
+      "msg.content = " + getContent() + "\n" +
       "msg.prob = " + _fetchProbability + "\n" +
       "msg.source = " + _source + "\n";
   }
@@ -94,12 +95,41 @@ public class AP3Message extends Message {
     _messageType = messageType; 
   }
 
-  public Object getContent() { 
-    return _content; 
+  /**
+   * Returns the content object, converted back from a byte array.
+   */
+  public Object getContent() {
+    Object content = null;
+    try {
+      ByteArrayInputStream baStream = new ByteArrayInputStream(_contentBytes);
+      ObjectInputStream oiStream = new ObjectInputStream(baStream);
+      content = oiStream.readObject();
+      oiStream.close();
+      baStream.close();
+    }
+    catch (Exception e) {
+      System.err.println("AP3 Error: Could not rebuild object from byte array: " +
+        e.toString());
+    }
+    return content;
   }
 
+  /**
+   * Stores the given content object as a byte array.
+   */
   public void setContent(Object content) {
-    _content = content;
+    try {
+      ByteArrayOutputStream baStream = new ByteArrayOutputStream();
+      ObjectOutputStream ooStream = new ObjectOutputStream(baStream);
+      ooStream.writeObject(content);
+      _contentBytes = baStream.toByteArray();
+      ooStream.close();
+      baStream.close();
+    }
+    catch (Exception e) {
+      System.err.println("AP3 Error: Could not write object to byte array: " +
+        e.toString());
+    }
   }
 
   public NodeId getSource() {
