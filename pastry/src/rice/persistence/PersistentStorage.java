@@ -238,12 +238,12 @@ public class PersistentStorage implements Storage {
    * @param c The command to run once the operation is complete
    * @return The objects
    */
-  public void scan(Id start, Id end, Continuation c) {
+  public void scan(IdRange range , Continuation c) {
     Id startId;
     Id endId;
     try {
-      startId = (Id) start;
-      endId = (Id) end;
+      startId = (Id) range.getCCW();
+      endId = (Id) range.getCW();
     } catch (ClassCastException e) {
         c.receiveException(new IllegalArgumentException("start and end passed into scan are not id!"));
         return;
@@ -386,16 +386,20 @@ public class PersistentStorage implements Storage {
    * @return File the correct file
    *
    */
-  private File resolveConflict(File conflictFile) throws Exception{
-        //decreaseUsedSpace(oldFile.length());
-        //oldFile.delete();
-        //increaseUsedSpace(newFile.length());
-        //return newFile;
-        /* should get a list of all files with substring */
-        /* find one with the newest version */
-        /* delete all others and then return newest */
-
-        return conflictFile;
+  private void resolveConflict(File conflictFile) throws Exception{
+        //String id = conflictFile.getName().split(".")[0];
+        //SubStringFilter ssf = new SubStringFilter(id);
+        //File[] files = conflictFile.getParent().listFiles(ssf);
+        //File correctFile = files[0];
+        //for(int i = 1 ; i < files.length; i ++){
+         //   if(getVersion(correctFile) < getVersion(files[i])){
+          //     moveToLost(correctFile);
+           //    correctFile = files[i];
+           // }
+           // else{
+            //   moveToLost(files[i]); 
+           // }
+        //}
   }
 
   

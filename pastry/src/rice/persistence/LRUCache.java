@@ -203,8 +203,8 @@ public class LRUCache implements Cache {
    * @param c The command to run once the operation is complete
    * @return The objects
    */
-  public synchronized void scan(Id start, Id end, Continuation c) {
-    storage.scan(start, end, c);
+  public synchronized void scan(IdRange range, Continuation c) {
+    storage.scan(range, c);
   }
 
   /**

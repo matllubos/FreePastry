@@ -102,7 +102,7 @@ public interface Catalog {
    * @param c The command to run once the operation is complete
    * @return The objects
    */
-  public void scan(Id start, Id end, Continuation c);
+  public void scan(IdRange range , Continuation c);
 
   /**
    * Returns the total size of the stored data in bytes.The result

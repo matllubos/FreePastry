@@ -151,7 +151,7 @@ public class StorageManager implements Cache, Storage {
    * @param c The command to run once the operation is complete
    * @return The objects
    */
-  public void scan(final Id start, final Id end, final Continuation c) {
+  public void scan(final IdRange range, final Continuation c) {
     Continuation scanner = new Continuation() {
       private Comparable[] fromCache;
       
@@ -159,7 +159,7 @@ public class StorageManager implements Cache, Storage {
         if (fromCache == null) {
           fromCache = (Comparable[]) o;
 
-          storage.scan(start, end, this);
+          storage.scan(range, this);
         } else {
           Comparable[] fromStorage = (Comparable[]) o;
 
@@ -182,7 +182,7 @@ public class StorageManager implements Cache, Storage {
       }
     };
 
-    cache.scan(start, end, scanner);   
+    cache.scan(range, scanner);   
   }
 
   /**

@@ -133,8 +133,8 @@ public class MemoryStorage implements Storage {
     c.receiveResult(storage.get(id));
   }
 
-  public void scan(Id start, Id end, Continuation c) {
-    c.receiveResult(idSet.subSet(start,end));    
+  public void scan(IdRange range , Continuation c) {
+    c.receiveResult(idSet.subSet(range.getCCW(), range.getCW()));    
   }
 
   public void getTotalSize(Continuation c) {
