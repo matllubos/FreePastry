@@ -150,8 +150,15 @@ public class Stripe extends Observable implements IScribeApp{
      public void scribeIsReady(){}
      public void subscribeHandler(NodeId topicId,
                                   NodeHandle child, boolean wasAdded, Serializable data){
-	  channel.stripeSubscriberAdded();
-          /* We should check if we can take this child on */
+	    BandwidthManager bandwidthManager = getChannel().getBandwidthManager();
+	    if(bandwidthManager.canTakeChild(getChannel(), this)){
+	        channel.stripeSubscriberAdded();
+            }
+	    else{
+                /* THIS IS WHERE THE DROP SHOULD OCCUR */
+                //System.out.println("SHOULD NOT TAKE CHILD");
+	   }
+	/* We should check if we can take this child on */
      }
 
     public static final int STRIPE_SUBSCRIBED = 0;

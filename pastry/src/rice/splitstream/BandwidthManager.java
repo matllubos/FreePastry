@@ -55,7 +55,7 @@ public class BandwidthManager{
       * @return whether we can take on another child 
       */
       public boolean canTakeChild(Channel channel, Stripe s){
-         return false;
+        return(getUsedBandwidth(channel) < getMaxBandwidth(channel)); 
       }
     /**
      * Registers a channel within the system with the bandwidth manager
@@ -75,6 +75,13 @@ public class BandwidthManager{
 	usedBandwidth.put(channel,new Integer(oldBandwidth + 1));
 	
       }
-
+     public int getUsedBandwidth(Channel channel){
+	int bandwidth = ((Integer)usedBandwidth.get(channel)).intValue();
+	return bandwidth;
+     }
+     public int getMaxBandwidth(Channel channel){
+	int bandwidth = ((Integer)maxBandwidth.get(channel)).intValue();
+	return bandwidth;
+     }
       private static int DEFAULT_CHILDREN = 20;
 } 

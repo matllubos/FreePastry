@@ -173,6 +173,9 @@ public class Channel extends PastryAppl implements IScribeApp {
     this.outChannel = outChannel;
     bandwidthManager.adjustBandwidth(this, outChannel); 
   }
+  public BandwidthManager getBandwidthManager(){
+	return bandwidthManager;
+  }
   public ChannelId getChannelId(){
 	return channelId;
   } 
@@ -285,6 +288,12 @@ public class Channel extends PastryAppl implements IScribeApp {
 
   public void stripeSubscriberAdded(){
 	bandwidthManager.additionalBandwidthUsed(this);
+	if(bandwidthManager.getMaxBandwidth(this) == 
+           bandwidthManager.getUsedBandwidth(this) ){
+		System.out.println("*****USING TOO MUCH BW *****");
+		System.out.println("Leaving Spare Capacity Tree");
+		scribe.leave(getSpareCapacityId(), this, cred);
+	}
   }
 
 

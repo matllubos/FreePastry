@@ -8,6 +8,7 @@ SOURCE  = \
 	Stripe.java \
 	StripeId.java\
 	SplitStreamOutputStream.java\
+	BandwidthManager.java\
 	SplitStreamTest.java
 
 RMI_SOURCE =
