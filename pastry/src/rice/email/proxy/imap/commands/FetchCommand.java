@@ -51,14 +51,14 @@ public class FetchCommand extends AbstractImapCommand {
       ImapState state = getState();
       MailFolder fold = state.getSelectedFolder();
       List msgs = fold.getMessages(_range);
-      String result = "";
+      StringBuffer result = new StringBuffer();
       for (Iterator i = msgs.iterator(); i.hasNext();) {
         StoredMessage msg = (StoredMessage) i.next();
 
-        result += fetchMessage(msg);
+        result.append(fetchMessage(msg));
       }
 
-      getConn().print(result);
+      getConn().print(result.toString());
 
       taggedSimpleSuccess();
     } catch (MailboxException e) {
@@ -67,18 +67,21 @@ public class FetchCommand extends AbstractImapCommand {
   }
 
   String fetchMessage(StoredMessage msg) throws MailboxException {
-    String result = "* " + msg.getSequenceNumber() + " FETCH (";
+    StringBuffer result = new StringBuffer();
+    result.append("* ");
+    result.append(msg.getSequenceNumber());
+    result.append(" FETCH (");
 
     for (Iterator i = parts.iterator(); i.hasNext();) {
       Object part = i.next();
       FetchPart handler = regestry.getHandler(part);
-      result += handler.fetch(msg, part);
+      result.append(handler.fetch(msg, part));
 
       if (i.hasNext())
-        result += " ";
+        result.append(" ");
     }
 
-    return result +")\r\n";
+    return result.toString() +")\r\n";
   }
 
   public void appendPartRequest(String string) {

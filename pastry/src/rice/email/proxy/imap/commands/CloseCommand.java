@@ -33,12 +33,15 @@ public class CloseCommand extends AbstractImapCommand {
     try {
       MailFolder fold = getState().getSelectedFolder();
       List l = fold.getMessages(MsgFilter.DELETED);
-      StoredMessage[] deleted = new StoredMessage[l.size()];
       
-      for (int i=0; i<l.size(); i++) 
-        deleted[i] = (StoredMessage) l.get(i);
+      if (l.size() > 0) {
+        StoredMessage[] deleted = new StoredMessage[l.size()];
       
-      fold.purge(deleted);
+        for (int i=0; i<l.size(); i++) 
+          deleted[i] = (StoredMessage) l.get(i);
+       
+        fold.purge(deleted);
+      }
       
       Iterator j = fold.getMessages(MsgFilter.RECENT).iterator();
       

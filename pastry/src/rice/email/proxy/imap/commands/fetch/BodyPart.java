@@ -203,7 +203,7 @@ public class BodyPart extends FetchPart {
       EmailData data = (EmailData) c.getResult();
       
       if (data == null) {
-        return "Error: Unable to fetch data - did not exist in Past!";
+        return format("Error: Unable to fetch data - did not exist in Past!\r\n");
       }
       
       InternetHeaders iHeaders = new InternetHeaders(new ByteArrayInputStream(data.getData()));
@@ -255,7 +255,7 @@ public class BodyPart extends FetchPart {
     EmailContentPart[] parts = (EmailContentPart[]) c.getResult();
     
     if (parts == null) {
-      return "Error: Unable to fetch data - did not exist in Past!";
+      return "Error: Unable to fetch data - did not exist in Past!\r\n";
     }
 
     for (int i=0; i<parts.length; i++) {
@@ -275,7 +275,7 @@ public class BodyPart extends FetchPart {
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
     if (c.getResult() == null) {
-      return "Unable to fetch data - did not exist in Past!";
+      return "Unable to fetch data - did not exist in Past!\r\n";
     } else {
       return new String(((EmailData) c.getResult()).getData());
     }
@@ -291,7 +291,7 @@ public class BodyPart extends FetchPart {
     EmailData headers = (EmailData) c.getResult();
     
     if (headers == null) {
-      headers = new EmailData("Error: Unable to fetch data - did not exist in Past!".getBytes());
+      headers = new EmailData("Error: Unable to fetch data - did not exist in Past!\r\n".getBytes());
     }
     
     c = new ExternalContinuation();
