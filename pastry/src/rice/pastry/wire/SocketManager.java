@@ -318,10 +318,14 @@ public class SocketManager implements SelectionKeyHandler {
 
           debug("Read header message " + hm);
 
-          WireNodeHandle wnh = new WireNodeHandle(hm.getAddress(), hm.getNodeId(), pastryNode);
-          wnh = (WireNodeHandle) pastryNode.getNodeHandlePool().coalesce(wnh);
+          WireNodeHandle handle = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(hm.getNodeId());
 
-          wnh.setKey(key);
+          if (handle == null) {
+            handle = new WireNodeHandle(hm.getAddress(), hm.getNodeId(), pastryNode);
+            handle = (WireNodeHandle) pastryNode.getNodeHandlePool().coalesce(handle);
+          }
+
+          handle.setKey(key);
 
           // since we're done, remove this entry
           connectors.remove(key);

@@ -38,6 +38,8 @@ package rice.pastry.wire;
 
 import java.net.*;
 
+import rice.pastry.*;
+
 /**
  * Wrapper class which contains an object to write and the address
  * it needs to be written to.
@@ -47,6 +49,9 @@ import java.net.*;
  * @author Alan Mislove
  */
 public class PendingWrite {
+
+  // the destination nodeId
+  private NodeId destination;
 
   // the destination address
   private InetSocketAddress address;
@@ -60,9 +65,19 @@ public class PendingWrite {
    * @param address The destination address of this object
    * @param o The object to be written.
    */
-  public PendingWrite(InetSocketAddress address, Object o) {
+  public PendingWrite(NodeId destination, InetSocketAddress address, Object o) {
+    this.destination = destination;
     this.address = address;
     this.o = o;
+  }
+
+  /**
+   * Returns the destination address of this write
+   *
+   * @return The destination address of this pending write.
+   */
+  public NodeId getDestination() {
+    return destination;
   }
 
   /**

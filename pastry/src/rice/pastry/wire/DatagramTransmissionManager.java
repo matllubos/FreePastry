@@ -99,11 +99,11 @@ public class DatagramTransmissionManager {
    */
   public void add(PendingWrite write) {
     synchronized (map) {
-      TransmissionEntry entry = (TransmissionEntry) map.get(write.getAddress());
+      TransmissionEntry entry = (TransmissionEntry) map.get(write.getDestination());
 
       if (entry == null) {
-        entry = new TransmissionEntry(write.getAddress());
-        map.put(write.getAddress(), entry);
+        entry = new TransmissionEntry(write.getDestination(), write.getAddress());
+        map.put(write.getDestination(), entry);
       }
 
       entry.add(write);
@@ -141,17 +141,17 @@ public class DatagramTransmissionManager {
    * @param address The address the ack came from.
    * @param num The number of the ack
    */
-  public void receivedAck(InetSocketAddress address, int num) {
+  public void receivedAck(AcknowledgementMessage message) {
     TransmissionEntry entry = null;
 
     synchronized (map) {
-      entry = (TransmissionEntry) map.get(address);
+      entry = (TransmissionEntry) map.get(message.getSource());
     }
 
     if (entry != null) {
-      entry.ackReceived(num);
+      entry.ackReceived(message.getNum());
     } else {
-      debug("PANIC: Ack received from unknown address " + address);
+      debug("PANIC: Ack received from unknown nodeId " + message.getSource());
     }
   }
 
@@ -176,6 +176,25 @@ public class DatagramTransmissionManager {
         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
       else
         key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+    }
+  }
+
+  /**
+   * Resets the sequence number for the specified node
+   *
+   * @param node The node to reset
+   */
+  public void resetAckNumber(NodeId node) {
+    TransmissionEntry entry = null;
+
+    synchronized (map) {
+      entry = (TransmissionEntry) map.get(node);
+    }
+
+    if (entry != null) {
+      entry.resetAckNumber();
+    } else {
+      debug("PANIC: Reset request received for unknown nodeId " + node);
     }
   }
 
@@ -217,6 +236,12 @@ public class DatagramTransmissionManager {
     // the destination address this entry is sending to
     private InetSocketAddress address;
 
+    // the node ID for this TE
+    private NodeId nodeId;
+
+    // the node handle for this TE
+    private WireNodeHandle handle;
+
     // the queue of pending writes
     private LinkedList queue;
 
@@ -250,17 +275,17 @@ public class DatagramTransmissionManager {
     public int STATE_WAITING_TO_SEND = -5;
 
     // the default wait-time for a lost packet
-    public long SEND_TIMEOUT_DEFAULT = 500;
+    public long SEND_TIMEOUT_DEFAULT = 1250;
 
     // the minimum wait time for a lost packet
     public long SEND_TIMEOUT_MIN = 250;
 
     // the initial amount of time to wait before resending
-    public long INITIAL_RESEND_WAIT_TIME = 250;
+    public long INITIAL_RESEND_WAIT_TIME = 100;
 
     // the factor by which to multiply the last send time
     // to determine the next timeout time
-    public double TIMEOUT_FACTOR = 2;
+    public double TIMEOUT_FACTOR = 2.5;
 
     // the maximum number to retries before dropping the message
     // on the floor
@@ -274,25 +299,36 @@ public class DatagramTransmissionManager {
     // open a socket
     public int MAX_UDP_QUEUE_SIZE = 4;
 
-    // the node ID for this TE
-    private NodeId nodeId;
-
 
     /**
      * Builds a TransmissionEntry for a specified address.
      *
      * @param address The destination address of this entry.
      */
-    public TransmissionEntry(InetSocketAddress address) {
+    public TransmissionEntry(NodeId nodeId, InetSocketAddress address) {
       queue = new LinkedList();
       ackExpected = BEGIN_ACK_NUM;
       state = STATE_NO_DATA;
       resendWaitTime = (long) (INITIAL_RESEND_WAIT_TIME * (1 + random.nextDouble()));
       sendTimeoutTime = SEND_TIMEOUT_DEFAULT;
-      nodeId = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address).getNodeId();
       numRetries = 0;
 
+      this.nodeId = nodeId;
       this.address = address;
+
+      handle = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(nodeId);
+
+      if (handle == null) {
+        handle = new WireNodeHandle(address, nodeId, pastryNode);
+        handle = (WireNodeHandle) pastryNode.getNodeHandlePool().coalesce(handle);
+      }
+    }
+
+    /**
+     * Resets this entry's ack number
+     */
+    public void resetAckNumber() {
+      ackExpected = BEGIN_ACK_NUM;
     }
 
     /**
@@ -306,22 +342,23 @@ public class DatagramTransmissionManager {
       debug("Added write for object " + write.getObject());
 
       if ((queue.size() > MAX_UDP_QUEUE_SIZE) && (! (write.getObject() instanceof DatagramMessage))) {
-        WireNodeHandle wnh = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address);
         LinkedList list = new LinkedList();
 
         Iterator i = queue.iterator();
-        i.next();
 
         while (i.hasNext()) {
           PendingWrite pw = (PendingWrite) i.next();
 
-          if (! (pw.getObject() instanceof DatagramMessage)) {
-            list.addLast(new SocketTransportMessage(pw.getObject()));
+          if (pw.getObject() instanceof DatagramTransportMessage) {
+            DatagramTransportMessage dtm = (DatagramTransportMessage) pw.getObject();
+            list.addLast(new SocketTransportMessage(dtm.getObject()));
             i.remove();
           }
         }
 
-        wnh.connectToRemoteNode(list);
+        debug("Queue has exceed maximum length - moving to TCP.");
+
+        handle.connectToRemoteNode(list);
       } else {
         if (state == STATE_NO_DATA)
           state = STATE_READY;
@@ -350,9 +387,9 @@ public class DatagramTransmissionManager {
           DatagramMessage msg = (DatagramMessage) write.getObject();
           msg.setNum(ackExpected);
 
-          return new PendingWrite(write.getAddress(), msg);
+          return new PendingWrite(nodeId, address, msg);
         } else {
-          return new PendingWrite(write.getAddress(), new DatagramTransportMessage(write.getObject(), ackExpected));
+          return new PendingWrite(nodeId, address, new DatagramTransportMessage(pastryNode.getNodeId(), nodeId, ackExpected, write.getObject()));
         }
       } else {
         throw new IllegalArgumentException("get() called on non-ready TransmissionEntry.");
@@ -368,12 +405,12 @@ public class DatagramTransmissionManager {
     public void ackReceived(int num) {
       if (state != STATE_NO_DATA) {
         if (ackExpected == num) {
-          ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address).markAlive();
+          handle.markAlive();
 
           PendingWrite pw = (PendingWrite) queue.removeFirst();
 
           if (pw.getObject() instanceof PingMessage)
-            ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address).pingResponse();
+            handle.pingResponse();
 
           long elapsedTime = System.currentTimeMillis() - sendTime;
 
@@ -429,8 +466,6 @@ public class DatagramTransmissionManager {
           if (numRetries == NUM_RETRIES_BEFORE_OPENING_SOCKET) {
             debug("Attempting to open a socket... (" + numRetries + " try)");
 
-            WireNodeHandle wnh = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address);
-
             LinkedList list = new LinkedList();
 
             Iterator i = queue.iterator();
@@ -442,14 +477,16 @@ public class DatagramTransmissionManager {
               i.remove();
             }
 
-            wnh.connectToRemoteNode(list);
+            handle.markDead();
+            handle.connectToRemoteNode(list);
           }
         }
 
         if (numRetries >= MAX_NUM_RETRIES) {
-          ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address).markDead();
-          debug(pastryNode.getNodeId() + " found " + address + " to be dead - cancelling all messages ");
-          queue.clear();
+          //((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address).markDead();
+          debug(pastryNode.getNodeId() + " found " + nodeId + " to be non-responsive - cancelling message " + queue.getFirst());
+          handle.markDead();
+          queue.removeFirst();
           state = STATE_NO_DATA;
         }
       } else if (state == STATE_WAITING_FOR_RESEND) {

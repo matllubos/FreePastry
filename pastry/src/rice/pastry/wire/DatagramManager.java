@@ -135,6 +135,17 @@ public class DatagramManager implements SelectionKeyHandler {
   }
 
   /**
+   * Designed to be called by a node handle when a socket is open in order to
+   * reset the seqence number of UDP.
+   *
+   * @param node The NodeId to reset.
+   */
+  public void resetAckNumber(NodeId node) {
+    transmissionManager.resetAckNumber(node);
+    lastAckNum.remove(node);
+  }
+
+  /**
    * Method designed for node handles to use when they wish to
    * write to their remote node. This method enqueues their message,
    * and will eventually send the message to the remote node.
@@ -142,9 +153,9 @@ public class DatagramManager implements SelectionKeyHandler {
    * @param address The remote address to send the message to.
    * @param o The object that should be sent.
    */
-  public void write(InetSocketAddress address, Object o) {
-    debug("Enqueueing write to " + address + " of " + o);
-    transmissionManager.add(new PendingWrite(address, o));
+  public void write(NodeId destination, InetSocketAddress address, Object o) {
+    debug("Enqueueing write to " + destination + " of " + o);
+    transmissionManager.add(new PendingWrite(destination, address, o));
     manager.getSelector().wakeup();
   }
 
@@ -155,40 +166,55 @@ public class DatagramManager implements SelectionKeyHandler {
    * @param key The SelectionKey which is readable.
    */
   public void read(SelectionKey key) {
-    InetSocketAddress address = null;
+     WireNodeHandle handle = null;
 
     try {
-      address = (InetSocketAddress) channel.receive(buffer);
+      InetSocketAddress address = (InetSocketAddress) channel.receive(buffer);
       buffer.flip();
       Object o = deserialize(buffer);
 
-      if (o instanceof AcknowledgementMessage) {
-        AcknowledgementMessage message = (AcknowledgementMessage) o;
-
-        transmissionManager.receivedAck(address, message.getNum());
-      } else if (o instanceof DatagramMessage) {
+      if (o instanceof DatagramMessage) {
         DatagramMessage message = (DatagramMessage) o;
 
-        debug("Deserialzied message " + o + " from " + address);
+        // make sure message is for us
+        if (message.getDestination().equals(pastryNode.getNodeId())) {
+          debug("Deserialzied message " + o + " from " + message.getSource());
 
-        // hand message off to the pastry node
-        if (sendAck(address, message.getNum())) {
-          if (o instanceof DatagramTransportMessage) {
-            // hand off to pastry node if a transport message is received
-            DatagramTransportMessage dtm = (DatagramTransportMessage) o;
+          // make sure this handle is in the pool
+          handle = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(message.getSource());
 
-            pastryNode.receiveMessage((Message) dtm.getObject());
-          } else if (o instanceof PingMessage) {
-            // do nothing (ack has been sent)
-          } else {
-            System.out.println("ERROR: Recieved unreccognized datagrammessage: " + o);
+          if (handle == null) {
+            handle = new WireNodeHandle(address, message.getSource(), pastryNode);
+            handle = (WireNodeHandle) pastryNode.getNodeHandlePool().coalesce(handle);
           }
+
+          // if ack, simply record it
+          if (o instanceof AcknowledgementMessage) {
+            transmissionManager.receivedAck((AcknowledgementMessage) message);
+          } else {
+            // hand message off to the pastry node
+            if (sendAck(address, message)) {
+              if (o instanceof DatagramTransportMessage) {
+                // hand off to pastry node if a transport message is received
+                DatagramTransportMessage dtm = (DatagramTransportMessage) o;
+
+                pastryNode.receiveMessage((Message) dtm.getObject());
+              } else if (o instanceof PingMessage) {
+                // do nothing (ack has been sent)
+              } else {
+                System.out.println("ERROR: Recieved unreccognized datagrammessage: " + o);
+              }
+            }
+          }
+        } else {
+          System.out.println("ERROR: Recieved message " + message + " at " + pastryNode.getNodeId() +
+                             " for dest " + message.getDestination() + " - dropping on floor.");
         }
       }
     } catch (IOException e) {
       debug("ERROR (datagrammanager:read): " + e);
-      if (address != null)
-        ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address).markDead();
+      if (handle != null)
+        handle.markDead();
     }
   }
 
@@ -222,7 +248,7 @@ public class DatagramManager implements SelectionKeyHandler {
         if (num == 0)
           System.out.println("ERROR: 0 bytes were written (not fatal, but bad) - full buffer.");
 
-        debug("Wrote message " + write.getObject() + " to " + write.getAddress());
+        debug("Wrote message " + write.getObject() + " to " + write.getDestination());
       }
     } catch (IOException e) {
       System.out.println("ERROR (datagrammanager:write): " + e);
@@ -253,21 +279,20 @@ public class DatagramManager implements SelectionKeyHandler {
    * @param address The desintation address of the ack.
    * @param ackNum The number of the incoming packet.
    */
-  private boolean sendAck(InetSocketAddress address, int ackNum) {
-    //debug("Created ack for " + address + " with num " + ackNum);
+  private boolean sendAck(InetSocketAddress address, DatagramMessage message) {
+    ackQueue.add(message.getAck(address));
 
-    ackQueue.add(new AcknowledgementMessage(address, ackNum));
+    Integer num = (Integer) lastAckNum.get(message.getSource());
 
-    Integer num = (Integer) lastAckNum.get(address);
-
-    // if we have not seen this number before, accept the packet
-    if ((num == null) || (num.intValue() < ackNum)) {
-      lastAckNum.put(address, new Integer(ackNum));
+    // if we have not seen this node before, accept the packet
+    if ((num == null) || (num.intValue() < message.getNum())) {
+      lastAckNum.put(message.getSource(), new Integer(message.getNum()));
       return true;
     }
 
-    if (num.intValue() > ackNum)
-      System.out.println(pastryNode.getNodeId() + " (M): PANIC: Got transmission with ack less than the last ack.");
+    if (num.intValue() > message.getNum())
+      debug(pastryNode.getNodeId() + " (M): ERROR: Got transmission with ack less than the last ack - ignoring message." +
+            " This is probably becuase a socket is being opened, but we haven't yet noticed it.");
 
     return false;
   }

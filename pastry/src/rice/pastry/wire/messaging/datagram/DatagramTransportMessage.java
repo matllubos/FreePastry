@@ -38,6 +38,8 @@ package rice.pastry.wire.messaging.datagram;
 
 import java.io.*;
 
+import rice.pastry.*;
+
 /**
  * Message which is a "transport" message in the datagram protocol.
  * It simply wraps an internal message for sending across the wire.
@@ -50,7 +52,7 @@ public class DatagramTransportMessage extends DatagramMessage {
 
   // the wrapped object
   private Object o;
-  
+
   /**
    * Builds a DatagramMessage given an object to wrap and a packet
    * number
@@ -58,8 +60,8 @@ public class DatagramTransportMessage extends DatagramMessage {
    * @param o The object to wrap
    * @param num The "packet number"
    */
-  public DatagramTransportMessage(Object o, int num) {
-    super(num);
+  public DatagramTransportMessage(NodeId source, NodeId destination, int num, Object o) {
+    super(source, destination, num);
     this.o = o;
   }
 
@@ -70,7 +72,7 @@ public class DatagramTransportMessage extends DatagramMessage {
    */
   public Object getObject() {
     return o;
-  } 
+  }
 
   public String toString() {
     return "DatagramTransportMsg num " + num + " wrapping " + o;

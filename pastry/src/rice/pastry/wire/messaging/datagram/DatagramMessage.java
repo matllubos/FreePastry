@@ -37,6 +37,9 @@ if advised of the possibility of such damage.
 package rice.pastry.wire.messaging.datagram;
 
 import java.io.*;
+import java.net.*;
+
+import rice.pastry.*;
 
 /**
  * Class which wraps all messages to be sent through the UDP-based
@@ -52,12 +55,20 @@ public abstract class DatagramMessage implements Serializable {
   // the "packet number"
   protected int num;
 
+  // the source of this message
+  protected NodeId source;
+
+  // the destination of this message
+  protected NodeId destination;
+
   /**
    * Builds a DatagramMessage given a packet number
    *
    * @param num The "packet number"
    */
-  public DatagramMessage(int num) {
+  public DatagramMessage(NodeId source, NodeId destination, int num) {
+    this.source = source;
+    this.destination = destination;
     this.num = num;
   }
 
@@ -69,17 +80,45 @@ public abstract class DatagramMessage implements Serializable {
   public int getNum() {
     return num;
   }
-  
+
   /**
    * Sets the "packet number" of this transmission
-   * 
+   *
    * @param num The packet number
    */
   public void setNum(int num) {
     this.num = num;
   }
 
+  /**
+   * Returns the NodeId from which this message came.
+   *
+   * @return This message's source
+   */
+  public NodeId getSource() {
+    return source;
+  }
+
+  /**
+   * Returns the NodeId which is the destination
+   *
+   * @return This message's destination
+   */
+  public NodeId getDestination() {
+    return destination;
+  }
+
+  /**
+   * Returns the approriate 'ack' message for this datagram
+   * transport message.
+   *
+   * @param address The address the ack will be sent to
+   */
+  public AcknowledgementMessage getAck(InetSocketAddress address) {
+    return new AcknowledgementMessage(destination, source, num, address);
+  }
+
   public String toString() {
-    return "DatagramMsg num " + num;
+    return "DatagramMsg from " + source + " to " + destination + " num " + num;
   }
 }

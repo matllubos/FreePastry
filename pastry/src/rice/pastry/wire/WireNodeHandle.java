@@ -182,7 +182,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
             // if message is small enough, send via UDP
             if (messageSize(msg) <= MAX_UDP_MESSAGE_SIZE) {
               debug("Message is small enough to go over UDP - sending.");
-              ((WirePastryNode) getLocalNode()).getDatagramManager().write(address, msg);
+              ((WirePastryNode) getLocalNode()).getDatagramManager().write(nodeId, address, msg);
             } else {
               debug("Message is too large - open up socket!");
               LinkedList list = new LinkedList();
@@ -192,7 +192,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
             }
           } else {
             // if we're waiting to disconnect, send message over UDP anyway
-            ((WirePastryNode) getLocalNode()).getDatagramManager().write(address, msg);
+            ((WirePastryNode) getLocalNode()).getDatagramManager().write(nodeId, address, msg);
           }
         } catch (IOException e) {
           System.out.println("IOException serializing message " + msg + " - cancelling message.");
@@ -306,6 +306,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
       key.attach(this);
 
       ((WirePastryNode) getLocalNode()).getSocketManager().openSocket(this);
+      ((WirePastryNode) getLocalNode()).getDatagramManager().resetAckNumber(nodeId);
 
       reader = new SocketChannelReader((WirePastryNode) getLocalNode());
       writer = new SocketChannelWriter((WirePastryNode) getLocalNode());
@@ -559,10 +560,18 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
 
     if (getLocalNode() != null) {
       // always send ping over UDP
-      ((WirePastryNode) getLocalNode()).getDatagramManager().write(address, new PingMessage(0));
+      ((WirePastryNode) getLocalNode()).getDatagramManager().write(nodeId, address, new PingMessage(getLocalNode().getNodeId(), nodeId, 0, this));
     }
 
     return alive;
+  }
+
+  /**
+   * Method which is called by the PingMessage right before it is going to be sent
+   * across the wire. Marks the beginning of a ping as now.
+   */
+  public void pingStarted() {
+    lastpingtime = System.currentTimeMillis();
   }
 
   /**
@@ -574,15 +583,12 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
   public void pingResponse() {
     if (isLocal) {
       debug("ERROR (pingResponse): Ping should never be sent to local node...");
-      debug("This Error is OK *ONLY* if this is happening during the initial join phase (before this node has recieved a JoinMessage response");
       return;
     }
 
     long stoptime = System.currentTimeMillis();
     if (proximity() > (int)(stoptime - lastpingtime))
       setProximity((int) (stoptime - lastpingtime));
-
-    debug("Received ping - proximity is " + proximity());
 
     markAlive();
   }

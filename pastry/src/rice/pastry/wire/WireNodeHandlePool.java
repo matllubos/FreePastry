@@ -86,38 +86,20 @@ public class WireNodeHandlePool extends DistNodeHandlePool {
    * @return The node handle to use to talk to the pastry node.
    */
   public synchronized DistNodeHandle coalesce(DistNodeHandle handle) {
-    WireNodeHandle nodehandle = (WireNodeHandle) handle;
-
-    InetSocketAddress address = nodehandle.getAddress();
-
-    if ((handles.get(address) == null) || (handles.get(address) == nodehandle)) {
-      handles.put(address, nodehandle);
-      nodehandle.setIsInPool(true);
+    if ((handles.get(handle.getNodeId()) == null) || (handles.get(handle.getNodeId()) == handle)) {
+      handles.put(handle.getNodeId(), handle);
+      handle.setIsInPool(true);
     } else {
-      nodehandle.setIsInPool(false);
+      handle.setIsInPool(false);
     }
 
-    WireNodeHandle response = (WireNodeHandle) handles.get(address);
-
-    if ((handle.getNodeId() != null) && (response.getNodeId() != null) &&
-        (! handle.getNodeId().equals(response.getNodeId()))) {
-      System.out.println("PANIC: Coalescing of node handles has failed!");
-      System.out.println("Node handle was " + nodehandle.getNodeId() + "/" + nodehandle.getAddress() + " is now " + response.getNodeId() + "/" + response.getAddress());
-    }
+    DistNodeHandle response = (DistNodeHandle) handles.get(handle.getNodeId());
 
     return response;
   }
 
-  /**
-   * Returns the SocketNodeHandle cooresponding to the
-   * given address.  Returns null if there is no node handle
-   * found.
-   *
-   * @param address The address to retrieve the node handle for.
-   * @return The SocketNodeHandle for the given address.
-   */
-  public WireNodeHandle get(InetSocketAddress address) {
-    return (WireNodeHandle) handles.get(address);
+  public WireNodeHandle get(NodeId nodeId) {
+    return (WireNodeHandle) handles.get(nodeId);
   }
 
   private void debug(String s) {
