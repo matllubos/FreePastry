@@ -21,16 +21,45 @@ import java.io.Serializable;
  */
 public class ControlFindParentMessage extends Message implements Serializable
 {
+    /**
+     * Holds the list of NodeHandles to send to (used for DFS)
+     */
     Vector send_to;
-    Vector already_seen;
-    StripeId stripe_id; // the stripe which we are looking for
-    Stripe recv_stripe = null;
-    ChannelId channel_id;
-    NodeHandle originalSource ;
-    final int DEFAULT_CHILDREN = 20;
 
-    // topicId is the spare capacity tree Id.
-    // stripeId is the stripe id for which local node is interested in .
+    /**
+     * Holds the list of NodeHandles already examined (used for DFS)
+     */
+    Vector already_seen;
+
+    /**
+     * Stripe we are trying to attach to
+     */
+    StripeId stripe_id;
+
+    /**
+     * Corresponding stripe on the receiving Channel object
+     */
+    Stripe recv_stripe = null;
+
+    /**
+     * Channel we are examining over
+     */
+    ChannelId channel_id;
+
+    /**
+     * The primal originator of this message
+     */
+    NodeHandle originalSource;
+
+    /**
+     * Constructs a FindParentMessage with the apropriate parameters
+     * @param addr The address of the source of this message
+     * @param source The NodeHandle of the source of this message
+     * @param topicId The topic id for the spare capacity tree
+     * @param c Credentials to send under
+     * @param stripe_id The stripe we want to attach to
+     * @param channel_id The channel we want to examine over
+     */
     public ControlFindParentMessage( Address addr, NodeHandle source, NodeId topicId, Credentials c, StripeId stripe_id, ChannelId channel_id)
     {
 	super( addr );
@@ -49,9 +78,8 @@ public class ControlFindParentMessage extends Message implements Serializable
     /**
      * This method determines whether a given source node is in the path to root of this node for a
      * given stripe tree.
-     * @param splitStream This node
+     * @param scribe The scribe object existing at the receiving Channel object
      * @param source Source node's handle
-     * @param stripe_id Stripe ID for stripe tree to examine over
      */
     private boolean isInRootPath( IScribe scribe, NodeHandle source )
     {
@@ -86,7 +114,7 @@ public class ControlFindParentMessage extends Message implements Serializable
      * @param topic The scribe topic this message pertains to (should always be the spare capacity id)
      * @param channel The channel this message is relevant to
      * @param stripe The splitstream stripe this message pertains to
-     * @return Should always return false, as message forwarding does not need to be done by
+     * @return Returns false unless the receiving node is not part of the spare capacity tree
      * scribe from this point on
      */
     public boolean handleMessage( Scribe scribe, Topic topic, Channel channel, Stripe stripe )
