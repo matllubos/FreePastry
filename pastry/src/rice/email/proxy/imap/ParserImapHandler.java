@@ -68,6 +68,7 @@ final class ParserImapHandler
         }
         catch (final Exception e)
         {
+          e.printStackTrace();
         }
         finally
         {

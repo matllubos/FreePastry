@@ -4,6 +4,7 @@ package rice.email.proxy.imap.parser.antlr;
 
 import rice.email.proxy.imap.commands.*;
 import rice.email.proxy.imap.commands.fetch.*;
+import rice.email.proxy.imap.commands.search.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.util.*;
 
@@ -191,6 +192,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		case STATUS:
 		case EXPUNGE:
 		case CLOSE:
+		case SEARCH:
 		{
 			command_auth();
 			break;
@@ -338,6 +340,11 @@ public ImapCommandParser(ParserSharedInputState state) {
 		case STORE:
 		{
 			store(false);
+			break;
+		}
+		case SEARCH:
+		{
+			search(false);
 			break;
 		}
 		case APPEND:
@@ -736,6 +743,11 @@ public ImapCommandParser(ParserSharedInputState state) {
 			store(true);
 			break;
 		}
+		case SEARCH:
+		{
+			search(true);
+			break;
+		}
 		default:
 		{
 			throw new NoViableAltException(LT(1), getFilename());
@@ -779,14 +791,14 @@ public ImapCommandParser(ParserSharedInputState state) {
 			match(LPAREN);
 			fetch_part(cmd);
 			{
-			_loop55:
+			_loop74:
 			do {
 				if ((LA(1)==SPACE)) {
 					match(SPACE);
 					fetch_part(cmd);
 				}
 				else {
-					break _loop55;
+					break _loop74;
 				}
 				
 			} while (true);
@@ -881,6 +893,46 @@ public ImapCommandParser(ParserSharedInputState state) {
 		}
 	}
 	
+	public final void search(
+		boolean isUID
+	) throws RecognitionException, TokenStreamException {
+		
+		
+				SearchCommand cmd = new SearchCommand(isUID);
+		AndSearchPart part = new AndSearchPart();
+		SearchPart oPart;
+			
+		
+		match(SEARCH);
+		match(SPACE);
+		oPart=search_group(isUID);
+		if ( inputState.guessing==0 ) {
+			part.addArgument(oPart);
+		}
+		{
+		_loop53:
+		do {
+			if ((LA(1)==SPACE)) {
+				match(SPACE);
+				oPart=search_group(isUID);
+				if ( inputState.guessing==0 ) {
+					part.addArgument(oPart);
+				}
+			}
+			else {
+				break _loop53;
+			}
+			
+		} while (true);
+		}
+		if ( inputState.guessing==0 ) {
+			
+			cmd.setPart(part);
+					command = cmd;
+				
+		}
+	}
+	
 	public final void append() throws RecognitionException, TokenStreamException {
 		
 		Token date, folder; int len; List flags=new ArrayList();
@@ -965,6 +1017,625 @@ public ImapCommandParser(ParserSharedInputState state) {
 				  command = cmd;
 				
 		}
+	}
+	
+	public final AndSearchPart  search_group(
+		boolean isUID
+	) throws RecognitionException, TokenStreamException {
+		AndSearchPart part;
+		
+		
+		part = new AndSearchPart();
+		SearchPart oPart;
+		
+		
+		{
+		switch ( LA(1)) {
+		case UID:
+		case BODY:
+		case HEADER:
+		case NOT:
+		case TEXT:
+		case ALL:
+		case ANSWERED:
+		case BCC:
+		case BEFORE:
+		case CC:
+		case DELETED:
+		case DRAFT:
+		case FLAGGED:
+		case FROM:
+		case KEYWORD:
+		case LARGER:
+		case NEW:
+		case OLD:
+		case ON:
+		case OR:
+		case RECENT:
+		case SEEN:
+		case SENTBEFORE:
+		case SENTON:
+		case SINCE:
+		case SMALLER:
+		case SUBJECT:
+		case TO:
+		case UNANSWERED:
+		case UNDELETED:
+		case UNDRAFT:
+		case UNFLAGGED:
+		case UNKEYWORD:
+		case UNSEEN:
+		{
+			oPart=search_part(isUID);
+			if ( inputState.guessing==0 ) {
+				part.addArgument(oPart);
+			}
+			break;
+		}
+		case LPAREN:
+		{
+			match(LPAREN);
+			oPart=search_group(isUID);
+			if ( inputState.guessing==0 ) {
+				part.addArgument(oPart);
+			}
+			{
+			_loop57:
+			do {
+				if ((LA(1)==SPACE)) {
+					match(SPACE);
+					oPart=search_group(isUID);
+					if ( inputState.guessing==0 ) {
+						part.addArgument(oPart);
+					}
+				}
+				else {
+					break _loop57;
+				}
+				
+			} while (true);
+			}
+			match(RPAREN);
+			break;
+		}
+		default:
+		{
+			throw new NoViableAltException(LT(1), getFilename());
+		}
+		}
+		}
+		return part;
+	}
+	
+	public final SearchPart  search_part(
+		boolean isUID
+	) throws RecognitionException, TokenStreamException {
+		SearchPart part;
+		
+		
+		part = null;
+		
+		
+		{
+		switch ( LA(1)) {
+		case ALL:
+		case ANSWERED:
+		case DELETED:
+		case DRAFT:
+		case FLAGGED:
+		case NEW:
+		case OLD:
+		case RECENT:
+		case SEEN:
+		case UNANSWERED:
+		case UNDELETED:
+		case UNDRAFT:
+		case UNFLAGGED:
+		case UNSEEN:
+		{
+			part=search_part_no_arg();
+			break;
+		}
+		case BODY:
+		case TEXT:
+		case BCC:
+		case CC:
+		case FROM:
+		case KEYWORD:
+		case SUBJECT:
+		case TO:
+		case UNKEYWORD:
+		{
+			part=search_part_str_arg();
+			break;
+		}
+		case LARGER:
+		case SMALLER:
+		{
+			part=search_part_num_arg();
+			break;
+		}
+		case BEFORE:
+		case ON:
+		case SENTBEFORE:
+		case SENTON:
+		case SINCE:
+		{
+			part=search_part_date_arg();
+			break;
+		}
+		case UID:
+		case HEADER:
+		case NOT:
+		case OR:
+		{
+			part=search_part_other(isUID);
+			break;
+		}
+		default:
+		{
+			throw new NoViableAltException(LT(1), getFilename());
+		}
+		}
+		}
+		return part;
+	}
+	
+	public final NoArgSearchPart  search_part_no_arg() throws RecognitionException, TokenStreamException {
+		NoArgSearchPart part;
+		
+		Token  a = null;
+		Token  b = null;
+		Token  c = null;
+		Token  d = null;
+		Token  e = null;
+		Token  f = null;
+		Token  g = null;
+		Token  h = null;
+		Token  i = null;
+		Token  j = null;
+		Token  k = null;
+		Token  l = null;
+		Token  m = null;
+		Token  n = null;
+		
+		part = new NoArgSearchPart();
+		
+		
+		{
+		switch ( LA(1)) {
+		case ALL:
+		{
+			a = LT(1);
+			match(ALL);
+			if ( inputState.guessing==0 ) {
+				part.setType(a.getText());
+			}
+			break;
+		}
+		case ANSWERED:
+		{
+			b = LT(1);
+			match(ANSWERED);
+			if ( inputState.guessing==0 ) {
+				part.setType(b.getText());
+			}
+			break;
+		}
+		case DELETED:
+		{
+			c = LT(1);
+			match(DELETED);
+			if ( inputState.guessing==0 ) {
+				part.setType(c.getText());
+			}
+			break;
+		}
+		case DRAFT:
+		{
+			d = LT(1);
+			match(DRAFT);
+			if ( inputState.guessing==0 ) {
+				part.setType(d.getText());
+			}
+			break;
+		}
+		case FLAGGED:
+		{
+			e = LT(1);
+			match(FLAGGED);
+			if ( inputState.guessing==0 ) {
+				part.setType(e.getText());
+			}
+			break;
+		}
+		case NEW:
+		{
+			f = LT(1);
+			match(NEW);
+			if ( inputState.guessing==0 ) {
+				part.setType(f.getText());
+			}
+			break;
+		}
+		case OLD:
+		{
+			g = LT(1);
+			match(OLD);
+			if ( inputState.guessing==0 ) {
+				part.setType(g.getText());
+			}
+			break;
+		}
+		case RECENT:
+		{
+			h = LT(1);
+			match(RECENT);
+			if ( inputState.guessing==0 ) {
+				part.setType(h.getText());
+			}
+			break;
+		}
+		case SEEN:
+		{
+			i = LT(1);
+			match(SEEN);
+			if ( inputState.guessing==0 ) {
+				part.setType(i.getText());
+			}
+			break;
+		}
+		case UNANSWERED:
+		{
+			j = LT(1);
+			match(UNANSWERED);
+			if ( inputState.guessing==0 ) {
+				part.setType(j.getText());
+			}
+			break;
+		}
+		case UNDELETED:
+		{
+			k = LT(1);
+			match(UNDELETED);
+			if ( inputState.guessing==0 ) {
+				part.setType(k.getText());
+			}
+			break;
+		}
+		case UNDRAFT:
+		{
+			l = LT(1);
+			match(UNDRAFT);
+			if ( inputState.guessing==0 ) {
+				part.setType(l.getText());
+			}
+			break;
+		}
+		case UNFLAGGED:
+		{
+			m = LT(1);
+			match(UNFLAGGED);
+			if ( inputState.guessing==0 ) {
+				part.setType(m.getText());
+			}
+			break;
+		}
+		case UNSEEN:
+		{
+			n = LT(1);
+			match(UNSEEN);
+			if ( inputState.guessing==0 ) {
+				part.setType(n.getText());
+			}
+			break;
+		}
+		default:
+		{
+			throw new NoViableAltException(LT(1), getFilename());
+		}
+		}
+		}
+		return part;
+	}
+	
+	public final StringArgSearchPart  search_part_str_arg() throws RecognitionException, TokenStreamException {
+		StringArgSearchPart part;
+		
+		Token  a = null;
+		Token  b = null;
+		Token  c = null;
+		Token  d = null;
+		Token  e = null;
+		Token  f = null;
+		Token  g = null;
+		Token  h = null;
+		Token  i = null;
+		
+		part = new StringArgSearchPart();
+		Token type;
+		
+		
+		{
+		switch ( LA(1)) {
+		case BCC:
+		{
+			a = LT(1);
+			match(BCC);
+			if ( inputState.guessing==0 ) {
+				part.setType(a.getText());
+			}
+			break;
+		}
+		case BODY:
+		{
+			b = LT(1);
+			match(BODY);
+			if ( inputState.guessing==0 ) {
+				part.setType(b.getText());
+			}
+			break;
+		}
+		case CC:
+		{
+			c = LT(1);
+			match(CC);
+			if ( inputState.guessing==0 ) {
+				part.setType(c.getText());
+			}
+			break;
+		}
+		case FROM:
+		{
+			d = LT(1);
+			match(FROM);
+			if ( inputState.guessing==0 ) {
+				part.setType(d.getText());
+			}
+			break;
+		}
+		case KEYWORD:
+		{
+			e = LT(1);
+			match(KEYWORD);
+			if ( inputState.guessing==0 ) {
+				part.setType(e.getText());
+			}
+			break;
+		}
+		case SUBJECT:
+		{
+			f = LT(1);
+			match(SUBJECT);
+			if ( inputState.guessing==0 ) {
+				part.setType(f.getText());
+			}
+			break;
+		}
+		case TEXT:
+		{
+			g = LT(1);
+			match(TEXT);
+			if ( inputState.guessing==0 ) {
+				part.setType(g.getText());
+			}
+			break;
+		}
+		case TO:
+		{
+			h = LT(1);
+			match(TO);
+			if ( inputState.guessing==0 ) {
+				part.setType(h.getText());
+			}
+			break;
+		}
+		case UNKEYWORD:
+		{
+			i = LT(1);
+			match(UNKEYWORD);
+			if ( inputState.guessing==0 ) {
+				part.setType(i.getText());
+			}
+			break;
+		}
+		default:
+		{
+			throw new NoViableAltException(LT(1), getFilename());
+		}
+		}
+		}
+		match(SPACE);
+		type=astring();
+		if ( inputState.guessing==0 ) {
+			part.setArgument(type.getText());
+		}
+		return part;
+	}
+	
+	public final NumberArgSearchPart  search_part_num_arg() throws RecognitionException, TokenStreamException {
+		NumberArgSearchPart part;
+		
+		Token  a = null;
+		Token  b = null;
+		
+		part = new NumberArgSearchPart();
+		Token num;
+		
+		
+		{
+		switch ( LA(1)) {
+		case LARGER:
+		{
+			a = LT(1);
+			match(LARGER);
+			if ( inputState.guessing==0 ) {
+				part.setType(a.getText());
+			}
+			break;
+		}
+		case SMALLER:
+		{
+			b = LT(1);
+			match(SMALLER);
+			if ( inputState.guessing==0 ) {
+				part.setType(b.getText());
+			}
+			break;
+		}
+		default:
+		{
+			throw new NoViableAltException(LT(1), getFilename());
+		}
+		}
+		}
+		match(SPACE);
+		num=astring();
+		if ( inputState.guessing==0 ) {
+			part.setArgument(Integer.parseInt(num.getText()));
+		}
+		return part;
+	}
+	
+	public final DateArgSearchPart  search_part_date_arg() throws RecognitionException, TokenStreamException {
+		DateArgSearchPart part;
+		
+		Token  a = null;
+		Token  b = null;
+		Token  c = null;
+		Token  d = null;
+		Token  e = null;
+		
+		part = new DateArgSearchPart();
+		Token date;
+		
+		
+		{
+		switch ( LA(1)) {
+		case BEFORE:
+		{
+			a = LT(1);
+			match(BEFORE);
+			if ( inputState.guessing==0 ) {
+				part.setType(a.getText());
+			}
+			break;
+		}
+		case ON:
+		{
+			b = LT(1);
+			match(ON);
+			if ( inputState.guessing==0 ) {
+				part.setType(b.getText());
+			}
+			break;
+		}
+		case SENTBEFORE:
+		{
+			c = LT(1);
+			match(SENTBEFORE);
+			if ( inputState.guessing==0 ) {
+				part.setType(c.getText());
+			}
+			break;
+		}
+		case SENTON:
+		{
+			d = LT(1);
+			match(SENTON);
+			if ( inputState.guessing==0 ) {
+				part.setType(d.getText());
+			}
+			break;
+		}
+		case SINCE:
+		{
+			e = LT(1);
+			match(SINCE);
+			if ( inputState.guessing==0 ) {
+				part.setType(e.getText());
+			}
+			break;
+		}
+		default:
+		{
+			throw new NoViableAltException(LT(1), getFilename());
+		}
+		}
+		}
+		match(SPACE);
+		date=astring();
+		if ( inputState.guessing==0 ) {
+			part.setArgument(date.getText());
+		}
+		return part;
+	}
+	
+	public final SearchPart  search_part_other(
+		boolean isUID
+	) throws RecognitionException, TokenStreamException {
+		SearchPart part;
+		
+		
+		part = null;
+		SearchPart a1,a2;
+		Token field, string;
+		MsgFilter range;
+		
+		
+		{
+		switch ( LA(1)) {
+		case OR:
+		{
+			match(OR);
+			match(SPACE);
+			a1=search_group(isUID);
+			match(SPACE);
+			a2=search_group(isUID);
+			if ( inputState.guessing==0 ) {
+				part = new OrSearchPart(a1, a2);
+			}
+			break;
+		}
+		case NOT:
+		{
+			match(NOT);
+			match(SPACE);
+			a1=search_group(isUID);
+			if ( inputState.guessing==0 ) {
+				part = new NotSearchPart(a1);
+			}
+			break;
+		}
+		case HEADER:
+		{
+			match(HEADER);
+			match(SPACE);
+			field=astring();
+			match(SPACE);
+			string=astring();
+			if ( inputState.guessing==0 ) {
+				part = new HeaderSearchPart(field.getText(), string.getText());
+			}
+			break;
+		}
+		case UID:
+		{
+			match(UID);
+			match(SPACE);
+			range=range(isUID);
+			if ( inputState.guessing==0 ) {
+				part = new UIDSearchPart(range);
+			}
+			break;
+		}
+		default:
+		{
+			throw new NoViableAltException(LT(1), getFilename());
+		}
+		}
+		}
+		return part;
 	}
 	
 	public final void fetch_part(
@@ -1355,7 +2026,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 					breq.addPart(a.getText());
 				}
 				{
-				_loop70:
+				_loop89:
 				do {
 					if ((LA(1)==SPACE)) {
 						match(SPACE);
@@ -1366,7 +2037,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 						}
 					}
 					else {
-						break _loop70;
+						break _loop89;
 					}
 					
 				} while (true);
@@ -1471,6 +2142,36 @@ public ImapCommandParser(ParserSharedInputState state) {
 		"\"ENVELOPE\"",
 		"\"FLAGS\"",
 		"\"INTERNALDATE\"",
+		"\"SEARCH\"",
+		"\"ANSWERED\"",
+		"\"BCC\"",
+		"\"BEFORE\"",
+		"\"CC\"",
+		"\"DELETED\"",
+		"\"DRAFT\"",
+		"\"FLAGGED\"",
+		"\"FROM\"",
+		"\"KEYWORD\"",
+		"\"LARGER\"",
+		"\"NEW\"",
+		"\"OLD\"",
+		"\"ON\"",
+		"\"OR\"",
+		"\"RECENT\"",
+		"\"SEEN\"",
+		"\"SENTBEFORE\"",
+		"\"SENTON\"",
+		"\"SENTSINCE\"",
+		"\"SINCE\"",
+		"\"SMALLER\"",
+		"\"SUBJECT\"",
+		"\"TO\"",
+		"\"UNANSWERED\"",
+		"\"UNDELETED\"",
+		"\"UNDRAFT\"",
+		"\"UNFLAGGED\"",
+		"\"UNKEYWORD\"",
+		"\"UNSEEN\"",
 		"PERIOD",
 		"SPACE",
 		"LPAREN",
@@ -1496,7 +2197,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 	};
 	
 	private static final long[] mk_tokenSet_0() {
-		long[] data = { 9223372036854775794L, 0L, 0L, 0L};
+		long[] data = { -14L, 536870911L, 0L, 0L};
 		return data;
 	}
 	public static final BitSet _tokenSet_0 = new BitSet(mk_tokenSet_0());

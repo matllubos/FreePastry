@@ -3,6 +3,7 @@ package rice.email.proxy.imap.parser.antlr;
 
 import rice.email.proxy.imap.commands.*;
 import rice.email.proxy.imap.commands.fetch.*;
+import rice.email.proxy.imap.commands.search.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.util.*;
 
@@ -123,7 +124,7 @@ command_auth :
 create | delete |
 subscribe | unsubscribe | list | lsub |
 examine | status | select |
-uid | fetch[false] | copy[false] | store[false] |
+uid | fetch[false] | copy[false] | store[false] | search[false] |
 append |
 expunge | close
 	;
@@ -234,7 +235,7 @@ close : CLOSE
 	;
 
 uid :
-	UID SPACE (fetch[true] | copy[true] | store[true])
+	UID SPACE (fetch[true] | copy[true] | store[true] | search[true])
 	;
 
 copy [boolean isUID]
@@ -268,6 +269,159 @@ store [boolean isUID]
 		command = cmd;
 	}
 	;
+  
+search [boolean isUID]
+	{
+		SearchCommand cmd = new SearchCommand(isUID);
+    AndSearchPart part = new AndSearchPart();
+    SearchPart oPart;
+	}:
+	SEARCH SPACE oPart =search_group[isUID] {part.addArgument(oPart);} 
+                (SPACE oPart=search_group[isUID] {part.addArgument(oPart);})*
+	{
+    cmd.setPart(part);
+		command = cmd;
+	}
+  ;
+  
+search_group [boolean isUID] returns [AndSearchPart part]
+  {
+    part = new AndSearchPart();
+    SearchPart oPart;
+  }
+  :
+ (oPart=search_part[isUID] {part.addArgument(oPart);}
+  |
+  LPAREN oPart=search_group[isUID] {part.addArgument(oPart);} 
+           (SPACE oPart=search_group[isUID] {part.addArgument(oPart);})*
+  RPAREN)
+  ;
+
+search_part [boolean isUID] returns [SearchPart part]
+  {
+     part = null;
+  }
+  :
+ (part=search_part_no_arg
+  |
+  part=search_part_str_arg 
+  |
+  part=search_part_num_arg
+  |
+  part=search_part_date_arg
+  |
+  part=search_part_other[isUID])
+  ;
+  
+search_part_other [boolean isUID] returns [SearchPart part] 
+  {
+    part = null;
+    SearchPart a1,a2;
+    Token field, string;
+    MsgFilter range;
+  }
+  :
+ (OR SPACE a1=search_group[isUID] SPACE a2=search_group[isUID] 
+   { part = new OrSearchPart(a1, a2); }
+  | 
+  NOT SPACE a1=search_group[isUID]
+   { part = new NotSearchPart(a1); } 
+  |
+  HEADER SPACE field=astring SPACE string=astring
+   { part = new HeaderSearchPart(field.getText(), string.getText()); }
+  |
+  UID SPACE range=range[isUID]
+   { part = new UIDSearchPart(range); })
+  ;
+  
+search_part_no_arg returns [NoArgSearchPart part]
+  {
+    part = new NoArgSearchPart();
+  }:
+  (a:ALL {part.setType(a.getText());}
+   |
+   b:ANSWERED {part.setType(b.getText());}
+   |
+   c:DELETED {part.setType(c.getText());}
+   |
+   d:DRAFT {part.setType(d.getText());}
+   |
+   e:FLAGGED {part.setType(e.getText());}
+   |
+   f:NEW {part.setType(f.getText());}
+   |
+   g:OLD {part.setType(g.getText());}
+   |
+   h:RECENT {part.setType(h.getText());}
+   |
+   i:SEEN {part.setType(i.getText());}
+   |
+   j:UNANSWERED {part.setType(j.getText());}
+   |
+   k:UNDELETED {part.setType(k.getText());}
+   |
+   l:UNDRAFT {part.setType(l.getText());}
+   |
+   m:UNFLAGGED {part.setType(m.getText());}
+   |
+   n:UNSEEN {part.setType(n.getText());})
+   ;
+   
+search_part_str_arg returns [StringArgSearchPart part]
+  {
+    part = new StringArgSearchPart();
+    Token type;
+  }:
+  (a:BCC {part.setType(a.getText());}
+   |
+   b:BODY {part.setType(b.getText());}
+   |
+   c:CC {part.setType(c.getText());}
+   |
+   d:FROM {part.setType(d.getText());}
+   |
+   e:KEYWORD {part.setType(e.getText());}
+   |
+   f:SUBJECT {part.setType(f.getText());}
+   |
+   g:TEXT {part.setType(g.getText());}
+   |
+   h:TO {part.setType(h.getText());}
+   |
+   i:UNKEYWORD {part.setType(i.getText());})
+   
+   SPACE type=astring {part.setArgument(type.getText());}
+   ;
+   
+search_part_num_arg returns [NumberArgSearchPart part]
+  {
+    part = new NumberArgSearchPart();
+    Token num;
+  }:
+  (a:LARGER {part.setType(a.getText());}
+   |
+   b:SMALLER {part.setType(b.getText());})
+   
+   SPACE num=astring {part.setArgument(Integer.parseInt(num.getText()));}
+   ;   
+   
+search_part_date_arg returns [DateArgSearchPart part]
+  {
+    part = new DateArgSearchPart();
+    Token date;
+  }:
+  (a:BEFORE {part.setType(a.getText());}
+   |
+   b:ON {part.setType(b.getText());}
+   |
+   c:SENTBEFORE {part.setType(c.getText());}
+   |
+   d:SENTON {part.setType(d.getText());}
+   |
+   e:SINCE {part.setType(e.getText());})
+   
+   SPACE date=astring {part.setArgument(date.getText());}
+   ; 
 
 fetch [boolean isUID]
 	{

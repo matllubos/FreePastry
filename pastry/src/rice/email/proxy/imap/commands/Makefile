@@ -19,6 +19,7 @@ SOURCE  = \
   	LogoutCommand.java	 \
   	LsubCommand.java	 \
   	NoopCommand.java	 \
+    SearchCommand.java   \
   	SelectCommand.java	 \
   	StatusCommand.java	 \
   	StoreCommand.java	 \
