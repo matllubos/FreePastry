@@ -128,10 +128,10 @@ public class ChannelUnitTest implements Observer{
     /**
      * Tests to see if leaveStripe becomes 15 when leave called
      * Succeeds: if the number of  subscribed stripes equals 16 -1
-     * 15 should be removed and generated from the routing table 
      */
-     getChannel().leaveStripe();
-    if(getChannel().getSubscribedStripes().size() == 15){
+    getChannel().leaveStripe();
+    if(getChannel().getSubscribedStripes().size() == 
+      (getChannel().getNumStripes() - 1)){
       System.out.println("Leave Additional Stripe(one)[ PASSED ]" );
     }
     else{
