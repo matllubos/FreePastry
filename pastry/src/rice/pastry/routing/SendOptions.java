@@ -136,9 +136,18 @@ public class SendOptions implements Serializable
 	return allowMultipleHops;
     }
 
+  public void setMultipleHopsAllowed(boolean b) {
+    allowMultipleHops = b;      
+  }
+
+
     public boolean rerouteIfSuspected() {
       return rerouteIfSuspected;
     }
+
+  public void setRerouteIfSuspected(boolean b) {
+    rerouteIfSuspected = b;
+  }
 
     private void readObject(ObjectInputStream in)
 	throws IOException, ClassNotFoundException 
@@ -158,9 +167,6 @@ public class SendOptions implements Serializable
 	out.writeBoolean(allowMultipleHops);
     }
 
-		public void setRerouteIfSuspected(boolean b) {
-      rerouteIfSuspected = b;
-		}
 }
 
 
