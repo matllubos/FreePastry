@@ -100,6 +100,13 @@ public class Post extends PastryAppl {
         if(client != null){
           client.notificationReceived(message);
     	}
+    }
+    else if( message instanceof PresenceMessage){
+    }
+    else if( message instanceof DeliveryRequestMessage){
+    }
+    else if( message instanceof RecieptMessage ){
+    }
 		 
   }
 
