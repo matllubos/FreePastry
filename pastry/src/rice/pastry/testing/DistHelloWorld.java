@@ -165,6 +165,18 @@ public class DistHelloWorld {
 	if (Log.ifp(5)) System.out.println("created " + pn);
 	return pn;
     }
+    
+    /**
+     * Invoke a HelloWorldApp method called sendRndMsg. First choose a
+     * random application from helloClients.
+     */
+    private void sendRandomMessage() {
+  int n = helloClients.size();
+  int client = rng.nextInt(n);
+  HelloWorldApp app = (HelloWorldApp) helloClients.get(client);
+  app.sendRndMsg(rng);
+    }
+
 
 
     /**
@@ -195,9 +207,23 @@ public class DistHelloWorld {
 	    }
 	}
 	
-	for (int i = 1; i < numnodes; i++)
-	    driver.makePastryNode(false);
+	for (int i = 1; i < numnodes; i++) {
+	  pn = driver.makePastryNode(false);
+      synchronized(pn) {
+        while (!pn.isReady()) {
+      try {
+          pn.wait();
+      } catch(InterruptedException e) {
+          System.out.println(e);
+      }
+        }
+    }   
+  }
 
+  for (int i = 0; i < nummsgs; i++) {
+    driver.sendRandomMessage();
+  }
+  
 	if (Log.ifp(5)) System.out.println(numnodes + " nodes constructed");
     }
 }

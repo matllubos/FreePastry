@@ -135,7 +135,7 @@ public class HelloWorldApp extends PastryAppl {
     public void notifyReady() {
 	if (true /*Log.ifp(6)*/)
 	    System.out.println("Node " + getNodeId() + " ready, waking up any clients");
-	sendRndMsg(new Random());
+	//sendRndMsg(new Random());
 
     }
 }
