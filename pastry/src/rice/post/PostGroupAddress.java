@@ -5,7 +5,9 @@ import rice.past.*;
 
 /**
  * This class represents the abstract notion of the address
- * of an group of users in the Post system.  
+ * of an group of users in the Post system.
+ * 
+ * @version $Id$
  */
 public abstract class PostGroupAddress extends PostEntityAddress {
 
@@ -16,10 +18,10 @@ public abstract class PostGroupAddress extends PostEntityAddress {
   }
 
   /**
-   * Returns all of the contained addresses, using the PAST client
+   * Returns all of the contained addresses, using the PAST service
    * if necessary.
    *
-   * @param past The PASTClient to use, if necessary
+   * @param past The PAST service to use, if necessary
    * @return All of the addresses in this group.
    */
   public abstract PostEntityAddress[] getAddresses(PASTService past);

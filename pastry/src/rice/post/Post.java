@@ -16,52 +16,87 @@ import rice.scribe.messaging.*;
 import rice.post.log.*;
 import rice.post.messaging.*;
 import rice.post.storage.*;
+import rice.post.security.*;
 
 /**
  * This class is the service layer which allows 
  * Post applications to use Post functionality.
+ * 
+ * @version $Id$
  */
 public class Post extends PastryAppl implements IScribeApp  {
   
-  // the local PAST service
+  /**
+   * The local PAST service to use for persistent storage.
+   */
   private PASTService pastService;
   
-  // the local Scribe service
+  /**
+   * The local Scribe service to use for notification.
+   */
   private IScribe scribeService;
   
-  // the address of the local user
+  /**
+   * The address of the local user.
+   */
   private PostUserAddress address;
   
-  // the keys of the local user
-  private KeyPair keyPair;
-
+  
   // --- PASTRY SUPPORT ---
 
-  // the credentials of POST
+  /**
+   * The credentials of POST.
+   */
   private Credentials credentials = new PermissiveCredentials();
+  
   
   // --- CLIENT SUPPORT ---
   
-  // the list of clients
+  /**
+   * The list of clients currently using POST.
+   */
   private Vector clients;
   
-  // the map of PostClientAddress -> PostClient
+  /**
+   * Maps PostClientAddress to PostClient.
+   */
   private Hashtable clientAddresses;
 
+  
   // --- BUFFERING SUPPORT ---
   
-  // The data structure to hold the packets
+  /**
+   * The data structure to hold the buffered packets.
+   */
   private Hashtable bufferedData;
 
+  
   // --- LOGGING SUPPORT ---
 
-  // This user's log
+  /**
+   * The top level POST log, with pointers to the logs for each application.
+   */
   private PostLog log;
 
+  
   // --- STORAGE SUPPORT ---
 
-  // The storage service
+  /**
+   * The storage service for storing data in POST.
+   */
   private StorageService storage;
+  
+  
+  // --- SECURITY SUPPORT ---
+  
+  /**
+   * The security service for managing all security related tasks.
+   * This field should never be made accessible to anything outside o
+   * Post, since it provides access to methods which can encrypt and
+   * decrypt using the user's key pair!
+   */
+  private SecurityService security;
+  
 
   /**
    * Builds a PostService to run on the given pastry node,
@@ -80,12 +115,12 @@ public class Post extends PastryAppl implements IScribeApp  {
               KeyPair keyPair) {
     super(node);
     
-    pastService = past;
-    scribeService = scribe;
+    this.pastService = past;
+    this.scribeService = scribe;
     this.address = address;
-    this.keyPair = keyPair;
 
-    storage = new StorageService(past, credentials, keyPair);
+    security = new SecurityService(keyPair);
+    storage = new StorageService(past, credentials, security);
     
     clients = new Vector();
     clientAddresses = new Hashtable();
@@ -93,17 +128,13 @@ public class Post extends PastryAppl implements IScribeApp  {
   }
 
   /**
-   * Returns the PastryAddress of this application
-   *
-   * @return The PostAddress, unique to Post
+   * @return The PastryAddress of the POST application.
    */
   public Address getAddress() {
     return PostAddress.instance();
   }
   
   /**
-   * Returns the credentials of POST
-   *
    * @return The credentials of POST
    */
    public Credentials getCredentials() {
@@ -123,14 +154,14 @@ public class Post extends PastryAppl implements IScribeApp  {
     else if( message instanceof ReceiptMessage ) {
          handleRecieptMessage(message);
     }
-		 
+   
   }
   private void handleNotificationMessage(Message message){
         NotificationMessage nmessage = (NotificationMessage) message;
         PostClient client = (PostClient) clientAddresses.get(nmessage.getClientId());
         if(client != null){
           client.notificationReceived(nmessage);
-    	}
+     }
   }
   
   private void handleRecieptMessage(Message message){
@@ -151,21 +182,26 @@ public class Post extends PastryAppl implements IScribeApp  {
 
 
   }
+
   /**
-   * This method returns this user's PostLog, which is the root of all of
-   * the user's application logs.
-   *
-   * @return This user's PostLog
+   * @return This user's PostLog, which is the root of all the user's
+   * application logs.
    */
   public PostLog getLog() {
     return null;
   }
 
   /**
-   * This method returns the local storage service, which writes data securely
+   * Retrieve's this user's PostLog from PAST, or creates and stores a new one
+   * if one does not already exist.
+   */
+  private void retrievePostLog() {
+    
+  }
+  
+  /**
+   * @return The local storage service for POST, which writes data securely
    * to PAST.
-   *
-   * @return This POST's StorageService.
    */
   public StorageService getStorageService() {
     return storage;
@@ -182,6 +218,7 @@ public class Post extends PastryAppl implements IScribeApp  {
       clientAddresses.put(client.getAddress(), client);
     }
   }
+  
   /**
    * This method announce's our presence via our scribe tree
    * 
@@ -231,16 +268,16 @@ public class Post extends PastryAppl implements IScribeApp  {
   public void receiveMessage(ScribeMessage msg) {
 
      synchronized(bufferedData){
-	
+ 
           Vector userQueue = (Vector) bufferedData.get(msg.getDestination());
           if(userQueue != null){
-		while(!userQueue.isEmpty()){
-	            NotificationMessage message = (NotificationMessage) userQueue.elementAt(0);
- 		    userQueue.removeElementAt(0);		
+  while(!userQueue.isEmpty()){
+             NotificationMessage message = (NotificationMessage) userQueue.elementAt(0);
+       userQueue.removeElementAt(0);  
                     routeMsg(message.getAddress().getAddress(), message, getCredentials(),
                              new SendOptions());
- 		    userQueue.removeElementAt(0);		
-		}
+       userQueue.removeElementAt(0);  
+  }
           }
      }
      /* Check and see if I have any messages for this person */

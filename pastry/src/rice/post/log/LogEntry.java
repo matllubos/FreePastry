@@ -49,7 +49,7 @@ public abstract class LogEntry implements PostData {
    * @throws IllegalArgument Always
    */
   public SignedReference buildSignedReference(NodeId location) {
-    throw new IllegalArgumentException("Log entries are content-hash.");
+    throw new IllegalArgumentException("Log entries are only stored as content-hash.");
   }
 
   /**

@@ -65,6 +65,7 @@ public class SecurityService {
   public SecurityService(KeyPair keyPair) throws SecurityException {
     this.keyPair = keyPair;
 
+    // Add a provider for RSA encryption
     Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
     
     try {
@@ -108,7 +109,8 @@ public class SecurityService {
   }
 
   /**
-   * Utility method for determining the hash of a byte[]
+   * Utility method for determining the hash of a byte[] using a secure
+   * hashing algorithm.
    *
    * @param input The input
    * @return The hash value
@@ -127,7 +129,7 @@ public class SecurityService {
   }
 
   /**
-   * Utility method for encrypting a block of data with DES
+   * Utility method for encrypting a block of data with DES.
    *
    * @param data The data
    * @param key The key
@@ -324,10 +326,10 @@ public class SecurityService {
 
   
   /**
-   * Tests the storage service.
+   * Tests the security service.
    */
   public static void main(String[] argv) throws NoSuchAlgorithmException, IOException, ClassNotFoundException {
-    System.out.println("StorageService Test Suite");
+    System.out.println("SecurityService Test Suite");
     System.out.println("-------------------------------------------------------------");
     System.out.println("  Initializing Tests");
     System.out.print("    Generating key pair\t\t\t\t\t");

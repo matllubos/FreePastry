@@ -1,7 +1,9 @@
 package rice.post;
 
 /**
- * This class represents an exception in the POST system.
+ * Any exception specific to POST.
+ * 
+ * @version $Id$
  */
 public class PostException extends Exception {
   

@@ -16,6 +16,9 @@ import rice.post.storage.*;
  */
 public class LogEntryReference extends ContentHashReference {
 
+  /**
+   * Creates a new LogEntryReference.
+   */
   public LogEntryReference(NodeId location, Key key) {
     super(location, key);
   }

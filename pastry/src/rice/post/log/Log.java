@@ -17,28 +17,39 @@ import rice.post.storage.*;
  */
 public class Log implements PostData {
 
-  // our location
+  /**
+   * The location of this log in PAST.
+   */
   private NodeId location;
 
-  // our name
-  private String name;
+  /**
+   * Some unique identifier to name this log.
+   */
+  private Object name;
 
-  // our map of child name -> reference
+  /**
+   * A map of the names of the child logs to their references.
+   */
   private HashMap children;
 
-  // the local POST we are currently on (is transient)
+  /**
+   * The current local POST service.  Transient: changes depending
+   * on where the log is being used.
+   */
   private transient Post post;
 
-  // the top entry in the log
+  /**
+   * The most recent entry in this log.
+   */
   private LogEntryReference topEntry;
   
   /**
-   * Constructs a Log
+   * Constructs a Log for use in POST
    *
-   * @param name The name of this log
-   * @param location The location of this log in the pastry ring
+   * @param name Some unique identifier for this log
+   * @param location The location of this log in PAST
    */
-  public Log(String name, NodeId location) {
+  public Log(Object name, NodeId location) {
     this.name = name;
     this.location = location;
 
@@ -46,45 +57,40 @@ public class Log implements PostData {
   }
   
   /**
-   * This method returns the location in PAST of this Log.
-   *
-   * @return The location of this Log.
+   * @return The location of this Log in PAST.
    */
   public NodeId getLocation() {
     return location;
   }
 
   /**
-    * This method returns the name of this Log.
-   *
    * @return The name of this Log.
    */
-  public String getName() {
+  public Object getName() {
     return name;
   }
 
   /**
-   * Sets the local Post object, if not already set
+   * Sets the current local Post service.
    *
-   * @param post The local post to user
+   * @param post The current local Post service
    */
   public void setPost(Post post) {
     this.post = post;
   }
 
   /**
-   * Syncs this log object into the network.
+   * Helper method to sync this log object on the network.
    */
   private void sync() {
     post.getStorageService().storeSigned(this, location);
   }
   
   /**
-   * This method adds a log to this log (essentially adding a child
-   * log, forming a tree).  
+   * This method adds a child log to this log, essentially forming a tree
+   * of logs.
    *
-   * @param name An identifier for this child log, such as a string, etc...
-   * @param log The log to add.
+   * @param log The log to add as a child.
    */
   public LogReference addChildLog(Log log) {
     LogReference lr = (LogReference) post.getStorageService().storeSigned(log, log.getLocation());
@@ -96,7 +102,7 @@ public class Log implements PostData {
   }
 
   /**
-   * This method removes a log from this log.
+   * This method removes a child log from this log.
    *
    * @param log The log to remove
    */
@@ -109,7 +115,7 @@ public class Log implements PostData {
    * This method returns an array of the names of all of the current child
    * logs of this log.
    *
-   * @return An array of String, the names of the children of this Log
+   * @return An array of Objects: the names of the children of this Log
    */
   public Object[] getChildLogNames() {
     return children.keySet().toArray();
@@ -117,20 +123,21 @@ public class Log implements PostData {
 
   /**
    * This method returns a reference to a specific child log of
-   * this log, given the name.
+   * this log, given the child log's name.
    *
    * @param name The name of the log to return.
-   * @return A reference to the requested log.
+   * @return A reference to the requested log, or null if the name
+   * is unrecognized.
    */
   public LogReference getChildLog(Object name) {
     return (LogReference) children.get(name);
   }
 
   /**
-   * This method appends an entry into the user's log, and updates the pointer to
-   * the top of the log to reflect the new object. This method returns a LogEntryReference
-   * which is a pointer to the LogEntry in PAST. Note that this method reinserts this
-   * Log into PAST in order to reflect the addition.
+   * This method appends an entry into the user's log, and updates the pointer 
+   * to the top of the log to reflect the new object. This method returns a 
+   * LogEntryReference which is a pointer to the LogEntry in PAST. Note that 
+   * this method reinserts this Log into PAST in order to reflect the addition.
    *
    * @param entry The log entry to append to the log.
    */
@@ -144,8 +151,8 @@ public class Log implements PostData {
 
   /**
    * This method retrieves a log entry given a reference to the log entry.
-   * This method also performs the appropriate verification checks and decryption
-   * necessary.
+   * This method also performs the appropriate verification checks and 
+   * decryption necessary.
    *
    * @param reference The reference to the log entry
    * @return The log entry referenced
@@ -155,8 +162,8 @@ public class Log implements PostData {
   }
 
   /**
-   * This method returns a reference to the top of this log, which can then be used
-   * to walk down the log.
+   * This method returns a reference to the most recent entry in the log,
+   * which can then be used to walk down the log.
    *
    * @return A reference to the top entry in the log.
    */
@@ -166,6 +173,7 @@ public class Log implements PostData {
 
   /**
    * Builds a LogReference object to this log, given a location.
+   * Used by the StorageService when storing the log.
    *
    * @param location The location of this object.
    * @return A LogReference to this object
@@ -183,7 +191,7 @@ public class Log implements PostData {
    * @throws IllegalArgumentException Always
    */
   public ContentHashReference buildContentHashReference(NodeId location, Key key) {
-    throw new IllegalArgumentException("Logs are only signed blocks.");
+    throw new IllegalArgumentException("Logs are only stored as signed blocks.");
   }
 }
 

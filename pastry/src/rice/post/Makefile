@@ -6,6 +6,7 @@ SOURCE  = \
 	PostClientAddress.java \
 	PostException.java \
 	PostEntityAddress.java \
+	PostLog.java \
 	PostGroupAddress.java \
 	PostUserAddress.java
 

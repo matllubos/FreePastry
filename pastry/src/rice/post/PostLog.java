@@ -1,9 +1,9 @@
-package rice.post.log;
+package rice.post;
 
 import java.security.*;
 import java.security.cert.*;
 
-import rice.post.*;
+import rice.post.log.*;
 
 /**
  * This class represents the Log which sits at the address of the user's
@@ -33,13 +33,13 @@ public class PostLog extends Log {
   private java.security.cert.Certificate certificate;
   
   /**
-   * Constructor for PostLog.
+   * Constructor for PostLog.  Only Post should need to do this.
    *
-   * @param user The user whom this LogHead is for
+   * @param user The user whom this PostLog is for
    * @param key The user's public key.
    * @param cert This user's certification
    */
-  protected PostLog(PostEntityAddress user, PublicKey key, java.security.cert.Certificate cert) {
+  PostLog(PostEntityAddress user, PublicKey key, java.security.cert.Certificate cert) {
     super("User " + user.toString() + "'s log", user.getAddress());
 
     this.user = user;
@@ -48,29 +48,23 @@ public class PostLog extends Log {
   }
     
   /**
-   * Returns the user to whom this log head belongs
-   *
-   * @return The user who owns this LogHead.
+   * @return The user who owns this PostLog.
    */
   public PostEntityAddress getEntityAddress() {
     return user;
   }
     
   /**
-   * Returns the public key of the user who owns this log head
-   *
-   * @return The public key of the user who owns this LogHead.
+   * @return The public key of the user who owns this PostLog.
    */
   public PublicKey getPublicKey() {
     return key;
   }
 
   /**
-   * Returns the signature for this user
-   *
-   * @return The public key of the user who owns this LogHead.
+   * @return The certificate for the user who owns this PostLog.
    */
-  public java.security.cert.Certificate getCertificatie() {
+  public java.security.cert.Certificate getCertificate() {
     return certificate;
   }
 }

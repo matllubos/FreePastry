@@ -3,8 +3,10 @@ package rice.post;
 import rice.post.messaging.*;
 
 /**
- * This class is a superclass mechanism for clients running on top
+ * This class is a superclass for clients running on top
  * of the Post object.
+ * 
+ * @version $Id$
  */
 public abstract class PostClient {
 

@@ -8,6 +8,8 @@ import rice.pastry.*;
  * POST service. This class is designed using the factory
  * pattery, with the getAddress() method as the entrance
  * into the factory.
+ * 
+ * @version $Id$
  */
 public final class PostClientAddress {
 
@@ -26,6 +28,7 @@ public final class PostClientAddress {
    * @return A unique address for this class of client
    */
   public static PostClientAddress getAddress(PostClient client) {
+    // NEEDS TO BE IMPLEMENTED
     return null;
   }
 

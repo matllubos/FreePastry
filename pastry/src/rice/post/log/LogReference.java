@@ -15,6 +15,9 @@ import rice.post.storage.*;
  */
 public class LogReference extends SignedReference {
 
+  /**
+   * Creates a new reference to a particular Log object.
+   */
   public LogReference(NodeId location) {
     super(location);
   }
