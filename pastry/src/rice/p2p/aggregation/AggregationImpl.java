@@ -83,6 +83,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private static int maxAggregatesPerRun = 3;
   
   private static final boolean addMissingAfterRefresh = true;
+  private static final int maxReaggregationPerRefresh = 100;
   private static final int nominalReferenceCount = 2;
   private static final int maxPointersPerAggregate = 100;
   private static final long pointerArrayLifetime = 2 * WEEKS;
@@ -1368,8 +1369,11 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
           }
         }, ids.length);
 
+        int totalMissing = 0;
         for (int i=0; i<ids.length; i++)
-          refreshInternal(ids[i], expirations[i], mc.getSubContinuation(i));
+          totalMissing += refreshInternal(ids[i], expirations[i], (totalMissing < maxReaggregationPerRefresh), mc.getSubContinuation(i));
+        if (totalMissing > 0)
+          warn("refresh: "+totalMissing+"/"+ids.length+" objects not in aggregate list, fetched "+Math.min(totalMissing, maxReaggregationPerRefresh));
       }
     });
   }
@@ -1419,7 +1423,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     }
   }
 
-  private void refreshInternal(final Id id, final long expiration, final Continuation command) {
+  private int refreshInternal(final Id id, final long expiration, final boolean mayReaggregate, final Continuation command) {
+    int objectsMissing = 0;
+
     AggregateDescriptor adc = (AggregateDescriptor) aggregateList.getADC(id);
     log(2, "Refresh("+id.toStringFull()+", expiration="+expiration+")");
     
@@ -1428,7 +1434,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       if (objDescIndex < 0) {
         warn("NL: Aggregate found, but object not found in aggregate?!? -- aborted");
         command.receiveException(new AggregationException("Inconsistency detected in aggregate list -- try restarting the application"));
-        return;
+        return objectsMissing;
       }
 
       if (adc.objects[objDescIndex].refreshedLifetime < expiration)
@@ -1459,7 +1465,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
               }
             });
             command.receiveException(new AggregationException("Object in waiting list, but broken: "+vkey.toStringFull()));
-            return;
+            return objectsMissing;
           }
 
           if (thisObject.refreshedLifetime < expiration) {
@@ -1484,62 +1490,68 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       if (foundWaiting) {
         log(2, "Found waiting -- returning");
         command.receiveResult(new Boolean(true));
-        return;
+        return objectsMissing;
       }
     
       /* Maybe the object is missing from the aggregate list? We attempt to fetch it 
          from PAST, and if it is found there, we add it to the waiting list */
 
-      if (addMissingAfterRefresh) {         
-        objectStore.lookup(id, false, new Continuation() {
-          public void receiveResult(Object o) {
-            if (o instanceof PastContent) {
-              final PastContent obj = (PastContent) o;
-              warn("Refresh: Found in PAST, but not in aggregate list: "+id);
+      if (addMissingAfterRefresh) {
+        objectsMissing ++;
+        
+        if (mayReaggregate) {
+          objectStore.lookup(id, false, new Continuation() {
+            public void receiveResult(Object o) {
+              if (o instanceof PastContent) {
+                final PastContent obj = (PastContent) o;
+                warn("Refresh: Found in PAST, but not in aggregate list: "+id);
             
-              long theVersion;
-              if (o instanceof GCPastContent) {
-                theVersion = ((GCPastContent)obj).getVersion();
-              } else {
-                theVersion = 0;
-              } 
-
-              final VersionKey vkey = new VersionKey(obj.getId(), theVersion);
-              final long theVersionF = theVersion;
-              final int theSize = getSize(obj);
-
-              if (policy.shouldBeAggregated(obj, theSize)) {
-                if (!waitingList.exists(vkey)) {
-                  log(3, "ADDING MISSING OBJECT AFTER REFRESH: "+obj.getId());
-
-                  waitingList.store(vkey, new ObjectDescriptor(obj.getId(), theVersionF, expiration, expiration, theSize), obj, new Continuation() {
-                    public void receiveResult(Object o) {
-                    }
-                    public void receiveException(Exception e) { 
-                      warn("Exception while refreshing aggregate: "+obj.getId()+" (e="+e+")");
-                      e.printStackTrace();
-                    }
-                  });
+                long theVersion;
+                if (o instanceof GCPastContent) {
+                  theVersion = ((GCPastContent)obj).getVersion();
                 } else {
-                  log(3, "Missing object already in waiting list: "+obj.getId());
+                  theVersion = 0;
+                } 
+
+                final VersionKey vkey = new VersionKey(obj.getId(), theVersion);
+                final long theVersionF = theVersion;
+                final int theSize = getSize(obj);
+
+                if (policy.shouldBeAggregated(obj, theSize)) {
+                  if (!waitingList.exists(vkey)) {
+                    log(3, "ADDING MISSING OBJECT AFTER REFRESH: "+obj.getId());
+
+                    waitingList.store(vkey, new ObjectDescriptor(obj.getId(), theVersionF, expiration, expiration, theSize), obj, new Continuation() {
+                      public void receiveResult(Object o) {
+                      }
+                      public void receiveException(Exception e) { 
+                        warn("Exception while refreshing aggregate: "+obj.getId()+" (e="+e+")");
+                        e.printStackTrace();
+                      }
+                    });
+                  } else {
+                    log(3, "Missing object already in waiting list: "+obj.getId());
+                  }
                 }
-              }
             
-              command.receiveResult(new Boolean(true));
-            } else {
-              warn("Cannot find refreshed object "+id+", lookup returns "+o);
-              command.receiveException(new AggregationException("Object not found: "+id.toStringFull()));
+                command.receiveResult(new Boolean(true));
+              } else {
+                warn("Cannot find refreshed object "+id+", lookup returns "+o);
+                command.receiveException(new AggregationException("Object not found: "+id.toStringFull()));
+              }
             }
-          }
-          public void receiveException(Exception e) {
-            command.receiveException(e);
-          }
-        });
+            public void receiveException(Exception e) {
+              command.receiveException(e);
+            }
+          });
+        }
       } else {
         warn("Refreshed object not found in any aggregate: "+id.toStringFull());
         command.receiveResult(new Boolean(true));
       }
     }
+    
+    return objectsMissing;
   }
 
   private int getSize(PastContent obj) {
