@@ -58,8 +58,6 @@ import rice.persistence.*;
  * @author Alan Mislove
  */
 public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
-  
-  protected HashMap cache;
 
   protected PastImpl delivered;
   
@@ -79,7 +77,6 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
     super(node, manager, replicas, instance + "-delivery", new PastPolicy.DefaultPastPolicy(), collectionInterval);
     
     this.delivered = delivered;
-    this.cache = new HashMap();
     this.factory = node.getIdFactory();
     this.rng = new Random();
   }
@@ -109,34 +106,29 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
    * any outstanding messages.  If so, then we remove the outstanding message
    * from our pending list.
    */
-  public void synchronize(final Continuation command) { 
-    log.finer(endpoint.getId() + ": Synchronizing...");
+  public void synchronize(Continuation command) { 
+    log.finer(endpoint.getId() + ": Synchronizing range " + endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor()+1, null, true));
+    
+    GCIdRange range = (GCIdRange) endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor()+1, null, true);
+    final Iterator i = storage.getStorage().scan(range.getRange()).getIterator();
 
-    Continuation c = new ListenerContinuation("Removal of delivered message") {
-      Iterator i = null;
-      
+    Continuation c = new StandardContinuation(command) {      
       public void receiveResult(Object o) {
-        if (! (new Boolean(true)).equals(o))
+        if (! Boolean.TRUE.equals(o))
           log.warning(endpoint.getId() + ": Removal of delivered message caused " + o);
-        
-        log.finer(endpoint.getId() + ": Synchronizing range " + endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor(), null, true));
-        GCIdRange range = (GCIdRange) endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor(), null, true);
-        
-        i = storage.getStorage().scan(range.getRange()).getIterator();
         
         while (i.hasNext()) {
           Id id = (Id) i.next();
-          //log.finer(endpoint.getId() + ": Synchronizing " + id);
 
           if (delivered.exists(id)) {
-            //log.finer(endpoint.getId() + ": Deleting id " + id + " because receipt exists");
+            log.finer(endpoint.getId() + ": Deleting id " + id + " because receipt exists");
             storage.unstore(id, this);
             return;
           }
         } 
         
         log.finer(endpoint.getId() + ": Done Synchronizing...");
-        command.receiveResult(new Boolean(true));
+        parent.receiveResult(new Boolean(true));
       }
     };
     
@@ -149,9 +141,7 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
    *
    * @param command The command to return the results to
    */
-  public void getGroups(final Continuation command) {
-    syncCache();
-    
+  public void getGroups(final Continuation command) {    
     log.finer("Getting list of groups...");
     GCIdRange range = (GCIdRange) endpoint.range(endpoint.getLocalNodeHandle(), 0, null, true);
 
@@ -159,7 +149,7 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
     
     Continuation c = new StandardContinuation(command) {
       int i=0;
-      Vector result = new Vector();
+      HashSet result = new HashSet();
       
       public void receiveResult(Object o) {
         while (i < array.length) {
@@ -167,17 +157,16 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
           GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
 
           if ((metadata != null) && (metadata instanceof DeliveryMetadata)) {
-            if (! result.contains(((DeliveryMetadata) metadata).getDestination()))
-              result.add(((DeliveryMetadata) metadata).getDestination());
+            result.add(((DeliveryMetadata) metadata).getDestination());
             i++;
           } else {
             setMetadata(id, this);
-            break;
+            return;
           }
         } 
         
-        if (i >= array.length) 
-          parent.receiveResult(result.toArray(new PostEntityAddress[0]));
+        log.finer("Return list of " + result.size() + " groups");
+        parent.receiveResult(result.toArray(new PostEntityAddress[0]));
       }
     };
     
@@ -213,41 +202,11 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
         }
       }
       
+      System.out.println("Could not find any messages for user " + address + " - not tragic, but strange...");
+      
       command.receiveResult(null);
     }
   }
-  
-  /**
-   * Removes any stale entries from the cache.  This is done by doing 
-   * scan(disk) - cache's set.
-   */
-  protected void syncCache() {
-    Iterator i = difference(cache.keySet(), storage.getStorage().scan()).getIterator();
-    
-    while (i.hasNext()) 
-      cache.remove(i.next());
-  }
-  
-  /**
-   * Computes the difference between the set and the idSet
-   *
-   * @param set The set to subtract from
-   * @param idset The set to subtract
-   * @return The difference
-   */
-  protected IdSet difference(Set set, IdSet idSet) {
-    IdSet result = factory.buildIdSet();
-    Iterator i = set.iterator();
-    
-    while (i.hasNext()) {
-      Id next = (Id) i.next();
-      if (! idSet.isMemberId(next))
-        result.addId(next);
-    }
-    
-    return result;
-  }
-    
   
   /**
    * Either returns the userid associated with the given id by looking in the cache,

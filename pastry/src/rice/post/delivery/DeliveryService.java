@@ -59,11 +59,6 @@ public class DeliveryService implements ScribeClient {
   protected HashSet cache;
   
   /**
-   * Whether or not a synchronize is already active
-   */
-  protected boolean synchronizeActive;
-  
-  /**
    * Contructs a StorageService given a PAST to run on top of.
    *
    * @param past The PAST service to use.
@@ -78,7 +73,6 @@ public class DeliveryService implements ScribeClient {
     this.factory = factory;
     this.timeoutInterval = timeoutInterval;
     this.cache = new HashSet();
-    this.synchronizeActive = false;
   }
   
   /**
@@ -113,13 +107,12 @@ public class DeliveryService implements ScribeClient {
    * @param message The presence message that was received
    * @param command The command to call with the message to send, if there is one
    */
-  public void presence(PresenceMessage message, final Continuation command) {
+  public void presence(PresenceMessage message, Continuation command) {
     post.getLogger().finer(post.getEndpoint().getId() + ": Responding to presence message " + message);
     
-    pending.getMessage(message.getSender(), new ListenerContinuation("Processing of presence message " + message) {
+    pending.getMessage(message.getSender(), new StandardContinuation(command) {
       public void receiveResult(Object o) {
-        if (o != null) 
-          command.receiveResult(((Delivery) o).getSignedMessage());
+        parent.receiveResult((o == null ? null : ((Delivery) o).getSignedMessage()));
       }
     });
   }
@@ -214,66 +207,32 @@ public class DeliveryService implements ScribeClient {
    * the correct Scribe groups by looking at the messages we are responsible for.
    */
   public void synchronize() { 
-    boolean go = false;
-    
-    synchronized (this) {
-      if (! synchronizeActive) {
-        synchronizeActive = true;
-        go = true;
-      }
-    }
-
-    if (go) {
-      pending.synchronize(new ListenerContinuation("Synchronization of Delivery Service") {
-        public void receiveResult(Object o) {
-          pending.getGroups(new StandardContinuation(this) {
-            public void receiveResult(Object o) {
-              PostEntityAddress[] addresses = (PostEntityAddress[]) o;
+    pending.synchronize(new ListenerContinuation("Synchronization of Delivery Service") {
+      public void receiveResult(Object o) {
+        pending.getGroups(new StandardContinuation(this) {
+          public void receiveResult(Object o) {
+            PostEntityAddress[] addresses = (PostEntityAddress[]) o;
+            
+            for (int i=0; i<addresses.length; i++) 
+              scribe.subscribe(new Topic(addresses[i].getAddress()), DeliveryService.this, null);
+            
+            Topic[] topics = scribe.getTopics(DeliveryService.this);
+            
+            for (int i=0; i<topics.length; i++) {
+              boolean found = false;
               
-              for (int i=0; i<addresses.length; i++) {
-                post.getLogger().finer(post.getEndpoint().getId() + ": Making sure we're subscribed to " + addresses[i]);
-                
-                scribe.subscribe(new Topic(addresses[i].getAddress()), DeliveryService.this, null);
+              for (int j=0; j<addresses.length && !found; j++) {
+                if (addresses[j].getAddress().equals(topics[i].getId()))
+                  found = true;
               }
               
-              Topic[] topics = scribe.getTopics(DeliveryService.this);
-              
-              for (int i=0; i<topics.length; i++) {
-                boolean found = false;
-                
-                for (int j=0; j<addresses.length && !found; j++) {
-                  if (addresses[j].getAddress().equals(topics[i].getId()))
-                    found = true;
-                }
-                
-                if (! found) {
-                  post.getLogger().finer(post.getEndpoint().getId() + ": Unsubscribing from " + topics[i]);
-                  scribe.unsubscribe(topics[i], DeliveryService.this);
-                }
-              }
-              
-              synchronized (DeliveryService.this) {
-                synchronizeActive = false;
-              }
+              if (! found) 
+                scribe.unsubscribe(topics[i], DeliveryService.this);
             }
-
-            public void receiveException(Exception e) {
-              synchronized (DeliveryService.this) {
-                synchronizeActive = false;
-              }
-              
-              parent.receiveException(e);
-            }
-          });
-        }
-        
-        public void receiveException(Exception e) {
-          synchronized (DeliveryService.this) {
-            synchronizeActive = false;
           }
-        }
-      });
-    }
+        });
+      }
+    });
   }
   
   /**

@@ -637,7 +637,6 @@ public class Folder {
    */
   public void getBottomEntry(Continuation command) {
     _log.getTopEntry(new StandardContinuation(command) {
-      
       public void receiveResult(Object o) {
         EmailLogEntry entry = (EmailLogEntry) o;
         

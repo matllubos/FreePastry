@@ -355,8 +355,11 @@ public class Log implements PostData {
         public void receiveResult(Object o) {
           LogEntry thisEntry = (LogEntry) o;
           
-          if (((entry != null) && (thisEntry.contains(entry))) ||
-              (thisEntry.getPreviousEntryReference() == null)) {
+          if (thisEntry == null) {
+            System.out.println("Log entry was unexpectedly null - returning prematurely...");
+            parent.receiveResult(Boolean.TRUE);
+          } else if (((entry != null) && (thisEntry.contains(entry))) ||
+                     (thisEntry.getPreviousEntryReference() == null)) {
             parent.receiveResult(Boolean.TRUE);
           } else {
             set.add(thisEntry.getPreviousEntryReference());

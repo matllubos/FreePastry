@@ -460,7 +460,7 @@ public class StorageService {
         ContentHashData chd = (ContentHashData) result;
         
         if (chd == null) {
-          command.receiveResult(null);
+          command.receiveException(new PostException("Content hash data not found in PAST!"));
           return;
         }
         
