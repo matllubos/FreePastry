@@ -85,6 +85,8 @@ public class RMIScribeMaintenanceTest {
     public static int numUnsubscribed = 0;
     public static double fractionUnsubscribedAllowed = 0.5; 
     public static Object LOCK = new Object();
+    public static int IDLE_TIME = 50; // in seconds
+
 
     public RMIScribeMaintenanceTest(){
 	factory = DistPastryNodeFactory.getFactory(DistPastryNodeFactory.PROTOCOL_RMI, port);
@@ -259,6 +261,19 @@ public class RMIScribeMaintenanceTest {
 			    }
 			}
 		    }
+
+		    
+		    if(! topicLog.getUnsubscribed()){
+			long currentTime = System.currentTimeMillis();
+			long prevTime = topicLog.getLastRecvTime();
+			int diff = (int)((currentTime - prevTime)/ 1000.0);
+
+			if( diff > RMIScribeMaintenanceTest.IDLE_TIME)
+			    System.out.println("\nWARNING :: "+m_app.m_scribe.getNodeId()+" DID NOT  Receive a message on the topic "+topicId + " for "+diff+" secs \n");
+			
+		    }
+
+
 		    if(! topicLog.getUnsubscribed()){
 			NodeHandle parent =  m_app.m_scribe.getTopic(topicId).getParent();
 			
@@ -268,6 +283,10 @@ public class RMIScribeMaintenanceTest {
 			}
 			
 		    }
+
+
+
+
 		    
 		}
 		pause(publish_period*1000);

@@ -49,10 +49,11 @@ package rice.scribe.testing;
 
 public class RMITopicLog{
     private int lastSeqNumRecv = -1;
+    private long lastRecvTime = System.currentTimeMillis();
     private int seqNumToPublish = -1;
     private int count = 1;
     private boolean unsubscribed = false;
-
+    
     public RMITopicLog(){
 	}
     
@@ -89,6 +90,15 @@ public class RMITopicLog{
 
     public void setUnsubscribed(boolean value){
 	unsubscribed = value;
+	return;
+    }
+
+    public long getLastRecvTime(){
+	return lastRecvTime;
+    }
+
+    public void setLastRecvTime(long value){
+	lastRecvTime = value;
 	return;
     }
 }

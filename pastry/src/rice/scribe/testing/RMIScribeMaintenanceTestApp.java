@@ -159,6 +159,7 @@ public class RMIScribeMaintenanceTestApp implements IScribeApp
 
 	last_seqno_recv = topicLog.getLastSeqNumRecv();
 	topicLog.setLastSeqNumRecv(new_seqno);
+	topicLog.setLastRecvTime(System.currentTimeMillis());
 
 	if(last_seqno_recv == -1 || new_seqno == -1)
 	    return;
