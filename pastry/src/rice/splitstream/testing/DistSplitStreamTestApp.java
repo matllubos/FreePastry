@@ -88,8 +88,6 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
 
     public DistSplitStreamTest m_driver;
 
-    public DistStripeLog stripeLog = new DistStripeLog();
-
     private static class DistSplitStreamTestAppAddress implements Address {
 	private int myCode = 0x8abc796c;
 	
