@@ -169,7 +169,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
     if (range.isEmpty()) {
       return new IdSet();
     } else if (range.getCCW().equals(range.getCW())) {
-      return this;
+      return (IdSet) this.clone();
     } else {
       return subSet(range.getCCW(), range.getCW());
     }

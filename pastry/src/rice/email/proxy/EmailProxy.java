@@ -68,6 +68,7 @@ public class EmailProxy extends PostProxy {
     {"email_send_publish_request", "true"}, 
     {"email_fetch_log", "true"}, 
     {"email_fetch_log_retries", "3"}, 
+    {"email_gateway", "false"},
     {"email_imap_enable", "true"},
     {"email_imap_ssl", "false"},
     {"email_imap_port", "1143"}, 

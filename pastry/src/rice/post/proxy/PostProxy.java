@@ -896,9 +896,12 @@ public class PostProxy {
     mutablePast = new PastImpl(node, mutableStorage, 
                                parameters.getIntParameter("past_replication_factor"), 
                                parameters.getStringParameter("application_instance_name") + "-mutable", new PostPastPolicy());
-    deliveredPast = new PastImpl(node, deliveredStorage, 
+    deliveredPast = new GCPastImpl(node, deliveredStorage, 
                                  parameters.getIntParameter("past_replication_factor"), 
-                                 parameters.getStringParameter("application_instance_name") + "-delivered");
+                                 parameters.getStringParameter("application_instance_name") + "-delivered",
+                                 new PastPolicy.DefaultPastPolicy(),
+                                 parameters.getLongParameter("past_garbage_collection_interval"),
+                                 trashStorage);
     pendingPast = new DeliveryPastImpl(node, pendingStorage, 
                                        parameters.getIntParameter("past_replication_factor"), 
                                        parameters.getStringParameter("application_instance_name") + "-pending", deliveredPast,

@@ -508,7 +508,10 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @return Whether or not the id exists
    */
   public boolean exists(Id id) {
-    return storage.getStorage().exists(((GCId) id).getId());
+    if (id instanceof GCId) 
+      return storage.getStorage().exists(((GCId) id).getId());
+    else
+      return storage.getStorage().exists(id);
   }  
   
   protected class ReplicaMap {
