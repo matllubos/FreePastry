@@ -193,6 +193,7 @@ public class RouteMessage extends Message implements Serializable, rice.p2p.comm
 
     public boolean routeMessage(NodeId localId) {
 	if (nextHop == null) return false;
+      setSenderId(localId);
 
 	NodeHandle handle = nextHop;
 	nextHop = null;
