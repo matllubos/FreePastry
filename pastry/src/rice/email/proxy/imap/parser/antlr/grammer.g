@@ -330,8 +330,11 @@ search_part_other [boolean isUID] returns [SearchPart part]
   HEADER SPACE field=astring SPACE string=astring
    { part = new HeaderSearchPart(field.getText(), string.getText()); }
   |
-  UID SPACE range=range[isUID]
-   { part = new UIDSearchPart(range); })
+  UID SPACE range=range[true]
+   { part = new FilterSearchPart(range); }
+  |
+  range=range[false]
+   { part = new FilterSearchPart(range); })
   ;
   
 search_part_no_arg returns [NoArgSearchPart part]

@@ -1065,6 +1065,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		case UNFLAGGED:
 		case UNKEYWORD:
 		case UNSEEN:
+		case ATOM:
 		{
 			oPart=search_part(isUID);
 			if ( inputState.guessing==0 ) {
@@ -1168,6 +1169,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		case HEADER:
 		case NOT:
 		case OR:
+		case ATOM:
 		{
 			part=search_part_other(isUID);
 			break;
@@ -1623,9 +1625,17 @@ public ImapCommandParser(ParserSharedInputState state) {
 		{
 			match(UID);
 			match(SPACE);
-			range=range(isUID);
+			range=range(true);
 			if ( inputState.guessing==0 ) {
-				part = new UIDSearchPart(range);
+				part = new FilterSearchPart(range);
+			}
+			break;
+		}
+		case ATOM:
+		{
+			range=range(false);
+			if ( inputState.guessing==0 ) {
+				part = new FilterSearchPart(range);
 			}
 			break;
 		}

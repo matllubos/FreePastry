@@ -4,11 +4,11 @@ import rice.email.proxy.imap.ImapConnection;
 import rice.email.proxy.mail.StoredMessage;
 import rice.email.proxy.mailbox.*;
 
-public class UIDSearchPart extends SearchPart {
+public class FilterSearchPart extends SearchPart {
 
   MsgFilter filter;
 
-  public UIDSearchPart(MsgFilter filter) {
+  public FilterSearchPart(MsgFilter filter) {
     this.filter = (MsgFilter) filter;
   }
 

@@ -10,7 +10,7 @@ SOURCE  = \
   NumberArgSearchPart.java \
   OrSearchPart.java \
   StringArgSearchPart.java \
-  UIDSearchPart.java
+  FilterSearchPart.java
   
 RMI_SOURCE =
 
