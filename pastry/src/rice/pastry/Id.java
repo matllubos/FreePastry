@@ -284,8 +284,9 @@ public class Id implements Comparable, Serializable
 	 *
 	 * @param cnt the number of bits to shift, negative shifts left, positive shifts right
 	 * @param fill value of bit shifted in (0 if fill == 0, 1 otherwise)
+	 * @return this
 	 */
-	public void shift(int cnt, int fill) 
+	public Distance shift(int cnt, int fill) 
 	{
 	    int carry, bit;
 
@@ -311,6 +312,8 @@ public class Id implements Comparable, Serializable
 		    }
 		}
 	    }
+	    
+	    return this;
 	}
 
 	/**
@@ -352,6 +355,35 @@ public class Id implements Comparable, Serializable
 
 
     }
+
+
+    /**
+     * Returns an Id corresponding to this Id plus a given distance
+     *
+     * @param offset the distance to add
+     * @return the new Id
+     */
+
+    public Id add(Distance offset) {
+	Id newId = new Id();
+	long x, y, sum;
+	int carry = 0;
+
+	for (int i=0; i<nlen; i++) {
+	    x = Id[i] & 0x0ffffffffL;
+	    y = offset.difference[i] & 0x0ffffffffL;
+		
+	    sum = x + y + carry;
+		
+	    if (sum >= 0x100000000L) carry = 1;
+	    else carry = 0;
+
+	    newId.Id[i] = (int)sum;
+	}
+
+	return newId;
+    }
+
     
     /**
      * Returns the absolute numerical distance between a pair of Ids.
@@ -483,7 +515,9 @@ public class Id implements Comparable, Serializable
     }
 
     /**
-     * Checks to see if the Id nid is clockwise or counterclockwise on the ring.
+     * Checks to see if the Id nid is clockwise or counterclockwise from this, on the ring.
+     * An Id is clockwise if it is within the half circle clockwise from this on the ring.
+     * An Id is considered counter-clockwise from itself.
      *
      * @return true if clockwise, false otherwise.
      */
@@ -513,6 +547,26 @@ public class Id implements Comparable, Serializable
 	    }
 	}
     }
+
+    /**
+     * Checks if this Id is between two given ids ccw (inclusive) and cw (exclusive) on the circle
+     * 
+     * @param ccw the counterclockwise id 
+     * @param cw the clockwise id
+     * @return true if this is between ccw (inclusive) and cw (exclusive), false otherwise
+     */
+    
+    public boolean isBetween(Id ccw, Id cw) {
+	if (ccw.equals(cw)) return false;
+
+	if (ccw.clockwise(cw)) {
+	    return this.clockwise(cw) && !this.clockwise(ccw);
+	}
+	else {
+	    return !this.clockwise(ccw) || this.clockwise(cw);
+	}
+    }
+
 
     /**
      * Checks if the ith bit is flipped.
