@@ -223,7 +223,8 @@ public class MessageAnycast extends ScribeMessage implements Serializable
 	    if(result == false)
 		return false;
 	    else {
-		already_seen.add(scribe.getLocalHandle());
+		if(!already_seen.contains(scribe.getLocalHandle()))
+		   already_seen.add(scribe.getLocalHandle());
 		if(send_to.contains(scribe.getLocalHandle())){
 		    //System.out.println("Send to contains local node -- FINE");
 		    send_to.remove((Object)scribe.getLocalHandle());
@@ -233,9 +234,15 @@ public class MessageAnycast extends ScribeMessage implements Serializable
 		else {
 		    //Sending to parent if not root
 		    if ( !scribe.isRoot( topic.getTopicId() ) ){
-			if(scribe.getParent( topic.getTopicId()) == null)
+			if(scribe.getParent( topic.getTopicId()) != null){
+			    scribe.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
+			}
+			else {
 			    System.out.println("WARNING -- Parent is null for non-root node.. should handle this case -- At "+scribe.getNodeId()+" for topic "+topic.getTopicId());
-			scribe.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
+			    // We are not part of tree anymore, so should 
+			    // anycast furthur this message
+			    scribe.anycast(topic.getTopicId(), this, c);
+			}
 		    }
 		    //This node is the root, which means DFS failed
 		    else {						
@@ -249,7 +256,14 @@ public class MessageAnycast extends ScribeMessage implements Serializable
 	}
 	return false;
     }
-
+    
+    /**
+     * Method returns the number of nodes visited during
+     * the DFS.
+     */
+    public int alreadySeenSize(){
+	return already_seen.size();
+    }
     /**
      * Method to notify that anycast has failed.
      * Derived classes can do more application-specific handling
@@ -260,6 +274,6 @@ public class MessageAnycast extends ScribeMessage implements Serializable
     }
 
     public String toString() {
-	return new String( "ANYCAST MSG:" + m_source+ " topicId "+getTopicId() );
+	return new String( "ANYCAST MSG:" + m_source.getNodeId()+ " topicId "+getTopicId() );
     }
 }
