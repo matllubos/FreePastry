@@ -85,30 +85,8 @@ public class ControlFindParentMessage extends Message implements Serializable
      */
     public void handleMessage( Scribe scribe, Topic topic, Channel channel )
     {
-        if(topic == null) System.out.println("TOPIC IS NULL");
-        System.out.println("Forwarding at " + scribe.getNodeId());
+        //System.out.println("Forwarding at " + scribe.getNodeId());
         Credentials c = new PermissiveCredentials();
-/*        if ( topic == null )
-        {
-           if ( send_to.size() != 0 )
-           {
-              already_seen.add( 0, send_to.remove(0) );
-           }
-           else
-           {
-              already_seen.add( 0, scribe.getNodeHandle() );
-           }
-           if ( send_to.size() != 0 )
-           {
-              scribe.routeMsgDirect( (NodeHandle) send_to.get(0), this, c, null );
-           }
-           else
-           {
-              scribe.routeMsgDirect( originalSource, this, c, null );
-           }
-        }
-        else
-        { */
         if ( send_to.size() != 0 )
         {
             already_seen.add( 0, send_to.remove(0) );
@@ -123,7 +101,8 @@ public class ControlFindParentMessage extends Message implements Serializable
              ( !isInRootPath( scribe, originalSource ) ) &&
              ( originalSource != scribe.getLocalHandle()) )
         {
-           scribe.addChild( originalSource, stripe_id );
+           System.out.println("TAKING ON CHILD "  + originalSource.getNodeId());scribe.addChild( originalSource, stripe_id );
+	   channel.stripeSubscriberAdded();
            channel.routeMsgDirect( originalSource,
                                   new ControlFindParentResponseMessage( channel.getAddress(),
                                                                         scribe.getNodeHandle(),
@@ -141,9 +120,8 @@ public class ControlFindParentMessage extends Message implements Serializable
 
         }
         else
-        {
+        {   if(topic == null) System.out.println("TOPIC IS NULL");
             Vector v = scribe.getChildren( topic.getTopicId() );
-            System.out.println( "DFSing over topic "+topic.getTopicId() );
             //System.out.println( "Children of node "+ scribe.getNodeId() + " are " + v );
             if ( v != null )
             {
@@ -156,14 +134,12 @@ public class ControlFindParentMessage extends Message implements Serializable
             }
             if ( send_to.size() > 0 )
             {
-                System.out.println( "Routing to node "+((NodeHandle)send_to.get(0)).getNodeId() );
                 channel.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
             }
             else
             {
                 if ( !scribe.isRoot( topic.getTopicId() ) )
                 {
-                    System.out.println( "Routing to parent "+((NodeHandle)scribe.getParent( topic.getTopicId() )).getNodeId() );
                     channel.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
                 }
                 else
@@ -180,7 +156,6 @@ public class ControlFindParentMessage extends Message implements Serializable
                 }
             }
         }
-        //}
     }
 
     public String toString()

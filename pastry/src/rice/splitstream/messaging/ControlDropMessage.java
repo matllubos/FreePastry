@@ -46,7 +46,7 @@ public class ControlDropMessage extends ControlMessage{
                                                                    spare_id,
                                                                    c,
                                                                    (StripeId)topic.getTopicId(), channel_id );
-      scribe.anycast( spare_id, msg, c );
+      scribe.anycast( spare_id, msg, c ); 
    }
 
    /**
