@@ -55,15 +55,15 @@ import java.util.*;
 public class Id implements Comparable, Serializable 
 {
     // Distance constants
-    private static int[] One = {1,0,0,0};
-    private static int[] NegOne = {-1,-1,-1,-1};
+    private static int[] One = {1,0,0,0,0};
+    private static int[] NegOne = {-1,-1,-1,-1,-1};
 
     /**
      * This is the bit length of the node ids.  If it is n, then
      * there are 2^n possible different Ids.  We currently assume
      * that it is divisible by 32.
      */
-    public final static int IdBitLength = 128;
+    public final static int IdBitLength = 160;
 
     // elements in the array.
     private final static int nlen = IdBitLength / 32;

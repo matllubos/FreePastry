@@ -255,7 +255,7 @@ public abstract class PastryRegrTest {
 	for (int i=0; i<k; i++) {
 	    int from = rng.nextInt(n);
 	    int to = rng.nextInt(n);
-	    byte[] keyBytes = new byte[16];
+	    byte[] keyBytes = new byte[Id.IdBitLength/8];
 	    rng.nextBytes(keyBytes);
 	    NodeId key = new NodeId(keyBytes);
 

@@ -69,8 +69,8 @@ public class IdRange {
      */
     public IdRange() {
 	empty = true;
-	this.ccw = new Id();
-	this.cw = new Id();
+	ccw = new Id();
+	cw = ccw;
     }
 
     /**
@@ -92,6 +92,8 @@ public class IdRange {
     public boolean equals(Object obj) {
 	IdRange o = (IdRange) obj;
 
+	if (empty && o.empty) return true;
+	if (isFull() && o.isFull()) return true;
 	if (empty == o.empty && ccw.equals(o.ccw) && cw.equals(o.cw)) return true;
 	else return false;
     }
@@ -100,7 +102,7 @@ public class IdRange {
      * return the size of the range
      * @return the numerical distance of the range
      */ 
-    public Id.Distance size() {
+    private Id.Distance size() {
 	if (ccw.clockwise(cw))
 	    return ccw.distance(cw);
 	else
@@ -113,6 +115,23 @@ public class IdRange {
      */ 
     public boolean isEmpty() {
 	return empty;
+    }
+
+    /**
+     * test if the range is the full circle
+     * @return true if the range is full circle
+     */ 
+    public boolean isFull() {
+	return ccw.equals(cw) && !empty;
+    }
+
+    /**
+     * test if this range is adjacent to another range
+     * @param o another range
+     * @return true if the range is asjacent to o
+     */ 
+    public boolean isAdjacent(IdRange o) {
+	return (ccw.equals(o.cw) || o.ccw.equals(cw)) && !empty && !o.empty && !isFull() && !o.isFull();
     }
 
     /**
@@ -162,7 +181,7 @@ public class IdRange {
 
     /**
      * merge two ranges
-     * if this and other don't overlap and are not adjacent, the result is this
+     * if this and other don't overlap, are not adjacent, and this is not empty, then the result is this
      * 
      * @param o the other range
      * @return the resulting range

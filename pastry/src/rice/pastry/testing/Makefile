@@ -11,6 +11,7 @@ SOURCE  = \
 	DistHelloWorld.java \
 	RegrTestApp.java\
 	NodeIdUnit.java\
+	IdRangeUnit.java\
 	PingMessage.java \
 	PingMessageNew.java \
 	PingAddress.java \
