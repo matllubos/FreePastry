@@ -65,6 +65,9 @@ public class Id implements rice.p2p.commonapi.Id {
   // elements in the array.
   private final static int nlen = IdBitLength / 32;
   private int Id[];
+  
+  // serialver for backwards compatibility
+  static final long serialVersionUID = 2166868464271508935L;
 
   // serialver for backwards compatibility
   static final long serialVersionUID = 2166868464271508935L;
@@ -81,6 +84,43 @@ public class Id implements rice.p2p.commonapi.Id {
       int k = material[j] & 0xff;
       Id[j / 4] |= k << ((j % 4) * 8);
     }
+  }
+  
+  /**
+   * Constructor, which takes the output of a toStringFull() and converts it back
+   * into an Id.  Should not normally be used.
+   *
+   * @param hex The hexadeciaml representation from the toStringFull()
+   */
+  public Id(String hex) {
+    this(hex.toCharArray(), 0, hex.length());
+  }
+  
+  /**
+   * Constructor, which takes the output of a toStringFull() and converts it back
+   * into an Id.  Should not normally be used.
+   *
+   * @param hex The hexadeciaml representation from the toStringFull()
+   */
+  public Id(char[] chars, int offset, int length) {
+    Id = new int[nlen];
+    
+    for (int i=0; i<nlen; i++) 
+      for (int j=0; j<8; j++) 
+        Id[nlen-1-i] = (Id[nlen-1-i] << 4) | trans(chars[offset + 8*i + j]);
+  }
+  
+  /**
+   * Internal method for mapping digit -> num
+   *
+   * @param digit The printed char
+   * @param num The byte number
+   */
+  protected static byte trans(char c) {
+    if (('0' <= c) && ('9' >= c))
+      return (byte) (c - '0');
+    else
+      return (byte) (c - 'A' + 10);
   }
 
   /**
