@@ -21,7 +21,7 @@ public class PastryObjectInputStream extends ObjectInputStream {
   protected PastryNode node;
 
 	/**
-	 * @param arg0
+	 * @param arg0 
 	 * @throws java.io.IOException
 	 */
 	public PastryObjectInputStream(InputStream stream, PastryNode node) throws IOException {

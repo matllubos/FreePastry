@@ -70,7 +70,7 @@ public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
      */
     public IdRange() {
 	empty = true;
-	ccw = new Id();
+	ccw = Id.build();
 	cw = ccw;
     }
 
@@ -81,7 +81,7 @@ public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
      */
     public IdRange(boolean type) {
 	empty = type;
-	ccw = new Id();
+	ccw = Id.build();
 	cw = ccw;
 
     }
@@ -326,7 +326,7 @@ public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
      */ 
     public IdRange ccwHalf() {
 	if (empty) return new IdRange();
-	if (isFull()) return new IdRange(new Id(Id.Null), new Id(Id.Half));
+	if (isFull()) return new IdRange(Id.build(Id.Null), Id.build(Id.Half));
 
 	Id newCW = ccw.add(size().shift(1,0,true));
 	return new IdRange(ccw, newCW);
@@ -338,7 +338,7 @@ public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
      */ 
     public IdRange cwHalf() {
 	if (empty) return new IdRange();
-	if (isFull()) return new IdRange(new Id(Id.Half), new Id(Id.Null));
+	if (isFull()) return new IdRange(Id.build(Id.Half), Id.build(Id.Null));
 
 	Id newCCW = ccw.add(size().shift(1,0,true));
 	return new IdRange(newCCW, cw);

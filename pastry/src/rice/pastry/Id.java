@@ -35,52 +35,100 @@ if advised of the possibility of such damage.
 ********************************************************************************/
 
 package rice.pastry;
-import java.io.*;
 
+import java.io.*;
 import java.lang.Comparable;
+import java.lang.ref.*;
 import java.util.*;
 
 /**
  * Represents a Pastry identifier for a node, object or key. A single identifier and the bit length
- * for Ids is stored in this class. Ids are stored little endian.
+ * for Ids is stored in this class. Ids are stored little endian.  NOTE: Ids are immutable, and are
+ * coalesced for memory efficiency.  New Ids are to be constructed from the build() methods, which
+ * ensure that only one copy of each Id is in memory at a time.
  *
  * @version $Id$
  * @author Andrew Ladd
  * @author Peter Druschel
+ * @author Alan Mislove
  */
 public class Id implements rice.p2p.commonapi.Id {
 
-  // Distance constants
-  public final static int[] Null = {0, 0, 0, 0, 0};
-  public final static int[] One = {1, 0, 0, 0, 0};
-  public final static int[] NegOne = {-1, -1, -1, -1, -1};
-  public final static int[] Half = {0x80, 0, 0, 0, 0};
-
+  /**
+   * Support for coalesced Ids - ensures only one copy of each Id is in memory
+   */
+  protected static WeakHashMap MAP = new WeakHashMap();
+  
   /**
    * This is the bit length of the node ids. If it is n, then there are 2^n possible different Ids.
    * We currently assume that it is divisible by 32.
    */
   public final static int IdBitLength = 160;
-
-  // elements in the array.
   private final static int nlen = IdBitLength / 32;
-  private int Id[];
   
-  // serialver for backwards compatibility
+  /**
+   * serialver for backwards compatibility
+   */
   static final long serialVersionUID = 2166868464271508935L;
+  
+  /**
+   * Distance constants
+   */
+  public final static int[] Null = {0, 0, 0, 0, 0};
+  public final static int[] One = {1, 0, 0, 0, 0};
+  public final static int[] NegOne = {-1, -1, -1, -1, -1};
+  public final static int[] Half = {0x80, 0, 0, 0, 0};
+  
+  /**
+   * The actual contents of this Id
+   */
+  private int Id[];
 
   /**
    * Constructor.
    *
-   * @param material an array of length at least IdBitLength/8 containing raw Id material.
+   * @param material an array of length at least IdBitLength/32 containing raw Id material.
    */
-  public Id(byte material[]) {
+  protected Id(int material[]) {
     Id = new int[nlen];
+    for (int i = 0; (i < nlen) && (i < material.length); i++) 
+      Id[i] = material[i];
+  }
 
-    for (int j = 0; (j < IdBitLength / 8) && (j < material.length); j++) {
-      int k = material[j] & 0xff;
-      Id[j / 4] |= k << ((j % 4) * 8);
-    }
+  /**
+   * return the number of digits in a given base
+   *
+   * @param base the number of bits in the base
+   * @return the number of digits in that base
+   */
+  public static int numDigits(int base) {
+    return IdBitLength / base;
+  }
+
+  /**
+   * Creates a random Id. For testing purposed only -- should NOT be used to generate real node or
+   * object identifiers (low quality of random material).
+   *
+   * @param rng random number generator
+   * @return a random Id
+   */
+  public static Id makeRandomId(Random rng) {
+    byte material[] = new byte[IdBitLength / 8];
+    rng.nextBytes(material);
+    return build(material);
+  }
+  
+  
+  
+  // ----- SUPPORT FOR ID COALESCING -----
+  
+  /**
+   * Constructor.
+   *
+   * @param material an array of length at least IdBitLength/32 containing raw Id material.
+   */
+  public static Id build(int material[]) {
+    return resolve(new Id(material));
   }
   
   /**
@@ -89,8 +137,8 @@ public class Id implements rice.p2p.commonapi.Id {
    *
    * @param hex The hexadeciaml representation from the toStringFull()
    */
-  public Id(String hex) {
-    this(hex.toCharArray(), 0, hex.length());
+  public static Id build(String hex) {
+    return build(hex.toCharArray(), 0, hex.length());
   }
   
   /**
@@ -99,13 +147,15 @@ public class Id implements rice.p2p.commonapi.Id {
    *
    * @param hex The hexadeciaml representation from the toStringFull()
    */
-  public Id(char[] chars, int offset, int length) {
-    Id = new int[nlen];
+  public static Id build(char[] chars, int offset, int length) {
+    int[] array = new int[nlen];
     
     for (int i=0; i<nlen; i++) 
       for (int j=0; j<8; j++) 
-        Id[nlen-1-i] = (Id[nlen-1-i] << 4) | trans(chars[offset + 8*i + j]);
-  }
+        array[nlen-1-i] = (array[nlen-1-i] << 4) | trans(chars[offset + 8*i + j]);
+    
+    return build(array);
+  }  
   
   /**
    * Internal method for mapping digit -> num
@@ -121,13 +171,46 @@ public class Id implements rice.p2p.commonapi.Id {
   }
   
   /**
+   * Constructor.
+   *
+   * @param material an array of length at least IdBitLength/8 containing raw Id material.
+   */
+  public static Id build(byte[] material) {
+    return build(trans(material));
+  }
+  
+  /**
+   * Internal method for mapping byte[] -> int[]
+   *
+   * @param material The input byte[]
+   * @return THe int[]
+   */
+  protected static int[] trans(byte[] material) {
+    int[] array = new int[nlen];
+    
+    for (int j = 0; (j < IdBitLength / 8) && (j < material.length); j++) {
+      int k = material[j] & 0xff;
+      array[j / 4] |= k << ((j % 4) * 8);
+    }
+    
+    return array;
+  }
+  
+  /**
+   * Constructor. It constructs a new Id with a value of 0 for all bits.
+   */
+  public static Id build() {
+    return build(new int[nlen]);
+  }
+  
+  /**
    * Static method for converting the hex representation into an array of
    * ints.
    *
    * @param hex The hexadecimal represetnation
    * @return The cooresponding int array
    */
-  public static int[] trans(String hex) {
+  protected static int[] trans(String hex) {
     int[] ints = new int[nlen];
     
     for (int i=0; i<nlen; i++) {
@@ -137,53 +220,40 @@ public class Id implements rice.p2p.commonapi.Id {
     
     return ints;
   } 
-
+  
   /**
-   * Constructor.
+   * Method which performs the coalescing and interaction with the weak hash map
    *
-   * @param material an array of length at least IdBitLength/32 containing raw Id material.
+   * @param id The Id to coalesce
+   * @return The Id to use
    */
-  public Id(int material[]) {
-    Id = new int[nlen];
-    for (int i = 0; (i < nlen) && (i < material.length); i++) {
-      Id[i] = material[i];
+  private static Id resolve(Id id) {
+    synchronized (MAP) {
+      WeakReference ref = (WeakReference) MAP.get(id);
+      Id result = null;
+      
+      if ((ref != null) && ((result = (Id) ref.get()) != null)) {
+        return result;
+      } else {
+        MAP.put(id, new WeakReference(id));
+        return id;
+      }
     }
   }
-
+  
   /**
-   * Constructor. It constructs a new Id with a value of 0 for all bits.
-   */
-  public Id() {
-    Id = new int[nlen];
-    for (int i = 0; i < nlen; i++) {
-      Id[i] = 0;
-    }
-  }
-
-  /**
-   * return the number of digits in a given base
+   * Define readResolve, which will replace the deserialized object with the canootical
+   * one (if one exists) to ensure Id coalescing.
    *
-   * @param base the number of bits in the base
-   * @return the number of digits in that base
+   * @return The real Id
    */
-  public static int numDigits(int base) {
-    return IdBitLength / base;
+  private Object readResolve() throws ObjectStreamException {
+    return resolve(this);
   }
-
-
-  /**
-   * Creates a random Id. For testing purposed only -- should NOT be used to generate real node or
-   * object identifiers (low quality of random material).
-   *
-   * @param rng random number generator
-   * @return a random Id
-   */
-  public static Id makeRandomId(Random rng) {
-    byte material[] = new byte[IdBitLength / 8];
-    rng.nextBytes(material);
-    return new Id(material);
-  }
-
+  
+  
+  // ----- NORMAL ID METHODS -----
+  
   /**
    * gets the Id just clockwise from this
    *
@@ -239,7 +309,7 @@ public class Id implements rice.p2p.commonapi.Id {
     if (shift + b > 32) {
       val = (val & 0xffffffffL) | (((long) Id[index + 1]) << 32);
     }
-    //System.out.println("val=" + Long.toHexString(val));}
+
     return ((int) (val >> shift)) & ((1 << b) - 1);
   }
 
@@ -261,7 +331,7 @@ public class Id implements rice.p2p.commonapi.Id {
       res.setDigit(i, suffixDigit, b);
     }
 
-    return res;
+    return build(res.Id);
   }
 
 
@@ -276,7 +346,6 @@ public class Id implements rice.p2p.commonapi.Id {
    * @param i the index of the requested member of the set (0<=i<num; the 0-th member is this)
    * @return the resulting set member, or null in case of illegal arguments
    */
-
   public Id getAlternateId(int num, int b, int i) {
     if (num > (1 << b) || i < 0 || i >= num) {
       return null;
@@ -287,10 +356,10 @@ public class Id implements rice.p2p.commonapi.Id {
     int digit = res.getDigit(numDigits(b) - 1, b) + ((1 << b) / num) * i;
     res.setDigit(numDigits(b) - 1, digit, b);
 
-    return res;
+    return build(res.Id);
   }
 
-  // Common API Support
+  // ----- COMMON API SUPPORT -----
 
   /**
    * Checks if this Id is between two given ids ccw (inclusive) and cw (exclusive) on the circle
@@ -310,7 +379,7 @@ public class Id implements rice.p2p.commonapi.Id {
    * @param i which bit to set.
    * @param v new value of bit
    */
-  public void setBit(int i, int v) {
+  private void setBit(int i, int v) {
     int index = i / 32;
     int shift = i % 32;
     int val = Id[index];
@@ -331,7 +400,7 @@ public class Id implements rice.p2p.commonapi.Id {
    * @param v the new value of the digit
    * @param b which power of 2 is the base to get it in.
    */
-  public void setDigit(int i, int v, int b) {
+  private void setDigit(int i, int v, int b) {
     int bitIndex = b * i + (IdBitLength % b);
     int index = bitIndex / 32;
     int shift = bitIndex % 32;
@@ -457,7 +526,7 @@ public class Id implements rice.p2p.commonapi.Id {
    * @return the new Id
    */
   public Id add(Distance offset) {
-    Id newId = new Id();
+    int[] array = new int[nlen];
     long x;
     long y;
     long sum;
@@ -475,10 +544,10 @@ public class Id implements rice.p2p.commonapi.Id {
         carry = 0;
       }
 
-      newId.Id[i] = (int) sum;
+      array[i] = (int) sum;
     }
 
-    return newId;
+    return build(array);
   }
 
   /**
@@ -525,11 +594,11 @@ public class Id implements rice.p2p.commonapi.Id {
    *
    * @param otherId a Id object
    */
-  public void xor(Id otherId) {
-    for (int i = 0; i < nlen; i++) {
-      Id[i] ^= otherId.Id[i];
-    }
-  }
+//  public void xor(Id otherId) {
+//    for (int i = 0; i < nlen; i++) {
+//      Id[i] ^= otherId.Id[i];
+//    }
+//  }
 
 
   /**
@@ -763,7 +832,6 @@ public class Id implements rice.p2p.commonapi.Id {
    * @param nid the other node id.
    * @return an int[] containing the distance between this and nid.
    */
-
   private int[] absDistance(Id nid) {
     int dist[] = new int[nlen];
     long x;

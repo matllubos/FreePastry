@@ -46,48 +46,48 @@ import java.util.*;
  * @version $Id$
  *
  * @author Peter Druschel
+ * @author Alan Mislove
  */
-
-public class NodeId extends Id 
-{
-    /**
-     * This is the bit length of the node ids.  If it is n, then
-     * there are 2^n different Pastry nodes.  We currently assume
-     * that it is divisible by 32.
-     */
-    public final static int nodeIdBitLength = IdBitLength;
-
-
-    /**
-     * Constructor.
-     *
-     * @param material an array of length at least IdBitLength/8 containing raw Id material.
-     */
-    public NodeId(byte material[]) 
-    {
-	super(material);
-    }
-
-    /**
-     * Constructor.
-     *
-     * @param material an array of length at least IdBitLength/32 containing raw Id material.
-     */
-    public NodeId(int material[]) 
-    {
-	super(material);
-    }
-
-    /**
-     * Constructor.
-     *
-     * It constructs a new Id with a value of 0 for all bits.
-     */
-    public NodeId() 
-    {
-	super();
-    }
-
+public class NodeId extends Id {
+  
+  /**
+   * This is the bit length of the node ids.  If it is n, then
+   * there are 2^n different Pastry nodes.  We currently assume
+   * that it is divisible by 32.
+   */
+  public final static int nodeIdBitLength = IdBitLength;
+  
+  /**
+   * serialver for backwards compatibility
+   */
+  static final long serialVersionUID = 4346947555837618045L;
+  
+  /**
+   * Constructor.
+   *
+   * @param material an array of length at least IdBitLength/8 containing raw Id material.
+   */
+  public NodeId(byte material[]) {
+    super(trans(material));
+  }
+  
+  /**
+   * Constructor.
+   *
+   * @param material an array of length at least IdBitLength/32 containing raw Id material.
+   */
+  public NodeId(int material[]) {
+    super(material);
+  }
+  
+  /**
+   * Undefine readResolve for NodeIds
+   *
+   * @return This
+   */
+  private Object readResolve() throws ObjectStreamException {
+    return this;
+  }
 }
 
 

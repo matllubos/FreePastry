@@ -213,7 +213,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
     }
 
     byte[] digest = md.digest();
-    cachedHash = new Id(digest);
+    cachedHash = Id.build(digest);
     validHash = true;
 
     return cachedHash;
@@ -284,6 +284,14 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
    */
   public rice.p2p.commonapi.Id hash() {
     return getHash();
+  }
+  
+  /**
+   * return this set as an array
+   * @return the array
+   */
+  public rice.p2p.commonapi.Id[] asArray() {
+    return (rice.p2p.commonapi.Id[]) idSet.toArray(new rice.p2p.commonapi.Id[0]);
   }
   
   public Object clone(){
