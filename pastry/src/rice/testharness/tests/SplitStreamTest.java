@@ -92,9 +92,11 @@ public class SplitStreamTest extends Test implements ISplitStreamApp, Observer {
 
   private int m_testFreq = Scribe.m_scribeMaintFreq;
   
-  private int OUT_BW = 20;
+  private int OUT_BW = 16;
 
   private int last_recv_time = 0;
+
+  public Hashtable m_logTable = new Hashtable();
 
   /**
    * Hashtable storing sequence numbers being published per stripe
@@ -124,7 +126,7 @@ public class SplitStreamTest extends Test implements ISplitStreamApp, Observer {
     splitStream = new SplitStreamImpl(localNode, scribe);
     splitStream.registerApp(this);
     
-    _out.println("Created scribe/splitstram at " + localNode.getNodeId());
+    //_out.println("Created scribe/splitstram at " + localNode.getNodeId());
   }	
 
   /**
@@ -134,11 +136,11 @@ public class SplitStreamTest extends Test implements ISplitStreamApp, Observer {
   public void startTest(final TestHarness thl, NodeId[] nodes) {
     if(getNodeId().equals(new NodeId(new byte[NodeId.nodeIdBitLength]))) {
       // creator of channel
-      _out.println("Creating channel at " + getNodeId() + " with name " + m_name);
+	//_out.println("Creating channel at " + getNodeId() + " with name " + m_name);
       createChannel(base, m_name);
     }
     else{
-      _out.println("Attaching channel at " + getNodeId());
+	//_out.println("Attaching channel at " + getNodeId());
       attachChannel(CHANNEL_ID);
     }
   }
@@ -161,12 +163,19 @@ public class SplitStreamTest extends Test implements ISplitStreamApp, Observer {
    */
   public void update(Observable o, Object arg){
     byte[] data = (byte [])arg;
-    Byte bt = new Byte(data[0]);
+    //Byte bt = new Byte(data[0]);
+    String ds = new String(data);
     StripeId stripeId = (StripeId)((Stripe)o).getStripeId();
     String str = stripeId.toString().substring(3,4);
     int recv_time = (int)System.currentTimeMillis();
     int diff;
-
+    char [] c = str.toString().toCharArray();
+    int stripe_int = c[0] - '0';
+    if(stripe_int > 9)
+	stripe_int = 10 + c[0] - 'A';
+    else
+	stripe_int = c[0] - '0';
+    
     if(last_recv_time == 0)
       diff = 0;
     else
@@ -179,11 +188,7 @@ public class SplitStreamTest extends Test implements ISplitStreamApp, Observer {
       * Logging style
      * <App_Index> <Host-name> <Stripe_num> <Seq_num> <Diff>
      */
-    try{
-      _out.println(getNodeId() + "\t"+InetAddress.getLocalHost().getHostName()+"\t"+str+"\t"+bt.intValue()+"\t"+diff);
-    } catch(UnknownHostException e){
-      _out.println(e);
-    }
+    _out.println(stripe_int+"\t"+Integer.valueOf(ds).intValue()+"\t"+recv_time);
 
   }
   
@@ -206,7 +211,7 @@ public class SplitStreamTest extends Test implements ISplitStreamApp, Observer {
    */
   public void channelIsReady(ChannelId channelId) {
     Channel channel = (Channel)m_channels.get(CHANNEL_ID);
-    _out.println("Channel " + CHANNEL_ID + " is ready, at " + getNodeId());
+    //_out.println("Channel " + CHANNEL_ID + " is ready, at " + getNodeId());
     // join all the stripes for the channel
     joinChannelStripes(CHANNEL_ID);
 
@@ -242,8 +247,8 @@ public class SplitStreamTest extends Test implements ISplitStreamApp, Observer {
   public void showBandwidth(ChannelId channelId){
     Channel channel = (Channel) m_channels.get(channelId);
     BandwidthManager bandwidthManager = channel.getBandwidthManager();
-    _out.println("Channel " + channelId + " has " +
-                       bandwidthManager.getUsedBandwidth(channel) + " children ");
+    //_out.println("Channel " + channelId + " has " +
+    //bandwidthManager.getUsedBandwidth(channel) + " children ");
     return;
   }
 
@@ -257,19 +262,20 @@ public class SplitStreamTest extends Test implements ISplitStreamApp, Observer {
       StripeId stripeId = send.getStripes()[i];
       Stripe stripe = send.joinStripe(stripeId, this);
       OutputStream out = stripe.getOutputStream();
-      _out.println("Sending on Stripe " + stripeId);
+      //_out.println("Sending on Stripe " + stripeId);
       //	    byte[] toSend = "Hello".getBytes() ;
 
       Integer seq = (Integer)m_stripe_seq.get((StripeId)stripeId);
       if(seq == null)
         seq = new Integer(0);
-      byte[] toSend = new byte[1];
-      toSend[0] = seq.byteValue();
+      String str = seq.toString();
+      byte[] toSend = str.getBytes();
+      //toSend[0] = seq.byteValue();
       int seq_num = seq.intValue();
       seq = new Integer(seq_num + 1);
       m_stripe_seq.put(stripeId, seq);
       try{
-        out.write(toSend, 0, 1 );
+        out.write(toSend, 0, toSend.length );
       }
       catch(IOException e){
         e.printStackTrace();
@@ -399,4 +405,5 @@ public class SplitStreamTest extends Test implements ISplitStreamApp, Observer {
       return new String( "SPLIT_STREAM_TEST  MSG:" );
     }
   }
+    
 }
