@@ -176,8 +176,16 @@ public abstract class PastryAppl implements MessageReceiver
     public boolean routeMsgDirect(NodeHandle dest, Message msg, Credentials cred, SendOptions opt) {
 	if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] routemsgdirect " + msg + " to " + dest);
 	if (!dest.isAlive()) return false;
-	RouteMessage rm = new RouteMessage(dest, msg, cred, opt, getAddress());
-	thePastryNode.receiveMessage(rm);
+	//RouteMessage rm = new RouteMessage(dest, msg, cred, opt, getAddress());
+	//thePastryNode.receiveMessage(rm);
+
+	// XXX Does routeMsgDirect need credentials?
+	// Arguably, leafset messages don't need credentials because
+	// individual nodeids may be signed. (not entirely true..)
+	// But routeMsgDirect messages *do* need credentials. So do we
+	// go back to using options to differentiate from routeMsg?
+
+	dest.receiveMessage(msg);
 	return dest.isAlive();
     }
 
@@ -197,7 +205,6 @@ public abstract class PastryAppl implements MessageReceiver
     public void routeMsg(NodeId key, Message msg, Credentials cred, SendOptions opt) {
 	if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] routemsg " + msg + " to " + key);
 	RouteMessage rm = new RouteMessage(key, msg, cred, opt, getAddress());
-
 	thePastryNode.receiveMessage(rm);
     }
     
