@@ -61,7 +61,9 @@ public class CAKeyGenerator {
    */
   public static String fetchPassword(String prompt) throws IOException {
     System.out.print(prompt + ": ");
-    return password.getPassword();
+//    return password.getPassword();
+    BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+    return reader.readLine();
   }
 
   /**
