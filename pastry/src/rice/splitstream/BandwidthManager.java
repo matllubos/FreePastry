@@ -32,5 +32,26 @@ public abstract class BandwidthManager{
       * @return the default number of children
       */
      public int getDefaultChildren(){return 0;}
+     /**
+      * gets current number of Children this child currently has.
+      * @return the current number of children
+      */
+      public int getNumChildren(){return 0;}
+     /**
+      * gets current number of primary Children this child currently has.
+      * @return the current number of primary children
+      */
+      public int getNumPrimaryChildren(){return 0;}
+     /**
+      * Determines based upon capacity information whether the 
+      * system can take on another child.
+      * @return whether we can take on another child 
+      */
+      public boolean canTakeChild(Channnel channel, Stripe s){return false;}
+    /**
+     * Registers a channel within the system with the bandwidth manager
+     * @param the channel to be added
+     */
+      public void registerChannel(Channel channel){}
      private static int DEFAULT_CHILDREN = 20;
 } 

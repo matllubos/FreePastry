@@ -13,7 +13,7 @@ public class Channel {
    private Credentials cred;
    private boolean isReady = false;
 
-   public Channel(int numStripes, IScribe scribe, Credentials cred){
+   public Channel(int numStripes, IScribe scribe, Credentials cred, BandwidthManager bandwidthManager){
 	this.numStripes = numStripes;
  	this.cred = cred;
 	this.scribe = scribe;
