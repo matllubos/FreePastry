@@ -12,7 +12,6 @@ import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.socket.*;
 import rice.pastry.socket.SocketCollectionManager.*;
-import rice.serialization.*;
 
 /**
  * Class which serves as an "reader" for messages sent across the wire via the

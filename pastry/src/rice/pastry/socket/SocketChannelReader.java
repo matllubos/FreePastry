@@ -12,7 +12,6 @@ import java.util.zip.*;
 import rice.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.serialization.*;
 
 /**
  * Class which serves as an "reader" for messages sent across the wire via the
@@ -227,7 +226,6 @@ public class SocketChannelReader {
    * @exception IOException DESCRIBE THE EXCEPTION
    */
   private Object deserialize(byte[] array) throws IOException {
-    //ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(new ByteArrayInputStream(array))));
     ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(array));
     Object o = null;
 

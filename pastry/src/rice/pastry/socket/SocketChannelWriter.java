@@ -12,8 +12,6 @@ import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 
-import rice.serialization.*;
-
 /**
  * Class which serves as an "writer" for all of the messages sent across the
  * wire in Pastry. This class serializes and properly formats all messages, and
@@ -289,7 +287,6 @@ public class SocketChannelWriter {
 
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      //ObjectOutputStream oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(baos)));
       ObjectOutputStream oos = new ObjectOutputStream(baos);
 
       // write out object and find its length
