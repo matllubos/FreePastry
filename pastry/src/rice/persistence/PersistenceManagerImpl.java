@@ -50,6 +50,10 @@ public class PersistenceManagerImpl implements PersistenceManager{
      * If the object is already persistent, this method will
      * simply update the object's serialized image.
      *
+     * This is implemented atomically so that this may succeed
+     * and store the new object, or fail and leave the previous
+     * object in tact.
+     * 
      * @param obj The object to be made persistent.
      * @param pid The object's id.
      * @return <code>true</code> if the action succeeds, else
@@ -98,10 +102,32 @@ public class PersistenceManagerImpl implements PersistenceManager{
    }
 
     /**
+     * Request to remove the object from the list of persistend objects.
+     * Delete the serialized image of the object from stable storage. If
+     * necessary.
+     *
+     * <p> If the object was not in the cached list in the first place,
+     * nothing happens and <code>false</code> is returned.
+     *
+     * @param pid The object's persistence id
+     * @return <code>true</code> if the action succeeds, else
+     * <code>false</code>.
+     */
+   public boolean unpersist(NodeId id){
+     return false;
+   }
+
+
+
+    /**
      * Caches the object for potential future use
      * 
      * If the object is already persistent, this method will
      * simply update the object's serialized image.
+     *
+     * This is implemented atomically so that this may succeed
+     * and store the new object, or fail and leave the previous
+     * object in tact.
      *
      * @param obj The object to be made persistent.
      * @param id The object's id.
@@ -142,6 +168,19 @@ public class PersistenceManagerImpl implements PersistenceManager{
     public java.io.Serializable getObject(NodeId id){
 	return (java.io.Serializable) storedObjects.get(id);
     }
+
+   /**
+    * Return the objects identified by the given range of ids
+    *
+    * @param start The staring id of the range.
+    * @param end The ending id of the range.
+    * @return The objects, or <code>null</code> if there are no objects in
+    *  range .
+    */
+    public Vector getObject(NodeId start, NodeId end){
+      return null;
+    }
+
 
     /*****************************************************************/
     /* Helper functions for Directory Management                     */
@@ -209,4 +248,52 @@ public class PersistenceManagerImpl implements PersistenceManager{
     private void writePersistentTable(){
 
     }
+
+    /*****************************************************************/
+    /* Functions for Configuration Management                        */
+    /*****************************************************************/
+   
+
+  /**
+   * Sets the root directory that the persistence Manager uses 
+   *
+   * @param dir the String representing the directory to use 
+   * @return boolean, true if the operation suceeds false if it doesn't 
+   */
+   public boolean setRoot(String dir){
+   }
+
+  /**
+   * gets the root directory that the persistence Manager uses 
+   *
+   * @return String the directory for the root 
+   */
+   public String getRoot(){
+   }
+
+  /**
+   * gets the amount of storage that the persistence Manager uses 
+   *
+   * @return int the amount of storage in MB allocated for use 
+   */
+   public int getStorageSize(){
+   }
+
+  /**
+   * Sets the amount of storage that the persistence Manager uses 
+   *
+   * @param size the amount of storage available to use in MB
+   * @return boolean, true if the operation suceeds false if it doesn't 
+   */
+   public boolean setStorageSize(int size){
+   }
+
+  /**
+   * gets the amount of storage that the persistence Manager has
+   * allocated to be used for storage of persisted object 
+   *
+   * @return int the amount of storage in MB used for storing objects
+   */
+   public int getUsedStorageSize(){
+   }
 }
