@@ -307,13 +307,27 @@ public class SecurityUtils {
    * @exception SecurityException If the encryption does not happen properly
    */
   public static byte[] encryptSymmetric(byte[] data, byte[] key) throws SecurityException {
+    return encryptSymmetric(data, key, 0, data.length);
+  }
+  
+  /**
+   * Utility method for encrypting a block of data with symmetric encryption.
+   *
+   * @param data The data
+   * @param key The key
+   * @param offset The offset into the data
+   * @param length The length of data to write
+   * @return The ciphertext
+   * @exception SecurityException If the encryption does not happen properly
+   */
+  public static byte[] encryptSymmetric(byte[] data, byte[] key, int offset, int length) throws SecurityException {
     try {
       synchronized (cipherSymmetric) {
         key = correctLength(key, SYMMETRIC_KEY_LENGTH);
         SecretKeySpec secretKey = new SecretKeySpec(key, SYMMETRIC_ALGORITHM);
         cipherSymmetric.init(Cipher.ENCRYPT_MODE, secretKey);
 
-        return cipherSymmetric.doFinal(data);
+        return cipherSymmetric.doFinal(data, offset, length);
       }
     } catch (InvalidKeyException e) {
       throw new SecurityException("InvalidKeyException encrypting object: " + e);
