@@ -88,13 +88,27 @@ public class RegrTestApp extends PastryAppl {
 
 	if (localId != key) {
 	    int inBetween;
-	    if (localId.compareTo(key) < 0)
-		inBetween = prg.pastryNodesSorted.subMap(localId,key).size();
-	    else
-		inBetween = prg.pastryNodesSorted.subMap(key,localId).size();
+	    if (localId.compareTo(key) < 0) {
+		int i1 = prg.pastryNodesSorted.subMap(localId,key).size();
+		int i2 = prg.pastryNodesSorted.tailMap(key).size() + 
+		    prg.pastryNodesSorted.headMap(localId).size();	    
+	    
+		inBetween = (i1 < i2) ? i1 : i2;
+	    }
+	    else {
+		int i1 = prg.pastryNodesSorted.subMap(key,localId).size();
+		int i2 = prg.pastryNodesSorted.tailMap(localId).size() + 
+		    prg.pastryNodesSorted.headMap(key).size();
 
-	    if (inBetween > 0) 
+		inBetween = (i1 < i2) ? i1 : i2;
+	    }
+
+	    if (inBetween > 1) {
 		System.out.println("messageForAppl failure, inBetween=" + inBetween);
+		System.out.print(msg);
+		System.out.println(" received at " + getNodeId());
+		System.out.println(getLeafSet());
+	    }
 	}
     }
     
@@ -108,13 +122,19 @@ public class RegrTestApp extends PastryAppl {
 	NodeId.Distance dist = localId.distance(key);
 
 	if (prg.lastMsg == msg) {
-	    if (dist.compareTo(prg.lastDist) > 0)
+	    if ( (localId.indexOfMSDD(key,4) > prg.lastNode.indexOfMSDD(key,4) &&
+		  nextHop != localId) ||
+		 (localId.indexOfMSDD(key,4) == prg.lastNode.indexOfMSDD(key,4) && 
+		  dist.compareTo(prg.lastDist) > 0) )
 		System.out.println("at... " + getNodeId() + " enrouteMessage failure with " + msg +
-				   " lastDist=" + prg.lastDist + " dist=" + dist);
+				   " lastNode=" + prg.lastNode + " lastDist=" + prg.lastDist + 
+				   " dist=" + dist + " nextHop=" + nextHop);
+
 	    prg.lastDist = dist;
 	}
 	prg.lastMsg = msg;
 	prg.lastDist = dist;
+	prg.lastNode = localId;
 
 	return true;
     }
@@ -138,6 +158,7 @@ public class RegrTestApp extends PastryAppl {
 
 	int inBetween;
 
+	/*
 	if (localId.clockwise(nid)) {
 	    // nid is clockwise from this node
 	    if (localId.compareTo(nid) < 0)  { // localId < nid?
@@ -162,12 +183,33 @@ public class RegrTestApp extends PastryAppl {
 		//System.out.println("c4");
 	    }
 	}    
+	*/
 
-	if ( (inBetween > 4 && wasAdded) ||
-	     (inBetween <= 4 && !wasAdded) ) {
+	
+	if (localId.compareTo(nid) < 0)  { // localId < nid?
+	    int i1 = prg.pastryNodesSorted.subMap(localId,nid).size();
+	    int i2 = prg.pastryNodesSorted.tailMap(nid).size() + 
+		prg.pastryNodesSorted.headMap(localId).size();	    
+	    
+	    inBetween = (i1 < i2) ? i1 : i2;
+	}
+	else {
+	    int i1 = prg.pastryNodesSorted.subMap(nid,localId).size();
+	    int i2 = prg.pastryNodesSorted.tailMap(localId).size() + 
+		prg.pastryNodesSorted.headMap(nid).size();
+
+	    inBetween = (i1 < i2) ? i1 : i2;
+	}
+
+
+	if ( (inBetween > 4 && wasAdded && !prg.pastryNodeLastAdded.equals(getNodeId())) ||
+	     (inBetween <= 4 && !wasAdded && getLeafSet().get(nid) == null) ) {
 	    System.out.println("at... " + getNodeId() + "leafSetChange failure 3 with " + nid + 
 			       " wasAdded=" + wasAdded + " inBetween=" + inBetween);
 	    System.out.println(getLeafSet());
+	    Iterator it = prg.pastryNodesSorted.keySet().iterator();
+	    while (it.hasNext())
+		System.out.println(it.next());
 	}
 
     }
@@ -185,4 +227,3 @@ public class RegrTestApp extends PastryAppl {
     }
 
 }
-

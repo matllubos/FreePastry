@@ -126,7 +126,7 @@ public class NodeIdUnit {
 	b = new NodeId(raw7f);
 	NodeId c = new NodeId(raw0);
 	System.out.println("a=" + a + "b=" + b + "c=" + c);
-	a.distance(b);
+	//a.distance(b);
 
 	if (a.clockwise(c))
 	    System.out.println("c is clockwise from a");
@@ -138,7 +138,9 @@ public class NodeIdUnit {
 	else
 	    System.out.println("c is counter-clockwise from b");
 	
-
+	System.out.println("a.distance(b)" + a.distance(b) + "b.distance(a)=" + b.distance(a));
+	System.out.println("a.longDistance(b)" + a.longDistance(b) + "b.longDistance(a)=" + b.longDistance(a));
+			  
 
 
 

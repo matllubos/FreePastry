@@ -130,7 +130,9 @@ public class NodeId implements Comparable, Serializable
 	
 	for (int i=nodeId.length - 1; i >= 0; i--) 
 	    if (nodeId[i] != oth.nodeId[i]) {
-		if (nodeId[i] < oth.nodeId[i]) return -1;
+		int t = nodeId[i] & 0xff;
+		int o = oth.nodeId[i] & 0xff;
+		if (t < o) return -1;
 		else return 1;
 	    }
 	    
@@ -260,7 +262,7 @@ public class NodeId implements Comparable, Serializable
     }
     
     /**
-     * Returns the distance between a pair of nodeIds.
+     * Returns the shorter distance between a pair of nodeIds.
      *
      * @param nid the other node id.
      * @return the distance between this and nid.
@@ -324,6 +326,74 @@ public class NodeId implements Comparable, Serializable
 
 	return d;
     }
+
+
+    /**
+     * Returns the longer distance between a pair of nodeIds.
+     *
+     * @param nid the other node id.
+     * @return the distance between this and nid.
+     */
+
+    public Distance longDistance(NodeId nid) 
+    {
+	int n = nodeIdBitLength >> 3;
+	
+	int diff[] = new int[n];
+	int x, y;
+	int carry = 0;
+
+	// if (clockwise(nid)) 
+	if (compareTo(nid) > 0)
+	    for (int i=0; i<n; i++) {
+		x = nodeId[i];
+		y = nid.nodeId[i];
+		
+		if (x < 0) x+=256;
+		if (y < 0) y+=256;
+
+		diff[i] = x - y - carry;
+		
+		if (diff[i] < 0) {
+		    diff[i] += 256;
+		    carry = 1;
+		}
+		else carry = 0;
+	    }
+	else 
+	    for (int i=0; i<n; i++) {
+		x = nodeId[i];
+		y = nid.nodeId[i];
+		
+		if (x < 0) x+=256;
+		if (y < 0) y+=256;
+
+		diff[i] = y - x - carry;
+		
+		if (diff[i] < 0) {
+		    diff[i] += 256;
+		    carry = 1;
+		}
+		else carry = 0;
+	    }	       
+
+	if ( (diff[n-1] & 0x80) == 0 ) {
+	    carry = 0;
+	    for (int i=0; i<n; i++) {
+		diff[i] = 0 - diff[i] - carry;
+		if (diff[i] < 0) {
+		    diff[i] += 256;
+		    carry = 1;
+		}
+	    }
+	}
+
+	Distance d = new Distance(diff);
+	//System.out.println("Diff:" + this + nid + d); 
+
+	return d;
+    }
+
 
     /**
      * Equivalence relation for nodes.

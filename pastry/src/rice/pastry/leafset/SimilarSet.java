@@ -7,6 +7,7 @@ import java.util.*;
 public class SimilarSet extends Observable implements NodeSet 
 {
     private NodeId baseId;
+    private boolean clockwise;
 
     private NodeHandle[] nodes;
     private NodeId.Distance[] dist;
@@ -31,8 +32,9 @@ public class SimilarSet extends Observable implements NodeSet
      * @param size the size of the similar set.
      */
 
-    public SimilarSet(NodeId base, int size) {
+    public SimilarSet(NodeId base, int size, boolean cw) {
 	baseId = base;
+	clockwise = cw;
 	theSize = 0;
 
 	nodes = new NodeHandle[size];
@@ -50,7 +52,12 @@ public class SimilarSet extends Observable implements NodeSet
     public boolean put(NodeHandle handle)
     {
 	NodeId nid = handle.getNodeId();
-	NodeId.Distance d = baseId.distance(handle.getNodeId());
+	NodeId.Distance d;
+
+	if (baseId.clockwise(nid) == clockwise)
+	    d = baseId.distance(nid);
+	else
+	    d = baseId.longDistance(nid);
 	
 	int n = nodes.length;
 
@@ -217,3 +224,6 @@ public class SimilarSet extends Observable implements NodeSet
 	return theSize - 1;
     }
 }
+
+
+

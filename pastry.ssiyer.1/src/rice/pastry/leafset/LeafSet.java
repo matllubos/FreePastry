@@ -56,9 +56,10 @@ public class LeafSet extends Observable implements NodeSet {
     public LeafSet(NodeId nid, int size) 
     {
 	baseId = nid;
-	
-	cwSet = new SimilarSet(nid, size);
-	ccwSet = new SimilarSet(nid, size);
+	theSize = size;
+
+	cwSet = new SimilarSet(nid, size, true);
+	ccwSet = new SimilarSet(nid, size, false);
     }
 
     /**
@@ -77,8 +78,10 @@ public class LeafSet extends Observable implements NodeSet {
 
 	//System.out.println("Inserting " + handle.getNodeId() + " into " + this);
 
-	if (baseId.clockwise(nid) == true) return cwSet.put(handle);
-	else return ccwSet.put(handle);
+	//if (baseId.clockwise(nid) == true) return cwSet.put(handle);
+	//else return ccwSet.put(handle);
+	
+	return cwSet.put(handle) | ccwSet.put(handle);
     }
 
     /**
@@ -90,7 +93,13 @@ public class LeafSet extends Observable implements NodeSet {
     
     public NodeHandle get(NodeId nid) 
     {
+	/*
 	if (baseId.clockwise(nid) == true) return cwSet.get(nid);
+	else return ccwSet.get(nid);
+	*/
+	NodeHandle h = cwSet.get(nid);
+
+	if (h != null)  return h;
 	else return ccwSet.get(nid);
     }
 
