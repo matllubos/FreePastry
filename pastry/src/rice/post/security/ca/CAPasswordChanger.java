@@ -85,4 +85,15 @@ public class CAPasswordChanger {
       e.printStackTrace();
     }
   }
+  
+  public static void changePassword(String username, String oldpass, String newpass) throws Exception {
+    File file = new File(username + ".epost");
+    PostCertificate cert = CACertificateGenerator.readCertificate(file);
+    KeyPair pair = CACertificateGenerator.readKeyPair(file, oldpass);
+    File tmp = new File(username + ".epost.tmp");
+    file.renameTo(tmp);
+      
+    CACertificateGenerator.writeFile(cert, pair, newpass, file);
+    tmp.delete();
+  }
 }
