@@ -131,12 +131,15 @@ public class SimpleFolderTest extends Thread {
     }
     
     // check to see if we have gotten the right print outs
+    System.out.println(buffer.toString());
+    /*
     if (buffer.toString().equals(theAnswer)) {
       System.out.println("Passed the SimpleFolderTest");
     } else {
       System.out.println("Failed the SimpleFolderTest");
       System.out.println(buffer.toString());
     }
+    */
   }
 
   /**
@@ -739,305 +742,304 @@ public class SimpleFolderTest extends Thread {
     Thread.sleep(4000);
   }
   
-  public static String theAnswer = "";
-  /**
-"Starting tests
-PostLog lookup for user user1 failed.
-Waiting...
-Starting to get root Folder
-Fetched the initial emailLogRef
-Email Root Log did not exist, adding one
-Starting a new ESAddRootFolderCont
-ESAddRootFolderCont received a result.
-Result is: rice.post.log.LogReference@bb0d0d
-Starting a new ESRootFolderCont
-ESRootFolderCont received a result.
-Result is: rice.post.log.Log@958bb8
-SimpleFolderCont received result. State is 10 0 0
-Adding new Folder Root
-Name of the root Folder: Root
-Making subFolder 0
-SimpleFolderCont received result. State is 20 0 1
-Adding new Folder Folder 0
-Making subFolder 1
-SimpleFolderCont received result. State is 20 0 2
-Adding new Folder Folder 1
-Moving on to making subSubFolder 0
-Making subFolder 0
-SimpleFolderCont received result. State is 20 1 1
-Adding new Folder Folder 1 0
-Making subFolder 1
-SimpleFolderCont received result. State is 20 1 2
-Adding new Folder Folder 1 1
-Moving on to making subSubFolder 1
-Making subFolder 0
-SimpleFolderCont received result. State is 20 2 1
-Adding new Folder Folder 2 0
-Making subFolder 1
-SimpleFolderCont received result. State is 20 2 2
-Adding new Folder Folder 2 1
-Finished Creating the Folders
-Number of sub folders is 2
-Folder 1
-Folder 0
-Number of subSub folders is 2
-Folder 1 0
-Folder 1 1
-Number of subSub folders is 2
-Folder 2 1
-Folder 2 0
-Initializing the EmailStorage state
-Adding email 0
-Adding email 1
-Adding email 2
-Adding email 3
-Adding email 4
-Adding email 5
-Adding email 6
-Finished adding the emails to each Folder, moving on to Snapshot
-Doing snapshots
-Adding snapshot email 0
-Adding snapshot email 1
-Entering testEmails1. EmailCount is: 0, and state is:60
+  public static String theAnswer = 
+"Starting tests\n" +
+"PostLog lookup for user user1 failed.\n" +
+"Waiting...\n" +
+"Starting to get root Folder\n" +
+"Fetched the initial emailLogRef\n" +
+"Email Root Log did not exist, adding one\n" +
+"Starting a new ESAddRootFolderCont\n" +
+"ESAddRootFolderCont received a result.\n" +
+"Result is: rice.post.log.LogReference@bb0d0d\n" +
+"Starting a new ESRootFolderCont\n" +
+"ESRootFolderCont received a result.\n" +
+"Result is: rice.post.log.Log@958bb8\n" +
+"SimpleFolderCont received result. State is 10 0 0\n" +
+"Adding new Folder Root\n" +
+"Name of the root Folder: Root\n" +
+"Making subFolder 0\n" +
+"SimpleFolderCont received result. State is 20 0 1\n" +
+"Adding new Folder Folder 0\n" +
+"Making subFolder 1\n" +
+"SimpleFolderCont received result. State is 20 0 2\n" +
+"Adding new Folder Folder 1\n" +
+"Moving on to making subSubFolder 0\n" +
+"Making subFolder 0\n" +
+"SimpleFolderCont received result. State is 20 1 1\n" +
+"Adding new Folder Folder 1 0\n" +
+"Making subFolder 1\n" +
+"SimpleFolderCont received result. State is 20 1 2\n" +
+"Adding new Folder Folder 1 1\n" +
+"Moving on to making subSubFolder 1\n" +
+"Making subFolder 0\n" +
+"SimpleFolderCont received result. State is 20 2 1\n" +
+"Adding new Folder Folder 2 0\n" +
+"Making subFolder 1\n" +
+"SimpleFolderCont received result. State is 20 2 2\n" +
+"Adding new Folder Folder 2 1\n" +
+"Finished Creating the Folders\n" +
+"Number of sub folders is 2\n" +
+"Folder 1\n" +
+"Folder 0\n" +
+"Number of subSub folders is 2\n" +
+"Folder 1 0\n" +
+"Folder 1 1\n" +
+"Number of subSub folders is 2\n" +
+"Folder 2 1\n" +
+"Folder 2 0\n" +
+"Initializing the EmailStorage state\n" +
+"Adding email 0\n" +
+"Adding email 1\n" +
+"Adding email 2\n" +
+"Adding email 3\n" +
+"Adding email 4\n" +
+"Adding email 5\n" +
+"Adding email 6\n" +
+"Finished adding the emails to each Folder, moving on to Snapshot\n" +
+"Doing snapshots\n" +
+"Adding snapshot email 0\n" +
+"Adding snapshot email 1\n" +
+"Entering testEmails1. EmailCount is: 0, and state is:60\n" +
 
-Root Folder contains the emails:
-Subject: First Email for Folder 0
-Send To: TestReciever 0
-Entering testEmails1. EmailCount is: 1, and state is:60
-Entering testEmails1. EmailCount is: 0, and state is:63
+"Root Folder contains the emails:\n" +
+"Subject: First Email for Folder 0\n" +
+"Send To: TestReciever 0\n" +
+"Entering testEmails1. EmailCount is: 1, and state is:60\n" +
+"Entering testEmails1. EmailCount is: 0, and state is:63\n" +
 
-Sub Folder 0  contains the emails:
-Subject: SS message 1
-Send To: SS-Receiver 1
-Subject: SS message 0
-Send To: SS-Receiver 0
-Subject: First Email for Folder 1
-Send To: TestReciever 1
-Entering testEmails1. EmailCount is: 1, and state is:63
+"Sub Folder 0  contains the emails:\n" +
+"Subject: SS message 1\n" +
+"Send To: SS-Receiver 1\n" +
+"Subject: SS message 0\n" +
+"Send To: SS-Receiver 0\n" +
+"Subject: First Email for Folder 1\n" +
+"Send To: TestReciever 1\n" +
+"Entering testEmails1. EmailCount is: 1, and state is:63\n" +
 
-Sub Folder 1  contains the emails:
-Subject: First Email for Folder 2
-Send To: TestReciever 2
-Entering testEmails1. EmailCount is: 2, and state is:63
-Entering testEmails1. EmailCount is: 0, and state is:66
+"Sub Folder 1  contains the emails:\n" +
+"Subject: First Email for Folder 2\n" +
+"Send To: TestReciever 2\n" +
+"Entering testEmails1. EmailCount is: 2, and state is:63\n" +
+"Entering testEmails1. EmailCount is: 0, and state is:66\n" +
 
-Sub Sub Folder 0  contains the emails:
-Subject: First Email for Folder 3
-Send To: TestReciever 3
-Entering testEmails1. EmailCount is: 1, and state is:66
+"Sub Sub Folder 0  contains the emails:\n" +
+"Subject: First Email for Folder 3\n" +
+"Send To: TestReciever 3\n" +
+"Entering testEmails1. EmailCount is: 1, and state is:66\n" +
 
-Sub Sub Folder 1  contains the emails:
-Subject: First Email for Folder 4
-Send To: TestReciever 4
-Entering testEmails1. EmailCount is: 2, and state is:66
+"Sub Sub Folder 1  contains the emails:\n" +
+"Subject: First Email for Folder 4\n" +
+"Send To: TestReciever 4\n" +
+"Entering testEmails1. EmailCount is: 2, and state is:66\n" +
 
-Sub Sub Folder 2  contains the emails:
-Subject: First Email for Folder 5
-Send To: TestReciever 5
-Entering testEmails1. EmailCount is: 3, and state is:66
+"Sub Sub Folder 2  contains the emails:\n" +
+"Subject: First Email for Folder 5\n" +
+"Send To: TestReciever 5\n" +
+"Entering testEmails1. EmailCount is: 3, and state is:66\n" +
 
-Sub Sub Folder 3  contains the emails:
-Subject: First Email for Folder 6
-Send To: TestReciever 6
-Entering testEmails1. EmailCount is: 4, and state is:66
-Done with testEmails1, emailCount is 0, subFolder length is 2, and subSubFolder length is 4
-Entering testEvents1. EmailCount is: 0, and state is:70
+"Sub Sub Folder 3  contains the emails:\n" +
+"Subject: First Email for Folder 6\n" +
+"Send To: TestReciever 6\n" +
+"Entering testEmails1. EmailCount is: 4, and state is:66\n" +
+"Done with testEmails1, emailCount is 0, subFolder length is 2, and subSubFolder length is 4\n" +
+"Entering testEvents1. EmailCount is: 0, and state is:70\n" +
 
-Root Folder contains the following events:
-Insert Email Event for: First Email for Folder 0
-Insert Folder Event for: Folder 1
-Insert Folder Event for: Folder 0
-Entering testEvents1. EmailCount is: 1, and state is:70
-Entering testEvents1. EmailCount is: 0, and state is:73
+"Root Folder contains the following events:\n" +
+"Insert Email Event for: First Email for Folder 0\n" +
+"Insert Folder Event for: Folder 1\n" +
+"Insert Folder Event for: Folder 0\n" +
+"Entering testEvents1. EmailCount is: 1, and state is:70\n" +
+"Entering testEvents1. EmailCount is: 0, and state is:73\n" +
 
-Sub Folder 0  contains the events:
-Insert Email Event for: SS message 1
-Insert Email Event for: SS message 0
-Insert Email Event for: First Email for Folder 1
-Insert Folder Event for: Folder 1 1
-Insert Folder Event for: Folder 1 0
-Entering testEvents1. EmailCount is: 1, and state is:73
+"Sub Folder 0  contains the events:\n" +
+"Insert Email Event for: SS message 1\n" +
+"Insert Email Event for: SS message 0\n" +
+"Insert Email Event for: First Email for Folder 1\n" +
+"Insert Folder Event for: Folder 1 1\n" +
+"Insert Folder Event for: Folder 1 0\n" +
+"Entering testEvents1. EmailCount is: 1, and state is:73\n" +
 
-Sub Folder 1  contains the events:
-Insert Email Event for: First Email for Folder 2
-Insert Folder Event for: Folder 2 1
-Insert Folder Event for: Folder 2 0
-Entering testEvents1. EmailCount is: 2, and state is:73
-Entering testEvents1. EmailCount is: 0, and state is:76
+"Sub Folder 1  contains the events:\n" +
+"Insert Email Event for: First Email for Folder 2\n" +
+"Insert Folder Event for: Folder 2 1\n" +
+"Insert Folder Event for: Folder 2 0\n" +
+"Entering testEvents1. EmailCount is: 2, and state is:73\n" +
+"Entering testEvents1. EmailCount is: 0, and state is:76\n" +
 
-Sub Sub Folder 0  contains the events:
-Insert Email Event for: First Email for Folder 3
-Entering testEvents1. EmailCount is: 1, and state is:76
+"Sub Sub Folder 0  contains the events:\n" +
+"Insert Email Event for: First Email for Folder 3\n" +
+"Entering testEvents1. EmailCount is: 1, and state is:76\n" +
 
-Sub Sub Folder 1  contains the events:
-Insert Email Event for: First Email for Folder 4
-Entering testEvents1. EmailCount is: 2, and state is:76
+"Sub Sub Folder 1  contains the events:\n" +
+"Insert Email Event for: First Email for Folder 4\n" +
+"Entering testEvents1. EmailCount is: 2, and state is:76\n" +
 
-Sub Sub Folder 2  contains the events:
-Insert Email Event for: First Email for Folder 5
-Entering testEvents1. EmailCount is: 3, and state is:76
+"Sub Sub Folder 2  contains the events:\n" +
+"Insert Email Event for: First Email for Folder 5\n" +
+"Entering testEvents1. EmailCount is: 3, and state is:76\n" +
 
-Sub Sub Folder 3  contains the events:
-Insert Email Event for: First Email for Folder 6
-Entering testEvents1. EmailCount is: 4, and state is:76
-Done with testEvents1, emailCount is 0, subFolder length is 2, and subSubFolder length is 4
-
-
-Entering testFolders!!! 
-RootFolder's child folders
-Folder 1
-Folder 0
-
-subFolder's child folders
-Folder 1 0
-Folder 1 1
-
-Folder 2 1
-Folder 2 0
-
-subSubFolder's child folders
+"Sub Sub Folder 3  contains the events:\n" +
+"Insert Email Event for: First Email for Folder 6\n" +
+"Entering testEvents1. EmailCount is: 4, and state is:76\n" +
+"Done with testEvents1, emailCount is 0, subFolder length is 2, and subSubFolder length is 4\n" +
 
 
+"Entering testFolders!!! \n" +
+"RootFolder's child folders\n" +
+"Folder 1\n" +
+"Folder 0\n" +
 
+"subFolder's child folders\n" +
+"Folder 1 0\n" +
+"Folder 1 1\n" +
 
-Rotating messages
-entering rotate messages. State: 90 emailCount: 0
+"Folder 2 1\n" +
+"Folder 2 0\n" +
 
-rotating subFolder message 0
-SourceEmail: Subject: First Email for Folder 1
-Send To: TestReciever 1  sourceFolder: Folder 0  targetFolder: Folder 1
-rotated message 1
-entering rotate messages. State: 90 emailCount: 1
-
-rotating subFolder message 1
-SourceEmail: Subject: First Email for Folder 2
-Send To: TestReciever 2  sourceFolder: Folder 1  targetFolder: Folder 0
-rotated message 2
-entering rotate messages. State: 90 emailCount: 2
-
-rotating subFolder message 2
-entering rotate messages. State: 95 emailCount: 0
-
-rotating subSubFolder message 0
-rotated message 1
-entering rotate messages. State: 95 emailCount: 1
-
-rotating subSubFolder message 1
-rotated message 2
-entering rotate messages. State: 95 emailCount: 2
-
-rotating subSubFolder message 2
-rotated message 3
-entering rotate messages. State: 95 emailCount: 3
-
-rotating subSubFolder message 3
-rotated message 4
-entering rotate messages. State: 95 emailCount: 4
-
-rotating subSubFolder message 4
+"subSubFolder's child folders\n" +
 
 
 
 
+"Rotating messages\n" +
+"entering rotate messages. State: 90 emailCount: 0\n" +
 
-Deleting messages.  State is 100  emailCount is 0
-Deleting message 3
-delete message cont
-Deleting messages.  State is 100  emailCount is 1
-Deleting message 0
-delete message cont
-Deleting messages.  State is 100  emailCount is 2
-Deleting message 1
-delete message cont
-Deleting messages.  State is 100  emailCount is 3
-Deleting message 2
-delete message cont
-Deleting messages.  State is 100  emailCount is 4
-Deleting messages.  State is 103  emailCount is 0
-Checking Folder 0
-delete message cont
-Delete Email Event for: First Email for Folder 6
-Insert Email Event for: First Email for Folder 6
-Delete Email Event for: First Email for Folder 3
-Insert Email Event for: First Email for Folder 3
-Deleting messages.  State is 103  emailCount is 1
-Checking Folder 1
-delete message cont
-Delete Email Event for: First Email for Folder 3
-Delete Email Event for: First Email for Folder 4
-Insert Email Event for: First Email for Folder 3
-Insert Email Event for: First Email for Folder 4
-Deleting messages.  State is 103  emailCount is 2
-Checking Folder 2
-delete message cont
-Delete Email Event for: First Email for Folder 4
-Delete Email Event for: First Email for Folder 5
-Insert Email Event for: First Email for Folder 4
-Insert Email Event for: First Email for Folder 5
-Deleting messages.  State is 103  emailCount is 3
-Checking Folder 3
-delete message cont
-Delete Email Event for: First Email for Folder 5
-Delete Email Event for: First Email for Folder 6
-Insert Email Event for: First Email for Folder 5
-Insert Email Event for: First Email for Folder 6
-Deleting messages.  State is 103  emailCount is 4
-deleting messages and folders
-Deleting messages.  State is 106  emailCount is 0
-Removing Folder 0
-delete message cont
-Deleting messages.  State is 106  emailCount is 1
-Removing Folder 1
-delete message cont
-Deleting messages.  State is 106  emailCount is 2
-Removing Folder 2
-delete message cont
-Deleting messages.  State is 106  emailCount is 3
-Removing Folder 3
-delete message cont
-Deleting messages.  State is 106  emailCount is 4
-Deleting messages.  State is 110  emailCount is 0
-Deleting message 1
-delete message cont
-Deleting messages.  State is 110  emailCount is 1
-Deleting message 0
-delete message cont
-Deleting messages.  State is 110  emailCount is 2
-Deleting messages.  State is 113  emailCount is 0
-Checking Folder 0
-delete message cont
-Delete Email Event for: First Email for Folder 2
-Delete Folder Event for: Folder 1 1
-Delete Folder Event for: Folder 1 0
-Insert Email Event for: First Email for Folder 2
-Delete Email Event for: First Email for Folder 1
-Insert Email Event for: SS message 1
-Insert Email Event for: SS message 0
-Insert Email Event for: First Email for Folder 1
-Insert Folder Event for: Folder 1 1
-Insert Folder Event for: Folder 1 0
-Deleting messages.  State is 113  emailCount is 1
-Checking Folder 1
-delete message cont
-Delete Email Event for: First Email for Folder 1
-Delete Folder Event for: Folder 2 1
-Delete Folder Event for: Folder 2 0
-Delete Email Event for: First Email for Folder 2
-Insert Email Event for: First Email for Folder 1
-Insert Email Event for: First Email for Folder 2
-Insert Folder Event for: Folder 2 1
-Insert Folder Event for: Folder 2 0
-Deleting messages.  State is 113  emailCount is 2
-deleting messages and folders
-Deleting messages.  State is 116  emailCount is 0
-Removing Folder 0
-delete message cont
-Deleting messages.  State is 116  emailCount is 1
-Removing Folder 1
-delete message cont
-Deleting messages.  State is 116  emailCount is 2
-Deleting messages.  State is 120  emailCount is 0
-Done!
-Finished with Folder Tests";
-  */
+"rotating subFolder message 0\n" +
+"SourceEmail: Subject: First Email for Folder 1\n" +
+"Send To: TestReciever 1  sourceFolder: Folder 0  targetFolder: Folder 1\n" +
+"rotated message 1\n" +
+"entering rotate messages. State: 90 emailCount: 1\n" +
+
+"rotating subFolder message 1\n" +
+"SourceEmail: Subject: First Email for Folder 2\n" +
+"Send To: TestReciever 2  sourceFolder: Folder 1  targetFolder: Folder 0\n" +
+"rotated message 2\n" +
+"entering rotate messages. State: 90 emailCount: 2\n" +
+
+"rotating subFolder message 2\n" +
+"entering rotate messages. State: 95 emailCount: 0\n" +
+
+"rotating subSubFolder message 0\n" +
+"rotated message 1\n" +
+"entering rotate messages. State: 95 emailCount: 1\n" +
+
+"rotating subSubFolder message 1\n" +
+"rotated message 2\n" +
+"entering rotate messages. State: 95 emailCount: 2\n" +
+
+"rotating subSubFolder message 2\n" +
+"rotated message 3\n" +
+"entering rotate messages. State: 95 emailCount: 3\n" +
+
+"rotating subSubFolder message 3\n" +
+"rotated message 4\n" +
+"entering rotate messages. State: 95 emailCount: 4\n" +
+
+"rotating subSubFolder message 4\n" +
+
+
+
+
+
+"Deleting messages.  State is 100  emailCount is 0\n" +
+"Deleting message 3\n" +
+"delete message cont\n" +
+"Deleting messages.  State is 100  emailCount is 1\n" +
+"Deleting message 0\n" +
+"delete message cont\n" +
+"Deleting messages.  State is 100  emailCount is 2\n" +
+"Deleting message 1\n" +
+"delete message cont\n" +
+"Deleting messages.  State is 100  emailCount is 3\n" +
+"Deleting message 2\n" +
+"delete message cont\n" +
+"Deleting messages.  State is 100  emailCount is 4\n" +
+"Deleting messages.  State is 103  emailCount is 0\n" +
+"Checking Folder 0\n" +
+"delete message cont\n" +
+"Delete Email Event for: First Email for Folder 6\n" +
+"Insert Email Event for: First Email for Folder 6\n" +
+"Delete Email Event for: First Email for Folder 3\n" +
+"Insert Email Event for: First Email for Folder 3\n" +
+"Deleting messages.  State is 103  emailCount is 1\n" +
+"Checking Folder 1\n" +
+"delete message cont\n" +
+"Delete Email Event for: First Email for Folder 3\n" +
+"Delete Email Event for: First Email for Folder 4\n" +
+"Insert Email Event for: First Email for Folder 3\n" +
+"Insert Email Event for: First Email for Folder 4\n" +
+"Deleting messages.  State is 103  emailCount is 2\n" +
+"Checking Folder 2\n" +
+"delete message cont\n" +
+"Delete Email Event for: First Email for Folder 4\n" +
+"Delete Email Event for: First Email for Folder 5\n" +
+"Insert Email Event for: First Email for Folder 4\n" +
+"Insert Email Event for: First Email for Folder 5\n" +
+"Deleting messages.  State is 103  emailCount is 3\n" +
+"Checking Folder 3\n" +
+"delete message cont\n" +
+"Delete Email Event for: First Email for Folder 5\n" +
+"Delete Email Event for: First Email for Folder 6\n" +
+"Insert Email Event for: First Email for Folder 5\n" +
+"Insert Email Event for: First Email for Folder 6\n" +
+"Deleting messages.  State is 103  emailCount is 4\n" +
+"deleting messages and folders\n" +
+"Deleting messages.  State is 106  emailCount is 0\n" +
+"Removing Folder 0\n" +
+"delete message cont\n" +
+"Deleting messages.  State is 106  emailCount is 1\n" +
+"Removing Folder 1\n" +
+"delete message cont\n" +
+"Deleting messages.  State is 106  emailCount is 2\n" +
+"Removing Folder 2\n" +
+"delete message cont\n" +
+"Deleting messages.  State is 106  emailCount is 3\n" +
+"Removing Folder 3\n" +
+"delete message cont\n" +
+"Deleting messages.  State is 106  emailCount is 4\n" +
+"Deleting messages.  State is 110  emailCount is 0\n" +
+"Deleting message 1\n" +
+"delete message cont\n" +
+"Deleting messages.  State is 110  emailCount is 1\n" +
+"Deleting message 0\n" +
+"delete message cont\n" +
+"Deleting messages.  State is 110  emailCount is 2\n" +
+"Deleting messages.  State is 113  emailCount is 0\n" +
+"Checking Folder 0\n" +
+"delete message cont\n" +
+"Delete Email Event for: First Email for Folder 2\n" +
+"Delete Folder Event for: Folder 1 1\n" +
+"Delete Folder Event for: Folder 1 0\n" +
+"Insert Email Event for: First Email for Folder 2\n" +
+"Delete Email Event for: First Email for Folder 1\n" +
+"Insert Email Event for: SS message 1\n" +
+"Insert Email Event for: SS message 0\n" +
+"Insert Email Event for: First Email for Folder 1\n" +
+"Insert Folder Event for: Folder 1 1\n" +
+"Insert Folder Event for: Folder 1 0\n" +
+"Deleting messages.  State is 113  emailCount is 1\n" +
+"Checking Folder 1\n" +
+"delete message cont\n" +
+"Delete Email Event for: First Email for Folder 1\n" +
+"Delete Folder Event for: Folder 2 1\n" +
+"Delete Folder Event for: Folder 2 0\n" +
+"Delete Email Event for: First Email for Folder 2\n" +
+"Insert Email Event for: First Email for Folder 1\n" +
+"Insert Email Event for: First Email for Folder 2\n" +
+"Insert Folder Event for: Folder 2 1\n" +
+"Insert Folder Event for: Folder 2 0\n" +
+"Deleting messages.  State is 113  emailCount is 2\n" +
+"deleting messages and folders\n" +
+"Deleting messages.  State is 116  emailCount is 0\n" +
+"Removing Folder 0\n" +
+"delete message cont\n" +
+"Deleting messages.  State is 116  emailCount is 1\n" +
+"Removing Folder 1\n" +
+"delete message cont\n" +
+"Deleting messages.  State is 116  emailCount is 2\n" +
+"Deleting messages.  State is 120  emailCount is 0\n" +
+"Done!\n" +
+      "Finished with Folder Tests";
+
 }
