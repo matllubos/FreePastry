@@ -87,6 +87,27 @@ public class ControlFindParentMessage extends Message implements Serializable
     {
         //System.out.println("Forwarding at " + scribe.getNodeId());
         Credentials c = new PermissiveCredentials();
+        if ( topic == null )
+        {
+           if ( send_to.size() != 0 )
+           {
+              already_seen.add( 0, send_to.remove(0) );
+           }
+           else
+           {
+              already_seen.add( 0, scribe.getNodeHandle() );
+           }
+           if ( send_to.size() != 0 )
+           {
+              channel.routeMsgDirect( (NodeHandle) send_to.get(0), this, c, null );
+           }
+           else
+           {
+              channel.routeMsgDirect( originalSource, this, c, null );
+           }
+        }
+        else
+        {
         if ( send_to.size() != 0 )
         {
             already_seen.add( 0, send_to.remove(0) );
@@ -155,6 +176,7 @@ public class ControlFindParentMessage extends Message implements Serializable
                                            null );
                 }
             }
+        }
         }
     }
 
