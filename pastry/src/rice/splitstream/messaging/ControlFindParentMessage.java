@@ -21,7 +21,7 @@ public class ControlFindParentMessage extends MessageAnycast
     StripeId stripe_id;
     Stripe recv_stripe = null;
     ChannelId channel_id;
-
+    NodeHandle originalSource ;
     final int DEFAULT_CHILDREN = 20;
 
     public ControlFindParentMessage( Address addr, NodeHandle source, NodeId topicId, Credentials c, StripeId stripe_id, ChannelId channel_id)
@@ -31,6 +31,7 @@ public class ControlFindParentMessage extends MessageAnycast
        already_seen = new Vector();
        this.stripe_id = stripe_id;
        this.channel_id = channel_id;
+       this.originalSource = source;
     }
 
     public StripeId getStripeId()
@@ -76,6 +77,7 @@ public class ControlFindParentMessage extends MessageAnycast
 
     public void handleForwardWrapper( Scribe scribe, Topic topic, Stripe s )
     {
+        System.out.println("Handle Forward Wrapper");
         recv_stripe = s;
         this.handleForwardMessage( scribe, topic );
     }
@@ -104,7 +106,7 @@ public class ControlFindParentMessage extends MessageAnycast
            }
            if ( send_to.size() != 0 )
            {
-              scribe.routeMsgDirect( send_to.get(0), this, c, null );
+              scribe.routeMsgDirect( (NodeHandle) send_to.get(0), this, c, null );
            }
            else
            {
@@ -129,6 +131,7 @@ public class ControlFindParentMessage extends MessageAnycast
         }
         else
         {
+	   System.out.println("recv_stripe is null");
            default_children = DEFAULT_CHILDREN;
         }
         if ( ( aggregateNumChildren( scribe ) < default_children ) &&
@@ -190,7 +193,8 @@ public class ControlFindParentMessage extends MessageAnycast
     {
         Credentials c = new PermissiveCredentials();
 	System.out.println("Delivering from " + scribe.getNodeId());
-
+	System.out.println("Delivering to " + this.originalSource.getNodeId());
+	System.out.println("this.getSource() " + this.getSource().getNodeId());
         scribe.addChild( this.getSource(), stripe_id );
         scribe.routeMsgDirect( this.getSource(), 
                                new ControlFindParentResponseMessage( scribe.getAddress(),
