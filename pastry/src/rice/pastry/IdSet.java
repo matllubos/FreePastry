@@ -118,7 +118,7 @@ public class IdSet {
      * @param to the upper end of the range (exclusive)
      * @return the subset
      */ 
-    IdSet subSet(Id from, Id to) {
+    public IdSet subSet(Id from, Id to) {
 	IdSet res = new IdSet();
 
 	res.idSet = idSet.subSet(from, to);
