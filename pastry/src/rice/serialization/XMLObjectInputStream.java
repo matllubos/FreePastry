@@ -66,6 +66,11 @@ import sun.reflect.*;
 public class XMLObjectInputStream extends ObjectInputStream {
   
   /**
+  * The hashmap of readResolve methods, mapping Class->Method
+   */
+  protected static HashMap READ_RESOLVES = new HashMap();
+  
+  /**
    * A cache of constructors, mapping classes to serialization constructors
    */
   protected static Hashtable constructors = new Hashtable();
@@ -80,7 +85,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
    * read off of the stream.
    */
   protected Hashtable references;
-    
+   
   /**
    * The stack of objects which are currently being read off of the stream
    */
@@ -447,31 +452,46 @@ public class XMLObjectInputStream extends ObjectInputStream {
    * @return The method, or null if none was found
    */
   private static Method getReadResolve(Class cl) {
-    Method meth = null;
-    Class defCl = cl;
-    while (defCl != null) {
-	    try {
-        meth = defCl.getDeclaredMethod("readResolve", new Class[0]);
-        break;
-	    } catch (NoSuchMethodException ex) {
-        defCl = defCl.getSuperclass();
-	    }
-    }
-    
-    if (meth == null) {
-	    return null;
-    }
-    
-    meth.setAccessible(true);
-    int mods = meth.getModifiers();
-    if ((mods & (Modifier.STATIC | Modifier.ABSTRACT)) != 0) {
-	    return null;
-    } else if ((mods & (Modifier.PUBLIC | Modifier.PROTECTED)) != 0) {
-	    return meth;
-    } else if ((mods & Modifier.PRIVATE) != 0) {
-	    return (cl == defCl) ? meth : null;
-    } else {
-	    return meth;
+    synchronized (READ_RESOLVES) {
+      if (READ_RESOLVES.containsKey(cl)) 
+        return (Method) READ_RESOLVES.get(cl);
+      
+      Method meth = null;
+      Class defCl = cl;
+      while (defCl != null) {
+        try {
+          meth = defCl.getDeclaredMethod("readResolve", new Class[0]);
+          break;
+        } catch (NoSuchMethodException ex) {
+          defCl = defCl.getSuperclass();
+        }
+      }
+      
+      if (meth == null) {
+        READ_RESOLVES.put(cl, null);
+        return null;
+      }
+      
+      meth.setAccessible(true);
+      int mods = meth.getModifiers();
+      if ((mods & (Modifier.STATIC | Modifier.ABSTRACT)) != 0) {
+        READ_RESOLVES.put(cl, null);
+        return null;
+      } else if ((mods & (Modifier.PUBLIC | Modifier.PROTECTED)) != 0) {
+        READ_RESOLVES.put(cl, meth);
+        return meth;
+      } else if ((mods & Modifier.PRIVATE) != 0) {
+        if (cl == defCl) {
+          READ_RESOLVES.put(cl, meth);
+          return meth;
+        } else {
+          READ_RESOLVES.put(cl, null);
+          return null;
+        }
+      } else {
+        READ_RESOLVES.put(cl, meth);
+        return meth;
+      }
     }
   }
   
