@@ -272,8 +272,12 @@ public class PostProxy {
   {"glacier_neighbor_timeout", "7200"},
   {"aggregation_flush_interval", "180"},
   {"aggregation_max_aggregate_size", "1048576"},
-  {"aggregation_max_objects_per_aggregate", "20"},
+  {"aggregation_max_objects_per_aggregate", "25"},
   {"aggregation_renew_threshold", "72"},
+  {"aggregation_consolidation_interval", "900"},
+  {"aggregation_consolidation_threshold", "1209600"},
+  {"aggregation_min_objects_per_aggregate", "20"},
+  {"aggregation_min_aggregate_utilization", "0.8"},
   {"past_replication_factor", "3"},
   {"application_instance_name", "PostProxy"}
   };
@@ -863,6 +867,10 @@ public class PostProxy {
       immutableAggregation.setMaxAggregateSize(parameters.getIntParameter("aggregation_max_aggregate_size"));
       immutableAggregation.setMaxObjectsInAggregate(parameters.getIntParameter("aggregation_max_objects_per_aggregate"));
       immutableAggregation.setRenewThreshold(parameters.getIntParameter("aggregation_renew_threshold"));
+      immutableAggregation.setConsolidationInterval(parameters.getIntParameter("aggregation_consolidation_interval"));
+      immutableAggregation.setConsolidationThreshold(parameters.getIntParameter("aggregation_consolidation_threshold"));
+      immutableAggregation.setConsolidationMinObjectsPerAggregate(parameters.getIntParameter("aggregation_min_objects_per_aggregate"));
+      immutableAggregation.setConsolidationMinUtilization(parameters.getDoubleParameter("aggregation_min_aggregate_utilization"));
 
       immutablePast = immutableAggregation;
 
