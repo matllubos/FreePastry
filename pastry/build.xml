@@ -2,6 +2,7 @@
 
   <!-- Necessary properties and paths -->
   <property name="src.dir" value="src"/>
+  <property name="jar.dir" value="jars"/>
   <property name="build.dir" value="classes" />  
   <property name="lib.dir" value="lib" />
   <property name="pretty.dir" value="pretty" />
@@ -35,6 +36,7 @@
 
   <target name="clean">
     <delete dir="${build.dir}"/>
+    <delete file="epost.jar"/>
   </target>
   
   <!-- All the stuff that needs to be done before anything can happen -->
@@ -57,10 +59,11 @@
   <target name="compile" depends="init,make_imap_parser">
     <javac srcdir="${src.dir}"
            destdir="${build.dir}"
-	   classpathref="project.classpath"
-	   includes="**/*.java"
+           classpathref="project.classpath"
+           includes="**/*.java"
            deprecation="yes"
-	   debug="true">
+           debug="true">
+           
     </javac>
     <antcall target="make_rmic_stubs"/>
   </target>
@@ -70,10 +73,10 @@
           message="You must set the pretty.src.dir property"/>
     <pathconvert refid="pretty.classpath"
                  pathsep=":"
-		 property="pretty.classpath.path"/>
+                 property="pretty.classpath.path"/>
     <taskdef name="pretty" 
              classname="org.acm.seguin.ant.Pretty" 
-	     classpath="${pretty.classpath.path}"/>
+             classpath="${pretty.classpath.path}"/>
     <pretty settingsDir="${pretty.dir}" cvs="true">      
       <fileset dir="${src.dir}/${pretty.src.dir}" includes="**/*.java"/> 
     </pretty>  
@@ -96,6 +99,30 @@
   <target name="jar" depends="compile">   
     <jar destfile="${build.dir}/pastry.jar">
       <fileset dir="${build.dir}" includes="**/*.class"/>
+    </jar>
+  </target>
+
+  <target name="epost" depends="compile">
+    <jar destfile="epost.jar" manifest="${jar.dir}/epost/Manifest">
+      <fileset dir="${build.dir}" includes="rice/Continuation*.class"/>
+      <fileset dir="${build.dir}" includes="rice/Executable*.class"/>
+      <fileset dir="${build.dir}" includes="rice/email/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/p2p/commonapi/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/p2p/glacier/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/p2p/aggregation/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/p2p/multiring/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/p2p/past/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/p2p/replication/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/p2p/scribe/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/p2p/util/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/pastry/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/persistence/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/post/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/proxy/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/selector/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/serialization/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/visualization/**/*.class"/>
+      <fileset dir="${jar.dir}/epost" includes="ca.publickey,proxy.params"/>
     </jar>
   </target>
 
