@@ -246,56 +246,105 @@ public interface Continuation {
     }
   }
   
-  public static class MultiContinuationHandle implements Continuation {
-  
-    protected MultiContinuation parent;
-    int myIndex;
-    
-    protected MultiContinuationHandle(MultiContinuation parent, int myIndex) {
-      this.myIndex = myIndex;
-      this.parent = parent;
-    }
-    
-    public void receiveResult(Object o) {
-      parent.receive(myIndex, o);
-    }
-    
-    public void receiveException(Exception e) {
-      parent.receive(myIndex, e);
-    }
-  }
-  
+  /**
+   * This class represents a Continuation which is used when multiple 
+   * results are expected, which can come back at different times.  The
+   * prototypical example of its use is in an application like Past, where
+   * Insert messages are sent to a number of replicas and the responses
+   * come back at different times.  
+   *
+   * Optionally, the creator can override the isDone() method, which 
+   * is called each time an intermediate result comes in.  This allows
+   * applications like Past to declare an insert successful after a 
+   * certain number of results have come back successful.
+   */
   public static class MultiContinuation {
   
     protected Object result[];
     protected boolean haveResult[];
     protected Continuation parent;
-    protected int resultsAvailable;
+    protected boolean done;
     
-    public MultiContinuation(Continuation parent, int numResults) {
+    /**
+     * Constructor which takes a parent continuation as well
+     * as the number of results which to expect.  
+     *
+     * @param parent The parent continuation
+     * @param num The number of results expected to come in
+     */
+    public MultiContinuation(Continuation parent, int num) {
       this.parent = parent;
-      this.resultsAvailable = 0;
-      this.result = new Object[numResults];
-      this.haveResult = new boolean[numResults];
-      for (int i=0; i<numResults; i++)
-        this.haveResult[i] = false;
+      this.result = new Object[num];
+      this.haveResult = new boolean[num];
+      this.done = false;
     }
     
-    public Continuation getSubContinuation(int index) {
-      if ((index<0) || (index>=result.length))
-        return null;
-        
-      return new MultiContinuationHandle(this, index);
+    /**
+     * Returns the continuation which should be used as the
+     * result continuation for the index-th result.  This should
+     * be called exactly once for each int between 0 and num.
+     *
+     * @param The index of this continuation
+     */
+    public Continuation getSubContinuation(final int index) {
+      return new Continuation() {
+        public void receiveResult(Object o) { receive(index, o); }
+        public void receiveException(Exception e) { receive(index, e); }
+      };
     }
     
-    protected synchronized void receive(int index, Object o) {
-      result[index] = o;
-      if (!haveResult[index]) {
+    /**
+     * Internal method which receives the results and determines
+     * if we are done with this task.  This method ignores multiple
+     * calls by the same client continuation.
+     *
+     * @param index The index the result is for
+     * @param o The result for that continuation
+     */
+    protected void receive(int index, Object o) {
+      if ((! done) && (! haveResult[index])) {
         haveResult[index] = true;
-        resultsAvailable ++;
-        if (resultsAvailable == result.length)
-          parent.receiveResult(result);
+        result[index] = o;
+
+        try {
+          if (isDone()) {
+            done = true;
+            parent.receiveResult(getResult());
+          }
+        } catch (Exception e) {
+          done = true;
+          parent.receiveException(e);
+        }
       }
+    }
+    
+    /**
+     * Method which returns whether or not we are done.  This is designed
+     * to be overridden by subclasses in order to allow for more advanced
+     * behavior.  
+     *
+     * If we are done and the subclass wishes to return an exception to the
+     * calling application, it may throw an Exception, which will be caught
+     * and returned to the parent via the receiveException() method.  This
+     * will cause this continaution to be permanently marked as done.
+     */
+    public boolean isDone() throws Exception {
+      for (int i=0; i<haveResult.length; i++) 
+        if (! haveResult[i]) 
+          return false;
+      
+      return true;
+    }
+    
+    /**
+     * Method which can also be overriden to change what result should be 
+     * returned to the parent continuation.  This defaults to the Object[]
+     * containing results or exceptions.
+     *
+     * @return The result which should be returned to the application
+     */
+    public Object getResult() {
+      return result; 
     }
   }
 }
