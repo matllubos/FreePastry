@@ -177,7 +177,7 @@ public class Scribe extends PastryAppl implements IScribe
      */
     public ScribeMaintainer m_maintainer;
 
-    
+    public static int m_scribeMaintFreq = 10; // seconds
 
     private static class ScribeAddress implements Address {
 	private int myCode = 0x8aec747c;
@@ -274,15 +274,6 @@ public class Scribe extends PastryAppl implements IScribe
 	m_distinctParentTable = new Hashtable();
 	m_alreadySentHBNodes = new HashSet();
 
-	/* If the node is already up, then the application should itself
-	 * start the maintenance thread "here", otherwise its started in 
-	 * notifyReady().
-	 */
-	if(pn.isReady()){
-	    if(thePastryNode instanceof DistPastryNode) {
-		new Thread(new DistScribeMaintenanceThread(this)).start();
-	    } 
-	}
     }
 
     /**
@@ -314,8 +305,12 @@ public class Scribe extends PastryAppl implements IScribe
      * Distributed network instead of a simulate network.
      */
     public void notifyReady() {
+	Credentials cred;
+	cred = new PermissiveCredentials();
+	System.out.println("notifyReady called for Scribe application on" + getNodeId()); 
 	if(thePastryNode instanceof DistPastryNode) {
-	    new Thread(new DistScribeMaintenanceThread(this)).start();
+	    thePastryNode.scheduleMsg(makeScribeMaintenanceMessage(cred), 
+				   m_scribeMaintFreq*1000, m_scribeMaintFreq*1000);
 	}
     }
 
@@ -736,6 +731,17 @@ public class Scribe extends PastryAppl implements IScribe
         return new MessageReplyFromParent( m_address, this.thePastryNode.getLocalHandle(), c);
     }
 
+
+    /**
+     * Makes a ScribeMaintenance message using the current Pastry node as the 
+     * source.
+     *
+     * @param c the credentials that will be associated with the message
+     * @return the ScribeMessage.
+     */
+    public ScribeMessage makeScribeMaintenanceMessage(  Credentials c ) {
+        return new MessageScribeMaintenance( m_address, this.thePastryNode.getLocalHandle(), c);
+    }
 
 
     /**
