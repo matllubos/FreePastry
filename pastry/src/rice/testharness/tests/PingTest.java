@@ -118,7 +118,7 @@ public class PingTest extends Test {
    * Method which is called when the TestHarness wants this
    * Test to begin testing.
    */
-  public void startTest(final TestHarness thl, NodeId[] nodes) {
+  public void startTest(final TestHarness thl, NodeHandle[] nodes) {
     trial++;
   
     // pick random NodeId

@@ -18,12 +18,12 @@ public class SubscribedMessage extends TestHarnessMessage {
   /**
    * The source of the message.
    */
-  protected NodeId _source;
+  protected NodeHandle _source;
 
   /**
    * Constructor
    */
-  public SubscribedMessage(NodeId source) {
+  public SubscribedMessage(NodeHandle source) {
     super();
     _source = source;
   }
@@ -32,7 +32,7 @@ public class SubscribedMessage extends TestHarnessMessage {
     return "SubscribedMessage: " + _source;
   }
 
-  public NodeId getSource() {
+  public NodeHandle getSource() {
     return _source;
   }
 

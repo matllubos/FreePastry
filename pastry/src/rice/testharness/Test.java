@@ -88,6 +88,6 @@ public abstract class Test extends PastryAppl implements Serializable {
    * Method which is called when the TestHarness wants this
    * Test to begin testing.
    */
-  public abstract void startTest(TestHarness th, NodeId[] nodes);
+  public abstract void startTest(TestHarness th, NodeHandle[] nodes);
 
 }

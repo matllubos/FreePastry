@@ -165,7 +165,7 @@ public class EmailTest extends Test {
     * Method which is called when the TestHarness wants this
    * Test to begin testing.
    */
-  public void startTest(final TestHarness thl, NodeId[] nodes) {
+  public void startTest(final TestHarness thl, NodeHandle[] nodes) {
     try {
       System.out.println();
       System.out.print("    Starting POST service\t\t\t\t\t");

@@ -103,7 +103,7 @@ public class TraceTest extends Test {
    * Method which is called when the TestHarness wants this
    * Test to begin testing.
    */
-  public void startTest(TestHarness thl, NodeId[] nodes) {
+  public void startTest(TestHarness thl, NodeHandle[] nodes) {
     NodeId nid = nidf.generateNodeId();
 
     // create a PingMessage, and timestamp with the current time

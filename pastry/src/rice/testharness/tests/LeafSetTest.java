@@ -94,13 +94,13 @@ public class LeafSetTest extends Test {
    * Method which is called when the TestHarness wants this
    * Test to begin testing.
    */
-  public void startTest(final TestHarness thl, NodeId[] nodes) {
+  public void startTest(final TestHarness thl, NodeHandle[] nodes) {
     LeafSet ls = _localNode.getLeafSet();
     TreeMap pastryNodesSorted = new TreeMap();
     boolean success = true;
 
     for (int i=0; i<nodes.length; i++) {
-      pastryNodesSorted.put(nodes[i], nodes[i]);
+      pastryNodesSorted.put(nodes[i].getNodeId(), nodes[i].getNodeId());
     }
 
     // check size

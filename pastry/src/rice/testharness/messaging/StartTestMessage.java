@@ -25,12 +25,12 @@ public class StartTestMessage extends TestHarnessMessage {
    */
   protected String _runName;
 
-  protected NodeId[] _nodes;
+  protected NodeHandle[] _nodes;
 
   /**
    * Constructor
    */
-  public StartTestMessage(String runName, NodeId[] nodes) {
+  public StartTestMessage(String runName, NodeHandle[] nodes) {
     super();
     _runName = runName;
     _nodes = nodes;
@@ -44,7 +44,7 @@ public class StartTestMessage extends TestHarnessMessage {
     return _runName;
   }
 
-  public NodeId[] getNodes() {
+  public NodeHandle[] getNodes() {
     return _nodes;
   }
 }

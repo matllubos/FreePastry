@@ -71,7 +71,7 @@ public class DistTestHarnessRunner {
   /**
    * The port to start the first node on.
    */
-  private static int defaultStartPort = 10293;
+  private static int defaultStartPort = 12000;
 
   /**
    * The port to start the first node on.
@@ -81,7 +81,9 @@ public class DistTestHarnessRunner {
   /**
    * The port on the bootstrapHost to look for the bootstrap node on
    */
-  public static int bootstrapPort = 10293;
+  public static int bootstrapPort = 12000;
+
+  public static int NUM_NODES_PER_HOST;
 
   /**
    * The name of the machine on which to look for the bootstrap node
@@ -104,6 +106,8 @@ public class DistTestHarnessRunner {
   public DistTestHarnessRunner(int num, int port) {
     startPort = port;
 
+    NUM_NODES_PER_HOST = num;
+    
     _pastryNodes = new Vector();
     _testNodes = new Vector();
     _factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(), DistPastryNodeFactory.PROTOCOL_WIRE, startPort);
@@ -233,6 +237,16 @@ public class DistTestHarnessRunner {
     int port = defaultStartPort;
 
     for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-b") && i+1 < args.length) {
+        int n = Integer.parseInt(args[i+1]);
+        if (n > 0) RoutingTable.idBaseBitLength = n;
+        break;
+      }
+    }
+
+    System.out.println("RTB is " + RoutingTable.idBaseBitLength);
+    
+    for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-bootstrap") && i+1 < args.length) {
         String str = args[i+1];
         int index = str.indexOf(':');
@@ -288,8 +302,8 @@ public class DistTestHarnessRunner {
         System.out.println("Current nodes in the system:");
 
         for (int i=0; i<((TestHarness) _testNodes.elementAt(0))._subscribedNodes.size(); i++) {
-          NodeId nh = (NodeId) ((TestHarness) _testNodes.elementAt(0))._subscribedNodes.elementAt(i);
-          System.out.println("  " + i + ": " + nh);
+          NodeHandle nh = (NodeHandle) ((TestHarness) _testNodes.elementAt(0))._subscribedNodes.elementAt(i);
+          System.out.println("  " + i + ": " + nh.getNodeId());
         }
 
       } else if ( token.startsWith( "listlocalnodes" ) ) {
@@ -357,10 +371,10 @@ public class DistTestHarnessRunner {
 
         Vector nodeIds = ((TestHarness) _testNodes.elementAt(0))._subscribedNodes;
 
-        NodeId[] nodes = new NodeId[nodeIds.size()];
+        NodeHandle[] nodes = new NodeHandle[nodeIds.size()];
 
         for (int i=0; i<nodes.length; i++) {
-          nodes[i] = (NodeId) nodeIds.elementAt(i);
+          nodes[i] = (NodeHandle) nodeIds.elementAt(i);
         }
 
         Message m = new StartTestMessage(name, nodes);

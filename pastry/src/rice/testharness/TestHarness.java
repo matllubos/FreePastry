@@ -140,7 +140,7 @@ public class TestHarness extends PastryAppl implements Serializable {
    * node of its presence.
    */
   public void initialize() {
-    SubscribedMessage sm = new SubscribedMessage(_pastryNode.getNodeId());
+    SubscribedMessage sm = new SubscribedMessage(_pastryNode.getLocalHandle());
     routeMsg(ROOT_NODE_ID, sm, _credentials, null);
   }
 
@@ -269,7 +269,7 @@ public class TestHarness extends PastryAppl implements Serializable {
     Thread t = new Thread() {
       public void run() {
         for (int i=0; i<_subscribedNodes.size(); i++) {
-          routeMsg((NodeId) _subscribedNodes.elementAt(i), m, new PermissiveCredentials(), null);
+          routeMsgDirect((NodeHandle) _subscribedNodes.elementAt(i), m, new PermissiveCredentials(), null);
         }
       }
     };
@@ -277,10 +277,10 @@ public class TestHarness extends PastryAppl implements Serializable {
     t.start();
   }
 
-  public void send(final Message m, final NodeId nh) {
+  public void send(final Message m, final NodeHandle nh) {
     Thread t = new Thread() {
       public void run() {
-        routeMsg(nh, m, _credentials, null);
+        routeMsgDirect(nh, m, _credentials, null);
       }
     };
 

@@ -4,7 +4,9 @@ SOURCE  = \
 	LeafSetTest.java \
 	TraceTest.java \
 	PingTest.java \
-  SplitStreamTest.java
+  SplitStreamTest.java \
+  Pinger.java \
+  PastryPinger.java
 
 RMI_SOURCE =
 

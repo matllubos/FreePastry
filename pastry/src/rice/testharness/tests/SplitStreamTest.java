@@ -133,7 +133,7 @@ public class SplitStreamTest extends Test implements ISplitStreamApp, Observer {
     * Method which is called when the TestHarness wants this
     * Test to begin testing.
     */
-  public void startTest(final TestHarness thl, NodeId[] nodes) {
+  public void startTest(final TestHarness thl, NodeHandle[] nodes) {
     if(getNodeId().equals(new NodeId(new byte[NodeId.nodeIdBitLength]))) {
       // creator of channel
 	//_out.println("Creating channel at " + getNodeId() + " with name " + m_name);
