@@ -46,7 +46,7 @@ import java.io.*;
 import java.lang.*;
 
 /**
- * PingTestNew
+ * DirectPastryPingTest
  *
  * A performance test suite for pastry. 
  *
@@ -55,8 +55,8 @@ import java.lang.*;
  * @author Rongmei Zhang
  */
 
-public class PingTestNew {
-    public PingTestNew(){ }
+public class DirectPastryPingTest {
+    public DirectPastryPingTest(){ }
 
     private static boolean parseInput( String in ) {
 	StringTokenizer tokened = new StringTokenizer( in );
