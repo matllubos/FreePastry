@@ -209,13 +209,15 @@ public class StandardJoinProtocol implements MessageReceiver
 	}
 
 	// now broadcast the rows to our peers in each row
-	// routeTable is not updated yet in the simulation
-
 	//for (int i=0; i<n; i++) {
 	//    RouteSet row[] = routeTable.getRow(i);
 
 	for (int i=jr.lastRow(); i<n; i++) {
 	    RouteSet row[] = jr.getRow(i);
+
+	    int myCol = localHandle.getNodeId().getDigit(i,rice.pastry.routing.RoutingTable.idBaseBitLength);
+	    NodeHandle nhMyCol = row[myCol].closestNode();
+	    row[myCol].put(localHandle);
 
 	    BroadcastRouteRow brr = new BroadcastRouteRow(localId, row);
 
@@ -224,7 +226,11 @@ public class StandardJoinProtocol implements MessageReceiver
 
 		// broadcast to closest node only
 		
-		NodeHandle nh = rs.closestNode();
+		NodeHandle nh;
+		if (j != myCol)
+		    nh = rs.closestNode();
+		else
+		    nh = nhMyCol;
 		if (nh != null) nh.receiveMessage(brr);
 
 		/*
