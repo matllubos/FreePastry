@@ -166,7 +166,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
     public PastryNode newNode(NodeHandle bootstrap) {
 
 	NodeId nodeId = nidFactory.generateNodeId();
-	DirectPastryNode pn = new DirectPastryNode(nodeId);
+	DirectPastryNode pn = new DirectPastryNode(nodeId, simulator);
 	
 	DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
 

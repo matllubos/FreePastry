@@ -112,12 +112,12 @@ public abstract class PastryRegrTest {
      * constructor
      */
     protected PastryRegrTest() {
-  pastryNodes = new Vector();
-  pastryNodesSorted = new TreeMap();
-  pastryNodesLastAdded = new Vector();
-  inConcJoin = false;
-  rtApps = new Vector();
-  rng = new Random();
+	pastryNodes = new Vector();
+	pastryNodesSorted = new TreeMap();
+	pastryNodesLastAdded = new Vector();
+	inConcJoin = false;
+	rtApps = new Vector();
+	rng = new Random();
     }
 
     /**
@@ -125,35 +125,35 @@ public abstract class PastryRegrTest {
      */
 
     private void makePastryNode() {
-  NodeHandle bootstrap = getBootstrap();
-  PastryNode pn = generateNode(bootstrap);
+	NodeHandle bootstrap = getBootstrap();
+	PastryNode pn = generateNode(bootstrap);
 
-  pastryNodes.addElement(pn);
-  pastryNodesSorted.put(pn.getNodeId(),pn);
-  pastryNodesLastAdded.clear();
-  pastryNodesLastAdded.addElement(pn.getNodeId());
+	pastryNodes.addElement(pn);
+	pastryNodesSorted.put(pn.getNodeId(),pn);
+	pastryNodesLastAdded.clear();
+	pastryNodesLastAdded.addElement(pn.getNodeId());
 
-  RegrTestApp rta = new RegrTestApp(pn,this);
-  rtApps.addElement(rta);
+	RegrTestApp rta = new RegrTestApp(pn,this);
+	rtApps.addElement(rta);
 
-  registerapp(pn,rta);
+	registerapp(pn,rta);
 
-  int msgCount = 0;
+	int msgCount = 0;
 
-  if (bootstrap != null)
-      while(simulate()) msgCount++;
+	if (bootstrap != null)
+	    while(simulate()) msgCount++;
 
-  //System.out.println("created " + pn + " messages: " + msgCount);
+	//System.out.println("created " + pn + " messages: " + msgCount);
 
-  checkLeafSet(rta);
-  checkRoutingTable(rta);
-  //System.out.println("");
+	checkLeafSet(rta);
+	checkRoutingTable(rta);
+	//System.out.println("");
     }
 
     protected PastryNode generateNode(NodeHandle bootstrap) {
-  PastryNode pn = factory.newNode(bootstrap);
+	PastryNode pn = factory.newNode(bootstrap);
 
-  return pn;
+	return pn;
     }
 
 
@@ -166,76 +166,76 @@ public abstract class PastryRegrTest {
      */
 
     private void makePastryNode(int num) {
-  RegrTestApp rta[] = new RegrTestApp[num];
-  pastryNodesLastAdded.clear();
+	RegrTestApp rta[] = new RegrTestApp[num];
+	pastryNodesLastAdded.clear();
 
-  inConcJoin = true;
+	inConcJoin = true;
 
-  int n = pastryNodes.size(); // n will be a multiple of num
-  if (n==0) num = 1;
-  for (int i=0; i<num; i++) {
+	int n = pastryNodes.size(); // n will be a multiple of num
+	if (n==0) num = 1;
+	for (int i=0; i<num; i++) {
 
-      NodeHandle bootstrap = null;
+	    NodeHandle bootstrap = null;
 
-//      if (n == 0)   // first batch of nodes
-    bootstrap = getBootstrap();
-//      else {    // corresponding node from previous batch
-//    PastryNode pn = (PastryNode) pastryNodes.get(/*n+i - num*/n-1);
-//    if (pn != null) bootstrap = pn.getLocalHandle();
-//      }
+	    //      if (n == 0)   // first batch of nodes
+	    bootstrap = getBootstrap();
+	    //      else {    // corresponding node from previous batch
+	    //    PastryNode pn = (PastryNode) pastryNodes.get(/*n+i - num*/n-1);
+	    //    if (pn != null) bootstrap = pn.getLocalHandle();
+	    //      }
 
-      PastryNode pn = generateNode(bootstrap);
-      pastryNodes.addElement(pn);
-      pastryNodesSorted.put(pn.getNodeId(),pn);
-      pastryNodesLastAdded.addElement(pn.getNodeId());
+	    PastryNode pn = generateNode(bootstrap);
+	    pastryNodes.addElement(pn);
+	    pastryNodesSorted.put(pn.getNodeId(),pn);
+	    pastryNodesLastAdded.addElement(pn.getNodeId());
 
-      rta[i] = new RegrTestApp(pn,this);
-      rtApps.addElement(rta[i]);
+	    rta[i] = new RegrTestApp(pn,this);
+	    rtApps.addElement(rta[i]);
+	    
+	    registerapp(pn,rta[i]);
 
-      registerapp(pn,rta[i]);
+	    // ADDED FOR SOCKET PROTOCOL...
+	    while (!pn.isReady()) {
+		pause(500);
+	    }
 
-  // ADDED FOR SOCKET PROTOCOL...
-    while (!pn.isReady()) {
-      pause(500);
+	    if (bootstrap != null)
+		if (n == 0) {
+		    // we have to join the first batch of nodes
+		    // sequentially, else we create multiple rings
+		    while(simulate()) msgCount++;
+		}
+	}
+
+	int msgCount = 0;
+
+	// now simulate concurrent joins
+	while(simulate()) msgCount++;
+
+	inConcJoin = false;
+
+	for (int i=0; i<num; i++) {
+	    System.out.println("created " + rta[i].getNodeId());
+
+	    checkLeafSet(rta[i]);
+	    checkRoutingTable(rta[i]);
+	}
+
+	System.out.println("messages: " + msgCount);
+
+	/*
+	  for (int i=0; i<rtApps.size(); i++) {
+	  checkLeafSet((RegrTestApp)rtApps.get(i));
+	  checkRoutingTable((RegrTestApp)rtApps.get(i));
+	  }
+	*/
+
     }
 
-      if (bootstrap != null)
-    if (n == 0) {
-        // we have to join the first batch of nodes
-        // sequentially, else we create multiple rings
-        while(simulate()) msgCount++;
+    public synchronized void pause(int ms) {
+	System.out.println("Waiting for pastry node to be ready...");
+	try { wait(ms); } catch (InterruptedException e) {}
     }
-  }
-
-  int msgCount = 0;
-
-  // now simulate concurrent joins
-  while(simulate()) msgCount++;
-
-  inConcJoin = false;
-
-  for (int i=0; i<num; i++) {
-      System.out.println("created " + rta[i].getNodeId());
-
-      checkLeafSet(rta[i]);
-      checkRoutingTable(rta[i]);
-  }
-
-  System.out.println("messages: " + msgCount);
-
-  /*
-  for (int i=0; i<rtApps.size(); i++) {
-      checkLeafSet((RegrTestApp)rtApps.get(i));
-      checkRoutingTable((RegrTestApp)rtApps.get(i));
-  }
-  */
-
-    }
-
-  public synchronized void pause(int ms) {
-    System.out.println("Waiting for pastry node to be ready...");
-    try { wait(ms); } catch (InterruptedException e) {}
-  }
 
     /**
      * Send messages among random message pairs. In each round, one
@@ -245,30 +245,30 @@ public abstract class PastryRegrTest {
      * of an existing node)
      *
      * @param k the number of rounds */
-
+    
     public void sendPings(int k) {
-  int n = rtApps.size();
+	int n = rtApps.size();
 
-  for (int i=0; i<k; i++) {
-      int from = rng.nextInt(n);
-      int to = rng.nextInt(n);
-      byte[] keyBytes = new byte[16];
-      rng.nextBytes(keyBytes);
-      NodeId key = new NodeId(keyBytes);
+	for (int i=0; i<k; i++) {
+	    int from = rng.nextInt(n);
+	    int to = rng.nextInt(n);
+	    byte[] keyBytes = new byte[16];
+	    rng.nextBytes(keyBytes);
+	    NodeId key = new NodeId(keyBytes);
 
-      RegrTestApp rta = (RegrTestApp) rtApps.get(from);
-      PastryNode pn = (PastryNode) pastryNodes.get(to);
+	    RegrTestApp rta = (RegrTestApp) rtApps.get(from);
+	    PastryNode pn = (PastryNode) pastryNodes.get(to);
       
-      // send to a  random node
-      rta.sendTrace(pn.getNodeId());
-      while(simulate());
+	    // send to a  random node
+	    rta.sendTrace(pn.getNodeId());
+	    while(simulate());
       
-      // send to a random key
-      rta.sendTrace(key);
-      while(simulate());
+	    // send to a random key
+	    rta.sendTrace(key);
+	    while(simulate());
 
-      //System.out.println("-------------------");
-  }
+	    //System.out.println("-------------------");
+	}
     }
 
     /**
@@ -276,58 +276,58 @@ public abstract class PastryRegrTest {
      */
 
     private void checkLeafSet(RegrTestApp rta) {
-  LeafSet ls = rta.getLeafSet();
-  NodeId localId = rta.getNodeId();
+	LeafSet ls = rta.getLeafSet();
+	NodeId localId = rta.getNodeId();
 
-  // check size
-  if (ls.size() < ls.maxSize() && (pastryNodesSorted.size()-1)*2 != ls.size())
-      System.out.println("checkLeafSet: incorrect size " + rta.getNodeId() +
-             " ls.size()=" + ls.size() + " total nodes=" + pastryNodesSorted.size() + "\n" + ls);
+	// check size
+	if (ls.size() < ls.maxSize() && (pastryNodesSorted.size()-1)*2 != ls.size())
+	    System.out.println("checkLeafSet: incorrect size " + rta.getNodeId() +
+			       " ls.size()=" + ls.size() + " total nodes=" + pastryNodesSorted.size() + "\n" + ls);
 
-  // check for correct leafset range
-  // ccw half
-  for (int i=-ls.ccwSize(); i<0; i++) {
-      NodeHandle nh = ls.get(i);
+	// check for correct leafset range
+	// ccw half
+	for (int i=-ls.ccwSize(); i<0; i++) {
+	    NodeHandle nh = ls.get(i);
 
-      if (! nh.isAlive())
-        System.out.println("checkLeafSet: dead node handle " + nh.getNodeId() +
-                           " in leafset at " + rta.getNodeId() + "\n" + ls);
+	    if (! nh.isAlive())
+		System.out.println("checkLeafSet: dead node handle " + nh.getNodeId() +
+				   " in leafset at " + rta.getNodeId() + "\n" + ls);
 
-      NodeId nid = ls.get(i).getNodeId();
-      int inBetween;
+	    NodeId nid = ls.get(i).getNodeId();
+	    int inBetween;
 
-      if (localId.compareTo(nid) > 0) // local > nid ?
-    inBetween = pastryNodesSorted.subMap(nid, localId).size();
-      else
-    inBetween = pastryNodesSorted.tailMap(nid).size() +
-        pastryNodesSorted.headMap(localId).size();
+	    if (localId.compareTo(nid) > 0) // local > nid ?
+		inBetween = pastryNodesSorted.subMap(nid, localId).size();
+	    else
+		inBetween = pastryNodesSorted.tailMap(nid).size() +
+		    pastryNodesSorted.headMap(localId).size();
 
-      if (inBetween != -i)
-    System.out.println("checkLeafSet: failure at" + rta.getNodeId() +
-           "i=" + i + " inBetween=" + inBetween + "\n" + ls);
-  }
+	    if (inBetween != -i)
+		System.out.println("checkLeafSet: failure at" + rta.getNodeId() +
+				   "i=" + i + " inBetween=" + inBetween + "\n" + ls);
+	}
 
-  // cw half
-  for (int i=1; i<=ls.cwSize(); i++) {
-      NodeHandle nh = ls.get(i);
+	// cw half
+	for (int i=1; i<=ls.cwSize(); i++) {
+	    NodeHandle nh = ls.get(i);
 
-      if (! nh.isAlive())
-        System.out.println("checkLeafSet: dead node handle " + nh.getNodeId() +
-                           " in leafset at " + rta.getNodeId() + "\n" + ls);
+	    if (! nh.isAlive())
+		System.out.println("checkLeafSet: dead node handle " + nh.getNodeId() +
+				   " in leafset at " + rta.getNodeId() + "\n" + ls);
 
-      NodeId nid = ls.get(i).getNodeId();
-      int inBetween;
+	    NodeId nid = ls.get(i).getNodeId();
+	    int inBetween;
+	    
+	    if (localId.compareTo(nid) < 0)   // localId < nid?
+		inBetween = pastryNodesSorted.subMap(localId, nid).size();
+	    else
+		inBetween = pastryNodesSorted.tailMap(localId).size() +
+		    pastryNodesSorted.headMap(nid).size();
 
-      if (localId.compareTo(nid) < 0)   // localId < nid?
-    inBetween = pastryNodesSorted.subMap(localId, nid).size();
-      else
-    inBetween = pastryNodesSorted.tailMap(localId).size() +
-        pastryNodesSorted.headMap(nid).size();
-
-      if (inBetween != i)
-    System.out.println("checkLeafSet: failure at" + rta.getNodeId() +
-               "i=" + i + " inBetween=" + inBetween + "\n" + ls);
-  }
+	    if (inBetween != i)
+		System.out.println("checkLeafSet: failure at" + rta.getNodeId() +
+				   "i=" + i + " inBetween=" + inBetween + "\n" + ls);
+	}
 
     }
 
@@ -337,70 +337,70 @@ public abstract class PastryRegrTest {
      */
 
     private void checkRoutingTable(RegrTestApp rta) {
-  RoutingTable rt = rta.getRoutingTable();
+	RoutingTable rt = rta.getRoutingTable();
 
-  // check routing table
+	// check routing table
 
-  for (int i=rt.numRows()-1; i>=0; i--) {
-    // next row
-      for (int j=0; j<rt.numColumns(); j++) {
-    // next column
+	for (int i=rt.numRows()-1; i>=0; i--) {
+	    // next row
+	    for (int j=0; j<rt.numColumns(); j++) {
+		// next column
 
-    // skip if local nodeId digit
-    // if (j == rta.getNodeId().getDigit(i,4)) continue;
+		// skip if local nodeId digit
+		// if (j == rta.getNodeId().getDigit(i,4)) continue;
 
-    RouteSet rs = rt.getRouteSet(i,j);
+		RouteSet rs = rt.getRouteSet(i,j);
 
-    NodeId domainFirst = rta.getNodeId().getDomainPrefix(i,j,0);
-    NodeId domainLast = rta.getNodeId().getDomainPrefix(i,j,0xf);
-    //System.out.println("prefixes " + rta.getNodeId() + domainFirst + domainLast);
+		NodeId domainFirst = rta.getNodeId().getDomainPrefix(i,j,0);
+		NodeId domainLast = rta.getNodeId().getDomainPrefix(i,j,0xf);
+		//System.out.println("prefixes " + rta.getNodeId() + domainFirst + domainLast);
 
-    if (rs.size() == 0) {
-        // no entry
+		if (rs.size() == 0) {
+		    // no entry
 
-        // check if no nodes with appropriate prefix exist
-        int inBetween = pastryNodesSorted.subMap(domainFirst,domainLast).size() +
-      (pastryNodesSorted.containsKey(domainLast) ? 1 : 0);
+		    // check if no nodes with appropriate prefix exist
+		    int inBetween = pastryNodesSorted.subMap(domainFirst,domainLast).size() +
+			(pastryNodesSorted.containsKey(domainLast) ? 1 : 0);
 
-        if (inBetween > 0) {
+		    if (inBetween > 0) {
 
-      System.out.println("checkRoutingTable: missing RT entry at" + rta.getNodeId() +
-             "row=" + i + " column=" + j + " inBetween=" + inBetween);
-      //System.out.println("prefixes " + rta.getNodeId() + domainFirst + domainLast);
-        }
-    }
-    else {
-        // check entries
-        int lastProximity = 0;
-        for (int k=0; k<rs.size(); k++) {
+			System.out.println("checkRoutingTable: missing RT entry at" + rta.getNodeId() +
+					   "row=" + i + " column=" + j + " inBetween=" + inBetween);
+			//System.out.println("prefixes " + rta.getNodeId() + domainFirst + domainLast);
+		    }
+		}
+		else {
+		    // check entries
+		    int lastProximity = 0;
+		    for (int k=0; k<rs.size(); k++) {
 
-      // check for correct proximity ordering
-      if (rs.get(k).proximity() < lastProximity) {
-          System.out.println("checkRoutingTable failure 1, row=" + i + " column=" + j +
-                 " rank=" + k);
+			// check for correct proximity ordering
+			if (rs.get(k).proximity() < lastProximity) {
+			    System.out.println("checkRoutingTable failure 1, row=" + i + " column=" + j +
+					       " rank=" + k);
 
-      }
-      //lastProximity = rs.get(k).proximity();
+			}
+			//lastProximity = rs.get(k).proximity();
 
-      NodeId id = rs.get(k).getNodeId();
+			NodeId id = rs.get(k).getNodeId();
 
-      // check if node exists
-      if (!pastryNodesSorted.containsKey(id)) {
-          if (isReallyAlive(id))
-        System.out.println("checkRoutingTable failure 2, row=" + i + " column=" + j +
-               " rank=" + k);
-      }
-      else   // check if node has correct prefix
-          if ( !pastryNodesSorted.subMap(domainFirst,domainLast).containsKey(id) &&
-         !domainLast.equals(id) )
-        System.out.println("checkRoutingTable failure 3, row=" + i + " column=" + j +
-               " rank=" + k);
-        }
-    }
-      }
-  }
+			// check if node exists
+			if (!pastryNodesSorted.containsKey(id)) {
+			    if (isReallyAlive(id))
+				System.out.println("checkRoutingTable failure 2, row=" + i + " column=" + j +
+						   " rank=" + k);
+			}
+			else   // check if node has correct prefix
+			    if ( !pastryNodesSorted.subMap(domainFirst,domainLast).containsKey(id) &&
+				 !domainLast.equals(id) )
+				System.out.println("checkRoutingTable failure 3, row=" + i + " column=" + j +
+						   " rank=" + k);
+		    }
+		}
+	    }
+	}
 
-  //System.out.println(rt);
+	//System.out.println(rt);
 
     }
 
@@ -409,11 +409,11 @@ public abstract class PastryRegrTest {
      */
     private void initiateLeafSetMaintenance() {
 
-  for (int i=0; i<pastryNodes.size(); i++) {
-      PastryNode pn = (PastryNode)pastryNodes.get(i);
-      pn.receiveMessage(new InitiateLeafSetMaintenance());
-      while(simulate());
-  }
+	for (int i=0; i<pastryNodes.size(); i++) {
+	    PastryNode pn = (PastryNode)pastryNodes.get(i);
+	    pn.receiveMessage(new InitiateLeafSetMaintenance());
+	    while(simulate());
+	}
 
     }
 
@@ -422,11 +422,11 @@ public abstract class PastryRegrTest {
      */
     private void initiateRouteSetMaintenance() {
 
-  for (int i=0; i<pastryNodes.size(); i++) {
-      PastryNode pn = (PastryNode)pastryNodes.get(i);
-      pn.receiveMessage(new InitiateRouteSetMaintenance());
-      while(simulate());
-  }
+	for (int i=0; i<pastryNodes.size(); i++) {
+	    PastryNode pn = (PastryNode)pastryNodes.get(i);
+	    pn.receiveMessage(new InitiateRouteSetMaintenance());
+	    while(simulate());
+	}
 
     }
 
@@ -437,16 +437,16 @@ public abstract class PastryRegrTest {
      */
 
     private void killNodes(int num) {
-  for (int i=0; i<num; i++) {
-      int n = rng.nextInt(pastryNodes.size());
-
-      PastryNode pn = (PastryNode)pastryNodes.get(n);
-      pastryNodes.remove(n);
-      rtApps.remove(n);
-      pastryNodesSorted.remove(pn.getNodeId());
-      killNode(pn);
-      System.out.println("Killed " + pn.getNodeId());
-  }
+	for (int i=0; i<num; i++) {
+	    int n = rng.nextInt(pastryNodes.size());
+	    
+	    PastryNode pn = (PastryNode)pastryNodes.get(n);
+	    pastryNodes.remove(n);
+	    rtApps.remove(n);
+	    pastryNodesSorted.remove(pn.getNodeId());
+	    killNode(pn);
+	    System.out.println("Killed " + pn.getNodeId());
+	}
     }
 
     /**
@@ -454,92 +454,92 @@ public abstract class PastryRegrTest {
      */
 
     protected static void mainfunc(PastryRegrTest pt, String args[],
-        int n, int d, int k, int m, int numConcJoins) {
+				   int n, int d, int k, int m, int numConcJoins) {
 
-  Date old = new Date();
+	Date old = new Date();
+  
+	for (int i=0; i<n; i += numConcJoins) {
+	    pt.makePastryNode(numConcJoins);
 
-  for (int i=0; i<n; i += numConcJoins) {
-      pt.makePastryNode(numConcJoins);
+	    if ((i + numConcJoins) % m == 0) {
+		Date now = new Date();
+		System.out.println((i + numConcJoins) + " " + (now.getTime() - old.getTime()) +
+				   " " + pt.msgCount);
+		pt.msgCount = 0;
+		old = now;
+	    }
 
-      if ((i + numConcJoins) % m == 0) {
-    Date now = new Date();
-    System.out.println((i + numConcJoins) + " " + (now.getTime() - old.getTime()) +
-           " " + pt.msgCount);
-    pt.msgCount = 0;
-    old = now;
-      }
+	    pt.sendPings(k);
+	}
 
-      pt.sendPings(k);
-  }
+	System.out.println(n + " nodes constructed");
 
-  System.out.println(n + " nodes constructed");
+	System.out.println("starting RT and leafset check");
+	// check all routing tables, leaf sets
+	for (int j=0; j<pt.rtApps.size(); j++) {
+	    pt.checkLeafSet((RegrTestApp)pt.rtApps.get(j));
+	    pt.checkRoutingTable((RegrTestApp)pt.rtApps.get(j));
+	}
+	System.out.println("finished RT and leafset check");
 
-  System.out.println("starting RT and leafset check");
-  // check all routing tables, leaf sets
-  for (int j=0; j<pt.rtApps.size(); j++) {
-      pt.checkLeafSet((RegrTestApp)pt.rtApps.get(j));
-      pt.checkRoutingTable((RegrTestApp)pt.rtApps.get(j));
-  }
-  System.out.println("finished RT and leafset check");
+	// kill some nodes
+	pt.killNodes(d);
 
-  // kill some nodes
-  pt.killNodes(d);
+	System.out.println(d + " nodes killed");
 
-  System.out.println(d + " nodes killed");
+	// send messages
+	pt.sendPings((n-d)*k);
+	System.out.println((n-d)*k + " messages sent");
 
-  // send messages
-  pt.sendPings((n-d)*k);
-  System.out.println((n-d)*k + " messages sent");
+	System.out.println("starting leafset/RT maintenance");
 
-  System.out.println("starting leafset/RT maintenance");
+	// initiate maint.
+	pt.initiateLeafSetMaintenance();
+	pt.initiateRouteSetMaintenance();
 
-  // initiate maint.
-  pt.initiateLeafSetMaintenance();
-  pt.initiateRouteSetMaintenance();
+	System.out.println("finished leafset/RT maintenance");
 
-  System.out.println("finished leafset/RT maintenance");
+	// send messages
+	pt.sendPings((n-d)*k);
+	System.out.println((n-d)*k + " messages sent");
 
-  // send messages
-  pt.sendPings((n-d)*k);
-  System.out.println((n-d)*k + " messages sent");
+	// print all nodeIds, sorted
+	//Iterator it = pt.pastryNodesSorted.keySet().iterator();
+	//while (it.hasNext())
+	//System.out.println(it.next());
 
-  // print all nodeIds, sorted
-  //Iterator it = pt.pastryNodesSorted.keySet().iterator();
-  //while (it.hasNext())
-  //System.out.println(it.next());
+	System.out.println("starting RT and leafset check");
 
-  System.out.println("starting RT and leafset check");
+	// check all routing tables, leaf sets
+	for (int i=0; i<pt.rtApps.size(); i++) {
+	    pt.checkLeafSet((RegrTestApp)pt.rtApps.get(i));
+	    pt.checkRoutingTable((RegrTestApp)pt.rtApps.get(i));
+	}
 
-  // check all routing tables, leaf sets
-  for (int i=0; i<pt.rtApps.size(); i++) {
-      pt.checkLeafSet((RegrTestApp)pt.rtApps.get(i));
-      pt.checkRoutingTable((RegrTestApp)pt.rtApps.get(i));
-  }
+	//pt.sendPings(k);
 
-  //pt.sendPings(k);
+	for (int i=0; i<4; i++) {
 
-  for (int i=0; i<4; i++) {
+	    System.out.println("Starting leafset/RT maintenance, round " + (i+2));
 
-      System.out.println("Starting leafset/RT maintenance, round " + (i+2));
+	    // initiate maint.
+	    pt.initiateLeafSetMaintenance();
+	    pt.initiateRouteSetMaintenance();
 
-      // initiate maint.
-      pt.initiateLeafSetMaintenance();
-      pt.initiateRouteSetMaintenance();
+	    System.out.println("finished leafset/RT maintenance, round " + (i+2));
 
-      System.out.println("finished leafset/RT maintenance, round " + (i+2));
+	    // send messages
+	    pt.sendPings((n-d)*k);
+	    System.out.println((n-d)*k + " messages sent");
 
-      // send messages
-      pt.sendPings((n-d)*k);
-      System.out.println((n-d)*k + " messages sent");
+	    System.out.println("starting RT and leafset check, round " + (i+2));
 
-      System.out.println("starting RT and leafset check, round " + (i+2));
-
-      // check all routing tables, leaf sets
-      for (int j=0; j<pt.rtApps.size(); j++) {
-    pt.checkLeafSet((RegrTestApp)pt.rtApps.get(j));
-    pt.checkRoutingTable((RegrTestApp)pt.rtApps.get(j));
-      }
-  }
+	    // check all routing tables, leaf sets
+	    for (int j=0; j<pt.rtApps.size(); j++) {
+		pt.checkLeafSet((RegrTestApp)pt.rtApps.get(j));
+		pt.checkRoutingTable((RegrTestApp)pt.rtApps.get(j));
+	    }
+	}
 
     }
 }

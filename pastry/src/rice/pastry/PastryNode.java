@@ -218,12 +218,57 @@ public abstract class PastryNode implements MessageReceiver {
     else throw new Error("security failure");
   }
 
+  /**
+   * Registers an application with this pastry node.
+   *
+   * @param app the application
+   */
+
   public final void registerApp(PastryAppl app) {
     apps.add(app);
   }
+
+
+  /**
+   * Schedule the specified message to be sent to the local node after a specified delay.
+   * Useful to provide timeouts.
+   *
+   * @param msg a message that will be delivered to the local node after the specified delay
+   * @param delay time in milliseconds before message is to be delivered
+   * @return the scheduled event object; can be used to cancel the message
+   */
+  public abstract ScheduledMessage scheduleMsg(Message msg, long delay);
+
+
+  /**
+   * Schedule the specified message for repeated fixed-delay delivery to the local node,  
+   * beginning after the specified delay. Subsequent executions take place at approximately regular 
+   * intervals separated by the specified period. Useful to initiate periodic tasks.
+   *
+   * @param msg a message that will be delivered to the local node after the specified delay
+   * @param delay time in milliseconds before message is to be delivered
+   * @param period time in milliseconds between successive message deliveries
+   * @return the scheduled event object; can be used to cancel the message 
+   */
+  public abstract ScheduledMessage scheduleMsg(Message msg, long delay, long period);
+
+
+  /**
+   * Schedule the specified message for repeated fixed-rate delivery to the local node,  
+   * beginning after the specified delay. Subsequent executions take place at approximately regular 
+   * intervals, separated by the specified period.
+   *
+   * @param msg a message that will be delivered to the local node after the specified delay
+   * @param delay time in milliseconds before  message is to be delivered
+   * @param period time in milliseconds between successive message deliveries
+   * @return the scheduled event object; can be used to cancel the message 
+   */
+  public abstract ScheduledMessage scheduleMsgAtFixedRate(Message msg, long delay, long period);
+
 
   public String toString() {
     return "Pastry node " + myNodeId.toString();
   }
 
 }
+

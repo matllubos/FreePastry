@@ -36,7 +36,10 @@ if advised of the possibility of such damage.
 
 package rice.pastry.dist;
 
+import java.util.*;
 import rice.pastry.*;
+import rice.pastry.messaging.*;
+
 
 /**
  * Class which represents the abstraction of a "real" pastry node. Designed
@@ -48,6 +51,7 @@ import rice.pastry.*;
  */
 
 public abstract class DistPastryNode extends PastryNode {
+    private Timer timer;
 
     /**
      * Constructor, with NodeId. Need to set the node's ID before this node
@@ -55,6 +59,7 @@ public abstract class DistPastryNode extends PastryNode {
      */
     protected DistPastryNode(NodeId id) {
       super(id);
+      timer = new Timer();
     }
 
     /**
@@ -69,4 +74,56 @@ public abstract class DistPastryNode extends PastryNode {
      * Method which kills a PastryNode (used only for testing).
      */
     public abstract void kill();
+
+
+   /**
+     * Schedule the specified message to be sent to the local node after a specified delay.
+     * Useful to provide timeouts.
+     *
+     * @param msg a message that will be delivered to the local node after the specified delay
+     * @param delay time in milliseconds before message is to be delivered
+     * @return the scheduled event object; can be used to cancel the message
+     */
+    public ScheduledMessage scheduleMsg(Message msg, long delay) {
+	ScheduledMessage sm = new ScheduledMessage(this, msg);
+	timer.schedule(sm, delay);
+	return sm;
+    }
+
+
+    /**
+     * Schedule the specified message for repeated fixed-delay delivery to the local node,  
+     * beginning after the specified delay. Subsequent executions take place at approximately regular 
+     * intervals separated by the specified period. Useful to initiate periodic tasks.
+     *
+     * @param msg a message that will be delivered to the local node after the specified delay
+     * @param delay time in milliseconds before message is to be delivered
+     * @param period time in milliseconds between successive message deliveries
+     * @return the scheduled event object; can be used to cancel the message 
+     */
+    public ScheduledMessage scheduleMsg(Message msg, long delay, long period) {
+	ScheduledMessage sm = new ScheduledMessage(this, msg);
+	timer.schedule(sm, delay, period);
+	return sm;
+    }
+
+
+    /**
+     * Schedule the specified message for repeated fixed-rate delivery to the local node,  
+     * beginning after the specified delay. Subsequent executions take place at approximately regular 
+     * intervals, separated by the specified period.
+     *
+     * @param msg a message that will be delivered to the local node after the specified delay
+     * @param delay time in milliseconds before  message is to be delivered
+     * @param period time in milliseconds between successive message deliveries
+     * @return the scheduled event object; can be used to cancel the message 
+     */
+    public ScheduledMessage scheduleMsgAtFixedRate(Message msg, long delay, long period) {
+	ScheduledMessage sm = new ScheduledMessage(this, msg);
+	timer.scheduleAtFixedRate(sm, delay, period);
+	return sm;
+    }
+
 }
+
+

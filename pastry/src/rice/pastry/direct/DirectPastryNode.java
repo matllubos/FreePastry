@@ -53,8 +53,11 @@ import java.util.*;
 
 public class DirectPastryNode extends PastryNode
 {
-    public DirectPastryNode(NodeId id) {
+    private NetworkSimulator simulator;
+
+    public DirectPastryNode(NodeId id, NetworkSimulator sim) {
 	super(id);
+	simulator = sim;
     }
 
     public void setDirectElements(/* simulator */) { }
@@ -67,4 +70,51 @@ public class DirectPastryNode extends PastryNode
      * Called from PastryNode after the join succeeds.
      */
     protected final void nodeIsReady() { }
+
+
+    /**
+     * Schedule the specified message to be sent to the local node after a specified delay.
+     * Useful to provide timeouts.
+     *
+     * @param msg a message that will be delivered to the local node after the specified delay
+     * @param delay time in milliseconds before message is to be delivered
+     * @return the scheduled event object; can be used to cancel the message
+     */
+    public ScheduledMessage scheduleMsg(Message msg, long delay) {
+	// XXX - implement!
+	return new ScheduledMessage(this, msg);
+    }
+
+
+    /**
+     * Schedule the specified message for repeated fixed-delay delivery to the local node,  
+     * beginning after the specified delay. Subsequent executions take place at approximately regular 
+     * intervals separated by the specified period. Useful to initiate periodic tasks.
+     *
+     * @param msg a message that will be delivered to the local node after the specified delay
+     * @param delay time in milliseconds before message is to be delivered
+     * @param period time in milliseconds between successive message deliveries
+     * @return the scheduled event object; can be used to cancel the message 
+     */
+    public ScheduledMessage scheduleMsg(Message msg, long delay, long period) {
+	// XXX - implement!
+	return new ScheduledMessage(this, msg);
+    }
+
+
+    /**
+     * Schedule the specified message for repeated fixed-rate delivery to the local node,  
+     * beginning after the specified delay. Subsequent executions take place at approximately regular 
+     * intervals, separated by the specified period.
+     *
+     * @param msg a message that will be delivered to the local node after the specified delay
+     * @param delay time in milliseconds before  message is to be delivered
+     * @param period time in milliseconds between successive message deliveries
+     * @return the scheduled event object; can be used to cancel the message 
+     */
+    public ScheduledMessage scheduleMsgAtFixedRate(Message msg, long delay, long period) {
+	// XXX - implement!
+	return new ScheduledMessage(this, msg);
+    }
 }
+
