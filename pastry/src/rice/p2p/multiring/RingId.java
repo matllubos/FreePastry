@@ -49,6 +49,8 @@ import rice.p2p.commonapi.*;
  */
 public class RingId implements Id {
   
+  private static final long serialVersionUID = -4390496639871320200L;
+  
   /**
    * The id which this ringId represents
    */
