@@ -2,13 +2,11 @@ PACKAGE = rice.email
 
 SOURCE  = \
 	Email.java \
-	EmailUserAddress.java \
-	EmailAttachment.java \
-	EmailBody.java \
+	EmailData.java \
+	EmailDataReference.java \
 	EmailService.java \
 	EmailServiceListener.java \
-	EmailGroupAddress.java \
-	Folder.java
+	EmailUserAddress.java
 
 RMI_SOURCE =
 

@@ -9,7 +9,7 @@ import rice.post.storage.*;
  * Represents the attachment to an email.
  */
 public class EmailData implements PostData {
-  byte[] _data = data;
+  byte[] _data;
   
   /**
    * Constructor. Takes in a byte[] representing the data of the
