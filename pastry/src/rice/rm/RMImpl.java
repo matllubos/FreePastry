@@ -294,6 +294,35 @@ public class RMImpl extends CommonAPIAppl implements RM {
     }
 
 
+    public void periodicMaintenance() {
+	// Remove stale objects
+	app.isResponsible(myRange);
+	
+	
+	// Fetch missing objects
+	IdRange requestRange = myRange;
+	
+	Vector rangeSet = new Vector();
+	if((requestRange!=null) && !requestRange.isEmpty())
+	    rangeSet.add(requestRange);
+	NodeSet set = requestorSet(rangeSet);
+	for(int i=0; i<set.size(); i++) {
+	    
+	    NodeHandle toNode;
+	    RMRequestKeysMsg msg;
+	    
+	    toNode = set.get(i);
+	    if(toNode.getNodeId().equals(getNodeId()))
+		continue;
+	    msg = new RMRequestKeysMsg(getLocalHandle(),getAddress(), getCredentials(), m_seqno ++, rangeSet, true);
+	    //System.out.println(getNodeId() + "sending Periodic Maintenance RequestKeys msg to " + toNode.getNodeId());
+	    route(null, msg, toNode);
+	}
+	
+	
+
+    }
+
     
     /**
      * Returns the address of this application.

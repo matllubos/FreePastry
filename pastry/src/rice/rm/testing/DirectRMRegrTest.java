@@ -254,6 +254,14 @@ public class DirectRMRegrTest
 	    passed = passed & rmApp.checkPassed();
 
 	}
+
+	// We will now invoke the periodic maintenance protocol
+	System.out.println("Starting the periodic maintenance protocol");
+	for(i=0; i< rmClients.size(); i++) {
+	    rmApp = (DirectRMRegrTestApp)rmClients.elementAt(i);
+	    rmApp.periodicMaintenance();
+	    while(simulate());
+	}
 	
 	return passed;
     }

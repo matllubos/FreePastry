@@ -131,6 +131,13 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
 	m_rm.replicate(objectKey, new Integer(1));
     }
 
+    // Call to underlying replica manager
+    public void periodicMaintenance() {
+	//System.out.println(getNodeId() + " issuing periodic maintenance ");
+	m_rm.periodicMaintenance();
+    }
+
+
     public void replicateSuccess(Id key, boolean status) {
 	//System.out.println("Replicate status for key=" + key + " is " + status);
     }

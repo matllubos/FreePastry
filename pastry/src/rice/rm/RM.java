@@ -73,8 +73,20 @@ public interface RM {
      */
     public boolean replicate( Id objectKey, Object object);
 
-   
+
+
+
+    /*
+     * Start the periodic maintenance 
+     */
+    public void periodicMaintenance();
 
 }
+
+
+
+
+
+
 
 

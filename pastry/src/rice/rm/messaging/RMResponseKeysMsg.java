@@ -120,6 +120,8 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 	    rm.app.fetch(fetchSet);
 	}
 	else {
+
+	    //System.out.println("checking the stamped version of protocol");
 	    // Should check if the stamps match. If not generate
 	    // message to fetch keys with keySetStamp set to false
 	    Id oHash, myHash;
