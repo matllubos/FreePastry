@@ -21,7 +21,7 @@ public class ControlFindParentMessage extends MessageAnycast
     StripeId stripe_id;
     Stripe recv_stripe = null;
 
-    //final int ALLOWABLE_CHILDREN = 2;
+    final int DEFAULT_CHILDREN = 20;
 
     public ControlFindParentMessage( Address addr, NodeHandle source, NodeId topicId, Credentials c, StripeId stripe_id )
     {
@@ -96,8 +96,16 @@ public class ControlFindParentMessage extends MessageAnycast
         {
             already_seen.add( 0, scribe.getNodeHandle() );
         }
-        BandwidthManager bandwidthManager = recv_stripe.getChannel().getBandwidthManager();
-        if ( ( aggregateNumChildren( scribe ) < bandwidthManager.getDefaultChildren() ) &&
+        if ( recv_stripe != null )
+        {
+           BandwidthManager bandwidthManager = recv_stripe.getChannel().getBandwidthManager();
+           int default_children = bandwidthManager.getDefaultChildren();
+        }
+        else
+        {
+           int default_children = DEFAULT_CHILDREN;
+        }
+        if ( ( aggregateNumChildren( scribe ) < default_children ) &&
              ( !isInRootPath( scribe, this.getSource() ) ) )
         {
             this.handleDeliverMessage( scribe, topic );
@@ -162,8 +170,18 @@ public class ControlFindParentMessage extends MessageAnycast
                                                                      new Boolean( true ) ),
                                c,
                                null );
-        BandwidthManager bandwidthManager = recv_stripe.getChannel().getBandwidthManager();
-        if ( aggregateNumChildren( scribe ) >= bandwidthManager.getDefaultChildren() )
+        if ( recv_stripe != null )
+        {
+           BandwidthManager bandwidthManager = recv_stripe.getChannel().getBand\
+widthManager();
+           int default_children = bandwidthManager.getDefaultChildren();
+        }
+        else
+        {
+           int default_children = DEFAULT_CHILDREN;
+        }
+
+        if ( aggregateNumChildren( scribe ) >= default_children )
         {
             scribe.leave( topic.getTopicId(), null, c );
         }
