@@ -59,6 +59,8 @@ import rice.persistence.*;
  */
 public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
 
+  protected int redundancy;
+  
   protected PastImpl delivered;
   
   protected IdFactory factory;
@@ -73,9 +75,10 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
    */
-  public DeliveryPastImpl(Node node, StorageManager manager, int replicas, String instance, PastImpl delivered, long collectionInterval) {
+  public DeliveryPastImpl(Node node, StorageManager manager, int replicas, int redundancy, String instance, PastImpl delivered, long collectionInterval) {
     super(node, manager, replicas, instance + "-delivery", new PastPolicy.DefaultPastPolicy(), collectionInterval);
     
+    this.redundancy = redundancy;
     this.delivered = delivered;
     this.factory = node.getIdFactory();
     this.rng = new Random();
@@ -143,7 +146,7 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
    */
   public void getGroups(final Continuation command) {    
     log.finer("Getting list of groups...");
-    GCIdRange range = (GCIdRange) endpoint.range(endpoint.getLocalNodeHandle(), 0, null, true);
+    GCIdRange range = (GCIdRange) endpoint.range(endpoint.getLocalNodeHandle(), redundancy, null, true);
 
     final Iterator i = storage.getStorage().scan(range.getRange()).getIterator();
     
@@ -179,7 +182,7 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
    * @param command The command to return the results to
    */
   public void getMessage(final PostEntityAddress address, final Continuation command) {
-    GCIdRange range = (GCIdRange) endpoint.range(endpoint.getLocalNodeHandle(), 0, null, true);
+    GCIdRange range = (GCIdRange) endpoint.range(endpoint.getLocalNodeHandle(), redundancy, null, true);
     Iterator i = storage.getStorage().scan(range.getRange()).getIterator();
     
     while (i.hasNext()) {
@@ -197,32 +200,6 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
       
     command.receiveResult(null);
   }
-      
-    
-/*    final Id[] array = storage.getStorage().scan(range.getRange()).asArray();
-    
-    if (array.length == 0) {
-      command.receiveResult(null);
-    } else {
-      int start = rng.nextInt(array.length);
-      int current = (start + 1) % array.length;
-      
-      do { 
-        GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(array[current]);
-        
-        if ((metadata != null) && (metadata instanceof DeliveryMetadata) && 
-            ((DeliveryMetadata) metadata).getDestination().equals(address)) {
-          storage.getObject(array[current], command);
-          return;
-        } else {
-          current = (current + 1) % array.length;
-        }
-      } while (current != start);
-      
-      System.out.println("Could not find any messages for user " + address + " - not tragic, but strange...");
-      
-      command.receiveResult(null);
-    } */
   
   /**
    * Either returns the userid associated with the given id by looking in the cache,

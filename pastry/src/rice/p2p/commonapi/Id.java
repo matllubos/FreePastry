@@ -115,6 +115,20 @@ public interface Id extends Comparable, Serializable {
    * @return A byte[] representing this Id
    */
   public byte[] toByteArray();
+  
+  /**
+   * Stores the byte[] value of this Id in the provided byte array
+   *
+   * @return A byte[] representing this Id
+   */
+  public void toByteArray(byte[] array, int offset);
+  
+  /**
+   * Returns the length of the byte[] representing this Id
+   *
+   * @return The length of the byte[] representing this Id
+   */
+  public int getByteArrayLength();
 
   /**
    * Returns a string representing the full length of this Id.

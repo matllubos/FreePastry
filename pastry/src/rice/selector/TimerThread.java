@@ -103,8 +103,11 @@ public class TimerThread /*extends Thread*/ {
           s.select((int)(executionTime - currentTime));
               //queue.wait(executionTime - currentTime);
      //} // synchronized
-      if (taskFired)  // Task fired; run it, holding no locks
-          task.run();
+       if (taskFired) {  // Task fired; run it, holding no locks 
+         //long start = System.currentTimeMillis();
+         task.run();
+       //  System.out.println("ST: " + (System.currentTimeMillis() - start) + " " + task.toString());
+       }
     }
     
 }

@@ -2,6 +2,7 @@ package rice.p2p.glacier;
 
 import rice.p2p.commonapi.*;
 import rice.p2p.glacier.VersionKey;
+import rice.p2p.util.MathUtils;
 
 /**
  * DESCRIBE THE CLASS
@@ -18,6 +19,8 @@ public class FragmentKey implements Id, Comparable {
    * DESCRIBE THE FIELD
    */
   protected int id;
+  
+  private static final long serialVersionUID = 5373228569261524536L;
 
   /**
    * Constructor for FragmentKey.
@@ -92,18 +95,30 @@ public class FragmentKey implements Id, Comparable {
    * @return DESCRIBE THE RETURN VALUE
    */
   public byte[] toByteArray() {
-    byte[] v = key.toByteArray();
-    byte[] result = new byte[v.length + 4];
+    byte[] result = new byte[getByteArrayLength()];
 
-    for (int i=0; i<v.length; i++)
-      result[i] = v[i];
-
-    result[v.length + 0] = (byte)(0xFF & (id>>24));
-    result[v.length + 1] = (byte)(0xFF & (id>>16));
-    result[v.length + 2] = (byte)(0xFF & (id>>8));
-    result[v.length + 3] = (byte)(0xFF & (id));
+    toByteArray(result, 0);
 
     return result;
+  }
+  
+  /**
+   * Stores the byte[] value of this Id in the provided byte array
+   *
+   * @return A byte[] representing this Id
+   */
+  public void toByteArray(byte[] result, int offset) {
+    key.toByteArray(result, offset);
+    MathUtils.intToByteArray(id, result, offset+key.getByteArrayLength());
+  }
+  
+  /**
+    * Returns the length of the byte[] representing this Id
+   *
+   * @return The length of the byte[] representing this Id
+   */
+  public int getByteArrayLength() {
+    return key.getByteArrayLength() + 4;
   }
 
   /**

@@ -125,7 +125,7 @@ public class StoredEmail implements Serializable, Comparable, Cloneable {
    */
   public int compareTo(Object o) {
     StoredEmail email = (StoredEmail) o;
-    return new Integer(getUID()).compareTo(new Integer(email.getUID()));
+    return getUID() - email.getUID();
   }
   
   public Object clone() {

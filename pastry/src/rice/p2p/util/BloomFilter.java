@@ -153,7 +153,7 @@ public class BloomFilter implements Serializable {
     
     for (int i=0; i<array.length; i+=4) {
       System.arraycopy(array, i, tmp, 0, ((array.length - i < 4) ? (array.length - i) : 4));
-      result += (result * seed) + MathUtils.getInt(tmp); 
+      result += (result * seed) + MathUtils.byteArrayToInt(tmp); 
     }
     
     return result;

@@ -56,7 +56,7 @@ public class SecurityUtilsUnit {
     System.out.print("    Testing long conversion\t\t\t\t");
     long testLong = Long.parseLong("0123456789ABCDEF", 16);
 
-    byte[] testLongByte = MathUtils.getByteArray(testLong);
+    byte[] testLongByte = MathUtils.longToByteArray(testLong);
 
     if ((testLongByte[0] == (byte) 0x01) &&
       (testLongByte[1] == (byte) 0x23) &&

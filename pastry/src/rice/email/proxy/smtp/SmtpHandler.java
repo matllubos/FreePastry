@@ -39,6 +39,7 @@ class SmtpHandler {
   public void handleConnection(Socket socket) throws IOException {
     _conn = new SmtpConnection(this, socket, _server);
     _state = new SmtpState(_workspace, _userManager);
+    _state.setRemote(socket.getInetAddress());
 
     try {
       _quitting = false;

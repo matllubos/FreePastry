@@ -57,7 +57,7 @@ public class CoalescedLog extends EncryptedLog {
    * @param entry The log entry to append to the log.
    * @param command The command to run once done
    */
-  public void addLogEntry(final LogEntry entry, final Continuation command) {
+  public synchronized void addLogEntry(final LogEntry entry, final Continuation command) {
     pending.appendEntry(entry);
     regenerateCipherPending();
     

@@ -58,20 +58,25 @@ public class Parameters {
 	private static String FILENAME_EXTENSION = ".params";
   private static String ARRAY_SPACER = ",";
 	
-	public Parameters(String fileName) {
+	public Parameters(String fileName) throws IOException {
 		this.fileName = fileName + FILENAME_EXTENSION;
     
-		try {
-			properties.load(new FileInputStream(this.fileName));
-		} catch(IOException ioe) {
-      System.out.println("[Loader       ]: Could not find properties file (" + ioe + "), creating " + fileName);
-		}
+    if (new File(this.fileName).exists()) {
+      properties.load(new FileInputStream(this.fileName));
+    } else {
+      properties.load(ClassLoader.getSystemResource(this.fileName).openStream());
+      writeFile();
+    }
 	}
   
   protected InetSocketAddress parseInetSocketAddress(String name) throws UnknownHostException {
     String host = name.substring(0, name.indexOf(":"));
     String port = name.substring(name.indexOf(":")+1);
     return new InetSocketAddress(InetAddress.getByName(host), Integer.parseInt(port));
+  }
+  
+  public void removeParameter(String name) {
+    properties.remove(name); 
   }
 	
 	public int getIntParameter(String name) {

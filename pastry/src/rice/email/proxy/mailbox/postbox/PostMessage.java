@@ -14,6 +14,7 @@ import rice.email.proxy.mailbox.*;
 import rice.email.proxy.util.*;
 
 import java.io.*;
+import java.net.*;
 
 import java.util.*;
 
@@ -40,6 +41,7 @@ import java.util.Random;
 public class PostMessage implements StoredMessage {
 
   public static String UNSECURE_HEADER_LINE = "X-EPost-Unsecure: True";
+  public static String IMAGE_URL_HEADER_LINE = "X-Image-Url: http://www.epostmail.org/images/epost-badge.png";
   
   private StoredEmail email;
 
@@ -95,14 +97,12 @@ public class PostMessage implements StoredMessage {
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
   }
 
-  public static Email parseEmail(Resource content) throws MailboxException {
+  public static Email parseEmail(InetAddress remote, Resource content) throws MailboxException {
     try {
       Properties props = new Properties();
       Session session = Session.getDefaultInstance(props, null);
       javax.mail.internet.MimeMessage mm = new javax.mail.internet.MimeMessage(session, content.getInputStream());
-      
-      
-      
+            
       Address froms[] = null;
       Address to[] = null;
       Address cc[] = null;
@@ -143,7 +143,7 @@ public class PostMessage implements StoredMessage {
         }
       }
 
-      return parseEmail(recipients, content);
+      return parseEmail(remote, recipients, content);
     } catch (IOException e) {
       throw new MailboxException(e);
     } catch(AddressException ae){
@@ -160,11 +160,11 @@ public class PostMessage implements StoredMessage {
     }
   }
 
-  public static Email parseEmail(MailAddress[] addresses, Resource content) throws MailboxException {
-    return parseEmail(addresses, content, null);
+  public static Email parseEmail(InetAddress remote, MailAddress[] addresses, Resource content) throws MailboxException {
+    return parseEmail(remote, addresses, content, null);
   }
   
-  public static Email parseEmail(MailAddress[] addresses, Resource content, PostEntityAddress address) throws MailboxException {
+  public static Email parseEmail(InetAddress remote, MailAddress[] addresses, Resource content, PostEntityAddress address) throws MailboxException {
     PostEntityAddress[] recipients = new PostEntityAddress[addresses.length];
     
     for (int i=0; i<recipients.length; i++) 
@@ -174,7 +174,7 @@ public class PostMessage implements StoredMessage {
       Properties props = new Properties();
       Session session = Session.getDefaultInstance(props, null);
       javax.mail.internet.MimeMessage mm = new javax.mail.internet.MimeMessage(session, content.getInputStream());
-
+      
       Address froms[] = mm.getFrom();
       PostUserAddress from = new PostUserAddress(factory, "Unknown");
 
@@ -190,6 +190,15 @@ public class PostMessage implements StoredMessage {
         mm.addHeaderLine(UNSECURE_HEADER_LINE);
       }
       
+      try {
+        if ((mm.getHeader("X-Image-Url") == null) || (mm.getHeader("X-Image-Url").length == 0))
+          mm.addHeaderLine(IMAGE_URL_HEADER_LINE);
+
+        if (remote != null)
+          mm.addHeaderLine("Received from " + remote.getHostAddress() + " by " + InetAddress.getLocalHost().getHostAddress() + " via SMTP; " + MimeMessage.dateReader.format(new Date(System.currentTimeMillis())));
+      } catch (Exception e) {
+        System.out.println("ERROR: Got exception " + e + " adding breadcrumb...");
+      }
       return new Email(from, recipients, (EmailMessagePart) process(mm));
     } catch (Exception e) {
       try {

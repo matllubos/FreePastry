@@ -39,7 +39,7 @@ public class EmailHeadersPart extends EmailContentPart {
    * @param content The content of this part
    */
   public EmailHeadersPart(EmailData headers, EmailContentPart content) {
-    super(content.getSize());
+    super(headers.getData().length + content.getSize());
     this.headers = headers;
     this.content = content;
   }

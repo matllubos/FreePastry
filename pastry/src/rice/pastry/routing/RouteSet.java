@@ -353,8 +353,27 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
     private void writeObject(ObjectOutputStream out)
       throws IOException, ClassNotFoundException {
       if (closest == -1) closestNode();
-      out.writeObject(nodes);
-      out.writeInt(theSize);
+      
+      // here, we don't want to advetise nodes which are dead, so we filter
+      // our list based on only live nodes
+      NodeHandle[] tmp = new NodeHandle[nodes.length];
+      
+      int j=0;
+      for (int i=0; i<tmp.length; i++) {
+        if ((nodes[i] != null) && (nodes[i].isAlive())) {
+          tmp[j] = nodes[i];
+          j++;
+        }
+      }
+        
+      out.writeObject(tmp);
+      out.writeInt(j);
+      
+      int closest = -1;
+      for (int i=0; i<j; i++) 
+        if ((closest == -1) || (tmp[i].proximity() < tmp[closest].proximity())) 
+          closest = i;
+          
       out.writeInt(closest);
     }
 

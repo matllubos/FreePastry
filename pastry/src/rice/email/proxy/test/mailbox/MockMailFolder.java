@@ -105,7 +105,7 @@ public class MockMailFolder
     public void appendMessage(String content) throws MailboxException {
       MockMail mail = new MockMail(_nextUID);
       _nextUID++;
-      Email email = PostMessage.parseEmail(new StringBufferResource(content));
+      Email email = PostMessage.parseEmail(null, new StringBufferResource(content));
 
       mail.setMessage(email);
 

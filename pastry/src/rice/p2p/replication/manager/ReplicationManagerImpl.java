@@ -99,6 +99,11 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
   protected ReplicationManagerHelper helper;
   
   /**
+   * The deleter, for managing ids to delete
+   */
+  protected ReplicationManagerDeleter deleter;
+  
+  /**
    * the logger which we will use
    */
   protected Logger log = Logger.getLogger(this.getClass().getName());
@@ -131,6 +136,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     this.factory = node.getIdFactory();
     this.endpoint = node.registerApplication(this, instance);
     this.helper = new ReplicationManagerHelper();
+    this.deleter = new ReplicationManagerDeleter();
     this.instance = instance;
     
     log.finer(endpoint.getId() + ": Starting up ReplicationManagerImpl with client " + client);
@@ -225,42 +231,11 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
   public void setRange(final IdRange range) {
     log.finest(endpoint.getId() + ": Removing range " + range + " from the list of pending ids");
 
-    /* First, tell the helper that the range has changed */
+    /* tell the helper and deleter that the range has changed */
+    System.out.println("RMImpl.setRange " + instance + ": " + range);
+
     helper.setRange(range);
-    
-    IdRange notRange = range.getComplementRange();
-    
-    System.out.println("RMImpl.setRange " + instance + ": " + range + " notRange " + notRange);
-    
-    /* Next, we delete any unrelevant keys from the client */
-    final Iterator i = client.scan(notRange).getIterator();
-    
-    /* We only remove the first NUM_DELETE_AT_ONCE entries, however */
-    Continuation c = new ListenerContinuation("Removal of Ids") {
-      int count = 0;
-      Id id = null;
-      
-      public void receiveResult(Object o) {
-        if (! o.equals(new Boolean(true))) {
-          log.warning(endpoint.getId() + ": Unstore of id " + id + " did not succeed!");
-        }
-        
-        
-        if (count < NUM_DELETE_AT_ONCE) {
-          while (i.hasNext() && (! client.exists((id = (Id) i.next())))) {}
-          
-          if (i.hasNext()) {
-            log.finer(endpoint.getId() + ": Telling client to delete id " + id + " range " + range);
-            count++;
-            
-            System.out.println("RMImpl.setRange " + instance + ": removing id " + id);
-            client.remove(id, this);
-          }
-        }
-      }
-    };
-  
-    c.receiveResult(new Boolean(true));
+    deleter.setRange(range);
   }    
   
   /**
@@ -488,6 +463,102 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
         current = null;
         scheduleNext(); 
       }
+    }
+  }
+  
+  /**
+   * Inner class which keeps track of the keys which we are currently deleting
+   */
+  protected class ReplicationManagerDeleter implements Continuation {
+    
+    /**
+     * The set of ids we are responsible for deleting
+     */
+    protected IdSet set;
+    
+    /**
+     * Whether or not we are waiting for a response
+     */
+    protected Id id;
+    
+    /**
+     * Bulds a new one
+     */
+    public ReplicationManagerDeleter() {
+      set = factory.buildIdSet();
+    }
+    
+    /**
+     * Adds a set of ids to the to-delete list
+     *
+     * @param range The current responsible range
+     */
+    public synchronized void setRange(IdRange range) {
+      IdRange notRange = range.getComplementRange();    
+
+      // first, we add all of the clients stuff in the not-range 
+      Iterator i = client.scan(notRange).getIterator();
+      int count = 0;
+      
+      while (i.hasNext() && (count < NUM_DELETE_AT_ONCE)) {
+        count++;
+        Id next = (Id) i.next();
+        
+        if ((id == null) || (! (id.equals(next))))
+          set.addId(next);
+      }
+      
+      // next, we remove and ids from the to-delete list which are not in the range
+      Iterator j = set.subSet(range).getIterator();
+      
+      while (j.hasNext()) 
+        set.removeId((Id) j.next());
+      
+      go();
+    }
+     
+    /**
+     * Internal method which starts the deleting, if it's not already started
+     */
+    protected synchronized void go() {
+      if ((id == null) && (set.numElements() > 0)) {
+        id = (Id) set.getIterator().next();
+        set.removeId(id);
+        
+        log.finer(endpoint.getId() + ": Telling client to delete id " + id);
+        System.out.println("RMImpl.go " + instance + ": removing id " + id);
+        
+        client.remove(id, this);
+      }
+    }
+    
+    /**
+     * Implementation of continuation
+     *
+     * @param o The result
+     */
+    public synchronized void receiveResult(Object o) {
+      if (id == null) 
+        System.out.println("ERROR: RMImpl.deleter Received result " + o + " unexpectedly!");
+      
+      if (! Boolean.TRUE.equals(o)) 
+        System.out.println("ERROR: RMImpl.deleter Unstore of " + id + " did not succeed '" + o + "'!");
+      
+      id = null;
+      go();
+    }
+    
+    /**
+     * Implementation of continuation
+     *
+     * @param o The result
+     */
+    public synchronized void receiveException(Exception e) {
+      System.out.println("ERROR: RMImpl.deleter Unstore of " + id + " caused exception '" + e + "'!");
+      e.printStackTrace();
+      
+      id = null;
+      go();
     }
   }
 }

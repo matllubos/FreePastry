@@ -114,16 +114,16 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver
 	    if (nh.isAlive()) routeTable.put(nh);
 
 	    for (int i=0; i<row.length; i++) {
-		RouteSet rs = row[i];
-		//int n = rs.size();
-		//System.out.print(n + " ");
-		
-		for (int j=0; rs!=null && j<rs.size(); j++) {
-		    nh = rs.get(j);
-		    nh = security.verifyNodeHandle(nh);
-		    if (nh.isAlive() == false) continue;
-		    routeTable.put(nh);
-		}
+        RouteSet rs = row[i];
+        //int n = rs.size();
+        //System.out.print(n + " ");
+        
+        for (int j=0; rs!=null && j<rs.size(); j++) {
+          nh = rs.get(j);
+          nh = security.verifyNodeHandle(nh);
+          if (nh.isAlive() == false) continue;
+          routeTable.put(nh);
+        }
 	    }
 
 	    //System.out.println("done");

@@ -3,6 +3,7 @@ package rice.p2p.glacier;
 import java.io.Serializable;
 import rice.p2p.commonapi.Id;
 import rice.p2p.multiring.RingId;
+import rice.p2p.util.MathUtils;
 
 /**
  * DESCRIBE THE CLASS
@@ -19,6 +20,8 @@ public class VersionKey implements Id, Serializable, Comparable {
    * DESCRIBE THE FIELD
    */
   protected long version;
+  
+  private static final long serialVersionUID = -7473630685140924130L;
 
   /**
    * Constructor for VersionKey.
@@ -111,24 +114,37 @@ public class VersionKey implements Id, Serializable, Comparable {
   public int hashCode() {
     return (id.hashCode() + (new Long(version).hashCode()));
   }
-  
+
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @return DESCRIBE THE RETURN VALUE
+   */
   public byte[] toByteArray() {
-    byte[] v = id.toByteArray();
-    byte[] result = new byte[v.length + 8];
-
-    for (int i=0; i<v.length; i++)
-      result[i] = v[i];
-
-    result[v.length + 0] = (byte)(0xFF & (version>>56));
-    result[v.length + 1] = (byte)(0xFF & (version>>48));
-    result[v.length + 2] = (byte)(0xFF & (version>>40));
-    result[v.length + 3] = (byte)(0xFF & (version>>32));
-    result[v.length + 4] = (byte)(0xFF & (version>>24));
-    result[v.length + 5] = (byte)(0xFF & (version>>16));
-    result[v.length + 6] = (byte)(0xFF & (version>>8));
-    result[v.length + 7] = (byte)(0xFF & (version));
-
+    byte[] result = new byte[getByteArrayLength()];
+    
+    toByteArray(result, 0);
+    
     return result;
+  }
+  
+  /**
+    * Stores the byte[] value of this Id in the provided byte array
+   *
+   * @return A byte[] representing this Id
+   */
+  public void toByteArray(byte[] result, int offset) {
+    id.toByteArray(result, offset);
+    MathUtils.longToByteArray(version, result, offset + id.getByteArrayLength());
+  }
+  
+  /**
+   * Returns the length of the byte[] representing this Id
+   *
+   * @return The length of the byte[] representing this Id
+   */
+  public int getByteArrayLength() {
+    return id.getByteArrayLength() + 8;
   }
 
   public boolean isBetween(Id ccw, Id cw) {

@@ -170,6 +170,24 @@ public class RingId implements Id {
   }
   
   /**
+   * Stores the byte[] value of this Id in the provided byte array
+   *
+   * @return A byte[] representing this Id
+   */
+  public void toByteArray(byte[] array, int offset) {
+    id.toByteArray(array, offset);
+  }
+  
+  /**
+   * Returns the length of the byte[] representing this Id
+   *
+   * @return The length of the byte[] representing this Id
+   */
+  public int getByteArrayLength() {
+    return id.getByteArrayLength();
+  }
+  
+  /**
    * Returns whether or not this object is equal to the provided one
    *
    * @param o The object to compare to

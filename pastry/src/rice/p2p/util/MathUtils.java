@@ -136,15 +136,34 @@ public class MathUtils {
    * @param input The log to convert
    * @return a byte[] representation
    */
-  public static byte[] getByteArray(int input) {
+  public static byte[] intToByteArray(int input) {
     byte[] output = new byte[4];
-    
-    output[0] = (byte) (0xFF & (input >> 24));
-    output[1] = (byte) (0xFF & (input >> 16));
-    output[2] = (byte) (0xFF & (input >> 8));
-    output[3] = (byte) (0xFF & input);
-    
+    intToByteArray(input, output, 0);
     return output;
+  }
+  
+  /**
+   * Utility method for converting a int into a byte[]
+   *
+   * @param input The log to convert
+   * @return a byte[] representation
+   */
+  public static void intToByteArray(int input, byte[] output, int offset) {
+    output[offset + 0] = (byte) (0xFF & (input >> 24));
+    output[offset + 1] = (byte) (0xFF & (input >> 16));
+    output[offset + 2] = (byte) (0xFF & (input >> 8));
+    output[offset + 3] = (byte) (0xFF & input);
+  }
+  
+  /**
+   * Utility method for converting a byte[] into a int
+   *
+   * @param input The byte[] to convert
+   * @return a int representation
+   */
+  public static int byteArrayToInt(byte[] input) {
+    input = correctLength(input, 4);
+    return ((input[0] << 24) | (input[1] << 16) | (input[2] << 8) | input[3]); 
   }
 
   /**
@@ -153,19 +172,27 @@ public class MathUtils {
    * @param input The log to convert
    * @return a byte[] representation
    */
-  public static byte[] getByteArray(long input) {
+  public static byte[] longToByteArray(long input) {
     byte[] output = new byte[8];
-
-    output[0] = (byte) (0xFF & (input >> 56));
-    output[1] = (byte) (0xFF & (input >> 48));
-    output[2] = (byte) (0xFF & (input >> 40));
-    output[3] = (byte) (0xFF & (input >> 32));
-    output[4] = (byte) (0xFF & (input >> 24));
-    output[5] = (byte) (0xFF & (input >> 16));
-    output[6] = (byte) (0xFF & (input >> 8));
-    output[7] = (byte) (0xFF & input);
-
+    longToByteArray(input, output, 0);
     return output;
+  }
+  
+  /**
+   * Utility method for converting a long into a byte[]
+   *
+   * @param input The log to convert
+   * @return a byte[] representation
+   */
+  public static void longToByteArray(long input, byte[] output, int offset) {    
+    output[offset + 0] = (byte) (0xFF & (input >> 56));
+    output[offset + 1] = (byte) (0xFF & (input >> 48));
+    output[offset + 2] = (byte) (0xFF & (input >> 40));
+    output[offset + 3] = (byte) (0xFF & (input >> 32));
+    output[offset + 4] = (byte) (0xFF & (input >> 24));
+    output[offset + 5] = (byte) (0xFF & (input >> 16));
+    output[offset + 6] = (byte) (0xFF & (input >> 8));
+    output[offset + 7] = (byte) (0xFF & input);
   }
 
   /**
@@ -174,22 +201,10 @@ public class MathUtils {
    * @param input The byte[] to convert
    * @return a long representation
    */
-  public static long getLong(byte[] input) {
+  public static long byteArrayToLong(byte[] input) {
     input = correctLength(input, 8);
     return ((input[0] << 56) | (input[1] << 48) | (input[2] << 40) | (input[3] << 32) |
       (input[4] << 24) | (input[5] << 16) | (input[6] << 8) | input[7]);
-  }
-  
-  
-  /**
-   * Utility method for converting a byte[] into a int
-   *
-   * @param input The byte[] to convert
-   * @return a int representation
-   */
-  public static int getInt(byte[] input) {
-    input = correctLength(input, 4);
-    return ((input[0] << 24) | (input[1] << 16) | (input[2] << 8) | input[3]); 
   }
 
   /**

@@ -98,7 +98,7 @@ public class Timer {
     protected Timer(Selector selector, boolean profile) {
       this.selector = selector;
       if (profile) {
-        thread = new ProfileTimerThread(queue, selector);
+      //  thread = new ProfileTimerThread(queue, selector);
       } else {
         thread = new TimerThread(queue, selector);
       }

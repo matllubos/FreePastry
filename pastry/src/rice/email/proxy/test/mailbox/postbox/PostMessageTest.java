@@ -23,7 +23,7 @@ public class PostMessageTest extends TestCase {
 
   public void testSimpleMessageParsing() {
     try {
-      Email email = PostMessage.parseEmail(new StringBufferResource(TEST_MESSAGE));
+      Email email = PostMessage.parseEmail(null, new StringBufferResource(TEST_MESSAGE));
     } catch (MailboxException e) {
       e.printStackTrace();
       assertTrue("Exception " + e + " thrown. ", false);
@@ -32,7 +32,7 @@ public class PostMessageTest extends TestCase {
 
   public void testAdvancedMessageParsing() {
     try {
-      Email email = PostMessage.parseEmail(new StringBufferResource(LARGE_TEST_MESSAGE));
+      Email email = PostMessage.parseEmail(null, new StringBufferResource(LARGE_TEST_MESSAGE));
 
       assertTrue("Top level should be multipart", email.content.content instanceof EmailMultiPart);
 

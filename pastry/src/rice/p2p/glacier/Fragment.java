@@ -3,7 +3,9 @@ package rice.p2p.glacier;
 import java.io.*;
 
 public class Fragment implements Serializable {
-  protected transient byte payload[];
+  private static final long serialVersionUID = -809948154556539350L;
+  
+  public transient byte payload[];
 
   public Fragment(int _size) {
     payload = new byte[_size];

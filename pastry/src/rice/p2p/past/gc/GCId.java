@@ -149,14 +149,30 @@ public class GCId implements Id {
    * @return A byte[] representing this Id
    */
   public byte[] toByteArray() {
-    byte[] bytes = id.toByteArray();
-    byte[] expiration = MathUtils.getByteArray(this.expiration);
-    byte[] result = new byte[bytes.length+expiration.length];
+    byte[] result = new byte[getByteArrayLength()];
     
-    System.arraycopy(bytes, 0, result, 0, bytes.length);
-    System.arraycopy(expiration, 0, result, bytes.length, expiration.length);
+    toByteArray(result, 0);
     
     return result;
+  }
+  
+  /**
+   * Stores the byte[] value of this Id in the provided byte array
+   *
+   * @return A byte[] representing this Id
+   */
+  public void toByteArray(byte[] array, int offset) {
+    id.toByteArray(array, offset);
+    MathUtils.longToByteArray(expiration, array, offset+id.getByteArrayLength());
+  }
+  
+  /**
+   * Returns the length of the byte[] representing this Id
+   *
+   * @return The length of the byte[] representing this Id
+   */
+  public int getByteArrayLength() {
+    return id.getByteArrayLength() + 8;
   }
   
   /**

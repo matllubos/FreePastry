@@ -125,7 +125,7 @@ public class PostFolder implements MailFolder {
       Email email = msg.getEmail();
 
       if (email == null) {
-        email = PostMessage.parseEmail(msg.getResource());
+        email = PostMessage.parseEmail(null, msg.getResource());
       }
       
       Flags flags = new Flags();

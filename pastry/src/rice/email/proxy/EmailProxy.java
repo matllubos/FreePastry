@@ -71,6 +71,7 @@ public class EmailProxy extends PostProxy {
     {"email_send_publish_request", "true"}, 
     {"email_fetch_log", "true"}, 
     {"email_fetch_log_retries", "3"}, 
+    {"email_fetch_log_retry_sleep", "30000"},
     {"email_gateway", "false"},
     {"email_imap_enable", "true"},
     {"email_imap_ssl", "false"},
@@ -135,8 +136,11 @@ public class EmailProxy extends PostProxy {
         c.sleep();
         
         if (c.exceptionThrown()) { 
+          stepDone(FAILURE, "Fetching email log caused exception " + c.getException());
+          stepStart("Sleeping and then retrying to fetch email log (" + retries + "/" + parameters.getIntParameter("email_fetch_log_retries"));
           if (retries < parameters.getIntParameter("email_fetch_log_retries")) {
             retries++;
+            Thread.sleep(parameters.getIntParameter("email_fetch_log_retry_sleep"));
           } else {
             throw c.getException(); 
           }

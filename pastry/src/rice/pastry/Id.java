@@ -60,6 +60,11 @@ public class Id implements rice.p2p.commonapi.Id {
   private static WeakHashMap ID_MAP = new WeakHashMap();
   
   /**
+   * The static translation array
+   */
+  private static String tran[] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"};
+  
+  /**
    * This is the bit length of the node ids. If it is n, then there are 2^n possible different Ids.
    * We currently assume that it is divisible by 32.
    */
@@ -434,9 +439,19 @@ public class Id implements rice.p2p.commonapi.Id {
    * @param target an array of length at least IdBitLength/8 for the Id to be stored in.
    */
   public void blit(byte target[]) {
+    blit(target, 0);
+  }
+  
+  /**
+    * Blits the distance into a target array, starting at the given offset.
+   *
+   * @param offset The offset to start at
+   * @param target an array of length at least IdBitLength/8 for the distance to be stored in.
+   */
+  public void blit(byte target[], int offset) {
     for (int j = 0; j < IdBitLength / 8; j++) {
       int k = Id[j / 4] >> ((j % 4) * 8);
-      target[j] = (byte) (k & 0xff);
+      target[offset+j] = (byte) (k & 0xff);
     }
   }
 
@@ -506,6 +521,24 @@ public class Id implements rice.p2p.commonapi.Id {
     return copy();
   }
 
+  /**
+   * Stores the byte[] value of this Id in the provided byte array
+   *
+   * @return A byte[] representing this Id
+   */
+  public void toByteArray(byte[] array, int offset) {
+    blit(array, offset);
+  }
+  
+  /**
+    * Returns the length of the byte[] representing this Id
+   *
+   * @return The length of the byte[] representing this Id
+   */
+  public int getByteArrayLength() {
+    return (int) IdBitLength / 8;
+  }
+  
   /**
    * Hash codes for Ids.
    *
@@ -752,19 +785,15 @@ public class Id implements rice.p2p.commonapi.Id {
    */
   public String toString() {
     StringBuffer buffer = new StringBuffer();
-
-    String tran[] = {"0", "1", "2", "3", "4", "5", "6", "7",
-      "8", "9", "A", "B", "C", "D", "E", "F"};
-
+    buffer.append("<0x");
+    
     int n = IdBitLength / 4;
-    for (int i = n - 1; i >= n-6; i--) {
-      int d = getDigit(i, 4);
-
-      buffer.append(tran[d]);
-    }
-    return "<0x" + buffer.toString() + "..>";
-
-//    return "<0x" + toStringFull().substring(0, 6) + "..>";
+    for (int i = n-1; i >= n-6; i--) 
+      buffer.append(tran[getDigit(i, 4)]);
+    
+    buffer.append("..>");
+    
+    return buffer.toString();
   }
 
   /**
@@ -775,15 +804,10 @@ public class Id implements rice.p2p.commonapi.Id {
   public String toStringFull() {
     StringBuffer buffer = new StringBuffer();
 
-    String tran[] = {"0", "1", "2", "3", "4", "5", "6", "7",
-      "8", "9", "A", "B", "C", "D", "E", "F"};
-
     int n = IdBitLength / 4;
-    for (int i = n - 1; i >= 0; i--) {
-      int d = getDigit(i, 4);
-
-      buffer.append(tran[d]);
-    }
+    for (int i = n - 1; i >= 0; i--) 
+      buffer.append(tran[getDigit(i, 4)]);
+    
     return buffer.toString();
   }
 
@@ -941,9 +965,19 @@ public class Id implements rice.p2p.commonapi.Id {
      * @param target an array of length at least IdBitLength/8 for the distance to be stored in.
      */
     public void blit(byte target[]) {
+      blit(target, 0);
+    }
+    
+    /**
+     * Blits the distance into a target array, starting at the given offset.
+     *
+     * @param offset The offset to start at
+     * @param target an array of length at least IdBitLength/8 for the distance to be stored in.
+     */
+    public void blit(byte target[], int offset) {
       for (int j = 0; j < IdBitLength / 8; j++) {
         int k = difference[j / 4] >> ((j % 4) * 8);
-        target[j] = (byte) (k & 0xff);
+        target[offset+j] = (byte) (k & 0xff);
       }
     }
 

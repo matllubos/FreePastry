@@ -55,6 +55,9 @@ import rice.p2p.commonapi.*;
  */
 public class IdBloomFilter implements Serializable {
   
+  // serialver for backwards compatibility
+  private static final long serialVersionUID = -9122948172786936161L;
+  
   /**
    * The number of bits per key in bloom filters
    */
@@ -64,6 +67,11 @@ public class IdBloomFilter implements Serializable {
    * The number of different hash functions to use in bloom filters
    */
   public static int NUM_HASH_FUNCTIONS = 2;
+  
+  /**
+   * An internal byte[] for managing ids in a memory-efficent manner
+   */
+  protected transient byte[] array;
   
   /**
    * The parameters to the hash functions for this bloom filter
@@ -86,12 +94,26 @@ public class IdBloomFilter implements Serializable {
   }
   
   /**
+   * Internal method for checking to see if the array exists, and if not,
+   * instanciating it.  It also places the given Id into the array.
+   *
+   * @param id An id to build the array from
+   */
+  protected void checkArray(Id id) {
+    if (array == null) 
+      array = id.toByteArray();
+    else
+      id.toByteArray(array, 0);
+  }
+  
+  /**
    * Method which adds an Id to the underlying bloom filter
    *
    * @param id The id to add
    */
   protected void addId(Id id) {
-    filter.add(id.toByteArray());
+    checkArray(id);
+    filter.add(array);
   }
   
   /**
@@ -102,7 +124,8 @@ public class IdBloomFilter implements Serializable {
    * @param id The id to check for
    */
   public boolean check(Id id) {
-    return filter.check(id.toByteArray());
+    checkArray(id);
+    return filter.check(array);
   }
   
   /**

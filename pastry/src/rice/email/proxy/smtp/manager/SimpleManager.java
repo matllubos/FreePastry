@@ -94,9 +94,9 @@ public class SimpleManager implements SmtpManager {
     Email email = null;
     
     if (gateway) {
-      email = PostMessage.parseEmail(recipients, state.getMessage().getResource(), address);
+      email = PostMessage.parseEmail(state.getRemote(), recipients, state.getMessage().getResource(), address);
     } else {
-      email = PostMessage.parseEmail(recipients, state.getMessage().getResource());
+      email = PostMessage.parseEmail(state.getRemote(), recipients, state.getMessage().getResource());
     }
     
     ExternalContinuation c = new ExternalContinuation();

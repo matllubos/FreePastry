@@ -89,7 +89,7 @@ public class SelectorManager extends Thread {
     }
     timer = new Timer(selector, profile);
     timerThread = timer.thread;
-    setPriority(Thread.MAX_PRIORITY);
+  //  setPriority(Thread.MAX_PRIORITY);
     start();
   }
 
@@ -295,6 +295,10 @@ public class SelectorManager extends Thread {
     }
   }
 
+  int select() throws IOException {
+    return select(TIMEOUT);
+  }
+  
   /**
    * Selects on the selector, and returns the result. Also properly synchronizes
    * around the selector

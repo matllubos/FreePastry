@@ -171,7 +171,7 @@ public class CACertificateGenerator {
         String filename = userid + ".epost";
         File dir = new File(".");
         if (web) {
-          dir = new File("d" + (new SecureRandom()).nextInt(Integer.MAX_VALUE));
+          dir = new File("certificates/d" + (new SecureRandom()).nextInt(Integer.MAX_VALUE));
           
           if (! dir.mkdir()) 
             throw new IOException("Could not create directory " + dir); 

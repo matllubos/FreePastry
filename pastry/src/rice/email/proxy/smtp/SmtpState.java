@@ -1,5 +1,7 @@
 package rice.email.proxy.smtp;
 
+import java.net.*;
+
 import rice.email.proxy.mail.MovingMessage;
 import rice.email.proxy.user.*;
 import rice.email.proxy.util.*;
@@ -9,6 +11,7 @@ public class SmtpState {
   MovingMessage currentMessage;
   Workspace _workspace;
   User user;
+  InetAddress remote;
 
   public SmtpState(Workspace workspace, UserManager manager) {
     _workspace = workspace;
@@ -36,6 +39,14 @@ public class SmtpState {
   
   public User getUser() {
     return user;
+  }
+  
+  public InetAddress getRemote() {
+    return remote;
+  }
+  
+  public void setRemote(InetAddress remote) {
+    this.remote = remote;
   }
   
   public String getPassword(String username) throws UserException {

@@ -337,39 +337,33 @@ public class PersistentStorage implements Storage {
       public Object doWork() throws Exception {
         synchronized(statLock) { numWrites++; }
         
-        /* first, rename the current file to a temporary name */
-        File objFile = getFile(id); 
+        /* first, create a temporary file */
+        File objFile = getFile(id);
         File transcFile = makeTemporaryFile(id);
-        
-        /* now, rename the current file to a temporary name (if it exists) */
-        renameFile(objFile, transcFile);
         
         /* next, write out the data to a new copy of the original file */
         try {
-          writeObject(obj, metadata, id, System.currentTimeMillis(), objFile);
-        } catch (IOException e) {
-          /* if an IOException is thrown, rename the files back and abort */
-          deleteFile(objFile);
-          renameFile(transcFile, objFile);
+          writeObject(obj, metadata, id, System.currentTimeMillis(), transcFile);
+          
+          /* abort if this will put us over quota */
+          if (getUsedSpace() + getFileLength(transcFile) > getStorageSize()) 
+            throw new OutofDiskSpaceException();
+        } catch (Exception e) {
+          /* if an IOException is thrown, delete the temporary file and abort */
+          deleteFile(transcFile);
           throw e;
         }
-        
-        /* abort if this will put us over quota */
-        if(getUsedSpace() + getFileLength(objFile) > getStorageSize()) {
-          deleteFile(objFile);
-          renameFile(transcFile, objFile);
-          throw new OutofDiskSpaceException();
-        }
-        
-        System.out.println("COUNT: " + System.currentTimeMillis() + " Storing data of class " + obj.getClass().getName() + " under " + id.toStringFull() + " of size " + objFile.length() + " in " + name);
+
+        System.out.println("COUNT: " + System.currentTimeMillis() + " Storing data of class " + obj.getClass().getName() + " under " + id.toStringFull() + " of size " + objFile.length() + " in " + name);       
         
         /* recalculate amount used */
-        decreaseUsedSpace(getFileLength(transcFile)); 
-        increaseUsedSpace(getFileLength(objFile));
+        decreaseUsedSpace(getFileLength(objFile)); 
+        increaseUsedSpace(getFileLength(transcFile));
         
-        /* now, delete the old file */
-        deleteFile(transcFile);
+        /* now, rename the temporary file to be the real file */
+        renameFile(transcFile, objFile); 
         
+        /* mark the metadata cache of this file to be dirty */
         if (index) {
           synchronized (PersistentStorage.this.metadata) {
             PersistentStorage.this.metadata.put(id, metadata);
@@ -536,11 +530,9 @@ public class PersistentStorage implements Storage {
             /* and make sure that it exists */
             if ((objFile == null) || (! objFile.exists())) 
               return null;
-            else {
-              System.out.println("COUNT: " + System.currentTimeMillis() + " Fetching data under " + id + " of size " + objFile.length() + " in " + name);
 
-              return readData(objFile);
-            }
+            System.out.println("COUNT: " + System.currentTimeMillis() + " Fetching data under " + id + " of size " + objFile.length() + " in " + name);
+            return readData(objFile);
           } catch (Exception e) {
             /* remove our index for this file */
             if (index) {
@@ -716,8 +708,6 @@ public class PersistentStorage implements Storage {
     initFiles(appDirectory);
     debug("Initing file map");
     initFileMap(appDirectory);
-    debug("Initing metadata");
-    initMetadata();
     debug("Syncing metadata");
     if (index)
       writeDirty();
@@ -754,9 +744,8 @@ public class PersistentStorage implements Storage {
     File[] files = dir.listFiles(new DirectoryFilter());
     directories.put(dir, files);
     
-    for (int i=0; i<files.length; i++) {
+    for (int i=0; i<files.length; i++)
       initDirectoryMap(files[i]);
-    }
   }
   
   /**
@@ -785,9 +774,6 @@ public class PersistentStorage implements Storage {
         initFiles(new File(dir, files[i]));
         metadata = false;
       }
-      
-      /* release the file for garbage collection */
-      files[i] = null;
     }
     
     /* and delete the old metadata file, if it exists */
@@ -798,31 +784,20 @@ public class PersistentStorage implements Storage {
   /**
    * Method which initializes a temporary file by doing the following:
    *   1.  If this file is not a temporary file, simply returns the file
-   *   2.  If so, sees if the real file exists.  If the real file exists, 
-   *       renames this file and returns the new name.
-   *   3.  If so, determines which of the two files is the newest, and
-   *       deletes the temporary file.  Returns the temporary filename
-   *       which doesn't exist any more.
+   *   2.  If so, it simply moves this file to the lost and found and returns null 
+   *
+   * This is done since all temporary files are, by definition, temporary
+   * until they are renamed to an actual ID name.  Thus, if we detect a 
+   * temporary file during start-up, it is likely that the file is corrupted
+   * and should be deleted.
    */
   private String initTemporaryFile(File parent, String name) throws IOException {
     if (! isTemporaryFile(name))
       return name;
     
-    File file = new File(parent, name);
-    File real = new File(parent, readKey(file).toStringFull());
-    
-    if (! real.exists()) {
-      renameFile(file, real);
-      return real.getName();
-    }
-    
-    resolveConflict(file, real, real);
-    
+    moveToLost(new File(parent, name));
     return null;
   }
-  
-  // DELTE ME
-  int count = 0;
   
   /**
    * Inititializes the idSet data structure
@@ -883,19 +858,6 @@ public class PersistentStorage implements Storage {
         initFileMap(files[i]);
       }
     }
-  }
-  
-  /**
-   * Removes any entries in the metadata file which do not have files
-   */
-  private void initMetadata() throws IOException {
-    /*Id[] ids = (Id[])  metadata.keySet().toArray(new Id[0]);
-    
-    for (int i=0; i<ids.length; i++)
-      if (! idSet.isMemberId(ids[i])) {
-        metadata.remove(ids[i]);
-        dirty.add(getDirectoryForId(ids[i]));
-      } */
   }
 
   /**
@@ -1474,8 +1436,12 @@ public class PersistentStorage implements Storage {
           dirty.remove(files[i]);
         }
       } catch (IOException e) {
-        System.err.println("ERROR: Got error " + e + " while writing out metadata file - aborting!");
-        e.printStackTrace();
+        try {
+          System.err.println("ERROR: Got error " + e + " while writing out metadata in '" + files[i].getCanonicalPath() + "' - aborting!");
+          e.printStackTrace();
+        } catch (IOException f) {
+          System.err.println("PANIC: Got IOException " + f+ " trying to detail exception " + e + " while writing out file " + files[i]);
+        }
       }
     }
   }

@@ -24,6 +24,7 @@ import rice.post.security.*;
 import rice.post.security.ca.*;
 import rice.post.storage.*;
 
+import rice.selector.*;
 import rice.serialization.*;
 import rice.proxy.*;
 
@@ -41,6 +42,10 @@ import java.net.*;
 import java.security.*;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.*;
+
+import java.nio.*;
+import java.nio.channels.*;
 
 /**
  * This class starts up everything on the Pastry side, and then
@@ -225,6 +230,11 @@ public class PostProxy {
    */
   protected PostDialog dialog;
   
+  /**
+   * The class which manages the log
+   */
+  protected LogManager logManager;
+  
   protected static void initializeParameters(Parameters result, String[][] parameters) {    
     for (int i=0; i<parameters.length; i++)
       result.registerStringParameter(parameters[i][0], parameters[i][1]);
@@ -232,6 +242,7 @@ public class PostProxy {
   
   public static String[][] DEFAULT_PARAMETERS = new String[][] {{"pastry_proxy_enable", "false"},
   {"pastry_proxy", "sys01.cs.rice.edu:10001"},
+  {"pastry_allow_new_ring", "false"},
   {"pastry_proxy_username", System.getProperty("user.name")},
   {"pastry_proxy_password", ""}, 
   {"pastry_protocol", "socket"},
@@ -246,6 +257,11 @@ public class PostProxy {
   {"multiring_global_pastry_bootstraps", "128.42.7.237:20001"}, //"thor05.cs.rice.edu:20001,thor06.cs.rice.edu:20001,thor07.cs.rice.edu:20001," + 
                                                                 //"thor08.cs.rice.edu:20001,thor09.cs.rice.edu:20001,thor10.cs.rice.edu:20001"},
   {"standard_error_redirect_enable", "true"},
+  {"standard_output_network_enable", "true"},
+  {"standard_output_network_interval", "86400000"},
+  {"standard_output_network_host_name", "joshua.cs.rice.edu"},
+  {"standard_output_network_host_port", "35001"},
+  {"standard_output_network_buffer_size", "128000"}, 
   {"standard_output_redirect_enable", "true"},
   {"standard_output_redirect_append", "true"},
   {"standard_output_redirect_filename", "nohup.out"},
@@ -265,7 +281,9 @@ public class PostProxy {
   {"post_emergency_recover_logs", "false"},
   {"post_force_log_reinsert", "false"}, 
   {"post_fetch_log", "true"}, 
-  {"post_fetch_log_retries", "3"}, 
+  {"post_fetch_log_retries", "10"}, 
+  {"post_fetch_log_retry_sleep", "30000"},
+  {"post_redundancy_factor", "1"},
   {"post_synchronize_interval", "60000"},
   {"post_object_refresh_interval", "259200000"},
   {"post_object_timeout_interval", "1814400000"},
@@ -293,6 +311,36 @@ public class PostProxy {
   };
   
   /**
+   * Method which check all necessary boot conditions before starting the proxy.
+   *
+   * @param parameters The parameters to use
+   */
+  protected void startCheckBoot(Parameters parameters) throws Exception {
+    String address = InetAddress.getLocalHost().getHostAddress();
+    
+    if (! CompatibilityCheck.testIPAddress(address)) 
+      panic("You computer appears to have the non-routable address " + address + ".\n" +
+            "This is likely because (a) you are not connected to any network or\n" +
+            "(b) you are connected from behind a NAT box.  Please ensure that you have\n" +
+            "a valid, routable IP address and try again.");
+    
+    String version = System.getProperty("java.version");
+    
+    if (! CompatibilityCheck.testJavaVersion(version))
+      panic("You appear to be running an incompatible version of Java '" + System.getProperty("java.version") + "'.\n" +
+            "Currently, only Java 1.4 is supported, and you must be running a\n" +
+            "version of at least 1.4.2.  Please see http://java.sun.com in order\n" +
+            "to download a compatible version.");
+    
+    String os = System.getProperty("os.name");
+    
+    if (! CompatibilityCheck.testOS(os))
+      panic("You appear to be running an incompatible operating system '" + System.getProperty("os.name") + "'.\n" +
+            "Currently, only Windows and Linux are supported for ePOST, although\n" +
+            "we are actively trying to add support for Mac OS X.");
+  }
+  
+  /**
    * Method which sees if we are going to use a proxy for the pastry node, and if so
    * initiates the remote connection.
    *
@@ -301,6 +349,19 @@ public class PostProxy {
   protected void startDialog(Parameters parameters) throws Exception {
     if (parameters.getBooleanParameter("proxy_show_dialog")) {
       dialog = new PostDialog(); 
+    }
+  }
+  
+  /**
+   * Method which sees if we are using a liveness monitor, and if so, sets up this
+   * VM to have a client liveness monitor.
+   *
+   * @param parameters The parameters to use
+   */
+  protected void startLivenessMonitor(Parameters parameters) throws Exception {
+    if (parameters.getBooleanParameter("proxy_liveness_monitor_enable")) {
+      LivenessThread lt = new LivenessThread(parameters);
+      lt.start();
     }
   }
 
@@ -341,24 +402,18 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startRedirection(Parameters parameters) throws Exception {
-    try {
-      if (parameters.getBooleanParameter("standard_output_redirect_enable")) {
-        stepStart("Redirecting Standard Output");
-        System.setOut(new PrintStream(new FileOutputStream(parameters.getStringParameter("standard_output_redirect_filename"), 
-                                                           parameters.getBooleanParameter("standard_output_redirect_append"))));
-        stepDone(SUCCESS);
-      }
-    
-      if (parameters.getBooleanParameter("standard_error_redirect_enable")) {
-        stepStart("Redirecting Standard Error");
-        System.setErr(System.out);
-        stepDone(SUCCESS);
-      }
-    } catch (IOException ioe) {
-      panic(ioe, 
-            "There was an error writing to the file " + parameters.getStringParameter("standard_output_redirect_filename") + ".",
-            "standard_output_redirect_filename");
+    if (parameters.getBooleanParameter("standard_output_network_enable")) {
+      logManager = new NetworkLogManager(parameters);
+    } else if (parameters.getBooleanParameter("standard_output_redirect_enable")) {
+      logManager = new StandardLogManager(parameters);
+    } else {
+      logManager = new ConsoleLogManager(parameters);
     }
+    
+    stepStart("Redirecting Standard Output and Error");
+    System.setOut(new PrintStream(logManager));
+    System.setErr(new PrintStream(logManager));
+    stepDone(SUCCESS);
   }
   
   /**
@@ -495,11 +550,13 @@ public class PostProxy {
       if (files.length > 1) {
         panic("POST could not determine which username to run with - \n" + files.length + " certificates were found in the root directory.\n" +
               "Please remove all but the one which you want to run POST with.");
-        System.exit(-13);
       } else if (files.length == 0) {
-        panic("POST could not determine which username to run with - \nno certificates were found in the root directory.\n" +
-              "Please place the userid.epost file you want to run POST \nwith in the root directory.");
-        System.exit(-12);
+        panic("POST could not determine which username to run with - \n" + 
+              "no certificates were found in the root directory.\n" +
+              "Please place the userid.epost certificate you want to run POST \n" + 
+              "with in the root directory.\n\n" + 
+              "If you do not yet have a certificate, once can be created from\n" + 
+              "http://www.epostmail.org/");
       } else {
         parameters.registerStringParameter("post_username", files[0].substring(0, files[0].indexOf(".")));
         stepDone(SUCCESS);
@@ -578,7 +635,10 @@ public class PostProxy {
       pair = CACertificateGenerator.readKeyPair(file, parameters.getStringParameter("post_password"));
       stepDone(SUCCESS);
     } catch (SecurityException e) {
-      panic(e, "The password for the certificate was incorrect - please try again.", new String[] {"post_password"});
+      parameters.removeParameter("post_password");
+      parameters.writeFile();
+//      panic(e, "The password for the certificate was incorrect - please try again.", new String[] {"post_password"});
+      startRetrieveUserKey(parameters);
     }
   }
   
@@ -737,8 +797,7 @@ public class PostProxy {
     } else if (protocol.equalsIgnoreCase("socket")) {
       protocolId = DistPastryNodeFactory.PROTOCOL_SOCKET;
     } else {
-      stepDone(FAILURE, "Unknown protocol " + protocol);
-      System.exit(-18);
+      panic(new RuntimeException(), "The pastry protocol " + protocol + " is unknown.", "pastry_protocol");
     }
     
     DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port), protocolId, port);
@@ -748,7 +807,16 @@ public class PostProxy {
     if (parameters.getBooleanParameter("pastry_proxy_enable"))
       proxyAddress = parameters.getInetSocketAddressParameter("pastry_proxy");
     
-    node = factory.newNode(factory.getNodeHandle(bootAddresses), proxyAddress);
+    rice.pastry.NodeHandle bootHandle = factory.getNodeHandle(bootAddresses);
+    
+    if ((bootHandle == null) && (! parameters.getBooleanParameter("pastry_allow_new_ring")))
+      panic(new RuntimeException(), 
+            "Could not contact existing ring and not allowed to create a new ring.\n" +
+            "This is likely because (a) your computer is not properly connected to the\n" +
+            "Internet or (b) the ring you are attempting to connect to is off-line.  Please\n" +
+            "check you connection and try again later.", "pastry_bootstraps");
+
+    node = factory.newNode(bootHandle, proxyAddress);
     pastryNode = (PastryNode) node;
     timer = ((DistPastryNode) node).getTimer();
     
@@ -768,7 +836,24 @@ public class PostProxy {
     
     if (glacierTrashStorage != null)
       ((PersistentStorage) glacierTrashStorage.getStorage()).setTimer(timer);
-    Thread.sleep(3000);
+    
+    int count = 0;
+    
+    do {
+      System.out.println("Sleeping to allow node to boot into the ring");
+      Thread.sleep(3000);
+      count++;
+      
+      if (count > 10) {
+        panic("The Pastry node has unsuccessfully tried for 30 seconds to boot into the\n" +
+              "ring - it is highly likely that there is a problem preventing the connection.\n" + 
+              "The most common error is a firewall which is preventing incoming connections - \n" +
+              "please ensure that any firewall protecting you machine allows incoming traffic \n" +
+              "in both UDP and TCP on port " + parameters.getIntParameter("pastry_port"));
+      }
+    } while ((! parameters.getBooleanParameter("pastry_allow_new_ring")) &&
+             (pastryNode.getLeafSet().size() == 0));
+    
     stepDone(SUCCESS);
   }  
   
@@ -827,8 +912,7 @@ public class PostProxy {
     } else if (protocol.equalsIgnoreCase("socket")) {
       protocolId = DistPastryNodeFactory.PROTOCOL_SOCKET;
     } else {
-      stepDone(FAILURE, "Unknown global protocol " + protocol);
-      System.exit(-20);
+      panic(new RuntimeException(), "The global pastry protocol " + protocol + " is unknown.", "multiring_global_pastry_protocol");
     }
     
     DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port), protocolId, port);
@@ -958,6 +1042,7 @@ public class PostProxy {
                                  trashStorage);
     pendingPast = new DeliveryPastImpl(node, pendingStorage, 
                                        parameters.getIntParameter("past_replication_factor"), 
+                                       parameters.getIntParameter("post_redundancy_factor"),
                                        parameters.getStringParameter("application_instance_name") + "-pending", deliveredPast,
                                        parameters.getLongParameter("past_garbage_collection_interval"));
     stepDone(SUCCESS);
@@ -975,8 +1060,7 @@ public class PostProxy {
       
       String[] pieces = System.getProperty("RECOVER").split("/|:| ");
       if (pieces.length != 5) {
-        System.err.println("Usage: -DRECOVER=\"mm/dd/yyyy hh:mm\" (use 24h format)");
-        System.exit(1);
+        panic(new RuntimeException(), "The correct usage for the RECOVER option is '-DRECOVER=\"mm/dd/yyyy hh:mm\"' (use 24h format).", "RECOVER");
       }
       
       int month = Integer.parseInt(pieces[0]) - 1;  /* month is 0-based */
@@ -1060,8 +1144,11 @@ public class PostProxy {
         c.sleep();
         
         if (c.exceptionThrown()) { 
+          stepDone(FAILURE, "Fetching POST log caused exception " + c.getException());
+          stepStart("Sleeping and then retrying to fetch POST log (" + retries + "/" + parameters.getIntParameter("post_fetch_log_retries"));
           if (retries < parameters.getIntParameter("post_fetch_log_retries")) {
             retries++;
+            Thread.sleep(parameters.getIntParameter("post_fetch_log_retry_sleep"));
           } else {
             throw c.getException(); 
           }
@@ -1078,9 +1165,12 @@ public class PostProxy {
   protected Parameters start(Parameters parameters) throws Exception {
     initializeParameters(parameters, DEFAULT_PARAMETERS);
     
+    startCheckBoot(parameters);
+    
     startDialog(parameters);
+    startLivenessMonitor(parameters);
     startPastryProxy(parameters);
-
+        
     sectionStart("Initializing Parameters");
     startRedirection(parameters);
     startShutdownHooks(parameters);
@@ -1134,30 +1224,6 @@ public class PostProxy {
       System.exit(-1);
     }
   }
-
-  /**
-   * This method parses the arguments passed to the proxy, sets up the necessary
-   * local variables, and returns the userId.
-   *
-   * @param args The arguments from the main() method
-   * @return The name of the user
-   */
-  protected void parseArgs(String[] args) {
-    String[] files = (new File(".")).list(new FilenameFilter() {
-      public boolean accept(File dir, String name) {
-        return name.endsWith(".certificate");
-      }
-    });
-    
-    if (files.length > 1) {
-      System.out.println("ERROR: Expected at most one certificate, found " + files.length);
-      System.exit(0);
-    } else if (files.length == 0) {
-      System.out.println("NOTE: Did not find certificate, running in passive mode...");
-    } else {
-      name = files[0].substring(0, files[0].indexOf("."));
-    }
-  }
   
   /**
    * Helper method which throws an exception and tells the user a message
@@ -1195,7 +1261,12 @@ public class PostProxy {
   }
   
   public void panic(String m) {
-    JOptionPane.showMessageDialog(null, m, "Error Starting POST Proxy", JOptionPane.ERROR_MESSAGE); 
+    System.err.println("PANIC : " + m);
+
+    if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) {
+      JOptionPane.showMessageDialog(null, m, "Error Starting POST Proxy", JOptionPane.ERROR_MESSAGE); 
+    }
+    
     System.exit(-1);
   }
 
@@ -1257,9 +1328,11 @@ public class PostProxy {
     protected JTextArea area;
     protected JScrollPane scroll;
     protected JPanel panel;
+    protected JPanel kill;
     
     public PostDialog() {
       panel = new PostPanel();
+      kill = new KillPanel();
       area = new JTextArea(15,75);
       area.setFont(new Font("Courier", Font.PLAIN, 10));
       scroll = new JScrollPane(area, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -1275,6 +1348,11 @@ public class PostProxy {
       d.gridy=1;
       layout.setConstraints(scroll, d);      
       getContentPane().add(scroll);
+      
+      GridBagConstraints e = new GridBagConstraints();
+      e.gridy=2;
+      layout.setConstraints(kill, e);      
+      getContentPane().add(kill);
       
       pack();
       show();
@@ -1299,6 +1377,144 @@ public class PostProxy {
       g.setFont(new Font("Times", Font.PLAIN, 12));
       g.drawString("The status of your node is shown below.", 52, 60);
       
+    }
+  }
+  
+  protected class KillPanel extends JPanel {
+    public KillPanel() {
+      JButton restart = new JButton("Restart");
+      JButton kill = new JButton("Kill");
+      
+      restart.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          int i = JOptionPane.showConfirmDialog(KillPanel.this, "Are your sure you wish to restart your ePOST proxy?", "Restart", 
+                                                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+          
+          if (i == JOptionPane.YES_OPTION) 
+            System.exit(-2);
+        }
+      });
+      
+      kill.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          int i = JOptionPane.showConfirmDialog(KillPanel.this, "Are your sure you wish to kill your ePOST proxy?", "Kill", 
+                                                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+          
+          if (i == JOptionPane.YES_OPTION) 
+            System.exit(-1);
+        }
+      });
+      
+      GridBagLayout layout = new GridBagLayout();
+      setLayout(layout);
+      
+      GridBagConstraints c = new GridBagConstraints();
+      layout.setConstraints(restart, c);      
+      add(restart);
+      
+      GridBagConstraints d = new GridBagConstraints();
+      d.gridx=1;
+      layout.setConstraints(kill, d);      
+      add(kill);
+    }
+    
+    public Dimension getPreferredSize() {
+      return new Dimension(300, 30);
+    }
+    
+  }
+
+  protected class LivenessThread extends Thread {
+    
+    protected InputStream in;
+    protected OutputStream out;
+    
+    protected Pipe.SinkChannel sink;    
+    protected Pipe.SourceChannel source;
+    
+    protected byte[] buffer1;
+    protected byte[] buffer2;
+    
+    protected LivenessKeyHandler handler;
+    
+    public LivenessThread(Parameters parameters) throws IOException {
+      Pipe pipeA = Pipe.open();
+      Pipe pipeB = Pipe.open();
+      this.in = System.in;
+      this.out = System.out;
+      
+      this.sink = pipeA.sink();
+      this.source = pipeB.source();
+      
+      this.buffer1 = new byte[1];
+      this.buffer2 = new byte[1];
+      
+      this.handler = new LivenessKeyHandler(parameters, pipeA.source(), pipeB.sink());
+    }
+    
+    public void run() {
+      try {
+        while (true) {
+          in.read(buffer1);
+          ByteBuffer b1 = ByteBuffer.wrap(buffer1);
+          sink.write(b1);  
+
+          ByteBuffer b2 = ByteBuffer.wrap(buffer2);
+          source.read(b2);
+          out.write(buffer2);
+          out.flush();
+        }
+      } catch (IOException e) {
+        System.err.println("Got IOException " + e + " while monitoring liveness - exiting!");
+        e.printStackTrace();
+      }
+    }
+  }
+
+  protected class LivenessKeyHandler extends SelectionKeyHandler {
+    
+    protected ByteBuffer buffer;
+    
+    protected Pipe.SourceChannel source;
+    protected Pipe.SinkChannel sink;
+    
+    protected SelectionKey sourceKey;
+    protected SelectionKey sinkKey;
+   
+    public LivenessKeyHandler(Parameters parameters, Pipe.SourceChannel source, Pipe.SinkChannel sink) throws IOException {
+      this.buffer = ByteBuffer.allocate(1);
+      this.source = source;
+      this.sink = sink;
+      
+      this.source.configureBlocking(false);
+      this.sink.configureBlocking(false);
+      
+      SelectorManager manager = SelectorManager.getSelectorManager();
+      
+      this.sourceKey = manager.register(source, this, SelectionKey.OP_READ);
+      this.sinkKey = manager.register(sink, this, 0);
+    }
+    
+    public void read(SelectionKey key) {
+      try {
+        buffer.clear();
+        source.read(buffer);
+        sinkKey.interestOps(SelectionKey.OP_WRITE);
+      } catch (IOException e) {
+        System.out.println("IOException while reading liveness monitor! " + e);
+        e.printStackTrace();
+      }
+    }
+    
+    public void write(SelectionKey key) {
+      try {
+        buffer.flip();
+        sink.write(buffer);
+        sinkKey.interestOps(0);
+      } catch (IOException e) {
+        System.out.println("IOException while reading liveness monitor! " + e);
+        e.printStackTrace();
+      }
     }
   }
 }

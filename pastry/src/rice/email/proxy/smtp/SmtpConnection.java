@@ -59,7 +59,7 @@ public class SmtpConnection {
     }
 
     public void println(String line) {
-        System.out.println("S: " + line);
+   //     System.out.println("S: " + line);
         out.print(line + "\r\n");
         out.flush();
     }
@@ -68,10 +68,10 @@ public class SmtpConnection {
       int result = in.nextToken();
       
       if (result == in.TT_WORD) {
-        System.out.println("C: " + in.sval);
+   //     System.out.println("C: " + in.sval);
         return in.sval;
       } else if (result == in.TT_NUMBER) {
-        System.out.println("C*:" + in.nval);
+    //    System.out.println("C*:" + in.nval);
         return "" + in.nval;
       } else {
         return null;
