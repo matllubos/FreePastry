@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.scribe;
 
 import rice.pastry.NodeHandle;
+import rice.pastry.NodeId;
 import rice.scribe.messaging.ScribeMessage;
 
 /**
@@ -85,14 +86,24 @@ public interface IScribeApp
     public void forwardHandler( ScribeMessage msg );
     
 
-    /**
-     * Invoked by Scribe after a new child is added to one of
+     /**
+     * Invoked by Scribe after a child is added to or removed from one of
      * the node's children tables.
      *
      * @param msg 
-     * The SUBSCRIBE message from the new child.
+     * The SUBSCRIBE/UNSUBSCRIBE message from the child, or null
+     * if child was dropped because it became dead.
+     *
+     * @param topicId
+     * The topic for which child was added or removed.
+     *
+     * @param child
+     * The corresponding child.
+     *
+     * @param wasAdded true if child was added and false if child was removed.
+     *
      */
-    public void subscribeHandler( ScribeMessage msg );
+    public void subscribeHandler( ScribeMessage msg, NodeId topicId, NodeHandle child, boolean wasAdded );
     
 
     /**

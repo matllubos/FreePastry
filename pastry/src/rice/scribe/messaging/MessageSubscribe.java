@@ -137,28 +137,15 @@ public class MessageSubscribe extends ScribeMessage implements Serializable
 	}
 	
 	// make the source a child for this topic
-	topic.addChild( nhandle );
+	topic.addChild( nhandle, this );
 
 	// Inform all interested applications
+	/*
 	IScribeApp[] apps = topic.getApps();
 	for ( int i=0; i<apps.length; i++ ) {
-	    apps[i].subscribeHandler( this );
+	    apps[i].subscribeHandler( this, m_topicId, nhandle, true );
 	}
-	
-	
-	/**
-	 * If the ackOnSubscribeSwitch is set to true, we
-	 * should now send an immediate ACK.
-	 */
-	if( scribe.m_ackOnSubscribeSwitch ) {
-	    /** 
-	     * Send a AckOnSubscribeMessage to the new subscriber so that
-	     * it can set its parent pointer and reset its parentHandler.
-	     */
-	    ScribeMessage amsg = scribe.makeAckOnSubscribeMessage(m_topicId, cred);
-	    scribe.routeMsgDirect( nhandle, amsg, cred, opt );
-
-	}
+	*/
 	// stop routing the original message
 	return false;
     }

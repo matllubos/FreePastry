@@ -158,6 +158,8 @@ public interface IScribe
     public boolean multicast( NodeId groupID, Object obj, Credentials cred );
     
 
+
+
     /**
      * Anycast to a group/topic. Data will be delivered to 'ANY' one node
      * which has joined the group. The handling of anycast message is 
@@ -197,6 +199,9 @@ public interface IScribe
      */
     public void scheduleHB();
 
+
+
+
     /**
      * The tree repair event for a particular topic in Scribe is triggered
      * when a node misses a certain treeRepairThreshold number of heartbeat 
@@ -208,6 +213,8 @@ public interface IScribe
      */
     public void setTreeRepairThreshold(int value);
     
+
+
     
     /**
      * Generate a unique id for the topic, which will determine its rendezvous
@@ -222,6 +229,8 @@ public interface IScribe
     public NodeId generateTopicId(String topicName);
 
 
+
+
     /** 
      * Returns the local node's parent in this topic's multicast
      * tree.
@@ -231,6 +240,8 @@ public interface IScribe
      * @return the parent node.
      */
     public NodeHandle getParent(NodeId topicId);
+
+
 
     /** 
      * This returns the most current view of the children in this 
@@ -243,6 +254,50 @@ public interface IScribe
      */
     public Vector getChildren(NodeId topicId);
 
+
+    /** 
+     * This returns the number of children in this 
+     * topic's multicast subtree rooted at the local node. 
+     *
+     * @param topicId
+     * The id of the topic.
+     *
+     * @return the number of children of local node for this topic.
+     */
+    public int numChildren(NodeId topicId);
+
+
+
+
+    /**
+     * Add a node as a child in the children table for
+     * a topic.
+     *
+     * @param child  the child to be added
+     *
+     * @param topicId the topic for which this child is added
+     *
+     * @return true if operation was successful, false otherwise
+     *
+     */
+    public boolean addChild(NodeHandle child, NodeId topicId);
+
+
+
+    /**
+     * Removes a node as a child from the children table for
+     * a topic.
+     *
+     * @param child  the child to be removed
+     *
+     * @param topicId the topic for which this child is removed
+     *
+     * @return true if operation was successful, false otherwise
+     *
+     */
+    public boolean removeChild(NodeHandle child, NodeId topicId);
+
+    
 }
 
 

@@ -145,17 +145,8 @@ public class MessagePublish extends ScribeMessage implements Serializable
 		    while( k < topicsForChild.size()){
 			topicId = (NodeId)topicsForChild.elementAt(k);
 			Topic tp = (Topic) scribe.getTopic(topicId);
-			tp.removeChild( nhandle );
+			tp.removeChild( nhandle, null );
 			k++;
-			/*
-			 * only if we have no apps subscribed & if we dont have 
-			 * children we can forget about the topic
-			 */
-			
-			if( !tp.hasSubscribers() && !tp.hasChildren() ) {
-			    ScribeMessage msgu = scribe.makeUnsubscribeMessage( topicId, cred);
-			    scribe.routeMsgDirect(m_source, msgu, cred, opt);
-			}
 		    }
 		}
 		else {

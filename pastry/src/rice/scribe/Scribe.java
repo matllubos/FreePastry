@@ -1216,6 +1216,167 @@ public class Scribe extends PastryAppl implements IScribe
 	children = topic.getChildren();
 	return children;
     }
+
+
+    /**
+     * Whenever the children table for a topic is changed, ( a child is added
+     * or removed), this method is invoked to do some handling.
+     * If child was added :
+     *     if ackOnSubscribe is set, then send AckOnSubscribe mesg to new child
+     *
+     * If child was dropped:
+     *     if there are no applications as well as no child for this topic,
+     *     then local topic object is removed and an unsubscribe message is
+     *     send.
+     * 
+     * @param child the child which was added/removed
+     *
+     * @param topicId the topic for which child was added/removed
+     *
+     * @param wasAdded true if child was added, false if child was removed.
+     *
+     * @param msg the ScribeMessage which triggered this action,
+     *            it can be SUBSCRIBE/UNSUBSCRIBE msg, or null if application 
+     *            on top of Scribe called addChild()/removeChild()
+     */
+    public void childObserver(NodeHandle child, NodeId topicId, boolean wasAdded, ScribeMessage pmsg)
+    {
+	Credentials cred = getCredentials();
+	SendOptions opt = getSendOptions();
+	Topic topic = getTopic(topicId);
+
+	if(wasAdded){
+	    // child was added
+	    if( m_ackOnSubscribeSwitch ) {
+	    /** 
+	     * Send a AckOnSubscribeMessage to the new subscriber so that
+	     * it can set its parent pointer and reset its parentHandler.
+	     */
+	    ScribeMessage amsg = makeAckOnSubscribeMessage(topicId, cred);
+	    routeMsgDirect( child, amsg, cred, opt );
+	    }
+	    
+	    //notify applications about addition of this child, even if this
+	    // addition action was prompted by application
+	    IScribeApp[] apps = topic.getApps();
+	    for ( int i=0; i<apps.length; i++ ) {
+		apps[i].subscribeHandler( pmsg, topicId, child, true );
+	}
+	    
+	    
+	}
+	else {
+	    // child was removed
+
+	    // only if we have no subscribing apps & if we have no children
+	    // then send the unsubscribe message to the parent
+	    if ( !topic.hasSubscribers() && !topic.hasChildren() ) {
+		// tell multicast tree parent to remove local node
+		NodeHandle parent = topic.getParent();
+
+		if ( parent != null ) {
+
+		    //make a new message and send this thru scribe
+		    ScribeMessage msg = makeUnsubscribeMessage( topicId, cred );
+		    // msg.setData( this.getData() );
+
+		    // send directly to parent
+		    routeMsgDirect( parent, msg, cred, opt );
+
+		    //we no longer need the topic and is good to remove it
+		    topic.removeFromScribe();
+		}
+		else {
+		    // if parent unknown then set waiting flag and wait until 
+		    // first event arrives
+
+		    // make sure it is not Topic manager
+		    if( topic.isTopicManager() ){
+			topic.removeFromScribe();
+		    }
+		    else{
+			topic.waitUnsubscribe( true );
+		    }
+		}
+	    }
+
+	    //notify applications about the removal of this child, even if
+	    //this child removal action was prompted by some application
+	    IScribeApp[] apps = topic.getApps();
+	    for ( int i=0; i<apps.length; i++ ) {
+		apps[i].subscribeHandler( pmsg, topicId, child, false );
+	    }
+	}
+
+
+    }
+    
+
+
+    /** 
+     * This returns the number of children in this 
+     * topic's multicast subtree rooted at the local node. 
+     *
+     * @param topicId
+     * The id of the topic.
+     *
+     * @return the number of children of local node for this topic
+     *         if topic exists, else -1
+     */
+    public int numChildren(NodeId topicId)
+    {
+	Vector children = getChildren(topicId);
+
+	if(children != null)
+	    return children.size();
+	else
+	    return -1;
+    }
+
+
+    /**
+     * Add a node as a child in the children table for
+     * a topic.
+     *
+     * @param child  the child to be added
+     *
+     * @param topicId the topic for which this child is added
+     *
+     * @return true if operation was successful, false otherwise
+     *
+     */
+    public boolean addChild(NodeHandle child, NodeId topicId)
+    {
+	Topic topic = getTopic(topicId);
+       
+	if(topic != null)
+	    return topic.addChild(child, null);
+	else
+	    return false;
+    }
+
+
+    /**
+     * Removes a node as a child from the children table for
+     * a topic.
+     *
+     * @param child  the child to be removed
+     *
+     * @param topicId the topic for which this child is removed
+     *
+     * @return true if operation was successful, false otherwise
+     *
+     */
+    public boolean removeChild(NodeHandle child, NodeId topicId)
+    {
+	Topic topic = getTopic(topicId);
+       
+	if(topic != null)
+	    return topic.removeChild(child, null);
+	else
+	    return false;
+    }
+
     
 }
 

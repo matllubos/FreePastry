@@ -90,44 +90,50 @@ public class MessageUnsubscribe extends ScribeMessage implements Serializable
 	if ( topic != null ) {
 	    // remove source node from children if it isnt us
 	    if(!m_source.getNodeId().equals( scribe.getNodeId() ) ) {
-		topic.removeChild( handle );
+		topic.removeChild( handle, this );
+	    }
+	    // if its us, then that means last application has left
+	    // the topic group
+	    
+	    else {
+		// only if we have no subscribing apps & if we have no children
+		// then send the unsubscribe message to the parent
+		
+		if ( !topic.hasSubscribers() && !topic.hasChildren() ) {
+		    // tell multicast tree parent to remove local node
+		    NodeHandle parent = topic.getParent();
+		    
+		    if ( parent != null ) {
+			Credentials cred = scribe.getCredentials();
+			SendOptions opt = scribe.getSendOptions();
+			
+			//make a new message and send this thru scribe
+			ScribeMessage msg = 
+			    scribe.makeUnsubscribeMessage( m_topicId, cred );
+			msg.setData( this.getData() );
+			
+			// send directly to parent
+			scribe.routeMsgDirect( parent, msg, cred, opt );
+			
+			//we no longer need the topic and is good to remove it
+			topic.removeFromScribe();
+			
+		    }
+		    else {
+			// if parent unknown then set waiting flag and wait until 
+			// first event arrives
+			
+			// make sure it is not Topic manager
+			if( topic.isTopicManager() ){
+			    topic.removeFromScribe();
+			}
+			else{
+			    topic.waitUnsubscribe( true );
+			}
+		    }
+		}
 	    }
 	    
-	    // only if we have no subscribing apps & if we have no children
-	    // then send the unsubscribe message to the parent
-	    if ( !topic.hasSubscribers() && !topic.hasChildren() ) {
-		// tell multicast tree parent to remove local node
-		NodeHandle parent = topic.getParent();
-
-		if ( parent != null ) {
-		    Credentials cred = scribe.getCredentials();
-		    SendOptions opt = scribe.getSendOptions();
-
-		    //make a new message and send this thru scribe
-		    ScribeMessage msg = 
-			scribe.makeUnsubscribeMessage( m_topicId, cred );
-		    msg.setData( this.getData() );
-
-		    // send directly to parent
-		    scribe.routeMsgDirect( parent, msg, cred, opt );
-
-		    //we no longer need the topic and is good to remove it
-		    topic.removeFromScribe();
-
-		}
-		else {
-		    // if parent unknown then set waiting flag and wait until 
-		    // first event arrives
-
-		    // make sure it is not Topic manager
-		    if( topic.isTopicManager() ){
-			topic.removeFromScribe();
-		    }
-		    else{
-			topic.waitUnsubscribe( true );
-		    }
-		}
-	    }
 	}
 	else {
 	} // if topic unknown, error

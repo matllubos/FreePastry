@@ -39,6 +39,7 @@ package rice.scribe;
 import java.util.*;
 import rice.pastry.*;
 import rice.scribe.maintenance.*;
+import rice.scribe.messaging.*;
 
 /**
  * @(#) Topic.java
@@ -153,9 +154,13 @@ public class Topic
      * 
      * @param child the node to be added as a child.
      * 
+     * @param msg the ScribeMessage which triggered this action,
+     *            it can be SUBSCRIBE msg, or null if application 
+     *            on top of Scribe called addChild()
+     *
      * @return true if the child was NOT already in the Set of children.
      */
-    public boolean addChild( NodeHandle child ) {
+    public boolean addChild( NodeHandle child, ScribeMessage msg ) {
 	boolean result;
 
 	result = m_children.add( child );
@@ -163,6 +168,7 @@ public class Topic
 	// Reflect this child in the distinctChildrenTable
 	// maintained by scribe.
 	m_scribe.addChildForTopic(child, this.getTopicId());
+	m_scribe.childObserver(child, this.getTopicId(), true, msg);
 	return result;
     }
     
@@ -172,9 +178,14 @@ public class Topic
      *
      * @param child the child node to be removed from the multicast tree.
      *
+     * @param msg the ScribeMessage which triggered this action,
+     *            it can be UNSUBSCRIBE msg, or null if application 
+     *            on top of Scribe called removeChild() or this child
+     *            became dead
+     *
      * @return true if the child node was in the Set of children.
      */
-    public boolean removeChild( NodeHandle child ) {
+    public boolean removeChild( NodeHandle child, ScribeMessage msg ) {
 	boolean result;
 
 	result = m_children.remove( child );
@@ -182,6 +193,7 @@ public class Topic
 	// Reflect this child in the distinctChildrenTable
 	// maintained by scribe.
 	m_scribe.removeChildForTopic(child, this.getTopicId());
+	m_scribe.childObserver(child, this.getTopicId(), false, msg);
 	return result ;
     }
     

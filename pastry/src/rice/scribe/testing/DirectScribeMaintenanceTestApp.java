@@ -118,9 +118,10 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp
     }
 
     /**
-     * up-call invoked by scribe when a node is added to the multicast tree.
+     * up-call invoked by scribe when a node is added/removed  to the multicast tree.
      */
-    public void subscribeHandler( ScribeMessage msg ) {
+    public void subscribeHandler( ScribeMessage msg, NodeId topicId, NodeHandle child, boolean wasAdded ) {
+	    
 	/*
 	System.out.println("Node:" + getNodeId() + " App:"
                                 + m_app + " child subscribed: " + msg);

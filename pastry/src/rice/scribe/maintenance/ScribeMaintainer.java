@@ -152,28 +152,8 @@ public class ScribeMaintainer
 		    while( k < topicsForChild.size()){
 			topicId = (NodeId)topicsForChild.elementAt(k);
 			topic = (Topic) m_scribe.getTopic(topicId);
-			topic.removeChild( child );
+			topic.removeChild( child, null );
 			k++;
-			/*
-			 * only if we have no apps subscribed & if we dont have 
-			 * children we can forget about the topic
-			 */
-			
-			if( !topic.hasSubscribers() && !topic.hasChildren() ) {
-			    if ( topic.getParent() != null ) {
-				ScribeMessage msgu = m_scribe.makeUnsubscribeMessage( topicId, cred );
-				
-				m_scribe.routeMsgDirect( topic.getParent(), msgu, cred, opt );
-				
-				// forget parent
-				topic.setParent( null );
-			    }
-			    else { 
-				// if parent unknown, set waiting flag and
-				//wait until first event arrives
-				topic.waitUnsubscribe( true );
-			    }
-			}
 		    }
 		}
 	    }
