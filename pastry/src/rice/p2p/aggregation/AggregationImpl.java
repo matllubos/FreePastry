@@ -34,6 +34,7 @@ import rice.p2p.past.gc.GCPastContent;
 import rice.p2p.past.gc.GCPastContentHandle;
 import rice.persistence.StorageManager;
 import rice.visualization.server.DebugCommandHandler;
+import rice.p2p.glacier.v2.GlacierContentHandle;
 
 import rice.post.PostEntityAddress;
 import rice.post.storage.SignedData;
@@ -806,6 +807,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
     Vector currentAggregate = new Vector();
     Vector aggregates = new Vector();
+    Vector deletionVector = new Vector();
     Iterator iter = waitingKeys.getIterator();
     long currentAggregateSize = 0;
     int currentObjectsInAggregate = 0;
@@ -834,7 +836,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             break;
           }
         } else {
-          warn("Metadata in waiting object "+thisId.toStringFull()+" appears to be damaged -- suggest deletion");
+          warn("Metadata in waiting object "+thisId.toStringFull()+" appears to be damaged. Scheduling for deletion...");
+          deletionVector.add(thisId);
         }
       }
       
@@ -863,6 +866,21 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         if (!iter.hasNext())
           break;
       }
+    }
+
+    Enumeration delenda = deletionVector.elements();
+    while (delenda.hasMoreElements()) {
+      final Id thisId = (Id) delenda.nextElement();
+      log(2, "Deleting object "+thisId.toStringFull()+" from waiting list (broken metadata)");
+      waitingList.unstore(thisId, new Continuation() {
+        public void receiveResult(Object o) {
+          log(3, "Successfully deleted: "+thisId);
+        }
+        public void receiveException(Exception e) {
+          warn("Cannot delete: "+thisId+", e="+e);
+          e.printStackTrace();
+        }
+      });
     }
   
     Continuation.MultiContinuation c = new Continuation.MultiContinuation(new Continuation() {
@@ -1559,7 +1577,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     keysToDo.add(aggregateList.getRoot());
     rebuildInProgress = true;
     
-    log(3, "Rebuild: Fetching handles for aggregate " + aggregateList.getRoot().toStringFull());
+    log(2, "Rebuild: Fetching handles for aggregate " + aggregateList.getRoot().toStringFull());
     aggregateStore.lookupHandles(aggregateList.getRoot(), 999, new Continuation() {
       Id currentLookup = aggregateList.getRoot();
       
@@ -1589,13 +1607,13 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                   keysToDo.remove(currentLookup);
                   keysDone.add(currentLookup);
 
-                  log(3, "Rebuild: Got aggregate " + currentLookup.toStringFull());
+                  log(2, "Rebuild: Got aggregate " + currentLookup.toStringFull());
 
                   Aggregate aggr = (Aggregate) o;
                   ObjectDescriptor[] objects = new ObjectDescriptor[aggr.components.length];
                   long aggregateExpiration = (thisHandle instanceof GCPastContentHandle) ? ((GCPastContentHandle)thisHandle).getExpiration() : GCPast.INFINITY_EXPIRATION;
           
-                  for (int i=0; i<aggr.components.length; i++)
+                  for (int i=0; i<aggr.components.length; i++) {
                     objects[i] = new ObjectDescriptor(
                       aggr.components[i].getId(), 
                       aggr.components[i].getVersion(),
@@ -1603,6 +1621,42 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                       aggregateExpiration,
                       getSize(aggr.components[i])
                     );
+                    
+                    final GCPastContent objData = aggr.components[i];
+                    log(3, "Checking whether "+objData.getId()+"v"+objData.getVersion()+" is in object store...");
+                    objectStore.lookupHandles(objData.getId(), 1, new Continuation() {
+                      public void receiveResult(Object o) {
+/* evil... needs pastcontenthandle */                      
+                        GCPastContentHandle[] result = (o instanceof GCPastContentHandle[]) ? ((GCPastContentHandle[])o) : new GCPastContentHandle[] {};
+                        log(3, "Handles for "+objData.getId()+"v"+objData.getVersion()+": "+result);
+                        boolean gotOne = false;
+                        for (int i=0; i<result.length; i++) {
+                          log(3, "Have v"+result[i].getVersion());
+                          if (result[i].getVersion() >= objData.getVersion())
+                            gotOne = true;
+                        }
+                        
+                        if (gotOne) {
+                          log(3, "Got it");
+                        } else {
+                          log(3, "Ain't got it... reinserting");
+                          objectStore.insert(objData, new Continuation() {
+                            public void receiveResult(Object o) {
+                              log(3, "Reinsert "+objData.getId()+"v"+objData.getVersion()+" ok, result="+o);
+                            }
+                            public void receiveException(Exception e) {
+                              log(3, "Reinsert "+objData.getId()+"v"+objData.getVersion()+" failed, exception="+e);
+                              e.printStackTrace();
+                            }
+                          });
+                        }
+                      }
+                      public void receiveException(Exception e) {
+                        log(3, "Cannot retrieve handles for object "+objData.getId()+"v"+objData.getVersion()+" to be restored; e="+e);
+                        e.printStackTrace();
+                      }
+                    });
+                  }
             
                   aggregateList.addAggregateDescriptor(new AggregateDescriptor(currentLookup, aggregateExpiration, objects, aggr.getPointers()));
           
@@ -1618,13 +1672,14 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                   }
           
                   if (!keysToDo.isEmpty()) {
-                    log(3, "Rebuild: "+keysToDo.size()+" keys to go, "+keysDone.size()+" done");
+                    log(2, "Rebuild: "+keysToDo.size()+" keys to go, "+keysDone.size()+" done");
                     currentLookup = (Id) keysToDo.firstElement();
-                    log(3, "Rebuild: Fetching handles for aggregate " + currentLookup.toStringFull());
+                    log(2, "Rebuild: Fetching handles for aggregate " + currentLookup.toStringFull());
                     aggregateStore.lookupHandles(currentLookup, 999, outerContinuation);
                   } else {
                     aggregateList.writeToDisk();
                     rebuildInProgress = false;
+                    log(2, "Rebuild: Completed; "+keysDone.size()+" aggregates checked");
                     command.receiveResult(new Boolean(true));
                   }
                 } else {
@@ -1651,7 +1706,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         if (!keysToDo.isEmpty()) {
           log(3, "Trying next key");
           currentLookup = (Id) keysToDo.firstElement();
-          log(3, "Rebuild: Fetching handles for aggregate " + currentLookup.toStringFull());
+          log(2, "Rebuild: Fetching handles for aggregate " + currentLookup.toStringFull());
           aggregateStore.lookupHandles(currentLookup, 999, this);
         } else {
           if (aggregateList.isEmpty()) {
@@ -1908,7 +1963,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
   
   public void lookupHandles(final Id id, final long version, final int max, final Continuation command) {
-    panic("lookupHandles invoked with version number!");
+    ((VersioningPast)aggregateStore).lookupHandles(id, version, max, command);
   }
   
   public void lookupHandle(final Id id, final NodeHandle handle, final Continuation command) {
@@ -1980,8 +2035,10 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
     /* Note that we never give out any handles from the aggregate store, so this must
        be an object store handle */
-  
-    objectStore.fetch(handle, command);
+    if (handle instanceof GlacierContentHandle)
+      aggregateStore.fetch(handle, command);
+    else
+      objectStore.fetch(handle, command);
   }
 
   public void flush(Id id, Continuation command) {
