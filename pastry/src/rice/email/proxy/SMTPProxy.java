@@ -6,11 +6,13 @@ import java.net.InetAddress;
 import rice.email.EmailService;
 
 /**
- * This class defines an SMTP service that is layered on top of the POST system.  Since both
- * sending and receiving are actions in POST that must be associated with a specific user, 
- * this SMTP proxy requires password authentication from clients trying to send through it. 
- * 
- * @author Derek Ruths
+ * This class defines an SMTP service that is layered on top of the
+ * POST system. It accepts SMTP connections on the given port, parses
+ * the messages it receives, and sends them using the provided
+ * EmailService.
+ *
+ * Note that most of the actual functionality is in SMTPDaemon.
+ * @author Dave Price
  */
 public class SMTPProxy {
 
@@ -49,3 +51,4 @@ public class SMTPProxy {
       t.start();
   }
 }
+
