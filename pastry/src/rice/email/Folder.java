@@ -147,6 +147,7 @@ public class Folder {
    * @return the newly created child Folder
    */   
   public void createChildFolder(String name, Continuation command) {
+    System.out.println("Creating child Folder");
     // make the log to add
     Log log = new Log(name, _log.getLocation(), _post);
     // make the entry to insert after the new log has been added
@@ -154,6 +155,7 @@ public class Folder {
     // make the continuation to perform after adding the log.  This takes in the entry to insert
     // and the log to insert it into.  
     Continuation preCommand = new FolderAddLogEntryTask(entry, _log, command);
+    System.out.println("Adding the new child log, log is " + log + " and preCommand is " + preCommand);
     _log.addChildLog(log, preCommand);    
   }
 
@@ -353,6 +355,7 @@ public class Folder {
      * Constructs a FolderAddLogEntryTask.
      */
     public FolderAddLogEntryTask(LogEntry entry, Log newLog, Continuation command) {
+      System.out.println("Constructing a new FolderAddLogEntryTask");
       _entry = entry;
       _newLog = newLog;
       _command = command;
@@ -369,6 +372,8 @@ public class Folder {
      * Returns the contents to the given user continuation.
      */
     public void receiveResult(Object o) {
+      System.out.println("FolderAddLogEntryTask received result");      
+      System.out.println("Result was : " + o);
       Folder result = new Folder(_newLog, _post);
       FolderReturnResultTask preCommand = new FolderReturnResultTask(result, _command);
       _log.addLogEntry(_entry, preCommand);

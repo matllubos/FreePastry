@@ -17,9 +17,10 @@ public class SimpleFolderTest extends EmailTest {
   private Folder _rootFolder;
   // the current state of the program
   private int _state;
-
   // the immediate subFolders
   Folder _subFolder1, _subFolder2;
+
+
 
   // methods
   public void startTest() {
@@ -49,17 +50,22 @@ public class SimpleFolderTest extends EmailTest {
 
       // try to get the root
       _state = GOT_ROOT;
-      Continuation command = new SimpleFolderCont(_rootFolder);      
+      Continuation command = new SimpleFolderCont();      
       _sender.getRootFolder(command);
     }
 
     else if (_state == GOT_ROOT) {
+      if (_rootFolder == null) {
+	System.out.println("Root Folder was null after getRoot. Very bad, exitting.");
+	return;
+      }
+
       // once we have the name of the root, print it out
       System.out.println("Name of the root Folder: " + _rootFolder.getName());
 
       // create a new Folder under the root
       _state = MADE_CHILD_1;
-      Continuation command = new SimpleFolderCont(_subFolder1);
+      Continuation command = new SimpleFolderCont();
       _rootFolder.createChildFolder("Adam", command);
     }
     else if (_state == MADE_CHILD_1) {
@@ -72,7 +78,7 @@ public class SimpleFolderTest extends EmailTest {
       }
       // create a new Folder under the root
       _state = MADE_CHILD_2;
-      Continuation command = new SimpleFolderCont(_subFolder2);
+      Continuation command = new SimpleFolderCont();
       _rootFolder.createChildFolder("Bob", command);
     }
     else if (_state == MADE_CHILD_2) {
@@ -88,15 +94,31 @@ public class SimpleFolderTest extends EmailTest {
     }
   }
 
+
   // Gets the root Folder, continues on with test
   protected class SimpleFolderCont implements Continuation {
-    Folder _folder;
-    public SimpleFolderCont(Folder folder) {
-      _folder = folder;      
+    public SimpleFolderCont() {
+      System.out.println("Creating SimpleFolderCont ");
     }
     public void start() {}
     public void receiveResult(Object o) {      
-      _folder = (Folder)o;
+      System.out.println("SimpleFolderCont received result. ");
+      System.out.println("Result was: " + ((Folder)o));
+      if (_state == GOT_ROOT) {
+	_rootFolder = (Folder)o;
+      }
+      else if (_state == MADE_CHILD_1) {
+	_subFolder1 = (Folder)o;
+      }
+      else if (_state == MADE_CHILD_2) {
+	_subFolder2 = (Folder)o;
+      }
+
+      // temp test
+      if (_rootFolder == null) {
+	System.out.println("RootFolder was not set correctly");
+      }
+
       testBody();
     }
     public void receiveException(Exception e) {

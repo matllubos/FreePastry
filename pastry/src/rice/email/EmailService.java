@@ -38,11 +38,13 @@ public class EmailService extends PostClient {
 	 * @param result The result of the command.
 	 */
 	public void receiveResult(Object result) {
-	    Log emailLog = (Log) result;
+	  System.out.println("ESRootFolderCont received a result.");
+	  System.out.println("Result is: " + (Log)result);
+	  Log emailLog = (Log) result;
 	    
-	    Folder f = new Folder(emailLog, _post);
-
-	    this.resultHandler.receiveResult(f);
+	  Folder f = new Folder(emailLog, _post);
+	  
+	  this.resultHandler.receiveResult(f);
 	}
 
 	/**
@@ -76,7 +78,7 @@ public class EmailService extends PostClient {
 	 */
 	public void receiveResult(Object result) {
 	  System.out.println("ESAddRootFolderCont received a result.");
-	  System.out.println("Result is: " + result);
+	  System.out.println("Result is: " + ((LogReference)result));
 	  LogReference emailLogRef = (LogReference)result;
 	  StorageService storage = _post.getStorageService();
 	  storage.retrieveSigned(emailLogRef, new ESRootFolderCont(resultHandler));
