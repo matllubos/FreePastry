@@ -142,6 +142,10 @@ public class SelectorManager extends Thread {
     invocations.add(d);
     selector.wakeup();
   }
+  
+  public int getNumInvocations() {
+    return invocations.size();
+  }
 
   /**
    * Adds a selectionkey handler into the list of handlers which wish to change
