@@ -391,8 +391,23 @@ public class DirectScribeMaintenanceTest
 	    System.out.print("[ PASSED ]\n");
 	else
 	    System.out.print("[ FAILED ]\n");
+	
+	ok &= passed;
 
+	/**
+	 * TEST 0c
+	 * Checks the removeChild interface method.
+	 */
+	topicId = (NodeId)topicIds.elementAt(0);
+	passed = checkRemoveChild(topicId);
+	System.out.print("\nREMOVE CHILD TEST:\t\t\t\t\t\t");
 
+	if(passed)
+	    System.out.print("[ PASSED ]\n");
+	else
+	    System.out.print("[ FAILED ]\n");
+	
+	ok &= passed;
 	/**
 	 * TEST 1.
 	 * Now we will check if initially all the nodes are part of 
@@ -1166,6 +1181,40 @@ public class DirectScribeMaintenanceTest
 	    return true;
 	else
 	    return false;
+    }
+    
+    /**
+     * Tests the removeChild interface method.
+     * A random node picks one of its children for given
+     * topic, and removes it. Now, after this its list of 
+     * children for this topic are checked and this child 
+     * should not be there.
+     */
+    public boolean checkRemoveChild(NodeId topicId){
+	int i;
+	DirectScribeMaintenanceTestApp scribeApp = null;
+
+	for(i = 0; i < scribeClients.size(); i++){
+	    scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(i);
+	    if(scribeApp.m_scribe.numChildren(topicId) > 1)
+		break;
+	}	
+
+	Vector children = scribeApp.m_scribe.getChildren(topicId);
+	NodeHandle victimChild = (NodeHandle)children.elementAt(0);
+
+	scribeApp.m_scribe.removeChild(victimChild, topicId);
+	while(simulate());
+
+	children = scribeApp.m_scribe.getChildren(topicId);
+	
+	// add child back.
+	scribeApp.m_scribe.addChild(victimChild, topicId);
+	while(simulate());
+	if(children.contains(victimChild))
+	    return false;
+	else
+	    return true;
     }
 }
  
