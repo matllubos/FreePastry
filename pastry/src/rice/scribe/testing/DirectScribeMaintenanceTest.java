@@ -104,6 +104,17 @@ public class DirectScribeMaintenanceTest
     private int nodesCurrentlyAlive = 0;
 
     private boolean currentAckFlagState;
+
+    private class Data implements Serializable{
+	String name = null;
+	public Data(NodeId hostname){
+	    name = new String("Scribe : Data transferred." + hostname.toString());
+	}
+	public String toString(){
+	    return name;
+	}
+    }
+
     
     public DirectScribeMaintenanceTest() {
 	simulator = new EuclideanNetwork();
@@ -260,7 +271,9 @@ public class DirectScribeMaintenanceTest
 	    scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(i);
 	    for(j=0; j < topicIds.size() ; j++) {
 		topicId = (NodeId)topicIds.elementAt(j);
-		scribeApp.join(topicId);
+		//scribeApp.join(topicId);
+		Data data = new Data(scribeApp.m_scribe.getNodeId());
+		scribeApp.join(topicId, data);
 	    }		
 	}
 	while (simulate());
@@ -349,9 +362,20 @@ public class DirectScribeMaintenanceTest
 	    }		
 	}
 	while (simulate());
-	
 
+	/**
+	 * TEST 0
+	 * Checks the functionality of addChild and setParent 
+	 * interface methods.
+	 */
 
+	passed = setParentAndaddChildTest();
+
+	if(passed)
+	    System.out.println("\n\nSET-PARENT_&_ADD-CHILD TEST:  PASSED \n");
+	else
+	    System.out.println("\n\nSET-PARENT_&_ADD-CHILD TEST:  FAILED \n");
+	   
 
 
 	/**
@@ -987,6 +1011,53 @@ public class DirectScribeMaintenanceTest
 	}		
 	return result;
     }
+
+
+    /**
+     * Checks whether setParent and addChild works correctly.
+     * A node(X) is picked and its parent is set to 
+     * another random node(Y), and then X is added as a child
+     * in Y's children table. Then, different trees are analysed to
+     * see if everything is correct. This procedure is followed for
+     * all nodes in system.
+     */
+    public boolean setParentAndaddChildTest(){
+	boolean result = true;
+	DirectScribeMaintenanceTestApp scribeAppX, scribeAppY;
+	NodeId topicId;
+	NodeHandle parent;
+
+	for(int x = 0; x < this.n; x++){
+	    scribeAppX = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(x);
+	    topicId = (NodeId)topicIds.elementAt(0);
+	    
+	    parent = scribeAppX.m_scribe.getParent(topicId);
+	    if(parent != null){
+		scribeAppY = (DirectScribeMaintenanceTestApp)nodeIdToApp.get((NodeId)parent.getNodeId());
+		
+		scribeAppX.m_scribe.setParent( scribeAppY.getLocalHandle(), topicId);
+		
+		scribeAppY.m_scribe.addChild( scribeAppX.getLocalHandle(), topicId);
+		
+		while(simulate());
+		
+		// check if trees are all right
+		result = checkAllTrees();
+		
+		// check if child-parent relationship is consistent
+		// from both child and parent views
+		result = result && childParentViewConsistencyTest(x);
+		
+		// check if parent table is consistent at child node
+		result = result && distinctParentTableConsistencyTest(x);
+		
+		// check if children table is consistent at parent node
+		result = result && distinctChildrenTableConsistencyTest(scribeAppY.m_appCount);
+	    }
+	}
+	return result;
+    }
+    
 }
  
 
