@@ -138,7 +138,7 @@ public class PersistentStorage implements Storage {
 			public void doWork(){
 				try {
 				  if (id == null || obj == null) {
-					c.receiveResult(new Boolean(false));
+					c.receiveResult(new IllegalArgumentException());
 					return;
 				  }
 				  /* Create a file representation and then transactionally write it */
