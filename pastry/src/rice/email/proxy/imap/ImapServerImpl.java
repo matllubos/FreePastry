@@ -50,7 +50,7 @@ public final class ImapServerImpl extends Thread implements ImapServer {
 
         System.out.println("Accepted connection from " + socket.getInetAddress());
 
-        if (acceptNonLocal || proxy || (socket.getInetAddress().isSiteLocalAddress())) {
+        if (acceptNonLocal || proxy || (socket.getInetAddress().equals(InetAddress.getLocalHost()))) {
           Thread thread = new Thread() {
             public void run() {
               try {
