@@ -1481,10 +1481,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             reportSuccess();
           }
         } else {
-          warn("Insertion of "+key+" failed, only "+numReceiptsReceived()+"/"+numFragments+" receipts received");
+          warn(whoAmI()+" "+key+" failed, only "+numReceiptsReceived()+"/"+numFragments+" receipts received");
           if (!answered) {
             answered = true;
-            command.receiveException(new GlacierException("Insert failed, did not receive enough receipts"));
+            command.receiveException(new GlacierException(whoAmI()+" failed, did not receive enough receipts"));
           }
         }
 
