@@ -98,7 +98,17 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * Timeout to use while waiting for response messages, in milliseconds.
    */
   private long timeout = 5000;
-  
+
+  /**
+   * Replication factor to use with the replication manager 
+   * Should probably make this slightly more configurable
+   */
+  private static int REPLICATION_FACTOR = 4;
+ 
+  /**
+   * Replication Manager to use
+   */
+  private RM replicationManager; 
   /**
    * Builds a new PASTService to run on the given PastryNode, given a
    * Storage object (to persistedly store objects) and a cache used
@@ -114,6 +124,8 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
     credentials = new PermissiveCredentials();
     sendOptions = new SendOptions();
     commandTable = new Hashtable();
+    replicationManager = new RMImpl(pastry);
+    replicationManager.register(this.getAddress(), this);
   }
 
   /**
@@ -267,6 +279,7 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
         command.receiveException(result);
       }
     });
+    replicationManager.replicate(getAddress(), id, obj, REPLICATION_FACTOR - 1);
   }
     
   /**
@@ -376,6 +389,7 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
         command.receiveException(result);
       }
     });
+    replicationManager.remove(getAddress(), id, REPLICATION_FACTOR - 1);
   }
 
  // ---------- RMClient Methods ----------
@@ -391,7 +405,14 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
   */
   public void responsible(NodeId objectKey, Object object){
 
-
+       final Continuation insert = new Continuation(){
+         public void receiveResult(Object o){}
+         public void receiveException(Exception e){
+               e.printStackTrace();
+         }
+       };
+         
+       getStorage().store(objectKey, (Serializable) object, insert);
   }
 
  /* This upcall is invoked by the Replica Manager to notify the application 
@@ -403,6 +424,15 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
   * @param objectKey the object key of the object
   */
   public void notresponsible(NodeId objectKey){
+
+      final Continuation delete = new Continuation(){
+         public void receiveResult(Object o){}
+         public void receiveException(Exception e){
+               e.printStackTrace();
+         }
+       };
+         
+       getStorage().unstore(objectKey, delete);
 
   }
  
@@ -423,7 +453,12 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
   * is ready.
   */
   public void rmIsReady(){
+     System.out.println("Replica Manager is Ready");
 
+  }
+
+  public int getReplicationFactor(){
+    return REPLICATION_FACTOR;
   }
   
  // ---------- Debug Methods ---------------   
