@@ -190,8 +190,8 @@ public class Channel implements IScribeApp {
      /* then make call accordingly */
   }
   public void scribeIsReady(){}
-  public void subscribeHandler(ScribeMessage msg, NodeId topicId, 
-                               NodeHandle child, boolean wasAdded){}
+  public void subscribeHandler(NodeId topicId, 
+                               NodeHandle child, boolean wasAdded, Object data){}
 }
 
 

@@ -62,7 +62,10 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream{
     * This was designed per suggestion by Atuhl, he is going to 
     * add the appropriate hooks into Scribe.
     */
-   public void handleSubscribe(ChannelId channelId){}
+   public void handleSubscribe(ChannelId channelId){
+	/* Does this really work on subscribe? */
+        attachChannel(channelId);
+   }
    public void messageForAppl(Message msg){}
    public Credentials getCredentials(){return credentials;}
    public Address getAddress(){return null;}

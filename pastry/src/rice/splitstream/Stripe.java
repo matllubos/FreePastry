@@ -120,8 +120,8 @@ public class Stripe extends Observable implements IScribeApp{
        /* then make call accordingly */
      }
      public void scribeIsReady(){}
-     public void subscribeHandler(ScribeMessage msg, NodeId topicId, 
-                                  NodeHandle child, boolean wasAdded){
+     public void subscribeHandler(NodeId topicId,
+                                  NodeHandle child, boolean wasAdded, Object data){
           /* We should check if we can take this child on */
      }
 
