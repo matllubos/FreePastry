@@ -13,7 +13,7 @@ public class DeleteMailLogEntry extends LogEntry {
   /**
    * Constructor for DeleteMailLogEntry.  For the given email, creates a node which serves
    * as a marker that the previous occurence of the email in the chain
-   * should be disregarded.  The next field is the next LogNode in the chain.
+   * should be disregarded.
    *
    * @param email the email to store
    */

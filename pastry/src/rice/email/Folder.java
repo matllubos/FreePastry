@@ -11,6 +11,7 @@ import rice.post.storage.*;
  * Represents a notion of a folder in the email service.
  */
 public class Folder {
+  // maximum entry limit for our primitive snapshot policy
   private static final int COMPRESS_LIMIT = 100;
 
   // name of the folder
@@ -190,6 +191,7 @@ public class Folder {
     try {
       Log log = new Log(name, _log.getLocation());
       _log.addChildLog(log);
+      _log.addLogEntry(new InsertFolderLogEntry(name));
       return new Folder(log, _storage);
     } catch (StorageException e) {
       throw new PostException(e.getMessage());
@@ -229,6 +231,7 @@ public class Folder {
   public void removeFolder(String name) throws PostException {
     try {
       _log.removeChildLog(name);
+      _log.addLogEntry(new DeleteFolderLogEntry(name));
     } catch (StorageException e) {
       throw new PostException(e.getMessage());
     }

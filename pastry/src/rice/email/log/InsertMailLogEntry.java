@@ -11,12 +11,10 @@ public class InsertMailLogEntry extends LogEntry {
   Email _email;
     
   /**
-   * Constructor for MailEntry.  For the given email, creates an
-   * entry which can be used in a log chain.  The next field is the
-   * next LogEntry in the chain.
+   * Constructor for InsertMailEntry.  For the given email, creates an
+   * entry which can be used in a log chain. 
    *
    * @param email the email to store
-   * @param prev The reference to previous LogEntry in the chain
    */
   public InsertMailLogEntry(Email email) {
     _email = email;
