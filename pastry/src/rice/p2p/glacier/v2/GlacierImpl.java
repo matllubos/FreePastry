@@ -1562,13 +1562,33 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           return;
         }
 
-        final Manifest[] manifests = policy.createManifests(vkey, obj, fragments, expiration);
-        if (manifests == null) {
-          command.receiveException(new GlacierException("Cannot create manifests"));
-          return;
-        }
+        log(3, "insert(" + vkey.toStringFull() + ") encoded fragments OK, creating manifests...");
 
-        distribute(vkey, fragments, manifests, expiration, tagInsert, command);
+        endpoint.process(new Executable() {
+          public Object execute() {
+            return policy.createManifests(vkey, obj, fragments, expiration);
+          }
+        }, new Continuation() {
+          public void receiveResult(Object o) {
+            if (o instanceof Manifest[]) {
+              final Manifest[] manifests = (Manifest[]) o;
+              if (manifests == null) {
+                command.receiveException(new GlacierException("Cannot create manifests"));
+                return;
+              }
+
+              distribute(vkey, fragments, manifests, expiration, tagInsert, command);
+            } else {
+              warn("insert(" + vkey.toStringFull() + ") cannot create manifests - returned o="+o);
+              command.receiveException(new GlacierException("Cannot create manifests in insert()"));
+            }
+          }
+          public void receiveException(Exception e) {
+            warn("insert(" + vkey.toStringFull() + ") cannot create manifests - exception e="+e);
+            e.printStackTrace();
+            command.receiveException(e);
+          }
+        });
       }
       public void receiveException(Exception e) {
         command.receiveException(new GlacierException("EncodeObject failed: e="+e));
