@@ -42,7 +42,7 @@ public class DistSplitStreamTest {
     public Vector localNodes;
     private static NodeHandle bootStrapNode;
     private static int port = 5010;
-    private static String bshost = null;
+    public static String bshost = null;
     private static int bsport = 5010;
     private static int numNodes = 5;
     public Integer num = new Integer(0);
@@ -58,7 +58,7 @@ public class DistSplitStreamTest {
     // 'fractionUnsubscribedAllowed' of 'numNodes' to unsubscribe for each topic.
     private static Hashtable numUnsubscribed = null;
 
-
+    
     // fraction of total virtual nodes on this host allowed to unsubscribe
     public static double fractionUnsubscribedAllowed = 0.5; 
     public static Object LOCK = new Object();
@@ -177,7 +177,7 @@ public class DistSplitStreamTest {
 		break;
 	    }
 	}
-
+	System.out.println("bshost == "+bshost);
 	for (int i = 0; i < args.length; i++) {
 	    if (args[i].equals("-protocol") && i+1 < args.length) {
 		String s = args[i+1];
@@ -234,9 +234,10 @@ public class DistSplitStreamTest {
     public static void main(String args[]) {
 	int seed;
 	PastryNode pn;
-
+	String boothost;
 	Log.init(args);
 	doInitstuff(args);
+	boothost = bshost;
 	seed = (int)System.currentTimeMillis();
 	PastrySeed.setSeed(seed);
 	System.out.println("seed used=" + seed); 
@@ -258,7 +259,7 @@ public class DistSplitStreamTest {
 	    }
 	}
         //bootStrapNode = pn.getLocalHandle();
-
+	bshost = boothost;
 	for (int i = 1; i < numNodes ; i++){
 	    driver.makeNode();
 	}

@@ -50,10 +50,10 @@ public class DistSplitStreamTestMessage extends Message implements Serializable
 	Channel channel = (Channel) splitStreamApp.m_channels.get(m_channelId);
 	if(channel == null)
 	    System.out.println("PROBLEM -- channel is null");
-	DistSplitStreamTest driver = splitStreamApp.getDriver();
-	if(driver == null)
-	    System.out.println("PROBLEM -- driver is null --- should never happen");
-	String bootHost = splitStreamApp.getDriver().getBootHost();
+	//DistSplitStreamTest driver = splitStreamApp.getDriver();
+	//if(driver == null)
+	// System.out.println("PROBLEM -- driver is null --- should never happen");
+	String bootHost = DistSplitStreamTest.bshost;//splitStreamApp.getDriver().getBootHost();
 	String localHost = null;
 
 	try{
@@ -62,8 +62,9 @@ public class DistSplitStreamTestMessage extends Message implements Serializable
 	    System.out.println("Error determining local host: " + e);
 	}
 	
+	System.out.println("Localhost "+localHost+", boothost "+bootHost);
 
-	if(splitStreamApp.m_appIndex == 0){// && localHost.equals(bootHost)){
+	if(splitStreamApp.m_appIndex == 4 && localHost.equals(bootHost)){
 	    // I am the creator of the channel
 	    splitStreamApp.sendData(channel.getChannelId());
 	}

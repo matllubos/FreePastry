@@ -324,10 +324,11 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
 	Channel channel =  (Channel) m_channels.get(channelId);
 	
 	// Join all the stripes associated with the channel
-	System.out.println("App "+m_appIndex+" subscribing to stripes of channel, currently subscribed "+channel.getNumSubscribedStripes());
+	//System.out.println("App "+m_appIndex+" subscribing to stripes of channel, currently subscribed "+channel.getNumSubscribedStripes()+" total stripes "+channel.getNumStripes());
 	while(channel.getNumSubscribedStripes() < channel.getNumStripes()){
 	    Stripe stripe = channel.joinAdditionalStripe(this);
 	}
+	System.out.println("App "+m_appIndex+" has subscribed to all stripes **********");
     }
 
     public boolean channelReady(ChannelId channelId){
