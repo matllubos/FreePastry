@@ -1,6 +1,8 @@
 package rice.post.messaging;
 
 import rice.post.*;
+import rice.post.messaging.*;
+import java.io.*;
 
 /**
  * This class represents an abstract message in the Post system
@@ -8,7 +10,7 @@ import rice.post.*;
  * extend this class with each type of relevant notification 
  * message.
  */
-public abstract class NotificationMessage extends PostMessage {
+public abstract class NotificationMessage extends Message implements Serializable {
   private PostClientAddress address = null;
  
   /**

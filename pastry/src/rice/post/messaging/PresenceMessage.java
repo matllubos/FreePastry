@@ -2,13 +2,14 @@ package rice.post.messaging;
 
 import rice.post.*;
 import rice.pastry.*;
+import rice.pastry.messaging.*;
 
 /**
  * This is the message broadcast to the Scribe group of
  * the user to inform replica holders that that user is available
  * at the given nodeid.
  */
-public class PresenceMessage extends PostMessage {
+public class PresenceMessage extends ScribeMessage implements Serializable{
   private PostUserAddress address;
   private NodeId location;    
   /**

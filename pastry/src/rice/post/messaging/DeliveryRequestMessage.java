@@ -4,12 +4,13 @@ import java.security.*;
 
 import rice.post.*;
 import rice.pastry.*;
-
+import rice.pastry.message.*;
+import java.io.*;
 /**
  * This message is broadcast to the sender of a NotificationMessage in
  * order to inform the sender that the message has been received.
  */
-public class DeliveryRequestMessage extends PostMessage {
+public class DeliveryRequestMessage extends Message implements Serializable {
   
   private PostUserAddress sender      = null;
   private PostUserAddress destination = null;
