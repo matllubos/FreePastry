@@ -110,6 +110,8 @@ public class MessagePublish extends ScribeMessage implements Serializable
 			ScribeMessage msg = scribe.makeUnsubscribeMessage( m_topicId, cred );
 			scribe.routeMsgDirect( m_source, msg, cred, opt );
 		    }
+		    else
+			topic.postponeParentHandler();
 		}
 	    }
             else {
