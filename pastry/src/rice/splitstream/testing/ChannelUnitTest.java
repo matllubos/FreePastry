@@ -20,7 +20,7 @@ import java.util.*;
  * 
  * @author Ansley Post
  */
-public class ChannelUnitTest{
+public class ChannelUnitTest implements Observer{
 
  private EuclideanNetwork simulator;
  private DirectPastryNodeFactory factory;
@@ -70,6 +70,100 @@ public class ChannelUnitTest{
     }
     else{
       System.out.println("Get Channel Id              [ FAILED ]" );
+      passed = false;
+    }
+
+    /**
+     * Tests to see if getStripes returns the correct number of stripes 
+     * Succeeds: if the number of stripes equals numStripes 
+     */
+    if(getChannel().getStripes().length == getChannel().getNumStripes()){
+      System.out.println("Get Stripes                 [ PASSED ]" );
+    }
+    else{
+      System.out.println("Get Stripes                 [ FAILED ]" );
+      passed = false;
+    }
+
+    /**
+     * Tests to see if getSubscribedStripes returns 0 before a stripe
+     * is subscribed to.
+     * Succeeds: if the number of  subscribed stripes equals 0 
+     */
+    if(getChannel().getSubscribedStripes().size() == 0){
+      System.out.println("Get Subscribed Stripes(none)[ PASSED ]" );
+    }
+    else{
+      System.out.println("Get Subscribed Stripes(none)[ FAILED ]" );
+      passed = false;
+    } 
+
+    /**
+     * Tests to see if getSubscribedStripes becomes 1 when join called 
+     * Succeeds: if the number of  subscribed stripes equals  1
+     */
+    getChannel().joinAdditionalStripe(this);
+    if(getChannel().getSubscribedStripes().size() == 1){
+      System.out.println("Join Additional Stripe(one) [ PASSED ]" );
+    }
+    else{
+      System.out.println("Join Additional Stripe(one) [ FAILED ]" );
+      passed = false;
+    } 
+
+    /**
+     * Tests to see if getSubscribedStripes becomes 16 when join called
+     * until no more can be joined 
+     * Succeeds: if the number of  subscribed stripes equals total stripes 
+     */
+    while(getChannel().joinAdditionalStripe(this) != null){}
+    if(getChannel().getSubscribedStripes().size() == getChannel().getNumStripes()){
+      System.out.println("Join Additional Stripe(all) [ PASSED ]" );
+    }
+    else{
+      System.out.println("Join Additional Stripe(all) [ FAILED ]" );
+      passed = false;
+    } 
+
+    /**
+     * Tests to see if leaveStripe becomes 15 when leave called
+     * Succeeds: if the number of  subscribed stripes equals 16 -1
+     * 15 should be removed and generated from the routing table 
+     */
+     getChannel().leaveStripe();
+    if(getChannel().getSubscribedStripes().size() == 15){
+      System.out.println("Leave Additional Stripe(one)[ PASSED ]" );
+    }
+    else{
+      System.out.println("Leave Additional Stripe(one)[ FAILED ]" );
+    }
+
+    /**
+     * Tests to see if getSubscribedStripes becomes 0 when leave called
+     * until no more can be left 
+     * Succeeds: if the number of  subscribed stripes equals 0 
+     */
+    while(getChannel().leaveStripe() != null){}
+    if(getChannel().getSubscribedStripes().size() == 0){
+      System.out.println("Leave Additional Stripe(all)[ PASSED ]" );
+    }
+    else{
+      System.out.println("Leave Additional Stripe(all)[ FAILED ]" );
+      passed = false;
+    }
+
+    /**
+     * Tests to see if getPrimaryStripe returns a stripe sharing a prefix 
+     * Succeeds: if the stripe shares the first digit 
+     */
+    if(
+     getChannel().getPrimaryStripe().getStripeId().getDigit(15 , 4) == 
+     getChannel().getNodeId().getDigit(15, 4 )
+      ){
+      System.out.println("Get Primary Stripe          [ PASSED ]" );
+    }
+    else{
+      System.out.println("Get Primary Stripe          [ FAILED ]" );
       passed = false;
     }
 
@@ -144,5 +238,7 @@ public class ChannelUnitTest{
   public boolean simulate() { 
 	return simulator.simulate(); 
   }
-
+  public void update(Observable o, Object data){
+     /* do nothing */
+  }
 }
