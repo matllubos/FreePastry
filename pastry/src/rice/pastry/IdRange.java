@@ -229,9 +229,9 @@ public class IdRange {
 	if (o.ccw.equals(o.cw)) return this;
 
 	boolean ccwIn = ccw.isBetween(o.ccw, o.cw);
-	boolean cwIn = cw.isBetween(o.ccw, o.cw);
+	boolean cwIn = cw.isBetween(o.ccw, o.cw) && !cw.equals(o.ccw);
 	boolean occwIn = o.ccw.isBetween(ccw, cw);
-	boolean ocwIn = o.cw.isBetween(ccw, cw);
+	boolean ocwIn = o.cw.isBetween(ccw, cw) && !o.cw.equals(ccw);
 
 	if (ccwIn && cwIn && occwIn && ocwIn) {
 	    // ranges intersect in two ranges, return ccw range
