@@ -260,7 +260,12 @@ public class RouteMessage extends Message implements Serializable, rice.p2p.comm
      * @return the options.
      */
 
-    public SendOptions getOptions() { return opts; }
+    public SendOptions getOptions() { 
+      if (opts == null) {
+        opts = new SendOptions();
+      }
+      return opts; 
+    }
 
     public String toString() {
 	String str = "";
