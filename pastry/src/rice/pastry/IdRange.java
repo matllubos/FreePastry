@@ -280,7 +280,7 @@ public class IdRange {
      * @return the range corresponding to the ccw half of this range
      */ 
     public IdRange ccwHalf() {
-	Id newCW = ccw.add(size().shift(1,0));
+	Id newCW = ccw.add(size().shift(1,0,true));
 	return new IdRange(ccw, newCW);
     }
 
@@ -289,7 +289,7 @@ public class IdRange {
      * @return the range corresponding to the cw half of this range
      */ 
     public IdRange cwHalf() {
-	Id newCCW = ccw.add(size().shift(1,0));
+	Id newCCW = ccw.add(size().shift(1,0,true));
 	return new IdRange(newCCW, cw);
     }
 

@@ -288,7 +288,22 @@ public class Id implements Comparable, Serializable
 	 */
 	public Distance shift(int cnt, int fill) 
 	{
-	    int carry, bit;
+	    return shift(cnt, fill, false);
+	}
+
+
+	/**
+	 * Shift operator. 
+	 * shift(-1,0) multiplies value of this by two, shift(1,0) divides by 2
+	 *
+	 * @param cnt the number of bits to shift, negative shifts left, positive shifts right
+	 * @param fill value of bit shifted in (0 if fill == 0, 1 otherwise)
+	 * @param roundUp if true, round up the results after right shifting
+	 * @return this
+	 */
+	public Distance shift(int cnt, int fill, boolean roundUp) 
+	{
+	    int carry, bit = 0, lsb = 0;
 
 	    if (cnt > 0) {	  
 		for (int j=0; j<cnt; j++) {
@@ -298,6 +313,22 @@ public class Id implements Comparable, Serializable
 			bit = difference[i] & 1;
 			difference[i] = (difference[i] >>> 1) | carry;
 			carry = (bit == 0) ? 0 : 0x80000000;
+		    }
+
+		    if (j==0) lsb = bit;
+		}
+		
+		if (roundUp && lsb > 0) {
+		    long x, sum;
+		    // add one to round up
+		    carry = 1;
+		    for (int i=0; i<nlen; i++) {
+			x = difference[i] & 0x0ffffffffL;
+			sum = x + carry;
+			if (sum >= 0x100000000L) carry = 1;
+			else carry = 0;
+
+			difference[i] = (int)sum;
 		    }
 		}
 	    }

@@ -66,7 +66,7 @@ public class IdSet {
     /**
      * Constructor.
      */
-    public IdSet(SortedSet s) {
+    protected IdSet(SortedSet s) {
 	idSet = s;
 	validHash = false;
     }
@@ -142,7 +142,7 @@ public class IdSet {
     }
 
     /**
-     * return an iterator that iterates over the elements of this set
+     * return an iterator over the elements of this set
      * @return the interator
      */
     public Iterator getIterator() {

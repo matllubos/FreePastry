@@ -427,7 +427,8 @@ public abstract class PastryRegrTest {
 		// fetch the replicaSet of the key at the ccw edge of the range
 		NodeSet cs = ls.replicaSet(range.getCCW(), maxRank+1);
 
-		if ( !cs.member(nearest)) {
+		//if ( !cs.member(nearest)) {
+		if ( cs.get(0).getNodeId() != nearest ) {
 		    System.out.println("checkLeafSet: range failure 1 at " + rta.getNodeId() + " k=" + k + 
 				       " maxRank=" + maxRank + "\n" + cs + "\n" + ls + "\n" + range + "\nnearest=" + nearest);
 		    
@@ -444,7 +445,8 @@ public abstract class PastryRegrTest {
 		// fetch the replicaSet of the key at the cw edge of the range
 		cs = ls.replicaSet(range.getCW(), maxRank+1);
 
-		if ( !cs.member(nearest)) {
+		//if ( !cs.member(nearest)) {
+		if ( cs.get(0).getNodeId() != nearest ) {
 		    System.out.println("checkLeafSet: range failure 2 at " + rta.getNodeId() + " k=" + k + 
 				       " maxRank=" + maxRank + "\n" + cs + "\n" + ls + "\n" + range + "\nnearest=" + nearest);
 

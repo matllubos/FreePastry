@@ -364,8 +364,8 @@ public class LeafSet extends Observable implements Serializable {
      */
 
     public NodeSet replicaSet(Id key, int max) {
-	System.out.println("replicaSet Called with max= " + max + " key= " + key);
-	System.out.println(this);
+	//System.out.println("replicaSet Called with max= " + max + " key= " + key);
+	//System.out.println(this);
 	NodeSet set = new NodeSet();
 	if (max < 1) return set;
 
