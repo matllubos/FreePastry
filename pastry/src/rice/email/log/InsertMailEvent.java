@@ -5,7 +5,7 @@ import rice.email.*;
  * An Email Creation Event (ECE).  Signifies that the referenced Email was
  * created. 
  */
-public class InsertMailEvent implements EmailEvent {
+public class InsertMailEvent implements Event {
   Email _email;
     
   /**

@@ -7,7 +7,7 @@ import rice.email.*;
  * An Email Deletion Event.  Signifies that the referenced Email was
  * deleted. 
  */
-public class DeleteMailEvent implements EmailEvent{
+public class DeleteMailEvent implements Event{
   Email _email ;
     
   /**
