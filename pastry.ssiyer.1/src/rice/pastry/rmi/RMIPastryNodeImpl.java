@@ -64,6 +64,7 @@ class RMIPastryNodeImpl extends UnicastRemoteObject implements RMIPastryNode
     private class MsgHandler implements Runnable {
 	public void run() {
 	    while (true) {
+		Message msg = null;
 		synchronized (queue) {
 		    while (count == 0) {
 			try {
@@ -71,7 +72,6 @@ class RMIPastryNodeImpl extends UnicastRemoteObject implements RMIPastryNode
 			} catch (InterruptedException e) {}
 		    }
 
-		    Message msg = null;
 		    try {
 			msg = (Message) queue.removeFirst();
 			count--;
@@ -79,19 +79,19 @@ class RMIPastryNodeImpl extends UnicastRemoteObject implements RMIPastryNode
 			System.out.println("no msg despite count = " + count);
 			continue;
 		    }
-
-		    /*
-		     * The sender of this message is alive. So if we have a
-		     * handle in our pool with this Id, then it should be
-		     * reactivated.
-		     */
-		    NodeId sender = msg.getSenderId();
-		    System.out.println("[rmi] received " +
-				       (msg instanceof RouteMessage ? "route" : "direct")
-				       + " msg from " + sender + ": " + msg);
-		    if (sender != null) handlepool.activate(sender);
-		    node.receiveMessage(msg);
 		}
+
+		/*
+		* The sender of this message is alive. So if we have a
+		* handle in our pool with this Id, then it should be
+		* reactivated.
+		 */
+		NodeId sender = msg.getSenderId();
+		System.out.println("[rmi] received " +
+				   (msg instanceof RouteMessage ? "route" : "direct")
+				   + " msg from " + sender + ": " + msg);
+		if (sender != null) handlepool.activate(sender);
+		node.receiveMessage(msg);
 	    }
 	}
     }

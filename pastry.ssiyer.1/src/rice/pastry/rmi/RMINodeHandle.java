@@ -189,7 +189,8 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	    System.out.println("[rmi] bouncing message back to self at " + localhandle);
 	    if (msg instanceof RouteMessage) {
 		RouteMessage rmsg = (RouteMessage) msg;
-		rmsg.setNextHop(null);
+		rmsg.nextHop = null;
+		System.out.println("[rmi] this msg bounced is " + rmsg);
 		localhandle.receiveMessage(rmsg);
 	    } else {
 		localhandle.receiveMessage(msg);
@@ -227,7 +228,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
     {
 	RMIPastryNode rn = (RMIPastryNode) in.readObject();
 	NodeId rnid = (NodeId) in.readObject();
-	System.out.println("[rmi] readobject RMI handle for node: " + rnid);
+	// System.out.println("[rmi] readobject RMI handle for node: " + rnid);
 	init(rn, rnid); // initialize all the other elements also
     }
 
@@ -235,7 +236,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	throws IOException, ClassNotFoundException 
     {
 	if (isLocal) System.out.println("[rmi] writeObject from " + localhandle.getNodeId() + " to local node " + remotenid);
-	else System.out.println("[rmi] writeobject RMI handle for node: " + remotenid);
+	// else System.out.println("[rmi] writeobject RMI handle for node: " + remotenid);
 	out.writeObject(remoteNode);
 	out.writeObject(remotenid);
     } 

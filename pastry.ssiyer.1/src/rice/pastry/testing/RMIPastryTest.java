@@ -77,6 +77,7 @@ public class RMIPastryTest {
 	RMIPastryNode other = null;
 	try {
 	    other = (RMIPastryNode)Naming.lookup("//:" + port + "/Pastry");
+	    //pause(1000);
 	} catch (Exception e) {
 	    System.out.println("Unable to find another node on localhost");
 	}
@@ -114,12 +115,8 @@ public class RMIPastryTest {
 				   + " (attempt " + i + "/" + nattempts + ")");
 	    }
 
-	    if (i != nattempts) {
-		// synchronized (this) {
-		    // try { wait(1000); } catch (InterruptedException e) {}
-		// }
+	    if (i != nattempts)
 		pause(1000);
-	    }
 	}
 
 	/*
@@ -145,11 +142,11 @@ public class RMIPastryTest {
 	    RMINodeHandle other_handle = new RMINodeHandle(other, otherid /* , pn */);
 	    pn.receiveMessage(new InitiateJoin(other_handle));
 	}
+	// else pause(1000);
     }
 
     public void printLeafSets() {
-	pause(10000);
-
+	pause(1000);
 	for (int i = 0; i < pastrynodes.size(); i++)
 	    System.out.println(((PastryNode)pastrynodes.get(i)).getLeafSet());
     }
@@ -157,7 +154,6 @@ public class RMIPastryTest {
     public synchronized void pause(int ms) {
 	System.out.println("waiting for " + (ms/1000) + " sec");
 	try { wait(ms); } catch (InterruptedException e) {}
-	System.out.println("done waiting.");
     }
 
     /**
@@ -216,6 +212,7 @@ public class RMIPastryTest {
 	for (int i = 0; i < numnodes; i++)
 	    pt.makePastryNode();
 
-	pt.printLeafSets();
+	while (true)
+	    pt.printLeafSets();
     }
 }

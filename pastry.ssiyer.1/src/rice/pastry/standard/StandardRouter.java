@@ -115,8 +115,10 @@ public class StandardRouter implements MessageReceiver {
 
 	int lsPos = leafSet.mostSimilar(target);
 
-	if (lsPos == 0) // message is for the local node so deliver it
+	if (lsPos == 0) { // message is for the local node so deliver it
 	    msg.nextHop = localHandle;
+	    if (msg.nextHop != null) System.out.println("3. nexthop = " + msg.nextHop.getNodeId());
+	}
 
 	else if ((lsPos > 0 && lsPos < cwSize) ||
 		 //		 (lsPos < 0 && lsPos < ccwSize)) // message is for a node in the leaf set
@@ -131,7 +133,10 @@ public class StandardRouter implements MessageReceiver {
 		    receiveRouteMessage(msg);
 		    return;
 		}
-		else msg.nextHop = handle;
+		else {
+		    msg.nextHop = handle;
+		    if (msg.nextHop != null) System.out.println("4. nexthop = " + msg.nextHop.getNodeId());
+		}
 	    }
 	else {
 	    RouteSet rs = routeTable.getBestEntry(target);
@@ -163,6 +168,7 @@ public class StandardRouter implements MessageReceiver {
 	    }
 
 	    msg.nextHop = handle;
+	    if (msg.nextHop != null) System.out.println("5. nexthop = " + msg.nextHop.getNodeId());
 	}
 
 	localHandle.receiveMessage(msg);
