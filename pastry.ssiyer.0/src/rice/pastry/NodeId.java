@@ -634,7 +634,7 @@ public class NodeId implements Comparable, Serializable
 	    s = s + tran[d];
 	}
 
-	return "<" + s.substring(0,5) + ">";
+	return "<" + s.substring(0,6) + "..>";
 	//return "<" + s.substring(0,5)+"..." + ">";
 	//return "< nodeId " + s + " >";
     }

@@ -42,7 +42,7 @@ import java.util.*;
 import java.io.*;
 
 /**
- * A set of nodes, ordered by nodeId
+ * A set of nodes, ordered by numerical distance of their nodeId from the baseId (local nodeId)
  *
  * @version $Id$
  *
@@ -54,13 +54,20 @@ import java.io.*;
 public class SimilarSet extends Observable implements NodeSet, Serializable
 {
     private NodeHandle localNode;
+    private LeafSet leafset;
     private NodeId baseId;
-    private boolean clockwise;
 
     private NodeHandle[] nodes;
     private NodeId.Distance[] dist;
 
     private int theSize;
+
+    /**
+     * swap two elements
+     *
+     * @param i the index of the first element
+     * @param j the indes of the second element
+     */
 
     protected void swap(int i, int j) {
 	NodeHandle handle = nodes[i];
@@ -76,18 +83,18 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
     /**
      * Constructor.
      *
+     * @param ls the leafset
      * @param localNode the local node 
      * @param size the size of the similar set.
      */
 
-    public SimilarSet(NodeHandle localNode, int size, boolean cw) {
+    public SimilarSet(LeafSet ls, NodeHandle localNode, int size) {
 	this.localNode = localNode;
+	this.leafset = ls;
 	baseId = localNode.getNodeId();
-	clockwise = cw;
 	theSize = 0;
-
-	nodes = new NodeHandle[size];
-	dist = new NodeId.Distance[size];
+	nodes = new NodeHandle[size*2];
+	dist = new NodeId.Distance[size*2];
     }
     
     /**
@@ -103,21 +110,16 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
 	NodeId nid = handle.getNodeId();
 	NodeId.Distance d;
 
-	if (baseId.clockwise(nid) == clockwise)
-	    d = baseId.distance(nid);
-	else
-	    d = baseId.longDistance(nid);
-	
-	int n = nodes.length;
-
 	if (nid.equals(baseId)) return false;
+
+	d = baseId.distance(nid);
 
 	for (int i=0; i<theSize; i++)
 	    if (nid.equals(nodes[i].getNodeId())) return false;
 
-	if (theSize < n) return true;
+	if (theSize < nodes.length/2 || leafset.size() < nodes.length) return true;
 	
-	if (dist[n - 1].compareTo(d) <= 0) return false;
+	if (dist[theSize - 1].compareTo(d) <= 0) return false;
 
 	return true;
     }
@@ -136,40 +138,35 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
 	NodeId nid = handle.getNodeId();
 	NodeId.Distance d;
 
-	if (baseId.clockwise(nid) == clockwise)
-	    d = baseId.distance(nid);
-	else
-	    d = baseId.longDistance(nid);
-	
-	int n = nodes.length;
-
 	if (nid.equals(baseId)) return false;
 
 	for (int i=0; i<theSize; i++)
 	    if (nid.equals(nodes[i].getNodeId())) return false;
-	
+
+	d = baseId.distance(nid);
 	int index;
 
-	if (theSize < n) {
+	if (theSize < nodes.length/2 || leafset.size() < nodes.length) {
 	    nodes[theSize] = handle;
 	    dist[theSize] = d;
 	    
-	    index = theSize++;
+	    index = theSize;
+	    theSize++;
 	}
 	else {
-	    if (dist[n - 1].compareTo(d) <= 0) return false;
+	    if (dist[theSize - 1].compareTo(d) <= 0) return false;
 
 	    theSize --;
 	    
 	    setChanged();
-	    notifyObservers(new NodeSetUpdate(nodes[n - 1], false));
+	    notifyObservers(new NodeSetUpdate(nodes[theSize - 1], false));
 	    
 	    theSize++;
 
-	    nodes[n - 1] = handle;
-	    dist[n - 1] = d;
+	    nodes[theSize - 1] = handle;
+	    dist[theSize - 1] = d;
 	    
-	    index = n - 1;
+	    index = theSize - 1;
 	}
 
 	for (int i=index; i>0; i--)
@@ -231,30 +228,42 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
      * Removes a node id and its handle from the set.
      *
      * @param nid the node to remove.
-     *
      * @return the node handle removed or null if nothing.
      */
 
     public NodeHandle remove(NodeId nid) {
 	for (int i=0; i<theSize; i++) {
 	    if (nodes[i].getNodeId().equals(nid)) {
-		NodeHandle handle = nodes[i];
-		
-		for (int j=i+1; j<theSize; j++) {
-		    nodes[j - 1] = nodes[j];
-		    dist[j - 1] = dist[j];
-		}
-		
-		theSize --;
-
-		setChanged();
-		notifyObservers(new NodeSetUpdate(handle, false));
-		
-		return handle;
+		return remove(i);
 	    }
 	}
 
 	return null;
+    }
+
+
+    /**
+     * Removes a node id and its handle from the set.
+     *
+     * @param i the index of the node to remove.
+     * @return the node handle removed or null if nothing.
+     */
+
+    public NodeHandle remove(int i) {
+	if (i < 0 || i >= theSize) return null;
+	NodeHandle handle = nodes[i];
+		
+	for (int j=i+1; j<theSize; j++) {
+	    nodes[j - 1] = nodes[j];
+	    dist[j - 1] = dist[j];
+	}
+		
+	theSize --;
+
+	setChanged();
+	notifyObservers(new NodeSetUpdate(handle, false));
+		
+	return handle;
     }
 
     /**

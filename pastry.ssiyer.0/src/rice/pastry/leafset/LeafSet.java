@@ -70,8 +70,8 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
 	baseId = localNode.getNodeId();
 	theSize = size;
 
-	cwSet = new SimilarSet(localNode, size, true);
-	ccwSet = new SimilarSet(localNode, size, false);
+	cwSet = new SimilarSet(this, localNode, size/2);
+	ccwSet = new SimilarSet(this, localNode, size/2);
     }
 
     /**
@@ -87,10 +87,18 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
 	NodeId nid = handle.getNodeId();
 	if (nid.equals(baseId)) return false;
 
-	//System.out.println("Inserting " + handle.getNodeId() + " into " + this);
+	boolean res;
 
-	if (baseId.clockwise(nid)) return cwSet.put(handle);
-	else return ccwSet.put(handle);
+	if (baseId.clockwise(nid)) {
+	    res = cwSet.put(handle);
+	    if (size() > theSize) ccwSet.remove(ccwSize()-1);
+	}
+	else {
+	    res = ccwSet.put(handle);
+	    if (size() > theSize) cwSet.remove(cwSize()-1);
+	}
+
+	return res;
     }
 
     /**
@@ -200,7 +208,7 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
      * @return the size.
      */
 
-    public int maxSize() { return theSize * 2; }
+    public int maxSize() { return theSize; }
 
     /**
      * Gets the current size of the leaf set.
@@ -264,23 +272,6 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
 	else
 	    return -ccwMS - 1;
 
-
-	/*
-	int cwMS = cwSet.mostSimilar(nid);
-	int ccwMS = ccwSet.mostSimilar(nid);
-	int res;
-
-	NodeId.Distance cwMinDist = cwSet.get(cwMS).getNodeId().distance(nid);
-	NodeId.Distance ccwMinDist = ccwSet.get(ccwMS).getNodeId().distance(nid);
-
-	if (cwMinDist.compareTo(ccwMinDist) <= 0) 
-	    res = cwMS + 1;
-	else
-	    res = -ccwMS - 1;
-	
-	System.out.println("LeafSet.mostSimilar: nid= " + nid + " res= " + res + "\n" + this);
-	return res;
-	*/
     }
 
     /**

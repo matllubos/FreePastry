@@ -100,7 +100,9 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	    mergeLeafSet(remotels, from);
 
 	    // if this node just joined, notify the members of the original leaf set
-	    if (type == BroadcastLeafSet.JoinInitial) broadcast(remotels,from);   
+	    //if (type == BroadcastLeafSet.JoinInitial) broadcast(remotels,from);   
+	    // if this node just joined, notify the members of our new leaf set
+	    if (type == BroadcastLeafSet.JoinInitial) broadcast();   
 
 	    // next, perform leaf set maintenance
 	    // this ensures rapid leafset reconstruction in the event of massive node failures
@@ -110,38 +112,11 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	    // or, if "from" dropped from our leafset, then we leave the following check for another node
 	    if (type != BroadcastLeafSet.JoinAdvertise || !leafSet.member(from.getNodeId())) return;
 
-	    // now, check if any of our local leaf set members are missing in the received leaf set
+	    // else, check if any of our local leaf set members are missing in the received leaf set
 	    // if so, we send our leafset to each missing entry and to the source of the leafset
 	    // this guarantees correctness in the event of concurrent node joins in the same leaf set
-	    int cwSize = leafSet.cwSize();
-	    int ccwSize = leafSet.ccwSize();
-	    BroadcastLeafSet bl = new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update);
-	    boolean missing = false;
-		
-	    for (int i=-ccwSize; i<=cwSize; i++) {
-		NodeHandle nh;
+	    checkLeafSet(remotels, from);
 
-		if (i == 0) continue;
-		nh = leafSet.get(i);
-
-		if (nh.isAlive() == false) continue;
-		
-		if (remotels.test(nh)) {
-		    // member nh is missing from remote leafset, send local leafset
-		    //System.out.println("StandardLeafsetProtocol: node " + nh.getNodeId() + " missing from " +
-		    //remotels);
-		    missing = true;
-		    nh.receiveMessage(bl);		    
-		    System.out.println("sending ls to " + nh.getNodeId());
-		}
-	    }
-
-	    if (missing) {
-		// nodes where missing, send update to "from"
-		from = security.verifyNodeHandle(from);
-		from.receiveMessage(bl);
-		System.out.println("sending ls to src " + from.getNodeId());
-	    }
 	}
 
 	else if (msg instanceof RequestLeafSet) {    // request for leaf set from a remote node
@@ -172,6 +147,51 @@ public class StandardLeafSetProtocol implements MessageReceiver {
     }
 
     /**
+     * Checks a received leaf set advertisement for concurrently joined nodes
+     
+     * @param remotels the remote leafset
+     * @param from the node from which we received the leafset
+     */
+
+    protected void checkLeafSet(LeafSet remotels, NodeHandle from) {
+
+	// check if any of our local leaf set members are missing in the received leaf set
+	// if so, we send our leafset to each missing entry and to the source of the leafset
+	// this guarantees correctness in the event of concurrent node joins in the same leaf set
+	int cwSize = leafSet.cwSize();
+	int ccwSize = leafSet.ccwSize();
+	BroadcastLeafSet bl = new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update);
+	boolean missing = false;
+		
+	for (int i=-ccwSize; i<=cwSize; i++) {
+	    NodeHandle nh;
+
+	    if (i == 0) continue;
+	    nh = leafSet.get(i);
+
+	    if (nh.isAlive() == false) continue;
+		
+	    if (remotels.test(nh)) {
+		// member nh is missing from remote leafset, send local leafset
+		//System.out.println("StandardLeafsetProtocol: node " + nh.getNodeId() + " missing from " +
+		//remotels);
+		missing = true;
+		nh.receiveMessage(bl);		    
+		System.out.println("sending ls to " + nh.getNodeId());
+	    }
+	}
+
+	if (missing) {
+	    // nodes where missing, send update to "from"
+	    from = security.verifyNodeHandle(from);
+	    from.receiveMessage(bl);
+	    System.out.println("sending ls to src " + from.getNodeId());
+	}
+
+    }
+
+
+    /**
      * Merge a remote leafset into our own
      
      * @param remotels the remote leafset
@@ -184,10 +204,54 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	
 	// merge the received leaf set into our own
 	// to minimize inserts/removes, we do this from nearest to farthest nodes
+	// and we fill up the two leaf set halves evenly
 
 	// get index of entry closest to local nodeId
 	int closest = remotels.mostSimilar(localHandle.getNodeId());
 
+	int cw = closest;
+	int ccw = closest-1;
+	int i;
+
+	while (cw <= cwSize || ccw >= -ccwSize) {
+	    NodeHandle nh;
+
+	    if (leafSet.ccwSize() < leafSet.cwSize()) {
+		// ccw is shorter
+
+		if (ccw >= -ccwSize) 
+		    // add to the ccw half
+		    i = ccw--;
+		else
+		    // add to the cw half
+		    i = cw++;
+	    }
+	    else {
+
+		if (cw <= cwSize) 
+		    // add to the cw half
+		    i = cw++;
+		else
+		    // add to the ccw half
+		    i = ccw--;
+	    }
+
+	    if (i == 0) nh = from;
+	    else nh = remotels.get(i);
+
+	    nh = security.verifyNodeHandle(nh);
+	    if (nh.isAlive() == false) continue;
+		
+	    // merge into our leaf set
+	    leafSet.put(nh);
+
+	    // update RT as well
+	    routeTable.put(nh);
+
+	}
+
+
+	/*
 	for (int i=closest; i<=cwSize; i++) {
 	    NodeHandle nh;
 
@@ -220,6 +284,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	    routeTable.put(nh);
 	}
 
+	*/
     }
     
     /**
@@ -279,6 +344,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
     }
 
     /**
+     *
      * Maintain the leaf set. This method checks for dead leafset entries and replaces them as needed. It is 
      * assumed that this method be invoked periodically.
      *

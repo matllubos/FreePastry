@@ -60,7 +60,7 @@ public class PastryNode implements NodeHandle
     private LeafSet leafSet;
     private RoutingTable routeSet;
     private NodeHandle localhandle;
-    private boolean syncinit;
+    public boolean syncinit;
   
     /**
      * Constructor.  Creates a new Pastry network.

@@ -56,3 +56,4 @@ public interface RMIPastryNode extends Remote
     public NodeId getNodeId() throws java.rmi.RemoteException;
     public void receiveMessage(Message msg) throws java.rmi.RemoteException;
 }
+

@@ -175,11 +175,11 @@ public class RouteMessage extends Message implements Serializable {
 	nextHop = null;
 
 	if (localId.equals(handle.getNodeId())) {
-	System.out.println("[RTR] " + localId +
-			   "is receiving internal message " + internalMsg);
+	    //System.out.println("[RTR] " + localId +
+	    //"is receiving internal message " + internalMsg);
 	} else {
-	System.out.println("[RTR] " + localId + "is forwarding to nexthop = "
-			   + handle + " (" + handle.getNodeId() + ")");
+	    //System.out.println("[RTR] " + localId + "is forwarding to nexthop = "
+	    //+ handle + " (" + handle.getNodeId() + ")");
 	}
 
 	if (localId.equals(handle.getNodeId())) handle.receiveMessage(internalMsg);      

@@ -173,6 +173,7 @@ public abstract class PastryAppl implements MessageReceiver
 	RouteMessage rm = new RouteMessage(dest, msg, cred, opt, getAddress());
 
 	thePastryNode.receiveMessage(rm);
+	// XXX - needs fixing
 	return true;
     }
 

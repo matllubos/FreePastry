@@ -79,7 +79,7 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
     private RMINodeHandlePool handlepool;
 
     private static final int rtMax = 8;
-    private static final int lSetSize = 12;
+    private static final int lSetSize = 24;
   
     public RMIPastryNodeFactory() {
 	nidFactory = new RandomNodeIdFactory();

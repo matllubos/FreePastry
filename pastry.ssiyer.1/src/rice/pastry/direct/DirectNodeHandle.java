@@ -71,5 +71,10 @@ class DirectNodeHandle implements NodeHandle
     
     public int proximity() { return simulator.proximity(localNode.getNodeId(), remoteNode.getNodeId()); }
 
-    public void receiveMessage(Message msg) {  simulator.deliverMessage(msg, remoteNode); }
+    public void receiveMessage(Message msg) {  
+	if (!isAlive())
+	    System.out.println("DirectNodeHandle: attempt to send message to a dead node!");
+
+	simulator.deliverMessage(msg, remoteNode); 
+    }
 }
