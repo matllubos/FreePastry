@@ -637,7 +637,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public void shutdown() {
       try {
-        ((SocketChannel) key.channel()).socket().shutdownOutput();
+        if ((key != null) && (key.channel() != null))
+          ((SocketChannel) key.channel()).socket().shutdownOutput();
+        
         socketClosed(path, this);
         SelectorManager.getSelectorManager().modifyKey(key);
       } catch (IOException e) {
