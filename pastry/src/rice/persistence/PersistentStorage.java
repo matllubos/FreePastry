@@ -692,20 +692,21 @@ public class PersistentStorage implements Storage {
    * @return the directory and id should be in
    *
    */ 
-  private File getDirectoryForIdHelper(String id, File root){
-      if(!containsDir(root)){
+  private File getDirectoryForIdHelper(String id, File root) {
+      if (!containsDir(root)) {
         return root; 
-      }
-      else{
+      } else {
         /* recurse and find the file */
-        if(root == appDirectory)
-             return getDirectoryForIdHelper(id, new File(root, id.substring(0, 1 )));
-        else{
-             File dir = new File(root, id.substring(0, root.getName().length() + 1));
-             if(!dir.exists())
-                createDir(dir);
-             return getDirectoryForIdHelper(id, dir);
+        File dir = new File(root, id.substring(0, 1));
+        
+        if (root != appDirectory) {
+          dir = new File(root, id.substring(0, root.getName().length() + 1));
         }
+        
+        if(!dir.exists())
+          createDir(dir);
+        
+        return getDirectoryForIdHelper(id, dir);
       }
   }
 
