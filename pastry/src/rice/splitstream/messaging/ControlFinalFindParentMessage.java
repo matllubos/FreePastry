@@ -39,7 +39,7 @@ public class ControlFinalFindParentMessage extends MessageAnycast
     /**
      * Corresponding stripe on the receiving Channel object
      */
-    Stripe recv_stripe = null;
+    transient Stripe recv_stripe = null;
 
     /**
      * Channel we are examining over
@@ -54,7 +54,7 @@ public class ControlFinalFindParentMessage extends MessageAnycast
     /**
      * Splitstream object on local node.
      */
-    SplitStreamImpl ss;
+    transient SplitStreamImpl ss;
 
     /**
      * Credentials

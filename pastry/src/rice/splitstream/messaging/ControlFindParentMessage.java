@@ -30,7 +30,7 @@ public class ControlFindParentMessage extends MessageAnycast
     /**
      * Corresponding stripe on the receiving Channel object
      */
-    Stripe recv_stripe = null;
+    transient Stripe recv_stripe = null;
 
     /**
      * Channel we are examining over
@@ -45,7 +45,7 @@ public class ControlFindParentMessage extends MessageAnycast
     /**
      * Splitstream object on local node.
      */
-    SplitStreamImpl ss;
+    transient SplitStreamImpl ss;
 
     /**
      * Credentials
@@ -209,12 +209,6 @@ public class ControlFindParentMessage extends MessageAnycast
 								 true),
 			   cred,
 			   null );
-    }
-
-
-    public String toString()
-    {
-        return null;
     }
 
     public void printRootPath(Vector path){
