@@ -73,8 +73,8 @@ public class LeafSet extends Observable implements Serializable {
     baseId = localNode.getNodeId();
     theSize = size;
 
-    cwSet = new SimilarSet(localNode, size/2, true);
-    ccwSet = new SimilarSet(localNode, size/2, false);
+    cwSet = new SimilarSet(this, localNode, size/2, true);
+    ccwSet = new SimilarSet(this, localNode, size/2, false);
   }
 
   /**
@@ -754,6 +754,25 @@ public class LeafSet extends Observable implements Serializable {
       s = s + get(i).getNodeId();
 
     return s;
+  }
+
+  protected boolean isProperlyRemoved(NodeHandle handle) {
+    //if (true) return true;
+    return !member(handle.getNodeId());
+  }
+
+  protected boolean testOtherSet(SimilarSet set, NodeHandle handle) {
+    //if (true) return false;
+    SimilarSet otherSet = ccwSet;
+    if (otherSet == set) {
+      otherSet = cwSet;
+    }
+    
+    return otherSet.test(handle);
+  }
+  
+  public boolean directTest(NodeHandle handle) {
+    return cwSet.test(handle) || ccwSet.test(handle);
   }
 }
 

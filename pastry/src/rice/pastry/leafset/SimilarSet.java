@@ -57,6 +57,7 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
     private boolean clockwise;
     private NodeHandle[] nodes;
     private int theSize;
+    private LeafSet leafSet;
 
     /**
      * swap two elements
@@ -79,7 +80,8 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
      * @param cw true if this is the clockwise leafset half
      */
 
-    public SimilarSet(NodeHandle localNode, int size, boolean cw) {
+    public SimilarSet(LeafSet leafSet, NodeHandle localNode, int size, boolean cw) {
+  this.leafSet = leafSet;
 	ln = localNode;
 	clockwise = cw;
 	theSize = 0;
@@ -140,8 +142,9 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
 	    
 	    setChanged();
 	   
-	    notifyObservers(new NodeSetUpdate(nodes[theSize], false));
-
+      if (leafSet.isProperlyRemoved(nodes[theSize])) {
+	      notifyObservers(new NodeSetUpdate(nodes[theSize], false));
+      }
 	    nodes[theSize].deleteObserver(this);
 	    
 	    theSize++;
@@ -163,7 +166,9 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
 	}
 
 	setChanged();
-	notifyObservers(new NodeSetUpdate(handle, true));
+  if (!leafSet.testOtherSet(this, handle)) {
+  	notifyObservers(new NodeSetUpdate(handle, true));
+  }
 
 	// register as an observer, so we'll be notified if the handle is declared dead
 	handle.addObserver(this);
@@ -259,7 +264,7 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
      * @return the node handle removed or null if nothing.
      */
 
-    public NodeHandle remove(int i) {
+    protected NodeHandle remove(int i) {
 	if (i < 0 || i >= theSize) return null;
 	NodeHandle handle = nodes[i];
 		
@@ -270,7 +275,9 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
 	theSize --;
 
 	setChanged();
-	notifyObservers(new NodeSetUpdate(handle, false));
+  if (leafSet.isProperlyRemoved(handle)) {
+  	notifyObservers(new NodeSetUpdate(handle, false));
+  }
 		
 	handle.deleteObserver(this);
 
