@@ -78,7 +78,7 @@ public class FragmentKeyFactory implements IdFactory {
     String keyNodeS = stok.nextToken();
     String versionS = stok.nextToken();
     String fragmentIdS = stok.nextToken();
-    RingId key = FACTORY.buildRingId(new rice.pastry.Id(keyRingS), new rice.pastry.Id(keyNodeS));
+    RingId key = FACTORY.buildRingId(rice.pastry.Id.build(keyRingS), rice.pastry.Id.build(keyNodeS));
 
     return new FragmentKey(new VersionKey(key, Integer.valueOf(versionS).intValue()), Integer.valueOf(fragmentIdS).intValue());
   }
@@ -132,5 +132,9 @@ public class FragmentKeyFactory implements IdFactory {
     System.err.println("FragmentKeyFactory.buildNodeHandleSet() called");
     System.exit(1);
     return null;
+  }
+  
+  public int getIdToStringLength() {
+    return FACTORY.getIdToStringLength() + 4;
   }
 }
