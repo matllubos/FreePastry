@@ -189,8 +189,8 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
         }
 
         
-        //pn.doneNode(getNearest(localhandle, bootstrap));
-        pn.doneNode(bootstrap);
+        pn.doneNode(getNearest(localhandle, bootstrap));
+        //pn.doneNode(bootstrap);
       }
     };
 
