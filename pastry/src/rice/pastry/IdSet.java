@@ -66,11 +66,11 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
 
   /**
    * Constructor.
-   * constructs a shallow copy of the given IdSet o.
-   * @param s the SortedSet based on which we construct a new IdSet
+   * constructs a shallow copy of the given TreeSet s.
+   * @param s the TreeSet based on which we construct a new IdSet
    */
   protected IdSet(TreeSet s) {
-    idSet = (TreeSet) s.clone();
+    idSet = new TreeSet(s);
     validHash = false;
   }
 
