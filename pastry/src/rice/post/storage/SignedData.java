@@ -23,7 +23,7 @@ class SignedData implements Serializable, Persistable {
   /**
    * The time that the data was stored.
    */
-  private long timestamp;
+  private byte[] timestamp;
 
   /**
    * The signature used to sign the data.
@@ -41,11 +41,11 @@ class SignedData implements Serializable, Persistable {
    * signed with the user's private key.
    *
    * @param data The data to store
-   * @param time The current time
+   * @param time The timestamp
    * @param signature The signature for this data
    * @param credentials Credentials of the data
    */
-  public SignedData(byte[] data, long timestamp, byte[] signature, Credentials credentials) {
+  public SignedData(byte[] data, byte[] timestamp, byte[] signature, Credentials credentials) {
     this.data = data;
     this.timestamp = timestamp;
     this.signature = signature;
@@ -62,7 +62,7 @@ class SignedData implements Serializable, Persistable {
   /**
    * @return The timestamp when the data was stored
    */
-  public long getTimestamp() {
+  public byte[] getTimestamp() {
     return timestamp;
   }
 

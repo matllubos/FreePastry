@@ -127,8 +127,13 @@ public class StorageService {
   public SignedReference storeSigned(PostData data, NodeId location) throws StorageException {
     try {
       byte[] plainText = security.serialize(data);
-      long timestamp = System.currentTimeMillis();
-      byte[] signature = security.sign(plainText, timestamp);
+      byte[] timestamp = security.getByteArray(System.currentTimeMillis());
+
+      byte[] all = new byte[plainText.length + 8];
+      System.arraycopy(plainText, 0, all, 0, plainText.length);
+      System.arraycopy(timestamp, 0, all, plainText.length, 8);
+      
+      byte[] signature = security.sign(all);
       
       SignedData sd = new SignedData(plainText, timestamp, signature, null);
       

@@ -175,19 +175,16 @@ public class SecurityService {
   }
 
   /**
-   * Utility method for signing a block of data and attached
-   * timestamp with the user's private key
+   * Utility method for signing a block of data with the user's private key
    *
    * @param data The data
-   * @param time The attached timestamp
    * @return The signature
    */
-  public byte[] sign(byte[] data, long time) throws SecurityException {
+  public byte[] sign(byte[] data) throws SecurityException {
     try {
       signature.initSign(keyPair.getPrivate());
 
       signature.update(data);
-      signature.update(getByteArray(time));
 
       return signature.sign();
     } catch (InvalidKeyException e) {
@@ -202,29 +199,26 @@ public class SecurityService {
    * key.
    *
    * @param data The data to verify
-   * @param time The attached timestamp
    * @param sig The proposed signature
    * @return Whether or not the sig matches.
    */
-  private boolean verify(byte[] data, long time, byte[] sig) throws SecurityException {
-    return verify(data, time, sig, keyPair.getPublic());
+  private boolean verify(byte[] data, byte[] sig) throws SecurityException {
+    return verify(data, sig, keyPair.getPublic());
   }
   
   /**
    * Utility method for verifying a signature
    *
    * @param data The data to verify
-   * @param time The attached timestamp
    * @param sig The proposed signature
    * @param key The key to verify against
    * @return Whether or not the sig matches.
    */
-  private boolean verify(byte[] data, long time, byte[] sig, PublicKey key) throws SecurityException {
+  private boolean verify(byte[] data, byte[] sig, PublicKey key) throws SecurityException {
     try {
       signature.initVerify(key);
 
       signature.update(data);
-      signature.update(getByteArray(time));
 
       return signature.verify(sig);
     } catch (InvalidKeyException e) {
@@ -298,7 +292,7 @@ public class SecurityService {
    * @param input The log to convert
    * @return a byte[] representation
    */
-  private byte[] getByteArray(long input) {
+  public byte[] getByteArray(long input) {
     byte[] output = new byte[8];
 
     output[0] = (byte) (0xFF & (input >> 56));
@@ -319,7 +313,7 @@ public class SecurityService {
    * @param input The byte[] to convert
    * @return a long representation
    */
-  private long getLong(byte[] input) {
+  public long getLong(byte[] input) {
     return ((input[0] << 56) | (input[1] << 48) | (input[2] << 40) | (input[3] << 32) |
             (input[4] << 24) | (input[5] << 16) | (input[6] << 8) | input[7]);
   }
@@ -414,10 +408,9 @@ public class SecurityService {
 
     System.out.print("    Testing signing and verification (phase 1)\t\t");
 
-    long time = System.currentTimeMillis();
-    byte[] testStringSig = security.sign(testStringByte, time);
+    byte[] testStringSig = security.sign(testStringByte);
 
-    if (security.verify(testStringByte, time, testStringSig)) {
+    if (security.verify(testStringByte, testStringSig)) {
       System.out.println("[ PASSED ]");
     } else {
       System.out.println("[ FAILED ]");
@@ -428,9 +421,9 @@ public class SecurityService {
 
     System.out.print("    Testing signing and verification (phase 2)\t\t");
 
-    time = time + 100;
-
-    if (! security.verify(testStringByte, time, testStringSig)) {
+    testStringSig[0]++;
+    
+    if (! security.verify(testStringByte, testStringSig)) {
       System.out.println("[ PASSED ]");
     } else {
       System.out.println("[ FAILED ]");
