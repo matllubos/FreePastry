@@ -85,5 +85,14 @@ public class CacheMessage extends PastMessage {
   public void returnResponse(Continuation c) {
     throw new RuntimeException("ERROR: returnResponse should not be called on cacheMessage!");
   }
+
+  /**
+   * Returns a string representation of this message
+   *
+   * @return A string representing this message
+   */
+  public String toString() {
+    return "[CacheMessage for " + content + "]";
+  }
 }
 

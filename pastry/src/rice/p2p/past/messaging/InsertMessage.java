@@ -79,5 +79,14 @@ public class InsertMessage extends ContinuationMessage {
   public PastContent getContent() {
     return content;
   }
+
+  /**
+    * Returns a string representation of this message
+   *
+   * @return A string representing this message
+   */
+  public String toString() {
+    return "[InsertMessage for " + content + "]";
+  }
 }
 

@@ -78,5 +78,14 @@ public class FetchHandleMessage extends ContinuationMessage {
   public Id getId() {
     return id;
   }
+
+  /**
+    * Returns a string representation of this message
+   *
+   * @return A string representing this message
+   */
+  public String toString() {
+    return "[FetchHandleMessage for " + id + "]";
+  }
 }
 

@@ -76,5 +76,14 @@ public class MessageLostMessage extends PastMessage {
   public void returnResponse(Continuation c) {
     c.receiveException(new PastException("Outgoing message was lost - please try again."));
   }
+
+  /**
+  * Returns a string representation of this message
+   *
+   * @return A string representing this message
+   */
+  public String toString() {
+    return "[MessageLostMessage]";
+  }
 }
 

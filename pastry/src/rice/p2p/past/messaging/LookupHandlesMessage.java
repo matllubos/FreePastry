@@ -92,5 +92,14 @@ public class LookupHandlesMessage extends ContinuationMessage {
   public int getMax() {
     return max;
   }
+
+  /**
+    * Returns a string representation of this message
+   *
+   * @return A string representing this message
+   */
+  public String toString() {
+    return "[LookupHandlesMessage for " + id + " max " + max + "]";
+  }
 }
 

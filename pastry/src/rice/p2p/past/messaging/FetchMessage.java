@@ -98,5 +98,14 @@ public class FetchMessage extends ContinuationMessage {
   public void setCached() {
     cached = true;
   }
+
+  /**
+    * Returns a string representation of this message
+   *
+   * @return A string representing this message
+   */
+  public String toString() {
+    return "[FetchMessage for " + handle + " cached? " + cached + "]";
+  }
 }
 

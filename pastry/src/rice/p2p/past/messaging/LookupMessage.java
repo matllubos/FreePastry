@@ -120,5 +120,14 @@ public class LookupMessage extends ContinuationMessage {
   public NodeHandle getPreviousNodeHandle() {
     return handle;
   }
+
+  /**
+    * Returns a string representation of this message
+   *
+   * @return A string representing this message
+   */
+  public String toString() {
+    return "[LookupMessage for " + id + "]";
+  }
 }
 
