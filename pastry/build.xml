@@ -62,18 +62,23 @@
   </target>
 
   <target name="compile_epost" depends="make_imap_parser">
-    <antcall target="compile"/>
-  </target>
-
-  <target name="compile" depends="init">
     <javac srcdir="${src.dir}"
            destdir="${build.dir}"
            classpathref="project.classpath"
            includes="**/*.java"
            deprecation="yes"
            debuglevel="lines,vars,source"
-           debug="true">
-           
+           debug="true">           
+    </javac>
+  </target>
+
+  <target name="compile" depends="init">
+    <javac srcdir="${src.dir}"
+           destdir="${build.dir}"
+           includes="**/*.java"
+           deprecation="yes"
+           debuglevel="lines,vars,source"
+           debug="true">           
     </javac>
 <!--    <antcall target="make_rmic_stubs"/> -->
   </target>
@@ -85,7 +90,7 @@
   <!-- We want to do this so the line numbers match up with the prefixed license -->
   <target name="beautifythencompile">
     <antcall target="beautifyandlicense"/>
-    <antcall target="compile"/>    
+    <antcall target="compile_epost"/>    
   </target>
   
   <target name="beautifyandlicense">
@@ -145,7 +150,7 @@
         <include name="rice/p2p/replication/**/*.java"/>
         <include name="rice/p2p/scribe/**/*.java"/>
         <include name="rice/p2p/splitstream/**/*.java"/>
-   <!-- <include name="rice/p2p/util/**/*.java"/> -->
+        <include name="rice/p2p/util/**/*.java"/> 
         <include name="rice/pastry/*.java"/>
         <include name="rice/pastry/client/**/*.java"/>
         <include name="rice/pastry/commonapi/**/*.java"/>
@@ -179,7 +184,7 @@
     </jar>
   </target>
 
-  <target name="corejar" depends="compile">
+  <target name="corejar" depends="compile_epost">
   	<jar destfile="${build.dir}/pastry-core.jar">
       <fileset dir="${build.dir}" includes="rice/Continuation*.class"/>
       <fileset dir="${build.dir}" includes="rice/Executable*.class"/>
@@ -209,7 +214,7 @@
         <include name="rice/p2p/replication/**/*.class"/>
         <include name="rice/p2p/scribe/**/*.class"/>
         <include name="rice/p2p/splitstream/**/*.class"/>
-   <!-- <include name="rice/p2p/util/**/*.class"/> -->
+        <include name="rice/p2p/util/**/*.class"/> 
         <include name="rice/pastry/*.class"/>
         <include name="rice/pastry/client/**/*.class"/>
         <include name="rice/pastry/commonapi/**/*.class"/>
@@ -279,7 +284,7 @@
         <include name="rice/p2p/replication/**/*.java"/>
         <include name="rice/p2p/scribe/**/*.java"/>
         <include name="rice/p2p/splitstream/**/*.java"/>
-   <!-- <include name="rice/p2p/util/**/*.java"/> -->
+        <include name="rice/p2p/util/**/*.java"/>
         <include name="rice/pastry/*.java"/>
         <include name="rice/pastry/client/**/*.java"/>
         <include name="rice/pastry/commonapi/**/*.java"/>
@@ -317,7 +322,7 @@
         <include name="rice/p2p/replication/**/*.java"/>
         <include name="rice/p2p/scribe/**/*.java"/>
         <include name="rice/p2p/splitstream/**/*.java"/>
-   <!-- <include name="rice/p2p/util/**/*.java"/> -->
+        <include name="rice/p2p/util/**/*.java"/>
         <include name="rice/pastry/*.java"/>
         <include name="rice/pastry/client/**/*.java"/>
         <include name="rice/pastry/commonapi/**/*.java"/>
@@ -343,10 +348,10 @@
       <zipfileset dir="." includes="build.xml"/>
     </zip>
     <tar destfile="FreePastry-${freepastry-version}-docs.tgz" compression="gzip">
-      <tarfileset dir="${docs.dir}" prefix="docs"/>
+      <tarfileset dir="${docs.dir}" prefix="docs" />
     </tar>
     <zip destfile="FreePastry-${freepastry-version}-docs.zip">
-      <fileset dir="${docs.dir}"/>
+      <zipfileset dir="${docs.dir}" prefix="docs" />
     </zip>
     <checksum fileext=".md5sum" todir="." algorithm="MD5">
       <fileset dir=".">
@@ -365,7 +370,7 @@
   
   <!-- ********************** epost section ********************* -->
   
-  <target name="epost_jar" depends="compile">
+  <target name="epost_jar" depends="compile_epost">
     <jar destfile="epost.jar" manifest="${jar.dir}/epost/Manifest" compress="true">
       <fileset dir="${build.dir}" includes="rice/Continuation*.class"/>
       <fileset dir="${build.dir}" includes="rice/Executable*.class"/>
