@@ -8,7 +8,8 @@ SOURCE  = \
 	ControlDropMessage.java\
 	ControlPropogatePathMessage.java\
 	ControlTimeoutMessage.java\
-	ControlFindParentMessage.java
+	ControlFindParentMessage.java\
+	ControlFinalFindParentMessage.java
 
 RMI_SOURCE =
 
