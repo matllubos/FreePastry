@@ -62,7 +62,7 @@ public class Visualization implements DataProvider {
     
     this.frame = new VisualizationFrame(this);
     
-    selectedRing.touchAllNodes();
+    //selectedRing.touchAllNodes();
     
     Thread t = new Thread() {
       public void run() {

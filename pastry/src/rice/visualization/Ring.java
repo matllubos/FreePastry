@@ -626,12 +626,18 @@ public class Ring {
     }   
   }
 
-  public void touchAllNodes() {    
+  boolean touchNodes = false;
+  public void stopTouchingNodes() {
+    touchNodes = false; 
+  }
+
+  public void touchAllNodes() {
+    touchNodes = true;
     Thread touchThread = new Thread(new Runnable() {
       public void run() {
         boolean touchedAll = false;
         HashSet touched = new HashSet();
-        while(!touchedAll) {
+        while(touchNodes && !touchedAll) {
           //System.out.println("touchAllNodes()");
           Node[] nds = getNodes();
           touchedAll = true;
@@ -649,7 +655,7 @@ public class Ring {
             }
           }
         }
-        System.out.println("touchAllNodes() complete");
+//        System.out.println("touchAllNodes() complete");
       }
     },"TouchAllNodesThread");
     touchThread.start();

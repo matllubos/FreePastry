@@ -1,6 +1,8 @@
 package rice.visualization;
 
 import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.net.InetSocketAddress;
@@ -16,6 +18,8 @@ public class InformationPanel extends JPanel {
   
   public static int INFORMATION_PANEL_WIDTH = 350;
   public static int INFORMATION_PANEL_HEIGHT = PastryRingPanel.PASTRY_RING_PANEL_HEIGHT/3;
+  public static String TOUCH_BUTTON_START = "Touch Ring";
+  public static String TOUCH_BUTTON_STOP = "Stop Touching Ring";
   
   protected Visualization visualization;
   
@@ -56,6 +60,25 @@ public class InformationPanel extends JPanel {
     
     text = new JTextField(getText());
     add(text);
+    
+    final JButton touchButton = new JButton(TOUCH_BUTTON_START);
+    touchButton.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent arg0) {
+        if (touchButton.getText().equals(TOUCH_BUTTON_START)) {
+          touchButton.setText(TOUCH_BUTTON_STOP); 
+          if (InformationPanel.this.visualization.selectedRing != null) {
+            InformationPanel.this.visualization.selectedRing.touchAllNodes();
+          }          
+        } else {
+          touchButton.setText(TOUCH_BUTTON_START);           
+          if (InformationPanel.this.visualization.selectedRing != null) {
+            InformationPanel.this.visualization.selectedRing.stopTouchingNodes();
+          }
+        }
+
+      }
+    });
+    add(touchButton);
   }
   
   protected String getText() {
