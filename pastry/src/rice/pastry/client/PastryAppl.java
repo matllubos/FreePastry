@@ -160,6 +160,16 @@ public abstract class PastryAppl implements MessageReceiver
 
     public final NodeId getNodeId() { return thePastryNode.getNodeId(); }
 
+    /**
+     * Gets the handle of the Pastry node associated with this client
+     *
+     * @return the node handle
+     */
+
+    public final NodeHandle getNodeHandle()
+    {
+	return thePastryNode.getLocalHandle();
+    }
 
     /**
      * Sends a message to the Pastry node identified by dest. If that
