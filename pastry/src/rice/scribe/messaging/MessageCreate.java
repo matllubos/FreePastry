@@ -94,14 +94,16 @@ public class MessageCreate extends ScribeMessage implements Serializable
 
 	if( topic == null ) {
 	    topic = new Topic( m_topicId, scribe );
+	    topic.addToScribe();
+	    topic.topicManager( true );
 	    // notify scribeObservers of this event, that a topic
 	    // was created.
 	    scribe.notifyScribeObservers(m_topicId);
 	}
-	
-	topic.addToScribe();
-	topic.topicManager( true );
-	
+	else {
+	    topic.addToScribe();
+	    topic.topicManager( true );
+	}
     }
     
     /**
