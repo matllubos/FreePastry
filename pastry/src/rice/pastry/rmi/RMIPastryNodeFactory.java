@@ -123,6 +123,7 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
   public NodeHandle generateNodeHandle(InetSocketAddress address) {
     RMIRemoteNodeI bsnode = null;
 
+    /*
     // look on local machine
     for (int i = 1; bsnode == null && i <= NUM_ATTEMPTS; i++) {
       try {
@@ -135,6 +136,7 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
       if ((bsnode == null) && (i != NUM_ATTEMPTS))
         pause(1000);
     }
+    */
 
     // look at remote address
     if (bsnode == null) {

@@ -95,10 +95,10 @@ public class DistScribeRegrTest {
     // received in this period, warning mesg is printed.
     public static int IDLE_TIME = 120; // in seconds
 
-    public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
+    public static int protocol = DistPastryNodeFactory.PROTOCOL_RMI;
 
     public DistScribeRegrTest(){
-	factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(), PROTOCOL, port);
+	factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(), protocol, port);
 	pastryNodes = new Vector();
 	distClients = new Vector();
 	rng = new Random(PastrySeed.getSeed());
@@ -123,15 +123,14 @@ public class DistScribeRegrTest {
     }
 
     /**
-     * process command line args, set the security manager, and start
-     * the RMI registry if using RMI protocol. 
+     * process command line args, set the security manager
      */
     private static void doInitstuff(String args[]) {
 	// process command line arguments
 	
 	for (int i = 0; i < args.length; i++) {
 	    if (args[i].equals("-help")) {
-		System.out.println("Usage: DistScribeRegrTest [-port p] [-bootstrap host[:port]] [-nodes n] [-help]");
+		System.out.println("Usage: DistScribeRegrTest [-port p] [-protocol (rmi|wire)] [-bootstrap host[:port]] [-nodes n] [-help]");
 		System.exit(1);
 	    }
 	}
@@ -164,6 +163,21 @@ public class DistScribeRegrTest {
 	    if (args[i].equals("-nodes") && i+1 < args.length) {
 		int n = Integer.parseInt(args[i+1]);
 		if (n > 0) numNodes = n;
+		break;
+	    }
+	}
+
+	for (int i = 0; i < args.length; i++) {
+	    if (args[i].equals("-protocol") && i+1 < args.length) {
+		String s = args[i+1];
+
+		if (s.equalsIgnoreCase("wire"))
+		    protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
+		else if (s.equalsIgnoreCase("rmi"))
+		    protocol = DistPastryNodeFactory.PROTOCOL_RMI;
+		else
+		    System.out.println("ERROR: Unsupported protocol: " + s);
+
 		break;
 	    }
 	}
@@ -208,40 +222,26 @@ public class DistScribeRegrTest {
 	PastrySeed.setSeed(seed);
 	System.out.println("seed used=" + seed); 
 	DistScribeRegrTest driver = new DistScribeRegrTest();
+
+	// create first node
 	pn = driver.makeScribeNode();
-	// We wait till one PastryNode on this host is ready so that the 
-	// rest of the nodes can find a bootstrap node on the local host
-	while(!pn.isReady()) {;}
+	bshost = null;
+
+	// We set bshost to null and wait till the first PastryNode on this host is ready so that the 
+	// rest of the nodes find a botstrap node on the local host
+	synchronized(pn) {
+	    while (!pn.isReady()) {
+		try {
+		    pn.wait();
+		} catch(InterruptedException e) {
+		    System.out.println("Interrupted while waiting for first node to be constructed");
+		}
+	    }
+	}
+
 	for (int i = 1; i < numNodes ; i++){
 	    driver.makeScribeNode();
 	}
 	if (Log.ifp(5)) System.out.println(numNodes + " nodes constructed");
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
