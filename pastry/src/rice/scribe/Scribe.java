@@ -551,7 +551,7 @@ public class Scribe extends PastryAppl implements IScribe
      */
     public boolean anycast( NodeId groupID, Object obj, Credentials cred ){
 	if(!isReady()) return false;
-	System.out.println("Sending anycast message from "+getNodeId());
+	//System.out.println("Sending anycast message from "+getNodeId());
 	ScribeMessage msg = makeAnycastMessage( groupID, cred );
 	msg.setData( obj );
 	this.routeMsg( groupID, msg, cred, m_sendOptions );
