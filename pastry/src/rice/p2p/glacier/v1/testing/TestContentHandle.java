@@ -1,4 +1,4 @@
-package rice.p2p.glacier.testing;
+package rice.p2p.glacier.v1.testing;
 
 import rice.p2p.past.*;
 import rice.p2p.commonapi.*;

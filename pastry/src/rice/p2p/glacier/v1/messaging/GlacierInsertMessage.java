@@ -1,8 +1,10 @@
-package rice.p2p.glacier.messaging;
+package rice.p2p.glacier.v1.messaging;
 
 import rice.*;
 import rice.p2p.commonapi.*;
-import rice.p2p.glacier.*;
+import rice.p2p.glacier.FragmentKey;
+import rice.p2p.glacier.Fragment;
+import rice.p2p.glacier.v1.*;
 
 /**
  * DESCRIBE THE CLASS

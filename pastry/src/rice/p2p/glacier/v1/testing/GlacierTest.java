@@ -1,4 +1,4 @@
-package rice.p2p.glacier.testing;
+package rice.p2p.glacier.v1.testing;
 
 import rice.*;
 
@@ -9,7 +9,8 @@ import rice.pastry.direct.*;
 import rice.pastry.standard.*;
 import rice.pastry.join.*;
 import rice.p2p.glacier.*;
-import rice.p2p.glacier.testing.*;
+import rice.p2p.glacier.v1.*;
+import rice.p2p.glacier.v1.testing.*;
 import rice.p2p.past.*;
 import rice.p2p.commonapi.IdFactory;
 import rice.p2p.multiring.MultiringIdFactory;

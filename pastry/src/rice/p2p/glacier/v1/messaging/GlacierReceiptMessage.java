@@ -1,4 +1,4 @@
-package rice.p2p.glacier.messaging;
+package rice.p2p.glacier.v1.messaging;
 
 import rice.*;
 import rice.p2p.commonapi.*;
@@ -10,28 +10,28 @@ import rice.p2p.glacier.*;
  * @version $Id$
  * @author ahae
  */
-public class GlacierQueryMessage extends GlacierMessage {
+public class GlacierReceiptMessage extends GlacierMessage {
   /**
    * DESCRIBE THE FIELD
    */
   protected FragmentKey key;
 
   /**
-   * Constructor for GlacierQueryMessage.
+   * Constructor for GlacierReceiptMessage.
    *
    * @param uid DESCRIBE THE PARAMETER
    * @param key DESCRIBE THE PARAMETER
    * @param source DESCRIBE THE PARAMETER
    * @param dest DESCRIBE THE PARAMETER
    */
-  public GlacierQueryMessage(int uid, FragmentKey key, NodeHandle source, Id dest) {
+  public GlacierReceiptMessage(int uid, FragmentKey key, NodeHandle source, Id dest) {
     super(uid, source, dest);
 
     this.key = key;
   }
 
   /**
-   * Gets the Key attribute of the GlacierQueryMessage object
+   * Gets the Key attribute of the GlacierReceiptMessage object
    *
    * @return The Key value
    */
@@ -45,7 +45,7 @@ public class GlacierQueryMessage extends GlacierMessage {
    * @return DESCRIBE THE RETURN VALUE
    */
   public String toString() {
-    return "[GlacierQuery for " + key + "]";
+    return "[GlacierReceipt for " + key + "]";
   }
 }
 
