@@ -55,11 +55,12 @@ import rice.pastry.PastryNodeFactory;
 import rice.pastry.PastrySeed;
 import rice.pastry.dist.DistPastryNode;
 import rice.pastry.dist.DistPastryNodeFactory;
+import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketPastryNode;
+import rice.pastry.socket.SocketPoolManager;
 import rice.pastry.standard.RandomNodeIdFactory;
 import rice.pastry.wire.Wire;
-import rice.pastry.wire.exception.NodeIsDeadException;
 
 /**
  * A hello world example for pastry. This is the distributed driver.
@@ -87,10 +88,15 @@ public class DistHelloWorldMultiThread {
   private static int port = 5009;
   private static String bshost = null;
   private static int bsport = 5009;
-  private static int numnodes = 15;
-  private static int nummsgs = 200;
+  private static int numnodes = 25;
+  private static int nummsgs = 50;
   public static int protocol = DistPastryNodeFactory.PROTOCOL_SOCKET;
-  private static boolean toFile = true;
+  private static boolean toFile = false;
+  private static boolean useStall = true;
+  private static boolean useKill = true;
+  private static boolean noKilling = false;
+  private static boolean oneThreadPerMessage = false;
+  
 
   /**
    * Constructor
@@ -246,6 +252,37 @@ public class DistHelloWorldMultiThread {
     }
   }
 
+  public static void makeDeadlock() {
+    try { Thread.sleep(15000); } catch (InterruptedException ie) {}
+    final Object l1 = new Object();
+    final Object l2 = new Object(); 
+    new Thread(new Runnable() {
+      public void run() {
+        synchronized(l1) {
+          System.out.println("got l1");
+          try { Thread.sleep(5000); } catch (InterruptedException ie) {}
+          System.out.println("getting l2");
+          synchronized(l2) {
+            System.out.println("ERROR: got l2");
+          }
+        }        
+      }
+    }, "DL1").start();
+
+    new Thread(new Runnable() {
+      public void run() {
+        synchronized(l2) {
+          System.out.println("got l2");
+          try { Thread.sleep(5000); } catch (InterruptedException ie) {}
+          System.out.println("getting l1");
+          synchronized(l1) {
+            System.out.println("ERROR: got l1");
+          }
+        }        
+      }
+    }, "DL2").start();
+  }
+
   /**
    * Usage: DistHelloWorld [-msgs m] [-nodes n] [-port p] [-bootstrap bshost[:bsport]]
    *                      [-verbose|-silent|-verbosity v] [-help].
@@ -266,12 +303,29 @@ public class DistHelloWorldMultiThread {
         e.printStackTrace();
       }
     }
+    
+    //makeDeadlock();
+    
     Log.init(args);
     if (protocol == DistPastryNodeFactory.PROTOCOL_WIRE) {      
       Wire.initialize();
     }
     doIinitstuff(args);
-    final DistHelloWorldMultiThread driver = new DistHelloWorldMultiThread();
+     
+    ArrayList stats = new ArrayList();
+    Stat curStat = null;
+    DistHelloWorldMultiThread driver = null;
+    int numSocks = 6;
+    for (int times = 0; times < 20; times++) {
+    
+    //for (numSocks = 20; numSocks > 5; numSocks-=2) {
+
+      try {
+      SocketPoolManager.MAX_OPEN_SOCKETS = numSocks;
+      curStat = new Stat(numSocks, numnodes);
+      stats.add(curStat);
+    
+    driver = new DistHelloWorldMultiThread();
 
     // create first node
     PastryNode pn = driver.makePastryNode(true);
@@ -311,9 +365,36 @@ public class DistHelloWorldMultiThread {
       e.printStackTrace();
     }
 
-    for (int i = 0; i < numnodes; i++)
-      System.out.println(
-        ((PastryNode) driver.pastryNodes.elementAt(i)).getLeafSet() + "");
+    // wait for leafsets to stabalize
+    // determine number of elements expected in ls
+    int expectedLSsize = (driver.pastryNodes.size()-1)*2; // numNodes-self * 2 because both sides will have the same elements
+    LeafSet ls = ((PastryNode) driver.pastryNodes.elementAt(0)).getLeafSet();    
+    if (expectedLSsize > ls.maxSize()) {
+      expectedLSsize = ls.maxSize();
+    }
+    boolean lsIsComplete = false;
+    while (!lsIsComplete) {
+      lsIsComplete = true;
+      for (int i = 0; i < numnodes; i++) {      
+        ls = ((PastryNode) driver.pastryNodes.elementAt(i)).getLeafSet();
+        System.out.println(ls + " : "+ls.size());
+        if (ls.size() < expectedLSsize) {
+          System.out.println(ls.size()+"<"+expectedLSsize);
+          lsIsComplete = false;
+        }
+      }
+      if (!lsIsComplete) {
+        try {
+          System.out.println();
+          Thread.sleep(5000);
+        } catch (InterruptedException ie) {
+          lsIsComplete = true;          
+        }
+      }
+    }
+    
+    curStat.lsComplete();
+    System.out.println("leafset complete:"+curStat);
 
     for (int i = 0; i < nummsgs; i++) {
       driver.sendRandomMessage();
@@ -321,41 +402,126 @@ public class DistHelloWorldMultiThread {
 
     //Now sit back and enjoy the fun, add some churn..
 
+    int NUM_ITERS = 10;
     int kill_counter = 0;
     int iters = 0;
-    while (true) {
-      if (iters < 10) {
+    boolean running = true;
+    long finishedTime = 0;
+    while (running) {
+      if (iters < NUM_ITERS) {
         for (int i = 0; i < 50; i++) {
           driver.sendRandomMessage();
         }
       }
+      
+      
       try {
+        long time = System.currentTimeMillis();
+        time/=1000;
+        System.out.println("At time (seconds)"+time);
         System.out.println("Messages Sent so far :" + driver.sentMessages());
         System.out.println(
           "Messages Delivered so far :" + driver.recievedMessages());
         ArrayList list = driver.getMissingMessages();
         System.out.println("Missing Messages so far :" + list.size());
         
-                        Iterator i = list.iterator();
-                        while (i.hasNext()) {
-                            HelloMsg m = (HelloMsg)i.next();
-//                            System.out.println("  Missing msg: "+m);                            
-                        }
+        if (iters >= NUM_ITERS) {
+          long curTime = System.currentTimeMillis();
+          if (finishedTime == 0) {
+            finishedTime = curTime;
+          }
+          if (curTime - finishedTime > 6000000) {
+            running = false;
+          }
+          int numMissing = 0;
+          Iterator i = list.iterator();
+          while (i.hasNext()) {
+            HelloMsg m = (HelloMsg)i.next();
+            if (!driver.killedNodes.contains(m.source)) { // if the source is not dead
+              boolean onlyPrintLiveFailures = useKill || useStall;
+              if (onlyPrintLiveFailures) {
+                // check to see if last address is a dead node
+                InetSocketAddress lastAddr = m.getLastAddress();
+                if (lastAddr == null) {
+                  numMissing++;
+                  System.out.println("  Missing msg: "+m.getInfo());                                                                                        
+                } else {
+                  Iterator it = driver.pastryNodes.iterator();
+                  boolean print = false;
+                  boolean missing = false;
+                  while (it.hasNext()) {
+                    PastryNode pn1 = (PastryNode)it.next();
+                    SocketNodeHandle snh = (SocketNodeHandle)pn1.getLocalHandle();
+                    if (snh.getAddress().equals(lastAddr) || m.ackReceived == false) {
+                      missing = true;
+                    }
+                  }
+                  if (missing) {
+                    numMissing++;
+                    //System.out.println("     Pre Missing");
+                    System.out.println("  Missing msg: "+m.getInfo());                                                                    
+                  }      
+                }
+              } else {
+                numMissing++;
+                System.out.println("  Missing msg: "+m.getInfo());                                                                                    
+              }
+            }
+          } // while
+          if (numMissing == 0) {
+            throw new DoneException();
+          }
+        }
         if (kill_counter < numnodes*2/3) {
-          driver.stallPastryNode();
-          //driver.killPastryNode();
+          int blargh = driver.rng.nextInt(2);
+          if (blargh == 0) {
+            if (useStall) {
+              driver.stallPastryNode();
+            } else {
+              driver.killPastryNode();              
+            }
+          } else {
+            if (useKill) {
+              driver.killPastryNode();
+            } else {
+              driver.stallPastryNode();
+            }
+          }
           kill_counter++;
           System.out.println("KillCounter:" + kill_counter);
         } else {
           iters++;
         }
-
+        
         Thread.currentThread().sleep(5000);
 
+      } catch (DoneException de) {
+        throw de;                
       } catch (Exception e) {
         e.printStackTrace();
         //                System.out.println(e);
       }
+    }
+    } catch (DoneException de) {
+      boolean temp = noKilling;
+      noKilling = false;
+      while (!driver.pastryNodes.isEmpty()) {
+        driver.killPastryNode();
+      }
+      noKilling = temp;
+      curStat.finished();
+      System.out.println("done "+curStat);
+      port += numnodes+1;
+      bsport = port;
+      try {
+        Thread.sleep(5000);
+      } catch (InterruptedException ie) {}
+    }
+
+    } // for 
+    Iterator eeee = stats.iterator();
+    while(eeee.hasNext()) {
+      System.out.println(eeee.next());
     }
   }
 
@@ -380,30 +546,44 @@ public class DistHelloWorldMultiThread {
 
     final HelloWorldAppMultiThread app = tempApp;
     final int msgId = getNextMsgId();
-    Thread t = new Thread("Hello Client # " + app.getNodeId() + "," + msgId) {
-      public void run() {
+    if (oneThreadPerMessage) {
+      Thread t = new Thread("Hello Client # " + app.getNodeId() + "," + msgId) {
+        public void run() {
+          try {
+  //          Thread.currentThread().sleep(rng.nextInt(5000));
+            app.sendRndMsg(rng, msgId);
+          } catch (Exception e) {
+            //System.out.println("Error Creating a new client thread for "+app.getNodeId()+" " + e);
+  //          if (!(e instanceof NodeIsDeadException)) {
+              e.printStackTrace();
+  //          }
+          }
+        }
+      };
+  
+      t.start();
+    } else {
         try {
-          Thread.currentThread().sleep(rng.nextInt(5000));
+//          Thread.currentThread().sleep(rng.nextInt(5000));
           app.sendRndMsg(rng, msgId);
         } catch (Exception e) {
           //System.out.println("Error Creating a new client thread for "+app.getNodeId()+" " + e);
-          //if (!(e instanceof NodeIsDeadException)) {
+//          if (!(e instanceof NodeIsDeadException)) {
             e.printStackTrace();
-          //}
+//          }
         }
-      }
-    };
-
-    t.start();
+    }
 
   }
+
+    
 
   //Global BookKeeping
   //Precious Global variables - need to have synchronized access to them
 
   private HashMap SentMessageLog = new HashMap();
   private HashMap RecievedMessageLog = new HashMap();
-  private static int id = 0;
+  private int id = 0;
   private int ready_nodes = 0;
 
   public synchronized void MessageSent(HelloMsg helloMsg) { // int messageId, NodeId node){
@@ -411,7 +591,8 @@ public class DistHelloWorldMultiThread {
   }
 
   public synchronized void MessageRecieved(HelloMsg helloMsg) {
-    //        Thread.dumpStack();
+            //Thread.dumpStack();
+    //System.out.println("DHW.messageReceived("+helloMsg+")");
     RecievedMessageLog.put(new Integer(helloMsg.getId()), helloMsg);
   }
 
@@ -460,19 +641,22 @@ public class DistHelloWorldMultiThread {
   * is called, and it can do any interesting stuff it wants.
   */
   public void killPastryNode() {
-  
+    if (noKilling) return;  
     int killNum = rng.nextInt(pastryNodes.size());
     DistPastryNode pn =
       (DistPastryNode) pastryNodes.remove(killNum);
+    killedNodes.addElement(pn.getId());
     HelloWorldAppMultiThread app = (HelloWorldAppMultiThread)helloClients.remove(killNum);      
     System.out.println("***********************   killing pastry node:" + pn + ","+app);
     pn.kill();
   }
   
   public void stallPastryNode() {
+      if (noKilling) return;
       int killNum = rng.nextInt(pastryNodes.size());
       DistPastryNode pn =
         (DistPastryNode) pastryNodes.remove(killNum);
+      killedNodes.addElement(pn.getId());
       HelloWorldAppMultiThread app = (HelloWorldAppMultiThread)helloClients.remove(killNum);      
       System.out.println("***********************   stalling pastry node:" + pn + ","+app);
       if (pn instanceof SocketPastryNode) {
@@ -481,6 +665,39 @@ public class DistHelloWorldMultiThread {
           pn.kill();   
       }
   }
+  
+  Vector killedNodes = new Vector();
 
 }
 
+class Stat {
+  public int numNodes;
+  public int numSocks; 
+  public long lsCompleteTime;
+  public long startTime;
+  public long endTime;
+  
+  public Stat(int numS, int numN) {
+    numSocks = numS;
+    numNodes = numN;
+    startTime = System.currentTimeMillis();
+  }
+  
+  public void lsComplete() {
+    lsCompleteTime = System.currentTimeMillis();
+  }
+  
+  public void finished() {
+    endTime = System.currentTimeMillis();
+  }
+  
+  public String toString() {
+    long t = endTime-startTime;
+    long t2 = lsCompleteTime-startTime;
+    return numNodes+":"+numSocks +":"+t2+","+t;
+  }
+}
+
+class DoneException extends Exception {
+  
+}
