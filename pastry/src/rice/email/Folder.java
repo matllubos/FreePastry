@@ -86,7 +86,7 @@ public class Folder {
       }
       uncompressedEntries += 1;
     }
-    snapShotUpdate(uncompressedEntries);
+    snapShotUpdate(uncompressedEntries, (Email[])contents.toArray() );
     return (Email[])contents.toArray();
   }
 
@@ -100,8 +100,7 @@ public class Folder {
    * read before the complete Folder contents can be returned.
    * @param state the current contents of the Folder
    */
-  private void snapShotUpdate(int entries, Email[] contents)
-  {
+  private void snapShotUpdate(int entries, Email[] contents) throws StorageException {
     // if the number of entries is greater than the compression limit,
     // add a new snapshot
     if (entries > COMPRESS_LIMIT) {

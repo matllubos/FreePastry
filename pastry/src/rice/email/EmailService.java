@@ -42,7 +42,7 @@ public class EmailService extends PostClient {
    *
    * @param email The email to send
    */
-  public void sendMessage(Email email) throws PostException {
+  public void sendMessage(Email email) throws PostException, StorageException {
     
     // store the Email's data before sending it
     StorageService storage = _post.getStorageService();
