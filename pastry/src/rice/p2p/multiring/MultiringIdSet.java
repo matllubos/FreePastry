@@ -212,4 +212,13 @@ public class MultiringIdSet implements IdSet {
   public Object clone() {
     return new MultiringIdSet(ringId, (IdSet) set.clone());
   }
+  
+  /**
+   * Returns a new, empty IdSet of this type
+   *
+   * @return A new IdSet
+   */
+  public IdSet build() {
+    return new MultiringIdSet(ringId, set.build());
+  }
 }

@@ -214,7 +214,7 @@ public class MultiringIdFactory implements IdFactory {
    */
   public IdRange buildIdRangeFromPrefix(String string) {
     if (string.indexOf(", ") < 0) 
-      throw new IllegalArgumentException("Prefix cannot be built from String " + string);
+      return new MultiringIdRange(ringId, factory.buildIdRangeFromPrefix(string));
     
     string = string.substring(1);
     Id ring = factory.buildIdFromToString(string.substring(0, string.indexOf(", ")));
