@@ -675,17 +675,21 @@ public class NodeId implements Comparable, Serializable
 
 
     /**
-     * produces a set of nodeIds that are evenly distributed around the id ring.
-     * One invocation produces the i-th member of a set of size num. The set is
-     * evenly distributed around the ring, with an offset given by this nodeId.
-     *
-     * @param num the number of nodeIds in the set (should be a power of 2)
+     * produces a set of ids (keys) that are evenly distributed around
+     * the id ring.  One invocation produces the i-th member of a set
+     * of size num. The set is evenly distributed around the ring,
+     * with an offset given by this nodeId.  The set is useful for
+     * constructing, for instance, Scribe trees with disjoint sets of
+     * interior nodes.
+     * @param num the number of nodeIds in the set (must be less than 2^b)
      * @param b the routing base (as a power of 2)
-     * @param i the index of the requested member of the set (0<i<num; the 0-th member is this)
-     * @return the resulting set member
+     * @param i the index of the requested member of the set (0<=i<num; the 0-th member is this)
+     * @return the resulting set member, or null in case of illegal arguments
      */
 
     public NodeId getAlternateId(int num, int b, int i) {
+	if (num > (1 << b) || i < 0 || i >= num) return null;
+
 	NodeId res = new NodeId(nodeId);
 
 	int digit = res.getDigit(numDigits(b)-1, b) + ((1 << b) / num) * i;
