@@ -96,14 +96,15 @@ public class ControlFindParentMessage extends MessageAnycast
         {
             already_seen.add( 0, scribe.getNodeHandle() );
         }
+        int default_children;
         if ( recv_stripe != null )
         {
            BandwidthManager bandwidthManager = recv_stripe.getChannel().getBandwidthManager();
-           int default_children = bandwidthManager.getDefaultChildren();
+           default_children = bandwidthManager.getDefaultChildren();
         }
         else
         {
-           int default_children = DEFAULT_CHILDREN;
+           default_children = DEFAULT_CHILDREN;
         }
         if ( ( aggregateNumChildren( scribe ) < default_children ) &&
              ( !isInRootPath( scribe, this.getSource() ) ) )
@@ -170,14 +171,15 @@ public class ControlFindParentMessage extends MessageAnycast
                                                                      new Boolean( true ) ),
                                c,
                                null );
+        int default_children;
         if ( recv_stripe != null )
         {
            BandwidthManager bandwidthManager = recv_stripe.getChannel().getBandwidthManager();
-           int default_children = bandwidthManager.getDefaultChildren();
+           default_children = bandwidthManager.getDefaultChildren();
         }
         else
         {
-           int default_children = DEFAULT_CHILDREN;
+           default_children = DEFAULT_CHILDREN;
         }
 
         if ( aggregateNumChildren( scribe ) >= default_children )
