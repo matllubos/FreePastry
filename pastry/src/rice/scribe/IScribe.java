@@ -52,6 +52,8 @@ import rice.pastry.NodeId;
  *
  * @author Romer Gil
  * @author Eric Engineer
+ * @author Atul Singh
+ * @author Animesh Nandi
  */
 
 public interface IScribe
@@ -113,7 +115,9 @@ public interface IScribe
     
     /**
      * Publish information to a topic.  Data will be delivered to All nodes 
-     * that are subscribed to the topic.
+     * that are subscribed to the topic.  The message will trickle from
+     * the root of the multicast tree for the topic DOWN the tree, with each
+     * node sending this message to its children for the topic.
      *
      * @param   cred
      * The credentials of the entity publishing to the topic.
@@ -130,13 +134,15 @@ public interface IScribe
 
 
     /**
-     * Send heartbeat messages to its children for all the topics on this
-     * local scribe node. This method should be called by the driver 
-     * periodically. Moreover, the local node also expects HeartBeat
-     * Message from its parent when it sends the HeartBeat message to 
-     * its children. So, if it fails to receive a threshold value of such
-     * heartbeat messages from the parent for a particular topic,
-     * a tree repair event is triggered for that topic.
+     * Sends heartbeat messages to this local node's children for all the 
+     * topics on this local scribe node. This method should be invoked 
+     * periodically by the driver with the same frequency in all nodes.
+     * In addition to initiating sending of heartbeat messages from this
+     * local node, this method also implicitly notifies the local node that
+     * it should expect a heartbeat message from its parents for all the 
+     * topics on this local node. So, if it fails to receive a threshold 
+     * value of such heartbeat messages from any parent for a particular
+     * topic, a tree repair event is triggered for that topic.
      */
     public void scheduleHB();
 
@@ -155,7 +161,7 @@ public interface IScribe
     
     
     /**
-     * Generate a unique id for the topic, which will determine its rendez-vous
+     * Generate a unique id for the topic, which will determine its rendezvous
      * point. This is a helper method. Applications can use their own 
      * methods to generate TopicId.
      *
@@ -166,11 +172,6 @@ public interface IScribe
      */
     public NodeId generateTopicId(String topicName);
 
-
-    
-
-
-   
 }
 
 

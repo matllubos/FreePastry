@@ -49,7 +49,7 @@ import java.util.*;
  *
  * HeartBeatMessage is used whenever a Scribe nodes wishes let its children 
  * know that it is still alive, so that the children need not do any repairing
- * of the multicast tree. We send a common HeartBeat Message to a node when
+ * of the multicast tree. We send a single HeartBeat Message to a node when
  * it is our child for more than one topic, thereby avoiding sending multiple
  * HeartBeat messages to same node.
  *

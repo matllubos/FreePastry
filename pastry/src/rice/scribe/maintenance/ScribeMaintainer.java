@@ -64,9 +64,15 @@ public class ScribeMaintainer
     }
 
     /**
-     * Sends a heartbeat message to all the children in a topic's
-     * multicast subtree rooted at the local node. It does this for
-     * all the topics residing on this node.    
+     * Sends heartbeat messages to this local node's children for all the 
+     * topics on this local scribe node. This method should be invoked 
+     * periodically by the driver with the same frequency in all nodes.
+     * In addition to initiating sending of heartbeat messages from this
+     * local node, this method also implicitly notifies the local node that
+     * it should expect a heartbeat message from its parents for all the 
+     * topics on this local node. So, if it fails to receive a threshold 
+     * value of such heartbeat messages from any parent for a particular
+     * topic, a tree repair event is triggered for that topic.
      */
     public void scheduleHB() {
 	Topic topic;
@@ -117,12 +123,10 @@ public class ScribeMaintainer
 
 
 	/**
-	 * First we identify the number of topics for which a node
-	 * is our child, then we construct a common HeartBeatMsg 
-	 *  which this node is local
-	 * node's child, and send it it. By this, we avoid sending 
-	 * multiple HeartBeatMessages to a single node if it our child
-	 * for multiple topics.
+	 * We send this heartbeat message to th set of distinct children 
+	 * for this node.
+	 * By this, we avoid sending multiple HeartBeat messages to a single node
+	 * if it our child for multiple topics.
 	 */
 
 	Vector distinctChildren = m_scribe.getDistinctChildren();

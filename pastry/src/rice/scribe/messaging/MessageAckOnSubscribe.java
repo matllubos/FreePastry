@@ -50,15 +50,10 @@ import java.util.*;
 /**
  * @(#) MessageAckOnSubscribe.java
  *
- * MessageAckOnSubscribe is used to modify the ackOnSubscribeSwitch for
- * a given topic on the destination node, so that whenever a new 
- * subscriber joins the multicast tree for that topic,
- * an immediate ACK is sent to it in the form of
- * MessageAckOnSubscribe type message. 
- *
- * There are two functions of this message :
- * 1) Sets the parent pointer for given topic on destination node.
- * 2) Sets the ackOnSubscribeSwitch for given topic on destination node
+ * MessageAckOnSubscribe is used so that whenever a new subscriber joins the
+ * multicast tree for that topic, an immediate ACK is sent to it in the form of
+ * this type of message. It sets the parent pointer for a given topic on the
+ * destination node.
  * 
  * @version $Id$ 
  * 

@@ -72,8 +72,8 @@ public class Topic
     protected Set m_children = new HashSet();
     
     /** 
-     * Local node's parent in this topics multicast
-     * subtree rooted at the local node.
+     * Local node's parent in this topic's multicast
+     * tree
      */
     protected NodeHandle m_parent = null;
     
@@ -104,8 +104,8 @@ public class Topic
      * including the parent for this topic. 
      *
      * This value is RESET whenever the local node receives a 
-     * heartbeat message or a publish message from the parent for
-     * the topic.
+     * heartbeat message, publish message or MessageAckOnSubscribe from the
+     * parent for the topic.
      */
     public int m_heartBeatsMissed = 0;
 
@@ -222,7 +222,7 @@ public class Topic
 
     /** 
      * Sets the local node's parent in this topic's multicast
-     * subtree rooted at this node.
+     * tree.
      * 
      * @param parent the node to be the parent.
      */
@@ -256,7 +256,7 @@ public class Topic
 
     /** 
      * Returns the local node's parent in this topic's multicast
-     * subtree rooted at this node.
+     * tree.
      *
      * @return the parent node.
      */
@@ -356,7 +356,7 @@ public class Topic
     /**
      * Resets the number of heartbeat messages corresponding to
      * this topic to zero. This method is called when you get a 
-     * heartbeat message or a publish message.
+     * heartbeat message or a publish message or a MessageAckOnSubscribe.
      */
     public void postponeParentHandler() {
 	m_heartBeatsMissed = 0;

@@ -55,8 +55,8 @@ import rice.scribe.maintenance.*;
 /**
  * @(#) Scribe.java
  *
- * This is the Scribe Object which implements the IScribe interface 
- * (the external Scribe API).
+ * This is the Scribe Object which implements the 
+ * IScribe interface (the external Scribe API).
  *
  * @version $Id$
  *
@@ -94,24 +94,22 @@ public class Scribe extends PastryAppl implements IScribe
      * Hashtable having mapping from a child -> list of topics for 
      * which this child is in local node's children list for that topic.
      * In this way, this table will have only distinct children and for
-     * each child, the list of topics in which it is a child.
+     * each child we have the list of topics for which it is a child.
      * Used to identify distinct chidren when sending HeartBeat messages,
      * so that we dont send a node multiple HeartBeat messages when it is
      * child for more than one topic.
      */
-
     protected Hashtable m_distinctChildrenTable;
 
 
     /**
      * Hashtable having mapping from a parent node -> list of topics for 
-     * which the parent node is local node's parent in their corresponding
-     * multicast trees. Whenever local node receives a HeartBeat message
-     * from a node, it checks out all topics for which that node is its
-     * parent. Then for all those topics, it postpones the parentHandler.
+     * which the parent node is local node's parent in the corresponding
+     * multicast tree for that topic. Whenever local node receives a
+     * HeartBeat message from a node, it calls the postponeParentHandler 
+     * method for all topics for which that node is its parent.
      * By having this data structure locally, we avoid sending lists
      * of topics for which a node is parent, which may be very large.
-     *
      */
     protected Hashtable m_distinctParentTable;
 
@@ -119,23 +117,33 @@ public class Scribe extends PastryAppl implements IScribe
 
 
     /**
-     * Optimization on number of HeartBeat Messages sent. Each node keeps track
-     * of children to which it has sent a publish message in last HeartBeat
-     * period. When this HeartBeat period expires, it need not send an 
-     * explicit HeartBeat message to these 'marked' children, as publish message
-     * is an implicit keep-alive message from parent that it is alive.
+     * Optimization on number of HeartBeat Messages sent. Each node keeps 
+     * track of the distinct children to which it has sent a PUBLISH message 
+     * in last HeartBeat period. Thus in the scheduleHB() method which denotes
+     * the end of the previous HeartBeatPeriod, it need not send an explicit
+     * HeartBeat message to these 'marked' children, since a PUBLISH message
+     * is an implicit keep-alive message from the parent that it is alive.
      */
     protected Set m_alreadySentHBNodes;
 
 
     /**
-     * The AckOnSubscribe switch for this scribe.
-     * It  activates the immediate sending of 
-     * ACK by a node when it receives a SUBSCRIBE message
-     * from its child for a topic. Otherwise, this 
-     * immediate ACK is not sent.
-     * Default is true.
-     * 
+     * The AckOnSubscribe switch for this scribe. It activates the immediate
+     * sending of ACK by a node when it receives a SUBSCRIBE message from its
+     * child for a topic. Otherwise, this immediate ACK is not sent. This flag
+     * is set to TRUE.
+     * Setting it to false will cause several more messages in the form of
+     * MessageRequestToParent and MessageReplyFromParent to be exchanged 
+     * between the child node and the parent node, when the child node 
+     * receives a HeartBeat message from the parent. NOTE that if the HeartBeat
+     * message maintained a list of topics for which the child node(receiver of
+     * heartbeat message) was its child, then the AckOnSubscribe switch could
+     * have been set to false and these extra messages in the form of
+     * MessageRequestToParent and MessageReplyFromParent could have been got 
+     * rid of. But due to scalability issues of sending the list of topics in
+     * the HeartBeat message we have adopted the current approach of setting 
+     * the AckOnSubscribe switch to TRUE and additionally having the 
+     * MessageRequestToParent and MessageReplyFromParent type of message.
      */
     public  boolean m_ackOnSubscribeSwitch = true;
 
@@ -146,12 +154,12 @@ public class Scribe extends PastryAppl implements IScribe
     protected static Address m_address = new ScribeAddress();
 
     /**
-     * The SendOptions object to be used for all messaging through Pastry
+     * The SendOptions object to be used for all messaging through Pastry.
      */
     protected SendOptions m_sendOptions = null;
 
     /**
-     * The SendOptions object to be used for all messaging through Pastry
+     * The SendOptions object to be used for all messaging through Pastry.
      */
     protected static Credentials m_credentials = null;
 
@@ -179,8 +187,36 @@ public class Scribe extends PastryAppl implements IScribe
 	}
     }
 
+    /* These objects are values corresponding to the keys in the 
+     * m_DistinctChildrenTable and the m_DistinctParentTable data 
+     * structures maintained by the local Scribe node.
+     */
     private static class HashTableEntry {
+
+	/* The list of topics for which the key for this HashTableEntry is
+	 * a parent or a child of the local node, depending on whether it is 
+	 * being used for the m_DistinctParentTable or the 
+	 * m_DistinctChildrenTable respectively.
+	 */
 	private Vector topicList;
+
+
+	/* This is the Bitwise Exclusive OR of the topics in topicList above.
+	 * Fingerprints are matched when the child node receives a HeartBeat
+	 * message from a parent node. In order to remove inconsistent views
+	 * of parent-child relationships as seen from the parent and the child,
+	 * we match the fingerprint sent in the HeartBeat message (which is the
+	 * fingerprint corresponding to the child node as key in the
+	 * m_DistinctChildren table in the parent node) against the fingerprint
+	 * corresponding to the parent node as key in the m_DistinctParentTable
+	 * in the child node.
+	 * Inconsistent views can arise when a MessageAckOnSubscribe is lost or
+	 * a failure to receive HeartBeat messages in time or loss of other 
+	 * types of messages.
+	 * On a fingerprint mismatch,the child node sends a
+	 * MessageRequestToParent to the parent node requesting for the list of 
+	 * topics for which the parent node has it as a child.
+	 */
         private NodeId fingerprint ;
 
 	public HashTableEntry() {
@@ -262,11 +298,15 @@ public class Scribe extends PastryAppl implements IScribe
 
 
     /**
-     * Send heartbeat messages to its children for all the topics on this
-     * local scribe node. This method should be called by the driver 
-     * periodically. The failure of receive a threshold value of such
-     * heartbeat messages from the parent for a particular topic triggers
-     * a tree repair for that topic.
+     * Sends heartbeat messages to this local node's children for all the 
+     * topics on this local scribe node. This method should be invoked 
+     * periodically by the driver with the same frequency in all nodes.
+     * In addition to initiating sending of heartbeat messages from this
+     * local node, this method also implicitly notifies the local node that
+     * it should expect a heartbeat message from its parents for all the 
+     * topics on this local node. So, if it fails to receive a threshold 
+     * value of such heartbeat messages from any parent for a particular
+     * topic, a tree repair event is triggered for that topic.
      */
     public void scheduleHB(){
 	m_maintainer.scheduleHB();
@@ -276,7 +316,7 @@ public class Scribe extends PastryAppl implements IScribe
      * Returns true if the local node is currently the 
      * root(the node that is closest to the topicId) of the topic.
      * 
-     * @return true if the local node is currently the root for the topic
+     * @return true if the local node is currently the root for the topic.
      */
     public boolean isRoot(NodeId topicId) {
 	return isClosest(topicId);
@@ -368,8 +408,9 @@ public class Scribe extends PastryAppl implements IScribe
     
     /**
      * Publish information to a topic.  Data will be delivered to ALL nodes 
-     * that are subscribed to the topic and will be routed through ALL the 
-     * nodes in the multicast tree.
+     * that are subscribed to the topic. The message will trickle from
+     * the root of the multicast tree for the topic DOWN the tree, with each
+     * node sending this message to its children for the topic.
      *
      * @param   cred    
      * the credentials of the entity publishing to the topic.
@@ -378,7 +419,8 @@ public class Scribe extends PastryAppl implements IScribe
      * the ID of the topic to publish to.
      *
      * @param   obj
-     * the information that is to be published.
+     * The information that is to be published.
+     * This should be serializable.
      */
     public void publish( NodeId topicId, Object obj, Credentials cred ) {
 	ScribeMessage msg = makePublishMessage( topicId, cred );
@@ -388,13 +430,14 @@ public class Scribe extends PastryAppl implements IScribe
     }
 
     /**
-     * Generate a unique id for the topic, which will determine its rendez-vous
-     * point.
+     * Generate a unique id for the topic, which will determine its rendezvous
+     * point.  This is a helper method. Applications can use their own 
+     * methods to generate TopicId.
      *
      * @param topicName 
-     * the name of the topic
+     * the name of the topic (unique to the local node)
      *
-     * @return the topic id.
+     * @return the Topic id.
      */
     public NodeId generateTopicId( String topicName ) { 
 	MessageDigest md = null;
@@ -705,12 +748,6 @@ public class Scribe extends PastryAppl implements IScribe
      *                adding this child
      */
     public void addChildForTopic(NodeHandle child, NodeId topicId){
-
-	/**
-	 * See if we already have it as a child for some other
-	 * topic , if yes then add this topicId to list of topics
-	 * for which this node is  our child.
-	 */
 	synchronized(m_distinctChildrenTable){
 	    Set set = m_distinctChildrenTable.keySet();
 	    HashTableEntry entry;
@@ -729,13 +766,19 @@ public class Scribe extends PastryAppl implements IScribe
 
     }
     
-
+    /**
+     * Removes a child for a topic from the distinctChildrenTable.
+     * See if we already have it as a child for some other
+     * topic , if yes then remove this topicId from the list of topics
+     * for which this node is our child. We also remove the entry from the 
+     * hashtable if the list of topics becomes empty.
+     *
+     * @param child The NodeHandle of Child
+     * @param topicId The topicId for the topic for which we are
+     *                removing this child
+     */
     public void removeChildForTopic(NodeHandle child, NodeId topicId){
-	/**
-	 * See if we already have it as a child for some other
-	 * topic , if yes then remove this topicId from the list of topics
-	 * for which this node is  our child.
-	 */
+	
 	synchronized(m_distinctChildrenTable){
 	    Set set = m_distinctChildrenTable.keySet();
 	    HashTableEntry entry;
@@ -757,9 +800,9 @@ public class Scribe extends PastryAppl implements IScribe
 
     /**
      * Gets the vector of topicIds for which given node
-     * is a children.
-     * @param child  The NodeHandle of child node.
+     * is a child.
      *
+     * @param child  The NodeHandle of child node.
      * @return Vector of topicIds for which this node is 
      *         a child.
      */
@@ -779,7 +822,8 @@ public class Scribe extends PastryAppl implements IScribe
 
     /**
      * Gets the Vector of distinct parent of this local node
-     * in multicast tree of all topics.
+     * in the multicast trees of all topics.
+     *
      * @return Vector of distinct parents
      */
     public Vector  getDistinctParents(){
@@ -795,6 +839,18 @@ public class Scribe extends PastryAppl implements IScribe
 	return result;
     }
 
+
+    /**
+     * Removes a parent for a topic fromthe distinctParentTable.
+     * See if we already have it as a parent for some other
+     * topic , if yes then remove this topicId from the list of topics
+     * for which this node is our parent. We also remove the entry from the 
+     * hashtable if the list of topics becomes empty.
+     *
+     * @param parent The NodeHandle of Parent
+     * @param topicId The topicId for the topic for which we are
+     *                removing this parent
+     */
     public void removeParentForTopic(NodeHandle parent, NodeId topicId){
 	synchronized(m_distinctParentTable){
 	    Set set = m_distinctParentTable.keySet();
@@ -814,6 +870,16 @@ public class Scribe extends PastryAppl implements IScribe
     }
     
 
+    /**
+     * Adds a parent for a topic into the distinctParentTable.
+     * If this child already exists, then we add this topic into
+     * its corresponding list of topics for which it is our parent.
+     * Otherwise, we create a new entry into the hashtable.
+     * 
+     * @param child The NodeHandle of Parent
+     * @param topicId The topicId for the topic for which we are
+     *                adding this parent
+     */
     public void addParentForTopic(NodeHandle parent, NodeId topicId){
 
 	synchronized(m_distinctParentTable){
@@ -837,8 +903,8 @@ public class Scribe extends PastryAppl implements IScribe
     /**
      * Gets the vector of topicIds for which given node
      * is our parent.
-     * @param parent  The NodeHandle of parent node.
      *
+     * @param parent  The NodeHandle of parent node.
      * @return Vector of topicIds for which this node is 
      *         our parent.
      */
@@ -856,7 +922,11 @@ public class Scribe extends PastryAppl implements IScribe
     }
 
 
-
+    /* Gets the fingerprint corresponding to a key in the m_DistinctParentTable.
+     *
+     * @param parent the key
+     * @return the fingerprint corresponding to this key
+     */
     public NodeId getFingerprintForParentTopics(NodeHandle parent) {
 	HashTableEntry entry;
 	NodeId fingerprint;
@@ -870,6 +940,11 @@ public class Scribe extends PastryAppl implements IScribe
 	return fingerprint;
     }
 
+    /* Gets the fingerprint corresponding to a key in the m_DistinctChildrenTable.
+     *
+     * @param parent the key
+     * @return the fingerprint corresponding to this key
+     */
     public NodeId getFingerprintForChildTopics(NodeHandle child) {
 	HashTableEntry entry;
 	NodeId fingerprint;
@@ -887,10 +962,10 @@ public class Scribe extends PastryAppl implements IScribe
 
     /**
      * Adds a child to the list of nodes to which this node
-     * has already send a HeartBeat message. (actually an 
-     * implicit HeartBeat in form of Publish message)
-     * @param childId NodeId of child.
+     * has already send a implicit HeartBeat message in the form of 
+     * Publish message.
      *
+     * @param childId NodeId of child.
      * @return true if child already exists else false
      */
     public boolean addChildToAlreadySentHBNodes(NodeId childId){
@@ -904,7 +979,7 @@ public class Scribe extends PastryAppl implements IScribe
 
     /**
      * Gets the vector of nodes to which an implicit HeartBeat
-     * was sent (in form of Publish message) in last HeartBeat
+     * in form of Publish message was sent in last HeartBeat
      * period. 
      *
      * @return Vector of child nodes to which a publish message
@@ -926,7 +1001,7 @@ public class Scribe extends PastryAppl implements IScribe
     }
 
     /** 
-     * The set is made empty so that the set contains
+     * The set is cleared so that the set contains
      * only those nodes to which Publish message was sent in
      * last HeartBeat period.
      */
@@ -937,6 +1012,10 @@ public class Scribe extends PastryAppl implements IScribe
 	return;
     }
 
+    /* Gets the local NodeHandle associated with this Scribe node.
+     *
+     * @return local handle of Scribe node.
+     */
     public NodeHandle getLocalHandle() {
 	return thePastryNode.getLocalHandle();
     }

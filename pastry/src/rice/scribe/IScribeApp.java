@@ -49,6 +49,8 @@ import rice.scribe.messaging.ScribeMessage;
  *
  * @author Romer Gil
  * @author Eric Engineer
+ * @author Atul Singh
+ * @author Animesh Nandi
  */
 
 public interface IScribeApp
