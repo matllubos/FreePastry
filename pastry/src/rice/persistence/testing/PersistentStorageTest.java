@@ -53,7 +53,7 @@ import rice.persistence.*;
  * This class is a class which tests the PersistentStorage class
  * in the rice.persistence package.
  */
-public class PersistentStorageTest extends StorageTest {
+public class PersistentStorageTest extends MemoryStorageTest {
 
   /**
    * Builds a MemoryStorageTest

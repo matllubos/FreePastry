@@ -2,7 +2,7 @@ PACKAGE = rice.persistence.testing
 
 SOURCE  = \
   Test.java \
-  StorageTest.java \
+  MemoryStorageTest.java \
   PersistentStorageTest.java \
   LRUCacheTest.java
 
