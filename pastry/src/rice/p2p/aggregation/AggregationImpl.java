@@ -1446,6 +1446,21 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
           ObjectDescriptor thisObject = (ObjectDescriptor) waitingList.getMetadata(vkey);
           log(2, "Refreshing in waiting list: " + vkey.toStringFull());
           foundWaiting = true;
+          
+          if (thisObject == null) {
+            warn("Broken object in waiting list: " + vkey.toStringFull() + ", removing...");
+            waitingList.unstore(vkey, new Continuation() {
+              public void receiveResult(Object o) {
+                log(2, "Broken object "+vkey.toStringFull()+" removed successfully");
+              }
+              public void receiveException(Exception e) {
+                warn("Cannot remove broken object "+vkey.toStringFull()+" from waiting list (exception: "+e+")");
+                e.printStackTrace();
+              }
+            });
+            command.receiveException(new AggregationException("Object in waiting list, but broken: "+vkey.toStringFull()));
+            return;
+          }
 
           if (thisObject.refreshedLifetime < expiration) {
             ObjectDescriptor newDescriptor = new ObjectDescriptor(
