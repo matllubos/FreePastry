@@ -193,7 +193,7 @@ public class Stripe extends Observable implements IScribeApp{
 									   channel.getSpareCapacityId(), channel.getChannelId() ),
 					    credentials, null );
 		    scribe.removeChild(child, topicId);
-		    bandwidthManager.additionalBandwidthFreed(channel);
+		    //bandwidthManager.additionalBandwidthFreed(channel);
 		    //System.out.println("SHOULD NOT TAKE CHILD");
 		}
 		/* We should check if we can take this child on */
@@ -201,10 +201,11 @@ public class Stripe extends Observable implements IScribeApp{
 	    else {
 		// child was dropped
 		//System.out.println("Child was dropped ");
-		bandwidthManager.additionalBandwidthFreed(channel);
+		//bandwidthManager.additionalBandwidthFreed(channel);
 	    }
      }
     public static final int STRIPE_SUBSCRIBED = 0;
     public static final int STRIPE_UNSUBSCRIBED = 1;
     public static final int STRIPE_DROPPED = 2;
 }
+

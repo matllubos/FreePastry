@@ -320,18 +320,8 @@ public class Channel extends PastryAppl implements IScribeApp {
 	Stripe toReturn = null;
         for(int i = 0 ; i < getStripes().length && !found; i ++){
 	    Stripe stripe = (Stripe) stripeIdTable.get(getStripes()[i]);
-            /* I don't know about this - Ansley */
-	    /** 
-	     * Fixed a bug, when an implicitly subscribed stripe is not 
-	     * a member of subscribedStripes, but its state is STRIPE_DROPPED,
-	     * (could easily happen for primary stripe), so might never subscribe 
-	     * to that stripe! - Atul.
-	     */
-	    //if(!subscribedStripes.contains((Stripe)stripe) && stripe.getState() == Stripe.STRIPE_DROPPED)
-	    if(!subscribedStripes.contains((Stripe)stripe) && stripe.getState() != Stripe.STRIPE_UNSUBSCRIBED)
-		subscribedStripes.addElement(stripe);
 
-	    if(stripe.getState() == Stripe.STRIPE_UNSUBSCRIBED){
+	    if(stripe.getState() != Stripe.STRIPE_SUBSCRIBED){
 		toReturn = stripe;
 		toReturn.joinStripe();	
 		toReturn.addObserver(observer);
@@ -403,8 +393,7 @@ public class Channel extends PastryAppl implements IScribeApp {
     public void stripeSubscriberAdded(){
 
 	bandwidthManager.additionalBandwidthUsed(this);
-	if(bandwidthManager.getMaxBandwidth(this) == 
-           bandwidthManager.getUsedBandwidth(this) ){
+	if(!bandwidthManager.canTakeChild(this)){
 	    System.out.println("Node " + getNodeId() + " Leaving Spare Capacity Tree");
 	    scribe.leave(getSpareCapacityId(), this, cred);
 	}
