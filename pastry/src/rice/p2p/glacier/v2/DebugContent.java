@@ -10,16 +10,16 @@ public class DebugContent implements PastContent, GCPastContent {
   protected Id myId;
   protected boolean isMutable;
   protected long version;
+  protected byte[] payload;
 
-  public DebugContent(Id id, boolean isMutable, long version)
-  {
+  public DebugContent(Id id, boolean isMutable, long version, byte[] payload) {
     myId = id;
     this.isMutable = isMutable;
     this.version = version;
+    this.payload = payload;
   }
 
-  public PastContent checkInsert(Id id, PastContent existingContent) throws PastException
-  {
+  public PastContent checkInsert(Id id, PastContent existingContent) throws PastException {
     if (!isMutable ||  !(existingContent instanceof DebugContent))
       return this;
       
@@ -31,24 +31,24 @@ public class DebugContent implements PastContent, GCPastContent {
     return version;
   }
   
-  public PastContentHandle getHandle(Past local)
-  {
+  public PastContentHandle getHandle(Past local) {
     return new DebugContentHandle(myId, version, GCPast.INFINITY_EXPIRATION, local.getLocalNodeHandle());
   }
   
-  public GCPastContentHandle getHandle(GCPast local, long expiration)
-  {
+  public GCPastContentHandle getHandle(GCPast local, long expiration) {
     return new DebugContentHandle(myId, version, expiration, local.getLocalNodeHandle());
   }
   
-  public Id getId()
-  {
+  public Id getId() {
     return myId;
   }
   
-  public boolean isMutable()
-  {
+  public boolean isMutable() {
     return this.isMutable;
+  }
+  
+  public byte[] getPayload() {
+    return payload;
   }
 }
 
