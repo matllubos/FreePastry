@@ -330,7 +330,7 @@ public class ScribeImpl implements Scribe, Application {
         NodeHandle parent = manager.getParent();
 
         if (parent != null) {
-          endpoint.route(parent.getId(), new UnsubscribeMessage(handle, topic), parent);
+          endpoint.route(null, new UnsubscribeMessage(handle, topic), parent);
         }
       }
     } else {
@@ -397,7 +397,7 @@ public class ScribeImpl implements Scribe, Application {
     }
 
     // we send a confirmation back to the child
-    endpoint.route(child.getId(), new SubscribeAckMessage(handle, topic, manager.getPathToRoot(), id), child);
+    endpoint.route(null, new SubscribeAckMessage(handle, topic, manager.getPathToRoot(), id), child);
 
     // and lastly notify all of the clients
     ScribeClient[] clients = manager.getClients();
@@ -438,7 +438,7 @@ public class ScribeImpl implements Scribe, Application {
         log.fine(endpoint.getId() + ": We no longer need topic " + topic + " - unsubscribing from parent " + parent);
 
         if (parent != null) {
-          endpoint.route(parent.getId(), new UnsubscribeMessage(handle, topic), parent);
+          endpoint.route(null, new UnsubscribeMessage(handle, topic), parent);
         }
       }
 
@@ -446,7 +446,7 @@ public class ScribeImpl implements Scribe, Application {
         log.fine(endpoint.getId() + ": Informing child " + child + " that he has been dropped from topic " + topic);
         
         // now, we tell the child that he has been dropped
-        endpoint.route(child.getId(), new DropMessage(handle, topic), child);
+        endpoint.route(null, new DropMessage(handle, topic), child);
       }
 
       // and lastly notify all of the clients
@@ -617,12 +617,12 @@ public class ScribeImpl implements Scribe, Application {
           SubscribeMessage sMessage = (SubscribeMessage) aMessage;
           log.finer(endpoint.getId() + ": Sending SubscribeFailedMessage to " + sMessage.getSubscriber());
 
-          endpoint.route(sMessage.getSubscriber().getId(),
+          endpoint.route(null,
                          new SubscribeFailedMessage(handle, sMessage.getTopic(), sMessage.getId()),
                          sMessage.getSubscriber());
         }
       } else {
-        endpoint.route(handle.getId(), aMessage, handle);
+        endpoint.route(null, aMessage, handle);
       }
 
       return false;
@@ -665,7 +665,7 @@ public class ScribeImpl implements Scribe, Application {
           SubscribeMessage sMessage = (SubscribeMessage) aMessage;
           log.fine(endpoint.getId() + ": Sending SubscribeFailedMessage (at root) to " + sMessage.getSubscriber());
 
-          endpoint.route(sMessage.getSubscriber().getId(),
+          endpoint.route(null,
                          new SubscribeFailedMessage(handle, sMessage.getTopic(), sMessage.getId()),
                          sMessage.getSubscriber());
         } else {
@@ -689,7 +689,7 @@ public class ScribeImpl implements Scribe, Application {
       if (isRoot(saMessage.getTopic())) {
         log.fine(endpoint.getId() + ": Received unexpected subscribe ack message (we are the root) from " +
                  saMessage.getSource() + " for topic " + saMessage.getTopic());
-        endpoint.route(saMessage.getSource().getId(), new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
+        endpoint.route(null, new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
       } else {
         // if we don't know about this topic, then we unsubscribe
         // if we already have a parent, then this is either an errorous
@@ -704,13 +704,13 @@ public class ScribeImpl implements Scribe, Application {
           } else {
             log.warning(endpoint.getId() + ": Received unexpected subscribe ack message (already have parent " + manager.getParent() +
                         ") from " + saMessage.getSource() + " for topic " + saMessage.getTopic());
-            endpoint.route(saMessage.getSource().getId(), new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
+            endpoint.route(null, new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
           }
         } else {
           log.warning(endpoint.getId() + ": Received unexpected subscribe ack message from " +
                       saMessage.getSource() + " for unknown topic " + saMessage.getTopic());
               
-          endpoint.route(saMessage.getSource().getId(), new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
+          endpoint.route(null, new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
         }
       }
     } else if (message instanceof SubscribeLostMessage) {
@@ -761,13 +761,13 @@ public class ScribeImpl implements Scribe, Application {
         for (int i = 0; i < handles.length; i++) {
           log.finer(endpoint.getId() + ": Forwarding publish message with data " + pMessage.getContent() + " for topic " +
             pMessage.getTopic() + " to child " + handles[i]);
-          endpoint.route(handles[i].getId(), pMessage, handles[i]);
+          endpoint.route(null, pMessage, handles[i]);
         }
       } else {
         log.warning(endpoint.getId() + ": Received unexpected publish message from " +
           pMessage.getSource() + " for unknown topic " + pMessage.getTopic());
 
-        endpoint.route(pMessage.getSource().getId(), new UnsubscribeMessage(handle, pMessage.getTopic()), pMessage.getSource());
+        endpoint.route(null, new UnsubscribeMessage(handle, pMessage.getTopic()), pMessage.getSource());
       }
     } else if (message instanceof UnsubscribeMessage) {
       UnsubscribeMessage uMessage = (UnsubscribeMessage) message;
@@ -829,7 +829,7 @@ public class ScribeImpl implements Scribe, Application {
         }
       } else {
         if (isRoot(topic) && (manager.getParent() != null)) {
-          endpoint.route(manager.getParent().getId(), new UnsubscribeMessage(handle, topic), manager.getParent());
+          endpoint.route(null, new UnsubscribeMessage(handle, topic), manager.getParent());
           manager.setParent(null);
         }
       }
@@ -963,15 +963,15 @@ public class ScribeImpl implements Scribe, Application {
       this.pathToRoot = new Id[pathToRoot.length + 1];
       System.arraycopy(pathToRoot, 0, this.pathToRoot, 0, pathToRoot.length);
       this.pathToRoot[pathToRoot.length] = endpoint.getId();
-
+      
       // now send the information out to our children
       NodeHandle[] children = getChildren();
       for (int i=0; i<children.length; i++) {
         if (Arrays.asList(this.pathToRoot).contains(children[i].getId())) {
-          endpoint.route(children[i].getId(), new DropMessage(handle, topic), children[i]);
+          endpoint.route(null, new DropMessage(handle, topic), children[i]);
           removeChild(children[i]);
         } else {
-          endpoint.route(children[i].getId(), new SubscribeAckMessage(handle, topic, getPathToRoot(), Integer.MAX_VALUE), children[i]);
+          endpoint.route(null, new SubscribeAckMessage(handle, topic, getPathToRoot(), Integer.MAX_VALUE), children[i]);
         }
       }
     }
@@ -985,14 +985,14 @@ public class ScribeImpl implements Scribe, Application {
       if ((handle != null) && (parent != null)) {
         log.warning(endpoint.getId() + ": Unexpectedly changing parents for topic " + topic);
       }
-
+      
       if (parent != null) {
         parent.deleteObserver(this);
       }
-
+      
       parent = handle;
       setPathToRoot(new Id[0]);
-
+      
       if ((parent != null) && parent.isAlive()) {
         parent.addObserver(this);
       }
