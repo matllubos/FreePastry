@@ -95,17 +95,17 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
     port = p;
 
     if( rmiRegistry == null){
-	// set RMI security manager
-	if (System.getSecurityManager() == null)
-	    System.setSecurityManager(new RMISecurityManager());
-	
-	// start RMI registry
-	try {
-	    rmiRegistry = java.rmi.registry.LocateRegistry.createRegistry(port);
-	} catch (Exception e) {
-	    System.out.println("Error starting RMI registry: " + e);
-	    System.exit(-1);
-	}
+ // set RMI security manager
+ if (System.getSecurityManager() == null)
+     System.setSecurityManager(new RMISecurityManager());
+ 
+ // start RMI registry
+ try {
+     rmiRegistry = java.rmi.registry.LocateRegistry.createRegistry(port);
+ } catch (Exception e) {
+     System.out.println("Error starting RMI registry: " + e);
+     System.exit(-1);
+ }
     }
 
   }
@@ -130,11 +130,11 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
     for (int i = 1; bsnode == null && i <= NUM_ATTEMPTS; i++) {
       try {
         bsnode = (RMIRemoteNodeI) Naming.lookup("//" + address.getHostName()
-						+ ":" + address.getPort() + "/Pastry");
+      + ":" + address.getPort() + "/Pastry");
       } catch (Exception e) {
         System.out.println("Unable to find bootstrap node on "
-			   + address
-			   + " (attempt " + i + "/" + NUM_ATTEMPTS + ")");
+      + address
+      + " (attempt " + i + "/" + NUM_ATTEMPTS + ")");
       }
 
       if ((bsnode == null) && (i != NUM_ATTEMPTS))
@@ -243,5 +243,13 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
     t.start();
 
     return pn;
+  }
+  
+  protected Message getResponse(NodeHandle handle, Message message) {
+      return null ;
+    }
+  
+  protected int getProximity(NodeHandle handle) {
+    return 0 ;
   }
 }

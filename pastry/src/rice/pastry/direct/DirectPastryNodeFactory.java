@@ -55,7 +55,7 @@ import java.util.*;
  * @author Rongmei Zhang/Y. Charlie Hu
  */
 
-public class DirectPastryNodeFactory implements PastryNodeFactory
+public class DirectPastryNodeFactory extends PastryNodeFactory
 {
     private NodeIdFactory nidFactory;
     private NetworkSimulator simulator;
@@ -67,8 +67,8 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
     private static final int lSetSize = 24;
   
     public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim) {
-	nidFactory = nf;
-	simulator = sim;
+ nidFactory = nf;
+ simulator = sim;
     }
 
     public NetworkSimulator getNetworkSimulator() { return simulator; }
@@ -78,20 +78,20 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
      */
 
     private NodeHandle getClosest( NodeHandle local, RouteSet rs ){
-	NodeHandle nh = null;
-	NodeHandle nearHandle = null;
-	double dist = Double.MAX_VALUE;
-	double newdist;
+ NodeHandle nh = null;
+ NodeHandle nearHandle = null;
+ double dist = Double.MAX_VALUE;
+ double newdist;
 
-	for ( int i=0; i<rs.size(); i++ ) {
-	    nh = rs.get(i);
-	    newdist = simulator.proximity( local.getNodeId(), nh.getNodeId() );
-	    if( dist >= newdist  ){
-		nearHandle = nh;
-		dist = newdist;
-	    }
-	}
-	return nearHandle;
+ for ( int i=0; i<rs.size(); i++ ) {
+     nh = rs.get(i);
+     newdist = simulator.proximity( local.getNodeId(), nh.getNodeId() );
+     if( dist >= newdist  ){
+  nearHandle = nh;
+  dist = newdist;
+     }
+ }
+ return nearHandle;
     }
 
     /**
@@ -99,63 +99,63 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
      */
 
     private NodeHandle discover( NodeHandle localhandle, NodeHandle bootstrap ){
-	if( bootstrap == null )
-	    return null;
+ if( bootstrap == null )
+     return null;
 
-	PastryNode	nearNode = ((DirectNodeHandle)bootstrap).getLocalNode();
-	LeafSet 	ls = nearNode.getLeafSet();
-	NodeHandle 	nearHandle = bootstrap;
-	double		dist = simulator.proximity( localhandle.getNodeId(), bootstrap.getNodeId() );
-	double		newdist;
-	int		i;
-	NodeHandle	nh, currentClosest;
+ PastryNode nearNode = ((DirectNodeHandle)bootstrap).getLocalNode();
+ LeafSet  ls = nearNode.getLeafSet();
+ NodeHandle  nearHandle = bootstrap;
+ double  dist = simulator.proximity( localhandle.getNodeId(), bootstrap.getNodeId() );
+ double  newdist;
+ int  i;
+ NodeHandle nh, currentClosest;
 
-	for( i=0; i<ls.size(); i++ ){
-	    nh = ls.get( i );
-	    if( nh == null )
-		continue;
-	    newdist = simulator.proximity( localhandle.getNodeId(), nh.getNodeId() );
-	    if( dist >= newdist  ){
-		nearHandle = nh;
-		dist = newdist;
-	    }
-	}
+ for( i=0; i<ls.size(); i++ ){
+     nh = ls.get( i );
+     if( nh == null )
+  continue;
+     newdist = simulator.proximity( localhandle.getNodeId(), nh.getNodeId() );
+     if( dist >= newdist  ){
+  nearHandle = nh;
+  dist = newdist;
+     }
+ }
 
-	nearNode = ((DirectNodeHandle)nearHandle).getLocalNode();
-	RoutingTable rt = nearNode.getRoutingTable();
-	int depth = rt.numRows();
+ nearNode = ((DirectNodeHandle)nearHandle).getLocalNode();
+ RoutingTable rt = nearNode.getRoutingTable();
+ int depth = rt.numRows();
 
-	while( depth -- > 0 ){
-	    for( i=0; i<rt.numColumns(); i++ ){
-		nh = getClosest( localhandle, rt.getRow(depth)[i] );
-		if( nh == null )
-		    continue;
-		newdist = simulator.proximity( localhandle.getNodeId(), nh.getNodeId() );
-		if( dist >= newdist  ){
-		    nearHandle = nh;
-		    dist = newdist;
-		}
-	    }
-	    nearNode = ((DirectNodeHandle)nearHandle).getLocalNode();
-	    rt = nearNode.getRoutingTable();
-	}
-	
-	do{
-	    currentClosest = nearHandle;
-	    for( i=0; i<rt.numColumns(); i++ ){
-		nh = getClosest( localhandle, rt.getRow(0)[i] );
-		if( nh == null )
-		    continue;
-		newdist = simulator.proximity( localhandle.getNodeId(), nh.getNodeId() );
-		if( dist >= newdist  ){
-		    nearHandle = nh;
-		    dist = newdist;
-		}
-	    }
-	    nearNode = ((DirectNodeHandle)nearHandle).getLocalNode();
-	    rt = nearNode.getRoutingTable();
-	}while( currentClosest != nearHandle );
-	return nearHandle;
+ while( depth -- > 0 ){
+     for( i=0; i<rt.numColumns(); i++ ){
+  nh = getClosest( localhandle, rt.getRow(depth)[i] );
+  if( nh == null )
+      continue;
+  newdist = simulator.proximity( localhandle.getNodeId(), nh.getNodeId() );
+  if( dist >= newdist  ){
+      nearHandle = nh;
+      dist = newdist;
+  }
+     }
+     nearNode = ((DirectNodeHandle)nearHandle).getLocalNode();
+     rt = nearNode.getRoutingTable();
+ }
+ 
+ do{
+     currentClosest = nearHandle;
+     for( i=0; i<rt.numColumns(); i++ ){
+  nh = getClosest( localhandle, rt.getRow(0)[i] );
+  if( nh == null )
+      continue;
+  newdist = simulator.proximity( localhandle.getNodeId(), nh.getNodeId() );
+  if( dist >= newdist  ){
+      nearHandle = nh;
+      dist = newdist;
+  }
+     }
+     nearNode = ((DirectNodeHandle)nearHandle).getLocalNode();
+     rt = nearNode.getRoutingTable();
+ }while( currentClosest != nearHandle );
+ return nearHandle;
     }
 
     /**
@@ -173,39 +173,47 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
      * @return a new PastryNode
      */
     public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId) {
-	DirectPastryNode pn = new DirectPastryNode(nodeId, simulator);
-	
-	DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
-	simulator.registerNodeId( localhandle );
+ DirectPastryNode pn = new DirectPastryNode(nodeId, simulator);
+ 
+ DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
+ simulator.registerNodeId( localhandle );
 
-	DirectSecurityManager secureMan = new DirectSecurityManager(simulator);
-	MessageDispatch msgDisp = new MessageDispatch();
+ DirectSecurityManager secureMan = new DirectSecurityManager(simulator);
+ MessageDispatch msgDisp = new MessageDispatch();
 
-	RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
-	LeafSet leafSet = new LeafSet(localhandle, lSetSize);
-		
-	StandardRouter router =
-	    new StandardRouter(localhandle, routeTable, leafSet, secureMan);
-	StandardLeafSetProtocol lsProtocol =
-	    new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
-	StandardRouteSetProtocol rsProtocol =
-	    new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
-	StandardJoinProtocol jProtocol =
-	    new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
+ RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
+ LeafSet leafSet = new LeafSet(localhandle, lSetSize);
+  
+ StandardRouter router =
+     new StandardRouter(localhandle, routeTable, leafSet, secureMan);
+ StandardLeafSetProtocol lsProtocol =
+     new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
+ StandardRouteSetProtocol rsProtocol =
+     new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
+ StandardJoinProtocol jProtocol =
+     new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
 
-	msgDisp.registerReceiver(router.getAddress(), router);
-	msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
-	msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
-	msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
+ msgDisp.registerReceiver(router.getAddress(), router);
+ msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
+ msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
+ msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
 
-	pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
-	pn.setDirectElements(/* simulator */);
-	secureMan.setLocalPastryNode(pn);
+ pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
+ pn.setDirectElements(/* simulator */);
+ secureMan.setLocalPastryNode(pn);
 
-	// pn.doneNode(bootstrap);
-	//	pn.doneNode( discover(localhandle,bootstrap) );
-	pn.doneNode( simulator.getClosest(nodeId) );
+ // pn.doneNode(bootstrap);
+ // pn.doneNode( discover(localhandle,bootstrap) );
+ pn.doneNode( simulator.getClosest(nodeId) );
 
-	return pn;
+ return pn;
+    }
+    
+    protected Message getResponse(NodeHandle handle, Message message) {
+      return null ;
+    }
+
+    protected int getProximity(NodeHandle handle) {
+      return 0 ;
     }
 }

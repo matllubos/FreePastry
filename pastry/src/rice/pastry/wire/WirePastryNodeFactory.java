@@ -248,5 +248,12 @@ public class WirePastryNodeFactory extends DistPastryNodeFactory {
     if (Log.ifp(8))
       System.out.println(" (F): " + s);
   }
+  
+  protected Message getResponse(NodeHandle handle, Message message) {
+    return null ;
+  }
+  
+  protected int getProximity(NodeHandle handle) {
+    return 0 ;
+  }
 }
-

@@ -39,6 +39,7 @@ package rice.pastry.dist;
 import rice.pastry.*;
 import rice.pastry.rmi.*;
 import rice.pastry.wire.*;
+import rice.pastry.messaging.*;
 
 import java.net.*;
 
@@ -54,7 +55,7 @@ import java.net.*;
  *
  * @author Alan Mislove
  */
-public abstract class DistPastryNodeFactory implements PastryNodeFactory {
+public abstract class DistPastryNodeFactory extends PastryNodeFactory {
 
   // choices of protocols
   public static int PROTOCOL_RMI = 0;
@@ -87,8 +88,6 @@ public abstract class DistPastryNodeFactory implements PastryNodeFactory {
    * @param address The address of the remote node.
    */
   public final NodeHandle getNodeHandle(InetSocketAddress address) {
-    // HERE WE WANT TO IMPLEMENT THE ITERATIVE SEARCH ALGORITHM
-    // FOR FINDING THE NEAREST NODE HANDLE TO US
     return generateNodeHandle(address);
   }
 
@@ -127,6 +126,14 @@ public abstract class DistPastryNodeFactory implements PastryNodeFactory {
       return new WirePastryNodeFactory(nf, port);
 
     throw new IllegalArgumentException("Unsupported Protocol " + protocol);
+  }
+  
+  protected Message getResponse(NodeHandle handle, Message message) {
+    return null ;
+  }
+  
+  protected int getProximity(NodeHandle handle) {
+    return 0 ;
   }
 }
 

@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.pastry.multiring;
 
 import rice.pastry.*;
+import rice.pastry.messaging.*;
 
 import java.net.*;
 
@@ -49,7 +50,7 @@ import java.net.*;
  *
  * @author Alan Mislove
  */
-public class MultiRingPastryNodeFactory implements PastryNodeFactory {
+public class MultiRingPastryNodeFactory extends PastryNodeFactory {
 
   private PastryNodeFactory factory;
   
@@ -91,6 +92,14 @@ public class MultiRingPastryNodeFactory implements PastryNodeFactory {
     childNode.setBootstrap(bootstrap);
     
     return childNode;
+  }
+  
+  protected Message getResponse(NodeHandle handle, Message message) {
+      return null ;
+    }
+  
+  protected int getProximity(NodeHandle handle) {
+    return 0 ;
   }
 }
 
