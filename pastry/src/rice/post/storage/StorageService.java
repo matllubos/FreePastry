@@ -248,6 +248,7 @@ public class StorageService {
       for (int i=0; i<ids.length; i++)
         ids[i] = references[i].getLocation();
       
+      System.out.println("CALLING REFERSH WITH " + ids.length + " OBJECTS!");
       ((GCPast) immutablePast).refresh(ids, getTimeout(), command);
     } else {
       command.receiveResult(Boolean.TRUE);
@@ -263,7 +264,14 @@ public class StorageService {
    */
   public void backupLogs(final PostLog log, final Log[] logs, Continuation command) {
     long time = ((long) System.currentTimeMillis() / PostImpl.BACKUP_INTERVAL) * PostImpl.BACKUP_INTERVAL;
-    storeSigned(new GroupData(logs), log.getLocation(), time, System.currentTimeMillis() + BACKUP_LIFETIME, keyPair, immutablePast, command);
+    storeSigned(new GroupData(logs), log.getLocation(), time, System.currentTimeMillis() + BACKUP_LIFETIME, keyPair, immutablePast, new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        if (immutablePast instanceof Aggregation) 
+          ((Aggregation) immutablePast).flush(parent);
+        else
+          parent.receiveResult(o);
+      }
+    });
   }
   
   /**
