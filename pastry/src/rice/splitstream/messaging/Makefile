@@ -3,13 +3,9 @@ PACKAGE = rice.splitstream.messaging
 SOURCE  = \
 	ControlAttachResponseMessage.java\
 	ControlAttachMessage.java\
-	SplitStreamAddress.java
-	#ControlDropMessage.java \
-	#ControlMessage.java \
-	#SplitStreamMessage.java \
-      	#StripeContentMessage.java
-#	ControlFindParentMessage.java \
-	#ControlAddMessage.java \
+	SplitStreamAddress.java\
+	ControlFindParentResponseMessage.java\
+	ControlFindParentMessage.java
 
 RMI_SOURCE =
 

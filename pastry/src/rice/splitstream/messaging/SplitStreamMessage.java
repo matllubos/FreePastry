@@ -26,7 +26,7 @@ public interface SplitStreamMessage{
        * @param splitStream The scribe group this message is relevant to
        * @param s the Stripe which this message belongs to
        */
-      public void handleForwardMessage(Scribe scribe, Topic topic);
+      public boolean handleForwardMessage(Scribe scribe, Topic topic);
       /**
        * @return a String representation of the Object
        */ 

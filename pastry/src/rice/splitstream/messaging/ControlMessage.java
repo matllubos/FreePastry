@@ -4,6 +4,7 @@ import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.scribe.*;
 import rice.scribe.messaging.*;
+import rice.pastry.security.*;
 
 /**
  * This is a generic control message type. It is left to the specific
@@ -12,6 +13,10 @@ import rice.scribe.messaging.*;
  */
 public abstract class ControlMessage extends ScribeMessage implements SplitStreamMessage{
 
+   public ControlMessage(Address addr, NodeHandle source, NodeId tid, Credentials c)
+   {
+      super( addr,source,tid,c);
+   }
    /**
     * Callback method executed when the application receives a message for delivery
     * @param scribe The scribe group this message is relevant to
@@ -24,7 +29,7 @@ public abstract class ControlMessage extends ScribeMessage implements SplitStrea
     * @param splitStream The scribe group this message is relevant to
     * @param s The stripe that sent this message
     */
-   public abstract void handleForwardMessage( Scribe scribe, Topic topic );
+   public abstract boolean handleForwardMessage( Scribe scribe, Topic topic );
 
    /**
     * @return A string representation of this object

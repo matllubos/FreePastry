@@ -7,6 +7,7 @@ import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 import java.util.Vector;
+import java.lang.Boolean;
 
 /**
  * This class represents the anycast message sent by a node upon receiving a
@@ -22,7 +23,7 @@ public class ControlFindParentMessage extends MessageAnycast
 
     final int ALLOWABLE_CHILDREN = 2;
 
-    public ControlFindParentMessage( Address addr, NodeHandle source, TopicId topicId, Credentials c, StripeId stripe_id )
+    public ControlFindParentMessage( Address addr, NodeHandle source, NodeId topicId, Credentials c, StripeId stripe_id )
     {
        super( addr, source, topicId, c );
        send_to = new Vector();
@@ -83,7 +84,7 @@ public class ControlFindParentMessage extends MessageAnycast
      * @param scribe The SplitStream application
      * @param topic The stripe that this message is relevant to
      */
-    public void handleForwardMessage( Scribe scribe, Topic topic )
+    public boolean handleForwardMessage( Scribe scribe, Topic topic )
     {
         Credentials c = new PermissiveCredentials();
         
@@ -96,7 +97,7 @@ public class ControlFindParentMessage extends MessageAnycast
             already_seen.add( 0, scribe.getNodeHandle() );
         }
 
-        if ( ( aggregateNumChildren( scribe ) < ALLOWABLE_CHILDREN &&
+        if ( ( aggregateNumChildren( scribe ) < ALLOWABLE_CHILDREN ) &&
              ( !isInRootPath( scribe, this.getSource() ) ) )
         {
             this.handleDeliverMessage( scribe, topic );
@@ -114,25 +115,28 @@ public class ControlFindParentMessage extends MessageAnycast
             }
             if ( send_to.size() > 0 )
             {
-                scribe.routeMsgDirect( (NodeHandle)send_to.get(0), this );
+                scribe.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
             }
             else
             {
                 if ( !scribe.isRoot( topic.getTopicId() ) )
                 {
-                    scribe.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this );
+                    scribe.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
                 }
                 else
                 {
                     scribe.routeMsgDirect( this.getSource(),
                                            new ControlFindParentResponseMessage( scribe.getAddress(),
                                                                                  scribe.getNodeHandle(),
-                                                                                 topic.getTopicId(),
+                                                                                 stripe_id,
                                                                                  c,
-                                                                                 new Boolean( false ) ) );
+                                                                                 new Boolean( false ) ),
+                                           c,
+                                           null );
                 }
             }
         }
+        return true;
     }
 
     /**
@@ -153,9 +157,11 @@ public class ControlFindParentMessage extends MessageAnycast
         scribe.routeMsgDirect( this.getSource(), 
                                new ControlFindParentResponseMessage( scribe.getAddress(),
                                                                      scribe.getNodeHandle(),
-                                                                     topic.getTopicId(),
+                                                                     stripe_id,
                                                                      c,
-                                                                     new Boolean( true ) ) );
+                                                                     new Boolean( true ) ),
+                               c,
+                               null );
 
         if ( aggregateNumChildren( scribe ) >= ALLOWABLE_CHILDREN )
         {
