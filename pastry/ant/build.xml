@@ -7,6 +7,7 @@
   <property name="ant_lib_dir" value="${ant_dir}/lib" />
   <property name="docs_dir" value="docs" />
   <property name="javadoc_dir" value="${docs_dir}/javadoc" />
+  <property name="rmic_includes_files_text" value="${build_dir}/rice/pastry/rmi/RMIRemoteNodeI.class" />
   <property name="exclude_files_text" value="rice/past/search/** 
                                              rice/ap3/** 
                                              rice/nls/** 
@@ -17,7 +18,8 @@
                                              rice/caching/** 
                                              rice/email/test/** 
                                              rice/testharness/**
-                                             rice/splitstream/testing/**" />
+                                             rice/splitstream/testing/**
+                                             rice/splitstream2/testing/**" />
 
   <target name="init">   
     <mkdir dir="${build_dir}" />
@@ -39,8 +41,12 @@
     <antlr target="${src_dir}/rice/email/proxy/imap/parser/antlr/lexer.g" />
     <antlr target="${src_dir}/rice/email/proxy/imap/parser/antlr/grammer.g" />
   </target>
-
-  <target name="compile" depends="imap-parser">    
+  
+  <target name="compile" depends="imap-parser"> 
+    <rmic  base="${build_dir}"
+           classpath="${classpath_text}" 
+           includes="${rmic_includes_files_text}"
+           excludes="${exclude_files_text}" />   
     <javac srcdir="${src_dir}" 
            destdir="${build_dir}"
            classpath="${classpath_text}" 
