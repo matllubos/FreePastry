@@ -82,7 +82,7 @@ public class AP3Test {
 
 	    AP3TestingClient ap3Node = (AP3TestingClient) ap3Nodes.get(nodeIndex);
 
-	    ap3Node.getService().getAnonymizedContent("requestMsg", 0.50);
+	    ap3Node.getService().getAnonymizedContent("requestMsg", 0.50, 10000);
 
 	    while(simulate());
 	    

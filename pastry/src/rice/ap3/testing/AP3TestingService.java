@@ -16,8 +16,6 @@ import java.util.Hashtable;
 import java.util.Random;
 
 /**
- * @(#) AP3TestingService.java
- *
  * A service specially used for testing only.
  * It provides access to the internals of AP3ServiceImpl.
  *
