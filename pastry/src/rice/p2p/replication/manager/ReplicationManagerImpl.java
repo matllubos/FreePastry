@@ -99,6 +99,12 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
   protected Logger log = Logger.getLogger(this.getClass().getName());
   
   /**
+   * The current outstanding reminder task - used to cancel it if we
+   * receive a response
+   */
+  protected TimerTask timer;
+  
+  /**
    * Constructor
    *
    * @param node The node below this Replication implementation
@@ -114,9 +120,9 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     
     log.finer(endpoint.getId() + ": Starting up ReplicationManagerImpl with client " + client);
     
-//    log.addHandler(new ConsoleHandler());
-//    log.setLevel(Level.FINER);
-//    log.getHandlers()[0].setLevel(Level.FINER);
+ //   log.addHandler(new ConsoleHandler());
+ //   log.setLevel(Level.FINER);
+ //   log.getHandlers()[0].setLevel(Level.FINER);
     
     this.replication = new ReplicationImpl(node, this, replicationFactor, instance);
   }
@@ -149,6 +155,8 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    */
   protected void informClient(final Id id, final int uid) {
     log.fine(endpoint.getId() + ": Telling client to fetch id " + id);
+  
+    timer = endpoint.scheduleMessage(new TimeoutMessage(uid), TIMEOUT_DELAY);
     
     client.fetch(id, new Continuation() {
       public void receiveResult(Object o) {
@@ -158,6 +166,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
         
         log.fine(endpoint.getId() + ": Successfully fetched id " + id);
         
+        timer.cancel();
         helper.message(uid);
       }
       
@@ -165,8 +174,6 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
         receiveResult(e);
       }
     });
-    
-    endpoint.scheduleMessage(new TimeoutMessage(uid), TIMEOUT_DELAY);
   }
   
   /**
