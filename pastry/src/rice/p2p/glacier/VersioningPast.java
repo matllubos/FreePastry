@@ -67,7 +67,7 @@ public interface VersioningPast {
    * @param expiration The time to extend the lifetime to
    * @param command Command to be performed when the result is received
    */
-  public void refresh(Id[] ids, long[] versions, long expiration, Continuation command);
+  public void refresh(Id[] ids, long[] versions, long[] expirations, Continuation command);
   
 }
 
