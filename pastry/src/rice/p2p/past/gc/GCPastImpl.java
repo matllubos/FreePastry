@@ -62,12 +62,17 @@ public class GCPastImpl extends PastImpl implements GCPast {
   /**
    * The interval at which expired objects are removed from the store
    */
-  public static int COLLECTION_INTERVAL = 3600000;
+  public static int COLLECTION_INTERVAL = 3600000; //5 * 60 * 1000;
   
   /**
    * The trash can, or where objects should go once expired.  If null, they are deleted
    */
   protected StorageManager trash;
+  
+  /**
+   * The real factory, which is not wrapped with a GCIdFactory
+   */
+  protected IdFactory realFactory;
   
   /**
    * Constructor for GCPast
@@ -92,8 +97,9 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param trash The storage manager to place the deleted objects into (if null, they are removed)
    */
   public GCPastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy, StorageManager trash) {
-    super(node, manager, replicas, instance, policy);
+    super(new GCNode(node), manager, replicas, instance, policy);
     this.trash = trash;
+    this.realFactory = node.getIdFactory();
     
     endpoint.scheduleMessage(new GCCollectMessage(0, getLocalNodeHandle(), node.getId()), COLLECTION_INTERVAL, COLLECTION_INTERVAL);
   }
@@ -164,7 +170,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param command Command to be performed when the result is received
    */
   public void refresh(Id[] array, final long expiration, Continuation command) {
-    IdSet set = factory.buildIdSet();
+    IdSet set = realFactory.buildIdSet();
     for (int i=0; i<array.length; i++)
       set.addId(array[i]);
     
@@ -284,6 +290,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
       } else if (msg instanceof GCCollectMessage) {
         final Id[] array = scan().asArray();
         
+      //  System.out.println("COLLECTING OBJECTS!!!!!!");
+        
         Continuation remove = new ListenerContinuation("Removal of expired ids") {
           int index = -1;
           
@@ -295,7 +303,9 @@ public class GCPastImpl extends PastImpl implements GCPast {
             if (index < array.length) {
               final GCId id = (GCId) array[index];
 
-              if (trash != null) {                
+              if (trash != null) {                        
+             //   System.out.println("MOVING " + id + " TO THE TRASH CAN!");
+
                 storage.getObject(id.getId(), new StandardContinuation(this) {
                   public void receiveResult(Object o) {
                     trash.store(id.getId(), storage.getMetadata(id.getId()), (Serializable) o, new StandardContinuation(parent) {
@@ -306,6 +316,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
                   }
                 });
               } else {
+              //  System.out.println("DELETING " + id + "!");
                 storage.unstore(id.getId(), this);
               }
             }
@@ -447,7 +458,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
       IdSet set = (IdSet) map.get(handle);
       
       if (set == null) {
-        set = factory.buildIdSet();
+        set = realFactory.buildIdSet();
         map.put(handle, set);
       }
       
