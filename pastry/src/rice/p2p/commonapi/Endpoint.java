@@ -94,13 +94,30 @@ public interface Endpoint {
   NodeHandleSet neighborSet(int num);
 
   /**
-   * This methods returns an ordered set of nodehandles on which replicas of an object with
+   * This method returns an ordered set of nodehandles on which replicas of an object with
    * a given id can be stored.  The call returns nodes up to and including a node with maxRank.
+   *
+   * This method is equivalent to calling
+   *
+   * replicaSet(id, maxRank, getLocalNodeHandle(), neighborSet(Integer.MAX_VALUE));
    *
    * @param id The object's id.
    * @param maxRank The number of desired replicas.
    */
   NodeHandleSet replicaSet(Id id, int maxRank);
+  
+  /**
+   * This methods returns an ordered set of nodehandles on which replicas of an object with
+   * a given id can be stored.  The call returns nodes up to and including a node with maxRank.
+   * This call also allows the application to provide a remove "center" node, as well as
+   * other nodes in the vicinity. 
+   *
+   * @param id The object's id.
+   * @param maxRank The number of desired replicas.
+   * @param handle The root handle of the remove set
+   * @param set The set of other nodes around the root handle
+   */
+  NodeHandleSet replicaSet(Id id, int maxRank, NodeHandle root, NodeHandleSet set);
 
   /**
    * This operation provides information about ranges of keys for which the node is currently
