@@ -35,6 +35,9 @@ met:
 
 package rice.testharness.tests;
 
+import rice.p2p.commonapi.IdFactory;
+
+import rice.pastry.commonapi.*;
 import rice.pastry.client.*;
 import rice.pastry.leafset.*;
 import rice.pastry.security.*;
@@ -78,6 +81,8 @@ public class PostTest extends Test {
   public static int NUM_TRIALS = 50;
 
   public static String INSTANCE_NAME = "PostTest";
+
+  public static IdFactory FACTORY = new PastryIdFactory();
 
   protected Credentials _credentials = new PermissiveCredentials();
 
@@ -129,7 +134,9 @@ public class PostTest extends Test {
         address = new PostUserAddress("test"+localNode.getNodeId());
       }
       
-      StorageManager storage = new StorageManager(new PersistentStorage(".", 100000000), new LRUCache(new MemoryStorage(), 1000000));
+      StorageManager storage = new StorageManager(FACTORY,
+                                                  new PersistentStorage(FACTORY, ".", 100000000),
+                                                  new LRUCache(new MemoryStorage(FACTORY), 1000000));
       
       System.out.print("    Starting PAST service\t\t\t\t\t");
       past = new PASTServiceImpl(localNode, storage,INSTANCE_NAME);

@@ -298,8 +298,10 @@ public class PastImpl implements Past, Application, RMClient {
 
     final Continuation receiveHandles = new Continuation() {
 
+      // the number of handles we are waiting for
       private int num = -1;
-      
+
+      // the handles we have received
       private Vector handles = new Vector();
       
       public void receiveResult(Object o) {
@@ -330,6 +332,7 @@ public class PastImpl implements Past, Application, RMClient {
       public void receiveResult(Object o) {
         NodeHandleSet replicas = (NodeHandleSet) o;
 
+        // record the number of handles we are going to receive
         receiveHandles.receiveResult(new Integer(replicas.size()));
 
         for (int i=0; i<replicas.size(); i++) {
@@ -365,7 +368,7 @@ public class PastImpl implements Past, Application, RMClient {
       return;
     }
     
-    sendRequest(null,
+    sendRequest(handle.getNodeHandle().getId(),
                 new FetchMessage(getUID(), handle, endpoint.getId(), handle.getNodeHandle().getId()),
                 handle.getNodeHandle(),
                 command);
@@ -417,25 +420,28 @@ public class PastImpl implements Past, Application, RMClient {
 
       // if it is a request, look in the cache
       if (! lmsg.isResponse()) {
+
+        // if in the cache, send a response
         if (storage.getCache().exists(id)) {
           storage.getCache().getObject(id, getResponseContinuation(lmsg));
           return false;
         }
       } else {
+        // otherwise, cache the response
         cache(id, content);
       }
-
-      return true;
     } else if (message.getMessage() instanceof FetchMessage) {
+      // insert fetch response into cache
       FetchMessage fmsg = (FetchMessage) message.getMessage();
       Id id = fmsg.getHandle().getId();
       PastContent content = (PastContent) fmsg.getResponse();
 
-      cache(id, content);
-      return true;
-    } else {
-      return true;
-    } 
+      if (fmsg.isResponse()) {
+        cache(id, content);
+      }
+    }
+    
+    return true;
   }
 
   /**
