@@ -1,169 +1,178 @@
 <!DOCTYPE html PUBLIC "-//w3c//dtd html 4.0 transitional//en">
 <html>
 <head>
-    
+        
   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-    
+        
   <meta name="GENERATOR" content="Mozilla/4.76 [en] (Windows NT 5.0; U) [Netscape]">
-    
+        
   <meta name="Author" content="Peter Druschel">
   <title>FreePastry</title>
 </head>
   <body text="#000000" bgcolor="#ffffff" link="#0000ee" vlink="#551a8b" alink="#ff0000" style="font-family: Verdana,Arial; ">
-  
-<center> 
+    
+<center>  
 <h1> <font size="+4">FreePastry</font></h1>
-</center>
-  
-<h3>  
+ </center>
+    
+<h3>   
 <hr width="100%"></h3>
- Release 0.1 beta, 4/4/02. 
+  Release 0.1 beta, 4/4/02.  
 <p>This is the first beta release of FreePastry. </p>
+ 
 <p>FreePastry is a modular, open source implementation of the <a href="http://www.cs.rice.edu/CS/Systems/Pastry/">
-Pastry</a>
-&nbsp; p2p routing and location substrate. <br>
-&nbsp; </p>
+ Pastry</a>
+ &nbsp; p2p routing and location substrate. <br>
+ &nbsp; </p>
+ 
 <h3> Contributors</h3>
- <a href="http://www.cs.rice.edu/%7Edruschel/">Peter Druschel</a>
-, <a href="http://www.cs.rice.edu/%7Eychu/">Y. Charlie Hu</a>
-, <a href="http://www.cs.rice.edu/%7Essiyer/">Sitaram Iyer</a>
-, <a href="http://www.cs.rice.edu/%7Ealadd/">Andrew Ladd</a>
-, and <a href="http://composer.ecn.purdue.edu/%7Erongmei/">RongMei Zhang</a>
- contributed to the FreePastry code. The code is based on algorithms and protocols
-described in the following papers: <br>
-&nbsp; 
+  <a href="http://www.cs.rice.edu/%7Edruschel/">Peter Druschel</a>
+ , <a href="http://www.cs.rice.edu/%7Eychu/">Y. Charlie Hu</a>
+ , <a href="http://www.cs.rice.edu/%7Essiyer/">Sitaram Iyer</a>
+ , <a href="http://www.cs.rice.edu/%7Ealadd/">Andrew Ladd</a>
+ , and <a href="http://composer.ecn.purdue.edu/%7Erongmei/">RongMei Zhang</a>
+  contributed to the FreePastry code. The code is based on algorithms and
+protocols described in the following papers: <br>
+ &nbsp;  
 <ul>
- <li> <font face="Helvetica, Arial, sans-serif">A. Rowstron and P. Druschel,
-    <i>Pastry: Scalable, distributed object location and routing for large-scale
-peer-to-peer systems</i>.&nbsp; IFIP/ACM International Conference on Distributed
-Systems Platforms (Middleware), Heidelberg, Germany, pages 329-350, November,
+  <li> <font face="Helvetica, Arial, sans-serif">A. Rowstron and P. Druschel, 
+    <i>Pastry: Scalable, distributed object location and routing for large-scale 
+peer-to-peer systems</i>.&nbsp; IFIP/ACM International Conference on Distributed 
+Systems Platforms (Middleware), Heidelberg, Germany, pages 329-350, November, 
 2001. [<i><a href="http://www.research.microsoft.com/%7Eantr/PAST/pastry.pdf.zip">
- pdf.zip</a>
- | <a href="http://www.research.microsoft.com/%7Eantr/PAST/pastry.ps.zip">
-ps.zip</a>
- | <a href="http://www.research.microsoft.com/%7Eantr/PAST/pastry.pdf">pdf</a>
- | <a href="http://www.research.microsoft.com/%7Eantr/PAST/pastry.ps">ps</a>
-    </i>]</font></li>
- 
-</ul>
-  
-<ul>
- <li> <font face="Helvetica, Arial, sans-serif">M. Castro, P. Druschel, Y.
-C. Hu, A. Rowstron, <i>Exploiting network proximity in peer-to-peer overlay
-networks</i>.&nbsp; Submitted for publication.&nbsp; [<i><a href="http://www.research.microsoft.com/%7Eantr/PAST/location.pdf.zip">
- pdf.zip</a>
- |<a href="http://www.research.microsoft.com/%7Eantr/PAST/location.ps.zip">
+  pdf.zip</a>
+  | <a href="http://www.research.microsoft.com/%7Eantr/PAST/pastry.ps.zip">
  ps.zip</a>
- | <a href="http://www.research.microsoft.com/%7Eantr/PAST/location.pdf">
-pdf</a>
- | <a href="http://www.research.microsoft.com/%7Eantr/PAST/location.ps">ps</a>
-    </i>]</font></li>
- 
+  | <a href="http://www.research.microsoft.com/%7Eantr/PAST/pastry.pdf">pdf</a>
+  | <a href="http://www.research.microsoft.com/%7Eantr/PAST/pastry.ps">ps</a>
+     </i>]</font></li>
+   
 </ul>
-  <br>
-&nbsp; 
+    
+<ul>
+  <li> <font face="Helvetica, Arial, sans-serif">M. Castro, P. Druschel,
+Y. C. Hu, A. Rowstron, <i>Exploiting network proximity in peer-to-peer overlay 
+networks</i>.&nbsp; Submitted for publication.&nbsp; [<i><a href="http://www.research.microsoft.com/%7Eantr/PAST/location.pdf.zip">
+  pdf.zip</a>
+  |<a href="http://www.research.microsoft.com/%7Eantr/PAST/location.ps.zip">
+  ps.zip</a>
+  | <a href="http://www.research.microsoft.com/%7Eantr/PAST/location.pdf">
+ pdf</a>
+  | <a href="http://www.research.microsoft.com/%7Eantr/PAST/location.ps">
+ps</a>
+     </i>]</font></li>
+   
+</ul>
+   <br>
+ &nbsp;  
 <h3> Requirements</h3>
- The software requires a Java runtime, version 1.3. The software was developed 
-using Sun's SDK, version 1.3.1. <br>
-&nbsp; <br>
-&nbsp; 
+  The software requires a Java runtime, version 1.3. The software was developed
+ using Sun's SDK, version 1.3.1. <br>
+ &nbsp; <br>
+ &nbsp;  
 <h3> Limitations</h3>
- The initial release has the following limitations. <br>
-&nbsp; 
+  The initial release has the following limitations. <br>
+ &nbsp;  
 <ul>
- <li> The API may be subject to minor changes in future releases.</li>
- 
+  <li> The API may be subject to minor changes in future releases.</li>
+   
 </ul>
- 
+   
 <ul>
-   <li> Little performance tuning of the implementation has been done as of
-yet.</li>
-  &nbsp; <li> Two "wire protocols" are provided with the initial release,
+    <li> Little performance tuning of the implementation has been done as
+of yet.</li>
+   &nbsp; <li> Two "wire protocols" are provided with the initial release, 
 "Direct" and "RMI".</li>
- 
+   
 </ul>
-  
+    
 <ul>
- 
+     
   <ul>
- <li> "Direct" emulates a network, allowing many Pastry nodes to execute
-in one Java VM without a real network. This is very useful for application
+  <li> "Direct" emulates a network, allowing many Pastry nodes to execute 
+in one Java VM without a real network. This is very useful for application 
 development and testing.</li>
- 
+     
   </ul>
- 
+   
 </ul>
-  
+    
 <ul>
- 
+     
   <ul>
- <li> RMI is simple wire protocol based on Java RMI. Several "virtual" Pastry 
-nodes can be started in each Java VM. RMI is used for communication across 
-physical nodes.</li>
- 
+  <li> RMI is simple wire protocol based on Java RMI. Several "virtual" Pastry
+ nodes can be started in each Java VM. RMI is used for communication across
+ physical nodes.</li>
+     
   </ul>
- 
+   
 </ul>
-  
-<blockquote>We will release more efficient wire protocols based on sockets 
-later. Future wire protocols will also be based on an open standard to ensure
+    
+<blockquote>We will release more efficient wire protocols based on sockets
+ later. Future wire protocols will also be based on an open standard to ensure 
 interoperability among different implementations.</blockquote>
-  
+      
   <ul>
- <li> Security support does not exist in this release. Therefore, the&nbsp;
-software should only be run in trusted environments. Future release&nbsp;
+  <li> Security support does not exist in this release. Therefore, the&nbsp; 
+software should only be run in trusted environments. Future release&nbsp; 
 will include security.</li>
- 
+     
   </ul>
-  
+      
   <ul>
- <li> The discovery protocol for automatic location of a nearby node using
-any bootstrap node, which is described in the Pastry proximity paper, is
-not yet implemented in FreePastry. To allow Pastry to construct an efficient 
-network proximity-aware overlay, the specified bootstrap node should therefore 
-be the near the current node in the network, among all existing Pastry nodes 
-in the overlay.</li>
- 
+  <li> The discovery protocol for automatic location of a nearby node using 
+any bootstrap node, which is described in the Pastry proximity paper, is not
+yet implemented in FreePastry. To allow Pastry to construct an efficient
+ network proximity-aware overlay, the specified bootstrap node should therefore
+ be the near the current node in the network, among all existing Pastry nodes
+ in the overlay.</li>
+     
   </ul>
-  
-  <blockquote>(Background: To start a Pastry node, the IP address (and port 
-number, unless the default port is used) of a "bootstrap" or "contact" node
-must be provided. If no such node is provided, and no other Pastry node runs
-on the local machine, then FreePastry creates a new overlay network with
-itself as the only node. Any node that is already part of the Pastry node
-can serve as the bootstrap node.)</blockquote>
-  
+      
+  <blockquote>(Background: To start a Pastry node, the IP address (and port
+ number, unless the default port is used) of a "bootstrap" or "contact" node 
+must be provided. If no such node is provided, and no other Pastry node runs 
+on the local machine, then FreePastry creates a new overlay network with itself
+as the only node. Any node that is already part of the Pastry node can serve
+as the bootstrap node.)</blockquote>
+        
     <p><br>
-Future releases will address efficiency, security, interoperability and will
-provide application components like Scribe, Past, replica management, caching,
-etc. <br>
-&nbsp; <br>
-&nbsp; <br>
-&nbsp; </p>
+ Future releases will address efficiency, security, interoperability and
+will provide application components like Scribe, Past, replica management,
+caching, etc. <br>
+ &nbsp; <br>
+ &nbsp; <br>
+ &nbsp; </p>
+     
     <h3> Installation</h3>
- To use the binary distribution, download the pastry jar file and set the 
-Java classpath to include the path of the jar file. This can be done using 
-the "-cp" command line argument, or by setting the CLASSPATH variable in your
-shell environment. 
-    <p>To use the source distribution, you will need to have GNU make installed 
-(available from <a href="ftp://ftp.gnu.org/pub/gnu/make">ftp://ftp.gnu.org/pub/gnu/make</a>
-) on your system. Expand the archive (FreePastry-0.1-beta.tgz or FreePastry-0.1-beta.zip)
-into a directory. Execute "make" in the top level directory, then change
-to the "classes" directory to run programs. (You may have to run "make" twice
-the first time). </p>
-    <p>You may have to provide a Java security policy file with sufficient 
-permissions to allow FreePastry to contact other nodes. The simplest way to
-do this is to install a ".java.policy" file with the following content into
-your home directory: </p>
+  To use the binary distribution, download the pastry jar file and set the
+ Java classpath to include the path of the jar file. This can be done using
+ the "-cp" command line argument, or by setting the CLASSPATH variable in
+your shell environment.      
+    <p>To compile the source distribution, you will need to have GNU make
+installed  (available from <a href="ftp://ftp.gnu.org/pub/gnu/make">ftp://ftp.gnu.org/pub/gnu/make</a>
+ ) on your system. Expand the archive (FreePastry-0.1-beta.tgz or FreePastry-0.1-beta.zip) 
+into a directory. Set the environment variables mentioned in setpath.csh
+to values appropriate for your system. Execute "make" in the top level directory
+(you may have to run "make" twice the first time), then change to the "classes"
+directory to run FreePastry.&nbsp; </p>
+     
+    <p>You may have to provide a Java security policy file with sufficient
+ permissions to allow FreePastry to contact other nodes. The simplest way
+to do this is to install a ".java.policy" file with the following content
+into your home directory: </p>
+     
     <p>grant { <br>
-&nbsp;&nbsp;&nbsp; permission java.security.AllPermission; <br>
-}; </p>
+ &nbsp;&nbsp;&nbsp; permission java.security.AllPermission; <br>
+ }; </p>
+     
     <p> </p>
-    <hr> 
+     
+    <hr>      
     <h3> Running FreePastry</h3>
- 1. To run a HelloWorld example with the RMI wire protocol: 
+  1. To run a HelloWorld example with the RMI wire protocol:      
     <pre><b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Usage: java [-cp pastry.jar] rice.pastry.testing.RMIHelloWorld<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [-port p] [-nodes n] [-bootstrap bshost[:bsport]]<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [-verbose|-silent|-verbosity v] [-help]<br><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Ports p and bsport refer to RMI registry port numbers (default = 5009).<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Without -bootstrap bshost[:bsport], only localhost:p is used for bootstrap.<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Default verbosity is 5, -verbose is 10, and -silent is -1 (error msgs only).<br><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (replace "pastry.jar" by "FreePastry-&lt;version&gt;.jar", of course)</b></pre>
- &nbsp;&nbsp;&nbsp; Some interesting configurations: 
+  &nbsp;&nbsp;&nbsp; Some interesting configurations:      
     <pre><b>
         a. java rice.pastry.testing.RMIHelloWorld
 
@@ -198,7 +207,7 @@ your home directory: </p>
                 The second client restarts with a new NodeID, and joins the
                 Pastry network. One of them sends messages to the now-dead
                 node, finds it down, and <em>may or may not</em> remove it<br>                from the leaf sets. (repeat a few times to observe both<br>                possibilities, i.e., leaf sets of size 3 or 5). If the<br>                latter, then leaf set maintenance kicks in within a minute<br>                on one of the nodes, and removes the stale entries.<br><br>        f. pokey$ ..RMIHelloWorld<br>           gamma$ ..RMIHelloWorld -bootstrap pokey -nodes 2<br><br>                The client on gamma instantiates two virtual nodes, which<br>                are independent in identity and functionality. Try starting<br>                say 10 or 30 virtual nodes, killing with a &lt;ctrl-C&gt;,<br>                starting another bunch, etc.<br></b></pre>
- <!--
+  <!--
 	g. pokey$ RMIHelloWorld -nodes 50 | tee log.pokey
 		(allow a minutes or two)
 	   gamma$ RMIHelloWorld -bootstrap pokey -nodes 50 | tee log.gamma
@@ -207,11 +216,13 @@ your home directory: </p>
 		locality properties hold. Start two groups of 50 virtual
 		nodes on two geographically distant hosts.  
 -->
- 
-    <hr width="50%"> 
-    <p>2. To run the same HelloWorld application on an emulated network: </p>
+       
+    <hr width="50%">      
+    <p>2. To run the same HelloWorld application on an emulated network:
+    </p>
+     
     <pre><b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Usage: java [-cp pastry.jar] rice.pastry.testing.HelloWorld<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;                   [-msgs m] [-nodes n] [-verbose|-silent|-verbosity v]<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [-simultaneous_joins] [-simultaneous_msgs] [-help]</b></pre>
- &nbsp;&nbsp;&nbsp; Some interesting configurations: 
+  &nbsp;&nbsp;&nbsp; Some interesting configurations:      
     <pre><b>
         a. java rice.pastry.testing.HelloWorld
 
@@ -224,32 +235,35 @@ your home directory: </p>
 
                 Join all three nodes at once, then issue three messages,
                 then go about delivering them.</b></pre>
- 
-    <hr width="50%"> 
-    <p>3. To run a regression test that constructs 500 nodes connected by
+       
+    <hr width="50%">      
+    <p>3. To run a regression test that constructs 500 nodes connected by 
 an emulated network: </p>
+     
     <pre><b>
         java [-cp pastry.jar] rice.pastry.testing.DirectPastryRegrTest
 </b></pre>
- 
-    <hr width="50%"> 
-    <p>4. To run a simple performance test based on an emulated network with 
-successively larger numbers of nodes: </p>
+       
+    <hr width="50%">      
+    <p>4. To run a simple performance test based on an emulated network with
+ successively larger numbers of nodes: </p>
+     
     <pre><b>
 	 java [-cp pastry.jar] rice.pastry.testing.DirectPastryPingTest 
 </b></pre>
-
-      <p>&nbsp; <br>
-&nbsp; </p>
-      <h3> Writing applications on top of FreePastry</h3>
- All applications must extend the class rice.pastry.client.PastryAppl. This 
-class implements the Pastry API. Example applications and drivers can be found
-in rice.pastry.testing; the Hello World suite (HelloWorldApp.java, HelloWorld.java,
-RMIHelloWorld.java) may be a good starting point. Each application consists
-minimally of an application class that extends rice.pastry.client.PastryAppl,
-and a driver class that implements main(), creates and initializes one of
+        
+    <p>&nbsp; <br>
+ &nbsp; </p>
+       
+    <h3> Writing applications on top of FreePastry</h3>
+  All applications must extend the class rice.pastry.client.PastryAppl. This
+ class implements the Pastry API. Example applications and drivers can be
+found in rice.pastry.testing; the Hello World suite (HelloWorldApp.java,
+HelloWorld.java, RMIHelloWorld.java) may be a good starting point. Each application
+consists minimally of an application class that extends rice.pastry.client.PastryAppl, 
+and a driver class that implements main(), creates and initializes one of 
 more nodes, etc.<br>
-&nbsp;<br>
-&nbsp; 
-      </body>
-      </html>
+ &nbsp;<br>
+ &nbsp;        
+    </body>
+    </html>
