@@ -13,6 +13,8 @@ public class Aggregate implements GCPastContent {
   protected Id[] pointers;
   protected Id myId;
   
+  private static final long serialVersionUID = -4891386773008082L;
+  
   public Aggregate(GCPastContent[] components, Id[] pointers) {
     this.components = components;
     this.myId = null;
