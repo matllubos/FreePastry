@@ -48,6 +48,11 @@ public class DeliveryService implements ScribeClient {
   protected IdFactory factory;
   
   /**
+   * A cache of recently-received delivery message ids
+   */
+  protected HashSet cache;
+  
+  /**
    * Contructs a StorageService given a PAST to run on top of.
    *
    * @param past The PAST service to use.
@@ -60,6 +65,7 @@ public class DeliveryService implements ScribeClient {
     this.delivered = delivered;
     this.scribe = scribe;
     this.factory = factory;
+    this.cache = new HashSet();
   }
   
   /**
@@ -102,12 +108,17 @@ public class DeliveryService implements ScribeClient {
    */
   public void check(SignedPostMessage message, Continuation command) {
     post.getLogger().finer(post.getEndpoint().getId() + ": Checking for existence of message " + message);
+    Id id = (new Delivery(message, factory)).getId();
     
-    delivered.lookup((new Delivery(message, factory)).getId(), new StandardContinuation(command) {
-      public void receiveResult(Object o) {
-        parent.receiveResult(new Boolean(o == null));
-      }
-    });
+    if (cache.contains(id)) {
+      command.receiveResult(new Boolean(false));
+    } else {
+      delivered.lookup(id, new StandardContinuation(command) {
+        public void receiveResult(Object o) {
+          parent.receiveResult(new Boolean(o == null));
+        }
+      });
+    }
   }
   
   /**
@@ -121,8 +132,20 @@ public class DeliveryService implements ScribeClient {
    */
   public void delivered(SignedPostMessage message, byte[] signature, Continuation command) { 
     post.getLogger().finer(post.getEndpoint().getId() + ": Inserting receipt for " + message);
-
-    delivered.insert(new Receipt(message, factory, signature), command);
+    final Receipt receipt = new Receipt(message, factory, signature);
+    
+    cache.add(receipt.getId());
+    
+    delivered.insert(receipt, new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        parent.receiveResult(o);
+      }
+      
+      public void receiveException(Exception e) {
+        cache.remove(receipt.getId());
+        parent.receiveException(e);
+      }
+    });
   }
   
   /**
