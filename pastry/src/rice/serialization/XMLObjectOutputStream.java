@@ -75,6 +75,11 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
   protected Hashtable references;
   
   /**
+   * A cache of the writeReplace() methods
+   */
+  protected HashMap writeReplaces;
+  
+  /**
    * A counter used to generate unique references
    */
   protected int next = 0;
@@ -108,6 +113,7 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
     
     this.writer = new XMLWriter(new OutputStreamWriter(out));
     this.references = new Hashtable();
+    this.writeReplaces = new HashMap();
     this.currentObjects = new Stack();
     this.currentClasses = new Stack();
     this.currentPutFields = new Stack();
@@ -433,7 +439,10 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
    * @param cl The class to find the writeReplace() of
    * @return The method, or null if none was found
    */
-  private static Method getWriteReplace(Class cl) {
+  private Method getWriteReplace(Class cl) {
+    if (writeReplaces.containsKey(cl))
+      return (Method) writeReplaces.get(cl);
+    
     Method meth = null;
     Class defCl = cl;
     while (defCl != null) {
@@ -446,20 +455,28 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
     }
     
     if (meth == null) {
+      writeReplaces.put(cl, meth);
 	    return null;
     }
     
     meth.setAccessible(true);
     int mods = meth.getModifiers();
     if ((mods & (Modifier.STATIC | Modifier.ABSTRACT)) != 0) {
-	    return null;
     } else if ((mods & (Modifier.PUBLIC | Modifier.PROTECTED)) != 0) {
+      writeReplaces.put(cl, meth);
 	    return meth;
     } else if ((mods & Modifier.PRIVATE) != 0) {
-	    return (cl == defCl) ? meth : null;
+	    if (cl == defCl) {
+        writeReplaces.put(cl, meth);
+        return meth;
+      }
     } else {
-	    return meth;
+      writeReplaces.put(cl, meth);
+      return meth;
     }
+      
+    writeReplaces.put(cl, null);
+    return null;
   }
   
   /**

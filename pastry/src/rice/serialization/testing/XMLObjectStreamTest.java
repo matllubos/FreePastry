@@ -612,6 +612,7 @@ public class XMLObjectStreamTest {
     test("monkey");
     test("");
     test("blah blah balh\n blah blah ablh");
+    test("blah blah balh\n\t\r\n\r\t\r blah blah ablh");
     test("<monkey>");
     test("<>&;'\"");
     

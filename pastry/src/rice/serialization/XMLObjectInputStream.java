@@ -98,6 +98,16 @@ public class XMLObjectInputStream extends ObjectInputStream {
   protected ReflectionFactory reflFactory = (ReflectionFactory) AccessController.doPrivileged(new sun.reflect.ReflectionFactory.GetReflectionFactoryAction());
 
   /**
+   * The list of validation objects waiting for the entire object graph to be read in
+   */
+  protected ValidationList vlist;
+  
+  /**
+   * The depth at which we are currently at in the object tree
+   */
+  protected int depth;
+  
+  /**
    * Constructor which reads data from the given input stream in order
    * deserialize objects.  This constructor also reads the header from the 
    * stream, and throws an IOException if the correct header is not seen.
@@ -112,6 +122,8 @@ public class XMLObjectInputStream extends ObjectInputStream {
     this.currentObjects = new Stack();
     this.currentClasses = new Stack();
     this.references = new Hashtable();
+    this.vlist = new ValidationList();
+    this.depth = 0;
         
     readStreamHeader();
   }
@@ -147,6 +159,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
    */
   public void reset() throws IOException {
     references = new Hashtable(); 
+    vlist.clear();
   }
   
   /**
@@ -329,7 +342,13 @@ public class XMLObjectInputStream extends ObjectInputStream {
   protected Object readObjectOverride() throws IOException, ClassNotFoundException {
     reader.readStartTag();
     
-    return readObjectHelper();
+    Object result = readObjectHelper();
+    
+    if (depth == 0) {
+      vlist.doCallbacks();
+    }
+    
+    return result;
   }
   
   /**
@@ -344,7 +363,13 @@ public class XMLObjectInputStream extends ObjectInputStream {
   public Object readUnshared() throws IOException, ClassNotFoundException {
     reader.readStartTag();
     
-    return readUnsharedHelper(false);
+    Object result = readUnsharedHelper(false);
+    
+    if (depth == 0) {
+      vlist.doCallbacks();
+    }
+    
+    return result;
   }
   
   /**
@@ -362,7 +387,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
     if (currentObjects.peek() != null)
       readFields(currentObjects.peek(), (Class) currentClasses.peek());
     else
-      throw new NotActiveException();
+      throw new NotActiveException("defaultReadObject called with empty stack!");
   }
   
   /**
@@ -384,7 +409,27 @@ public class XMLObjectInputStream extends ObjectInputStream {
     if (currentObjects.peek() != null)
       return readGetFields();
     else
-      throw new NotActiveException();
+      throw new NotActiveException("readFields called with empty stack!");
+  }
+  
+  /**
+   * Register an object to be validated before the graph is returned.  While
+   * similar to resolveObject these validations are called after the entire
+   * graph has been reconstituted.  Typically, a readObject method will
+   * register the object with the stream so that when all of the objects are
+   * restored a final set of validations can be performed.
+   *
+   * @param	obj the object to receive the validation callback.
+   * @param	prio controls the order of callbacks
+   * @throws	NotActiveException The stream is not currently reading objects
+   * 		so it is invalid to register a callback.
+   * @throws	InvalidObjectException The validation object is null.
+   */
+  public void registerValidation(ObjectInputValidation obj, int prio) throws NotActiveException, InvalidObjectException {
+    if (currentObjects.peek() == null) 
+	    throw new NotActiveException("registerValidation called with empty stack!");
+    
+    vlist.register(obj, prio);
   }
   
   // ----- Internal helper methods -----
@@ -679,14 +724,19 @@ public class XMLObjectInputStream extends ObjectInputStream {
    */
   protected Object readObjectHelper() throws IOException, ClassNotFoundException {
     reader.assertStartTag();
+    depth++;
+    Object result = null;
     
     if (reader.getStartTag().equals("reference")) {
-      return readReference();
+      result = readReference();
     } else if (reader.getStartTag().equals("null")) {
-      return readNull();
+      result = readNull();
     } else {
-      return readUnsharedHelper(true); 
+      result = readUnsharedHelper(true); 
     } 
+    
+    depth--;
+    return result;
   }
   
   /**
@@ -871,6 +921,8 @@ public class XMLObjectInputStream extends ObjectInputStream {
     } catch (IllegalAccessException e) {
       throw new IOException("IllegalAccessException thrown! " + e);
     } catch (InvocationTargetException e) {
+      System.out.println(e.getTargetException().getMessage());
+      e.getTargetException().printStackTrace();
       throw new IOException("InvocationTargetException thrown! " + e.getTargetException());
     }
     
@@ -1032,6 +1084,10 @@ public class XMLObjectInputStream extends ObjectInputStream {
     try {
       Field f = c.getDeclaredField(reader.getAttribute("field"));
       f.setAccessible(true);
+      
+      int mask = Modifier.STATIC | Modifier.FINAL;
+	    if ((f.getModifiers() & mask) != 0)
+        throw new NoSuchFieldException("Field read was either static or final!");
       
       if (reader.getStartTag().equals("primitive")) {
         readPrimitiveField(o, f);
@@ -1254,6 +1310,83 @@ public class XMLObjectInputStream extends ObjectInputStream {
     
     public ObjectStreamClass getObjectStreamClass() {
       throw new UnsupportedOperationException("CANNOT GET THE OBJECT STREAM CLASS!");
+    }
+  }
+  
+  // ----- VALIDATION LIST IMPLEMENTATION ----
+  
+  /**
+   * Prioritized list of callbacks to be performed once object graph has been
+   * completely deserialized.
+   */
+  private static class ValidationList {
+    
+    private static class Callback {
+	    final ObjectInputValidation obj;
+	    final int priority;
+	    Callback next;
+	    
+	    Callback(ObjectInputValidation obj, int priority, Callback next) {
+        this.obj = obj;
+        this.priority = priority;
+        this.next = next;
+	    }
+    }
+    
+    /** linked list of callbacks */
+    private Callback list;
+    
+    /**
+     * Creates new (empty) ValidationList.
+     */
+    ValidationList() {
+    }
+    
+    /**
+     * Registers callback.  Throws InvalidObjectException if callback
+     * object is null.
+     */
+    void register(ObjectInputValidation obj, int priority) throws InvalidObjectException {
+	    if (obj == null) {
+        throw new InvalidObjectException("null callback");
+	    }
+	    
+	    Callback prev = null, cur = list;
+	    while (cur != null && priority < cur.priority) {
+        prev = cur;
+        cur = cur.next;
+	    }
+	    if (prev != null) {
+        prev.next = new Callback(obj, priority, cur);
+	    } else {
+        list = new Callback(obj, priority, list);
+	    }
+    }
+    
+    /**
+     * Invokes all registered callbacks and clears the callback list.
+     * Callbacks with higher priorities are called first; those with equal
+     * priorities may be called in any order.  If any of the callbacks
+     * throws an InvalidObjectException, the callback process is terminated
+     * and the exception propagated upwards.
+     */
+    void doCallbacks() throws InvalidObjectException {
+	    try {
+        while (list != null) {
+          list.obj.validateObject();
+          list = list.next;
+        }
+	    } catch (InvalidObjectException ex) {
+        list = null;
+        throw ex;
+	    }
+    }
+    
+    /**
+     * Resets the callback list to its initial (empty) state.
+     */
+    public void clear() {
+	    list = null;
     }
   }
 }
