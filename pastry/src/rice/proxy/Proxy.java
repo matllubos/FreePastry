@@ -167,7 +167,7 @@ public class Proxy {
     
     if (parameters.getBooleanParameter("java_prefer_select") ||
         (parameters.getBooleanParameter("java_prefer_select_automatic_osx") && 
-         System.getProperty("os.arch").toLowerCase().indexOf("mac os x") >= 0)) {
+         System.getProperty("os.name").toLowerCase().indexOf("mac os x") >= 0)) {
       result.append(" -Djava.nio.preferSelect=true");
     }
     
