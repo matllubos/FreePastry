@@ -80,7 +80,6 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
      *
      * @return true if the put succeeded, false otherwise.
      */
-
     public boolean put(NodeHandle handle) {
       int worstIndex = -1;
       int worstProximity = Integer.MIN_VALUE;
@@ -105,36 +104,38 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
         setChanged();
         notifyObservers(new NodeSetUpdate(handle, true));
 
-	// ping handles while the set is not full
-	handle.ping();
+        // ping handles while the set is not full
+        handle.ping();
+        handle.addObserver(this);
 
         return true;
-      }
-      else {
+      } else {
         if (handle.proximity() == Integer.MAX_VALUE) {
           // wait until the proximity value is available
 
-	  handle.ping(); // XXX - eventually, should only ping handles pinged from the deserializer
+          handle.ping(); // XXX - eventually, should only ping handles pinged from the deserializer
           handle.addObserver(this);
+
           return false;
-        }
-        else if (handle.proximity() < worstProximity) {
+        } else if (handle.proximity() < worstProximity) {
           // remove handle with worst proximity
           setChanged();
           notifyObservers(new NodeSetUpdate(nodes[worstIndex], false));
 
-	  // in case we observe this handle, stop doing so
-	  nodes[worstIndex].deleteObserver(this);
+          // in case we observe this handle, stop doing so
+          nodes[worstIndex].deleteObserver(this);
 
           // insert new handle
           nodes[worstIndex] = handle;
 
           setChanged();
           notifyObservers(new NodeSetUpdate(handle, true));
+          handle.addObserver(this);
 
           return true;
+        } else {
+          return false;
         }
-        else return false;
       }
     }
 
@@ -148,12 +149,10 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
     public void update(Observable o, Object arg) {
       // if the proximity is initialized for the time, insert the handle
       if (((Integer) arg) == NodeHandle.PROXIMITY_CHANGED) {
-
-	//System.out.println("RouteSet:update(), inserting pinged node");
-        put((NodeHandle) o);   
-
-	// we're no longer interested in this handle
-	o.deleteObserver(this);
+        put((NodeHandle) o);  
+      } else if (((Integer) arg) == NodeHandle.DECLARED_DEAD) {
+        // changed to remove dead handles - AM 
+        remove((NodeHandle) o);
       }
     }
 
@@ -164,46 +163,52 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
      *
      * @return the removed handle or null.
      */
-
-  public NodeHandle remove(NodeId nid) {
-    for (int i=0; i<theSize; i++) {
-      if (nodes[i].getNodeId().equals(nid)) {
-        NodeHandle handle = nodes[i];
-
-        nodes[i] = nodes[--theSize];
-
-        setChanged();
-        notifyObservers(new NodeSetUpdate(handle, false));
-
-  // in case we observe this handle, stop doing so
-  handle.deleteObserver(this);
-
-        return handle;
+    public NodeHandle remove(NodeId nid) {
+      for (int i=0; i<theSize; i++) {
+        if (nodes[i].getNodeId().equals(nid)) {
+          NodeHandle handle = nodes[i];
+          
+          nodes[i] = nodes[--theSize];
+          
+          setChanged();
+          notifyObservers(new NodeSetUpdate(handle, false));
+          
+          // in case we observe this handle, stop doing so
+          handle.deleteObserver(this);
+          
+          return handle;
+        }
       }
+      
+      return null;
     }
-
-    return null;
-  }
-
-  public NodeHandle remove(NodeHandle nh) {
-    for (int i=0; i<theSize; i++) {
-      if (nodes[i].equals(nh)) {
-        NodeHandle handle = nodes[i];
-
-        nodes[i] = nodes[--theSize];
-
-        setChanged();
-        notifyObservers(new NodeSetUpdate(handle, false));
-
-  // in case we observe this handle, stop doing so
-  handle.deleteObserver(this);
-
-        return handle;
+    
+    /**
+     * Removes a node from a set.
+     *
+     * @param nid the node id to remove.
+     *
+     * @return the removed handle or null.
+     */
+    public NodeHandle remove(NodeHandle nh) {
+      for (int i=0; i<theSize; i++) {
+        if (nodes[i].equals(nh)) {
+          NodeHandle handle = nodes[i];
+          
+          nodes[i] = nodes[--theSize];
+          
+          setChanged();
+          notifyObservers(new NodeSetUpdate(handle, false));
+          
+          // in case we observe this handle, stop doing so
+          handle.deleteObserver(this);
+          
+          return handle;
+        }
       }
+      
+      return null;
     }
-
-    return null;
-  }
 
     /**
      * Membership test.
@@ -212,34 +217,38 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
      *
      * @return true if it is a member, false otherwise.
      */
-
-  public boolean member(NodeHandle nh) {
-    for (int i=0; i<theSize; i++)
-      if (nodes[i].equals(nh)) return true;
-
-    return false;
-  }
-
-  public boolean member(NodeId nid) {
-    for (int i=0; i<theSize; i++)
-      if (nodes[i].getNodeId().equals(nid)) return true;
-
-    return false;
-  }
-
+    public boolean member(NodeHandle nh) {
+      for (int i=0; i<theSize; i++)
+        if (nodes[i].equals(nh)) return true;
+      
+      return false;
+    }
+    
+    /**
+     * Membership test.
+     *
+     * @param nid the node id to membership of.
+     *
+     * @return true if it is a member, false otherwise.
+     */
+    public boolean member(NodeId nid) {
+      for (int i=0; i<theSize; i++)
+        if (nodes[i].getNodeId().equals(nid)) return true;
+      
+      return false;
+    }
+    
     /**
      * Return the current size of the set.
      *
      * @return the size.
      */
-
     public int size() { return theSize; }
 
     /**
      * Pings all new nodes in the RouteSet.
      * No longer- Called from RouteMaintenance.
      */
-
     public void pingAllNew() {
       for (int i=0; i<theSize; i++) {
         if (nodes[i].proximity() == Integer.MAX_VALUE)
@@ -247,25 +256,27 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
       }
     }
 
-  /**
-   * Return the closest live node in the set.
-   *
-   * @return the closest node, or null if no live node exists in the set.
-   */
-  public NodeHandle closestNode() {
-    return closestNode(NodeHandle.LIVENESS_SUSPECTED);
-  }
     /**
      * Return the closest live node in the set.
      *
      * @return the closest node, or null if no live node exists in the set.
      */
-  public NodeHandle closestNode(int minLiveness) {
+    public NodeHandle closestNode() {
+      return closestNode(NodeHandle.LIVENESS_SUSPECTED);
+    }
+    
+    /**
+     * Return the closest live node in the set.
+     *
+     * @return the closest node, or null if no live node exists in the set.
+     */
+    public NodeHandle closestNode(int minLiveness) {
       int bestProximity = Integer.MAX_VALUE;
       NodeHandle bestNode = null;
 
       for (int i=0; i<theSize; i++) {
-        if (!(nodes[i].getLiveness() <= minLiveness) /*isAlive()*/) continue;        
+        if (nodes[i].getLiveness() > minLiveness) continue;  
+        
         int p = nodes[i].proximity();
         if (p <= bestProximity) {
           bestProximity = p;
@@ -273,9 +284,6 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
           closest = i;
         }
       }
-
-      //System.out.println(bestProximity);
-      //System.out.println(nodes.length);
 
       // If a backup node handle bubbles up to the top, ping it.
       if (bestNode != null && bestProximity == Integer.MAX_VALUE)
@@ -289,7 +297,6 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
      *
      * @return the ith node.
      */
-
     public NodeHandle get(int i) {
       if (i < 0 || i >= theSize) throw new NoSuchElementException();
 
@@ -303,10 +310,9 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
      *
      * @return the node handle.
      */
-
     public NodeHandle get(NodeId nid) {
-	for (int i=0; i<theSize; i++)
-	  if (nodes[i].getNodeId().equals(nid)) return nodes[i];
+      for (int i=0; i<theSize; i++)
+        if (nodes[i].getNodeId().equals(nid)) return nodes[i];
 
       return null;
     }
@@ -316,26 +322,29 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
      *
      * @return the node.
      */
+    public int getIndex(NodeId nid) {
+      for (int i=0; i<theSize; i++)
+        if (nodes[i].getNodeId().equals(nid)) return i;
 
-  public int getIndex(NodeId nid) {
-    for (int i=0; i<theSize; i++)
-      if (nodes[i].getNodeId().equals(nid)) return i;
-
-    return -1;
-  }
-
-  public int getIndex(NodeHandle nh) {
-    for (int i=0; i<theSize; i++)
-      if (nodes[i].equals(nh)) return i;
-
-    return -1;
-  }
-
+      return -1;
+    }
+    
+    /**
+     * Get the index of the node id.
+     *
+     * @return the node.
+     */ 
+    public int getIndex(NodeHandle nh) {
+      for (int i=0; i<theSize; i++)
+        if (nodes[i].equals(nh)) return i;
+      
+      return -1;
+    }
+    
     /**
      * deserialize the routeSet
      * pings the handle the was the closests on the sending node
      */
-
     private void readObject(ObjectInputStream in)
       throws IOException, ClassNotFoundException {
       nodes = (NodeHandle[]) in.readObject();
@@ -349,7 +358,6 @@ public class RouteSet extends Observable implements NodeSetI, Serializable, Obse
      * serialize the RouteSet
      * records the closest node
      */
-
     private void writeObject(ObjectOutputStream out)
       throws IOException, ClassNotFoundException {
       if (closest == -1) closestNode();

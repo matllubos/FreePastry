@@ -270,10 +270,7 @@ public class SocketSourceRouteManager {
    * @param proximity The proximity
    */
   protected synchronized void markProximity(SourceRoute route, int proximity) {
-    AddressManager am = (AddressManager) managers.get(route.getLastHop());
-    
-    if (am != null)
-      am.markProximity(route, proximity);
+    getAddressManager(route.getLastHop(), false).markProximity(route, proximity);
   }
   
   /**
@@ -498,8 +495,15 @@ public class SocketSourceRouteManager {
      */
     protected synchronized void markProximity(SourceRoute route, int proximity) {
       if (this.proximity > proximity) {
+        // first, we check and see if we have no best route (this can happen if the best just died)
+        if (best == null) {
+          debug("No previous best route existed to " + address + " route " + route + " is now the best");
+          best = route;        
+        }
+        
         this.proximity = proximity;
         pool.update(address, SocketNodeHandle.PROXIMITY_CHANGED);
+        setAlive();
       }
     }
       
