@@ -748,7 +748,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
         /* Only after the fragment has been successfully stored do we
            reply with a ReceiptMessage! */
 
-        storage.store(gim.getKey(), gim.getFragment(),
+        storage.store(gim.getKey(), null, gim.getFragment(),
           new Continuation() {
             public void receiveResult(Object o) {
               endpoint.route(

@@ -523,7 +523,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       
     if ((cmd.length() >= 11) && cmd.substring(0, 11).equals("refresh all")) {
       long expiration = System.currentTimeMillis() + Long.parseLong(cmd.substring(12));
-      TreeSet ids = new TreeSet();
+      IdSet ids = factory.buildIdSet();
       String result;
       
       resetMarkers();
@@ -534,21 +534,22 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         if (!aggr.marker) {
           aggr.marker = true;
           for (int i=0; i<aggr.objects.length; i++)
-            ids.add(aggr.objects[i].key);
+            ids.addId(aggr.objects[i].key);
         }
       }
       
-      if (!ids.isEmpty()) {
-        Id[] allIds = (Id[]) ids.toArray(new Id[] {});
-        result = "Refreshing " + allIds.length + " keys...\n";
-        for (int i=0; i<allIds.length; i++)
-          result = result + "#" + i + " " + allIds[i].toStringFull() + "\n";
+      if (ids.numElements() > 0) {
+        result = "Refreshing " + ids.numElements() + " keys...\n";
+        Iterator iter = ids.getIterator();
+        int i = 0;
+        while (iter.hasNext())
+          result = result + "#" + (i++) + " " + ((Id)iter.next()).toStringFull() + "\n";
       
         final String[] ret = new String[] { null };
-        refresh(allIds, expiration, new Continuation() {
+        refresh(ids, expiration, new Continuation() {
           public void receiveResult(Object o) {
             ret[0] = "result("+o+")";
-          }
+          };
           public void receiveException(Exception e) {
             ret[0] = "exception("+e+")";
           }
@@ -569,10 +570,12 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       String keyArg = args.substring(0, args.lastIndexOf(' '));
 
       Id id = factory.buildIdFromToString(keyArg);
+      IdSet idSet = factory.buildIdSet();
       long expiration = System.currentTimeMillis() + Long.parseLong(expirationArg);
+      idSet.addId(id);
 
       final String[] ret = new String[] { null };
-      refresh(new Id[] { id }, expiration, new Continuation() {
+      refresh(idSet, expiration, new Continuation() {
         public void receiveResult(Object o) {
           ret[0] = "result("+o+")";
         }
@@ -893,7 +896,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             if (aggregateStore instanceof GCPast) {
               final AggregateDescriptor aggrF = aggr;
               final long maxLifetimeF = maxLifetime;
-              ((GCPast)aggregateStore).refresh(new Id[] { aggr.key }, maxLifetime, new Continuation() {
+              final IdSet idSet = factory.buildIdSet();
+              idSet.addId(aggr.key);
+              ((GCPast)aggregateStore).refresh(idSet, maxLifetime, new Continuation() {
                 public void receiveResult(Object o) {
                   if (o instanceof Object[]) {
                     Object[] oA = (Object[]) o;
@@ -1010,21 +1015,26 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private void refreshInObjectStore(Id id, long expiration, Continuation command) {
     if (objectStore instanceof GCPast) {
-      ((GCPast)objectStore).refresh(new Id[] { id }, expiration, command);
+      IdSet idSet = factory.buildIdSet();
+      idSet.addId(id);
+      ((GCPast)objectStore).refresh(idSet, expiration, command);
     } else {
       command.receiveResult(new Boolean(true));
     }
   }
   
-  public void refresh(final Id[] id, final long expiration, final Continuation command) {
-    if (id.length < 1) {
+  public void refresh(final IdSet idSet, final long expiration, final Continuation command) {
+    if (idSet.numElements() < 1) {
       command.receiveResult(new Boolean[] {});
       return;
     }
     
-    Continuation.MultiContinuation mc = new Continuation.MultiContinuation(command, id.length);
-    for (int i=0; i<id.length; i++)
-      refresh(id[i], expiration, mc.getSubContinuation(i));
+    Continuation.MultiContinuation mc = new Continuation.MultiContinuation(command, idSet.numElements());
+    Iterator iter = idSet.getIterator();
+    int i = 0;
+    
+    while (iter.hasNext())
+      refresh((Id) iter.next(), expiration, mc.getSubContinuation(i++));
   }
 
   private void refresh(final Id id, final long expiration, final Continuation command) {
@@ -1071,7 +1081,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
               if (policy.shouldBeAggregated(obj, theSize)) {
                 log("ADDING MISSING AGGRGATE: "+obj.getId());
 
-                waitingList.store(vkey, obj, new Continuation() {
+                waitingList.store(vkey, null, obj, new Continuation() {
                   public void receiveResult(Object o) {
                     waiting.add(new ObjectDescriptor(obj.getId(), theVersionF, expiration, expiration, theSize));
                   }
@@ -1246,7 +1256,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       log("AGGREGATE INSERT: "+obj.getId());
 
       objectStore.insert(obj, command);
-      waitingList.store(vkey, obj, new Continuation() {
+      waitingList.store(vkey, null, obj, new Continuation() {
         public void receiveResult(Object o) {
           waiting.add(new ObjectDescriptor(obj.getId(), theVersionF, lifetime, lifetime, theSize));
         }

@@ -239,7 +239,7 @@ public class ReplicationRegrTest extends CommonAPITest {
       
       while (i.hasNext()) {
         Id next = (Id) i.next();
-        storage.store(next, next, new ListenerContinuation("Insertion of " + next));
+        storage.store(next, null, next, new ListenerContinuation("Insertion of " + next));
       }
     }
     
@@ -277,7 +277,7 @@ public class ReplicationRegrTest extends CommonAPITest {
     }
     
     public void insert(Id id) {
-      storage.store(id, id, new ListenerContinuation("Insertion of id " + id));
+      storage.store(id, null, id, new ListenerContinuation("Insertion of id " + id));
     }
   }
 }
