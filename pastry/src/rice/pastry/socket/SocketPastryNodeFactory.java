@@ -202,9 +202,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @return A node with a random ID and next port number.
    */
   public PastryNode newNode(NodeHandle bootstrap) {
-    if (bootstrap == null) {
-      return newNode(bootstrap, NodeId.buildNodeId());
-    } 
+//    if (bootstrap == null) {
+//      return newNode(bootstrap, NodeId.buildNodeId());
+//    } 
     return newNode(bootstrap, nidFactory.generateNodeId());
   }
 
