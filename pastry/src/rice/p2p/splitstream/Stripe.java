@@ -41,11 +41,6 @@ public class Stripe implements ScribeClient {
   protected boolean isPrimary;
 
   /**
-   * The stripe state, whether it is dropped, connected, etc.
-   */
-  protected boolean subscribed;
-
-  /**
    * The list of SplitStreamClients interested in data from this client
    */
   protected Vector clients;
@@ -59,7 +54,6 @@ public class Stripe implements ScribeClient {
   public Stripe(StripeId stripeId, Scribe scribe) {
     this.stripeId = stripeId;
     this.scribe = scribe;
-    this.subscribed = false;
     this.isPrimary = false;
     // NEED TO ADD PRIMARY LOGIC HERE
 
@@ -91,7 +85,7 @@ public class Stripe implements ScribeClient {
    * @return the State the stripe is in
    */
   public boolean isSubscribed() {
-    return subscribed;
+    return (clients.size() != 0);
   }
 
   /**
@@ -100,7 +94,11 @@ public class Stripe implements ScribeClient {
    * @param client The client to add
    */
   public void subscribe(SplitStreamClient client) {
-    if (!clients.contains(client)) {
+    if (! clients.contains(client)) {
+      if (clients.size() == 0) {
+        scribe.subscribe(topic, this);
+      }
+
       clients.add(client);
     }
   }
@@ -111,17 +109,19 @@ public class Stripe implements ScribeClient {
    * @param client The client to remove
    */
   public void unsubscribe(SplitStreamClient client) {
-    clients.remove(client);
+    if (clients.contains(client)) {
+      clients.remove(client);
+
+      if (clients.size() == 0) {
+        scribe.unsubscribe(topic, this);
+      }
+    }
   }
 
   /**
    * Leaves this stripe This causes us to stop getting data and to leave the scribe topic group
    */
   public void leaveStripe() {
-    if (subscribed) {
-      scribe.unsubscribe(topic, this);
-      subscribed = false;
-    }
   }
 
   /**
@@ -129,10 +129,6 @@ public class Stripe implements ScribeClient {
    * received
    */
   public void joinStripe() {
-    if (! subscribed) {
-      scribe.subscribe(topic, this);
-      subscribed = true;
-    }
   }
 
   /**

@@ -35,4 +35,20 @@ public class StripeId {
   public Id getId() {
     return id;
   }
+
+  public String toString() {
+    return "[StripeId " + ((rice.pastry.Id)id).toStringFull() + "]";
+  }
+
+  public int hashCode() {
+    return id.hashCode();
+  }
+
+  public boolean equals(Object o) {
+    if (! (o instanceof StripeId)) {
+      return false;
+    }
+
+    return ((StripeId) o).id.equals(id);
+  }
 }

@@ -1,6 +1,7 @@
 package rice.p2p.splitstream;
 
-import java.io.Serializable;
+import java.io.*;
+import java.math.*;
 import java.util.*;
 
 import rice.p2p.commonapi.*;
@@ -99,16 +100,59 @@ public class Channel {
    * @return The array of stripeIds based on this channelId
    */
   protected static StripeId[] generateStripeIds(ChannelId id, IdFactory factory) {
-/*    int num = Math.exp(2, STRIPE_BASE);
+    int num = (int) Math.pow(2, STRIPE_BASE);
     StripeId[] stripeIds = new StripeId[num];
 
     for (int i=0; i<num; i++) {
-      byte[] array = id.toByteArray();
-      // NEED TO SET ARRAY HERE TO BE APPROPRIATELY PREFIXED
-      stripeIds[i] = new StripeId(array);
+      byte[] array = id.getId().toByteArray();
+      stripeIds[i] = new StripeId(factory.buildId(process(array, STRIPE_BASE, i)));
     }
 
-    return stripeIds; */
-    return null;
+    return stripeIds; 
+  }
+
+  /**
+   * Returns a new array, of the same length as array, with the first
+   * base bits set to represent num.
+   *
+   * @param array The input array
+   * @param base The number of bits to replace
+   * @param num The number to replace the first base bits with
+   * @return A new array
+   */
+  private static byte[] process(byte[] array, int base, int num) {
+    int length = array.length * 8;
+    BigInteger bNum = new BigInteger(num + "");
+    bNum = bNum.shiftLeft(length-base);
+    BigInteger bArray = new BigInteger(1, switchEndian(array));
+    
+    for (int i=length-1; i>length-base-1; i--) {
+      if (bNum.testBit(i)) {
+        bArray = bArray.setBit(i);
+      } else {
+        bArray = bArray.clearBit(i);
+      }
+    }
+
+    byte[] newArray = bArray.toByteArray();
+    byte[] result = new byte[array.length];
+    
+    if (newArray.length <= array.length) {
+      System.arraycopy(newArray, 0, result, result.length-newArray.length, newArray.length);
+    } else {
+      System.arraycopy(newArray, newArray.length-array.length, result, 0, array.length);
+    }
+    
+    return switchEndian(result);
+  }
+
+  private static byte[] switchEndian(byte[] array) {
+    byte[] result = new byte[array.length];
+
+    for (int i=0; i<result.length; i++) {
+      result[i] = array[result.length-1-i];
+    }
+
+    return result;
   }
 }
