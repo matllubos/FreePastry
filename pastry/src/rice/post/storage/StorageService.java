@@ -33,7 +33,12 @@ public class StorageService {
   /**
    * The PAST service used for distributed persistant storage.
    */
-  private Past past;
+  private Past immutablePast;
+  
+  /**
+   * The PAST service used for distributed persistant storage.
+   */
+  private Past mutablePast;
   
   /**
    * The keyPair used to sign and verify objects
@@ -62,9 +67,10 @@ public class StorageService {
    * @param credentials Credentials to use to store data.
    * @param keyPair The keypair to sign/verify data with
    */
-  public StorageService(PostEntityAddress address, Past past, IdFactory factory, KeyPair keyPair) {
+  public StorageService(PostEntityAddress address, Past immutablePast, Past mutablePast, IdFactory factory, KeyPair keyPair) {
     this.entity = address;
-    this.past = past;
+    this.immutablePast = immutablePast;
+    this.mutablePast = mutablePast;
     this.keyPair = keyPair;
     this.factory = factory;
     
@@ -289,7 +295,7 @@ public class StorageService {
         final ContentHashData chd = new ContentHashData(location, cipherText);
         final Continuation task = this;
 
-        past.lookupHandles(chd.getId(), past.getReplicationFactor(), new StandardContinuation(command) {
+        immutablePast.lookupHandles(chd.getId(), immutablePast.getReplicationFactor(), new StandardContinuation(command) {
           public void receiveResult(Object o) {
             PastContentHandle[] handles = (PastContentHandle[]) o;
             
@@ -301,7 +307,7 @@ public class StorageService {
             }
             
             // Store the content hash data in PAST
-            past.insert(chd, task);
+            immutablePast.insert(chd, task);
           }
         });
 
@@ -373,7 +379,7 @@ public class StorageService {
      */
     protected void start() {
       System.out.println(reference.getLocation() + " " + System.currentTimeMillis() + ": Starting PAST lookup");
-      past.lookup(reference.getLocation(), this);
+      immutablePast.lookup(reference.getLocation(), this);
 
       // Now we wait until PAST calls us with the receiveResult
       // and then we continue processing this call
@@ -485,7 +491,7 @@ public class StorageService {
         sd.setSignature(SecurityUtils.sign(sd.getDataAndTimestamp(), keyPair.getPrivate()));
 
         // Store the signed data in PAST 
-        past.insert(sd, this);
+        mutablePast.insert(sd, this);
 
         // Now we wait to make sure that the update or insert worked, and
         // then return the reference.
@@ -555,7 +561,7 @@ public class StorageService {
       * Starts this task running.
      */
     protected void start() {
-      past.lookupHandles(reference.getLocation(), past.getReplicationFactor(), this);
+      mutablePast.lookupHandles(reference.getLocation(), mutablePast.getReplicationFactor(), this);
 
       // Now we wait until PAST calls us with the receiveResult
       // and then we continue processing this call
@@ -588,7 +594,7 @@ public class StorageService {
         }
 
         if (handle != null) {
-          past.fetch(handle, this);
+          mutablePast.fetch(handle, this);
         } else {
           command.receiveResult(null);
         }
@@ -724,7 +730,7 @@ public class StorageService {
         SecureData sd = new SecureData(location, cipherText);
 
         // Store the content hash data in PAST
-        past.insert(sd, this);
+        immutablePast.insert(sd, this);
 
         // Now we wait until PAST calls us with the receiveResult
         // and then we return the address
@@ -793,7 +799,7 @@ public class StorageService {
       * Starts this task running.
      */
     protected void start() {
-      past.lookup(reference.getLocation(), this);
+      immutablePast.lookup(reference.getLocation(), this);
 
       // Now we wait until PAST calls us with the receiveResult
       // and then we continue processing this call
