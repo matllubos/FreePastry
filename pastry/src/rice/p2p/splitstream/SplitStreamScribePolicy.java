@@ -45,7 +45,7 @@ public class SplitStreamScribePolicy implements ScribePolicy {
   public SplitStreamScribePolicy(Scribe scribe, SplitStream splitStream) {
     this.scribe = scribe;
     this.splitStream = splitStream;
-    this.policy = policy;
+    this.policy = new Hashtable();
   }
 
   /**
@@ -85,17 +85,20 @@ public class SplitStreamScribePolicy implements ScribePolicy {
    * @return Whether or not this child should be allowed add.
    */
   public boolean allowSubscribe(SubscribeMessage message, ScribeClient[] clients, NodeHandle[] children) {
-    if ((clients.length == 0) && (children.length == 0)) {
+    System.out.println("ANALYSIZING MESSAGE " + message + " CLIENTS " + clients.length + " CHILDREN " + children.length + " ROOT " + scribe.isRoot(message.getTopic()));
+    
+    if ((clients.length == 0) && (children.length == 0) && (! scribe.isRoot(message.getTopic()))) {
       return false;
     }
-
+    
     Channel channel = getChannel(message.getTopic());
 
     if (channel == null) {
-      return false;
+      // here, we are the root, so we accept it only if we don't already have a child
+      // this is the only implicit subscription in the system
+      return (children.length == 0);
     } else {
       int max = getMaxChildren(channel.getChannelId());
-
       return (getTotalChildren(channel) < (max - 1));
     }
   }
@@ -112,6 +115,9 @@ public class SplitStreamScribePolicy implements ScribePolicy {
     message.addFirst(parent);
 
     // NEED TO ADD CHILDREN/PARENTS SELECTIVELY HERE
+    for (int i=0; i<children.length; i++) {
+      message.addLast(children[i]);
+    }
   }
 
   /**

@@ -81,6 +81,8 @@ public class AnycastMessage extends ScribeMessage {
     this.content = content;
     this.visited = new Vector();
     this.toVisit = new LinkedList();
+
+    addVisited(source);
   }
 
   /**

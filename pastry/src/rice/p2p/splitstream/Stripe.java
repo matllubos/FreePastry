@@ -193,5 +193,14 @@ public class Stripe implements ScribeClient {
    */
   public void childRemoved(Topic topic, NodeHandle child) {
   }
+
+  /**
+    * Returns a String representation of this Stripe
+   *
+   * @return A String representing this stripe
+   */
+  public String toString() {
+    return "Stripe " + stripeId;
+  }
 }
 

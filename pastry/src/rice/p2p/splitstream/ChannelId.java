@@ -46,7 +46,7 @@ public class ChannelId {
   }
 
   public String toString() {
-    return "[ChannelId " + ((rice.pastry.Id)id).toStringFull() + "]";
+    return "[ChannelId " + id + "]";
   }
 
   public int hashCode() {

@@ -119,5 +119,13 @@ public interface Scribe {
    * @param policy The current policy for this scribe
    */
   public void setPolicy(ScribePolicy policy);
+
+  /**
+   * Returns whether or not this Scribe is the root for the given topic
+   *
+   * @param topic The topic in question
+   * @return Whether or not we are currently the root
+   */
+  public boolean isRoot(Topic topic);
 }
 

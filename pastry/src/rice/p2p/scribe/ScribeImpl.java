@@ -153,6 +153,21 @@ public class ScribeImpl implements Scribe, Application {
     return new NodeHandle[0];
   }
 
+  /**
+   * Returns whether or not this Scribe is the root for the given topic
+   *
+   * @param topic The topic in question
+   * @return Whether or not we are currently the root
+   */
+  public boolean isRoot(Topic topic) {
+    NodeHandleSet set = endpoint.replicaSet(topic.getId(), 1);
+
+    if (set.size() == 0)
+      return false;
+    else
+      return set.getHandle(0).getId().equals(endpoint.getId());
+  }
+
   // ----- SCRIBE METHODS -----
 
   /**
@@ -334,16 +349,16 @@ public class ScribeImpl implements Scribe, Application {
         // see if the policy will allow us to take on this child
         if (policy.allowSubscribe(sMessage, clients, handles)) {
           log.finer(endpoint.getId() + ": Hijacking subscribe message from " +
-            sMessage.getSource() + " for topic " + sMessage.getTopic());
+            sMessage.getSubscriber() + " for topic " + sMessage.getTopic());
 
           // if so, add the child
-          addChild(sMessage.getTopic(), sMessage.getSource());
+          addChild(sMessage.getTopic(), sMessage.getSubscriber());
           return false;
         }
 
         // otherwise, we are effectively rejecting the child
         log.finer(endpoint.getId() + ": Rejecting subscribe message from " +
-          sMessage.getSource() + " for topic " + sMessage.getTopic());
+          sMessage.getSubscriber() + " for topic " + sMessage.getTopic());
 
         // if we are not associated with this topic at all, we simply let the subscribe go
         // closer to the root
@@ -420,7 +435,7 @@ public class ScribeImpl implements Scribe, Application {
       // the root
       if (aMessage.getSource().getId().equals(endpoint.getId())) {
         if (aMessage instanceof SubscribeMessage) {
-          log.info(endpoint.getId() + ": Received our own subscribe message for topic " +
+          log.info(endpoint.getId() + ": Received our own subscribe message " + aMessage + " for topic " +
             aMessage.getTopic() + " - we are the root.");
         } else {
           log.warning(endpoint.getId() + ": Received unexpected delivered anycast message for topic " +
@@ -721,4 +736,3 @@ public class ScribeImpl implements Scribe, Application {
     }
   }
 }
-

@@ -97,13 +97,19 @@ public class SplitStreamRegrTest extends CommonAPITest {
   protected void testBasic() {
      int creator  = rng.nextInt(NUM_NODES);
      ChannelId id = new ChannelId(generateId());
-     ssclients[creator].createChannel(id); 
+     ssclients[creator].createChannel(id);
+     simulate();
      for(int i = 0; i < NUM_NODES; i++){
        ssclients[i].attachChannel(id);
+       simulate();
        ssclients[i].getStripes();
+       simulate();
        ssclients[i].subscribeStripes();
+       simulate();
      }
 
+     ssclients[creator].publishAll(new byte[0]);
+     simulate();
   }
 
   /**
@@ -149,11 +155,11 @@ public class SplitStreamRegrTest extends CommonAPITest {
       log("Client Created " + n);
    }
    public void joinFailed(Stripe s){
-      log("Join Failed on Stripe " + s);
+      log("Join Failed on " + s);
    }
 
    public void deliver(Stripe s, byte[] data){
-      log("Data recieved on Stripe" + s);
+      log("Data recieved on " + s);
   }
    
    public void createChannel(ChannelId cid){
@@ -179,11 +185,13 @@ public class SplitStreamRegrTest extends CommonAPITest {
       } 
    }
    public void publishAll(byte[] b){
+     log("Publishing to all Stripes.");
      for(int i = 0; i < stripes.length; i++){
         publish(b, stripes[i]);
      }
-   } 
+   }
    public void publish(byte[] b, Stripe s){
+     log("Publishing to " + s);
        s.publish(b);
    }
 

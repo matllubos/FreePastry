@@ -49,6 +49,11 @@ import rice.p2p.scribe.*;
 public class SubscribeMessage extends AnycastMessage {
 
   /**
+   * The original subscriber
+   */
+  protected NodeHandle subscriber;
+
+  /**
    * Constructor which takes a unique integer Id
    *
    * @param source The source address
@@ -56,6 +61,17 @@ public class SubscribeMessage extends AnycastMessage {
    */
   public SubscribeMessage(NodeHandle source, Topic topic) {
     super(source, topic, null);
+
+    this.subscriber = source;
+  }
+
+  /**
+   * Returns the node who is trying to subscribe
+   *
+   * @return The node who is attempting to subscribe
+   */
+  public NodeHandle getSubscriber() {
+    return subscriber;
   }
 
 }

@@ -37,7 +37,7 @@ public class StripeId {
   }
 
   public String toString() {
-    return "[StripeId " + ((rice.pastry.Id)id).toStringFull() + "]";
+    return "[StripeId " + id + "]";
   }
 
   public int hashCode() {
