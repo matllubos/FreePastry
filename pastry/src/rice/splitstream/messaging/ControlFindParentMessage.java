@@ -8,13 +8,14 @@ import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 import java.util.Vector;
 import java.lang.Boolean;
+import java.io.Serializable;
 
 /**
  * This class represents the anycast message sent by a node upon receiving a
  * drop notification from its former parent.  It is sent to the spare
  * capacity tree in an attempt to find a new parent.
  */
-public class ControlFindParentMessage extends MessageAnycast
+public class ControlFindParentMessage extends Message implements Serializable
 {
     Vector send_to;
     Vector already_seen;
@@ -26,7 +27,7 @@ public class ControlFindParentMessage extends MessageAnycast
 
     public ControlFindParentMessage( Address addr, NodeHandle source, NodeId topicId, Credentials c, StripeId stripe_id, ChannelId channel_id)
     {
-       super( addr, source, topicId, c );
+       super( addr );
        send_to = new Vector();
        already_seen = new Vector();
        this.stripe_id = stripe_id;
@@ -75,13 +76,6 @@ public class ControlFindParentMessage extends MessageAnycast
         return total;
     }
 
-    public void handleForwardWrapper( Scribe scribe, Topic topic, Stripe s )
-    {
-        System.out.println("Handle Forward Wrapper");
-        recv_stripe = s;
-        this.handleForwardMessage( scribe, topic );
-    }
-
     /**
      * This is the callback method for when this message should be forwarded to another
      * node in the spare capacity tree.  This node does not have any spare capacity
@@ -89,12 +83,12 @@ public class ControlFindParentMessage extends MessageAnycast
      * @param scribe The SplitStream application
      * @param topic The stripe that this message is relevant to
      */
-    public boolean handleForwardMessage( Scribe scribe, Topic topic )
+    public void handleMessage( Scribe scribe, Topic topic, Channel channel )
     {
         if(topic == null) System.out.println("TOPIC IS NULL");
         System.out.println("Forwarding at " + scribe.getNodeId());
         Credentials c = new PermissiveCredentials();
-        if ( topic == null )
+/*        if ( topic == null )
         {
            if ( send_to.size() != 0 )
            {
@@ -110,11 +104,11 @@ public class ControlFindParentMessage extends MessageAnycast
            }
            else
            {
-              scribe.routeMsgDirect( this.getSource(), this, c, null );
+              scribe.routeMsgDirect( originalSource, this, c, null );
            }
         }
         else
-        {
+        { */
         if ( send_to.size() != 0 )
         {
             already_seen.add( 0, send_to.remove(0) );
@@ -123,22 +117,28 @@ public class ControlFindParentMessage extends MessageAnycast
         {
             already_seen.add( 0, scribe.getNodeHandle() );
         }
-        int default_children;
-        if ( recv_stripe != null )
+        BandwidthManager bandwidthManager = channel.getBandwidthManager();
+
+        if ( ( bandwidthManager.canTakeChild( channel ) ) &&
+             ( !isInRootPath( scribe, originalSource ) ) &&
+             ( originalSource != scribe.getLocalHandle()) )
         {
-           BandwidthManager bandwidthManager = recv_stripe.getChannel().getBandwidthManager();
-           default_children = bandwidthManager.getDefaultChildren();
-        }
-        else
-        {
-	   System.out.println("recv_stripe is null");
-           default_children = DEFAULT_CHILDREN;
-        }
-        if ( ( aggregateNumChildren( scribe ) < default_children ) &&
-             ( !isInRootPath( scribe, this.getSource() ) ) &&
-             ( this.getSource() != scribe.getLocalHandle()) )
-        {
-            this.handleDeliverMessage( scribe, topic );
+           scribe.addChild( originalSource, stripe_id );
+           scribe.routeMsgDirect( originalSource,
+                                  new ControlFindParentResponseMessage( scribe.getAddress(),
+                                                                        scribe.getNodeHandle(),
+                                                                        channel_id,
+                                                                        c,
+                                                                        new Boolean( true ), stripe_id ),
+                                  c,
+                                  null );
+           int default_children;
+
+           if ( !bandwidthManager.canTakeChild( channel ) )
+           {
+               scribe.leave( topic.getTopicId(), null, c );
+           }
+
         }
         else
         {
@@ -164,7 +164,7 @@ public class ControlFindParentMessage extends MessageAnycast
                 }
                 else
                 {
-                    scribe.routeMsgDirect( this.getSource(),
+                    scribe.routeMsgDirect( originalSource,
                                            new ControlFindParentResponseMessage( scribe.getAddress(),
                                                                                  scribe.getNodeHandle(),
                                                                                  channel_id,
@@ -175,50 +175,7 @@ public class ControlFindParentMessage extends MessageAnycast
                 }
             }
         }
-        }
-        return true;
-    }
-
-    /**
-     * This is the callback method for when this message is accepted
-     * by the current node (i.e., this node has the potential to act
-     * as a parent to the node that sent the message).  Note that
-     * this does not necessarily imply that the current node will
-     * fulfill the conditions to take on the message originator as a
-     * new child.
-     * @param scribe The SplitStream application
-     * @param topic The stripe that this message is relevant to
-     */
-    public void handleDeliverMessage( Scribe scribe, Topic topic )
-    {
-        Credentials c = new PermissiveCredentials();
-	System.out.println("Delivering from " + scribe.getNodeId());
-	System.out.println("Delivering to " + this.originalSource.getNodeId());
-	System.out.println("this.getSource() " + this.getSource().getNodeId());
-        scribe.addChild( this.getSource(), stripe_id );
-        scribe.routeMsgDirect( this.getSource(), 
-                               new ControlFindParentResponseMessage( scribe.getAddress(),
-                                                                     scribe.getNodeHandle(),
-                                                                     channel_id,
-                                                                     c,
-                                                                     new Boolean( true ), stripe_id ),
-                               c,
-                               null );
-        int default_children;
-        if ( recv_stripe != null )
-        {
-           BandwidthManager bandwidthManager = recv_stripe.getChannel().getBandwidthManager();
-           default_children = bandwidthManager.getDefaultChildren();
-        }
-        else
-        {
-           default_children = DEFAULT_CHILDREN;
-        }
-
-        if ( aggregateNumChildren( scribe ) >= default_children )
-        {
-            scribe.leave( topic.getTopicId(), null, c );
-        }
+        //}
     }
 
     public String toString()
