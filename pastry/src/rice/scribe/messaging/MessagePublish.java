@@ -164,13 +164,8 @@ public class MessagePublish extends ScribeMessage implements Serializable
 		}
 	    }
 	    
-	    // if waiting to find parent, now send unsubscription msg
-	    if ( topic.isWaitingUnsubscribe() ) {
-		topicId = topic.getTopicId();
-		scribe.unsubscribe( topicId, null, cred );
-		topic.waitUnsubscribe( false );
-	    }
-	    
+
+
 	    // if local node is subscriber of this topic, pass the event to
 	    // the registered applications' event handlers
 	    if ( topic.hasSubscribers() ) {
@@ -208,6 +203,7 @@ public class MessagePublish extends ScribeMessage implements Serializable
 	return new String( "PUBLISH MSG:" + m_source );
     }
 }
+
 
 
 
