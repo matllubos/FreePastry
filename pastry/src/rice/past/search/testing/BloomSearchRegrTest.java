@@ -922,7 +922,7 @@ public class BloomSearchRegrTest {
   }
 
   /**
-   * Usage: DistPASTSearchRegrTest [-port p] [-bootstrap host[:port]] [-protocol (rmi|wire)] [-help]
+   * Usage: BloomSearchRegrTest [-port p] [-bootstrap host[:port]] [-protocol (rmi|wire)] [-help]
    */
   public static void main(String args[]) {
 
