@@ -203,9 +203,32 @@ public class NodeIdUnit {
 
 	if (nid.indexOfMSDB(a) == a.indexOfMSDB(nid)) System.out.println("msdb is symmetric");
 	else System.out.println("ALERT: msdb is not symmetric");
+
+	for (int i=2; i<=6; i++) { 
+	    int msdd;
+
+	    System.out.println("msdd a and nid (base " + (1 << i) + ") " + (msdd = nid.indexOfMSDD(a, i)) + 
+			       " val=" + a.getDigit(msdd,i) + "," + nid.getDigit(msdd,i));
+	    System.out.println("msdd b and nid (base " + (1 << i) + ") " + (msdd = nid.indexOfMSDD(b, i)) +
+			       " val=" + b.getDigit(msdd,i) + "," + nid.getDigit(msdd,i));
+	}
+
+	System.out.println("--------------------------");
+    }
+
+
+    public void alternateTest() 
+    {
+	System.out.println("--------------------------");
 	
-	System.out.println("msdd a and nid (base 16) " + nid.indexOfMSDD(a, 4));
-	System.out.println("msdd b and nid (base 16) " + nid.indexOfMSDD(b, 4));
+	System.out.println("nid=" + nid);
+
+	for (int b=2; b<7; b++) 
+	    for (int num=2; num<=(1 << b); num*=2)
+		for (int i=1; i<num; i++) 
+		    System.out.println("alternate (b=" + b + ") " + i + ":" + 
+				       nid.getAlternateId(num, b, i));
+
 
 	System.out.println("--------------------------");
     }
@@ -221,6 +244,7 @@ public class NodeIdUnit {
 	distanceTest();
 	baseFiddlingTest();
 	msdTest();
+	alternateTest();
     }
     
     public static void main(String args[]) 

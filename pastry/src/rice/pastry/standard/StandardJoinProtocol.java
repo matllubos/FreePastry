@@ -148,10 +148,7 @@ public class StandardJoinProtocol implements MessageReceiver
 
 	    jh = security.verifyNodeHandle(jh);
 
-	    // can't insert a joining handle, else it might be routed to itself!!
-	    //if (jh.isAlive() == true) routeTable.put(jh);
-
-	    int base = RoutingTable.idBaseBitLength;
+	    int base = RoutingTable.baseBitLength();
 		
 	    int msdd = localId.indexOfMSDD(nid, base);
 	    int last = jr.lastRow();
@@ -216,7 +213,7 @@ public class StandardJoinProtocol implements MessageReceiver
 	for (int i=jr.lastRow(); i<n; i++) {
 	    RouteSet row[] = jr.getRow(i);
 
-	    int myCol = localHandle.getNodeId().getDigit(i,rice.pastry.routing.RoutingTable.idBaseBitLength);
+	    int myCol = localHandle.getNodeId().getDigit(i,rice.pastry.routing.RoutingTable.baseBitLength());
 	    NodeHandle nhMyCol = row[myCol].closestNode();
 	    row[myCol].put(localHandle);
 

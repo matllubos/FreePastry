@@ -62,7 +62,7 @@ public class PingTestRecord extends TestRecord{
     public PingTestRecord( int n, int k ){
 	super( n, k );
 
-	nIndex = (int) Math.ceil( Math.log(n)/Math.log(Math.pow(2,RoutingTable.idBaseBitLength)) );
+	nIndex = (int) Math.ceil( Math.log(n)/Math.log(Math.pow(2,RoutingTable.baseBitLength())) );
 	nIndex *= 3;
 	nHops = new int[nIndex];
 	fProb = new double[nIndex];

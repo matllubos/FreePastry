@@ -169,7 +169,7 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver
 	    RouteSet row[] = routeTable.getRow(i);
 	    BroadcastRouteRow brr = new BroadcastRouteRow(localHandle.getNodeId(), row);
 	    RequestRouteRow rrr = new RequestRouteRow(localHandle, i);
-	    int myCol = localHandle.getNodeId().getDigit(i, RoutingTable.idBaseBitLength);
+	    int myCol = localHandle.getNodeId().getDigit(i, RoutingTable.baseBitLength());
 	    int j;
 
 	    // try up to maxTrials times to find a column with live entries

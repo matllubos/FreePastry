@@ -54,7 +54,7 @@ import java.util.*;
  */
 
 public class StandardLeafSetProtocol implements MessageReceiver {
-    private final boolean failstop = true;  // nodes are assumed to fail silently
+    private final boolean failstop = false;  // nodes are assumed to fail silently
 
     private NodeHandle localHandle;
 

@@ -143,15 +143,18 @@ public class RegrTestApp extends PastryAppl {
 
 	NodeId localId = getNodeId();
 	NodeId.Distance dist = localId.distance(key);
+	int base = getRoutingTable().baseBitLength();
 
 	if (prg.lastMsg == msg) {
-	    if ( (localId.indexOfMSDD(key,4) > prg.lastNode.indexOfMSDD(key,4) &&
-		  nextHop != localId) ||
-		 (localId.indexOfMSDD(key,4) == prg.lastNode.indexOfMSDD(key,4) && 
-		  dist.compareTo(prg.lastDist) > 0) )
+	    int localIndex = localId.indexOfMSDD(key,base);
+	    int lastIndex = prg.lastNode.indexOfMSDD(key,base);
+
+	    if ( (localIndex > lastIndex && nextHop != localId) ||
+		 (localIndex == lastIndex && dist.compareTo(prg.lastDist) > 0) )
 		System.out.println("at... " + getNodeId() + " enrouteMessage failure with " + msg +
 				   " lastNode=" + prg.lastNode + " lastDist=" + prg.lastDist + 
-				   " dist=" + dist + " nextHop=" + nextHop);
+				   " dist=" + dist + " nextHop=" + nextHop + 
+				   " loci=" + localIndex + " lasti=" + lastIndex);
 
 	    prg.lastDist = dist;
 	}

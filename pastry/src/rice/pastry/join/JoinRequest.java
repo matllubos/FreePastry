@@ -205,7 +205,7 @@ public class JoinRequest extends Message implements Serializable
     private void initialize() {
 	joinHandle = null;
 	
-	rowCount = NodeId.nodeIdBitLength / RoutingTable.idBaseBitLength;
+	rowCount = NodeId.nodeIdBitLength / RoutingTable.baseBitLength();
 
 	rows = new RouteSet[rowCount][];
     }

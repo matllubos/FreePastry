@@ -140,12 +140,13 @@ public class StandardRouter implements MessageReceiver {
 	    RouteSet rs = routeTable.getBestEntry(target);
 	    NodeHandle handle = null;
 
-	    // get the closest alive node
-	    handle = rs.closestNode();
-
-	    if (handle == null) {
+	    if (rs == null ||
+		// get the closest alive node
+		(handle = rs.closestNode()) == null) {
+		
 		// no live routing table entry matching the next digit
 		// get best alternate RT entry
+
 		handle = routeTable.bestAlternateRoute(target);
 
 		if (handle == null) {
@@ -209,8 +210,8 @@ public class StandardRouter implements MessageReceiver {
 
 	int diffDigit;
 
-	if ( (diffDigit = prevId.indexOfMSDD(key, RoutingTable.idBaseBitLength)) == 
-	     localId.indexOfMSDD(key, RoutingTable.idBaseBitLength)) {
+	if ( (diffDigit = prevId.indexOfMSDD(key, RoutingTable.baseBitLength())) == 
+	     localId.indexOfMSDD(key, RoutingTable.baseBitLength())) {
 	    
 	    // the previous node is missing a RT entry, send the row
 	    // for now, we send the entire row for simplicity

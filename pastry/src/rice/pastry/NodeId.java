@@ -128,6 +128,19 @@ public class NodeId implements Comparable, Serializable
     }
 
     /**
+     * return the number of digits in a given base
+     *
+     * @param base the number of bits in the base
+     * @return the number of digits in that base
+     */ 
+
+    public static int numDigits(int base) 
+    {
+	return nodeIdBitLength / base;
+    }
+
+
+    /**
      * Equality operator for nodeIds.
      *
      * @param obj a nodeId object
@@ -307,7 +320,6 @@ public class NodeId implements Comparable, Serializable
 	int x, y;
 	int carry = 0;
 
-	// if (clockwise(nid)) 
 	if (compareTo(nid) > 0)
 	    for (int i=0; i<n; i++) {
 		x = nodeId[i];
@@ -374,7 +386,6 @@ public class NodeId implements Comparable, Serializable
 	int x, y;
 	int carry = 0;
 
-	// if (clockwise(nid)) 
 	if (compareTo(nid) > 0)
 	    for (int i=0; i<n; i++) {
 		x = nodeId[i];
@@ -428,20 +439,17 @@ public class NodeId implements Comparable, Serializable
 
     /**
      * Xor operator for nodeIds.
-     * Sets this nodeId to the bit-wise XOR of itself and nid
+     * Sets this nodeId to the bit-wise XOR of itself and otherId
      *
-     * @param nid a nodeId object
+     * @param otherId a nodeId object
      */ 
 
     public void xor(NodeId otherId ) 
     {
 	int n = nodeIdBitLength >> 3;
-	byte nid[] = new byte[n];
-
-        otherId.blit(nid);
 
 	for (int i=0; i<n; i++) 
-	    nodeId[i] ^= nid[i];
+	    nodeId[i] ^= otherId.nodeId[i];
     }
 
 
@@ -556,8 +564,7 @@ public class NodeId implements Comparable, Serializable
 
     public int getDigit(int i, int b) 
     {
-	int base = 1 << b;
-	int index = b * i;
+	int index = b * i + (nodeIdBitLength % b);
 	int val = 0;
 	int mask = 1;
 
@@ -582,8 +589,7 @@ public class NodeId implements Comparable, Serializable
 
     public void setDigit(int i, int v, int b) 
     {
-	int base = 1 << b;
-	int index = b * i;
+	int index = b * i + (nodeIdBitLength % b);
 	int mask = 1;
 
 	for (int j=0; j<b; j++) {
@@ -629,7 +635,7 @@ public class NodeId implements Comparable, Serializable
      * Returns the index of the most significant different digit (MSDD) in a given base.
      *
      * @param nid another node id to compare with.
-     * @param base the base to compare in.
+     * @param base the base (as a power of two) to compare in.
      *
      * @return the index of the msdd (0 is the least significant) / will return negative if they do not differ.
      */
@@ -638,29 +644,56 @@ public class NodeId implements Comparable, Serializable
     {
 	int ind = indexOfMSDB(nid);
 
+	// ignore trailing LSBs if (nodeIdBitLength % base) > 0
+	ind -= nodeIdBitLength % base;
+
 	if (ind < 0) return ind;
 
 	return ind / base;
     }
 
     /**
-     * produces a nodeId whose prefix up to row is identical to this, followed by digit column, followed
-     * by a suffix of digits with value suffixDigits.
+     * produces a nodeId whose prefix up to row is identical to this, followed by a digit with value 
+     * column, followed by a suffix of digits with value suffixDigits.
      *
      * @param row the length of the prefix
      * @param column the value of the following digit
-     * @param suffixDigit the value of the suffic digits
+     * @param suffixDigit the value of the suffix digits
+     * @param b power of 2 of the base
+     * @return the resulting nodeId
      */
 
-    public NodeId getDomainPrefix(int row, int column, int suffixDigit) {
+    public NodeId getDomainPrefix(int row, int column, int suffixDigit, int b) {
 	NodeId res = new NodeId(nodeId);
 	
-	res.setDigit(row, column, 4);
+	res.setDigit(row, column, b);
 	for (int i=0; i<row; i++)
-	    res.setDigit(i, suffixDigit, 4);
+	    res.setDigit(i, suffixDigit, b);
 
 	return res;
     }
+
+
+    /**
+     * produces a set of nodeIds that are evenly distributed around the id ring.
+     * One invocation produces the i-th member of a set of size num. The set is
+     * evenly distributed around the ring, with an offset given by this nodeId.
+     *
+     * @param num the number of nodeIds in the set (should be a power of 2)
+     * @param b the routing base (as a power of 2)
+     * @param i the index of the requested member of the set (0<i<num; the 0-th member is this)
+     * @return the resulting set member
+     */
+
+    public NodeId getAlternateId(int num, int b, int i) {
+	NodeId res = new NodeId(nodeId);
+
+	int digit = res.getDigit(numDigits(b)-1, b) + ((1 << b) / num) * i;
+	res.setDigit(numDigits(b)-1, digit, b);
+
+	return res;
+    }
+
 
 
     /**
@@ -680,7 +713,7 @@ public class NodeId implements Comparable, Serializable
 
 
     /**
-     * Returns a string representation of the nodeId.
+     * Returns a string representation of the nodeId in base 16.
      *
      * The string is a byte string from most to least significant.
      */

@@ -68,7 +68,7 @@ public class RoutingTable extends Observable {
      * The routing calculations will occur in base <EM> 2 <SUP> idBaseBitLength </SUP> </EM>
      */
     
-    public final static int idBaseBitLength = 4;
+    private final static int idBaseBitLength = 3;
 
     private NodeId myNodeId;
     private NodeHandle myNodeHandle;
@@ -91,7 +91,7 @@ public class RoutingTable extends Observable {
 	int cols = 1 << idBaseBitLength;
 	int rows = NodeId.nodeIdBitLength / idBaseBitLength;
 
-	if (NodeId.nodeIdBitLength % idBaseBitLength > 0) rows++;
+	//if (NodeId.nodeIdBitLength % idBaseBitLength > 0) rows++;
 	
 	routingTable = new RouteSet[rows][cols];
 
@@ -121,6 +121,14 @@ public class RoutingTable extends Observable {
      */
 
     public int numRows() { return routingTable.length; }
+
+    /**
+     * return the bit length of the base
+     *
+     * @return baseBitLength
+     */
+
+    public static int baseBitLength() { return idBaseBitLength; }
 
 
     /**
@@ -192,11 +200,11 @@ public class RoutingTable extends Observable {
     }
 
     /**
-     * Gets the set of handles that match at least more digit of the key than the local nodeId.
+     * Gets the set of handles that match at least one more digit of the key than the local nodeId.
      *
      * @param key the key
      *
-     * @return a read-only set of possible handles 
+     * @return a read-only set of possible handles, or null if none exist 
      */
     
     public RouteSet getBestEntry(NodeId key) 

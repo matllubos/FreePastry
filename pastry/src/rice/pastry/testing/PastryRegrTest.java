@@ -350,12 +350,12 @@ public abstract class PastryRegrTest {
 		// next column
 
 		// skip if local nodeId digit
-		// if (j == rta.getNodeId().getDigit(i,4)) continue;
+		// if (j == rta.getNodeId().getDigit(i,rt.baseBitLength())) continue;
 
 		RouteSet rs = rt.getRouteSet(i,j);
 
-		NodeId domainFirst = rta.getNodeId().getDomainPrefix(i,j,0);
-		NodeId domainLast = rta.getNodeId().getDomainPrefix(i,j,0xf);
+		NodeId domainFirst = rta.getNodeId().getDomainPrefix(i,j,0,rt.baseBitLength());
+		NodeId domainLast = rta.getNodeId().getDomainPrefix(i,j,-1,rt.baseBitLength());
 		//System.out.println("prefixes " + rta.getNodeId() + domainFirst + domainLast);
 
 		if (rs.size() == 0) {
