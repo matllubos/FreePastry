@@ -25,4 +25,12 @@ public class InsertMailEvent implements Event {
   public Email getEmail() {
     return _email;
   }
+
+  /**
+   * Returns a String representation of this Event.
+   * @return the String for this Event
+   */
+  public String toString() {
+    return "Insert Email Event for: " + _email.getSubject();    
+  }
 }

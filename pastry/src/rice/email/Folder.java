@@ -62,6 +62,7 @@ public class Folder {
    * of Emails stored by the Folder.
    */
   private void readContents(Continuation command) {
+    System.out.println("Read contents called");
     // create the state for this process
     Vector state = new Vector();
     // get the ref to the top entry
@@ -85,14 +86,14 @@ public class Folder {
   private void snapShotUpdate(int entries, Email[] contents, Continuation command) {
     // if the number of entries is greater than the compression limit,
     // add a new snapshot
-    // return the final value to the user's continuation
-    command.receiveResult(contents);
+    // return the final value to the user's continuation    
     
     if (entries > COMPRESS_LIMIT) {
-	_log.addLogEntry(new SnapShotLogEntry(contents), command);
+      System.out.println("Adding snapshot!");
+      _log.addLogEntry(new SnapShotLogEntry(contents), command);
     } 
     else {
-      command.receiveResult((Object)contents);
+      command.receiveResult(contents);
     }
   }
 
@@ -120,7 +121,49 @@ public class Folder {
    * @param email The email to insert.
    */
   public void addMessage(Email email, Continuation command) {
+    System.out.println("Starting add Message");
     _log.addLogEntry(new InsertMailLogEntry(email), command);
+  }
+
+  /**
+   * Moves a message from this folder into a another, given folder.
+   * This means adding the message to the destination folder, and
+   * removing the message from this folder.
+   *
+   * @param email The email to move.
+   * @param folder The destination folder for the message.
+   * @param command the remaining work to carry out
+   */
+  public void moveMessage(Email email, Folder folder, Continuation command) {
+    System.out.println("Starting move Message for email " + email +
+		       "Folder " + folder + " and command " + command);
+    Continuation preCommand = new FolderRemoveMessageTask(email, this, command);
+    folder.addMessage(email, preCommand);
+  }
+
+  /**
+   * Deletes a message from this Folder.
+   *
+   * @param email The email to delete.
+   * @param command the remaining work to carry out
+   */
+  public void removeMessage(Email email, Continuation command) {
+    System.out.println("Starting remove Message with email " + email +
+		       " and command " + command);
+    _log.addLogEntry(new DeleteMailLogEntry(email), command); 
+  }
+
+  /**
+   * Moves a message from this folder into a another, given folder.
+   * This means adding the message to the destination folder, and
+   * removing the message from this folder.
+   *
+   * @param email The email to move.
+   * @param folder The destination folder for the message.
+   */
+  public void moveMessage(Email email, Folder folder) {
+    Continuation command = new FolderRemoveMessageTask(email, this);
+    folder.addMessage(email, command);
   }
 
   /**
@@ -132,21 +175,7 @@ public class Folder {
     Continuation command = new FolderNullTask(null);
     _log.addLogEntry(new DeleteMailLogEntry(email), command); 
   }
-
-  /**
-   * Moves a message from this folder into a another, given folder.
-   * This means adding the message to the destination folder, and
-   * removing the message from this folder.
-   *
-   * @param email The email to move.
-   * @param srcFolder The source folder for the message.
-   * @param destFolder The destination folder for the message.
-   */
-  public void moveMessage(Email email, Folder folder) {
-    Continuation command = new FolderRemoveMessageTask(email, folder);
-    folder.addMessage(email, command);
-  }
-
+  
   /**
    * Creates a new child of the given name.  The current Folder
    * is the parent.
@@ -172,7 +201,7 @@ public class Folder {
    *
    * @param name The name of the folder to delete.
    */
-  public void removeFolder(String name) throws PostException {
+  public void removeFolder(String name) {
     // make the continuation to perform after removing the log
     Continuation command = new FolderNullTask(null);
     // make the entry to insert after the log has been deleted
@@ -183,6 +212,21 @@ public class Folder {
     _log.removeChildLog(name, preCommand);
   }
 
+  /**
+   * Deletes a folder from the user's mailbox.
+   *
+   * @param name The name of the folder to delete.
+   */
+  public void removeFolder(String name, Continuation command) {
+    // make the entry to insert after the log has been deleted 
+    LogEntry entry = new DeleteFolderLogEntry(name);
+    // make the continuation to perform after adding the log.  This takes in the entry to insert
+    // and the log to insert it into.  
+    Continuation preCommand = new FolderAddLogEntryTask(entry, _log, command);
+    _log.removeChildLog(name, preCommand);
+  }
+
+  
   /**
    * Returns the selected Folder.  The Folder is selected by its name;
    * if the Folder does not exist an exception is thrown.
@@ -220,6 +264,7 @@ public class Folder {
    * @return the array of recent events
    */
   public void getPartialEventLog(Email target, Continuation command) {
+    System.out.println("Trying to get new event log");
     Vector events = new Vector();
     LogEntryReference top = _log.getTopEntry();
     
@@ -267,11 +312,14 @@ public class Folder {
      * perform another fetch and pass the current state on to the next call.
      */
     public void receiveResult(Object o) {
+      //System.out.println("FolderReadContentsTask received result " + o);
+
       LogEntryReference top = null;
       LogEntry topEntry = (LogEntry)o;
       boolean finished = false;
       
-      // deal with the current LogEntry
+      // deal with the current LogEntry.  If the entry is not an email or equivalent, ignore it
+      // and go on to the next one
       if (topEntry instanceof InsertMailLogEntry) {
         _contents.add(((InsertMailLogEntry)topEntry).getEmail());
       }
@@ -287,11 +335,7 @@ public class Folder {
           finished = true;
         }
       }
-      else {
-        // throw some manner of error?
-        finished = true;
-      }
-
+      
       // if not finished, try to move to the next LogEntry
       if (!finished) {
 	top = topEntry.getPreviousEntry();
@@ -302,10 +346,16 @@ public class Folder {
 
       // if finished, check to see if a new snapshot needs to be entered and return
       if (finished) {
+	System.out.println("FolderReadContentsTask is done and checking to see if a snapshot needs to be added");
 	// add a snapshot if need be.  The snapShot method will start the user task (i.e. return the result) 
 	// even if no snapshot is added
 	FolderReturnResultTask preCommand = new FolderReturnResultTask(_contents, _command);
-	snapShotUpdate(_contents.size(), (Email[])_contents.toArray(), _command);	
+	//System.out.println("base contents:\n" + _contents + "\n");
+	Email[] resultEmails = new Email[_contents.size()];
+	for (int i = 0; i < resultEmails.length; i++) {
+	  resultEmails[i] = (Email)(_contents.get(i));
+	}
+	snapShotUpdate(_contents.size(), resultEmails, _command);	
       // otherwise continue building up the contents
       } else {
 	FolderReadContentsTask preCommand = new FolderReadContentsTask(_contents, _command);
@@ -317,7 +367,7 @@ public class Folder {
      * Simply prints out an error message.
      */  
     public void receiveException(Exception e) {
-      System.out.println("Exception " + e + "  occured while trying to read the contents of LogEntry " + _contents.size());
+      System.out.println("Exception " + e + "  occured while trying to read the LogEntry.");
     }
   }
 
@@ -472,7 +522,7 @@ public class Folder {
      * Simply prints out the error message.
      */  
     public void receiveException(Exception e) {
-      System.out.println("Exception " + e + "  occured while trying to return the new Folder");
+      System.out.println("Exception " + e + "  occured while trying to return the new Folder\n");
     }
   }
 
@@ -543,7 +593,11 @@ public class Folder {
       }
       // otherwise, return the result to the user's continuation
       else {
-	_command.receiveResult(_events);
+	Event[] resultEvents = new Event[_events.size()];
+	for (int i = 0; i < resultEvents.length; i++) {
+	  resultEvents[i] = (Event)(_events.get(i));
+	}
+	_command.receiveResult(resultEvents);
       }
     }
 
@@ -551,7 +605,8 @@ public class Folder {
      * Simply prints out the error message.
      */  
     public void receiveException(Exception e) {
-      System.out.println("Exception " + e + "  occured while trying to return the new Folder");
+      System.out.println("Exception " + e + "  occured while trying to get the events");
+      e.printStackTrace();
     }
   }
 
@@ -562,6 +617,7 @@ public class Folder {
   protected class FolderRemoveMessageTask implements Continuation {
     Email _email;
     Folder _folder;
+    Continuation _command;
 
     /**
      * Constructs a FolderGetLogTask.
@@ -569,6 +625,16 @@ public class Folder {
     public FolderRemoveMessageTask(Email email, Folder folder) {
       _email = email;
       _folder = folder;
+      _command = new FolderNullTask(null);
+    }
+
+    /**
+     * Constructs a FolderGetLogTask.
+     */
+    public FolderRemoveMessageTask(Email email, Folder folder, Continuation command) {
+      _email = email;
+      _folder = folder;
+      _command = command;
     }
 
     /**
@@ -580,7 +646,8 @@ public class Folder {
      * Take the result, form a Folder from it, and returns the Folder to the given user continuation.
      */
     public void receiveResult(Object o) {      
-      _folder.removeMessage(_email);
+      System.out.println("FolderRemoveMessageTask received result " + o);
+      _folder.removeMessage(_email, _command);
     }
 
     /**

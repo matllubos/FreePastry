@@ -315,4 +315,12 @@ public class Email implements java.io.Serializable {
       }
     }
   }
+
+  public String toString() {
+    String result = "Subject: " + subject;
+    for (int i = 0; i < recipients.length; i++) {
+      result = result + "\nSend To: " + recipients[i];
+    }
+    return result;
+  }
 }

@@ -4,7 +4,7 @@ SOURCE  = \
 	EmailTest.java \
 	SendEmailTest.java \
 	SimpleFolderTest.java \
-	ProxyTest.java
+	ThreadingTest.java
 
 RMI_SOURCE =
 

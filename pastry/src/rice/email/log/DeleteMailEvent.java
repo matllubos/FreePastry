@@ -27,4 +27,12 @@ public class DeleteMailEvent implements Event{
   public Email getEmail() {
     return _email;
   }
+
+  /**
+   * Returns a String representation of this Event.
+   * @return the String for this Event
+   */
+  public String toString() {
+    return "Delete Email Event for: " + _email.getSubject();    
+  }
 }

@@ -25,4 +25,12 @@ public class InsertFolderEvent implements Event {
   public String getName() {
     return _name;
   }
+
+  /**
+   * Returns a String representation of this Event.
+   * @return the String for this Event
+   */
+  public String toString() {
+    return "Insert Folder Event for: " + _name;    
+  }
 }
