@@ -131,7 +131,7 @@
              use="true">
       <fileset dir="${src.dir}">
         <include name="rice/*.java"/>
-        <include name="rice/email/**/*.java"/>
+   <!-- <include name="rice/email/**/*.java"/> -->
         <include name="rice/p2p/commonapi/**/*.java"/>
         <include name="rice/p2p/glacier/*.java"/>
         <include name="rice/p2p/glacier/v1/**/*.java"/>
@@ -141,14 +141,26 @@
         <include name="rice/p2p/replication/**/*.java"/>
         <include name="rice/p2p/scribe/**/*.java"/>
         <include name="rice/p2p/splitstream/**/*.java"/>
-        <include name="rice/p2p/util/**/*.java"/>
-        <include name="rice/pastry/**/*.java"/>
+   <!-- <include name="rice/p2p/util/**/*.java"/> -->
+        <include name="rice/pastry/*.java"/>
+        <include name="rice/pastry/client/**/*.java"/>
+        <include name="rice/pastry/commonapi/**/*.java"/>
+        <include name="rice/pastry/dist/**/*.java"/>
+        <include name="rice/pastry/join/**/*.java"/>
+        <include name="rice/pastry/leafset/**/*.java"/>
+        <include name="rice/pastry/messaging/**/*.java"/>
+   <!-- <include name="rice/pastry/rmi/**/*.java"/> -->
+        <include name="rice/pastry/routing/**/*.java"/>
+        <include name="rice/pastry/security/**/*.java"/>
+        <include name="rice/pastry/socket/**/*.java"/>
+        <include name="rice/pastry/standard/**/*.java"/>
+   <!-- <include name="rice/pastry/wire/**/*.java"/> -->
         <include name="rice/persistence/**/*.java"/>
-        <include name="rice/post/**/*.java"/>
-        <include name="rice/proxy/**/*.java"/>
+   <!-- <include name="rice/post/**/*.java"/> -->
+   <!-- <include name="rice/proxy/**/*.java"/> -->
         <include name="rice/selector/**/*.java"/>
         <include name="rice/serialization/**/*.java"/>
-        <include name="rice/visualization/**/*.java"/>
+   <!-- <include name="rice/visualization/**/*.java"/> -->
       </fileset>
        <doctitle>Rice Pastry API</doctitle>
        <header>Rice Pastry API</header>
@@ -181,8 +193,42 @@
   
   <target name="freepastry_jar" depends="beautifythencompile">
     <jar destfile="pastry.jar" compress="true">
-      <fileset dir="${build.dir}" includes="rice/Continuation*.class"/>
-      <fileset dir="${build.dir}" includes="rice/Executable*.class"/>
+      <fileset dir="${build.dir}">
+        <include name="rice/*.class"/>
+   <!-- <include name="rice/email/**/*.class"/> -->
+        <include name="rice/p2p/commonapi/**/*.class"/>
+        <include name="rice/p2p/glacier/*.class"/>
+        <include name="rice/p2p/glacier/v1/**/*.class"/>
+        <include name="rice/p2p/aggregation/**/*.class"/>
+        <include name="rice/p2p/multiring/**/*.class"/>
+        <include name="rice/p2p/past/**/*.class"/>
+        <include name="rice/p2p/replication/**/*.class"/>
+        <include name="rice/p2p/scribe/**/*.class"/>
+        <include name="rice/p2p/splitstream/**/*.class"/>
+   <!-- <include name="rice/p2p/util/**/*.class"/> -->
+        <include name="rice/pastry/*.class"/>
+        <include name="rice/pastry/client/**/*.class"/>
+        <include name="rice/pastry/commonapi/**/*.class"/>
+        <include name="rice/pastry/dist/**/*.class"/>
+        <include name="rice/pastry/join/**/*.class"/>
+        <include name="rice/pastry/leafset/**/*.class"/>
+        <include name="rice/pastry/messaging/**/*.class"/>
+   <!-- <include name="rice/pastry/rmi/**/*.class"/> -->
+        <include name="rice/pastry/routing/**/*.class"/>
+        <include name="rice/pastry/security/**/*.class"/>
+        <include name="rice/pastry/socket/**/*.class"/>
+        <include name="rice/pastry/standard/**/*.class"/>
+   <!-- <include name="rice/pastry/wire/**/*.class"/> -->
+        <include name="rice/persistence/**/*.class"/>
+   <!-- <include name="rice/post/**/*.class"/> -->
+   <!-- <include name="rice/proxy/**/*.class"/> -->
+        <include name="rice/selector/**/*.class"/>
+        <include name="rice/serialization/**/*.class"/>
+   <!-- <include name="rice/visualization/**/*.class"/> -->
+      </fileset>
+   
+ <!--  
+      <fileset dir="${build.dir}" includes="rice/*.class"/>
       <fileset dir="${build.dir}" includes="rice/email/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/p2p/commonapi/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/p2p/glacier/*.class"/>
@@ -200,7 +246,8 @@
       <fileset dir="${build.dir}" includes="rice/proxy/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/selector/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/serialization/**/*.class"/>
-      <fileset dir="${build.dir}" includes="rice/visualization/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/visualization/**/*.class"/> 
+  -->
     </jar>
   </target>
 
@@ -208,34 +255,14 @@
     <move file="pastry.jar" tofile="FreePastry-${freepastry-version}.jar"/>
     <tar destfile="FreePastry-${freepastry-version}-all.tgz" compression="gzip">
       <tarfileset dir="." includes="FreePastry-${freepastry-version}.jar"/>
-      <tarfileset dir="./lib">
-        <include name="activation.jar"/>
-        <include name="antlr.jar"/>
-        <include name="bouncycastle.jar"/>
-        <include name="javamail.jar"/>
-        <include name="jcommon-0.9.1.jar"/>
-        <include name="jfreechart-0.9.16.jar"/>
-        <include name="xmlpull_1_1_3_4a.jar"/>
-        <include name="xpp3-1.1.3.4d_b2.jar"/>
-      </tarfileset>
     </tar>
     <zip destfile="FreePastry-${freepastry-version}-all.zip">
       <zipfileset dir="." includes="FreePastry-${freepastry-version}.jar"/>
-      <zipfileset dir="./lib">
-        <include name="activation.jar"/>
-        <include name="antlr.jar"/>
-        <include name="bouncycastle.jar"/>
-        <include name="javamail.jar"/>
-        <include name="jcommon-0.9.1.jar"/>
-        <include name="jfreechart-0.9.16.jar"/>
-        <include name="xmlpull_1_1_3_4a.jar"/>
-        <include name="xpp3-1.1.3.4d_b2.jar"/>
-      </zipfileset>
     </zip>
     <tar destfile="FreePastry-${freepastry-version}-source.tgz" compression="gzip">
       <tarfileset dir="${src.dir}" prefix="src">
         <include name="rice/*.java"/>
-        <include name="rice/email/**/*.java"/>
+   <!-- <include name="rice/email/**/*.java"/> -->
         <include name="rice/p2p/commonapi/**/*.java"/>
         <include name="rice/p2p/glacier/*.java"/>
         <include name="rice/p2p/glacier/v1/**/*.java"/>
@@ -245,25 +272,35 @@
         <include name="rice/p2p/replication/**/*.java"/>
         <include name="rice/p2p/scribe/**/*.java"/>
         <include name="rice/p2p/splitstream/**/*.java"/>
-        <include name="rice/p2p/util/**/*.java"/>
-        <include name="rice/pastry/**/*.java"/>
+   <!-- <include name="rice/p2p/util/**/*.java"/> -->
+        <include name="rice/pastry/*.java"/>
+        <include name="rice/pastry/client/**/*.java"/>
+        <include name="rice/pastry/commonapi/**/*.java"/>
+        <include name="rice/pastry/dist/**/*.java"/>
+        <include name="rice/pastry/join/**/*.java"/>
+        <include name="rice/pastry/leafset/**/*.java"/>
+        <include name="rice/pastry/messaging/**/*.java"/>
+   <!-- <include name="rice/pastry/rmi/**/*.java"/> -->
+        <include name="rice/pastry/routing/**/*.java"/>
+        <include name="rice/pastry/security/**/*.java"/>
+        <include name="rice/pastry/socket/**/*.java"/>
+        <include name="rice/pastry/standard/**/*.java"/>
+   <!-- <include name="rice/pastry/wire/**/*.java"/> -->
         <include name="rice/persistence/**/*.java"/>
-        <include name="rice/post/**/*.java"/>
-        <include name="rice/proxy/**/*.java"/>
+   <!-- <include name="rice/post/**/*.java"/> -->
+   <!-- <include name="rice/proxy/**/*.java"/> -->
         <include name="rice/selector/**/*.java"/>
         <include name="rice/serialization/**/*.java"/>
-        <include name="rice/visualization/**/*.java"/>
+   <!-- <include name="rice/visualization/**/*.java"/> -->
       </tarfileset>
       <tarfileset dir="ant" includes="**/*" prefix="ant"/>
-      <tarfileset dir="${lib.dir}" includes="*.jar" prefix="lib"/>
-      <tarfileset dir="${jar.dir}" includes="**/*" prefix="jars"/>
       <tarfileset dir="license" includes="**/*" prefix="license"/>
       <tarfileset dir="." includes="build.xml"/>
     </tar>
     <zip destfile="FreePastry-${freepastry-version}-source.zip">
       <fileset dir="${src.dir}">
         <include name="rice/*.java"/>
-        <include name="rice/email/**/*.java"/>
+   <!-- <include name="rice/email/**/*.java"/> -->
         <include name="rice/p2p/commonapi/**/*.java"/>
         <include name="rice/p2p/glacier/*.java"/>
         <include name="rice/p2p/glacier/v1/**/*.java"/>
@@ -273,18 +310,28 @@
         <include name="rice/p2p/replication/**/*.java"/>
         <include name="rice/p2p/scribe/**/*.java"/>
         <include name="rice/p2p/splitstream/**/*.java"/>
-        <include name="rice/p2p/util/**/*.java"/>
-        <include name="rice/pastry/**/*.java"/>
+   <!-- <include name="rice/p2p/util/**/*.java"/> -->
+        <include name="rice/pastry/*.java"/>
+        <include name="rice/pastry/client/**/*.java"/>
+        <include name="rice/pastry/commonapi/**/*.java"/>
+        <include name="rice/pastry/dist/**/*.java"/>
+        <include name="rice/pastry/join/**/*.java"/>
+        <include name="rice/pastry/leafset/**/*.java"/>
+        <include name="rice/pastry/messaging/**/*.java"/>
+   <!-- <include name="rice/pastry/rmi/**/*.java"/> -->
+        <include name="rice/pastry/routing/**/*.java"/>
+        <include name="rice/pastry/security/**/*.java"/>
+        <include name="rice/pastry/socket/**/*.java"/>
+        <include name="rice/pastry/standard/**/*.java"/>
+   <!-- <include name="rice/pastry/wire/**/*.java"/> -->
         <include name="rice/persistence/**/*.java"/>
-        <include name="rice/post/**/*.java"/>
-        <include name="rice/proxy/**/*.java"/>
+   <!-- <include name="rice/post/**/*.java"/> -->
+   <!-- <include name="rice/proxy/**/*.java"/> -->
         <include name="rice/selector/**/*.java"/>
         <include name="rice/serialization/**/*.java"/>
-        <include name="rice/visualization/**/*.java"/>
+   <!-- <include name="rice/visualization/**/*.java"/> -->
       </fileset>
       <fileset dir="ant" includes="**/*"/>
-      <fileset dir="${lib.dir}" includes="*.jar"/>
-      <fileset dir="${jar.dir}" includes="**/*"/>
       <fileset dir="license" includes="**/*"/>
       <fileset dir="." includes="build.xml"/>
     </zip>
