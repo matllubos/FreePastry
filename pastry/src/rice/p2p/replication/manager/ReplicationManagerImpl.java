@@ -69,6 +69,11 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
   public static int TIMEOUT_DELAY = 20000;
   
   /**
+   * The number of ids to delete at a given time - others will be deleted later 
+   */
+  public static int NUM_DELETE_AT_ONCE = 50;
+  
+  /**
    * The id factory used for manipulating ids
    */
   protected IdFactory factory;
@@ -114,9 +119,9 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     
     log.finer(endpoint.getId() + ": Starting up ReplicationManagerImpl with client " + client);
     
- //   log.addHandler(new ConsoleHandler());
- //   log.setLevel(Level.FINER);
- //   log.getHandlers()[0].setLevel(Level.FINER);
+  //  log.addHandler(new ConsoleHandler());
+  //  log.setLevel(Level.FINER);
+  //  log.getHandlers()[0].setLevel(Level.FINER);
     
     this.replication = new ReplicationImpl(node, this, replicationFactor, instance);
   }
@@ -147,10 +152,10 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * @param id The id which the client should fetch
    * @param uid The unique id for this message
    */
-  protected void informClient(final Id id, final int uid) {
+  protected void informClient(final Id id) {
     log.fine(endpoint.getId() + ": Telling client to fetch id " + id);
   
-    final TimerTask timer = endpoint.scheduleMessage(new TimeoutMessage(uid), TIMEOUT_DELAY);
+    final TimerTask timer = endpoint.scheduleMessage(new TimeoutMessage(id), TIMEOUT_DELAY);
     
     client.fetch(id, new Continuation() {
       public void receiveResult(Object o) {
@@ -161,7 +166,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
         log.fine(endpoint.getId() + ": Successfully fetched id " + id);
         
         timer.cancel();
-        helper.message(uid);
+        helper.message(id);
       }
       
       public void receiveException(Exception e) {
@@ -215,14 +220,19 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     
     /* Next, we delete any unrelevant keys from the client */
     final Iterator i = clone(client.scan(notRange)).getIterator();
-
+    
+    /* We only remove the first NUM_DELETE_AT_ONCE entries, however */
     Continuation c = new ListenerContinuation("Removal of Ids") {
+      int count = 0;
+      
       public void receiveResult(Object o) {
         if (! o.equals(new Boolean(true))) {
           log.warning(endpoint.getId() + ": Unstore of id did not succeed!");
         }
         
-        if (i.hasNext()) {
+        count++;
+        
+        if ((i.hasNext()) && (count < NUM_DELETE_AT_ONCE)) {
           Id id = (Id) i.next();
           
           log.finer(endpoint.getId() + ": Telling client to delete id " + id + " range " + range);
@@ -277,7 +287,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
       helper.wakeup();
     } else if (message instanceof TimeoutMessage) {
       log.finest(endpoint.getId() + ": Received timeout message");
-      helper.message(((TimeoutMessage) message).getUID());
+      helper.message(((TimeoutMessage) message).getId());
     } else {
       log.warning(endpoint.getId() + ": Received unknown message " + message);
     }
@@ -332,7 +342,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     /**
      * The next message UID which is available
      */
-    protected int nextUID;
+    protected Id current;
     
     /**
      * Constructor 
@@ -340,7 +350,6 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     public ReplicationManagerHelper() {
       set = factory.buildIdSet();
       state = STATE_NOTHING;
-      nextUID = Integer.MIN_VALUE;
     }
     
     /**
@@ -354,12 +363,11 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
       while (i.hasNext()) {
         Id id = (Id) i.next();
         
-        if (! (set.isMemberId(id) || client.exists(id))) {
+        if (! (set.isMemberId(id) || client.exists(id)))
           set.addId(id);
-        }
       }
         
-      if (state == STATE_NOTHING) {
+      if ((state == STATE_NOTHING) && (set.numElements() > 0)) {
         send();
       }
     }
@@ -386,20 +394,17 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
      */
     protected synchronized void send() {
       if ((state != STATE_WAITING) && (set.numElements() > 0)) {
-        state = STATE_WAITING;
-        informClient(getNextId(), getNextUID());
+        Id id = getNextId();
+        
+        if (id != null) {
+          state = STATE_WAITING;
+          informClient(id);
+        } else {
+          state = STATE_NOTHING;
+        }
       } else if (state != STATE_WAITING) {
         state = STATE_NOTHING;
       }
-    }
-    
-    /**
-      * Returns the next unique id for a message
-     *
-     * @return The next available UID
-     */
-    protected synchronized int getNextUID() {
-      return nextUID++;
     }
     
     /**
@@ -416,12 +421,15 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
         return null;
       }
       
-      Id result = (Id) i.next();  
-      set.removeId(result);
+      current = (Id) i.next();  
+      set.removeId(current);
       
-      log.finer(endpoint.getId() + ": Returing next id to fetch " + result);
+      log.finer(endpoint.getId() + ": Returing next id to fetch " + current);
       
-      return result;
+      if (! client.exists(current))
+        return current;
+      else
+        return getNextId();
     }
     
     public synchronized void wakeup() {
@@ -430,14 +438,14 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
       }
     }
     
-    public synchronized void message(int id) {
-      if ((state == STATE_WAITING) && (id == nextUID - 1)) {
+    public synchronized void message(Id id) {
+      if ((state == STATE_WAITING) && (current != null) && (current.equals(id))) {
         state = STATE_SLEEPING;
+        current = null;
         scheduleNext(); 
       }
     }
   }
-  
 }
 
 

@@ -56,7 +56,7 @@ public class ReplicationImpl implements Replication, Application {
   /**
    * The amount of time to wait between replications
    */
-  public static int MAINTENANCE_INTERVAL = 180000;
+  public static int MAINTENANCE_INTERVAL = 300000;
   
   /**
    * this application's endpoint
@@ -112,7 +112,7 @@ public class ReplicationImpl implements Replication, Application {
     
     // inject the first reminder message, which will cause the replication to begin
     // and the next maintenance message to be scheduled
-    endpoint.scheduleMessage(new ReminderMessage(handle), MAINTENANCE_INTERVAL, MAINTENANCE_INTERVAL);
+    endpoint.scheduleMessage(new ReminderMessage(handle), 0, MAINTENANCE_INTERVAL);
   }
   
   /**

@@ -52,24 +52,24 @@ public class TimeoutMessage implements Message {
   /**
    * THe unique id of this message
    */
-  protected int uid;
+  protected Id id;
   
   /**
    * Constructor which takes a unique integer Id
    *
    * @param uid The uid
    */
-  public TimeoutMessage(int uid) {
-    this.uid = uid;
+  public TimeoutMessage(Id id) {
+    this.id = id;
   }
   
   /**
-   * Returns the unique id of this message
+   * Returns the id of this message
    *
-   * @return The unique id of this message
+   * @return The id of this message
    */
-  public int getUID() {
-    return uid;
+  public Id getId() {
+    return id;
   }
 }
 
