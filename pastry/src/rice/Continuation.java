@@ -208,14 +208,17 @@ public interface Continuation {
 
     protected Exception exception;
     protected Object result;
+    protected boolean done = false;
 
     public synchronized void receiveResult(Object o) {
       result = o;
+      done = true;
       notify();
     }
 
     public synchronized void receiveException(Exception e) {
       exception = e;
+      done = true;
       notify();
     }
 
@@ -233,7 +236,7 @@ public interface Continuation {
 
     public synchronized void sleep() {
       try {
-        if ((result == null) && (exception == null)) {
+        if (! done) {
           wait();
         }
       } catch (InterruptedException e) {
