@@ -44,8 +44,13 @@ import java.util.LinkedList;
 import rice.pastry.NodeId;
 import rice.pastry.PastryNode;
 import rice.pastry.dist.DistCoalesedNodeHandle;
+import rice.pastry.join.JoinRequest;
+import rice.pastry.leafset.BroadcastLeafSet;
+import rice.pastry.leafset.RequestLeafSet;
 import rice.pastry.messaging.Message;
+import rice.pastry.routing.BroadcastRouteRow;
 import rice.pastry.routing.RouteMessage;
+import rice.pastry.testing.HelloMsg;
 import rice.pastry.wire.exception.DeserializationException;
 import rice.pastry.wire.exception.ImproperlyFormattedMessageException;
 import rice.pastry.wire.exception.NodeIsDeadException;
@@ -190,7 +195,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
       key.attach(this);
 
       ((WirePastryNode) getLocalNode()).getSocketManager().openSocket(this);
-      ((WirePastryNode) getLocalNode()).getDatagramManager().resetAckNumber(nodeId);
+      //((WirePastryNode) getLocalNode()).getDatagramManager().resetAckNumber(nodeId);
 
       reader = new SocketChannelReader((WirePastryNode) getLocalNode(),this);
       writer = new SocketChannelWriter((WirePastryNode) getLocalNode(), scm, key, this);
@@ -277,6 +282,13 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     }
   }
 
+  public void notifyKilled() {
+    SocketChannelWriter scw = writer;
+    if (scw != null) {
+      writer.notifyKilled(); 
+    }
+  }
+  
   /**
    * Called to send a message to the node corresponding to this handle.
    *
@@ -309,6 +321,13 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
       } catch (CancelledKeyException cke) {
         SelectorManager selMgr = ((WirePastryNode)getLocalNode()).getSelectorManager();
         if (!selMgr.isAlive()) {
+          SocketChannelWriter tempWriter = writer;
+          if (writer!=null) {
+            Iterator messages = writer.getQueue();
+            if (messages != null) {
+              notifyPotentiallyLostMessage(messages);
+            }
+          }
           throw new NodeIsDeadException(cke);
         } else {
           closeDueToError(); 
@@ -408,6 +427,14 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     }
   }
 
+  public void notifyPotentiallyLostMessage(Iterator i) {
+    while (i.hasNext()) {
+      Object o = i.next();
+      System.err.println("WNH: Potentially lost the message:"+o);
+    }
+  }
+
+
   /**
    * Is called by the SelectorManager every time the manager is awakened. Checks
    * to make sure that if we are waiting to write data, we are registered as
@@ -449,8 +476,14 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
               // | SelectionKey.OP_WRITE);
             } catch (NullPointerException npe) {
               if (!selMgr.isAlive()) {
+                if (messages != null) {
+                  notifyPotentiallyLostMessage(messages);
+                }
                 throw new NodeIsDeadException(npe);
               } else {
+                if (messages != null) {
+                  notifyPotentiallyLostMessage(messages);
+                }
                 throw npe;
               }
             }
@@ -461,9 +494,9 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
 
         if (messages != null) {
           Iterator i = messages;
-
           while (i.hasNext()) {
             Object o = i.next();
+
             debug("Enqueueing message " + o + " into socket channel writer.");
             writer.enqueue(o);
           }
@@ -488,6 +521,17 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
         close(messages);
       }
     } else {
+      // enqueue all those messages
+      if (messages != null) {
+        Iterator i = messages;
+
+        while (i.hasNext()) {
+          Object o = i.next();
+          debug("Enqueueing message " + o + " into socket channel writer.");
+          writer.enqueue(o);
+        }
+      }
+      
       // state is not udp
       // TODO implement, or throw exception
     }
@@ -668,6 +712,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
         System.out.println("An error occured during message deserialization - ignoring message...");
         tempReader.reset();
       } catch (IOException e) {
+        System.err.println("Error occurred during reading from " + address + " at " + getNodeId() + " - closing socket. " + e);
         debug("Error occurred during reading from " + address + " at " + getNodeId() + " - closing socket. " + e);
         close(tempWriter.getQueue());
       }
@@ -838,7 +883,9 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
    *
    * @param messages The messages that need to be rerouted (or null)
    */
-  private synchronized void close(Iterator messages) {
+  private void close(Iterator messages) {
+    synchronized(localnode) {
+      synchronized(this) {
       if (state == STATE_USING_UDP) {
         return;
       }
@@ -874,7 +921,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
               // if it's a routeMessage, reroute it
               if (smsg.getObject() instanceof RouteMessage) {
                 RouteMessage rmsg = (RouteMessage) smsg.getObject();
-                rmsg.nextHop = null;
+                rmsg.nextHop = null;            
                 getLocalNode().receiveMessage(rmsg);
   
                 debug("Rerouted message " + rmsg);
@@ -896,6 +943,8 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
         System.out.println("IOException " + e + " disconnecting from remote node " + address);
         markDead();
       }
+      }
+    }
   }
 
 
