@@ -62,11 +62,9 @@ public class PersistentStorage implements Storage {
 
   private File rootDirectory;       // root directory to store stuff in
   private File backupDirectory;     // dir for storing persistent objs
-  private File transDirectory;      // dir for transactions
 
   private static String rootDir;                          // rootDirectory
   private static final String backupDir = "/FreePastry-Storage-Root/"; // backupDirectory
-  private static final String transDir = "/transaction/";  // transDirectory
 
   private long storageSize;
   private long usedSize;
@@ -111,41 +109,32 @@ public class PersistentStorage implements Storage {
    * <code>false</code>.
    */
   public void store(Comparable id, Serializable obj, Continuation c) {
+
     try {
       if (id == null || obj == null) {
         c.receiveResult(new Boolean(false));
         return;
       }
 
-      if(!fileMap.containsKey(id)){
-         /* This is a new entry must create mapping */
-         String fileName = makeFileName(id);
-         createMapping(id, fileName);
-      }
-
       /* Create a file representation and then transactionally write it */
       File objFile = getFile(id); 
-      File transcFile = new File(transDirectory, objFile.getName());
-
-      FileOutputStream fileStream  = new FileOutputStream(transcFile);
-      ObjectOutputStream objStream = new ObjectOutputStream(fileStream);
-       
-      objStream.writeObject(id);
-      objStream.writeObject(obj);
+      /* change the name here */
+      File transcFile = makeFile(id);
+      writeObject(obj, id, readVersion(objFile) + 1, transcFile);
 
 
-      decreaseUsedSpace(objFile.length()); /* decrease the amount used */
-
-      if( getUsedSpace() + objFile.length() > getStorageSize()){
+      if( getUsedSpace() + getFileLength(objFile) > getStorageSize()){
          /* abort, this will put us over quota */
-         transcFile.delete(); /* Assume Atomic */
+         deleteFile(transcFile); 
          c.receiveResult(new Boolean(false));
          return;
       }
       else{
         /* complete transaction */
-        transcFile.renameTo(objFile); /* Assume Atomic */
-        increaseUsedSpace(objFile.length()); /* increase the amount used */
+        decreaseUsedSpace(getFileLength(objFile)); /* decrease amount used */
+        deleteFile(objFile);
+        increaseUsedSpace(transcFile.length()); /* increase the amount used */
+        createMapping(id, transcFile);
        } 
 
       c.receiveResult(new Boolean(true));
@@ -210,7 +199,7 @@ public class PersistentStorage implements Storage {
    */
   public void getObject(Comparable id, Continuation c){
       File objFile = getFile(id); 
-      c.receiveResult(readObject(objFile));
+      c.receiveResult(readData(objFile));
   }
 
   /**
@@ -296,17 +285,6 @@ public class PersistentStorage implements Storage {
       return false;
     }
 
-    transDirectory = new File(backupDirectory, transDir);
-    if (createDir(transDirectory) == false) {
-      return false;
-    }
-    else{
-      File[] files = transDirectory.listFiles();
-      int numFiles = files.length;
-      for ( int i = 0; i < numFiles; i++){
-        files[i].delete(); /* clean out all uncompleted transactions */ 
-      }
-    }
      
     return true;
   }
@@ -318,9 +296,19 @@ public class PersistentStorage implements Storage {
 
     for ( int i = 0; i < numFiles; i++){
        /* insert keys into file Map */
+       /* need to check for uncompleted and conflicting transactions */
        if(files[i].isFile()){
-          fileMap.put(readKey(files[i]), files[i]);
-          increaseUsedSpace(files[i].length()); /* increase the amount used */
+          try{
+            fileMap.put(readKey(files[i]), files[i]);
+            increaseUsedSpace(files[i].length()); /* increase the amount used */
+          }
+          catch(java.io.IOException e){
+            System.out.println("Caught File Exception");
+            /* handle the case where there is an uncompleted trans */
+          }
+          catch(Exception e){
+            e.printStackTrace();
+          }
        }
     }
   
@@ -339,8 +327,35 @@ public class PersistentStorage implements Storage {
     return directory.isDirectory();
   }
 
-  private String makeFileName(Comparable id){
-    return String.valueOf(id.hashCode());
+  private long getFileLength(File file){
+   if (file == null)
+      return 0;
+   else 
+      return file.length();
+  }
+
+  private void deleteFile(File file){
+    if(file != null)
+       file.delete();
+  }
+  /**
+   * Generates a new file name to assign for a given id
+   *
+   * @param Comparable id the id to generate a name for
+   * @return String the new File name
+   *
+   * This method will return the hashcode of the object used as the id
+   * unless there is a collision, in which case it will return a random number
+   * Since this mapping is only needed once it does not matter what number
+   * is used to generate the filename, the hashcode is the first try fo
+   * effeciency.
+   */
+  private File makeFile(Comparable id){
+    File file = new File(backupDirectory, String.valueOf(id.hashCode()));
+    while(fileMap.contains(file)){
+      file = new File(backupDirectory, String.valueOf(new Random().nextInt()));
+    }
+    return file;
   }
 
   /*****************************************************************/
@@ -350,11 +365,10 @@ public class PersistentStorage implements Storage {
      return (File) fileMap.get(id);
   }
   
-  private void createMapping(Comparable id, String fileName){
-       File objFile = new File(backupDirectory, fileName);
+  private void createMapping(Comparable id, File file){
      synchronized(fileMap){
        /* create a file */
-       fileMap.put(id, objFile);
+       fileMap.put(id, file);
      }
   }
   
@@ -368,14 +382,8 @@ public class PersistentStorage implements Storage {
   /* Helper functions for Object Input/Output                      */
   /*****************************************************************/
 
-  /**
-   * Abstract over reading a single object to a file using Java
-   * serialization.
-   *
-   * @param file The file to create the object from.
-   * @return The object that was read in
-   */
-  public static Serializable readObject(File file){
+  public static Serializable readObject(File file , int offset){
+
     Serializable toReturn = null;
     if(file == null)
        return null;
@@ -384,12 +392,13 @@ public class PersistentStorage implements Storage {
 
     FileInputStream fin;
     ObjectInputStream objin;
-
     synchronized (file) {
           try {
               fin = new FileInputStream(file);
               objin = new ObjectInputStream(fin);
-              objin.readObject(); /* skip key */
+              for(int i = 0 ; i < offset; i ++){
+                 objin.readObject(); /* skip objects */
+              }
               toReturn = (Serializable) objin.readObject();
               fin.close();
               objin.close();
@@ -400,6 +409,20 @@ public class PersistentStorage implements Storage {
     }
     return toReturn;
   }
+
+
+  /**
+   * Abstract over reading a single object to a file using Java
+   * serialization.
+   *
+   * @param file The file to create the object from.
+   * @return The object that was read in
+   */
+  public static Serializable readData(File file){
+     return(readObject(file, 1));
+  }
+
+
 
   /**
    * Abstract over reading a single key from a file using Java
@@ -408,32 +431,26 @@ public class PersistentStorage implements Storage {
    * @param file The file to create the key from.
    * @return The key that was read in
    */
-  public static Serializable readKey(File file){
-    Serializable toReturn = null;
-    if(file == null)
-       return null;
-    if(!file.exists())
-       return null;
-
-    FileInputStream fin;
-    ObjectInputStream objin;
-
-    synchronized (file) {
-          try {
-              fin = new FileInputStream(file);
-              objin = new ObjectInputStream(fin);
-              toReturn = (Serializable) objin.readObject();
-              fin.close();
-              objin.close();
-          }
-          catch (Exception e) {
-             e.printStackTrace();
-          }
-    }
-    return toReturn;
+  public static Serializable readKey(File file) throws Exception{
+    return (readObject(file, 0));
   }
      
-     
+    
+  /**
+   * Abstract over reading a version from a file using Java
+   * serialization.
+   *
+   * @param file The file to create the version from.
+   * @return The key that was read in
+   */
+  public static long readVersion(File file) throws Exception{
+   long toReturn = 0;
+   Long temp = ((Long) readObject(file, 2));
+   if(temp != null){
+     toReturn = temp.longValue();
+   }
+   return (toReturn);
+  } 
 
   /**
    * Abstract over writing a single object to a file using Java
@@ -443,7 +460,7 @@ public class PersistentStorage implements Storage {
    * @param file The file to serialize the object to.
    * @return The object's disk space usage
    */
-   public static long writeObject(Object obj, File file) {
+   public static long writeObject(Serializable obj, Comparable key, long version, File file)     {
        if (obj == null || file == null)
             return 0;
 
@@ -454,7 +471,9 @@ public class PersistentStorage implements Storage {
           try {
               fout = new FileOutputStream(file);
               objout = new ObjectOutputStream(fout);
+              objout.writeObject(key);
               objout.writeObject(obj);
+              objout.writeObject(new Long(version));
               fout.close();
               objout.close();
           }
