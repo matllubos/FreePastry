@@ -11,6 +11,10 @@ import java.lang.Boolean;
 import java.io.Serializable;
 
 /**
+ * @(#) ControlFindParentMessage.java
+ *
+ * @version $Id$
+ *
  * This class represents the anycast message sent by a node upon receiving a
  * drop notification from its former parent.  It is sent to the spare
  * capacity tree in an attempt to find a new parent.
@@ -86,17 +90,23 @@ public class ControlFindParentMessage extends Message implements Serializable
 	{
 	    send_to.addAll( 0, scribe.getChildren( topic.getTopicId() ) );
 	}
+	
+	// remove all those previosly seen
 	while ( ( send_to.size() > 0 ) &&
 		( already_seen.contains( send_to.get(0) ) ) )
 	{
 	    send_to.remove( 0 );
 	}
+
+	// route to next eligible node in the spare capacity tree
         if ( send_to.size() > 0 )
 	{
 	    channel.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
 	}
 	else
 	{
+	    // route to parent if not root, else nobody can take this node
+
 	    if ( !scribe.isRoot( topic.getTopicId() ) )
 	    {
 	        channel.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
@@ -104,7 +114,7 @@ public class ControlFindParentMessage extends Message implements Serializable
 	    }
 	    else
 	    {
-	        //System.out.println( "No suitable parent found" );
+	        System.out.println( "No suitable parent found" );
 		channel.routeMsgDirect( originalSource,
 					new ControlFindParentResponseMessage( channel.getAddress(),
 									      scribe.getNodeHandle(),
@@ -133,7 +143,7 @@ public class ControlFindParentMessage extends Message implements Serializable
     public boolean handleMessage( Scribe scribe, Topic topic, Channel channel, Stripe stripe )
     {
 	recv_stripe = stripe;
-        //System.out.println("Forwarding at " + scribe.getNodeId()+" for stipe "+stripe.getStripeId());
+        //System.out.println("Forwarding at " + scribe.getNodeId()+" for stipe "+stripe.getStripeId()+" from original source "+originalSource.getNodeId());
         Credentials c = new PermissiveCredentials();
 	Topic stripeTopic = scribe.getTopic(recv_stripe.getStripeId());
 
@@ -145,6 +155,7 @@ public class ControlFindParentMessage extends Message implements Serializable
 	{
             already_seen.add( 0, scribe.getNodeHandle() );
 	}
+
 
         if ( stripeTopic == null )
 	    {
@@ -159,13 +170,13 @@ public class ControlFindParentMessage extends Message implements Serializable
 		     ( !isInRootPath( scribe, originalSource ) ) &&
 		     ( originalSource != scribe.getLocalHandle()) )
 		    {
-			//System.out.println("TAKING ON CHILD "  + originalSource.getNodeId());
+			//System.out.println("NODE "+channel.getNodeId()+" TAKING ON CHILD "  + originalSource.getNodeId()+" for stripe " +recv_stripe.getStripeId());
 			scribe.addChild( originalSource, recv_stripe.getStripeId() );
 			//System.out.println("List of children for node "+scribe.getNodeId()+ " for topicid "+stripe_id+" recv_strpie.getStripe "+recv_stripe.getStripeId());
 			//Vector vc = scribe.getChildren((NodeId)recv_stripe.getStripeId() );
 			//for(int i = 0; i < vc.size(); i++)
 			//   System.out.println("**"+((NodeHandle)vc.elementAt(i)).getNodeId()+" **");
-			channel.stripeSubscriberAdded();
+			//channel.stripeSubscriberAdded();
 			channel.routeMsgDirect( originalSource,
 						new ControlFindParentResponseMessage( channel.getAddress(),
 										      scribe.getNodeHandle(),
@@ -187,6 +198,8 @@ public class ControlFindParentMessage extends Message implements Serializable
 		else
 		{   
                     //if(topic == null) System.out.println("TOPIC IS NULL");
+		    if(topic == null)
+			return true;
                     startDFS( channel, scribe, topic, c );
 		}
 	    }

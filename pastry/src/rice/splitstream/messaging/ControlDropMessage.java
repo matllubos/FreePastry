@@ -54,12 +54,12 @@ public class ControlDropMessage extends ControlMessage{
     * This method is called upon receipt of the message by the node that has been
     * dropped.  An anycast ControlFindParentMessage is sent to the spare capacity
     * tree in an attempt to find a new parent.
-    * 
+    * 0
     * @param scribe The scribe group this message is relevant to
     * @param topic The topic this message is relevant to
     * @param thePastryNode Pastry node from the channel this message is delivered to
     */
-   public void handleDeliverMessage( Scribe scribe, Topic topic, PastryNode thePastryNode )
+   public void handleDeliverMessage( Scribe scribe, Topic topic, PastryNode thePastryNode, Channel channel )
    {
       Credentials c = new PermissiveCredentials();
       ControlFindParentMessage msg = new ControlFindParentMessage( SplitStreamAddress.instance(), 
@@ -67,13 +67,15 @@ public class ControlDropMessage extends ControlMessage{
                                                                    spare_id,
                                                                    c,
                                                                    (StripeId)topic.getTopicId(), channel_id );
-      scribe.anycast( spare_id, msg, c ); 
+      //scribe.anycast( spare_id, msg, c ); 
+      channel.routeMsg(spare_id, msg, c, null);
       scribe.setParent(null, topic.getTopicId());
       ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( this.getDestination(),
                                                                         0,
                                                                         spare_id,
                                                                         c, stripe_id, channel_id );
-      thePastryNode.scheduleMsg( timeoutMessage, timeout_len );
+      //System.out.println("Node "+scribe.getNodeId()+" sending FIND_PARENT_MESSAGE for "+(StripeId)topic.getTopicId());
+      //thePastryNode.scheduleMsg( timeoutMessage, timeout_len );
       //System.out.println("setParent set to null called ");
       //System.out.println("Node "+scribe.getNodeId()+ " dropped for "+topic.getTopicId());
    }

@@ -19,7 +19,7 @@ import rice.scribe.messaging.*;
 public class ControlFindParentResponseMessage extends Message
 {
     StripeId stripe_id;
-    NodeHandle source;
+    public NodeHandle source;
     Object m_data;
 
     public ControlFindParentResponseMessage( Address addr, NodeHandle source, ChannelId topicId, Credentials c, Boolean accept, StripeId stripe_id )
@@ -47,11 +47,17 @@ public class ControlFindParentResponseMessage extends Message
         if ( ((Boolean)m_data).booleanValue() )
         {
             scribe.setParent( source, topic.getTopicId() );
+	    //System.out.println("setparent set");
+	    //System.out.println("Node "+scribe.getNodeId()+" received response to FindParent from "+source.getNodeId()+ " for stripe "+topic.getTopicId());
         }
         else
         {
             /* generate upcall */
         }
+    }
+
+    public NodeHandle getSource(){
+	return source;
     }
 
     public String toString()
