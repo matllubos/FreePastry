@@ -3,6 +3,7 @@ package rice.pastry.rmi;
 import rice.pastry.*;
 
 import java.util.*;
+import java.lang.ref.WeakReference;
 import java.rmi.RemoteException;
 
 /**
@@ -27,24 +28,35 @@ class RMINodeHandlePool
      * Adds a RMINodeHandle to the pool if another with the same NodeId
      * isn't found.
      *
-     * @param nh the node handle to coalesce into pool.
-     * @return either nh, or a handle from the pool with same NodeId.
+     * @param handle the node handle to coalesce into pool.
+     * @return either handle, or a handle from the pool with same NodeId.
      */
-    public RMINodeHandle coalesce(RMINodeHandle nh)
+    public RMINodeHandle coalesce(RMINodeHandle handle)
     {
-	NodeId nid = nh.getNodeId();
-	RMINodeHandle ph = (RMINodeHandle) handles.get(nid);
-	if (ph == null) {
-	    handles.put(nid, nh);
-	    nh.setIsInPool(true);
-	    //System.out.println("[rmi] ADDING " + nh + " with id " + nid + " to pool");
-	    return nh;
-	} else {
-	    //System.out.println("[rmi] " + ph + " found, so NOT ADDING " + nh + " with id " + nid + " to pool");
-	    if (ph != nh)
-		nh.setIsInPool(false);
+	NodeId nid = handle.getNodeId();
+	WeakReference storedref = (WeakReference) handles.get(nid);
+	RMINodeHandle storedhandle = null;
+
+	if (storedref != null) {
+	    storedhandle = (RMINodeHandle) storedref.get();
+	    if (storedhandle == null)
+		storedref.clear(); // xxx need to do?
 	}
-	return ph;
+
+	if (storedhandle == null) {
+
+	    WeakReference newref = new WeakReference(handle);
+	    handles.put(nid, newref);
+	    handle.setIsInPool(true);
+	    //System.out.println("[rmi] ADDING " + handle + " with id " + nid + " to pool");
+	    return handle;
+
+	} else {
+	    //System.out.println("[rmi] " + storedhandle + " found, so NOT ADDING " + handle + " with id " + nid + " to pool");
+	    if (storedhandle != handle)
+		handle.setIsInPool(false);
+	}
+	return storedhandle;
     }
 
     /**
@@ -55,9 +67,16 @@ class RMINodeHandlePool
      */
     public void activate(NodeId nid)
     {
-	RMINodeHandle ph = (RMINodeHandle) handles.get(nid);
-	if (ph != null) {
-	    ph.markAlive();
+	WeakReference storedref = (WeakReference) handles.get(nid);
+	RMINodeHandle storedhandle = null;
+	if (storedref != null) {
+	    storedhandle = (RMINodeHandle) storedref.get();
+	    if (storedhandle == null)
+		storedref.clear(); // xxx need to do?
+	}
+
+	if (storedhandle != null) {
+	    storedhandle.markAlive();
 	} else {
 	    // do nothing; ignore senders who we don't know anything about
 	}
