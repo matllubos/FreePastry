@@ -55,7 +55,7 @@ public class IPNodeIdFactory implements NodeIdFactory
     private static int nextInstance = 0;
     private InetAddress localIP;
     private int port;
-    private Random rng;
+    //private Random rng;
 
     /**
      * Constructor.
@@ -73,7 +73,7 @@ public class IPNodeIdFactory implements NodeIdFactory
 	    System.out.println("ALERT: IPNodeIdFactory cannot determine local IP address: " + e);
 	}
 
-	rng = new Random(PastrySeed.getSeed());
+//	rng = new Random(PastrySeed.getSeed());
     }
 
     /**
@@ -115,10 +115,10 @@ public class IPNodeIdFactory implements NodeIdFactory
 
 	// now, we randomize the least significant 32 bits to ensure
 	// that stale node handles are detected reliably.
-	byte rand[] = new byte[4];
-	rng.nextBytes(rand);
-	for (int i=0; i<4; i++)
-	    digest[i] = rand[i];
+//	byte rand[] = new byte[4];
+//	rng.nextBytes(rand);
+//	for (int i=0; i<4; i++)
+//	    digest[i] = rand[i];
 
 	NodeId nodeId = new NodeId(digest);
 
