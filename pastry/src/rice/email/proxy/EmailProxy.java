@@ -67,7 +67,7 @@ public class EmailProxy extends PostProxy {
   public static String[][] DEFAULT_PARAMETERS = new String[][] {{"email_accept_non_local", "true"},
     {"email_send_publish_request", "true"}, 
     {"email_fetch_log", "true"}, 
-    {"email_fetch_retries", "3"}, 
+    {"email_fetch_log_retries", "3"}, 
     {"email_imap_enable", "true"},
     {"email_imap_ssl", "false"},
     {"email_imap_port", "1143"}, 

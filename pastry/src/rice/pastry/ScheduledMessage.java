@@ -82,8 +82,6 @@ public class ScheduledMessage extends TimerTask {
     	Message m = msg;
     	if (m != null)
         localNode.receiveMessage(msg);
-    } catch (NullPointerException npe) {
-			// could have been a timing issue with cancellation, no biggie
     } catch (Exception e) {
       System.err.println("Delivering " + this + " caused exception " + e);
       e.printStackTrace();

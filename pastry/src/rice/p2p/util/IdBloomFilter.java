@@ -79,10 +79,10 @@ public class IdBloomFilter implements Serializable {
    */
   public IdBloomFilter(IdSet set) {
     this.filter = new BloomFilter(NUM_HASH_FUNCTIONS, NUM_BITS_PER_KEY * set.numElements());
-    Iterator i = set.getIterator();  
+    Id[] array = set.asArray();  
     
-    while (i.hasNext())
-      addId((Id) i.next());
+    for (int i=0; i<array.length; i++)
+      addId(array[i]);
   }
   
   /**

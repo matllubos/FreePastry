@@ -161,14 +161,21 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
       Vector result = new Vector();
       
       public void receiveResult(Object o) {
-        if ((o != null) && (! result.contains(o))) {
-          result.add(o);
-          log.finer("Adding " + o + " to the list of groups...");
-        }
+        while (i < array.length) {
+          Id id = array[i];
+          GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
+
+          if ((metadata != null) && (metadata instanceof DeliveryMetadata)) {
+            if (! result.contains(((DeliveryMetadata) metadata).getDestination()))
+              result.add(((DeliveryMetadata) metadata).getDestination());
+            i++;
+          } else {
+            setMetadata(id, this);
+            break;
+          }
+        } 
         
-        if (i < array.length)
-          getUser(array[i++], this);
-        else
+        if (i >= array.length) 
           parent.receiveResult(result.toArray(new PostEntityAddress[0]));
       }
     };
@@ -256,24 +263,14 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
    * @param id The id to return the PostEntityAddress of
    * @param command The command to return the result to
    */
-  protected void getUser(final Id id, Continuation command) {
-    GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
+  protected void setMetadata(final Id id, Continuation command) {
+    final GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
     
-    if ((metadata == null) || (! (metadata instanceof DeliveryMetadata))) {
-      storage.getObject(id, new StandardContinuation(command) {
-        public void receiveResult(Object o) {
-          PostEntityAddress address = ((Delivery) o).getMessage().getDestination();
-          
-          storage.setMetadata(id, ((Delivery) o).getMetadata(DEFAULT_EXPIRATION), new StandardContinuation(parent) {
-            public void receiveResult(Object o) {
-              parent.receiveResult(((DeliveryMetadata) storage.getMetadata(id)).getDestination());
-            }
-          });
-        }
-      });
-    } else {
-      command.receiveResult(((DeliveryMetadata) metadata).getDestination());
-    }
+    storage.getObject(id, new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        storage.setMetadata(id, ((Delivery) o).getMetadata((metadata == null ? DEFAULT_EXPIRATION : metadata.getExpiration())), parent);
+      }
+    });
   }
 }
 

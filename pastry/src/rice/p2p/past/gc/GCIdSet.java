@@ -83,6 +83,14 @@ public class GCIdSet implements IdSet {
    */
   public void addId(Id id) {
     removeId(new GCMatchingId(((GCId) id).getId())); 
+    doAddId(id);
+  }
+  
+  /**
+   * add a member
+   * @param id the id to add
+   */
+  protected void doAddId(Id id) {
     ids.add(id);
   }
   
@@ -110,6 +118,9 @@ public class GCIdSet implements IdSet {
    * @return the subset
    */
   public IdSet subSet(IdRange range) {
+    if (range == null)
+      return this;
+    
     GCIdSet res;
     
     if (range.getCCWId().compareTo(range.getCWId()) <= 0) {

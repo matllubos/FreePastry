@@ -200,12 +200,14 @@ public class DeliveryService implements ScribeClient {
         go = true;
       }
     }
-    
+    System.out.println("DELIERYSERVICE.SYNCHRONIZE " + go);
     if (go) {
       pending.synchronize(new ListenerContinuation("Synchronization of Delivery Service") {
         public void receiveResult(Object o) {
+          System.out.println("DELIERYSERVICE.SYNCHRONIZE 1");
           pending.getGroups(new StandardContinuation(this) {
             public void receiveResult(Object o) {
+              System.out.println("DELIERYSERVICE.SYNCHRONIZE 2");
               PostEntityAddress[] addresses = (PostEntityAddress[]) o;
               
               for (int i=0; i<addresses.length; i++) {
@@ -215,6 +217,7 @@ public class DeliveryService implements ScribeClient {
               }
               
               Topic[] topics = scribe.getTopics(DeliveryService.this);
+              System.out.println("DELIERYSERVICE.SYNCHRONIZE 3");
               
               for (int i=0; i<topics.length; i++) {
                 boolean found = false;
@@ -229,6 +232,7 @@ public class DeliveryService implements ScribeClient {
                   scribe.unsubscribe(topics[i], DeliveryService.this);
                 }
               }
+              System.out.println("DELIERYSERVICE.SYNCHRONIZE 4");
               
               synchronized (DeliveryService.this) {
                 synchronizeActive = false;
@@ -239,6 +243,7 @@ public class DeliveryService implements ScribeClient {
               synchronized (DeliveryService.this) {
                 synchronizeActive = false;
               }
+              System.out.println("DELIERYSERVICE.SYNCHRONIZE E");
               
               parent.receiveException(e);
             }

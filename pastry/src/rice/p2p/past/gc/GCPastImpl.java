@@ -283,11 +283,21 @@ public class GCPastImpl extends PastImpl implements GCPast {
         StandardContinuation process = new StandardContinuation(getResponseContinuation(msg)) {
           public void receiveResult(Object o) {
             if (i.hasNext()) {
-              Id id = (Id) i.next();
+              final Id id = (Id) i.next();
               set.addId(new GCId(id, rmsg.getExpiration()));
               
-              ((GCPastMetadata) storage.getMetadata(id)).setExpiration(rmsg.getExpiration());
-              storage.setMetadata(id, storage.getMetadata(id), this);
+              GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
+              
+              if (metadata != null) {
+                metadata.setExpiration(rmsg.getExpiration());
+                storage.setMetadata(id, storage.getMetadata(id), this);
+              } else {
+                storage.getObject(id, new StandardContinuation(this) {
+                  public void receiveResult(Object o) {
+                    storage.setMetadata(id, ((GCPastContent) o).getMetadata(rmsg.getExpiration()), parent);
+                  }
+                });
+              }
             } else {
               parent.receiveResult(Boolean.TRUE);
             }
@@ -372,9 +382,9 @@ public class GCPastImpl extends PastImpl implements GCPast {
       GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
       
       if (metadata != null) 
-        set.addId(new GCId(id, metadata.getExpiration()));
+        set.doAddId(new GCId(id, metadata.getExpiration()));
       else
-        set.addId(new GCId(id, DEFAULT_EXPIRATION));
+        set.doAddId(new GCId(id, DEFAULT_EXPIRATION));
     }    
   }
   

@@ -86,6 +86,11 @@ public class ScribeImpl implements Scribe, Application {
    * the hashtable of outstanding messages
    */
   private Hashtable outstanding;
+  
+  /**
+   * The hashtable of outstanding lost messags
+   */
+  private Hashtable lost;
 
   /**
    * the next unique id
@@ -113,6 +118,7 @@ public class ScribeImpl implements Scribe, Application {
     this.endpoint = node.registerApplication(this, instance);
     this.topics = new Hashtable();
     this.outstanding = new Hashtable();
+    this.lost = new Hashtable();
     this.policy = policy;
     this.handle = endpoint.getLocalNodeHandle();
     this.id = Integer.MIN_VALUE;
@@ -231,7 +237,9 @@ public class ScribeImpl implements Scribe, Application {
       outstanding.put(new Integer(id), client);
 
     endpoint.route(topic.getId(), new SubscribeMessage(handle, topic, previousParent, id, content), null);
-    endpoint.scheduleMessage(new SubscribeLostMessage(handle, topic, id), MESSAGE_TIMEOUT);
+    CancellableTask task = endpoint.scheduleMessage(new SubscribeLostMessage(handle, topic, id), MESSAGE_TIMEOUT);
+    
+    lost.put(new Integer(id), task);
   }
 
   /**
@@ -242,6 +250,10 @@ public class ScribeImpl implements Scribe, Application {
   private void ackMessageReceived(SubscribeAckMessage message) {
     ScribeClient client = (ScribeClient) outstanding.remove(new Integer(message.getId()));
     log.finer(endpoint.getId() + ": Removing client " + client + " from list of outstanding for ack " + message.getId());
+    CancellableTask task = (CancellableTask) lost.remove(new Integer(message.getId()));
+    
+    if (task != null)
+      task.cancel();
   }
 
   /**
@@ -251,7 +263,8 @@ public class ScribeImpl implements Scribe, Application {
    */
   private void failedMessageReceived(SubscribeFailedMessage message) {
     ScribeClient client = (ScribeClient) outstanding.remove(new Integer(message.getId()));
-
+    lost.remove(new Integer(message.getId()));
+    
     log.finer(endpoint.getId() + ": Telling client " + client + " about FAILURE for outstanding ack " + message.getId());
     
     if (client != null)
@@ -265,6 +278,7 @@ public class ScribeImpl implements Scribe, Application {
    */
   private void lostMessageReceived(SubscribeLostMessage message) {
     ScribeClient client = (ScribeClient) outstanding.remove(new Integer(message.getId()));
+    lost.remove(new Integer(message.getId()));
 
     log.finer(endpoint.getId() + ": Telling client " + client + " about LOSS for outstanding ack " + message.getId());
     
