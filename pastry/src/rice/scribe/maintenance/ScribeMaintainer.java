@@ -197,14 +197,12 @@ public class ScribeMaintainer
 	    // System.out.println("This node need not start a tree repair since it is the topic manager for the topic");
 	    return;
 	}
+
 	//System.out.println("Tree repair started for topic "+topic.getTopicId()+" at "+m_scribe.getNodeId());
 	topicId = topic.getTopicId();
 	cred = m_scribe.getCredentials();
 	opt = m_scribe.getSendOptions();
 	
-	msgs = m_scribe.makeSubscribeMessage( topicId, cred);
-	topic.postponeParentHandler();
-
 	// Now, we should set the parent for this topic to null, as 
 	// most probably we are going to get a new parent for this
 	// topic. So, if we have a non-null parent right now, we
@@ -218,11 +216,16 @@ public class ScribeMaintainer
 	}
 	topic.setParent(null);
 
+	msgs = m_scribe.makeSubscribeMessage( topicId, cred);
+	topic.postponeParentHandler();
+
 	// Inform all interested applications
 	IScribeApp[] apps = topic.getApps();
 	for ( int i=0; i<apps.length; i++ ) {
 	    apps[i].faultHandler( msgs );
 	}
+
+	// now, send a subscribe message
 	m_scribe.routeMsg( topicId, msgs, cred, opt );
 
     }

@@ -153,8 +153,6 @@ public class MessageSubscribe extends ScribeMessage implements Serializable
 	 */
 	
 	if( scribe.m_ackOnSubscribeSwitch ) {
-
-	    
 	    /** 
 	     * Send a AckOnSubscribeMessage to the new subscriber so that
 	     * it can set its parent pointer and reset its parentHandler.

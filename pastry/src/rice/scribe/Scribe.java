@@ -367,9 +367,12 @@ public class Scribe extends PastryAppl implements IScribe
 	// Register application as a subscriber for this topic
 	topic.subscribe( subscriber );
 
-	ScribeMessage msg = makeSubscribeMessage( topicId, cred);
-	topic.postponeParentHandler();
-	this.routeMsg( topicId, msg, cred, m_sendOptions );
+	// If we already have a parent, we dont send a subscribe mesg.
+	if( topic.getParent() == null){
+	    ScribeMessage msg = makeSubscribeMessage( topicId, cred);
+	    topic.postponeParentHandler();
+	    this.routeMsg( topicId, msg, cred, m_sendOptions );
+	}
     }
     
     /**
@@ -524,19 +527,20 @@ public class Scribe extends PastryAppl implements IScribe
      */
     public void leafSetChange( NodeHandle nh, boolean wasAdded ) {
 	NodeId nid = nh.getNodeId();
+	Topic topic;
+	NodeId topicId, myNodeId;
+	Credentials c = m_credentials;
+	Vector topicVector = new Vector();
+	int i = 0;
+
+	myNodeId = this.getNodeId();
+	
+	topicVector = getTopics();
+	
 
 	if( wasAdded ) {
 	    //if the node was added we must check if the new node should be
 	    //topic manager for any of our topics.
-	    Topic topic;
-	    NodeId topicId, myNodeId;
-	    Credentials c = m_credentials;
-	    Vector topicVector = new Vector();
-	    int i = 0;
-
-	    myNodeId = this.getNodeId();
-
-	    topicVector = getTopics();
 	    
 	    while( i < topicVector.size() ) {
 		topic = (Topic)topicVector.elementAt(i);
@@ -549,15 +553,39 @@ public class Scribe extends PastryAppl implements IScribe
 			topic.topicManager( false );
 
 			//send a subscribe message
-			ScribeMessage msg = makeSubscribeMessage( topicId, c);
-			topic.postponeParentHandler();
-			this.routeMsg( topicId, msg, c, m_sendOptions );
+			if( topic.getParent() == null) {
+			    ScribeMessage msg = makeSubscribeMessage( topicId, c);
+			    topic.postponeParentHandler();
+			    this.routeMsg( topicId, msg, c, m_sendOptions );
+			}
 		    }
 		}
 	    }
 	}
 	else {
-	    //We do not need to do anything when a node drops.
+	    
+	    while( i < topicVector.size() ) {
+		topic = (Topic)topicVector.elementAt(i);
+		i++;
+		topicId = topic.getTopicId();
+		// for all topics, if we are the current root, but
+		// before this leafSet change we were not the
+		// topicManager for this topic, we become the new
+		// topicManager.
+		if (isRoot(topicId)) {
+		    if( !topic.isTopicManager() ) {
+			//We are the  new topic manager.
+			topic.topicManager( true );
+			NodeHandle prev_parent;
+			prev_parent = topic.getParent();
+			if( prev_parent != null){
+			    ScribeMessage msgu = makeUnsubscribeMessage( topicId, c);
+			    this.routeMsgDirect(prev_parent, msgu, c, m_sendOptions);
+			}
+			topic.setParent(null);
+		    }
+		}
+	    }
 	}
     }
 

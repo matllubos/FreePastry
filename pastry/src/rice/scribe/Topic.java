@@ -327,19 +327,6 @@ public class Topic
      * @param topicMgr value of the flag
      */
     public void topicManager( boolean topicMgr ) {
-
-	if( topicMgr ) {
-	    ;
-	    // No tree repair is required here since it just became the 
-	    //root for the topic.
-	}
-	else if( m_topicManager ) {
-	    // When a node was earlier a topic manager(root) for a topic
-	    // it did not schedule any tree repair event. Since now it is
-	    // no longer the topic manager, it needs to schedule a tree 
-	    // repair for this topic.
-	    m_scribe.m_maintainer.scheduleTR( this );
-	}
 	m_topicManager = topicMgr;
     }
 

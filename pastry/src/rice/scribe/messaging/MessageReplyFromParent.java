@@ -123,11 +123,25 @@ public class MessageReplyFromParent extends ScribeMessage implements Serializabl
 		if(topicListFromParent== null || !topicListFromParent.contains(topicId)) {
 		    ScribeMessage msg = scribe.makeSubscribeMessage( topicId, cred );
 		    topic = scribe.getTopic(topicId);
+		    topic.setParent(null);
 		    topic.postponeParentHandler();
 		    scribe.routeMsg( topicId, msg, cred, opt );     
 		}
 	    }
 	}
+
+	// for the topics, which are common in both parent and child,
+	// we call postponeParentHandler().
+	if(topicListLocal != null && topicListFromParent != null) {    
+	    for(i=0 ; i< topicListLocal.size(); i++ ) {
+		topicId = (NodeId)topicListLocal.elementAt(i);
+		if(topicListFromParent.contains(topicId)) {
+		    topic = scribe.getTopic(topicId);
+		    topic.postponeParentHandler();
+		}
+	    }
+	}
+
     }
     
 

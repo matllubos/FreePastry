@@ -113,21 +113,27 @@ public class MessageHeartBeat extends ScribeMessage implements Serializable
 	parentFingerprint = (NodeId)getData();
 	localFingerprint = scribe.getFingerprintForParentTopics(m_source);
 
+	
 	if(!parentFingerprint.equals(localFingerprint)) {
+	    /*
+	     * Now, there is inconsistency in parent-child relationship
+	     * from the view of parent and child, so the child requests
+	     * for the entire list of topics for which the parent is
+	     * having this node as its child.
+	     */
 	    msg = scribe.makeRequestToParentMessage( null, cred );
 	    scribe.routeMsgDirect( m_source, msg, cred, opt );
 	}
-	
-	if( topics != null){
-	    while( i < topics.size()){
-		topicId = (NodeId)topics.elementAt(i);
-		i++;
-		topic = scribe.getTopic(topicId);
-		if ( topic != null ) {
+	else {
+	    if( topics != null){
+		while( i < topics.size()){
+		    topicId = (NodeId)topics.elementAt(i);
+		    i++;
+		    topic = scribe.getTopic(topicId);
 		    // take note of the parent for this topic and tell the failure 
 		    // handler that the parent is ok
 		    if( topic.getParent() != m_source)
-			System.out.println("Error:: should not happen"); 
+			System.out.println("Error:: Inconsistency in distinctParentTable found"); 
 		    topic.postponeParentHandler();
 		    // if waiting to find parent, now send unsubscription msg
 		    if ( topic.isWaitingUnsubscribe() ) {
@@ -137,16 +143,6 @@ public class MessageHeartBeat extends ScribeMessage implements Serializable
 		}
 	    }
 	}
-	else
-	    {
-		/*
-		 * Now, this is the case that the node who sent this HeartBeat
-		 * message to us, thinks that I am his child for some topic,
-		 * but that node doesnt exist in my list of distinctParentTable,
-		 * so I should send him a message asking for listOfTopics for
-		 * for which I am in his distinctChildrenTable
-		 */
-	    }
     }
     
 
