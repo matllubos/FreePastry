@@ -197,15 +197,19 @@ public class ReplicationImpl implements Replication, Application {
     
     for (int i=0; i<handles.size(); i++) {
       NodeHandle handle = handles.getHandle(i);
-      IdRange range = endpoint.range(handle, 0, handle.getId()).intersectRange(getTotalRange());
-      Id hash = client.scan(range).hash();
+      IdRange handleRange = endpoint.range(handle, 0, handle.getId());
 
-      if ((range != null) && (! range.intersectRange(getTotalRange()).isEmpty())) {
-        log.finer(endpoint.getId() + ": Sending request to " + handle + " for range " + range);
-        RequestMessage request = new RequestMessage(this.handle, new IdRange[] {range, ourRange}, new Id[] {hash, ourHash});
-        log.finer(endpoint.getId() + ": About to pass to endpoint"); 
-        endpoint.route(handle.getId(), request, handle);
-        log.finer(endpoint.getId() + ": Done passing to endpoint"); 
+      if (handleRange != null) {
+        IdRange range = handleRange.intersectRange(getTotalRange());
+        Id hash = client.scan(range).hash();
+
+        if ((range != null) && (! range.intersectRange(getTotalRange()).isEmpty())) {
+          log.finer(endpoint.getId() + ": Sending request to " + handle + " for range " + range);
+          RequestMessage request = new RequestMessage(this.handle, new IdRange[] {range, ourRange}, new Id[] {hash, ourHash});
+          log.finer(endpoint.getId() + ": About to pass to endpoint"); 
+          endpoint.route(handle.getId(), request, handle);
+          log.finer(endpoint.getId() + ": Done passing to endpoint"); 
+        }
       }
     }
     log.finer(endpoint.getId() + ": Done sending out requests"); 
