@@ -1,0 +1,4 @@
+export JAVA_DEV_ROOT="d:/cvs/FreePastry/pastry"
+export JAVA_HOME="/ProgramFiles/j2sdk1.4.1"
+export IS_UNIX=false
+

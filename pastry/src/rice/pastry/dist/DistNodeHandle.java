@@ -468,7 +468,14 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
 	else
 	    super.clearChanged();
     }
+
+    // Observer method
+    
+    public void update(Observable o, Object obj) {}
+
+
 }
+
 
 
 

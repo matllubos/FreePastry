@@ -584,6 +584,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
     markAlive();
   }
 
+
   /**
    * Overridden in order to specify the default state (using UDP)
    */

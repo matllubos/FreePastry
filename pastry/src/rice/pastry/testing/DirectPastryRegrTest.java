@@ -130,7 +130,8 @@ public class DirectPastryRegrTest extends PastryRegrTest {
     public static void main(String args[]) {
 	Log.init(args);
 	DirectPastryRegrTest pt = new DirectPastryRegrTest();
-	mainfunc(pt, args, 100 /*n*/, 20/*d*/, 10/*k*/, 100/*m*/, 10/*conc*/);
+	mainfunc(pt, args, 200 /*n*/, 20/*d*/, 10/*k*/, 100/*m*/, 100/*conc*/);
     }
 }
+
 

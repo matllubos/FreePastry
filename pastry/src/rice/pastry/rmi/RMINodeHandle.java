@@ -42,6 +42,7 @@ import rice.pastry.routing.*;
 import rice.pastry.messaging.*;
 
 import java.io.*;
+import java.util.*;
 import java.rmi.RemoteException;
 
 /**
@@ -261,3 +262,4 @@ public class RMINodeHandle extends DistNodeHandle
               + ")";
     }
 }
+

@@ -308,14 +308,15 @@ public class LeafSet extends Observable implements Serializable {
      * @param routeTable the routing table
      * @param security the security manager
      * @param testOnly if true, do not change the leafset
+     * @param insertedHandles if not null, a Set that contains, upon return of this method, the nodeHandles that would be inserted into this LeafSet if testOnly is true
      * @return true if the local leafset changed
      */
 
     public boolean merge(LeafSet remotels, NodeHandle from, RoutingTable routeTable, 
-			     PastrySecurityManager security, boolean testOnly) {
+			     PastrySecurityManager security, boolean testOnly, Set insertedHandles) {
 
 	//System.out.println("LeafSet::merge of " + remotels + " into \n" + this);
-	boolean changed = false;
+	boolean changed, result = false;
 	int cwSize = remotels.cwSize();
 	int ccwSize = remotels.ccwSize();
 	
@@ -418,16 +419,19 @@ public class LeafSet extends Observable implements Serializable {
 	    //if (member(nh.getNodeId())) continue;
 
 	    if (testOnly) {
-		// merge into our cw leaf set half
-		changed |= cwSet.test(nh);
+		// see it is missing
+		changed = cwSet.test(nh);
 	    }
 	    else {
 		// merge into our cw leaf set half
-		changed |= cwSet.put(nh);
+		changed = cwSet.put(nh);
 
 		// update RT as well
 		routeTable.put(nh);
 	    }
+
+	    result |= changed;
+	    if (insertedHandles != null && changed) insertedHandles.add(nh);
 	}
 
 	for (int i=ccw; i>= -ccwSize; i--) {
@@ -441,16 +445,19 @@ public class LeafSet extends Observable implements Serializable {
 	    //if (member(nh.getNodeId())) continue;
 
 	    if (testOnly) {
-		// merge into our leaf set
-		changed |= ccwSet.test(nh);
+		// see if it is missing
+		changed = ccwSet.test(nh);
 	    }
 	    else {
 		// merge into our leaf set
-		changed |= ccwSet.put(nh);
+		changed = ccwSet.put(nh);
 
 		// update RT as well
 		routeTable.put(nh);
 	    }
+
+	    result |= changed;
+	    if (insertedHandles != null && changed) insertedHandles.add(nh);
 	}
 
 	// if there is overlap, insert nearest nodes regardless of orientation
@@ -466,19 +473,22 @@ public class LeafSet extends Observable implements Serializable {
 		
 		if (testOnly) {
 		    // merge into our leaf set
-		    changed |= test(nh);
+		    changed = test(nh);
 		}
 		else {
 		    // merge into our leaf set
-		    changed |= put(nh);
+		    changed = put(nh);
 		}
+
+		result |= changed;
+		if (insertedHandles != null && changed) insertedHandles.add(nh);
 	    }
 	}
 
 
 	//System.out.println("LeafSet::merge result: " + this);
 
-	return changed;
+	return result;
     }
 
 
@@ -523,3 +533,4 @@ public class LeafSet extends Observable implements Serializable {
 
 
 }
+

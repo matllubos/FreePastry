@@ -1,4 +1,4 @@
-	
+#
 #  (C) 2000 Geotecnical Software Services - GeoSoft
 # 
 #***************************************************************************
@@ -18,7 +18,6 @@ PACKAGES = \
 	rice.pastry.direct\
 	rice.pastry.dist\
 	rice.pastry.standard\
-	rice.pastry.rmi\
 	rice.pastry.security\
 	rice.pastry.testing\
 	rice.pastry.wire\
@@ -29,7 +28,8 @@ PACKAGES = \
 	rice.scribe.maintenance\
 	rice.scribe.messaging\
 	rice.scribe.security\
-	rice.scribe.testing
+	rice.scribe.testing\
+	rice.pastry.rmi
 #	rice.ap3\
 #	rice.ap3.routing\
 #	rice.ap3.messaging\
@@ -70,4 +70,5 @@ BOTTOM      = '<font size="-1">Copyright &copy; 2001 - Rice Pastry</font>'
 
 
 include $(JAVA_DEV_ROOT)/make/Makefile
+
 
