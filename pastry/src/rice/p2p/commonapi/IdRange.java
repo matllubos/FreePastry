@@ -36,6 +36,7 @@ if advised of the possibility of such damage.
 
 package rice.p2p.commonapi;
 
+import java.io.*;
 import java.util.*;
 
 /**
@@ -48,7 +49,7 @@ import java.util.*;
  * @author Alan Mislove
  * @author Peter Druschel
  */
-public interface IdRange {
+public interface IdRange extends Serializable {
   
   /**
    * test if a given key lies within this range
