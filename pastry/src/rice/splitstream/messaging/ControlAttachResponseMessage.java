@@ -7,6 +7,9 @@ import java.io.Serializable;
  * This message is sent in response to an incoming Attach message.  It
  * contains a list of all Stripe Ids for the current channel, as well as
  * the id of the spare capacity tree and the channel id itself.
+ *
+ * @(#) ControlAttachResponseMessage.java
+ * @version $Id:
  * @author briang
  */
 public class ControlAttachResponseMessage extends Message implements Serializable

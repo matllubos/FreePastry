@@ -10,6 +10,10 @@ import rice.pastry.security.*;
  * This is a generic control message type. It is left to the specific
  * application to decide if and how it wants to subclass this for
  * additional control functionality.
+ *
+ * @(#) ControlMessage.java
+ * @version $Id:
+ * @author briang
  */
 public abstract class ControlMessage extends ScribeMessage implements SplitStreamMessage{
 

@@ -14,7 +14,9 @@ import java.io.Serializable;
  * message.  It should be scheduled for timed delivery to the
  * appropriate Channel or Stripe.
  *
- * @author Brian Greinke
+ * @(#) ControlTimeoutMessage.java
+ * @version $Id:
+ * @author briang
  */
 public class ControlTimeoutMessage extends Message implements Serializable
 {

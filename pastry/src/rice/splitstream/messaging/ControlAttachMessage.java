@@ -12,6 +12,9 @@ import java.io.Serializable;
  * attaches to that channel.  The purpose is to learn which stripes are
  * included in this channel.  This information is returned via a
  * ControlAttachResponseMessage.
+ *
+ * @(#) ControlAttachMessage.java
+ * @version $Id:
  * @author briang
  */
 public class ControlAttachMessage implements Serializable {

@@ -11,6 +11,9 @@ import rice.scribe.messaging.*;
  * This message is sent to a client when it has been dropped from it's
  * parent in the tree for a particular stripe. Upon receipt of the message,
  * the client should attempt to locate another parent.
+ *
+ * @(#) ControlDropMessage.java
+ * @version $Id:
  * @author briang
  */
 public class ControlDropMessage extends ControlMessage{

@@ -11,13 +11,13 @@ import java.lang.Boolean;
 import java.io.Serializable;
 
 /**
- * @(#) ControlFindParentMessage.java
- *
- * @version $Id$
- *
  * This class represents the anycast message sent by a node upon receiving a
  * drop notification from its former parent.  It is sent to the spare
  * capacity tree in an attempt to find a new parent.
+ *
+ * @(#) ControlFindParentMessage.java
+ * @version $Id:
+ * @author briang
  */
 public class ControlFindParentMessage extends Message implements Serializable
 {

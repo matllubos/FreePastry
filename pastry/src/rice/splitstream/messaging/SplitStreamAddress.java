@@ -3,7 +3,7 @@ package rice.splitstream.messaging;
 import rice.pastry.messaging.Address;
 
 /**
- * The application address for POST.
+ * The application address for SplitStream.
  * This class follows the Singleton pattern.
  *
  * @version $Id$
@@ -12,7 +12,7 @@ import rice.pastry.messaging.Address;
 public class SplitStreamAddress implements Address {
 
   /**
-   * The only instance of PostAddress ever created.
+   * The only instance of SplitStreamAddress ever created.
    */
   private static SplitStreamAddress _instance;
 
@@ -22,7 +22,7 @@ public class SplitStreamAddress implements Address {
   private int _code = 0x29b53bc0;
 
   /**
-   * Returns the single instance of PostAddress.
+   * Returns the single instance of SplitStreamAddress.
    */
   public static SplitStreamAddress instance() {
     if(null == _instance) {
@@ -43,7 +43,7 @@ public class SplitStreamAddress implements Address {
 
   /**
    * Determines if another object is equal to this one.
-   * Simply checks if it is an instance of PostAddress
+   * Simply checks if it is an instance of SplitStreamAddress
    * since there is only one instance ever created.
    */
   public boolean equals(Object obj) {

@@ -16,6 +16,9 @@ import rice.scribe.messaging.*;
  * parent that has accepted it as a child.  Content is normally true, but
  * in the event that no suitable parent could be found, a "false" message
  * will be sent by the root of the spare capacity tree.
+ *
+ * @(#) ControlFindParentResponseMessage.java
+ * @version $Id:
  * @author briang
  */
 

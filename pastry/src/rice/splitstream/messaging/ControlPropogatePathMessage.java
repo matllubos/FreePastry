@@ -11,6 +11,9 @@ import java.util.Vector;
  * This message is sent from any node whose parent has changed, to each
  * of its children and descendents.  It contains a list with the nodeId
  * of each node it encounters along its path.
+ *
+ * @(#) ControlPropogatePathMessage.java
+ * @version $Id:
  * @author briang
  */
 public class ControlPropogatePathMessage extends Message{
