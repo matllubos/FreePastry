@@ -100,30 +100,36 @@ public class NodeIdUnit {
 	NodeId a = createNodeId();
 	NodeId b = createNodeId();
 	
-	for (int i=0; i<20; i++) {
+	for (int i=0; i<100; i++) {
+	    NodeId.Distance adist = nid.distance(a);
+	    NodeId.Distance adist2 = a.distance(nid);
+	    NodeId.Distance bdist = nid.distance(b);
+	    System.out.println("adist =" + adist + "\n bdist=" + bdist);
+
+	    if (adist.equals(adist2) == true) System.out.println("distance seems reflexive");
+	    else System.out.println("ALERT: distance is non-reflexive.");
+
+	    if (adist.equals(bdist) == true) 
+		System.out.println("ALERT: nodes seem at equal distance - very unlikely");
+	    else System.out.println("nodes have different distance as expected.");
+
+	    System.out.println("result of comparison with a and b " + adist.compareTo(bdist));
+	    System.out.println("result of comparison with a to itself " + adist.compareTo(adist2));
 
 	    if (a.clockwise(b))
 		System.out.println("b is clockwise from a");
 	    else
 		System.out.println("b is counter-clockwise from a");
 
+	    NodeId.Distance abs = a.distance(b);
+	    NodeId.Distance abl = a.longDistance(b);
+	    if (abs.compareTo(abl) != -1)
+		System.out.println("ERROR: abs.compareTo(abl)=" + abs.compareTo(abl));
+
 	    a = createNodeId();
 	    b = createNodeId();
 	}
 
-	NodeId.Distance adist = nid.distance(a);
-	NodeId.Distance adist2 = a.distance(nid);
-	NodeId.Distance bdist = nid.distance(b);
-	System.out.println("adist =" + adist + "\n bdist=" + bdist);
-
-	if (adist.equals(adist2) == true) System.out.println("distance seems reflexive");
-	else System.out.println("ALERT: distance is non-reflexive.");
-
-	if (adist.equals(bdist) == true) System.out.println("ALERT: nodes seem at equal distance - very unlikely");
-	else System.out.println("nodes have different distance as expected.");
-
-	System.out.println("result of comparison with a and b " + adist.compareTo(bdist));
-	System.out.println("result of comparison with a to itself " + adist.compareTo(adist2));
 
 	byte[] raw0 = {0,0,0,0,0,0,0,0,0,0,
 		       0,0,0,0,0,0};
@@ -131,12 +137,17 @@ public class NodeIdUnit {
 			0,0,0,0,0,-128};
 	byte[] raw7f = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
 			-1,-1,-1,-1,-1,127};
+	
+	byte[] t1 = {0x62,(byte)0xac,0x0a,0x6d,0x26,0x3a,(byte)0xeb,(byte)0xb1,(byte)0xe4,(byte)0x8e,
+			0x25,(byte)0xf2,(byte)0xe5,0x0e,(byte)0xa2,0x13};
+	byte[] t2 = {0x3a,0x3f,(byte)0xfa,(byte)0x82,0x00,(byte)0x91,(byte)0xfb,(byte)0x82,(byte)0x9d,(byte)0xd2,
+			(byte)0xd8,0x42,(byte)0x86,0x40,0x5d,(byte)0xd7};
 
-	a = new NodeId(raw80);
-	b = new NodeId(raw7f);
+	a = new NodeId(t1/*raw80*/);
+	b = new NodeId(t2/*raw7f*/);
 	NodeId c = new NodeId(raw0);
 	System.out.println("a=" + a + "b=" + b + "c=" + c);
-	//a.distance(b);
+	System.out.println("a.clockwise(b)=" + a.clockwise(b));
 
 	if (a.clockwise(c))
 	    System.out.println("c is clockwise from a");
@@ -195,8 +206,16 @@ public class NodeIdUnit {
 
 	NodeId.Distance adist = nid.distance(a);
 	NodeId.Distance bdist = nid.distance(b);
+	NodeId.Distance aldist = nid.longDistance(a);
+	NodeId.Distance bldist = nid.longDistance(b);
+	
+	System.out.println("nid.dist(a)=" + adist);
+	System.out.println("nid.longDist(a)=" + aldist);
+	System.out.println("nid.dist(b)=" + bdist);
+	System.out.println("nid.longDist(b)=" + bldist);
 
-	System.out.println("result of comparison with a and b " + adist.compareTo(bdist));
+	System.out.println("adist.compareTo(bdist) " + adist.compareTo(bdist));
+	System.out.println("aldist.compareTo(bldist) " + aldist.compareTo(bldist));
 
 	System.out.println("msdb a and nid " + nid.indexOfMSDB(a));
 	System.out.println("msdb b and nid " + nid.indexOfMSDB(b));
@@ -233,6 +252,29 @@ public class NodeIdUnit {
 	System.out.println("--------------------------");
     }
 
+    public void domainPrefixTest() 
+    {
+	System.out.println("--------------------------");
+	
+	System.out.println("nid=" + nid);
+
+	for (int b=2; b<7; b++) 
+	    for (int row=nid.nodeIdBitLength/b-1; row >=0; row--)
+		for (int col=0; col<(1 << b); col++) {
+		    NodeId domainFirst = nid.getDomainPrefix(row,col,0,b);
+		    NodeId domainLast = nid.getDomainPrefix(row,col,-1,b);
+		    System.out.println("prefixes " + nid + domainFirst + domainLast);
+		    int cmp = domainFirst.compareTo(domainLast);
+		    boolean equal = domainFirst.equals(domainLast);
+		    if ((cmp == 0) != equal)
+			System.out.println("ERROR, compareTo=" + cmp + " equal=" + equal); 
+		    if (cmp == 1)
+			System.out.println("ERROR, compareTo=" + cmp); 
+		}
+
+	System.out.println("--------------------------");
+    }
+
     public NodeIdUnit() 
     {
 	rng = new Random(PastrySeed.getSeed());
@@ -245,6 +287,7 @@ public class NodeIdUnit {
 	baseFiddlingTest();
 	msdTest();
 	alternateTest();
+	domainPrefixTest();
     }
     
     public static void main(String args[]) 

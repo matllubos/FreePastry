@@ -1,4 +1,4 @@
-export JAVA_DEV_ROOT="d:/cvs/FreePastry/pastry"
-export JAVA_HOME="/ProgramFiles/j2sdk1.4.1"
+export JAVA_DEV_ROOT="c:/temp/cvs/pastry"
+export JAVA_HOME="c:/ProgramFiles/Java/j2sdk1.4.1_01"
 export IS_UNIX=false
 

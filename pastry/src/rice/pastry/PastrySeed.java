@@ -60,7 +60,7 @@ public class PastrySeed
 {
 
     private static boolean deterministic = false; // default value;
-    private static int seedValue = 0; // deafault value;
+    private static int seedValue = 0; // default value;
     
     public static int getSeed() {
 	

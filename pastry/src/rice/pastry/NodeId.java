@@ -57,29 +57,40 @@ public class NodeId implements Comparable, Serializable
     /**
      * This is the bit length of the node ids.  If it is n, then
      * there are 2^n different Pastry nodes.  We currently assume
-     * that it is divisible by 8.
+     * that it is divisible by 32.
      */
-    
     public final static int nodeIdBitLength = 128;
-    
-    /// 2^(nodeIdBitLength - 3) elements in the array.
-    private byte nodeId[];
+
+    // elements in the array.
+    private final static int nlen = nodeIdBitLength / 32;
+    private int nodeId[];
 
     /**
      * Constructor.
      *
-     * @param material an array of length at least 2^(nodeIdBitLength - 3) containing raw nodeId material.
+     * @param material an array of length at least nodeIdBitLength/8 containing raw nodeId material.
      */
     public NodeId(byte material[]) 
     {
-	int n = nodeIdBitLength >> 3;
-	
-	nodeId = new byte[n];
+	nodeId = new int[nlen];
+	for (int i=0; i<nlen; i++) nodeId[i] = 0;
 
-	for (int i=0; i<n; i++) nodeId[i] = material[i];
+	for (int j=0; j<nodeIdBitLength/8; j++) {
+	    int k = material[j] & 0xff;
+	    nodeId[j / 4] |= k << ((j % 4) * 8);
+	}
     }
 
-
+    /**
+     * Constructor.
+     *
+     * @param material an array of length at least nodeIdBitLength/32 containing raw nodeId material.
+     */
+    public NodeId(int material[]) 
+    {
+	nodeId = new int[nlen];
+	for (int i=0; i<nlen; i++) nodeId[i] = material[i];
+    }
 
     /**
      * Constructor.
@@ -88,11 +99,8 @@ public class NodeId implements Comparable, Serializable
      */
     public NodeId() 
     {
-	int n = nodeIdBitLength >> 3;
-	
-	nodeId = new byte[n];
-
-	for (int i=0; i<n; i++) nodeId[i] = 0;
+	nodeId = new int[nlen];
+	for (int i=0; i<nlen; i++) nodeId[i] = 0;
     }
     
 
@@ -100,14 +108,15 @@ public class NodeId implements Comparable, Serializable
     /**
      * Blits the nodeId into a target array.
      *
-     * @param target an array of length at least 2^(nodeIdBitLength - 3) for the nodeId to be stored in.
+     * @param target an array of length at least nodeIdBitLength/8 for the nodeId to be stored in.
      */
     
     public void blit(byte target[]) 
     {
-	int n = nodeIdBitLength >> 3;
-	
-	for (int i=0; i<n; i++) target[i] = nodeId[i];
+	for (int j=0; j<nodeIdBitLength/8; j++) {
+	    int k = nodeId[j / 4] >> ((j % 4) * 8);
+	    target[j] = (byte)(k & 0xff);
+	}
     }
     
     /**
@@ -118,12 +127,8 @@ public class NodeId implements Comparable, Serializable
 
     public byte [] copy() 
     {
-	int n = nodeIdBitLength >> 3;
-
-	byte target[] = new byte[n];
-
-	for (int i=0; i<n; i++) target[i] = nodeId[i];
-	
+	byte target[] = new byte[nodeIdBitLength/8];
+	blit(target);
 	return target;
     }
 
@@ -150,10 +155,8 @@ public class NodeId implements Comparable, Serializable
     public boolean equals(Object obj) 
     {
 	NodeId nid = (NodeId) obj;
-	
-	int n = nodeIdBitLength >> 3;
 
-	for (int i=0; i<n; i++) 
+	for (int i=0; i<nlen; i++) 
 	    if (nodeId[i] != nid.nodeId[i]) return false;
 
 	return true;
@@ -172,10 +175,10 @@ public class NodeId implements Comparable, Serializable
     {
 	NodeId oth = (NodeId) obj;
 	
-	for (int i=nodeId.length - 1; i >= 0; i--) 
+	for (int i=nlen-1; i >= 0; i--) 
 	    if (nodeId[i] != oth.nodeId[i]) {
-		int t = nodeId[i] & 0xff;
-		int o = oth.nodeId[i] & 0xff;
+		long t = nodeId[i] & 0x0ffffffffL;
+		long o = oth.nodeId[i] & 0x0ffffffffL;
 		if (t < o) return -1;
 		else return 1;
 	    }
@@ -191,14 +194,11 @@ public class NodeId implements Comparable, Serializable
 
     public int hashCode() 
     {
-	int n = nodeIdBitLength >> 3;
-
 	int h = 0;
 
-	/// Hash function is computed by cyclicly XORing the bits of the nodeId.
-	
-	for (int i=0; i<n; i++)
-	    h ^= (nodeId[i] << (i % 24));
+	/// Hash function is computed by XORing the bits of the nodeId.
+	for (int i=0; i<nlen; i++)
+	    h ^= nodeId[i];
 
 	return h;		   
     }
@@ -222,6 +222,33 @@ public class NodeId implements Comparable, Serializable
 	}
 	
 	/**
+	 * Blits the distance into a target array.
+	 *
+	 * @param target an array of length at least nodeIdBitLength/8 for the distance to be stored in.
+	 */
+    
+	public void blit(byte target[]) 
+	{
+	    for (int j=0; j<nodeIdBitLength/8; j++) {
+		int k = difference[j / 4] >> ((j % 4) * 8);
+		target[j] = (byte)(k & 0xff);
+	    }
+	}
+    
+	/**
+	 * Copy the distance into a freshly generated array.
+	 *
+	 * @return a fresh copy of the distance material
+	 */
+
+	public byte [] copy() 
+	{
+	    byte target[] = new byte[nodeIdBitLength/8];
+	    blit(target);
+	    return target;
+	}
+
+	/**
 	 * Comparison operator.
 	 *
 	 * The comparison that occurs is an absolute magnitude comparison.
@@ -234,12 +261,11 @@ public class NodeId implements Comparable, Serializable
 	{
 	    Distance oth = (Distance) obj;
 
-	    if (difference.length < oth.difference.length) return -1;
-	    if (difference.length > oth.difference.length) return 1;
-	    
-	    for (int i=difference.length - 1; i >= 0; i--) 
+	    for (int i=nlen-1; i >= 0; i--) 
 		if (difference[i] != oth.difference[i]) {
-		    if (difference[i] < oth.difference[i]) return -1;
+		    long t = difference[i] & 0x0ffffffffL;
+		    long o = oth.difference[i] & 0x0ffffffffL;
+		    if (t < o) return -1;
 		    else return 1;
 		}
 	    
@@ -267,14 +293,11 @@ public class NodeId implements Comparable, Serializable
 	
 	public int hashCode()
 	{
-	    int n = nodeIdBitLength >> 3;
-	    
 	    int h = 0;
 	    
-	    // Hash function is computed by cyclicly XORing the bits of the nodeId.
-	    
-	    for (int i=0; i<n; i++)
-		h ^= (difference[i] << (i % 24));
+	    // Hash function is computed by XORing the bits of the nodeId.
+	    for (int i=0; i<nlen; i++)
+		h ^= difference[i];
 	    
 	    return h;		   
 	}
@@ -292,10 +315,9 @@ public class NodeId implements Comparable, Serializable
 	    String tran[] = { "0", "1", "2", "3", "4", "5", "6", "7",
 			      "8", "9", "A", "B", "C", "D", "E", "F" };
 	
-	    int n = nodeIdBitLength >> 3;
-
-	    for (int i=n-1; i>=0; i--) {
-		s = s + tran[(difference[i] >> 4) & 0x0f] + tran[difference[i] & 0x0f];
+	    for (int j=nodeIdBitLength/8-1; j>=0; j--) {
+		int k = difference[j / 4] >> ((j % 4) * 8);
+		s = s + tran[(k >> 4) & 0x0f] + tran[k & 0x0f];
 	    }
 
 	    return "< nodeId.distance " + s + " >";
@@ -306,6 +328,48 @@ public class NodeId implements Comparable, Serializable
     }
     
     /**
+     * Returns the absolute numerical distance between a pair of nodeIds.
+     *
+     * @param nid the other node id.
+     * @return an int[] containing the distance between this and nid.
+     */
+
+    private int[] absDistance(NodeId nid) 
+    {
+	int dist[] = new int[nlen];
+	long x, y, diff;
+	int carry = 0;
+
+	if (compareTo(nid) > 0)
+	    for (int i=0; i<nlen; i++) {
+		x = nodeId[i] & 0x0ffffffffL;
+		y = nid.nodeId[i] & 0x0ffffffffL;
+		
+		diff = x - y - carry;
+		
+		if (diff < 0) carry = 1;
+		else carry = 0;
+
+		dist[i] = (int)diff;
+	    }
+	else 
+	    for (int i=0; i<nlen; i++) {
+		x = nodeId[i] & 0x0ffffffffL;
+		y = nid.nodeId[i] & 0x0ffffffffL;
+		
+		diff = y - x - carry;
+		
+		if (diff < 0) carry = 1;
+		else carry = 0;
+
+		dist[i] = (int)diff;
+	    }	       
+
+	//System.out.println("absDist=" + new Distance(dist));
+	return dist;
+    }
+
+    /**
      * Returns the shorter numerical distance on the ring between a pair of nodeIds.
      *
      * @param nid the other node id.
@@ -314,62 +378,16 @@ public class NodeId implements Comparable, Serializable
 
     public Distance distance(NodeId nid) 
     {
-	int n = nodeIdBitLength >> 3;
-	
-	int diff[] = new int[n];
-	int x, y;
-	int carry = 0;
+	int[] dist = absDistance(nid);
 
-	if (compareTo(nid) > 0)
-	    for (int i=0; i<n; i++) {
-		x = nodeId[i];
-		y = nid.nodeId[i];
-		
-		if (x < 0) x+=256;
-		if (y < 0) y+=256;
+	if ( (dist[nlen-1] & 0x80000000) != 0 ) 
+	    invert(dist);
 
-		diff[i] = x - y - carry;
-		
-		if (diff[i] < 0) {
-		    diff[i] += 256;
-		    carry = 1;
-		}
-		else carry = 0;
-	    }
-	else 
-	    for (int i=0; i<n; i++) {
-		x = nodeId[i];
-		y = nid.nodeId[i];
-		
-		if (x < 0) x+=256;
-		if (y < 0) y+=256;
-
-		diff[i] = y - x - carry;
-		
-		if (diff[i] < 0) {
-		    diff[i] += 256;
-		    carry = 1;
-		}
-		else carry = 0;
-	    }	       
-
-	if ( (diff[n-1] & 0x80) != 0 ) {
-	    carry = 0;
-	    for (int i=0; i<n; i++) {
-		diff[i] = 0 - diff[i] - carry;
-		if (diff[i] < 0) {
-		    diff[i] += 256;
-		    carry = 1;
-		}
-	    }
-	}
-
-	Distance d = new Distance(diff);
-	//System.out.println("Diff:" + this + nid + d); 
+	Distance d = new Distance(dist);
+	//System.out.println("Dist:" + this + nid + d); 
 
 	return d;
     }
-
 
     /**
      * Returns the longer numerical distance on the ring between a pair of nodeIds.
@@ -380,60 +398,31 @@ public class NodeId implements Comparable, Serializable
 
     public Distance longDistance(NodeId nid) 
     {
-	int n = nodeIdBitLength >> 3;
-	
-	int diff[] = new int[n];
-	int x, y;
-	int carry = 0;
+	int[] dist = absDistance(nid);
 
-	if (compareTo(nid) > 0)
-	    for (int i=0; i<n; i++) {
-		x = nodeId[i];
-		y = nid.nodeId[i];
-		
-		if (x < 0) x+=256;
-		if (y < 0) y+=256;
+	if ( (dist[nlen-1] & 0x80000000) == 0 )
+	    invert(dist);
 
-		diff[i] = x - y - carry;
-		
-		if (diff[i] < 0) {
-		    diff[i] += 256;
-		    carry = 1;
-		}
-		else carry = 0;
-	    }
-	else 
-	    for (int i=0; i<n; i++) {
-		x = nodeId[i];
-		y = nid.nodeId[i];
-		
-		if (x < 0) x+=256;
-		if (y < 0) y+=256;
-
-		diff[i] = y - x - carry;
-		
-		if (diff[i] < 0) {
-		    diff[i] += 256;
-		    carry = 1;
-		}
-		else carry = 0;
-	    }	       
-
-	if ( (diff[n-1] & 0x80) == 0 ) {
-	    carry = 0;
-	    for (int i=0; i<n; i++) {
-		diff[i] = 0 - diff[i] - carry;
-		if (diff[i] < 0) {
-		    diff[i] += 256;
-		    carry = 1;
-		}
-	    }
-	}
-
-	Distance d = new Distance(diff);
+	Distance d = new Distance(dist);
 	//System.out.println("Diff:" + this + nid + d); 
 
 	return d;
+    }
+
+    /**
+     * inverts the distance value stored in an integer array (computes 0-value)
+     *
+     * @param dist the distance value
+     */
+    private void invert(int[] dist) {
+	int carry = 0;
+	long diff;
+	for (int i=0; i<nlen; i++) {
+	    diff = dist[i] & 0x0ffffffffL;
+	    diff = 0L - diff - carry;
+	    if (diff < 0) carry = 1;
+	    dist[i] = (int)diff;
+	}
     }
 
 
@@ -446,9 +435,7 @@ public class NodeId implements Comparable, Serializable
 
     public void xor(NodeId otherId ) 
     {
-	int n = nodeIdBitLength >> 3;
-
-	for (int i=0; i<n; i++) 
+	for (int i=0; i<nlen; i++) 
 	    nodeId[i] ^= otherId.nodeId[i];
     }
 
@@ -461,11 +448,9 @@ public class NodeId implements Comparable, Serializable
      */
     
     public boolean equals(NodeId nid) {
-	if(nid == null) 
-	    return false;
-	int n = nodeIdBitLength >> 3;
+	if(nid == null) return false;
 
-	for (int i=0; i<n; i++)
+	for (int i=0; i<nlen; i++)
 	    if (nodeId[i] != nid.nodeId[i]) return false;
 	
 	return true;	
@@ -479,29 +464,28 @@ public class NodeId implements Comparable, Serializable
     
     public boolean clockwise(NodeId nid) 
     {
-	int n = nodeIdBitLength >> 3;
+	boolean diffMSB = ((nodeId[nlen-1] & 0x80000000) != (nid.nodeId[nlen-1] & 0x80000000));
+	int x, y;	
+	int i;
 
-	boolean diffMSB = ((nodeId[n - 1] & 0x80) != (nid.nodeId[n-1] & 0x80));
-	int i = n - 1;
-	
-	if ((nodeId[i] & 0x7f) == (nid.nodeId[i] & 0x7f)) 
-	    for (i = n - 2; i >= 0; i--) 
-		if (nodeId[i] != nid.nodeId[i]) break;
-	
-	if (i >= 0) {
-	    int x, y;
-	    x = (nodeId[i] < 0 ? (nodeId[i] + 256) : nodeId[i]);
-	    y = (nid.nodeId[i] < 0 ? (nid.nodeId[i] + 256) : nid.nodeId[i]);
-
-	    if (i == n - 1) {
-		x &= 0x7f;
-		y &= 0x7f;
-	    }
-	    
+	if ((x = (nodeId[nlen-1] & 0x7fffffff)) != (y = (nid.nodeId[nlen-1] & 0x7fffffff))) {
 	    return ((y > x) ^ diffMSB);
 	}
+	else {
+	    for (i = nlen-2; i >= 0; i--) 
+		if (nodeId[i] != nid.nodeId[i]) break;
+	    
+	    if (i < 0) 
+		return diffMSB;
+	    else {
+		long xl, yl;
 
-	return diffMSB;
+		xl = nodeId[i] & 0xffffffffL;
+		yl = nid.nodeId[i] & 0xffffffffL;
+
+		return ((yl > xl) ^ diffMSB);
+	    }
+	}
     }
 
     /**
@@ -516,10 +500,9 @@ public class NodeId implements Comparable, Serializable
 
     public boolean checkBit(int i) 
     {
-	int index = i / 8;
-	int shift = i % 8;
+	int index = i / 32;
+	int shift = i % 32;
 	int val = nodeId[index];
-	if (val < 0) val += 256;
 	int mask = (1 << shift);
 
 	if ((val & mask) != 0) return true;
@@ -539,16 +522,15 @@ public class NodeId implements Comparable, Serializable
 
     public void setBit(int i, int v) 
     {
-	int index = i / 8;
-	int shift = i % 8;
+	int index = i / 32;
+	int shift = i % 32;
 	int val = nodeId[index];
-	if (val < 0) val += 256;
 	int mask = (1 << shift);
 	
 	if (v == 1)
-	    nodeId[index] = (byte)(val | mask);
+	    nodeId[index] = val | mask;
 	else
-	    nodeId[index] = (byte)(val & ~mask);
+	    nodeId[index] = val & ~mask;
     }
 
     /**
@@ -564,16 +546,14 @@ public class NodeId implements Comparable, Serializable
 
     public int getDigit(int i, int b) 
     {
-	int index = b * i + (nodeIdBitLength % b);
-	int val = 0;
-	int mask = 1;
+	int bitIndex = b * i + (nodeIdBitLength % b);
+	int index = bitIndex / 32;
+	int shift = bitIndex % 32;
 
-	for (int j=0; j<b; j++) {
-	    if (checkBit(j + index) == true) val += mask;
-	    mask <<= 1;
-	}
-
-	return val;
+	long val = nodeId[index];
+	if (shift + b > 32) val = (val & 0xffffffffL) | (((long)nodeId[index+1]) << 32);
+	//System.out.println("val=" + Long.toHexString(val));}
+	return ((int)(val >> shift)) & ((1 << b) - 1);
     }
 
 
@@ -589,12 +569,27 @@ public class NodeId implements Comparable, Serializable
 
     public void setDigit(int i, int v, int b) 
     {
-	int index = b * i + (nodeIdBitLength % b);
-	int mask = 1;
+	int bitIndex = b * i + (nodeIdBitLength % b);
+	int index = bitIndex / 32;
+	int shift = bitIndex % 32;
+	int mask = (1 << b) - 1;
 
-	for (int j=0; j<b; j++) {
-	    setBit(j + index, v & 1);
-	    v >>= 1;
+	if (shift + b > 32) {
+	    // digit overlaps a word boundary
+
+	    long newd = ((long)(v & mask)) << shift;
+	    long vmask  = ~(((long)mask) << shift);
+	    long val = nodeId[index];
+	    val = (val & 0xffffffffL) | (((long)nodeId[index+1]) << 32);
+
+	    val = (val & vmask) | newd;
+
+	    nodeId[index] = (int)val;
+	    nodeId[index+1] = (int)(val >> 32);
+	} else {
+	    int newd = (v & mask) << shift;
+	    int vmask = ~(mask << shift);
+	    nodeId[index] = (nodeId[index] & vmask) | newd;
 	}
     }
 
@@ -607,24 +602,18 @@ public class NodeId implements Comparable, Serializable
     
     public int indexOfMSDB(NodeId nid)
     {
-	int n = nodeIdBitLength >> 3;
-
-	for (int i=n - 1; i>=0; i--) {
-	    int x = nodeId[i];
-	    int y = nid.nodeId[i];
-
-	    if (x < 0) x += 256;
-	    if (y < 0) y += 256;
-
-	    int cmp = (x ^ y);
+	for (int i=nlen-1; i>=0; i--) {
+	    int cmp = nodeId[i] ^ nid.nodeId[i];
 	    
 	    if (cmp != 0) {
-		int mask = 0x80;
-		
-		for (int j=0; j<8; j++) {
-		    if ((cmp & mask) != 0) return 8 * i + 7 - j;
-		    mask >>= 1;
-		}
+		int tmp;
+		int j = 0;
+		if ((tmp = cmp & 0xffff0000) != 0) {cmp = tmp; j += 16;}
+		if ((tmp = cmp & 0xff00ff00) != 0) {cmp = tmp; j += 8;}
+		if ((tmp = cmp & 0xf0f0f0f0) != 0) {cmp = tmp; j += 4;}
+		if ((tmp = cmp & 0xcccccccc) != 0) {cmp = tmp; j += 2;}
+		if ((tmp = cmp & 0xaaaaaaaa) != 0) {cmp = tmp; j += 1;}
+		return 32 * i + j;
 	    }
 	}
 
@@ -648,7 +637,6 @@ public class NodeId implements Comparable, Serializable
 	ind -= nodeIdBitLength % base;
 
 	if (ind < 0) return ind;
-
 	return ind / base;
     }
 
@@ -710,7 +698,7 @@ public class NodeId implements Comparable, Serializable
      */
 
     public static NodeId makeRandomId(Random rng) {
-	byte material[] = new byte[nodeIdBitLength >> 3];
+	byte material[] = new byte[nodeIdBitLength/8];
 	rng.nextBytes(material);
 	return new NodeId(material);
     }
@@ -729,7 +717,7 @@ public class NodeId implements Comparable, Serializable
 	String tran[] = { "0", "1", "2", "3", "4", "5", "6", "7",
 			  "8", "9", "A", "B", "C", "D", "E", "F" };
 	
-	int n = nodeIdBitLength >> 2;
+	int n = nodeIdBitLength / 4;
 
 	for (int i=n-1; i>=0; i--) {
 	    int d = getDigit(i, 4);

@@ -117,7 +117,7 @@ public abstract class PastryRegrTest {
 	pastryNodesLastAdded = new Vector();
 	inConcJoin = false;
 	rtApps = new Vector();
-	rng = new Random();
+	rng = new Random(PastrySeed.getSeed());
     }
 
     /**
@@ -356,7 +356,8 @@ public abstract class PastryRegrTest {
 
 		NodeId domainFirst = rta.getNodeId().getDomainPrefix(i,j,0,rt.baseBitLength());
 		NodeId domainLast = rta.getNodeId().getDomainPrefix(i,j,-1,rt.baseBitLength());
-		//System.out.println("prefixes " + rta.getNodeId() + domainFirst + domainLast);
+		//System.out.println("prefixes " + rta.getNodeId() + domainFirst + domainLast 
+		//	   + "compareTo=" + domainFirst.compareTo(domainLast));
 
 		if (rs.size() == 0) {
 		    // no entry
