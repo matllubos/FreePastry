@@ -169,6 +169,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	DirectPastryNode pn = new DirectPastryNode(nodeId, simulator);
 	
 	DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
+	simulator.registerNodeId( localhandle );
 
 	DirectSecurityManager secureMan = new DirectSecurityManager(simulator);
 	MessageDispatch msgDisp = new MessageDispatch();
@@ -184,8 +185,6 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	    new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
 	StandardJoinProtocol jProtocol =
 	    new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
-
-	simulator.registerNodeId( localhandle );
 
 	msgDisp.registerReceiver(router.getAddress(), router);
 	msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);

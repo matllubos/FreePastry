@@ -190,6 +190,8 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
      * Testing purposes only!
      */
     public void kill() {
+	super.kill();
+
 	try {
 	    UnicastRemoteObject.unexportObject(this, true); // force
 	} catch (NoSuchObjectException e) {

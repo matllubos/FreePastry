@@ -105,13 +105,16 @@ public class RouteSet extends Observable implements NodeSet, Serializable, Obser
         setChanged();
         notifyObservers(new NodeSetUpdate(handle, true));
 
+	// ping handles while the set is not full
+	handle.ping();
+
         return true;
       }
       else {
         if (handle.proximity() == Integer.MAX_VALUE) {
-          // ping and wait until the proximity value is available
+          // wait until the proximity value is available
 
-	  handle.ping();
+	  handle.ping(); // XXX - eventually, should only ping handles pinged from the deserializer
           handle.addObserver(this);
           return false;
         }
@@ -288,6 +291,11 @@ public class RouteSet extends Observable implements NodeSet, Serializable, Obser
       return -1;
     }
 
+    /**
+     * deserialize the routeSet
+     * pings the handle the was the closests on the sending node
+     */
+
     private void readObject(ObjectInputStream in)
       throws IOException, ClassNotFoundException {
       nodes = (NodeHandle[]) in.readObject();
@@ -296,6 +304,11 @@ public class RouteSet extends Observable implements NodeSet, Serializable, Obser
       if (closest != -1) nodes[closest].ping();
         closest = -1;
     }
+
+    /**
+     * serialize the RouteSet
+     * records the closest node
+     */
 
     private void writeObject(ObjectOutputStream out)
       throws IOException, ClassNotFoundException {

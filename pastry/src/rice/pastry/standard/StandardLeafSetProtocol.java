@@ -339,7 +339,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	// request from most distant live ccw entry
 	for (int i=-ccwSize; i < 0; i++) {
 	    NodeHandle handle = leafSet.get(i);
-	    if (handle.isAlive()) {
+	    if (handle != null && handle.isAlive()) {
 		handle.receiveMessage(rls);
 		allDead = false;
 		break;
@@ -353,7 +353,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	// request from most distant live cw entry
 	for (int i=cwSize; i > 0; i--) {
 	    NodeHandle handle = leafSet.get(i);
-	    if (handle.isAlive()) {
+	    if (handle != null && handle.isAlive()) {
 		handle.receiveMessage(rls);
 		allDead = false;
 		break;

@@ -520,7 +520,7 @@ public abstract class PastryRegrTest {
 	System.out.println((n-d)*k + " messages sent");
 
 	// Dist: wait until everyone detects failed nodes
-	pt.pause(100000);
+	pt.pause(5000);
 
 	// print all nodeIds, sorted
 	//Iterator it = pt.pastryNodesSorted.keySet().iterator();
@@ -560,5 +560,8 @@ public abstract class PastryRegrTest {
 	    }
 	}
 
+	pt.pause(300000);
+	System.out.println("finished, exiting...");
+	System.exit(0);
     }
 }

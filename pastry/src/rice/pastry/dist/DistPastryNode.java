@@ -67,7 +67,7 @@ public abstract class DistPastryNode extends PastryNode {
      */
     protected DistPastryNode(NodeId id) {
       super(id);
-      timer = new Timer();
+      timer = new Timer(true); // uses deamon thread, so it terminates once other threads have terminated
     }
 
     /**
@@ -102,7 +102,10 @@ public abstract class DistPastryNode extends PastryNode {
     /**
      * Method which kills a PastryNode (used only for testing).
      */
-    public abstract void kill();
+    public void kill() {
+	// cancel all scheduled messages
+	timer.cancel();
+    }
 
 
    /**

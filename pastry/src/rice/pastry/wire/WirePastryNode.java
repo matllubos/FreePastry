@@ -192,6 +192,7 @@ public class WirePastryNode extends DistPastryNode {
    * testing purposes.
    */
   public void kill() {
+     super.kill();
     _manager.kill();
   }
 }
