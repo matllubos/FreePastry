@@ -11,7 +11,7 @@ import rice.email.*;
  */
 public class SnapShotLogEntry extends LogEntry {
   // stores the emails of the current folder
-  private Email[] _emails;
+  private StoredEmail[] _emails;
     
   /**
    * Constructor for SnapShot.  For the given email, creates an
@@ -20,7 +20,7 @@ public class SnapShotLogEntry extends LogEntry {
    *
    * @param email the email to store
    */
-  public SnapShotLogEntry(Email[] emails) {
+  public SnapShotLogEntry(StoredEmail[] emails) {
     _emails = emails;
   }
 
@@ -28,7 +28,7 @@ public class SnapShotLogEntry extends LogEntry {
    * Returns all of the emails that the SnapShot contains.
    * @return the valid emails at the point of the SnapShot
    */
-  public Email[] getEmails() {
+  public StoredEmail[] getStoredEmails() {
     return _emails;
   }
       

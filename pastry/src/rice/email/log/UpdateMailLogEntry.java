@@ -4,21 +4,22 @@ import rice.post.log.*;
 import rice.email.*;
 
 /**
- * Stores an email in the LogEntry chain.  Holds the email and a pointer
- * to the next LogEntry.
- * @author Joe Montgomery
+ * Adds the flags to the log entry
+ * @author 
  */
-public class InsertMailLogEntry extends LogEntry {
-  StoredEmail _storedEmail;
-    
+public class UpdateMailLogEntry extends LogEntry {
+
+    StoredEmail _storedEmail;
+
   /**
    * Constructor for InsertMailEntry.  For the given email, creates an
    * entry which can be used in a log chain. 
    *
    * @param email the email to store
    */
-  public InsertMailLogEntry(StoredEmail email) {
-    _storedEmail = email;
+  public UpdateMailLogEntry(StoredEmail email) {
+    _storedEmail = email; 
+ 
   }
   
   /**
@@ -29,10 +30,5 @@ public class InsertMailLogEntry extends LogEntry {
   public StoredEmail getStoredEmail() {
     return _storedEmail;
   }
+ 
 }
-
-
-
-
-
-

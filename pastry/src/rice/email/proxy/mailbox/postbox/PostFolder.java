@@ -159,7 +159,7 @@ public class PostFolder implements MailFolder {
       }   
 
       LinkedList list = new LinkedList();
-      Email[] emails = (Email[]) result[0];
+      StoredEmail[] emails = (StoredEmail[]) result[0];
       
       for (int i=emails.length-1; i>=0; i--) {
         PostMessage msg = new PostMessage(emails[i], emails.length-i, this.getFolder());
@@ -198,3 +198,12 @@ public class PostFolder implements MailFolder {
     return Integer.MAX_VALUE + "";
   }
 }
+
+
+
+
+
+
+
+
+

@@ -51,6 +51,8 @@ public class ExamineCommand
               untaggedResponse(recent + " RECENT");
               untaggedResponse(
                     "FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)");
+	      untaggedSuccess(
+		      "[PERMANENTFLAGS (\\* \\Answered \\Flagged \\Deleted \\Seen \\Draft)] Permanant flags");
               untaggedSuccess(
                       "[UIDVALIDITY " + UIDvalidity + 
                       "] UIDs valid ");

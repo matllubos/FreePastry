@@ -9,7 +9,7 @@ import rice.email.*;
  * @author Joe Montgomery
  */
 public class DeleteMailLogEntry extends LogEntry {
-  Email _email ;
+  StoredEmail _storedEmail ;
     
   /**
    * Constructor for DeleteMailLogEntry.  For the given email, creates a node which serves
@@ -18,8 +18,8 @@ public class DeleteMailLogEntry extends LogEntry {
    *
    * @param email the email to store
    */
-  public DeleteMailLogEntry(Email email) {
-    _email = email;
+  public DeleteMailLogEntry(StoredEmail email) {
+    _storedEmail = email;
   }
   
   /**
@@ -27,7 +27,8 @@ public class DeleteMailLogEntry extends LogEntry {
    *
    * @return The email inserted
    */
-  public Email getEmail() {
-    return _email;
+  public StoredEmail getStoredEmail() {
+    return _storedEmail;
   }
 }
+

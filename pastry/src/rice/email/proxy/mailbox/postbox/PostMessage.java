@@ -12,25 +12,33 @@ import java.util.*;
 
 public class PostMessage implements StoredMessage {
 
-  private Email email;
+  private StoredEmail email;
 
   private int sequence;
 
   private Folder folder;
 
-  public PostMessage(Email email, int sequence, Folder folder) {
-    this.email = email;
+  public PostMessage(StoredEmail storedEmail, int sequence, Folder folder) {
+    this.email = storedEmail;
     this.sequence = sequence;
     this.folder = folder;
   }
 
   public int getUID() {
-    return sequence;
+    return email.getUID();
   }
 
   public int getSequenceNumber() {
     return sequence;
   }
+
+    public Folder getFolder() {
+	return folder;
+    }
+
+    public StoredEmail getStoredEmail() {
+	return email;
+    }
 
   public MimeMessage getMessage() throws MailboxException {
     try {
@@ -50,7 +58,7 @@ public class PostMessage implements StoredMessage {
         }
       };
 
-      email.getBody(c);
+      email.getEmail().getBody(c);
 
       synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
 
@@ -69,7 +77,7 @@ public class PostMessage implements StoredMessage {
   }
 
   public FlagList getFlagList() {
-    return PostFlagList.get(email);
+    return PostFlagList.get(this);
   }
 
   public void purge() throws MailboxException {
@@ -102,3 +110,6 @@ public class PostMessage implements StoredMessage {
     }  
   }
 }
+
+
+

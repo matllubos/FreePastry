@@ -1,25 +1,28 @@
 package rice.email.proxy.mailbox.postbox;
 
+import rice.*;
 import rice.email.*;
 import rice.email.proxy.mailbox.*;
 
 import java.util.*;
 
 public class PostFlagList implements FlagList {
-  boolean _seen;
-  boolean _deleted;
-  boolean _recent;
+
+    PostMessage _msg;
 
   private static Hashtable loc = new Hashtable();
 
-  private PostFlagList() {
+  private PostFlagList(PostMessage msg) {
+      _msg = msg;
   }
 
-  public static PostFlagList get(Email email) {
-    if (loc.get(email) == null) {
-      loc.put(email, new PostFlagList());
+  public static PostFlagList get(PostMessage msg) {
+
+    if (loc.get(msg.getStoredEmail().getEmail()) == null) {
+      loc.put(msg.getStoredEmail().getEmail(), new PostFlagList(msg));
     }
-      return (PostFlagList) loc.get(email);
+      return (PostFlagList) loc.get(msg.getStoredEmail().getEmail());
+      // this is returning emails. Should it be returning MimedMessages??
   }
   
   public void addFlag(String flag)
@@ -34,12 +37,49 @@ public class PostFlagList implements FlagList {
 
   public void setFlag(String flag, boolean value)
   {
-    if ("\\Deleted".equalsIgnoreCase(flag))
-      setDeleted(value);
+    
+      if ("\\Deleted".equalsIgnoreCase(flag))
+	  _msg.getStoredEmail().getFlags().setDeleted(value);
+      if ("\\Answered".equalsIgnoreCase(flag))
+	  _msg.getStoredEmail().getFlags().setAnswered(value);
+      if ("\\Seen".equalsIgnoreCase(flag))
+	  _msg.getStoredEmail().getFlags().setSeen(value);
+      if ("\\Flagged".equalsIgnoreCase(flag))
+	  _msg.getStoredEmail().getFlags().setFlagged(value);
+      if ("\\Draft".equalsIgnoreCase(flag))
+	  _msg.getStoredEmail().getFlags().setDraft(value);
 
-    if ("\\Seen".equalsIgnoreCase(flag))
-      setSeen(value);
+      try {
+	  final Exception[] exception = new Exception[1];
+	  final Object[] result = new Object[1];
+	  final Object wait = "wait";
+	  
+	  Continuation c = new Continuation() {
+		  public void receiveResult(Object o) {
+		      synchronized(wait) {
+			  result[0] = o;
+			  wait.notify();
+		      }
+		  }
+		  public void receiveException (Exception e) {
+		      synchronized (wait) {
+			  exception[0] = e;
+			  result[0] = "result";
+			  wait.notify();
+		      }
+		  }
+	      };
+	  _msg.getFolder().updateMessage(_msg.getStoredEmail(), c);
+	  synchronized (wait) { if (result[0] == null) wait.wait();}
+	  
+	  if (exception[0] != null) {
+	      throw new Exception(exception[0]);
+	  }
+      }catch (Exception e) {
+	  
+      }
   }
+
 
   public void commit()
   {
@@ -47,31 +87,51 @@ public class PostFlagList implements FlagList {
 
   public boolean isRecent()
   {
-
-    return _recent;
+      return _msg.getStoredEmail().getFlags().isRecent();
   }
 
-  public boolean isDeleted()
-  {
-
-    return _deleted;
+    public boolean isDeleted() {
+      return _msg.getStoredEmail().getFlags().isDeleted();
   }
 
-  public boolean isSeen()
-  {
-
-    return _seen;
+    public boolean isSeen() {
+      return _msg.getStoredEmail().getFlags().isSeen();
   }
 
-  public void setDeleted(boolean deleted)
-  {
-    this._deleted = deleted;
-  }
+    public boolean isAnswered() {
+	return _msg.getStoredEmail().getFlags().isAnswered();
+    }
 
-  public void setSeen(boolean seen)
-  {
-    this._seen = seen;
-  }
+    public boolean isFlagged() {
+	return _msg.getStoredEmail().getFlags().isFlagged();
+    }
+
+    public boolean isDraft() {
+	return _msg.getStoredEmail().getFlags().isDraft();
+    }
+
+
+    /** 
+     * Returns a Vector representation of the flagList
+     * @return the Vector of the set flags
+     */
+    public Vector flagList() {
+	Vector flaglist= new Vector();
+	if (isRecent())
+	    flaglist.add("\\Recent");
+	if (isSeen())
+	    flaglist.add("\\Seen");
+	if (isDeleted())
+	    flaglist.add("\\Deleted");
+	if (isAnswered())
+	    flaglist.add("\\Answered");
+	if (isFlagged())
+	    flaglist.add("\\Flagged");
+	if (isDraft())
+	    flaglist.add("\\Draft");
+
+	return flaglist;
+    }
 
   public String toFlagString()
   {
@@ -84,8 +144,21 @@ public class PostFlagList implements FlagList {
       flagBuffer.append("\\Recent ");
 
     if (isDeleted())
-      flagBuffer.append("\\Deleted");
+      flagBuffer.append("\\Deleted ");
+
+    if (isAnswered())
+	flagBuffer.append("\\Answered ");
+
+    if (isFlagged())
+	flagBuffer.append("\\Flagged ");
+
+    if (isDraft())
+	flagBuffer.append("\\Draft ");
 
     return "(" + flagBuffer.toString().trim() + ")";
   }
 }
+
+
+
+

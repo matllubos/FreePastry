@@ -6,11 +6,11 @@ public interface FlagList
 
     void removeFlag(String flag);
 
-    void setDeleted(boolean value);
+    //    void setDeleted(boolean value);
 
     boolean isDeleted();
 
-    void setSeen(boolean value);
+    //    void setSeen(boolean value);
 
     boolean isSeen();
 

@@ -162,9 +162,14 @@ public class EmailProxy {
       past = new PastImpl(pastry, storage, REPLICATION_FACTOR, INSTANCE_NAME);
       System.out.println("[ DONE ]");
 
-      System.out.print("    Press <ENTER> when you have the Pastry and PAST networks up.\n");
-      BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
-      input.readLine();
+      //System.out.print("    Press <ENTER> when you have the Pastry and PAST networks up.\n");
+      //BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
+      //input.readLine();
+
+      try {
+	  Thread.sleep(10000);
+      }catch (InterruptedException e) {
+      }
 
       System.out.print("    Starting POST service\t\t\t\t\t");
       post = new PostImpl(pastry, past, scribe, address, pair, certificate, caPublic, INSTANCE_NAME);

@@ -2,6 +2,7 @@ package rice.email;
 
 import rice.*;
 import java.util.*;
+import rice.email.*;
 import rice.email.messaging.*;
 import rice.email.log.*;
 import rice.post.*;
@@ -30,7 +31,8 @@ public class Folder {
 
   // the cache of children
   private Hashtable _children;
-  
+
+   
   /**
    * Constructs an empty Folder.
    * @param name The name of the folder.
@@ -95,18 +97,19 @@ public class Folder {
    * @param contents the Email[] that needs to be returned
    * @param command the work to perform after this call
    */
-  private void snapShotUpdate(int entries, Email[] contents, Continuation command) {
+  private void snapShotUpdate(int entries, StoredEmail[] contents, Continuation command) {
     // if the number of entries is greater than the compression limit,
     // add a new snapshot
     if (entries > COMPRESS_LIMIT) {
       _log.addLogEntry(new SnapShotLogEntry(contents), command);
-
+      
       // otherwise just return the result
-    } else {
-      command.receiveResult(contents);
+    } 
+    else {
+	command.receiveResult(contents);
     }
   }
-
+    
   /**
    * Returns the name of this folder
    *
@@ -126,14 +129,28 @@ public class Folder {
     readContents(new FolderNullTask(command));
   }
 
+    /**
+     * Updates an Email (flags)
+     *
+     * @param email The email to update.
+     * @param command the work to perform after this call.
+     */
+    public void updateMessage(StoredEmail email, Continuation command) {
+	_log.addLogEntry(new UpdateMailLogEntry(email), command);
+    }
+
   /**
    * Appends an email to this Folder.
+   * Creates a new StoredEmail instance with the given email.
+   * Sets all flags to false for the new email in the folder
    *
    * @param email The email to insert.
    * @param command the work to perform after this call
    */
   public void addMessage(Email email, Continuation command) {
-    _log.addLogEntry(new InsertMailLogEntry(email), command);
+      Flags flags = new Flags();
+      StoredEmail storedEmail = new StoredEmail(email, _log.getNextUID(), flags); 
+    _log.addLogEntry(new InsertMailLogEntry(storedEmail), command);
   }
 
   /**
@@ -145,9 +162,9 @@ public class Folder {
    * @param folder The destination folder for the message.
    * @param command the remaining work to carry out
    */
-  public void moveMessage(Email email, Folder folder, Continuation command) {
+  public void moveMessage(StoredEmail email, Folder folder, Continuation command) {
     Continuation preCommand = new FolderRemoveMessageTask(email, this, command);
-    folder.addMessage(email, preCommand);
+    folder.addMessage(email.getEmail(), preCommand);
   }
 
   /**
@@ -156,7 +173,7 @@ public class Folder {
    * @param email The email to delete.
    * @param command the remaining work to carry out
    */
-  public void removeMessage(Email email, Continuation command) {
+  public void removeMessage(StoredEmail email, Continuation command) {
     _log.addLogEntry(new DeleteMailLogEntry(email), command);
   }
 
@@ -168,9 +185,9 @@ public class Folder {
    * @param email The email to move.
    * @param folder The destination folder for the message.
    */
-  public void moveMessage(Email email, Folder folder) {
+  public void moveMessage(StoredEmail email, Folder folder) {
     Continuation command = new FolderRemoveMessageTask(email, this);
-    folder.addMessage(email, command);
+    folder.addMessage(email.getEmail(), command);
   }
 
   /**
@@ -178,10 +195,11 @@ public class Folder {
    *
    * @param email The email to delete.
    */
-  public void removeMessage(Email email) {
+  public void removeMessage(StoredEmail email) {
     Continuation command = new FolderNullTask(null);
     _log.addLogEntry(new DeleteMailLogEntry(email), command);
   }
+
 
   /**
    * Creates a new child of the given name.  The current Folder
@@ -255,7 +273,6 @@ public class Folder {
 
   /**
    * Returns the names of the child Folders of the current Folder.
-   *
    * @return an array of the names of the child Folders
    */
   public String[] getChildren() {
@@ -276,7 +293,7 @@ public class Folder {
    * @param target the email to act as the signal to stop
    * @param command the work to perform after this call
    */
-  public void getPartialEventLog(Email target, Continuation command) {
+  public void getPartialEventLog(StoredEmail target, Continuation command) {
     Vector events = new Vector();
 
     // get the top entry in the log.
@@ -325,27 +342,43 @@ public class Folder {
         // deal with the current LogEntry.  If the entry is not an email or equivalent, ignore it
         // and go on to the next one
         if (topEntry instanceof InsertMailLogEntry) {
-          ((InsertMailLogEntry)topEntry).getEmail().setStorage(_storage);
-          _contents.add(((InsertMailLogEntry)topEntry).getEmail());
-        }
+	    if (_contents.contains(((InsertMailLogEntry)topEntry).getStoredEmail())) { //skip entry.
+	    }
+	    else {
+		((InsertMailLogEntry)topEntry).getStoredEmail().getEmail().setStorage(_storage);
+		_contents.add(((InsertMailLogEntry)topEntry).getStoredEmail());
+	    }
+	}
         else if (topEntry instanceof DeleteMailLogEntry) {
-          _deleted.add(((DeleteMailLogEntry)topEntry).getEmail());
+          _deleted.add(((DeleteMailLogEntry)topEntry).getStoredEmail());
           System.out.println("Found deleted entry...");
         }
+
+	else if (topEntry instanceof UpdateMailLogEntry) {
+	    if (_contents.contains(((UpdateMailLogEntry)topEntry).getStoredEmail())) { //skip entry. updated entry already added
+	    }
+	    else {
+		((UpdateMailLogEntry)topEntry).getStoredEmail().getEmail().setStorage(_storage);
+		_contents.add(((UpdateMailLogEntry)topEntry).getStoredEmail());
+	    }
+	}
+	
         else if (topEntry instanceof SnapShotLogEntry) {
-          Email[] rest = ((SnapShotLogEntry)topEntry).getEmails();
-          for (int i = 0; i < rest.length; i++) {
-            rest[i].setStorage(_storage);
-            _contents.add(rest[i]);
-          }
+	    StoredEmail[] rest = ((SnapShotLogEntry)topEntry).getStoredEmails();
+	    for (int i = 0; i < rest.length; i++) {
+		rest[i].getEmail().setStorage(_storage);
+		_contents.add(rest[i]);
+	    }
           if (((SnapShotLogEntry)topEntry).isEnd()) {
-            finished = true;
+	      finished = true;
           }
         }
-      } else {
-        finished = true;
       }
 
+      else {
+	  finished = true;
+      }
+      
       // if finished, check to see if a new snapshot needs to be entered and return
       if (finished) {
         // first, remove all of the deleted messages from the list
@@ -356,9 +389,9 @@ public class Folder {
         // add a snapshot if need be.  The snapShot method will start the user task (i.e. return the result)
         // even if no snapshot is added
         FolderReturnResultTask preCommand = new FolderReturnResultTask(_contents, _command);
-        Email[] resultEmails = new Email[_contents.size()];
+        StoredEmail[] resultEmails = new StoredEmail[_contents.size()];
         for (int i = 0; i < resultEmails.length; i++) {
-          resultEmails[i] = (Email)(_contents.get(i));
+          resultEmails[i] = (StoredEmail)(_contents.get(i));
         }
       //  snapShotUpdate(_contents.size(), resultEmails, _command);
         // otherwise continue building up the contents
@@ -540,14 +573,14 @@ public class Folder {
    * Retrieves a log, and then returns a Folder generated by the retreived log.
    */
   protected class FolderGetEventsTask implements Continuation {
-    Email _target;
+    StoredEmail _target;
     Vector _events;
     Continuation _command;
 
     /**
      * Constructs a FolderGetEventsTask.
      */
-    public FolderGetEventsTask(Email target, Vector events, Continuation command) {
+    public FolderGetEventsTask(StoredEmail target, Vector events, Continuation command) {
       _target = target;
       _events = events;
       _command = command;
@@ -563,7 +596,7 @@ public class Folder {
       if (o != null) {
         // store an event corresponding to the topEntry
         if (topEntry instanceof InsertMailLogEntry) {
-          Email currentEmail = ((InsertMailLogEntry)topEntry).getEmail();
+          Email currentEmail = ((InsertMailLogEntry)topEntry).getStoredEmail().getEmail();
           _events.add(new InsertMailEvent(currentEmail));
           // if we have reaced the target email, stop going through the log
           if ((_target != null) && (currentEmail.equals(_target))) {
@@ -571,7 +604,7 @@ public class Folder {
           }
         }
         else if (topEntry instanceof DeleteMailLogEntry) {
-          _events.add(new DeleteMailEvent(((DeleteMailLogEntry)topEntry).getEmail()));
+          _events.add(new DeleteMailEvent(((DeleteMailLogEntry)topEntry).getStoredEmail().getEmail()));
         }
         if (topEntry instanceof InsertFolderLogEntry) {
           _events.add(new InsertFolderEvent(((InsertFolderLogEntry)topEntry).getName()));
@@ -609,14 +642,14 @@ public class Folder {
    * Calls removeMessage once the original continuation finishes
    */
   protected class FolderRemoveMessageTask implements Continuation {
-    Email _email;
+    StoredEmail _email;
     Folder _folder;
     Continuation _command;
 
     /**
      * Constructs a FolderGetLogTask.
      */
-    public FolderRemoveMessageTask(Email email, Folder folder) {
+    public FolderRemoveMessageTask(StoredEmail email, Folder folder) {
       _email = email;
       _folder = folder;
       _command = new FolderNullTask(null);
@@ -625,7 +658,7 @@ public class Folder {
     /**
      * Constructs a FolderGetLogTask.
      */
-    public FolderRemoveMessageTask(Email email, Folder folder, Continuation command) {
+    public FolderRemoveMessageTask(StoredEmail email, Folder folder, Continuation command) {
       _email = email;
       _folder = folder;
       _command = command;
@@ -654,7 +687,7 @@ public class Folder {
   public String toString() {
     return getName();
   }
-}
+ }
 
 
 
