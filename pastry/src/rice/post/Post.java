@@ -17,7 +17,7 @@ import rice.post.storage.*;
  * This class is the service layer which allows 
  * Post applications to use Post functionality.
  */
-public class Post extends PastryAppl {
+public class Post extends PastryAppl implements IScribeApp  {
   
   // the local PAST service
   private PASTService pastService;
@@ -100,8 +100,6 @@ public class Post extends PastryAppl {
         if(client != null){
           client.notificationReceived(message);
     	}
-    }
-    else if( message instanceof PresenceMessage){
     }
     else if( message instanceof DeliveryRequestMessage){
     }
@@ -235,4 +233,10 @@ public class Post extends PastryAppl {
   public UserBlock getUserBlock() {
     return null;
   }
+
+  public void faultHandler(ScribeMessage msg, NodeHandle faultyParent){}
+  public void forwardHandler(ScribeMessage msg){}
+  public void receiveMessage(ScribeMessage msg){}
+  public void scribeIsReady(){}
+  public void subscribeHandler(ScribeMessage msg){}
 }

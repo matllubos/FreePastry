@@ -9,7 +9,7 @@ import rice.pastry.messaging.*;
  * the user to inform replica holders that that user is available
  * at the given nodeid.
  */
-public class PresenceMessage extends ScribeMessage implements Serializable{
+public class PresenceMessage implements Serializable{
   private PostUserAddress address;
   private NodeId location;    
   /**
