@@ -197,6 +197,14 @@ public class SplitStreamRegrTest extends CommonAPITest {
          stripes[i].subscribe(this);
       } 
    }
+   public void publishAll(byte[] b){
+     for(int i = 0; i < stripes.length; i++){
+        publish(b, stripes[i]);
+     }
+   } 
+   public void publish(byte[] b, Stripe s){
+       s.publish(b);
+   }
 
    private void log(String s){
       System.out.println("" + n + " " + s);
