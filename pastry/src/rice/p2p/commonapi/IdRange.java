@@ -39,6 +39,8 @@ package rice.p2p.commonapi;
 import java.util.*;
 
 /**
+ * @(#) IdRange.java
+ *
  * Represents a contiguous range of Ids.
  * 
  * @version $Id$

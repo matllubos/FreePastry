@@ -58,9 +58,8 @@ public class ContentHashPastContentHandle implements PastContentHandle {
   /**
    * Constructor
    *
+   * @param nh The handle of the node which holds the object
    * @param id key identifying the object to be inserted
-   * @param obj the object to be inserted
-   * @param command Command to be performed when the result is received
    */
   public ContentHashPastContentHandle(NodeHandle nh, Id id) {
     storageNode = nh;

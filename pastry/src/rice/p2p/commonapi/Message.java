@@ -39,6 +39,8 @@ package rice.p2p.commonapi;
 import java.io.*;
 
 /**
+ * @(#) Message.java
+ *
  * This interface is an abstraction of a message which is sent through
  * the common API-based system.
  *

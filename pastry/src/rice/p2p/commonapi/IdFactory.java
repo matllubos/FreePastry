@@ -41,6 +41,8 @@ import java.io.*;
 import java.util.*;
 
 /**
+ * @(#) IdFactory.java
+ *
  * This interface provides applications with a way of generating Ids in a
  * protocol-specific manner.
  *

@@ -61,14 +61,12 @@ public class FetchMessage extends ContinuationMessage {
   private boolean cached = false;
   
   /**
-   * Constructor which takes a unique integer Id, as well as the
-   * data to be stored
+   * Constructor 
    *
    * @param uid The unique id
-   * @param id The location to be stored
+   * @param handle The handle to the data to be looked up
    * @param source The source address
    * @param dest The destination address
-   * @param content The data to be stored
    */
   public FetchMessage(int uid, PastContentHandle handle, NodeHandle source, Id dest) {
     super(uid, source, dest);

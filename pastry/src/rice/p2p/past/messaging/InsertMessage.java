@@ -61,10 +61,9 @@ public class InsertMessage extends ContinuationMessage {
    * data to be stored
    *
    * @param uid The unique id
-   * @param id The location to be stored
+   * @param content The content to be inserted
    * @param source The source address
    * @param dest The destination address
-   * @param content The data to be stored
    */
   public InsertMessage(int uid, PastContent content, NodeHandle source, Id dest) {
     super(uid, source, dest);

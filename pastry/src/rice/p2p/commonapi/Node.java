@@ -37,6 +37,8 @@ if advised of the possibility of such damage.
 package rice.p2p.commonapi;
 
 /**
+ * @(#) Node.java
+ *
  * Interface which represents a node in a peer-to-peer system, regardless of
  * the underlying protocol.  This represents a factory, in a sense, that will
  * give a application an Endpoint which it can use to send and receive

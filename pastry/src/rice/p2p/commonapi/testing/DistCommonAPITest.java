@@ -254,19 +254,17 @@ public abstract class DistCommonAPITest {
   /**
    * Method which prints the end of a test section step.
    *
-   * @param name The name of step
+   * @param status The status of step
    */
   protected final void stepDone(String status) {
-    System.out.println("[" + status + "]");
-    if(status.equals(FAILURE))
-      System.exit(0);
+    stepDone(status, "");
   }
 
   /**
    * Method which prints the end of a test section step, as
    * well as a message.
    *
-   * @param name The name of section
+   * @param status The status of section
    * @param message The message
    */
   protected final void stepDone(String status, String message) {

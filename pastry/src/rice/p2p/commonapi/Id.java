@@ -41,6 +41,8 @@ import java.io.*;
 import java.util.*;
 
 /**
+ * @(#) Id.java
+ *
  * This interface is an abstraction of an Id (or key) from the CommonAPI paper.
  *
  * @version $Id$
@@ -64,6 +66,7 @@ public interface Id extends Comparable, Serializable {
    * An Id is clockwise if it is within the half circle clockwise from this on the ring.
    * An Id is considered counter-clockwise from itself.
    *
+   * @param nid The id to compare to
    * @return true if clockwise, false otherwise.
    */
   public boolean clockwise(Id nid);

@@ -39,6 +39,8 @@ package rice.p2p.commonapi;
 import java.io.*;
 
 /**
+ * @(#) NodeHandle.java
+ *
  * This class is an abstraction of a node handle from the CommonAPI paper. A
  * node handle is a handle to a known node, which conceptually includes the
  * node's Id, as well as the node's underlying network address (such as IP/port).

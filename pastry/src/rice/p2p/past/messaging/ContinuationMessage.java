@@ -65,10 +65,8 @@ public abstract class ContinuationMessage extends PastMessage implements Continu
    * data to be stored
    *
    * @param uid The unique id
-   * @param id The location to be stored
-   * @param source The source address
+   * @param source The source handle
    * @param dest The destination address
-   * @param content The data to be stored
    */
   protected ContinuationMessage(int uid, NodeHandle source, Id dest) {
     super(uid, source, dest); 

@@ -41,6 +41,8 @@ import java.util.*;
 import java.security.*;
 
 /**
+ * @(#) IdSet.java
+ *
  * Represents a set of ids.
  * 
  * @version $Id$

@@ -37,6 +37,8 @@ if advised of the possibility of such damage.
 package rice.p2p.commonapi;
 
 /**
+ * @(#) Endpoint.java
+ *
  * Interface which represents a node in a peer-to-peer system, regardless of
  * the underlying protocol.  This represents the *local* node, upon which applications
  * can call methods.  
@@ -84,8 +86,7 @@ public interface Endpoint {
    * This methods returns an unordered set of nodehandles on which are neighbors of the local
    * node in the id space.  Up to num handles are returned.
    *
-   * @param id The object's id.
-   * @param maxRank The number of desired replicas.
+   * @param num The number of desired handle to return.
    */
   NodeHandleSet neighborSet(int num);
 

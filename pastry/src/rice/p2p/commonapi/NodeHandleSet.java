@@ -39,6 +39,8 @@ package rice.p2p.commonapi;
 import java.util.*;
 
 /**
+ * @(#) NodeHandleSet.java
+ *
  * An interface to a generic set of node handles.
  *
  * @version $Id$
