@@ -52,6 +52,8 @@ import java.security.*;
 public class StandardAddress implements Address {
 
   protected int myCode;
+  
+  protected String name;
 
   public StandardAddress(Class c, String instance) {
     MessageDigest md = null;
@@ -61,8 +63,10 @@ public class StandardAddress implements Address {
     } catch ( NoSuchAlgorithmException e ) {
       System.err.println( "No SHA support!" );
     }
+    
+    name = c.toString() + "-" + instance;
 
-    md.update((c.toString() + instance).getBytes());
+    md.update(name.getBytes());
     byte[] digest = md.digest();
 
     myCode = (digest[0] << 24) + (digest[1] << 16) +
@@ -80,6 +84,10 @@ public class StandardAddress implements Address {
     } else {
       return false;
     }
+  }
+  
+  public String toString() {
+    return "[StandardAddress: " + name + "]";
   }
 }
 

@@ -58,14 +58,18 @@ public class MessageDispatch {
 
   // a buffer of messages received before an application has been added to handle
   // the messages
-  private Vector buffer;
+  private Hashtable buffer;
+  
+  // the current count of the number of messages in the bufer
+  private int bufferCount;
 
   /**
    * Constructor.
    */
   public MessageDispatch() {
     addressBook = new HashMap();
-    buffer = new Vector();
+    buffer = new Hashtable();
+    bufferCount = 0;
   }
 
   /**
@@ -80,19 +84,6 @@ public class MessageDispatch {
     }
 
     addressBook.put(address, receiver);
-
-    // deliver any buffered messages
-    Iterator i = buffer.iterator();
-
-    while (i.hasNext()) {
-      Message msg = (Message) i.next();
-      MessageReceiver mr = (MessageReceiver) addressBook.get(msg.getDestination());
-
-      if (mr != null) {
-        mr.receiveMessage(msg);
-        i.remove();
-      }
-    }
   }
 
   /**
@@ -106,18 +97,41 @@ public class MessageDispatch {
     MessageReceiver mr = (MessageReceiver) addressBook.get(msg.getDestination());
 
     if (mr != null) {
-      mr.receiveMessage(msg); return true;
+      Address address = msg.getDestination();
+      mr.receiveMessage(msg); 
+      deliverBuffered(address);
+      return true;
     } else {
-      buffer.addElement(msg);
-
-      if (buffer.size() > BUFFER_SIZE) {
-        Message dropped = (Message) buffer.remove(0);
-
-        System.out.println("Could not dispatch message " + dropped + " because the application address " + dropped.getDestination() + " was unknown.");
+      if (bufferCount > BUFFER_SIZE) {
+        System.out.println("Could not dispatch message " + msg + " because the application address " + msg.getDestination() + " was unknown.");
         System.out.println("Message is going to be dropped on the floor.");
+      } else {
+        Vector vector = (Vector) buffer.get(msg.getDestination());
+        
+        if (vector == null) {
+          vector = new Vector();
+          buffer.put(msg.getDestination(), vector);
+        }
+        
+        vector.add(msg);
+        bufferCount++;
       }
       
       return false;
     }
+  }
+  
+  protected void deliverBuffered(Address address) {
+    // deliver any buffered messages
+    Vector vector = (Vector) buffer.remove(address);
+    
+    if (vector != null) {
+      MessageReceiver mr = (MessageReceiver) addressBook.get(address);
+      
+      for (int i=0; i<vector.size(); i++) {
+        mr.receiveMessage((Message) vector.elementAt(i));
+        bufferCount--;
+      }
+    } 
   }
 }

@@ -54,7 +54,7 @@ import rice.pastry.routing.SendOptions;
  * @author Alan Mislove
  * @author Peter Druschel
  */
-public class PastryEndpoint extends PastryAppl implements rice.p2p.commonapi.Endpoint {
+public class PastryEndpoint extends PastryAppl implements Endpoint {
 
   protected Credentials credentials = new PermissiveCredentials();
 
@@ -69,7 +69,6 @@ public class PastryEndpoint extends PastryAppl implements rice.p2p.commonapi.End
     super(pn, application.getClass().getName() + instance);
 
     this.application = application;
-
   }
 
   // API methods to be invoked by applications
@@ -292,7 +291,7 @@ public class PastryEndpoint extends PastryAppl implements rice.p2p.commonapi.End
    */
   public void receiveMessage(rice.pastry.messaging.Message msg) {
     if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] recv " + msg);
-
+      
     if (msg instanceof rice.pastry.routing.RouteMessage) {
       rice.pastry.routing.RouteMessage rm = (rice.pastry.routing.RouteMessage) msg;
 

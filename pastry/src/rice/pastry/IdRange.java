@@ -390,6 +390,33 @@ public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
     public rice.p2p.commonapi.IdRange getComplementRange() {
       return complement();
     }
+    
+    /**
+     * merges the given range with this range
+     *
+     * @return The merge
+     */
+    public rice.p2p.commonapi.IdRange mergeRange(rice.p2p.commonapi.IdRange range) {
+      return merge((IdRange) range);
+    }
+    
+    /**
+     * diffs the given range with this range
+     *
+     * @return The merge
+     */
+    public rice.p2p.commonapi.IdRange diffRange(rice.p2p.commonapi.IdRange range) {
+      return diff((IdRange) range);
+    }
+    
+    /**
+     * intersects the given range with this range
+     *
+     * @return The merge
+     */
+    public rice.p2p.commonapi.IdRange intersectRange(rice.p2p.commonapi.IdRange range) {
+      return intersect((IdRange) range);
+    }
 }
 
 
