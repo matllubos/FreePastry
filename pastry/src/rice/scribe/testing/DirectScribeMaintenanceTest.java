@@ -349,19 +349,18 @@ public class DirectScribeMaintenanceTest
 	}
 	while (simulate());
 	
+
+
+
+
 	/**
+	 * TEST 1.
 	 * Now we will check if initially all the nodes are part of 
 	 * all the trees. At this point we have not introduced any
 	 * failures and neither has any heartbeat of maintainenance
 	 * activity started.
 	 */
-	passed = true;
-	for(j=0; j < topicIds.size() ; j++) {
-	    topicId = (NodeId)topicIds.elementAt(j);
-	    nodesInTree = BFS(topicId);
-	    if(nodesInTree!= nodesCurrentlyAlive)
-		passed = false;
-	}	
+	passed = checkAllTrees();
 	if(passed)
 	    System.out.println("\n CHECK : To see if initially all the nodes were part of all the required trees - PASSED\n");
 	else
@@ -369,56 +368,13 @@ public class DirectScribeMaintenanceTest
 	ok = ok && passed;
 
 
-
-
-
-	 // First we are checking consistency of distinctChildrenTable
-	Topic topic;
-	int totalChildren;
-	int avgTotal = 0;
-	int avgDistinct = 0;
-	int s = 0;
-	int m = 0;
-	int l = 0;
-	Set distinctChildrenSet ;
-	Vector distinctChildrenVector, distinctParentVector;
-	Vector topicsForChild, topicsForParent;
-	Iterator it;
-	NodeHandle parent;
-
+	/**
+	 * TEST 2.
+	 * First we are checking consistency of distinctChildrenTable
+	 */
 	passed = true;
 	for(i=0; i< scribeClients.size(); i++) {
-	    scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
-	    scribe = scribeApp.m_scribe;
-	    Vector children;
-	    NodeId childId;
-	    //NodeId topicId;
-	    NodeHandle child;
-	    Vector topics = scribe.getTopics();
-	    int t ;
-	    for( t = 0; t < topics.size(); t++){
-		
-		topic = (Topic) topics.elementAt(t);
-		children = (Vector) topic.getChildren();
-		for( l=0; l < children.size(); l++){
-		    child = (NodeHandle) children.elementAt(l);
-		    topicsForChild = (Vector) scribe.getTopicsForChild((NodeHandle)child);
-		    if(!topicsForChild.contains(topic.getTopicId()))
-			passed = false;
-		}
-	    }
-	    distinctChildrenVector = (Vector)scribe.getDistinctChildren();
-	    for( l = 0; l < distinctChildrenVector.size(); l++){
-		child = (NodeHandle) distinctChildrenVector.elementAt(l);
-		topicsForChild = (Vector) scribe.getTopicsForChild((NodeHandle)child);
-		for( t = 0; t < topicsForChild.size(); t++){
-		    topicId = (NodeId) topicsForChild.elementAt(t);
-		    topic = scribe.getTopic(topicId);
-		    children = (Vector) topic.getChildren();
-		    if( !children.contains(child))
-			passed = false;
-		}
-	    }
+	    passed = distinctChildrenTableConsistencyTest(i);
 	}
 	if ( passed == true)
 	    System.out.println("\n CHECK : DISTINCT CHILDREN TABLE CONSISTENCY - PASSED \n");
@@ -430,38 +386,13 @@ public class DirectScribeMaintenanceTest
 
 
 
-	// checking distinctParentTable consistency
+	/**
+	 * TEST 3.
+	 * Now, we are checking distinctParentTable consistency
+	 */
 	passed = true;
 	for(i=0; i< scribeClients.size(); i++) {
-	    scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
-	    scribe = scribeApp.m_scribe;
-	    Vector children;
-	    NodeId childId;
-	    //NodeId topicId;
-	    NodeHandle child;
-	    Vector topics = scribe.getTopics();
-	    int t ;
-	    for( t = 0; t < topics.size(); t++){
-		
-		topic = (Topic) topics.elementAt(t);
-		parent = (NodeHandle) topic.getParent();
-		if( parent != null) {
-		    topicsForParent = (Vector) scribe.getTopicsForParent((NodeHandle)parent);
-		    if( !topicsForParent.contains(topic.getTopicId()))
-			passed = false;
-		}
-	    }
-	    distinctParentVector = (Vector) scribe.getDistinctParents();
-	    for( l = 0; l < distinctParentVector.size(); l++) {
-		parent = (NodeHandle) distinctParentVector.elementAt(l);
-		topicsForParent = (Vector)scribe.getTopicsForParent((NodeHandle)parent);
-		for( t = 0; t < topicsForParent.size(); t++){
-			topicId = (NodeId) topicsForParent.elementAt(t);
-			topic = (Topic) scribe.getTopic(topicId);
-			if( topic.getParent() != parent)
-			    passed = false;
-		}
-	    }
+	    passed = distinctParentTableConsistencyTest(i);
 	}
 	if ( passed == true)
 	    System.out.println("\n CHECK : DISTINCT PARENT TABLE CONSISTENCY - PASSED \n");
@@ -474,6 +405,7 @@ public class DirectScribeMaintenanceTest
 
 
 	/**
+	 * TEST 4.
 	 * This test checks if the parent pointer of a node in a multicast
 	 * tree is not-null. We check it before any HeartBeat message is sent or
 	 * anything is published on that topic, so the only way the parent pointer
@@ -486,19 +418,8 @@ public class DirectScribeMaintenanceTest
 	 * condition fails, our test also fails.
 	 */
 	passed = true; 
-	for(j=0; j< topicIds.size(); j++){
-	    for(i=0; i< scribeClients.size(); i++) {
-		parent = null;
-		scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
-		topicId = (NodeId)topicIds.elementAt(j);
-		topic = scribeApp.m_scribe.getTopic(topicId);
-		parent = topic.getParent();
-		
-		if( parent == null) {
-		    if(!scribeApp.m_scribe.isRoot(topicId))
-			passed = false;
-		}
-	    }
+	for(i=0; i< scribeClients.size(); i++) {
+	    passed = checkParentPointerForAllTopics(i);
 	}
 	if(passed)
 	    System.out.println("\n CHECK : Parent pointers are not-null - PASSED \n");
@@ -509,90 +430,49 @@ public class DirectScribeMaintenanceTest
 
 
 
-	// We check to see if the MessageAckOnSubscribe correctly removes the 
-	// dangling child pointers.
-	
+
+
+
+	/**
+	 * TEST 5.
+	 * We check to see if the MessageAckOnSubscribe correctly removes the 
+	 * dangling child pointers, meaning that the parent-child 
+	 * relationship is consistent from the view of the CHILD as well
+	 * as PARENT.
+	 */
 	currentAckFlagState = true;
 	joinNodes(concurrentJoins);
 	System.out.println("Total Nodes currently alive = " + nodesCurrentlyAlive);
-	for(i= 0; i < scribeClients.size(); i++) {
-	    scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
-	    for(j=0; j < topicIds.size() ; j++) {
-		topicId = (NodeId)topicIds.elementAt(j);
-		topic = scribeApp.m_scribe.getTopic(topicId);
-		scribeApp.m_scribe.m_maintainer.scheduleTR(topic);
-		while (simulate());
-	    }
-	}
-	// Here we are trying to check that the parent-child relationship is
-	// consistent from the view of the CHILD as well as the PARENT.
-	ScribeMaintenanceTestApp parentApp, childApp;
-	Topic topicInParent, topicInChild;
-	Vector children;
-	NodeHandle child;
-	int k;
+	// schedule TreeRepair on all nodes.
+	scheduleTROnAllNodes();
 	passed = true;
-	for(j=0; j< topicIds.size(); j++){
-	    for(i=0; i< scribeClients.size(); i++) {
-		scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
-		topicId = (NodeId)topicIds.elementAt(j);
-		topic = scribeApp.m_scribe.getTopic(topicId);
-		if(topic == null)
-		    continue;
-		parent = topic.getParent();
-		if( parent != null) {
-		    parentApp = (ScribeMaintenanceTestApp)nodeIdToApp.get(parent.getNodeId());
-		    topicInParent = parentApp.m_scribe.getTopic(topicId);
-		    children = topicInParent.getChildren();
-		    if(!children.contains(scribeApp.m_scribe.getLocalHandle()))
-			passed =false;
-		
-		}
-		children = topic.getChildren();
-		for(k=0; k<children.size(); k++) {
-		    child = (NodeHandle)children.elementAt(k);
-		    childApp = (ScribeMaintenanceTestApp)nodeIdToApp.get(child.getNodeId());
-		    topicInChild = childApp.m_scribe.getTopic(topicId);
-		    if(topicInChild == null || !scribeApp.m_scribe.getLocalHandle().equals(topicInChild.getParent()))
-			passed = false;
-		}
-	    }
+	for(i=0; i< scribeClients.size(); i++) {
+	    passed = childParentViewConsistencyTest(i);
 	}
+	
 	if(passed)
 	    System.out.println("\n CHECK : MessageAckOnSubscribe - Parent-Child relationship is consistent from view of PARENT as well as CHILD - PASSED \n");
 	else
 	    System.out.println("\n CHECK : MessageAckOnSubscribe - Parent-Child relationship is consistent from view of PARENT as well as CHILD - FAILED \n");
 	ok = ok && passed;
 
-	passed = true;
-	for(j=0; j < topicIds.size() ; j++) {
-	    topicId = (NodeId)topicIds.elementAt(j);
-	    nodesInTree = BFS(topicId);
-	    if(nodesInTree!= nodesCurrentlyAlive)
-		passed = false;
-	}	
+	// Sanity check.
+	// Now, check if all nodes are part of all the multicast groups
+
+	passed = checkAllTrees();
 	if(passed)
 	    System.out.println("\n CHECK : MessageAckOnSubscribe - ALL the nodes are part of the required multicast trees - PASSED \n");
 	else
 	    System.out.println("\n CHECK : MessageAckOnSubscribe - All the nodes are part of the required multicast trees - FAILED \n");
 	ok = ok && passed;
-	
 
+	// Sanity check.
+	// Check if parent pointers for all topics for all nodes are non-null.
 	passed = true;
-	for(j=0; j< topicIds.size(); j++){
-	    for(i=0; i< scribeClients.size(); i++) {
-		parent = null;
-		scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
-		topicId = (NodeId)topicIds.elementAt(j);
-		topic = scribeApp.m_scribe.getTopic(topicId);
-		parent = topic.getParent();
-		if( parent == null) {
-		    if(!scribeApp.m_scribe.isRoot(topicId))
-			passed = false;
-		}
-		
-	    }
-	}
+	for(i=0; i< scribeClients.size(); i++) {
+	    passed = checkParentPointerForAllTopics(i);
+	}	   
+	
 	if(passed)
 	    System.out.println("\n CHECK : MessageAckOnSubscribe - Parent pointers are not-null - PASSED \n");
 	else
@@ -601,9 +481,13 @@ public class DirectScribeMaintenanceTest
 
 
 
-	
 
-	/* We check to see if the MessageHeartBeats are successful in setting parent pointers
+
+
+
+	/**
+	 * TEST 6.
+	 * We check to see if the MessageHeartBeats are successful in setting parent pointers
 	 * and also in removing dangling child pointers.
 	 */ 
 	for(i= 0; i < scribeClients.size(); i++) {
@@ -613,50 +497,27 @@ public class DirectScribeMaintenanceTest
 	currentAckFlagState = false;
 	joinNodes(concurrentJoins);
 	System.out.println("Total Nodes currently alive = " + nodesCurrentlyAlive);
-	for(i= 0; i < scribeClients.size(); i++) {
-	    scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
-	    for(j=0; j < topicIds.size() ; j++) {
-		topicId = (NodeId)topicIds.elementAt(j);
-		topic = scribeApp.m_scribe.getTopic(topicId);
-		scribeApp.m_scribe.m_maintainer.scheduleTR(topic);
-		while (simulate());
-	    }
-	}
-	for(i= 0; i < scribeClients.size(); i++) {
-	    scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
-	    scribeApp.m_scribe.scheduleHB();
-	    while (simulate());
-	}
+	// Schedule TreeRepair event on all nodes
+	scheduleTROnAllNodes();
+	// Schedule HeartBeat event on all node
+	scheduleHBOnAllNodes();
 
-	passed = true;
-	for(j=0; j < topicIds.size() ; j++) {
-	    topicId = (NodeId)topicIds.elementAt(j);
-	    nodesInTree = BFS(topicId);
-	    if(nodesInTree!= nodesCurrentlyAlive)
-		passed = false;
-	}
+	// Check if all nodes are part of all multicast trees.
+	passed = checkAllTrees();
 	if(passed)
 	    System.out.println("\n CHECK : MessageHeartBeat correctly removes dangling child pointers - PASSED \n");
 	else
 	    System.out.println("\n CHECK : MessageHeartBeat correctly removes dangling child pointers - FAILED \n");
 	ok = ok && passed;
 
+
+	//Sanity check.
+	//Check if parent pointers for all topics for all nodes are non-null.
 	passed = true;
-	for(j=0; j< topicIds.size(); j++){
-	    for(i=0; i< scribeClients.size(); i++) {
-		parent = null;
-		scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
-		topicId = (NodeId)topicIds.elementAt(j);
-		topic = scribeApp.m_scribe.getTopic(topicId);
-		parent = topic.getParent();
-		
-		if( parent == null) {
-		    if(!scribeApp.m_scribe.isRoot(topicId))
-			passed = false;
-		}
-		
-	    }
+	for(i=0; i< scribeClients.size(); i++) {
+	    passed = checkParentPointerForAllTopics(i);
 	}
+
 	if(passed)
 	    System.out.println("\n CHECK : MessageHeartBeat correctly sets parent pointers - PASSED \n");
 	else
@@ -664,45 +525,31 @@ public class DirectScribeMaintenanceTest
 	ok = ok && passed;
 
 
+
+
+
+
+
+	/**
+	 * TEST 7.
+	 *
+	 * Now we will check if after failure of 'concurrentFailures' 
+	 * and the joining of 'concurrentJoins' nodes, the maintenance
+	 * activity is triggered by itself (since it will miss 
+	 * treeRepairThreshold value of heartbeatmessages) and check
+	 * if all the remaining nodes are part of the required trees.
+	 *
+	 */
 	for(iteration=0; iteration < numIterations; iteration++) {
 	    killNodes(concurrentFailures);
 	    joinNodes(concurrentJoins);
 	    System.out.println("Total Nodes currently alive = " + nodesCurrentlyAlive);
-	    /*
-	    for(i= 0; i < scribeClients.size(); i++) {
-		scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
-		for(j=0; j < topicIds.size() ; j++) {
-		    topicId = (NodeId)topicIds.elementAt(j);
-		    topic = scribeApp.m_scribe.getTopic(topicId);
-		    scribeApp.m_scribe.m_maintainer.scheduleTR(topic);
-		    while (simulate());
-		}
-	    }
-	    */
 
 	    for(heartbeatcount = 0; heartbeatcount <= treeRepairThreshold; heartbeatcount ++) {
-		for(i= 0; i < scribeClients.size(); i++) {
-		    scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
-		    scribeApp.m_scribe.scheduleHB();
-		    while (simulate());
-		}
+		scheduleHBOnAllNodes();
 	    }
-
-	    /**
-	     * Now we will check if after failure of 'concurrentFailures' 
-	     * and the joining of 'concurrentJoins' nodes, the maintenance
-	     * activity is triggered by itself (since it will miss 
-	     * treeRepairThreshold value of heartbeatmessages) and check
-	     * if all the remaining nodes are part of the required trees.
-	     */
-
-	    passed = true;
-	    for(j=0; j < topicIds.size() ; j++) {
-		topicId = (NodeId)topicIds.elementAt(j);
-		nodesInTree = BFS(topicId);
-		if(nodesInTree!= nodesCurrentlyAlive)
-		    passed = false;
-	    }	
+	    // check if all nodes are part of all multicast groups.
+	    passed = checkAllTrees();
 	    if(passed)
 		System.out.println("CHECK : to see if after concurrent node failures and node joins the remaning nodes reconfigure to become part of the appropriate trees" +  "- PASSED\n");
 	    else
@@ -826,7 +673,7 @@ public class DirectScribeMaintenanceTest
 		//System.out.println("");
 	    }
 	}
-	System.out.println("TREE TRAVERSAL COMPLETE:: DEPTH = " + depth + "Total Nodes = " + traversedList.size());
+	//System.out.println("TREE TRAVERSAL COMPLETE:: DEPTH = " + depth + "Total Nodes = " + traversedList.size());
 	return traversedList.size();
 	
     }
@@ -857,8 +704,238 @@ public class DirectScribeMaintenanceTest
 
     }
 
+    /**
+     * Check if all nodes are part of all multicast trees.
+     * @return true if all nodes are part of all multicast
+     *         trees, else false
+     */
+    private boolean checkAllTrees(){
+	boolean result;
+	NodeId topicId;
+	int nodesInTree;
+	result = true;
+	for(int j=0; j < topicIds.size() ; j++) {
+	    topicId = (NodeId)topicIds.elementAt(j);
+	    nodesInTree = BFS(topicId);
+	    if(nodesInTree!= nodesCurrentlyAlive)
+		result = false;
+	}		
+	return result;
+    }
+
+
+    /**
+     * Check the consistency between distinctChildrenTable maintained
+     * by scribe on a node and the children maintained by each Topic on that node.
+     *
+     * @param nodeIndex index of specfied node.
+     * @return true if the test passes, else false
+     */
+    public boolean distinctChildrenTableConsistencyTest(int nodeIndex){
+
+	ScribeMaintenanceTestApp scribeApp;
+	Scribe scribe; 
+	Vector children;
+	NodeId topicId;
+	NodeHandle child;
+	Vector topics ;
+	int t, l;
+	Topic topic;
+	Vector topicsForChild;
+	Vector distinctChildrenVector;
+	boolean result = true;
+
+	scribeApp  = (ScribeMaintenanceTestApp)scribeClients.elementAt(nodeIndex);
+	scribe = scribeApp.m_scribe;
+	topics = scribe.getTopics();
+
+	for( t = 0; t < topics.size(); t++){
+	    topic = (Topic) topics.elementAt(t);
+	    children = (Vector) topic.getChildren();
+	    for( l=0; l < children.size(); l++){
+		child = (NodeHandle) children.elementAt(l);
+		topicsForChild = (Vector) scribe.getTopicsForChild((NodeHandle)child);
+		if(!topicsForChild.contains(topic.getTopicId()))
+		    result = false;
+	    }
+	}
+	distinctChildrenVector = (Vector)scribe.getDistinctChildren();
+	for( l = 0; l < distinctChildrenVector.size(); l++){
+	    child = (NodeHandle) distinctChildrenVector.elementAt(l);
+	    topicsForChild = (Vector) scribe.getTopicsForChild((NodeHandle)child);
+	    for( t = 0; t < topicsForChild.size(); t++){
+		topicId = (NodeId) topicsForChild.elementAt(t);
+		topic = scribe.getTopic(topicId);
+		children = (Vector) topic.getChildren();
+		if( !children.contains(child))
+		    result  = false;
+	    }
+	}
+	return result;
+    }
+    
+
+    /**
+     * Check the consistency between distinctParentTable maintained
+     * by scribe on a node and the parent maintained by each Topic on that node.
+     *
+     * @param nodeIndex index of specfied node.
+     *
+     * @return true if test passes, else false
+     */
+    public boolean distinctParentTableConsistencyTest(int nodeIndex){
+	ScribeMaintenanceTestApp scribeApp;
+	Scribe scribe; 
+	NodeId topicId;
+	NodeHandle parent;
+	Vector topics;
+	Topic topic;
+	int t, l ;
+	Vector topicsForParent;
+	boolean result = true;
+	Vector distinctParentVector;
+
+	scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(nodeIndex);
+	scribe  = scribeApp.m_scribe;
+	topics = scribe.getTopics();
+	for( t = 0; t < topics.size(); t++){
+	    topic = (Topic) topics.elementAt(t);
+	    parent = (NodeHandle) topic.getParent();
+	    if( parent != null) {
+		topicsForParent = (Vector) scribe.getTopicsForParent((NodeHandle)parent);
+		if( !topicsForParent.contains(topic.getTopicId()))
+		    result = false;
+	    }
+	}
+	distinctParentVector = (Vector) scribe.getDistinctParents();
+	for( l = 0; l < distinctParentVector.size(); l++) {
+	    parent = (NodeHandle) distinctParentVector.elementAt(l);
+	    topicsForParent = (Vector)scribe.getTopicsForParent((NodeHandle)parent);
+	    for( t = 0; t < topicsForParent.size(); t++){
+		topicId = (NodeId) topicsForParent.elementAt(t);
+		topic = (Topic) scribe.getTopic(topicId);
+		if( topic.getParent() != parent)
+		    result = false;
+	    }
+	}
+	return result;
+    }
+
+
+    /**
+     * Check if parent pointer is set for all topics on the specified node.
+     *
+     * @param nodeIndex index of specfied node.
+     *
+     * @return true if test passes, else false
+     */
+    public boolean checkParentPointerForAllTopics(int nodeIndex){
+	ScribeMaintenanceTestApp scribeApp;
+	Scribe scribe; 
+	NodeHandle parent = null;
+	NodeId topicId;
+	Topic topic;
+	boolean result = true;
+	int i, j;
+
+	scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(nodeIndex);
+	scribe = scribeApp.m_scribe;
+
+	for(j=0; j< topicIds.size(); j++){
+	    parent = null;
+	    topicId = (NodeId)topicIds.elementAt(j);
+	    topic = scribeApp.m_scribe.getTopic(topicId);
+	    parent = topic.getParent();
+	    if( parent == null) {
+		if(!scribeApp.m_scribe.isRoot(topicId))
+		    result = false;
+	    }
+	}	
+	return result;
+    }
+
+
+    /**
+     * Schedule a TreeRepair event on all nodes for all the topics.
+     */
+    public void scheduleTROnAllNodes(){
+	int i, j;
+	ScribeMaintenanceTestApp scribeApp;
+	Topic topic;
+	NodeId topicId;
+
+	for(i= 0; i < scribeClients.size(); i++) {
+	    scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
+	    for(j=0; j < topicIds.size() ; j++) {
+		topicId = (NodeId)topicIds.elementAt(j);
+		topic = scribeApp.m_scribe.getTopic(topicId);
+		scribeApp.m_scribe.m_maintainer.scheduleTR(topic);
+		while (simulate());
+	    }
+	}
+
+    }
+
+    /**
+     * Schedule a HeartBeat event on all nodes for all topics.
+     */
+    public void scheduleHBOnAllNodes(){
+	int i;
+	ScribeMaintenanceTestApp scribeApp;
+
+	for(i= 0; i < scribeClients.size(); i++) {
+	    scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
+	    scribeApp.m_scribe.scheduleHB();
+	    while (simulate());
+	}
+    }
+
+    /**
+     * Here we are trying to check that the parent-child relationship is
+     * consistent from the view of the CHILD as well as the PARENT, on 
+     * given node.
+     * @param nodeIndex index of specfied node.
+     *
+     * @return true if the test passes, else false.
+     */
+    public boolean childParentViewConsistencyTest(int nodeIndex){
+	boolean result = true;
+	ScribeMaintenanceTestApp scribeApp, parentApp, childApp;
+	NodeId topicId;
+	Topic topic, topicInParent, topicInChild;
+	NodeHandle parent, child;
+	Vector children;
+	int j, k;
+
+	scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(nodeIndex);
+	for(j=0; j< topicIds.size(); j++){
+	    topicId = (NodeId)topicIds.elementAt(j);
+	    topic = scribeApp.m_scribe.getTopic(topicId);
+	    if(topic == null)
+		continue;
+	    parent = topic.getParent();
+	    if( parent != null) {
+		parentApp = (ScribeMaintenanceTestApp)nodeIdToApp.get(parent.getNodeId());
+		topicInParent = parentApp.m_scribe.getTopic(topicId);
+		children = topicInParent.getChildren();
+		if(!children.contains(scribeApp.m_scribe.getLocalHandle()))
+		    result =false;
+		
+	    }
+	    children = topic.getChildren();
+	    for(k=0; k<children.size(); k++) {
+		child = (NodeHandle)children.elementAt(k);
+		childApp = (ScribeMaintenanceTestApp)nodeIdToApp.get(child.getNodeId());
+		topicInChild = childApp.m_scribe.getTopic(topicId);
+		if(topicInChild == null || !scribeApp.m_scribe.getLocalHandle().equals(topicInChild.getParent()))
+		    result = false;
+	    }
+	}
+	return result;
+    }
 }
  
+
 
 
 
