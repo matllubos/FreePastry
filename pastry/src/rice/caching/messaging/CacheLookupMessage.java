@@ -44,8 +44,6 @@ import java.io.*;
 import java.util.*;
 
 /**
-* @(#) CacheLookupMessage.java
- *
  * This abstract class is designed to be extended by applications which use
  * the dynmaic caching functinoality.  Only the effective "lookup" messages
  * need to extend this class.
@@ -54,10 +52,13 @@ import java.util.*;
  *
  * @author Alan Mislove
  */
-public abstract class CacheLookupMessage extends Message implements Serializable {
+public abstract class CacheLookupMessage extends Message implements Serializable, LocalNodeI {
 
   // a list containing all of the hops of this message
   private Vector hops = new Vector();
+
+  // a transient local pastry node
+  private transient PastryNode node;
 
   /**
    * Constructor to comply with the Message class.
@@ -99,11 +100,35 @@ public abstract class CacheLookupMessage extends Message implements Serializable
     else
       return (NodeHandle) hops.elementAt(hops.size() - 2);
   }
-    
-  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
-    ois.defaultReadObject();
 
-    // need to add current NodeHandle to the hops list
+  /**
+   * Accessor method.
+   */
+  public PastryNode getLocalNode() {
+    return node;
+  }
+
+  /**
+    * Accessor method. Notifies the overridable afterSetLocalNode.
+   */
+  public void setLocalNode(PastryNode pn) {
+    node = pn;
+    hops.addElement(pn.getLocalHandle());
+  }
+
+  /**
+   * May be called from handle etc methods to ensure that local node has
+   * been set, either on construction or on deserialization/receivemsg.
+   */
+  public void assertLocalNode() {
+    if (node == null) {
+      new Exception().printStackTrace();
+    }
+  }
+  
+  private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+    in.defaultReadObject();
+    LocalNodeI.pending.addPending(in, this);
   }
 }
 
