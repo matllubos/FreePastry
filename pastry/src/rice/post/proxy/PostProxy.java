@@ -27,6 +27,8 @@ import rice.post.*;
 import rice.post.security.*;
 import rice.post.security.ca.*;
 
+import rice.serialization.*;
+
 import rice.email.*;
 import rice.email.proxy.smtp.*;
 import rice.email.proxy.imap.*;
@@ -35,6 +37,7 @@ import rice.email.proxy.mailbox.*;
 import rice.email.proxy.mailbox.postbox.*;
 
 import java.util.*;
+import java.util.zip.*;
 import java.io.*;
 import java.net.*;
 import java.security.*;
@@ -166,7 +169,7 @@ public class PostProxy {
       sectionStart("Creating and Initializing Services");
       stepStart("Retrieving CA public key");
       FileInputStream fis = new FileInputStream("ca.publickey");
-      ObjectInputStream ois = new JSX.ObjectReader(fis);
+      ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
 
       caPublic = (PublicKey) ois.readObject();
       ois.close();
@@ -174,7 +177,7 @@ public class PostProxy {
 
       stepStart("Retrieving " + name + "'s certificate");
       fis = new FileInputStream(name + ".certificate");
-      ois = new JSX.ObjectReader(fis);
+      ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
 
       certificate = (PostCertificate) ois.readObject();
       ois.close();
@@ -221,7 +224,7 @@ public class PostProxy {
       address = (PostUserAddress) certificate.getAddress();
 
       fis = new FileInputStream(name + ".keypair.enc");
-      ois = new JSX.ObjectReader(fis);
+      ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
 
       stepStart("Reading in encrypted keypair");
       byte[] cipher = (byte[]) ois.readObject();
