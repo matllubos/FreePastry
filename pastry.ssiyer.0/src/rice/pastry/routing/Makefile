@@ -8,7 +8,9 @@ SOURCE  = \
 	RouteMessage.java\
 	BroadcastRouteRow.java\
 	RequestRouteRow.java\
-	RouteProtocolAddress.java
+	RouteProtocolAddress.java\
+	InitiateRouteSetMaintenance.java
+
 
 RMI_SOURCE =
 

@@ -157,7 +157,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 
 	// check if any of our local leaf set members are missing in the received leaf set
 	// if so, we send our leafset to each missing entry and to the source of the leafset
-	// this guarantees correctness in the event of concurrent node joins in the same leaf set
+	// this ensures correctness in the event of concurrent node joins in the same leaf set
 	int cwSize = leafSet.cwSize();
 	int ccwSize = leafSet.ccwSize();
 	BroadcastLeafSet bl = new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update);
@@ -199,96 +199,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
      */
 
     protected void mergeLeafSet(LeafSet remotels, NodeHandle from) {
-
 	leafSet.merge(remotels, from, routeTable, security);
-
-	/*
-	int cwSize = remotels.cwSize();
-	int ccwSize = remotels.ccwSize();
-	
-	// merge the received leaf set into our own
-	// to minimize inserts/removes, we do this from nearest to farthest nodes
-	// and we fill up the two leaf set halves evenly
-
-	// get index of entry closest to local nodeId
-	int closest = remotels.mostSimilar(localHandle.getNodeId());
-
-	int cw = closest;
-	int ccw = closest-1;
-	int i;
-
-	while (cw <= cwSize || ccw >= -ccwSize) {
-	    NodeHandle nh;
-
-	    if (leafSet.ccwSize() < leafSet.cwSize()) {
-		// ccw is shorter
-
-		if (ccw >= -ccwSize) 
-		    // add to the ccw half
-		    i = ccw--;
-		else
-		    // add to the cw half
-		    i = cw++;
-	    }
-	    else {
-
-		if (cw <= cwSize) 
-		    // add to the cw half
-		    i = cw++;
-		else
-		    // add to the ccw half
-		    i = ccw--;
-	    }
-
-	    if (i == 0) nh = from;
-	    else nh = remotels.get(i);
-
-	    nh = security.verifyNodeHandle(nh);
-	    if (nh.isAlive() == false) continue;
-		
-	    // merge into our leaf set
-	    leafSet.put(nh);
-
-	    // update RT as well
-	    routeTable.put(nh);
-
-	}
-	*/
-	
-	/*
-	for (int i=closest; i<=cwSize; i++) {
-	    NodeHandle nh;
-
-	    if (i == 0) nh = from;
-	    else nh = remotels.get(i);
-		
-	    nh = security.verifyNodeHandle(nh);
-	    if (nh.isAlive() == false) continue;
-		
-	    // merge into our leaf set
-	    leafSet.put(nh);
-
-	    // update RT as well
-	    routeTable.put(nh);
-	}
-
-	for (int i=closest-1; i>= -ccwSize; i--) {
-	    NodeHandle nh;
-
-	    if (i == 0) nh = from;
-	    else nh = remotels.get(i);
-		
-	    nh = security.verifyNodeHandle(nh);
-	    if (nh.isAlive() == false) continue;
-		
-	    // merge into our leaf set
-	    leafSet.put(nh);
-
-	    // update RT as well
-	    routeTable.put(nh);
-	}
-
-	*/
     }
     
     /**
@@ -364,7 +275,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	// ccw half
 	for (int i=-leafSet.ccwSize(); i<0; i++) {
 	    NodeHandle nh = leafSet.get(i);
-	    if (!nh.isAlive()) {
+	    if (!nh.ping()) {
 		// remove the dead entry
 		leafSet.remove(nh.getNodeId());
 		lostMembers = true;
@@ -374,7 +285,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	// cw half
 	for (int i=leafSet.cwSize(); i>0; i--) {
 	    NodeHandle nh = leafSet.get(i);
-	    if (!nh.isAlive()) {
+	    if (!nh.ping()) {
 		// remove the dead entry
 		leafSet.remove(nh.getNodeId());
 		lostMembers = true;

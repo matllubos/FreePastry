@@ -112,7 +112,7 @@ public class RoutingTable extends Observable {
      * @return number of columns
      */
 
-    public int numRows() { return routingTable.length; }
+    public int numColumns() { return routingTable[0].length; }
 
     /**
      * return the number of rows in the routing table
@@ -120,7 +120,7 @@ public class RoutingTable extends Observable {
      * @return number of rows
      */
 
-    public int numColumns() { return routingTable[0].length; }
+    public int numRows() { return routingTable.length; }
 
 
     /**

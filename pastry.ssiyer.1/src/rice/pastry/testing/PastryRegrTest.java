@@ -162,7 +162,7 @@ public class PastryRegrTest {
 
 	    if (bootstrap != null && n == 0)
 		// we have to join the first batch of nodes sequentially,
-		// else we created multiple rings
+		// else we create multiple rings
 		while(simulate()) msgCount++;
 	}
 	
@@ -359,8 +359,6 @@ public class PastryRegrTest {
 
     /**
      * initiate leafset maintenance
-     *
-     * @param pn the pastry node
      */
     public void initiateLeafSetMaintenance() {
 
@@ -373,7 +371,20 @@ public class PastryRegrTest {
     }
 
     /**
-     * kill a random number of nodes
+     * initiate routing table maintenance
+     */
+    public void initiateRouteSetMaintenance() {
+
+	for (int i=0; i<pastryNodes.size(); i++) {
+	    PastryNode pn = (PastryNode)pastryNodes.get(i);
+	    pn.receiveMessage(new InitiateRouteSetMaintenance());
+	    while(simulate());
+	}
+
+    }
+
+    /**
+     * kill a given number of nodes, randomly chosen
      *
      * @param num the number of nodes to kill
      */
@@ -401,10 +412,10 @@ public class PastryRegrTest {
     public static void main(String args[]) {
 	PastryRegrTest pt = new PastryRegrTest();
 	
-	int n = 30;
+	int n = 100;
 	int d = 20;
 	int k = 100;
-	int numConcJoins = 1;
+	int numConcJoins = 4;
 	int m = 100;
 
 	Date old = new Date();
@@ -434,12 +445,13 @@ public class PastryRegrTest {
 	pt.sendPings((n-d)*k);
 	System.out.println((n-d)*k + " messages sent");
 
-	System.out.println("starting leafset maintenance");
+	System.out.println("starting leafset/RT maintenance");
 
-	// initiate leafset maint.
+	// initiate maint.
 	pt.initiateLeafSetMaintenance();
+	pt.initiateRouteSetMaintenance();
 
-	System.out.println("finished leafset maintenance");
+	System.out.println("finished leafset/RT maintenance");
 
 	// send messages
 	pt.sendPings((n-d)*k);
@@ -462,12 +474,13 @@ public class PastryRegrTest {
 
 	for (int i=0; i<4; i++) {
 
-	    System.out.println("Starting leafset maintenance, round " + (i+2));
+	    System.out.println("Starting leafset/RT maintenance, round " + (i+2));
 
-	    // initiate leafset maint.
+	    // initiate maint.
 	    pt.initiateLeafSetMaintenance();
+	    pt.initiateRouteSetMaintenance();
 
-	    System.out.println("finished leafset maintenance, round " + (i+2));
+	    System.out.println("finished leafset/RT maintenance, round " + (i+2));
 
 	    // send messages
 	    pt.sendPings((n-d)*k);

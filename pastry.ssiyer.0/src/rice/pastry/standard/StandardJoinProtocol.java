@@ -185,6 +185,7 @@ public class StandardJoinProtocol implements MessageReceiver
 	NodeId localId = localHandle.getNodeId();
 	int n = jr.numRows();
 
+	// send the rows to the RouteSetProtocol on the local node
 	for (int i=jr.lastRow(); i<n; i++) {
 	    RouteSet row[] = jr.getRow(i);
 	    
@@ -195,7 +196,7 @@ public class StandardJoinProtocol implements MessageReceiver
 	    }
 	}
 
-
+	// now broadcast the rows to our peers in each row
 	for (int i=0; i<n; i++) {
 	    RouteSet row[] = routeTable.getRow(i);
 

@@ -171,10 +171,8 @@ public abstract class PastryAppl implements MessageReceiver
     public boolean routeMsgDirect(NodeHandle dest, Message msg, Credentials cred, SendOptions opt) {
 	if (!dest.isAlive()) return false;
 	RouteMessage rm = new RouteMessage(dest, msg, cred, opt, getAddress());
-
 	thePastryNode.receiveMessage(rm);
-	// XXX - needs fixing
-	return true;
+	return dest.isAlive();
     }
 
 
