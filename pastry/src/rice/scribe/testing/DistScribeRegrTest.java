@@ -168,21 +168,8 @@ public class DistScribeRegrTest {
 	    }
 	}
 	
-	if( PROTOCOL == DistPastryNodeFactory.PROTOCOL_RMI){
-
-	    // set RMI security manager
-	    if (System.getSecurityManager() == null)
-		System.setSecurityManager(new RMISecurityManager());
-	    
-	    // start RMI registry
-	    try {
-		java.rmi.registry.LocateRegistry.createRegistry(port);
-	    } catch (Exception e) {
-		System.out.println("Error starting RMI registry: " + e);
-	    }
-	}
     }
-
+    
     /**
      * Create a Pastry node and add it to pastryNodes. Also create a client
      * application for this node, and spawn off a separate thread for it.
