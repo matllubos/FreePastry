@@ -69,15 +69,17 @@ public class MessageHeartBeat extends ScribeMessage implements Serializable
      *
      * @param addr the address of the scribe receiver.
      * @param source the node generating the message.
-     * @param tid its null, as a child will find out for which topics
-     *            topics this node is its parent and will do processing
-     *            accordingly
      * @param c the credentials associated with the mesasge.
      */
     public 
 	MessageHeartBeat( Address addr, NodeHandle source, 
-			  NodeId tid, Credentials c ) {
+			  Credentials c ) {
 	super( addr, source, null, c );
+
+	// we pass null for topicId, as a child will find out 
+	//for which topics topics this node is its parent and 
+	//will do processing accordingly
+
     }
     
    
@@ -121,7 +123,7 @@ public class MessageHeartBeat extends ScribeMessage implements Serializable
 	     * for the entire list of topics for which the parent is
 	     * having this node as its child.
 	     */
-	    msg = scribe.makeRequestToParentMessage( null, cred );
+	    msg = scribe.makeRequestToParentMessage( cred );
 	    scribe.routeMsgDirect( m_source, msg, cred, opt );
 	}
 	else {

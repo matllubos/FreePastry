@@ -670,13 +670,12 @@ public class Scribe extends PastryAppl implements IScribe
     /**
      * Makes a heart-beat message using the current Pastry node as the source.
      *
-     * @param tid the topic id the message reffers to.
      * @param c the credentials that will be associated with the message
      *
      * @return the ScribeMessage.
      */
-    public ScribeMessage makeHeartBeatMessage( NodeId tid, Credentials c ) {
-	return new MessageHeartBeat( m_address, this.thePastryNode.getLocalHandle(), tid, c);
+    public ScribeMessage makeHeartBeatMessage( Credentials c ) {
+	return new MessageHeartBeat( m_address, this.thePastryNode.getLocalHandle(), c);
     }
 
     /**
@@ -695,24 +694,22 @@ public class Scribe extends PastryAppl implements IScribe
      * Makes a RequestToParent message using the current Pastry node as the 
      * source.
      *
-     * @param tid is null 
      * @param c the credentials that will be associated with the message
      * @return the ScribeMessage.
      */
-    public ScribeMessage makeRequestToParentMessage( NodeId tid, Credentials c ) {
-        return new MessageRequestToParent( m_address, this.thePastryNode.getLocalHandle(), tid, c);
+    public ScribeMessage makeRequestToParentMessage( Credentials c ) {
+        return new MessageRequestToParent( m_address, this.thePastryNode.getLocalHandle(),  c);
     }
 
      /**
      * Makes a ReplyFromParent message using the current Pastry node as the 
      * source.
      *
-     * @param tid is null 
      * @param c the credentials that will be associated with the message
      * @return the ScribeMessage.
      */
-    public ScribeMessage makeReplyFromParentMessage( NodeId tid, Credentials c ) {
-        return new MessageReplyFromParent( m_address, this.thePastryNode.getLocalHandle(), tid, c);
+    public ScribeMessage makeReplyFromParentMessage(  Credentials c ) {
+        return new MessageReplyFromParent( m_address, this.thePastryNode.getLocalHandle(), c);
     }
 
 

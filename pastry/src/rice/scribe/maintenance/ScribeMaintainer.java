@@ -141,7 +141,7 @@ public class ScribeMaintainer
 	    if( !listOfAlreadySentNodes.contains((NodeId)child.getNodeId())){
 		cred = m_scribe.getCredentials();
 		opt = m_scribe.getSendOptions();
-		msgh = m_scribe.makeHeartBeatMessage( null, cred );
+		msgh = m_scribe.makeHeartBeatMessage( cred );
 		msgh.setData(m_scribe.getFingerprintForChildTopics(child));
 		
 		if( !m_scribe.routeMsgDirect( child, msgh, cred, opt ) ) {

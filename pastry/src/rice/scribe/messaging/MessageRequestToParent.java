@@ -66,12 +66,11 @@ public class MessageRequestToParent extends ScribeMessage implements Serializabl
      *
      * @param addr the address of the scribe receiver.
      * @param source the node generating the message.
-     * @param tid is null
      * @param c the credentials associated with the mesasge.
      */
     public 
 	MessageRequestToParent( Address addr, NodeHandle source, 
-			  NodeId tid, Credentials c ) {
+				Credentials c ) {
 	super( addr, source, null, c );
     }
     
@@ -96,7 +95,7 @@ public class MessageRequestToParent extends ScribeMessage implements Serializabl
 	SendOptions opt = scribe.getSendOptions();
 	Vector topics = scribe.getTopicsForChild(m_source);
 	
-	ScribeMessage msg = scribe.makeReplyFromParentMessage( null, cred);
+	ScribeMessage msg = scribe.makeReplyFromParentMessage( cred);
 	msg.setData(topics);
 	scribe.routeMsgDirect( m_source, msg, cred, opt );
 
