@@ -18,7 +18,7 @@ import rice.visualization.server.DebugCommandHandler;
 
 public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Application, DebugCommandHandler {
 
-  protected final FragmentStorage fragmentStorage;
+  protected final StorageManager fragmentStorage;
   protected final StorageManager neighborStorage;
   protected final GlacierPolicy policy;
   protected final Node node;
@@ -67,7 +67,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private final int restoreMaxBoosts = 2;
 
   public GlacierImpl(Node nodeArg, StorageManager fragmentStorageArg, StorageManager neighborStorageArg, int numFragmentsArg, int numSurvivorsArg, IdFactory factoryArg, String instanceArg, GlacierPolicy policyArg) {
-    this.fragmentStorage = new FragmentStorage(fragmentStorageArg);
+    this.fragmentStorage = fragmentStorageArg;
     this.neighborStorage = neighborStorageArg;
     this.policy = policyArg;
     this.node = nodeArg;
@@ -643,7 +643,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     insert(obj, System.currentTimeMillis() + 30*SECONDS, command);
   }
 
-  public void refresh(final Id[] id, final long expiration, final Continuation command) {
+  public void refresh(final IdSet id, final long expiration, final Continuation command) {
     command.receiveResult(new Object[] { new Boolean(true) });
     /* Implement me */
   }
@@ -850,7 +850,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             return;
           }
           
-          neighborStorage.store(fNodeId, new Long(fWhen),
+          neighborStorage.store(fNodeId, null, new Long(fWhen),
             new Continuation() {
               public void receiveResult(Object o) {
                 log("Continue: neighborSeen ("+fNodeId+", "+fWhen+") after store");
@@ -1318,12 +1318,25 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
 
     } else if (msg instanceof GlacierNeighborRequestMessage) {
       final GlacierNeighborRequestMessage gnrm = (GlacierNeighborRequestMessage) msg;
-      
-      neighborStorage.scan(gnrm.getRequestedRange(), new Continuation() {
-        int numRequested;
-        Id[] neighbors;
-        long[] lastSeen;
-        int currentLookup;
+      final IdSet requestedNeighbors = neighborStorage.scan(gnrm.getRequestedRange());
+      final int numRequested = requestedNeighbors.numElements();
+
+      if (numRequested < 1) {
+        log("No neighbors in that range -- canceled");
+        return; 
+      }
+            
+      log("Found "+numRequested+" neighbors in range "+gnrm.getRequestedRange()+", retrieving...");
+              
+      final Id[] neighbors = new Id[numRequested];
+      final long[] lastSeen = new long[numRequested];
+            
+      Iterator iter = requestedNeighbors.getIterator();
+      for (int i=0; i<numRequested; i++)
+        neighbors[i] = (Id)(iter.next());
+              
+      neighborStorage.getObject(neighbors[0], new Continuation() {
+        int currentLookup = 0;
         
         public void receiveResult(Object o) {
           log("Continue: NeighborRequest from "+gnrm.getSource().getId()+" for range "+gnrm.getRequestedRange());
@@ -1331,27 +1344,6 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           if (o == null) {
             warn("Problem while retrieving neighbors -- canceled");
             return;
-          }
-          
-          if (o instanceof IdSet) {
-            IdSet requestedNeighbors = (IdSet)o;
-            numRequested = requestedNeighbors.numElements();
-            if (numRequested < 1) {
-              log("No neighbors in that range -- canceled");
-              return; 
-            }
-            
-            log("Found "+numRequested+" neighbors in range "+gnrm.getRequestedRange()+", retrieving...");
-              
-            neighbors = new Id[numRequested];
-            lastSeen = new long[numRequested];
-            
-            Iterator iter = requestedNeighbors.getIterator();
-            for (int i=0; i<numRequested; i++)
-              neighbors[i] = (Id)(iter.next());
-              
-            currentLookup = 0;
-            neighborStorage.getObject(neighbors[currentLookup], this);
           }
           
           if (o instanceof Long) {
@@ -1373,6 +1365,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         
         public void receiveException(Exception e) {
           warn("Problem while retrieving neighbors in range "+gnrm.getRequestedRange()+" for "+gnrm.getSource()+" -- canceled");
+          e.printStackTrace();
         }
       });
           
@@ -1678,7 +1671,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
               new FragmentMetadata(thisManifest.getExpirationDate(), -1)
             );
 
-            fragmentStorage.store(thisKey, fam,
+            fragmentStorage.store(thisKey, null, fam,
               new Continuation() {
                 public void receiveResult(Object o) {
                   log("Stored OK, sending receipt: "+thisKey);
@@ -1740,7 +1733,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                     new FragmentMetadata(thisManifest.getExpirationDate(), -1)
                   );
 
-                  fragmentStorage.store(thisKey, fam,
+                  fragmentStorage.store(thisKey, null, fam,
                     new Continuation() {
                       public void receiveResult(Object o) {
                         log("Recovered fragment stored OK");
