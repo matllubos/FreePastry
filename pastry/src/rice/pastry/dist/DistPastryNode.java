@@ -31,6 +31,7 @@ import rice.pastry.join.*;
 import rice.pastry.leafset.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
+import sun.misc.SignalHandler;
 
 /**
  * Class which represents the abstraction of a "real" pastry node. Designed to
@@ -58,6 +59,9 @@ public abstract class DistPastryNode extends PastryNode {
   // the list of network listeners
   private Vector listeners;
 
+  // the list of errors
+  private static Vector errors = new Vector();
+
   // join retransmission stuff
   private ScheduledMessage joinEvent;
 
@@ -67,8 +71,10 @@ public abstract class DistPastryNode extends PastryNode {
    *
    * @param id DESCRIBE THE PARAMETER
    */
-  protected DistPastryNode(NodeId id) {
+  protected DistPastryNode(NodeId id) {    
     super(id);
+    SignalHandler s;
+    
     timer = new Timer(true);
     // uses deamon thread, so it terminates once other threads have terminated
     
@@ -97,6 +103,20 @@ public abstract class DistPastryNode extends PastryNode {
       listeners[i].dataReceived(message, address, size);
   }
 
+  public static String[] getErrors() {
+    String[] result = (String[]) errors.toArray(new String[0]);
+    errors.clear();
+    
+    return result;
+  }
+  
+  public static void addError(String error) {
+    if (errors.size() > 20)
+      errors.removeElementAt(0);
+    
+    errors.add(error);
+  }
+
   /**
    * Method which returns the Dist for this Pastry node.
    *
@@ -111,10 +131,16 @@ public abstract class DistPastryNode extends PastryNode {
    * @param bootstrap Node handle to bootstrap with.
    */
   public final void initiateJoin(NodeHandle bootstrap) {
+    //System.out.println("DistPN.initiateJoin()");
     if (bootstrap != null) {
-      // schedule (re-)transmission of the join message, every 5s
-      joinEvent = scheduleMsg(new InitiateJoin(bootstrap), 0, 5000);
       //this.receiveMessage(new InitiateJoin(bootstrap));
+
+      // schedule (re-)transmission of the join message, every 5s
+      //joinEvent = scheduleMsg(new InitiateJoin(bootstrap), 0, 5000);
+
+      // schedule (re-)transmission of the join message at an exponential backoff
+      joinEvent = scheduleMsgExpBackoff(new InitiateJoin(bootstrap), 0, 5000, 2);
+
     } else {
       setReady();
     }
@@ -196,6 +222,10 @@ public abstract class DistPastryNode extends PastryNode {
     return sm;
   }
 
+  public ExponentialBackoffScheduledMessage scheduleMsgExpBackoff(Message msg, long delay, long initialPeriod, double expBase) {
+    ExponentialBackoffScheduledMessage sm = new ExponentialBackoffScheduledMessage(this,msg,timer,delay,initialPeriod,expBase);
+    return sm;
+  }
 
   /**
    * Schedule the specified message for repeated fixed-rate delivery to the
