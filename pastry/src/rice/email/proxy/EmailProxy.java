@@ -168,7 +168,7 @@ public class EmailProxy {
 
       System.out.print("    Starting StorageManager\t\t\t\t\t");
       StorageManager storage = new StorageManager(FACTORY,
-                                                  new PersistentStorage(FACTORY, ".", DEFAULT_DISK_SIZE),
+                                                  new PersistentStorage(FACTORY, pastry.getNodeId().toString(), ".", DEFAULT_DISK_SIZE),
                                                   new LRUCache(new MemoryStorage(FACTORY), DEFAULT_CACHE_SIZE));
       System.out.println("[ DONE ]");
 

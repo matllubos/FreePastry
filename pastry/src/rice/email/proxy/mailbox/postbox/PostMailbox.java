@@ -3,6 +3,7 @@ package rice.email.proxy.mailbox.postbox;
 import rice.email.proxy.mail.MovingMessage;
 
 import rice.email.proxy.mailbox.*;
+import rice.email.proxy.imap.*;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -12,6 +13,7 @@ import java.util.*;
 
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import java.util.*;
 
 import rice.Continuation;
 
@@ -26,6 +28,8 @@ public class PostMailbox implements Mailbox {
 
   // the local email service to use
   EmailService email;
+
+    Hashtable subscriptions = new Hashtable();
 
   // a cache of the previously-fetch folders
   Hashtable folders;
@@ -98,7 +102,7 @@ public class PostMailbox implements Mailbox {
 
       if (exception[0] != null)
         throw exception[0];
-
+    
       folders.put(name.toLowerCase(), new PostFolder(folder[0], root.getFolder(), email));
 
       return (MailFolder) folders.get(name);
@@ -186,7 +190,7 @@ public class PostMailbox implements Mailbox {
       ((PostFolder) getRootFolder()).getFolder().createChildFolder(folder.toLowerCase(), insert);
 
       synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
-
+    
       if (exception[0] != null)
         throw new MailboxException(exception[0]);
     } catch (Exception e) {
@@ -194,7 +198,7 @@ public class PostMailbox implements Mailbox {
     }
   }
 
-  public void deleteFolder(String folder) throws MailboxException {
+ public void deleteFolder(String folder) throws MailboxException {
     try {
       final Object[] result = new Object[1];
       final Exception[] exception = new Exception[1];
@@ -230,32 +234,91 @@ public class PostMailbox implements Mailbox {
   }
 
   // TO DO: use the pattern
-  public MailFolder[] listFolders(String pattern) throws MailboxException {
+  public Vector listFolders(String pattern) throws MailboxException {
     try {
-      PostFolder root = (PostFolder) getRootFolder();
-      String[] names = root.getFolder().getChildren();
-      MailFolder[] folders = new MailFolder[names.length];
-      for (int i = 0; i < names.length; i++)
-      {
-        PostFolder folder = (PostFolder) getFolder(names[i]);
-        folders[i] = new PostFolder(folder.getFolder(), root.getFolder(), email);
-      }
+	PostFolder root = (PostFolder) getRootFolder();
+	String[] names = root.getFolder().getChildren();
+	//      MailFolder[] folders = new MailFolder[names.length];
+	Vector folders = new Vector();
+	
+	for (int i = 0; i < names.length; i++) {
 
-      return folders;
+		PostFolder folder = (PostFolder) getFolder(names[i]);
+
+		if (pattern.endsWith("*") || pattern.equals("*")) {
+		    String p = pattern.replaceAll("\\*", ".*");
+		    if (((String)folder.getFullName()).matches(p)) 
+			folders.add(new PostFolder(folder.getFolder(), root.getFolder(), email));
+		}
+
+		if (pattern.endsWith("%")) {
+		    String p = pattern.replaceAll("\\%", ".*");
+		    if (((String)folder.getFullName()).matches(p)) 
+			folders.add(new PostFolder(folder.getFolder(), root.getFolder(),email));
+		}
+
+		else if (folder.getFullName().equalsIgnoreCase(pattern)) {
+		    folders.add(new PostFolder(folder.getFolder(), root.getFolder(), email));
+		 
+		}
+	}
+	return folders;
     } catch (Exception e) {
-      throw new MailboxException(e);
+	throw new MailboxException(e);
     }
+  }    
+
+  public void subscribe(ImapConnection conn, String fullName) throws MailboxException {
+      try {
+
+	  if (!subscriptions.containsKey(conn)) {
+	      subscriptions.put(conn, new Vector());
+	  }
+	 
+	  if (!((Vector)subscriptions.get(conn)).contains(fullName)) {
+	      ((Vector)subscriptions.get(conn)).add(fullName);
+	  }
+
+      } catch (Exception e) {
+	  throw new MailboxException(e);
+      }
   }
 
-  public void subscribe(String fullName) throws MailboxException {
-    throw new MailboxException("Subscriptions are not yet implemented...");
+  public void unsubscribe(ImapConnection conn, String fullName) throws MailboxException {
+      //throw new MailboxException("Subscriptions are not yet implemented...");
+      try{
+	  if (((Vector)subscriptions.get(conn)).contains(fullName)) {
+	      ((Vector)subscriptions.get(conn)).remove(fullName);
+	  }      
+      } catch (Exception e) {
+	  throw new MailboxException(e);
+      }
   }
 
-  public void unsubscribe(String fullName) throws MailboxException {
-    throw new MailboxException("Subscriptions are not yet implemented...");
-  }
-
-  public String[] listSubscriptions(String pattern) throws MailboxException {
-    return new String[0];
+  public String[] listSubscriptions(ImapConnection conn, String pattern) throws MailboxException {
+      try {
+	  String[] nameList;
+	  if (!subscriptions.containsKey(conn)) {
+	      subscriptions.put(conn, new Vector());
+	      nameList = new String[1];
+	      nameList[0] = "";
+	  }
+	  else {
+	      Vector subList = (Vector)subscriptions.get(conn);
+	     
+	       nameList = new String[subList.size()];
+	      for (int i=0; i < subList.size(); i++) {
+		  nameList[i] = (String)subList.elementAt(i);	 
+	      }
+	  }	  
+	  return nameList;
+	  
+      } catch (Exception e) {
+	  throw new MailboxException(e);
+      }
   }
 }
+
+
+
+

@@ -44,6 +44,7 @@ public class PostFolder implements MailFolder {
     this.folder = folder;
     this.parent = parent;
     this.email = email;
+  
   }
 
   /**
@@ -109,7 +110,7 @@ public class PostFolder implements MailFolder {
       throw new MailboxException(e);
     } 
   }
-
+ 
   public List getMessages(MsgFilter range) throws MailboxException {
     try {
       final Object[] result = new Object[1];
