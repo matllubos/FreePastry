@@ -260,6 +260,7 @@ public class Email implements java.io.Serializable {
      * Constructs a EmailStoreDataTask.
      */
     public EmailStoreDataTask(int index, Continuation resultListener) {
+      System.out.println("Created new EmailStoreDataTask");
       _index = index;
       _resultListener = resultListener;
     }
@@ -276,6 +277,8 @@ public class Email implements java.io.Serializable {
      * storing the attachments.  Once each of the attachments is stored, the method is done.
      */
     public void receiveResult(Object o) {
+      System.out.println("StoreDataTask received result, now storing data at index " + _index);
+      System.out.println("received result was " + o); 
       // save the returned reference
       if (_index == BODY) {
 	bodyRef = (EmailDataReference)o;
@@ -287,7 +290,11 @@ public class Email implements java.io.Serializable {
       _index = _index + 1;      
       if ((attachments != null) && (_index < attachments.length)) {
 	EmailStoreDataTask command = new EmailStoreDataTask(_index, _resultListener);
-	storage.storeContentHash(attachments[_index], command);
+	storage.storeContentHash(attachments[_index], command);	
+      } 
+      // if there are no more data items, pass an empty result to the given continuation
+      else {
+	_resultListener.receiveResult(o);
       }
     }
 

@@ -1,5 +1,6 @@
 package rice.email.test;
 
+import rice.*;
 import rice.email.*;
 import rice.email.messaging.*;
 import rice.post.*;
@@ -60,7 +61,7 @@ public class SendEmailTest extends EmailTest {
 					body, attachments);
 
 		try {
-			sender.sendMessage(email, null);
+			sender.sendMessage(email, new SENullCont());
 		} catch(Exception e) {
 			System.err.println("Error sending email");
 			e.printStackTrace();
@@ -75,6 +76,12 @@ public class SendEmailTest extends EmailTest {
 
 		Thread.sleep(5000);
 	}
-}
 
+  // inner class, added by JM so that sendMessage will have a continuation that is not null.
+  private class SENullCont implements Continuation {
+    SENullCont() {}
+    public void receiveResult(Object result) {}
+    public void receiveException(Exception result) {}
+  }
+}
 
