@@ -97,8 +97,13 @@ public class AggregateList {
           entriesReplayed ++;
         
           if (parts[2].equals("setRoot")) {
-            rootKey = factory.buildIdFromToString(parts[3]);
-            System.out.println("  - rootKey = "+rootKey.toStringFull());
+            if (parts[3].equals("null")) {
+              rootKey = null;
+              System.out.println("  - rootKey = null");
+            } else {
+              rootKey = factory.buildIdFromToString(parts[3]);
+              System.out.println("  - rootKey = "+rootKey.toStringFull());
+            }
             
           } else if (parts[2].equals("setAL")) {
             Id adcKey = factory.buildIdFromToString(parts[3]);
