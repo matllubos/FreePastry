@@ -209,8 +209,8 @@ public class PostImpl implements Post, Application, ScribeClient {
   //  logger.setLevel(Level.FINEST);
   //  logger.getHandlers()[0].setLevel(Level.FINEST);
     
-    endpoint.scheduleMessage(new SynchronizeMessage(), synchronizeInterval, synchronizeInterval);
-    endpoint.scheduleMessage(new RefreshMessage(), refreshInterval, refreshInterval);
+    endpoint.scheduleMessage(new SynchronizeMessage(), new Random().nextInt((int) synchronizeInterval), synchronizeInterval);
+    endpoint.scheduleMessage(new RefreshMessage(), new Random().nextInt((int) refreshInterval), refreshInterval);
     
     logger.fine(endpoint.getId() + ": Constructed new Post with user " + address + " and instance " + instance);
   }
