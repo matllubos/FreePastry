@@ -27,9 +27,9 @@ public class ConfigurationFrame extends JFrame {
     
     this.parameters = parameters;
     this.panels = new ControlPanel[6];
-    this.panels[0] = new JavaConfiguration();
-    this.panels[1] = new PostConfiguration();
-    this.panels[2] = new EmailConfiguration();
+    this.panels[0] = new EmailConfiguration();
+    this.panels[1] = new JavaConfiguration();
+    this.panels[2] = new PostConfiguration();
     this.panels[3] = new ProxyConfiguration();
     this.panels[4] = new GlacierConfiguration();
     this.panels[5] = new OtherConfiguration();
@@ -39,9 +39,9 @@ public class ConfigurationFrame extends JFrame {
     
     JTabbedPane pane = new JTabbedPane();
     
-    pane.addTab("Java", null, panels[0], "Java Configuration Pane");
-    pane.addTab("POST", null, panels[1], "POST Configuration Pane");
-    pane.addTab("Email", null, panels[2], "Email Configuration Pane");
+    pane.addTab("Email", null, panels[0], "Email Configuration Pane");
+    pane.addTab("Java", null, panels[1], "Java Configuration Pane");
+    pane.addTab("POST", null, panels[2], "POST Configuration Pane");
     pane.addTab("Proxy", null, panels[3], "Proxy Configuration Pane");
     pane.addTab("Glacier", null, panels[4], "Glacier Configuration Pane");
     pane.addTab("Other", null, panels[5], "Other Configuration Pane");
