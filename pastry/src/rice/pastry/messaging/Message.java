@@ -93,7 +93,10 @@ public abstract class Message implements Serializable
      * 
      * @return the immediate sender's NodeId.
      */
-    public NodeId getSenderId() { return sender.getNodeId(); }
+    public NodeId getSenderId() { 
+      if (sender == null) return null;
+      return sender.getNodeId(); 
+    }
     
     /**
      * Get sender.
