@@ -33,7 +33,7 @@ public class QueuePanelCreator implements PanelCreator {
       public void run() {
         updateData();
       }
-    }, UPDATE_TIME, UPDATE_TIME);
+    }, 0, UPDATE_TIME);
   }
   
   public DataPanel createPanel(Object[] objects) {
@@ -45,7 +45,7 @@ public class QueuePanelCreator implements PanelCreator {
       dataStorageCons.gridy = 0;
       dataStorageCons.fill = Constraints.HORIZONTAL;
       
-      LineGraphView dataStorageView = new LineGraphView("Processing Queue", 380, 200, dataStorageCons, "Time (sec)", "Queue Size", false, false);
+      LineGraphView dataStorageView = new LineGraphView("Processing Queue", 380, 200, dataStorageCons, "Time (s)", "Queue Size", false, false);
       dataStorageView.addSeries("Data Stored", getTimeArray(), getArray(processing), Color.blue);
       
       pastPanel.addDataView(dataStorageView);
@@ -60,7 +60,7 @@ public class QueuePanelCreator implements PanelCreator {
       dataStorageCons.gridy = 0;
       dataStorageCons.fill = Constraints.HORIZONTAL;
       
-      LineGraphView dataStorageView = new LineGraphView("Persistence Queue", 380, 200, dataStorageCons, "Time (sec)", "Queue Size", false, false);
+      LineGraphView dataStorageView = new LineGraphView("Persistence Queue", 380, 200, dataStorageCons, "Time (s)", "Queue Size", false, false);
       dataStorageView.addSeries("Insert", getTimeArray(), getArray(persistence), Color.green);
       
       pastPanel.addDataView(dataStorageView);
@@ -75,7 +75,7 @@ public class QueuePanelCreator implements PanelCreator {
       dataStorageCons.gridy = 0;
       dataStorageCons.fill = Constraints.HORIZONTAL;
       
-      LineGraphView dataStorageView = new LineGraphView("Selector Queue", 380, 200, dataStorageCons, "Time (sec)", "Queue Size", false, false);
+      LineGraphView dataStorageView = new LineGraphView("Selector Queue", 380, 200, dataStorageCons, "Time (s)", "Queue Size", false, false);
       dataStorageView.addSeries("Insert", getTimeArray(), getArray(invocations), Color.orange);
       
       pastPanel.addDataView(dataStorageView);
@@ -93,7 +93,7 @@ public class QueuePanelCreator implements PanelCreator {
       long offset = ((Long) times.elementAt(0)).longValue();
       
       for (int i=0; i<timesA.length; i++) 
-        timesA[i] = (double) ((((Long) times.elementAt(i)).longValue() - offset) / 1000);
+        timesA[i] = (double) ((((Long) times.elementAt(i)).longValue() - offset) / UPDATE_TIME);
       
       return timesA;
     } else {

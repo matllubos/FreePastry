@@ -11,7 +11,7 @@ import java.util.*;
 public class PersistencePanelCreator implements PanelCreator {
   
   public static int NUM_DATA_POINTS = 600;
-  public static int UPDATE_TIME = 1000;
+  public static int UPDATE_TIME = 60000;
   
   Vector data = new Vector();
   Vector cache = new Vector();
@@ -29,7 +29,7 @@ public class PersistencePanelCreator implements PanelCreator {
       public void run() {
         updateData();
       }
-    }, UPDATE_TIME, UPDATE_TIME);
+    }, 0, UPDATE_TIME);
   }
   
   public DataPanel createPanel(Object[] objects) {
@@ -41,7 +41,7 @@ public class PersistencePanelCreator implements PanelCreator {
       dataStorageCons.gridy = 0;
       dataStorageCons.fill = Constraints.HORIZONTAL;
       
-      LineGraphView dataStorageView = new LineGraphView(name + " Keys", 380, 200, dataStorageCons, "Time (sec)", "Number of Keys", false, false);
+      LineGraphView dataStorageView = new LineGraphView(name + " Keys", 380, 200, dataStorageCons, "Time (m)", "Number of Keys", false, false);
       dataStorageView.addSeries("Keys", getTimeArray(), getArray(keys), Color.green);
       
       pastPanel.addDataView(dataStorageView);
@@ -56,7 +56,7 @@ public class PersistencePanelCreator implements PanelCreator {
       dataStorageCons.gridy = 0;
       dataStorageCons.fill = Constraints.HORIZONTAL;
       
-      LineGraphView dataStorageView = new LineGraphView(name + " Storage Size", 380, 200, dataStorageCons, "Time (sec)", "Data (KB)", true, false);
+      LineGraphView dataStorageView = new LineGraphView(name + " Storage Size", 380, 200, dataStorageCons, "Time (m)", "Data (MB)", true, false);
       dataStorageView.addSeries("Data Stored", getTimeArray(), getArray(data), Color.blue);
       
       pastPanel.addDataView(dataStorageView);
@@ -71,7 +71,7 @@ public class PersistencePanelCreator implements PanelCreator {
       dataStorageCons.gridy = 0;
       dataStorageCons.fill = Constraints.HORIZONTAL;
       
-      LineGraphView dataStorageView = new LineGraphView(name + " Cache Size", 380, 200, dataStorageCons, "Time (sec)", "Count", true, false);
+      LineGraphView dataStorageView = new LineGraphView(name + " Cache Size", 380, 200, dataStorageCons, "Time (m)", "Data (MB)", true, false);
       dataStorageView.addSeries("Insert", getTimeArray(), getArray(cache), Color.orange);
       
       pastPanel.addDataView(dataStorageView);
@@ -89,7 +89,7 @@ public class PersistencePanelCreator implements PanelCreator {
       long offset = ((Long) times.elementAt(0)).longValue();
       
       for (int i=0; i<timesA.length; i++) 
-        timesA[i] = (double) ((((Long) times.elementAt(i)).longValue() - offset) / 1000);
+        timesA[i] = (double) ((((Long) times.elementAt(i)).longValue() - offset) / UPDATE_TIME);
       
       return timesA;
     } else {
@@ -112,8 +112,8 @@ public class PersistencePanelCreator implements PanelCreator {
   
   protected synchronized void updateData() {
     try {
-      data.add(new Double((double) storage.getStorage().getTotalSize()/1000));
-      cache.add(new Double((double) storage.getCache().getTotalSize()/1000));
+      data.add(new Double((double) storage.getStorage().getTotalSize()/(1024*1024)));
+      cache.add(new Double((double) storage.getCache().getTotalSize()/(1024*1024)));
       keys.add(new Double((double) storage.scan().numElements()));
       times.add(new Long(System.currentTimeMillis()));
             

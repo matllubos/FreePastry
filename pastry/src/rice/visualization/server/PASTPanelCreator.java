@@ -14,7 +14,7 @@ import java.util.*;
 public class PASTPanelCreator implements PanelCreator {
   
   public static int NUM_DATA_POINTS = 600;
-  public static int UPDATE_TIME = 1000;
+  public static int UPDATE_TIME = 60000;
   
   Vector times = new Vector();
   Vector outstanding = new Vector();
@@ -34,7 +34,7 @@ public class PASTPanelCreator implements PanelCreator {
       public void run() {
         updateData();
       }
-    }, UPDATE_TIME, UPDATE_TIME);
+    }, 0, UPDATE_TIME);
   }
   
   public DataPanel createPanel(Object[] objects) {
@@ -61,7 +61,7 @@ public class PASTPanelCreator implements PanelCreator {
       dataStorageCons.gridy = 0;
       dataStorageCons.fill = Constraints.HORIZONTAL;
       
-      LineGraphView dataStorageView = new LineGraphView(name + " Outstanding", 380, 200, dataStorageCons, "Time (sec)", "Outstanding", false, false);
+      LineGraphView dataStorageView = new LineGraphView(name + " Outstanding", 380, 200, dataStorageCons, "Time (m)", "Outstanding", false, false);
       dataStorageView.addSeries("Insert", getTimeArray(), getArray(this.outstanding), Color.red);
       
       pastPanel.addDataView(dataStorageView);
@@ -76,7 +76,7 @@ public class PASTPanelCreator implements PanelCreator {
       dataStorageCons.gridy = 0;
       dataStorageCons.fill = Constraints.HORIZONTAL;
       
-      LineGraphView dataStorageView = new LineGraphView(name + " Requests", 380, 200, dataStorageCons, "Time (sec)", "Count", false, true);
+      LineGraphView dataStorageView = new LineGraphView(name + " Requests", 380, 200, dataStorageCons, "Time (m)", "Count", false, true);
       dataStorageView.addSeries("Insert", getTimeArray(), getArray(inserts), Color.blue);
       dataStorageView.addSeries("Lookup", getTimeArray(), getArray(lookups), Color.red);
       dataStorageView.addSeries("Fetch Handle", getTimeArray(), getArray(fetchHandles), Color.green);
@@ -97,7 +97,7 @@ public class PASTPanelCreator implements PanelCreator {
       long offset = ((Long) times.elementAt(0)).longValue();
       
       for (int i=0; i<timesA.length; i++) 
-        timesA[i] = (double) ((((Long) times.elementAt(i)).longValue() - offset) / 1000);
+        timesA[i] = (double) ((((Long) times.elementAt(i)).longValue() - offset) / UPDATE_TIME);
       
       return timesA;
     } else {

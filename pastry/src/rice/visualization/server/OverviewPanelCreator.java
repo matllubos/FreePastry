@@ -12,7 +12,7 @@ import java.util.*;
 public class OverviewPanelCreator implements PanelCreator {
   
   public static int NUM_DATA_POINTS = 600;
-  public static int UPDATE_TIME = 1000;
+  public static int UPDATE_TIME = 60000;
   
   protected Vector times = new Vector();
   protected Vector used = new Vector();
@@ -23,7 +23,7 @@ public class OverviewPanelCreator implements PanelCreator {
       public void run() {
         updateData();
       }
-    }, UPDATE_TIME, UPDATE_TIME);
+    }, 0, UPDATE_TIME);
   }
   
   public DataPanel createPanel(Object[] objects) {
@@ -69,7 +69,7 @@ public class OverviewPanelCreator implements PanelCreator {
     memoryCons.gridy = 0;
     memoryCons.fill = Constraints.HORIZONTAL;
     
-    LineGraphView memoryView = new LineGraphView("Memory Usage", 380, 200, memoryCons, "Time (sec)", "Memory Used (B)", true, false);
+    LineGraphView memoryView = new LineGraphView("Memory Usage", 380, 200, memoryCons, "Time (m)", "Memory Used (B)", true, false);
     memoryView.addSeries("Total Memory", getTimeArray(), getTotalMemoryArray(), Color.green);
     memoryView.addSeries("Used Memory", getTimeArray(), getUsedMemoryArray(), Color.blue);
     
@@ -88,7 +88,7 @@ public class OverviewPanelCreator implements PanelCreator {
       long offset = ((Long) times.elementAt(0)).longValue();
       
       for (int i=0; i<timesA.length; i++) 
-        timesA[i] = (double) ((((Long) times.elementAt(i)).longValue() - offset) / 1000);
+        timesA[i] = (double) ((((Long) times.elementAt(i)).longValue() - offset) / UPDATE_TIME);
       
       return timesA;
     } else {

@@ -16,7 +16,7 @@ import java.util.*;
 public class EmailPanelCreator implements PanelCreator {
   
   public static int NUM_DATA_POINTS = 600;
-  public static int UPDATE_TIME = 1000;
+  public static int UPDATE_TIME = 60000;
   
   Vector connect = new Vector();
   Vector success = new Vector();
@@ -32,7 +32,7 @@ public class EmailPanelCreator implements PanelCreator {
       public void run() {
         updateData();
       }
-    }, UPDATE_TIME, UPDATE_TIME);
+    }, 0, UPDATE_TIME);
   }
   
   public DataPanel createPanel(Object[] objects) {
@@ -44,7 +44,7 @@ public class EmailPanelCreator implements PanelCreator {
       dataStorageCons.gridy = 0;
       dataStorageCons.fill = Constraints.HORIZONTAL;
       
-      LineGraphView dataStorageView = new LineGraphView("SMTP Server", 380, 200, dataStorageCons, "Time (sec)", "Number", false, false);
+      LineGraphView dataStorageView = new LineGraphView("SMTP Server", 380, 200, dataStorageCons, "Time (m)", "Number", false, false);
       dataStorageView.addSeries("Connections", getTimeArray(), getArray(connect), Color.blue);
       dataStorageView.addSeries("Successful", getTimeArray(), getArray(success), Color.green);
       dataStorageView.addSeries("Failed", getTimeArray(), getArray(fail), Color.red);
@@ -64,7 +64,7 @@ public class EmailPanelCreator implements PanelCreator {
       long offset = ((Long) times.elementAt(0)).longValue();
       
       for (int i=0; i<timesA.length; i++) 
-        timesA[i] = (double) ((((Long) times.elementAt(i)).longValue() - offset) / 1000);
+        timesA[i] = (double) ((((Long) times.elementAt(i)).longValue() - offset) / UPDATE_TIME);
       
       return timesA;
     } else {

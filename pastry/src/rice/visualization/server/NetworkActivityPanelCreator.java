@@ -13,7 +13,7 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
   
   public static int NUM_DATA_POINTS = 600;
   public static int NUM_MESSAGES = 200;
-  public static int UPDATE_TIME = 1000;
+  public static int UPDATE_TIME = 60000;
   
   protected Vector sent = new Vector();
   
@@ -34,7 +34,7 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
       public void run() {
         updateData();
       }
-    }, UPDATE_TIME, UPDATE_TIME);
+    }, 0, UPDATE_TIME);
   }
   
   public DataPanel createPanel(Object[] objects) {
@@ -45,7 +45,7 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
     dataSentCons.gridy = 0;
     dataSentCons.fill = Constraints.HORIZONTAL;
     
-    LineGraphView dataSentView = new LineGraphView("Data Sent", 380, 200, dataSentCons, "Time (sec)", "Data (B)", false, false);
+    LineGraphView dataSentView = new LineGraphView("Data Sent", 380, 200, dataSentCons, "Time (m)", "Data (B)", false, false);
     dataSentView.addSeries("Data Sent", getTimeArray(), getSentArray(), Color.green);
     
     Constraints dataReceivedCons = new Constraints();
@@ -53,7 +53,7 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
     dataReceivedCons.gridy = 0;
     dataReceivedCons.fill = Constraints.HORIZONTAL;
     
-    LineGraphView dataReceivedView = new LineGraphView("Data Received", 380, 200, dataReceivedCons, "Time (sec)", "Data (B)", false, false);
+    LineGraphView dataReceivedView = new LineGraphView("Data Received", 380, 200, dataReceivedCons, "Time (m)", "Data (B)", false, false);
     dataReceivedView.addSeries("Data Received", getTimeArray(), getReceivedArray(), Color.red);
     
     Constraints dataBreakdownCons = new Constraints();
@@ -97,7 +97,7 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
     long offset = ((Long) times.elementAt(0)).longValue();
     
     for (int i=0; i<timesA.length; i++) 
-      timesA[i] = (double) ((((Long) times.elementAt(i)).longValue() - offset) / 1000);
+      timesA[i] = (double) ((((Long) times.elementAt(i)).longValue() - offset) / UPDATE_TIME);
     
     return timesA;
   }
