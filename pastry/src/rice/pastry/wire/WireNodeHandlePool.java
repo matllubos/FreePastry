@@ -73,6 +73,15 @@ public class WireNodeHandlePool extends DistNodeHandlePool {
     return (WireNodeHandle) handles.get(nodeId);
   }
 
+  public void notifyKilled() {
+    synchronized(handles) {
+      Iterator i = handles.values().iterator();
+      while (i.hasNext()) {
+        ((WireNodeHandle)i.next()).notifyKilled();
+      }
+    }
+  }
+
   /**
    * The method verifies a WireNodeHandle. If a node handle to the pastry node
    * has never been seen before, an entry is added, and this node handle is
