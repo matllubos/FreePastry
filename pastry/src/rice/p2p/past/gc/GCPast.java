@@ -33,11 +33,6 @@ public interface GCPast extends Past {
   public static final long INFINITY_EXPIRATION = Long.MAX_VALUE;
   
   /**
-   * Timeout value which represents objects stored before garbage colection
-   */
-  public static final long NO_EXPIRATION_SPECIFIED = -1L;
-  
-  /**
    * Inserts an object with the given ID into this instance of Past.
    * Asynchronously returns a PastException to command, if the
    * operation was unsuccessful.  If the operation was successful, a
