@@ -15,6 +15,9 @@ import rice.post.storage.*;
  * @author Alan Mislove
  */
 public class EmailHeadersPart extends EmailContentPart {
+  
+  // serialver uid
+  private static final long serialVersionUID = 1186745194337869017L;
 
   /**
    * The data representing the haeders (transient as it is stored).
@@ -115,6 +118,14 @@ public class EmailHeadersPart extends EmailContentPart {
         content.storeData(parent);
       }
     });
+  }
+  
+  /**
+   * Returns the hashCode
+   *
+   */
+  public int hashCode() {
+    return headersReference.hashCode() ^ content.hashCode();
   }
 
   /**

@@ -15,6 +15,9 @@ import rice.post.storage.*;
  * @author Alan Mislove
  */
 public class EmailSinglePart extends EmailContentPart {
+  
+  // serialver
+  private static final long serialVersionUID = -8701317817146783297L;
 
   /**
    * The number of lines for this email single part
@@ -120,6 +123,14 @@ public class EmailSinglePart extends EmailContentPart {
     } else {
       return content.equals(part.content);
     }
+  }
+  
+  /**
+    * Returns the hashCode
+   *
+   */
+  public int hashCode() {
+    return contentReference.hashCode();
   }
     
     /**

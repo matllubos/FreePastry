@@ -15,6 +15,9 @@ import rice.post.storage.*;
  * @author Alan Mislove
  */
 public abstract class EmailContentPart implements Serializable {
+  
+  // serialversionuid for backwarnds compatibility
+  private static final long serialVersionUID = 6448441928180861395L;
 
   /**
    * The size of this part, in bytes
@@ -80,6 +83,11 @@ public abstract class EmailContentPart implements Serializable {
    * Overridden to enforce subclasses have a valid equals
    */
   public abstract boolean equals(Object o);
+  
+  /**
+   * Overridden to enforce hashCode();
+   */
+  public abstract int hashCode();
   
   /**
    * This method returns a list of all the handles stored in this part

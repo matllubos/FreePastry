@@ -15,6 +15,9 @@ import rice.post.storage.*;
  * @author Alan Mislove
  */
 public class EmailMultiPart extends EmailContentPart {
+  
+  // serialver
+  private static final long serialVersionUID = -1126503326536855181L;
 
   /**
    * The string used to seperate the parts of this multipart
@@ -115,6 +118,19 @@ public class EmailMultiPart extends EmailContentPart {
    */
   public void getContent(Continuation command) {
     command.receiveResult(content);
+  }
+  
+  /**
+   * Returns the hashCode
+   *
+   */
+  public int hashCode() {
+    int result = 293732638;
+    
+    for (int i=0; i<content.length; i++)
+      result ^= content[i].hashCode();
+    
+    return result;
   }
 
   /**

@@ -21,6 +21,9 @@ import rice.post.storage.*;
  * @author Derek Ruths
  */
 public class Email implements java.io.Serializable {
+  
+  // serialveruid for backwards compatibility
+  private static final long serialVersionUID = -6065011673456452566L;
 
   PostUserAddress sender;
   PostEntityAddress[] recipients;
@@ -67,6 +70,24 @@ public class Email implements java.io.Serializable {
    */
   public void getContent(final Continuation command) {
     command.receiveResult(content);
+  }
+  
+  /**
+   * Returns the hashcode
+   *
+   * @reutn the hashcode
+   */
+  public int hashCode() {
+    int result = 928373;
+    
+    result ^= sender.hashCode();
+    
+    for (int i=0; i<recipients.length; i++)
+      result ^= recipients[i].hashCode();
+    
+    result ^= content.hashCode();
+    
+    return result;
   }
 
   /**

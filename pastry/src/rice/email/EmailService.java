@@ -40,6 +40,9 @@ public class EmailService extends PostClient {
   
   // whether to allow reinsertion of log head
   private boolean logRewrite;
+  
+  // a temporary list of recently received emails
+  private HashSet received;
 
   /**
    * the name of the Inbox's log
@@ -56,6 +59,7 @@ public class EmailService extends PostClient {
     this.post = post;
     this.keyPair = keyPair;
     this.logRewrite = logRewrite;
+    this.received = new HashSet();
 
     post.addClient(this);
   }
@@ -211,6 +215,14 @@ public class EmailService extends PostClient {
   public void notificationReceived(NotificationMessage nm, Continuation command) {
     if (nm instanceof EmailNotificationMessage) {
       final EmailNotificationMessage enm = (EmailNotificationMessage) nm;
+      
+      // in case we've already received it, just say ok
+      if (received.contains(enm.getEmail())) {
+        System.out.println("Received duplicate email from " + enm.getEmail().getSender() + " - silenlty accepting");
+        command.receiveResult(Boolean.TRUE);
+        return;
+      }
+      
       try {
         enm.getEmail().setStorage(post.getStorageService());
       } catch (NullPointerException e) {
@@ -230,13 +242,14 @@ public class EmailService extends PostClient {
             HashSet set = new HashSet();
             enm.getEmail().getContentHashReferences(set);
             ContentHashReference[] references = (ContentHashReference[]) set.toArray(new ContentHashReference[0]);
+            received.add(enm.getEmail());
             
             post.getStorageService().refreshContentHash(references, parent);
           }
         });
       } else {
         System.out.println("Recieved message, but was unable to insert due to null inbox...");
-        command.receiveResult(new Boolean(false));
+        command.receiveResult(Boolean.FALSE);
       }
     } else {
       System.out.println("EmailService received unknown notification " + nm + " - dropping on floor.");
