@@ -158,6 +158,30 @@ public interface IScribe
     public boolean multicast( NodeId groupID, Object obj, Credentials cred );
     
 
+    /**
+     * Anycast to a group/topic. Data will be delivered to 'ANY' one node
+     * which has joined the group. The handling of anycast message is 
+     * left to the application. The applications may do DFS of its subtree
+     * to evaluate some predicates to find out a node having desirable
+     * properties.
+     *
+     * @param   groupID         
+     * The ID of the group to anycast.
+     *
+     * @param   obj           
+     * The information that is to be included in anycast message.
+     * This should be serializable.
+     *
+     * @param   cred
+     * The credentials of the entity anycasting to the group.
+     *
+     * @return true if the operation was successful, false if the operation
+     *         failed because the underlying Scribe substrate was not ready.
+     */
+    public boolean anycast( NodeId groupID, Object obj, Credentials cred );
+    
+
+
 
     /**
      * Sends heartbeat messages to this local node's children for all the 

@@ -530,6 +530,36 @@ public class Scribe extends PastryAppl implements IScribe
     }
 
     /**
+     * Anycast to a group/topic. Data will be delivered to 'ANY' one node
+     * which has joined the group. The handling of anycast message is 
+     * left to the application. The applications may do DFS of its subtree
+     * to evaluate some predicates to find out a node having desirable
+     * properties.
+     *
+     * @param   groupID         
+     * The ID of the group to anycast.
+     *
+     * @param   obj           
+     * The information that is to be included in anycast message.
+     * This should be serializable.
+     *
+     * @param   cred
+     * The credentials of the entity anycasting to the group.
+     *
+     * @return true if the operation was successful, false if the operation
+     *         failed because the underlying Scribe substrate was not ready.
+     */
+    public boolean anycast( NodeId groupID, Object obj, Credentials cred ){
+	if(!isReady()) return false;
+	System.out.println("Sending anycast message from "+getNodeId());
+	ScribeMessage msg = makeAnycastMessage( groupID, cred );
+	msg.setData( obj );
+	this.routeMsg( groupID, msg, cred, m_sendOptions );
+	return true;
+    }
+
+
+    /**
      * Generate a unique id for the topic, which will determine its rendezvous
      * point.  This is a helper method. Applications can use their own 
      * methods to generate TopicId.
@@ -762,6 +792,18 @@ public class Scribe extends PastryAppl implements IScribe
     public ScribeMessage makePublishMessage( NodeId tid, Credentials c ) {
 	return new MessagePublish( m_address, this.thePastryNode.getLocalHandle(), tid, c );
     }
+
+     /**
+     * Makes a anycast message using the current Pastry node as the source.
+     *
+     * @param tid the topic id the message reffers to.
+     * @param c the credentials that will be associated with the message
+     * @return the ScribeMessage.
+     */
+    public ScribeMessage makeAnycastMessage( NodeId tid, Credentials c ) {
+	return new MessageAnycast( m_address, this.thePastryNode.getLocalHandle(), tid, c );
+    }
+
 
     /**
      * Makes a heart-beat message using the current Pastry node as the source.
