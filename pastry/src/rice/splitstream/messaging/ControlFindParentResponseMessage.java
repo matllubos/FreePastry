@@ -20,14 +20,14 @@ public class ControlFindParentResponseMessage extends ControlMessage
      * This node is the message originator.  It should set its parent to
      * the Id of the originator of this message or, in the case of a "false"
      * response, generate an application-level upcall.
-     * @param splitStream The SplitStream application
+     * @param scribe The Scribe group this message is relevant to
      * @param s The stripe that this message is relevant to
      */
-    public void handleDeliverMessage( SplitStreamImpl splitStream, Stripe s )
+    public void handleDeliverMessage( IScribe scribe, Stripe s )
     {
         if ( (Boolean)m_data.booleanValue() )
         {
-            splitStream.getScribe().addParent( this.getSource() );
+            scribe.addParent( this.getSource() );
         }
         else
         {
@@ -37,10 +37,10 @@ public class ControlFindParentResponseMessage extends ControlMessage
 
     /**
      * Should do nothing.
-     * @param splitStream The SplitStream application
+     * @param splitStream The Scribe group this message is relevant to
      * @param s The stripe that this message is relevant to
      */
-    public void handleForwardMessage( ISplitStream splitStream, Stripe s )
+    public void handleForwardMessage( IScribe scribe, Stripe s )
     {
     }
 

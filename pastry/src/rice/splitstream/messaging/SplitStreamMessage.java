@@ -13,17 +13,17 @@ public interface SplitStreamMessage{
       /**
        * The call back method into the application for messages to be
        * forwarded.
-       * @param splitStream a handle to the application
+       * @param scribe The scribe group this message is relevant to
        * @param s the Stripe which this message belongs to
        */
-      public void handleDeliverMessage(SplitStreamImpl splitStream, Stripe s);
+      public void handleDeliverMessage(IScribe scribe, Stripe s);
       /**
        * The call back method into the application for messages to be
        * delivered.  
-       * @param splitStream a handle to the application
+       * @param splitStream The scribe group this message is relevant to
        * @param s the Stripe which this message belongs to
        */
-      public void handleForwardMessage(SplitStreamImpl splitStream, Stripe s);
+      public void handleForwardMessage(IScribe scribe, Stripe s);
       /**
        * @return a String representation of the Object
        */ 

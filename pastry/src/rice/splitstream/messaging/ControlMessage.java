@@ -12,17 +12,17 @@ public abstract class ControlMessage extends Message implements SplitStreamMessa
 
    /**
     * Callback method executed when the application receives a message for delivery
-    * @param splitStream The application receiving the message
+    * @param scribe The scribe group this message is relevant to
     * @param s The stripe that sent this message
     */
-   public abstract void handleDeliverMessage( SplitStreamImpl splitStream, Stripe s );
+   public abstract void handleDeliverMessage( IScribe scribe, Stripe s );
 
    /**
     * Callback method executed when the application receives a message for forwarding
-    * @param splitStream The application receiving the message
+    * @param splitStream The scribe group this message is relevant to
     * @param s The stripe that sent this message
     */
-   public abstract void handleForwardMessage( SplitStreamImpl splitStream, Stripe s );
+   public abstract void handleForwardMessage( IScribe scribe, Stripe s );
 
    /**
     * @return A string representation of this object

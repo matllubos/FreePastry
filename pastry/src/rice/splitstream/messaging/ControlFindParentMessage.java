@@ -14,11 +14,11 @@ public class ControlFindParentMessage extends MessageAnycast
 {
     Vector send_to;
     Vector already_seen;
-    StripeId stripe_id
+    StripeId stripe_id;
 
     final int ALLOWABLE_CHILDREN = 2;
 
-    public ControlFindParentMessage( Address addr, NodeHandle source, StripeId topicId, Credentials c, StripeId stripe_id )
+    public ControlFindParentMessage( Address addr, NodeHandle source, TopicId topicId, Credentials c, StripeId stripe_id )
     {
        super( addr, source, topicId, c );
        send_to = new Vector();
@@ -33,9 +33,9 @@ public class ControlFindParentMessage extends MessageAnycast
      * @param source Source node's handle
      * @param stripe_id Stripe ID for stripe tree to examine over
      */
-    private boolean isInRootPath( IScribe scribe, NodeHandle source, StripeId stripe_id )
+    private boolean isInRootPath( IScribe scribe, NodeHandle source, Stripe s )
     {
-        return false;
+        return s.getRootPath().contains( source );
     }
 
     /**
@@ -50,6 +50,8 @@ public class ControlFindParentMessage extends MessageAnycast
         {
             total += scribe.numChildren( ((Topic)topics.get(i)).getTopicId() );
         }
+
+        return total;
     }
 
     /**
@@ -72,8 +74,8 @@ public class ControlFindParentMessage extends MessageAnycast
             already_seen.add( 0, scribe.getNodeHandle() );
         }
 
-        if ( ( aggregateNumChildren( scribe ) > ALLOWABLE_CHILDREN &&
-             ( !isInRootPath( scribe, topic.getTopicId() ) ) )
+        if ( ( aggregateNumChildren( scribe ) < ALLOWABLE_CHILDREN &&
+             ( !isInRootPath( scribe, this.getSource(), /*NEED A STRIPE*/ ) ) )
         {
             this.handleDeliverMessage( scribe, topic );
         }

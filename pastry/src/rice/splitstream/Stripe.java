@@ -44,7 +44,12 @@ public class Stripe extends Observable implements IScribeApp{
     * A flag wheter or not this stripe is the primary stripe for this node
     */
    private boolean isPrimary = false;  
- 
+
+   /**
+    * The path from this node to the root
+    */
+   private Vector root_path = null;
+
    /**
     * The constructor used when creating a stripe from scratch.
     */
@@ -60,6 +65,24 @@ public class Stripe extends Observable implements IScribeApp{
       	}
       }
     }
+
+   /**
+    * Sets the path to root for this stripe
+    * @param path The path to the root in the form of a vector of NodeHandles
+    */
+   public void setRootPath( Vector path )
+   {
+      root_path = path;
+   }
+   /**
+    * Returns the path to root for this stripe
+    * @return The path to the root in the form of a vector of NodeHandles
+    */
+   public Vector getRootPath()
+   {
+      return root_path;
+   }
+
    /**
     * gets the StripeID for this stripe
     * @return theStripeID 
