@@ -61,7 +61,11 @@
     <antlr target="${src.dir}/rice/email/proxy/imap/parser/antlr/grammer.g" />
   </target>
 
-  <target name="compile" depends="init,make_imap_parser">
+  <target name="compile_epost" depends="make_imap_parser">
+    <antcall target="compile"/>
+  </target>
+
+  <target name="compile" depends="init">
     <javac srcdir="${src.dir}"
            destdir="${build.dir}"
            classpathref="project.classpath"
@@ -71,7 +75,7 @@
            debug="true">
            
     </javac>
-    <antcall target="make_rmic_stubs"/>
+<!--    <antcall target="make_rmic_stubs"/> -->
   </target>
 
   
@@ -253,12 +257,15 @@
 
   <target name="freepastry-release" depends="freepastry_jar,javadoc">
     <move file="pastry.jar" tofile="FreePastry-${freepastry-version}.jar"/>
+ <!--
     <tar destfile="FreePastry-${freepastry-version}-all.tgz" compression="gzip">
       <tarfileset dir="." includes="FreePastry-${freepastry-version}.jar"/>
     </tar>
     <zip destfile="FreePastry-${freepastry-version}-all.zip">
       <zipfileset dir="." includes="FreePastry-${freepastry-version}.jar"/>
     </zip>
+  -->   
+    
     <tar destfile="FreePastry-${freepastry-version}-source.tgz" compression="gzip">
       <tarfileset dir="${src.dir}" prefix="src">
         <include name="rice/*.java"/>
@@ -298,7 +305,7 @@
       <tarfileset dir="." includes="build.xml"/>
     </tar>
     <zip destfile="FreePastry-${freepastry-version}-source.zip">
-      <fileset dir="${src.dir}">
+      <zipfileset dir="${src.dir}" prefix="src">
         <include name="rice/*.java"/>
    <!-- <include name="rice/email/**/*.java"/> -->
         <include name="rice/p2p/commonapi/**/*.java"/>
@@ -330,12 +337,12 @@
         <include name="rice/selector/**/*.java"/>
         <include name="rice/serialization/**/*.java"/>
    <!-- <include name="rice/visualization/**/*.java"/> -->
-      </fileset>
-      <fileset dir="ant" includes="**/*"/>
-      <fileset dir="license" includes="**/*"/>
-      <fileset dir="." includes="build.xml"/>
+      </zipfileset>
+      <zipfileset dir="ant" includes="**/*"/ prefix="ant">
+      <zipfileset dir="license" includes="**/*"/ prefix="license">
+      <zipfileset dir="." includes="build.xml"/>
     </zip>
-    <tar destfile="FreePastry-${freepastry-version}-source.tgz" compression="gzip">
+    <tar destfile="FreePastry-${freepastry-version}-docs.tgz" compression="gzip">
       <tarfileset dir="${docs.dir}" prefix="docs"/>
     </tar>
     <zip destfile="FreePastry-${freepastry-version}-docs.zip">
@@ -344,8 +351,10 @@
     <checksum fileext=".md5sum" todir="." algorithm="MD5">
       <fileset dir=".">
         <include name="FreePastry-${freepastry-version}.jar"/>
-        <include name="FreePastry-${freepastry-version}-all.tgz"/>
+ <!--    
+		<include name="FreePastry-${freepastry-version}-all.tgz"/>
         <include name="FreePastry-${freepastry-version}-all.zip"/>
+ -->
         <include name="FreePastry-${freepastry-version}-source.tgz"/>
         <include name="FreePastry-${freepastry-version}-source.zip"/>
         <include name="FreePastry-${freepastry-version}-docs.tgz"/>
