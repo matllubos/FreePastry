@@ -904,8 +904,6 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
         }
   
         setState(STATE_USING_UDP,"close()");
-        Exception e = new Exception("Dump");
-        e.printStackTrace(outputStream);
   
         if (messages != null) {
           debug("Messages contains " + writer.queueSize() + " messages.");
