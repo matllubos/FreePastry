@@ -260,6 +260,15 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
   }
   
   /**
+   * Returns a new, empty IdSet of this type
+   *
+   * @return A new IdSet
+   */
+  public rice.p2p.commonapi.IdSet build() {
+    return new IdSet();
+  }
+  
+  /**
    * return a subset of this set, consisting of the member ids in a given range
    * @param from the lower end of the range (inclusive)
    * @param to the upper end of the range (exclusive)

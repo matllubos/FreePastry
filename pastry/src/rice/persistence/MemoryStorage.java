@@ -65,7 +65,7 @@ public class MemoryStorage implements Storage {
   private HashMap storage;
   
   // the map used to store the metadata
-  private HashMap metadata;
+  private TreeMap metadata;
 
   // the current list of Ids
   private IdSet idSet;
@@ -85,7 +85,7 @@ public class MemoryStorage implements Storage {
     this.factory = factory;
     idSet = factory.buildIdSet();
     storage = new HashMap();
-    metadata = new HashMap();
+    metadata = new TreeMap();
     currentSize = 0;
   } 
   
@@ -246,6 +246,27 @@ public class MemoryStorage implements Storage {
   public IdSet scan() {
     return idSet;
   }
+  
+  /**
+   * Returns a map which contains keys mapping ids to the associated 
+   * metadata.  
+   *
+   * @param range The range to query  
+   * @return The map containg the keys 
+   */
+  public TreeMap scanMetadata(IdRange range) {
+    return new TreeMap(metadata.subMap(range.getCCWId(), range.getCWId()));
+  }
+  
+  /**
+   * Returns a map which contains keys mapping ids to the associated 
+   * metadata.  
+   *
+   * @return The treemap mapping ids to metadata 
+   */
+  public TreeMap scanMetadata() {
+    return new TreeMap(metadata);
+  }
 
   /**
    * Returns the total size of the stored data in bytes.The result
@@ -256,6 +277,15 @@ public class MemoryStorage implements Storage {
    */
   public long getTotalSize() {
     return currentSize;
+  }
+  
+  /**
+   * Returns the number of Ids currently stored in the catalog
+   *
+   * @return The number of ids in the catalog
+   */
+  public int getSize() {
+    return idSet.numElements();
   }
 
   /**

@@ -45,7 +45,7 @@ package rice.persistence;
  * @version $Id$
  */
 import java.io.*;
-import java.util.Iterator;
+import java.util.*;
 
 import rice.*;
 import rice.Continuation.*;
@@ -233,6 +233,27 @@ public class StorageManagerImpl implements StorageManager {
     
     return toReturn;
   }
+  
+  /**
+   * Returns a map which contains keys mapping ids to the associated 
+   * metadata.  
+   *
+   * @param range The range to query  
+   * @return The map containg the keys 
+   */
+  public TreeMap scanMetadata(IdRange range) {
+    return storage.scanMetadata(range);
+  }
+  
+  /**
+   * Returns a map which contains keys mapping ids to the associated 
+   * metadata.  
+   *
+   * @return The treemap mapping ids to metadata 
+   */
+  public TreeMap scanMetadata() {
+    return storage.scanMetadata();
+  }
 
   /**
    * Returns the total size of the stored data in bytes.The result
@@ -243,6 +264,15 @@ public class StorageManagerImpl implements StorageManager {
    */
   public long getTotalSize() {
     return cache.getTotalSize() + storage.getTotalSize();
+  }
+  
+  /**
+   * Returns the number of Ids currently stored in the catalog
+   *
+   * @return The number of ids in the catalog
+   */
+  public int getSize() {
+    return storage.getSize();
   }
 
   /**

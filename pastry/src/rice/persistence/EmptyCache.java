@@ -193,6 +193,27 @@ public class EmptyCache implements Cache {
   public IdSet scan() {
     return factory.buildIdSet();
   }
+  
+  /**
+   * Returns a map which contains keys mapping ids to the associated 
+   * metadata.  
+   *
+   * @param range The range to query  
+   * @return The map containg the keys 
+   */
+  public TreeMap scanMetadata(IdRange range) {
+    return new TreeMap();
+  }
+  
+  /**
+    * Returns a map which contains keys mapping ids to the associated 
+   * metadata.  
+   *
+   * @return The treemap mapping ids to metadata 
+   */
+  public TreeMap scanMetadata() {
+    return new TreeMap();
+  }
 
   /**
    * Returns the maximum size of the cache, in bytes. The result
@@ -214,6 +235,15 @@ public class EmptyCache implements Cache {
    * @return The total size, in bytes, of data stored.
    */
   public long getTotalSize() {
+    return 0;
+  }
+  
+  /**
+   * Returns the number of Ids currently stored in the catalog
+   *
+   * @return The number of ids in the catalog
+   */
+  public int getSize() {
     return 0;
   }
 

@@ -36,6 +36,8 @@ if advised of the possibility of such damage.
 
 package rice.persistence;
 
+import java.util.*;
+
 /*
  * @(#) Catalog.java
  *
@@ -134,6 +136,30 @@ public interface Catalog {
    */
   public IdSet scan();
 
+  /**
+   * Returns a map which contains keys mapping ids to the associated 
+   * metadata.  
+   *
+   * @param range The range to query  
+   * @return The map containg the keys 
+   */
+  public TreeMap scanMetadata(IdRange range);
+  
+  /**
+   * Returns a map which contains keys mapping ids to the associated 
+   * metadata.  
+   *
+   * @return The treemap mapping ids to metadata 
+   */
+  public TreeMap scanMetadata();
+  
+  /**
+   * Returns the number of Ids currently stored in the catalog
+   *
+   * @return The number of ids in the catalog
+   */
+  public int getSize();
+  
   /**
    * Returns the total size of the stored data in bytes.
    *

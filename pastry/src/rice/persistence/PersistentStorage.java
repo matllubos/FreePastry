@@ -144,8 +144,9 @@ public class PersistentStorage implements Storage {
   private File lostDirectory;       // dir for lost objects
   
   private HashMap directories;      // the in-memory map of directories (for efficiency)
-  private HashMap metadata;         // the in-memory cache of object metadata
   private HashSet dirty;            // the list of directories which have dirty metadata
+
+  private TreeMap metadata;         // the in-memory cache of object metadata
 
   private String rootDir;           // rootDirectory
 
@@ -183,8 +184,8 @@ public class PersistentStorage implements Storage {
     this.rng = new Random();
     this.idSet = factory.buildIdSet();
     this.directories = new HashMap();
-    this.metadata = new HashMap();
     this.dirty = new HashSet();
+    this.metadata = new TreeMap();
     
     debug("Launching persistent storage in " + rootDir + " with name " + name + " spliting factor " + MAX_FILES);
     
@@ -208,7 +209,7 @@ public class PersistentStorage implements Storage {
           }
         });
       }
-    }, METADATA_SYNC_TIME, METADATA_SYNC_TIME);
+    }, (new Random(name.hashCode())).nextInt(METADATA_SYNC_TIME), METADATA_SYNC_TIME);
   }
   
   /**
@@ -490,6 +491,41 @@ public class PersistentStorage implements Storage {
       return (IdSet) idSet.clone();
     }
   }
+  
+  /**
+   * Returns a map which contains keys mapping ids to the associated 
+   * metadata.  
+   *
+   * @param range The range to query  
+   * @return The map containg the keys 
+   */
+  public TreeMap scanMetadata(IdRange range) {
+    synchronized (idSet) {
+      TreeMap map = null;
+      
+      if (range.getCCWId().compareTo(range.getCWId()) <= 0) {
+        map = new TreeMap(metadata.subMap(range.getCCWId(), range.getCWId()));
+      } else {
+        map = new TreeMap(metadata.tailMap(range.getCCWId()));
+        map.putAll(metadata.headMap(range.getCWId()));
+      }
+      
+      return map;
+    }
+  }
+  
+  /**
+   * Returns a map which contains keys mapping ids to the associated 
+   * metadata.  
+   *
+   * @return The treemap mapping ids to metadata 
+   */
+  public TreeMap scanMetadata() {
+    synchronized (idSet) {
+      return new TreeMap(metadata);
+    }
+  }
+  
   /**
    * Returns the total size of the stored data in bytes.The result
    * is returned via the receiveResult method on the provided
@@ -500,6 +536,15 @@ public class PersistentStorage implements Storage {
    */
   public long getTotalSize(){
     return usedSize;
+  }
+  
+  /**
+   * Returns the number of Ids currently stored in the catalog
+   *
+   * @return The number of ids in the catalog
+   */
+  public int getSize() {
+    return idSet.numElements();
   }
 
 
@@ -1249,9 +1294,9 @@ public class PersistentStorage implements Storage {
     if (! metadata.exists())
       return -1L;
 
-    IdRange range = getRangeForDirectory(file);
-
     try {
+      IdRange range = getRangeForDirectory(file);
+
       fin = new FileInputStream(metadata);
       ObjectInputStream objin = new ObjectInputStream(new BufferedInputStream(fin));
       
@@ -1269,7 +1314,13 @@ public class PersistentStorage implements Storage {
       
       return metadata.lastModified();
     } catch (ClassNotFoundException e) {
-      throw new IOException("Got " + e);
+      System.out.println("ERROR: Got exception " + e + " while reading metadata file " + metadata + " - rebuilding file");
+      deleteFile(metadata);
+      return 0L;
+    } catch (IOException e) {
+      System.out.println("ERROR: Got exception " + e + " while reading metadata file " + metadata + " - rebuilding file");
+      deleteFile(metadata);
+      return 0L;
     } finally {
       fin.close();
     }
@@ -1583,7 +1634,6 @@ public class PersistentStorage implements Storage {
     else {
        return false;
     }
-
   }
   
   /**

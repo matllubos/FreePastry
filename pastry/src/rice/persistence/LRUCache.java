@@ -280,6 +280,27 @@ public class LRUCache implements Cache {
   public synchronized IdSet scan() {
     return storage.scan();
   }
+  
+  /**
+   * Returns a map which contains keys mapping ids to the associated 
+   * metadata.  
+   *
+   * @param range The range to query  
+   * @return The map containg the keys 
+   */
+  public TreeMap scanMetadata(IdRange range) {
+    return storage.scanMetadata(range);
+  }
+  
+  /**
+   * Returns a map which contains keys mapping ids to the associated 
+   * metadata.  
+   *
+   * @return The treemap mapping ids to metadata 
+   */
+  public TreeMap scanMetadata() {
+    return storage.scanMetadata();
+  }
 
   /**
    * Returns the maximum size of the cache, in bytes. The result
@@ -290,6 +311,15 @@ public class LRUCache implements Cache {
    */
   public long getMaximumSize() {
     return maximumSize;
+  }
+  
+  /**
+   * Returns the number of Ids currently stored in the catalog
+   *
+   * @return The number of ids in the catalog
+   */
+  public int getSize() {
+    return storage.getSize();
   }
 
   /**
