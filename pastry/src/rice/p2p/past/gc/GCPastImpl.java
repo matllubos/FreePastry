@@ -75,11 +75,6 @@ public class GCPastImpl extends PastImpl implements GCPast {
    */
   protected IdFactory realFactory;
   
-  /**
-   * THe cached GCIdSet of our Ids
-   */
-  protected GCIdSet set;
-  
   // internal tracing stats
   public int collected = 0;
   public int refreshed = 0;
@@ -114,9 +109,6 @@ public class GCPastImpl extends PastImpl implements GCPast {
     super(new GCNode(node), manager, replicas, instance, policy);
     this.trash = trash;
     this.realFactory = node.getIdFactory();
-    this.set = new GCIdSet();
-    
-    loadGCIdSet();
     
     endpoint.scheduleMessage(new GCCollectMessage(0, getLocalNodeHandle(), node.getId()), collectionInterval, collectionInterval);
   }
@@ -271,10 +263,6 @@ public class GCPastImpl extends PastImpl implements GCPast {
               try {
                 // allow the object to check the insert, and then insert the data
                 GCPastContent content = (GCPastContent) imsg.getContent().checkInsert(imsg.getContent().getId(), (PastContent) o);
-                synchronized (set) {
-                  set.addId(new GCId(content.getId(), imsg.getExpiration()));
-                }
-                
                 storage.store(content.getId(), content.getMetadata(imsg.getExpiration()), content, parent);
               } catch (PastException e) {
                 parent.receiveException(e);
@@ -296,10 +284,6 @@ public class GCPastImpl extends PastImpl implements GCPast {
 
               /* skip the object if we don't have it yet */
               if (storage.exists(id)) {
-                synchronized (set) {
-                  set.addId(new GCId(id, rmsg.getExpiration()));
-                }
-                
                 GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
                 
                 if (metadata != null) {
@@ -331,36 +315,39 @@ public class GCPastImpl extends PastImpl implements GCPast {
         log.finer("Returning replica set " + set + " for lookup handles of id " + lmsg.getId() + " max " + lmsg.getMax() + " at " + endpoint.getId());
         getResponseContinuation(msg).receiveResult(set);
       } else if (msg instanceof GCCollectMessage) {
-        final Id[] array = scan().asArray();
+        final Iterator i = storage.scanMetadata().keySet().iterator();  
         
-        Continuation remove = new ListenerContinuation("Removal of expired ids") {
-          int index = -1;
-          
+        Continuation remove = new ListenerContinuation("Removal of expired ids") {          
           public void receiveResult(Object o) {
-            while (++index < array.length) 
-              if (((GCId) array[index]).getExpiration() < System.currentTimeMillis()) 
-                break;
+            Id id = null;
+            GCPastMetadata metadata = null;
+            
+            while (i.hasNext()) {
+              id = (Id) i.next();
+              metadata = (GCPastMetadata) storage.getMetadata(id);
               
-            if (index < array.length) {
+              if ((metadata != null) && (metadata.getExpiration() < System.currentTimeMillis()) ||
+                  (metadata == null) && (DEFAULT_EXPIRATION < System.currentTimeMillis()))
+                break;
+            }
+              
+            if (i.hasNext()) {
               collected++;
               
-              final GCId id = (GCId) array[index];
-              synchronized (set) {
-                set.removeId(id);
-              }
+              final Id gid = id;
                 
               if (trash != null) {                        
-                storage.getObject(id.getId(), new StandardContinuation(this) {
+                storage.getObject(gid, new StandardContinuation(this) {
                   public void receiveResult(Object o) {
-                    trash.store(id.getId(), storage.getMetadata(id.getId()), (Serializable) o, new StandardContinuation(parent) {
+                    trash.store(gid, storage.getMetadata(gid), (Serializable) o, new StandardContinuation(parent) {
                       public void receiveResult(Object o) {
-                        storage.unstore(id.getId(), parent);
+                        storage.unstore(gid, parent);
                       }
                     });
                   }
                 });
               } else {
-                storage.unstore(id.getId(), this);
+                storage.unstore(gid, this);
               }
             }
           }
@@ -394,25 +381,6 @@ public class GCPastImpl extends PastImpl implements GCPast {
     }
   }
   
-  /**
-   * Method which populates the GCIdSet
-   */
-  protected void loadGCIdSet() {
-    synchronized (set) {
-      Iterator i = storage.getStorage().scan().getIterator();
-    
-      while (i.hasNext()) {
-        Id id = (Id) i.next();
-        GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
-      
-        if (metadata != null) 
-          set.doAddId(new GCId(id, metadata.getExpiration()));
-        else
-          set.doAddId(new GCId(id, DEFAULT_EXPIRATION));
-      }    
-    }
-  }
-  
   // ---- REPLICATION MANAGER METHODS -----
   
   /**
@@ -430,10 +398,6 @@ public class GCPastImpl extends PastImpl implements GCPast {
     if (gcid.getExpiration() < System.currentTimeMillis()) {
       command.receiveResult(Boolean.TRUE);
     } else if (storage.exists(gcid.getId())) {
-      synchronized (set) {
-        set.addId(gcid);
-      }
-      
       GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(gcid.getId());
       
       if (metadata == null) {
@@ -458,9 +422,6 @@ public class GCPastImpl extends PastImpl implements GCPast {
           } else {
             GCPastContent content = (GCPastContent) o;
             log.finest("inserting replica of id " + id);
-            synchronized (set) {
-              set.addId(gcid);
-            }
             
             storage.getStorage().store(gcid.getId(), content.getMetadata(gcid.getExpiration()), content, parent);
           }
@@ -488,9 +449,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param range the requested range
    */
   public IdSet scan(IdRange range) {
-    synchronized (set) {
-      return set.subSet(range);
-    }
+    GCIdRange gcRange = (GCIdRange) range;
+    return new GCIdSet(storage.getStorage().scan(gcRange.getRange()), storage.getStorage().scanMetadata(gcRange.getRange()));
   }
   
   /**
@@ -501,9 +461,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param range the requested range
    */
   public IdSet scan() {
-    synchronized (set) {
-      return (IdSet) set.clone();
-    }
+    return new GCIdSet(storage.getStorage().scan(), storage.getStorage().scanMetadata());
   }
   
   /**

@@ -158,8 +158,7 @@ public class GCEndpoint implements Endpoint {
    */
   public IdRange range(NodeHandle handle, int rank, Id lkey) {
     IdRange range = endpoint.range(handle, rank, lkey);
-    
-    return (range == null ? range : new GCIdRange(range));
+    return (range == null ? null : new GCIdRange(range));
   }
   
   /**
@@ -180,8 +179,7 @@ public class GCEndpoint implements Endpoint {
    */
   public IdRange range(NodeHandle handle, int rank, Id lkey, boolean cumulative) {
     IdRange range = endpoint.range(handle, rank, lkey, cumulative);
-    
-    return (range == null ? range : new GCIdRange(range));
+    return (range == null ? null : new GCIdRange(range));
   }
   
   /**

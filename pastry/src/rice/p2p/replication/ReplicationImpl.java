@@ -183,12 +183,7 @@ public class ReplicationImpl implements Replication, Application {
    * @return The *total* range
    */
   protected IdRange getTotalRange() {
-    IdRange range = endpoint.range(handle, replicationFactor, handle.getId(), true);
-    
-    if (range == null)
-      range = factory.buildIdRange(handle.getId(), handle.getId());
-    
-    return range;
+    return endpoint.range(handle, replicationFactor, handle.getId(), true);
   }
     
   /**
@@ -196,7 +191,9 @@ public class ReplicationImpl implements Replication, Application {
    */
   private void updateClient() {
     log.fine(endpoint.getId() + ": Updating client with range " + getTotalRange());
-    client.setRange(getTotalRange());
+    
+    if (getTotalRange() != null)
+      client.setRange(getTotalRange());
   }
   
   /**
@@ -204,35 +201,34 @@ public class ReplicationImpl implements Replication, Application {
    * which hold keys this node may be interested in
    */
   public void replicate() {
-    System.out.println("COUNT: " + System.currentTimeMillis() + " Sending out requests in instance " + instance); 
     final NodeHandleSet handles = endpoint.neighborSet(Integer.MAX_VALUE);
-    final IdRange ourRange = endpoint.range(handle, 0, handle.getId());
+    final IdRange ourRange = endpoint.range(handle, 0, handle.getId());  
     
-    endpoint.process(new BloomFilterExecutable(client.scan(ourRange)), new ListenerContinuation("Creation of our bloom filter") {
+    endpoint.process(new BloomFilterExecutable(ourRange), new ListenerContinuation("Creation of our bloom filter") {
       int total = 0;
 
       public void receiveResult(Object o) {
         final IdBloomFilter ourFilter = (IdBloomFilter) o;
-        total += client.scan(ourRange).numElements();
-    
+
         for (int i=0; i<handles.size(); i++) {
           final NodeHandle handle = handles.getHandle(i);
           final IdRange handleRange = endpoint.range(handle, 0, handle.getId());
-
+          
           if (handleRange != null) {
             final IdRange range = handleRange.intersectRange(getTotalRange());
-            endpoint.process(new BloomFilterExecutable(client.scan(range)), new StandardContinuation(this) {
-              public void receiveResult(Object o) {
-                IdBloomFilter filter = (IdBloomFilter) o;
-                total += client.scan(range).numElements();
 
-                if ((range != null) && (! range.intersectRange(getTotalRange()).isEmpty())) {
-                  System.out.println("COUNT: " + System.currentTimeMillis() + " Sending request to " + handle + " for range " + range + " in instance " + instance);
+            if ((range != null) && (! range.intersectRange(getTotalRange()).isEmpty())) {
+              endpoint.process(new BloomFilterExecutable(range), new StandardContinuation(this) {
+                public void receiveResult(Object o) {
+                  IdBloomFilter filter = (IdBloomFilter) o;
+
+                  System.out.println("COUNT: " + System.currentTimeMillis() + " Sending request to " + handle + " for range " + range + ", " + ourRange + " in instance " + instance);
+                  
                   RequestMessage request = new RequestMessage(ReplicationImpl.this.handle, new IdRange[] {range, ourRange}, new IdBloomFilter[] {filter, ourFilter});
                   endpoint.route(null, request, handle);
                 }
-              }
-            });
+              });
+            }
           }
         }
         
@@ -302,6 +298,8 @@ public class ReplicationImpl implements Replication, Application {
       for (int i=0; i<rm.getIdSets().length; i++) {
         IdSet fetch = policy.difference(client.scan(rm.getRanges()[i]), rm.getIdSets()[i], factory);
         
+        System.out.println("COUNT: " + System.currentTimeMillis() + " Was told to fetch " + fetch.numElements() + " in instance " + instance);
+
         if (fetch.numElements() > 0) 
           client.fetch(fetch, rm.getSource());
       }
@@ -329,14 +327,14 @@ public class ReplicationImpl implements Replication, Application {
    * Internal class which is an executable for creating a bloom filter
    */
   protected class BloomFilterExecutable implements Executable {
-    protected IdSet set;
+    protected IdRange range;
     
-    public BloomFilterExecutable(IdSet set) {
-      this.set = set;
+    public BloomFilterExecutable(IdRange range) {
+      this.range = range;
     }
     
     public Object execute() {
-      return new IdBloomFilter(set);
+      return new IdBloomFilter(client.scan(range));
     }
   }
 }

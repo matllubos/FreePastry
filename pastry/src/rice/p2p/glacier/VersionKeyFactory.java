@@ -96,18 +96,6 @@ public class VersionKeyFactory implements IdFactory {
   public rice.p2p.commonapi.Id buildIdFromToString(char[] chars, int offset, int length) {
     return buildIdFromToString(new String(chars, offset, length));
   }
-  
-  /**
-   * Builds an IdRange based on a prefix.  Any id which has this prefix should
-   * be inside this IdRange, and any id which does not share this prefix should
-   * be outside it.
-   *
-   * @param string The toString() representation of an Id
-   * @return The built Id.
-   */
-  public IdRange buildIdRangeFromPrefix(String string) {
-    throw new UnsupportedOperationException("VersionKeyFactory cannot be used to build Ids!");  
-  }
 
   /**
    * Builds a protocol-specific Id.Distance given the source data.
@@ -132,6 +120,18 @@ public class VersionKeyFactory implements IdFactory {
     System.err.println("VersionKeyFactory.buildIdRange() called");
     System.exit(1);
     return null;
+  }
+  
+  /**
+   * Builds an IdRange based on a prefix.  Any id which has this prefix should
+   * be inside this IdRange, and any id which does not share this prefix should
+   * be outside it.
+   *
+   * @param string The toString() representation of an Id
+   * @return The built Id.
+   */
+  public IdRange buildIdRangeFromPrefix(String string) {
+    return new VersionKeyRange(FACTORY.buildIdRangeFromPrefix(string));
   }
 
   /**

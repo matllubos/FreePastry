@@ -187,7 +187,7 @@ public class GCIdFactory implements IdFactory {
    * @return an empty IdSet
    */
   public IdSet buildIdSet() {
-    return new GCIdSet();
+    return new GCIdSet(factory);
   }
   
   /**

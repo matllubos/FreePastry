@@ -169,19 +169,14 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
    * @return the subset
    */
   public VersionKeySet subSet(Id from, Id to) {
-    System.err.println("VersionKeySet.subSet(2) called");
-    System.exit(1);
-    return null;
-    /*
-     *  VersionKeySet res;
-     *  if (from.compareTo(to) <= 0) {
-     *  res = new VersionKeySet( (TreeSet) idSet.subSet(from, to));
-     *  } else {
-     *  res = new VersionKeySet( (TreeSet) idSet.tailSet(from));
-     *  res.idSet.addAll(idSet.headSet(to));
-     *  }
-     *  return res;
-     */
+    VersionKeySet res;
+    if (from.compareTo(to) <= 0) {
+      res = new VersionKeySet((TreeSet)idSet.subSet(from, to));
+    } else {
+      res = new VersionKeySet((TreeSet)idSet.tailSet(from));
+      res.idSet.addAll(idSet.headSet(to));
+    }
+    return res;
   }
 
   /**
@@ -191,20 +186,13 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
    * @return the subset
    */
   public VersionKeySet subSet(VersionKeyRange range) {
-
-    System.err.println("VersionKeySet.subSet() called");
-    System.exit(1);
-    return null;
-    /*
-     *  if (range.isEmpty()) {
-     *  return new VersionKeySet();
-     *  } else if (range.getCCW().equals(range.getCW())) {
-     *  return this;
-     *  } else {
-     *  return subSet(range.getCCW(), range.getCW());
-     *  }
-     */
-  }
+    if(range.isEmpty())
+      return new VersionKeySet();
+    if(range.getCCWId().equals(range.getCWId()))
+      return (VersionKeySet)clone();
+    else
+      return subSet(range.getCCWId(), range.getCWId());
+  } 
 
 
   /**
@@ -216,13 +204,7 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
   public String toString() {
     Iterator it = getIterator();
     Id key;
-    String s = "[ IdSet: ";
-    while (it.hasNext()) {
-      key = (Id) it.next();
-      s = s + key + ",";
-
-    }
-    s = s + " ]";
+    String s = "[ IdSet:  ]";
     return s;
   }
 
@@ -273,6 +255,15 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
    */
   public Object clone() {
     return new VersionKeySet(this);
+  }
+  
+  /**
+    * Returns a new, empty IdSet of this type
+   *
+   * @return A new IdSet
+   */
+  public IdSet build() {
+    return new VersionKeySet();
   }
 
   /**

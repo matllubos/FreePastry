@@ -623,12 +623,11 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @return Whether or not to forward the message further
    */
   public boolean forward(final RouteMessage message) {
-    log.info("Forwarding given message " + message + " to the specified next hop");
+/*    log.info("Forwarding given message " + message + " to the specified next hop");
     
     if (message.getMessage() instanceof LookupMessage) {
       final LookupMessage lmsg = (LookupMessage) message.getMessage();
       Id id = lmsg.getId();
-      PastContent content = (PastContent) lmsg.getResponse();
 
       // if it is a request, look in the cache
       if (! lmsg.isResponse()) {
@@ -646,7 +645,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
     // let the message know that it was here
     if (message.getMessage() instanceof PastMessage) {
       ((PastMessage) message.getMessage()).addHop(getLocalNodeHandle());
-    }
+    } */
 
     return true;
   }

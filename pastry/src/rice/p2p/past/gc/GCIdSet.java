@@ -54,27 +54,32 @@ import rice.p2p.commonapi.*;
 public class GCIdSet implements IdSet {
   
   // internal representation of the ids
-  protected TreeSet ids;
+  protected IdSet ids;
+  
+  // interal list of the timeouts
+  protected TreeMap timeouts;
   
   /**
    * Constructor
    */
-  protected GCIdSet() {
-    this.ids = new TreeSet();
+  protected GCIdSet(IdFactory factory) {
+    this.ids = factory.buildIdSet();
+    this.timeouts = new TreeMap();
   }
   
   /**
    * Constructor
    */
-  protected GCIdSet(TreeSet set) {
-    this.ids = new TreeSet(set);
+  protected GCIdSet(IdSet set, TreeMap timeouts) {
+    this.ids = set;
+    this.timeouts = new TreeMap(timeouts);
   }
   
   /**
    * return the number of elements
    */
   public int numElements() {
-    return ids.size();
+    return ids.numElements();
   }
   
   /**
@@ -82,33 +87,29 @@ public class GCIdSet implements IdSet {
    * @param id the id to add
    */
   public void addId(Id id) {
-    removeId(new GCMatchingId(((GCId) id).getId())); 
-    doAddId(id);
+    GCId gcid = (GCId) id;
+    ids.addId(gcid.getId());
+    timeouts.put(gcid.getId(), new GCPastMetadata(gcid.getExpiration()));
   }
   
   /**
-   * add a member
-   * @param id the id to add
-   */
-  protected void doAddId(Id id) {
-    ids.add(id);
-  }
-  
-  /**
-    * remove a member
+   * remove a member
    * @param id the id to remove
    */
   public void removeId(Id id) {
-    ids.remove(id);
+    GCId gcid = (GCId) id;
+    ids.removeId(gcid.getId());
+    timeouts.remove(gcid.getId());
   }
   
   /**
-    * test membership
+   * test membership
    * @param id the id to test
    * @return true of id is a member, false otherwise
    */
   public boolean isMemberId(Id id) {
-    return ids.contains(id);
+    GCId gcid = (GCId) id;
+    return ids.isMemberId(gcid.getId());
   }
   
   /**
@@ -119,18 +120,20 @@ public class GCIdSet implements IdSet {
    */
   public IdSet subSet(IdRange range) {
     if (range == null)
-      return new GCIdSet(ids);
+      return build();
     
-    GCIdSet res;
+    GCIdRange gcRange = (GCIdRange) range;
     
-    if (range.getCCWId().compareTo(range.getCWId()) <= 0) {
-      res = new GCIdSet((TreeSet) ids.subSet(range.getCCWId(), range.getCWId()));
+    TreeMap map = null;
+    
+    if (gcRange.getRange().getCCWId().compareTo(gcRange.getRange().getCWId()) <= 0) {
+      map = new TreeMap(timeouts.subMap(gcRange.getRange().getCCWId(), gcRange.getRange().getCWId()));
     } else {
-      res = new GCIdSet((TreeSet) ids.tailSet(range.getCCWId()));
-      res.ids.addAll(ids.headSet(range.getCWId()));
+      map = new TreeMap(timeouts.tailMap(gcRange.getRange().getCCWId()));
+      map.putAll(timeouts.headMap(gcRange.getRange().getCWId()));
     }
-    
-    return res;
+
+    return new GCIdSet(ids.subSet(gcRange.getRange()), map);
   }
   
   /**
@@ -138,7 +141,22 @@ public class GCIdSet implements IdSet {
    * @return the interator
    */
   public Iterator getIterator() {
-    return ids.iterator();
+    return new Iterator() {
+      Iterator i = ids.getIterator();
+      
+      public boolean hasNext() { return i.hasNext(); }
+      public Object next() { return getGCId((Id) i.next()); }
+      public void remove() { throw new UnsupportedOperationException("Remove on GCIdSet()!"); }
+    };
+  }
+  
+  protected GCId getGCId(Id id) {
+    GCPastMetadata metadata = (GCPastMetadata) timeouts.get(id);
+    
+    if (metadata != null)
+      return new GCId(id, metadata.getExpiration());
+    else
+      return new GCId(id, GCPastImpl.DEFAULT_EXPIRATION);
   }
   
   /**
@@ -146,7 +164,12 @@ public class GCIdSet implements IdSet {
    * @return the array
    */
   public Id[] asArray() {
-    return (Id[]) ids.toArray(new Id[0]);
+    Id[] array = ids.asArray();
+    
+    for (int i=0; i<array.length; i++)
+      array[i] = getGCId(array[i]);
+    
+    return array;
   }
   
   /**
@@ -155,24 +178,7 @@ public class GCIdSet implements IdSet {
    * @return the hash of this set
    */
   public byte[] hash() {
-    MessageDigest md = null;
-    try {
-      md = MessageDigest.getInstance("SHA");
-    } catch (NoSuchAlgorithmException e) {
-      System.err.println("No SHA support!");
-      return null;
-    }
-    
-    Id[] array = asArray();
-    Arrays.sort(array);
-         
-    for (int i=0; i<array.length; i++) {
-      GCId id = (GCId) array[i];
-      md.update(id.getId().toByteArray());
-      md.update(new BigInteger("" + id.getExpiration()).toByteArray());
-    }
-    
-    return md.digest();
+    throw new UnsupportedOperationException("hash on GCIdSet()!");
   }
   
   /**
@@ -187,7 +193,7 @@ public class GCIdSet implements IdSet {
     if (numElements() != other.numElements())
       return false;
     
-    Iterator i = ids.iterator();
+    Iterator i = ids.getIterator();
     while (i.hasNext())
       if (! other.isMemberId((Id) i.next()))
         return false;
@@ -219,25 +225,15 @@ public class GCIdSet implements IdSet {
    * @return a clone
    */
   public Object clone() {
-    return new GCIdSet(ids);
+    return new GCIdSet(ids, timeouts);
   }
   
-  protected static class GCMatchingId extends GCId {
-    
-    public GCMatchingId(Id id) {
-      super(id, 0L);
-    }
-    
-    public boolean equals(Object o) {
-      return ((GCId) o).id.equals(id);
-    }
-    
-    public long getExpiration() {
-      throw new IllegalArgumentException("getExpriation called on GCMathcing ID!");
-    }
-    
-    public byte[] toByteArray() {
-      throw new IllegalArgumentException("toByte[] called on GCMathcing ID!");
-    }
+  /**
+    * Returns a new, empty IdSet of this type
+   *
+   * @return A new IdSet
+   */
+  public IdSet build() {
+    return new GCIdSet(ids.build(), new TreeMap());
   }
 }

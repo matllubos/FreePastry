@@ -109,18 +109,6 @@ public class FragmentKeyFactory implements IdFactory {
     System.exit(1);
     return null;
   }
-  
-  /**
-    * Builds an IdRange based on a prefix.  Any id which has this prefix should
-   * be inside this IdRange, and any id which does not share this prefix should
-   * be outside it.
-   *
-   * @param string The toString() representation of an Id
-   * @return The built Id.
-   */
-  public IdRange buildIdRangeFromPrefix(String string) {
-    throw new UnsupportedOperationException("FragmentKeyFactory cannot be used to build Ids!");  
-  }
 
   /**
    * Creates an IdRange given the CW and CCW ids.
@@ -133,6 +121,18 @@ public class FragmentKeyFactory implements IdFactory {
     System.err.println("FragmentKeyFactory.buildIdRange() called");
     System.exit(1);
     return null;
+  }
+  
+  /**
+   * Builds an IdRange based on a prefix.  Any id which has this prefix should
+   * be inside this IdRange, and any id which does not share this prefix should
+   * be outside it.
+   *
+   * @param string The toString() representation of an Id
+   * @return The built Id.
+   */
+  public IdRange buildIdRangeFromPrefix(String string) {
+    return new FragmentKeyRange(FACTORY.buildIdRangeFromPrefix(string));
   }
 
   /**

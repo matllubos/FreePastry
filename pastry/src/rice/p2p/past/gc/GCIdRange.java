@@ -75,7 +75,7 @@ public class GCIdRange implements IdRange {
    *
    * @return The internal range
    */
-  protected IdRange getRange() {
+  public IdRange getRange() {
     return range;
   }
   
@@ -150,6 +150,15 @@ public class GCIdRange implements IdRange {
    */
   public boolean isEmpty() {
     return range.isEmpty();
+  }
+  
+  /**
+   * Returns a string
+   *
+   * @return THe string
+   */
+  public String toString() {
+    return "{GC " + range + "}"; 
   }
 }
 

@@ -108,4 +108,11 @@ public interface IdSet extends Serializable {
    * @return A clone of this set
    */
   public Object clone();
+  
+  /**
+   * Returns a new, empty IdSet of this type
+   *
+   * @return A new IdSet
+   */
+  public IdSet build();
 }

@@ -228,24 +228,26 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     IdRange notRange = range.getComplementRange();
     
     /* Next, we delete any unrelevant keys from the client */
-    final Iterator i = clone(client.scan(notRange)).getIterator();
+    final Iterator i = client.scan(notRange).getIterator();
     
     /* We only remove the first NUM_DELETE_AT_ONCE entries, however */
     Continuation c = new ListenerContinuation("Removal of Ids") {
       int count = 0;
+      Id id = null;
       
       public void receiveResult(Object o) {
         if (! o.equals(new Boolean(true))) {
-          log.warning(endpoint.getId() + ": Unstore of id did not succeed!");
+          log.warning(endpoint.getId() + ": Unstore of id " + id + " did not succeed!");
         }
         
-        count++;
-        
-        if ((i.hasNext()) && (count < NUM_DELETE_AT_ONCE)) {
-          Id id = (Id) i.next();
+        if (count < NUM_DELETE_AT_ONCE) {
+          while (i.hasNext() && (! client.exists((id = (Id) i.next())))) {}
           
-          log.finer(endpoint.getId() + ": Telling client to delete id " + id + " range " + range);
-          client.remove(id, this);
+          if (i.hasNext()) {
+            log.finer(endpoint.getId() + ": Telling client to delete id " + id + " range " + range);
+            count++;
+            client.remove(id, this);
+          }
         }
       }
     };

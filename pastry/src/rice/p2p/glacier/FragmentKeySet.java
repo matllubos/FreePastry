@@ -169,19 +169,14 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    * @return the subset
    */
   public FragmentKeySet subSet(Id from, Id to) {
-    System.err.println("FragmentKeySet.subSet(2) called");
-    System.exit(1);
-    return null;
-    /*
-     *  FragmentKeySet res;
-     *  if (from.compareTo(to) <= 0) {
-     *  res = new FragmentKeySet( (TreeSet) idSet.subSet(from, to));
-     *  } else {
-     *  res = new FragmentKeySet( (TreeSet) idSet.tailSet(from));
-     *  res.idSet.addAll(idSet.headSet(to));
-     *  }
-     *  return res;
-     */
+    FragmentKeySet res;
+    if(from.compareTo(to) <= 0) {
+      res = new FragmentKeySet((TreeSet)idSet.subSet(from, to));
+    } else {
+      res = new FragmentKeySet((TreeSet)idSet.tailSet(from));
+      res.idSet.addAll(idSet.headSet(to));
+    }
+    return res;
   }
 
   /**
@@ -191,19 +186,12 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    * @return the subset
    */
   public FragmentKeySet subSet(FragmentKeyRange range) {
-
-    System.err.println("FragmentKeySet.subSet() called");
-    System.exit(1);
-    return null;
-    /*
-     *  if (range.isEmpty()) {
-     *  return new FragmentKeySet();
-     *  } else if (range.getCCW().equals(range.getCW())) {
-     *  return this;
-     *  } else {
-     *  return subSet(range.getCCW(), range.getCW());
-     *  }
-     */
+    if(range.isEmpty())
+      return new FragmentKeySet();
+    if(range.getCCWId().equals(range.getCWId()))
+      return (FragmentKeySet)clone();
+    else
+      return subSet(range.getCCWId(), range.getCWId());
   }
 
 
@@ -253,7 +241,6 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    * @return the subset
    */
   public rice.p2p.commonapi.IdSet subSet(rice.p2p.commonapi.IdRange range) {
-    //return subSet((Id) range.getCWId(), (Id) range.getCCWId());
     return subSet((FragmentKeyRange) range);
   }
 
@@ -273,6 +260,15 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    */
   public Object clone() {
     return new FragmentKeySet(this);
+  }
+  
+  /**
+   * Returns a new, empty IdSet of this type
+   *
+   * @return A new IdSet
+   */
+  public IdSet build() {
+    return new FragmentKeySet();
   }
 
   /**

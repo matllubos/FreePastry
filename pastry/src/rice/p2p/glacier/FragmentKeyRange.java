@@ -17,18 +17,12 @@ public class FragmentKeyRange implements IdRange {
   protected IdRange range;
 
   /**
-   * The ringId of the nodes in the range
-   */
-  protected Id ringId;
-
-  /**
    * Constructor
    *
    * @param ringId DESCRIBE THE PARAMETER
    * @param range DESCRIBE THE PARAMETER
    */
-  protected FragmentKeyRange(Id ringId, IdRange range) {
-    this.ringId = ringId;
+  protected FragmentKeyRange(IdRange range) {
     this.range = range;
   }
 
@@ -38,10 +32,7 @@ public class FragmentKeyRange implements IdRange {
    * @return the id at the counterclockwise edge of the range (inclusive)
    */
   public Id getCCWId() {
-    System.err.println("FragmentKeyRange.getCCWId() called");
-    System.exit(1);
-    return null;
-//    return new RingId(ringId, range.getCCWId());
+    return new FragmentKey(new VersionKey(range.getCCWId(), 0L), 0);
   }
 
   /**
@@ -50,10 +41,7 @@ public class FragmentKeyRange implements IdRange {
    * @return the id at the clockwise edge of the range (exclusive)
    */
   public Id getCWId() {
-    System.err.println("FragmentKeyRange.getCWId() called");
-    System.exit(1);
-    return null;
-//    return new RingId(ringId, range.getCWId());
+    return new FragmentKey(new VersionKey(range.getCWId(), 0L), 0);
   }
 
   /**
@@ -74,10 +62,7 @@ public class FragmentKeyRange implements IdRange {
    * @return Whether or not this range is empty
    */
   public boolean isEmpty() {
-    System.err.println("FragmentKeyRange.isEmpty() called");
-    System.exit(1);
-    return false;
-//    return range.isEmpty();
+    return range.isEmpty();
   }
 
   /**
@@ -87,10 +72,7 @@ public class FragmentKeyRange implements IdRange {
    * @return true if the key lies within this range, false otherwise
    */
   public boolean containsId(Id key) {
-    System.err.println("FragmentKeyRange.containsID() called");
-    System.exit(1);
-    return false;
-//    return range.containsId(key);
+    return range.containsId(((FragmentKey)key).key.id);
   }
 
   /**

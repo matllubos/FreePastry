@@ -17,18 +17,12 @@ public class VersionKeyRange implements IdRange {
   protected IdRange range;
 
   /**
-   * The ringId of the nodes in the range
-   */
-  protected Id ringId;
-
-  /**
    * Constructor
    *
    * @param ringId DESCRIBE THE PARAMETER
    * @param range DESCRIBE THE PARAMETER
    */
-  protected VersionKeyRange(Id ringId, IdRange range) {
-    this.ringId = ringId;
+  protected VersionKeyRange(IdRange range) {
     this.range = range;
   }
 
@@ -38,10 +32,7 @@ public class VersionKeyRange implements IdRange {
    * @return the id at the counterclockwise edge of the range (inclusive)
    */
   public Id getCCWId() {
-    System.err.println("VersionKeyRange.getCCWId() called");
-    System.exit(1);
-    return null;
-//    return new RingId(ringId, range.getCCWId());
+    return new VersionKey(range.getCCWId(), 0L);
   }
 
   /**
@@ -50,10 +41,7 @@ public class VersionKeyRange implements IdRange {
    * @return the id at the clockwise edge of the range (exclusive)
    */
   public Id getCWId() {
-    System.err.println("VersionKeyRange.getCWId() called");
-    System.exit(1);
-    return null;
-//    return new RingId(ringId, range.getCWId());
+    return new VersionKey(range.getCWId(), 0L);
   }
 
   /**
@@ -74,10 +62,7 @@ public class VersionKeyRange implements IdRange {
    * @return Whether or not this range is empty
    */
   public boolean isEmpty() {
-    System.err.println("VersionKeyRange.isEmpty() called");
-    System.exit(1);
-    return false;
-//    return range.isEmpty();
+    return range.isEmpty();
   }
 
   /**
@@ -87,10 +72,7 @@ public class VersionKeyRange implements IdRange {
    * @return true if the key lies within this range, false otherwise
    */
   public boolean containsId(Id key) {
-    System.err.println("VersionKeyRange.containsID() called");
-    System.exit(1);
-    return false;
-//    return range.containsId(key);
+    return range.containsId(((VersionKey)key).id);
   }
 
   /**
@@ -139,11 +121,7 @@ public class VersionKeyRange implements IdRange {
    * @return Equals
    */
   public boolean equals(Object o) {
-    System.err.println("VersionKeyRange.equals() called");
-    System.exit(1);
-    return false;
-//    MultiringIdRange other = (MultiringIdRange) o;
-//    return (other.getRange().equals(range) && other.ringId.equals(ringId));
+    return ((VersionKeyRange)o).range.equals(range);
   }
 
   /**
@@ -152,10 +130,7 @@ public class VersionKeyRange implements IdRange {
    * @return hashCode
    */
   public int hashCode() {
-    System.err.println("VersionKeyRange.hashCode() called");
-    System.exit(1);
-    return 0;
-//    return (range.hashCode() + ringId.hashCode());
+    return range.hashCode();
   }
 
   /**
@@ -164,10 +139,7 @@ public class VersionKeyRange implements IdRange {
    * @return A string
    */
   public String toString() {
-    System.err.println("VersionKeyRange.toString() called");
-    System.exit(1);
-    return null;
-//    return "{RingId " + ringId + " " + range.toString() + "}";
+    return "[VKRange " + range + "]";
   }
 }
 
