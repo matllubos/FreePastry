@@ -286,6 +286,20 @@ public class PersistentStorage implements Storage {
   }
 
   /**
+   * Return the objects identified by the given range of ids. The IdSet 
+   * returned contains the Ids of the stored objects. The range is
+   * partially inclusive, the lower range is inclusive, and the upper
+   * exclusive.
+   *
+   * NOTE: This method blocks so if the behavior of this method changes and
+   * uses the disk, this method may be deprecated.
+   *
+   * @return The idset containg the keys 
+   */
+  public IdSet scan() {
+    return idSet;
+  }
+  /**
    * Returns the total size of the stored data in bytes.The result
    * is returned via the receiveResult method on the provided
    * Continuation with an Integer representing the size.

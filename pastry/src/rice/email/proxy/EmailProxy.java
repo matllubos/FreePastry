@@ -33,7 +33,6 @@ import rice.email.proxy.smtp.*;
 import rice.email.proxy.pop3.*;
 import rice.email.proxy.imap.*;
 import rice.email.proxy.user.*;
-import rice.email.proxy.web.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.mailbox.postbox.*;
 
@@ -88,7 +87,7 @@ public class EmailProxy extends PostProxy {
      
   protected ImapServerImpl imap;
      
-  protected WebServer web;
+//  protected WebServer web;
 
   public EmailProxy(String[] args) {
       super(args);

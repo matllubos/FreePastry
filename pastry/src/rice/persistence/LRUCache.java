@@ -46,9 +46,12 @@ package rice.persistence;
  */
 import java.io.*;
 import java.util.*;
+import java.util.zip.*;
 
 import rice.*;
 import rice.p2p.commonapi.*;
+
+import rice.serialization.*;
 
 /**
  * This class is an encapsulation of a least-recently-used (LRU)
@@ -79,6 +82,10 @@ public class LRUCache implements Cache {
     this.maximumSize = maximumSize;
 
     this.order = new LinkedList();
+    Iterator i = storage.scan().getIterator();
+    
+    while (i.hasNext())
+      order.addLast(i.next());
   }
 
   /**
@@ -97,12 +104,15 @@ public class LRUCache implements Cache {
    * @param obj The object to cache.
    * @param c The command to run once the operation is complete
    */
-  public synchronized void cache(final Id id, final Serializable obj, final Continuation c) {
+  public void cache(final Id id, final Serializable obj, final Continuation c) {
     final int size = getSize(obj);
 
     if (order.contains(id)) {
-      order.remove(id);
-      order.addFirst(id);
+      synchronized (order) {
+        order.remove(id);
+        order.addFirst(id);
+      }
+      
       c.receiveResult(new Boolean(true));
       return;
     }
@@ -116,7 +126,10 @@ public class LRUCache implements Cache {
     
     final Continuation store = new Continuation() {
       public void receiveResult(Object o) {
-        order.addFirst(id);
+        synchronized (order) {
+          order.addFirst(id);
+        }
+        
         storage.store(id, obj, c);
       }
 
@@ -155,8 +168,11 @@ public class LRUCache implements Cache {
    * @param pid The object's id
    * @param c The command to run once the operation is complete
    */
-  public synchronized void uncache(Id id, Continuation c) {
-    order.remove(id);
+  public void uncache(Id id, Continuation c) {
+    synchronized (order) {
+      order.remove(id);
+    }
+    
     storage.unstore(id, c);
   }
 
@@ -191,14 +207,16 @@ public class LRUCache implements Cache {
    * @return The object, or <code>null</code> if there is no cooresponding
    * object (through receiveResult on c).
    */
-  public synchronized void getObject(Id id, Continuation c) {
+  public void getObject(Id id, Continuation c) {
     if (! order.contains(id)) {
       c.receiveResult(null);
       return;
     }
 
-    order.remove(id);
-    order.addFirst(id);
+    synchronized (this) {
+      order.remove(id);
+      order.addFirst(id);
+    }
 
     storage.getObject(id, c);
   }
@@ -237,8 +255,20 @@ public class LRUCache implements Cache {
    * @return The idset containg the keys 
    */
    public synchronized IdSet scan(IdRange range){
-     return(storage.scan(range));
+     return storage.scan(range);
    }
+  
+  /**
+   * Return all objects currently stored by this catalog
+   *
+   * NOTE: This method blocks so if the behavior of this method changes and
+   * no longer stored in memory, this method may be deprecated.
+   *
+   * @return The idset containg the keys 
+   */
+  public synchronized IdSet scan() {
+    return storage.scan();
+  }
 
   /**
    * Returns the maximum size of the cache, in bytes. The result
@@ -348,7 +378,9 @@ public class LRUCache implements Cache {
 
       return baos.toByteArray().length;
     } catch (IOException e) {
-      throw new RuntimeException("Object " + obj + " was not serialized correctly!");
+      e.printStackTrace();
+      // returns maximum value here, so it won't be cached
+      return Integer.MAX_VALUE;
     }
   }
 }

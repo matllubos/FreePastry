@@ -46,9 +46,12 @@ package rice.persistence;
  */
 import java.io.*;
 import java.util.*;
+import java.util.zip.*;
 
 import rice.*;
 import rice.p2p.commonapi.*;
+
+import rice.serialization.*;
 
 /**
  * This class is an implementation of Storage which provides
@@ -197,8 +200,19 @@ public class MemoryStorage implements Storage {
    * @return The idset containg the keys 
    */
   public IdSet scan(IdRange range){
-    IdSet toReturn = idSet.subSet(range); 
-    return(toReturn);
+    return idSet.subSet(range);
+  }
+  
+  /**
+   * Return all objects currently stored by this catalog
+   *
+   * NOTE: This method blocks so if the behavior of this method changes and
+   * no longer stored in memory, this method may be deprecated.
+   *
+   * @return The idset containg the keys 
+   */
+  public IdSet scan() {
+    return idSet;
   }
 
   /**
@@ -224,7 +238,7 @@ public class MemoryStorage implements Storage {
       ObjectOutputStream oos = new ObjectOutputStream(baos);
 
       oos.writeObject(obj);
-      oos.flush();
+      oos.close();
 
       return baos.toByteArray().length;
     } catch (IOException e) {
