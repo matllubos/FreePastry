@@ -70,7 +70,7 @@ public class LookupHandlesMessage extends ContinuationMessage {
    * @param dest The destination address
    * @param content The data to be stored
    */
-  public LookupHandlesMessage(int uid, Id id, int max, Id source, Id dest) {
+  public LookupHandlesMessage(int uid, Id id, int max, NodeHandle source, Id dest) {
     super(uid, source, dest);
 
     this.id = id;

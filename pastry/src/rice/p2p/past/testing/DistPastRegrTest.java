@@ -102,10 +102,10 @@ public class DistPastRegrTest extends DistCommonAPITest {
    * nodes have been created and are ready.
    */
   protected void runTest() {
+    pause(5000);
+    
     // Run each test
     testRouteRequest();
-    //testPastFunctions();
-    //new TestPastFunctions().start();
   }
 
   /* ---------- Test methods and classes ---------- */
@@ -509,7 +509,7 @@ public class DistPastRegrTest extends DistCommonAPITest {
 
     // Insert file
     stepStart("Caching Mutable Object");
-    final LookupMessage lmsg = new LookupMessage(1, id, id, id);
+    final LookupMessage lmsg = new LookupMessage(1, id, local.getLocalNodeHandle(), id);
     lmsg.receiveResult(file1);
     
     assertTrue("Message should continue to be routed",
@@ -545,7 +545,7 @@ public class DistPastRegrTest extends DistCommonAPITest {
             stepDone();
 
             // check lookup
-            LookupMessage lmsg = new LookupMessage(-1, id, id, id);
+            LookupMessage lmsg = new LookupMessage(-1, id, local.getLocalNodeHandle(), id);
 
             stepStart("Lookup Satisfied By Cache");
             assertTrue("Message should not continue to be routed",

@@ -59,8 +59,8 @@ public class MessageLostMessage extends PastMessage {
    *
    * @param uid The unique id
    */
-  public MessageLostMessage(int uid, Id local) {
-    super(uid, local, local);
+  public MessageLostMessage(int uid, NodeHandle local) {
+    super(uid, local, local.getId());
 
     setResponse();
   }

@@ -57,7 +57,7 @@ public abstract class PastMessage implements Message {
   protected int id;
 
   // the source Id of this message
-  protected Id source;
+  protected NodeHandle source;
 
   // the destination of this message
   protected Id dest;
@@ -72,7 +72,7 @@ public abstract class PastMessage implements Message {
    * @param source The source address
    * @param dest The destination address
    */
-  protected PastMessage(int id, Id source, Id dest) {
+  protected PastMessage(int id, NodeHandle source, Id dest) {
     this.id = id;
     this.source = source;
     this.dest = dest;
@@ -94,7 +94,7 @@ public abstract class PastMessage implements Message {
    *
    * @return The source of this message
    */
-  public Id getSource() {
+  public NodeHandle getSource() {
     return source;
   }
 
@@ -104,7 +104,7 @@ public abstract class PastMessage implements Message {
    * @return The dest of this message
    */
   public Id getDestination() {
-    return source;
+    return dest;
   }
 
   /**

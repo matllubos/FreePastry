@@ -70,7 +70,7 @@ public class FetchMessage extends ContinuationMessage {
    * @param dest The destination address
    * @param content The data to be stored
    */
-  public FetchMessage(int uid, PastContentHandle handle, Id source, Id dest) {
+  public FetchMessage(int uid, PastContentHandle handle, NodeHandle source, Id dest) {
     super(uid, source, dest);
 
     this.handle = handle;

@@ -130,12 +130,12 @@ public class PastImpl implements Past, Application, RMClient {
     return new Continuation() {
       public void receiveResult(Object o) {
         cmsg.receiveResult(o);
-        endpoint.route(msg.getSource(), cmsg, null);
+        endpoint.route(msg.getSource().getId(), cmsg, msg.getSource());
       }
 
       public void receiveException(Exception e) {
         cmsg.receiveException(e);
-        endpoint.route(msg.getSource(), cmsg, null);
+        endpoint.route(msg.getSource().getId(), cmsg, msg.getSource());
       }
     };
   }
@@ -163,7 +163,7 @@ public class PastImpl implements Past, Application, RMClient {
    */
   private void sendRequest(Id id, PastMessage message, NodeHandle hint, Continuation command) {
     insertPending(message.getUID(), command);
-    endpoint.scheduleMessage(new MessageLostMessage(message.getUID(), endpoint.getId()), MESSAGE_TIMEOUT);
+    endpoint.scheduleMessage(new MessageLostMessage(message.getUID(), getLocalNodeHandle()), MESSAGE_TIMEOUT);
     endpoint.route(id, message, hint);
   }
 
@@ -241,7 +241,7 @@ public class PastImpl implements Past, Application, RMClient {
       return;
     }
                           
-    sendRequest(obj.getId(), new InsertMessage(getUID(), obj, endpoint.getId(), obj.getId()), command);
+    sendRequest(obj.getId(), new InsertMessage(getUID(), obj, getLocalNodeHandle(), obj.getId()), command);
   }
 
   /**
@@ -271,8 +271,8 @@ public class PastImpl implements Past, Application, RMClient {
       command.receiveException(new RuntimeException("Id cannot be null in lookup!"));
       return;
     }
-    
-    sendRequest(id, new LookupMessage(getUID(), id, endpoint.getId(), id), command);
+
+    sendRequest(id, new LookupMessage(getUID(), id, getLocalNodeHandle(), id), command);
   }
 
   /**
@@ -347,7 +347,7 @@ public class PastImpl implements Past, Application, RMClient {
 
         for (int i=0; i<replicas.size(); i++) {
           NodeHandle node = replicas.getHandle(i);
-          sendRequest(null, new FetchHandleMessage(getUID(), id, endpoint.getId(), node.getId()), node, receiveHandles);
+          sendRequest(null, new FetchHandleMessage(getUID(), id, getLocalNodeHandle(), node.getId()), node, receiveHandles);
         }
       }
 
@@ -356,7 +356,7 @@ public class PastImpl implements Past, Application, RMClient {
       }
     };
 
-    sendRequest(id, new LookupHandlesMessage(getUID(), id, max, endpoint.getId(), id), receiveReplicas);
+    sendRequest(id, new LookupHandlesMessage(getUID(), id, max, getLocalNodeHandle(), id), receiveReplicas);
   }
 
   /**
@@ -379,7 +379,7 @@ public class PastImpl implements Past, Application, RMClient {
     }
     
     sendRequest(handle.getNodeHandle().getId(),
-                new FetchMessage(getUID(), handle, endpoint.getId(), handle.getNodeHandle().getId()),
+                new FetchMessage(getUID(), handle, getLocalNodeHandle(), handle.getNodeHandle().getId()),
                 handle.getNodeHandle(),
                 command);
   }
@@ -442,23 +442,10 @@ public class PastImpl implements Past, Application, RMClient {
           cache(id, content);
         }
       }
-    } else if (message.getMessage() instanceof FetchMessage) {
-      // insert fetch response into cache
-      FetchMessage fmsg = (FetchMessage) message.getMessage();
-      Id id = fmsg.getHandle().getId();
-      PastContent content = (PastContent) fmsg.getResponse();
+    } 
 
-      // if the message hasn't been cached and we don't have it, cache it
-      if ((fmsg.isResponse()) &&
-          (! fmsg.isCached()) &&
-          (content != null) &&
-          (! content.isMutable())) {
-        
-        fmsg.setCached();
-        cache(id, content);
-      }
-    }
-    
+    // see if we can route to the closest replica
+    //replicaManager.lookupForward((rice.pastry.routing.RouteMessage) message);
     return true;
   }
 
@@ -658,4 +645,3 @@ public class PastImpl implements Past, Application, RMClient {
     return storage;
   }
 }
-
