@@ -45,7 +45,7 @@ public class PASTPanelCreator implements PanelCreator {
     for (int i=0; i<objects.length; i++) {
       if (objects[i] instanceof PastryNode)
         node = (PastryNode) objects[i];
-      else if (objects[i] instanceof Past)
+      else if (objects[i] instanceof PastImpl)
         past = (PastImpl) objects[i];
       else if (objects[i] instanceof StorageManager)
         manager = (StorageManager) objects[i];
