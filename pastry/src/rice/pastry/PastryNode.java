@@ -211,10 +211,11 @@ public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.
      * interfere with application messages.
      */
     public synchronized void receiveMessage(Message msg) {
-	LocalNodeI.pending.setPending(msg.getStream(), this);
+      if (! (msg.getStream() instanceof PastryObjectInputStream))
+      	LocalNodeI.pending.setPending(msg.getStream(), this);
 	
-	if (mySecurityManager.verifyMessage(msg) == true)
-	    myMessageDispatch.dispatchMessage(msg);
+    	if (mySecurityManager.verifyMessage(msg) == true)
+	      myMessageDispatch.dispatchMessage(msg);
     }
     
     /**

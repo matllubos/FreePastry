@@ -164,7 +164,10 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    */
   private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
       in.defaultReadObject();
+      
+    if (! (in instanceof PastryObjectInputStream)) {
       LocalNodeI.pending.addPending(in, this);
+    }
   }
 }
 
