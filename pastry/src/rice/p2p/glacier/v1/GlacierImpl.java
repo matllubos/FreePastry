@@ -348,7 +348,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
     byte[][] fragmentHash = new byte[numFragments][];
     for (int i = 0; i < numFragments; i++) {
       md.reset();
-      md.update(fragments[i].payload);
+      md.update(fragments[i].getPayload());
       fragmentHash[i] = md.digest();
     }
 
