@@ -99,7 +99,11 @@ public class ControlPropogatePathMessage extends Message{
 								     channel.getChannelId(),
 								     channel.getTimeoutLen() ),
 				      credentials, null );
-	      scribe.removeChild((NodeHandle)children.get(i), stripe.getStripeId());
+	      if ( !scribe.removeChild((NodeHandle)children.get(i), stripe.getStripeId()) )
+              {
+                  System.out.println( "Error removing child " + ((NodeHandle)children.get(i)).getNodeId()
+                                      + " at " + scribe.getNodeHandle().getNodeId() );
+              }
 	  }
 	  else {
 	      Vector forward_path = (Vector)path.clone();

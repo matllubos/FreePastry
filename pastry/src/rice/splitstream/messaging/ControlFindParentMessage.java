@@ -202,8 +202,11 @@ public class ControlFindParentMessage extends Message implements Serializable
 			//System.out.println("NODE "+channel.getNodeId()+" TAKING ON CHILD "  + originalSource.getNodeId()+" for stripe " +recv_stripe.getStripeId());
 			if(!subscribedStripes.contains(recv_stripe))
 			    channel.stripeSubscriberAdded();
-			scribe.addChild( originalSource, recv_stripe.getStripeId() );
-			
+			if ( !scribe.addChild( originalSource, recv_stripe.getStripeId() ) )
+                        {
+                            System.out.println( "Failure adding child "+originalSource.getNodeId()+" at "+
+                                               scribe.getNodeHandle().getNodeId() );
+			}
 			Vector sendPath = (Vector)recv_stripe.getRootPath().clone();
 			sendPath.add(scribe.getLocalHandle());
 
