@@ -8,7 +8,8 @@ SOURCE  = \
   LookupHandlesMessage.java \
   FetchMessage.java \
   FetchHandleMessage.java \
-  MessageLostMessage.java
+  MessageLostMessage.java \
+  CacheMessage.java
   
 RMI_SOURCE =
 

@@ -206,10 +206,10 @@ public class PastImpl implements Past, Application, RMClient {
    * @param id The id
    * @param obj The object
    */
-  private void cache(Id id, final PastContent content) {
+  private void cache(final PastContent content) {
     if ((content != null) && (! content.isMutable())) {
       
-      storage.cache(id, content, new Continuation() {
+      storage.cache(content.getId(), content, new Continuation() {
         public void receiveResult(Object o) {
           if (! (o.equals(new Boolean(true)))) {
             System.out.println("Caching of " + content + " failed.");
@@ -240,6 +240,8 @@ public class PastImpl implements Past, Application, RMClient {
       command.receiveException(new RuntimeException("Object cannot be null in insert!"));
       return;
     }
+
+    replicaManager.registerKey((rice.pastry.Id) obj.getId());
                           
     sendRequest(obj.getId(), new InsertMessage(getUID(), obj, getLocalNodeHandle(), obj.getId()), command);
   }
@@ -266,13 +268,38 @@ public class PastImpl implements Past, Application, RMClient {
    * @param command Command to be performed when the result is received
    */
   public void lookup(Id id, Continuation command) {
+    lookup(id, command, true);
+  }
+
+  /**
+   * Retrieves the object stored in this instance of Past with the
+   * given ID.  Asynchronously returns a PastContent object as the
+   * result to the provided Continuation, or a PastException. This
+   * method is provided for convenience; its effect is identical to a
+   * lookupHandles() and a subsequent fetch() to the handle that is
+   * nearest in the network.
+   *
+   * The client must authenticate the object. In case of failure, an
+   * alternate replica of the object can be obtained via
+   * lookupHandles() and fetch().
+   *
+   * This method is not safe if the object is immutable and storage
+   * nodes are not trusted. In this case, clients should used the
+   * lookUpHandles method to obtains the handles of all primary
+   * replicas and determine which replica is fresh in an
+   * application-specific manner.
+   *
+   * @param id the key to be queried
+   * @param command Command to be performed when the result is received
+   */
+  protected void lookup(Id id, Continuation command, boolean useReplicas) {
     if (command == null) return;
     if (id == null) {
       command.receiveException(new RuntimeException("Id cannot be null in lookup!"));
       return;
     }
 
-    sendRequest(id, new LookupMessage(getUID(), id, getLocalNodeHandle(), id), command);
+    sendRequest(id, new LookupMessage(getUID(), id, useReplicas, getLocalNodeHandle(), id), command);
   }
 
   /**
@@ -422,30 +449,38 @@ public class PastImpl implements Past, Application, RMClient {
    */
   public boolean forward(final RouteMessage message) {
     if (message.getMessage() instanceof LookupMessage) {
-      LookupMessage lmsg = (LookupMessage) message.getMessage();
+      final LookupMessage lmsg = (LookupMessage) message.getMessage();
       Id id = lmsg.getId();
       PastContent content = (PastContent) lmsg.getResponse();
 
       // if it is a request, look in the cache
       if (! lmsg.isResponse()) {
+        if (storage.getCache().exists(id)) {
 
-        // if in the cache, send a response
-        if (storage.exists(id)) {
-          storage.getObject(id, getResponseContinuation(lmsg));
+          // deliver the message, which will do what we want
+          deliver(endpoint.getId(), lmsg);
+          
           return false;
+        } else {
+          // otherwise, see if we can route to the closest replica
+          if (lmsg.useReplicas()) {
+            //replicaManager.lookupForward((rice.pastry.routing.RouteMessage) message);
+          }
         }
       } else {
         // if the message hasn't been cached and we don't have it, cache it
         if ((! lmsg.isCached()) && (content != null) && (! content.isMutable())) {
-          
           lmsg.setCached();
-          cache(id, content);
+          cache(content);
         }
       }
-    } 
+    }
 
-    // see if we can route to the closest replica
-    //replicaManager.lookupForward((rice.pastry.routing.RouteMessage) message);
+    // let the message know that it was here
+    if (message.getMessage() instanceof PastMessage) {
+      ((PastMessage) message.getMessage()).addHop(getLocalNodeHandle());
+    }
+
     return true;
   }
 
@@ -479,8 +514,34 @@ public class PastImpl implements Past, Application, RMClient {
           }
         });
       } else if (msg instanceof LookupMessage) {
-        LookupMessage lmsg = (LookupMessage) msg;
-        storage.getObject(lmsg.getId(), getResponseContinuation(msg));
+        final LookupMessage lmsg = (LookupMessage) msg;
+        
+        // if the data is here, we send the reply, as well as push a cached copy
+        // back to the previous node
+        Continuation forward = new Continuation() {
+          public void receiveResult(Object o) {
+
+            // send result back
+            getResponseContinuation(lmsg).receiveResult(o);
+
+            // if possible, pushed copy into previous hop cache
+            if ((lmsg.getPreviousNodeHandle() != null) &&
+                (o != null) &&
+                (! ((PastContent) o).isMutable())) {
+              NodeHandle handle = lmsg.getPreviousNodeHandle();
+              
+              CacheMessage cmsg = new CacheMessage(getUID(), (PastContent) o, getLocalNodeHandle(), handle.getId());    
+              endpoint.route(handle.getId(), cmsg, handle);
+            }
+          }
+
+          public void receiveException(Exception e) {
+            getResponseContinuation(lmsg).receiveException(e);
+          }
+        };
+
+        // lookup the object
+        storage.getObject(lmsg.getId(), forward);
       } else if (msg instanceof LookupHandlesMessage) {
         LookupHandlesMessage lmsg = (LookupHandlesMessage) msg;
         getResponseContinuation(msg).receiveResult(endpoint.replicaSet(lmsg.getId(), lmsg.getMax()));
@@ -504,6 +565,8 @@ public class PastImpl implements Past, Application, RMClient {
             getResponseContinuation(msg).receiveException(e);
           }
         });
+      } else if (msg instanceof CacheMessage) {
+        cache(((CacheMessage) msg).getContent());
       } else {
         System.out.println("ERROR - Received message " + msg + " of unknown type.");
       }
@@ -563,7 +626,7 @@ public class PastImpl implements Past, Application, RMClient {
         }
       };
 
-      lookup(id, insert);
+      lookup(id, insert, false);
     }
   }
 

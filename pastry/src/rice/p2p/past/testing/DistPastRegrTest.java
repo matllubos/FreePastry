@@ -102,7 +102,6 @@ public class DistPastRegrTest extends DistCommonAPITest {
    * nodes have been created and are ready.
    */
   protected void runTest() {
-    pause(5000);
     
     // Run each test
     testRouteRequest();
@@ -134,6 +133,9 @@ public class DistPastRegrTest extends DistCommonAPITest {
           public void receive(Object result) throws Exception {
             assertTrue("Insert of file should succeed", ((Boolean)result).booleanValue());
             stepDone();
+
+            // run replica maintenance
+            runReplicaMaintence();
 
             // Check file exists
             stepStart("Remote File Lookup");
@@ -188,6 +190,9 @@ public class DistPastRegrTest extends DistCommonAPITest {
         assertTrue("Insert of file should succeed", ((Boolean)result).booleanValue());
         stepDone();
 
+        // run replica maintenance
+        runReplicaMaintence();
+
         // Check file exists
         stepStart("Remote File Lookup");
         local.lookup(remoteId, new TestCommand() {
@@ -205,6 +210,9 @@ public class DistPastRegrTest extends DistCommonAPITest {
                 assertTrue("Insert of overwriting file should succeed", ((Boolean)result).booleanValue());
                 stepDone();
 
+                // run replica maintenance
+                runReplicaMaintence();
+
                 // Check correct file exists
                 stepStart("Remote Overwriting File Lookup");
                 local.lookup(remoteId, new TestCommand() {
@@ -221,6 +229,9 @@ public class DistPastRegrTest extends DistCommonAPITest {
                       public void receive(Object result) throws Exception {
                         assertTrue("Insert of non-overwriting file should succeed", ((Boolean)result).booleanValue());
                         stepDone();
+
+                        // run replica maintenance
+                        runReplicaMaintence();
 
                         // Check correct file exists
                         stepStart("Remote Non-Overwriting File Lookup");
@@ -437,10 +448,10 @@ public class DistPastRegrTest extends DistCommonAPITest {
     local.insert(file, new TestCommand() {
       public void receive(Object result) throws Exception {
         assertTrue("Insert of file should succeed", ((Boolean)result).booleanValue());
-
+        stepDone();
+        
         // run replica maintenance
         runReplicaMaintence();
-        stepDone();
 
         // Check file exists (at 1 replica)
         stepStart("Remote Handles Lookup - 1 Replica");
@@ -509,7 +520,7 @@ public class DistPastRegrTest extends DistCommonAPITest {
 
     // Insert file
     stepStart("Caching Mutable Object");
-    final LookupMessage lmsg = new LookupMessage(1, id, local.getLocalNodeHandle(), id);
+    final LookupMessage lmsg = new LookupMessage(1, id, false, local.getLocalNodeHandle(), id);
     lmsg.receiveResult(file1);
     
     assertTrue("Message should continue to be routed",
@@ -545,7 +556,7 @@ public class DistPastRegrTest extends DistCommonAPITest {
             stepDone();
 
             // check lookup
-            LookupMessage lmsg = new LookupMessage(-1, id, local.getLocalNodeHandle(), id);
+            LookupMessage lmsg = new LookupMessage(-1, id, false, local.getLocalNodeHandle(), id);
 
             stepStart("Lookup Satisfied By Cache");
             assertTrue("Message should not continue to be routed",
@@ -563,6 +574,8 @@ public class DistPastRegrTest extends DistCommonAPITest {
     for (int i=0; i<NUM_NODES; i++) {
       ((RMImpl) pasts[i].getReplicaManager()).periodicMaintenance();
     }
+
+    pause(500);
   }
 
   private Id generateId() {

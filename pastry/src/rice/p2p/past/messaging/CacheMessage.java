@@ -41,9 +41,10 @@ import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 
 /**
- * @(#) LookupMessage.java
+ * @(#) CacheMessage.java
  *
- * This class is the representation of a lookup request (by Id) in Past.
+ * This class represents message which pushes an object forward one hop in order
+ * to be cached.
  *
  * @version $Id$
  *
@@ -51,89 +52,38 @@ import rice.p2p.past.*;
  * @author Ansley Post
  * @author Peter Druschel
  */
-public class LookupMessage extends ContinuationMessage {
+public class CacheMessage extends PastMessage {
 
-  // the id to fetch
-  private Id id;
-
-  // whether or not this message has been cached
-  private boolean cached = false;
-
-  // whether or not to look for nearest replicas
-  private boolean useReplicas;
-
-  // the list of nodes where this message has been
-  private NodeHandle handle;
+  // the content to be cached
+  protected PastContent content;
   
   /**
-   * Constructor which takes a unique integer Id, as well as the
-   * data to be stored
+   * Constructor which takes a unique integer Id and the local id
    *
    * @param uid The unique id
-   * @param id The location to be stored
-   * @param useReplicas Whether or not to look for nearest replicas
-   * @param source The source address
-   * @param dest The destination address
-   * @param content The data to be stored
    */
-  public LookupMessage(int uid, Id id, boolean useReplicas, NodeHandle source, Id dest) {
+  public CacheMessage(int uid, PastContent content, NodeHandle source, Id dest) {
     super(uid, source, dest);
 
-    this.id = id;
-    this.useReplicas = useReplicas;
+    this.content = content;
   }
 
   /**
-   * Method which returns the id
+   * Method which returns the content
    *
-   * @param o The contained id
+   * @return The content
    */
-  public Id getId() {
-    return id;
+  public PastContent getContent() {
+    return content;
   }
 
   /**
-   * Returns whether or not this message has been cached
+    * Method by which this message is supposed to return it's response.
    *
-   * @return Whether or not this message has been cached
+   * @param c The continuation to return the reponse to.
    */
-  public boolean isCached() {
-    return cached;
-  }
-
-  /**
-   * Sets this message as having been cached.
-   */
-  public void setCached() {
-    cached = true;
-  }
-
-  /**
-   * Method which is designed to be overridden by subclasses if they need
-   * to keep track of where they've been.
-   *
-   * @param handle The current local handle
-   */
-  public void addHop(NodeHandle handle) {
-    this.handle = handle;
-  }
-
-  /**
-   * Method which returns the previous hop (where the message was just at)
-   *
-   * @return The previous hop
-   */
-  public NodeHandle getPreviousNodeHandle() {
-    return handle;
-  }
-
-  /**
-   * Returns whether or not this message should use the replicas
-   *
-   * @return Whether or not this message should use the replicas
-   */
-  public boolean useReplicas() {
-    return useReplicas;
+  public void returnResponse(Continuation c) {
+    throw new RuntimeException("ERROR: returnResponse should not be called on cacheMessage!");
   }
 }
 

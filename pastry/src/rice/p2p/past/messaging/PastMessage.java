@@ -133,5 +133,14 @@ public abstract class PastMessage implements Message {
    * @param c The continuation to return the reponse to.
    */
   public abstract void returnResponse(Continuation c);
+
+  /**
+   * Method which is designed to be overridden by subclasses if they need
+   * to keep track of where they've been.
+   *
+   * @param handle The current local handle
+   */
+  public void addHop(NodeHandle handle) {
+  }
 }
 
