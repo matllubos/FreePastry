@@ -54,7 +54,6 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
   private final static int rtMax = 1;
   private final static int lSetSize = 24;
-  private final static int maxOpenSockets = 5;
 
   /**
    * Large period (in seconds) means infrequent, 0 means never.
@@ -165,8 +164,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
     try {
       NodeIdResponseMessage rm = (NodeIdResponseMessage) getResponse(address, new NodeIdRequestMessage());
-
-      return new SocketNodeHandle(address, rm.getNodeId());
+      
+      return rm.getHandle();
     } catch (IOException e) {
       System.out.println("Error connecting to address " + address + ": " + e);
       System.out.println("Couldn't find a bootstrap node, starting a new ring...");
@@ -209,6 +208,14 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   }
   
 
+  public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId, InetSocketAddress proxy) {
+    try {
+      return newNode(bootstrap, nidFactory.generateNodeId(), proxy, InetAddress.getLocalHost());
+    } catch (UnknownHostException uhe) {
+      throw new RuntimeException(uhe);
+    }
+  }
+
   /**
    * Method which creates a Pastry node from the next port with a randomly
    * generated NodeId.
@@ -217,30 +224,35 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @param nodeId DESCRIBE THE PARAMETER
    * @return A node with a random ID and next port number.
    */
-  public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress proxyaddress) {
+  public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress proxyAddress, InetAddress bindAddress) {
     final SocketPastryNode pn = new SocketPastryNode(nodeId);
 
     SelectorManager sManager = new SelectorManager(pn);
 
     SocketCollectionManager socketManager = null;
-    InetSocketAddress address = null;
+    InetSocketAddress address = proxyAddress;
     SocketNodeHandlePool pool = new SocketNodeHandlePool(pn);
     PingManager pingManager = null;
-
+    SocketNodeHandle localhandle = null;
+        
     synchronized (this) {
       
       boolean connected = false;
       while (!connected) {
+        if (proxyAddress == null) {
+          address = getAddress(port);
+        }    
+        localhandle = new SocketNodeHandle(address, nodeId);
         boolean pingSuccess = false;
         try {
-          pingManager = new PingManager(port, sManager, pool, proxyaddress);
+          pingManager = new PingManager(port, sManager, pool, localhandle);
           pingSuccess = true;
         } catch (BindException be) {
                     
         }
         if (pingSuccess) {
           try {
-            socketManager = new SocketCollectionManager(pn, pool, port, sManager, pingManager, proxyaddress);
+            socketManager = new SocketCollectionManager(pn, pool, port, sManager, pingManager, address);
             connected = true;
           } catch (BindException be) {
             pingManager.kill();
@@ -248,11 +260,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
           }
         }
       }
-      address = getAddress(port);
       port++;
     }
 
-    final SocketNodeHandle localhandle = new SocketNodeHandle(address, nodeId);
     SocketPastrySecurityManager secureMan = new SocketPastrySecurityManager(localhandle, pool);
     MessageDispatch msgDisp = new MessageDispatch();
     RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
@@ -364,4 +374,5 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       System.out.println(" (F): " + s);
     }
   }
+
 }

@@ -53,15 +53,17 @@ import rice.pastry.*;
  */
 public class PingMessage extends SocketMessage implements Probe {
 
-  public InetSocketAddress returnAddress;
-
 	private long start;
+  public SocketNodeHandle sender;
+  public SocketNodeHandle receiver;
 
   /**
    * Constructor
    */
-  public PingMessage(InetSocketAddress returnAddr) {
-    this.returnAddress = returnAddr;
+  public PingMessage(SocketNodeHandle sender, SocketNodeHandle receiver) {
+    this.sender = sender;
+    this.receiver = receiver;
+    start = System.currentTimeMillis();
   }
   
   public long getStartTime() {

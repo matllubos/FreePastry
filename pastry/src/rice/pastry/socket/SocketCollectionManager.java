@@ -26,18 +26,20 @@ package rice.pastry.socket;
 
 import java.io.IOException;
 import java.net.BindException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.TimerTask;
+import java.util.WeakHashMap;
 
 import rice.pastry.Log;
 import rice.pastry.NodeHandle;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RouteMessage;
+import rice.pastry.socket.exception.TooManyMessagesException;
 
 /**
  * Class which maintains all outgoing open sockets. It holds a ConnectionManager 
@@ -55,9 +57,6 @@ import rice.pastry.routing.RouteMessage;
  */
 public class SocketCollectionManager implements SelectionKeyHandler {
 
-
-  InetSocketAddress returnAddress;
-
 	// the selector manager which the collection manager uses
   SelectorManager manager;
 
@@ -67,13 +66,10 @@ public class SocketCollectionManager implements SelectionKeyHandler {
   // the node handle pool on this node
   private SocketNodeHandlePool pool;
 
-  // the local address of the node
-  private InetSocketAddress localAddress;
-
   protected SocketPoolManager socketPoolManager;
   
-  // maps an address -> ConnectionManager
-  private Hashtable connections;
+  // maps an SocketNodeHandle -> ConnectionManager
+  private WeakHashMap connections;
 
   // ServerSocketChannel for accepting incoming connections
   private SelectionKey key;
@@ -82,6 +78,8 @@ public class SocketCollectionManager implements SelectionKeyHandler {
   private int port;
 
   private PingManager pingManager;
+
+  private InetSocketAddress bindAddress;
 
   /**
    * the size of the buffers for the socket
@@ -97,14 +95,15 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    * @param manager DESCRIBE THE PARAMETER
    * @param pingManager DESCRIBE THE PARAMETER
    */
-  public SocketCollectionManager(SocketPastryNode node, SocketNodeHandlePool pool, int port, final SelectorManager manager, PingManager pingManager, InetSocketAddress proxyAddress) throws BindException {
+  public SocketCollectionManager(SocketPastryNode node, SocketNodeHandlePool pool, int port, final SelectorManager manager, PingManager pingManager, InetSocketAddress bindAddress) throws BindException {
     this.pingManager = pingManager;
     this.pastryNode = node;
     this.port = port;
     this.pool = pool;
+    this.bindAddress = bindAddress;
+    pool.scm = this;
     this.manager = manager;
-    this.returnAddress = proxyAddress;
-    connections = new Hashtable();
+    connections = new WeakHashMap();
     
     try {
 
@@ -112,11 +111,7 @@ public class SocketCollectionManager implements SelectionKeyHandler {
       final ServerSocketChannel channel = ServerSocketChannel.open();
       channel.configureBlocking(false);
       boolean failedOnce = false;
-      this.localAddress = new InetSocketAddress(InetAddress.getLocalHost(), this.port);    
-      if (returnAddress == null) {
-        returnAddress = this.localAddress;
-      }
-      channel.socket().bind(localAddress); // can throw bind exception
+      channel.socket().bind(bindAddress); // can throw bind exception
       
       this.socketPoolManager = new SocketPoolManager(this, manager);
       manager.setSocketCollectionManager(this);
@@ -160,8 +155,8 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    * @param address The address to return the value for
    * @return The Alive value
    */
-  public boolean isAlive(InetSocketAddress address) {
-    return ((ConnectionManager)connections.get(address)).getLiveness() < NodeHandle.LIVENESS_FAULTY;    
+  public boolean isAlive(SocketNodeHandle snh) {
+    return ((ConnectionManager)connections.get(snh)).getLiveness() < NodeHandle.LIVENESS_FAULTY;    
   }
 
   /**
@@ -172,13 +167,25 @@ public class SocketCollectionManager implements SelectionKeyHandler {
   public String toString() {
     String result = "";
 
-    Enumeration i = connections.keys();
-    while (i.hasMoreElements()) {
-      result += i.nextElement().toString() + "\n";
+    Iterator i = connections.keySet().iterator();
+    while (i.hasNext()) {
+      result += i.next().toString() + "\n";
     }
 
     return result;
   }
+
+//  public void addConnectionManager(SocketNodeHandle snh) {
+////    System.out.println("SNH:"+snh);
+////    System.out.println("SNH.getId():"+snh.getId());
+////    System.out.println("connections:"+connections);
+//    
+//    ConnectionManager cm = (ConnectionManager)connections.get(snh.getId());
+//    if (cm == null) {
+//      cm = new ConnectionManager(this, snh);
+//      connections.put(snh.getId(), cm);
+//    }        
+//  }
 
   /**
    * Returns the ConnectionManager for that address.  If one doesn't exist,
@@ -187,23 +194,25 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    * @param address The address that corresponds to the ConnectionManager
    * @return the ConnectionManager correcsponding to the address.
    */
-  public ConnectionManager getConnectionManager(InetSocketAddress address) {
-    ConnectionManager cm = (ConnectionManager)connections.get(address);
+//  public ConnectionManager getConnectionManager(InetSocketAddress address, int foo) {
+  public ConnectionManager getConnectionManager(SocketNodeHandle snh) {
+    ConnectionManager cm = (ConnectionManager)connections.get(snh);
     if (cm == null) {
-      cm = new ConnectionManager(this, address);
-      connections.put(address, cm);
+      cm = new ConnectionManager(this, snh);
+      connections.put(snh, cm);
     }
     return cm;
   }
-
+  
   /**
    * Method which sends a message across the wire.
    *
    * @param message The message to send
    * @param address the address to send the message
    */
-  public void send(InetSocketAddress address, Message message) {
-    getConnectionManager(address).send(message);
+  public void send(SocketNodeHandle snh, Message message) throws TooManyMessagesException {
+//    public void send(InetSocketAddress address, Message message) throws TooManyMessagesException {
+    getConnectionManager(snh).send(message);
   }
 
   /**
@@ -213,8 +222,8 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    * @param address The address to return the value for
    * @return RTT time in millis 
    */
-  public int proximity(InetSocketAddress address) {
-    return pingManager.proximity(address);
+  public int proximity(SocketNodeHandle snh) {
+    return pingManager.proximity(snh);
   }
 
   /**
@@ -230,20 +239,10 @@ public class SocketCollectionManager implements SelectionKeyHandler {
     try {
       socketPoolManager.socketOpened(new SocketManager(key, this));
     } catch (IOException e) {
-      System.out.println("ERROR (accepting connection): " + e + "at "+addressString());
+      if (ConnectionManager.LOG_LOW_LEVEL)
+        System.out.println("ERROR (accepting connection): " + e + " at "+addressString());
     }
     return true;
-  }
-
-  /**
-   * Method which should change the interestOps of the handler's key. This
-   * method should *ONLY* be called by the selection thread in the context of a
-   * select().
-   *
-   * @param key The key in question
-   */
-  public void modifyKey(SelectionKey key) {
-    System.out.println("PANIC: modifyKey() called on SocketCollectionManager!");
   }
 
   /**
@@ -332,8 +331,8 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    *
    * @param address The address to mark dead
    */
-  protected void markDead(InetSocketAddress address) {
-    pool.update(address, SocketNodeHandle.DECLARED_DEAD);
+  protected void markDead(SocketNodeHandle snh) {
+    pool.update(snh, SocketNodeHandle.DECLARED_DEAD);
   }
 
   /**
@@ -341,8 +340,8 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    *
    * @param address The address to mark alive
    */
-  protected void markAlive(InetSocketAddress address) {
-    pool.update(address, SocketNodeHandle.DECLARED_LIVE);
+  protected void markAlive(SocketNodeHandle snh) {
+    pool.update(snh, SocketNodeHandle.DECLARED_LIVE);
   }
 
   /**
@@ -361,8 +360,8 @@ public class SocketCollectionManager implements SelectionKeyHandler {
 	 * @param address the address to find liveness info for
 	 * @return NodeHandle.LIVENESS_ALIVE, LIVENESS_SUSPECTED(_FAULTY), LIVENESS_FAULTY, LIVENESS_UNKNOWN
 	 */
-	public int getLiveness(InetSocketAddress address) {
-    ConnectionManager cm = (ConnectionManager)connections.get(address);
+	public int getLiveness(SocketNodeHandle snh) {
+    ConnectionManager cm = (ConnectionManager)connections.get(snh);
     if (cm != null) {
       return cm.getLiveness();
     }
@@ -381,8 +380,9 @@ public class SocketCollectionManager implements SelectionKeyHandler {
    * socket.  Calls accept on the appropriate ConnectionManager.
 	 * @param manager
 	 */
-	public void newSocketManager(InetSocketAddress address, SocketManager manager) {
-    getConnectionManager(address).acceptSocket(manager);
+  public void newSocketManager(SocketNodeHandle snh, SocketManager manager) {
+//    public void newSocketManager(InetSocketAddress address, SocketManager manager) {
+    getConnectionManager(snh).acceptSocket(manager);
 	}
 
 	/**
@@ -410,10 +410,21 @@ public class SocketCollectionManager implements SelectionKeyHandler {
 	 * @return
 	 */
 	public String addressString() {
-    if (localAddress == returnAddress) {
-      return returnAddress.toString();
-    } else {
-      return returnAddress+"@"+localAddress;      
-    }
+    return ((SocketNodeHandle)pastryNode.getLocalHandle()).getAddress()+"@"+bindAddress;      
+	}
+  
+  public Iterator getConnections() {
+    return connections.values().iterator();
+  }
+
+  public SocketNodeHandle getLocalNodeHandle() {
+    return (SocketNodeHandle)pastryNode.getLocalHandle();
+  }
+
+	/**
+	 * 
+	 */
+	public InetSocketAddress getAddress() {
+		return getLocalNodeHandle().getAddress();		
 	}
 }

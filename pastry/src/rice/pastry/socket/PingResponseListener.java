@@ -24,5 +24,5 @@ public interface PingResponseListener {
    * @param RTT the rtt of the most recent ping 
    * @param timeHeardFrom the time we got that response
    */
-  public void pingResponse(InetSocketAddress address, long RTT, long timeHeardFrom);
+  public void pingResponse(SocketNodeHandle snh, long RTT, long timeHeardFrom);
 }

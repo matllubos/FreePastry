@@ -18,15 +18,15 @@ import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
-import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.WeakHashMap;
 
+import rice.pastry.NodeId;
+import rice.pastry.socket.exception.DeserializationException;
+import rice.pastry.socket.exception.ImproperlyFormattedMessageException;
+import rice.pastry.socket.exception.SerializationException;
 import rice.pastry.socket.messaging.PingMessage;
 import rice.pastry.socket.messaging.PingResponseMessage;
-import rice.pastry.wire.WireNodeHandle;
-import rice.pastry.wire.exception.DeserializationException;
-import rice.pastry.wire.exception.ImproperlyFormattedMessageException;
-import rice.pastry.wire.exception.SerializationException;
 
 /**
  * 
@@ -65,7 +65,7 @@ import rice.pastry.wire.exception.SerializationException;
  */
 public class PingManager implements SelectionKeyHandler {
 
-  private InetSocketAddress returnAddress;
+  private SocketNodeHandle localHandle;
 
 	// ********************** User Contorl "Tweak" Fields ****************
   /**
@@ -88,9 +88,9 @@ public class PingManager implements SelectionKeyHandler {
 
   // ************* Fields to handle notification/recording *******
   /**
-   * InetSocketAddress -> ArrayList of PingResponseListener
+   * SocketNodeHandle -> ArrayList of PingResponseListener
    */
-  protected Hashtable pingListeners = new Hashtable();
+  protected WeakHashMap pingListeners = new WeakHashMap();
 
   /**
    * The "queue" of pings/pingResponses
@@ -99,22 +99,22 @@ public class PingManager implements SelectionKeyHandler {
 
   /**
    * the list of the last time a ping was sent
-   * address -> Long
+   * SocketNodeHandle -> Long
    */
-  private Hashtable pingSentTimes;
+  private WeakHashMap pingSentTimes;
 
   /**
    * the list of the last time a ping was received
-   * address -> Long
+   * SocketNodeHandle -> Long
    */
-  private Hashtable pingResponseTimes;
+  private WeakHashMap pingResponseTimes;
 
   /**
    * the list of cached proximities
-   * address -> Integer
+   * SocketNodeHandle -> Integer
    * 
    */
-  private Hashtable proximity;
+  private WeakHashMap proximity;
 
 
   // ********************** Technical fields ********************
@@ -158,14 +158,14 @@ public class PingManager implements SelectionKeyHandler {
    * @param manager ref to SelectorManager
    * @param pool ref to SocketNodeHandlePool
    */
-  public PingManager(int port, SelectorManager manager, SocketNodeHandlePool pool, InetSocketAddress proxyAddress) throws BindException {
+  public PingManager(int port, SelectorManager manager, SocketNodeHandlePool pool, SocketNodeHandle localHandle) throws BindException {
     this.port = port;
     this.manager = manager;
     this.pool = pool;
-    proximity = new Hashtable();
-    pingSentTimes = new Hashtable();
-    pingResponseTimes = new Hashtable();
-    this.returnAddress = proxyAddress;
+    this.localHandle = localHandle;
+    proximity = new WeakHashMap();
+    pingSentTimes = new WeakHashMap();
+    pingResponseTimes = new WeakHashMap();
     pendingMsgs = new ArrayList();
     // allocate enought bytes to read a node handle
     buffer = ByteBuffer.allocateDirect(DATAGRAM_SEND_BUFFER_SIZE);
@@ -175,9 +175,6 @@ public class PingManager implements SelectionKeyHandler {
       channel = DatagramChannel.open();
       channel.configureBlocking(false);
       InetSocketAddress isa = new InetSocketAddress(port);
-      if (returnAddress == null) {
-        returnAddress = new InetSocketAddress(InetAddress.getLocalHost(),port);
-      }
       channel.socket().bind(isa); // throws BindException
       channel.socket().setSendBufferSize(DATAGRAM_SEND_BUFFER_SIZE);
       channel.socket().setReceiveBufferSize(DATAGRAM_RECEIVE_BUFFER_SIZE);
@@ -205,8 +202,8 @@ public class PingManager implements SelectionKeyHandler {
    * @param address The address to return the value for
    * @return RTT proximity in millis
    */
-  public int proximity(InetSocketAddress address) {
-    Integer i = (Integer) proximity.get(address);
+  public int proximity(SocketNodeHandle snh) {
+    Integer i = (Integer) proximity.get(snh);
 
     if (i == null) {
       return SocketNodeHandle.DEFAULT_PROXIMITY;
@@ -223,8 +220,8 @@ public class PingManager implements SelectionKeyHandler {
    * @param address the address we last pinged
    * @return The LastTimePinged value
    */
-  public long getLastTimePinged(InetSocketAddress address) {
-    return ((Long) pingSentTimes.get(address)).longValue();
+  public long getLastTimePinged(SocketNodeHandle snh) {
+    return ((Long) pingSentTimes.get(snh)).longValue();
   }
   
   /**
@@ -234,8 +231,8 @@ public class PingManager implements SelectionKeyHandler {
    * @param address the address in question
    * @return the last time we heard from that address
    */
-  public long getLastTimePingReceived(InetSocketAddress address) {
-      Long l = (Long) pingResponseTimes.get(address);
+  public long getLastTimePingReceived(SocketNodeHandle snh) {
+      Long l = (Long) pingResponseTimes.get(snh);
       if (l != null) {
         return l.longValue();
       } else {
@@ -258,8 +255,8 @@ public class PingManager implements SelectionKeyHandler {
    * @param address The address to ping
    * @param prl DESCRIBE THE PARAMETER
    */
-  protected void ping(InetSocketAddress address, PingResponseListener prl) {
-    ping(address, prl, false);
+  protected void ping(SocketNodeHandle snh, PingResponseListener prl) {
+    ping(snh, prl, false);
   }
 
   /**
@@ -281,8 +278,8 @@ public class PingManager implements SelectionKeyHandler {
    * @param address the address to ping
    * @param prl the PRL to notify when the response arrives
    */
-  protected void forcePing(InetSocketAddress address, PingResponseListener prl) {
-    ping(address, prl, true);
+  protected void forcePing(SocketNodeHandle snh, PingResponseListener prl) {
+    ping(snh, prl, true);
   }
 
 
@@ -293,25 +290,26 @@ public class PingManager implements SelectionKeyHandler {
    * @param prl the response listener to notify
    * @param force bypass the PING_THROTTLE rule.
    */
-  private void ping(final InetSocketAddress address, final PingResponseListener prl, final boolean force) {
+  private void ping(final SocketNodeHandle snh, final PingResponseListener prl, final boolean force) {
+    //final InetSocketAddress address = snh.getAddress();
     manager.invoke(new Runnable() {
 			public void run() {
         long curTime = System.currentTimeMillis();
         if (force ||
-          (pingSentTimes.get(address) == null) ||
-          (curTime - getLastTimePinged(address) > PING_THROTTLE)) {
-          pingSentTimes.put(address, new Long(curTime));
-          addPingResponseListener(address, prl);
-          enqueue(address, new PingMessage(returnAddress));        
+          (pingSentTimes.get(snh) == null) ||
+          (curTime - getLastTimePinged(snh) > PING_THROTTLE)) {
+          pingSentTimes.put(snh, new Long(curTime));
+          addPingResponseListener(snh, prl);
+          enqueue(snh, new PingMessage(localHandle, snh));        
         } else {
-          if (getLastTimePingReceived(address) >= getLastTimePinged(address)) {
+          if (getLastTimePingReceived(snh) >= getLastTimePinged(snh)) {
             // we just pinged them, and got a response
             if (prl != null) {
-              prl.pingResponse(address, proximity(address), getLastTimePingReceived(address));
+              prl.pingResponse(snh, proximity(snh), getLastTimePingReceived(snh));
             }
           } else {
             // we are still waiting to hear from someone
-            addPingResponseListener(address, prl);
+            addPingResponseListener(snh, prl);
           }
         }
 			}
@@ -325,9 +323,9 @@ public class PingManager implements SelectionKeyHandler {
    * @param address The address to send to
    * @param msg the message to send to the address
    */
-  private void enqueue(InetSocketAddress address, Object msg) {
-    pendingMsgs.add(new PendingWrite(address, msg));
-    manager.modifyKey(key);
+  private void enqueue(SocketNodeHandle snh, Object msg) {
+    pendingMsgs.add(new PendingWrite(snh, msg));
+    enableWriteOpIfNecessary(key);
   }
 
   /**
@@ -335,7 +333,7 @@ public class PingManager implements SelectionKeyHandler {
    *
    * @param key DESCRIBE THE PARAMETER
    */
-  public void modifyKey(SelectionKey key) {
+  private void enableWriteOpIfNecessary(SelectionKey key) {
     if (!pendingMsgs.isEmpty()) {
       key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
     }
@@ -355,7 +353,7 @@ public class PingManager implements SelectionKeyHandler {
       while (i.hasNext()) {
         PendingWrite write = (PendingWrite) i.next();
         ByteBuffer buf = serialize(write.message);
-        int num = channel.send(buf, write.address);
+        int num = channel.send(buf, write.snh.getAddress());
         i.remove();
 
         if (num == 0) {
@@ -379,8 +377,6 @@ public class PingManager implements SelectionKeyHandler {
 	   * @param key the key that was selected
 	   */
 	  public boolean read(SelectionKey key) {
-	
-	    WireNodeHandle handle = null;
 	
 	    try {
 	      InetSocketAddress address = null;
@@ -422,7 +418,11 @@ public class PingManager implements SelectionKeyHandler {
     //System.out.println("PingMgr.receiveMessage("+message.getClass().getName()+")");
     if (message instanceof PingMessage) {
       PingMessage pm = (PingMessage) message;
-      enqueue(pm.returnAddress, new PingResponseMessage(pm.getStartTime(), returnAddress));
+      if ((pm.receiver == null) || (pm.receiver.equals(localHandle))) {
+        enqueue(pm.sender, new PingResponseMessage(pm.getStartTime(), localHandle, pm.sender));
+      } else {
+//        System.out.println(this+" ignoring ping message with incorrect receiver");
+      }
     }
     if (message instanceof PingResponseMessage) {
       PingResponseMessage prm = (PingResponseMessage) message;
@@ -430,11 +430,11 @@ public class PingManager implements SelectionKeyHandler {
       long startTime = prm.getStartTime();
       int time = (int) (curTime - startTime);
 
-      if ((proximity.get(prm.returnAddress) == null) || (((Integer) proximity.get(prm.returnAddress)).intValue() > time)) {
-        proximity.put(prm.returnAddress, new Integer(time));
-        pool.update(prm.returnAddress, SocketNodeHandle.PROXIMITY_CHANGED);
+      if ((proximity.get(prm.sender) == null) || (((Integer) proximity.get(prm.sender)).intValue() > time)) {
+        proximity.put(prm.sender, new Integer(time));
+        pool.update(prm.sender, SocketNodeHandle.PROXIMITY_CHANGED);
       }
-      pingResponse(prm.returnAddress, curTime);
+      pingResponse(prm.sender, curTime);
     }
   }
 
@@ -445,9 +445,9 @@ public class PingManager implements SelectionKeyHandler {
    * @param address DESCRIBE THE PARAMETER
    * @param curTime DESCRIBE THE PARAMETER
    */
-  public void pingResponse(InetSocketAddress address, long curTime) {
-    pingResponseTimes.put(address, new Long(curTime));
-    notifyPingResponseListeners(address, proximity(address), curTime);
+  public void pingResponse(SocketNodeHandle snh, long curTime) {
+    pingResponseTimes.put(snh, new Long(curTime));
+    notifyPingResponseListeners(snh, proximity(snh), curTime);
   }
 
   /**
@@ -459,13 +459,13 @@ public class PingManager implements SelectionKeyHandler {
    * @param proximity
    * @param lastTimePinged
    */
-  protected void notifyPingResponseListeners(InetSocketAddress address, int proximity, long lastTimeHeardFrom) {
-    ArrayList list = (ArrayList) pingListeners.get(address);
+  protected void notifyPingResponseListeners(SocketNodeHandle snh, int proximity, long lastTimeHeardFrom) {
+    ArrayList list = (ArrayList) pingListeners.get(snh);
     if (list != null) {
       Iterator i = list.iterator();
       while (i.hasNext()) {
         PingResponseListener prl = (PingResponseListener) i.next();
-        prl.pingResponse(address, proximity, lastTimeHeardFrom);
+        prl.pingResponse(snh, proximity, lastTimeHeardFrom);
         i.remove();
       }
     }
@@ -479,14 +479,14 @@ public class PingManager implements SelectionKeyHandler {
    * @param address The address waiting to hear from
    * @param prl The feature to be added to the PingResponseListener attribute
    */
-  private void addPingResponseListener(InetSocketAddress address, PingResponseListener prl) {
+  private void addPingResponseListener(SocketNodeHandle snh, PingResponseListener prl) {
     if (prl == null) {
       return;
     }
-    ArrayList list = (ArrayList) pingListeners.get(address);
+    ArrayList list = (ArrayList) pingListeners.get(snh);
     if (list == null) {
       list = new ArrayList();
-      pingListeners.put(address, list);
+      pingListeners.put(snh, list);
     }
     list.add(prl);
   }
@@ -496,7 +496,7 @@ public class PingManager implements SelectionKeyHandler {
    *
    */
   public class PendingWrite {
-    InetSocketAddress address;
+    SocketNodeHandle snh;
     Object message;
 
     /**
@@ -505,8 +505,8 @@ public class PingManager implements SelectionKeyHandler {
      * @param adr DESCRIBE THE PARAMETER
      * @param m DESCRIBE THE PARAMETER
      */
-    public PendingWrite(InetSocketAddress adr, Object m) {
-      address = adr;
+    public PendingWrite(SocketNodeHandle snh, Object m) {
+      this.snh = snh;
       message = m;
     }
   }
@@ -599,7 +599,8 @@ public class PingManager implements SelectionKeyHandler {
 
       synchronized (selector) {
         channel.close();
-        key.cancel();
+        if (key != null) 
+          key.cancel();
       }
     } catch (IOException ioe) {
       ioe.printStackTrace();

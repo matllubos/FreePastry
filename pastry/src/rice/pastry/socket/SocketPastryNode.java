@@ -147,14 +147,15 @@ public class SocketPastryNode extends DistPastryNode {
    * testing purposes.
    */
   public void kill() {
-    super.kill();
+//    System.out.println("SPN.kill()");
     manager.kill();
+    super.kill();
 //    sManager.kill();
 //    pingManager.kill();
   }
 
-  public void stall() {
-      manager.stall();
+  public void stall(int time) {
+      manager.stall(time);
   }
 
   /**
@@ -201,6 +202,5 @@ public class SocketPastryNode extends DistPastryNode {
         throw new NodeIsDeadException(ise);
       }
     }
-  }
-  
+  }  
 }

@@ -333,6 +333,8 @@ public abstract class PastryAppl implements MessageReceiver
    * is ready to send and receive messages
    */
   public void notifyReady() {}
+  
+//  public abstract void messageNotDelivered(Message msg, String s);
 
 }
 

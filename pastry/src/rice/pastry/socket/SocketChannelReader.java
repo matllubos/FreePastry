@@ -37,6 +37,7 @@ import java.util.Arrays;
 import rice.pastry.Log;
 import rice.pastry.PastryObjectInputStream;
 import rice.pastry.socket.exception.SocketClosedByRemoteHostException;
+import rice.pastry.socket.messaging.AddressMessage;
 //import rice.pastry.testing.HelloMsg;
 
 /**
@@ -49,7 +50,7 @@ import rice.pastry.socket.exception.SocketClosedByRemoteHostException;
  */
 public class SocketChannelReader {
 
-//  public boolean readOnce = false;
+  public boolean readOnce = false;
 
 	// the pastry node
   private SocketPastryNode spn;
@@ -165,9 +166,9 @@ public class SocketChannelReader {
         Object obj = deserialize(objectArray);
         debug("Deserialized bytes into object " + obj);
         checkPoint(obj,777);
-//        if (!(obj instanceof AddressMessage)) {
-//          readOnce = true;
-//        }
+        if (!(obj instanceof AddressMessage)) {
+          readOnce = true;
+        }
 //        System.out.println("SCR.read():Deserialized bytes into object " + obj);
 
         //   if (spn != null)

@@ -8,6 +8,9 @@ package rice.pastry.socket.messaging;
 
 import java.net.InetSocketAddress;
 
+import rice.pastry.NodeId;
+import rice.pastry.socket.SocketNodeHandle;
+
 /**
  * @author jeffh
  *
@@ -16,14 +19,17 @@ import java.net.InetSocketAddress;
  */
 public class AddressMessage extends SocketControlMessage {
 
-  public InetSocketAddress address;
+  public SocketNodeHandle sender;
+  public SocketNodeHandle receiver;
   public int type;
+  
   
 	/**
 	 * @param address
 	 */
-	public AddressMessage(InetSocketAddress address, int type) {
-		this.address = address;
+	public AddressMessage(SocketNodeHandle sender, SocketNodeHandle receiver, int type) {
+    this.sender = sender;
+    this.receiver = receiver;
     this.type = type;
 	}
   

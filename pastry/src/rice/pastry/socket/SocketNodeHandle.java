@@ -26,11 +26,14 @@ package rice.pastry.socket;
 
 import java.net.InetSocketAddress;
 import java.util.Observable;
+import java.util.Random;
 
 import rice.pastry.Log;
 import rice.pastry.NodeId;
 import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.messaging.Message;
+import rice.pastry.messaging.MessageReceiver;
+import rice.pastry.socket.exception.TooManyMessagesException;
 
 /**
  * Represents a remote node for a "real" IP network.
@@ -74,7 +77,7 @@ public class SocketNodeHandle extends DistNodeHandle {
       //System.out.println("SNH.getLiveness(): spn == null");
       return LIVENESS_ALIVE;
     } else {
-      return spn.getSocketCollectionManager().getLiveness(getAddress());
+      return spn.getSocketCollectionManager().getLiveness(this);
     } 
   }
   
@@ -101,7 +104,7 @@ public class SocketNodeHandle extends DistNodeHandle {
       //System.out.println("SNH.getLiveness(): spn == null");
       return -1;
     } else {
-      ConnectionManager cm = spn.getSocketCollectionManager().getConnectionManager(getAddress());
+      ConnectionManager cm = spn.getSocketCollectionManager().getConnectionManager(this);
       return cm.getNumberMessagesAllowedToSend(type);
     }     
   }
@@ -117,7 +120,7 @@ public class SocketNodeHandle extends DistNodeHandle {
       //System.out.println("SNH.getLiveness(): spn == null");
       return -1;
     } else {
-      ConnectionManager cm = spn.getSocketCollectionManager().getConnectionManager(getAddress());
+      ConnectionManager cm = spn.getSocketCollectionManager().getConnectionManager(this);
       if (cm != null) {
         return cm.getMessageType(m);
       } 
@@ -140,7 +143,27 @@ public class SocketNodeHandle extends DistNodeHandle {
         spn.receiveMessage(msg);
     } else {
       debug("Passing message " + msg + " to the socket controller for writing");
-      spn.getSocketCollectionManager().send(getAddress(), msg);
+      try {        
+        spn.getSocketCollectionManager().send(this, msg);
+      } catch (TooManyMessagesException tmme) {
+        // TODO: look up app and call messageNotDelivered()
+        MessageReceiver mr = spn.getMessageDispatch().lookupDestination(msg);
+//        if (mr instanceof Application) {
+//          Application a = (Application)mr;
+//          if (msg instanceof rice.p2p.commonapi.Message) {
+//            a.messageNotDelivered((rice.p2p.commonapi.Message)msg, "Maximum queue size reached");
+//          } else {
+//            // TODO: maybe it's a RouteMessage?  What to do with it.
+//          }
+//        } else
+ 
+//        if (mr instanceof PastryAppl) {
+//          PastryAppl a = (PastryAppl)mr;
+//          a.messageNotDelivered(msg, "Maximum queue size reached");
+//        } else {
+          throw tmme;
+//        } 
+      }
     }
   }
 
@@ -153,9 +176,9 @@ public class SocketNodeHandle extends DistNodeHandle {
    */
   public String toString() {
     if (getLocalNode() == null) {
-      return "[SNH: " + nodeId + "/" + address + "]";
+      return "[SNH: " + nodeId + "@" + epoch+ "/" + address + "]";
     } else {
-      return "[SNH: " + getLocalNode().getNodeId() + " -> " + nodeId + "/" + address + "]";
+      return "[SNH: " + getLocalNode().getNodeId() + " -> " + nodeId + "@" + epoch + "/" + address + "]";
     }
   }
 
@@ -167,11 +190,18 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @return true if they are equal, false otherwise.
    */
   public boolean equals(Object obj) {
-    if (!(obj instanceof SocketNodeHandle)) {
+    SocketNodeHandle that = (SocketNodeHandle)obj;
+    if (that == null) {
       return false;
     }
-
-    return ((SocketNodeHandle) obj).getNodeId().equals(getNodeId());
+    //System.out.println(this+"equals("+that+")");  
+    if (this.epoch != that.epoch) {
+//      System.out.println(this+".equals("+that+"):"+false);
+      return false;
+    }
+    boolean ret = that.getNodeId().equals(getNodeId());
+//    System.out.println(this+".equals("+that+"):"+ret);
+    return ret;
   }
 
   /**
@@ -181,7 +211,7 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @return a hash code.
    */
   public int hashCode() {
-    return getNodeId().hashCode();
+    return epoch*getNodeId().hashCode();
   }
 
   /**
@@ -201,7 +231,7 @@ public class SocketNodeHandle extends DistNodeHandle {
       if (spn.getNodeId().equals(nodeId)) {
       return 0;
     } else {
-      return spn.getSocketCollectionManager().proximity(getAddress());
+      return spn.getSocketCollectionManager().proximity(this);
     }
   }
 
@@ -216,7 +246,7 @@ public class SocketNodeHandle extends DistNodeHandle {
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
 
     if (spn != null) {
-      spn.getPingManager().ping(getAddress(), null);
+      spn.getPingManager().ping(this, null);
       //spn.getPingManager().ping(getAddress(),new TestResponseListener(getAddress(),getNodeId()));
     }
 
@@ -233,7 +263,7 @@ public class SocketNodeHandle extends DistNodeHandle {
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
 
     if (spn != null) {
-      spn.getPingManager().ping(getAddress(), prl);
+      spn.getPingManager().ping(this, prl);
     }
 
     return isAlive();

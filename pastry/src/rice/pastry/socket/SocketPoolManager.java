@@ -53,8 +53,6 @@ public class SocketPoolManager {
   SocketCollectionManager scm;
   SelectorManager selectorManager;
 
-  Random r = new Random();
-
 	public SocketPoolManager(SocketCollectionManager scm, SelectorManager selectorMgr) {
     this.scm = scm;
     this.selectorManager = selectorMgr;
@@ -96,6 +94,9 @@ public class SocketPoolManager {
   public void requestAccept() {
     if (availablePermits() > 0) {
       selectorManager.acceptSocket();
+      return;
+    } else {
+//      System.out.println("SPM.requestAccept():"+this);
     }
     if (!closeNextIdle()) { // will recursively accept
       scheduleWakeupTask();        
@@ -130,7 +131,7 @@ public class SocketPoolManager {
     while(i.hasNext()) {
       SocketManager sm = (SocketManager)i.next();
       if (sm.isIdle()) {
-        sm.close();
+        sm.close();//ThisHalf();
         return true;
       }
     }
@@ -357,7 +358,7 @@ public class SocketPoolManager {
 
   private boolean printMe(SocketManager sm) {
     //if (true) return false;
-    if (scm.returnAddress.getPort() == 5009) {
+    if (scm.getAddress().getPort() == 5009) {
       //System.out.println(this);
       return true;
     }

@@ -39,6 +39,7 @@ package rice.pastry.socket.messaging;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 
+import rice.pastry.NodeId;
 import rice.pastry.socket.SocketNodeHandle;
 
 /**
@@ -51,16 +52,18 @@ import rice.pastry.socket.SocketNodeHandle;
 */
 public class PingResponseMessage extends SocketMessage implements Probe {
   
-  public InetSocketAddress returnAddress;
+  public SocketNodeHandle sender;
+  public SocketNodeHandle receiver;
 
 	private long start;
   
   /**
   * Constructor
   */
-  public PingResponseMessage(long start, InetSocketAddress returnAddr) {
+  public PingResponseMessage(long start, SocketNodeHandle sender, SocketNodeHandle receiver) {
     this.start = start;
-    this.returnAddress = returnAddr;
+    this.sender = sender;
+    this.receiver = receiver;
   }
   
   public long getStartTime() {

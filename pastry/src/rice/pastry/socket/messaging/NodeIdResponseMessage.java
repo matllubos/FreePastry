@@ -36,9 +36,7 @@ if advised of the possibility of such damage.
 
 package rice.pastry.socket.messaging;
 
-import java.io.*;
-
-import rice.pastry.*;
+import rice.pastry.socket.SocketNodeHandle;
 
 /**
  * A response message to a NodeIdRequestMessage, containing the remote
@@ -50,15 +48,15 @@ import rice.pastry.*;
  */
 public class NodeIdResponseMessage extends SocketControlMessage {
 
-  private NodeId nid;
+  private SocketNodeHandle snh;
 
   /**
    * Constructor
    *
    * @param nid The nodeId of the receiver of the NodeIdRequestMessage.
    */
-  public NodeIdResponseMessage(NodeId nid) {
-    this.nid = nid;
+  public NodeIdResponseMessage(SocketNodeHandle snh) {
+    this.snh = snh;
   }
 
   /**
@@ -66,7 +64,7 @@ public class NodeIdResponseMessage extends SocketControlMessage {
    *
    * @return The NodeId of the receiver node.
    */
-  public NodeId getNodeId() {
-    return nid;
+  public SocketNodeHandle getHandle() {
+    return snh;
   }
 }

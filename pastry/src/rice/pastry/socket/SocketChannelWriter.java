@@ -168,7 +168,8 @@ public class SocketChannelWriter {
   
   Object firstObject;
   public boolean enqueue(Object o) {
-    //System.out.println("ENQ3:@"+System.currentTimeMillis()+":"+this+":"+o);
+    if (ConnectionManager.LOG_LOW_LEVEL)
+      System.out.println("ENQ3:@"+System.currentTimeMillis()+":"+this+":"+o);
     checkPoint(o,103);
 
     if (firstObject == null) {
@@ -228,7 +229,8 @@ public class SocketChannelWriter {
           }
 //          System.out.println("SEN:"+manager+".SCW.write()" + queue.getFirst() + ":"+timeToWrite);
           debug("About to serialize object " + queue.getFirst());
-          System.out.println("SND:@"+System.currentTimeMillis()+":"+this+":"+queue.getFirst());
+          if (ConnectionManager.LOG_LOW_LEVEL)
+            System.out.println("SND:@"+System.currentTimeMillis()+":"+this+":"+queue.getFirst());
 
           Object first = queue.getFirst();
           checkPoint(first,104);
@@ -308,7 +310,7 @@ public class SocketChannelWriter {
 				    //System.out.println("ENQ5a:@"+System.currentTimeMillis()+":"+this+":"+o);
             queue.add(i, o);
             if (manager!=null) {
-              manager.registerModifyKey();            
+              manager.messageEnqueued();            
             }
             return;
           }
@@ -319,7 +321,7 @@ public class SocketChannelWriter {
     //System.out.println("ENQ5b:@"+System.currentTimeMillis()+":"+this+":"+o);
     queue.addLast(o);
     if (manager!=null) {
-      manager.registerModifyKey();            
+      manager.messageEnqueued();            
     }
   }
 

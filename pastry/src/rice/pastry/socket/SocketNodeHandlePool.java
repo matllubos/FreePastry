@@ -24,16 +24,20 @@
 
 package rice.pastry.socket;
 
-import java.lang.ref.*;
-import java.net.*;
-import java.util.*;
+import java.lang.ref.WeakReference;
+import java.net.InetSocketAddress;
+import java.util.Iterator;
+import java.util.Vector;
+import java.util.WeakHashMap;
 
-import rice.pastry.dist.*;
+import rice.pastry.NodeId;
+import rice.pastry.dist.DistNodeHandle;
+import rice.pastry.dist.DistNodeHandlePool;
 
 /**
  * The DistNodeHandlePool controls all of the node handles in use by the
  * DistPastryNode. It ensures that there is only one "active" node handle for
- * each remote pastry node.
+ * each remote pastry node, as well as proper memory management.
  *
  * @version $Id: SocketNodeHandlePool.java,v 1.4 2003/12/22 03:24:47 amislove
  *      Exp $
@@ -46,10 +50,12 @@ public class SocketNodeHandlePool extends DistNodeHandlePool {
    */
   protected SocketPastryNode node;
 
+  protected SocketCollectionManager scm;
+
   /**
    * A mapping containing references to all of the handles in the system
    */
-  protected Hashtable handles;
+  protected WeakHashMap handles;
 
   /**
    * Constructor.
@@ -58,7 +64,7 @@ public class SocketNodeHandlePool extends DistNodeHandlePool {
    */
   public SocketNodeHandlePool(SocketPastryNode node) {
     this.node = node;
-    handles = new Hashtable();
+    handles = new WeakHashMap();
   }
 
   /**
@@ -112,8 +118,8 @@ public class SocketNodeHandlePool extends DistNodeHandlePool {
    * @param update The update to notify the handles of
    * @param address DESCRIBE THE PARAMETER
    */
-  protected void update(InetSocketAddress address, Object update) {
-    Vector vector = (Vector) handles.get(address);
+  protected void update(SocketNodeHandle snh, Object update) {
+    Vector vector = (Vector) handles.get(snh);
 
     if (vector != null) {
       boolean printed = false;
@@ -139,5 +145,5 @@ public class SocketNodeHandlePool extends DistNodeHandlePool {
         }
       }
     }
-  }
+  }  
 }

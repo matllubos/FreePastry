@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
@@ -140,6 +141,10 @@ public class SocketManager implements SelectionKeyHandler {
     connectionManager = cm;
     cmSet = new RuntimeException("Stack Trace");
     this.address = address;
+    if (!sentAddress) {
+      send(new AddressMessage(scm.getLocalNodeHandle(),connectionManager.snh,type));
+      sentAddress = true;
+    }
   }
 
   /**
@@ -177,13 +182,13 @@ public class SocketManager implements SelectionKeyHandler {
    * @param manager the manager
    * @param numTriesToConnect how many failures we've had so far
    */
-  void retryConnection(final SocketManager manager, int numTriesToConnect, boolean delay) {
-    scm.socketPoolManager.relenquishPermit(manager);
+  void retryConnection(int numTriesToConnect, boolean delay) {
+    scm.socketPoolManager.relenquishPermit(this);
     connectionManager.checkDead();
 //    System.out.println("CM.retryConnectionLater("+manager.getType()+","+numTriesToConnect+")");
     if (numTriesToConnect > MAX_NUM_RETRIES_FOR_CONNECTION) {
-      System.out.println("CM.retryConnectionLater() stopped trying to reconnect after "+numTriesToConnect+" failed attempts.");
-      manager.close();
+      System.out.println(this+".retryConnectionLater() stopped trying to reconnect after "+numTriesToConnect+" failed attempts.");
+      close();
     } else {
       if (delay) {
         scm.scheduleTask(new TimerTask() {
@@ -192,8 +197,8 @@ public class SocketManager implements SelectionKeyHandler {
             scm.manager.invoke(new Runnable() {
               public void run() {
   //              System.out.println("CM.retryConnectionLater():requestingToOpenSocket("+manager+")");
-                if (!manager.closed && (connectionManager.getLiveness() < NodeHandle.LIVENESS_FAULTY)) {  // this can happen if we markDead while we are waiting to connect                  
-                  manager.tryToCreateConnection();
+                if (!closed && (connectionManager.getLiveness() < NodeHandle.LIVENESS_FAULTY)) {  // this can happen if we markDead while we are waiting to connect                  
+                  tryToCreateConnection();
                 }
               }
             });
@@ -201,7 +206,7 @@ public class SocketManager implements SelectionKeyHandler {
           }
         },(int)(INITIAL_CONNECTION_RETRY_WAIT_TIME*Math.pow(CONNECTION_RETRY_FACTOR, numTriesToConnect))); 
       } else {
-        manager.tryToCreateConnection();
+        tryToCreateConnection();
 //        scm.socketPoolManager.requestToOpenSocket(manager);        
       }
     }   
@@ -220,10 +225,13 @@ public class SocketManager implements SelectionKeyHandler {
    * createConnection() now, or later.
    */
   public void tryToCreateConnection() {
-    if (!sentAddress) {
-      send(new AddressMessage(scm.returnAddress,type));
-      sentAddress = true;
+    if (ctor != 2) {
+      Thread.dumpStack();
     }
+//    if (!sentAddress) {
+//      send(new AddressMessage(scm.returnAddress,scm.getLocalNodeHandle(),connectionManager.getNodeId(),type));
+//      sentAddress = true;
+//    }
     scm.socketPoolManager.requestToOpenSocket(this);
   }
 
@@ -261,6 +269,7 @@ public class SocketManager implements SelectionKeyHandler {
   
       if (done) {
         key = channel.register(scm.manager.getSelector(), SelectionKey.OP_READ);
+        //System.out.println("SM.createConnection(): Registering "+this);
       } else {
         if (connectionManager != null) {
           if (checkDeadTask == null) {
@@ -281,11 +290,11 @@ public class SocketManager implements SelectionKeyHandler {
           }
         }
         key = channel.register(scm.manager.getSelector(), SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
+//        System.out.println("SM.createConnection(): Registering(2) "+this);
       }
   
       key.attach(handler);
-      scm.manager.modifyKey(key);
-  
+      enableWriteOpIfNecessary(key);
       if (done) {
         if (numTriesToConnect > 0) {
           System.out.println("SM.createConnection():reconnection successful after "+numTriesToConnect+" attempts! "+bindFailure);
@@ -314,7 +323,7 @@ public class SocketManager implements SelectionKeyHandler {
       numTriesToConnect++;
         
       if (connectionManager != null) {
-        /*connectionManager.*/retryConnection(this,numTriesToConnect,false);
+        /*connectionManager.*/retryConnection(numTriesToConnect,false);
       }
       return true;
     }
@@ -326,7 +335,7 @@ public class SocketManager implements SelectionKeyHandler {
       numTriesToConnect++;
         
       if (connectionManager != null) {
-        /*connectionManager.*/retryConnection(this,numTriesToConnect,true);
+        /*connectionManager.*/retryConnection(numTriesToConnect,true);
       }
       return true;
     }
@@ -364,8 +373,6 @@ public class SocketManager implements SelectionKeyHandler {
     } catch (IOException e) {   
       if (!tryToHandleIOException(e)) {
         e.printStackTrace();
-        debug("Got exception " + e + " on connect - marking as dead");
-        System.out.println("Mark Dead due to failure to connect");
         if (connectionManager != null) {
           connectionManager.checkDead(); //markDead();
         }
@@ -377,9 +384,11 @@ public class SocketManager implements SelectionKeyHandler {
     }
     if (numTriesToConnect > 0) {
       if (bindFailure) {
-        System.out.println("SM.connect():reconnection successful after "+numTriesToConnect+" attempts! :"+bindFailure);
+        if (ConnectionManager.LOG_LOW_LEVEL)
+          System.out.println(this+".connect():reconnection successful after "+numTriesToConnect+" attempts! :"+bindFailure);
       } else {
-        System.out.println("SM.connect():reconnection successful after "+numTriesToConnect+" attempts!");
+        if (ConnectionManager.LOG_LOW_LEVEL)
+          System.out.println(this+".connect():reconnection successful after "+numTriesToConnect+" attempts!");
       }
     }
     scm.socketPoolManager.socketOpened(this);
@@ -415,29 +424,66 @@ public class SocketManager implements SelectionKeyHandler {
     debug("Accepted connection from " + address);
 
     key = channel.register(scm.manager.getSelector(), SelectionKey.OP_READ);
+    //System.out.println("SM.acceptConnection(): Registering "+this);
     key.attach(this);
   }
 
-  
+//  
+//  boolean thisHalfClosed = false;
+//  boolean thatHalfClosed = false;
+//
+//  void closeThisHalf() {
+//    if (thisHalfClosed) {
+//      return;
+//    }
+//    if (thatHalfClosed) {
+//      close();
+//    } else {
+//      try {
+//        SocketChannel sc = (SocketChannel)key.channel();
+//        sc.socket().shutdownOutput();    
+//      } catch (IOException e) {
+//        System.out.println("ERROR: Recevied exception " + e + " while closing this half of socket!");
+//      }
+//    }
+//    thisHalfClosed = true;
+//  }  
+//  
+//  void thatHalfClosed() {
+//    if (thatHalfClosed) {
+//      throw new RuntimeException("That half already closed.");
+//    }
+//    if (writer.isEmpty()) {
+//      close();
+//    } else {
+////      if (connectionManager.)
+//      thatHalfClosed = true;
+//    }
+//  }
 
   /**
    * Method which closes down this socket manager, by closing the socket,
    * cancelling the key and setting the key to be interested in nothing
    */
   public void close() {
+    if (ConnectionManager.LOG_LOW_LEVEL)
+      System.out.println(this+".close()");
     closedTrace = new RuntimeException("closed here");
     closed = true;
     cancelCheckDeadTask(); // stop checking dead on my account
     //Thread.dumpStack();
     try {
-      synchronized (scm.manager.getSelector()) {
+//      synchronized (scm.manager.getSelector()) {
         if (key != null) {
+          SocketChannel sc = (SocketChannel)key.channel();
           key.channel().close();
           key.cancel();
+          if (ConnectionManager.LOG_LOW_LEVEL)
+            System.out.println("SM.close() cancelled "+this);
           key.attach(null);
           key = null;
         }
-      }
+//      }
     } catch (IOException e) {
       System.out.println("ERROR: Recevied exception " + e + " while closing socket!");
     }
@@ -458,41 +504,55 @@ public class SocketManager implements SelectionKeyHandler {
   // *************** Send/Receive Lifecycle *************************
   /**
    * The entry point for outgoing messages - messages from here are enqueued
-   * for transport to the remote node.  Writer will call registerModifyKey()
+   * for transport to the remote node.  Writer will call messageEnqueued() which will set the write bit
    *
    * @param message DESCRIBE THE PARAMETER
    */
-  public void send(final Object message) {
-//    System.out.println("ENQ2:@"+System.currentTimeMillis()+":"+this+":"+message+":"+message.getClass().getName());
+  public boolean send(final Object message) {
+    if (sentAddress == false && ctor == 2 && !(message instanceof AddressMessage)) {
+      System.out.println(message);
+      Thread.dumpStack();
+    }
+    if (ConnectionManager.LOG_LOW_LEVEL)
+      System.out.println("ENQ2:@"+System.currentTimeMillis()+":"+this+":"+message+":"+message.getClass().getName());
+
+//    if (thatHalfClosed) {
+//      return false;
+//    }
 
     lastWritten = message;
     
 //    System.out.println("SM<"+type+">.send("+message+")");
       writer.enqueue(message); 
-      markActive();  
+      markActive();
+      return true;  
   }
 
   /**
    * Called by the writer when something is in queue to be written.
    *
    */
-  void registerModifyKey() {
+  void messageEnqueued() {
     if (key != null) {
-      scm.manager.modifyKey(key);
+      enableWriteOpIfNecessary(key);
     }
   }
 
   /**
    * Method which should change the interestOps of the handler's key. This
-   * method should *ONLY* be called by the selection thread in the context of
-   * a select().
+   * method should *ONLY* be called by the selection thread.
    *
    * @param key The key in question
    */
-  public void modifyKey(SelectionKey key) {
-    if (!writer.isEmpty()) {
-      key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-    }
+  private void enableWriteOpIfNecessary(SelectionKey key) {    
+    try {
+      if (connecting && !writer.isEmpty()) {
+        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+      }
+    } catch (CancelledKeyException e) {
+      e.printStackTrace();
+      System.out.println("Error CKE:"+this);
+    }    
   }
 
   /**
@@ -527,38 +587,53 @@ public class SocketManager implements SelectionKeyHandler {
 
       if (o != null) {
         debug("Read message " + o + " from socket.");
-        System.out.println("REC:@"+System.currentTimeMillis()+":"+this+":"+o);
+        if (ConnectionManager.LOG_LOW_LEVEL)
+          System.out.println("REC:@"+System.currentTimeMillis()+":"+this+":"+o);
 
         if (o instanceof AddressMessage) {
           AddressMessage am = (AddressMessage) o;
-          if (address == null) {
-            this.address = am.address;
-//            System.out.println("SM<"+type+">.read("+o+") -> "+am.type);
-            type = am.type;
-            scm.newSocketManager(address, this);
-            if (connectionManager != null) {
-              connectionManager.markAlive();
-            }
+          if (!am.receiver.equals(scm.getLocalNodeHandle())) {
+            //System.out.println("ERROR: SocketManager recieved connection for incorrect NodeId expected "+scm.getLocalNodeHandle()+" received "+am.receiver);
+            close();
           } else {
-            System.out.println("SERIOUS ERROR: Received duplicate address assignments: " + this.address + " and " + o);
+            if (address == null) {
+              this.address = am.sender.getAddress();
+              if (this.address == null) {
+                Thread.dumpStack();
+              }
+  //            System.out.println("SM<"+type+">.read("+o+") -> "+am.type);
+              type = am.type;
+              scm.newSocketManager(am.sender, this);
+              if (connectionManager != null) {
+                connectionManager.markAlive();
+              }
+            } else {
+              System.out.println("SERIOUS ERROR: Received duplicate address assignments: " + this.address + " and " + o);
+            }
           }
         } else {
           receive((Message)o);
         }
       }
     } catch (SocketClosedByRemoteHostException se) {
+//      System.out.println("SocketManager.read() " + e + " - closing."+this);
       if (connectionManager != null) {
+        if (!reader.readOnce)
+          connectionManager.failedDuringOpen = true;
         connectionManager.checkDead();
       }
-      close();      
+      close();//thatHalfClosed();      
     } catch (IOException e) {
-      System.out.println("SocketManager " + e + " reading - cancelling.");
+      if (ConnectionManager.LOG_LOW_LEVEL)
+        System.out.println("SocketManager.read() " + e + " - closing."+this);
       //e.printStackTrace();
       debug("ERROR " + e + " reading - cancelling.");
       if (connectionManager != null) {
+        if (!reader.readOnce)
+          connectionManager.failedDuringOpen = true;
         connectionManager.checkDead();
       }
-      close();
+      close(); 
     }
     return true;
     //System.out.println("SM<"+type+">.read():3");
@@ -588,7 +663,7 @@ public class SocketManager implements SelectionKeyHandler {
     if (message instanceof SocketControlMessage) { // optimization
     
       if (message instanceof NodeIdRequestMessage) {
-        send(new NodeIdResponseMessage(scm.pastryNode.getNodeId()));
+        send(new NodeIdResponseMessage((SocketNodeHandle)scm.pastryNode.getLocalHandle()));
       } else if (message instanceof LeafSetRequestMessage) {
         send(new LeafSetResponseMessage(scm.pastryNode.getLeafSet()));
       } else if (message instanceof RouteRowRequestMessage) {
@@ -675,7 +750,13 @@ public class SocketManager implements SelectionKeyHandler {
    * yee ol' toString()
    */
   public String toString() {
-    return "SocketManager<"+type+">@"+System.identityHashCode(this)+":"+scm.addressString()+" -> "+address+" "+getStatus();//+":"+lastWritten;
+    String s = " key:";
+    if (key == null) {
+      s+="null";
+    } else {
+      s+=System.identityHashCode(key);
+    }
+    return "SocketManager<"+type+","+ctor+">@"+System.identityHashCode(this)+":"+scm.addressString()+" -> "+address+s+" "+getStatus();//+":"+lastWritten;
   }
   
   public String getStatus() {
@@ -718,6 +799,7 @@ public class SocketManager implements SelectionKeyHandler {
   public int getNumberPendingMessages() {
     return writer.getQueue().size();    
   }
+
 
 
 }

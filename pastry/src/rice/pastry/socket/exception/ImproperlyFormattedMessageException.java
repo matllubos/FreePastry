@@ -22,51 +22,25 @@
  * of this software, even if advised of the possibility of such damage.
  */
 
-package rice.pastry.socket;
+package rice.pastry.socket.exception;
 
-import java.nio.channels.*;
+import java.io.*;
 
 /**
- * This interface is designed to be a callback mechanism from the
- * SelectorManager. Once the manager has determines that something has happened,
- * it informs the appropriate SelectionKeyHandler via this interface. The
- * SelectionKeyHandler which is interested in being notified of events relating
- * to the SelectionKey should attach itself to the SelectionKey via the attach()
- * method. The SelectorManager will then call that SelectionKeyHandler's
- * methods.
+ * Class which represents an exception occuring during the parsing of a Pastry
+ * message sent through the Socket protocol.
  *
- * @version $Id: SelectionKeyHandler.java,v 1.2 2004/03/08 19:53:57 amislove Exp
- *      $
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
-public interface SelectionKeyHandler {
+public class ImproperlyFormattedMessageException extends IOException {
 
   /**
-   * Method which is called when the key becomes acceptable.
+   * Constructs an ImproperlyFormattedMessageException with a given message
    *
-   * @param key The key which is acceptable.
+   * @param message The message of this exception
    */
-  public boolean accept(SelectionKey key);
-
-  /**
-   * Method which is called when the key becomes connectable.
-   *
-   * @param key The key which is connectable.
-   */
-  public boolean connect(SelectionKey key);
-
-  /**
-   * Method which is called when the key becomes readable.
-   *
-   * @param key The key which is readable.
-   */
-  public boolean read(SelectionKey key);
-
-  /**
-   * Method which is called when the key becomes writable.
-   *
-   * @param key The key which is writable.
-   */
-  public boolean write(SelectionKey key);
-
+  public ImproperlyFormattedMessageException(String message) {
+    super(message);
+  }
 }
+
