@@ -206,7 +206,9 @@ public class RouteMessage extends Message implements Serializable, rice.p2p.comm
 	    //+ handle + " (" + handle.getNodeId() + ")");
 	}
 
-	if (localId.equals(handle.getNodeId())) handle.receiveMessage(internalMsg);      
+	if (localId.equals(handle.getNodeId())) {
+    handle.receiveMessage(internalMsg);
+  }      
 	else handle.receiveMessage(this);
 
 	return true;
