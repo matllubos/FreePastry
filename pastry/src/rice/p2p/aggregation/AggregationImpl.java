@@ -701,7 +701,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private void storeAggregate(final Aggregate aggr, final long expiration, final ObjectDescriptor[] desc, final Id[] pointers, final Continuation command) {
     aggr.setId(factory.buildId(aggr.getContentHash()));
-    log("Storing aggregate, CH="+aggr.getId());
+    log("Storing aggregate, CH="+aggr.getId()+", expiration="+expiration+" (rel "+(expiration-System.currentTimeMillis())+")");
   
     aggregateStore.insert(aggr, new Continuation() {
       public void receiveResult(Object o) {
@@ -872,12 +872,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       if (components[i].refreshedLifetime > maxLifetime)
         maxLifetime = components[i].refreshedLifetime;
 
-    if (maxLifetime > (now + 60 * SECONDS))
-      maxLifetime = now + 60 * SECONDS;
-
     return maxLifetime;
   }
-
 
   private void refreshAggregates() {
     Enumeration enum = aggregateList.elements();
