@@ -100,6 +100,6 @@ public class RingNodeId extends NodeId {
   }
   
   public String toString() {
-    return "[RingId:" + ringId + ", NodeId" + super.toString() + "]";
+    return "[RingId:" + ringId + ", NodeId:" + super.toString() + "]";
   }
 }

@@ -52,13 +52,23 @@ import java.security.*;
 
 public class RandomRingNodeIdFactory extends RandomNodeIdFactory {
 
+  private RingId ringId;
+
+  public RandomRingNodeIdFactory() {
+    ringId = null;
+  }
+
+  public RandomRingNodeIdFactory(RingId ringId) {
+    this.ringId = ringId;
+  }
+  
   /**
    * generate a nodeId
    *
    * @return the new nodeId
    */
   public NodeId generateNodeId() {
-    return new RingNodeId(super.generateNodeId(), null);
+    return new RingNodeId(super.generateNodeId(), ringId);
   }
 
 }

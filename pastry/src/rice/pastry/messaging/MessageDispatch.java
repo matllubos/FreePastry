@@ -63,6 +63,10 @@ public class MessageDispatch
 
     public void registerReceiver(Address address, MessageReceiver receiver) 
     {
+      if (addressBook.get(address) != null) {
+        System.out.println("ERROR - Registering receiver for already-registered address " + address);
+      }
+      
 	addressBook.put(address, receiver);	
     }
 
@@ -78,11 +82,13 @@ public class MessageDispatch
     {
 	MessageReceiver mr = (MessageReceiver) addressBook.get(msg.getDestination());
 
-	if (mr != null) { mr.receiveMessage(msg); return true; }
-	else throw new Error("message " + msg + " could not be dispatched at " + msg.getDestination());
-
-	// this should be a more interseting exception...
-    }
+	if (mr != null) {
+    mr.receiveMessage(msg); return true;
+  } else {
+    System.out.println("Could not dispatch message " + msg + " becuase the application address " + msg.getDestination() + " was unknown.");
+    System.out.println("Message is going to be dropped on the floor.");
+  }
+  }
 
     /**
      * Constructor.

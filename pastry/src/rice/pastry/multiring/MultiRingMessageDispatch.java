@@ -50,6 +50,10 @@ public class MultiRingMessageDispatch extends MessageDispatch {
     this.dispatch = dispatch;
   }
 
+  public void registerReceiver(Address address, MessageReceiver receiver) {
+    dispatch.registerReceiver(address, receiver);
+  }
+
   public boolean dispatchMessage(Message msg) {
     node.processMessage(msg);
 

@@ -47,6 +47,8 @@ import rice.pastry.leafset.*;
 import rice.pastry.security.*;
 import rice.pastry.standard.*;
 
+import rice.scribe.*;
+
 /**
  * Class which represents a pastry node which is in multiple rings.  It internally
  * contains a pastry node for each seperate ring, and has logic for routing messages
@@ -91,10 +93,12 @@ public class MultiRingPastryNode extends PastryNode {
   public RingId getRingId() {
     return ((RingNodeId) myNodeId).getRingId();
   }
+
+  public Scribe getScribe() {
+    return appl.getScribe();
+  }
   
   public void processMessage(Message msg) {
-    System.out.println(getNodeId() + " Saw the message " + msg.getClass().getName());
-    
     if ((msg instanceof JoinRequest) &&
         ((JoinRequest) msg).accepted()) {
       NodeHandle acceptor = ((JoinRequest) msg).getJoinHandle();

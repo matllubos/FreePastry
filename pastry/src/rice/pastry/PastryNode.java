@@ -113,8 +113,6 @@ public abstract class PastryNode implements MessageReceiver {
 
     public void setMessageDispatch(MessageDispatch md) {
       myMessageDispatch = md;
-
-      System.out.println("Set MD to a " + md.getClass().getName());
     }
     
     /**

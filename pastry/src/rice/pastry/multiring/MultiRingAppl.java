@@ -64,7 +64,7 @@ import rice.scribe.messaging.*;
  * @author Alan Mislove
  */ 
 
-public class MultiRingAppl extends PastryAppl implements IScribeApp {
+public class MultiRingAppl extends PastryAppl implements IScribeApp, Serializable {
 
   public static int REMINDER_TIMEOUT = 5000;
 
@@ -95,6 +95,10 @@ public class MultiRingAppl extends PastryAppl implements IScribeApp {
   public void addRing(RingId ringId) {
     System.out.println("Joining SCRIBE group " + getRingId() + " at " + thePastryNode.getNodeId());
     scribe.join(ringId.toNodeId(), this, credentials, null);
+  }
+
+  protected Scribe getScribe() {
+    return scribe;
   }
 
   protected RingId getRingId() {
