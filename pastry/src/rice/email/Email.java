@@ -126,6 +126,7 @@ public class Email implements java.io.Serializable {
    * saves the references to the content in the email.  
    * Should be called before the Email is sent over the wire.
    *
+   * // JM errorListener?  Wrong, wrong, wrong. Hrumph.
    * @param errorListener os the object notified of any errors in
    * storage.  If the storage process is successful, then this
    * listener will not be notified of anything.
@@ -133,7 +134,6 @@ public class Email implements java.io.Serializable {
   protected void storeData(Continuation errorListener) {   
     // if the body has not already been inserted into PAST
     if (this.bodyRef == null) {
-      //if (!(this.bodyRef instanceof EmailDataReference)) {
       EmailStoreDataTask command = new EmailStoreDataTask(EmailStoreDataTask.BODY, errorListener);
       storage.storeContentHash(body, command);
     }
@@ -285,8 +285,8 @@ public class Email implements java.io.Serializable {
       
       // store the next data item in the email
       _index = _index + 1;      
-      if (_index < attachments.length) {
-	EmailStoreDataTask command = new EmailStoreDataTask(_index, null);
+      if ((attachments != null) && (_index < attachments.length)) {
+	EmailStoreDataTask command = new EmailStoreDataTask(_index, _resultListener);
 	storage.storeContentHash(attachments[_index], command);
       }
     }
