@@ -5,6 +5,7 @@ import java.io.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
 import rice.persistence.StorageManager;
+import rice.p2p.aggregation.messaging.*;
 import rice.Continuation;
 import rice.p2p.glacier.v2.DebugContent;
 import rice.p2p.glacier.VersionKey;
@@ -636,7 +637,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                 public void receiveResult(Object o) {
                   if (remainingHere > 0) {
                     log("Continuing burst insert, "+remainingHere+" remaining");
-                    int thisAvgSize = ((0.0001*rand.nextInt(1000)) < sizeSkew) ? smallSize : largeSize;
+                    int thisAvgSize = ((0.001*rand.nextInt(1000)) < sizeSkew) ? smallSize : largeSize;
                     int thisSize = (int)(0.3*thisAvgSize + rand.nextInt((int)(1.4*thisAvgSize)));
                     Id randomID = factory.buildRandomId(rand);
                     remainingHere --;

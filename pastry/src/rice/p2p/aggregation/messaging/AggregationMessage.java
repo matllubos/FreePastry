@@ -1,4 +1,4 @@
-package rice.p2p.aggregation;
+package rice.p2p.aggregation.messaging;
 
 import rice.*;
 import rice.p2p.commonapi.*;
