@@ -177,7 +177,22 @@ public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
     public NodeId getNodeId(){
 	return m_scribe.getNodeId();
     }
+
+    public StripeId getPrimaryStripeId( ChannelId channelId )
+    {
+	Channel channel = (Channel) m_channels.get(channelId);
+        Stripe primary_stripe = channel.getPrimaryStripe();
+        return primary_stripe.getStripeId();
+    }
+
+    public RoutingTable getRoutingTable( ChannelId channelId )
+    {
+	Channel channel = (Channel) m_channels.get(channelId);
+	return channel.getRoutingTable();
+    }
+
 }
+
 
 
 

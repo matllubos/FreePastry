@@ -158,6 +158,20 @@ public class DirectSplitStreamTest{
 	DirectSplitStreamTestApp app2 = (DirectSplitStreamTestApp) test.splitStreamApps.elementAt(0);
 	passed = test.checkTree((NodeId)app2.getSpareCapacityId(channelId));
 
+
+        /**
+         * Now check all channels to ensure that their primary stripe
+         * shares a prefix with their node id
+         */
+        passed = test.checkPrimaryStripeIds( channelId );
+
+	if(passed)
+	    System.out.println("\n\nPRIMARY STRIPE ID TEST : PASSED \n\n");
+	else
+	    System.out.println("\n\nPRIMARY STRIPE ID TEST : FAILED \n\n");
+
+        result &= passed;
+
 	/**
 	 * TEST 3 
 	 * Checking if everybody receives the data when its being sent
@@ -206,11 +220,12 @@ public class DirectSplitStreamTest{
 
 	test.printParents(channelId);
 
+
 	/**
 	 * Now we will fail some nodes currently and then see if the system
 	 * still works.
 	 */
-	/*	
+		
 	test.killNodes(test.concurrentFailures);
 	for(int i = 0; i <= test.trThreshold; i++)
 	    test.scheduleHBOnAllNodes();
@@ -235,7 +250,7 @@ public class DirectSplitStreamTest{
 	else
 	    System.out.println("\n\nAfter Failing Nodes :::: STRIPE-MEMBERSHIP FAILED \n\n");
 
-	*/
+
 	System.out.println(PastrySeed.getSeed() );
     }
 
@@ -352,7 +367,24 @@ public class DirectSplitStreamTest{
     public boolean simulate() { 
 	return simulator.simulate(); 
     }
-    
+
+    /**
+     * Determines if all channels have the correct primary stripe set
+     */
+    public boolean checkPrimaryStripeIds( ChannelId channelId )
+    {
+        boolean returner = true;
+        for ( int i=0; i<splitStreamApps.size(); i++ )
+        {
+            DirectSplitStreamTestApp app = ( DirectSplitStreamTestApp) splitStreamApps.elementAt(0);
+            StripeId primary_id = app.getPrimaryStripeId( channelId );
+	    returner &= ( primary_id.getDigit( app.getRoutingTable(channelId).numRows() -1, 4) 
+	                  == app.getNodeId().getDigit( app.getRoutingTable(channelId).numRows() -1,4) );
+        }
+        return returner;
+    }
+            
+        
     /**
      * Checks if all nodes are part of the tree. We do a tree traversal from
      * the root of the tree and see if number of ndoes in the tree is same
