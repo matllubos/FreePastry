@@ -176,7 +176,7 @@ public class RouteMessage extends Message implements Serializable, rice.p2p.comm
     public RouteMessage(Id target, Message msg, NodeHandle firstHop, Address aux) 
     {
 	super(new RouterAddress());
-	this.target = (NodeId)target;
+	this.target = (Id)target;
 	internalMsg = msg;
 	this.opts = new SendOptions();
 	auxAddress = aux;
@@ -306,7 +306,7 @@ public class RouteMessage extends Message implements Serializable, rice.p2p.comm
     }
 
     public void setDestinationId(rice.p2p.commonapi.Id id) {
-      target = (NodeId) id;
+      target = (Id) id;
     }
 
     public void setNextHopHandle(rice.p2p.commonapi.NodeHandle nextHop) {
