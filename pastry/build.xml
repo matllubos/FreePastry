@@ -62,6 +62,7 @@
            classpathref="project.classpath"
            includes="**/*.java"
            deprecation="yes"
+           debuglevel="lines,vars,source"
            debug="true">
            
     </javac>
@@ -102,7 +103,7 @@
     </jar>
   </target>
 
-  <target name="epost" depends="compile">
+  <target name="epost_jar" depends="compile">
     <jar destfile="epost.jar" manifest="${jar.dir}/epost/Manifest">
       <fileset dir="${build.dir}" includes="rice/Continuation*.class"/>
       <fileset dir="${build.dir}" includes="rice/Executable*.class"/>
@@ -122,8 +123,12 @@
       <fileset dir="${build.dir}" includes="rice/selector/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/serialization/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/visualization/**/*.class"/>
-      <fileset dir="${jar.dir}/epost" includes="ca.publickey,default.params"/>
+      <fileset dir="${jar.dir}/epost" includes="ca.publickey,default.params,ePOST_certificate.cer"/>
     </jar>
+  </target>
+
+  <target name="epost" depends="epost_jar">
+    <signjar jar="epost.jar" alias="ePOST" storepass="monkey" keystore="jars/ePOST_keystore" />
   </target>
 
 </project>
