@@ -6,6 +6,7 @@ import java.util.*;
 
 import rice.pastry.*;
 import rice.post.security.*;
+import rice.p2p.past.*;
 
 /**
  * This class is used internally by the storage package to
@@ -13,24 +14,13 @@ import rice.post.security.*;
  * 
  * @version $Id$
  */
-class SignedData implements Serializable {
+class SignedData extends StorageServiceData {
 
-  /**
-   * The data being stored.
-   */
-  private byte[] data;
+  // The time that the data was stored.
+  protected byte[] timestamp;
 
-  /**
-   * The time that the data was stored.
-   */
-  private byte[] timestamp;
-
-  /**
-   * The signature used to sign the data.
-   */
-  private PostSignature signature;
-
-  public transient Object id;
+  // The signature used to sign the data.
+  protected PostSignature signature;
   
   /**
    * Builds a SignedData for a byte array given a timestamp.
@@ -41,20 +31,16 @@ class SignedData implements Serializable {
    * @param time The timestamp
    * @param credentials Credentials of the data
    */
-  public SignedData(byte[] data, byte[] timestamp) {
-    this.data = data;
+  public SignedData(Id location, byte[] data, byte[] timestamp) {
+    super(location, data);
+    
     this.timestamp = timestamp;
     this.signature = null;
   }
 
   /**
-   * @return The actual data
-   */
-  public byte[] getData() {
-    return data;
-  }
-
-  /**
+   * Returns the internal timestamp of this version
+   *
    * @return The timestamp when the data was stored
    */
   public byte[] getTimestamp() {
@@ -95,6 +81,33 @@ class SignedData implements Serializable {
   }
 
   public String toString() {
-    return "SignedData[" + id + "]";
+    return "SignedData[" + data.length + "]";
+  }
+
+  /**
+   * Checks if a insert operation should be allowed.  Invoked when a
+   * Past node receives an insert request and it is a replica root for
+   * the id; invoked on the object to be inserted.  This method
+   * determines the effect of an insert operation on an object that
+   * already exists: it computes the new value of the stored object,
+   * as a function of the new and the existing object.
+   *
+   * @param id the key identifying the object
+   * @param newObj the new object to be stored
+   * @param existingObj the existing object stored on this node (null if no object associated with id is stored on this node)
+   * @return null, if the operation is not allowed; else, the new
+   * object to be stored on the local node.
+   */
+  public PastContent checkInsert(rice.p2p.commonapi.Id id, PastContent existingContent) throws PastException {
+    return this;
+  }
+
+  /**
+   * States if this content object is mutable. Mutable objects are not subject to dynamic caching in Past.
+   *
+   * @return true if this object is mutable, else false
+   */
+  public boolean isMutable() {
+    return true;
   }
 }

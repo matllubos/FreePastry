@@ -19,8 +19,8 @@ public class Folder {
   // name of the folder
   private String _name;
 
-  // the log of the Folder
-  private Log _log;
+  // the underlying log of the Folder
+  private EmailLog _log;
 
   // the storage service used by the Folder to fetch log contents
   private StorageService _storage;
@@ -46,7 +46,7 @@ public class Folder {
    * @param log the Log which contains the data for the Folder.
    * @param storage the storage service used to get log data from PAST.
    */
-  public Folder(Log log, Post post) {
+  public Folder(EmailLog log, Post post) {
     if (log.getName() instanceof String) {
       _name = (String) log.getName();
     } else {
@@ -192,7 +192,7 @@ public class Folder {
    */
   public void createChildFolder(String name, Continuation command) {
     // make the log to add
-    Log log = new Log(name, _storage.getRandomNodeId(), _post);
+    EmailLog log = new EmailLog(name, _storage.getRandomNodeId(), _post);
     // make the entry to insert after the new log has been added
     LogEntry entry = new InsertFolderLogEntry(name);
     // make the continuation to perform after adding the log.  This takes in the entry to insert
@@ -411,7 +411,7 @@ public class Folder {
    */
   protected class FolderAddLogEntryTask implements Continuation {
     LogEntry _entry;
-    Log _newLog;
+    EmailLog _newLog;
     Continuation _command;
     String _name;
     boolean _isAdded = false;
@@ -419,7 +419,7 @@ public class Folder {
     /**
       * Constructs a FolderAddLogEntryTask.
      */
-    public FolderAddLogEntryTask(LogEntry entry, Log newLog, Continuation command) {
+    public FolderAddLogEntryTask(LogEntry entry, EmailLog newLog, Continuation command) {
       _entry = entry;
       _newLog = newLog;
       _command = command;
@@ -428,7 +428,7 @@ public class Folder {
     /**
      * Constructs a FolderAddLogEntryTask.
      */
-    public FolderAddLogEntryTask(String name, LogEntry entry, Log newLog, Continuation command) {
+    public FolderAddLogEntryTask(String name, LogEntry entry, EmailLog newLog, Continuation command) {
       _entry = entry;
       _newLog = newLog;
       _command = command;
@@ -515,7 +515,7 @@ public class Folder {
      * Take the result, form a Folder from it, and returns the Folder to the given user continuation.
      */
     public void receiveResult(Object o) {
-      Log log = (Log)o;
+      EmailLog log = (EmailLog) o;
       log.setPost(_post);
 
       Folder f = new Folder(log, _post);

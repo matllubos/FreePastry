@@ -18,7 +18,7 @@ public class LogReference extends SignedReference {
   /**
    * Creates a new reference to a particular Log object.
    */
-  public LogReference(NodeId location) {
+  public LogReference(Id location) {
     super(location);
   }
   

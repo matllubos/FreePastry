@@ -21,7 +21,7 @@ public class SecureReference implements Serializable {
   /**
    * Location where this data is stored in PAST.
    */
-  private NodeId location;
+  private Id location;
 
   /**
    * Key used to sign the content hash.
@@ -35,7 +35,7 @@ public class SecureReference implements Serializable {
    * @param location The location in PAST of the PostData object
    * @param key The encryption key of the PostData object
    */
-  public SecureReference(NodeId location, Key key) {
+  public SecureReference(Id location, Key key) {
     this.location = location;
     this.key = key;
   }
@@ -43,7 +43,7 @@ public class SecureReference implements Serializable {
   /**
    * @return The location of the data referenced by this object
    */
-  public NodeId getLocation() {
+  public Id getLocation() {
     return location;
   }
 

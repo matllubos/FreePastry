@@ -21,7 +21,7 @@ public class Log implements PostData {
   /**
    * The location of this log in PAST.
    */
-  private NodeId location;
+  private Id location;
 
   /**
    * Some unique identifier to name this log.
@@ -55,7 +55,7 @@ public class Log implements PostData {
    * @param name Some unique identifier for this log
    * @param location The location of this log in PAST
    */
-  public Log(Object name, NodeId location, Post post) {
+  public Log(Object name, Id location, Post post) {
     this.name = name;
     this.location = location;
 
@@ -67,7 +67,7 @@ public class Log implements PostData {
   /**
    * @return The location of this Log in PAST.
    */
-  public NodeId getLocation() {
+  public Id getLocation() {
     return location;
   }
 
@@ -236,7 +236,7 @@ public class Log implements PostData {
    * @param location The location of this object.
    * @return A LogReference to this object
    */
-  public SignedReference buildSignedReference(NodeId location) {
+  public SignedReference buildSignedReference(Id location) {
     return new LogReference(location);
   }
 
@@ -248,7 +248,7 @@ public class Log implements PostData {
    * @param key
    * @throws IllegalArgumentException Always
    */
-  public ContentHashReference buildContentHashReference(NodeId location, Key key) {
+  public ContentHashReference buildContentHashReference(Id location, Key key) {
     throw new IllegalArgumentException("Logs are only stored as signed blocks.");
   }
 
@@ -260,7 +260,7 @@ public class Log implements PostData {
    * @param key The for the data
    * @throws IllegalArgumentException Always
    */
-  public SecureReference buildSecureReference(NodeId location, Key key) {
+  public SecureReference buildSecureReference(Id location, Key key) {
     throw new IllegalArgumentException("Logs are only stored as signed blocks.");
   }
 

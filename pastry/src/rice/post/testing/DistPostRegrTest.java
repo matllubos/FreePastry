@@ -4,8 +4,7 @@ import rice.*;
 
 import rice.p2p.commonapi.IdFactory;
 
-import rice.past.*;
-import rice.past.messaging.*;
+import rice.p2p.past.*;
 
 import rice.pastry.*;
 import rice.pastry.commonapi.*;
@@ -121,7 +120,7 @@ public class DistPostRegrTest {
     StorageManager sm = new StorageManager(FACTORY,
                                            new MemoryStorage(FACTORY),
                                            new LRUCache(new MemoryStorage(FACTORY), 1000000));
-    PASTServiceImpl past = new PASTServiceImpl(pn, sm, INSTANCE_NAME);
+    PastImpl past = new PastImpl(pn, sm, k, INSTANCE_NAME);
     pastNodes.add(past);
 
     Scribe scribe = new Scribe(pn, credentials);
@@ -135,7 +134,7 @@ public class DistPostRegrTest {
   protected void makePOSTNode(int i) {
     try {
       PastryNode pn = (PastryNode) pastrynodes.elementAt(i);
-      PASTServiceImpl past = (PASTServiceImpl) pastNodes.elementAt(i);
+      PastImpl past = (PastImpl) pastNodes.elementAt(i);
       Scribe scribe = (Scribe) scribeNodes.elementAt(i);
 
       KeyPair pair = kpg.generateKeyPair();
@@ -451,15 +450,15 @@ public class DistPostRegrTest {
       return false;
     }
 
-    public SignedReference buildSignedReference(NodeId location) {
+    public SignedReference buildSignedReference(Id location) {
       return new SignedReference(location);
     }
 
-    public ContentHashReference buildContentHashReference(NodeId location, Key key) {
+    public ContentHashReference buildContentHashReference(Id location, Key key) {
       return new ContentHashReference(location, key);
     }
 
-    public SecureReference buildSecureReference(NodeId location, Key key) {
+    public SecureReference buildSecureReference(Id location, Key key) {
       return new SecureReference(location, key);
     }
   }

@@ -1,7 +1,7 @@
 package rice.post;
 
 import rice.pastry.*;
-import rice.past.*;
+import rice.p2p.past.*;
 
 /**
  * This class represents the abstract notion of the address
@@ -24,5 +24,5 @@ public abstract class PostGroupAddress extends PostEntityAddress {
    * @param past The PAST service to use, if necessary
    * @return All of the addresses in this group.
    */
-  public abstract PostEntityAddress[] getAddresses(PASTService past);
+  public abstract PostEntityAddress[] getAddresses(Past past);
 }

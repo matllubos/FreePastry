@@ -24,7 +24,7 @@ public interface PostData extends Serializable {
    * @param location The location of the data
    * @return A pointer to the data
    */
-  public SignedReference buildSignedReference(NodeId location);
+  public SignedReference buildSignedReference(Id location);
 
   /**
    * This method dynamically builds an appropriate ContentHashReference
@@ -34,7 +34,7 @@ public interface PostData extends Serializable {
    * @param key The for the data
    * @return A pointer to the data
    */
-  public ContentHashReference buildContentHashReference(NodeId location, Key key);
+  public ContentHashReference buildContentHashReference(Id location, Key key);
 
   /**
     * This method dynamically builds an appropriate SecureReference
@@ -44,5 +44,5 @@ public interface PostData extends Serializable {
    * @param key The for the data
    * @return A pointer to the data
    */
-  public SecureReference buildSecureReference(NodeId location, Key key);  
+  public SecureReference buildSecureReference(Id location, Key key);  
 }

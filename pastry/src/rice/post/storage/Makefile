@@ -8,7 +8,9 @@ SOURCE  = \
 	SignedData.java \
 	SignedReference.java \
 	SecureData.java \
-	SecureReference.java
+	SecureReference.java \
+  StorageServiceData.java \
+  StorageServiceDataHandle.java
 
 RMI_SOURCE =
 

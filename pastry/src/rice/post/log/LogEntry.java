@@ -118,7 +118,7 @@ public abstract class LogEntry implements PostData {
    * @param location The location of this object.
    * @throws IllegalArgument Always
    */
-  public SignedReference buildSignedReference(NodeId location) {
+  public SignedReference buildSignedReference(Id location) {
     throw new IllegalArgumentException("Log entries are only stored as content-hash.");
   }
 
@@ -130,7 +130,7 @@ public abstract class LogEntry implements PostData {
    * @param key The key used to encrypt this object
    * @return A LogEntryReference to this object
    */
-  public ContentHashReference buildContentHashReference(NodeId location, Key key) {
+  public ContentHashReference buildContentHashReference(Id location, Key key) {
     return new LogEntryReference(location, key);
   }
 
@@ -142,7 +142,7 @@ public abstract class LogEntry implements PostData {
    * @param key The for the data
    * @throws IllegalArgumentException Always
    */
-  public SecureReference buildSecureReference(NodeId location, Key key) {
+  public SecureReference buildSecureReference(Id location, Key key) {
     throw new IllegalArgumentException("Log entries are only stored as content-hash blocks.");
   }  
 }

@@ -19,7 +19,7 @@ public class SignedReference implements Serializable {
   /**
    * Location where this data is stored in PAST.
    */
-  private NodeId location;
+  private Id location;
 
   /**
    * Contructs a PostDataReference object given
@@ -27,14 +27,14 @@ public class SignedReference implements Serializable {
    *
    * @param location The location in PAST of the PostData object
    */
-  public SignedReference(NodeId location) {
+  public SignedReference(Id location) {
     this.location = location;
   }
 
   /**
    * @return The location of the data referenced by this object
    */
-  public NodeId getLocation() {
+  public Id getLocation() {
     return location;
   }
 

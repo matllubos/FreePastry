@@ -143,7 +143,7 @@ public class EmailService extends PostClient {
                 try {
                   if (folder == null) {
 
-                    Log emailLog = (Log) o;
+                    EmailLog emailLog = (EmailLog) o;
                     emailLog.setPost(_post);
 
                     folder = new Folder(emailLog, _post);
@@ -180,7 +180,7 @@ public class EmailService extends PostClient {
               }
             };
 
-            Log emailRootLog = new Log(pca, _post.getStorageService().getRandomNodeId(), _post);
+            EmailLog emailRootLog = new EmailLog(pca, _post.getStorageService().getRandomNodeId(), _post);
             mainLog.addChildLog(emailRootLog, store);
           } else {
 
@@ -190,7 +190,7 @@ public class EmailService extends PostClient {
 
                 try {
                   if (folder == null) {
-                    Log emailLog = (Log) o;
+                    EmailLog emailLog = (EmailLog) o;
                     emailLog.setPost(_post);
 
                     folder = new Folder(emailLog, _post);

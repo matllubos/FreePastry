@@ -16,7 +16,7 @@ import rice.pastry.standard.*;
 import rice.scribe.*;
 import rice.scribe.messaging.*;
 
-import rice.past.*;
+import rice.p2p.past.*;
 
 import rice.persistence.*;
 
@@ -54,6 +54,8 @@ public class EmailProxy {
   static final IdFactory FACTORY = new PastryIdFactory();
 
   static final String INSTANCE_NAME = "EmailProxy";
+
+  static final int REPLICATION_FACTOR = 3;
   
   private Credentials _credentials = new PermissiveCredentials();
 
@@ -61,7 +63,7 @@ public class EmailProxy {
 
   private Scribe scribe;
 
-  private PASTService past;
+  private Past past;
 
   private Post post;
 
@@ -102,7 +104,7 @@ public class EmailProxy {
       System.out.println("[ DONE ]");
 
       System.out.print("    Generating user address\t\t\t\t\t");
-      address = new PostUserAddress("merziyah@" + InetAddress.getLocalHost().getHostAddress());
+      address = new PostUserAddress("amislove@" + InetAddress.getLocalHost().getHostAddress());
       System.out.println("[ DONE ]");
 
       System.out.print("    Generating user key pair\t\t\t\t\t");
@@ -125,7 +127,7 @@ public class EmailProxy {
       System.out.println("[ DONE ]");
 
       System.out.print("    Starting PAST service\t\t\t\t\t");
-      past = new PASTServiceImpl(pastry, storage, INSTANCE_NAME);
+      past = new PastImpl(pastry, storage, REPLICATION_FACTOR, INSTANCE_NAME);
       System.out.println("[ DONE ]");
 
       System.out.print("    Press <ENTER> when you have the Pastry and PAST networks up.\n");

@@ -9,7 +9,8 @@ SOURCE  = \
 	DeleteMailEvent.java \
 	InsertMailEvent.java \
 	DeleteFolderEvent.java \
-	InsertFolderEvent.java
+	InsertFolderEvent.java \
+  EmailLog.java
 
 RMI_SOURCE =
 

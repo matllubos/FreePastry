@@ -9,7 +9,7 @@ import rice.pastry.wire.*;
 import rice.post.*;
 import rice.post.security.*;
 import rice.email.*;
-import rice.past.*;
+import rice.p2p.past.*;
 import rice.scribe.*;
 import rice.persistence.*;
 
@@ -28,6 +28,8 @@ public class EmailTest {
   public static IdFactory FACTORY = new PastryIdFactory();
   
   public static String INSTANCE_NAME = "EmailTest";
+
+  public static int REPLICATION_FACTOR = 3;
   
   private InetSocketAddress firstAddress = null;
   private SecurityService securityService = new SecurityService(null, null);
@@ -64,7 +66,7 @@ public class EmailTest {
     PostUserAddress[] addresses = new PostUserAddress[nodeNum];
     StorageManager[] sManagers = new StorageManager[nodeNum];
     Scribe[] scribes = new Scribe[nodeNum];
-    PASTService[] pastServices = new PASTService[nodeNum];
+    Past[] pastServices = new Past[nodeNum];
     EmailService[] emailServices = new EmailService[nodeNum];
 
     try {
@@ -99,9 +101,10 @@ public class EmailTest {
 
         scribes[i] = new Scribe(localNodes[i], null);
 
-        pastServices[i] = new PASTServiceImpl(localNodes[i],
-                                              sManagers[i],
-                                              INSTANCE_NAME);
+        pastServices[i] = new PastImpl(localNodes[i],
+                                       sManagers[i],
+                                       REPLICATION_FACTOR,
+                                       INSTANCE_NAME);
       }
 
       // now that we've cereated all those, create the post

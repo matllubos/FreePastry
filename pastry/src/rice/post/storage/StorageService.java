@@ -9,7 +9,7 @@ import javax.crypto.*;
 import javax.crypto.spec.*;
 
 import rice.*;
-import rice.past.*;
+import rice.p2p.past.*;
 import rice.post.*;
 import rice.post.security.*;
 import rice.pastry.*;
@@ -35,7 +35,7 @@ public class StorageService {
   /**
    * The PAST service used for distributed persistant storage.
    */
-  private PASTService past;
+  private Past past;
   
   /**
    * Security service to handle all encryption tasks.
@@ -64,7 +64,7 @@ public class StorageService {
    * @param credentials Credentials to use to store data.
    * @param security SecurityService to handle all security related tasks
    */
-  public StorageService(PostEntityAddress address, PASTService past, Credentials credentials, SecurityService security) {
+  public StorageService(PostEntityAddress address, Past past, Credentials credentials, SecurityService security) {
     this.entity = address;
     this.past = past;
     this.credentials = credentials;
@@ -79,7 +79,7 @@ public class StorageService {
     pendingVerification = new Hashtable();
   }
 
-  public NodeId getRandomNodeId() {
+  public Id getRandomNodeId() {
     return factory.generateNodeId();
   }
 
@@ -131,7 +131,7 @@ public class StorageService {
    * @param location The location where to store the data
    * @param command The command to run once the store has completed.
    */
-  public void storeSigned(PostData data, NodeId location, Continuation command) {
+  public void storeSigned(PostData data, Id location, Continuation command) {
     StoreSignedTask task = new StoreSignedTask(data, location, command);
     task.start();
   }
@@ -261,7 +261,7 @@ public class StorageService {
 
     private PostData data;
     private Continuation command;
-    private NodeId location;
+    private Id location;
     private Key key;
     
     /**
@@ -289,16 +289,15 @@ public class StorageService {
         if (entity.getAddress() instanceof RingNodeId) {
           location = new RingNodeId(new NodeId(loc), ((RingNodeId) entity.getAddress()).getRingId());
         } else {
-          location = new NodeId(loc);
+          location = new Id(loc);
         }
         
         key = new SecretKeySpec(hash, "DES");
 
-        ContentHashData chd = new ContentHashData(cipherText);
-        chd.id = data;
+        ContentHashData chd = new ContentHashData(location, cipherText);
 
         // Store the content hash data in PAST
-        past.insert(location, chd, this);
+        past.insert(chd, this);
 
         // Now we wait until PAST calls us with the receiveResult
         // and then we return the address
@@ -313,10 +312,21 @@ public class StorageService {
      * @param result The result of the command.
      */
     public void receiveResult(Object result) {
-      if (((Boolean) result).booleanValue()) {
-        command.receiveResult(data.buildContentHashReference(location, key));
+      if (! (result instanceof Boolean[])) {
+        command.receiveException(new IOException("Storage of signed data into Past returned unknown data " + result));
       } else {
-        command.receiveException(new IOException("Storage of content hash into PAST failed."));
+        Boolean[] results = (Boolean[]) result;
+        boolean error = false;
+
+        for (int i=0; i<results.length; i++) {
+          error = error || (results[i] == null) || (! results[i].booleanValue());
+        }
+
+        if (! error) {
+          command.receiveResult(data.buildContentHashReference(location, key));
+        } else {
+          command.receiveException(new IOException("Storage of signed data into PAST failed - replicas did not store object."));
+        }
       }
     }
 
@@ -431,10 +441,8 @@ public class StorageService {
     
     private PostData data;
     private Continuation command;
-    private NodeId location;
+    private Id location;
     private Key key;
-
-    private int state;
 
     /**
      * This contructs creates a task to store a given data and call the
@@ -443,7 +451,7 @@ public class StorageService {
      * @param data The data to store
      * @param command The command to run once the data has been stored
      */
-    protected StoreSignedTask(PostData data, NodeId location, Continuation command) {
+    protected StoreSignedTask(PostData data, Id location, Continuation command) {
       this.data = data;
       this.location = location;
       this.command = command;
@@ -453,40 +461,21 @@ public class StorageService {
       * Starts this task running.
      */
     protected void start() {
-      state = STATE_1;
-      past.delete(location, this);
-
-      // Now we wait to see if this thing existed in PAST, which is relayed to
-      // us via the receiveResult method
-    }
-
-    private void startState1() {
       try {
         byte[] plainText = security.serialize(data);
         byte[] timestamp = security.getByteArray(System.currentTimeMillis());
 
-        SignedData sd = new SignedData(plainText, timestamp);
-        sd.id = data;
+        SignedData sd = new SignedData(location, plainText, timestamp);
 
         sd.setSignature(security.sign(sd.getDataAndTimestamp()));
 
-        state = STATE_2;
-
         // Store the signed data in PAST 
-        past.insert(location, sd, this);
+        past.insert(sd, this);
 
         // Now we wait to make sure that the update or insert worked, and
         // then return the reference.
       } catch (IOException e) {
         command.receiveException(e);
-      }
-    }
-      
-    private void startState2(boolean success) {
-      if (success) {
-        command.receiveResult(data.buildSignedReference(location));
-      } else {
-        command.receiveException(new StorageException("The signed data could not be stored in PAST"));
       }
     }
 
@@ -496,21 +485,26 @@ public class StorageService {
      * @param result The result of the command.
      */
     public void receiveResult(Object result) {
-      switch (state) {
-        case STATE_1:
-          startState1();
-          break;
-        case STATE_2:
-          startState2(((Boolean) result).booleanValue());
-          break;
-        default:
-          command.receiveException(new IllegalArgumentException("Received unknown value " + result + " as a result of storeSigned."));
-          break;
+      if (! (result instanceof Boolean[])) {
+        command.receiveException(new IOException("Storage of signed data into Past returned unknown data " + result));
+      } else {
+        Boolean[] results = (Boolean[]) result;
+        boolean error = false;
+
+        for (int i=0; i<results.length; i++) {
+          error = error || (results[i] == null) || (! results[i].booleanValue());
+        }
+
+        if (! error) {
+          command.receiveResult(data.buildSignedReference(location));
+        } else {
+          command.receiveException(new IOException("Storage of signed data into PAST failed - replicas did not store object."));
+        }
       }
     }
-
+      
     /**
-      * Called when a previously requested result causes an exception
+     * Called when a previously requested result causes an exception
      *
      * @param result The exception caused
      */
@@ -654,7 +648,7 @@ public class StorageService {
 
     private PostData data;
     private Continuation command;
-    private NodeId location;
+    private Id location;
     private Key key;
 
     /**
@@ -684,16 +678,15 @@ public class StorageService {
         if (entity.getAddress() instanceof RingNodeId) {
           location = new RingNodeId(new NodeId(loc), ((RingNodeId) entity.getAddress()).getRingId());
         } else {
-          location = new NodeId(loc);
+          location = new Id(loc);
         }
         
         key = new SecretKeySpec(keyByte, "DES");
 
-        SecureData sd = new SecureData(cipherText);
-        sd.id = data;
+        SecureData sd = new SecureData(location, cipherText);
 
         // Store the content hash data in PAST
-        past.insert(location, sd, this);
+        past.insert(sd, this);
 
         // Now we wait until PAST calls us with the receiveResult
         // and then we return the address
@@ -708,10 +701,21 @@ public class StorageService {
      * @param result The result of the command.
      */
     public void receiveResult(Object result) {
-      if (((Boolean) result).booleanValue()) {
-        command.receiveResult(data.buildSecureReference(location, key));
+      if (! (result instanceof Boolean[])) {
+        command.receiveException(new IOException("Storage of signed data into Past returned unknown data " + result));
       } else {
-        command.receiveException(new StorageException("Storage of content hash into PAST failed."));
+        Boolean[] results = (Boolean[]) result;
+        boolean error = false;
+
+        for (int i=0; i<results.length; i++) {
+          error = error || (results[i] == null) || (! results[i].booleanValue());
+        }
+
+        if (! error) {
+          command.receiveResult(data.buildSecureReference(location, key));
+        } else {
+          command.receiveException(new IOException("Storage of signed data into PAST failed - replicas did not store object."));
+        }
       }
     }
 

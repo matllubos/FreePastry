@@ -19,7 +19,7 @@ public class LogEntryReference extends ContentHashReference {
   /**
    * Creates a new LogEntryReference.
    */
-  public LogEntryReference(NodeId location, Key key) {
+  public LogEntryReference(Id location, Key key) {
     super(location, key);
   }
 

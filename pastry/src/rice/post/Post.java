@@ -11,7 +11,7 @@ import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.standard.*;
 import rice.pastry.*;
-import rice.past.*;
+import rice.p2p.past.*;
 import rice.scribe.*;
 import rice.scribe.messaging.*;
 import rice.post.log.*;
@@ -32,7 +32,7 @@ public class Post extends PastryAppl implements IScribeApp  {
   /**
    * The local PAST service to use for persistent storage.
    */
-  private PASTService pastService;
+  private Past past;
   
   /**
    * The local Scribe service to use for notification.
@@ -134,7 +134,7 @@ public class Post extends PastryAppl implements IScribeApp  {
    * @throws PostException if the PostLog could not be accessed
    */
   public Post(PastryNode node, 
-              PASTService past, 
+              Past past, 
               IScribe scribe,
               PostEntityAddress address,
               KeyPair keyPair,
@@ -145,7 +145,7 @@ public class Post extends PastryAppl implements IScribeApp  {
   {
     super(node, instance);
     
-    this.pastService = past;
+    this.past = past;
     this.scribeService = scribe;
     this.address = address;
     this.publicKey = keyPair.getPublic();

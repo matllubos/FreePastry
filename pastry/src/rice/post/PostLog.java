@@ -45,7 +45,7 @@ public class PostLog extends Log {
    */
   PostLog(PostEntityAddress user, PublicKey key, PostCertificate cert, Post post, Continuation command) {
     super("User " + user.toString() + "'s log", user.getAddress(), post);
-
+ 
     this.user = user;
     this.key = key;
     this.certificate = cert;
