@@ -85,7 +85,7 @@ public class HelloWorldApp extends PastryAppl {
      * @param rng Random number generator.
      */
     public void sendRndMsg(Random rng) {
-	NodeId rndid = (NodeId) Id.makeRandomId(rng);
+	Id rndid = Id.makeRandomId(rng);
 	if (Log.ifp(5))
 	    System.out.println("Sending message from " + getNodeId() + " to random dest " + rndid);
 	Message msg = new HelloMsg(addr, getNodeId(), rndid, ++msgid);
@@ -185,10 +185,10 @@ public class HelloWorldApp extends PastryAppl {
 
 class HelloMsg extends Message {
     public NodeId source;
-    public NodeId target;
+    public Id target;
     private int msgid;
 
-    public HelloMsg(Address addr, NodeId src, NodeId tgt, int mid) {
+    public HelloMsg(Address addr, NodeId src, Id tgt, int mid) {
 	super(addr);
 	source = src;
 	target = tgt;

@@ -78,7 +78,7 @@ public class DistHelloWorld {
      * Constructor
      */
     public DistHelloWorld() {
-	factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(), protocol, port);
+	factory = DistPastryNodeFactory.getFactory(new IPNodeIdFactory(), protocol, port);
 	pastryNodes = new Vector();
 	helloClients = new Vector();
 	rng = new Random(PastrySeed.getSeed());

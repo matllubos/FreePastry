@@ -2,7 +2,7 @@
 
 GENERAL CLEANUP
 
-    Define commmon API with SimPastry
+#    Define commmon API with SimPastry
 
 CORRECTNESS
 
@@ -20,9 +20,9 @@ FUNCTIONALITY
 
 PERFORMANCE
 
-    Do some memory tuning to allow simulations with larger numbers of nodes.
-    Improve efficiency of NodeIds.
-    Improve serialization efficiency of leafsets.
+#    Do some memory tuning to allow simulations with larger numbers of nodes.
+#    Improve efficiency of NodeIds.
+#    Improve serialization efficiency of leafsets.
     Implement find-nearby-node algorithm.
 #    Socket based wire protocol; use scalable non-blocking I/O support from Java 1.4.
 

@@ -200,7 +200,7 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
     RMINodeHandle localhandle = new RMINodeHandle(null, nodeId, address);
 
     RMINodeHandlePool handlepool = new RMINodeHandlePool();
-    localhandle = (RMINodeHandle) handlepool.coalesce(localhandle); // add ourselves to pool
+    //localhandle = (RMINodeHandle) handlepool.coalesce(localhandle); // add ourselves to pool
 
     RMIPastrySecurityManager secureMan =
       new RMIPastrySecurityManager(localhandle, handlepool);

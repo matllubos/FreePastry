@@ -52,17 +52,26 @@ import rice.p2p.commonapi.*;
  * node.
  * 
  * The policy object allows applications to control the semantics of
- * an instance of PAST. For instance, which objects can be inserted
- * (e.g., content-hash objects only), what happens when an object is
- * inserted that already exists in PAST, whether deletions are allowed
- * and when, etc.
+ * an instance of PAST. For instance, the policy controls which
+ * objects can be inserted (e.g., content-hash objects only), what
+ * happens when an object is inserted that already exists in PAST,
+ * whether deletions are allowed and when, etc.
  *
  * @version $Id$
- * @author Peter Druschel
+ * @author Peter Druschel 
+ *
  */
 
 public interface PASTPolicy {
   
+
+
+    
+
+    //
+    // following are methods invoked on the nodes that store a given object replica
+    //
+
   /**
    * Checks if a insert operation should be allowed.  Invoked when a
    * PAST node receives an insert request and it is a replica root for

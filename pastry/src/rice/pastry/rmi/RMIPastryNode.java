@@ -95,7 +95,7 @@ public class RMIPastryNode extends DistPastryNode implements RMIRemoteNodeI
 		    System.out.println("received " +
 				       (msg instanceof RouteMessage ? "route" : "direct")
 				       + " msg from " + sender + ": " + msg);
-		if (sender != null) handlepool.activate(sender);
+		//if (sender != null) handlepool.activate(sender);
 
 		receiveMessage(msg);
 	    }
