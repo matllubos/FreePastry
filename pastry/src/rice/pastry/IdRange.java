@@ -92,7 +92,7 @@ public class IdRange {
     public boolean equals(Object obj) {
 	IdRange o = (IdRange) obj;
 
-	if (empty == o.empty && ccw == o.ccw && cw == o.cw) return true;
+	if (empty == o.empty && ccw.equals(o.ccw) && cw.equals(o.cw)) return true;
 	else return false;
     }
         
