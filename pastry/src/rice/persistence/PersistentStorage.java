@@ -141,7 +141,7 @@ public class PersistentStorage implements Storage {
 
       if( getUsedSpace() + getFileLength(objFile) > getStorageSize()){
          /* abort, this will put us over quota */
-         deleteFile(transcFile); 
+         deleteFile(transcFile);
          c.receiveResult(new Boolean(false));
          return;
       }
@@ -315,7 +315,7 @@ public class PersistentStorage implements Storage {
     if(directoryTransactionInProgress()){
       directoryCleanUp(appDirectory);
     }
-    initFileMap(backupDirectory);
+    initFileMap(appDirectory);
    }
 
   /**
@@ -416,7 +416,7 @@ public class PersistentStorage implements Storage {
    *
    */
   private void resolveConflict(File conflictFile) throws Exception{
-        String id = conflictFile.getName().split(".")[0];
+        String id = conflictFile.getName().substring(0, conflictFile.getName().indexOf("."));
         PrefixFilter ssf = new PrefixFilter(id);
         File[] files = conflictFile.getParentFile().listFiles(ssf);
         File correctFile = files[0];

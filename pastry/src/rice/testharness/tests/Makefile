@@ -11,7 +11,8 @@ SOURCE  = \
   LogInsertPostTest.java\
   ContentHashInsertPostTest.java\
   ContentHashFetchPostTest.java\
-  SignedInsertPostTest.java
+  SignedInsertPostTest.java\
+  PastTest.java
 
 RMI_SOURCE =
 

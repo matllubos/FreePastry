@@ -88,6 +88,23 @@ public abstract class Test extends PastryAppl implements Serializable {
   }
 
   /**
+    * Constructor which takes the local node this test is on,
+    * an array of all the nodes in the network, and a printwriter
+    * to which to write data.
+    *
+    * @param out The PrintWriter to write test results to.
+    * @param localNode The local Pastry node
+    * @param nodes NodeHandles to all of the other participating
+    *              TestHarness nodes.
+    */
+  public Test(PrintStream out, PastryNode localNode, TestHarness harness, String instance) {
+    super(localNode, instance);
+    _localNode = localNode;
+    _out = out;
+    _harness = harness;
+  }
+
+  /**
    * Method which is called when the TestHarness wants this
    * Test to begin testing.
    */

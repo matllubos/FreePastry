@@ -494,14 +494,12 @@ public class PastImpl implements Past, Application, RMClient {
       } else if (msg instanceof LookupMessage) {
         LookupMessage lmsg = (LookupMessage) msg;
         storage.getObject(lmsg.getId(), getResponseContinuation(msg));
-        // HERE  - NEED TO RETRIEVE HANDLE AND THEN VERIFY OBJECT
       } else if (msg instanceof LookupHandlesMessage) {
         LookupHandlesMessage lmsg = (LookupHandlesMessage) msg;
         getResponseContinuation(msg).receiveResult(endpoint.replicaSet(lmsg.getId(), lmsg.getMax()));
       } else if (msg instanceof FetchMessage) {
         FetchMessage fmsg = (FetchMessage) msg;
         storage.getObject(fmsg.getHandle().getId(), getResponseContinuation(msg));
-        // HERE  - NEED TO VERIFY OBJECT
       } else if (msg instanceof FetchHandleMessage) {
         FetchHandleMessage fmsg = (FetchHandleMessage) msg;
         storage.getObject(fmsg.getId(), new Continuation() {
@@ -566,7 +564,11 @@ public class PastImpl implements Past, Application, RMClient {
       
       Continuation insert = new Continuation() {
         public void receiveResult(Object o) {
-          storage.store(id, (Serializable) o, receive);
+          if (o == null) {
+            System.out.println("Could not fetch id " + id);
+          } else {
+            storage.store(id, (Serializable) o, receive);
+          }
         }
 
         public void receiveException(Exception e) {
