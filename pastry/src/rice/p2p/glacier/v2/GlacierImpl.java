@@ -283,7 +283,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                 bv.add(getHashInput(fkey.getVersionKey(), currentExp));
                 bv.add(getHashInput(fkey.getVersionKey(), prevExp));
               } else {
-                warn("Cannot read metadata of object "+fkey.toStringFull()+", storage returned null");
+                warn("SYNC Cannot read metadata of object "+fkey.toStringFull()+", storage returned null");
               }
             }
           }
@@ -535,19 +535,23 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         while (iter.hasNext()) {
           final Id thisKey = (Id) iter.next();
           final FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(thisKey);
-          if (metadata.getCurrentExpiration() < now) {
-            candidates ++;
-            if (doneSoFar < garbageCollectionMaxFragmentsPerRun) {
-              doneSoFar ++;
-              deleteFragment(thisKey, new Continuation() {
-                public void receiveResult(Object o) {
-                  log(2, "GC collected "+thisKey.toStringFull()+", expired "+(now-metadata.getCurrentExpiration())+" msec ago");
-                }
-                public void receiveException(Exception e) {
-                  log(3, "GC cannot collect "+thisKey.toStringFull());
-                }
-              });
+          if (metadata != null) {
+            if (metadata.getCurrentExpiration() < now) {
+              candidates ++;
+              if (doneSoFar < garbageCollectionMaxFragmentsPerRun) {
+                doneSoFar ++;
+                deleteFragment(thisKey, new Continuation() {
+                  public void receiveResult(Object o) {
+                    log(2, "GC collected "+thisKey.toStringFull()+", expired "+(now-metadata.getCurrentExpiration())+" msec ago");
+                  }
+                  public void receiveException(Exception e) {
+                    log(3, "GC cannot collect "+thisKey.toStringFull());
+                  }
+                });
+              }
             }
+          } else {
+            warn("GC cannot read metadata in object "+thisKey.toStringFull()+", storage returned null");
           }
         }
         
@@ -1060,8 +1064,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         FragmentKey thisKey = (FragmentKey) iter.next();
         boolean isMine = responsibleRange.containsId(getFragmentLocation(thisKey));
         FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(thisKey);
-        result.append(((Id)thisKey).toStringFull()+" "+(isMine ? "OK" : "MI")+" "+
-            (metadata.getCurrentExpiration()-now)+" "+(metadata.getPreviousExpiration()-now)+"\n");
+        if (metadata != null) {
+          result.append(((Id)thisKey).toStringFull()+" "+(isMine ? "OK" : "MI")+" "+
+              (metadata.getCurrentExpiration()-now)+" "+(metadata.getPreviousExpiration()-now)+"\n");
+        }
       }
       
       return result.toString();
@@ -2156,7 +2162,13 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         haveItA[i] = fragmentStorage.exists(gqm.getKey(i));
         if (haveItA[i]) {
           FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(gqm.getKey(i));
-          expirationA[i] = metadata.getCurrentExpiration();
+          if (metadata != null) {
+            expirationA[i] = metadata.getCurrentExpiration();
+          } else {
+            warn("QUERY cannot read metadata in object "+gqm.getKey(i).toStringFull()+", storage returned null");
+            expirationA[i] = 0;
+            haveItA[i] = false;
+          }
         } else {
           expirationA[i] = 0;
         }
@@ -2248,23 +2260,27 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         Id thisPos = getFragmentLocation(fkey);
         if (range.containsId(thisPos)) {
           FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(fkey);
-          if (!bv.contains(getHashInput(fkey.getVersionKey(), metadata.getCurrentExpiration()))) {
-            if (metadata.getCurrentExpiration() >= earliestAcceptableExpiration) {
-              if (metadata.getStoredSince() <= latestAcceptableStoredSince) {
-                log(4, fkey+" @"+thisPos+" - MISSING");
-                missing.add(fkey);
-                if (missing.size() >= syncMaxFragments) {
-                  log(2, "Limit of "+syncMaxFragments+" missing fragments reached");
-                  break;
+          if (metadata != null) {
+            if (!bv.contains(getHashInput(fkey.getVersionKey(), metadata.getCurrentExpiration()))) {
+              if (metadata.getCurrentExpiration() >= earliestAcceptableExpiration) {
+                if (metadata.getStoredSince() <= latestAcceptableStoredSince) {
+                  log(4, fkey+" @"+thisPos+" - MISSING");
+                  missing.add(fkey);
+                  if (missing.size() >= syncMaxFragments) {
+                    log(2, "Limit of "+syncMaxFragments+" missing fragments reached");
+                    break;
+                  }
+                } else {
+                  log(3, fkey+" @"+thisPos+" - TOO FRESH (stored "+(System.currentTimeMillis()-metadata.getStoredSince())+"ms)");
                 }
               } else {
-                log(3, fkey+" @"+thisPos+" - TOO FRESH (stored "+(System.currentTimeMillis()-metadata.getStoredSince())+"ms)");
+                log(3, fkey+" @"+thisPos+" - EXPIRES SOON (in "+(metadata.getCurrentExpiration()-System.currentTimeMillis())+"ms)");
               }
             } else {
-              log(3, fkey+" @"+thisPos+" - EXPIRES SOON (in "+(metadata.getCurrentExpiration()-System.currentTimeMillis())+"ms)");
+              log(4, fkey+" @"+thisPos+" - OK");
             }
           } else {
-            log(4, fkey+" @"+thisPos+" - OK");
+            warn("SYNC RESPONSE cannot read metadata in object "+fkey.toStringFull()+", storage returned null");
           }
         } else log(4, fkey+" @"+thisPos+" - OUT OF RANGE");
       }
@@ -2593,8 +2609,8 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
 
           if (fragmentStorage.exists(thisKey)) {
             final FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(thisKey);
-            if (metadata.getCurrentExpiration() < thisManifest.getExpiration()) {
-              log(2, "Replacing old manifest for "+thisKey+" (expires "+metadata.getCurrentExpiration()+") by new one (expires "+thisManifest.getExpiration()+")");
+            if ((metadata == null) || (metadata.getCurrentExpiration() < thisManifest.getExpiration())) {
+              log(2, "Replacing old manifest for "+thisKey+" (expires "+((metadata == null) ? "(broken)" : ""+metadata.getCurrentExpiration())+") by new one (expires "+thisManifest.getExpiration()+")");
               fragmentStorage.getObject(thisKey, new Continuation() {
                 public void receiveResult(Object o) {
                   if (o instanceof FragmentAndManifest) {
@@ -2627,7 +2643,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                 }
               });
             } else {
-              warn("We already have exp="+metadata.getCurrentExpiration()+", discarding manifest for "+thisKey+" with exp="+thisManifest.getExpiration());
+              warn("We already have exp="+((metadata == null) ? "(broken)" : ""+metadata.getCurrentExpiration())+", discarding manifest for "+thisKey+" with exp="+thisManifest.getExpiration());
             }
             
             continue;
