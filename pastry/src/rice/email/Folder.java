@@ -188,7 +188,7 @@ public class Folder {
             final Continuation thisOne = this;
             
             if (index < names.length) {
-              _log.getChildLog(names[index], new StandardContinuation(parent) {
+              getChildFolder((String) names[index], new StandardContinuation(parent) {
                 public void receiveResult(Object o) {
                   index++;
                   ((Folder) o).getContentHashReferences(set, thisOne);

@@ -238,7 +238,7 @@ public class EmailService extends PostClient {
    * implement the garbage collection service, thus, the application must
    * ensure that all data which it is still interested in is returned.
    *
-   * The applications should return a PastContentHandle[] containing all of 
+   * The applications should return a ContentHashReference[] containing all of 
    * the handles The application is still interested in to the provided continatuion.
    */
   public void getContentHashReferences(Continuation command) {
