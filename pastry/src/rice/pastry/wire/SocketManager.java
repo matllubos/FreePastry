@@ -185,7 +185,7 @@ public class SocketManager implements SelectionKeyHandler {
     try {
       SocketChannel channel = (SocketChannel) ((ServerSocketChannel) key.channel()).accept();
       channel.socket().setSendBufferSize(WireNodeHandle.SOCKET_BUFFER_SIZE);
-      channel.socket().setReceiveBufferSize(WireNodeHandle.SOCKET_BUFFER_SIZE);      
+      channel.socket().setReceiveBufferSize(WireNodeHandle.SOCKET_BUFFER_SIZE);
       channel.configureBlocking(false);
 
       Selector selector = pastryNode.getSelectorManager().getSelector();
@@ -218,7 +218,7 @@ public class SocketManager implements SelectionKeyHandler {
     try {
       connector.read();
     } catch (IOException e) {
-      System.out.println("ERROR " + e + " reading connnector - cancelling.");
+      debug("ERROR " + e + " reading connnector - cancelling.");
       connectors.remove(key);
 
       try {
@@ -326,6 +326,8 @@ public class SocketManager implements SelectionKeyHandler {
           // since we're done, remove this entry
           connectors.remove(key);
         } else if (o instanceof NodeIdRequestMessage) {
+          debug("Read request message " + o);
+
           writer = new SocketChannelWriter(pastryNode);
 
           writer.enqueue(new NodeIdResponseMessage(pastryNode.getNodeId()));
@@ -341,6 +343,8 @@ public class SocketManager implements SelectionKeyHandler {
       boolean done = writer.write((SocketChannel) key.channel());
 
       if (done) {
+        key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+
         // since we're done, remove this entry
         connectors.remove(key);
         key.attach(null);
