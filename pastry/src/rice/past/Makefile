@@ -5,7 +5,9 @@ SOURCE  = \
 	PastImpl.java \
 	PastContent.java\
 	PastContentHandle.java\
-	PastException.java 
+	PastException.java \
+	ContentHashPastContent.java \
+	ContentHashPastContentHandle.java
 
 RMI_SOURCE =
 
