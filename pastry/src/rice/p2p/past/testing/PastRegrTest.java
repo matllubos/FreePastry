@@ -179,12 +179,16 @@ public class PastRegrTest extends CommonAPITest {
                     testVersionControl();
                   }
                 });
+                simulate();
               }
             });
+            simulate();
           }
         });
+        simulate();
       }
     });
+    simulate();
   }
 
   /**
@@ -294,16 +298,22 @@ public class PastRegrTest extends CommonAPITest {
                             testParameterChecks();
                           }
                         });
+                        simulate();
                       }
                     });
+                    simulate();
                   }
                 });
+                simulate();
               }
             });
+            simulate();
           }
         });
+        simulate();
       }
     });
+    simulate();
   }
 
   /**
@@ -367,16 +377,22 @@ public class PastRegrTest extends CommonAPITest {
                             testFetch();
                           }
                         });
+                        simulate();
                       }
                     });
+                    simulate();
                   }
                 });
+                simulate();
               }
             });
+            simulate();
           }
         });
+        simulate();
       }
     });
+    simulate();
   }
 
   /**
@@ -467,16 +483,22 @@ public class PastRegrTest extends CommonAPITest {
                             testLookupHandles();
                           }
                         });
+                        simulate();
                       }
                     });
+                    simulate();
                   }
                 });
+                simulate();
               }
             });
+            simulate();
           }
         });
+        simulate();
       }
     });
+    simulate();
   }
   
   /**
@@ -581,12 +603,16 @@ public class PastRegrTest extends CommonAPITest {
                     testCaching();
                   }
                 });
+                simulate();
               }
             });
+            simulate();
           }
         });
+        simulate();
       }
     });
+    simulate();
   }
 
   /**
@@ -671,12 +697,16 @@ public class PastRegrTest extends CommonAPITest {
                     sectionDone();
                   }
                 });
+                simulate();
               }
             });
+            simulate();
           }
         });
+        simulate();
       }
     });
+    simulate();
   }
 
   /**
@@ -698,7 +728,7 @@ public class PastRegrTest extends CommonAPITest {
    */
   private Id generateId() {
     byte[] data = new byte[20];
-    new Random().nextBytes(data);
+    rng.nextBytes(data);
     return FACTORY.buildId(data);
   }
                 

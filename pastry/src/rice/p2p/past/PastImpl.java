@@ -115,10 +115,6 @@ public class PastImpl implements Past, Application, RMClient {
     replicationFactor = replicas;
     pending = factory.buildIdSet();
 
-  //  log.addHandler(new ConsoleHandler());
-  //  log.setLevel(Level.FINEST);
-  //  log.getHandlers()[0].setLevel(Level.FINEST);
-
     replicaManager = new RMImpl((rice.pastry.PastryNode) node, this, replicas, instance);
   }
   
@@ -532,34 +528,36 @@ public class PastImpl implements Past, Application, RMClient {
 
     final Continuation receiveHandles = new Continuation() {
 
-      // the number of handles we are waiting for
-      private int num = -1;
+      // the number of handles received
+      private int received = 0;
 
       // the handles we have received
-      private Vector handles = new Vector();
+      private PastContentHandle[] handles;
       
       public void receiveResult(Object o) {
-        if (num == -1) {
-          num = ((Integer) o).intValue();
+        if (handles == null) {
+          handles = new PastContentHandle[((Integer) o).intValue()];
         } else {
-          handles.add(o);
-          log.finer("Receiving replica handle " + o + " for lookup Id " + id);
+          process((PastContentHandle) o);
+        }
+      }
 
-          if (handles.size() == num) {
-            PastContentHandle[] array = new PastContentHandle[num];
+      protected void process(PastContentHandle handle) {
+        handles[received] = handle;
+        received++;
 
-            for (int i=0; i<num; i++) {
-              array[i] = (PastContentHandle) handles.elementAt(i);
-            }
+        log.finer("Received replica handle " + handle + " for lookup Id " + id);
 
-            log.finer("Receiving all handles for lookup Id " + id + " - returning result");
-            command.receiveResult(array);
-          }
+        if (handles.length == received) {
+          log.finer("Receiving all handles for lookup Id " + id + " - returning result");
+          command.receiveResult(handles);
         }
       }
 
       public void receiveException(Exception e) {
-        command.receiveException(e);
+        log.fine("Exception " + e + " occured while fetching handles for " + id + " - inserting null handle");
+
+        process(null);
       }
     };
 
@@ -659,7 +657,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @return Whether or not to forward the message further
    */
   public boolean forward(final RouteMessage message) {
-    log.fine("Forwarding given message " + message + " to the specified next hop");
+    log.info("Forwarding given message " + message + " to the specified next hop");
     
     if (message.getMessage() instanceof LookupMessage) {
       final LookupMessage lmsg = (LookupMessage) message.getMessage();
@@ -675,7 +673,7 @@ public class PastImpl implements Past, Application, RMClient {
           deliver(endpoint.getId(), lmsg);
           
           return false;
-        } 
+        }
       } else {
         // if the message hasn't been cached and we don't have it, cache it
         if ((! lmsg.isCached()) && (content != null) && (! content.isMutable())) {
@@ -867,7 +865,7 @@ public class PastImpl implements Past, Application, RMClient {
 
         if (notIds.hasNext()) {
           final Id id = (Id) notIds.next();
-          log.warning("Unstoring id " + id);
+          log.finer("Unstoring id " + id);
 
           storage.getStorage().getObject(id, new StandardContinuation(this) {
             public void receiveResult(Object o) {
