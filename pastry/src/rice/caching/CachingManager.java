@@ -37,14 +37,13 @@ if advised of the possibility of such damage.
 package rice.caching;
 
 import rice.pastry.*;
+import rice.pastry.client.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 
 import rice.caching.messaging.*;
 
 /**
- * @(#) CachingManager.java
- *
  * This interface is exported by Caching Manager for any applications which need to
  * use the dynamic-caching functionality.
  *
@@ -54,47 +53,65 @@ import rice.caching.messaging.*;
  */
 public class CachingManager extends PastryAppl {
 
+  // the client on top of this caching manager
   private CachingManagerClient client;
 
+  // the credentials of this caching manager
   private Credentials credentials;
 
-  private Adddress address;
-
-  public CachingManager(CachingManagerClient client) {
+  /**
+   * Constructor which takes a pastry node, a client to run on top of this manager,
+   * and an instance name, which is recommended, but not required, to be the same as the
+   * instance of the client.
+   *
+   * @param node The local pastry node
+   * @param client The client this manager will work with
+   * @param instance A unique instance name of this manager/client
+   */
+  public CachingManager(PastryNode node, CachingManagerClient client, String instance) {
+    super(node, client.getClass().getName() + instance);
+    
     this.client = client;
     this.credentials = new PermissiveCredentials();
-    this.address = new CachingManagerAddress(client.getAddress().hashCode());
   }
 
-  public Address getAddress() {
-    return address;
+  /**
+   * Methods which returns the credentials of this PastryAppl.
+   *
+   * @return The credentials
+   */
+  public Credentials getCredentials() {
+    return credentials;
   }
-  
-  public void cache(CacheMessage message, NodeId id, Object obj) {
+
+  /**
+   * Method by which a client informs the caching manager that an object should
+   * be propogated in the dynamic cache.  This methods *MUST* be called on the node
+   * which satisfies the request of the given message.  The calling client should call
+   * this method, and then send the result back to the callee.  This method will cause
+   * this caching manager to forward the result one hop towards the callee, and insert
+   * the object in that cache.
+   *
+   * @param message The message which was the lookup
+   * @param id The id (or key) of the lookup
+   * @param obj The resulting object
+   */
+  public void cache(CacheLookupMessage message, NodeId id, Object obj) {
     NodeHandle dest = message.getPreviousNode();
-    CacheMessage message = new CacheMessage(address, id, obj);
+    CachingManagerMessage cmsg = new CachingManagerMessage(address, id, obj);
 
-    routeMsgDirect(dest, message, credentials, null);
+    routeMsgDirect(dest, cmsg, credentials, null);
   }
 
+  /**
+   * Method by which the caching manager receives messages through pastry.
+   *
+   * @param message The message which has arrived.
+   */
   public void messageForAppl(Message message) {
-    if (message instanceof CacheMessage) {
-      client.cache(message.getId(), message.getObject());
+    if (message instanceof CachingManagerMessage) {
+      CachingManagerMessage cmsg = (CachingManagerMessage) message;
+      client.cache(cmsg.getId(), cmsg.getObject());
     }
   }
-
-  private static class CachingManagerAddress implements Address {
-    private int myCode;
-
-    public CachingManagerAddress(int applCode) {
-      myCode = !applCode;
-    }
-    
-    public int hashCode() { return myCode; }
-
-    public boolean equals(Object obj) {
-      return (obj instanceof CachingManagerAddress);
-    }
-  }
-  
 }

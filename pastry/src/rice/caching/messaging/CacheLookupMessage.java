@@ -41,6 +41,7 @@ import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 
 import java.io.*;
+import java.util.*;
 
 /**
 * @(#) CacheLookupMessage.java
@@ -55,24 +56,50 @@ import java.io.*;
  */
 public abstract class CacheLookupMessage extends Message implements Serializable {
 
+  // a list containing all of the hops of this message
   private Vector hops = new Vector();
-  
+
+  /**
+   * Constructor to comply with the Message class.
+   */
   public CacheLookupMessage(Address dest) {
     super(dest);
   }
 
+  /**
+   * Constructor to comply with the Message class.
+   */
   public CacheLookupMessage(Address dest, Credentials cred) {
     super(dest, cred);
   }
 
+  /**
+   * Constructor to comply with the Message class.
+   */
   public CacheLookupMessage(Address dest, Credentials cred, Date timestamp) {
     super(dest, cred, timestamp);
   }
 
+  /**
+   * Constructor to comply with the Message class.
+   */
   public CacheLookupMessage(Address dest, Date timestamp) {
     super(dest, timestamp);
   }
 
+  /**
+   * Method which returns the handle of the previous node which this lookup message
+   * was on.  If no previous node exists, then null is returned.
+   *
+   * @return The previous node which this handle was on.
+   */
+  public NodeHandle getPreviousNode() {
+    if (hops.size() < 2)
+      return null;
+    else
+      return (NodeHandle) hops.elementAt(hops.size() - 2);
+  }
+    
   private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
     ois.defaultReadObject();
 

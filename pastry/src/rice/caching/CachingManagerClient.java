@@ -43,19 +43,17 @@ import rice.pastry.security.*;
 import rice.caching.messaging.*;
 
 /**
-* @(#) CachingManagerClient.java
- *
  * This interface is required for any application which wishes to use the
  * Caching Manager.
  *
  * @version $Id$
  *
- * @author Alan mislove
+ * @author Alan Mislove
  */
 public interface CachingManagerClient {
 
   /**
-   * Upcall from the CachingManager which tells this client to
+   * Upcall from the CachingManager which tells this client to locally
    * cache the given object, under the provided key.
    *
    * @param key The object's key

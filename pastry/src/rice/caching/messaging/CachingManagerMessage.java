@@ -43,8 +43,6 @@ import rice.pastry.security.*;
 import java.io.*;
 
 /**
- * @(#) CachingManagerMessage.java
- *
  * A message internal to the dynamic caching system, which propragates the
  * objects to other nodes.
  *
@@ -54,20 +52,36 @@ import java.io.*;
  */
 public class CachingManagerMessage extends Message implements Serializable {
 
+  private NodeId id;
+
+  private Object obj;
+  
   /**
-      */
+   * Constructor which takes an address (for delivery), and a corresponding key
+   * and object.
+   */
   public CachingManagerMessage(Address address, NodeId id, Object obj) {
     super(address);
     this.id = id;
     this.obj = obj;
   }
 
+  /**
+   * Returns this message's Id.
+   *
+   * @return The id of this message.
+   */
   public NodeId getId() {
     return id;
   }
 
+  /**
+   * Returns this message's object.
+   *
+   * @return The object associated with this message.
+   */
   public Object getObject() {
-    return object;
+    return obj;
   }
 }
 
