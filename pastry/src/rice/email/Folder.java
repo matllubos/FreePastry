@@ -13,7 +13,7 @@ import rice.post.storage.*;
  */
 public class Folder {
   // maximum entry limit for our primitive snapshot policy
-  private static final int COMPRESS_LIMIT = 100;
+  public static final int COMPRESS_LIMIT = 5;
 
   // name of the folder
   private String _name;
@@ -57,7 +57,7 @@ public class Folder {
    * Used to read the contents of the Folder and build up the array
    * of Emails stored by the Folder.
    */
-  private void readContents(Continuation command) throws PostException {
+  private void readContents(Continuation command) {
     // create the state for this process
     Vector state = new Vector();
     // get the ref to the top entry
@@ -106,7 +106,7 @@ public class Folder {
    *
    * @return the stored Emails
    */
-  public void getMessages(Continuation command) throws PostException {
+  public void getMessages(Continuation command) {
     readContents(new FolderNullTask(command));
   }
 
@@ -115,8 +115,7 @@ public class Folder {
    *
    * @param email The email to insert.
    */
-  public void addMessage(Email email) throws PostException {
-    Continuation command = new FolderNullTask(null);
+  public void addMessage(Email email, Continuation command) {
     _log.addLogEntry(new InsertMailLogEntry(email), command);
   }
 
@@ -125,7 +124,7 @@ public class Folder {
    *
    * @param email The email to delete.
    */
-  public void removeMessage(Email email) throws PostException {
+  public void removeMessage(Email email) {
     Continuation command = new FolderNullTask(null);
     _log.addLogEntry(new DeleteMailLogEntry(email), command); 
   }
@@ -139,9 +138,9 @@ public class Folder {
    * @param srcFolder The source folder for the message.
    * @param destFolder The destination folder for the message.
    */
-  public void moveMessage(Email email, Folder folder) throws PostException {
-    folder.addMessage(email);
-    removeMessage(email);
+  public void moveMessage(Email email, Folder folder) {
+    Continuation command = new FolderRemoveMessageTask(email, folder);
+    folder.addMessage(email, command);
   }
 
   /**
@@ -159,7 +158,7 @@ public class Folder {
     LogEntry entry = new InsertFolderLogEntry(name);
     // make the continuation to perform after adding the log.  This takes in the entry to insert
     // and the log to insert it into.  
-    Continuation preCommand = new FolderAddLogEntryTask(entry, _log, command);
+    Continuation preCommand = new FolderAddLogEntryTask(entry, log, command);
     System.out.println("Adding the new child log, log is " + log + " and preCommand is " + preCommand);
     _log.addChildLog(log, preCommand);    
   }
@@ -344,6 +343,8 @@ public class Folder {
      * Returns the result to the given user continuation.
      */
     public void receiveResult(Object o) {
+      System.out.println("FolderReturnResultTask received result");      
+      System.out.println("Result was : " + o + ", but returning " + _result);
       _command.receiveResult(_result);
     }
 
@@ -367,7 +368,6 @@ public class Folder {
      * Constructs a FolderAddLogEntryTask.
      */
     public FolderAddLogEntryTask(LogEntry entry, Log newLog, Continuation command) {
-      System.out.println("Constructing a new FolderAddLogEntryTask");
       _entry = entry;
       _newLog = newLog;
       _command = command;
@@ -552,7 +552,44 @@ public class Folder {
   }
 
 
+  /**
+   * Calls removeMessage once the original continuation finishes
+   */
+  protected class FolderRemoveMessageTask implements Continuation {
+    Email _email;
+    Folder _folder;
 
+    /**
+     * Constructs a FolderGetLogTask.
+     */
+    public FolderRemoveMessageTask(Email email, Folder folder) {
+      _email = email;
+      _folder = folder;
+    }
+
+    /**
+     * Starts the processing of this task.
+     */
+    public void start() {}
+
+    /**
+     * Take the result, form a Folder from it, and returns the Folder to the given user continuation.
+     */
+    public void receiveResult(Object o) {      
+      _folder.removeMessage(_email);
+    }
+
+    /**
+     * Simply prints out the error message.
+     */  
+    public void receiveException(Exception e) {
+      System.out.println("Exception " + e + "  occured while trying to add a message to a Folder");
+    }
+  }
+
+  public String toString() {
+    return getName();
+  }
 }
   
 
