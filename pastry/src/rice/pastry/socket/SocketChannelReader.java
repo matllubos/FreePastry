@@ -42,9 +42,11 @@ import java.nio.*;
 import java.nio.channels.*;
 import java.nio.charset.*;
 import java.util.*;
+import java.util.zip.*;
 
 import rice.pastry.*;
 import rice.pastry.messaging.*;
+import rice.serialization.*;
 
 /**
  * Class which serves as an "reader" for messages sent across the wire
@@ -153,8 +155,12 @@ public class SocketChannelReader {
 
         byte[] objectArray = new byte[objectSize];
         buffer.get(objectArray);
+     //   int size = objectSize + MAGIC_NUMBER.length + 4;
         Object obj = deserialize(objectArray);
         debug("Deserialized bytes into object " + obj);
+
+     //   if (spn != null)
+     //     spn.broadcastReceivedListeners(obj, (InetSocketAddress) sc.socket().getRemoteSocketAddress(), size);
         return obj;
       }
     }
@@ -222,11 +228,13 @@ public class SocketChannelReader {
    * @return the deserialized object
    */
   private Object deserialize(byte[] array) throws IOException {
+    //ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(new ByteArrayInputStream(array))));
     ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(array));
     Object o = null;
-
+    
     try {
       reset();
+      
       return ois.readObject();
     } catch (ClassCastException e) {
       System.out.println("PANIC: Serialized message was not a pastry message!");

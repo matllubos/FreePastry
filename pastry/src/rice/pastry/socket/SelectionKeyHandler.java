@@ -55,6 +55,15 @@ import java.nio.channels.*;
 public interface SelectionKeyHandler {
   
   /**
+   * Method which should change the interestOps of the handler's key.
+   * This method should *ONLY* be called by the selection thread in
+   * the context of a select().
+   *
+   * @param key The key in question
+   */
+  public void modifyKey(SelectionKey key);
+  
+  /**
    * Method which is called when the key becomes acceptable.
    * 
    * @param key The key which is acceptable.

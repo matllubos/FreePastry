@@ -63,11 +63,11 @@ public class SelectorManager {
   // used for testing (simulating killing a node)
   private boolean alive = true;
   
-  // the amount of time to wait during a selection (ms)
-  public int SELECT_WAIT_TIME = 1000;
-  
   // a list of the invocations that need to be done in this thread
   private LinkedList invocations;
+  
+  // the list of handlers which want to change their key
+  private HashSet modifyKeys;
   
   /**
     * Constructor.
@@ -78,6 +78,7 @@ public class SelectorManager {
   public SelectorManager(SocketPastryNode node) {
     this.node = node;
     this.invocations = new LinkedList();
+    this.modifyKeys = new HashSet();
     
     // attempt to create selector
     try {
@@ -116,6 +117,17 @@ public class SelectorManager {
   }
   
   /**
+   * Adds a selectionkey handler into the list of handlers which wish to change their
+   * keys.  Thus, modifyKeys() will be called on the next selection operation
+   *
+   * @param key The key which is to be chanegd
+   */
+  public synchronized void modifyKey(SelectionKey key) {
+    modifyKeys.add(key);
+    selector.wakeup();
+  }
+  
+  /**
    * Method which invokes all pending invocations.  This method should *only* be
    * called by the selector thread.
    */
@@ -123,6 +135,17 @@ public class SelectorManager {
     while (invocations.size() > 0) {
       ((Runnable) invocations.removeFirst()).run();
     }
+    
+    Iterator i = modifyKeys.iterator();
+    
+    while (i.hasNext()) {
+      SelectionKey key = (SelectionKey) i.next();
+      
+      if (key.isValid() && (key.attachment() != null))
+        ((SelectionKeyHandler) key.attachment()).modifyKey(key);
+    }
+    
+    modifyKeys.clear();
   }
   
   /**
@@ -132,8 +155,11 @@ public class SelectorManager {
    * @param the result from selector.select
    */
   private int select() throws IOException {
+    if ((invocations.size() > 0) || (modifyKeys.size() > 0))
+      return selector.selectNow();
+    
     synchronized (selector) {
-      return selector.select(SELECT_WAIT_TIME);
+      return selector.select(); 
     }
   }
   
@@ -144,9 +170,7 @@ public class SelectorManager {
    * @return The array of keys
    */
   private SelectionKey[] keys() throws IOException {
-    synchronized (selector) {
-      return (SelectionKey[]) selector.keys().toArray(new SelectionKey[0]);
-    }
+    return (SelectionKey[]) selector.keys().toArray(new SelectionKey[0]);
   }
   
   /**
@@ -156,9 +180,7 @@ public class SelectorManager {
    * @return The array of keys
    */
   private SelectionKey[] selectedKeys() throws IOException {
-    synchronized (selector) {
-      return (SelectionKey[]) selector.selectedKeys().toArray(new SelectionKey[0]);
-    }
+    return (SelectionKey[]) selector.selectedKeys().toArray(new SelectionKey[0]);
   }
   
   /**
@@ -171,7 +193,7 @@ public class SelectorManager {
       
       // loop while waiting for activity
       while (alive && (select() >= 0)) {
-        
+                
         doInvocations();
         
         SelectionKey[] keys = selectedKeys();
@@ -211,8 +233,12 @@ public class SelectorManager {
       SelectionKey[] keys = keys();
         
       for (int i=0; i<keys.length; i++) {
-        keys[i].channel().close();
-        keys[i].cancel();
+        try {
+          keys[i].channel().close();
+          keys[i].cancel();
+        } catch (IOException e) {
+          System.out.println("IOException " + e + " occured while trying to close and cancel key.");
+        }
       }
       
       selector.close();

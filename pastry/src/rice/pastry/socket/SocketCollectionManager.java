@@ -130,14 +130,15 @@ public class SocketCollectionManager implements SelectionKeyHandler {
       channel.configureBlocking(false);
       channel.socket().bind(localAddress);
 
-      final SocketCollectionManager socketCollectionManager = this;
+      final SelectionKeyHandler handler = this;
+      
       manager.invoke(new Runnable() {
         public void run() {
           try {
             key = channel.register(manager.getSelector(), SelectionKey.OP_ACCEPT);
-            key.attach(socketCollectionManager);
+            key.attach(handler);
           } catch (IOException e) {
-            System.out.println("ERROR registering server socket " + e);
+            System.out.println("ERROR creating server socket key " + e);
           }
         }
       });
@@ -239,9 +240,7 @@ public class SocketCollectionManager implements SelectionKeyHandler {
       if (! sockets.containsKey(address)) {
         sockets.put(address, manager);
         queue.addFirst(address);
-        
-     //   System.out.println("RESOLVE\tOPEN\t" + localAddress.getPort() + "\t" + address.getPort());
-        
+                
         debug("Recorded opening of socket to " + address);
 
         if (sockets.size() > MAX_OPEN_SOCKETS) {
@@ -258,7 +257,6 @@ public class SocketCollectionManager implements SelectionKeyHandler {
         
         if (remote.compareTo(local) < 0) {
           debug("RESOLVE: Cancelling existing connection to " + address);
-   //       System.out.println("RESOLVE\tCLOSE INIT\t" + localAddress.getPort() + "\t" + address.getPort());
           SocketManager toClose = (SocketManager) sockets.get(address);
 
           socketClosed(address, toClose);
@@ -266,7 +264,6 @@ public class SocketCollectionManager implements SelectionKeyHandler {
           toClose.close();
         } else {
           debug("RESOLVE: Cancelling new connection to " + address);
-     //     System.out.println("RESOLVE\tCLOSE RECV\t" + localAddress.getPort() + "\t" + address.getPort());
         }
       }
     }
@@ -413,6 +410,17 @@ public class SocketCollectionManager implements SelectionKeyHandler {
       System.out.println("ERROR (accepting connection): " + e);
     }
   }
+  
+  /**
+   * Method which should change the interestOps of the handler's key.
+   * This method should *ONLY* be called by the selection thread in
+   * the context of a select().
+   *
+   * @param key The key in question
+   */
+  public void modifyKey(SelectionKey key) {
+    System.out.println("PANIC: modifyKey() called on SocketCollectionManager!");
+  }
 
   /**
    * Specified by the SelectionKeyHandler interface - is called whenever a key
@@ -517,17 +525,8 @@ public class SocketCollectionManager implements SelectionKeyHandler {
         
       debug("Accepted connection from " + address);
       
-      final SocketManager socketManager = this;
-      manager.invoke(new Runnable() {
-        public void run() {
-          try {
-            key = channel.register(manager.getSelector(), SelectionKey.OP_READ);
-            key.attach(socketManager);
-          } catch (IOException e) {
-            System.out.println("ERROR registering accepted socket " + e);
-          }
-        }
-      });
+      key = channel.register(manager.getSelector(), SelectionKey.OP_READ);
+      key.attach(this);
     }
     
     /**
@@ -546,27 +545,23 @@ public class SocketCollectionManager implements SelectionKeyHandler {
       
       debug("Initiating socket connection to " + address);
       
-      final SocketManager socketManager = this;
+      final SelectionKeyHandler handler = this;
+      
       manager.invoke(new Runnable() {
         public void run() {
           try {
-            if (done) {
+            if (done) 
               key = channel.register(manager.getSelector(), SelectionKey.OP_READ);
-            
-              if (! key.isValid()) {
-                markDead(address);
-                throw new IOException("Invalid key after connect - remote node dead!");
-              }
-            } else {
+            else 
               key = channel.register(manager.getSelector(), SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
-            }
-          
-            key.attach(socketManager);
+        
+            key.attach(handler);
+            manager.modifyKey(key);
           } catch (IOException e) {
-            System.out.println("ERROR registering server socket " + e);
+            System.out.println("ERROR creating server socket channel " + e);
           }
         }
-      });
+      });    
       
       send(localAddress);
     }
@@ -577,10 +572,13 @@ public class SocketCollectionManager implements SelectionKeyHandler {
      */
     public void close() {
       try {
-        if (key != null) {
-          key.channel().close();
-          key.cancel();
-          key.attach(null);
+        synchronized (manager.getSelector()) {
+          if (key != null) {
+            key.channel().close();
+            key.cancel();
+            key.attach(null);
+            key = null;
+          }
         }
         
         if (address != null) {
@@ -602,6 +600,8 @@ public class SocketCollectionManager implements SelectionKeyHandler {
               reroute(address, (Message) o);
             }
           }
+          
+          address = null;
         }
       } catch (IOException e) {
         System.out.println("ERROR: Recevied exception " + e + " while closing socket!");
@@ -615,20 +615,10 @@ public class SocketCollectionManager implements SelectionKeyHandler {
      * @param Message message
      */
     public void send(final Object message) {
-      writer.enqueue(message); 
-            
-      manager.invoke(new Runnable() {
-        public void run() {
-          if (key.isValid()) {
-            key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-          } else {
-            debug("ERROR: Unvalid key in write - while sending message " + message);
-            
-            if (message instanceof Message)
-              reroute(address, (Message) message);
-          }
-        }
-      });
+      writer.enqueue(message);
+      
+      if (key != null)
+        manager.modifyKey(key);
     }
     
     /**
@@ -661,6 +651,18 @@ public class SocketCollectionManager implements SelectionKeyHandler {
         } else 
           System.out.println("SERIOUS ERROR: Received no address assignment, but got message " + message);
       }
+    }
+    
+    /**
+     * Method which should change the interestOps of the handler's key.
+     * This method should *ONLY* be called by the selection thread in
+     * the context of a select().
+     *
+     * @param key The key in question
+     */
+    public void modifyKey(SelectionKey key) {
+      if (! writer.isEmpty()) 
+        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
     }
     
     /**

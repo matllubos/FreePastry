@@ -106,7 +106,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       System.out.println("Couldn't find a bootstrap node, starting a new ring...");
       return null;
     }
-  }
+  } 
 
   /**
     * Method which creates a Pastry node from the next port

@@ -42,12 +42,14 @@ import java.nio.*;
 import java.nio.channels.*;
 import java.nio.charset.*;
 import java.util.*;
+import java.util.zip.*;
 
 import rice.pastry.wire.exception.*;
 import rice.pastry.routing.*;
 import rice.pastry.messaging.*;
 import rice.pastry.*;
 import rice.pastry.wire.messaging.socket.*;
+import rice.serialization.*;
 
 /**
  * Class which serves as an "writer" for all of the
@@ -127,12 +129,14 @@ public class SocketChannelWriter {
    *
    * @param o The object to be written.
    */
-  public void enqueue(Object o) {
+  public boolean enqueue(Object o) {
     synchronized (queue) {
       if (queue.size() < MAXIMUM_QUEUE_LENGTH) {
         addToQueue(o);
+        return true;
       } else {
         System.err.println(spn.getNodeId() + " (W): Maximum TCP queue length reached - message " + o + " will be dropped.");
+        return false;
       }
     }
   }
@@ -145,9 +149,7 @@ public class SocketChannelWriter {
    * @return Whether or not there are objects still to be written.
    */
   public boolean isEmpty() {
-    synchronized (queue) {
-      return ((buffer == null) && (queue.size() == 0));
-    }
+    return ((buffer == null) && (queue.size() == 0));
   }
   
   /**
@@ -185,6 +187,9 @@ public class SocketChannelWriter {
         if (queue.size() > 0) {
           debug("About to serialize object " + queue.getFirst());
           buffer = serialize(queue.getFirst());
+          
+      //    if (spn != null)
+      //      spn.broadcastSentListeners(queue.getFirst(), (InetSocketAddress) sc.socket().getRemoteSocketAddress(), buffer.limit());
         } else {
           return true;
         }
@@ -228,13 +233,13 @@ public class SocketChannelWriter {
 
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      //ObjectOutputStream oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(baos)));
       ObjectOutputStream oos = new ObjectOutputStream(baos);
-
+      
       // write out object and find its length
       oos.writeObject(o);
+      oos.close();
       int len = baos.toByteArray().length;
-
-      //System.out.println("serializingS " + o + " len=" + len);
 
       ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
       DataOutputStream dos = new DataOutputStream(baos2);
@@ -266,7 +271,3 @@ public class SocketChannelWriter {
     }
   }
 }
-
-
-
-

@@ -81,7 +81,6 @@ public class SocketPastrySecurityManager implements PastrySecurityManager {
     * @param msg a message.
     * @return if the message is safe, false otherwise.
     */
-  
   public boolean verifyMessage(Message msg) {
     return true;
   }
@@ -94,7 +93,6 @@ public class SocketPastrySecurityManager implements PastrySecurityManager {
     *
     * @return true if the credentials match the address, false otherwise.
     */
-  
   public boolean verifyAddressBinding(Credentials cred, Address addr) {
     return true;
   }
@@ -106,7 +104,6 @@ public class SocketPastrySecurityManager implements PastrySecurityManager {
     *
     * @return the verified node handle
     */
-  
   public NodeHandle verifyNodeHandle(NodeHandle handle) {
     return pool.coalesce((DistNodeHandle) handle);
   }

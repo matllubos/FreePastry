@@ -158,6 +158,6 @@ public class SocketPastryNode extends DistPastryNode {
    * @return a String
    */
   public String toString() {
-    return "SocketNodeHandle (" + getNodeId() + ")\n" + sManager; 
+    return "SocketNodeHandle (" + getNodeId() + ")\n"; 
   }
 }
