@@ -44,6 +44,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   protected final String instance;
   protected final IdFactory factory;
   protected final String debugID;
+  protected final Random random;
   protected final Node node;
 
   private final char tiFlush = 1;
@@ -96,6 +97,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private static final long statsRange = 3 * WEEKS;
   private static final long statsInterval = 60 * SECONDS;
 
+  private final double jitterRange = 0.1;
+
   public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance) throws IOException {
     this(node, aggregateStore, objectStore, waitingList, configFileName, factory, instance, getDefaultPolicy());
   }
@@ -108,6 +111,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     this.objectStore = objectStore;
     this.node = node;
     this.timers = new Hashtable();
+    this.random = new Random();
     this.aggregateList = new AggregateList(configFileName, getLocalNodeHandle().getId().toString(), factory, aggregateLogEnabled);
     this.stats = aggregateList.getStatistics(statsGranularity, statsRange, nominalReferenceCount);
     this.policy = policy;
@@ -123,8 +127,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     else 
       log(2, "Aggregate list read OK -- current root: " + ((aggregateList.getRoot() == null) ? "null" : aggregateList.getRoot().toStringFull()));
 
-    addTimer(flushDelayAfterJoin, tiFlush);
-    addTimer(consolidationDelayAfterJoin, tiConsolidate);
+    addTimer(jitterTerm(flushDelayAfterJoin), tiFlush);
+    addTimer(jitterTerm(consolidationDelayAfterJoin), tiConsolidate);
     addTimer(statsInterval, tiStatistics);
     if (monitorEnabled)
       addTimer(monitorRefreshInterval, tiMonitor);
@@ -132,6 +136,10 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private static AggregationPolicy getDefaultPolicy() {
     return new AggregationDefaultPolicy();
+  }
+
+  private long jitterTerm(long basis) {
+    return (long)((1-jitterRange)*basis) + random.nextInt((int)(2*jitterRange*basis));
   }
 
   private String getLogPrefix() {
@@ -1168,13 +1176,13 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
           formAggregates(doNothing);
         }
         
-        addTimer(flushInterval, tiFlush);
+        addTimer(jitterTerm(flushInterval), tiFlush);
         break;
       }
       case tiConsolidate :
       {
         consolidateAggregates();
-        addTimer(consolidationInterval, tiConsolidate);
+        addTimer(jitterTerm(consolidationInterval), tiConsolidate);
         break;
       }
       case tiMonitor :
