@@ -18,8 +18,6 @@ import rice.Continuation.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.util.*;
 
-import rice.serialization.*;
-
 /**
  * This class is a cahcce which doesn't store anything.
  */

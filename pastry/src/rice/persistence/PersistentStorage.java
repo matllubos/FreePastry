@@ -16,7 +16,6 @@ import java.util.zip.*;
 import rice.*;
 import rice.Continuation.*;
 import rice.p2p.commonapi.*;
-import rice.serialization.*;
 import rice.selector.*;
 import rice.p2p.util.*;
 

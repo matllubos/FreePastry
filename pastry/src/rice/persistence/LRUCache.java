@@ -18,8 +18,6 @@ import rice.Continuation.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.util.*;
 
-import rice.serialization.*;
-
 /**
  * This class is an encapsulation of a least-recently-used (LRU)
  * cache.  It uses the provided storage service in order to

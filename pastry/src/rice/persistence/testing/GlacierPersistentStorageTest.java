@@ -14,10 +14,10 @@ import java.util.*;
 import java.util.zip.*;
 
 import rice.*;
-import rice.serialization.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.glacier.*;
 import rice.p2p.glacier.v2.*;
+import rice.p2p.util.*;
 import rice.pastry.commonapi.*;
 import rice.persistence.*;
 

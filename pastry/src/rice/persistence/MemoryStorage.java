@@ -17,8 +17,6 @@ import rice.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.util.*;
 
-import rice.serialization.*;
-
 /**
  * This class is an implementation of Storage which provides
  * in-memory storage. This class is specifically *NOT* designed
