@@ -56,15 +56,11 @@ public class GCIdSet implements IdSet {
   // internal representation of the ids
   protected Vector ids;
   
-  // the way to make ids
-  protected IdFactory factory;
-  
   /**
    * Constructor
    */
-  protected GCIdSet(IdFactory factory) {
+  protected GCIdSet() {
     this.ids = new Vector();
-    this.factory = factory;
   }
   
   /**
@@ -107,7 +103,7 @@ public class GCIdSet implements IdSet {
    * @return the subset
    */
   public IdSet subSet(IdRange range) {
-    GCIdSet result = new GCIdSet(factory);
+    GCIdSet result = new GCIdSet();
     
     for (int i=0; i<ids.size(); i++) 
       if (range.containsId(((GCId) ids.elementAt(i)))) 
@@ -137,7 +133,7 @@ public class GCIdSet implements IdSet {
    *
    * @return the hash of this set
    */
-  public Id hash() {
+  public byte[] hash() {
     MessageDigest md = null;
     try {
       md = MessageDigest.getInstance("SHA");
@@ -155,7 +151,7 @@ public class GCIdSet implements IdSet {
       md.update(new BigInteger("" + id.getExpiration()).toByteArray());
     }
     
-    return new GCId(factory.buildId(md.digest()), GCPast.INFINITY_EXPIRATION);
+    return md.digest();
   }
   
   /**

@@ -62,7 +62,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
   /**
    * The interval at which expired objects are removed from the store
    */
-  public static int COLLECTION_INTERVAL = 3600000; //5 * 60 * 1000;
+  public static int COLLECTION_INTERVAL = 5 * 60 * 1000;
   
   /**
    * The trash can, or where objects should go once expired.  If null, they are deleted
@@ -363,7 +363,9 @@ public class GCPastImpl extends PastImpl implements GCPast {
     log.finer("Sending out replication fetch request for the id " + id);
     final GCId gcid = (GCId) id;
     
-    if (storage.exists(gcid.getId())) {
+    if (gcid.getExpiration() < System.currentTimeMillis()) {
+      command.receiveResult(Boolean.TRUE);
+    } else if (storage.exists(gcid.getId())) {
       GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(gcid.getId());
       
       if ((metadata == null) || (metadata.getExpiration() < gcid.getExpiration())) 
@@ -425,7 +427,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @return The set
    */
   protected IdSet buildGCIdSet(IdSet set) {
-    GCIdSet result = new GCIdSet(realFactory);
+    GCIdSet result = new GCIdSet();
     Iterator i = set.getIterator();
     
     while (i.hasNext()) {
