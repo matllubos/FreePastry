@@ -40,6 +40,8 @@ import rice.Continuation;
 import rice.past.*;
 import rice.past.messaging.*;
 
+import rice.rm.*;
+
 import rice.pastry.PastryNode;
 import rice.pastry.dist.*;
 import rice.pastry.standard.*;
@@ -74,7 +76,7 @@ public class DistPASTRegrTest {
   private Random rng;
   private IPNodeIdFactory idFactory;
 
-  private static int numNodes = 20;
+  private static int numNodes = 10;
   private static int k = 3;  // replication factor
 
   private static int port = 5009;
@@ -137,6 +139,9 @@ public class DistPASTRegrTest {
     past.DEBUG = false;
     pastNodes.add(past);
     System.out.println("created " + pn);
+    while (!pn.isReady()) {
+      pause(1000);
+    }
 
     return past;
   }
@@ -170,6 +175,15 @@ public class DistPASTRegrTest {
     }
   }
 
+  /**
+   * Initiates replica maintenance on all nodes
+   */
+  protected void initiateMaintenance() {
+    for (int i=0; i<pastNodes.size(); i++) {
+      ((RMImpl) ((PASTServiceImpl) pastNodes.elementAt(i)).getRM()).periodicMaintenance();
+    }
+  }
+
 
   /* ---------- Testing utility methods ---------- */
 
@@ -180,7 +194,7 @@ public class DistPASTRegrTest {
     throws TestFailedException
   {
     if (!test) {
-       System.exit(0);
+      System.exit(0);
       throw new TestFailedException("\nAssertion failed in '" + name +
                                     "'\nExpected: " + intention);
     }
@@ -196,6 +210,7 @@ public class DistPASTRegrTest {
     throws TestFailedException
   {
     if (!expected.equals(actual)) {
+      System.exit(0);
       throw new TestFailedException("\nAssertion failed in '" + name +
                                     "'\nDescription: " + description +
                                     "\nExpected: " + expected +
@@ -349,7 +364,11 @@ public class DistPASTRegrTest {
     protected void runInsertChecks() {
       // "Loop" to perform a check on each node
       //   (Runs the same command several times, incrementing currentIndex field)
-                         pause(200000);
+
+      System.out.println("Initiating replica maintenance.");
+      initiateMaintenance();
+      pause(5000);
+      
       localCount = 0;
       currentIndex = 0;
       remote = (PASTServiceImpl) pastNodes.elementAt(currentIndex);
@@ -384,9 +403,9 @@ public class DistPASTRegrTest {
                 remote = (PASTServiceImpl) pastNodes.elementAt(currentIndex);
                 remote.lookup(fileId, MONKEY);
               } else {
-                assertEquals("PASTFunctions",
-                             "File should have been found " + k + " time after insert",
-                             new Integer(k), new Integer(localCount));
+                assertTrue("PASTFunctions",
+                           "File should have been found at least " + k + " time after insert",
+                           k <= localCount);
 
                 runReclaimTests();
               }

@@ -99,7 +99,7 @@ public class PASTServiceImpl implements PASTService, Application, RMClient {
    * Replication factor to use with the replication manager 
    * Should probably make this slightly more configurable
    */
-  private static int REPLICATION_FACTOR = 4;
+  private static int REPLICATION_FACTOR = 3;
  
   /**
    * Replication Manager to use
@@ -140,6 +140,15 @@ public class PASTServiceImpl implements PASTService, Application, RMClient {
    */
   public Id getId() {
     return endpoint.getId();
+  }
+
+  /**
+   * Return the RM
+   *
+   * @return The Rm
+   */
+  public RM getRM() {
+    return replicationManager;
   }
   
   // ---------- CommonAPI Methods ----------
