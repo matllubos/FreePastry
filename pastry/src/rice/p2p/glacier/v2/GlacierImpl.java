@@ -95,6 +95,15 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private final long rateLimitedCheckInterval = 30 * SECONDS;
   private int rateLimitedRequestsPerSecond = 3;
 
+  private final boolean enableBulkRefresh = true;
+  private final long bulkRefreshProbeInterval = 3 * SECONDS;
+  private final double bulkRefreshMaxProbeFactor = 3.0;
+  private final long bulkRefreshManifestInterval = 30 * SECONDS;
+  private final int bulkRefreshManifestAggregationFactor = 20;
+  private final int bulkRefreshPatchAggregationFactor = 50;
+  private final long bulkRefreshPatchInterval = 3 * MINUTES;
+  private final int bulkRefreshPatchRetries = 2;
+
   private final double jitterRange = 0.1;
 
   private final long statisticsReportInterval = 1 * MINUTES;
@@ -1215,25 +1224,33 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     }
 
     if (cmd.startsWith("insert") && faultInjectionEnabled) {
-      int numObjects = Integer.parseInt(cmd.substring(7));
+      String args = cmd.substring(7);
+      String expirationArg = args.substring(args.lastIndexOf(' ') + 1);
+      String numObjectsArg = args.substring(0, args.lastIndexOf(' '));
+
+      final int numObjects = Integer.parseInt(numObjectsArg);
+      final int lifetime = Integer.parseInt(expirationArg);
       String result = "";
       
       for (int i=0; i<numObjects; i++) {
-        Id randomID = factory.buildRandomId(random);
+        final Id randomID = factory.buildRandomId(random);
         result = result + randomID.toStringFull() + "\n";
-        insert(
-          new DebugContent(randomID, false, 0, new byte[] {}),
-          System.currentTimeMillis() + 120*SECONDS,
-          new Continuation() {
-            public void receiveResult(Object o) {
-            }
-            public void receiveException(Exception e) {
-            }
+        pendingTraffic.put(new VersionKey(randomID, 0), new Continuation.SimpleContinuation() {
+          public void receiveResult(Object o) {
+            insert(
+              new DebugContent(randomID, false, 0, new byte[] {}),
+              System.currentTimeMillis() + lifetime,
+              new Continuation() {
+                public void receiveResult(Object o) {
+                }
+                public void receiveException(Exception e) {
+                }
+              });
           }
-        );
+        });
       }
       
-      return result + numObjects + " object(s) created\n";
+      return result + numObjects + " object(s) with lifetime "+lifetime+"ms created\n";
     }
 
     if (cmd.startsWith("set loglevel")) {
@@ -1346,52 +1363,433 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     insert(obj, GCPast.INFINITY_EXPIRATION, command);
   }
 
-  public void refresh(Id[] ids, long expiration, final Continuation command) {
+  public void refresh(Id[] ids, long[] expirations, Continuation command) {
     long[] versions = new long[ids.length];
     Arrays.fill(versions, 0);
-    refresh(ids, versions, expiration, command);
+    refresh(ids, versions, expirations, command);
   }
 
-  public void refresh(Id[] ids, long[] versions, final long expiration, final Continuation command) {
-    final Continuation.MultiContinuation mc = new Continuation.MultiContinuation(command, ids.length);
-    
-    for (int i=0; i<ids.length; i++) {
-      final Continuation thisContinuation = mc.getSubContinuation(i);
-      final Id thisId = ids[i];
-      final long thisVersion = versions[i];
+  public void refresh(Id[] ids, long expiration, Continuation command) {
+    long[] expirations = new long[ids.length];
+    Arrays.fill(expirations, expiration);
+    refresh(ids, expirations, command);
+  }
+  
+  public void refresh(final Id[] ids, final long[] versions, final long[] expirations, final Continuation command) {
+    if (!enableBulkRefresh) {
+      /* Ordinary refresh method (safe in 'hostile' environments) */
+
+      final Continuation.MultiContinuation mc = new Continuation.MultiContinuation(command, ids.length);
+      for (int i=0; i<ids.length; i++) {
+        final Continuation thisContinuation = mc.getSubContinuation(i);
+        final Id thisId = ids[i];
+        final long thisVersion = versions[i];
+        final long thisExpiration = expirations[i];
       
-      log(2, "refresh("+thisId.toStringFull()+"v"+thisVersion+", exp="+expiration+")");
+        log(2, "refresh("+thisId.toStringFull()+"v"+thisVersion+", exp="+thisExpiration+")");
 
-      final VersionKey thisVersionKey = new VersionKey(thisId, thisVersion);
-      Continuation prev = (Continuation) pendingTraffic.put(thisVersionKey, new Continuation.SimpleContinuation() {
-        public void receiveResult(Object o) {
-          retrieveManifest(thisVersionKey, tagRefresh, new Continuation() {
-            public void receiveResult(Object o) {
-              if (o instanceof Manifest) {
-                Manifest manifest = (Manifest) o;
+        final VersionKey thisVersionKey = new VersionKey(thisId, thisVersion);
+        Continuation prev = (Continuation) pendingTraffic.put(thisVersionKey, new Continuation.SimpleContinuation() {
+          public void receiveResult(Object o) {
+            retrieveManifest(thisVersionKey, tagRefresh, new Continuation() {
+              public void receiveResult(Object o) {
+                if (o instanceof Manifest) {
+                  Manifest manifest = (Manifest) o;
 
-                log(3, "refresh("+thisId.toStringFull()+"v"+thisVersion+"): Got manifest");
-                manifest = policy.updateManifest(new VersionKey(thisId, thisVersion), manifest, expiration);
-                Manifest[] manifests = new Manifest[numFragments];
-                for (int i=0; i<numFragments; i++)
-                  manifests[i] = manifest;
-                distribute(new VersionKey(thisId, thisVersion), null, manifests, expiration, tagRefresh, thisContinuation);
+                  log(3, "refresh("+thisId.toStringFull()+"v"+thisVersion+"): Got manifest");
+                  manifest = policy.updateManifest(new VersionKey(thisId, thisVersion), manifest, thisExpiration);
+                  Manifest[] manifests = new Manifest[numFragments];
+                  for (int i=0; i<numFragments; i++)
+                    manifests[i] = manifest;
+                  distribute(new VersionKey(thisId, thisVersion), null, manifests, thisExpiration, tagRefresh, thisContinuation);
+                } else {
+                  warn("refresh("+thisId+"v"+thisVersion+"): Cannot retrieve manifest");
+                  thisContinuation.receiveResult(new GlacierException("Cannot retrieve manifest -- retry later"));
+                }
+              }
+              public void receiveException(Exception e) {
+                warn("refresh("+thisId+"v"+thisVersion+"): Exception while retrieving manifest: "+e);
+                e.printStackTrace();
+                thisContinuation.receiveException(e);
+              }
+            });
+          }
+        });
+      
+        if (prev != null)
+          prev.receiveException(new GlacierException("Key collision in traffic shaper (refresh)"));
+      }
+    } else {
+      /* Aggregated refresh method */
+      
+      addContinuation(new GlacierContinuation() {
+        int minAcceptable = (int)(numSurvivors * minFragmentsAfterInsert);
+        FragmentKey[][] fragmentKey;
+        VersionKey[] versionKey;
+        Id[][] fragmentLocation;
+        NodeHandle[][] fragmentHolder;
+        boolean[][] fragmentChecked;
+        Vector holders;
+        Manifest manifests[];
+        int successes[];
+        boolean answered;
+        long nextTimeout;
+        int currentStage;
+        int retriesRemaining;
+        final int stageProbing = 1;
+        final int stageFetchingManifests = 2;
+        final int stagePatching = 3;
+      
+        public String toString() {
+          return "AggregateRefresh continuation ("+fragmentKey.length+" fragments)";
+        }
+        public void init() {
+          log(2, "Initializing AggregateRefresh continuation");
+        
+          fragmentKey = new FragmentKey[ids.length][numFragments];
+          fragmentLocation = new Id[ids.length][numFragments];
+          fragmentHolder = new NodeHandle[ids.length][numFragments];
+          fragmentChecked = new boolean[ids.length][numFragments];
+          manifests = new Manifest[ids.length];
+          versionKey = new VersionKey[ids.length];
+          successes = new int[ids.length];
+          nextTimeout = System.currentTimeMillis() + bulkRefreshProbeInterval;
+          currentStage = stageProbing;
+          holders = new Vector();
+          retriesRemaining = (int)(bulkRefreshMaxProbeFactor * numFragments);
+          answered = false;
+        
+          boolean haveFragmentMyself = false;
+          for (int i=0; i<ids.length; i++) {
+            manifests[i] = null;
+            versionKey[i] = new VersionKey(ids[i], versions[i]);
+            for (int j=0; j<numFragments; j++) {
+              fragmentKey[i][j] = new FragmentKey(new VersionKey(ids[i], versions[i]), j);
+              fragmentLocation[i][j] = getFragmentLocation(fragmentKey[i][j]);
+              fragmentChecked[i][j] = false;
+              if (fragmentStorage.getMetadata(fragmentKey[i][j]) != null) {
+                haveFragmentMyself = true;
+                fragmentHolder[i][j] = getLocalNodeHandle();
               } else {
-                warn("refresh("+thisId+"v"+thisVersion+"): Cannot retrieve manifest");
-                thisContinuation.receiveResult(new GlacierException("Cannot retrieve manifest -- retry later"));
+                fragmentHolder[i][j] = null;
               }
             }
-            public void receiveException(Exception e) {
-              warn("refresh("+thisId+"v"+thisVersion+"): Exception while retrieving manifest: "+e);
-              e.printStackTrace();
-              thisContinuation.receiveException(e);
+          }
+
+          if (haveFragmentMyself)
+            holders.add(getLocalNodeHandle());
+
+          Arrays.fill(successes, 0);
+        
+          log(3, "AR Initialization completed, "+fragmentKey.length+" candidate objects. Triggering first probe...");
+          timeoutExpired();
+        }
+        public void receiveResult(Object o) {
+          if (o instanceof GlacierRefreshResponseMessage) {
+            GlacierRefreshResponseMessage grrm = (GlacierRefreshResponseMessage) o;
+            IdRange thisRange = grrm.getRange();
+            NodeHandle holder = grrm.isOnline() ? grrm.getSource() : null;
+            
+            log(3, "AR got refresh response: range "+thisRange+", online="+grrm.isOnline());
+            if (thisRange != null) {
+              for (int i=0; i<ids.length; i++) {
+                for (int j=0; j<numFragments; j++) {
+                  if (thisRange.containsId(fragmentLocation[i][j])) {
+                    fragmentChecked[i][j] = true;
+                    fragmentHolder[i][j] = holder;
+                  }
+                }
+              }
             }
-          });
+            
+            if (!holders.contains(holder))
+              holders.add(holder);
+          } else if (o instanceof GlacierDataMessage) {
+            GlacierDataMessage gdm = (GlacierDataMessage) o;
+            
+            log(3, "AR Received data message with "+gdm.numKeys()+" keys");
+            for (int i=0; i<gdm.numKeys(); i++) {
+              if ((gdm.getManifest(i) != null) && (gdm.getKey(i) != null)) {
+                Manifest thisManifest = gdm.getManifest(i);
+                FragmentKey thisKey = gdm.getKey(i);
+                
+                log(3, "AR Received manifest for "+gdm.getKey(i)+", checking signature...");
+                if (policy.checkSignature(thisManifest, thisKey.getVersionKey())) {
+                  log(3, "AR Signature OK");
+                  for (int j=0; j<ids.length; j++) {
+                    if ((manifests[j] == null) && (versionKey[j].equals(thisKey.getVersionKey()))) {
+                      manifests[j] = thisManifest;
+                      log(3, "AR Storing under #"+j);
+                    }
+                  }
+                } else {
+                  warn("AR Invalid signature");
+                }
+              }
+            }
+          } else if (o instanceof GlacierRefreshCompleteMessage) {
+            GlacierRefreshCompleteMessage grcm = (GlacierRefreshCompleteMessage) o;
+            log(3, "AR Refresh completion reported by "+grcm.getSource());
+
+            for (int i=0; i<grcm.numKeys(); i++) {
+              log(3, "AR Refresh completion: Key "+grcm.getKey(i)+", "+grcm.getUpdates(i)+" update(s)");
+              
+              int index = -1;
+              for (int j=0; j<ids.length; j++) {
+                if (grcm.getKey(i).equals(versionKey[j]))
+                  index = j;
+              }
+              
+              if (index >= 0) {
+                int maxSuccesses = 0;
+                for (int j=0; j<numFragments; j++) {
+                  if (!fragmentChecked[index][j] && (fragmentHolder[index][j] != null) && (fragmentHolder[index][j].equals(grcm.getSource()))) {
+                    maxSuccesses ++;
+                    fragmentChecked[index][j] = true;
+                  }
+                }
+                    
+                if (grcm.getUpdates(i) > maxSuccesses) {
+                  warn("Node "+grcm.getSource()+" reports "+grcm.getUpdates(i)+" for "+grcm.getKey(i)+", but is responsible for only "+maxSuccesses+" fragments -- duplicate message, or under attack?");
+                  successes[index] += maxSuccesses;
+                } else {
+                  successes[index] += grcm.getUpdates(i);
+                }
+              } else {
+                warn("Node "+grcm.getSource()+" reports completion for "+grcm.getKey(i)+", but no refresh request matches?!?");
+              }
+            }
+
+            if (!answered) {
+              boolean allSuccessful = true;
+              for (int i=0; i<successes.length; i++)
+                if (successes[i] < minAcceptable)
+                  allSuccessful = false;
+                
+              if (allSuccessful) {
+                log(3, "AR Reporing success");
+              
+                Object[] result = new Object[ids.length];
+                for (int i=0; i<ids.length; i++)
+                  result[i] = new Boolean(true);
+            
+                answered = true;
+                command.receiveResult(result);
+              }
+            }
+          } else {
+            warn("Unexpected result in AR continuation: "+o+" -- discarded");
+          }
+        }
+        public void receiveException(Exception e) {
+          warn("Exception during AggregateRefresh: "+e);
+          e.printStackTrace();
+          terminate();
+          
+          if (!answered) {
+            Object[] result = new Object[ids.length];
+            Exception ee = new GlacierException("Exception during refresh: "+e);
+
+            for (int i=0; i<ids.length; i++)
+              result[i] = ee;
+            
+            answered = true;
+            command.receiveResult(result);
+          }
+        }
+        public void timeoutExpired() {
+          if (currentStage == stageProbing) {
+            nextTimeout = System.currentTimeMillis() + bulkRefreshProbeInterval;
+            
+            int nextProbe = random.nextInt(ids.length);
+            int nextFID = random.nextInt(numFragments);
+            int maxSteps = ids.length * numFragments;
+            while ((maxSteps > 0) && fragmentChecked[nextProbe][nextFID]) {
+              nextFID ++;
+              if (nextFID >= numFragments) {
+                nextFID = 0;
+                nextProbe = (nextProbe + 1) % ids.length;
+              }
+              
+              maxSteps --;
+            }
+            
+            if (!fragmentChecked[nextProbe][nextFID] && (retriesRemaining > 0)) {
+              log(3, "AR Sending a probe to "+fragmentKey[nextProbe][nextFID]+" at "+fragmentLocation[nextProbe][nextFID]+" ("+retriesRemaining+" probes left)");
+              fragmentChecked[nextProbe][nextFID] = true;
+              retriesRemaining --;
+              sendMessage(
+                fragmentLocation[nextProbe][nextFID],
+                new GlacierRefreshProbeMessage(getMyUID(), fragmentLocation[nextProbe][nextFID], getLocalNodeHandle(), fragmentLocation[nextProbe][nextFID], tagRefresh),
+                null
+              );
+            } else {
+              currentStage = stageFetchingManifests;
+              retriesRemaining = 3;
+            }
+          }
+          
+          if (currentStage == stageFetchingManifests) {
+            nextTimeout = System.currentTimeMillis() + bulkRefreshManifestInterval;
+
+            boolean[] objectCovered = new boolean[ids.length];
+            boolean allObjectsCovered = true;
+            for (int i=0; i<ids.length; i++) {
+              objectCovered[i] = (manifests[i] != null);
+              allObjectsCovered &= objectCovered[i];
+            }
+            
+            if (!allObjectsCovered && ((retriesRemaining--) > 0)) {
+              log(3, "AR Fetching manifests, "+retriesRemaining+" attempts remaining");
+              while (true) {
+                int idx = random.nextInt(ids.length);
+                int maxSteps = ids.length + 2;
+                while (objectCovered[idx] && ((--maxSteps)>0))
+                  idx = (idx+1) % ids.length;
+                if (maxSteps <= 0)
+                  break;
+                
+                int fid = random.nextInt(numFragments);
+                maxSteps = numFragments + 2;
+                while ((fragmentHolder[idx][fid] == null) && ((--maxSteps)>0))
+                  fid = (fid+1) % numFragments;
+
+                if (fragmentHolder[idx][fid] != null) {
+                  NodeHandle thisHolder = fragmentHolder[idx][fid];
+                  Vector idsToQuery = new Vector();
+                  for (int i=0; i<ids.length; i++) {
+                    if (!objectCovered[i]) {
+                      for (int j=0; j<numFragments; j++) {
+                        if ((fragmentHolder[i][j] != null) && (fragmentHolder[i][j].equals(thisHolder))) {
+                          idsToQuery.add(fragmentKey[i][j]);
+                          objectCovered[i] = true;
+                          break;
+                        }
+                      }
+                    }
+                  }
+                  
+                  log(3, "AR Asking "+thisHolder+" for "+idsToQuery.size()+" manifests");
+                  for (int i=0; i<idsToQuery.size(); i+= bulkRefreshManifestAggregationFactor) {
+                    int idsHere = Math.min(idsToQuery.size() - i, bulkRefreshManifestAggregationFactor);
+                    FragmentKey[] keys = new FragmentKey[idsHere];
+                    for (int j=0; j<idsHere; j++)
+                      keys[j] = (FragmentKey) idsToQuery.elementAt(i+j);
+
+                    log(3, "AR Sending a manifest fetch with "+idsHere+" IDs, starting at "+keys[0]);                    
+                    sendMessage(
+                      null,
+                      new GlacierFetchMessage(getMyUID(), keys, GlacierFetchMessage.FETCH_MANIFEST, getLocalNodeHandle(), thisHolder.getId(), tagRefresh),
+                      thisHolder
+                    );
+                  }
+                } else {
+                  objectCovered[idx] = true;
+                }
+              }
+                
+              log(3, "AR Manifest fetches sent; awaiting responses...");
+                
+            } else {
+              currentStage = stagePatching;
+              retriesRemaining = bulkRefreshPatchRetries;
+              
+              log(3, "AR Patching manifests...");
+              for (int i=0; i<ids.length; i++)
+                if (manifests[i] != null)
+                  manifests[i] = policy.updateManifest(versionKey[i], manifests[i], expirations[i]);
+                  
+              log(3, "AR Done patching manifests");
+              
+              for (int i=0; i<ids.length; i++)
+                for (int j=0; j<numFragments; j++)
+                  fragmentChecked[i][j] = ((fragmentHolder[i][j] == null) || (manifests[i] == null));
+            }
+          }
+          
+          if (currentStage == stagePatching) {
+            nextTimeout = System.currentTimeMillis() + bulkRefreshPatchInterval;
+          
+            if ((retriesRemaining--) > 0) {
+              log(3, "AR Sending patches... ("+retriesRemaining+" retries left)");
+
+              int totalPatchesSent = 0;
+              for (int h=0; h<holders.size(); h++) {
+                NodeHandle thisHolder = (NodeHandle) holders.elementAt(h);
+                
+                /* Find out which patches this holder should get */
+                
+                boolean[] sendPatchForObject = new boolean[ids.length];
+                int numPatches = 0;
+              
+                for (int i=0; i<ids.length; i++) {
+                  sendPatchForObject[i] = false;
+                
+                  for (int j=0; j<numFragments; j++)
+                    if (!fragmentChecked[i][j] && fragmentHolder[i][j].equals(thisHolder))
+                      sendPatchForObject[i] = true;
+                
+                  if (sendPatchForObject[i])
+                    numPatches ++;
+                }
+              
+                log(3, "AR Holder #"+h+" ("+thisHolder+") should get "+numPatches+" patches");
+              
+                /* Send the patches */
+              
+                int nextPatch = 0;
+                for (int i=0; i<numPatches; i+=bulkRefreshPatchAggregationFactor) {
+                  int patchesHere = Math.min(numPatches-i, bulkRefreshPatchAggregationFactor);
+
+                  VersionKey[] keys = new VersionKey[patchesHere];
+                  long[] lifetimes = new long[patchesHere];
+                  byte[][] signatures = new byte[patchesHere][];
+                
+                  for (int j=0; j<patchesHere; j++) {
+                    while (!sendPatchForObject[nextPatch])
+                      nextPatch ++;
+                  
+                    keys[j] = versionKey[nextPatch];
+                    lifetimes[j] = expirations[nextPatch];
+                    signatures[j] = manifests[nextPatch].signature;
+                    nextPatch ++;
+                  }
+                
+                  log(3, "AR Sending a patch with "+patchesHere+" IDs, starting at "+keys[0]+", to "+thisHolder.getId());
+                  totalPatchesSent += patchesHere;
+                  
+                  sendMessage(
+                    null,
+                    new GlacierRefreshPatchMessage(getMyUID(), keys, lifetimes, signatures, getLocalNodeHandle(), thisHolder.getId(), tagRefresh),
+                    thisHolder
+                  );
+                }
+              }
+              
+              if (totalPatchesSent == 0) {
+                log(3, "AR No patches sent; refresh seems to be complete...");
+                retriesRemaining = 0;
+                timeoutExpired();
+              }
+            } else {
+              log(3, "AR Giving up");
+              terminate();
+
+              Object[] result = new Object[ids.length];
+              for (int i=0; i<ids.length; i++) {
+                result[i] = (successes[i] >= minAcceptable) ? (Object)(new Boolean(true)) : (Object)(new GlacierException("Only "+successes[i]+" fragments of "+versionKey[i]+" refreshed successfully; need "+minAcceptable));
+                log(3, " - AR Result for "+versionKey[i]+": " + ((result[i] instanceof Boolean) ? "OK" : "Failed") + " (with "+successes[i]+"/"+numFragments+" fragments, "+minAcceptable+" acceptable)");
+              }
+            
+              answered = true;
+              command.receiveResult(result);
+            }
+          }
+        }
+        public long getTimeout() {
+          return nextTimeout;
         }
       });
-      
-      if (prev != null)
-        prev.receiveException(new GlacierException("Key collision in traffic shaper (refresh)"));
     }
   }
 
@@ -2157,6 +2555,68 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     if (prev != null)
       prev.receiveException(new GlacierException("Key collision in traffic shaper (rateLimitedRetrieveFragment)"));
   }
+
+  public Id[][] getNeighborRanges() {
+    Iterator iter = neighborStorage.scan().getIterator();
+    Vector ccwIDs = new Vector();
+    Vector cwIDs = new Vector();
+    Id myID = getLocalNodeHandle().getId();
+      
+    while (iter.hasNext()) {
+      Id thisNeighbor = (Id)iter.next();
+      if (myID.clockwise(thisNeighbor))
+        cwIDs.add(thisNeighbor);
+      else
+        ccwIDs.add(thisNeighbor);
+    }
+
+    for (int j=0; j<2; j++) {
+      Vector v = (j==0) ? cwIDs : ccwIDs;
+      boolean madeProgress = true;
+      while (madeProgress) {
+        madeProgress = false;
+        for (int i=0; i<(v.size()-1); i++) {
+          if (((Id)v.elementAt(i+1)).clockwise((Id)v.elementAt(i))) {
+            Object h = v.elementAt(i);
+            v.setElementAt(v.elementAt(i+1), i);
+            v.setElementAt(h, i+1);
+            madeProgress = true;
+          }
+        }
+      }
+    }
+      
+    Vector allIDs = new Vector();
+    allIDs.addAll(ccwIDs);
+    allIDs.add(myID);
+    allIDs.addAll(cwIDs);
+
+    Id[][] result = new Id[allIDs.size()][3];
+    for (int i=0; i<allIDs.size(); i++) {
+      Id currentElement = (Id) allIDs.elementAt(i);
+      Id cwId, ccwId;
+
+      if (i>0) {
+        Id previousElement = (Id) allIDs.elementAt(i-1);
+        ccwId = previousElement.addToId(previousElement.distanceFromId(currentElement).shiftDistance(1,0));
+      } else {
+        ccwId = currentElement;
+      }
+
+      if (i<(allIDs.size()-1)) {
+        Id nextElement = (Id) allIDs.elementAt(i+1);
+        cwId = currentElement.addToId(currentElement.distanceFromId(nextElement).shiftDistance(1,0));
+      } else {
+        cwId = currentElement;
+      }
+      
+      result[i][0] = ccwId;
+      result[i][1] = currentElement;
+      result[i][2] = cwId;
+    }
+    
+    return result;
+  }
   
   public void deliver(Id id, Message message) {
 
@@ -2389,71 +2849,150 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           
       return;
 
+    } else if (msg instanceof GlacierRefreshProbeMessage) {
+      final GlacierRefreshProbeMessage grpm = (GlacierRefreshProbeMessage) msg;
+      Id requestedId = grpm.getRequestedId();
+      
+      log(2, "Refresh probe for "+requestedId+" (RR="+responsibleRange+")");
+      
+      Id[][] ranges = getNeighborRanges();
+      IdRange returnedRange = null;
+      boolean online = false;
+
+      if (responsibleRange.containsId(requestedId)) {
+        returnedRange = responsibleRange;
+        online = true;
+      } else {
+        online = false;
+        for (int i=0; i<ranges.length; i++) {
+          IdRange thisRange = factory.buildIdRange(ranges[i][0], ranges[i][2]);
+          log(3, " - "+thisRange+" ("+ranges[i][1]+")");
+          if (thisRange.containsId(requestedId))
+            returnedRange = thisRange;
+        }
+      }
+      
+      sendMessage(
+        null,
+        new GlacierRefreshResponseMessage(grpm.getUID(), returnedRange, online, getLocalNodeHandle(), grpm.getSource().getId(), grpm.getTag()),
+        grpm.getSource()
+      );
+      
+    } else if (msg instanceof GlacierRefreshPatchMessage) {
+      final GlacierRefreshPatchMessage grpm = (GlacierRefreshPatchMessage) msg;
+
+      log(2, "AR Refresh patches received for "+grpm.numKeys()+" keys. Processing...");
+      Continuation c = new Continuation() {
+        static final int phaseFetch = 1;
+        static final int phaseStore = 2;
+        static final int phaseAdvance = 3;
+        int[] successes = new int[grpm.numKeys()];
+        int currentPhase = phaseAdvance;
+        FragmentKey currentKey = null;
+        int currentIndex = 0;
+        int currentFID = -1;
+        
+        public void receiveResult(Object o) {
+          if (currentPhase == phaseFetch) {
+            log(3, "AR Patch: Got FAM for "+currentKey);
+          
+            FragmentAndManifest fam = (FragmentAndManifest) o;
+            fam.manifest.update(grpm.getLifetime(currentIndex), grpm.getSignature(currentIndex));
+            
+            if (policy.checkSignature(fam.manifest, currentKey.getVersionKey())) {
+              FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(currentKey);
+              if (metadata != null) {
+                if (metadata.currentExpirationDate <= grpm.getLifetime(currentIndex)) {
+                  currentPhase = phaseStore;
+                  if (metadata.currentExpirationDate == grpm.getLifetime(currentIndex)) {
+                    log(3, "AR Duplicate refresh request (prev="+metadata.previousExpirationDate+" cur="+metadata.currentExpirationDate+" updated="+grpm.getLifetime(currentIndex)+") -- ignoring");
+                  } else {
+                    metadata.previousExpirationDate = metadata.currentExpirationDate;
+                    metadata.currentExpirationDate = grpm.getLifetime(currentIndex);
+                    log(3, "AR FAM "+currentKey+" updated ("+metadata.previousExpirationDate+" -> "+metadata.currentExpirationDate+"), writing to disk...");
+                    fragmentStorage.store(currentKey, metadata, fam, this);
+                    return;
+                  }
+                } else {
+                  warn("RefreshPatch attempts to roll back lifetime from "+metadata.currentExpirationDate+" to "+grpm.getLifetime(currentIndex));
+                  currentPhase = phaseStore;
+                }
+              } else {
+                warn("Cannot fetch metadata for key "+currentKey+", got 'null'");
+                currentPhase = phaseAdvance;
+              }
+            } else {
+              warn("RefreshPatch with invalid signature: "+currentKey);
+              currentPhase = phaseAdvance;
+            }
+          }
+          
+          if (currentPhase == phaseStore) {
+            log(3, "AR Patch: Update completed for "+currentKey);
+            successes[currentIndex] ++;
+            currentPhase = phaseAdvance;
+          }
+          
+          if (currentPhase == phaseAdvance) {
+            do {
+              currentFID ++;
+              if (currentFID >= numFragments) {
+                currentFID = 0;
+                currentIndex ++;
+              }
+              
+              if (currentIndex >= grpm.numKeys()) {
+                respond();
+                return;
+              }
+              
+              currentKey = new FragmentKey(grpm.getKey(currentIndex), currentFID);
+            } while (!fragmentStorage.exists(currentKey));
+            
+            currentPhase = phaseFetch;
+            log(3, "AR Patch: Fetching FAM for "+currentKey);
+            fragmentStorage.getObject(currentKey, this);
+          }
+        }
+        public void respond() {
+          int totalSuccesses = 0;
+          for (int i=0; i<successes.length; i++)
+            totalSuccesses += successes[i];
+
+          log(3, "AR Patch: Sending response ("+totalSuccesses+" updates total)");
+
+          sendMessage(
+            null,
+            new GlacierRefreshCompleteMessage(grpm.getUID(), grpm.getAllKeys(), successes, getLocalNodeHandle(), grpm.getSource().getId(), grpm.getTag()),
+            grpm.getSource()
+          );
+        }
+        public void receiveException(Exception e) {
+          warn("Exception while processing AR patch (key "+currentKey+", phase "+currentPhase+"): "+e);
+          e.printStackTrace();
+          currentPhase = phaseAdvance;
+          receiveResult(null);
+        }
+      };              
+        
+      c.receiveResult(null);
+    
     } else if (msg instanceof GlacierRangeQueryMessage) {
       final GlacierRangeQueryMessage grqm = (GlacierRangeQueryMessage) msg;
       IdRange requestedRange = grqm.getRequestedRange();
       
       log(2, "Range query for "+requestedRange);
 
-      Iterator iter = neighborStorage.scan().getIterator();
-      Vector ccwIDs = new Vector();
-      Vector cwIDs = new Vector();
-      Id myID = getLocalNodeHandle().getId();
+      Id[][] ranges = getNeighborRanges();
       
-      while (iter.hasNext()) {
-        Id thisNeighbor = (Id)iter.next();
-        if (myID.clockwise(thisNeighbor))
-          cwIDs.add(thisNeighbor);
-        else
-          ccwIDs.add(thisNeighbor);
-      }
-
-      for (int j=0; j<2; j++) {
-        Vector v = (j==0) ? cwIDs : ccwIDs;
-        boolean madeProgress = true;
-        while (madeProgress) {
-          madeProgress = false;
-          for (int i=0; i<(v.size()-1); i++) {
-            if (((Id)v.elementAt(i+1)).clockwise((Id)v.elementAt(i))) {
-              Object h = v.elementAt(i);
-              v.setElementAt(v.elementAt(i+1), i);
-              v.setElementAt(h, i+1);
-              madeProgress = true;
-            }
-          }
-        }
-      }
-      
-      Vector allIDs = new Vector();
-      allIDs.addAll(ccwIDs);
-      allIDs.add(myID);
-      allIDs.addAll(cwIDs);
-      
-      for (int i=0; i<allIDs.size(); i++) {
-        Id currentElement = (Id) allIDs.elementAt(i);
-        Id cwId, ccwId;
-        if (i>0) {
-          Id previousElement = (Id) allIDs.elementAt(i-1);
-          ccwId = previousElement.addToId(previousElement.distanceFromId(currentElement).shiftDistance(1,0));
-        } else {
-          ccwId = currentElement;
-        }
-        if (i<(allIDs.size()-1)) {
-          Id nextElement = (Id) allIDs.elementAt(i+1);
-          cwId = currentElement.addToId(currentElement.distanceFromId(nextElement).shiftDistance(1,0));
-        } else {
-          cwId = currentElement;
-        }
-
-        log(3, " - #"+i+" "+currentElement+": "+ccwId+"-"+cwId);
-        
-        IdRange thisRange = factory.buildIdRange(ccwId, cwId);
+      for (int i=0; i<ranges.length; i++) {
+        IdRange thisRange = factory.buildIdRange(ranges[i][0], ranges[i][2]);
         IdRange intersectRange = requestedRange.intersectRange(thisRange);
         if (!intersectRange.isEmpty()) {
           log(3, "     - Intersects: "+intersectRange+", sending RangeForward");
           sendMessage(
-            currentElement,
-            new GlacierRangeForwardMessage(grqm.getUID(), requestedRange, grqm.getSource(), getLocalNodeHandle(), currentElement, grqm.getTag()),
+            ranges[i][1],
+            new GlacierRangeForwardMessage(grqm.getUID(), requestedRange, grqm.getSource(), getLocalNodeHandle(), ranges[i][1], grqm.getTag()),
             null
           );
         }
@@ -2487,98 +3026,60 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       
     } else if (msg instanceof GlacierFetchMessage) {
       final GlacierFetchMessage gfm = (GlacierFetchMessage) msg;
-      log(2, "Fetch request for " + gfm.getKey());
+      log(2, "Fetch request for " + gfm.getKey(0) + ((gfm.getNumKeys()>1) ? (" and " + (gfm.getNumKeys() - 1) + " other keys") : "") + ", request="+gfm.getRequest());
 
       /* FetchMessages are sent during recovery to retrieve a fragment from
          another node. They can be answered a) if the recipient has a copy
          of the fragment, or b) if the recipient has a full replica of
          the object. In the second case, the fragment is created on-the-fly */
 
-      fragmentStorage.getObject(gfm.getKey(),
-        new Continuation() {
-          public void receiveResult(Object o) {
-            if (o != null) {
-              log(2, "Fragment "+gfm.getKey()+" found ("+o+"), returning...");
-              FragmentAndManifest fam = (FragmentAndManifest) o;
-              Fragment fragment = ((gfm.getRequest() & GlacierFetchMessage.FETCH_FRAGMENT)!=0) ? fam.fragment : null;
-              Manifest manifest = ((gfm.getRequest() & GlacierFetchMessage.FETCH_MANIFEST)!=0) ? fam.manifest : null;
-              
-              sendMessage(
-                null,
-                new GlacierDataMessage(gfm.getUID(), gfm.getKey(), fragment, manifest, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
-                gfm.getSource()
-              );
-            } else {
-              log(3, "Fragment "+gfm.getKey()+" not found - but maybe we have the original? - "+gfm.getKey().getVersionKey().getId());
-              policy.prefetchLocalObject(gfm.getKey().getVersionKey(),
-                new Continuation() {
-                  public void receiveResult(Object o) {
-                    if (o != null) {
-                      long theVersion = (o instanceof GCPastContent) ? ((GCPastContent)o).getVersion() : 0;
-                      if (theVersion == gfm.getKey().getVersionKey().getVersion()) {
-                        log(2, "Original of "+gfm.getKey()+" found ("+o+", ts="+theVersion+", expected="+gfm.getKey().getVersionKey().getVersion()+") Recoding...");
-                        
-                        if ((gfm.getRequest() & GlacierFetchMessage.FETCH_FRAGMENT) == 0) {
-                          sendMessage(
-                            null,
-                            new GlacierDataMessage(gfm.getUID(), gfm.getKey(), null, null, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
-                            gfm.getSource()
-                          );
-                        } else {
-                          final PastContent retrievedObject = (PastContent) o;
-                          endpoint.process(new Executable() {
-                            public Object execute() {
-                              Fragment[] frags = policy.encodeObject(retrievedObject);
-                              log(3, "Fragments recoded ok. Returning "+gfm.getKey()+"...");
-                              return frags[gfm.getKey().getFragmentID()];
-                            }
-                          }, new Continuation() {
-                            public void receiveResult(Object o) {
-                              Fragment fragment = (Fragment) o;
-                          
-                              sendMessage(
-                                null,
-                                new GlacierDataMessage(gfm.getUID(), gfm.getKey(), fragment, null, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
-                                gfm.getSource()
-                              );
-                            } 
-                            public void receiveException(Exception e) {
-                              warn("Cannot reencode queried fragment: "+gfm.getKey());
-                            }
-                          });
-                        }
-                      } else {
-                        log(2, "Original of "+gfm.getKey()+" not found; have different version: "+theVersion);
-                        sendMessage(
-                          null,
-                          new GlacierResponseMessage(gfm.getUID(), gfm.getKey(), false, 0, true, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
-                          gfm.getSource()
-                        );
-                      }
-                    } else {
-                      log(2, "Original of "+gfm.getKey()+" not found either");
-                      sendMessage(
-                        null,
-                        new GlacierResponseMessage(gfm.getUID(), gfm.getKey(), false, 0, true, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
-                        gfm.getSource()
-                      );
-                    }
-                  }
-
-                  public void receiveException(Exception e) {
-                    warn("storage.getObject(" + gfm.getKey() + ") returned exception " + e);
-                    e.printStackTrace();
-                  }
-                }
-              );
-            }
+      fragmentStorage.getObject(gfm.getKey(0), new Continuation() {
+        int currentLookup = 0;
+        Fragment fragment[] = new Fragment[gfm.getNumKeys()];
+        Manifest manifest[] = new Manifest[gfm.getNumKeys()];
+        int numFragments = 0, numManifests = 0;
+        
+        public void returnResponse() {
+          log(3, "Returning response with "+numFragments+" fragments, "+numManifests+" manifests ("+gfm.getNumKeys()+" queries originally)");
+          sendMessage(
+            null,
+            new GlacierDataMessage(gfm.getUID(), gfm.getAllKeys(), fragment, manifest, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
+            gfm.getSource()
+          );
+        }
+        public void receiveResult(Object o) {
+          if (o != null) {
+            log(2, "Fragment "+gfm.getKey(currentLookup)+" found ("+o+")");
+            FragmentAndManifest fam = (FragmentAndManifest) o;
+            fragment[currentLookup] = ((gfm.getRequest() & GlacierFetchMessage.FETCH_FRAGMENT)!=0) ? fam.fragment : null;
+            if (fragment[currentLookup] != null)
+              numFragments ++;
+            manifest[currentLookup] = ((gfm.getRequest() & GlacierFetchMessage.FETCH_MANIFEST)!=0) ? fam.manifest : null;
+            if (manifest[currentLookup] != null)
+              numManifests ++;
+          } else {
+            log(2, "Fragment "+gfm.getKey(currentLookup)+" not found");
+            fragment[currentLookup] = null;
+            manifest[currentLookup] = null;
           }
-
-          public void receiveException(Exception e) {
-            warn("Fetch(" + gfm.getKey() + ") returned exception " + e);
-          }
-        });
-      
+          
+          nextLookup();
+        }
+        public void nextLookup() {
+          currentLookup ++;
+          if (currentLookup >= gfm.getNumKeys())
+            returnResponse();
+          else
+            fragmentStorage.getObject(gfm.getKey(currentLookup), this);
+        }
+        public void receiveException(Exception e) { 
+          warn("Exception while retrieving fragment "+gfm.getKey(currentLookup)+" (lookup #"+currentLookup+"), e="+e);
+          e.printStackTrace();
+          fragment[currentLookup] = null;
+          manifest[currentLookup] = null;
+          nextLookup();
+        }
+      });
     } else if (msg instanceof GlacierDataMessage) {
       final GlacierDataMessage gdm = (GlacierDataMessage) msg;
       for (int i=0; i<gdm.numKeys(); i++) {
