@@ -117,6 +117,8 @@ public class Proxy {
     result.append(parameters.getStringParameter("java_maximum_memory"));
     result.append(" -Xss");
     result.append(parameters.getStringParameter("java_stack_size"));
+    if (System.getProperty("RECOVER") != null)
+      result.append(" -DRECOVER=\""+System.getProperty("RECOVER")+"\"");
     
     if (parameters.getBooleanParameter("java_memory_free_enable")) {
       result.append(" -Xmaxf" + parameters.getDoubleParameter("java_memory_free_maximum"));
