@@ -193,14 +193,7 @@ public class RMINodeHandle extends DistNodeHandle
     public boolean pingImpl() {
       NodeId tryid;
 
-      /*
-      * Note subtle point: When ping is called from RouteSet.readObject,
-      * the RMI security manager has not yet had a chance to call the
-      * above setLocalNode. So isLocal may be false even for local node.
-      *
-      * This is not disastrous; at worst, we'll ping the local node once.
-       */
-
+      // don't ping local nodes or during node construction
       if (isLocal || getLocalNode() == null) return alive;
 
       /*
