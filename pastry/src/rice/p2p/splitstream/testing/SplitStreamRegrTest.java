@@ -43,6 +43,8 @@ public class SplitStreamRegrTest extends CommonAPITest {
    */
   protected Random rng;
 
+    protected Random generateIdRng;
+
   /**
    * Constructor which sets up all local variables
    */
@@ -50,6 +52,8 @@ public class SplitStreamRegrTest extends CommonAPITest {
     splitstreams = new SplitStreamImpl[NUM_NODES];
     ssclients = new SplitStreamTestClient[NUM_NODES];
     rng = new Random(PastrySeed.getSeed());
+    generateIdRng = new Random(PastrySeed.getSeed());
+
   }
 
 
@@ -290,7 +294,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
    */
   private Id generateId() {
     byte[] data = new byte[20];
-    new Random(PastrySeed.getSeed()).nextBytes(data);
+    generateIdRng.nextBytes(data);
     return FACTORY.buildId(data);
   }
  
