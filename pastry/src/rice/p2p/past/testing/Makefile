@@ -1,7 +1,7 @@
 PACKAGE = rice.p2p.past.testing
 
 SOURCE  = \
-  DistPastRegrTest.java
+  PastRegrTest.java
 
 RMI_SOURCE =
 

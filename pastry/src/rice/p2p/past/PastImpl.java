@@ -41,6 +41,7 @@ import java.util.*;
 import java.util.logging.* ;
 
 import rice.*;
+import rice.Continuation.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.messaging.*;
 import rice.persistence.*;
@@ -447,7 +448,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @param id the key to be queried
    * @param command Command to be performed when the result is received
    */
-  public void lookup(Id id, Continuation command) {
+  public void lookup(final Id id, final Continuation command) {
     log.fine("Looking up object stored in Past with id " + id);
     if (command == null) return;
     if (id == null) {
@@ -455,8 +456,41 @@ public class PastImpl implements Past, Application, RMClient {
       return;
     }
 
-    sendRequest(id, new LookupMessage(getUID(), id, getLocalNodeHandle(), id), command);
-    
+    storage.getObject(id, new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        if (o != null) {
+          command.receiveResult(o);
+        } else {
+          // send the request across the wire, and see if the result is null or not
+          sendRequest(id, new LookupMessage(getUID(), id, getLocalNodeHandle(), id), new StandardContinuation(this) {
+            public void receiveResult(Object o) {
+              // if we have an object, we return it
+              // otherwise, we must check all replicas in order to make sure that
+              // the object doesn't exist anywhere
+              if (o != null) {
+                command.receiveResult(o);
+              } else {
+                lookupHandles(id, replicationFactor, new StandardContinuation(this) {
+                  public void receiveResult(Object o) {
+                    PastContentHandle[] handles = (PastContentHandle[]) o;
+
+                    for (int i=0; i<handles.length; i++) {
+                      if (handles[i] != null) {
+                        fetch(handles[i], command);
+                        return;
+                      }
+                    }
+
+                    // there were no replicas of the object
+                    command.receiveResult(null);
+                  }
+                });
+              }
+            }
+          });
+        }
+      }
+    });
   }
 
   /**
@@ -564,7 +598,6 @@ public class PastImpl implements Past, Application, RMClient {
     if (command == null) return;
     if (handle == null) {
       command.receiveException(new RuntimeException("Handle cannot be null in fetch!"));
-      log.warning("Handle cannot be null in fetch!");
       return;
     }
     
@@ -633,17 +666,12 @@ public class PastImpl implements Past, Application, RMClient {
       if (! lmsg.isResponse()) {
         log.finer("Lookup message " + lmsg + " is a request; look in the cache");
         if (storage.exists(id)) {
-
           // deliver the message, which will do what we want
           log.fine("Request for " + id + " satisfied locally - responding");
           deliver(endpoint.getId(), lmsg);
           
           return false;
-        } else {
-          // otherwise, see if we can route to the closest replica
-          replicaManager.lookupForward((rice.pastry.routing.RouteMessage) message);
-          log.fine("Attempting to route directly to nearest replica for " + id);
-        }
+        } 
       } else {
         // if the message hasn't been cached and we don't have it, cache it
         if ((! lmsg.isCached()) && (content != null) && (! content.isMutable())) {
@@ -817,7 +845,7 @@ public class PastImpl implements Past, Application, RMClient {
     IdRange notRange = range.getComplementRange();
 
     log.finer("Got new responsible range " + range);
-    Continuation c = new Continuation() {
+    final Continuation c = new Continuation() {
       private Iterator notIds;
 
       public void receiveResult(Object o) {
@@ -831,9 +859,17 @@ public class PastImpl implements Past, Application, RMClient {
         }
 
         if (notIds.hasNext()) {
-          Id id = (Id) notIds.next();
+          final Id id = (Id) notIds.next();
           log.warning("Unstoring id " + id);
-          storage.unstore(id, this);
+
+          storage.getStorage().getObject(id, new StandardContinuation(this) {
+            public void receiveResult(Object o) {
+              PastContent content = (PastContent) o;
+
+              cache(content);
+              storage.getStorage().unstore(id, parent);
+            }
+          });
         }
       }
 

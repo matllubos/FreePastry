@@ -1,8 +1,8 @@
 /*************************************************************************
 
-"Free Pastry" Peer-to-Peer Application Development Substrate 
+"FreePastry" Peer-to-Peer Application Development Substrate
 
-Copyright 2002, Rice University. All rights reserved. 
+Copyright 2002, Rice University. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -34,53 +34,47 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.p2p.commonapi;
+package rice.p2p.scribe.messaging;
 
-import java.io.*;
-import java.util.*;
+import rice.*;
+import rice.p2p.commonapi.*;
+import rice.p2p.scribe.*;
 
 /**
- * @(#) NodeHandle.java
+ * @(#) PublishRequestMessage.java
  *
- * This class is an abstraction of a node handle from the CommonAPI paper. A
- * node handle is a handle to a known node, which conceptually includes the
- * node's Id, as well as the node's underlying network address (such as IP/port).
- *
- * This class is (unfortunately) an abstact class due to the need to be observable.
+ * The publish message.
  *
  * @version $Id$
  *
  * @author Alan Mislove
- * @author Peter Druschel
  */
-public abstract class NodeHandle extends Observable implements Serializable  {
+public class PublishRequestMessage extends ScribeMessage {
 
-  // constants defining types of observable events
-  public static final Integer PROXIMITY_CHANGED = new Integer(1);
-  public static final Integer DECLARED_DEAD = new Integer(2);
-  public static final Integer DECLARED_LIVE = new Integer(3);
-  
-  /**
-   * Returns this node's id.
-   *
-   * @return The corresponding node's id.
-   */
-  public abstract Id getId();
+  // the content of this message
+  protected ScribeContent content;
 
   /**
-   * Returns whether or not this node is currently alive
+  * Constructor which takes a unique integer Id
    *
-   * @return Whether or not this node is currently alive
+   * @param id The unique id
+   * @param source The source address
+   * @param dest The destination address
    */
-  public abstract boolean isAlive();
+  public PublishRequestMessage(NodeHandle source, Topic topic, ScribeContent content) {
+    super(source, topic);
+
+    this.content = content;
+  }
 
   /**
-   * Returns the current proximity value of this node
+   * Returns the content
    *
-   * @return The current proximity value of this node
+   * @return The content
    */
-  public abstract int proximity();
-  
+  public ScribeContent getContent() {
+    return content;
+  }
+
 }
-
 

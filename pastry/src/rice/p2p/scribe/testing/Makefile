@@ -1,8 +1,8 @@
-PACKAGE = rice.p2p.commonapi.testing
+PACKAGE = rice.p2p.scribe.testing
 
 SOURCE  = \
-  CommonAPITest.java
-  
+	ScribeRegrTest.java
+
 RMI_SOURCE =
 
 MAIN       = 

@@ -52,19 +52,19 @@ import java.net.*;
 import java.io.Serializable;
 
 /**
- * @(#) DistPastRegrTest.java
+ * @(#) PastRegrTest.java
  *
- * Provides regression testing for the Past service using distributed nodes.
+ * Provides regression testing for the Past service
  *
  * @version $Id$
  *
  * @author Alan Mislove
  */
 
-public class DistPastRegrTest extends DistCommonAPITest {
+public class PastRegrTest extends CommonAPITest {
 
   // the instance name to use
-  public static String INSTANCE = "DistPastRegrTest";
+  public static String INSTANCE = "PastRegrTest";
   
   // the replication factor in Past
   public static int REPLICATION_FACTOR = 3;
@@ -81,7 +81,7 @@ public class DistPastRegrTest extends DistCommonAPITest {
   /**
    * Constructor which sets up all local variables
    */
-  public DistPastRegrTest() {
+  public PastRegrTest() {
     pasts = new PastImpl[NUM_NODES];
     storages = new StorageManager[NUM_NODES];
     rng = new Random();
@@ -594,58 +594,85 @@ public class DistPastRegrTest extends DistCommonAPITest {
    */
   protected void testCaching() {
     final PastImpl local = pasts[rng.nextInt(NUM_NODES)];
-    final Id id = generateId();
-    final PastContent file1 = new TestPastContent(id);
-    final PastContent file2 = new NonMutableTestPastContent(id);
+    final Id id1 = generateId();
+    final Id id2 = generateId();
+    final PastContent file1 = new TestPastContent(id1);
+    final PastContent file2 = new TestPastContent(id2);
+    final PastContent file3 = new NonMutableTestPastContent(id2);
 
     sectionStart("Caching Testing");
 
-    // Insert file
-    stepStart("Caching Mutable Object");
-    final LookupMessage lmsg = new LookupMessage(1, id, local.getLocalNodeHandle(), id);
-    lmsg.receiveResult(file1);
-    
-    assertTrue("Message should continue to be routed",
-               local.forward(new TestRouteMessage(id, null, lmsg)));
-
-    stepDone();
-
-    stepStart("Cache Shouldn't Contain Object");
+    // Manually insert file
+    stepStart("Manually Inserting Object Into Cache");
 
     // check cache
-    local.getStorageManager().getObject(id, new TestCommand() {
+    local.getStorageManager().getCache().cache(id1, file1, new TestCommand() {
       public void receive(Object result) throws Exception {
-        assertTrue("Object should be null", result == null);
+        assertTrue("Object should not be null", result != null);
+        assertTrue("Object should be True", result.equals(new Boolean(true)));
 
         stepDone();
 
-        stepStart("Caching Non-Mutable Object");
-        
-        lmsg.receiveResult(file2);
-        assertTrue("Message should continue to be routed",
-                   local.forward(new TestRouteMessage(id, null, lmsg)));
-
-        stepDone();
-
-        stepStart("Cache Should Contain Object");
-
-        // check cache
-        local.getStorageManager().getObject(id, new TestCommand() {
+        // Check file exists
+        stepStart("Local Lookup Satisfied by Cache");
+        local.lookup(id1, new TestCommand() {
           public void receive(Object result) throws Exception {
-            assertTrue("Object should not be null", result != null);
-            assertTrue("Object should be correct", result.equals(file2));
+            assertTrue("File should not be null", result != null);
+            assertEquals("Lookup of file should be correct",
+                         file1,
+                         result);
+            stepDone();
+
+            // Insert file
+            stepStart("Caching Mutable Object");
+            final LookupMessage lmsg = new LookupMessage(1, id2, local.getLocalNodeHandle(), id2);
+            lmsg.receiveResult(file2);
+
+            assertTrue("Message should continue to be routed",
+                       local.forward(new TestRouteMessage(id2, null, lmsg)));
 
             stepDone();
 
-            // check lookup
-            LookupMessage lmsg = new LookupMessage(-1, id, local.getLocalNodeHandle(), id);
+            stepStart("Cache Shouldn't Contain Object");
 
-            stepStart("Lookup Satisfied By Cache");
-            assertTrue("Message should not continue to be routed",
-                       ! local.forward(new TestRouteMessage(id, null, lmsg)));
-            stepDone();
-            
-            sectionDone();
+            // check cache
+            local.getStorageManager().getObject(id2, new TestCommand() {
+              public void receive(Object result) throws Exception {
+                assertTrue("Object should be null", result == null);
+
+                stepDone();
+
+                stepStart("Caching Non-Mutable Object");
+
+                lmsg.receiveResult(file3);
+                assertTrue("Message should continue to be routed",
+                           local.forward(new TestRouteMessage(id2, null, lmsg)));
+
+                stepDone();
+
+                stepStart("Cache Should Contain Object");
+
+                // check cache
+                local.getStorageManager().getObject(id2, new TestCommand() {
+                  public void receive(Object result) throws Exception {
+                    assertTrue("Object should not be null", result != null);
+                    assertTrue("Object should be correct", result.equals(file3));
+
+                    stepDone();
+
+                    // check lookup
+                    LookupMessage lmsg = new LookupMessage(-1, id2, local.getLocalNodeHandle(), id2);
+
+                    stepStart("Lookup Satisfied By Cache");
+                    assertTrue("Message should not continue to be routed",
+                               ! local.forward(new TestRouteMessage(id2, null, lmsg)));
+                    stepDone();
+
+                    sectionDone();
+                  }
+                });
+              }
+            });
           }
         });
       }
@@ -681,7 +708,7 @@ public class DistPastRegrTest extends DistCommonAPITest {
    */
   public static void main(String args[]) {
     parseArgs(args);
-    DistPastRegrTest pastTest = new DistPastRegrTest();
+    PastRegrTest pastTest = new PastRegrTest();
     pastTest.start();
   }
   

@@ -1,8 +1,8 @@
 /*************************************************************************
 
-"Free Pastry" Peer-to-Peer Application Development Substrate 
+"FreePastry" Peer-to-Peer Application Development Substrate
 
-Copyright 2002, Rice University. All rights reserved. 
+Copyright 2002, Rice University. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -34,53 +34,58 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.p2p.commonapi;
+package rice.p2p.scribe;
 
-import java.io.*;
-import java.util.*;
+import rice.*;
+import rice.p2p.commonapi.*;
 
 /**
- * @(#) NodeHandle.java
+ * @(#) ScribeClient.java
  *
- * This class is an abstraction of a node handle from the CommonAPI paper. A
- * node handle is a handle to a known node, which conceptually includes the
- * node's Id, as well as the node's underlying network address (such as IP/port).
- *
- * This class is (unfortunately) an abstact class due to the need to be observable.
+ * This interface represents a client using the Scribe system.
  *
  * @version $Id$
- *
  * @author Alan Mislove
- * @author Peter Druschel
  */
-public abstract class NodeHandle extends Observable implements Serializable  {
-
-  // constants defining types of observable events
-  public static final Integer PROXIMITY_CHANGED = new Integer(1);
-  public static final Integer DECLARED_DEAD = new Integer(2);
-  public static final Integer DECLARED_LIVE = new Integer(3);
-  
-  /**
-   * Returns this node's id.
-   *
-   * @return The corresponding node's id.
-   */
-  public abstract Id getId();
+public interface ScribeClient {
 
   /**
-   * Returns whether or not this node is currently alive
+   * This method is invoked when an anycast is received for a topic
+   * which this client is interested in.  The client should return
+   * whether or not the anycast should continue.
    *
-   * @return Whether or not this node is currently alive
+   * @param topic The topic the message was anycasted to
+   * @param content The content which was anycasted
+   * @return Whether or not the anycast should continue
    */
-  public abstract boolean isAlive();
+  public boolean anycast(Topic topic, ScribeContent content);
 
   /**
-   * Returns the current proximity value of this node
+   * This method is invoked when a message is delivered for a topic this
+   * client is interested in.
    *
-   * @return The current proximity value of this node
+   * @param topic The topic the message was published to
+   * @param content The content which was published
    */
-  public abstract int proximity();
-  
+  public void deliver(Topic topic, ScribeContent content);
+
+  /**
+   * Informs this client that a child was added to a topic in
+   * which it was interested in.
+   *
+   * @param topic The topic to unsubscribe from
+   * @param child The child that was added
+   */
+  public void childAdded(Topic topic, NodeHandle child);
+
+  /**
+   * Informs this client that a child was removed from a topic in
+   * which it was interested in.
+   *
+   * @param topic The topic to unsubscribe from
+   * @param child The child that was removed
+   */
+  public void childRemoved(Topic topic, NodeHandle child);
+
 }
-
 

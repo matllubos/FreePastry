@@ -40,9 +40,11 @@ import rice.*;
 
 import rice.p2p.commonapi.*;
 
+import rice.pastry.*;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
 import rice.pastry.commonapi.*;
+import rice.pastry.direct.*;
 import rice.pastry.dist.*;
 import rice.pastry.standard.*;
 
@@ -59,7 +61,7 @@ import java.io.Serializable;
  *
  * @author Alan Mislove
  */
-public abstract class DistCommonAPITest {
+public abstract class CommonAPITest {
 
   // ----- VARAIBLES -----
   
@@ -70,10 +72,13 @@ public abstract class DistCommonAPITest {
   // ----- PASTRY SPECIFIC VARIABLES -----
 
   // the factory for creating pastry nodes
-  protected DistPastryNodeFactory factory;
+  protected PastryNodeFactory factory;
 
   // the factory for creating random node ids
   protected NodeIdFactory idFactory;
+
+  // the simulator, in case of direct
+  protected NetworkSimulator simulator;
   
 
   // ----- STATIC FIELDS -----
@@ -83,6 +88,23 @@ public abstract class DistCommonAPITest {
 
   // the factory which creates pastry ids
   public static IdFactory FACTORY = new PastryIdFactory();
+
+
+  // ----- TESTING SPECIFIC FIELDS -----
+
+  // the text to print to the screen
+  public static final String SUCCESS = "SUCCESS";
+  public static final String FAILURE = "FAILURE";
+
+  // the width to pad the output
+  protected static final int PAD_SIZE = 60;
+
+  // the direct protocol
+  public static final int PROTOCOL_DIRECT = -138;
+
+  // the possible network simulation models
+  public static final int SIMULATOR_SPHERE = -1;
+  public static final int SIMULATOR_EUCLIDEAN = -2;
 
 
   // ----- PASTRY SPECIFIC FIELDS -----
@@ -99,18 +121,11 @@ public abstract class DistCommonAPITest {
   // the procotol to use when creating nodes
   public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
 
+  // the simulator to use in the case of direct
+  public static int SIMULATOR = SIMULATOR_SPHERE;
+
   // the instance name to use
   public static String INSTANCE_NAME = "DistCommonAPITest";
-
-
-  // ----- TESTING SPECIFIC FIELDS -----
-
-  // the text to print to the screen
-  public static final String SUCCESS = "SUCCESS";
-  public static final String FAILURE = "FAILURE";
-
-  // the width to pad the output
-  protected static final int PAD_SIZE = 60;
 
 
   // ----- ATTEMPT TO LOAD LOCAL HOSTNAME -----
@@ -130,11 +145,22 @@ public abstract class DistCommonAPITest {
    * Constructor, which takes no arguments and sets up the
    * factories in preparation for node creation.
    */
-  public DistCommonAPITest() {
+  public CommonAPITest() {
     idFactory = new IPNodeIdFactory(PORT);
-    factory = DistPastryNodeFactory.getFactory(idFactory,
-                                               PROTOCOL,
-                                               PORT);
+
+    if (SIMULATOR == SIMULATOR_SPHERE) {
+      simulator = new SphereNetwork();
+    } else {
+      simulator = new EuclideanNetwork();
+    }
+    
+    if (PROTOCOL == PROTOCOL_DIRECT) {
+      factory = new DirectPastryNodeFactory(idFactory, simulator);
+    } else {
+      factory = DistPastryNodeFactory.getFactory(idFactory,
+                                                 PROTOCOL,
+                                                 PORT);
+    }
 
     nodes = new Node[NUM_NODES];
   }
@@ -145,12 +171,13 @@ public abstract class DistCommonAPITest {
   public void start() {
     for (int i=0; i<NUM_NODES; i++) {
       nodes[i] = createNode(i);
-      
-      while (! ((PastryNode) nodes[i]).isReady()) {
-        pause(1000);
-      }
+
+      simulate();
+
+      pause(1000);
       
       processNode(i, nodes[i]);
+      simulate();
 
       System.out.println("Created node " + i + " with id " + ((PastryNode) nodes[i]).getNodeId());
     }
@@ -162,6 +189,16 @@ public abstract class DistCommonAPITest {
 
 
   // ----- INTERNAL METHODS -----
+
+  /**
+   * In case we're using the direct simulator, this method
+   * simulates the message passing.
+   */
+  protected void simulate() {
+    if (PROTOCOL == PROTOCOL_DIRECT) {
+      while (simulator.simulate()) {}
+    }
+  }
 
   /**
    * Method which creates a single node, given it's node
@@ -184,8 +221,12 @@ public abstract class DistCommonAPITest {
    * @return handle to bootstrap node, or null.
    */
   protected rice.pastry.NodeHandle getBootstrap() {
-    InetSocketAddress address = new InetSocketAddress(BOOTSTRAP_HOST, BOOTSTRAP_PORT);
-    return factory.getNodeHandle(address);
+    if (PROTOCOL == PROTOCOL_DIRECT) {
+      return ((DirectPastryNode) nodes[0]).getLocalHandle();
+    } else {
+      InetSocketAddress address = new InetSocketAddress(BOOTSTRAP_HOST, BOOTSTRAP_PORT);
+      return ((DistPastryNodeFactory) factory).getNodeHandle(address);
+    }
   }
 
   /**
@@ -194,8 +235,18 @@ public abstract class DistCommonAPITest {
    * @param ms The number of milliseconds to pause
    */
   protected synchronized void pause(int ms) {
-    //System.out.println("waiting for " + (ms/1000) + " sec");
-    try { wait(ms); } catch (InterruptedException e) {}
+    if (PROTOCOL != PROTOCOL_DIRECT)
+      try { wait(ms); } catch (InterruptedException e) {}
+  }
+
+  /**
+   * Method which kills the specified node
+   *
+   * @param n The node to kill
+   */
+  protected void kill(int n) {
+    if (PROTOCOL == PROTOCOL_DIRECT)
+      simulator.setAlive((rice.pastry.NodeId) nodes[n].getId(), false);
   }
 
 
@@ -387,8 +438,25 @@ public abstract class DistCommonAPITest {
           PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
         else if (s.equalsIgnoreCase("rmi"))
           PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
+        else if (s.equalsIgnoreCase("direct"))
+          PROTOCOL = PROTOCOL_DIRECT;
         else
           System.out.println("ERROR: Unsupported protocol: " + s);
+
+        break;
+      }
+    }
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-simulator") && i+1 < args.length) {
+        String s = args[i+1];
+
+        if (s.equalsIgnoreCase("sphere"))
+          SIMULATOR = SIMULATOR_SPHERE;
+        else if (s.equalsIgnoreCase("euclidean"))
+          PROTOCOL = SIMULATOR_EUCLIDEAN;
+        else
+          System.out.println("ERROR: Unsupported simulator: " + s);
 
         break;
       }

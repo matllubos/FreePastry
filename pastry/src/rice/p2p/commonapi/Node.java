@@ -64,6 +64,13 @@ public interface Node {
   public Endpoint registerApplication(Application application, String instance);
 
   /**
+   * Returns the Id of this node
+   *
+   * @return This node's Id
+   */
+  public Id getId();
+
+  /**
    * Returns a factory for Ids specific to this node's protocol.
    *
    * @return A factory for creating Ids.
