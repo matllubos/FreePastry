@@ -87,7 +87,7 @@ public interface PASTPolicy {
    * @param clCred credential object provided by the principal who initiated the operation
    * @return null, if the operation is not allowed; else, the object to be inserted 
    */
-  public Serializable checkInsert(Id id, Serializable newObj, Serializable existingObject, boolean isRoot, Credentials clCred);
+  public Serializable checkInsert(Id id, PASTContent newObj, PASTContent existingObject, Credentials clCred);
 
   /**
    * Checks if a lookup operation should be allowed.
@@ -99,7 +99,7 @@ public interface PASTPolicy {
    * @param clCred credential object provided by the principal who initiated the operation
    * @return null, if the operation is not allowed; else, the object to be returned to the client
    */
-  public Serializable checkLookup(Id id, Serializable existingObject, boolean isRoot, Credentials clCred);
+  public Serializable checkLookup(Id id, PASTObject existingObject, Credentials clCred);
 
   /**
    * Checks if a exists operation should be allowed.
@@ -112,18 +112,6 @@ public interface PASTPolicy {
    * @param clCred credential object provided by the principal who initiated the operation
    * @return the result returned to the client
    */
-  public boolean checkExists(Id id, Serializable existingObject, boolean isRoot, Credentials clCred);
-  
-  /**
-   * Checks if a delete operation should be allowed.
-   * Invoked when a PAST node receives an insert request and it is a replica root for the id, or it has the object.
-   * 
-   * @param id Pastry key identifying the object
-   * @param existingObj the existing object stored on this node (null if no object associated with id is stored on this node)
-   * @param true if the local node is a replica root for the id, false otherwise
-   * @param clCred credential object provided by the principal who initiated the operation
-   * @return true if the operation is allowed, false otherwise
-   */
-  public boolean checkDelete(Id id, Serializable existingObject, boolean isRoot, Credentials clCred);
+  public boolean checkExists(Id id, PASTContent existingObject, Credentials clCred);
   
 }

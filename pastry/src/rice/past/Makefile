@@ -1,8 +1,13 @@
 PACKAGE = rice.past
 
 SOURCE  = \
-	PASTService.java \
-	PASTServiceImpl.java
+	PAST.java \
+	ContentHashPAST.java \
+	SignedPAST.java \
+	PASTContent.java\
+	ContentHashPASTContent.java\
+	PASTPolicy.java\
+	SignedPASTContent.java
 
 RMI_SOURCE =
 
