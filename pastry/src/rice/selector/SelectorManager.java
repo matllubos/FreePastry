@@ -213,22 +213,49 @@ public class SelectorManager extends Thread {
    * Method which invokes all pending invocations. This method should *only* be
    * called by the selector thread.
    */
-  private synchronized void doInvocations() {
-    while (invocations.size() > 0) {
-      ((Runnable) invocations.removeFirst()).run();
+  private void doInvocations() {
+    Runnable run = getInvocation();
+    while (run != null) {
+      run.run();
+      run = getInvocation();
     }
 
-    Iterator i = modifyKeys.iterator();
-
-    while (i.hasNext()) {
-      SelectionKey key = (SelectionKey) i.next();
-
-      if (key.isValid() && (key.attachment() != null)) {
+    SelectionKey key = getModifyKey();
+    while (key != null) {
+      if (key.isValid() && (key.attachment() != null)) 
         ((SelectionKeyHandler) key.attachment()).modifyKey(key);
-      }
+      
+      key = getModifyKey();
     }
-
-    modifyKeys.clear();
+  }
+  
+  /**
+   * Method which synchroniously returns the first element off of the
+   * invocations list.
+   *
+   * @return An item from the invocations list
+   */
+  private synchronized Runnable getInvocation() {
+    if (invocations.size() > 0)
+      return (Runnable) invocations.removeFirst();
+    else
+      return null;
+  }
+  
+  /**
+   * Method which synchroniously returns on element off
+   * of the modifyKeys list
+   *
+   * @return An item from the invocations list
+   */
+  private synchronized SelectionKey getModifyKey() {
+    if (modifyKeys.size() > 0) {
+      Object result = modifyKeys.iterator().next();
+      modifyKeys.remove(result);
+      return (SelectionKey) result;
+    } else {
+      return null;
+    }
   }
 
   /**
