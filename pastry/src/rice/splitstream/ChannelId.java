@@ -1,15 +1,18 @@
 package rice.splitstream;
+
 import rice.pastry.*;
+
 /**
- * Add class information here
- */
-/**
- * This class just wraps the NodeId so that
- * we can have type checking.
+ * This class wraps the nodeId object so we can use type checking
+ * and allow more readable and understandable code. All it does is
+ * subclass the nodeId and provide a constructor that allows the
+ * wrapping of a NodeId object to create a concrete subclass 
  *
+ * @version $Id$
  * @author Ansley Post
  */
 public class ChannelId extends NodeId{
+
  /**
   * Constructor that takes in a nodeId and makes a ChannelId
   */
