@@ -883,7 +883,7 @@ public class Channel implements IScribeApp {
 	  //System.out.println("Setting root path in controlDropMessage msg - making it empty at"+getNodeId()+" for stripe "+stripe.getStripeId());
           stripe.setRootPath( null );
         }
-	//System.out.println("Node "+getNodeId()+" received DROP message"+" for stripe "+dropMessage.getStripeId());
+	//System.out.println("Node "+((Scribe)scribe).getNodeId()+" received DROP message"+" for stripe "+dropMessage.getStripeId());
 	dropMessage.handleDeliverMessage((Scribe)scribe, 
            ((Scribe) scribe).getTopic(dropMessage.getStripeId()), getSplitStream().getPastryNode(), this);
     }
@@ -1067,6 +1067,21 @@ public class Channel implements IScribeApp {
      */
     public Scribe getScribe(){
 	return (Scribe)scribe;
+    }
+
+    /** 
+     * Upcall by scribe to let this application know that 
+     * it is the new root.
+     */
+    public void isNewRoot(NodeId topicId){
+    }
+
+    public void setMaxTimeout(int limit){
+	max_timeouts = limit;
+    }
+    
+    public int getMaxTimeout(){
+	return max_timeouts;
     }
 }
 

@@ -421,6 +421,16 @@ public class Stripe extends Observable implements IScribeApp{
     }
 
     /** 
+     * Upcall by scribe to let this application know that 
+     * it is the new root.
+     */
+    public void isNewRoot(NodeId tid){
+	NodeId topicId = (NodeId)getStripeId();
+	if(!topicId.equals(tid))
+	    System.out.println("ERROR --- isNewRoot upcall failure");
+	setRootPath(null);
+    }
+    /** 
      * The constant status code associated with the subscribed state
      */
     public static final int STRIPE_SUBSCRIBED = 0;

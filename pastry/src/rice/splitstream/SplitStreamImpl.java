@@ -498,5 +498,12 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 	return true;
     }
     
+    /** 
+     * Upcall by scribe to let this application know that 
+     * it is the new root.
+     */
+    public void isNewRoot(NodeId topicId){
+    }
 } 
+
 
