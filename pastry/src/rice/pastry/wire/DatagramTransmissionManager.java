@@ -286,14 +286,14 @@ public class DatagramTransmissionManager {
     public long SEND_TIMEOUT_DEFAULT = 1000;
 
     // the minimum wait time for a lost packet
-    public long SEND_TIMEOUT_MIN = 250;
+    public long SEND_TIMEOUT_MIN = 500;
 
     // the initial amount of time to wait before resending
     public long INITIAL_RESEND_WAIT_TIME = 100;
 
     // the factor by which to multiply the last send time
     // to determine the next timeout time
-    public double TIMEOUT_FACTOR = 2.5;
+    public double TIMEOUT_FACTOR = 2;
 
     // the maximum number to retries before dropping the message
     // on the floor
@@ -301,7 +301,7 @@ public class DatagramTransmissionManager {
 
     // the maximum number of retries before declaring the node to
     // be dead and attampting to open a socket
-    public int NUM_RETRIES_BEFORE_OPENING_SOCKET = 2;
+    public int NUM_RETRIES_BEFORE_OPENING_SOCKET = 3;
 
     // the maximum number of objects in the UDP queue before we
     // open a socket
@@ -496,7 +496,7 @@ public class DatagramTransmissionManager {
                 }
               }
 
-              handle.markDead();
+              //handle.markDead();
 
               if (queue.size() > 0)
                 state = STATE_READY;
@@ -512,6 +512,7 @@ public class DatagramTransmissionManager {
           debug(pastryNode.getNodeId() + " found " + nodeId + " to be non-responsive - cancelling message " + queue.getFirst());
           queue.removeFirst();
           state = STATE_NO_DATA;
+	  //handle.markDead();
         }
       } else if (state == STATE_WAITING_FOR_RESEND) {
         long timeout = System.currentTimeMillis() - resendWaitBeginTime;
