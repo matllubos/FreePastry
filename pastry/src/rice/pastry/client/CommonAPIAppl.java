@@ -130,16 +130,19 @@ public abstract class CommonAPIAppl extends PastryAppl
 
 
     /**
-     * This method produces an unordered list of nodehandles that are
+     * This method produces an ordered list of nodehandles(sorted wrt to their distance 
+     * in the Id space from the local node )that are
      * neighbors of the local node in the ID space. Up to num
      * node handles are returned.
-     *
+     * Note - CommonAPI Requirements in the paper mentioned above ONLY requires us to return an 
+     * unordered list of neighbors. We however return an ordered list to remove the ambiguity
+     * of deciding which neighbors to return, when this method is called for value of num that 
+     * is less the number of neighbors that the local node has.  
      * @param num the maximal number of nodehandles requested
      * @return the nodehandle set
      */
-
     public NodeSet neighborSet(int num) {
-	return replicaSet(getNodeId(), num);
+	return getLeafSet().neighborSet(num);
     }
 
 
@@ -164,59 +167,30 @@ public abstract class CommonAPIAppl extends PastryAppl
    
     /**
      * This method provides information about ranges of keys for which
-     * the node n is currently a r-root. The operations returns null
-     * if the range could not be determined. It is an error to query
-     * the range of a node not present in the neighbor set as returned
-     * by the update upcall or the neighborSet call.
+     * the node n is currently a r-root. The operations returns
+     * false if the range could not be determined, true
+     * otherwise. It is an error to query the range of a node not
+     * present in the neighbor set as returned by the update
+     * upcall or the neighborSet call.  Certain implementations
+     * may return an error if r is greater than zero.
      *
      * Some implementations may have multiple, disjoint ranges of keys
-     * for which a given node is responsible (Pastry has two). The
-     * parameter key allows the caller to specify which range should
-     * be returned.  If the node referenced by n is the r-root for
-     * key, then the resulting range includes key. Otherwise, the
-     * result is the nearest range clockwise from key for which n is
-     * responsible.
+     * for which a given node is responsible. The parameter key
+     * allows the caller to specify which region should be returned.
+     * If the node referenced by n is responsible for key, then
+     * the resulting range includes key. Otherwise, the result is the
+     * nearest range clockwise from key for which n is responsible.
      *
      * @param n nodeHandle of the node whose range is being queried
      * @param r the rank
      * @param key the key
      * @param cumulative if true, returns ranges for which n is an i-root for 0<i<=r
-     * @return the range of keys, or null if range could not be determined for the given node and rank 
+     * @return the range of keys, or null if range could not be determined for the given node and rank
      */
-
     public IdRange range(NodeHandle n, int r, Id key, boolean cumulative) {
-
-	if (cumulative)
-	    return getLeafSet().range(n, r);
-
-	IdRange ccw = getLeafSet().range(n, r, false);
-	IdRange cw = getLeafSet().range(n, r, true);
-
-	if (cw == null || ccw.contains(key) || key.isBetween(cw.getCW(), ccw.getCCW())) return ccw;
-	else return cw;
-
+	return getLeafSet().range(n, r);
     }
 
-    /**
-     * This method provides information about ranges of keys for which
-     * the node n is currently a r-root. The operations returns null
-     * if the range could not be determined. It is an error to query
-     * the range of a node not present in the neighbor set as returned
-     * by the update upcall or the neighborSet call.
-     *
-     * Some implementations may have multiple, disjoint ranges of keys
-     * for which a given node is responsible (Pastry has two). The
-     * parameter key allows the caller to specify which range should
-     * be returned.  If the node referenced by n is the r-root for
-     * key, then the resulting range includes key. Otherwise, the
-     * result is the nearest range clockwise from key for which n is
-     * responsible.
-     *
-     * @param n nodeHandle of the node whose range is being queried
-     * @param r the rank
-     * @param key the key
-     * @return the range of keys, or null if range could not be determined for the given node and rank 
-     */
 
     public IdRange range(NodeHandle n, int r, Id key) {
 	return range(n, r, key, false);
@@ -257,7 +231,7 @@ public abstract class CommonAPIAppl extends PastryAppl
      * @param msg the message that is arriving.
      */
 
-    public abstract void deliver(Id key, Message msg);
+    public /*abstract*/ void deliver(Id key, Message msg) {}
 
     /**
      * Called by pastry when a message is enroute and is passing through this node.  If this
@@ -267,6 +241,7 @@ public abstract class CommonAPIAppl extends PastryAppl
      * @param key the key
      * @param nextHop the default next hop for the message.
      *
+     * @return true if the message should be routed, false if the message should be cancelled.
      */
      
     public void forward(RouteMessage msg) {
@@ -289,64 +264,6 @@ public abstract class CommonAPIAppl extends PastryAppl
      */
     
     public void notifyReady() {}
-
-
-
-    /*
-     * internal methods
-     */ 
-
-    
-    // hide defunct methods from PastryAppl
-    public final void messageForAppl(Message msg) {}
-    public final boolean enrouteMessage(Message msg, NodeId key, NodeId nextHop, SendOptions opt) {
-	return true;
-    }
-
-    /**
-     * Called by pastry when the leaf set changes.
-     *
-     * @param nh the handle of the node that was added or removed.
-     * @param wasAdded true if the node was added, false if the node was removed.
-     */
-
-    public final void leafSetChange(NodeHandle nh, boolean wasAdded) {
-	update(nh, wasAdded);
-    }
-
-
-    /**
-     * Called by pastry to deliver a message to this client.  Not to be overridden.
-     *
-     * @param msg the message that is arriving.
-     */
-
-    public void receiveMessage(Message msg) {
-	if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] recv " + msg);
-
-	if (msg instanceof RouteMessage) {
-	    RouteMessage rm = (RouteMessage) msg;
-
-	    // call application
-	    forward(rm);
-	    
-	    if (rm.nextHop != null) {
-		NodeHandle nextHop = rm.nextHop;
-
-		// route the message
-		rm.routeMessage(getNodeId());
-		
-		// if the message is for the local node, deliver it here
-		if (getNodeId().equals(nextHop.getNodeId()))
-		    deliver(rm.getTarget(), rm.unwrap());
-	    }
-	}
-	else {
-	    // if the message is not a RouteMessage, then it is for the local node
-	    // we ignore this and instead deliver the message above, 
-	    // because deliver requires access to the message's key
-	}
-    }
 
 }
 
