@@ -213,6 +213,7 @@ public abstract class Message implements Serializable
 	throws IOException, ClassNotFoundException 
     {
 	in.defaultReadObject();
-	stream = in;
+	if (!(in instanceof PastryObjectInputStream)) 
+  	stream = in;
     }
 }
