@@ -425,7 +425,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @return The set
    */
   protected IdSet buildGCIdSet(IdSet set) {
-    GCIdSet result = new GCIdSet(factory);
+    GCIdSet result = new GCIdSet(realFactory);
     Iterator i = set.getIterator();
     
     while (i.hasNext()) {
