@@ -47,57 +47,77 @@ import java.util.*;
  * @author Andrew Ladd
  */
 
-public class MessageDispatch 
-{
-    // have modified from HashMap to HashMap to use the internal representation 
-    // of a LocalAddress.  Otherwise remote node cannot get its message delivered
-    // because objects constructed differently are not mapped to the same value
-    private HashMap addressBook;
+public class MessageDispatch {
 
-    /**
-     * Registers a receiver with the mail service.
-     *
-     * @param name a name for a receiver.
-     * @param receiver the receiver.
-     */
+  public static int BUFFER_SIZE = 32;
 
-    public void registerReceiver(Address address, MessageReceiver receiver) 
-    {
-      if (addressBook.get(address) != null) {
-        System.out.println("ERROR - Registering receiver for already-registered address " + address);
+  // have modified from HashMap to HashMap to use the internal representation
+  // of a LocalAddress.  Otherwise remote node cannot get its message delivered
+  // because objects constructed differently are not mapped to the same value
+  private HashMap addressBook;
+
+  // a buffer of messages received before an application has been added to handle
+  // the messages
+  private Vector buffer;
+
+  /**
+   * Constructor.
+   */
+  public MessageDispatch() {
+    addressBook = new HashMap();
+    buffer = new Vector();
+  }
+
+  /**
+   * Registers a receiver with the mail service.
+   *
+   * @param name a name for a receiver.
+   * @param receiver the receiver.
+   */
+  public void registerReceiver(Address address, MessageReceiver receiver) {
+    if (addressBook.get(address) != null) {
+      System.out.println("ERROR - Registering receiver for already-registered address " + address);
+    }
+
+    addressBook.put(address, receiver);
+
+    // deliver any buffered messages
+    Iterator i = buffer.iterator();
+
+    while (i.hasNext()) {
+      Message msg = (Message) i.next();
+      MessageReceiver mr = (MessageReceiver) addressBook.get(msg.getDestination());
+
+      if (mr != null) {
+        mr.receiveMessage(msg);
+        i.remove();
+      }
+    }
+  }
+
+  /**
+   * Dispatches a message to the appropriate receiver.
+   *
+   * @param msg the message.
+   *
+   * @return true if message could be dispatched, false otherwise.
+   */
+  public boolean dispatchMessage(Message msg) {
+    MessageReceiver mr = (MessageReceiver) addressBook.get(msg.getDestination());
+
+    if (mr != null) {
+      mr.receiveMessage(msg); return true;
+    } else {
+      buffer.addElement(msg);
+
+      if (buffer.size() > BUFFER_SIZE) {
+        Message dropped = (Message) buffer.remove(0);
+
+        System.out.println("Could not dispatch message " + dropped + " because the application address " + dropped.getDestination() + " was unknown.");
+        System.out.println("Message is going to be dropped on the floor.");
       }
       
-	addressBook.put(address, receiver);	
+      return false;
     }
-
-    /**
-     * Dispatches a message to the appropriate receiver.
-     *
-     * @param msg the message.
-     * 
-     * @return true if message could be dispatched, false otherwise.
-     */
-
-    public boolean dispatchMessage(Message msg) 
-    {
-	MessageReceiver mr = (MessageReceiver) addressBook.get(msg.getDestination());
-
-	if (mr != null) {
-	    mr.receiveMessage(msg); return true;
-	} else {
-	    System.out.println("Could not dispatch message " + msg + " because the application address " + msg.getDestination() + " was unknown.");
-	    System.out.println("Message is going to be dropped on the floor.");
-	    return false;
-	}
-    }
-
-    /**
-     * Constructor.
-     */
-    
-    public MessageDispatch() 
-    {
-	addressBook = new HashMap();
-    }
-
+  }
 }
