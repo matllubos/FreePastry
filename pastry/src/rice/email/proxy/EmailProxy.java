@@ -98,31 +98,38 @@ public class EmailProxy extends PostProxy {
          email = new EmailService(post, pair, ALLOW_LOG_INSERT);
          stepDone(SUCCESS);
          
-         stepStart("Fetching Email INBOX log");
-         int retries = 0;
-         boolean done = false;
          ExternalContinuation c = null;
          
-         while (!done) {
-           c = new ExternalContinuation();
-           email.getRootFolder(c);
-           c.sleep();
-           
-           if (c.exceptionThrown()) { 
-             if (retries < NUM_RETRIES) {
-               retries++;
-             } else {
-               throw c.getException(); 
-             }
-           } else {
-             done = true;
-           }
-         }
-         stepDone(SUCCESS);
+         if (FETCH_LOGS) {
+           stepStart("Fetching Email INBOX log");
+           int retries = 0;
+           boolean done = false;
          
+           while (!done) {
+             c = new ExternalContinuation();
+             email.getRootFolder(c);
+             c.sleep();
+           
+             if (c.exceptionThrown()) { 
+               if (retries < NUM_RETRIES) {
+                 retries++;
+               } else {
+                 throw c.getException(); 
+               }
+             } else {
+               done = true;
+             }
+           }
+           stepDone(SUCCESS);
+         }
          
          stepStart("Starting User Email Services");
-         manager = new UserManagerImpl(email, new PostMailboxManager(email, (rice.email.Folder) c.getResult()));
+         
+         if (FETCH_LOGS) 
+           manager = new UserManagerImpl(email, new PostMailboxManager(email, (rice.email.Folder) c.getResult()));
+         else 
+           manager = new UserManagerImpl(email, new PostMailboxManager(email, null));
+           
          String addr = address.toString();
          manager.createUser(addr.substring(0, addr.indexOf("@")), null, pass);
          stepDone(SUCCESS);
@@ -184,23 +191,24 @@ public class EmailProxy extends PostProxy {
          
          PostMessage.factory = FACTORY;
          
-         Thread t = new Thread("POST Presence Announcement Thread") {
+   /*      Thread t = new Thread("POST Presence Announcement Thread") {
            public void run() {
              try {
                while (true) {
                  Thread.sleep(60000);
                  post.announcePresence();
                }
-             } catch (Exception e) {
-               System.out.println("Exception occured during construction " + e + " " + e.getMessage());
-               e.printStackTrace();
+             } catch (Throwable t) {
+               System.out.println("Error: (PostAnnouncement.run): " + t);
+               t.printStackTrace();
+               System.exit(-1);
              }
            }
          };
          
          if (SEND_PUBLISH) {
            t.start();
-         }
+         } */
        }
      }
      
