@@ -1456,6 +1456,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
       public void receiveResult(Object o) {
         if (currentIndex >= 0) {
+          log(3, "receiveResult("+o+") for index "+currentIndex+", length="+ids.length);
           log(3, "Internal refresh of "+ids[currentIndex].toStringFull()+" returned "+o);
           result[currentIndex] = o;
         }
@@ -1594,17 +1595,18 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                           public void receiveResult(Object o) {
                             ((PastImpl) objectStore).cache(obj, new Continuation() {
                               public void receiveResult(Object o) {
+                                log(3, "Refresh: Missing object "+id.toStringFull()+" added ok");
                                 myParent.receiveResult(new Boolean(true));
                               }
                               public void receiveException(Exception e) {
-                                warn("Refresh: Exception while precaching object: "+obj.getId()+" (e="+e+")");
+                                warn("Refresh: Exception while precaching object: "+id.toStringFull()+" (e="+e+")");
                                 e.printStackTrace();
                                 myParent.receiveResult(new Boolean(true));
                               }
                             });
                           }
                           public void receiveException(Exception e) { 
-                            warn("Exception while refreshing aggregate: "+obj.getId()+" (e="+e+")");
+                            warn("Refresh: Exception while refreshing aggregate: "+id.toStringFull()+" (e="+e+")");
                             e.printStackTrace();
                             myParent.receiveResult(new AggregationException("Cannot store reaggregated object in waiting list: "+id.toStringFull()));
                           }
@@ -1612,30 +1614,33 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
                         return;
                       } else {
-                        log(3, "Refresh: Missing object already in waiting list: "+obj.getId().toStringFull());
+                        log(3, "Refresh: Missing object already in waiting list: "+id.toStringFull());
                         myParent.receiveResult(new Boolean(true));
+                        return;
                       }
                     }
                     
                     log(3, "Refresh: Missing object should not be aggregated: "+id.toStringFull());
                     myParent.receiveResult(new Boolean(true));
+                    return;
                   } else {
-                    warn("Cannot find refreshed object "+id+", lookup returns "+o);
+                    warn("Refresh: Cannot find refreshed object "+id.toStringFull()+", lookup returns "+o);
                     myParent.receiveException(new AggregationException("Object not found during reaggregation: "+id.toStringFull()));
                   }
                 }
                 public void receiveException(Exception e) {
+                  warn("Refresh: Exception received while reaggregating "+id.toStringFull()+", e="+e);
                   myParent.receiveException(e);
                 }
               });
               return;
             } else {
-              log(3, "Refresh: Limit of "+maxReaggregationPerRefresh+" reaggregations exceeded; postponing...");
+              log(3, "Refresh: Limit of "+maxReaggregationPerRefresh+" reaggregations exceeded; postponing id="+id.toStringFull());
               receiveResult(new Boolean(true));
               return;
             }
           } else {
-            warn("Refreshed object not found in any aggregate: "+id.toStringFull());
+            warn("Refresh: Refreshed object not found in any aggregate: "+id.toStringFull());
             receiveResult(new Boolean(true));
             return;
           }
