@@ -704,14 +704,14 @@ public class DatagramTransmissionManager {
           System.err.println("DTM1: Potentially lost the message:"+o);
         }
         if (!(write.getObject() instanceof DatagramMessage)) {
-          boolean priority = ((Message) write.getObject()).hasPriority();
+          boolean priority = ((Message) write.getObject()).getPriority() == 0;
   
           if ((priority) && (queue.size() > 0)) {
             for (int i = 1; i < queue.size(); i++) {
               PendingWrite thisWrite = (PendingWrite) queue.get(i);
   
               if ((!(thisWrite.getObject() instanceof DatagramMessage)) &&
-                (!((Message) thisWrite.getObject()).hasPriority())) {
+                (!(((Message) thisWrite.getObject()).getPriority() == 0))) {
                 debug("Prioritizing datagram message " + write.getObject() + " over message " + thisWrite.getObject());
   
                 queue.add(i, write);

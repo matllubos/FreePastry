@@ -356,14 +356,14 @@ public class SocketChannelWriter {
   private void addToQueue(Object o) {
     wireDebug("DBG:addToQueue("+o+")");
     if (o instanceof SocketTransportMessage) {
-      boolean priority = ((Message) ((SocketTransportMessage) o).getObject()).hasPriority();
+      boolean priority = ((Message) ((SocketTransportMessage) o).getObject()).getPriority() == 0;
 
       if ((priority) && (queue.size() > 0)) {
         for (int i = 1; i < queue.size(); i++) {
           Object thisObj = queue.get(i);
 
           if ((thisObj instanceof SocketTransportMessage) &&
-            (!((Message) ((SocketTransportMessage) thisObj).getObject()).hasPriority())) {
+            (!(((Message) ((SocketTransportMessage) thisObj).getObject()).getPriority() == 0))) {
             debug("Prioritizing socket message " + o + " over message " + thisObj);
 
             queue.add(i, o);

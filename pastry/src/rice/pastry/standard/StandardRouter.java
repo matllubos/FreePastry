@@ -153,14 +153,11 @@ public class StandardRouter implements MessageReceiver {
 			RouteSet rs = routeTable.getBestEntry(target);
 			NodeHandle handle = null;
 
-			if (rs == null
-				|| // get the closest alive node
-			 (handle = rs.closestNode(NodeHandle.LIVENESS_ALIVE))
-					== null) {
+      // get the closest alive node
+			if (rs == null || ((handle = rs.closestNode(NodeHandle.LIVENESS_ALIVE)) == null)) {
 
 				// no live routing table entry matching the next digit
 				// get best alternate RT entry
-
 				handle = routeTable.bestAlternateRoute(NodeHandle.LIVENESS_ALIVE, target);
 
 				if (handle == null) {
@@ -176,8 +173,7 @@ public class StandardRouter implements MessageReceiver {
 					}
 				} else {
 					NodeId.Distance altDist = handle.getNodeId().distance(target);
-					NodeId.Distance lsDist =
-						leafSet.get(lsPos).getNodeId().distance(target);
+					NodeId.Distance lsDist = leafSet.get(lsPos).getNodeId().distance(target);
 
 					if (lsDist.compareTo(altDist) < 0) {
 						// closest leaf set member is closer

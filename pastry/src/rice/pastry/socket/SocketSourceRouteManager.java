@@ -95,7 +95,7 @@ public class SocketSourceRouteManager {
     while (i.hasNext()) {
       Object addr = i.next();
       
-      if (! ((AddressManager) managers.get(addr)).dead)
+      if (((AddressManager) managers.get(addr)).getLiveness() < SocketNodeHandle.LIVENESS_DEAD)
         result.put(addr, ((AddressManager) managers.get(addr)).best);
     }
     
@@ -201,18 +201,13 @@ public class SocketSourceRouteManager {
 
   /**
    * Method which returns the last cached liveness value for the given address.
-   * If there is no cached value, then true is returned.
+   * If there is no cached value, then LIVENESS_ALIVE
    *
    * @param address The address to return the value for
-   * @return The Alive value
+   * @return The liveness value
    */
-  public boolean isAlive(EpochInetSocketAddress address) {
-    AddressManager am = (AddressManager) managers.get(address);
-    
-    if (am == null)
-      return true;
-    else
-      return am.isAlive();
+  public int getLiveness(EpochInetSocketAddress address) {
+    return getAddressManager(address, true).getLiveness();
   }  
   
   /**
@@ -238,12 +233,10 @@ public class SocketSourceRouteManager {
    * @param address The now-dead address
    */
   protected void markDead(EpochInetSocketAddress address) {
-    System.out.println("INFO: Found remote address " + address + " to be dead due to new epoch");
-    
     AddressManager am = (AddressManager) managers.get(address);
     
     if (am != null)
-      am.markDead();
+      am.markDeadForever();
   }
   
   /**
@@ -259,6 +252,18 @@ public class SocketSourceRouteManager {
   }
   
   /**
+   * This method should be called when a known route is declared
+   * suspected.
+   *
+   * @param route The now-live route
+   */
+  protected void markSuspected(SourceRoute route) {
+    debug("Found route " + route + " to be suspected");
+    
+    getAddressManager(route.getLastHop(), false).markSuspected(route);
+  }
+  
+  /**
   * Reroutes the given message. If this node is alive, send() is called. If
    * this node is not alive and the message is a route message, it is rerouted.
    * Otherwise, the message is dropped.
@@ -267,7 +272,7 @@ public class SocketSourceRouteManager {
    * @param address The address of the remote node
    */
   protected void reroute(EpochInetSocketAddress address, Message m) {
-    if (isAlive(address)) {
+    if (getLiveness(address) == SocketNodeHandle.LIVENESS_ALIVE) {
       debug("Attempting to resend message " + m + " to alive address " + address);
       send(address, m);
     } else {
@@ -314,7 +319,8 @@ public class SocketSourceRouteManager {
   protected SourceRoute getBestRoute(EpochInetSocketAddress address) {
     AddressManager am = (AddressManager) managers.get(address);
     
-    if ((am == null) || (am.dead))
+    if ((am == null) || (am.getLiveness() == SocketNodeHandle.LIVENESS_DEAD) ||
+        (am.getLiveness() == SocketNodeHandle.LIVENESS_DEAD_FOREVER))
       return null;
     else
       return am.best;
@@ -350,15 +356,12 @@ public class SocketSourceRouteManager {
     
     // the list of known-dead routes for this manager
     protected HashSet deadRoutes;
-    
+
     // the list of currently-checking routes for this manager
     protected HashSet pendingRoutes;
     
-    // whether or not this address is dead
-    protected boolean dead;
-    
-    // wheter or not this address is dead forever (ie a WrongEpochMessage has been received)
-    protected boolean deadForever;
+    // the current liveness of this address
+    protected int liveness;
     
     /**
      * Constructor, given an address
@@ -368,6 +371,7 @@ public class SocketSourceRouteManager {
       this.queue = new Vector();
       this.pendingRoutes = new HashSet();
       this.deadRoutes = new HashSet();
+      this.liveness = SocketNodeHandle.LIVENESS_SUSPECTED;
       
       if (SocketPastryNode.verbose) System.out.println("ADDRESS MANAGER CREATED AT " + localAddress + " FOR " + address);
       
@@ -400,43 +404,20 @@ public class SocketSourceRouteManager {
         best = route;  
       }
       
-      // lastly, we check and see if this address was previously declared dead and announce liveness
-      if (dead) {
-        dead = false;
-        pool.update(route.getLastHop(), SocketNodeHandle.DECLARED_LIVE);
-        
-        if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Found address " + address + " to be alive again.");
-      } 
-      
-      // and finally we can now send any pending messages
-      while (queue.size() > 0)
-        send((Message) queue.remove(0));    
+      // finally, mark this address as alive
+      setAlive();
     }
     
     /**
-     * This method should be called when a known node is declared dead - this is
-     * ONLY called when a new epoch of that node is detected.  Note that this method
-     * is silent - no checks are done.  Caveat emptor.
+      * This method should be called when a known route is declared
+     * alive.
      *
-     * @param address The now-dead address
+     * @param route The now-live route
      */
-    protected synchronized void markDead() {
-      deadForever = true;
-      
-      System.out.println("MARKING ADDRESS " + address + " AS DEAD FOREVER!");
-      
-      if (! dead) {
-        this.dead = true;
-        this.best = null;
-      
-        pool.update(address, SocketNodeHandle.DECLARED_DEAD);
-        
-        if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Found address " + address + " to be dead due to new epoch.");        
-        
-        while (queue.size() > 0)
-          reroute(address, (Message) queue.remove(0));        
-      }        
-    }
+    protected synchronized void markSuspected(SourceRoute route) {      
+      // mark this address as suspected
+      setSuspected();
+    }    
     
     /**
      * This method should be called when a known route is declared
@@ -449,35 +430,45 @@ public class SocketSourceRouteManager {
       pendingRoutes.remove(route);
       
       // if we're already dead, who cares
-      if (dead)
+      if ((liveness == SocketNodeHandle.LIVENESS_DEAD) || (liveness == SocketNodeHandle.LIVENESS_DEAD_FOREVER))
         return;
       
       // if this route was the best, or if we have no best, we need to
       // look for alternate routes - if all alternates are now dead,
       // we mark ourselves as dead
       if ((best == null) || (route.equals(best))) {
-        SourceRoute[] routes = getAllRoutes(route.getLastHop());
         best = null;
+
+        SourceRoute[] routes = getAllRoutes(route.getLastHop());
         boolean found = false;
-        
+
         for (int i=0; i<routes.length; i++) {
-          if ((! deadRoutes.contains(routes[i])) && (! pendingRoutes.contains(routes[i]))) {
-            checkRoute(routes[i]);
+          if (! deadRoutes.contains(routes[i])) {
             found = true;
+
+            if (! pendingRoutes.contains(routes[i]))
+              checkRoute(routes[i]);            
           }
         }
         
-        if (! found) {
-          dead = true;
-          pool.update(address, SocketNodeHandle.DECLARED_DEAD);
-          
-          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Found address " + address + " to be dead.");
-          
-          while (queue.size() > 0)
-            reroute(address, (Message) queue.remove(0));
-        }
+        if (! found) 
+          setDead();
       } 
     }    
+    
+    /**
+     * This method should be called when a known node is declared dead - this is
+     * ONLY called when a new epoch of that node is detected.  Note that this method
+     * is silent - no checks are done.  Caveat emptor.
+     *
+     * @param address The now-dead address
+     */
+    protected synchronized void markDeadForever() {      
+      System.out.println("MARKING ADDRESS " + address + " AS DEAD FOREVER!");
+      this.best = null;
+      
+      setDeadForever();
+    }
       
     /**
      * Method which enqueues a message to this address
@@ -486,33 +477,42 @@ public class SocketSourceRouteManager {
      */
     public synchronized void send(Message message) {
       // if we're dead, we go ahead and just checkDead on our best route
-      if ((dead) && (! deadForever))
+      if (liveness == SocketNodeHandle.LIVENESS_DEAD)
         manager.checkDead(SourceRoute.build(address));
       
       // and in any case, we either send if we have a best route or add the message
       // to the queue
-      if (best == null) 
+      if (best == null) {
         queue.add(message);
-      else
+        
+        if (pendingRoutes.size() == 0)
+          System.err.println("ERROR: Enqueueing message to " + address + " without any pending routes - very very bad!!!");
+      } else {
         manager.send(best, message);
+      }
     }
     
     /**
      * Method which suggests a ping to the remote node.
      */
     public void ping() {
-      if (deadForever)
-        return;
-      
-      if (dead) {
-        System.out.println("PING: CHECKING DEAD ON DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
-        manager.checkDead(SourceRoute.build(address));
-      } else if (best != null) {
-        manager.ping(best);
+      switch (liveness) {
+        case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
+          return;
+        case SocketNodeHandle.LIVENESS_DEAD:
+          System.out.println("PING: CHECKING DEAD ON DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
+          manager.checkDead(SourceRoute.build(address));
+          break;
+        default:
+          if (best != null) {
+            manager.ping(best);
         
-        // check to see if the direct route is available
-        if (! best.isDirect()) 
-          manager.ping(SourceRoute.build(address));
+            // check to see if the direct route is available
+            if (! best.isDirect()) 
+              manager.ping(SourceRoute.build(address));
+          }
+          
+          break;
       }
     }  
     
@@ -521,19 +521,24 @@ public class SocketSourceRouteManager {
      * Method which suggests a ping to the remote node.
      */
     public void checkLiveness() {
-      if (deadForever)
-        return;
-      
-      if (dead) {
-        System.out.println("CHECKLIVENESS: CHECKING DEAD ON DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
-        manager.checkDead(SourceRoute.build(address));
-      } else if (best != null) {
-        manager.checkLiveness(best);
-        
-        // check to see if the direct route is available
-        if (! best.isDirect()) 
-          manager.ping(SourceRoute.build(address));
-      }
+      switch (liveness) {
+        case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
+          return;
+        case SocketNodeHandle.LIVENESS_DEAD:
+          System.out.println("CHECKLIVENESS: CHECKING DEAD ON DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
+          manager.checkDead(SourceRoute.build(address));
+          break;
+        default:
+          if (best != null) {
+            manager.checkLiveness(best);
+            
+            // check to see if the direct route is available
+            if (! best.isDirect()) 
+              manager.ping(SourceRoute.build(address));
+          }
+          
+          break;
+      }  
     }  
     
     /**
@@ -557,8 +562,8 @@ public class SocketSourceRouteManager {
      * @param address The address to return the value for
      * @return The Alive value
      */
-    public boolean isAlive() {
-      return (! dead);
+    public int getLiveness() {
+      return liveness;
     }  
     
     /**
@@ -570,6 +575,104 @@ public class SocketSourceRouteManager {
       if (! pendingRoutes.contains(route)) {
         pendingRoutes.add(route);
         manager.checkDead(route);
+      }
+    }
+    
+    /**
+     * Internal method which marks this address as being alive.  If we were dead before, it
+     * sends an update out to the observers.
+     */
+    protected void setAlive() {
+      switch (liveness) {
+        case SocketNodeHandle.LIVENESS_DEAD:
+          liveness = SocketNodeHandle.LIVENESS_ALIVE;
+          pool.update(address, SocketNodeHandle.DECLARED_LIVE);
+          System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be alive again.");
+          break;
+        case SocketNodeHandle.LIVENESS_SUSPECTED:
+          liveness = SocketNodeHandle.LIVENESS_ALIVE;
+          System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be unsuspected.");
+          break;
+        case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
+          System.out.println("ERROR: Found dead-forever handle to " + address + " to be alive again!");
+          break;
+      }
+      
+      // and finally we can now send any pending messages
+      while (queue.size() > 0)
+        send((Message) queue.remove(0));    
+    }
+    
+    /**
+     * Internal method which marks this address as being suspected.
+     */
+    protected void setSuspected() {
+      switch (liveness) {
+        case SocketNodeHandle.LIVENESS_ALIVE:
+          liveness = SocketNodeHandle.LIVENESS_SUSPECTED;
+          System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be suspected.");
+          break;
+        case SocketNodeHandle.LIVENESS_DEAD:
+          System.out.println("ERROR: Found node handle " + address + " to be suspected from dead - should not happen!");
+          break;
+        case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
+          System.out.println("ERROR: Found node handle " + address + " to be suspected from dead forever - should never ever happen!");
+          break;
+      }
+      
+      // and finally we can now reroute any route messages
+      Object[] array = queue.toArray();
+      
+      for (int i=0; i<array.length; i++) 
+        if (array[i] instanceof RouteMessage) {
+          System.out.println("REROUTE: Rerouting message " + array[i] + " due to suspected next hop " + address);
+          reroute(address, (Message) array[i]);
+          queue.remove(array[i]);
+        }
+    }
+    
+    /**
+     * Internal method which marks this address as being dead.  If we were alive or suspected before, it
+     * sends an update out to the observers.
+     */
+    protected void setDead() {
+      switch (liveness) {
+        case SocketNodeHandle.LIVENESS_DEAD:
+          return;
+        case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
+          System.out.println("ERROR: Found node handle " + address + " to be dead from dead forever - should not happen!");
+          break;
+        default:
+          this.best = null;
+          this.liveness = SocketNodeHandle.LIVENESS_DEAD;
+          pool.update(address, SocketNodeHandle.DECLARED_DEAD);        
+          System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead.");
+          break;
+      }
+      
+      // and finally we can now send any pending messages
+      while (queue.size() > 0)
+        reroute(address, (Message) queue.remove(0));
+    }
+    
+    /**
+     * Internal method which marks this address as being dead.  If we were alive or suspected before, it
+     * sends an update out to the observers.
+     */
+    protected void setDeadForever() {
+      switch (liveness) {
+        case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
+          return;
+        case SocketNodeHandle.LIVENESS_DEAD:
+          this.liveness = SocketNodeHandle.LIVENESS_DEAD_FOREVER;
+          System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead forever.");
+          break;
+        default:
+          this.best = null;
+          this.liveness = SocketNodeHandle.LIVENESS_DEAD_FOREVER;
+          pool.update(address, SocketNodeHandle.DECLARED_DEAD);        
+          System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead forever.");
+          break;
       }
     }
   }
