@@ -51,6 +51,11 @@ import rice.p2p.scribe.messaging.*;
  * @author Alan Mislove
  */
 public class ScribeImpl implements Scribe, Application {
+  
+  /**
+   * The interval with which to perform maintenance
+   */
+  public static int MAINTENANCE_INTERVAL = 300000;
 
   /**
    * the timeout for a subscribe message
@@ -122,6 +127,9 @@ public class ScribeImpl implements Scribe, Application {
     this.policy = policy;
     this.handle = endpoint.getLocalNodeHandle();
     this.id = Integer.MIN_VALUE;
+    
+    // schedule the period liveness checks of the parent
+    endpoint.scheduleMessage(new MaintenanceMessage(), (new Random()).nextInt(MAINTENANCE_INTERVAL), MAINTENANCE_INTERVAL);
     
    // log.addHandler(new ConsoleHandler());
    // log.setLevel(Level.FINEST);
@@ -817,6 +825,18 @@ public class ScribeImpl implements Scribe, Application {
       } else {
         log.warning(endpoint.getId() + ": Received unexpected drop message from " +
                     dMessage.getSource() + " for unknown topic " + dMessage.getTopic() + " - ignoring");
+      }
+    } else if (message instanceof MaintenanceMessage) {
+      log.fine(endpoint.getId() + ": Received maintenance message");
+
+      Iterator i = topics.values().iterator();
+      
+      // for each topic, make sure our parent is still alive
+      while (i.hasNext()) {
+        NodeHandle parent = ((TopicManager) i.next()).getParent();
+        
+        if (parent != null)
+          parent.checkLiveness();
       }
     } else {
       log.warning(endpoint.getId() + ": Received unknown message " + message + " - dropping on floor.");

@@ -81,6 +81,17 @@ public abstract class NodeHandle extends Observable implements Serializable  {
    */
   public abstract int proximity();
   
+  /**
+   * Requests that the underlying transport layer check to ensure
+   * that the remote node is live.  If the node is found to be live, nothing
+   * happens, but if the node does not respond, the transport layer
+   * make take steps to verfify that the node is dead.  Such steps
+   * could include finding an alteranate route to the node.
+   *
+   * @return Whether or not the node is currently alive
+   */
+  public abstract boolean checkLiveness();
+  
 }
 
 
