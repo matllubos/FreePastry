@@ -236,9 +236,9 @@ public class PostMessage implements StoredMessage {
         String header = (String) e.nextElement();
         
 	if (header.charAt(header.length()-1) == '\n') {
-          headersText += e.nextElement();
+          headersText += header;
         } else {
-          headersText += e.nextElement() + "\n";
+          headersText += header + "\n";
         }
       }
 
