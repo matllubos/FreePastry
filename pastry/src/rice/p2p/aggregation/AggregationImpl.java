@@ -1245,7 +1245,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     if (policy.shouldBeAggregated(obj, theSize)) {
       log("AGGREGATE INSERT: "+obj.getId());
 
-//      objectStore.insert(obj, command);
+      objectStore.insert(obj, command);
       waitingList.store(vkey, obj, new Continuation() {
         public void receiveResult(Object o) {
           waiting.add(new ObjectDescriptor(obj.getId(), theVersionF, lifetime, lifetime, theSize));
@@ -1443,7 +1443,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             /* Note that we have to give up here... even if the object has not been 
                aggregated, there is no efficient way to find out its version number.
                The user must call lookupVersion in this case. */
-            command.receiveResult(null);
+            command.receiveResult(new PastContentHandle[] { null });
           }
         }
       }
