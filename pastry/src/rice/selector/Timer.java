@@ -95,9 +95,13 @@ public class Timer {
      * @see Thread
      * @see #cancel()
      */
-    protected Timer(Selector selector) {
+    protected Timer(Selector selector, boolean profile) {
       this.selector = selector;
-      thread = new TimerThread(queue, selector);
+      if (profile) {
+        thread = new ProfileTimerThread(queue, selector);
+      } else {
+        thread = new TimerThread(queue, selector);
+      }
         //thread.start();
     }
 

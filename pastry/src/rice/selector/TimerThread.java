@@ -31,7 +31,7 @@ public class TimerThread /*extends Thread*/ {
      * Otherwise, the Timer would never be garbage-collected and this
      * thread would never go away.
      */
-    private TaskQueue queue;
+    protected TaskQueue queue;
     private Selector selector;
 
     public TimerThread(TaskQueue queue, Selector selector) {

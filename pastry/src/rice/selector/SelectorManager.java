@@ -59,7 +59,7 @@ public class SelectorManager extends Thread {
   private static SelectorManager manager;
 
   // the underlying selector used
-  private Selector selector;
+  protected Selector selector;
 
   // a list of the invocations that need to be done in this thread
   protected LinkedList invocations;
@@ -76,7 +76,7 @@ public class SelectorManager extends Thread {
   /**
    * Constructor, which is private since there is only one selector per JVM.
    */
-  protected SelectorManager() {
+  protected SelectorManager(boolean profile) {
     super("Main Selector Thread");
     this.invocations = new LinkedList();
     this.modifyKeys = new HashSet();
@@ -87,7 +87,7 @@ public class SelectorManager extends Thread {
     } catch (IOException e) {
       System.out.println("SEVERE ERROR (SelectorManager): Error creating selector " + e);
     }
-    timer = new Timer(selector);
+    timer = new Timer(selector, profile);
     timerThread = timer.thread;
     start();
   }
@@ -110,7 +110,7 @@ public class SelectorManager extends Thread {
         System.out.println("Using Profile Selector");
         manager = new ProfileSelector();        
       } else {
-        manager = new SelectorManager();
+        manager = new SelectorManager(false);
       }
       return manager;
     }
@@ -176,39 +176,7 @@ public class SelectorManager extends Thread {
         timerThread.mainLoopHelper(this);
         onLoop();
         doInvocations();
-
-        SelectionKey[] keys = selectedKeys();
-
-        for (int i = 0; i < keys.length; i++) {
-          selector.selectedKeys().remove(keys[i]);
-
-          SelectionKeyHandler skh = (SelectionKeyHandler) keys[i].attachment();
-
-          if (skh != null) {
-            // accept
-            if (keys[i].isValid() && keys[i].isAcceptable()) {
-              skh.accept(keys[i]);
-            }
-
-            // connect
-            if (keys[i].isValid() && keys[i].isConnectable()) {
-              skh.connect(keys[i]);
-            }
-
-            // read
-            if (keys[i].isValid() && keys[i].isReadable()) {
-              skh.read(keys[i]);
-            }
-
-            // write
-            if (keys[i].isValid() && keys[i].isWritable()) {
-              skh.write(keys[i]);
-            }
-          } else {
-            keys[i].channel().close();
-            keys[i].cancel();
-          }
-        }
+        doSelections();
       }
 
       SelectionKey[] keys = keys();
@@ -230,11 +198,46 @@ public class SelectorManager extends Thread {
     }
   }
 
+  protected void doSelections() throws IOException {
+    SelectionKey[] keys = selectedKeys();
+
+    for (int i = 0; i < keys.length; i++) {
+      selector.selectedKeys().remove(keys[i]);
+
+      SelectionKeyHandler skh = (SelectionKeyHandler) keys[i].attachment();
+
+      if (skh != null) {
+        // accept
+        if (keys[i].isValid() && keys[i].isAcceptable()) {
+          skh.accept(keys[i]);
+        }
+
+        // connect
+        if (keys[i].isValid() && keys[i].isConnectable()) {
+          skh.connect(keys[i]);
+        }
+
+        // read
+        if (keys[i].isValid() && keys[i].isReadable()) {
+          skh.read(keys[i]);
+        }
+
+        // write
+        if (keys[i].isValid() && keys[i].isWritable()) {
+          skh.write(keys[i]);
+        }
+      } else {
+        keys[i].channel().close();
+        keys[i].cancel();
+      }
+    }
+  }
+
   /**
    * Method which invokes all pending invocations. This method should *only* be
    * called by the selector thread.
    */
-  private void doInvocations() {
+  protected void doInvocations() {
     Runnable run = getInvocation();
     while (run != null) {
       try {
@@ -262,7 +265,7 @@ public class SelectorManager extends Thread {
    *
    * @return An item from the invocations list
    */
-  private synchronized Runnable getInvocation() {
+  protected synchronized Runnable getInvocation() {
     if (invocations.size() > 0)
       return (Runnable) invocations.removeFirst();
     else
@@ -275,7 +278,7 @@ public class SelectorManager extends Thread {
    *
    * @return An item from the invocations list
    */
-  private synchronized SelectionKey getModifyKey() {
+  protected synchronized SelectionKey getModifyKey() {
     if (modifyKeys.size() > 0) {
       Object result = modifyKeys.iterator().next();
       modifyKeys.remove(result);
@@ -331,7 +334,7 @@ public class SelectorManager extends Thread {
    * @return The array of keys
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  private SelectionKey[] selectedKeys() throws IOException {
+  protected SelectionKey[] selectedKeys() throws IOException {
     return (SelectionKey[]) selector.selectedKeys().toArray(new SelectionKey[0]);
   }
 
