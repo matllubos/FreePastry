@@ -54,7 +54,7 @@ public abstract class DistPastryNode extends PastryNode {
   /**
    * DESCRIBE THE FIELD
    */
-  protected Timer timer;
+  protected static final Timer timer = new Timer(true);
   
   // the list of network listeners
   private Vector listeners;
@@ -75,7 +75,7 @@ public abstract class DistPastryNode extends PastryNode {
     super(id);
     SignalHandler s;
     
-    timer = new Timer(true);
+//    timer = new Timer(true);
     // uses deamon thread, so it terminates once other threads have terminated
     
     this.listeners = new Vector();
@@ -184,7 +184,7 @@ public abstract class DistPastryNode extends PastryNode {
    */
   public void kill() {
     // cancel all scheduled messages
-    timer.cancel();
+    //timer.cancel();
   }
 
 
