@@ -1187,7 +1187,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     }
     
     /**
-      * DESCRIBE THE METHOD
+     * DESCRIBE THE METHOD
      *
      * @param s DESCRIBE THE PARAMETER
      */
