@@ -15,11 +15,10 @@ import java.io.Serializable;
  * ControlAttachResponseMessage.
  *
  * @(#) ControlAttachMessage.java
- * @version $Id:
+ * @version $Id$
  * @author briang
+ * @author Atul Singh
  */
-//public class ControlAttachMessage extends Message implements Serializable {
-//public class ControlAttachMessage implements Serializable {
 public class ControlAttachMessage extends MessageAnycast{
 
     /**
@@ -64,7 +63,7 @@ public class ControlAttachMessage extends MessageAnycast{
     public boolean handleMessage( Channel channel, IScribe scribe )
     {
 	if(!channel.isReady()){
-	    System.out.println("ControlAttachMessage -- Channel is not ready at "+((Scribe)scribe).getNodeId());
+	    System.out.println("DEBUG :: ControlAttachMessage -- Channel is not ready at "+((Scribe)scribe).getNodeId());
 	    return true;
 	}
 	else {
@@ -74,7 +73,7 @@ public class ControlAttachMessage extends MessageAnycast{
 	    StripeId[] stripeid_array = channel.getStripes();
 	    
 	    NodeId[] return_array = new NodeId[stripeid_array.length+2];
-	    System.out.println("ControlAttachMessage  -- Node "+((Scribe)scribe).getNodeId()+" satisfying request from node "+source.getNodeId());
+	    System.out.println("DEBUG :: ControlAttachMessage  -- Node "+((Scribe)scribe).getNodeId()+" satisfying request from node "+source.getNodeId());
 
 	    return_array[0] = (NodeId)chanid;
 	    for ( int i=0; i<stripeid_array.length; i++ )
@@ -87,9 +86,9 @@ public class ControlAttachMessage extends MessageAnycast{
 	    
 	    response.setContent( return_array );
 	    if(return_array == null){
-		System.out.println("I'm not returning any data");
+		System.out.println("DEBUG :: I'm not returning any data");
 	    }else if(return_array.length <= 1){
-		System.out.println("Returning too little data");
+		System.out.println("DEBUG :: Returning too little data");
 	    }
 	    
 	    channel.getSplitStream().routeMsgDirect( source, response, credentials, null );
@@ -98,7 +97,7 @@ public class ControlAttachMessage extends MessageAnycast{
     }
     
     public void faultHandler(Scribe scribe){
-	System.out.println("ControlAttachMessage Failed ");
+	System.out.println("DEBUG :: ControlAttachMessage Failed ");
     }
 
     public NodeHandle getSource()

@@ -8,6 +8,7 @@ import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 import java.io.Serializable;
 
+import java.util.Random;
 /**
  * This class represents a timeout event that could possibly
  * occur while waiting for delivery of a FindParent or Attach
@@ -15,8 +16,9 @@ import java.io.Serializable;
  * appropriate Channel or Stripe.
  *
  * @(#) ControlTimeoutMessage.java
- * @version $Id:
+ * @version $Id$
  * @author briang
+ * @author Atul Singh
  */
 public class ControlTimeoutMessage extends Message implements Serializable
 {
@@ -27,6 +29,7 @@ public class ControlTimeoutMessage extends Message implements Serializable
     private static int ATTACH      = 1;
     private static int FIND_PARENT = 2;
     private static int FINAL_FIND_PARENT = 3;
+    private static Random  random = new Random();
     /**
      * The number of times the sent message this is related to has failed
      * to elicit a response.
@@ -138,6 +141,7 @@ public class ControlTimeoutMessage extends Message implements Serializable
      */
     public void handleMessage( Channel channel, PastryNode thePastryNode, Scribe scribe )
     {
+
         boolean ignore;
         if ( msg_type == ATTACH )
         {
@@ -158,12 +162,35 @@ public class ControlTimeoutMessage extends Message implements Serializable
             if ( ( num_fails > channel.getTimeouts() ) && ( channel.getTimeouts() != -1 ) )
             {
                 /* Exceeded allowable number of retries; generate app-level upcall(?) */
+		// Check if local node has attempted the final try, if not attempt it!
+
+		if(!channel.getStripe(stripe_id).getFinalTry()){
+		    System.out.println("DEBUG :: Exceeded allowable number of retries , sending ANYCAST to STRIPE tree. From "+scribe.getNodeId()+" for stripe :"+(NodeId)stripe_id);
+		    ControlFinalFindParentMessage cffpMsg = new ControlFinalFindParentMessage(scribe.getAddress(),
+											      scribe.getLocalHandle(),
+											      stripe_id,
+											      c, 
+											      channel.getChannelId() );
+		    scribe.anycast(stripe_id, cffpMsg, c);
+		    
+		    ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( SplitStreamAddress.instance(),
+                                                                                      0,
+                                                                                      stripe_id,
+                                                                                      c,
+										      channel_id );
+		    float rand = random.nextFloat();
+		    float newTimeout = (float)((1 + rand) * channel.getTimeoutLen());
+		    channel.getStripe( stripe_id ).num_fails = 0;
+		    channel.getStripe( stripe_id ).setFinalTry(true);
+                    thePastryNode.scheduleMsg( timeoutMessage, (long)newTimeout);
+		}
+		
             }
             else
             {
                 if ( msg_type == ATTACH && !channel.isReady())
                 {
-		    System.out.println("Node "+scribe.getNodeId()+" sending ControlAttachMessage");
+		    System.out.println("DEBUG :: Node "+scribe.getNodeId()+" sending ControlAttachMessage");
         	    ControlAttachMessage attachMessage = new ControlAttachMessage( scribe.getAddress(), scribe.getLocalHandle(), channel_id, c );
                     //channel.getSplitStream().routeMsg( dest, attachMessage, c, null );
 		    scribe.anycast(channel_id, attachMessage, c);
@@ -171,11 +198,17 @@ public class ControlTimeoutMessage extends Message implements Serializable
                                                                                       num_fails+1,
                                                                                       dest,
                                                                                       c, channel_id );
-	            thePastryNode.scheduleMsg( timeoutMessage, channel.getTimeoutLen() );
+		    long multiplyTimeout = (long)(1 << (num_fails + 1));
+		    float rand = random.nextFloat();
+		    multiplyTimeout *= (1.0 + rand);
+		    float newTimeout = (float)(multiplyTimeout * channel.getTimeoutLen());
+		    System.out.println("DEBUG :: ATTACH MESSAGE TIMED OUT : new time out "+(long)newTimeout+" rand = "+rand+" multiplyTimeout "+multiplyTimeout);
+	            thePastryNode.scheduleMsg( timeoutMessage, (long)newTimeout);
                 
                 }
                 else if ( msg_type == FIND_PARENT )
                 {
+		    System.out.println("DEBUG :: Time out message for FIND_PARENT at "+scribe.getLocalHandle().getNodeId()+" for stripe "+stripe_id);
                     ControlFindParentMessage msg = new ControlFindParentMessage( scribe.getAddress(),
                                                                                  scribe.getLocalHandle(),
                                                                                  dest,
@@ -188,9 +221,15 @@ public class ControlTimeoutMessage extends Message implements Serializable
                                                                                       dest,
                                                                                       c, stripe_id, channel_id );
 		    channel.getStripe( stripe_id ).num_fails = num_fails + 1;
-                    thePastryNode.scheduleMsg( timeoutMessage, channel.getTimeoutLen() );
+		    long multiplyTimeout = (long)(1 << (num_fails + 1));
+		    float rand = random.nextFloat();
+		    multiplyTimeout *= (1.0 + rand);
+		    float newTimeout = (float)(multiplyTimeout * channel.getTimeoutLen());
+		    System.out.println("DEBUG :: FIND_PARENT MESSAGE TIMED OUT : new time out "+(long)newTimeout+" rand = "+rand+ "multiplyTimeout = "+multiplyTimeout+" num_fails "+num_fails);
+                    thePastryNode.scheduleMsg( timeoutMessage, (long)newTimeout);
                 }
 		else if(msg_type == FINAL_FIND_PARENT){
+		    System.out.println("DEBUG :: Time out message for FINAL_FIND_PARENT at "+scribe.getLocalHandle().getNodeId()+" for stripe "+stripe_id);
 		    ControlFinalFindParentMessage cffpMsg = new ControlFinalFindParentMessage(scribe.getAddress(),
 											      scribe.getLocalHandle(),
 											      stripe_id,
@@ -203,8 +242,13 @@ public class ControlTimeoutMessage extends Message implements Serializable
                                                                                       stripe_id,
                                                                                       c,
 										      channel_id );
+		    long multiplyTimeout = (long)(1 << (num_fails + 1));
+		    float rand = random.nextFloat();
+		    multiplyTimeout *= (1.0 + rand);
+		    float newTimeout = (float)(multiplyTimeout * channel.getTimeoutLen());
+		    System.out.println("DEBUG :: FINAL_FIND_PARENT MESSAGE TIMED OUT : new time out "+(long)newTimeout+" rand = "+rand);
 		    channel.getStripe( stripe_id ).num_fails = num_fails + 1;
-                    thePastryNode.scheduleMsg( timeoutMessage, channel.getTimeoutLen() );
+                    thePastryNode.scheduleMsg( timeoutMessage, (long)(newTimeout));
 		}
             }
         }

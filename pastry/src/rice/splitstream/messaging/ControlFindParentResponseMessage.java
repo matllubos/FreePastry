@@ -113,9 +113,9 @@ public class ControlFindParentResponseMessage extends Message
             scribe.setParent( source, topic.getTopicId() );
 	    stripe.setIgnoreTimeout( true );
 	    stripe.setState(Stripe.STRIPE_SUBSCRIBED);
-
-	    //System.out.println("setparent set");
-	    //System.out.println("Node "+scribe.getNodeId()+" received response to FindParent from "+source.getNodeId()+ " for stripe "+topic.getTopicId());
+	    stripe.setFinalTry(false);
+	    //System.out.println(" DEBUG ::setparent set");
+	    System.out.println(" DEBUG :: CFPResponse -- passed, Node "+scribe.getNodeId()+" received response to FindParent from "+source.getNodeId()+ " for stripe "+topic.getTopicId()+" at time "+(int)System.currentTimeMillis());
         }
         else
 	    {
@@ -123,10 +123,63 @@ public class ControlFindParentResponseMessage extends Message
 		int num_fails = stripe.num_fails;
 		int max_fails = channel.getMaxTimeout();
 		
-		if(max_fails > 0 && num_fails < max_fails)
+		System.out.println("DEBUG :: CFPResponse -- failed, max fails = "+max_fails +" num failed already = "+num_fails+" at "+scribe.getNodeId()+ " for topic "+stripe.getStripeId());
+
+
+		if(max_fails <= 0){
+		    if(!stripe.getFinalTry()){
+			System.out.println(" DEBUG ::CFPResponse -- failed, should retry. Source "+scribe.getNodeId()+" Topic "+stripe.getStripeId());
+			
+			Credentials c = new PermissiveCredentials();
+			
+			// Policy for handling failures in FindParentMessage
+			// Now, no-one could take me as a child in spare-capacity tree,
+			// so now should go back to the first node in stripe it contacted
+			// first, go down that stripe tree to the leaves, and ask them
+			// (if they have positive outgoing capacity) to drop one of their
+			// primary children and take me.
+			
+			System.out.println(" DEBUG ::Sending controlFinalFindParentMessage from "+scribe.getNodeId()+" for stripe "+stripe.getStripeId());
+			ControlFinalFindParentMessage cffpMsg = new ControlFinalFindParentMessage(scribe.getAddress(),
+												  scribe.getLocalHandle(),
+												  stripe.getStripeId(), 
+												  c, 
+												  channel.getChannelId() );
+			scribe.anycast(stripe.getStripeId(), cffpMsg, c);
+			
+			ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( SplitStreamAddress.instance(),
+											  0,//num_fails+1,
+											  stripe.getStripeId(),
+											  c,
+											  channel_id );
+			float rand = Channel.random.nextFloat();
+			float newTimeout = (float)((1.0 + rand) * channel.getTimeoutLen());
+			stripe.num_fails = 0;
+			stripe.setFinalTry(true);
+
+			scribe.getPastryNode().scheduleMsg( timeoutMessage, (long)newTimeout);
+			stripe.setIgnoreTimeout( false );
+		    }
+		    else{
+			System.out.println(" DEBUG ::PANIC --- FinalFindParentMessage also Failed at "+scribe.getNodeId()+" for stripe "+stripe.getStripeId());
+		    }
+		}
+		else {
+		    if(num_fails > max_fails && stripe.getFinalTry()){
+			System.out.println(" DEBUG ::PANIC --- FinalFindParentMessage also Failed at "+scribe.getNodeId()+" for stripe "+stripe.getStripeId());
+		    }
+
+		}
+		
+	    }
+    
+		 
+		/*
+		  if(max_fails > 0 && num_fails < max_fails)
 		    stripe.setIgnoreTimeout( false );
-		else if(checkFinalTry()){
-		    System.out.println("CFPResponse -- failed, should retry. Source "+source.getNodeId()+" Topic "+stripe.getStripeId());
+		//else if(checkFinalTry()){
+		else if(!stripe.getFinalTry()){
+		    System.out.println(" DEBUG ::CFPResponse -- failed, should retry. Source "+scribe.getNodeId()+" Topic "+stripe.getStripeId());
 		    
 		    Credentials c = new PermissiveCredentials();
 		    
@@ -137,7 +190,7 @@ public class ControlFindParentResponseMessage extends Message
 		    // (if they have positive outgoing capacity) to drop one of their
 		    // primary children and take me.
 		    
-		    System.out.println("Sending controlFinalFindParentMessage from "+scribe.getNodeId()+" for stripe "+stripe.getStripeId());
+		    System.out.println(" DEBUG ::Sending controlFinalFindParentMessage from "+scribe.getNodeId()+" for stripe "+stripe.getStripeId());
 		    ControlFinalFindParentMessage cffpMsg = new ControlFinalFindParentMessage(scribe.getAddress(),
 											      scribe.getLocalHandle(),
 											      stripe.getStripeId(), 
@@ -151,16 +204,17 @@ public class ControlFindParentResponseMessage extends Message
                                                                                       c,
 										      channel_id );
 		    stripe.num_fails = 0;
+		    stripe.setFinalTry(true);
                     scribe.getPastryNode().scheduleMsg( timeoutMessage, channel.getTimeoutLen() );
 		    stripe.setIgnoreTimeout( false );
-		}
+		    }
 		else{
-		    System.out.println("PANIC --- FinalFindParentMessage also Failed at "+scribe.getNodeId()+" for stripe "+stripe.getStripeId());
+		    System.out.println(" DEBUG ::PANIC --- FinalFindParentMessage also Failed at "+scribe.getNodeId()+" for stripe "+stripe.getStripeId());
 		    stripe.setIgnoreTimeout( true );
 		}
-
+		*/
             /* generate upcall */
-        }
+	        
     }
     
     public NodeHandle getSource(){

@@ -13,8 +13,9 @@ import rice.scribe.messaging.*;
  * the client should attempt to locate another parent.
  *
  * @(#) ControlDropMessage.java
- * @version $Id:
+ * @version $Id$
  * @author briang
+ * @author Atul Singh
  */
 public class ControlDropMessage extends ControlMessage{
 
@@ -78,7 +79,7 @@ public class ControlDropMessage extends ControlMessage{
     */    
    public void handleDeliverMessage( Scribe scribe, Topic topic )
    {
-      System.out.println( "Getting to wrong handleDeliverMessage at node "+scribe.getNodeId() );
+      System.out.println( "DEBUG :: Getting to wrong handleDeliverMessage at node "+scribe.getNodeId() );
    }
 
 
@@ -93,8 +94,10 @@ public class ControlDropMessage extends ControlMessage{
     */
    public void handleDeliverMessage( Scribe scribe, Topic topic, PastryNode thePastryNode, Channel channel )
    {
-      Credentials c = new PermissiveCredentials();
-      //System.out.println("Sending FindParentMessage from "+scribe.getLocalHandle().getNodeId()+" for stripe "+topic.getTopicId());
+       Credentials c = new PermissiveCredentials();
+       Stripe stripe = channel.getStripe(stripe_id);
+
+       System.out.println("DEBUG :: Rec DROP Message :: Sending FindParentMessage from "+scribe.getLocalHandle().getNodeId()+" for stripe "+topic.getTopicId());
       ControlFindParentMessage msg = new ControlFindParentMessage( scribe.getAddress(),
                                                                    scribe.getLocalHandle(),
                                                                    spare_id,
@@ -111,7 +114,9 @@ public class ControlDropMessage extends ControlMessage{
                                                                         c, stripe_id, channel_id );
       channel.getStripe( stripe_id ).num_fails = 0;
       channel.getStripe( stripe_id ).setIgnoreTimeout( false );
-      thePastryNode.scheduleMsg( timeoutMessage, timeout_len );
+      float rand = Channel.random.nextFloat();
+      float newTimeout = (float)((1.0 + rand) * timeout_len ); 
+      thePastryNode.scheduleMsg( timeoutMessage, (long)newTimeout);
    }
 
    /**

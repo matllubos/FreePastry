@@ -90,7 +90,7 @@ public class ControlPropogatePathMessage extends Message{
       {
 	  if(path.contains((NodeHandle)children.get(i))){
 	      // Cycle dude..
-	      System.out.println("PROPOGATE_PATH :: Cycle detected at "+scribe.getNodeId()+ " with child "+((NodeHandle)children.get(i)).getNodeId()+" for stripe "+stripe.getStripeId());
+	      System.out.println("DEBUG :: PROPOGATE_PATH :: Cycle detected at "+scribe.getNodeId()+ " with child "+((NodeHandle)children.get(i)).getNodeId()+" for stripe "+stripe.getStripeId());
 	      channel.getSplitStream().routeMsgDirect((NodeHandle)children.get(i), new ControlDropMessage( channel.getSplitStream().getAddress(),
 								     channel.getSplitStream().getNodeHandle(),
 								     stripe.getStripeId(),
@@ -101,7 +101,7 @@ public class ControlPropogatePathMessage extends Message{
 				      credentials, null );
 	      if ( !scribe.removeChild((NodeHandle)children.get(i), stripe.getStripeId()) )
               {
-                  System.out.println( "Error removing child " + ((NodeHandle)children.get(i)).getNodeId()
+                  System.out.println( "DEBUG :: Error removing child " + ((NodeHandle)children.get(i)).getNodeId()
                                       + " at " + scribe.getNodeHandle().getNodeId() );
               }
 	  }

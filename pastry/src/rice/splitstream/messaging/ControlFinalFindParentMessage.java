@@ -95,7 +95,7 @@ public class ControlFinalFindParentMessage extends MessageAnycast
      */
     private boolean isInRootPath( IScribe scribe, NodeHandle source )
     {
-	//System.out.println("Printing path for stripe "+recv_stripe.getStripeId()+ " at "+((Scribe)scribe).getNodeId() );
+	//System.out.println("DEBUG :: Printing path for stripe "+recv_stripe.getStripeId()+ " at "+((Scribe)scribe).getNodeId() );
 	//printRootPath(recv_stripe.getRootPath());
         if ( recv_stripe != null )
 	    {
@@ -135,7 +135,7 @@ public class ControlFinalFindParentMessage extends MessageAnycast
 	Random rng = new Random();
 	int random = rng.nextInt(stripeIds.length);
 	StripeId victimStripeId;
-        System.out.println("Forwarding at " + scribe.getNodeId()+" for stipe "+stripe.getStripeId()+" from original source "+originalSource.getNodeId());
+        //System.out.println("DEBUG :: Forwarding at " + scribe.getNodeId()+" for stipe "+stripe.getStripeId()+" from original source "+originalSource.getNodeId());
         Credentials c = new PermissiveCredentials();
 	Topic stripeTopic = scribe.getTopic(recv_stripe.getStripeId());
 	Vector children;
@@ -155,10 +155,10 @@ public class ControlFinalFindParentMessage extends MessageAnycast
 	// then it cant satisfy the request, hence should continue
 	// looking 
 	if(rndStripe.size() == 0 || ( bandwidthManager.getMaxBandwidth(channel) <= 0)) {
-	    System.out.println("At "+scribe.getNodeId()+", rndStripe.size = "+rndStripe.size()+" maxBand = "+bandwidthManager.getMaxBandwidth(channel));
+	    //System.out.println("DEBUG :: At "+scribe.getNodeId()+", rndStripe.size = "+rndStripe.size()+" maxBand = "+bandwidthManager.getMaxBandwidth(channel));
 	    return true;
 	}
-	System.out.println("At "+scribe.getNodeId()+", rndStripe.size = "+rndStripe.size()+" maxBand = "+bandwidthManager.getMaxBandwidth(channel));
+	//System.out.println("DEBUG :: At "+scribe.getNodeId()+", rndStripe.size = "+rndStripe.size()+" maxBand = "+bandwidthManager.getMaxBandwidth(channel));
 	
 	/**
 	 * Conditions to check
@@ -198,35 +198,34 @@ public class ControlFinalFindParentMessage extends MessageAnycast
 	    random = rng.nextInt(children.size());
 	    NodeHandle victimChild = (NodeHandle)children.elementAt(random);
 
-	    ss.routeMsgDirect( originalSource,
-			       new ControlFindParentResponseMessage( ss.getAddress(),
-								     scribe.getNodeHandle(),
-								     channel_id,
-								     c,
-								     new Boolean( true ), 
-								     stripe.getStripeId(),
-								     sendPath,
-								     false),
-			       c,
-			       null );
+	    ControlFindParentResponseMessage cfprmsg = new ControlFindParentResponseMessage( 
+											    ss.getAddress(),
+											    scribe.getNodeHandle(),
+											    channel_id,
+											    c,
+											    new Boolean( true ), 
+											    stripe.getStripeId(),
+											    sendPath,
+											    false);
+	    ControlPropogatePathMessage cpgmsg = new ControlPropogatePathMessage( ss.getAddress(),
+										  ss.getNodeHandle(),
+										  recv_stripe.getStripeId(),
+										  c,
+										  sendPath,
+										  channel_id );
+	    AckData data = new AckData(cfprmsg, cpgmsg);
 
-
-	    ss.routeMsgDirect( originalSource,
-			       new ControlPropogatePathMessage( ss.getAddress(),
-								ss.getNodeHandle(),
-								recv_stripe.getStripeId(),
-								c,
-								sendPath,
-								channel_id ),
-			       c,
-			       null );
 	    if(!scribe.removeChild(victimChild, (NodeId)victimStripeId))
-		System.out.println("Failure in removeChild -- Child "+victimChild.getNodeId()+" at "+scribe.getNodeId());
-	    if ( !scribe.addChild( originalSource, recv_stripe.getStripeId() ) )
+		System.out.println("DEBUG :: Failure in removeChild -- Child "+victimChild.getNodeId()+" at "+scribe.getNodeId());
+	    if ( !scribe.addChild( originalSource, (NodeId)recv_stripe.getStripeId(), data ) )
 		{
-		    System.out.println( "Failure adding child "+originalSource.getNodeId()+" at "+
-					scribe.getNodeHandle().getNodeId() );
+		    System.out.println( "DEBUG :: Failure adding child "+originalSource.getNodeId()+" at "+
+					scribe.getNodeHandle().getNodeId()+" in ControlFinalFindParentMessage" );
+
+		    //channel.stripeSubscriberRemoved();
 		}
+
+
 	    ss.routeMsgDirect( victimChild, 
 			       new ControlDropMessage( ss.getAddress(),
 						       ss.getNodeHandle(),
@@ -238,25 +237,26 @@ public class ControlFinalFindParentMessage extends MessageAnycast
 			       c, 
 			       null ); 
 	    
-	    //System.out.println("Node "+scribe.getNodeId()+ " taking the child "+originalSource.getNodeId());
-
-	    System.out.println("NODE "+scribe.getNodeId()+" TAKING ON CHILD "  + originalSource.getNodeId()+" for stripe " +recv_stripe.getStripeId()+" and REMOVING CHILD "+victimChild.getNodeId()+" for stripe "+victimStripeId);
+	    //System.out.println("DEBUG :: Node "+scribe.getNodeId()+ " taking the child "+originalSource.getNodeId());
+	    
+	    System.out.println("DEBUG :: NODE "+scribe.getNodeId()+" TAKING ON CHILD "  + originalSource.getNodeId()+" for stripe " +recv_stripe.getStripeId()+" and REMOVING CHILD "+victimChild.getNodeId()+" for stripe "+victimStripeId+" in response to ControlFinalFindParentMessage");
 	    return false;
 	}
 	else {
+	    /*
 	    if(isInRootPath( scribe, originalSource ) )
-		System.out.println("ControlFinalFindParentMessage -- Could not satisfy the request at "+channel.getSplitStream().getNodeId()+" from "+originalSource.getNodeId()+" for "+stripe_id+" because loops are created");
+		System.out.println("DEBUG :: ControlFinalFindParentMessage -- Could not satisfy the request at "+channel.getSplitStream().getNodeId()+" from "+originalSource.getNodeId()+" for "+stripe_id+" because loops are created");
 	    if(recv_stripe.getState() == Stripe.STRIPE_DROPPED)
-		System.out.println("ControlFinalFindParentMessage -- Could not satisfy the request at "+channel.getSplitStream().getNodeId()+" from "+originalSource.getNodeId()+" for "+stripe_id+" because local node is dropped for this stripe");
+		System.out.println("DEBUG :: ControlFinalFindParentMessage -- Could not satisfy the request at "+channel.getSplitStream().getNodeId()+" from "+originalSource.getNodeId()+" for "+stripe_id+" because local node is dropped for this stripe");
 	    if(stripeTopic == null)
-		System.out.println("ControlFinalFindParentMessage -- Could not satisfy the request at "+channel.getSplitStream().getNodeId()+" from "+originalSource.getNodeId()+" for "+stripe_id+" because local node is not subscribed to the stripe");
-
+		System.out.println("DEBUG :: ControlFinalFindParentMessage -- Could not satisfy the request at "+channel.getSplitStream().getNodeId()+" from "+originalSource.getNodeId()+" for "+stripe_id+" because local node is not subscribed to the stripe");
+	    */
 	    return true;
 	}
     }
 
     public void faultHandler(Scribe scribe){
-	System.out.println("ControlFinalFindParentMessage -- DFS Failed. Noone could take me "+originalSource.getNodeId()+" as a child. - traversed "+alreadySeenSize());
+	System.out.println("DEBUG :: ControlFinalFindParentMessage -- DFS Failed. Noone could take me "+originalSource.getNodeId()+" at "+scribe.getNodeHandle().getNodeId()+ "as a child. - traversed "+alreadySeenSize()+" for stripe "+getStripeId());
 	
 	scribe.routeMsgDirect( originalSource,
 			       new ControlFindParentResponseMessage( SplitStreamAddress.instance(),
@@ -278,9 +278,9 @@ public class ControlFinalFindParentMessage extends MessageAnycast
     }
 
     public void printRootPath(Vector path){
-	System.out.println("Printing Root Path");
+	System.out.println("DEBUG :: Printing Root Path");
 	for(int i = 0; i < path.size(); i++)
-	    System.out.println("<"+((NodeHandle)path.elementAt(i)).getNodeId()+" >");
+	    System.out.println("DEBUG :: <"+((NodeHandle)path.elementAt(i)).getNodeId()+" >");
     }
 }
 
