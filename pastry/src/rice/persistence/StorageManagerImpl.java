@@ -241,21 +241,8 @@ public class StorageManagerImpl implements StorageManager {
    *
    * @param c The command to run once the operation is complete
    */
-  public void getTotalSize(final Continuation c) {
-    cache.getTotalSize(new StandardContinuation(c) {
-      private int cacheSize = -1;
-      
-      public void receiveResult(Object o) {
-        if (cacheSize == -1) {
-          cacheSize = ((Integer) o).intValue();
-          storage.getTotalSize(this);
-        } else {
-          int storageSize = ((Integer) o).intValue();
-          
-          c.receiveResult(new Integer(cacheSize + storageSize));
-        }
-      }
-    });    
+  public long getTotalSize() {
+    return cache.getTotalSize() + storage.getTotalSize();
   }
 
   /**
@@ -336,8 +323,8 @@ public class StorageManagerImpl implements StorageManager {
    *
    * @param c The command to run once the operation is complete
    */
-  public void getMaximumSize(Continuation c) {
-    cache.getMaximumSize(c);
+  public long getMaximumSize() {
+    return cache.getMaximumSize();
   }
 
   /**

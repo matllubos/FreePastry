@@ -201,8 +201,8 @@ public class EmptyCache implements Cache {
    *
    * @param c The command to run once the operation is complete
    */
-  public void getMaximumSize(Continuation c) {
-    c.receiveResult(new Integer(0));
+  public long getMaximumSize() {
+    return 0;
   }
 
   /**
@@ -213,8 +213,8 @@ public class EmptyCache implements Cache {
    * @param c The command to run once the operation is complete
    * @return The total size, in bytes, of data stored.
    */
-  public void getTotalSize(Continuation c) {
-    c.receiveResult(new Integer(0));
+  public long getTotalSize() {
+    return 0;
   }
 
   /**

@@ -97,7 +97,7 @@ public interface Cache extends Catalog {
    *
    * @param c The command to run once the operation is complete
    */
-  public void getMaximumSize(Continuation c);
+  public long getMaximumSize();
 
   /**
    * Sets the maximum size of the cache, in bytes. Setting this

@@ -492,8 +492,8 @@ public class PersistentStorage implements Storage {
    * @param c The command to run once the operation is complete
    * @return The total size, in bytes, of data stored.
    */
-  public void getTotalSize(Continuation c){
-    c.receiveResult(new Long(usedSize));
+  public long getTotalSize(){
+    return usedSize;
   }
 
 
@@ -571,7 +571,7 @@ public class PersistentStorage implements Storage {
       System.err.println("Metadata cache not found for namespace " + getName() + " - restoring from files.");
       metadataFile.createNewFile();
     } else {
-      metadata = readMetadataFile(metadataFile);
+      metadata = readMetadataFile(metadataFile, metadataFileTmp);
     }
   }
   
@@ -1306,7 +1306,7 @@ public class PersistentStorage implements Storage {
    * Utility function which reads the metadata file off of disk and stores the
    * result into the memory cache.
    */
-  private static HashMap readMetadataFile(File file) throws IOException {
+  private static HashMap readMetadataFile(File file, File tmp) throws IOException {
     FileInputStream fin = null;
     try {
       fin = new FileInputStream(file);
@@ -1316,8 +1316,15 @@ public class PersistentStorage implements Storage {
     } catch (Exception e) {
       System.out.println("Got error " + e + " while reading metadata file - removing file.");
       deleteFile(file);
-      file.createNewFile();
-      return new HashMap();
+      
+      if (tmp.exists()) {
+        System.out.println("Found backup metadata file " + tmp + " attempting to recover.");
+        renameFile(tmp, file);
+        return readMetadataFile(file, tmp);
+      } else {
+        file.createNewFile();
+        return new HashMap();
+      }
     } finally {
       fin.close();
     }
@@ -1495,7 +1502,10 @@ public class PersistentStorage implements Storage {
    * @return int the amount of storage in MB allocated for use
    */
   public long getStorageSize() {
-    return storageSize;
+    if (storageSize > 0)
+      return storageSize;
+    else
+      return Long.MAX_VALUE;
   }
 
   /**
@@ -1556,7 +1566,7 @@ public class PersistentStorage implements Storage {
    * @return String the name of the instance
    *
    */
-  private String getName(){
+  public String getName(){
     return name;
   }
 

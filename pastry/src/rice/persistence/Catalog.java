@@ -135,11 +135,9 @@ public interface Catalog {
   public IdSet scan();
 
   /**
-   * Returns the total size of the stored data in bytes.The result
-   * is returned via the receiveResult method on the provided
-   * Continuation with a Long representing the total size used.
+   * Returns the total size of the stored data in bytes.
    *
-   * @param c The command to run once the operation is complete
+   * @return The total storage size
    */
-  public void getTotalSize(Continuation c);
+  public long getTotalSize();
 }

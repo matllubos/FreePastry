@@ -168,23 +168,12 @@ public class LRUCache implements Cache {
       }
     };
 
-    Continuation resize = new Continuation() {
-      public void receiveResult(Object o) {
-        long totalSize = ((Long) o).longValue();
+    long totalSize = storage.getTotalSize();
 
-        if (maximumSize - size < totalSize) {
-          resize(maximumSize - size, store);
-        } else {
-          store.receiveResult(new Boolean(true));
-        }
-      }
-
-      public void receiveException(Exception e) {
-        c.receiveException(e);
-      }
-    };
-
-    storage.getTotalSize(resize);
+    if (maximumSize - size < totalSize)
+      resize(maximumSize - size, store);
+    else 
+      store.receiveResult(Boolean.TRUE);
   }
 
   /**
@@ -299,8 +288,8 @@ public class LRUCache implements Cache {
    *
    * @param c The command to run once the operation is complete
    */
-  public void getMaximumSize(Continuation c) {
-    c.receiveResult(new Integer(maximumSize));
+  public long getMaximumSize() {
+    return maximumSize;
   }
 
   /**
@@ -311,8 +300,8 @@ public class LRUCache implements Cache {
    * @param c The command to run once the operation is complete
    * @return The total size, in bytes, of data stored.
    */
-  public void getTotalSize(Continuation c) {
-    storage.getTotalSize(c);
+  public long getTotalSize() {
+    return storage.getTotalSize();
   }
 
   /**
@@ -352,36 +341,20 @@ public class LRUCache implements Cache {
    * @param size The maximum number of bytes to make the cache
    * @param c The command to run once the operation is complete
    */
-  private void resize(final int size, final Continuation c) {
-    
-    final Continuation remove = new Continuation() {
+  private void resize(final int size, Continuation c) {
+    final Continuation remove = new StandardContinuation(c) {
       private boolean waitingForSize = true;
       
       public void receiveResult(Object o) {
-        if (waitingForSize) {
-          waitingForSize = false;
-          
-          if (((Long) o).longValue() > size) {
-            //System.out.println("Evicting object " + size + " " + o);
-            
-            Comparable thisID = (Comparable) order.getLast();
-
-            uncache((Id) thisID, this);
-          } else {
-            c.receiveResult(new Boolean(true));
-          }
+        if (storage.getTotalSize() > size) {
+          uncache((Id) order.getLast(), this);
         } else {
-          waitingForSize = true;
-          storage.getTotalSize(this);
+          parent.receiveResult(new Boolean(true));
         }
-      }
-
-      public void receiveException(Exception e) {
-        c.receiveException(e);
       }
     };
 
-    storage.getTotalSize(remove);
+    remove.receiveResult(Boolean.TRUE);
   }
 
   /**
