@@ -150,7 +150,8 @@ public class Stripe extends Observable implements IScribeApp{
      public void forwardHandler(ScribeMessage msg){}
      public void receiveMessage(ScribeMessage msg){
        setChanged();
-       notifyObservers(); 
+       /* send the data to the application - Atul*/
+       notifyObservers( msg.getData()); 
 
        /* Check the type of message */
        /* then make call accordingly */
