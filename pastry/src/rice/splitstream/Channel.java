@@ -382,7 +382,7 @@ public class Channel extends PastryAppl implements IScribeApp {
   }
   
   private void handleControlAttachResponseMessage(Message msg){
-        System.out.println(getNodeId() + " recieved a response to anycast ");
+        //System.out.println(getNodeId() + " recieved a response to anycast ");
 	NodeId[] subInfo = (NodeId[]) ((ControlAttachResponseMessage) msg).getContent();	
 	channelId = new ChannelId(subInfo[0]);
 	spareCapacityId = new SpareCapacityId(subInfo[subInfo.length-1]);

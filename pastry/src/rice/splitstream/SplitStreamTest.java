@@ -37,7 +37,7 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
  private Vector channels;
  private Random rng;
  private RandomNodeIdFactory idFactory;
- private static int numNodes = 255;
+ private static int numNodes = 100;
  private static int port = 5009;
  private static String bshost;
  private static int bsport = 5009;

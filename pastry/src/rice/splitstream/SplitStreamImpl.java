@@ -110,7 +110,7 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
    public void setBandwidthManager(){}
    /** - IScribeObserver Implementation -- */
    public void update(Object topicId){
-	System.out.println("Topic " + topicId + " Created at " + ((Scribe)scribe).getNodeId());
+	//System.out.println("Topic " + topicId + " Created at " + ((Scribe)scribe).getNodeId());
  	//Topic topic = ((Scribe)scribe).getTopic((NodeId)topicId);
 	//topic.subscribe(this);
 
