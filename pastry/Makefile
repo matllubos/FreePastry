@@ -17,6 +17,7 @@ PACKAGES = \
 	rice.pastry.join\
 	rice.pastry.direct\
 	rice.pastry.dist\
+	rice.pastry.rmi\
 	rice.pastry.standard\
 	rice.pastry.security\
 	rice.pastry.testing\
@@ -29,20 +30,9 @@ PACKAGES = \
 	rice.scribe.messaging\
 	rice.scribe.security\
 	rice.scribe.testing\
-	rice.splitstream \
-	rice.splitstream.messaging \
-	rice.splitstream.testing \
-	rice.post\
-	rice.post.log\
-	rice.post.messaging\
-	rice.post.storage\
-	rice.post.testing\
-	rice.pastry.rmi\
-	rice.email\
-	rice.email.log\
-	rice.email.messaging\
-	rice.email.test\
-	rice.email.proxy \
+	rice.splitstream\
+	rice.splitstream.messaging\
+	rice.splitstream.testing\
 	rice.past\
 	rice.past.messaging\
 	rice.past.testing\
@@ -50,7 +40,28 @@ PACKAGES = \
 	rice.persistence.testing\
 	rice.rm\
 	rice.rm.messaging\
-	rice.rm.testing
+	rice.rm.testing\
+	rice.post\
+	rice.post.log\
+	rice.post.messaging\
+	rice.post.storage\
+	rice.post.testing\
+	rice.email\
+	rice.email.log\
+	rice.email.messaging\
+	rice.email.test\
+	rice.email.proxy\
+	rice.email.proxy.imap\
+	rice.email.proxy.imap.commands\
+	rice.email.proxy.imap.commands.fetch\
+	rice.email.proxy.imap.parser.antlr\
+	rice.email.proxy.mail\
+	rice.email.proxy.mailbox\
+	rice.email.proxy.mailbox.postbox\
+	rice.email.proxy.smtp\
+	rice.email.proxy.smtp.manager\
+	rice.email.proxy.smtp.commands\
+	rice.email.proxy.user 
 #	rice.storage\
 #	rice.storage.testing\
 #	rice.past.search\
@@ -64,7 +75,7 @@ NODOC_PACKAGES =
 
 JARS = pastry.jar
 
-JARS_LIB       = javamail.jar bouncycastle.jar
+JARS_LIB       = javamail.jar bouncycastle.jar antlr.jar
 
 JARS_3RDPARTY = 
 
