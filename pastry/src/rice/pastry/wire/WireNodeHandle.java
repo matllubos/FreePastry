@@ -710,7 +710,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
         System.out.println("An error occured during message deserialization - ignoring message...");
         tempReader.reset();
       } catch (IOException e) {
-        System.err.println("Error occurred during reading from " + address + " at " + getNodeId() + " - closing socket. " + e);
+        //System.err.println("Error occurred during reading from " + address + " at " + getNodeId() + " - closing socket. " + e);
         debug("Error occurred during reading from " + address + " at " + getNodeId() + " - closing socket. " + e);
         close(tempWriter.getQueue());
       }

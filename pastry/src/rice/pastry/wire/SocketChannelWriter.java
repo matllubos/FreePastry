@@ -456,7 +456,7 @@ public class SocketChannelWriter {
       
       byte[] newBytes = baos2.toByteArray();
       if (oldBuf != null) {
-        System.err.println("OldBuf != null:"+oldBuf.limit()+","+oldBuf.remaining());        
+        //System.err.println("OldBuf != null:"+oldBuf.limit()+","+oldBuf.remaining());        
         oldBuf.rewind();
         byte[] oldBytes = oldBuf.array();
         byte[] combined = new byte[newBytes.length+oldBytes.length];
