@@ -360,6 +360,9 @@ public class Topic
      * method is called by ScribeMessage objects. 
      */
     public void removeFromScribe() {
+	// We need to set the parent to null because we need to keep the 
+	// DistinctParentTableConsistent 
+	setParent(null);
 	m_scribe.m_topics.remove( m_topicId );
     }
 
