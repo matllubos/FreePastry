@@ -219,5 +219,9 @@ public class Stripe implements ScribeClient {
   public String toString() {
     return "Stripe " + stripeId;
   }
+
+    public NodeHandle[] getChildren(){
+	return this.scribe.getChildren(new Topic(this.getStripeId().getId()));
+    }
 }
 

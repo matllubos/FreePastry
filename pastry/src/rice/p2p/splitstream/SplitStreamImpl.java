@@ -100,6 +100,8 @@ public class SplitStreamImpl implements SplitStream {
     return (Channel[]) channels.values().toArray(new Channel[0]);
   }
 
-   
+    public SplitStreamScribePolicy getPolicy(){
+	return (SplitStreamScribePolicy)(scribe.getPolicy());
+    }
 }
 

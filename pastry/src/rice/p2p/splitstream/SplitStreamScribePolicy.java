@@ -184,7 +184,7 @@ public class SplitStreamScribePolicy implements ScribePolicy {
    * @param channel The channel to get the children for
    * @return The total number of children for that channel
    */
-  private int getTotalChildren(Channel channel) {
+  public int getTotalChildren(Channel channel) {
     int total = 0;
     Stripe[] stripes = channel.getStripes();
 

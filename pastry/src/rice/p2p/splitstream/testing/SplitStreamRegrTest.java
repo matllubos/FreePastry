@@ -86,7 +86,62 @@ public class SplitStreamRegrTest extends CommonAPITest {
 
     // Run each test
     testBasic();
+    testBandwidthUsage();
+    testIndependence();
   }
+
+    protected void testBandwidthUsage(){
+	boolean result = true;
+	int count = 0;
+	int total = 0;
+	Channel channel;
+	sectionStart("BandwidthUsage Test");
+	stepStart("Usage");
+	simulate();
+	for(int i = 0; i < NUM_NODES; i++){
+	    channel = ssclients[i].getChannel();
+	    count = ((SplitStreamScribePolicy)splitstreams[i].getPolicy()).getTotalChildren(channel);
+	    if(count > SplitStreamScribePolicy.DEFAULT_MAXIMUM_CHILDREN)
+		result = false;
+	    //System.out.println("count "+count);
+	    total += count;
+	}	
+	//System.out.println("Total outgoing capacity Used "+total);
+	
+	if(result && (total == (NUM_NODES -1 ) * SplitStreamScribePolicy.DEFAULT_MAXIMUM_CHILDREN)){
+	    stepDone(SUCCESS);
+	}
+	else{
+	    stepDone(FAILURE);
+	}
+	sectionDone();
+    }
+
+    protected void testIndependence(){
+	boolean result = true;
+	int count = 0;
+	int num = 0;
+	int[] array = new int[20];
+	Channel channel;
+	Stripe[] stripes;
+	sectionStart("Path Independence Test");
+	stepStart("Usage");
+	simulate();
+	for(int i = 0; i < NUM_NODES; i++){
+	    channel = ssclients[i].getChannel();
+	    stripes = channel.getStripes();
+	    num = 0;
+	    for(int j = 0 ; j < stripes.length; j++){
+		count = stripes[j].getChildren().length;
+		if(count > 0)
+		    num++;
+	    }
+	    array[num] ++;
+	}
+	for(int i = 0; i < 20; i++)
+	    System.out.println(i+"\t"+array[i]);
+	sectionDone();
+    }
 
   /*
    *  ---------- Test methods and classes ----------
@@ -183,11 +238,16 @@ public class SplitStreamRegrTest extends CommonAPITest {
 
    private int numMesgsReceived = 0;
 
+      private SplitStreamScribePolicy policy = null;
    public SplitStreamTestClient(Node n, SplitStream ss){
       this.n = n;
       this.ss =ss;
       log("Client Created " + n);
    }
+
+      public Channel getChannel(){
+	  return this.channel;
+      }
    public void joinFailed(Stripe s){
       log("Join Failed on " + s);
    }
@@ -208,9 +268,10 @@ public class SplitStreamRegrTest extends CommonAPITest {
         channel = ss.attachChannel(cid);
    }
 
-   public void getStripes(){
+   public Stripe[] getStripes(){
       log("Retrieving Stripes.");
       stripes = channel.getStripes();
+      return stripes;
    }
 
    public void subscribeStripes(){
