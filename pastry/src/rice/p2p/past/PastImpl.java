@@ -66,7 +66,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   // ----- STATIC FIELDS -----
 
   // the number of milliseconds to wait before declaring a message lost
-  public static int MESSAGE_TIMEOUT = 15000;
+  public static int MESSAGE_TIMEOUT = 45000;
   
 
   // ----- VARIABLE FIELDS -----
@@ -128,6 +128,15 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   // ----- INTERNAL METHODS -----
 
   /**
+   * Returns the endpoint associated with the Past - ONLY FOR TESTING - DO NOT USE
+   *
+   * @return The endpoint
+   */
+  public Endpoint getEndpoint() {
+    return endpoint;
+  }
+  
+  /**
    * Returns a new uid for a message
    *
    * @return A new id
@@ -148,12 +157,12 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
     return new Continuation() {
       public void receiveResult(Object o) {
         cmsg.receiveResult(o);
-        endpoint.route(msg.getSource().getId(), cmsg, msg.getSource());
+        endpoint.route(null, cmsg, msg.getSource());
       }
 
       public void receiveException(Exception e) {
         cmsg.receiveException(e);
-        endpoint.route(msg.getSource().getId(), cmsg, msg.getSource());
+        endpoint.route(null, cmsg, msg.getSource());
       }
     };
   }
@@ -169,6 +178,18 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   private void sendRequest(Id id, PastMessage message, Continuation command) {
     sendRequest(id, message, null, command);
   }
+  
+  /**
+   * Sends a request message across the wire, and stores the appropriate
+   * continuation.
+   *
+   * @param handle The node handle to send directly too
+   * @param message The message to send.
+   * @param command The command to run once a result is received
+   */
+  private void sendRequest(NodeHandle handle, PastMessage message, Continuation command) {
+    sendRequest(null, message, handle, command);
+  }
 
   /**
    * Sends a request message across the wire, and stores the appropriate
@@ -181,7 +202,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    */
   private void sendRequest(Id id, PastMessage message, NodeHandle hint, Continuation command) {
     log.finer("Sending request message " + message + " to id " + id + " via " + hint);
-    TimerTask timer = endpoint.scheduleMessage(new MessageLostMessage(message.getUID(), getLocalNodeHandle()), MESSAGE_TIMEOUT);
+    TimerTask timer = endpoint.scheduleMessage(new MessageLostMessage(message.getUID(), getLocalNodeHandle(), hint), MESSAGE_TIMEOUT);
     insertPending(message.getUID(), timer, command);
     endpoint.route(id, message, hint);
   }
@@ -231,25 +252,25 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   /**
    * Method which inserts the given object into the cache
    *
-   * @param id The id
-   * @param obj The object
+   * @param content The content to cache
    */
   private void cache(final PastContent content) {
+    cache(content, new ListenerContinuation("Caching of " + content));
+  }
+  
+  /**
+   * Method which inserts the given object into the cache
+   *
+   * @param content The content to cache
+   * @param command The command to run once done
+   */
+  private void cache(final PastContent content, final Continuation command) {   
     log.finer("Inserting PastContent object " + content + " into cache");
-    if ((content != null) && (! content.isMutable())) {
-      
-      storage.cache(content.getId(), content, new Continuation() {
-        public void receiveResult(Object o) {
-          if (! (o.equals(new Boolean(true)))) {
-            log.warning("Caching of " + content + " under id " + content.getId() + " failed.");
-          }
-        }
-
-        public void receiveException(Exception e) {
-          log.warning("Caching of " + content + " under id " + content.getId() + " caused exception " + e);
-        }
-      });
-    }
+    
+    if ((content != null) && (! content.isMutable())) 
+      storage.cache(content.getId(), content, command);
+    else
+      command.receiveResult(new Boolean(true));
   }
 
   
@@ -290,25 +311,46 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
           handles.add(o);
 
           if (handles.size() == num) {
-            Boolean[] array = new Boolean[num];
-
+            final Boolean[] array = new Boolean[num];
+            int fail = 0;
+            
             for (int i=0; i<num; i++) {
-              array[i] = (Boolean) handles.elementAt(i);
+              if (handles.elementAt(i) instanceof Exception) 
+                array[i] = new Boolean(false);
+              else
+                array[i] = (Boolean) handles.elementAt(i);
+              
+              if (! array[i].booleanValue())
+                fail++;
             }
 
-            log.fine("Received all handles for id " + obj.getId() + " - returning result");
-            command.receiveResult(array);
+            if (fail < 2) {
+              log.fine("Received all handles (fail " + fail + " ) for id " + obj.getId() + " - returning result");
+              
+              // lastly, try and cache object locally for future use
+              cache(obj, new Continuation()  {
+                public void receiveResult(Object o) {
+                  command.receiveResult(array);
+                }
+                
+                public void receiveException(Exception e) {
+                  receiveResult(e);
+                }
+              });
+            } else {
+              log.warning("More than one replica insert failed - throwing exception!");
+              command.receiveException(new PastException("Had " + fail + " failures during insert - aborting."));
+            }
           }
         }
       }
 
       public void receiveException(Exception e) {
-        command.receiveException(e);
+        receiveResult(e);
       }
     };
 
     Continuation receiveReplicas = new Continuation() {
-
       public void receiveResult(Object o) {
         NodeHandleSet replicas = (NodeHandleSet) o;
         log.finer("Received replicas " + replicas + " for id " + obj.getId());
@@ -318,7 +360,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
 
         for (int i=0; i<replicas.size(); i++) {
           NodeHandle node = replicas.getHandle(i);
-          sendRequest(node.getId(), new InsertMessage(getUID(), obj, getLocalNodeHandle(), obj.getId()), node, receiveHandles);
+          sendRequest(node, new InsertMessage(getUID(), obj, getLocalNodeHandle(), obj.getId()), receiveHandles);
         }
       }
 
@@ -352,6 +394,19 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param command Command to be performed when the result is received
    */
   public void lookup(final Id id, final Continuation command) {
+    lookup(id, true, command);
+  }
+  
+  /**
+   * Method which performs the same as lookup(), but allows the 
+   * callee to specify if the data should be cached.
+   *
+   * 
+   * @param id the key to be queried
+   * @param cache Whether or not the data should be cached
+   * @param command Command to be performed when the result is received
+   */
+  public void lookup(final Id id, final boolean cache, final Continuation command) {
     log.fine("Looking up object stored in Past with id " + id);
     if (command == null) return;
     if (id == null) {
@@ -366,12 +421,25 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
         } else {
           // send the request across the wire, and see if the result is null or not
           sendRequest(id, new LookupMessage(getUID(), id, getLocalNodeHandle(), id), new StandardContinuation(this) {
-            public void receiveResult(Object o) {
+            public void receiveResult(final Object o) {
               // if we have an object, we return it
               // otherwise, we must check all replicas in order to make sure that
               // the object doesn't exist anywhere
               if (o != null) {
-                command.receiveResult(o);
+                // lastly, try and cache object locally for future use
+                if (cache) {
+                  cache((PastContent) o, new Continuation()  {
+                    public void receiveResult(Object object) {
+                      command.receiveResult(o);
+                    }
+                    
+                    public void receiveException(Exception e) {
+                      receiveResult(e);
+                    }
+                  });
+                } else {
+                  command.receiveResult(o);                            
+                }
               } else {
                 lookupHandles(id, replicationFactor+1, new StandardContinuation(this) {
                   public void receiveResult(Object o) {
@@ -379,7 +447,25 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
 
                     for (int i=0; i<handles.length; i++) {
                       if (handles[i] != null) {
-                        fetch(handles[i], command);
+                        fetch(handles[i], new StandardContinuation(parent) {
+                          public void receiveResult(final Object o) {
+                            // lastly, try and cache object locally for future use
+                            if (cache) {
+                              cache((PastContent) o, new Continuation()  {
+                                public void receiveResult(Object object) {
+                                  command.receiveResult(o);
+                                }
+                                
+                                public void receiveException(Exception e) {
+                                  receiveResult(e);
+                                }
+                              });
+                            } else {
+                              command.receiveResult(o);                            
+                            }
+                          }
+                        });
+                        
                         return;
                       }
                     }
@@ -475,7 +561,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
 
         for (int i=0; i<replicas.size(); i++) {
           NodeHandle node = replicas.getHandle(i);
-          sendRequest(node.getId(), new FetchHandleMessage(getUID(), id, getLocalNodeHandle(), node.getId()), node, receiveHandles);
+          sendRequest(node, new FetchHandleMessage(getUID(), id, getLocalNodeHandle(), node.getId()), receiveHandles);
         }
       }
 
@@ -508,9 +594,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
     
     log.fine("Retrieving object associated with content handle " + handle);
     
-    sendRequest(handle.getNodeHandle().getId(),
+    sendRequest(handle.getNodeHandle(),
                 new FetchMessage(getUID(), handle, getLocalNodeHandle(), handle.getNodeHandle().getId()),
-                handle.getNodeHandle(),
                 command);
   }
 
@@ -638,7 +723,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
               log.fine("Pushing cached copy of " + ((PastContent) o).getId() + " to " + handle);
 
               CacheMessage cmsg = new CacheMessage(getUID(), (PastContent) o, getLocalNodeHandle(), handle.getId());    
-              endpoint.route(handle.getId(), cmsg, handle);
+              endpoint.route(null, cmsg, handle);
             }
           }
 
@@ -681,7 +766,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
         log.severe("ERROR - Received message " + msg + "of unknown type.");
       }
     }
-  }
+  } 
 
   /**
    * This method is invoked to inform the application that the given node
@@ -708,7 +793,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   public void fetch(final Id id, Continuation command) {
     log.finer("Sending out replication fetch request for the id " + id);
     
-    lookup(id, new StandardContinuation(command) {
+    lookup(id, false, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         log.finest("retrieving replica id " + id);
         
