@@ -332,8 +332,26 @@ public class MultiringIdFactory implements IdFactory {
     public boolean removeAll(Collection c) { throw new UnsupportedOperationException("removeAll not supported!"); }
     public boolean retainAll(Collection c) { throw new UnsupportedOperationException("retainAll not supported!"); }
     public int size() { throw new UnsupportedOperationException("size not supported!"); }
-    public Object[] toArray() { throw new UnsupportedOperationException("toArray not supported!"); }
-    public Object[] toArray(Object[] a) { throw new UnsupportedOperationException("toArray not supported!"); }
+    public Object[] toArray() { 
+      Object[] result = new Object[set.size()];
+      Iterator i = set.iterator();
+      int j = 0;
+      
+      while (i.hasNext()) 
+        result[j++] = ((RingId) i.next()).getId();
+      
+      return result;
+    }
+    public Object[] toArray(Object[] a) { 
+      Object[] result = (Object[]) java.lang.reflect.Array.newInstance(a.getClass().getComponentType(), set.size());
+      Iterator i = set.iterator();
+      int j = 0;
+      
+      while (i.hasNext()) 
+        result[j++] = ((RingId) i.next()).getId();
+      
+      return result;
+    }
   }
     
   protected class MultiringMapEntry implements Map.Entry {
