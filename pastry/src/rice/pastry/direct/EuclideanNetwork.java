@@ -98,6 +98,11 @@ public class EuclideanNetwork implements NetworkSimulator
 	}
     }
 
+    /**
+     * Constructor.
+     *
+     */
+
     public EuclideanNetwork() {
 	rng = new Random();
 	nodeMap = new HashMap();
@@ -105,6 +110,12 @@ public class EuclideanNetwork implements NetworkSimulator
 	testRecord = null;
     }
     
+    /**
+     * register a new node
+     *
+     * @param nh the NodeHandle being registered
+     */
+
     public void registerNodeId(NodeHandle nh)
     {
 	NodeId nid = nh.getNodeId();
@@ -112,6 +123,13 @@ public class EuclideanNetwork implements NetworkSimulator
 	if (nodeMap.get(nid) != null) throw new Error("collision creating network stats for " + nid);
 	nodeMap.put(nid, new NodeRecord(nh));
     }
+
+    /**
+     * testing if a NodeId is alive
+     *
+     * @param nid the NodeId being tested
+     * @return true if nid is alive false otherwise
+     */
 
     public boolean isAlive(NodeId nid) {
 	NodeRecord nr = (NodeRecord) nodeMap.get(nid);
@@ -121,6 +139,13 @@ public class EuclideanNetwork implements NetworkSimulator
 	return nr.alive;
     }
 
+    /**
+     * set a NodeId to be alive or not
+     *
+     * @param nid the NodeId being set
+     * @param alive the value being set
+     */
+
     public void setAlive(NodeId nid, boolean alive) {
 	NodeRecord nr = (NodeRecord) nodeMap.get(nid);
 	
@@ -128,6 +153,14 @@ public class EuclideanNetwork implements NetworkSimulator
 
 	nr.alive = alive;
     }
+
+    /**
+     * computes the proximity between two NodeIds
+     *
+     * @param a the first NodeId 
+     * @param b the second NodeId 
+     * @return the proximity between the two input NodeIds
+     */
 
     public int proximity(NodeId a, NodeId b)
     {
@@ -157,12 +190,34 @@ public class EuclideanNetwork implements NetworkSimulator
 	
 	return true;
     }
+
+    /**
+     * set TestRecord
+     *
+     * @param tr input TestRecord
+     */
+
     public void setTestRecord( TestRecord tr ){
 	testRecord = tr;
     }
+
+    /**
+     * get TestRecord
+     *
+     * @return the returned TestRecord
+     */
+
     public TestRecord getTestRecord(){
 	return testRecord;
     }
+	
+    /**
+     * find the closest NodeId to an input NodeId out of all NodeIds in the network
+     *
+     * @param nid the input NodeId
+     * @return the NodeId closest to the input NodeId in the network
+     */
+
     public NodeHandle getClosest(NodeId nid) {
 	Iterator it = nodeMap.values().iterator();
 	NodeHandle bestHandle = null;
