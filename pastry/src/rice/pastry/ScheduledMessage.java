@@ -74,7 +74,12 @@ public class ScheduledMessage extends TimerTask {
    * deliver the message
    */
   public void run() {
-    localNode.receiveMessage(msg);
+    try {
+      localNode.receiveMessage(msg);
+    } catch (Exception e) {
+      System.err.println("Delivering " + this + " caused exception " + e);
+      e.printStackTrace();
+    }
   }
 
 }
