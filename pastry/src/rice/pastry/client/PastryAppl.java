@@ -166,7 +166,7 @@ public abstract class PastryAppl implements MessageReceiver
      * @return the node handle
      */
 
-    public final NodeHandle getNodeHandle()
+    public NodeHandle getNodeHandle()
     {
 	return thePastryNode.getLocalHandle();
     }
