@@ -116,11 +116,21 @@ public interface Endpoint {
   IdRange range(NodeHandle handle, int rank, Id lkey);
 
   /**
-   * Returns a handle to the local node below this endpoint.
+   * Returns a handle to the local node below this endpoint.  This node handle is serializable,
+   * and can therefore be sent to other nodes in the network and still be valid.
    *
    * @return A NodeHandle referring to the local node.
    */
   NodeHandle getLocalNodeHandle();
+
+  /**
+   * Schedules a message to be delivered to this application after the provided number of
+   * milliseconds.
+   *
+   * @param message The message to be delivered
+   * @param delay The number of milliseconds to wait before delivering the message
+   */
+  void scheduleMessage(Message message, long delay);
   
 }
 

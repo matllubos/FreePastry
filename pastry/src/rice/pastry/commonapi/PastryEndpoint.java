@@ -110,6 +110,18 @@ public class PastryEndpoint extends PastryAppl implements rice.p2p.commonapi.End
   }
 
   /**
+   * Schedules a message to be delivered to this application after the provided number of
+   * milliseconds.
+   *
+   * @param message The message to be delivered
+   * @param delay The number of milliseconds to wait before delivering the message
+   */
+  public void scheduleMessage(Message message, long delay) {
+    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), message);
+    thePastryNode.scheduleMsg(pm, delay);
+  }
+
+  /**
    * This method produces a list of nodes that can be used as next
    * hops on a route towards key, such that the resulting route
    * satisfies the overlay protocol's bounds on the number of hops

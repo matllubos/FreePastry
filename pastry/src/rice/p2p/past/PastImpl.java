@@ -58,6 +58,15 @@ import rice.rm.*;
  */
 public class PastImpl implements Past, Application, RMClient {
 
+  
+  // ----- STATIC FIELDS -----
+
+  // the number of milliseconds to wait before declaring a message lost
+  public static int MESSAGE_TIMEOUT = 5000;
+  
+
+  // ----- VARIABLE FIELDS -----
+
   // this application's endpoint
   protected Endpoint endpoint;
 
@@ -154,6 +163,7 @@ public class PastImpl implements Past, Application, RMClient {
    */
   private void sendRequest(Id id, PastMessage message, NodeHandle hint, Continuation command) {
     insertPending(message.getUID(), command);
+    endpoint.scheduleMessage(new MessageLostMessage(message.getUID(), endpoint.getId()), MESSAGE_TIMEOUT);
     endpoint.route(id, message, hint);
   }
 
