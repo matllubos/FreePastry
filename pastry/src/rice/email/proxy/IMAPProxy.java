@@ -57,7 +57,7 @@ public class IMAPProxy {
    */
   public void attach(EmailService service, String imapUsername, String imapPassword) {
 
-      this.session = Session.getInstance(new Properties());
+      this.session = Session.getInstance(System.getProperties());
 
       // Note the service
       this.service = service;
