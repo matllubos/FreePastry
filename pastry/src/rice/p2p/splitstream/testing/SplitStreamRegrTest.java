@@ -11,6 +11,8 @@ import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.testing.*;
 import rice.p2p.splitstream.*;
 
+import rice.pastry.PastrySeed;
+
 /**
  * @(#) SplitStreamRegrTest.java Provides regression testing for the Scribe service using distributed
  * nodes.
@@ -47,7 +49,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
   public SplitStreamRegrTest() {
     splitstreams = new SplitStreamImpl[NUM_NODES];
     ssclients = new SplitStreamTestClient[NUM_NODES];
-    rng = new Random();
+    rng = new Random(PastrySeed.getSeed());
   }
 
 
@@ -58,7 +60,8 @@ public class SplitStreamRegrTest extends CommonAPITest {
    * @param args DESCRIBE THE PARAMETER
    */
   public static void main(String args[]) {
-    parseArgs(args);
+      //PastrySeed.setSeed(922063158);
+      parseArgs(args);
     SplitStreamRegrTest splitstreamTest = new SplitStreamRegrTest();
     splitstreamTest.start();
   }
@@ -163,6 +166,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
 
 	
 	byte[] data = {0,1,0,1,1};
+	boolean pass = true;
 	for(int i = 0; i < 10; i++){
 	    ssclients[rng.nextInt(NUM_NODES - num) + num].publishAll(data);
 	    simulate();
@@ -175,18 +179,20 @@ public class SplitStreamRegrTest extends CommonAPITest {
 		    System.out.println(ssclients[i+num].getId()+" recived "+ssclients[i+num].getNumMesgs());
 		ssclients[j+num].reset();
 	    }
-	    System.out.println("Expected " + ((NUM_NODES - num) * 16) + " messages, got " + totalmsgs);
-
+	    //System.out.println("Expected " + ((NUM_NODES - num) * 16) + " messages, got " + totalmsgs);
+	    if(totalmsgs != ((NUM_NODES -num)*16))
+		pass = false;
 	}
-	/*
-	if(totalmsgs == ((NUM_NODES - num) * 16 * 10)){
+	//printPaths(num, NUM_NODES);
+
+	if(pass){
 	    stepDone(SUCCESS);
 	}
 	else{
 	    printPaths(num, NUM_NODES);
-	    stepDone(FAILURE, "Expected " + ((NUM_NODES - num) * 16 * 10) + " messages, got " + totalmsgs);
+	    stepDone(FAILURE);
 	}
-	*/
+	
 	sectionDone();
     }
 
@@ -254,6 +260,8 @@ public class SplitStreamRegrTest extends CommonAPITest {
 		    result = false;
 		    System.out.println("Node "+ssclients[i].getId()+" is parent less for topic "+stripes[j].getStripeId().getId());
 		}
+		//if(stripes[j].getParent() == null && stripes[j].isRoot())
+		//System.out.println("Node "+ssclients[i].getId()+" is parent less, but is the root for topic "+stripes[j].getStripeId().getId());
 	    }
 	}
 	return result;
@@ -282,7 +290,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
    */
   private Id generateId() {
     byte[] data = new byte[20];
-    new Random().nextBytes(data);
+    new Random(PastrySeed.getSeed()).nextBytes(data);
     return FACTORY.buildId(data);
   }
  

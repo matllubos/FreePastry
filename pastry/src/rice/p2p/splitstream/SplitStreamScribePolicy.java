@@ -127,8 +127,8 @@ public class SplitStreamScribePolicy implements ScribePolicy {
 		  if(victimChild.getId().equals(newChild.getId()))
 		      return false;
 		  else{
-		      System.out.println("Removing child "+victimChild+" at "+channel.getLocalId()+" for topic "
-					 +message.getTopic().getId()+" for new child "+newChild);
+		      //System.out.println("Removing child "+victimChild+" at "+channel.getLocalId()+" for topic "
+		      //+message.getTopic().getId()+" for new child "+newChild);
 		      scribe.removeChild(new Topic(message.getTopic().getId()), victimChild);
 		      return true;
 		  }
@@ -138,9 +138,9 @@ public class SplitStreamScribePolicy implements ScribePolicy {
 		  if(res != null){
 		      scribe.removeChild(new Topic((Id)res.elementAt(1)), (NodeHandle)res.elementAt(0));
 		      //scribe.addChild(message.getTopic(),((SubscribeMessage)message).getSubscriber());
-		      System.out.println("Adding child "+((SubscribeMessage)message).getSubscriber() + " for topic "
-					 +message.getTopic()+" at "+getChannel(message.getTopic()).getLocalId()
-					 +" removing child "+(NodeHandle)res.elementAt(0));
+		      //System.out.println("Adding child "+((SubscribeMessage)message).getSubscriber() + " for topic "
+		      //+message.getTopic()+" at "+getChannel(message.getTopic()).getLocalId()
+		      //+" removing child "+(NodeHandle)res.elementAt(0));
 		      return true;
 		  }
 		  else
@@ -160,42 +160,49 @@ public class SplitStreamScribePolicy implements ScribePolicy {
    * @param children Our current children for this message's topic
    */
   public void directAnycast(AnycastMessage message, NodeHandle parent, NodeHandle[] children) {
-    message.addFirst(parent);
-
-
+      if(parent != null){
+	  if(SplitStreamScribePolicy.getPrefixMatch(message.getTopic().getId(), parent.getId()) > 0)
+	      message.addFirst(parent);
+	  else
+	      message.addLast(parent);
+      }
+    
     // NEED TO ADD CHILDREN/PARENTS SELECTIVELY HERE
-    Vector good = new Vector();
-    Vector bad = new Vector();
-    for (int i=0; i<children.length; i++) {
-	if(SplitStreamScribePolicy.getPrefixMatch(message.getTopic().getId(), children[i].getId()) > 0)
-	    good.add(children[i]);
-	else
-	    bad.add(children[i]);
-    }
-    int index;
-    while(good.size() > 0){
-	index = rng.nextInt(good.size());
-	message.addFirst((NodeHandle)(good.elementAt(index)));
-	good.remove((NodeHandle)(good.elementAt(index)));
-    }
-    while(bad.size() > 0){
-	index = rng.nextInt(bad.size());
-	message.addLast((NodeHandle)(bad.elementAt(index)));
-	bad.remove((NodeHandle)(bad.elementAt(index)));
-    }
 
-
-
-    if(message instanceof SubscribeMessage){
-
+    // we do not want to anycast through our own children
+    if(message instanceof SubscribeMessage && !((SubscribeMessage)message).getSubscriber().getId().equals(getChannel(message.getTopic()).getLocalId())){
+	Vector good = new Vector();
+	Vector bad = new Vector();
+	for (int i=0; i<children.length; i++) {
+	    if(SplitStreamScribePolicy.getPrefixMatch(message.getTopic().getId(), children[i].getId()) > 0)
+		good.add(children[i]);
+	    else
+		bad.add(children[i]);
+	}
+	int index;
+	while(good.size() > 0){
+	    index = rng.nextInt(good.size());
+	    message.addFirst((NodeHandle)(good.elementAt(index)));
+	    good.remove((NodeHandle)(good.elementAt(index)));
+	}
+	while(bad.size() > 0){
+	    index = rng.nextInt(bad.size());
+	    message.addLast((NodeHandle)(bad.elementAt(index)));
+	    bad.remove((NodeHandle)(bad.elementAt(index)));
+	}
+    
+    
+	
+	//if(message instanceof SubscribeMessage){
+	
 	NodeHandle nextHop = message.getNext();
 	// make sure that the next node is alive
 	while ((nextHop != null) && (!nextHop.isAlive())) {
-	    nextHop = message.getNext();
+	nextHop = message.getNext();
 	}
-
+	
 	if(nextHop == null){
-
+	    
 	    // two cases, either
 	    // a) local node is a leaf
 	    // b) local node is root for non-prefix match topic,
@@ -206,9 +213,9 @@ public class SplitStreamScribePolicy implements ScribePolicy {
 		if(res != null){
 		    scribe.removeChild(new Topic((Id)res.elementAt(1)), (NodeHandle)res.elementAt(0));
 		    scribe.addChild(message.getTopic(),((SubscribeMessage)message).getSubscriber());
-		    System.out.println("Adding child "+((SubscribeMessage)message).getSubscriber() + " for topic "
-				       +message.getTopic()+" at "+getChannel(message.getTopic()).getLocalId()
-				       +" removing child "+(NodeHandle)res.elementAt(0));
+		    //System.out.println("Adding child "+((SubscribeMessage)message).getSubscriber() + " for topic "
+		    //+message.getTopic()+" at "+getChannel(message.getTopic()).getLocalId()
+		    //+" removing child "+(NodeHandle)res.elementAt(0));
 		    return;
 		}
 		
@@ -229,6 +236,8 @@ public class SplitStreamScribePolicy implements ScribePolicy {
 	else
 	    message.addFirst(nextHop);
     }
+
+    
   }
 
   /**
