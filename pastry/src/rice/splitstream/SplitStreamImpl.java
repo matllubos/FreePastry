@@ -81,7 +81,7 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
    public Channel createChannel(int numStripes, String name){
 
 	Channel channel = new Channel(numStripes, name, scribe, credentials, bandwidthManager, node);
-	//channels.put(channel.getChannelId(), channel);
+	channels.put(channel.getChannelId(), channel);
 	return (channel);
 
    }
