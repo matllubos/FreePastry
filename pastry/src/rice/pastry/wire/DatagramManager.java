@@ -183,8 +183,6 @@ public class DatagramManager implements SelectionKeyHandler {
 
             // make sure message is for us
             if (message.getDestination().equals(pastryNode.getNodeId())) {
-              System.out.println("Deserialzied message " + o + " from " + message.getSource());
-
               // make sure this handle is in the pool
               handle = ((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(message.getSource());
 
@@ -243,8 +241,6 @@ public class DatagramManager implements SelectionKeyHandler {
       while (i.hasNext()) {
         AcknowledgementMessage ack = (AcknowledgementMessage) i.next();
 
-	System.out.println("Sending ACK to " + ack.getAddress());
-
         if (channel.send(serialize(ack), ack.getAddress()) > 0)
           i.remove();
         else
@@ -256,8 +252,6 @@ public class DatagramManager implements SelectionKeyHandler {
 
       while (i.hasNext()) {
         PendingWrite write = (PendingWrite) i.next();
-
-	System.out.println("Sending message " + write.getObject() + " to address " + write.getAddress());
 
         int num = channel.send(serialize(write.getObject()), write.getAddress());
 
@@ -352,7 +346,6 @@ public class DatagramManager implements SelectionKeyHandler {
    */
   public static Object deserialize(ByteBuffer buffer) throws IOException {
     int len = buffer.remaining();
-    System.out.println("Deserializing a buffer with " + len + " bytes.");
     byte[] array = new byte[len];
 
     // copy the data into the buffer

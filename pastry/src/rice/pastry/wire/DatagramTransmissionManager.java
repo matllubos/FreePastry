@@ -340,12 +340,39 @@ public class DatagramTransmissionManager {
     }
 
     /**
+     * Adds an entry into the queue, taking message prioritization into account
+     *
+     * @param write The pending write to add
+     */
+    private void addToQueue(PendingWrite write) {
+      if (! (write.getObject() instanceof DatagramMessage)) {
+        boolean priority = ((Message) write.getObject()).hasPriority();
+
+        if ((priority) && (queue.size() > 0)) {
+          for (int i=1; i<queue.size(); i++) {
+            PendingWrite thisWrite = (PendingWrite) queue.get(i);
+
+            if ((! (thisWrite.getObject() instanceof DatagramMessage)) &&
+                (! ((Message) thisWrite.getObject()).hasPriority())) {
+              debug("Prioritizing datagram message " + write.getObject() + " over message " + thisWrite.getObject());
+
+              queue.add(i, write);
+              return;
+            }
+          }
+        }
+      }
+      
+      queue.addLast(write);
+    }
+
+    /**
      * Adds a pending write to this entry's queue.
      *
      * @param write The write to add.
      */
     public void add(PendingWrite write) {
-      queue.addLast(write);
+      addToQueue(write);
 
       debug("Added write for object " + write.getObject());
 

@@ -68,7 +68,7 @@ import rice.pastry.wire.messaging.socket.*;
 public class SocketChannelWriter {
 
   // the maximum length of the queue
-  public static int MAXIMUM_QUEUE_LENGTH = 50;
+  public static int MAXIMUM_QUEUE_LENGTH = 256;
 
   // the magic number array which is written first
   protected static byte[] MAGIC_NUMBER = new byte[] {0x45, 0x79, 0x12, 0x0D};
@@ -113,6 +113,33 @@ public class SocketChannelWriter {
   }
 
   /**
+   * Adds an entry into the queue, taking message prioritization into account
+   *
+   * @param write The pending write to add
+   */
+  private void addToQueue(Object o) {
+    if (o instanceof SocketTransportMessage) {
+      boolean priority = ((Message) ((SocketTransportMessage) o).getObject()).hasPriority();
+
+      if ((priority) && (queue.size() > 0)) {
+        for (int i=1; i<queue.size(); i++) {
+          Object thisObj = queue.get(i);
+
+          if ((thisObj instanceof SocketTransportMessage) &&
+              (! ((Message) ((SocketTransportMessage) thisObj).getObject()).hasPriority())) {
+            debug("Prioritizing socket message " + o + " over message " + thisObj);
+            
+            queue.add(i, o);
+            return;
+          }
+        }
+      }
+    }
+      
+    queue.addLast(o);
+  }
+
+  /**
    * Adds an object to this SocketChannelWriter's queue of pending
    * objects to write.  This methos is synchronized and therefore
    * safe for use by multiple threads.
@@ -122,7 +149,7 @@ public class SocketChannelWriter {
   public void enqueue(Object o) {
     synchronized (queue) {
       if (queue.size() < MAXIMUM_QUEUE_LENGTH) {
-        queue.addLast(o);
+        addToQueue(o);
       } else {
         System.err.println("Maximum TCP queue length reached - message " + o + " will be dropped.");
       }
@@ -185,9 +212,7 @@ public class SocketChannelWriter {
   public boolean write(SocketChannel sc) throws IOException {
     synchronized (queue) {
       if (buffer == null) {
-        if ((! waitingForGreeting) && (queue.size() > 0)) {
-          System.out.println("Writing message " + queue.getFirst() + " on socket to address " + sc.socket().getRemoteSocketAddress());
- 
+        if ((! waitingForGreeting) && (queue.size() > 0)) { 
           buffer = serialize(queue.getFirst());
         } else {
           return true;
