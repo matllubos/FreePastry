@@ -123,7 +123,9 @@ public abstract class PastryNode implements MessageReceiver {
 	nodeIsReady();
 	
 	// notify applications
-	Iterator it = apps.iterator();
+	//Iterator it = apps.iterator();
+	Vector temp = (Vector)apps.clone();
+	Iterator it = temp.iterator();
 	while (it.hasNext())
 	    ((PastryAppl)(it.next())).notifyReady();
 	
