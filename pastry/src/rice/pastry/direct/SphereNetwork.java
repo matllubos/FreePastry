@@ -43,7 +43,9 @@ import java.util.*;
 import java.lang.*;
 
 /**
- * Sphere network topology and idealized node life.
+ * Sphere network topology and idealized node life.  Emulates a
+ * network of nodes that are randomly placed on a sphere. Proximity is
+ * based on euclidean distance on the sphere.
  *
  * @version $Id$
  *

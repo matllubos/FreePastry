@@ -60,13 +60,14 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
     private RandomNodeIdFactory nidFactory;
     private NetworkSimulator simulator;
 
+    // max number of handles stored per routing table entry
     private static final int rtMax = 8;
+
+    // leafset size
     private static final int lSetSize = 24;
   
     public DirectPastryNodeFactory(NetworkSimulator sim) {
 	nidFactory = new RandomNodeIdFactory();
-	//	simulator = new EuclideanNetwork();
-	//	simulator = new SphereNetwork();
 	simulator = sim;
     }
 
@@ -184,7 +185,6 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	StandardJoinProtocol jProtocol =
 	    new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
 
-//	simulator.registerNodeId(nodeId);
 	simulator.registerNodeId( localhandle );
 
 	msgDisp.registerReceiver(router.getAddress(), router);

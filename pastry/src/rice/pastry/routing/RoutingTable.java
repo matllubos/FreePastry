@@ -125,7 +125,7 @@ public class RoutingTable extends Observable {
 
     /**
      * Determines an alternate hop numerically closer to the key than the one we are at. This assumes
-     * that bestEntry did not produce a live nodeHandle that matched the next digit of the key.
+     * that bestEntry did not produce a live nodeHandle that matches the next digit of the key.
      * 
      * @param key the key
      * @return a nodeHandle of a numerically closer node, relative to the key

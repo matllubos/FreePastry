@@ -43,13 +43,14 @@ import java.util.*;
 import java.lang.*;
 
 /**
- * Euclidean network topology and idealized node life.
- *
+ * Euclidean network topology and idealized node life.  Emulates a
+ * network of nodes that are randomly placed in a plane. Proximity is
+ * based on euclidean distance in the plane.
+ * 
  * @version $Id$
  *
  * @author Andrew Ladd
- * @author Rongmei Zhang
- */
+ * @author Rongmei Zhang */
 
 public class EuclideanNetwork implements NetworkSimulator 
 {

@@ -176,7 +176,7 @@ public class StandardRouter implements MessageReceiver {
 		}
 	    }
 	    else {
-		// we found an appropriate RT entry, check for holes are previous node
+		// we found an appropriate RT entry, check for RT holes at previous node
 		checkForRouteTableHole(msg, handle);
 	    }
 
@@ -213,6 +213,7 @@ public class StandardRouter implements MessageReceiver {
 	     localId.indexOfMSDD(key, RoutingTable.idBaseBitLength)) {
 	    
 	    // the previous node is missing a RT entry, send the row
+	    // for now, we send the entire row for simplicity
 
 	    //System.out.println("checkForRouteTableHole, sending row=" + diffDigit + " to=" + prevId);
 

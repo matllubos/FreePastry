@@ -99,14 +99,8 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	    // first, merge the received leaf set into our own
 	    mergeLeafSet(remotels, from);
 
-	    // if this node just joined, notify the members of the original leaf set
-	    //if (type == BroadcastLeafSet.JoinInitial) broadcast(remotels,from);   
 	    // if this node just joined, notify the members of our new leaf set
 	    if (type == BroadcastLeafSet.JoinInitial) broadcast();   
-
-	    // next, perform leaf set maintenance
-	    // this ensures rapid leafset reconstruction in the event of massive node failures
-	    //maintainLeafSet();
 
 	    // if this is not a join advertisement, then we are done
 	    // or, if "from" dropped from our leafset, then we leave the following check for another node
@@ -124,11 +118,6 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 
 	    NodeHandle returnHandle = rls.returnHandle();
 	    returnHandle = security.verifyNodeHandle(returnHandle);
-
-	    // perform maintenance prior to sending the leaf set
-	    // this avoids sending dead entries and also cause more rapid
-	    // reconstruction in the event of massive failures
-	    // maintainLeafSet();
 
 	    if (returnHandle.isAlive()) {
 		BroadcastLeafSet bls = new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update);
