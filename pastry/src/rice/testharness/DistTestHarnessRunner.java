@@ -70,7 +70,7 @@ public class DistTestHarnessRunner {
   /**
    * The port to start the first node on.
    */
-  private static int START_PORT = 12000;
+  public static int START_PORT = 12000;
 
   /**
    * The port on the bootstrapHost to look for the bootstrap node on
@@ -102,14 +102,18 @@ public class DistTestHarnessRunner {
   public DistTestHarnessRunner() {
     pastryNodes = new Vector();
     testNodes = new Vector();
-    factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(), PROTOCOL, START_PORT);
+    factory = DistPastryNodeFactory.getFactory(getNodeIdFactory(), PROTOCOL, START_PORT);
 
+  }
+
+  protected NodeIdFactory getNodeIdFactory() {
+    return new RandomNodeIdFactory();
   }
 
   public void run() {
     // create all of the nodes
     for (int i=0; i<NUM_NODES; i++) {
-      createNode(i);
+        createNode(i);
     }
     
     boolean quit = false;
@@ -188,14 +192,20 @@ public class DistTestHarnessRunner {
   protected NodeHandle getPastryBootstrap() {
     if (pastryNodes.size() == 0) {
       InetSocketAddress bootAddress = null;
+      InetSocketAddress address = null;
 
       try {
         bootAddress = new InetSocketAddress(BOOTSTRAP_HOST, BOOTSTRAP_PORT);
+        address = new InetSocketAddress(InetAddress.getLocalHost(), START_PORT); 
       } catch (Exception e) {
         System.out.println("ERROR (getBootstrap): " + e);
       }
 
-      return factory.getNodeHandle(bootAddress);
+      if (address.equals(bootAddress)) {
+        return null;
+      } else {
+        return factory.getNodeHandle(bootAddress);
+      }
     } else {
       return factory.getNodeHandle(((WireNodeHandle) ((PastryNode) pastryNodes.elementAt(pastryNodes.size() - 1)).getLocalHandle()).getAddress());
     }

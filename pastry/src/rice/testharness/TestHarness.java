@@ -148,8 +148,11 @@ public class TestHarness extends PastryAppl implements IScribeApp {
   public void initialize(boolean root) {
     if (root) {
       System.out.println("Joining scribe group rooted at : " + scribe.generateTopicId(this.getClass().getName() + "-ROOT"));
+      scribe.create(scribe.generateTopicId(this.getClass().getName() + "-ROOT"), _credentials);
       scribe.join(scribe.generateTopicId(this.getClass().getName() + "-ROOT"), this, _credentials);
     }
+
+    System.out.println("Anycasting to scribe group rooted at : " + scribe.generateTopicId(this.getClass().getName() + "-ROOT"));
     
     SubscribedMessage sm = new SubscribedMessage(_pastryNode.getLocalHandle());
     scribe.anycast(scribe.generateTopicId(this.getClass().getName() + "-ROOT"), sm, _credentials);
@@ -297,10 +300,14 @@ public class TestHarness extends PastryAppl implements IScribeApp {
   }
 
   public void receiveMessage( ScribeMessage msg ) {
+    System.out.println("GOT AN MULTICAST! HOLY SHIT!");
+    
     messageForAppl((Message) msg.getData());
   }
 
   public boolean anycastHandler(ScribeMessage msg) {
+    System.out.println("GOT AN ANYCAST! HOLY SHIT!");
+    
     messageForAppl((Message) msg.getData());
 
     return false;

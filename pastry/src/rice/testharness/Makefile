@@ -4,6 +4,7 @@ SOURCE  = \
  TestHarness.java \
  DistTestHarnessRunner.java \
  MultiRingDistTestHarnessRunner.java \
+ MultiRingTestHarness.java\
  Test.java
 
 RMI_SOURCE =

@@ -88,6 +88,10 @@ public class MultiRingDistTestHarnessRunner extends DistTestHarnessRunner {
     multiRingFactory = new MultiRingPastryNodeFactory(factory);
   }
 
+  protected NodeIdFactory getNodeIdFactory() {
+    return new RandomRingNodeIdFactory();
+  }
+
   protected PastryNode createPastryNode() {
     PastryNode pn = multiRingFactory.newNode(getPastryBootstrap());
 
@@ -103,12 +107,45 @@ public class MultiRingDistTestHarnessRunner extends DistTestHarnessRunner {
     }
   }
 
+  protected MultiRingTestHarness[] getOthers() {
+    MultiRingTestHarness[] result = new MultiRingTestHarness[otherTestNodes.size()];
+
+    for (int i=0; i<result.length; i++) {
+      result[i] = (MultiRingTestHarness) otherTestNodes.elementAt(i);
+    }
+
+    return result;
+  }
+
+  protected void createNode(final int num) {
+    int port = START_PORT + num;
+
+    PastryNode pn = createPastryNode();
+
+    System.err.println("Created node " + num + " " + pn.getNodeId() + " on port " + port);
+
+    MultiRingTestHarness test = new MultiRingTestHarness(pn, this);
+
+    while (! pn.isReady()) {
+      pause(500);
+    }
+
+    while (! test.isReady()) {
+      pause(500);
+    }
+
+    test.initialize(getPastryBootstrap() == null);
+
+    pastryNodes.addElement(pn);
+    testNodes.addElement(test);
+  }
+
   private void duplicateNode(final int num) {
     PastryNode pn = multiRingFactory.joinRing((MultiRingPastryNode) pastryNodes.elementAt(num), null);
 
     System.err.println("Created node " + num + " " + pn.getNodeId() + " on port " + ((DistNodeHandle) ((DistPastryNode) ((MultiRingPastryNode) pn).getPastryNode()).getLocalHandle()).getAddress().getPort());
 
-    TestHarness test = new TestHarness(pn);
+    TestHarness test = new MultiRingTestHarness(pn, this);
 
     while (! pn.isReady()) {
       pause(500);
