@@ -72,6 +72,11 @@ public class Proxy {
       au.start();
     }
     
+    if (parameters.getBooleanParameter("proxy_sleep_monitor_enable")) {
+      SleepMonitor sm = new SleepMonitor(parameters);
+      sm.start();
+    }
+    
     while (true) {
       String command = buildJavaCommand(parameters);
       String[] environment = buildJavaEnvironment(parameters);
@@ -127,7 +132,9 @@ public class Proxy {
       result.append(" \"");
     }
     
-    if ((parameters.getStringParameter("java_home") == null) && (System.getProperty("os.name").toLowerCase().indexOf("windows") < 0))
+    if (((parameters.getStringParameter("java_home") == null) ||
+         (parameters.getStringParameter("java_home").equals(""))) && 
+        (System.getProperty("os.name").toLowerCase().indexOf("windows") < 0))
       parameters.setStringParameter("java_home", System.getProperty("java.home"));
     
     if ((parameters.getStringParameter("java_home") != null) && (! ("".equals(parameters.getStringParameter("java_home"))))) {
@@ -486,4 +493,35 @@ public class Proxy {
       return buf.toString();
     }
   }
+  
+  private class SleepMonitor extends Thread {
+    
+    protected int sleep;
+    
+    protected int timeout;
+    
+    protected long last;
+        
+    public SleepMonitor(Parameters parameters) {
+      this.sleep = parameters.getIntParameter("proxy_sleep_monitor_sleep");
+      this.timeout = parameters.getIntParameter("proxy_sleep_monitor_timeout");
+    }
+    
+    public void run() {
+      this.last = System.currentTimeMillis();
+      
+      while (true) {
+        try {          
+          Thread.sleep(sleep);
+          
+          if (System.currentTimeMillis() - last > timeout) {
+            System.err.println("INFO: Sleep detected - " + (System.currentTimeMillis() - last) + " millis elapsed - restarting ePOST!");
+            restart();
+          }
+          
+          last = System.currentTimeMillis();
+        } catch (InterruptedException e) {}
+      }
+    }
+  }  
 }
