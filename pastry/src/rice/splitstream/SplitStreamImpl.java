@@ -67,15 +67,16 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
     */
    public Channel createChannel(int numStripes, String name){
 	//System.out.println("Channel: Creating a new channel, numStripes = " + numStripes);
-	return (new Channel(numStripes,name, scribe, credentials ,bandwidthManager, node));
+	Channel channel = new Channel(numStripes, name, scribe, credentials, bandwidthManager, node);
+	//channels.put(channel.getChannelId(), channel);
+	return (channel);
    }
    /**
     * This method is used by peers who wish to listen to content distributed 
     * by some other peer using SplitStream. It attaches the local node to the 
     * Channel which is being used by the source peer to distribute the content.
     * Essentially, this method finds out the different parameters of Channel
-    * object which is created by the source, (the peer distributing the content)
-    *, and then creates a local Channel object with these parameters and
+    * object which is created by the source, (the peer distributing the content)    *, and then creates a local Channel object with these parameters and
     * returns it.  
     * This is a non-blocking call so the returned Channel object may not be 
     * initialized with all the parameters, so applications should wait for 

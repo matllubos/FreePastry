@@ -48,7 +48,7 @@ public class BandwidthManager{
       * Get the default number of children that a channel may have
       * @return the default number of children
       */
-     public int getDefaultChildren(){return 0;}
+     public int getDefaultChildren(){return DEFAULT_CHILDREN;}
      /**
       * gets current number of Children this child currently has.
       * @return the current number of children

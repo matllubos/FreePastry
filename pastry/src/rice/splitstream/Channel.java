@@ -158,7 +158,8 @@ public class Channel extends PastryAppl implements IScribeApp {
 
 	for(int i = 0 ; i < stripeIds.length ; i++){
 		if(stripeIdTable == null) {System.out.println("NULL");}
-		stripeIdTable.put(stripeIds[i], "NULL");
+		stripeIdTable.put(stripeIds[i],
+                   new Stripe( stripeIds[i], this, scribe, cred, false));
 		
 	}
 
@@ -251,8 +252,12 @@ public class Channel extends PastryAppl implements IScribeApp {
 	boolean found= false;
 	Stripe toReturn = null;
         for(int i = 0 ; i < getStripes().length && !found; i ++){
-	  	if(stripeIdTable.get(getStripes()[i]) instanceof String){
-			toReturn = joinStripe(getStripes()[i], observer);
+                Stripe stripe = (Stripe) stripeIdTable.get(getStripes()[i]);
+	  	if(stripe.getState() == Stripe.STRIPE_UNSUBSCRIBED){
+			toReturn = stripe;
+		        toReturn.joinStripe();	
+		        toReturn.addObserver(observer);
+		        subscribedStripes.addElement(toReturn);
 			found = true;
 		}
 	}
@@ -268,13 +273,7 @@ public class Channel extends PastryAppl implements IScribeApp {
   public Stripe joinStripe(StripeId stripeId, Observer observer){
 		Object tableEntry = stripeIdTable.get(stripeId);
 		Stripe stripe = null; 
-		if(tableEntry instanceof String){
-		   stripe = new Stripe(stripeId, this, scribe, cred, false);
-		   stripeIdTable.put(stripeId, stripe);
-		}
-		else{
-		   stripe = (Stripe) tableEntry;
-		}
+		stripe = (Stripe) tableEntry;
 		stripe.joinStripe();	
 		stripe.addObserver(observer);
 		subscribedStripes.addElement(stripe);
@@ -375,7 +374,9 @@ public class Channel extends PastryAppl implements IScribeApp {
 	/* Fill in all instance variable for channel */
 	for(int i = 1 ; i < subInfo.length-1 ; i++){
 		this.numStripes = subInfo.length -2 ;
-		stripeIdTable.put(new StripeId(subInfo[i]), "NULL");
+		StripeId stripeId = new StripeId(subInfo[i]);
+		stripeIdTable.put(stripeId, 
+                   new Stripe( stripeId, this, scribe, cred, false));
 	}
         if(scribe.join(channelId, this, cred, subInfo)){
 	}
@@ -384,11 +385,17 @@ public class Channel extends PastryAppl implements IScribeApp {
 	isReady = true;
   }
   private void handleControlFindParentResponseMessage(Message msg){
-    /* Should call stripe.setParent() */
+    System.out.println("Find Parent Response Messeage");
+   /* Should call stripe.setParent() */
   }
   private void handleControlDropMessage(Message msg){
-    System.out.println("Drop Message");
-    /* Should call stripe.drop() */
+    //System.out.println("Drop Message");
+    //System.out.println("I'm getting Dropped " + getNodeId());
+    ControlDropMessage dropMessage = (ControlDropMessage) msg;
+    Stripe stripe = (Stripe) stripeIdTable.get(dropMessage.getStripeId());
+    if(stripe != null)
+       stripe.dropped();
+    dropMessage.handleDeliverMessage((Scribe)scribe, ((Scribe) scribe).getTopic(dropMessage.getStripeId())); 
   }
   private void handleChannelMessage(ScribeMessage msg){
     /* this case is when we get an attach message */

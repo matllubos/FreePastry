@@ -62,9 +62,9 @@ public class Stripe extends Observable implements IScribeApp{
 
       if(create){
       	if(scribe.create(stripeId, credentials)){
-		stripeState = STRIPE_UNSUBSCRIBED;
       	}
       }
+	stripeState = STRIPE_UNSUBSCRIBED;
 	//System.out.println("Stripe Created");
 	outputStream = new SplitStreamOutputStream(stripeId, scribe, credentials);
     }
@@ -127,7 +127,7 @@ public class Stripe extends Observable implements IScribeApp{
 	}
      }
      public void dropped(){
-	System.out.println("I'm Getting Dropped");
+        stripeState = STRIPE_DROPPED;
      }
 	
      public void backdoorSend(Serializable data){
@@ -169,7 +169,7 @@ public class Stripe extends Observable implements IScribeApp{
                                                                        channel.getNodeHandle(),
                                                                        topicId,
                                                                        credentials,
-                                                                       channel.getSpareCapacityId() ),
+                                                                       channel.getSpareCapacityId(), channel.getChannelId() ),
                                         credentials, null );
                 //System.out.println("SHOULD NOT TAKE CHILD");
 	   }
