@@ -574,7 +574,8 @@ public class PersistentStorage implements Storage {
    * 
    * In doing this it must resolve conflicts and aborted
    * transactions. After this is run the most current stable
-   * state should be restored
+   * state should be restored.  Also record the total used space
+   * for all files in the root.
    *
    */
   private void initFileMap(File dir) throws IOException {
@@ -587,8 +588,10 @@ public class PersistentStorage implements Storage {
     for (int i=0; i<files.length; i++) {
       if (files[i].isFile()) {
         Id id = readKey(files[i]);
+        increaseUsedSpace(getFileLength(files[i]));
         idSet.addId(id);
-        metadata.put(id, readMetadata(files[i]));
+        // HACK AMISlOVE FOR DEMO
+        metadata.put(id, null); //readMetadata(files[i]));
       } else if (files[i].isDirectory()) {
         initFileMap(files[i]);
       }
@@ -1164,11 +1167,14 @@ public class PersistentStorage implements Storage {
     ras.seek(file.length() - 32);
 
     if (ras.readLong() != PERSISTENCE_MAGIC_NUMBER) {
+      ras.close();
       return null;
     } else if (ras.readLong() != PERSISTENCE_VERSION_2) {
+      ras.close();
       System.out.println("Persistence version did not match - exiting!");
       return null;
     } else if (ras.readLong() != PERSISTENCE_REVISION_2_0) {
+      ras.close();
       System.out.println("Persistence revision did not match - exiting!");
       return null;
     }
@@ -1181,11 +1187,15 @@ public class PersistentStorage implements Storage {
     Serializable result = null;
     
     try {
-      result = (Serializable) objin.readObject();
+      try {
+        result = (Serializable) objin.readObject();
+      } finally {       
+        objin.close();
+        fis.close();
+        ras.close();
+      }
     } catch (ClassNotFoundException e) {
       throw new IOException(e.getMessage());
-    } finally {
-      objin.close();
     }
     
     return result;
