@@ -15,6 +15,7 @@ public class ControlFindParentMessage extends MessageAnycast
     Vector send_to;
     Vector already_seen;
     StripeId stripe_id;
+    Stripe recv_stripe = null;
 
     final int ALLOWABLE_CHILDREN = 2;
 
@@ -26,6 +27,11 @@ public class ControlFindParentMessage extends MessageAnycast
        this.stripe_id = stripe_id;
     }
 
+    public StripeId getStripeId()
+    {
+       return stripe_id;
+    }
+
     /**
      * This method determines whether a given source node is in the path to root of this node for a
      * given stripe tree.
@@ -33,9 +39,16 @@ public class ControlFindParentMessage extends MessageAnycast
      * @param source Source node's handle
      * @param stripe_id Stripe ID for stripe tree to examine over
      */
-    private boolean isInRootPath( IScribe scribe, NodeHandle source, Stripe s )
+    private boolean isInRootPath( IScribe scribe, NodeHandle source )
     {
-        return s.getRootPath().contains( source );
+        if ( recv_stripe != null )
+        {
+            return recv_stripe.getRootPath().contains( source );
+        }
+        else
+        {
+            return false;
+        }
     }
 
     /**
@@ -52,6 +65,12 @@ public class ControlFindParentMessage extends MessageAnycast
         }
 
         return total;
+    }
+
+    public void handleForwardWrapper( Scribe scribe, Topic topic, Stripe s )
+    {
+        recv_stripe = s;
+        this.handleForwardMessage( scribe, topic );
     }
 
     /**
@@ -75,7 +94,7 @@ public class ControlFindParentMessage extends MessageAnycast
         }
 
         if ( ( aggregateNumChildren( scribe ) < ALLOWABLE_CHILDREN &&
-             ( !isInRootPath( scribe, this.getSource(), /*NEED A STRIPE*/ ) ) )
+             ( !isInRootPath( scribe, this.getSource() ) ) )
         {
             this.handleDeliverMessage( scribe, topic );
         }
