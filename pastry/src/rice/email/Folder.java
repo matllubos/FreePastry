@@ -396,7 +396,7 @@ public class Folder {
   public void addMessage(final Email email, final Flags flags, final long internaldate, final Continuation command) {
     _log.incrementExists();
     _log.incrementEntries();
-    email.setStorage(_storage);
+    email.setStorage(_storage);    
     email.storeData(new StandardContinuation(command) {
       public void receiveResult(Object o) {
         StoredEmail storedEmail = new StoredEmail(email, _log.getNextUID(), flags, internaldate);
@@ -679,12 +679,9 @@ public class Folder {
 
       public void receiveResult(Object o) {
         EmailLogEntry entry = (EmailLogEntry) o;
-        boolean finished = false;
         
-        if (entry != null) {
-          if ((top != null) && (entry.equals(top))) {
-            finished = true;
-          } else if (entry instanceof InsertMailLogEntry) {
+        while (entry != null) {
+          if (entry instanceof InsertMailLogEntry) {
             insert(((InsertMailLogEntry) entry).getStoredEmail());
           } else if (entry instanceof InsertMailsLogEntry) {
             StoredEmail[] inserts = ((InsertMailsLogEntry) entry).getStoredEmails();
@@ -706,7 +703,6 @@ public class Folder {
             for (int i=0; i<updates.length; i++) 
               insert(updates[i]);            
           } else if (entry instanceof SnapShotLogEntry) {
-            System.out.println("FOUND SNAPSHOT - TOP ENTRY IS " + ((SnapShotLogEntry) entry).getTopEntry());
             StoredEmail[] rest = ((SnapShotLogEntry) entry).getStoredEmails();
 
             for (int i = 0; i < rest.length; i++)
@@ -715,26 +711,42 @@ public class Folder {
             if (top == null)
               top = ((SnapShotLogEntry) entry).getTopEntry();
             
+            // break if there's no recorded top entry: we are done
             if (top == null)
-              finished = true;
+              break;
+          } else {
+            // break if we don't recognize this log entry
+            break;
           }
-        } else {
-          finished = true;
-        }
-
-        if (finished) {
-          // now, sort the list (by UID)
-          Collections.sort(emails);
-          StoredEmail[] result = (StoredEmail[]) emails.toArray(new StoredEmail[0]);
-          System.out.println("SETTING EXISTS TO BE " + result.length + " TOP " + top + " FINISHED " + finished);
-
-          if (_log.getBufferSize() == 0) 
-            _log.setExists(result.length);
           
-          parent.receiveResult(result);
-        } else {
-          entry.getPreviousEntry(this);
-        }
+          // break if we've just processed the top entry
+          if ((top != null) && (entry.equals(top))) 
+            break;
+          
+          // otherwise, we need to get the next log entry
+          if (entry.hasPreviousEntry()) {
+            EmailLogEntry tmp = (EmailLogEntry) entry.getCachedPreviousEntry();
+            
+            if (tmp != null) {
+              entry = tmp;
+            } else {
+              entry.getPreviousEntry(this);
+              return;
+            }
+          } else {
+            // break if there isn't a next entry
+            break;
+          }
+        } 
+
+        // now, sort the list (by UID)
+        Collections.sort(emails);
+        StoredEmail[] result = (StoredEmail[]) emails.toArray(new StoredEmail[0]);
+        
+        if (_log.getBufferSize() == 0) 
+          _log.setExists(result.length);
+        
+        parent.receiveResult(result);
       }
     });
   }

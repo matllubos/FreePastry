@@ -147,6 +147,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param command Command to be performed when the result is received
    */
   public void insert(final PastContent obj, final long expiration, Continuation command) {
+    System.out.println("COUNT: " + System.currentTimeMillis() + " Inserting data of class " + obj.getClass().getName() + " under " + obj.getId().toStringFull());
+    
     doInsert(obj.getId(), new MessageBuilder() {
       public PastMessage buildMessage() {
         return new GCInsertMessage(getUID(), obj, expiration, getLocalNodeHandle(), obj.getId());
@@ -200,6 +202,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param command Command to be performed when the result is received
    */
   public void refresh(final Id[] array, long[] expirations, Continuation command) {
+    System.out.println("COUNT: " + System.currentTimeMillis() + " Refreshing " + array.length + " data elements");
+
     GCIdSet set = new GCIdSet(realFactory);
     for (int i=0; i<array.length; i++)
       set.addId(new GCId(array[i], expirations[i]));
@@ -231,7 +235,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
     final Id[] array = ids.asArray();
     GCId start = (GCId) array[0];
     
-    sendRequest(start.getId(), new GCLookupHandlesMessage(getUID(), start.getId(), getLocalNodeHandle(), start.getId()), new StandardContinuation(command) {
+    sendRequest(start.getId(), new GCLookupHandlesMessage(getUID(), start.getId(), getLocalNodeHandle(), start.getId()), 
+                new NamedContinuation("GCLookupHandles for " + start.getId(), command) {
       public void receiveResult(Object o) {
         NodeHandleSet set = (NodeHandleSet) o;
         final ReplicaMap map = new ReplicaMap();
@@ -258,7 +263,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
               NodeHandle next = (NodeHandle) iterator.next();
               GCIdSet ids = map.getIds(next);
               
-              sendRequest(next, new GCRefreshMessage(getUID(), ids, getLocalNodeHandle(), next.getId()), this);
+              sendRequest(next, new GCRefreshMessage(getUID(), ids, getLocalNodeHandle(), next.getId()), 
+                          new NamedContinuation("GCRefresh to " + next, this));
             } else {
               refresh(ids, parent);
             }

@@ -135,7 +135,7 @@ public class MultiringNodeHandle extends NodeHandle implements Observer  {
    * @return A string
    */
   public String toString() {
-    return "{RingId " + ringId + " " + handle.toString() + "}";
+    return "{MNH " + handle.toString() + "}";
   }
   
   /**

@@ -134,22 +134,22 @@ public class PostProxy {
   /**
    * The local storage manager, for immutable objects
    */
-  protected StorageManager immutableStorage;
+  protected StorageManagerImpl immutableStorage;
   
   /**
    * The local storage manager, for mutable objects
    */
-  protected StorageManager mutableStorage;
+  protected StorageManagerImpl mutableStorage;
   
   /**
    * The local storage for pending deliveries
    */
-  protected StorageManager pendingStorage;
+  protected StorageManagerImpl pendingStorage;
   
   /**
    * The local storage for pending deliveries
    */
-  protected StorageManager deliveredStorage;
+  protected StorageManagerImpl deliveredStorage;
   
   /**
    * The local trash can, if in use
@@ -254,6 +254,7 @@ public class PostProxy {
   {"post_log_clone_enable", "false"}, 
   {"post_log_clone_username", ""},
   {"post_allow_log_insert", "false"}, 
+  {"post_emergency_recover_logs", "false"},
   {"post_force_log_reinsert", "false"}, 
   {"post_fetch_log", "true"}, 
   {"post_fetch_log_retries", "3"}, 
@@ -587,7 +588,13 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startStorageManagers(Parameters parameters) throws Exception {
-    String prefix = InetAddress.getLocalHost().getHostName() + "-" + parameters.getIntParameter("pastry_port");
+    String hostname = "localhost";
+    
+    try {
+      hostname = InetAddress.getLocalHost().getHostName();
+    } catch (UnknownHostException e) {}
+    
+    String prefix = hostname + "-" + parameters.getIntParameter("pastry_port");
     String location = parameters.getStringParameter("storage_root_location");
     int diskLimit = parameters.getIntParameter("storage_disk_limit");
     int cacheLimit = parameters.getIntParameter("storage_cache_limit");
@@ -904,6 +911,18 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startPost(Parameters parameters) throws Exception {
+    if (parameters.getBooleanParameter("post_emergency_recover_logs")) {
+      stepStart("Recovering/Restoring POST Logs backup");
+      ExternalContinuation d = new ExternalContinuation();
+      StorageService.recoverLogs(address.getAddress(), pair, immutablePast, mutablePast, d);
+      d.sleep();
+      
+      if (d.exceptionThrown())
+        throw d.getException();
+      stepDone(SUCCESS);
+    }
+
+    
     stepStart("Starting POST service");
     post = new PostImpl(node, immutablePast, mutablePast, pendingPast, deliveredPast, address, pair, certificate, caPublic, 
                         parameters.getStringParameter("application_instance_name"), 
@@ -961,6 +980,7 @@ public class PostProxy {
           done = true;
         }
       }
+      
       
       stepDone(SUCCESS);
     }

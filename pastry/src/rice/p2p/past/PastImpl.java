@@ -183,6 +183,15 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   }
   
   /**
+   * Returns of the outstanding messages.  This is a DEBUGGING method ONLY!
+   *
+   * @return The list of all the outstanding messages
+   */
+  public Continuation[] getOutstandingMessages() {
+    return (Continuation[]) outstanding.values().toArray(new Continuation[0]);
+  }
+  
+  /**
    * Returns the endpoint associated with the Past - ONLY FOR TESTING - DO NOT USE
    *
    * @return The endpoint
@@ -319,7 +328,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
     if (set.size() == max) {
       command.receiveResult(set);
     } else {
-      sendRequest(id, new LookupHandlesMessage(getUID(), id, max, getLocalNodeHandle(), id), command);
+      sendRequest(id, new LookupHandlesMessage(getUID(), id, max, getLocalNodeHandle(), id), 
+                  new NamedContinuation("LookupHandlesMessage for " + id, command));
     }
   }
 
@@ -391,7 +401,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
         };
         
         for (int i=0; i<replicas.size(); i++) 
-          sendRequest(replicas.getHandle(i), builder.buildMessage(), multi.getSubContinuation(i));
+          sendRequest(replicas.getHandle(i), builder.buildMessage(), 
+                      new NamedContinuation("InsertMessage to " + replicas.getHandle(i) + " for " + id, multi.getSubContinuation(i)));
       }
     });
   }
@@ -470,7 +481,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
           command.receiveResult(o);
         } else {
           // send the request across the wire, and see if the result is null or not
-          sendRequest(id, new LookupMessage(getUID(), id, getLocalNodeHandle(), id), new StandardContinuation(this) {
+          sendRequest(id, new LookupMessage(getUID(), id, getLocalNodeHandle(), id), new NamedContinuation("LookupMessage for " + id, this) {
             public void receiveResult(final Object o) {
               // if we have an object, we return it
               // otherwise, we must check all replicas in order to make sure that
@@ -585,7 +596,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   public void lookupHandle(Id id, NodeHandle handle, Continuation command) {
     log.fine("Retrieving handle for id " + id + " from node " + handle);
     
-    sendRequest(handle, new FetchHandleMessage(getUID(), id, getLocalNodeHandle(), handle.getId()), command);
+    sendRequest(handle, new FetchHandleMessage(getUID(), id, getLocalNodeHandle(), handle.getId()), 
+                new NamedContinuation("FetchHandleMessage to " + handle + " for " + id, command));
   }
 
   /**
@@ -604,7 +616,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
     log.fine("Retrieving object associated with content handle " + handle);
 
     NodeHandle han = handle.getNodeHandle();
-    sendRequest(han, new FetchMessage(getUID(), handle, getLocalNodeHandle(), han.getId()), command);
+    sendRequest(han, new FetchMessage(getUID(), handle, getLocalNodeHandle(), han.getId()), 
+                new NamedContinuation("FetchMessage to " + handle.getNodeHandle() + " for " + handle.getId(), command));
   }
 
   /**

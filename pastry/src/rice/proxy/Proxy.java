@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.proxy;
 
 import java.io.*;
+import java.util.*;
 
 /**
  * This class represents a generic Java process launching program which reads in
@@ -52,11 +53,13 @@ public class Proxy {
   public static String PROXY_PARAMETERS_NAME = "proxy";
   public static String[][] DEFAULT_PARAMETERS = new String[][] {{"java_home", System.getProperty("java.home")},
                                                                 {"java_command", "java"},
+                                                                {"java_wrapper_command", ""},
                                                                 {"java_maximum_memory", "128M"},
                                                                 {"java_memory_free_enable", "true"},
                                                                 {"java_memory_free_maximum", "0.50"},
                                                                 {"java_debug_enable", "false"},
                                                                 {"java_debug_port", "8000"},
+                                                                {"java_stack_size", "1024K"},
                                                                 {"java_hprof_enable", "false"},
                                                                 {"java_interpreted_mode", "false"},
                                                                 {"java_profiling_enable", "false"},
@@ -87,7 +90,8 @@ public class Proxy {
     
     while (count < parameters.getIntParameter("restart_max")) {
       System.out.println("[Loader       ]: Launching command " + command);
-      Process process = Runtime.getRuntime().exec(command, environment);
+      
+      Process process = (environment.length > 0 ? Runtime.getRuntime().exec(command, environment) : Runtime.getRuntime().exec(command));
       Printer error = new Printer(process.getErrorStream(), "[Error Stream ]: ");
       Printer standard = new Printer(process.getInputStream(), "[Output Stream]: ");
       
@@ -120,23 +124,38 @@ public class Proxy {
   }
 
   protected String[] buildJavaEnvironment(Parameters parameters) {
+    HashSet set = new HashSet();
+    
     if (parameters.getBooleanParameter("java_profiling_enable") ||
         parameters.getBooleanParameter("java_thread_debugger_enable"))  {
-      return new String[] {"LD_LIBRARY_PATH=" + parameters.getStringParameter("java_profiling_native_library_directory")};
-    } else {
-      return new String[0];
+      if (System.getProperty("os.name").toLowerCase().indexOf("windows") < 0) {
+        set.add("LD_LIBRARY_PATH=" + parameters.getStringParameter("java_profiling_native_library_directory"));
+      } 
     }
+    
+    return (String[]) set.toArray(new String[0]);
   }   
   
   protected String buildJavaCommand(Parameters parameters) {
     StringBuffer result = new StringBuffer();
-    result.append(parameters.getStringParameter("java_home"));
-    result.append(System.getProperty("file.separator"));
-    result.append("bin");
-    result.append(System.getProperty("file.separator"));
+    
+    if (! ("".equals(parameters.getStringParameter("java_wrapper_command")))) {
+      result.append(parameters.getStringParameter("java_wrapper_command"));
+      result.append(" \"");
+    }
+    
+    if (! ("".equals(parameters.getStringParameter("java_home")))) {
+      result.append(parameters.getStringParameter("java_home"));
+      result.append(System.getProperty("file.separator"));
+      result.append("bin");
+      result.append(System.getProperty("file.separator"));
+    }
+    
     result.append(parameters.getStringParameter("java_command"));
     result.append(" -Xmx");
     result.append(parameters.getStringParameter("java_maximum_memory"));
+    result.append(" -Xss");
+    result.append(parameters.getStringParameter("java_stack_size"));
     
     if (parameters.getBooleanParameter("java_memory_free_enable")) {
       result.append(" -Xmaxf" + parameters.getDoubleParameter("java_memory_free_maximum"));
@@ -159,7 +178,12 @@ public class Proxy {
       result.append(" -Xrunhprof");
     }
     
-    if (parameters.getBooleanParameter("java_profiling_enable"))  {
+    if (parameters.getBooleanParameter("java_profiling_enable")) {
+      if (System.getProperty("os.name").toLowerCase().indexOf("windows") >= 0) {
+        result.append(" -Djava.library.path=");
+        result.append(parameters.getStringParameter("java_profiling_native_library_directory"));
+      }
+      
       result.append(" -Xrunpri");
       if (! parameters.getBooleanParameter("java_profiling_memory_enable"))
           result.append(":dmp=1");
@@ -215,6 +239,10 @@ public class Proxy {
     result.append(parameters.getStringParameter("java_main_class"));
     result.append(" ");
     result.append(parameters.getStringParameter("java_main_class_parameters"));
+    
+    if (! ("".equals(parameters.getStringParameter("java_wrapper_command")))) {
+      result.append(" \"");
+    }
     
     return result.toString();
   }

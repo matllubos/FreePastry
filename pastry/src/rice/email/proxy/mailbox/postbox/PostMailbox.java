@@ -45,12 +45,13 @@ public class PostMailbox implements Mailbox {
   public PostMailbox(EmailService email, Folder root) throws MailboxException {
     if (email == null)
       throw new IllegalArgumentException("EmailService cannot be null in PostMailbox.");
-    
-    if (root == null)
-      throw new IllegalArgumentException("Root folder cannot be null in PostMailbox");
 
     this.email = email;
-    this.root = new PostFolder(root, null, email);
+    
+    if (root != null)
+      this.root = new PostFolder(root, null, email);
+    else
+      System.out.println("INFO: Root folder is null - folder operations will likely cause a NPE");
   }
   
   /**

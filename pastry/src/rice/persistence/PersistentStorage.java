@@ -477,12 +477,12 @@ public class PersistentStorage implements Storage {
         public Object doWork() throws Exception {
           synchronized(statLock) { numMetadataWrites++; }
           
+          System.out.println("COUNT: " + System.currentTimeMillis() + " Updating metadata for " + id.toStringFull() + " in " + name);
+          
           /* write the metadata to the file */
           File objFile = getFile(id);
           writeMetadata(objFile, metadata);
-          
-          System.out.println("COUNT: " + System.currentTimeMillis() + " Updating metadata for " + id.toStringFull() + " in " + name);
-          
+                    
           /* then update our cache */
           if (index) {
             synchronized (PersistentStorage.this.metadata) {
@@ -563,14 +563,14 @@ public class PersistentStorage implements Storage {
    */
   public IdSet scan(IdRange range){
     if (index) {
-      synchronized (metadata) {
-        if (range.isEmpty())
-          return factory.buildIdSet();
-        else if (range.getCCWId().equals(range.getCWId())) 
-          return scan();
-        else
+      if (range.isEmpty())
+        return factory.buildIdSet();
+      else if (range.getCCWId().equals(range.getCWId())) 
+        return scan();
+      else 
+        synchronized (metadata) {
           return factory.buildIdSet(new ImmutableSortedMap(metadata.keySubMap(range.getCCWId(), range.getCWId())));
-      }
+        }
     } else {
       throw new UnsupportedOperationException("scan() not supported without indexing");
     }
@@ -606,14 +606,14 @@ public class PersistentStorage implements Storage {
    */
   public SortedMap scanMetadata(IdRange range) {
     if (index) {
-      synchronized (metadata) {
-        if (range.isEmpty()) 
-          return new RedBlackMap();
-        else if (range.getCCWId().equals(range.getCWId())) 
-          return scanMetadata();
-        else 
+      if (range.isEmpty()) 
+        return new RedBlackMap();
+      else if (range.getCCWId().equals(range.getCWId())) 
+        return scanMetadata();
+      else 
+        synchronized (metadata) {
           return new ImmutableSortedMap(metadata.keySubMap(range.getCCWId(), range.getCWId()));
-      }
+        }
     } else {
       throw new UnsupportedOperationException("scanMetadata() not supported without indexing");
     }
@@ -844,6 +844,9 @@ public class PersistentStorage implements Storage {
       if (isFile(dir, files[i].getName())) {
         Id id = readKey(files[i]);
         long len = getFileLength(files[i]);
+        
+        if (id == null)
+          System.out.println("READING " + files[i] + " RETURNED NULL!");
         
         if (len > 0) {
           increaseUsedSpace(len);
@@ -1705,18 +1708,20 @@ public class PersistentStorage implements Storage {
     RandomAccessFile ras = null;
     FileOutputStream fout = null;
     
-    try {
-      ras = new RandomAccessFile(file, "rw");
-      ras.seek(file.length() - 32);
+    if (file.length() > 32) {
+      try {
+        ras = new RandomAccessFile(file, "rw");
+        ras.seek(file.length() - 32);
       
-      if ((ras.readLong() == PERSISTENCE_MAGIC_NUMBER) && 
-          (ras.readLong() == PERSISTENCE_VERSION_2) &&
-          (ras.readLong() == PERSISTENCE_REVISION_2_0)) {
-        long length = ras.readLong();
-        ras.setLength(file.length() - 32 - length);
-      } 
-    } finally {
-      ras.close();
+        if ((ras.readLong() == PERSISTENCE_MAGIC_NUMBER) && 
+            (ras.readLong() == PERSISTENCE_VERSION_2) &&
+            (ras.readLong() == PERSISTENCE_REVISION_2_0)) {
+          long length = ras.readLong();
+          ras.setLength(file.length() - 32 - length);
+        } 
+      } finally {
+        ras.close();
+      }
     }
     
     long len1 = file.length();

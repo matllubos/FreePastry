@@ -112,7 +112,7 @@ public class FragmentKey implements Id, Comparable {
    * @return DESCRIBE THE RETURN VALUE
    */
   public String toStringFull() {
-    return key.toStringFull() + ":" + id;
+    return key.toStringFull() + "#" + id;
   }
 
   /**
@@ -121,7 +121,7 @@ public class FragmentKey implements Id, Comparable {
    * @return DESCRIBE THE RETURN VALUE
    */
   public String toString() {
-    return key.toString() + ":" + id;
+    return key.toString() + "#" + id;
   }
 
   /**

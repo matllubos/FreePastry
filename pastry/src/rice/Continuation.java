@@ -347,4 +347,59 @@ public interface Continuation {
       return result; 
     }
   }
+  
+  /**
+   * Continuation class which takes a provided string as it's name, and
+   * returns that String when toString() is called.
+   */
+  public static class NamedContinuation implements Continuation {
+    
+    // the internal continuation
+    protected Continuation parent;
+    
+    // the name of this continuation
+    protected String name;
+    
+    /**
+     * Builds a new NamedContinuation given the name and the wrapped
+     * continuation
+     *
+     * @param name The name
+     * @param command The parent continuation
+     */
+    public NamedContinuation(String name, Continuation command) {
+      this.name = name;
+      this.parent = command;
+    }
+    
+    /**
+     * Called when an the result is availble.  Simply passes the result
+     * to the parent;
+     *
+     * @param result The result
+     */
+    public void receiveResult(Object result) {
+      parent.receiveResult(result);
+    }
+    
+    /**
+     * Called when an execption occured as a result of the
+     * previous command.  Simply calls the parent continuation's
+     * receiveException() method.
+     *
+     * @param result The exception which was caused.
+     */
+    public void receiveException(Exception result) {
+      parent.receiveException(result);
+    }
+    
+    /**
+     * Returns the name of this continuation
+     *
+     * @return The name
+     */
+    public String toString() {
+      return name;
+    }
+  }
 }

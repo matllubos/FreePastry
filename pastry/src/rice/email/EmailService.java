@@ -204,7 +204,12 @@ public class EmailService extends PostClient {
   public void notificationReceived(NotificationMessage nm, Continuation command) {
     if (nm instanceof EmailNotificationMessage) {
       final EmailNotificationMessage enm = (EmailNotificationMessage) nm;
-      enm.getEmail().setStorage(post.getStorageService());
+      try {
+        enm.getEmail().setStorage(post.getStorageService());
+      } catch (NullPointerException e) {
+        command.receiveResult(Boolean.FALSE);
+        return;
+      }
 
       System.out.println("Received email from " + enm.getEmail().getSender());
 

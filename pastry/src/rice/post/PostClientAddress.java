@@ -15,12 +15,14 @@ import java.io.*;
  */
 public final class PostClientAddress implements Serializable {
 
+  private static final long serialVersionUID = 7140777125939291819L;
+  
   protected String name;
   
   /**
    * Constructor
    */
-  private PostClientAddress(String name) {
+  public PostClientAddress(String name) {
     this.name = name;
   }
 

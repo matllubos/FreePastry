@@ -112,7 +112,7 @@ public class StorageManagerImpl implements StorageManager {
    * @return Whether or not an object is present at id.
    */
   public boolean exists(Id id) {
-    return (cache.exists(id) || storage.exists(id));
+    return storage.exists(id);
   }
   
   /**

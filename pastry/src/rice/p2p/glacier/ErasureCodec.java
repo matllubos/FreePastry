@@ -301,6 +301,8 @@ public class ErasureCodec {
       System.err.println(ioe);
     } catch (ClassNotFoundException cnfe) {
       System.err.println(cnfe);
+    } catch (IllegalStateException ise) {
+      System.err.println(ise);
     }
 
     return null;
