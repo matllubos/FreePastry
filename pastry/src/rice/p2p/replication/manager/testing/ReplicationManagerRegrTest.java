@@ -310,7 +310,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
   
   public void runMaintenance() {
     for (int i=0; i<NUM_NODES; i++) {
-      replications[i].getReplication().sendRequests();
+      replications[i].getReplication().replicate();
     }
     
     simulate();

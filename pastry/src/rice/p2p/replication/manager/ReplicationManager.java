@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.p2p.replication.manager;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.replication.*;
 
 /**
  * @(#) Replication.java
@@ -51,6 +52,14 @@ import rice.p2p.commonapi.*;
  * @author Alan Mislove
  */
 public interface ReplicationManager {
+  
+  /**
+   * Returns the internal replication object used by this manager.  This internal
+   * object should not be messed with.
+   *
+   * @return The internal replication utility
+   */
+  public Replication getReplication();
   
 }
 

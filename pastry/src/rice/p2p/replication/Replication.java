@@ -57,6 +57,13 @@ import rice.p2p.commonapi.*;
  */
 public interface Replication {
   
+  /**
+   * Method which invokes the replication process.  This should not normally be called by
+   * applications, as the Replication class itself periodicly invokes this process.  However,
+   * applications are allowed to use this method to initiate a replication request.
+   */
+  public void replicate();
+  
 }
 
 

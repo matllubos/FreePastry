@@ -40,6 +40,7 @@ import java.util.*;
 import java.util.logging.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.replication.ReplicationPolicy.*;
 import rice.p2p.replication.messaging.*;
 
 /**
@@ -84,6 +85,11 @@ public class ReplicationImpl implements Replication, Application {
   protected ReplicationClient client;
   
   /**
+   * This replication's policy, which allows for application-specific replication
+   */
+  protected ReplicationPolicy policy;
+  
+  /**
    * The replication factor for this replication
    */
   protected int replicationFactor;
@@ -97,9 +103,25 @@ public class ReplicationImpl implements Replication, Application {
    * @param instance The unique instance name of this Replication
    */
   public ReplicationImpl(Node node, ReplicationClient client, int replicationFactor, String instance) {
+    this(node, client, replicationFactor, instance, new DefaultReplicationPolicy());
+  }
+  
+  /**
+   * Constructor
+   *
+   * @param node The node below this Replication implementation
+   * @param client The client for this Replication
+   * @param replicationFactor The replication factor for this instance
+   * @param instance The unique instance name of this Replication
+   */
+  public ReplicationImpl(Node node, ReplicationClient client, int replicationFactor, String instance, ReplicationPolicy policy) {
     this.client = client;
     this.replicationFactor = replicationFactor;
     this.factory = node.getIdFactory();
+    this.policy = policy;
+    
+    if (this.policy == null)
+      this.policy = new DefaultReplicationPolicy();
     
     this.endpoint = node.registerApplication(this, instance);
     this.handle = endpoint.getLocalNodeHandle();
@@ -112,7 +134,7 @@ public class ReplicationImpl implements Replication, Application {
     
     // inject the first reminder message, which will cause the replication to begin
     // and the next maintenance message to be scheduled
-    endpoint.scheduleMessage(new ReminderMessage(handle), 0, MAINTENANCE_INTERVAL);
+    endpoint.scheduleMessage(new ReminderMessage(handle), MAINTENANCE_INTERVAL, MAINTENANCE_INTERVAL);
   }
   
   /**
@@ -135,28 +157,6 @@ public class ReplicationImpl implements Replication, Application {
     
     while (i.hasNext()) {
       result.addId((Id) i.next());
-    }
-    
-    return result;
-  }
-  
-  /**
-   * Internal method which takes returns set A - set B, or all of the members
-   * of set A which are not in set B.
-   *
-   * @param a The first set
-   * @param b The second set
-   * @return The difference, a-b
-   */
-  private IdSet difference(IdSet a, IdSet b) {
-    IdSet result = factory.buildIdSet();
-    Iterator i = a.getIterator();
-    
-    while (i.hasNext()) {
-      Id id = (Id) i.next();
-      
-      if (! b.isMemberId(id)) 
-        result.addId(id);
     }
     
     return result;
@@ -189,7 +189,7 @@ public class ReplicationImpl implements Replication, Application {
    * This internal method sends out the request messages to all of the nodes
    * which hold keys this node may be interested in
    */
-  public void sendRequests() {
+  public void replicate() {
     log.finer(endpoint.getId() + ": Sending out requests"); 
     NodeHandleSet handles = endpoint.neighborSet(Integer.MAX_VALUE);
     IdRange ourRange = endpoint.range(handle, 0, handle.getId());
@@ -206,9 +206,7 @@ public class ReplicationImpl implements Replication, Application {
         if ((range != null) && (! range.intersectRange(getTotalRange()).isEmpty())) {
           log.finer(endpoint.getId() + ": Sending request to " + handle + " for range " + range);
           RequestMessage request = new RequestMessage(this.handle, new IdRange[] {range, ourRange}, new Id[] {hash, ourHash});
-          log.finer(endpoint.getId() + ": About to pass to endpoint"); 
-          endpoint.route(handle.getId(), request, handle);
-          log.finer(endpoint.getId() + ": Done passing to endpoint"); 
+          endpoint.route(null, request, handle);
         }
       }
     }
@@ -256,17 +254,15 @@ public class ReplicationImpl implements Replication, Application {
       }
         
       if (response.numElements() > 0)
-        endpoint.route(rm.getSource().getId(), new ResponseMessage(handle, response), rm.getSource());
+        endpoint.route(null, new ResponseMessage(handle, response), rm.getSource());
     } else if (message instanceof ResponseMessage) {
       ResponseMessage rm = (ResponseMessage) message;
-      IdSet keys = rm.getIdSet();
-      IdSet exist = client.scan(getTotalRange());
-      IdSet fetch = difference(keys, exist);
+      IdSet fetch = policy.difference(client.scan(getTotalRange()), rm.getIdSet(), factory);
         
       if (fetch.numElements() > 0) 
         client.fetch(fetch);
     } else if (message instanceof ReminderMessage) {
-      sendRequests(); 
+      replicate(); 
       updateClient(); 
     } else {
       log.warning(endpoint.getId() + ": Received unknown message " + message + " - dropping on floor.");
