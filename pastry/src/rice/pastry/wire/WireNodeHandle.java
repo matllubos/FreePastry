@@ -152,8 +152,15 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
         System.out.println("Recieved DisconnectMessage at non-connected socket - not fatal... (state == " + state + ")");
       }
     } else if (message instanceof HelloResponseMessage) {
-      markAlive();
-      writer.greetingReceived();
+      HelloResponseMessage hrmsg = (HelloResponseMessage) message;
+
+      if (hrmsg.getNodeId().equals(getNodeId()) && hrmsg.getDestination().equals(getLocalNode().getNodeId())) {
+        markAlive();
+        writer.greetingReceived();
+      } else {
+        debug("Receved incorrect HelloMessageResponse for nodeId " + hrmsg.getNodeId() + " - resetting.");
+        close(null);
+      }
     } else {
       System.out.println("Received unreconginzed SocketCommandMessage " + message + " - dropping on floor");
     }
@@ -186,7 +193,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
             } else {
               debug("Message is too large - open up socket!");
               LinkedList list = new LinkedList();
-              list.addFirst(new SocketTransportMessage(msg));
+              list.addFirst(new SocketTransportMessage(msg, nodeId));
 
               connectToRemoteNode(list);
             }
@@ -198,7 +205,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
           System.out.println("IOException " + e + " serializing message " + msg + " - cancelling message.");
         }
       } else {
-        writer.enqueue(new SocketTransportMessage(msg));
+        writer.enqueue(new SocketTransportMessage(msg, nodeId));
 
         if (((WirePastryNode) getLocalNode()).inThread()) {
           key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
@@ -222,7 +229,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     ObjectOutputStream oos = new ObjectOutputStream(baos);
 
-    oos.writeObject(new SocketTransportMessage(obj));
+    oos.writeObject(new SocketTransportMessage(obj, nodeId));
     oos.flush();
 
     byte[] array = baos.toByteArray();
@@ -477,9 +484,15 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
             debug("Read socket message " + o + " - passing to node handle.");
             receiveSocketMessage((SocketCommandMessage) o);
           } else if (o instanceof SocketTransportMessage) {
-            debug("Read message " + o + " - passing to pastry node.");
             SocketTransportMessage stm = (SocketTransportMessage) o;
-            getLocalNode().receiveMessage((Message) stm.getObject());
+            
+            if (stm.getDestination().equals(getLocalNode().getNodeId())) {
+              debug("Read message " + o + " - passing to pastry node.");
+              getLocalNode().receiveMessage((Message) stm.getObject());
+            } else {
+              debug("Read message " + o + " at " + nodeId + " for wrong nodeId " + stm.getDestination() + " - killing connection.");
+              throw new IOException("Incoming message was for incorrect node id.");
+            }
           } else {
             throw new IllegalArgumentException("Message " + o + " was not correctly wrapped.");
           }

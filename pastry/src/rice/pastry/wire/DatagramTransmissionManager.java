@@ -362,7 +362,7 @@ public class DatagramTransmissionManager {
 
           if (! (pw.getObject() instanceof DatagramMessage)) {
             debug("Moving message " + pw.getObject() + " to TCP queue.");
-            list.addLast(new SocketTransportMessage(pw.getObject()));
+            list.addLast(new SocketTransportMessage(pw.getObject(), pw.getDestination()));
             i.remove();
           }
         }
@@ -491,7 +491,7 @@ public class DatagramTransmissionManager {
                 PendingWrite pw = (PendingWrite) i.next();
                 if (! (pw.getObject() instanceof DatagramMessage)) {
                   debug("Moving message " + pw.getObject() + " to TCP queue.");
-                  list.addLast(new SocketTransportMessage(pw.getObject()));
+                  list.addLast(new SocketTransportMessage(pw.getObject(), pw.getDestination()));
                   i.remove();
                 }
               }

@@ -38,6 +38,8 @@ package rice.pastry.wire.messaging.socket;
 
 import java.io.*;
 
+import rice.pastry.*;
+
 /**
  * Class which represents a wrapper message sent across the socket-based
  * protocol - it has another message inside of it.
@@ -50,14 +52,17 @@ public class SocketTransportMessage extends SocketMessage {
 
   private Object o;
 
+  private NodeId destination;
+
   /**
    * Constructs a new message wrapping another object.
    *
    * @param o The object to be wrapped.
    */
-  public SocketTransportMessage(Object o) {
+  public SocketTransportMessage(Object o, NodeId destination) {
     super();
     this.o = o;
+    this.destination = destination;
   }
 
   /**
@@ -67,6 +72,15 @@ public class SocketTransportMessage extends SocketMessage {
    */
   public Object getObject() {
     return o;
+  }
+
+  /**
+   * Returns the destination node id
+   *
+   * @return The destination node id
+   */
+  public NodeId getDestination() {
+    return destination;
   }
   
   public String toString() {
