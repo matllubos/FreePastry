@@ -571,7 +571,7 @@ public class PostImpl implements Post, Application, ScribeClient {
         if (j.hasNext()) 
           ((PostClient) j.next()).getLogs(this);
         else 
-          storage.backupLogs((Log[]) set.toArray(new Log[0]), new ListenerContinuation("Backing up of mutable objects"));
+          storage.backupLogs(log, (Log[]) set.toArray(new Log[0]), new ListenerContinuation("Backing up of mutable objects"));
       }
     };
     

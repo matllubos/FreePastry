@@ -875,14 +875,16 @@ public class PostProxy {
     } else {
       immutablePast = new PastImpl(node, immutableStorage, 
                                    parameters.getIntParameter("past_replication_factor"), 
-                                   parameters.getStringParameter("application_instance_name") + "-immutable");
+                                   parameters.getStringParameter("application_instance_name") + "-immutable", 
+                                   new PastPolicy.DefaultPastPolicy(), trashStorage);
     }
     
     realImmutablePast = immutablePast;
       
     mutablePast = new PastImpl(node, mutableStorage, 
                                parameters.getIntParameter("past_replication_factor"), 
-                               parameters.getStringParameter("application_instance_name") + "-mutable", new PostPastPolicy());
+                               parameters.getStringParameter("application_instance_name") + "-mutable",
+                               new PostPastPolicy(), trashStorage);
     deliveredPast = new GCPastImpl(node, deliveredStorage, 
                                  parameters.getIntParameter("past_replication_factor"), 
                                  parameters.getStringParameter("application_instance_name") + "-delivered",

@@ -175,23 +175,10 @@ public class StorageService {
    * @param references The references to refresh
    * @param command The command to run once done
    */
-  public void backupLogs(final Log[] logs, Continuation command) {
-    final long time = ((long) System.currentTimeMillis() / PostImpl.BACKUP_INTERVAL) * PostImpl.BACKUP_INTERVAL;
-    Continuation c = new StandardContinuation(command) {
-      int i = 0;
-      
-      public void receiveResult(Object o) {
-        if (i < logs.length) {
-          StoreSignedTask task = new StoreSignedTask(logs[i], logs[i].getLocation(), this, immutablePast, time, BACKUP_LIFETIME);
-          task.start();
-          i++;
-        } else {
-          parent.receiveResult(Boolean.TRUE);
-        }
-      }
-    };
-    
-    c.receiveResult(null);
+  public void backupLogs(final PostLog log, final Log[] logs, Continuation command) {
+    long time = ((long) System.currentTimeMillis() / PostImpl.BACKUP_INTERVAL) * PostImpl.BACKUP_INTERVAL;
+    StoreSignedTask task = new StoreSignedTask(new GroupData(logs), log.getLocation(), command, immutablePast, time);
+    task.start();
   }
   
   /**
