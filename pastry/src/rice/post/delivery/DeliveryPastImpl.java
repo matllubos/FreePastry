@@ -121,15 +121,14 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
         
         log.finer(endpoint.getId() + ": Synchronizing range " + endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor(), null, true));
 
-        
         i = storage.getStorage().scan(endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor(), null, true)).getIterator();
         
         while (i.hasNext()) {
           Id id = (Id) i.next();
-          log.finer(endpoint.getId() + ": Synchronizing " + id);
+          //log.finer(endpoint.getId() + ": Synchronizing " + id);
 
           if (delivered.exists(id)) {
-            log.finer(endpoint.getId() + ": Deleting id " + id + " because receipt exists");
+            //log.finer(endpoint.getId() + ": Deleting id " + id + " because receipt exists");
             storage.unstore(id, this);
             return;
           }
