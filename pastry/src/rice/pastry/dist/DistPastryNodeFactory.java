@@ -32,7 +32,6 @@ import rice.Continuation.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.rmi.*;
-import rice.pastry.socket.*;
 import rice.pastry.wire.*;
 
 /**
@@ -132,7 +131,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
     } else if (protocol == PROTOCOL_WIRE) {
       return new WirePastryNodeFactory(nf, port);
     } else if (protocol == PROTOCOL_SOCKET) {
-      return new SocketPastryNodeFactory(nf, port);
+//      return new SocketPastryNodeFactory(nf, port);
     }
 
     throw new IllegalArgumentException("Unsupported Protocol " + protocol);
