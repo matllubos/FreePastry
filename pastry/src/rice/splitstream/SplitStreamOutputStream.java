@@ -12,7 +12,7 @@ import rice.scribe.*;
  * the java stream architecture.  It currently only works with bytes
  * or objects that can be converted to byte arays such as a string. It
  * will not work with serialization due to the headers generated when
- * serialization is used. There is also some limits due to the fact
+ * serialization is used. There are also some limits due to the fact
  * that there must be some synchronization with serialized objects since
  * you must get the header information at the beginning of the stream
  * to be able to reconstruct the objects. This does not work well with

@@ -3,7 +3,7 @@ package rice.splitstream;
 import rice.pastry.*;
 /**
  * The interface defines the methods that a splitStream object
- * must implement these methods. The methods are for creating
+ * must implement. The methods are for creating
  * a channel and for attaching to an already existing channel
  *
  * @version $Id$

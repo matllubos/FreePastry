@@ -15,12 +15,12 @@ import rice.pastry.security.*;
 import rice.splitstream.messaging.*;
 
 /** 
- * The channel controls all the meta  data assocaited with a group of 
- * stripes. It contains the stripes themselves plus any sparacapcity groups
+ * The channel controls all the meta  data associated with a group of 
+ * stripes. It contains the stripes themselves plus any sparecapcity groups
  * associated with the group of stripes.  It also manages the amount of
  * bandwidth that is used by this collection of stripes.  A Channel is 
  * created by giving it a name which is then hashed to come up with a 
- * channelId which uniquely identifys this channel. If other nodes want
+ * channelId which uniquely identifies this channel. If other nodes want
  * to join the channel they attach to it. ( Join the scribe group ) 
  *
  * This is the channel object that represents a group of stripes in
@@ -75,7 +75,7 @@ public class Channel implements IScribeApp {
   
     /**
      * The splitStreamImpl object associated with this node, this is
-     * is need to have access to the pastry messages
+     * needed to have access to the pastry messages
      */
     private SplitStreamImpl splitStream = null;
 
@@ -292,7 +292,7 @@ public class Channel implements IScribeApp {
 
     /**
      * Gets the splitStream instance that this channel was created from
-     * @retrun SplitStreamImpl the SplitStreamObject for this channel
+     * @return SplitStreamImpl the SplitStreamObject for this channel
      */
      public SplitStreamImpl getSplitStream(){
         return splitStream;
@@ -324,7 +324,7 @@ public class Channel implements IScribeApp {
 
     /**
      * At any moment a node is subscribed to at least 1 but possibly
-     * more stripes. They will always be subscribed to thier primary
+     * more stripes. They will always be subscribed to their primary
      * Stripe.
      * @return Vector the Stripes this node is subscribed to.
      */
@@ -538,7 +538,7 @@ public class Channel implements IScribeApp {
 
     /**
      * Upcall generated when the underlying scribe layer is ready
-     * Currently not implmented
+     * Currently not implemented
      */
     public void scribeIsReady(){
     }
@@ -552,7 +552,7 @@ public class Channel implements IScribeApp {
 
 
     /**
-     * MessageForChannel takes a message in from pastry
+     * MessageForChannel takes a message in from pastry,
      * determines what type of message it is and then 
      * sends it to the appropriate sub routine to be handled
      */
@@ -597,8 +597,7 @@ public class Channel implements IScribeApp {
 	    return handleControlFindParentMessage(msg); 
 	}
         else if(msg instanceof ControlAttachMessage){
-            System.out.println("CONTROL ATTACH MESSAGE !!!");
-            System.out.println("CODE SHOULD BE ADDED TO MAKE ME WORK!!!");
+            return handleAttachMessage(msg);
         }
 	return true;
     }
@@ -639,7 +638,7 @@ public class Channel implements IScribeApp {
     }
 
     /** 
-     * Handles the ControlFindParentResponseMessage recieved through pastry
+     * Handles the ControlFindParentResponseMessage received through pastry
      * 
      * @param msg the ControlFindParentMessage to handle
      */ 
@@ -659,7 +658,7 @@ public class Channel implements IScribeApp {
     }
 
     /**
-     * Handles the ControlDropMessage recieved through pastry
+     * Handles the ControlDropMessage received through pastry
      *
      * @param msg the ControlDropMessage to handle
      */
@@ -687,13 +686,13 @@ public class Channel implements IScribeApp {
      *
      * @param msg the ScribeMessage for this channel
      */
-    private void handleAttachMessage(Message msg){
+    private boolean handleAttachMessage(Message msg){
         ControlAttachMessage attachMsg = (ControlAttachMessage) msg;
-	attachMsg.handleMessage(this, scribe, attachMsg.getSource());
+	return attachMsg.handleMessage(this, scribe, attachMsg.getSource());
     }
 
     /**
-     * Handles the message that is recieved through the spare capacity
+     * Handles the message that is received through the spare capacity
      * tree.
      *
      * Assumes this is a SpareCapacityMessage as that is the only kind of
@@ -720,7 +719,7 @@ public class Channel implements IScribeApp {
     
     /**
      *
-     * Handles the ControlFindParentMessage through pastry
+     * Handles the ControlFindParentMessage through Pastry
      *
      * @param msg the message to handle
      */
@@ -805,7 +804,7 @@ public class Channel implements IScribeApp {
     /**
      * Returns the meta data associated with the channel,
      * e.g. channelId, the number of stripes, the stripeIds and the 
-     * the spare capacity ids.
+     * spare capacity ids.
      *
      * @return meta-data associated with this channel
      */

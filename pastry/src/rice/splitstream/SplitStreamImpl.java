@@ -16,7 +16,7 @@ import rice.splitstream.messaging.*;
 /**
  * This is the implementing class of the ISplitStream interface. It 
  * provides the functionality of creating and attaching to channels.
- * It also provides alot of implementation details. It handles the
+ * It also provides a lot of implementation details. It handles the
  * creation of Channel objects in the path of the Channel tree. It 
  * also monitors the creation of stripes interior to the tree and
  * keeps track of the bandwidth used until the user subscribes to 
@@ -95,8 +95,8 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
    /**
     * This method is used by a peer who wishes to distribute the content
     * using SplitStream. It creates a Channel Object consisting of numStripes
-    * number of Stripes, one for each strips content. A Channel object is
-    * responsible for implementing SplitStream functionality, like maintaing
+    * number of Stripes, one for each stripe's content. A Channel object is
+    * responsible for implementing SplitStream functionality, like maintaining
     * multiple multicast trees, bandwidth management and discovering parents
     * having spare capacity. One Channel object should be created for each 
     * content distribution which wishes to use SplitStream. 
@@ -194,14 +194,14 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
    }
 
    /**
-    * The upcall generated when a subscribe message is recieved
+    * The upcall generated when a subscribe message is received
     * This currently handles the  implicit creation of channel objects
     * when they don't exist at this node
     *
     * @param topicId the topic being subscribed/dropped
     * @param child the child to be added/dropped
-    * @param was added wether the was a subscribe or an unsubscribe
-    * @param data the date that was in the subscribe/unsubscribe message
+    * @param wasAdded whether the operation was a subscribe or an unsubscribe
+    * @param data the data that was in the subscribe/unsubscribe message
     * 
     */
    public void subscribeHandler(NodeId topicId, 
@@ -275,7 +275,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 			   child_root_path.add( ((Scribe)scribe).getLocalHandle() );
 
 			   /**
-			    * In all cases except the case that victimChild is same as recently added
+			    * In all cases except the case that victimChild is the same as the recently added
 			    * child and also for the same stripe, then we need to send the propogate path
 			    * message to recently added child.
 			    */
@@ -354,7 +354,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     }
    
     /**
-     * Get PastryNode returns a pastyr node
+     * Get PastryNode returns a pastry node
      * @returns PastryNode the Node
      */
     public PastryNode getPastryNode(){
@@ -365,14 +365,14 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     
     /**
      * Returns the application address of this pastry application
-     * @return Address the applications address
+     * @return Address the application's address
      */
     public Address getAddress(){
 	return address;
     }
     
     /**
-     * Gets the securtiy credentials for this pastry application
+     * Gets the security credentials for this pastry application
      *
      * @return Credentials the credentials
      */
@@ -381,7 +381,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     }
 
     /**
-     * MessageForAppl takes a message in from pastry
+     * MessageForAppl takes a message in from pastry,
      * determines what type of message it is and then 
      * sends it to the appropriate sub routine to be handled
      */

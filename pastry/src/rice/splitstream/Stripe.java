@@ -17,7 +17,7 @@ import java.util.*;
  * It is the basic unit in the system. It is rooted at the stripeId
  * for the stripe.  It is through the stripe that data is sent. It
  * can be subscribed to in which case data is recieved or it can
- * be unsubscribed. A stripe can have some number of children
+ * be unsubscribed from. A stripe can have some number of children
  * and controlling this is the way that bandwidth is controlled.
  * If a stripe is dropped then it searches for a new parent. 
  * A stripe recieves all the scribe messages for the topicId
@@ -30,7 +30,7 @@ import java.util.*;
 public class Stripe extends Observable implements IScribeApp{
 
    /**
-    * The stripe state, wheter it is dropped, connected, etc.
+    * The stripe state, whether it is dropped, connected, etc.
     */
    private int stripeState = 0;
 
@@ -46,7 +46,7 @@ public class Stripe extends Observable implements IScribeApp{
 
    /**
     * The input stream used to get data from this stripe. 
-    * Currently this a byteArrayInputStream but should be
+    * Currently this is a byteArrayInputStream but should be
     * converted to a SplitStreamInputStream so that the
     * buffer will not grow forever. Currently the app
     * does not use this stream for input and instead
@@ -76,7 +76,7 @@ public class Stripe extends Observable implements IScribeApp{
     */
    private IScribe scribe = null;
    /**
-    * A flag wheter or not this stripe is the primary stripe for this node
+    * A flag whether or not this stripe is the primary stripe for this node
     */
    private boolean isPrimary = false;  
 
@@ -285,8 +285,8 @@ public class Stripe extends Observable implements IScribeApp{
       *
       * @param topicId the topic that is being subscribed/unsubscribed
       * @param child the NodeHandle of the child joining
-      * @param wasAdded wheter a child was subscribed/unsubscribed
-      * @param data the date contianed in the subscribe/unsubscribe message
+      * @param wasAdded whether a child was subscribed/unsubscribed
+      * @param data the data contained in the subscribe/unsubscribe message
       */  
      public void subscribeHandler(NodeId topicId,
                                   NodeHandle child, boolean wasAdded, Serializable data){
@@ -333,7 +333,7 @@ public class Stripe extends Observable implements IScribeApp{
 		    child_root_path.add( ((Scribe)scribe).getLocalHandle() );
 
 		    /**
-		     * In all cases except the case that victimChild is same as recently added
+		     * In all cases except the case that victimChild is the same as the recently added
 		     * child and also for the same stripe, then we need to send the propogate path
 		     * message to recently added child.
 		     */
@@ -390,17 +390,17 @@ public class Stripe extends Observable implements IScribeApp{
     }
 
     /** 
-     * The constant status code associate with the subscribed state
+     * The constant status code associated with the subscribed state
      */
     public static final int STRIPE_SUBSCRIBED = 0;
 
     /** 
-     * The constant status code associate with the unsubscribed state
+     * The constant status code associated with the unsubscribed state
      */
     public static final int STRIPE_UNSUBSCRIBED = 1;
 
     /** 
-     * The constant status code associate with the dropped state
+     * The constant status code associated with the dropped state
      */
     public static final int STRIPE_DROPPED = 2;
 

@@ -10,14 +10,14 @@ import java.util.*;
 /**
  * This class is responsible for freeing bandwidth
  * when it is needed. Right now the notion of bandwidth
- * is slightly illdefined. It can be defined in terms of stripes
+ * is slightly ill-defined. It can be defined in terms of stripes
  * or bytes. This can also be per application, per channel or
- * globally. The first cut at freeing badwidth is handle by 
- * the fact the you can drop children from a stripe. After that 
+ * globally. The first cut at freeing badwidth is handled by 
+ * the fact that you can drop children from a stripe. After that 
  * you can start dropping non-primary stripes for each channel. Finally
  * you must come up with some method for dropping channels. You must
  * handle user requests at some higher priority than what is going on
- * in the backround.  There are many ways to wiegh each of these priorities
+ * in the background.  There are many ways to weigh each of these priorities
  * and there must be some more discussion on which is best.
  *
  * @version $Id$
@@ -26,29 +26,29 @@ import java.util.*;
 public class BandwidthManager{
 
     /**
-     * This is the default number of outgoing bandwidth that a channel may have
+     * This is the default amount of outgoing bandwidth that a channel may have
      * if no call to setDefaultBandwidth has been made. Channels may 
      * individually call configureChannel to change the number of 
-     * outgoing bandwidth it may take on.
+     * outgoing bandwidth they may take on.
      */
     private static int DEFAULT_BANDWIDTH = 16;
 
 
     /**
      * Hashtable to keep track of all Channels registered with the bandwidth
-     * managers max bandwidth.
+     * manager's max bandwidth.
      */
     private Hashtable maxBandwidth = null;
 
     /**
      * Hashtable to keep track of all Channels registered with the bandwidth
-     * managers used bandwidth.
+     * manager's used bandwidth.
      */
     private Hashtable usedBandwidth = null;
 
     /**
-     * The number of outgoing bandwidht a channel may have, if no value has been
-     * specified. Maybe adjusted later by calling configure channel
+     * The number of outgoing bandwidth a channel may have, if no value has been
+     * specified. May be adjusted later by calling configure channel
      */ 
     private int defaultBandwidth = DEFAULT_BANDWIDTH;
 
@@ -69,7 +69,7 @@ public class BandwidthManager{
      */ 
     public boolean freeBandwidth(){
         /** 
-         * This should be implemented depending upon the policies, you want
+         * This should be implemented depending upon the policies you want
          * to use 
          */
 	return false;
@@ -88,7 +88,7 @@ public class BandwidthManager{
      */ 
     public Vector freeBandwidth(Channel channel){
         /** 
-         * This should be implemented depending upon the policies, you want
+         * This should be implemented depending upon the policies you want
          * to use 
          */
 	Stripe primaryStripe = channel.getPrimaryStripe();
@@ -140,7 +140,7 @@ public class BandwidthManager{
 	    //System.out.println("numDigits "+numDigits+" digitLength "+digitLength);
 	    // Start comparing the children's digits with local node's
 	    // digits, starting with most significant digit going all the
-	    // way to least signifcant digit 
+	    // way to least significant digit 
 	    //System.out.println("Local node "+channel.getSplitStream().getNodeId());
 	    for(int k = 0; k < numDigits; k++){
 		for(int j = 0; j < children.size(); j++){
