@@ -79,9 +79,9 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
   }
 
   /**
-   * A more detailed version of isAlive().  This can return 4 states:
+   * A more detailed version of isAlive().  This can return 3 states:
    * 
-   * @return LIVENESS_UNKNOWN, LIVENESS_ALIVE, LIVENESS_SUSPECTED, LIVENESS_FAULTY
+   * @return LIVENESS_ALIVE, LIVENESS_SUSPECTED, LIVENESS_DEAD
    */
   public abstract int getLiveness();
   
