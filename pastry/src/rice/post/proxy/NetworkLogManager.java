@@ -10,6 +10,8 @@ public class NetworkLogManager extends LogManager {
   
   protected File file;
   
+  protected String[] other;
+  
   protected FileOutputStream fos;
   
   protected long interval;
@@ -22,6 +24,7 @@ public class NetworkLogManager extends LogManager {
   
   public NetworkLogManager(Parameters parameters) {
     this.file = new File(parameters.getStringParameter("standard_output_redirect_filename"));
+    this.other = parameters.getStringArrayParameter("standard_output_network_other_filenames");
     this.interval = parameters.getLongParameter("standard_output_network_interval");
     this.pastry_port = 10001;
     
@@ -101,7 +104,7 @@ public class NetworkLogManager extends LogManager {
     
     public void run() {
       try {
-        Thread.sleep(300000);
+        Thread.sleep(30000);
       } catch (InterruptedException e) {}
       
       while (true) {
@@ -123,7 +126,14 @@ public class NetworkLogManager extends LogManager {
     protected void sendFiles() {
       File[] files = new File(".").listFiles(new FilenameFilter() {
         public boolean accept(File parent, String file) {
-          return file.startsWith(NetworkLogManager.this.file + ".");
+          if (file.startsWith(NetworkLogManager.this.file + "."))
+            return true;
+          
+          for (int i=0; i<other.length; i++)
+            if (file.startsWith(other[i]))
+              return true;
+          
+          return false;
         }
       });
       

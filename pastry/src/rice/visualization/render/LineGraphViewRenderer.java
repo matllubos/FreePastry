@@ -15,7 +15,7 @@ import rice.visualization.data.*;
 
 public class LineGraphViewRenderer extends ViewRenderer {
   
-  public LineGraphViewRenderer(Visualization visualization) {
+  public LineGraphViewRenderer(DataProvider visualization) {
     super(visualization);
   }  
   

@@ -14,7 +14,7 @@ import rice.visualization.data.*;
 
 public class PieChartViewRenderer extends ViewRenderer {
   
-  public PieChartViewRenderer(Visualization visualization) {
+  public PieChartViewRenderer(DataProvider visualization) {
     super(visualization);
   }  
   

@@ -18,27 +18,24 @@ public class PastryNodePanel extends JPanel {
   public static int PASTRY_NODE_TAB_WIDTH = PASTRY_NODE_PANEL_WIDTH - 40;
   public static int PASTRY_NODE_TAB_HEIGHT = PASTRY_NODE_PANEL_HEIGHT - 40;
   
-  protected Visualization visualization;
-  
   protected ViewRendererFactory factory;
   
   protected int selected = 0;
   
   protected JTabbedPane pane = null;
         
-  public PastryNodePanel(Visualization visualization, ViewRendererFactory factory) {    
-    this.visualization = visualization;
+  public PastryNodePanel(ViewRendererFactory factory) {    
     this.factory = factory;
   }
   
-  public void nodeSelected(Node node) {
+  public void nodeSelected(Node node, Data data) {
     removeAll();
     
     if (node != null) {
       if (pane != null)
         selected = pane.getSelectedIndex();
   
-      processData(visualization.getData(node));
+      processData(data);
     } else {
       pane = null;
       selected = 0;

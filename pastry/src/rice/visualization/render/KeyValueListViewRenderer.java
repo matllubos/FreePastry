@@ -13,7 +13,7 @@ public class KeyValueListViewRenderer extends ViewRenderer {
   public static int DEFAULT_LINE_SPACING = 15;
   public static int DEFAULT_INDENT = 85;
   
-  public KeyValueListViewRenderer(Visualization visualization) {
+  public KeyValueListViewRenderer(DataProvider visualization) {
     super(visualization);
   }
     

@@ -10,9 +10,9 @@ import rice.visualization.data.*;
 
 public abstract class ViewRenderer {
   
-  protected Visualization visualization;
+  protected DataProvider visualization;
   
-  public ViewRenderer (Visualization visualization) {
+  public ViewRenderer (DataProvider visualization) {
     this.visualization = visualization;
   }
   

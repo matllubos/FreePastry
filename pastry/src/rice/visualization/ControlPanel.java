@@ -27,6 +27,7 @@ import javax.swing.filechooser.FileFilter;
 
 import rice.pastry.dist.DistNodeHandle;
 import rice.visualization.client.UpdateJarResponse;
+import rice.visualization.data.*;
 
 /**
  * @author jeffh
@@ -160,7 +161,7 @@ public class ControlPanel extends JPanel implements ActionListener {
     return new Dimension(InformationPanel.INFORMATION_PANEL_WIDTH, InformationPanel.INFORMATION_PANEL_HEIGHT*2);
   }
 
-  public void nodeSelected(Node node) {
+  public void nodeSelected(Node node, Data data) {
     if (node != null) {
       updateJarsButton.setEnabled(true);      
     } else {

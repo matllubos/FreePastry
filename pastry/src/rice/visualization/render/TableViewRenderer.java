@@ -17,7 +17,7 @@ public class TableViewRenderer extends ViewRenderer {
   public static java.awt.Color DEFAULT_BACKGROUND_COLOR = java.awt.Color.white;
   public static java.awt.Color DEFAULT_FOREGROUND_COLOR = java.awt.Color.gray;
   
-  public TableViewRenderer(Visualization visualization) {
+  public TableViewRenderer(DataProvider visualization) {
     super(visualization);
   }  
   

@@ -126,6 +126,7 @@ standard_output_network_enable=true
 standard_output_network_host_name=joshua.cs.rice.edu
 standard_output_network_host_port=35001
 standard_output_network_interval=86400000
+standard_output_network_other_filenames=aggregation.param
 standard_output_redirect_append=true
 standard_output_redirect_enable=true
 standard_output_redirect_filename=nohup.out

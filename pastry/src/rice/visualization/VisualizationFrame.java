@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
+import rice.visualization.data.*;
 import rice.visualization.render.*;
 import rice.pastry.dist.*;
 
@@ -47,7 +48,7 @@ public class VisualizationFrame extends JFrame {
     
     c = new GridBagConstraints();
     
-    pastryNodePanel = new PastryNodePanel(visualization, factory);
+    pastryNodePanel = new PastryNodePanel(factory);
     c.gridx = 0;
     c.gridy = 3;
     c.gridheight = 1;
@@ -84,15 +85,15 @@ public class VisualizationFrame extends JFrame {
     pastryRingPanel.nodeHighlighted(node);
   }
   
-  public void nodeSelected(Node node) {
-    controlPanel.nodeSelected(node); 
+  public void nodeSelected(Node node, Data data) {
+    controlPanel.nodeSelected(node, data); 
     if (node != null) {
       if (node.ring == visualization.selectedRing)
-        informationPanel.nodeSelected(node);
+        informationPanel.nodeSelected(node, data);
     } else {
-      informationPanel.nodeSelected(node);      
+      informationPanel.nodeSelected(node, data);      
     }
-    pastryRingPanel.nodeSelected(node);
-    pastryNodePanel.nodeSelected(node);
+    pastryRingPanel.nodeSelected(node, data);
+    pastryNodePanel.nodeSelected(node, data);
   }
 }

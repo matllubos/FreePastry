@@ -12,6 +12,7 @@ import javax.swing.JPanel;
 
 import rice.pastry.NodeId;
 import rice.pastry.dist.DistNodeHandle;
+import rice.visualization.data.Data;
 
 public class InformationPanel extends JPanel {
   
@@ -56,7 +57,7 @@ public class InformationPanel extends JPanel {
     return new Dimension(INFORMATION_PANEL_WIDTH, INFORMATION_PANEL_HEIGHT);
   }
   
-  public void nodeSelected(Node node) {
+  public void nodeSelected(Node node, Data data) {
     if (node != null) {
       Node[] handles = visualization.getNodes();
       

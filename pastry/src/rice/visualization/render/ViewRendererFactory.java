@@ -15,6 +15,16 @@ public class ViewRendererFactory {
     this.renderers = new Vector();
   }
   
+  public static ViewRendererFactory buildFactory(DataProvider visualization) {
+    ViewRendererFactory factory = new ViewRendererFactory();
+    factory.addRenderer(new TableViewRenderer(visualization));
+    factory.addRenderer(new KeyValueListViewRenderer(visualization));
+    factory.addRenderer(new LineGraphViewRenderer(visualization));
+    factory.addRenderer(new PieChartViewRenderer(visualization));
+    
+    return factory;
+  }
+  
   public void addRenderer(ViewRenderer renderer) {
     renderers.add(renderer);
   }

@@ -8,6 +8,7 @@ import java.math.*;
 
 import rice.p2p.commonapi.*;
 import rice.pastry.dist.*;
+import rice.visualization.data.Data;
 
 public class PastryRingPanel extends JPanel implements MouseListener, MouseMotionListener {
   
@@ -264,7 +265,7 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
     repaint();
   }
   
-  public void nodeSelected(Node node) {
+  public void nodeSelected(Node node, Data data) {
     repaint();
   }
 

@@ -12,8 +12,9 @@ import rice.pastry.dist.DistNodeHandle;
 import rice.visualization.client.UpdateJarResponse;
 import rice.visualization.client.VisualizationClient;
 import rice.visualization.data.Data;
+import rice.visualization.data.DataProvider;
 
-public class Visualization {
+public class Visualization implements DataProvider {
   
   public static int PORT_OFFSET = 3847;
   
@@ -124,8 +125,6 @@ public class Visualization {
     return r.getNodes();
   }
   
-  
-  
   public Data getData() {
     return data;
   }
@@ -198,7 +197,8 @@ public class Visualization {
       repaint = true;
     setSelected((Node)null);
     if (repaint) {
-      frame.nodeSelected(selectedNode);
+      refreshData();
+      frame.nodeSelected(selectedNode, data);
     }
   }  
 
@@ -240,7 +240,9 @@ public class Visualization {
     //Thread.dumpStack();
     if ((selectedNode == null) || (! selectedNode.equals(node))) {
       selectedNode = node;
-      frame.nodeSelected(node);
+      
+      refreshData();
+      frame.nodeSelected(node, data);
     }
   }
   

@@ -17,6 +17,7 @@ import rice.p2p.aggregation.*;
 import rice.p2p.multiring.*;
 
 import rice.persistence.*;
+import rice.visualization.LocalVisualization;
 
 import rice.post.*;
 import rice.post.delivery.*;
@@ -1320,6 +1321,7 @@ public class PostProxy {
     public PostDialog() {
       panel = new PostPanel();
       kill = new KillPanel();
+
       area = new JTextArea(15,75);
       area.setFont(new Font("Courier", Font.PLAIN, 10));
       scroll = new JScrollPane(area, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -1344,6 +1346,29 @@ public class PostProxy {
       setTitle("ePOST");
       pack();
       show();
+      
+      setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+      
+      addWindowListener(new WindowListener() {
+        public void windowClosing(WindowEvent e) {
+          String message = "Do you wish to kill the ePOST proxy or just hide the status window?";
+          int i = JOptionPane.showOptionDialog(null, message, "Kill ePOST Proxy", 
+                                               0, JOptionPane.INFORMATION_MESSAGE, null, 
+                                               new Object[] {"Cancel", "Kill ePOST Proxy", "Hide Status Window"}, "Hide Status Window");
+          
+          if (i == 2)
+            hide();
+            
+          if (i == 1) 
+            System.exit(-1);
+        }
+        public void windowActivated(WindowEvent e) {}
+        public void windowClosed(WindowEvent e) {}
+        public void windowDeactivated(WindowEvent e) {}
+        public void windowDeiconified(WindowEvent e) {}
+        public void windowIconified(WindowEvent e) {}
+        public void windowOpened(WindowEvent e) {}
+      });
     }
     
     public void append(String s) {
@@ -1372,6 +1397,7 @@ public class PostProxy {
     public KillPanel() {
       JButton restart = new JButton("Restart");
       JButton kill = new JButton("Kill");
+      JButton status = new JButton("Status");
       
       restart.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
@@ -1393,15 +1419,26 @@ public class PostProxy {
         }
       });
       
+      status.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          LocalVisualization vis = new LocalVisualization((DistNodeHandle) pastryNode.getLocalNodeHandle());
+        }
+      });
+      
       GridBagLayout layout = new GridBagLayout();
       setLayout(layout);
       
+      GridBagConstraints b = new GridBagConstraints();
+      layout.setConstraints(restart, b);      
+      add(status);
+      
       GridBagConstraints c = new GridBagConstraints();
+      c.gridx=1;
       layout.setConstraints(restart, c);      
       add(restart);
       
       GridBagConstraints d = new GridBagConstraints();
-      d.gridx=1;
+      d.gridx=2;
       layout.setConstraints(kill, d);      
       add(kill);
     }
