@@ -53,7 +53,7 @@ import rice.persistence.*;
  * This class is a class which tests the Cache class
  * in the rice.persistence package.
  */
-public class CacheTest extends Test {
+public class LRUCacheTest extends Test {
 
   protected static final int CACHE_SIZE = 100;
   
@@ -62,7 +62,7 @@ public class CacheTest extends Test {
   /**
    * Builds a MemoryStorageTest
    */
-  public CacheTest() {
+  public LRUCacheTest() {
     cache = new LRUCache(new MemoryStorage(), CACHE_SIZE);
   }
 
@@ -231,7 +231,7 @@ public class CacheTest extends Test {
     setUp(check1);
   }
 
-  private void testScan() {
+  private void testScan(final Continuation c) {
     final Continuation handleBadScan = new Continuation() {
       public void receiveResult(Object o) {
         stepDone(FAILURE, "Query returned; should have thrown exception");
@@ -241,6 +241,8 @@ public class CacheTest extends Test {
         stepDone(SUCCESS);
 
         sectionEnd();
+
+        c.receiveResult(new Boolean(true));
       }
     };
     
@@ -336,14 +338,240 @@ public class CacheTest extends Test {
     };
 
     testExists(insertString);
-  }    
+  }
+
+  private void testRandomInserts(final Continuation c) {
+    
+    final int START_NUM = 10;
+    final int END_NUM = 98;
+    final int SKIP = 2;
+
+    final int NUM_ELEMENTS = 17;
+    final int LAST_NUM_REMAINING = 66;
+    
+    final Continuation checkRandom = new Continuation() {
+
+      private int NUM_DELETED = -1;
+
+      public void receiveResult(Object o) {
+        if (NUM_DELETED == -1) {
+          stepStart("Checking object deletion");
+          NUM_DELETED = ((Integer) o).intValue();
+          cache.scan("Stress" + START_NUM, "Stress" + END_NUM, this);
+        } else {
+          int length = ((Comparable[])o).length;
+
+          int desired = NUM_ELEMENTS - NUM_DELETED;
+          
+          if (length == desired) {
+            stepDone(SUCCESS);
+
+            sectionEnd();
+            c.receiveResult(new Boolean(true));
+          } else {
+            stepDone(FAILURE, "Expected " + desired + " objects after deletes, found " + length + ".");
+            return;
+          }
+        }
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+
+    
+    final Continuation removeRandom = new Continuation() {
+      
+      private Random random = new Random();
+      private int count = LAST_NUM_REMAINING;
+      private int num_deleted = 0;
+
+      public void receiveResult(Object o) {
+        if (count == LAST_NUM_REMAINING) {
+          stepStart("Removing random subset of objects");
+        }
+
+        if (o.equals(new Boolean(false))) {
+          stepDone(FAILURE, "Deletion of " + count + " failed.");
+          return;
+        }
+
+        if (count == END_NUM) {
+          stepDone(SUCCESS);
+          checkRandom.receiveResult(new Integer(num_deleted));
+          return;
+        }
+
+        if (random.nextBoolean()) { 
+          num_deleted++;
+          cache.uncache("Stress" + (count += SKIP), this);
+        } else {
+          count += SKIP;
+          receiveResult(new Boolean(true));
+        }
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+    
+    final Continuation checkExists = new Continuation() {
+      private int count = START_NUM - SKIP;
+
+      public void receiveResult(Object o) {
+        if (count == START_NUM - SKIP) {
+          stepStart("Checking exists for all 50 objects");
+        } else {
+          if (o.equals(new Boolean(count < LAST_NUM_REMAINING))) {
+            if (((Boolean)o).booleanValue()) {
+              stepDone(FAILURE, "Element " + count + " did exist - should not have.");
+              return;
+            } else {
+              stepDone(FAILURE, "Element " + count + " did not exist - should have.");
+              return;
+            }
+          }
+        }
+
+        if (count == END_NUM) {
+          stepDone(SUCCESS);
+          removeRandom.receiveResult(new Boolean(true));
+          return;
+        }
+        
+        cache.exists("Stress" + (count += SKIP), this);
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+    
+    
+    final Continuation insert = new Continuation() {
+
+      private int count = START_NUM;
+
+      public void receiveResult(Object o) {
+        if (o.equals(new Boolean(false))) {
+          stepDone(FAILURE, "Insertion of " + count + " failed.");
+          return;
+        }
+        
+        if (count == START_NUM) {
+          stepDone(SUCCESS);
+          stepStart("Inserting 40 objects from 100 to 1000000 bytes");
+        }
+
+        if (count > END_NUM) {
+          stepDone(SUCCESS);
+          checkExists.receiveResult(new Boolean(true));
+          return;
+        }
+
+        int num = count;
+        count += SKIP;
+        
+        cache.cache("Stress" + num, new byte[num * num * num], this);
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+
+    final Continuation setSize = new Continuation() {
+      public void receiveResult(Object o) {
+
+        if (o.equals(new Boolean(false))) {
+          stepDone(FAILURE, "Testing of scan failed");
+          return;
+        }
+
+        sectionStart("Stress Testing");
+        stepStart("Increasing cache size to 10000000 bytes");
+
+        cache.setMaximumSize(10000000, insert);
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+  
+    testScan(setSize);
+  }
+
+
+  private void testErrors() {
+    final Continuation validateNullValue = new Continuation() {
+
+      public void receiveResult(Object o) {
+        if (o.equals(new Boolean(true))) {
+          stepDone(FAILURE, "Null value should return false");
+          return;
+        }
+
+        stepDone(SUCCESS);
+
+        sectionEnd();        
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+
+    final Continuation insertNullValue = new Continuation() {
+
+      public void receiveResult(Object o) {
+        if (o.equals(new Boolean(true))) {
+          stepDone(FAILURE, "Null key should return false");
+          return;
+        }
+
+        stepDone(SUCCESS);
+
+        stepStart("Inserting null value");
+
+        cache.cache("null value", null, validateNullValue);
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+
+    final Continuation insertNullKey = new Continuation() {
+
+      public void receiveResult(Object o) {
+        if (o.equals(new Boolean(false))) {
+          stepDone(FAILURE, "Random insert tests failed.");
+          return;
+        }
+
+        sectionStart("Testing Error Cases");
+        stepStart("Inserting null key");
+
+        cache.cache(null, "null key", insertNullValue);
+      }
+
+      public void receiveException(Exception e) {
+        stepException(e);
+      }
+    };
+
+    testRandomInserts(insertNullKey);
+  }
   
   public void start() {
-    testScan();
+    testErrors();
   }
 
   public static void main(String[] args) {
-    CacheTest test = new CacheTest();
+    LRUCacheTest test = new LRUCacheTest();
 
     test.start();
   }

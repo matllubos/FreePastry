@@ -4,7 +4,7 @@ SOURCE  = \
   Test.java \
   StorageTest.java \
   PersistentStorageTest.java \
-  CacheTest.java
+  LRUCacheTest.java
 
 RMI_SOURCE =
 

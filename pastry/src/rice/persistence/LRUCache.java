@@ -241,12 +241,24 @@ public class LRUCache implements Cache {
    * @return The success or failure of the setSize operation
    * (through receiveResult on c).
    */
-  public void setMaximumSize(int size, Continuation c) {
+  public void setMaximumSize(final int size, final Continuation c) {
+    Continuation local = new Continuation() {
+      public void receiveResult(Object o) {
+        maximumSize = size;
+
+        c.receiveResult(new Boolean(true));
+      }
+
+      public void receiveException(Exception e) {
+        c.receiveException(e);
+      }
+    };
+
     if (size < maximumSize) {
-      resize(size, c);
+      resize(size, local);
+    } else {
+      local.receiveResult(new Boolean(true));
     }
-    
-    maximumSize = size;
   }
 
   /**
