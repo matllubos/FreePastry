@@ -132,6 +132,13 @@ public class BasicScribeRegrTestApp implements IScribeApp
     public void forwardHandler( ScribeMessage msg ) {
 	// System.out.println("Node:" + getNodeId() + " App:" + m_app + " forwarding: "+ msg);
     }
+
+    /**
+     * up-call invoked by Scribe when an anycast message is being handled.
+     */
+    public boolean anycastHandler(ScribeMessage msg){
+	return true;
+    }
     
     /**
      * up-call invoked by scribe when a node detects a failure from its parent.
