@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.p2p.multiring;
 
 import rice.p2p.commonapi.*;
+import java.util.Random;
 
 /**
  * @(#) IdFactory.java 
@@ -152,6 +153,16 @@ public class MultiringIdFactory implements IdFactory {
     return new RingId(getRingId(), factory.buildId(string));
   }
   
+  /**
+   * Builds a random protocol-specific Id.
+   *
+   * @param rng A random number generator
+   * @return The built Id.
+   */
+  public rice.p2p.commonapi.Id buildRandomId(Random rng) {
+    return new RingId(getRingId(), factory.buildRandomId(rng));
+  }
+
   /**
    * Builds an Id by converting the given toString() output back to an Id.  Should
    * not normall be used.

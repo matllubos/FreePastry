@@ -100,6 +100,16 @@ public class PastryIdFactory implements IdFactory {
   }
   
   /**
+   * Builds a random protocol-specific Id.
+   *
+   * @param rng A random number generator
+   * @return The built Id.
+   */
+  public rice.p2p.commonapi.Id buildRandomId(Random rng) {
+    return rice.pastry.Id.makeRandomId(rng);
+  }
+
+  /**
    * Builds an Id by converting the given toString() output back to an Id.  Should
    * not normally be used.
    *
