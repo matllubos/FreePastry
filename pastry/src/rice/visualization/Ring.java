@@ -467,36 +467,45 @@ public class Ring {
   // ************* Used to set your size **********************
   public void select() {
     if (parent == null) {
-      renderSize = 0;
-      setChildrenSize(1);
+      setRenderSize(0);
+      setChildrenSize(1,null);
       rootCenterIsStale = true;
       //calculatePositions();
     } else {
       parent.setRenderSize(1);
-      parent.setChildrenSize(2);
-      renderSize = 0;
+      parent.setChildrenSize(2,this);
+      setRenderSize(0);
       parent.rootCenterIsStale = true;
       //parent.calculatePositions();
     }
   }
   
   private void setRenderSize(int i) {
+    oldRadius = getRadius();
     renderSize = i;
   }
 
-  private void setChildrenSize(int childSize) {
+  private void setChildrenSize(int childSize, Ring excludeRing) {
     Iterator i = children.iterator();
     while (i.hasNext()) {
       Ring r = (Ring)i.next();
-      r.setRenderSize(childSize);
+      if (r != excludeRing)
+        r.setRenderSize(childSize);
     }
   }
 
   /**
    * @return radius based on rendersize
    */
+//  public double getRadius() {
+//    return RENDER_RADIUS[renderSize]; 
+//  }
+
+  double oldRadius = 0;
   public double getRadius() {
-    return RENDER_RADIUS[renderSize]; 
+    double dr = RENDER_RADIUS[renderSize]-oldRadius;
+    dr/=(double)visualization.NUM_STEPS;
+    return oldRadius+(dr*visualization.curStep);
   }
 
  

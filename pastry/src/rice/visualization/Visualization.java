@@ -3,6 +3,8 @@ package rice.visualization;
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.Hashtable;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.Vector;
 
 import rice.pastry.NodeId;
@@ -151,9 +153,42 @@ public class Visualization {
     }
   }
 
+  public Ring getRoot() {
+    return getRingByIndex(0);
+  }
+
+  class MyTimerTask extends TimerTask {
+		public void run() {
+      curStep++;
+      getRoot().rootCenterIsStale = true;
+      
+      if (curStep >= NUM_STEPS) {
+        cancel();		
+        myTask = null;	
+      }
+      frame.pastryRingPanel.repaint();
+		}    
+  }
+
+  int NUM_STEPS = 10;
+  int curStep = NUM_STEPS;
+  MyTimerTask myTask = null;
+  Timer timer = new Timer();
+  private void startAnimation() {
+    curStep = 0;
+    if (myTask != null) {
+      myTask.cancel();
+      myTask = null;
+    }
+    myTask = new MyTimerTask();
+    timer.schedule(myTask,100,100);
+  }
+
   public void selectRing(Ring r) {
     selectedRing = r;
     r.select();
+    startAnimation();
+    
     boolean repaint = false;
     if (selectedNode == null)
       repaint = true;
