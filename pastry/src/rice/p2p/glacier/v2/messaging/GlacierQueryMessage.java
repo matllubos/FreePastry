@@ -13,8 +13,8 @@ import rice.p2p.glacier.*;
 public class GlacierQueryMessage extends GlacierMessage {
   protected FragmentKey keys[];
 
-  public GlacierQueryMessage(int uid, FragmentKey keys[], NodeHandle source, Id dest) {
-    super(uid, source, dest, false);
+  public GlacierQueryMessage(int uid, FragmentKey keys[], NodeHandle source, Id dest, char tag) {
+    super(uid, source, dest, false, tag);
 
     this.keys = keys;
   }

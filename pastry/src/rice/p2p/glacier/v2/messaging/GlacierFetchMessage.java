@@ -12,8 +12,8 @@ public class GlacierFetchMessage extends GlacierMessage {
   public static final int FETCH_MANIFEST = 2;
   public static final int FETCH_FRAGMENT_AND_MANIFEST = FETCH_FRAGMENT | FETCH_MANIFEST;
 
-  public GlacierFetchMessage(int uid, FragmentKey key, int request, NodeHandle source, Id dest) {
-    super(uid, source, dest, false);
+  public GlacierFetchMessage(int uid, FragmentKey key, int request, NodeHandle source, Id dest, char tag) {
+    super(uid, source, dest, false, tag);
 
     this.key = key;
     this.request = request;

@@ -13,7 +13,7 @@ public class GlacierTimeoutMessage extends GlacierMessage {
    * @param local The local nodehandle
    */
   public GlacierTimeoutMessage(int uid, NodeHandle local) {
-    super(uid, local, local.getId(), false);
+    super(uid, local, local.getId(), false, (char)0);
   }
 
   /**

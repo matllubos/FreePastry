@@ -10,8 +10,8 @@ public class GlacierSyncMessage extends GlacierMessage {
   protected int offsetFID;
   protected BloomFilter BloomFilter;
 
-  public GlacierSyncMessage(int uid, IdRange range, int offsetFID, BloomFilter BloomFilter, NodeHandle source, Id dest) {
-    super(uid, source, dest, false);
+  public GlacierSyncMessage(int uid, IdRange range, int offsetFID, BloomFilter BloomFilter, NodeHandle source, Id dest, char tag) {
+    super(uid, source, dest, false, tag);
 
     this.range = range;
     this.offsetFID = offsetFID;

@@ -7,8 +7,8 @@ public class GlacierNeighborRequestMessage extends GlacierMessage {
 
   protected IdRange requestedRange;
 
-  public GlacierNeighborRequestMessage(int uid, IdRange requestedRange, NodeHandle source, Id dest) {
-    super(uid, source, dest, false);
+  public GlacierNeighborRequestMessage(int uid, IdRange requestedRange, NodeHandle source, Id dest, char tag) {
+    super(uid, source, dest, false, tag);
 
     this.requestedRange = requestedRange;
   }

@@ -8,8 +8,8 @@ public class GlacierRangeForwardMessage extends GlacierMessage {
   protected IdRange requestedRange;
   protected NodeHandle requestor;
 
-  public GlacierRangeForwardMessage(int uid, IdRange requestedRange, NodeHandle requestor, NodeHandle source, Id dest) {
-    super(uid, source, dest, false);
+  public GlacierRangeForwardMessage(int uid, IdRange requestedRange, NodeHandle requestor, NodeHandle source, Id dest, char tag) {
+    super(uid, source, dest, false, tag);
 
     this.requestedRange = requestedRange;
     this.requestor = requestor;

@@ -12,12 +12,12 @@ public class GlacierDataMessage extends GlacierMessage {
   protected Fragment[] fragments;
   protected Manifest[] manifests;
 
-  public GlacierDataMessage(int uid, FragmentKey key, Fragment fragment, Manifest manifest, NodeHandle source, Id dest, boolean isResponse) {
-    this(uid, new FragmentKey[] { key }, new Fragment[] { fragment }, new Manifest[] { manifest }, source, dest, isResponse);
+  public GlacierDataMessage(int uid, FragmentKey key, Fragment fragment, Manifest manifest, NodeHandle source, Id dest, boolean isResponse, char tag) {
+    this(uid, new FragmentKey[] { key }, new Fragment[] { fragment }, new Manifest[] { manifest }, source, dest, isResponse, tag);
   }
 
-  public GlacierDataMessage(int uid, FragmentKey[] keys, Fragment[] fragments, Manifest[] manifests, NodeHandle source, Id dest, boolean isResponse) {
-    super(uid, source, dest, isResponse);
+  public GlacierDataMessage(int uid, FragmentKey[] keys, Fragment[] fragments, Manifest[] manifests, NodeHandle source, Id dest, boolean isResponse, char tag) {
+    super(uid, source, dest, isResponse, tag);
 
     this.keys = keys;
     this.fragments = fragments;

@@ -9,6 +9,9 @@ public abstract class GlacierMessage implements Message {
   // the unique id for this message
   protected int id;
 
+  // the tag of this message
+  protected char tag;
+
   // the source Id of this message
   protected NodeHandle source;
 
@@ -25,11 +28,12 @@ public abstract class GlacierMessage implements Message {
    * @param source The source address
    * @param dest The destination address
    */
-  protected GlacierMessage(int id, NodeHandle source, Id dest, boolean isResponse) {
+  protected GlacierMessage(int id, NodeHandle source, Id dest, boolean isResponse, char tag) {
     this.id = id;
     this.source = source;
     this.dest = dest;
     this.isResponse = isResponse;
+    this.tag = tag;
   }
 
   /**
@@ -61,6 +65,10 @@ public abstract class GlacierMessage implements Message {
   
   public boolean isResponse() {
     return isResponse;
+  }
+  
+  public char getTag() {
+    return tag;
   }
 }
 

@@ -7,8 +7,8 @@ import rice.p2p.glacier.*;
 public class GlacierRangeResponseMessage extends GlacierMessage {
   protected IdRange commonRange;
 
-  public GlacierRangeResponseMessage(int uid, IdRange commonRange, NodeHandle source, Id dest) {
-    super(uid, source, dest, true);
+  public GlacierRangeResponseMessage(int uid, IdRange commonRange, NodeHandle source, Id dest, char tag) {
+    super(uid, source, dest, true, tag);
 
     this.commonRange = commonRange;
   }

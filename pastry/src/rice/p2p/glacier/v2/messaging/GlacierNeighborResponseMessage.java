@@ -8,8 +8,8 @@ public class GlacierNeighborResponseMessage extends GlacierMessage {
   protected Id[] neighbors;
   protected long[] lastSeen;
 
-  public GlacierNeighborResponseMessage(int uid, Id[] neighbors, long[] lastSeen, NodeHandle source, Id dest) {
-    super(uid, source, dest, true);
+  public GlacierNeighborResponseMessage(int uid, Id[] neighbors, long[] lastSeen, NodeHandle source, Id dest, char tag) {
+    super(uid, source, dest, true, tag);
 
     this.neighbors = neighbors;
     this.lastSeen = lastSeen;
