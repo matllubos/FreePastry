@@ -101,7 +101,7 @@ public interface IdSet extends Serializable {
    *
    * @return the hash of this set
    */
-  public Id hash();
+  public byte[] hash();
   
   /**
    * Override clone() to make it publicly accessible

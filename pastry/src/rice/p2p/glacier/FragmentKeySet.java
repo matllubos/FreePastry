@@ -74,7 +74,7 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    * @return an Id containing the secure hash of this set
    */
 
-  public Id getHash() {
+  public byte[] getHash() {
 
     System.err.println("FragmentKeySet.getHash() called");
     System.exit(1);
@@ -262,7 +262,7 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    *
    * @return the hash of this set
    */
-  public rice.p2p.commonapi.Id hash() {
+  public byte[] hash() {
     return getHash();
   }
 

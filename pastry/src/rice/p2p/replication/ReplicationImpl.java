@@ -57,7 +57,7 @@ public class ReplicationImpl implements Replication, Application {
   /**
    * The amount of time to wait between replications
    */
-  public static int MAINTENANCE_INTERVAL = 600000;
+  public static int MAINTENANCE_INTERVAL = 60 * 1000;// 600000;
   
   /**
    * this application's endpoint
@@ -193,7 +193,7 @@ public class ReplicationImpl implements Replication, Application {
     log.finer(endpoint.getId() + ": Sending out requests"); 
     NodeHandleSet handles = endpoint.neighborSet(Integer.MAX_VALUE);
     IdRange ourRange = endpoint.range(handle, 0, handle.getId());
-    Id ourHash = client.scan(ourRange).hash();
+    byte[] ourHash = client.scan(ourRange).hash();
     
     for (int i=0; i<handles.size(); i++) {
       NodeHandle handle = handles.getHandle(i);
@@ -201,11 +201,11 @@ public class ReplicationImpl implements Replication, Application {
 
       if (handleRange != null) {
         IdRange range = handleRange.intersectRange(getTotalRange());
-        Id hash = client.scan(range).hash();
+        byte[] hash = client.scan(range).hash();
 
         if ((range != null) && (! range.intersectRange(getTotalRange()).isEmpty())) {
           log.finer(endpoint.getId() + ": Sending request to " + handle + " for range " + range);
-          RequestMessage request = new RequestMessage(this.handle, new IdRange[] {range, ourRange}, new Id[] {hash, ourHash});
+          RequestMessage request = new RequestMessage(this.handle, new IdRange[] {range, ourRange}, new byte[][] {hash, ourHash});
           endpoint.route(null, request, handle);
         }
       }
@@ -249,7 +249,7 @@ public class ReplicationImpl implements Replication, Application {
       for (int i=0; i<rm.getRanges().length; i++) {
         IdSet set = client.scan(rm.getRanges()[i]);
         
-        if (! set.hash().equals(rm.getHashes()[i]))
+        if (! Arrays.equals(set.hash(), rm.getHashes()[i]))
           response = merge(factory, response, set);
       }
         

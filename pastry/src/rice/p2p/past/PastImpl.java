@@ -36,42 +36,17 @@ if advised of the possibility of such damage.
 
 package rice.p2p.past;
 
-import java.util.Hashtable;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.*;
+import java.util.logging.*;
 
-import rice.Continuation;
-import rice.Continuation.ListenerContinuation;
-import rice.Continuation.MultiContinuation;
-import rice.Continuation.SimpleContinuation;
-import rice.Continuation.StandardContinuation;
-import rice.p2p.commonapi.Application;
-import rice.p2p.commonapi.CancellableTask;
-import rice.p2p.commonapi.Endpoint;
-import rice.p2p.commonapi.Id;
-import rice.p2p.commonapi.IdFactory;
-import rice.p2p.commonapi.IdRange;
-import rice.p2p.commonapi.IdSet;
-import rice.p2p.commonapi.Message;
-import rice.p2p.commonapi.Node;
-import rice.p2p.commonapi.NodeHandle;
-import rice.p2p.commonapi.NodeHandleSet;
-import rice.p2p.commonapi.RouteMessage;
-import rice.p2p.past.PastPolicy.DefaultPastPolicy;
-import rice.p2p.past.messaging.CacheMessage;
-import rice.p2p.past.messaging.ContinuationMessage;
-import rice.p2p.past.messaging.FetchHandleMessage;
-import rice.p2p.past.messaging.FetchMessage;
-import rice.p2p.past.messaging.InsertMessage;
-import rice.p2p.past.messaging.LookupHandlesMessage;
-import rice.p2p.past.messaging.LookupMessage;
-import rice.p2p.past.messaging.MessageLostMessage;
-import rice.p2p.past.messaging.PastMessage;
-import rice.p2p.replication.Replication;
-import rice.p2p.replication.manager.ReplicationManager;
-import rice.p2p.replication.manager.ReplicationManagerClient;
-import rice.p2p.replication.manager.ReplicationManagerImpl;
-import rice.persistence.StorageManager;
+import rice.*;
+import rice.Continuation.*;
+import rice.p2p.commonapi.*;
+import rice.p2p.past.PastPolicy.*;
+import rice.p2p.past.messaging.*;
+import rice.p2p.replication.*;
+import rice.p2p.replication.manager.*;
+import rice.persistence.*;
 
 /**
  * @(#) PastImpl.java

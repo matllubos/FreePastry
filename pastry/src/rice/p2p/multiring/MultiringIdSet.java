@@ -171,8 +171,8 @@ public class MultiringIdSet implements IdSet {
    *
    * @return the hash of this set
    */
-  public Id hash() {
-    return new RingId(ringId, set.hash());
+  public byte[] hash() {
+    return set.hash();
   }
   
   /**

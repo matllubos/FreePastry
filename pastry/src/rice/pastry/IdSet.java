@@ -56,7 +56,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
   private TreeSet idSet;
 
   // a cache of the fingerprint hash
-  private Id cachedHash;
+  private byte[] cachedHash;
   private boolean validHash;
 
   /**
@@ -188,9 +188,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
    *
    * @return an Id containing the secure hash of this set
    */
-
-  public Id getHash() {
-
+  public byte[] getHash() {
     if (validHash) return cachedHash;
 
     // recompute the hash
@@ -212,21 +210,16 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
       md.update(raw);
     }
 
-    byte[] digest = md.digest();
-    cachedHash = Id.build(digest);
+    cachedHash = md.digest();
     validHash = true;
 
     return cachedHash;
   }
 
-
-
   /**
    * Returns a string representation of the IdSet.
    */
-
-  public String toString()
-  {
+  public String toString() {
     Iterator it = getIterator();
     Id key;
     String s = "[ IdSet: ";
@@ -274,7 +267,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
    */
   public rice.p2p.commonapi.IdSet subSet(rice.p2p.commonapi.IdRange range) {
     //return subSet((Id) range.getCWId(), (Id) range.getCCWId());
-    return subSet((IdRange)range);
+    return subSet((IdRange) range);
   }
   
   /**
@@ -282,7 +275,7 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
    *
    * @return the hash of this set
    */
-  public rice.p2p.commonapi.Id hash() {
+  public byte[] hash() {
     return getHash();
   }
   

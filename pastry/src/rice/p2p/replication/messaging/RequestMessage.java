@@ -55,7 +55,7 @@ public class RequestMessage extends ReplicationMessage {
   protected IdRange[] ranges;
   
   // the list of hashes for this message
-  protected Id[] hashes;
+  protected byte[][] hashes;
   
   /**
    * Constructor which takes a unique integer Id
@@ -63,7 +63,7 @@ public class RequestMessage extends ReplicationMessage {
    * @param source The source address
    * @param topic The topic
    */
-  public RequestMessage(NodeHandle source, IdRange[] ranges, Id[] hashes) {
+  public RequestMessage(NodeHandle source, IdRange[] ranges, byte[][] hashes) {
     super(source);
     
     this.ranges = ranges;
@@ -84,7 +84,7 @@ public class RequestMessage extends ReplicationMessage {
    *
    * @return The ranges of this message
    */
-  public Id[] getHashes() {
+  public byte[][] getHashes() {
     return hashes;
   }
 }
