@@ -27,7 +27,7 @@ public interface PostData extends Serializable {
   public SignedReference buildSignedReference(NodeId location);
 
   /**
-   * This method dynamically builds an appropriate SignedReference
+   * This method dynamically builds an appropriate ContentHashReference
    * for this type of PostData given a location and key.
    *
    * @param location The location of the data
@@ -35,5 +35,14 @@ public interface PostData extends Serializable {
    * @return A pointer to the data
    */
   public ContentHashReference buildContentHashReference(NodeId location, Key key);
-  
+
+  /**
+    * This method dynamically builds an appropriate SecureReference
+   * for this type of PostData given a location and key.
+   *
+   * @param location The location of the data
+   * @param key The for the data
+   * @return A pointer to the data
+   */
+  public SecureReference buildSecureReference(NodeId location, Key key);  
 }

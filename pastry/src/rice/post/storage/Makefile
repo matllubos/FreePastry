@@ -2,11 +2,13 @@ PACKAGE = rice.post.storage
 
 SOURCE  = \
 	PostData.java \
-	ContentHashReference.java \
-	SignedReference.java \
 	StorageService.java \
 	ContentHashData.java \
-	SignedData.java
+	ContentHashReference.java \
+	SignedData.java \
+	SignedReference.java \
+	SecureData.java \
+	SecureReference.java
 
 RMI_SOURCE =
 

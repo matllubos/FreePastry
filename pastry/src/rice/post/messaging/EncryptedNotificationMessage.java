@@ -16,7 +16,7 @@ public class EncryptedNotificationMessage extends PostMessage {
    *
    * @param data The encrypted NotificationMessage
    */
-  public EncryptedNotificationMessage(PostUserAddress sender, byte[] data) {
+  public EncryptedNotificationMessage(PostEntityAddress sender, byte[] data) {
     super(sender);
     this.data = data;
   }

@@ -20,7 +20,7 @@ public class PresenceMessage extends PostMessage {
    * @param sender The address of the user asserted to be present.
    * @param location The user's asserted location.
    */
-  public PresenceMessage(PostUserAddress sender, NodeId location) {
+  public PresenceMessage(PostEntityAddress sender, NodeId location) {
     super(sender);
     this.location = location;
   }

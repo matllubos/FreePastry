@@ -19,7 +19,7 @@ public class ReceiptMessage extends PostMessage {
    *
    * @param message The notification message which this is a receipt for
    */
-  public ReceiptMessage(PostUserAddress sender, EncryptedNotificationMessage message) {
+  public ReceiptMessage(PostEntityAddress sender, EncryptedNotificationMessage message) {
     super(sender);
     this.message = message;
   }

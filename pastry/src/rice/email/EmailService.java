@@ -20,16 +20,12 @@ import rice.email.messaging.*;
  * {@link Email} object as its argument.
  */
 public class EmailService extends PostClient {
-  // the name for ePOST's root log
-  public static final String EPOST_NAME="ePOST";
 
   // the name of the Inbox's log
   public static final String INBOX_NAME="Inbox";
   
   // the Emails Service's Post object
-  Post _post = null;
-  
-  private HashSet emailServiceListeners = new HashSet(); 
+  Post _post;
   
   /** 
    * Constructor
@@ -37,7 +33,7 @@ public class EmailService extends PostClient {
    * @param post The Post service to use
    */
   public EmailService(Post post) {
-    _post = null;
+    _post = post;
   }
 
   /**
@@ -46,14 +42,15 @@ public class EmailService extends PostClient {
    *
    * @param email The email to send
    */
-  public void sendMessage(Email email, EmailData body, EmailData[] attachments) throws PostException {
+  public void sendMessage(Email email) throws PostException {
+    
     // store the Email's data before sending it
     StorageService storage = _post.getStorageService();
     email.setStorage(storage);
     email.storeData();
 
     // send the notification messages to each of the recipients
-    PostUserAddress[] recipients = (PostUserAddress[])email.getRecipientUsers();
+    PostEntityAddress[] recipients = email.getRecipients();
     EmailNotificationMessage msg;
 
     for (int i = 0; i < recipients.length; i++) {
@@ -70,18 +67,27 @@ public class EmailService extends PostClient {
    * JM this needs some error checking for when the given folder is not found
    *
    * @param folderName the folder to fetch the Log for
-   * @return the fetched Log
+   * @return the fetched Log, or null if an error occured
    */
   public Folder getRootFolder() {
-    // find the Client Id for this client
-    PostClientAddress pca = PostClientAddress.getAddress(this);
-    // use the Id to fetch the root log
-    //JM needs new method here:
-    //Log mainLog = _post.getLog(pca);
-    Log mainLog = _post.getLog();
-    
-    return new Folder(mainLog, _post.getStorageService());    
-  }  
+    try {
+      // find the Client Id for this client
+      PostClientAddress pca = PostClientAddress.getAddress(this);
+
+      // use the Id to fetch the root log
+      PostLog mainLog = _post.getLog();
+      LogReference emailLogRef = mainLog.getChildLog(pca);
+      Log emailLog = (Log) _post.getStorageService().retrieveSigned(emailLogRef);
+
+      return new Folder(emailLog, _post.getStorageService());
+    } catch (StorageException e) {
+      System.out.println("An error occured while retrieveing log - " + e);
+      return null;
+    } catch (ClassCastException e) {
+      System.out.println("An error occured while retrieveing log - " + e);
+      return null;
+    }
+  }
 
   /**
    * This method is how the Post layer informs the EmailService
@@ -92,31 +98,13 @@ public class EmailService extends PostClient {
   public void notificationReceived(NotificationMessage nm) {
     
     if(nm instanceof EmailNotificationMessage) {
-      EmailNotificationMessage enm = (EmailNotificationMessage) enm;
+      EmailNotificationMessage enm = (EmailNotificationMessage) nm;
 
       // notify the observers that an email has been received.
       this.notifyObservers(enm);
+    } else {
+      System.out.println("EmailService received unknown notification " + nm + " - dropping on floor.");
     }
   }    
-
-  /**
-   * This method adds an object that will be notified of events that occur in this 
-   * post client.
-   * 
-   * @param esl is the object that will be notified.
-   */
-  public void addEmailServiceListener(EmailServiceListener esl) {
-    this.emailServiceListeners.add(esl);
-  }
-  
-  /**
-   * This method removes an object from the set of objects that are notified by
-   * this email service of events that occur in it.
-   * 
-   * @param esl is the object that will no longer be notified.
-   */
-  public void removeEmailServiceListener(EmailServiceListener esl) {
-    this.emailServiceListeners.remove(esl);
-  }
 
 }

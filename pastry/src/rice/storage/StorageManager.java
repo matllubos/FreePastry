@@ -1,9 +1,9 @@
 package rice.storage;
 
+import java.io.*;
+
 import rice.pastry.security.Credentials;
 import rice.pastry.NodeId;
-
-import ObjectWeb.Persistence.Persistable;
 
 /**
  * @(#) StorageManager.java
@@ -14,7 +14,7 @@ import ObjectWeb.Persistence.Persistable;
  * sort of log.
  *
  * @version $Id$
- * @author Charles Reis
+ * @author Alan Mislove
  */
 public interface StorageManager {
   
@@ -25,7 +25,7 @@ public interface StorageManager {
    * @param authorCred Author's credentials
    * @return true if store succeeds, false otherwise
    */
-  public boolean insert(NodeId id, Persistable obj, Credentials authorCred);
+  public boolean insert(NodeId id, Serializable obj, Credentials authorCred);
   
   /**
    * Stores an update to the object with the given ID.
@@ -34,7 +34,7 @@ public interface StorageManager {
    * @param authorCred Update Author's credentials
    * @return true if update was successful, false if no object was found
    */
-  public boolean update(NodeId id, Persistable update, Credentials authorCred);
+  public boolean update(NodeId id, Serializable update, Credentials authorCred);
   
   /**
    * Retrieves the object and all associated updates with the given ID.

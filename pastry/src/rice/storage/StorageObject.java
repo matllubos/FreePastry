@@ -1,9 +1,9 @@
 package rice.storage;
 
+import java.io.*;
+
 import rice.pastry.security.Credentials;
 import rice.pastry.NodeId;
-
-import ObjectWeb.Persistence.Persistable;
 
 import java.util.Vector;
 
@@ -22,7 +22,7 @@ public interface StorageObject {
   /**
    * Returns the original Persistable object.
    */
-  public Persistable getOriginal();
+  public Serializable getOriginal();
 
   /**
    * Returns the Credentials of the author of the original file.
@@ -53,7 +53,7 @@ public interface StorageObject {
    * Returns a Vector with the original Persistable object in the first position,
    * followed by all Persistable updates.  Purely a convenience method.
    */
-  public Vector getAllPersistables();
+  public Vector getAllUpdates();
 
   /**
    * Returns a Vector with the author Credentials of the original
@@ -61,5 +61,11 @@ public interface StorageObject {
    * of all updates.  Purely a convenience method.
    */
   public Vector getAllAuthorCredentials();
-  
+
+  /**
+   * Adds an update to the original object.
+   * @param update update to the original
+   * @param authorCred Credentials of author of update
+   */
+  public void addUpdate(Serializable update, Credentials authorCred);
 }

@@ -193,5 +193,17 @@ public class Log implements PostData {
   public ContentHashReference buildContentHashReference(NodeId location, Key key) {
     throw new IllegalArgumentException("Logs are only stored as signed blocks.");
   }
+
+  /**
+   * This method is not supported (you CAN NOT store a log as a
+   * secure block).
+   *
+   * @param location The location of the data
+   * @param key The for the data
+   * @throws IllegalArgumentException Always
+   */
+  public SecureReference buildSecureReference(NodeId location, Key key) {
+    throw new IllegalArgumentException("Logs are only stored as signed blocks.");
+  }  
 }
 

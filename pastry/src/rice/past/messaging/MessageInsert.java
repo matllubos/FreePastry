@@ -8,8 +8,6 @@ import rice.pastry.NodeId;
 import rice.pastry.messaging.Message;
 import rice.pastry.security.Credentials;
 
-import ObjectWeb.Persistence.Persistable;
-
 import java.util.Random;
 import java.io.*;
 
@@ -26,7 +24,7 @@ public class MessageInsert extends PASTMessage {
   /**
    * The file to insert.
    */
-  protected Persistable _file;
+  protected Serializable _file;
   
   /**
    * The credentials of the author of the file.
@@ -47,7 +45,7 @@ public class MessageInsert extends PASTMessage {
    */
   public MessageInsert(NodeId nodeId, 
                        NodeId fileId, 
-                       Persistable file, 
+                       Serializable file, 
                        Credentials authorCred) {
     super(nodeId, fileId);
     _file = file;

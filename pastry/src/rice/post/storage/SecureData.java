@@ -7,29 +7,29 @@ import rice.pastry.*;
 
 /**
  * This class is used internally by the storage package to
- * store data as a content-hash.
- * 
+ * store data using a secure scheme.
+ *
  * @version $Id$
  */
-class ContentHashData implements Serializable {
+class SecureData implements Serializable {
 
-  /** 
-   * The data stored in this content hash object.
+  /**
+  * The data stored in this content hash object.
    */
   private byte[] data;
 
   /**
-   * Builds a ContentHashData from a byte array and the credentials of data
+    * Builds a SecureData from a byte array and the credentials of data
    *
    * @param data The data to store
    * @param credentials Credentials of the data
    */
-  public ContentHashData(byte[] data) {
+  public SecureData(byte[] data) {
     this.data = data;
   }
 
   /**
-   * @return The byte array of actual data.
+    * @return The byte array of actual data.
    */
   public byte[] getData() {
     return data;

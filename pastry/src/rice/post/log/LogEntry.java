@@ -63,5 +63,17 @@ public abstract class LogEntry implements PostData {
   public ContentHashReference buildContentHashReference(NodeId location, Key key) {
     return new LogEntryReference(location, key);
   }
+
+  /**
+   * This method is not supported (you CAN NOT store a log as a
+   * secure block).
+   *
+   * @param location The location of the data
+   * @param key The for the data
+   * @throws IllegalArgumentException Always
+   */
+  public SecureReference buildSecureReference(NodeId location, Key key) {
+    throw new IllegalArgumentException("Log entries are only stored as content-hash blocks.");
+  }  
 }
 

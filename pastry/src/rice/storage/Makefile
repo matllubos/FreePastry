@@ -4,7 +4,7 @@ SOURCE  = \
 	StorageObject.java \
 	StorageManager.java \
 	StorageObjectImpl.java \
-	StorageManagerImpl.java
+	MemoryStorageManager.java
 
 RMI_SOURCE =
 

@@ -8,8 +8,6 @@ import rice.pastry.NodeId;
 import rice.pastry.messaging.Message;
 import rice.pastry.security.Credentials;
 
-import ObjectWeb.Persistence.Persistable;
-
 import java.util.Random;
 import java.io.*;
 
@@ -26,7 +24,7 @@ public class MessageAppend extends PASTMessage {
   /**
    * The update to insert.
    */
-  protected Persistable _update;
+  protected Serializable _update;
   
   /**
    * The credentials of the author of the update.
@@ -47,7 +45,7 @@ public class MessageAppend extends PASTMessage {
    */
   public MessageAppend(NodeId nodeId, 
                        NodeId fileId, 
-                       Persistable update,
+                       Serializable update,
                        Credentials authorCred) {
     super(nodeId, fileId);
     _update = update;

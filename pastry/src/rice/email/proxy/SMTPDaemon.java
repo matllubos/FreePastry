@@ -129,11 +129,8 @@ class SMTPDaemon implements Runnable {
 	}
 
 	// Now we have a LinkedList of recipients, we want an array
-	PostUserAddress[] recipientArray =
-	    (PostUserAddress[]) recipients.toArray(new PostUserAddress[0]);
-
-	// Recipient group - FIXME do something with this
-	PostGroupAddress[] recipientGroupArray = new PostGroupAddress[0];
+	PostEntityAddress[] recipientArray =
+	    (PostEntityAddress[]) recipients.toArray(new PostEntityAddress[0]);
 
 	// We've seen DATA from the user, so now tell them it's okay
 	// to deliver their message.
@@ -164,13 +161,12 @@ class SMTPDaemon implements Runnable {
 	// Deliver the message.
 	Email deliverMe = new Email(sender,
 				    recipientArray,
-				    recipientGroupArray,
 				    subject,
 				    messageData,  // body reference
 				    attachments); // attach refs
 	
 	try {
-	    service.sendMessage(deliverMe, messageData, attachments);
+	    service.sendMessage(deliverMe);
 	} catch (PostException e) {
 	    // do something sensible
 	}

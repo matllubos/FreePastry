@@ -9,6 +9,7 @@ import javax.crypto.*;
 import javax.crypto.spec.*;
 
 import rice.past.*;
+import rice.storage.*;
 import rice.post.*;
 import rice.post.security.*;
 import rice.pastry.*;
@@ -23,6 +24,8 @@ import rice.pastry.security.*;
  * @version $Id$
  */
 public class StorageService {
+
+  public static final int SYMMETRIC_KEY_LENGTH = 8;
   
   /**
    * The PAST service used for distributed persistant storage.
@@ -38,6 +41,11 @@ public class StorageService {
    * The credentials used to store data.
    */
   private Credentials credentials;
+
+  /**
+   * A random object
+   */
+  private Random random;
   
   /**
    * Contructs a StorageService given a PAST to run on top of.
@@ -50,6 +58,7 @@ public class StorageService {
     this.past = past;
     this.credentials = credentials;
     this.security = security;
+    this.random = random;
   }
 
   /**
@@ -73,7 +82,7 @@ public class StorageService {
       NodeId location = new NodeId(loc);
       SecretKeySpec secretKey = new SecretKeySpec(hash, "DES");
       
-      ContentHashData chd = new ContentHashData(cipherText, null);
+      ContentHashData chd = new ContentHashData(cipherText);
       
       // Store the content hash data in PAST
       past.insert(location, chd, credentials);
@@ -95,9 +104,14 @@ public class StorageService {
    */
   public PostData retrieveContentHash(ContentHashReference reference) throws StorageException {
     try {
+      StorageObject so = past.lookup(reference.getLocation());
+
+      if (so == null) {
+        return null;
+      }
+      
       // TO DO: fetch from multiple locations to prevent rollback attacks
-      ContentHashData chd = 
-        (ContentHashData) past.lookup(reference.getLocation()).getOriginal();
+      ContentHashData chd = (ContentHashData) so.getOriginal();
       byte[] keyBytes = reference.getKey().getEncoded();
       
       byte[] cipherText = chd.getData();
@@ -150,15 +164,16 @@ public class StorageService {
       
       byte[] signature = security.sign(all);
       
-      SignedData sd = new SignedData(plainText, timestamp, signature, null);
+      SignedData sd = new SignedData(plainText, timestamp, signature);
       
       // Store the signed data in PAST
       past.insert(location, sd, credentials);
       
       return data.buildSignedReference(location);
-    }
-    catch (IOException ioe) {
-      throw new StorageException("IOException while storing data: " + ioe);
+    } catch (IOException ioe) {
+      System.out.println("IOException " + ioe + " occured during storage attempt.");
+      ioe.printStackTrace();
+      throw new StorageException("IOException while storing data: " + ioe + " " + ioe.getMessage());
     }
   }
 
@@ -191,7 +206,13 @@ public class StorageService {
   {
     try {
       // TO DO: fetch from multiple locations to prevent rollback attacks
-      SignedData sd = (SignedData) past.lookup(reference.getLocation()).getOriginal();
+      StorageObject so = past.lookup(reference.getLocation());
+
+      if (so == null) {
+        return null;
+      }
+
+      SignedData sd = (SignedData) so.getOriginal();
       
       byte[] plainText = sd.getData();
       Object data = security.deserialize(plainText);
@@ -201,6 +222,85 @@ public class StorageService {
         throw new StorageException("Signature of retrieved data is not correct.");
       }
       
+      return (PostData) data;
+    }
+    catch (ClassCastException cce) {
+      throw new StorageException("ClassCastException while retrieving data: " + cce);
+    }
+    catch (IOException ioe) {
+      throw new StorageException("IOException while retrieving data: " + ioe);
+    }
+    catch (ClassNotFoundException cnfe) {
+      throw new StorageException("ClassNotFoundException while retrieving data: " + cnfe);
+    }
+  }
+
+  /**
+   * Stores a PostData in the PAST storage system, in encrypted state,
+   * and returns a pointer and key to the data object.
+   *
+   * This method first generates a random key, uses this key to encrypt
+   * the data, and then stored the data under the key of it's content-hash.
+   *
+   * @param data The data to store.
+   * @return A pointer and key to the data.
+   */
+  public SecureReference storeSecure(PostData data) throws StorageException {
+    try {
+      byte[] plainText = security.serialize(data);
+
+      // pick random key
+      byte[] key = new byte[SYMMETRIC_KEY_LENGTH];
+      random.nextBytes(key);
+
+      byte[] cipherText = security.encryptDES(plainText, key);
+      byte[] loc = security.hash(cipherText);
+
+      NodeId location = new NodeId(loc);
+      SecretKeySpec secretKey = new SecretKeySpec(key, "DES");
+
+      SecureData sd = new SecureData(cipherText);
+
+      // Store the content hash data in PAST
+      past.insert(location, sd, credentials);
+
+      return data.buildSecureReference(location, secretKey);
+    }
+    catch (IOException ioe) {
+      throw new StorageException("IOException while storing data: " + ioe);
+    }
+  }
+
+  /**
+   * This method retrieves a given SecureReference object from the
+   * network. This method also performs the verification checks and
+   * decryption necessary.
+   *
+   * @param reference The reference to the PostDataObject
+   * @return The corresponding PostData object
+   */
+  public PostData retrieveSecure(SecureReference reference) throws StorageException {
+    try {
+      StorageObject so = past.lookup(reference.getLocation());
+
+      if (so == null) {
+        return null;
+      }
+      
+      SecureData sd = (SecureData) so.getOriginal();
+      byte[] keyBytes = reference.getKey().getEncoded();
+
+      byte[] cipherText = sd.getData();
+      byte[] plainText = security.decryptDES(cipherText, keyBytes);
+      Object data = security.deserialize(plainText);
+
+      // Verify hash(cipher) == location
+      byte[] hashCipher = security.hash(cipherText);
+      byte[] loc = reference.getLocation().copy();
+      if (!Arrays.equals(hashCipher, loc)) {
+        throw new StorageException("Hash of cipher text does not match location.");
+      }
+
       return (PostData) data;
     }
     catch (ClassCastException cce) {

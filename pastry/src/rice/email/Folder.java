@@ -22,14 +22,14 @@ public class Folder {
 
   // the nodeID of the client's POST
   //private NodeID _nodeId;
-  
+
   /**
    * Constructs an empty Folder.
    * JM I think that this should be disappeared.
    * @param name The name of the folder.
    */
   public Folder(String name) {
-    _name = name;    
+    _name = name;
   }
 
   /**
@@ -39,7 +39,7 @@ public class Folder {
    * @param storage the storage service used to get log data from PAST.
    */
   public Folder(Log log, StorageService storage) {
-    _name = (String)log.getName();
+    _name = (String) log.getName();
     _log = log;
     _storage = storage;
   }
@@ -58,48 +58,48 @@ public class Folder {
     while (!finished) {
       // deal with the current LogEntry
       if (topEntry instanceof InsertMailLogEntry) {
-	contents.add(((InsertMailLogEntry)topEntry).getEmail());
+        contents.add(((InsertMailLogEntry)topEntry).getEmail());
       }
       else if (topEntry instanceof DeleteMailLogEntry) {
-	contents.remove(((DeleteMailLogEntry)topEntry).getEmail());
+        contents.remove(((DeleteMailLogEntry)topEntry).getEmail());
       }
       else if (topEntry instanceof SnapShotLogEntry) {
-	Email[] rest = ((SnapShotLogEntry)topEntry).getEmails();
-	for (int i = 0; i < rest.length; i++) {
-	  contents.add(rest[i]);
-	}
-	if (((SnapShotLogEntry)topEntry).isEnd()) {
-	  finished = true;
-	}	
+        Email[] rest = ((SnapShotLogEntry)topEntry).getEmails();
+        for (int i = 0; i < rest.length; i++) {
+          contents.add(rest[i]);
+        }
+        if (((SnapShotLogEntry)topEntry).isEnd()) {
+          finished = true;
+        }
       }
       else {
-	// throw some manner of error? 
-	finished = true;	
+        // throw some manner of error?
+        finished = true;
       }
 
       // try to move to the next LogEntry
       top = topEntry.getPreviousEntry();
       if (top == null) {
-	finished = true;
+        finished = true;
       }
       else {
-	topEntry = (LogEntry)_storage.retrieveContentHash(top);
+        topEntry = (LogEntry)_storage.retrieveContentHash(top);
       }
     }
     return (Email[])contents.toArray();
   }
-    
+
   /**
-   * Returns the name of this folder
-   * 
+    * Returns the name of this folder
+   *
    * @return The name of the folder
    */
   public String getName() {
     return _name;
   }
-        
+
   /**
-   * Returns the Emails contained in this Folder.
+    * Returns the Emails contained in this Folder.
    *
    * @return the stored Emails
    */
@@ -108,25 +108,33 @@ public class Folder {
   }
 
   /**
-   * Appends an email to this Folder.
+    * Appends an email to this Folder.
    *
    * @param email The email to insert.
    */
-  public void addMessage(Email email) throws PostException, StorageException {
-    _log.addLogEntry(new InsertMailLogEntry(email));
-  }
-
-  /** 
-   * Deletes a message from this Folder.
-   *
-   * @param email The email to delete.
-   */
-  public void removeMessage(Email email) throws PostException, StorageException {
-    _log.addLogEntry(new DeleteMailLogEntry(email));
+  public void addMessage(Email email) throws PostException {
+    try {
+      _log.addLogEntry(new InsertMailLogEntry(email));
+    } catch (StorageException e) {
+      throw new PostException(e.getMessage());
+    }
   }
 
   /**
-   * Moves a message from this folder into a another, given folder.
+    * Deletes a message from this Folder.
+   *
+   * @param email The email to delete.
+   */
+  public void removeMessage(Email email) throws PostException {
+    try {
+      _log.addLogEntry(new DeleteMailLogEntry(email)); 
+    } catch (StorageException e) {
+      throw new PostException(e.getMessage());
+    }
+  }
+
+  /**
+    * Moves a message from this folder into a another, given folder.
    * This means adding the message to the destination folder, and
    * removing the message from this folder.
    *
@@ -138,28 +146,40 @@ public class Folder {
     folder.addMessage(email);
     removeMessage(email);
   }
-  
-  public Folder createChildFolder(String name) throws PostException, StorageException {
-    Log log = new Log(name, _log.getLocation());    
-    _log.addChildLog(log);
-    return new Folder(log, _storage);
+
+  public Folder createChildFolder(String name) throws PostException {
+    try {
+      Log log = new Log(name, _log.getLocation());
+      _log.addChildLog(log);
+      return new Folder(log, _storage);
+    } catch (StorageException e) {
+      throw new PostException(e.getMessage());
+    }
   }
-  
-  public Folder getChildFolder(String name) throws PostException, StorageException {
-    Log log = (Log)_storage.retrieveSigned(_log.getChildLog(name));
-    return new Folder(log, _storage);
+
+  public Folder getChildFolder(String name) throws PostException {
+    try {
+      Log log = (Log)_storage.retrieveSigned(_log.getChildLog(name));
+      return new Folder(log, _storage);
+    } catch (StorageException e) {
+      throw new PostException(e.getMessage());
+    }
   }
-  
+
   public String[] getChildren() throws PostException {
     return (String[])_log.getChildLogNames();
   }
-  
+
   /**
-   * Deletes a folder from the user's mailbox.
+    * Deletes a folder from the user's mailbox.
    *
    * @param name The name of the folder to delete.
    */
-  public void removeFolder(String name) throws PostException, StorageException {
-    _log.removeChildLog(name);
+  public void removeFolder(String name) throws PostException {
+    try {
+      _log.removeChildLog(name);
+    } catch (StorageException e) {
+      throw new PostException(e.getMessage());
+    }
   }
 }

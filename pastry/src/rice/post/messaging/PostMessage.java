@@ -33,7 +33,7 @@ import rice.post.*;
 public abstract class PostMessage implements Serializable{
 
   // the sender of this PostMessage
-  private PostUserAddress sender;
+  private PostEntityAddress sender;
 
   // internal state-keeping for signature production
   private boolean aboutToBeWritten = false;
@@ -47,7 +47,7 @@ public abstract class PostMessage implements Serializable{
    *
    * @param sender The sender of this message.
    */
-  public PostMessage(PostUserAddress sender) {
+  public PostMessage(PostEntityAddress sender) {
     this.sender = sender;
   }
 
@@ -56,7 +56,7 @@ public abstract class PostMessage implements Serializable{
    *
    * @return The sender
    */
-  public final PostUserAddress getSender() {
+  public final PostEntityAddress getSender() {
     return sender;
   }
   

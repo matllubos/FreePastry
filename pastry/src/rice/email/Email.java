@@ -14,8 +14,7 @@ import rice.email.messaging.*;
 public class Email implements java.io.Serializable {
 
   private PostUserAddress sender;
-  private PostUserAddress[] recipientUsers;
-  private PostGroupAddress[] recipientGroups;
+  private PostEntityAddress[] recipients;
   private String subject;
   private transient EmailData body;
   private transient EmailData[] attachments;
@@ -34,15 +33,13 @@ public class Email implements java.io.Serializable {
    * @param attachments The attachments to the message (could be zero-length.)
    */
   public Email(PostUserAddress sender, 
-               PostUserAddress[] recipientUsers, 
-               PostGroupAddress[] recipientGroups, 
+               PostEntityAddress[] recipients, 
                String subject, 
                EmailData body, 
                EmailData[] attachments) {
     
     this.sender = sender;
-    this.recipientUsers = recipientUsers;
-    this.recipientGroups = recipientGroups;
+    this.recipients = recipients;
     this.subject = subject;
     this.body = body;
     this.attachments = attachments;
@@ -64,17 +61,8 @@ public class Email implements java.io.Serializable {
    *
    * @return The recipient users of this email.
    */
-  public PostUserAddress[] getRecipientUsers() {
-    return this.recipientUsers;
-  }
-    
-  /**
-   * Returns the recipient users of this message.
-   *
-   * @return The recipient users of this email.
-   */
-  public PostGroupAddress[] getRecipientGroups() {
-    return this.recipientGroups;
+  public PostEntityAddress[] getRecipients() {
+    return this.recipients;
   }
 
   /**

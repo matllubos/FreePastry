@@ -47,7 +47,7 @@ import java.io.*;
  * @author Andrew Ladd
  */
 
-public interface Credentials {}
+public interface Credentials extends Serializable {}
 
 
 

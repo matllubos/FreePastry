@@ -24,7 +24,7 @@ public abstract class NotificationMessage extends PostMessage {
    * @param destination The address of the user or group to which this
    *        message should be delivered. 
    */
-  public NotificationMessage(PostClientAddress clientAddress, PostUserAddress sender, PostEntityAddress destination) {
+  public NotificationMessage(PostClientAddress clientAddress, PostEntityAddress sender, PostEntityAddress destination) {
     super(sender);
     this.clientAddress = clientAddress;
     this.destination = destination;

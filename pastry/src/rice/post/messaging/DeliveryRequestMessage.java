@@ -23,7 +23,7 @@ public class DeliveryRequestMessage extends PostMessage {
    * @param destination The destination address to deliver the notification to
    * @param message The message to deliver, in encrypted state
    */
-  public DeliveryRequestMessage(PostUserAddress sender, 
+  public DeliveryRequestMessage(PostEntityAddress sender, 
                                 PostUserAddress destination, 
                                 EncryptedNotificationMessage message) {
     super(sender);

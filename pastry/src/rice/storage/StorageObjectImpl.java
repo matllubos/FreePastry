@@ -1,10 +1,9 @@
 package rice.storage;
 
+import java.io.*;
+
 import rice.pastry.security.Credentials;
 import rice.pastry.NodeId;
-
-import ObjectWeb.Persistence.Persistable;
-import ObjectWeb.Persistence.PersistenceID;
 
 import java.util.Vector;
 import java.io.Serializable;
@@ -19,8 +18,9 @@ import java.io.Serializable;
  * @version $Id$
  * @author Charles Reis
  */
-public class StorageObjectImpl implements StorageObject, Persistable, Serializable {
-  private final Persistable _original;
+public class StorageObjectImpl implements StorageObject, Serializable {
+  
+  private final Serializable _original;
   private final Credentials _authorCred;
   private final Vector _updates;
   private final Vector _updateCredentials;
@@ -31,7 +31,7 @@ public class StorageObjectImpl implements StorageObject, Persistable, Serializab
    * @param original The persistable object to store
    * @param cred Credentials of the author of the original object
    */
-  public StorageObjectImpl(Persistable original, Credentials cred) {
+  public StorageObjectImpl(Serializable original, Credentials cred) {
     _original = original;
     _authorCred = cred;
     _updates = new Vector();
@@ -41,7 +41,7 @@ public class StorageObjectImpl implements StorageObject, Persistable, Serializab
   /**
    * Returns the original Persistable object.
    */
-  public Persistable getOriginal() {
+  public Serializable getOriginal() {
     return _original;
   }
   
@@ -77,10 +77,10 @@ public class StorageObjectImpl implements StorageObject, Persistable, Serializab
   
   
   /**
-   * Returns a Vector with the original Persistable object in the first position,
-   * followed by all Persistable updates.  Purely a convenience method.
+   * Returns a Vector with the original Serializable object in the first position,
+   * followed by all Serializable updates.  Purely a convenience method.
    */
-  public Vector getAllPersistables() {
+  public Vector getAllUpdates() {
     Vector all = new Vector();
     all.add(_original);
     all.addAll(_updates);
@@ -105,36 +105,8 @@ public class StorageObjectImpl implements StorageObject, Persistable, Serializab
    * @param update Persistable update to the original
    * @param authorCred Credentials of author of update
    */
-  public void addUpdate(Persistable update, Credentials authorCred) {
+  public void addUpdate(Serializable update, Credentials authorCred) {
     _updates.add(update);
     _updateCredentials.add(authorCred);
   }
-  
-  
-  // ---------- Persistable Methods ---------
-
-  /**
-   * Returns the Object's own credentials.
-   *
-   * @return The objects's credential object
-   */
-  public ObjectWeb.Security.Credentials getCredentials() {
-    return _original.getCredentials();
-  }
-
-  
-  /**
-   * Called by the <code>PersistenceManager</code> in the context of the
-   * <code>recoverPersistentObjects</code> method just after an object was
-   * recovered. Passes the object's new <code>PersistanceID</code> object as an
-   * argument.
-   *
-   * <p> The object can use this pid to access any <code>PersistentStorage</code>
-   * objects it may own.
-   *
-   * @param pid The object's new <code>PersistenceID</code>
-   */
-  public void reActivate(PersistenceID pid) {
-  }
-  
 }

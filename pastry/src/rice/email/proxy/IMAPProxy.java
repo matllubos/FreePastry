@@ -114,11 +114,13 @@ public class IMAPProxy {
       // Subject field
       message.setSubject(email.getSubject());
 
+      // TO DO: Handle groups
+      
       // Recipients
-      PostUserAddress[] recips = email.getRecipientUsers();
+      PostEntityAddress[] recips = email.getRecipients();
       Address[] container = new Address[1];
       for (int i = 0; i < recips.length; i++) {
-	  container[0] = new InternetAddress(toInetEmail(recips[i]));
+	  container[0] = new InternetAddress(toInetEmail((PostUserAddress) recips[i]));
 	  message.addRecipients(Message.RecipientType.TO, container);
       }
 

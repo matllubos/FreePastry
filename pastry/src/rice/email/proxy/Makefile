@@ -2,7 +2,8 @@ PACKAGE = rice.email.proxy
 
 SOURCE  = \
 	IMAPProxy.java \
-	SMTPProxy.java
+	SMTPProxy.java \
+	SMTPDaemon.java
 
 RMI_SOURCE =
 

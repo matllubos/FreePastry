@@ -1,6 +1,7 @@
 package rice.post;
 
 import java.security.*;
+import java.io.*;
 
 import rice.pastry.*;
 
@@ -12,7 +13,7 @@ import rice.pastry.*;
  * 
  * @version $Id$
  */
-public abstract class PostEntityAddress {
+public abstract class PostEntityAddress implements Serializable {
 
   /**
    * Constructor

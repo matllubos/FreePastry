@@ -10,8 +10,7 @@ import rice.pastry.routing.*;
 
 import rice.storage.*;
 
-import ObjectWeb.Persistence.*;
-
+import java.io.*;
 import java.util.Hashtable;
 
 /**
@@ -242,11 +241,11 @@ public class PASTServiceImpl
    * Inserts a file into the remote PAST storage system, using the given
    * file ID.
    * @param id Pastry key identifying this object
-   * @param obj Persistable object to be stored
+   * @param obj Serializable object to be stored
    * @param authorCred Author's credentials
    * @return true if store succeeds, false otherwise
    */
-  public boolean insert(NodeId id, Persistable obj, Credentials authorCred) {
+  public boolean insert(NodeId id, Serializable obj, Credentials authorCred) {
     NodeId nodeId = _pastryNode.getNodeId();
     debug("Insert request for file " + id + " at node " + nodeId);
     MessageInsert request = new MessageInsert(nodeId, id, obj, authorCred);
@@ -262,11 +261,11 @@ public class PASTServiceImpl
   /**
    * Appends an update to an existing object in the remote PAST storage system.
    * @param id Pastry key of original object to be updated
-   * @param update Persistable update to the original object
+   * @param update Serializable update to the original object
    * @param authorCred Update Author's credentials
    * @return true if update was successful, false if no object was found
    */
-  public boolean update(NodeId id, Persistable update, Credentials authorCred) {
+  public boolean update(NodeId id, Serializable update, Credentials authorCred) {
     NodeId nodeId = _pastryNode.getNodeId();
     debug("Request to append to file " + id + " at node " + nodeId);
     MessageAppend request = new MessageAppend(nodeId, id, update, authorCred);

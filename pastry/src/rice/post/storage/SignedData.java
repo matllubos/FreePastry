@@ -4,8 +4,6 @@ import java.io.*;
 import java.security.*;
 
 import rice.pastry.*;
-import ObjectWeb.Security.*;
-import ObjectWeb.Persistence.*;
 
 /**
  * This class is used internally by the storage package to
@@ -13,7 +11,7 @@ import ObjectWeb.Persistence.*;
  * 
  * @version $Id$
  */
-class SignedData implements Serializable, Persistable {
+class SignedData implements Serializable {
 
   /**
    * The data being stored.
@@ -29,11 +27,6 @@ class SignedData implements Serializable, Persistable {
    * The signature used to sign the data.
    */
   private byte[] signature;
-
-  /**
-   * Credentials of the data.
-   */
-  private Credentials credentials;
   
   /**
    * Builds a SignedData for a byte array given a timestamp.
@@ -45,11 +38,10 @@ class SignedData implements Serializable, Persistable {
    * @param signature The signature for this data
    * @param credentials Credentials of the data
    */
-  public SignedData(byte[] data, byte[] timestamp, byte[] signature, Credentials credentials) {
+  public SignedData(byte[] data, byte[] timestamp, byte[] signature) {
     this.data = data;
     this.timestamp = timestamp;
     this.signature = signature;
-    this.credentials = credentials;
   }
 
   /**
@@ -71,19 +63,5 @@ class SignedData implements Serializable, Persistable {
    */
   public byte[] getSignature() {
     return signature;
-  }
-
-  /**
-   * @return Credentials of the data
-   */
-  public Credentials getCredentials() {
-    return credentials;
-  }
-
-  /**
-   * Called when this object is recovered from persistent store, allowing
-   * it to recover any objects it may know about.
-   */
-  public void reActivate(PersistenceID id) {
   }
 }

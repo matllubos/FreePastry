@@ -8,8 +8,6 @@ import rice.pastry.NodeId;
 import rice.pastry.messaging.Message;
 import rice.pastry.security.Credentials;
 
-import ObjectWeb.Persistence.Persistable;
-
 import java.util.Random;
 import java.io.*;
 

@@ -39,7 +39,7 @@ public class Post extends PastryAppl implements IScribeApp  {
   /**
    * The address of the local user.
    */
-  private PostUserAddress address;
+  private PostEntityAddress address;
   
   
   // --- PASTRY SUPPORT ---
@@ -130,7 +130,7 @@ public class Post extends PastryAppl implements IScribeApp  {
   public Post(PastryNode node, 
               PASTService past, 
               IScribe scribe,
-              PostUserAddress address,
+              PostEntityAddress address,
               KeyPair keyPair,
               java.security.cert.Certificate cert, 
               PublicKey caPublicKey)
@@ -162,6 +162,13 @@ public class Post extends PastryAppl implements IScribeApp  {
    */
   public Address getAddress() {
     return PostAddress.instance();
+  }
+
+  /**
+    * @return The PostEntityAddress of the local user.
+   */
+  public PostEntityAddress getEntityAddress() {
+    return address;
   }
   
   /**
@@ -320,7 +327,7 @@ public class Post extends PastryAppl implements IScribeApp  {
       return;
     }
     
-    PostUserAddress sender = nm.getSender();
+    PostEntityAddress sender = nm.getSender();
     PostLog senderLog = null;
 
     try {
@@ -360,7 +367,7 @@ public class Post extends PastryAppl implements IScribeApp  {
    */
   private void handleRecieptMessage(ReceiptMessage message) {
     EncryptedNotificationMessage enm = message.getEncryptedNotificationMessage();
-    PostUserAddress sender = message.getSender();
+    PostEntityAddress sender = message.getSender();
 
     // remove message
     synchronized (bufferedData) {
@@ -385,6 +392,11 @@ public class Post extends PastryAppl implements IScribeApp  {
     try {
       SignedReference logRef = new SignedReference(entity.getAddress());
       PostLog postLog = (PostLog) storage.retrieveSigned(logRef);
+
+      if (postLog == null) {
+        return null;
+      }
+      
       if (security.verifyCertificate(postLog.getEntityAddress(),
                                      postLog.getPublicKey(),
                                      postLog.getCertificate())) {
@@ -417,17 +429,19 @@ public class Post extends PastryAppl implements IScribeApp  {
       this.log = postLog;
     }
     catch (StorageException se) {
-      throw new PostException("Could not access PostLog: " + se);
+      se.printStackTrace();
+      throw new PostException("Could not access PostLog: " + se + " " + se.getMessage());
     }
   }
   
   /**
-   * @return The local storage service for POST, which writes data securely
-   * to PAST.
+   * This method returns the local storage service.
+   *
+   * @return The storage service.
    */
   public StorageService getStorageService() {
     return storage;
-  }    
+  }	    
   
   /**
    * Registers a client with this Post 

@@ -1,9 +1,10 @@
-package rice.post.storage;
+package rice.email;
 
 import java.security.*;
 
 import rice.pastry.*;
 import rice.past.*;
+import rice.post.storage.*;
 
 /**
  * This class serves as a reference to a PostObject
@@ -11,7 +12,7 @@ import rice.past.*;
  * location in the network and the encryption key of the
  * corresponding PostData object.
  */
-public class EmailDataReference extends ContentHashReference{
+public class EmailDataReference extends ContentHashReference {
 
   /**
    * Contructs an EmailDataReference object given
