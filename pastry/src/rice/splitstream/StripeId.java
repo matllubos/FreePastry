@@ -11,7 +11,7 @@ import rice.pastry.*;
  * @version $Id$
  * @author Ansley Post
  */
-public class StripeId extends NodeId{
+public class StripeId extends NodeId {
 
  /**
   * Constructor that takes in a nodeId and makes a StripeId
@@ -19,4 +19,5 @@ public class StripeId extends NodeId{
  public StripeId(NodeId node){
   super(node.copy());
  }	
+
 }

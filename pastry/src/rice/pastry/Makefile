@@ -1,6 +1,8 @@
 PACKAGE = rice.pastry
 
 SOURCE  = \
+	Id.java\
+	IdSet.java \
 	NodeId.java\
 	NodeIdFactory.java\
 	NodeHandle.java\
@@ -14,8 +16,6 @@ SOURCE  = \
 	Log.java \
 	PastrySeed.java\
 	ScheduledMessage.java
-
-#	NodeIdI.java
 
 RMI_SOURCE =
 

@@ -269,8 +269,8 @@ public class NodeIdUnit {
 	for (int b=2; b<7; b++) 
 	    for (int row=nid.nodeIdBitLength/b-1; row >=0; row--)
 		for (int col=0; col<(1 << b); col++) {
-		    NodeId domainFirst = nid.getDomainPrefix(row,col,0,b);
-		    NodeId domainLast = nid.getDomainPrefix(row,col,-1,b);
+		    Id domainFirst = nid.getDomainPrefix(row,col,0,b);
+		    Id domainLast = nid.getDomainPrefix(row,col,-1,b);
 		    System.out.println("prefixes " + nid + domainFirst + domainLast);
 		    int cmp = domainFirst.compareTo(domainLast);
 		    boolean equal = domainFirst.equals(domainLast);

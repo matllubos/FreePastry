@@ -171,7 +171,7 @@ public class Channel implements IScribeApp {
 	System.out.println("DEBUG ::Creating "+numStripes+" number of stripes ");
         NodeId baseId = scribe.generateTopicId(name + "STRIPES");
 	for(int i = 0; i < this.numStripes; i++){
-	    StripeId stripeId = new StripeId(baseId.getAlternateId(numStripes, 4, i)); 
+	    StripeId stripeId = new StripeId((NodeId)baseId.getAlternateId(numStripes, 4, i)); 
 	    Stripe stripe = new Stripe(stripeId, this, scribe,cred,true);
 	    stripeIdTable.put(stripeId, stripe);
 	    System.out.println("DEBUG ::Created stripe "+stripeId);

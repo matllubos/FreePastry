@@ -36,58 +36,105 @@ if advised of the possibility of such damage.
 
 package rice.pastry;
 
-import java.lang.Comparable;
-import java.io.*;
 import java.util.*;
 
 /**
- * Represents a Pastry identifier for a node.
- *
+ * Represents a set of Pastry ids.
+ * *
  * @version $Id$
  *
  * @author Peter Druschel
  */
 
-public class NodeId extends Id 
-{
-    /**
-     * This is the bit length of the node ids.  If it is n, then
-     * there are 2^n different Pastry nodes.  We currently assume
-     * that it is divisible by 32.
-     */
-    public final static int nodeIdBitLength = IdBitLength;
+public class IdSet {
 
+    private SortedSet idSet;
 
     /**
      * Constructor.
-     *
-     * @param material an array of length at least IdBitLength/8 containing raw Id material.
      */
-    public NodeId(byte material[]) 
-    {
-	super(material);
+    public IdSet() {
+	idSet = new TreeSet();
     }
 
     /**
-     * Constructor.
-     *
-     * @param material an array of length at least IdBitLength/32 containing raw Id material.
+     * Copy constructor.
      */
-    public NodeId(int material[]) 
-    {
-	super(material);
+    public IdSet(IdSet o) {
+	idSet = new TreeSet(idSet);
     }
 
     /**
-     * Constructor.
-     *
-     * It constructs a new Id with a value of 0 for all bits.
+     * return the number of elements
+     */ 
+    public int numElements() {
+	return idSet.size();
+    }
+
+    /**
+     * add a member
+     * @param id the id to add
+     */ 
+    public void addMember(Id id) {
+	idSet.add(id);
+    }
+
+    /**
+     * remove a member
+     * @param id the id to remove
+     */ 
+    public void removeMember(Id id) {
+	idSet.remove(id);
+    }
+
+    /**
+     * test membership
+     * @param id the id to test
+     * @return true of id is a member, false otherwise
+     */ 
+    public boolean isMember(Id id) {
+	return idSet.contains(id);
+    }
+
+    /**
+     * return the smallest member id
+     * @return the smallest id in the set
+     */ 
+    public Id minMember() {
+	return (Id) idSet.first();
+    }
+
+    /**
+     * return the largest member id
+     * @return the largest id in the set
+     */ 
+    public Id maxMember() {
+	return (Id) idSet.last();
+    }
+
+    /**
+     * return a subset of this set, consisting of the member ids in a given range
+     * @param from the lower end of the range (inclusive)
+     * @param to the upper end of the range (exclusive)
+     * @return the subset
+     */ 
+    IdSet subSet(Id from, Id to) {
+	IdSet res = new IdSet();
+
+	res.idSet = idSet.subSet(from, to);
+	return res;
+    }
+
+    /**
+     * return an iterator that iterates over the elements of this set
+     * @return the interator
      */
-    public NodeId() 
-    {
-	super();
+    Iterator getIterator() {
+	return idSet.iterator();
     }
 
 }
+
+
 
 

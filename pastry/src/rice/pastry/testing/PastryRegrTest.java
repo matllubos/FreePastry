@@ -354,8 +354,8 @@ public abstract class PastryRegrTest {
 
 		RouteSet rs = rt.getRouteSet(i,j);
 
-		NodeId domainFirst = rta.getNodeId().getDomainPrefix(i,j,0,rt.baseBitLength());
-		NodeId domainLast = rta.getNodeId().getDomainPrefix(i,j,-1,rt.baseBitLength());
+		Id domainFirst = rta.getNodeId().getDomainPrefix(i,j,0,rt.baseBitLength());
+		Id domainLast = rta.getNodeId().getDomainPrefix(i,j,-1,rt.baseBitLength());
 		//System.out.println("prefixes " + rta.getNodeId() + domainFirst + domainLast 
 		//	   + "compareTo=" + domainFirst.compareTo(domainLast));
 
