@@ -419,7 +419,8 @@ public class SocketManager implements SelectionKeyHandler {
         enableWrite(false);
         // since we're done, remove this entry
         connectors.remove(key);
-        key.attach(null);
+        key.attach(new StaleSKH());
+        //key.cancel();
       }
     }
 
