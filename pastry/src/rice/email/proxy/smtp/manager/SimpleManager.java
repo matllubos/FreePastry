@@ -16,7 +16,7 @@ import rice.email.proxy.mailbox.postbox.*;
 public class SimpleManager implements SmtpManager {
 
   public static int MAX_SIZE = 8000000;
-  public static String[] POST_HOST = new String[] {"dosa.cs.rice.edu", ".epostmail.org"};
+  public static String[] POST_HOST = new String[] {"dosa.cs.rice.edu", "thor05.cs.rice.edu", ".epostmail.org"};
   public static String SMTP_HOST = "moe.rice.edu";
 
   private boolean gateway;
