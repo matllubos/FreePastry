@@ -1,18 +1,28 @@
 package rice.p2p.glacier;
 
-import java.io.Serializable;
+import java.io.*;
 
-/**
- * DESCRIBE THE CLASS
- *
- * @version $Id$
- * @author ahae
- */
 public class Fragment implements Serializable {
-  public byte payload[];
+  protected transient byte payload[];
 
   public Fragment(int _size) {
     payload = new byte[_size];
+  }
+  
+  public byte[] getPayload() {
+    return payload;
+  }
+  
+  private void writeObject(ObjectOutputStream oos) throws IOException {
+    oos.defaultWriteObject();
+    oos.writeInt(payload.length);
+    oos.write(payload);
+  }
+  
+  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    ois.defaultReadObject();
+    payload = new byte[ois.readInt()];
+    ois.readFully(payload, 0, payload.length);
   }
 }
 
