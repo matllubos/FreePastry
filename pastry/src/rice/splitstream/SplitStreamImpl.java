@@ -223,8 +223,8 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
        
        
        if(nodeData!=null){
-           System.out.println("Channel Data Recieved Filling MetaData");
-           System.out.println(nodeData.length); 
+           //System.out.println("Channel Data Recieved Filling MetaData");
+           //System.out.println(nodeData.length); 
 	   /* Clean This up */
 	   StripeId[] stripeId = new StripeId[nodeData.length - 2];
 	   ChannelId channelId = new ChannelId(nodeData[0]);
@@ -242,7 +242,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 	       channel = new Channel(channelId, stripeId, spareCapacityId, scribe, bandwidthManager, this);
 	       channels.put(channelId, channel);
 	   }
-           else{
+           else if(channel.getSpareCapacityId() == null){
                channel.setStripes(stripeId);
                channel.setSpareCapacityId(spareCapacityId);
            }
@@ -256,7 +256,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 	   if(!((NodeId)channelId).equals(topicId)){
 	       Vector subscribedStripes = channel.getSubscribedStripes();
 	       if(!channel.stripeAlreadySubscribed((StripeId)topicId)){
-                   System.out.println(channel);
+                   //System.out.println(channel);
 		   Stripe stripe = channel.getStripe((StripeId)topicId);
 		   if(wasAdded){
 		       if(bandwidthManager.canTakeChild(channel)){

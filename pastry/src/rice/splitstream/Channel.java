@@ -338,7 +338,12 @@ public class Channel implements IScribeApp {
 	}
 	return (temp);
     }
-
+   
+    /**
+     * setStripes allows the setting of stripe data
+     * 
+     * @param s the data to be used
+     */
     public void setStripes( StripeId[] s){
         for(int i = 0; i < s.length; i++){
 	  Stripe stripe = new Stripe(s[i], this, scribe,cred,true);
@@ -349,6 +354,11 @@ public class Channel implements IScribeApp {
         }
     }
 
+    /**
+     * setSpareCapacityId allows the setting of spareCapacityId 
+     * 
+     * @param spareCapacityId the data to be used
+     */
     public void setSpareCapacityId(SpareCapacityId spareCapacityId){
       this.spareCapacityId = spareCapacityId;
     }
