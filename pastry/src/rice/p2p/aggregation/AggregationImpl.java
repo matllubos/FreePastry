@@ -1076,14 +1076,19 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         break;
       
       while (iter.hasNext()) {
-        thisObject = (ObjectDescriptor) waitingList.getMetadata((Id) iter.next());
-        if (((currentAggregateSize + thisObject.size) <= maxAggregateSize) && (currentObjectsInAggregate < maxObjectsInAggregate)) {
-          currentAggregateSize += thisObject.size;
-          currentObjectsInAggregate ++;
-          currentAggregate.add(thisObject);
+        Id thisId = (Id) iter.next();
+        thisObject = (ObjectDescriptor) waitingList.getMetadata(thisId);
+        if (thisObject != null) {
+          if (((currentAggregateSize + thisObject.size) <= maxAggregateSize) && (currentObjectsInAggregate < maxObjectsInAggregate)) {
+            currentAggregateSize += thisObject.size;
+            currentObjectsInAggregate ++;
+            currentAggregate.add(thisObject);
+          } else {
+            mustAddObject = true;
+            break;
+          }
         } else {
-          mustAddObject = true;
-          break;
+          warn("Metadata in waiting object "+thisId.toStringFull()+" appears to be damaged -- suggest deletion");
         }
       }
       
