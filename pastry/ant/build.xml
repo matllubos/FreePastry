@@ -20,11 +20,11 @@
                  pathsep="${path.separator}" />
   </target>
 
-  <target name="beautify">
+  <target name="beautify" depends="compile">
     <taskdef name="pretty" classname="org.acm.seguin.ant.Pretty" classpath="${ant-lib}/jrefactory.jar:${ant-lib}/JRefactoryModule.jar:${ant-lib}/JavaStyle.jar" />
 
     <pretty settingsDir="." cvs="true">      
-      <fileset dir="."> 
+      <fileset dir="${src}"> 
         <include name="**/*.java" />      
       </fileset>    
     </pretty>  
