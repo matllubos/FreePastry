@@ -6,7 +6,10 @@ SOURCE  = \
 	ChannelUnitTest.java \
 	SplitStreamUnitTest.java \
 	DirectSplitStreamTest.java \
-	DirectSplitStreamTestApp.java
+	DirectSplitStreamTestApp.java \
+	DistSplitStreamTest.java \
+	DistSplitStreamTestApp.java \
+	DistSplitStreamTestMessage.java
 
 
 RMI_SOURCE =
