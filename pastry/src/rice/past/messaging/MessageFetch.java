@@ -36,55 +36,47 @@ if advised of the possibility of such damage.
 
 package rice.past.messaging;
 
-import rice.pastry.messaging.Address;
+import rice.*;
+
+import rice.past.*;
+
+import rice.pastry.*;
+import rice.pastry.messaging.*;
+import rice.pastry.security.Credentials;
+
+import java.util.Random;
+import java.io.*;
 
 /**
- * @(#) PASTAddress.java
+* @(#) MessageFetch.java
  *
- * The application address for PAST.
- * This class follows the Singleton pattern.
+ * PASTMessage requesting a file be retrieved for a replica node.
  *
  * @version $Id$
- * @author Charles Reis
+ * @author Alan Mislove
  */
-public class PASTAddress implements Address {
+public class MessageFetch extends MessageLookup {
 
   /**
-   * The only instance of PASTAddress ever created.
+   * Builds a new request to fetch an existing file.
+   * @param nodeId Source Pastry node's ID
+   * @param fileId Pastry key of desired file
    */
-  private static PASTAddress _instance;
-
-  /**
-   * Code representing address.
-   */
-  private int _code = 0xcfb32a5d;
-
-  /**
-   * Returns the single instance of PASTAddress.
-   */
-  public static PASTAddress instance() {
-    if(null == _instance) {
-      _instance = new PASTAddress();
-    } 
-    return _instance;
+  public MessageFetch(Address address, NodeId nodeId, Id fileId) {
+    super(address, nodeId, fileId);
   }
 
   /**
-   * Private constructor for singleton pattern.
+   * Display this message.
    */
-  private PASTAddress() {}
-
-  /**
-   * Returns the code representing the address.
-   */
-  public int hashCode() { return _code; }
-  
-  /**
-   * Determines if another object is equal to this one.
-   * Simply checks if it is an instance of PASTAddress
-   * since there is only one instance ever created.
-   */
-  public boolean equals(Object obj) {
-    return (obj instanceof PASTAddress);
+  public String toString() {
+    String val = "FETCH ";
+    if (getType() == REQUEST) {
+      val += "Request: ";
+    }
+    else {
+      val += "Response: ";
+    }
+    return val + getFileId();
   }
 }

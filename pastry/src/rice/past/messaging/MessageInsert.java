@@ -40,8 +40,8 @@ import rice.*;
 
 import rice.past.*;
 
-import rice.pastry.NodeId;
-import rice.pastry.messaging.Message;
+import rice.pastry.*;
+import rice.pastry.messaging.*;
 import rice.pastry.security.Credentials;
 
 import java.util.Random;
@@ -79,11 +79,12 @@ public class MessageInsert extends PASTMessage {
    * @param update File to be stored
    * @param authorCred Credentials of the author of the file
    */
-  public MessageInsert(NodeId nodeId, 
-                       NodeId fileId, 
+  public MessageInsert(Address address, 
+                       NodeId nodeId, 
+                       Id fileId, 
                        Serializable file, 
                        Credentials authorCred) {
-    super(nodeId, fileId);
+    super(address, nodeId, fileId);
     _file = file;
     _cred = authorCred;
   }

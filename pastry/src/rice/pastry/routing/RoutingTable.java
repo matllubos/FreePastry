@@ -135,7 +135,7 @@ public class RoutingTable extends Observable implements Observer {
      * @return a nodeHandle of a numerically closer node, relative to the key
      */
 
-    public NodeHandle bestAlternateRoute(NodeId key)
+    public NodeHandle bestAlternateRoute(Id key)
     {
 	final int cols = 1 << idBaseBitLength;
 	int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
@@ -249,7 +249,7 @@ public class RoutingTable extends Observable implements Observer {
      * @return a read-only set of possible handles, or null if none are known
      */
     
-    public RouteSet getBestEntry(NodeId key) 
+    public RouteSet getBestEntry(Id key) 
     {
 	int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
 	if (diffDigit < 0) return null;
@@ -267,7 +267,7 @@ public class RoutingTable extends Observable implements Observer {
      * @return a read-only set of possible handles
      */
     
-    private RouteSet makeBestEntry(NodeId key) 
+    private RouteSet makeBestEntry(Id key) 
     {
 	int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
 	if (diffDigit < 0) return null;

@@ -97,10 +97,14 @@ public class CachingManager extends PastryAppl {
    * @param obj The resulting object
    */
   public void cache(CacheLookupMessage message, NodeId id, Object obj) {
-    NodeHandle dest = message.getPreviousNode();
-    CachingManagerMessage cmsg = new CachingManagerMessage(address, id, obj);
+    NodeHandle[] hops = message.getHops();
 
-    routeMsgDirect(dest, cmsg, credentials, null);
+    if (hops.length > 1) {
+      NodeHandle dest = hops[hops.length-2];
+      CachingManagerMessage cmsg = new CachingManagerMessage(address, id, obj);
+
+      routeMsgDirect(dest, cmsg, credentials, null);
+    }
   }
 
   /**

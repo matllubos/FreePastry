@@ -38,8 +38,8 @@ package rice.past.messaging;
 
 import rice.past.*;
 
-import rice.pastry.NodeId;
-import rice.pastry.messaging.Message;
+import rice.pastry.*;
+import rice.pastry.messaging.*;
 
 import java.util.Random;
 import java.io.*;
@@ -74,7 +74,7 @@ public abstract class PASTMessage extends Message implements Serializable {
   /**
    * The fileId of the file, to be used as destination.
    */
-  protected NodeId _fileId;
+  protected Id _fileId;
   
   /**
    * Constructor
@@ -82,8 +82,8 @@ public abstract class PASTMessage extends Message implements Serializable {
    * @param fileId NodeId of file (destination node)
    * @param messageType whether this is a request or a response
    */
-  public PASTMessage(NodeId source, NodeId fileId, int messageType) {
-    super(PASTAddress.instance());
+  public PASTMessage(Address address, NodeId source, Id fileId, int messageType) {
+    super(address);
     _messageID = new PASTMessageIDImpl();
     _messageType = messageType;
     _fileId = fileId;
@@ -95,8 +95,8 @@ public abstract class PASTMessage extends Message implements Serializable {
    * @param source NodeId of source Pastry node
    * @param fileId NodeId of file (destination node)
    */
-  public PASTMessage(NodeId source, NodeId fileId) {
-    this(source, fileId, REQUEST);
+  public PASTMessage(Address address, NodeId source, Id fileId) {
+    this(address, source, fileId, REQUEST);
   }
   
   /**
@@ -139,7 +139,7 @@ public abstract class PASTMessage extends Message implements Serializable {
   /**
    * Gets the fileId for this file, which is used as the destination.
    */
-  public NodeId getFileId() {
+  public Id getFileId() {
     return _fileId;
   }
   

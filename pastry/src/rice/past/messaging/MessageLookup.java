@@ -40,8 +40,8 @@ import rice.*;
 
 import rice.past.*;
 
-import rice.pastry.NodeId;
-import rice.pastry.messaging.Message;
+import rice.pastry.*;
+import rice.pastry.messaging.*;
 import rice.pastry.security.Credentials;
 
 import java.util.Random;
@@ -67,8 +67,8 @@ public class MessageLookup extends PASTMessage {
    * @param nodeId Source Pastry node's ID
    * @param fileId Pastry key of desired file
    */
-  public MessageLookup(NodeId nodeId, NodeId fileId) {
-    super(nodeId, fileId);
+  public MessageLookup(Address address, NodeId nodeId, Id fileId) {
+    super(address, nodeId, fileId);
   }
   
   /**

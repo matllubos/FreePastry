@@ -40,8 +40,8 @@ import rice.*;
 
 import rice.past.*;
 
-import rice.pastry.NodeId;
-import rice.pastry.messaging.Message;
+import rice.pastry.*;
+import rice.pastry.messaging.*;
 import rice.pastry.security.Credentials;
 
 import java.util.Random;
@@ -74,8 +74,8 @@ public class MessageReclaim extends PASTMessage {
    * @param fileId Pastry key of desired file
    * @param cred Credentials of user requesting the reclaim
    */
-  public MessageReclaim(NodeId nodeId, NodeId fileId, Credentials cred) {
-    super(nodeId, fileId);
+  public MessageReclaim(Address address, NodeId nodeId, Id fileId, Credentials cred) {
+    super(address, nodeId, fileId);
     _cred = cred;
   }
   

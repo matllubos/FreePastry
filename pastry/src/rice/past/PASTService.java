@@ -39,7 +39,7 @@ package rice.past;
 import java.io.Serializable;
 
 import rice.*;
-import rice.pastry.NodeId;
+import rice.pastry.*;
 import rice.pastry.security.Credentials;
 
 
@@ -68,7 +68,7 @@ public interface PASTService {
    * @param authorCred Author's credentials
    * @param command Command to be performed when the result is received
    */
-  public void insert(NodeId id, Serializable obj, Credentials authorCred,
+  public void insert(Id id, Serializable obj, Credentials authorCred,
                      Continuation command);
   
   /**
@@ -79,7 +79,7 @@ public interface PASTService {
    * @param id Pastry key of original object
    * @param command Command to be performed when the result is received
    */
-  public void lookup(NodeId id, Continuation command);
+  public void lookup(Id id, Continuation command);
   
   /**
    * Determines whether an object is currently stored at the given ID.
@@ -89,7 +89,7 @@ public interface PASTService {
    * @param id Pastry key of original object
    * @param command Command to be performed when the result is received
    */
-  public void exists(NodeId id, Continuation command);
+  public void exists(Id id, Continuation command);
   
   /**
    * Reclaims the storage used by the object with the given ID.
@@ -99,7 +99,7 @@ public interface PASTService {
    * @param id Pastry key of original object
    * @param authorCred Author's credentials
    */
-  public void delete(NodeId id, Credentials authorCred,
+  public void delete(Id id, Credentials authorCred,
                      Continuation command);
   
 }

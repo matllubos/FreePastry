@@ -48,7 +48,7 @@ import rice.rm.*;
 import rice.persistence.*;
 
 import java.io.*;
-import java.util.Hashtable;
+import java.util.*;
 
 /**
  * @(#) PASTServiceImpl.java
@@ -117,15 +117,14 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * @param pastry PastryNode to run on
    * @param storage The Storage object to use for storage and caching
    */
-  public PASTServiceImpl(PastryNode pastry, StorageManager storage) {
-    super(pastry);
+  public PASTServiceImpl(PastryNode pastry, StorageManager storage, String instance) {
+    super(pastry, instance);
     this.pastry = pastry;
     this.storage = storage;
     credentials = new PermissiveCredentials();
     sendOptions = new SendOptions();
     commandTable = new Hashtable();
-    replicationManager = new RMImpl(pastry);
-    replicationManager.register(this.getAddress(), this);
+    replicationManager = new RMImpl(pastry, this);
   }
 
   /**
@@ -147,15 +146,6 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
   }
   
   // ---------- PastryAppl Methods ----------
-  
-  /**
-   * Returns the address of this application.
-   *
-   * @return the address.
-   */
-  public Address getAddress() {
-    return PASTAddress.instance();
-  }
   
   /**
    * Returns the credentials of this application.
@@ -245,12 +235,12 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * @param authorCred Author's credentials
    * @param command Command to be performed when the result is received
    */
-  public void insert(NodeId id, Serializable obj, Credentials authorCred,
+  public void insert(Id id, Serializable obj, Credentials authorCred,
                      final Continuation command)
   {
     NodeId nodeId = pastry.getNodeId();
     debug("Insert request for file " + id + " at node " + nodeId);
-    MessageInsert request = new MessageInsert(nodeId, id, obj, authorCred);
+    MessageInsert request = new MessageInsert(getAddress(), nodeId, id, obj, authorCred);
     
     // Send the request
     _sendRequestMessage(request, new Continuation() {
@@ -279,7 +269,6 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
         command.receiveException(result);
       }
     });
-    replicationManager.replicate(getAddress(), id, obj, REPLICATION_FACTOR - 1);
   }
     
   /**
@@ -290,10 +279,10 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * @param id Pastry key of original object
    * @param command Command to be performed when the result is received
    */
-  public void lookup(NodeId id, final Continuation command) {
+  public void lookup(Id id, final Continuation command) {
     NodeId nodeId = pastry.getNodeId();
     debug("Request to look up file " + id + " at node " + nodeId);
-    MessageLookup request = new MessageLookup(nodeId, id);
+    MessageLookup request = new MessageLookup(getAddress(), nodeId, id);
     
     // Send the request
     _sendRequestMessage(request, new Continuation() {
@@ -325,10 +314,10 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * @param id Pastry key of original object
    * @param command Command to be performed when the result is received
    */
-  public void exists(NodeId id, final Continuation command) {
+  public void exists(Id id, final Continuation command) {
     NodeId nodeId = pastry.getNodeId();
     debug("Request to determine if file " + id + " exists, at node " + nodeId);
-    MessageExists request = new MessageExists(nodeId, id);
+    MessageExists request = new MessageExists(getAddress(), nodeId, id);
     
     // Send the request
     _sendRequestMessage(request, new Continuation() {
@@ -361,12 +350,12 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
    * @param id Pastry key of original object
    * @param authorCred Author's credentials
    */
-  public void delete(NodeId id, Credentials authorCred,
+  public void delete(Id id, Credentials authorCred,
                      final Continuation command) {
     NodeId nodeId = pastry.getNodeId();
     System.out.println("Deleting the file with ID: " + id);
     MessageReclaim request = 
-      new MessageReclaim(pastry.getNodeId(), id, authorCred);
+      new MessageReclaim(getAddress(), pastry.getNodeId(), id, authorCred);
     
     // Send the request
     _sendRequestMessage(request, new Continuation() {
@@ -389,76 +378,109 @@ public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient
         command.receiveException(result);
       }
     });
-    replicationManager.remove(getAddress(), id, REPLICATION_FACTOR - 1);
+  }
+
+  /**
+   * Fetchs the given object and inserts it into the storage.  This method is designed
+   * to be called by PAST itself in order to get objects which it is a replica for.
+   *
+   * @param id Pastry key of original object
+   */
+  private void fetch(final Id id) {
+    NodeId nodeId = pastry.getNodeId();
+    debug("Request to fetch up file " + id + " at node " + nodeId);
+    MessageFetch request = new MessageFetch(getAddress(), nodeId, id);
+
+    // Send the request
+    _sendRequestMessage(request, new Continuation() {
+      public void receiveResult(final Object result) {
+        storage.store(id, ((MessageFetch)result).getContent(), new Continuation() {
+          public void receiveResult(Object o) {
+            if (! o.equals(new Boolean(true))) {
+              System.out.println("Storage of object " + result + " failed!");
+            }
+          }
+
+          public void receiveException(Exception e) {
+            System.out.println("ERROR - Exception " + e + " occurred during storage of fetched object " + result);
+          }
+        });
+      }
+
+      public void receiveException(Exception result) {
+        System.out.println("ERROR - Exception " + result + " occurred during fetching.");
+      }
+    });
   }
 
  // ---------- RMClient Methods ----------
 
- /* This upcall is invoked by the Replica Manager to notify the application 
-  * that it is responsible for the object with this particular objectKey. It
-  * is the duty of the application to decide what action to take. For instance,
-  * in PAST, the application will need to store the file in it
-  * local storage unit.
-  *
-  * @param objectKey the object key of the object
-  * @param object the object
-  */
-  public void responsible(NodeId objectKey, Object object){
-
-       final Continuation insert = new Continuation(){
-         public void receiveResult(Object o){}
-         public void receiveException(Exception e){
-               e.printStackTrace();
-         }
-       };
-         
-       getStorage().store(objectKey, (Serializable) object, insert);
-  }
-
- /* This upcall is invoked by the Replica Manager to notify the application 
-  * that it is no longer responsible for the object with this particular
-  * objectKey. It is the duty of the application to decide what action to take.
-  * For instance, in PAST, the application will need to delete the file from
-  * its local storage unit.
-  *
-  * @param objectKey the object key of the object
-  */
-  public void notresponsible(NodeId objectKey){
-
-      final Continuation delete = new Continuation(){
-         public void receiveResult(Object o){}
-         public void receiveException(Exception e){
-               e.printStackTrace();
-         }
-       };
-         
-       getStorage().unstore(objectKey, delete);
-
-  }
- 
- /* This upcall is invoked by the Replica Manager to notify the application
-  * that it should continue to hold the object. If it was not holding the 
-  * object then the RMClient should treat this upcall as implicit notification
-  * that it is responsible and so should take steps to get the object. On the 
-  * other hand if the RMClient does not get this upcall for a long time(several 
-  * Timeperiods after, where it is assumed that the underlying RM layer is ASKED
-  * by the RMClient layer to send a  refresh in one timeperiod), then the
-  * application can get rid of the object.
-  */
-  public void refresh(NodeId objectKey){
-
-  }
-
- /* This upcall is simply to denote that the underlying replica manager
-  * is ready.
-  */
-  public void rmIsReady(){
-     System.out.println("Replica Manager is Ready");
-
-  }
-
-  public int getReplicationFactor(){
+  /* This upcall is used by the Replica Manager to get the
+    * replica factor to associate with itself.
+    */
+  public int getReplicaFactor() {
     return REPLICATION_FACTOR;
+  }
+
+  /**
+   * This upcall is invoked to notify the application that is should
+   * fetch the cooresponding keys in this set, since the node is now
+   * responsible for these keys also
+   */
+  public void fetch(IdSet keySet) {
+    Iterator i = keySet.getIterator();
+
+    while (i.hasNext()) {
+      fetch((Id) i.next());
+    }
+  }
+
+
+  /**
+   * This upcall is simply to denote that the underlying replica manager
+   * (rm) is ready.
+   */
+  public void rmIsReady(RM rm) {
+  }
+
+  /**
+   * This upcall is to notify the application of the range of keys for
+   * which it is responsible. The application might choose to react to
+   * call by calling a scan(complement of this range) to the persistance
+   * manager and get the keys for which it is not responsible and
+   * call delete on the persistance manager for those objects
+   */
+  public void isResponsible(IdRange range) {
+    IdRange notRange = range.complement();
+    final Iterator notIds = storage.scan(range).getIterator();
+
+    Continuation c = new Continuation() {
+      public void receiveResult(Object o) {
+        if (! o.equals(new Boolean(true))) {
+          System.out.println("Unstore of Id did not succeed!");
+        }
+
+        if (notIds.hasNext()) {
+          storage.unstore((Id) notIds.next(), this);
+        }
+      }
+
+      public void receiveException(Exception e) {
+        System.out.println("Exception " + e + " occurred during removal of objects.");
+      }
+    };
+
+    c.receiveResult(new Boolean(true));
+  }
+
+  /**
+   * This upcall should return the set of keys that the application
+   * currently stores in this range. Should return a empty IdSet (not null), in
+   * the case that no keys belong to this range
+   */
+  public IdSet scan(IdRange range) {
+    // pass throght to storage!
+    return null;
   }
   
  // ---------- Debug Methods ---------------   

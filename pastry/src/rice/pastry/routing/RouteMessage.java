@@ -54,7 +54,7 @@ import java.io.*;
  */
 
 public class RouteMessage extends Message implements Serializable, rice.p2p.commonapi.RouteMessage {
-    private NodeId target;
+    private Id target;
     private Message internalMsg;
 
     private NodeHandle prevNode;
@@ -70,7 +70,7 @@ public class RouteMessage extends Message implements Serializable, rice.p2p.comm
      * @param cred the credentials for the message.
      */
 
-    public RouteMessage(NodeId target, Message msg, Credentials cred) 
+    public RouteMessage(Id target, Message msg, Credentials cred) 
     {
 	super(new RouterAddress());
 	this.target = target;
@@ -89,7 +89,7 @@ public class RouteMessage extends Message implements Serializable, rice.p2p.comm
      * @param opts the send options for the message.
      */
 
-    public RouteMessage(NodeId target, Message msg, Credentials cred, SendOptions opts) 
+    public RouteMessage(Id target, Message msg, Credentials cred, SendOptions opts) 
     {
 	super(new RouterAddress());
 	this.target = target;
@@ -129,7 +129,7 @@ public class RouteMessage extends Message implements Serializable, rice.p2p.comm
      * @param aux an auxilary address which the message after each hop.
      */
 
-    public RouteMessage(NodeId target, Message msg, Credentials cred, Address aux) 
+    public RouteMessage(Id target, Message msg, Credentials cred, Address aux) 
     {
 	super(new RouterAddress());
 	this.target = target;
@@ -151,7 +151,7 @@ public class RouteMessage extends Message implements Serializable, rice.p2p.comm
      * @param aux an auxilary address which the message after each hop.
      */
 
-    public RouteMessage(NodeId target, Message msg, Credentials cred, SendOptions opts, Address aux) 
+    public RouteMessage(Id target, Message msg, Credentials cred, SendOptions opts, Address aux) 
     {
 	super(new RouterAddress());
 	this.target = target;
@@ -217,7 +217,7 @@ public class RouteMessage extends Message implements Serializable, rice.p2p.comm
      * @return the target node id.
      */
     
-    public NodeId getTarget() { return target; }
+    public Id getTarget() { return target; }
 
     public NodeHandle getPrevNode() { return prevNode; }
     public void setPrevNode(NodeHandle n) { prevNode = n;}

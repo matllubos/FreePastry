@@ -111,7 +111,7 @@ public class StandardRouter implements MessageReceiver {
 
     public void receiveRouteMessage(RouteMessage msg) 
     {
-	NodeId target = msg.getTarget();
+	Id target = msg.getTarget();
 
 	if(target == null)
 	  target = localId;
@@ -206,7 +206,7 @@ public class StandardRouter implements MessageReceiver {
 	if (msg.getPrevNode() == null) return;
 
 	NodeId prevId = msg.getPrevNode().getNodeId();
-	NodeId key = msg.getTarget();
+	Id key = msg.getTarget();
 
 	//System.out.println("checkForRouteTableHole, prevNode=" + prevId +
 	//	   " localId=" + localId + " key=" + msg.getTarget() +

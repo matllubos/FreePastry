@@ -226,7 +226,7 @@ public abstract class PastryAppl implements MessageReceiver
    * @param cred credentials that verify the authenticity of the message.
    * @param opt send options that describe how the message is to be routed.
    */
-  public void routeMsg(NodeId key, Message msg, Credentials cred, SendOptions opt) {
+  public void routeMsg(Id key, Message msg, Credentials cred, SendOptions opt) {
     if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] routemsg " + msg + " to " + key);
     RouteMessage rm = new RouteMessage(key, msg, cred, opt, getAddress());
     thePastryNode.receiveMessage(rm);
@@ -300,7 +300,7 @@ public abstract class PastryAppl implements MessageReceiver
    *
    * @return true if the message should be routed, false if the message should be cancelled.
    */
-  public boolean enrouteMessage(Message msg, NodeId key, NodeId nextHop, SendOptions opt) {
+  public boolean enrouteMessage(Message msg, Id key, NodeId nextHop, SendOptions opt) {
     return true;
   }
 

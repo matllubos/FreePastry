@@ -1,12 +1,12 @@
 PACKAGE = rice.past.messaging
 
 SOURCE  = \
-	PASTAddress.java\
 	PASTMessageID.java\
 	PASTMessageIDImpl.java\
 	PASTMessage.java\
 	MessageInsert.java\
 	MessageLookup.java\
+	MessageFetch.java\
 	MessageExists.java\
   MessageReclaim.java
 
