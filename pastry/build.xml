@@ -104,7 +104,7 @@
   </target>
 
   <target name="corejar" depends="compile">
-  	<jar destfile="pastry-core.jar">
+  	<jar destfile="${build.dir}/pastry-core.jar">
       <fileset dir="${build.dir}" includes="rice/Continuation*.class"/>
       <fileset dir="${build.dir}" includes="rice/Executable*.class"/>
       <fileset dir="${build.dir}" includes="rice/p2p/commonapi/**/*.class"/>
