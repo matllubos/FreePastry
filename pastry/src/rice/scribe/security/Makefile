@@ -2,7 +2,7 @@ PACKAGE = rice.scribe.security
 
 SOURCE  = \
 	IScribeSecurityManager.java \
-	PsecurityManager.java
+	PSecurityManager.java
 
 RMI_SOURCE =
 

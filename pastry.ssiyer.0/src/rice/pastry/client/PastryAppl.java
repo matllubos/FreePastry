@@ -166,10 +166,12 @@ public abstract class PastryAppl implements MessageReceiver
      * @param cred credentials that verify the authenticity of the message.
      * @param opt send options that describe how the message is to be routed.  */
 
-    public void routeMsgDirect(NodeHandle dest, Message msg, Credentials cred, SendOptions opt) {
+    public boolean routeMsgDirect(NodeHandle dest, Message msg, Credentials cred, SendOptions opt) {
+	if (!dest.isAlive()) return false;
 	RouteMessage rm = new RouteMessage(dest, msg, cred, opt, getAddress());
 
 	thePastryNode.receiveMessage(rm);
+	return true;
     }
 
 
