@@ -1,4 +1,5 @@
 package rice.splitstream;
+import rice.splitstream.messaging.*;
 import rice.scribe.*;
 import rice.scribe.messaging.*;
 import rice.pastry.*;
@@ -157,6 +158,13 @@ public class Stripe extends Observable implements IScribeApp{
             }
 	    else{
                 /* THIS IS WHERE THE DROP SHOULD OCCUR */
+                Credentials credentials = new PermissiveCredentials();
+                channel.routeMsgDirect( child, new ControlDropMessage( channel.getAddress(),
+                                                                       channel.getNodeHandle(),
+                                                                       topicId,
+                                                                       credentials,
+                                                                       channel.getSpareCapacityId() ),
+                                        credentials, null );
                 //System.out.println("SHOULD NOT TAKE CHILD");
 	   }
 	/* We should check if we can take this child on */

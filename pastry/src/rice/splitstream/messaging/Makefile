@@ -5,6 +5,7 @@ SOURCE  = \
 	ControlAttachMessage.java\
 	SplitStreamAddress.java\
 	ControlFindParentResponseMessage.java\
+	ControlDropMessage.java\
 	ControlFindParentMessage.java
 
 RMI_SOURCE =

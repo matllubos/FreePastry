@@ -1,5 +1,12 @@
 package rice.splitstream.messaging;
+
 import rice.splitstream.*;
+import rice.pastry.*;
+import rice.pastry.messaging.*;
+import rice.pastry.security.*;
+import rice.scribe.*;
+import rice.scribe.messaging.*;
+
 /**
  * This message is sent to a client when it has been dropped from it's
  * parent in the tree for a particular stripe. Upon receipt of the message,
@@ -7,30 +14,48 @@ import rice.splitstream.*;
  */
 public class ControlDropMessage extends ControlMessage{
 
-   /**
-    * Callback method executed when the application receives a message for delivery
-    * @param splitStream The application receiving the message
-    * @param s The stripe that sent this message
-    */
-   public void handleDeliverMessage( ISplitStream splitStream, Stripe s ){}
+   private NodeId spare_id;
+
+   public ControlDropMessage( Address addr, NodeHandle source, NodeId stripe_id,
+                              Credentials c, NodeId spare_id )
+   {
+      super( addr, source, stripe_id, c );
+      this.spare_id = spare_id;
+   }
 
    /**
-    * Callback method executed when the application receives a message for forwarding
-    * @param splitStream The application receiving the message
-    * @param s The stripe that sent this message
+    * Can't attach to parent (or dropped from parent for some reason). Anycast
+    * to the spare capacity tree to find a new parent.
+    * @param scribe The scribe group this message is relevant to
+    * @param topic The topic this message is relevant to
     */
-   public void handleForwardMessage( ISplitStream splitStream, Stripe s ){}
+   public void handleDeliverMessage( Scribe scribe, Topic topic )
+   {
+      Credentials c = new PermissiveCredentials();
+      ControlFindParentMessage msg = new ControlFindParentMessage( scribe.getAddress(), 
+                                                                   scribe.getLocalHandle(),
+                                                                   spare_id,
+                                                                   c,
+                                                                   (StripeId)topic.getTopicId() );
+      scribe.anycast( spare_id, msg, c );
+   }
+
+   /**
+    * Should do nothing
+    * @param scribe The Scribe group this message is relevant to
+    * @param topic The topic this message is relevant to
+    */
+   public boolean handleForwardMessage( Scribe scribe, Topic topic )
+   {
+      return true;
+   }
 
    /**
     * @return A string representation of this object
     */
    public String toString(){return null;}
 
-   /**
-    * Returns the particular stripe that the client was dropped from.
-    * @return A stripe
-    */
-   public Stripe getDroppedStripe(){return null;}
+
 }
 
 
