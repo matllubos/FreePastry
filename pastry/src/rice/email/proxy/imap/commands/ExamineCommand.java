@@ -34,6 +34,7 @@ public class ExamineCommand extends AbstractImapCommand {
   public void execute() {
     try {
       if (_folder != null) {
+	  System.out.println("FOLDER NOT NULL");
         MailFolder fold = getState().getFolder(_folder);
 
         int exists         = fold.getMessages(MsgFilter.ALL).size();

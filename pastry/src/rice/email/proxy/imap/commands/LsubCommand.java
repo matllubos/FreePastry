@@ -39,8 +39,7 @@ public class LsubCommand
     {
         try
         {
-            String[] fold = getState().getMailbox().listSubscriptions(
-                                    _folder);
+            String[] fold = getState().getMailbox().listSubscriptions(getConn(), _folder);
 
             for (int i = 0; i < fold.length; i++)
             {

@@ -4,7 +4,8 @@ import rice.email.proxy.imap.ImapState;
 
 import rice.email.proxy.mailbox.MailFolder;
 import rice.email.proxy.mailbox.MailboxException;
-
+import rice.email.proxy.mailbox.postbox.*;
+import java.util.*;
 
 /**
  * LIST command.
@@ -43,13 +44,13 @@ public class ListCommand
 
         try
         {
-            MailFolder[] fold = getState().getMailbox().listFolders(
+            Vector fold = getState().getMailbox().listFolders(
                                         _folder);
 
-            for (int i = 0; i < fold.length; i++)
+            for (int i = 0; i < fold.size(); i++)
             {
                 untaggedSimpleResponse(
-                        "() \"/\" \"" + fold[i].getFullName() + "\"");
+                        "() \"/\" \"" + ((MailFolder)fold.elementAt(i)).getFullName() + "\"");
             }
 
             taggedSimpleSuccess();
@@ -82,3 +83,5 @@ public class ListCommand
         this.reference = reference;
     }
 }
+
+
