@@ -20,23 +20,29 @@ PACKAGES = \
 	rice.pastry.standard\
 	rice.pastry.rmi\
 	rice.pastry.security\
+	rice.pastry.socket\
+	rice.pastry.socket.exception\
+	rice.pastry.socket.messaging\
 	rice.pastry.testing\
 	rice.scribe\
 	rice.scribe.maintenance\
 	rice.scribe.messaging\
 	rice.scribe.security\
-	rice.scribe.testing
-#	rice.ap3\
-#	rice.ap3.routing\
-#	rice.ap3.messaging\
-#	rice.ap3.testing\
-#	rice.storage\
-#	rice.storage.testing\
-#	rice.past\
-#	rice.past.messaging\
-#	rice.past.testing\
-#	rice.past.search\
-#	rice.past.search.testing
+	rice.scribe.testing\
+	rice.ap3\
+	rice.ap3.routing\
+	rice.ap3.messaging\
+	rice.ap3.testing\
+	rice.storage\
+	rice.storage.testing\
+	rice.past\
+	rice.past.messaging\
+	rice.past.testing\
+	rice.past.search\
+	rice.past.search.testing\
+	rice.testharness\
+	rice.testharness.messaging\
+	rice.testharness.testing
 
 NODOC_PACKAGES = 
 

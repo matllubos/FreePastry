@@ -76,8 +76,8 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
      * @param p RMI registry port.
      */
     public RMIPastryNodeFactory(int p) {
-	nidFactory = new RandomNodeIdFactory();
-	port = p;
+ nidFactory = new RandomNodeIdFactory();
+ port = p;
     }
 
     /**
@@ -92,49 +92,62 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
      * @param bootstrap Node handle to bootstrap from.
      */
     public PastryNode newNode(NodeHandle bootstrap) {
-
-	NodeId nodeId = nidFactory.generateNodeId();
-	RMIPastryNode pn = new RMIPastryNode(nodeId);
-
-	if (bootstrap != null)
-	    bootstrap.setLocalNode(pn);
-	
-	RMINodeHandle localhandle = new RMINodeHandle(null, nodeId);
-	localhandle.setLocalNode(pn);
-
-	RMINodeHandlePool handlepool = new RMINodeHandlePool();
-
-	// not needed due to autocoalescing
-	//localhandle = handlepool.coalesce(localhandle); // add ourselves to pool
-
-	RMIPastrySecurityManager secureMan =
-	    new RMIPastrySecurityManager(localhandle, handlepool);
-	MessageDispatch msgDisp = new MessageDispatch();
-
-	RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
-	LeafSet leafSet = new LeafSet(localhandle, lSetSize);
-
-	StandardRouter router =
-	    new StandardRouter(localhandle, routeTable, leafSet, secureMan);
-	StandardLeafSetProtocol lsProtocol =
-	    new StandardLeafSetProtocol(localhandle, secureMan, leafSet, routeTable);
-	StandardRouteSetProtocol rsProtocol =
-	    new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
-	StandardJoinProtocol jProtocol =
-	    new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
-
-	msgDisp.registerReceiver(router.getAddress(), router);
-	msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
-	msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
-	msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
-
-	pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
-	pn.setRMIElements(handlepool, port, leafSetMaintFreq, routeSetMaintFreq);
-	secureMan.setLocalPastryNode(pn);
-
-	pn.doneNode(bootstrap);
-
-	return pn;
+      return newNode(bootstrap, nidFactory.generateNodeId());
     }
+  
+    /**
+     * Makes many policy choices and manufactures a new RMIPastryNode.
+     * Creates a series of artifacts to adorn the node, like a security
+     * manager, a leafset, etc. with hand-picked parameters like the leaf
+     * set size. Finally calls the respective setElements to pass these on
+     * to the {,RMI,Direct}PastryNode as appropriate, and then calls
+     * node.doneNode() (which internally performs mechanisms like exporting
+     * the node and notifying applications).
+     *
+     * @param bootstrap Node handle to bootstrap from.
+     * @param nodeId The new node's ID.
+     */
+    public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId) {
+
+ RMIPastryNode pn = new RMIPastryNode(nodeId);
+
+ if (bootstrap != null)
+     bootstrap.setLocalNode(pn);
+ 
+ RMINodeHandle localhandle = new RMINodeHandle(null, nodeId);
+ localhandle.setLocalNode(pn);
+
+ RMINodeHandlePool handlepool = new RMINodeHandlePool();
+ localhandle = handlepool.coalesce(localhandle); // add ourselves to pool
+
+ RMIPastrySecurityManager secureMan =
+     new RMIPastrySecurityManager(localhandle, handlepool);
+ MessageDispatch msgDisp = new MessageDispatch();
+
+ RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
+ LeafSet leafSet = new LeafSet(localhandle, lSetSize);
+
+ StandardRouter router =
+     new StandardRouter(localhandle, routeTable, leafSet, secureMan);
+ StandardLeafSetProtocol lsProtocol =
+     new StandardLeafSetProtocol(localhandle, secureMan, leafSet, routeTable);
+ StandardRouteSetProtocol rsProtocol =
+     new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
+ StandardJoinProtocol jProtocol =
+     new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
+
+ msgDisp.registerReceiver(router.getAddress(), router);
+ msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
+ msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
+ msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
+
+ pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
+ pn.setRMIElements(handlepool, port, leafSetMaintFreq, routeSetMaintFreq);
+ secureMan.setLocalPastryNode(pn);
+
+ pn.doneNode(bootstrap);
+
+ return pn;
+    }  
 }
 
