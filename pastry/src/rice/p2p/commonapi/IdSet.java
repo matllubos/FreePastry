@@ -96,4 +96,6 @@ public interface IdSet extends Serializable {
    * @return the hash of this set
    */
   public Id hash();
+  
+  public Object clone();
 }
