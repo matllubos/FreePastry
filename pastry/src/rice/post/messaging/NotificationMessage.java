@@ -3,7 +3,8 @@ package rice.post.messaging;
 import rice.post.*;
 import rice.pastry.messaging.*;
 import java.io.*;
-
+import rice.post.messaging.*;
+ 
 /**
  * This class represents an abstract message in the Post system
  * which serves as a notification.  Each Post application should
@@ -22,7 +23,7 @@ public abstract class NotificationMessage extends Message implements Serializabl
    *        message should be delivered. 
    */
   public NotificationMessage(PostClientAddress clientId, PostEntityAddress address) {
-   super(address.getAddress());
+   super(PostAddress.instance());
    this.clientId = clientId;
    this.address = address;
   }

@@ -1,5 +1,6 @@
 package rice.post.messaging;
 
+import java.io.*;
 import rice.post.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
@@ -19,7 +20,7 @@ public class PresenceMessage implements Serializable{
    * @param location The user's asserted location.
    */
   public PresenceMessage(PostUserAddress address, NodeId location) {
-     this.adress =address;
+     this.address =address;
      this.location = location;
   }
     

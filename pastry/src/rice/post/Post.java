@@ -6,6 +6,7 @@ import java.util.*;
 import rice.pastry.security.*;
 import rice.pastry.client.*;
 import rice.pastry.messaging.*;
+import rice.pastry.routing.*;
 import rice.pastry.*;
 import rice.past.*;
 import rice.scribe.*;
@@ -120,7 +121,7 @@ public class Post extends PastryAppl implements IScribeApp  {
           userQueue.addElement(dmessage.getNotificationMessage());
         }
     }
-    else if( message instanceof RecieptMessage ){
+    else if( message instanceof ReceiptMessage ){
     }
 		 
   }
@@ -143,9 +144,10 @@ public class Post extends PastryAppl implements IScribeApp  {
   /* TO DO:: FIX ME!!! topic id */
   private void announcePresence(){
      NodeHandle nodeId = thePastryNode.getLocalHandle();
+     NodeId topicId = null; /* fix this to be the topic id of the user's scribe group */
      MessagePublish sMessage = 
-                  new MessagePublish(getAddress(), nodeId, null, getCredentials());
-    scribe.routeMsg(sMessage);
+                  new MessagePublish(getAddress(), nodeId, topicId, getCredentials());
+    routeMsg(topicId, sMessage, getCredentials(), new SendOptions());
   }
 
   /**
@@ -256,7 +258,7 @@ public class Post extends PastryAppl implements IScribeApp  {
 
      synchronized(bufferedData){
 	
-          userQueue = buffered.get(message.getDestination());
+          Vector userQueue = (Vector) bufferedData.get(msg.getDestination());
           if(userQueue != null){
             /* Iterate and send */ 
           }

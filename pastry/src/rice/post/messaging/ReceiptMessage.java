@@ -1,7 +1,7 @@
 package rice.post.messaging;
-
+import rice.post.messaging.*;
 import java.security.*;
-
+import java.io.*;
 import rice.post.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
@@ -18,6 +18,7 @@ public class ReceiptMessage extends Message implements Serializable{
    * @param message The notification message which this is a receipt for
    */
   public ReceiptMessage(NotificationMessage message) {
+     super(PostAddress.instance());
      this.message = message;
   }
     

@@ -3,7 +3,6 @@ PACKAGE = rice.post.messaging
 SOURCE  = \
 	PostAddress.java \
 	NotificationMessage.java \
-	PostMessage.java \
 	PresenceMessage.java \
 	ReceiptMessage.java \
 	DeliveryRequestMessage.java 

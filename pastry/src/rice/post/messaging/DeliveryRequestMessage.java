@@ -1,7 +1,7 @@
 package rice.post.messaging;
 
 import java.security.*;
-
+import rice.post.messaging.*;
 import rice.post.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
@@ -26,6 +26,7 @@ public class DeliveryRequestMessage extends Message implements Serializable {
   public DeliveryRequestMessage(PostUserAddress sender, 
                                 PostUserAddress destination, 
                                 NotificationMessage message) {
+     super(PostAddress.instance());
      this.sender = sender;
      this.destination = destination;
      this.message = message;
@@ -46,7 +47,7 @@ public class DeliveryRequestMessage extends Message implements Serializable {
    *
    * @return The address of the destination of this notification
    */
-  public PostUserAddress getDestination() {
+  public PostUserAddress getUserDestination() {
     return destination;
   }
     
