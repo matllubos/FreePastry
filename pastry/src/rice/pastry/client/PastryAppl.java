@@ -87,14 +87,13 @@ public abstract class PastryAppl implements MessageReceiver
   // constructor
 
   /**
-   * Constructor.
+   * Constructor. 
    *
    * @param pn the pastry node that client will attach to.
    */
   public PastryAppl(PastryNode pn) {
     thePastryNode = pn;
 
-    if (getAddress() == null) throw new NullPointerException();
     thePastryNode.registerReceiver(getCredentials(), getAddress(), this);
 
     thePastryNode.addLeafSetObserver(new LeafSetObserver());
@@ -104,24 +103,19 @@ public abstract class PastryAppl implements MessageReceiver
   }
   
   /**
-   * Constructor.
+   * Constructor.  This constructor will perform the same tasks as the
+   * above constructor, but will also create a Pastry address for this
+   * application, which is dependent upon the given instance name and
+   * the class name.
    *
    * @param pn the pastry node that client will attach to.
    * @param instance The instance name of this appl.
    */
   public PastryAppl(PastryNode pn, String instance) {
-    thePastryNode = pn;
+    this(pn);
+    
     this.instance = instance;
-
     this.address = new StandardAddress(this.getClass(), instance);
-
-    if (getAddress() == null) throw new NullPointerException();
-    thePastryNode.registerReceiver(getCredentials(), getAddress(), this);
-
-    thePastryNode.addLeafSetObserver(new LeafSetObserver());
-    thePastryNode.addRouteSetObserver(new RouteSetObserver());
-
-    thePastryNode.registerApp(this); // just adds it to a list
   }
 
   /**

@@ -6,7 +6,9 @@ SOURCE  = \
 	IdRange.java\
 	Message.java\
 	Node.java\
-	NodeHandle.java
+	NodeHandle.java\
+  RouteMessage.java\
+  VirtualizedNode.java
 
 RMI_SOURCE =
 

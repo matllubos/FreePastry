@@ -15,8 +15,8 @@ notice, this list of conditions and the following disclaimer.
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
 
-- Neither the name of Rice University (RICE) nor the names of its
-contributors may be used to endorse or promote products derived from
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+contributors may be  used to endorse or promote  products derived from
 this software without specific prior written permission.
 
 This software is provided by RICE and the contributors on an "as is"
@@ -36,32 +36,64 @@ if advised of the possibility of such damage.
 
 package rice.commonapi;
 
+import java.io.*;
+
 /**
- * Interface which represents a node in a peer-to-peer system, regardless of
- * the underlying protocol.  This represents a factory, in a sense, that will
- * give a application a VirtualizedNode which it can use to send and receive
- * messages.
+ * This class is a container class which represents a message, as it is
+ * about to be forwarded to another node.
  *
  * @version $Id$
  *
  * @author Alan Mislove
  * @author Peter Druschel
  */
-public interface Node {
+public abstract class RouteMessage implements Serializable {
+
+  protected Id id;
+
+  protected NodeHandle nextHop;
+
+  protected Message message;
 
   /**
-   * This returns a VirtualizedNode specific to the given application and
-   * instance name to the application, which the application can then use
-   * in order to send an receive messages.
+   * Constructor which takes an id, nextHop, and internal message.  This is
+   * protected as only common API implementations should actually create
+   * route messages.
    *
-   * @param application The Application
-   * @param instance An identifier for a given instance
-   * @return The virtualized node specific to this application.
+   * @param id The destination id.
+   * @param nextHop The node that will receive this message next
+   * @param message The internal message.
    */
-  public VirtualizedNode registerApplication(Application application, String instance);
+  protected RouteMessage(Id id, NodeHandle nextHop, Message message) {
+    this.id = id;
+    this.nextHop = nextHop;
+    this.message = message;
+  }
 
+  public Id getDestination() {
+    return id;
+  }
+
+  public NodeHandle getNextHop() {
+    return nextHop;
+  }
+
+  public Message getMessage() {
+    return message;
+  }
+
+  public void setDestination(Id id) {
+    this.id = id;
+  }
+
+  public void setNextHop(NodeHandle nextHop) {
+    this.nextHop = nextHop;
+  }
+
+  public void setMessage(Message message) {
+    this.message = message;
+  }
+  
 }
-
-
 
 

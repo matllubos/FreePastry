@@ -54,12 +54,12 @@ public interface Application {
    * the message, specify a different nextHop (through re-routing), or
    * completely terminate the message.
    *
-   * @param id The destination id of the message
-   * @param message The message being sent
-   * @param nextHop The nextHop of the message
+   * @param message The message being sent, containing an internal message
+   * along with a destination key and nodeHandle next hop.
+   *
    * @return Whether or not to forward the message further
    */
-  public boolean forward(Id id, Message message, NodeHandle nextHop);
+  public boolean forward(RouteMessage message);
 
   /**
    * This method is called on the application at the destination node
