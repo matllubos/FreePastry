@@ -71,7 +71,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
     private static int port = 5009;
     private static String bshost;
     private static int bsport = 5009;
-    private static int numnodes = 1;
+    private static int numnodes = 10;
     private static int protocol = DistPastryNodeFactory.PROTOCOL_RMI;
 
     private InetSocketAddress bsaddress;
@@ -222,6 +222,6 @@ public class DistPastryRegrTest extends PastryRegrTest {
     public static void main(String args[]) {
       doInitstuff(args);
       DistPastryRegrTest pt = new DistPastryRegrTest();
-      mainfunc(pt, args, 10 /*n*/, 4 /*d*/, 1/*k*/, 20/*m*/, 4/*conc*/);
+      mainfunc(pt, args, numnodes /*n*/, 0 /*d*/, 1/*k*/, 20/*m*/, 4/*conc*/);
     }
 }
