@@ -498,7 +498,7 @@ public class ScribeImpl implements Scribe, Application {
 
       if (handle == null) {
 	  if(isRoot(aMessage.getTopic()))
-	      log.warning(endpoint.getId() + ": Anycast " + aMessage + " failed."+aMessage.length());
+	      log.warning(endpoint.getId() + ": Anycast " + aMessage + " failed.");
 	  else
 	      endpoint.route(aMessage.getTopic().getId(), aMessage, null);
 	  //aMessage.printVisitedList();
