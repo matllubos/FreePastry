@@ -127,6 +127,9 @@ public class SelectorManager extends Thread implements Timer {
    * @param key The key to cancel
    */
   public void cancel(SelectionKey key) {
+    if (key == null)
+      throw new NullPointerException();
+    
     cancelledKeys.add(key);
   }
   
@@ -152,6 +155,9 @@ public class SelectorManager extends Thread implements Timer {
    * @return The SelectionKey which uniquely identifies this channel
    */
   public SelectionKey register(SelectableChannel channel, SelectionKeyHandler handler, int ops) throws IOException {
+    if ((channel == null) || (handler == null))
+      throw new NullPointerException();
+    
     SelectionKey key = channel.register(selector, ops, handler);
     cancelledKeys.remove(key);
     
@@ -167,6 +173,9 @@ public class SelectorManager extends Thread implements Timer {
    * @param d The runnable task to invoke
    */
   public synchronized void invoke(Runnable d) {
+    if (d == null)
+      throw new NullPointerException();
+    
     invocations.add(d);
     selector.wakeup();
   }
@@ -183,6 +192,9 @@ public class SelectorManager extends Thread implements Timer {
    * @param key The key which is to be chanegd
    */
   public synchronized void modifyKey(SelectionKey key) {
+    if (key == null)
+      throw new NullPointerException();
+    
     modifyKeys.add(key);
     selector.wakeup();
   }
@@ -304,7 +316,7 @@ public class SelectorManager extends Thread implements Timer {
     }
     
     while (i.hasNext()) {
-      SelectionKey key = (SelectionKey)i.next();
+      SelectionKey key = (SelectionKey) i.next();
       if (key.isValid() && (key.attachment() != null))
         ((SelectionKeyHandler) key.attachment()).modifyKey(key);
     }
