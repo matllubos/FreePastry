@@ -214,7 +214,7 @@ public abstract class PastryRegrTest {
 		pause(500);
 	    }
 	}
-	pause(1000);
+	pause(2500);
 
 	inConcJoin = false;
 
