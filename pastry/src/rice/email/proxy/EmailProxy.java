@@ -102,7 +102,7 @@ public class EmailProxy {
       System.out.println("[ DONE ]");
 
       System.out.print("    Generating user address\t\t\t\t\t");
-      address = new PostUserAddress("amislove@" + InetAddress.getLocalHost().getHostAddress());
+      address = new PostUserAddress("merziyah@" + InetAddress.getLocalHost().getHostAddress());
       System.out.println("[ DONE ]");
 
       System.out.print("    Generating user key pair\t\t\t\t\t");

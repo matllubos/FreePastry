@@ -43,7 +43,7 @@ public class BodyPart
                 String[] headers = msg.getMessage().getHeader(next);
 
                 for (int j=0; j<headers.length; j++) {
-                  data += toSentenceCase(next) + ": " + headers[j] + "\r\n";
+                  data += toSentenceCase(next) + ": " + headers[j] + "\n";
                 }
               }
 

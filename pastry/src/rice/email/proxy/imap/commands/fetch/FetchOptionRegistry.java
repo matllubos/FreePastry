@@ -14,10 +14,10 @@ public class FetchOptionRegistry
         {
             FetchPart possibleHandler = HANDLERS[i];
             if (possibleHandler.canHandle(partType))
-
                 return possibleHandler;
         }
 
         return NIL_HANDLER;
+
     }
 }

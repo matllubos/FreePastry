@@ -34,6 +34,7 @@ public class FetchCommand
     public FetchCommand()
     {
         super("FETCH");
+	appendPartRequest("UID");
     }
 
     public boolean isValidForState(ImapState state)
@@ -120,3 +121,6 @@ public class FetchCommand
         _range = range;
     }
 }
+
+
+
