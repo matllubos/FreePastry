@@ -9,7 +9,9 @@ import java.io.Serializable;
 /**
  * This message is anycast to the scribe group for a channel when a node
  * attaches to that channel.  The purpose is to learn which stripes are
- * included in this channel.
+ * included in this channel.  This information is returned via a
+ * ControlAttachResponseMessage.
+ * @author briang
  */
 public class ControlAttachMessage implements Serializable {
 
@@ -17,6 +19,10 @@ public class ControlAttachMessage implements Serializable {
  * This method is called by the application (here, the channel) upon
  * receipt.  It retrieves the list of stripeIds and generates a
  * response message to the originator of the request.
+ *
+ * @param channel The channel receiving the message
+ * @param scribe The channel's Scribe object (unused)
+ * @param source The originating node's NodeHandle
  */
 public void handleMessage( Channel channel, IScribe scribe, NodeHandle source )
 {

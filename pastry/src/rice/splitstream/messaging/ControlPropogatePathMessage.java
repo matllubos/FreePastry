@@ -9,8 +9,9 @@ import java.util.Vector;
 
 /**
  * This message is sent from any node whose parent has changed, to each
- * of its children and descendents.  It contains a stack with the nodeId
+ * of its children and descendents.  It contains a list with the nodeId
  * of each node it encounters along its path.
+ * @author briang
  */
 public class ControlPropogatePathMessage extends Message{
 
@@ -26,14 +27,19 @@ public class ControlPropogatePathMessage extends Message{
       this.stripe_id = (StripeId)topicId;
    }
 
+   /**
+    * @return The stripe id associated with this message
+    */
    public StripeId getStripeId()
    {
       return stripe_id;
    }
 
    /**
-    * Handles forwarding of the message: adding this node's Id to the stack
-    * and sending to all children
+    * Handles forwarding of the message.  This node's path is set
+    * to the current list.  Then this node's NodeHandle is added to the
+    * list and messages containing the new list are sent to all of this
+    * node's children.
     * @param scribe The scribe group this message is relevant to
     * @param s The specific stripe this is relevant to
     */
@@ -50,7 +56,8 @@ public class ControlPropogatePathMessage extends Message{
           channel.routeMsgDirect( (NodeHandle)children.get(i), 
                                   new ControlPropogatePathMessage( channel.getAddress(),
                                                                    channel.getNodeHandle(),
-                                                                   stripe.getStripeId(),                                                                                        credentials,
+                                                                   stripe.getStripeId(),
+                                                                   credentials,
                                                                    forward_path ),
                                   credentials, null );
       }

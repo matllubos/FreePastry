@@ -5,7 +5,9 @@ import rice.pastry.messaging.*;
 import java.io.Serializable;
 /**
  * This message is sent in response to an incoming Attach message.  It
- * contains a list of all Stripe Ids for the current channel
+ * contains a list of all Stripe Ids for the current channel, as well as
+ * the id of the spare capacity tree and the channel id itself.
+ * @author briang
  */
 public class ControlAttachResponseMessage extends Message implements Serializable
 {
@@ -17,7 +19,9 @@ public class ControlAttachResponseMessage extends Message implements Serializabl
    }
 
    /**
-    * Sets the message content (here, the list of StripeIds)
+    * Sets the message content (here, the combined list of StripeIds, spare
+    * capacity id, and channel id)
+    *
     * @param content The message content
     */
    public void setContent( Object content )
@@ -26,7 +30,9 @@ public class ControlAttachResponseMessage extends Message implements Serializabl
    }
 
    /**
-    * Gets the message content (here, the list of StripeIds)
+    * Gets the message content (here, the combined list of StripeIds, spare
+    * capacity id, and channel id)
+    *
     * @return The message content
     */
    public Object getContent()
