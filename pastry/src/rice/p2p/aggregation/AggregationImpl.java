@@ -26,6 +26,7 @@ import rice.p2p.commonapi.*;
 import rice.p2p.glacier.VersionKey;
 import rice.p2p.glacier.VersioningPast;
 import rice.p2p.glacier.v2.DebugContent;
+import rice.p2p.glacier.v2.GlacierImpl;
 import rice.p2p.past.Past;
 import rice.p2p.past.PastImpl;
 import rice.p2p.past.PastContent;
@@ -38,6 +39,7 @@ import rice.persistence.StorageManager;
 import rice.p2p.glacier.v2.GlacierContentHandle;
 
 public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregation, Application, DebugCommandHandler {
+  public static final boolean verbose = false;
 
   protected final Past aggregateStore;
   protected final StorageManager waitingList;
@@ -160,11 +162,11 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private void log(int level, String str) {
     if (level <= loglevel)
-      System.out.println(getLogPrefix() + level + " " + str);
+      if (AggregationImpl.verbose) System.out.println(getLogPrefix() + level + " " + str);
   }
 
   private void warn(String str) {
-    System.out.println(getLogPrefix() + " *** WARNING *** " + str);
+    if (AggregationImpl.verbose) System.out.println(getLogPrefix() + " *** WARNING *** " + str);
   }
 
   /**

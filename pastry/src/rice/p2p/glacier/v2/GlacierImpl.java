@@ -14,6 +14,7 @@ import rice.p2p.past.PastContent;
 import rice.p2p.past.PastContentHandle;
 import rice.p2p.past.gc.GCPast;
 import rice.p2p.past.gc.GCPastContent;
+import rice.p2p.replication.ReplicationImpl;
 import rice.p2p.util.DebugCommandHandler;
 import rice.persistence.Storage;
 import rice.persistence.StorageManager;
@@ -23,6 +24,7 @@ import rice.pastry.commonapi.PastryIdFactory;
 import rice.p2p.multiring.*;
 
 public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Application, DebugCommandHandler {
+  public static final boolean verbose = false;
 
   protected final StorageManager fragmentStorage;
   protected final StorageManager neighborStorage;
@@ -1075,11 +1077,11 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
 
   private void log(int level, String str) {
     if (level <= loglevel) 
-      System.out.println(getLogPrefix() + level + " " + str);
+      if (GlacierImpl.verbose) System.out.println(getLogPrefix() + level + " " + str);
   }
 
   private void warn(String str) {
-    System.out.println(getLogPrefix() + "0 *** WARNING *** " + str);
+    if (GlacierImpl.verbose) System.out.println(getLogPrefix() + "0 *** WARNING *** " + str);
   }
 
   protected int getUID() {

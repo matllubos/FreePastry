@@ -23,7 +23,8 @@ import rice.persistence.*;
  * @author Andreas Haeberlen
  */
 public class GCPastImpl extends PastImpl implements GCPast {
-  
+  public static final boolean verbose = false;
+
   /**
    * The default expiration, or when objects inserted with no timeout will expire
    * 11:00 AM, 8/30/2004  1095180000000  1096560000000L
@@ -112,7 +113,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param command Command to be performed when the result is received
    */
   public void insert(final PastContent obj, final long expiration, Continuation command) {
-    System.out.println("COUNT: " + System.currentTimeMillis() + " Inserting data of class " + obj.getClass().getName() + " under " + obj.getId().toStringFull());
+    if (GCPastImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Inserting data of class " + obj.getClass().getName() + " under " + obj.getId().toStringFull());
     
     doInsert(obj.getId(), new MessageBuilder() {
       public PastMessage buildMessage() {
@@ -167,7 +168,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param command Command to be performed when the result is received
    */
   public void refresh(final Id[] array, long[] expirations, Continuation command) {
-    System.out.println("COUNT: " + System.currentTimeMillis() + " Refreshing " + array.length + " data elements");
+    if (GCPastImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Refreshing " + array.length + " data elements");
 
     GCIdSet set = new GCIdSet(realFactory);
     for (int i=0; i<array.length; i++)

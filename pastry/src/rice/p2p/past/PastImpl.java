@@ -28,7 +28,9 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
 
   
   // ----- STATIC FIELDS -----
+  public static final boolean verbose = false;
 
+  
   // the number of milliseconds to wait before declaring a message lost
   public static int MESSAGE_TIMEOUT = 30000;
   
@@ -392,7 +394,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   public void insert(final PastContent obj, final Continuation command) {
     log.fine("Inserting the object " + obj + " with the id " + obj.getId());
     
-    System.out.println("COUNT: " + System.currentTimeMillis() + " Inserting data of class " + obj.getClass().getName() + " under " + obj.getId().toStringFull());
+    if (PastImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Inserting data of class " + obj.getClass().getName() + " under " + obj.getId().toStringFull());
 
     doInsert(obj.getId(), new MessageBuilder() {
       public PastMessage buildMessage() {
@@ -444,7 +446,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param command Command to be performed when the result is received
    */
   public void lookup(final Id id, final boolean cache, final Continuation command) {
-    System.out.println("COUNT: " + System.currentTimeMillis() + " Performing lookup on " + id.toStringFull());
+    if (PastImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Performing lookup on " + id.toStringFull());
     
     storage.getObject(id, new StandardContinuation(command) {
       public void receiveResult(Object o) {
@@ -536,7 +538,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   public void lookupHandles(final Id id, int max, final Continuation command) {
     log.fine("Retrieving handles of up to " + max + " replicas of the object stored in Past with id " + id);
 
-    System.out.println("COUNT: " + System.currentTimeMillis() + " Fetching up to " + max + " handles of " + id.toStringFull());
+    if (PastImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Fetching up to " + max + " handles of " + id.toStringFull());
     
     getHandles(id, max, new StandardContinuation(command) {
       public void receiveResult(Object o) {
@@ -592,7 +594,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   public void fetch(PastContentHandle handle, Continuation command) {
     log.fine("Retrieving object associated with content handle " + handle);
 
-    System.out.println("COUNT: " + System.currentTimeMillis() + " Fetching object under id " + handle.getId().toStringFull() +  " on " + handle.getNodeHandle());
+    if (PastImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Fetching object under id " + handle.getId().toStringFull() +  " on " + handle.getNodeHandle());
     
     NodeHandle han = handle.getNodeHandle();
     sendRequest(han, new FetchMessage(getUID(), handle, getLocalNodeHandle(), han.getId()), 

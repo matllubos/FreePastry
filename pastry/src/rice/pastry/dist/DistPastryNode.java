@@ -15,6 +15,7 @@ import rice.pastry.join.InitiateJoin;
 import rice.pastry.leafset.InitiateLeafSetMaintenance;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.InitiateRouteSetMaintenance;
+import rice.persistence.PersistentStorage;
 import rice.selector.SelectorManager;
 import rice.selector.Timer;
 import sun.misc.SignalHandler;
@@ -28,6 +29,7 @@ import sun.misc.SignalHandler;
  */
 
 public abstract class DistPastryNode extends PastryNode {
+  public static final boolean verbose = false;
   
   // the queue used for processing requests
   public static ProcessingQueue QUEUE = new ProcessingQueue();
@@ -266,9 +268,9 @@ public abstract class DistPastryNode extends PastryNode {
        while (true) {
          ProcessingRequest e = queue.dequeue();
          
-         System.out.println("COUNT: " + System.currentTimeMillis() + " Starting execution of " + e.r);
+         if (DistPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Starting execution of " + e.r);
          e.run();
-         System.out.println("COUNT: " + System.currentTimeMillis() + " Done execution of " + e.r);
+         if (DistPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Done execution of " + e.r);
        }
 	   }
   }

@@ -139,6 +139,7 @@ public class PersistentStorage implements Storage {
   private long storageSize;         // The amount of storage allowed to be used 
   private long usedSize;            // The amount of storage currently in use
   private Random rng;               // random number generator
+  protected static final boolean verbose = false;
 
  /**
   * Builds a PersistentStorage given a root directory in which to
@@ -320,8 +321,8 @@ public class PersistentStorage implements Storage {
           deleteFile(transcFile);
           throw e;
         }
-
-        System.out.println("COUNT: " + System.currentTimeMillis() + " Storing data of class " + obj.getClass().getName() + " under " + id.toStringFull() + " of size " + transcFile.length() + " in " + name);       
+        
+        if (PersistentStorage.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Storing data of class " + obj.getClass().getName() + " under " + id.toStringFull() + " of size " + transcFile.length() + " in " + name);       
         
         /* recalculate amount used */
         decreaseUsedSpace(getFileLength(objFile)); 

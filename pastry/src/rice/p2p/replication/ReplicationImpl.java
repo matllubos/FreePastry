@@ -21,7 +21,8 @@ import rice.p2p.util.*;
  * @author Alan Mislove
  */
 public class ReplicationImpl implements Replication, Application {
-  
+  public static final boolean verbose = false;
+
   /**
    * The amount of time to wait between replications
    */
@@ -187,7 +188,7 @@ public class ReplicationImpl implements Replication, Application {
                 public void receiveResult(Object o) {
                   IdBloomFilter filter = (IdBloomFilter) o;
 
-                  System.out.println("COUNT: " + System.currentTimeMillis() + " Sending request to " + handle + " for range " + range + ", " + ourRange + " in instance " + instance);
+                  if (ReplicationImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Sending request to " + handle + " for range " + range + ", " + ourRange + " in instance " + instance);
                   
                   RequestMessage request = new RequestMessage(ReplicationImpl.this.handle, new IdRange[] {range, ourRange}, new IdBloomFilter[] {filter, ourFilter});
                   endpoint.route(null, request, handle);
@@ -197,7 +198,7 @@ public class ReplicationImpl implements Replication, Application {
           }
         }
         
-        System.out.println("COUNT: " + System.currentTimeMillis() + " Done sending replications requests with " + total + " in instance " + instance);
+        if (ReplicationImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Done sending replications requests with " + total + " in instance " + instance);
         log.finer(endpoint.getId() + ": Done sending out requests with " + total + " objects"); 
       }
     });
@@ -230,7 +231,7 @@ public class ReplicationImpl implements Replication, Application {
    * @param message The message being sent
    */
   public void deliver(Id id, Message message) {
-    System.out.println("COUNT: " + System.currentTimeMillis() + " Replication " + instance + " received message " + message);
+    if (ReplicationImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Replication " + instance + " received message " + message);
     
     if (message instanceof RequestMessage) {
       final RequestMessage rm = (RequestMessage) message;
@@ -241,7 +242,7 @@ public class ReplicationImpl implements Replication, Application {
           IdSet[] result = new IdSet[array.length];
           System.arraycopy(array, 0, result, 0, array.length);
           
-          System.out.println("COUNT: " + System.currentTimeMillis() + " Telling node " + rm.getSource() + " to fetch");
+          if (ReplicationImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Telling node " + rm.getSource() + " to fetch");
           endpoint.route(null, new ResponseMessage(handle, rm.getRanges(), result), rm.getSource());
         }
       }, rm.getRanges().length);
@@ -264,7 +265,7 @@ public class ReplicationImpl implements Replication, Application {
       for (int i=0; i<rm.getIdSets().length; i++) {
         IdSet fetch = policy.difference(client.scan(rm.getRanges()[i]), rm.getIdSets()[i], factory);
         
-        System.out.println("COUNT: " + System.currentTimeMillis() + " Was told to fetch " + fetch.numElements() + " in instance " + instance);
+        if (ReplicationImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Was told to fetch " + fetch.numElements() + " in instance " + instance);
 
         if (fetch.numElements() > 0) 
           client.fetch(fetch, rm.getSource());
