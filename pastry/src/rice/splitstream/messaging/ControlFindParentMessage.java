@@ -59,7 +59,6 @@ public class ControlFindParentMessage extends MessageAnycast
         {
             if ( !isInRootPath( scribe, s.getStripeId() ) )
             {
-                scribe.addChildForTopic( this.getSource(), s.getStripeId() );
                 scribe.addChild( this.getSource(), s.getStripeId() );
                 scribe.routeMsgDirect( this.getSource(), 
                                        new ControlFindParentResponseMessage( splitStream.getAddress(),
