@@ -80,7 +80,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private static int maxAggregateSize = 1024*1024;
   private static int maxObjectsInAggregate = 25;
-  private static int maxAggregatesPerRun = 3;
+  private static int maxAggregatesPerRun = 2;
   
   private static final boolean addMissingAfterRefresh = true;
   private static final int maxReaggregationPerRefresh = 100;
@@ -720,11 +720,15 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     Vector toRemove = new Vector();
     Enumeration enum = aggregateList.elements();
     long now = System.currentTimeMillis();
+  
+    /* Note: Multiple keys are mapped to a single aggregate descriptor, so the same ADC
+       may be returned multiple times - but we must delete it only once! */
     
     while (enum.hasMoreElements()) {
       AggregateDescriptor adc = (AggregateDescriptor) enum.nextElement();
       if (adc.currentLifetime < (now - aggregateGracePeriod)) {
-        toRemove.add(adc);
+        if (!toRemove.contains(adc))
+          toRemove.add(adc);
         warn("Scheduling dead aggregate for removal: "+adc.key.toStringFull()+"(expired "+adc.currentLifetime+")");
       }
     }
