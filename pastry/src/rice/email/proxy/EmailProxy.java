@@ -99,11 +99,22 @@ public class EmailProxy extends PostProxy {
       stepDone(SUCCESS);
 
       sectionDone();
-
-      while (true) {
-        Thread.sleep(10000);
-        post.announcePresence();
-      }
+      
+      Thread t = new Thread() {
+        public void run() {
+          try {
+            while (true) {
+              Thread.sleep(10000);
+              post.announcePresence();
+            }
+          } catch (Exception e) {
+            System.out.println("Exception occured during construction " + e + " " + e.getMessage());
+            e.printStackTrace();
+          }
+        }
+      };
+      
+      t.start();
     } catch (Exception e) {
       System.out.println("Exception occured during construction " + e + " " + e.getMessage());
       e.printStackTrace();
