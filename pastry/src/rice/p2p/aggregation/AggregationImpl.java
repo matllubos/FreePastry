@@ -65,7 +65,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   protected Vector monitorIDs;
   protected AggregationStatistics stats;
 
-  private int loglevel = 3;
+  private int loglevel = 2;
   private final boolean logStatistics = true;
 
   private static final long SECONDS = 1000;
