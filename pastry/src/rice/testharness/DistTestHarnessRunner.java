@@ -149,7 +149,11 @@ public class DistTestHarnessRunner {
       pause(500);
     }
 
-    test.initialize();
+    while (! test.isReady()) {
+      pause(500);
+    }
+
+    test.initialize(getPastryBootstrap() == null);
 
     pastryNodes.addElement(pn);
     testNodes.addElement(test);

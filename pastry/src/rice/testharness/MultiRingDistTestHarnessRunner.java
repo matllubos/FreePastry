@@ -68,8 +68,6 @@ import java.net.*;
  * @author Alan Mislove
  */
 public class MultiRingDistTestHarnessRunner extends DistTestHarnessRunner {
-
-  public static int MULTI_RING_START_PORT;
   
   protected Vector otherPastryNodes;
   protected Vector otherTestNodes;
@@ -106,11 +104,9 @@ public class MultiRingDistTestHarnessRunner extends DistTestHarnessRunner {
   }
 
   private void duplicateNode(final int num) {
-    int port = MULTI_RING_START_PORT + num;
-    
     PastryNode pn = multiRingFactory.joinRing((MultiRingPastryNode) pastryNodes.elementAt(num), null);
 
-    System.err.println("Created node " + num + " " + pn.getNodeId() + " on port " + port);
+    System.err.println("Created node " + num + " " + pn.getNodeId() + " on port " + ((DistNodeHandle) ((DistPastryNode) ((MultiRingPastryNode) pn).getPastryNode()).getLocalHandle()).getAddress().getPort());
 
     TestHarness test = new TestHarness(pn);
 
@@ -118,23 +114,14 @@ public class MultiRingDistTestHarnessRunner extends DistTestHarnessRunner {
       pause(500);
     }
 
-    test.initialize();
+    while (! test.isReady()) {
+      pause(500);
+    }
+
+    test.initialize(true);
 
     otherPastryNodes.addElement(pn);
     otherTestNodes.addElement(test);
-  }
-  
-  
-  public static void processArgs(String[] args) {
-    DistTestHarnessRunner.processArgs(args);
-    
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-port2") && i+1 < args.length) {
-        int n = Integer.parseInt(args[i+1]);
-        if (n > 0) MULTI_RING_START_PORT = n;
-        break;
-      }
-    }
   }
   
   /**

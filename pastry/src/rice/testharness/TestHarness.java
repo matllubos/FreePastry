@@ -45,6 +45,9 @@ import rice.pastry.direct.*;
 import rice.pastry.rmi.*;
 import rice.pastry.standard.*;
 
+import rice.scribe.*;
+import rice.scribe.messaging.*;
+
 import rice.testharness.messaging.*;
 
 import java.util.*;
@@ -63,9 +66,7 @@ import java.lang.reflect.*;
  * @author Alan Mislove
  */
 
-public class TestHarness extends PastryAppl implements Serializable {
-
-  public static final NodeId ROOT_NODE_ID = new NodeId(new byte[NodeId.nodeIdBitLength]);
+public class TestHarness extends PastryAppl implements IScribeApp {
   
   /**
    * The credentials for the TestHarness system.
@@ -99,6 +100,8 @@ public class TestHarness extends PastryAppl implements Serializable {
 
   private Random _random;
 
+  private Scribe scribe;
+
   /**
    * Constructor which creates a TestHarness given a
    * PastryNode.
@@ -114,6 +117,9 @@ public class TestHarness extends PastryAppl implements Serializable {
     _random = new Random();
     _testObjects = new Hashtable();
     _subscribedNodes = new Vector();
+
+    scribe = new Scribe(pn, _credentials);
+    scribe.registerApp(this);
   }
 
   /**
@@ -139,9 +145,16 @@ public class TestHarness extends PastryAppl implements Serializable {
    * sends a message to the root node (<0x0000..>) informing that
    * node of its presence.
    */
-  public void initialize() {
+  public void initialize(boolean root) {
+    if (root) {
+      System.out.println("Joining scribe group rooted at : " + scribe.generateTopicId(this.getClass().getName() + "-ROOT"));
+      scribe.join(scribe.generateTopicId(this.getClass().getName() + "-ROOT"), this, _credentials);
+    }
+    
     SubscribedMessage sm = new SubscribedMessage(_pastryNode.getLocalHandle());
-    routeMsg(ROOT_NODE_ID, sm, _credentials, null);
+    scribe.anycast(scribe.generateTopicId(this.getClass().getName() + "-ROOT"), sm, _credentials);
+
+    scribe.join(scribe.generateTopicId(this.getClass().getName()), this, _credentials);
   }
 
   /**
@@ -149,7 +162,11 @@ public class TestHarness extends PastryAppl implements Serializable {
    */
   public void kill() {
     UnsubscribedMessage um = new UnsubscribedMessage(_pastryNode.getNodeId());
-    routeMsg(ROOT_NODE_ID, um, _credentials, null);
+    scribe.anycast(scribe.generateTopicId(this.getClass().getName()), um, _credentials);
+  }
+
+  public boolean isReady() {
+    return scribe.isReady();
   }
 
   /**
@@ -266,15 +283,7 @@ public class TestHarness extends PastryAppl implements Serializable {
   }
 
   public void sendToAll(final Message m) {
-    Thread t = new Thread() {
-      public void run() {
-        for (int i=0; i<_subscribedNodes.size(); i++) {
-          routeMsgDirect((NodeHandle) _subscribedNodes.elementAt(i), m, new PermissiveCredentials(), null);
-        }
-      }
-    };
-
-    t.start();
+    scribe.multicast(scribe.generateTopicId(this.getClass().getName()), m, _credentials);
   }
 
   public void send(final Message m, final NodeHandle nh) {
@@ -286,4 +295,26 @@ public class TestHarness extends PastryAppl implements Serializable {
 
     t.start();
   }
+
+  public void receiveMessage( ScribeMessage msg ) {
+    messageForAppl((Message) msg.getData());
+  }
+
+  public boolean anycastHandler(ScribeMessage msg) {
+    messageForAppl((Message) msg.getData());
+
+    return false;
+  }
+  
+  public void isNewRoot(NodeId topicId) {}
+
+  public void newParent(NodeId topicId, NodeHandle newParent, Serializable data) {}
+
+  public void scribeIsReady() {}
+
+  public void forwardHandler( ScribeMessage msg ) {}
+
+  public void subscribeHandler(NodeId topicId, NodeHandle child, boolean wasAdded, Serializable obj ) {}
+
+  public void faultHandler( ScribeMessage msg, NodeHandle faultyParent ) {}
 }
