@@ -31,7 +31,7 @@ public class RFC822PartRequest {
     StringBuffer result = new StringBuffer();
     result.append(_name);
 
-    if ( _type.equals("")) {
+    if (! _type.equals("")) {
       result.append("." + _type);
     }
     

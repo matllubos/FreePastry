@@ -29,7 +29,7 @@ import rice.email.proxy.mailbox.MsgFilter;
 public class FetchCommand
     extends AbstractImapCommand
 {
-	static FetchOptionRegistry regestry = new FetchOptionRegistry();
+	public static FetchOptionRegistry regestry = new FetchOptionRegistry();
 	
     public FetchCommand()
     {
@@ -92,14 +92,8 @@ public class FetchCommand
 	if (parts.contains(string)) {
 	    return;
 	}
-      if (string.trim().equalsIgnoreCase("ALL")) {
-        parts.add("FLAGS");
-        parts.add("INTERNALDATE");
-        parts.add("RFC822.SIZE");
-        parts.add("ENVELOPE");
-      } else {
+      
         parts.add(string.toUpperCase());
-      }
     }
 
     public void appendPartRequest(Object obj)

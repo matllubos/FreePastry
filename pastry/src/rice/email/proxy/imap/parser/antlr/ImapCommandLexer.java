@@ -50,6 +50,8 @@ public class ImapCommandLexer extends antlr.CharScanner implements CommonLexToke
 		  if (text.equals("BODY")) return BODY;
 		  if (text.equals("BODY.PEEK")) return BODYPEEK;
 		  if (text.equals("RFC822")) return RFC822;
+		  if (text.equals("RFC822.HEADER")) return RFC822HEADER;
+		  if (text.equals("RFC822.TEXT")) return RFC822TEXT;
 		  return ttype;
 		}
 	}
@@ -77,9 +79,11 @@ public ImapCommandLexer(LexerSharedInputState state) {
 	literals.put(new ANTLRHashString("RFC822", this), new Integer(26));
 	literals.put(new ANTLRHashString("FETCH", this), new Integer(16));
 	literals.put(new ANTLRHashString("SUBSCRIBE", this), new Integer(10));
+	literals.put(new ANTLRHashString("RFC822.HEADER", this), new Integer(27));
 	literals.put(new ANTLRHashString("LIST", this), new Integer(9));
 	literals.put(new ANTLRHashString("CREATE", this), new Integer(8));
 	literals.put(new ANTLRHashString("SELECT", this), new Integer(15));
+	literals.put(new ANTLRHashString("RFC822.TEXT", this), new Integer(28));
 	literals.put(new ANTLRHashString("LOGIN", this), new Integer(14));
 	literals.put(new ANTLRHashString("UID", this), new Integer(17));
 	literals.put(new ANTLRHashString("BODY", this), new Integer(24));

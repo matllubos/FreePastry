@@ -42,6 +42,8 @@ tokens {
 	BODY="BODY";
 	BODYPEEK="BODY.PEEK";
   RFC822="RFC822";
+  RFC822HEADER="RFC822.HEADER";
+  RFC822TEXT="RFC822.TEXT";
 }
 
 {
@@ -60,6 +62,8 @@ tokens {
 		  if (text.equals("BODY")) return BODY;
 		  if (text.equals("BODY.PEEK")) return BODYPEEK;
 		  if (text.equals("RFC822")) return RFC822;
+		  if (text.equals("RFC822.HEADER")) return RFC822HEADER;
+		  if (text.equals("RFC822.TEXT")) return RFC822TEXT;
 		  return ttype;
 		}
 	}

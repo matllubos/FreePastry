@@ -213,7 +213,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		{
 		_loop25:
 		do {
-			if (((LA(1) >= CHECK && LA(1) <= PERIOD))) {
+			if (((LA(1) >= CHECK && LA(1) <= UNKNOWN))) {
 				matchNot(EOF);
 			}
 			else {
@@ -696,6 +696,8 @@ public ImapCommandParser(ParserSharedInputState state) {
 		case BODY:
 		case BODYPEEK:
 		case RFC822:
+		case RFC822HEADER:
+		case RFC822TEXT:
 		case ATOM:
 		{
 			fetch_part(cmd);
@@ -885,7 +887,8 @@ public ImapCommandParser(ParserSharedInputState state) {
 		Token  a = null;
 		Token  at = null;
 		Token  r = null;
-		Token  j = null;
+		Token  rh = null;
+		Token  rt = null;
 		Token  p = null;
 		
 		BodyPartRequest breq = new BodyPartRequest();
@@ -1019,29 +1022,33 @@ public ImapCommandParser(ParserSharedInputState state) {
 			if ( inputState.guessing==0 ) {
 				rreq.setName(r.getText()); System.out.println("GOT RFC " + r.getText());
 			}
-			{
-			switch ( LA(1)) {
-			case PERIOD:
-			{
-				match(PERIOD);
-				j = LT(1);
-				match(ATOM);
-				if ( inputState.guessing==0 ) {
-					rreq.setType(j.getText());
-				}
-				break;
+			if ( inputState.guessing==0 ) {
+				
+				cmd.appendPartRequest(rreq);
+				
 			}
-			case EOF:
-			case SPACE:
-			case RPAREN:
-			{
-				break;
+			break;
+		}
+		case RFC822HEADER:
+		{
+			rh = LT(1);
+			match(RFC822HEADER);
+			if ( inputState.guessing==0 ) {
+				rreq.setName("RFC822"); rreq.setType("HEADER"); System.out.println("GOT RFC " + rh.getText());
 			}
-			default:
-			{
-				throw new NoViableAltException(LT(1), getFilename());
+			if ( inputState.guessing==0 ) {
+				
+				cmd.appendPartRequest(rreq);
+				
 			}
-			}
+			break;
+		}
+		case RFC822TEXT:
+		{
+			rt = LT(1);
+			match(RFC822TEXT);
+			if ( inputState.guessing==0 ) {
+				rreq.setName("RFC822"); rreq.setType("TEXT"); System.out.println("GOT RFC " + rt.getText());
 			}
 			if ( inputState.guessing==0 ) {
 				
@@ -1114,6 +1121,8 @@ public ImapCommandParser(ParserSharedInputState state) {
 		"\"BODY\"",
 		"\"BODY.PEEK\"",
 		"\"RFC822\"",
+		"\"RFC822.HEADER\"",
+		"\"RFC822.TEXT\"",
 		"SPACE",
 		"LPAREN",
 		"RPAREN",
@@ -1132,12 +1141,11 @@ public ImapCommandParser(ParserSharedInputState state) {
 		"PLUS",
 		"NUMBER",
 		"LITERAL_START",
-		"UNKNOWN",
-		"PERIOD"
+		"UNKNOWN"
 	};
 	
 	private static final long[] mk_tokenSet_0() {
-		long[] data = { 140737488355314L, 0L, 0L, 0L};
+		long[] data = { 281474976710642L, 0L, 0L, 0L};
 		return data;
 	}
 	public static final BitSet _tokenSet_0 = new BitSet(mk_tokenSet_0());

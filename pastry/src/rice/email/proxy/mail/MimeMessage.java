@@ -10,7 +10,7 @@ import java.io.OutputStream;
 
 import java.text.SimpleDateFormat;
 
-import java.util.Date;
+import java.util.*;
 
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.Header;
@@ -121,9 +121,7 @@ public class MimeMessage
         return out.toString();
     }
 
-    public String[] getHeader(String name)
-      throws MailException
-    {
+    public String[] getHeader(String name) throws MailException {
       try {
         return _message.getHeader(name);
       } catch (MessagingException me) {
@@ -131,15 +129,31 @@ public class MimeMessage
       }
     }
 
+    public Enumeration getMatchingHeaderLines(String[] names) throws MailException {
+      try {
+        return _message.getMatchingHeaderLines(names);
+      } catch (MessagingException me) {
+        throw new MailException(me);
+      }
+    }
+
+    public Enumeration getNonMatchingHeaderLines(String[] names) throws MailException {
+      try {
+        return _message.getNonMatchingHeaderLines(names);
+      } catch (MessagingException me) {
+        throw new MailException(me);
+      }
+    }
+    
     public long getSize()
                  throws MailException
     {
         try
         {
 
-            return _resource.getSize();
+            return _message.getSize();
         }
-        catch (IOException ioe)
+        catch (MessagingException ioe)
         {
             throw new MailException(ioe);
         }

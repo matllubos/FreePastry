@@ -297,7 +297,16 @@ fetch_part[FetchCommand cmd]
   }
   |
 	r:RFC822 {rreq.setName(r.getText()); System.out.println("GOT RFC " + r.getText());}
-	  (PERIOD j:ATOM {rreq.setType(j.getText());})?
+  {
+    cmd.appendPartRequest(rreq);
+  }
+  |
+	rh:RFC822HEADER {rreq.setName("RFC822"); rreq.setType("HEADER"); System.out.println("GOT RFC " + rh.getText());}
+  {
+    cmd.appendPartRequest(rreq);
+  }
+  |
+	rt:RFC822TEXT {rreq.setName("RFC822"); rreq.setType("TEXT"); System.out.println("GOT RFC " + rt.getText());}
   {
     cmd.appendPartRequest(rreq);
   }
