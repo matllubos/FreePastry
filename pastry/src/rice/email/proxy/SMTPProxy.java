@@ -3,7 +3,7 @@ package rice.email.proxy;
 import java.net.BindException;
 import java.net.InetAddress;
 
-import rice.post.Post;
+import rice.email.EmailService;
 
 /**
  * This class defines an SMTP service that is layered on top of the POST system.  Since both
@@ -14,6 +14,10 @@ import rice.post.Post;
  */
 public class SMTPProxy {
 
+    InetAddress address;
+    int port;
+    SMTPDaemon daemon;
+
   /**
    * This constructor creates an SMTP service running on a specified address/port pair.
    * 
@@ -23,7 +27,8 @@ public class SMTPProxy {
    * @throws BindException if the service could not bind to the address/port pair.
    */
   public SMTPProxy(InetAddress address, int port) throws BindException {
-    return;
+      this.address = address;
+      this.port = port;
   }
 
   // methods
@@ -31,13 +36,16 @@ public class SMTPProxy {
    * This method binds this SMTP proxy to a post account.  In order to send through this 
    * account, the smtp client must provide the specified username and password.
    * 
-   * @param post is the Post this SMTP proxy should begin servicing.
-   * @param smtpUsername is the username that a SMTP client must provide to access the
-   * client.
-   * @param smtpPassword is the password that a SMTP client must provide to access the
-   * client.
+   * @param service is the EmailService this SMTP proxy should begin servicing.
    */
-  public void attach(Post post, String smtpUsername, String smtpPassword) {
-    return;
+  public void attach(EmailService service) {
+
+      // Launch a new SMTPDaemon at the given address and port.
+      // This daemon will be responsible for actually receiving SMTP requests
+      // and delivering messages.
+      daemon = new SMTPDaemon(address, port, service);
+      Thread t = new Thread(daemon);
+      t.setDaemon(true);
+      t.start();
   }
 }
