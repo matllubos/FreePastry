@@ -61,7 +61,7 @@ public class StorageTest extends Test {
    * Builds a MemoryStorageTest
    */
   public StorageTest() {
-    storage = new PersistentStorage(".", 20000000);
+    storage = new MemoryStorage();
   }
 
   public void setUp(final Continuation c) {
@@ -563,22 +563,26 @@ public class StorageTest extends Test {
   }
 
   private void testRandomInserts(final Continuation c) {
-    final Continuation checkRandom = new Continuation() {
-      private int start = 10;
-      private int end = 98;
-      private int skip = 2;
+    
+    final int START_NUM = 10;
+    final int END_NUM = 98;
+    final int SKIP = 2;
 
-      private int deleted = -1;
+    final int NUM_ELEMENTS = 1 + ((END_NUM - START_NUM) / SKIP);
+    
+    final Continuation checkRandom = new Continuation() {
+
+      private int NUM_DELETED = -1;
 
       public void receiveResult(Object o) {
-        if (deleted == -1) {
+        if (NUM_DELETED == -1) {
           stepStart("Checking object deletion");
-          deleted = ((Integer) o).intValue();
-          storage.scan("Stress" + start, "Stress" + end, this);
+          NUM_DELETED = ((Integer) o).intValue();
+          storage.scan("Stress" + START_NUM, "Stress" + END_NUM, this);
         } else {
           int length = ((Comparable[])o).length;
 
-          int desired = 1 + ((end-start)/skip) - deleted;
+          int desired = NUM_ELEMENTS - NUM_DELETED;
           
           if (length == desired) {
             stepDone(SUCCESS);
@@ -599,16 +603,13 @@ public class StorageTest extends Test {
 
     
     final Continuation removeRandom = new Continuation() {
+      
       private Random random = new Random();
-      private int start = 8;
-      private int end = 98;
-      private int count = start;
-      private int skip = 2;
-
-      private int deleted = 0;
+      private int count = START_NUM;
+      private int num_deleted = 0;
 
       public void receiveResult(Object o) {
-        if (count == start) {
+        if (count == START_NUM) {
           stepStart("Removing random subset of objects");
         }
 
@@ -617,18 +618,17 @@ public class StorageTest extends Test {
           return;
         }
 
-        if (count == end) {
+        if (count == END_NUM) {
           stepDone(SUCCESS);
-          checkRandom.receiveResult(new Integer(deleted));
+          checkRandom.receiveResult(new Integer(num_deleted));
           return;
         }
-        
-        count += skip;
 
         if (random.nextBoolean()) { 
-          deleted++;
-          storage.unstore("Stress" + count, this);
+          num_deleted++;
+          storage.unstore("Stress" + (count += SKIP), this);
         } else {
+          count += SKIP;
           receiveResult(new Boolean(true));
         }
       }
@@ -639,33 +639,28 @@ public class StorageTest extends Test {
     };
 
     final Continuation checkScan = new Continuation() {
-      private int skip = 2;
 
-      private int start = 8;
-      private int end = 98;
-
+      private int count = START_NUM;
+      
       public void receiveResult(Object o) {
-        if (start == 8) {
+        if (count == START_NUM) {
           stepStart("Checking scans for all ranges");
         } else {
           Comparable[] result = (Comparable[]) o;
-          int desired = 1 + ((end - start) / skip);
 
-          if (result.length != desired) {
-            stepDone(FAILURE, "Expected " + desired + " found " + result.length + " keys in scan from " + start + " to " + end + ".");
+          if (result.length != NUM_ELEMENTS - ((count - START_NUM) / SKIP)) {
+            stepDone(FAILURE, "Expected " + NUM_ELEMENTS + " found " + result.length + " keys in scan from " + count + " to " + END_NUM + ".");
             return;
           }
         }
         
-        if (start == end) {
+        if (count == END_NUM) {
           stepDone(SUCCESS);
           removeRandom.receiveResult(new Boolean(true));
           return;
         }
-
-        start += skip;
         
-        storage.scan("Stress" + start, "Stress" + end, this);
+        storage.scan("Stress" + (count += SKIP), "Stress" + END_NUM, this);
       }
 
       public void receiveException(Exception e) {
@@ -674,28 +669,25 @@ public class StorageTest extends Test {
     };
     
     final Continuation checkExists = new Continuation() {
-      private int count = 8;
-      private int skip = 2;
-      private int NUM_TO_INSERT=98;
+      private int count = START_NUM;
 
       public void receiveResult(Object o) {
         if (o.equals(new Boolean(false))) {
-          stepDone(FAILURE);
+          stepDone(FAILURE, "Element " + count + " did not exist.");
           return;
         }
         
-        if (count == 8) {
+        if (count == START_NUM) {
           stepStart("Checking exists for all 50 objects");
         }
 
-        if (count == NUM_TO_INSERT) {
+        if (count == END_NUM) {
           stepDone(SUCCESS);
           checkScan.receiveResult(new Boolean(true));
           return;
         }
-
-        count += skip;
-        storage.exists("Stress" + count, this);
+        
+        storage.exists("Stress" + (count += SKIP), this);
       }
 
       public void receiveException(Exception e) {
@@ -705,9 +697,8 @@ public class StorageTest extends Test {
     
     
     final Continuation insert = new Continuation() {
-      private int count = 8;
-      private int skip = 2;
-      private int NUM_TO_INSERT=98;
+
+      private int count = START_NUM;
 
       public void receiveResult(Object o) {
         if (o.equals(new Boolean(false))) {
@@ -715,19 +706,21 @@ public class StorageTest extends Test {
           return;
         }
         
-        if (count == 8) {
+        if (count == START_NUM) {
           sectionStart("Stress Testing");
-          stepStart("Inserting 50 objects from 0 to 1000000 bytes");
+          stepStart("Inserting 40 objects from 100 to 1000000 bytes");
         }
 
-        if (count == NUM_TO_INSERT) {
+        if (count > END_NUM) {
           stepDone(SUCCESS);
           checkExists.receiveResult(new Boolean(true));
           return;
         }
 
-        count += skip;
-        storage.store("Stress" + count, new byte[count * count * count], this);
+        int num = count;
+        count += SKIP;
+        
+        storage.store("Stress" + num, new byte[num * num * num], this);
       }
 
       public void receiveException(Exception e) {
