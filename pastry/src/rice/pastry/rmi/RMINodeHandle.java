@@ -75,6 +75,9 @@ public class RMINodeHandle implements NodeHandle, Serializable
     private transient PastryNode localnode;
     private transient boolean isLocal;
 
+    private transient long lastpingtime;
+    private static final long pingthrottle = 14 /* seconds */;
+
     /**
      * Constructor.
      *
@@ -111,6 +114,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	isInPool = false;
 	localnode = null;
 	isLocal = false;
+	lastpingtime = 0;
     }
 
     public NodeId getNodeId() { return remotenid; }
@@ -235,9 +239,18 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	 *
 	 * This is not disastrous; at worst, we'll ping the local node once.
 	 */
+
 	if (isLocal) return alive;
 
-	if (Log.ifp(7)) System.out.println("pinging " + remotenid);
+	/*
+	 * throttle super-rapid pings
+	 */
+	long now = System.currentTimeMillis();
+	if (now - lastpingtime < pingthrottle*1000)
+	    return alive;
+	lastpingtime = now;
+
+	if (Log.ifp(7)) System.out.println(localnode + " pinging " + remotenid);
 	try {
 
 	    long starttime = System.currentTimeMillis();
