@@ -44,7 +44,7 @@ import rice.pastry.client.*;
 import rice.pastry.security.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
-
+import rice.rm.*;
 import rice.persistence.*;
 
 import java.io.*;
@@ -59,8 +59,9 @@ import java.util.Hashtable;
  * @version $Id$
  * @author Charles Reis
  * @author Alan Mislove
+ * @author Ansley Post
  */
-public class PASTServiceImpl extends PastryAppl implements PASTService {
+public class PASTServiceImpl extends PastryAppl implements PASTService, RMClient {
   
   /**
    * Whether to print debugging statements.
@@ -376,7 +377,56 @@ public class PASTServiceImpl extends PastryAppl implements PASTService {
       }
     });
   }
-    
+
+ // ---------- RMClient Methods ----------
+
+ /* This upcall is invoked by the Replica Manager to notify the application 
+  * that it is responsible for the object with this particular objectKey. It
+  * is the duty of the application to decide what action to take. For instance,
+  * in PAST, the application will need to store the file in it
+  * local storage unit.
+  *
+  * @param objectKey the object key of the object
+  * @param object the object
+  */
+  public void responsible(NodeId objectKey, Object object){
+
+
+  }
+
+ /* This upcall is invoked by the Replica Manager to notify the application 
+  * that it is no longer responsible for the object with this particular
+  * objectKey. It is the duty of the application to decide what action to take.
+  * For instance, in PAST, the application will need to delete the file from
+  * its local storage unit.
+  *
+  * @param objectKey the object key of the object
+  */
+  public void notresponsible(NodeId objectKey){
+
+  }
+ 
+ /* This upcall is invoked by the Replica Manager to notify the application
+  * that it should continue to hold the object. If it was not holding the 
+  * object then the RMClient should treat this upcall as implicit notification
+  * that it is responsible and so should take steps to get the object. On the 
+  * other hand if the RMClient does not get this upcall for a long time(several 
+  * Timeperiods after, where it is assumed that the underlying RM layer is ASKED
+  * by the RMClient layer to send a  refresh in one timeperiod), then the
+  * application can get rid of the object.
+  */
+  public void refresh(NodeId objectKey){
+
+  }
+
+ /* This upcall is simply to denote that the underlying replica manager
+  * is ready.
+  */
+  public void rmIsReady(){
+
+  }
+  
+ // ---------- Debug Methods ---------------   
   /**
    * Prints a debugging message to System.out if the
    * DEBUG flag is turned on.
