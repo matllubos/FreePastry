@@ -115,7 +115,7 @@ public class DirectPastryRegrTest extends PastryRegrTest {
      * murder the node. comprehensively.
      */
     protected void killNode(PastryNode pn) {
-	EuclideanNetwork enet = (EuclideanNetwork)simulator;
+	NetworkSimulator enet = (NetworkSimulator) simulator;
 	enet.setAlive(pn.getNodeId(), false);
     }
 
@@ -127,3 +127,4 @@ public class DirectPastryRegrTest extends PastryRegrTest {
 	mainfunc(pt, args, 100 /*n*/, 20/*d*/, 100/*k*/, 100/*m*/, 4/*conc*/);
     }
 }
+
