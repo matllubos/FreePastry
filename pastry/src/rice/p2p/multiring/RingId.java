@@ -112,7 +112,13 @@ public class RingId implements Id {
    * @return true if clockwise, false otherwise.
    */
   public boolean clockwise(Id nid) {
-    return id.clockwise(nid);
+    if (nid instanceof RingId) {
+      RingId rnid = (RingId) nid;
+      if (!rnid.getRingId().equals(this.getRingId()))
+        throw new IllegalArgumentException("Cannot compare RingIDs from different Rings!");
+        
+      return id.clockwise(rnid.getId());
+    } else throw new IllegalArgumentException("Cannot compare RingID with another ID type!");
   }
   
   /**
