@@ -22,7 +22,7 @@ public class ErasureCodec {
 
   final static int Lfield = 10;
   final static int MultField = (1 << Lfield) - 1;
-  final static int MAX_OBJECT_SIZE = 2000000;
+  final static int MAX_OBJECT_SIZE = 10000000;
   /*
    *  bytes
    */

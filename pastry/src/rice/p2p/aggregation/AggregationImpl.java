@@ -70,7 +70,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private static final long flushDelayAfterJoin = 30 * SECONDS;
   private static long flushInterval = 5 * MINUTES;
 
-  private static int maxAggregateSize = 1024*1024;
+  private static int maxAggregateSize = 8*1024*1024;
   private static int maxObjectsInAggregate = 25;
   private static int maxAggregatesPerRun = 3;
   
@@ -1216,9 +1216,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     }
   }
 
-  private void refreshInObjectStore(Id id, long expiration, Continuation command) {
+  private void refreshInObjectStore(Id[] ids, long expiration, Continuation command) {
     if (objectStore instanceof GCPast) {
-      ((GCPast)objectStore).refresh(new Id[] { id }, expiration, command);
+      ((GCPast)objectStore).refresh(ids, expiration, command);
     } else {
       command.receiveResult(new Boolean(true));
     }
@@ -1230,18 +1230,39 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return;
     }
 
-    Continuation.MultiContinuation mc = new Continuation.MultiContinuation(new Continuation() {
+    refreshInObjectStore(ids, expiration, new Continuation() {
+      boolean successful = false;
+      Object result;
+      
       public void receiveResult(Object o) {
-        aggregateList.writeToDisk();
-        command.receiveResult(o);
+        successful = true;
+        result = o;
+        refreshInAggregates();
       }
       public void receiveException(Exception e) {
-        command.receiveException(e);
+        successful = false;
+        result = e;
+        e.printStackTrace();
+        refreshInAggregates();
       }
-    }, ids.length);
+      private void refreshInAggregates() {
+        Continuation.MultiContinuation mc = new Continuation.MultiContinuation(new Continuation() {
+          public void receiveResult(Object o) {
+            aggregateList.writeToDisk();
+            if (successful)
+              command.receiveResult(result);
+            else
+              command.receiveException((Exception) o);
+          }
+          public void receiveException(Exception e) {
+            command.receiveException(e);
+          }
+        }, ids.length);
 
-    for (int i=0; i<ids.length; i++)
-      refresh(ids[i], expiration, mc.getSubContinuation(i));
+        for (int i=0; i<ids.length; i++)
+          refreshInternal(ids[i], expiration, mc.getSubContinuation(i));
+      }
+    });
   }
   
   public void refresh(final Id[] ids, final long[] versions, final long expiration, final Continuation command) {
@@ -1273,7 +1294,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
               if ((result[i] instanceof Boolean) && !(subresult[i] instanceof Boolean))
                 result[i] = subresult[i];
           } else {
-            Exception e = new AggregationException("Object sture returns unexpected result: "+o);
+            Exception e = new AggregationException("Object store returns unexpected result: "+o);
             for (int i=0; i<result.length; i++)
               result[i] = e;
           }
@@ -1289,7 +1310,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     }
   }
 
-  private void refresh(final Id id, final long expiration, final Continuation command) {
+  private void refreshInternal(final Id id, final long expiration, final Continuation command) {
     AggregateDescriptor adc = (AggregateDescriptor) aggregateList.getADC(id);
     log(2, "Refresh("+id.toStringFull()+", expiration="+expiration+")");
     
@@ -1303,10 +1324,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
       if (adc.objects[objDescIndex].refreshedLifetime < expiration)
         aggregateList.setObjectRefreshedLifetime(adc, objDescIndex, expiration);
-        
-      refreshInObjectStore(id, expiration, command);
+
+      command.receiveResult(new Boolean(true));
     } else {
-    
       boolean foundWaiting = false;
       IdSet waitingIds = waitingList.scan();
       Iterator iter = waitingIds.getIterator();
@@ -1335,7 +1355,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       
       if (foundWaiting) {
         log(2, "Found waiting -- returning");
-        refreshInObjectStore(id, expiration, command);
+        command.receiveResult(new Boolean(true));
         return;
       }
     
@@ -1373,7 +1393,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                 });
               }
             
-              refreshInObjectStore(id, expiration, command);
+              command.receiveResult(new Boolean(true));
             } else {
               warn("Cannot find refreshed object "+id+", lookup returns "+o);
               command.receiveException(new AggregationException("Object not found: "+id.toStringFull()));
@@ -1385,7 +1405,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         });
       } else {
         warn("Refreshed object not found in any aggregate: "+id.toStringFull());
-        refreshInObjectStore(id, expiration, command);
+        command.receiveResult(new Boolean(true));
       }
     }
   }
