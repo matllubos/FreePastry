@@ -10,10 +10,16 @@ SOURCE  = \
 	DirectScribeRegrTest.java \
 	DistTopicLog.java\
 	DistScribeRegrTestApp.java \
-	DistScribeRegrTest.java
+	DistScribeRegrTest.java\
+	DistScribeRegrTestMessage.java
 
 RMI_SOURCE =
 
 MAIN       = 
 
 include $(JAVA_DEV_ROOT)/Makefile
+
+
+
+
+
