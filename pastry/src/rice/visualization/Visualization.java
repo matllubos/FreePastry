@@ -147,6 +147,14 @@ public class Visualization {
     return (DistNodeHandle[]) neighbors.get(handle.getId());
   }
   
+  public synchronized UpdateJarResponse updateJar(File[] files, String executionString) {
+    if (selected == null) {
+      throw new RuntimeException("No Node Selected");
+    }
+    VisualizationClient client = (VisualizationClient) clients.get(selected.getNodeId());
+    return client.updateJar(files,executionString);    
+  }
+  
   protected Data getData(DistNodeHandle handle) {
       VisualizationClient client = (VisualizationClient) clients.get(handle.getNodeId());
       

@@ -26,6 +26,12 @@ public class VisualizationServer implements Runnable {
   protected ServerSocket server;
   
   protected PastryNode node;
+  
+  protected boolean willAcceptNewJars = true;
+  
+  protected boolean willAcceptNewRestartCommandLine = true;
+  
+  private String restartCommand = null;
     
   public VisualizationServer(InetSocketAddress address, PastryNode node, Object[] objects) {
     this.address = address;
@@ -68,6 +74,7 @@ public class VisualizationServer implements Runnable {
       while (true) {
         ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
         Object object = ois.readObject();
+        System.out.println("Got "+object);
         
         if (object instanceof DataRequest) {
           ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
@@ -81,6 +88,10 @@ public class VisualizationServer implements Runnable {
           Collection collection = handles.values();
           ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
           oos.writeObject(collection.toArray(new DistNodeHandle[0]));       
+        } else if (object instanceof UpdateJarRequest) {
+          System.out.println("Got UpdateJarRequest");
+          ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+          handleUpdateJarRequest((UpdateJarRequest)object,oos);
         }
       }
     } catch (IOException e) {
@@ -88,6 +99,60 @@ public class VisualizationServer implements Runnable {
     } catch (ClassNotFoundException e) {
       System.out.println("Server: Exception " + e + " thrown.");
     }
+  }
+
+  protected void handleUpdateJarRequest(
+       UpdateJarRequest req, 
+       ObjectOutputStream oos)
+        throws IOException {
+    if (!willAcceptNewJars) {
+      oos.writeObject(new UpdateJarResponse(UpdateJarResponse.FILE_COPY_NOT_ALLOWED));      
+      return;
+    }
+
+    // this will most likely be an IOException
+    Exception e = null;
+
+    // try to write the files
+    try {
+      req.writeFiles();
+    } catch (Exception e1) {
+      e = e1;
+      e.printStackTrace(); 
+    }          
+    
+    UpdateJarResponse ujr;
+
+    if (req.executeCommand != null) {   
+      if (willAcceptNewRestartCommandLine) {      
+        restartCommand = req.executeCommand;
+        ujr = new UpdateJarResponse(e);
+      } else {
+        ujr = new UpdateJarResponse(e,UpdateJarResponse.NEW_EXEC_NOT_ALLOWED);        
+      }
+    } else {
+      ujr = new UpdateJarResponse(e);      
+    }
+    // respond with the exception if there was one
+    oos.writeObject(ujr);
+
+    // kill the node
+    ((DistPastryNode)node).kill();
+  
+    // sleep for a while
+    try {
+      Thread.sleep(req.getWaitTime());
+    } catch (InterruptedException ie) {
+      ie.printStackTrace();
+    }    
+    
+    System.out.println("restarting with command:\""+restartCommand+"\"");
+          
+    Process p = Runtime.getRuntime().exec(restartCommand);
+//    System.out.println("Process:"+p);
+    System.exit(0);
+    
+    
   }
   
   protected void addLeafSet(Hashtable handles) {
@@ -126,6 +191,19 @@ public class VisualizationServer implements Runnable {
     }
     
     return data;
+  }
+
+  /**
+   * @param string
+   * @param args
+   */
+  public void setRestartCommand(String string, String[] args) {
+    restartCommand = string;
+    if (args != null) {
+      for (int i = 0; i < args.length; i++) {
+        restartCommand = restartCommand.concat(" "+args[i]);    
+      }
+    }
   }
 
 }

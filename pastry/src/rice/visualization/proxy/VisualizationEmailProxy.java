@@ -18,9 +18,12 @@ public class VisualizationEmailProxy extends EmailProxy {
   protected int visualizationPort;
   
   protected static boolean visualization = false;
+
+  protected transient String[] args;
   
   public VisualizationEmailProxy(String[] args) {
     super(args);
+    this.args = args;
   }
   
   public void start() {
@@ -38,6 +41,9 @@ public class VisualizationEmailProxy extends EmailProxy {
     }
     
     server = new VisualizationServer(serverAddress, pastry, new Object[] {pastry, past, storage});
+    server.setRestartCommand(
+      "java -cp classes/:lib/activation.jar:lib/bouncycastle.jar:lib/javamail.jar:lib/junit.jar:lib/antlr.jar:lib/xmlpull_1_1_3_4a.jar:lib/xpp3-1.1.3.4d_b2.jar rice.visualization.proxy.VisualizationEmailProxy",
+      args);
     server.addPanelCreator(new OverviewPanelCreator());
     NetworkActivityPanelCreator network = new NetworkActivityPanelCreator();
     server.addPanelCreator(network);

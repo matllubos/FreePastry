@@ -15,7 +15,7 @@ import rice.p2p.commonapi.*;
 public class InformationPanel extends JPanel {
   
   public static int INFORMATION_PANEL_WIDTH = 350;
-  public static int INFORMATION_PANEL_HEIGHT = PastryRingPanel.PASTRY_RING_PANEL_HEIGHT;
+  public static int INFORMATION_PANEL_HEIGHT = PastryRingPanel.PASTRY_RING_PANEL_HEIGHT/2;
   
   protected Visualization visualization;
   

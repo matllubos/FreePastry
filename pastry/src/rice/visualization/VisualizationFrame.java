@@ -17,6 +17,8 @@ public class VisualizationFrame extends JFrame {
   
   protected InformationPanel informationPanel;
   
+  protected ControlPanel controlPanel;
+  
   protected VisualizationFrame(Visualization visualization) {
     super("Pastry Network Visualization"); 
     
@@ -38,6 +40,8 @@ public class VisualizationFrame extends JFrame {
     pastryRingPanel = new PastryRingPanel(visualization);
     c.gridx = 0;
     c.gridy = 0;
+    c.gridheight = 2;
+    c.gridwidth = 1;
     layout.setConstraints(pastryRingPanel, c);
     getContentPane().add(pastryRingPanel);
     
@@ -45,7 +49,8 @@ public class VisualizationFrame extends JFrame {
     
     pastryNodePanel = new PastryNodePanel(visualization, factory);
     c.gridx = 0;
-    c.gridy = 1;
+    c.gridy = 2;
+    c.gridheight = 1;
     c.gridwidth = 2;
     layout.setConstraints(pastryNodePanel, c);
     getContentPane().add(pastryNodePanel); 
@@ -55,8 +60,20 @@ public class VisualizationFrame extends JFrame {
     informationPanel = new InformationPanel(visualization);
     c.gridx = 1;
     c.gridy = 0;
+    c.gridheight = 1;
+    c.gridwidth = 1;
     layout.setConstraints(informationPanel, c);
     getContentPane().add(informationPanel); 
+    
+    c = new GridBagConstraints();
+    
+    controlPanel = new ControlPanel(visualization);
+    c.gridx = 1;
+    c.gridy = 1;
+    c.gridheight = 1;
+    c.gridwidth = 1;
+    layout.setConstraints(controlPanel, c);
+    getContentPane().add(controlPanel); 
     
     //Display the window.
     pack();
@@ -68,6 +85,7 @@ public class VisualizationFrame extends JFrame {
   }
   
   public void nodeSelected(DistNodeHandle node) {
+    controlPanel.nodeSelected(node);
     informationPanel.nodeSelected(node);
     pastryRingPanel.nodeSelected(node);
     pastryNodePanel.nodeSelected(node);

@@ -90,4 +90,30 @@ public class VisualizationClient {
     }
   }
   
+  public synchronized UpdateJarResponse updateJar(File[] files, String executionString) {
+    try {
+      ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+      UpdateJarRequest ujr = new UpdateJarRequest(files);
+      if (executionString != null) {
+        ujr.executeCommand = executionString;
+      }
+      oos.writeObject(ujr);
+      ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+      UpdateJarResponse result = (UpdateJarResponse) ois.readObject();
+      
+      this.state = STATE_ALIVE;
+      return result;
+    } catch (IOException e) {
+      this.state = STATE_DEAD;
+      System.out.println("Client: Exception " + e + " thrown.");
+
+      return null;
+    } catch (ClassNotFoundException e) {
+      this.state = STATE_UNKNOWN;
+      System.out.println("Client: Exception " + e + " thrown.");
+
+      return null;
+    }    
+  }
+  
 }
