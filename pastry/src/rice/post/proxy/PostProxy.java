@@ -619,7 +619,7 @@ public class PostProxy {
     if (parameters.getBooleanParameter("past_garbage_collection_enable")) {
       stepStart("Starting Trashcan Storage");
       trashStorage = new StorageManagerImpl(FACTORY,
-                                            new PersistentStorage(FACTORY, prefix + "-trash", location, diskLimit),
+                                            new PersistentStorage(FACTORY, prefix + "-trash", location, diskLimit, false),
                                             new EmptyCache(FACTORY));
       stepDone(SUCCESS);
     }

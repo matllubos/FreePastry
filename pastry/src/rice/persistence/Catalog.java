@@ -87,8 +87,14 @@ public interface Catalog {
    * no metadata exists.  The metadata must be stored in memory, so this 
    * operation is guaranteed to be fast and non-blocking.
    *
+   * The metadata returned from this method must *NOT* be mutated in any way,
+   * as the actual reference to the internal object is returned.  Mutating
+   * this metadata may make the internal indices incorrect, resulting 
+   * in undefined behavior.  Changing the metadata should be done by creating
+   * a new metadata object and calling setMetadata().
+   *
    * @param id The id for which the metadata is needed
-   * @return The metadata, or null of non exists
+   * @return The metadata, or null if none exists
    */
   public Serializable getMetadata(Id id);
   
