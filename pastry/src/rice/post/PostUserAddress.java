@@ -8,12 +8,37 @@ import rice.pastry.*;
  * 
  * @version $Id$
  */
-public abstract class PostUserAddress extends PostEntityAddress {
+public class PostUserAddress extends PostEntityAddress {
 
+  // the name of this user
+  private String name;
+  
+  // the address of this user
+  private NodeId address;
+  
   /**
    * Constructor
    */
-  public PostUserAddress() {
+  public PostUserAddress(String name) {
+    this.name = name;
+    address = getNodeId(name);
   }
 
+  /**
+   * Returns the address associated with this useraddress
+   *
+   * @return The corresponding address
+   */
+  public NodeId getAddress() {
+    return address;
+  }
+
+  /**
+   * Returns the name of this user
+   *
+   * @return The corresponding name
+   */
+  public String getName() {
+    return name;
+  }
 }
