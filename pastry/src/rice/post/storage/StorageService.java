@@ -14,6 +14,7 @@ import rice.storage.*;
 import rice.post.*;
 import rice.post.security.*;
 import rice.pastry.*;
+import rice.pastry.standard.*;
 import rice.pastry.security.*;
 
 /**
@@ -45,6 +46,11 @@ public class StorageService {
    * Stored data waiting for verification
    */
   private Hashtable pendingVerification;
+
+  /**
+   * Generates random node ids
+   */
+  private RandomNodeIdFactory factory;
   
   /**
    * Contructs a StorageService given a PAST to run on top of.
@@ -58,7 +64,12 @@ public class StorageService {
     this.credentials = credentials;
     this.security = security;
 
+    factory = new RandomNodeIdFactory();
     pendingVerification = new Hashtable();
+  }
+
+  public NodeId getRandomNodeId() {
+    return factory.generateNodeId();
   }
 
   /**
@@ -533,6 +544,8 @@ public class StorageService {
      * @param result The result of the command.
      */
     public void receiveResult(Object result) {
+      Object data = null;
+      
       try {
         StorageObject so = (StorageObject) result;
 
@@ -551,15 +564,16 @@ public class StorageService {
         }
 
         byte[] plainText = sd.getData();
-        Object data = security.deserialize(plainText);
+        data = security.deserialize(plainText);
 
         pendingVerification.put(data, sd);
 
         command.receiveResult((PostData) data);
       }
-      catch (ClassCastException cce) {
-        command.receiveException(new StorageException("ClassCastException while retrieving data: " + cce));
-      }
+ /*     catch (ClassCastException cce) {
+        command.receiveException(new StorageException("ClassCastException while retrieving data: " + data + result));
+        cce.printStackTrace();
+      } */
       catch (IOException ioe) {
         command.receiveException(new StorageException("IOException while retrieving data: " + ioe));
       }

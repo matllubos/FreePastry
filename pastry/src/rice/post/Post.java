@@ -643,6 +643,7 @@ public class Post extends PastryAppl implements IScribeApp  {
       if (! (nm.getSender().equals(message.getSender()))) {
         System.out.println("PANIC - Found ENM from " + message.getSender() + " with internal NM from different sender " +
                            nm.getSender() + " - dropping on floor.");
+        return;
       }
       
       // deliver notification messag
