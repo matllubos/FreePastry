@@ -1,0 +1,77 @@
+Description of "wire" pastry package
+09/05/2002, Alan Mislove 
+
+
+OVERVIEW
+--------
+The rice.pastry.wire package provides a socket and datagram-based communications driver for Pastry, replacing the RMI driver in the rice.pastry.rmi package.  The wire package uses Java 1.4's New I/O (NIO) library to provide non-blocking connecting, reading, and writing, thus showing a substancial performance increase over the RMI-based version.  The wire package also has support for socket pooling, wbich allows the user to specify how many socket a given pastry node can be using at one time.
+
+
+DETAILED DESCRIPTION
+--------------------
+The wire package works in the following manner:  Each node in the system is assigned to a specific InetSocketAddress (IP + port) where all other nodes can contact it. It is listening for both UDP datagrams and incoming TCP connections on this port.  All messages from one node to another are initially sent via UDP to the remote node.  If the message queue gets too large, or the messages get to large, or too many packets are being lost the wire system will attempt to establish a TCP connection to the remote node. 
+
+Datagram Messages
+-----------------
+All messages sent via the UDP protocol are ensured delivery by the implementation of a simple stop-and-wait protocol.  Each packet has a sequence number, and the next packet won't be sent unless the acknoweldgement for the previous packet has already arrived.  There is also an implemention of a exponential back-off policy for dealing with lost packets.  If an ack is not heard for an amount of time, the sending node will attempt to resend the packet.  It will then wait a longer time than before to hear the ack.  It repeats this process until it hears the ack to declares the remote node to be dead.
+
+Joining
+-------
+When a node wishes to join the network, it must provide the InetSocketAddres of a node already in the system.  To get the NodeID, the factory driver will then attempt to open a TCP connection to this node and send across a NodeId request. If a connection can be established, the node handle is built as expected, and the node can boot as normal.  If no connnection can be established, 'null' is returned and the node boots as if it is the only node in the network.
+
+Node Death
+----------
+When a node dies, one of two methods will detect it's death on the remote nodes.  If a TCP connection had been established, the unexepcted closure of this connection will indicate to the remote node that this node has died.  Otherwise if UDP is being used, the next time a message is sent to this node, the remote node will never receive an ack, and will eventually declare this node to be dead.
+
+
+CONSTANTS
+---------
+DatagramManager.DATAGRAM_RECEIVE_BUFFER_SIZE
+  The size of the receive buffer (at the socket level) for reading datagrams
+  off of the wire.
+  
+DatagramManager.DATAGRAM_SEND_BUFFER_SIZE
+  The size of the send buffer (at the socket level) for sending datagrams across the wire.
+  
+DatagramTranssmissionManager.TransmissionEntry.SEND_TIMEOUT_DEFAULT
+  The default amount of time to wait before declaring a packet lost (will change according to network conditions).
+
+DatagramTranssmissionManager.TransmissionEntry.SEND_TIMEOUT_MIN
+  The minimum amount of time to wait before declaring a packet lost.
+
+DatagramTranssmissionManager.TransmissionEntry.INITIAL_RESEND_WAIT_TIME
+  The initial amount of time to wait before attempting to resend a packet (after a packet has been declared lost).
+
+DatagramTranssmissionManager.TransmissionEntry.TIMEOUT_FACTOR
+  The factor by which to multiply the last send time to determine the next timeout time.
+    
+DatagramTranssmissionManager.TransmissionEntry.MAX_NUM_RETRIES
+  The maximum number to retries before dropping the message on the floor and
+  declaring the remote node to be dead.
+
+DatagramTranssmissionManager.TransmissionEntry.NUM_RETRIES_BEFORE_OPENING_SOCKET
+  The maximum number of retries before declaring the node to be dead and attampting to open a socket.
+
+DatagramTranssmissionManager.TransmissionEntry.MAX_UDP_QUEUE_SIZE = 4;
+  The maximum number of objects in the UDP queue before attempting to open a socket.
+
+SelectorManager.SELECT_WAIT_TIME
+  The maximum amount to time to wait on each select() operation.
+  
+SocketManager.MAX_OPEN_SOCKETS
+  The maximum number of open sockets for each pastry node.
+  
+WireNodeHandle.MAX_UDP_MESSAGE_SIZE
+  The maximum size of a message that can go over UDP (larger message will force open a socket).
+  
+WireNodeHandle.SOCKET_BUFFER_SIZE
+  The size of the buffer (at the socket level) used to send and receive messages from the socket.
+  
+WireNodeHandle.PING_THROTTLE
+  The number of minutes we must wait before sending subsequent pings.
+
+
+KNOWN BUGS
+----------
+
+All platforms require Java 1,4.  Under Windows, Java 1.4.1 is required to run.
