@@ -67,17 +67,17 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
   /**
    * A cache of the writeReplace() methods, mapping class->writeReplace()
    */
-  protected static HashMap WRITE_REPLACES = new HashMap();
+  protected static SoftHashMap WRITE_REPLACES = new SoftHashMap();
   
   /**
    * A cache of the writeObject() methods, mapping class->writeObject()
    */
-  protected static HashMap WRITE_OBJECTS = new HashMap();
+  protected static SoftHashMap WRITE_OBJECTS = new SoftHashMap();
   
   /**
    * A cache of the persistentFields, mapping class->Field[]
    */
-  protected static HashMap PERSISTENT_FIELDS = new HashMap();
+  protected static SoftHashMap PERSISTENT_FIELDS = new SoftHashMap();
   
   /**
    * The underlying XML writing engine

@@ -66,19 +66,19 @@ import sun.reflect.*;
 public class XMLObjectInputStream extends ObjectInputStream {
   
   /**
-  * The hashmap of readResolve methods, mapping Class->Method
+   * The hashmap of readResolve methods, mapping Class->Method
    */
-  protected static HashMap READ_RESOLVES = new HashMap();
+  protected static SoftHashMap READ_RESOLVES = new SoftHashMap();
   
   /**
-  * The hashmap of readObject methods, mapping Class->Method
+   * The hashmap of readObject methods, mapping Class->Method
    */
-  protected static HashMap READ_OBJECTS = new HashMap();
+  protected static SoftHashMap READ_OBJECTS = new SoftHashMap();
   
   /**
    * A cache of constructors, mapping classes to serialization constructors
    */
-  protected static HashMap CONSTRUCTORS = new HashMap();
+  protected static SoftHashMap CONSTRUCTORS = new SoftHashMap();
   
   /**
    * The underlying reader, which parses the XML
