@@ -34,8 +34,7 @@ import rice.pastry.*;
  * protocol. Adds on a "packet number" which should be repeated in the
  * AcknowledgementMessage ack packet.
  *
- * @version $Id$
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public abstract class DatagramMessage implements Serializable {
 

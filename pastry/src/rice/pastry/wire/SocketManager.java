@@ -44,32 +44,42 @@ import rice.pastry.wire.messaging.socket.*;
  * SocketConnector to read the greeting message (HelloMessage) off of the
  * stream, and hands the connection off to the appropriate node handle.
  *
- * @version $Id$
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public class SocketManager implements SelectionKeyHandler {
 
-  // the pastry node which this manager serves
+  /**
+   * the pastry node which this manager serves
+   */
   private WirePastryNode pastryNode;
 
-  // the linked list of open sockets
+  /**
+   * the linked list of open sockets
+   */
   protected LinkedList openSockets;
 
-  // maps a SelectionKey -> SocketConnector
+  /**
+   * maps a SelectionKey -> SocketConnector
+   */
   private HashMap connectors;
 
-  // ServerSocketChannel for accepting incoming connections
+  /**
+   * ServerSocketChannel for accepting incoming connections
+   */
   private ServerSocketChannel serverChannel;
 
-  // ServerSocketChannels key for accepting incoming connections
-  private SelectionKey key;
+  /**
+   * ServerSocketChannels key for accepting incoming connections
+   */
+  private SelectionKey serverKey;
 
-  // the port number this manager is listening on
+  /**
+   * the port number this manager is listening on
+   */
   private int port;
 
-  // the number of sockets where we start closing other sockets
   /**
-   * DESCRIBE THE FIELD
+   * the number of sockets where we start closing other sockets
    */
   public static int MAX_OPEN_SOCKETS = 256;
 
@@ -83,6 +93,7 @@ public class SocketManager implements SelectionKeyHandler {
    */
   public SocketManager(WirePastryNode node, int port, Selector selector) {
     pastryNode = node;
+    wireDebug("DBG:SM ctor 1");
     openSockets = generateOpenSockets();
     connectors = new HashMap();
     this.port = port;
@@ -95,13 +106,21 @@ public class SocketManager implements SelectionKeyHandler {
       serverChannel.configureBlocking(false);
       serverChannel.socket().bind(server);
 
-      key = serverChannel.register(selector, SelectionKey.OP_ACCEPT);
-      key.attach(this);
+      serverKey = serverChannel.register(selector, SelectionKey.OP_ACCEPT);
+      serverKey.attach(this);
     } catch (IOException e) {
       System.out.println("ERROR creating server socket channel " + e);
+      wireDebug("DBG:SM ctor failure");
     }
+    wireDebug("DBG:SM ctor 2");
   }
-  
+
+  /**
+   * Can be overloaded.  This returns the list of open sockets
+   * that this socketmanager is to act upon.
+   * 
+   * @return a LinkedList to remember what sockets are open
+   */  
   protected LinkedList generateOpenSockets() {
     return new LinkedList();
   }
@@ -130,6 +149,11 @@ public class SocketManager implements SelectionKeyHandler {
     }
   }
   
+  /**
+   * called routinely to recycle sockets that haven't recently
+   * been used
+   *
+   */
   protected void removeOpenSocketsIfNeeded() {
     while (needToDisconnectSockets() && openSockets.size() > 0) {             
       WireNodeHandle snh = (WireNodeHandle) openSockets.removeLast();
@@ -138,6 +162,11 @@ public class SocketManager implements SelectionKeyHandler {
     }    
   }
   
+  /**
+   * called to determine if a socket should be closed
+   * 
+   * @return wether to close a socket
+   */
   protected boolean needToDisconnectSockets() {
     return openSockets.size() > MAX_OPEN_SOCKETS;
   }
@@ -195,7 +224,7 @@ public class SocketManager implements SelectionKeyHandler {
       channel.socket().setReceiveBufferSize(WireNodeHandle.SOCKET_BUFFER_SIZE);
       channel.configureBlocking(false);
 
-      wireDebug("DBG:accept("+key+")");
+      wireDebug("DBG:"+System.currentTimeMillis()+":accept("+channel.socket().getRemoteSocketAddress()+")");
 
       Selector selector = pastryNode.getSelectorManager().getSelector();
 
@@ -209,6 +238,7 @@ public class SocketManager implements SelectionKeyHandler {
       }
     } catch (IOException e) {
       System.out.println("ERROR (accepting connection): " + e);
+      wireDebug("DBG:error during accept()");
     }
   }
 
@@ -220,6 +250,7 @@ public class SocketManager implements SelectionKeyHandler {
    * @param key The key which is readable.
    */
   public void read(SelectionKey key) {
+    wireDebug("DBG:"+System.currentTimeMillis()+":read()");
     SocketConnector connector = (SocketConnector) connectors.get(key);
 
     debug("Found data to be read from " + ((SocketChannel) key.channel()).socket().getRemoteSocketAddress());
@@ -227,6 +258,7 @@ public class SocketManager implements SelectionKeyHandler {
     try {
       connector.read();
     } catch (IOException e) {
+      wireDebug("DBG:exception:"+serverKey+","+key+","+e);
       debug("ERROR " + e + " reading connnector - cancelling.");
       connectors.remove(key);
 
@@ -283,9 +315,9 @@ public class SocketManager implements SelectionKeyHandler {
   }
 
   /**
-   * DESCRIBE THE METHOD
+   * general logging method
    *
-   * @param s DESCRIBE THE PARAMETER
+   * @param s string to log
    */
   private void debug(String s) {
     if (Log.ifp(8)) {
@@ -293,7 +325,20 @@ public class SocketManager implements SelectionKeyHandler {
     }
   }
   
+  /**
+   * special outputstream for wireDebug()
+   */
   transient PrintStream outputStream = null;
+
+
+  /**
+   * This method provides extensive logging service for wire.  
+   * It is used to verify that all queued messages are sent and received.
+   * This system creates several log files that can be parced by 
+   * rice.pastry.wire.testing.WireFileProcessor
+   * 
+   * @param s String to log.
+   */
   void wireDebug(String s) {
     if (!Wire.outputDebug) return;
     synchronized(Wire.outputStreamLock) {
@@ -312,24 +357,30 @@ public class SocketManager implements SelectionKeyHandler {
       }
     }
   }
+  
   /**
    * Private class which is tasked with reading the greeting message off of a
    * newly connected socket. This greeting message says who the socket is coming
    * from, and allows the connected to hand the socket off the appropriate node
    * handle.
    *
-   * @version $Id$
-   * @author jeffh
+   * @author Alan Mislove, Jeff Hoye
    */
   private class SocketConnector {
 
-    // the key to read from
+    /**
+     * the key to read from
+     */
     private SelectionKey key;
 
-    // the reader reading data off of the stream
+    /**
+     * the reader reading data off of the stream
+     */
     private SocketChannelReader reader;
 
-    // the writer (in case it is necessary)
+    /**
+     * the writer (in case it is necessary)
+     */
     private SocketChannelWriter writer;
 
     /**
@@ -347,10 +398,11 @@ public class SocketManager implements SelectionKeyHandler {
      * first 4 bytes, containing the size of the greeting message. It then
      * allocates enough space to read the greeting message, and does so.
      *
-     * @exception IOException DESCRIBE THE EXCEPTION
+     * @exception IOException if there is an error reading/deserializing
      */
     public void read() throws IOException {
       Object o = reader.read((SocketChannel) key.channel());
+      wireDebug("DBG:sc:read("+o+")");
       if (o != null) {
         if (o instanceof HelloMessage) {
           HelloMessage hm = (HelloMessage) o;
@@ -409,7 +461,7 @@ public class SocketManager implements SelectionKeyHandler {
 
 
     /**
-     * @exception IOException DESCRIBE THE EXCEPTION
+     * @exception IOException if there is an error writing/serializing
      */
     public void write() throws IOException {
       boolean done = writer.write((SocketChannel) key.channel());
@@ -425,9 +477,12 @@ public class SocketManager implements SelectionKeyHandler {
     }
 
     /**
-     * DESCRIBE THE METHOD
+     * This method controls the key's write interestOp, 
+     * and has a parallel boolean to improve performance. 
+     * The actual interestOp is only called if the state 
+     * changes.
      *
-     * @param write DESCRIBE THE PARAMETER
+     * @param write new boolean for key's write interestOp
      */
     private void enableWrite(boolean write) {
       if (write) {
@@ -447,9 +502,9 @@ public class SocketManager implements SelectionKeyHandler {
     }
 
     /**
-     * DESCRIBE THE METHOD
+     * general logging method
      *
-     * @param s DESCRIBE THE PARAMETER
+     * @param s string to log
      */
     private void debug(String s) {
       if (Log.ifp(8)) {

@@ -34,9 +34,7 @@ import rice.pastry.*;
  * protocol. Each DatagramMessage is assigned a integer number (increasing), and
  * each "ack" packet sent back contains that number.
  *
- * @version $Id: AcknowledgementMessage.java,v 1.3 2004/01/06 19:53:52 jeffh Exp
- *      $
- * @author jeffh
+ * @author Alan Mislove, Jeff Hoye
  */
 public class AcknowledgementMessage extends DatagramMessage {
 

@@ -24,10 +24,10 @@
 package rice.pastry.wire;
 
 /**
- * @author jeffh
- *
- * To change the template for this generated type comment go to
- * Window&gt;Preferences&gt;Java&gt;Code Generation&gt;Code and Comments
+ * This is an interface to notify user code that the FileDescriptors
+ * for the system are being saturated.  It is not currently used.
+ * 
+ * @author Jeff Hoye
  */
 public interface WireLimitatioinListener {
   void resourcesRunningShort(int numFileDescriptorsUsed, int approxNumFileDescriptorsAvailable);

@@ -41,8 +41,7 @@ import rice.pastry.routing.*;
  * performing route set and leaf set maintainance, and another thread for
  * listening on the sockets and performing all non-blocking I/O.
  *
- * @version $Id$
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 
 public class WirePastryNode extends DistPastryNode {
@@ -177,7 +176,7 @@ public class WirePastryNode extends DistPastryNode {
   }
 
   /**
-   * DESCRIBE THE METHOD
+   * called when the node is initialized
    */
   public void nodeIsReady() {
     super.nodeIsReady();

@@ -32,7 +32,6 @@ import rice.pastry.*;
  * Wrapper class which contains an object to write and the address it needs to
  * be written to.
  *
- * @version $Id$
  * @author Alan Mislove
  */
 public class PendingWrite {

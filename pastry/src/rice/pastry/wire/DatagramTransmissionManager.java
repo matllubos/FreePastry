@@ -43,35 +43,52 @@ import rice.pastry.wire.messaging.socket.*;
  * ordered delivery of packets to their destinations. This implementation is
  * thread-safe, so both the client and pastry thread can access it at once.
  *
- * @version $Id: DatagramTransmissionManager.java,v 1.17 2003/07/22 07:14:20
- *      amislove Exp $
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public class DatagramTransmissionManager {
 
   boolean writing = false;
 
-  // maps address -> TransmissionEntry
+  /** 
+   * maps address -> TransmissionEntry
+   */
   private HashMap map;
 
-  // the key the datagrammanager uses
+  /** 
+   * the key the datagrammanager uses
+   */
   private SelectionKey key;
 
-  // the pastry node this transmission manager serves
+  /** 
+   * the pastry node this transmission manager serves
+   */
   private WirePastryNode pastryNode;
 
-  // a random number generator used for retransmission delays
+  /**
+   * a random number generator used for retransmission delays
+   */
   private Random random;
 
-  // the first 'ack' number to use
   /**
-   * DESCRIBE THE FIELD
+   * the first 'ack' number to use
    */
   public static int BEGIN_ACK_NUM = Integer.MIN_VALUE;
 
+  /**
+   * The Datagram Manager this object is servicing.
+   */
   private DatagramManager datagramManager;
 
+  /**
+   * Lock to verify this object's notifyKilled() is only 
+   * acted upon the first time.
+   */
   private Object killedLock = new Object();
+
+  /**
+   * boolean to verify this object's notifyKilled() is only 
+   * acted upon the first time.
+   */
   private boolean killed = false;
 
   /**
@@ -111,6 +128,12 @@ public class DatagramTransmissionManager {
     }
   }
 
+  /**
+   * notifys all of the TransmissionEntries that they have
+   * been killed.  This method has logic to guarantee that
+   * it only calls notifyKilled on the TransmissionEntries
+   * once.
+   */
   public void notifyKilled() {
     synchronized(killedLock) {
       if (killed) return;
@@ -156,7 +179,7 @@ public class DatagramTransmissionManager {
    * 'ready', and the next message will be sent across the wire on the next
    * getReady() call.
    *
-   * @param message DESCRIBE THE PARAMETER
+   * @param message The ack that was received.
    */
   public void receivedAck(AcknowledgementMessage message) {
     TransmissionEntry entry = null;
@@ -195,10 +218,14 @@ public class DatagramTransmissionManager {
   }
 
   /**
-   * DESCRIBE THE METHOD
+   * This method controls the key's write interestOp, 
+   * and has a parallel boolean to improve performance. 
+   * The actual interestOp is only called if the state 
+   * changes.
    *
-   * @param write DESCRIBE THE PARAMETER
-   * @param reason DESCRIBE THE PARAMETER
+   * @param write new boolean for key's write interestOp
+   * @param reason used for logging, the reason the state 
+   * is changing
    */
   public void enableWrite(boolean write, String reason) {
     //if (writing != write) {
@@ -262,9 +289,9 @@ public class DatagramTransmissionManager {
   }
 
   /**
-   * DESCRIBE THE METHOD
+   * general logging method
    *
-   * @param s DESCRIBE THE PARAMETER
+   * @param s string to log
    */
   private void debug(String s) {
     if (Log.ifp(8)) {
@@ -286,112 +313,127 @@ public class DatagramTransmissionManager {
    * TIMEOUT_FACTOR * X ms before the next message is declared dead. This will
    * improve performance when the amount of traffic on the network is changing.
    *
-   * @version $Id: DatagramTransmissionManager.java,v 1.18 2004/01/06 19:53:51
-   *      jeffh Exp $
-   * @author jeffh
+   * @author Alan Mislove, Jeff Hoye
    */
   private class TransmissionEntry {
 
     // STATIC FIELDS
     /**
-     * DESCRIBE THE FIELD
+     * READY to Send
      */
     public int STATE_READY = -1;
+
     /**
-     * DESCRIBE THE FIELD
+     * WAITING to receive an ACK
      */
     public int STATE_WAITING_FOR_ACK = -2;
+
     /**
-     * DESCRIBE THE FIELD
+     * no data to send
      */
     public int STATE_NO_DATA = -3;
     /**
-     * DESCRIBE THE FIELD
+     * waiting to resend info becasue we didn't get an ACK
      */
     public int STATE_WAITING_FOR_RESEND = -4;
     /**
-     * DESCRIBE THE FIELD
+     * Ready to send after waiting due to a resend
      */
     public int STATE_WAITING_TO_SEND = -5;
 
-    // the default wait-time for a lost packet
     /**
-     * DESCRIBE THE FIELD
+     * the default wait-time for a lost packet
      */
     public long SEND_TIMEOUT_DEFAULT = 1000;
 
-    // the minimum wait time for a lost packet
     /**
-     * DESCRIBE THE FIELD
+     * the minimum wait time for a lost packet
      */
     public long SEND_TIMEOUT_MIN = 500;
 
-    // the initial amount of time to wait before resending
     /**
-     * DESCRIBE THE FIELD
+     * the initial amount of time to wait before resending
      */
     public long INITIAL_RESEND_WAIT_TIME = 100;
 
-    // the factor by which to multiply the last send time
-    // to determine the next timeout time
     /**
-     * DESCRIBE THE FIELD
+     * the factor by which to multiply the last send time
+     * to determine the next timeout time
      */
     public double TIMEOUT_FACTOR = 2;
 
-    // the maximum number to retries before dropping the message
-    // on the floor
     /**
-     * DESCRIBE THE FIELD
+     * the maximum number to retries before dropping the message
+     * on the floor
      */
     public int MAX_NUM_RETRIES = 6;
 
-    // the maximum number of retries before declaring the node to
-    // be dead and attampting to open a socket
     /**
-     * DESCRIBE THE FIELD
+     * the maximum number of retries before declaring the node to
+     * be dead and attampting to open a socket
      */
     public int NUM_RETRIES_BEFORE_OPENING_SOCKET = 4;
 
-    // the maximum number of objects in the UDP queue before we
-    // open a socket
     /**
-     * DESCRIBE THE FIELD
+     * the maximum number of objects in the UDP queue before we
+     * open a socket
      */
     public int MAX_UDP_QUEUE_SIZE = 4;
 
     // PRIVATE FIELDS
-    // the destination address this entry is sending to
+    /**
+     * the destination address this entry is sending to
+     */
     private InetSocketAddress address;
 
-    // the node ID for this TE
+    /**
+     * the node ID for this TE
+     */
     private NodeId nodeId;
 
-    // the node handle for this TE
+    /**
+     * the node handle for this TE
+     */
     private WireNodeHandle handle;
 
-    // the queue of pending writes
+    /**
+     * the queue of pending writes
+     */
     private LinkedList queue;
 
-    // the ack number we are currently waiting for
+    /**
+     * the ack number we are currently waiting for
+     */
     private int ackExpected;
 
-    // time last time at which we sent a message
+    /**
+     * time last time at which we sent a message
+     */
     private long sendTime;
 
-    // the time at which we began waiting to resent
+    /**
+     * the time at which we began waiting to resent
+     */
     private long resendWaitBeginTime;
 
-    // how long we should wait until we resent
+    /**
+     * how long we should wait until we resent
+     */
     private long resendWaitTime;
 
-    // the state of this TransmissionEntry
+    /**
+     * the state of this TransmissionEntry
+     */
     private int state;
 
-    // how long we should wait before declaring a packet lost
+    /**
+     * how long we should wait before declaring a packet lost
+     */ 
     private long sendTimeoutTime;
 
-    // how me retries we have done so far
+    /**
+     * how me retries we have done so far
+     */
     private int numRetries;
 
 
@@ -399,7 +441,7 @@ public class DatagramTransmissionManager {
      * Builds a TransmissionEntry for a specified address.
      *
      * @param address The destination address of this entry.
-     * @param nodeId DESCRIBE THE PARAMETER
+     * @param nodeId the remote nodeId
      */
     public TransmissionEntry(NodeId nodeId, InetSocketAddress address) {
       queue = new LinkedList();
@@ -421,7 +463,8 @@ public class DatagramTransmissionManager {
     }
 
     /**
-     * 
+     * prints Potentially lost the message for all 
+     * messages in queue
      */
     public void notifyKilled() {
       synchronized(queue) {
@@ -677,9 +720,9 @@ public class DatagramTransmissionManager {
     }
 
     /**
-     * DESCRIBE THE METHOD
+     * general logging method
      *
-     * @param s DESCRIBE THE PARAMETER
+     * @param s string to log
      */
     private void debug(String s) {
       if (Log.ifp(8)) {

@@ -65,49 +65,65 @@ import rice.pastry.wire.messaging.datagram.PingMessage;
  * order to ensure (ordered) delivery.
  *
  * @version $Id$
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 
 public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
 
-  // the port number
+  /** 
+   * the port number
+   */
   private int port;
 
-  // the pastry node
+  /** 
+   * the pastry node
+   */
   private WirePastryNode pastryNode;
 
-  // the selector manager
+  /** 
+   * the selector manager
+   */
   private SelectorManager manager;
 
-  // a buffer used for read/writing datagrams
+  /**
+   * a buffer used for read/writing datagrams
+   */
   private ByteBuffer buffer;
 
-  // the channel used from talking to the network
+  /**
+   * the channel used from talking to the network
+   */
   private DatagramChannel channel;
 
-  // the key used to determine what has taken place
+  /**
+   * the key used to determine what has taken place
+   */
   private SelectionKey key;
 
-  // the manager which controls the transmission of data
+  /** 
+   * the manager which controls the transmission of data
+   */
   private DatagramTransmissionManager transmissionManager;
 
-  // maps address -> ack number (last one seen)
+  /**
+   * maps address -> ack number (last one seen)
+   */
   private HashMap lastAckNum;
 
-  // the queue of pending acks waiting to be sent
+  /** 
+   * the queue of pending acks waiting to be sent
+   */
   private LinkedList ackQueue;
 
-  // the size of the buffer used to read incoming datagrams
-  // must be big enough to encompass multiple datagram packets
   /**
-   * DESCRIBE THE FIELD
+   * the size of the buffer used to read incoming datagrams
+   * must be big enough to encompass multiple datagram packets
    */
   public static int DATAGRAM_RECEIVE_BUFFER_SIZE = 131072;
 
-  // the size of the buffer used to send outgoing datagrams
-  // this is also the largest message size than can be sent via UDP
   /**
-   * DESCRIBE THE FIELD
+   * the size of the buffer used to send outgoing datagrams
+   * this is also the largest message size than can be sent via UDP
    */
   public static int DATAGRAM_SEND_BUFFER_SIZE = 65536;
 
@@ -115,8 +131,8 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
    * Constructor.
    *
    * @param port The port number this Datagram Manager should run on
-   * @param pastryNode DESCRIBE THE PARAMETER
-   * @param manager DESCRIBE THE PARAMETER
+   * @param pastryNode the pastry node that the Datagram Manager is servicing
+   * @param manager The selector manager that calls into this Datagram Manager
    */
   public DatagramManager(WirePastryNode pastryNode, SelectorManager manager, int port) {
     this.port = port;
@@ -263,7 +279,20 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
       e.printStackTrace();
     }
   }
+  
+  /**
+   * special outputstream for wireDebug()
+   */
   transient PrintStream outputStream = null;
+
+  /**
+   * This method provides extensive logging service for wire.  
+   * It is used to verify that all queued messages are sent and received.
+   * This system creates several log files that can be parced by 
+   * rice.pastry.wire.testing.WireFileProcessor
+   * 
+   * @param s String to log.
+   */
   void wireDebug(String s) {
     if (!Wire.outputDebug) return;
     synchronized(Wire.outputStreamLock) {
@@ -382,8 +411,8 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
    *
    * @param address The desintation address of the ack.
    * @param message DESCRIBE THE PARAMETER
-   * @return DESCRIBE THE RETURN VALUE
-   * @exception IOException DESCRIBE THE EXCEPTION
+   * @return true if the ack was properly sent
+   * @exception IOException if there is a problem serializing or sending
    */
   private boolean sendAck(InetSocketAddress address, DatagramMessage message)
      throws IOException {
@@ -408,9 +437,9 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
   }
 
   /**
-   * DESCRIBE THE METHOD
+   * general logging method
    *
-   * @param s DESCRIBE THE PARAMETER
+   * @param s string to log
    */
   private void debug(String s) {
     if (Log.ifp(8)) {
@@ -424,7 +453,7 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
    *
    * @param o The object to serialize
    * @return A ByteBuffer containing the object
-   * @exception IOException DESCRIBE THE EXCEPTION
+   * @exception IOException if the object can't be serialized
    */
   public static ByteBuffer serialize(Object o) throws IOException {
     try {
@@ -453,7 +482,7 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
    *
    * @param buffer The buffer read from the datagram.
    * @return The deserialized object.
-   * @exception IOException DESCRIBE THE EXCEPTION
+   * @exception IOException if the buffer can't be deserialized
    */
   public static Object deserialize(ByteBuffer buffer) throws IOException {
     int len = buffer.remaining();

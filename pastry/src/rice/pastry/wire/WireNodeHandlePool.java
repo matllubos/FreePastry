@@ -41,9 +41,7 @@ import rice.pastry.routing.*;
  * WirePastryNode. It ensures that there is only one node handle for each
  * respective pastry node.
  *
- * @version $Id: WireNodeHandlePool.java,v 1.6 2003/12/22 03:24:49 amislove Exp
- *      $
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public class WireNodeHandlePool extends DistNodeHandlePool {
 
@@ -64,15 +62,19 @@ public class WireNodeHandlePool extends DistNodeHandlePool {
   }
 
   /**
-   * DESCRIBE THE METHOD
+   * Looks up the WireNodeHandle given a NodeId
    *
-   * @param nodeId DESCRIBE THE PARAMETER
-   * @return DESCRIBE THE RETURN VALUE
+   * @param nodeId the nodeId you want a Handle for
+   * @return the handle you requested
    */
   public WireNodeHandle get(NodeId nodeId) {
     return (WireNodeHandle) handles.get(nodeId);
   }
 
+  /**
+   * tells all the WireNodeHandles they have been killed.
+   *
+   */
   public void notifyKilled() {
     synchronized(handles) {
       Iterator i = handles.values().iterator();
@@ -105,11 +107,6 @@ public class WireNodeHandlePool extends DistNodeHandlePool {
     return response;
   }
 
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @return DESCRIBE THE RETURN VALUE
-   */
   public String toString() {
     String response = "";
 
@@ -124,9 +121,9 @@ public class WireNodeHandlePool extends DistNodeHandlePool {
   }
 
   /**
-   * DESCRIBE THE METHOD
+   * general logging method
    *
-   * @param s DESCRIBE THE PARAMETER
+   * @param s string to log
    */
   private void debug(String s) {
     if (Log.ifp(6)) {

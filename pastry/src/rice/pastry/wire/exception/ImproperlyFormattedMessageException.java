@@ -30,9 +30,7 @@ import java.io.*;
  * Class which represents an exception occuring during the parsing of a Pastry
  * message sent through the Socket protocol.
  *
- * @version $Id: ImproperlyFormattedMessageException.java,v 1.2 2004/01/06
- *      19:53:52 jeffh Exp $
- * @author jeffh
+ * @author Alan Mislove, Jeff Hoye
  */
 public class ImproperlyFormattedMessageException extends IOException {
 

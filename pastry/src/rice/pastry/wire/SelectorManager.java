@@ -36,19 +36,29 @@ import rice.pastry.*;
  * When activity occurs, it figures out who is interested in what has happened,
  * and hands off to that object.
  *
- * @version $Id$
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public class SelectorManager {
 
-  // the amount of time to wait during a selection (ms)
   /**
-   * DESCRIBE THE FIELD
+   * the amount of time to wait during a selection (ms)
    */
   public int SELECT_WAIT_TIME = 100;
+  
+  /**
+   * used to synchronize getting jobs from the 
+   * selector
+   */
   Object selectorLock = new Object();
+
+  /**
+   * pending jobs
+   */
   Iterator selectorIterator;
 
+  /**
+   * the objects that need a routine wakeup call.
+   */
   ArrayList needToWakeUp = new ArrayList();
 
   // the selector used
@@ -63,7 +73,7 @@ public class SelectorManager {
   /**
    * Constructor.
    *
-   * @param node The pastry node this SocketManager is serving
+   * @param node The pastry node this SelectorManager is serving
    */
   public SelectorManager(WirePastryNode node) {
     pastryNode = node;
@@ -98,9 +108,10 @@ public class SelectorManager {
   }
 
   /**
-   * DESCRIBE THE METHOD
+   * required to register all objects that need a routine
+   * wakeup call on the Selector thread.
    *
-   * @param skh DESCRIBE THE PARAMETER
+   * @param skh The object to call wakeup on.
    */
   public void registerForWakeup(NeedsWakeUp skh) {
     synchronized (needToWakeUp) {
@@ -109,9 +120,10 @@ public class SelectorManager {
   }
 
   /**
-   * DESCRIBE THE METHOD
+   * used to unregister an object for wakeup on the 
+   * Selector thread.
    *
-   * @param skh DESCRIBE THE PARAMETER
+   * @param skh The object to stop calling wakeup on.
    */
   public void unregisterForWakeup(NeedsWakeUp skh) {
     synchronized (needToWakeUp) {
@@ -173,7 +185,7 @@ public class SelectorManager {
                 //System.out.println("******************* Exiting Write");
               }
             } else {
-              //System.err.println("Found key witout attachment!");
+              debug("Found key witout attachment!");
               //key.cancel();
             }
           }
@@ -189,8 +201,7 @@ public class SelectorManager {
           }
         }
         // synch (needToWakeUp)
-      }
-      // while(alive)
+      } // while(alive)
 
       // shutdown code
       synchronized (selectorLock) {
@@ -198,8 +209,13 @@ public class SelectorManager {
 
         for (int i = 0; i < keys.length; i++) {
           key = (SelectionKey) keys[i];
-          key.channel().close();
-          key.cancel();
+          try {
+            key.channel().close();
+            key.cancel();
+          } catch (IOException ioe) {
+            System.err.println("Error Closing socket from "+pastryNode+"to "+key.attachment()+":"+ioe);
+            ioe.printStackTrace();
+          }
         }
 
 //        System.out.println("Selector:open:"+selector.isOpen()+","+selector);
@@ -212,7 +228,7 @@ public class SelectorManager {
         }
       }
     } catch (Throwable e) {
-      System.out.println("ERROR (run): " + e);
+      System.out.println("ERROR (run): node:"+pastryNode+":" + e);
       e.printStackTrace();
     }
   }
@@ -248,9 +264,9 @@ public class SelectorManager {
 
 
   /**
-   * DESCRIBE THE METHOD
+   * general logging method
    *
-   * @param s DESCRIBE THE PARAMETER
+   * @param s string to log
    */
   private void debug(String s) {
     if (Log.ifp(8)) {

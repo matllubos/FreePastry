@@ -32,9 +32,7 @@ import rice.pastry.*;
  * Message which is a "transport" message in the datagram protocol. It simply
  * wraps an internal message for sending across the wire.
  *
- * @version $Id: DatagramTransportMessage.java,v 1.2 2002/09/09 01:19:49
- *      amislove Exp $
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public class DatagramTransportMessage extends DatagramMessage {
 

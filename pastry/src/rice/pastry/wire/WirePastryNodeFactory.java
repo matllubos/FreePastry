@@ -23,28 +23,39 @@
  */
 
 package rice.pastry.wire;
-import java.io.*;
-import java.net.*;
-import java.nio.*;
-import java.nio.channels.*;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.nio.channels.SocketChannel;
 
-import java.util.*;
-
-import rice.pastry.*;
-import rice.pastry.dist.*;
-import rice.pastry.leafset.*;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
-import rice.pastry.security.*;
-import rice.pastry.standard.*;
-import rice.pastry.wire.messaging.socket.*;
+import rice.pastry.Log;
+import rice.pastry.NodeHandle;
+import rice.pastry.NodeId;
+import rice.pastry.NodeIdFactory;
+import rice.pastry.PastryNode;
+import rice.pastry.dist.DistCoalesedNodeHandle;
+import rice.pastry.dist.DistPastryNodeFactory;
+import rice.pastry.leafset.LeafSet;
+import rice.pastry.messaging.MessageDispatch;
+import rice.pastry.routing.RouteSet;
+import rice.pastry.routing.RoutingTable;
+import rice.pastry.standard.StandardJoinProtocol;
+import rice.pastry.standard.StandardLeafSetProtocol;
+import rice.pastry.standard.StandardRouteSetProtocol;
+import rice.pastry.standard.StandardRouter;
+import rice.pastry.wire.messaging.socket.LeafSetRequestMessage;
+import rice.pastry.wire.messaging.socket.LeafSetResponseMessage;
+import rice.pastry.wire.messaging.socket.NodeIdRequestMessage;
+import rice.pastry.wire.messaging.socket.NodeIdResponseMessage;
+import rice.pastry.wire.messaging.socket.RouteRowRequestMessage;
+import rice.pastry.wire.messaging.socket.RouteRowResponseMessage;
+import rice.pastry.wire.messaging.socket.SocketCommandMessage;
 
 /**
  * Pastry node factory for Wire-linked nodes.
  *
- * @version $Id: WirePastryNodeFactory.java,v 1.24 2003/12/22 03:24:49 amislove
- *      Exp $
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public class WirePastryNodeFactory extends DistPastryNodeFactory {
 

@@ -30,9 +30,7 @@ import java.io.*;
  * Class which represents an exception occuring during the serialization of a
  * Pastry message.
  *
- * @version $Id: SerializationException.java,v 1.2 2004/01/06 19:53:52 jeffh Exp
- *      $
- * @author jeffh
+ * @author Alan Mislove, Jeff Hoye
  */
 public class SerializationException extends IOException {
 

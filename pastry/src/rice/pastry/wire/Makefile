@@ -11,6 +11,7 @@ SOURCE  = \
 	SocketChannelReader.java\
 	SocketChannelWriter.java\
 	SocketManager.java\
+	StaleSKH.java\
 	Wire.java\
 	WireLimitatioinListener.java\
 	WireNodeHandle.java\

@@ -30,12 +30,20 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 /**
- * @author jeffh
- *
- * To change the template for this generated type comment go to
- * Window&gt;Preferences&gt;Java&gt;Code Generation&gt;Code and Comments
+ * This is the beginning of a process wide authority for Wire.
+ * It will be used to maintain the number of file descriptors 
+ * allowed/being used, as well as any process wide controll
+ * necessary for the wire package.
+ * 
+ * As of this release, the vast majority of the methods called 
+ * are ignored.  The only fields of interest are outputDebug, 
+ * outputStreamLock.
+ * 
+ * @author Jeff Hoye
  */
 public class Wire {
+
+  
   private static boolean initialized = false;
   private static int numAllowedFileDescriptors = 0;
   private static int numUsedFileDescriptors = 0;
@@ -48,9 +56,18 @@ public class Wire {
   private static int oneOfs = 0;
   private static int oneOfsCalled = 0;
   private static int pendingsCalled = 0;
-  
+
+  /**
+   * whether to log (to multiple files)
+   */  
   static boolean outputDebug = false;
+  
+  /**
+   * a lock to make sure we don't acidentally 
+   * create 2 log files for the same object
+   */
   static Object outputStreamLock = new Object();
+
   /**
    * Automatic determination of ulimit -n
    */

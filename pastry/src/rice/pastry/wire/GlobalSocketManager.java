@@ -28,10 +28,14 @@ import java.nio.channels.Selector;
 import java.util.LinkedList;
 
 /**
- * @author jeffh
- *
- * To change the template for this generated type comment go to
- * Window&gt;Preferences&gt;Java&gt;Code Generation&gt;Code and Comments
+ * This is one of the first steps toward a centrally managed 
+ * wire protocol that can support OS level limitations such
+ * as FileDescriptor limits. This object has static lists 
+ * of the sockets open to other connections.  This way such 
+ * a list is maintained process wide since the number of 
+ * FDs is a per-process count.
+ * 
+ * @author Jeff Hoye
  */
 public class GlobalSocketManager extends SocketManager {
 
@@ -40,19 +44,30 @@ public class GlobalSocketManager extends SocketManager {
   static LinkedList pendingCloseSockets = new LinkedList();
 
 	/**
-	 * @param node
-	 * @param port
-	 * @param selector
+   * Constructs a new GlobalSocketManager.
+   * 
+   * @param node The pastry node this manager is serving
+   * @param port The port number which this manager is listening on
+   * @param selector The Selector this manager should register with
 	 */
 	public GlobalSocketManager(WirePastryNode node, int port,
                              Selector selector) {
 		super(node, port, selector);
 	}
 
+  /**
+   * Returns the staticlly allocated list.
+   */
   protected LinkedList generateOpenSockets() {
     return openSocks;
   }
   
+  /**
+   * asks the socketmanager wether to call 
+   * removeOpenSocketsIfNeeded
+   * 
+   * @return wether to disconnect some sockets
+   */
   protected boolean needToDisconnectSockets() {
     return Wire.needToReleaseFDs();
   }  

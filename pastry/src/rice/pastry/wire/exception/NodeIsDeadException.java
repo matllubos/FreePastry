@@ -24,21 +24,23 @@
 package rice.pastry.wire.exception;
 
 /**
- * @version $Id$
- * @author jeffh To change the template for this generated type comment go to
- *      Window&gt;Preferences&gt;Java&gt;Code Generation&gt;Code and Comments
+ * Thrown if you try to send a message on a node that has been
+ * killed.
+ * 
+ * @author Jeff Hoye 
  */
 public class NodeIsDeadException extends RuntimeException {
 
   /**
-   * DESCRIBE THE FIELD
+   * The original reason we found the node to be dead.
    */
   public Exception originalException;
 
   /**
    * Constructor for NodeIsDeadException.
    *
-   * @param e DESCRIBE THE PARAMETER
+   * @param e The original exception when we noticed
+   * we had been killed.
    */
   public NodeIsDeadException(Exception e) {
     originalException = e;

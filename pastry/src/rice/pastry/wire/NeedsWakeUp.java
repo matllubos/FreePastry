@@ -25,13 +25,17 @@
 package rice.pastry.wire;
 
 /**
- * @version $Id$
- * @author jeffh To change the template for this generated type comment go to
- *      Window&gt;Preferences&gt;Java&gt;Code Generation&gt;Code and Comments
+ * This interface was designed to pull wakeUp out of 
+ * all of the SelectionKeyHandlers.  This way we only call
+ * wakeup on object that will need it.
+ * 
+ * @author Jeff Hoye 
  */
 public interface NeedsWakeUp {
+
   /**
-   * DESCRIBE THE METHOD
+   * this method is routinely called on the 
+   * SelectorManager's thread.
    */
   public void wakeup();
 }

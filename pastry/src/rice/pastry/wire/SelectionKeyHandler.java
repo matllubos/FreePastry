@@ -35,9 +35,7 @@ import java.nio.channels.*;
  * method. The SelectorManager will then call that SelectionKeyHandler's
  * methods.
  *
- * @version $Id: SelectionKeyHandler.java,v 1.1 2002/08/13 18:09:55 amislove Exp
- *      $
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public interface SelectionKeyHandler {
 

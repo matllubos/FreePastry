@@ -35,8 +35,6 @@ import rice.pastry.standard.*;
 /**
  * Security manager for wire connections between nodes.
  *
- * @version $Id: WirePastrySecurityManager.java,v 1.1 2002/08/13 18:09:56
- *      amislove Exp $
  * @author Alan Mislove
  */
 

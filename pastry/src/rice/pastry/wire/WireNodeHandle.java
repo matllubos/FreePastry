@@ -30,10 +30,10 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
@@ -63,8 +63,7 @@ import rice.pastry.wire.messaging.socket.SocketTransportMessage;
  * to be sent over the UDP protocol (as determined by the MAX_UDP_MESSAGE_SIZE),
  * then a socket connection is opened to the remote node.
  *
- * @version $Id$
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionKeyHandler {
 
@@ -77,39 +76,35 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
   private transient SelectionKey key;
   private transient int state;
 
-  // possible states of the WireNodeHandle
   /**
-   * DESCRIBE THE FIELD
+   * using UDP
    */
   public final static int STATE_USING_UDP = -1;
   /**
-   * DESCRIBE THE FIELD
+   * using TCP
    */
   public final static int STATE_USING_TCP = -2;
   /**
-   * DESCRIBE THE FIELD
+   * waiting to disconnect from TCP from remote side
    */
   public final static int STATE_USING_UDP_WAITING_FOR_TCP_DISCONNECT = -3;
   /**
-   * DESCRIBE THE FIELD
+   * waiting to disconnect
    */
   public final static int STATE_USING_UDP_WAITING_TO_DISCONNECT = -4;
 
-  // the largest message size to send over UDP
   /**
-   * DESCRIBE THE FIELD
+   * the largest message size to send over UDP
    */
   public static int MAX_UDP_MESSAGE_SIZE = DatagramManager.DATAGRAM_SEND_BUFFER_SIZE;
 
-  // the size of the "receive" buffer for the socket
   /**
-   * DESCRIBE THE FIELD
+   * the size of the "receive" buffer for the socket
    */
   public static int SOCKET_BUFFER_SIZE = 32768;
 
-  // the throttle (pings only sent this many seconds)
   /**
-   * DESCRIBE THE FIELD
+   * the throttle (pings only sent this many seconds)
    */
   public static int PING_THROTTLE = 5;
 
@@ -196,7 +191,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
       reader = new SocketChannelReader((WirePastryNode) getLocalNode(),this);
       writer = new SocketChannelWriter((WirePastryNode) getLocalNode(), scm, key, this);
 
-      setState(STATE_USING_TCP,"setKey1:"+scm);
+      setState(STATE_USING_TCP,"setKey1:"+System.currentTimeMillis()+":"+scm+","+key.interestOps()+","+key.channel());
     } else {
       markAlive();
 
@@ -280,6 +275,10 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     }
   }
 
+  /**
+   * prints Potentially lost the message for all 
+   * messages in queue
+   */
   public void notifyKilled() {
     SocketChannelWriter scw = writer;
     if (scw != null) {
@@ -425,20 +424,17 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     }
   }
 
-  public void notifyPotentiallyLostMessage(Iterator i) {
+  /**
+   * prints Potentially lost the message for all 
+   * messages in the iterator
+   * 
+   * @param i an iterator of messages to print out the error message for
+   */
+  public void notifyPotentiallyLostMessage(Iterator i) {    
     while (i.hasNext()) {
       Object o = i.next();
       System.err.println("WNH: Potentially lost the message:"+o);
     }
-  }
-
-
-  /**
-   * Is called by the SelectorManager every time the manager is awakened. Checks
-   * to make sure that if we are waiting to write data, we are registered as
-   * being interested in writing.
-   */
-  public void wakeup() {
   }
 
   /**
@@ -447,7 +443,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
    * the receiveMessageImpl, if there is a too-big message waiting to be sent,
    * or by the TransmissionManager if there are too many messages in the queue.
    *
-   * @param messages DESCRIBE THE PARAMETER
+   * @param messages the initial queue
    */
   public void connectToRemoteNode(Iterator messages) {
     if (state == STATE_USING_UDP) {
@@ -459,7 +455,10 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
 
         boolean done = channel.connect(address);
 
-        debug("Opening socket to " + address);
+        
+        InetSocketAddress localAddr = (InetSocketAddress)channel.socket().getLocalSocketAddress();
+        wireDebug("DBG:Opening socket to " + address+" from:"+localAddr);        
+        debug("Opening socket to " + address+" from:"+localAddr);
 
         SelectorManager selMgr = ((WirePastryNode) getLocalNode()).getSelectorManager();
         Selector selector = selMgr.getSelector();
@@ -536,14 +535,6 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
   }
 
   /**
-   * DESCRIBE THE METHOD
-   *
-   * @param hm DESCRIBE THE PARAMETER
-   */
-  public void sendGreetingResponse(HelloMessage hm) {
-  }
-
-  /**
    * Method that is designed to be called by the SocketManager when it wishes
    * for this node handle to disconnect. Once this is called, the node handle
    * will finish writing out any pending objects in the queue, and then send a
@@ -582,6 +573,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
    * @param key DESCRIBE THE PARAMETER
    */
   public void connect(SelectionKey key) {
+    wireDebug("DBG:connect()");
     try {
       if (((SocketChannel) key.channel()).finishConnect()) {
         // deregister interest in connecting to this socket
@@ -612,7 +604,18 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
    *
    * @param key DESCRIBE THE PARAMETER
    */
+  transient int writeCtr = 0;
+  transient long writeTmr = 0;
   public void write(SelectionKey key) {
+    writeCtr++;
+    long time = System.currentTimeMillis();
+    if (time - writeTmr > 1000) {
+      writeTmr = time;
+      wireDebug("DBG:write():"+writeCtr+":"+key.interestOps());
+    }
+    
+    
+    
     if (state == STATE_USING_TCP) {
       ((WirePastryNode) getLocalNode()).getSocketManager().update(this);
     }
@@ -629,10 +632,25 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     } catch (IOException e) {
       debug("ERROR writing - cancelling. " + e);
       close(writer.getQueue());
+    } catch (NullPointerException npe) {
+      // writer can disappear
     }
   }
   
+
+  /**
+   * special outputstream for wireDebug()
+   */
   transient PrintStream outputStream = null;
+
+  /**
+   * This method provides extensive logging service for wire.  
+   * It is used to verify that all queued messages are sent and received.
+   * This system creates several log files that can be parced by 
+   * rice.pastry.wire.testing.WireFileProcessor
+   * 
+   * @param s String to log.
+   */
   void wireDebug(String s) {
     if (!Wire.outputDebug) return;
     synchronized(Wire.outputStreamLock) {
@@ -663,6 +681,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
    * @param key DESCRIBE THE PARAMETER
    */
   public void read(SelectionKey key) {
+    wireDebug("DBG:read()");
     if (state == STATE_USING_TCP) {
       ((WirePastryNode) getLocalNode()).getSocketManager().update(this);
     }
@@ -780,9 +799,7 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
   }
 
   /**
-   * DESCRIBE THE METHOD
-   *
-   * @return DESCRIBE THE RETURN VALUE
+   * implementation for toString()
    */
   public String toStringImpl() {
     return "[" + nodeId + " (" + address.getAddress().getHostAddress() + ":" + address.getPort() + ") on " + localnode + "]";
@@ -867,6 +884,9 @@ public class WireNodeHandle extends DistCoalesedNodeHandle implements SelectionK
     return array.length;
   }
 
+  /**
+   * helper method for closing due to an error
+   */
   void closeDueToError() {
     if (writer != null) {
       close(writer.getQueue());

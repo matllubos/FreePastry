@@ -32,7 +32,6 @@ import rice.pastry.wire.*;
 /**
  * Class which represents a "ping" message sent through the udp pastry system.
  *
- * @version $Id$
  * @author Alan Mislove
  */
 public class PingMessage extends DatagramMessage {

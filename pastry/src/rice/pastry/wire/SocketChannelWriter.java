@@ -57,9 +57,7 @@ import rice.pastry.wire.messaging.socket.SocketTransportMessage;
  * Calling isEmpty() will tell clients if it is safe to mark the SelectionKey as
  * not being interested in writing.
  *
- * @version $Id: SocketChannelWriter.java,v 1.13 2003/10/01 06:35:10 amislove
- *      Exp $
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public class SocketChannelWriter {
 
@@ -78,31 +76,46 @@ public class SocketChannelWriter {
 
   // performance helper to remember the state of the selectionKey
   private boolean interestedInWriting = false;
-
-  // the maximum length of the queue
+  
   /**
-   * DESCRIBE THE FIELD
+   * the maximum length of the queue
    */
   public static int MAXIMUM_QUEUE_LENGTH = 256;
 
-  // the magic number array which is written first
   /**
-   * DESCRIBE THE FIELD
+   * the magic number array which is written first
    */
   protected static byte[] MAGIC_NUMBER = new byte[]{0x45, 0x79, 0x12, 0x0D};
 
   protected WireNodeHandle handle;
+  
+  /**
+   * a message that has already been serialized and 
+   * pulled off of the queue but hasn't been sent
+   */
+  protected Object pendingMsg = null;
 
+  /**
+   * Constructor which creates this SocketChannelWriter with a 
+   * pastry node and an object to write out.  But is not associated
+   * with a WireNodeHandle.
+   *
+   * @param spn The PastryNode the SocketChannelWriter servers
+   * @param msg first message to send
+   * @param key the key that this writer should maintain
+   */
   public SocketChannelWriter(WirePastryNode spn, SocketCommandMessage msg, SelectionKey key) {
     this(spn,msg,key,null);
   }
+
   /**
    * Constructor which creates this SocketChannelWriter with a pastry node and
    * an object to write out.
    *
    * @param spn The PastryNode the SocketChannelWriter servers
-   * @param msg DESCRIBE THE PARAMETER
-   * @param key DESCRIBE THE PARAMETER
+   * @param msg first message to send
+   * @param key the key that this writer should maintain
+   * @param wnh the WireNodeHandle that this object services
    */
   public SocketChannelWriter(WirePastryNode spn, SocketCommandMessage msg, SelectionKey key, WireNodeHandle wnh) {
     pastryNode = spn;
@@ -113,6 +126,11 @@ public class SocketChannelWriter {
       buffer = serialize(msg,null);
     } catch (IOException e) {
       System.out.println("PANIC: Error serializing message " + msg);
+    }
+    if (msg != null) {
+      wireDebug("DBG:SCW ctor:"+msg+":"+buffer.remaining());
+    } else {
+      wireDebug("DBG:SCW ctor:"+null+":"+null);     
     }
 
     queue = new LinkedList();
@@ -190,7 +208,10 @@ public class SocketChannelWriter {
   }
 
 
-  
+  /**
+   * method to re-assign the key if it changes
+   * @param key the new key
+   */  
   public void setKey(SelectionKey key) {
     synchronized(queue) {
       this.key = key;
@@ -200,9 +221,9 @@ public class SocketChannelWriter {
   }
 
   /**
-   * DESCRIBE THE METHOD
+   * Accessor for the queue size.
    *
-   * @return DESCRIBE THE RETURN VALUE
+   * @return the size of the queue
    */
   public int queueSize() {
     return queue.size();
@@ -224,7 +245,8 @@ public class SocketChannelWriter {
   }
 
   /**
-   * DESCRIBE THE METHOD
+   * called when the greeting has been received, setting
+   * that the socket is ready to be used to write data over
    */
   public void greetingReceived() {
     debug("Greeting has been received - acting normally.");
@@ -260,10 +282,10 @@ public class SocketChannelWriter {
         if (buffer == null) {
           if ((!waitingForGreeting) && (queue.size() > 0)) {
             //System.out.println("SEN:"+queue.getFirst().toString());
-            Object o = queue.removeFirst();
-            wireDebug("SEN:"+o.toString());
-            debug("About to serialize object " + o);
-            buffer = serialize(o,null);
+            pendingMsg = queue.removeFirst();
+            wireDebug("SEN:"+pendingMsg.toString());
+            debug("About to serialize object " + pendingMsg);
+            buffer = serialize(pendingMsg,null);
             allowedToDeleteFirstOffOfQueue = true;
           } else {
             updateSelectionKeyBasedOnQueue();
@@ -274,7 +296,7 @@ public class SocketChannelWriter {
         int j = buffer.limit();
         int i = sc.write(buffer);
   
-        wireDebug("DBG:Wrote " + i + " of " + j + " bytes, buf.remaining():"+buffer.remaining());
+        wireDebug("DBG:"+System.currentTimeMillis()+"Wrote " + i + " of " + j + " bytes, buf.remaining():"+buffer.remaining());
         debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
   
         if (buffer.remaining() != 0) {
@@ -286,6 +308,7 @@ public class SocketChannelWriter {
 //        }
   
         buffer = null;
+        pendingMsg = null;
   
         // if there are more objects in the queue, try writing those
         // otherwise, return saying all objects have been written
@@ -293,6 +316,9 @@ public class SocketChannelWriter {
       }
     } catch (IOException e) {
       ioe = e;
+      if (pendingMsg != null) {
+        System.err.println("SCW3: Potentially lost the message:"+pendingMsg);        
+      }
     } finally {
 
       Wire.registerSocketChannel(sc,"write:"+ooo+" ex:"+ioe);
@@ -302,6 +328,15 @@ public class SocketChannelWriter {
     }
   }
 
+
+  /**
+   * This method provides extensive logging service for wire.  
+   * It is used to verify that all queued messages are sent and received.
+   * This system creates several log files that can be parced by 
+   * rice.pastry.wire.testing.WireFileProcessor
+   * 
+   * @param s String to log.
+   */
   private void wireDebug(String s) {
     try {
       if (handle!=null) {
@@ -341,14 +376,23 @@ public class SocketChannelWriter {
     queue.addLast(o);
   }
 
+  /**
+   * decides wether to set the write interestOp on the key
+   */
   private void updateSelectionKeyBasedOnQueue() {
     updateSelectionKeyBasedOnQueue(false);
+    try {
+      if (key != null) {
+        //wireDebug("DBG:updateSelKey:"+key.interestOps());
+      }
+    } catch (Exception e) {}
   }
 
 
   /**
    * only stops writing if queue is empty for performance reasons, it is
    * required that the caller is synchronized on the queue
+   * @param ignoreInterested ignore the interestedInWriting flag
    */
   private void updateSelectionKeyBasedOnQueue(boolean ignoreInterested) {
     if ((buffer == null) && (queue.size() == 0)) {
@@ -365,8 +409,9 @@ public class SocketChannelWriter {
 
   /**
    * helper method for updateSelectionKeyBasedOnQueue
+   * sets the key.interestOp for writing
    *
-   * @param write
+   * @param write wether we need to write
    */
   private void enableWrite(boolean write) {
     //System.out.println("SCW:enableWrite("+write+")");
@@ -405,9 +450,9 @@ public class SocketChannelWriter {
   }
 
   /**
-   * DESCRIBE THE METHOD
+   * general logging method
    *
-   * @param s DESCRIBE THE PARAMETER
+   * @param s string to log   * @param s DESCRIBE THE PARAMETER
    */
   private void debug(String s) {
     if (Log.ifp(8)) {
@@ -427,7 +472,7 @@ public class SocketChannelWriter {
    *
    * @param o The object to serialize
    * @return A ByteBuffer containing the object prepended with its size.
-   * @exception IOException DESCRIBE THE EXCEPTION
+   * @exception IOException if there is an error
    */
   public static ByteBuffer serialize(Object o, ByteBuffer oldBuf) throws IOException {
     if (o == null) {
@@ -473,11 +518,15 @@ public class SocketChannelWriter {
       throw new SerializationException("Unserializable class during attempt to serialize.");
     }
   }
+
   /**
-   * 
+   * prints out any messages still in queue
    */
   public void notifyKilled() {
     synchronized(queue) {
+      if (pendingMsg != null) {
+        System.err.println("SCW2: Potentially lost the message:"+pendingMsg);        
+      }
       Iterator i = queue.iterator();
       while (i.hasNext()) {
         Object o = i.next();

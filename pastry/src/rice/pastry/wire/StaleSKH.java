@@ -1,59 +1,58 @@
-/*
- * Created on Feb 19, 2004
- *
- * To change the template for this generated file go to
- * Window&gt;Preferences&gt;Java&gt;Code Generation&gt;Code and Comments
+/**
+ * "FreePastry" Peer-to-Peer Application Development Substrate Copyright 2002,
+ * Rice University. All rights reserved. Redistribution and use in source and
+ * binary forms, with or without modification, are permitted provided that the
+ * following conditions are met: - Redistributions of source code must retain
+ * the above copyright notice, this list of conditions and the following
+ * disclaimer. - Redistributions in binary form must reproduce the above
+ * copyright notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution. -
+ * Neither the name of Rice University (RICE) nor the names of its contributors
+ * may be used to endorse or promote products derived from this software without
+ * specific prior written permission. This software is provided by RICE and the
+ * contributors on an "as is" basis, without any representations or warranties
+ * of any kind, express or implied including, but not limited to,
+ * representations or warranties of non-infringement, merchantability or fitness
+ * for a particular purpose. In no event shall RICE or contributors be liable
+ * for any direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute goods or
+ * services; loss of use, data, or profits; or business interruption) however
+ * caused and on any theory of liability, whether in contract, strict liability,
+ * or tort (including negligence or otherwise) arising in any way out of the use
+ * of this software, even if advised of the possibility of such damage.
  */
 package rice.pastry.wire;
 
 import java.nio.channels.SelectionKey;
 
 /**
- * @author jeffh
- *
- * To change the template for this generated type comment go to
- * Window&gt;Preferences&gt;Java&gt;Code Generation&gt;Code and Comments
+ * The purpose of this class is to be able to have a key
+ * in the SelectorManager without an attachment while it 
+ * is pending being attached.  If a StaleSKH is attached,
+ * then the key will be cancelled next time it is read.
+ * 
+ * @author Jeff Hoye
  */
 public class StaleSKH implements SelectionKeyHandler {
 
   /**
-   * 
+   * Constructor for StaleSKH.
    */
   public StaleSKH() {
     super();
-    // TODO Auto-generated constructor stub
   }
 
-  /* (non-Javadoc)
-   * @see rice.pastry.wire.SelectionKeyHandler#accept(java.nio.channels.SelectionKey)
-   */
   public void accept(SelectionKey key) {
-    // TODO Auto-generated method stub
-
   }
 
-  /* (non-Javadoc)
-   * @see rice.pastry.wire.SelectionKeyHandler#connect(java.nio.channels.SelectionKey)
-   */
   public void connect(SelectionKey key) {
-    // TODO Auto-generated method stub
-
   }
 
-  /* (non-Javadoc)
-   * @see rice.pastry.wire.SelectionKeyHandler#read(java.nio.channels.SelectionKey)
-   */
   public void read(SelectionKey key) {
-    // TODO Auto-generated method stub
     key.cancel();
   }
 
-  /* (non-Javadoc)
-   * @see rice.pastry.wire.SelectionKeyHandler#write(java.nio.channels.SelectionKey)
-   */
   public void write(SelectionKey key) {
-    // TODO Auto-generated method stub
-
   }
 
 }

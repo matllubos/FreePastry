@@ -44,9 +44,7 @@ import rice.pastry.wire.messaging.socket.*;
  * SocketChannelReader is designed to be reused, to read objects continiously
  * off of one stream.
  *
- * @version $Id: SocketChannelReader.java,v 1.10 2003/10/01 06:35:10 amislove
- *      Exp $
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public class SocketChannelReader {
 
@@ -70,9 +68,8 @@ public class SocketChannelReader {
 
   protected WireNodeHandle handle;
 
-  // the magic number array which is written first
   /**
-   * DESCRIBE THE FIELD
+   * the magic number array which is written first
    */
   protected static byte[] MAGIC_NUMBER = SocketChannelWriter.MAGIC_NUMBER;
 
@@ -99,7 +96,7 @@ public class SocketChannelReader {
    * @param sc The channel to read from.
    * @return The object read off the stream, or null if no object has been
    *      completely read yet
-   * @exception IOException DESCRIBE THE EXCEPTION
+   * @exception IOException if there is an error during reading/deserialization
    */
   public Object read(SocketChannel sc) throws IOException {
     if (!initialized) {
@@ -160,6 +157,15 @@ public class SocketChannelReader {
     return null;
   }
   
+   /**
+    * 
+    * This method provides extensive logging service for wire.  
+    * It is used to verify that all queued messages are sent and received.
+    * This system creates several log files that can be parced by 
+    * rice.pastry.wire.testing.WireFileProcessor
+    * 
+    * @param s String to log.
+    */
   private void wireDebug(String s) {
     try {
       if (handle!=null) {
@@ -189,7 +195,7 @@ public class SocketChannelReader {
    * Private method which is designed to verify the magic number buffer coming
    * across the wire.
    *
-   * @exception IOException DESCRIBE THE EXCEPTION
+   * @exception IOException if there is an error
    */
   private void verifyMagicBuffer() throws IOException {
     // ensure that there is at least the object header ready to
@@ -213,7 +219,7 @@ public class SocketChannelReader {
    * Private method which is designed to read the header of the incoming
    * message, and prepare the buffer for the object appropriately.
    *
-   * @exception IOException DESCRIBE THE EXCEPTION
+   * @exception IOException if there is an error
    */
   private void initializeObjectBuffer() throws IOException {
     // ensure that there is at least the object header ready to
@@ -246,9 +252,9 @@ public class SocketChannelReader {
    * Method which parses an object once it is ready, and notifies the pastry
    * node of the message.
    *
-   * @param array DESCRIBE THE PARAMETER
+   * @param array the bytes to deserialize
    * @return the deserialized object
-   * @exception IOException DESCRIBE THE EXCEPTION
+   * @exception IOException if there is an error
    */
   private Object deserialize(byte[] array) throws IOException {
     ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(array));
@@ -270,9 +276,9 @@ public class SocketChannelReader {
   }
 
   /**
-   * DESCRIBE THE METHOD
+   * general logging method
    *
-   * @param s DESCRIBE THE PARAMETER
+   * @param s string to log
    */
   private void debug(String s) {
     if (Log.ifp(8)) {
