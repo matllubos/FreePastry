@@ -99,7 +99,7 @@ public class SocketPoolManager extends SelectionKeyHandler {
    */
   protected void requestToOpenSocket(SocketManager sm) {
     assertNotClosed(sm);
-    if (sm.connectionManager.getLiveness() >= NodeHandle.LIVENESS_FAULTY) {
+    if (sm.connectionManager.getLiveness() >= NodeHandle.LIVENESS_UNREACHABLE) {
       return;  // This dude is dead, no sense wasting time with him
     }
     if (!waitingSet.contains(sm)) {

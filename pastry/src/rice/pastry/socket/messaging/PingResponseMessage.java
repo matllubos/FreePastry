@@ -49,25 +49,17 @@ import rice.pastry.socket.SocketNodeHandle;
 *
 * @author Alan Mislove
 */
-public class PingResponseMessage extends SocketMessage implements Probe {
+public class PingResponseMessage extends SocketProbe {
   
-  public SocketNodeHandle sender;
-  public SocketNodeHandle receiver;
 
 	private long start;
-
-  public LeafSet leafSet;
-  public Collection failedSet;
   
   /**
   * Constructor
   */
-  public PingResponseMessage(long start, SocketNodeHandle sender, SocketNodeHandle receiver, LeafSet leafSet, Collection failedSet) {
+  public PingResponseMessage(long start, SocketNodeHandle sender, SocketNodeHandle receiver, LeafSet leafSet, Collection failedSet, int joinState) {
+    super(sender,receiver,leafSet,failedSet,joinState);
     this.start = start;
-    this.sender = sender;
-    this.receiver = receiver;
-    this.leafSet = leafSet;
-    this.failedSet = failedSet;
   }
   
   public long getStartTime() {
@@ -75,18 +67,10 @@ public class PingResponseMessage extends SocketMessage implements Probe {
   }
   
   public String toString() {
-    return "PingResponseMessage";
+    return "PingResponseMessage "+super.toString();
   }
-	public Collection getFailedset() {
-		return null;
-	}
 
-	public LeafSet getLeafset() {
-		return leafSet;
+	public boolean isResponse() {
+		return true;
 	}
-
-	public SocketNodeHandle getSender() {
-		return sender;
-	}
-
 }

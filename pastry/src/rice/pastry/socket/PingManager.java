@@ -21,8 +21,10 @@ import java.util.LinkedList;
 import java.util.WeakHashMap;
 
 import rice.pastry.PastryObjectInputStream;
+import rice.pastry.churn.*;
 import rice.pastry.churn.FailedSetManager;
 import rice.pastry.churn.NullFailedSetManager;
+import rice.pastry.churn.Probe;
 import rice.pastry.socket.exception.DeserializationException;
 import rice.pastry.socket.exception.ImproperlyFormattedMessageException;
 import rice.pastry.socket.exception.SerializationException;
@@ -345,7 +347,7 @@ public class PingManager extends SelectionKeyHandler {
             ll.removeFirst();
           }
           addPingResponseListener(snh, prl);
-          enqueue(snh, new PingMessage(localHandle, snh, curTime, spn.getLeafSet(), fsm.getFailedSet()));        
+          enqueue(snh, new PingMessage(localHandle, snh, curTime, spn.getLeafSet(), fsm.getFailedSet(), fsm.getJoinState()));        
         } else {
           if (getLastTimePingReceived(snh) >= getLastTimePinged(snh)) {
             // we just pinged them, and got a response
@@ -359,7 +361,11 @@ public class PingManager extends SelectionKeyHandler {
         }
 			}
 		};
-    SelectorManager.getSelectorManager().invoke(r);      
+    if (SelectorManager.isSelectorThread()) {
+      r.run();
+    } else {
+      SelectorManager.getSelectorManager().invoke(r);      
+    }
   }
 
   /**
@@ -467,7 +473,8 @@ public class PingManager extends SelectionKeyHandler {
     if (message instanceof PingMessage) {
       PingMessage pm = (PingMessage) message;
       if ((pm.receiver == null) || (pm.receiver.equals(localHandle))) {
-        enqueue(pm.sender, new PingResponseMessage(pm.getStartTime(), localHandle, pm.sender, spn.getLeafSet(), fsm.getFailedSet()));
+        notifyProbeListeners(pm);
+        enqueue(pm.sender, new PingResponseMessage(pm.getStartTime(), localHandle, pm.sender, spn.getLeafSet(), fsm.getFailedSet(), fsm.getJoinState()));
       } else {
 //        System.out.println(this+" ignoring ping message with incorrect receiver");
       }
@@ -492,6 +499,7 @@ public class PingManager extends SelectionKeyHandler {
         proximity.put(prm.sender, new Integer(time));
         pool.update(prm.sender, SocketNodeHandle.PROXIMITY_CHANGED);
       }
+      notifyProbeListeners(prm);
       pingResponse(prm.sender, curTime, startTime);
     }
   }
@@ -547,6 +555,24 @@ public class PingManager extends SelectionKeyHandler {
       pingListeners.put(snh, list);
     }
     list.add(prl);
+  }
+
+  ArrayList probeListeners = new ArrayList();
+
+  private void notifyProbeListeners(Probe p) {
+    Iterator i = probeListeners.iterator();
+    while(i.hasNext()) {
+      ProbeListener pl = (ProbeListener)i.next();
+      pl.probeReceived(p);
+    }
+  }
+
+  public void addProbeListener(ProbeListener pl) {
+    probeListeners.add(pl);
+  }
+
+  public void removeProbeListener(ProbeListener pl) {
+    probeListeners.remove(pl);    
   }
 
   /**

@@ -295,8 +295,8 @@ public class ConnectionManager {
       }
     }
     
-    if (getLiveness() >= NodeHandle.LIVENESS_FAULTY) {
-      debug("WARNING:"+this+"Attempting to open socket to faulty node");
+    if (getLiveness() >= NodeHandle.LIVENESS_UNREACHABLE) {
+      debug("WARNING:"+this+"Attempting to open socket to faulty or unreachable node");
       checkDead();
       return;
     }
@@ -535,8 +535,12 @@ public class ConnectionManager {
   }  
 
   private boolean errors(Message message) {
-    if (getLiveness() == NodeHandle.LIVENESS_FAULTY) {
-      messageNotSent(message, SocketPastryNode.EC_CONNECTION_FAULTY);
+    if (getLiveness() >= NodeHandle.LIVENESS_UNREACHABLE) {
+      if (liveness == NodeHandle.LIVENESS_UNREACHABLE) {
+        messageNotSent(message, SocketPastryNode.EC_NODE_UNREACHABLE);              
+      } else {
+        messageNotSent(message, SocketPastryNode.EC_CONNECTION_FAULTY);
+      }
       return true;
     }
     int numMessages = 0;    
@@ -620,11 +624,15 @@ public class ConnectionManager {
       synchronized(invokeLock) {
         invokedDataMessages--;
       }
-      if (liveness < NodeHandle.LIVENESS_FAULTY) {
+      if (liveness < NodeHandle.LIVENESS_UNREACHABLE) {
         openSocket(TYPE_DATA);        
         dataSocketManager.send(message);        
       } else {
-        messageNotSent(message, SocketPastryNode.EC_CONNECTION_FAULTY);
+        if (liveness == NodeHandle.LIVENESS_UNREACHABLE) {
+          messageNotSent(message, SocketPastryNode.EC_NODE_UNREACHABLE);              
+        } else {
+          messageNotSent(message, SocketPastryNode.EC_CONNECTION_FAULTY);
+        }
       }
     }
   } // sendNow()
@@ -1019,11 +1027,11 @@ public class ConnectionManager {
    * Starts pinging the remote node if we're not already pinging them.
    *
    */
-  public void checkDead() {
-    checkDead(1);
+  public boolean checkDead() {
+    return checkDead(1);
   }
   
-  public void checkDead(int powerOffset) {
+  public boolean checkDead(int powerOffset) {
     //assertSelectorThread();
     if (powerOffset < 1) {
       throw new RuntimeException("Invalid Power Offset "+powerOffset);
@@ -1031,18 +1039,17 @@ public class ConnectionManager {
     
     if (address == null) {
       //System.out.println("checkDead called with null address");
-      return;
+      return false;
     }    
     
     if (deadChecker == null) { 
       //System.out.println(this+" checking dead");
-      if (getLiveness() == NodeHandle.LIVENESS_FAULTY) {
-     //   Thread.dumpStack();        
-      }
       deadChecker = new DeadChecker(address, pingManager, powerOffset);
       deadChecker.start();
+      return true;
     } else {
       deadChecker.updatePowerOffset(powerOffset);    
+      return false;
     }
   }
   
@@ -1069,11 +1076,17 @@ public class ConnectionManager {
    */
   protected void markDead() {
     long susTime = System.currentTimeMillis() - markSuspectedTime;
-    if (LOG_LOW_LEVEL)
+    //if (LOG_LOW_LEVEL)
       System.out.println(this+"markDead() after being suspected for "+susTime);
-    setLiveness(NodeHandle.LIVENESS_FAULTY);
     timesMarkedDead++;
-    scm.markDead((SocketNodeHandle)snh.get());
+    if (SocketPastryNodeFactory.churn && isInLeafSet()) {
+      System.out.println(this+" marking UNREACHABLE");
+      setLiveness(NodeHandle.LIVENESS_UNREACHABLE);
+    } else {
+      System.out.println(this+" marking FAULTY");
+      setLiveness(NodeHandle.LIVENESS_FAULTY);
+      scm.markDead((SocketNodeHandle)snh.get());
+    }
     if (deadChecker != null) {
       deadChecker.cancel();
       deadChecker.tries = NUM_PING_TRIES;
@@ -1085,6 +1098,20 @@ public class ConnectionManager {
     if (dataSocketManager != null) {
       dataSocketManager.close();
     }
+  }
+
+
+  public void upgradeUnreachableToFaulty() {
+    if (liveness == NodeHandle.LIVENESS_UNREACHABLE) {    
+      System.out.println(this+".upgratdeUnreachableToFaulty()");
+      setLiveness(NodeHandle.LIVENESS_FAULTY);    
+    }
+  }
+    
+  protected boolean isInLeafSet() {
+    NodeHandle nh = getNodeHandle();
+    if (nh == null) return false;
+    return scm.isInLeafSet(nh);
   }
   
   /**
@@ -1111,7 +1138,7 @@ public class ConnectionManager {
 
     // true if we are switching from faulty to alive
     boolean needToNotifySCM = false;
-    if (getLiveness() == NodeHandle.LIVENESS_FAULTY) {
+    if (liveness == NodeHandle.LIVENESS_FAULTY) {
       needToNotifySCM = true;
     }
     setLiveness(NodeHandle.LIVENESS_ALIVE);    
@@ -1221,13 +1248,16 @@ public class ConnectionManager {
   private boolean rerouteExtractedMessage(Message o) {
     if (o instanceof RouteMessage) {
       RouteMessage rm = (RouteMessage)o;
-      switch (getLiveness()) {
+      switch (liveness) {
         case NodeHandle.LIVENESS_SUSPECTED:
           if (rm.getOptions().rerouteIfSuspected()) {
             scm.reroute(rm);
             return true;
           } // else we are suspected, but not supposed to rerouteIfSuspected()
           return false;
+        case NodeHandle.LIVENESS_UNREACHABLE:
+          messageNotSent(o,SocketPastryNode.EC_NODE_UNREACHABLE);
+          return true;
         case NodeHandle.LIVENESS_FAULTY:
           scm.reroute(rm);
           return true;        
@@ -1236,9 +1266,12 @@ public class ConnectionManager {
       
       }            
     } else {
-      switch (getLiveness()) {
+      switch (liveness) {
         case NodeHandle.LIVENESS_SUSPECTED:
           return false; // don't throw out anything except route messages
+        case NodeHandle.LIVENESS_UNREACHABLE:
+          messageNotSent(o,SocketPastryNode.EC_NODE_UNREACHABLE);
+          return true; // throw out junk in the queue
         case NodeHandle.LIVENESS_FAULTY:
           messageNotSent(o,SocketPastryNode.EC_CONNECTION_FAULTY);
           return true; // throw out junk in the queue
@@ -1708,7 +1741,7 @@ public class ConnectionManager {
    * needs to close down remaining connections
    */
 	protected void finalize() throws Throwable {
-    if (LOG_LOW_LEVEL)
+    //if (LOG_LOW_LEVEL)
       System.out.println(this+"CM.finalize()");
     close();
 		super.finalize();

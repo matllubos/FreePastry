@@ -162,7 +162,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
         return (int) ping;
       } catch (IOException e) {
-        System.out.println("Error pinging address " + wHandle.getAddress() + ": " + e);
+        System.out.println("SPNF: Error pinging address " + wHandle.getAddress() + ": " + e);
+        //e.printStackTrace();
         return SocketNodeHandle.DEFAULT_PROXIMITY;
       }
     } else {
@@ -297,6 +298,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       lsProtocol = new ChurnLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
       jProtocol = new ChurnJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet, (ChurnLeafSetProtocol)lsProtocol);
       pingManager.setFailedSetManager((ChurnLeafSetProtocol)lsProtocol);
+      pingManager.addProbeListener((ChurnLeafSetProtocol)lsProtocol);
     } else {
       lsProtocol = new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
       jProtocol = new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);      

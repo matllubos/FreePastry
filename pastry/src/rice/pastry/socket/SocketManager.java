@@ -222,7 +222,7 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
 //            SelectorManager.getSelectorManager().invoke(new Runnable() {
               public void run() {
   //              System.out.println("CM.retryConnectionLater():requestingToOpenSocket("+manager+")");
-                if (!closed && (connectionManager.getLiveness() < NodeHandle.LIVENESS_FAULTY)) {  // this can happen if we markDead while we are waiting to connect                  
+                if (!closed && (connectionManager.getLiveness() < NodeHandle.LIVENESS_UNREACHABLE)) {  // this can happen if we markDead while we are waiting to connect                  
                   tryToCreateConnection();
                 }
 //              }
@@ -716,7 +716,7 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
   public boolean isIdle() {
     // if dead
     if ((connectionManager != null) &&
-        (connectionManager.getLiveness() == NodeHandle.LIVENESS_FAULTY))
+        (connectionManager.getLiveness() >= NodeHandle.LIVENESS_UNREACHABLE))
       return true;
     if (System.currentTimeMillis() - lastTimeActive > IDLE_THRESHOLD) {    
       if (connectionManager != null && !connectionManager.isPendingAcks(this)) {

@@ -50,10 +50,12 @@ public class SocketPastryNode extends DistPastryNode {
   public static final String EC_REASON_MSG_TOO_LARGE = "message size was too large";
   public static final String EC_REASON_CONNECTION_FAULTY = "connection was faulty";
   public static final String EC_REASON_QUEUE_FULL = "too many messages enqueued";
+  public static final String EC_REASON_NODE_UNREACHABLE = "node is unreachable";
 
   public static final int EC_MSG_TOO_LARGE = 78001;
   public static final int EC_CONNECTION_FAULTY = 78002;
   public static final int EC_QUEUE_FULL = 78003;
+  public static final int EC_NODE_UNREACHABLE = 78004;
 
 
   // The address (ip + port) of this pastry node
@@ -87,6 +89,27 @@ public class SocketPastryNode extends DistPastryNode {
    */
   public boolean isAlive() {
     return alive;
+  }
+
+  /**
+   * Only legal to upgrade from UNREACHABLE -> FAULTY
+   */
+  public void markDead(SocketNodeHandle snh) {
+    if (!isAlive()) return;
+    ConnectionManager cm = sManager.getConnectionManager(snh);
+    cm.upgradeUnreachableToFaulty();        
+  }
+
+  public void addLivenessListener(SocketNodeHandle snh, LivenessListener ll) {
+    if (!isAlive()) return;
+    ConnectionManager cm = sManager.getConnectionManager(snh);
+    cm.addLivenessListener(ll);
+  }
+
+  public void removeLivenessListener(SocketNodeHandle snh, LivenessListener ll) {
+    if (!isAlive()) return;
+    ConnectionManager cm = sManager.getConnectionManager(snh);
+    cm.removeLivenessListener(ll);
   }
 
   /**
@@ -133,6 +156,8 @@ public class SocketPastryNode extends DistPastryNode {
         return EC_REASON_CONNECTION_FAULTY;
       case EC_QUEUE_FULL:
         return EC_REASON_QUEUE_FULL;
+      case EC_NODE_UNREACHABLE:
+        return EC_REASON_NODE_UNREACHABLE;
     }
     return super.getErrorString(errorCode);      
   }
@@ -263,5 +288,6 @@ public class SocketPastryNode extends DistPastryNode {
    */
   public String toString() {
     return "SocketPastryNode (" + getNodeId() + ")";
-  }  
+  }
+
 }

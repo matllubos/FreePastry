@@ -87,11 +87,12 @@ public class SocketNodeHandlePool extends DistNodeHandlePool {
    * @param handle The newly created/deserialized handle
    */
   protected void record(SocketNodeHandle handle) {
+    //System.out.println("SNHP.record("+handle+")");
     Vector vector = (Vector) handles.get(handle.getAddress());
 
     if (vector == null) {
       vector = new Vector();
-      handles.put(handle.getAddress(), vector);
+      handles.put(handle, vector);
     }
 
     vector.addElement(new WeakReference(handle));
@@ -123,7 +124,8 @@ public class SocketNodeHandlePool extends DistNodeHandlePool {
    */
   protected void update(SocketNodeHandle snh, Object update) {
     Vector vector = (Vector) handles.get(snh);
-
+//    System.out.println("SNHP.update()"+vector);
+    
     if (vector != null) {
       boolean printed = false;
 

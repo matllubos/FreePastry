@@ -116,7 +116,7 @@ public class SocketNodeHandle extends DistNodeHandle {
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
 
 		int liveness = getLiveness();
-		if ((liveness == LIVENESS_UNKNOWN) || (liveness == LIVENESS_FAULTY))
+		if ((liveness == LIVENESS_UNKNOWN) || (liveness == LIVENESS_FAULTY) || (liveness == LIVENESS_UNREACHABLE))
 		  return DEFAULT_PROXIMITY;
     if (spn == null) {
       return DEFAULT_PROXIMITY;
@@ -133,10 +133,11 @@ public class SocketNodeHandle extends DistNodeHandle {
    */
   public void probe() {
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
-
-    if (spn != null) {
+    if (!spn.getSocketCollectionManager().checkDead(this))
       spn.getPingManager().forcePing(this, null);
-    }
+//    if (spn != null) {
+//      spn.getPingManager().forcePing(this, null);
+//    }
   }
 
   /**
@@ -179,6 +180,7 @@ public class SocketNodeHandle extends DistNodeHandle {
    *
    */
   public void afterSetLocalNode() {
+//    System.out.println("SNH.afterSetLocalNode()");
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
     SocketNodeHandlePool snhp = (SocketNodeHandlePool)spn.getNodeHandlePool();
     snhp.record(this); 

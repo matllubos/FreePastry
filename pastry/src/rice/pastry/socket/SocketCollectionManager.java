@@ -296,6 +296,17 @@ public class SocketCollectionManager {
   
   // ***************** Liveness ***********************
   /**
+   * Returns true if it sent a ping, i.e. was not already checking
+   */
+  public boolean checkDead(SocketNodeHandle handle) {
+    ConnectionManager cm = (ConnectionManager)connections.get(handle);
+    if (cm != null) {
+      return cm.checkDead();
+    }
+    return false;
+  }
+  
+  /**
    * @param address the address to find liveness info for
    * @return NodeHandle.LIVENESS_ALIVE, LIVENESS_SUSPECTED(_FAULTY), LIVENESS_FAULTY, LIVENESS_UNKNOWN
    */
@@ -317,6 +328,14 @@ public class SocketCollectionManager {
   public boolean isAlive(SocketNodeHandle snh) {
     return ((ConnectionManager)connections.get(snh)).getLiveness() < NodeHandle.LIVENESS_FAULTY;    
   }
+
+  /**
+   * @return true if the nodehandle is in the leafset
+   */
+  public boolean isInLeafSet(NodeHandle nh) {
+    return pastryNode.getLeafSet().member(nh);
+  }
+
 
   /**
    * Marks the associated address as being dead
@@ -418,7 +437,7 @@ public class SocketCollectionManager {
       System.out.println(pastryNode.getNodeId() + " (SCM): " + s);
     }
   }
-  
+
 //	protected void finalize() throws Throwable {
 //    System.out.println(this+"SCM.finalize()");
 //		super.finalize();
