@@ -28,33 +28,79 @@ public class CACertificateGenerator {
   public static String default_base_address = "dosa.cs.rice.edu";
   public static String default_ring = "Rice";
 
+  public static String getArg(String[] args, String argType) {
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].startsWith(argType)) {
+        if (args.length > i+1) {
+          String ret = args[i+1];
+          if (!ret.startsWith("-"))
+            return ret;
+        } 
+      } 
+    } 
+    return null;
+  }
+
+  public static boolean getFlagArg(String[] args, String argType) {
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].startsWith(argType)) {
+        return true;
+      } 
+    } 
+    return false;
+  }
+
   /**
    * The main program for the CertificateGenerator class
    *
    * @param args The command line arguments
    */
   public static void main(String[] args) {
+    String base_address = getArg(args,"-baseaddr");
+    String userid = getArg(args,"-username");
+    String password = getArg(args,"-password");
+    String ring = getArg(args,"-ring");
+    String caDirectory = getArg(args,"-ca");
+    boolean web = getFlagArg(args,"-web");
+    String webPrefix = getArg(args,"-webprefix");
+    
     boolean done = false;
     try {
       BufferedReader input = new BufferedReader(new InputStreamReader(System.in));  
-      System.out.println("POST Certificate Generator");
+      if (!web)
+        System.out.println("POST Certificate Generator");
 
-      File f = new File("ca.keypair.enc");      
+      File f = new File(caDirectory,"ca.keypair.enc");      
       FileInputStream fis = new FileInputStream(f);
       ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
 
-      System.out.print("    Reading in encrypted keypair\t\t\t\t");
+      if (!web)
+        System.out.print("    Reading in encrypted keypair\t\t\t\t");
       byte[] cipher = (byte[]) ois.readObject();
-      System.out.println("[ DONE ]");
+      if (!web)
+        System.out.println("[ DONE ]");
 
-      String pass;
+      String pass = null;
       byte[] key = null;
       byte[] data = null;
 
+      if (caDirectory != null) {
+        File pwFile = new File(caDirectory,"pw"); 
+        if (pwFile.exists()) {
+          FileInputStream fis2 = new FileInputStream(pwFile);
+          Reader r = new BufferedReader(new InputStreamReader(fis2));
+          StreamTokenizer st = new StreamTokenizer(r);
+          st.nextToken();
+          pass = st.sval;
+        }
+      }
+
       try {
-        pass = CAKeyGenerator.fetchPassword("Please enter the password");
+        if (pass == null) 
+          pass = CAKeyGenerator.fetchPassword("Please enter the password");
         
-        System.out.print("    Decrypting keypair\t\t\t\t\t\t");
+        if (!web)
+          System.out.print("    Decrypting keypair\t\t\t\t\t\t");
         key = SecurityUtils.hash(pass.getBytes());
         data = SecurityUtils.decryptSymmetric(cipher, key);
       }catch (SecurityException e) {
@@ -65,30 +111,39 @@ public class CACertificateGenerator {
       }
       
       KeyPair caPair = (KeyPair) SecurityUtils.deserialize(data);
-      System.out.println("[ DONE ]");
+      if (!web)
+        System.out.println("[ DONE ]");
       while(!done) {
       
-        System.out.print("Please enter the base address ["+default_base_address+"]: ");
-        String base_address = input.readLine();
-        if (base_address.equals("")) {
-          base_address = default_base_address;
+        if (base_address == null) {
+          System.out.print("Please enter the base address ["+default_base_address+"]: ");
+          base_address = input.readLine();
+          if (base_address.equals("")) {
+            base_address = default_base_address;
+          }
+          default_base_address = base_address;
         }
-        default_base_address = base_address;
-      
-        System.out.print("Please enter the new username (@"+base_address+"): ");
-        String userid = input.readLine();
+              
+        if (userid == null) {
+          System.out.print("Please enter the new username (@"+base_address+"): ");
+          userid = input.readLine();
+        }
         
-        System.out.print("Please enter the ring name ["+default_ring+"]: ");
-        String ring = input.readLine();
-        
+        if (ring == null) {        
+          System.out.print("Please enter the ring name ["+default_ring+"]: ");
+          ring = input.readLine();
+        }
+                
         if (ring.equals(""))
           ring = default_ring;
         
         default_ring = ring;
   
-        System.out.print("    Generating new key pair\t\t\t\t\t");
+        if (!web)
+          System.out.print("    Generating new key pair\t\t\t\t\t");
         KeyPair pair = SecurityUtils.generateKeyAsymmetric();
-        System.out.println("[ DONE ]");
+        if (!web)
+          System.out.println("[ DONE ]");
   
         IdFactory realFactory = new PastryIdFactory();
         Id ringId = realFactory.buildId(ring);
@@ -100,52 +155,87 @@ public class CACertificateGenerator {
         ringId = realFactory.buildId(ringData);
         
         PostUserAddress address = new PostUserAddress(new MultiringIdFactory(ringId, realFactory), userid + "@"+base_address);
-        System.out.print("    Generating the certificate " + address.getAddress() + "\t");
+        if (!web)
+          System.out.print("    Generating the certificate " + address.getAddress() + "\t");
         PostCertificate certificate = CASecurityModule.generate(address, pair.getPublic(), caPair.getPrivate());
-        System.out.println("[ DONE ]");
-  
-        FileOutputStream fos = new FileOutputStream(userid + ".certificate");
+        if (!web)
+          System.out.println("[ DONE ]");
+        
+        File certFile = null;
+        FileOutputStream fos;
+        String randomDirectory = null;
+        if (web) {
+//          Random rand = new Random();
+          SecureRandom rand = new SecureRandom();
+          randomDirectory = "d"+rand.nextInt(Integer.MAX_VALUE);
+          File randDir = new File(randomDirectory);
+          if (!randDir.mkdir()) {
+            System.out.println("Could not create directory "+randomDirectory+" "+randDir.getAbsolutePath()+" "+randDir.getAbsolutePath()); 
+          }
+          certFile = new File(randomDirectory,userid + ".certificate");
+          fos = new FileOutputStream(certFile);
+        } else {
+          fos = new FileOutputStream(userid + ".certificate");
+        }
+        
         ObjectOutputStream oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fos)));
   
-        System.out.print("    Writing out certificate to '" + userid + ".certificate'\t\t");
+        if (!web)
+          System.out.print("    Writing out certificate to '" + userid + ".certificate'\t\t");
         oos.writeObject(certificate);
   
         oos.flush();
         oos.close();
-        System.out.println("[ DONE ]");
+        if (!web)
+          System.out.println("[ DONE ]");
   
-        System.out.println("    Getting password to encrypt keypair with\t\t\t\t");
-        String password = CAKeyGenerator.getPassword();
-  
-        System.out.print("    Encrypting keypair\t\t\t\t\t\t");
+        if (password == null) {
+          System.out.println("    Getting password to encrypt keypair with\t\t\t\t");
+          password = CAKeyGenerator.getPassword();
+        }
+          
+        if (!web)
+          System.out.print("    Encrypting keypair\t\t\t\t\t\t");
         key = SecurityUtils.hash(password.getBytes());
         data = SecurityUtils.serialize(pair);
         cipher = SecurityUtils.encryptSymmetric(data, key);
-        System.out.println("[ DONE ]");
+        if (!web)
+          System.out.println("[ DONE ]");
   
-        fos = new FileOutputStream(userid + ".keypair.enc");
+        File keyFile = null;
+        if (web) {
+          keyFile = new File(randomDirectory, userid + ".keypair.enc");
+          fos = new FileOutputStream(keyFile);
+        } else {
+          fos = new FileOutputStream(userid + ".keypair.enc");          
+        }
         oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fos)));
   
-        System.out.print("    Writing out encrypted keypair\t\t\t\t");
+        if (!web)
+          System.out.print("    Writing out encrypted keypair\t\t\t\t");
         oos.writeObject(cipher);
   
         oos.flush();
         oos.close();
-        System.out.println("[ DONE ]");
-
-        System.out.print("Create another key? y/n [No]: ");
-        String another = input.readLine();
-        
-        if (another.equals(""))
-          another = "No";
-        
-        if (another.startsWith("n") || another.startsWith("N")) {
+        if (!web)
+          System.out.println("[ DONE ]");
+        if (web) {
+          System.out.println("Certificate available at <A HREF=\""+webPrefix+""+randomDirectory+"/"+certFile.getName()+"\">"+certFile.getName()+"</A>");
+          System.out.println("Keypair available at <A HREF=\""+webPrefix+""+randomDirectory+"/"+keyFile.getName()+"\">"+keyFile.getName()+"</A>");
           done = true;
         } else {
-          done = false;
-        }
-        
-
+          System.out.print("Create another key? y/n [No]: ");
+          String another = input.readLine();
+          
+          if (another.equals(""))
+            another = "No";
+          
+          if (another.startsWith("n") || another.startsWith("N")) {
+            done = true;
+          } else {
+            done = false;
+          }
+        }         
       }        
     } catch (Exception e) {
       System.out.println("Exception occured during construction " + e + " " + e.getMessage());
