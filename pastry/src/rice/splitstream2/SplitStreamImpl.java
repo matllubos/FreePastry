@@ -178,7 +178,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     public void receiveMessage(ScribeMessage msg){
 	/* Check the type of message */
 	/* then make call accordingly */
-	//System.out.println("DEBUG :: Recieved message");
+	System.out.println("DEBUG :: Recieved message");
     }
     // Default implementation of anycastHandler.
     public boolean anycastHandler(ScribeMessage msg){
@@ -207,6 +207,7 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
 				 boolean wasAdded,  
 				 Serializable data){
 
+        System.out.println("Subscribe Handler Called");
     }
     
     /** -- Pastry Implementation -- **/
