@@ -101,8 +101,10 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
     public DistSplitStreamTestApp( PastryNode pn, ISplitStream splitstream, int index, int numStripes, String name, ChannelId channelId, DistSplitStreamTest driver) {
 	super(pn);
 	m_pastryNode = pn;
+	m_numStripes = numStripes;
 	m_splitstream = splitstream;
 	m_name = name;
+	m_driver = driver;
 	((SplitStreamImpl)m_splitstream).registerApp((ISplitStreamApp)this);
 	m_sendOptions = new SendOptions();
 	m_logTable = new Hashtable();
@@ -112,11 +114,10 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
 
 	//m_channels = new Hashtable();
 	
-	m_numStripes = numStripes;
 	System.out.println("******** SplitStreamImpl name = "+name);
 	m_channelId = channelId;
 	m_stripe_seq = new Hashtable();
-	m_driver = driver;
+
 
     }
 
@@ -244,7 +245,7 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
     public void splitstreamIsReady(){
 	if(m_appIndex == 0){
 	    // creator of channel
-	    System.out.println("Creating channel at "+m_appIndex+" with name "+m_name);
+	    System.out.println("Creating channel at "+m_appIndex+" with name "+m_name+" with "+m_numStripes+" stripes");
 	    createChannel(m_numStripes, m_name);
 	}
 	else{
@@ -323,6 +324,7 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
 	Channel channel =  (Channel) m_channels.get(channelId);
 	
 	// Join all the stripes associated with the channel
+	System.out.println("App "+m_appIndex+" subscribing to stripes of channel, currently subscribed "+channel.getNumSubscribedStripes());
 	while(channel.getNumSubscribedStripes() < channel.getNumStripes()){
 	    Stripe stripe = channel.joinAdditionalStripe(this);
 	}

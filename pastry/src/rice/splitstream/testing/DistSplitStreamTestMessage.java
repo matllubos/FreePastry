@@ -46,7 +46,13 @@ public class DistSplitStreamTestMessage extends Message implements Serializable
      * @param splitStreamApp the DistSplitStreamTestApp application.
      */
     public void handleDeliverMessage( DistSplitStreamTestApp splitStreamApp) {
+       
 	Channel channel = (Channel) splitStreamApp.m_channels.get(m_channelId);
+	if(channel == null)
+	    System.out.println("PROBLEM -- channel is null");
+	DistSplitStreamTest driver = splitStreamApp.getDriver();
+	if(driver == null)
+	    System.out.println("PROBLEM -- driver is null --- should never happen");
 	String bootHost = splitStreamApp.getDriver().getBootHost();
 	String localHost = null;
 

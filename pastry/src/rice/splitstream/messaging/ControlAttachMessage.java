@@ -63,30 +63,42 @@ public class ControlAttachMessage extends MessageAnycast{
      */
     public boolean handleMessage( Channel channel, IScribe scribe )
     {
-	NodeHandle source = this.getSource();
-	SpareCapacityId spcapid = channel.getSpareCapacityId();
-	ChannelId chanid = channel.getChannelId();
-	StripeId[] stripeid_array = channel.getStripes();
-      
-	NodeId[] return_array = new NodeId[stripeid_array.length+2];
-	return_array[0] = (NodeId)chanid;
-	for ( int i=0; i<stripeid_array.length; i++ )
-	    {
-		return_array[i+1] = stripeid_array[i];
-	    }
-	return_array[return_array.length-1] = (NodeId)spcapid;
-
-	ControlAttachResponseMessage response = new ControlAttachResponseMessage( channel.getSplitStream().getAddress(), channel_id );
-
-	response.setContent( return_array );
-	if(return_array == null){
-	    System.out.println("I'm not returning any data");
-	}else if(return_array.length <= 1){
-	    System.out.println("Returning too little data");
+	if(!channel.isReady()){
+	    System.out.println("ControlAttachMessage -- Channel is not ready at "+((Scribe)scribe).getNodeId());
+	    return true;
 	}
+	else {
+	    NodeHandle source = this.getSource();
+	    SpareCapacityId spcapid = channel.getSpareCapacityId();
+	    ChannelId chanid = channel.getChannelId();
+	    StripeId[] stripeid_array = channel.getStripes();
+	    
+	    NodeId[] return_array = new NodeId[stripeid_array.length+2];
+	    System.out.println("ControlAttachMessage  -- Node "+((Scribe)scribe).getNodeId()+" satisfying request from node "+source.getNodeId());
 
-	channel.getSplitStream().routeMsgDirect( source, response, credentials, null );
-	return false;
+	    return_array[0] = (NodeId)chanid;
+	    for ( int i=0; i<stripeid_array.length; i++ )
+		{
+		    return_array[i+1] = stripeid_array[i];
+		}
+	    return_array[return_array.length-1] = (NodeId)spcapid;
+	    
+	    ControlAttachResponseMessage response = new ControlAttachResponseMessage( channel.getSplitStream().getAddress(), channel_id );
+	    
+	    response.setContent( return_array );
+	    if(return_array == null){
+		System.out.println("I'm not returning any data");
+	    }else if(return_array.length <= 1){
+		System.out.println("Returning too little data");
+	    }
+	    
+	    channel.getSplitStream().routeMsgDirect( source, response, credentials, null );
+	    return false;
+	}
+    }
+    
+    public void faultHandler(Scribe scribe){
+	System.out.println("ControlAttachMessage Failed ");
     }
 
     public NodeHandle getSource()

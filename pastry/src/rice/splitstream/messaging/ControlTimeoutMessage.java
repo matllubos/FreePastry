@@ -161,8 +161,9 @@ public class ControlTimeoutMessage extends Message implements Serializable
             }
             else
             {
-                if ( msg_type == ATTACH )
+                if ( msg_type == ATTACH && !channel.isReady())
                 {
+		    System.out.println("Node "+scribe.getNodeId()+" sending ControlAttachMessage");
         	    ControlAttachMessage attachMessage = new ControlAttachMessage( scribe.getAddress(), scribe.getLocalHandle(), channel_id, c );
                     //channel.getSplitStream().routeMsg( dest, attachMessage, c, null );
 		    scribe.anycast(channel_id, attachMessage, c);
