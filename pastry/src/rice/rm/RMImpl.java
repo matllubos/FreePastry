@@ -643,7 +643,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
      * periodically invoked at the local node.
      */
     public void periodicMaintenance() {
-	System.out.println("Periodic maint: range= " + myRange);
+	//System.out.println("Periodic maint: range= " + myRange);
 	// Remove stale objects
 	if(myRange!=null)
 	    app.isResponsible(myRange);
