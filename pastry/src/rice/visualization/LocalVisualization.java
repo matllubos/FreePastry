@@ -48,7 +48,7 @@ public class LocalVisualization implements DataProvider {
     return data;
   }
   
-  protected void updateData() {
+  protected void updateData() throws IOException {
     if (client == null) {
       InetSocketAddress address = new InetSocketAddress(handle.getAddress().getAddress(), handle.getAddress().getPort() + PORT_OFFSET);
       client = new VisualizationClient(address);
@@ -57,5 +57,8 @@ public class LocalVisualization implements DataProvider {
     }
         
     this.data = client.getData();
+    
+    if (this.data == null)
+      throw new IOException("Data was null - likely disconnected!");
   }
 }

@@ -59,6 +59,12 @@ public class VisualizationClient {
       this.state = STATE_DEAD;
       System.out.println("Client: Exception " + e + " thrown.");
       
+      try {
+        socket.close();
+      } catch (IOException f) {
+        System.out.println("Client: Exception " + f + " thrown closing.");
+      }
+      
       return null;
     } catch (ClassNotFoundException e) {
       this.state = STATE_UNKNOWN;
@@ -81,6 +87,12 @@ public class VisualizationClient {
       this.state = STATE_DEAD;
       System.out.println("Client: Exception " + e + " thrown.");
 
+      try {
+        socket.close();
+      } catch (IOException f) {
+        System.out.println("Client: Exception " + f + " thrown closing.");
+      }
+      
       return null;
     } catch (ClassNotFoundException e) {
       this.state = STATE_UNKNOWN;
