@@ -57,7 +57,7 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
     
   // the local pastry node
   protected transient PastryNode localnode;
-
+  static final long serialVersionUID = 987479397660721015L;
   /**
    * Gets the nodeId of this Pastry node.
    *

@@ -53,7 +53,7 @@ import java.util.*;
  * @author Alan Mislove
  */
 public abstract class DistNodeHandle extends NodeHandle implements Observer {
-
+    static final long serialVersionUID = 6030505652558872412L;
     // the nodeId of this node handle's remote node
     protected NodeId nodeId;
 
