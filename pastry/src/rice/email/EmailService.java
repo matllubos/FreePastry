@@ -20,7 +20,8 @@ import rice.email.messaging.*;
  * {@link Email} object as its argument.
  */
 public class EmailService extends PostClient {
-
+  
+  
   // the name of the Inbox's log
   public static final String INBOX_NAME="Inbox";
   
@@ -31,17 +32,18 @@ public class EmailService extends PostClient {
    * Constructor
    *
    * @param post The Post service to use
-   */
+   */  
   public EmailService(Post post) {
     _post = post;
   }
-
+  
   /**
    * @return the post object this serivce is using.
    */
   public Post getPost() {
     return _post;
   }
+
   /**
    * Sends the email to the recipient. The Email object has a notion
    * of who its recipients are.
@@ -49,17 +51,19 @@ public class EmailService extends PostClient {
    * @param email The email to send
    */
   public void sendMessage(Email email) throws PostException {
-    
+
+    /*
     // store the Email's data before sending it
     StorageService storage = _post.getStorageService();
     email.setStorage(storage);
     email.storeData();
+    */
 
     // send the notification messages to each of the recipients
     PostEntityAddress[] recipients = email.getRecipients();
     EmailNotificationMessage msg;
 
-    for (int i = 0; i < recipients.length; i++) {
+    for (int i = 0; i < recipients.length; i++) {	
       // create the Notification message, notification should go to ePost
       msg = new EmailNotificationMessage(email, recipients[i], this);
       
@@ -67,7 +71,7 @@ public class EmailService extends PostClient {
       _post.sendNotification(msg);
     }
   }
-
+  
   /**
    * Returns the Log for ePost's root folder.
    * JM this needs some error checking for when the given folder is not found
@@ -76,15 +80,16 @@ public class EmailService extends PostClient {
    * @return the fetched Log, or null if an error occured
    */
   public Folder getRootFolder() {
+    
     try {
       // find the Client Id for this client
       PostClientAddress pca = PostClientAddress.getAddress(this);
-
+      
       // use the Id to fetch the root log
       PostLog mainLog = _post.getLog();
       LogReference emailLogRef = mainLog.getChildLog(pca);
       Log emailLog = (Log) _post.getStorageService().retrieveSigned(emailLogRef);
-
+      
       return new Folder(emailLog, _post.getStorageService());
     } catch (StorageException e) {
       System.out.println("An error occured while retrieveing log - " + e);

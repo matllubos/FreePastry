@@ -1,5 +1,6 @@
 package rice.email;
 
+import rice.*;
 import rice.post.*;
 import rice.post.log.*;
 import rice.post.messaging.*;
@@ -92,17 +93,15 @@ public class Email implements java.io.Serializable {
    *
    * @return The body of this email.
    */
-  public EmailData getBody() {
+  public void getBody(ReceiveResultCommand command) {
     // if the body has not been fetched already, fetch it
     if (this.body == null) {
-      try {
-	body = (EmailData)storage.retrieveContentHash(bodyRef);
-      } catch (StorageException s) {
-	// JM do something sensible here
-      }      
+      // make a new command to store the returned body and 
+      // then return the body once it has been stored
+      EmailGetBodyTask preCommand = new EmailGetBodyTask(command);
+      // start the fetching process
+      storage.retrieveContentHash(bodyRef, preCommand);
     }
-    // return the body
-    return this.body;
   }
      
   /**
@@ -110,21 +109,18 @@ public class Email implements java.io.Serializable {
    *
    * @return The attachments of this email.
    */
-  public EmailData[] getAttachments() {
-    // if the attachments have not been fetched already, fetch them
-    if (this.attachments == null) {
-      for (int i = 0; i < attachmentRefs.length; i++) {
-	try {
-	  attachments[i] = (EmailData)storage.retrieveContentHash(attachmentRefs[i]);
-	} catch (StorageException s) {
-	  // JM do something sensible here
-	}
-      }
+  public void getAttachments(ReceiveResultCommand command) {
+    // if the attachments have not been fetched already, and there are refs to the attachments, 
+    // fetch the attachments
+    if ((this.attachments == null) && (this.attachmentRefs != null)) {
+      // make a new command to store the returned attachment and start to fetch the next attachment.
+      // Once the attachments have all been fetch, call the user's command
+      EmailGetAttachmentsTask preCommand = new EmailGetAttachmentsTask(0, command);
+      // start the fetching process
+      storage.retrieveContentHash(attachmentRefs[0], preCommand);
     }
-    // return the attachments
-    return this.attachments;
   }
-  
+
   /**
    * Stores the content of the Email into PAST and 
    * saves the references to the content in the email.  
@@ -152,6 +148,104 @@ public class Email implements java.io.Serializable {
 	} catch (StorageException s) {
 	// JM do something sensible here
       }
+    }
+  }
+
+  /**
+   * This class is used to fetch an email body, and then store the result.  
+   * To return the result to the user, the user's given command is called once
+   * the body has been stored.
+   */
+  protected class EmailGetBodyTask implements ReceiveResultCommand {
+    private ReceiveResultCommand _command;
+    
+    /**
+     * Constructs a EmailGetBodyTask given a user-command.
+     */
+    public EmailGetBodyTask(ReceiveResultCommand command) {
+      _command = command;
+    }
+
+    /**
+     * Starts the processing of this task.
+     */
+    public void start() {
+      // JM I don't believe anything needs to be done here
+    }
+
+    /**
+     * Stores the result, and then calls the user's command.
+     */
+    public void receiveResult(Object o) {
+      // store the fetched body
+      try {
+	body = (EmailData)o;      
+      } catch (Exception e) {
+	System.out.println("The email body was fetched, but had problems " + o);
+      }
+      // pass the result along to the caller
+      _command.receiveResult(o);
+    }
+
+    /**
+     * Simply prints out the error,
+     */  
+    public void receiveException(Exception e) {
+      System.out.println("Exception " + e + "  occured while trying to fetch an email body");
+    }
+  }
+
+  /**
+   * This class is used to fetch an email attachment, and store the result,
+   * and then fetch the next attachment.  Once each of the attachments have
+   * been fetched and stored, calls the user's given command.
+   */
+  protected class EmailGetAttachmentsTask implements ReceiveResultCommand {
+    private int _index;
+    private ReceiveResultCommand _command;
+    
+    /**
+     * Constructs a EmailGetAttachmentsTask given a user-command.
+     */
+    public EmailGetAttachmentsTask(int i, ReceiveResultCommand command) {
+      _index = i;
+      _command = command;
+    }
+
+    /**
+     * Starts the processing of this task.
+     */
+    public void start() {
+      // JM I don't believe anything needs to be done here
+    }
+
+    /**
+     * Stores the result, and then fetches the next attachment.  If there are no more
+     * attachments, calls the user's provided command.
+     */
+    public void receiveResult(Object o) {
+      // store the fetched attachment
+      try {
+	attachments[_index] = (EmailData)o;  
+	// if there are more attachments, fetch the next one
+	if (_index < attachmentRefs.length) {
+	  _index = _index + 1;
+	  EmailGetAttachmentsTask preCommand = new EmailGetAttachmentsTask(_index, _command);
+	  storage.retrieveContentHash(attachmentRefs[_index], preCommand);
+	// otherwise pass the result along to the caller
+	} else {
+	  _command.receiveResult(attachments);
+	}    
+      } catch (Exception e) {
+	System.out.println("The email attachment " + _index + " was fetched, but had problems. " + o);
+      }      
+    }
+
+    /**
+     * Simply prints out the error,
+     */  
+    public void receiveException(Exception e) {
+      System.out.println("Exception " + e + "  occured while trying to fetch email attachment " + _index);
     }
   }
 }

@@ -48,6 +48,8 @@ public class Folder {
    * of Emails stored by the Folder.
    */
   private Email[] readContents() throws PostException {
+
+    /*
     Vector contents = new Vector();
     boolean finished = false;
     LogEntryReference top = _log.getTopEntry();
@@ -98,6 +100,8 @@ public class Folder {
     }
     snapShotUpdate(uncompressedEntries, (Email[])contents.toArray() );
     return (Email[])contents.toArray();
+    */
+    return null;
   }
 
   /**
@@ -111,6 +115,7 @@ public class Folder {
    * @param state the current contents of the Folder
    */
   private void snapShotUpdate(int entries, Email[] contents) {
+    /*
     // if the number of entries is greater than the compression limit,
     // add a new snapshot
     if (entries > COMPRESS_LIMIT) {
@@ -119,7 +124,8 @@ public class Folder {
       } catch (StorageException s) {
 	// JM do something sensible here
       }
-    }    
+    } 
+    */   
   }
 
   /**
@@ -146,11 +152,13 @@ public class Folder {
    * @param email The email to insert.
    */
   public void addMessage(Email email) throws PostException {
+    /*
     try {
       _log.addLogEntry(new InsertMailLogEntry(email));
     } catch (StorageException e) {
       throw new PostException(e.getMessage());
     }
+    */
   }
 
   /**
@@ -159,11 +167,13 @@ public class Folder {
    * @param email The email to delete.
    */
   public void removeMessage(Email email) throws PostException {
+    /*
     try {
       _log.addLogEntry(new DeleteMailLogEntry(email)); 
     } catch (StorageException e) {
       throw new PostException(e.getMessage());
     }
+    */
   }
 
   /**
@@ -188,6 +198,7 @@ public class Folder {
    * @return the newly created child Folder
    */   
   public Folder createChildFolder(String name) throws PostException {
+    /*
     try {
       Log log = new Log(name, _log.getLocation());
       _log.addChildLog(log);
@@ -196,6 +207,8 @@ public class Folder {
     } catch (StorageException e) {
       throw new PostException(e.getMessage());
     }
+    */
+    return null;
   }
 
   /**
@@ -206,12 +219,15 @@ public class Folder {
    * @return the selected child Folder
    */
   public Folder getChildFolder(String name) throws PostException {
+    /*
     try {
       Log log = (Log)_storage.retrieveSigned(_log.getChildLog(name));
       return new Folder(log, _storage);
     } catch (StorageException e) {
       throw new PostException(e.getMessage());
     }
+    */
+    return null;
   }
 
   /**
@@ -220,7 +236,10 @@ public class Folder {
    * @return an array of the names of the child Folders
    */
   public String[] getChildren() throws PostException {
+    /*
     return (String[])_log.getChildLogNames();
+    */
+    return null;
   }
 
   /**
@@ -229,12 +248,14 @@ public class Folder {
    * @param name The name of the folder to delete.
    */
   public void removeFolder(String name) throws PostException {
+    /*
     try {
       _log.removeChildLog(name);
       _log.addLogEntry(new DeleteFolderLogEntry(name));
     } catch (StorageException e) {
       throw new PostException(e.getMessage());
     }
+    */
   }
 
   /**
@@ -246,6 +267,7 @@ public class Folder {
    * @return the array of recent events
    */
   public EmailEvent[] getPartialEventLog(Email target) {
+    /*
     // setup the control vars
     Vector events = new Vector();
     boolean finished = false;
@@ -287,6 +309,8 @@ public class Folder {
       }
     }
     return (EmailEvent[])events.toArray();
+    */
+    return null;
   }  
   
   
@@ -296,6 +320,7 @@ public class Folder {
    * @return the complete array of events
    */
   public EmailEvent[] getCompleteEventLog()  {
+    /*
     // setup the control vars
     Vector events = new Vector();
     boolean finished = false;
@@ -316,6 +341,12 @@ public class Folder {
       else if (topEntry instanceof DeleteMailLogEntry) {
 	events.add(new DeleteMailEvent(((DeleteMailLogEntry)topEntry).getEmail()));
       }
+      if (topEntry instanceof InsertFolderLogEntry) {
+	events.add(new InsertFolderEvent(((InsertFolderLogEntry)topEntry).getName()));
+      }
+      else if (topEntry instanceof DeleteFolderLogEntry) {
+	events.add(new DeleteFolderEvent(((DeleteFolderLogEntry)topEntry).getName()));
+      }
 
       // try to move to the next LogEntry
       top = topEntry.getPreviousEntry();
@@ -331,5 +362,7 @@ public class Folder {
       }
     }
     return (EmailEvent[])events.toArray();
+    */
+    return null;
   }  
 }
