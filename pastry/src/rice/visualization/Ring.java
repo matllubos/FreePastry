@@ -31,7 +31,7 @@ public class Ring {
   /**
    * Vector of Node
    */
-  public Vector nodes;
+  private Vector nodes;
 
   /**
    * DistNodeHandle -> VisualizationClient
@@ -53,6 +53,19 @@ public class Ring {
   
   public void setVisualization(Visualization v) {
     this.visualization = v;
+  }
+  
+  public synchronized void addNode(Node node) {
+    nodes.add(node);
+  }
+  
+  protected synchronized Vector cloneNodes() {
+    Vector r = new Vector();
+    
+    for (int i=0; i<nodes.size(); i++)
+      r.add(nodes.elementAt(i));
+    
+    return r;
   }
   
   public Ring(String name, DistNodeHandle handle, Ring parent) {
@@ -78,7 +91,7 @@ public class Ring {
         return distnodes[i];
     //Thread.dumpStack();
     Node newNode = new Node(handle,this);
-    nodes.addElement(newNode);
+    addNode(newNode);
     if (parent != null) {
       parent.buildAssociations(newNode);
     } else {
@@ -93,7 +106,7 @@ public class Ring {
   public void buildAssociations(Node n) {
     if (n.ring != this) {
       // check self  
-      Iterator i = nodes.iterator();
+      Iterator i = cloneNodes().iterator();
       while (i.hasNext()) {
         Node n2 = (Node)i.next();
         if (n.handle.getId().equals(n2.handle.getId())) {
@@ -111,11 +124,11 @@ public class Ring {
   }
 
   public Node[] getNodes() {
-    return (Node[]) nodes.toArray(new Node[0]);
+    return (Node[]) cloneNodes().toArray(new Node[0]);
   }
   
   public String toString() {
-    return "Ring \""+name+"\" bootstrap: "+nodes.get(0);
+    return "Ring \""+name+"\" bootstrap: "+cloneNodes().get(0);
   }
   
   public int getState(DistNodeHandle node) {
@@ -152,7 +165,7 @@ public class Ring {
    * Attempts to select a node in own ring, then children's rings.
    */
   public Node getNode(int x, int y) {
-    Iterator i = nodes.iterator();
+    Iterator i = cloneNodes().iterator();
     while(i.hasNext()) {
       Node n = (Node)i.next();
       if ((n.selectionArea!=null) && (n.textLocation != null) &&
@@ -160,15 +173,15 @@ public class Ring {
         return n;
       }
     }
-    i = children.iterator();
+ /*   i = children.iterator();
     while(i.hasNext()) {
       Ring r = (Ring)i.next();
       Node n = r.getNode(x,y);
       if (n != null) {
         return n;
       }
-    }
-    return null;
+    } */
+    return null; 
   }
 
   public Ring getRing(int x, int y) {
@@ -243,7 +256,7 @@ public class Ring {
   
   protected void paintConnections(Graphics g) {
     Node sel = visualization.getSelectedNode();
-    Iterator i = nodes.iterator();
+    Iterator i = cloneNodes().iterator();
     while(i.hasNext()) {
       Node node = (Node)i.next();
       if (!(node == sel)) 
@@ -283,7 +296,7 @@ public class Ring {
 
   private void paintNodes(Graphics g, Point center, int radius) {
 
-    Iterator i = nodes.iterator();
+    Iterator i = cloneNodes().iterator();
     while (i.hasNext()) {
       Node node = (Node)i.next();
       //node.location = idToLocation(node.handle.getId(), center, radius);
@@ -329,12 +342,13 @@ public class Ring {
                                          (int) rect.getWidth(), (int) rect.getHeight());
       }
         
-      g.drawString(string, node.textLocation.x, node.textLocation.y + fontHeight);         
+      if (this.equals(visualization.getSelectedRing()))
+        g.drawString(string, node.textLocation.x, node.textLocation.y + fontHeight);         
     }
   }
 
   public void prepNodes(Graphics g, Point center, int radius) {
-    Iterator i = nodes.iterator();
+    Iterator i = cloneNodes().iterator();
     while(i.hasNext()) {
       Node node = (Node)i.next(); 
       node.location = idToLocation(node.handle.getId(), center, radius);

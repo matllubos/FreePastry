@@ -85,6 +85,16 @@ public class PostProxy {
   protected FragmentKeyFactory KFACTORY;
   
   /**
+   * The Internet-visible IP address of this node, if a NAT is present
+   */
+  protected InetAddress natAddress;
+  
+  /**
+   * The factory used to create the normal Pastry node
+   */
+  protected DistPastryNodeFactory factory;
+  
+  /**
     * The node the services should use
    */
   protected PastryNode pastryNode;
@@ -250,6 +260,19 @@ public class PostProxy {
    * The class which manages the log
    */
   protected LogManager logManager;
+  
+  /**
+    * Method which sees if we are using a liveness monitor, and if so, sets up this
+   * VM to have a client liveness monitor.
+   *
+   * @param parameters The parameters to use
+   */
+  protected void startLivenessMonitor(Parameters parameters) throws Exception {
+    if (parameters.getBooleanParameter("proxy_liveness_monitor_enable")) {
+      LivenessThread lt = new LivenessThread(parameters);
+      lt.start();
+    }
+  }
     
   /**
    * Method which check all necessary boot conditions before starting the proxy.
@@ -260,11 +283,22 @@ public class PostProxy {
     if (parameters.getBooleanParameter("proxy_compatibility_check_enable")) {
       String address = InetAddress.getLocalHost().getHostAddress();
       
-      if (! CompatibilityCheck.testIPAddress(address)) 
-        panic("You computer appears to have the non-routable address " + address + ".\n" +
-              "This is likely because (a) you are not connected to any network or\n" +
-              "(b) you are connected from behind a NAT box.  Please ensure that you have\n" +
-              "a valid, routable IP address and try again.");
+      if (! CompatibilityCheck.testIPAddress(address)) {
+        int i = message("You computer appears to have the non-routable address " + address + ".\n" +
+                        "This is likely because you are connected from behind a NAT - ePOST can\n" + 
+                        "run from behind a NAT, but you must set up port forwarding on port 10001\n" +
+                        "for both TCP and UDP to your internal address '" + address + "'.\n\n" +
+                        "If you have set up your NAT box, select 'NAT is Set Up' to test your\n" + 
+                        "connection, otherwise, select 'Kill ePOST Proxy'.", 
+                        new String[] {"NAT is Set Up", "Kill ePOST Proxy"}, "Kill ePOST Proxy");
+        
+        if (i == 1) {
+          System.exit(-1);
+        } else {
+          startCheckNAT(parameters);
+        }
+      }
+          
       
       String version = System.getProperty("java.version");
       
@@ -273,15 +307,48 @@ public class PostProxy {
               "Currently, only Java 1.4 is supported, and you must be running a\n" +
               "version of at least 1.4.2.  Please see http://java.sun.com in order\n" +
               "to download a compatible version.");
-      
+      /*
       String os = System.getProperty("os.name");
       
       if (! CompatibilityCheck.testOS(os))
         panic("You appear to be running an incompatible operating system '" + System.getProperty("os.name") + "'.\n" +
               "Currently, only Windows and Linux are supported for ePOST, although\n" +
-              "we are actively trying to add support for Mac OS X.");
+              "we are actively trying to add support for Mac OS X."); */
     }
   }
+  
+  /**
+   * Method which checks the NAT connection
+   *
+   * @param parameters The parameters to use
+   */
+  protected void startCheckNAT(Parameters parameters) throws Exception {
+    ConnectivityCheckClient client = new ConnectivityCheckClient(parameters.getInetSocketAddressParameter("pastry_proxy_connectivity_server"));
+    natAddress = client.check(parameters.getLongParameter("pastry_proxy_connectivity_timeout")/4, parameters.getIntParameter("pastry_proxy_connectivity_port"));
+  
+    if (natAddress == null) 
+      natAddress = client.check(parameters.getLongParameter("pastry_proxy_connectivity_timeout")/2, parameters.getIntParameter("pastry_proxy_connectivity_port"));
+
+    if (natAddress == null) 
+      natAddress = client.check(parameters.getLongParameter("pastry_proxy_connectivity_timeout"), parameters.getIntParameter("pastry_proxy_connectivity_port"));
+    
+    if (natAddress == null) {
+      int j = message("ePOST attempted to determine the NAT IP address, but was unable to.  This\n" +
+                      "is likely caused by an incorrectly configured NAT - make sure that your NAT\n" +
+                      "is set up to forward both TCP and UDP packets on port 10001 to '" + address + "'.\n\n" + 
+                      "Error: " + client.getError(), new String[] {"Kill ePOST Proxy", "Retry"}, "Kill ePOST Proxy");
+    
+      if (j == 1)
+        startCheckNAT(parameters);
+      else
+        System.exit(-1);
+    } else {
+      message("ePOST successfully checked your connection - it appears that the IP address\n" +
+              "of your NAT is " + natAddress.getHostAddress() + ".  Please do not remove the port forwarding on\n" + 
+              "your NAT as long as you are using ePOST.", new String[] {"OK"}, "OK");
+    }
+  }
+    
   
   /**
    * Method which sees if we are going to use a proxy for the pastry node, and if so
@@ -294,19 +361,6 @@ public class PostProxy {
       dialog = new PostDialog(); 
     }
   }
-  
-  /**
-   * Method which sees if we are using a liveness monitor, and if so, sets up this
-   * VM to have a client liveness monitor.
-   *
-   * @param parameters The parameters to use
-   */
-  protected void startLivenessMonitor(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("proxy_liveness_monitor_enable")) {
-      LivenessThread lt = new LivenessThread(parameters);
-      lt.start();
-    }
-  }
 
   /**
    * Method which sees if we are going to use a proxy for the pastry node, and if so
@@ -314,13 +368,13 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */
- /* protected void startPastryProxy(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("pastry_proxy_enable")) {
-      sectionStart("Creating Remote Proxy");
+  protected void startPastryProxy(Parameters parameters) throws Exception {
+   /* if (parameters.getBooleanParameter("pastry_proxy_enable")) {
+      sectionStart("Preparing Proxy Address");
       
-      InetSocketAddress proxy = parameters.getInetSocketAddressParameter("pastry_proxy");
+      proxyAddress = parameters.getInetSocketAddressParameter("pastry_proxy_address");
       
-      if (parameters.getStringParameter("pastry_proxy_password") == null) {
+    if (parameters.getStringParameter("pastry_proxy_password") == null) {
         String password = CAKeyGenerator.fetchPassword(parameters.getStringParameter("pastry_proxy_username") + "@" + 
                                                        proxy.getAddress() + "'s SSH Password");
         parameters.setStringParameter("pastry_proxy_password", password);
@@ -331,13 +385,13 @@ public class PostProxy {
                                     parameters.getStringParameter("pastry_proxy_username"), 
                                     parameters.getStringParameter("pastry_proxy_password"), 
                                     proxy.getPort(),
-                                    parameters.getIntParameter("pastry_port"));
-      remoteProxy.run();
+                                  parameters.getIntParameter("pastry_port"));
+      remoteProxy.run(); 
       stepDone(SUCCESS);
       
       sectionDone();
-    }
-  } */
+    } */
+  } 
   
   /**
    * Method which redirects standard output and error, if desired.
@@ -525,11 +579,7 @@ public class PostProxy {
     
       if (ringId == null) 
         ringId = ((RingId) certificate.getAddress().getAddress()).getRingId();
-      
-      Id id = rice.pastry.Id.build(new int[] {-483279260, -1929711158, 1739364733, 601172903, 834666663});
-        
-      System.out.println("Read in " + certificate.getAddress().getAddress() + ", " + id);
-    
+          
       stepDone(SUCCESS);
     } catch (Exception e) {
       panic(e, "There was an error reading the file '" + parameters.getStringParameter("post_username") + ".certificate'.", new String[] {"post_username"});
@@ -765,10 +815,15 @@ public class PostProxy {
       panic(new RuntimeException(), "The pastry protocol " + protocol + " is unknown.", "pastry_protocol");
     }
     
-    DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port), protocolId, port);
+    factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port), protocolId, port);
     InetSocketAddress[] bootAddresses = parameters.getInetSocketAddressArrayParameter("pastry_ring_" + prefix+ "_bootstraps");
     InetSocketAddress proxyAddress = null;
         
+ /*   if (parameters.getBooleanParameter("pastry_ring_" + prefix+ "_proxy_enable"))
+      proxyAddress = parameters.getInetSocketAddressParameter("pastry_ring_" + prefix+ "_proxy_address"); */
+    if (natAddress != null)
+      proxyAddress = new InetSocketAddress(natAddress, port);
+    
     rice.pastry.NodeHandle bootHandle = factory.getNodeHandle(bootAddresses);
     
     if ((bootHandle == null) && (! parameters.getBooleanParameter("pastry_ring_" + prefix+ "_allow_new_ring")))
@@ -883,8 +938,12 @@ public class PostProxy {
     
     DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port), protocolId, port);
     InetSocketAddress[] bootAddresses = parameters.getInetSocketAddressArrayParameter("pastry_ring_" + prefix + "_bootstraps");
+    InetSocketAddress proxyAddress = null;
     
-    globalNode = factory.newNode(factory.getNodeHandle(bootAddresses), (rice.pastry.NodeId) ((RingId) node.getId()).getId());
+    if (parameters.getBooleanParameter("pastry_ring_" + prefix+ "_proxy_enable"))
+      proxyAddress = parameters.getInetSocketAddressParameter("pastry_ring_" + prefix+ "_proxy_address");
+    
+    globalNode = factory.newNode(factory.getNodeHandle(bootAddresses), (rice.pastry.NodeId) ((RingId) node.getId()).getId(), proxyAddress);
     globalPastryNode = (PastryNode) globalNode;
 
     int count = 0;
@@ -926,7 +985,7 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startGlobalNode(Parameters parameters) throws Exception { 
-    if (parameters.getBooleanParameter("multiring_global_enable")) {
+    if (parameters.getBooleanParameter("multiring_global_enable") && (natAddress == null)) {
       startGlobalPastryNode(parameters);
       startGlobalMultiringNode(parameters);
     }
@@ -1149,10 +1208,9 @@ public class PostProxy {
   }
   
   protected Parameters start(Parameters parameters) throws Exception {
-    startCheckBoot(parameters);
-    
-    startDialog(parameters);
     startLivenessMonitor(parameters);
+    startCheckBoot(parameters);    
+    startDialog(parameters);
     //startPastryProxy(parameters);
         
     sectionStart("Initializing Parameters");
@@ -1163,9 +1221,12 @@ public class PostProxy {
     startRetrieveUser(parameters);
     sectionDone();
     
-    sectionStart("Bootstrapping Local Node");
+    sectionStart("Initializing Disk Storage");
     startCreateIdFactory(parameters);
     startStorageManagers(parameters);
+    sectionDone();
+    
+    sectionStart("Bootstrapping Local Node");
     startPastryNode(parameters);
     sectionDone();
     
@@ -1234,26 +1295,41 @@ public class PostProxy {
     
     message.append(" in your proxy.params file.\n\n");
     message.append(e.getClass().getName() + ": " + e.getMessage());
+
+    System.err.println("PANIC : " + message + " --- " + e);
     
-    if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) {
+    try {
+      if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) 
       JOptionPane.showMessageDialog(null, message.toString() ,"Error: " + e.getClass().getName(), JOptionPane.ERROR_MESSAGE); 
-    } else {
-      System.err.println("PANIC : " + message + " --- " + e);
-    }
-    
+    } catch (java.lang.InternalError f) {}
+
     throw e;
   }
   
   public void panic(String m) {
     System.err.println("PANIC : " + m);
 
-    if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) {
-      JOptionPane.showMessageDialog(null, m, "Error Starting POST Proxy", JOptionPane.ERROR_MESSAGE); 
-    }
+    try {
+      if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) 
+        JOptionPane.showMessageDialog(null, m, "Error Starting POST Proxy", JOptionPane.ERROR_MESSAGE); 
+    } catch (java.lang.InternalError f) {}
     
     System.exit(-1);
   }
 
+  public int message(String m, String[] options, String def) {
+    System.err.println("MESSAGE : " + m);
+    
+    try {
+      if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) 
+        return JOptionPane.showOptionDialog(null, m, "ePOST Message", 
+                                             0, JOptionPane.INFORMATION_MESSAGE, null, 
+                                             options, def);
+    } catch (java.lang.InternalError f) {}
+    
+    return 0;
+  }
+  
   public static void main(String[] args) {
     PostProxy proxy = new PostProxy();
     proxy.start();
@@ -1421,7 +1497,16 @@ public class PostProxy {
       
       status.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          LocalVisualization vis = new LocalVisualization((DistNodeHandle) pastryNode.getLocalNodeHandle());
+          try {
+            if (natAddress == null) {
+              LocalVisualization vis = new LocalVisualization((DistNodeHandle) pastryNode.getLocalNodeHandle());
+            } else {
+              DistNodeHandle handle = (DistNodeHandle) factory.getNodeHandle(new InetSocketAddress(InetAddress.getLocalHost(), 10001));
+              LocalVisualization vis = new LocalVisualization(handle);
+            }
+          } catch (Exception f) {
+            System.err.println("Got Error launching Vis: " + f);
+          }
         }
       });
       
@@ -1542,4 +1627,6 @@ public class PostProxy {
       }
     }
   }
+  
+
 }

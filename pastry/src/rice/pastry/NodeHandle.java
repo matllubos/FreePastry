@@ -155,6 +155,18 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    */
   public abstract boolean equals(Object obj);
 
+  /**
+   * Method which is used by Pastry to start the bootstrapping process on the 
+   * local node using this handle as the bootstrap handle.  Default behavior is
+   * simply to call receiveMessage(msg), but transport layer implementations may
+   * care to perform other tasks by overriding this method, since the node is
+   * not technically part of the ring yet.
+   *
+   * @param msg the bootstrap message.
+   */
+  public void bootstrap(Message msg) {
+    receiveMessage(msg);
+  }
 
   /**
    * Hash codes for nodehandles.

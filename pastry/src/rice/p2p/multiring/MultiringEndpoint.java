@@ -154,7 +154,10 @@ public class MultiringEndpoint implements Endpoint {
    * @param maxRank The number of desired replicas.
    */
   public NodeHandleSet replicaSet(Id id, int maxRank) {
-    return new MultiringNodeHandleSet(node.getRingId(), endpoint.replicaSet(((RingId) id).getId(), maxRank));
+    if (((RingId) id).getRingId().equals(node.getRingId()))
+      return new MultiringNodeHandleSet(node.getRingId(), endpoint.replicaSet(((RingId) id).getId(), maxRank));
+    else
+      return new MultiringNodeHandleSet(((RingId) id).getRingId(), node.getNode().getIdFactory().buildNodeHandleSet());
   }
   
   /**
@@ -169,10 +172,13 @@ public class MultiringEndpoint implements Endpoint {
    * @param set The set of other nodes around the root handle
    */
   public NodeHandleSet replicaSet(Id id, int maxRank, NodeHandle root, NodeHandleSet set) {
-    return new MultiringNodeHandleSet(node.getRingId(), endpoint.replicaSet(((RingId) id).getId(), 
-                                                                            maxRank,
-                                                                            ((MultiringNodeHandle) root).getHandle(),
-                                                                            ((MultiringNodeHandleSet) set).getSet()));
+    if (((RingId) id).getRingId().equals(node.getRingId()))
+      return new MultiringNodeHandleSet(node.getRingId(), endpoint.replicaSet(((RingId) id).getId(), 
+                                                                              maxRank,
+                                                                              ((MultiringNodeHandle) root).getHandle(),
+                                                                              ((MultiringNodeHandleSet) set).getSet()));
+    else
+      return new MultiringNodeHandleSet(((RingId) id).getRingId(), node.getNode().getIdFactory().buildNodeHandleSet());      
   }
   
   /**

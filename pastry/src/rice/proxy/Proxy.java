@@ -245,6 +245,19 @@ public class Proxy {
       lm.die();
   }
   
+  public boolean verifyJar(String filename) {
+   /* String[] cp = new DynamicClasspath().getClasspath().split(System.getProperty("path.separator"));
+    JarFile newJar = new JarFile(filename);
+    int i=0;
+    
+    while ((oldJar == null) && (i < cp.length)) 
+      if (! cp[i].equals(filename))
+        JarFile oldJar = new JarFile(cp[i]);
+      
+    Certificate cert = oldJar */
+    return true;
+  }
+  
   public static void main(String[] args) throws IOException, InterruptedException {
     Proxy proxy = new Proxy();
     proxy.run(PROXY_PARAMETERS_NAME);
@@ -418,13 +431,15 @@ public class Proxy {
                   hf = new HttpFetcher(new URL(root + filename), new FileOutputStream(new File(".", filename)));
                   hf.fetch();
                   
-                  restart();
+                  if (verifyJar(filename))
+                    restart();
                 }
               } else {
                 hf = new HttpFetcher(new URL(root + filename), new FileOutputStream(new File(".", filename)));
                 hf.fetch();
                 
-                restart();   
+                if (verifyJar(filename))
+                  restart();   
               }
             }
           } catch (Exception e) {

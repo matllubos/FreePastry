@@ -4,11 +4,9 @@ import java.awt.Dimension;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.net.InetSocketAddress;
+import java.util.*;
 
-import javax.swing.BorderFactory;
-import javax.swing.DefaultComboBoxModel;
-import javax.swing.JComboBox;
-import javax.swing.JPanel;
+import javax.swing.*;
 
 import rice.pastry.NodeId;
 import rice.pastry.dist.DistNodeHandle;
@@ -24,6 +22,10 @@ public class InformationPanel extends JPanel {
   protected DefaultComboBoxModel model;
   
   protected DefaultComboBoxModel addrModel;
+  
+  protected JTextField text;
+  
+  protected boolean changing = false;
     
   public InformationPanel(Visualization visualization) {
     this.visualization = visualization;
@@ -35,7 +37,7 @@ public class InformationPanel extends JPanel {
     add(combo);
     combo.addItemListener(new ItemListener() {
       public void itemStateChanged(ItemEvent state) { 
-        if (state.getStateChange() == state.SELECTED) {
+        if ((state.getStateChange() == state.SELECTED) && (! changing)) {
           InformationPanel.this.visualization.setSelected((NodeId) state.getItem(),InformationPanel.this.visualization.getSelectedRing());
         }
       }
@@ -46,11 +48,18 @@ public class InformationPanel extends JPanel {
     add(addrCombo);
     addrCombo.addItemListener(new ItemListener() {
       public void itemStateChanged(ItemEvent state) { 
-        if (state.getStateChange() == state.SELECTED) {
+        if ((state.getStateChange() == state.SELECTED) && (! changing)) {
           InformationPanel.this.visualization.setSelected((InetSocketAddress) state.getItem(),InformationPanel.this.visualization.getSelectedRing());
         }
       }
     });
+    
+    text = new JTextField(getText());
+    add(text);
+  }
+  
+  protected String getText() {
+    return model.getSize() + " live nodes";
   }
   
   public Dimension getPreferredSize() {
@@ -59,39 +68,49 @@ public class InformationPanel extends JPanel {
   
   public void nodeSelected(Node node, Data data) {
     if (node != null) {
+      changing = true;
       Node[] handles = visualization.getNodes();
-      
-      for (int i=0; i<handles.length; i++) {
-        if (model.getIndexOf(handles[i].handle.getNodeId()) < 0) {
-          boolean inserted = false;
-          for (int j=0; (j<model.getSize()) && !inserted; j++) {
-            if (((NodeId) model.getElementAt(j)).compareTo(handles[i].handle.getNodeId()) > 0) {
-              model.insertElementAt(handles[i].handle.getNodeId(), j);
-              inserted = true;
-            }
-          }
-          if (! inserted)
-            model.addElement(handles[i].handle.getNodeId());
+      Arrays.sort(handles, new Comparator() {
+        public int compare(Object a, Object b) {
+          return ((Node) a).handle.getNodeId().compareTo(((Node) b).handle.getNodeId());
         }
-      }
+        
+        public boolean equals() {
+          return false;
+        }
+      });
+      
+      model.removeAllElements();
+      
+      for (int i=0; i<handles.length; i++) 
+        if (handles[i].ring == node.ring)
+          model.addElement(handles[i].handle.getNodeId());
+      
       model.setSelectedItem(node.handle.getNodeId());
       
-      for (int i=0; i<handles.length; i++) {
-        if (addrModel.getIndexOf(handles[i].handle.getAddress()) < 0) {
-          boolean inserted = false;
-          for (int j=0; (j<addrModel.getSize()) && !inserted; j++) {
-            if (((InetSocketAddress) addrModel.getElementAt(j)).toString().compareTo(handles[i].handle.getAddress().toString()) > 0) {
-              addrModel.insertElementAt(handles[i].handle.getAddress(), j);
-              inserted = true;
-            }
-          }
-          if (! inserted)
-            addrModel.addElement(handles[i].handle.getAddress());
+      Arrays.sort(handles, new Comparator() {
+        public int compare(Object a, Object b) {
+          return ((Node) a).handle.getAddress().toString().compareTo(((Node) b).handle.getAddress().toString());
         }
-      }
+        
+        public boolean equals() {
+          return false;
+        }
+      });
+                  
+                  
+      addrModel.removeAllElements();
+      
+      for (int i=0; i<handles.length; i++) 
+        if (handles[i].ring == node.ring)
+          addrModel.addElement(handles[i].handle.getAddress());
+      
       addrModel.setSelectedItem(node.handle.getAddress());
       
+      text.setText(getText());
+      
       repaint();
+      changing = false;
     }
   }
 }

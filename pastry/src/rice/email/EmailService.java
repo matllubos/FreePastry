@@ -255,11 +255,16 @@ public class EmailService extends PostClient {
    */
   public void getContentHashReferences(Continuation command) {
     final Set set = new HashSet();
-    folder.getContentHashReferences(set, new StandardContinuation(command) {
-      public void receiveResult(Object o) {
-        parent.receiveResult(set.toArray(new ContentHashReference[0]));
-      }
-    });
+
+    if (folder != null) {
+      folder.getContentHashReferences(set, new StandardContinuation(command) {
+        public void receiveResult(Object o) {
+          parent.receiveResult(set.toArray(new ContentHashReference[0]));
+        }
+      });
+    } else {
+      command.receiveResult(new ContentHashReference[0]);
+    }
   }
   
   /**

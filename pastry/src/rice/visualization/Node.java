@@ -16,7 +16,7 @@ import rice.pastry.dist.DistNodeHandle;
 /**
  * @author Jeff Hoye
  */
-public class Node {
+public class Node implements Comparable {
   DistNodeHandle handle;
   Point location;
   Ring ring;
@@ -50,5 +50,9 @@ public class Node {
     if (n.handle.getId().equals(this.handle.getId())) {
       associations.add(n);
     }
+  }
+  
+  public int compareTo(Object o) {
+    return handle.getNodeId().compareTo(((Node) o).handle.getNodeId());
   }
 }

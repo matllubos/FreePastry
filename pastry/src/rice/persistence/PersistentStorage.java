@@ -1509,7 +1509,8 @@ public class PersistentStorage implements Storage {
       objout.writeObject(map);
       objout.close();
     } finally {
-      fout.close();
+      if (fout != null)
+        fout.close();
     }
   }
   

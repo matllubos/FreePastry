@@ -16,28 +16,35 @@ import javax.net.ssl.*;
 
 public class SSLSmtpServerImpl extends SmtpServerImpl {
   
-  public SSLSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager) throws Exception {
-    super(port, email, gateway, address, acceptNonLocal, authenticate, userManager);
+  protected String keystore;
+  
+  protected String password;
+  
+  public SSLSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String keystore, String password) throws Exception {
+    super(port, email, gateway, address, acceptNonLocal, authenticate, userManager);    
+    this.keystore = keystore;
+    this.password = password;
+    initializeSSL();
   }
   
-  public void initialize() throws IOException {
+  public void initialize() {
+  }
+  
+  public void initializeSSL() throws IOException {
     try {
       //Security.addProvider(new com.sun.net.ssl.internal.ssl.Provider());
       SSLContext con = SSLContext.getInstance("TLS");
       SecureRandom random = SecureRandom.getInstance("SHA1PRNG", "SUN");
       
-      
       // Change this to whatever the password is for the key
-      char[] password={'m', 'o', 'n', 'k', 'e', 'y'};
+      char[] pass = password.toCharArray();
       
-      String fname = ".keystore";
-      
-      FileInputStream fis = new FileInputStream(fname);
+      // load the key
       KeyStore ks = KeyStore.getInstance("JKS");
-      ks.load(fis, null);
+      ks.load(new FileInputStream(keystore), null);
       
       KeyManagerFactory km = KeyManagerFactory.getInstance("SunX509");
-      km.init(ks , password);
+      km.init(ks, pass);
       
       // Now get the key managers
       KeyManager[] keymanage = km.getKeyManagers();

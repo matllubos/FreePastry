@@ -25,6 +25,7 @@
 package rice.pastry.dist;
 
 import java.net.InetSocketAddress;
+import java.util.*;
 
 import rice.*;
 import rice.Continuation.*;
@@ -93,6 +94,16 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * @return The NodeHandle value
    */
   public final NodeHandle getNodeHandle(InetSocketAddress[] addresses) {
+    // first, randomize the addresses
+    Random r = new Random();
+    for (int i=0; i<addresses.length; i++) {
+      int j = r.nextInt(addresses.length);
+      InetSocketAddress tmp = addresses[j];
+      addresses[j] = addresses[i];
+      addresses[i] = tmp;
+    } 
+    
+    // then boot
     for (int i=0; i<addresses.length; i++) {
       NodeHandle result = getNodeHandle(addresses[i]);
       if (result != null)

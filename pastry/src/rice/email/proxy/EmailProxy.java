@@ -80,7 +80,59 @@ public class EmailProxy extends PostProxy {
     CommandMap.setDefaultCommandMap(cmdmap);    
     stepDone(SUCCESS);
   }
+   
+   /**
+    * Method which retrieve the post user's certificate and key
+    *
+    * @param parameters The parameters to use
+    */  
+   protected void startRetrieveKeystore(Parameters parameters) throws Exception {
+     String file = parameters.getStringParameter("email_ssl_keystore_filename");
      
+     if ((! new File(file).exists()) &&
+         (parameters.getBooleanParameter("email_imap_ssl") ||
+          parameters.getBooleanParameter("email_pop3_ssl") ||
+          parameters.getBooleanParameter("email_smtp_ssl"))) {
+       stepStart("Creating keypair for SSL servers");
+       
+       String pass = parameters.getStringParameter("email_ssl_keystore_password");
+       int validity = parameters.getIntParameter("email_ssl_keystore_validity");
+       
+       StringBuffer command = new StringBuffer();
+       command.append(System.getProperty("java.home"));
+       command.append(System.getProperty("file.separator"));
+       command.append("bin");
+       command.append(System.getProperty("file.separator"));
+       command.append("keytool -genkey -keystore ");
+       command.append(file);
+       command.append(" -alias ePOST -validity ");
+       command.append("" + validity);
+       command.append(" -keypass ");
+       command.append(pass);
+       command.append(" -storepass "); 
+       command.append(pass);
+       
+       Process process = Runtime.getRuntime().exec(command.toString());
+       BufferedReader r = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+       BufferedWriter w = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
+       
+       w.write("ePOST User at " + InetAddress.getLocalHost() + "\n");
+       w.write("Unknown\n");
+       w.write("Unknown\n");
+       w.write("Unknown\n");
+       w.write("Unknown\n");
+       w.write("Unknown\n");
+       w.write("yes\n");
+       w.flush();
+
+       process.waitFor();
+       
+       if (process.exitValue() != 0)
+         stepDone(FAILURE);
+       else
+         stepDone(SUCCESS);
+     }
+   }
      
   /**
    * Method which fetches the local email service
@@ -158,6 +210,8 @@ public class EmailProxy extends PostProxy {
         boolean gateway = parameters.getBooleanParameter("email_gateway");
         boolean accept = parameters.getBooleanParameter("email_accept_nonlocal");
         boolean authenticate = parameters.getBooleanParameter("email_smtp_authenticate");
+        String file = parameters.getStringParameter("email_ssl_keystore_filename");
+        String pass = parameters.getStringParameter("email_ssl_keystore_password");
         String sendersA = parameters.getStringParameter("email_allowed_senders");
         String[] senders = new String[0];
         
@@ -166,7 +220,7 @@ public class EmailProxy extends PostProxy {
         
         if (parameters.getBooleanParameter("email_smtp_ssl")) {
           stepStart("Starting SSL SMTP server on port " + port);
-          smtp = new SSLSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager);
+          smtp = new SSLSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, file, pass);
           smtp.start();
           stepDone(SUCCESS);
         } else if (parameters.getBooleanParameter("email_smtp_non_blocking")) {
@@ -182,6 +236,13 @@ public class EmailProxy extends PostProxy {
         }
       } catch (Exception e) {
         stepDone(FAILURE, "ERROR: Unable to launch SMTP server - continuing - " + e);
+        e.printStackTrace();
+        
+        int i = message("The SMTP server failed to launch due to an exception.\n\n" + 
+                        e + " - " + e.getMessage(), new String[] {"Continue", "Kill ePOST Proxy"}, "Continue");
+        
+        if (i == 1)
+          System.exit(-1);
       }
     }
   }
@@ -197,10 +258,12 @@ public class EmailProxy extends PostProxy {
         int port = parameters.getIntParameter("email_imap_port");
         boolean gateway = parameters.getBooleanParameter("email_gateway");
         boolean accept = parameters.getBooleanParameter("email_accept_nonlocal");
+        String file = parameters.getStringParameter("email_ssl_keystore_filename");
+        String pass = parameters.getStringParameter("email_ssl_keystore_password");
         
         if (parameters.getBooleanParameter("email_imap_ssl")) {
           stepStart("Starting SSL IMAP server on port " + port);
-          imap = new SSLImapServerImpl(port, email, manager, gateway, accept);
+          imap = new SSLImapServerImpl(port, email, manager, gateway, accept, file, pass);
           imap.start();
           stepDone(SUCCESS);
         } else if (parameters.getBooleanParameter("email_imap_non_blocking")) {
@@ -216,6 +279,13 @@ public class EmailProxy extends PostProxy {
         }
       } catch (Exception e) {
         stepDone(FAILURE, "ERROR: Unable to launch IMAP server - continuing - " + e);
+        e.printStackTrace();
+        
+        int i = message("The IMAP server failed to launch due to an exception.\n\n" + 
+                        e + " - " + e.getMessage(), new String[] {"Continue", "Kill ePOST Proxy"}, "Continue");
+        
+        if (i == 1)
+          System.exit(-1);
       }
     }
   }
@@ -231,10 +301,12 @@ public class EmailProxy extends PostProxy {
         int port = parameters.getIntParameter("email_pop3_port");
         boolean gateway = parameters.getBooleanParameter("email_gateway");
         boolean accept = parameters.getBooleanParameter("email_accept_nonlocal");
+        String file = parameters.getStringParameter("email_ssl_keystore_filename");
+        String pass = parameters.getStringParameter("email_ssl_keystore_password");
         
         if (parameters.getBooleanParameter("email_pop3_ssl")) {
           stepStart("Starting SSL POP3 server on port " + port);
-          pop3 = new SSLPop3ServerImpl(port, email, manager, gateway, accept);
+          pop3 = new SSLPop3ServerImpl(port, email, manager, gateway, accept, file, pass);
           pop3.start();
           stepDone(SUCCESS);
         } else if (parameters.getBooleanParameter("email_pop3_non_blocking")) {
@@ -250,6 +322,13 @@ public class EmailProxy extends PostProxy {
         }
       } catch (Exception e) {
         stepDone(FAILURE, "ERROR: Unable to launch IMAP server - continuing - " + e);
+        e.printStackTrace();
+        
+        int i = message("The POP3 server failed to launch due to an exception.\n\n" + 
+                        e + " - " + e.getMessage(), new String[] {"Continue", "Kill ePOST Proxy"}, "Continue");
+        
+        if (i == 1)
+          System.exit(-1);
       }
     }
   }
@@ -279,6 +358,7 @@ public class EmailProxy extends PostProxy {
     startMailcap(parameters);
        
     if (parameters.getBooleanParameter("post_proxy_enable")) {
+      startRetrieveKeystore(parameters);
       startEmailService(parameters);
       startFetchEmailLog(parameters);
       startUserManager(parameters);

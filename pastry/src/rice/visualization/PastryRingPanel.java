@@ -220,7 +220,7 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
                                          (int) rect.getWidth(), (int) rect.getHeight());
       }
         
-      g.drawString(string, (int) textLocations[i].getX(), (int) (textLocations[i].getY() + fontHeight));
+        g.drawString(string, (int) textLocations[i].getX(), (int) (textLocations[i].getY() + fontHeight));
     }
     
     this.nodeLocations = nodeLocations;
@@ -283,16 +283,34 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
     switch (e.getButton()) {
       case MouseEvent.BUTTON1:  
 
-        Node n = visualization.getNode(e.getX(), e.getY());
+        final Node n = visualization.getNode(e.getX(), e.getY());
         if (n == null) {
-          Ring r = visualization.getRing(e.getX(), e.getY());
+          final Ring r = visualization.getRing(e.getX(), e.getY());
           if (r == null) {
-            visualization.setSelected((Node)null);
-          } else {
-            visualization.selectRing(r);
+            Thread t = new Thread() {
+              public void run() {
+                visualization.setSelected((Node) null);
+              }
+            };
+            
+            t.start();
+          } else { 
+            Thread t = new Thread() {
+              public void run() {
+                visualization.selectRing(r);
+              }
+            };
+            
+            t.start();            
           }
         } else {
-          visualization.setSelected(n);
+          Thread t = new Thread() {
+            public void run() {
+              visualization.setSelected(n);
+            }
+          };
+          
+          t.start();
         }
 
         break;

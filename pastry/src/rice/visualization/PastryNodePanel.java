@@ -45,10 +45,12 @@ public class PastryNodePanel extends JPanel {
   }
   
   protected void processData(Data data) {
-    pane = processDataPanels(data.getDataPanels());
-    add(pane);
+    if (data != null) {
+      pane = processDataPanels(data.getDataPanels());
+      add(pane);
 
-    doLayout(); 
+      doLayout(); 
+    }
   }
   
   protected JTabbedPane processDataPanels(DataPanel[] panels) {

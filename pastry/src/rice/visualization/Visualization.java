@@ -219,13 +219,13 @@ public class Visualization implements DataProvider {
   
   public Node getNode(int x, int y) {
     // try the selected ring
-    Node n = selectedRing.getNode(x,y);
-    Ring root = getRingByIndex(0);
+    return selectedRing.getNode(x,y);
+ /*   Ring root = getRingByIndex(0);
     // try the main ring, which will recursively try all rings
     if ((n == null) && (selectedRing != root)) { 
       n = root.getNode(x,y);
     }
-    return n;
+    return n; */
   }
   
   public Ring getRing(int x, int y) {
@@ -239,9 +239,7 @@ public class Visualization implements DataProvider {
   public void setSelected(Node node) {
     //Thread.dumpStack();
     if ((selectedNode == null) || (! selectedNode.equals(node))) {
-      selectedNode = node;
-      
-      refreshData();
+      selectedNode = node;      
       frame.nodeSelected(node, data);
     }
   }

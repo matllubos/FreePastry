@@ -74,7 +74,13 @@ public class Parameters {
   protected InetSocketAddress parseInetSocketAddress(String name) throws UnknownHostException {
     String host = name.substring(0, name.indexOf(":"));
     String port = name.substring(name.indexOf(":")+1);
-    return new InetSocketAddress(InetAddress.getByName(host), Integer.parseInt(port));
+    
+    try {
+      return new InetSocketAddress(InetAddress.getByName(host), Integer.parseInt(port));
+    } catch (UnknownHostException uhe) {
+      System.err.println("ERROR: Unable to find IP for ISA " + name + " - returning null.");
+      return null;
+    }
   }
   
   protected String getProperty(String name) {
@@ -122,12 +128,16 @@ public class Parameters {
   
   public InetSocketAddress[] getInetSocketAddressArrayParameter(String name) throws UnknownHostException {
     String[] addresses = getStringParameter(name).split(ARRAY_SPACER);
-    InetSocketAddress[] result = new InetSocketAddress[addresses.length];
+    List result = new LinkedList();
+
+    for (int i=0; i<addresses.length; i++) {
+      InetSocketAddress address = parseInetSocketAddress(addresses[i]);
       
-    for (int i=0; i<result.length; i++)
-      result[i] = parseInetSocketAddress(addresses[i]);
+      if (address != null)
+        result.add(address);
+    }
     
-    return result;
+    return (InetSocketAddress[]) result.toArray(new InetSocketAddress[0]);
   }
   
 	public String getStringParameter(String name) {

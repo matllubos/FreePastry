@@ -67,6 +67,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   
   // the timeout for writing time
   public static long TIMER_TIMEOUT = 180000;
+  
+  // the fake port for booting
+  public static int BOOTSTRAP_PORT = 1;
 
   // the pastry node which this manager serves
   private SocketPastryNode pastryNode;
@@ -180,7 +183,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     synchronized (sockets) {
       if (!sockets.containsKey(address)) {
         debug("No connection open to " + address + " - opening one");
-        openSocket(address);
+        openSocket(address, false);
       }
 
       if (sockets.containsKey(address)) {
@@ -192,6 +195,21 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         debug("ERROR: Could not connection to remote address " + address + " rerouting message " + message);
         reroute(address, message);
       }
+    }
+  }
+  
+  /**
+   * Method which sends bootstraps a node by sending message across the wire,
+   * using a fake IP address in the header so that the local node is not marked
+   * alive, and then closes the connection.
+   *
+   * @param message The message to send
+   * @param address The address to send the message to
+   */
+  public void bootstrap(InetSocketAddress address, Message message) {
+    synchronized (sockets) {
+      openSocket(address, true);    
+      ((SocketManager) sockets.get(address)).send(message);
     }
   }
 
@@ -331,11 +349,11 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    *
    * @param address The address of the remote node
    */
-  protected void openSocket(InetSocketAddress address) {
+  protected void openSocket(InetSocketAddress address, boolean bootstrap) {
     try {
       synchronized (sockets) {
         if (!sockets.containsKey(address)) {
-          socketOpened(address, new SocketManager(address));
+          socketOpened(address, new SocketManager(address, bootstrap));
         } else {
           debug("SERIOUS ERROR: Request to open socket to already-open socket to " + address);
         }
@@ -506,6 +524,10 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     
     // the timer task which is set once we set the 'writable' flag
     private rice.selector.TimerTask timer;
+    
+    // whether or not this is a bootstrap socket - if so, we fake the address 
+    // and die once the the message has been sent
+    private boolean bootstrap;
 
     /**
      * Constructor which accepts an incoming connection, represented by the
@@ -518,8 +540,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @exception IOException DESCRIBE THE EXCEPTION
      */
     public SocketManager(SelectionKey key) throws IOException {
-      reader = new SocketChannelReader(pastryNode);
-      writer = new SocketChannelWriter(pastryNode, null);
+      this.reader = new SocketChannelReader(pastryNode);
+      this.writer = new SocketChannelWriter(pastryNode, null);
+      this.bootstrap = false;
       acceptConnection(key);
     }
 
@@ -532,9 +555,10 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param address DESCRIBE THE PARAMETER
      * @exception IOException DESCRIBE THE EXCEPTION
      */
-    public SocketManager(InetSocketAddress address) throws IOException {
-      reader = new SocketChannelReader(pastryNode);
-      writer = new SocketChannelWriter(pastryNode, address);
+    public SocketManager(InetSocketAddress address, boolean bootstrap) throws IOException {
+      this.reader = new SocketChannelReader(pastryNode);
+      this.writer = new SocketChannelWriter(pastryNode, address);
+      this.bootstrap = bootstrap;
       createConnection(address);
     }
 
@@ -691,7 +715,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         }
       } catch (IOException e) {
         debug("ERROR " + e + " reading - cancelling.");
-        checkDead(address);
+        
+        if ((address != null) && (address.getPort() != BOOTSTRAP_PORT))
+          checkDead(address);
         close();
       }
     }
@@ -708,6 +734,11 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         
         if (writer.write((SocketChannel) key.channel())) {
           key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+          
+          if (bootstrap) {
+            System.out.println("BOOTSTRAP: DONE SENDING - CLOSING ");
+            close();
+          }
         } else {
           //setTimer();
         }
@@ -771,7 +802,15 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           }
         });
 
-      send(localAddress);
+      InetSocketAddress fake = new InetSocketAddress(InetAddress.getLocalHost(), BOOTSTRAP_PORT);
+      
+      if (bootstrap) {
+        send(fake);
+        
+        System.out.println("BOOTSTRAP: SENDING ADDRESS " + fake);
+      } else {
+        send(localAddress);
+      }
     }
 
     /**

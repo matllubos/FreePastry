@@ -13,28 +13,35 @@ import javax.net.ssl.*;
 
 public class SSLPop3ServerImpl extends Pop3ServerImpl {
   
-  public SSLPop3ServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal) throws IOException {
+  protected String keystore;
+  
+  protected String password;
+  
+  public SSLPop3ServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, String keystore, String password) throws IOException {
     super(port, email, manager, gateway, acceptNonLocal);
+    this.keystore = keystore;
+    this.password = password;
+    initializeSSL();
   }
   
-  public void initialize() throws IOException {
+  public void initialize() {
+  }
+  
+  public void initializeSSL() throws IOException {
     try {
       //Security.addProvider(new com.sun.net.ssl.internal.ssl.Provider());
       SSLContext con =SSLContext.getInstance("TLS");
       SecureRandom random = SecureRandom.getInstance("SHA1PRNG", "SUN");
       
-      
       // Change this to whatever the password is for the key
-      char[] password={'m', 'o', 'n', 'k', 'e', 'y'};
+      char[] pass = password.toCharArray();
       
-      String fname = ".keystore";
-      
-      FileInputStream fis = new FileInputStream(fname);
+      // load the key
       KeyStore ks = KeyStore.getInstance("JKS");
-      ks.load(fis, null);
+      ks.load(new FileInputStream(keystore), null);
       
       KeyManagerFactory km = KeyManagerFactory.getInstance("SunX509");
-      km.init(ks , password);
+      km.init(ks, pass);
       
       // Now get the key managers
       KeyManager[] keymanage = km.getKeyManagers();

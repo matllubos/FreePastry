@@ -151,8 +151,7 @@ public class StandardJoinProtocol implements MessageReceiver {
 						//localNode.setReady();
 					}
 				}
-		} else if (
-			msg instanceof RouteMessage) {
+		} else if (msg instanceof RouteMessage) {
 			// a join request message at an intermediate node
 			RouteMessage rm = (RouteMessage) msg;
 
@@ -183,8 +182,7 @@ public class StandardJoinProtocol implements MessageReceiver {
 			//System.out.println("done");
 
 			rm.routeMessage(localHandle);
-		} else if (
-			msg instanceof InitiateJoin) { // request from the local node to join
+		} else if (msg instanceof InitiateJoin) { // request from the local node to join
 			InitiateJoin ij = (InitiateJoin) msg;
 
 			NodeHandle nh = ij.getHandle();
@@ -201,7 +199,7 @@ public class StandardJoinProtocol implements MessageReceiver {
 						new PermissiveCredentials(),
 						address);
 				rm.getOptions().setRerouteIfSuspected(false);
-				nh.receiveMessage(rm);
+				nh.bootstrap(rm);
 			}
 		}
 	}

@@ -99,7 +99,20 @@ public class SocketNodeHandle extends DistNodeHandle {
       spn.getSocketCollectionManager().send(getAddress(), msg);
     }
   }
-
+  
+  /**
+   * Method which is used by Pastry to start the bootstrapping process on the 
+   * local node using this handle as the bootstrap handle.  Default behavior is
+   * simply to call receiveMessage(msg), but transport layer implementations may
+   * care to perform other tasks by overriding this method, since the node is
+   * not technically part of the ring yet.
+   *
+   * @param msg the bootstrap message.
+   */
+  public void bootstrap(Message msg) {
+    ((SocketPastryNode) getLocalNode()).getSocketCollectionManager().bootstrap(getAddress(), msg);
+  }
+    
   /**
    * Returns a String representation of this DistNodeHandle. This method is
    * designed to be called by clients using the node handle, and is provided in

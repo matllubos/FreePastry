@@ -938,7 +938,7 @@ public class PostImpl implements Post, Application, ScribeClient {
   public void sendNotification(final NotificationMessage message) {
     final PostUserAddress destination = (PostUserAddress) message.getDestination();
 
-    logger.fine(endpoint.getId() + ": Sending notification message " + message + " to: " + destination);
+    System.out.println("POST: " + endpoint.getId() + ": Sending notification message " + message + " to: " + destination + " addr: " + destination.getAddress());
 
     getPostLog(destination, new ListenerContinuation("Send Notification to " + destination) {
       public void receiveResult(Object o) {
