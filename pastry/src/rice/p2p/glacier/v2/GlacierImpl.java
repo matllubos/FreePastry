@@ -56,6 +56,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private final int syncBloomFilterNumHashes = 3;
   private final int syncBloomFilterBitsPerKey = 4;
   private final int syncPartnersPerTrial = 1;
+  private final int syncMaxFragments = 100;
 
   private final int manifestAggregationFactor = 5;
   
@@ -165,6 +166,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         
         while (iter.hasNext()) {
           final Id thisNeighbor = (Id) iter.next();
+System.out.println("thisNeighbor = "+thisNeighbor);
 
           if (leafSet.memberHandle(thisNeighbor)) {
             log(3, "CNE: Refreshing current neighbor: "+thisNeighbor);
@@ -392,7 +394,13 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                   }
                 );
               } else {
-                warn("Handoff: We already have a fragment with this key! -- discarding");
+                warn("Handoff: We already have a fragment with this key! -- sending response");
+                endpoint.route(
+                  null,
+                  new GlacierResponseMessage(gdm.getUID(), thisKey, true, thisManifest.getExpiration(), true, getLocalNodeHandle(), gdm.getSource().getId(), true),
+                  gdm.getSource()
+                );
+                
                 continue;
               }
           
@@ -424,6 +432,12 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           if (!responsibleRange.containsId(thisPos)) {
             log(3, "Must hand off "+fkey+" @"+thisPos);
             handoffs.add(fkey);
+
+            if (handoffs.size() >= handoffMaxFragments) {
+              log(2, "Limit of "+handoffMaxFragments+" reached for handoff");
+              break;
+            }
+            
             if (destination == null)
               destination = thisPos;
           }
@@ -436,8 +450,8 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         
         int numHandoffs = Math.min(handoffs.size(), handoffMaxFragments);
         log(2, "Handing off "+numHandoffs+" fragments (out of "+handoffs.size()+")");
-        FragmentKey[] keys = new FragmentKey[handoffs.size()];
-        for (int i=0; i<handoffs.size(); i++)
+        FragmentKey[] keys = new FragmentKey[numHandoffs];
+        for (int i=0; i<numHandoffs; i++)
           keys[i] = (FragmentKey) handoffs.elementAt(i);
 
         endpoint.route(
@@ -1728,6 +1742,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             if (metadata.getCurrentExpiration() >= earliestAcceptableExpiration) {
               log(4, fkey+" @"+thisPos+" - MISSING");
               missing.add(fkey);
+              if (missing.size() >= syncMaxFragments) {
+                log(2, "Limit of "+syncMaxFragments+" missing fragments reached");
+                break;
+              }
             } else {
               log(4, fkey+" @"+thisPos+" - EXPIRES SOON");
             }
