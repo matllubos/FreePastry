@@ -128,7 +128,7 @@ public class SocketChannelWriter {
    */
   public boolean isEmpty() {
     synchronized (queue) {
-      return ((buffer == null) && (queue.size() == 0));
+      return ((buffer == null) && ((queue.size() == 0) || waitingForGreeting));
     }
   }
 
