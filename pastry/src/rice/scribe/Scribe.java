@@ -542,6 +542,7 @@ public class Scribe extends PastryAppl implements IScribe
 	if( topic.getState() == Topic.CREATED){
 	    ScribeMessage msg = makeSubscribeMessage( topicId, cred);
 	    topic.postponeParentHandler();
+	    msg.setData(obj);
 	    this.routeMsg( topicId, msg, cred, m_sendOptions );
 	}
 
@@ -759,7 +760,8 @@ public class Scribe extends PastryAppl implements IScribe
 	//System.out.println( "Node: " + getNodeId() + " enroute" );
 	//System.out.println( "Node: " + target + " enroute to target" );
 	//System.out.println( "Node: " + nextHop + " enroute nextHop" );
-	
+	//System.out.println(" Node "+getNodeId() +" received "+smsg);
+	//System.out.println("Topic "+ topic + " for topicId "+topicId);
 	return smsg.handleForwardMessage( this, topic );
     }
 
