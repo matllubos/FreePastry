@@ -74,6 +74,12 @@ public class SelectorManager extends Thread implements Timer {
 
   // the list of keys waiting to be cancelled
   protected HashSet cancelledKeys;
+  
+  // the set used to store the timer events
+  protected TreeSet timerQueue = new TreeSet();
+  
+  // the next time the selector is schedeled to wake up 
+  protected long wakeupTime = 0;
 
   /**
    * Constructor, which is private since there is only one selector per JVM.
@@ -180,6 +186,11 @@ public class SelectorManager extends Thread implements Timer {
     selector.wakeup();
   }
   
+  /**
+   * Debug method which returns the number of pending invocations
+   *
+   * @return The number of pending invocations
+   */
   public int getNumInvocations() {
     return invocations.size();
   }
@@ -218,7 +229,6 @@ public class SelectorManager extends Thread implements Timer {
       while (true) {
         // NOTE: This is so we aren't always holding the selector lock when we get context switched 
         Thread.yield();
-//        try { Thread.sleep(100); } catch (Exception ioe) {}
         executeDueTasks();
         onLoop();
         doInvocations();
@@ -411,64 +421,116 @@ public class SelectorManager extends Thread implements Timer {
     }
   }
 
-  public TreeSet timerQueue = new TreeSet();
-
   /**
-   * @return
+   * Returns whether or not this thread of execution is the selector 
+   * thread
+   *
+   * @return Whether or not this is the selector thread
    */
   public static boolean isSelectorThread() {
-    return Thread.currentThread() == manager;
+    return (Thread.currentThread() == manager);
   }
   
+  /**
+   * Method which schedules a task to run after a specified number of millis
+   *
+   * @param task The task to run
+   * @param delay The delay
+   */
   public void schedule(TimerTask task, long delay) {
     task.nextExecutionTime = System.currentTimeMillis() + delay;    
     addTask(task);
   }  
-
+  
+  /**
+   * Method which schedules a task to run at a specified time
+   *
+   * @param task The task to run
+   * @param time The time to run
+   */
   public void schedule(TimerTask task, Date time) {
     task.nextExecutionTime = time.getTime();
     addTask(task);
   }
   
+  /**
+   * Method which schedules a task to run repeatedly after a 
+   * specified delay and period
+   *
+   * @param task The task to run
+   * @param delay The delay
+   * @param period The period with which to run
+   */
   public void schedule(TimerTask task, long delay, long period) {
     task.nextExecutionTime = System.currentTimeMillis() + delay;
-    task.period = (int)period;
+    task.period = (int) period;
     addTask(task);
   }
   
+  /**
+   * Method which schedules a task to run repeatedly first at a specified time 
+   * and period
+   *
+   * @param task The task to run
+   * @param firstTime The first time
+   * @param period The period with which to run
+   */  
   public void schedule(TimerTask task, Date firstTime, long period) {
     task.nextExecutionTime = firstTime.getTime();
-    task.period = (int)period;
+    task.period = (int) period;
     addTask(task);
   }
   
+  /**
+   * Method which schedules a task to run repeatedly (at a fixed rate) after a 
+   * specified delay and period
+   *
+   * @param task The task to run
+   * @param delay The delay
+   * @param period The period with which to run
+   */
   public void scheduleAtFixedRate(TimerTask task, long delay, long period) {
     task.nextExecutionTime = System.currentTimeMillis() + delay;
-    task.period = (int)period;
+    task.period = (int) period;
     addTask(task);
   }
   
+  /**
+   * Method which schedules a task to run repeatedly (at a fixed rate) after a 
+   * specified delay and period
+   *
+   * @param task The task to run
+   * @param delay The delay
+   * @param period The period with which to run
+   */  
   public void scheduleAtFixedRate(TimerTask task, Date firstTime, long period) {
     task.nextExecutionTime = firstTime.getTime();
-    task.period = (int)period;
+    task.period = (int) period;
     addTask(task);
   }
 
-  long wakeupTime = 0;
-
+  /**
+   * Internal method which adds a task to the task tree, waking up the selector
+   * if necessary to recalculate the sleep time
+   *
+   * @param task The task to add
+   */
   private void addTask(TimerTask task) {
-    //System.out.println("AddTask("+task+") "+(task.scheduledExecutionTime() - System.currentTimeMillis()));
     synchronized(selector) {
-      boolean ret = timerQueue.add(task);  
-      if (!ret) {
+      if (! timerQueue.add(task)) {
+        System.out.println("ERROR: Got false while enqueueing task " + task + "!");
         Thread.dumpStack();
       }
     }
+    
     // need to interrupt thread if waiting too long in selector    
     if (wakeupTime >= task.scheduledExecutionTime())
       selector.wakeup();
   }
 
+  /**
+   * Internal method which finds all due tasks and executes them.
+   */
   protected void executeDueTasks() {
     //System.out.println("SM.executeDueTasks()");
     long now = System.currentTimeMillis();
@@ -521,6 +583,11 @@ public class SelectorManager extends Thread implements Timer {
     }  
   }
 
+  /**
+   * Returns the timer associated with this SelectorManager (in this case, it is this).
+   *
+   * @return The associated timer
+   */
   public Timer getTimer() {
     return this;
   } 
