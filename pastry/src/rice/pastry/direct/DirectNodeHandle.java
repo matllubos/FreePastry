@@ -140,7 +140,7 @@ public class DirectNodeHandle extends NodeHandle {
    */
   public void receiveMessage(Message msg) {
     if (!isAlive()) {
-      System.out.println("DirectNodeHandle: attempt to send message " + msg + " to a dead node " + getNodeId() + "!");
+	//System.out.println("DirectNodeHandle: attempt to send message " + msg + " to a dead node " + getNodeId() + "!");
     } else {
       simulator.deliverMessage(msg, remoteNode);
     }
