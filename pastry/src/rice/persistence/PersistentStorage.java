@@ -21,7 +21,6 @@ import rice.pastry.*;
  */
 public class PersistentStorage implements Storage {
 
-  private static final String logFileName    = "transactions.persist";
   private static final String serialFileName = "serialTable.persist";
   
   private File serialFile;
@@ -37,7 +36,7 @@ public class PersistentStorage implements Storage {
   private static final String infoDir = "/pminfo/";       // infoDirectory
   private static final String transDir = "/transaction";  // transDirectory
 
-  private int storageSize;
+  private long storageSize;
   private long usedSize;
   private Hashtable persistentObjects;
 
@@ -56,6 +55,8 @@ public class PersistentStorage implements Storage {
       System.out.println("ERROR: Failed to Initialized Directories");
     
    serialFile = new File(infoDirectory, serialFileName);
+
+   /* Should read in existing objects */
 
     persistentObjects = new Hashtable();
   }
@@ -85,14 +86,6 @@ public class PersistentStorage implements Storage {
         System.out.println("ERROR: MakePersistent called with null arguments.");
       }
 
-      Serializable storedObj = (Serializable) persistentObjects.get(id);
-
-      /* If we are trying to persist an object twice without changing */
-      /* it then we are successful */
-      if(storedObj != null && storedObj.equals(obj)){
-        //      return true;
-      }
-
       /* Create a file representation and then transactionally write it */
       String fileName = makeFileName(id);
       File objFile = new File(backupDirectory, fileName);
@@ -111,8 +104,11 @@ public class PersistentStorage implements Storage {
       increaseUsedSpace(objFile.length());
 
       writePersistentTable();
+      c.receiveResult(new Boolean(true));
 
     } catch (Exception e) {
+       e.printStackTrace();
+       c.receiveException(e);
     }
   }
 
@@ -136,10 +132,18 @@ public class PersistentStorage implements Storage {
   public void unstore(Comparable id, Continuation c) {
      /* 1. Should remove this from hashtable */
      persistentObjects.remove(id);
+
      /* 2. Should write hashtable atomically */
      writePersistentTable();
+
      /* 3. Should remove from disk */
      /* 4. Should update the value of used space */
+      String fileName = makeFileName(id);
+      File objFile = new File(backupDirectory, fileName);
+      decreaseUsedSpace(objFile.length());
+      objFile.delete();
+       
+      c.receiveResult(new Boolean(true));
   }
 
   /**
@@ -186,7 +190,6 @@ public class PersistentStorage implements Storage {
    * @return The objects
    */
   public void scan(Comparable start, Comparable end, Continuation c) {
-
     try {
       start.compareTo(end);
       end.compareTo(start);
@@ -377,7 +380,7 @@ public class PersistentStorage implements Storage {
    * @return boolean, true if the operation suceeds false if it doesn't
    */
   public boolean setStorageSize(int size) {
-    if(storageSize >= size){
+    if(storageSize <= size){
         storageSize = size;
         return true;
     }
@@ -393,5 +396,9 @@ public class PersistentStorage implements Storage {
 
   private void increaseUsedSpace(long i){
      usedSize = usedSize + i;
+  }
+
+  private void decreaseUsedSpace(long i){
+     usedSize = usedSize - i;
   }
 }
