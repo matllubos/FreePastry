@@ -47,7 +47,10 @@ PACKAGES = \
 	rice.past.messaging\
 	rice.past.testing\
 	rice.persistence\
-	rice.persistence.testing
+	rice.persistence.testing\
+	rice.rm\
+	rice.rm.messaging\
+	rice.rm.testing
 #	rice.storage\
 #	rice.storage.testing\
 #	rice.past.search\
