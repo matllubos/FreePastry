@@ -1,9 +1,6 @@
 PACKAGE = rice.pastry.join
 
-SOURCE  = \
-	JoinRequest.java\
-	JoinAddress.java\
-	InitiateJoin.java
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 RMI_SOURCE =
 MAIN       = 

@@ -1,13 +1,6 @@
 PACKAGE = rice.pastry.leafset
 
-SOURCE  = \
-	SimilarSet.java\
-	LeafSet.java\
-	RequestLeafSet.java\
-	BroadcastLeafSet.java\
-	LeafSetProtocolAddress.java\
-	InitiateLeafSetMaintenance.java
-
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 RMI_SOURCE =
 

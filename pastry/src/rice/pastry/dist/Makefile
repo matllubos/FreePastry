@@ -1,10 +1,6 @@
 PACKAGE = rice.pastry.dist
 
-SOURCE	= \
-	DistNodeHandle.java\
-	DistNodeHandlePool.java\
-	DistPastryNode.java\
-	DistPastryNodeFactory.java
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 MAIN	= 
 

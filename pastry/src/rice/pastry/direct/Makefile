@@ -1,13 +1,6 @@
 PACKAGE = rice.pastry.direct
 
-SOURCE  = \
-	DirectPastryNode.java\
-	DirectNodeHandle.java\
-	NetworkSimulator.java\
-	DirectSecurityManager.java\
-	DirectPastryNodeFactory.java\
-	EuclideanNetwork.java\
-	SphereNetwork.java
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 RMI_SOURCE =
 
