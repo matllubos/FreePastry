@@ -100,6 +100,7 @@ public class ControlFindParentMessage extends Message implements Serializable
 	Topic stripeTopic = scribe.getTopic(recv_stripe.getStripeId());
         if ( stripeTopic == null )
 	    {
+		//System.out.println("Topic is null for stripe "+recv_stripe.getStripeId());
 		if ( send_to.size() != 0 )
 		    {
 			already_seen.add( 0, send_to.remove(0) );
@@ -108,17 +109,43 @@ public class ControlFindParentMessage extends Message implements Serializable
 		    {
 			already_seen.add( 0, scribe.getNodeHandle() );
 		    }
-		if ( send_to.size() != 0 )
+		Vector v = scribe.getChildren( topic.getTopicId() );
+		//System.out.println( "Children of node "+ scribe.getNodeId() + " are " + v );
+		if ( v != null )
 		    {
-			channel.routeMsgDirect( (NodeHandle) send_to.get(0), this, c, null );
+			send_to.addAll( 0, scribe.getChildren( topic.getTopicId() ) );
+		    }
+		while ( ( send_to.size() > 0 ) &&
+			( already_seen.contains( send_to.get(0) ) ) )
+		    {
+			send_to.remove( 0 );
+		    }
+		if ( send_to.size() > 0 )
+		    {
+			channel.routeMsgDirect( (NodeHandle)send_to.get(0), this, c, null );
 		    }
 		else
 		    {
-			channel.routeMsgDirect( originalSource, this, c, null );
+			if ( !scribe.isRoot( topic.getTopicId() ) )
+			    {
+				channel.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
+				//System.out.println( "Forwarding to parent at node "+scribe.getNodeId() );
+			    }
+			else
+			    {
+				System.out.println( "You're screwed, we're at the root" );
+				channel.routeMsgDirect( originalSource,
+							new ControlFindParentResponseMessage( channel.getAddress(),
+											      scribe.getNodeHandle(),
+											      channel_id,
+											      c,
+											      new Boolean( false ), stripe_id ),
+							c,
+							null );
+			    }
 		    }
-
 	    }
-        else
+	else
 	    {
 		if ( send_to.size() != 0 )
 		    {
@@ -129,7 +156,7 @@ public class ControlFindParentMessage extends Message implements Serializable
 			already_seen.add( 0, scribe.getNodeHandle() );
 		    }
 		BandwidthManager bandwidthManager = channel.getBandwidthManager();
-
+		
 		if ( ( bandwidthManager.canTakeChild( channel ) ) &&
 		     ( !isInRootPath( scribe, originalSource ) ) &&
 		     ( originalSource != scribe.getLocalHandle()) )
@@ -181,6 +208,7 @@ public class ControlFindParentMessage extends Message implements Serializable
 			    if ( !scribe.isRoot( topic.getTopicId() ) )
 				{
 				    channel.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this, c, null );
+				    //System.out.println( "Forwarding to parent at node "+scribe.getNodeId() );
 				}
 			    else
 				{
