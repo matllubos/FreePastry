@@ -764,11 +764,9 @@ public class Scribe extends PastryAppl implements IScribe
     public Vector getTopics(){
 	Vector topicVector = new Vector();
 
-	synchronized(m_topics){
-		Iterator it = m_topics.values().iterator();		
-		while( it.hasNext()){
-		    topicVector.add((Topic)it.next());
-		}
+	Iterator it = m_topics.values().iterator();		
+	while( it.hasNext()){
+	    topicVector.add((Topic)it.next());
 	}
 	return topicVector;
     }
@@ -782,13 +780,13 @@ public class Scribe extends PastryAppl implements IScribe
     public Vector  getDistinctChildren(){
 	Set set;
 	Vector result =  new Vector();
-	synchronized(m_distinctChildrenTable){
-	    set = m_distinctChildrenTable.keySet();
-	    Iterator it = set.iterator();
-	    while(it.hasNext()){
-		result.addElement((NodeHandle)it.next());
-	    }
+
+	set = m_distinctChildrenTable.keySet();
+	Iterator it = set.iterator();
+	while(it.hasNext()){
+	    result.addElement((NodeHandle)it.next());
 	}
+
 	return result;
     }
 
@@ -803,7 +801,6 @@ public class Scribe extends PastryAppl implements IScribe
      *                adding this child
      */
     public void addChildForTopic(NodeHandle child, NodeId topicId){
-	synchronized(m_distinctChildrenTable){
 	    Set set = m_distinctChildrenTable.keySet();
 	    HashTableEntry entry;
 
@@ -816,9 +813,6 @@ public class Scribe extends PastryAppl implements IScribe
 		entry.addTopicId(topicId);
 		m_distinctChildrenTable.put(child, entry);
 	    }
-	    
-	}	  
-
     }
     
     /**
@@ -834,23 +828,20 @@ public class Scribe extends PastryAppl implements IScribe
      */
     public void removeChildForTopic(NodeHandle child, NodeId topicId){
 	
-	synchronized(m_distinctChildrenTable){
-	    Set set = m_distinctChildrenTable.keySet();
-	    HashTableEntry entry;
-
-	    if( set.contains(child)){
-		entry = (HashTableEntry)m_distinctChildrenTable.get(child);
-		entry.removeTopicId(topicId);
-
-		if(entry.size() == 0)
-		    m_distinctChildrenTable.remove(child);
-	    }
-	    else {
-		// We need not do anything here.
-	    }
+	Set set = m_distinctChildrenTable.keySet();
+	HashTableEntry entry;
+	
+	if( set.contains(child)){
+	    entry = (HashTableEntry)m_distinctChildrenTable.get(child);
+	    entry.removeTopicId(topicId);
+	    
+	    if(entry.size() == 0)
+		m_distinctChildrenTable.remove(child);
+	}
+	else {
+	    // We need not do anything here.
 	}
     }
-
 
 
     /**
@@ -867,10 +858,10 @@ public class Scribe extends PastryAppl implements IScribe
 
 	if(child == null || !m_distinctChildrenTable.keySet().contains(child))
 	    return null;
-	synchronized(m_distinctChildrenTable){
-	    entry = (HashTableEntry)m_distinctChildrenTable.get(child);
-	    topics_clone = (Vector)entry.topicList.clone();
-	}
+
+	entry = (HashTableEntry)m_distinctChildrenTable.get(child);
+	topics_clone = (Vector)entry.topicList.clone();
+
 	return topics_clone;
     }
 
@@ -884,12 +875,11 @@ public class Scribe extends PastryAppl implements IScribe
     public Vector  getDistinctParents(){
 	Set set;
 	Vector result =  new Vector();
-	synchronized(m_distinctParentTable){
-	    set = m_distinctParentTable.keySet();
-	    Iterator it = set.iterator();
-	    while(it.hasNext()){
-		result.addElement((NodeHandle)it.next());
-	    }
+
+	set = m_distinctParentTable.keySet();
+	Iterator it = set.iterator();
+	while(it.hasNext()){
+	    result.addElement((NodeHandle)it.next());
 	}
 	return result;
     }
@@ -907,20 +897,19 @@ public class Scribe extends PastryAppl implements IScribe
      *                removing this parent
      */
     public void removeParentForTopic(NodeHandle parent, NodeId topicId){
-	synchronized(m_distinctParentTable){
-	    Set set = m_distinctParentTable.keySet();
-	    HashTableEntry entry;
-
-	    if( set.contains(parent)){
-		entry = (HashTableEntry)m_distinctParentTable.get(parent);
-		entry.removeTopicId(topicId);
-
-		if(entry.size() == 0)
-		    m_distinctParentTable.remove(parent);
-	    }
-	    else {
-		// We need not do anything here.
-	    }
+	
+	Set set = m_distinctParentTable.keySet();
+	HashTableEntry entry;
+	
+	if( set.contains(parent)){
+	    entry = (HashTableEntry)m_distinctParentTable.get(parent);
+	    entry.removeTopicId(topicId);
+	    
+	    if(entry.size() == 0)
+		m_distinctParentTable.remove(parent);
+	}
+	else {
+	    // We need not do anything here.
 	}
     }
     
@@ -937,23 +926,20 @@ public class Scribe extends PastryAppl implements IScribe
      */
     public void addParentForTopic(NodeHandle parent, NodeId topicId){
 
-	synchronized(m_distinctParentTable){
-	    Set set = m_distinctParentTable.keySet();
-	    HashTableEntry entry;
-
-	    if( set.contains(parent)){
-		entry = (HashTableEntry)m_distinctParentTable.get(parent);
-		entry.addTopicId(topicId);
-	    }
-	    else {
-		entry = new HashTableEntry();
-		entry.addTopicId(topicId);
-		m_distinctParentTable.put(parent, entry);
-	    }
-	    
-	}	  
-    }
-
+	Set set = m_distinctParentTable.keySet();
+	HashTableEntry entry;
+	
+	if( set.contains(parent)){
+	    entry = (HashTableEntry)m_distinctParentTable.get(parent);
+	    entry.addTopicId(topicId);
+	}
+	else {
+	    entry = new HashTableEntry();
+	    entry.addTopicId(topicId);
+	    m_distinctParentTable.put(parent, entry);
+	}
+	
+    }	  
 
     /**
      * Gets the vector of topicIds for which given node
@@ -969,10 +955,10 @@ public class Scribe extends PastryAppl implements IScribe
 	
 	if(parent == null || !m_distinctParentTable.keySet().contains(parent))
 	    return null;
-	synchronized(m_distinctParentTable){
-	    entry = (HashTableEntry)m_distinctParentTable.get(parent);
-	    topics_clone = (Vector)entry.topicList.clone();
-	}
+
+	entry = (HashTableEntry)m_distinctParentTable.get(parent);
+	topics_clone = (Vector)entry.topicList.clone();
+
 	return topics_clone;
     }
 
@@ -989,10 +975,10 @@ public class Scribe extends PastryAppl implements IScribe
 	
 	if(parent == null || !m_distinctParentTable.keySet().contains(parent))
 	    return null;
-	synchronized(m_distinctParentTable){
-	    entry = (HashTableEntry)m_distinctParentTable.get(parent);
-	    fingerprint = entry.getFingerprint();
-	}
+
+	entry = (HashTableEntry)m_distinctParentTable.get(parent);
+	fingerprint = entry.getFingerprint();
+
 	return fingerprint;
     }
 
@@ -1008,10 +994,10 @@ public class Scribe extends PastryAppl implements IScribe
 	
 	if(child == null || !m_distinctChildrenTable.keySet().contains(child))
 	    return null;
-	synchronized(m_distinctChildrenTable){
-	    entry = (HashTableEntry)m_distinctChildrenTable.get(child);
-	    fingerprint = entry.getFingerprint();
-	}
+
+	entry = (HashTableEntry)m_distinctChildrenTable.get(child);
+	fingerprint = entry.getFingerprint();
+
 	return fingerprint;
     }
     
@@ -1027,9 +1013,8 @@ public class Scribe extends PastryAppl implements IScribe
      */
     public boolean addChildToAlreadySentHBNodes(NodeId childId){
 	boolean result;
-	synchronized(m_alreadySentHBNodes){
-	    result = m_alreadySentHBNodes.add((NodeId)childId);
-	}
+
+	result = m_alreadySentHBNodes.add((NodeId)childId);
 	return result;
     }
 
@@ -1045,14 +1030,12 @@ public class Scribe extends PastryAppl implements IScribe
     public Vector getAlreadySentHBNodes(){
 	Vector list = new Vector();
 	NodeId childId ;
-
-	synchronized(m_alreadySentHBNodes){
-	    Iterator it = m_alreadySentHBNodes.iterator();
-	    while(it.hasNext()){
-		childId = (NodeId) it.next();
-		if( ! list.contains(childId))
-		    list.addElement(childId);
-	    }
+	
+	Iterator it = m_alreadySentHBNodes.iterator();
+	while(it.hasNext()){
+	    childId = (NodeId) it.next();
+	    if( ! list.contains(childId))
+		list.addElement(childId);
 	}
 	return list;
     }
@@ -1063,9 +1046,7 @@ public class Scribe extends PastryAppl implements IScribe
      * last HeartBeat period.
      */
     public void clearAlreadySentHBNodes(){
-	synchronized(m_alreadySentHBNodes){
-	    m_alreadySentHBNodes.clear();
-	}
+	m_alreadySentHBNodes.clear();
 	return;
     }
 

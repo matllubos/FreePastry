@@ -157,9 +157,9 @@ public class Topic
      */
     public boolean addChild( NodeHandle child ) {
 	boolean result;
-	synchronized(m_children){
-	    result = m_children.add( child );
-	}
+
+	result = m_children.add( child );
+
 	// Reflect this child in the distinctChildrenTable
 	// maintained by scribe.
 	m_scribe.addChildForTopic(child, this.getTopicId());
@@ -176,9 +176,9 @@ public class Topic
      */
     public boolean removeChild( NodeHandle child ) {
 	boolean result;
-	synchronized(m_children){
-	    result = m_children.remove( child );
-	}
+
+	result = m_children.remove( child );
+
 	// Reflect this child in the distinctChildrenTable
 	// maintained by scribe.
 	m_scribe.removeChildForTopic(child, this.getTopicId());
@@ -192,9 +192,7 @@ public class Topic
      */
     public boolean hasChildren() {
 	boolean result;
-	synchronized(m_children){
-	    result = !m_children.isEmpty();
-	}
+	result = !m_children.isEmpty();
 	return result; 
     }
 
@@ -209,14 +207,10 @@ public class Topic
     public Vector getChildren(){
 	Vector children = new Vector();
 
-	// To avoid concurrent modification, every access to m_children
-	// is through synchronized primitive.
-	synchronized(m_children){
-	    Iterator it = m_children.iterator();
-	    while(it.hasNext()){
-		NodeHandle nhandle = (NodeHandle)it.next();
-		children.add(nhandle);
-	    }
+	Iterator it = m_children.iterator();
+	while(it.hasNext()){
+	    NodeHandle nhandle = (NodeHandle)it.next();
+	    children.add(nhandle);
 	}
 	return children;
     }    
@@ -358,9 +352,7 @@ public class Topic
      * method is called by ScribeMessage objects. 
      */
     public void addToScribe() {
-	synchronized(m_scribe.m_topics){
-	    m_scribe.m_topics.put( m_topicId, this );
-	}
+	m_scribe.m_topics.put( m_topicId, this );
     }
 
     /**
@@ -368,9 +360,7 @@ public class Topic
      * method is called by ScribeMessage objects. 
      */
     public void removeFromScribe() {
-	synchronized(m_scribe.m_topics){
-	    m_scribe.m_topics.remove( m_topicId );
-	}
+	m_scribe.m_topics.remove( m_topicId );
     }
 
     /**
