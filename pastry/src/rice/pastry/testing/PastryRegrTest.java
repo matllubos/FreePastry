@@ -404,7 +404,7 @@ public class PastryRegrTest {
 	int n = 500;
 	int d = 200;
 	int k = 100;
-	int numConcJoins = 2;
+	int numConcJoins = 8;
 	int m = 100;
 
 	Date old = new Date();

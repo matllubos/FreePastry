@@ -199,6 +199,10 @@ public class StandardLeafSetProtocol implements MessageReceiver {
      */
 
     protected void mergeLeafSet(LeafSet remotels, NodeHandle from) {
+
+	leafSet.merge(remotels, from, routeTable, security);
+
+	/*
 	int cwSize = remotels.cwSize();
 	int ccwSize = remotels.ccwSize();
 	
@@ -249,8 +253,8 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	    routeTable.put(nh);
 
 	}
-
-
+	*/
+	
 	/*
 	for (int i=closest; i<=cwSize; i++) {
 	    NodeHandle nh;

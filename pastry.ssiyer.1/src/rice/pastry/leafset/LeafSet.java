@@ -37,6 +37,8 @@ if advised of the possibility of such damage.
 package rice.pastry.leafset;
 
 import rice.pastry.*;
+import rice.pastry.routing.*;
+import rice.pastry.security.*;
 
 import java.util.*;
 import java.io.*;
@@ -50,13 +52,13 @@ import java.io.*;
  * @author Peter Druschel
  */
 
-public class LeafSet extends Observable implements NodeSet, Serializable {
-    private int theSize;
-
+public class LeafSet extends Observable implements Serializable {
     private NodeId baseId;
-    
     private SimilarSet cwSet;
     private SimilarSet ccwSet;
+
+    private int theSize;
+    private boolean wrapped; // the leafset contains the entire ring
 
     /**
      * Constructor.
@@ -69,43 +71,65 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
     {
 	baseId = localNode.getNodeId();
 	theSize = size;
+	wrapped = true;
 
-	cwSet = new SimilarSet(this, localNode, size/2);
-	ccwSet = new SimilarSet(this, localNode, size/2);
+	cwSet = new SimilarSet(localNode, size/2, true);
+	ccwSet = new SimilarSet(localNode, size/2, false);
     }
 
     /**
      * Puts a NodeHandle into the set.
      *
      * @param handle the handle to put.
-     *
+     * @param from the node from which the handle was received
      * @return true if successful, false otherwise.
      */
 
-    public boolean put(NodeHandle handle) 
+    /*
+    private boolean put(NodeHandle handle, NodeHandle from) 
     {
 	NodeId nid = handle.getNodeId();
 	if (nid.equals(baseId)) return false;
-
-	boolean res;
-
-	if (baseId.clockwise(nid)) {
-	    res = cwSet.put(handle);
-	    if (size() > theSize) ccwSet.remove(ccwSize()-1);
+	if (member(nid)) return false;
+	
+	if (size() == 0) {
+	    cwSet.put(handle);
+	    ccwSet.put(handle);
+	    return true;
 	}
-	else {
-	    res = ccwSet.put(handle);
-	    if (size() > theSize) cwSet.remove(cwSize()-1);
-	}
+	
+	boolean res1;
+	boolean res2;
 
-	return res;
+	if (ccwSet.member(from)) 
+	    res1 = cwSet.put(handle);
+	if (cwSet.member(from))
+	    res2 = cwSet.put(handle);
+
+	return res1 | res2;
+    }
+    */
+
+    /**
+     * Puts a NodeHandle into the set.
+     *
+     * @param handle the handle to put.
+     * @return true if successful, false otherwise.
+     */
+
+    private boolean put(NodeHandle handle) 
+    {
+	NodeId nid = handle.getNodeId();
+	if (nid.equals(baseId)) return false;
+	if (member(nid)) return false;
+
+	return cwSet.put(handle) || ccwSet.put(handle);
     }
 
     /**
      * Test if a put of the given NodeHandle would succeed.
      *
      * @param handle the handle to test.
-     *
      * @return true if a put would succeed, false otherwise.
      */
 
@@ -113,9 +137,9 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
     {
 	NodeId nid = handle.getNodeId();
 	if (nid.equals(baseId)) return false;
-	
-	if (baseId.clockwise(nid)) return cwSet.test(handle);
-	else return ccwSet.test(handle);
+	if (member(nid)) return false;
+
+	return cwSet.test(handle) || ccwSet.test(handle);
     }
 
 
@@ -142,8 +166,9 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
     
     public NodeHandle get(NodeId nid) 
     {
-	if (baseId.clockwise(nid)) return cwSet.get(nid);
-	else return ccwSet.get(nid);
+	NodeHandle res = cwSet.get(nid);
+	if (res != null) return res;
+	return ccwSet.get(nid);
     }
 
     /**
@@ -151,26 +176,29 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
      *
      * @param nid the node id.
      *
-     * @return the index or throws a NoSuchElementException
+     * @return the index or throws a NoSuchElementException 
      */
 
     public int getIndex(NodeId nid) throws NoSuchElementException {
-	if (baseId.clockwise(nid)) return cwSet.getIndex(nid) + 1;
-	else return - ccwSet.getIndex(nid) - 1;
+	int index = cwSet.getIndex(nid);
+	if (index >= 0) return index + 1;
+	index = ccwSet.getIndex(nid);
+	if (index >= 0) return -index - 1;
+
+	throw new NoSuchElementException();
     }
 
     /**
      * Finds the NodeHandle at a given index.
      *
      * @param index an index.
-     * @return the handle associated with that index or throws an exception.
+     * @return the handle associated with that index.
      */
     
     public NodeHandle get(int index) 
     {
-	if (index > 0) return cwSet.get(index - 1);
-	else if (index < 0) return ccwSet.get(- index - 1);
-	else return null;
+	if (index >= 0) return cwSet.get(index - 1);
+	else return ccwSet.get(- index - 1);
     }
     
     /**
@@ -182,15 +210,13 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
 
     public boolean member(NodeId nid) 
     {
-	if (baseId.clockwise(nid)) return cwSet.member(nid);
-	else return ccwSet.member(nid);
+	return cwSet.member(nid) || ccwSet.member(nid);
     }
     
     /**
      * Removes a node id and its handle from the set.
      *
      * @param nid the node to remove.
-     *
      * @return the node handle removed or null if nothing.
      */
 
@@ -198,8 +224,10 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
     {
 	//System.out.println("Removing " + nid + " from " + this);
 
-	if (baseId.clockwise(nid)) return cwSet.remove(nid);
-	else return ccwSet.remove(nid);
+	NodeHandle res1 = cwSet.remove(nid);
+	NodeHandle res2 = ccwSet.remove(nid);
+	if (res1 != null) return res1;
+	else return res2;
     }
 
     /**
@@ -239,8 +267,7 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
      * Numerically closests node to a given a node in the leaf set. 
      *
      * @param nid a node id.
-     *
-     * @return the index of the numerically closest node (0 is baseId is the closest).
+     * @return the index of the numerically closest node (0 if baseId is the closest).
      */
 
     public int mostSimilar(NodeId nid) {
@@ -273,6 +300,113 @@ public class LeafSet extends Observable implements NodeSet, Serializable {
 	    return -ccwMS - 1;
 
     }
+
+
+    /**
+     * Merge a remote leafset into this
+     *
+     * @param remotels the remote leafset
+     * @param from the node from which we received the leafset
+     * @param routeTable the routing table
+     * @param security the security manager
+     */
+
+    public void merge(LeafSet remotels, NodeHandle from, RoutingTable routeTable, 
+			     PastrySecurityManager security) {
+
+	//System.out.println("LeafSet::merge of " + remotels + " into \n" + this);
+
+	int cwSize = remotels.cwSize();
+	int ccwSize = remotels.ccwSize();
+	
+	// merge the received leaf set into our own
+	// to minimize inserts/removes, we do this from nearest to farthest nodes
+
+	// get indexes of localId in the leafset
+	int cw = remotels.cwSet.getIndex(baseId);
+	int ccw = remotels.ccwSet.getIndex(baseId);
+
+	if (cw < 0) {
+	    // localId not in cw set
+
+	    if (ccw < 0) {
+		// localId not in received leafset, we are joining
+
+		if (remotels.size() == 0) {
+		    cw = ccw = 0;
+		}
+		else {
+		    // get index of entry closest to local nodeId
+		    int closest = remotels.mostSimilar(baseId);
+		    NodeId closestId = remotels.get(closest).getNodeId();
+		    
+		    if (!baseId.clockwise(closestId) && !baseId.equals(closestId))
+			closest++;
+
+		    cw = closest;
+		    ccw = closest - 1;
+		}
+	    }
+	    else {
+		ccw = -ccw  - 2;
+		cw = ccw + 2;
+	    }
+	}
+	else {
+	    // localId in cw set
+
+	    if (ccw < 0) {
+		cw = cw + 2;
+		ccw = cw - 2;
+	    }
+	    else {
+		// localId is in both halves
+		int tmp = ccw;
+		ccw = cw;
+		cw = -tmp;
+	    }
+	}
+
+	//System.out.println("LeafSet::merge cw=" + cw + " ccw=" + ccw);
+
+	for (int i=cw; i<=cwSize; i++) {
+	    NodeHandle nh;
+
+	    if (i == 0) nh = from;
+	    else nh = remotels.get(i);
+		
+	    nh = security.verifyNodeHandle(nh);
+	    if (nh.isAlive() == false) continue;
+	    //if (member(nh.getNodeId())) continue;
+
+	    // merge into our cw leaf set half
+	    cwSet.put(nh);
+
+	    // update RT as well
+	    routeTable.put(nh);
+	}
+
+	for (int i=ccw; i>= -ccwSize; i--) {
+	    NodeHandle nh;
+
+	    if (i == 0) nh = from;
+	    else nh = remotels.get(i);
+		
+	    nh = security.verifyNodeHandle(nh);
+	    if (nh.isAlive() == false) continue;
+	    //if (member(nh.getNodeId())) continue;
+		
+	    // merge into our leaf set
+	    ccwSet.put(nh);
+
+	    // update RT as well
+	    routeTable.put(nh);
+	}
+
+	//System.out.println("LeafSet::merge result: " + this);
+
+    }
+
 
     /**
      * Add observer method.

@@ -54,8 +54,8 @@ import java.io.*;
 public class SimilarSet extends Observable implements NodeSet, Serializable
 {
     private NodeHandle localNode;
-    private LeafSet leafset;
     private NodeId baseId;
+    private boolean clockwise;
 
     private NodeHandle[] nodes;
     private NodeId.Distance[] dist;
@@ -86,15 +86,16 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
      * @param ls the leafset
      * @param localNode the local node 
      * @param size the size of the similar set.
+     * @param cw true if this is the clockwise leafset half
      */
 
-    public SimilarSet(LeafSet ls, NodeHandle localNode, int size) {
+    public SimilarSet(NodeHandle localNode, int size, boolean cw) {
 	this.localNode = localNode;
-	this.leafset = ls;
 	baseId = localNode.getNodeId();
+	clockwise = cw;
 	theSize = 0;
-	nodes = new NodeHandle[size*2];
-	dist = new NodeId.Distance[size*2];
+	nodes = new NodeHandle[size];
+	dist = new NodeId.Distance[size];
     }
     
     /**
@@ -112,13 +113,16 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
 
 	if (nid.equals(baseId)) return false;
 
-	d = baseId.distance(nid);
-
 	for (int i=0; i<theSize; i++)
 	    if (nid.equals(nodes[i].getNodeId())) return false;
 
-	if (theSize < nodes.length/2 || leafset.size() < nodes.length) return true;
+	if (theSize < nodes.length) return true;
 	
+	if (baseId.clockwise(nid) == clockwise)
+	    d = baseId.distance(nid);
+	else
+	    d = baseId.longDistance(nid);
+
 	if (dist[theSize - 1].compareTo(d) <= 0) return false;
 
 	return true;
@@ -143,10 +147,14 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
 	for (int i=0; i<theSize; i++)
 	    if (nid.equals(nodes[i].getNodeId())) return false;
 
-	d = baseId.distance(nid);
+	if (baseId.clockwise(nid) == clockwise)
+	    d = baseId.distance(nid);
+	else
+	    d = baseId.longDistance(nid);
+
 	int index;
 
-	if (theSize < nodes.length/2 || leafset.size() < nodes.length) {
+	if (theSize < nodes.length) {
 	    nodes[theSize] = handle;
 	    dist[theSize] = d;
 	    
@@ -199,7 +207,7 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
     /**
      * Gets the ith element in the set.
      *
-     * @param i an index. i == -1 refers to the baseiD
+     * @param i an index. i == -1 refers to the baseId
      * @return the handle associated with that id or null if no such handle is found.
      */
     
@@ -270,19 +278,18 @@ public class SimilarSet extends Observable implements NodeSet, Serializable
      * Gets the index of the element with the given node id.
      *
      * @param nid the node id.
-     *
      * @return the index or -1 if the element does not exist.
      */
 
-    public int getIndex(NodeId nid) throws NoSuchElementException {
+    public int getIndex(NodeId nid) {
 	for (int i=0; i<theSize; i++) 
 	    if (nodes[i].getNodeId().equals(nid)) return i;
 	
-	throw new NoSuchElementException();
+	return -1;
     }
     
     /**
-     * Gets the theSize of half the leaf set.
+     * Gets the current size of this set.
      *
      * @return the size.
      */
