@@ -41,4 +41,8 @@ public class AggregationGlacierPolicy implements GlacierPolicy {
   public void prefetchLocalObject(VersionKey key, Continuation command) {
     pastStore.getObject(key.getId(), command);
   }
+
+  public Manifest updateManifest(VersionKey key, Manifest manifest, long newExpiration) {
+    return manifest;
+  }
 };
