@@ -63,5 +63,9 @@ public class DebugContent implements PastContent, GCPastContent {
     payload = new byte[ois.readInt()];
     ois.readFully(payload, 0, payload.length);
   }
+  
+  public GCPastMetadata getMetadata(long expiration) {
+    return new GCPastMetadata(expiration);
+  }
 }
 

@@ -38,6 +38,17 @@ abstract class StorageServiceData implements GCPastContent {
     this.location = location;
     this.data = data;
   }
+  
+  /**
+   * Returns the metadata which should be stored with this object.  Allows applications
+   * to add arbitrary items into the object's metadata.
+   *
+   * @param The local GCPast service which the content is on.
+   * @return the handle
+   */
+  public GCPastMetadata getMetadata(long expiration) {
+    return new GCPastMetadata(expiration);
+  }
 
   /**
    * Returns the location of this data

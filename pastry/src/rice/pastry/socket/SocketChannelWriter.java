@@ -159,6 +159,7 @@ public class SocketChannelWriter {
    * @return DESCRIBE THE RETURN VALUE
    */
   public boolean enqueue(Object o) {
+    record("Enqueued", o, -1, address);
     if (ConnectionManager.LOG_LOW_LEVEL)
       System.out.println("ENQ3:@"+System.currentTimeMillis()+":"+this+":"+o);
 
@@ -204,6 +205,21 @@ public class SocketChannelWriter {
       manager.messageEnqueued();            
     }
   }
+  
+  protected void record(String action, Object obj, int size, InetSocketAddress address) {
+    if (obj instanceof rice.pastry.routing.RouteMessage) {
+      record(action, ((rice.pastry.routing.RouteMessage) obj).unwrap(), size, address);
+    } else if (obj instanceof rice.pastry.commonapi.PastryEndpointMessage) {
+      record(action, ((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), size, address);
+    } else if (obj instanceof rice.post.messaging.PostPastryMessage) {
+      record(action, ((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, address);
+    } else if (obj instanceof rice.pastry.socket.messaging.SocketTransportMessage) {
+      record(action, ((rice.pastry.socket.messaging.SocketTransportMessage) obj).msg, size, address);
+    } else {
+      System.out.println("COUNT: " + System.currentTimeMillis() + " " + action + " message " + obj.getClass() + " of size " + size + " to " + address);
+    }
+  }
+  
 
   /**
    * Method which is designed to be called when this writer should write out its
@@ -233,6 +249,8 @@ public class SocketChannelWriter {
             spn.broadcastSentListeners(first, address, buffer.limit());
           }
           
+          record("Sent", queue.getFirst(), buffer.limit(), (InetSocketAddress) sc.socket().getRemoteSocketAddress());
+          
           if ((first != null) && (buffer == null)) {
             // we got a message that was too big
             queue.removeFirst();
@@ -251,6 +269,8 @@ public class SocketChannelWriter {
   
   //      System.out.println("SCW.write():Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
         debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
+        
+        record("Wrote " + i + " of " + j + " bytes of", queue.getFirst(), buffer.limit(), (InetSocketAddress) sc.socket().getRemoteSocketAddress());
   
         if (buffer.remaining() != 0) {
           return false;

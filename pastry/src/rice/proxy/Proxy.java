@@ -55,6 +55,7 @@ public class Proxy {
                                                                 {"java_maximum_memory", "128M"},
                                                                 {"java_debug_enable", "false"},
                                                                 {"java_debug_port", "8000"},
+                                                                {"java_interpreted_mode", "false"},
                                                                 {"java_profiling_enable", "false"},
                                                                 {"java_profiling_port", "31000"},
                                                                 {"java_profiling_memory_enable", "false"},
@@ -132,6 +133,10 @@ public class Proxy {
     result.append(parameters.getStringParameter("java_command"));
     result.append(" -Xmx");
     result.append(parameters.getStringParameter("java_maximum_memory"));
+    
+    if (parameters.getBooleanParameter("java_interpreted_mode")) {
+      result.append(" -Xint");
+    }
     
     if (parameters.getBooleanParameter("java_debug_enable")) {
       result.append(" -Xdebug -Djava.compiler=NONE -Xnoagent -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=");

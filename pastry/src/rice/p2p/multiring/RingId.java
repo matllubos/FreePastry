@@ -188,7 +188,7 @@ public class RingId implements Id {
    * @return hashCode
    */
   public int hashCode() {
-    return (id.hashCode() + ringId.hashCode());
+    return (id.hashCode() * ringId.hashCode());
   }
   
   /**

@@ -59,6 +59,11 @@ public class DeliveryService implements ScribeClient {
   protected HashSet cache;
   
   /**
+   * Whether or not a synchronize is already active
+   */
+  protected boolean synchronizeActive;
+  
+  /**
    * Contructs a StorageService given a PAST to run on top of.
    *
    * @param past The PAST service to use.
@@ -73,6 +78,7 @@ public class DeliveryService implements ScribeClient {
     this.factory = factory;
     this.timeoutInterval = timeoutInterval;
     this.cache = new HashSet();
+    this.synchronizeActive = false;
   }
   
   /**
@@ -186,37 +192,66 @@ public class DeliveryService implements ScribeClient {
    * the correct Scribe groups by looking at the messages we are responsible for.
    */
   public void synchronize() { 
-    pending.synchronize(new ListenerContinuation("Synchronization of Delivery Service") {
-      public void receiveResult(Object o) {
-        pending.getGroups(new StandardContinuation(this) {
-          public void receiveResult(Object o) {
-            PostEntityAddress[] addresses = (PostEntityAddress[]) o;
-            
-            for (int i=0; i<addresses.length; i++) {
-              post.getLogger().finer(post.getEndpoint().getId() + ": Making sure we're subscribed to " + addresses[i]);
-
-              scribe.subscribe(new Topic(addresses[i].getAddress()), DeliveryService.this, null);
-            }
-             
-            Topic[] topics = scribe.getTopics(DeliveryService.this);
-            
-            for (int i=0; i<topics.length; i++) {
-              boolean found = false;
-              
-              for (int j=0; j<addresses.length && !found; j++) {
-                if (addresses[j].getAddress().equals(topics[i].getId()))
-                  found = true;
-              }
-              
-              if (! found) {
-                post.getLogger().finer(post.getEndpoint().getId() + ": Unsubscribing from " + topics[i]);
-                scribe.unsubscribe(topics[i], DeliveryService.this);
-              }
-            }
-          }
-        });
+    boolean go = false;
+    
+    synchronized (this) {
+      if (! synchronizeActive) {
+        synchronizeActive = true;
+        go = true;
       }
-    });
+    }
+    
+    if (go) {
+      pending.synchronize(new ListenerContinuation("Synchronization of Delivery Service") {
+        public void receiveResult(Object o) {
+          pending.getGroups(new StandardContinuation(this) {
+            public void receiveResult(Object o) {
+              PostEntityAddress[] addresses = (PostEntityAddress[]) o;
+              
+              for (int i=0; i<addresses.length; i++) {
+                post.getLogger().finer(post.getEndpoint().getId() + ": Making sure we're subscribed to " + addresses[i]);
+                
+                scribe.subscribe(new Topic(addresses[i].getAddress()), DeliveryService.this, null);
+              }
+              
+              Topic[] topics = scribe.getTopics(DeliveryService.this);
+              
+              for (int i=0; i<topics.length; i++) {
+                boolean found = false;
+                
+                for (int j=0; j<addresses.length && !found; j++) {
+                  if (addresses[j].getAddress().equals(topics[i].getId()))
+                    found = true;
+                }
+                
+                if (! found) {
+                  post.getLogger().finer(post.getEndpoint().getId() + ": Unsubscribing from " + topics[i]);
+                  scribe.unsubscribe(topics[i], DeliveryService.this);
+                }
+              }
+              
+              synchronized (DeliveryService.this) {
+                synchronizeActive = false;
+              }
+            }
+
+            public void receiveException(Exception e) {
+              synchronized (DeliveryService.this) {
+                synchronizeActive = false;
+              }
+              
+              parent.receiveException(e);
+            }
+          });
+        }
+        
+        public void receiveException(Exception e) {
+          synchronized (DeliveryService.this) {
+            synchronizeActive = false;
+          }
+        }
+      });
+    }
   }
   
   /**

@@ -178,7 +178,7 @@ public class GCId implements Id {
    * @return hashCode
    */
   public int hashCode() {
-    return (int) (id.hashCode() + expiration);
+    return id.hashCode();
   }
   
   /**

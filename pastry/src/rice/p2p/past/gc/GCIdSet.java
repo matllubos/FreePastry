@@ -82,6 +82,7 @@ public class GCIdSet implements IdSet {
    * @param id the id to add
    */
   public void addId(Id id) {
+    removeId(new GCMatchingId(((GCId) id).getId())); 
     ids.add(id);
   }
   
@@ -208,5 +209,24 @@ public class GCIdSet implements IdSet {
    */
   public Object clone() {
     return ids.clone();
+  }
+  
+  protected static class GCMatchingId extends GCId {
+    
+    public GCMatchingId(Id id) {
+      super(id, 0L);
+    }
+    
+    public boolean equals(Object o) {
+      return ((GCId) o).id.equals(id);
+    }
+    
+    public long getExpiration() {
+      throw new IllegalArgumentException("getExpriation called on GCMathcing ID!");
+    }
+    
+    public byte[] toByteArray() {
+      throw new IllegalArgumentException("toByte[] called on GCMathcing ID!");
+    }
   }
 }

@@ -671,6 +671,24 @@ public class PostProxy {
     
     node = factory.newNode(factory.getNodeHandle(bootAddresses), proxyAddress);
     pastryNode = (PastryNode) node;
+    rice.selector.Timer timer = ((DistPastryNode) node).getTimer();
+    
+    ((PersistentStorage) immutableStorage.getStorage()).setTimer(timer);
+    ((PersistentStorage) ((LRUCache) immutableStorage.getCache()).getStorage()).setTimer(timer);
+    
+    ((PersistentStorage) mutableStorage.getStorage()).setTimer(timer);
+    ((PersistentStorage) pendingStorage.getStorage()).setTimer(timer);
+    ((PersistentStorage) deliveredStorage.getStorage()).setTimer(timer);
+    if (trashStorage != null)
+      ((PersistentStorage) trashStorage.getStorage()).setTimer(timer);
+    
+    ((PersistentStorage) glacierImmutableStorage.getStorage()).setTimer(timer);
+    ((PersistentStorage) glacierMutableStorage.getStorage()).setTimer(timer);
+    ((PersistentStorage) glacierNeighborStorage.getStorage()).setTimer(timer);
+    ((PersistentStorage) aggrWaitingStorage.getStorage()).setTimer(timer);
+    
+    if (glacierTrashStorage != null)
+      ((PersistentStorage) glacierTrashStorage.getStorage()).setTimer(timer);
     Thread.sleep(3000);
     stepDone(SUCCESS);
   }  

@@ -90,6 +90,15 @@ public class LRUCache implements Cache {
   }
   
   /**
+   * Returns the backing storage object
+   *
+   * @return The storage backing this cache
+   */
+  public Storage getStorage() {
+    return storage;
+  }
+  
+  /**
    * Renames the given object to the new id.  This method is potentially faster
    * than store/cache and unstore/uncache.
    *
@@ -128,7 +137,7 @@ public class LRUCache implements Cache {
   public void cache(final Id id, final Serializable metadata, final Serializable obj, final Continuation c) {
     final int size = getSize(obj);
 
-    if (order.contains(id)) {
+    if (exists(id)) {
       synchronized (order) {
         order.remove(id);
         order.addFirst(id);
@@ -204,7 +213,7 @@ public class LRUCache implements Cache {
    * @return Whether or not an object is present at id.
    */
   public boolean exists(Id id) {
-    return order.contains(id);
+    return storage.exists(id);
   }
 
   /**
@@ -216,7 +225,7 @@ public class LRUCache implements Cache {
    * object (through receiveResult on c).
    */
   public void getObject(Id id, Continuation c) {
-    if (! order.contains(id)) {
+    if (! exists(id)) {
       c.receiveResult(null);
       return;
     }

@@ -408,6 +408,8 @@ public class PingManager extends SelectionKeyHandler {
         ByteBuffer buf = serialize(write.message);
         int num = channel.send(buf, write.snh.getAddress());
         spn.broadcastSentListeners(write.message, write.snh.getAddress(), num);
+        
+        System.out.println("COUNT: " + System.currentTimeMillis() + " Sent message " + write.message.getClass() + " of size " + num  + " to " + write.snh.getAddress());
         i.remove();
 
         if (num == 0) {
@@ -435,7 +437,7 @@ public class PingManager extends SelectionKeyHandler {
 	      InetSocketAddress address = null;
 	
 	      while ((address = (InetSocketAddress) channel.receive(buffer)) != null) {
-          int len = buffer.limit();
+          int len = buffer.remaining();
           
 	        //debug("Received data from address " + address);
 	        buffer.flip();
@@ -444,6 +446,9 @@ public class PingManager extends SelectionKeyHandler {
 	          Object o = deserialize(buffer);
             //              System.out.println("REC:"+o);
             spn.broadcastReceivedListeners(o, address, len);
+            
+            System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + o.getClass() + " of size " + len + " from " + address);
+                      
 	          receiveMessage(o);
 	        } else {
 	//              debug("Read from datagram channel, but no bytes were there - no bad, but wierd.");

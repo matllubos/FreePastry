@@ -58,7 +58,12 @@ public class ReplicationImpl implements Replication, Application {
   /**
    * The amount of time to wait between replications
    */
-  public static int MAINTENANCE_INTERVAL = 60 * 1000;// 600000;
+  public static int MAINTENANCE_INTERVAL = 60 * 10 * 1000;
+  
+  /**
+   * The maximum number of keys to return in one message
+   */
+  public static int MAX_KEYS_IN_MESSAGE = 1000;
   
   /**
    * this application's endpoint
@@ -191,10 +196,12 @@ public class ReplicationImpl implements Replication, Application {
    * which hold keys this node may be interested in
    */
   public void replicate() {
+    int total = 0;
     log.finer(endpoint.getId() + ": Sending out requests"); 
     NodeHandleSet handles = endpoint.neighborSet(Integer.MAX_VALUE);
     IdRange ourRange = endpoint.range(handle, 0, handle.getId());
     IdBloomFilter ourFilter = new IdBloomFilter(client.scan(ourRange));
+    total += client.scan(ourRange).numElements();
     
     for (int i=0; i<handles.size(); i++) {
       NodeHandle handle = handles.getHandle(i);
@@ -203,15 +210,19 @@ public class ReplicationImpl implements Replication, Application {
       if (handleRange != null) {
         IdRange range = handleRange.intersectRange(getTotalRange());
         IdBloomFilter filter = new IdBloomFilter(client.scan(range));
+        total += client.scan(range).numElements();
 
         if ((range != null) && (! range.intersectRange(getTotalRange()).isEmpty())) {
-          log.finer(endpoint.getId() + ": Sending request to " + handle + " for range " + range);
+          System.out.println("COUNT: " + System.currentTimeMillis() + " Sending request to " + handle + " for range " + range);
           RequestMessage request = new RequestMessage(this.handle, new IdRange[] {range, ourRange}, new IdBloomFilter[] {filter, ourFilter});
           endpoint.route(null, request, handle);
         }
       }
     }
-    log.finer(endpoint.getId() + ": Done sending out requests"); 
+
+    System.out.println("COUNT: " + System.currentTimeMillis() + " Done sending replications requests with " + total);
+
+    log.finer(endpoint.getId() + ": Done sending out requests with " + total + " objects"); 
   }
 
   
@@ -246,20 +257,24 @@ public class ReplicationImpl implements Replication, Application {
     if (message instanceof RequestMessage) {
       RequestMessage rm = (RequestMessage) message;
       IdSet response = factory.buildIdSet();
+      int total = 0;
       
-      for (int i=0; i<rm.getRanges().length; i++) {
+      for (int i=0; (i<rm.getRanges().length) && (response.numElements() < MAX_KEYS_IN_MESSAGE); i++) {
         Iterator it = client.scan(rm.getRanges()[i]).getIterator();
         
-        while (it.hasNext()) {
+        while (it.hasNext() && (response.numElements() < MAX_KEYS_IN_MESSAGE)) {
           Id next = (Id) it.next();
+          total++;
           
           if (! rm.getFilters()[i].check(next))
             response.addId(next);
         }
       }
-        
-      if (response.numElements() > 0)
+    
+      if (response.numElements() > 0) {
+        System.out.println("COUNT: " + System.currentTimeMillis() + " Telling node " + rm.getSource() + " to fetch " + response.numElements() + " out of " + total);
         endpoint.route(null, new ResponseMessage(handle, response), rm.getSource());
+      }
     } else if (message instanceof ResponseMessage) {
       ResponseMessage rm = (ResponseMessage) message;
       IdSet fetch = policy.difference(client.scan(getTotalRange()), rm.getIdSet(), factory);

@@ -91,4 +91,8 @@ public class Aggregate implements GCPastContent {
   public GCPastContentHandle getHandle(GCPast local, long expiration) {
     return new AggregateHandle(local.getLocalNodeHandle(), myId, getVersion(), expiration);
   }
+
+  public GCPastMetadata getMetadata(long expiration) {
+    return new GCPastMetadata(expiration);
+  }
 };

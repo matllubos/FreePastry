@@ -89,6 +89,10 @@ public abstract class DistPastryNode extends PastryNode {
     this.listeners = new Vector();
   }
   
+  public Timer getTimer() {
+    return timer;
+  }
+  
   public void addNetworkListener(NetworkListener listener) {
     listeners.add(listener);
   }

@@ -76,6 +76,11 @@ public class GCPastImpl extends PastImpl implements GCPast {
   protected IdFactory realFactory;
   
   /**
+   * THe cached GCIdSet of our Ids
+   */
+  protected GCIdSet set;
+  
+  /**
    * Constructor for GCPast
    *
    * @param node The node below this Past implementation
@@ -105,6 +110,9 @@ public class GCPastImpl extends PastImpl implements GCPast {
     super(new GCNode(node), manager, replicas, instance, policy);
     this.trash = trash;
     this.realFactory = node.getIdFactory();
+    this.set = new GCIdSet();
+    
+    loadGCIdSet();
     
     endpoint.scheduleMessage(new GCCollectMessage(0, getLocalNodeHandle(), node.getId()), collectionInterval, collectionInterval);
   }
@@ -256,8 +264,10 @@ public class GCPastImpl extends PastImpl implements GCPast {
             public void receiveResult(Object o) {
               try {
                 // allow the object to check the insert, and then insert the data
-                PastContent content = imsg.getContent().checkInsert(imsg.getContent().getId(), (PastContent) o);
-                storage.store(imsg.getContent().getId(), new GCPastMetadata(imsg.getExpiration()), content, parent);
+                GCPastContent content = (GCPastContent) imsg.getContent().checkInsert(imsg.getContent().getId(), (PastContent) o);
+                set.addId(new GCId(content.getId(), imsg.getExpiration()));
+                
+                storage.store(content.getId(), content.getMetadata(imsg.getExpiration()), content, parent);
               } catch (PastException e) {
                 parent.receiveException(e);
               }
@@ -268,15 +278,16 @@ public class GCPastImpl extends PastImpl implements GCPast {
         }
       } else if (msg instanceof GCRefreshMessage) {
         final GCRefreshMessage rmsg = (GCRefreshMessage) msg;        
-        final GCPastMetadata metadata = new GCPastMetadata(rmsg.getExpiration());
         final Iterator i = rmsg.getKeys().getIterator();
         
         StandardContinuation process = new StandardContinuation(getResponseContinuation(msg)) {
           public void receiveResult(Object o) {
             if (i.hasNext()) {
               Id id = (Id) i.next();
+              set.addId(new GCId(id, rmsg.getExpiration()));
               
-              storage.setMetadata(id, metadata, this);
+              ((GCPastMetadata) storage.getMetadata(id)).setExpiration(rmsg.getExpiration());
+              storage.setMetadata(id, storage.getMetadata(id), this);
             } else {
               parent.receiveResult(Boolean.TRUE);
             }
@@ -295,8 +306,6 @@ public class GCPastImpl extends PastImpl implements GCPast {
       } else if (msg instanceof GCCollectMessage) {
         final Id[] array = scan().asArray();
         
-      //  System.out.println("COLLECTING OBJECTS!!!!!!");
-        
         Continuation remove = new ListenerContinuation("Removal of expired ids") {
           int index = -1;
           
@@ -307,10 +316,9 @@ public class GCPastImpl extends PastImpl implements GCPast {
               
             if (index < array.length) {
               final GCId id = (GCId) array[index];
+              set.removeId(id);
 
               if (trash != null) {                        
-             //   System.out.println("MOVING " + id + " TO THE TRASH CAN!");
-
                 storage.getObject(id.getId(), new StandardContinuation(this) {
                   public void receiveResult(Object o) {
                     trash.store(id.getId(), storage.getMetadata(id.getId()), (Serializable) o, new StandardContinuation(parent) {
@@ -321,7 +329,6 @@ public class GCPastImpl extends PastImpl implements GCPast {
                   }
                 });
               } else {
-              //  System.out.println("DELETING " + id + "!");
                 storage.unstore(id.getId(), this);
               }
             }
@@ -354,6 +361,23 @@ public class GCPastImpl extends PastImpl implements GCPast {
     }
   }
   
+  /**
+   * Method which populates the GCIdSet
+   */
+  protected void loadGCIdSet() {
+    Iterator i = storage.getStorage().scan().getIterator();
+    
+    while (i.hasNext()) {
+      Id id = (Id) i.next();
+      GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
+      
+      if (metadata != null) 
+        set.addId(new GCId(id, metadata.getExpiration()));
+      else
+        set.addId(new GCId(id, DEFAULT_EXPIRATION));
+    }    
+  }
+  
   // ---- REPLICATION MANAGER METHODS -----
   
   /**
@@ -371,12 +395,22 @@ public class GCPastImpl extends PastImpl implements GCPast {
     if (gcid.getExpiration() < System.currentTimeMillis()) {
       command.receiveResult(Boolean.TRUE);
     } else if (storage.exists(gcid.getId())) {
+      set.addId(gcid);
       GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(gcid.getId());
       
-      if ((metadata == null) || (metadata.getExpiration() < gcid.getExpiration())) 
-        storage.setMetadata(gcid.getId(), new GCPastMetadata(gcid.getExpiration()), command);
-      else
+      if (metadata == null) {
+        storage.getObject(gcid.getId(), new StandardContinuation(command) {
+          public void receiveResult(Object o) {
+            GCPastContent content = (GCPastContent) o;
+            storage.setMetadata(content.getId(), content.getMetadata(gcid.getExpiration()), parent);
+          }
+        });
+      } else if (metadata.getExpiration() < gcid.getExpiration()) {
+        metadata.setExpiration(gcid.getExpiration());
+        storage.setMetadata(gcid.getId(), metadata, command);
+      } else {
         command.receiveResult(Boolean.TRUE);
+      }
     } else {
       policy.fetch(gcid.getId(), hint, this, new StandardContinuation(command) {
         public void receiveResult(Object o) {
@@ -384,8 +418,10 @@ public class GCPastImpl extends PastImpl implements GCPast {
             log.warning("Could not fetch id " + id + " - policy returned null in namespace " + instance);
             parent.receiveResult(new Boolean(false));
           } else {
+            GCPastContent content = (GCPastContent) o;
             log.finest("inserting replica of id " + id);
-            storage.getStorage().store(gcid.getId(), new GCPastMetadata(gcid.getExpiration()), (PastContent) o, parent);
+            set.addId(gcid);
+            storage.getStorage().store(gcid.getId(), content.getMetadata(gcid.getExpiration()), content, parent);
           }
         }
       });
@@ -411,10 +447,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param range the requested range
    */
   public IdSet scan(IdRange range) {
-    if (range != null)
-      return buildGCIdSet(storage.getStorage().scan(((GCIdRange) range).getRange()).asArray());
-    else
-      return buildGCIdSet(storage.getStorage().scan(range).asArray());
+    return set.subSet(range);
   }
   
   /**
@@ -425,32 +458,11 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param range the requested range
    */
   public IdSet scan() {
-    return buildGCIdSet(storage.getStorage().scan().asArray());
+    return set;
   }
   
   /**
-   * Internal method which builds a GCId set for use with replication
-   *
-   * @param set The set ot base it off of
-   * @return The set
-   */
-  protected IdSet buildGCIdSet(Id[] ids) {
-    GCIdSet result = new GCIdSet();
-    
-    for (int i=0; i<ids.length; i++) {
-      GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(ids[i]);
-      
-      if (metadata != null) 
-        result.addId(new GCId(ids[i], metadata.getExpiration()));
-      else
-        result.addId(new GCId(ids[i], DEFAULT_EXPIRATION));
-    }
-    
-    return result;
-  }
-  
-  /**
-  * This upcall should return whether or not the given id is currently stored
+   * This upcall should return whether or not the given id is currently stored
    * by the client.
    *
    * @param id The id in question

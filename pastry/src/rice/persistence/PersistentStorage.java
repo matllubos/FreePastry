@@ -97,6 +97,7 @@ public class PersistentStorage implements Storage {
    */
   public static final String BACKUP_DIRECTORY = "/FreePastry-Storage-Root/";
   public static final String LOST_AND_FOUND_DIRECTORY = "lost+found";
+  public static final String METADATA_FILENAME_EXTENSION = ".metadata";
   
   /**
    * The splitting factor, or the number of files in one directory
@@ -107,6 +108,11 @@ public class PersistentStorage implements Storage {
    * The maximum number of subdirectories in a directory before splitting
    */
   public static final int MAX_DIRECTORIES = 32;
+  
+  /**
+   * The amount of time before re-writing the metadata file
+   */
+  public static final int METADATA_SYNC_TIME = 300000;
   
   /**
    * Whether or not to print debug output 
@@ -138,6 +144,8 @@ public class PersistentStorage implements Storage {
   
   private HashMap directories;      // the in-memory map of directories (for efficiency)
   
+  private File metadataFile;        // the on-disk cache of object metadata
+  private File metadataFileTmp;     // a temporary file for metadata
   private HashMap metadata;         // the in-memory cache of object metadata
 
   private String rootDir;           // rootDirectory
@@ -182,6 +190,26 @@ public class PersistentStorage implements Storage {
     
     init();
   } 
+  
+  /**
+   * Method which allows the persistence root to schedle an event which will tell it to 
+   * sync the metadata cached. Should be called exactly once after the persistence root is 
+   * created.
+   *
+   * @param timer The timer to use to schedule the events
+   */
+  public void setTimer(rice.selector.Timer timer) {
+    timer.scheduleAtFixedRate(new rice.selector.TimerTask() {
+      public void run() {
+        QUEUE.enqueue(new WorkRequest(new ListenerContinuation("Enqueue of writeMetadataFile")) {
+          public Object doWork() throws Exception {
+            writeMetadataFile(metadata, metadataFile, metadataFileTmp);
+            return Boolean.TRUE;
+          }
+        });
+      }
+    }, METADATA_SYNC_TIME, METADATA_SYNC_TIME);
+  }
   
   /**
    * Renames the given object to the new id.  This method is potentially faster
@@ -393,12 +421,15 @@ public class PersistentStorage implements Storage {
           try { 
             /* get the file */
             File objFile = getFile(id);
-            
+                        
             /* and make sure that it exists */
             if ((objFile == null) || (! objFile.exists())) 
               return null;
-            else 
+            else {
+              System.out.println("COUNT: " + System.currentTimeMillis() + " Fetching data under " + id + " of size " + objFile.length() + " in " + name);
+
               return readData(objFile);
+            }
           } catch (Exception e) {
             /* if there's a problem, move the file to the lost+found */
             moveToLost(getFile(id));
@@ -473,10 +504,22 @@ public class PersistentStorage implements Storage {
    * when we start up
    */
   private void init() throws IOException {
+    debug("Initing directories");
     initDirectories();
+    debug("Initing directory map");
     initDirectoryMap(appDirectory);
+    debug("Initing metadata file");
+    initMetadataFile();
+    debug("Initing files");
     initFiles(appDirectory);
-    initFileMap(appDirectory);
+    debug("Initing file map");
+    boolean c1 = initFileMap(appDirectory);
+    debug("Initing metadata");
+    boolean c2 = initMetadata();
+    debug("Done initing");
+    
+    if (c1 || c2)
+      writeMetadataFile(metadata, metadataFile, metadataFileTmp);
   }
 
   /**
@@ -502,14 +545,31 @@ public class PersistentStorage implements Storage {
   
   /**
    * Reads in the in-memory map of directories for use.
+   *
+   * @param dir The directory to recurse
    */
   private void initDirectoryMap(File dir) {
-    debug("Initing dir map in " + dir);
     File[] files = dir.listFiles(new DirectoryFilter());
     directories.put(dir, files);
     
     for (int i=0; i<files.length; i++) {
       initDirectoryMap(files[i]);
+    }
+  }
+  
+  /**
+   * Reads in the on-disk cache of file metadata and stored it in the
+   * in-memory hash table.
+   */
+  private void initMetadataFile() throws IOException {
+    metadataFile = new File(backupDirectory, getName() + METADATA_FILENAME_EXTENSION);
+    metadataFileTmp = new File(backupDirectory, getName() + METADATA_FILENAME_EXTENSION + ".tmp");
+    
+    if (! metadataFile.exists()) {
+      System.err.println("Metadata cache not found for namespace " + getName() + " - restoring from files.");
+      metadataFile.createNewFile();
+    } else {
+      metadata = readMetadataFile(metadataFile);
     }
   }
   
@@ -569,6 +629,9 @@ public class PersistentStorage implements Storage {
     return null;
   }
   
+  // DELTE ME
+  int count = 0;
+  
   /**
    * Inititializes the idSet data structure
    * 
@@ -578,23 +641,49 @@ public class PersistentStorage implements Storage {
    * for all files in the root.
    *
    */
-  private void initFileMap(File dir) throws IOException {
+  private boolean initFileMap(File dir) throws IOException {
     /* first, see if this directory needs to be expanded */
     checkDirectory(dir);
     
     /* next, start processing by listing the number of files and going from there */
     File[] files = dir.listFiles();
+    boolean changed = false;
         
     for (int i=0; i<files.length; i++) {
       if (files[i].isFile()) {
         Id id = readKey(files[i]);
         increaseUsedSpace(getFileLength(files[i]));
         idSet.addId(id);
-        metadata.put(id, readMetadata(files[i]));
+        
+        /* if the file is newer than the metadata file, update the metadata 
+           if we don't have the metadata for this file, update it */
+        if ((! metadata.containsKey(id)) || (files[i].lastModified() > metadataFile.lastModified())) {
+          metadata.put(id, readMetadata(files[i]));
+          changed = true;
+        }
       } else if (files[i].isDirectory()) {
-        initFileMap(files[i]);
+        boolean result = initFileMap(files[i]);
+        changed = changed || result;
       }
     }
+    
+    return changed;
+  }
+  
+  /**
+   * Removes any entries in the metadata file which do not have files
+   */
+  private boolean initMetadata() throws IOException {
+    Id[] ids =(Id[])  metadata.keySet().toArray(new Id[0]);
+    boolean changed = false;
+    
+    for (int i=0; i<ids.length; i++)
+      if (! idSet.isMemberId(ids[i])) {
+        metadata.remove(ids[i]);
+        changed = true;
+      }
+        
+    return changed;
   }
 
   /**
@@ -869,7 +958,7 @@ public class PersistentStorage implements Storage {
    * @param directory The directory to be created
    * @return Whether the directory is successfully created.
    */
-  private void createDirectory(File directory) throws IOException {
+  private static void createDirectory(File directory) throws IOException {
     if ((directory != null) && (! directory.exists()) && (! directory.mkdir()))
       throw new IOException("Creation of directory " + directory + " failed!");
   }
@@ -880,7 +969,7 @@ public class PersistentStorage implements Storage {
    *
    * @param file file whose length to get
    */
-  private long getFileLength(File file) {
+  private static long getFileLength(File file) {
     return (((file != null) && file.exists()) ? file.length() : 0);
   }
   
@@ -890,7 +979,7 @@ public class PersistentStorage implements Storage {
    * @param oldFile The old name
    * @param newFile The new name
    */
-  private void renameFile(File oldFile, File newFile) throws IOException {
+  private static void renameFile(File oldFile, File newFile) throws IOException {
     if ((oldFile != null) && oldFile.exists() && (! oldFile.equals(newFile))) {
       deleteFile(newFile);
         
@@ -905,7 +994,7 @@ public class PersistentStorage implements Storage {
    * @param file file to be deleted.
    *
    */
-  private void deleteFile(File file) throws IOException {
+  private static void deleteFile(File file) throws IOException {
     if ((file != null) && file.exists() && (! file.delete()))
       throw new IOException("Delete of " + file + " failed!");         
   }
@@ -915,7 +1004,7 @@ public class PersistentStorage implements Storage {
    * 
    * @param name The name of the file
    * @return Whether or not it is temporary
-   */
+   */static 
   private boolean isTemporaryFile(String name) {    
     return (name.indexOf(".") >= 0);
   }
@@ -1139,7 +1228,6 @@ public class PersistentStorage implements Storage {
     
     return toReturn;
   }
-  
 
   /**
    * Abstract over reading a single object to a file using Java
@@ -1161,7 +1249,7 @@ public class PersistentStorage implements Storage {
   private static Serializable readMetadata(File file) throws IOException {  
     if (file.length() < 32) 
       return null;
-    
+        
     RandomAccessFile ras = new RandomAccessFile(file, "r");
     ras.seek(file.length() - 32);
 
@@ -1177,7 +1265,7 @@ public class PersistentStorage implements Storage {
       System.out.println("Persistence revision did not match - exiting!");
       return null;
     }
-    
+        
     long length = ras.readLong();
     ras.seek(file.length() - 32 - length);
  
@@ -1196,8 +1284,44 @@ public class PersistentStorage implements Storage {
     } catch (ClassNotFoundException e) {
       throw new IOException(e.getMessage());
     }
-    
+        
     return result;
+  }
+  
+  /**
+   * Utility function which reads the metadata file off of disk and stores the
+   * result into the memory cache.
+   */
+  private static HashMap readMetadataFile(File file) throws IOException {
+    FileInputStream fin = null;
+    try {
+      fin = new FileInputStream(file);
+      ObjectInputStream objin = new ObjectInputStream(new BufferedInputStream(new GZIPInputStream(fin)));
+      
+      return (HashMap) objin.readObject();
+    } catch (Exception e) {
+      System.out.println("Got error " + e + " while reading metadata file - removing file.");
+      deleteFile(file);
+      file.createNewFile();
+      return new HashMap();
+    } finally {
+      fin.close();
+    }
+  }
+  
+  /**
+   * Utility function which writes the metadata file out to disk.
+   */
+  private static void writeMetadataFile(HashMap map, File file, File tmp) throws IOException {
+    renameFile(file, tmp);
+    
+    FileOutputStream fout = new FileOutputStream(file);
+    ObjectOutputStream objout = new ObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fout)));
+    objout.writeObject(map);
+    objout.close();
+    fout.close();
+    
+    deleteFile(tmp);
   }
   
   /**
@@ -1538,7 +1662,7 @@ public class PersistentStorage implements Storage {
 	   }
 	   
 	   public void run() {
-       while (true)
+       while (true) 
          workQ.dequeue().run();
 	   }
   }
@@ -1626,4 +1750,5 @@ public class PersistentStorage implements Storage {
 	
 	private static class WorkQueueOverflowException extends PersistenceException {
 	}
+
 }

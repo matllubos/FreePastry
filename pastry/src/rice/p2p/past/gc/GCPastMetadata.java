@@ -50,6 +50,9 @@ import rice.p2p.past.*;
  * @author Peter Druschel 
  */
 public class GCPastMetadata implements Serializable {
+  
+  // serialver for backwards compatibility
+  private static final long serialVersionUID = -2432306227012003387L;
 
   // the expiration time
   protected long expiration;
@@ -70,6 +73,15 @@ public class GCPastMetadata implements Serializable {
    */
   public long getExpiration() {
     return expiration;
+  }
+  
+  /**
+   * Method which sets the expiration time
+   *
+   * @param The new expiration time
+   */
+  public void setExpiration(long expiration) {
+    this.expiration = expiration;
   }
 }
 

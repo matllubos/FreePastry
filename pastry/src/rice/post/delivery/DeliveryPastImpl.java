@@ -95,7 +95,7 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
   public void fetch(Id id, NodeHandle hint, Continuation command) {
     log.finer(endpoint.getId() + ": Told to fetch Id " + id);
     
-    if (delivered.exists(id)) {
+    if (delivered.exists(((GCId) id).getId())) {
       log.finer(endpoint.getId() + ": Skipping Id " + id + " because we have receipt.");
       command.receiveResult(new Boolean(true));
     } else {
@@ -257,19 +257,22 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
    * @param command The command to return the result to
    */
   protected void getUser(final Id id, Continuation command) {
-    PostEntityAddress address = (PostEntityAddress) cache.get(id);
+    GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
     
-    if (address != null) {
-      command.receiveResult(address);
-    } else {
+    if ((metadata == null) || (! (metadata instanceof DeliveryMetadata))) {
       storage.getObject(id, new StandardContinuation(command) {
         public void receiveResult(Object o) {
           PostEntityAddress address = ((Delivery) o).getMessage().getDestination();
-          cache.put(id, address);
           
-          parent.receiveResult(address);
+          storage.setMetadata(id, ((Delivery) o).getMetadata(DEFAULT_EXPIRATION), new StandardContinuation(parent) {
+            public void receiveResult(Object o) {
+              parent.receiveResult(((DeliveryMetadata) storage.getMetadata(id)).getDestination());
+            }
+          });
         }
       });
+    } else {
+      command.receiveResult(((DeliveryMetadata) metadata).getDestination());
     }
   }
 }

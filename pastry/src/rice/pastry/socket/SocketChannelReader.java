@@ -171,13 +171,15 @@ public class SocketChannelReader {
         byte[] objectArray = new byte[objectSize];
         buffer.get(objectArray);
         buffer = null;
-        //   int size = objectSize + MAGIC_NUMBER.length + 4;
+        int size = objectSize + MAGIC_NUMBER.length + 4;
         Object obj = deserialize(objectArray);
         debug("Deserialized bytes into object " + obj);
 
         if (spn != null) {
-          spn.broadcastReceivedListeners(obj, (InetSocketAddress) sc.socket().getRemoteSocketAddress(), objectSize+8);
+          spn.broadcastReceivedListeners(obj, (InetSocketAddress) sc.socket().getRemoteSocketAddress(), size);
         }
+        
+        record(obj, size, (InetSocketAddress) sc.socket().getRemoteSocketAddress());
 
         if (!(obj instanceof AddressMessage)) {
           readOnce = true;
@@ -191,6 +193,20 @@ public class SocketChannelReader {
     }
 
     return null;
+  }
+  
+  protected void record(Object obj, int size, InetSocketAddress address) {
+    if (obj instanceof rice.pastry.routing.RouteMessage) {
+      record(((rice.pastry.routing.RouteMessage) obj).unwrap(), size, address);
+    } else if (obj instanceof rice.pastry.commonapi.PastryEndpointMessage) {  
+      record(((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), size, address);
+    } else if (obj instanceof rice.post.messaging.PostPastryMessage) {
+      record(((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, address);
+    } else if (obj instanceof rice.pastry.socket.messaging.SocketTransportMessage) {
+      record(((rice.pastry.socket.messaging.SocketTransportMessage) obj).msg, size, address);
+    } else {
+      System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + obj.getClass() + " of size " + size + " from " + address);
+    }
   }
 
   /**
