@@ -1,4 +1,4 @@
-package rice.email.proxy;
+package rice.post.proxy;
 
 import rice.*;
 
