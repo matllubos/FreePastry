@@ -2,7 +2,7 @@ package rice.splitstream.messaging;
 
 import rice.splitstream.*;
 import rice.pastry.messaging.*;
-
+import java.io.Serializable;
 /**
  * This message is sent in response to an incoming Attach message.  It
  * contains a list of all Stripe Ids for the current channel

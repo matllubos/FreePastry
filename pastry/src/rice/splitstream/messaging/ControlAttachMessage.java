@@ -3,6 +3,8 @@ package rice.splitstream.messaging;
 import rice.pastry.NodeHandle;
 import rice.pastry.messaging.*;
 import rice.splitstream.*;
+import rice.scribe.*;
+import java.io.Serializable;
 
 /**
  * This message is anycast to the scribe group for a channel when a node
