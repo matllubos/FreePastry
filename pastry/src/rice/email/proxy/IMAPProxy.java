@@ -45,7 +45,7 @@ public class IMAPProxy implements Observer, MessageCountListener {
 
     Session session;
 
-    Folder inbox;
+    rice.email.Folder inbox;
 
     
     /**
@@ -96,10 +96,10 @@ public class IMAPProxy implements Observer, MessageCountListener {
 		_parent.update_gotattachments(this, (EmailData[]) o);
 		break;
 	    case STATE_GETTING_ROOT:
-		_parent.update_got_root(this, (Folder) o);
+		_parent.update_got_root(this, (rice.email.Folder) o);
 		break;
 	    case STATE_GETTING_INBOX:
-		_parent.update_got_inbox(this, (Folder) o);
+		_parent.update_got_inbox(this, (rice.email.Folder) o);
 		break;
 	    case STATE_CREATING_INBOX:
 		_parent.update_created_inbox(this);
@@ -290,12 +290,12 @@ public class IMAPProxy implements Observer, MessageCountListener {
     /**
      * Called when the message has been placed into the inbox folder.
      */
-    protected void update_got_root(IMAPContinuation ic, Folder rootFolder) {
+    protected void update_got_root(IMAPContinuation ic, rice.email.Folder rootFolder) {
 	
 	// Do we already have a folder called INBOX? If so, get it
 	String[] subfolders = rootFolder.getChildren();
-	boolan hasInbox = false;
-	for (int i = 0; i < subfolders.length) {
+	boolean hasInbox = false;
+	for (int i = 0; i < subfolders.length; i++) {
 	    if (subfolders[i].equals("INBOX")) {
 		hasInbox = true;
 		break;
@@ -321,7 +321,7 @@ public class IMAPProxy implements Observer, MessageCountListener {
 	service.getRootFolder(ic);
     }
 
-    protected void update_got_inbox(IMAPContinuation ic, Folder thisBox) {
+    protected void update_got_inbox(IMAPContinuation ic, rice.email.Folder thisBox) {
 	this.inbox = thisBox;
 
 	ic.setState(STATE_ADDING_TO_INBOX);
