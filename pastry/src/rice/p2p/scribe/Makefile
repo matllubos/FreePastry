@@ -5,8 +5,8 @@ SOURCE  = \
 	ScribeImpl.java \
 	ScribeContent.java \
 	ScribeClient.java \
-  ScribePolicy.java \
-  Topic.java
+	ScribePolicy.java \
+	Topic.java
 
 RMI_SOURCE =
 

@@ -94,6 +94,13 @@ public class AnycastMessage extends ScribeMessage {
     return content;
   }
 
+
+    public void setContent(ScribeContent content){
+	if(this.content != null)
+	    System.out.println("Over-writing the content of message");
+	this.content = content;
+    }
+
   /**
    * Returns the next handle to visit
    *
@@ -155,5 +162,14 @@ public class AnycastMessage extends ScribeMessage {
       toVisit.addLast(handle);
     }
   }
+
+    public void remove(NodeHandle handle){
+	if(handle == null)
+	    return;
+	if(toVisit.contains(handle))
+	    toVisit.remove(handle);
+	if(visited.contains(handle))
+	    visited.remove(handle);
+    }
 }
 
