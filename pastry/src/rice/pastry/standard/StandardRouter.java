@@ -120,11 +120,11 @@ public class StandardRouter implements MessageReceiver {
 	    msg.nextHop = localHandle;
 
 	else if ((lsPos>0 && lsPos<cwSize ) ||
-////		 (lsPos==cwSize && !leafSet.get(lsPos).getNodeId().clockwise(target)) ||
+		 // (lsPos==cwSize && !leafSet.get(lsPos).getNodeId().clockwise(target)) ||
 		 (lsPos<0 && -lsPos<ccwSize) 
-////		 || (-lsPos==ccwSize && leafSet.get(lsPos).getNodeId().clockwise(target))
-		)
-	    // for the two boundary cases we further check the msg is inside the boundary node
+		 //|| (-lsPos==ccwSize && leafSet.get(lsPos).getNodeId().clockwise(target)) 
+		 )
+	    // the target is within range of the leafset, deliver it directly 
 	    {
 		NodeHandle handle = leafSet.get(lsPos);
 
@@ -137,6 +137,7 @@ public class StandardRouter implements MessageReceiver {
 		}
 	    }
 	else {
+	    // use the routing table
 	    RouteSet rs = routeTable.getBestEntry(target);
 	    NodeHandle handle = null;
 
@@ -182,3 +183,4 @@ public class StandardRouter implements MessageReceiver {
 	localHandle.receiveMessage(msg);
     }
 }
+

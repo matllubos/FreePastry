@@ -290,7 +290,8 @@ public abstract class PastryAppl implements MessageReceiver
     public void routeSetChange(NodeHandle nh, boolean wasAdded) {}
 
     /**
-     * Invoked when the Pastry node is ready to receive application messages.
+     * Invoked when the Pastry node has joined the overlay network and
+     * is ready to send and receive messages
      */
     
     public void notifyReady() {}

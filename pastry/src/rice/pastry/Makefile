@@ -2,6 +2,7 @@ PACKAGE = rice.pastry
 
 SOURCE  = \
 	NodeId.java\
+	NodeIdI.java\
 	NodeIdFactory.java\
 	NodeHandle.java\
 	PastryNode.java\

@@ -105,7 +105,6 @@ public class StandardJoinProtocol implements MessageReceiver
 		if (jr.accepted() == false) {   // this the terminal node on the request path
 		    //leafSet.put(nh);
 		    jr.acceptJoin(localHandle,leafSet);
-
 		    nh.receiveMessage(jr);
 		}
 		
@@ -114,7 +113,10 @@ public class StandardJoinProtocol implements MessageReceiver
 		    
 		    jh = security.verifyNodeHandle(jh);
 
-		    if (jh.isAlive() == true) {  // the join handle is alive
+		    if (jh.getNodeId().equals(localHandle.getNodeId())) {
+			System.out.println("NodeId collision, join failed!");
+		    }
+		    else if (jh.isAlive() == true) { // the join handle is alive
 			routeTable.put(jh); // add the num. closest node to the routing table
 
 			// update local RT, then broadcast rows to our peers
@@ -144,8 +146,10 @@ public class StandardJoinProtocol implements MessageReceiver
 		
 	    int msdd = localId.indexOfMSDD(nid, base);
 	    int last = jr.lastRow();
-		
-	    for (int i=last - 1; i>=msdd; i--) {
+
+	    //System.out.println("join from " + nid + " at " + localId + " msdd=" + msdd + " last=" + last);
+			       
+	    for (int i=last - 1; msdd>0 && i>=msdd; i--) {
 		//System.out.println(routeTable);
 		//System.out.print(i + " ");
 

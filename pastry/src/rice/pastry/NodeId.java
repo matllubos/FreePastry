@@ -273,7 +273,7 @@ public class NodeId implements Comparable, Serializable
     }
     
     /**
-     * Returns the shorter distance between a pair of nodeIds.
+     * Returns the shorter numerical distance on the ring between a pair of nodeIds.
      *
      * @param nid the other node id.
      * @return the distance between this and nid.
@@ -340,7 +340,7 @@ public class NodeId implements Comparable, Serializable
 
 
     /**
-     * Returns the longer distance between a pair of nodeIds.
+     * Returns the longer numerical distance on the ring between a pair of nodeIds.
      *
      * @param nid the other node id.
      * @return the distance between this and nid.
@@ -407,7 +407,7 @@ public class NodeId implements Comparable, Serializable
 
 
     /**
-     * Equivalence relation for nodes.
+     * Equivalence relation for nodeIds.
      *
      * @param nid the other node id.
      * @return true if they are equal, false otherwise.
@@ -423,7 +423,7 @@ public class NodeId implements Comparable, Serializable
     }
 
     /**
-     * Checks to see if the node is clockwise or counterclockwise.
+     * Checks to see if the nodeId nid is clockwise or counterclockwise on the ring.
      *
      * @return true if clockwise, false otherwise.
      */
@@ -628,7 +628,7 @@ public class NodeId implements Comparable, Serializable
     /**
      * Returns a string representation of the nodeId.
      *
-     * The string is a byte string from least to most significant.
+     * The string is a byte string from most to least significant.
      */
 
     public String toString() 

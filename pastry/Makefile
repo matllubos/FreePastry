@@ -18,7 +18,7 @@ PACKAGES = \
 	rice.ap3\
 	rice.ap3.routing\
 	rice.ap3.messaging\
-	rice.ap3.testing\
+#	rice.ap3.testing\
 	rice.scribe\
 	rice.scribe.maintenance\
 	rice.scribe.messaging\
