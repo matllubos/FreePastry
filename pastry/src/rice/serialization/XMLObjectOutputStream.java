@@ -65,6 +65,21 @@ import java.util.*;
 public class XMLObjectOutputStream extends ObjectOutputStream {
   
   /**
+   * A cache of the writeReplace() methods, mapping class->writeReplace()
+   */
+  protected static HashMap WRITE_REPLACES = new HashMap();
+  
+  /**
+   * A cache of the writeObject() methods, mapping class->writeObject()
+   */
+  protected static HashMap WRITE_OBJECTS = new HashMap();
+  
+  /**
+   * A cache of the persistentFields, mapping class->Field[]
+   */
+  protected static HashMap PERSISTENT_FIELDS = new HashMap();
+  
+  /**
    * The underlying XML writing engine
    */
   protected XMLWriter writer;
@@ -74,11 +89,6 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
    * maps Integer(hash) -> reference name.
    */
   protected Hashtable references;
-  
-  /**
-   * A cache of the writeReplace() methods
-   */
-  protected HashMap writeReplaces;
   
   /**
    * A counter used to generate unique references
@@ -114,7 +124,6 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
     
     this.writer = new XMLWriter(out);
     this.references = new Hashtable();
-    this.writeReplaces = new HashMap();
     this.currentObjects = new Stack();
     this.currentClasses = new Stack();
     this.currentPutFields = new Stack();
@@ -442,8 +451,8 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
    * @return The method, or null if none was found
    */
   private Method getWriteReplace(Class cl) {
-    if (writeReplaces.containsKey(cl))
-      return (Method) writeReplaces.get(cl);
+    if (WRITE_REPLACES.containsKey(cl))
+      return (Method) WRITE_REPLACES.get(cl);
     
     Method meth = null;
     Class defCl = cl;
@@ -457,7 +466,7 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
     }
     
     if (meth == null) {
-      writeReplaces.put(cl, meth);
+      WRITE_REPLACES.put(cl, meth);
 	    return null;
     }
     
@@ -465,20 +474,46 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
     int mods = meth.getModifiers();
     if ((mods & (Modifier.STATIC | Modifier.ABSTRACT)) != 0) {
     } else if ((mods & (Modifier.PUBLIC | Modifier.PROTECTED)) != 0) {
-      writeReplaces.put(cl, meth);
+      WRITE_REPLACES.put(cl, meth);
 	    return meth;
     } else if ((mods & Modifier.PRIVATE) != 0) {
 	    if (cl == defCl) {
-        writeReplaces.put(cl, meth);
+        WRITE_REPLACES.put(cl, meth);
         return meth;
       }
     } else {
-      writeReplaces.put(cl, meth);
+      WRITE_REPLACES.put(cl, meth);
       return meth;
     }
       
-    writeReplaces.put(cl, null);
+    WRITE_REPLACES.put(cl, null);
     return null;
+  }
+  
+  /**
+    * This method returns the readResolve() method of a given class, if such a method 
+   * exists.  This method searches the class's heirarchy for a readResolve() method
+   * which is assessible by the given class.  If no such method is found, null is returned.
+   *
+   * @param cl The class to find the readResolve() of
+   * @return The method, or null if none was found
+   */
+  private static Method getWriteObject(Class cl) {
+    synchronized (WRITE_OBJECTS) {
+      if (WRITE_OBJECTS.containsKey(cl)) 
+        return (Method) WRITE_OBJECTS.get(cl);
+      
+      try {
+        Method method = cl.getDeclaredMethod("writeObject", new Class[] {ObjectOutputStream.class});
+        method.setAccessible(true);
+        
+        WRITE_OBJECTS.put(cl, method);
+        return method;
+      } catch (NoSuchMethodException e) {
+        WRITE_OBJECTS.put(cl, null);
+        return null;
+      }
+    }
   }
   
   /**
@@ -489,14 +524,20 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
    *
    * @param c The class to return the fields for
    */
-  protected Field[] getPersistentFields(Class c) {
-    Field[] fields = getSerialPersistentFields(c);
+  protected Field[] getPersistentFields(Class cl) {
+    synchronized (PERSISTENT_FIELDS) {
+      if (PERSISTENT_FIELDS.containsKey(cl))
+        return (Field[]) PERSISTENT_FIELDS.get(cl);
+          
+      Field[] fields = getSerialPersistentFields(cl);
     
-    if (fields == null) {
-      fields = c.getDeclaredFields();
+      if (fields == null) {
+        fields = cl.getDeclaredFields();
+      }
+    
+      PERSISTENT_FIELDS.put(cl, fields);
+      return fields;
     }
-    
-    return fields;
   }
   
   /**
@@ -898,24 +939,25 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
     writer.start("declaredClass");
     writer.attribute("class", c.getName());
     
-    try {
-      Method method = c.getDeclaredMethod("writeObject", new Class[] {ObjectOutputStream.class});
-      method.setAccessible(true);
-      
-      currentObjects.push(o);
-      currentClasses.push(c);
-      currentPutFields.push(new PutField());
-      method.invoke(o, new Object[] {this});
-      currentObjects.pop();
-      currentClasses.pop();
-      currentPutFields.pop();
-    } catch (NoSuchMethodException e) {
+    Method method = getWriteObject(c);
+    
+    if (method != null) {
+      try {
+        currentObjects.push(o);
+        currentClasses.push(c);
+        currentPutFields.push(new PutField());
+        method.invoke(o, new Object[] {this});
+        currentObjects.pop();
+        currentClasses.pop();
+        currentPutFields.pop();
+      } catch (IllegalAccessException e) {
+        throw new IOException("IllegalAccessException thrown! " + e);
+      } catch (InvocationTargetException e) {
+        throw new IOException("InvocationTargetException thrown! " + e.getTargetException());
+      }
+    } else {
       writeFields(o, c);
-    } catch (IllegalAccessException e) {
-      throw new IOException("IllegalAccessException thrown! " + e);
-    } catch (InvocationTargetException e) {
-      throw new IOException("InvocationTargetException thrown! " + e.getTargetException());
-    }
+    } 
     
     writer.end("declaredClass"); 
   }

@@ -71,9 +71,14 @@ public class XMLObjectInputStream extends ObjectInputStream {
   protected static HashMap READ_RESOLVES = new HashMap();
   
   /**
+  * The hashmap of readObject methods, mapping Class->Method
+   */
+  protected static HashMap READ_OBJECTS = new HashMap();
+  
+  /**
    * A cache of constructors, mapping classes to serialization constructors
    */
-  protected static Hashtable constructors = new Hashtable();
+  protected static HashMap CONSTRUCTORS = new HashMap();
   
   /**
    * The underlying reader, which parses the XML
@@ -455,7 +460,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
     synchronized (READ_RESOLVES) {
       if (READ_RESOLVES.containsKey(cl)) 
         return (Method) READ_RESOLVES.get(cl);
-      
+            
       Method meth = null;
       Class defCl = cl;
       while (defCl != null) {
@@ -496,6 +501,32 @@ public class XMLObjectInputStream extends ObjectInputStream {
   }
   
   /**
+   * This method returns the readResolve() method of a given class, if such a method 
+   * exists.  This method searches the class's heirarchy for a readResolve() method
+   * which is assessible by the given class.  If no such method is found, null is returned.
+   *
+   * @param cl The class to find the readResolve() of
+   * @return The method, or null if none was found
+   */
+  private static Method getReadObject(Class cl) {
+    synchronized (READ_OBJECTS) {
+      if (READ_OBJECTS.containsKey(cl)) 
+        return (Method) READ_OBJECTS.get(cl);
+      
+      try {
+        Method method = cl.getDeclaredMethod("readObject", new Class[] {ObjectInputStream.class});
+        method.setAccessible(true);
+      
+        READ_OBJECTS.put(cl, method);
+        return method;
+      } catch (NoSuchMethodException e) {
+        READ_OBJECTS.put(cl, null);
+        return null;
+      }
+    }
+  }
+  
+  /**
    * Method which returns the Serializable constructor for the provided class.  This
    * Constructor is the no-arg Constructor for the first non-Serializable class
    * in the class's superclass heirarchy.  This method does not cache the result, but
@@ -530,7 +561,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
    */
   protected Object newInstance(Class c) throws IOException {
     try {
-      Constructor cons = (Constructor) constructors.get(c);
+      Constructor cons = (Constructor) CONSTRUCTORS.get(c);
     
       if (cons == null) {
         if (Externalizable.class.isAssignableFrom(c)) {
@@ -540,7 +571,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
         }
           
         cons.setAccessible(true);
-        constructors.put(c, cons);
+        CONSTRUCTORS.put(c, cons);
       }
 
       return cons.newInstance(new Object[0]);
@@ -927,27 +958,30 @@ public class XMLObjectInputStream extends ObjectInputStream {
     reader.assertStartTag("declaredClass");
 
     Class c = Class.forName(reader.getAttribute("class"));
-
-    try {
-      Method method = c.getDeclaredMethod("readObject", new Class[] {ObjectInputStream.class});
-      method.setAccessible(true);
-
-      currentObjects.push(o);
-      currentClasses.push(c);
-      method.invoke(o, new Object[] {this});
-      currentObjects.pop();
-      currentClasses.pop();
-      readUnreadOptionalData();
-    } catch (NoSuchMethodException e) {
+    
+    Method method = getReadObject(c);
+    
+    if (method != null) {
+      try {
+        currentObjects.push(o);
+        currentClasses.push(c);
+        method.invoke(o, new Object[] {this});
+        currentObjects.pop();
+        currentClasses.pop();
+        readUnreadOptionalData();
+      } catch (InvocationTargetException e) {
+        System.out.println(e.getTargetException().getMessage());
+        e.getTargetException().printStackTrace();
+        throw new IOException("InvocationTargetException thrown! " + e.getTargetException());
+      } catch (IllegalAccessException e) {
+        System.out.println(e.getMessage());
+        e.printStackTrace();
+        throw new IOException("IllegalAccessException thrown! " + e);
+      }
+    } else {
       readFields(o, c);
       readUnreadOptionalData();
-    } catch (IllegalAccessException e) {
-      throw new IOException("IllegalAccessException thrown! " + e);
-    } catch (InvocationTargetException e) {
-      System.out.println(e.getTargetException().getMessage());
-      e.getTargetException().printStackTrace();
-      throw new IOException("InvocationTargetException thrown! " + e.getTargetException());
-    }
+    } 
     
     reader.assertEndTag("declaredClass");
     
