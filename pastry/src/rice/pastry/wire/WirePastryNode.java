@@ -189,6 +189,8 @@ public class WirePastryNode extends DistPastryNode {
    */
   public void kill() {
     super.kill();
+    _dManager.notifyKilled();
+    _pool.notifyKilled();
     _manager.kill();
 //    _sManager.kill();
     Wire.releaseFileDescriptors(BASE_NUM_FDS_REQUIRED);
