@@ -889,16 +889,19 @@ System.out.println("IOException " + e + " occured while verifiying PostMessage "
    */
   public void fetch(IdSet keySet) {
     debug("I NEED TO GET " + keySet);
-    Iterator i = keySet.getIterator();
 
-    while (i.hasNext()) {
-      Id id = (Id) i.next();
-      NodeSet set = replicaManager.replicaSet(id, REPLICATION_FACTOR);
-      DeliveryLookupMessage dlm = new DeliveryLookupMessage(address, getNodeHandle(), id);
-      
-      Iterator j = set.getIterator();
-      while (j.hasNext()) {
-        routeMsgDirect((NodeHandle) j.next(), new PostPastryMessage(signPostMessage(dlm)), getCredentials(), new SendOptions());
+    if (replicaManager != null) {
+      Iterator i = keySet.getIterator();
+
+      while (i.hasNext()) {
+        Id id = (Id) i.next();
+        NodeSet set = replicaManager.replicaSet(id, REPLICATION_FACTOR);
+        DeliveryLookupMessage dlm = new DeliveryLookupMessage(address, getNodeHandle(), id);
+
+        Iterator j = set.getIterator();
+        while (j.hasNext()) {
+          routeMsgDirect((NodeHandle) j.next(), new PostPastryMessage(signPostMessage(dlm)), getCredentials(), new SendOptions());
+        }
       }
     }
   }
