@@ -98,16 +98,33 @@ public class MessagePropertyPart extends FetchPart {
       }
     }
 
-    private String parseMimeMultipart(MimeMultipart mime) throws MessagingException {
-      String result = "(";
+    private String parseMimeMultipart(MimeMultipart mime) throws MessagingException, MailboxException {
+      try {
+        String result = "(";
 
-      for (int i=0; i<mime.getCount(); i++) {
-        result += parseMimeBodyPart((MimeBodyPart) mime.getBodyPart(i));
+        for (int i=0; i<mime.getCount(); i++) {
+          MimeBodyPart part = (MimeBodyPart) mime.getBodyPart(i);
+
+          if (part.getContent() instanceof MimeMultipart) {
+            result += parseMimeMultipart((MimeMultipart) part.getContent());
+          } else {
+            result += parseMimeBodyPart(part);
+          }
+        }
+
+        String content = "mixed";
+
+        if (mime.getContentType().indexOf("multipart") > 0) {
+          String msg = mime.getContentType();
+          content = msg.substring(msg.indexOf("multipart")+10, msg.indexOf(" ", msg.indexOf("multipart")+10));
+        }
+        
+        result += " \"" + content + "\")";
+
+        return result;
+      } catch (IOException ioe) {
+        throw new MailboxException(ioe);
       }
-
-      result += " \"MIXED\")";
-
-      return result;
     }
 
     private String parseMimeBodyPart(MimeBodyPart mime) throws MessagingException {
@@ -117,11 +134,15 @@ public class MessagePropertyPart extends FetchPart {
       String mainType = "\"" + type + "\"";
       String subType = "NIL";
 
+      System.out.println("Got type " + type);
+
       if (type.indexOf("/") != -1) {
         mainType = "\"" + type.substring(0,type.indexOf("/")) + "\"";
 
         if (type.indexOf(";") != -1) {
           subType = "\"" + type.substring(type.indexOf("/") + 1, type.indexOf(";")) + "\"";
+        } else {
+          subType = "\"" + type.substring(type.indexOf("/") + 1) + "\"";
         }
       }
 
@@ -138,21 +159,26 @@ public class MessagePropertyPart extends FetchPart {
 
       result += mainType + " " + subType + " ";
 
-      result += "(";
-      
-      if (! charset.equals("NIL")) {
-        result += "\"CHARSET\" \"" + charset + "\"";
-      }
 
-      if ((! charset.equals("NIL")) && (! name.equals("NIL"))) {
-        result += " ";
-      }
+      if ((charset.equals("NIL")) && (name.equals("NIL"))) {
+        result += "NIL ";
+      } else {
+        result += "(";
 
-      if (! name.equals("NIL")) {
-        result += "\"NAME\" \"" + name + "\"";
-      }
+        if (! charset.equals("NIL")) {
+          result += "\"CHARSET\" \"" + charset + "\"";
+        }
 
-      result += ") ";
+        if ((! charset.equals("NIL")) && (! name.equals("NIL"))) {
+          result += " ";
+        }
+        
+        if (! name.equals("NIL")) {
+          result += "\"NAME\" \"" + name + "\"";
+        }
+
+        result += ") ";
+      }
 
       String encoding = "\"" + mime.getEncoding() + "\"";
 
@@ -160,7 +186,19 @@ public class MessagePropertyPart extends FetchPart {
         encoding = "\"7BIT\"";
       }
 
-      result += "NIL NIL " + encoding + " " + mime.getSize();
+      String id = "\"" + mime.getContentID() + "\"";
+
+      if (id.equals("\"null\"")) {
+        id = "NIL";
+      }
+
+      String description = "\"" + mime.getDescription() + "\"";
+
+      if (description.equals("\"null\"")) {
+        description = "NIL";
+      }
+      
+      result +=  id + " " + description + " " + encoding + " " + mime.getSize();
 
       if (mainType.toLowerCase().equals("text")) {
         result += " " + mime.getLineCount();
