@@ -7,9 +7,10 @@ import rice.scribe.messaging.*;
 /*
  * @(#) SplitStreamMessage.java
  *
- */
-/**
- * This message is the base class for all SplitStreamMessages 
+ * This message is the base class for all SplitStreamMessages
+ *
+ * @deprecated This version of SplitStream has been deprecated - please use the version
+ *   located in the rice.p2p.splitstream package.
  */
 public interface SplitStreamMessage{
 

@@ -17,8 +17,11 @@ import java.util.*;
 /**
  * This test determines wheter the bandwidthManager is functioning as it is
  * supposed to be.
- * 
+ *
  * @author Ansley Post
+ *
+ * @deprecated This version of SplitStream has been deprecated - please use the version
+ *   located in the rice.p2p.splitstream package.
  */
 public class BandwidthUnitTest{
 

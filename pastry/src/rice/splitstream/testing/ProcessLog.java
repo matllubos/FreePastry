@@ -3,7 +3,11 @@ package rice.splitstream.testing;
 import java.io.*;
 import java.util.*;
 
-
+/**
+ *
+ * @deprecated This version of SplitStream has been deprecated - please use the version
+ *   located in the rice.p2p.splitstream package.
+ */
 public class ProcessLog{
     protected static Vector file_names = new Vector();
     protected static int MAX_SEQ = 10240;

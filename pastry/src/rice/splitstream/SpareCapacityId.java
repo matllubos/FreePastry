@@ -10,6 +10,9 @@ import rice.pastry.*;
  *
  * @version $Id$
  * @author Ansley Post
+ *
+ * @deprecated This version of SplitStream has been deprecated - please use the version
+ *   located in the rice.p2p.splitstream package.
  */
 public class SpareCapacityId extends NodeId{
 

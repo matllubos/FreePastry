@@ -15,6 +15,9 @@ import java.util.Vector;
  * @(#) ControlPropogatePathMessage.java
  * @version $Id$
  * @author briang
+ *
+ * @deprecated This version of SplitStream has been deprecated - please use the version
+ *   located in the rice.p2p.splitstream package.
  */
 public class ControlPropogatePathMessage extends Message{
 

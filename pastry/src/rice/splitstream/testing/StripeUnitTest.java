@@ -17,8 +17,11 @@ import java.util.*;
 /**
  * This test determines whether the Stripe class is functioning as it is
  * supposed to be.
- * 
+ *
  * @author Ansley Post
+ *
+ * @deprecated This version of SplitStream has been deprecated - please use the version
+ *   located in the rice.p2p.splitstream package.
  */
 public class StripeUnitTest implements Observer {
 

@@ -23,7 +23,11 @@ import java.net.*;
 import java.io.Serializable;
 import java.security.*;
 
-
+/**
+ *
+ * @deprecated This version of SplitStream has been deprecated - please use the version
+ *   located in the rice.p2p.splitstream package.
+ */
 public class DirectSplitStreamTestApp implements ISplitStreamApp, Observer{
 
     private ISplitStream m_splitstream = null;

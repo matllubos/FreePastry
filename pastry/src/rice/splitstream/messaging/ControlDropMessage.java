@@ -16,6 +16,9 @@ import rice.scribe.messaging.*;
  * @version $Id$
  * @author briang
  * @author Atul Singh
+ *
+ * @deprecated This version of SplitStream has been deprecated - please use the version
+ *   located in the rice.p2p.splitstream package.
  */
 public class ControlDropMessage extends ControlMessage{
 

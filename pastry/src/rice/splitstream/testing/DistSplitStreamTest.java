@@ -30,8 +30,11 @@ import java.security.*;
  * A test suite for SplitStream with RMI/WIRE.
  *
  * @version $Id$
- * 
+ *
  * @author Atul Singh
+ *
+ * @deprecated This version of SplitStream has been deprecated - please use the version
+ *   located in the rice.p2p.splitstream package.
  */
 
 public class DistSplitStreamTest {

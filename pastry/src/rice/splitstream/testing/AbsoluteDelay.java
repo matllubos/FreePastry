@@ -3,6 +3,11 @@ package rice.splitstream.testing;
 import java.io.*;
 import java.util.*;
 
+/**
+ *
+ * @deprecated This version of SplitStream has been deprecated - please use the version
+ *   located in the rice.p2p.splitstream package.
+ */
 public class AbsoluteDelay extends ProcessLog{
     
     private static int absoluteDelayMax[] = new int[MAX_SEQ];
