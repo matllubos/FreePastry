@@ -79,7 +79,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private final long HOURS = 60 * MINUTES;
 
   private final long insertTimeout = 20 * SECONDS;
-  private final double minFragmentsAfterInsert = 2.0;
+  private final double minFragmentsAfterInsert = 3.0;
 
   private final long refreshTimeout = 20 * SECONDS;
 
@@ -203,8 +203,6 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         
         while (iter.hasNext()) {
           final Id thisNeighbor = (Id) iter.next();
-System.out.println("thisNeighbor = "+thisNeighbor);
-
           if (leafSet.memberHandle(thisNeighbor)) {
             log(3, "CNE: Refreshing current neighbor: "+thisNeighbor);
             neighborSeen(thisNeighbor, System.currentTimeMillis());
@@ -286,7 +284,8 @@ System.out.println("thisNeighbor = "+thisNeighbor);
               bv.add(getHashInput(fkey.getVersionKey(), prevExp));
             }
           }
-        
+
+          log(3, "Got "+bv);        
           log(2, keySet.numElements()+" keys added, sending sync request...");
         
           endpoint.route(
@@ -697,7 +696,7 @@ System.out.println("thisNeighbor = "+thisNeighbor);
     return ((h<10) ? "0" : "") + Integer.toString(h) + ":" +
            ((m<10) ? "0" : "") + Integer.toString(m) + ":" +
            ((s<10) ? "0" : "") + Integer.toString(s) + " @" +
-           node.getId() + "#" + Thread.currentThread().getName() + "# " + debugID;
+           node.getId() + " " + debugID;
   }
 
   private void log(int level, String str) {
@@ -798,23 +797,23 @@ System.out.println("thisNeighbor = "+thisNeighbor);
     if ((cmd.length() >= 2) && cmd.substring(0, 2).equals("ls")) {
       FragmentKeySet keyset = (FragmentKeySet) fragmentStorage.scan();
       Iterator iter = keyset.getIterator();
-      String result = "";
+      StringBuffer result = new StringBuffer();
   
       long now = System.currentTimeMillis();
       if (cmd.indexOf("-r") < 0)
         now = 0;
     
-      result = result + keyset.numElements()+ " fragment(s)\n";
+      result.append(keyset.numElements()+ " fragment(s)\n");
       
       while (iter.hasNext()) {
         FragmentKey thisKey = (FragmentKey) iter.next();
         boolean isMine = responsibleRange.containsId(getFragmentLocation(thisKey));
         FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(thisKey);
-        result = result + ((Id)thisKey).toStringFull()+" "+(isMine ? "OK" : "MI")+" "+
-                 (metadata.getCurrentExpiration()-now)+" "+(metadata.getPreviousExpiration()-now)+"\n";
+        result.append(((Id)thisKey).toStringFull()+" "+(isMine ? "OK" : "MI")+" "+
+            (metadata.getCurrentExpiration()-now)+" "+(metadata.getPreviousExpiration()-now)+"\n");
       }
       
-      return result;
+      return result.toString();
     }
 
     if ((cmd.length() >= 5) && cmd.substring(0, 5).equals("flush")) {
@@ -979,7 +978,9 @@ System.out.println("thisNeighbor = "+thisNeighbor);
       boolean[] receiptReceived;
       boolean doInsert = (fragments != null);
       boolean doRefresh = !doInsert;
-
+      boolean answered = false;
+      int minAcceptable = (int)(numSurvivors * minFragmentsAfterInsert);
+      
       public String toString() {
         return whoAmI() + " continuation for "+key;
       }
@@ -1053,8 +1054,10 @@ System.out.println("thisNeighbor = "+thisNeighbor);
                 if ((holder[fragmentID] != null) && (holder[fragmentID].equals(grm.getSource()))) {
                   log(3, "Receipt received after "+whoAmI()+": "+grm.getKey(0));
                   receiptReceived[fragmentID] = true;
-                  if (numReceiptsReceived() == numFragments)
-                    timeoutExpired();
+                  if ((numReceiptsReceived() >= minAcceptable) && !answered) {
+                    answered = true;
+                    reportSuccess();
+                  }
                 } else { 
                   warn("Receipt received from another source (expecting "+holder[fragmentID]+")");
                 }
@@ -1074,20 +1077,32 @@ System.out.println("thisNeighbor = "+thisNeighbor);
       public void receiveException(Exception e) {
         warn("Exception during "+whoAmI()+"("+key+"): "+e);
         e.printStackTrace();
-        command.receiveException(new GlacierException("Exception while inserting/refreshing: "+e));
+        if (!answered) {
+          answered = true;
+          command.receiveException(new GlacierException("Exception while inserting/refreshing: "+e));
+        }
         terminate();
       }
-      public void timeoutExpired() {
-        int minAcceptable = (int)(numSurvivors * minFragmentsAfterInsert);
+      private void reportSuccess() {
+        log(3, "Reporting success for "+key+", "+numReceiptsReceived()+"/"+numFragments+" receipts received so far");
+        if (doInsert)
+          command.receiveResult(new Boolean[] { new Boolean(true) });
+        else
+          command.receiveResult(new Boolean(true));
+      }      
+      public void timeoutExpired() {        
         if (numReceiptsReceived() >= minAcceptable) {
           log(2, whoAmI()+" of "+key+" successful, "+numReceiptsReceived()+"/"+numFragments+" receipts received");
-          if (doInsert)
-            command.receiveResult(new Boolean[] { new Boolean(true) });
-          else
-            command.receiveResult(new Boolean(true));
+          if (!answered) {
+            answered = true;
+            reportSuccess();
+          }
         } else {
           warn("Insertion of "+key+" failed, only "+numReceiptsReceived()+"/"+numFragments+" receipts received");
-          command.receiveException(new GlacierException("Insert failed, did not receive enough receipts"));
+          if (!answered) {
+            answered = true;
+            command.receiveException(new GlacierException("Insert failed, did not receive enough receipts"));
+          }
         }
 
         terminate();
@@ -1761,6 +1776,7 @@ System.out.println("thisNeighbor = "+thisNeighbor);
       final GlacierSyncMessage gsm = (GlacierSyncMessage) msg;
 
       log(2, "SyncRequest from "+gsm.getSource().getId()+" for "+gsm.getRange()+" offset "+gsm.getOffsetFID());
+      log(3, "Contains "+gsm.getBloomFilter());
       
       Iterator iter = fragmentStorage.scan().getIterator();
       final IdRange range = gsm.getRange();
