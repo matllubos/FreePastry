@@ -7,7 +7,7 @@ SOURCE  = \
 	ISplitStream.java \
 	Stripe.java \
 	StripeId.java\
-        SplitStreamTest.java
+	SplitStreamTest.java
 
 RMI_SOURCE =
 

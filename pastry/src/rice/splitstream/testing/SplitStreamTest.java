@@ -1,4 +1,4 @@
-package rice.splitstream;
+package rice.splitstream.testing;
 
 
 import rice.*;
@@ -53,17 +53,20 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
 
 
    public static void main(String argv[]){
-      System.out.println("SplitStream Test Program v0.22");
+      System.out.println("SplitStream Test Program v0.4");
       SplitStreamTest test = new SplitStreamTest();
       test.init();
       test.createNodes();
+      /** --CREATE -- **/
       Channel channel = test.createChannel(1);
+      System.out.println(channel);
+      /** -- ATTACH -- **/
       Channel channel2 = test.attachChannel(2, channel);
       while(test.simulate());
-      Stripe stripeSender = channel.getSubscribedStripes()[0];
+      /* Stripe stripeSender = channel.getSubscribedStripes()[0];
       StripeId striperecvId = channel2.getStripes()[0];
       Stripe striperecv = channel2.joinStripe(striperecvId, test);
-      stripeSender.backdoorSend(new String("Hello"));
+      stripeSender.backdoorSend(new String("Hello")); */
       while(test.simulate());
       
    }

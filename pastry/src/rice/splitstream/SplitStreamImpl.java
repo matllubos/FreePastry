@@ -41,10 +41,6 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
     */
    public Channel createChannel(int numStripes){
 	System.out.println("Channel: Creating a new channel, numStripes = " + numStripes);
-	if(scribe == null)
-		{ System.out.println("NULL");}
-	if(((Scribe)scribe).getNodeHandle().getLocalNode() == null)
-		{ System.out.println("NULL");}
 	return (new Channel(numStripes, scribe, credentials ,bandwidthManager, node));
    }
    /**
@@ -82,7 +78,6 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
    /** - IScribeObserver Implementation -- */
    public void update(Object topicId){
  	scribe.join((NodeId) topicId, this, credentials);	
- 	System.out.println("Topic Created " + (NodeId) topicId + " at " + ((Scribe) scribe).getNodeId());
    } 
 
    /** - IScribeApp Implementation -- */
@@ -102,11 +97,15 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
                                Serializable data){
      NodeId[] nodeData = (NodeId[]) data;
      if(nodeData.length > 1){
-	System.out.println("Channel Creation Message");
-	
+   			
 	/* Clean This up */
 	StripeId[] stripeId = new StripeId[nodeData.length - 2];
 	ChannelId channelId = new ChannelId(nodeData[0]);
+	for(int i = 1; i < nodeData.length -1; i++){
+		stripeId[i-1] = new StripeId(nodeData[i]);
+	}
+
+
         SpareCapacityId spareCapacityId = new SpareCapacityId(nodeData[nodeData.length -1]);
 	/* Clean This up */
 
@@ -116,7 +115,6 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
      else
 	System.out.println("Stripe Subscription Message");
  
-     System.out.println("Subscribe Message Recieved for topic " + topicId);
    }
 }
 

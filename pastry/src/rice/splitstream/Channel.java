@@ -19,8 +19,9 @@ public class Channel extends PastryAppl implements IScribeApp {
     * subscribed to.
     */
    private SpareCapacityId spareCapacityId = null;
-   private int subscribedStripes = 0;
+   private int numSubscribedStripes = 0;
    private Hashtable stripeIdTable = new Hashtable();
+   private Vector subscribedStripes = new Vector();
    /**
     * The primary stripe for this node.
     */
@@ -57,7 +58,7 @@ public class Channel extends PastryAppl implements IScribeApp {
    public Channel(int numStripes, IScribe scribe, Credentials cred, 
                   BandwidthManager bandwidthManager, PastryNode node){
  	super(node);	
-        this.subscribedStripes = numStripes;
+        this.numSubscribedStripes = numStripes;
 	this.scribe = scribe;
 	this.bandwidthManager = bandwidthManager;
 	this.numStripes = numStripes;
@@ -65,15 +66,14 @@ public class Channel extends PastryAppl implements IScribeApp {
 	this.bandwidthManager.registerChannel(this);
 	scribe.registerApp(this);
         NodeId topicId = (new RandomNodeIdFactory()).generateNodeId();
-	System.out.println("Trying to create channel : " +  topicId);
         if(scribe.create(topicId, cred)){
 		System.out.println("Channel Topic Created");
+		this.channelId = new ChannelId(topicId);
         }
         topicId = (new RandomNodeIdFactory()).generateNodeId();
         if(scribe.create(topicId, cred)){
-		System.out.println("SpareCapacity Topic Created");
+		this.spareCapacityId = new SpareCapacityId(topicId);
         }
-	spareCapacityId = new SpareCapacityId(topicId);
         NodeId baseId = (new RandomNodeIdFactory()).generateNodeId();
 	for(int i = 0; i < numStripes; i++){
 		StripeId stripeId = new StripeId(baseId.getAlternateId(numStripes, 4, i));
@@ -83,10 +83,12 @@ public class Channel extends PastryAppl implements IScribeApp {
         /* Also select the primary stripe */
    	NodeId[] subInfo = new NodeId[numStripes + 2]; 
 	subInfo[0] = topicId;
+	for(int i = 1; i < subInfo.length -1; i++){
+		subInfo[i] = getStripes()[i - 1];
+	}
 	subInfo[subInfo.length-1] = topicId;
 	if(scribe.join(topicId, this, cred, subInfo)){
 		System.out.println("Joined Group");
-		this.channelId = new ChannelId(topicId);
 	}		
    	isReady = true;
    }
@@ -105,23 +107,23 @@ public class Channel extends PastryAppl implements IScribeApp {
 	ControlAttachMessage attachMessage = new ControlAttachMessage();
         /* is this right? */
         /* Change the data to be the message we want to send */
+        System.out.println("Sending Anycast Message ");
         scribe.anycast(channelId, attachMessage, cred );
- 	/* join */	
-        /* Get back all the StripeID's and then process them */
-        /* Then we should be attached */
-        /* we also need to create and mark a primary stripe */ 
 
    }
   
   public Channel(ChannelId channelId, StripeId[] stripeIds, SpareCapacityId 
                  spareCapacityId, IScribe scribe, BandwidthManager bandwidthManager, PastryNode node){
 
- 	super(node);	
-	System.out.println("A Channel Object is being created");
+ 	super(node);
 	this.channelId = channelId;
+	this.spareCapacityId = spareCapacityId;
+
 	for(int i = 0 ; i < stripeIds.length ; i++){
-		stripeIdTable.put(stripeIds[i], null);
+		if(stripeIdTable == null) {System.out.println("NULL");}
+		stripeIdTable.put(stripeIds[i], "NULL");
 	}
+
 	this.numStripes = stripeIds.length;
 	this.scribe = scribe;
 	this.bandwidthManager = bandwidthManager;
@@ -130,6 +132,8 @@ public class Channel extends PastryAppl implements IScribeApp {
 	
 	/* Subscribe to a primary stripe */
 	isReady = true;
+	System.out.println("A Channel Object is being created (In Path) at " + getNodeId());
+	System.out.println(this);
     }
  
   /**
@@ -154,7 +158,13 @@ public class Channel extends PastryAppl implements IScribeApp {
    * @return An array of all StripeIds associated with this channel
    */ 
   public StripeId[] getStripes(){
-	return ((StripeId[]) stripeIdTable.keySet().toArray());
+	Object[] obj = stripeIdTable.keySet().toArray();	
+	StripeId[] temp = new StripeId[obj.length];
+	for(int i = 0; i < obj.length; i++){
+		temp[i] = (StripeId) obj[i];
+	}
+	
+	return (temp);
   }
 
   /**
@@ -163,15 +173,13 @@ public class Channel extends PastryAppl implements IScribeApp {
    * Stripe.
    * @return Stripe[] the Stripes this node is subscribed to.
    */
-  public Stripe[] getSubscribedStripes(){
-       Set s = stripeIdTable.entrySet();
-       s.remove(null);
-       return  ((Stripe[]) s.toArray());
+  public Vector getSubscribedStripes(){
+ 	return(subscribedStripes); 
   }
 
   /**
    * The primary stripe is the stripe that the user must have.
-   * @return Stripe The Strip object that is the primary stripe.
+   * @return Stripe The Stripe object that is the primary stripe.
    */ 
   public Stripe getPrimaryStripe(){
     return primaryStripe;
@@ -204,6 +212,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 		}
 		stripe.joinStripe();	
 		stripe.addObserver(observer);
+		subscribedStripes.addElement(stripe);
 		return(stripe);
   }
 
@@ -218,7 +227,7 @@ public class Channel extends PastryAppl implements IScribeApp {
   * @return the number of Stripes
   */
   public int getNumSubscribedStripes(){
-     return subscribedStripes;
+     return numSubscribedStripes;
   }
 
  /**
@@ -230,7 +239,7 @@ public class Channel extends PastryAppl implements IScribeApp {
   }
 
   public SpareCapacityId getSpareCapacityId(){
-     return null;
+     return spareCapacityId;
   }
 
 
@@ -258,12 +267,25 @@ public class Channel extends PastryAppl implements IScribeApp {
   public void messageForAppl (Message msg){
 	NodeId[] subInfo = (NodeId[]) ((ControlAttachResponseMessage) msg).getContent();	
 	channelId = new ChannelId(subInfo[0]);
+	spareCapacityId = new SpareCapacityId(subInfo[subInfo.length-1]);
 	/* Fill in all instance variable for channel */
+	for(int i = 1 ; i < subInfo.length-1 ; i++){
+		stripeIdTable.put(new StripeId(subInfo[i]), "NULL");
+	}
         if(scribe.join(channelId, this, cred, subInfo)){
 	}
 	isReady = true;
+	System.out.println("Channel is now ready!");
   }
-
+  public String toString(){
+	String toReturn = "Channel: " + getChannelId() + "\n";
+	toReturn = toReturn + "Stripes: \n";
+	for(int i = 0; i < numStripes; i++){
+		toReturn = toReturn + "\t" + getStripes()[i] + "\n";
+	}
+	toReturn = toReturn + "Spare Capacity Id: " + getSpareCapacityId();
+	return(toReturn);	
+  }
 }
   
 
