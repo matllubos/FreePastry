@@ -49,7 +49,7 @@ public class MessageUnsubscribe extends ScribeMessage implements Serializable
 
 	if ( topic != null ) {
 	    // remove source node from chilren if it isnt us
-	    if( m_source.getNodeId().equals( scribe.getNodeId() ) ) {
+	    if(!m_source.getNodeId().equals( scribe.getNodeId() ) ) {
 		topic.removeChild( handle );
 	    }
 	    
@@ -73,11 +73,24 @@ public class MessageUnsubscribe extends ScribeMessage implements Serializable
 
 		    //we no longer need the topic and is good to remove it
 		    topic.removeFromScribe();
+
+		    // stop TR and HB
+		    topic.stopTR();
+		    topic.stopHB();
 		}
 		else {
 		    // if parent unknown set waiting flag and wait until 
 		    // first event arrives
-		    topic.waitUnsubscribe( true );
+
+		    // make sure it is not Topic manager
+		    if( topic.isTopicManager() ){
+			topic.removeFromScribe();
+			topic.stopHB();
+			System.out.println( "topic " + "removed at " + scribe.getNodeId() );
+		    }
+		    else{
+			topic.waitUnsubscribe( true );
+		    }
 		}
 	    }
 	}

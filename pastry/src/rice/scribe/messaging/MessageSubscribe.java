@@ -45,42 +45,45 @@ public class MessageSubscribe extends ScribeMessage implements Serializable
      */
     public void 
 	handleDeliverMessage( Scribe scribe, Topic topic ) {
-	//we know that we are topic manager because we received the topic msg
-	topic.topicManager( true );
+	// This function will never be executed, because handleForwardMessage() is always
+	// executed first, even on the destination (topic) node.
 
-	if( !scribe.getSecurityManager().
-	   verifyCanSubscribe( m_source, m_topicId ) ){
-
-	    //bad permissions from source node
-	    return;
-	}
-
-	if( topic == null ) {
-	    /*If the topic is unknown just create it. It could be that the old
-	      manager failed and its children want to repair the tree.
-	     */
-	    topic = new Topic( m_topicId, scribe );
-	    topic.addToScribe();
-	} 
-
-	if ( m_source.getNodeId().equals( scribe.getNodeId() ) ) {
-	    //	    topic.subscribe( true );
-	}
-	else {
-	    topic.addChild( m_source );
-
-	    //make the subscribe handler upcall to the scribe app
-	    //IScribeApp app = scribe.getScribeApp();
-	    //app.subscribeHandler( this );
-
-	    // Make the subscribe handler upcall to all interested apps
-	    IScribeApp[] apps = topic.getApps();
-	    for ( int i=0; i<apps.length; i++ ) {
-		apps[i].subscribeHandler( this );
-	    }
-
-	    
-	}
+//	//we know that we are topic manager because we received the topic msg
+//	topic.topicManager( true );
+//
+//	if( !scribe.getSecurityManager().
+//	   verifyCanSubscribe( m_source, m_topicId ) ){
+//
+//	    //bad permissions from source node
+//	    return;
+//	}
+//
+//	if( topic == null ) {
+//	    /*If the topic is unknown just create it. It could be that the old
+//	      manager failed and its children want to repair the tree.
+//	     */
+//	    topic = new Topic( m_topicId, scribe );
+//	    topic.addToScribe();
+//	} 
+//
+//	if ( m_source.getNodeId().equals( scribe.getNodeId() ) ) {
+//	    //	    topic.subscribe( true );
+//	}
+//	else {
+//	    topic.addChild( m_source );
+//
+//	    //make the subscribe handler upcall to the scribe app
+//	    //IScribeApp app = scribe.getScribeApp();
+//	    //app.subscribeHandler( this );
+//
+//	    // Make the subscribe handler upcall to all interested apps
+//	    IScribeApp[] apps = topic.getApps();
+//	    for ( int i=0; i<apps.length; i++ ) {
+//		apps[i].subscribeHandler( this );
+//	    }
+//
+//	    
+//	}
     }
     
     /**
