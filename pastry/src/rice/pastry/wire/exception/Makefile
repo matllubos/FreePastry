@@ -1,9 +1,10 @@
 PACKAGE = rice.pastry.wire.exception
 
 SOURCE  = \
-	SerializationException.java \
 	DeserializationException.java \
-	ImproperlyFormattedMessageException.java
+	ImproperlyFormattedMessageException.java \
+	NodeIsDeadException.java \
+	SerializationException.java 
 
 MAIN       = 
 

@@ -1,4 +1,3 @@
-
 /**
  * "FreePastry" Peer-to-Peer Application Development Substrate Copyright 2002,
  * Rice University. All rights reserved. Redistribution and use in source and

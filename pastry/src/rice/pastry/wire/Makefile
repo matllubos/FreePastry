@@ -1,19 +1,23 @@
 PACKAGE = rice.pastry.wire
 
 SOURCE  = \
-	WirePastryNode.java\
-	WirePastryNodeFactory.java\
-	WirePastrySecurityManager.java\
-	WireNodeHandle.java\
-	WireNodeHandlePool.java\
-	SelectorManager.java\
-	SelectionKeyHandler.java\
 	DatagramManager.java\
 	DatagramTransmissionManager.java\
-	SocketManager.java\
+	GlobalSocketManager.java\
+	NeedsWakeUp.java\
+	PendingWrite.java\
+	SelectionKeyHandler.java\
+	SelectorManager.java\
 	SocketChannelReader.java\
 	SocketChannelWriter.java\
-	PendingWrite.java
+	SocketManager.java\
+	Wire.java\
+	WireLimitationListener.java\
+	WireNodeHandle.java\
+	WireNodeHandlePool.java\
+	WirePastryNodeFactory.java\
+	WirePastryNode.java\
+	WirePastrySecurityManager.java
 
 MAIN       = 
 
