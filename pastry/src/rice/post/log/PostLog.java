@@ -7,24 +7,33 @@ import rice.post.*;
 
 /**
  * This class represents the Log which sits at the address of the user's
- * PostUserAddress and points to the most recent entry in the log.
- *
+ * PostUserAddress and points to the logs of other applications.  This
+ * log itself has no entries.
+ * 
  * This object overrides Log in order to contain the user's public key
  * and certificate for other users in the system to read.
+ * 
+ * @version $Id$
  */
 public class PostLog extends Log {
 
-  // the user of this log
+  /**
+   * The user of this log.
+   */
   private PostEntityAddress user;
 
-  // the public key of the user
+  /**
+   * The public key of the user.
+   */
   private PublicKey key;
 
-  // the certificate of the user
+  /**
+   * The certificate of the user.
+   */
   private java.security.cert.Certificate certificate;
   
   /**
-   * Constructor for LogHead.
+   * Constructor for PostLog.
    *
    * @param user The user whom this LogHead is for
    * @param key The user's public key.

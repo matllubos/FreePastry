@@ -9,6 +9,8 @@ import rice.post.storage.*;
  * Abstract class for all entries in the log. Each application using post should
  * implement a class hierarchy of log entries relevant to the semantics of that
  * system.
+ * 
+ * @version $Id$
  */
 public abstract class LogEntry implements PostData {
 

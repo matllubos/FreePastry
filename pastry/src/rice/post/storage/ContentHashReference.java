@@ -10,8 +10,20 @@ import rice.past.*;
  * stored in the Post system.  This class knows both the
  * location in the network and the encryption key of the
  * corresponding PostData object.
+ * 
+ * @version $Id$
  */
 public class ContentHashReference {
+  
+  /**
+   * Location where this data is stored in PAST.
+   */
+  private NodeId location;
+  
+  /**
+   * Key used to sign the content hash.
+   */
+  private Key key;
 
   /**
    * Contructs a PostDataReference object given
@@ -21,24 +33,22 @@ public class ContentHashReference {
    * @param key The encryption key of the PostData object
    */
   protected ContentHashReference(NodeId location, Key key) {
+    this.location = location;
+    this.key = key;
   }
 
   /**
-   * Returns the location of the data referenced by this object
-   *
-   * @return The location of the data
+   * @return The location of the data referenced by this object
    */
   public NodeId getLocation() {
-    return null;
+    return location;
   }
 
   /**
-   * Returns the encryption key for this object
-   *
-   * @return The encrypted key of the data
+   * @return The encryption key for the data
    */
   public Key getKey() {
-    return null;
+    return key;
   }
 
 }

@@ -10,8 +10,15 @@ import rice.past.*;
  * stored in the Post system.  This class knows both the
  * location in the network and the encryption key of the
  * corresponding PostData object.
+ * 
+ * @version $Id$
  */
 public class SignedReference {
+  
+  /**
+   * Location where this data is stored in PAST.
+   */
+  private NodeId location;
 
   /**
    * Contructs a PostDataReference object given
@@ -20,15 +27,14 @@ public class SignedReference {
    * @param location The location in PAST of the PostData object
    */
   protected SignedReference(NodeId location) {
+    this.location = location;
   }
 
   /**
-   * Returns the location of the data referenced by this object
-   *
-   * @return The location of the data
+   * @return The location of the data referenced by this object
    */
   public NodeId getLocation() {
-    return null;
+    return location;
   }
 
 }

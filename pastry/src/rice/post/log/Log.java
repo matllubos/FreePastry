@@ -12,6 +12,8 @@ import rice.post.storage.*;
  * this log in order to get lists of sublogs, or walk backwards down
  * all of the entries.  Log classes are stored in PAST at specific
  * locations, and are updated whenever a change is made to the log.
+ * 
+ * @version $Id$
  */
 public class Log implements PostData {
 

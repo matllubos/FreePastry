@@ -7,11 +7,13 @@ import rice.pastry.*;
 
 /**
  * This interface is designed to serve as an abstraction of a
- * data object stored in Post. This object will be stored
+ * data object stored in Post.  This object will be stored
  * in an encrypted state at a location in the network.  Users
- * can access this object by having a copy of the cooresponding
+ * can access this object by having a copy of the corresponding
  * Reference object, which contains the location and
  * possibly the key of this object.
+ * 
+ * @version $Id$
  */
 public interface PostData extends Serializable {
 

@@ -18,35 +18,52 @@ import rice.pastry.security.*;
  * class supports two types of data: content-hash blocks and private-key
  * signed blocks.  This class will automatically format and store data,
  * as well as retrieve and verify the stored data.
+ * 
+ * @version $Id$
  */
 public class StorageService {
   
-  // The name of the symmetric cipher
+  /**
+   * The name of the symmetric cipher to use.
+   */
   public static String SYMMETRIC_ALGORITHM = "DES/ECB/PKCS5Padding";
   
-  // The name of the signature algorithm
+  /**
+   * The name of the signature algorithm to use.
+   */
   public static String SIGNATURE_ALGORITHM = "SHA1withRSA";
 
-  // the past service
+  /**
+   * The PAST service used for distributed persistant storage.
+   */
   private PASTService past;
 
-  // the credentials to use
+  /**
+   * The credentials used to store data.
+   */
   private Credentials credentials;
 
-  // the keypair to use to sign stuff
+  /**
+   * The key pair used to sign data.
+   */
   private KeyPair keyPair;
 
-  // the cipher used to encrypt/decrypt stuff
+  /**
+   * The cipher used to encrypt/decrypt data.
+   */
   private Cipher cipher;
 
-  // the signature used for verification and signing
+  /**
+   * The signature used for verification and signing data.
+   */
   private Signature signature;
   
   /**
-   * Contructs a StorageService given a PAST to run on
-   * top of.
+   * Contructs a StorageService given a PAST to run on top of.
    *
    * @param past The PAST service to use.
+   * @param credentials Credentials to use to store data.
+   * @param keyPair The user's key pair to use for data encryption
    */
   public StorageService(PASTService past, Credentials credentials, KeyPair keyPair) {
     this.past = past;
@@ -60,7 +77,7 @@ public class StorageService {
       System.out.println("NoSuchAlgorithmException on construction: " + e);
     } catch (NoSuchPaddingException e) {
       System.out.println("NoSuchPaddingException on construction: " + e);
-    } 
+    }
   }
 
   /**
@@ -83,15 +100,16 @@ public class StorageService {
     NodeId location = new NodeId(loc);
     SecretKeySpec secretKey = new SecretKeySpec(hash, "DES");
 
-    ContentHashData chd = new ContentHashData(cipherText, null);
+    ContentHashData chd = new ContentHashData(cipherText, credentials);
     
+    // Store the content hash data in PAST
     past.insert(location, chd, credentials);
 
     return data.buildContentHashReference(location, secretKey);
   }
 
   /**
-   * The method retrieves a given PostDataReference object from the
+   * This method retrieves a given PostDataReference object from the
    * network. This method also performs the verification checks and
    * decryption necessary.
    *
@@ -100,7 +118,9 @@ public class StorageService {
    */
   public PostData retrieveContentHash(ContentHashReference reference) {
     // TO DO - verify hashes, classes, last class
-    ContentHashData chd = (ContentHashData) past.lookup(reference.getLocation()).getOriginal();
+    //  (Catch a ClassCastException)
+    ContentHashData chd = 
+      (ContentHashData) past.lookup(reference.getLocation()).getOriginal();
 
     byte[] cipherText = chd.getData();
     byte[] plainText = DESdecrypt(cipherText, reference.getKey().getEncoded());
@@ -123,8 +143,9 @@ public class StorageService {
     long timestamp = System.currentTimeMillis();
     byte[] signature = sign(plainText, timestamp);
 
-    SignedData sd = new SignedData(plainText, timestamp, signature, null);
+    SignedData sd = new SignedData(plainText, timestamp, signature, credentials);
 
+    // Store the signed data in PAST
     past.insert(location, sd, credentials);
 
     return data.buildSignedReference(location);   
@@ -141,6 +162,7 @@ public class StorageService {
    */
   public PostData retrieveSigned(SignedReference reference) {
     // TO DO - verify signature, last class, etc...
+    //  (Catch a ClassCastException)
     SignedData sd = (SignedData) past.lookup(reference.getLocation()).getOriginal();
 
     byte[] plainText = sd.getData();
@@ -192,8 +214,7 @@ public class StorageService {
   }
 
   /**
-   * Private utility method for determineing the hash of
-   * a byte[]
+   * Private utility method for determining the hash of a byte[]
    *
    * @param input The input
    * @return The hash value
@@ -213,8 +234,7 @@ public class StorageService {
   }
 
   /**
-   * Private utility method for encrypting a block of data
-   * with DES
+   * Private utility method for encrypting a block of data with DES
    *
    * @param data The data
    * @param key The key
@@ -316,8 +336,7 @@ public class StorageService {
   }
 
   /**
-   * Private utility method for converting a long into
-   * a byte[]
+   * Private utility method for converting a long into a byte[]
    *
    * @param input The log to convert
    * @return a byte[] representation
@@ -338,8 +357,7 @@ public class StorageService {
   }
 
   /**
-   * Private utility method for converting a byte[] into
-   * a long
+   * Private utility method for converting a byte[] into a long
    *
    * @param input The byte[] to convert
    * @return a long representation
@@ -349,6 +367,10 @@ public class StorageService {
             (input[4] << 24) | (input[5] << 16) | (input[6] << 8) | input[7]);
   }
 
+  
+  /**
+   * Tests the storage service.
+   */
   public static void main(String[] argv) throws NoSuchAlgorithmException {
     System.out.println("StorageService Test Suite");
     System.out.println("-------------------------------------------------------------");
@@ -383,7 +405,7 @@ public class StorageService {
     } else {
       System.out.println("[ FAILED ]");
       System.out.println("    Input: \t" + testLong);
-      System.out.println("    Output:\t" + testLongByte[0] + " " + testLongByte[1] + " "  + 																		testLongByte[2] + " "  + testLongByte[3]);
+      System.out.println("    Output:\t" + testLongByte[0] + " " + testLongByte[1] + " "  +                   testLongByte[2] + " "  + testLongByte[3]);
     }
     
     
