@@ -283,7 +283,19 @@ public class Topic
 	return apps;
     }
 
-    
+    /**
+     * Stops tree repair events
+     */
+    public void stopTR(){
+	m_scheduler.cancelTR( this );
+    }
+
+    /**
+     * Stops heart beat events
+     */
+    public void stopHB(){
+	m_scheduler.cancelHB( this );
+    }
 }
 
 
