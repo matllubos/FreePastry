@@ -50,7 +50,7 @@ public class SocketPastryNode extends DistPastryNode {
   private SelectorManager manager;
 
   // The SocketManager, controlling the sockets
-  private SocketCollectionManager sManager;
+  SocketCollectionManager sManager;
 
   private PingManager pingManager;
 

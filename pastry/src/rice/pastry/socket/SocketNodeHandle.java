@@ -52,6 +52,12 @@ public class SocketNodeHandle extends DistNodeHandle {
    * The default distance, which is used before a ping
    */
   public static int DEFAULT_PROXIMITY = Integer.MAX_VALUE;
+  
+  public static String REASON_TOO_LARGE = "message size was too large";
+
+  public static String REASON_CONNECTION_FAULTY = "connection was faulty";
+
+  public static String REASON_TOO_MANY_MESSAGES_QUEUED = "too many messages enqueued";
 
   /**
    * Constructor
@@ -146,23 +152,8 @@ public class SocketNodeHandle extends DistNodeHandle {
       try {        
         spn.getSocketCollectionManager().send(this, msg);
       } catch (TooManyMessagesException tmme) {
-        // TODO: look up app and call messageNotDelivered()
-        MessageReceiver mr = spn.getMessageDispatch().lookupDestination(msg);
-//        if (mr instanceof Application) {
-//          Application a = (Application)mr;
-//          if (msg instanceof rice.p2p.commonapi.Message) {
-//            a.messageNotDelivered((rice.p2p.commonapi.Message)msg, "Maximum queue size reached");
-//          } else {
-//            // TODO: maybe it's a RouteMessage?  What to do with it.
-//          }
-//        } else
- 
-//        if (mr instanceof PastryAppl) {
-//          PastryAppl a = (PastryAppl)mr;
-//          a.messageNotDelivered(msg, "Maximum queue size reached");
-//        } else {
-          throw tmme;
-//        } 
+        spn.sManager.messageNotSent(msg, REASON_TOO_MANY_MESSAGES_QUEUED);
+//        throw tmme;
       }
     }
   }

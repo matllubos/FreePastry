@@ -29,15 +29,15 @@ import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
-import java.util.Enumeration;
-import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.TimerTask;
 import java.util.WeakHashMap;
 
 import rice.pastry.Log;
 import rice.pastry.NodeHandle;
+import rice.pastry.client.PastryAppl;
 import rice.pastry.messaging.Message;
+import rice.pastry.messaging.MessageReceiver;
 import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.exception.TooManyMessagesException;
 
@@ -426,5 +426,15 @@ public class SocketCollectionManager implements SelectionKeyHandler {
 	 */
 	public InetSocketAddress getAddress() {
 		return getLocalNodeHandle().getAddress();		
+	}
+
+	public void messageNotSent(Message m, String reason) {
+    MessageReceiver mr = pastryNode.getMessageDispatch().getDestination(m);
+    if ((mr != null) && (mr instanceof PastryAppl)) {
+      PastryAppl a = (PastryAppl)mr;
+      a.messageNotDelivered(m, reason);
+    } else {
+      debug("WARNING: message not sent "+m+":"+reason);
+    }
 	}
 }

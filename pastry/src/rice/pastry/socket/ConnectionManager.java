@@ -566,13 +566,13 @@ public class ConnectionManager {
    * @return TYPE_CONTROL or TYPE_DATA
    */
   int getMessageType(Message m) {
-    /*
+    
     if (m instanceof RouteMessage) {
       if (((RouteMessage)m).unwrap() instanceof HelloMsg) {
-       // return TYPE_DATA;        
+        return TYPE_DATA;        
       }
     }
-*/
+
     if (m.hasPriority() || 
          ((m instanceof RouteMessage) && ((RouteMessage)m).getOptions().multipleHopsAllowed())) {         
       return TYPE_CONTROL;
@@ -706,7 +706,8 @@ public class ConnectionManager {
     int i = stp.seqNumber;
     RouteMessage rm = (RouteMessage)stp.msg;
     Message m = rm.unwrap();
-    System.err.println(this+"WARNING: Message "+o+" dropped because it was too big.  Size = "+len+" max size ="+ConnectionManager.MAX_ROUTE_MESSAGE_SIZE);
+    messageNotSent(m,SocketNodeHandle.REASON_TOO_LARGE);
+//    System.err.println(this+"WARNING: Message "+o+" dropped because it was too big.  Size = "+len+" max size ="+ConnectionManager.MAX_ROUTE_MESSAGE_SIZE);
 
     // pull the ate out of the queue
     AckTimeoutEvent ate = (AckTimeoutEvent)pendingAcks.remove(new Integer(i));    
@@ -715,6 +716,10 @@ public class ConnectionManager {
       return;
     }
     ate.cancel();
+  }
+  
+  void messageNotSent(Message m, String reason) {
+    scm.messageNotSent(m,reason);    
   }
 
   /**
@@ -1176,6 +1181,7 @@ public class ConnectionManager {
         case NodeHandle.LIVENESS_SUSPECTED:
           return false; // don't throw out anything except route messages
         case NodeHandle.LIVENESS_FAULTY:
+          messageNotSent(o,SocketNodeHandle.REASON_CONNECTION_FAULTY);
           return true; // throw out junk in the queue
         default:
           return false; // not supposed to reroute if alive
