@@ -67,6 +67,9 @@ import rice.pastry.wire.messaging.socket.*;
  */
 public class SocketChannelWriter {
 
+  // the magic number array which is written first
+  protected static byte[] MAGIC_NUMBER = new byte[] {0x45, 0x79, 0x12, 0x0D};
+  
   // the pastry node
   private WirePastryNode pastryNode;
 
@@ -229,6 +232,7 @@ public class SocketChannelWriter {
       DataOutputStream dos = new DataOutputStream(baos2);
 
       // write out length of the object, followed by the object itself
+      dos.write(MAGIC_NUMBER);
       dos.writeInt(len);
       dos.flush();
       dos.write(baos.toByteArray());

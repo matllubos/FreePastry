@@ -62,6 +62,9 @@ import rice.pastry.*;
  */
 public class SocketChannelReader {
 
+  // the magic number array which is written first
+  protected static byte[] MAGIC_NUMBER = SocketChannelWriter.MAGIC_NUMBER;
+
   // the pastry node
   private WirePastryNode spn;
 
@@ -77,6 +80,9 @@ public class SocketChannelReader {
   // for reading the size of the object (header)
   private ByteBuffer sizeBuffer;
 
+  // for reading the size of the object (header)
+  private ByteBuffer magicBuffer;
+
   /**
    * Constructor which creates this SocketChannelReader and the
    * WirePastryNode.  Once the reader has completely read a message,
@@ -89,6 +95,7 @@ public class SocketChannelReader {
     initialized = false;
 
     sizeBuffer = ByteBuffer.allocateDirect(4);
+    magicBuffer = ByteBuffer.allocateDirect(4);
   }
 
   /**
@@ -102,6 +109,20 @@ public class SocketChannelReader {
    */
   public Object read(SocketChannel sc) throws IOException {
     if (! initialized) {
+      int read = sc.read(magicBuffer);
+
+      if (read == -1) {
+        // implies that the channel is closed
+        throw new IOException("Error on read - the channel has been closed.");
+      }
+
+      if (magicBuffer.remaining() == 0) {
+        magicBuffer.flip();
+        verifyMagicBuffer();
+      }
+    }
+
+    if (objectSize == -1) {
       int read = sc.read(sizeBuffer);
 
       if (read == -1) {
@@ -113,7 +134,7 @@ public class SocketChannelReader {
         sizeBuffer.flip();
         initializeObjectBuffer();
       }
-    }
+    }    
 
     if (objectSize != -1) {
       int read = sc.read(buffer);
@@ -138,6 +159,28 @@ public class SocketChannelReader {
   }
 
   /**
+   * Private method which is designed to verify the magic number buffer
+   * coming across the wire.
+   */
+  private void verifyMagicBuffer() throws IOException {
+    // ensure that there is at least the object header ready to
+    // be read
+    if (magicBuffer.remaining() == 4) {
+      initialized = true;
+
+      // allocate space for the header
+      byte[] magicArray = new byte[4];
+      magicBuffer.get(magicArray, 0, 4);
+
+      // verify the buffer
+      if (! Arrays.equals(magicArray, MAGIC_NUMBER)) {
+        System.out.println("Improperly formatted message received - ignoring.");
+        throw new IOException("Improperly formatted message - incorrect magic number.");
+      }
+    }
+  }
+  
+  /**
    * Private method which is designed to read the header of the incoming
    * message, and prepare the buffer for the object appropriately.
    */
@@ -145,7 +188,6 @@ public class SocketChannelReader {
     // ensure that there is at least the object header ready to
     // be read
     if (sizeBuffer.remaining() == 4) {
-      initialized = true;
 
       // allocate space for the header
       byte[] sizeArray = new byte[4];
@@ -204,6 +246,7 @@ public class SocketChannelReader {
 
     buffer = null;
     sizeBuffer.clear();
+    magicBuffer.clear();
   }
 
   private void debug(String s) {
