@@ -51,8 +51,8 @@ import java.util.zip.*;
 import rice.*;
 import rice.Continuation.*;
 import rice.p2p.commonapi.*;
-
 import rice.serialization.*;
+import rice.selector.*;
 
 /**
  * This class is an implementation of Storage which provides
@@ -184,35 +184,27 @@ public class PersistentStorage implements Storage {
    * @param c The command to run once the operation is complete
    */
   public void rename(final Id oldId, final Id newId, Continuation c) {
-    try {
-      workQ.enqueue(new WorkRequest(c) {
-        public void doWork() {
-          try {
-            File f = getFile(oldId);
-            
-            if ((f != null) && (f.exists())) {
-              File g = getFile(newId);
-              renameFile(f, g);
-              
-              checkDirectory(g.getParentFile());
-              
-              synchronized(idSet) {
-                idSet.addId(newId); 
-                idSet.removeId(oldId); 
-              }
-              
-              c.receiveResult(new Boolean(true));
-            } else {
-              c.receiveResult(new Boolean(false));
-            }
-          } catch (Exception e) {
-            c.receiveException(e);
+    workQ.enqueue(new WorkRequest(c) {
+      public Object doWork() throws Exception {
+        File f = getFile(oldId);
+        
+        if ((f != null) && (f.exists())) {
+          File g = getFile(newId);
+          renameFile(f, g);
+          
+          checkDirectory(g.getParentFile());
+          
+          synchronized(idSet) {
+            idSet.addId(newId); 
+            idSet.removeId(oldId); 
           }
+          
+          return Boolean.TRUE;
+        } else {
+          return Boolean.FALSE;
         }
-      });
-    } catch(WorkQueueOverflowException e) {
-      c.receiveException(e);
-    } 
+      }
+    });
   }
 
   /**
@@ -236,56 +228,45 @@ public class PersistentStorage implements Storage {
    * <code>false</code>.
    */
   public void store(final Id id, final Serializable metadata, final Serializable obj, Continuation c) {
-    try {
-      workQ.enqueue(new WorkRequest(c) { 
-        public void doWork() {
-          try {
-            /* first, rename the current file to a temporary name */
-            File objFile = getFile(id); 
-            File transcFile = makeTemporaryFile(id);
-            
-            /* now, rename the current file to a temporary name (if it exists) */
-            renameFile(objFile, transcFile);
-  
-            /* next, write out the data to a new copy of the original file */
-            writeObject(obj, metadata, id, System.currentTimeMillis(), objFile);
-            
-            /* abort, if this will put us over quota */
-            if(getUsedSpace() + getFileLength(objFile) > getStorageSize()) {
-              deleteFile(objFile);
-              renameFile(transcFile, objFile);
-              c.receiveException(new OutofDiskSpaceException());
-              return;
-            }
-
-            System.out.println("COUNT: " + System.currentTimeMillis() + " Storing data of class " + obj.getClass().getName() + " under " + id.toStringFull() + " of size " + objFile.length() + " in " + name);
-            
-            /* recalculate amount used */
-            decreaseUsedSpace(getFileLength(transcFile)); 
-            increaseUsedSpace(getFileLength(objFile));
-            
-            /* now, delete the old file */
-            deleteFile(transcFile);
-
-            synchronized (idSet) {
-              idSet.addId(id); 
-              PersistentStorage.this.metadata.put(id, metadata);
-            }
-            
-            /* finally, check to see if this directory needs to be split */
-            checkDirectory(objFile.getParentFile());
-            
-            c.receiveResult(new Boolean(true));
-          } catch (Exception e) {
-            System.out.println("ERROR: Got exception " + e + " while storing data under " + id.toStringFull() + " in namespace " + name);
-            e.printStackTrace();
-            c.receiveException(e);
-          }
+    workQ.enqueue(new WorkRequest(c) { 
+      public Object doWork() throws Exception {
+        /* first, rename the current file to a temporary name */
+        File objFile = getFile(id); 
+        File transcFile = makeTemporaryFile(id);
+        
+        /* now, rename the current file to a temporary name (if it exists) */
+        renameFile(objFile, transcFile);
+        
+        /* next, write out the data to a new copy of the original file */
+        writeObject(obj, metadata, id, System.currentTimeMillis(), objFile);
+        
+        /* abort, if this will put us over quota */
+        if(getUsedSpace() + getFileLength(objFile) > getStorageSize()) {
+          deleteFile(objFile);
+          renameFile(transcFile, objFile);
+          throw new OutofDiskSpaceException();
         }
-      });
-    } catch(WorkQueueOverflowException e) {
-      c.receiveException(e);
-    }
+        
+        System.out.println("COUNT: " + System.currentTimeMillis() + " Storing data of class " + obj.getClass().getName() + " under " + id.toStringFull() + " of size " + objFile.length() + " in " + name);
+        
+        /* recalculate amount used */
+        decreaseUsedSpace(getFileLength(transcFile)); 
+        increaseUsedSpace(getFileLength(objFile));
+        
+        /* now, delete the old file */
+        deleteFile(transcFile);
+        
+        synchronized (idSet) {
+          idSet.addId(id); 
+          PersistentStorage.this.metadata.put(id, metadata);
+        }
+        
+        /* finally, check to see if this directory needs to be split */
+        checkDirectory(objFile.getParentFile());
+        
+        return Boolean.TRUE;
+      }
+    });
   }
   
   /**
@@ -305,42 +286,31 @@ public class PersistentStorage implements Storage {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>.
    */
-  public void unstore(final Id id, Continuation c1) {
-    try {
-      workQ.enqueue(new WorkRequest(c1) { 
-        public void doWork() {
-          try {
-            File objFile = getFile(id); 
-            
-            /* check to make sure file exists */
-            if (objFile == null) {
-              c.receiveResult(new Boolean(false));
-              return;
-            }
-            
-            System.out.println("COUNT: " + System.currentTimeMillis() + " Unstoring data under " + id.toStringFull() + " of size " + objFile.length() + " in " + name);
-            
-            /* remove id from stored list */
-            synchronized (idSet) { 
-              idSet.removeId(id);
-              metadata.remove(id);
-            }
-            
-            /* record the space collected and delete the file */
-            decreaseUsedSpace(objFile.length());
-            deleteFile(objFile);
-            
-            c.receiveResult(new Boolean(true));
-          } catch (IOException e) {
-            System.out.println("ERROR: Got exception " + e + " while unstoring data under " + id.toStringFull() + " in namespace " + name);
-            e.printStackTrace();
-            c.receiveException(e);
-          }
+  public void unstore(final Id id, Continuation c) {
+    workQ.enqueue(new WorkRequest(c) { 
+      public Object doWork() throws Exception {
+        /* first get the file */
+        File objFile = getFile(id); 
+        
+        System.out.println("COUNT: " + System.currentTimeMillis() + " Unstoring data under " + id.toStringFull() + " of size " + objFile.length() + " in " + name);
+        
+        /* remove id from stored list */
+        synchronized (idSet) { 
+          idSet.removeId(id);
+          metadata.remove(id);
         }
-      });
-    } catch(WorkQueueOverflowException e){
-      c1.receiveException(e);
-    }
+        
+        /* check to make sure file exists */
+        if ((objFile == null) || (! objFile.exists()))
+          return Boolean.FALSE;
+        
+        /* record the space collected and delete the file */
+        decreaseUsedSpace(objFile.length());
+        deleteFile(objFile);
+        
+        return Boolean.TRUE;
+      }
+    });
   }
 
   /**
@@ -378,33 +348,23 @@ public class PersistentStorage implements Storage {
    * @param metadata The metadata to store
    * @param c The command to run once the operation is complete
    */
-  public void setMetadata(final Id id, final Serializable metadata, Continuation command) {
+  public void setMetadata(final Id id, final Serializable metadata, Continuation c) {
     if (! exists(id)) {
-      command.receiveResult(new Boolean(false));
-      return;
-    }
-    
-    try {
-      workQ.enqueue(new WorkRequest(command) { 
-        public void doWork() {
-          try {
-            File objFile = getFile(id); 
-            writeMetadata(objFile, metadata);
-            
-            synchronized (idSet) {
-              PersistentStorage.this.metadata.put(id, metadata);
-            }
-            
-            c.receiveResult(new Boolean(true));
-          } catch (IOException e) {
-            System.out.println("ERROR: Got exception " + e + " while unstoring data under " + id.toStringFull() + " in namespace " + name);
-            e.printStackTrace();
-            c.receiveException(e);
+      c.receiveResult(new Boolean(false));
+    } else {    
+      workQ.enqueue(new WorkRequest(c) { 
+        public Object doWork() throws Exception {
+          /* write the metadata to the file */
+          writeMetadata(getFile(id), metadata);
+          
+          /* then update our cache */
+          synchronized (idSet) {
+            PersistentStorage.this.metadata.put(id, metadata);
           }
+          
+          return Boolean.TRUE;
         }
       });
-    } catch(WorkQueueOverflowException e){
-      command.receiveException(e);
     }
   }
 
@@ -416,43 +376,36 @@ public class PersistentStorage implements Storage {
    * @return The object, or <code>null</code> if there is no cooresponding
    * object (through receiveResult on c).
    */
-  public void getObject(final Id id, Continuation c1) {
+  public void getObject(final Id id, Continuation c) {
     if (! exists(id)) {
-      c1.receiveResult(null);
-      return;
-    }
-    
-    try {
-		  workQ.enqueue(new WorkRequest(c1) { 
-			  public void doWork() {
+      c.receiveResult(null);
+    } else {    
+      workQ.enqueue(new WorkRequest(c) { 
+        public Object doWork() throws Exception {
           try { 
+            /* get the file */
             File objFile = getFile(id);
             
-            if ((objFile == null) || (! objFile.exists())) {
-              c.receiveResult(null);
-            } else {
-              c.receiveResult(readData(objFile));
-            }
-          } catch(Exception e) {
-            try {
-              moveToLost(getFile(id));
-              
-              synchronized (idSet) {
-                idSet.removeId(id); 
-              }
-            } catch (Exception f) {
-              System.out.println(f.toString());
+            /* and make sure that it exists */
+            if ((objFile == null) || (! objFile.exists())) 
+              return null;
+            else 
+              return readData(objFile);
+          } catch (Exception e) {
+            /* if there's a problem, move the file to the lost+found */
+            moveToLost(getFile(id));
+            
+            /* remove our index for this file */
+            synchronized (idSet) {
+              idSet.removeId(id); 
+              metadata.remove(id);
             }
             
-            System.out.println("ERROR: Got exception " + e + " while getting data under " + id.toStringFull() + " in namespace " + name);
-            e.printStackTrace();
-            c.receiveException(e);
+            throw e;
           }
         }
       });
-  	} catch(WorkQueueOverflowException e) {
-		  c1.receiveException(e);
-	  }
+    }
   }
 
   /**
@@ -1567,14 +1520,8 @@ public class PersistentStorage implements Storage {
 	   }
 	   
 	   public void run() {
-       try {
-  		   while(true)
-	  		   workQ.dequeue().doWork();
-       } catch (Throwable t) {
-         System.out.println("ERROR (PersistenceThread.run): " + t);
-         t.printStackTrace(System.out);
-         System.exit(-1);
-       }
+       while(true)
+         workQ.dequeue().run();
 	   }
   }
   
@@ -1591,12 +1538,12 @@ public class PersistentStorage implements Storage {
 	     this.capacity = capacity;
 	  }
 	  
-	  public synchronized void enqueue(WorkRequest request) throws WorkQueueOverflowException {
+	  public synchronized void enqueue(WorkRequest request) {
       if (capacity < 0 || q.size() < capacity) {
 			  q.add(request);
 			  notifyAll();
 		  } else {
-			  throw(new WorkQueueOverflowException());
+			  request.returnError(new WorkQueueOverflowException());
       }
 	  }
 	  
@@ -1613,7 +1560,7 @@ public class PersistentStorage implements Storage {
 	}
   
 	private abstract class WorkRequest {
-    protected Continuation c;
+    private Continuation c;
     
 		public WorkRequest(Continuation c){
       this.c = c;
@@ -1622,8 +1569,34 @@ public class PersistentStorage implements Storage {
 		public WorkRequest(){
 			/* do nothing */
 		}
+    
+    public void returnResult(Object o) {
+      c.receiveResult(o); 
+    }
+    
+    public void returnError(Exception e) {
+      c.receiveException(e); 
+    }
+    
+    public void run() {
+      try {
+        final Object result = doWork();
+      
+        SelectorManager.getSelectorManager().invoke(new Runnable() {
+          public void run() {
+            returnResult(result);
+          }
+        });
+      } catch (final Exception e) {
+        SelectorManager.getSelectorManager().invoke(new Runnable() {
+          public void run() {
+            returnError(e);
+          }
+        });
+      }
+    }
 		
-		public abstract void doWork();
+		public abstract Object doWork() throws Exception;
 	}
 	
 	
