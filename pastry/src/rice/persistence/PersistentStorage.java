@@ -1441,6 +1441,16 @@ public class PersistentStorage implements Storage {
         synchronized (metadata) {
           dirty.remove(files[i]);
         }
+      } catch (FileNotFoundException f) {
+        try {
+          System.err.println("ERROR: Could not find directory while writing out metadata in '" + files[i].getCanonicalPath() + "' - removing from dirty list and continuing!");
+
+          synchronized (metadata) {
+            dirty.remove(files[i]);
+          }
+        } catch (IOException g) {
+          System.err.println("PANIC: Got IOException " + g + " trying to detail FNF exception " + f + " while writing out file " + files[i]);
+        }
       } catch (IOException e) {
         try {
           System.err.println("ERROR: Got error " + e + " while writing out metadata in '" + files[i].getCanonicalPath() + "' - aborting!");

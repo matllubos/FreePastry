@@ -60,6 +60,9 @@ public abstract class NodeHandle extends Observable implements Serializable  {
   public static final Integer DECLARED_DEAD = new Integer(2);
   public static final Integer DECLARED_LIVE = new Integer(3);
   
+  // serialver
+  private static final long serialVersionUID = 4761193998848368227L;
+  
   /**
    * Returns this node's id.
    *

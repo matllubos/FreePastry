@@ -48,6 +48,7 @@ import java.util.*;
  */
 public class MultiringNodeHandle extends NodeHandle implements Observer  {
   
+  // serailver
   static final long serialVersionUID = -2972303779251779984L;
 
   /**

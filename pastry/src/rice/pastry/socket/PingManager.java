@@ -327,15 +327,11 @@ public class PingManager extends SelectionKeyHandler {
 
         while (i.hasNext()) {
           Envelope write = (Envelope) i.next();
-          ByteBuffer buf = ByteBuffer.wrap(write.data);
           
-          int num = channel.send(buf, write.destination.getAddress());
-          i.remove();
-
-      //    System.out.println("NOTE: Writing " + num + " bytes of data to address " + write.destination.getAddress());
-          
-          if (num == 0) 
-            System.out.println("ERROR: 0 bytes were written (not fatal, but bad) - full buffer.");
+          if (channel.send(ByteBuffer.wrap(write.data), write.destination.getAddress()) == write.data.length)
+            i.remove();
+          else
+            break;
         }
       }
     } catch (IOException e) {
