@@ -2,13 +2,14 @@ PACKAGE = rice.pastry
 
 SOURCE  = \
 	NodeId.java\
-	NodeIdI.java\
 	NodeIdFactory.java\
 	NodeHandle.java\
 	PastryNode.java\
 	PastryNodeFactory.java\
 	NodeSet.java\
 	NodeSetUpdate.java
+
+#	NodeIdI.java
 
 RMI_SOURCE =
 

@@ -62,8 +62,6 @@ public abstract class PastryNode implements MessageReceiver
     protected NodeHandle localhandle;
     protected boolean ready;
     protected Vector apps;
-    private int nmsgs;
-    private int leafSetMaintFreq, routeSetMaintFreq;
 
     /**
      * Constructor, with NodeId. Need to set the node's ID before this node
@@ -72,8 +70,6 @@ public abstract class PastryNode implements MessageReceiver
     protected PastryNode(NodeId id) {
 	myNodeId = id;
 	ready = false;
-	nmsgs = 0;
-	leafSetMaintFreq = routeSetMaintFreq = 0;
 	apps = new Vector();
     }
 
@@ -89,20 +85,15 @@ public abstract class PastryNode implements MessageReceiver
      * @param md Message dispatcher.
      * @param ls Leaf set.
      * @param rt Routing table.
-     * @param lsmf Leaf set maintenance frequency. 0 means never.
-     * @param rsmf Route set maintenance frequency. 0 means never.
      */
     public final void setElements(NodeHandle lh, PastrySecurityManager sm,
 				  MessageDispatch md,
-				  LeafSet ls, RoutingTable rt,
-				  int lsmf, int rsmf) {
+				  LeafSet ls, RoutingTable rt) {
 	localhandle = lh;
 	mySecurityManager = sm;
 	myMessageDispatch = md;
 	leafSet = ls;
 	routeSet = rt;
-	leafSetMaintFreq = lsmf;
-	routeSetMaintFreq = rsmf;
     }
 
     public final NodeHandle getLocalHandle() { return localhandle; }
@@ -136,26 +127,13 @@ public abstract class PastryNode implements MessageReceiver
 
     /**
      * message receiver interface. synchronized so that the external message
-     * processing thread won't interfere with application messages.
+     * processing thread and the leafset/route maintenance thread won't
+     * interfere with application messages.
      */
     public final synchronized void receiveMessage(Message msg) 
     {
 	if (mySecurityManager.verifyMessage(msg) == true)
 	    myMessageDispatch.dispatchMessage(msg); 
-
-	nmsgs++;
-
-	if (leafSetMaintFreq > 0 && (nmsgs % leafSetMaintFreq) == 0) {
-	    msg = new InitiateLeafSetMaintenance();
-	    if (mySecurityManager.verifyMessage(msg) == true)
-		myMessageDispatch.dispatchMessage(msg); 
-	}
-
-	if (routeSetMaintFreq > 0 && (nmsgs % routeSetMaintFreq) == 0) {
-	    msg = new InitiateRouteSetMaintenance();
-	    if (mySecurityManager.verifyMessage(msg) == true)
-		myMessageDispatch.dispatchMessage(msg); 
-	}
     }
 
     /** 

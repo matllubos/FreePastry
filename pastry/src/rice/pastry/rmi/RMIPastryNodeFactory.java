@@ -59,18 +59,17 @@ import java.rmi.Naming;
 public class RMIPastryNodeFactory implements PastryNodeFactory
 {
     private RandomNodeIdFactory nidFactory;
+    private int port;
 
     private static final int rtMax = 8;
     private static final int lSetSize = 24;
 
     /**
-     * Large value means infrequent, 0 means never
+     * Large period (in seconds) means infrequent, 0 means never.
      */
-    private static final int leafSetMaintFreq = 100;
-    private static final int routeSetMaintFreq = 300;
+    private static final int leafSetMaintFreq = 30;
+    private static final int routeSetMaintFreq = 120;
 
-    int port;
-  
     /**
      * Constructor.
      *
@@ -124,9 +123,8 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
 	msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
 	msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
 
-	pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable,
-		       leafSetMaintFreq, routeSetMaintFreq);
-	pn.setRMIElements(handlepool, port);
+	pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
+	pn.setRMIElements(handlepool, port, leafSetMaintFreq, routeSetMaintFreq);
 	secureMan.setLocalPastryNode(pn);
 
 	pn.doneNode(bootstrap);

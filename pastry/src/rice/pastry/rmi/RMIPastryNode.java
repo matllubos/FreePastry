@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.pastry.rmi;
 
 import rice.pastry.*;
+import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
 import rice.pastry.messaging.*;
 import rice.pastry.join.*;
@@ -60,6 +61,11 @@ public class RMIPastryNode extends PastryNode
     private RMIRemoteNodeI remotestub;
     private RMINodeHandlePool handlepool;
     private int port;
+
+    /**
+     * Large value (in seconds) means infrequent, 0 means never.
+     */
+    private int leafSetMaintFreq, routeSetMaintFreq;
 
     private LinkedList queue;
     private int count;
@@ -100,6 +106,28 @@ public class RMIPastryNode extends PastryNode
 	}
     }
 
+    private class LeafSetMaintThread implements Runnable {
+	public void run() {
+	    while (true) {
+		try {
+		    Thread.sleep(1000*leafSetMaintFreq);
+		} catch (InterruptedException e) {}
+		receiveMessage(new InitiateLeafSetMaintenance());
+	    }
+	}
+    }
+
+    private class RouteSetMaintThread implements Runnable {
+	public void run() {
+	    while (true) {
+		try {
+		    Thread.sleep(1000*routeSetMaintFreq);
+		} catch (InterruptedException e) {}
+		receiveMessage(new InitiateRouteSetMaintenance());
+	    }
+	}
+    }
+
     /**
      * Constructor
      */
@@ -117,10 +145,14 @@ public class RMIPastryNode extends PastryNode
      *
      * @param hp Node handle pool
      * @param p RMIregistry port
+     * @param lsmf Leaf set maintenance frequency. 0 means never.
+     * @param rsmf Route set maintenance frequency. 0 means never.
      */
-    public void setRMIElements(RMINodeHandlePool hp, int p) {
+    public void setRMIElements(RMINodeHandlePool hp, int p, int lsmf, int rsmf) {
 	handlepool = hp;
 	port = p;
+	leafSetMaintFreq = lsmf;
+	routeSetMaintFreq = rsmf;
     }
 
     /**
@@ -129,8 +161,12 @@ public class RMIPastryNode extends PastryNode
      * @param hp Node handle pool
      */
     public void doneNode(NodeHandle bootstrap) {
-	MsgHandler handler = new MsgHandler();
-	new Thread(handler).start();
+
+	new Thread(new MsgHandler()).start();
+	if (leafSetMaintFreq > 0)
+	    new Thread(new LeafSetMaintThread()).start();
+	if (routeSetMaintFreq > 0)
+	    new Thread(new RouteSetMaintThread()).start();
 
 	try {
 	    remotestub = (RMIRemoteNodeI) UnicastRemoteObject.exportObject(this);
