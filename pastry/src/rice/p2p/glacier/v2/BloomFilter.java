@@ -24,15 +24,12 @@ public class BloomFilter implements Serializable {
     
     for (int i=2; i<=maxFactor; i++) {
       if (isPrimeL[i]) {
-        System.out.print(i+" ");
         for (int j=0; j<=(int)(maxFactor/i); j++)
           isPrimeL[j*i] = false;
         for (int j=(int)((offset+i-1)/i); j<=(int)(length/i); j++)
           isPrimeH[j*i - offset] = false;
       }
     }
-    
-    System.out.println();
     
     hashParams = new int[numHashes];
     Random rand = new Random();
@@ -53,7 +50,6 @@ public class BloomFilter implements Serializable {
     
     for (int i=0; i<data.length; i++) {
       cache = (cache<<8) + data[i] + ((data[i]<0) ? 256 : 0);
-//System.out.println("cache = "+cache+" data = "+data[i]);
       if (((++ctr) == 7) || (i==(data.length-1))) {
         for (int j=0; j<hashParams.length; j++)
           hash[j] += cache % hashParams[j];
@@ -64,11 +60,6 @@ public class BloomFilter implements Serializable {
     
     for (int j=0; j<hashParams.length; j++)
       hash[j] = hash[j] % hashParams[j];
-      
-/*System.out.print("Hashes: ");
-for (int j=0; j<hashParams.length; j++)
-  System.out.print(hash[j]+ "(mod "+hashParams[j]+") ");
-System.out.println(); */
       
     return hash;
   }
@@ -86,7 +77,6 @@ System.out.println(); */
     int[] hash = getHashes(data);
     for (int i=0; i<hashParams.length; i++)
       bitfield[hash[i]/8] |= (1<<(hash[i]&7));
-//dump();
   }
   
   public boolean contains(byte[] data) {
