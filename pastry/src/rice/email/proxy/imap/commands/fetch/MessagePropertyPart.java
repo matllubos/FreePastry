@@ -128,6 +128,14 @@ public class MessagePropertyPart extends FetchPart {
       String charset = parseContentType(type, "charset");
       String name = parseContentType(type, "name");
 
+      if (charset.matches("\".*\"")) {
+        charset = charset.substring(1, charset.length()-2);
+      }
+
+      if (name.matches("\".*\"")) {
+        name = name.substring(1, name.length()-2);
+      }
+
       result += mainType + " " + subType + " ";
 
       result += "(\"CHARSET\" \"" + charset + "\"";
