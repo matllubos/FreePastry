@@ -62,7 +62,7 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
 
     // liveness and distance functions
     protected transient boolean isInPool;
-    protected transient boolean alive;
+    protected transient int status;
     protected transient boolean isLocal;
 
     // distance metric. private in order to notify observers of metric change
@@ -79,7 +79,7 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
       redirect = null;
 
       isInPool = false;
-      alive = true;
+      status = LIVENESS_ALIVE;
       distance = DEFAULT_DISTANCE;
       isLocal = false;
     }
@@ -110,7 +110,7 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
      * Updates the isLocal and alive variables.
      */
     public void afterSetLocalNode() {
-      alive = true;
+      status = LIVENESS_ALIVE;
 
       if ((nodeId != null) && getLocalNode().getNodeId().equals(nodeId)) {
         isLocal = true;
@@ -129,6 +129,7 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
      *
      * @return true if the node is alive, false otherwise.
      */
+     /*
     public final boolean isAlive() {
       verify();
 
@@ -141,6 +142,21 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
 
       return alive;
     }
+*/
+
+    public final int getLiveness() {
+      verify();
+
+      if (redirect != null) {
+        return redirect.getLiveness();
+      }
+
+      if (isLocal && status != LIVENESS_ALIVE)
+        System.out.println("panic; local node dead");
+
+      return status;      
+    }
+    
 
     /**
      * Marks this handle as alive (if dead earlier), and reset distance to infinity. If node is
@@ -154,12 +170,12 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
         return;
       }
 
-      if (alive == false) {
+      if (!isAlive()) {
         if (Log.ifp(5)) {
           System.out.println(getLocalNode() + "found " + nodeId + " to be alive after all");
         }
 
-        alive = true;
+        status = LIVENESS_ALIVE;
         distance = Integer.MAX_VALUE;
 
         setChanged();
@@ -179,7 +195,7 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
         return;
       }
 
-      if (alive == true) {
+      if (isAlive()) {
         if (Log.ifp(5)) {
           if (getLocalNode() == null) {
             System.out.println("Incoming node handle " + nodeId + " found remote node to be dead");
@@ -188,7 +204,7 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
           }
         }
 
-        alive = false;
+        status = LIVENESS_FAULTY;
         distance = Integer.MAX_VALUE;
 
         setChanged();
@@ -361,7 +377,7 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
 
       verified = false;
       isInPool = false;
-      alive = true;
+      status = LIVENESS_ALIVE;
       distance = DEFAULT_DISTANCE;
       isLocal = false;
     }

@@ -50,6 +50,11 @@ import java.util.*;
  */
 public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implements MessageReceiver, LocalNodeI {
 
+  public static final int LIVENESS_UNKNOWN = 0;
+  public static final int LIVENESS_ALIVE = 1;
+  public static final int LIVENESS_SUSPECTED = 2;
+  public static final int LIVENESS_FAULTY = 3;
+    
   // the local pastry node
   protected transient PastryNode localnode;
 
@@ -70,7 +75,18 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    *
    * @return true if the node is alive, false otherwise.
    */
-  public abstract boolean isAlive();
+  public final boolean isAlive() {
+    return getLiveness() < LIVENESS_FAULTY; 
+  }
+
+  /**
+   * A more detailed version of isAlive().  This can return 4 states:
+   * 
+   * @return LIVENESS_UNKNOWN, LIVENESS_ALIVE, LIVENESS_SUSPECTED, LIVENESS_FAULTY
+   */
+  public abstract int getLiveness();
+    
+
 
   /**
    * Returns the last known proximity information about the Pastry node associated with this handle.

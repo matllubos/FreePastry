@@ -89,8 +89,11 @@ public class DirectNodeHandle extends NodeHandle {
    *
    * @return The Alive value
    */
-  public boolean isAlive() {
-    return simulator.isAlive(remoteNode.getNodeId());
+  public int getLiveness() {
+    if (simulator.isAlive(remoteNode.getNodeId())) {
+      return LIVENESS_ALIVE;
+    }
+    return LIVENESS_FAULTY; 
   }
 
   /**
