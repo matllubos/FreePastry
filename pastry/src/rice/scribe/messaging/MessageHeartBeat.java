@@ -112,7 +112,7 @@ public class MessageHeartBeat extends ScribeMessage implements Serializable
 	ScribeMessage msg; 
 
 	
-	parentFingerprint = (NodeId)getData();
+	parentFingerprint = (NodeId)((Serializable)getData());
 	localFingerprint = scribe.getFingerprintForParentTopics(m_source);
 
 	

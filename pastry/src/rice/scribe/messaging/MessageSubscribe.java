@@ -134,10 +134,14 @@ public class MessageSubscribe extends ScribeMessage implements Serializable
 
 	    // pass the application specific data along the path
 	    // toward the root.
-	    msg.setData(getData());
+	    msg.setData((Serializable)this.getData());
 
 	    // join multicast tree by routing subscribe message thru pastry
 	    scribe.routeMsg( m_topicId, msg, cred, opt );
+
+	    // notify scribeObservers of this event, that a topic
+	    // was created.
+	    scribe.notifyScribeObservers(m_topicId);
 	}
 	
 	// make the source a child for this topic
@@ -155,7 +159,7 @@ public class MessageSubscribe extends ScribeMessage implements Serializable
     }
 
     public String toString() {
-	return new String( "SUBSCRIBE MSG:" + m_source );
+	return new String( "SUBSCRIBE MSG:" + m_source);
     }
 }
 

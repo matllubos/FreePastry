@@ -93,7 +93,7 @@ public class MessageRequestToParent extends ScribeMessage implements Serializabl
 	Vector topics = scribe.getTopicsForChild(m_source);
 	
 	ScribeMessage msg = scribe.makeReplyFromParentMessage( cred);
-	msg.setData(topics);
+	msg.setData((Serializable)topics);
 	scribe.routeMsgDirect( m_source, msg, cred, opt );
 
     }

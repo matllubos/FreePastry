@@ -59,7 +59,7 @@ public abstract class ScribeMessage extends Message implements Serializable
      * This is the information inside the message.
      * Should be serializable.
      */
-    private Object m_data;
+    private Serializable m_data;
 
     /**
      * The ID of the topic that this message refers to.
@@ -117,7 +117,7 @@ public abstract class ScribeMessage extends Message implements Serializable
      *
      * @param data the data contained in the message.
      */
-    public void setData( Object data ) { m_data = data; }
+    public void setData( Serializable data ) { m_data = data; }
 
 
     /**
@@ -125,7 +125,7 @@ public abstract class ScribeMessage extends Message implements Serializable
      * 
      * @return the data contained in the message.
      */
-    public Object getData() { return m_data; }
+    public Serializable getData() { return m_data; }
 
     /**
      * Returns the topicId associated with the message.

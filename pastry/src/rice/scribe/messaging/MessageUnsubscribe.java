@@ -110,7 +110,7 @@ public class MessageUnsubscribe extends ScribeMessage implements Serializable
 			//make a new message and send this thru scribe
 			ScribeMessage msg = 
 			    scribe.makeUnsubscribeMessage( m_topicId, cred );
-			msg.setData( this.getData() );
+			msg.setData((Serializable) this.getData() );
 			
 			// send directly to parent
 			scribe.routeMsgDirect( parent, msg, cred, opt );

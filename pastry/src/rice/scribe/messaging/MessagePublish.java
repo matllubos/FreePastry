@@ -126,7 +126,8 @@ public class MessagePublish extends ScribeMessage implements Serializable
 	    int j = 0;
 	    ScribeMessage msg = scribe.makePublishMessage( m_topicId, cred );
 	    
-	    msg.setData( this.getData() );
+	    msg.setData((Serializable) this.getData() );
+
 
 	    
 	    IScribeApp[] apps = topic.getApps();

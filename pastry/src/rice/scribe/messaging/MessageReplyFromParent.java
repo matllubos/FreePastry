@@ -93,7 +93,7 @@ public class MessageReplyFromParent extends ScribeMessage implements Serializabl
 
 	Credentials cred = scribe.getCredentials();
 	SendOptions opt = scribe.getSendOptions();
-	Vector topicListFromParent = (Vector)getData();
+	Vector topicListFromParent = (Vector)((Serializable)getData());
 	Vector topicListLocal = scribe.getTopicsForParent(m_source);
 	NodeId topicId;
 	Topic topic;

@@ -142,7 +142,7 @@ public class ScribeMaintainer
 		cred = m_scribe.getCredentials();
 		opt = m_scribe.getSendOptions();
 		msgh = m_scribe.makeHeartBeatMessage( cred );
-		msgh.setData(m_scribe.getFingerprintForChildTopics(child));
+		msgh.setData((Serializable)m_scribe.getFingerprintForChildTopics(child));
 		
 		if( !m_scribe.routeMsgDirect( child, msgh, cred, opt ) ) {
 		
