@@ -1583,7 +1583,7 @@ public class ConnectionManager {
 
     if (m instanceof HelloMsg) {
       HelloMsg hm = (HelloMsg)m;
-      hm.state = state;
+      //hm.state = state;
       if (state == 1) {
         //hm.addReceiver(address);
         //hm.lastMan = this;

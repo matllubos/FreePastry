@@ -21,6 +21,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.WeakHashMap;
 
+import rice.pastry.PastryObjectInputStream;
 import rice.pastry.socket.exception.DeserializationException;
 import rice.pastry.socket.exception.ImproperlyFormattedMessageException;
 import rice.pastry.socket.exception.SerializationException;
@@ -90,7 +91,7 @@ public class PingManager implements SelectionKeyHandler {
   /**
    * The number of sent pings that we remember for each connection.  This is security so nobody can alter their proximity by sending a newer message.
    */
-  private int NUM_PINGS_TO_REMEMBER = 5;
+  private int NUM_PINGS_TO_REMEMBER = 15;
 
 
   // ************* Fields to handle notification/recording *******
@@ -158,6 +159,8 @@ public class PingManager implements SelectionKeyHandler {
    */
   private SelectorManager manager;
 
+  private SocketPastryNode spn;
+
   /**
    * Constructor for PingManager.
    * 
@@ -165,7 +168,8 @@ public class PingManager implements SelectionKeyHandler {
    * @param manager ref to SelectorManager
    * @param pool ref to SocketNodeHandlePool
    */
-  public PingManager(int port, SelectorManager manager, SocketNodeHandlePool pool, SocketNodeHandle localHandle) throws BindException {
+  public PingManager(int port, SelectorManager manager, SocketNodeHandlePool pool, SocketNodeHandle localHandle, SocketPastryNode spn) throws BindException {
+    this.spn = spn;
     this.port = port;
     this.manager = manager;
     this.pool = pool;
@@ -584,7 +588,7 @@ public class PingManager implements SelectionKeyHandler {
    * @return The deserialized object.
    * @exception IOException if the buffer can't be deserialized
    */
-  public static Object deserialize(ByteBuffer buffer) throws IOException {
+  public Object deserialize(ByteBuffer buffer) throws IOException {
     int len = buffer.remaining();
     byte[] array = new byte[len];
 
@@ -592,7 +596,7 @@ public class PingManager implements SelectionKeyHandler {
     buffer.get(array);
     buffer.clear();
 
-    ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(array));
+    ObjectInputStream ois = new PastryObjectInputStream(new ByteArrayInputStream(array),spn);
 
     try {
       Object o = ois.readObject();

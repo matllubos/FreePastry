@@ -27,8 +27,8 @@ package rice.pastry.socket;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.util.Date;
 import java.util.Enumeration;
-import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -68,7 +68,7 @@ public class SelectorManager {
   public int numTimesNotRemoveKey = 0;
   public int totalNumTimesNotRemoveKey = 0;
   public static boolean recordStats = false;
-  public static boolean useHeartbeat = true;
+  public static boolean useHeartbeat = false;
 
 
   // *********************** debugging statistics ****************
@@ -150,22 +150,6 @@ public class SelectorManager {
     this.scm = scm;
   }
 
-  Hashtable invokeTypes = new Hashtable();
-  /**
-   * This method schedules a runnable task to be done by the selector thread
-   * during the next select() call. All operations which modify the selector
-   * should be done using this method, as they must be done in the selector
-   * thread.
-   *
-   * @param d The runnable task to invoke
-   */
-  public void invoke(Runnable d) {
-    synchronized(invocationLock) {
-      invocations.add(d);
-    }
-    selector.wakeup();
-  }
-
   /**
    * This method starts the socket manager listening for events. It is designed
    * to be started when this thread's start() method is invoked.
@@ -190,9 +174,15 @@ public class SelectorManager {
             long diff = (curTime-lastHeartBeat)-HEART_BEAT_TIME;
             lastHeartBeat = curTime;
             curTime/=1000;
-            System.out.println("SM.run(): heartbeat "+curTime+","+scm.addressString()+": lostTime:"+diff+" total:"+totalNumTimesNotRemoveKey+ " maxInvokes:"+maxInvocations+" totalInvokes:"+totalNumInvocations+" spm:"+scm.socketPoolManager+" waitingToAccept:"+waitingToAccept());
+            System.out.println("SM.run(): "+new Date()+","+scm.addressString()+": lostTime:"+diff+" total:"+totalNumTimesNotRemoveKey+ " maxInvokes:"+maxInvocations+" totalInvokes:"+totalNumInvocations+" spm:"+scm.socketPoolManager+" waitingToAccept:"+waitingToAccept());
             System.out.println(scm.socketPoolManager.getStatus());
+            Iterator i = scm.getConnectionManagers().iterator(); 
+            while(i.hasNext()) {
+              ConnectionManager cm = (ConnectionManager)i.next();
+              System.out.println("  "+cm.getStatus());
+            }            
             printStats();
+            System.out.println();
           }        
         }
 
@@ -281,7 +271,7 @@ public class SelectorManager {
   private void closeChannels() throws IOException {
     SelectionKey[] keys = keys();
 
-    //System.out.println("SelectorManager killed");
+    System.out.println(this+" killed");
     for (int i = 0; i < keys.length; i++) {
       try {
         keys[i].channel().close();
@@ -331,6 +321,10 @@ public class SelectorManager {
     // mark socketmanager as dead
     alive = false;
     selector.wakeup();
+    if (stall) {
+      stall = false;
+      selectorThread.interrupt();
+    }
   }
 
   /**
@@ -344,6 +338,23 @@ public class SelectorManager {
   Selector getSelector() {
     return selector;
   }
+
+  Hashtable invokeTypes = new Hashtable();
+  /**
+   * This method schedules a runnable task to be done by the selector thread
+   * during the next select() call. All operations which modify the selector
+   * should be done using this method, as they must be done in the selector
+   * thread.
+   *
+   * @param d The runnable task to invoke
+   */
+  public void invoke(Runnable d) {
+    synchronized(invocationLock) {
+      invocations.add(d);
+    }
+    selector.wakeup();
+  }
+
 
   Object invocationLock = new Object();
 
@@ -426,6 +437,12 @@ public class SelectorManager {
    */
   boolean stall = false;
 
+  public String toString() {
+    return "Selector for "+node.getLocalHandle();
+  }
+
+  
+
   /**
    * The time to stall the thread when stalling.
    */
@@ -445,5 +462,10 @@ public class SelectorManager {
 		public boolean isSelectorThread() {
       return (Thread.currentThread() == selectorThread);
 		}
+
+//	protected void finalize() throws Throwable {
+//    System.out.println(this+".finalize()");
+//		super.finalize();
+//	}
 
 }

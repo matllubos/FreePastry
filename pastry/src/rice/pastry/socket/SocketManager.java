@@ -65,9 +65,10 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
   private SocketCollectionManager scm;
 
   /** 
+   * This is active while we are connecting, and cancelled when we close, or complete connection.  
    * An anonamous inner class.  Invariant: if checkDeadTask != null, it is running and can be cancelled.
    */
-  private TimerTask checkDeadTask = null;
+  private TimerTask connectingCheckDeadTask = null;
 
   public Exception closedTrace;
   Exception openedTrace;
@@ -283,8 +284,8 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
         //System.out.println("SM.createConnection(): Registering "+this);
       } else {
         if (connectionManager != null) {
-          if (checkDeadTask == null) {
-            checkDeadTask = 
+          if (connectingCheckDeadTask == null) {
+            connectingCheckDeadTask = 
               new TimerTask() {
                 /**
                  * This runs while we are connecting every 5 seconds.  It calls checkDead() on the selector thread.
@@ -297,7 +298,7 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
                   });
                 }
     					};
-            scm.scheduleTask(checkDeadTask,5000,5000);
+            scm.scheduleTask(connectingCheckDeadTask,5000,5000);
           }
         }
         key = channel.register(scm.manager.getSelector(), SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
@@ -354,11 +355,11 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
 	}
   
   private void cancelCheckDeadTask() {
-    if (checkDeadTask != null) {
+    if (connectingCheckDeadTask != null) {
       try {
-        checkDeadTask.cancel();
+        connectingCheckDeadTask.cancel();
       } catch (Exception e) {}
-      checkDeadTask = null;
+      connectingCheckDeadTask = null;
     }
   }
   /**
@@ -764,6 +765,9 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
     return "SocketManager<"+type+","+ctor+">@"+System.identityHashCode(this)+":"+scm.addressString()+" -> "+address+s+" "+getStatus();//+":"+lastWritten;
   }
   
+  /** 
+   * Debugging method that prints status.
+   */
   public String getStatus() {
     String s1 = "live: ";
     if (connectionManager != null) {
@@ -771,14 +775,14 @@ public class SocketManager implements SelectionKeyHandler, LivenessListener {
     } else {
       s1 = "live: null";
     }
-    boolean cd = checkDeadTask != null;
+    boolean cd = connectingCheckDeadTask != null;
     String s = null;
     
     try {
       s = ""+key.isWritable();
     } catch (Exception e) {}
     
-    return "{"+s1+",ctor:"+ctor+",conn1:"+connecting+",conn2:"+connected+",idle:"+isIdle()+",clos:"+closed+",halfclosed:"+halfClosed+",numTries:"+numTriesToConnect+",deadChecker:"+cd /*+",w.q:"+writer.getSize()+",w.e:"+writer.isEmpty()+",w.k:"+s*/+"}";
+    return "{"+s1+",ctor:"+ctor+",conn1:"+connecting+",conn2:"+connected+",idle:"+isIdle()+",clos:"+closed+",halfclosed:"+halfClosed+",numTries:"+numTriesToConnect+",connDeadChecker:"+cd /*+",w.q:"+writer.getSize()+",w.e:"+writer.isEmpty()+",w.k:"+s*/+"}";
   }
 
 	/**

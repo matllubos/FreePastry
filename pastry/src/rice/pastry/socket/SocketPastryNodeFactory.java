@@ -226,7 +226,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    */
   public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress proxyAddress, InetAddress bindAddress) {
     final SocketPastryNode pn = new SocketPastryNode(nodeId);
-
+    pn.getLocalNodeI(bootstrap); // register this nodehandle as early as we can
     SelectorManager sManager = new SelectorManager(pn);
 
     SocketCollectionManager socketManager = null;
@@ -245,7 +245,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
         localhandle = new SocketNodeHandle(address, nodeId);
         boolean pingSuccess = false;
         try {
-          pingManager = new PingManager(port, sManager, pool, localhandle);
+          pingManager = new PingManager(port, sManager, pool, localhandle, pn);
           pingSuccess = true;
         } catch (BindException be) {
                     

@@ -143,7 +143,7 @@ public class SocketChannelWriter {
 
     if (m instanceof HelloMsg) {
       HelloMsg hm = (HelloMsg)m;
-      hm.state = state;
+      //hm.state = state;
       if (state == 104) {
         //hm.addReceiver(address);
         //hm.lastSM = manager;

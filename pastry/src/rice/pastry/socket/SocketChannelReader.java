@@ -86,6 +86,7 @@ public class SocketChannelReader {
    * @param spn The PastryNode the SocketChannelReader serves.
    */
   public SocketChannelReader(SocketPastryNode spn, SocketManager sm) {
+    //if (spn == null) Thread.dumpStack();
     this.spn = spn;
     this.manager = sm;
     initialized = false;

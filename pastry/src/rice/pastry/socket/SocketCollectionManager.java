@@ -29,15 +29,14 @@ import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.TimerTask;
 import java.util.WeakHashMap;
 
 import rice.pastry.Log;
 import rice.pastry.NodeHandle;
-import rice.pastry.client.PastryAppl;
 import rice.pastry.messaging.Message;
-import rice.pastry.messaging.MessageReceiver;
 import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.exception.TooManyMessagesException;
 
@@ -203,6 +202,11 @@ public class SocketCollectionManager implements SelectionKeyHandler {
     }
     return cm;
   }
+  
+  public Collection getConnectionManagers() {
+    return connections.values();
+  }
+
   
   /**
    * Method which sends a message across the wire.
@@ -431,4 +435,5 @@ public class SocketCollectionManager implements SelectionKeyHandler {
 	public InetSocketAddress getAddress() {
 		return getLocalNodeHandle().getAddress();		
 	}
+
 }
