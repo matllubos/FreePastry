@@ -14,14 +14,16 @@ public class ControlFindParentMessage extends MessageAnycast
 {
     Vector send_to;
     Vector already_seen;
+    StripeId stripe_id
 
     final int ALLOWABLE_CHILDREN = 2;
 
-    public ControlFindParentMessage( Address addr, NodeHandle source, StripeId topicId, Credentials c )
+    public ControlFindParentMessage( Address addr, NodeHandle source, StripeId topicId, Credentials c, StripeId stripe_id )
     {
        super( addr, source, topicId, c );
        send_to = new Vector();
        already_seen = new Vector();
+       this.stripe_id = stripe_id;
     }
 
     /**
@@ -82,7 +84,7 @@ public class ControlFindParentMessage extends MessageAnycast
             {
                 send_to.addAll( 0, scribe.getChildren( topic.getTopicId() ) );
             }
-            while ( !( already_seen.contains( send_to.get(0) ) ) && ( send_to.size() > 0 ) )
+            while ( ( already_seen.contains( send_to.get(0) ) ) && ( send_to.size() > 0 ) )
             {
                 send_to.remove( 0 );
             }
@@ -92,7 +94,7 @@ public class ControlFindParentMessage extends MessageAnycast
             }
             else
             {
-                if ( !isRoot( topic.getTopicId() ) )
+                if ( !scribe.isRoot( topic.getTopicId() ) )
                 {
                     scribe.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this );
                 }
@@ -123,7 +125,7 @@ public class ControlFindParentMessage extends MessageAnycast
     {
         Credentials c = new PermissiveCredentials();
 
-        scribe.addChild( this.getSource(), topic.getTopicId() );
+        scribe.addChild( this.getSource(), stripe_id );
         scribe.routeMsgDirect( this.getSource(), 
                                new ControlFindParentResponseMessage( scribe.getAddress(),
                                                                      scribe.getNodeHandle(),
@@ -133,7 +135,7 @@ public class ControlFindParentMessage extends MessageAnycast
 
         if ( aggregateNumChildren( scribe ) >= ALLOWABLE_CHILDREN )
         {
-            /* need to leave the spare capacity tree now */
+            scribe.leave( topic.getTopicId(), null, c );
         }
     }
 
