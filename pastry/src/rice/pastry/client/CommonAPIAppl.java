@@ -169,23 +169,28 @@ public abstract class CommonAPIAppl extends PastryAppl
      * otherwise. It is an error to query the range of a node not
      * present in the neighbor set as returned by the update
      * upcall or the neighborSet call.  Certain implementations
-     * may return an error if $r$ is greater than zero. $[lkey, rkey]$
-     * denotes an inclusive range of key values.
+     * may return an error if r is greater than zero.
      *
      * Some implementations may have multiple, disjoint ranges of keys
-     * for which a given node is responsible. The parameter lkey
+     * for which a given node is responsible. The parameter key
      * allows the caller to specify which region should be returned.
-     * If the node referenced by n is responsible for key lkey, then
-     * the resulting range includes lkey. Otherwise, the result is the
-     * nearest range clockwise from lkey for which $N$ is responsible.
+     * If the node referenced by n is responsible for key, then
+     * the resulting range includes key. Otherwise, the result is the
+     * nearest range clockwise from key for which n is responsible.
      *
      * @param n nodeHandle of the node whose range is being queried
      * @param r the rank
-     * @param range the range of keys being queried and returned
-     * @return false if range could not be determined for the given node and rank, true otherwise
+     * @param key the key
+     * @param cumulative if true, returns ranges for which n is an i-root for 0<i<=r
+     * @return the range of keys, or null if range could not be determined for the given node and rank
      */
-    boolean range(NodeHandle n, int r, IdRange range) {
-	return false;
+    public IdRange range(NodeHandle n, int r, Id key, boolean cumulative) {
+	return getLeafSet().range(n, r, key, cumulative);
+    }
+
+
+    public IdRange range(NodeHandle n, int r, Id key) {
+	return range(n, r, key, false);
     }
 
 
@@ -223,7 +228,7 @@ public abstract class CommonAPIAppl extends PastryAppl
      * @param msg the message that is arriving.
      */
 
-    public abstract void deliver(Id key, Message msg);
+    public /*abstract*/ void deliver(Id key, Message msg) {}
 
     /**
      * Called by pastry when a message is enroute and is passing through this node.  If this
@@ -236,7 +241,7 @@ public abstract class CommonAPIAppl extends PastryAppl
      * @return true if the message should be routed, false if the message should be cancelled.
      */
      
-    public void forward(Id key, Message msg, NodeHandle nextHopNode) {
+    public void forward(RouteMessage msg) {
 	return;
     }
     
