@@ -661,7 +661,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public void shutdown() {
       try {
-        System.out.println("SHUTDOWN OUT: Shutting down output to path " + path);
+        System.out.println("SHUTDOWN OUT: " + localAddress + " Shutting down output to path " + path);
         ((SocketChannel) key.channel()).socket().shutdownOutput();
         socketClosed(path, this);
         SelectorManager.getSelectorManager().modifyKey(key);
@@ -792,7 +792,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         }
       } catch (IOException e) {
         debug("ERROR " + e + " reading - cancelling.");
-        System.out.println("SHUTDOWN OUT: Read closing of path " + path + " " + ((SocketChannel) key.channel()).socket().isOutputShutdown());
+        System.out.println("SHUTDOWN OUT: " + localAddress + " Read closing of path " + path + " " + ((SocketChannel) key.channel()).socket().isOutputShutdown());
         
         // if it's not a bootstrap path, and we didn't close this socket's output,
         // then check to see if the remote address is dead or just closing a socket
@@ -960,7 +960,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public void shutdown(SelectionKey key) {
       try {
-        System.out.println("SHUTDOWN OUT: Shutting down output to SR path...");
+        System.out.println("SHUTDOWN OUT: " + localAddress + " Shutting down output to SR path...");
         ((SocketChannel) key.channel()).socket().shutdownOutput();
         sourceRouteClosed(this);
       } catch (IOException e) {
@@ -989,7 +989,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           key2 = null;
         }
         
-        System.out.println("SHUTDOWN OUT: Closing SR path...");
+        System.out.println("SHUTDOWN OUT: " + localAddress + " Closing SR path...");
         
         sourceRouteClosed(this);
       } catch (IOException e) {
@@ -1024,33 +1024,34 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param key The selection key for this manager
      */
     public void read(SelectionKey key) {
-      try {
-        if (repeater.read((SocketChannel) key.channel())) {
+      try {        
+        try {
+          if (repeater.read((SocketChannel) key.channel())) {
+            key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
+            otherKey(key).interestOps(otherKey(key).interestOps() | SelectionKey.OP_WRITE);
+          }
+        } catch (ClosedChannelException e) {
+          debug("INFO " + e + " reading source route - closing other half...");
+          // first, deregister in reading and writing to the appropriate sockets
+          ((SocketChannel) key.channel()).socket().shutdownInput();
           key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
-          otherKey(key).interestOps(otherKey(key).interestOps() | SelectionKey.OP_WRITE);
+          otherKey(key).interestOps(otherKey(key).interestOps() & ~SelectionKey.OP_WRITE);
+          
+          // then determine if the sockets are now completely shut down,
+          // or if only half is now closed
+          if (((SocketChannel) otherKey(key).channel()).socket().isInputShutdown()) 
+            close();
+          else
+            shutdown(otherKey(key));
         }
-      } catch (ClosedChannelException e) {
-        debug("INFO " + e + " reading source route - closing other half...");
-
-        // first, deregister in reading and writing to the appropriate sockets
-        key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
-        otherKey(key).interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-
-        // then determine if the sockets are now completely shut down,
-        // or if only half is now closed
-        if (((SocketChannel) otherKey(key).channel()).socket().isInputShutdown()) 
-          close();
-        else
-          shutdown(otherKey(key));
       } catch (IOException e) {
         debug("ERROR " + e + " reading source route - cancelling.");
         close();
       }
     }
     
-    
     /**
-      * Writes to the socket attached to this socket manager.
+     * Writes to the socket attached to this socket manager.
      *
      * @param key The selection key for this manager
      */
@@ -1067,7 +1068,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     }
     
     /**
-      * Accepts a new connection on the given key
+     * Accepts a new connection on the given key
      *
      * @param serverKey The server socket key
      * @exception IOException DESCRIBE THE EXCEPTION
