@@ -44,6 +44,7 @@ import rice.p2p.commonapi.*;
 import rice.pastry.Log;
 import rice.pastry.NodeId;
 import rice.pastry.PastryNode;
+import rice.pastry.leafset.LeafSet;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.security.*;
 import rice.pastry.routing.SendOptions;
@@ -207,8 +208,27 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param max_rank the maximal number of nodehandles returned
    * @return the replica set
    */
-  public NodeHandleSet replicaSet(Id key, int max_rank) {
-    return getLeafSet().replicaSet((rice.pastry.Id) key, max_rank);
+  public NodeHandleSet replicaSet(Id id, int maxRank) {
+    return getLeafSet().replicaSet((rice.pastry.Id) id, maxRank);
+  }
+  
+  /**
+   * This methods returns an ordered set of nodehandles on which replicas of an object with
+   * a given id can be stored.  The call returns nodes up to and including a node with maxRank.
+   * This call also allows the application to provide a remove "center" node, as well as
+   * other nodes in the vicinity. 
+   *
+   * @param id The object's id.
+   * @param maxRank The number of desired replicas.
+   * @param handle The root handle of the remove set
+   * @param set The set of other nodes around the root handle
+   */
+  public NodeHandleSet replicaSet(Id id, int maxRank, NodeHandle root, NodeHandleSet set) {
+    LeafSet leaf = new LeafSet((rice.pastry.NodeHandle) root, getLeafSet().maxSize());
+    for (int i=0; i<set.size(); i++)
+      leaf.put((rice.pastry.NodeHandle) set.getHandle(i));
+    
+    return leaf.replicaSet((rice.pastry.Id) id, maxRank);
   }
 
   /**
