@@ -77,6 +77,18 @@ public interface IScribe
     public void registerApp(IScribeApp app);
 
 
+    /** 
+     * Registers the application that implements the IScribeObserver 
+     * interface. Whenever a topic is implicitly created, these registered
+     * applications would be notified.
+     *
+     * @param app The application interested in getting notified whenever
+     *            a topic is implicitly created.
+     */
+    public void registerScribeObserver(IScribeObserver app);
+
+
+
     /**
      * Creates a group/topic if the credentials are valid. Nodes must then join
      * this group in order to get information multicast to it.

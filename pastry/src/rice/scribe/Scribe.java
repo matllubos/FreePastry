@@ -345,9 +345,18 @@ public class Scribe extends PastryAppl implements IScribe
 	if(isReady())
 	    app.scribeIsReady();
 	m_apps.add(app);
-	if(app instanceof IScribeObserver)
-	    m_scribeObservers.add(app);
+    }
 
+    /** 
+     * Registers the application that implements the IScribeObserver 
+     * interface. Whenever a topic is implicitly created, these registered
+     * applications would be notified.
+     *
+     * @param app The application interested in getting notified whenever
+     *            a topic is implicitly created.
+     */
+    public void registerScribeObserver(IScribeObserver app) {
+	m_scribeObservers.add(app);
     }
     
 

@@ -75,6 +75,7 @@ public class DirectScribeMaintenanceTestApp implements IScribeApp, IScribeObserv
 	m_credentials = cred;
 	m_pastryNode = node;
 	m_scribe.registerApp(this);
+	m_scribe.registerScribeObserver(this);
     }
 
     /**
