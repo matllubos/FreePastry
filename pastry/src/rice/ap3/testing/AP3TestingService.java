@@ -63,9 +63,11 @@ public class AP3TestingService extends AP3ServiceImpl {
   /**
    * Overriden to return a specific node as opposed to a random one
    */
+  /*
   protected NodeId _generateRandomNodeID() {
     return _randomNode;
   }
+  */
 
   protected void setRandomNode(NodeId node) {
     _randomNode = node;

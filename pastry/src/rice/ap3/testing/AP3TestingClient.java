@@ -28,7 +28,7 @@ public class AP3TestingClient implements AP3Client {
   }
 
   public Object fetchContent(Object request) {
-    return null;
+    return "Content fetched from: " + _ap3.getNodeId();
   }
 
   public AP3TestingService getService() {

@@ -67,6 +67,16 @@ public class AP3ServiceImpl
   protected RandomNodeIdFactory _randomNodeIDFactory;
 
   /**
+   * Timeout on waiting for a response in
+   * milliseconds.
+   *
+   * Needs accessors and exported out through
+   * the AP3Service interface.
+   */
+  protected long _timeout;
+
+
+  /**
    * Constructor
    */
   public AP3ServiceImpl(PastryNode pn, AP3Client client) {
@@ -78,6 +88,7 @@ public class AP3ServiceImpl
     this._randomNodeIDFactory = new RandomNodeIdFactory();
     this._threadTable = new Hashtable();
     this._random = new Random();
+    this._timeout = 2000;
   }
 
   /**
@@ -94,18 +105,12 @@ public class AP3ServiceImpl
     boolean messageIDCollided = true;
     AP3Message requestMsg = null;
 
-    requestMsg = _createAP3Message(this.getNodeId(),
-				   request,
-				   AP3MessageType.REQUEST,
-				   fetchProbability);
-
-    /*
     while(messageIDCollided) {
       try {
 	requestMsg = _createAP3Message(this.getNodeId(),
-				       request,
-				       AP3MessageType.REQUEST,
-				       fetchProbability);
+	 			       request,
+		 		       AP3MessageType.REQUEST,
+			 	       fetchProbability);
 	_routingTable.addEntry(requestMsg);
 	messageIDCollided = false;
       } catch(Exception e) {
@@ -113,41 +118,45 @@ public class AP3ServiceImpl
       }
     }
 
+    /* Update the thread table so that this thread can collect its
+     * response when it arrives.
+     */
     _threadTable.put(requestMsg.getID(),
-		     new ThreadTableEntry(Thread.currentThread(), null));
-    */
+	 	     new ThreadTableEntry(Thread.currentThread(), null));
 
+    /* Route the message and begin the anonymization process!
+     */
     this._routeMsg(_generateRandomNodeID(), requestMsg);
 
-    /* In the future, change wait() to be wait(timeout) 
-     * so that the thread can wake after a timeout period to handle the
-     * timeout. 
-
-    while(((ThreadTableEntry) _threadTable.get(requestMsg.getID()))._msg ==
-	  null) {
-      System.out.println("waiting...");
+    /* Wait till a response is received.
+     *
+     * Needs to be changed so that it works properly by 
+     * subclassing Thread and giving us something that can
+     * be suspended and resumed.
+     */
+    if(((ThreadTableEntry) _threadTable.get(requestMsg.getID()))._msg ==
+       null) {
       try {
-	//wait();
-	Thread.currentThread().wait();
-      } catch (Exception e) {
-	System.out.println("\nawoken\n");
-	// If the thread is interrupted, continue.
+	Thread.sleep(_timeout);
+      } catch (InterruptedException e) {
       }
     }
-    */
 
     /* Thread is here because it has been notified by a thread
      * that deposited the response message in the thread table.
-     * So get that response msg, extract the object and return it.
-
+     * Or because it has timed out.
+     */
     AP3Message responseMsg = 
       ((ThreadTableEntry) _threadTable.get(requestMsg.getID()))._msg;
 
-    return responseMsg.getContent();
-    */
-
-    System.out.println("\nDEBUG -------- Leaving getAnonymizedContent()");
-    return null;
+    /* If it has timed out, return null.
+     * Need to resend request in the future.
+     */
+    if(responseMsg == null) {
+      return null;
+    } else {
+      return responseMsg.getContent();
+    }
   }
 
   /**
@@ -195,7 +204,6 @@ public class AP3ServiceImpl
     } else if (ap3Msg.getType() == AP3MessageType.RESPONSE) {
       this._handleResponse(ap3Msg);
     } else {
-
       /* Should never be here */
       throw new IllegalArgumentException("Message type is neither request nor response");
     }
@@ -205,13 +213,10 @@ public class AP3ServiceImpl
    * Handles response messages.
    */
   protected void _handleResponse(AP3Message msg) {
-
     AP3RoutingTableEntry routeInfo = _routingTable.getEntry(msg.getID());
     _routingTable.dropEntry(msg.getID());
 
     if(routeInfo == null) {
-      System.out.println("\n\nDEBUG -------- Received an unknown response in node " +
-			 this.getNodeId() + "\n\n");
       /* We know nothing about this response message, so drop it */
       return;
     } else {
@@ -231,10 +236,10 @@ public class AP3ServiceImpl
 	    ("No sleeping thread found to give response to");
 	}
 	
-	System.out.println("\n\nDEBUG -------- Received my response in node " +
-			   this.getNodeId() + "\n\n");
+	/* This will cause the thread awaiting this message
+	 * to wake up and return the content to the user.
+	 */
 	threadInfo._msg = msg;
-	threadInfo._thread.notify();
       } else {
 	/* Route response back towards originator after 
 	 * letting the client cache it 
@@ -251,35 +256,34 @@ public class AP3ServiceImpl
   protected void _handleRequest(AP3Message msg) {
     
     AP3RoutingTableEntry routeInfo = _routingTable.getEntry(msg.getID());
+    Object content = null;
+
     if(routeInfo != null) {
       /* This is a message id collision, drop the request */
-      System.out.println("\ncollision.node =" + this.getNodeId() + 
-			 "\ncollision.messageID =" + msg.getID() + "\n");
       return;
     }
     
-    AP3Message responseMsg = null;
-    Object content = null;
-
     content = _client.checkCache(msg.getContent());
     if(content != null) {
       /* We're an intermediate node that found the requested content
        * in our cache. Let's return it.
        */
-      _sendResponse(msg.getSource(), content);
+      _sendResponse(msg.getSource(), msg.getID(), content);
     } else if(_shouldFetch(msg.getFetchProbability())) {
       /* According to the fetch probability set in the message
-       * and our random coin toss, we're supposed to fetch 
+       * and our random dice toss, we're supposed to fetch 
        * the content. 
        */
       content = _client.fetchContent(msg.getContent());
-      _sendResponse(msg.getSource(), content);
+      _sendResponse(msg.getSource(), msg.getID(), content);
     } else {
       /* We're supposed to forward the request to a randomly chosen
-       * node. Make a mark of it in the routing table.
+       * node. Make a mark of it in the routing table and update
+       * the message to reflect the new source, which is the current node.
        */
       try {
 	_routingTable.addEntry(msg);
+	msg.setSource(this.getNodeId());
 	this._routeMsg(_generateRandomNodeID(), msg);
       } catch (Exception e) {
 	/* A message id collision occurred, drop the request */
@@ -323,11 +327,12 @@ public class AP3ServiceImpl
   /**
    * Helper function used to return response messages
    */
-  protected void _sendResponse(NodeId dest, Object responseContent) {
+  protected void _sendResponse(NodeId dest, AP3MessageID id, Object responseContent) {
     AP3Message responseMsg = _createAP3Message(null,
 					       responseContent,
 					       AP3MessageType.RESPONSE,
 					       -1.0);
+    responseMsg.setID(id);
     this._routeMsg(dest, responseMsg);
   }
 
@@ -339,7 +344,7 @@ public class AP3ServiceImpl
     /**
      * The blocked thread itself.
      */
-    protected Thread _thread;
+    protected Object _waitObject;
 
     /**
      * The resposne message for the blocked thread
@@ -350,8 +355,8 @@ public class AP3ServiceImpl
     /**
      * Constructor.
      */
-    ThreadTableEntry(Thread thread, AP3Message msg) {
-      this._thread = thread;
+    ThreadTableEntry(Object waitObject, AP3Message msg) {
+      this._waitObject = waitObject;
       this._msg = msg;
     }
   }

@@ -239,7 +239,9 @@ public class RMIAP3Test {
     //}
       
     sourceNode.getService().setRandomNode(destNode.getService().getNodeId());
-    sourceNode.getService().getAnonymizedContent("requestMsg", 0.01);
+    String content = (String) sourceNode.getService().getAnonymizedContent("requestMsg", 1);
+
+    System.out.println("\n\nDEBUG ----------- CONTENT RECEIVED: " + content);
 
     System.out.println("\n\n------------------- Finished making requests\n\n");
   }
@@ -249,7 +251,7 @@ public class RMIAP3Test {
    * Usage: RMIAP3Test [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
    */
   public static void main(String args[]) {
-    int k = 1; // number of messages to send
+    int k = 5; // number of messages to send
     
     doRMIinitstuff(args);
     RMIAP3Test ap3Test = new RMIAP3Test();
