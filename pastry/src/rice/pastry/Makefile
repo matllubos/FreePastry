@@ -1,22 +1,6 @@
 PACKAGE = rice.pastry
 
-SOURCE  = \
-	Id.java\
-	IdSet.java \
-	IdRange.java \
-	NodeId.java\
-	NodeIdFactory.java\
-	NodeHandle.java\
-	LocalNode.java\
-	LocalNodeI.java\
-	PendingLocalNodesList.java\
-	PastryNode.java\
-	PastryNodeFactory.java\
-	NodeSet.java\
-	NodeSetUpdate.java \
-	Log.java \
-	PastrySeed.java\
-	ScheduledMessage.java
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 RMI_SOURCE =
 

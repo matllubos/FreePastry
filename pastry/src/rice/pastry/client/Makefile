@@ -1,8 +1,6 @@
 PACKAGE = rice.pastry.client
 
-SOURCE  = \
-	PastryAppl.java \
-	CommonAPIAppl.java
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 RMI_SOURCE =
 
