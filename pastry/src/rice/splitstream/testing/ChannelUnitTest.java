@@ -157,13 +157,15 @@ public class ChannelUnitTest implements Observer{
      * Succeeds: if the stripe shares the first digit 
      */
     if(
-     getChannel().getPrimaryStripe().getStripeId().getDigit(15 , 4) == 
-     getChannel().getNodeId().getDigit(15, 4 )
+     getChannel().getPrimaryStripe().getStripeId().getDigit(31 , 4) == 
+     getChannel().getNodeId().getDigit(31, 4 )
       ){
       System.out.println("Get Primary Stripe          [ PASSED ]" );
     }
     else{
       System.out.println("Get Primary Stripe          [ FAILED ]" );
+      System.out.println("\n Node Id = " + getChannel().getNodeId());
+      System.out.println("Stripe id = " + getChannel().getPrimaryStripe().getStripeId());
       passed = false;
     }
 
