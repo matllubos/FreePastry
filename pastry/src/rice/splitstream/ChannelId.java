@@ -1,6 +1,9 @@
 package rice.splitstream;
 import rice.pastry.*;
 /**
+ * Add class information here
+ */
+/**
  * This class just wraps the NodeId so that
  * we can have type checking.
  */
