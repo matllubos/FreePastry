@@ -19,6 +19,6 @@ public interface ISplitStream{
     * content into
     * @return A new channel object
     */
-   Channel createChannel(int numStripes);
+   Channel createChannel(int numStripes, String name);
 
 }

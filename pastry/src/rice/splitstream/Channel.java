@@ -79,8 +79,7 @@ public class Channel extends PastryAppl implements IScribeApp {
     * Constructor to Create a new channel
     *
     */
-   public Channel(int numStripes, IScribe scribe, Credentials cred, 
-                  BandwidthManager bandwidthManager, PastryNode node){
+   public Channel(int numStripes, String name, IScribe scribe, Credentials cred,                  BandwidthManager bandwidthManager, PastryNode node){
         /* This method should probably broken down into smaller sub methods */
  	super(node);	
         this.numSubscribedStripes = numStripes;
@@ -92,7 +91,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	/* register this channel with the bandwidthManager */
 	this.bandwidthManager.registerChannel(this);
 	scribe.registerApp(this);
-        NodeId topicId = random.generateNodeId();
+        NodeId topicId = this.scribe.generateTopicId(name);
         if(scribe.create(topicId, cred)){
 		System.out.println("Channel Topic Created");
 		this.channelId = new ChannelId(topicId);
@@ -384,19 +383,25 @@ public class Channel extends PastryAppl implements IScribeApp {
 	}		
 	isReady = true;
   }
-  private void handleControlFindParentResponseMessage(Message msg){}
-  private void handleControlDropMessage(Message msg){}
+  private void handleControlFindParentResponseMessage(Message msg){
+    /* Should call stripe.setParent() */
+  }
+  private void handleControlDropMessage(Message msg){
+    System.out.println("Drop Message");
+    /* Should call stripe.drop() */
+  }
   private void handleChannelMessage(ScribeMessage msg){
-	 	ControlAttachMessage attachMessage =(ControlAttachMessage) msg.getData();
-		attachMessage.handleMessage(this, scribe, msg.getSource());
+    ControlAttachMessage attachMessage =(ControlAttachMessage) msg.getData();
+    attachMessage.handleMessage(this, scribe, msg.getSource());
   }
   private void handleSpareCapacityMessage(ScribeMessage msg){
-		Stripe stripe = null;
-		ControlFindParentMessage parentMessage = (ControlFindParentMessage) msg;
-		if(stripeIdTable.get(parentMessage.getStripeId()) instanceof Stripe){
-			stripe = (Stripe) stripeIdTable.get(parentMessage.getStripeId());	
-		}
-		parentMessage.handleForwardWrapper((Scribe) scribe,((Scribe) scribe).getTopic(parentMessage.getTopicId()), stripe );
+    System.out.println("SpareCapacity Message");
+    Stripe stripe = null;
+    ControlFindParentMessage parentMessage = (ControlFindParentMessage) msg;
+    if(stripeIdTable.get(parentMessage.getStripeId()) instanceof Stripe){
+      stripe = (Stripe) stripeIdTable.get(parentMessage.getStripeId());	
+    }
+    parentMessage.handleForwardWrapper((Scribe) scribe,((Scribe) scribe).getTopic(parentMessage.getTopicId()), stripe );
   }
   public String toString(){
 	String toReturn = "Channel: " + getChannelId() + "\n";

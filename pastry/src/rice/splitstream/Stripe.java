@@ -125,7 +125,11 @@ public class Stripe extends Observable implements IScribeApp{
  		stripeState = STRIPE_SUBSCRIBED;
 		inputStream = new ByteArrayInputStream(inputBuffer);
 	}
-     }	
+     }
+     public void dropped(){
+	System.out.println("I'm Getting Dropped");
+     }
+	
      public void backdoorSend(Serializable data){
 	scribe.multicast(stripeId, data, credentials);
      }
@@ -136,6 +140,8 @@ public class Stripe extends Observable implements IScribeApp{
     public int getState(){ 
        return stripeState;
     }
+
+
     /**
      * Scribe Implementation Methods
      */
@@ -159,12 +165,12 @@ public class Stripe extends Observable implements IScribeApp{
 	    else{
                 /* THIS IS WHERE THE DROP SHOULD OCCUR */
                 Credentials credentials = new PermissiveCredentials();
-                /*channel.routeMsgDirect( child, new ControlDropMessage( channel.getAddress(),
+                channel.routeMsgDirect( child, new ControlDropMessage( channel.getAddress(),
                                                                        channel.getNodeHandle(),
                                                                        topicId,
                                                                        credentials,
                                                                        channel.getSpareCapacityId() ),
-                                        credentials, null );*/
+                                        credentials, null );
                 //System.out.println("SHOULD NOT TAKE CHILD");
 	   }
 	/* We should check if we can take this child on */

@@ -65,9 +65,9 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp,IScribeObserver
     *        be striped, each part is a Stripe.
     * @return an instance of a Channel class. 
     */
-   public Channel createChannel(int numStripes){
+   public Channel createChannel(int numStripes, String name){
 	//System.out.println("Channel: Creating a new channel, numStripes = " + numStripes);
-	return (new Channel(numStripes, scribe, credentials ,bandwidthManager, node));
+	return (new Channel(numStripes,name, scribe, credentials ,bandwidthManager, node));
    }
    /**
     * This method is used by peers who wish to listen to content distributed 
