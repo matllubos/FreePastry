@@ -665,7 +665,7 @@ public class PostImpl extends PastryAppl implements Post, IScribeApp  {
         return;
       }
 
-      System.out.println(thePastryNode.getNodeId() + "DEBUG: successfully deserialized notification message from : " + nm.getSender());
+      //System.out.println(thePastryNode.getNodeId() + "DEBUG: successfully deserialized notification message from : " + nm.getSender());
 
       if (! (nm.getSender().equals(message.getSender()))) {
         System.out.println("PANIC - Found ENM from " + message.getSender() + " with internal NM from different sender " +
