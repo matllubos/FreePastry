@@ -211,7 +211,7 @@ public class SocketChannelReader {
       System.out.println("PANIC: Unknown class type in serialized message!");
       throw new IOException("Unknown class type in message - closing channel.");
     } catch (InvalidClassException e) {
-      System.out.println("PANIC: Serialized message was an invalid class!");
+      System.out.println("PANIC(socket.SocketChannelReader): Serialized message was an invalid class!"+e.getMessage()+":"+e.classname);
       throw new IOException("Invalid class in message - closing channel.");
     }
   }

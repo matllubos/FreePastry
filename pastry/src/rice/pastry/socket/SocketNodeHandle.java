@@ -46,6 +46,9 @@ import rice.pastry.socket.exception.TooManyMessagesException;
  */
 public class SocketNodeHandle extends DistNodeHandle {
 
+  static final long serialVersionUID = -1905829262183080770L;
+
+
   /**
    * The default distance, which is used before a ping
    */

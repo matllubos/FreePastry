@@ -623,7 +623,7 @@ public class PingManager extends SelectionKeyHandler {
       System.out.println("PANIC: Unknown class type in serialized message!");
       throw new ImproperlyFormattedMessageException("Unknown class type in message - closing channel.");
     } catch (InvalidClassException e) {
-      System.out.println("PANIC: Serialized message was an invalid class!");
+      System.out.println("PANIC(socket.PingManager): Serialized message was an invalid class!"+e.getMessage()+":"+e.classname);
       throw new DeserializationException("Invalid class in message - closing channel.");
     }
   }
