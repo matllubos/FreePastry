@@ -36,14 +36,22 @@ if advised of the possibility of such damage.
 
 package rice.pastry;
 
-import rice.pastry.messaging.*;
-import rice.pastry.security.*;
-import rice.pastry.client.*;
-import rice.pastry.leafset.*;
-import rice.pastry.routing.*;
-
+import java.io.ObjectInputStream;
 import java.lang.ref.WeakReference;
-import java.util.*;
+import java.util.Iterator;
+import java.util.Observer;
+import java.util.Vector;
+import java.util.WeakHashMap;
+
+import rice.pastry.client.PastryAppl;
+import rice.pastry.leafset.LeafSet;
+import rice.pastry.messaging.Address;
+import rice.pastry.messaging.Message;
+import rice.pastry.messaging.MessageDispatch;
+import rice.pastry.messaging.MessageReceiver;
+import rice.pastry.routing.RoutingTable;
+import rice.pastry.security.Credentials;
+import rice.pastry.security.PastrySecurityManager;
 
 /**
  * A Pastry node is single entity in the pastry network.
@@ -230,8 +238,9 @@ public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.
      * interfere with application messages.
      */
     public synchronized void receiveMessage(Message msg) {
-      if (! (msg.getStream() instanceof PastryObjectInputStream))
-      	LocalNodeI.pending.setPending(msg.getStream(), this);
+      ObjectInputStream stream = msg.getStream();
+      if ((stream != null) && (! (stream instanceof PastryObjectInputStream)))
+      	LocalNodeI.pending.setPending(stream, this);
 	
     	if (mySecurityManager.verifyMessage(msg) == true)
 	      myMessageDispatch.dispatchMessage(msg);
