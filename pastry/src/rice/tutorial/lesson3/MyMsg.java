@@ -30,7 +30,7 @@ public class MyMsg implements Message {
   }
   
   public String toString() {
-    return "TestMsg from "+from+" to "+to;
+    return "MyMsg from "+from+" to "+to;
   }
 
   /**
