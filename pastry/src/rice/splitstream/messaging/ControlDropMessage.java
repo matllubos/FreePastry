@@ -16,13 +16,15 @@ public class ControlDropMessage extends ControlMessage{
 
    private NodeId spare_id;
    private StripeId stripe_id;
+   private ChannelId channel_id;
 
    public ControlDropMessage( Address addr, NodeHandle source, NodeId stripe_id,
-                              Credentials c, NodeId spare_id )
+                              Credentials c, NodeId spare_id, ChannelId channel_id )
    {
       super( addr, source, stripe_id, c );
       this.stripe_id = (StripeId)stripe_id;
       this.spare_id = spare_id;
+      this.channel_id = channel_id;
    }
 
    public StripeId getStripeId()
@@ -43,7 +45,7 @@ public class ControlDropMessage extends ControlMessage{
                                                                    scribe.getLocalHandle(),
                                                                    spare_id,
                                                                    c,
-                                                                   (StripeId)topic.getTopicId() );
+                                                                   (StripeId)topic.getTopicId(), channel_id );
       scribe.anycast( spare_id, msg, c );
    }
 

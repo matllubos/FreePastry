@@ -20,15 +20,17 @@ public class ControlFindParentMessage extends MessageAnycast
     Vector already_seen;
     StripeId stripe_id;
     Stripe recv_stripe = null;
+    ChannelId channel_id;
 
     final int DEFAULT_CHILDREN = 20;
 
-    public ControlFindParentMessage( Address addr, NodeHandle source, NodeId topicId, Credentials c, StripeId stripe_id )
+    public ControlFindParentMessage( Address addr, NodeHandle source, NodeId topicId, Credentials c, StripeId stripe_id, ChannelId channel_id)
     {
        super( addr, source, topicId, c );
        send_to = new Vector();
        already_seen = new Vector();
        this.stripe_id = stripe_id;
+       this.channel_id = channel_id;
     }
 
     public StripeId getStripeId()
@@ -47,7 +49,8 @@ public class ControlFindParentMessage extends MessageAnycast
     {
         if ( recv_stripe != null )
         {
-            return recv_stripe.getRootPath().contains( source );
+            //return recv_stripe.getRootPath().contains( source );
+		return false;
         }
         else
         {
@@ -86,6 +89,8 @@ public class ControlFindParentMessage extends MessageAnycast
      */
     public boolean handleForwardMessage( Scribe scribe, Topic topic )
     {
+        if(topic == null) System.out.println("TOPIC IS NULL");
+        System.out.println("Forwarding at " + scribe.getNodeId());
         Credentials c = new PermissiveCredentials();
         
         if ( send_to.size() != 0 )
@@ -107,7 +112,8 @@ public class ControlFindParentMessage extends MessageAnycast
            default_children = DEFAULT_CHILDREN;
         }
         if ( ( aggregateNumChildren( scribe ) < default_children ) &&
-             ( !isInRootPath( scribe, this.getSource() ) ) )
+             ( !isInRootPath( scribe, this.getSource() ) ) &&
+             ( this.getSource() != scribe.getLocalHandle()) )
         {
             this.handleDeliverMessage( scribe, topic );
         }
@@ -118,7 +124,8 @@ public class ControlFindParentMessage extends MessageAnycast
             {
                 send_to.addAll( 0, scribe.getChildren( topic.getTopicId() ) );
             }
-            while ( ( already_seen.contains( send_to.get(0) ) ) && ( send_to.size() > 0 ) )
+            while ( ( send_to.size() > 0 ) &&
+                    ( already_seen.contains( send_to.get(0) ) ) )
             {
                 send_to.remove( 0 );
             }
@@ -137,9 +144,9 @@ public class ControlFindParentMessage extends MessageAnycast
                     scribe.routeMsgDirect( this.getSource(),
                                            new ControlFindParentResponseMessage( scribe.getAddress(),
                                                                                  scribe.getNodeHandle(),
-                                                                                 stripe_id,
+                                                                                 channel_id,
                                                                                  c,
-                                                                                 new Boolean( false ) ),
+                                                                                 new Boolean( false ), stripe_id ),
                                            c,
                                            null );
                 }
@@ -161,14 +168,15 @@ public class ControlFindParentMessage extends MessageAnycast
     public void handleDeliverMessage( Scribe scribe, Topic topic )
     {
         Credentials c = new PermissiveCredentials();
+	System.out.println("Delivering from " + scribe.getNodeId());
 
         scribe.addChild( this.getSource(), stripe_id );
         scribe.routeMsgDirect( this.getSource(), 
                                new ControlFindParentResponseMessage( scribe.getAddress(),
                                                                      scribe.getNodeHandle(),
-                                                                     stripe_id,
+                                                                     channel_id,
                                                                      c,
-                                                                     new Boolean( true ) ),
+                                                                     new Boolean( true ), stripe_id ),
                                c,
                                null );
         int default_children;

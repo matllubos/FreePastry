@@ -13,13 +13,16 @@ import rice.scribe.messaging.*;
  * in the event that no suitable parent could be found, a "false" message
  * will be sent by the root of the spare capacity tree.
  */
+
+
 public class ControlFindParentResponseMessage extends ControlMessage
 {
-
-    public ControlFindParentResponseMessage( Address addr, NodeHandle source, StripeId topicId, Credentials c, Boolean accept )
+    StripeId stripe_id;
+    public ControlFindParentResponseMessage( Address addr, NodeHandle source, ChannelId topicId, Credentials c, Boolean accept, StripeId stripe_id )
     {
         super( addr, source, topicId, c );
         this.setData(accept);
+	this.stripe_id = stripe_id;
     }
 
     /**
