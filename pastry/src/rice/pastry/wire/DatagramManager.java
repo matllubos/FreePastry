@@ -343,7 +343,9 @@ public class DatagramManager implements SelectionKeyHandler, NeedsWakeUp {
   public void wakeup() {
     // wakeup the transmission manager, which checks to see if any packets have
     // been lost
-    transmissionManager.wakeup();
+    synchronized(pastryNode) {
+      transmissionManager.wakeup();
+    }
 
     // if there are pending acks/pings, make sure that we are interested in writing
 
