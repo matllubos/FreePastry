@@ -2663,7 +2663,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           }
         } else {
           log(2, "retrieveObject: Giving up on "+key+" ("+restoreMaxBoosts+" attempts, "+numCheckedFragments()+" checked, "+numHaveFragments()+" gotten)");
-          c.receiveException(new GlacierException("Maximum number of attempts ("+restoreMaxBoosts+") reached for key "+key));
+          c.receiveException(new GlacierNotEnoughFragmentsException("Maximum number of attempts ("+restoreMaxBoosts+") reached for key "+key, numCheckedFragments(), numHaveFragments()));
           localTerminate();
         }
       }
@@ -3420,28 +3420,47 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             final FragmentMetadata metadata = (FragmentMetadata) fragmentStorage.getMetadata(thisKey);
             if ((metadata == null) || (metadata.getCurrentExpiration() < thisManifest.getExpiration())) {
               log(2, "Replacing old manifest for "+thisKey+" (expires "+((metadata == null) ? "(broken)" : ""+metadata.getCurrentExpiration())+") by new one (expires "+thisManifest.getExpiration()+")");
+
               fragmentStorage.getObject(thisKey, new Continuation() {
                 public void receiveResult(Object o) {
                   if (o instanceof FragmentAndManifest) {
                     FragmentAndManifest fam = (FragmentAndManifest) o;
-                    fam.manifest = thisManifest;
+
                     log(3, "Got FAM for "+thisKey+", now replacing old manifest with new one...");
-                    fragmentStorage.store(thisKey, new FragmentMetadata(thisManifest.getExpiration(), ((metadata == null) ? 0 : metadata.getCurrentExpiration()), System.currentTimeMillis()), fam,
-                      new Continuation() {
-                        public void receiveResult(Object o) {
-                          log(3, "Old manifest for "+thisKey+" replaced OK, sending receipt");
-                          sendMessage(
-                            null,
-                            new GlacierResponseMessage(gdm.getUID(), thisKey, true, thisManifest.getExpiration(), true, getLocalNodeHandle(), gdm.getSource().getId(), true, gdm.getTag()),
-                            gdm.getSource()
-                          );
+                    
+                    String fault = null;
+                    
+                    if (!thisManifest.validatesFragment(thisFragment, thisKey.getFragmentID()))
+                      fault = "Update: Manifest does not validate this fragment";
+                    if (!policy.checkSignature(thisManifest, thisKey.getVersionKey()))
+                      fault = "Update: Manifest is not signed properly";
+                    if (!Arrays.equals(thisManifest.getObjectHash(), fam.manifest.getObjectHash()))
+                      fault = "Update: Object hashes not equal";
+                    for (int i=0; i<numFragments; i++)
+                      if (!Arrays.equals(thisManifest.getFragmentHash(i), fam.manifest.getFragmentHash(i)))
+                        fault = "Update: Fragment hash #"+i+" does not match";
+
+                    if (fault == null) {
+                      fam.manifest = thisManifest;
+                      fragmentStorage.store(thisKey, new FragmentMetadata(thisManifest.getExpiration(), ((metadata == null) ? 0 : metadata.getCurrentExpiration()), System.currentTimeMillis()), fam,
+                        new Continuation() {
+                          public void receiveResult(Object o) {
+                            log(3, "Old manifest for "+thisKey+" replaced OK, sending receipt");
+                            sendMessage(
+                              null,
+                              new GlacierResponseMessage(gdm.getUID(), thisKey, true, thisManifest.getExpiration(), true, getLocalNodeHandle(), gdm.getSource().getId(), true, gdm.getTag()),
+                              gdm.getSource()
+                            );
+                          }
+                          public void receiveException(Exception e) {
+                            warn("Cannot store refreshed manifest: "+e);
+                            e.printStackTrace();
+                          }
                         }
-                        public void receiveException(Exception e) {
-                          warn("Cannot store refreshed manifest: "+e);
-                          e.printStackTrace();
-                        }
-                      }
-                    );
+                      );
+                    } else {
+                      warn(fault);
+                    }
                   } else {
                     warn("Fragment store returns something other than a FAM: "+o);
                   }
@@ -3490,8 +3509,14 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
               }
             }
             public void receiveException(Exception e) {
-              warn("Exception while recovering synced fragment "+thisKey+": "+e);
-              e.printStackTrace();
+              if (e instanceof GlacierNotEnoughFragmentsException) {
+                GlacierNotEnoughFragmentsException gnf = (GlacierNotEnoughFragmentsException) e;
+                log(2, "Not enough fragments to reconstruct "+thisKey+": "+gnf.checked+"/"+numFragments+" checked, "+gnf.found+" found, "+numSurvivors+" needed");
+              } else {
+                warn("Exception while recovering synced fragment "+thisKey+": "+e);
+                e.printStackTrace();
+              }
+              
               terminate();
             }
             public void timeoutExpired() {
