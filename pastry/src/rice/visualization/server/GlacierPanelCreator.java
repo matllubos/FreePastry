@@ -2,7 +2,7 @@ package rice.visualization.server;
 
 import rice.visualization.data.*;
 import rice.pastry.*;
-import rice.p2p.glacier.*;
+import rice.p2p.glacier.v1.*;
 import rice.persistence.*;
 import rice.Continuation.*;
 
@@ -44,7 +44,7 @@ public class GlacierPanelCreator implements PanelCreator {
     for (int i=0; i<objects.length; i++) {
       if (objects[i] instanceof PastryNode)
         node = (PastryNode) objects[i];
-      else if (objects[i] instanceof GlacierImpl)
+      else if (objects[i] instanceof rice.p2p.glacier.v1.GlacierImpl)
         glacier = (GlacierImpl) objects[i];
       else if (objects[i] instanceof StorageManager)
         manager = (StorageManager) objects[i];
@@ -57,8 +57,11 @@ public class GlacierPanelCreator implements PanelCreator {
   }
   
   protected DataPanel createPanel(PastryNode node, GlacierImpl glacier, StorageManager manager) {
-    GlacierState state = glacier.getState();
+
     DataPanel glacierPanel = new DataPanel("Glacier");
+
+/*
+    GlacierState state = glacier.getState();
     int numFragments = glacier.getNumFragments();
     
     GridBagConstraints glacierCons = new GridBagConstraints();
@@ -145,7 +148,8 @@ public class GlacierPanelCreator implements PanelCreator {
     glacierPanel.addDataView(glacierView);
     glacierPanel.addDataView(glacierView2);
     glacierPanel.addDataView(fragmentHistoView);
-        
+
+*/        
     return glacierPanel;
   }
   
