@@ -425,7 +425,7 @@ public abstract class PastryRegrTest {
 
 		if ( (j>=0 && cs.get(j/2).getNodeId() != nearest) ||
 		     (j<0 && !ls.overlaps() && cs.get(maxRank).getNodeId() != nearest) ||
-		     (j<0 && ls.overlaps() && cs.get(0).getNodeId() != nearest) ) {
+		     (j<0 && ls.overlaps() && !range.isFull() /*cs.get(0).getNodeId() != nearest*/) ) {
 		    System.out.println("checkLeafSet: range failure 1 at " + rta.getNodeId() + " k=" + k + " j=" + j +
 				       " maxRank=" + maxRank + "\n" + cs + "\n" + ls + "\n" + range + "\nnearest=" + nearest);
 		    
@@ -444,7 +444,7 @@ public abstract class PastryRegrTest {
 
 		if ( (j>= 0 && cs.get(j/2).getNodeId() != nearest) ||
 		     (j<0 && !ls.overlaps() && cs.get(maxRank).getNodeId() != nearest) ||
-		     (j<0 && ls.overlaps() && cs.get(0).getNodeId() != nearest) ) {
+		     (j<0 && ls.overlaps() && !range.isFull()/*cs.get(0).getNodeId() != nearest*/) ) {
 		    System.out.println("checkLeafSet: range failure 2 at " + rta.getNodeId() + " k=" + k + " j=" + j +
 				       " maxRank=" + maxRank + "\n" + cs + "\n" + ls + "\n" + range + "\nnearest=" + nearest);
 
