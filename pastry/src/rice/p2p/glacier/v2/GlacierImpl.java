@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.*;
 
 import rice.Continuation;
+import rice.Executable;
 import rice.p2p.commonapi.*;
 import rice.p2p.glacier.*;
 import rice.p2p.glacier.v2.messaging.*;
@@ -12,7 +13,9 @@ import rice.p2p.past.PastContent;
 import rice.p2p.past.PastContentHandle;
 import rice.p2p.past.gc.GCPast;
 import rice.p2p.past.gc.GCPastContent;
+import rice.persistence.Storage;
 import rice.persistence.StorageManager;
+import rice.persistence.PersistentStorage;
 import rice.visualization.server.DebugCommandHandler;
 
 public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Application, DebugCommandHandler {
@@ -38,6 +41,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   protected Vector listeners;
 
   private int loglevel = 2;
+  private final boolean logStatistics = true;
   private final boolean faultInjectionEnabled = false;
 
   private final long SECONDS = 1000;
@@ -766,7 +770,17 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           statistics.numContinuations = continuations.size();
           statistics.numObjectsInTrash = (trashStorage == null) ? 0 : trashStorage.scan().numElements();
           statistics.responsibleRange = responsibleRange;
-          log(2, "Statistics: "+statistics);
+          
+          Storage storageF = fragmentStorage.getStorage();
+          if (storageF instanceof PersistentStorage)
+            statistics.fragmentStorageSize = ((PersistentStorage)storageF).getTotalSize();
+          
+          Storage storageT = (trashStorage == null) ? null : trashStorage.getStorage();
+          if (storageT instanceof PersistentStorage)
+            statistics.trashStorageSize = ((PersistentStorage)storageT).getTotalSize();
+
+          if (logStatistics)
+            statistics.dump();
           
           Enumeration enum = listeners.elements();
           while (enum.hasMoreElements()) {
@@ -1496,25 +1510,37 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     });
   }  
 
-  public void insert(final PastContent obj, long expiration, final Continuation command) {
+  public void insert(final PastContent obj, final long expiration, final Continuation command) {
     long theVersion = (obj instanceof GCPastContent) ? ((GCPastContent)obj).getVersion() : 0;
     final VersionKey vkey = new VersionKey(obj.getId(), theVersion);
 
     log(2, "insert(" + obj + " (id=" + vkey.toStringFull() + ", mutable=" + obj.isMutable() + ")");
 
-    final Fragment[] fragments = policy.encodeObject(obj);
-    if (fragments == null) {
-      command.receiveException(new GlacierException("Cannot encode object"));
-      return;
-    }
+    endpoint.process(new Executable() {
+      public Object execute() {
+        return policy.encodeObject(obj);
+      }
+    }, new Continuation() {
+      public void receiveResult(Object o) {
+        final Fragment[] fragments = (Fragment[]) o;
+        if (fragments == null) {
+          command.receiveException(new GlacierException("Cannot encode object"));
+          return;
+        }
 
-    final Manifest[] manifests = policy.createManifests(vkey, obj, fragments, expiration);
-    if (manifests == null) {
-      command.receiveException(new GlacierException("Cannot create manifests"));
-      return;
-    }
+        final Manifest[] manifests = policy.createManifests(vkey, obj, fragments, expiration);
+        if (manifests == null) {
+          command.receiveException(new GlacierException("Cannot create manifests"));
+          return;
+        }
 
-    distribute(vkey, fragments, manifests, expiration, tagInsert, command);
+        distribute(vkey, fragments, manifests, expiration, tagInsert, command);
+      }
+      public void receiveException(Exception e) {
+        command.receiveException(new GlacierException("EncodeObject failed: e="+e));
+        e.printStackTrace();
+      }
+    });
   }
 
   private void timerExpired() {
@@ -2022,17 +2048,31 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                 return;
               }
               
-              log(3, "Reencode object: " + key.getVersionKey());
-              Fragment[] frag = policy.encodeObject((PastContent) o);
-              log(3, "Reencode complete: " + key.getVersionKey());
+              final PastContent retrievedObject = (PastContent) o;
+              endpoint.process(new Executable() {
+                public Object execute() {
+                  log(3, "Reencode object: " + key.getVersionKey());
+                  Object result = policy.encodeObject(retrievedObject);
+                  log(3, "Reencode complete: " + key.getVersionKey());
+                  return result;
+                }
+              }, new Continuation() {
+                public void receiveResult(Object o) {
+                  Fragment[] frag = (Fragment[]) o;
                 
-              if (!manifest.validatesFragment(frag[key.getFragmentID()], key.getFragmentID())) {
-                warn("Reconstructed fragment #"+key.getFragmentID()+" does not match manifest ??!?");
-                c.receiveException(new GlacierException("Recovered object, but cannot re-encode it (strange!) -- try again later!"));
-                return;
-              }
+                  if (!manifest.validatesFragment(frag[key.getFragmentID()], key.getFragmentID())) {
+                    warn("Reconstructed fragment #"+key.getFragmentID()+" does not match manifest ??!?");
+                    c.receiveException(new GlacierException("Recovered object, but cannot re-encode it (strange!) -- try again later!"));
+                    return;
+                  }
               
-              c.receiveResult(frag[key.getFragmentID()]);
+                  c.receiveResult(frag[key.getFragmentID()]);
+                }
+                public void receiveException(Exception e) {
+                  c.receiveException(new GlacierException("Recovered object, but re-encode failed: "+e));
+                  e.printStackTrace();
+                }
+              });
             }
             public void receiveException(Exception e) {
               c.receiveException(e);
@@ -2083,7 +2123,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           log(3, "Message UID#"+msg.getUID()+" is response, but continuation has already terminated");
         }
       } else {
-        warn("Message UID#"+msg.getUID()+" is response, but continuation not found");
+        log(3, "Unusual: Message UID#"+msg.getUID()+" is response, but continuation not found");
       }
        
       return;
@@ -2416,18 +2456,35 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                       if (theVersion == gfm.getKey().getVersionKey().getVersion()) {
                         log(2, "Original of "+gfm.getKey()+" found ("+o+", ts="+theVersion+", expected="+gfm.getKey().getVersionKey().getVersion()+") Recoding...");
                         
-                        Fragment fragment = null;
-                        if ((gfm.getRequest() & GlacierFetchMessage.FETCH_FRAGMENT)!=0) {
-                          Fragment[] frags = policy.encodeObject((Serializable) o);
-                          log(3, "Fragments recoded ok. Returning "+gfm.getKey()+"...");
-                          fragment = frags[gfm.getKey().getFragmentID()];
-                        }
+                        if ((gfm.getRequest() & GlacierFetchMessage.FETCH_FRAGMENT) == 0) {
+                          sendMessage(
+                            null,
+                            new GlacierDataMessage(gfm.getUID(), gfm.getKey(), null, null, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
+                            gfm.getSource()
+                          );
+                        } else {
+                          final PastContent retrievedObject = (PastContent) o;
+                          endpoint.process(new Executable() {
+                            public Object execute() {
+                              Fragment[] frags = policy.encodeObject(retrievedObject);
+                              log(3, "Fragments recoded ok. Returning "+gfm.getKey()+"...");
+                              return frags[gfm.getKey().getFragmentID()];
+                            }
+                          }, new Continuation() {
+                            public void receiveResult(Object o) {
+                              Fragment fragment = (Fragment) o;
                           
-                        sendMessage(
-                          null,
-                          new GlacierDataMessage(gfm.getUID(), gfm.getKey(), fragment, null, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
-                          gfm.getSource()
-                        );
+                              sendMessage(
+                                null,
+                                new GlacierDataMessage(gfm.getUID(), gfm.getKey(), fragment, null, getLocalNodeHandle(), gfm.getSource().getId(), true, gfm.getTag()),
+                                gfm.getSource()
+                              );
+                            } 
+                            public void receiveException(Exception e) {
+                              warn("Cannot reencode queried fragment: "+gfm.getKey());
+                            }
+                          });
+                        }
                       } else {
                         log(2, "Original of "+gfm.getKey()+" not found; have different version: "+theVersion);
                         sendMessage(
