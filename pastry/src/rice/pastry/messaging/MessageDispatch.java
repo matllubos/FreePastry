@@ -41,7 +41,6 @@ import java.util.Hashtable;
 import java.util.Vector;
 
 import rice.p2p.commonapi.RouteMessage;
-import rice.pastry.testing.HelloMsg;
 
 /**
  * An object which remembers the mapping from names to MessageReceivers

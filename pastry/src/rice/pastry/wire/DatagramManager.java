@@ -50,7 +50,6 @@ import rice.pastry.leafset.RequestLeafSet;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.BroadcastRouteRow;
 import rice.pastry.routing.RouteMessage;
-import rice.pastry.testing.HelloMsg;
 import rice.pastry.wire.exception.DeserializationException;
 import rice.pastry.wire.exception.ImproperlyFormattedMessageException;
 import rice.pastry.wire.exception.SerializationException;
