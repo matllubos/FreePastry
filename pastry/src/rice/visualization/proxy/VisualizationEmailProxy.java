@@ -57,6 +57,10 @@ public class VisualizationEmailProxy extends EmailProxy {
       server.addPanelCreator(recent);
       server.addPanelCreator(new PastryPanelCreator());
       server.addPanelCreator(new PASTPanelCreator());
+      if (immutablePast instanceof DebugCommandHandler)
+        server.addDebugCommandHandler((DebugCommandHandler)immutablePast);
+      if (mutablePast instanceof DebugCommandHandler)
+        server.addDebugCommandHandler((DebugCommandHandler)mutablePast);
       
       pastry.addNetworkListener(network);
       pastry.addNetworkListener(recent);
