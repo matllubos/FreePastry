@@ -25,8 +25,8 @@ public class PersistentStorage implements Storage {
   private File transDirectory; // dir for transactions
 
   private static String rootDir;                          // rootDirectory
-  private static final String backupDir = "/Backup/";     // backupDirectory
-  private static final String transDir = "/transaction";  // transDirectory
+  private static final String backupDir = "/FreePastry-Storage-Root/"; // backupDirectory
+  private static final String transDir = "/transaction/";  // transDirectory
 
   private long storageSize;
   private long usedSize;
@@ -250,8 +250,7 @@ public class PersistentStorage implements Storage {
    * creates the necessary subdirectories.
    *
    * @return Whether the directories are successfully initialized.
-   */
-  private boolean initDirectories()
+   */ private boolean initDirectories()
   {
     rootDirectory = new File(rootDir);
     if (createDir(rootDirectory) == false) {
@@ -263,8 +262,9 @@ public class PersistentStorage implements Storage {
       return false;
     }
 
-    transDirectory = new File(rootDirectory, transDir);
+    transDirectory = new File(backupDirectory, transDir);
     if (createDir(transDirectory) == false) {
+      System.out.println("FAILING HERE!");
       return false;
     }
     else{
@@ -285,8 +285,10 @@ public class PersistentStorage implements Storage {
 
     for ( int i = 0; i < numFiles; i++){
        /* insert keys into file Map */
-       fileMap.put(readKey(files[i]), files[i]);
-       increaseUsedSpace(files[i].length()); /* increase the amount used */
+       if(files[i].isFile()){
+          fileMap.put(readKey(files[i]), files[i]);
+          increaseUsedSpace(files[i].length()); /* increase the amount used */
+       }
     }
   
   }
