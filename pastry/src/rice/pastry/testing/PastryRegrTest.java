@@ -165,7 +165,7 @@ public abstract class PastryRegrTest {
 	inConcJoin = true;
 
 	int n = pastryNodes.size(); // n will be a multiple of num
-
+	if (n==0) num = 1;
 	for (int i=0; i<num; i++) {
 
 	    NodeHandle bootstrap = null;
@@ -173,7 +173,7 @@ public abstract class PastryRegrTest {
 	    if (n == 0)		// first batch of nodes
 		bootstrap = getBootstrap();
 	    else {		// corresponding node from previous batch
-		PastryNode pn = (PastryNode) pastryNodes.get(n+i - num);
+		PastryNode pn = (PastryNode) pastryNodes.get(/*n+i - num*/n-1);
 		if (pn != null) bootstrap = pn.getLocalHandle();
 	    }
 
