@@ -271,7 +271,17 @@ public class Stripe extends Observable implements IScribeApp{
      * up-call invoked by Scribe when an anycast message is being handled.
      */
     public boolean anycastHandler(ScribeMessage msg){
-	return true;
+	boolean result = true;
+
+	if(msg instanceof ControlFinalFindParentMessage){
+	    ControlFinalFindParentMessage pmsg = (ControlFinalFindParentMessage)msg;
+	    result= pmsg.handleMessage(getChannel().getSplitStream(), 
+				       getChannel().getScribe(), 
+				       getChannel(), 
+				       this );
+	}
+
+	return result;
     }
      /**
       * Upcall generated when a message is received
@@ -378,7 +388,7 @@ public class Stripe extends Observable implements IScribeApp{
 										     channel.getChannelId(),
      channel.getTimeoutLen())
      , credentials, null ); 
-		    //System.out.println(" STRIPE "+this+" Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+ " at "+((Scribe)scribe).getNodeId());
+		    System.out.println(" STRIPE "+this+" Sending DROP message to "+victimChild.getNodeId()+" for stripe"+victimStripeId+ " at "+((Scribe)scribe).getNodeId());
 
 		    victimStripe.setLocalDrop(true);
 		    scribe.removeChild(victimChild, (NodeId)victimStripeId);

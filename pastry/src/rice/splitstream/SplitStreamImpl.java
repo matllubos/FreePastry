@@ -193,6 +193,23 @@ public class SplitStreamImpl extends PastryAppl implements ISplitStream,
     }
     // Default implementation of anycastHandler.
     public boolean anycastHandler(ScribeMessage msg){
+	boolean result = true;
+	if(msg instanceof ControlFinalFindParentMessage){
+	    ControlFinalFindParentMessage pmsg = (ControlFinalFindParentMessage)msg;
+	    StripeId stripeId = pmsg.getStripeId();
+	    Channel channel = (Channel)channels.get(pmsg.getChannelId());
+	    if(channel == null){
+		System.out.println("ERROR -- Should never happen");
+		return true;
+	    }
+	    if(!channel.stripeAlreadySubscribed(stripeId)){
+		result= pmsg.handleMessage(channel.getSplitStream(), 
+				       channel.getScribe(), 
+				       channel, 
+				       channel.getStripe(stripeId) );
+		return result;
+	    }
+	}
 	return true;
     }
   

@@ -648,6 +648,11 @@ public class Channel implements IScribeApp {
 	    ControlAttachMessage amsg = (ControlAttachMessage)msg;
 	    result = amsg.handleMessage(this, getScribe());
 	}
+	if(msg instanceof ControlFinalFindParentMessage){
+	    ControlFinalFindParentMessage pmsg = (ControlFinalFindParentMessage)msg;
+	    result= pmsg.handleMessage(getSplitStream(), getScribe(), this, this.getStripe(pmsg.getStripeId()) );
+	}
+
 	return result;
     }
 
