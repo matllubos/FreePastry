@@ -23,41 +23,93 @@ import java.rmi.RMISecurityManager;
 public class RMIPastryTest {
     private RMIPastryNodeFactory factory;
 
+    private static int port;
+    private static String connecthost;
+    private static int connectport;
+
     public RMIPastryTest() {
 	factory = new RMIPastryNodeFactory();
     }
 
     public void makePastryNode() {
 
-	pause(2000);
+	pause();
+
+	// PingClient pc = new PingClient(pn);
 
 	RMIPastryNode other = null;
 	try {
-	    other = (RMIPastryNode)Naming.lookup("//thor05:" + 5009 + "/Pastry");
+	    other = (RMIPastryNode)Naming.lookup("//" + connecthost +
+						  ":" + connectport + "/Pastry");
 	} catch (Exception e) {
 	    System.out.println("Unable to find another node: " + e.toString());
 	}
 
-	// this also creates an associated RMIPastryNode and binds it:
+	/*
+	 * This creates a PastryNode and an associated RMIPastryNode, and
+	 * binds the latter to the registry. We do the above lookup prior to
+	 * creating the node, so we don't find ourselves.
+	 */
 	PastryNode pn = new PastryNode(factory);
 	System.out.println("created " + pn);
 
-	// PingClient pc = new PingClient(pn);
+	/*
+	 * don't know anyone else, so we return now and just hang around
+	 */
+	if (other == null) return;
 
-	if (other != null) {
-	    RMINodeHandle other_handle = new RMINodeHandle(other);
-	    pn.receiveMessage(new InitiateJoin(other_handle));
+	NodeId otherid;
+	try {
+	    otherid = other.getNodeId();
+	} catch (Exception e) {
+	    System.out.println("Unable to get remote node id: " + e.toString());
+	    return;
 	}
+
+	RMINodeHandle other_handle = new RMINodeHandle(other, otherid, pn);
+	pn.receiveMessage(new InitiateJoin(other_handle));
     }
 
-    public static void main(String args[]) {
-	RMIPastryTest pt = new RMIPastryTest();
+    /**
+     * Usage: RMIPastryTest [-port n] [-connect host[:port]]
+     */
+    public static void main(String args[])
+    {
+	// defaults
+	connecthost = "thor05";
+	port = connectport = 5009;
+
+	for (int i = 0; i < args.length; i++) {
+	    if (args[i].equals("-port") && i+1 < args.length) {
+		int p = Integer.parseInt(args[i+1]);
+		if (p > 0) port = p;
+		break;
+	    }
+	}
 	
+	for (int i = 0; i < args.length; i++) {
+	    if (args[i].equals("-connect") && i+1 < args.length) {
+		String str = args[i+1];
+		int index = str.indexOf(':');
+		if (index == -1) {
+		    connecthost = str;
+		    connectport = port;
+		} else {
+		    connecthost = str.substring(0, index);
+		    connectport = Integer.parseInt(str.substring(index + 1));
+		    if (connectport <= 0) connectport = port;
+		}
+		break;
+	    }
+	}
+	
+	RMIPastryTest pt = new RMIPastryTest();
+
 	if (System.getSecurityManager() == null)
 	    System.setSecurityManager(new RMISecurityManager());
 
 	try {
-	    Runtime.getRuntime().exec("rmiregistry " + 5009);
+	    Runtime.getRuntime().exec("rmiregistry " + port);
 	} catch (Exception e) {
 	    System.out.println("Unable to start rmiregistry: " + e.toString());
 	}
@@ -66,7 +118,7 @@ public class RMIPastryTest {
 	//pt.sendPings(k);
     }
 
-    private synchronized void pause(int ms) {
+    private synchronized void pause() {
 	try {
 	    System.err.print("wait for rmiregistry to start..");
 	    wait(1000);
