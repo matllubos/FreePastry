@@ -5,6 +5,9 @@ import rice.p2p.commonapi.*;
 import rice.p2p.glacier.*;
 
 public abstract class GlacierMessage implements Message {
+  
+  // serialver for backward compatibility
+  private static final long serialVersionUID = -5849182107707420256L;
 
   // the unique id for this message
   protected int id;
@@ -34,6 +37,21 @@ public abstract class GlacierMessage implements Message {
     this.dest = dest;
     this.isResponse = isResponse;
     this.tag = tag;
+  }
+  
+  /**
+   * Method which should return the priority level of this message.  The messages
+   * can range in priority from 0 (highest priority) to Integer.MAX_VALUE (lowest) -
+   * when sending messages across the wire, the queue is sorted by message priority.
+   * If the queue reaches its limit, the lowest priority messages are discarded.  Thus,
+   * applications which are very verbose should have LOW_PRIORITY or lower, and
+   * applications which are somewhat quiet are allowed to have MEDIUM_PRIORITY or
+   * possibly even HIGH_PRIORITY.
+   *
+   * @return This message's priority
+   */
+  public int getPriority() {
+    return LOW_PRIORITY;
   }
 
   /**

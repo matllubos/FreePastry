@@ -50,7 +50,27 @@ import java.io.*;
  * @author Peter Druschel
  */
 public interface Message extends Serializable {
+  
+  // different priority levels
+  public static final int HIGH_PRIORITY = 5;
+  public static final int MEDIUM_HIGH_PRIORITY = 10;
+  public static final int MEDIUM_PRIORITY = 15;
+  public static final int MEDIUM_LOW_PRIORITY = 20;
+  public static final int LOW_PRIORITY = 25;
 
+  /**
+   * Method which should return the priority level of this message.  The messages
+   * can range in priority from 0 (highest priority) to Integer.MAX_VALUE (lowest) -
+   * when sending messages across the wire, the queue is sorted by message priority.
+   * If the queue reaches its limit, the lowest priority messages are discarded.  Thus,
+   * applications which are very verbose should have LOW_PRIORITY or lower, and
+   * applications which are somewhat quiet are allowed to have MEDIUM_PRIORITY or
+   * possibly even HIGH_PRIORITY.
+   *
+   * @return This message's priority
+   */
+  public int getPriority();
+  
 }
 
 

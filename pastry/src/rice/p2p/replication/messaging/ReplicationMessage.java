@@ -50,6 +50,9 @@ import rice.p2p.replication.*;
  */
 public abstract class ReplicationMessage implements Message {
   
+  // serialver for backward compatibility
+  private static final long serialVersionUID = 2121558100279943464L;
+  
   // the source of this message
   protected NodeHandle source;
   
@@ -61,6 +64,21 @@ public abstract class ReplicationMessage implements Message {
    */
   protected ReplicationMessage(NodeHandle source) {
     this.source = source;
+  }
+  
+  /**
+   * Method which should return the priority level of this message.  The messages
+   * can range in priority from 0 (highest priority) to Integer.MAX_VALUE (lowest) -
+   * when sending messages across the wire, the queue is sorted by message priority.
+   * If the queue reaches its limit, the lowest priority messages are discarded.  Thus,
+   * applications which are very verbose should have LOW_PRIORITY or lower, and
+   * applications which are somewhat quiet are allowed to have MEDIUM_PRIORITY or
+   * possibly even HIGH_PRIORITY.
+   *
+   * @return This message's priority
+   */
+  public int getPriority() {
+    return MEDIUM_PRIORITY;
   }
   
   /**

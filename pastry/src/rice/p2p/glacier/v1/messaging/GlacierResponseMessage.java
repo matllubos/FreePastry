@@ -32,6 +32,10 @@ public class GlacierResponseMessage extends GlacierMessage {
     this.key = key;
     this.haveIt = haveIt;
   }
+  
+  public int getPriority() {
+    return LOW_PRIORITY;
+  }
 
   /**
    * Gets the Key attribute of the GlacierResponseMessage object

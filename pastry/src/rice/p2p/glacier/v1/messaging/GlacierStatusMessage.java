@@ -22,6 +22,10 @@ public class GlacierStatusMessage extends GlacierMessage
         this.isFullList = isFullList;
         this.events = events;
     }
+    
+    public int getPriority() {
+      return LOW_PRIORITY;
+    }
 
     public String toString() 
     {

@@ -32,6 +32,10 @@ public class GlacierDataMessage extends GlacierMessage {
     this.key = key;
     this.fragment = fragment;
   }
+  
+  public int getPriority() {
+    return LOW_PRIORITY;
+  }
 
   /**
    * Gets the Key attribute of the GlacierDataMessage object

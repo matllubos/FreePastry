@@ -178,17 +178,14 @@ public class PostMessage implements StoredMessage {
       Address froms[] = mm.getFrom();
       PostUserAddress from = new PostUserAddress(factory, "Unknown");
 
-      if ((froms != null) && (froms.length > 0)) {
+      if ((froms != null) && (froms.length > 0)) 
         from = new PostUserAddress(factory, ((InternetAddress) froms[0]).getAddress());
-      }
 
-      if (address != null) {
-        from = (PostUserAddress) address;
-      }
-
-      if (address != null) {
+      if ((address != null) && (! address.equals(from))) 
         mm.addHeaderLine(UNSECURE_HEADER_LINE);
-      }
+
+      if (address != null) 
+        from = (PostUserAddress) address;
       
       try {
         if ((mm.getHeader("X-Image-Url") == null) || (mm.getHeader("X-Image-Url").length == 0))

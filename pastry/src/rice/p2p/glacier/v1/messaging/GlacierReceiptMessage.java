@@ -29,6 +29,10 @@ public class GlacierReceiptMessage extends GlacierMessage {
 
     this.key = key;
   }
+  
+  public int getPriority() {
+    return LOW_PRIORITY;
+  }
 
   /**
    * Gets the Key attribute of the GlacierReceiptMessage object

@@ -15,6 +15,10 @@ public class GlacierTimeoutMessage extends GlacierMessage {
   public GlacierTimeoutMessage(int uid, NodeHandle local) {
     super(uid, local, local.getId());
   }
+  
+  public int getPriority() {
+    return LOW_PRIORITY;
+  }
 
   /**
   * Returns a string representation of this message

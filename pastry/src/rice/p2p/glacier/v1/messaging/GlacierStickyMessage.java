@@ -16,6 +16,10 @@ public class GlacierStickyMessage extends GlacierMessage
         this.realDestination = realDestination;
         this.message = message;
     }
+    
+    public int getPriority() {
+      return LOW_PRIORITY;
+    }
 
     public String toString() 
     {

@@ -55,6 +55,10 @@ public class GlacierInsertMessage extends GlacierMessage {
     this.knownHolderFragmentID = knownHolderFragmentID;
     this.knownHolderCertain = knownHolderCertain;
   }
+  
+  public int getPriority() {
+    return LOW_PRIORITY;
+  }
 
   /**
    * Gets the Key attribute of the GlacierInsertMessage object

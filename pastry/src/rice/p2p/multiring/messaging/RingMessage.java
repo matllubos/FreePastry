@@ -50,6 +50,9 @@ import rice.p2p.scribe.*;
  * @author Alan Mislove
  */
 public class RingMessage implements Message, ScribeContent {
+  
+  // serialver for backward compatibility
+  private static final long serialVersionUID = -7097995807488121199L;
 
   /**
    * The target of this ring message
@@ -77,7 +80,21 @@ public class RingMessage implements Message, ScribeContent {
     this.id = id;
     this.message = message;
     this.application = application;
-
+  }
+  
+  /**
+   * Method which should return the priority level of this message.  The messages
+   * can range in priority from 0 (highest priority) to Integer.MAX_VALUE (lowest) -
+   * when sending messages across the wire, the queue is sorted by message priority.
+   * If the queue reaches its limit, the lowest priority messages are discarded.  Thus,
+   * applications which are very verbose should have LOW_PRIORITY or lower, and
+   * applications which are somewhat quiet are allowed to have MEDIUM_PRIORITY or
+   * possibly even HIGH_PRIORITY.
+   *
+   * @return This message's priority
+   */
+  public int getPriority() {
+    return message.getPriority();
   }
 
   /**
