@@ -24,15 +24,16 @@
 
 package rice.pastry.dist;
 
-import java.net.*;
-import java.util.*;
+import java.net.InetSocketAddress;
 
-import rice.*;
-import rice.Continuation.*;
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.pastry.rmi.*;
-import rice.pastry.wire.*;
+import rice.pastry.NodeHandle;
+import rice.pastry.NodeId;
+import rice.pastry.NodeIdFactory;
+import rice.pastry.PastryNode;
+import rice.pastry.PastryNodeFactory;
+import rice.pastry.rmi.RMIPastryNodeFactory;
+import rice.pastry.socket.SocketPastryNodeFactory;
+import rice.pastry.wire.WirePastryNodeFactory;
 
 /**
  * An abstraction of the nodeId factory for distributed nodes. In order to
@@ -131,7 +132,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
     } else if (protocol == PROTOCOL_WIRE) {
       return new WirePastryNodeFactory(nf, port);
     } else if (protocol == PROTOCOL_SOCKET) {
-//      return new SocketPastryNodeFactory(nf, port);
+      return new SocketPastryNodeFactory(nf, port);
     }
 
     throw new IllegalArgumentException("Unsupported Protocol " + protocol);
