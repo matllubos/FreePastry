@@ -24,7 +24,6 @@ PACKAGES = \
 	rice.p2p.scribe.messaging\
 	rice.p2p.scribe.testing\
 	rice.p2p.splitstream\
-	rice.p2p.splitstream.messaging\
 	rice.p2p.splitstream.testing\
 	rice.past\
 	rice.past.messaging\
@@ -47,7 +46,7 @@ PACKAGES = \
 	rice.pastry.wire.exception\
 	rice.pastry.wire.messaging.datagram\
 	rice.pastry.wire.messaging.socket\
-	rice.pastry.wire.messaging.testing\
+	rice.pastry.wire.testing\
 	rice.persistence\
 	rice.persistence.testing\
 	rice.rm\

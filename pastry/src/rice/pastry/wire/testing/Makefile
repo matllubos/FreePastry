@@ -2,11 +2,11 @@ PACKAGE = rice.pastry.wire.testing
 
 SOURCE  = \
 	HelloMessageDigest.java\
-	MessageDigest.java
-	MessageDigestFactory.java
-	PublishMessageDigest.java
-	WireFIleFilter.java
-	WireFIleProcessor.java
+	MessageDigest.java\
+	MessageDigestFactory.java\
+	PublishMessageDigest.java\
+	WireFileFilter.java\
+	WireFileProcessor.java
 
 MAIN       = 
 
