@@ -860,24 +860,29 @@ public class Id implements Comparable, Serializable
 
     public String toString() 
     {
-	String s = "0x";
 	
+	
+
+	return "<0x" + toStringFull().substring(0,6) + "..>";
+	//return "<" + s.substring(0,5)+"..." + ">";
+	//return "< Id " + s + " >";
+    }
+
+    public String toStringFull(){
+	String s = "";
+
 	String tran[] = { "0", "1", "2", "3", "4", "5", "6", "7",
 			  "8", "9", "A", "B", "C", "D", "E", "F" };
-	
-	int n = IdBitLength / 4;
 
+	int n = IdBitLength / 4;
 	for (int i=n-1; i>=0; i--) {
 	    int d = getDigit(i, 4);
 	    	    
 	    s = s + tran[d];
 	}
+        return s;
 
-	return "<" + s.substring(0,6) + "..>";
-	//return "<" + s.substring(0,5)+"..." + ">";
-	//return "< Id " + s + " >";
     }
-
 
 }
 
