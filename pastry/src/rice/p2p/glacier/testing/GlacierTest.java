@@ -17,8 +17,7 @@ import rice.persistence.*;
 
 import java.util.*;
 import java.net.*;
-import java.io.Serializable;
-
+import java.io.*;
 
 public class GlacierTest {
     public static String INSTANCE = "GlacierTest";
@@ -72,20 +71,29 @@ public class GlacierTest {
      */
     public void makePastryNode(int i) {
 
-	PastryNode pn = factory.newNode(getBootstrap());
-	pastryNodes.addElement(pn);
+        StorageManager pastStor = null, glacierStor = null;
+        PastryNode pn = null;
 
-        StorageManager pastStor = new StorageManagerImpl(FACTORY,
-            new PersistentStorage(FACTORY, "past-root-"+i, ".", 1000000),
-            new LRUCache(new MemoryStorage(FACTORY), 1000000)
-        );
+        try {
+            pn = factory.newNode(getBootstrap());
+            pastryNodes.addElement(pn);
 
-        StorageManager glacierStor = new StorageManagerImpl(FACTORY,
-            new PersistentStorage(FACTORY, "glacier-root-"+i, ".", 1000000),
-            new LRUCache(new MemoryStorage(FACTORY), 1000000)
-        );
+            pastStor = new StorageManagerImpl(FACTORY,
+                new PersistentStorage(FACTORY, "past-root-"+i, ".", 1000000),
+                new LRUCache(new MemoryStorage(FACTORY), 1000000)
+            );
 
-	GlacierImpl glac = new GlacierImpl(pn, "glacier-"+i, pastStor, glacierStor, new GlacierDefaultPolicy(), REPLICATION_FACTOR, numFragments, numSurvivors, null, INSTANCE);
+            glacierStor = new StorageManagerImpl(FACTORY,
+                new PersistentStorage(FACTORY, "glacier-root-"+i, ".", 1000000),
+                new LRUCache(new MemoryStorage(FACTORY), 1000000)
+            );
+        } catch (IOException ioe) {
+            System.out.println("makePastryNode("+i+") failed, "+ioe);
+            ioe.printStackTrace();
+            System.exit(1);
+        }
+
+    	GlacierImpl glac = new GlacierImpl(pn, "glacier-"+i, pastStor, glacierStor, new GlacierDefaultPolicy(), REPLICATION_FACTOR, numFragments, numSurvivors, null, INSTANCE);
 	glaciers.addElement(glac);
 	if (Log.ifp(5)) System.out.println("created " + pn);
     }
