@@ -1,5 +1,7 @@
 package rice.splitstream;
+
 import java.util.*;
+
 /**
  * This class is responsible for freeing bandwidth
  * when it is needed. Right now the notion of bandwidth
@@ -30,7 +32,7 @@ public class BandwidthManager{
 
      /**
       * The number of children a channel may have, if no value has been
-      * specified. Maybe adjusted later on by calling configure channel
+      * specified. Maybe adjusted later by calling configure channel
       */ 
      private int defaultChildren = DEFAULT_CHILDREN;
 
@@ -46,8 +48,10 @@ public class BandwidthManager{
       * This method makes an attempt to free up bandwidth
       * when it is needed. It follows the basic outline as
       * describe above,not completely defined.
+      *
+      * @return boolean whether bandwidth was able to be freed
       */ 
-     public void freeBandwidth(){
+     public boolean freeBandwidth(){
         /** 
          * This should be implemented depending upon the policies, you want
          * to use 
@@ -105,6 +109,7 @@ public class BandwidthManager{
        * @param Channel the channel whose bandwidth changed.
        */
       public void additionalBandwidthUsed(Channel channel){
+
 	int oldBandwidth = ((Integer)usedBandwidth.get(channel)).intValue();
 	usedBandwidth.put(channel,new Integer(oldBandwidth + 1));
 	if((oldBandwidth + 1) == (DEFAULT_CHILDREN + 1))
@@ -130,6 +135,12 @@ public class BandwidthManager{
 	int bandwidth = ((Integer)maxBandwidth.get(channel)).intValue();
 	return bandwidth;
       }
-
+      
+      /**
+       * This is the default number of children that a channel may have
+       * if no call to setDefaultChildren has been made. Channels may 
+       * individually call configureChannel to change the number of children
+       * it may take on.
+       */
       private static int DEFAULT_CHILDREN = 25;
 } 
