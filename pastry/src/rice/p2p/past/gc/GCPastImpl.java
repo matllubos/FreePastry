@@ -27,9 +27,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
 
   /**
    * The default expiration, or when objects inserted with no timeout will expire
-   * 11:00 AM, 8/30/2004  1095180000000  1096560000000L
    */
-  public static final long DEFAULT_EXPIRATION = 1095180000000L;
+  public static final long DEFAULT_EXPIRATION = Long.MAX_VALUE;
   
   /**
    * The real factory, which is not wrapped with a GCIdFactory
