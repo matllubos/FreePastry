@@ -1,7 +1,9 @@
 PACKAGE = rice.post.security
 
 SOURCE  = \
-	SecurityService.java
+	SecurityService.java \
+	PostSignature.java \
+	PostCertificate.java
 
 RMI_SOURCE =
 

@@ -181,7 +181,6 @@ public class StorageService {
       System.out.println("Verification failed of signed block:");
       printArray(sd.getData());
       printArray(sd.getTimestamp());
-      printArray(sd.getSignature());
       return false;
     }
 

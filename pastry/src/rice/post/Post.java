@@ -108,7 +108,7 @@ public class Post extends PastryAppl implements IScribeApp  {
   /**
    * The certificate used to authenticate this user's key pair.
    */
-  private java.security.cert.Certificate certificate;
+  private PostCertificate certificate;
   
   /**
    * The public key of the certificate authority.
@@ -125,7 +125,7 @@ public class Post extends PastryAppl implements IScribeApp  {
    * @param scribe The Scribe service running on this Pastry node.
    * @param address The address of the user in the system
    * @param keyPair The KeyPair of this user
-   * @param cert The certificate authenticating this user
+   * @param certificate The certificate authenticating this user
    * @param caPublicKey The public key of the certificate authority
    * 
    * @throws PostException if the PostLog could not be accessed
@@ -135,7 +135,7 @@ public class Post extends PastryAppl implements IScribeApp  {
               IScribe scribe,
               PostEntityAddress address,
               KeyPair keyPair,
-              java.security.cert.Certificate cert, 
+              PostCertificate certificate, 
               PublicKey caPublicKey)
     throws PostException
   {
@@ -145,7 +145,7 @@ public class Post extends PastryAppl implements IScribeApp  {
     this.scribeService = scribe;
     this.address = address;
     this.publicKey = keyPair.getPublic();
-    this.certificate = cert;
+    this.certificate = certificate;
     this.caPublicKey = caPublicKey;
 
     security = new SecurityService(keyPair, caPublicKey);
@@ -361,7 +361,7 @@ public class Post extends PastryAppl implements IScribeApp  {
    */
   private SignedPostMessage signPostMessage(PostMessage message) {
     try {
-      byte[] sig = security.sign(security.serialize(message));
+      PostSignature sig = security.sign(security.serialize(message));
 
       return new SignedPostMessage(message, sig);
     } catch (SecurityException e) {
@@ -388,7 +388,7 @@ public class Post extends PastryAppl implements IScribeApp  {
       }
       
       byte[] plainText = security.serialize(message.getMessage());
-      byte[] sig = message.getSignature();
+      PostSignature sig = message.getSignature();
 
       return security.verify(plainText, sig, key);
     } catch (SecurityException e) {
@@ -708,7 +708,8 @@ public class Post extends PastryAppl implements IScribeApp  {
           return;
         }
 
-        if (security.verifyCertificate(log.getEntityAddress(),
+        if (security.verifyCertificate(caPublicKey,
+                                       log.getEntityAddress(),
                                        log.getPublicKey(),
                                        log.getCertificate())) {
           storage.verifySigned(log, log.getPublicKey());

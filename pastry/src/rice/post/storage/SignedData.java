@@ -4,6 +4,7 @@ import java.io.*;
 import java.security.*;
 
 import rice.pastry.*;
+import rice.post.security.*;
 
 /**
  * This class is used internally by the storage package to
@@ -26,7 +27,7 @@ class SignedData implements Serializable {
   /**
    * The signature used to sign the data.
    */
-  private byte[] signature;
+  private PostSignature signature;
   
   /**
    * Builds a SignedData for a byte array given a timestamp.
@@ -71,11 +72,11 @@ class SignedData implements Serializable {
   /**
    * @return The signature to verify the data and timestamp
    */
-  public byte[] getSignature() {
+  public PostSignature getSignature() {
     return signature;
   }
 
-  protected void setSignature(byte[] sig) {
+  protected void setSignature(PostSignature sig) {
     signature = sig;
   }
 }

@@ -13,6 +13,7 @@ import rice.pastry.security.*;
 import rice.post.*;
 import rice.post.messaging.*;
 import rice.post.storage.*;
+import rice.post.security.*;
 
 import rice.scribe.*;
 
@@ -40,6 +41,7 @@ public class DistPostRegrTest {
   private Credentials credentials = new PermissiveCredentials();
   private KeyPair caPair;
   private KeyPairGenerator kpg;
+  private SecurityService security;
 
   private Object waitObject = "waitObject";
   private boolean notificationReceived = false;
@@ -79,7 +81,8 @@ public class DistPostRegrTest {
     rng = new Random(5);
     
     kpg = KeyPairGenerator.getInstance("RSA");
-    caPair = kpg.generateKeyPair();    
+    caPair = kpg.generateKeyPair();
+    security = new SecurityService(null, null);
   }
 
   /**
@@ -130,7 +133,9 @@ public class DistPostRegrTest {
 
       PostUserAddress address = new PostUserAddress("TEST" + i);
 
-      Post post = new Post(pn, past, scribe, address, pair, null, caPair.getPublic());
+      PostCertificate certificate = security.generateCertificate(address, pair.getPublic(), caPair.getPrivate());
+      
+      Post post = new Post(pn, past, scribe, address, pair, certificate, caPair.getPublic());
       postNodes.add(post);
 
       DummyPostClient dpc = new DummyPostClient(post);

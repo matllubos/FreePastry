@@ -109,17 +109,6 @@ public class SecurityService {
   }
 
   /**
-   * Utility method for verifying a Certificate
-   *
-   * @param address The entity who owns the certifcate
-   * @param key The public key of this entity
-   * @param certificate The certificate of this entity
-   */
-  public boolean verifyCertificate(PostEntityAddress address, PublicKey key, java.security.cert.Certificate certificate) {
-    return true;
-  }
-
-  /**
    * Utility method for serializing an object to a byte[].
    *
    * @param o The object to serialize
@@ -220,18 +209,28 @@ public class SecurityService {
    * @param data The data
    * @return The signature
    */
-  public byte[] sign(byte[] data) throws SecurityException {
+  public PostSignature sign(byte[] data) throws SecurityException {
+    return sign(data, keyPair.getPrivate());
+  }
+
+  /**
+    * Utility method for signing a block of data with the user's private key
+   *
+   * @param data The data
+   * @return The signature
+   */
+  private PostSignature sign(byte[] data, PrivateKey key) throws SecurityException {
     try {
-      signature.initSign(keyPair.getPrivate());
+      signature.initSign(key);
 
       signature.update(data);
 
-      return signature.sign();
+      return new PostSignature(signature.sign());
     } catch (InvalidKeyException e) {
       throw new SecurityException("InvalidKeyException signing object: " + e);
     } catch (SignatureException e) {
       throw new SecurityException("SignatureException signing object: " + e);
-    } 
+    }
   }
 
   /**
@@ -242,7 +241,7 @@ public class SecurityService {
    * @param sig The proposed signature
    * @return Whether or not the sig matches.
    */
-  public boolean verify(byte[] data, byte[] sig) throws SecurityException {
+  public boolean verify(byte[] data, PostSignature sig) throws SecurityException {
     return verify(data, sig, keyPair.getPublic());
   }
   
@@ -254,13 +253,13 @@ public class SecurityService {
    * @param key The key to verify against
    * @return Whether or not the sig matches.
    */
-  public boolean verify(byte[] data, byte[] sig, PublicKey key) throws SecurityException {
+  public boolean verify(byte[] data, PostSignature sig, PublicKey key) throws SecurityException {
     try {
       signature.initVerify(key);
 
       signature.update(data);
 
-      return signature.verify(sig);
+      return signature.verify(sig.getSignature());
     } catch (InvalidKeyException e) {
       throw new SecurityException("InvalidKeyException verifying object: " + e);
     } catch (SignatureException e) {
@@ -268,6 +267,53 @@ public class SecurityService {
     }   
   }
 
+  /**
+   * Utility method for verifying a certificate
+   *
+   * @param caKey The key to verify against (CA's pub key)
+   * @param address The address of the entity
+   * @param key The key to of the entity
+   * @param certificate The proposed certificate
+   * @return Whether or not the certificate matches.
+   */
+  public boolean verifyCertificate(PublicKey caKey, PostEntityAddress address, PublicKey key, PostCertificate certificate) throws SecurityException {
+    try {
+      byte[] keyByte = serialize(key);
+      byte[] addressByte = serialize(address);
+
+      byte[] all = new byte[addressByte.length + keyByte.length];
+      System.arraycopy(addressByte, 0, all, 0, addressByte.length);
+      System.arraycopy(keyByte, 0, all, addressByte.length, keyByte.length);
+
+      return verify(all, certificate, caKey);
+    } catch (IOException e) {
+      throw new SecurityException("InvalidKeyException verifying object: " + e);
+    }
+  }
+
+  /**
+   * Utility method for verifying a signature
+   *
+   * @param address The address of the entity
+   * @param key The key to of the entity
+   * @param caKey The private key of the CA
+   * @return Whether or not the sig matches.
+   */
+  public PostCertificate generateCertificate(PostEntityAddress address, PublicKey key, PrivateKey caKey) throws SecurityException {
+    try {
+      byte[] keyByte = serialize(key);
+      byte[] addressByte = serialize(address);
+
+      byte[] all = new byte[addressByte.length + keyByte.length];
+      System.arraycopy(addressByte, 0, all, 0, addressByte.length);
+      System.arraycopy(keyByte, 0, all, addressByte.length, keyByte.length);
+
+      return new PostCertificate(sign(all, caKey).getSignature());
+    } catch (IOException e) {
+      throw new SecurityException("InvalidKeyException verifying object: " + e);
+    }
+  }
+  
   /**
    * Encrypts the given byte[] using the user's public key.
    *
@@ -456,7 +502,7 @@ public class SecurityService {
 
     System.out.print("    Testing signing and verification (phase 1)\t\t");
 
-    byte[] testStringSig = security.sign(testStringByte);
+    PostSignature testStringSig = security.sign(testStringByte);
 
     if (security.verify(testStringByte, testStringSig)) {
       System.out.println("[ PASSED ]");
@@ -464,12 +510,12 @@ public class SecurityService {
       System.out.println("[ FAILED ]");
       System.out.println("    Input: \t" + testString);
       System.out.println("    Length:\t" + testStringByte.length);
-      System.out.println("    Sig Len:\t" + testStringSig.length);
+      System.out.println("    Sig Len:\t" + testStringSig.getSignature().length);
     }
 
     System.out.print("    Testing signing and verification (phase 2)\t\t");
 
-    testStringSig[0]++;
+    testStringSig.getSignature()[0]++;
     
     if (! security.verify(testStringByte, testStringSig)) {
       System.out.println("[ PASSED ]");
@@ -477,7 +523,7 @@ public class SecurityService {
       System.out.println("[ FAILED ]");
       System.out.println("    Input: \t" + testString);
       System.out.println("    Length:\t" + testStringByte.length);
-      System.out.println("    Sig Len:\t" + testStringSig.length);
+      System.out.println("    Sig Len:\t" + testStringSig.getSignature().length);
     }   
 
     System.out.print("    Testing RSA functions\t\t\t\t");

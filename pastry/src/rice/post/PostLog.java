@@ -6,6 +6,7 @@ import java.security.cert.*;
 import rice.*;
 import rice.post.log.*;
 import rice.post.storage.*;
+import rice.post.security.*;
 
 /**
  * This class represents the Log which sits at the address of the user's
@@ -32,7 +33,7 @@ public class PostLog extends Log {
   /**
    * The certificate of the user.
    */
-  private java.security.cert.Certificate certificate;
+  private PostCertificate certificate;
   
   /**
    * Constructor for PostLog.  Package protected: only Post can create
@@ -42,7 +43,7 @@ public class PostLog extends Log {
    * @param key The user's public key.
    * @param cert This user's certification
    */
-  PostLog(PostEntityAddress user, PublicKey key, java.security.cert.Certificate cert, Post post, Continuation command) {
+  PostLog(PostEntityAddress user, PublicKey key, PostCertificate cert, Post post, Continuation command) {
     super("User " + user.toString() + "'s log", user.getAddress(), post);
 
     this.user = user;
@@ -69,7 +70,7 @@ public class PostLog extends Log {
   /**
    * @return The certificate for the user who owns this PostLog.
    */
-  public java.security.cert.Certificate getCertificate() {
+  public PostCertificate getCertificate() {
     return certificate;
   }
 }
