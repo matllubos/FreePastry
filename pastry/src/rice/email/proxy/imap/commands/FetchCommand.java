@@ -89,6 +89,9 @@ public class FetchCommand
 
     public void appendPartRequest(String string)
     {
+	if (parts.contains(string)) {
+	    return;
+	}
       if (string.trim().equalsIgnoreCase("ALL")) {
         parts.add("FLAGS");
         parts.add("INTERNALDATE");

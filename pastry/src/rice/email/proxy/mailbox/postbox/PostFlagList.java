@@ -19,10 +19,7 @@ public class PostFlagList implements FlagList {
     if (loc.get(email) == null) {
       loc.put(email, new PostFlagList());
     }
-PostFlagList list = (PostFlagList) loc.get(email);
-list._recent = true;
-return list;
-    //  return (PostFlagList) loc.get(email);
+      return (PostFlagList) loc.get(email);
   }
   
   public void addFlag(String flag)
