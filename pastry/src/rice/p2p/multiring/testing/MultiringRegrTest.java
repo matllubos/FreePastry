@@ -417,6 +417,10 @@ public class MultiringRegrTest {
     public MultiringTestMessage(Id source) {
       this.source = source;
     }
+    
+    public int getPriority() {
+      return MEDIUM_PRIORITY;
+    }
   }
   
 
