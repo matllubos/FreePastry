@@ -133,6 +133,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
         }
       }
 
+      bsport = port;  // make sure bsport = port, if no -bootstrap argument is provided
       for (int i = 0; i < args.length; i++) {
         if (args[i].equals("-bootstrap") && i+1 < args.length) {
           String str = args[i+1];
@@ -148,7 +149,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
           break;
         }
       }
-
+      
       for (int i = 0; i < args.length; i++) {
         if (args[i].equals("-nodes") && i+1 < args.length) {
           int n = Integer.parseInt(args[i+1]);
