@@ -753,7 +753,7 @@ public class ScribeImpl implements Scribe, Application {
         for (int i = 0; i < handles.length; i++) {
           log.finer(endpoint.getId() + ": Forwarding publish message with data " + pMessage.getContent() + " for topic " +
             pMessage.getTopic() + " to child " + handles[i]);
-          endpoint.route(null, pMessage, handles[i]);
+          endpoint.route(null, new PublishMessage(endpoint.getLocalNodeHandle(), pMessage.getTopic(), pMessage.getContent()), handles[i]);
         }
       } else {
         log.warning(endpoint.getId() + ": Received unexpected publish message from " +
