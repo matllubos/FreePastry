@@ -19,7 +19,7 @@ public class OverviewPanelCreator implements PanelCreator {
   protected Vector total = new Vector();
   
   public OverviewPanelCreator() {
-    Thread t = new Thread() {
+    Thread t = new Thread("Overview Panel Monitor Thread") {
       public void run() {
         while (true) {
           try {

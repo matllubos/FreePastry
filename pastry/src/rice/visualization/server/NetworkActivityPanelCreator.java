@@ -30,7 +30,7 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
   protected double receivedTotal = 0;
   
   public NetworkActivityPanelCreator() {
-    Thread t = new Thread() {
+    Thread t = new Thread("Network Activity Panel Monitor Thread") {
       public void run() {
         while (true) {
           try {
