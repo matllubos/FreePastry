@@ -61,8 +61,11 @@ import rice.serialization.*;
  */
 public class MemoryStorage implements Storage {
 
-  // the hashtable used to store the data
-  private Hashtable storage;
+  // the map used to store the data
+  private HashMap storage;
+  
+  // the map used to store the metadata
+  private HashMap metadata;
 
   // the current list of Ids
   private IdSet idSet;
@@ -81,7 +84,8 @@ public class MemoryStorage implements Storage {
   public MemoryStorage(IdFactory factory) {
     this.factory = factory;
     idSet = factory.buildIdSet();
-    storage = new Hashtable();
+    storage = new HashMap();
+    metadata = new HashMap();
     currentSize = 0;
   } 
   
@@ -105,6 +109,9 @@ public class MemoryStorage implements Storage {
     storage.put(newId, storage.get(oldId));
     storage.remove(oldId);
     
+    metadata.put(newId, metadata.get(oldId));
+    metadata.remove(oldId);
+    
     c.receiveResult(new Boolean(true));
   }
     
@@ -117,11 +124,12 @@ public class MemoryStorage implements Storage {
    *
    * @param obj The object to be made persistent.
    * @param id The object's id.
+   * @param metadata The object's metadata
    * @param c The command to run once the operation is complete
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>.
    */
-  public void store(Id id, Serializable obj, Continuation c) {
+  public void store(Id id, Serializable metadata, Serializable obj, Continuation c) {
     if (id == null || obj == null) {
       c.receiveResult(new Boolean(false));
       return;
@@ -129,7 +137,8 @@ public class MemoryStorage implements Storage {
     
     currentSize += getSize(obj);
     
-    storage.put(id, obj);
+    this.storage.put(id, obj);
+    this.metadata.put(id, metadata);
     idSet.addId(id);
     c.receiveResult(new Boolean(true));
   }
@@ -149,6 +158,7 @@ public class MemoryStorage implements Storage {
    */
   public void unstore(Id id, Continuation c) {
     Object stored = storage.remove(id);
+    metadata.remove(id);
     idSet.removeId(id);
 
     if (stored != null) {
@@ -168,16 +178,33 @@ public class MemoryStorage implements Storage {
   public boolean exists(Id id) {
     return storage.containsKey(id);
   }
-
+  
   /**
-   * Returns whether or not the provided id exists, by returning
-   * a Boolean through receiveResult on c
+   * Returns the metadata associated with the provided object, or null if
+   * no metadata exists.  The metadata must be stored in memory, so this 
+   * operation is guaranteed to be fast and non-blocking.
    *
-   * @param id The id to check
-   * @param c The command to run once the result is available
-   */  
-  public void exists(Id id, Continuation c) {
-    c.receiveResult(new Boolean(storage.containsKey(id)));
+   * @param id The id for which the metadata is needed
+   * @return The metadata, or null of non exists
+   */
+  public Serializable getMetadata(Id id) {
+    return (Serializable) metadata.get(id);
+  }
+  
+  /**
+   * Updates the metadata stored under the given key to be the provided
+   * value.  As this may require a disk access, the requestor must
+   * also provide a continuation to return the result to.  
+   *
+   * @param id The id for the metadata 
+   * @param metadata The metadata to store
+   * @param c The command to run once the operation is complete
+   */
+  public void setMetadata(Id id, Serializable metadata, Continuation command) {
+    if (exists(id)) 
+      this.metadata.put(id, metadata);
+
+    command.receiveResult(new Boolean(exists(id)));
   }
 
   /**
@@ -189,24 +216,6 @@ public class MemoryStorage implements Storage {
    */
   public void getObject(Id id, Continuation c) {
     c.receiveResult(storage.get(id));
-  }
-
-  /**
-   * Return the objects identified by the given range of ids. The IdSet
-   * returned contains the Ids of the stored objects. The range is
-   * partially inclusive, the lower range is inclusive, and the upper
-   * exclusive.
-   *
-   * When the operation is complete, the receiveResult() method is called
-   * on the provided continuation with a IdSet result containing the
-   * resulting IDs.
-   *
-   * @param start The staring id of the range. (inclusive)
-   * @param end The ending id of the range. (exclusive)
-   * @param c The command to run once the operation is complete
-   */
-  public void scan(IdRange range , Continuation c) {
-    c.receiveResult(idSet.subSet(range));    
   }
 
   /**

@@ -82,7 +82,7 @@ public class EmptyCache implements Cache {
   public void rename(final Id oldId, final Id newId, Continuation c) {
     c.receiveException(new IllegalArgumentException("EmptyCache has no objects!"));
   }
-
+  
   /**
    * Caches an object in this storage. This method is non-blocking.
    * If the object has already been stored at the location id, this
@@ -99,7 +99,7 @@ public class EmptyCache implements Cache {
    * @param obj The object to cache.
    * @param c The command to run once the operation is complete
    */
-  public void cache(final Id id, final Serializable obj, final Continuation c) {
+  public void cache(Id id, Serializable metadata, Serializable obj, Continuation c) {
     c.receiveResult(new Boolean(true));
   }
 
@@ -129,19 +129,6 @@ public class EmptyCache implements Cache {
   }
 
   /**
-   * Returns whether or not an object is cached in the location <code>id</code>.
-   * The result is returned via the receiveResult method on the provided
-   * Continuation with an Boolean represnting the result.
-   *
-   * @param c The command to run once the operation is complete
-   * @param id The id of the object in question.
-   * @return Whether or not an object is present at id.
-   */
-  public void exists(Id id, Continuation c) {
-    c.receiveResult(new Boolean(false));
-  }
-
-  /**
    * Returns the object identified by the given id.
    *
    * @param id The id of the object in question.
@@ -152,26 +139,31 @@ public class EmptyCache implements Cache {
   public void getObject(Id id, Continuation c) {
     c.receiveResult(null);
   }
-
+  
   /**
-   * Return the objects identified by the given range of ids. The IdSet 
-   * returned contains the Ids of the stored objects. The range is
-   * partially inclusive, the lower range is inclusive, and the upper
-   * exclusive.
+   * Returns the metadata associated with the provided object, or null if
+   * no metadata exists.  The metadata must be stored in memory, so this 
+   * operation is guaranteed to be fast and non-blocking.
    *
-   *
-   * When the operation is complete, the receiveResult() method is called
-   * on the provided continuation with a IdSet result containing the
-   * resulting IDs.
-   *
-   * @param start The staring id of the range. (inclusive)
-   * @param end The ending id of the range. (exclusive) 
-   * @param c The command to run once the operation is complete
-   * @return The idset containg the keys 
+   * @param id The id for which the metadata is needed
+   * @return The metadata, or null of non exists
    */
-   public void scan(IdRange range, Continuation c) {
-     c.receiveResult(factory.buildIdSet());
-   }
+  public Serializable getMetadata(Id id) {
+    return null;
+  }
+  
+  /**
+   * Updates the metadata stored under the given key to be the provided
+   * value.  As this may require a disk access, the requestor must
+   * also provide a continuation to return the result to.  
+   *
+   * @param id The id for the metadata 
+   * @param metadata The metadata to store
+   * @param c The command to run once the operation is complete
+   */
+  public void setMetadata(Id id, Serializable metadata, Continuation c) {
+    c.receiveResult(new Boolean(true));
+  }
 
   /**
    * Return the objects identified by the given range of ids. The IdSet 

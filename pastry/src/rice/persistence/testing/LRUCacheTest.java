@@ -108,7 +108,7 @@ public class LRUCacheTest extends Test {
         }
 
         stepStart("Inserting Fourth Object (227 bytes)");
-        cache.cache(data[4], new byte[200], put4);
+        cache.cache(data[4], null, new byte[200], put4);
       }
 
       public void receiveException(Exception e) {
@@ -125,7 +125,7 @@ public class LRUCacheTest extends Test {
         }
 
         stepStart("Inserting Third Object (65 bytes)");
-        cache.cache(data[3], new byte[38], put3);
+        cache.cache(data[3], null, new byte[38], put3);
       }
 
       public void receiveException(Exception e) {
@@ -142,7 +142,7 @@ public class LRUCacheTest extends Test {
         }
 
         stepStart("Inserting Second Object (40 bytes)");
-        cache.cache(data[2], new byte[13], put2);
+        cache.cache(data[2], null, new byte[13], put2);
       }
 
       public void receiveException(Exception e) {
@@ -153,97 +153,36 @@ public class LRUCacheTest extends Test {
     sectionStart("Inserting Objects");
     
     stepStart("Inserting First Object (30 bytes)");
-    cache.cache(data[1], new byte[3], put1);
+    cache.cache(data[1], null, new byte[3], put1);
   }
 
   private void testExists(final Continuation c) {
-    final Continuation done = new Continuation() {
-      public void receiveResult(Object o) {
-        if (o.equals(new Boolean(false))) {
-          stepDone(SUCCESS);
-        } else {
-          stepDone(FAILURE);
-        }
-
-        sectionEnd();
-
-        c.receiveResult(new Boolean(true));
-      }
-
-      public void receiveException(Exception e) {
-        stepException(e);
-      }
-    };
-
-
-    final Continuation check4 = new Continuation() {
-      public void receiveResult(Object o) {
-        if (o.equals(new Boolean(true))) {
-          stepDone(SUCCESS);
-        } else {
-          stepDone(FAILURE);
-        }
-
-        stepStart("Checking for Fourth Object");
-        cache.exists(data[4], done);
-      }
-
-      public void receiveException(Exception e) {
-        stepException(e);
-      }
-    };
-
-    final Continuation check3 = new Continuation() {
-      public void receiveResult(Object o) {
-        if (o.equals(new Boolean(false))) {
-          stepDone(SUCCESS);
-        } else {
-          stepDone(FAILURE);
-        }
-
-        stepStart("Checking for Third Object");
-        cache.exists(data[3], check4);
-      }
-
-      public void receiveException(Exception e) {
-        stepException(e);
-      }
-    };
-
-    final Continuation check2 = new Continuation() {
-      public void receiveResult(Object o) {
-        if (o.equals(new Boolean(false))) {
-          stepDone(SUCCESS);
-        } else {
-          stepDone(FAILURE);
-        }
-
-        stepStart("Checking for Second Object");
-        cache.exists(data[2], check3);
-      }
-
-      public void receiveException(Exception e) {
-        stepException(e);
-      }
-    };
-
-    final Continuation check1 = new Continuation() {
+    setUp(new Continuation() {
       public void receiveResult(Object o) {
         if (o.equals(new Boolean(true))) {
           sectionStart("Checking for Objects");
           stepStart("Checking for First Object");
-          cache.exists(data[1], check2);
+          if (cache.exists(data[1])) stepDone(SUCCESS); else stepDone(FAILURE);
+          stepStart("Checking for Second Object");
+          if (cache.exists(data[2])) stepDone(SUCCESS); else stepDone(FAILURE);
+          stepStart("Checking for Third Object");
+          if (cache.exists(data[3])) stepDone(SUCCESS); else stepDone(FAILURE);
+          stepStart("Checking for Fourth Object");
+          if (cache.exists(data[4])) stepDone(SUCCESS); else stepDone(FAILURE);
+          stepStart("Checking for Fifth Object");
+          if (cache.exists(data[5])) stepDone(SUCCESS); else stepDone(FAILURE);
+          sectionEnd();
+          
+          c.receiveResult(new Boolean(true));
         } else {
           throw new RuntimeException("SetUp did not complete correctly!");
         }
       }
-
+      
       public void receiveException(Exception e) {
         stepException(e);
       }
-    };
-
-    setUp(check1);
+    });
   }
 
   private void testScan(final Continuation c) {
@@ -260,63 +199,6 @@ public class LRUCacheTest extends Test {
         c.receiveResult(new Boolean(true));
       }
     };
-    
-    final Continuation verify2 = new Continuation() {
-      public void receiveResult(Object o) {
-        if (o == null) {
-          stepDone(FAILURE, "Result of query was null");
-          return;
-        }
-
-        IdSet result = (IdSet) o;
-
-        if (result.numElements() != 0) {
-          stepDone(FAILURE, "Result had " + result.numElements() + " elements, expected 0.");
-          return;
-        }
-
-        stepDone(SUCCESS);
-
-        stepStart("Requesting Scan from 'Monkey' to 9");
-        handleBadScan.receiveException(new Exception());
-        //cache.scan(new IdRange(data[11],data[9]), handleBadScan);
-      }
-
-      public void receiveException(Exception e) {
-        stepException(e);
-      }
-    };
-
-    final Continuation verify = new Continuation() {
-      public void receiveResult(Object o) {
-        if (o == null) {
-          stepDone(FAILURE, "Result of query was null");
-          return;
-        }
-
-        IdSet result = (IdSet) o;
-
-        if (result.numElements() != 1) {
-          stepDone(FAILURE, "Result had " + result.numElements() + " elements, expected 1.");
-          return;
-        }
-
-
-        if (! result.isMemberId(data[3])) {
-          stepDone(FAILURE, "Result had incorrect element " + data[3] + ", expected 3.");
-          return;
-        }
-
-        stepDone(SUCCESS);
-
-        stepStart("Requesting Scan from 8 to 10");
-        cache.scan(FACTORY.buildIdRange(data[8], data[10]), verify2);
-      }
-
-      public void receiveException(Exception e) {
-        stepException(e);
-      }
-    };
 
     final Continuation query = new Continuation() {
       public void receiveResult(Object o) {
@@ -327,7 +209,32 @@ public class LRUCacheTest extends Test {
         }
 
         stepStart("Requesting Scan from 3 to 6");
-        cache.scan(FACTORY.buildIdRange(data[3], data[6]), verify);
+        IdSet result = cache.scan(FACTORY.buildIdRange(data[3], data[6]));
+        
+        if (result.numElements() != 1) {
+          stepDone(FAILURE, "Result had " + result.numElements() + " elements, expected 1.");
+          return;
+        }
+        
+        if (! result.isMemberId(data[3])) {
+          stepDone(FAILURE, "Result had incorrect element " + data[3] + ", expected 3.");
+          return;
+        }
+        
+        stepDone(SUCCESS);
+        
+        stepStart("Requesting Scan from 8 to 10");
+        result = cache.scan(FACTORY.buildIdRange(data[8], data[10]));
+        
+        if (result.numElements() != 0) {
+          stepDone(FAILURE, "Result had " + result.numElements() + " elements, expected 0.");
+          return;
+        }
+        
+        stepDone(SUCCESS);
+        
+        stepStart("Requesting Scan from 'Monkey' to 9");
+        handleBadScan.receiveException(new Exception());
       }
 
       public void receiveException(Exception e) {
@@ -341,7 +248,7 @@ public class LRUCacheTest extends Test {
           sectionStart("Testing Scan");
 
           stepStart("Inserting String as Key");
-          cache.cache(data[11], new byte[0], query);
+          cache.cache(data[11], null, new byte[0], query);
         } else {
           stepException(new RuntimeException("Exists did not complete correctly."));
         }
@@ -366,27 +273,21 @@ public class LRUCacheTest extends Test {
     
     final Continuation checkRandom = new Continuation() {
 
-      private int NUM_DELETED = -1;
-
       public void receiveResult(Object o) {
-        if (NUM_DELETED == -1) {
-          stepStart("Checking object deletion");
-          NUM_DELETED = ((Integer) o).intValue();
-          cache.scan(FACTORY.buildIdRange(data[13 + START_NUM], data[13 + END_NUM + SKIP]), this);
-        } else {
-          int length = ((IdSet)o).numElements();
-
-          int desired = NUM_ELEMENTS - NUM_DELETED;
+        stepStart("Checking object deletion");
+        int NUM_DELETED = ((Integer) o).intValue();
+        int length = cache.scan(FACTORY.buildIdRange(data[13 + START_NUM], data[13 + END_NUM + SKIP])).numElements();
+        
+        int desired = NUM_ELEMENTS - NUM_DELETED;
+        
+        if (length == desired) {
+          stepDone(SUCCESS);
           
-          if (length == desired) {
-            stepDone(SUCCESS);
-
-            sectionEnd();
-            c.receiveResult(new Boolean(true));
-          } else {
-            stepDone(FAILURE, "Expected " + desired + " objects after deletes, found " + length + ".");
-            return;
-          }
+          sectionEnd();
+          c.receiveResult(new Boolean(true));
+        } else {
+          stepDone(FAILURE, "Expected " + desired + " objects after deletes, found " + length + ".");
+          return;
         }
       }
 
@@ -433,14 +334,14 @@ public class LRUCacheTest extends Test {
     };
     
     final Continuation checkExists = new Continuation() {
-      private int count = START_NUM - SKIP;
-
       public void receiveResult(Object o) {
-        if (count == START_NUM - SKIP) {
-          stepStart("Checking exists for all 50 objects");
-        } else {
-          if (o.equals(new Boolean(count < LAST_NUM_REMAINING))) {
-            if (((Boolean)o).booleanValue()) {
+        stepStart("Checking exists for all 50 objects");
+        
+        for (int count = START_NUM - SKIP; count < END_NUM; count+=SKIP) {
+          Boolean b = new Boolean(cache.exists(data[13 + count]));
+          
+          if (b.equals(new Boolean(count < LAST_NUM_REMAINING))) {
+            if (b.booleanValue()) {
               stepDone(FAILURE, "Element " + count + " did exist - should not have.");
               return;
             } else {
@@ -449,14 +350,9 @@ public class LRUCacheTest extends Test {
             }
           }
         }
-
-        if (count == END_NUM) {
-          stepDone(SUCCESS);
-          removeRandom.receiveResult(new Boolean(true));
-          return;
-        }
-
-        cache.exists(data[13 + (count += SKIP)], this);
+        
+        stepDone(SUCCESS);
+        removeRandom.receiveResult(new Boolean(true));
       }
 
       public void receiveException(Exception e) {
@@ -489,7 +385,7 @@ public class LRUCacheTest extends Test {
         int num = count;
         count += SKIP;
         
-        cache.cache(data[13 + num], new byte[num * num * num], this);
+        cache.cache(data[13 + num], null, new byte[num * num * num], this);
       }
 
       public void receiveException(Exception e) {
@@ -551,7 +447,7 @@ public class LRUCacheTest extends Test {
 
         stepStart("Inserting null value");
 
-        cache.cache(data[12], null, validateNullValue);
+        cache.cache(data[12], null, null, validateNullValue);
       }
 
       public void receiveException(Exception e) {
@@ -570,7 +466,7 @@ public class LRUCacheTest extends Test {
         sectionStart("Testing Error Cases");
         stepStart("Inserting null key");
 
-        cache.cache(null, "null key", insertNullValue);
+        cache.cache(null, null, "null key", insertNullValue);
       }
 
       public void receiveException(Exception e) {

@@ -113,29 +113,6 @@ public class StorageManagerImpl implements StorageManager {
   public boolean exists(Id id) {
     return (cache.exists(id) || storage.exists(id));
   }
-
-  /**
-   * Returns whether or not an object is present in the location <code>id</code>.
-   * The result is returned via the receiveResult method on the provided
-   * Continuation with an Boolean represnting the result.
-   *
-   * Returns <code>True</code> or <code>False</code> depending on whether the object
-   * exists (through receiveResult on c);
-   *
-   * @param c The command to run once the operation is complete
-   * @param id The id of the object in question.
-   */
-  public void exists(final Id id, Continuation c) {
-    cache.exists(id, new StandardContinuation(c) {
-      public void receiveResult(Object o) {
-        if (o.equals(new Boolean(true))) {
-          parent.receiveResult(o);
-        } else {
-          storage.exists(id, parent);
-        }
-      }
-    });
-  }  
   
   /**
    * Renames the given object to the new id.  This method is potentially faster
@@ -171,48 +148,39 @@ public class StorageManagerImpl implements StorageManager {
       }
     });    
   }
-
+  
   /**
-   * Return the objects identified by the given range of ids. The IdSet
-   * returned contains the Ids of the stored objects. The range is
-   * partially inclusive, the lower range is inclusive, and the upper
-   * exclusive.
+   * Returns the metadata associated with the provided object, or null if
+   * no metadata exists.  The metadata must be stored in memory, so this 
+   * operation is guaranteed to be fast and non-blocking.
    *
-   * When the operation is complete, the receiveResult() method is called
-   * on the provided continuation with a IdSet result containing the
-   * resulting IDs.
+   * @param id The id for which the metadata is needed
+   * @return The metadata, or null of non exists
+   */
+  public Serializable getMetadata(Id id) {
+    if (cache.exists(id)) {
+      return cache.getMetadata(id);
+    } else {
+      return storage.getMetadata(id);
+    }
+  }  
+  
+  /**
+   * Updates the metadata stored under the given key to be the provided
+   * value.  As this may require a disk access, the requestor must
+   * also provide a continuation to return the result to.  
    *
-   * @param start The staring id of the range. (inclusive)
-   * @param end The ending id of the range. (exclusive)
+   * @param id The id for the metadata 
+   * @param metadata The metadata to store
    * @param c The command to run once the operation is complete
    */
-   public void scan(final IdRange range, final Continuation c) {
-     cache.scan(range, new StandardContinuation(c) {
-       private IdSet fromCache;
-       
-       public void receiveResult(Object o) {
-         if (fromCache == null) {
-           fromCache = (IdSet) o;
-           
-           storage.scan(range, this);
-         } else {
-           IdSet fromStorage = (IdSet) o;
-           
-           IdSet toReturn = factory.buildIdSet();
-           
-           Iterator i = fromStorage.getIterator(); 
-           while(i.hasNext())
-             toReturn.addId((Id) i.next());
-           
-           i = fromCache.getIterator(); 
-           while(i.hasNext())
-             toReturn.addId((Id) i.next());
-           
-           parent.receiveResult(toReturn);
-         }
-       }
-     });   
-   }
+  public void setMetadata(final Id id, final Serializable metadata, Continuation command) {
+    cache.setMetadata(id, metadata, new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        storage.setMetadata(id, metadata, parent);
+      }
+    });
+  }
 
   /**
    * Return the objects identified by the given range of ids. The IdSet
@@ -302,11 +270,12 @@ public class StorageManagerImpl implements StorageManager {
    * <code>False</code> (through receiveResult on c).
    *
    * @param id The object's id.
+   * @param metadata The object's metadata
    * @param obj The object to store.
    * @param c The command to run once the operation is complete
    */
-  public void store(Id id, Serializable obj, Continuation c) {
-    storage.store(id, obj, c);
+  public void store(Id id, Serializable metadata, Serializable obj, Continuation c) {
+    storage.store(id, metadata, obj, c);
   }
 
   /**
@@ -337,11 +306,12 @@ public class StorageManagerImpl implements StorageManager {
    * <code>False</code> (through receiveResult on c).
    *
    * @param id The object's id.
+   * @param metadata The object's metadata
    * @param obj The object to cache.
    * @param c The command to run once the operation is complete
    */
-  public void cache(Id id, Serializable obj, Continuation c) {
-    cache.cache(id, obj, c);
+  public void cache(Id id, Serializable metadata, Serializable obj, Continuation c) {
+    cache.cache(id, metadata, obj, c);
   }
 
   /**

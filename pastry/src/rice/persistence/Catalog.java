@@ -71,19 +71,6 @@ public interface Catalog {
   public boolean exists(Id id);
 
   /**
-   * Returns whether or not an object is present in the location <code>id</code>.
-   * The result is returned via the receiveResult method on the provided
-   * Continuation with an Boolean represnting the result.
-   *
-   * Returns <code>True</code> or <code>False</code> depending on whether the object
-   * exists (through receiveResult on c);
-   *
-   * @param c The command to run once the operation is complete
-   * @param id The id of the object in question.
-   */
-  public void exists(Id id, Continuation c);
-
-  /**
    * Returns the object identified by the given id, or <code>null</code> if
    * there is no cooresponding object (through receiveResult on c).
    *
@@ -91,6 +78,27 @@ public interface Catalog {
    * @param c The command to run once the operation is complete
    */
   public void getObject(Id id, Continuation c);
+  
+  /**
+   * Returns the metadata associated with the provided object, or null if
+   * no metadata exists.  The metadata must be stored in memory, so this 
+   * operation is guaranteed to be fast and non-blocking.
+   *
+   * @param id The id for which the metadata is needed
+   * @return The metadata, or null of non exists
+   */
+  public Serializable getMetadata(Id id);
+  
+  /**
+   * Updates the metadata stored under the given key to be the provided
+   * value.  As this may require a disk access, the requestor must
+   * also provide a continuation to return the result to.  
+   *
+   * @param id The id for the metadata 
+   * @param metadata The metadata to store
+   * @param c The command to run once the operation is complete
+   */
+  public void setMetadata(Id id, Serializable metadata, Continuation command);
   
   /**
    * Renames the given object to the new id.  This method is potentially faster
@@ -101,22 +109,6 @@ public interface Catalog {
    * @param c The command to run once the operation is complete
    */
   public void rename(Id oldId, Id newId, Continuation c);
-
-  /**
-   * Return the objects identified by the given range of ids. The IdSet 
-   * returned contains the Ids of the stored objects. The range is
-   * partially inclusive, the lower range is inclusive, and the upper
-   * exclusive.
-   *
-   * When the operation is complete, the receiveResult() method is called
-   * on the provided continuation with a IdSet result containing the
-   * resulting IDs.
-   *
-   * @param start The staring id of the range. (inclusive)
-   * @param end The ending id of the range. (exclusive) 
-   * @param c The command to run once the operation is complete
-   */
-  public void scan(IdRange range , Continuation c);
 
  /**
    * Return the objects identified by the given range of ids. The IdSet 

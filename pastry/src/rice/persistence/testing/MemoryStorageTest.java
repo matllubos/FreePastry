@@ -64,6 +64,7 @@ public class MemoryStorageTest extends Test {
 
   protected boolean store;
   private Id[] data;
+  private Integer[] metadata;
 
   /**
    * Builds a MemoryMemoryStorageTest
@@ -71,10 +72,12 @@ public class MemoryStorageTest extends Test {
   public MemoryStorageTest(boolean store) {
     storage = new MemoryStorage(FACTORY);
     data  = new Id[500];
+    metadata = new Integer[500];
     int[] x = new int[5];
     for (int i = 0; i < 500; i ++){
         x[3] = i;
       	data[i] = FACTORY.buildId(x);
+        metadata[i] = new Integer(i);
     }
     this.store = store;
   }
@@ -108,7 +111,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Storing Fourth Object");
-        storage.store(data[4], "Fourth Object", put4);
+        storage.store(data[4], metadata[4], "Fourth Object", put4);
       }
 
       public void receiveException(Exception e) {
@@ -126,7 +129,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Storing Third Object");
-        storage.store(data[3], "Third Object", put3);
+        storage.store(data[3], metadata[3], "Third Object", put3);
       }
 
       public void receiveException(Exception e) {
@@ -144,7 +147,7 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Storing Second Object");
-        storage.store(data[2], "Second Object", put2);
+        storage.store(data[2], metadata[2], "Second Object", put2);
       }
 
       public void receiveException(Exception e) {
@@ -155,7 +158,7 @@ public class MemoryStorageTest extends Test {
     sectionStart("Storing Objects");
     
     stepStart("Storing First Object");
-    storage.store(data[1], "First Object", put1);
+    storage.store(data[1], metadata[1], "First Object", put1);
   }
 
   public void testRetreival(final Continuation c) {
@@ -294,109 +297,61 @@ public class MemoryStorageTest extends Test {
   }
 
   public void testExists(final Continuation c) {
-    final Continuation check5 = new Continuation() {
-      public void receiveResult(Object o) {
-        if (o.equals(new Boolean(false))) {
-          stepDone(SUCCESS);
-        } else {
-          stepDone(FAILURE);
-        }
-
-        sectionEnd();
-        c.receiveResult(new Boolean(true));
-      }
-
-      public void receiveException(Exception e) {
-        stepException(e);
-      }
-    };
-
-    final Continuation check4 = new Continuation() {
-      public void receiveResult(Object o) {
-        if (o.equals(new Boolean(true))) {
-          stepDone(SUCCESS);
-        } else {
-          stepDone(FAILURE);
-        }
-
-        stepStart("Checking for Fifth Object");
-        storage.exists(data[5], check5);
-      }
-
-      public void receiveException(Exception e) {
-        stepException(e);
-      }
-    };
-    
-    final Continuation check3 = new Continuation() {
-      public void receiveResult(Object o) {
-        if (o.equals(new Boolean(true))) {
-          stepDone(SUCCESS);
-        } else {
-          stepDone(FAILURE);
-        }
-
-        stepStart("Checking for Fourth Object");
-        storage.exists(data[4], check4);
-      }
-
-      public void receiveException(Exception e) {
-        stepException(e);
-      }
-    };
-
-    final Continuation check2 = new Continuation() {
-      public void receiveResult(Object o) {
-        if (o.equals(new Boolean(true))) {
-          stepDone(SUCCESS);
-        } else {
-          stepDone(FAILURE);
-        }
-
-        stepStart("Checking for Third Object");
-        storage.exists(data[3], check3);
-      }
-
-      public void receiveException(Exception e) {
-        stepException(e);
-      }
-    };
-
-    final Continuation check1 = new Continuation() {
-      public void receiveResult(Object o) {
-        if ((! store) || o.equals(new Boolean(true))) {
-          stepDone(SUCCESS);
-        } else {
-          stepDone(FAILURE);
-        }
-
-        stepStart("Checking for Second Object");
-        storage.exists(data[2], check2);
-      }
-
-      public void receiveException(Exception e) {
-        stepException(e);
-      }
-    };
-
-    Continuation check0 = new Continuation() {
+    testRetreival(new Continuation() {
       public void receiveResult(Object o) {
         if (o.equals(new Boolean(true))) {
           sectionStart("Checking for Objects");
-
           stepStart("Checking for First Object");
-          storage.exists(data[1], check1);
+          if (storage.exists(data[1])) stepDone(SUCCESS); else stepDone(FAILURE);
+          stepStart("Checking for Second Object");
+          if (storage.exists(data[2])) stepDone(SUCCESS); else stepDone(FAILURE);
+          stepStart("Checking for Third Object");
+          if (storage.exists(data[3])) stepDone(SUCCESS); else stepDone(FAILURE);
+          stepStart("Checking for Fourth Object");
+          if (storage.exists(data[4])) stepDone(SUCCESS); else stepDone(FAILURE);
+          stepStart("Checking for Fifth Object");
+          if (! storage.exists(data[5])) stepDone(SUCCESS); else stepDone(FAILURE);
+          sectionEnd();
+          
+          sectionStart("Checking for Metadata");
+          stepStart("Checking for First Object Metadata");
+          if (metadata[1].equals(storage.getMetadata(data[1]))) stepDone(SUCCESS); else stepDone(FAILURE);
+          stepStart("Checking for Second Object Metadata");
+          if (metadata[2].equals(storage.getMetadata(data[2]))) stepDone(SUCCESS); else stepDone(FAILURE);
+          stepStart("Checking for Third Object Metadata");
+          if (metadata[3].equals(storage.getMetadata(data[3]))) stepDone(SUCCESS); else stepDone(FAILURE);
+          stepStart("Checking for Fourth Object Metadata");
+          if (metadata[4].equals(storage.getMetadata(data[4]))) stepDone(SUCCESS); else stepDone(FAILURE);
+          stepStart("Checking for Fifth Object Metadata");
+          if (! metadata[5].equals(storage.getMetadata(data[5]))) stepDone(SUCCESS); else stepDone(FAILURE);
+          sectionEnd();
+          
+          sectionStart("Modifying Metadata");
+          stepStart("Changing Metadata");
+          storage.setMetadata(data[4], new Integer(5001), new Continuation() {
+            public void receiveResult(Object o) {
+              stepDone(SUCCESS);
+              
+              stepStart("Checking for New Metadata");
+              if ((new Integer(5001)).equals(storage.getMetadata(data[4]))) stepDone(SUCCESS); else stepDone(FAILURE);
+              sectionEnd();
+              
+              c.receiveResult(new Boolean(true));
+            }
+            
+            public void receiveException(Exception e) {
+              stepException(e);
+            }
+          });
         } else {
-          stepException(new RuntimeException("SetUp did not complete correctly."));
+          throw new RuntimeException("SetUp did not complete correctly!");
         }
       }
-
+      
       public void receiveException(Exception e) {
         stepException(e);
       }
-    };
-
-    testRetreival(check0);
+    });
   }  
 
   private void testRemoval(final Continuation c) {
@@ -421,14 +376,7 @@ public class MemoryStorageTest extends Test {
     
     final Continuation retrieve1 = new Continuation() {
       public void receiveResult(Object o) {
-        if ((! store) ||  o.equals(new Boolean(false))) {
-          stepDone(SUCCESS);
-        } else {
-          stepDone(FAILURE);
-        }
-
-        stepStart("Attempting to Retrieve First Object");
-        storage.getObject(data[1], done1);
+        
       }
 
       public void receiveException(Exception e) {
@@ -445,7 +393,16 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Checking for First Object");
-        storage.exists(data[1], retrieve1);
+        boolean result = storage.exists(data[1]);
+        
+        if ((! store) || (! result)) {
+          stepDone(SUCCESS);
+        } else {
+          stepDone(FAILURE);
+        }
+        
+        stepStart("Attempting to Retrieve First Object");
+        storage.getObject(data[1], done1);
       }
 
       public void receiveException(Exception e) {
@@ -487,62 +444,6 @@ public class MemoryStorageTest extends Test {
         c.receiveResult(new Boolean(true));
       }
     };
-    
-    final Continuation verify2 = new Continuation() {
-      public void receiveResult(Object o) {
-        if (o == null) {
-          stepDone(FAILURE, "Result of query was null");
-          return;
-        }
-
-        IdSet result = (IdSet) o;
-
-        if (result.numElements() != 0) {
-          stepDone(FAILURE, "Result had " + result.numElements() + " elements, expected 0.");
-          return;
-        }
-
-        stepDone(SUCCESS);
-
-        stepStart("Requesting Scan from 'Monkey' to 9");
-        handleBadScan.receiveException(new Exception()); 
-     }
-
-      public void receiveException(Exception e) {
-        stepException(e);
-      }
-    };
-    
-    final Continuation verify = new Continuation() {
-      public void receiveResult(Object o) {
-        if (o == null) {
-          stepDone(FAILURE, "Result of query was null");
-          return;
-        }
-
-        IdSet result = (IdSet) o;
-
-        if (result.numElements() != 2) {
-          stepDone(FAILURE, "Result had " + result.numElements() + " elements, expected 2.");
-          return;
-        }
-
-
-        if (! ((result.isMemberId(data[3])) && (result.isMemberId(data[4])))) {
-          stepDone(FAILURE, "Result had incorrect elements " + data[0] + ", " + data[1] + ", expected 3 and 4.");
-          return;
-        }
-
-        stepDone(SUCCESS);
-        
-        stepStart("Requesting Scan from 8 to 10");
-        storage.scan(FACTORY.buildIdRange(data[8], data[10]), verify2);        
-      }
-
-      public void receiveException(Exception e) {
-        stepException(e);
-      }
-    };
 
     final Continuation query = new Continuation() {
       public void receiveResult(Object o) {
@@ -553,7 +454,33 @@ public class MemoryStorageTest extends Test {
         }
 
         stepStart("Requesting Scan from 3 to 6");
-        storage.scan(FACTORY.buildIdRange(data[3], data[6]), verify);
+        IdSet result = storage.scan(FACTORY.buildIdRange(data[3], data[6]));
+        
+        if (result.numElements() != 2) {
+          stepDone(FAILURE, "Result had " + result.numElements() + " elements, expected 2.");
+          return;
+        }
+        
+        
+        if (! ((result.isMemberId(data[3])) && (result.isMemberId(data[4])))) {
+          stepDone(FAILURE, "Result had incorrect elements " + data[0] + ", " + data[1] + ", expected 3 and 4.");
+          return;
+        }
+        
+        stepDone(SUCCESS);
+        
+        stepStart("Requesting Scan from 8 to 10");
+        result = storage.scan(FACTORY.buildIdRange(data[8], data[10]));
+        
+        if (result.numElements() != 0) {
+          stepDone(FAILURE, "Result had " + result.numElements() + " elements, expected 0.");
+          return;
+        }
+        
+        stepDone(SUCCESS);
+        
+        stepStart("Requesting Scan from 'Monkey' to 9");
+        handleBadScan.receiveException(new Exception()); 
       }
 
       public void receiveException(Exception e) {
@@ -567,7 +494,7 @@ public class MemoryStorageTest extends Test {
           sectionStart("Testing Scan");
 
           stepStart("Inserting String as Key");
-          storage.store(data[11], "Monkey", query);
+          storage.store(data[11], null, "Monkey", query);
         } else {
           stepException(new RuntimeException("Removal did not complete correctly."));
         }
@@ -590,28 +517,21 @@ public class MemoryStorageTest extends Test {
     final int NUM_ELEMENTS = 1 + ((END_NUM - START_NUM) / SKIP);
     
     final Continuation checkRandom = new Continuation() {
-
-      private int NUM_DELETED = -1;
-
       public void receiveResult(Object o) {
-        if (NUM_DELETED == -1) {
-          stepStart("Checking object deletion");
-          NUM_DELETED = ((Integer) o).intValue();
-          storage.scan(FACTORY.buildIdRange(data[13 + START_NUM], data[13 + END_NUM + SKIP]), this);
-        } else {
-          int length = ((IdSet)o).numElements();
-
-          int desired = NUM_ELEMENTS - NUM_DELETED ;
+        stepStart("Checking object deletion");
+        int NUM_DELETED = ((Integer) o).intValue();
+        int length = storage.scan(FACTORY.buildIdRange(data[13 + START_NUM], data[13 + END_NUM + SKIP])).numElements();
+        
+        int desired = NUM_ELEMENTS - NUM_DELETED;
+        
+        if (length == desired) {
+          stepDone(SUCCESS);
           
-          if (length == desired) {
-            stepDone(SUCCESS);
-
-            sectionEnd();
-            c.receiveResult(new Boolean(true));
-          } else {
-            stepDone(FAILURE, "Expected " + desired + " objects after deletes, found " + length + ".");
-            return;
-          }
+          sectionEnd();
+          c.receiveResult(new Boolean(true));
+        } else {
+          stepDone(FAILURE, "Expected " + desired + " objects after deletes, found " + length + ".");
+          return;
         }
       }
 
@@ -662,25 +582,20 @@ public class MemoryStorageTest extends Test {
       private int count = START_NUM;
       
       public void receiveResult(Object o) {
-        if (count == START_NUM) {
           stepStart("Checking scans for all ranges");
-        } else {
-          IdSet result = (IdSet) o;
 
+        for (int count = START_NUM; count <  END_NUM - SKIP; count+=SKIP) {
+          IdSet result = storage.scan(FACTORY.buildIdRange(data[13 + (count += SKIP)], data[13 + END_NUM]));
+          
           int i = NUM_ELEMENTS - ((count - START_NUM + SKIP) / SKIP) ;
-          if (result.numElements() != i ){
+          if (result.numElements() != i){
             stepDone(FAILURE, "Expected " + i + " found " + result.numElements() + " keys in scan from " + count + " to " + END_NUM + ".");
             return;
           }
         }
         
-        if (count >= END_NUM - SKIP) {
-          stepDone(SUCCESS);
-          removeRandom.receiveResult(new Boolean(true));
-          return;
-        }
-        
-        storage.scan(FACTORY.buildIdRange(data[13 + (count += SKIP)], data[13 + END_NUM]), this);
+        stepDone(SUCCESS);
+        removeRandom.receiveResult(new Boolean(true));
       }
 
       public void receiveException(Exception e) {
@@ -689,25 +604,20 @@ public class MemoryStorageTest extends Test {
     };
     
     final Continuation checkExists = new Continuation() {
-      private int count = START_NUM;
-
       public void receiveResult(Object o) {
-        if (o.equals(new Boolean(false))) {
-          stepDone(FAILURE, "Element " + count + " did not exist.");
-          return;
+        stepStart("Checking exists for all 50 objects");
+        
+        for (int count = START_NUM - SKIP; count < END_NUM; count+=SKIP) {
+          boolean b = storage.exists(data[13 + count]);
+          
+          if (! b) {
+            stepDone(FAILURE, "Element " + count + " did exist - should not have.");
+            return;
+          }
         }
         
-        if (count == START_NUM) {
-          stepStart("Checking exists for all 50 objects");
-        }
-
-        if (count == END_NUM) {
-          stepDone(SUCCESS);
-          checkScan.receiveResult(new Boolean(true));
-          return;
-        }
-        
-        storage.exists(data[13 + (count += SKIP)], this);
+        stepDone(SUCCESS);
+        checkScan.receiveResult(new Boolean(true));
       }
 
       public void receiveException(Exception e) {
@@ -740,7 +650,7 @@ public class MemoryStorageTest extends Test {
         int num = count;
         count += SKIP;
         
-        storage.store(data[13 + num], new byte[num * num * num], this);
+        storage.store(data[13 + num], null, new byte[num * num * num], this);
       }
 
       public void receiveException(Exception e) {
@@ -783,7 +693,7 @@ public class MemoryStorageTest extends Test {
 
         stepStart("Inserting null value");
 
-        storage.store(data[12], null, validateNullValue);
+        storage.store(data[12], null, null, validateNullValue);
       }
 
       public void receiveException(Exception e) {
@@ -802,7 +712,7 @@ public class MemoryStorageTest extends Test {
         sectionStart("Testing Error Cases");
         stepStart("Inserting null key");
 
-        storage.store(null, "null key", insertNullValue);
+        storage.store(null, null, "null key", insertNullValue);
       }
 
       public void receiveException(Exception e) {

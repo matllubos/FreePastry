@@ -57,7 +57,7 @@ import rice.p2p.commonapi.*;
  * @version $Id$
  */
 public interface Cache extends Catalog {
-
+  
   /**
    * Caches an object in this storage. This method is non-blocking.
    * If the object has already been stored at the location id, this
@@ -71,10 +71,11 @@ public interface Cache extends Catalog {
    * <code>False</code> (through receiveResult on c).
    *
    * @param id The object's id.
+   * @param metadata The object's metdatadata
    * @param obj The object to cache.
    * @param c The command to run once the operation is complete
    */
-  public void cache(Id id, Serializable obj, Continuation c);
+  public void cache(Id id, Serializable metadata, Serializable obj, Continuation c);
 
   /**
    * Removes the object from the list of cached objects. This method is

@@ -69,10 +69,11 @@ public interface Storage extends Catalog {
    * <code>False</code> (through receiveResult on c).
    *
    * @param id The object's id.
+   * @param metadata The object's metadata
    * @param obj The object to store.
    * @param c The command to run once the operation is complete
    */
-  public void store(Id id, Serializable obj, Continuation c);
+  public void store(Id id, Serializable metadata, Serializable obj, Continuation c);
 
   /**
    * Removes the object from the list of stored objects. This method is

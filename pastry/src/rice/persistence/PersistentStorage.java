@@ -61,11 +61,39 @@ import rice.serialization.*;
  * also provides these services is a non-blocking fashion by
  * launching a seperate thread which is tasked with actaully
  * writing the data to disk.
+ *
+ * The serialized objects are stored on-disk in a GZIPed XML format,
+ * which provides extensibility with reasonable storage and processing
+ * costs.  Additionally, any metadata, if provided, is also stored
+ * in the on-disk file.  The format of the file is
+ *
+ * [Object, Gzipped XML]
+ * [Metadata, Gzipped XML]
+ * [persistence magic number, long]
+ * [persistence version, long]
+ * [persistence revision, long]
+ * [metadata length, long]
+ *
+ * The persistence package is set up to automatically upgrade older
+ * versions of the on-disk format as new data is written under the
+ * key.  
+ *
+ * Persistence also supports the metadata interface specified in the
+ * Catalog interface.  All metadata is guaranteeded to be stored
+ * in memory, so fetching the metadata of a given key is an efficient
+ * operation.  
  */
 public class PersistentStorage implements Storage {
   
   /**
    * Static variables defining the layout of the on-disk storage 
+   */
+  public static final long PERSISTENCE_MAGIC_NUMBER = 8038844221L;
+  public static final long PERSISTENCE_VERSION_2 = 2L;
+  public static final long PERSISTENCE_REVISION_2_0 = 0L;
+  
+  /**
+   * Static variables which define the location of the storage root
    */
   private static final String BACKUP_DIRECTORY = "/FreePastry-Storage-Root/";
   private static final String LOST_AND_FOUND_DIRECTORY = "lost+found";
@@ -94,6 +122,8 @@ public class PersistentStorage implements Storage {
   private File lostDirectory;       // dir for lost objects
   
   private HashMap directories;      // the in-memory map of directories (for efficiency)
+  
+  private HashMap metadata;         // the in-memory cache of object metadata
 
   private String rootDir;           // rootDirectory
 
@@ -136,6 +166,7 @@ public class PersistentStorage implements Storage {
     this.workThread = new PersistenceThread(workQ, name);
     this.idSet = factory.buildIdSet();
     this.directories = new HashMap();
+    this.metadata = new HashMap();
     
     debug("Launching persistent storage in " + rootDir + " with name " + name + " spliting factor " + MAX_FILES);
     
@@ -153,21 +184,19 @@ public class PersistentStorage implements Storage {
    * @param c The command to run once the operation is complete
    */
   public void rename(final Id oldId, final Id newId, Continuation c) {
-/*    try {
+    try {
       workQ.enqueue(new WorkRequest(c) {
         public void doWork() {
           try {
             File f = getFile(oldId);
             
-            if (f != null) {
-              File g = makeTemporaryFile(newId);
-              f.renameTo(g);
-//              files.put(newId, g);
-//              files.remove(oldId);
+            if ((f != null) && (f.exists())) {
+              File g = getFile(newId);
+              renameFile(f, g);
               
-              checkDirectory(newId.getParentFile());
+              checkDirectory(g.getParentFile());
               
-              synchronized(idSet){
+              synchronized(idSet) {
                 idSet.addId(newId); 
                 idSet.removeId(oldId); 
               }
@@ -183,7 +212,7 @@ public class PersistentStorage implements Storage {
       });
     } catch(WorkQueueOverflowException e) {
       c.receiveException(e);
-    } */
+    } 
   }
 
   /**
@@ -200,14 +229,15 @@ public class PersistentStorage implements Storage {
    * with the success or failure of the operation.
    *
    * @param obj The object to be made persistent.
-   * @param id The object's id.
+   * @param id The object's id. 
+   * @param metadata The object's metadata
    * @param c The command to run once the operation is complete
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>.
    */
-  public void store(final Id id, final Serializable obj, final Continuation c1) {
+  public void store(final Id id, final Serializable metadata, final Serializable obj, Continuation c) {
     try {
-      workQ.enqueue(new WorkRequest(c1) { 
+      workQ.enqueue(new WorkRequest(c) { 
         public void doWork() {
           try {
             /* first, rename the current file to a temporary name */
@@ -218,10 +248,10 @@ public class PersistentStorage implements Storage {
             renameFile(objFile, transcFile);
   
             /* next, write out the data to a new copy of the original file */
-            writeObject(obj, id, System.currentTimeMillis(), objFile);
+            writeObject(obj, metadata, id, System.currentTimeMillis(), objFile);
             
             /* abort, if this will put us over quota */
-            if(getUsedSpace() + getFileLength(objFile) > getStorageSize()){
+            if(getUsedSpace() + getFileLength(objFile) > getStorageSize()) {
               deleteFile(objFile);
               renameFile(transcFile, objFile);
               c.receiveException(new OutofDiskSpaceException());
@@ -239,6 +269,7 @@ public class PersistentStorage implements Storage {
 
             synchronized (idSet) {
               idSet.addId(id); 
+              PersistentStorage.this.metadata.put(id, metadata);
             }
             
             /* finally, check to see if this directory needs to be split */
@@ -253,7 +284,7 @@ public class PersistentStorage implements Storage {
         }
       });
     } catch(WorkQueueOverflowException e) {
-      c1.receiveException(e);
+      c.receiveException(e);
     }
   }
   
@@ -292,6 +323,7 @@ public class PersistentStorage implements Storage {
             /* remove id from stored list */
             synchronized (idSet) { 
               idSet.removeId(id);
+              metadata.remove(id);
             }
             
             /* record the space collected and delete the file */
@@ -322,33 +354,59 @@ public class PersistentStorage implements Storage {
       return idSet.isMemberId(id);
     }
   }
-
+  
   /**
-   * Returns whether or not an object is present in the location <code>id</code>.
-   * The result is returned via the receiveResult method on the provided
-   * Continuation with an Boolean represnting the result.
+   * Returns the metadata associated with the provided object, or null if
+   * no metadata exists.  The metadata must be stored in memory, so this 
+   * operation is guaranteed to be fast and non-blocking.
    *
-   * @param c The command to run once the operation is complete
-   * @param id The id of the object in question.
-   * @return Whether or not an object is present at id.
+   * @param id The id for which the metadata is needed
+   * @return The metadata, or null of non exists
    */
-	public void exists(final Id id, Continuation c1) {
-		try{
-			workQ.enqueue(new WorkRequest(c1) { 
-			  public void doWork(){
-          boolean result = false;
-          
-          synchronized (idSet) {
-            result = idSet.isMemberId(id);
+  public Serializable getMetadata(Id id) {
+    synchronized (idSet) {
+      return (Serializable) metadata.get(id);
+    }
+  }
+  
+  /**
+   * Updates the metadata stored under the given key to be the provided
+   * value.  As this may require a disk access, the requestor must
+   * also provide a continuation to return the result to.  
+   *
+   * @param id The id for the metadata 
+   * @param metadata The metadata to store
+   * @param c The command to run once the operation is complete
+   */
+  public void setMetadata(final Id id, final Serializable metadata, Continuation command) {
+    if (! exists(id)) {
+      command.receiveResult(new Boolean(false));
+      return;
+    }
+    
+    try {
+      workQ.enqueue(new WorkRequest(command) { 
+        public void doWork() {
+          try {
+            File objFile = getFile(id); 
+            writeMetadata(objFile, metadata);
+            
+            synchronized (idSet) {
+              PersistentStorage.this.metadata.put(id, metadata);
+            }
+            
+            c.receiveResult(new Boolean(true));
+          } catch (IOException e) {
+            System.out.println("ERROR: Got exception " + e + " while unstoring data under " + id.toStringFull() + " in namespace " + name);
+            e.printStackTrace();
+            c.receiveException(e);
           }
-
-          c.receiveResult(new Boolean(result)); 				
         }
-			});
-		} catch(WorkQueueOverflowException e) {
-		  c1.receiveException(e);
-	  }
-	}
+      });
+    } catch(WorkQueueOverflowException e){
+      command.receiveException(e);
+    }
+  }
 
   /**
    * Returns the object identified by the given id.
@@ -395,38 +453,6 @@ public class PersistentStorage implements Storage {
   	} catch(WorkQueueOverflowException e) {
 		  c1.receiveException(e);
 	  }
-  }
-  
-  /**
-   * Return the objects identified by the given range of ids. The IdSet 
-   * returned contains the Ids of the stored objects. The range is
-   * partially inclusive, the lower range is inclusive, and the upper
-   * exclusive.
-   *
-   *
-   * When the operation is complete, the receiveResult() method is called
-   * on the provided continuation with an IdSet result containing the
-   * resulting IDs.
-   *
-   * @param range The range to query  
-   * @param c The command to run once the operation is complete
-   * @return The idset containg the keys 
-   */
-  public void scan(final IdRange range, final Continuation c1) {
-	  try{
-		  workQ.enqueue( new WorkRequest(c1) { 
-			  public void doWork(){
-					IdSet toReturn = null;
-					synchronized(idSet){
-						toReturn = idSet.subSet(range); 
-					}
-					c.receiveResult(toReturn);
-			  }
-		  });
-	  } catch(WorkQueueOverflowException e) {
-		  c1.receiveException(e);
-	  }
-	  
   }
 
   /**
@@ -598,8 +624,10 @@ public class PersistentStorage implements Storage {
     File[] files = dir.listFiles();
         
     for (int i=0; i<files.length; i++) {
-     if (files[i].isFile()) {
-        idSet.addId((Id) readKey(files[i]));
+      if (files[i].isFile()) {
+        Id id = readKey(files[i]);
+        idSet.addId(id);
+        metadata.put(id, readMetadata(files[i]));
       } else if (files[i].isDirectory()) {
         initFileMap(files[i]);
       }
@@ -1160,6 +1188,61 @@ public class PersistentStorage implements Storage {
   private static Serializable readData(File file) throws IOException {
      return readObject(file, 1);
   }
+  
+  /**
+   * Reads in the metadata from the provided file, or returns null if 
+   * no metadata was found
+   * 
+   * @param file The file which should be read for the metadata
+   */
+  private static Serializable readMetadata(File file) throws IOException {  
+    if (file.length() < 32) 
+      return null;
+    
+    RandomAccessFile ras = new RandomAccessFile(file, "r");
+    ras.seek(file.length() - 32);
+
+    if (ras.readLong() != PERSISTENCE_MAGIC_NUMBER) {
+      return null;
+    } else if (ras.readLong() != PERSISTENCE_VERSION_2) {
+      System.out.println("Persistence version did not match - exiting!");
+      return null;
+    } else if (ras.readLong() != PERSISTENCE_REVISION_2_0) {
+      System.out.println("Persistence revision did not match - exiting!");
+      return null;
+    }
+    
+    long length = ras.readLong();
+    ras.seek(file.length() - 32 - length);
+ 
+    FileInputStream fis = new FileInputStream(ras.getFD());
+    ObjectInputStream objin = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
+    Serializable result = null;
+    
+    try {
+      result = (Serializable) objin.readObject();
+    } catch (ClassNotFoundException e) {
+      throw new IOException(e.getMessage());
+    } finally {
+      objin.close();
+    }
+    
+    return result;
+  }
+  
+  /**
+   * Utility method which skips the provided number of bytes forward in a
+   * file input stream.  Due to stupid contact for FIS.skip();
+   * 
+   * @param fis The input stream
+   * @param skip The number of bytes to skip
+   */
+  private static void skip(FileInputStream fis, long skip) throws IOException {
+    long skipped = 0;
+    
+    while (skipped < skip) 
+      skipped += fis.skip(skip-skipped);
+  }
 
   /**
    * Abstract over reading a single key from a file using Java
@@ -1199,7 +1282,7 @@ public class PersistentStorage implements Storage {
    * @param file The file to serialize the object to.
    * @return The object's disk space usage
    */
-  private static long writeObject(Serializable obj, Id key, long version, File file) {
+  private static long writeObject(Serializable obj, Serializable metadata, Id key, long version, File file) {
     if (obj == null || file == null)
       return 0;
     
@@ -1211,11 +1294,64 @@ public class PersistentStorage implements Storage {
       objout.writeObject(new Long(version));
       objout.close();
       fout.close();
+      
+      long len1 = file.length();
+      fout = new FileOutputStream(file, true);
+      objout = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fout)));
+      objout.writeObject(metadata);
+      objout.close();
+      fout.close();
+      
+      long len2 = file.length();
+      fout = new FileOutputStream(file, true);
+      DataOutputStream dos = new DataOutputStream(fout);
+      dos.writeLong(PERSISTENCE_MAGIC_NUMBER);
+      dos.writeLong(PERSISTENCE_VERSION_2);
+      dos.writeLong(PERSISTENCE_REVISION_2_0);
+      dos.writeLong(len2-len1);
+      dos.close();
     } catch (Throwable e) {
       e.printStackTrace();
     }
     
     return file.length();
+  }
+  
+  
+  /**
+   * Re-writes the metadata stored in the provided file.
+   * 
+   * @param file The file to which the metadata should be written
+   * @param metadata The metadata to write
+   */
+  private static void writeMetadata(File file, Serializable metadata) throws IOException {
+    RandomAccessFile ras = new RandomAccessFile(file, "rw");
+    ras.seek(file.length() - 32);
+    
+    if ((ras.readLong() == PERSISTENCE_MAGIC_NUMBER) && 
+        (ras.readLong() == PERSISTENCE_VERSION_2) &&
+        (ras.readLong() == PERSISTENCE_REVISION_2_0)) {
+      long length = ras.readLong();
+      ras.setLength(file.length() - 32 - length);
+    } 
+    
+    ras.seek(file.length());
+    
+    long len1 = file.length();
+    FileOutputStream fout = new FileOutputStream(file, true);
+    ObjectOutputStream objout = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fout)));
+    objout.writeObject(metadata);
+    objout.close();
+    fout.close();
+    
+    long len2 = file.length();
+    fout = new FileOutputStream(file, true);
+    DataOutputStream dos = new DataOutputStream(fout);
+    dos.writeLong(PERSISTENCE_MAGIC_NUMBER);
+    dos.writeLong(PERSISTENCE_VERSION_2);
+    dos.writeLong(PERSISTENCE_REVISION_2_0);
+    dos.writeLong(len2-len1);
+    dos.close();
   }
 
   /*****************************************************************/
@@ -1336,7 +1472,7 @@ public class PersistentStorage implements Storage {
    */ 
   private class DirectoryFilter implements FilenameFilter {
     public boolean accept(File dir, String name) {
-      return ((name.length() != factory.getIdToStringLength()) && (new File(dir, name)).isDirectory());
+      return ((name.length() < factory.getIdToStringLength()) && (new File(dir, name)).isDirectory());
     }
   }
   
@@ -1347,7 +1483,7 @@ public class PersistentStorage implements Storage {
    */
   private class FileFilter implements FilenameFilter {
     public boolean accept(File dir, String name) {
-      return (name.length() == factory.getIdToStringLength());
+      return (name.length() >= factory.getIdToStringLength());
     }
   }
   
