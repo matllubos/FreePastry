@@ -174,7 +174,7 @@ public class RMRequestKeysMsg extends RMMessage implements Serializable{
 	    IdRange iRange;
 	    int numKeys = 0;
 	    boolean hashEnabled;
-	    Id hash = new Id();
+	    Id hash = Id.build();
 	    IdSet keySet = new IdSet();
 
 	    // The values that will not be required to be filled

@@ -103,7 +103,7 @@ public abstract class RMMessage extends Message implements Serializable{
 	    // Other values are set to DONTCARE values
 	    numKeys = 0;
 	    keySet = new IdSet();
-	    hash = new Id();
+	    hash = Id.build();
 	    range = new IdRange();
 	}
 
