@@ -6,6 +6,11 @@ import rice.email.messaging.*;
 import rice.post.*;
 import java.util.*;
 
+/**
+ * This test tests the core email sending/receiving functionality.
+ * 
+ * @author Derek Ruths, Joe Montgomery
+ */
 public class SendEmailTest extends EmailTest {
 
     public static final String EMAIL_SUBJECT = "Subject";
@@ -152,4 +157,6 @@ public class SendEmailTest extends EmailTest {
     public void receiveException(Exception result) {}
   }
 }
+
+
 

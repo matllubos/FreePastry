@@ -17,6 +17,8 @@ import java.security.*;
 /**
  * This class provides helper functions for all email-testing
  * code.
+ *
+ * @author Derek Ruths
  */
 public class EmailTest {
 
