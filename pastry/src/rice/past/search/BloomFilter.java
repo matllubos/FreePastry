@@ -3,7 +3,8 @@ package rice.past.search;
 import java.io.Serializable;
 
 /**
- * TODO: Derek Ruths finish this comment
+ * This interface defines the core attributes and methods common to all
+ * bloom filters which the {@link BloomSearchServiceImpl} can use.
  * 
  * @author Derek Ruths
  */
@@ -17,7 +18,7 @@ public interface BloomFilter extends Serializable {
     public boolean contains(Object obj);
     
     /**
-     * This method adds an object to this filter so that calls to {@link contains}
+     * This method adds an object to this filter so that calls to {@link #contains}
      * providing this object as the argument will return <code>true</code>.
      * 
      * @param obj is the object to add to this filter.

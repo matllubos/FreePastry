@@ -20,8 +20,11 @@ import rice.pastry.security.Credentials;
 import rice.pastry.security.PermissiveCredentials;
 
 /**
- * TODO: Derek Ruths finish this comment
- * 
+ * This class provides an implementation of the search service by
+ * using bloom filter representations of the results for each individual
+ * search result.  These bloom filters are passed around rather than the 
+ * search results, minimizing bandwidth usage.
+ *
  * @author Derek Ruths
  */
 public class BloomSearchServiceImpl
@@ -31,7 +34,12 @@ public class BloomSearchServiceImpl
     public static int MAX_CACHED_TUPLE = 2;
     
     private static int waitID = 0;
-    
+  
+    /**
+     * This constant represents the tolerated percent false positive 
+     * returned by the bloom filters used by this implementation.  Currently
+     * it is set to allow up to a 20% false positive rate.
+     */  
     private static double PERR_COEFF = -0.22314; // perr = .2
     
     // fields
@@ -92,7 +100,11 @@ public class BloomSearchServiceImpl
     
     // constructors
     /**
-     * 
+     * This constructs a search service.
+     *
+     * @param pn is the pastry node that the search service will sit on.
+     * @param ps is the past service which the local search service will bind
+     * to.
      */
     public BloomSearchServiceImpl(PastryNode pn, PASTService ps) {
         super(pn);
@@ -624,6 +636,10 @@ public class BloomSearchServiceImpl
     }
 }
 
+/**
+ * This class is used to allow non-blocking calls for requests on
+ * the size of the set of results for a search term.
+ */
 class SizeLock implements Serializable {
     
     private int size;
@@ -652,6 +668,10 @@ class SizeLock implements Serializable {
     }
 }
 
+/**
+ * This class is used to allow non-blocking calls for the actual set of
+ * results associated with a specific search term.
+ */
 class ResultLock implements Serializable {
     
     private Vector result;
@@ -680,6 +700,11 @@ class ResultLock implements Serializable {
     }
 }
 
+/**
+ * This message is sent to request that the number of results
+ * associated with a specific search term be sent to a specific
+ * system.
+ */
 class ReturnResultSizeMessage extends Message {
 
     private IndexKeyString term;
@@ -710,6 +735,11 @@ class ReturnResultSizeMessage extends Message {
     }
 }
 
+/**
+ * This message is sent in response to the ReturnResultSizeMessage
+ * in order to return the number of results associated with a given
+ * search term.
+ */
 class ResultSizeResultMessage extends Message {
     
     private int size;
@@ -731,6 +761,10 @@ class ResultSizeResultMessage extends Message {
     }
 }
 
+/**
+ * This message requests that a remote system perform a search
+ * using the set of search strings and the provided bloom filter.
+ */
 class SearchMessage extends Message {
     
     private BloomFilter bloomFilter;
@@ -773,6 +807,10 @@ class SearchMessage extends Message {
     }
 }
 
+/**
+ * This message is sent in response to a SearchMessage.  This returns 
+ * the results of the search to the system.
+ */
 class SearchResultMessage extends Message {
  
     private int waitID;
