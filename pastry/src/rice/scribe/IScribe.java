@@ -44,6 +44,8 @@ import rice.pastry.NodeHandle;
 
 import java.util.Vector;
 
+import java.io.*;
+
 /**
  * @(#) IScribe.java
  *
@@ -111,7 +113,29 @@ public interface IScribe
      */
     public boolean join( NodeId groupID, IScribeApp subscriber, Credentials cred);
 
-
+    /**
+     * Joins a multicast group/topic.  When a node joins a multicast group,
+     * it receives all messages multicast to that group. An application can
+     * specify additional data to be sent with the SUBSCRIBE message.
+     *
+     * @param    cred
+     * The credentials of the entity joining the group
+     *
+     * @param    groupID        
+     * The ID of the group to join to
+     *
+     * @param    subscriber
+     * The application joining the group
+     *
+     * @param obj
+     * Additional data to be passed with the SUBSCRIBE msg, specific to
+     * an application. Should be serializable.
+     *
+     * @return true if the operation was successful, false if the operation
+     *         failed because the underlying Scribe substrate was not ready. 
+     *
+     */
+    public boolean join( NodeId groupID, IScribeApp subscriber, Credentials cred, Serializable obj);
 
     
     /**
@@ -242,6 +266,17 @@ public interface IScribe
     public NodeHandle getParent(NodeId topicId);
 
 
+    /**
+     * Sets the parent for the topic specified by topicId.
+     *
+     * @param parent The new parent for the topic
+     *
+     * @param topicId the topic for which this parent is set
+     *
+     * @return true if operation was successful, false otherwise
+     */
+    public boolean setParent(NodeHandle parent, NodeId topicId);
+
 
     /** 
      * This returns the most current view of the children in this 
@@ -297,7 +332,8 @@ public interface IScribe
      */
     public boolean removeChild(NodeHandle child, NodeId topicId);
 
-    
+
+   
 }
 
 

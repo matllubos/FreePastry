@@ -49,6 +49,8 @@ import rice.pastry.leafset.*;
 import java.util.*;
 import java.security.*;
 
+import java.io.*;
+
 import rice.scribe.messaging.*;
 import rice.scribe.security.*;
 import rice.scribe.maintenance.*;
@@ -461,6 +463,53 @@ public class Scribe extends PastryAppl implements IScribe
 	}
 	return true;
     }
+
+    /**
+     * Joins a multicast group/topic.  When a node joins a multicast group,
+     * it receives all messages multicast to that group. An application can
+     * specify additional data to be sent with the SUBSCRIBE message.
+     *
+     * @param    cred
+     * The credentials of the entity joining the group
+     *
+     * @param    topicID        
+     * The ID of the group to join to
+     *
+     * @param    subscriber
+     * The application joining the group
+     *
+     * @param obj
+     * Additional data to be passed with the SUBSCRIBE msg, specific to
+     * an application. Should be serializable.
+     *
+     * @return true if the operation was successful, false if the operation
+     *         failed because the underlying Scribe substrate was not ready. 
+     *
+     */
+    public boolean join( NodeId topicId, IScribeApp subscriber, 
+			   Credentials cred, Serializable obj ) {
+	if(!isReady()) return false;
+	Topic topic = (Topic) m_topics.get( topicId );
+	
+	if ( topic == null ) {
+	    topic = new Topic( topicId, this );
+	    // add topic to known topics
+	    topic.addToScribe();
+	}
+	
+	// Register application as a subscriber for this topic
+	topic.subscribe( subscriber );
+
+	// If we already have a parent, we dont send a subscribe mesg.
+	if( topic.getParent() == null){
+	    ScribeMessage msg = makeSubscribeMessage( topicId, cred);
+	    topic.postponeParentHandler();
+	    msg.setData(obj);
+	    this.routeMsg( topicId, msg, cred, m_sendOptions );
+	}
+	return true;
+    }
+
 
     /**
      * Leaving a multicast group/topic. After a node leaves a group, it
@@ -1197,6 +1246,28 @@ public class Scribe extends PastryAppl implements IScribe
     }
 
 
+     /**
+     * Sets the parent for the topic specified by topicId.
+     *
+     * @param parent The new parent for the topic
+     *
+     * @param topicId the topic for which this parent is set
+     *
+     * @return true if operation was successful, false otherwise
+     *         
+     */
+    public boolean setParent(NodeHandle parent, NodeId topicId){
+	Topic topic = getTopic(topicId);
+       
+	if(topic != null){
+	    topic.setParent(parent);
+	    return true;
+	}
+	else
+	    return false;
+    }
+
+
     /** 
      * This returns the most current view of the children in this 
      * topic's multicast subtree rooted at the local node. 
@@ -1260,7 +1331,11 @@ public class Scribe extends PastryAppl implements IScribe
 	    // addition action was prompted by application
 	    IScribeApp[] apps = topic.getApps();
 	    for ( int i=0; i<apps.length; i++ ) {
-		apps[i].subscribeHandler( pmsg, topicId, child, true );
+		if(pmsg != null)
+		    apps[i].subscribeHandler(topicId, child, true, pmsg.getData());
+		else
+		    apps[i].subscribeHandler(topicId, child, true, null);
+
 	}
 	    
 	    
@@ -1304,7 +1379,11 @@ public class Scribe extends PastryAppl implements IScribe
 	    //this child removal action was prompted by some application
 	    IScribeApp[] apps = topic.getApps();
 	    for ( int i=0; i<apps.length; i++ ) {
-		apps[i].subscribeHandler( pmsg, topicId, child, false );
+		if(pmsg != null)
+		    apps[i].subscribeHandler(topicId, child, false, pmsg.getData());
+		else
+		    apps[i].subscribeHandler(topicId, child, false, null);
+
 	    }
 	}
 
@@ -1378,9 +1457,8 @@ public class Scribe extends PastryAppl implements IScribe
     }
 
     
+   
 }
-
-
 
 
 
