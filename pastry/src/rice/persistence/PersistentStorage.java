@@ -1334,10 +1334,14 @@ public class PersistentStorage implements Storage {
    */
   private static void writeMetadataFile(File file, HashMap map) throws IOException {    
     FileOutputStream fout = new FileOutputStream(new File(file, METADATA_FILENAME));
-    ObjectOutputStream objout = new ObjectOutputStream(new BufferedOutputStream(fout));
-    objout.writeObject(map);
-    objout.close();
-    fout.close();
+    
+    try {
+      ObjectOutputStream objout = new ObjectOutputStream(new BufferedOutputStream(fout));
+      objout.writeObject(map);
+      objout.close();
+    } finally {
+      fout.close();
+    }
   }
   
   /**
