@@ -616,7 +616,7 @@ public class Channel extends PastryAppl implements IScribeApp {
         }
 
 	dropMessage.handleDeliverMessage((Scribe)scribe, 
-           ((Scribe) scribe).getTopic(dropMessage.getStripeId()));
+           ((Scribe) scribe).getTopic(dropMessage.getStripeId()), this.thePastryNode);
     }
 
 

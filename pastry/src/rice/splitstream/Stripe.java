@@ -270,7 +270,9 @@ public class Stripe extends Observable implements IScribeApp{
 									   channel.getNodeHandle(),
 									   topicId,
 									   credentials,
-									   channel.getSpareCapacityId(), channel.getChannelId() ),
+									   channel.getSpareCapacityId(),
+                                                                           channel.getChannelId(),
+                                                                           channel.getTimeoutLen() ),
 					    credentials, null );
 		    scribe.removeChild(child, topicId);
 		    //bandwidthManager.additionalBandwidthFreed(channel);
