@@ -1,0 +1,33 @@
+/*
+
+ ToDo
+------
+
+ 1. Change the values of SPLITFACTOR and MAXKEYSINRANGE to appropriate values.
+
+ 3. Check carefully the best way to handle the m_pendingRanges table in case
+    of loss of messages. ( since the protocol is trigger based on the response)
+    A loss of a single response may cause it to wait for the entire
+    maintenance period. 
+
+ 4. During the maintainenance period, what should we do incase the 
+    pendingRanges table is not empty.
+
+ 8. Set the appropriate value of Maintenance Freq;
+
+ 10. Implement the timeout/message mechanism
+ 
+ 13. Check if we get duplication of messages in RMI
+
+ 14. Set the Distributed Test protocol to RMI/WIRE 
+
+
+Notes
+-----
+
+ 
+ 2. Uses RandomNodeIdFactory in the Distributed test since the IPNodeIDFactory causes problem 
+    with the bootstrapping in the join ptotocol
+
+
+*/
