@@ -97,6 +97,17 @@ public class PastryIdFactory implements IdFactory {
     md.update(string.getBytes());
     return buildId(md.digest());
   }
+  
+  /**
+   * Builds an Id by converting the given toString() output back to an Id.  Should
+   * not normally be used.
+   *
+   * @param string The toString() representation of an Id
+   * @return The built Id.
+   */
+  public Id buildIdFromToString(String string) {
+    return new rice.pastry.Id(string);
+  }
 
   /**
    * Builds a protocol-specific Id.Distance given the source data.
