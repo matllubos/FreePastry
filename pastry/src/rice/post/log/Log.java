@@ -86,6 +86,15 @@ public class Log implements PostData {
   }
   
   /**
+   * Returns whether or not this log should be cached
+   *
+   * @return Whether or not this log should be cached
+   */
+  public boolean cache() {
+    return true;
+  }
+  
+  /**
    * @return The location of this Log in PAST.
    */
   public Id getLocation() {
@@ -226,7 +235,9 @@ public class Log implements PostData {
         if (o != null) {
           Log log = (Log) o;
           log.setPost(post);
-          childrenCache.put(log.getName(), log);
+
+          if (log.cache()) 
+            childrenCache.put(log.getName(), log);
         }
         
         parent.receiveResult(o);
