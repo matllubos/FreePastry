@@ -5,7 +5,7 @@ import rice.email.proxy.user.*;
 import rice.email.proxy.util.*;
 import rice.email.proxy.mailbox.postbox.*;
 
-import java.io.IOException;
+import java.io.*;
 
 import java.net.*;
 
@@ -43,20 +43,31 @@ public final class ImapServerImpl extends Thread implements ImapServer {
       while (! quit) {
         final Socket socket = server.accept();
 
-        System.out.println("Accepted connection...");
+        System.out.println("Accepted connection from " + socket.getInetAddress());
 
-        Thread thread = new Thread() {
-          public void run() {
-            try {
-              ParserImapHandler handler = new ParserImapHandler(manager, workspace);
-              handler.handleConnection(socket);
-            } catch (IOException e) {
-              System.out.println("IOException occurred during handling of connection - " + e);
+        if (socket.getInetAddress().isSiteLocalAddress()) {
+          Thread thread = new Thread() {
+            public void run() {
+              try {
+                ParserImapHandler handler = new ParserImapHandler(manager, workspace);
+                handler.handleConnection(socket);
+              } catch (IOException e) {
+                System.out.println("IOException occurred during handling of connection - " + e);
+              }
             }
-          }
-        };
+          };
 
-        thread.start();
+          thread.start();
+        } else {
+          System.out.println("Connection not local - aborting");
+
+          OutputStream o = socket.getOutputStream();
+          PrintWriter out = new PrintWriter(o, true);
+
+          out.println("* BAD Connections only allowed locally");
+          out.flush();
+          socket.close();
+        }
       }
     } catch (IOException e) {
       System.out.println("IOException occurred during accepting of connection - " + e);

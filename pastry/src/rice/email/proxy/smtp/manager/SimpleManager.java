@@ -1,19 +1,27 @@
 package rice.email.proxy.smtp.manager;
 
+import java.io.*;
 import java.util.*;
 
 import rice.*;
 import rice.email.*;
+import rice.email.proxy.dns.*;
+import rice.email.proxy.smtp.client.*;
 import rice.email.proxy.smtp.*;
 import rice.email.proxy.mail.*;
 import rice.email.proxy.mailbox.postbox.*;
 
 public class SimpleManager implements SmtpManager {
 
+  public static String POST_HOST = "dosa.cs.rice.edu";
+
+  private DnsService dns;
+  
   private EmailService email;
 
-  public SimpleManager(EmailService email) {
+  public SimpleManager(EmailService email) throws Exception {
     this.email = email;
+    this.dns = new DnsServiceImpl();
   }
 
   public String checkSender(SmtpState state, MailAddress sender) {
@@ -21,15 +29,6 @@ public class SimpleManager implements SmtpManager {
   }
 
   public String checkRecipient(SmtpState state, MailAddress rcpt) {
-    /*     MailAddress sender = state.getMessage().getReturnPath();
-
-    if (!_configuration.isLocalAddress(rcpt) &&
-        !_configuration.isLocalAddress(sender))
-  {
-
-      return "550 Requested action not taken: user not local";
-  } */
-
     return null;
   }
 
@@ -39,12 +38,21 @@ public class SimpleManager implements SmtpManager {
   }
 
   public void send(SmtpState state) throws Exception {
-    Vector recps = new Vector();
+    Vector postRecps = new Vector();
+    Vector nonPostRecps = new Vector();
     Iterator i = state.getMessage().getRecipientIterator();
 
-    while (i.hasNext()) recps.add(i.next());
+    while (i.hasNext()) {
+      MailAddress addr = (MailAddress) i.next();
 
-    MailAddress[] recipients = (MailAddress[]) recps.toArray(new MailAddress[0]);
+      if (addr.getHost().equals(POST_HOST)) {
+        postRecps.add(addr);
+      } else {
+        nonPostRecps.add(addr);
+      }
+    }
+
+    MailAddress[] recipients = (MailAddress[]) postRecps.toArray(new MailAddress[0]);
     
     final Exception[] exception = new Exception[1];
     final Object[] result = new Object[1];
@@ -73,6 +81,27 @@ public class SimpleManager implements SmtpManager {
       
     if (exception[0] != null) {
       throw exception[0];
+    }
+
+    for (int j=0; j<nonPostRecps.size();  j++) {
+      MailAddress addr = (MailAddress) nonPostRecps.elementAt(j);
+      String[] hosts = dns.lookup(addr.getHost());
+
+      if (hosts.length == 0) {
+        System.out.println( "No MX records found for " + addr.getHost());
+      } else {
+        System.out.println("A message is headed to " + addr + " at " + hosts[0]);
+
+        try {
+          Reader content = state.getMessage().getContent();
+          SmtpClient client = new SmtpClient(hosts[0]);
+          client.connect();
+          client.send(state.getMessage().getReturnPath().toString(), addr.toString(), content);
+          client.close();
+        } catch (Exception e) {
+          System.out.println("Couldn't send a message to " + addr + " due to " + e);
+        }
+      }
     }
   }
 }

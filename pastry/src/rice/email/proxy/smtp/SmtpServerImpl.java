@@ -22,7 +22,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
 
   private EmailService email;
 
-  public SmtpServerImpl(int port, EmailService email) throws IOException {
+  public SmtpServerImpl(int port, EmailService email) throws Exception {
     this.port = port;
     this.email = email;
     this.manager = new SimpleManager(email);
@@ -47,20 +47,31 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
       while (! quit) {
         final Socket socket = server.accept();
 
-        System.out.println("Accepted connection...");
-        
-        Thread thread = new Thread() {
-          public void run() {
-            try {
-              SmtpHandler handler = new SmtpHandler(registry, manager, workspace);
-              handler.handleConnection(socket);
-            } catch (IOException e) {
-              System.out.println("IOException occurred during handling of connection - " + e);
-            }
-          }
-        };
+        System.out.println("Accepted connection from " + socket.getInetAddress());
 
-        thread.start();
+        if (socket.getInetAddress().isSiteLocalAddress()) {
+          Thread thread = new Thread() {
+            public void run() {
+              try {
+                SmtpHandler handler = new SmtpHandler(registry, manager, workspace);
+                handler.handleConnection(socket);
+              } catch (IOException e) {
+                System.out.println("IOException occurred during handling of connection - " + e);
+              }
+            }
+          };
+
+          thread.start();
+        } else {
+          System.out.println("Connection not local - aborting");
+          
+          OutputStream o = socket.getOutputStream();
+          PrintWriter out = new PrintWriter(o, true);
+
+          out.println("554 Connections only allowed locally");
+          out.flush();
+          socket.close();
+        }
       }
     } catch (IOException e) {
        System.out.println("IOException occurred during accepting of connection - " + e);
