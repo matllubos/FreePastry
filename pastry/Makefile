@@ -14,15 +14,16 @@ PACKAGES = \
 	rice.pastry.direct\
 	rice.pastry.standard\
 	rice.pastry.rmi\
-	rice.pastry.testing\
-	rice.ap3\
-	rice.ap3.routing\
-	rice.ap3.messaging\
-	rice.scribe\
-	rice.scribe.maintenance\
-	rice.scribe.messaging\
-	rice.scribe.security\
-	rice.scribe.testing
+	rice.pastry.testing
+
+#	rice.ap3\
+#	rice.ap3.routing\
+#	rice.ap3.messaging\
+#	rice.scribe\
+#	rice.scribe.maintenance\
+#	rice.scribe.messaging\
+#	rice.scribe.security\
+#	rice.scribe.testing
 
 #	rice.ap3.testing
 
@@ -54,3 +55,4 @@ BOTTOM      = '<font size="-1">Copyright &copy; 2001 - Rice Pastry</font>'
 
 
 include $(JAVA_DEV_ROOT)/make/Makefile
+

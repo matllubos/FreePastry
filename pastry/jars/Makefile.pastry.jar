@@ -1,4 +1,4 @@
-JAR_CONTENT = rice
+JAR_CONTENT = rice/pastry
 
 MANIFEST = Manifest.directory.jar
 
