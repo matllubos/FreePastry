@@ -43,7 +43,7 @@ import rice.p2p.past.*;
 /**
  * @(#) InsertMessage.java
  *
- * This class the abstraction of a message used internally by Past.
+ * This class represents a message which is an insert request in past.
  *
  * @version $Id$
  *

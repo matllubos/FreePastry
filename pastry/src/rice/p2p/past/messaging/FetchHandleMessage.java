@@ -43,7 +43,7 @@ import rice.p2p.past.*;
 /**
  * @(#) FetchHandleMessage.java
  *
- * This class represents a handle request in Past
+ * This class represents a handle request in Past.
  *
  * @version $Id$
  *

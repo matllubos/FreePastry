@@ -10,6 +10,8 @@ package rice;
  * is called.
  *
  * @version $Id$
+ *
+ * @author Alan Mislove
  */
 public interface Continuation {
 

@@ -43,7 +43,7 @@ import rice.p2p.past.*;
 /**
  * @(#) LookupMessage.java
  *
- * This class the abstraction of a message used internally by Past.
+ * This class is the representation of a lookup request (by Id) in Past.
  *
  * @version $Id$
  *

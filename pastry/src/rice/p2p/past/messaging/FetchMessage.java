@@ -43,7 +43,8 @@ import rice.p2p.past.*;
 /**
  * @(#) FetchMessage.java
  *
- * This class the abstraction of a message used internally by Past.
+ * This class represents a message which is a fetch request in past, based
+ * on a handle).
  *
  * @version $Id$
  *

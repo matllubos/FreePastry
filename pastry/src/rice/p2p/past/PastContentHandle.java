@@ -44,7 +44,10 @@ import rice.p2p.commonapi.*;
 /**
  * @(#) PastContentHandle.java
  * 
- * This interface must be implemented by all content object handles.
+ * This interface must be implemented by all content object handles.  This interface
+ * represents an object that is stored on a specific replica.  Thus, the validity of
+ * a handle is sometimes very short, and applications should keep references to an
+ * object by Id rather than handle.
  *
  * @version $Id$
  * @author Alan Mislove

@@ -44,7 +44,7 @@ import rice.p2p.past.*;
  * @(#) ContinuationMessage.java
  *
  * This class the abstraction of a message used internally by Past which serves
- * as a continuation.
+ * as a continuation (for receiving the results of an operation).
  *
  * @version $Id$
  *
