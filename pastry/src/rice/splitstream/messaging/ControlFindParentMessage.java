@@ -12,6 +12,7 @@ public class ControlFindParentMessage extends MessageAnycast
 
     public ControlFindParentMessage()
     {
+       super(null,null,null,null);
     }
 
     /**
