@@ -44,12 +44,7 @@ import java.util.LinkedList;
 
 import rice.pastry.Log;
 import rice.pastry.NodeId;
-import rice.pastry.join.JoinRequest;
-import rice.pastry.leafset.BroadcastLeafSet;
-import rice.pastry.leafset.RequestLeafSet;
 import rice.pastry.messaging.Message;
-import rice.pastry.routing.BroadcastRouteRow;
-import rice.pastry.routing.RouteMessage;
 import rice.pastry.wire.exception.DeserializationException;
 import rice.pastry.wire.exception.ImproperlyFormattedMessageException;
 import rice.pastry.wire.exception.SerializationException;
