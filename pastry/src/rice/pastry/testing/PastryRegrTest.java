@@ -359,7 +359,7 @@ public abstract class PastryRegrTest {
 		//System.out.println("prefixes " + rta.getNodeId() + domainFirst + domainLast 
 		//	   + "compareTo=" + domainFirst.compareTo(domainLast));
 
-		if (rs.size() == 0) {
+		if (rs == null || rs.size() == 0) {
 		    // no entry
 
 		    // check if no nodes with appropriate prefix exist

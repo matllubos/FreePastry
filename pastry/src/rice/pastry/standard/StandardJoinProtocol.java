@@ -107,7 +107,7 @@ public class StandardJoinProtocol implements MessageReceiver
 	    nh = security.verifyNodeHandle(nh);
 	    
 	    if (nh.isAlive() == true)  // the handle is alive
-		if (jr.accepted() == false) {   // this the terminal node on the request path
+		if (jr.accepted() == false) {   // this is the terminal node on the request path
 		    //leafSet.put(nh);
 		    jr.acceptJoin(localHandle,leafSet);
 		    nh.receiveMessage(jr);
@@ -192,7 +192,7 @@ public class StandardJoinProtocol implements MessageReceiver
      */
 
     public void broadcastRows(JoinRequest jr) {
-	NodeId localId = localHandle.getNodeId();
+	//NodeId localId = localHandle.getNodeId();
 	int n = jr.numRows();
 
 	// send the rows to the RouteSetProtocol on the local node
@@ -200,38 +200,29 @@ public class StandardJoinProtocol implements MessageReceiver
 	    RouteSet row[] = jr.getRow(i);
 	    
 	    if (row != null) {
-		BroadcastRouteRow brr = new BroadcastRouteRow(localId, row);
+		BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
 
 		localHandle.receiveMessage(brr);
 	    }
 	}
 
 	// now broadcast the rows to our peers in each row
-	//for (int i=0; i<n; i++) {
-	//    RouteSet row[] = routeTable.getRow(i);
 
 	for (int i=jr.lastRow(); i<n; i++) {
 	    RouteSet row[] = jr.getRow(i);
 
-	    int myCol = localHandle.getNodeId().getDigit(i,rice.pastry.routing.RoutingTable.baseBitLength());
-	    NodeHandle nhMyCol = row[myCol].closestNode();
-	    row[myCol].put(localHandle);
-
-	    BroadcastRouteRow brr = new BroadcastRouteRow(localId, row);
+	    BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
 
 	    for (int j=0; j<row.length; j++) {
 		RouteSet rs = row[j];
+		if (rs == null) continue;
 
-		// broadcast to closest node only
+		// send to closest nodes only
 		
-		NodeHandle nh;
-		if (j != myCol)
-		    nh = rs.closestNode();
-		else
-		    nh = nhMyCol;
+		NodeHandle nh = rs.closestNode();
 		if (nh != null) nh = security.verifyNodeHandle(nh);
 		if (nh != null) nh.receiveMessage(brr);
-
+		
 		/*
 		int m = rs.size();
 		for (int k=0; k<m; k++) {
@@ -242,7 +233,6 @@ public class StandardJoinProtocol implements MessageReceiver
 		*/
 	    }
 	}
-
 
     }
 }

@@ -63,7 +63,7 @@ import java.util.*;
  * @author Peter Druschel
  */
 
-public class RoutingTable extends Observable {
+public class RoutingTable extends Observable implements Observer {
     /**
      * The routing calculations will occur in base <EM> 2 <SUP> idBaseBitLength </SUP> </EM>
      */
@@ -91,18 +91,14 @@ public class RoutingTable extends Observable {
 	int cols = 1 << idBaseBitLength;
 	int rows = NodeId.nodeIdBitLength / idBaseBitLength;
 
-	//if (NodeId.nodeIdBitLength % idBaseBitLength > 0) rows++;
-	
 	routingTable = new RouteSet[rows][cols];
 
 	for (int i=0; i<rows; i++) {
 	    int myCol = myNodeId.getDigit(i,idBaseBitLength);
-
-	    for (int j=0; j<cols; j++) {
-		routingTable[i][j] = new RouteSet(maxEntries);
-		// enter local handle
-		if (j == myCol) routingTable[i][j].put(myNodeHandle);
-	    }
+	    // insert this node at the appropriate column
+	    routingTable[i][myCol] = new RouteSet(maxEntries);
+	    routingTable[i][myCol].put(myNodeHandle);
+	    routingTable[i][myCol].addObserver(this);
 	}
     }
 
@@ -156,7 +152,7 @@ public class RoutingTable extends Observable {
 		    (keyDigit + i) & (cols - 1) : (keyDigit + cols - i) & (cols - 1);
 
 		RouteSet rs = getRouteSet(diffDigit, digit);
-		for (int k=0; k<rs.size(); k++) {
+		for (int k=0; rs!=null && k<rs.size(); k++) {
 		    NodeHandle n = rs.get(k);
 		    
 		    if (n.isAlive()) {
@@ -189,7 +185,7 @@ public class RoutingTable extends Observable {
      * @param index the index of the digit in base <EM> 2 <SUP> idBaseBitLength </SUP></EM>.  <EM> 0 </EM> is the least significant.
      * @param digit ranges from <EM> 0... 2 <SUP> idBaseBitLength - 1 </SUP> </EM>.  Selects which digit to use.
      *
-     * @return a read-only set of possible handles located at that position in the routing table
+     * @return a read-only set of possible handles located at that position in the routing table, or null if none are known
      */
 
     public RouteSet getRouteSet(int index, int digit) 
@@ -204,7 +200,7 @@ public class RoutingTable extends Observable {
      *
      * @param key the key
      *
-     * @return a read-only set of possible handles, or null if none exist 
+     * @return a read-only set of possible handles, or null if none are known
      */
     
     public RouteSet getBestEntry(NodeId key) 
@@ -212,6 +208,30 @@ public class RoutingTable extends Observable {
 	int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
 	if (diffDigit < 0) return null;
 	int digit = key.getDigit(diffDigit, idBaseBitLength);
+
+	return routingTable[diffDigit][digit];
+    }
+
+
+    /**
+     * Like getBestEntry, but creates an entry if none currently exists.
+     *
+     * @param key the key
+     *
+     * @return a read-only set of possible handles
+     */
+    
+    private RouteSet makeBestEntry(NodeId key) 
+    {
+	int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
+	if (diffDigit < 0) return null;
+	int digit = key.getDigit(diffDigit, idBaseBitLength);
+
+	if (routingTable[diffDigit][digit] == null) {
+	    // allocate a RouteSet
+	    routingTable[diffDigit][digit] = new RouteSet(maxEntries);
+	    routingTable[diffDigit][digit].addObserver(this);
+	}
 
 	return routingTable[diffDigit][digit];
     }
@@ -225,8 +245,8 @@ public class RoutingTable extends Observable {
     public void put(NodeHandle handle) 
     {
 	NodeId nid = handle.getNodeId();
-	RouteSet ns = getBestEntry(nid);
-	
+	RouteSet ns = makeBestEntry(nid);
+
 	if (ns != null) ns.put(handle);
     }
 
@@ -234,12 +254,15 @@ public class RoutingTable extends Observable {
      * Gets the node handle associated with a given id.
      *
      * @param nid a node id
-     * @return the handle associated with that id.
+     * @return the handle associated with that id, or null if none is known.
      */
     
     public NodeHandle get(NodeId nid) 
     {
 	RouteSet ns = getBestEntry(nid);
+
+	if (ns == null) return null;
+	
 	return ns.get(nid);
     }
 
@@ -256,25 +279,30 @@ public class RoutingTable extends Observable {
      * Removes a node id from the table.
      *
      * @param nid the node id to remove.
-     * @return the handle that was removed.
+     * @return the handle that was removed, or null if it did not exist.
      */
     
     public NodeHandle remove(NodeId nid) 
     {
 	RouteSet ns = getBestEntry(nid);
+	
+	if (ns == null) return null;
+
 	return ns.remove(nid);
     }
 
-    /**
-     * Adds an observer to routing table.
-     *
-     * @param o the observer
-     */
 
-    public void addObserver(Observer o) {
-	for (int i=0; i<routingTable.length; i++)
-	    for (int j=0; j<routingTable[i].length; j++)
-		routingTable[i][j].addObserver(o);
+    /**
+     * Is called by the Observer pattern whenever a RouteSet in this table
+     * has changed.
+     *
+     * @param o the RouteSet
+     * @param arg the event 
+     */
+    public void update(Observable o, Object arg) {
+	// pass the event to the Observers of this RoutingTable
+	setChanged();
+	notifyObservers(arg);
     }
 
     /**
@@ -288,7 +316,10 @@ public class RoutingTable extends Observable {
 
 	for (int i=routingTable.length-1; i>=0; i--) {
 	    for (int j=0; j<routingTable[i].length; j++) {
-		s += ("" + routingTable[i][j].size() + "\t");
+		if (routingTable[i][j] != null)
+		    s += ("" + routingTable[i][j].size() + "\t");
+		else
+		    s += ("" + 0 + "\t");
 	    }		
 	    s += ("\n");
 	}

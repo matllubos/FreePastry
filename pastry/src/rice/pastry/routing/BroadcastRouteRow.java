@@ -52,7 +52,7 @@ import java.io.*;
  */
 
 public class BroadcastRouteRow extends Message implements Serializable {
-    private NodeId fromNode;
+    private NodeHandle fromNode;
     private RouteSet[] row;
 
     private static final Address addr = new RouteProtocolAddress();
@@ -66,7 +66,7 @@ public class BroadcastRouteRow extends Message implements Serializable {
      * @param r the row
      */
 
-    public BroadcastRouteRow(Credentials cred, Date stamp, NodeId from, RouteSet[] r) {
+    public BroadcastRouteRow(Credentials cred, Date stamp, NodeHandle from, RouteSet[] r) {
 	super(addr, cred, stamp);
 
 	fromNode = from;
@@ -82,7 +82,7 @@ public class BroadcastRouteRow extends Message implements Serializable {
      * @param r the row
      */
 
-    public BroadcastRouteRow(Date stamp, NodeId from, RouteSet[] r) {
+    public BroadcastRouteRow(Date stamp, NodeHandle from, RouteSet[] r) {
 	super(addr, stamp);
 
 	fromNode = from;
@@ -98,7 +98,7 @@ public class BroadcastRouteRow extends Message implements Serializable {
      * @param r the row
      */
 
-    public BroadcastRouteRow(Credentials cred, NodeId from, RouteSet[] r) {
+    public BroadcastRouteRow(Credentials cred, NodeHandle from, RouteSet[] r) {
 	super(addr, cred);
 
 	fromNode = from;
@@ -113,7 +113,7 @@ public class BroadcastRouteRow extends Message implements Serializable {
      * @param r the row
      */
 
-    public BroadcastRouteRow(NodeId from, RouteSet[] r) {
+    public BroadcastRouteRow(NodeHandle from, RouteSet[] r) {
 	super(addr);
 
 	fromNode = from;
@@ -126,7 +126,7 @@ public class BroadcastRouteRow extends Message implements Serializable {
      * @return the from node.
      */
 
-    public NodeId from() { return fromNode; }
+    public NodeHandle from() { return fromNode; }
 
     /**
      * Gets the row that was sent in the message.
@@ -139,7 +139,7 @@ public class BroadcastRouteRow extends Message implements Serializable {
     public String toString() {
 	String s = "";
 
-	s+="BroadcastRouteRow(of " + fromNode + ")";
+	s+="BroadcastRouteRow(of " + fromNode.getNodeId() + ")";
 
 	return s;
     }

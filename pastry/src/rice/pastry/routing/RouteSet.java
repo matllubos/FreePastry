@@ -272,8 +272,8 @@ public class RouteSet extends Observable implements NodeSet, Serializable, Obser
      */
 
     public NodeHandle get(NodeId nid) {
-      for (int i=0; i<theSize; i++)
-      if (nodes[i].getNodeId().equals(nid)) return nodes[i];
+	for (int i=0; i<theSize; i++)
+	  if (nodes[i].getNodeId().equals(nid)) return nodes[i];
 
       return null;
     }

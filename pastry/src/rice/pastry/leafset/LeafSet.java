@@ -495,7 +495,8 @@ public class LeafSet extends Observable implements Serializable {
     /**
      * Add observer method.
      *
-     * @param o the observer to add.  */
+     * @param o the observer to add.  
+     */
 
     public void addObserver(Observer o) {
 	cwSet.addObserver(o);
@@ -506,7 +507,8 @@ public class LeafSet extends Observable implements Serializable {
     /**
      * Delete observer method.
      *
-     * @param o the observer to delete.  */
+     * @param o the observer to delete.  
+     */
 
     public void deleteObserver(Observer o) {
 	cwSet.deleteObserver(o);

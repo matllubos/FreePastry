@@ -219,7 +219,7 @@ public class StandardRouter implements MessageReceiver {
 	    //System.out.println("checkForRouteTableHole, sending row=" + diffDigit + " to=" + prevId);
 
 	    RouteSet[] row = routeTable.getRow(diffDigit);
-	    BroadcastRouteRow brr = new BroadcastRouteRow(localId, row);
+	    BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
 
 	    NodeHandle prevNode = security.verifyNodeHandle(msg.getPrevNode());
 	    if (prevNode.isAlive())

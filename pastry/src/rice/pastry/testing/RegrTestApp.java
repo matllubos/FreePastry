@@ -229,9 +229,15 @@ public class RegrTestApp extends PastryAppl {
 	System.out.print("node " + nid + " was ");
 	if (wasAdded) System.out.println("added");
 	else System.out.println("removed");
-
 	System.out.println(getRoutingTable());
 	*/
+
+	if (!prg.pastryNodesSorted.containsKey(nid)) {
+	    if (nh.isAlive() || wasAdded) 
+		System.out.println("at... " + getNodeId() + "routeSetChange failure 1 with " + nid +
+				   " wasAdded=" + wasAdded);
+	}
+
     }
 
 }

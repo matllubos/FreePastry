@@ -49,11 +49,12 @@ import java.util.*;
  * @version $Id$
  *
  * @author Andrew Ladd
+ * @author Peter Druschel
  */
 
 public class StandardRouteSetProtocol implements Observer, MessageReceiver
 {
-    private static final int maxTrials = 5;
+    private static final int maxTrials = (1 << RoutingTable.baseBitLength()) / 2;
     private NodeHandle localHandle;    
     private PastrySecurityManager security;
     private RoutingTable routeTable;
@@ -106,18 +107,19 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver
 	    BroadcastRouteRow brr = (BroadcastRouteRow) msg;
 
 	    RouteSet[] row = brr.getRow();
+	    //System.out.println("BroadcastRouteRow from " + brr.from().getNodeId());
 
-	    //System.out.println("BroadcastRouteRow from " + brr.from());
+	    NodeHandle nh = brr.from();
+	    nh = security.verifyNodeHandle(nh);
+	    if (nh.isAlive()) routeTable.put(nh);
 
 	    for (int i=0; i<row.length; i++) {
 		RouteSet rs = row[i];
-		int n = rs.size();
-
+		//int n = rs.size();
 		//System.out.print(n + " ");
 		
-		for (int j=0; j<n; j++) {
-		    NodeHandle nh = rs.get(j);
-
+		for (int j=0; rs!=null && j<rs.size(); j++) {
+		    nh = rs.get(j);
 		    nh = security.verifyNodeHandle(nh);
 		    if (nh.isAlive() == false) continue;
 		    routeTable.put(nh);
@@ -137,7 +139,7 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver
 	    //System.out.println("RequestRouteRow " + reqRow + " from " + nh.getNodeId());
 
 	    RouteSet row[] = routeTable.getRow(reqRow);
-	    BroadcastRouteRow brr = new BroadcastRouteRow(localHandle.getNodeId(), row);
+	    BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
 	    nh.receiveMessage(brr);
 	}
 
@@ -167,7 +169,7 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver
 	// for each populated row in our routing table
 	for (int i=routeTable.numRows()-1; i>=0; i--) {
 	    RouteSet row[] = routeTable.getRow(i);
-	    BroadcastRouteRow brr = new BroadcastRouteRow(localHandle.getNodeId(), row);
+	    BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
 	    RequestRouteRow rrr = new RequestRouteRow(localHandle, i);
 	    int myCol = localHandle.getNodeId().getDigit(i, RoutingTable.baseBitLength());
 	    int j;
@@ -180,13 +182,10 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver
 
 		RouteSet rs = row[col];
 
-		// ping all nodes in routeset -- don't: too much pinging.
-		// rs.pingAllNew();
-
 		// swap row with closest node only
-		NodeHandle nh = rs.closestNode();
+		NodeHandle nh;
 
-		if (nh != null) {
+		if (rs != null && (nh = rs.closestNode()) != null) {
 		    //System.out.println(localHandle.getNodeId() + 
 		    //	       " swapping RT row[" + i + "," + col + "] with " + nh.getNodeId());
 		    nh.receiveMessage(brr);
