@@ -64,6 +64,10 @@ public class MimeMessage
         }
     }
 
+    public MimeBodyPart getMessage() {
+      return _message;
+    }
+
     public Object getContent()
       throws MailException
     {

@@ -256,12 +256,14 @@ store [boolean isUID]
 		StoreCommand cmd = new StoreCommand();
 		MsgFilter range;
 		Token type;
+    Token type2 = null;
 		List flags;
 	}:
-	STORE SPACE range=range[isUID] SPACE type=astring SPACE flags=flags
+	STORE SPACE range=range[isUID] SPACE type=astring (PERIOD type2=astring)? SPACE flags=flags
 	{
 		cmd.setFlags(flags);
 		cmd.setType(type.getText());
+    if (type2 != null) { cmd.setType(type.getText() + "." + type2.getText()); }
 		cmd.setRange(range);
 		command = cmd;
 	}
@@ -297,7 +299,7 @@ fetch [boolean isUID]
       (body_part[breq])?
 	  RSBRACKET
     
-      (LSANGLE a1:ATOM PERIOD a2:ATOM RSANGLE)?
+      (LSANGLE a1:ATOM PERIOD a2:ATOM {breq.setRange(a1.getText(), a2.getText());} RSANGLE)?
     )?
   {
     if (realBody) {

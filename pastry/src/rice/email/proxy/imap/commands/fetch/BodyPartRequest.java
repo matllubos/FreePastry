@@ -11,6 +11,8 @@ public class BodyPartRequest {
   List _type = new ArrayList();
   boolean _peek = false;
   List _parts = new ArrayList();
+  int _rangeStart = -1;
+  int _rangeLength = -1;
 
   public String getName() {
     return _name;
@@ -29,12 +31,12 @@ public class BodyPartRequest {
   }
 
   public void appendType(String type) {
-    _type.addLast(type);
+    _type.add(type);
   }
 
   public void reAppendType(String type) {
-    _type.removeLast();
-    _type.addLast(type);
+    _type.remove(_type.size() - 1);
+    _type.add(type);
   }
 
   public void setPeek(boolean peek) {
@@ -45,6 +47,26 @@ public class BodyPartRequest {
     _parts.add(part);
   }
 
+  public boolean hasRange() {
+    return ((_rangeStart >= 0) && (_rangeLength > 0));
+  }
+
+  public int getRangeStart() {
+    return _rangeStart;
+  }
+
+  public int getRangeLength() {
+    return _rangeLength;
+  }
+
+  public void setRange(String start, String length) {
+    try {
+      _rangeStart = Integer.parseInt(start);
+      _rangeLength = Integer.parseInt(length);
+    } catch (NumberFormatException e) {
+    }
+  }
+  
   public Iterator getPartIterator() {
     return _parts.iterator();
   }
@@ -53,7 +75,14 @@ public class BodyPartRequest {
     StringBuffer result = new StringBuffer();
     result.append(_name);
     result.append("[");
-    result.append(_type);
+
+    for (int i=0; i<_type.size(); i++) {
+      result.append(_type.get(i) + "");
+
+      if (i < _type.size()-1) {
+        result.append(".");
+      }
+    }
 
     if ((_parts != null) && (_parts.iterator().hasNext()))
     {

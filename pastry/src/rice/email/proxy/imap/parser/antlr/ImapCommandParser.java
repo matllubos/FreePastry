@@ -735,14 +735,14 @@ public ImapCommandParser(ParserSharedInputState state) {
 			match(LPAREN);
 			fetch_part(cmd);
 			{
-			_loop52:
+			_loop53:
 			do {
 				if ((LA(1)==SPACE)) {
 					match(SPACE);
 					fetch_part(cmd);
 				}
 				else {
-					break _loop52;
+					break _loop53;
 				}
 				
 			} while (true);
@@ -797,6 +797,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 				StoreCommand cmd = new StoreCommand();
 				MsgFilter range;
 				Token type;
+		Token type2 = null;
 				List flags;
 			
 		
@@ -805,12 +806,31 @@ public ImapCommandParser(ParserSharedInputState state) {
 		range=range(isUID);
 		match(SPACE);
 		type=astring();
+		{
+		switch ( LA(1)) {
+		case PERIOD:
+		{
+			match(PERIOD);
+			type2=astring();
+			break;
+		}
+		case SPACE:
+		{
+			break;
+		}
+		default:
+		{
+			throw new NoViableAltException(LT(1), getFilename());
+		}
+		}
+		}
 		match(SPACE);
 		flags=flags();
 		if ( inputState.guessing==0 ) {
 			
 					cmd.setFlags(flags);
 					cmd.setType(type.getText());
+			if (type2 != null) { cmd.setType(type.getText() + "." + type2.getText()); }
 					cmd.setRange(range);
 					command = cmd;
 				
@@ -996,6 +1016,9 @@ public ImapCommandParser(ParserSharedInputState state) {
 					match(PERIOD);
 					a2 = LT(1);
 					match(ATOM);
+					if ( inputState.guessing==0 ) {
+						breq.setRange(a1.getText(), a2.getText());
+					}
 					match(RSANGLE);
 					break;
 				}
@@ -1232,7 +1255,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 		num = LT(1);
 		match(ATOM);
 		if ( inputState.guessing==0 ) {
-			breq.setType(num.getText());
+			breq.appendType(num.getText());
 		}
 	}
 	
@@ -1242,15 +1265,13 @@ public ImapCommandParser(ParserSharedInputState state) {
 		
 		Token  a = null;
 		Token  at = null;
-		Token  mime = null;
-		Token  text = null;
 		
 		switch ( LA(1)) {
 		case HEADER:
 		{
 			match(HEADER);
 			if ( inputState.guessing==0 ) {
-				breq.setType("HEADER");
+				breq.appendType("HEADER");
 			}
 			{
 			switch ( LA(1)) {
@@ -1259,7 +1280,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 				match(PERIOD);
 				match(FIELDS);
 				if ( inputState.guessing==0 ) {
-					breq.setType("HEADER.FIELDS");
+					breq.reAppendType("HEADER.FIELDS");
 				}
 				{
 				switch ( LA(1)) {
@@ -1268,7 +1289,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 					match(PERIOD);
 					match(NOT);
 					if ( inputState.guessing==0 ) {
-						breq.setType("HEADER.FIELDS.NOT");
+						breq.reAppendType("HEADER.FIELDS.NOT");
 					}
 					break;
 				}
@@ -1290,7 +1311,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 					breq.addPart(a.getText());
 				}
 				{
-				_loop67:
+				_loop68:
 				do {
 					if ((LA(1)==SPACE)) {
 						match(SPACE);
@@ -1301,7 +1322,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 						}
 					}
 					else {
-						break _loop67;
+						break _loop68;
 					}
 					
 				} while (true);
@@ -1323,19 +1344,17 @@ public ImapCommandParser(ParserSharedInputState state) {
 		}
 		case MIME:
 		{
-			mime = LT(1);
 			match(MIME);
 			if ( inputState.guessing==0 ) {
-				breq.setType(mime.getText());
+				breq.appendType("MIME");
 			}
 			break;
 		}
 		case TEXT:
 		{
-			text = LT(1);
 			match(TEXT);
 			if ( inputState.guessing==0 ) {
-				breq.setType(text.getText());
+				breq.appendType("TEXT");
 			}
 			break;
 		}

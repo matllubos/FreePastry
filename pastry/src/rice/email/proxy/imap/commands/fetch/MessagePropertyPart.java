@@ -17,7 +17,7 @@ public class MessagePropertyPart extends FetchPart {
   
     List supportedParts = Arrays.asList(new Object[]  {
       "ALL", "FAST", "FULL", "BODY", "BODYSTRUCTURE", "ENVELOPE",
-      "FLAGS", "INTERNALDATE", "RFC822.SIZE", "UID"
+      "FLAGS", "INTERNALDATE", "UID"
     });
 
     public boolean canHandle(Object req) {
@@ -129,22 +129,30 @@ public class MessagePropertyPart extends FetchPart {
       String name = parseContentType(type, "name");
 
       if (charset.matches("\".*\"")) {
-        charset = charset.substring(1, charset.length()-2);
+        charset = charset.substring(1, charset.length()-1);
       }
 
       if (name.matches("\".*\"")) {
-        name = name.substring(1, name.length()-2);
+        name = name.substring(1, name.length()-1);
       }
 
       result += mainType + " " + subType + " ";
 
-      result += "(\"CHARSET\" \"" + charset + "\"";
-
-      if (name.equals("NIL")) {
-        result += ") ";
-      } else {
-        result += " \"NAME\" " + name + ") ";
+      result += "(";
+      
+      if (! charset.equals("NIL")) {
+        result += "\"CHARSET\" \"" + charset + "\"";
       }
+
+      if ((! charset.equals("NIL")) && (! name.equals("NIL"))) {
+        result += " ";
+      }
+
+      if (! name.equals("NIL")) {
+        result += "\"NAME\" \"" + name + "\"";
+      }
+
+      result += ") ";
 
       String encoding = "\"" + mime.getEncoding() + "\"";
 
@@ -152,7 +160,13 @@ public class MessagePropertyPart extends FetchPart {
         encoding = "\"7BIT\"";
       }
 
-      result += "NIL NIL " + encoding + " " + mime.getSize() + " " + mime.getLineCount() + ")";
+      result += "NIL NIL " + encoding + " " + mime.getSize();
+
+      if (mainType.toLowerCase().equals("text")) {
+        result += " " + mime.getLineCount();
+      }
+
+      result += ")";
 
       return result;
     }

@@ -187,7 +187,8 @@ public class EmailProxy {
       System.out.print("    Starting Email service\t\t\t\t\t");
       email = new EmailService(post, pair);
       manager = new UserManagerImpl(email, new PostMailboxManager(email));
-      manager.createUser(address.toString(), null, pass);
+      String addr = address.toString();
+      manager.createUser(addr.substring(0, addr.indexOf("@")), null, pass);
       System.out.println("[ DONE ]");
 
       System.out.print("    Starting SMTP server on port " + smtpport + "\t\t\t\t");
