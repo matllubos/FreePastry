@@ -59,7 +59,7 @@ import java.security.*;
 /**
  * @(#) RMIScribeMaintenanceTest.java
  *
- * a test suite for Scribe with RMI.
+ * A test suite for Scribe with RMI.
  *
  * @version $Id$
  *
@@ -72,9 +72,6 @@ public class RMIScribeMaintenanceTest {
     private Vector pastryNodes;
     private Random rng;
     public Vector rmiClients;
-    private Timer m_timer;
-    //private RMIMaintenanceEvent m_event;
-    private int m_schedulingRate;
     private Vector localNodes;
 
     private static int port = 5009;
@@ -82,17 +79,13 @@ public class RMIScribeMaintenanceTest {
     private static int bsport = 5009;
     private static int numNodes = 5;
     public Integer num = new Integer(0);
-    public String publisherHost = "dosa.cs.rice.edu/128.42.3.76";
-    // constructor
+    public String publisherHost = "thor01.cs.rice.edu";
 
-    public RMIScribeMaintenanceTest(int schedulingRate){
+    public RMIScribeMaintenanceTest(){
 	factory = DistPastryNodeFactory.getFactory(DistPastryNodeFactory.PROTOCOL_RMI, port);
 	pastryNodes = new Vector();
 	rmiClients = new Vector();
 	rng = new Random(PastrySeed.getSeed());
-	m_timer = new Timer(true);
-	//m_event = new RMIMaintenanceEvent();
-	m_schedulingRate = schedulingRate;
 	localNodes = new Vector();
     }
 
@@ -217,7 +210,7 @@ public class RMIScribeMaintenanceTest {
 	    } catch (UnknownHostException e) {
 		System.out.println("[rmi] Error: Host unknown: " );
 	    }
-	    host = localaddr.toString();
+	    host = localaddr.getHostName();
 
 	    if(m_app.m_appIndex == 0 && host.equals(publisherHost))
 		m_app.create(topicId);
@@ -244,7 +237,7 @@ public class RMIScribeMaintenanceTest {
 		    //else
 		    //System.out.println("My "+m_app.m_scribe.getNodeId()+" parent is in same machine");
 		}
-		m_app.m_scribe.scheduleHB();
+	       
 	    }
 	}
     }
@@ -283,16 +276,14 @@ public class RMIScribeMaintenanceTest {
 	PastryNode pn = factory.newNode(bootstrap); // internally initiateJoins
 	int joinTimeout = 300;
 	pastryNodes.addElement(pn);
-	//synchronized(localNodes){
 	localNodes.addElement(pn.getNodeId());
-	//}
+	
 
 	
 	Credentials cred = new PermissiveCredentials();
 	Scribe scribe = new Scribe(pn, cred );
-	scribe.setTreeRepairThreshold(5);
+	scribe.setTreeRepairThreshold(3);
 	RMIScribeMaintenanceTestApp app = new RMIScribeMaintenanceTestApp(pn, scribe, cred);
-	//m_event.addScribe(scribe);
 	rmiClients.addElement(app);
 
 	synchronized (pn) {
@@ -346,7 +337,7 @@ public class RMIScribeMaintenanceTest {
 	seed = (int)System.currentTimeMillis();
 	PastrySeed.setSeed(seed);
 	System.out.println("seed used=" + seed); 
-	RMIScribeMaintenanceTest driver = new RMIScribeMaintenanceTest(2*1000);
+	RMIScribeMaintenanceTest driver = new RMIScribeMaintenanceTest();
 	int count = 0;
 
 	for (int i = 0; i < numNodes; i++){
