@@ -38,6 +38,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 
 import rice.pastry.Log;
+import rice.pastry.commonapi.PastryEndpointMessage;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.messaging.AddressMessage;
@@ -285,6 +286,10 @@ public class SocketChannelWriter {
   
         if (newO instanceof RouteMessage) {
           newO = ((RouteMessage)newO).unwrap();
+        }
+  
+        if (newO instanceof PastryEndpointMessage) {
+          newO = ((PastryEndpointMessage)newO).getMessage();
         }
   
         String oType = newO.getClass().getName();
