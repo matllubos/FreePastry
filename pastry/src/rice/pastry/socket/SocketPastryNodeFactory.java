@@ -194,6 +194,30 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @return A node with a random ID and next port number.
    */
   public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId) {
+    return newNode(bootstrap, nodeId, null);
+  }
+  
+  /**
+   * Method which creates a Pastry node from the next port with a randomly
+   * generated NodeId.
+   *
+   * @param bootstrap Node handle to bootstrap from.
+   * @return A node with a random ID and next port number.
+   */
+  public PastryNode newNode(NodeHandle bootstrap, InetSocketAddress proxy) {
+    return newNode(bootstrap, nidFactory.generateNodeId(), proxy);
+  }
+  
+
+  /**
+   * Method which creates a Pastry node from the next port with a randomly
+   * generated NodeId.
+   *
+   * @param bootstrap Node handle to bootstrap from.
+   * @param nodeId DESCRIBE THE PARAMETER
+   * @return A node with a random ID and next port number.
+   */
+  public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress proxyaddress) {
     final SocketPastryNode pn = new SocketPastryNode(nodeId);
 
     SelectorManager sManager = new SelectorManager(pn);
@@ -201,11 +225,29 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     SocketCollectionManager socketManager = null;
     InetSocketAddress address = null;
     SocketNodeHandlePool pool = new SocketNodeHandlePool(pn);
-    PingManager pingManager;
+    PingManager pingManager = null;
 
     synchronized (this) {
-      pingManager = new PingManager(port, sManager, pool);
-      socketManager = new SocketCollectionManager(pn, pool, port, sManager, pingManager);
+      
+      boolean connected = false;
+      while (!connected) {
+        boolean pingSuccess = false;
+        try {
+          pingManager = new PingManager(port, sManager, pool, proxyaddress);
+          pingSuccess = true;
+        } catch (BindException be) {
+                    
+        }
+        if (pingSuccess) {
+          try {
+            socketManager = new SocketCollectionManager(pn, pool, port, sManager, pingManager, proxyaddress);
+            connected = true;
+          } catch (BindException be) {
+            pingManager.kill();
+            port++;
+          }
+        }
+      }
       address = getAddress(port);
       port++;
     }
@@ -270,7 +312,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   protected Message getResponse(InetSocketAddress address, Message message) throws IOException {
     // create reader and writer
     SocketChannelWriter writer = new SocketChannelWriter(null, null);
-    SocketChannelReader reader = new SocketChannelReader(null);
+    SocketChannelReader reader = new SocketChannelReader(null, null);
 
     // bind to the appropriate port
     SocketChannel channel = SocketChannel.open();

@@ -24,12 +24,17 @@
 
 package rice.pastry.socket;
 
-import java.io.*;
-import java.net.*;
-import java.nio.channels.*;
-import java.util.*;
+import java.io.IOException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.LinkedList;
 
-import rice.pastry.*;
+import rice.pastry.Log;
+import rice.pastry.dist.NodeIsDeadException;
 
 /**
  * This class is the class which handles the selector, and listens for activity.
@@ -56,6 +61,62 @@ public class SelectorManager {
   // the list of handlers which want to change their key
   private HashSet modifyKeys;
 
+  public Thread selectorThread;
+
+  public long lastHeartBeat = 0;
+  public int HEART_BEAT_TIME = 60000;
+  public int maxInvocations = 0;
+  public int numInvocations = 0;
+  public int totalNumInvocations = 0;
+  public int numTimesNotRemoveKeyInRow = 0;
+  public int numTimesNotRemoveKey = 0;
+  public int totalNumTimesNotRemoveKey = 0;
+
+  public Hashtable stats = new Hashtable();
+  
+  public void addStat(String s, long time) {
+    Stat st = (Stat)stats.get(s);
+    if (st == null) {
+      st = new Stat(s);
+      stats.put(s,st);
+    }
+    st.addTime(time);
+  }
+
+  public void printStats() {
+    synchronized(stats) {
+      Enumeration e = stats.elements();
+      while(e.hasMoreElements()) {
+        Stat s = (Stat)e.nextElement(); 
+        System.out.println("  "+s);
+      }
+    }
+  }
+
+  class Stat {
+    int num = 0;
+    String name = null;
+    long totalTime = 0;
+    long maxTime = 0;
+    
+    public Stat(String name) {
+      this.name = name;
+    }
+    
+    public void addTime(long t) {
+      num++;
+      totalTime+=t;
+      if (t > maxTime) {
+        maxTime = t;  
+      }
+    }
+    
+    public String toString() {
+      long avgTime = totalTime/num;
+      return name+" num:"+num+" total:"+totalTime+" maxTime:"+maxTime+" avg:"+avgTime;
+    }
+  }
+
   /**
    * Constructor.
    *
@@ -74,6 +135,14 @@ public class SelectorManager {
     }
   }
 
+
+  SocketCollectionManager scm = null;
+  void setSocketCollectionManager(SocketCollectionManager scm) {
+    this.scm = scm;
+  }
+
+  int numInvokes = 0;
+  Hashtable invokeTypes = new Hashtable();
   /**
    * This method schedules a runnable task to be done by the selector thread
    * during the next select() call. All operations which modify the selector
@@ -82,9 +151,21 @@ public class SelectorManager {
    *
    * @param d The runnable task to invoke
    */
-  public synchronized void invoke(Runnable d) {
-    invocations.add(d);
+  public void invoke(Runnable d) {
+    synchronized(invocationLock) {
+      invocations.add(d);
+      //invocationLock.notifyAll();
+    }
     selector.wakeup();
+    /*
+    synchronized(scm.pastryNode) {
+      synchronized(this) {
+        invocations.add(d);
+        this.notifyAll();
+        selector.wakeup();
+      }
+    }
+    */
   }
 
   /**
@@ -94,16 +175,30 @@ public class SelectorManager {
    *
    * @param key The key which is to be chanegd
    */
-  public synchronized void modifyKey(SelectionKey key) {
-    modifyKeys.add(key);
+  public void modifyKey(SelectionKey key) {
+    synchronized(invocationLock) {
+      modifyKeys.add(key);
+    }
     selector.wakeup();
+    /*
+    synchronized(scm.pastryNode) {
+      synchronized(this) {
+        modifyKeys.add(key);
+        selector.wakeup();
+      }
+    }
+    */
   }
+
+  int acceptRejected = 0;
 
   /**
    * This method starts the socket manager listening for events. It is designed
    * to be started when this thread's start() method is invoked.
    */
   public void run() {
+    selectorThread = Thread.currentThread();
+    
     try {
       debug("Socket Manager starting...");
 
@@ -112,44 +207,94 @@ public class SelectorManager {
         if (stall) {
             try {
                 Thread.sleep(STALL_TIME);
+                stall = false;
             } catch (InterruptedException ie) {}
         }
-
-
-        doInvocations();
-
+        long curTime = System.currentTimeMillis();
+        if (curTime - lastHeartBeat > HEART_BEAT_TIME) {
+          long diff = (curTime-lastHeartBeat)-HEART_BEAT_TIME;
+          lastHeartBeat = curTime;
+          curTime/=1000;
+          System.out.println("SM.run(): heartbeat "+curTime+","+scm.addressString()+": lostTime:"+diff+" total:"+totalNumTimesNotRemoveKey+ " maxInvokes:"+maxInvocations+" totalInvokes:"+totalNumInvocations+" spm:"+scm.socketPoolManager+" waitingToAccept:"+waitingToAccept());
+          System.out.println(scm.socketPoolManager.getStatus());
+          printStats();
+        }        
+        
         SelectionKey[] keys = selectedKeys();
-
         for (int i = 0; i < keys.length; i++) {
-          selector.selectedKeys().remove(keys[i]);
+//          selector.selectedKeys().remove(keys[i]);
 
           SelectionKeyHandler skh = (SelectionKeyHandler) keys[i].attachment();
-
           if (skh != null) {
+
+            // read
+            if (keys[i].isValid() && keys[i].isReadable()) {
+              if (skh.read(keys[i])) {
+                selector.selectedKeys().remove(keys[i]);                                
+              } 
+            }
+  
+            // write
+            if (keys[i].isValid() && keys[i].isWritable()) {
+              if (skh.write(keys[i])) {
+                selector.selectedKeys().remove(keys[i]);                                
+              } 
+            }
+
             // accept
             if (keys[i].isValid() && keys[i].isAcceptable()) {
-              skh.accept(keys[i]);
+              //try { Thread.sleep(5000); } catch (InterruptedException ie){}
+              if (acceptorKey != null) {
+                numTimesNotRemoveKey++;                
+                scm.disableAccept(); // gets enabled when we acceptSocket()
+              }
+              acceptorKey = keys[i]; // gets set back to null in acceptSocket()
+              scm.socketPoolManager.requestAccept(); // calls acceptSocket() now or later
             }
 
             // connect
             if (keys[i].isValid() && keys[i].isConnectable()) {
-              skh.connect(keys[i]);
+              if (skh.connect(keys[i])) {
+                selector.selectedKeys().remove(keys[i]);                                
+              } 
             }
+/*
+            if (acceptorKey != null) {
+              scm.disableAccept();
+              acceptRejected++;
 
-            // read
-            if (keys[i].isValid() && keys[i].isReadable()) {
-              skh.read(keys[i]);
-            }
-
-            // write
-            if (keys[i].isValid() && keys[i].isWritable()) {
-              skh.write(keys[i]);
-            }
+              selector.selectedKeys().remove(keys[i]);                                
+              removedOneKey = true;
+            } 
+            */
           } else {
             keys[i].channel().close();
             keys[i].cancel();
           }
-        }
+        } // for
+      
+//        synchronized(scm.pastryNode) {
+//          synchronized(this) {
+            doInvocations();
+//          }
+//        }
+/*
+            if (!removedOneKey) { 
+              numTimesNotRemoveKey++;
+              totalNumTimesNotRemoveKey++;
+              // we didn't actually handle 1 key, but we're burnin the processor
+              //System.out.println("SM.run().waiting():"+scm.socketPoolManager);
+              //scm.socketPoolManager.printBusySockets();
+//              this.wait(100);  // an invokation will wake us up
+            } else {
+              if (numTimesNotRemoveKey > numTimesNotRemoveKeyInRow) {
+                numTimesNotRemoveKeyInRow = numTimesNotRemoveKey;
+              }
+              numTimesNotRemoveKey = 0;
+              //System.out.println("SM.run()     not waiting");
+            }
+            */
+      
       }
 
       SelectionKey[] keys = keys();
@@ -164,11 +309,44 @@ public class SelectorManager {
       }
 
       selector.close();
+    } catch (NodeIsDeadException nide) {
+      if (alive) {
+        nide.printStackTrace();        
+      }
     } catch (Throwable e) {
       System.out.println("ERROR (SocketManager.run): " + e);
       e.printStackTrace();
     }
   }
+  
+  SelectionKey acceptorKey = null;
+  
+  public void acceptSocket() {
+    scm.enableAccept();
+    SelectionKey tempKey = acceptorKey;
+    acceptorKey = null;
+
+    boolean removeKey = false;
+    if (tempKey != null) {
+      SelectionKeyHandler skh = (SelectionKeyHandler)tempKey.attachment();
+      if (skh != null && tempKey.isValid() && tempKey.isAcceptable()) {
+        if (skh.accept(tempKey)) {
+          removeKey = true;
+        } 
+      } else {
+        removeKey = true;      
+      }
+  
+      if (removeKey) {
+        selector.selectedKeys().remove(tempKey);                                      
+      }
+    }
+  }
+
+  public boolean waitingToAccept() {
+    return acceptorKey != null;
+  }
+
 
   /**
    * To be used for testing purposes only - kills the socket client by shutting
@@ -191,16 +369,31 @@ public class SelectorManager {
     return selector;
   }
 
+  Object invocationLock = new Object();
+
   /**
    * Method which invokes all pending invocations. This method should *only* be
    * called by the selector thread.
    */
-  private synchronized void doInvocations() {
-    while (invocations.size() > 0) {
-      ((Runnable) invocations.removeFirst()).run();
+  private void doInvocations() {
+    LinkedList ll;
+    HashSet hs;
+    synchronized(invocationLock) {            
+      ll = invocations;
+      invocations = new LinkedList();
+      hs = modifyKeys;
+      modifyKeys = new HashSet();
+    }
+    int size = ll.size();
+    totalNumInvocations+=size;
+    if (size > maxInvocations) {
+      maxInvocations = size;
+    }
+    while (ll.size() > 0) {
+      ((Runnable) ll.removeFirst()).run();
     }
 
-    Iterator i = modifyKeys.iterator();
+    Iterator i = hs.iterator();
 
     while (i.hasNext()) {
       SelectionKey key = (SelectionKey) i.next();
@@ -210,7 +403,7 @@ public class SelectorManager {
       }
     }
 
-    modifyKeys.clear();
+    hs.clear();
   }
 
   /**
@@ -225,9 +418,9 @@ public class SelectorManager {
       return selector.selectNow();
     }
 
-    synchronized (selector) {
+//    synchronized (selector) {
       return selector.select();
-    }
+//    }
   }
 
   /**
@@ -263,17 +456,26 @@ public class SelectorManager {
     }
   }
 
-
+  // ****************** For testing only ********************
   public boolean isAlive() {
     return alive;
   }
 
+  /**
+   * The state of the thread.  (stalled?)
+   */
   boolean stall = false;
-  int STALL_TIME = 500000;
+
+  /**
+   * The time to stall the thread when stalling.
+   */
+  int STALL_TIME = 15000000;
     /**
-     * 
+     * Stalls the thread for STALL_TIME time.  This is a different way of simulating
+     * killing, or temporarily bringing the node down.
      */
     public void stall() {
         stall = true;
     }
+
 }

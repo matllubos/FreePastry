@@ -37,6 +37,7 @@ if advised of the possibility of such damage.
 package rice.pastry.socket.messaging;
 
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.util.Collection;
 
 import rice.pastry.socket.*;
@@ -52,12 +53,15 @@ import rice.pastry.*;
  */
 public class PingMessage extends SocketMessage implements Probe {
 
-  private long start;
+  public InetSocketAddress returnAddress;
+
+	private long start;
 
   /**
    * Constructor
    */
-  public PingMessage() {
+  public PingMessage(InetSocketAddress returnAddr) {
+    this.returnAddress = returnAddr;
   }
   
   public long getStartTime() {

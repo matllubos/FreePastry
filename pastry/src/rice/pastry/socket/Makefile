@@ -1,16 +1,6 @@
 PACKAGE = rice.pastry.socket
 
-SOURCE  = \
-	SelectionKeyHandler.java\
-	SelectorManager.java \
-	SocketChannelReader.java \
-	SocketChannelWriter.java\
-	SocketCollectionManager.java\
-	SocketNodeHandle.java\
-	SocketNodeHandlePool.java\
-	SocketPastryNode.java\
-	SocketPastryNodeFactory.java\
-	SocketPastrySecurityManager.java
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 RMI_SOURCE =
 

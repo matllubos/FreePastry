@@ -55,27 +55,27 @@ public interface SelectionKeyHandler {
    *
    * @param key The key which is acceptable.
    */
-  public void accept(SelectionKey key);
+  public boolean accept(SelectionKey key);
 
   /**
    * Method which is called when the key becomes connectable.
    *
    * @param key The key which is connectable.
    */
-  public void connect(SelectionKey key);
+  public boolean connect(SelectionKey key);
 
   /**
    * Method which is called when the key becomes readable.
    *
    * @param key The key which is readable.
    */
-  public void read(SelectionKey key);
+  public boolean read(SelectionKey key);
 
   /**
    * Method which is called when the key becomes writable.
    *
    * @param key The key which is writable.
    */
-  public void write(SelectionKey key);
+  public boolean write(SelectionKey key);
 
 }

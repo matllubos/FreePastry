@@ -22,6 +22,9 @@ public class SocketTransportMessage extends SocketMessage {
 	 * 
 	 */
 	public SocketTransportMessage(Message msg, int seq) {
+    if (msg instanceof SocketTransportMessage) {
+      Thread.dumpStack();
+    }
     this.msg = msg;
     this.seqNumber = seq;
 	}
@@ -31,7 +34,7 @@ public class SocketTransportMessage extends SocketMessage {
   }
 
   public String toString() {
-    return "["+msg.toString()+"]";
+    return "["+msg.toString()+"]<"+seqNumber+">";
   }
 
 }

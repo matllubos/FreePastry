@@ -1,15 +1,6 @@
 PACKAGE = rice.pastry.socket.messaging
 
-SOURCE  = \
-	LeafSetRequestMessage.java\
-	LeafSetResponseMessage.java \
-	NodeIdRequestMessage.java \
-	NodeIdResponseMessage.java\
-	PingMessage.java\
-	PingResponseMessage.java\
-	RouteRowRequestMessage.java\
-	RouteRowResponseMessage.java\
-	SocketMessage.java
+SOURCE = $(notdir $(wildcard $(SOURCE_DIR)/$(PACKAGE_LOC)/*.java))
 
 RMI_SOURCE =
 

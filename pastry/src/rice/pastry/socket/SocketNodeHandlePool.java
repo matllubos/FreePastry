@@ -90,6 +90,19 @@ public class SocketNodeHandlePool extends DistNodeHandlePool {
     }
 
     vector.addElement(new WeakReference(handle));
+    removeNullReferences(vector);
+  }
+  
+  private void removeNullReferences(Vector v) {
+    synchronized(v) {
+    Iterator i = v.iterator();
+      while (i.hasNext()) {
+        WeakReference wr = (WeakReference)i.next();
+        if (wr.get() == null) {
+          i.remove();
+        }
+      }    
+    }
   }
 
   /**

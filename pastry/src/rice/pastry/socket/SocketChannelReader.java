@@ -24,33 +24,34 @@
 
 package rice.pastry.socket;
 
-import java.io.*;
-import java.net.*;
-import java.nio.*;
-import java.nio.channels.*;
-import java.nio.charset.*;
-import java.util.*;
-import java.util.zip.*;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.InvalidClassException;
+import java.io.ObjectInputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.NotYetConnectedException;
+import java.nio.channels.SocketChannel;
+import java.util.Arrays;
 
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.serialization.*;
+import rice.pastry.Log;
+import rice.pastry.PastryObjectInputStream;
+import rice.pastry.socket.exception.SocketClosedByRemoteHostException;
+//import rice.pastry.testing.HelloMsg;
 
 /**
  * Class which serves as an "reader" for messages sent across the wire via the
  * Pastry socket protocol. This class builds up an object as it is being sent
- * across the wire, and when it has recieved all of an object, it informs the
- * WirePastryNode by using the recieveMessage(msg) method. The
- * SocketChannelReader is designed to be reused, to read objects continiously
- * off of one stream.
+ * across the wire, and when it has recieved all of an object it returns the 
+ * object to the caller (usually a SocketManager).
  *
- * @version $Id: SocketChannelReader.java,v 1.5 2004/03/08 19:53:57 amislove Exp
- *      $
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public class SocketChannelReader {
 
-  // the pastry node
+//  public boolean readOnce = false;
+
+	// the pastry node
   private SocketPastryNode spn;
 
   // whether or not the reader has read the message header
@@ -74,6 +75,8 @@ public class SocketChannelReader {
    */
   protected static byte[] MAGIC_NUMBER = SocketChannelWriter.MAGIC_NUMBER;
 
+  private SocketManager manager;
+
   /**
    * Constructor which creates this SocketChannelReader and the WirePastryNode.
    * Once the reader has completely read a message, it deserializes the message
@@ -81,8 +84,9 @@ public class SocketChannelReader {
    *
    * @param spn The PastryNode the SocketChannelReader serves.
    */
-  public SocketChannelReader(SocketPastryNode spn) {
+  public SocketChannelReader(SocketPastryNode spn, SocketManager sm) {
     this.spn = spn;
+    this.manager = sm;
     initialized = false;
 
     sizeBuffer = ByteBuffer.allocateDirect(4);
@@ -101,11 +105,20 @@ public class SocketChannelReader {
    */
   public Object read(SocketChannel sc) throws IOException {
     if (!initialized) {
-      int read = sc.read(magicBuffer);
+      int read = -1;
+      try {
+        read = sc.read(magicBuffer);
+      } catch (NotYetConnectedException nyce) {
+        // Note: This happens when we kill the remote node using kill, so throwing a SocketClosed... will be great.
+        //System.out.println("SCR:NotYetConnectedException"+manager+","+manager.getStatus());
+        //throw nyce;
+      }
 
       if (read == -1) {
         // implies that the channel is closed
-        throw new IOException("Error on read - the channel has been closed.");
+        
+        throw new SocketClosedByRemoteHostException("Error on read - the channel has been closed.");
+//        throw new IOException("Error on read - the channel has been closed.");
       }
 
       if (magicBuffer.remaining() == 0) {
@@ -147,9 +160,14 @@ public class SocketChannelReader {
 
         byte[] objectArray = new byte[objectSize];
         buffer.get(objectArray);
+        buffer = null;
         //   int size = objectSize + MAGIC_NUMBER.length + 4;
         Object obj = deserialize(objectArray);
         debug("Deserialized bytes into object " + obj);
+        checkPoint(obj,777);
+//        if (!(obj instanceof AddressMessage)) {
+//          readOnce = true;
+//        }
 //        System.out.println("SCR.read():Deserialized bytes into object " + obj);
 
         //   if (spn != null)
@@ -160,6 +178,32 @@ public class SocketChannelReader {
 
     return null;
   }
+
+  public String toString() {
+    return "SCR for "+manager;
+  }
+
+  private void checkPoint(Object m, int state) {
+    /*
+    if (m instanceof SocketTransportMessage) {
+      m = ((SocketTransportMessage)m).msg;
+    }
+
+    if (m instanceof RouteMessage) {
+      m = ((RouteMessage)m).unwrap();
+    }    
+
+    if (m instanceof HelloMsg) {
+      HelloMsg hm = (HelloMsg)m;
+      hm.state = state;
+    }
+
+    if (m instanceof JoinRequest) {
+      System.out.println(m+" at "+state+" "+this);
+    }
+    */
+  }
+
 
   /**
    * Resets this input stream so that it is ready to read another object off of
@@ -241,7 +285,7 @@ public class SocketChannelReader {
    */
   private Object deserialize(byte[] array) throws IOException {
     //ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(new ByteArrayInputStream(array))));
-    ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(array));
+    ObjectInputStream ois = new PastryObjectInputStream(new ByteArrayInputStream(array), spn);
     Object o = null;
 
     try {
@@ -274,5 +318,12 @@ public class SocketChannelReader {
       }
     }
   }
+
+	/**
+	 * @return true if we are actively downloading an object
+	 */
+	public boolean isDownloading() {
+		return (buffer != null);
+	}
 
 }

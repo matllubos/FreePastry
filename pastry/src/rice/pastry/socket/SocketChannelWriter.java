@@ -33,12 +33,19 @@ import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.LinkedList;
 
 import rice.pastry.Log;
 import rice.pastry.messaging.Message;
+import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.messaging.AckMessage;
+import rice.pastry.socket.messaging.AddressMessage;
+import rice.pastry.socket.messaging.SocketTransportMessage;
+import rice.pastry.testing.HelloMsg;
+//import rice.pastry.testing.HelloMsg;
 
 /**
  * Class which serves as an "writer" for all of the messages sent across the
@@ -49,12 +56,21 @@ import rice.pastry.socket.messaging.AckMessage;
  * maintains an internal queue of messages waiting to be sent across the wire.
  * Calling isEmpty() will tell clients if it is safe to mark the SelectionKey as
  * not being interested in writing.
+ * 
+ * As opposed to previous versions of Socket and Wire, any message that makes it 
+ * to this point is considered "in-flight" and is not recalled.  Messages that
+ * are queued here are attempting to be "nageled" together into the same packet.
  *
- * @version $Id: SocketChannelWriter.java,v 1.5 2004/03/08 19:53:57 amislove Exp
- *      $
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public class SocketChannelWriter {
+
+  public boolean wroteOnce = false;
+	private static Object statLock = new Object();
+  private static HashMap msgTypes = new HashMap();
+  private static int numWrites = 0;
+  private static int numWriteModulo = 1000;
+  private static boolean logWriteTypes = false;
 
   // the pastry node
   private SocketPastryNode spn;
@@ -115,6 +131,32 @@ public class SocketChannelWriter {
   long timeEnque = 0;
   Hashtable timeEnq = new Hashtable();
 
+  private void checkPoint(Object m, int state) {
+    
+    if (m instanceof SocketTransportMessage) {
+      m = ((SocketTransportMessage)m).msg;
+    }
+
+    if (m instanceof RouteMessage) {
+      m = ((RouteMessage)m).unwrap();
+    }    
+
+    if (m instanceof HelloMsg) {
+      HelloMsg hm = (HelloMsg)m;
+      hm.state = state;
+      if (state == 1) {
+        hm.addReceiver(address);
+        //Thread.dumpStack();
+      }
+    }
+/*
+    if (m instanceof JoinRequest) {
+      System.out.println(m+" at "+state+" "+this);
+    }
+  */  
+  }
+
+
   /**
    * Adds an object to this SocketChannelWriter's queue of pending objects to
    * write. This methos is synchronized and therefore safe for use by multiple
@@ -123,7 +165,18 @@ public class SocketChannelWriter {
    * @param o The object to be written.
    * @return DESCRIBE THE RETURN VALUE
    */
+  
+  Object firstObject;
   public boolean enqueue(Object o) {
+    checkPoint(o,103);
+
+    if (firstObject == null) {
+      firstObject = o;
+//      System.out.println(this+" firstObject = "+firstObject+ " : "+firstObject.getClass().getName());
+      if (firstObject instanceof SocketTransportMessage) {
+//        Thread.dumpStack();
+      }
+    }
 //    System.out.println("ENQ4:"+manager+".SCW.enqueue()" + o);
     timeEnque = System.currentTimeMillis();
     timeEnq.put(o,new Long(timeEnque));
@@ -174,8 +227,18 @@ public class SocketChannelWriter {
           }
 //          System.out.println("SEN:"+manager+".SCW.write()" + queue.getFirst() + ":"+timeToWrite);
           debug("About to serialize object " + queue.getFirst());
+          System.out.println("SND:@"+System.currentTimeMillis()+":"+this+":"+queue.getFirst());
+
           Object first = queue.getFirst();
+          checkPoint(first,104);
           buffer = serialize(first);
+          if ((first != null) && (buffer == null)) {
+            // we got a message that was too big
+            queue.removeFirst();
+          }
+          if (!(first instanceof AddressMessage)) {
+            wroteOnce = true;
+          }
 
           //    if (spn != null)
           //      spn.broadcastSentListeners(queue.getFirst(), (InetSocketAddress) sc.socket().getRemoteSocketAddress(), buffer.limit());
@@ -184,23 +247,25 @@ public class SocketChannelWriter {
         }
       }
 
-      int j = buffer.limit();
-      int i = sc.write(buffer);
-
-//      System.out.println("SCW.write():Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
-      debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
-
-      if (buffer.remaining() != 0) {
-        return false;
+      if (buffer != null) {
+        int j = buffer.limit();
+        int i = sc.write(buffer);
+  
+  //      System.out.println("SCW.write():Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
+        debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
+  
+        if (buffer.remaining() != 0) {
+          return false;
+        }
+  
+        if (spn != null) {
+          debug("Finished writing message " + queue.getFirst() + " - queue now contains " + (queue.size() - 1) + " items");
+        }
+  
+        queue.removeFirst();
+  
+        buffer = null;
       }
-
-      if (spn != null) {
-        debug("Finished writing message " + queue.getFirst() + " - queue now contains " + (queue.size() - 1) + " items");
-      }
-
-      queue.removeFirst();
-
-      buffer = null;
 /*
       // if there are more objects in the queue, try writing those
       // otherwise, return saying all objects have been written
@@ -273,6 +338,10 @@ public class SocketChannelWriter {
       }
     }
   }
+  
+  public String toString() {
+    return "SCW for "+manager;
+  }
 
   /**
    * Method which serializes a given object into a ByteBuffer, in order to
@@ -284,11 +353,42 @@ public class SocketChannelWriter {
    * @return A ByteBuffer containing the object prepended with its size.
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  public static ByteBuffer serialize(Object o) throws IOException {
+  public ByteBuffer serialize(Object o) throws IOException {
     if (o == null) {
       return null;
     }
-
+    if (logWriteTypes) {
+      synchronized(statLock) {
+        Object newO = o;
+        if (newO instanceof SocketTransportMessage) {
+          newO = ((SocketTransportMessage)newO).msg;
+        }
+  
+        if (newO instanceof RouteMessage) {
+          newO = ((RouteMessage)newO).unwrap();
+        }
+  
+        String oType = newO.getClass().getName();
+        
+        Integer it = (Integer)msgTypes.get(oType);
+        if (it == null) {
+          msgTypes.put(oType, new Integer(1));
+        } else {
+          msgTypes.put(oType, new Integer(it.intValue()+1));        
+        }
+        numWrites++;
+        if (numWrites % numWriteModulo == 0) {
+          System.out.println("numWrites = "+numWrites);
+          Iterator ii = msgTypes.keySet().iterator();
+          while (ii.hasNext()) {
+            String s = (String)ii.next();
+            System.out.println("  "+s+":"+msgTypes.get(s));
+          }
+        }
+        
+      }
+    }
+    
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       //ObjectOutputStream oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(baos)));
@@ -298,6 +398,14 @@ public class SocketChannelWriter {
       oos.writeObject(o);
       oos.close();
       int len = baos.toByteArray().length;
+
+      
+      if ((manager != null) &&
+          (manager.getType() == ConnectionManager.TYPE_CONTROL) &&
+          (len > ConnectionManager.MAX_ROUTE_MESSAGE_SIZE)) {
+            manager.messageNotSent(o, len);
+            return null;
+      }
 
       ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
       DataOutputStream dos = new DataOutputStream(baos2);

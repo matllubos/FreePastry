@@ -24,14 +24,13 @@
 
 package rice.pastry.socket;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import java.net.InetSocketAddress;
+import java.util.Observable;
 
-import rice.pastry.*;
-import rice.pastry.dist.*;
-import rice.pastry.messaging.*;
-import rice.pastry.wire.exception.NodeIsDeadException;
+import rice.pastry.Log;
+import rice.pastry.NodeId;
+import rice.pastry.dist.DistNodeHandle;
+import rice.pastry.messaging.Message;
 
 /**
  * Abstract class for handles to "real" remote nodes. This class abstracts out
@@ -39,7 +38,7 @@ import rice.pastry.wire.exception.NodeIsDeadException;
  * protocols, since NodeHandles are sent across the wire.
  *
  * @version $Id$
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public class SocketNodeHandle extends DistNodeHandle {
 

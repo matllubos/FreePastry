@@ -31,7 +31,7 @@ import rice.pastry.NodeHandle;
 import rice.pastry.NodeId;
 import rice.pastry.dist.DistNodeHandlePool;
 import rice.pastry.dist.DistPastryNode;
-import rice.pastry.wire.exception.NodeIsDeadException;
+import rice.pastry.dist.NodeIsDeadException;
 
 /**
  * An Socket-based Pastry node, which has two threads - one thread for
@@ -149,6 +149,8 @@ public class SocketPastryNode extends DistPastryNode {
   public void kill() {
     super.kill();
     manager.kill();
+//    sManager.kill();
+//    pingManager.kill();
   }
 
   public void stall() {
@@ -190,7 +192,15 @@ public class SocketPastryNode extends DistPastryNode {
    * @param period DESCRIBE THE PARAMETER
    */
   protected void scheduleTask(TimerTask task, long delay, long period) {
-    timer.schedule(task, delay, period);
+    try {
+      timer.schedule(task, delay, period);
+    } catch (IllegalStateException ise) {
+      if (manager.isAlive()) {
+        throw ise;
+      } else {
+        throw new NodeIsDeadException(ise);
+      }
+    }
   }
   
 }
