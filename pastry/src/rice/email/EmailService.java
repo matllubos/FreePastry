@@ -25,7 +25,7 @@ import rice.email.messaging.*;
 public class EmailService extends PostClient {
 
   // the name of the Inbox's log
-  public static final String INBOX_NAME="inbox";
+  public static final String INBOX_NAME="INBOX";
 
   // the Emails Service's Post object
   Post _post;
@@ -149,7 +149,7 @@ public class EmailService extends PostClient {
                   if (folder == null) {
                     folder = new Folder((EmailLog) o, _post, keyPair);
 
-                    folder.createChildFolder("inbox", this);
+                    folder.createChildFolder(INBOX_NAME, this);
                   } else {
                     inbox = (Folder) o;
                     command.receiveResult(folder);
@@ -192,7 +192,7 @@ public class EmailService extends PostClient {
                 try {
                   if (folder == null) {
                     folder = new Folder((EmailLog) o, _post, keyPair);
-                    folder.getChildFolder("inbox", this);
+                    folder.getChildFolder(INBOX_NAME, this);
                   } else {
                     inbox = (Folder) o;
                     command.receiveResult(folder);

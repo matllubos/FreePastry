@@ -119,7 +119,7 @@ public class BodyPart extends FetchPart {
         headers = msg.getMessage().getNonMatchingHeaderLines(parts);
       }
 
-      String result = collapse(headers);
+      String result = collapse(headers) + "\r\n";
       
       getConn().print("{" + result.length() + "}\r\n");
       getConn().print(result);
@@ -133,8 +133,6 @@ public class BodyPart extends FetchPart {
       Object data = msg.getMessage().getContent();
 
       if (data instanceof String) {
-        System.out.println("Found a string...");
-
         if ((part.length == 1) && (part[0].equals("TEXT") || part[0].equals("1"))) {
           String content = "" + data;
           getConn().print("{" + content.length() + "}\r\n");
@@ -143,11 +141,8 @@ public class BodyPart extends FetchPart {
           getConn().print("NIL");
         }
       } else if (data instanceof MimeMultipart) {
-        System.out.println("Found a multipart...");
-
         MimeMultipart mime = (MimeMultipart) data;
 
-        // NEED TO DO RECURSIVE MESSAGE PARSING HERE...
         int i = Integer.parseInt(part[0]);
         
         MimeBodyPart thisPart = (MimeBodyPart) mime.getBodyPart(i-1);

@@ -92,7 +92,7 @@ public class EmailProxy {
       System.out.println("-----------------------------------------------------------------------");
       System.out.println("  Creating and Initializing Services");
       System.out.print("    Creating Pastry node\t\t\t\t\t");
-      WirePastryNodeFactory factory = new WirePastryNodeFactory(new RandomNodeIdFactory(), port);
+      WirePastryNodeFactory factory = new WirePastryNodeFactory(new IPNodeIdFactory(port), port);
       InetSocketAddress bootAddress = new InetSocketAddress(bootstrapHost, bootstrapPort);
 
       pastry = (WirePastryNode) factory.newNode(factory.getNodeHandle(bootAddress));
