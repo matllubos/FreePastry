@@ -201,7 +201,7 @@ public class RMINodeHandle extends DistNodeHandle
       * This is not disastrous; at worst, we'll ping the local node once.
        */
 
-      if (isLocal) return alive;
+      if (isLocal || getLocalNode() == null) return alive;
 
       /*
       * throttle super-rapid pings
