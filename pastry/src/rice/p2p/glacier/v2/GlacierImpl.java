@@ -1454,16 +1454,24 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         final FragmentKey thisKey = (FragmentKey) iter.next();
         fragmentStorage.getObject(thisKey, new Continuation() {
           FragmentKey currentKey = thisKey;
-          int totalChecks = 0, totalFailures = 0;
+          int totalChecks = 1, totalFailures = 0;
           public void receiveResult(Object o) {
             FragmentAndManifest fam = (FragmentAndManifest) o;
             boolean success = fam.manifest.validatesFragment(fam.fragment, currentKey.getFragmentID());
-            totalChecks ++;
             if (!success)
               totalFailures ++;
             result.append(currentKey.toStringFull()+" "+ (success ? "OK" : "FAIL") + "\n");
+            advance();
+          }
+          public void receiveException(Exception e) {
+            totalFailures ++;
+            result.append(currentKey.toStringFull()+" EXC: "+e+"\n");
+            advance();
+          }
+          public void advance() {
             if (iter.hasNext()) {
               currentKey = (FragmentKey) iter.next();
+              totalChecks ++;
               fragmentStorage.getObject(currentKey, this);
             } else {
               if (totalFailures == 0)
@@ -1471,9 +1479,6 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
               else
                 ret[0] = "FAIL, "+totalFailures+"/"+totalChecks+" fragments damaged"; 
             }
-          }
-          public void receiveException(Exception e) {
-            ret[0] = "exception("+e+")";
           }
         });
         
