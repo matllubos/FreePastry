@@ -88,7 +88,13 @@ public class MultiringIdRange implements IdRange {
    * @return true if the key lies within this range, false otherwise
    */
   public boolean containsId(Id key) {
-    return range.containsId(key);
+    if (key instanceof RingId) {
+      RingId rkey = (RingId) key;
+      if (!rkey.getRingId().equals(this.ringId))
+        throw new IllegalArgumentException("Cannot test membership for keys other than RingId");
+      
+      return range.containsId(rkey.getId());
+    } else throw new IllegalArgumentException("Cannot test membership for keys other than RingId");
   }
   
   /**
