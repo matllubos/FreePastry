@@ -226,8 +226,4 @@ public abstract class PastryNode implements MessageReceiver {
     return "Pastry node " + myNodeId.toString();
   }
 
-  /******************* BSCRIBE **************/
-  public Vector getApps(){
-    return apps;
-  }
 }
