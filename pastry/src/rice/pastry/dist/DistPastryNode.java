@@ -24,13 +24,22 @@
 
 package rice.pastry.dist;
 
-import java.net.*;
-import java.util.*;
-import rice.pastry.*;
-import rice.pastry.join.*;
-import rice.pastry.leafset.*;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
+import java.net.InetSocketAddress;
+import java.util.Vector;
+
+import rice.pastry.ExponentialBackoffScheduledMessage;
+import rice.pastry.NetworkListener;
+import rice.pastry.NodeHandle;
+import rice.pastry.NodeId;
+import rice.pastry.PastryNode;
+import rice.pastry.ScheduledMessage;
+import rice.pastry.join.InitiateJoin;
+import rice.pastry.leafset.InitiateLeafSetMaintenance;
+import rice.pastry.messaging.Message;
+import rice.pastry.routing.InitiateRouteSetMaintenance;
+import rice.selector.SelectorManager;
+import rice.selector.Timer;
+import rice.selector.TimerTask;
 import sun.misc.SignalHandler;
 
 /**
@@ -54,7 +63,7 @@ public abstract class DistPastryNode extends PastryNode {
   /**
    * DESCRIBE THE FIELD
    */
-  protected static final Timer timer = new Timer(true);
+  protected static final Timer timer = SelectorManager.getSelectorManager().getTimer();//new Timer(true);
   
   // the list of network listeners
   private Vector listeners;

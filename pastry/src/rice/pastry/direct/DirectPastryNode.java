@@ -36,12 +36,15 @@ if advised of the possibility of such damage.
 
 package rice.pastry.direct;
 
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.pastry.join.*;
-import rice.pastry.client.*;
+import rice.pastry.NodeHandle;
+import rice.pastry.NodeId;
+import rice.pastry.PastryNode;
+import rice.pastry.ScheduledMessage;
+import rice.pastry.join.InitiateJoin;
+import rice.pastry.messaging.Message;
+import rice.selector.SelectorManager;
+import rice.selector.Timer;
 
-import java.util.*;
 
 /**
  * Direct pastry node. Subclasses PastryNode, and does about nothing else.
@@ -59,7 +62,7 @@ public class DirectPastryNode extends PastryNode
 
     public DirectPastryNode(NodeId id, NetworkSimulator sim) {
 	super(id);
-        timer = new Timer(true);
+        timer = SelectorManager.getSelectorManager().getTimer(); //new Timer(true);
 	simulator = sim;
     }
 

@@ -12,7 +12,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
-import java.util.TimerTask;
 
 import rice.pastry.Log;
 import rice.pastry.NodeHandle;
@@ -30,6 +29,7 @@ import rice.pastry.socket.messaging.SocketControlMessage;
 import rice.pastry.socket.messaging.SocketTransportMessage;
 import rice.selector.SelectionKeyHandler;
 import rice.selector.SelectorManager;
+import rice.selector.TimerTask;
 
 /**
  * Private class which manages a single socket.  It can be used in 3 instances:
@@ -50,6 +50,9 @@ import rice.selector.SelectorManager;
 public class SocketManager extends SelectionKeyHandler implements LivenessListener {
 
 
+  /**
+   * Whether to use nagling
+   */
 	boolean nagle = true;
 
 	// the key to read/write from/to
@@ -61,9 +64,14 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
   // the writer (in case it is necessary)
   private SocketChannelWriter writer;
 
-  // the node handle we're talking to
+  /**
+   * the node handle we're talking to
+   */ 
   InetSocketAddress address;
 
+  /**
+   * Back pointer to our owner.
+   */
   private SocketCollectionManager scm;
 
   /** 
@@ -72,9 +80,9 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
    */
   private TimerTask connectingCheckDeadTask = null;
 
-  public Exception closedTrace;
-  Exception openedTrace;
-  Exception cmSet;
+//  public Exception closedTrace;
+//  Exception openedTrace;
+//  Exception cmSet;
 
   /**
    * The type of SocketManager this represents.  It will be 
@@ -124,6 +132,18 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
   int ctor;
   
   /**
+   * Parameters for adaptive reconnection.
+   */
+  int INITIAL_CONNECTION_RETRY_WAIT_TIME = 5000;
+  int MAX_NUM_RETRIES_FOR_CONNECTION = 5;
+  double CONNECTION_RETRY_FACTOR = 2.0;  
+
+  /**
+   * True when we sent the addressMessage
+   */
+  boolean sentAddress = false;
+  
+  /**
    * Constructor which accepts an incoming connection, represented by the
    * selection key. This constructor builds a new SocketManager, and waits
    * until the greeting message is read from the other end. Once the greeting
@@ -152,7 +172,6 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
     this(scm,type);    
     ctor = 2;
     connectionManager = cm;
-    cmSet = new RuntimeException("Stack Trace");
     this.address = address;
     if (!sentAddress) {
       send(new AddressMessage(scm.getLocalNodeHandle(),connectionManager.snh,type));
@@ -177,11 +196,6 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
   }
   
   
-
-  int INITIAL_CONNECTION_RETRY_WAIT_TIME = 5000;
-  int MAX_NUM_RETRIES_FOR_CONNECTION = 5;
-  double CONNECTION_RETRY_FACTOR = 2.0;
-
   /**
    * So what happened is the remote server is too busy to accept connections?  
    * Rather than giving up, we're going to try a few times to do this.  This 
@@ -206,16 +220,17 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
     } else {
       if (delay) {
         scm.scheduleTask(new TimerTask() {
-          public void run() {
-  
-            SelectorManager.getSelectorManager().invoke(new Runnable() {
+          // don't need to call invoke because timer/selector are the same
+//          public void run() {
+//  
+//            SelectorManager.getSelectorManager().invoke(new Runnable() {
               public void run() {
   //              System.out.println("CM.retryConnectionLater():requestingToOpenSocket("+manager+")");
                 if (!closed && (connectionManager.getLiveness() < NodeHandle.LIVENESS_FAULTY)) {  // this can happen if we markDead while we are waiting to connect                  
                   tryToCreateConnection();
                 }
-              }
-            });
+//              }
+//            });
   
           }
         },(int)(INITIAL_CONNECTION_RETRY_WAIT_TIME*Math.pow(CONNECTION_RETRY_FACTOR, numTriesToConnect))); 
@@ -227,9 +242,6 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
   }
 
 
-
-
-  boolean sentAddress = false;
 
   // ***************** Connection Lifecycle ************************
 
@@ -290,12 +302,13 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
                 /**
                  * This runs while we are connecting every 5 seconds.  It calls checkDead() on the selector thread.
                  */
-                public void run() {
-                  SelectorManager.getSelectorManager().invoke(new Runnable() {
+                // don't need to call invoke because timer/selector are the same
+//                public void run() {
+//                  SelectorManager.getSelectorManager().invoke(new Runnable() {
                     public void run() {
                       connectionManager.checkDead();
-                    }
-                  });
+//                    }
+//                  });
                 }
     					};
             scm.scheduleTask(connectingCheckDeadTask,5000,5000);
@@ -466,7 +479,6 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
   public void close() {
     if (ConnectionManager.LOG_LOW_LEVEL)
       System.out.println(this+".close()");
-    closedTrace = new RuntimeException("closed here");
     closed = true;
     cancelCheckDeadTask(); // stop checking dead on my account
     //Thread.dumpStack();
@@ -505,22 +517,22 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
    *
    * @param message DESCRIBE THE PARAMETER
    */
-  public boolean send(final Object message) {
+  public boolean send(Message message) {
     if (sentAddress == false && ctor == 2 && !(message instanceof AddressMessage)) {
+      // assertion to verify we sent the address message
       System.out.println(message);
       Thread.dumpStack();
     }
     if (ConnectionManager.LOG_LOW_LEVEL)
       System.out.println("ENQ2:@"+System.currentTimeMillis()+":"+this+":"+message+":"+message.getClass().getName());
 
-//    if (thatHalfClosed) {
-//      return false;
-//    }
-
     lastWritten = message;
     
 //    System.out.println("SM<"+type+">.send("+message+")");
-      writer.enqueue(message); 
+      if (!writer.enqueue(message)) {
+        if (connectionManager != null)
+          connectionManager.messageNotSent(message,SocketPastryNode.EC_QUEUE_FULL);
+      }
       markActive();
       return true;  
   }
@@ -733,7 +745,6 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
 	 */
 	public void setConnectionManager(ConnectionManager manager) {
     connectionManager = manager;		
-    cmSet = new RuntimeException("Stack Trace2");
 	}   
   
   /**

@@ -65,6 +65,7 @@ import rice.pastry.socket.SocketPastryNode;
 import rice.pastry.socket.SocketPoolManager;
 import rice.pastry.standard.RandomNodeIdFactory;
 import rice.pastry.wire.Wire;
+import rice.selector.testing.SelectorTest;
 
 /**
  * A hello world example for pastry. This is the distributed driver.
@@ -87,7 +88,7 @@ public class DistHelloWorldMultiThread {
   private static PastryNodeFactory factory;
   private Vector pastryNodes;
   private Vector helloClients;
-  public Random rng;
+  public static final Random rng = new Random(PastrySeed.getSeed());
 
   private static int port = 5009;
   private static String bshost = null;
@@ -103,8 +104,10 @@ public class DistHelloWorldMultiThread {
   private static boolean noKilling = false;
   private static boolean oneThreadPerMessage = false;
   public static boolean useDirect = true;
-  private static boolean limitedSockets = true; //!useDirect;
-  public static boolean useNonDirect = true; //!useDirect; //true;
+  private static boolean limitedSockets = true; 
+  public static boolean useNonDirect = true; 
+  public static boolean useRandChoices = true;
+  public static boolean testSelector = true;
   
   public static DistPastryNodeFactory getSameFactory() {
     DistPastryNodeFactory sameNodeFactory = 
@@ -131,7 +134,6 @@ public class DistHelloWorldMultiThread {
         port);
     pastryNodes = new Vector();
     helloClients = new Vector();
-    rng = new Random(PastrySeed.getSeed());
   }
 
   /**
@@ -385,6 +387,7 @@ public class DistHelloWorldMultiThread {
     System.out.println("creatingSamenode():5  "+((System.currentTimeMillis()-beginTime)/1000));
     waitForLeafSetsToStabalize(driver);
     System.out.println("creatingSamenode():6  "+((System.currentTimeMillis()-beginTime)/1000));
+    if (testSelector) SelectorTest.main(null);
   }
   
   public void killSameNode() {
@@ -528,7 +531,7 @@ public class DistHelloWorldMultiThread {
         }
       } // while
       if (numMissing == 0) {
-        throw new DoneException();
+        throw new DoneException(0);
       }
       System.out.println("  numMissing:"+numMissing+" numMissingDirect:"+numMissingDirect+" lastNumMissingDirectCtr:"+lastNumMissingDirectCtr);
       if (useDirect && limitedSockets && numMissing == numMissingDirect) {
@@ -539,7 +542,7 @@ public class DistHelloWorldMultiThread {
           lastNumMissingDirectCtr++;
           if (lastNumMissingDirectCtr >= 5) {
             System.out.println("Giving up with "+numMissingDirect+" undelevered messages.  This is likely due to a node killing a direct connection as the other was sending"); 
-            throw new DoneException();
+            throw new DoneException(numMissingDirect);
           }
         } else {
           lastNumMissingDirect = numMissingDirect;
@@ -583,15 +586,26 @@ public class DistHelloWorldMultiThread {
 		Stat curStat = null;
 		DistHelloWorldMultiThread driver = null;
 		int numSocks = 6;
+    int defautltMaxOpenSockets = SocketPoolManager.MAX_OPEN_SOCKETS;
 		for (int times = 0; times < 20; times++) {
 
 			//for (numSocks = 20; numSocks > 5; numSocks-=2) {
 
 			try {
+        if (useRandChoices) {
+          limitedSockets = rng.nextBoolean();
+          useDirect = rng.nextBoolean();
+          useNonDirect = rng.nextBoolean();
+          useRegen = rng.nextBoolean();
+        }
+        
         if (limitedSockets)
   				SocketPoolManager.MAX_OPEN_SOCKETS = numSocks;
-
-				curStat = new Stat(numSocks, numnodes);
+        else 
+          SocketPoolManager.MAX_OPEN_SOCKETS = defautltMaxOpenSockets;
+          
+				curStat = new Stat(SocketPoolManager.MAX_OPEN_SOCKETS, numnodes, useDirect, useNonDirect, useRegen);
+        System.out.println(" running with "+curStat);
 				stats.add(curStat);
         
 				driver = new DistHelloWorldMultiThread();
@@ -692,7 +706,7 @@ public class DistHelloWorldMultiThread {
         }
 				noKilling = temp;
         useRegen = temp2;
-				curStat.finished();
+				curStat.finished(de.numMissing);
         System.out.println("done " + curStat);        
         long mem1 = Runtime.getRuntime().freeMemory();
         driver = null;
@@ -920,10 +934,15 @@ class Stat {
   public long lsCompleteTime;
   public long startTime;
   public long endTime;
+  boolean useDirect, useNonDirect, useRegen;
+  int numMissing = 0;
   
-  public Stat(int numS, int numN) {
+  public Stat(int numS, int numN, boolean useDirect, boolean useNonDirect, boolean useRegen) {
     numSocks = numS;
     numNodes = numN;
+    this.useDirect = useDirect;
+    this.useNonDirect = useNonDirect;
+    this.useRegen = useRegen;
     startTime = System.currentTimeMillis();
   }
   
@@ -931,17 +950,22 @@ class Stat {
     lsCompleteTime = System.currentTimeMillis();
   }
   
-  public void finished() {
+  public void finished(int numMissing) {
     endTime = System.currentTimeMillis();
+    this.numMissing = numMissing;
   }
   
   public String toString() {
     long t = endTime-startTime;
     long t2 = lsCompleteTime-startTime;
-    return numNodes+":"+numSocks +":"+t2+","+t;
+    return "numNodes:"+numNodes+" numSocks:"+numSocks +" timeFinishedCreating:"+t2+" timeFinished:"+t+" useDirect:"+useDirect+" useNonDirect:"+useNonDirect+" useRegen:"+useRegen+" numMissing:"+numMissing;
   }
 }
 
 class DoneException extends Exception {
-  
+  int numMissing = 0;
+  public DoneException(int numMissing) {
+    super();
+    this.numMissing = numMissing;
+  }
 }

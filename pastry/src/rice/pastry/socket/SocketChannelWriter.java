@@ -44,8 +44,6 @@ import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.messaging.AckMessage;
 import rice.pastry.socket.messaging.AddressMessage;
 import rice.pastry.socket.messaging.SocketTransportMessage;
-import rice.pastry.testing.HelloMsg;
-//import rice.pastry.testing.HelloMsg;
 
 /**
  * Class which serves as an "writer" for all of the messages sent across the
@@ -65,22 +63,38 @@ import rice.pastry.testing.HelloMsg;
  */
 public class SocketChannelWriter {
 
+  /**
+   * True the first time we write something other than the address message.
+   */
   public boolean wroteOnce = false;
+  
+  /**
+   * Static fields for logging based on the messages we are writing.
+   */  
 	private static Object statLock = new Object();
   private static HashMap msgTypes = new HashMap();
   private static int numWrites = 0;
   private static int numWriteModulo = 1000;
   private static boolean logWriteTypes = false;
 
-  // the pastry node
+  /**
+   * the pastry node
+   */
   private SocketPastryNode spn;
 
-  // internal buffer for storing the serialized object
+  /**
+   * internal buffer for storing the serialized object
+   */
   private ByteBuffer buffer;
 
-  // internal list of objects waiting to be written
+  /** 
+   * internal list of objects waiting to be written
+   */
   private LinkedList queue;
 
+  /**
+   * Reverse pointer to the socketmanager.
+   */
   private SocketManager manager;
 
   /**
@@ -88,12 +102,14 @@ public class SocketChannelWriter {
    */
   public static int MAXIMUM_QUEUE_LENGTH = 128;
 
-  // the magic number array which is written first
   /**
-   * DESCRIBE THE FIELD
+   * the magic number array which is written first
    */
   protected static byte[] MAGIC_NUMBER = new byte[]{0x77, 0x21, 0x25, 0x67};
 
+  /**
+   * Used for logging.
+   */
   InetSocketAddress address;
 
   /**
@@ -131,32 +147,6 @@ public class SocketChannelWriter {
   long timeEnque = 0;
   Hashtable timeEnq = new Hashtable();
 
-  private void checkPoint(Object m, int state) {
-    
-    if (m instanceof SocketTransportMessage) {
-      m = ((SocketTransportMessage)m).msg;
-    }
-
-    if (m instanceof RouteMessage) {
-      m = ((RouteMessage)m).unwrap();
-    }    
-
-    if (m instanceof HelloMsg) {
-      HelloMsg hm = (HelloMsg)m;
-      //hm.state = state;
-      if (state == 104) {
-        //hm.addReceiver(address);
-        //hm.lastSM = manager;
-        //Thread.dumpStack();
-      }
-    }
-/*
-    if (m instanceof JoinRequest) {
-      System.out.println(m+" at "+state+" "+this);
-    }
-  */  
-  }
-
 
   /**
    * Adds an object to this SocketChannelWriter's queue of pending objects to
@@ -166,20 +156,10 @@ public class SocketChannelWriter {
    * @param o The object to be written.
    * @return DESCRIBE THE RETURN VALUE
    */
-  
-  Object firstObject;
   public boolean enqueue(Object o) {
     if (ConnectionManager.LOG_LOW_LEVEL)
       System.out.println("ENQ3:@"+System.currentTimeMillis()+":"+this+":"+o);
-    checkPoint(o,103);
 
-    if (firstObject == null) {
-      firstObject = o;
-//      System.out.println(this+" firstObject = "+firstObject+ " : "+firstObject.getClass().getName());
-      if (firstObject instanceof SocketTransportMessage) {
-//        Thread.dumpStack();
-      }
-    }
 //    System.out.println("ENQ4:"+manager+".SCW.enqueue()" + o);
     timeEnque = System.currentTimeMillis();
     timeEnq.put(o,new Long(timeEnque));
@@ -234,7 +214,6 @@ public class SocketChannelWriter {
             System.out.println("SND:@"+System.currentTimeMillis()+":"+this+":"+queue.getFirst());
 
           Object first = queue.getFirst();
-          checkPoint(first,104);
           buffer = serialize(first);
           if ((first != null) && (buffer == null)) {
             // we got a message that was too big
@@ -345,6 +324,9 @@ public class SocketChannelWriter {
     }
   }
   
+  /**
+   * yee ol' toString()
+   */
   public String toString() {
     return "SCW for "+manager;
   }

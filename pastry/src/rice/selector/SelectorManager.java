@@ -67,12 +67,15 @@ public class SelectorManager extends Thread {
   // the list of handlers which want to change their key
   private HashSet modifyKeys;
 
+  private Timer timer;
+
+  private TimerThread timerThread;
+  
   /**
    * Constructor, which is private since there is only one selector per JVM.
    */
   private SelectorManager() {
     super("Main Selector Thread");
-
     this.invocations = new LinkedList();
     this.modifyKeys = new HashSet();
 
@@ -82,7 +85,8 @@ public class SelectorManager extends Thread {
     } catch (IOException e) {
       System.out.println("SEVERE ERROR (SelectorManager): Error creating selector " + e);
     }
-
+    timer = new Timer(selector);
+    timerThread = timer.thread;
     start();
   }
 
@@ -152,8 +156,12 @@ public class SelectorManager extends Thread {
       debug("SelectorManager starting...");
 
       long lastHeartBeat = 0;
+      boolean alive = true;
       // loop while waiting for activity
-      while (select() >= 0) {
+      while (alive) {
+//        doSelect
+//        select();
+        timerThread.mainLoopHelper(this);
         long curTime = System.currentTimeMillis();
         if ((curTime - lastHeartBeat) > 60000) {
           System.out.println("selector heartbeat "+new Date());
@@ -276,14 +284,16 @@ public class SelectorManager extends Thread {
    * @return DESCRIBE THE RETURN VALUE
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  private int select() throws IOException {
+  int select(int time) throws IOException {
+    if (time > TIMEOUT)
+      time = TIMEOUT;
     try {
-      if ((invocations.size() > 0) || (modifyKeys.size() > 0)) {
+      if ((time <= 0) || (invocations.size() > 0) || (modifyKeys.size() > 0)) {
         return selector.selectNow();
       }
 
       synchronized (selector) {
-        return selector.select(TIMEOUT);
+        return selector.select(time);
       }
     } catch (IOException e) {
       if (e.getMessage().indexOf("Interrupted system call") >= 0) {
@@ -327,4 +337,8 @@ public class SelectorManager extends Thread {
       System.out.println("(SelectorManager): " + s);
     }
   }
+
+	public Timer getTimer() {
+		return timer;
+	}
 }

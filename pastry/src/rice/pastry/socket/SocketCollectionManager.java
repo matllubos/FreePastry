@@ -31,7 +31,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.TimerTask;
 import java.util.WeakHashMap;
 
 import rice.pastry.Log;
@@ -41,6 +40,7 @@ import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.exception.TooManyMessagesException;
 import rice.selector.SelectionKeyHandler;
 import rice.selector.SelectorManager;
+import rice.selector.TimerTask;
 
 /**
  * Class which maintains all outgoing open sockets. It holds a ConnectionManager 

@@ -11,10 +11,10 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.TimerTask;
 
 import rice.pastry.NodeHandle;
 import rice.selector.SelectorManager;
+import rice.selector.TimerTask;
 
 /**
  * This class is in charge of "enforcing" the limitiaton on the number 
@@ -76,7 +76,6 @@ public class SocketPoolManager {
       System.out.println("SPM opened twice : "+manager);      
       Thread.dumpStack();
     }    
-    manager.openedTrace = new RuntimeException("opened here");
 
     assertNotClosed(manager);
     permittedSet.remove(manager);
@@ -291,13 +290,14 @@ public class SocketPoolManager {
   }
 
   class WakeupTimerTask extends TimerTask {
-    public void run() {
-      SelectorManager.getSelectorManager().invoke(new Runnable() {
+    // don't need to call invoke because timer/selector are the same
+//    public void run() {
+//      SelectorManager.getSelectorManager().invoke(new Runnable() {
 				public void run() {
           myTimer = null;
           transferIdleToWaiting();
-				}
-			});
+//				}
+//			});
     }
   }
 

@@ -36,9 +36,8 @@ if advised of the possibility of such damage.
 
 package rice.pastry;
 
-import rice.pastry.messaging.*;
-import java.io.*;
-import java.util.*;
+import rice.pastry.messaging.Message;
+import rice.selector.TimerTask;
 
 /**
  * A class that represents scheduled message events

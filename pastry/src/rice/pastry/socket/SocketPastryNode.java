@@ -25,7 +25,6 @@
 package rice.pastry.socket;
 
 import java.net.InetSocketAddress;
-import java.util.TimerTask;
 
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeId;
@@ -36,6 +35,7 @@ import rice.pastry.dist.NodeIsDeadException;
 import rice.pastry.messaging.Message;
 import rice.pastry.messaging.MessageReceiver;
 import rice.selector.SelectorManager;
+import rice.selector.TimerTask;
 
 /**
  * An Socket-based Pastry node, which has two threads - one thread for
@@ -246,7 +246,7 @@ public class SocketPastryNode extends DistPastryNode {
         // don't print anything 
       } else {
         System.out.println("WARNING: message not sent "+m+":"+getErrorString(errorCode));    
-        Thread.dumpStack();
+        //Thread.dumpStack();
       }
     }
   }

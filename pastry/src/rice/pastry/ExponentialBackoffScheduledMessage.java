@@ -6,10 +6,10 @@
  */
 package rice.pastry;
 
-import java.util.Timer;
-import java.util.TimerTask;
 
 import rice.pastry.messaging.Message;
+import rice.selector.Timer;
+import rice.selector.TimerTask;
 
 /**
  * @author jeffh

@@ -8,10 +8,8 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.TimerTask;
 
 import rice.pastry.NodeHandle;
 import rice.pastry.commonapi.PastryEndpointMessage;
@@ -23,8 +21,8 @@ import rice.pastry.socket.exception.TooManyMessagesException;
 import rice.pastry.socket.messaging.AckMessage;
 import rice.pastry.socket.messaging.AddressMessage;
 import rice.pastry.socket.messaging.SocketTransportMessage;
-import rice.pastry.testing.HelloMsg;
 import rice.selector.SelectorManager;
+import rice.selector.TimerTask;
 
 /**
  * 
@@ -121,6 +119,26 @@ public class ConnectionManager {
    * Kept for debugging.
    */
   int timesMissedAck = 0;
+
+  /**
+   * We need to have some messages pending invoke on the selector thread 
+   * to keep things simple and guarantee order.  However, we must determine
+   * where we think these messages are going as they enter the invoke queue
+   * so we can start throwing away messages if too many are queued.
+   * 
+   * This object is what we synchronize on to count the number of messages
+   * in this queue.  See invokedControlMessages, invokedDataMessages.
+   */
+  private Object invokeLock = new Object();
+  
+  /**
+   * Messages in the selector invoke queue.
+   */
+  int invokedControlMessages = 0;
+  /**
+   * Messages in the selector invoke queue.
+   */
+  int invokedDataMessages = 0;
 
   // ****************** Configuration ******************
   /**
@@ -343,7 +361,7 @@ public class ConnectionManager {
 					// move all pending messages out of old dsm
 					Iterator i = temp.getPendingMessages();
 					while (i.hasNext()) {
-						Object o = i.next();
+						Message o = (Message)i.next();
 						if (!(o instanceof AddressMessage)) {
 							dataSocketManager.send(o);	
 						}	
@@ -445,6 +463,13 @@ public class ConnectionManager {
     scm.getSocketPoolManager().socketClosed(manager);
   }  
 
+  /**
+   * A helper for socketClosed().  This will requeue the messages that 
+   * we didn't get acks from.  We need to do this when we close a socket 
+   * because we don't know that these messages got to their destination.
+   * 
+   * Note that this can cause message duplication.
+   */
   private void requeueMessagesPendingAck() {
 
     Iterator i = pendingAcks.keySet().iterator();
@@ -452,7 +477,6 @@ public class ConnectionManager {
       AckTimeoutEvent ate = (AckTimeoutEvent)pendingAcks.remove(i.next());
       ate.cancel();
       Message message = ate.msg.msg;
-      checkPoint(message,-1);
             
       addToQueuePriority(ate.msg.msg);
     }    
@@ -476,7 +500,6 @@ public class ConnectionManager {
    * @param type SocketCollectionManager.TYPE_CONTROL, SocketCollectionManager.TYPE_DATA
    */
   public void send(final Message message) {    
-    checkPoint(message,666);    
     if (errors(message)) {
       return;
     }
@@ -499,10 +522,8 @@ public class ConnectionManager {
         sendNow(message);
 			}
 		});    
-  }
-  
-  private Object invokeLock = new Object();
-  
+  }  
+
   private boolean errors(Message message) {
     if (getLiveness() == NodeHandle.LIVENESS_FAULTY) {
       messageNotSent(message, SocketPastryNode.EC_CONNECTION_FAULTY);
@@ -532,15 +553,11 @@ public class ConnectionManager {
   }
   
   /**
-   * Messages in the selector invoke queue.
-   */
-  int invokedControlMessages = 0;
-  /**
-   * Messages in the selector invoke queue.
-   */
-  int invokedDataMessages = 0;
-  
-  /**
+   * Returns the number of messages that may be queued
+   * by type.  This looks for messages in all the locations
+   * they may be: controlQueue, pendingAcks, invokedControlMessages
+   * or dataSocketManager.getNumberPendingMessages(), invokedDataMessages
+   * 
    * @param type Message type.
    * @return remaining queue size.
    */
@@ -578,7 +595,6 @@ public class ConnectionManager {
    */
   private void sendNow(Message message) {    
 //    System.out.println(this+".sendNow("+message+"):"+message.getClass().getName());    
-    checkPoint(message,1);
 
     int type = getMessageType(message);
     if (type == TYPE_CONTROL) {  
@@ -596,7 +612,6 @@ public class ConnectionManager {
       }
       if (liveness < NodeHandle.LIVENESS_FAULTY) {
         openSocket(TYPE_DATA);        
-        checkPoint(message,101);
         dataSocketManager.send(message);        
       } else {
         messageNotSent(message, SocketPastryNode.EC_CONNECTION_FAULTY);
@@ -638,8 +653,6 @@ public class ConnectionManager {
    * @return true if we will attempt to send the message.  False if we're dead, or the queue is full.
    */
   private boolean enqueue(Message o) {
-    checkPoint(o,2);
-
     if (controlQueue.size() < MAXIMUM_QUEUE_LENGTH) {
       addToQueue(o);
       return true;
@@ -657,8 +670,6 @@ public class ConnectionManager {
    * @param o The feature to be added to the ToQueue attribute
    */
   private void addToQueue(Message o) {
-    checkPoint(o,3);
-    
     boolean priority = o.hasPriority();
     if (priority) {
       addToQueuePriority(o);
@@ -801,7 +812,6 @@ public class ConnectionManager {
 
   public void internalReceiveMsg(Message o) {
     long beginTime = System.currentTimeMillis();
-    checkPoint(o,555);
     scm.pastryNode.receiveMessage(o);
     long endTime = System.currentTimeMillis();   
     Object o2 = o; 
@@ -845,8 +855,6 @@ public class ConnectionManager {
     AckTimeoutEvent ate = (AckTimeoutEvent)pendingAcks.remove(new Integer(i));
     
     if (ate != null) {
-      checkPoint(ate.msg.msg,45);
-      
 //        System.out.println(this+" SM.ackReceived("+i+") on type :"+type+"elapsed Time:"+ate.elapsedTime());
       ate.cancel();              
       updateRTO(System.currentTimeMillis() - ate.startTime);
@@ -865,12 +873,9 @@ public class ConnectionManager {
     //System.out.println(this+" SM.ackNotReceived("+ate+")");    
     AckTimeoutEvent nate = (AckTimeoutEvent)pendingAcks.get(new Integer(ate.ackNum));
     if (nate == null) {
-      checkPoint(ate.msg.msg,41);
-      
       // already received ack, or we got the socket close out from under us
       return;
     }
-    checkPoint(ate.msg.msg,42);      
     timesMissedAck++;
     if (NUM_PINGS_SUSPECT_FAULTY == 0) {
       markSuspected();
@@ -1192,25 +1197,19 @@ public class ConnectionManager {
    * @return true if the message can be deleted from the queue/pendingack
    */
   private boolean rerouteExtractedMessage(Message o) {
-    checkPoint(o,-50);
-
     if (o instanceof RouteMessage) {
       RouteMessage rm = (RouteMessage)o;
       switch (getLiveness()) {
         case NodeHandle.LIVENESS_SUSPECTED:
           if (rm.getOptions().rerouteIfSuspected()) {
             scm.reroute(rm);
-            checkPoint(o,-751);
             return true;
           } // else we are suspected, but not supposed to rerouteIfSuspected()
-          checkPoint(o,-752);
           return false;
         case NodeHandle.LIVENESS_FAULTY:
           scm.reroute(rm);
-          checkPoint(o,-753);
           return true;        
         default: // alive
-          checkPoint(o,-754);
           return false; // not supposed to reroute if alive
       
       }            
@@ -1361,11 +1360,12 @@ public class ConnectionManager {
        * timer.
        */
       public void run() {
-        SelectorManager.getSelectorManager().invoke(new Runnable() {
-          public void run() {
+        // don't need to call invoke because timer/selector are the same
+//        SelectorManager.getSelectorManager().invoke(new Runnable() {
+//          public void run() {
             runOnSelector();
-          }
-        });            
+//          }
+//        });            
       }
     }
 
@@ -1482,11 +1482,12 @@ public class ConnectionManager {
        * Reschedules the task onto the selector thread.
        */
       public void run() {
-        SelectorManager.getSelectorManager().invoke(new Runnable() {
-          public void run() {
+        // don't need to call invoke because timer/selector are the same
+//        SelectorManager.getSelectorManager().invoke(new Runnable() {
+//          public void run() {
             runOnSelector();
-          }
-        });            
+//          }
+//        });            
       }
     }
 
@@ -1497,8 +1498,6 @@ public class ConnectionManager {
      * @param msg the SocketTransportMessage we are waiting for.
      */
     public AckTimeoutEvent(SocketTransportMessage msg) {
-      checkPoint(msg,40);
-
       this.ackNum = msg.seqNumber;
       this.msg = msg;
       startTime = System.currentTimeMillis();
@@ -1567,52 +1566,6 @@ public class ConnectionManager {
 
 
   // ******************* Trace Functions ***************************8
-  /**
-   * This is a temporary testing method.
-   * @param m 
-   * @param state
-   */
-  private void checkPoint(Message m, int state) {
-    
-    if (m instanceof SocketTransportMessage) {
-      m = ((SocketTransportMessage)m).msg;
-    }
-
-    if (m instanceof RouteMessage) {
-      m = ((RouteMessage)m).unwrap();
-    }    
-
-    if (m instanceof HelloMsg) {
-      HelloMsg hm = (HelloMsg)m;
-      //hm.state = state;
-      if (state == 1) {
-        //hm.addReceiver(address);
-        //hm.lastMan = this;
-        //Thread.dumpStack();
-      }
-      if (state == 45) {
-        //hm.ackReceived = true;
-      }
-      if (state == 555) {
-        //hm.lastMan = this;
-      }
-      if (state == 666) {
-        //System.out.println(m+"@"+System.identityHashCode(m)+" at "+state+" "+this);
-        //hm.lastMan = this;
-      }
-    }
-    /*
-    if (m instanceof JoinRequest) {
-      if ((state == 1) || (state == 666)) {
-        //System.out.println(m+"@"+System.identityHashCode(m)+" at "+state+" "+this);
-      }
-      if (state == 666) {
-        //System.out.println(m+"@"+System.identityHashCode(m)+" at "+state+" "+this);
-        //Thread.dumpStack();        
-      }
-    }
-    */
-  }
 
   /**
    * For debugging.
