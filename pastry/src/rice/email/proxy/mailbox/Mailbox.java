@@ -15,7 +15,7 @@ public interface Mailbox
     public void createFolder(String folder)
                       throws MailboxException;
 
-    public Vector listFolders(String pattern)
+    public MailFolder[] listFolders(String pattern)
       throws MailboxException;
 
     public void deleteFolder(String folder)

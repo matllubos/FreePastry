@@ -15,73 +15,58 @@ import java.util.*;
  * http://asg.web.cmu.edu/rfc/rfc2060.html#sec-6.3.8 </a>
  * </p>
  */
-public class ListCommand
-    extends AbstractImapCommand
-{
-    public ListCommand()
-    {
-        super("LIST");
+public class ListCommand extends AbstractImapCommand {
+
+  public ListCommand() {
+    super("LIST");
+  }
+
+  public boolean isValidForState(ImapState state) {
+
+    return state.isAuthenticated();
+  }
+
+  String _folder;
+  String reference;
+
+  public void execute() {
+    if ("".equals(_folder)) {
+      untaggedSimpleResponse("(\\Noselect) NIL \"\"");
+      taggedSimpleSuccess();
+
+      return;
     }
 
-    public boolean isValidForState(ImapState state)
-    {
+    try {
+      MailFolder[] folders = getState().getMailbox().listFolders(_folder);
 
-        return state.isAuthenticated();
+      for (int i = 0; i < folders.length; i++) {
+        untaggedSimpleResponse("(\\Noinferiors) NIL \"" + folders[i].getFullName() + "\"");
+      }
+
+      taggedSimpleSuccess();
+    } catch (MailboxException e) {
+      taggedExceptionFailure(e);
     }
+  }
 
-    String _folder;
-    String reference;
+  public String getFolder() {
 
-    public void execute()
-    {
-        if ("".equals(_folder))
-        {
-            untaggedSimpleResponse("(\\Noselect) \"/\" \"\"");
-            taggedSimpleSuccess();
+    return _folder;
+  }
 
-            return;
-        }
+  public void setFolder(String mailbox) {
+    this._folder = mailbox;
+  }
 
-        try
-        {
-            Vector fold = getState().getMailbox().listFolders(
-                                        _folder);
+  public String getReference() {
 
-            for (int i = 0; i < fold.size(); i++)
-            {
-                untaggedSimpleResponse(
-                        "() \"/\" \"" + ((MailFolder)fold.elementAt(i)).getFullName() + "\"");
-            }
+    return reference;
+  }
 
-            taggedSimpleSuccess();
-        }
-        catch (MailboxException e)
-        {
-            taggedExceptionFailure(e);
-        }
-    }
-
-    public String getFolder()
-    {
-
-        return _folder;
-    }
-
-    public void setFolder(String mailbox)
-    {
-        this._folder = mailbox;
-    }
-
-    public String getReference()
-    {
-
-        return reference;
-    }
-
-    public void setReference(String reference)
-    {
-        this.reference = reference;
-    }
+  public void setReference(String reference) {
+    this.reference = reference;
+  }
 }
 
 

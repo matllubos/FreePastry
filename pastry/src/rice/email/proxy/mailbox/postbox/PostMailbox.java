@@ -66,10 +66,22 @@ public class PostMailbox implements Mailbox {
    * @throws MailboxException If an error occurs
    * @return The specificed MailFolder.
    */
-  public MailFolder getFolder(final String name) throws MailboxException {
-    if (folders.get(name.toLowerCase()) != null) {
-      return (MailFolder) folders.get(name.toLowerCase());
+  public MailFolder getFolder(String name) throws MailboxException {
+    if (name.trim().toLowerCase().equals("inbox")) {
+      name = EmailService.INBOX_NAME;
     }
+
+    String[] names = ((PostFolder) getRootFolder()).getFolder().getChildren();
+    Arrays.sort(names);
+    if (Arrays.binarySearch(names, name) < 0) {
+      throw new MailboxException("Folder " + name + " does not exist!");
+    }
+    
+    if (folders.get(name) != null) {
+      return (MailFolder) folders.get(name);
+    }
+
+    System.out.println("Getting " + name);
     
     try {
       PostFolder root = (PostFolder) getRootFolder();
@@ -96,15 +108,15 @@ public class PostMailbox implements Mailbox {
         }
       };
 
-      root.getFolder().getChildFolder(name.toLowerCase(), fetch);
+      root.getFolder().getChildFolder(name, fetch);
 
       synchronized (wait) { if ((folder[0] == null) && (exception[0] == null)) wait.wait(); }
 
       if (exception[0] != null)
         throw exception[0];
-    
-      folders.put(name.toLowerCase(), new PostFolder(folder[0], root.getFolder(), email));
 
+      folders.put(name, new PostFolder(folder[0], root.getFolder(), email));
+      
       return (MailFolder) folders.get(name);
     } catch (Exception e) {
       e.printStackTrace();
@@ -161,6 +173,12 @@ public class PostMailbox implements Mailbox {
   }
 
   public void createFolder(String folder) throws MailboxException {
+    if (folder.trim().toLowerCase().equals("inbox")) {
+      folder = EmailService.INBOX_NAME;
+    }
+
+    System.out.println("Creating " + folder);
+    
     if (!isValidFolderName(folder))
       throw new MailboxException("Invalid folder name.");
 
@@ -187,7 +205,7 @@ public class PostMailbox implements Mailbox {
         }
       };
 
-      ((PostFolder) getRootFolder()).getFolder().createChildFolder(folder.toLowerCase(), insert);
+      ((PostFolder) getRootFolder()).getFolder().createChildFolder(folder, insert);
 
       synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
     
@@ -233,89 +251,51 @@ public class PostMailbox implements Mailbox {
     }
   }
 
-  // TO DO: use the pattern
-  public Vector listFolders(String pattern) throws MailboxException {
-    try {
-	PostFolder root = (PostFolder) getRootFolder();
-	String[] names = root.getFolder().getChildren();
-	//      MailFolder[] folders = new MailFolder[names.length];
-	Vector folders = new Vector();
-	
-	for (int i = 0; i < names.length; i++) {
+  public MailFolder[] listFolders(String pattern) throws MailboxException {
+    PostFolder root = (PostFolder) getRootFolder();
+    String[] names = root.getFolder().getChildren();
+    Vector folders = new Vector();
 
-		PostFolder folder = (PostFolder) getFolder(names[i]);
+    pattern = pattern.replaceAll("\\*", ".*").replaceAll("\\%", ".*");
 
-		if (pattern.endsWith("*") || pattern.equals("*")) {
-		    String p = pattern.replaceAll("\\*", ".*");
-		    if (((String)folder.getFullName()).matches(p)) 
-			folders.add(new PostFolder(folder.getFolder(), root.getFolder(), email));
-		}
+    for (int i = 0; i < names.length; i++) {
+      PostFolder folder = (PostFolder) getFolder(names[i]);
 
-		if (pattern.endsWith("%")) {
-		    String p = pattern.replaceAll("\\%", ".*");
-		    if (((String)folder.getFullName()).matches(p)) 
-			folders.add(new PostFolder(folder.getFolder(), root.getFolder(),email));
-		}
-
-		else if (folder.getFullName().equalsIgnoreCase(pattern)) {
-		    folders.add(new PostFolder(folder.getFolder(), root.getFolder(), email));
-		 
-		}
-	}
-	return folders;
-    } catch (Exception e) {
-	throw new MailboxException(e);
+      if (folder.getFullName().matches(pattern))
+        folders.add(new PostFolder(folder.getFolder(), root.getFolder(), email));
     }
+
+    return (MailFolder[]) folders.toArray(new MailFolder[0]);
   }    
 
   public void subscribe(ImapConnection conn, String fullName) throws MailboxException {
-      try {
-
-	  if (!subscriptions.containsKey(conn)) {
-	      subscriptions.put(conn, new Vector());
-	  }
-	 
-	  if (!((Vector)subscriptions.get(conn)).contains(fullName)) {
-	      ((Vector)subscriptions.get(conn)).add(fullName);
-	  }
-
-      } catch (Exception e) {
-	  throw new MailboxException(e);
+    try {
+      if (! subscriptions.containsKey(conn)) {
+        subscriptions.put(conn, new Vector());
       }
+
+      if (!((Vector) subscriptions.get(conn)).contains(fullName)) {
+        ((Vector)subscriptions.get(conn)).add(fullName);
+      }
+    } catch (Exception e) {
+      throw new MailboxException(e);
+    }
   }
 
   public void unsubscribe(ImapConnection conn, String fullName) throws MailboxException {
-      //throw new MailboxException("Subscriptions are not yet implemented...");
-      try{
-	  if (((Vector)subscriptions.get(conn)).contains(fullName)) {
-	      ((Vector)subscriptions.get(conn)).remove(fullName);
-	  }      
-      } catch (Exception e) {
-	  throw new MailboxException(e);
-      }
+    if (((Vector) subscriptions.get(conn)).contains(fullName)) {
+      ((Vector) subscriptions.get(conn)).remove(fullName);
+    }
   }
 
   public String[] listSubscriptions(ImapConnection conn, String pattern) throws MailboxException {
-      try {
-	  String[] nameList;
-	  if (!subscriptions.containsKey(conn)) {
-	      subscriptions.put(conn, new Vector());
-	      nameList = new String[1];
-	      nameList[0] = "";
-	  }
-	  else {
-	      Vector subList = (Vector)subscriptions.get(conn);
-	     
-	       nameList = new String[subList.size()];
-	      for (int i=0; i < subList.size(); i++) {
-		  nameList[i] = (String)subList.elementAt(i);	 
-	      }
-	  }	  
-	  return nameList;
-	  
-      } catch (Exception e) {
-	  throw new MailboxException(e);
-      }
+    if (subscriptions.containsKey(conn)) {
+      Vector subList = (Vector) subscriptions.get(conn);
+
+      return (String[]) subList.toArray(new String[0]);
+    } else {
+      return new String[0];
+    }
   }
 }
 
