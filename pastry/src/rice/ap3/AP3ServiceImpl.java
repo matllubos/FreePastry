@@ -94,6 +94,12 @@ public class AP3ServiceImpl
     boolean messageIDCollided = true;
     AP3Message requestMsg = null;
 
+    requestMsg = _createAP3Message(this.getNodeId(),
+				   request,
+				   AP3MessageType.REQUEST,
+				   fetchProbability);
+
+    /*
     while(messageIDCollided) {
       try {
 	requestMsg = _createAP3Message(this.getNodeId(),
@@ -107,14 +113,16 @@ public class AP3ServiceImpl
       }
     }
 
-    this._routeMsg(_generateRandomNodeID(), requestMsg);
     _threadTable.put(requestMsg.getID(),
 		     new ThreadTableEntry(Thread.currentThread(), null));
+    */
+
+    this._routeMsg(_generateRandomNodeID(), requestMsg);
 
     /* In the future, change wait() to be wait(timeout) 
      * so that the thread can wake after a timeout period to handle the
      * timeout. 
-     */
+
     while(((ThreadTableEntry) _threadTable.get(requestMsg.getID()))._msg ==
 	  null) {
       System.out.println("waiting...");
@@ -122,19 +130,24 @@ public class AP3ServiceImpl
 	//wait();
 	Thread.currentThread().wait();
       } catch (Exception e) {
-	/* If the thread is interrupted, continue.
-	 */
+	System.out.println("\nawoken\n");
+	// If the thread is interrupted, continue.
       }
     }
+    */
 
     /* Thread is here because it has been notified by a thread
      * that deposited the response message in the thread table.
      * So get that response msg, extract the object and return it.
-     */
+
     AP3Message responseMsg = 
       ((ThreadTableEntry) _threadTable.get(requestMsg.getID()))._msg;
 
     return responseMsg.getContent();
+    */
+
+    System.out.println("\nDEBUG -------- Leaving getAnonymizedContent()");
+    return null;
   }
 
   /**
@@ -197,10 +210,12 @@ public class AP3ServiceImpl
     _routingTable.dropEntry(msg.getID());
 
     if(routeInfo == null) {
+      System.out.println("\n\nDEBUG -------- Received an unknown response in node " +
+			 this.getNodeId() + "\n\n");
       /* We know nothing about this response message, so drop it */
       return;
     } else {
-      if(routeInfo.getSource() == this.getNodeId()) {
+      if(routeInfo.getSource().equals(this.getNodeId())) {
 	/* Response belongs to this node so deposit response message in the
 	 * thread table and wake up the appropriate thread.
 	 */
@@ -216,6 +231,8 @@ public class AP3ServiceImpl
 	    ("No sleeping thread found to give response to");
 	}
 	
+	System.out.println("\n\nDEBUG -------- Received my response in node " +
+			   this.getNodeId() + "\n\n");
 	threadInfo._msg = msg;
 	threadInfo._thread.notify();
       } else {
@@ -236,6 +253,8 @@ public class AP3ServiceImpl
     AP3RoutingTableEntry routeInfo = _routingTable.getEntry(msg.getID());
     if(routeInfo != null) {
       /* This is a message id collision, drop the request */
+      System.out.println("\ncollision.node =" + this.getNodeId() + 
+			 "\ncollision.messageID =" + msg.getID() + "\n");
       return;
     }
     

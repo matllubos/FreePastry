@@ -63,7 +63,7 @@ public class AP3Message extends Message {
     } else {
       msgType = "RESPONSE";
     }
-    return "msg.type = " + msgType + "\n" + 
+    return "\n" + "msg.type = " + msgType + "\n" + 
       "msg.id = " + _messageID + "\n" +
       "msg.content = " + _content + "\n" +
       "msg.prob = " + _fetchProbability + "\n" +

@@ -21,4 +21,9 @@ public interface AP3MessageID {
    * Returns the hashcode value of the object.
    */
   int hashCode();
+
+  /**
+   * Returns the string representation of the node.
+   */
+  public String toString();
 }

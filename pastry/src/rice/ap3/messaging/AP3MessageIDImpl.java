@@ -49,10 +49,17 @@ public class AP3MessageIDImpl
   }
 
   /**
+   * Returns the string representation of the node.
+   */
+  public String toString() {
+    return _idCode.toString();
+  }
+
+  /**
    * Returns the internal representation of the id.
    * Used for .equals().
    */
   protected Long getIDCode() {
     return _idCode;
-  }    
+  }
 }

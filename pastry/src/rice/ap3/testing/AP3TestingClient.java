@@ -14,7 +14,7 @@ import rice.pastry.*;
  */
 public class AP3TestingClient implements AP3Client {
 
-  private AP3Service _ap3;
+  private AP3TestingService _ap3;
 
   public AP3TestingClient(PastryNode pn) {
     _ap3 = new AP3TestingService(pn, this);
@@ -31,7 +31,7 @@ public class AP3TestingClient implements AP3Client {
     return null;
   }
 
-  public AP3Service getService() {
+  public AP3TestingService getService() {
     return _ap3;
   }
 

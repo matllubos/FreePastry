@@ -17,7 +17,8 @@ import java.rmi.RMISecurityManager;
  * Tests AP3ServiceImpl using RMI.
  *
  * @version $Id$
- # @author Charlie Reis
+ * @author Charlie Reis
+ * @author Gaurav Oberoi
  */
 
 public class RMIAP3Test {
@@ -30,7 +31,7 @@ public class RMIAP3Test {
     private static int port = 5009;
     private static String bshost = "localhost";
     private static int bsport = 5009;
-    private static int numnodes = 1;
+    private static int numnodes = 50;
 
     public RMIAP3Test() {
 	factory = new RMIPastryNodeFactory(port);
@@ -193,42 +194,65 @@ public class RMIAP3Test {
 	try { wait(ms); } catch (InterruptedException e) {}
     }
 
-
-    public void makeRequests(int k) {
-	int n = ap3Nodes.size();
-
-	for (int i=0; i<k; i++) {
-	    int nodeIndex = rng.nextInt(n);
-
-	    AP3TestingClient ap3Node = (AP3TestingClient) ap3Nodes.get(nodeIndex);
-
-	    ap3Node.getService().getAnonymizedContent("requestMsg", 0.50);
-
-	    //while(simulate());
-
-	    System.out.println("\n\n------------------- Finished making requests\n\n");
-	}
+  /*
+  public void makeRequests(int k) {
+    int n = ap3Nodes.size();
+    
+    for (int i=0; i<k; i++) {
+      int nodeIndex = rng.nextInt(n);
+      
+      AP3TestingClient ap3Node = (AP3TestingClient) ap3Nodes.get(nodeIndex);
+      
+      ap3Node.getService().getAnonymizedContent("requestMsg", 0.100);
+      
+      //while(simulate());
+      
+      System.out.println("\n\n------------------- Finished making requests\n\n");
     }
+  }
+  */
 
+  public void makeRequests(int k) {
+    // Send one message only, from the first node to the second one in the list
+    AP3TestingClient sourceNode = (AP3TestingClient) ap3Nodes.get(0);
+    AP3TestingClient destNode = (AP3TestingClient) ap3Nodes.get(1); 
+    
+    PastryNode sourcePastryNode = (PastryNode) pastrynodes.get(0);
+    PastryNode destPastryNode = (PastryNode) pastrynodes.get(1);
+    
 
-    /**
-     * Usage: RMIAP3Test [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
-     */
-    public static void main(String args[]) {
-        int k = 2; // number of messages to send
-
-	doRMIinitstuff(args);
-	RMIAP3Test ap3Test = new RMIAP3Test();
-
-	for (int i = 0; i < numnodes; i++)
-	    ap3Test.makePastryNode();
-
-	System.out.println(numnodes + " nodes constructed");
-        ap3Test.makeRequests(k);
-
-	//while (true)
-	//for (int i = 0; i < 20; i++)
-	//    pt.printLeafSets();
-	System.out.println("\n\n------------------- Finished initializing\n\n");
+    while(!sourcePastryNode.isReady()) {
+      System.out.println("DEBUG ----------------- Source node not ready");
     }
+    while(!destPastryNode.isReady()) {
+      System.out.println("DEBUG ----------------- Dest node not ready");
+    }
+      
+    sourceNode.getService().setRandomNode(destNode.getService().getNodeId());
+    sourceNode.getService().getAnonymizedContent("requestMsg", 0.100);
+      
+    System.out.println("\n\n------------------- Finished making requests\n\n");
+  } 
+  
+  
+  /**
+   * Usage: RMIAP3Test [-port p] [-nodes n] [-bootstrap host[:port]] [-help]
+   */
+  public static void main(String args[]) {
+    int k = 1; // number of messages to send
+    
+    doRMIinitstuff(args);
+    RMIAP3Test ap3Test = new RMIAP3Test();
+    
+    for (int i = 0; i < numnodes; i++)
+      ap3Test.makePastryNode();
+    
+    System.out.println(numnodes + " nodes constructed");
+    ap3Test.makeRequests(k);
+    
+    //while (true)
+    //for (int i = 0; i < 20; i++)
+    //    pt.printLeafSets();
+    System.out.println("\n\n------------------- Finished initializing\n\n");
+  }
 }

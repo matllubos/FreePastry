@@ -68,8 +68,13 @@ public class AP3TestingMessage extends AP3Message {
     Iterator it = _routeInfo.iterator();
     while(it.hasNext()) {
       NodeId id = (NodeId) it.next();
-      routeStr = routeStr + id.toString() + ",";
+      routeStr = routeStr + id.toString();
+      if(it.hasNext()) {
+	routeStr += ",";
+      }
     }
+    routeStr += "]";
+    
     return super.toString() + "msg.route: " + routeStr + "\n";
   }
 }
