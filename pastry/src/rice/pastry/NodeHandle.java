@@ -93,6 +93,23 @@ public interface NodeHandle extends MessageReceiver {
      */
     
     public void setLocalNode(PastryNode pn);
+
+    /**
+     * Equality operator for nodehandles.
+     *
+     * @param obj a nodehandle object
+     * @return true if they are equal, false otherwise.
+     */ 
+    public boolean equals(Object obj);
+
+
+    /**
+     * Hash codes for nodehandles.
+     * 
+     * @return a hash code.
+     */
+    public int hashCode(); 
+
 }
 
 

@@ -81,4 +81,34 @@ public class DirectNodeHandle extends LocalNode implements NodeHandle
     public NetworkSimulator getSimulator(){
 	return simulator;
     }
+
+    /**
+     * Equivalence relation for nodehandles. They are equal if and only 
+     * if their corresponding NodeIds are equal.
+     *
+     * @param obj the other nodehandle .
+     * @return true if they are equal, false otherwise.
+     */
+    public boolean equals(Object obj){
+	if(obj == null)
+	    return false;
+	NodeHandle nh = (NodeHandle)obj;
+	if(this.getNodeId().equals(nh.getNodeId()))
+	    return true;
+	else
+	    return false;
+    }
+
+    /**
+     * Hash codes for node handles.It is the hashcode of 
+     * their corresponding NodeId's.
+     * 
+     * @return a hash code.
+     */
+    public int hashCode(){
+	return this.getNodeId().hashCode();
+    }
+
+
+
 }

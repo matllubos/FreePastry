@@ -254,6 +254,37 @@ public class RMINodeHandle extends DistNodeHandle
 	    out.writeObject(nodeId);
 	}
 
+    /**
+     * Equivalence relation for nodehandles. They are equal if and 
+     * only if their corresponding NodeIds are equal.
+     *
+     * @param obj the other nodehandle .
+     * @return true if they are equal, false otherwise.
+     */
+
+    public boolean equals(Object obj) {
+	NodeHandle nh;
+	
+	if(obj == null) return false;
+
+	nh = (NodeHandle)obj;
+	if(this.getNodeId().equals(nh.getNodeId()))
+	    return true;
+	else
+	    return false;
+    }
+    
+    /**
+     * Hash codes for node handles. It is the hashcode of 
+     * their corresponding NodeId's.
+     * 
+     * @return a hash code.
+     */
+    public int hashCode(){
+	return this.getNodeId().hashCode();
+    }
+
+
     public String toStringImpl() {
 	return (isLocal ? "(local " : "") + "handle " + nodeId
 	    + (alive ? "" : ":dead")
