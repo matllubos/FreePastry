@@ -29,6 +29,7 @@ public class SelectCommand
         catch (MailboxException me)
         {
             taggedExceptionFailure(me);
+          me.printStackTrace();
         }
     }
 

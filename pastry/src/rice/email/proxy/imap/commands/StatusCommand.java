@@ -52,28 +52,29 @@ public class StatusCommand
 
             getConn().print("* STATUS \"" + _folder + "\" (");
             String response = "";
-            if (_requests.contains("MESSAGES"))
-            {
+            if (_requests.contains("MESSAGES")) {
                 int exists = fold.getMessages(MsgFilter.ALL).size();
                 response += "MESSAGES " + exists + " ";
             }
 
-            if (_requests.contains("RECENT"))
-            {
+            if (_requests.contains("RECENT")) {
                 int recent = fold.getMessages(MsgFilter.RECENT).size();
                 response += "RECENT " + recent + " ";
             }
 
-            if (_requests.contains("UNSEEN"))
-            {
+            if (_requests.contains("UNSEEN")) {
               int recent = fold.getMessages(MsgFilter.not(MsgFilter.SEEN)).size();
               response += "UNSEEN " + recent + " ";
             }
             
-            if (_requests.contains("UIDVALIDITY"))
-            {
+            if (_requests.contains("UIDVALIDITY")) {
                 String uid = fold.getUIDValidity();
                 response += "UIDVALIDITY " + uid + " ";
+            }
+
+            if (_requests.contains("UIDNEXT")) {
+              int uid = fold.getNextUID();
+              response += "UIDNEXT " + uid + " ";
             }
 
             getConn().print(response.trim());

@@ -15,76 +15,61 @@ import rice.email.proxy.mailbox.MsgFilter;
  * http://asg.web.cmu.edu/rfc/rfc2060.html#sec-6.3.2 </a>
  * </p>
  */
-public class ExamineCommand
-    extends AbstractImapCommand
-{
-    String _folder;
+public class ExamineCommand extends AbstractImapCommand {
 
-    public ExamineCommand()
-    {
-        super("EXAMINE");
-    }
+  String _folder;
 
-    public boolean isValidForState(ImapState state)
-    {
+  public ExamineCommand() {
+    super("EXAMINE");
+  }
 
-        return state.isAuthenticated();
-    }
+  public boolean isValidForState(ImapState state) {
+    return state.isAuthenticated();
+  }
 
-    public ExamineCommand(String name)
-    {
-        super(name);
-    }
+  public ExamineCommand(String name) {
+    super(name);
+  }
 
-    public void execute()
-    {
-        try
-        {
-            if (_folder != null) {
-              MailFolder fold = getState().getFolder(_folder);
+  public void execute() {
+    try {
+      if (_folder != null) {
+        MailFolder fold = getState().getFolder(_folder);
 
-              int exists         = fold.getMessages(MsgFilter.ALL).size();
-              int recent         = fold.getMessages(MsgFilter.RECENT).size();
-              String UIDvalidity = fold.getUIDValidity();
+        int exists         = fold.getMessages(MsgFilter.ALL).size();
+        int recent         = fold.getMessages(MsgFilter.RECENT).size();
 
-              untaggedResponse(exists + " EXISTS");
-              untaggedResponse(recent + " RECENT");
-              untaggedResponse(
-                    "FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)");
-	      untaggedSuccess(
-		      "[PERMANENTFLAGS (\\* \\Answered \\Flagged \\Deleted \\Seen \\Draft)] Permanant flags");
-              untaggedSuccess(
-                      "[UIDVALIDITY " + UIDvalidity + 
-                      "] UIDs valid ");
-            }
-          
-          String writeStatus = isWritable() ? "[READ-WRITE]" : "[READ-ONLY]";
-          
-            taggedSuccess(
-                    writeStatus + " " + getCmdName() + 
-                    " completed");
+        untaggedResponse(exists + " EXISTS");
+        untaggedResponse(recent + " RECENT");
+        untaggedSuccess("[UIDVALIDITY " + fold.getUIDValidity() + "] UIDs valid ");
+        untaggedSuccess("[UIDNEXT " + fold.getNextUID() + "] Predicted next UID ");
+        untaggedResponse("FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)");
 
+        if (isWritable()) {
+          untaggedSuccess("[PERMANENTFLAGS (\\* \\Answered \\Flagged \\Deleted \\Seen \\Draft)] Permanent flags");
+        } else {
+          untaggedSuccess("[PERMANENTFLAGS ()] No permanent flags permitted");
         }
-        catch (MailboxException e)
-        {
-            taggedExceptionFailure(e);
-        }
+      }
+
+      String writeStatus = isWritable() ? "[READ-WRITE]" : "[READ-ONLY]";
+
+      taggedSuccess(writeStatus + " " + getCmdName() + " completed");
+
+    } catch (MailboxException e) {
+      taggedExceptionFailure(e);
     }
+  }
 
-    protected boolean isWritable()
-    {
+  protected boolean isWritable() {
+    return false;
+  }
 
-        return false;
-    }
+  public String getFolder() {
+    return _folder;
+  }
 
-    public String getFolder()
-    {
-
-        return _folder;
-    }
-
-    public void setFolder(String mailbox)
-    {
-        _folder = mailbox;
-    }
+  public void setFolder(String mailbox) {
+    _folder = mailbox;
+  }
 }

@@ -1,10 +1,7 @@
 PACKAGE = rice.email.proxy
 
 SOURCE  = \
-  EmailProxy.java \
-  CertificateAuthorityKeyGenerator.java \
-  CertificateGenerator.java \
-  password.java
+  EmailProxy.java 
 
 RMI_SOURCE =
 

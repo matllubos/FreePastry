@@ -32,14 +32,14 @@ public class PostMessage implements StoredMessage {
     return sequence;
   }
 
-    public Folder getFolder() {
-	return folder;
-    }
+  public Folder getFolder() {
+    return folder;
+  }
 
-    public StoredEmail getStoredEmail() {
-	return email;
-    }
-
+  public StoredEmail getStoredEmail() {
+    return email;
+  }
+  
   public MimeMessage getMessage() throws MailboxException {
     try {
       final Exception[] exception = new Exception[1];

@@ -4,7 +4,9 @@ SOURCE  = \
 	LogEntry.java \
 	LogEntryReference.java \
 	Log.java \
-	LogReference.java 
+	LogReference.java \
+  EncryptedLog.java \
+  EncryptedLogEntry.java
 
 RMI_SOURCE =
 

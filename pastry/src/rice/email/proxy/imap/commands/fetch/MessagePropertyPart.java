@@ -279,15 +279,16 @@ public class MessagePropertyPart
         personal = "\"" + personal + "\"";
 
       String emailAddress = address.getAddress();
-      String user = null;
-      String server = null;
+      String user = "NIL";
+      String server = "NIL";
 
-      if (emailAddress == null) {
-        user = "NIL";
-        server = "NIL";
-      } else {
-        user = "\"" + emailAddress.substring(0, address.getAddress().indexOf("@")) + "\"";
-        server = "\"" + emailAddress.substring(address.getAddress().indexOf("@") + 1) + "\"";
+      if (emailAddress != null) {
+        if (emailAddress.indexOf("@") >= 0) {
+          user = "\"" + emailAddress.substring(0, address.getAddress().indexOf("@")) + "\"";
+          server = "\"" + emailAddress.substring(address.getAddress().indexOf("@") + 1) + "\"";
+        } else {
+          user = "\"" + emailAddress + "\"";
+        }
       }
 
       getConn().print("(" + personal + " NIL " + user + " " + server + ")");

@@ -44,7 +44,7 @@ public class AppendCommand
 
     public void execute()
     {
-        getConn().println("+continue");
+        getConn().println("+ Ready for data");
         MovingMessage msg = getState().createMovingMessage();
         try
         {

@@ -1,4 +1,4 @@
-package rice.email.proxy;
+package rice.post.security;
 
 import rice.post.*;
 import rice.post.security.*;
@@ -28,29 +28,23 @@ public class CertificateGenerator {
       String pass = CertificateAuthorityKeyGenerator.fetchPassword("Please enter the password");
 
       System.out.print("    Decrypting keypair\t\t\t\t\t\t");
-      SecurityService security = new SecurityService(null, null);
+      byte[] key = SecurityService.hash(pass.getBytes());
+      byte[] data = SecurityService.decryptDES(cipher, key);
 
-      byte[] key = security.hash(pass.getBytes());
-      byte[] data = security.decryptDES(cipher, key);
-
-      KeyPair caPair = (KeyPair) security.deserialize(data);
+      KeyPair caPair = (KeyPair) SecurityService.deserialize(data);
       System.out.println("[ DONE ]");
 
       System.out.print("Please enter the new username (@rice.edu.post): ");
       BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
       String userid = input.readLine();
-      
-      System.out.print("    Build a key pair generator\t\t\t\t\t");
-      KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-      System.out.println("[ DONE ]");
 
       System.out.print("    Generating new key pair\t\t\t\t\t");
-      KeyPair pair = kpg.generateKeyPair();
+      KeyPair pair = SecurityService.generateKeyRSA();
       System.out.println("[ DONE ]");
 
       System.out.print("    Generating the certificate\t\t\t\t\t");
       PostUserAddress address = new PostUserAddress(userid + "@rice.edu.post");
-      PostCertificate certificate = security.generateCertificate(address, pair.getPublic(), caPair.getPrivate());
+      PostCertificate certificate = SecurityService.generateCertificate(address, pair.getPublic(), caPair.getPrivate());
       System.out.println("[ DONE ]");
 
       FileOutputStream fos = new FileOutputStream(userid + ".certificate");
@@ -67,11 +61,9 @@ public class CertificateGenerator {
       String password = CertificateAuthorityKeyGenerator.getPassword();
 
       System.out.print("    Encrypting keypair\t\t\t\t\t\t");
-      security = new SecurityService(null, null);
-
-      key = security.hash(password.getBytes());
-      data = security.serialize(pair);
-      cipher = security.encryptDES(data, key);
+      key = SecurityService.hash(password.getBytes());
+      data = SecurityService.serialize(pair);
+      cipher = SecurityService.encryptDES(data, key);
       System.out.println("[ DONE ]");
 
       fos = new FileOutputStream(userid + ".keypair.enc");
@@ -88,19 +80,4 @@ public class CertificateGenerator {
       e.printStackTrace();
     }
   }
-
-  static class Eraser extends Thread {
-    private boolean shouldRun = true;
-
-    public void run() {
-      while (shouldRun) {
-        System.out.print("\b ");
-      }
-    }
-
-    public synchronized void halt() {
-      shouldRun = false;
-    }
-  }
-
 }

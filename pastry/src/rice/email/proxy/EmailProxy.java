@@ -115,8 +115,7 @@ public class EmailProxy {
       System.out.println("[ DONE ]");
 
       System.out.print("    Verifying " + userid + "'s certificate\t\t\t\t");
-      SecurityService security = new SecurityService(null, null);
-      if (! security.verifyCertificate(caPublic, certificate)) {
+      if (! SecurityService.verifyCertificate(caPublic, certificate)) {
         System.out.println("Certificate could not be verified.");
         System.exit(0);
       }
@@ -135,10 +134,10 @@ public class EmailProxy {
       String pass = CertificateAuthorityKeyGenerator.fetchPassword(userid + "'s password");
 
       System.out.print("    Decrypting " + userid + "'s keypair\t\t\t\t");
-      byte[] key = security.hash(pass.getBytes());
-      byte[] data = security.decryptDES(cipher, key);
+      byte[] key = SecurityService.hash(pass.getBytes());
+      byte[] data = SecurityService.decryptDES(cipher, key);
 
-      pair = (KeyPair) security.deserialize(data);
+      pair = (KeyPair) SecurityService.deserialize(data);
       System.out.println("[ DONE ]");
 
       System.out.print("    Verifying " + userid + "'s keypair\t\t\t\t");
@@ -162,23 +161,12 @@ public class EmailProxy {
       past = new PastImpl(pastry, storage, REPLICATION_FACTOR, INSTANCE_NAME);
       System.out.println("[ DONE ]");
 
-      //System.out.print("    Press <ENTER> when you have the Pastry and PAST networks up.\n");
-      //BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
-      //input.readLine();
-
-      try {
-	  Thread.sleep(10000);
-      }catch (InterruptedException e) {
-      }
-
       System.out.print("    Starting POST service\t\t\t\t\t");
       post = new PostImpl(pastry, past, scribe, address, pair, certificate, caPublic, INSTANCE_NAME);
       System.out.println("[ DONE ]");
-      
-      Thread.sleep(5000);
 
       System.out.print("    Starting Email service\t\t\t\t\t");
-      email = new EmailService(post);
+      email = new EmailService(post, pair);
       manager = new UserManagerImpl(email, new PostMailboxManager(email));
       manager.createUser(address.toString(), null, pass);
       System.out.println("[ DONE ]");

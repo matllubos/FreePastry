@@ -36,13 +36,18 @@ public class EmailService extends PostClient {
   // the inbox folder
   private Folder inbox;
 
+  // the keypair used to encrypt the log
+  private KeyPair keyPair;
+
   /**
     * Constructor
    *
    * @param post The Post service to use
    */
-  public EmailService(Post post) {
+  public EmailService(Post post, KeyPair keyPair) {
     _post = post;
+
+    this.keyPair = keyPair;
 
     post.addClient(this);
 
@@ -142,11 +147,7 @@ public class EmailService extends PostClient {
               public void receiveResult(Object o) {
                 try {
                   if (folder == null) {
-
-                    EmailLog emailLog = (EmailLog) o;
-                    emailLog.setPost(_post);
-
-                    folder = new Folder(emailLog, _post);
+                    folder = new Folder((EmailLog) o, _post, keyPair);
 
                     folder.createChildFolder("inbox", this);
                   } else {
@@ -180,7 +181,7 @@ public class EmailService extends PostClient {
               }
             };
 
-            EmailLog emailRootLog = new EmailLog(pca, _post.getStorageService().getRandomNodeId(), _post);
+            EmailLog emailRootLog = new EmailLog(pca, _post.getStorageService().getRandomNodeId(), _post, keyPair);
             mainLog.addChildLog(emailRootLog, store);
           } else {
 
@@ -190,10 +191,7 @@ public class EmailService extends PostClient {
 
                 try {
                   if (folder == null) {
-                    EmailLog emailLog = (EmailLog) o;
-                    emailLog.setPost(_post);
-
-                    folder = new Folder(emailLog, _post);
+                    folder = new Folder((EmailLog) o, _post, keyPair);
                     folder.getChildFolder("inbox", this);
                   } else {
                     inbox = (Folder) o;

@@ -1,4 +1,4 @@
-package rice.email.proxy;
+package rice.post.security;
 
 public class password {
   public static native String getPassword();

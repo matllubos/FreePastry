@@ -17,12 +17,11 @@ public class PostFlagList implements FlagList {
   }
 
   public static PostFlagList get(PostMessage msg) {
-
     if (loc.get(msg.getStoredEmail().getEmail()) == null) {
       loc.put(msg.getStoredEmail().getEmail(), new PostFlagList(msg));
     }
-      return (PostFlagList) loc.get(msg.getStoredEmail().getEmail());
-      // this is returning emails. Should it be returning MimedMessages??
+
+    return (PostFlagList) loc.get(msg.getStoredEmail().getEmail());
   }
   
   public void addFlag(String flag)
@@ -35,51 +34,49 @@ public class PostFlagList implements FlagList {
     setFlag(flag, false);
   }
 
-  public void setFlag(String flag, boolean value)
-  {
-    
-      if ("\\Deleted".equalsIgnoreCase(flag))
-	  _msg.getStoredEmail().getFlags().setDeleted(value);
-      if ("\\Answered".equalsIgnoreCase(flag))
-	  _msg.getStoredEmail().getFlags().setAnswered(value);
-      if ("\\Seen".equalsIgnoreCase(flag))
-	  _msg.getStoredEmail().getFlags().setSeen(value);
-      if ("\\Flagged".equalsIgnoreCase(flag))
-	  _msg.getStoredEmail().getFlags().setFlagged(value);
-      if ("\\Draft".equalsIgnoreCase(flag))
-	  _msg.getStoredEmail().getFlags().setDraft(value);
+  public void setFlag(String flag, boolean value) {
+    if ("\\Deleted".equalsIgnoreCase(flag))
+      _msg.getStoredEmail().getFlags().setDeleted(value);
+    if ("\\Answered".equalsIgnoreCase(flag))
+      _msg.getStoredEmail().getFlags().setAnswered(value);
+    if ("\\Seen".equalsIgnoreCase(flag))
+      _msg.getStoredEmail().getFlags().setSeen(value);
+    if ("\\Flagged".equalsIgnoreCase(flag))
+      _msg.getStoredEmail().getFlags().setFlagged(value);
+    if ("\\Draft".equalsIgnoreCase(flag))
+      _msg.getStoredEmail().getFlags().setDraft(value);
 
-      try {
-	  final Exception[] exception = new Exception[1];
-	  final Object[] result = new Object[1];
-	  final Object wait = "wait";
-	  
-	  Continuation c = new Continuation() {
-		  public void receiveResult(Object o) {
-		      synchronized(wait) {
-			  result[0] = o;
-			  wait.notify();
-		      }
-		  }
-		  public void receiveException (Exception e) {
-		      synchronized (wait) {
-			  exception[0] = e;
-			  result[0] = "result";
-			  wait.notify();
-		      }
-		  }
-	      };
-	  _msg.getFolder().updateMessage(_msg.getStoredEmail(), c);
-	  synchronized (wait) { if (result[0] == null) wait.wait();}
-	  
-	  if (exception[0] != null) {
-	      throw new Exception(exception[0]);
-	  }
-      }catch (Exception e) {
-	  
+    try {
+      final Exception[] exception = new Exception[1];
+      final Object[] result = new Object[1];
+      final Object wait = "wait";
+
+      Continuation c = new Continuation() {
+        public void receiveResult(Object o) {
+          synchronized(wait) {
+            result[0] = o;
+            wait.notify();
+          }
+        }
+        public void receiveException (Exception e) {
+          synchronized (wait) {
+            exception[0] = e;
+            result[0] = "result";
+            wait.notify();
+          }
+        }
+      };
+      _msg.getFolder().updateMessage(_msg.getStoredEmail(), c);
+      synchronized (wait) { if (result[0] == null) wait.wait();}
+
+      if (exception[0] != null) {
+        throw new Exception(exception[0]);
       }
+    } catch (Exception e) {
+      // XXX NEED TO DO SOMETHING HERE!
+    }
   }
-
+  
 
   public void commit()
   {

@@ -55,6 +55,10 @@ public class PostFolder implements MailFolder {
     return folder.getName();
   }
 
+  public int getNextUID() {
+    return folder.getNextUID();
+  }
+
   public Folder getFolder() {
     return folder;
   }
@@ -87,7 +91,6 @@ public class PostFolder implements MailFolder {
 
       StreamUtils.copy(msg.getContent(), writer);
 
-      // TO DO - parse message
       EmailData data = new EmailData(baos.toByteArray());
 
       Email email = new Email(sender, recipients, "TEST", data, null);
@@ -160,9 +163,9 @@ public class PostFolder implements MailFolder {
 
       LinkedList list = new LinkedList();
       StoredEmail[] emails = (StoredEmail[]) result[0];
-      
-      for (int i=emails.length-1; i>=0; i--) {
-        PostMessage msg = new PostMessage(emails[i], emails.length-i, this.getFolder());
+
+      for (int i=0; i<emails.length; i++) {
+        PostMessage msg = new PostMessage(emails[i], i+1, this.getFolder());
         if (range.includes(msg)) {
           list.addLast(msg);
         }
@@ -175,27 +178,7 @@ public class PostFolder implements MailFolder {
   }
 
   public String getUIDValidity() throws MailboxException {
-/*    File[] files = _folder.listFiles(UID_FILTER);
-    if (files.length != 1)
-      throw new MailboxException("Not one UID validity");
-
-    String fName = files[0].getName();
-    if (fName.length() < 5)
-      throw new MailboxException("UID Validity too short");
-
-    return fName.substring(4); */
-
-   // return "monkey";
-    
- /*   List all = getMessages(MsgFilter.ALL);
-    
-    if (all.size() > 0) {
-      return "" + ((PostMessage) all.get(all.size()-1)).getUID();
-    } else {
-      return "0";
-    } */
-
-    return Integer.MAX_VALUE + "";
+    return folder.getCreationTime() + "";
   }
 }
 

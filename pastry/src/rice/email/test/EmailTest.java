@@ -132,7 +132,7 @@ public class EmailTest {
                                  addresses[i], pair, cert,
                                  caPair.getPublic(),
                                  INSTANCE_NAME);
-        emailServices[i] = new EmailService(post);
+        emailServices[i] = new EmailService(post, pair);
 
         new Thread(new Announcer(emailServices[i], waitTime)).start();
       }

@@ -21,33 +21,33 @@ public class Log implements PostData {
   /**
    * The location of this log in PAST.
    */
-  private Id location;
+  protected Id location;
 
   /**
    * Some unique identifier to name this log.
    */
-  private Object name;
+  protected Object name;
 
   /**
    * A map of the names of the child logs to their references.
    */
-  private HashMap children;
+  protected HashMap children;
 
   /**
    * The current local POST service.  Transient: changes depending
    * on where the log is being used.
    */
-  private transient Post post;
+  protected transient Post post;
 
   /**
    * A reference to the most recent entry in this log.
    */
-  private LogEntryReference topEntryReference;
+  protected LogEntryReference topEntryReference;
 
   /**
     * The most recent entry in this log.
    */
-  private transient LogEntry topEntry;
+  protected transient LogEntry topEntry;
   
   /**
    * Constructs a Log for use in POST
@@ -181,22 +181,6 @@ public class Log implements PostData {
   public void addLogEntry(LogEntry entry, Continuation command) {
     AddLogEntryTask task = new AddLogEntryTask(entry, command);
     task.start();
-  }
-
-  /**
-   * This method retrieves a log entry given a reference to the log entry.
-   * This method also performs the appropriate verification checks and
-   * decryption necessary.
-   *
-   * Once this method is finished, it will call the command.receiveResult()
-   * method with a LogEntry, or it may call
-   * receiveExcception if an exception occurred.
-   *
-   * @param reference The reference to the log entry
-   * @param command The command to run once a result is available
-   */
-  public void retrieveLogEntry(LogEntryReference reference, Continuation command) {
-    post.getStorageService().retrieveContentHash(reference, command);
   }
 
   /**

@@ -27,6 +27,9 @@ public abstract class LogEntry implements PostData {
 
   // the local Post service
   private transient Post post;
+
+  // this logentry's "parent" logentry (if it is, say, wrapped in an encLogEntry)
+  private transient LogEntry parent;
   
   /**
    * Constructs a LogEntry
@@ -68,6 +71,11 @@ public abstract class LogEntry implements PostData {
    * @return A reference to the previous log entry
    */
   public void getPreviousEntry(final Continuation command) {
+    if (parent != null) {
+      parent.getPreviousEntry(command);
+      return;
+    }
+    
     if ((previousEntry == null) && (previousEntryReference != null)) {
       Continuation fetch = new Continuation() {
         public void receiveResult(Object o) {
@@ -93,10 +101,17 @@ public abstract class LogEntry implements PostData {
 
   /**
    * Protected method which sets the post service
-   *
    */
   void setPost(Post post) {
     this.post = post;
+  }
+
+  /**
+   * Method which set's this log entry's parent, if, for example, it is inside an
+   * encrypted log entry.
+   */
+  void setParent(LogEntry parent) {
+    this.parent = parent;
   }
 
   /**

@@ -1,4 +1,4 @@
-package rice.email.proxy;
+package rice.post.security;
 
 import rice.post.*;
 import rice.post.security.*;
@@ -49,23 +49,17 @@ public class CertificateAuthorityKeyGenerator {
     try {
       System.out.println("POST Certificate Authority Key Generator");
 
-      System.out.print("    Build a key pair generator\t\t\t\t\t");
-      KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-      System.out.println("[ DONE ]");
-
       System.out.print("    Generating new key pair\t\t\t\t\t");
-      KeyPair pair = kpg.generateKeyPair();
+      KeyPair pair = SecurityService.generateKeyRSA();
       System.out.println("[ DONE ]");
 
       System.out.println("    Getting password to encrypt keypair with\t\t\t\t");
       String password = getPassword();
 
       System.out.print("    Encrypting keypair\t\t\t\t\t\t");
-      SecurityService security = new SecurityService(null, null);
-      
-      byte[] key = security.hash(password.getBytes());
-      byte[] data = security.serialize(pair);
-      byte[] cipher = security.encryptDES(data, key);
+      byte[] key = SecurityService.hash(password.getBytes());
+      byte[] data = SecurityService.serialize(pair);
+      byte[] cipher = SecurityService.encryptDES(data, key);
       System.out.println("[ DONE ]");
       
       FileOutputStream fos = new FileOutputStream("ca.keypair.enc");

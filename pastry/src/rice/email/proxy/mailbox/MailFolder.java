@@ -19,6 +19,8 @@ public interface MailFolder {
 
     String getFullName();
 
+    int getNextUID();
+
     void put(MovingMessage msg)
       throws MailboxException;
 }

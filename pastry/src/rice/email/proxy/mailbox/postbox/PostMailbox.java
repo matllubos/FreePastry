@@ -102,7 +102,7 @@ public class PostMailbox implements Mailbox {
    * @throws MailboxException If an error occurs.
    * @return The root folder.
    */
-  public MailFolder getRootFolder() throws Exception {
+  public MailFolder getRootFolder() throws MailboxException {
     try {
       final Folder[] folder = new Folder[1];
       final Exception[] exception = new Exception[1];
@@ -131,7 +131,7 @@ public class PostMailbox implements Mailbox {
       synchronized (wait) { if ((folder[0] == null) && (exception[0] == null)) wait.wait(); }
 
       if (exception[0] != null)
-        throw exception[0];
+        throw new MailboxException(exception[0]);
 
       return new PostFolder(folder[0], null, email);
     } catch (InterruptedException e) {
@@ -144,36 +144,41 @@ public class PostMailbox implements Mailbox {
   }
 
   public void createFolder(String folder) throws MailboxException {
-   /* if (!isValidFolderName(folder))
+    if (!isValidFolderName(folder))
       throw new MailboxException("Invalid folder name.");
 
-    boolean done = false;
-    boolean exceptionOccurred = false;
-
-    Continuation c = new Continuation() {
-      public void receiveResult(Object o) {
-        done = true;
-      }
-
-      public void receiveException(Exception e) {
-        System.out.println("Could not create folder " + folder + " " + e);
-        exceptionOccurred = true;
-      }
-    };
-
-    getRootFolder().getFolder().addChildFolder(folder, c);
-
     try {
-      while ((!exceptionOccurred) && (!done)) {
-        Thread.sleep(500);
-      }
-    } catch (InterruptedException e) {
+      final Object[] result = new Object[1];
+      final Exception[] exception = new Exception[1];
+
+      final Object wait = "wait";
+
+      Continuation insert = new Continuation() {
+        public void receiveResult(Object o) {
+          synchronized (wait) {
+            result[0] = o;
+            wait.notifyAll();
+          }
+        }
+
+        public void receiveException(Exception e) {
+          System.out.println("Could not create folder " + e);
+          synchronized (wait) {
+            exception[0] = e;
+            wait.notifyAll();
+          }
+        }
+      };
+
+      ((PostFolder) getRootFolder()).getFolder().createChildFolder(folder, insert);
+
+      synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
+
+      if (exception[0] != null)
+        throw new MailboxException(exception[0]);
+    } catch (Exception e) {
       throw new MailboxException(e);
     }
-
-    if (exceptionOccurred) {
-      throw new MailboxException("An Exception occurred while fetching the root folder.");
-    } */
   }
 
   // TO DO: use the pattern
