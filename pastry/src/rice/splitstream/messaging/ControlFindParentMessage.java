@@ -1,6 +1,8 @@
 package rice.splitstream.messaging;
+
 import rice.splitstream.*;
 import rice.scribe.messaging.*;
+import rice.pastry.security.*;
 import java.util.Vector;
 
 /**
@@ -12,6 +14,8 @@ public class ControlFindParentMessage extends MessageAnycast
 {
     Vector send_to;
     Vector already_seen;
+
+    final int ALLOWABLE_CHILDREN = 2;
 
     public ControlFindParentMessage( Address addr, NodeHandle source, StripeId topicId, Credentials c )
     {
@@ -33,19 +37,30 @@ public class ControlFindParentMessage extends MessageAnycast
     }
 
     /**
-     * This is the callback method for when this message is accepted
-     * by the current node (i.e., this node has the potential to act
-     * as a parent to the node that sent the message).  Note that
-     * this does not necessarily imply that the current node will
-     * fulfill the conditions to take on the message originator as a
-     * new child.
-     * @param splitStream The SplitStream application
-     * @param s The stripe that this message is relevant to
+     * This method returns the total number of children of this node, over all topics.
      */
-    public void handleMessage( SplitStreamImpl splitStream, Stripe s )
+    private int aggregateNumChildren( Scribe scribe )
     {
-        IScribe scribe = splitStream.getScribe();
-        int num_distinct_children = scribe.getDistinctChildren().size();
+        Vector topics = scribe.getTopics();
+        int total = 0;
+
+        for (int i=0; i<topics.size(); i++)
+        {
+            total += scribe.numChildren( ((Topic)topics.get(i)).getTopicId() );
+        }
+    }
+
+    /**
+     * This is the callback method for when this message should be forwarded to another
+     * node in the spare capacity tree.  This node does not have any spare capacity
+     * and is unable to take on the message originator as a child.
+     * @param scribe The SplitStream application
+     * @param topic The stripe that this message is relevant to
+     */
+    public void handleForwardMessage( Scribe scribe, Topic topic )
+    {
+        Credentials c = new PermissiveCredentials();
+        
         if ( send_to.size() != 0 )
         {
             already_seen.add( 0, send_to.remove(0) );
@@ -55,52 +70,70 @@ public class ControlFindParentMessage extends MessageAnycast
             already_seen.add( 0, scribe.getNodeHandle() );
         }
 
-        if ( num_distinct_children > splitStream.getBandwidthManager().getAllowableChildren() )
+        if ( ( aggregateNumChildren( scribe ) > ALLOWABLE_CHILDREN &&
+             ( !isInRootPath( scribe, topic.getTopicId() ) ) )
         {
-            if ( !isInRootPath( scribe, s.getStripeId() ) )
-            {
-                scribe.addChild( this.getSource(), s.getStripeId() );
-                scribe.routeMsgDirect( this.getSource(), 
-                                       new ControlFindParentResponseMessage( splitStream.getAddress(),
-                                                                             scribe.getNodeHandle(),
-                                                                             s.getStripeId(),
-                                                                             splitStream.getCredentials(),
-                                                                             new Boolean( true ) ) );
-            }
-            if ( scribe.getDistinctChildren().size() > splitStream.getBandwidthManager().getAllowableChildren() )
-            {
-                /* need to leave the spare capacity tree now */
-            }
-        }
-
-        Vector v = scribe.getChildren( s.getStripeId() );
-        if ( v != null )
-        {
-            send_to.addAll( 0, scribe.getChildren( s.getStripeId() ) );
-        }
-        while ( !( already_seen.contains( send_to.get(0) ) ) && ( send_to.size() > 0 ) )
-        {
-            send_to.remove( 0 );
-        }
-        if ( send_to.size() > 0 )
-        {
-            scribe.routeMsgDirect( (NodeHandle)send_to.get(0), this );
+            this.handleDeliverMessage( scribe, topic );
         }
         else
         {
-            if ( !isRoot( s.getStripeId() ) )
+            Vector v = scribe.getChildren( topic.getTopicId() );
+            if ( v != null )
             {
-                scribe.routeMsgDirect( scribe.getParent( s.getStripeId() ), this );
+                send_to.addAll( 0, scribe.getChildren( topic.getTopicId() ) );
+            }
+            while ( !( already_seen.contains( send_to.get(0) ) ) && ( send_to.size() > 0 ) )
+            {
+                send_to.remove( 0 );
+            }
+            if ( send_to.size() > 0 )
+            {
+                scribe.routeMsgDirect( (NodeHandle)send_to.get(0), this );
             }
             else
             {
-                scribe.routeMsgDirect( this.getSource(), 
-                                       new ControlFindParentResponseMessage( splitStream.getAddress(),
-                                                                             scribe.getNodeHandle(),
-                                                                             s.getStripeId(),
-                                                                             splitStream.getCredentials(),
-                                                                             new Boolean( false ) ) );
+                if ( !isRoot( topic.getTopicId() ) )
+                {
+                    scribe.routeMsgDirect( scribe.getParent( topic.getTopicId() ), this );
+                }
+                else
+                {
+                    scribe.routeMsgDirect( this.getSource(),
+                                           new ControlFindParentResponseMessage( scribe.getAddress(),
+                                                                                 scribe.getNodeHandle(),
+                                                                                 topic.getTopicId(),
+                                                                                 c,
+                                                                                 new Boolean( false ) ) );
+                }
             }
+        }
+    }
+
+    /**
+     * This is the callback method for when this message is accepted
+     * by the current node (i.e., this node has the potential to act
+     * as a parent to the node that sent the message).  Note that
+     * this does not necessarily imply that the current node will
+     * fulfill the conditions to take on the message originator as a
+     * new child.
+     * @param scribe The SplitStream application
+     * @param topic The stripe that this message is relevant to
+     */
+    public void handleDeliverMessage( Scribe scribe, Topic topic )
+    {
+        Credentials c = new PermissiveCredentials();
+
+        scribe.addChild( this.getSource(), topic.getTopicId() );
+        scribe.routeMsgDirect( this.getSource(), 
+                               new ControlFindParentResponseMessage( scribe.getAddress(),
+                                                                     scribe.getNodeHandle(),
+                                                                     topic.getTopicId(),
+                                                                     c,
+                                                                     new Boolean( true ) ) );
+
+        if ( aggregateNumChildren( scribe ) >= ALLOWABLE_CHILDREN )
+        {
+            /* need to leave the spare capacity tree now */
         }
     }
 
