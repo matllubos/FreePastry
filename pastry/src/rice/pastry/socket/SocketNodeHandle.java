@@ -55,6 +55,9 @@ import rice.pastry.messaging.*;
 public class SocketNodeHandle extends DistNodeHandle {
   
   static final long serialVersionUID = -5452528188786429274L;
+  
+  public static final int LIVENESS_DEAD_FOREVER = 4;
+
 
   // the default distance, which is used before a ping
   public static int DEFAULT_PROXIMITY = Integer.MAX_VALUE;
@@ -90,11 +93,10 @@ public class SocketNodeHandle extends DistNodeHandle {
     if (spn == null) {
       return LIVENESS_ALIVE;
     } else {
-      if (isLocal() || (spn.getSocketSourceRouteManager().isAlive(getEpochAddress()))) {
+      if (isLocal()) 
         return LIVENESS_ALIVE;
-      } else {
-        return LIVENESS_FAULTY;
-      }
+      else
+        return spn.getSocketSourceRouteManager().getLiveness(getEpochAddress());
     }
   }
   

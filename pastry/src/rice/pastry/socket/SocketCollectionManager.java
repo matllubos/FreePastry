@@ -564,6 +564,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     public void run() {
       if (tries < numTries) {
         tries++;
+        if (manager.getLiveness(path.getLastHop()) == SocketNodeHandle.LIVENESS_ALIVE)
+          manager.markSuspected(path);
+        
         pingManager.forcePing(path, this);
       } else {
         System.out.println("DeadChecker(" + path + ") expired - marking as dead.");
@@ -789,11 +792,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         if (writer.write((SocketChannel) key.channel())) {
           key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
           
-          if (bootstrap) {
-            if (SocketPastryNode.verbose) System.out.println("BOOTSTRAP: DONE SENDING - CLOSING ");
+          if (bootstrap) 
             close();
-          }
-        }
       } catch (IOException e) {
         debug("ERROR " + e + " writing - cancelling.");
         close();
