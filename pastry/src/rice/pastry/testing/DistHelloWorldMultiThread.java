@@ -106,7 +106,7 @@ public class DistHelloWorldMultiThread {
   public static boolean useDirect = true;
   private static boolean limitedSockets = true; 
   public static boolean useNonDirect = true; 
-  public static boolean useRandChoices = true;
+  public static boolean useRandChoices = false;
   public static boolean testSelector = true;
   
   public static DistPastryNodeFactory getSameFactory() {
