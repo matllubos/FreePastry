@@ -45,6 +45,7 @@ import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
+import rice.pastry.dist.*;
 
 import rice.scribe.*;
 
@@ -85,7 +86,7 @@ public class RMIScribeMaintenanceTest {
     // constructor
 
     public RMIScribeMaintenanceTest(int schedulingRate){
-	factory = new RMIPastryNodeFactory(port);
+	factory = DistPastryNodeFactory.getFactory(DistPastryNodeFactory.PROTOCOL_RMI, port);
 	pastryNodes = new Vector();
 	rmiClients = new Vector();
 	rng = new Random(PastrySeed.getSeed());
@@ -96,67 +97,9 @@ public class RMIScribeMaintenanceTest {
     }
 
     private NodeHandle getBootstrap() {
-	RMIRemoteNodeI bsnode = null;
-	try {
-	    bsnode = (RMIRemoteNodeI)Naming.lookup("//:" + port + "/Pastry");
-	} catch (Exception e) {
-	    System.out.println("Unable to find bootstrap node on localhost");
-	}
-	
-	int nattempts = 3;
-	
-	// if bshost:bsport == localhost:port then nattempts = 0.
-	// waiting for ourselves is not harmful, but pointless, and denies
-	// others the usefulness of symmetrically waiting for us.
-	
-	if (bsport == port) {
-	    InetAddress localaddr = null, connectaddr = null;
-	    String host = null;
-	    
-	    try {
-		host = "localhost"; localaddr = InetAddress.getLocalHost();
-		connectaddr = InetAddress.getByName(host = bshost);
-	    } catch (UnknownHostException e) {
-		System.out.println("[rmi] Error: Host unknown: " + host);
-		nattempts = 0;
-	    }
-	    
-	    if (nattempts != 0 && localaddr.equals(connectaddr))
-		nattempts = 0;
-	}
-	
-
-	for (int i = 1; bsnode == null && i <= nattempts; i++) {
-	    try {
-		bsnode = (RMIRemoteNodeI)Naming.lookup("//" + bshost
-						       + ":" + bsport
-						       + "/Pastry");
-	    } catch (Exception e) {
-		System.out.println("Unable to find bootstrap node on "
-				   + bshost + ":" + bsport
-				   + " (attempt " + i + "/" + nattempts + ")");
-	    }
-	    
-	    if (i != nattempts)
-		pause(1000);
-	}
-	
-	NodeId bsid = null;
-	if (bsnode != null) {
-	    try {
-		bsid = bsnode.getNodeId();
-	    } catch (Exception e) {
-		System.out.println("[rmi] Unable to get remote node id: " + e.toString());
-		bsnode = null;
-	    }
-	}
-    
-	RMINodeHandle bshandle = null;
-	if (bsid != null)
-	    bshandle = new RMINodeHandle(bsnode, bsid);
-	
+	InetSocketAddress addr = new InetSocketAddress(bshost, bsport);
+	NodeHandle bshandle = ((DistPastryNodeFactory)factory).getNodeHandle(addr);
 	return bshandle;
-
     }
 
     /**
