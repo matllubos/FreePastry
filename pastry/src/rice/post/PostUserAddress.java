@@ -41,4 +41,8 @@ public class PostUserAddress extends PostEntityAddress {
   public String getName() {
     return name;
   }
+
+  public String toString() {
+    return name;
+  }
 }

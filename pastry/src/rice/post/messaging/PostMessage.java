@@ -30,7 +30,7 @@ import rice.post.*;
  * 3. Verify the signature.
  *
  */
-public abstract class PostMessage implements Serializable{
+public abstract class PostMessage implements Serializable {
 
   // the sender of this PostMessage
   private PostEntityAddress sender;
@@ -48,6 +48,10 @@ public abstract class PostMessage implements Serializable{
    * @param sender The sender of this message.
    */
   public PostMessage(PostEntityAddress sender) {
+    if (sender == null) {
+      throw new IllegalArgumentException("Attempt to build PostMessage with null sender!");
+    }
+    
     this.sender = sender;
   }
 
@@ -95,15 +99,22 @@ public abstract class PostMessage implements Serializable{
   private void writeObject(ObjectOutputStream oos) throws IOException {
     oos.defaultWriteObject();
 
-    if (aboutToBeWritten)
-      oos.writeObject(signature);
+    if (aboutToBeWritten) {
+      oos.writeInt(signature.length);
+      oos.write(signature);
+    }
   }
 
   private void readObject(ObjectInputStream ois)
     throws IOException, ClassNotFoundException {
 
     ois.defaultReadObject();
+
+    if (aboutToBeWritten) {
+      signature = new byte[ois.readInt()];
+      ois.read(signature, 0, signature.length);
+    }
+    
     aboutToBeWritten = false;
-    this.signature = (byte[]) ois.readObject();
   }
 }

@@ -24,8 +24,6 @@ import rice.pastry.security.*;
  * @version $Id$
  */
 public class StorageService {
-
-  public static final int SYMMETRIC_KEY_LENGTH = 8;
   
   /**
    * The PAST service used for distributed persistant storage.
@@ -43,9 +41,9 @@ public class StorageService {
   private Credentials credentials;
 
   /**
-   * A random object
+   * Stored data waiting for verification
    */
-  private Random random;
+  private Hashtable pendingVerification;
   
   /**
    * Contructs a StorageService given a PAST to run on top of.
@@ -58,7 +56,8 @@ public class StorageService {
     this.past = past;
     this.credentials = credentials;
     this.security = security;
-    this.random = random;
+
+    pendingVerification = new Hashtable();
   }
 
   /**
@@ -158,17 +157,19 @@ public class StorageService {
       byte[] plainText = security.serialize(data);
       byte[] timestamp = security.getByteArray(System.currentTimeMillis());
 
-      byte[] all = new byte[plainText.length + 8];
-      System.arraycopy(plainText, 0, all, 0, plainText.length);
-      System.arraycopy(timestamp, 0, all, plainText.length, 8);
-      
-      byte[] signature = security.sign(all);
-      
-      SignedData sd = new SignedData(plainText, timestamp, signature);
-      
-      // Store the signed data in PAST
-      past.insert(location, sd, credentials);
-      
+      SignedData sd = new SignedData(plainText, timestamp);
+
+      sd.setSignature(security.sign(sd.getDataAndTimestamp()));
+
+
+      if (past.exists(location)) {
+        // Store the signed data in PAST starting a new thingy
+        past.update(location, sd, credentials);
+      } else {
+        // Store the signed data in PAST starting a new thingy
+        past.insert(location, sd, credentials);
+      }
+        
       return data.buildSignedReference(location);
     } catch (IOException ioe) {
       System.out.println("IOException " + ioe + " occured during storage attempt.");
@@ -186,8 +187,11 @@ public class StorageService {
    * @param location The location of the data
    * @return The data
    */
-  public PostData retrieveSigned(SignedReference reference) throws StorageException {
-    return retrieveSigned(reference, security.getPublicKey());
+  public PostData retrieveAndVerifySigned(SignedReference reference) throws StorageException {
+    PostData pd = retrieveSigned(reference);
+    verifySigned(pd, security.getPublicKey());
+
+    return pd;
   }
   
   /**
@@ -201,9 +205,26 @@ public class StorageService {
    * @param publicKey The public key matching the private key used to sign the data
    * @return The data
    */
-  public PostData retrieveSigned(SignedReference reference, PublicKey publicKey)
+  public PostData retrieveAndVerifySigned(SignedReference reference, PublicKey publicKey)
     throws StorageException
   {
+    PostData pd = retrieveSigned(reference);
+    verifySigned(pd, publicKey);
+
+    return pd;
+  }    
+
+  /**
+   * This method retrieves a previously-stored block from PAST which was
+   * signed using the private key. THIS METHOD EXPLICITLY DOES NOT PERFORM
+   * ANY VERIFICATION CHECKS ON THE DATA.  YOU MUST CALL verifySigned() IN
+   * ORDER TO VERIFY THE DATA.  This is provided for the case where the
+   * cooresponding key is located in the data.
+   *
+   * @param location The location of the data
+   * @return The data
+   */
+  public PostData retrieveSigned(SignedReference reference) throws StorageException {
     try {
       // TO DO: fetch from multiple locations to prevent rollback attacks
       StorageObject so = past.lookup(reference.getLocation());
@@ -212,15 +233,19 @@ public class StorageService {
         return null;
       }
 
-      SignedData sd = (SignedData) so.getOriginal();
+      SignedData sd = null;
+
+      if (so.getUpdates().size() == 0) {
+        sd = (SignedData) so.getOriginal();
+      } else {
+        Vector updates = so.getUpdates();
+        sd = (SignedData) updates.elementAt(updates.size() - 1);
+      }
       
       byte[] plainText = sd.getData();
       Object data = security.deserialize(plainText);
-      
-      // Verify signature
-      if (!security.verify(plainText, sd.getSignature(), publicKey)) {
-        throw new StorageException("Signature of retrieved data is not correct.");
-      }
+
+      pendingVerification.put(data, sd);
       
       return (PostData) data;
     }
@@ -232,6 +257,28 @@ public class StorageService {
     }
     catch (ClassNotFoundException cnfe) {
       throw new StorageException("ClassNotFoundException while retrieving data: " + cnfe);
+    }
+  }
+
+  /**
+   * This method retrieves a previously-stored block from PAST which was
+   * signed using the private key. THIS METHOD EXPLICITLY DOES NOT PERFORM
+   * ANY VERIFICATION CHECKS ON THE DATA.  YOU MUST CALL verifySigned() IN
+   * ORDER TO VERIFY THE DATA.  This is provided for the case where the
+   * cooresponding key is located in the data.
+   *
+   * @param location The location of the data
+   * @return The data
+   */
+  public void verifySigned(PostData data, PublicKey key) throws StorageException {
+    SignedData sd = (SignedData) pendingVerification.remove(data);
+    
+    // Verify signature
+    if ((sd == null) || (! security.verify(sd.getDataAndTimestamp(), sd.getSignature(), key))) {
+      printArray(sd.getData());
+      printArray(sd.getTimestamp());
+      printArray(sd.getSignature());
+      throw new StorageException("Signature of retrieved data is not correct.");
     }
   }
 
@@ -249,9 +296,7 @@ public class StorageService {
     try {
       byte[] plainText = security.serialize(data);
 
-      // pick random key
-      byte[] key = new byte[SYMMETRIC_KEY_LENGTH];
-      random.nextBytes(key);
+      byte[] key = security.generateKeyDES();
 
       byte[] cipherText = security.encryptDES(plainText, key);
       byte[] loc = security.hash(cipherText);
@@ -312,6 +357,14 @@ public class StorageService {
     catch (ClassNotFoundException cnfe) {
       throw new StorageException("ClassNotFoundException while retrieving data: " + cnfe);
     }
+  }
+    
+  private void printArray(byte[] array) {
+    for (int i=0; i<array.length; i++) {
+      System.out.print(Byte.toString(array[i]));
+    }
+
+    System.out.println();
   }
 
   

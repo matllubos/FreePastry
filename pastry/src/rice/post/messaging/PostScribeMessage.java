@@ -8,12 +8,15 @@ import java.io.*;
  */
 public class PostScribeMessage implements PostMessageWrapper {
 
+  private PostMessage message;
+  
   /**
    * Builds a PostScribeMessage given a PostMessage to contain.
    *
    * @param message The message to wrap.
    */
   public PostScribeMessage(PostMessage message) {
+    this.message = message;
   }
 
   /**
@@ -22,7 +25,7 @@ public class PostScribeMessage implements PostMessageWrapper {
    * @return The contained PostMessage.
    */
   public PostMessage getMessage() {
-    return null;
+    return message;
   }
 
 }

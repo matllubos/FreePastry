@@ -10,6 +10,8 @@ import rice.pastry.messaging.*;
  */
 public class PostPastryMessage extends Message implements PostMessageWrapper {
 
+  private PostMessage message;
+  
   /**
    * Builds a PostPastryMessage given a PostMessage.
    *
@@ -17,6 +19,8 @@ public class PostPastryMessage extends Message implements PostMessageWrapper {
    */
   public PostPastryMessage(PostMessage message) {
     super(PostAddress.instance());
+
+    this.message = message;
   }
 
   /**
@@ -25,7 +29,7 @@ public class PostPastryMessage extends Message implements PostMessageWrapper {
    * @return The contained PostMessage.
    */
   public PostMessage getMessage() {
-    return null;
+    return message;
   }
   
 }

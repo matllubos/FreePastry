@@ -35,13 +35,12 @@ class SignedData implements Serializable {
    *
    * @param data The data to store
    * @param time The timestamp
-   * @param signature The signature for this data
    * @param credentials Credentials of the data
    */
-  public SignedData(byte[] data, byte[] timestamp, byte[] signature) {
+  public SignedData(byte[] data, byte[] timestamp) {
     this.data = data;
     this.timestamp = timestamp;
-    this.signature = signature;
+    this.signature = null;
   }
 
   /**
@@ -59,9 +58,24 @@ class SignedData implements Serializable {
   }
 
   /**
+   * @return The data and timestamp appended
+   */
+  public byte[] getDataAndTimestamp() {
+    byte[] all = new byte[data.length + timestamp.length];
+    System.arraycopy(data, 0, all, 0, data.length);
+    System.arraycopy(timestamp, 0, all, data.length, timestamp.length);
+
+    return all;
+  }
+    
+  /**
    * @return The signature to verify the data and timestamp
    */
   public byte[] getSignature() {
     return signature;
+  }
+
+  protected void setSignature(byte[] sig) {
+    signature = sig;
   }
 }

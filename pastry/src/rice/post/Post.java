@@ -258,6 +258,8 @@ public class Post extends PastryAppl implements IScribeApp  {
   private void handleDeliveryRequestMessage(DeliveryRequestMessage message){
     /* Buffer this for Delivery */
 
+    System.out.println(thePastryNode.getNodeId() + "DEBUG: received delivery request from : " + message.getSender() + " to: " + message.getDestination());
+    
     synchronized(bufferedData) {
       Vector userQueue = (Vector) bufferedData.get(message.getDestination());
 
@@ -279,6 +281,9 @@ public class Post extends PastryAppl implements IScribeApp  {
    * @param message The incoming message
    */
   private void handlePresenceMessage(PresenceMessage message) {
+
+    System.out.println(thePastryNode.getNodeId() + "DEBUG: presence message from : " + message.getSender());
+    
     synchronized (bufferedData) {
 
       Vector userQueue = (Vector) bufferedData.get(message.getSender());
@@ -312,7 +317,8 @@ public class Post extends PastryAppl implements IScribeApp  {
     
     // decrypt and verify notification message
     try {
-      nm = (NotificationMessage) security.deserialize(security.decryptRSA(message.getData()));
+      byte[] key = security.decryptRSA(message.getKey());
+      nm = (NotificationMessage) security.deserialize(security.decryptDES(message.getData(), key));
     } catch (SecurityException e) {
       System.out.println("SecurityException occured which decrypting NotificationMessage " + e + " - dropping on floor.");
       return;
@@ -389,26 +395,28 @@ public class Post extends PastryAppl implements IScribeApp  {
    * another user's public key.
    */
   public PostLog getPostLog(PostEntityAddress entity) throws PostException {
-    try {
-      SignedReference logRef = new SignedReference(entity.getAddress());
-      PostLog postLog = (PostLog) storage.retrieveSigned(logRef);
+    SignedReference logRef = new SignedReference(entity.getAddress());
+    PostLog postLog = (PostLog) storage.retrieveSigned(logRef);
 
-      if (postLog == null) {
-        return null;
-      }
-      
-      if (security.verifyCertificate(postLog.getEntityAddress(),
-                                     postLog.getPublicKey(),
-                                     postLog.getCertificate())) {
-        return postLog;
-      }
-      else {
-        throw new PostException("Certificate of PostLog could not verified" +
-                                " for entity: " + entity);
-      }
+    if (postLog == null) {
+      System.out.println("PostLog lookup for user " + entity + " failed.");
+      return null;
     }
-    catch (StorageException se) {
-      throw new PostException("Could not access PostLog: " + se);
+
+    if ((postLog.getPublicKey() == null) || (postLog.getEntityAddress() == null)) {
+      throw new PostException("Malformed PostLog: " + postLog.getPublicKey() + " " + postLog.getEntityAddress());
+    }
+
+    if (security.verifyCertificate(postLog.getEntityAddress(),
+                                   postLog.getPublicKey(),
+                                   postLog.getCertificate())) {
+      storage.verifySigned(postLog, postLog.getPublicKey());
+
+      return postLog;
+    }
+    else {
+      throw new PostException("Certificate of PostLog could not verified" +
+                              " for entity: " + entity);
     }
   }
 
@@ -417,21 +425,14 @@ public class Post extends PastryAppl implements IScribeApp  {
    * if one does not already exist.
    */
   private void retrievePostLog() throws PostException {
-    try {
-      PostLog postLog = getPostLog(address);
-      if (postLog == null) {
-        // None found, so create a new one
-        postLog = new PostLog(address, publicKey, certificate);
-        storage.storeSigned(postLog, address.getAddress());
-      }
-      
-      // Store the log in a field
-      this.log = postLog;
+    PostLog postLog = getPostLog(address);
+    if (postLog == null) {
+      // None found, so create a new one
+      postLog = new PostLog(address, publicKey, certificate, this);
     }
-    catch (StorageException se) {
-      se.printStackTrace();
-      throw new PostException("Could not access PostLog: " + se + " " + se.getMessage());
-    }
+
+    // Store the log in a field
+    this.log = postLog;
   }
   
   /**
@@ -458,7 +459,7 @@ public class Post extends PastryAppl implements IScribeApp  {
   /**
    * This method announce's our presence via our scribe tree
    */
-  private void announcePresence(){
+  public void announcePresence() {
     PresenceMessage pm = new PresenceMessage(address, getNodeId());
     signAndPreparePostMessage(pm);
 
@@ -490,37 +491,48 @@ public class Post extends PastryAppl implements IScribeApp  {
   public void sendNotification(NotificationMessage message) {
     NodeId random = (new RandomNodeIdFactory()).generateNodeId();
 
+    System.out.println(thePastryNode.getNodeId() + "DEBUG: picked random node: " + random);
+    
     // TO DO : Assuming just a user for now, grouping crap later...
     PostUserAddress destination = (PostUserAddress) message.getDestination();
     PostLog destinationLog = null;
 
+    System.out.println(thePastryNode.getNodeId() + "DEBUG: sending message to: " + destination);
+    
     try {
       destinationLog = getPostLog(destination);
     } catch (PostException e) {
       System.out.println("PostException occured while retrieving PostLog for " + destination + " - aborting.");
+      e.printStackTrace();
       return;
-    }   	 	
+    }
+
+    System.out.println(thePastryNode.getNodeId() + "DEBUG: received destination log");
     
     signAndPreparePostMessage(message);
 
     byte[] cipherText = null;
     
     try {
-      cipherText = security.encryptRSA(security.serialize(message), destinationLog.getPublicKey());
+      byte[] key = security.generateKeyDES();
+      byte[] keyCipherText = security.encryptRSA(key, destinationLog.getPublicKey());
+      cipherText = security.encryptDES(security.serialize(message), key);
+
+      System.out.println(thePastryNode.getNodeId() + "DEBUG: built encrypted notfn msg: " + destination);
+      
+      EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, keyCipherText, cipherText);
+      DeliveryRequestMessage drm = new DeliveryRequestMessage(address, destination, enm);
+
+      signAndPreparePostMessage(drm);
+
+      System.out.println(thePastryNode.getNodeId() + "DEBUG: sending delivery request to : " + random);
+      
+      routeMsg(random, new PostPastryMessage(drm), getCredentials(), new SendOptions());
     } catch (SecurityException e) {
       System.out.println("SecurityException occured which encrypting NotificationMessage " + e + " - dropping on floor.");
-      return;
     } catch (IOException e) {
       System.out.println("IOException occured which encrypting NotificationMessage " + e + " - dropping on floor.");
-      return;
     } 
-
-    EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, cipherText);
-    DeliveryRequestMessage drm = new DeliveryRequestMessage(address, destination, enm);
-
-    signAndPreparePostMessage(drm);
-    
-    routeMsg(random, new PostPastryMessage(drm), getCredentials(), new SendOptions());
   }
 
   /**

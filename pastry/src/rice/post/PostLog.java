@@ -4,6 +4,7 @@ import java.security.*;
 import java.security.cert.*;
 
 import rice.post.log.*;
+import rice.post.storage.*;
 
 /**
  * This class represents the Log which sits at the address of the user's
@@ -40,12 +41,15 @@ public class PostLog extends Log {
    * @param key The user's public key.
    * @param cert This user's certification
    */
-  PostLog(PostEntityAddress user, PublicKey key, java.security.cert.Certificate cert) {
-    super("User " + user.toString() + "'s log", user.getAddress());
+  PostLog(PostEntityAddress user, PublicKey key, java.security.cert.Certificate cert, Post post)
+    throws StorageException {
+    super("User " + user.toString() + "'s log", user.getAddress(), post);
 
     this.user = user;
     this.key = key;
     this.certificate = cert;
+
+    sync();
   }
     
   /**

@@ -36,6 +36,11 @@ public class SecurityService {
   public static final String SIGNATURE_ALGORITHM = "SHA1withRSA";
 
   /**
+   * The length of DES keys
+   */
+  public static final int SYMMETRIC_KEY_LENGTH = 8;
+  
+  /**
    * The name of the hash function.
    */
   public static final String HASH_ALGORITHM = "MD5";
@@ -64,6 +69,11 @@ public class SecurityService {
    * The signature used for verification and signing data.
    */
   private Signature signature;
+
+  /**
+    * A random object
+   */
+  private Random random;
   
   /**
    * Contructs a SecurityService given a user's keyPair.
@@ -77,6 +87,8 @@ public class SecurityService {
 
     // Add a provider for RSA encryption
     Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+    
+    this.random = new Random();
     
     try {
       cipherDES = Cipher.getInstance(SYMMETRIC_ALGORITHM);
@@ -311,6 +323,14 @@ public class SecurityService {
     } catch (BadPaddingException e) {
       throw new SecurityException("BadPaddingException decrypting object: " + e);
     }
+  }
+
+  public byte[] generateKeyDES() {
+    // pick random key
+    byte[] key = new byte[SYMMETRIC_KEY_LENGTH];
+    random.nextBytes(key);
+
+    return key;
   }
     
   

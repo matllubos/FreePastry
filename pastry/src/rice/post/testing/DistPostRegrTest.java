@@ -12,6 +12,7 @@ import rice.storage.*;
 import rice.storage.testing.*;
 
 import rice.post.*;
+import rice.post.messaging.*;
 
 import rice.scribe.*;
 
@@ -33,9 +34,15 @@ public class DistPostRegrTest {
   private Vector pastNodes;
   private Vector scribeNodes;
   private Vector postNodes;
+  private Vector postClients;
   private Credentials credentials = new PermissiveCredentials();
   private KeyPair caPair;
   private KeyPairGenerator kpg;
+
+  private Object waitObject = "waitObject";
+  private boolean notificationReceived = false;
+  private boolean notificationFailed = false;
+  private Post receivingPost = null;
 
   private Random rng;
   private RandomNodeIdFactory idFactory;
@@ -65,6 +72,7 @@ public class DistPostRegrTest {
     pastrynodes = new Vector();
     pastNodes = new Vector();
     postNodes = new Vector();
+    postClients = new Vector();
     scribeNodes = new Vector();    
     rng = new Random(5);
     
@@ -122,6 +130,11 @@ public class DistPostRegrTest {
 
       Post post = new Post(pn, past, scribe, address, pair, null, caPair.getPublic());
       postNodes.add(post);
+
+      DummyPostClient dpc = new DummyPostClient(post);
+      postClients.add(dpc);
+      
+      post.addClient(dpc);
       System.out.println("built POST at " + pn);
     } catch (PostException e) {
       System.out.println("ERROR BUILDING POST: " + e);
@@ -146,10 +159,6 @@ public class DistPostRegrTest {
    */
   protected void initialize() {
     createNodes();
-
-    // Give nodes a chance to initialize
-    System.out.println("DEBUG ---------- Waiting for all nodes to be ready");
-    pause(3000);
 
     Enumeration nodes = pastrynodes.elements();
     while (nodes.hasMoreElements()) {
@@ -199,36 +208,51 @@ public class DistPostRegrTest {
   /**
    * Tests routing a PAST request to a particular node.
    */
-  protected void testRouteRequest() throws TestFailedException {
- /*   PASTService local = (PASTService) pastNodes.elementAt(rng.nextInt(numNodes));
-    PASTServiceImpl remote = (PASTServiceImpl) pastNodes.elementAt(rng.nextInt(numNodes));
-    NodeId remoteId = remote.getPastryNode().getNodeId();
-    String file = "test file";
+  protected void testNotification() throws TestFailedException {
+    int sendingNode = rng.nextInt(numNodes);
+    int receivingNode = rng.nextInt(numNodes);
 
-    // Check file does not exist
-    assertTrue("RouteRequest", "File should not exist before insert",
-               !local.exists(remoteId));
+    Post sendingPost = (Post) postNodes.elementAt(sendingNode);
+    receivingPost = (Post) postNodes.elementAt(receivingNode);
+    
+    String sender = "TEST" + sendingNode;
+    PostUserAddress senderAddr = new PostUserAddress(sender);
+    
+    String receiver = "TEST" + receivingNode;
+    PostUserAddress receiverAddr = new PostUserAddress(receiver);
 
-    // Insert file
-    System.out.println("TEST: RouteRequest: Inserting file with key: " + remoteId);
-    assertTrue("RouteRequest", "Insert of file should succeed",
-               local.insert(remoteId, file, null));
+    DummyPostClient sendingPostClient = (DummyPostClient) postClients.elementAt(sendingNode);
+    PostClientAddress addr = PostClientAddress.getAddress(sendingPostClient);
 
-    // Check file exists
-    assertTrue("RouteRequest", "File should exist after insert",
-               local.exists(remoteId));
+    DummyNotificationMessage dnm = new DummyNotificationMessage(addr, senderAddr, receiverAddr);
 
-    // Lookup file locally
-    StorageObject result = remote.getStorage().lookup(remoteId);
-    assertTrue("RouteRequest", "File should be inserted at known node",
-               result != null);
-    String file2 = (String) result.getOriginal();
-    assertEquals("RouteRequest", "Retrieved local file should be the same",
-                 file, file2);
-    */
+    sendingPost.sendNotification(dnm);
 
+    synchronized (waitObject) {
+      try {
+        while (! notificationReceived) {
+          receivingPost.announcePresence();
+          waitObject.wait(2000);
+          System.out.println("Waiting for notification message...");
+        }
+      } catch (InterruptedException e) {
+        System.out.println("ERROR WAITING:"  + e);
+      }
+    }
+
+    if (notificationFailed) {
+      throw new TestFailedException("Notificaiton received at wrong Post!");
+    }
   }
 
+  public void notificationReceived(NotificationMessage nm, Post post) {
+    if (! (receivingPost == post)) {
+      notificationFailed = true;
+    }
+    
+    notificationReceived = true;
+    waitObject.notify();
+  }
 
   /**
    * Initializes and runs all regression tests.
@@ -238,7 +262,7 @@ public class DistPostRegrTest {
 
     try {
       // Run each test
-      testRouteRequest();
+      testNotification();
 
       // TO DO:
       //  Test permissions (problems with serializability of dummy credentials?)
@@ -263,6 +287,14 @@ public class DistPostRegrTest {
       if (args[i].equals("-help")) {
         System.out.println("Usage: DistPASTSearchRegrTest [-port p] [-protocol (rmi|wire)] [-bootstrap host[:port]] [-help]");
         System.exit(1);
+      }
+    }
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-nodes") && i+1 < args.length) {
+        int p = Integer.parseInt(args[i+1]);
+        if (p > 0) numNodes = p;
+        break;
       }
     }
 
@@ -326,6 +358,26 @@ public class DistPostRegrTest {
   protected class TestFailedException extends Exception {
     protected TestFailedException(String message) {
       super(message);
+    }
+  }
+
+  protected class DummyPostClient extends PostClient {
+
+    private Post post;
+    
+    public DummyPostClient(Post p) {
+      this.post = p;
+    }
+
+    public void notificationReceived(NotificationMessage nm) {
+      DistPostRegrTest.this.notificationReceived(nm, post);
+    }
+  }
+
+  protected static class DummyNotificationMessage extends NotificationMessage {
+
+    public DummyNotificationMessage(PostClientAddress address, PostEntityAddress sender, PostEntityAddress receiver) {
+      super(address, sender, receiver);
     }
   }
 

@@ -13,5 +13,6 @@ public class PostException extends Exception {
    * @param msg The string representing the error.
    */
   public PostException(String msg) {
+    super(msg);
   }
 }

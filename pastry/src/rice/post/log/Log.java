@@ -49,11 +49,16 @@ public class Log implements PostData {
    * @param name Some unique identifier for this log
    * @param location The location of this log in PAST
    */
-  public Log(Object name, NodeId location) {
+  public Log(Object name, NodeId location, Post post) throws StorageException {
     this.name = name;
     this.location = location;
 
     children = new HashMap();
+
+    if (post != null) {
+      setPost(post);
+      sync();
+    }
   }
   
   /**
@@ -82,7 +87,7 @@ public class Log implements PostData {
   /**
    * Helper method to sync this log object on the network.
    */
-  private void sync() throws StorageException {
+  protected void sync() throws StorageException {
     post.getStorageService().storeSigned(this, location);
   }
   

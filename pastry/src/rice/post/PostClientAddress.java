@@ -2,6 +2,8 @@ package rice.post;
 
 import rice.pastry.*;
 
+import java.io.*;
+
 /**
  * This class represents the notion of an address, which
  * uniquely identifies an application running on top of the
@@ -11,12 +13,22 @@ import rice.pastry.*;
  * 
  * @version $Id$
  */
-public final class PostClientAddress {
+public final class PostClientAddress implements Serializable {
 
+  protected String name;
+  
   /**
    * Constructor
    */
-  private PostClientAddress() {
+  private PostClientAddress(String name) {
+  }
+
+  public boolean equals(Object o) {
+    if (o instanceof PostClientAddress) {
+      return ((PostClientAddress) o).name.equals(name);
+    } else {
+      return false;
+    }
   }
 
   /**
@@ -28,8 +40,7 @@ public final class PostClientAddress {
    * @return A unique address for this class of client
    */
   public static PostClientAddress getAddress(PostClient client) {
-    // NEEDS TO BE IMPLEMENTED
-    return null;
+    return new PostClientAddress(client.getClass().getName());
   }
 
 }
