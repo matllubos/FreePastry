@@ -81,6 +81,14 @@ public class NodeId extends Id {
   }
   
   /**
+   * Constructor.
+   */
+  public NodeId() {
+    super(new int[nlen]);
+  }
+  
+  
+  /**
    * Undefine readResolve for NodeIds
    *
    * @return This

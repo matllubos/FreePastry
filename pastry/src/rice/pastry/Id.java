@@ -64,7 +64,7 @@ public class Id implements rice.p2p.commonapi.Id {
    * We currently assume that it is divisible by 32.
    */
   public final static int IdBitLength = 160;
-  private final static int nlen = IdBitLength / 32;
+  protected final static int nlen = IdBitLength / 32;
   
   /**
    * serialver for backwards compatibility

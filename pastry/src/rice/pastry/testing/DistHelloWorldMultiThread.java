@@ -111,7 +111,7 @@ public class DistHelloWorldMultiThread {
       DistPastryNodeFactory.getFactory(
         new NodeIdFactory() {
           public NodeId generateNodeId() {
-            return NodeId.build();
+            return new NodeId();
           }
         },
         protocol,
