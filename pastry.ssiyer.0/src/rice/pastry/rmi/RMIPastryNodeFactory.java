@@ -127,7 +127,7 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
     public RoutingTable getRouteSet() { return routeTable; }
 
     public void doneWithNode(PastryNode pnode, NodeHandle bshandle) {
-	localhandle.setLocalHandle(pnode); // itself!
+	localhandle.setLocalNode(pnode); // itself!
 	rmilocalnode.setLocalPastryNode(pnode);
 	secureMan.setLocalPastryNode(pnode);
 	pnode.setLocalHandle(localhandle);

@@ -126,9 +126,11 @@ class RMIPastryNodeImpl extends UnicastRemoteObject
     public NodeId getNodeId() { return node.getNodeId(); }
 
     /**
-     * Proxies to the local node to accept a message.
+     * Proxies to the local node to accept a message. For synchronization
+     * purposes, it only adds the message to the queue and signals the
+     * message handler thread.
      */
-    public void receiveMessage(Message msg) {
+    public void remoteReceiveMessage(Message msg) {
 	synchronized (queue) {
 	    queue.add(msg);
 	    count++;

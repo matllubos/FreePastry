@@ -64,7 +64,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
     // unverified node handles, so this handle should be in the Pool.
     private transient boolean isInPool;
 
-    private transient NodeHandle localhandle;
+    private transient PastryNode localnode;
     private transient boolean isLocal;
 
     /**
@@ -92,7 +92,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
     public RMINodeHandle(RMIPastryNode rn, NodeId nid, PastryNode pn) {
 	System.out.println("[rmi] creating RMI handle for node: " + nid + ", local = " + pn);
 	init(rn, nid);
-	setLocalHandle(pn);
+	setLocalNode(pn);
     }
 
     private void init(RMIPastryNode rn, NodeId nid) {
@@ -101,7 +101,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	alive = true;
 	distance = INFTY;
 	isInPool = false;
-	localhandle = null;
+	localnode = null;
 	isLocal = false;
     }
 
@@ -110,14 +110,14 @@ public class RMINodeHandle implements NodeHandle, Serializable
     public NodeId getNodeId() { return remotenid; }
 
     /**
-     * The two localhandle accessor methods.
+     * The two localnode accessor methods.
      */
-    public NodeHandle getLocalHandle() { return localhandle; }
+    public NodeHandle getLocalNode() { return localnode; }
 
-    public void setLocalHandle(NodeHandle lh) {
-	//System.out.println("[rmi] setlocalhandle " + this + "(" + remotenid + ") " + lh);
-	localhandle = lh;
-	if (localhandle.getNodeId().equals(remotenid))
+    public void setLocalNode(PastryNode ln) {
+	//System.out.println("[rmi] setlocalnode " + this + "(" + remotenid + ") " + lh);
+	localnode = ln;
+	if (localnode.getNodeId().equals(remotenid))
 	    isLocal = true;
     }
 
@@ -159,6 +159,12 @@ public class RMINodeHandle implements NodeHandle, Serializable
     public void setIsInPool(boolean iip) { isInPool = iip; }
 
     public void receiveMessage(Message msg) {
+
+	if (isLocal) {
+	    localnode.receiveMessage(msg);
+	    return;
+	}
+
 	try {
 
 	    if (alive == false)
@@ -169,13 +175,13 @@ public class RMINodeHandle implements NodeHandle, Serializable
 		System.out.println("panic: sending message to unverified handle "
 				   + this + " for " + remotenid + ": " + msg);
 
-	    msg.setSenderId(localhandle.getNodeId());
+	    msg.setSenderId(localnode.getNodeId());
 
 	    System.out.println("[rmi] sending " +
 			       (msg instanceof RouteMessage ? "route" : "direct")
 			       + " msg to " + remotenid + ": " + msg);
 
-	    remoteNode.receiveMessage(msg);
+	    remoteNode.remoteReceiveMessage(msg);
 	    //System.out.println("[rmi] message sent successfully");
 
 	    markAlive();
@@ -186,14 +192,14 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	    markDead();
 
 	    // bounce back to local dispatcher
-	    System.out.println("[rmi] bouncing message back to self at " + localhandle);
+	    System.out.println("[rmi] bouncing message back to self at " + localnode);
 	    if (msg instanceof RouteMessage) {
 		RouteMessage rmsg = (RouteMessage) msg;
 		rmsg.nextHop = null;
 		System.out.println("[rmi] this msg bounced is " + rmsg);
-		localhandle.receiveMessage(rmsg);
+		localnode.receiveMessage(rmsg);
 	    } else {
-		localhandle.receiveMessage(msg);
+		localnode.receiveMessage(msg);
 	    }
 	}
     }
@@ -228,15 +234,13 @@ public class RMINodeHandle implements NodeHandle, Serializable
     {
 	RMIPastryNode rn = (RMIPastryNode) in.readObject();
 	NodeId rnid = (NodeId) in.readObject();
-	// System.out.println("[rmi] readobject RMI handle for node: " + rnid);
 	init(rn, rnid); // initialize all the other elements also
     }
 
     private void writeObject(ObjectOutputStream out)
 	throws IOException, ClassNotFoundException 
     {
-	if (isLocal) System.out.println("[rmi] writeObject from " + localhandle.getNodeId() + " to local node " + remotenid);
-	// else System.out.println("[rmi] writeobject RMI handle for node: " + remotenid);
+	if (isLocal) System.out.println("[rmi] writeObject from " + localnode.getNodeId() + " to local node " + remotenid);
 	out.writeObject(remoteNode);
 	out.writeObject(remotenid);
     } 
