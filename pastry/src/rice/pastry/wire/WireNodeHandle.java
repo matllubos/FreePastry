@@ -248,8 +248,6 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
   public void connectToRemoteNode(LinkedList messages) {
     if (state == STATE_USING_UDP) {
       try {
-      //  InetSocketAddress tcpAddress = new InetSocketAddress(address.getAddress(), address.getPort());// + 1);
-
         SocketChannel channel = SocketChannel.open();
         channel.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
         channel.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
@@ -277,17 +275,16 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
           while (i.hasNext()) {
             writer.enqueue(i.next());
           }
+        }
 
-          if (((WirePastryNode) getLocalNode()).inThread()) {
-            key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-          } else {
-            ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector().wakeup();
-          }
+        if (((WirePastryNode) getLocalNode()).inThread()) {
+          key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        } else {
+          ((WirePastryNode) getLocalNode()).getSelectorManager().getSelector().wakeup();
         }
       } catch (IOException e) {
-        markDead();
-        state = STATE_USING_UDP;
         debug("IOException connecting to remote node " + address);
+        close();
       }
     }
   }
@@ -447,8 +444,6 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
   public void write(SelectionKey key) {
     if (state == STATE_USING_TCP)
       ((WirePastryNode) getLocalNode()).getSocketManager().update(this);
-
-//    debug("Found channel ready for data - writing to " +address);
 
     try {
       // if writer is done, remove interest from writing

@@ -358,14 +358,18 @@ public class DatagramTransmissionManager {
         while (i.hasNext()) {
           PendingWrite pw = (PendingWrite) i.next();
 
-          if (pw.getObject() instanceof DatagramTransportMessage) {
-            DatagramTransportMessage dtm = (DatagramTransportMessage) pw.getObject();
-            list.addLast(new SocketTransportMessage(dtm.getObject()));
+          if (! (pw.getObject() instanceof DatagramMessage)) {
+            list.addLast(new SocketTransportMessage(pw.getObject()));
             i.remove();
           }
         }
 
         debug("Queue has exceed maximum length - moving to TCP.");
+
+        if (queue.size() > 0)
+          state = STATE_READY;
+        else
+          state = STATE_NO_DATA;
 
         handle.connectToRemoteNode(list);
       } else {
@@ -473,28 +477,37 @@ public class DatagramTransmissionManager {
           numRetries++;
 
           if (numRetries == NUM_RETRIES_BEFORE_OPENING_SOCKET) {
-            debug("Attempting to open a socket... (" + numRetries + " try)");
+            PendingWrite write = (PendingWrite) queue.getFirst();
 
-            LinkedList list = new LinkedList();
+            if (! (write.getObject() instanceof DatagramMessage)) {
+              debug("Attempting to open a socket... (" + numRetries + " try)");
 
-            Iterator i = queue.iterator();
-            i.next();
+              LinkedList list = new LinkedList();
 
-            while (i.hasNext()) {
-              PendingWrite pw = (PendingWrite) i.next();
-              list.addLast(new SocketTransportMessage(pw.getObject()));
-              i.remove();
+              Iterator i = queue.iterator();
+
+              while (i.hasNext()) {
+                PendingWrite pw = (PendingWrite) i.next();
+                if (! (pw.getObject() instanceof DatagramMessage)) {
+                  list.addLast(new SocketTransportMessage(pw.getObject()));
+                  i.remove();
+                }
+              }
+
+              handle.markDead();
+
+              if (queue.size() > 0)
+                state = STATE_READY;
+              else
+                state = STATE_NO_DATA;
+
+              handle.connectToRemoteNode(list);
             }
-
-            handle.markDead();
-            handle.connectToRemoteNode(list);
           }
         }
 
         if (numRetries >= MAX_NUM_RETRIES) {
-          //((WireNodeHandlePool) pastryNode.getNodeHandlePool()).get(address).markDead();
           debug(pastryNode.getNodeId() + " found " + nodeId + " to be non-responsive - cancelling message " + queue.getFirst());
-          handle.markDead();
           queue.removeFirst();
           state = STATE_NO_DATA;
         }
