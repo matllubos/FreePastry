@@ -242,11 +242,11 @@ public class PingManager extends SelectionKeyHandler {
       while ((address = (InetSocketAddress) channel.receive(buffer)) != null) {
         buffer.flip();
         
-        if (address.getPort() % 2 == localAddress.getAddress().getPort() % 2) {
+    /*    if (address.getPort() % 2 == localAddress.getAddress().getPort() % 2) {
           buffer.clear();
           System.out.println("Dropping packet");
           return;
-        } 
+        } */
         
         if (buffer.remaining() > 0) {
           readHeader(address);
