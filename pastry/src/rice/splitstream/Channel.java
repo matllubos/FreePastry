@@ -103,7 +103,7 @@ public class Channel implements IScribeApp {
      * Number of timeouts allowable before generating an upcall;
      * -1 indicates an infinite number of retries
      */
-    private int max_timeouts = 3;
+    private int max_timeouts = 5;
 
     /**
      * Length of time to wait for a response before timing out
@@ -114,6 +114,13 @@ public class Channel implements IScribeApp {
      * Should we ignore any attach-related timeout messages received
      */
     private boolean ignore_timeout = true;
+
+
+    /**
+     * Random number
+     */
+    public static Random random = new Random();
+
 
     /**
      * Constructor to create a new channel from scratch
@@ -142,11 +149,11 @@ public class Channel implements IScribeApp {
         /* create the topic */
         NodeId topicId = ((Scribe)this.scribe).generateTopicId(name);
         if(scribe.create(topicId, cred)){
-	    System.out.println("Channel Topic Created");
+	    System.out.println("DEBUG ::Channel Topic Created");
 	    this.channelId = new ChannelId(topicId);
         }
         else{
-           System.out.println("ERROR: Channel Topic Creation Failed");
+           System.out.println("DEBUG ::ERROR: Channel Topic Creation Failed");
         }
 
         /* Spare Capacity Id currently fixed to aid debugging */
@@ -156,18 +163,18 @@ public class Channel implements IScribeApp {
 	    this.spareCapacityId = new SpareCapacityId(topicId);
         }
         else
-           System.out.println("ERROR: Spare Capacity Topic Creation Failed");
+           System.out.println("DEBUG ::ERROR: Spare Capacity Topic Creation Failed");
 
-	System.out.println("Spare Capacity Id "+topicId);
+	System.out.println("DEBUG ::Spare Capacity Id "+topicId);
         /* Stripe Id base also fixed to aid debugging */
         //NodeId baseId = random.generateNodeId();
-	System.out.println("Creating "+numStripes+" number of stripes ");
+	System.out.println("DEBUG ::Creating "+numStripes+" number of stripes ");
         NodeId baseId = scribe.generateTopicId(name + "STRIPES");
 	for(int i = 0; i < this.numStripes; i++){
 	    StripeId stripeId = new StripeId(baseId.getAlternateId(numStripes, 4, i)); 
 	    Stripe stripe = new Stripe(stripeId, this, scribe,cred,true);
 	    stripeIdTable.put(stripeId, stripe);
-	    System.out.println("Created stripe "+stripeId);
+	    System.out.println("DEBUG ::Created stripe "+stripeId);
             /* This is the code to select the primary stripe, check it */ 
 	    if(stripeId.getDigit(getSplitStream().getRoutingTable().numRows() -1, 4) 
 		== getSplitStream().getNodeId().getDigit(getSplitStream().getRoutingTable().numRows() -1,4))
@@ -180,11 +187,11 @@ public class Channel implements IScribeApp {
 	if(scribe.join(spareCapacityId, this, cred)){
 	}
         else{
-          System.out.println("ERROR: Could not join Spare Capacity Tree");
+          System.out.println("DEBUG ::ERROR: Could not join Spare Capacity Tree");
         }
 	if(!isReady){
 	    isReady = true;
-	    System.out.println("Channel is ready at "+((Scribe)scribe).getNodeId()+" at the creator");
+	    System.out.println("DEBUG ::Channel is ready at "+((Scribe)scribe).getNodeId()+" at the creator");
 	    notifyApps();
 	}
    }  
@@ -203,7 +210,7 @@ public class Channel implements IScribeApp {
 	if(scribe.join(channelId, this, cred, subInfo)){
 	}		
         else{
-          System.out.println("ERROR: Could not join Channel Tree");
+          System.out.println("DEBUG ::ERROR: Could not join Channel Tree");
         }
     }
 
@@ -232,13 +239,15 @@ public class Channel implements IScribeApp {
                                         this.channelId,
 					cred
                                        );
-        //System.out.println("Sending Anycast Message from " + getNodeId());
-        System.out.println("Sending ControlAttach Message");
+        //System.out.println("DEBUG ::Sending Anycast Message from " + getNodeId());
+        System.out.println("DEBUG ::Sending ControlAttach Message");
         //this.getSplitStream().routeMsg(channelId, attachMessage, cred, null );
 	scribe.anycast(channelId, attachMessage, cred);
         ignore_timeout = false;
+	float rand = random.nextFloat();
+	float newTimeout = (float)((1.0 + rand) * getTimeoutLen());
         ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( getSplitStream().getAddress(), 0, channelId, cred, channelId );
-	this.splitStream.getPastryNode().scheduleMsg( timeoutMessage, timeoutLen );
+	this.splitStream.getPastryNode().scheduleMsg( timeoutMessage, (long)newTimeout);
 
     }
 
@@ -252,7 +261,7 @@ public class Channel implements IScribeApp {
 	    subInfo[0] = this.channelId;
 	    for(int i = 0; i < stripeIds.length; i++){
 		if(stripeIdTable == null){
-		    System.out.println("Debug :: StripeIdTable is null in Channel.java");
+		    System.out.println("DEBUG ::Debug :: StripeIdTable is null in Channel.java");
 		}
 		Stripe stripe = new Stripe( stripeIds[i], this, scribe, cred, false);
 		stripeIdTable.put(stripeIds[i], stripe);
@@ -269,17 +278,17 @@ public class Channel implements IScribeApp {
 	    if(scribe.join(this.channelId, this, cred, subInfo)){
 	    }
 	    else{
-		System.out.println("ERROR: Could not join Channel");
+		System.out.println("DEBUG ::ERROR: Could not join Channel");
 	    }
 
 	    if(scribe.join(spareCapacityId, this, cred)){
 	    }
 	    else{
-		System.out.println("ERROR: Could not join Spare Capacity Tree");
+		System.out.println("DEBUG ::ERROR: Could not join Spare Capacity Tree");
 	    }
 	    
 	    isReady = true;
-	    System.out.println("Channel is ready at "+((Scribe)scribe).getNodeId()+" from initialize messages");
+	    System.out.println("DEBUG ::Channel is ready at "+((Scribe)scribe).getNodeId()+" from initialize messages");
 	    notifyApps();
 	}
     }
@@ -304,9 +313,9 @@ public class Channel implements IScribeApp {
 	NodeId[] subInfo = new NodeId[stripeIds.length + 2];
 
 	subInfo[0] = channelId;
-	System.out.println("Channel -- created from subscribe method, stripeids.length ="+stripeIds.length);
+	System.out.println("DEBUG ::Channel -- created from subscribe method, stripeids.length ="+stripeIds.length);
 	for(int i = 0 ; i < stripeIds.length ; i++){
-	    if(stripeIdTable == null) {System.out.println("NULL");}
+	    if(stripeIdTable == null) {System.out.println("DEBUG ::NULL");}
             Stripe stripe = new Stripe( stripeIds[i], this, scribe, cred, false);
 	    stripeIdTable.put(stripeIds[i], stripe);
 	    subInfo[i+1] = stripeIds[i];
@@ -325,18 +334,18 @@ public class Channel implements IScribeApp {
 	if(scribe.join(channelId, this, cred, subInfo)){
 	}
         else{
-          System.out.println("ERROR: Could not join Channel Tree");
+          System.out.println("DEBUG ::ERROR: Could not join Channel Tree");
         }	
 	if(scribe.join(spareCapacityId, this, cred)){
 	}	
         else{	
-          System.out.println("ERROR: Could not join Spare Capacity Tree");
+          System.out.println("DEBUG ::ERROR: Could not join Spare Capacity Tree");
         }
 	if(!isReady){
 	    isReady = true;
 	    notifyApps();
-	    System.out.println("Channel is ready at "+((Scribe)scribe).getNodeId()+" from subscribe methods");
-	    //System.out.println("A Channel Object is being created (In Path) at " + getNodeId());
+	    System.out.println("DEBUG ::Channel is ready at "+((Scribe)scribe).getNodeId()+" from subscribe methods");
+	    //System.out.println("DEBUG ::A Channel Object is being created (In Path) at " + getNodeId());
 	}
     }
  
@@ -501,7 +510,7 @@ public class Channel implements IScribeApp {
         for(int i = 0 ; i < getStripes().length && !found; i ++){
 	    Stripe stripe = (Stripe) stripeIdTable.get(getStripes()[i]);
 
-	    //System.out.println("Stripe "+stripe.getStripeId()+" state "+stripe.getState());
+	    //System.out.println("DEBUG ::Stripe "+stripe.getStripeId()+" state "+stripe.getState());
             /**
              * Limits the search to only nonsubscribed stripes
              */
@@ -611,11 +620,11 @@ public class Channel implements IScribeApp {
          * the spare capcity tree
          */	
 	if((currentUsage + 1) == maxAllowed){
-	    System.out.println("Node " + getSplitStream().getNodeId() + " Joining Spare Capacity Tree Again");
+	    System.out.println("DEBUG ::Node " + getSplitStream().getNodeId() + " Joining Spare Capacity Tree Again");
 	    if(scribe.join(getSpareCapacityId(), this, cred)){
             }
             else{
-              System.out.println("ERROR: Failed to join Spare Capacity Tree");
+              System.out.println("DEBUG ::ERROR: Failed to join Spare Capacity Tree");
             }
 	}
     }
@@ -631,7 +640,7 @@ public class Channel implements IScribeApp {
          * then we leave the spare capacity tree
          */
 	if(!bandwidthManager.canTakeChild(this)){
-	    System.out.println("Node " + getSplitStream().getNodeId() + " Leaving Spare Capacity Tree");
+	    System.out.println("DEBUG ::Node " + getSplitStream().getNodeId() + " Leaving Spare Capacity Tree");
 	    scribe.leave(getSpareCapacityId(), this, cred);
 	}
     }
@@ -695,9 +704,9 @@ public class Channel implements IScribeApp {
 	Serializable obj = (Serializable)msg.getData();
 	/* Check the type of message */
 	/* then make call accordingly */
-	System.out.println("Channel - Recieved message through anycast");
+	System.out.println("DEBUG ::Channel - Recieved message through anycast");
 	if(obj instanceof ControlAttachMessage){
-	    System.out.println("Recieved ControlAttachMessage message through Anycast");
+	    System.out.println("DEBUG ::Recieved ControlAttachMessage message through Anycast");
 	    ControlAttachMessage amsg = (ControlAttachMessage)obj;
 	    ChannelId channelId = amsg.getChannelId();
 	    handleAttachMessage(amsg);
@@ -725,7 +734,7 @@ public class Channel implements IScribeApp {
 	
 	else{
 	    System.out.println(msg.getTopicId());
-	    System.out.println("Unknown Scribe Message");
+	    System.out.println("DEBUG ::Unknown Scribe Message");
         }
     }
 
@@ -760,7 +769,7 @@ public class Channel implements IScribeApp {
 	    handleControlDropMessage(msg);
 	}
 	else if(msg instanceof ControlFindParentMessage){
-	    System.out.println("Channel - Control Find Parent Msg should not come here ");
+	    System.out.println("DEBUG ::Channel - Control Find Parent Msg should not come here ");
 	    handleControlFindParentMessage(msg); 
 	}
 	else if ( msg instanceof ControlPropogatePathMessage )
@@ -773,12 +782,12 @@ public class Channel implements IScribeApp {
         }
 	/*
         else if( msg instanceof ControlAttachMessage){
-            System.out.println("Delivering Attach Message");
+            System.out.println("DEBUG ::Delivering Attach Message");
             handleAttachMessage(msg); 
         }
 	*/
 	else{
-	    System.out.println("Unknown Pastry Message Type");
+	    System.out.println("DEBUG ::Unknown Pastry Message Type");
 	}
     }
 
@@ -795,7 +804,7 @@ public class Channel implements IScribeApp {
 	}
 	/*
         else if(msg instanceof ControlAttachMessage){
-            System.out.println("Enrouting Attach Message");
+            System.out.println("DEBUG ::Enrouting Attach Message");
             return handleAttachMessage(msg);
         }
 	*/
@@ -833,17 +842,17 @@ public class Channel implements IScribeApp {
 	    if(scribe.join(channelId, this, cred, subInfo)){
 	    }
 	    else{
-		System.out.println("ERROR: Could not join channel tree");
+		System.out.println("DEBUG ::ERROR: Could not join channel tree");
 	    }
 	    if(scribe.join(spareCapacityId, this, cred)){
 	    }
 	    else{	
-		System.out.println("ERROR: Could not spare capacity tree");
+		System.out.println("DEBUG ::ERROR: Could not spare capacity tree");
 	    }
 
 	    isReady = true;
 	    ignore_timeout = true;
-	    System.out.println("Channel is ready at "+((Scribe)scribe).getNodeId()+" after receiving AttachResponse");
+	    System.out.println("DEBUG ::Channel is ready at "+((Scribe)scribe).getNodeId()+" after receiving AttachResponse");
 	    notifyApps();
 	}
     }
@@ -860,7 +869,7 @@ public class Channel implements IScribeApp {
 
 	if(stripe != null){
 	    Vector path = prmessage.getPath();
-	    //System.out.println("Setting root path in controlFindparentResponse msg - setting it to "+prmessage.getSource().getNodeId()+" at "+getSplitStream().getNodeId() + " for stripe "+stripe.getStripeId());
+	    //System.out.println("DEBUG ::Setting root path in controlFindparentResponse msg - setting it to "+prmessage.getSource().getNodeId()+" at "+getSplitStream().getNodeId() + " for stripe "+stripe.getStripeId());
 	    stripe.setRootPath( path );
         }
         //stripe.setIgnoreTimeout( true );
@@ -880,10 +889,10 @@ public class Channel implements IScribeApp {
 
 	if(stripe != null){
           stripe.dropped();
-	  //System.out.println("Setting root path in controlDropMessage msg - making it empty at"+getNodeId()+" for stripe "+stripe.getStripeId());
+	  //System.out.println("DEBUG ::Setting root path in controlDropMessage msg - making it empty at"+getNodeId()+" for stripe "+stripe.getStripeId());
           stripe.setRootPath( null );
         }
-	//System.out.println("Node "+((Scribe)scribe).getNodeId()+" received DROP message"+" for stripe "+dropMessage.getStripeId());
+	//System.out.println("DEBUG ::Node "+((Scribe)scribe).getNodeId()+" received DROP message"+" for stripe "+dropMessage.getStripeId());
 	dropMessage.handleDeliverMessage((Scribe)scribe, 
            ((Scribe) scribe).getTopic(dropMessage.getStripeId()), getSplitStream().getPastryNode(), this);
     }
@@ -898,7 +907,7 @@ public class Channel implements IScribeApp {
      * @param msg the ScribeMessage for this channel
      */
     private boolean handleAttachMessage(ControlAttachMessage attachMsg){
-	System.out.println("Channel - Should not receive Attach Message through Pastry");
+	System.out.println("DEBUG ::Channel - Should not receive Attach Message through Pastry");
 	return true;
         //ControlAttachMessage attachMsg = (ControlAttachMessage) msg.getData();
 	//return attachMsg.handleMessage(this, scribe, attachMsg.getSource());
@@ -915,7 +924,7 @@ public class Channel implements IScribeApp {
      */
     private void handleSpareCapacityMessage(ScribeMessage msg){
 
-	//System.out.println("SpareCapacity Message from " + msg.getSource().getNodeId() + " at " + getNodeId());
+	//System.out.println("DEBUG ::SpareCapacity Message from " + msg.getSource().getNodeId() + " at " + getNodeId());
 	/*
 	Stripe stripe = null;
 	ControlFindParentMessage parentMessage = 
@@ -975,8 +984,8 @@ public class Channel implements IScribeApp {
      */
     private void handleControlTimeoutMessage( Message msg )
     {
-	if( !ignore_timeout)
-	    System.out.println( "Received a scheduled timeout message. Ignoring? "+ignore_timeout );
+	//if( !ignore_timeout)
+	//System.out.println( "Received a scheduled timeout message. Ignoring? "+ignore_timeout );
         ControlTimeoutMessage timeoutMessage = (ControlTimeoutMessage)msg;
         timeoutMessage.handleMessage( this, getSplitStream().getPastryNode(), (Scribe)this.scribe );
     }
@@ -1074,6 +1083,13 @@ public class Channel implements IScribeApp {
      * it is the new root.
      */
     public void isNewRoot(NodeId topicId){
+    }
+
+    /**
+     * Upcall by scribe to let this application know about
+     * local node's new parent in the topic tree
+     */
+    public void newParent(NodeId topicId, NodeHandle newParent, Serializable data){
     }
 
     public void setMaxTimeout(int limit){
