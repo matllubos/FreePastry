@@ -81,6 +81,9 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   
   // The trash can, or where objects should go once removed.  If null, they are deleted
   protected StorageManager trash;
+  
+  // The backup store, or location of over-replicated objects, helping PAST to better deal with churn
+  protected Cache backup;
 
   // the replication factor for Past
   protected int replicationFactor;
@@ -136,7 +139,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param instance The unique instance name of this Past
    */
   public PastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy) {
-    this(node, manager, replicas, instance, policy, null);
+    this(node, manager, null, replicas, instance, policy, null);
   }
   
   
@@ -148,9 +151,10 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
    */
-  public PastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy, StorageManager trash) {
+  public PastImpl(Node node, StorageManager manager, Cache backup, int replicas, String instance, PastPolicy policy, StorageManager trash) {
     this.log.setLevel(Level.WARNING);
     this.storage = manager;
+    this.backup = backup;
     this.endpoint = node.registerApplication(this, instance);
     this.factory = node.getIdFactory();
     this.policy = policy;
@@ -807,7 +811,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   public void fetch(final Id id, NodeHandle hint, Continuation command) {
     log.finer("Sending out replication fetch request for the id " + id);
     
-    policy.fetch(id, hint, this, new StandardContinuation(command) {
+    policy.fetch(id, hint, backup, this, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         if (o == null) {
           log.warning("Could not fetch id " + id + " - policy returned null in namespace " + instance);
@@ -831,10 +835,10 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param id The id to remove
    */
   public void remove(final Id id, Continuation command) {
-    if (trash != null) {                        
+    if (backup != null) {                        
       storage.getObject(id, new StandardContinuation(command) {
         public void receiveResult(Object o) {
-          trash.store(id, storage.getMetadata(id), (Serializable) o, new StandardContinuation(parent) {
+          backup.cache(id, storage.getMetadata(id), (Serializable) o, new StandardContinuation(parent) {
             public void receiveResult(Object o) {
               storage.unstore(id, parent);
             }

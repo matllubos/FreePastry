@@ -40,6 +40,7 @@ import rice.*;
 import rice.Continuation.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.messaging.*;
+import rice.persistence.*;
 
 /**
  * @(#) PastPolicy.java This interface represents a policy for Past, which is asked whenever
@@ -61,9 +62,10 @@ public interface PastPolicy {
    *
    * @param id The id to fetch
    * @param past The local past instance 
+   * @param backup The backup cache, where the object *might* be located
    * @param command The command to call with the replica to store
    */
-  public void fetch(Id id, NodeHandle hint, Past past, Continuation command);
+  public void fetch(Id id, NodeHandle hint, Cache backup, Past past, Continuation command);
   
   /**
    * This method is call before an insert() is processed on the local node.  This allows applications
@@ -88,25 +90,30 @@ public interface PastPolicy {
      *
      * @param id The id to fetch
      * @param hint A hint as to where the key might be
+     * @param backup The backup cache, where the object *might* be located
      * @param past The local past instance 
      * @param command The command to call with the replica to store
      */
-    public void fetch(final Id id, final NodeHandle hint, final Past past, Continuation command) {
-      past.lookup(id, false, new StandardContinuation(command) {
-        public void receiveResult(Object o) {
-          if (o != null) 
-            parent.receiveResult(o);
-          else 
-            past.lookupHandle(id, hint, new StandardContinuation(parent) {
-              public void receiveResult(Object o) {
-                if (o != null) 
-                  past.fetch((PastContentHandle) o, parent);
-                else
-                  parent.receiveResult(null);
-              }
-            });
-        }
-      });
+    public void fetch(final Id id, final NodeHandle hint, final Cache backup, final Past past, Continuation command) {
+      if ((backup != null) && backup.exists(id)) {
+        backup.getObject(id, command);
+      } else {
+        past.lookup(id, false, new StandardContinuation(command) {
+          public void receiveResult(Object o) {
+            if (o != null) 
+              parent.receiveResult(o);
+            else 
+              past.lookupHandle(id, hint, new StandardContinuation(parent) {
+                public void receiveResult(Object o) {
+                  if (o != null) 
+                    past.fetch((PastContentHandle) o, parent);
+                  else
+                    parent.receiveResult(null);
+                }
+              });
+          }
+        });
+      }
     }
     
     /**

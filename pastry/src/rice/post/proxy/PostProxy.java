@@ -189,6 +189,21 @@ public class PostProxy {
   protected StorageManager aggrWaitingStorage;
   
   /**
+    * The local backup cache, for immutable objects
+   */
+  protected Cache immutableBackupCache;
+  
+  /**
+    * The local backup cache, for pending deliveries
+   */
+  protected Cache pendingBackupCache;
+  
+  /**
+    * The local backup cache for pending deliveries
+   */
+  protected Cache deliveredBackupCache;
+  
+  /**
    * The name of the local user
    */
   protected String name;
@@ -705,6 +720,22 @@ public class PostProxy {
       
       stepDone(SUCCESS);
     }
+    
+    if (parameters.getBooleanParameter("past_backup_cache_enable")) {
+      long backupLimit = parameters.getLongParameter("past_backup_cache_limit");
+      
+      stepStart("Starting Immutable Backup Cache");
+      immutableBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-immutable-cache", ".", diskLimit), cacheLimit);
+      stepDone(SUCCESS);
+      
+      stepStart("Starting Pending Backup Cache");
+      pendingBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-pending-cache", ".", diskLimit), cacheLimit);
+      stepDone(SUCCESS);
+      
+      stepStart("Starting Delivered Backup Cache");
+      deliveredBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-delivered-cache", ".", diskLimit), cacheLimit);
+      stepDone(SUCCESS);
+    }
   }
   
   /**
@@ -969,14 +1000,14 @@ public class PostProxy {
     stepStart("Starting Past services");
     
     if (parameters.getBooleanParameter("past_garbage_collection_enable")) {
-      immutablePast = new GCPastImpl(node, immutableStorage, 
+      immutablePast = new GCPastImpl(node, immutableStorage, immutableBackupCache, 
                                      parameters.getIntParameter("past_replication_factor"), 
                                      parameters.getStringParameter("application_instance_name") + "-immutable",
                                      new PastPolicy.DefaultPastPolicy(),
                                      parameters.getLongParameter("past_garbage_collection_interval"),
                                      trashStorage);
     } else {
-      immutablePast = new PastImpl(node, immutableStorage, 
+      immutablePast = new PastImpl(node, immutableStorage, immutableBackupCache,
                                    parameters.getIntParameter("past_replication_factor"), 
                                    parameters.getStringParameter("application_instance_name") + "-immutable", 
                                    new PastPolicy.DefaultPastPolicy(), trashStorage);
@@ -984,17 +1015,17 @@ public class PostProxy {
     
     realImmutablePast = immutablePast;
       
-    mutablePast = new PastImpl(node, mutableStorage, 
+    mutablePast = new PastImpl(node, mutableStorage, null,
                                parameters.getIntParameter("past_replication_factor"), 
                                parameters.getStringParameter("application_instance_name") + "-mutable",
                                new PostPastPolicy(), trashStorage);
-    deliveredPast = new GCPastImpl(node, deliveredStorage, 
+    deliveredPast = new GCPastImpl(node, deliveredStorage, deliveredBackupCache,
                                  parameters.getIntParameter("past_replication_factor"), 
                                  parameters.getStringParameter("application_instance_name") + "-delivered",
                                  new PastPolicy.DefaultPastPolicy(),
                                  parameters.getLongParameter("past_garbage_collection_interval"),
                                  trashStorage);
-    pendingPast = new DeliveryPastImpl(node, pendingStorage, 
+    pendingPast = new DeliveryPastImpl(node, pendingStorage, pendingBackupCache,
                                        parameters.getIntParameter("past_replication_factor"), 
                                        parameters.getIntParameter("post_redundancy_factor"),
                                        parameters.getStringParameter("application_instance_name") + "-pending", deliveredPast,

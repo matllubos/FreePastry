@@ -85,7 +85,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param collectionInterval The frequency with which GCPast should collection local expired objects
    */
   public GCPastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy, long collectionInterval) {
-    this(node, manager, replicas, instance, policy, collectionInterval, null);
+    this(node, manager, null, replicas, instance, policy, collectionInterval, null);
   }
   
   
@@ -94,15 +94,15 @@ public class GCPastImpl extends PastImpl implements GCPast {
    *
    * @param node The node below this Past implementation
    * @param manager The storage manager to be used by Past
+   * @param backup The cache used for previously-responsible objects (can be null)
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
    * @param trash The storage manager to place the deleted objects into (if null, they are removed)
    * @param policy The policy this past instance should use
    * @param collectionInterval The frequency with which GCPast should collection local expired objects
    */
-  public GCPastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy, long collectionInterval, StorageManager trash) {
-    super(new GCNode(node), manager, replicas, instance, policy);
-    this.trash = trash;
+  public GCPastImpl(Node node, StorageManager manager, Cache backup, int replicas, String instance, PastPolicy policy, long collectionInterval, StorageManager trash) {
+    super(new GCNode(node), manager, backup, replicas, instance, policy, trash);
     this.realFactory = node.getIdFactory();
     
     endpoint.scheduleMessage(new GCCollectMessage(0, getLocalNodeHandle(), node.getId()), collectionInterval, collectionInterval);
@@ -499,7 +499,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
         command.receiveResult(Boolean.TRUE);
       }
     } else {
-      policy.fetch(gcid.getId(), hint, this, new StandardContinuation(command) {
+      policy.fetch(gcid.getId(), hint, backup, this, new StandardContinuation(command) {
         public void receiveResult(Object o) {
           if (o == null) {
             log.warning("Could not fetch id " + id + " - policy returned null in namespace " + instance);

@@ -42,6 +42,7 @@ import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 import rice.p2p.past.messaging.*;
 import rice.post.*;
+import rice.persistence.*;
 
 /**
  * @(#) PastPolicy.java 
@@ -61,7 +62,7 @@ public class PostPastPolicy implements PastPolicy {
    * @param past The local past instance 
    * @param command The command to call with the replica to store
    */
-  public void fetch(final Id id, final NodeHandle hint, final Past past, Continuation command) {
+  public void fetch(final Id id, final NodeHandle hint, final Cache backup, final Past past, Continuation command) {
     past.lookupHandles(id, past.getReplicationFactor()+1, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         PastContentHandle[] handles = (PastContentHandle[]) o;

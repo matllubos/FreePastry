@@ -75,8 +75,8 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
    */
-  public DeliveryPastImpl(Node node, StorageManager manager, int replicas, int redundancy, String instance, PastImpl delivered, long collectionInterval) {
-    super(node, manager, replicas, instance + "-delivery", new PastPolicy.DefaultPastPolicy(), collectionInterval);
+  public DeliveryPastImpl(Node node, StorageManager manager, Cache backup, int replicas, int redundancy, String instance, PastImpl delivered, long collectionInterval) {
+    super(node, manager, backup, replicas, instance + "-delivery", new PastPolicy.DefaultPastPolicy(), collectionInterval, null);
     
     this.redundancy = redundancy;
     this.delivered = delivered;
@@ -121,11 +121,24 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
           log.warning(endpoint.getId() + ": Removal of delivered message caused " + o);
         
         while (i.hasNext()) {
-          Id id = (Id) i.next();
+          final Id id = (Id) i.next();
 
           if (delivered.exists(id)) {
+            final Continuation me = this;
+            
             log.finer(endpoint.getId() + ": Deleting id " + id + " because receipt exists");
-            storage.unstore(id, this);
+            storage.unstore(id, new StandardContinuation(parent) {
+              public void receiveResult(Object o) {
+                if (! Boolean.TRUE.equals(o))
+                  log.warning(endpoint.getId() + ": Removal of delivered message caused " + o);
+
+                if (backup == null) 
+                  me.receiveResult(o);
+                else 
+                  backup.uncache(id, me);
+              }
+            });
+            
             return;
           }
         } 
