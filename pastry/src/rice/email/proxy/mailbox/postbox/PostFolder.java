@@ -73,7 +73,11 @@ public class PostFolder implements MailFolder {
   }
 
   public void delete() throws MailboxException {
-    parent.removeFolder(getFullName());
+    ExternalContinuation c = new ExternalContinuation();
+    parent.removeFolder(getFullName(), c);
+    c.sleep();
+
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
   }
 
   public void put(MovingMessage msg) throws MailboxException {

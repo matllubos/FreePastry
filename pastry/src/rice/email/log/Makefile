@@ -3,13 +3,8 @@ PACKAGE = rice.email.log
 SOURCE  = \
 	DeleteMailLogEntry.java \
 	InsertMailLogEntry.java \
-	DeleteFolderLogEntry.java \
-	InsertFolderLogEntry.java \
 	SnapShotLogEntry.java \
-	DeleteMailEvent.java \
-	InsertMailEvent.java \
-	DeleteFolderEvent.java \
-	InsertFolderEvent.java \
+	UpdateMailLogEntry.java \
   EmailLog.java
 
 RMI_SOURCE =
