@@ -39,6 +39,13 @@ public class MovingMessage
         _workspace = workspace;
     }
 
+    public Resource getResource()
+      throws IOException
+    {
+
+      return _content;
+    }
+
     public Reader getContent()
                       throws IOException
     {
@@ -63,29 +70,6 @@ public class MovingMessage
             _content = null;
         }
     }
-
-    public Email toEmail() throws Exception {
-      if (email != null)
-        return email;
-
-      PostEntityAddress[] recipients = new PostEntityAddress[toAddresses.size()];
-
-      for (int i=0; i<toAddresses.size(); i++) {
-        recipients[i] = new PostUserAddress(toAddresses.get(i).toString());
-      }
-
-      StringWriter writer = new StringWriter();
-      StreamUtils.copy(getContent(), writer);
-      
-      email = new Email(new PostUserAddress(getReturnPath().toString()),
-                        recipients,
-                        "Test",
-                        new EmailData(writer.toString().getBytes()),
-                        null);
-
-      return email;
-    }
-                        
 
     public MailAddress getReturnPath()
     {

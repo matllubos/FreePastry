@@ -175,10 +175,21 @@ public class Folder {
    * @param email The email to insert.
    * @param command the work to perform after this call
    */
-  public void addMessage(Email email, Continuation command) {
-      Flags flags = new Flags();
-      StoredEmail storedEmail = new StoredEmail(email, _log.getNextUID(), flags); 
-    _log.addLogEntry(new InsertMailLogEntry(storedEmail), command);
+  public void addMessage(final Email email, final Continuation command) {
+    Continuation add = new Continuation() {
+      public void receiveResult(Object o) {
+        Flags flags = new Flags();
+        StoredEmail storedEmail = new StoredEmail(email, _log.getNextUID(), flags);
+        _log.addLogEntry(new InsertMailLogEntry(storedEmail), command);
+      }
+
+      public void receiveException(Exception e) {
+        command.receiveException(e);
+      }
+    };
+
+    email.setStorage(_storage);
+    email.storeData(add);
   }
 
   /**

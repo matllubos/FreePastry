@@ -20,9 +20,10 @@ public class Email implements java.io.Serializable {
 
   PostUserAddress sender;
   PostEntityAddress[] recipients;
-  String subject;
+  EmailDataReference headersRef;
   EmailDataReference bodyRef;
   EmailDataReference[] attachmentRefs;
+  private transient EmailData headers;
   private transient EmailData body;
   private transient EmailData[] attachments;
   private int attachmentCount;
@@ -38,22 +39,36 @@ public class Email implements java.io.Serializable {
    * @param body The body of the message.
    * @param attachments The attachments to the message (could be zero-length.)
    */
-  public Email(PostUserAddress sender, 
-               PostEntityAddress[] recipients, 
-               String subject, 
+  public Email(PostUserAddress sender,
+               PostEntityAddress[] recipients,
+               EmailData headers, 
                EmailData body, 
                EmailData[] attachments) {
+    if (sender == null)
+      throw new NullPointerException("Attempting to create email with null sender");
+
+    if (headers == null)
+      throw new NullPointerException("Attempting to create email with null headers");
+
+    if (body == null)
+      throw new NullPointerException("Attempting to create email with null body");
+
+    if (recipients == null)
+      throw new NullPointerException("Attempting to create email with null recipients");
     
     this.sender = sender;
     this.recipients = recipients;
-    this.subject = subject;
+    this.headers = headers;
     this.body = body;
     this.attachments = attachments;
+
+    if (this.attachments == null) {
+      this.attachments = new EmailData[0];
+    }
+    
     this.bodyRef = null;
     this.attachmentRefs = null;
-
-    if (attachments != null)
-      this.attachmentCount = attachments.length;
+    this.attachmentCount = attachments.length;
   }
     
   /**
@@ -86,15 +101,6 @@ public class Email implements java.io.Serializable {
   protected void setStorage(StorageService s) {
     storage = s;
   }
-  
-  /**
-   * Returns the subject of this message.
-   *
-   * @return The subject of this email.
-   */
-  public String getSubject() {
-    return this.subject;
-  }
 
   /**
    * Sets the equality of this email.
@@ -108,13 +114,46 @@ public class Email implements java.io.Serializable {
 
     return (sender.equals(email.sender) &&
             Arrays.equals(recipients, email.recipients) &&
-            subject.equals(email.subject) &&
             bodyRef.equals(email.bodyRef) &&
+            headersRef.equals(email.headersRef) &&
             Arrays.equals(attachmentRefs, email.attachmentRefs));
   }
-     
+
   /**
-   * Returns the  body of this message.  Should be text.
+    * Returns the headers of this message.  Should be text.
+   *
+   * @return The haders of this email.
+   */
+  public void getHeaders(final Continuation command) {
+    // if the body has not been fetched already, fetch it
+    if ((this.headers == null) && (this.headersRef != null)) {
+
+      // build a Continuation to receive the body, and process it
+      Continuation receiveBody = new Continuation() {
+        public void receiveResult(Object o) {
+          try {
+            Email.this.headers = (EmailData) o;
+            command.receiveResult(Email.this.headers);
+          } catch (ClassCastException e) {
+            command.receiveException(new ClassCastException("Expected a EmailData, got a " + o.getClass()));
+          }
+        }
+
+        public void receiveException(Exception e) {
+          command.receiveException(e);
+        }
+      };
+
+      // start the fetching process
+      storage.retrieveContentHash(headersRef, command);
+    } else {
+      command.receiveResult(this.headers);
+    }
+  }
+  
+  
+  /**
+   * Returns the body of this message.  Should be text.
    *
    * @return The body of this email.
    */
@@ -126,8 +165,8 @@ public class Email implements java.io.Serializable {
       Continuation receiveBody = new Continuation() {
         public void receiveResult(Object o) {
           try {
-            body = (EmailData) o;
-            command.receiveResult(body);
+            Email.this.body = (EmailData) o;
+            command.receiveResult(Email.this.body);
           } catch (ClassCastException e) {
             command.receiveException(new ClassCastException("Expected a EmailData, got a " + o.getClass()));
           }          
@@ -153,7 +192,7 @@ public class Email implements java.io.Serializable {
   public void getAttachments(final Continuation command) {
     // if the attachments have not been fetched already, and there are refs to the attachments, 
     // fetch the attachments
-    if ((this.attachments == null) && (this.attachmentRefs != null)) {
+    if ((this.attachments == null) && (this.attachmentRefs.length > 0)) {
       // start the fetching process
       this.attachments = new EmailData[this.attachmentCount];
 
@@ -164,14 +203,14 @@ public class Email implements java.io.Serializable {
         public void receiveResult(Object o) {
           try {
             // store the fetched attachment
-            attachments[i] = (EmailData) o;
+            Email.this.attachments[i] = (EmailData) o;
             i++;
             
             // if there are more attachments, fetch the next one
             if (i < attachmentCount) {
-              storage.retrieveContentHash(attachmentRefs[i], this);
+              storage.retrieveContentHash(Email.this.attachmentRefs[i], this);
             } else {
-              command.receiveResult(attachments);
+              command.receiveResult(Email.this.attachments);
             }
           } catch (ClassCastException e) {
             command.receiveException(new ClassCastException("Expected a EmailData in getAttachments, got a " + o.getClass()));
@@ -187,6 +226,10 @@ public class Email implements java.io.Serializable {
       // Once the attachments have all been fetch, call the user's command
       storage.retrieveContentHash(attachmentRefs[0], receiveAttachments);
     } else {
+      if (this.attachments == null) {
+        this.attachments = new EmailData[0];
+      }
+      
       command.receiveResult(this.attachments);
     }
   }
@@ -210,10 +253,20 @@ public class Email implements java.io.Serializable {
         
         public void receiveResult(Object o) {
           try {
-            if (bodyRef == null) {
+            if ((headersRef == null) && (headers != null)) {
+              headersRef = (EmailDataReference) o;
+
+              if (body != null) {
+                storage.storeContentHash(body, this);
+              } else if (attachmentCount > 0) {
+                storage.storeContentHash(attachments[0], this);
+              } else {
+                command.receiveResult(new Boolean(true));
+              }
+            } else if ((bodyRef == null) && (body != null)) {
               bodyRef = (EmailDataReference) o;
 
-              if (attachments != null) {
+              if (attachmentCount > 0) {
                 storage.storeContentHash(attachments[0], this);
               } else {
                 command.receiveResult(new Boolean(true));
@@ -239,7 +292,15 @@ public class Email implements java.io.Serializable {
       };
 
       // store the body, and have the result go to the continuation
-      storage.storeContentHash(body, store);
+      if (headers != null) {
+        storage.storeContentHash(headers, store);
+      } else if (body != null) {
+        storage.storeContentHash(body, store);
+      } else if (attachmentCount > 0) {
+        storage.storeContentHash(attachments[0], store);
+      } else {
+        command.receiveResult(new Boolean(true));
+      }
     } else {
       command.receiveResult(new Boolean(true));
     }
@@ -251,8 +312,6 @@ public class Email implements java.io.Serializable {
     for (int i=1; i < recipients.length; i++) {
       result += "\n" + recipients[i];
     }
-
-    result += "\nSubject:\t" + subject;
     
     return result;
   }

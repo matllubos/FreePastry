@@ -151,7 +151,7 @@ public class BodyPart extends FetchPart {
         
         MimeBodyPart thisPart = (MimeBodyPart) mime.getBodyPart(i-1);
 
-        InputStream stream = thisPart.getInputStream();
+        InputStream stream = thisPart.getRawInputStream();
         StringWriter writer = new StringWriter();
 
         StreamUtils.copy(new InputStreamReader(stream), writer);

@@ -32,6 +32,6 @@ public class InsertMailEvent implements Event {
    * @return the String for this Event
    */
   public String toString() {
-    return "Insert Email Event for: " + _email.getSubject();    
+    return "Insert Email Event for " + _email;    
   }
 }

@@ -232,7 +232,7 @@ public class EmailService extends PostClient {
       EmailNotificationMessage enm = (EmailNotificationMessage) nm;
       enm.getEmail().setStorage(_post.getStorageService());
 
-      System.out.println("Received email from " + enm.getEmail().getSender() + " with subject " + enm.getEmail().getSubject());
+      System.out.println("Received email from " + enm.getEmail().getSender());
       
       // notify the observers that an email has been received.
       this.setChanged();

@@ -4,6 +4,7 @@ import rice.*;
 import rice.email.*;
 import rice.email.proxy.smtp.*;
 import rice.email.proxy.mail.*;
+import rice.email.proxy.mailbox.postbox.*;
 
 public class SimpleManager implements SmtpManager {
 
@@ -57,7 +58,7 @@ public class SimpleManager implements SmtpManager {
       }
     };
     
-    email.sendMessage(state.getMessage().toEmail(), done);
+    email.sendMessage(PostMessage.parseEmail(state.getMessage().getResource()), done);
 
     synchronized(wait) { if (result[0] == null) wait.wait(); }
       

@@ -73,27 +73,7 @@ public class PostFolder implements MailFolder {
 
   public void put(MovingMessage msg) throws MailboxException {
     try {
-      PostUserAddress sender = new PostUserAddress(msg.getReturnPath().toString());
-
-      Iterator i = msg.getRecipientIterator();
-      Vector v = new Vector();
-
-      while (i.hasNext()) {v.add(i.next());}
-
-      PostUserAddress[] recipients = new PostUserAddress[v.size()];
-
-      for (int j=0; j<v.size(); j++) {
-        recipients[j] = (PostUserAddress) v.elementAt(j);
-      }
-
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      Writer writer = new OutputStreamWriter(baos);
-
-      StreamUtils.copy(msg.getContent(), writer);
-
-      EmailData data = new EmailData(baos.toByteArray());
-
-      Email email = new Email(sender, recipients, "TEST", data, null);
+      Email email = PostMessage.parseEmail(msg.getResource());
 
       final Exception[] exception = new Exception[1];
       final Object[] result = new Object[1];

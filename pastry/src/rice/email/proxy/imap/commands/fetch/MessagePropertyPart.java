@@ -30,18 +30,27 @@ public class MessagePropertyPart extends FetchPart {
 
         if ("ALL".equals(part)) {
           fetch(msg, "FLAGS");
+          getConn().print(" ");
           fetch(msg, "INTERNALDATE");
+          getConn().print(" ");
           fetch(msg, "RFC822.SIZE");
+          getConn().print(" ");
           fetch(msg, "ENVELOPE");
         } else if ("FAST".equals(part)) {
           fetch(msg, "FLAGS");
+          getConn().print(" ");
           fetch(msg, "INTERNALDATE");
+          getConn().print(" ");
           fetch(msg, "RFC822.SIZE");
         } else if ("FULL".equals(part)) {
           fetch(msg, "FLAGS");
+          getConn().print(" ");
           fetch(msg, "INTERNALDATE");
+          getConn().print(" ");
           fetch(msg, "RFC822.SIZE");
+          getConn().print(" ");
           fetch(msg, "ENVELOPE");
+          getConn().print(" ");
           fetch(msg, "BODY");
         } else if ("BODY".equals(part)) {
           fetchBodystructure(msg);
