@@ -18,11 +18,15 @@ import rice.scribe.messaging.*;
 public class ControlFindParentResponseMessage extends Message
 {
     StripeId stripe_id;
+    NodeHandle source;
+    Object m_data;
+
     public ControlFindParentResponseMessage( Address addr, NodeHandle source, ChannelId topicId, Credentials c, Boolean accept, StripeId stripe_id )
     {
-        super( addr, source, topicId, c );
-        this.setData(accept);
+        super( addr );
+        m_data = accept;
 	this.stripe_id = stripe_id;
+        this.source = source;
     }
 
     public StripeId getStripeId()
@@ -39,9 +43,9 @@ public class ControlFindParentResponseMessage extends Message
      */
     public void handleMessage( Scribe scribe, Topic topic )
     {
-        if ( ((Boolean)this.getData()).booleanValue() )
+        if ( ((Boolean)m_data).booleanValue() )
         {
-            scribe.setParent( this.getSource(), topic.getTopicId() );
+            scribe.setParent( source, topic.getTopicId() );
         }
         else
         {
