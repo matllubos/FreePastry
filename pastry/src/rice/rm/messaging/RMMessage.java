@@ -84,7 +84,7 @@ public abstract class RMMessage extends Message implements Serializable{
 	private IdRange reqRange;
 	private boolean hashEnabled;
 	private IdSet keySet;
-	private Id hash;
+	private byte[] hash;
 	private int numKeys;
 
 
@@ -103,14 +103,14 @@ public abstract class RMMessage extends Message implements Serializable{
 	    // Other values are set to DONTCARE values
 	    numKeys = 0;
 	    keySet = new IdSet();
-	    hash = Id.build();
+	    hash = new byte[] {};
 	    range = new IdRange();
 	}
 
 	/*
 	 * This constructor is to be used when the responder 
 	 */
-	public KEEntry(IdRange _reqRange, IdRange _range, int _numKeys, boolean _hashEnabled, Id _hash, IdSet _keySet ) {
+	public KEEntry(IdRange _reqRange, IdRange _range, int _numKeys, boolean _hashEnabled, byte[] _hash, IdSet _keySet ) {
 	    reqRange = _reqRange;
 	    range = _range;
 	    numKeys = _numKeys;	    
@@ -136,7 +136,7 @@ public abstract class RMMessage extends Message implements Serializable{
 	    return hashEnabled;
 	}
 	
-	public Id getHash() {
+	public byte[] getHash() {
 	    return hash;
 	}
 

@@ -164,7 +164,7 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 	    IdRange iRange = entry.getRange();
 	    int numKeys = entry.getNumKeys();
 	    boolean hashEnabled = entry.getHashEnabled();
-	    Id hash = entry.getHash();
+	    byte[] hash = entry.getHash();
 	    IdSet keySet = entry.getKeySet();
 
 	    if(numKeys == 0) {
@@ -191,7 +191,7 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 		continue;
 	    }
 	    else {
-		Id oHash , myHash;
+		byte[] oHash , myHash;
 		oHash = hash;
 		//System.out.println("oHash= " + oHash);
 		IdSet myKeySet = rm.app.scan(iRange);
