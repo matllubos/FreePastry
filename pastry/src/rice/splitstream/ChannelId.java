@@ -5,7 +5,7 @@ import rice.pastry.*;
  * we can have type checking.
  */
 public class ChannelId extends NodeId{
- public ChannelId(){
-  super(null);
+ public ChannelId(NodeId node){
+	super(node.copy()); 
  }	
 }

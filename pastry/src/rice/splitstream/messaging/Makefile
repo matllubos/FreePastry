@@ -2,7 +2,8 @@ PACKAGE = rice.splitstream.messaging
 
 SOURCE  = \
 	ControlAttachResponseMessage.java\
-	ControlAttachMessage.java
+	ControlAttachMessage.java\
+	SplitStreamAddress.java
 	#ControlDropMessage.java \
 	#ControlMessage.java \
 	#SplitStreamMessage.java \

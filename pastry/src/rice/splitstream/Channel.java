@@ -1,12 +1,15 @@
 package rice.splitstream;
 import rice.pastry.standard.*;
 import java.io.Serializable;
+import java.util.*;
 import rice.scribe.*;
 import rice.scribe.messaging.*;
 import rice.pastry.security.*;
 import rice.pastry.*;
-
-public class Channel implements IScribeApp {
+import rice.pastry.client.*;
+import rice.pastry.messaging.*;
+import rice.splitstream.messaging.*;
+public class Channel extends PastryAppl implements IScribeApp {
    /**
     * ChannelId for this channel 
     */
@@ -15,19 +18,14 @@ public class Channel implements IScribeApp {
     * The number of stripes in this channel the node is currently
     * subscribed to.
     */
+   private SpareCapacityId spareCapacityId = null;
    private int subscribedStripes = 0;
-   /**
-    * The array of all subscribed stripes
-    */
-   private Stripe[] stripes = null;
+   private Hashtable stripeIdTable = new Hashtable();
    /**
     * The primary stripe for this node.
     */
+   private int numStripes = 0;
    private Stripe primaryStripe = null;
-   /**
-    * The stripeIds for all stripes in this channel.
-    */
-   private StripeId[] stripeIds = null;
    /**
     * The total number of children on all stripes
     * this node will support.
@@ -44,6 +42,7 @@ public class Channel implements IScribeApp {
     */
    private Credentials cred = null;
    private boolean isReady = false;
+   private static Address address = SplitStreamAddress.instance();
    /**
     * The bandwidth manager for this channel, responsible for 
     * keeping track of the number of children, and then deciding
@@ -56,49 +55,83 @@ public class Channel implements IScribeApp {
     *
     */
    public Channel(int numStripes, IScribe scribe, Credentials cred, 
-                  BandwidthManager bandwidthManager){
-	
+                  BandwidthManager bandwidthManager, PastryNode node){
+ 	super(node);	
         this.subscribedStripes = numStripes;
 	this.scribe = scribe;
 	this.bandwidthManager = bandwidthManager;
+	this.numStripes = numStripes;
 	/* register this channel with the bandwidthManager */
 	this.bandwidthManager.registerChannel(this);
 	scribe.registerApp(this);
         NodeId topicId = (new RandomNodeIdFactory()).generateNodeId();
 	System.out.println("Trying to create channel : " +  topicId);
         if(scribe.create(topicId, cred)){
-		//this.channelId = (ChannelId) topicId;
 		System.out.println("Channel Topic Created");
-        } 		
-	stripes = new Stripe[numStripes];
-        stripeIds = new StripeId[numStripes];
+        }
+        topicId = (new RandomNodeIdFactory()).generateNodeId();
+        if(scribe.create(topicId, cred)){
+		System.out.println("SpareCapacity Topic Created");
+        }
+	spareCapacityId = new SpareCapacityId(topicId);
+        NodeId baseId = (new RandomNodeIdFactory()).generateNodeId();
 	for(int i = 0; i < numStripes; i++){
-		stripes[i] = new Stripe(this, scribe, cred);
-		stripeIds[i] = stripes[i].getStripeId();
+		StripeId stripeId = new StripeId(baseId.getAlternateId(numStripes, 4, i));
+		stripeIdTable.put(stripeId, new Stripe(stripeId, this, scribe,cred,true));
 	}
         /* Send a create message to the node with responsible with the stripes*/
         /* Also select the primary stripe */
+   	NodeId[] subInfo = new NodeId[numStripes + 2]; 
+	subInfo[0] = topicId;
+	subInfo[subInfo.length-1] = topicId;
+	if(scribe.join(topicId, this, cred, subInfo)){
+		System.out.println("Joined Group");
+		this.channelId = new ChannelId(topicId);
+	}		
+   	isReady = true;
    }
 
    /**
     * Constructor to create a Channel when a channelID is known
     */ 
    public Channel(ChannelId channelId, IScribe scribe, Credentials cred, 
-                  BandwidthManager bandwidthManager){
+                  BandwidthManager bandwidthManager, PastryNode node){
 	
+ 	super(node);	
 	this.channelId = channelId;
 	this.bandwidthManager = bandwidthManager;
 	this.scribe = scribe;
         scribe.registerApp(this);
+	ControlAttachMessage attachMessage = new ControlAttachMessage();
         /* is this right? */
         /* Change the data to be the message we want to send */
-        scribe.anycast(channelId, null, cred);
+        scribe.anycast(channelId, attachMessage, cred );
+ 	/* join */	
         /* Get back all the StripeID's and then process them */
         /* Then we should be attached */
         /* we also need to create and mark a primary stripe */ 
 
    }
   
+  public Channel(ChannelId channelId, StripeId[] stripeIds, SpareCapacityId 
+                 spareCapacityId, IScribe scribe, BandwidthManager bandwidthManager, PastryNode node){
+
+ 	super(node);	
+	System.out.println("A Channel Object is being created");
+	this.channelId = channelId;
+	for(int i = 0 ; i < stripeIds.length ; i++){
+		stripeIdTable.put(stripeIds[i], null);
+	}
+	this.numStripes = stripeIds.length;
+	this.scribe = scribe;
+	this.bandwidthManager = bandwidthManager;
+	if(scribe.join(channelId, this, cred)){
+	}
+	
+	/* Subscribe to a primary stripe */
+	isReady = true;
+    }
+ 
   /**
    * Channel Object is responsible for managing local node's usage of
    * outgoing bandwidth and incoming bandwidth, which is indicated by number
@@ -111,7 +144,9 @@ public class Channel implements IScribeApp {
     this.outChannel = outChannel;
     bandwidthManager.adjustBandwidth(this, outChannel); 
   }
- 
+  public ChannelId getChannelId(){
+	return channelId;
+  } 
   /** 
    * A channel consists of a number of stripes. This number is determined
    * at the time of content creation. Note that a content receiver does not
@@ -119,7 +154,7 @@ public class Channel implements IScribeApp {
    * @return An array of all StripeIds associated with this channel
    */ 
   public StripeId[] getStripes(){
-	return stripeIds;
+	return ((StripeId[]) stripeIdTable.keySet().toArray());
   }
 
   /**
@@ -129,7 +164,9 @@ public class Channel implements IScribeApp {
    * @return Stripe[] the Stripes this node is subscribed to.
    */
   public Stripe[] getSubscribedStripes(){
-       return  stripes;
+       Set s = stripeIdTable.entrySet();
+       s.remove(null);
+       return  ((Stripe[]) s.toArray());
   }
 
   /**
@@ -160,8 +197,14 @@ public class Channel implements IScribeApp {
    * @param stripeID The stripe to subscribe to
    * @return boolean Success of the join operation
    */ 
-  public Stripe joinStripe(StripeId stripeId){
-	return null;
+  public Stripe joinStripe(StripeId stripeId, Observer observer){
+		Stripe stripe = (Stripe) stripeIdTable.get(stripeId);
+		if(stripe == null){
+		   stripe = new Stripe(stripeId, this, scribe, cred, false);
+		}
+		stripe.joinStripe();	
+		stripe.addObserver(observer);
+		return(stripe);
   }
 
  /**
@@ -183,7 +226,11 @@ public class Channel implements IScribeApp {
   * @return the total number of stripes
   */
   public int getNumStripes(){
-     return stripeIds.length;
+     return numStripes;
+  }
+
+  public SpareCapacityId getSpareCapacityId(){
+     return null;
   }
 
 
@@ -192,16 +239,33 @@ public class Channel implements IScribeApp {
   public void receiveMessage(ScribeMessage msg){
      /* Check the type of message */
      /* then make call accordingly */
+	System.out.println("Recieved Message in Channel");
+	ControlAttachMessage attachMessage =(ControlAttachMessage) msg.getData();
+	attachMessage.handleMessage(this, scribe, msg.getSource());
   }
   public void scribeIsReady(){
-     isReady = true;
   }
   public void subscribeHandler(NodeId topicId, 
                                NodeHandle child, boolean wasAdded, Serializable data){}
+
+  /** -- Pastry Implementation -- **/
+  public Address getAddress(){
+	return address;
+  }
+  public Credentials getCredentials(){
+	return null;
+  }
+  public void messageForAppl (Message msg){
+	NodeId[] subInfo = (NodeId[]) ((ControlAttachResponseMessage) msg).getContent();	
+	channelId = new ChannelId(subInfo[0]);
+	/* Fill in all instance variable for channel */
+        if(scribe.join(channelId, this, cred, subInfo)){
+	}
+	isReady = true;
+  }
+
 }
-
-
-
+  
 
 
 

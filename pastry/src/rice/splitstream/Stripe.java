@@ -26,6 +26,7 @@ public class Stripe extends Observable implements IScribeApp{
     * The input stream used to get data from this stripe.
     */
    private InputStream inputStream = null;
+   private byte[] inputBuffer = null;  
    /**
     * The output stream used to give date to this stripe.
     */
@@ -47,27 +48,19 @@ public class Stripe extends Observable implements IScribeApp{
    /**
     * The constructor used when creating a stripe from scratch.
     */
-   public Stripe(Channel channel, IScribe scribe, Credentials credentials){
+   public Stripe(StripeId stripeId, Channel channel, IScribe scribe, Credentials credentials, boolean create){
       this.scribe = scribe;
       this.credentials = credentials;
       this.channel = channel;
+      this.stripeId = stripeId;
 
-      NodeId topicId = (new RandomNodeIdFactory()).generateNodeId();
-      System.out.println("Trying to create stripe: " +  topicId);
-      if(scribe.create(topicId, credentials)){
-	stripeState = STRIPE_SUBSCRIBED;
-        //this.stripeId = (StripeId) topicId;
+      if(create){
+      	if(scribe.create(stripeId, credentials)){
+		stripeState = STRIPE_UNSUBSCRIBED;
+      	}
       }
     }
-    /**
-     * The constructor used to join a stripe when you know the 
-     * StripeId
-     */
-    public Stripe(StripeId stripeId, Channel channel, IScribe scribe, 
-             	  Credentials credentials){
-
-    }
-    /**
+   /**
     * gets the StripeID for this stripe
     * @return theStripeID 
     */
@@ -100,6 +93,16 @@ public class Stripe extends Observable implements IScribeApp{
       */
      public void leaveStripe(){
        stripeState = STRIPE_UNSUBSCRIBED;
+     }
+     public void joinStripe(){
+	if(scribe.join(stripeId, this, credentials)){
+ 		stripeState = STRIPE_SUBSCRIBED;
+		inputStream = new ByteArrayInputStream(inputBuffer);
+		outputStream = new ByteArrayOutputStream();
+	}
+     }	
+     public void backdoorSend(Serializable data){
+	scribe.multicast(stripeId, data, credentials);
      }
     /**
     * get the state of the Stripe 
