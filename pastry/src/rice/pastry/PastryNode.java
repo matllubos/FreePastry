@@ -125,6 +125,8 @@ public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.
 	routeSet = rt;
     }
     
+    public rice.p2p.commonapi.NodeHandle getLocalNodeHandle() { return localhandle; }
+    
     public NodeHandle getLocalHandle() { return localhandle; }
     
     public NodeId getNodeId() { return myNodeId; }
