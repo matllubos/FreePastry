@@ -9,7 +9,8 @@ import rice.pastry.*;
  * at the given nodeid.
  */
 public class PresenceMessage extends PostMessage {
-    
+  private PostUserAddress address;
+  private NodeId location;    
   /**
    * Constructs a PresenceMessage
    *
@@ -17,6 +18,8 @@ public class PresenceMessage extends PostMessage {
    * @param location The user's asserted location.
    */
   public PresenceMessage(PostUserAddress address, NodeId location) {
+     this.adress =address;
+     this.location = location;
   }
     
   /**
@@ -25,7 +28,7 @@ public class PresenceMessage extends PostMessage {
    * @return The address of the user who sent this message.
    */
   public PostUserAddress getUserAddress() {
-    return null;
+    return address;
   }
     
   /**
@@ -34,6 +37,6 @@ public class PresenceMessage extends PostMessage {
    * @return The location in the Pastry ring of the user.
    */
   public NodeId getLocation() {
-    return null;
+    return location;
   }
 }
