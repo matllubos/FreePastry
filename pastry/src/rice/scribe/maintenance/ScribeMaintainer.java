@@ -202,10 +202,10 @@ public class ScribeMaintainer
 	}
 
 	// now, send a subscribe message
-	if(prev_parent != null)
-	    System.out.println("DEBUG :: TREE REPAIR FOR "+topicId+" previous parent "+prev_parent.getNodeId()+" at "+(int)System.currentTimeMillis()+" at node "+m_scribe.getNodeId());
-	else
-	    System.out.println("DEBUG :: TREE REPAIR FOR "+topicId+" previous parent is null, at "+(int)System.currentTimeMillis()+ " at node "+m_scribe.getNodeId());
+//	if(prev_parent != null)
+//	    System.out.println("DEBUG :: TREE REPAIR FOR "+topicId+" previous parent "+prev_parent.getNodeId()+" at "+(int)System.currentTimeMillis()+" at node "+m_scribe.getNodeId());
+//	else
+//	    System.out.println("DEBUG :: TREE REPAIR FOR "+topicId+" previous parent is null, at "+(int)System.currentTimeMillis()+ " at node "+m_scribe.getNodeId());
 	m_scribe.routeMsg( topicId, msgs, cred, opt );
 
     }

@@ -147,12 +147,16 @@ public abstract class DistCommonAPITest {
       nodes[i] = createNode(i);
       
       while (! ((PastryNode) nodes[i]).isReady()) {
-        pause(2000);
+        pause(1000);
       }
       
       processNode(i, nodes[i]);
+
+      System.out.println("Created node " + i + " with id " + ((PastryNode) nodes[i]).getNodeId());
     }
 
+    System.out.println("\nTest Beginning\n");
+    
     runTest();
   }
 
@@ -226,7 +230,7 @@ public abstract class DistCommonAPITest {
   /**
    * Method which prints the end of a test section.
    */
-  protected final void sectionEnd() {
+  protected final void sectionDone() {
     System.out.println();
   }
 
@@ -237,6 +241,14 @@ public abstract class DistCommonAPITest {
    */
   protected final void stepStart(String name) {
     System.out.print(pad("  " + name));
+  }
+
+  /**
+   * Method which prints the end of a test section step, with an
+   * assumed success.
+   */
+  protected final void stepDone() {
+    stepDone(SUCCESS);
   }
 
   /**
@@ -299,7 +311,7 @@ public abstract class DistCommonAPITest {
    */
   protected final void assertTrue(String intention, boolean test) {
     if (!test) {
-      stepDone(FAILURE, "Assertion " + intention + " failed.");
+      stepDone(FAILURE, "Assertion '" + intention + "' failed.");
     }
   }
 
@@ -310,9 +322,9 @@ public abstract class DistCommonAPITest {
                                     Object expected,
                                     Object actual) {
     if (!expected.equals(actual)) {
-      stepDone(FAILURE, "Assertion failed in " + description +
-               ", expected: " + expected +
-               " got actual: " + actual);
+      stepDone(FAILURE, "Assertion '" + description +
+               "' failed, expected: '" + expected +
+               "' got: " + actual + "'");
     }
   }
   

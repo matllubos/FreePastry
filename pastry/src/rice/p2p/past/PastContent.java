@@ -81,9 +81,10 @@ public interface PastContent extends Serializable {
    * Produces a handle for this content object. The handle is retrieved and returned to the
    * client as a result of the Past.lookupHandles() method.
    *
+   * @param The local Past service which the content is on.
    * @return the handle
    */
-  public PastContentHandle getHandle();
+  public PastContentHandle getHandle(Past local);
 
   /**
    * Returns the Id under which this object is stored in Past.

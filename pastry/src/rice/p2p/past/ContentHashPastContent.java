@@ -52,9 +52,6 @@ import rice.p2p.commonapi.*;
  */
 public abstract class ContentHashPastContent implements PastContent {
 
-  // the local Past instance used with this class; to be set by derived classes
-  protected transient Past myPast;
-
   // to be set by derived classes
   protected Id myId;
 
@@ -67,9 +64,9 @@ public abstract class ContentHashPastContent implements PastContent {
    * @param obj the object to be inserted
    * @param command Command to be performed when the result is received
    */
-  public void insert(Continuation command) {
+  public void insert(Past past, Continuation command) {
     Id myId = getContentHash();
-    myPast.insert(this, command);
+    past.insert(this, command);
   }
 
 
@@ -107,8 +104,8 @@ public abstract class ContentHashPastContent implements PastContent {
    *
    * @return the handle
    */
-  public PastContentHandle getHandle() {
-    return new ContentHashPastContentHandle(myPast.getLocalNodeHandle(), myId);
+  public PastContentHandle getHandle(Past local) {
+    return new ContentHashPastContentHandle(local.getLocalNodeHandle(), myId);
   }
 
   /**

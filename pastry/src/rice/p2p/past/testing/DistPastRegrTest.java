@@ -42,6 +42,8 @@ import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.testing.*;
 import rice.p2p.past.*;
 
+import rice.rm.*;
+
 import rice.persistence.*;
 
 import java.util.*;
@@ -63,9 +65,12 @@ public class DistPastRegrTest extends DistCommonAPITest {
   
   // the replication factor in Past
   public static int REPLICATION_FACTOR = 3;
+
+  // the storage services in the ring
+  protected StorageManager storages[];
   
   // the past impls in the ring
-  protected Past pasts[];
+  protected PastImpl pasts[];
 
   // a random number generator
   protected Random rng;
@@ -74,7 +79,8 @@ public class DistPastRegrTest extends DistCommonAPITest {
    * Constructor which sets up all local variables
    */
   public DistPastRegrTest() {
-    pasts = new Past[NUM_NODES];
+    pasts = new PastImpl[NUM_NODES];
+    storages = new StorageManager[NUM_NODES];
     rng = new Random();
   }
 
@@ -84,10 +90,10 @@ public class DistPastRegrTest extends DistCommonAPITest {
    * @param node The newly created node
    */
   protected void processNode(int num, Node node) {
-    StorageManager storage = new StorageManager(FACTORY,
-                                                new MemoryStorage(FACTORY),
-                                                new LRUCache(new MemoryStorage(FACTORY), 100000));
-    pasts[num] = new PastImpl(node, storage, REPLICATION_FACTOR, INSTANCE);
+    storages[num] = new StorageManager(FACTORY,
+                                      new MemoryStorage(FACTORY),
+                                      new LRUCache(new MemoryStorage(FACTORY), 100000));
+    pasts[num] = new PastImpl(node, storages[num], REPLICATION_FACTOR, INSTANCE);
   }
 
   /**
@@ -96,9 +102,9 @@ public class DistPastRegrTest extends DistCommonAPITest {
    */
   protected void runTest() {
     // Run each test
-   // testRouteRequest();
+    testRouteRequest();
     //testPastFunctions();
-   // new TestPastFunctions().start();
+    //new TestPastFunctions().start();
   }
 
   /* ---------- Test methods and classes ---------- */
@@ -106,41 +112,51 @@ public class DistPastRegrTest extends DistCommonAPITest {
   /**
    * Tests routing a Past request to a particular node.
    */
-  protected void testRouteRequest() throws TestFailedException {
-    final PastService local = pasts[rng.nextInt(NUM_NODES)];
-    final PastServiceImpl remote = pasts[rng.nextInt(NUM_NODES)];
-    final Id remoteId = remote.getId();
-    final String file = "test file";
+  protected void testRouteRequest() {
+    final PastImpl local = pasts[rng.nextInt(NUM_NODES)];
+    final PastImpl remote = pasts[rng.nextInt(NUM_NODES)];
+    final Id remoteId = remote.getLocalNodeHandle().getId();
+    final PastContent file = new TestPastContent(remoteId);
 
-    // Check file does not exist
-    local.exists(remoteId, new TestCommand() {
+    sectionStart("Simple Route Request");
+
+    // Check file doesn't exist
+    stepStart("Initial Lookup");
+    local.lookup(remoteId, new TestCommand() {
       public void receive(Object result) throws Exception {
-        assertTrue("RouteRequest", "File should not exist before insert",
-                   !((Boolean)result).booleanValue());
-        
+        assertTrue("File returned should be null", result == null);
+        stepDone();
+
         // Insert file
-        System.out.println("TEST: RouteRequest: Inserting file with key: " + remoteId);
-        local.insert(remoteId, file, new TestCommand() {
+        stepStart("File Insertion");
+        local.insert(file, new TestCommand() {
           public void receive(Object result) throws Exception {
-            assertTrue("RouteRequest", "Insert of file should succeed",
-                       ((Boolean)result).booleanValue());
-    
+            assertTrue("Insert of file should succeed", ((Boolean)result).booleanValue());
+            stepDone();
+
             // Check file exists
-            local.exists(remoteId, new TestCommand() {
+            stepStart("Remote File Lookup");
+            local.lookup(remoteId, new TestCommand() {
               public void receive(Object result) throws Exception {
-                assertTrue("RouteRequest", "File should exist after insert",
-                           ((Boolean)result).booleanValue());
+                assertTrue("File should not be null", result != null);
+                assertEquals("Lookup of file should be correct",
+                             file,
+                             result);
+                stepDone();
 
                 // Lookup file locally
-                remote.getStorage().getObject((rice.pastry.Id) remoteId, new TestCommand() {
+                stepStart("Local File Lookup");
+                remote.getStorageManager().getObject(remoteId, new TestCommand() {
                   public void receive(Object result) throws Exception {
-                    assertTrue("RouteRequest", "File should be inserted at known node",
+                    assertTrue("File should be inserted at known node",
                                result != null);
-                    assertEquals("RouteRequest", "Retrieved local file should be the same",
+                    assertEquals("Retrieved local file should be the same",
                                  file, result);
 
-                    // DONE WITH THE TEST!
-                    System.out.println("\n\n---- testRouteRequest passed! ---------------------\n");
+                    stepDone();
+                    sectionDone();
+
+                    testVersionControl();
                   }
                 });
               }
@@ -149,198 +165,340 @@ public class DistPastRegrTest extends DistCommonAPITest {
         });
       }
     });
-
   }
-  
+
   /**
-   * Commands for running the Past functions test.
+    * Tests overwriting an exiting object with a new one
    */
-  protected class TestPastFunctions {
-    final Credentials userCred;
-    final PastService local;
-    final Id fileId;
-    final String file;
-    final String update;
+  protected void testVersionControl() {
+    final PastImpl local = pasts[rng.nextInt(NUM_NODES)];
+    final PastImpl remote = pasts[rng.nextInt(NUM_NODES)];
+    final Id remoteId = remote.getLocalNodeHandle().getId();
+    final PastContent oldFile = new VersionedTestPastContent(remoteId, 0);
+    final PastContent newFile = new VersionedTestPastContent(remoteId, 1);
+    final PastContent newNewFile = new NonOverwritingTestPastContent(remoteId, 2);
     
-    int localCount;
-    int currentIndex;
-    PastServiceImpl remote;
-    
-    /**
-     * Sets up this test.
-     */
-    public TestPastFunctions() {
-      userCred = null;
-      local = (PastService) pastNodes.elementAt(rng.nextInt(NUM_NODES));
-      fileId = idFactory.generateNodeId();
-      file = "test file";
-      update = "update to file";
-      localCount = 0;
-      currentIndex = 0;
-      remote = null;
-    }
-    
-    /**
-     * Starts running this test.
-     */
-    public void start() {
-      runInsertTests();
-    }
-    
-    /**
-     * Checks that a file is not available until it is inserted,
-     * and that it can only be inserted once.
-     */
-    protected void runInsertTests() {
-      // Try looking up before insert
-      local.lookup(fileId, new TestCommand() {
-        public void receive(Object test) throws Exception {
-          assertTrue("PastFunctions", "Lookup before insert should fail",
-                     test == null);
-          
-          // Should not exists
-          local.exists(fileId, new TestCommand() {
-            public void receive(Object exists) throws Exception {
-              assertTrue("PastFunctions", "File should not exist before insert",
-                         !((Boolean)exists).booleanValue());
-              
-              // Insert file
-              System.out.println("TEST: PastFunctions: Inserting file with key: " + fileId);
-              local.insert(fileId, file,  new TestCommand() {
-                public void receive(Object success) throws Exception {
-                  assertTrue("PastFunctions", "Insert of file should succeed",
-                             ((Boolean)success).booleanValue());
-                  
-                  // Should exist
-                  local.exists(fileId, new TestCommand() {
-                    public void receive(Object exists) throws Exception {
-                      assertTrue("PastFunctions", "File should exist after insert",
-                                 ((Boolean)exists).booleanValue());
-                      
-                      // Try to insert again
-                      local.insert(fileId, file,  new TestCommand() {
-                        public void receive(Object success) throws Exception {
-                          assertTrue("PastFunctions", 
-                                     "Re-insert of file should fail",
-                                     !((Boolean)success).booleanValue());
-                          
-                          runInsertChecks();
-                        }
-                      });
-                    }
-                  });
-                }
-              });
-            }
-          });
-        }
-      });
-    }
-    
-    /**
-     * Checks that a file is stored on the right number of nodes after
-     * being inserted.
-     */
-    protected void runInsertChecks() {
-      // "Loop" to perform a check on each node
-      //   (Runs the same command several times, incrementing currentIndex field)
-                         pause(200000);
-      localCount = 0;
-      currentIndex = 0;
-      remote = (PastServiceImpl) pastNodes.elementAt(currentIndex);
-      remote.lookup(fileId, new TestCommand() {
-        public void receive(Object res) throws Exception {
-          Serializable result = (Serializable) res;
-          
-          // Check that file is found using Past, but has no updates
-          assertTrue("PastFunctions", "File should always be found remotely",
-                     result != null);
-          assertEquals("PastFunctions", 
-                       "Retrieved file should be the same, node " + currentIndex,
-                       file, result);
+    sectionStart("Version Control");
 
-          final TestCommand MONKEY = this;
-         
-          // Lookup file locally (using Storage)
-          remote.getStorage().getObject((rice.pastry.Id) fileId, new TestCommand() {
-            public void receive(Object result) throws Exception {
-              if (result != null) {
-                System.out.println("TEST: Found file locally on node " + currentIndex);
-                localCount++;
-                assertEquals("PastFunctions",
-                             "Retrieved local file should be the same, node " + currentIndex,
-                             file, result);
-              }
+    // Insert file
+    stepStart("File Insertion");
+    local.insert(oldFile, new TestCommand() {
+      public void receive(Object result) throws Exception {
+        assertTrue("Insert of file should succeed", ((Boolean)result).booleanValue());
+        stepDone();
 
-              // Now check if we've visited all nodes
-              currentIndex++;
-              if (currentIndex < pastNodes.size()) {
-                // Perform this check on the next node
-                remote = (PastServiceImpl) pastNodes.elementAt(currentIndex);
-                remote.lookup(fileId, MONKEY);
-              } else {
-                assertEquals("PastFunctions",
-                             "File should have been found " + remote.getReplicaFactor() + " time after insert",
-                             new Integer(remote.getReplicaFactor()), new Integer(localCount));
+        // Check file exists
+        stepStart("Remote File Lookup");
+        local.lookup(remoteId, new TestCommand() {
+          public void receive(Object result) throws Exception {
+            assertTrue("File should not be null", result != null);
+            assertEquals("Lookup of file should be correct",
+                         oldFile,
+                         result);
+            stepDone();
 
-                runReclaimTests();
-              }
-            }
-          });
-        }
-      });
-    } 
+            // Insert overwriting file
+            stepStart("Overwriting File Insertion");
+            local.insert(newFile, new TestCommand() {
+              public void receive(Object result) throws Exception {
+                assertTrue("Insert of overwriting file should succeed", ((Boolean)result).booleanValue());
+                stepDone();
 
-    /**
-     * Checks that deleting a file works.
-     */
-    protected void runReclaimTests() {
-      
-      // Reclaim space used by file
-      System.out.println("TEST: Reclaiming file with key: " + fileId);
-      local.delete(fileId, new TestCommand() {
-        public void receive(Object success) throws Exception {
-          assertTrue("PastFunctions", "File should be reclaimed successfully",
-                     ((Boolean)success).booleanValue());
-          
-          // "Loop" to make sure each node sees that file is gone
-          //   (Runs the same command several times, incrementing currentIndex field)
-          currentIndex = 0;
-          remote = (PastServiceImpl) pastNodes.elementAt(currentIndex);
-          remote.lookup(fileId, new TestCommand() {
-            public void receive(Object result) throws Exception {
-              assertTrue("PastFunctions", 
-                         "File should not be found remotely, node " + currentIndex,
-                         result == null);
-              
-              // Now check if we've visited all nodes
-              currentIndex++;
-              if (currentIndex < pastNodes.size()) {
-                // Perform this check on the next node
-                remote = (PastServiceImpl) pastNodes.elementAt(currentIndex);
-                remote.lookup(fileId, this);
-              } else {
-                // We've seen all the nodes, so move on
-                
-                // Check file does not exist
-                local.exists(fileId, new TestCommand() {
-                  public void receive(Object exists) throws Exception {
-                    assertTrue("PastFunctions", 
-                               "File should not exist after delete",
-                               !((Boolean)exists).booleanValue());
-                    
-                    // DONE WITH THE TEST!
-                    System.out.println("\n\n---- TestPastFunctions passed! ---------------------\n");
+                // Check correct file exists
+                stepStart("Remote Overwriting File Lookup");
+                local.lookup(remoteId, new TestCommand() {
+                  public void receive(Object result) throws Exception {
+                    assertTrue("Overwriting file should not be null", result != null);
+                    assertEquals("Lookup of overwriting file should be correct version",
+                                 newFile,
+                                 result);
+                    stepDone();
+
+                    // Insert overwriting file
+                    stepStart("Non-overwriting File Insertion");
+                    local.insert(newNewFile, new TestCommand() {
+                      public void receive(Object result) throws Exception {
+                        assertTrue("Insert of non-overwriting file should succeed", ((Boolean)result).booleanValue());
+                        stepDone();
+
+                        // Check correct file exists
+                        stepStart("Remote Non-Overwriting File Lookup");
+                        local.lookup(remoteId, new TestCommand() {
+                          public void receive(Object result) throws Exception {
+                            assertTrue("Non-Overwriting file should not be null", result != null);
+                            assertEquals("Lookup of non-overwriting file should be correct (second) version",
+                                         newFile,
+                                         result);
+                            stepDone();
+                            sectionDone();
+
+                            testParameterChecks();
+                          }
+                        });
+                      }
+                    });
                   }
                 });
               }
-            }
-          });
-        }
-      });
+            });
+          }
+        });
+      }
+    });
+  }
+
+  /**
+    * Tests the parameter checking in Past.
+   */
+  protected void testParameterChecks() {
+    final PastImpl local = pasts[rng.nextInt(NUM_NODES)];
+    final Id localId = local.getLocalNodeHandle().getId();
+    
+    sectionStart("Parameter Checks Testing");
+
+    // Null insert should fail
+    stepStart("Insertion Of Null");
+    local.insert(null, new TestExceptionCommand() {
+      public void receive(Object result) throws Exception {
+        assertTrue("Exception returned should not be null", result != null);
+        assertTrue("Exception should be return", result instanceof Exception);
+        stepDone();
+
+        // Null lookup should fail
+        stepStart("Lookup Of Null");
+        local.lookup(null, new TestExceptionCommand() {
+          public void receive(Object result) throws Exception {
+            assertTrue("Exception returned should not be null", result != null);
+            assertTrue("Exception should be return", result instanceof Exception);
+            stepDone();
+            
+            // Null fetch should fail
+            stepStart("Fetch Of Null");
+            local.fetch(null, new TestExceptionCommand() {
+              public void receive(Object result) throws Exception {
+                assertTrue("Exception returned should not be null", result != null);
+                assertTrue("Exception should be return", result instanceof Exception);
+                stepDone();
+
+                // Null lookup handles should fail
+                stepStart("Lookup Handles Of Null");
+                local.lookupHandles(null, 1, new TestExceptionCommand() {
+                  public void receive(Object result) throws Exception {
+                    assertTrue("Exception returned should not be null", result != null);
+                    assertTrue("Exception should be return", result instanceof Exception);
+                    stepDone();
+                    
+                    // Lookup handles of -4 should fail
+                    stepStart("Lookup Handles Of -4");
+                    local.lookupHandles(localId, -4, new TestExceptionCommand() {
+                      public void receive(Object result) throws Exception {
+                        assertTrue("Exception returned should not be null", result != null);
+                        assertTrue("Exception should be return", result instanceof Exception);
+                        stepDone();
+
+                        // Lookup handles of 0 should fail
+                        stepStart("Lookup Handles Of 0");
+                        local.lookupHandles(localId, 0, new TestExceptionCommand() {
+                          public void receive(Object result) throws Exception {
+                            assertTrue("Exception returned should not be null", result != null);
+                            assertTrue("Exception should be return", result instanceof Exception);
+                            stepDone();
+
+                            sectionDone();
+                            testFetch();
+                          }
+                        });
+                      }
+                    });
+                  }
+                });
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+
+  /**
+   * Tests the fetch function in Past.
+   */
+  protected void testFetch() {
+    final PastImpl local = pasts[rng.nextInt(NUM_NODES)];
+    final PastImpl remote1 = pasts[rng.nextInt(NUM_NODES)];
+    PastImpl tmp = pasts[rng.nextInt(NUM_NODES)];
+
+    while (tmp == remote1) {
+      tmp = pasts[rng.nextInt(NUM_NODES)];
     }
+
+    final PastImpl remote2 = tmp;
+    
+    final Id id = pasts[rng.nextInt(NUM_NODES)].getLocalNodeHandle().getId();
+    final PastContent file1 = new VersionedTestPastContent(id, 1);
+    final PastContent file2 = new VersionedTestPastContent(id, 2);
+
+    final PastContentHandle handle1 = new TestPastContentHandle(remote1, id);
+    final PastContentHandle handle2 = new TestPastContentHandle(remote2, id);
+
+    sectionStart("Fetch Testing");
+
+    // Insert file
+    stepStart("File 1 Insertion");
+    remote1.getStorageManager().store(id, file1, new TestCommand() {
+      public void receive(Object result) throws Exception {
+        assertTrue("Storage of file 1 should succeed", ((Boolean)result).booleanValue());
+
+        stepDone();
+
+        // Insert second file
+        stepStart("File 2 Insertion");
+        remote2.getStorageManager().store(id, file2, new TestCommand() {
+          public void receive(Object result) throws Exception {
+            assertTrue("Storage of file 2 should succeed", ((Boolean)result).booleanValue());
+
+            stepDone();
+
+            // Retrieve first file
+            stepStart("File 1 Fetch");
+            local.fetch(handle1, new TestCommand() {
+              public void receive(Object result) throws Exception {
+                assertTrue("Result should be non-null", result != null);
+                assertEquals("Result should be correct", file1, result);
+                assertTrue("Result should not be file 2", (! file2.equals(result)));
+
+                final Object received1 = result;
+
+                stepDone();
+
+                // Retrieve second file
+                stepStart("File 2 Fetch");
+                local.fetch(handle2, new TestCommand() {
+                  public void receive(Object result) throws Exception {
+                    assertTrue("Result should be non-null", result != null);
+                    assertEquals("Result should be correct", file2, result);
+                    assertTrue("Result should not be file 1", (! file1.equals(result)));
+
+                    final Object received2 = result;
+
+                    stepDone();
+
+                    // ensure different
+                    stepStart("File 1 and 2 Different");
+                    assertTrue("Files should not be equal", (! received1.equals(received2)));
+                    stepDone();
+
+                    // remove file
+                    stepStart("File 1 Removal");
+                    remote1.getStorageManager().unstore(id, new TestCommand() {
+                      public void receive(Object result) throws Exception {
+                        assertTrue("Removal of file 1 should succeed", ((Boolean)result).booleanValue());
+
+                        stepDone();
+
+                        // remove second file
+                        stepStart("File 2 Removal");
+                        remote2.getStorageManager().unstore(id, new TestCommand() {
+                          public void receive(Object result) throws Exception {
+                            assertTrue("Removal of file 2 should succeed", ((Boolean)result).booleanValue());
+
+                            stepDone();
+                            sectionDone();
+
+                            testLookupHandles();
+                          }
+                        });
+                      }
+                    });
+                  }
+                });
+              }
+            });
+          }
+        });
+      }
+    });
   }
   
+  /**
+   * Tests the lookup handles function in Past.
+   */
+  protected void testLookupHandles() {
+    final PastImpl local = pasts[rng.nextInt(NUM_NODES)];
+    final PastImpl remote = pasts[rng.nextInt(NUM_NODES)];
+    final Id remoteId = remote.getLocalNodeHandle().getId();
+    final PastContent file = new TestPastContent(remoteId);
+
+    sectionStart("Lookup Handles Testing");
+
+    // Insert file
+    stepStart("File Insertion");
+    local.insert(file, new TestCommand() {
+      public void receive(Object result) throws Exception {
+        assertTrue("Insert of file should succeed", ((Boolean)result).booleanValue());
+
+        // run replica maintenance
+        runReplicaMaintence();
+        stepDone();
+
+        // Check file exists (at 1 replica)
+        stepStart("Remote Handles Lookup - 1 Replica");
+        local.lookupHandles(remoteId, 1, new TestCommand() {
+          public void receive(Object result) throws Exception {
+            assertTrue("Replicas should not be null", result != null);
+            assertTrue("Replicas should be handle[]", result instanceof PastContentHandle[]);
+            assertTrue("Only 1 replica should be returned", ((PastContentHandle[]) result).length == 1);
+            assertEquals("Replica should be for right object", remoteId, ((PastContentHandle[]) result)[0].getId());
+
+            stepDone();
+
+            // Check file exists (at all replicas)
+            stepStart("Remote Handles Lookup - All Replicas");
+            local.lookupHandles(remoteId, REPLICATION_FACTOR, new TestCommand() {
+              public void receive(Object result) throws Exception {
+                assertTrue("Replicas should not be null", result != null);
+                assertTrue("Replicas should be handle[]", result instanceof PastContentHandle[]);
+
+                PastContentHandle[] handles = (PastContentHandle[]) result;
+
+                assertTrue("All replicas should be returned", handles.length == REPLICATION_FACTOR);
+
+                for (int i=0; i<handles.length; i++) {
+                  assertTrue("Replica " + i + " should not be null", handles[i] != null);
+                  assertEquals("Replica " + i + " should be for right object", remoteId, handles[i].getId());
+                }
+
+                stepDone();
+
+                // Check file exists (at a huge number of replicas)
+                stepStart("Remote Handles Lookup - 500 Replicas");
+                local.lookupHandles(remoteId, 500, new TestCommand() {
+                  public void receive(Object result) throws Exception {
+                    assertTrue("Replicas should not be null", result != null);
+                    assertTrue("Replicas should be handle[]", result instanceof PastContentHandle[]);
+
+                    PastContentHandle[] handles = (PastContentHandle[]) result;
+
+                    assertTrue("All replicas should be returned", handles.length == REPLICATION_FACTOR);
+
+                    stepDone();
+                    sectionDone();
+                  }
+                });
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+
+  private void runReplicaMaintence() {
+    for (int i=0; i<NUM_NODES; i++) {
+      ((RMImpl) pasts[i].getReplicaManager()).periodicMaintenance();
+    }
+  }
+                
 
   /**
    * Usage: DistPastTest [-port p] [-bootstrap host[:port]] [-nodes n] [-protocol (rmi|wire)] [-help]
@@ -365,7 +523,123 @@ public class DistPastRegrTest extends DistCommonAPITest {
     }
     public void receive(Object result) throws Exception {}
     public void receiveException(Exception e) {
-      throw new RuntimeException(e);
+      stepException(e);
+    }
+  }
+
+  /**
+    * Common superclass for test commands which should throw an exception
+   */
+  protected class TestExceptionCommand implements Continuation {
+    public void receiveResult(Object result) {
+      stepDone(FAILURE, "Command should throw an exception - got " + result);
+    }
+    public void receive(Object result) throws Exception {}
+    public void receiveException(Exception e) {
+      try {
+        receive(e);
+      }
+      catch (Exception ex) {
+        receiveException(ex);
+      }
+    }
+  }
+
+  /**
+   * Utility class for past content objects
+   */
+  protected static class TestPastContent implements PastContent {
+
+    protected Id id;
+
+    protected PastContent existing;
+    
+    public TestPastContent(Id id) {
+      this.id = id;
+    }
+
+    public PastContent checkInsert(Id id, PastContent existingContent) throws PastException {
+      existing = existingContent;
+      return this;
+    }
+
+    public PastContentHandle getHandle(Past past) {
+      return new TestPastContentHandle(past, id);
+    }
+
+    public Id getId() {
+      return id;
+    }
+
+    public boolean isMutable() {
+      return true;
+    }
+
+    public boolean equals(Object o) {
+      if (! (o instanceof TestPastContent)) return false;
+
+      return ((TestPastContent) o).id.equals(id);
+    }
+
+    public String toString() {
+      return "TestPastContent(" + id + ")";
+    }
+  }
+
+  protected static class VersionedTestPastContent extends TestPastContent {
+
+    protected int version = 0;
+
+    public VersionedTestPastContent(Id id, int version) {
+      super(id);
+      this.version = version;
+    }
+
+    public boolean equals(Object o) {
+      if (! (o instanceof VersionedTestPastContent)) return false;
+
+      return (((VersionedTestPastContent) o).id.equals(id) &&
+              (((VersionedTestPastContent) o).version == version));
+    }
+
+    public String toString() {
+      return "VersionedTestPastContent(" + id + ", " + version + ")";
+    }
+  }
+    
+  
+  protected static class NonOverwritingTestPastContent extends VersionedTestPastContent {
+
+    public NonOverwritingTestPastContent(Id id, int version) {
+      super(id, version);
+    }
+    
+    public PastContent checkInsert(Id id, PastContent existingContent) throws PastException {
+      return existingContent;
+    }
+  }
+
+
+  /**
+    * Utility class for past content object handles
+   */
+  protected static class TestPastContentHandle implements PastContentHandle {
+
+    protected NodeHandle handle;
+
+    protected Id id;
+
+    public TestPastContentHandle(Past past, Id id) {
+      this.handle = past.getLocalNodeHandle();
+      this.id = id;
+    }
+
+    public Id getId() {
+      return id;
+    }
+
+    public NodeHandle getNodeHandle() {
+      return handle;
     }
   }
   

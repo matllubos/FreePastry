@@ -89,8 +89,8 @@ public class RMMaintenanceMsg extends RMMessage implements Serializable
     }
     
     public void handleDeliverMessage( RMImpl rm) {
-	System.out.println("");
-	System.out.println("RMMaintenance message: at " + rm.getNodeId());
+	//System.out.println("");
+	//System.out.println("RMMaintenance message: at " + rm.getNodeId());
 	rm.periodicMaintenance();
     }
 

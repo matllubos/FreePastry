@@ -34,68 +34,65 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.p2p.past;
-
-import java.io.Serializable;
+package rice.p2p.past.messaging;
 
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.past.*;
 
 /**
- * A handle class for content-hash objects stored in Past.
+ * @(#) LookupMessage.java
+ *
+ * This class represents a request for all of the replicas of a given object.
  *
  * @version $Id$
+ *
+ * @author Alan Mislove
+ * @author Ansley Post
  * @author Peter Druschel
  */
-public class ContentHashPastContentHandle implements PastContentHandle {
+public class LookupHandlesMessage extends ContinuationMessage {
 
-  // the node on which the content object resides
-  private NodeHandle storageNode;
+  // the id to fetch
+  private Id id;
 
-  // the object's id
-  private Id myId;
-
+  // the number of replicas to fetch
+  private int max;
+   
   /**
-   * Constructor
+   * Constructor which takes a unique integer Id, as well as the
+   * data to be stored
    *
-   * @param id key identifying the object to be inserted
-   * @param obj the object to be inserted
-   * @param command Command to be performed when the result is received
+   * @param uid The unique id
+   * @param id The location to be stored
+   * @param max The number of replicas
+   * @param source The source address
+   * @param dest The destination address
+   * @param content The data to be stored
    */
-  public ContentHashPastContentHandle(NodeHandle nh, Id id) {
-    storageNode = nh;
-    myId = id;
+  public LookupHandlesMessage(int uid, Id id, int max, Id source, Id dest) {
+    super(uid, source, dest);
+
+    this.id = id;
+    this.max = max;
   }
 
-  
-  // ----- PastCONTENTHANDLE METHODS -----
-
   /**
-   * Returns the id of the PastContent object associated with this handle
+   * Method which returns the id
    *
-   * @return the id
+   * @return The contained id
    */
   public Id getId() {
-    return myId;
+    return id;
   }
 
   /**
-   * Returns the NodeHandle of the Past node on which the object associated
-   * with this handle is stored
+   * Method which returns the number of replicas
    *
-   * @return the id
+   * @return The number of replicas to fetch
    */
-  public NodeHandle getNodeHandle() {
-    return storageNode;
+  public int getMax() {
+    return max;
   }
 }
-
-
-
-
-
-
-
-
-
 

@@ -63,7 +63,7 @@ public interface PastContentHandle extends Serializable {
    * get the NodeHandle of the Past node on which the object associated with this handle is stored
    * @return the id
    */
-  public NodeHandle getNode();
+  public NodeHandle getNodeHandle();
 
 }
 

@@ -5,8 +5,10 @@ SOURCE  = \
   ContinuationMessage.java \
   InsertMessage.java \
   LookupMessage.java \
-  FetchMessage.java
-
+  LookupHandlesMessage.java \
+  FetchMessage.java \
+  FetchHandleMessage.java
+  
 RMI_SOURCE =
 
 MAIN       = 

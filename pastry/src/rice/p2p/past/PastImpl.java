@@ -75,6 +75,9 @@ public class PastImpl implements Past, Application, RMClient {
 
   // the hashtable of outstanding messages
   private Hashtable pending;
+
+  // the factory for manipulating ids
+  protected IdFactory factory;
   
   /**
    * Constructor for Past
@@ -87,10 +90,12 @@ public class PastImpl implements Past, Application, RMClient {
   public PastImpl(Node node, StorageManager manager, int replicas, String instance) {
     storage = manager;
     endpoint = node.registerApplication(this, instance);
+    factory = node.getIdFactory();
 
     replicaManager = new RMImpl((rice.pastry.PastryNode) node, this, replicas, instance);
     id = Integer.MIN_VALUE;
     pending = new Hashtable();
+    replicationFactor = replicas;
   }
   
 
@@ -135,8 +140,41 @@ public class PastImpl implements Past, Application, RMClient {
    * @param command The command to run once a result is received
    */
   private void sendRequest(Id id, PastMessage message, Continuation command) {
-    pending.put(new Integer(message.getUID()), command);
-    endpoint.route(id, message, null);
+    sendRequest(id, message, null, command);
+  }
+
+  /**
+   * Sends a request message across the wire, and stores the appropriate
+   * continuation.  Sends the message using the provided handle as a hint.
+   *
+   * @param id The destination id
+   * @param message The message to send.
+   * @param handle The first hop hint
+   * @param command The command to run once a result is received
+   */
+  private void sendRequest(Id id, PastMessage message, NodeHandle hint, Continuation command) {
+    insertPending(message.getUID(), command);
+    endpoint.route(id, message, hint);
+  }
+
+  /**
+   * Loads the provided continuation into the pending table
+   *
+   * @param uid The id of the message
+   * @param command The continuation to run
+   */
+  private void insertPending(int uid, Continuation command) {
+    pending.put(new Integer(uid), command);
+  }
+
+  /**
+   * Removes and returns the provided continuation from the pending table
+   *
+   * @param uid The id of the message
+   * @return The continuation to run
+   */
+  private Continuation removePending(int uid) {
+    return (Continuation) pending.remove(new Integer(uid));
   }
 
   /**
@@ -145,12 +183,34 @@ public class PastImpl implements Past, Application, RMClient {
    * @param message The message that arrived
    */
   private void handleResponse(PastMessage message) {
-    Continuation command = (Continuation) pending.remove(new Integer(message.getUID()));
+    Continuation command = removePending(message.getUID());
 
     if (command != null) {
       message.returnResponse(command);
     } else {
       System.out.println("ERROR - Found message " + message.getUID() + " with not pending Continuation.");
+    }
+  }
+
+  /**
+   * Method which inserts the given object into the cache
+   *
+   * @param id The id
+   * @param obj The object
+   */
+  private void cache(Id id, final PastContent content) {
+    if ((content != null) && (! content.isMutable())) {
+      storage.cache(id, content, new Continuation() {
+        public void receiveResult(Object o) {
+          if (! (o.equals(new Boolean(true)))) {
+            System.out.println("Caching of " + content + " failed.");
+          }
+        }
+
+        public void receiveException(Exception e) {
+          System.out.println("Caching of " + content + " caused exception " + e + ".");
+        }
+      });
     }
   }
 
@@ -166,6 +226,12 @@ public class PastImpl implements Past, Application, RMClient {
    * @param command Command to be performed when the result is received
    */
   public void insert(PastContent obj, Continuation command) {
+    if (command == null) return;
+    if (obj == null) {
+      command.receiveException(new RuntimeException("Object cannot be null in insert!"));
+      return;
+    }
+                          
     sendRequest(obj.getId(), new InsertMessage(getUID(), obj, endpoint.getId(), obj.getId()), command);
   }
 
@@ -191,6 +257,12 @@ public class PastImpl implements Past, Application, RMClient {
    * @param command Command to be performed when the result is received
    */
   public void lookup(Id id, Continuation command) {
+    if (command == null) return;
+    if (id == null) {
+      command.receiveException(new RuntimeException("Id cannot be null in lookup!"));
+      return;
+    }
+    
     sendRequest(id, new LookupMessage(getUID(), id, endpoint.getId(), id), command);
   }
 
@@ -204,11 +276,75 @@ public class PastImpl implements Past, Application, RMClient {
    * root for the the given key. If max exceeds the replication factor
    * r of this Past instance, only r replicas are returned.
    *
+   * This method will return a PastContentHandle[] array containing all
+   * of the handles.
+   *
    * @param id the key to be queried
    * @param max the maximal number of replicas requested
    * @param command Command to be performed when the result is received
    */
-  public void lookupHandles(Id id, int max, Continuation command) {
+  public void lookupHandles(final Id id, int max, final Continuation command) {
+    if (command == null) return;
+    if (id == null) {
+      command.receiveException(new RuntimeException("Id cannot be null in lookupHandles!"));
+      return;
+    }
+    if (max < 1)  {
+      command.receiveException(new RuntimeException("Max must be positive in lookupHandles!"));
+      return;
+    }
+
+    if (max > replicationFactor)
+      max = replicationFactor;
+
+    final Continuation receiveHandles = new Continuation() {
+
+      private int num = -1;
+      
+      private Vector handles = new Vector();
+      
+      public void receiveResult(Object o) {
+        if (num == -1) {
+          num = ((Integer) o).intValue();
+        } else {
+          handles.add(o);
+
+          if (handles.size() == num) {
+            PastContentHandle[] array = new PastContentHandle[num];
+
+            for (int i=0; i<num; i++) {
+              array[i] = (PastContentHandle) handles.elementAt(i);
+            }
+
+            command.receiveResult(array);
+          }
+        }
+      }
+
+      public void receiveException(Exception e) {
+        command.receiveException(e);
+      }
+    };
+
+    Continuation receiveReplicas = new Continuation() {
+
+      public void receiveResult(Object o) {
+        NodeHandleSet replicas = (NodeHandleSet) o;
+
+        receiveHandles.receiveResult(new Integer(replicas.size()));
+
+        for (int i=0; i<replicas.size(); i++) {
+          NodeHandle node = replicas.getHandle(i);
+          sendRequest(null, new FetchHandleMessage(getUID(), id, endpoint.getId(), node.getId()), node, receiveHandles);
+        }
+      }
+
+      public void receiveException(Exception e) {
+        command.receiveException(e);
+      }
+    };
+
+    sendRequest(id, new LookupHandlesMessage(getUID(), id, max, endpoint.getId(), id), receiveReplicas);
   }
 
   /**
@@ -224,7 +360,16 @@ public class PastImpl implements Past, Application, RMClient {
    * @param command Command to be performed when the result is received
    */
   public void fetch(PastContentHandle handle, Continuation command) {
-    sendRequest(handle.getId(), new FetchMessage(getUID(), handle, endpoint.getId(), handle.getId()), command);
+    if (command == null) return;
+    if (handle == null) {
+      command.receiveException(new RuntimeException("Handle cannot be null in fetch!"));
+      return;
+    }
+    
+    sendRequest(null,
+                new FetchMessage(getUID(), handle, endpoint.getId(), handle.getNodeHandle().getId()),
+                handle.getNodeHandle(),
+                command);
   }
 
   /**
@@ -263,8 +408,33 @@ public class PastImpl implements Past, Application, RMClient {
    *
    * @return Whether or not to forward the message further
    */
-  public boolean forward(RouteMessage message) {
-    return true;
+  public boolean forward(final RouteMessage message) {
+    if (message.getMessage() instanceof LookupMessage) {
+      LookupMessage lmsg = (LookupMessage) message.getMessage();
+      Id id = lmsg.getId();
+      PastContent content = (PastContent) lmsg.getResponse();
+      
+      cache(id, content);
+
+      // if it is a request, look in the cache
+      if (! lmsg.isResponse()) {
+        if (storage.getCache().scan(factory.buildIdRange(id, id)).numElements() > 0) {
+          storage.getCache().getObject(id, getResponseContinuation(lmsg));
+          return false;
+        }
+      }
+
+      return true;
+    } else if (message.getMessage() instanceof FetchMessage) {
+      FetchMessage fmsg = (FetchMessage) message.getMessage();
+      Id id = fmsg.getHandle().getId();
+      PastContent content = (PastContent) fmsg.getResponse();
+
+      cache(id, content);
+      return true;
+    } else {
+      return true;
+    } 
   }
 
   /**
@@ -281,16 +451,49 @@ public class PastImpl implements Past, Application, RMClient {
       handleResponse((PastMessage) message);
     } else {
       if (msg instanceof InsertMessage) {
-        InsertMessage imsg = (InsertMessage) msg;
-        storage.store(imsg.getContent().getId(), imsg.getContent(), getResponseContinuation(msg));
+        final InsertMessage imsg = (InsertMessage) msg;
+        storage.getObject(imsg.getContent().getId(), new Continuation() {
+          public void receiveResult(Object o) {
+            try {
+              PastContent content = imsg.getContent().checkInsert(imsg.getContent().getId(), (PastContent) o);
+              storage.store(imsg.getContent().getId(), content, getResponseContinuation(msg));
+            } catch (PastException e) {
+              receiveException(e);
+            }
+          }
+
+          public void receiveException(Exception e) {
+            getResponseContinuation(msg).receiveException(e);
+          }
+        });
       } else if (msg instanceof LookupMessage) {
         LookupMessage lmsg = (LookupMessage) msg;
         storage.getObject(lmsg.getId(), getResponseContinuation(msg));
         // HERE  - NEED TO RETRIEVE HANDLE AND THEN VERIFY OBJECT
+      } else if (msg instanceof LookupHandlesMessage) {
+        LookupHandlesMessage lmsg = (LookupHandlesMessage) msg;
+        getResponseContinuation(msg).receiveResult(endpoint.replicaSet(lmsg.getId(), lmsg.getMax()));
       } else if (msg instanceof FetchMessage) {
         FetchMessage fmsg = (FetchMessage) msg;
         storage.getObject(fmsg.getHandle().getId(), getResponseContinuation(msg));
         // HERE  - NEED TO VERIFY OBJECT
+      } else if (msg instanceof FetchHandleMessage) {
+        FetchHandleMessage fmsg = (FetchHandleMessage) msg;
+        storage.getObject(fmsg.getId(), new Continuation() {
+          public void receiveResult(Object o) {
+            PastContent content = (PastContent) o;
+
+            if (content != null) {
+              getResponseContinuation(msg).receiveResult(content.getHandle(PastImpl.this));
+            } else {
+              getResponseContinuation(msg).receiveException(new RuntimeException("Replica did not have object!"));
+            }
+          }	
+
+          public void receiveException(Exception e) {
+            getResponseContinuation(msg).receiveException(e);
+          }
+        });
       } else {
         System.out.println("ERROR - Received message " + msg + " of unknown type.");
       }
@@ -327,12 +530,12 @@ public class PastImpl implements Past, Application, RMClient {
       final Continuation receive = new Continuation() {
         public void receiveResult(Object o) {
           if (! (o.equals(new Boolean(true)))) {
-            System.out.println("Insertion of id " + id + " failed.");
+            System.out.println("Insertion of replica id " + id + " failed.");
           }
         }
 
         public void receiveException(Exception e) {
-          System.out.println("Insertion of id " + id + " caused exception " + e + ".");
+          System.out.println("Insertion of replica id " + id + " caused exception " + e + ".");
         }
       };
       
@@ -342,7 +545,7 @@ public class PastImpl implements Past, Application, RMClient {
         }
 
         public void receiveException(Exception e) {
-          System.out.println("Retreival of id " + id + " caused exception " + e + ".");
+          System.out.println("Retreival of replica id " + id + " caused exception " + e + ".");
         }
       };
 
@@ -404,6 +607,28 @@ public class PastImpl implements Past, Application, RMClient {
    */
   public rice.pastry.IdSet scan(rice.pastry.IdRange range) {
     return (rice.pastry.IdSet) storage.scan(range);
+  }
+
+  /**
+   * Returns the replica manager for this Past instance.  Should *ONLY* be used
+   * for testing.  Messing with this will cause unknown behavior.
+   *
+   * @return This Past's replica manager
+   */
+  public RM getReplicaManager() {
+    return replicaManager;
+  }
+
+
+  // ----- UTILITY METHODS -----
+
+  /**
+   * Returns this Past's storage manager.
+   *
+   * @return This Past's storage manager.
+   */
+  public StorageManager getStorageManager() {
+    return storage;
   }
 }
 

@@ -107,5 +107,14 @@ public abstract class ContinuationMessage extends PastMessage implements Continu
     else
       c.receiveException(exception);
   }
+
+  /**
+   * Returns the response
+   *
+   * @return The response
+   */
+  public Object getResponse() {
+    return response;
+  }
 }
 

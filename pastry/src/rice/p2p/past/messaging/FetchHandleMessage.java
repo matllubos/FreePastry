@@ -34,68 +34,51 @@ if advised of the possibility of such damage.
 
 ********************************************************************************/
 
-package rice.p2p.past;
-
-import java.io.Serializable;
+package rice.p2p.past.messaging;
 
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.past.*;
 
 /**
- * A handle class for content-hash objects stored in Past.
+ * @(#) FetchHandleMessage.java
+ *
+ * This class represents a handle request in Past
  *
  * @version $Id$
+ *
+ * @author Alan Mislove
+ * @author Ansley Post
  * @author Peter Druschel
  */
-public class ContentHashPastContentHandle implements PastContentHandle {
+public class FetchHandleMessage extends ContinuationMessage {
 
-  // the node on which the content object resides
-  private NodeHandle storageNode;
-
-  // the object's id
-  private Id myId;
-
+  // the id to fetch
+  private Id id;
+  
   /**
-   * Constructor
+   * Constructor which takes a unique integer Id, as well as the
+   * data to be stored
    *
-   * @param id key identifying the object to be inserted
-   * @param obj the object to be inserted
-   * @param command Command to be performed when the result is received
+   * @param uid The unique id
+   * @param id The location to be stored
+   * @param source The source address
+   * @param dest The destination address
+   * @param content The data to be stored
    */
-  public ContentHashPastContentHandle(NodeHandle nh, Id id) {
-    storageNode = nh;
-    myId = id;
+  public FetchHandleMessage(int uid, Id id, Id source, Id dest) {
+    super(uid, source, dest);
+
+    this.id = id;
   }
 
-  
-  // ----- PastCONTENTHANDLE METHODS -----
-
   /**
-   * Returns the id of the PastContent object associated with this handle
+   * Method which returns the id
    *
-   * @return the id
+   * @param o The contained id
    */
   public Id getId() {
-    return myId;
-  }
-
-  /**
-   * Returns the NodeHandle of the Past node on which the object associated
-   * with this handle is stored
-   *
-   * @return the id
-   */
-  public NodeHandle getNodeHandle() {
-    return storageNode;
+    return id;
   }
 }
-
-
-
-
-
-
-
-
-
 

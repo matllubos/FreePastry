@@ -671,8 +671,8 @@ public class Scribe extends PastryAppl implements IScribe
 	} catch ( NoSuchAlgorithmException e ) {
 	    System.err.println( "No SHA support!" );
 	}
-	if(m_ready)
-	    System.out.println("DEBUG :: Scribe is ready at"+getNodeId()+" , topic is "+topicName);
+	//if(m_ready)
+	    //System.out.println("DEBUG :: Scribe is ready at"+getNodeId()+" , topic is "+topicName);
 	md.update( topicName.getBytes() );
 	byte[] digest = md.digest();
 	

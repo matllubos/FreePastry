@@ -100,6 +100,9 @@ public interface Past {
    * root for the the given key. If max exceeds the replication factor
    * r of this Past instance, only r replicas are returned.
    *
+   * This method will return a PastContentHandle[] array containing all
+   * of the handles.
+   *
    * @param id the key to be queried
    * @param max the maximal number of replicas requested
    * @param command Command to be performed when the result is received 

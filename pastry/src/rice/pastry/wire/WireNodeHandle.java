@@ -195,7 +195,7 @@ public class WireNodeHandle extends DistNodeHandle implements SelectionKeyHandle
             ((WirePastryNode) getLocalNode()).getDatagramManager().write(nodeId, address, msg);
           }
         } catch (IOException e) {
-          System.out.println("IOException serializing message " + msg + " - cancelling message.");
+          System.out.println("IOException " + e + " serializing message " + msg + " - cancelling message.");
         }
       } else {
         writer.enqueue(new SocketTransportMessage(msg));
