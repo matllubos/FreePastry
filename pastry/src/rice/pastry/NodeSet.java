@@ -136,7 +136,7 @@ public class NodeSet implements NodeSetI {
      */ 
 
     public boolean member(NodeId nid) {
-	return (getIndex(nid) > 0);
+	return (getIndex(nid) >= 0);
     }
 
     

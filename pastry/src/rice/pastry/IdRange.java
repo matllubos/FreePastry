@@ -47,27 +47,39 @@ import java.util.*;
  */
 
 public class IdRange {
-
-    private Id left;
-    private Id right;
+    private boolean empty;
+    private Id ccw;
+    private Id cw;
 
     /**
      * Constructor.
      *
-     * @param left the id at the counterclockwise edge of the range (inclusive)
-     * @param right the id at the clockwise edge of the range (exclusive)
+     * @param ccw the id at the counterclockwise edge of the range (inclusive)
+     * @param cw the id at the clockwise edge of the range (exclusive)
      */
-    public IdRange(Id left, Id right) {
-	this.left = left;
-	this.right = right;
+    public IdRange(Id ccw, Id cw) {
+	empty = false;
+	this.ccw = ccw;
+	this.cw = cw;
+    }
+
+    /**
+     * Constructor, constructs an empty IdRange
+     *
+     */
+    public IdRange() {
+	empty = true;
+	this.ccw = new Id();
+	this.cw = new Id();
     }
 
     /**
      * Copy constructor.
      */
     public IdRange(IdRange o) {
-	this.left  = o.left;
-	this.right = o.right;
+	this.empty = o.empty;
+	this.ccw  = o.ccw;
+	this.cw = o.cw;
     }
 
     /**
@@ -75,62 +87,133 @@ public class IdRange {
      * @return the numerical distance of the range
      */ 
     public Id.Distance size() {
-	return left.distance(right);
+	if (ccw.clockwise(cw))
+	    return ccw.distance(cw);
+	else
+	    return ccw.longDistance(cw);
     }
 
+    /**
+     * test if the range is empty
+     * @return true if the range is empty
+     */ 
+    public boolean isEmpty() {
+	return empty;
+    }
 
     /**
-     * get left edge of range
+     * get counterclockwise edge of range
      * @return the id at the counterclockwise edge of the range (inclusive)
      */ 
-    public Id getLeft() {
-	return left;
+    public Id getCCW() {
+	return ccw;
     }
 
     /**
-     * get right edge of range
+     * get clockwise edge of range
      * @return the id at the clockwise edge of the range (exclusive)
      */ 
-    public Id getRight() {
-	return right;
+    public Id getCW() {
+	return cw;
     }
 
     /**
-     * set left edge of range
-     * @param left the new id at the counterclockwise edge of the range (inclusive)
+     * set counterclockwise edge of range
+     * @param ccw the new id at the counterclockwise edge of the range (inclusive)
      */ 
-    public void setLeft(Id left) {
-	this.left = left;
+    private void setCCW(Id ccw) {
+	this.ccw = ccw;
     }
 
     /**
-     * set right edge of range
-     * @param right the new id at the clockwise edge of the range (exclusive)
+     * set clockwise edge of range
+     * @param cw the new id at the clockwise edge of the range (exclusive)
      */ 
-    public void setRight(Id right) {
-	this.right = right;
+    private void setCW(Id cw) {
+	this.cw = cw;
     }
 
     /**
      * merge two ranges
+     * if this and other don't overlap and are not adjacent, the result is this
      * 
-     * @param other the other range
-     * @return the result range or null if other doesn't overlap or butt with this range
+     * @param o the other range
+     * @return the resulting range
      */
-    public IdRange merge(IdRange other) {
-	// XXX -implement
-	return null;
+    public IdRange merge(IdRange o) {
+	Id newCW, newCCW;
+
+	if (ccw.isBetween(o.ccw, o.cw))
+	    newCCW = o.ccw;
+	else
+	    newCCW = ccw;
+
+	if (cw.isBetween(o.ccw, o.cw))
+	    newCW = o.cw;
+	else
+	    newCW = cw;
+	
+	return new IdRange(newCCW, newCW);
     }
 
     /**
      * intersect two ranges
-     * 
-     * @param other the other range
-     * @return the result range or null if other doesn't overlap with this range
+     * returns an empty range if the ranges don't intersect
+     *
+     * @param o the other range
+     * @return the result range
      */
-    public IdRange intersect(IdRange other) {
-	// XXX -implement
-	return null;
+    public IdRange intersect(IdRange o) {
+	Id newCW, newCCW;
+	boolean intersect = false;
+
+	if (ccw.isBetween(o.ccw, o.cw)) {
+	    newCCW = ccw;
+	    intersect = true;
+	} else
+	    newCCW = o.ccw;
+
+	if (cw.isBetween(o.ccw, o.cw)) {
+	    newCW = cw;
+	    intersect = true;
+	}
+	else
+	    newCW = o.cw;
+	
+	if (intersect)
+	    return new IdRange(newCCW, newCW);
+	else
+	    return new IdRange();
+
+    }
+
+
+    /**
+     * get counterclockwise half of the range
+     * @return the range corresponding to the ccw half of this range
+     */ 
+    public IdRange ccwHalf() {
+	Id newCW = ccw.add(size().shift(1,0));
+	return new IdRange(ccw, newCW);
+    }
+
+    /**
+     * get clockwise half of the range
+     * @return the range corresponding to the cw half of this range
+     */ 
+    public IdRange cwHalf() {
+	Id newCCW = ccw.add(size().shift(1,0));
+	return new IdRange(newCCW, cw);
+    }
+
+
+    /**
+     * Returns a string representation of the range.
+     */
+
+    public String toString() 
+    {
+	return "IdRange: from:" + ccw + " to:" + cw + " empty=" + empty;
     }
 
 }
