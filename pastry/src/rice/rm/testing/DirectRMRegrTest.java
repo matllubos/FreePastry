@@ -47,6 +47,7 @@ import rice.pastry.routing.*;
 
 import rice.rm.*;
 import rice.rm.messaging.*;
+import rice.rm.testing.*;
 
 import java.util.*;
 import java.io.*;

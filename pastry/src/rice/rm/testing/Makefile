@@ -6,7 +6,12 @@ SOURCE  = \
 	RMRegrTestApp.java \
 	TestMessage.java \
 	HeartbeatMsg.java \
-	RefreshMsg.java
+	RefreshMsg.java \
+	ReplicateMsg.java \
+	ReplicateResponseMsg.java \
+	ReplicateTimeoutMsg.java \
+	InsertMsg.java \
+	InsertResponseMsg.java
 	#DistRMRegrTest.java \
 	#DistRMRegrTestApp.java \
 	#DistRMRegrTestMessage.java \

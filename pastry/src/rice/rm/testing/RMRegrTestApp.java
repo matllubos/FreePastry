@@ -75,6 +75,7 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
 
     public static int rFactor = 5;
 
+    public Hashtable m_pendingObjects;
 
     protected static Address m_address = new RMRegrTestAppAddress();
 
@@ -88,6 +89,28 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
 	}
     }
 
+
+    public static class ReplicateEntry{
+	private int numAcks;
+	private Object object;
+	
+	public ReplicateEntry(Object _object){
+	    this.numAcks = 0;
+	    this.object = _object ;
+	}
+	public int getNumAcks(){
+	    return numAcks;
+	}
+
+	public Object getObject() {
+	    return object;
+	}
+
+	public void incNumAcks() {
+	    numAcks ++;
+	    return;
+	}
+    }
 
     /**
      * Constructor
@@ -108,7 +131,7 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
 
 	m_keys = new IdSet(); 
 	m_refreshedKeys = new IdSet();
-
+	m_pendingObjects = new Hashtable();
 	m_rm.register(this, rFactor);
     }
 
@@ -116,6 +139,16 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
     public void rmIsReady() {
 
     }
+
+    public ReplicateEntry getPendingObject(Id key) {
+	return (ReplicateEntry)m_pendingObjects.get(key);
+    }
+
+    public void removePendingObject(Id key) {
+	m_pendingObjects.remove(key);
+    }
+    
+
 
     public void printRange() {
 	IdRange myRange1;
@@ -125,11 +158,23 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
     }
 
 
-    // Call to underlying replica manager
-    public void replicate(Id objectKey) {
-	//System.out.println(getNodeId() + " replicating object " + objectKey);
-	m_rm.replicate(objectKey, new Integer(1));
+    /**
+     * Called by the application when it needs to replicate an object into
+     * k nodes closest to the object key.
+     *
+     * @param objectKey  the pastry key for the object
+     * @param object the object
+     * @return true if operation successful else false
+     */
+    public boolean replicate(Id objectKey) {
+	Object object = new Integer(1);
+	m_pendingObjects.put(objectKey, new ReplicateEntry(object));
+	ReplicateMsg msg = new ReplicateMsg(getLocalHandle(),getAddress(),objectKey, getCredentials());
+	route(objectKey, msg, null);
+	return true;
+
     }
+
 
     // Call to underlying replica manager
     public void periodicMaintenance() {
@@ -237,6 +282,8 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
     }
 
 
+
+
     public NodeHandle getLocalHandle() {
 	return thePastryNode.getLocalHandle();
     }
@@ -290,6 +337,10 @@ public abstract class RMRegrTestApp extends CommonAPIAppl implements RMClient
     public void clearRefreshedKeys() {
 	m_refreshedKeys = new IdSet();
 
+    }
+
+    public PastryNode getPastryNode() {
+	return thePastryNode;
     }
 
     
