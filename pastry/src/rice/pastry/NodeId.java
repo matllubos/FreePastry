@@ -51,6 +51,11 @@ import java.util.*;
 public class NodeId extends Id {
   
   /**
+   * Support for coalesced Ids - ensures only one copy of each Id is in memory
+   */
+  private static WeakHashMap NODEID_MAP = new WeakHashMap();
+  
+  /**
    * This is the bit length of the node ids.  If it is n, then
    * there are 2^n different Pastry nodes.  We currently assume
    * that it is divisible by 32.
@@ -65,36 +70,45 @@ public class NodeId extends Id {
   /**
    * Constructor.
    *
-   * @param material an array of length at least IdBitLength/8 containing raw Id material.
+   * @param material an array of length at least IdBitLength/32 containing raw Id material.
    */
-  public NodeId(byte material[]) {
-    super(trans(material));
-  }
+  private NodeId(int material[]) {
+    super(material);
+  } 
   
   /**
    * Constructor.
    *
    * @param material an array of length at least IdBitLength/32 containing raw Id material.
    */
-  public NodeId(int material[]) {
-    super(material);
+  public static NodeId buildNodeId(int material[]) {
+    return (NodeId) resolve(NODEID_MAP, new NodeId(material));
   }
   
   /**
-   * Constructor.
-   */
-  public NodeId() {
-    super(new int[nlen]);
-  }
-  
-  
-  /**
-   * Undefine readResolve for NodeIds
+    * Constructor.
    *
-   * @return This
+   * @param material an array of length at least IdBitLength/8 containing raw Id material.
+   */
+  public static NodeId buildNodeId(byte[] material) {
+    return buildNodeId(trans(material));
+  }
+  
+  /**
+    * Constructor. It constructs a new Id with a value of 0 for all bits.
+   */
+  public static NodeId buildNodeId() {
+    return buildNodeId(new int[nlen]);
+  }
+  
+  /**
+   * Define readResolve, which will replace the deserialized object with the canootical
+   * one (if one exists) to ensure Id coalescing.
+   *
+   * @return The real Id
    */
   private Object readResolve() throws ObjectStreamException {
-    return this;
+    return resolve(NODEID_MAP, this);
   }
 }
 

@@ -57,7 +57,7 @@ public class Id implements rice.p2p.commonapi.Id {
   /**
    * Support for coalesced Ids - ensures only one copy of each Id is in memory
    */
-  protected static WeakHashMap MAP = new WeakHashMap();
+  private static WeakHashMap ID_MAP = new WeakHashMap();
   
   /**
    * This is the bit length of the node ids. If it is n, then there are 2^n possible different Ids.
@@ -128,7 +128,7 @@ public class Id implements rice.p2p.commonapi.Id {
    * @param material an array of length at least IdBitLength/32 containing raw Id material.
    */
   public static Id build(int material[]) {
-    return resolve(new Id(material));
+    return resolve(ID_MAP, new Id(material));
   }
   
   /**
@@ -227,15 +227,15 @@ public class Id implements rice.p2p.commonapi.Id {
    * @param id The Id to coalesce
    * @return The Id to use
    */
-  private static Id resolve(Id id) {
-    synchronized (MAP) {
-      WeakReference ref = (WeakReference) MAP.get(id);
+  protected static Id resolve(WeakHashMap map, Id id) {
+    synchronized (map) {
+      WeakReference ref = (WeakReference) map.get(id);
       Id result = null;
       
       if ((ref != null) && ((result = (Id) ref.get()) != null)) {
         return result;
       } else {
-        MAP.put(id, new WeakReference(id));
+        map.put(id, new WeakReference(id));
         return id;
       }
     }
@@ -248,7 +248,7 @@ public class Id implements rice.p2p.commonapi.Id {
    * @return The real Id
    */
   private Object readResolve() throws ObjectStreamException {
-    return resolve(this);
+    return resolve(ID_MAP, this);
   }
   
   
