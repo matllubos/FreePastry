@@ -171,11 +171,28 @@ public class Ring {
     return null;
   }
 
+  public Ring getRing(int x, int y) {
+    if (contains(x,y)) {
+      return this;
+    }
+    Iterator i = children.iterator();
+    while(i.hasNext()) {
+      Ring r = (Ring)i.next();
+      Ring sel = r.getRing(x,y);
+      if (sel != null) {
+        return sel;
+      }
+    }
+    return null;
+  }
+
   public boolean contains(int x, int y) {
     // calculate distance from center
-    double r2 = getRadius(); // radius squared
-    r2*=r2;
-    return ((x*x)+(y*y) <= r2);     
+    Point c = getCenter();
+    int dx = x-c.x;
+    int dy = y-c.y;
+    double r = getRadius(); 
+    return ((dx*dx)+(dy*dy) <= (r*r));     
   }
 
   // ********************* Drawing of tree ******************************
@@ -200,8 +217,12 @@ public class Ring {
   private void prepSelf(Graphics g) {
     Point p = getCenter();
     int r = (int)getRadius();
-    g.setColor(Color.BLACK);
+    g.setColor(Color.BLACK);   
     g.drawOval(p.x-r,p.y-r,r*2,r*2);
+    if (visualization.highlightedRing == this) { // render highlighted as double ring
+      int r2 = r-2;
+      g.drawOval(p.x-r2,p.y-r2,r2*2,r2*2);          
+    }
     prepNodes(g, p, r);        
   }
 

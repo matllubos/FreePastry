@@ -205,9 +205,9 @@ public class PersistentStorage implements Storage {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>.
    */
-  public void store(final Id id, final Serializable obj, final Continuation c) {
+  public void store(final Id id, final Serializable obj, final Continuation c1) {
     try {
-      workQ.enqueue(new WorkRequest(c) { 
+      workQ.enqueue(new WorkRequest(c1) { 
         public void doWork() {
           try {
             /* first, rename the current file to a temporary name */
@@ -253,7 +253,7 @@ public class PersistentStorage implements Storage {
         }
       });
     } catch(WorkQueueOverflowException e) {
-      c.receiveException(e);
+      c1.receiveException(e);
     }
   }
   
@@ -274,9 +274,9 @@ public class PersistentStorage implements Storage {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>.
    */
-  public void unstore(final Id id, Continuation c) {
+  public void unstore(final Id id, Continuation c1) {
     try {
-      workQ.enqueue(new WorkRequest(c) { 
+      workQ.enqueue(new WorkRequest(c1) { 
         public void doWork() {
           try {
             File objFile = getFile(id); 
@@ -307,7 +307,7 @@ public class PersistentStorage implements Storage {
         }
       });
     } catch(WorkQueueOverflowException e){
-      c.receiveException(e);
+      c1.receiveException(e);
     }
   }
 
@@ -332,9 +332,9 @@ public class PersistentStorage implements Storage {
    * @param id The id of the object in question.
    * @return Whether or not an object is present at id.
    */
-	public void exists(final Id id, Continuation c) {
+	public void exists(final Id id, Continuation c1) {
 		try{
-			workQ.enqueue(new WorkRequest(c) { 
+			workQ.enqueue(new WorkRequest(c1) { 
 			  public void doWork(){
           boolean result = false;
           
@@ -346,7 +346,7 @@ public class PersistentStorage implements Storage {
         }
 			});
 		} catch(WorkQueueOverflowException e) {
-		  c.receiveException(e);
+		  c1.receiveException(e);
 	  }
 	}
 
@@ -358,14 +358,14 @@ public class PersistentStorage implements Storage {
    * @return The object, or <code>null</code> if there is no cooresponding
    * object (through receiveResult on c).
    */
-  public void getObject(final Id id, Continuation c) {
+  public void getObject(final Id id, Continuation c1) {
     if (! exists(id)) {
-      c.receiveResult(null);
+      c1.receiveResult(null);
       return;
     }
     
     try {
-		  workQ.enqueue(new WorkRequest(c) { 
+		  workQ.enqueue(new WorkRequest(c1) { 
 			  public void doWork() {
           try { 
             File objFile = getFile(id);
@@ -393,7 +393,7 @@ public class PersistentStorage implements Storage {
         }
       });
   	} catch(WorkQueueOverflowException e) {
-		  c.receiveException(e);
+		  c1.receiveException(e);
 	  }
   }
   
@@ -412,9 +412,9 @@ public class PersistentStorage implements Storage {
    * @param c The command to run once the operation is complete
    * @return The idset containg the keys 
    */
-  public void scan(final IdRange range, final Continuation c) {
+  public void scan(final IdRange range, final Continuation c1) {
 	  try{
-		  workQ.enqueue( new WorkRequest(c) { 
+		  workQ.enqueue( new WorkRequest(c1) { 
 			  public void doWork(){
 					IdSet toReturn = null;
 					synchronized(idSet){
@@ -424,7 +424,7 @@ public class PersistentStorage implements Storage {
 			  }
 		  });
 	  } catch(WorkQueueOverflowException e) {
-		  c.receiveException(e);
+		  c1.receiveException(e);
 	  }
 	  
   }

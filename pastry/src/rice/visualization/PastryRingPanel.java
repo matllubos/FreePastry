@@ -281,23 +281,19 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
   public void mouseClicked(MouseEvent e) {
     switch (e.getButton()) {
       case MouseEvent.BUTTON1:  
-//        if (nodeLocations == null)
-//          return;
-//        
-//        for (int i=0; i<nodeLocations.length; i++) {
-//          if (nodeLocations[i].contains(e.getX(), e.getY()) || textLocations[i].contains(e.getX(), e.getY())) {
-//            visualization.setSelected(nodes[i]);
-//      
-//            return;
-//          }
-//        }
-//        
-//        visualization.setSelected((Node) null);
-//        break;
 
         Node n = visualization.getNode(e.getX(), e.getY());
-        System.out.println("Selecting "+n);
-        visualization.setSelected(n);
+        if (n == null) {
+          Ring r = visualization.getRing(e.getX(), e.getY());
+          if (r == null) {
+            visualization.setSelected((Node)null);
+          } else {
+            visualization.selectRing(r);
+          }
+        } else {
+          visualization.setSelected(n);
+        }
+
         break;
       case MouseEvent.BUTTON3:  
         switchRings();
@@ -316,20 +312,13 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
   }
   
   public void mouseMoved(MouseEvent e) {
-//    if (nodeLocations == null)
-//      return;
-//    
-//    for (int i=0; i<nodeLocations.length; i++) {
-//      if (nodeLocations[i].contains(e.getX(), e.getY()) || textLocations[i].contains(e.getX(), e.getY())) {
-//        visualization.setHighlighted(nodes[i]);
-//        return;
-//      }
-//    } 
-//    
-//    visualization.setHighlighted(null);
-
     Node n = visualization.getNode(e.getX(), e.getY());
-    visualization.setHighlighted(n);
+    if (n == null) {
+      Ring r = visualization.getRing(e.getX(), e.getY());
+      visualization.setHighlighted(null,r);
+    } else {
+      visualization.setHighlighted(n,null);
+    }
   }
   
   public void mouseDragged(MouseEvent e) {

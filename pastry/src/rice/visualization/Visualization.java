@@ -128,9 +128,10 @@ public class Visualization {
     return data;
   }
   
-  public void setHighlighted(Node node) {
-    if (highlightedNode != node) {
+  public void setHighlighted(Node node, Ring ring) {
+    if ((highlightedNode != node) || (highlightedRing != ring)) {
       highlightedNode = node;
+      highlightedRing = ring;
       frame.nodeHighlighted(node);
     }
   }
@@ -153,13 +154,13 @@ public class Visualization {
   public void selectRing(Ring r) {
     selectedRing = r;
     r.select();
-//    boolean repaint = false;
-//    if (selectedNode == null)
-//      repaint = true;
+    boolean repaint = false;
+    if (selectedNode == null)
+      repaint = true;
     setSelected((Node)null);
-//    if (repaint) {
-//      frame.nodeSelected(selectedNode, r);
-//    }
+    if (repaint) {
+      frame.nodeSelected(selectedNode);
+    }
   }  
 
 //  public void setSelected(NodeId id) {
@@ -178,7 +179,6 @@ public class Visualization {
   }
   
   public Node getNode(int x, int y) {
-    //System.out.println("getNode");
     // try the selected ring
     Node n = selectedRing.getNode(x,y);
     Ring root = getRingByIndex(0);
@@ -187,6 +187,14 @@ public class Visualization {
       n = root.getNode(x,y);
     }
     return n;
+  }
+  
+  public Ring getRing(int x, int y) {
+    // try the selected ring
+    Ring root = getRingByIndex(0);
+    // try the main ring, which will recursively try all rings
+    Ring sel = root.getRing(x,y);
+    return sel;
   }
   
   public void setSelected(Node node) {
