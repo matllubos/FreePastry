@@ -87,10 +87,41 @@ public interface Past {
    * replicas and determine which replica is fresh in an
    * application-specific manner.
    *
+   * By default, this method attempts to cache the result locally for
+   * future use.  Applications which do not desire this behavior should
+   * use the lookup(id, boolean, command) method.
+   *
    * @param id the key to be queried
    * @param command Command to be performed when the result is received
    */
   public void lookup(Id id, Continuation command);
+  
+  /**
+   * Retrieves the object stored in this instance of Past with the
+   * given ID.  Asynchronously returns a PastContent object as the
+   * result to the provided Continuation, or a PastException. This
+   * method is provided for convenience; its effect is identical to a
+   * lookupHandles() and a subsequent fetch() to the handle that is
+   * nearest in the network.
+   * 
+   * The client must authenticate the object. In case of failure, an
+   * alternate replica of the object can be obtained via
+   * lookupHandles() and fetch().
+   * 
+   * This method is not safe if the object is immutable and storage
+   * nodes are not trusted. In this case, clients should used the
+   * lookUpHandles method to obtains the handles of all primary
+   * replicas and determine which replica is fresh in an
+   * application-specific manner.
+   *
+   * This method also allows applications to specify if the result should
+   * be cached locally.
+   *
+   * @param id the key to be queried
+   * @param cache Whether or not the result should be cached
+   * @param command Command to be performed when the result is received
+   */
+  public void lookup(Id id, boolean cache, Continuation command);
 
   /**
    * Retrieves the handles of up to max replicas of the object stored
