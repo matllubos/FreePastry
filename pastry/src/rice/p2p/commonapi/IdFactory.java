@@ -93,6 +93,13 @@ public interface IdFactory {
    * @return The built Id.
    */
   public Id buildIdFromToString(char[] chars, int offset, int length);
+  
+  /**
+   * Returns the length a Id.toString should be.
+   *
+   * @return The correct length;
+   */
+  public int getIdToStringLength();
 
   /**
    * Builds a protocol-specific Id.Distance given the source data.

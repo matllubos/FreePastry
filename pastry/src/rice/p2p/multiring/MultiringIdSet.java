@@ -154,6 +154,19 @@ public class MultiringIdSet implements IdSet {
   }
   
   /**
+   * return this set as an array
+   * @return the array
+   */
+  public Id[] asArray() {
+    Id[] result = set.asArray();
+    
+    for (int i=0; i<result.length; i++)
+      result[i] = new RingId(ringId, result[i]);
+    
+    return result;
+  }
+  
+  /**
    * return a hash of this set
    *
    * @return the hash of this set

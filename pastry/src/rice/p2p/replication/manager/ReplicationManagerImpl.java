@@ -258,10 +258,13 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * currently stores in this range. Should return a empty IdSet (not null),
    * in the case that no keys belong to this range.
    *
+   * In this case, it returns the list of keys the client has, along with the
+   * keys which we have yet to tell the client to fetch.
+   *
    * @param range the requested range
    */
   public IdSet scan(IdRange range) {
-    return client.scan(range);
+    return ReplicationImpl.merge(factory, client.scan(range), helper.scan(range));
   }
   
   
@@ -396,6 +399,16 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
       /* now look for any matching ids */
       while (i.hasNext())
         set.removeId((Id) i.next());
+    }    
+    
+    /**
+     * In this case, it returns the list of keys the client has, along with the
+     * keys which we have yet to tell the client to fetch.
+     *
+     * @param range the requested range
+     */
+    public IdSet scan(IdRange range) {
+      return set.subSet(range);
     }
     
     /**

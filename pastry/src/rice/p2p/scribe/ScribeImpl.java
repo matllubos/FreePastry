@@ -715,7 +715,7 @@ public class ScribeImpl implements Scribe, Application {
       }
     } else if (message instanceof SubscribeLostMessage) {
       SubscribeLostMessage slMessage = (SubscribeLostMessage) message;
-
+      
       lostMessageReceived(slMessage);
     } else if (message instanceof SubscribeFailedMessage) {
       SubscribeFailedMessage sfMessage = (SubscribeFailedMessage) message;
@@ -817,11 +817,11 @@ public class ScribeImpl implements Scribe, Application {
     TopicManager manager;
     Topic topic;
 
-    while(e.hasNext()){
-      topic = (Topic)e.next();
-      manager = (TopicManager)topics.get(topic);
+    while (e.hasNext()) {
+      topic = (Topic) e.next();
+      manager = (TopicManager) topics.get(topic);
 
-      if (joined){
+      if (joined) {
         // check if new guy is root, we were old root, then subscribe
         if (manager.getParent() == null){
           // send subscribe message

@@ -127,6 +127,8 @@ public class MultiringNodeCollection {
       if ((thisShared > bestShared) || ((thisShared == bestShared) && (thisLength < bestLength)))
         best = thisNode;
     }
+    
+    //System.out.println("ROUTING MESSAGE TO TARGET " + id + " VIA NODE " + best.getId());
         
     best.route(id, message, application);
   }

@@ -164,6 +164,14 @@ public interface Endpoint {
    */
   TimerTask scheduleMessage(Message message, long delay, long period);
   
+  /**
+   * Returns a unique instance name of this endpoint, sort of a mailbox name for this
+   * application.
+   * 
+   * @return The unique instance name of this application
+   */
+  public String getInstance();
+  
 }
 
 

@@ -76,8 +76,19 @@ public class MultiringIdFactory implements IdFactory {
    *
    * @return The Id represetning the local ring
    */
-  protected Id getRingId() {
+  public Id getRingId() {
     return ringId;
+  }
+  
+  /**
+   * Builds a ringId by using the provided Id and ringIds.
+   *
+   * @param ringId The id to use as the ringid
+   * @param material The id material to use 
+   * @return The built Id.
+   */
+  public RingId buildRingId(Id ringId, byte[] material) {
+    return new RingId(ringId, factory.buildId(material));
   }
   
   /**
@@ -97,7 +108,17 @@ public class MultiringIdFactory implements IdFactory {
    * @param material The material to use
    * @return The built Id.
    */
-  protected Id buildNormalId(byte[] material) {
+  public Id buildNormalId(byte[] material) {
+    return factory.buildId(material);
+  }
+  
+  /**
+   * Builds a protocol-specific Id given the source data.
+   *
+   * @param material The material to use
+   * @return The built Id.
+   */
+  public Id buildNormalId(String material) {
     return factory.buildId(material);
   }
   
@@ -170,6 +191,15 @@ public class MultiringIdFactory implements IdFactory {
         return i;
     
     return chars.length;
+  }
+  
+  /**
+   * Returns the length a Id.toString should be.
+   *
+   * @return The correct length;
+   */
+  public int getIdToStringLength() {
+    return 4 + (2 * factory.getIdToStringLength());
   }
   
   /**

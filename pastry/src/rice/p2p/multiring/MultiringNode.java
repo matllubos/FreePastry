@@ -131,7 +131,7 @@ public class MultiringNode implements Node, ScribeClient {
    */
   public Endpoint registerApplication(Application application, String instance) {
     Endpoint endpoint = new MultiringEndpoint(this, node.registerApplication(new MultiringApplication(getRingId(), application), application.getClass() + "-" + instance), application);
-    endpoints.put(application.getClass().getName(), endpoint);
+    endpoints.put(endpoint.getInstance(), endpoint);
     
     return endpoint;
   }
@@ -198,6 +198,7 @@ public class MultiringNode implements Node, ScribeClient {
    * @param id The Id of the newly added ring
    */
   protected void nodeAdded(Id otherRingId) {
+    //System.out.println("JOINING SCRIBE GROUP " + otherRingId + " AT NODE " + getId());
     scribe.subscribe(new Topic(new RingId(ringId, otherRingId)), this);
   }
   
@@ -216,6 +217,7 @@ public class MultiringNode implements Node, ScribeClient {
       MultiringEndpoint endpoint = (MultiringEndpoint) endpoints.get(application);
       endpoint.route(id, message, null);
     } else {
+      //System.out.println("ANYCASTING TO SCRIBE GROUP " + getTarget(id) + " AT NODE " + getId() + " FOR APPLICATION " + application);
       scribe.anycast(new Topic(new RingId(ringId, getTarget(id))), new RingMessage(id, message, application));
     }
   }
@@ -269,6 +271,7 @@ public class MultiringNode implements Node, ScribeClient {
   public boolean anycast(Topic topic, ScribeContent content) {
     if (content instanceof RingMessage) {
       RingMessage rm = (RingMessage) content;
+      //System.out.println("RECEIVED ANYCAST TO " + rm.getId() + " AT NODE " + getId());
       collection.route(rm.getId(), rm.getMessage(), rm.getApplication());
     } else {
       System.out.println("Received unrecognized message " + content);

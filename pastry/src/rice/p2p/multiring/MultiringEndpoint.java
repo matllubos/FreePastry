@@ -99,21 +99,26 @@ public class MultiringEndpoint implements Endpoint {
    * @param hint The first node to send this message to, optional
    */
   public void route(Id id, Message message, NodeHandle hint) {
-    if ((hint != null) && (hint instanceof MultiringNodeHandle))
-      hint = ((MultiringNodeHandle) hint).getHandle();
+    RingId mId = (RingId) id;
+    MultiringNodeHandle mHint = (MultiringNodeHandle) hint;
           
-    if (id == null) {
-      endpoint.route(null, message, hint);
-    } else if (id instanceof RingId) {
-      if (((RingId) id).getRingId().equals(node.getRingId()))
-        endpoint.route(((RingId) id).getId(), message, hint);
-      else
-        node.getCollection().route((RingId) id, message, application.getClass().getName());
+    if (mId == null) {
+      if (mHint.getRingId().equals(node.getRingId())) {
+        endpoint.route(null, message, mHint.getHandle());
+      } else {
+        route(mHint.getId(), message, null);
+      }
     } else {
-      System.out.println(getId() + ": WARNING - Application attempting to route without a RingId - could be bad - " + id + " " + message + " " + hint);
-      (new Exception()).printStackTrace();
-      endpoint.route(id, message, hint);
-    }
+      if (mId.getRingId().equals(node.getRingId())) {
+        if ((mHint != null) && (mHint.getRingId().equals(node.getRingId()))) {
+          endpoint.route(mId.getId(), message, mHint.getHandle());
+        } else {
+          endpoint.route(mId.getId(), message, null);
+        }
+      } else {
+        node.getCollection().route(mId, message, getInstance());
+      }
+    } 
   }
   
   /**
@@ -247,6 +252,16 @@ public class MultiringEndpoint implements Endpoint {
    */
   protected void deliver(RingId id, Message target) {
     application.deliver(id, target);
+  }
+  
+  /**
+   * Returns a unique instance name of this endpoint, sort of a mailbox name for this
+   * application.
+   * 
+   * @return The unique instance name of this application
+   */
+  public String getInstance() {
+    return "multiring" + endpoint.getInstance();
   }
 
 }

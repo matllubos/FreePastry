@@ -182,6 +182,15 @@ public class RingId implements Id {
    * @return A string with all of this Id
    */
   public String toString() {
+/*    String result = (String) toStringRef.get();
+    
+    if (result == null) {
+      result = "(" + ringId + ", " + id + ")";
+      toStringRef = new SoftReference(result);
+    }
+    
+    return result;*/
+    
     return "(" + ringId + ", " + id + ")";
   }
   

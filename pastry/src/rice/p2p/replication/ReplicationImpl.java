@@ -145,7 +145,7 @@ public class ReplicationImpl implements Replication, Application {
    * @param b The second set
    * @return The merge, a+b
    */
-  private IdSet merge(IdSet a, IdSet b) {
+  public static IdSet merge(IdFactory factory, IdSet a, IdSet b) {
     IdSet result = factory.buildIdSet();
     Iterator i = a.getIterator();
     
@@ -250,7 +250,7 @@ public class ReplicationImpl implements Replication, Application {
         IdSet set = client.scan(rm.getRanges()[i]);
         
         if (! set.hash().equals(rm.getHashes()[i]))
-          response = merge(response, set);
+          response = merge(factory, response, set);
       }
         
       if (response.numElements() > 0)

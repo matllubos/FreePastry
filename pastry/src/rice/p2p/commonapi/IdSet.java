@@ -91,6 +91,12 @@ public interface IdSet extends Serializable {
   public Iterator getIterator();
   
   /**
+   * return this set as an array
+   * @return the array
+   */
+  public Id[] asArray();
+  
+  /**
    * return a hash of this set
    *
    * @return the hash of this set
