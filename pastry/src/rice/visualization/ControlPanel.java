@@ -157,7 +157,7 @@ public class ControlPanel extends JPanel implements ActionListener {
     return new Dimension(InformationPanel.INFORMATION_PANEL_WIDTH, InformationPanel.INFORMATION_PANEL_HEIGHT);
   }
 
-  public void nodeSelected(DistNodeHandle node, Ring r) {
+  public void nodeSelected(Node node) {
     if (node != null) {
       updateJarsButton.setEnabled(true);      
     } else {

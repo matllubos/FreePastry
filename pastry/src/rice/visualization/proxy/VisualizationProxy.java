@@ -49,7 +49,7 @@ public class VisualizationProxy {
     
     String bootstrap_host = "localhost";
     int bootstrap_port = 5009;
-    
+    Ring globalRing = null;
     int bootStrapArg = findBootstrapArg(args)+1;    
     if (bootStrapArg != -1) {
       try {      
@@ -68,8 +68,11 @@ public class VisualizationProxy {
               bootstrap_port = tmpport;
             }
           }
-          
-          rings.add(new Ring(ringName,(DistNodeHandle) factory.generateNodeHandle(new InetSocketAddress(bootstrap_host, bootstrap_port))));
+          Ring r = new Ring(ringName,(DistNodeHandle) factory.generateNodeHandle(new InetSocketAddress(bootstrap_host, bootstrap_port)), globalRing);
+          rings.add(r);
+          if (globalRing == null) { // this logic makes the global ring the first ring
+            globalRing = r;
+          }
         }
         handles = (Ring[]) rings.toArray(new Ring[0]);
 //        for (int i = 0; i < handles.length; i++) {
@@ -79,6 +82,7 @@ public class VisualizationProxy {
         System.out.println("Usage of -bootstrap is now:");  
         System.out.println("  -bootstrap ringName1 nodeAddress1:port1 ringName2 nodeAddress2:port2 ...");  
         System.out.println("  -bootstrap [list] must be the last args given");  
+        System.out.println("  currently we only support a heirarchy depth of 2, global must be the first");  
         System.exit(1);
       }
     } else { // only connect to localhost ring

@@ -32,8 +32,10 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
   
   public static Color LEAFSET_COLOR = new Color(140, 140, 255);
   public static Color ROUTE_TABLE_COLOR = new Color(255, 140, 140);
+  public static Color ASSOC_COLOR = new Color(80, 255, 80);
   public static Color LIGHT_LEAFSET_COLOR = new Color(230, 230, 255);
   public static Color LIGHT_ROUTE_TABLE_COLOR = new Color(255, 230, 230);
+  public static Color LIGHT_ASSOC_COLOR = new Color(140, 255, 140);
   
   protected Visualization visualization;
   
@@ -41,7 +43,7 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
   
   protected Rectangle[] textLocations;
   
-  protected DistNodeHandle[] nodes;
+  protected Node[] nodes;
   
   protected Ring ring;
   
@@ -62,34 +64,45 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
     // First paint background 
     super.paintComponent(g); 
     
-    g.setColor(Color.white);
+    g.setColor(Color.white); // paint background white
     g.fillRect(PASTRY_RING_PANEL_BORDER,
                PASTRY_RING_PANEL_BORDER, 
                PASTRY_RING_PANEL_WIDTH-(2*PASTRY_RING_PANEL_BORDER), 
                PASTRY_RING_PANEL_HEIGHT-(2*PASTRY_RING_PANEL_BORDER));
-    g.setColor(Color.black);
-    g.fillOval((PASTRY_RING_PANEL_WIDTH-PASTRY_RING_DIAMETER)/2, 
+
+
+    //paintMainCircle(g);
+    paintRings(g, PASTRY_RING_PANEL_WIDTH, PASTRY_RING_PANEL_HEIGHT);
+    //paintComponentNodes(g);
+    paintLegend(g);
+  } 
+  
+  protected void paintRings(Graphics g, int w, int h) {
+    Ring root = visualization.getRingByIndex(0); // root
+    root.paintTree(g, w, h);
+  }
+  
+  protected void paintMainCircle(Graphics g) {
+    g.setColor(Color.black); // draw major circle
+    g.drawOval((PASTRY_RING_PANEL_WIDTH-PASTRY_RING_DIAMETER)/2, 
                (PASTRY_RING_PANEL_HEIGHT-PASTRY_RING_DIAMETER)/2, 
                PASTRY_RING_DIAMETER,
                PASTRY_RING_DIAMETER);
-    g.setColor(Color.white);
-    g.fillOval((PASTRY_RING_PANEL_WIDTH-PASTRY_RING_DIAMETER)/2 + 1, 
-               (PASTRY_RING_PANEL_HEIGHT-PASTRY_RING_DIAMETER)/2 + 1, 
-               PASTRY_RING_DIAMETER-2, 
-               PASTRY_RING_DIAMETER-2);
-    g.setColor(Color.black);
+//    g.setColor(Color.white);
+//    g.fillOval((PASTRY_RING_PANEL_WIDTH-PASTRY_RING_DIAMETER)/2 + 1, 
+//               (PASTRY_RING_PANEL_HEIGHT-PASTRY_RING_DIAMETER)/2 + 1, 
+//               PASTRY_RING_DIAMETER-2, 
+//               PASTRY_RING_DIAMETER-2);
+//    g.setColor(Color.black); // draw "0" tickmark
     g.drawLine(PASTRY_RING_PANEL_WIDTH/2, (PASTRY_RING_PANEL_HEIGHT-PASTRY_RING_DIAMETER)/2-TICK_LENGTH/2,
-               PASTRY_RING_PANEL_WIDTH/2, (PASTRY_RING_PANEL_HEIGHT-PASTRY_RING_DIAMETER)/2+TICK_LENGTH/2);
-               
-    paintComponentNodes(g);
-    paintLegend(g);
-  } 
+               PASTRY_RING_PANEL_WIDTH/2, (PASTRY_RING_PANEL_HEIGHT-PASTRY_RING_DIAMETER)/2+TICK_LENGTH/2);    
+  }
   
   protected void paintLegend(Graphics g) {
     g.setColor(Color.black);
     g.setFont(new Font("Courier", Font.BOLD, 10));
     int fontHeight = g.getFontMetrics().getMaxAscent();
-    g.drawString(ring.name, LEGEND_LOCATION_X, LEGEND_LOCATION_Y-10+fontHeight-5);
+    g.drawString(visualization.selectedRing.name, LEGEND_LOCATION_X, LEGEND_LOCATION_Y-10+fontHeight-5);
     g.drawString("Legend:", LEGEND_LOCATION_X, LEGEND_LOCATION_Y+fontHeight-5);
     
     g.setColor(ROUTE_TABLE_COLOR);
@@ -117,36 +130,35 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
 
   }
 
-  protected void paintNode(Graphics g, Color color, int x, int y) {
-    g.setColor(Color.black);
-    g.fillOval(x, y, NODE_DIAMETER, NODE_DIAMETER);      
-    
+  protected void paintNode(Graphics g, Color color, int x, int y) {    
     g.setColor(color);
-    g.fillOval(x+1, y+1, NODE_DIAMETER-2, NODE_DIAMETER-2);  
+    g.fillOval(x, y, NODE_DIAMETER, NODE_DIAMETER);  
+    g.setColor(Color.black);
+    g.drawOval(x, y, NODE_DIAMETER, NODE_DIAMETER);      
   }
   
-  protected void paintConnections(Graphics g, DistNodeHandle node, Ring r) {
-    Color leafset = LIGHT_LEAFSET_COLOR;
-    Color routetable = LIGHT_ROUTE_TABLE_COLOR;
-    
-    // paint the leafset
-    if (isSelected(node)) {
-      leafset = LEAFSET_COLOR;
-      routetable = ROUTE_TABLE_COLOR;
-    }
-    
-    DistNodeHandle[] handles = visualization.getNeighbors(node,r);
-    
-    for (int j=0; j<handles.length; j++) {
-      paintConnection(g, node.getId(), handles[j].getId(), leafset);
-    }
+  protected void paintConnections(Graphics g, Node node, Ring r) {
+//    Color leafset = LIGHT_LEAFSET_COLOR;
+//    Color routetable = LIGHT_ROUTE_TABLE_COLOR;
+//    
+//    // paint the leafset
+//    if (isSelected(node)) {
+//      leafset = LEAFSET_COLOR;
+//      routetable = ROUTE_TABLE_COLOR;
+//    }
+//    
+//    DistNodeHandle[] handles = visualization.getNeighbors(node);
+//    
+//    for (int j=0; j<handles.length; j++) {
+//      paintConnection(g, node.handle.getId(), handles[j].getId(), leafset);
+//    }
   }
   
   protected void paintConnections(Graphics g) {
-    DistNodeHandle sel = null;
+    Node sel = null;
     
     for (int i=0; i<nodes.length; i++) {
-      if ((! isSelected(nodes[i])) && (visualization.getState(nodes[i],ring) == Visualization.STATE_ALIVE)) 
+      if ((! isSelected(nodes[i])) && (visualization.getState(nodes[i]) == Visualization.STATE_ALIVE)) 
         paintConnections(g, nodes[i],ring);
       else
         sel = nodes[i];
@@ -165,19 +177,19 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
     paintConnections(g);
     
     for (int i=0; i<nodes.length; i++) {
-      Dimension location = idToLocation(nodes[i].getId());
+      Dimension location = idToLocation(nodes[i].handle.getId());
       nodeLocations[i] = new Rectangle((int) (location.getWidth()-(NODE_DIAMETER/2)), (int) (location.getHeight()-(NODE_DIAMETER/2)), 
                                       NODE_DIAMETER, NODE_DIAMETER);
       
       Color color = NODE_COLOR_HEALTHY;
       
-      if (visualization.getState(nodes[i],ring) == Visualization.STATE_FAULT)
+      if (visualization.getState(nodes[i]) == Visualization.STATE_FAULT)
         color = NODE_COLOR_FAULT;
       
-      if (visualization.getState(nodes[i],ring) == Visualization.STATE_DEAD)
+      if (visualization.getState(nodes[i]) == Visualization.STATE_DEAD)
         color = NODE_COLOR_DEAD;
       
-      if (visualization.getState(nodes[i],ring) == Visualization.STATE_UNKNOWN)
+      if (visualization.getState(nodes[i]) == Visualization.STATE_UNKNOWN)
         color = NODE_COLOR_UNKNOWN;
 
       paintNode(g, color, (int) nodeLocations[i].getX(), (int) nodeLocations[i].getY());
@@ -193,8 +205,8 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
         g.setFont(new Font("Courier", Font.BOLD, 8));
       }
       
-      Dimension text = getTextLocation(nodes[i].getId());
-      String string = nodes[i].getNodeId().toString() + " " + nodes[i].getAddress().getAddress().getHostAddress() + ":" + nodes[i].getAddress().getPort();
+      Dimension text = getTextLocation(nodes[i].handle.getId());
+      String string = nodes[i].handle.getNodeId().toString() + " " + nodes[i].handle.getAddress().getAddress().getHostAddress() + ":" + nodes[i].handle.getAddress().getPort();
       FontMetrics metrics = g.getFontMetrics();
       int fontHeight = metrics.getMaxAscent();
       Rectangle2D rect = metrics.getStringBounds(string, g);
@@ -248,39 +260,44 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
     return new Dimension((int) (idDim.getWidth() + width), (int) (idDim.getHeight() + height));
   }
   
-  public void nodeHighlighted(DistNodeHandle node, Ring r) {
+  public void nodeHighlighted(Node node) {
     repaint();
   }
   
-  public void nodeSelected(DistNodeHandle node, Ring r) {
+  public void nodeSelected(Node node) {
     repaint();
   }
 
-  protected boolean isSelected(DistNodeHandle node) {
-    DistNodeHandle selected = visualization.getSelectedNode();
-    return ((selected != null) && (selected.getId().equals(node.getId())));
+  protected boolean isSelected(Node node) {
+    Node selected = visualization.getSelectedNode();
+    return ((selected != null) && (selected.handle.getId().equals(node.handle.getId())));
   }
 
-  protected boolean isHighlighted(DistNodeHandle node) {
-    DistNodeHandle highlighted = visualization.getHighlighted();
-    return ((highlighted != null) && (highlighted.getId().equals(node.getId())));
+  protected boolean isHighlighted(Node node) {
+    Node highlighted = visualization.getHighlighted();
+    return ((highlighted != null) && (highlighted.handle.getId().equals(node.handle.getId())));
   }
   
   public void mouseClicked(MouseEvent e) {
     switch (e.getButton()) {
       case MouseEvent.BUTTON1:  
-        if (nodeLocations == null)
-          return;
-        
-        for (int i=0; i<nodeLocations.length; i++) {
-          if (nodeLocations[i].contains(e.getX(), e.getY()) || textLocations[i].contains(e.getX(), e.getY())) {
-            visualization.setSelected(nodes[i],ring);
-      
-            return;
-          }
-        }
-        
-        visualization.setSelected((DistNodeHandle) null,ring);
+//        if (nodeLocations == null)
+//          return;
+//        
+//        for (int i=0; i<nodeLocations.length; i++) {
+//          if (nodeLocations[i].contains(e.getX(), e.getY()) || textLocations[i].contains(e.getX(), e.getY())) {
+//            visualization.setSelected(nodes[i]);
+//      
+//            return;
+//          }
+//        }
+//        
+//        visualization.setSelected((Node) null);
+//        break;
+
+        Node n = visualization.getNode(e.getX(), e.getY());
+        System.out.println("Selecting "+n);
+        visualization.setSelected(n);
         break;
       case MouseEvent.BUTTON3:  
         switchRings();
@@ -299,17 +316,20 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
   }
   
   public void mouseMoved(MouseEvent e) {
-    if (nodeLocations == null)
-      return;
-    
-    for (int i=0; i<nodeLocations.length; i++) {
-      if (nodeLocations[i].contains(e.getX(), e.getY()) || textLocations[i].contains(e.getX(), e.getY())) {
-        visualization.setHighlighted(nodes[i],ring);
-        return;
-      }
-    } 
-    
-    visualization.setHighlighted(null,null);
+//    if (nodeLocations == null)
+//      return;
+//    
+//    for (int i=0; i<nodeLocations.length; i++) {
+//      if (nodeLocations[i].contains(e.getX(), e.getY()) || textLocations[i].contains(e.getX(), e.getY())) {
+//        visualization.setHighlighted(nodes[i]);
+//        return;
+//      }
+//    } 
+//    
+//    visualization.setHighlighted(null);
+
+    Node n = visualization.getNode(e.getX(), e.getY());
+    visualization.setHighlighted(n);
   }
   
   public void mouseDragged(MouseEvent e) {

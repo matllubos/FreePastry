@@ -80,14 +80,19 @@ public class VisualizationFrame extends JFrame {
     setVisible(true);
   }
   
-  public void nodeHighlighted(DistNodeHandle node, Ring r) {
-    pastryRingPanel.nodeHighlighted(node, r);
+  public void nodeHighlighted(Node node) {
+    pastryRingPanel.nodeHighlighted(node);
   }
   
-  public void nodeSelected(DistNodeHandle node, Ring r) {
-    controlPanel.nodeSelected(node, r);
-    informationPanel.nodeSelected(node, r);
-    pastryRingPanel.nodeSelected(node, r);
-    pastryNodePanel.nodeSelected(node, r);
+  public void nodeSelected(Node node) {
+    controlPanel.nodeSelected(node); 
+    if (node != null) {
+      if (node.ring == visualization.selectedRing)
+        informationPanel.nodeSelected(node);
+    } else {
+      informationPanel.nodeSelected(node);      
+    }
+    pastryRingPanel.nodeSelected(node);
+    pastryNodePanel.nodeSelected(node);
   }
 }

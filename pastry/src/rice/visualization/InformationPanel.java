@@ -56,39 +56,39 @@ public class InformationPanel extends JPanel {
     return new Dimension(INFORMATION_PANEL_WIDTH, INFORMATION_PANEL_HEIGHT);
   }
   
-  public void nodeSelected(DistNodeHandle node, Ring r) {
+  public void nodeSelected(Node node) {
     if (node != null) {
-      DistNodeHandle[] handles = visualization.getNodes();
+      Node[] handles = visualization.getNodes();
       
       for (int i=0; i<handles.length; i++) {
-        if (model.getIndexOf(handles[i].getNodeId()) < 0) {
+        if (model.getIndexOf(handles[i].handle.getNodeId()) < 0) {
           boolean inserted = false;
           for (int j=0; (j<model.getSize()) && !inserted; j++) {
-            if (((NodeId) model.getElementAt(j)).compareTo(handles[i].getNodeId()) > 0) {
-              model.insertElementAt(handles[i].getNodeId(), j);
+            if (((NodeId) model.getElementAt(j)).compareTo(handles[i].handle.getNodeId()) > 0) {
+              model.insertElementAt(handles[i].handle.getNodeId(), j);
               inserted = true;
             }
           }
           if (! inserted)
-            model.addElement(handles[i].getNodeId());
+            model.addElement(handles[i].handle.getNodeId());
         }
       }
-      model.setSelectedItem(node.getNodeId());
+      model.setSelectedItem(node.handle.getNodeId());
       
       for (int i=0; i<handles.length; i++) {
-        if (addrModel.getIndexOf(handles[i].getAddress()) < 0) {
+        if (addrModel.getIndexOf(handles[i].handle.getAddress()) < 0) {
           boolean inserted = false;
           for (int j=0; (j<addrModel.getSize()) && !inserted; j++) {
-            if (((InetSocketAddress) addrModel.getElementAt(j)).toString().compareTo(handles[i].getAddress().toString()) > 0) {
-              addrModel.insertElementAt(handles[i].getAddress(), j);
+            if (((InetSocketAddress) addrModel.getElementAt(j)).toString().compareTo(handles[i].handle.getAddress().toString()) > 0) {
+              addrModel.insertElementAt(handles[i].handle.getAddress(), j);
               inserted = true;
             }
           }
           if (! inserted)
-            addrModel.addElement(handles[i].getAddress());
+            addrModel.addElement(handles[i].handle.getAddress());
         }
       }
-      addrModel.setSelectedItem(node.getAddress());
+      addrModel.setSelectedItem(node.handle.getAddress());
       
       repaint();
     }
