@@ -2,7 +2,7 @@ PACKAGE = rice.nls
 
 SOURCE  = \
     	NLS.java\
- 	NLSImplToy.java
+# 	NLSImplToy.java
 
 RMI_SOURCE =
 
