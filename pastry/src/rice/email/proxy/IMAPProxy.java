@@ -168,7 +168,9 @@ public class IMAPProxy implements Observer, MessageCountListener, FolderListener
       imapStore.addFolderListener(this);
 
       // Attach ourself to all the folders in the IMAP namespace
-      imapFolders = imapStore.getPersonalNamespaces();
+      try {
+	  imapFolders = imapStore.getPersonalNamespaces();
+      } catch (MessagingException e) { }
       for (int i = 0 ; i < imapFolders.length; i++) {
 	  imapFolders[i].addMessageCountListener(this);
       }
@@ -225,7 +227,6 @@ public class IMAPProxy implements Observer, MessageCountListener, FolderListener
 
 	  System.err.println("About to fetch the body of the message");
 	  email.getBody(ic);
-	  System.err.println("Called getBody.");
       } catch (MessagingException e) {
 	  System.err.println("IMAP proxy error on update: " + e);
       }
@@ -240,6 +241,7 @@ public class IMAPProxy implements Observer, MessageCountListener, FolderListener
      */
     protected void update_gotbody(IMAPContinuation ic, EmailData body)
     {
+	System.err.println("PROXY: Got body.");
 
 	try {
 	    
@@ -302,6 +304,8 @@ public class IMAPProxy implements Observer, MessageCountListener, FolderListener
      * Called when the message has been placed into the inbox folder.
      */
     protected void update_got_root(IMAPContinuation ic, rice.email.Folder rootFolder) {
+
+	System.err.println("Got the root folder");
 	
 	// Do we already have a folder called INBOX? If so, get it
 	String[] subfolders = rootFolder.getChildren();
@@ -328,21 +332,36 @@ public class IMAPProxy implements Observer, MessageCountListener, FolderListener
      */
     protected void update_created_inbox(IMAPContinuation ic) {
 	// Backtrack and start again.
+	System.err.println("PROXY: Created the inbox folder.");
 	ic.setState(STATE_GETTING_ROOT);
 	service.getRootFolder(ic);
     }
 
-    protected void update_got_inbox(IMAPContinuation ic, rice.email.Folder thisBox) {
+    protected void update_got_inbox(IMAPContinuation ic,
+				    rice.email.Folder thisBox) {
+
+	System.err.println("Got the inbox folder, about to add to it.");
+
+	if (service.getPost() == null) {
+	    System.err.println("Service's POST is null.");
+	}
+
+	thisBox.setPost(service.getPost());
 	this.inbox = thisBox;
 
 	ic.setState(STATE_ADDING_TO_INBOX);
-	this.inbox.addMessage(ic.getEmail(), ic);
+	try {
+	    this.inbox.addMessage(ic.getEmail(), ic);
+	} catch (NullPointerException e) {
+	    e.printStackTrace();
+	}
     }
 
     /**
      * Call when the message has been added to the inbox.
      */
     protected void update_added_to_inbox(IMAPContinuation ic) {
+	System.err.println("Finished: added message to inbox.");
 	// There's nothing else to do.
 	ic.setState(STATE_FINISHED);
     }
@@ -353,7 +372,7 @@ public class IMAPProxy implements Observer, MessageCountListener, FolderListener
      */
     private void deliverMessage(MimeMessage message) {
 	try {
-    System.out.println("Delivering message.");
+    System.out.println("DELIVERING message.");
     
 	    javax.mail.Folder thisFolder =
 		imapStore.getFolder("INBOX");
@@ -375,6 +394,7 @@ public class IMAPProxy implements Observer, MessageCountListener, FolderListener
 
     // Comply with the MessageCountListener interface
     public void messagesAdded(MessageCountEvent e) {
+	System.err.println("Saw messages added!");
 	new MessageAddTask(this, e).go();
     }
 
@@ -426,7 +446,7 @@ public class IMAPProxy implements Observer, MessageCountListener, FolderListener
 	    state = STATE_BEGIN;
 	}
 
-	public go() {
+	public void go() {
 	    state = STATE_GETTING_ROOT;
 	    parent.service.getRootFolder(this);
 	}
@@ -442,19 +462,20 @@ public class IMAPProxy implements Observer, MessageCountListener, FolderListener
 		break;
 	    case STATE_GETTING_FOLDER:
 		state = STATE_GETTING_MESSAGELIST;
-		this.folder = (rice.email.Folder o);
+		this.folder = (rice.email.Folder) o;
 		this.folder.getMessages(this);
 		break;
 	    case STATE_GETTING_MESSAGELIST:
 		state = STATE_REMOVING_MESSAGES;
-		folderMsgs[]
+		folderMsgs = (Email[]) o;
 		removeMessage(mIndex);
 		break;
 	    case STATE_REMOVING_MESSAGES:
 		mIndex++;
-		if (mIndex >= msgs.length)
+		if (mIndex >= msgs.length) {
 		    state = STATE_DONE;
 		    break;
+		}
 		else {
 		    removeMessage(mIndex);
 		    break;
@@ -474,19 +495,23 @@ public class IMAPProxy implements Observer, MessageCountListener, FolderListener
 	 * Deletes the message in the folder corresponding to the given index.
 	 */
 	private void removeMessage(int index) {
-	    String subject = msgs[index].getSubject();
+	    
+	    String subject;
+
+	    try {
+		subject = msgs[index].getSubject();
+	    } catch(MessagingException e) {
+		System.err.println("Error getting message subject");
+		subject = "Error";
+	    }
 
 	    // Find the Email with that matching subject and kill it.
 	    for (int i = 0; i < folderMsgs.length; i++) {
-		if (folderMsgs[i].getSubject.equals(subject)) {
-		    folder.removeMessage(folderMsgs[i], this);
-		    break;
+		if (folderMsgs[i].getSubject().equals(subject)) {
+		    folder.removeMessage(folderMsgs[i]);
 		}
 	    }
 
-	    // Odd - we lost the message. Shouldn't get here.
-	    System.err.println("Trying to delete a message that didn't exist.");
-	    // Call back into the message so that we keep going.
 	    this.receiveResult(null);	    
 	}	
     }
@@ -523,7 +548,7 @@ public class IMAPProxy implements Observer, MessageCountListener, FolderListener
 	/**
 	 * Begins adding the messages received to the folder.
 	 */
-	public go() {
+	public void go() {
 	    state = STATE_GETTING_ROOT;
 	    parent.service.getRootFolder(this);
 	}
@@ -546,9 +571,10 @@ public class IMAPProxy implements Observer, MessageCountListener, FolderListener
 		this.folder.addMessage(makeEmail(msgs[0]), this);
 	    case STATE_ADDING_MESSAGES:
 		mIndex++;
-		if (mIndex >= msgs.length)
+		if (mIndex >= msgs.length) {
 		    state = STATE_DONE;
 		    break;
+		}
 		else {
 		    this.folder.addMessage(makeEmail(msgs[mIndex]), this);
 		    break;
@@ -566,16 +592,20 @@ public class IMAPProxy implements Observer, MessageCountListener, FolderListener
 
 	private Email makeEmail(Message msg) {
 	    MimeMessage mm = (MimeMessage) msg;
-	    
+	    try {
 	    return
 		new
 		Email(
 		      new PostUserAddress(mm.getSender().toString()),
 		      makeRecipients(mm.getRecipients(Message.RecipientType.TO)),
-		      mm.getSubject();
-		      new EmailData( ((String) mm.getContent()).getBytes());
+		      mm.getSubject(),
+		      new EmailData( ((String) mm.getContent()).getBytes()),
 		      new EmailData[0]
 		      );
+	    } catch (Exception e) {
+		System.err.println("Exception creating an email object");
+		return null;
+	    }
 	}
 
 	private PostEntityAddress[] makeRecipients(javax.mail.Address[] recips) {
