@@ -102,6 +102,8 @@ developed using Sun's SDK, version 1.4.2_03+ <br>
 &nbsp;<br>
 <h3>Changes since release 1.3.2</h3>
 <ul>
+  <li>Supports <a href="http://www.epostmail.org/">ePOST</a>, which is now in production use.[<a href="http://www.epostmail.org/code.html">Download</a>]</li><br/>
+
   <li>Single threaded:&nbsp;
   We have adapted a single threaded model to improve performance. Calls into Pastry are still properly synchronized.  In fact if you run multiple nodes within the same JVM they will execute on the same thread.  The scheduler is implemented in rice.selector.</li><br>
 
