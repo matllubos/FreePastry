@@ -170,7 +170,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     this.tokenBucket = 0;
     this.bucketLastUpdated = System.currentTimeMillis();
     determineResponsibleRange();
-
+  }
+  
+  public void startup() {
+  
     /* Neighbor requests */
 
     addContinuation(new GlacierContinuation() {
@@ -3651,6 +3654,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   public void setBandwidthLimit(long bytesPerSecond, long maxBurst) {
     this.bucketTokensPerSecond = bytesPerSecond;
     this.bucketMaxBurstSize = maxBurst;
+  }
+  
+  public void setLogLevel(int newLevel) {
+    this.loglevel = newLevel;
   }
   
   public void addStatisticsListener(GlacierStatisticsListener gsl) {
