@@ -58,6 +58,7 @@ public class RouteSet extends Observable implements NodeSet, Serializable
 {
     private NodeHandle[] nodes;
     private int theSize;
+    private int closest;
     
     /**
      * Constructor.
@@ -68,6 +69,7 @@ public class RouteSet extends Observable implements NodeSet, Serializable
     public RouteSet(int maxSize) {
 	nodes = new NodeHandle[maxSize];
 	theSize = 0;	
+	closest = -1;
     }
 
     /**
@@ -172,7 +174,8 @@ public class RouteSet extends Observable implements NodeSet, Serializable
     public int size() { return theSize; }
     
     /**
-     * Pings all new nodes in the RouteSet. Called from RouteMaintenance.
+     * Pings all new nodes in the RouteSet.
+     * No longer- Called from RouteMaintenance.
      */
 
     public void pingAllNew() { 
@@ -199,11 +202,16 @@ public class RouteSet extends Observable implements NodeSet, Serializable
 	    if (p <= bestProximity) {
 		bestProximity = p;
 		bestNode = nodes[i];
+		closest = i;
 	    }
 	}
 
 	//System.out.println(bestProximity);
 	//System.out.println(nodes.length);
+
+	// If a backup node handle bubbles up to the top, ping it.
+	if (bestNode != null && bestProximity == Integer.MAX_VALUE)
+	    bestNode.ping();
 	
 	return bestNode;
     }
@@ -247,4 +255,23 @@ public class RouteSet extends Observable implements NodeSet, Serializable
 	
 	return -1;
     }
+
+    private void readObject(ObjectInputStream in)
+	throws IOException, ClassNotFoundException 
+    {
+	nodes = (NodeHandle[]) in.readObject();
+	theSize = in.readInt();
+	closest = in.readInt();
+	if (closest != -1) nodes[closest].ping();
+	closest = -1;
+    }
+
+    private void writeObject(ObjectOutputStream out)
+	throws IOException, ClassNotFoundException 
+    {
+	if (closest == -1) closestNode();
+	out.writeObject(nodes);
+	out.writeInt(theSize);
+	out.writeInt(closest);
+    } 
 }

@@ -56,12 +56,20 @@ public class RMINodeHandle implements NodeHandle, Serializable
     private RMIRemoteNodeI remoteNode;
     private NodeId remotenid;
 
+    /**
+     * Cached liveness bit, updated by any message, including ping.
+     */
     private transient boolean alive;
-    private transient int distance;
-    public static final int INFTY = Integer.MAX_VALUE;
 
-    // this is a sanity check thing: messages should never be sent to
-    // unverified node handles, so this handle should be in the Pool.
+    /**
+     * Cached proximity metric, updated by ping().
+     */
+    private transient int distance;
+
+    /**
+     * this is a sanity check thing: messages should never be sent to
+     * unverified node handles, so this handle should be in the Pool.
+     */
     private transient boolean isInPool;
 
     private transient PastryNode localnode;
@@ -99,7 +107,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	remoteNode = rn;
 	remotenid = nid;
 	alive = true;
-	distance = INFTY;
+	distance = Integer.MAX_VALUE;
 	isInPool = false;
 	localnode = null;
 	isLocal = false;
@@ -140,7 +148,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	if (alive == false) {
 	    System.out.println("[rmi] remote node became alive: " + remotenid);
 	    alive = true;
-	    distance = INFTY; // reset to infinity. alternatively, recompute.
+	    distance = Integer.MAX_VALUE; // reset to infinity. alternatively, recompute.
 	}
     }
 
@@ -148,12 +156,12 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	if (alive == true) {
 	    System.out.println("[rmi] remote node declared dead: " + remotenid);
 	    alive = false;
-	    distance = INFTY;
+	    distance = Integer.MAX_VALUE;
 	}
     }
 
     /**
-     * @return the cached proximity value, INFTY initially, 0 if its local.
+     * @return the cached proximity value, Integer.MAX_VALUE initially, 0 if its local.
      */
     public int proximity() {
 	if (isLocal) return 0;
@@ -210,9 +218,24 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	}
     }
 
+    /**
+     * Ping the remote node.
+     *
+     * @return liveness of remote node.
+     */
     public boolean ping() {
 	NodeId tryid;
+
+	/*
+	 * Note subtle point: When ping is called from RouteSet.readObject,
+	 * the RMI security manager has not yet had a chance to call the
+	 * above setLocalNode. So isLocal may be false even for local node.
+	 *
+	 * This is not disastrous; at worst, we'll ping the local node once.
+	 */
 	if (isLocal) return alive;
+
+	System.out.println("[rmi] pinging " + remotenid);
 	try {
 
 	    long starttime = System.currentTimeMillis();
@@ -223,10 +246,9 @@ public class RMINodeHandle implements NodeHandle, Serializable
 	    if (distance > (int)(stoptime - starttime))
 		distance = (int)(stoptime - starttime);
 
-	    if (tryid.equals(remotenid) == false) {
+	    if (tryid.equals(remotenid) == false)
 		System.out.println("[rmi] PANIC: remote node has changed its ID from "
 				   + remotenid + " to " + tryid);
-	    }
 	    markAlive();
 	} catch (RemoteException e) {
 	    if (alive) System.out.println("[rmi] ping failed on live node: " + e);
@@ -240,7 +262,7 @@ public class RMINodeHandle implements NodeHandle, Serializable
     {
 	RMIRemoteNodeI rn = (RMIRemoteNodeI) in.readObject();
 	NodeId rnid = (NodeId) in.readObject();
-	init(rn, rnid); // initialize all the other elements also
+	init(rn, rnid); // initialize all the other elements
     }
 
     private void writeObject(ObjectOutputStream out)
