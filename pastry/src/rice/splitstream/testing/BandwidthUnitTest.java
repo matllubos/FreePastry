@@ -48,6 +48,12 @@ public class BandwidthUnitTest{
   public boolean testBandwidthManager(){
     boolean passed = true;
     System.out.println("");
+
+    /**
+     * Tests to see if Get/Set Default bandwidth functions correctly 
+     * Succeeds: if getBandwidth() returns the value that setBandwidth()
+     * was set with.  
+     */
     getBandwidthManager().setDefaultBandwidth(50);
     if(getBandwidthManager().getDefaultBandwidth() == 50){
       System.out.println("Get/Set Default Bandwidth   [ PASSED ] ");
@@ -57,7 +63,11 @@ public class BandwidthUnitTest{
       passed = false;
     }
 
-
+    /**
+     * Tests to see if AdjustBandwidth/GetMaxBandwidth functions correctly 
+     * Succeeds: if getMaxBandwidth() returns the value that AdjustBandwidth()
+     * was called with
+     */
     getBandwidthManager().adjustBandwidth(getChannel(), 50);
     if(getBandwidthManager().getMaxBandwidth(getChannel()) == 50){
       System.out.println("Adjust/Get Max Bandwidth    [ PASSED ] ");
@@ -67,8 +77,11 @@ public class BandwidthUnitTest{
       passed = false;
     }
 
-     
-
+    /**
+     * Tests to see if additonalBandwidth/getBandwidth functions correctly 
+     * Succeeds: if additionalBandwidthUsed increases the value of getBandwidth 
+     * by 1 
+     */
     getBandwidthManager().additionalBandwidthUsed(getChannel());
     if(getBandwidthManager().getUsedBandwidth(getChannel()) == 1){
       System.out.println("Additional Bandwidth Used   [ PASSED ] ");
@@ -80,6 +93,11 @@ public class BandwidthUnitTest{
       passed = false;
     }
 
+    /**
+     * Tests to see if additonalBandwidthFreed functions correctly 
+     * Succeeds: if additionalBandwidthFreed decreases the value of 
+     * getBandwidth by 1 
+     */
     getBandwidthManager().additionalBandwidthFreed(getChannel());
     if(getBandwidthManager().getUsedBandwidth(getChannel()) == 0){
       System.out.println("Additional Bandwidth Freed  [ PASSED ] ");
@@ -89,6 +107,11 @@ public class BandwidthUnitTest{
       passed = false;
     }
 
+    /**
+     * Tests to see if canTakeChild functions correctly when a child
+     * can be taken
+     * Succeeds: if canTakeChild returns true 
+     */
     if(getBandwidthManager().canTakeChild(getChannel())){
       System.out.println("Can Take Child (empty)      [ PASSED ] ");
     }
@@ -97,10 +120,14 @@ public class BandwidthUnitTest{
       passed = false;
     }
 
+    /**
+     * Tests to see if canTakeChild stops returning true after
+     * all bandwidth is allocated. 
+     * Succeeds: if canTakeChild returns false 
+     */
     while(getBandwidthManager().canTakeChild(getChannel())){
        getBandwidthManager().additionalBandwidthUsed(getChannel());
     }
-
     if(getBandwidthManager().getUsedBandwidth(getChannel()) == 
        getBandwidthManager().getMaxBandwidth(getChannel())){
       System.out.println("Can Take Child (full)       [ PASSED ] ");
@@ -110,6 +137,11 @@ public class BandwidthUnitTest{
       passed = false;
     }
     
+    /**
+     * Tests to see if canTakeChild returnings true after
+     * some bandwidth is freed. 
+     * Succeeds: if canTakeChild returns true 
+     */
     getBandwidthManager().additionalBandwidthFreed(getChannel());
     if(getBandwidthManager().canTakeChild(getChannel())){
       System.out.println("Can Take Child (nonfull)    [ PASSED ] ");

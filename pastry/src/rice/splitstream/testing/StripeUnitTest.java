@@ -82,10 +82,10 @@ public class StripeUnitTest implements Observer {
     }
 
     if(getStripe().getState() == Stripe.STRIPE_SUBSCRIBED){
-      System.out.println("Get State                   [ PASSED ] ");
+      System.out.println("Get State (Subscribed)      [ PASSED ] ");
     }
     else{
-      System.out.println("Get State                   [ FAILED ] ");
+      System.out.println("Get State (Subscribed)      [ FAILED ] ");
       passed = false;
     }
 
@@ -94,7 +94,7 @@ public class StripeUnitTest implements Observer {
       System.out.println("Stripe Unit Test            [ PASSED ] ");
     }
     else{
-      System.out.println("Stripe Unit Test         [ FAILED ] ");
+      System.out.println("Stripe Unit Test            [ FAILED ] ");
     }
     return passed;
   }

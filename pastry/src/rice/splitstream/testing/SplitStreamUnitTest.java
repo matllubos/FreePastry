@@ -9,7 +9,12 @@ public class SplitStreamUnitTest{
      System.out.println("Starting SplitStream System Unit Tests");
      SplitStreamUnitTest test = new SplitStreamUnitTest();
      test.init();
-     test.run();
+     if(test.run()){
+          System.out.println("All Unit Tests              [ PASSED ] " );
+     }
+     else{
+          System.out.println("All Unit Tests              [ FAILED ] " );
+     }
    }
 
    public void init(){
@@ -21,10 +26,11 @@ public class SplitStreamUnitTest{
    }
  
    public boolean run(){
+    boolean passed = true;
     /* run all set up tests */
-    bandwidthTest.run();
-    stripeTest.run();
-    channelTest.run();
-    return true;
+    passed &= bandwidthTest.run();
+    passed &= stripeTest.run();
+    passed &= channelTest.run();
+    return passed;
    }
 }

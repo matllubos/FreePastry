@@ -31,6 +31,7 @@ public class ChannelUnitTest{
  private Random rng;
  private RandomNodeIdFactory idFactory;
  private Channel channel;
+ private Scribe scribe;
 
  public static void main(String argv[]){
       ChannelUnitTest test = new ChannelUnitTest();
@@ -47,7 +48,33 @@ public class ChannelUnitTest{
     boolean passed = true;
     System.out.println("");
 
+    /**
+     * Tests to see if there is a bandwidth associated with this channel
+     * Succeeds: if non-null BandwidthManager is returned
+     */
+    if(getChannel().getBandwidthManager() != null){
+      System.out.println("Get BandwidthManager        [ PASSED ]" );
+    }
+    else{
+      System.out.println("Get BandwidthManager        [ FAILED ]" );
+      passed = false;
+    }
+
+    /**
+     * Tests to see if ChannelId is correctly returned 
+     * Succeeds: if ChannelId is equal to the value of the generateTopicId
+     * for the string the channel is created with. 
+     */
+    if(scribe.generateTopicId("ChannelUnitTest").equals(getChannel().getChannelId())){
+      System.out.println("Get Channel Id              [ PASSED ]" );
+    }
+    else{
+      System.out.println("Get Channel Id              [ FAILED ]" );
+      passed = false;
+    }
+
     System.out.println("");
+    
     if(passed){
       System.out.println("Channel Unit Test           [ PASSED ] ");
     }
@@ -70,7 +97,7 @@ public class ChannelUnitTest{
 
         int base = RoutingTable.baseBitLength();
 	Channel c = 
-           ((ISplitStream) splitStreamNodes.elementAt(0)).createChannel(1<<base,"BandwidthUnitTest");
+           ((ISplitStream) splitStreamNodes.elementAt(0)).createChannel(1<<base,"ChannelUnitTest");
 	while(simulate());
 	return c;
 
@@ -100,6 +127,7 @@ public class ChannelUnitTest{
     ISplitStream ss = new SplitStreamImpl(pn, scribe);
     splitStreamNodes.add(ss);
     pastrynodes.add(pn);
+    this.scribe = scribe;
 
   }
 
