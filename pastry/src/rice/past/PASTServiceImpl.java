@@ -2,6 +2,7 @@ package rice.past;
 
 import rice.past.messaging.*;
 
+import rice.*;
 import rice.pastry.*;
 import rice.pastry.client.*;
 import rice.pastry.security.*;
@@ -37,7 +38,7 @@ public class PASTServiceImpl
   private final PastryNode _pastryNode;
   
   /**
-   * PersistenceManager used to store objects.
+   * StorageManager used to store objects.
    */
   private final StorageManager _storage;
     
@@ -52,10 +53,10 @@ public class PASTServiceImpl
   private final SendOptions _sendOptions;
   
   /**
-   * The table used to store information for blocked threads
-   * waiting for a response.
+   * The table used to store commands waiting for a response.
+   * Maps PASTMessageID to ReceiveResultCommand.
    */
-  protected Hashtable _threadTable;
+  protected final Hashtable _commandTable;
   
   /**
    * Timeout to use while waiting for response messages, in milliseconds.
@@ -75,7 +76,7 @@ public class PASTServiceImpl
     _storage = storage;
     _appCredentials = new PermissiveCredentials();
     _sendOptions = new SendOptions();
-    _threadTable = new Hashtable();
+    _commandTable = new Hashtable();
   }
   
   
@@ -166,175 +167,230 @@ public class PASTServiceImpl
   }
   
   /**
-   * Sends a request message, blocks until a response is received,
-   * and returns the response.
+   * Sends a request message and stores the given command to be
+   * executed when the response is received.
    * @param msg Request to send
-   * @return Response to the request
+   * @param command Command to execute when the result is received
    */
-  protected PASTMessage _sendRequestMessage(PASTMessage msg) {
+  protected void _sendRequestMessage(PASTMessage msg, 
+                                     ReceiveResultCommand command)
+  {
+    // Update the command table so that this command can collect its
+    // response when it arrives.
+    _commandTable.put(msg.getID(), command);
     
-    /* Update the thread table so that this thread can collect its
-     * response when it arrives.
-     */
-    ThreadTableEntry entry = new ThreadTableEntry();
-    _threadTable.put(msg.getID(), entry);
-    
-    /* Route the request to the remote node!
-     */
+    // Route the request to the remote node
     sendMessage(msg);
-    
-    /* Wait till a response is received.
-     *
-     * Needs to be changed so that it works properly by 
-     * subclassing Thread and giving us something that can
-     * be suspended and resumed.
-     */
-    if(entry._msg == null) {
-      try {
-        synchronized (entry._waitObject) {
-          entry._waitObject.wait(_timeout);
-        }
-      } catch (InterruptedException e) {
-      }
-    }
-    
-    /* Remove the thread from the thread table.
-     */
-    _threadTable.remove(msg.getID());
-    
-    /* Thread is here because it has been notified by a thread
-     * that deposited the response message in the thread table.
-     * Or because it has timed out.
-     */
-    PASTMessage responseMsg = entry._msg;
-    
-    return responseMsg;
   }
   
   /**
-   * Receives a response message after a request has been sent.
+   * Receives a response message after a request has been sent
+   * and gives it to the appropriate command.
    */
   protected void _handleResponseMessage(PASTMessage msg) {
-    /* Response should belong to this node so deposit response message in the
-     * thread table and wake up the appropriate thread.
-     */
-    ThreadTableEntry threadInfo = 
-      (ThreadTableEntry) _threadTable.get(msg.getID());
+    // Look up the command waiting for this response
+    ReceiveResultCommand command = 
+      (ReceiveResultCommand) _commandTable.get(msg.getID());
         
-    if (threadInfo == null) {
-      // We don't recognize this response message, so ignore it.
-      return;
+    if (command != null) {
+      // Give response to the command
+      command.receiveResult(msg);
     }
-        
-    /* This will cause the thread awaiting this message
-     * to wake up and return the content to the user.
-     */
-    threadInfo._msg = msg;
-    synchronized (threadInfo._waitObject) {
-      threadInfo._waitObject.notify();
+    else {
+      // We don't recognize this response message, so ignore it.
     }
   }
   
   // ---------- PASTService Methods ----------
   
   /**
-   * Inserts a file into the remote PAST storage system, using the given
-   * file ID.
-   * @param id Pastry key identifying this object
-   * @param obj Serializable object to be stored
+   * Inserts an object with the given ID into distributed storage.
+   * Asynchronously returns a boolean as the result to the provided
+   * InsertResultCommand, indicating whether the insert was successful.
+   * 
+   * @param id Pastry key identifying the object to be stored
+   * @param obj Persistable object to be stored
    * @param authorCred Author's credentials
-   * @return true if store succeeds, false otherwise
+   * @param command Command to be performed when the result is received
    */
-  public boolean insert(NodeId id, Serializable obj, Credentials authorCred) {
+  public void insert(NodeId id, Serializable obj, Credentials authorCred,
+                     final ReceiveResultCommand command)
+  {
     NodeId nodeId = _pastryNode.getNodeId();
     debug("Insert request for file " + id + " at node " + nodeId);
     MessageInsert request = new MessageInsert(nodeId, id, obj, authorCred);
-    MessageInsert response = (MessageInsert) _sendRequestMessage(request);
-    if (response != null) {
-      return response.getSuccess();
-    }
-    else {
-      return false;
-    }
+    
+    // Send the request
+    _sendRequestMessage(request, new ReceiveResultCommand() {
+      public void receiveResult(Object result) {
+        if (result == null) {
+          // Not successful
+          command.receiveResult(new Boolean(false));
+        }
+        else if (result instanceof MessageInsert) {
+          // Return whether successful
+          boolean success = ((MessageInsert)result).getSuccess();
+          command.receiveResult(new Boolean(success));
+        }
+        else {
+          // Should have gotten a MessageInsert
+          command.receiveException(new IllegalArgumentException("Expected a MessageInsert result, got " + result));
+        }
+      }
+      public void receiveException(Exception result) {
+        command.receiveException(result);
+      }
+    });
   }
   
   /**
-   * Appends an update to an existing object in the remote PAST storage system.
+   * Stores an update to the object with the given ID.
+   * Asynchronously returns a boolean as the result to the provided
+   * UpdateResultCommand, indicating whether the insert was successful.
+   * 
    * @param id Pastry key of original object to be updated
-   * @param update Serializable update to the original object
+   * @param update Persistable update to the original object
    * @param authorCred Update Author's credentials
-   * @return true if update was successful, false if no object was found
+   * @param command Command to be performed when the result is received
    */
-  public boolean update(NodeId id, Serializable update, Credentials authorCred) {
+  public void update(NodeId id, Serializable update, Credentials authorCred, 
+                     final ReceiveResultCommand command)
+  {
     NodeId nodeId = _pastryNode.getNodeId();
     debug("Request to append to file " + id + " at node " + nodeId);
     MessageAppend request = new MessageAppend(nodeId, id, update, authorCred);
-    MessageAppend response = (MessageAppend) _sendRequestMessage(request);
-    if (response != null) {
-      return response.getSuccess();
-    }
-    else {
-      return false;
-    }
+    
+    // Send the request
+    _sendRequestMessage(request, new ReceiveResultCommand() {
+      public void receiveResult(Object result) {
+        if (result == null) {
+          // Not successful
+          command.receiveResult(new Boolean(false));
+        }
+        else if (result instanceof MessageAppend) {
+          // Return whether successful
+          boolean success = ((MessageAppend)result).getSuccess();
+          command.receiveResult(new Boolean(success));
+        }
+        else {
+          // Should have gotten a MessageAppend
+          command.receiveException(new IllegalArgumentException("Expected a MessageAppend result, got " + result));
+        }
+      }
+      public void receiveException(Exception result) {
+        command.receiveException(result);
+      }
+    });
   }
   
   /**
-   * Remotely locates and returns the object and all updates associated with id.
+   * Retrieves the object and all associated updates with the given ID.
+   * Asynchronously returns a StorageObject as the result to the provided
+   * ReceiveResultCommand.
+   * 
    * @param id Pastry key of original object
-   * @return StorageObject with original object and a Vector of all
-   * updates to the object, or null if no object was found
+   * @param command Command to be performed when the result is received
    */
-  public StorageObject lookup(NodeId id) {
+  public void lookup(NodeId id, final ReceiveResultCommand command) {
     NodeId nodeId = _pastryNode.getNodeId();
     debug("Request to look up file " + id + " at node " + nodeId);
     MessageLookup request = new MessageLookup(nodeId, id);
-    MessageLookup response = (MessageLookup) _sendRequestMessage(request);
-    if (response != null) {
-      return response.getContent();
-    }
-    else {
-      return null;
-    }
-
+    
+    // Send the request
+    _sendRequestMessage(request, new ReceiveResultCommand() {
+      public void receiveResult(Object result) {
+        if (result == null) {
+          // Null result
+          command.receiveResult(null);
+        }
+        else if (result instanceof MessageLookup) {
+          // Return the content discovered
+          command.receiveResult(((MessageLookup)result).getContent());
+        }
+        else {
+          // Should have gotten a MessageLookup
+          command.receiveException(new IllegalArgumentException("Expected a MessageLookup result, got " + result));
+        }
+      }
+      public void receiveException(Exception result) {
+        command.receiveException(result);
+      }
+    });
   }
   
   /**
-   * Returns whether an object is currently stored at the given ID.
+   * Determines whether an object is currently stored at the given ID.
+   * Asynchronously returns a boolean as the result to the provided
+   * ReceiveResultCommand, indicating whether the object exists.
+   * 
    * @param id Pastry key of original object
-   * @return true if an object was found, false otherwise
+   * @param command Command to be performed when the result is received
    */
-  public boolean exists(NodeId id) {
+  public void exists(NodeId id, final ReceiveResultCommand command) {
     NodeId nodeId = _pastryNode.getNodeId();
     debug("Request to determine if file " + id + " exists, at node " + nodeId);
     MessageExists request = new MessageExists(nodeId, id);
-    MessageExists response = (MessageExists) _sendRequestMessage(request);
-    if (response != null) {
-      return response.exists();
-    }
-    else {
-      return false;
-    }
+    
+    // Send the request
+    _sendRequestMessage(request, new ReceiveResultCommand() {
+      public void receiveResult(Object result) {
+        if (result == null) {
+          // Not successful
+          command.receiveResult(new Boolean(false));
+        }
+        else if (result instanceof MessageExists) {
+          // Return whether object exists
+          boolean exists = ((MessageExists)result).exists();
+          command.receiveResult(new Boolean(exists));
+        }
+        else {
+          // Should have gotten a MessageExists
+          command.receiveException(new IllegalArgumentException("Expected a MessageExists result, got " + result));
+        }
+      }
+      public void receiveException(Exception result) {
+        command.receiveException(result);
+      }
+    });
   }
   
   /**
-   * Remotely reclaims the space used by the object with handle id,
-   * effectively deleting it.
+   * Reclaims the storage used by the object with the given ID.
+   * Asynchronously returns a boolean as the result to the provided
+   * ReceiveResultCommand, indicating whether the delete was successful.
+   * 
    * @param id Pastry key of original object
    * @param authorCred Author's credentials
-   * @return true if object was deleted, false if no object was found
    */
-  public boolean delete(NodeId id, Credentials authorCred) {
+  public void delete(NodeId id, Credentials authorCred,
+                     final ReceiveResultCommand command)
+  {
     NodeId nodeId = _pastryNode.getNodeId();
     System.out.println("Deleting the file with ID: " + id);
     MessageReclaim request = 
       new MessageReclaim(_pastryNode.getNodeId(), id, authorCred);
-    MessageReclaim response = (MessageReclaim) _sendRequestMessage(request);
-    if (response != null) {
-      return response.getSuccess();
-    }
-    else {
-      return false;
-    }
+    
+    // Send the request
+    _sendRequestMessage(request, new ReceiveResultCommand() {
+      public void receiveResult(Object result) {
+        if (result == null) {
+          // Not successful
+          command.receiveResult(new Boolean(false));
+        }
+        else if (result instanceof MessageReclaim) {
+          // Return whether successful
+          boolean success = ((MessageReclaim)result).getSuccess();
+          command.receiveResult(new Boolean(success));
+        }
+        else {
+          // Should have gotten a MessageReclaim
+          command.receiveException(new IllegalArgumentException("Expected a MessageReclaim result, got " + result));
+        }
+      }
+      public void receiveException(Exception result) {
+        command.receiveException(result);
+      }
+    });
   }
   
   /**
@@ -344,32 +400,6 @@ public class PASTServiceImpl
   protected void debug(String message) {
     if (DEBUG) {
       System.out.println("PASTService:  " + message);
-    }
-  }
-  
-  
-  /**
-   * Helper class used to store information on blocked threads
-   * waiting for a response.
-   */
-  protected class ThreadTableEntry {
-    /**
-     * The blocked thread itself.
-     */
-    protected Object _waitObject;
-
-    /**
-     * The resposne message for the blocked thread
-     * to pick up when its woken up.
-     */
-    protected PASTMessage _msg;
-
-    /**
-     * Constructor.
-     */
-    ThreadTableEntry() {
-      this._waitObject = new Object();
-      this._msg = null;
     }
   }
 }
