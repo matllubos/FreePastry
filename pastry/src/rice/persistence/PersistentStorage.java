@@ -1305,7 +1305,7 @@ public class PersistentStorage implements Storage {
       ras.setLength(file.length() - 32 - length);
     } 
     
-    ras.seek(file.length());
+    ras.close();
     
     long len1 = file.length();
     FileOutputStream fout = new FileOutputStream(file, true);
@@ -1322,6 +1322,7 @@ public class PersistentStorage implements Storage {
     dos.writeLong(PERSISTENCE_REVISION_2_0);
     dos.writeLong(len2-len1);
     dos.close();
+    fout.close();
   }
 
   /*****************************************************************/
