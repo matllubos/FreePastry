@@ -681,7 +681,7 @@ public class NodeId implements Comparable, Serializable
      * with an offset given by this nodeId.  The set is useful for
      * constructing, for instance, Scribe trees with disjoint sets of
      * interior nodes.
-     * @param num the number of nodeIds in the set (must be less than 2^b)
+     * @param num the number of nodeIds in the set (must be <= 2^b)
      * @param b the routing base (as a power of 2)
      * @param i the index of the requested member of the set (0<=i<num; the 0-th member is this)
      * @return the resulting set member, or null in case of illegal arguments
