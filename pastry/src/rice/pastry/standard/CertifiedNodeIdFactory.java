@@ -36,8 +36,17 @@ if advised of the possibility of such damage.
 
 package rice.pastry.standard;
 
-import rice.pastry.*;
 import java.io.*;
+import java.security.*;
+import java.security.cert.*;
+import java.security.spec.*;
+import java.util.*;
+import java.util.zip.*;
+import javax.crypto.*;
+import javax.crypto.spec.*;
+
+import rice.pastry.*;
+import rice.p2p.util.*;
 import rice.serialization.*;
 
 /**
@@ -51,11 +60,11 @@ import rice.serialization.*;
  */
 public class CertifiedNodeIdFactory implements NodeIdFactory {
   
-  public static String NODE_ID_FILENAME = ".nodeId-";
-  
+  public static String NODE_ID_FILENAME = "nodeId";
+
   protected int port;
   protected IPNodeIdFactory realFactory;
-  
+
   /**
    * Constructor.
    */
@@ -70,28 +79,98 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
    * @return the new nodeId
    */
   public NodeId generateNodeId() {
+    XMLObjectInputStream xois = null;
     try {
-      File f = new File(NODE_ID_FILENAME + port);
+      File f = new File(NODE_ID_FILENAME);
+      
+      if (! f.exists()) {
+        File g = new File("." + NODE_ID_FILENAME + "-" + port);
+        
+        if (g.exists())
+          g.renameTo(f);
+      }
       
       if (f.exists()) {
-        XMLObjectInputStream xois = new XMLObjectInputStream(new FileInputStream(f));
+        xois = new XMLObjectInputStream(new FileInputStream(f));
         return (NodeId) xois.readObject();
       } else {
-        NodeId result = realFactory.generateNodeId();
-        XMLObjectOutputStream xoos = new XMLObjectOutputStream(new FileOutputStream(f));
-        xoos.writeObject(result);
-        xoos.close();
-        
-        return result;
+        System.err.println("Unable to find NodeID certificate - exiting.");
+        throw new RuntimeException("Unable to find NodeID certificate - make sure that the NodeID certificate file '" + NODE_ID_FILENAME + "' exists in your ePOST directory.");
       }
     } catch (IOException e) {
-      System.out.println(e);
-      return null;
+      System.err.println(e);
+      throw new RuntimeException(e);
     } catch (ClassNotFoundException e) {
-      System.out.println(e);
-      return null;
+      System.err.println(e);
+      throw new RuntimeException(e);
+    } finally {
+      try {
+        if (xois != null)
+          xois.close();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
+
+  /**
+   * Method which generates a certificate given the nodeid, location, and private key
+   *
+   * @param id The id of the certificate to generate
+   * @param file The location to write the certificate to
+   * @param key The private key to use to sign the result
+   */
+  public static void generateCertificate(NodeId id, File file, PrivateKey key) {
+    try {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      XMLObjectOutputStream xoos = new XMLObjectOutputStream(baos);
+      xoos.writeObject(id);
+      xoos.close();
+      
+      XMLObjectOutputStream xoos2 = new XMLObjectOutputStream(new FileOutputStream(file));
+      xoos2.writeObject(id);
+      xoos2.write(SecurityUtils.sign(baos.toByteArray(), key));
+      xoos2.close();
+    } catch (IOException e) {
+      System.out.println(e);
+      throw new RuntimeException(e);
+    } 
+  }
   
+  /**
+   * Main method which, for convenience, allows certificate creation.  The parameters allowed are
+   * -ca [file] -out [dir]
+   */
+  public static void main(String[] args) throws Exception {
+    String caDirectory = getArg(args, "-ca");
+    String out = getArg(args, "-out");
+    
+    File f = new File(caDirectory,"ca.keypair.enc");      
+    FileInputStream fis = new FileInputStream(f);
+    ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(fis)));
+    
+    byte[] cipher = (byte[]) ois.readObject();
+      
+    File pwFile = new File(caDirectory,"pw"); 
+    StreamTokenizer st = new StreamTokenizer(new BufferedReader(new InputStreamReader(new FileInputStream(pwFile))));
+    st.nextToken();
+    
+    KeyPair caPair = (KeyPair) SecurityUtils.deserialize(SecurityUtils.decryptSymmetric(cipher, SecurityUtils.hash(st.sval.getBytes())));
+          
+    generateCertificate(new RandomNodeIdFactory().generateNodeId(), new File("/tmp/epost/" + out + "/" + NODE_ID_FILENAME), caPair.getPrivate());
+  }
+  
+  public static String getArg(String[] args, String argType) {
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].startsWith(argType)) {
+        if (args.length > i+1) {
+          String ret = args[i+1];
+          if (!ret.startsWith("-"))
+            return ret;
+        } 
+      } 
+    } 
+    return null;
+  }  
 }
 
