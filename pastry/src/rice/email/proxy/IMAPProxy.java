@@ -25,7 +25,8 @@ import rice.Continuation;
  * 
  * @author Dave Price
  */
-public class IMAPProxy implements Observer, MessageCountListener {
+public class IMAPProxy implements Observer, MessageCountListener, FolderListener
+{
 
     private final int STATE_INITIAL = 1;
     private final int STATE_GETTING_BODY = 2;
@@ -46,6 +47,8 @@ public class IMAPProxy implements Observer, MessageCountListener {
     Session session;
 
     rice.email.Folder inbox;
+
+    javax.mail.Folder[] imapFolders;
 
     
     /**
@@ -84,7 +87,6 @@ public class IMAPProxy implements Observer, MessageCountListener {
 
 	public void receiveResult(Object o) {
 
-	    System.err.println("Received a continuation call");
 	    switch(state) {
 	    case STATE_INITIAL:
 		System.err.println("Received a result in initial state!");
@@ -160,6 +162,15 @@ public class IMAPProxy implements Observer, MessageCountListener {
 	  System.err.println("Error connecting to IMAP server");
 	  System.out.println(e);
 	  e.printStackTrace();
+      }
+
+      // Ask the store to tell us about folder creation/deletion
+      imapStore.addFolderListener(this);
+
+      // Attach ourself to all the folders in the IMAP namespace
+      imapFolders = imapStore.getPersonalNamespaces();
+      for (int i = 0 ; i < imapFolders.length; i++) {
+	  imapFolders[i].addMessageCountListener(this);
       }
 
       // Finally add ourselves as a listener so that we hear about incoming mail.
@@ -354,14 +365,229 @@ public class IMAPProxy implements Observer, MessageCountListener {
 	}
     }
     
+    /**
+     * Convert this PostUserAddress to an internet-style email address.
+     * @param address The Address to compute.
+     */
     private String toInetEmail(PostUserAddress address) {
 	return address.getName();
     }
 
-    // Comply with the MessageCountListener pattern
+    // Comply with the MessageCountListener interface
     public void messagesAdded(MessageCountEvent e) {
+	new MessageAddTask(this, e).go();
     }
 
     public void messagesRemoved(MessageCountEvent e) {
+	new MessageRemoveTask(this, e).go();
     }
+
+    // Comply with the FolderListener interface
+    public void folderCreated(FolderEvent e) {
+	e.getFolder().addMessageCountListener(this);
+    }
+
+    public void folderDeleted(FolderEvent e) {
+	e.getFolder().removeMessageCountListener(this);
+    }
+
+    public void folderRenamed(FolderEvent e) {
+	e.getNewFolder().addMessageCountListener(this);
+	e.getFolder().removeMessageCountListener(this);
+    }
+
+    /**
+     * Self-contained task that handles a MessageCountEvent
+     * which removes messages from a given folder. Since we don't
+     * have a good way of identifying messages at the moment,
+     * we match by subject.
+     */
+    private class MessageRemoveTask implements Continuation {
+	private static final int STATE_BEGIN = 0;
+	private static final int STATE_GETTING_ROOT = 1;
+	private static final int STATE_GETTING_FOLDER = 2;
+	private static final int STATE_GETTING_MESSAGELIST = 3;
+	private static final int STATE_REMOVING_MESSAGES = 4;
+	private static final int STATE_DONE = 128;
+
+	IMAPProxy parent;
+	javax.mail.Message[] msgs;
+	Email[] folderMsgs;
+	int mIndex;
+	int state;
+	MessageCountEvent event;
+	rice.email.Folder folder;
+
+	public MessageRemoveTask(IMAPProxy parent, MessageCountEvent e) {
+	    this.parent = parent;
+	    this.event = e;
+	    this.msgs = e.getMessages();
+	    mIndex = 0;
+	    state = STATE_BEGIN;
+	}
+
+	public go() {
+	    state = STATE_GETTING_ROOT;
+	    parent.service.getRootFolder(this);
+	}
+
+	public void receiveResult(Object o) {
+	    switch(state) {
+	    case STATE_BEGIN:
+		System.err.println("Got a result in the begin state.");
+		break;
+	    case STATE_GETTING_ROOT:
+		state = STATE_GETTING_FOLDER;
+		((rice.email.Folder) o).getChildFolder(msgs[0].getFolder().getName(), this);
+		break;
+	    case STATE_GETTING_FOLDER:
+		state = STATE_GETTING_MESSAGELIST;
+		this.folder = (rice.email.Folder o);
+		this.folder.getMessages(this);
+		break;
+	    case STATE_GETTING_MESSAGELIST:
+		state = STATE_REMOVING_MESSAGES;
+		folderMsgs[]
+		removeMessage(mIndex);
+		break;
+	    case STATE_REMOVING_MESSAGES:
+		mIndex++;
+		if (mIndex >= msgs.length)
+		    state = STATE_DONE;
+		    break;
+		else {
+		    removeMessage(mIndex);
+		    break;
+		}
+	    case STATE_DONE:
+		System.err.println("Got a result in the end state.");
+		break;
+	    }
+		
+	}
+
+	public void receiveException(Exception e) {
+	    System.err.println("IMAPProxy got exception removing messages: " + e);
+	}
+
+	/**
+	 * Deletes the message in the folder corresponding to the given index.
+	 */
+	private void removeMessage(int index) {
+	    String subject = msgs[index].getSubject();
+
+	    // Find the Email with that matching subject and kill it.
+	    for (int i = 0; i < folderMsgs.length; i++) {
+		if (folderMsgs[i].getSubject.equals(subject)) {
+		    folder.removeMessage(folderMsgs[i], this);
+		    break;
+		}
+	    }
+
+	    // Odd - we lost the message. Shouldn't get here.
+	    System.err.println("Trying to delete a message that didn't exist.");
+	    // Call back into the message so that we keep going.
+	    this.receiveResult(null);	    
+	}	
+    }
+
+    /**
+     * Self-contained task that handles a MessageCountEvent
+     * on a given folder. Handles the addition of the given
+     * messages.
+     */
+    private class MessageAddTask implements Continuation {
+
+	private static final int STATE_BEGIN = 0;
+	private static final int STATE_GETTING_ROOT = 1;
+	private static final int STATE_GETTING_FOLDER = 2;
+	private static final int STATE_ADDING_MESSAGES = 3;
+	private static final int STATE_DONE = 128;
+
+	IMAPProxy parent;
+	javax.mail.Message[] msgs;
+	int mIndex;
+	int state;
+	MessageCountEvent event;
+	rice.email.Folder folder;
+	
+	
+	public MessageAddTask(IMAPProxy parent, MessageCountEvent e) {
+	    this.parent = parent;
+	    this.event = e;
+	    this.msgs = e.getMessages();
+	    mIndex = 0;
+	    state = STATE_BEGIN;
+	}
+
+	/**
+	 * Begins adding the messages received to the folder.
+	 */
+	public go() {
+	    state = STATE_GETTING_ROOT;
+	    parent.service.getRootFolder(this);
+	}
+
+	/**
+	 * Staging theprocess of adding all the messages
+	 */
+	public void receiveResult(Object o) {
+	    switch(state) {
+	    case STATE_BEGIN: 
+		System.err.println("Got a result in the begin state.");
+		break;
+	    case STATE_GETTING_ROOT:
+		state = STATE_GETTING_FOLDER;
+		((rice.email.Folder) o).getChildFolder(msgs[0].getFolder().getName(), this);
+		break;
+	    case STATE_GETTING_FOLDER:
+		state = STATE_ADDING_MESSAGES;
+		this.folder = (rice.email.Folder) o;
+		this.folder.addMessage(makeEmail(msgs[0]), this);
+	    case STATE_ADDING_MESSAGES:
+		mIndex++;
+		if (mIndex >= msgs.length)
+		    state = STATE_DONE;
+		    break;
+		else {
+		    this.folder.addMessage(makeEmail(msgs[mIndex]), this);
+		    break;
+		}
+	    case STATE_DONE:
+		System.err.println("Got a result in the end state.");
+		break;
+	    }
+
+	}
+
+	public void receiveException(Exception e) {
+	    System.err.println("Error adding messages to folder: " + e);
+	}
+
+	private Email makeEmail(Message msg) {
+	    MimeMessage mm = (MimeMessage) msg;
+	    
+	    return
+		new
+		Email(
+		      new PostUserAddress(mm.getSender().toString()),
+		      makeRecipients(mm.getRecipients(Message.RecipientType.TO)),
+		      mm.getSubject();
+		      new EmailData( ((String) mm.getContent()).getBytes());
+		      new EmailData[0]
+		      );
+	}
+
+	private PostEntityAddress[] makeRecipients(javax.mail.Address[] recips) {
+	    PostEntityAddress[] retMe = new PostEntityAddress[recips.length];
+	    
+	    for (int i = 0; i < recips.length; i++) {
+		retMe[i] = new PostUserAddress(recips[i].toString());
+	    }
+	    return retMe;
+	}
+	
+	
+    }
+    
 }
