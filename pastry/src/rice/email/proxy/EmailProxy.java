@@ -64,13 +64,13 @@ public class EmailProxy extends PostProxy {
     //cmdmap.addMailcap("text/*; ;x-java-content-handler=rice.email.proxy.mail.MailDataHandler");
   }
  
-  private EmailService email;
+  protected EmailService email;
 
-  private UserManagerImpl manager;
+  protected UserManagerImpl manager;
 
-  private SmtpServerImpl smtp;
+  protected SmtpServerImpl smtp;
 
-  private ImapServerImpl imap;
+  protected ImapServerImpl imap;
 
   public EmailProxy(String[] args) {
       super(args);
