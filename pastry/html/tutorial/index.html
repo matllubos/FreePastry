@@ -92,7 +92,8 @@ In this lesson we are going to use Socket transport layer to communicate.  The S
     // This will return null if we there is no node at that location
     NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
       
-    // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
+    // construct a node, passing the null boothandle on the first loop will 
+    // cause the node to start its own ring
     PastryNode node = factory.newNode(bootHandle);
       
     // the node may require sending several messages to fully boot into the ring
