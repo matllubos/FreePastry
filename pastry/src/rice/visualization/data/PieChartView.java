@@ -1,6 +1,5 @@
 package rice.visualization.data;
 
-import java.awt.*;
 import java.util.*;
 
 import rice.p2p.commonapi.*;
@@ -11,7 +10,7 @@ public class PieChartView extends DataView {
   
   protected Vector labels;
   
-  public PieChartView(String name, int width, int height, GridBagConstraints constraints) {
+  public PieChartView(String name, int width, int height, Constraints constraints) {
     super(name, width, height, constraints);
     
     this.items = new Vector();

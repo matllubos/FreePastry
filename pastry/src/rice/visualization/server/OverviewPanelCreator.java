@@ -5,7 +5,6 @@ import rice.pastry.*;
 import rice.pastry.dist.*;
 import rice.selector.*;
 
-import java.awt.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -38,10 +37,10 @@ public class OverviewPanelCreator implements PanelCreator {
   protected DataPanel createPanel(PastryNode node) {
     DataPanel nodePanel = new DataPanel("Basic Information");
     
-    GridBagConstraints nodeCons = new GridBagConstraints();
+    Constraints nodeCons = new Constraints();
     nodeCons.gridx = 0;
     nodeCons.gridy = 0;
-    nodeCons.fill = GridBagConstraints.HORIZONTAL;
+    nodeCons.fill = Constraints.HORIZONTAL;
     
     KeyValueListView nodeView = new KeyValueListView("Network Information", 380, 200, nodeCons);
     nodeView.add("NodeId", node.getId().toStringFull());
@@ -53,10 +52,10 @@ public class OverviewPanelCreator implements PanelCreator {
     nodeView.add("Domain Name", address.getAddress().getHostName());
     nodeView.add("User Language", System.getProperty("user.language"));
     
-    GridBagConstraints jvmCons = new GridBagConstraints();
+    Constraints jvmCons = new Constraints();
     jvmCons.gridx = 1;
     jvmCons.gridy = 0;
-    jvmCons.fill = GridBagConstraints.HORIZONTAL;
+    jvmCons.fill = Constraints.HORIZONTAL;
     
     KeyValueListView jvmView = new KeyValueListView("JVM/System Information", 380, 200, jvmCons);
     jvmView.add("JVM Version", System.getProperty("java.version"));
@@ -65,10 +64,10 @@ public class OverviewPanelCreator implements PanelCreator {
     jvmView.add("Op. System", System.getProperty("os.name") + " " + System.getProperty("os.version"));
     jvmView.add("O.S. Arch.", System.getProperty("os.arch"));
     
-    GridBagConstraints memoryCons = new GridBagConstraints();
+    Constraints memoryCons = new Constraints();
     memoryCons.gridx = 2;
     memoryCons.gridy = 0;
-    memoryCons.fill = GridBagConstraints.HORIZONTAL;
+    memoryCons.fill = Constraints.HORIZONTAL;
     
     LineGraphView memoryView = new LineGraphView("Memory Usage", 380, 200, memoryCons, "Time (sec)", "Memory Used (B)", true, false);
     memoryView.addSeries("Total Memory", getTimeArray(), getTotalMemoryArray(), Color.green);

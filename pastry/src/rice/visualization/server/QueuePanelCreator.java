@@ -10,7 +10,6 @@ import rice.Continuation.*;
 import rice.selector.*;
 import rice.pastry.dist.DistPastryNode.*;
 
-import java.awt.*;
 import java.util.*;
 
 public class QueuePanelCreator implements PanelCreator {
@@ -41,10 +40,10 @@ public class QueuePanelCreator implements PanelCreator {
     DataPanel pastPanel = new DataPanel("Queue");
 
     try {      
-      GridBagConstraints dataStorageCons = new GridBagConstraints();
+      Constraints dataStorageCons = new Constraints();
       dataStorageCons.gridx = 1;
       dataStorageCons.gridy = 0;
-      dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
+      dataStorageCons.fill = Constraints.HORIZONTAL;
       
       LineGraphView dataStorageView = new LineGraphView("Processing Queue", 380, 200, dataStorageCons, "Time (sec)", "Queue Size", false, false);
       dataStorageView.addSeries("Data Stored", getTimeArray(), getArray(processing), Color.blue);
@@ -56,10 +55,10 @@ public class QueuePanelCreator implements PanelCreator {
     }
     
     try {      
-      GridBagConstraints dataStorageCons = new GridBagConstraints();
+      Constraints dataStorageCons = new Constraints();
       dataStorageCons.gridx = 2;
       dataStorageCons.gridy = 0;
-      dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
+      dataStorageCons.fill = Constraints.HORIZONTAL;
       
       LineGraphView dataStorageView = new LineGraphView("Persistence Queue", 380, 200, dataStorageCons, "Time (sec)", "Queue Size", false, false);
       dataStorageView.addSeries("Insert", getTimeArray(), getArray(persistence), Color.green);
@@ -71,10 +70,10 @@ public class QueuePanelCreator implements PanelCreator {
     }
     
     try {      
-      GridBagConstraints dataStorageCons = new GridBagConstraints();
+      Constraints dataStorageCons = new Constraints();
       dataStorageCons.gridx = 0;
       dataStorageCons.gridy = 0;
-      dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
+      dataStorageCons.fill = Constraints.HORIZONTAL;
       
       LineGraphView dataStorageView = new LineGraphView("Selector Queue", 380, 200, dataStorageCons, "Time (sec)", "Queue Size", false, false);
       dataStorageView.addSeries("Insert", getTimeArray(), getArray(invocations), Color.orange);

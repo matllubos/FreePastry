@@ -13,8 +13,8 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
   
   public static int PASTRY_RING_PANEL_BORDER = 20; 
   public static int PASTRY_RING_PANEL_WIDTH = 835;
-  public static int PASTRY_RING_PANEL_HEIGHT = 520;
-  public static int PASTRY_RING_DIAMETER = 440;
+  public static int PASTRY_RING_PANEL_HEIGHT = 500;
+  public static int PASTRY_RING_DIAMETER = 420;
   
   public static int NODE_TEXT_SPACING = 15;
   public static int NODE_DIAMETER = 6;

@@ -5,7 +5,6 @@ import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 
-import java.awt.*;
 import java.net.*;
 import java.util.*;
 
@@ -27,10 +26,10 @@ public class RecentMessagesPanelCreator implements PanelCreator, NetworkListener
   public DataPanel createPanel(Object[] objects) {
     DataPanel networkActivityPanel = new DataPanel("Recent Messages");
     
-    GridBagConstraints leafsetCons = new GridBagConstraints();
+    Constraints leafsetCons = new Constraints();
     leafsetCons.gridx = 0;
     leafsetCons.gridy = 0;
-    leafsetCons.fill = GridBagConstraints.HORIZONTAL;
+    leafsetCons.fill = Constraints.HORIZONTAL;
     
     TableView countView = new TableView("Recently Sent Messages", 380, 200, leafsetCons);
     countView.setSizes(new int[] {135, 35, 65, 110});
@@ -48,10 +47,10 @@ public class RecentMessagesPanelCreator implements PanelCreator, NetworkListener
       
     networkActivityPanel.addDataView(countView);
     
-    GridBagConstraints leafsetCons2 = new GridBagConstraints();
+    Constraints leafsetCons2 = new Constraints();
     leafsetCons.gridx = 1;
     leafsetCons.gridy = 0;
-    leafsetCons.fill = GridBagConstraints.HORIZONTAL;
+    leafsetCons.fill = Constraints.HORIZONTAL;
     
     TableView countView2 = new TableView("Recently Received Messages", 380, 200, leafsetCons2);
     countView2.setSizes(new int[] {135, 35, 65, 110});

@@ -1,6 +1,5 @@
 package rice.visualization.data;
 
-import java.awt.*;
 import java.util.*;
 
 import rice.p2p.commonapi.*;
@@ -23,7 +22,7 @@ public class LineGraphView extends DataView {
   
   protected boolean legend;
   
-  public LineGraphView(String name, int width, int height, GridBagConstraints constraints, String xLabel, String yLabel, boolean area, boolean legend) {
+  public LineGraphView(String name, int width, int height, Constraints constraints, String xLabel, String yLabel, boolean area, boolean legend) {
     super(name, width, height, constraints);
     
     this.labels = new Vector();

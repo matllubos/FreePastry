@@ -9,7 +9,6 @@ import rice.persistence.*;
 import rice.Continuation.*;
 import rice.selector.*;
 
-import java.awt.*;
 import java.util.*;
 
 public class PASTPanelCreator implements PanelCreator {
@@ -41,10 +40,10 @@ public class PASTPanelCreator implements PanelCreator {
   public DataPanel createPanel(Object[] objects) {
     DataPanel pastPanel = new DataPanel(name + " PAST");
     
-    GridBagConstraints pastCons2 = new GridBagConstraints();
+    Constraints pastCons2 = new Constraints();
     pastCons2.gridx = 0;
     pastCons2.gridy = 0;
-    pastCons2.fill = GridBagConstraints.HORIZONTAL;
+    pastCons2.fill = Constraints.HORIZONTAL;
     
     TableView pastView2 = new TableView(name + " Outstanding Messages", 380, 200, pastCons2);
     pastView2.setSizes(new int[] {350});
@@ -57,10 +56,10 @@ public class PASTPanelCreator implements PanelCreator {
     pastPanel.addDataView(pastView2);
     
     try {      
-      GridBagConstraints dataStorageCons = new GridBagConstraints();
+      Constraints dataStorageCons = new Constraints();
       dataStorageCons.gridx = 1;
       dataStorageCons.gridy = 0;
-      dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
+      dataStorageCons.fill = Constraints.HORIZONTAL;
       
       LineGraphView dataStorageView = new LineGraphView(name + " Outstanding", 380, 200, dataStorageCons, "Time (sec)", "Outstanding", false, false);
       dataStorageView.addSeries("Insert", getTimeArray(), getArray(this.outstanding), Color.red);
@@ -72,10 +71,10 @@ public class PASTPanelCreator implements PanelCreator {
     }
     
     try {      
-      GridBagConstraints dataStorageCons = new GridBagConstraints();
+      Constraints dataStorageCons = new Constraints();
       dataStorageCons.gridx = 2;
       dataStorageCons.gridy = 0;
-      dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
+      dataStorageCons.fill = Constraints.HORIZONTAL;
       
       LineGraphView dataStorageView = new LineGraphView(name + " Requests", 380, 200, dataStorageCons, "Time (sec)", "Count", false, true);
       dataStorageView.addSeries("Insert", getTimeArray(), getArray(inserts), Color.blue);

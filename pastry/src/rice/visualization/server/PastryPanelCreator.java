@@ -5,7 +5,6 @@ import rice.pastry.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
 
-import java.awt.*;
 import java.util.*;
 
 public class PastryPanelCreator implements PanelCreator {
@@ -23,10 +22,10 @@ public class PastryPanelCreator implements PanelCreator {
   protected DataPanel createPanel(PastryNode node) {
     DataPanel pastryPanel = new DataPanel("Pastry");
     
-    GridBagConstraints leafsetCons = new GridBagConstraints();
+    Constraints leafsetCons = new Constraints();
     leafsetCons.gridx = 0;
     leafsetCons.gridy = 0;
-    leafsetCons.fill = GridBagConstraints.HORIZONTAL;
+    leafsetCons.fill = Constraints.HORIZONTAL;
     
     TableView leafsetView = new TableView("Leafset", 1130, 40, leafsetCons);
     Vector strings = new Vector();
@@ -38,10 +37,10 @@ public class PastryPanelCreator implements PanelCreator {
     
     leafsetView.addRow((String[]) strings.toArray(new String[0]));
     
-    GridBagConstraints routeTableCons = new GridBagConstraints();
+    Constraints routeTableCons = new Constraints();
     routeTableCons.gridx = 0;
     routeTableCons.gridy = 1;
-    routeTableCons.fill = GridBagConstraints.HORIZONTAL;
+    routeTableCons.fill = Constraints.HORIZONTAL;
     
     TableView routeTableView = new TableView("Routing Table", 1130, 160, routeTableCons);
     RoutingTable routingTable = node.getRoutingTable();

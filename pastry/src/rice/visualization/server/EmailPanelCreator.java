@@ -11,7 +11,6 @@ import rice.selector.*;
 import rice.pastry.dist.DistPastryNode.*;
 import rice.email.proxy.smtp.*;
 
-import java.awt.*;
 import java.util.*;
 
 public class EmailPanelCreator implements PanelCreator {
@@ -40,10 +39,10 @@ public class EmailPanelCreator implements PanelCreator {
     DataPanel pastPanel = new DataPanel("Email");
     
     try {      
-      GridBagConstraints dataStorageCons = new GridBagConstraints();
+      Constraints dataStorageCons = new Constraints();
       dataStorageCons.gridx = 1;
       dataStorageCons.gridy = 0;
-      dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
+      dataStorageCons.fill = Constraints.HORIZONTAL;
       
       LineGraphView dataStorageView = new LineGraphView("SMTP Server", 380, 200, dataStorageCons, "Time (sec)", "Number", false, false);
       dataStorageView.addSeries("Connections", getTimeArray(), getArray(connect), Color.blue);

@@ -1,6 +1,5 @@
 package rice.visualization.data;
 
-import java.awt.*;
 import java.util.*;
 
 import rice.p2p.commonapi.*;
@@ -9,7 +8,7 @@ public class KeyValueListView extends DataView {
   
   protected Properties properties;
   
-  public KeyValueListView(String name, int width, int height, GridBagConstraints constraints) {
+  public KeyValueListView(String name, int width, int height, Constraints constraints) {
     super(name, width, height, constraints);
     
     this.properties = new Properties();

@@ -28,12 +28,12 @@ public abstract class ViewRenderer {
     return new Font("Courier", Font.PLAIN, 9);
   }
   
-  protected Color getDefaultFontColor() {
-    return Color.black;
+  protected java.awt.Color getDefaultFontColor() {
+    return java.awt.Color.black;
   }
   
-  protected Color getDefaultBackgroundColor() {
-    return Color.gray;
+  protected java.awt.Color getDefaultBackgroundColor() {
+    return java.awt.Color.gray;
   }
   
   protected int getDefaultBorder() {

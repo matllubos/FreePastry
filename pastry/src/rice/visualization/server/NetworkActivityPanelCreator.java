@@ -6,7 +6,6 @@ import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.selector.*;
 
-import java.awt.*;
 import java.net.*;
 import java.util.*;
 
@@ -41,26 +40,26 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
   public DataPanel createPanel(Object[] objects) {
     DataPanel networkActivityPanel = new DataPanel("Network Activity");
     
-    GridBagConstraints dataSentCons = new GridBagConstraints();
+    Constraints dataSentCons = new Constraints();
     dataSentCons.gridx = 0;
     dataSentCons.gridy = 0;
-    dataSentCons.fill = GridBagConstraints.HORIZONTAL;
+    dataSentCons.fill = Constraints.HORIZONTAL;
     
     LineGraphView dataSentView = new LineGraphView("Data Sent", 380, 200, dataSentCons, "Time (sec)", "Data (B)", false, false);
     dataSentView.addSeries("Data Sent", getTimeArray(), getSentArray(), Color.green);
     
-    GridBagConstraints dataReceivedCons = new GridBagConstraints();
+    Constraints dataReceivedCons = new Constraints();
     dataReceivedCons.gridx = 1;
     dataReceivedCons.gridy = 0;
-    dataReceivedCons.fill = GridBagConstraints.HORIZONTAL;
+    dataReceivedCons.fill = Constraints.HORIZONTAL;
     
     LineGraphView dataReceivedView = new LineGraphView("Data Received", 380, 200, dataReceivedCons, "Time (sec)", "Data (B)", false, false);
     dataReceivedView.addSeries("Data Received", getTimeArray(), getReceivedArray(), Color.red);
     
-    GridBagConstraints dataBreakdownCons = new GridBagConstraints();
+    Constraints dataBreakdownCons = new Constraints();
     dataBreakdownCons.gridx = 2;
     dataBreakdownCons.gridy = 0;
-    dataBreakdownCons.fill = GridBagConstraints.HORIZONTAL;
+    dataBreakdownCons.fill = Constraints.HORIZONTAL;
     
     PieChartView linkDistributionView = new PieChartView("Link Distribution", 380, 200, dataBreakdownCons);
     Vector addresses = new Vector();

@@ -8,7 +8,6 @@ import rice.persistence.*;
 import rice.Continuation.*;
 import rice.selector.*;
 
-import java.awt.*;
 import java.util.*;
 
 public class MultiPersistencePanelCreator implements PanelCreator {

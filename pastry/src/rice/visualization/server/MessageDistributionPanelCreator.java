@@ -5,7 +5,6 @@ import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 
-import java.awt.*;
 import java.net.*;
 import java.util.*;
 
@@ -25,10 +24,10 @@ public class MessageDistributionPanelCreator implements PanelCreator, NetworkLis
   public DataPanel createPanel(Object[] objects) {
     DataPanel networkActivityPanel = new DataPanel("Message Information");
     
-    GridBagConstraints dataBreakdownCons = new GridBagConstraints();
+    Constraints dataBreakdownCons = new Constraints();
     dataBreakdownCons.gridx = 0;
     dataBreakdownCons.gridy = 0;
-    dataBreakdownCons.fill = GridBagConstraints.HORIZONTAL;
+    dataBreakdownCons.fill = Constraints.HORIZONTAL;
     
     PieChartView dataBreakdownView = new PieChartView("Distribution by Size", 380, 200, dataBreakdownCons);
     double[] data = getMessageSizeBreakdown();
@@ -38,10 +37,10 @@ public class MessageDistributionPanelCreator implements PanelCreator, NetworkLis
     
     networkActivityPanel.addDataView(dataBreakdownView);
     
-    GridBagConstraints dataCountCons = new GridBagConstraints();
+    Constraints dataCountCons = new Constraints();
     dataCountCons.gridx = 1;
     dataCountCons.gridy = 0;
-    dataCountCons.fill = GridBagConstraints.HORIZONTAL;
+    dataCountCons.fill = Constraints.HORIZONTAL;
     
     PieChartView dataCountView = new PieChartView("Distribution by Count", 380, 200, dataCountCons);
     data = getMessageCountBreakdown();
@@ -52,10 +51,10 @@ public class MessageDistributionPanelCreator implements PanelCreator, NetworkLis
     networkActivityPanel.addDataView(dataCountView);
     
     
-    GridBagConstraints leafsetCons = new GridBagConstraints();
+    Constraints leafsetCons = new Constraints();
     leafsetCons.gridx = 2;
     leafsetCons.gridy = 0;
-    leafsetCons.fill = GridBagConstraints.HORIZONTAL;
+    leafsetCons.fill = Constraints.HORIZONTAL;
     
     TableView countView = new TableView("Most Common Messages", 380, 200, leafsetCons);
     countView.setSizes(new int[] {240, 25, 45, 30});

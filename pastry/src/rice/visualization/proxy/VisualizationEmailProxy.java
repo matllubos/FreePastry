@@ -24,14 +24,9 @@ public class VisualizationEmailProxy extends EmailProxy {
   
   protected InetSocketAddress serverAddress;
   protected InetSocketAddress globalServerAddress;
-
-  public static String[][] DEFAULT_PARAMETERS = new String[][] {{"visualization_enable", "false"},
-  {"visualization_port", "10002"},
-  {"visualization_client_enable", "false"}
-  };
   
   public Parameters start(Parameters parameters) throws Exception { 
-    initializeParameters(super.start(parameters), DEFAULT_PARAMETERS);
+    super.start(parameters);
     
     if (parameters.getBooleanParameter("visualization_enable")) {
       DistPastryNode pastry = (DistPastryNode) ((MultiringNode) node).getNode();
@@ -137,6 +132,9 @@ public class VisualizationEmailProxy extends EmailProxy {
         }
       }
     }
+    
+    dialogPrint("\n\nYour ePOST is now booted and ready.  You can connect your mail client\n" +
+                "with the instructions shown on the http://www.epostmail.org website.\n");
     
     return parameters;
   }

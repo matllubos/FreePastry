@@ -1,6 +1,5 @@
 package rice.visualization.data;
 
-import java.awt.*;
 import java.io.*;
 import java.util.*;
 import javax.swing.*;
@@ -15,11 +14,11 @@ public abstract class DataView implements Serializable {
   
   protected int height;
     
-  protected GridBagConstraints constraints;
+  protected Constraints constraints;
   
   protected Data data;
   
-  public DataView(String name, int width, int height, GridBagConstraints constraints) {
+  public DataView(String name, int width, int height, Constraints constraints) {
     this.name = name;
     this.width = width;
     this.height = height;
@@ -44,7 +43,7 @@ public abstract class DataView implements Serializable {
     return height;
   }
   
-  public GridBagConstraints getConstraints() {
+  public Constraints getConstraints() {
     return constraints;
   }
   

@@ -8,7 +8,6 @@ import rice.persistence.*;
 import rice.Continuation.*;
 import rice.selector.*;
 
-import java.awt.*;
 import java.util.*;
 
 public class GCPanelCreator implements PanelCreator {
@@ -57,10 +56,10 @@ public class GCPanelCreator implements PanelCreator {
     DataPanel pastPanel = new DataPanel("GC");
     
     try {      
-      GridBagConstraints dataStorageCons = new GridBagConstraints();
+      Constraints dataStorageCons = new Constraints();
       dataStorageCons.gridx = 0;
       dataStorageCons.gridy = 0;
-      dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
+      dataStorageCons.fill = Constraints.HORIZONTAL;
       
       LineGraphView dataStorageView = new LineGraphView("Refreshed Objects", 380, 200, dataStorageCons, "Time (sec)", "Number Refreshed", false, false);
       dataStorageView.addSeries("Num Objects", getTimeArray(), getRefreshedArray(), Color.blue);
@@ -72,10 +71,10 @@ public class GCPanelCreator implements PanelCreator {
     }
     
     try {      
-      GridBagConstraints dataStorageCons = new GridBagConstraints();
+      Constraints dataStorageCons = new Constraints();
       dataStorageCons.gridx = 1;
       dataStorageCons.gridy = 0;
-      dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
+      dataStorageCons.fill = Constraints.HORIZONTAL;
       
       LineGraphView dataStorageView = new LineGraphView("Collected Objects", 380, 200, dataStorageCons, "Time (sec)", "Number Collected", false, false);
       dataStorageView.addSeries("Num OBjects", getTimeArray(), getCollectedArray(), Color.blue);
@@ -87,10 +86,10 @@ public class GCPanelCreator implements PanelCreator {
     }
     
  /*   try {      
-      GridBagConstraints cacheCons = new GridBagConstraints();
+      Constraints cacheCons = new Constraints();
       cacheCons.gridx = 2;
       cacheCons.gridy = 0;
-      cacheCons.fill = GridBagConstraints.HORIZONTAL;
+      cacheCons.fill = Constraints.HORIZONTAL;
       
       LineGraphView cacheView = new LineGraphView("Expiration Times", 380, 200, cacheCons, "Time (hours)", "Objects", false, false);
       cacheView.addSeries("Expiration Times", expirations, getExpirations(), Color.red);

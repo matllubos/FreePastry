@@ -6,7 +6,6 @@ import rice.persistence.*;
 import rice.Continuation.*;
 import rice.selector.*;
 
-import java.awt.*;
 import java.util.*;
 
 public class PersistencePanelCreator implements PanelCreator {
@@ -37,10 +36,10 @@ public class PersistencePanelCreator implements PanelCreator {
     DataPanel pastPanel = new DataPanel(name + " Storage");
     
     try {      
-      GridBagConstraints dataStorageCons = new GridBagConstraints();
+      Constraints dataStorageCons = new Constraints();
       dataStorageCons.gridx = 0;
       dataStorageCons.gridy = 0;
-      dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
+      dataStorageCons.fill = Constraints.HORIZONTAL;
       
       LineGraphView dataStorageView = new LineGraphView(name + " Keys", 380, 200, dataStorageCons, "Time (sec)", "Number of Keys", false, false);
       dataStorageView.addSeries("Keys", getTimeArray(), getArray(keys), Color.green);
@@ -52,10 +51,10 @@ public class PersistencePanelCreator implements PanelCreator {
     }
     
     try {      
-      GridBagConstraints dataStorageCons = new GridBagConstraints();
+      Constraints dataStorageCons = new Constraints();
       dataStorageCons.gridx = 1;
       dataStorageCons.gridy = 0;
-      dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
+      dataStorageCons.fill = Constraints.HORIZONTAL;
       
       LineGraphView dataStorageView = new LineGraphView(name + " Storage Size", 380, 200, dataStorageCons, "Time (sec)", "Data (KB)", true, false);
       dataStorageView.addSeries("Data Stored", getTimeArray(), getArray(data), Color.blue);
@@ -67,10 +66,10 @@ public class PersistencePanelCreator implements PanelCreator {
     }
     
     try {      
-      GridBagConstraints dataStorageCons = new GridBagConstraints();
+      Constraints dataStorageCons = new Constraints();
       dataStorageCons.gridx = 2;
       dataStorageCons.gridy = 0;
-      dataStorageCons.fill = GridBagConstraints.HORIZONTAL;
+      dataStorageCons.fill = Constraints.HORIZONTAL;
       
       LineGraphView dataStorageView = new LineGraphView(name + " Cache Size", 380, 200, dataStorageCons, "Time (sec)", "Count", true, false);
       dataStorageView.addSeries("Insert", getTimeArray(), getArray(cache), Color.orange);

@@ -7,7 +7,6 @@ import rice.persistence.*;
 import rice.selector.*;
 import rice.Continuation.*;
 
-import java.awt.*;
 import java.util.*;
 
 public class AggregationPanelCreator implements PanelCreator {
@@ -42,10 +41,10 @@ public class AggregationPanelCreator implements PanelCreator {
 
     DataPanel summaryPanel = new DataPanel("Aggregation");
 
-    GridBagConstraints cons = new GridBagConstraints();
+    Constraints cons = new Constraints();
     cons.gridx = 0;
     cons.gridy = 0;
-    cons.fill = GridBagConstraints.HORIZONTAL;
+    cons.fill = Constraints.HORIZONTAL;
     
     KeyValueListView aggregationView = new KeyValueListView("Aggregation Overview", 380, 200, cons);
     aggregationView.add("Obj. waiting", ""+aggregation.getNumObjectsWaiting());
@@ -65,10 +64,10 @@ public class AggregationPanelCreator implements PanelCreator {
     rice.p2p.commonapi.Id currentHandle = (rice.p2p.commonapi.Id) aggregation.getHandle();
     aggregationView.add("Current root", ((currentHandle == null) ? "null" : ((rice.p2p.multiring.RingId)currentHandle).getId().toStringFull()));
 
-    GridBagConstraints graphCons = new GridBagConstraints();
+    Constraints graphCons = new Constraints();
     graphCons.gridx = 1;
     graphCons.gridy = 0;
-    graphCons.fill = GridBagConstraints.HORIZONTAL;
+    graphCons.fill = Constraints.HORIZONTAL;
 
     LineGraphView graphView = new LineGraphView("Lifetime", 380, 200, graphCons, "Hours from now", "Occurrences", false, false);
     if (lastStats != null) {
@@ -85,10 +84,10 @@ public class AggregationPanelCreator implements PanelCreator {
       graphView.addSeries("Aggregates", timeSeries, aggrSeries, Color.blue);
     }
 
-    GridBagConstraints graphCons2 = new GridBagConstraints();
+    Constraints graphCons2 = new Constraints();
     graphCons2.gridx = 2;
     graphCons2.gridy = 0;
-    graphCons2.fill = GridBagConstraints.HORIZONTAL;
+    graphCons2.fill = Constraints.HORIZONTAL;
 
     LineGraphView graphView2 = new LineGraphView("Aggregate list", 380, 200, graphCons2, "Hours", "Items", false, false);
     if (statsTotal > 0) {

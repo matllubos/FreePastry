@@ -14,8 +14,8 @@ public class TableViewRenderer extends ViewRenderer {
   public static int DEFAULT_CELL_HEIGHT = 15;
   public static int DEFAULT_CELL_PADDING = 3;
   
-  public static Color DEFAULT_BACKGROUND_COLOR = Color.white;
-  public static Color DEFAULT_FOREGROUND_COLOR = Color.gray;
+  public static java.awt.Color DEFAULT_BACKGROUND_COLOR = java.awt.Color.white;
+  public static java.awt.Color DEFAULT_FOREGROUND_COLOR = java.awt.Color.gray;
   
   public TableViewRenderer(Visualization visualization) {
     super(visualization);
@@ -105,11 +105,11 @@ public class TableViewRenderer extends ViewRenderer {
     return result;
   }
   
-  protected Color getDefaultBackgroundColor() {
+  protected java.awt.Color getDefaultBackgroundColor() {
     return DEFAULT_BACKGROUND_COLOR;
   }
   
-  protected Color getDefaultForegroundColor() {
+  protected java.awt.Color getDefaultForegroundColor() {
     return DEFAULT_FOREGROUND_COLOR;
   }
   

@@ -77,7 +77,7 @@ public class PastryNodePanel extends JPanel {
     
     for (int i=0; i<panel.getDataViewCount(); i++) {
       JPanel thisPanel = factory.render(panel.getDataView(i));
-      layout.setConstraints(thisPanel, panel.getDataView(i).getConstraints());      
+      layout.setConstraints(thisPanel, panel.getDataView(i).getConstraints().trans());      
       jpanel.add(thisPanel);
     }
         

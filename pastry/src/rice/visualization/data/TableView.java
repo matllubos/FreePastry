@@ -1,6 +1,5 @@
 package rice.visualization.data;
 
-import java.awt.*;
 import java.util.*;
 
 import rice.p2p.commonapi.*;
@@ -11,7 +10,7 @@ public class TableView extends DataView {
   
   protected int[] sizes;
     
-  public TableView(String name, int width, int height, GridBagConstraints constraints) {
+  public TableView(String name, int width, int height, Constraints constraints) {
     super(name, width, height, constraints);
     
     this.rows = new Vector();

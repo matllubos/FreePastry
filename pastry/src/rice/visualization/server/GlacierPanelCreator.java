@@ -7,7 +7,6 @@ import rice.p2p.multiring.RingId;
 import rice.persistence.*;
 import rice.Continuation.*;
 
-import java.awt.*;
 import java.util.*;
 
 public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListener {
@@ -33,10 +32,10 @@ public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListe
 
     DataPanel glacierPanel = new DataPanel("Traffic");
 
-    GridBagConstraints glacierCons = new GridBagConstraints();
+    Constraints glacierCons = new Constraints();
     glacierCons.gridx = 0;
     glacierCons.gridy = 0;
-    glacierCons.fill = GridBagConstraints.HORIZONTAL;
+    glacierCons.fill = Constraints.HORIZONTAL;
     
     KeyValueListView glacierView = new KeyValueListView("Glacier Overview", 380, 200, glacierCons);
     GlacierStatistics current = history[(historyPtr + HISTORY - 1) % HISTORY];
@@ -70,16 +69,16 @@ public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListe
       glacierView.add("Starting up...", "");
     }
 
-    GridBagConstraints countCons = new GridBagConstraints();
+    Constraints countCons = new Constraints();
     countCons.gridx = 1;
     countCons.gridy = 0;
-    countCons.fill = GridBagConstraints.HORIZONTAL;
+    countCons.fill = Constraints.HORIZONTAL;
     KeyValueListView countView = new KeyValueListView("Message count", 380, 200, countCons);
 
-    GridBagConstraints graphCons = new GridBagConstraints();
+    Constraints graphCons = new Constraints();
     graphCons.gridx = 2;
     graphCons.gridy = 0;
-    graphCons.fill = GridBagConstraints.HORIZONTAL;
+    graphCons.fill = Constraints.HORIZONTAL;
     LineGraphView graphView = new LineGraphView("Messages", 380, 200, graphCons, "Minutes", "Messages", false, false);
 
     String tagToString[] = new String[] { "--", "Neighbor", "Sync", "SyncManifests", "SyncFetch", "Handoff", "Debug", "Refresh", "Insert", "LookupHandles", "Lookup", "Fetch", "LocalScan" };
@@ -105,10 +104,10 @@ public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListe
 
     DataPanel glacierPanel2 = new DataPanel("Queue");
 
-    GridBagConstraints graph2Cons = new GridBagConstraints();
+    Constraints graph2Cons = new Constraints();
     graph2Cons.gridx = 2;
     graph2Cons.gridy = 0;
-    graph2Cons.fill = GridBagConstraints.HORIZONTAL;
+    graph2Cons.fill = Constraints.HORIZONTAL;
 
     LineGraphView fetchView = new LineGraphView("Pending fetches", 380, 200, graph2Cons, "Minutes", "Queue entries", false, false);
     timeSeries = new double[HISTORY];
@@ -120,8 +119,8 @@ public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListe
       activeSeries[j] = (statJ == null) ? 0 : statJ.activeFetches;
       pendingSeries[j] = (statJ == null) ? 0 : statJ.pendingRequests;
     }
-    fetchView.addSeries("F", timeSeries, activeSeries, Color.GREEN);
-    fetchView.addSeries("F", timeSeries, pendingSeries, Color.BLUE);
+    fetchView.addSeries("F", timeSeries, activeSeries, Color.green);
+    fetchView.addSeries("F", timeSeries, pendingSeries, Color.blue);
     glacierPanel2.addDataView(fetchView);
 
     MultiDataPanel thePanel = new MultiDataPanel("Glacier");

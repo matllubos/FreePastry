@@ -33,14 +33,14 @@ public class LineGraphViewRenderer extends ViewRenderer {
         if (visualization.getData() != null) {
         LineGraphView view = (LineGraphView) visualization.getData().getView(v.getName());
         XYSeries[] data = new XYSeries[view.getSeriesCount()];
-        Color[] colors = new Color[view.getSeriesCount()];
+        java.awt.Color[] colors = new java.awt.Color[view.getSeriesCount()];
         
         for (int i=0; i<view.getSeriesCount(); i++) {
           double[] domain = view.getDomain(i);
           double[] range = view.getRange(i);
           
           data[i] = new XYSeries(view.getLabel(i));
-          colors[i] = view.getColor(i);
+          colors[i] = view.getColor(i).trans();
           
           for (int j=0; j<domain.length; j++)
             data[i].add(domain[j], range[j]);
@@ -57,7 +57,7 @@ public class LineGraphViewRenderer extends ViewRenderer {
     return panel; 
   }
   
-  public BufferedImage createGraph(XYSeries[] series, String xLabel, String yLabel, int width, int height, Color[] color, boolean area, boolean legend) {
+  public BufferedImage createGraph(XYSeries[] series, String xLabel, String yLabel, int width, int height, java.awt.Color[] color, boolean area, boolean legend) {
     XYSeriesCollection dataset= new XYSeriesCollection();
     
     for (int i=0; i<series.length; i++)
