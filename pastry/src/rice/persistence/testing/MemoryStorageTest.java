@@ -814,6 +814,7 @@ public class MemoryStorageTest extends Test {
   
   public void start() {
     testErrors();
+	try{	Thread.sleep(20000);}catch(InterruptedException ie){;}
   }
 
   public static void main(String[] args) {

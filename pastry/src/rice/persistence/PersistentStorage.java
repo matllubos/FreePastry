@@ -74,6 +74,10 @@ public class PersistentStorage implements Storage {
   private long storageSize;         // The amount of storage allowed to be used 
   private long usedSize;            // The amount of storage currently in use
   private IdSet idSet;              // In memory store of all keys
+  private WorkQ workQ = new WorkQ(); // A work Queue for all currently pending requests
+  private Thread workThread = new PersistenceThread(workQ); // The thread that does the work
+  
+  /* Constants */
   
   private final int MAX_FILES = 1000; // The maximum number of files in a dir
   private final boolean DEBUG = true; // Turn on and off debug prints 
@@ -104,8 +108,21 @@ public class PersistentStorage implements Storage {
     this.name = name;
     this.rootDir = rootDir;
     storageSize = size; 
+	workThread.start();
+	System.out.println("Trying to init .....");
+	try{
+		workQ.enqueue( new WorkRequest() { 
+			public void doWork(){
+				init();
+			}
+		});
+	}
+	catch(WorkQueueOverflowException e){
+		  e.printStackTrace();
+	}
+	System.out.println("Done to init .....");
 
-    init();
+
   }
 
   /**
@@ -127,44 +144,52 @@ public class PersistentStorage implements Storage {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>.
    */
-  public void store(Id id, Serializable obj, Continuation c) {
+  public void store(final Id id, final Serializable obj, final Continuation c){
+	try{
+		workQ.enqueue( new WorkRequest(c) { 
+			public void doWork(){
+				try {
+				  if (id == null || obj == null) {
+					c.receiveResult(new Boolean(false));
+					return;
+				  }
+				  /* Create a file representation and then transactionally write it */
+				  File objFile = getFile(id); 
+				  /* change the name here */
+				  File transcFile = makeFile((Id) id);
+				  writeObject(obj, id, readVersion(objFile) + 1, transcFile);
 
-    try {
-      if (id == null || obj == null) {
-        c.receiveResult(new Boolean(false));
-        return;
-      }
+				  if( getUsedSpace() + getFileLength(objFile) > getStorageSize()){
+					 /* abort, this will put us over quota */
+					 deleteFile(transcFile);
+					 c.receiveException(new OutofDiskSpaceException());
+					 return;
+				  }
+				  else{
+					/* complete transaction */
+					decreaseUsedSpace(getFileLength(objFile)); /* decrease amount used */
+					deleteFile(objFile);
+					increaseUsedSpace(transcFile.length()); /* increase the amount used */
+					synchronized(idSet){
+						idSet.addId(id); 
+					}
+					if(numFilesDir(transcFile.getParentFile()) > MAX_FILES){
+						expandDirectory(transcFile.getParentFile());
+					}
+				  } 
 
-      /* Create a file representation and then transactionally write it */
-      File objFile = getFile(id); 
-      /* change the name here */
-      File transcFile = makeFile((Id) id);
-      writeObject(obj, id, readVersion(objFile) + 1, transcFile);
+				  c.receiveResult(new Boolean(true));
 
-
-      if( getUsedSpace() + getFileLength(objFile) > getStorageSize()){
-         /* abort, this will put us over quota */
-         deleteFile(transcFile);
-         c.receiveResult(new Boolean(false));
-         return;
-      }
-      else{
-        /* complete transaction */
-        decreaseUsedSpace(getFileLength(objFile)); /* decrease amount used */
-        deleteFile(objFile);
-        increaseUsedSpace(transcFile.length()); /* increase the amount used */
-        idSet.addId(id); 
-        if(numFilesDir(transcFile.getParentFile()) > MAX_FILES){
-            expandDirectory(transcFile.getParentFile());
-        }
-      } 
-
-      c.receiveResult(new Boolean(true));
-
-    } catch (Exception e) {
-       e.printStackTrace();
-       c.receiveException(e);
-    }
+				} catch (Exception e) {
+				   e.printStackTrace();
+				   c.receiveException(e);
+				}
+			}
+		});
+		}
+		catch(WorkQueueOverflowException e){
+		  c.receiveException(e);
+		}
   }
 
   /**
@@ -184,18 +209,27 @@ public class PersistentStorage implements Storage {
    * @return <code>true</code> if the action succeeds, else
    * <code>false</code>.
    */
-  public void unstore(Id id, Continuation c) {
-
-      File objFile = getFile(id); 
-      if(objFile == null){
-       c.receiveResult(new Boolean(false));
-       return;
-      } 
-      idSet.removeId(id);
-      decreaseUsedSpace(objFile.length());
-      objFile.delete();
-       
-      c.receiveResult(new Boolean(true));
+  public void unstore(final Id id, Continuation c){
+	try{
+		workQ.enqueue( new WorkRequest(c) { 
+		  public void doWork(){
+			  File objFile = getFile(id); 
+			  if(objFile == null){
+				   c.receiveResult(new Boolean(false));
+				   return;
+			  }
+			  synchronized(idSet){ 
+				  idSet.removeId(id);
+			  }
+			  decreaseUsedSpace(objFile.length());
+			  objFile.delete();
+			  c.receiveResult(new Boolean(true));
+			}
+		});
+	}
+	catch(WorkQueueOverflowException e){
+	  c.receiveException(e);
+	}
   }
 
 
@@ -206,7 +240,9 @@ public class PersistentStorage implements Storage {
    * @return Whether or not an object is present at id.
    */
   public boolean exists(Id id) {
-    return idSet.isMemberId(id);
+    synchronized(idSet){
+		return idSet.isMemberId(id);
+	}
   }
   
 
@@ -219,9 +255,20 @@ public class PersistentStorage implements Storage {
    * @param id The id of the object in question.
    * @return Whether or not an object is present at id.
    */
-  public void exists(Id id, Continuation c) {
-     c.receiveResult(new Boolean(idSet.isMemberId(id))); 
-  }
+	public void exists(final Id id, Continuation c){
+		try{
+			workQ.enqueue( new WorkRequest(c) { 
+			  public void doWork(){
+				 synchronized(idSet){
+					 c.receiveResult(new Boolean(idSet.isMemberId(id))); 
+				 }
+				}
+			});
+		}
+		catch(WorkQueueOverflowException e){
+		  c.receiveException(e);
+	  }
+	}
 
   /**
    * Returns the object identified by the given id.
@@ -231,20 +278,29 @@ public class PersistentStorage implements Storage {
    * @return The object, or <code>null</code> if there is no cooresponding
    * object (through receiveResult on c).
    */
-  public void getObject(Id id, Continuation c){
-      File objFile = getFile(id);
-      if(objFile == null){
-         c.receiveResult(null);
-         return;
-      }
-      Object toReturn = null;
-      try{ 
-        toReturn = readData(objFile);
-      }
-      catch(Exception e){
-        e.printStackTrace();
-      }
-      c.receiveResult(toReturn);
+  public void getObject(final Id id, Continuation c){
+	  try{
+		  workQ.enqueue( new WorkRequest(c) { 
+			  public void doWork(){
+				  File objFile = getFile(id);
+				  if(objFile == null){
+					 c.receiveResult(null);
+					 return;
+				  }
+				  Object toReturn = null;
+				  try{ 
+					toReturn = readData(objFile);
+				  }
+				  catch(Exception e){
+					e.printStackTrace();
+				  }
+				  c.receiveResult(toReturn);
+			  }
+		 });
+	}
+	catch(WorkQueueOverflowException e){
+		  c.receiveException(e);
+	  }
   }
 
   /**
@@ -262,9 +318,22 @@ public class PersistentStorage implements Storage {
    * @param c The command to run once the operation is complete
    * @return The idset containg the keys 
    */
-  public void scan(IdRange range , Continuation c) {
-    IdSet toReturn = idSet.subSet(range); 
-    c.receiveResult(toReturn);
+  public void scan(final IdRange range , final Continuation c){
+	  try{
+		  workQ.enqueue( new WorkRequest(c) { 
+			  public void doWork(){
+					IdSet toReturn = null;
+					synchronized(idSet){
+						toReturn = idSet.subSet(range); 
+					}
+					c.receiveResult(toReturn);
+			  }
+		  });
+	  }
+	  catch(WorkQueueOverflowException e){
+		  c.receiveException(e);
+	  }
+	  
   }
 
   /**
@@ -281,7 +350,10 @@ public class PersistentStorage implements Storage {
    * @return The idset containg the keys 
    */
   public IdSet scan(IdRange range){
-    IdSet toReturn = idSet.subSet(range); 
+    IdSet toReturn = null;
+    synchronized(idSet){
+		toReturn = idSet.subSet(range); 
+	}
     return(toReturn);
   }
 
@@ -297,7 +369,9 @@ public class PersistentStorage implements Storage {
    * @return The idset containg the keys 
    */
   public IdSet scan() {
-    return idSet;
+    synchronized(idSet){
+		return (IdSet) idSet.clone();
+	}
   }
   /**
    * Returns the total size of the stored data in bytes.The result
@@ -326,8 +400,8 @@ public class PersistentStorage implements Storage {
 
     if(numFilesDir(appDirectory) > MAX_FILES)
             expandDirectory(appDirectory);
-
-    idSet = factory.buildIdSet();
+			
+	idSet = factory.buildIdSet();
 
     if(directoryTransactionInProgress()){
       directoryCleanUp(appDirectory);
@@ -384,21 +458,22 @@ public class PersistentStorage implements Storage {
        /* insert keys into file Map */
        /* need to check for uncompleted and conflicting transactions */
        if(files[i].isFile()){
-
+          
           try{
              
             long version = readVersion(files[i]);
             Object key = readKey(files[i]);
-
-            if(!idSet.isMemberId((Id) key)){
-              idSet.addId((Id) key);
-              increaseUsedSpace(files[i].length()); /* increase amount used */
-            }
-            else{
-               /* resolve conflict due to unfinished trans */
-              resolveConflict(files[i]);
-              System.out.println("Resolving Conflicting Versions");
-            }
+            synchronized(idSet){
+				if(!idSet.isMemberId((Id) key)){
+				  idSet.addId((Id) key);
+				  increaseUsedSpace(files[i].length()); /* increase amount used */
+				}
+				else{
+				   /* resolve conflict due to unfinished trans */
+				  resolveConflict(files[i]);
+				  System.out.println("Resolving Conflicting Versions");
+				}
+			}
           }
           catch(java.io.EOFException e){
               System.out.println("Recovering From Incomplete Write");
@@ -1028,5 +1103,84 @@ public class PersistentStorage implements Storage {
     }
   }
 /**********************************************************************/
+  /*****************************************************************/
+  /* Inner Classes for Worker Thread                          */
+  /*****************************************************************/
+
+  private class PersistenceThread extends Thread{
+       WorkQ workQ;
+	   
+	   public PersistenceThread( WorkQ workQ ){
+	      this.workQ = workQ;
+	   }
+	   
+	   public void run(){
+		   while(true)
+			   workQ.dequeue().doWork();
+	   }
+  }
+  
+  private class WorkQ {
+      List q = new LinkedList();
+	  /* A negative capacity, is equivalent to infinted capacity */
+	  int capacity = -1;
+	  
+	  public WorkQ(){
+	     /* do nothing */
+	  }
+	  
+	  public WorkQ(int capacity){
+	     this.capacity = capacity;
+	  }
+	  
+	  public synchronized void  enqueue(WorkRequest request) throws WorkQueueOverflowException{
+
+	      if(capacity <  0 || q.size() < capacity){
+			  q.add(request);
+			  notify();
+		  }
+		  else
+			  throw( new WorkQueueOverflowException ());
+	  }
+	  
+	  public synchronized WorkRequest dequeue(){
+	      while ( q.isEmpty() ){
+		     try {
+				 wait();
+			 } catch ( InterruptedException e ){
+			 }
+		 }
+		 return (WorkRequest) q.remove(0);
+	 }
+	  
+	}
+	  
+	private abstract class WorkRequest{
+	       Continuation c;
+		   
+		public WorkRequest(Continuation c){
+		      this.c = c;
+		}
+		
+		public WorkRequest(){
+			/* do nothing */
+		}
+		
+		public abstract void doWork();
+	}
+	
+	
+	private class PersistenceException extends Exception{
+	
+	}
+	
+	private class OutofDiskSpaceException extends PersistenceException{
+	
+	}
+	
+	private class WorkQueueOverflowException extends PersistenceException{
+	
+	}
+
 }
 
