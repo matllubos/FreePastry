@@ -352,23 +352,14 @@ public class PostProxy {
       String os = System.getProperty("os.name");
       
       if (! CompatibilityCheck.testOS(os)) {
-        String message = "You appear to be running an incompatible operating system '" + System.getProperty("os.name") + "'.\n" +
-        "Currently, only Windows and Linux are supported for ePOST, although\n" +
-        "we are actively trying to add support for Mac OS X.";
+        String message = "You appear to be running an untested operating system '" + System.getProperty("os.name") + "'.\n" +
+        "Currently, only Windows, Linux, and OS X are tested with ePOST, although\n" +
+        "you are welcome to continue running ePOST on your system.";
         
-        if (System.getProperty("os.name").toLowerCase().indexOf("mac") >= 0) {
-          message += "\n\nNOTE: It looks like you're running on a Mac - we have had mixed success with\n" +
-                         "running on Macs.  On dual G5 machines, ePOST is known to cause kernel panics, \n" +
-                         "however it appears somewhat stable on G4 machines.  If you are brave, you can \n" +
-                         "choose to run ePOST, but be warned!";
+        int i = message(message, new String[] {"Kill ePOST Proxy", "I'm brave! Launch ePOST!"}, "Kill ePOST Proxy");
         
-          int i = message(message, new String[] {"Kill ePOST Proxy", "I'm brave! Launch ePOST!"}, "Kill ePOST Proxy");
-          
-          if (i == 0)
-            System.exit(-1);
-        } else {
-          panic(message);
-        }
+        if (i == 0) 
+          System.exit(-1);
       }
     }
   }

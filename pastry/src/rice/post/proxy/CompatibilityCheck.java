@@ -94,7 +94,7 @@ public class CompatibilityCheck {
   }
 
   public static boolean testOS(String os) {
-    if ((os.toLowerCase().indexOf("linux") >= 0) || (os.toLowerCase().indexOf("windows") >= 0))
+    if ((os.toLowerCase().indexOf("linux") >= 0) || (os.toLowerCase().indexOf("windows") >= 0) || (os.toLowerCase().indexOf("mac os x") >= 0))
       return true;
     
     return false;
