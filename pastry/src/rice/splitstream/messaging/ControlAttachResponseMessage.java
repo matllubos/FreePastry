@@ -1,15 +1,20 @@
 package rice.splitstream.messaging;
 
 import rice.splitstream.*;
-import rice.pastry.messaging.Message;
+import rice.pastry.messaging.*;
 
 /**
  * This message is sent in response to an incoming Attach message.  It
  * contains a list of all Stripe Ids for the current channel
  */
-public class ControlAttachResponseMessage extends Message 
+public class ControlAttachResponseMessage extends Message implements Serializable
 {
-   private byte[] _contentArray;
+   private Object _content;
+
+   public ControlAttachResponseMessage( Address addr )
+   {
+      super( addr );
+   }
 
    /**
     * Sets the message content (here, the list of StripeIds)
@@ -17,6 +22,7 @@ public class ControlAttachResponseMessage extends Message
     */
    public void setContent( Object content )
    {
+      _content = content;
    }
 
    /**
@@ -25,7 +31,7 @@ public class ControlAttachResponseMessage extends Message
     */
    public Object getContent()
    {
-      return null;
+      return _content;
    } 
 }
 
