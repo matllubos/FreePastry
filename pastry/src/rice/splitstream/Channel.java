@@ -366,6 +366,9 @@ public class Channel extends PastryAppl implements IScribeApp {
     else if(msg instanceof ControlDropMessage){
         handleControlDropMessage(msg);
     }
+    else if(msg instanceof ControlFindParentMessage){
+        handleControlFindParentMessage(msg); 
+    }
     else{
         System.out.println("Unknown Pastry Message Type");
     }
@@ -394,7 +397,6 @@ public class Channel extends PastryAppl implements IScribeApp {
   }
   private void handleControlDropMessage(Message msg){
     //System.out.println("Drop Message");
-    //System.out.println("I'm getting Dropped " + getNodeId());
     ControlDropMessage dropMessage = (ControlDropMessage) msg;
     Stripe stripe = (Stripe) stripeIdTable.get(dropMessage.getStripeId());
     if(stripe != null)
@@ -416,6 +418,12 @@ public class Channel extends PastryAppl implements IScribeApp {
     //  stripe = (Stripe) stripeIdTable.get(parentMessage.getStripeId());	
     //}
   }
+
+   private void handleControlFindParentMessage(Message msg){
+      ControlFindParentMessage parentMessage = (ControlFindParentMessage) msg;
+      parentMessage.handleMessage((Scribe ) scribe, ((Scribe)scribe).getTopic(getSpareCapacityId()), this); 
+
+   }
   
 /**
    * This returns a string representation of the channel.
