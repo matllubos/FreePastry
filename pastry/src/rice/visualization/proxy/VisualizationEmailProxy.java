@@ -7,6 +7,8 @@ import rice.email.proxy.*;
 import java.io.*;
 import java.net.*;
 
+import rice.p2p.multiring.*;
+
 import rice.pastry.dist.*;
 
 public class VisualizationEmailProxy extends EmailProxy {
@@ -26,11 +28,13 @@ public class VisualizationEmailProxy extends EmailProxy {
     this.args = args;
   }
   
-  public void start() {
+  public void start() throws Exception { 
     super.start();
     
-    visualizationPort = ((DistNodeHandle) pastry.getLocalHandle()).getAddress().getPort() + Visualization.PORT_OFFSET;
+    DistPastryNode pastry = (DistPastryNode) ((MultiringNode) node).getNode();
     
+    visualizationPort = ((DistNodeHandle) pastry.getLocalHandle()).getAddress().getPort() + Visualization.PORT_OFFSET;
+     
     sectionStart("Starting Visualization services");
     stepStart("Creating Visualization Server");
     try {
@@ -40,7 +44,7 @@ public class VisualizationEmailProxy extends EmailProxy {
       stepDone(FAILURE, e + "");
     }
     
-    server = new VisualizationServer(serverAddress, pastry, new Object[] {pastry, past, storage});
+    server = new VisualizationServer(serverAddress, pastry, storage, new Object[] {pastry, past, storage});
     server.setRestartCommand(
       "java -cp classes/:lib/activation.jar:lib/bouncycastle.jar:lib/javamail.jar:lib/junit.jar:lib/antlr.jar:lib/xmlpull_1_1_3_4a.jar:lib/xpp3-1.1.3.4d_b2.jar rice.visualization.proxy.VisualizationEmailProxy",
       args);
@@ -54,20 +58,24 @@ public class VisualizationEmailProxy extends EmailProxy {
     server.addPanelCreator(new PastryPanelCreator());
     server.addPanelCreator(new PASTPanelCreator());
     
-    ((DistPastryNode) pastry).addNetworkListener(network);
-    ((DistPastryNode) pastry).addNetworkListener(recent);
-    ((DistPastryNode) pastry).addNetworkListener(message);
+    pastry.addNetworkListener(network);
+    pastry.addNetworkListener(recent);
+    pastry.addNetworkListener(message);
     stepDone(SUCCESS);
     
-    stepStart("Starting Visualization Server on port " + visualizationPort);
-    Thread t = new Thread(server);
-    t.start();
-    stepDone(SUCCESS);
-
-    if (visualization) {
-      stepStart("Launching Visualization Client");
-      Visualization visualization = new Visualization((DistNodeHandle) pastry.getLocalHandle());
+    try {
+      stepStart("Starting Visualization Server on port " + visualizationPort);
+      Thread t = new Thread(server, "Visualization Server Thread");
+      t.start();
       stepDone(SUCCESS);
+      
+      if (visualization) {
+        stepStart("Launching Visualization Client");
+        Visualization visualization = new Visualization((DistNodeHandle) pastry.getLocalHandle());
+        stepDone(SUCCESS);
+      }
+    } catch (Exception e) {
+      System.err.println("ERROR: Unable to launch Visualization server - continuing - " + e);
     }
   }
   
@@ -84,7 +92,12 @@ public class VisualizationEmailProxy extends EmailProxy {
   
   public static void main(String[] args) {
     VisualizationEmailProxy proxy = new VisualizationEmailProxy(args);
-    proxy.start();
+    try {
+      proxy.start();
+    } catch (Exception e) {
+      System.err.println("ERROR: Found Exception while start proxy - exiting - " + e);
+      System.exit(-1);
+    }
   }
   
 }
