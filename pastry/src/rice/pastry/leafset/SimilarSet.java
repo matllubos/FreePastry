@@ -53,6 +53,7 @@ import java.io.*;
 
 public class SimilarSet extends Observable implements NodeSetI, Serializable, Observer
 {
+  
     private NodeHandle ln;
     private boolean clockwise;
     private NodeHandle[] nodes;
@@ -152,7 +153,8 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
 	    setChanged();
 	   
       if (leafSet.isProperlyRemoved(nodes[theSize])) {
-	      notifyObservers(new NodeSetUpdate(nodes[theSize], false));
+        if (leafSet.observe)
+  	      notifyObservers(new NodeSetUpdate(nodes[theSize], false));
       }
 	    nodes[theSize].deleteObserver(this);
 	    
@@ -176,7 +178,8 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable, Ob
 
 	setChanged();
   if (!leafSet.testOtherSet(this, handle)) {
-  	notifyObservers(new NodeSetUpdate(handle, true));
+    if (leafSet.observe)
+    	notifyObservers(new NodeSetUpdate(handle, true));
   }
 
 	// register as an observer, so we'll be notified if the handle is declared dead
@@ -313,7 +316,8 @@ return null;
 
 	setChanged();
   if (leafSet.isProperlyRemoved(handle)) {
-  	notifyObservers(new NodeSetUpdate(handle, false));
+    if (leafSet.observe)
+    	notifyObservers(new NodeSetUpdate(handle, false));
   }
 		
 	handle.deleteObserver(this);

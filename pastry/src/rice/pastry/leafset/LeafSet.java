@@ -54,14 +54,22 @@ import java.io.*;
  * @author Peter Druschel
  */
 public class LeafSet extends Observable implements Serializable {
+  static private final long serialVersionUID = 3960030608598552977L;
+
   private NodeId baseId;
   private NodeHandle baseHandle;
   private SimilarSet cwSet;
   private SimilarSet ccwSet;
 
+  transient boolean observe = true;
   private int theSize;
 
   private LeafSet(LeafSet that) {
+    this(that, true); 
+  }
+  
+  private LeafSet(LeafSet that, boolean observe) {
+    this.observe = observe;
     this.baseId = that.baseId;
     this.baseHandle = that.baseHandle;
     this.ccwSet = that.ccwSet.copy(this);
@@ -75,8 +83,13 @@ public class LeafSet extends Observable implements Serializable {
    * @param localHandle the local node
    * @param size the size of the leaf set.
    */
-  public LeafSet(NodeHandle localNode, int size)
-  {
+  public LeafSet(NodeHandle localNode, int size) {
+    this(localNode, size, true);
+  }
+  
+  public LeafSet(NodeHandle localNode, int size, boolean observe) {
+    this.observe = observe;
+    
     baseHandle = localNode;
     baseId = localNode.getNodeId();
     theSize = size;
