@@ -14,7 +14,7 @@ import rice.splitstream.messaging.*;
 
 import java.io.*;
 import java.util.*;
-
+import java.net.*;
 /**
  *
  * @version $Id$ 
@@ -47,7 +47,17 @@ public class DistSplitStreamTestMessage extends Message implements Serializable
      */
     public void handleDeliverMessage( DistSplitStreamTestApp splitStreamApp) {
 	Channel channel = (Channel) splitStreamApp.m_channels.get(m_channelId);
-	if(splitStreamApp.m_appIndex == 0){
+	String bootHost = splitStreamApp.getDriver().getBootHost();
+	String localHost = null;
+
+	try{
+	    localHost = InetAddress.getLocalHost().getHostName();
+	}catch(UnknownHostException e){
+	    System.out.println("Error determining local host: " + e);
+	}
+	
+
+	if(splitStreamApp.m_appIndex == 0){// && localHost.equals(bootHost)){
 	    // I am the creator of the channel
 	    splitStreamApp.sendData(channel.getChannelId());
 	}

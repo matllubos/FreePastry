@@ -93,6 +93,9 @@ public class DistSplitStreamTest {
 	numUnsubscribed.put(topicId, new Integer(count + 1));
     }
 
+    public String getBootHost(){
+	return bshost;
+    }
     private NodeHandle getBootstrap() {
 	InetSocketAddress addr = null;
 	if(bshost != null )
@@ -213,7 +216,7 @@ public class DistSplitStreamTest {
 	nodeId = scribe.generateTopicId("DistSplitStreamTest");
 	channelId = new ChannelId(nodeId);
 	ISplitStream ss = new SplitStreamImpl(pn, scribe);
-	DistSplitStreamTestApp app = new DistSplitStreamTestApp(pn, ss, m_appIndex, 1<<base, "DistSplitStreamTest", channelId);
+	DistSplitStreamTestApp app = new DistSplitStreamTestApp(pn, ss, m_appIndex, 1<<base, "DistSplitStreamTest", channelId, this);
 	distClients.addElement(app);
 	m_appIndex ++;
 	System.out.println("Created node "+pn.getNodeId());

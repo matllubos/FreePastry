@@ -44,7 +44,7 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
     private int m_numStripes;
     private String m_name;
     private ChannelId m_channelId;
-    private int OUT_BW = 16;
+    private int OUT_BW = 20;
     /**
      * The hashtable maintaining mapping from topicId to log object
      * maintained by this application for that topic.
@@ -66,8 +66,11 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
      */
     protected static Credentials m_credentials = null;
 
-
-    public int m_testFreq;
+    /**
+     * This sets the periodic rate at which the DistSplitStreamTest 
+     * Messages will be invoked.
+     */
+    public int m_testFreq = Scribe.m_scribeMaintFreq;
 
     /**
      * Hashtable storing sequence numbers being published per stripe
@@ -78,9 +81,11 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
      * HashTable of channels created/attached by this application.
      * Contains mapping from channelId -> Channel objects
      */
-    public Hashtable m_channels = null;
+    public Hashtable m_channels = new Hashtable();
 
     public int last_recv_time = 0;
+
+    public DistSplitStreamTest m_driver;
 
     private static class DistSplitStreamTestAppAddress implements Address {
 	private int myCode = 0x8abc796c;
@@ -93,28 +98,31 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
     }
 
 
-    public DistSplitStreamTestApp( PastryNode pn, ISplitStream splitstream, int index, int numStripes, String name, ChannelId channelId) {
+    public DistSplitStreamTestApp( PastryNode pn, ISplitStream splitstream, int index, int numStripes, String name, ChannelId channelId, DistSplitStreamTest driver) {
 	super(pn);
 	m_pastryNode = pn;
 	m_splitstream = splitstream;
+	m_name = name;
 	((SplitStreamImpl)m_splitstream).registerApp((ISplitStreamApp)this);
 	m_sendOptions = new SendOptions();
 	m_logTable = new Hashtable();
 	m_appIndex = index;
 	m_rng = new Random(PastrySeed.getSeed() + m_appIndex);
 	m_scribe = (Scribe) ((SplitStreamImpl)m_splitstream).getScribe();
-	// This sets the periodic rate at which the DistSplitStreamTest Messages will be 
-	// invoked.
-	m_testFreq = Scribe.m_scribeMaintFreq;
-	m_channels = new Hashtable();
+
+	//m_channels = new Hashtable();
 	
 	m_numStripes = numStripes;
-	m_name = name;
+	System.out.println("******** SplitStreamImpl name = "+name);
 	m_channelId = channelId;
 	m_stripe_seq = new Hashtable();
+	m_driver = driver;
 
     }
 
+    public DistSplitStreamTest getDriver(){
+	return m_driver;
+    }
 
     /** 
      * Upcall that given channel is ready, i.e. it has all the
@@ -236,6 +244,7 @@ public class DistSplitStreamTestApp extends PastryAppl implements ISplitStreamAp
     public void splitstreamIsReady(){
 	if(m_appIndex == 0){
 	    // creator of channel
+	    System.out.println("Creating channel at "+m_appIndex+" with name "+m_name);
 	    createChannel(m_numStripes, m_name);
 	}
 	else{
