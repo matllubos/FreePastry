@@ -111,6 +111,14 @@ public class SocketPastryNode extends DistPastryNode {
     super.kill();
     sManager.kill();
     pingManager.kill();
+    if (leafSetRoutineMaintenance != null) {
+//    	System.out.println("killing leafSetRoutineMaintenance "+leafSetRoutineMaintenance);
+      leafSetRoutineMaintenance.cancel();	
+    }
+    if (routeSetRoutineMaintenance != null) {
+//    	System.out.println("killing routesetRoutineMaintenance "+routeSetRoutineMaintenance);
+      routeSetRoutineMaintenance.cancel();	
+    }
   }
 
   // ***************** Error Handling ********************  
