@@ -36,20 +36,42 @@ if advised of the possibility of such damage.
 
 package rice.p2p.past;
 
-import java.io.*;
-import java.util.*;
-import java.util.logging.* ;
+import java.util.Hashtable;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-import rice.*;
-import rice.Continuation.*;
-
-import rice.p2p.commonapi.*;
-import rice.p2p.past.messaging.*;
-import rice.p2p.past.PastPolicy.*;
-import rice.p2p.replication.*;
-import rice.p2p.replication.manager.*;
-
-import rice.persistence.*;
+import rice.Continuation;
+import rice.Continuation.ListenerContinuation;
+import rice.Continuation.MultiContinuation;
+import rice.Continuation.SimpleContinuation;
+import rice.Continuation.StandardContinuation;
+import rice.p2p.commonapi.Application;
+import rice.p2p.commonapi.CancellableTask;
+import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.IdFactory;
+import rice.p2p.commonapi.IdRange;
+import rice.p2p.commonapi.IdSet;
+import rice.p2p.commonapi.Message;
+import rice.p2p.commonapi.Node;
+import rice.p2p.commonapi.NodeHandle;
+import rice.p2p.commonapi.NodeHandleSet;
+import rice.p2p.commonapi.RouteMessage;
+import rice.p2p.past.PastPolicy.DefaultPastPolicy;
+import rice.p2p.past.messaging.CacheMessage;
+import rice.p2p.past.messaging.ContinuationMessage;
+import rice.p2p.past.messaging.FetchHandleMessage;
+import rice.p2p.past.messaging.FetchMessage;
+import rice.p2p.past.messaging.InsertMessage;
+import rice.p2p.past.messaging.LookupHandlesMessage;
+import rice.p2p.past.messaging.LookupMessage;
+import rice.p2p.past.messaging.MessageLostMessage;
+import rice.p2p.past.messaging.PastMessage;
+import rice.p2p.replication.Replication;
+import rice.p2p.replication.manager.ReplicationManager;
+import rice.p2p.replication.manager.ReplicationManagerClient;
+import rice.p2p.replication.manager.ReplicationManagerImpl;
+import rice.persistence.StorageManager;
 
 /**
  * @(#) PastImpl.java
@@ -236,7 +258,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    */
   protected void sendRequest(Id id, PastMessage message, NodeHandle hint, Continuation command) {
     log.finer("Sending request message " + message + " to id " + id + " via " + hint);
-    TimerTask timer = endpoint.scheduleMessage(new MessageLostMessage(message.getUID(), getLocalNodeHandle(), id, message, hint), MESSAGE_TIMEOUT);
+    CancellableTask timer = endpoint.scheduleMessage(new MessageLostMessage(message.getUID(), getLocalNodeHandle(), id, message, hint), MESSAGE_TIMEOUT);
     insertPending(message.getUID(), timer, command);
     endpoint.route(id, message, hint);
   }
@@ -247,7 +269,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param uid The id of the message
    * @param command The continuation to run
    */
-  private void insertPending(int uid, TimerTask timer, Continuation command) {
+  private void insertPending(int uid, CancellableTask timer, Continuation command) {
     log.finer("Loading continuation " + uid + " into pending table");
     timers.put(new Integer(uid), timer);
     outstanding.put(new Integer(uid), command);
@@ -261,7 +283,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    */
   private Continuation removePending(int uid) {
     log.finer("Removing and returning continuation " + uid + " from pending table");
-    TimerTask timer = (TimerTask) timers.remove(new Integer(uid));
+    CancellableTask timer = (CancellableTask) timers.remove(new Integer(uid));
     
     if (timer != null)
       timer.cancel();

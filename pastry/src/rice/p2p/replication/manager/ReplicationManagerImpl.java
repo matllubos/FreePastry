@@ -164,7 +164,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
   protected void informClient(final Id id) {
     log.fine(endpoint.getId() + ": Telling client to fetch id " + id);
   
-    final TimerTask timer = endpoint.scheduleMessage(new TimeoutMessage(id), TIMEOUT_DELAY);
+    final CancellableTask timer = endpoint.scheduleMessage(new TimeoutMessage(id), TIMEOUT_DELAY);
     
     client.fetch(id, new Continuation() {
       public void receiveResult(Object o) {

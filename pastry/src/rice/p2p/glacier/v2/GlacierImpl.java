@@ -3,17 +3,54 @@ package rice.p2p.glacier.v2;
 // o Multiple fragments on one node?
 // o Check manifest when doing a direct lookup()
 
-import java.util.*;
-import java.security.*;
-import java.io.*;
-import rice.*;
-import rice.p2p.commonapi.*;
-import rice.p2p.past.*;
-import rice.p2p.past.gc.*;
-import rice.persistence.*;
-import rice.p2p.glacier.*;
-import rice.p2p.glacier.v2.*;
-import rice.p2p.glacier.v2.messaging.*;
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Enumeration;
+import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.Random;
+import java.util.Vector;
+
+import rice.Continuation;
+import rice.p2p.commonapi.Application;
+import rice.p2p.commonapi.CancellableTask;
+import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.IdFactory;
+import rice.p2p.commonapi.IdRange;
+import rice.p2p.commonapi.IdSet;
+import rice.p2p.commonapi.Message;
+import rice.p2p.commonapi.Node;
+import rice.p2p.commonapi.NodeHandle;
+import rice.p2p.commonapi.NodeHandleSet;
+import rice.p2p.commonapi.RouteMessage;
+import rice.p2p.glacier.Fragment;
+import rice.p2p.glacier.FragmentKey;
+import rice.p2p.glacier.FragmentKeySet;
+import rice.p2p.glacier.Glacier;
+import rice.p2p.glacier.GlacierException;
+import rice.p2p.glacier.VersionKey;
+import rice.p2p.glacier.VersioningPast;
+import rice.p2p.glacier.v2.messaging.GlacierDataMessage;
+import rice.p2p.glacier.v2.messaging.GlacierFetchMessage;
+import rice.p2p.glacier.v2.messaging.GlacierMessage;
+import rice.p2p.glacier.v2.messaging.GlacierNeighborRequestMessage;
+import rice.p2p.glacier.v2.messaging.GlacierNeighborResponseMessage;
+import rice.p2p.glacier.v2.messaging.GlacierQueryMessage;
+import rice.p2p.glacier.v2.messaging.GlacierRangeForwardMessage;
+import rice.p2p.glacier.v2.messaging.GlacierRangeQueryMessage;
+import rice.p2p.glacier.v2.messaging.GlacierRangeResponseMessage;
+import rice.p2p.glacier.v2.messaging.GlacierResponseMessage;
+import rice.p2p.glacier.v2.messaging.GlacierSyncMessage;
+import rice.p2p.glacier.v2.messaging.GlacierTimeoutMessage;
+import rice.p2p.past.Past;
+import rice.p2p.past.PastContent;
+import rice.p2p.past.PastContentHandle;
+import rice.p2p.past.gc.GCPast;
+import rice.p2p.past.gc.GCPastContent;
+import rice.persistence.StorageManager;
 import rice.visualization.server.DebugCommandHandler;
 
 public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Application, DebugCommandHandler {
@@ -33,7 +70,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   protected long nextContinuationTimeout;
   protected IdRange responsibleRange;
   protected int nextUID;
-  protected TimerTask timer;  
+  protected CancellableTask timer;  
 
   private final int loglevel = 3;
 

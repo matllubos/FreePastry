@@ -1,16 +1,46 @@
 package rice.p2p.aggregation;
 
-import java.util.*;
-import java.io.*;
-import rice.p2p.past.*;
-import rice.p2p.past.gc.*;
-import rice.persistence.StorageManager;
-import rice.p2p.aggregation.messaging.*;
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.io.PrintStream;
+import java.io.Serializable;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Enumeration;
+import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.Random;
+import java.util.TreeSet;
+import java.util.Vector;
+
 import rice.Continuation;
-import rice.p2p.glacier.v2.DebugContent;
+import rice.p2p.aggregation.messaging.AggregationMessage;
+import rice.p2p.aggregation.messaging.AggregationTimeoutMessage;
+import rice.p2p.commonapi.Application;
+import rice.p2p.commonapi.CancellableTask;
+import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.IdFactory;
+import rice.p2p.commonapi.IdSet;
+import rice.p2p.commonapi.Message;
+import rice.p2p.commonapi.Node;
+import rice.p2p.commonapi.NodeHandle;
+import rice.p2p.commonapi.RouteMessage;
 import rice.p2p.glacier.VersionKey;
 import rice.p2p.glacier.VersioningPast;
-import rice.p2p.commonapi.*;
+import rice.p2p.glacier.v2.DebugContent;
+import rice.p2p.past.Past;
+import rice.p2p.past.PastContent;
+import rice.p2p.past.PastContentHandle;
+import rice.p2p.past.gc.GCPast;
+import rice.p2p.past.gc.GCPastContent;
+import rice.p2p.past.gc.GCPastContentHandle;
+import rice.persistence.StorageManager;
 import rice.visualization.server.DebugCommandHandler;
 
 class ObjectDescriptor implements Serializable {
@@ -325,7 +355,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
      *  requested timer. This message will be delivered if the
      *  pires and it has not been removed in the meantime.
      */
-    TimerTask timer = endpoint.scheduleMessage(new AggregationTimeoutMessage(timeoutID, getLocalNodeHandle()), timeoutMsec);
+    CancellableTask timer = endpoint.scheduleMessage(new AggregationTimeoutMessage(timeoutID, getLocalNodeHandle()), timeoutMsec);
     timers.put(new Integer(timeoutID), timer);
   }
 
@@ -335,7 +365,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
    * @param timeoutID Identifier of the timer event to be cancelled
    */
   private void removeTimer(int timeoutID) {
-    TimerTask timer = (TimerTask) timers.remove(new Integer(timeoutID));
+    CancellableTask timer = (CancellableTask) timers.remove(new Integer(timeoutID));
 
     if (timer != null) {
       timer.cancel();

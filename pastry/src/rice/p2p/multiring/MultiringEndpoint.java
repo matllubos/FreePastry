@@ -246,7 +246,7 @@ public class MultiringEndpoint implements Endpoint {
    * @param message The message to be delivered
    * @param delay The number of milliseconds to wait before delivering the message
    */
-  public TimerTask scheduleMessage(Message message, long delay) {
+  public CancellableTask scheduleMessage(Message message, long delay) {
     return endpoint.scheduleMessage(message, delay);
   }
   
@@ -258,7 +258,7 @@ public class MultiringEndpoint implements Endpoint {
    * @param delay The number of milliseconds to wait before delivering the fist message
    * @param delay The number of milliseconds to wait before delivering subsequent messages
    */
-  public TimerTask scheduleMessage(Message message, long delay, long period) {
+  public CancellableTask scheduleMessage(Message message, long delay, long period) {
     return endpoint.scheduleMessage(message, delay, period);
   }
   

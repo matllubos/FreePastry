@@ -1346,7 +1346,7 @@ panic("setBit disabled");
      *  requested timer. This message will be delivered if the
      *  pires and it has not been removed in the meantime.
      */
-    TimerTask timer = endpoint.scheduleMessage(new GlacierTimeoutMessage(timeoutID, getLocalNodeHandle()), timeoutMsec);
+    CancellableTask timer = endpoint.scheduleMessage(new GlacierTimeoutMessage(timeoutID, getLocalNodeHandle()), timeoutMsec);
     timers.put(new Integer(timeoutID), timer);
   }
 
@@ -1356,7 +1356,7 @@ panic("setBit disabled");
    * @param timeoutID Identifier of the timer event to be cancelled
    */
   private void removeTimer(int timeoutID) {
-    TimerTask timer = (TimerTask) timers.remove(new Integer(timeoutID));
+    CancellableTask timer = (CancellableTask) timers.remove(new Integer(timeoutID));
 
     if (timer != null) {
       timer.cancel();
