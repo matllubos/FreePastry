@@ -29,6 +29,7 @@ CLASS_DIR        = $(JAVA_DEV_ROOT)/classes
 DOC_DIR          = $(JAVA_DEV_ROOT)/docs
 MAKE_DIR         = $(JAVA_DEV_ROOT)/make
 JAR_DIR          = $(JAVA_DEV_ROOT)/jars
+LIB_DIR          = $(JAVA_DEV_ROOT)/lib
 
 ifdef JAVA_DEV_LOCAL
 SOURCE_DIR       = $(JAVA_DEV_LOCAL)/src
@@ -79,10 +80,13 @@ LOCAL_JARLIST    = $(subst $(SPACE),$(SEP),$(LOCAL_JARTMP))
 OTHER_JARTMP     = $(patsubst %,$(JAR_DIR)/%,$(JARS_3RDPARTY))
 OTHER_JARLIST    = $(subst $(SPACE),$(SEP),$(OTHER_JARTMP))
 
+LIB_JARTMP     = $(patsubst %,$(LIB_DIR)/%,$(JARS_LIB))
+LIB_JARLIST    = $(subst $(SPACE),$(SEP),$(LIB_JARTMP))
+
 JRE              = $(JAVA_HOME)/jre/lib/rt.jar
 
 SOURCEPATH       = $(SOURCE_DIR)
-CLASSPATH        = $(JRE)$(SEP)$(LOCAL_CLASS_DIR)$(SEP)$(CLASS_DIR)$(SEP)$(LOCAL_JARLIST)$(SEP)$(OTHER_JARLIST)$(SEP)$(OBJECTWEB_DIR)
+CLASSPATH        = $(JRE)$(SEP)$(LOCAL_CLASS_DIR)$(SEP)$(CLASS_DIR)$(SEP)$(LOCAL_JARLIST)$(SEP)$(OTHER_JARLIST)$(SEP)$(LIB_JARLIST)
 
 JAVAC_OPTIONS    = -d $(DESTINATION) -classpath $(CLASSPATH) -sourcepath $(SOURCEPATH) -deprecation
 JAVA_OPTIONS     = -classpath $(CLASSPATH) -Xmx512m

@@ -34,6 +34,7 @@ PACKAGES = \
 #	rice.post.log\
 #	rice.post.messaging\
 #	rice.post.storage\
+# 	rice.post.testing\
 #	rice.storage\
 #	rice.storage.testing\
 #	rice.past\
@@ -48,7 +49,9 @@ PACKAGES = \
 
 NODOC_PACKAGES = 
 
-JARS = pastry.jar
+JARS = pastry.ja
+
+JARS_LIB       = javamail.jar bouncycastle.jarr
 
 JARS_3RDPARTY = 
 
@@ -56,7 +59,6 @@ MAIN_CLASS     = PastryTest
 MAIN_PACKAGE   = rice.pastry.testing
 
 MAIN_JAR       = 
-
 
 RUN_PARAMETERS = 
 
