@@ -38,12 +38,7 @@ public class PASTServiceImpl extends PastryAppl implements PASTService {
   /**
    * Storage used to store objects (persistedly).
    */
-  private Storage storage;
-
-  /**
-   * Cache used to cache objects in transit.
-   */
-  private Cache cache; 
+  private StorageManager storage;
     
   /**
    * Credentials for this application
@@ -72,35 +67,24 @@ public class PASTServiceImpl extends PastryAppl implements PASTService {
    * to cache objects.
    *
    * @param pastry PastryNode to run on
-   * @param storage The Storage object to use for persistent storage
-   * @param cache The Cache used to cache objects in transit
+   * @param storage The Storage object to use for storage and caching
    */
-  public PASTServiceImpl(PastryNode pastry, Storage storage, Cache cache) {
+  public PASTServiceImpl(PastryNode pastry, StorageManager storage) {
     super(pastry);
     this.pastry = pastry;
     this.storage = storage;
-    this.cache = cache;
     credentials = new PermissiveCredentials();
     sendOptions = new SendOptions();
     commandTable = new Hashtable();
   }
 
   /**
-   * Returns the Storage object
+   * Returns the StorageManager object
    *
-   * @return This PAST's Storage object
+   * @return This PAST's StorageManager object
    */
-  public Storage getStorage() {
+  public StorageManager getStorage() {
     return storage;
-  }
-
-  /**
-   * Returns the Cache object
-   *
-   * @return This PAST's Storage object
-   */
-  public Cache getCache() {
-    return cache;
   }
 
   /**

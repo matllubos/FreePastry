@@ -83,8 +83,10 @@ public class DistPASTRegrTest {
     PastryNode pn = factory.newNode(getBootstrap());
     pastrynodes.add(pn);
 
-    PASTServiceImpl past = new PASTServiceImpl(pn, new MemoryStorage(),
-                                               new LRUCache(new MemoryStorage(), 10000));
+    StorageManager storage = new StorageManager(new MemoryStorage(),
+                                                new LRUCache(new MemoryStorage(), 10000));
+
+    PASTServiceImpl past = new PASTServiceImpl(pn, storage);
     past.DEBUG = true;
     pastNodes.add(past);
     System.out.println("created " + pn);
