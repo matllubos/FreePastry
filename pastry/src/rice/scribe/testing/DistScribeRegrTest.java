@@ -80,12 +80,21 @@ public class DistScribeRegrTest {
     private static int bsport = 5009;
     private static int numNodes = 5;
     public Integer num = new Integer(0);
-    public static int NUM_TOPICS = 1;
-    public static int UNSUBSCRIBE_LIMIT = 5;
+    public static int NUM_TOPICS = 5;
+
+    // number of message received before a node tries 
+    //to unsubscribe with random probability
+    public static int UNSUBSCRIBE_LIMIT = 50; 
     public static int numUnsubscribed = 0;
+
+    // fraction of total virtual nodes on this host allowed to unsubscribe
     public static double fractionUnsubscribedAllowed = 0.5; 
     public static Object LOCK = new Object();
+
+    // Time a node waits for messages after subscribing, if no messages
+    // received in this period, warning mesg is printed.
     public static int IDLE_TIME = 50; // in seconds
+
     public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
 
     public DistScribeRegrTest(){
@@ -271,17 +280,6 @@ public class DistScribeRegrTest {
 
 			if( diff > DistScribeRegrTest.IDLE_TIME)
 			    System.out.println("\nWARNING :: "+m_app.m_scribe.getNodeId()+" DID NOT  Receive a message on the topic "+topicId + " for "+diff+" secs \n");
-			
-		    }
-
-
-		    if(! topicLog.getUnsubscribed()){
-			NodeHandle parent =  m_app.m_scribe.getTopic(topicId).getParent();
-			
-			if(parent != null){
-			    if( !m_driver.localNodes.contains(parent.getNodeId()))
-				System.out.println("Yoooooo.. My "+m_app.m_scribe.getNodeId()+ " appindex=" + m_app.m_appIndex + "'s parent "+parent+"is in other machine");
-			}
 			
 		    }
 		}

@@ -45,6 +45,7 @@ import rice.scribe.maintenance.*;
 
 import java.io.*;
 import java.util.*;
+
 /**
  *
  * HeartBeatMessage is used whenever a Scribe nodes wishes let its children 

@@ -45,9 +45,9 @@ import rice.pastry.direct.*;
 import java.util.*;
 
 /**
- * @(#) ScribeMaintenanceTestApp.java
+ * @(#) DirectScribeMaintenanceTestApp.java
  *
- * An application used by the ScribeMaintenanceTest suite for Scribe.
+ * An application used by the DirectScribeMaintenanceTest suite for Scribe.
  *
  * @version $Id$
  *
@@ -55,7 +55,7 @@ import java.util.*;
  * @author Animesh Nandi 
  */
 
-public class ScribeMaintenanceTestApp implements IScribeApp
+public class DirectScribeMaintenanceTestApp implements IScribeApp
 {
 
     private PastryNode m_pastryNode ;
@@ -69,7 +69,7 @@ public class ScribeMaintenanceTestApp implements IScribeApp
      * @param scribe The underlying scribe 
      * @param cred The credentials 
      */
-    public ScribeMaintenanceTestApp( PastryNode node, Scribe scribe, Credentials cred ) {
+    public DirectScribeMaintenanceTestApp( PastryNode node, Scribe scribe, Credentials cred ) {
 	m_scribe = scribe;
 	m_credentials = cred;
 	m_pastryNode = node;

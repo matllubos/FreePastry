@@ -130,7 +130,7 @@ public class DirectScribeMaintenanceTest
 	
 	Credentials cred = new PermissiveCredentials();
 	Scribe scribe = new Scribe(pn, cred );
-	ScribeMaintenanceTestApp scribeApp = new ScribeMaintenanceTestApp(pn, scribe, cred);
+	DirectScribeMaintenanceTestApp scribeApp = new DirectScribeMaintenanceTestApp(pn, scribe, cred);
 	// Also set the treeRepairThresold value for the scribe 
 	scribeApp.m_scribe.setTreeRepairThreshold(treeRepairThreshold);
 	scribeApp.m_appCount = appCount;
@@ -168,7 +168,7 @@ public class DirectScribeMaintenanceTest
 	Iterator it;
 	NodeId key;
 	int appcounter = 0;
-	ScribeMaintenanceTestApp scribeApp;
+	DirectScribeMaintenanceTestApp scribeApp;
 
 	if(num == 0)
 	    return;
@@ -187,14 +187,14 @@ public class DirectScribeMaintenanceTest
 	     * have to keep the field appCount consistent with the 
 	     * remaining applications present.
 	     */
-	    appcountKilled = ((ScribeMaintenanceTestApp)nodeIdToApp.get(pn.getNodeId())).m_appCount;
+	    appcountKilled = ((DirectScribeMaintenanceTestApp)nodeIdToApp.get(pn.getNodeId())).m_appCount;
 	    nodeIdToApp.remove(pn.getNodeId());
 	    keySet = nodeIdToApp.keySet();
 	    it = keySet.iterator();
 		
 	    while(it.hasNext()) {
 		key = (NodeId) it.next();
-		scribeApp = (ScribeMaintenanceTestApp)nodeIdToApp.get(key);
+		scribeApp = (DirectScribeMaintenanceTestApp)nodeIdToApp.get(key);
 		appcounter = scribeApp.m_appCount;
 		if(appcounter > appcountKilled) 
 		    scribeApp.m_appCount --;
@@ -221,7 +221,7 @@ public class DirectScribeMaintenanceTest
      */ 
     public void joinNodes(int num) {
 	int i,j;
-	ScribeMaintenanceTestApp scribeApp;
+	DirectScribeMaintenanceTestApp scribeApp;
 	NodeId topicId;
 
 	if(num == 0) 
@@ -249,14 +249,14 @@ public class DirectScribeMaintenanceTest
 	initiateRouteSetMaintenance();
 	
 	for(i= (nodesCurrentlyAlive - num); i< scribeClients.size(); i++) {
-	    scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
+	    scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(i);
 	    scribeApp.m_scribe.m_ackOnSubscribeSwitch = currentAckFlagState;
 	}
 
 
 	// We will make these new nodes subscribe to the topic trees
 	for(i= (nodesCurrentlyAlive - num); i< scribeClients.size(); i++) {
-	    scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
+	    scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(i);
 	    for(j=0; j < topicIds.size() ; j++) {
 		topicId = (NodeId)topicIds.elementAt(j);
 		scribeApp.subscribe(topicId);
@@ -299,7 +299,7 @@ public class DirectScribeMaintenanceTest
      */
     public boolean doTesting() {
 
-	ScribeMaintenanceTestApp scribeApp;
+	DirectScribeMaintenanceTestApp scribeApp;
 	int i,j;
 	int iteration;
 	int index;
@@ -327,13 +327,13 @@ public class DirectScribeMaintenanceTest
 	System.out.println("Total Nodes currently alive = " + nodesCurrentlyAlive);
 	
 	for(i= 0; i < scribeClients.size(); i++) {
-	    scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
+	    scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(i);
 	    scribeApp.m_scribe.m_ackOnSubscribeSwitch = true;
 	}
 
 
 	index = rng.nextInt(n);
-	scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(index);
+	scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(index);
 	for(i=0; i< numTopics; i ++) {
 	    topicId = generateTopicId( new String( "ScribeTest" + i ) );
 	    topicIds.add(topicId);
@@ -341,7 +341,7 @@ public class DirectScribeMaintenanceTest
 	}
 	while(simulate());
 	for(i=0; i< scribeClients.size(); i++) {
-	    scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
+	    scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(i);
 	    for(j=0; j < topicIds.size() ; j++) {
 		topicId = (NodeId)topicIds.elementAt(j);
 		scribeApp.subscribe(topicId);
@@ -491,7 +491,7 @@ public class DirectScribeMaintenanceTest
 	 * and also in removing dangling child pointers.
 	 */ 
 	for(i= 0; i < scribeClients.size(); i++) {
-	    scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
+	    scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(i);
 	    scribeApp.m_scribe.m_ackOnSubscribeSwitch = false;
 	}
 	currentAckFlagState = false;
@@ -574,7 +574,7 @@ public class DirectScribeMaintenanceTest
 	for(j=0; j< numTopics; j ++) {
 	    topicId = (NodeId) topicIds.elementAt(j);
 	    for(i=0; i< scribeClients.size() ; i++) {
-		scribeApp = ( ScribeMaintenanceTestApp) scribeClients.elementAt(i);
+		scribeApp = ( DirectScribeMaintenanceTestApp) scribeClients.elementAt(i);
 		if(!scribeApp.m_scribe.isRoot(topicId)) {
 		    scribeApp.unsubscribe(topicId);
 		}
@@ -623,11 +623,11 @@ public class DirectScribeMaintenanceTest
      */
      public int rootApp(NodeId topicId) {
 	int i;
-	ScribeMaintenanceTestApp app;
+	DirectScribeMaintenanceTestApp app;
 	int rootApp = -1;
 	
 	for(i=0; i< scribeClients.size() ; i++) {
-	    app = ( ScribeMaintenanceTestApp) scribeClients.elementAt(i);
+	    app = ( DirectScribeMaintenanceTestApp) scribeClients.elementAt(i);
 	    if(app.m_scribe.isRoot(topicId)) {
 	 	if(rootApp != -1)
 		    System.out.println("Warning::more than ONE application is root for the same topic's multicast tree");
@@ -654,7 +654,7 @@ public class DirectScribeMaintenanceTest
     public int BFS(NodeId topicId) {
 	int appIndex;
 	Vector toTraverse = new Vector();
-	ScribeMaintenanceTestApp app;
+	DirectScribeMaintenanceTestApp app;
 	Topic topic;
 	Vector children;
 	NodeId childId;
@@ -678,7 +678,7 @@ public class DirectScribeMaintenanceTest
 		    toTraverse.add(new Integer(-1));
 		continue;
 	    }
-	    app = (ScribeMaintenanceTestApp) scribeClients.elementAt(appIndex);
+	    app = (DirectScribeMaintenanceTestApp) scribeClients.elementAt(appIndex);
 	    //System.out.println(" *** Children of " + app.getNodeId() + " ***");
 	    topic = app.m_scribe.getTopic(topicId);
 
@@ -687,8 +687,8 @@ public class DirectScribeMaintenanceTest
 		for(i=0; i < children.size(); i++) {
 		    childId = ((NodeHandle)children.elementAt(i)).getNodeId();
 		    //System.out.print(childId + " ");
-		    app = (ScribeMaintenanceTestApp)nodeIdToApp.get(childId);
-		    appIndex = ((ScribeMaintenanceTestApp)nodeIdToApp.get(childId)).m_appCount;
+		    app = (DirectScribeMaintenanceTestApp)nodeIdToApp.get(childId);
+		    appIndex = ((DirectScribeMaintenanceTestApp)nodeIdToApp.get(childId)).m_appCount;
 		    if(!traversedList.contains(new Integer(appIndex)))
 			{
 			    traversedList.add(new Integer(appIndex));
@@ -766,7 +766,7 @@ public class DirectScribeMaintenanceTest
      */
     public boolean distinctChildrenTableConsistencyTest(int nodeIndex){
 
-	ScribeMaintenanceTestApp scribeApp;
+	DirectScribeMaintenanceTestApp scribeApp;
 	Scribe scribe; 
 	Vector children;
 	NodeId topicId;
@@ -778,7 +778,7 @@ public class DirectScribeMaintenanceTest
 	Vector distinctChildrenVector;
 	boolean result = true;
 
-	scribeApp  = (ScribeMaintenanceTestApp)scribeClients.elementAt(nodeIndex);
+	scribeApp  = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(nodeIndex);
 	scribe = scribeApp.m_scribe;
 	topics = scribe.getTopics();
 
@@ -817,7 +817,7 @@ public class DirectScribeMaintenanceTest
      * @return true if test passes, else false
      */
     public boolean distinctParentTableConsistencyTest(int nodeIndex){
-	ScribeMaintenanceTestApp scribeApp;
+	DirectScribeMaintenanceTestApp scribeApp;
 	Scribe scribe; 
 	NodeId topicId;
 	NodeHandle parent;
@@ -828,7 +828,7 @@ public class DirectScribeMaintenanceTest
 	boolean result = true;
 	Vector distinctParentVector;
 
-	scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(nodeIndex);
+	scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(nodeIndex);
 	scribe  = scribeApp.m_scribe;
 	topics = scribe.getTopics();
 	for( t = 0; t < topics.size(); t++){
@@ -863,7 +863,7 @@ public class DirectScribeMaintenanceTest
      * @return true if test passes, else false
      */
     public boolean checkParentPointerForAllTopics(int nodeIndex){
-	ScribeMaintenanceTestApp scribeApp;
+	DirectScribeMaintenanceTestApp scribeApp;
 	Scribe scribe; 
 	NodeHandle parent = null;
 	NodeId topicId;
@@ -871,7 +871,7 @@ public class DirectScribeMaintenanceTest
 	boolean result = true;
 	int i, j;
 
-	scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(nodeIndex);
+	scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(nodeIndex);
 	scribe = scribeApp.m_scribe;
 
 	for(j=0; j< topicIds.size(); j++){
@@ -893,12 +893,12 @@ public class DirectScribeMaintenanceTest
      */
     public void scheduleTROnAllNodes(){
 	int i, j;
-	ScribeMaintenanceTestApp scribeApp;
+	DirectScribeMaintenanceTestApp scribeApp;
 	Topic topic;
 	NodeId topicId;
 
 	for(i= 0; i < scribeClients.size(); i++) {
-	    scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
+	    scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(i);
 	    for(j=0; j < topicIds.size() ; j++) {
 		topicId = (NodeId)topicIds.elementAt(j);
 		topic = scribeApp.m_scribe.getTopic(topicId);
@@ -914,10 +914,10 @@ public class DirectScribeMaintenanceTest
      */
     public void scheduleHBOnAllNodes(){
 	int i;
-	ScribeMaintenanceTestApp scribeApp;
+	DirectScribeMaintenanceTestApp scribeApp;
 
 	for(i= 0; i < scribeClients.size(); i++) {
-	    scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(i);
+	    scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(i);
 	    scribeApp.m_scribe.scheduleHB();
 	    while (simulate());
 	}
@@ -933,14 +933,14 @@ public class DirectScribeMaintenanceTest
      */
     public boolean childParentViewConsistencyTest(int nodeIndex){
 	boolean result = true;
-	ScribeMaintenanceTestApp scribeApp, parentApp, childApp;
+	DirectScribeMaintenanceTestApp scribeApp, parentApp, childApp;
 	NodeId topicId;
 	Topic topic, topicInParent, topicInChild;
 	NodeHandle parent, child;
 	Vector children;
 	int j, k;
 
-	scribeApp = (ScribeMaintenanceTestApp)scribeClients.elementAt(nodeIndex);
+	scribeApp = (DirectScribeMaintenanceTestApp)scribeClients.elementAt(nodeIndex);
 	for(j=0; j< topicIds.size(); j++){
 	    topicId = (NodeId)topicIds.elementAt(j);
 	    topic = scribeApp.m_scribe.getTopic(topicId);
@@ -948,7 +948,7 @@ public class DirectScribeMaintenanceTest
 		continue;
 	    parent = topic.getParent();
 	    if( parent != null) {
-		parentApp = (ScribeMaintenanceTestApp)nodeIdToApp.get(parent.getNodeId());
+		parentApp = (DirectScribeMaintenanceTestApp)nodeIdToApp.get(parent.getNodeId());
 		topicInParent = parentApp.m_scribe.getTopic(topicId);
 		children = topicInParent.getChildren();
 		if(!children.contains(scribeApp.m_scribe.getLocalHandle()))
@@ -958,7 +958,7 @@ public class DirectScribeMaintenanceTest
 	    children = topic.getChildren();
 	    for(k=0; k<children.size(); k++) {
 		child = (NodeHandle)children.elementAt(k);
-		childApp = (ScribeMaintenanceTestApp)nodeIdToApp.get(child.getNodeId());
+		childApp = (DirectScribeMaintenanceTestApp)nodeIdToApp.get(child.getNodeId());
 		topicInChild = childApp.m_scribe.getTopic(topicId);
 		if(topicInChild == null || !scribeApp.m_scribe.getLocalHandle().equals(topicInChild.getParent()))
 		    result = false;

@@ -43,7 +43,7 @@ import rice.scribe.*;
  * @(#) DistScribeMaintenanceThread.java
  *
  * This is the Scribe Maintenance Thread that is responsible for the Scribe
- * tree maintenance activities in the Distributed network. Thi thread is started
+ * tree maintenance activities in the Distributed network. This thread is started
  * when the pastry node(of type DistPastryNode)'s notifyReady() method is called. 
  *
  * In the case of a simulated network the driver should explicitly call the
@@ -60,8 +60,8 @@ public class DistScribeMaintenanceThread implements Runnable {
 
     IScribe m_scribe;
 
-    // Default maintenance period.
-    public static int m_maintPeriod = 10;
+    // Default maintenance period, in seconds
+    public static int m_maintPeriod = 10; 
 
     public DistScribeMaintenanceThread(IScribe scribe) {
 	m_scribe = scribe;

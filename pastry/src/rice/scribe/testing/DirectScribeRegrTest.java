@@ -40,7 +40,7 @@ import rice.scribe.testing.*;
 import rice.pastry.*;
 
 /**
- * @(#) ScribeRegrTest.java
+ * @(#) DirectScribeRegrTest.java
  *
  * A comprehensive regression test suite for Scribe.
  *
@@ -50,7 +50,7 @@ import rice.pastry.*;
  * @author Animesh Nandi 
  */
 
-public class ScribeRegrTest
+public class DirectScribeRegrTest
 {
 
     public static void main(String args[]) {
