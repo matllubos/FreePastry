@@ -165,7 +165,16 @@ public interface Past {
    * @return The set of ids
    */
   public IdSet scan(IdRange range);
-
+  
+  /**
+   * Return the ids of objects stored in this instance of Past on the
+   * *local* node. The IdSet returned
+   * contains the Ids of the stored objects.
+   *
+   * @return The set of ids
+   */
+  public IdSet scan();
+  
   /**
    * get the nodeHandle of the local Past node
    *
