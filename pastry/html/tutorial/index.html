@@ -388,7 +388,7 @@ Here is the new code we will add to the bottom of the DistTutorial constructor:
     if (bootHandle != null) {
       
       // route 10 messages
-      for (int i = 0; i < 10; i++) {
+      for (int i = 0; i &lt; 10; i++) {
         // pick a key at random
         Id randId = nidFactory.generateNodeId();
         
@@ -407,7 +407,7 @@ Here is the new code we will add to the bottom of the DistTutorial constructor:
       
       // this is a typical loop to cover your leafset.  Note that if the leafset
       // overlaps, then duplicate nodes will be sent to twice
-      for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
+      for (int i=-leafSet.ccwSize(); i&lt;=leafSet.cwSize(); i++) {
         if (i != 0) { // don't send to self
           // select the item
           NodeHandle nh = leafSet.get(i);
