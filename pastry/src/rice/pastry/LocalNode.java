@@ -5,7 +5,6 @@ import java.io.*;
 import java.util.*;
 
 import rice.pastry.messaging.*;
-import rice.pastry.rmi.*;
 
 /**
  * Implementation of the LocalNodeI interface that some Serializable classes (such
