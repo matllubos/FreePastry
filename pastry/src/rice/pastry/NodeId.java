@@ -602,7 +602,6 @@ public class NodeId implements Comparable, Serializable
 	return ind / base;
     }
 
-
     public NodeId getDomainPrefix(int row, int column, int suffixDigit) {
 	NodeId res = new NodeId(nodeId);
 	
@@ -618,12 +617,14 @@ public class NodeId implements Comparable, Serializable
      * Creates a random nodeId.
      *
      * @param rng random number generator
+     * @return a random nodeId
      */
     public static NodeId makeRandomId(Random rng) {
 	byte material[] = new byte[nodeIdBitLength >> 3];
 	rng.nextBytes(material);
 	return new NodeId(material);
     }
+
 
     /**
      * Returns a string representation of the nodeId.
@@ -651,6 +652,7 @@ public class NodeId implements Comparable, Serializable
 	//return "< nodeId " + s + " >";
     }
 
+    /*
     private void readObject(ObjectInputStream in)
 	throws IOException, ClassNotFoundException 
     {
@@ -669,6 +671,8 @@ public class NodeId implements Comparable, Serializable
 
 	for (int i=0; i<n; i++) out.writeByte(nodeId[i]);
     } 
+    */
+
 }
 
 

@@ -475,9 +475,9 @@ public abstract class PastryRegrTest {
 	System.out.println((n-d)*k + " messages sent");
 
 	// print all nodeIds, sorted
-	Iterator it = pt.pastryNodesSorted.keySet().iterator();
-	while (it.hasNext())
-	    System.out.println(it.next());
+	//Iterator it = pt.pastryNodesSorted.keySet().iterator();
+	//while (it.hasNext())
+	//System.out.println(it.next());
 
 	System.out.println("starting RT and leafset check");
 

@@ -40,6 +40,7 @@ import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
+import rice.pastry.security.*;
 
 /**
  * An implementation of the standard Pastry routing algorithm.
@@ -56,7 +57,7 @@ public class StandardRouter implements MessageReceiver {
 
     private RoutingTable routeTable;
     private LeafSet leafSet;
-       
+    private PastrySecurityManager security;       
     private Address routeAddress;
 
     /**
@@ -66,12 +67,13 @@ public class StandardRouter implements MessageReceiver {
      * @param ls the leaf set.
      */
 
-    public StandardRouter(NodeHandle handle, RoutingTable rt, LeafSet ls) {
+    public StandardRouter(NodeHandle handle, RoutingTable rt, LeafSet ls, PastrySecurityManager sm) {
 	localHandle = handle;
 	localId = handle.getNodeId();
 
 	routeTable = rt;
 	leafSet = ls;
+	security = sm;
 
 	routeAddress = new RouterAddress();
     }
@@ -173,11 +175,57 @@ public class StandardRouter implements MessageReceiver {
 		    }
 		}
 	    }
+	    else {
+		// we found an appropriate RT entry, check for holes are previous node
+		checkForRouteTableHole(msg, handle);
+	    }
 
 	    msg.nextHop = handle;
 	}
 
+	msg.setPrevNode(localHandle);
 	localHandle.receiveMessage(msg);
     }
+
+    
+    /**
+     * checks to see if the previous node along the path was missing a RT entry
+     * if so, we send the previous node the corresponding RT row to patch the hole
+     *
+     * @param msg the RouteMessage being routed
+     * @param handle the next hop handle
+     */
+
+    private void checkForRouteTableHole(RouteMessage msg, NodeHandle handle) {
+
+	if (msg.getPrevNode() == null) return;
+
+	NodeId prevId = msg.getPrevNode().getNodeId();
+	NodeId key = msg.getTarget();
+
+	//System.out.println("checkForRouteTableHole, prevNode=" + prevId +
+	//	   " localId=" + localId + " key=" + msg.getTarget() +
+	//	   " nextHop=" + handle.getNodeId());
+
+	int diffDigit;
+
+	if ( (diffDigit = prevId.indexOfMSDD(key, RoutingTable.idBaseBitLength)) == 
+	     localId.indexOfMSDD(key, RoutingTable.idBaseBitLength)) {
+	    
+	    // the previous node is missing a RT entry, send the row
+
+	    //System.out.println("checkForRouteTableHole, sending row=" + diffDigit + " to=" + prevId);
+
+	    RouteSet[] row = routeTable.getRow(diffDigit);
+	    BroadcastRouteRow brr = new BroadcastRouteRow(localId, row);
+
+	    NodeHandle prevNode = security.verifyNodeHandle(msg.getPrevNode());
+	    if (prevNode.isAlive())
+		prevNode.receiveMessage(brr);
+	}
+	    
+
+    }
 }
+
 

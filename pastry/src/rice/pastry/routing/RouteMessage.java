@@ -55,6 +55,7 @@ public class RouteMessage extends Message implements Serializable {
     private NodeId target;
     private Message internalMsg;
 
+    private NodeHandle prevNode;
     private transient SendOptions opts;
     private transient Address auxAddress;
     public transient NodeHandle nextHop;
@@ -196,6 +197,10 @@ public class RouteMessage extends Message implements Serializable {
     
     public NodeId getTarget() { return target; }
 
+    public NodeHandle getPrevNode() { return prevNode; }
+    public void setPrevNode(NodeHandle n) { prevNode = n;}
+    
+
     /**
      * Get receiver address.
      * 
@@ -224,6 +229,7 @@ public class RouteMessage extends Message implements Serializable {
 
     public SendOptions getOptions() { return opts; }
 
+    /*
     private void readObject(ObjectInputStream in)
 	throws IOException, ClassNotFoundException 
     {
@@ -237,6 +243,7 @@ public class RouteMessage extends Message implements Serializable {
 	out.writeObject(target);
 	out.writeObject(internalMsg);
     }
+    */
 
     public String toString() {
 	String str = "";

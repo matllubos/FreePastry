@@ -136,21 +136,36 @@ public abstract class PastryNode implements MessageReceiver
     }
 
     /**
-     * Add/delete a leaf set observer to the Pastry node.
+     * Add a leaf set observer to the Pastry node.
      *
      * @param o the observer.
      */
     
     public final void addLeafSetObserver(Observer o) { leafSet.addObserver(o); }
+
+    /**
+     * Delete a leaf set observer from the Pastry node.
+     *
+     * @param o the observer.
+     */
+
     public final void deleteLeafSetObserver(Observer o) { leafSet.deleteObserver(o); }
     
     /**
-     * Add/delete a route set observer to the Pastry node.
+     * Add a route set observer to the Pastry node.
      *     
      * @param o the observer.
      */
     
     public final void addRouteSetObserver(Observer o) { routeSet.addObserver(o); }
+
+
+    /**
+     * Delete a route set observer from the Pastry node.
+     *     
+     * @param o the observer.
+     */
+
     public final void deleteRouteSetObserver(Observer o) { routeSet.deleteObserver(o); }
 
     /**
