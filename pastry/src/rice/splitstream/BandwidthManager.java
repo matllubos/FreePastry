@@ -14,7 +14,7 @@ import java.util.*;
  * and there must be some more discussion on which is best. So this
  * class is abstract. The behavior will be decided at a later point
  */
-public abstract class BandwidthManager{
+public class BandwidthManager{
      private Hashtable channelBandwidth = null;
      public BandwidthManager(){
 	channelBandwidth = new Hashtable();
@@ -25,7 +25,7 @@ public abstract class BandwidthManager{
       * describe above, again not completely defined so left
       * as abstract.
       */ 
-     public abstract void freeBandwidth();
+     public void freeBandwidth(){}
      /**
       * Define the Default Bandwidth for a newly created Channel 
       * @param the limit to the number of children a channel may have

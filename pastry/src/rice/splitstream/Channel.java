@@ -56,7 +56,7 @@ public class Channel implements IScribeApp {
     */
    public Channel(int numStripes, IScribe scribe, Credentials cred, 
                   BandwidthManager bandwidthManager){
-
+	
         this.subscribedStripes = numStripes;
 	this.scribe = scribe;
 	this.bandwidthManager = bandwidthManager;
@@ -64,6 +64,7 @@ public class Channel implements IScribeApp {
 	this.bandwidthManager.registerChannel(this);
 	scribe.registerApp(this);
         NodeId topicId = (new RandomNodeIdFactory()).generateNodeId();
+	System.out.println("Trying to create channel : " +  topicId);
         if(scribe.create(topicId, cred)){
 		this.channelId = (ChannelId) topicId;
         } 		

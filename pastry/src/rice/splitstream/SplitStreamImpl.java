@@ -16,11 +16,12 @@ import rice.pastry.security.*;
  */
 public class SplitStreamImpl implements ISplitStream, IScribeApp{
     private IScribe scribe = null;
-    private BandwidthManager bandwidthManager = null;
+    private BandwidthManager bandwidthManager = new BandwidthManager();
     private Credentials credentials = new PermissiveCredentials();
     public SplitStreamImpl(PastryNode node, IScribe scribe){
- 	scribe = this.scribe;   
-    }
+ 	this.scribe = scribe;  
+    	this.scribe.registerApp(this);
+   }
 
    /**
     * This method is used by a peer who wishes to distribute the content
@@ -35,6 +36,7 @@ public class SplitStreamImpl implements ISplitStream, IScribeApp{
     * @return an instance of a Channel class. 
     */
    public Channel createChannel(int numStripes){
+	System.out.println("Channel: Creating a new channel, numStripes = " + numStripes);
 	return (new Channel(numStripes, scribe, credentials ,bandwidthManager));
    }
    /**

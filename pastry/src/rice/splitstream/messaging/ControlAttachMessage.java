@@ -23,7 +23,7 @@ public void handleMessage( Channel channel, IScribe scribe, NodeHandle source )
       StripeId[] return_array = channel.getStripes();
       ControlAttachResponseMessage response = new ControlAttachResponseMessage( ((Scribe)scribe).getAddress() );
       response.setContent( return_array );
-      (Scribe)scribe.routeMsgDirect( source, response, null, null );
+      ((Scribe)scribe).routeMsgDirect( source, response, null, null );
 }
 
 }
