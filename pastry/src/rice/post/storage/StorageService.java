@@ -68,6 +68,11 @@ public class StorageService {
    * The random number generator
    */
   private Random rng;
+
+  /**
+   * Lifetime of log head backups
+   */
+  private long BACKUP_LIFETIME = 1000 * 60 * 60 * 24;
   
   /**
    * Contructs a StorageService given a PAST to run on top of.
@@ -177,7 +182,7 @@ public class StorageService {
       
       public void receiveResult(Object o) {
         if (i < logs.length) {
-          StoreSignedTask task = new StoreSignedTask(logs[i], logs[i].getLocation(), this, immutablePast, time);
+          StoreSignedTask task = new StoreSignedTask(logs[i], logs[i].getLocation(), this, immutablePast, time, BACKUP_LIFETIME);
           task.start();
           i++;
         } else {
@@ -570,6 +575,7 @@ public class StorageService {
     private Key key;
     private Past past;
     private long time;
+    private long expiration;
 
     /**
      * This contructs creates a task to store a given data and call the
@@ -579,15 +585,20 @@ public class StorageService {
      * @param command The command to run once the data has been stored
      */
     protected StoreSignedTask(PostData data, Id location, Continuation command) {
-      this(data, location, command, mutablePast, System.currentTimeMillis());
+      this(data, location, command, mutablePast, System.currentTimeMillis(), GCPast.INFINITY_EXPIRATION);
+    }
+
+    protected StoreSignedTask(PostData data, Id location, Continuation command, Past past, long time) {
+      this(data, location, command, past, time, GCPast.INFINITY_EXPIRATION);
     }
     
-    protected StoreSignedTask(PostData data, Id location, Continuation command, Past past, long time) {
+    protected StoreSignedTask(PostData data, Id location, Continuation command, Past past, long time, long expiration) {
       this.data = data;
       this.location = location;
       this.command = command;
       this.past = past;
       this.time = time;
+      this.expiration = expiration;
     }
 
     /**
@@ -603,7 +614,10 @@ public class StorageService {
         sd.setSignature(SecurityUtils.sign(sd.getDataAndTimestamp(), keyPair.getPrivate()));
 
         // Store the signed data in PAST 
-        past.insert(sd, this);
+        if (past instanceof GCPast)
+          ((GCPast)past).insert(sd, expiration, this);
+        else
+          past.insert(sd, this);
 
         // Now we wait to make sure that the update or insert worked, and
         // then return the reference.
