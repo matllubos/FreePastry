@@ -9,6 +9,8 @@ import rice.past.*;
 import rice.scribe.*;
 import rice.storage.*;
 
+import java.net.*;
+
 import java.security.*;
 
 /**
@@ -16,6 +18,8 @@ import java.security.*;
  * code.
  */
 public class EmailTest {
+
+	private InetSocketAddress firstAddress = null;	
 
 	protected EmailService createEmailService() {
 
@@ -25,7 +29,17 @@ public class EmailTest {
 		int port = (int)(((double) 16000)*Math.random());
 
 		WirePastryNodeFactory idFactory = new WirePastryNodeFactory(rnd, port);
-		PastryNode localNode = idFactory.newNode(null);
+		PastryNode localNode = null;
+
+		if(this.firstAddress == null) {
+			localNode = idFactory.newNode(null);
+			this.firstAddress = ((WireNodeHandle) localNode.getLocalHandle()).getAddress();
+		} else {
+			NodeHandle nodeHandle = idFactory.generateNodeHandle(this.firstAddress);
+			 
+			localNode = idFactory.newNode(nodeHandle);
+		}
+
 		KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
 		KeyPair caPair = kpg.generateKeyPair();
 		KeyPair pair = kpg.generateKeyPair();
