@@ -3,6 +3,7 @@ PACKAGE = rice.scribe
 SOURCE  = \
 	IScribe.java \
 	IScribeApp.java \
+	IScribeObserver.java \
 	Scribe.java \
 	Topic.java
 
