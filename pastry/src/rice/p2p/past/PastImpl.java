@@ -425,20 +425,22 @@ public class PastImpl implements Past, Application, RMClient {
       LookupMessage lmsg = (LookupMessage) message.getMessage();
       Id id = lmsg.getId();
       PastContent content = (PastContent) lmsg.getResponse();
-      
-      cache(id, content);
 
       // if it is a request, look in the cache
       if (! lmsg.isResponse()) {
 
         // if in the cache, send a response
-        if (storage.getCache().exists(id)) {
-          storage.getCache().getObject(id, getResponseContinuation(lmsg));
+        if (storage.exists(id)) {
+          storage.getObject(id, getResponseContinuation(lmsg));
           return false;
         }
       } else {
-        // otherwise, cache the response
-        cache(id, content);
+        // if the message hasn't been cached and we don't have it, cache it
+        if ((! lmsg.isCached()) && (content != null) && (! content.isMutable())) {
+          
+          lmsg.setCached();
+          cache(id, content);
+        }
       }
     } else if (message.getMessage() instanceof FetchMessage) {
       // insert fetch response into cache
@@ -446,7 +448,13 @@ public class PastImpl implements Past, Application, RMClient {
       Id id = fmsg.getHandle().getId();
       PastContent content = (PastContent) fmsg.getResponse();
 
-      if (fmsg.isResponse()) {
+      // if the message hasn't been cached and we don't have it, cache it
+      if ((fmsg.isResponse()) &&
+          (! fmsg.isCached()) &&
+          (content != null) &&
+          (! content.isMutable())) {
+        
+        fmsg.setCached();
         cache(id, content);
       }
     }

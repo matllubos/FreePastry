@@ -56,6 +56,9 @@ public class FetchMessage extends ContinuationMessage {
 
   // the id to fetch
   private PastContentHandle handle;
+
+  // whether or not this message has been cached
+  private boolean cached = false;
   
   /**
    * Constructor which takes a unique integer Id, as well as the
@@ -80,6 +83,22 @@ public class FetchMessage extends ContinuationMessage {
    */
   public PastContentHandle getHandle() {
     return handle;
+  }
+
+  /**
+   * Returns whether or not this message has been cached
+   *
+   * @return Whether or not this message has been cached
+   */
+  public boolean isCached() {
+    return cached;
+  }
+
+  /**
+   * Sets this message as having been cached.
+   */
+  public void setCached() {
+    cached = true;
   }
 }
 

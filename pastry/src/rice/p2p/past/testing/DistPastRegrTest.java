@@ -501,7 +501,7 @@ public class DistPastRegrTest extends DistCommonAPITest {
    */
   protected void testCaching() {
     final PastImpl local = pasts[rng.nextInt(NUM_NODES)];
-    final Id id = local.getLocalNodeHandle().getId();
+    final Id id = generateId();
     final PastContent file1 = new TestPastContent(id);
     final PastContent file2 = new NonMutableTestPastContent(id);
 
@@ -520,7 +520,7 @@ public class DistPastRegrTest extends DistCommonAPITest {
     stepStart("Cache Shouldn't Contain Object");
 
     // check cache
-    local.getStorageManager().getCache().getObject(id, new TestCommand() {
+    local.getStorageManager().getObject(id, new TestCommand() {
       public void receive(Object result) throws Exception {
         assertTrue("Object should be null", result == null);
 
@@ -537,7 +537,7 @@ public class DistPastRegrTest extends DistCommonAPITest {
         stepStart("Cache Should Contain Object");
 
         // check cache
-        local.getStorageManager().getCache().getObject(id, new TestCommand() {
+        local.getStorageManager().getObject(id, new TestCommand() {
           public void receive(Object result) throws Exception {
             assertTrue("Object should not be null", result != null);
             assertTrue("Object should be correct", result.equals(file2));
@@ -563,6 +563,12 @@ public class DistPastRegrTest extends DistCommonAPITest {
     for (int i=0; i<NUM_NODES; i++) {
       ((RMImpl) pasts[i].getReplicaManager()).periodicMaintenance();
     }
+  }
+
+  private Id generateId() {
+    byte[] data = new byte[20];
+    new Random().nextBytes(data);
+    return FACTORY.buildId(data);
   }
                 
 
@@ -692,6 +698,12 @@ public class DistPastRegrTest extends DistCommonAPITest {
 
     public boolean isMutable() {
       return false;
+    }
+
+    public boolean equals(Object o) {
+      if (! (o instanceof NonMutableTestPastContent)) return false;
+
+      return ((NonMutableTestPastContent) o).id.equals(id);
     }
   }
 
