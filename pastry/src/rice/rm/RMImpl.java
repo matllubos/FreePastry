@@ -55,7 +55,6 @@ import java.util.*;
 
 
 import rice.rm.messaging.*;
-import rice.rm.testing.*;
 
 
 /**
