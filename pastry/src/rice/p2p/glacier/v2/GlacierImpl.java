@@ -1016,7 +1016,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     }
   }
 
-  private byte[] getDistance(double d) {
+  private static byte[] getDistance(double d) {
     byte[] result = new byte[20];
       
     double c = 0.5;
@@ -1043,10 +1043,8 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
    * @return The location of the fragment
    */
   private Id getFragmentLocation(Id objectKey, int fragmentNr, long version) {
-    double vOffset = version * (1.0/2.7182821);
-    vOffset -= (long)vOffset;
-    double totalOffset = (((float)fragmentNr) / ((float)numFragments)) + vOffset;
-    return objectKey.addToId(factory.buildIdDistance(getDistance(totalOffset)));
+    double totalOffset = (((float)fragmentNr) / ((float)numFragments)) + version * (1.0/2.7182821);
+    return objectKey.addToId(factory.buildIdDistance(getDistance(totalOffset - Math.floor(totalOffset))));
   }
   
   private Id getFragmentLocation(FragmentKey fkey) {
