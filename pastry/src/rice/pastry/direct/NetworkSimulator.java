@@ -96,6 +96,7 @@ public interface NetworkSimulator
     public void setTestRecord( TestRecord tr );
     public TestRecord getTestRecord();
     public NodeHandle getClosest(NodeId nid);
+    public void setAlive(NodeId nid, boolean alive);
 
     public boolean simulate();
 }
