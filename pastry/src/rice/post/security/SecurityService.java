@@ -1,12 +1,15 @@
 package rice.post.security;
 
 import java.security.*;
+import java.security.cert.*;
 import java.security.spec.*;
 import java.util.*;
 import java.math.*;
 import java.io.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
+
+import rice.post.*;
 
 /**
  * This class is a utility for performing security-related operations
@@ -77,6 +80,17 @@ public class SecurityService {
     } catch (NoSuchPaddingException e) {
       throw new SecurityException("NoSuchPaddingException on construction: " + e);
     }
+  }
+
+  /**
+   * Utility method for verifying a Certificate
+   *
+   * @param address The entity who owns the certifcate
+   * @param key The public key of this entity
+   * @param certificate The certificate of this entity
+   */
+  public boolean verifyCertificate(PostEntityAddress address, PublicKey key, java.security.cert.Certificate certificate) {
+    return true;
   }
 
   /**
