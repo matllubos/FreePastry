@@ -4,9 +4,12 @@ import java.security.*;
 import java.util.*;
 
 import rice.*;
+import rice.Continuation.*;
+import rice.email.*;
 import rice.p2p.commonapi.*;
 import rice.post.*;
 import rice.post.log.*;
+import rice.post.storage.*;
 
 /**
  * This represents the head of an email log, representing
@@ -39,6 +42,12 @@ public class EmailLog extends CoalescedLog {
   
   // the list of subscription for this log (only used if this is the root)
   private Vector subscriptions;
+  
+  // the most recent snapshot for this log (null if unsupported)
+  private ContentHashReference snapshot;
+  
+  // the cached version of the most recent snapshot
+  private transient SnapShot cachedSnapshot;
 
   /**
    * Constructor for SnapShot.
@@ -56,6 +65,15 @@ public class EmailLog extends CoalescedLog {
     numRecent = 0;
     numEntries = 0;
     subscriptions = new Vector();
+  }
+  
+  /**
+   * Returns the reference to the most recent snapshot
+   *
+   * @return The most recent log snapshot ref
+   */
+  public ContentHashReference getSnapshotReference() {
+    return snapshot;
   }
   
   /**
@@ -143,6 +161,45 @@ public class EmailLog extends CoalescedLog {
    */
   public void resetEntries() {
     numEntries = 0;
+  }
+  
+  /**
+   * Sets the newest snapshot
+   *
+   * @param snapshot The snapshot
+   */
+  public void setSnapshot(final SnapShot snapshot, Continuation command) {
+    post.getStorageService().storeContentHash(snapshot, new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        cachedSnapshot = snapshot;
+    
+        resetEntries();
+        EmailLog.this.snapshot = (ContentHashReference) o;
+    
+        sync(parent);
+      }
+    });
+  }
+  
+  /**
+   * Returns the most recent snapshot reference
+   *
+   * @command The command to return the continuation to
+   */
+  public void getSnapshot(Continuation command) {
+    if (cachedSnapshot != null) {
+      command.receiveResult(cachedSnapshot);
+    } else if (snapshot == null) {
+      command.receiveResult(null);
+    } else {
+      post.getStorageService().retrieveContentHash(snapshot, new StandardContinuation(command) {
+        public void receiveResult(Object o) {
+          cachedSnapshot = (SnapShot) o;
+          
+          parent.receiveResult(o);
+        }
+      });
+    }
   }
 
   /**

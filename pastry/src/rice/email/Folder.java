@@ -172,6 +172,9 @@ public class Folder {
    * the handles in to the provided continatuion.
    */
   public void getContentHashReferences(final Set set, Continuation command) {
+    if (_log.getSnapshotReference() != null)
+      set.add(_log.getSnapshotReference());
+    
     getMessageReferences(set, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         getLogReferences(set, new StandardContinuation(parent) {
@@ -206,6 +209,14 @@ public class Folder {
       set.add(_log.getTopEntryReference());
     }
     
+    _log.getSnapshot(new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        getLogReferences(set, (SnapShot) o, parent);
+      }
+    });
+  }
+    
+  protected void getLogReferences(final Set set, final SnapShot snapshot, Continuation command) {
     _log.getTopEntry(new StandardContinuation(command) {
       LogEntry top = null;
       
@@ -214,6 +225,9 @@ public class Folder {
           parent.receiveResult(Boolean.TRUE);
           return;
         }
+        
+        if ((top == null) && (snapshot != null))
+          top = snapshot.getTopEntry();
 
         LogEntry entry = (LogEntry) o;
                 
@@ -620,18 +634,17 @@ public class Folder {
           getMessages(new StandardContinuation(parent) {
             public void receiveResult(Object o) {
               if (_log.getEntries() == entries) {
-                _log.resetEntries();
-                _log.addLogEntry(new SnapShotLogEntry((StoredEmail[]) o, entry), parent);
+                _log.setSnapshot(new SnapShot((StoredEmail[]) o, entry), parent);
               } else {
                 System.out.println("INFO: Was unable to create snapshot - other log entry in progress.  Not bad, but a little unexpected.");
-                parent.receiveResult(new Boolean(true));
+                parent.receiveResult(Boolean.TRUE);
               }
             }
           });
         }
       });
     } else {
-      command.receiveResult(new Boolean(true));
+      command.receiveResult(Boolean.TRUE);
     }
   }
 
@@ -657,6 +670,20 @@ public class Folder {
    * @return the stored Emails
    */
   public void getMessages(Continuation command) {
+    _log.getSnapshot(new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        getMessages((SnapShot) o, parent);
+      }
+    });
+  }
+  
+  /**
+   * Returns the Emails contained in this Folder.
+   *
+   * @param command the work to perform after this call
+   * @return the stored Emails
+   */
+  public void getMessages(final SnapShot snapshot, Continuation command) {
     _log.getTopEntry(new StandardContinuation(command) {
       private Vector emails = new Vector();
       private HashSet seen = new HashSet();
@@ -678,6 +705,9 @@ public class Folder {
       }
 
       public void receiveResult(Object o) {
+        if ((top == null) && (snapshot != null))
+          top = snapshot.getTopEntry();
+        
         EmailLogEntry entry = (EmailLogEntry) o;
         
         while (entry != null) {
@@ -720,8 +750,17 @@ public class Folder {
           }
           
           // break if we've just processed the top entry
-          if ((top != null) && (entry.equals(top))) 
+          if ((top != null) && (entry.equals(top))) {
+            // if there is a snapshot in the log, add it in
+            if (snapshot != null) {
+              StoredEmail[] rest = snapshot.getStoredEmails();
+              
+              for (int i = 0; i < rest.length; i++)
+                insert(rest[i]);
+            }
+            
             break;
+          }
           
           // otherwise, we need to get the next log entry
           if (entry.hasPreviousEntry()) {
