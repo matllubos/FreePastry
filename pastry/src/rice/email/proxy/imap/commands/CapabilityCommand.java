@@ -32,7 +32,7 @@ public class CapabilityCommand
 
     public void execute()
     {
-        getConn().print("* CAPABILITY IMAP4\r\n");
+        getConn().print("* CAPABILITY IMAP4rev1\r\n");
         taggedSuccess("CAPABILITY completed");
     }
 }

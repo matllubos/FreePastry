@@ -7,6 +7,7 @@ import rice.email.proxy.imap.ImapConnection;
 
 import java.io.IOException;
 
+
 import java.io.InputStream;
 import antlr.TokenStreamException;
 import antlr.TokenStreamIOException;
@@ -45,8 +46,10 @@ public class ImapCommandLexer extends antlr.CharScanner implements CommonLexToke
 		  }
 		  return value;
 		} else {
-	      String text = getText();
-		  if (text.equals("BODY") || text.equals("BODY.PEEK")) return BODY;
+      String text = getText();
+		  if (text.equals("BODY")) return BODY;
+		  if (text.equals("BODY.PEEK")) return BODYPEEK;
+		  if (text.equals("RFC822")) return RFC822;
 		  return ttype;
 		}
 	}
@@ -69,7 +72,9 @@ public ImapCommandLexer(LexerSharedInputState state) {
 	literals.put(new ANTLRHashString("EXPUNGE", this), new Integer(22));
 	literals.put(new ANTLRHashString("LSUB", this), new Integer(12));
 	literals.put(new ANTLRHashString("UNSUBSCRIBE", this), new Integer(11));
+	literals.put(new ANTLRHashString("BODY.PEEK", this), new Integer(25));
 	literals.put(new ANTLRHashString("CAPABILITY", this), new Integer(7));
+	literals.put(new ANTLRHashString("RFC822", this), new Integer(26));
 	literals.put(new ANTLRHashString("FETCH", this), new Integer(16));
 	literals.put(new ANTLRHashString("SUBSCRIBE", this), new Integer(10));
 	literals.put(new ANTLRHashString("LIST", this), new Integer(9));

@@ -13,76 +13,54 @@ import javax.mail.*;
 import javax.mail.internet.*;
 
 
-public class MessagePropertyPart
-    extends FetchPart
-{
-    List supportedParts = Arrays.asList(
-                                  new Object[] 
-    {
-        "RFC822.PEEK", "RFC822", "RFC822.HEADER", "RFC822.SIZE", "RFC822.TEXT",
-        "UID", "FLAGS", "INTERNALDATE", "ALL", "ENVELOPE", "BODY", "BODYSTRUCTURE"
+public class MessagePropertyPart extends FetchPart {
+  
+    List supportedParts = Arrays.asList(new Object[]  {
+      "ALL", "FAST", "FULL", "ENVELOPE",
+      "FLAGS", "INTERNALDATE", "RFC822.SIZE", "UID"
     });
 
-    public boolean canHandle(Object req)
-    {
-
+    public boolean canHandle(Object req) {
         return supportedParts.contains(req);
     }
 
-    public void fetch(StoredMessage msg, Object part)
-    {
-        try
-        {
-            if ("RFC822.PEEK".equals(part))
-                part = "RFC822";
-          
-            getConn().print(part + " ");
-            if ("RFC822.HEADER".equals(part))
-                bodyHeader(msg);
-            else if ("RFC822.SIZE".equals(part))
-                bodySize(msg);
-            else if ("UID".equals(part))
-                msgUID(msg);
-            else if ("FLAGS".equals(part))
-                msgFlags(msg);
-            else if ("INTERNALDATE".equals(part))
-                internalDate(msg);
-            else if ("RFC822".equals(part))
-                entireMsg(msg);
-            else if ("ENVELOPE".equals(part))
-                envelope(msg);
-            else if ("BODY".equals(part))
-                body(msg);
-            else if ("BODYSTRUCTURE".equals(part))
-                body(msg);
-            else if ("RFC822.TEXT".equals(part))
-                text(msg);
-            else if ("ALL".equals(part)) {
-                fetch(msg, "FLAGS");
-                fetch(msg, "INTERNALDATE");
-                fetch(msg, "RFC822.SIZE");
-            } 
-                
-        }
-        catch (Exception me)
-        {
-            System.out.println(
-                    "PROGRAMMING LAZINESS NEEDS TO BE FIXED NOW");
-            me.printStackTrace();
-        }
-    }
-
-    void bodyHeader(StoredMessage msg) throws MailboxException {
+    public void fetch(StoredMessage msg, Object part)  {
       try {
-        String header = msg.getMessage().getHeader();
-        getConn().print("{" + header.length() + "}\r\n");
-        getConn().print(header);
-      } catch (MailException me) {
-        throw new MailboxException(me);
+        getConn().print(part + " ");
+
+        if ("ALL".equals(part)) {
+          fetch(msg, "FLAGS");
+          fetch(msg, "INTERNALDATE");
+          fetch(msg, "RFC822.SIZE");
+          fetch(msg, "ENVELOPE");
+        } else if ("FAST".equals(part)) {
+          fetch(msg, "FLAGS");
+          fetch(msg, "INTERNALDATE");
+          fetch(msg, "RFC822.SIZE");
+        } else if ("FULL".equals(part)) {
+          fetch(msg, "FLAGS");
+          fetch(msg, "INTERNALDATE");
+          fetch(msg, "RFC822.SIZE");
+          fetch(msg, "ENVELOPE");
+          fetch(msg, "BODY");
+        } else if ("ENVELOPE".equals(part)) {
+          fetchEnvelope(msg);
+        } else if ("FLAGS".equals(part)) {
+          fetchFlags(msg);
+        } else if ("INTERNALDATE".equals(part)) {
+          fetchInternaldate(msg);
+        } else if ("RFC822.SIZE".equals(part)) {
+          fetchSize(msg);
+        } else if ("UID".equals(part)) {
+          fetchUID(msg);
+        }
+      } catch (Exception me) {
+        System.out.println("Exception " + me + " thrown while fetching " + part);
+        me.printStackTrace();
       }
     }
 
-    void body(StoredMessage msg) throws MailboxException {
+/*    void body(StoredMessage msg) throws MailboxException {
       try {
         Object data = msg.getMessage().getContent();
 
@@ -203,40 +181,29 @@ public class MessagePropertyPart
       } catch (MessagingException e) {
         throw new MailboxException(e);
       }
-    }
+    } */
 
-    void bodySize(StoredMessage msg)
-           throws MailboxException, MailException
-    {
+    void fetchSize(StoredMessage msg) throws MailboxException, MailException {
         getConn().print("" + msg.getMessage().getSize());
     }
 
-    void msgUID(StoredMessage msg)
-         throws MailboxException
-    {
+    void fetchUID(StoredMessage msg) throws MailboxException {
         getConn().print("" + msg.getUID());
     }
 
-    void msgID(StoredMessage msg)
-      throws MailboxException
-    {
+    void fetchID(StoredMessage msg) throws MailboxException {
       getConn().print("\"" + msg.getSequenceNumber() + "\"");
     }
 
-    void msgFlags(StoredMessage msg)
-           throws MailboxException
-    {
+    void fetchFlags(StoredMessage msg) throws MailboxException {
         getConn().print(msg.getFlagList().toFlagString());
     }
 
-    void internalDate(StoredMessage msg)
-               throws MailboxException
-    {
-        getConn().print(
-                '"' + msg.getMessage().getInternalDate() + '"');
+    void fetchInternaldate(StoredMessage msg) throws MailboxException {
+        getConn().print("\"" + msg.getMessage().getInternalDate() + "\"");
     }
 
-    public void entireMsg(StoredMessage msg)
+  /*  public void entireMsg(StoredMessage msg)
                    throws MailboxException
     {
         try
@@ -254,7 +221,7 @@ public class MessagePropertyPart
         {
             throw new MailboxException(ioe);
         }
-    }
+    } */
 
     private void addresses(InternetAddress[] addresses) {
       if ((addresses != null) && (addresses.length > 0)) {
@@ -307,12 +274,10 @@ public class MessagePropertyPart
       return result;
     }
     
-    public void envelope(StoredMessage msg)
-                   throws MailboxException
-    {
+    public void fetchEnvelope(StoredMessage msg) throws MailboxException {
       try {
         getConn().print("(");
-        internalDate(msg);
+        fetchInternaldate(msg);
 
         String[] subject = msg.getMessage().getHeader("Subject");
 
@@ -348,7 +313,7 @@ public class MessagePropertyPart
         } else {
             getConn().print("\"" + inReplyTo[0] + "\" ");
         }
-        msgID(msg);
+        fetchID(msg);
         getConn().print(")");
       } catch (MailException me) {
         throw new MailboxException(me);

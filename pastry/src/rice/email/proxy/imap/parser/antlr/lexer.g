@@ -1,10 +1,8 @@
 header {
-package foedus.imap.parser.antlr;
+package rice.email.proxy.imap.parser.antlr;
 
-import foedus.imap.commands.*;
-import foedus.imap.ImapConnection;
-
-import org.apache.avalon.framework.logger.Logger;
+import rice.email.proxy.imap.commands.*;
+import rice.email.proxy.imap.ImapConnection;
 
 import java.io.IOException;
 
@@ -42,6 +40,8 @@ tokens {
 	EXPUNGE="EXPUNGE";
 	CLOSE="CLOSE";
 	BODY="BODY";
+	BODYPEEK="BODY.PEEK";
+  RFC822="RFC822";
 }
 
 {
@@ -56,8 +56,10 @@ tokens {
 		  }
 		  return value;
 		} else {
-	      String text = getText();
-		  if (text.equals("BODY") || text.equals("BODY.PEEK")) return BODY;
+      String text = getText();
+		  if (text.equals("BODY")) return BODY;
+		  if (text.equals("BODY.PEEK")) return BODYPEEK;
+		  if (text.equals("RFC822")) return RFC822;
 		  return ttype;
 		}
 	}
@@ -74,13 +76,7 @@ RPAREN	:	')'
 
 ATOM :
 		(ATOM_CHAR | '%' | '*')+
-		/*
-		{
-			if (getText().indexOf('%') != -1) {
-			$setType(PATTERN);
-			}
-		}*/
-	;
+	; 
 
 FLAG :	'\\' ATOM
 	;
@@ -110,10 +106,10 @@ QUOTED	:	QUOTE! (QUOTED_CHAR)* QUOTE!
 protected
 QUOTED_SPECIALS :	'\"' | '\\'
 	;
-
+  
 protected
-ATOM_CHAR :	~('(' | ')' | '{' | '[' | ']' | ' ' | '*' | '%' | '\\' | '\"' | '\u007f'..'\u00FF' | '\u0000'..'\u001f')
-	;
+ATOM_CHAR : ~('(' | ')' | '{' | '[' | ']' | ' ' | '*' | '%' | '\\' | '\"' | '\u007f'..'\u00FF' | '\u0000'..'\u001f')
+  ;
 
 protected
 CHAR	:	('\u0001'..'\u007f')
