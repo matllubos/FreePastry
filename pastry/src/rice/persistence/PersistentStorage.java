@@ -20,22 +20,17 @@ import rice.pastry.*;
  */
 public class PersistentStorage implements Storage {
 
-  private static final String serialFileName = "serialTable.persist";
-  
-  private File serialFile;
   private File rootDirectory;       // root directory to store stuff in
   private File backupDirectory;     // dir for storing persistent objs
-  private File infoDirectory;       // dir for some management info
-  private File transDirectory;      // directory for unrolling copies
+  private File transDirectory; // dir for transactions
 
   private static String rootDir;                          // rootDirectory
   private static final String backupDir = "/Backup/";     // backupDirectory
-  private static final String infoDir = "/pminfo/";       // infoDirectory
   private static final String transDir = "/transaction";  // transDirectory
 
   private long storageSize;
   private long usedSize;
-  private Hashtable persistentObjects;
+  private Hashtable fileMap;
 
   /**
    * Builds a PersistentStorage given a root directory in which to
@@ -52,11 +47,10 @@ public class PersistentStorage implements Storage {
     else
       System.out.println("ERROR: Failed to Initialized Directories");
     
-   serialFile = new File(infoDirectory, serialFileName);
+   fileMap = new Hashtable();
 
    /* Should read in existing objects */
 
-    persistentObjects = new Hashtable();
   }
 
   /**
@@ -94,14 +88,14 @@ public class PersistentStorage implements Storage {
 
       objStream.writeObject(obj);
 
+      decreaseUsedSpace(objFile.length()); /* decrease the amount used */
+
       transcFile.renameTo(objFile); /* Assume Atomic */
 
-
-      persistentObjects.put(obj, id);
+      /* maybe i should combine this increase and decrease */
   
-      increaseUsedSpace(objFile.length());
+      increaseUsedSpace(objFile.length()); /* increase the amount used */
 
-      writePersistentTable();
       c.receiveResult(new Boolean(true));
 
     } catch (Exception e) {
@@ -129,10 +123,7 @@ public class PersistentStorage implements Storage {
    */
   public void unstore(Comparable id, Continuation c) {
      /* 1. Should remove this from hashtable */
-     persistentObjects.remove(id);
 
-     /* 2. Should write hashtable atomically */
-     writePersistentTable();
 
      /* 3. Should remove from disk */
      /* 4. Should update the value of used space */
@@ -201,7 +192,7 @@ public class PersistentStorage implements Storage {
     }
 
     Vector result = new Vector();
-    Iterator i = persistentObjects.keySet().iterator();
+    Iterator i = fileMap.keySet().iterator();
 
     while (i.hasNext()) {
       try {
@@ -257,11 +248,6 @@ public class PersistentStorage implements Storage {
       return false;
     }
 
-    infoDirectory = new File(rootDirectory, infoDir);
-    if (createDir(infoDirectory) == false) {
-      return false;
-    }
-
     transDirectory = new File(rootDirectory, transDir);
     if (createDir(transDirectory) == false) {
       return false;
@@ -287,14 +273,6 @@ public class PersistentStorage implements Storage {
     return id.toString();
   }
 
-  private void writePersistentTable(){
-     synchronized(persistentObjects){
-       File transactionFile = new File(transDirectory, serialFileName);
-       writeObject( persistentObjects, transactionFile);
-       transactionFile.renameTo(serialFile); //assume Atomic
-     }
-
-  }
   /*****************************************************************/
   /* Helper functions for Object Input/Output                      */
   /*****************************************************************/
