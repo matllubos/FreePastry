@@ -32,8 +32,8 @@ public class ImapConnection
 
     // networking/io stuff
     Socket _socket;
-    PrintWriter _out;
-    BufferedReader _in;
+    public PrintWriter _out;
+    public BufferedReader _in;
     InetAddress _clientAddress;
     SpyInputStream _spy;
 
@@ -45,19 +45,21 @@ public class ImapConnection
     {
 
         // networking
-        _socket = sock;
-        _socket.setSoTimeout(TIMEOUT_MILLIS);
-        _clientAddress = _socket.getInetAddress();
+        if (sock != null) {
+          _socket = sock;
+          _socket.setSoTimeout(TIMEOUT_MILLIS);
+          _clientAddress = _socket.getInetAddress();
 
-        // streams
-        OutputStream out = _socket.getOutputStream();
-        InputStream in = _socket.getInputStream();
+          // streams
+          OutputStream out = _socket.getOutputStream();
+          InputStream in = _socket.getInputStream();
 
         /* cheap logging trick */
 
-        // _spy = new SpyInputStream(in, System.out);
-        _out = new PrintWriter(out, true);
-        _in = new BufferedReader(new InputStreamReader(in));
+          // _spy = new SpyInputStream(in, System.out);
+          _out = new PrintWriter(out, true);
+          _in = new BufferedReader(new InputStreamReader(in));
+        }
 
         // protocol
         _handler = handler;

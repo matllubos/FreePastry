@@ -62,8 +62,8 @@ public class EmailProxy extends PostProxy {
 
   private ImapServerImpl imap;
 
-  public EmailProxy(String userid) {
-      super(userid);
+  public EmailProxy(String[] args) {
+      super(args);
   }
 
   public void start() {
@@ -100,12 +100,8 @@ public class EmailProxy extends PostProxy {
     }
   }
 
-  /**
-   * Usage:
-   * java rice.email.proxy.EmailProxy userid [-bootstrap hostname[:port]] [-port port] [-imapport port] [-smtpport port]
-   */
-  public static void main(String[] args) {
-    String userid = PostProxy.parseArgs(args);
+  public void parseArgs(String[] args) {
+    super.parseArgs(args);
 
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-imapport") && i+1 < args.length) {
@@ -136,8 +132,14 @@ public class EmailProxy extends PostProxy {
         break;
       }
     }
-  
-    EmailProxy proxy = new EmailProxy(userid);
+  }    
+
+  /**
+   * Usage:
+   * java rice.email.proxy.EmailProxy userid [-bootstrap hostname[:port]] [-port port] [-imapport port] [-smtpport port]
+   */
+  public static void main(String[] args) {
+    EmailProxy proxy = new EmailProxy(args);
     proxy.start();
   }
 }

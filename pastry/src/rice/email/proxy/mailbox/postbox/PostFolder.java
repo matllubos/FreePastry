@@ -1,6 +1,7 @@
 package rice.email.proxy.mailbox.postbox;
 
 import rice.*;
+import rice.Continuation.*;
 import rice.email.*;
 import rice.post.*;
 
@@ -30,6 +31,9 @@ public class PostFolder implements MailFolder {
   // the local email service
   private EmailService email;
 
+  // a cache of PostMessages
+  private HashMap messageCache;
+
   /**
    * Builds a folder given a string name
    */
@@ -44,7 +48,7 @@ public class PostFolder implements MailFolder {
     this.folder = folder;
     this.parent = parent;
     this.email = email;
-  
+    this.messageCache = new HashMap();
   }
 
   /**
@@ -98,86 +102,43 @@ public class PostFolder implements MailFolder {
           flags.setDraft(true);
       }
 
-      final Exception[] exception = new Exception[1];
-      final Object[] result = new Object[1];
-      final Object wait = "wait";
-
-      Continuation c = new Continuation() {
-        public void receiveResult(Object o) {
-          synchronized (wait) {
-            result[0] = o;
-            wait.notify();
-          }
-        }
-
-        public void receiveException(Exception e) {
-          synchronized (wait) {
-            exception[0] = e;
-            result[0] = "result";
-            wait.notify();
-          }
-        }
-      };
-
+      ExternalContinuation c = new ExternalContinuation();
       folder.addMessage(email, flags, c);
+      c.sleep();
 
-      synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
-
-      if (exception[0] != null) {
-        throw new MailboxException(exception[0]);
-      }
+      if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
     } catch (IOException e) {
       throw new MailboxException(e);
-    } catch (InterruptedException e) {
-      throw new MailboxException(e);
-    } 
+    }
   }
  
   public List getMessages(MsgFilter range) throws MailboxException {
-    try {
-      final Object[] result = new Object[1];
-      final Exception[] exception = new Exception[1];
-      final Object wait = "wait";
+    ExternalContinuation c = new ExternalContinuation();
+    folder.getMessages(c);
+    c.sleep();
 
-      Continuation c = new Continuation() {
-        public void receiveResult(Object o) {
-          synchronized (wait) {
-            result[0] = o;
-            wait.notify();
-          }
-        }
+    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
-        public void receiveException(Exception e) {
-          synchronized (wait) {
-            exception[0] = e;
-            result[0] = "result";
-            wait.notify();
-          }
-        }
-      };
+    LinkedList list = new LinkedList();
+    StoredEmail[] emails = (StoredEmail[]) c.getResult();
 
-      folder.getMessages(c);
+    for (int i=0; i<emails.length; i++) {
+      PostMessage msg = null;
 
-      synchronized (wait) { if ((result[0] == null) && (exception[0] == null)) wait.wait(); }
-
-      if (exception[0] != null) {
-        throw new MailboxException(exception[0]);
-      }   
-
-      LinkedList list = new LinkedList();
-      StoredEmail[] emails = (StoredEmail[]) result[0];
-
-      for (int i=0; i<emails.length; i++) {
-        PostMessage msg = new PostMessage(emails[i], i+1, this.getFolder());
-        if (range.includes(msg)) {
-          list.addLast(msg);
-        }
+      if (messageCache.get(emails[i]) == null) {
+        msg = new PostMessage(emails[i], i+1, this.getFolder());
+        messageCache.put(emails[i], msg);
+      } else {
+        msg = (PostMessage) messageCache.get(emails[i]);
+        msg.setSequenceNumber(i+1);
       }
 
-      return list;
-    } catch (InterruptedException e) {
-      throw new MailboxException(e);
+      if (range.includes(msg)) {
+        list.addLast(msg);
+      }
     }
+
+    return list;
   }
 
   public String getUIDValidity() throws MailboxException {

@@ -31,22 +31,24 @@ public class SmtpConnection {
     // networking/io stuff
     Socket sock;
     InetAddress clientAddress;
-    PrintWriter out;
-    BufferedReader in;
+    public PrintWriter out;
+    public BufferedReader in;
     SmtpHandler handler;
     String heloName;
 
     public SmtpConnection(SmtpHandler handler, Socket sock)
                    throws IOException
     {
-        this.sock = sock;
-        sock.setSoTimeout(TIMEOUT_MILLIS);
-        clientAddress = sock.getInetAddress();
-        OutputStream o = sock.getOutputStream();
-        InputStream i = sock.getInputStream();
-        out = new PrintWriter(o, true);
-        in = new BufferedReader(new InputStreamReader(i));
-
+        if (sock != null) {
+          this.sock = sock;
+          sock.setSoTimeout(TIMEOUT_MILLIS);
+          clientAddress = sock.getInetAddress();
+          OutputStream o = sock.getOutputStream();
+          InputStream i = sock.getInputStream();
+          out = new PrintWriter(o, true);
+          in = new BufferedReader(new InputStreamReader(i));
+        }
+          
         this.handler = handler;
     }
 
