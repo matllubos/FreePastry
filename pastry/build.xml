@@ -103,6 +103,20 @@
     </jar>
   </target>
 
+  <target name="corejar" depends="compile">
+  	<jar destfile="pastry-core.jar">
+      <fileset dir="${build.dir}" includes="rice/Continuation*.class"/>
+      <fileset dir="${build.dir}" includes="rice/Executable*.class"/>
+      <fileset dir="${build.dir}" includes="rice/p2p/commonapi/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/p2p/past/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/p2p/replication/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/p2p/scribe/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/p2p/util/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/pastry/**/*.class"/>
+      <fileset dir="${build.dir}" includes="rice/selector/**/*.class"/>
+	</jar>
+  </target>
+
   <target name="epost_jar" depends="compile">
     <jar destfile="epost.jar" manifest="${jar.dir}/epost/Manifest">
       <fileset dir="${build.dir}" includes="rice/Continuation*.class"/>
