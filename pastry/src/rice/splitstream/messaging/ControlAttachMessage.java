@@ -20,8 +20,19 @@ public class ControlAttachMessage implements Serializable {
  */
 public void handleMessage( Channel channel, IScribe scribe, NodeHandle source )
 {
-      StripeId[] return_array = channel.getStripes();
-      ControlAttachResponseMessage response = new ControlAttachResponseMessage( (channel.getAddress() );
+      SpareCapacityId spcapid = channel.getSpareCapacityId();
+      ChannelId chanid = channel.getChannelId();
+      StripeId[] stripeid_array = channel.getStripes();
+      
+      NodeId[] return_array = new NodeId[stripeid_array.length+2];
+      return_array[0] = (NodeId)chanid;
+      for ( int i=0; i<stripeid_array.length; i++ )
+      {
+          return_array[i+1] = stripeid_array[i];
+      }
+      return_array[return_array.length-1] = (NodeId)spcapid;
+
+      ControlAttachResponseMessage response = new ControlAttachResponseMessage( channel.getAddress() );
       response.setContent( return_array );
       ((Scribe)scribe).routeMsgDirect( source, response, null, null );
 }
