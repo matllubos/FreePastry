@@ -57,6 +57,7 @@ public abstract class ContentHashPastContent implements PastContent {
   // to be set by derived classes
   protected Id myId;
 
+  
   /**
    * Inserts this object into its associated Past instance.
    * Asynchronously returns a boolean as the result to the provided
@@ -90,12 +91,15 @@ public abstract class ContentHashPastContent implements PastContent {
   public PastContent checkInsert(Id id, PastContent existingContent) throws PastException {
     // can't overwrite content hash objects
     if (existingContent != null)
+    {
       throw new PastException("ContentHashPastContent: can't insert, object already exists");
-
+    }
+    
     // only allow correct content hash key
     if (!id.equals(getContentHash()))
+    {
       throw new PastException("ContentHashPastContent: can't insert, content hash incorrect");
-
+    }
     return this;
   }
 

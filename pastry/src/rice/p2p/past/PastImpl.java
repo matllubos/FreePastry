@@ -38,6 +38,7 @@ package rice.p2p.past;
 
 import java.io.*;
 import java.util.*;
+import java.util.logging.* ;
 
 import rice.*;
 import rice.p2p.commonapi.*;
@@ -91,6 +92,8 @@ public class PastImpl implements Past, Application, RMClient {
   // the set of Ids which we need to fetch
   protected IdSet pending;
   
+  private Logger log = Logger.getLogger("rice.p2p.past.PastImpl");
+  
   /**
    * Constructor for Past
    *
@@ -130,6 +133,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @return A new id
    */
   private Continuation getResponseContinuation(final PastMessage msg) {
+    log.finer("getting the Continuation to respond to the message " + msg);
     final ContinuationMessage cmsg = (ContinuationMessage) msg;
     
     return new Continuation() {
@@ -167,9 +171,11 @@ public class PastImpl implements Past, Application, RMClient {
    * @param command The command to run once a result is received
    */
   private void sendRequest(Id id, PastMessage message, NodeHandle hint, Continuation command) {
+    log.finer("sending request message " + message + " across the wire and storing the appropriate continuation " + command);
     insertPending(message.getUID(), command);
     endpoint.scheduleMessage(new MessageLostMessage(message.getUID(), getLocalNodeHandle()), MESSAGE_TIMEOUT);
     endpoint.route(id, message, hint);
+    
   }
 
   /**
@@ -179,6 +185,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @param command The continuation to run
    */
   private void insertPending(int uid, Continuation command) {
+    log.finer("loading continuation " + command + " into pending table");
     outstanding.put(new Integer(uid), command);
   }
 
@@ -189,6 +196,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @return The continuation to run
    */
   private Continuation removePending(int uid) {
+    log.finer("removing and returning continuation from pending table");
     return (Continuation) outstanding.remove(new Integer(uid));
   }
 
@@ -198,6 +206,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @param message The message that arrived
    */
   private void handleResponse(PastMessage message) {
+    log.finer("handling reponse message " + message + " from the request");
     Continuation command = removePending(message.getUID());
 
     if (command != null) {
@@ -212,17 +221,20 @@ public class PastImpl implements Past, Application, RMClient {
    * @param obj The object
    */
   private void cache(final PastContent content) {
+    log.finer("inserting PastContent object " + content + " into cache");
     if ((content != null) && (! content.isMutable())) {
       
       storage.cache(content.getId(), content, new Continuation() {
         public void receiveResult(Object o) {
           if (! (o.equals(new Boolean(true)))) {
-            System.out.println("Caching of " + content + " failed.");
+            //System.out.println("Caching of " + content + " failed.");
+            log.warning("Caching of " + content + " failed.");
           }
         }
 
         public void receiveException(Exception e) {
-          System.out.println("Caching of " + content + " caused exception " + e + ".");
+          //System.out.println("Caching of " + content + " caused exception " + e + ".");
+          log.warning("Caching of " + content + " caused exception " + e + ".");
         }
       });
     }
@@ -235,6 +247,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @param set The keys to fetch
    */
   private void addToPending(IdSet set) {
+    log.finer("adding set of ID's " + set + " to the list of pending");
     Iterator i = set.getIterator();
 
     while (i.hasNext()) {
@@ -251,27 +264,32 @@ public class PastImpl implements Past, Application, RMClient {
    * Sends out the request for the next pending id. 
    */
   private void fetchNextPending() {
+    log.finer("Sending out request for the next pending id");
     final Id id = (Id) pending.getIterator().next();
     
+    log.finest("inserting replica of id " + id);
     final Continuation receive = new Continuation() {
       public void receiveResult(Object o) {
         if (! (o.equals(new Boolean(true)))) {
-          System.out.println("Insertion of replica of id " + id + " failed.");
+          //System.out.println("Insertion of replica of id " + id + " failed.");
+          log.warning("Insertion of replica of id " + id + " failed.");
         }
-        
         fetchPendingCompleted(id);
       }
 
       public void receiveException(Exception e) {
-        System.out.println("Insertion of replica id " + id + " caused exception " + e + ".");
+        //System.out.println("Insertion of replica id " + id + " caused exception " + e + ".");
+        log.warning("Insertion of replica id " + id + " caused exception " + e + ".");
         fetchPendingCompleted(id);
       }
     };
 
+    log.finest("retrieving replica id " + id);
     final Continuation insert = new Continuation() {
       public void receiveResult(Object o) {
         if (o == null) {
-          System.out.println("Could not fetch id " + id);
+          //System.out.println("Could not fetch id " + id);
+          log.severe("Could not fetch id" + id);
         } else {
           PastContent content = (PastContent) o;
           storage.store(content.getId(), content, receive);
@@ -279,11 +297,13 @@ public class PastImpl implements Past, Application, RMClient {
       }
 
       public void receiveException(Exception e) {
-        System.out.println("Retreival of replica id " + id + " caused exception " + e + ".");
+        //System.out.println("Retreival of replica id " + id + " caused exception " + e + ".");
+        log.warning("Retrieval of replica id " + id + " caused exception " + e + ".");
         fetchPendingCompleted(id);
       }
     };
 
+    log.finest("fetching handles of replicas of id" + id);
     Continuation fetch = new Continuation() {
       public void receiveResult(Object o) {
         if (o != null) {
@@ -297,7 +317,8 @@ public class PastImpl implements Past, Application, RMClient {
           }
 
           if (handle == null) {
-            System.out.println("Could not fetch object of id " + id + " - all replicas were null.");
+            //System.out.println("Could not fetch object of id " + id + " - all replicas were null.");
+            log.warning("Could not fetch object of id " + id + " - all replicas were null.");
             fetchPendingCompleted(id);
           } else {
             fetch(handle, insert);
@@ -306,7 +327,8 @@ public class PastImpl implements Past, Application, RMClient {
       }
 
       public void receiveException(Exception e) {
-        System.out.println("Fetch handles of replica of id " + id + " caused exception " + e + ".");
+        //System.out.println("Fetch handles of replica of id " + id + " caused exception " + e + ".");
+        log.warning("Fetch handles of replica of id " + id + " caused exception " + e + ".");
         fetchPendingCompleted(id);
       }
     };
@@ -321,6 +343,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @param id The id which the fetch of has completed
    */
   private void fetchPendingCompleted(Id id) {
+    log.finer("fetch of pending id " + id + " has been completed");
     pending.removeId(id);
 
     if (pending.getIterator().hasNext()) {
@@ -342,14 +365,17 @@ public class PastImpl implements Past, Application, RMClient {
    * @param command Command to be performed when the result is received
    */
   public void insert(final PastContent obj, final Continuation command) {
+    log.fine("inserting the object " + obj + " with the given ID into Past");
     if (command == null) return;
     if (obj == null) {
       command.receiveException(new RuntimeException("Object cannot be null in insert!"));
+      log.warning("Object cannot be null in insert!");
       return;
     }
 
     replicaManager.registerKey((rice.pastry.Id) obj.getId());
 
+    log.finer("receiving handles of responses");
     final Continuation receiveHandles = new Continuation() {
 
       // the number of handles we are waiting for
@@ -381,6 +407,7 @@ public class PastImpl implements Past, Application, RMClient {
       }
     };
 
+    log.finer("receiving replicas of handles that are going to be inserted");
     Continuation receiveReplicas = new Continuation() {
 
       public void receiveResult(Object o) {
@@ -425,13 +452,16 @@ public class PastImpl implements Past, Application, RMClient {
    * @param command Command to be performed when the result is received
    */
   public void lookup(Id id, Continuation command) {
+    log.fine("retrieving object stored in Past with given id " + id);
     if (command == null) return;
     if (id == null) {
       command.receiveException(new RuntimeException("Id cannot be null in lookup!"));
+      log.warning("Id cannot be null in lookup!");
       return;
     }
 
     sendRequest(id, new LookupMessage(getUID(), id, getLocalNodeHandle(), id), command);
+    
   }
 
   /**
@@ -452,19 +482,23 @@ public class PastImpl implements Past, Application, RMClient {
    * @param command Command to be performed when the result is received
    */
   public void lookupHandles(final Id id, int max, final Continuation command) {
+    log.fine("retrieving handles of up to " + max + " replicas of the object stored in Past with given ID");
     if (command == null) return;
     if (id == null) {
       command.receiveException(new RuntimeException("Id cannot be null in lookupHandles!"));
+      log.warning("Id cannot be null in lookupHandles!");
       return;
     }
     if (max < 1)  {
       command.receiveException(new RuntimeException("Max must be positive in lookupHandles!"));
+      log.warning("Max must be positive in lookupHandles!") ;
       return;
     }
 
     if (max > replicationFactor)
       max = replicationFactor;
 
+    log.finer("receiving handles");
     final Continuation receiveHandles = new Continuation() {
 
       // the number of handles we are waiting for
@@ -496,6 +530,7 @@ public class PastImpl implements Past, Application, RMClient {
       }
     };
 
+    log.finer("receiving replicas of handles that are going to be received");
     Continuation receiveReplicas = new Continuation() {
 
       public void receiveResult(Object o) {
@@ -531,9 +566,11 @@ public class PastImpl implements Past, Application, RMClient {
    * @param command Command to be performed when the result is received
    */
   public void fetch(PastContentHandle handle, Continuation command) {
+    log.fine("Retrieving object associated with given content handle " + handle);
     if (command == null) return;
     if (handle == null) {
       command.receiveException(new RuntimeException("Handle cannot be null in fetch!"));
+      log.warning("Handle cannot be null in fetch!");
       return;
     }
     
@@ -552,6 +589,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @return The set of ids
    */
   public IdSet scan(IdRange range) {
+    log.fine("returning ID's of objects stored in Past");
     return storage.scan(range);
   }
 
@@ -561,6 +599,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @return the nodehandle
    */
   public NodeHandle getLocalNodeHandle() {
+    log.fine("returning the nodeHandle of local Past node");
     return endpoint.getLocalNodeHandle();
   }
   
@@ -580,6 +619,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @return Whether or not to forward the message further
    */
   public boolean forward(final RouteMessage message) {
+    log.info("forwarding given message " + message + " to the specified next hop");
     if (message.getMessage() instanceof LookupMessage) {
       final LookupMessage lmsg = (LookupMessage) message.getMessage();
       Id id = lmsg.getId();
@@ -587,6 +627,7 @@ public class PastImpl implements Past, Application, RMClient {
 
       // if it is a request, look in the cache
       if (! lmsg.isResponse()) {
+        log.fine("lookup message " + lmsg + " is a request; look in the cache");
         if (storage.exists(id)) {
 
           // deliver the message, which will do what we want
@@ -600,12 +641,14 @@ public class PastImpl implements Past, Application, RMClient {
       } else {
         // if the message hasn't been cached and we don't have it, cache it
         if ((! lmsg.isCached()) && (content != null) && (! content.isMutable())) {
+          log.fine("message hasn't been cached; it is being vached");
           lmsg.setCached();
           cache(content);
         }
       }
     }
 
+    log.fine("letting the message know that it was here");
     // let the message know that it was here
     if (message.getMessage() instanceof PastMessage) {
       ((PastMessage) message.getMessage()).addHop(getLocalNodeHandle());
@@ -622,6 +665,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @param message The message being sent
    */
   public void deliver(Id id, Message message) {
+    log.info("delivering "+ message + " with " + id);
     final PastMessage msg = (PastMessage) message;
 
     if (msg.isResponse()) {
@@ -650,6 +694,7 @@ public class PastImpl implements Past, Application, RMClient {
         
         // if the data is here, we send the reply, as well as push a cached copy
         // back to the previous node
+        log.fine("checking if data is here");
         Continuation forward = new Continuation() {
           public void receiveResult(Object o) {
 
@@ -672,6 +717,7 @@ public class PastImpl implements Past, Application, RMClient {
           }
         };
 
+        log.fine("lookup the object");
         // lookup the object
         storage.getObject(lmsg.getId(), forward);
       } else if (msg instanceof LookupHandlesMessage) {
@@ -691,7 +737,7 @@ public class PastImpl implements Past, Application, RMClient {
             } else {
               getResponseContinuation(msg).receiveResult(null);
             }
-          }	
+          } 
 
           public void receiveException(Exception e) {
             getResponseContinuation(msg).receiveException(e);
@@ -700,7 +746,8 @@ public class PastImpl implements Past, Application, RMClient {
       } else if (msg instanceof CacheMessage) {
         cache(((CacheMessage) msg).getContent());
       } else {
-        System.out.println("ERROR - Received message " + msg + " of unknown type.");
+        //System.out.println("ERROR - Received message " + msg + " of unknown type.");
+        log.severe("ERROR - Received message " + msg + "of unknown type.");
       }
     }
   }
@@ -727,6 +774,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @param keySet set containing the keys that needs to be fetched
    */
   public void fetch(rice.pastry.IdSet keySet) {
+    log.fine("notifying application to fetch the corresponding keys " + keySet + " in the set");
     if (pending.getIterator().hasNext()) {
       addToPending(keySet);
     } else {
@@ -759,8 +807,10 @@ public class PastImpl implements Past, Application, RMClient {
    * responsible
    */
   public void isResponsible(rice.pastry.IdRange range) {
+    log.fine("notifying application of the range of keys " + range + " for which it is responsible");
     IdRange notRange = range.getComplementRange();
 
+    log.finer("unstoring of IDs from replication manager");
     Continuation c = new Continuation() {
       private Iterator notIds;
 
@@ -771,7 +821,8 @@ public class PastImpl implements Past, Application, RMClient {
           while (i.hasNext()) v.add(i.next());
           notIds = v.iterator();
         } else if (! o.equals(new Boolean(true))) {
-          System.out.println("Unstore of Id did not succeed!");
+          //System.out.println("Unstore of Id did not succeed!");
+          log.warning("Unstore of Id did not succeed!");
         }
 
         if (notIds.hasNext()) {
@@ -780,7 +831,8 @@ public class PastImpl implements Past, Application, RMClient {
       }
 
       public void receiveException(Exception e) {
-        System.out.println("Exception " + e + " occurred during removal of objects.");
+        //System.out.println("Exception " + e + " occurred during removal of objects.");
+        log.warning("Exception " + e + " occured during removal of objects.");
       }
     };
 
@@ -794,6 +846,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @param range the requested range
    */
   public rice.pastry.IdSet scan(rice.pastry.IdRange range) {
+    log.fine("returning set of keys that application stores in the range " + range);
     return (rice.pastry.IdSet) storage.scan(range);
   }
 
@@ -804,6 +857,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @return This Past's replica manager
    */
   public RM getReplicaManager() {
+    log.fine("returning replica manger for this instance of Past");
     return replicaManager;
   }
 
@@ -816,6 +870,7 @@ public class PastImpl implements Past, Application, RMClient {
    * @return This Past's storage manager.
    */
   public StorageManager getStorageManager() {
+    log.fine("returning storage manager for this instance of Past");
     return storage;
   }
 }
