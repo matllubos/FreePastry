@@ -77,6 +77,11 @@ public class EuclideanNetwork implements NetworkSimulator
 	}
     }
 
+    /**
+     * Initialize a random Euclidean NodeRecord
+     *
+     */
+
     private class NodeRecord {
 	public int x, y;
 	public boolean alive;
@@ -140,7 +145,7 @@ public class EuclideanNetwork implements NetworkSimulator
     }
 
     /**
-     * set a NodeId to be alive or not
+     * set the liveliness of a NodeId
      *
      * @param nid the NodeId being set
      * @param alive the value being set
