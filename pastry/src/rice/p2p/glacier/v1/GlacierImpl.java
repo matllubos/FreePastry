@@ -327,7 +327,9 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
     /* We also need hashes of the fragments. */
 
     log("Create fragments: " + obj);
-    Fragment[] fragments = codec.encode(bytes);
+    boolean[] generateFragment = new boolean[numFragments];
+    Arrays.fill(generateFragment, true);
+    Fragment[] fragments = codec.encode(bytes, generateFragment);
     log("Completed: " + obj);
 
     if (fragments == null)
@@ -405,7 +407,9 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
       /* Compute the fragments */
 
       log("Encode object: " + obj);
-      Fragment[] fragments = codec.encodeObject(obj);
+      boolean[] generateFragment = new boolean[numFragments];
+      Arrays.fill(generateFragment, true);
+      Fragment[] fragments = codec.encodeObject(obj, generateFragment);
       log("Completed: " + obj);
 
       if (fragments != null) {
@@ -993,7 +997,10 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
                   public void receiveResult(Object o) {
                     if (o != null) {
                       log("Original found. Recoding...");
-                      Fragment[] frags = codec.encodeObject((Serializable) o);
+                      boolean[] generateFragment = new boolean[numFragments];
+                      Arrays.fill(generateFragment, false);
+                      generateFragment[gfm.getKey().getFragmentID()] = true;
+                      Fragment[] frags = codec.encodeObject((Serializable) o, generateFragment);
                       log("Fragments recoded ok. Returning fragment...");
                       endpoint.route(
                         null,

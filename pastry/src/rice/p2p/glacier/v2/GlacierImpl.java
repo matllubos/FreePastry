@@ -18,6 +18,9 @@ import rice.persistence.StorageManager;
 import rice.persistence.PersistentStorage;
 import rice.visualization.server.DebugCommandHandler;
 
+import rice.pastry.commonapi.PastryIdFactory;
+import rice.p2p.multiring.*;
+
 public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Application, DebugCommandHandler {
 
   protected final StorageManager fragmentStorage;
@@ -1954,7 +1957,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
 
     endpoint.process(new Executable() {
       public Object execute() {
-        return policy.encodeObject(obj);
+        boolean[] generateFragment = new boolean[numFragments];
+        Arrays.fill(generateFragment, true);
+        return policy.encodeObject(obj, generateFragment);
       }
     }, new Continuation() {
       public void receiveResult(Object o) {
@@ -2506,7 +2511,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
               endpoint.process(new Executable() {
                 public Object execute() {
                   log(3, "Reencode object: " + key.getVersionKey());
-                  Object result = policy.encodeObject(retrievedObject);
+                  boolean generateFragment[] = new boolean[numFragments];
+                  Arrays.fill(generateFragment, false);
+                  generateFragment[key.getFragmentID()] = true;
+                  Object result = policy.encodeObject(retrievedObject, generateFragment);
                   log(3, "Reencode complete: " + key.getVersionKey());
                   return result;
                 }
