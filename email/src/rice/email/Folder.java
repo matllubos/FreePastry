@@ -142,7 +142,9 @@ public class Folder {
   }
   
   public Folder createChildFolder(String name) {
-    _log.addChildLog(new Log(name, _log.getLocation()));
+    Log log = new Log(name, _log.getLocation());    
+    _log.addChildLog(log);
+    return new Folder(log, _storage);
   }
   
   public Folder getChildFolder(String name) {
