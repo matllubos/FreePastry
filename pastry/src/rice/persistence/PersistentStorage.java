@@ -108,20 +108,8 @@ public class PersistentStorage implements Storage {
     this.name = name;
     this.rootDir = rootDir;
     storageSize = size; 
+	init();
 	workThread.start();
-	System.out.println("Trying to init .....");
-	try{
-		workQ.enqueue( new WorkRequest() { 
-			public void doWork(){
-				init();
-			}
-		});
-	}
-	catch(WorkQueueOverflowException e){
-		  e.printStackTrace();
-	}
-	System.out.println("Done to init .....");
-
 
   }
 
