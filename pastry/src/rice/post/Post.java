@@ -8,6 +8,7 @@ import rice.pastry.security.*;
 import rice.pastry.client.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
+import rice.pastry.standard.*;
 import rice.pastry.*;
 import rice.past.*;
 import rice.scribe.*;
@@ -132,9 +133,11 @@ public class Post extends PastryAppl implements IScribeApp  {
     	}
   }
   
-  private void handleRecieptMessage(message){}
+  private void handleRecieptMessage(Message message){
 
-  private void handlePresenceMessage(Message message){
+  }
+
+  private void handleDeliveryRequestMessage(Message message){
     /* Buffer this for Delivery */
     DeliveryRequestMessage dmessage = (DeliveryRequestMessage) message;
     synchronized(bufferedData){
@@ -183,7 +186,6 @@ public class Post extends PastryAppl implements IScribeApp  {
    * This method announce's our presence via our scribe tree
    * 
    */
-  /* TO DO:: FIX ME!!! topic id */
   private void announcePresence(){
      NodeHandle nodeId = thePastryNode.getLocalHandle();
      NodeId topicId = null; /* fix this to be the topic id of the user's scribe group */
@@ -219,7 +221,7 @@ public class Post extends PastryAppl implements IScribeApp  {
   public void sendNotification(NotificationMessage message) {
      NodeId destination = (new RandomNodeIdFactory()).generateNodeId();
      DeliveryRequestMessage drmessage = 
-                   new DeliveryRequestMessage(getNodeId(), destination, message);
+                   new DeliveryRequestMessage(address, (PostUserAddress) message.getAddress(), message);
      routeMsg(destination, drmessage, getCredentials(),
               new SendOptions());
   }  
@@ -232,6 +234,13 @@ public class Post extends PastryAppl implements IScribeApp  {
 	
           Vector userQueue = (Vector) bufferedData.get(msg.getDestination());
           if(userQueue != null){
+		while(!userQueue.isEmpty()){
+	            NotificationMessage message = (NotificationMessage) userQueue.elementAt(0);
+ 		    userQueue.removeElementAt(0);		
+                    routeMsg(message.getAddress().getAddress(), message, getCredentials(),
+                             new SendOptions());
+ 		    userQueue.removeElementAt(0);		
+		}
             /* Iterate and send */ 
           }
      }
