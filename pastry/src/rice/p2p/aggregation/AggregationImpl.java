@@ -1644,7 +1644,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
           log(3, "lookupHandles("+id+","+max+") handled by PAST; ret="+o);
           command.receiveResult(o);
         } else {
-          warn("lookupHandles("+id+","+max+") failed, ret="+o+" -- restoring");
+          log(2, "lookupHandles("+id+","+max+") failed, ret="+o+" -- restoring");
 
           AggregateDescriptor adc = (AggregateDescriptor) aggregateList.getADC(id);
           if (adc!=null) {
@@ -1669,7 +1669,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
               }
             });
           } else {
-            warn("lookupHandles: "+id+" is neither in object store nor in aggregate list");
+            log(2, "lookupHandles: "+id+" is neither in object store nor in aggregate list");
             /* Note that we have to give up here... even if the object has not been 
                aggregated, there is no efficient way to find out its version number.
                The user must call lookupVersion in this case. */
