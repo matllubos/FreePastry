@@ -129,6 +129,27 @@ public interface GCPast extends Past {
    * @param expiration The time to extend the lifetime to
    * @param command Command to be performed when the result is received
    */
+  public void refresh(Id[] ids, long[] expiration, Continuation command);
+
+  /**
+   * Updates the objects stored under the provided keys id to expire no
+   * earlier than the provided expiration time.  Asyncroniously returns
+   * the result to the caller via the provided continuation.  
+   *
+   * The result of this operation is an Object[], which is the same length
+   * as the input array of Ids.  Each element in the array is either 
+   * Boolean(true), representing that the refresh succeeded for the 
+   * cooresponding Id, or an Exception describing why the refresh failed.  
+   * Specifically, the possible exceptions which can be returned are:
+   * 
+   * ObjectNotFoundException - if no object was found under the given key
+   * RefreshFailedException - if the refresh operation failed for any other
+   *   reason (the getMessage() will describe the failure)
+   * 
+   * @param id The keys which to refresh
+   * @param expiration The time to extend the lifetime to (applies to all keys)
+   * @param command Command to be performed when the result is received
+   */
   public void refresh(Id[] ids, long expiration, Continuation command);
 
 }
