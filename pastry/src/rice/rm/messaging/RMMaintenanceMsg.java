@@ -49,7 +49,10 @@ import java.io.*;
 import java.util.*;
 
 /**
+ * @(#) RMMaintenanceMsg.java
  *
+ * A periodic message scheduled on the local node to trigger the periodic
+ * replica manager maintenance protocol.
  * 
  * @version $Id$ 
  * 
@@ -60,12 +63,25 @@ import java.util.*;
 public class RMMaintenanceMsg extends RMMessage implements Serializable
 {
 
+    /**
+     * The time interval between successive replica manager maintenance
+     * activities.
+     */  
     public static int maintFreq = 120 ; // in seconds (here it is 2 minutes)
 
+
+    /**
+     * The time offset after the RM substrate on the local node is ready 
+     * when we first trigger the maintenance protocol.
+     */ 
     public static int maintStart = 120; // in seconds (here it is 2 minutes)
 
     /**
      * Constructor
+     * @param source the local node itself
+     * @param address the RM application address
+     * @param authorCred the credentials of the source
+     * @param seqno for debugging purpose only
      */
     public RMMaintenanceMsg(NodeHandle source, Address address,  Credentials authorCred, int seqno) {
 	super(source, address, authorCred, seqno);

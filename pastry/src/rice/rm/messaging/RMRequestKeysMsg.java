@@ -50,28 +50,58 @@ import java.io.*;
 /**
  * @(#) RMRequestKeysMsg.java
  *
- * A RM message. These messages are exchanged between the RM modules on the pastry nodes. 
+ * This message is used to request for the set of keys lying in the ranges
+ * specified in the message. This message coupled with the RMResponseKeysMsg 
+ * is fundamental to the Keys Exchange Protocol of the Replica Manager. 
+ * We handle loss of this type of message by a Timeout mechanism. 
  *
  * @version $Id$
+ *
  * @author Animesh Nandi
  */
 public class RMRequestKeysMsg extends RMMessage implements Serializable{
 
+    /**
+     * The list of ranges whose corresponding key sets the issuer of this 
+     * message is interested in.
+     */
     private Vector rangeSet;
 
-    // This is to handle the loss of this type of messages
-    // (The other kind of messages do not require a Timeout mechanism, hence they do not have this field)
-    // That is if a Timeout occurred for a RMRequestKeysMsg, then the subsequent RMRequestKeysMsg
-    // that will be resent will have the SAME eventId but an INCREASED value of seqNo.
+
+    /**
+     * This is to handle the loss of this type of messages.
+     * (The other kind of messages do not require a Timeout mechanism,
+     * hence they do not have this field).
+     * Specifically, if a Timeout occurred for a RMRequestKeysMsg, then the
+     * subsequent RMRequestKeysMsg that will be resent will have the SAME
+     * eventId but an INCREASED value of seqNo. Also the RMResponseKeysMsg
+     * sent in response to this message will have the SAME eventId.
+     */
     private int eventId; 
 
-    // In the Timeout mechanism upto MAXATTEMPTS will be made
+    /**
+     * In the Timeout mechanism upto MAXATTEMPTS will be made. 
+     * This represents the number of attempts made so far.
+     */
     private int attempt;
 
+    /**
+     * The timeout period within which if the response to this message
+     * is not received, then the same message is resent.
+     */
     public static int TIMEOUT = 10; // 10 seconds
 
+
+    /**
+     * The maximum number of attempts made in the timeout mechanism after
+     * which the message is ignored.
+     */
     public static int MAXATTEMPTS = 3; 
 
+    /**
+     * Contains the RMRequestKeysMsg and the destination to which it was
+     * being sent.
+     */
     public static class WrappedMsg {
 	RMRequestKeysMsg msg;
 	NodeHandle dest;
@@ -97,6 +127,12 @@ public class RMRequestKeysMsg extends RMMessage implements Serializable{
 
     /**
      * Constructor : Builds a new RM Message
+     * @param source the source of the message
+     * @param address the RM application address
+     * @param authorCred the credentials of the source
+     * @param seqno for debugging purposes only
+     * @param _rangeSet the rangeSet of this message
+     * @param _eventId the eventId of this message
      */
     public RMRequestKeysMsg(NodeHandle source, Address address, Credentials authorCred, int seqno, Vector _rangeSet, int _eventId) {
 	super(source,address, authorCred, seqno);
@@ -110,10 +146,13 @@ public class RMRequestKeysMsg extends RMMessage implements Serializable{
 
 
     /**
-     * This method is called whenever the rm node receives a message for 
-     * itself and wants to process it. The processing is delegated by rm 
-     * to the message.
-     * 
+     * The handling of the message iterates of the 'rangeSet' as takes the
+     * following action on the entries of type RMMessage.KEEntry.
+     * If first takes the intersection of the requested range with the range
+     * that it is itself responsible for. Then it issues a scan on this
+     * intersected range. If the requestor asks only for the hash of the 
+     * keys in the range, then only the hash is returned, otherwise the
+     * key Set correspnding to the intersected range is returned.
      */
     public void handleDeliverMessage( RMImpl rm) {
 	//System.out.println("At " + rm.getNodeId() + "received RequestKeysMsg from " + getSource().getNodeId() + " seqno= " + getSeqno());
@@ -179,13 +218,22 @@ public class RMRequestKeysMsg extends RMMessage implements Serializable{
 	return eventId;
     }
 
-    // Since this message has a timeout mechanism, the next we send the message as a result 
-    // of Timeout we need to reflect the current seqNo used by the application
+    /**
+     * Since this message has a timeout mechanism, the next time we resend
+     * the message as a result of Timeout we need to reflect the current
+     * seqNo used by the application in the message.
+     */
     public void setSeqNo(int val) {
 	_seqno = val;
 
     }
 
+
+    /**
+     * Since this message has a timeout mechanism, the next time we resend
+     * the message as a result of Timeout we need to increment the attempt
+     * number.
+     */
     public void incrAttempt() {
 	attempt++;
 	return;

@@ -49,21 +49,36 @@ import java.io.*;
 /**
  * @(#) RMResponseKeysMsg.java
  *
- * A RM message. These messages are exchanged between the RM modules on the pastry nodes. 
+ * This message is delivered in response to a RMRequestKeysMsg. It shares
+ * the same 'eventId' as the RMRequestKeysMsg to which it responded.
  *
  * @version $Id$
+ *
  * @author Animesh Nandi
  */
 public class RMResponseKeysMsg extends RMMessage implements Serializable{
 
-
+    /**
+     * The list of ranges whose corresponding key sets the issuer of its 
+     * corresponding RMRequestKeysMsg message was interested in, except with
+     * the difference that the ranges in this list are a result of the 
+     * intersection of the ranges requested for and 'myRange' of the responder.
+     */
     private Vector rangeSet;
 
-    // Event Id of the RMRequestKeysMsg to which this is a response
+    /**
+     * Event Id of the RMRequestKeysMsg to which this is a response.
+     */
     private int eventId;
 
     /**
      * Constructor : Builds a new RM Message
+     * @param source the source of the message
+     * @param address the RM application address
+     * @param authorCred the credentials of the source
+     * @param seqno for debugging purposes only
+     * @param _rangeSet the rangeSet of this message
+     * @param _eventId the eventId of this message
      */
     public RMResponseKeysMsg(NodeHandle source, Address address, Credentials authorCred, int seqno, Vector _rangeSet, int _eventId) {
 	super(source,address, authorCred, seqno);
@@ -74,10 +89,55 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 
 
     /**
-     * This method is called whenever the rm node receives a message for 
-     * itself and wants to process it. The processing is delegated by rm 
-     * to the message.
-     * 
+     * The handling of the message does the following -
+     *
+     * 1. Removes the event characterized by 'eventId' from the m_PendingEvents
+     *    hashtable signifying that a response to the message was received 
+     *    to ensure that on the occurrence of the timeout, the message is NOT
+     *    resent.
+     *
+     * 2. We then iterate over the 'rangeSet' for each entry of type 
+     *    RMMessage.KEEntry we do the following:
+     *    a) If the entire key set for the rangge was requested, it notifies 
+     *       the RMClient to fetch() the keys in that set. Additionally, it
+     *       removes this range from the list of pending ranges in the 
+     *       m_pendingRanges hashtable.
+     *    b) If only the hash of the keys in the range was requested and 
+     *       the hash matched then we
+     *       remove this range from the list of pending ranges in the 
+     *       m_pendingRanges hashtable.
+     *    c) If only the hash of the keys in the range was requested and
+     *       the hash did not match, then we update the entry corresponding
+     *       to this range in the pending ranges list
+     *       with the number of keys in this range as notified by the source
+     *       of the message.
+     *
+     * 3. We now iterate over the pending Ranges list and split the ranges 
+     *    whose expected number of keys('numKeys') is greater than 
+     *    MAXKEYSINRANGE. The splitting method is recursive binary spliting
+     *    until we get a total SPLITFACTOR number of subranges from the
+     *    intitial range.
+     *
+     * 4. At this point all ranges in the pendingRanges list have either a
+     *    value of 'numKeys' less than MAXKEYSINRANGE or a value or '-1' 
+     *    denoting uninitialized. 
+     *
+     * 5. Now we iterate over this list of pending ranges and build a new
+     *    RMRequestKeysMsg with a new rangeSet called 'toAskFor' in the code
+     *    below. All add all ranges with uninitialized value of 'numKeys' 
+     *    to the new list 'toAskFor' setting their 'hashEnabled' field in 
+     *    their corresponding RMMessage.KEEntry to 'true', signifying that
+     *    it is interested only in the hash value of the keys in this range.
+     *    Additonally, it also adds ranges with already initialized 'numKeys'
+     *    values to this 'toAskFor' list with the 'hashEnabled' field set to
+     *    'false' as long as the total size of the key sets corresponding to
+     *    the entries in  'toAskFor' is less than MAXKEYSINRANGE.
+     *
+     * 6. Sends the new RMRequestKeysMsg with this 'toAskFor' list. 
+     *    Additionally, in order to implement the TIMEOUT mechanism to
+     *    handle loss of RMRequestKeysMsg, we wrap the RMRequestKeysMsg
+     *    in a RMTimeoutMsg which we schedule on the local node after a 
+     *    TIMEOUT period.     
      */
     public void handleDeliverMessage( RMImpl rm) {
 	//System.out.println("Start " + rm.getNodeId() + " received ResponseKeys msg from" + getSource().getNodeId() + "seq= " + getSeqno());
@@ -225,6 +285,7 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 
     
 }
+
 
 
 

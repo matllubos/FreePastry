@@ -49,10 +49,10 @@ import java.io.*;
 /**
  * @(#) RMMessage.java
  *
- * A RM message. These messages are exchanged between the RM modules on the pastry nodes. 
+ * A RM message. These messages are exchanged between the RM modules. 
  *
  * @version $Id$
- * @author Atul Singh
+ *
  * @author Animesh Nandi
  */
 public abstract class RMMessage extends Message implements Serializable{
@@ -70,22 +70,33 @@ public abstract class RMMessage extends Message implements Serializable{
      */
     protected NodeHandle _source;
 
-    // for debugging purposes
+    /**
+     * for debugging purposes only
+     */
     protected int _seqno;
 
 
-    // This class will be used by the messaging system
+    /**
+     * This class will be used by the messaging system.
+     * These are entries in the 'rangeSet'field in the RMRequestKeysMsg
+     */
     public static class KEEntry implements Serializable{
 	private IdRange reqRange;
 	private boolean hashEnabled;
 	private IdSet keySet;
 	private Id hash;
 	private int numKeys;
-	// This range is got by the intersection of the reqRange and the responsible
-	// range on the responder side
+
+
+	/**
+	 * This range is got by the intersection of the reqRange 
+	 * and the responsible range on the responder side.
+	 */
 	private IdRange range;
 
-	// This constructor is to be used by the requestor for keys
+	/* 
+	 * This constructor is to be used by the requestor for keys
+	 */
 	public KEEntry(IdRange _range, boolean _hEnabled) {
 	    reqRange = _range;
 	    hashEnabled = _hEnabled;
@@ -96,7 +107,9 @@ public abstract class RMMessage extends Message implements Serializable{
 	    range = new IdRange();
 	}
 
-	// This constructor is to be used when the responder 
+	/*
+	 * This constructor is to be used when the responder 
+	 */
 	public KEEntry(IdRange _reqRange, IdRange _range, int _numKeys, boolean _hashEnabled, Id _hash, IdSet _keySet ) {
 	    reqRange = _reqRange;
 	    range = _range;
@@ -140,14 +153,12 @@ public abstract class RMMessage extends Message implements Serializable{
 
     }
 
-    // Stands for the Keys Exchange protocol Pending Entry
-    // this class will be used to keep track of the pending entries on the requestor side
-   
-
-
     /**
      * Constructor : Builds a new RM Message
+     * @param source the source of the message 
      * @param address RM Application address
+     * @param authorCred the credentials of the source
+     * @param seqno seuence number for debugging purposes only
      */
     public RMMessage(NodeHandle source, Address address, Credentials authorCred, int seqno) {
 	super(address);
@@ -161,10 +172,8 @@ public abstract class RMMessage extends Message implements Serializable{
      * This method is called whenever the rm node receives a message for 
      * itself and wants to process it. The processing is delegated by rm 
      * to the message.
-     * 
      */
-    public abstract void 
-	handleDeliverMessage( RMImpl rm);
+    public abstract void handleDeliverMessage( RMImpl rm);
     
 
     public int getSeqno() {

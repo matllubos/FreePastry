@@ -49,7 +49,11 @@ import java.io.*;
 import java.util.*;
 
 /**
+ * @(#) RMTimeoutMsg.java
  *
+ * The timeout message containing a wrapped RMRequestKeysMsg, which is 
+ * scheduled to be delivered at the local node TIMEOUT period after the 
+ * wrapped RMRequestKeysMg in it was intially sent.
  * 
  * @version $Id$ 
  * 
@@ -64,6 +68,11 @@ public class RMTimeoutMsg extends RMMessage implements Serializable
 
     /**
      * Constructor
+     * @param source the local node itself
+     * @param address the RM application address
+     * @param authorCred the credentials of the source
+     * @param seqno for debugging purposes only
+     * @param _wmsg the wrapped RMRequestKeysMsg
      */
     public RMTimeoutMsg(NodeHandle source, Address address,  Credentials authorCred, int seqno, RMRequestKeysMsg.WrappedMsg _wmsg) {
 	super(source, address, authorCred, seqno);
@@ -71,6 +80,14 @@ public class RMTimeoutMsg extends RMMessage implements Serializable
 	
     }
     
+    /**
+     * If the RMResponseKeysMsg corresponding to the wrapped RMRequestKeysMsg
+     * was received (done by having same 'eventId' field in RMRequestKeysMsg &
+     * corresponding RMResponseKeysMsg) then nothing needs to be done. 
+     * Otherwise, the wrapped RMRequestKeysMsg is resent, while incrementing
+     * its attempt number. Note that after MAXATTEMPTS number of timeouts,
+     * the message will be ignored even if not successfully delivered.
+     */ 
     public void handleDeliverMessage( RMImpl rm) {
 	//System.out.println("");
 	//System.out.println("RMTimeout message: at " + rm.getNodeId());
