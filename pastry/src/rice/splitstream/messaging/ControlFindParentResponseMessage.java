@@ -4,6 +4,7 @@ import rice.splitstream.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
+import rice.pastry.direct.*;
 
 import java.lang.Boolean;
 import java.util.Vector;
@@ -95,12 +96,39 @@ public class ControlFindParentResponseMessage extends Message
         {
             scribe.setParent( source, topic.getTopicId() );
 	    stripe.setIgnoreTimeout( true );
+	    stripe.setState(Stripe.STRIPE_SUBSCRIBED);
+
 	    //System.out.println("setparent set");
 	    //System.out.println("Node "+scribe.getNodeId()+" received response to FindParent from "+source.getNodeId()+ " for stripe "+topic.getTopicId());
         }
         else
 	    {
 		System.out.println("CFPResponse -- failed, should retry");
+		Channel channel = stripe.getChannel();
+		int num_fails = stripe.num_fails;
+		Credentials c = new PermissiveCredentials();
+		if(scribe.getPastryNode() instanceof DirectPastryNode){
+		    System.out.println("DirectNodeHandle -----------");
+		    if(num_fails < channel.getTimeouts()){
+			System.out.println("DirectNodeHandle -- sending again CFPMessage at "+scribe.getNodeId());
+			ControlFindParentMessage cfpMsg = new ControlFindParentMessage(scribe.getAddress(),
+										       scribe.getLocalHandle(),
+										       channel.getSpareCapacityId(),
+										       c, 
+										       stripe.getStripeId(), 
+										       channel.getChannelId() );
+			stripe.num_fails = num_fails + 1;
+			scribe.anycast(channel.getSpareCapacityId(), cfpMsg, c);
+			
+			ControlTimeoutMessage timeoutMsg = new ControlTimeoutMessage( channel.getSplitStream().getAddress(),
+										      num_fails + 1, 
+										      channel.getSpareCapacityId(),
+										      c,
+										      stripe.getStripeId(),
+										      channel.getChannelId());
+			scribe.getPastryNode().scheduleMsg( timeoutMsg, channel.getTimeoutLen() );
+		    }
+		}
 		stripe.setIgnoreTimeout( false );
             /* generate upcall */
         }
