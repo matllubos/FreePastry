@@ -1,3 +1,40 @@
+/*************************************************************************
+
+"Free Pastry" Peer-to-Peer Application Development Substrate 
+
+Copyright 2002, Rice University. All rights reserved. 
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+- Neither  the name  of Rice  University (RICE) nor  the names  of its
+contributors may be  used to endorse or promote  products derived from
+this software without specific prior written permission.
+
+This software is provided by RICE and the contributors on an "as is"
+basis, without any representations or warranties of any kind, express
+or implied including, but not limited to, representations or
+warranties of non-infringement, merchantability or fitness for a
+particular purpose. In no event shall RICE or contributors be liable
+for any direct, indirect, incidental, special, exemplary, or
+consequential damages (including, but not limited to, procurement of
+substitute goods or services; loss of use, data, or profits; or
+business interruption) however caused and on any theory of liability,
+whether in contract, strict liability, or tort (including negligence
+or otherwise) arising in any way out of the use of this software, even
+if advised of the possibility of such damage.
+
+********************************************************************************/
+
+
 package rice.scribe;
 
 import rice.pastry.client.*;
@@ -6,6 +43,7 @@ import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.*;
 import rice.pastry.direct.*;
+import rice.pastry.leafset.*;
 
 import java.util.*;
 import java.security.*;
@@ -15,7 +53,12 @@ import rice.scribe.security.*;
 import rice.scribe.maintenance.*;
 
 /**
- * Main entry point for the Scribe System
+ * @(#) Scribe.java
+ *
+ * This is the Scribe Object which implements the IScribe interface 
+ * (the external Scribe API).
+ *
+ * @version $Id$
  *
  * @author Romer Gil
  * @author Eric Engineer
@@ -30,7 +73,34 @@ public class Scribe extends PastryAppl implements IScribe
     /**
      * Set of topics on the local scribe node. 
      */
-    HashMap m_topics = null;
+    public HashMap m_topics = null;
+    
+
+    /**
+     * The threshold value for triggering tree repair for a topic. 
+     * Tree repair for a topic is triggered after we have missed this
+     * threshold value of heartbeat messages from the parent for the topic.
+     * This threshold value can be set using the setTreeRepairThreshold
+     * method and its value retreived using the getTreeRepairThreshold 
+     * method. Default value is 2.
+     */
+    private int m_treeRepairThreshold = 2;
+
+    
+
+    /**
+     * Hashtable having mapping from a child -> list of topics for 
+     * which this child is in local node's children list for that topic.
+     * In this way, this table will have only distinct children and for
+     * each child, the list of topics in which it is a child.
+     * Used to identify distinct chidren when sending HeartBeat messages,
+     * so that we dont send a node multiple HeartBeat messages when it is
+     * child for more than one topic.
+     */
+
+    protected Hashtable m_distinctChildrenTable;
+
+
 
     private static class ScribeAddress implements Address {
 	private int myCode = 0x8aec747c;
@@ -63,29 +133,78 @@ public class Scribe extends PastryAppl implements IScribe
     protected IScribeSecurityManager m_securityManager = null;
 
     /**
-     *
+     * The ScribeMaintainer object handles all the tree maintenance
+     * activities like the sending of heartbeat messages and issuing 
+     * tree repair events for all the topics residing on the local node.
      */
-    ScribeScheduler m_scheduler;
+    public ScribeMaintainer m_maintainer;
 
     /**
      * Constructor.
      *
      * @param pn the pastry node that client will attach to.
+     *
+     * @param cred the credentials associated with this scribe object. 
      */
     public Scribe( PastryNode pn, Credentials cred ) {
 	super( pn );
 	m_topics = new HashMap();
 	m_sendOptions = new SendOptions();
 	m_securityManager = new PSecurityManager();
-	m_scheduler = new ScribeScheduler( this, 20*1000, 30*1000 );
+	m_maintainer = new ScribeMaintainer( this);
 	m_credentials = cred;
-	//	m_scribeApp = app;
-	
 	if( cred == null ) {
 	    m_credentials = new PermissiveCredentials();
 	}
-
+	m_distinctChildrenTable = new Hashtable();
     }
+
+    /**
+     * The tree repair event for a particular topic in Scribe is triggered
+     * when a node misses a certain threshold number of heartbeat 
+     * messages from its parent for the topic. This threshold value can be 
+     * set using this method.
+     *
+     * @param    value
+     * The value for the tree repair threshold.
+     */
+    public void setTreeRepairThreshold(int value) {
+	m_treeRepairThreshold = value;
+    }
+
+
+    /**
+     * Gets the tree repair threshold value.
+     *
+     * @return the tree repair threshold value
+     */
+    public int getTreeRepairThreshold() {
+	return m_treeRepairThreshold;
+    }
+
+
+    /**
+     * Send heartbeat messages to its children for all the topics on this
+     * local scribe node. This method should be called by the driver 
+     * periodically. The failure of receive a threshold value of such
+     * heartbeat messages from the parent for a particular topic triggers
+     * a tree repair for that topic.
+     */
+    public void scheduleHB(){
+	m_maintainer.scheduleHB();
+    }
+
+    /**
+     * Returns true if the local node is currently the 
+     * root(the node that is closest to the topicId) of the topic.
+     * 
+     * @return true if the local node is currently the root for the topic
+     */
+    public boolean isRoot(NodeId topicId) {
+	return isClosest(topicId);
+    }
+
+
 
     /**
      * Creates a topic if the credentials are valid.  Nodes must then subscribe
@@ -96,9 +215,12 @@ public class Scribe extends PastryAppl implements IScribe
      *
      * @param    topicID       
      * the ID of the topic to be created
+     *
+     * @param    ackSwitch
+     * the value by which ackOnSubscribeSwitch is initialised
      */
-    public void create( NodeId topicId, Credentials cred ) {
-	ScribeMessage msg = makeCreateMessage( topicId, cred );
+    public void create( NodeId topicId, Credentials cred, boolean value ) {
+	ScribeMessage msg = makeCreateMessage( topicId, cred , value);
 
 	this.routeMsg( topicId, msg, cred, m_sendOptions );
     }
@@ -121,12 +243,13 @@ public class Scribe extends PastryAppl implements IScribe
 	
 	if ( topic == null ) {
 	    topic = new Topic( topicId, this );
-	    m_topics.put( topicId, topic );
+	    synchronized(m_topics){
+		m_topics.put( topicId, topic );
+	    }
 	}
 	
 	// Register application as a subscriber for this topic
 	topic.subscribe( subscriber );
-	topic.restartParentHandler();
 	
 	ScribeMessage msg = makeSubscribeMessage( topicId, cred );
 	this.routeMsg( topicId, msg, cred, m_sendOptions );
@@ -177,9 +300,8 @@ public class Scribe extends PastryAppl implements IScribe
      * @param   topicID         
      * the ID of the topic to publish to.
      *
-     * @param   msg           
-     * the information that is to be published, encapsulated in a Message 
-     * object.
+     * @param   obj
+     * the information that is to be published.
      */
     public void publish( NodeId topicId, Object obj, Credentials cred ) {
 	ScribeMessage msg = makePublishMessage( topicId, cred );
@@ -190,10 +312,12 @@ public class Scribe extends PastryAppl implements IScribe
 
     /**
      * Generate a unique id for the topic, which will determine its rendez-vous
-     * point. THIS STILL NEEDS TO BE IMPLEMENTED!!!
+     * point.
      *
      * @param topicName 
      * the name of the topic
+     *
+     * @return the topic id.
      */
     public NodeId generateTopicId( String topicName ) { 
 	MessageDigest md = null;
@@ -220,15 +344,15 @@ public class Scribe extends PastryAppl implements IScribe
      */
     public Address getAddress() { return m_address; }
 
+
     /**
-     * Returns the credentials of this client. Since all the functions in the 
-     * API have a reference to a credentials object this is probably not 
-     * necessary.
+     * Returns the credentials of this client.
      *
      * @return the credentials.
      */
     public Credentials getCredentials() { return m_credentials; }
     
+
     /**
      * Called by pastry when a message arrives for this client.
      *
@@ -242,6 +366,8 @@ public class Scribe extends PastryAppl implements IScribe
 
 	smsg.handleDeliverMessage( this, topic );
     }
+
+
 
     /**
      * Called by pastry when a message is enroute and is passing through this 
@@ -262,11 +388,11 @@ public class Scribe extends PastryAppl implements IScribe
 
 	NodeId topicId = smsg.getTopicId();
 	Topic topic = (Topic)m_topics.get( topicId );
-	/*
-	System.out.println( "Node: " + getNodeId() + " enroute" );
-	System.out.println( "Node: " + target + " enroute to target" );
-	System.out.println( "Node: " + nextHop + " enroute nextHop" );
-	*/
+	
+	//System.out.println( "Node: " + getNodeId() + " enroute" );
+	//System.out.println( "Node: " + target + " enroute to target" );
+	//System.out.println( "Node: " + nextHop + " enroute nextHop" );
+	
 	return smsg.handleForwardMessage( this, topic );
     }
 
@@ -282,16 +408,20 @@ public class Scribe extends PastryAppl implements IScribe
 	if( wasAdded ) {
 	    //if the node was added we must check if the new node should be
 	    //topic manager for any of our topics.
-	    Iterator it = m_topics.values().iterator();
 	    Topic topic;
 	    NodeId topicId, myNodeId;
 	    NodeId.Distance myDistance, distance;
 	    Credentials c = m_credentials;
+	    Vector topicVector = new Vector();
+	    int i = 0;
 
 	    myNodeId = this.getNodeId();
 
-	    while( it.hasNext() ) {
-		topic = (Topic)it.next();
+	    topicVector = getTopics();
+	    
+	    while( i < topicVector.size() ) {
+		topic = (Topic)topicVector.elementAt(i);
+		i++;
 		//for all topics, if we are manager then we do more processing
 		if( topic.isTopicManager() ) {
 		    topicId = topic.getTopicId();
@@ -303,10 +433,10 @@ public class Scribe extends PastryAppl implements IScribe
 		     *new node's then the new node should be manager
 		     */
 		    if( myDistance.compareTo( distance ) > 0 ) {
-			//WE HAVE GOT A NEW TOPIC MANAGER!!! YAY
+			//We have got a new topic manager.
 			topic.topicManager( false );
 
-			//please send a subscribe message
+			//send a subscribe message
 			ScribeMessage msg = makeSubscribeMessage( topicId, c );
 			this.routeMsg( topicId, msg, c, m_sendOptions );
 		    }
@@ -314,12 +444,13 @@ public class Scribe extends PastryAppl implements IScribe
 	    }
 	}
 	else {
-	    //I dont think we care if a node drops.
+	    //We do not need to do anything when a node drops.
 	}
     }
 
     /**
-     * Returns the handle of the node inside the Scribe system.
+     * Returns the handle of the local node on which this Scribe 
+     * application resides.
      *
      * @return the node handle.
      */
@@ -327,14 +458,6 @@ public class Scribe extends PastryAppl implements IScribe
 	return thePastryNode.getLocalHandle();
     }
 
-    /**
-     * Returns the application using the Scribe system.
-     *
-     * @return the scribe application.
-     */
-    // public IScribeApp getScribeApp() { 
-    //	return m_scribeApp; 
-    //}
 
     /**
      * Returns the send options in the Scribe system.
@@ -345,6 +468,7 @@ public class Scribe extends PastryAppl implements IScribe
 	return m_sendOptions;
     }
 
+
     /**
      * Returns the security manager from the Scribe node.
      *
@@ -354,10 +478,11 @@ public class Scribe extends PastryAppl implements IScribe
 	return m_securityManager;
     }
 
+
     /**
      * Makes a subscribe message using the current Pastry node as the source.
      *
-     * @param tid the topic id the message reffers to.
+     * @param tid the topic id the message refers to.
      * @param c the credentials that will be associated with the message
      *
      * @return the ScribeMessage.
@@ -384,11 +509,11 @@ public class Scribe extends PastryAppl implements IScribe
      *
      * @param tid the topic id the message reffers to.
      * @param c the credentials that will be associated with the message
-     *
+     * @param ackFlag the value to initiliaze ackOnSubscribeSwitch
      * @return the ScribeMessage.
      */
-    public ScribeMessage makeCreateMessage( NodeId tid, Credentials c ) {
-	return new MessageCreate( m_address, this.thePastryNode.getLocalHandle(), tid, c );
+    public ScribeMessage makeCreateMessage( NodeId tid, Credentials c, boolean ackFlag) {
+	return new MessageCreate( m_address, this.thePastryNode.getLocalHandle(), tid, c, ackFlag );
     }
 
     /**
@@ -406,15 +531,124 @@ public class Scribe extends PastryAppl implements IScribe
     /**
      * Makes a heart-beat message using the current Pastry node as the source.
      *
-     * @param tid the topic id the message reffers to.
+     * @param tids the Vector of topic ids the message reffers to.
      * @param c the credentials that will be associated with the message
      *
      * @return the ScribeMessage.
      */
-    public ScribeMessage makeHeartBeatMessage( NodeId tid, Credentials c ) {
-	return new MessageHeartBeat( m_address, this.thePastryNode.getLocalHandle(), tid, c );
+    public ScribeMessage makeHeartBeatMessage( Vector tids, Credentials c ) {
+	return new MessageHeartBeat( m_address, this.thePastryNode.getLocalHandle(), tids, c );
+    }
+
+
+    /**
+     * Makes a AckOnSubscribe message using the current Pastry node as the source.
+     *
+     * @param tid the topic id the message reffers to.
+     * @param c the credentials that will be associated with the message
+     * @param ackFlag the new value of ackOnSubscribeSwitch
+     * @return the ScribeMessage.
+     */
+    public ScribeMessage makeAckOnSubscribeMessage( NodeId tid, Credentials c, boolean ackFlag ) {
+	return new MessageAckOnSubscribe( m_address, this.thePastryNode.getLocalHandle(), tid, c , ackFlag);
+    }
+
+
+    /**
+     * Returns the topic object associated with topicId.
+     * @param topicId the topic id
+     * @return the Topic associated with the topicId
+     */
+    public Topic getTopic( NodeId topicId) {
+	Topic topic = (Topic) m_topics.get( topicId );
+	return topic;
+    }
+
+    
+
+    /** 
+     * Method to access the list of topics this scribe is 
+     * responsible for. Returns a vector of topics residing
+     * on this node.
+     */
+    public Vector getTopics(){
+	Vector topicVector = new Vector();
+
+	synchronized(m_topics){
+		Iterator it = m_topics.values().iterator();		
+		while( it.hasNext()){
+		    topicVector.add((Topic)it.next());
+		}
+	}
+	return topicVector;
+    }
+    
+    
+    
+    /**
+     * Gets the value of switch AckOnSubscribeSwitch
+     * for given topicId.
+     * 
+     * @param topicId
+     * The topic whose AckOnSubscribeSwitch we are reading.
+     *
+     * @return The value of AckOnSubscribeSwitch
+     */
+    public boolean getAckOnSubscribeSwitch(NodeId topicId){
+	Topic topic = getTopic(topicId);
+	return topic.getAckOnSubscribeSwitch();
+    }
+
+
+    /**
+     * Gets the hashtable which maintains mapping from
+     * a child node to the list of topics in which that 
+     * node is a child.
+     * @return corresponding Hashtable 
+     */
+    public Hashtable getDistinctChildrenTable(){
+	return m_distinctChildrenTable;
+    }
+    
+
+    /**
+     * Gets the Vector of distinct children of this local node
+     * in multicast tree of all topics.
+     * @return Vector of distinct children
+     */
+    public Vector  getDistinctChildren(){
+	Set set;
+	Vector result =  new Vector();
+	synchronized(m_distinctChildrenTable){
+	    set = m_distinctChildrenTable.keySet();
+	    Iterator it = set.iterator();
+	    while(it.hasNext()){
+		result.addElement((NodeHandle)it.next());
+	    }
+	}
+	return result;
+    }
+
+    
+    /**
+     * Gets the vector of topicIds for which given node
+     * is a children.
+     * @param child  The NodeHandle of child node.
+     *
+     * @return Vector of topicIds for which this node is 
+     *         a child.
+     */
+    public Vector getTopicsForChild(NodeHandle child){
+	Vector topics;
+	
+	synchronized(m_distinctChildrenTable){
+	    topics = (Vector)m_distinctChildrenTable.get((NodeHandle)child);
+	}
+	return topics;
     }
 }
+
+
 
 
 
