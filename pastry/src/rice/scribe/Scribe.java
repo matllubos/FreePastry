@@ -193,6 +193,14 @@ public class Scribe extends PastryAppl implements IScribe
 
     public static int m_scribeMaintFreq = 10; // seconds
 
+
+    /**
+     * The set of applications which are interested in getting notified
+     * whenever the local node becomes an intermediate node for a topic.
+     */
+    public Set m_scribeObservers = null;
+
+
     private static class ScribeAddress implements Address {
 	private int myCode = 0x8aec747c;
 	
@@ -289,7 +297,7 @@ public class Scribe extends PastryAppl implements IScribe
 	m_distinctParentTable = new Hashtable();
 	m_alreadySentHBNodes = new HashSet();
 	m_apps = new Vector();
-
+	m_scribeObservers = new HashSet();
     }
 
     /**
@@ -337,6 +345,9 @@ public class Scribe extends PastryAppl implements IScribe
 	if(isReady())
 	    app.scribeIsReady();
 	m_apps.add(app);
+	if(app instanceof IScribeObserver)
+	    m_scribeObservers.add(app);
+
     }
     
 
@@ -1456,7 +1467,15 @@ public class Scribe extends PastryAppl implements IScribe
 	    return false;
     }
 
-    
+    public void notifyScribeObservers(NodeId topicId){
+	IScribeObserver app;
+	Iterator it = m_scribeObservers.iterator();
+
+	while(it.hasNext()){
+	    app = (IScribeObserver)it.next();
+	    app.update((Object)topicId);
+	}
+    }
    
 }
 
