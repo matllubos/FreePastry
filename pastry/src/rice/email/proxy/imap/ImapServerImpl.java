@@ -21,10 +21,10 @@ public final class ImapServerImpl extends Thread implements ImapServer {
 
   private EmailService email;
 
-  public ImapServerImpl(int port, EmailService email) throws IOException {
+  public ImapServerImpl(int port, EmailService email, UserManager manager) throws IOException {
     this.port = port;
     this.email = email;
-    this.manager = new UserManagerImpl(email, new PostMailboxManager(email));
+    this.manager = manager;
     this.workspace = new InMemoryWorkspace();
 
     initialize();

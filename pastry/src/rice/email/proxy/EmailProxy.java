@@ -26,6 +26,9 @@ import rice.post.security.*;
 import rice.email.*;
 import rice.email.proxy.smtp.*;
 import rice.email.proxy.imap.*;
+import rice.email.proxy.user.*;
+import rice.email.proxy.mailbox.*;
+import rice.email.proxy.mailbox.postbox.*;
 
 import rice.testharness.*;
 import rice.testharness.messaging.*;
@@ -75,13 +78,15 @@ public class EmailProxy {
 
   private KeyPair pair;
 
-  private KeyPair caPair;
+  private PublicKey caPublic;
+
+  private UserManagerImpl manager;
 
   private SmtpServerImpl smtp;
 
   private ImapServerImpl imap;
 
-  public EmailProxy (String bootstrapHost, int bootstrapPort, int port, int imapport, int smtpport) {
+  public EmailProxy (String userid, String bootstrapHost, int bootstrapPort, int port, int imapport, int smtpport) {
     try {
       System.out.println("Email Proxy");
       System.out.println("-----------------------------------------------------------------------");
@@ -93,27 +98,54 @@ public class EmailProxy {
       pastry = (WirePastryNode) factory.newNode(factory.getNodeHandle(bootAddress));
       System.out.println("[ DONE ]");
 
-      System.out.print("    Retrieving CA key pair\t\t\t\t\t");
-      KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-
-      FileInputStream fis = new FileInputStream("capair.txt");
+      System.out.print("    Retrieving CA public key\t\t\t\t\t");
+      FileInputStream fis = new FileInputStream("ca.publickey");
       ObjectInputStream ois = new ObjectInputStream(fis);
 
-      caPair = (KeyPair) ois.readObject();
-
+      caPublic = (PublicKey) ois.readObject();
+      ois.close();
       System.out.println("[ DONE ]");
 
-      System.out.print("    Generating user address\t\t\t\t\t");
-      address = new PostUserAddress("amislove@" + InetAddress.getLocalHost().getHostAddress());
+      System.out.print("    Retrieving " + userid + "'s certificate\t\t\t\t");
+      fis = new FileInputStream(userid + ".certificate");
+      ois = new ObjectInputStream(fis);
+
+      certificate = (PostCertificate) ois.readObject();
+      ois.close();
       System.out.println("[ DONE ]");
 
-      System.out.print("    Generating user key pair\t\t\t\t\t");
-      pair = kpg.generateKeyPair();
-      System.out.println("[ DONE ]");
-
-      System.out.print("    Generating user certificate\t\t\t\t\t");
+      System.out.print("    Verifying " + userid + "'s certificate\t\t\t\t");
       SecurityService security = new SecurityService(null, null);
-      certificate = security.generateCertificate(address, pair.getPublic(), caPair.getPrivate());
+      if (! security.verifyCertificate(caPublic, certificate)) {
+        System.out.println("Certificate could not be verified.");
+        System.exit(0);
+      }
+      System.out.println("[ DONE ]");
+
+      address = (PostUserAddress) certificate.getAddress();
+
+      fis = new FileInputStream(userid + ".keypair.enc");
+      ois = new ObjectInputStream(fis);
+
+      System.out.print("    Reading in encrypted keypair\t\t\t\t");
+      byte[] cipher = (byte[]) ois.readObject();
+      ois.close();
+      System.out.println("[ DONE ]");
+
+      String pass = CertificateAuthorityKeyGenerator.fetchPassword(userid + "'s password");
+
+      System.out.print("    Decrypting " + userid + "'s keypair\t\t\t\t");
+      byte[] key = security.hash(pass.getBytes());
+      byte[] data = security.decryptDES(cipher, key);
+
+      pair = (KeyPair) security.deserialize(data);
+      System.out.println("[ DONE ]");
+
+      System.out.print("    Verifying " + userid + "'s keypair\t\t\t\t");
+      if (! pair.getPublic().equals(certificate.getKey())) {
+        System.out.println("KeyPair could not be verified.");
+        System.exit(0);
+      }
       System.out.println("[ DONE ]");
 
       System.out.print("    Starting StorageManager\t\t\t\t\t");
@@ -135,13 +167,15 @@ public class EmailProxy {
       input.readLine();
 
       System.out.print("    Starting POST service\t\t\t\t\t");
-      post = new Post(pastry, past, scribe, address, pair, certificate, caPair.getPublic(), INSTANCE_NAME);
+      post = new Post(pastry, past, scribe, address, pair, certificate, caPublic, INSTANCE_NAME);
       System.out.println("[ DONE ]");
       
       Thread.sleep(5000);
 
       System.out.print("    Starting Email service\t\t\t\t\t");
       email = new EmailService(post);
+      manager = new UserManagerImpl(email, new PostMailboxManager(email));
+      manager.createUser(address.toString(), null, pass);
       System.out.println("[ DONE ]");
 
       System.out.print("    Starting SMTP server on port " + smtpport + "\t\t\t\t");
@@ -150,7 +184,7 @@ public class EmailProxy {
       System.out.println("[ DONE ]");
 
       System.out.print("    Starting IMAP server on port " + imapport + "\t\t\t\t");
-      imap = new ImapServerImpl(imapport, email);
+      imap = new ImapServerImpl(imapport, email, manager);
       imap.start();
       System.out.println("[ DONE ]");
 
@@ -166,7 +200,7 @@ public class EmailProxy {
 
   /**
    * Usage:
-   * java rice.email.proxy.EmailProxy [-bootstrap hostname[:port]] [-port port] [-imapport port] [-smtpport port]
+   * java rice.email.proxy.EmailProxy userid [-bootstrap hostname[:port]] [-port port] [-imapport port] [-smtpport port]
    */
   public static void main(String[] args) {
     int port = DEFAULT_PORT;
@@ -174,6 +208,13 @@ public class EmailProxy {
     int smtpport = DEFAULT_SMTP_PORT;
     String bootstrapHost = DEFAULT_BOOTSTRAP_HOST;
     int bootstrapPort = DEFAULT_BOOTSTRAP_PORT;
+
+    if (args.length < 1) {
+      System.out.println("Usage: java rice.email.proxy.EmailProxy userid [-bootstrap hostname[:port]] [-port port] [-imapport port] [-smtpport port] [-help]");
+      System.exit(0);
+    }
+
+    String userid = args[0];
     
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-bootstrap") && i+1 < args.length) {
@@ -204,6 +245,13 @@ public class EmailProxy {
     }
 
     for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-help")) {
+        System.out.println("Usage: java rice.email.proxy.EmailProxy userid [-bootstrap hostname[:port]] [-port port] [-imapport port] [-smtpport port] [-help]");
+        System.exit(0);
+      }
+    }
+
+    for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-imapport") && i+1 < args.length) {
         int n = Integer.parseInt(args[i+1]);
         if (n > 0) imapport = n;
@@ -219,6 +267,6 @@ public class EmailProxy {
       }
     }
   
-    EmailProxy proxy = new EmailProxy(bootstrapHost, bootstrapPort, port, imapport, smtpport);
+    EmailProxy proxy = new EmailProxy(userid, bootstrapHost, bootstrapPort, port, imapport, smtpport);
   }
 }
