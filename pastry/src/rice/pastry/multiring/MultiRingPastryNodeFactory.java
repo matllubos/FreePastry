@@ -71,13 +71,13 @@ public class MultiRingPastryNodeFactory implements PastryNodeFactory {
   }
 
   private PastryNode newNode(NodeHandle bootstrap, NodeId nodeId, boolean setDone) {
-    MultiRingPastryNode node = new MultiRingPastryNode(factory.newNode(bootstrap, nodeId));
+    MultiRingPastryNode node = new MultiRingPastryNode( factory.newNode(bootstrap, new RingNodeId(nodeId.copy(), null)));
 
+    node.setMessageDispatch(new MultiRingMessageDispatch(node, node.getMessageDispatch()));
+    
     if (setDone) {
       node.setBootstrap(bootstrap);
     }
-
-    node.setMessageDispatch(new MultiRingMessageDispatch(node, node.getMessageDispatch()));
     
     return node;
   }

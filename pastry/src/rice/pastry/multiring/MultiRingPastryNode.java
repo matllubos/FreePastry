@@ -36,7 +36,9 @@ met:
 
 package rice.pastry.multiring;
 
+import java.net.*;
 import java.util.*;
+import java.security.*;
 
 import rice.pastry.*;
 import rice.pastry.client.*;
@@ -99,16 +101,16 @@ public class MultiRingPastryNode extends PastryNode {
   }
   
   public void processMessage(Message msg) {
-    if ((msg instanceof JoinRequest) &&
-        ((JoinRequest) msg).accepted()) {
-      NodeHandle acceptor = ((JoinRequest) msg).getJoinHandle();
-      RingNodeId nodeId = (RingNodeId) acceptor.getNodeId();
-      ((RingNodeId) myNodeId).setRingId(nodeId.getRingId());
+    if (msg instanceof JoinRequest) {
+      processJoinRequest((JoinRequest) msg);
     }
     
     if (msg instanceof RouteMessage) {
       RouteMessage rm = (RouteMessage) msg;
-
+      if (rm.unwrap() instanceof JoinRequest) {
+        processJoinRequest((JoinRequest) rm.unwrap());
+      }
+        
       if (rm.getTarget() instanceof RingNodeId) {
         RingId targetRingId = ((RingNodeId) rm.getTarget()).getRingId();
         if (targetRingId != null) {
@@ -128,10 +130,21 @@ public class MultiRingPastryNode extends PastryNode {
     }
   }
 
+  private void processJoinRequest(JoinRequest jm) {
+    System.err.println("SAW A JOIN REQUEST AT " + myNodeId + " FOR " + jm.getHandle().getNodeId());
+    
+    if (jm.accepted() && jm.getHandle().getNodeId().equals(myNodeId)) {
+
+      NodeHandle acceptor = jm.getJoinHandle();
+      RingNodeId nodeId = (RingNodeId) acceptor.getNodeId();
+      ((RingNodeId) myNodeId).setRingId(nodeId.getRingId());
+    }
+  }
+  
   public void setBootstrap(NodeHandle bootstrap) {
     if (bootstrap == null) {
       if (getParent() != null) {
-        RingId ringId = new RingId((new RandomNodeIdFactory()).generateNodeId().copy());
+        RingId ringId = generateRingId();
         ((RingNodeId) myNodeId).setRingId(ringId);
 
         System.out.println("Generated new random ring ID: " + ringId);
@@ -140,10 +153,26 @@ public class MultiRingPastryNode extends PastryNode {
       } else {
         RingId ringId = MultiRingPastryNode.GLOBAL_RING_ID;
         ((RingNodeId) myNodeId).setRingId(ringId);
-        
+         
         System.out.println("Used global ringId: " + ringId);
       }
     } 
+  }
+
+  private RingId generateRingId() {
+    try{
+      String name = InetAddress.getLocalHost().getCanonicalHostName();
+      String domain = name.substring(name.substring(0, name.lastIndexOf(".")).lastIndexOf(".") + 1);
+
+      MessageDigest md = MessageDigest.getInstance( "SHA" );
+
+      md.update( domain.getBytes() );
+      return new RingId(md.digest());
+    } catch (Exception e) {
+      System.out.println("ERROR " + e + " while constructing new RingId.");
+    }
+    
+    return null;
   }
 
   public void setParentPastryNode(MultiRingPastryNode parent) {
