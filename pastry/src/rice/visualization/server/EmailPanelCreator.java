@@ -100,7 +100,7 @@ public class EmailPanelCreator implements PanelCreator {
         fail.removeElementAt(0);
       }
     } catch (Exception e) {
-      System.out.println("Ecception " + e + " thrown.");
+      System.out.println("Exception " + e + " thrown.");
       e.printStackTrace();
     }
   }
