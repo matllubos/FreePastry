@@ -38,14 +38,13 @@ import rice.pastry.NodeHandle;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.exception.TooManyMessagesException;
-import rice.selector.SelectionKeyHandler;
 import rice.selector.SelectorManager;
 import rice.selector.TimerTask;
 
 /**
  * Class which maintains all outgoing open sockets. It holds a ConnectionManager 
  * for each active connection, and it uses the SocketPoolManager to keep 
- * only MAX_OPEN_SOCKETS number of client sockets open at once. It also
+ * only SocketPoolManager.MAX_OPEN_SOCKETS number of client sockets open at once. It also
  * binds a ServerSocketChannel to the specified port and listens for incoming
  * connections, builds a SocketManager, then hands the SocketManager to an appropriate
  * ConnectionManager. 
@@ -57,9 +56,6 @@ import rice.selector.TimerTask;
  * @author Alan Mislove, Jeff Hoye
  */
 public class SocketCollectionManager {
-
-	// the selector manager which the collection manager uses
-  //SelectorManager manager;
 
   // the pastry node which this manager serves
   SocketPastryNode pastryNode;
@@ -145,6 +141,82 @@ public class SocketCollectionManager {
   }
 
   /**
+   * Method which sends a message across the wire.
+   *
+   * @param message The message to send
+   * @param address the address to send the message
+   */
+  public void send(SocketNodeHandle snh, Message message) throws TooManyMessagesException {
+    if (!pastryNode.isAlive()) return;
+    getConnectionManager(snh).send(message);
+  }
+
+  /**
+   * Method which returns the last cached proximity value for the given address.
+   * If there is no cached value, then DEFAULT_PROXIMITY is returned.
+   *
+   * @param address The address to return the value for
+   * @return RTT time in millis 
+   */
+  public int proximity(SocketNodeHandle snh) {
+    return pingManager.proximity(snh);
+  }
+
+  /**
+   * Reroutes the given message. If this node is alive, send() is called. If
+   * this node is not alive and the message is a route message, it is rerouted.
+   * Otherwise, the message is dropped.
+   *
+   * @param m The message
+   * @param address the address the message came from
+   */
+  protected void reroute(RouteMessage m) {
+    if (m instanceof RouteMessage) {
+      debug("Attempting to reroute route message " + m);
+      ((RouteMessage) m).nextHop = null;
+      pastryNode.receiveMessage(m);
+    } else {
+      debug("Dropping message " + m + " because next hop is dead!");
+    }    
+  }
+
+  // ***************** Connection Manager Management *******************
+  /**
+   * Returns the ConnectionManager for that address.  If one doesn't exist,
+   * it creates a new one.
+   * 
+   * @param address The address that corresponds to the ConnectionManager
+   * @return the ConnectionManager correcsponding to the address.
+   */
+  public ConnectionManager getConnectionManager(SocketNodeHandle snh) {
+    if (!pastryNode.isAlive()) return null; // keep from creating new connection managers while we are shutting the rest down
+    ConnectionManager cm = (ConnectionManager)connections.get(snh);
+    if (cm == null) {
+      cm = new ConnectionManager(this, snh);
+      connections.put(snh, cm);
+    }
+    return cm;
+  }
+  
+  /**
+   * Returns all of the ConnectionManagers that this scm is managing.
+   * @return all of the ConnectionManagers that this scm is managing.
+   */
+  public Collection getConnectionManagers() {
+    return connections.values();
+  }
+
+  /**
+   * Called by a SocketManager when it receives the address message from a new
+   * socket.  Calls accept on the appropriate ConnectionManager.
+   * @param manager
+   */
+  public boolean newSocketManager(SocketNodeHandle snh, SocketManager manager) {
+    if (!pastryNode.isAlive()) return false;
+    getConnectionManager(snh).acceptSocket(manager);
+    return true;
+  }
+  /**
    * Kills all the ConnectionManagers, and the ServerSocket.
    */
   public void kill() {
@@ -170,102 +242,8 @@ public class SocketCollectionManager {
     });
   }
 
-  /**
-   * Method which returns the last cached liveness value for the given address.
-   * If there is no cached value, then true is returned.
-   *
-   * @param address The address to return the value for
-   * @return The Alive value
-   */
-  public boolean isAlive(SocketNodeHandle snh) {
-    return ((ConnectionManager)connections.get(snh)).getLiveness() < NodeHandle.LIVENESS_FAULTY;    
-  }
-
-  /**
-   * Prints out the list of all open sockets
-   *
-   * @return The list of all open sockets
-   */
-  public String toString() {
-    String result = "";
-
-    Iterator i = connections.keySet().iterator();
-    while (i.hasNext()) {
-      result += i.next().toString() + "\n";
-    }
-
-    return result;
-  }
-
-//  public void addConnectionManager(SocketNodeHandle snh) {
-////    System.out.println("SNH:"+snh);
-////    System.out.println("SNH.getId():"+snh.getId());
-////    System.out.println("connections:"+connections);
-//    
-//    ConnectionManager cm = (ConnectionManager)connections.get(snh.getId());
-//    if (cm == null) {
-//      cm = new ConnectionManager(this, snh);
-//      connections.put(snh.getId(), cm);
-//    }        
-//  }
-
-  /**
-   * Returns the ConnectionManager for that address.  If one doesn't exist,
-   * it creates a new one.
-   * 
-   * @param address The address that corresponds to the ConnectionManager
-   * @return the ConnectionManager correcsponding to the address.
-   */
-//  public ConnectionManager getConnectionManager(InetSocketAddress address, int foo) {
-  public ConnectionManager getConnectionManager(SocketNodeHandle snh) {
-    if (!pastryNode.isAlive()) return null; // keep from creating new connection managers while we are shutting the rest down
-    ConnectionManager cm = (ConnectionManager)connections.get(snh);
-    if (cm == null) {
-      cm = new ConnectionManager(this, snh);
-      connections.put(snh, cm);
-    }
-    return cm;
-  }
   
-  public Collection getConnectionManagers() {
-    return connections.values();
-  }
-  
-  /**
-   * Method which sends a message across the wire.
-   *
-   * @param message The message to send
-   * @param address the address to send the message
-   */
-  public void send(SocketNodeHandle snh, Message message) throws TooManyMessagesException {
-//    public void send(InetSocketAddress address, Message message) throws TooManyMessagesException {
-    if (!pastryNode.isAlive()) return;
-    getConnectionManager(snh).send(message);
-  }
-
-  /**
-   * Method which returns the last cached proximity value for the given address.
-   * If there is no cached value, then DEFAULT_PROXIMITY is returned.
-   *
-   * @param address The address to return the value for
-   * @return RTT time in millis 
-   */
-  public int proximity(SocketNodeHandle snh) {
-    return pingManager.proximity(snh);
-  }
-
-  /**
-   * Specified by the SelectionKeyHandler interface. Is called whenever a key
-   * has become acceptable, representing an incoming connection. This method
-   * will accept the connection, and attach a SocketConnector in order to read
-   * the greeting off of the channel. Once the greeting has been read, the
-   * connector will hand the channel off to the appropriate node handle.
-   *
-   * @param key The key which is acceptable.
-   */
-  public void accept(SelectionKey key) {
-    socketPoolManager.accept(key);    
-  }
+  // ************** Scheduling *****************
 
   /**
    * Schedules a task to be called every "period" after "delay"
@@ -298,22 +276,28 @@ public class SocketCollectionManager {
     }
   }
   
+  // ***************** Liveness ***********************
   /**
-   * Reroutes the given message. If this node is alive, send() is called. If
-   * this node is not alive and the message is a route message, it is rerouted.
-   * Otherwise, the message is dropped.
-   *
-   * @param m The message
-   * @param address the address the message came from
+   * @param address the address to find liveness info for
+   * @return NodeHandle.LIVENESS_ALIVE, LIVENESS_SUSPECTED(_FAULTY), LIVENESS_FAULTY, LIVENESS_UNKNOWN
    */
-  protected void reroute(RouteMessage m) {
-    if (m instanceof RouteMessage) {
-      debug("Attempting to reroute route message " + m);
-      ((RouteMessage) m).nextHop = null;
-      pastryNode.receiveMessage(m);
-    } else {
-      debug("Dropping message " + m + " because next hop is dead!");
-    }    
+  public int getLiveness(SocketNodeHandle snh) {
+    ConnectionManager cm = (ConnectionManager)connections.get(snh);
+    if (cm != null) {
+      return cm.getLiveness();
+    }
+    return 0;
+  }
+
+  /**
+   * Method which returns the last cached liveness value for the given address.
+   * If there is no cached value, then true is returned.
+   *
+   * @param address The address to return the value for
+   * @return The Alive value
+   */
+  public boolean isAlive(SocketNodeHandle snh) {
+    return ((ConnectionManager)connections.get(snh)).getLiveness() < NodeHandle.LIVENESS_FAULTY;    
   }
 
   /**
@@ -334,6 +318,77 @@ public class SocketCollectionManager {
     pool.update(snh, SocketNodeHandle.DECLARED_LIVE);
   }
 
+
+  // ****************** Accessors ***************************
+  /**
+   * The SocketPoolManager for this node.
+   */
+  public SocketPoolManager getSocketPoolManager() {
+    return socketPoolManager;
+  }
+
+	/**
+	 * @return The PingManager for this node.
+	 */
+	public PingManager getPingManager() {
+		return pingManager;
+	}
+
+	/**
+	 * @return the address: proxy,local address
+	 */
+	public String addressString() {
+    InetSocketAddress a = ((SocketNodeHandle)pastryNode.getLocalHandle()).getAddress();
+    if (a.equals(bindAddress)) {
+      return bindAddress.toString();
+    }
+    return a+"@"+bindAddress;      
+	}
+  
+  /**
+   * @return the nodehandle of the local node
+   */
+  public SocketNodeHandle getLocalNodeHandle() {
+    return (SocketNodeHandle)pastryNode.getLocalHandle();
+  }
+
+	/**
+	 * @return the local address
+	 */
+	public InetSocketAddress getAddress() {
+		return getLocalNodeHandle().getAddress();		
+	}
+  
+  // ************** Debugging *********************
+  /**
+   * Prints out the list of all open sockets
+   *
+   * @return The list of all open sockets
+   */
+  public String toString() {
+    String result = "";
+
+    Iterator i = connections.keySet().iterator();
+    while (i.hasNext()) {
+      result += i.next().toString() + "\n";
+    }
+
+    return result;
+  }
+
+  /**
+   * Debugging method. 
+   */
+  public void printConnectionManagers() {
+    System.out.println("Connections for "+pastryNode);
+    Iterator i = getConnectionManagers().iterator();
+    while (i.hasNext()) {
+      ConnectionManager cm = (ConnectionManager)i.next();
+      if ((cm != null) && (cm.getLiveness() < NodeHandle.LIVENESS_FAULTY))
+        System.out.println("  "+cm+" "+cm.getStatus());
+    }
+  }
+
   /**
    * Log debugging trace
    *
@@ -344,81 +399,10 @@ public class SocketCollectionManager {
       System.out.println(pastryNode.getNodeId() + " (SCM): " + s);
     }
   }
-
-
-	/**
-	 * @param address the address to find liveness info for
-	 * @return NodeHandle.LIVENESS_ALIVE, LIVENESS_SUSPECTED(_FAULTY), LIVENESS_FAULTY, LIVENESS_UNKNOWN
-	 */
-	public int getLiveness(SocketNodeHandle snh) {
-    ConnectionManager cm = (ConnectionManager)connections.get(snh);
-    if (cm != null) {
-      return cm.getLiveness();
-    }
-		return 0;
-	}
-
-	/**
-	 * The SocketPoolManager for this node.
-	 */
-	public SocketPoolManager getSocketPoolManager() {
-		return socketPoolManager;
-	}
-
-	/**
-   * Called by a SocketManager when it receives the address message from a new
-   * socket.  Calls accept on the appropriate ConnectionManager.
-	 * @param manager
-	 */
-  public boolean newSocketManager(SocketNodeHandle snh, SocketManager manager) {
-//    public void newSocketManager(InetSocketAddress address, SocketManager manager) {
-    if (!pastryNode.isAlive()) return false;
-    getConnectionManager(snh).acceptSocket(manager);
-    return true;
-	}
-
-	/**
-	 * @return The PingManager for this node.
-	 */
-	public PingManager getPingManager() {
-		return pingManager;
-	}
-
-	/**
-	 * @return
-	 */
-	public String addressString() {
-    InetSocketAddress a = ((SocketNodeHandle)pastryNode.getLocalHandle()).getAddress();
-    if (a.equals(bindAddress)) {
-      return bindAddress.toString();
-    }
-    return a+"@"+bindAddress;      
-	}
   
-  public Iterator getConnections() {
-    return connections.values().iterator();
-  }
-
-  public SocketNodeHandle getLocalNodeHandle() {
-    return (SocketNodeHandle)pastryNode.getLocalHandle();
-  }
-
-	/**
-	 * 
-	 */
-	public InetSocketAddress getAddress() {
-		return getLocalNodeHandle().getAddress();		
+	protected void finalize() throws Throwable {
+    System.out.println(this+".finalize()");
+		super.finalize();
 	}
-  
-  public void printConnectionManagers() {
-    System.out.println("Connections for "+pastryNode);
-    Iterator i = getConnectionManagers().iterator();
-    while (i.hasNext()) {
-      ConnectionManager cm = (ConnectionManager)i.next();
-      if (cm != null)
-        System.out.println("  "+cm+" "+cm.getStatus());
-    }
-  }
-
 
 }

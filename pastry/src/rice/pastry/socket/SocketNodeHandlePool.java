@@ -25,12 +25,10 @@
 package rice.pastry.socket;
 
 import java.lang.ref.WeakReference;
-import java.net.InetSocketAddress;
 import java.util.Iterator;
 import java.util.Vector;
 import java.util.WeakHashMap;
 
-import rice.pastry.NodeId;
 import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.dist.DistNodeHandlePool;
 
@@ -41,7 +39,7 @@ import rice.pastry.dist.DistNodeHandlePool;
  *
  * @version $Id: SocketNodeHandlePool.java,v 1.4 2003/12/22 03:24:47 amislove
  *      Exp $
- * @author Alan Mislove
+ * @author Alan Mislove, Jeff Hoye
  */
 public class SocketNodeHandlePool extends DistNodeHandlePool {
 
@@ -64,6 +62,7 @@ public class SocketNodeHandlePool extends DistNodeHandlePool {
    */
   public SocketNodeHandlePool(SocketPastryNode node) {
     this.node = node;
+    node.setSocketNodeHandlePool(this);
     handles = new WeakHashMap();
   }
 
@@ -99,6 +98,10 @@ public class SocketNodeHandlePool extends DistNodeHandlePool {
     removeNullReferences(vector);
   }
   
+  /**
+   * Helper for record(), removes all the WeakReferences() that are empty.
+   * @param v
+   */
   private void removeNullReferences(Vector v) {
     synchronized(v) {
     Iterator i = v.iterator();

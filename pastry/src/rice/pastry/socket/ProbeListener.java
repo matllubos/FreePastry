@@ -9,10 +9,8 @@ package rice.pastry.socket;
 import rice.pastry.socket.messaging.Probe;
 
 /**
- * @author jeffh
+ * @author Jeff Hoye
  *
- * To change the template for this generated type comment go to
- * Window>Preferences>Java>Code Generation>Code and Comments
  */
 public interface ProbeListener {
   void probeReceived(Probe p);

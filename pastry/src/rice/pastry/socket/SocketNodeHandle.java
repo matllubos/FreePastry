@@ -31,9 +31,7 @@ import rice.pastry.Log;
 import rice.pastry.NodeId;
 import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.messaging.Message;
-import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.exception.TooManyMessagesException;
-import rice.pastry.testing.HelloMsg;
 
 /**
  * Represents a remote node for a "real" IP network.
@@ -63,71 +61,7 @@ public class SocketNodeHandle extends DistNodeHandle {
     super(nodeId, address);
   }
 
-  /**
-   * Returns the last known status information about the Pastry node
-   * associated with this handle. Invoking this method does not cause network
-   * activity.
-   *
-   * @return true if the node is alive, false otherwise.
-   */
-  public int getLiveness() {
-    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
-
-    if (spn == null) {
-      //System.out.println("SNH.getLiveness(): spn == null");
-      return LIVENESS_ALIVE;
-    } else {
-      return spn.getSocketCollectionManager().getLiveness(this);
-    } 
-  }
-  
-  /**
-   * Returns the number of messages that can be queued before an exception is thrown.
-   * A typical way to call this would be:
-   * <code>
-   * SocketNodeHandle snh;
-   * Message m;
-   * ...
-   * if (snh.getNumberMessagesAllowedToSend(snh.getMessageType(m) > 10) {
-   *   snh.send(m);
-   * } else {
-   *  // send it later
-   * }
-   * </code>
-   * @param type The type of message.
-   * @return the number of messages of this type that 
-   * can be sent before an exception is thrown.
-   */
-  public int getNumberMessagesAllowedToSend(int type) {
-    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
-    if (spn == null) {
-      //System.out.println("SNH.getLiveness(): spn == null");
-      return -1;
-    } else {
-      ConnectionManager cm = spn.getSocketCollectionManager().getConnectionManager(this);
-      return cm.getNumberMessagesAllowedToSend(type);
-    }     
-  }
-
-  /**
-   * Returns the type of message.
-   * @param m The message you want to determine the type of.
-   * @return The message type.  ConnectionManager.TYPE_CONTROL, TYPE_DATA.
-   */
-  public int getMessageType(Message m) {
-    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
-    if (spn == null) {
-      //System.out.println("SNH.getLiveness(): spn == null");
-      return -1;
-    } else {
-      ConnectionManager cm = spn.getSocketCollectionManager().getConnectionManager(this);
-      if (cm != null) {
-        return cm.getMessageType(m);
-      } 
-      return -1;
-    }     
-  }
-
+  // ********************** Services *******************
   /**
    * Called to send a message to the node corresponding to this handle.
    *
@@ -139,69 +73,32 @@ public class SocketNodeHandle extends DistNodeHandle {
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
 
     if (spn.getNodeId().equals(nodeId)) {
-      //debug("Sending message " + msg + " locally");
-//      if ((msg instanceof HelloMsg) || (msg instanceof RouteMessage))
-//        System.out.println("Sending message " + msg + " locally");
       spn.receiveMessage(msg);
     } else {
       debug("Passing message " + msg + " to the socket controller for writing");
-//      if ((msg instanceof HelloMsg) || (msg instanceof RouteMessage))
-//        System.out.println("Passing message " + msg + " to the socket controller for writing");
       try {        
         spn.getSocketCollectionManager().send(this, msg);
       } catch (TooManyMessagesException tmme) {
         spn.messageNotSent(msg, SocketPastryNode.EC_QUEUE_FULL);
-//        System.out.println("tmme "+msg);
-//        throw tmme;
       }
     }
   }
 
   /**
-   * Returns a String representation of this DistNodeHandle. This method is
-   * designed to be called by clients using the node handle, and is provided in
-   * order to ensure that the right node handle is being talked to.
+   * Returns the last known status information about the Pastry node
+   * associated with this handle. Invoking this method does not cause network
+   * activity.
    *
-   * @return A String representation of the node handle.
+   * @return true if the node is alive, false otherwise.
    */
-  public String toString() {
-    if (getLocalNode() == null) {
-      return "[SNH: " + nodeId + "@" + epoch+ "/" + address + "]";
+  public int getLiveness() {
+    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+
+    if (spn == null) {
+      return LIVENESS_UNKNOWN;
     } else {
-      return "[SNH: " + getLocalNode().getNodeId() + " -> " + nodeId + "@" + epoch + "/" + address + "]";
-    }
-  }
-
-  /**
-   * Equivalence relation for nodehandles. They are equal if and only if their
-   * corresponding NodeIds are equal.
-   *
-   * @param obj the other nodehandle .
-   * @return true if they are equal, false otherwise.
-   */
-  public boolean equals(Object obj) {
-    SocketNodeHandle that = (SocketNodeHandle)obj;
-    if (that == null) {
-      return false;
-    }
-    //System.out.println(this+"equals("+that+")");  
-    if (this.epoch != that.epoch) {
-//      System.out.println(this+".equals("+that+"):"+false);
-      return false;
-    }
-    boolean ret = that.getNodeId().equals(getNodeId());
-//    System.out.println(this+".equals("+that+"):"+ret);
-    return ret;
-  }
-
-  /**
-   * Hash codes for node handles. It is the hashcode of their corresponding
-   * NodeId's.
-   *
-   * @return a hash code.
-   */
-  public int hashCode() {
-    return epoch*getNodeId().hashCode();
+      return spn.getSocketCollectionManager().getLiveness(this);
+    } 
   }
 
   /**
@@ -259,14 +156,19 @@ public class SocketNodeHandle extends DistNodeHandle {
     return isAlive();
   }
 
+  // ************** Record Keeping ****************
   /**
    * Method which registers this handle with the node that it is currently on.
    *
    */
   public void afterSetLocalNode() {
-    ((SocketNodeHandlePool) ((SocketPastryNode) getLocalNode()).getNodeHandlePool()).record(this);
+    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+    SocketNodeHandlePool snhp = (SocketNodeHandlePool)spn.getNodeHandlePool();
+    snhp.record(this); 
   }
 
+
+  // *************** Observers *********************  
   /**
    * DESCRIBE THE METHOD
    *
@@ -275,25 +177,6 @@ public class SocketNodeHandle extends DistNodeHandle {
    */
   public void update(Observable o, Object obj) {
   }
-
-  /*
-   *  static int lastResponseListener = 0;
-   *  class TestResponseListener implements PingResponseListener {
-   *  int myName;
-   *  NodeId myId;
-   *  public TestResponseListener(InetSocketAddress address, NodeId id) {
-   *  myName = lastResponseListener++;
-   *  myId = id;
-   *  System.out.println(myName+".ping("+address+","+id+")");
-   *  }
-   *  public void pingResponse(
-   *  InetSocketAddress address,
-   *  long RTT,
-   *  long timeHeardFrom) {
-   *  System.out.println(myName+".pingResponse("+address+","+RTT+","+timeHeardFrom+")");
-   *  }
-   *  }
-   */
 
   /**
    * Method which allows the observers of this socket node handle to be updated.
@@ -306,6 +189,55 @@ public class SocketNodeHandle extends DistNodeHandle {
     notifyObservers(update);
   }
 
+  // ******************** Congestion Control *******************  
+  /**
+   * Returns the number of messages that can be queued before an exception is thrown.
+   * A typical way to call this would be:
+   * <code>
+   * SocketNodeHandle snh;
+   * Message m;
+   * ...
+   * if (snh.getNumberMessagesAllowedToSend(snh.getMessageType(m) > 10) {
+   *   snh.send(m);
+   * } else {
+   *  // send it later
+   * }
+   * </code>
+   * @param type The type of message.
+   * @return the number of messages of this type that 
+   * can be sent before an exception is thrown.
+   */
+  public int getNumberMessagesAllowedToSend(int type) {
+    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+    if (spn == null) {
+      //System.out.println("SNH.getLiveness(): spn == null");
+      return -1;
+    } else {
+      ConnectionManager cm = spn.getSocketCollectionManager().getConnectionManager(this);
+      return cm.getNumberMessagesAllowedToSend(type);
+    }     
+  }
+
+  /**
+   * Returns the type of message.
+   * @param m The message you want to determine the type of.
+   * @return The message type.  ConnectionManager.TYPE_CONTROL, TYPE_DATA.
+   */
+  public int getMessageType(Message m) {
+    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+    if (spn == null) {
+      //System.out.println("SNH.getLiveness(): spn == null");
+      return -1;
+    } else {
+      ConnectionManager cm = spn.getSocketCollectionManager().getConnectionManager(this);
+      if (cm != null) {
+        return cm.getMessageType(m);
+      } 
+      return -1;
+    }     
+  }
+
+  // **************** Debugging **********************
   /**
    * DESCRIBE THE METHOD
    *
@@ -315,6 +247,50 @@ public class SocketNodeHandle extends DistNodeHandle {
     if (Log.ifp(8)) {
       System.out.println(this + ": " + s);
     }
+  }
+  /**
+   * Returns a String representation of this DistNodeHandle. This method is
+   * designed to be called by clients using the node handle, and is provided in
+   * order to ensure that the right node handle is being talked to.
+   *
+   * @return A String representation of the node handle.
+   */
+  public String toString() {
+    if (getLocalNode() == null) {
+      return "[SNH: " + nodeId + "@" + epoch+ "/" + address + "]";
+    } else {
+      return "[SNH: " + getLocalNode().getNodeId() + " -> " + nodeId + "@" + epoch + "/" + address + "]";
+    }
+  }
+
+  // **************** Equivalence ************************
+  /**
+   * Equivalence relation for nodehandles. They are equal if and only if their
+   * corresponding NodeIds are equal.
+   *
+   * @param obj the other nodehandle .
+   * @return true if they are equal, false otherwise.
+   */
+  public boolean equals(Object obj) {
+    SocketNodeHandle that = (SocketNodeHandle)obj;
+    if (that == null) {
+      return false;
+    }
+    if (this.epoch != that.epoch) {
+      return false;
+    }
+    boolean ret = that.getNodeId().equals(getNodeId());
+    return ret;
+  }
+
+  /**
+   * Hash codes for node handles. It is the hashcode of their corresponding
+   * NodeId's.
+   *
+   * @return a hash code.
+   */
+  public int hashCode() {
+    return epoch*getNodeId().hashCode();
   }
 }
 

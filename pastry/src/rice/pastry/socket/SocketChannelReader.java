@@ -38,7 +38,6 @@ import rice.pastry.Log;
 import rice.pastry.PastryObjectInputStream;
 import rice.pastry.socket.exception.SocketClosedByRemoteHostException;
 import rice.pastry.socket.messaging.AddressMessage;
-//import rice.pastry.testing.HelloMsg;
 
 /**
  * Class which serves as an "reader" for messages sent across the wire via the
@@ -96,6 +95,14 @@ public class SocketChannelReader {
   }
 
   /**
+   * @return true if we are actively downloading an object
+   */
+  public boolean isDownloading() {
+    return (buffer != null);
+  }
+
+  // ************** Reading Messages ******************
+  /**
    * Method which is to be called when there is data available on the specified
    * SocketChannel. The data is read in, and if the object is done being read,
    * it is parsed.
@@ -129,7 +136,7 @@ public class SocketChannelReader {
       } else {
         return null;
       }
-    }
+    } // initialized
 
     if (objectSize == -1) {
       int read = sc.read(sizeBuffer);
@@ -166,7 +173,6 @@ public class SocketChannelReader {
         //   int size = objectSize + MAGIC_NUMBER.length + 4;
         Object obj = deserialize(objectArray);
         debug("Deserialized bytes into object " + obj);
-        checkPoint(obj,777);
         if (!(obj instanceof AddressMessage)) {
           readOnce = true;
         }
@@ -181,31 +187,34 @@ public class SocketChannelReader {
     return null;
   }
 
-  public String toString() {
-    return "SCR for "+manager;
+  /**
+   * Method which parses an object once it is ready, and notifies the pastry
+   * node of the message.
+   *
+   * @param array DESCRIBE THE PARAMETER
+   * @return the deserialized object
+   * @exception IOException DESCRIBE THE EXCEPTION
+   */
+  private Object deserialize(byte[] array) throws IOException {
+    //ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(new ByteArrayInputStream(array))));
+    ObjectInputStream ois = new PastryObjectInputStream(new ByteArrayInputStream(array), spn);
+    Object o = null;
+
+    try {
+      reset();
+
+      return ois.readObject();
+    } catch (ClassCastException e) {
+      System.out.println("PANIC: Serialized message was not a pastry message!");
+      throw new IOException("Message recieved " + o + " was not a pastry message - closing channel.");
+    } catch (ClassNotFoundException e) {
+      System.out.println("PANIC: Unknown class type in serialized message!");
+      throw new IOException("Unknown class type in message - closing channel.");
+    } catch (InvalidClassException e) {
+      System.out.println("PANIC: Serialized message was an invalid class!");
+      throw new IOException("Invalid class in message - closing channel.");
+    }
   }
-
-  private void checkPoint(Object m, int state) {
-    /*
-    if (m instanceof SocketTransportMessage) {
-      m = ((SocketTransportMessage)m).msg;
-    }
-
-    if (m instanceof RouteMessage) {
-      m = ((RouteMessage)m).unwrap();
-    }    
-
-    if (m instanceof HelloMsg) {
-      HelloMsg hm = (HelloMsg)m;
-      hm.state = state;
-    }
-
-    if (m instanceof JoinRequest) {
-      System.out.println(m+" at "+state+" "+this);
-    }
-    */
-  }
-
 
   /**
    * Resets this input stream so that it is ready to read another object off of
@@ -218,30 +227,6 @@ public class SocketChannelReader {
     buffer = null;
     sizeBuffer.clear();
     magicBuffer.clear();
-  }
-
-  /**
-   * Private method which is designed to verify the magic number buffer coming
-   * across the wire.
-   *
-   * @exception IOException DESCRIBE THE EXCEPTION
-   */
-  private void verifyMagicBuffer() throws IOException {
-    // ensure that there is at least the object header ready to
-    // be read
-    if (magicBuffer.remaining() == 4) {
-      initialized = true;
-
-      // allocate space for the header
-      byte[] magicArray = new byte[4];
-      magicBuffer.get(magicArray, 0, 4);
-
-      // verify the buffer
-      if (!Arrays.equals(magicArray, MAGIC_NUMBER)) {
-        System.out.println("Improperly formatted message received - ignoring.");
-        throw new IOException("Improperly formatted message - incorrect magic number.");
-      }
-    }
   }
 
   /**
@@ -278,34 +263,31 @@ public class SocketChannelReader {
   }
 
   /**
-   * Method which parses an object once it is ready, and notifies the pastry
-   * node of the message.
+   * Private method which is designed to verify the magic number buffer coming
+   * across the wire.
    *
-   * @param array DESCRIBE THE PARAMETER
-   * @return the deserialized object
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  private Object deserialize(byte[] array) throws IOException {
-    //ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(new ByteArrayInputStream(array))));
-    ObjectInputStream ois = new PastryObjectInputStream(new ByteArrayInputStream(array), spn);
-    Object o = null;
+  private void verifyMagicBuffer() throws IOException {
+    // ensure that there is at least the object header ready to
+    // be read
+    if (magicBuffer.remaining() == 4) {
+      initialized = true;
 
-    try {
-      reset();
+      // allocate space for the header
+      byte[] magicArray = new byte[4];
+      magicBuffer.get(magicArray, 0, 4);
 
-      return ois.readObject();
-    } catch (ClassCastException e) {
-      System.out.println("PANIC: Serialized message was not a pastry message!");
-      throw new IOException("Message recieved " + o + " was not a pastry message - closing channel.");
-    } catch (ClassNotFoundException e) {
-      System.out.println("PANIC: Unknown class type in serialized message!");
-      throw new IOException("Unknown class type in message - closing channel.");
-    } catch (InvalidClassException e) {
-      System.out.println("PANIC: Serialized message was an invalid class!");
-      throw new IOException("Invalid class in message - closing channel.");
+      // verify the buffer
+      if (!Arrays.equals(magicArray, MAGIC_NUMBER)) {
+        System.out.println("Improperly formatted message received - ignoring.");
+        throw new IOException("Improperly formatted message - incorrect magic number.");
+      }
     }
   }
 
+
+  // ******************* Debugging **********************
   /**
    * DESCRIBE THE METHOD
    *
@@ -321,11 +303,9 @@ public class SocketChannelReader {
     }
   }
 
-	/**
-	 * @return true if we are actively downloading an object
-	 */
-	public boolean isDownloading() {
-		return (buffer != null);
-	}
+  public String toString() {
+    return "SCR for "+manager;
+  }
+
 
 }

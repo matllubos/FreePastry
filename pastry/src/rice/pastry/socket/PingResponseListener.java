@@ -6,7 +6,6 @@
  */
 package rice.pastry.socket;
 
-import java.net.InetSocketAddress;
 
 /**
  * Interface for listening to pings.  You may want to read the PingManager documentation.

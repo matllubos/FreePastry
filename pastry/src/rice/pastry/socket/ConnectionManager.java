@@ -320,6 +320,9 @@ public class ConnectionManager {
 
   /**
    * called by SocketCollectionManager when a remote node opens a socket.
+   * This has logic to replace the existing socket if both parties opened
+   * sockets to each other concurrenlty.  It has a helper replaceExistingSocket().
+   * 
    * @param sm The new SocketManager opened by the remote node
    */
   public void acceptSocket(SocketManager sm) {
@@ -1074,11 +1077,8 @@ public class ConnectionManager {
    * called by DeadChecker.pingResponse(), message received.
    * Notifies us that we are still hearing from the remote node.
    *
+   * @param powerOffset this is the power of the time we need to wait
    */
-  protected void markAlive() {
-    markAlive(0);
-  }
-  
   protected void markAlive(int powerOffset) {    
     failedDuringOpen = false;
     initializeSocketsIfNeeded();
@@ -1427,6 +1427,8 @@ public class ConnectionManager {
           alreadyRaised = false;
         } else {
           powerOffset++;
+          if (powerOffset > 6) 
+            powerOffset = 6;
         }
         pingManager.forcePing(snh, DeadChecker.this);
         schedule(powerOffset);
@@ -1490,12 +1492,7 @@ public class ConnectionManager {
        * Reschedules the task onto the selector thread.
        */
       public void run() {
-        // don't need to call invoke because timer/selector are the same
-//        SelectorManager.getSelectorManager().invoke(new Runnable() {
-//          public void run() {
-            runOnSelector();
-//          }
-//        });            
+        runOnSelector();
       }
     }
 
@@ -1518,6 +1515,8 @@ public class ConnectionManager {
     public void runOnSelector() {            
       if (cancelled) return;
       powerOffset++;
+      if (powerOffset > 6) 
+        powerOffset = 6;
       myTimer = null;
       ackNotReceived(AckTimeoutEvent.this, powerOffset);
     }
@@ -1567,7 +1566,7 @@ public class ConnectionManager {
      * yee ol' toString() method.
      */
     public String toString() {
-      return "ATE<"+ackNum+">:"+msg+":elapsed:"+elapsedTime()+" ttf:"+timeToFailure();
+      return "ATE<"+ackNum+">:"+msg+":elapsed:"+elapsedTime()+" ttf:"+timeToFailure()+ " powerOffset:"+powerOffset;
     }
   }
 
@@ -1685,7 +1684,7 @@ public class ConnectionManager {
    * needs to close down remaining connections
    */
 	protected void finalize() throws Throwable {
-    if (LOG_LOW_LEVEL)
+    //if (LOG_LOW_LEVEL)
       System.out.println(this+".finalize()");
     close();
 		super.finalize();

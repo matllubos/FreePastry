@@ -34,14 +34,12 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedList;
 
 import rice.pastry.Log;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RouteMessage;
-import rice.pastry.socket.messaging.AckMessage;
 import rice.pastry.socket.messaging.AddressMessage;
 import rice.pastry.socket.messaging.SocketTransportMessage;
 
@@ -125,6 +123,7 @@ public class SocketChannelWriter {
     queue = new LinkedList();
   }
 
+  // ************** Accessors ****************
   /**
    * Returns whether or not there are objects in the queue on in writing. If the
    * result is true, it the safe to mark the SelectionKey as not being
@@ -145,10 +144,11 @@ public class SocketChannelWriter {
     return queue;
   }
 
-  long timeEnque = 0;
-  Hashtable timeEnq = new Hashtable();
+  int getSize() {
+    return queue.size();
+  }
 
-
+  // **************** Send Lifecycle ***************
   /**
    * Adds an object to this SocketChannelWriter's queue of pending objects to
    * write. This methos is synchronized and therefore safe for use by multiple
@@ -161,9 +161,6 @@ public class SocketChannelWriter {
     if (ConnectionManager.LOG_LOW_LEVEL)
       System.out.println("ENQ3:@"+System.currentTimeMillis()+":"+this+":"+o);
 
-//    System.out.println("ENQ4:"+manager+".SCW.enqueue()" + o);
-    timeEnque = System.currentTimeMillis();
-    timeEnq.put(o,new Long(timeEnque));
     synchronized (queue) {
       if (queue.size() < MAXIMUM_QUEUE_LENGTH) {
         addToQueue(o);
@@ -176,12 +173,35 @@ public class SocketChannelWriter {
   }
 
   /**
-   * Returns the queue of writes for the remote address
+   * Adds an entry into the queue, taking message prioritization into account
    *
+   * @param o The feature to be added to the ToQueue attribute
    */
-  public void reset() {
-    queue = new LinkedList();
-    buffer = null;
+  private void addToQueue(Object o) {    
+    if (o instanceof Message) {
+      boolean priority = ((Message) o).hasPriority();
+
+      if ((priority) && (queue.size() > 0)) {
+        for (int i = 1; i < queue.size(); i++) {
+          Object thisObj = queue.get(i);
+
+          if ((thisObj instanceof Message) && (!((Message) thisObj).hasPriority())) {
+            debug("Prioritizing socket message " + o + " over message " + thisObj);
+            //System.out.println("ENQ5a:@"+System.currentTimeMillis()+":"+this+":"+o);
+            queue.add(i, o);
+            if (manager!=null) {
+              manager.messageEnqueued();            
+            }
+            return;
+          }
+        }
+      }
+    }
+
+    queue.addLast(o);
+    if (manager!=null) {
+      manager.messageEnqueued();            
+    }
   }
 
   /**
@@ -201,15 +221,6 @@ public class SocketChannelWriter {
     synchronized (queue) {
       if (buffer == null) {
         if (queue.size() > 0) {
-          Long lo = (Long)timeEnq.remove(queue.getFirst());
-          
-          long timeToWrite;
-          if (lo != null) {
-            timeToWrite = System.currentTimeMillis() - lo.longValue();
-          } else {
-            timeToWrite = 0;
-          }
-//          System.out.println("SEN:"+manager+".SCW.write()" + queue.getFirst() + ":"+timeToWrite);
           debug("About to serialize object " + queue.getFirst());
           if (ConnectionManager.LOG_LOW_LEVEL)
             System.out.println("SND:@"+System.currentTimeMillis()+":"+this+":"+queue.getFirst());
@@ -223,9 +234,6 @@ public class SocketChannelWriter {
           if (!(first instanceof AddressMessage)) {
             wroteOnce = true;
           }
-
-          //    if (spn != null)
-          //      spn.broadcastSentListeners(queue.getFirst(), (InetSocketAddress) sc.socket().getRemoteSocketAddress(), buffer.limit());
         } else {
           return true;
         }
@@ -250,86 +258,8 @@ public class SocketChannelWriter {
   
         buffer = null;
       }
-/*
-      // if there are more objects in the queue, try writing those
-      // otherwise, return saying all objects have been written
-      if ((manager != null) && (manager.getType() == SocketCollectionManager.TYPE_CONTROL)) {
-        if (manager.canWrite()) {
-          return write(sc);
-        } else {
-          return false;
-        }
-      } else { // mgr == null || TYPE_DATA
-        */
-        return write(sc);        
-      //}
-      
+      return write(sc);      
     }
-  }
-
-  /**
-   * Adds an entry into the queue, taking message prioritization into account
-   *
-   * @param o The feature to be added to the ToQueue attribute
-   */
-  private void addToQueue(Object o) {
-    //System.out.println("ENQ4:@"+System.currentTimeMillis()+":"+this+":"+o);
-  	
-    if (queue.size() > 2 && !(o instanceof AckMessage)) {
-      //System.out.println("SCW.addToQueue("+o+"):"+o.getClass().getName());
-      //Thread.dumpStack();
-    }
-    if (o instanceof Message) {
-      boolean priority = ((Message) o).hasPriority();
-
-      if ((priority) && (queue.size() > 0)) {
-        for (int i = 1; i < queue.size(); i++) {
-          Object thisObj = queue.get(i);
-
-          if ((thisObj instanceof Message) && (!((Message) thisObj).hasPriority())) {
-            debug("Prioritizing socket message " + o + " over message " + thisObj);
-				    //System.out.println("ENQ5a:@"+System.currentTimeMillis()+":"+this+":"+o);
-            queue.add(i, o);
-            if (manager!=null) {
-              manager.messageEnqueued();            
-            }
-            return;
-          }
-        }
-      }
-    }
-
-    //System.out.println("ENQ5b:@"+System.currentTimeMillis()+":"+this+":"+o);
-    queue.addLast(o);
-    if (manager!=null) {
-      manager.messageEnqueued();            
-    }
-  }
-
-  int getSize() {
-    return queue.size();
-  }
-
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @param s DESCRIBE THE PARAMETER
-   */
-  private void debug(String s) {
-    if (Log.ifp(8)) {
-      if (spn == null) {
-        System.out.println("(W): " + s);
-      } else {
-        System.out.println(spn.getNodeId() + " (W): " + s);
-      }
-    }
-  }
-  
-  /**
-   * yee ol' toString()
-   */
-  public String toString() {
-    return "SCW for "+manager;
   }
 
   /**
@@ -415,4 +345,29 @@ public class SocketChannelWriter {
       throw new IOException("Unserializable class during attempt to serialize.");
     }
   }
+
+
+  // **************** Debugging *******************
+  /**
+   * DESCRIBE THE METHOD
+   *
+   * @param s DESCRIBE THE PARAMETER
+   */
+  private void debug(String s) {
+    if (Log.ifp(8)) {
+      if (spn == null) {
+        System.out.println("(W): " + s);
+      } else {
+        System.out.println(spn.getNodeId() + " (W): " + s);
+      }
+    }
+  }
+  
+  /**
+   * yee ol' toString()
+   */
+  public String toString() {
+    return "SCW for "+manager;
+  }
+
 }

@@ -94,18 +94,15 @@ public class DistHelloWorldMultiThread {
   private static int port = 5009;
   private static String bshost = null;
   private static int bsport = 5009;
-  private static int numnodes = 25;
+  private static int numnodes = 30;
   private static int nummsgs = 50;
   public static int protocol = DistPastryNodeFactory.PROTOCOL_SOCKET;
   private static boolean toFile = true;
-  private static boolean useTempStall = false;
-  private static boolean useStall = true;
   private static boolean useKill = true;
   private static boolean useRegen = true;
-  private static boolean noKilling = false;
   private static boolean oneThreadPerMessage = false;
   public static boolean useDirect = true;
-  private static boolean limitedSockets = true; 
+  private static boolean limitedSockets = false; 
   public static boolean useNonDirect = true; 
   public static boolean useRandChoices = false;
   public static boolean testSelector = true;
@@ -279,14 +276,14 @@ public class DistHelloWorldMultiThread {
   }
 
   public static void makeDeadlock() {
-    try { Thread.sleep(15000); } catch (InterruptedException ie) {}
+    sleep(15000);
     final Object l1 = new Object();
     final Object l2 = new Object(); 
     new Thread(new Runnable() {
       public void run() {
         synchronized(l1) {
           System.out.println("got l1");
-          try { Thread.sleep(5000); } catch (InterruptedException ie) {}
+          sleep(5000);
           System.out.println("getting l2");
           synchronized(l2) {
             System.out.println("ERROR: got l2");
@@ -299,7 +296,7 @@ public class DistHelloWorldMultiThread {
       public void run() {
         synchronized(l2) {
           System.out.println("got l2");
-          try { Thread.sleep(5000); } catch (InterruptedException ie) {}
+          sleep(5000);
           System.out.println("getting l1");
           synchronized(l1) {
             System.out.println("ERROR: got l1");
@@ -347,7 +344,7 @@ public class DistHelloWorldMultiThread {
         System.out.println(
           "* Creating node " + i + "               **********");
         pn = driver.makePastryNode(false, factory);
-        Thread.currentThread().sleep(500);
+        sleep(500);
         waitUntilReady(pn);
       }
     } catch (Exception e) {
@@ -357,12 +354,7 @@ public class DistHelloWorldMultiThread {
 
     // wait until they are all created
     while (!driver.allNodesCreated()) {
-      try {
-        Thread.sleep(1000);
-      } catch (Exception e) {
-        //System.out.println(e);
-        e.printStackTrace();
-      }
+      sleep(1000);
     }
 
     System.out.println(numnodes + " nodes constructed");
@@ -371,7 +363,6 @@ public class DistHelloWorldMultiThread {
 
   static DistPastryNode sameNode = null;
   public static void createSameNode(DistHelloWorldMultiThread driver) {
-    if (noKilling) return;
     driver.ready_nodes = numnodes-1;
     double beginTime = System.currentTimeMillis();
     System.out.println("creatingSamenode():1  "+((System.currentTimeMillis()-beginTime)/1000));
@@ -393,7 +384,6 @@ public class DistHelloWorldMultiThread {
   }
   
   public void killSameNode() {
-    if (noKilling) return;  
 //    HelloWorldAppMultiThread app = (HelloWorldAppMultiThread)helloClients.remove(killNum); 
     int index = pastryNodes.indexOf(sameNode);
     DistPastryNode pn =
@@ -407,7 +397,7 @@ public class DistHelloWorldMultiThread {
 
   public static void sleep(int time) {
     try {
-      Thread.currentThread().sleep(time);
+      Thread.sleep(time);
     } catch (Exception e) {
       //System.out.println(e);
       e.printStackTrace();
@@ -479,7 +469,7 @@ public class DistHelloWorldMultiThread {
         HelloMsg m = (HelloMsg) i.next();
         if (!driver.killedNodes.contains(m.intermediateSource)) {
           // if the source is not dead
-          boolean onlyPrintLiveFailures = useKill || useStall;
+          boolean onlyPrintLiveFailures = useKill;
           if (onlyPrintLiveFailures) {
             // check to see if last address is a dead node
             //InetSocketAddress lastAddr = m.getLastAddress();
@@ -604,7 +594,6 @@ public class DistHelloWorldMultiThread {
           useNonDirect = rng.nextBoolean();
           useRegen = rng.nextBoolean();
         }
-        
         if (limitedSockets)
   				SocketPoolManager.MAX_OPEN_SOCKETS = numSocks;
         else 
@@ -651,42 +640,15 @@ public class DistHelloWorldMultiThread {
             running = printMissingMessages(driver, iters);
 
 						if (kill_counter < numnodes * 2 / 3) {
-							//          driver.closePastryNode();          
 
               driver.killPastryNode();
-//              boolean choose = false;
-//              while(!choose) {
-//                int blargh = driver.rng.nextInt(3);
-//                switch(blargh) {
-//                  case 0:
-//                  if (useKill) {
-//                    driver.killPastryNode();
-//                    choose = true;
-//                  }
-//                  break;                    
-//
-//                  case 1:
-//                  if (useStall) {
-//                    driver.stallPastryNode();
-//                    choose = true;
-//                  }
-//                  break;                    
-//
-//                  case 2:
-//                  if (useTempStall) {
-//                    driver.tempStallPastryNode();
-//                    choose = true;
-//                  }
-//                  break;                    
-//                }
-//              } // while              
 							kill_counter++;
 							System.out.println("KillCounter:" + kill_counter);
 						} else {
 							iters++;
 						}
 
-						Thread.currentThread().sleep(5000);
+						sleep(5000);
 
 					} catch (DoneException de) {
 						throw de;
@@ -696,8 +658,6 @@ public class DistHelloWorldMultiThread {
 					}
 				}
 			} catch (DoneException de) {
-				boolean temp = noKilling;
-				noKilling = false;
         boolean temp2 = useRegen;
         useRegen = false;
         if (sameNode != null) {
@@ -706,11 +666,6 @@ public class DistHelloWorldMultiThread {
         while (!driver.pastryNodes.isEmpty()) {
           driver.killPastryNode();
         }
-        while (!driver.stalledNodes.isEmpty()) {
-          DistPastryNode dpn = (DistPastryNode)driver.stalledNodes.remove(0);
-          dpn.kill();
-        }
-				noKilling = temp;
         useRegen = temp2;
 				curStat.finished(de.numMissing);
         System.out.println("done " + curStat);        
@@ -719,10 +674,9 @@ public class DistHelloWorldMultiThread {
         Runtime.getRuntime().gc();
 				port += numnodes + 1;
 				bsport = port;
-				try {
-					Thread.sleep(5000);
-				} catch (InterruptedException ie) {
-				}
+					
+        sleep(5000);
+
         long mem2 = Runtime.getRuntime().freeMemory();
         System.out.println("mem1:"+(mem1/1000000)+" mem2:"+(mem2/1000000));
 			}
@@ -762,10 +716,7 @@ public class DistHelloWorldMultiThread {
   //          Thread.currentThread().sleep(rng.nextInt(5000));
             app.sendRndMsg(rng, msgId);
           } catch (Exception e) {
-            //System.out.println("Error Creating a new client thread for "+app.getNodeId()+" " + e);
-  //          if (!(e instanceof NodeIsDeadException)) {
               e.printStackTrace();
-  //          }
           }
         }
       };
@@ -868,7 +819,6 @@ public class DistHelloWorldMultiThread {
   * is called, and it can do any interesting stuff it wants.
   */
   public void killPastryNode() {
-    if (noKilling) return;  
     int killNum = getKillNum();
     DistPastryNode pn =
       (DistPastryNode) pastryNodes.remove(killNum);
@@ -878,59 +828,8 @@ public class DistHelloWorldMultiThread {
     pn.kill();
   }
   
-  public void closePastryNode() {
-    if (noKilling) return;  
-    int killNum = getKillNum();
-    SocketPastryNode pn =
-      (SocketPastryNode) pastryNodes.get(killNum);
-    System.out.println("***********************   closing pastry node:" + pn);
-    Iterator i = pn.getSocketCollectionManager().getConnections();
-    while(i.hasNext()) {
-      ConnectionManager cm = (ConnectionManager)i.next();
-      System.out.println("Closing:"+cm);
-      cm.close();
-    }
-  }
-  
-//  public void stallPastryNode() {
-//    if (noKilling) return;
-//    int killNum = getKillNum();
-//    DistPastryNode pn =
-//      (DistPastryNode) pastryNodes.remove(killNum);
-//    killedNodes.addElement(pn.getLocalHandle());
-//    stalledNodes.add(pn);
-//    HelloWorldAppMultiThread app = (HelloWorldAppMultiThread)helloClients.remove(killNum);      
-//    System.out.println("***********************   perminantely stalling pastry node:" + pn + ","+app);
-//    if (pn instanceof SocketPastryNode) {
-//        ((SocketPastryNode)pn).stall(15000000);   
-//    } else {
-//        pn.kill();   
-//    }
-//  }
-//  
-//  public void tempStallPastryNode() {
-//    if (noKilling) return;
-//    int killNum = getKillNum();
-//    DistPastryNode pn =
-//      (DistPastryNode) pastryNodes.get(killNum);
-//    killedNodes.addElement(pn.getLocalHandle());
-//    HelloWorldAppMultiThread app = (HelloWorldAppMultiThread)helloClients.get(killNum);      
-//    if (pn instanceof SocketPastryNode) {
-//      int stallTime = rng.nextInt(90);
-//      stallTime+=30;
-//      System.out.println("***********************   stalling pastry node for "+stallTime+" seconds:" + pn + ","+app);
-//      stallTime*=1000;
-//        ((SocketPastryNode)pn).stall(stallTime);   
-//    } else {
-//      pn.kill();   
-//    }
-//  }
   
   Vector killedNodes = new Vector();
-  /**
-   * This is held around so we can garbage collect them when the sim is complete.
-   */
-  Vector stalledNodes = new Vector();
 
 }
 

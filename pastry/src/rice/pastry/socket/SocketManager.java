@@ -823,4 +823,9 @@ public class SocketManager extends SelectionKeyHandler implements LivenessListen
     }    
   }
 
+//	protected void finalize() throws Throwable {
+//    System.out.println(this+".finalize()");
+//		super.finalize();
+//	}
+
 }

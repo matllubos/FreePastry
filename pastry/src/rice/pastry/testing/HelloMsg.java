@@ -4,15 +4,10 @@
  */
 package rice.pastry.testing;
 
-import java.net.InetSocketAddress;
-import java.util.Vector;
-
 import rice.p2p.commonapi.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.messaging.Address;
 import rice.pastry.messaging.Message;
-import rice.pastry.socket.ConnectionManager;
-import rice.pastry.socket.SocketManager;
 
 /**
  * @author Jeff Hoye

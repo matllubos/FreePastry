@@ -221,7 +221,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     return newNode(bootstrap, nidFactory.generateNodeId(), proxy);
   }
   
-
+  /**
+   * Ability to specify a proxy for this new node.
+   */
   public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId, InetSocketAddress proxy) {
     try {
       return newNode(bootstrap, nidFactory.generateNodeId(), proxy, InetAddress.getLocalHost());
@@ -293,7 +295,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
 
     pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
-    pn.setSocketElements(address, socketManager, pingManager, pool, leafSetMaintFreq, routeSetMaintFreq);
+    pn.setSocketElements(address, socketManager, pingManager, leafSetMaintFreq, routeSetMaintFreq);
     secureMan.setLocalPastryNode(pn);
 
     pool.coalesce(localhandle);
@@ -303,19 +305,15 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       bootstrap.setLocalNode(pn);
     }
 
+    final SocketNodeHandle theLocalHandle = localhandle;
     // launch thread to handle the sockets
-//    Thread t =
-//      new Thread("Thread for node " + nodeId) {
     SelectorManager.getSelectorManager().invoke(
       new Runnable() {
         public void run() {
-          //pn.doneNode(getNearest(localhandle, bootstrap));
+//          pn.doneNode(getNearest(theLocalHandle, bootstrap));
           pn.doneNode(bootstrap);
         }
       });
-//      };
-//
-//    t.start();
 
     return pn;
   }

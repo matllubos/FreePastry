@@ -79,66 +79,14 @@ public class SocketPastryNode extends DistPastryNode {
     super(id);
   }
 
+  // ************* lifecycle *************
+  private boolean alive = true;
   /**
-   * Returns the SelectorManager for this pastry node.
-   *
-   * @return The SelectorManager for this pastry node.
+   * Returns false once the node has been killed.
+   * @return false when the node has been killed.  True otherwise.
    */
-//  public SelectorManager getSelectorManager() {
-//    return manager;
-//  }
-
-  /**
-   * Returns the SocketManager for this pastry node.
-   *
-   * @return The SocketManager for this pastry node.
-   */
-  public SocketCollectionManager getSocketCollectionManager() {
-    return sManager;
-  }
-
-  /**
-   * Returns the PingManager for this pastry node.
-   *
-   * @return The PingManager for this pastry node.
-   */
-  public PingManager getPingManager() {
-    return pingManager;
-  }
-
-  /**
-   * Returns the WireNodeHandlePool for this pastry node.
-   *
-   * @return The WireNodeHandlePool for this pastry node.
-   */
-  public DistNodeHandlePool getNodeHandlePool() {
-    return pool;
-  }
-
-  /**
-   * Helper method which allows the WirePastryNodeFactory to initialize a number
-   * of the pastry node's elements.
-   *
-   * @param address The address of this pastry node.
-   * @param manager The socket manager for this pastry node.
-   * @param lsmf Leaf set maintenance frequency. 0 means never.
-   * @param rsmf Route set maintenance frequency. 0 means never.
-   * @param sManager The new SocketElements value
-   * @param pingManager The new SocketElements value
-   * @param pool The new SocketElements value
-   */
-  public void setSocketElements(InetSocketAddress address,                                
-                                SocketCollectionManager sManager,
-                                PingManager pingManager,
-                                SocketNodeHandlePool pool,
-                                int lsmf,
-                                int rsmf) {
-    this.address = address;
-    this.sManager = sManager;
-    this.pingManager = pingManager;
-    this.pool = pool;
-    this.leafSetMaintFreq = lsmf;
-    this.routeSetMaintFreq = rsmf;
+  public boolean isAlive() {
+    return alive;
   }
 
   /**
@@ -160,30 +108,46 @@ public class SocketPastryNode extends DistPastryNode {
   public void kill() {
 //    System.out.println("SPN.kill()");
     alive = false;
-//    manager.kill();
     super.kill();
     sManager.kill();
     pingManager.kill();
   }
 
-//  public void stall(int time) {
-//      manager.stall(time);
-//  }
-
-  private boolean alive = true;
-  public boolean isAlive() {
-    return alive;
+  // ***************** Error Handling ********************  
+  /** 
+   * Returns the available error code strings.
+   */
+  public String getErrorString(int errorCode) {
+    switch (errorCode) {
+      case EC_MSG_TOO_LARGE:
+        return EC_REASON_MSG_TOO_LARGE;
+      case EC_CONNECTION_FAULTY:
+        return EC_REASON_CONNECTION_FAULTY;
+      case EC_QUEUE_FULL:
+        return EC_REASON_QUEUE_FULL;
+    }
+    return super.getErrorString(errorCode);      
   }
 
   /**
-   * Prints out a String representation of this node
-   *
-   * @return a String
+   * Helper to notify the app that the message couldn't be sent for the specified reason.
    */
-  public String toString() {
-    return "SocketPastryNode (" + getNodeId() + ")";
+  public void messageNotSent(Message m, int errorCode) {
+    MessageReceiver mr = getMessageDispatch().getDestination(m);
+    if ((mr != null) && (mr instanceof PastryAppl)) {
+      PastryAppl a = (PastryAppl)mr;
+      a.messageNotDelivered(m, errorCode);
+    } else {
+      if ((errorCode == EC_CONNECTION_FAULTY) && (Thread.currentThread() == SelectorManager.getSelectorManager())) {
+        // don't print anything 
+      } else {
+        System.out.println("WARNING: message not sent "+m+":"+getErrorString(errorCode));    
+        //Thread.dumpStack();
+      }
+    }
   }
 
+  // ***************** Scheduling **************
   /**
    * DESCRIBE THE METHOD
    *
@@ -220,34 +184,76 @@ public class SocketPastryNode extends DistPastryNode {
       }
     }
   }  
-  
-  /** 
-   * Returns the available error code strings.
+
+  // ************* Accessors **************
+  /**
+   * Returns the SocketManager for this pastry node.
+   *
+   * @return The SocketManager for this pastry node.
    */
-  public String getErrorString(int errorCode) {
-    switch (errorCode) {
-      case EC_MSG_TOO_LARGE:
-        return EC_REASON_MSG_TOO_LARGE;
-      case EC_CONNECTION_FAULTY:
-        return EC_REASON_CONNECTION_FAULTY;
-      case EC_QUEUE_FULL:
-        return EC_REASON_QUEUE_FULL;
-    }
-    return super.getErrorString(errorCode);      
+  public SocketCollectionManager getSocketCollectionManager() {
+    return sManager;
   }
 
-  public void messageNotSent(Message m, int errorCode) {
-    MessageReceiver mr = getMessageDispatch().getDestination(m);
-    if ((mr != null) && (mr instanceof PastryAppl)) {
-      PastryAppl a = (PastryAppl)mr;
-      a.messageNotDelivered(m, errorCode);
-    } else {
-      if ((errorCode == EC_CONNECTION_FAULTY) && (Thread.currentThread() == SelectorManager.getSelectorManager())) {
-        // don't print anything 
-      } else {
-        System.out.println("WARNING: message not sent "+m+":"+getErrorString(errorCode));    
-        //Thread.dumpStack();
-      }
-    }
+  /**
+   * Returns the PingManager for this pastry node.
+   *
+   * @return The PingManager for this pastry node.
+   */
+  public PingManager getPingManager() {
+    return pingManager;
   }
+
+  /**
+   * Returns the DistNodeHandlePool for this pastry node.
+   *
+   * @return the SocketNodeHandlePool for this pastry node.
+   */
+  public DistNodeHandlePool getNodeHandlePool() {
+    return pool;
+  }
+
+  /**
+   * Setter for pool
+   * @param pool
+   */
+  public void setSocketNodeHandlePool(SocketNodeHandlePool pool) {
+    this.pool = pool;    
+  }
+
+
+  /**
+   * Helper method which allows the WirePastryNodeFactory to initialize a number
+   * of the pastry node's elements.
+   *
+   * @param address The address of this pastry node.
+   * @param manager The socket manager for this pastry node.
+   * @param lsmf Leaf set maintenance frequency. 0 means never.
+   * @param rsmf Route set maintenance frequency. 0 means never.
+   * @param sManager The new SocketElements value
+   * @param pingManager The new SocketElements value
+   * @param pool The new SocketElements value
+   */
+  public void setSocketElements(InetSocketAddress address,                                
+                                SocketCollectionManager sManager,
+                                PingManager pingManager,
+                                int lsmf,
+                                int rsmf) {
+    this.address = address;
+    this.sManager = sManager;
+    this.pingManager = pingManager;
+    this.leafSetMaintFreq = lsmf;
+    this.routeSetMaintFreq = rsmf;
+  }
+  
+
+  // ********************* Debugging ***************
+  /**
+   * Prints out a String representation of this node
+   *
+   * @return a String
+   */
+  public String toString() {
+    return "SocketPastryNode (" + getNodeId() + ")";
+  }  
 }
