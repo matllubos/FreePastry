@@ -99,8 +99,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   protected final Past aggregateStore;
   protected final StorageManager waitingList;
   protected final AggregationPolicy policy;
-  protected final Hashtable aggregateList;
-  protected final String configFileName;
+  protected final AggregateList aggregateList;
   protected final Endpoint endpoint;
   protected final Past objectStore;
   protected final String instance;
@@ -111,12 +110,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private final char tiFlush = 1;
   private final char tiMonitor = 2;
   protected Hashtable timers;
-  protected Id rootKey;
   protected int expirationCounter;
   protected Continuation flushWait;
   protected boolean rebuildInProgress;
-  protected int numAggregates;
-  protected int numObjectsInAggregates;
   protected Vector monitorIDs;
 
   private final int loglevel = 2;
@@ -145,11 +141,13 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private static final boolean monitorEnabled = false;
   private static final long monitorRefreshInterval = 10 * MINUTES;
 
-  public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance) {
+  private static final boolean aggregateLogEnabled = true;
+
+  public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance) throws IOException {
     this(node, aggregateStore, objectStore, waitingList, configFileName, factory, instance, getDefaultPolicy());
   }
 
-  public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance, AggregationPolicy policy) {
+  public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance, AggregationPolicy policy) throws IOException {
     this.endpoint = node.registerApplication(this, instance);
     this.waitingList = waitingList;
     this.instance = instance;
@@ -157,20 +155,20 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     this.objectStore = objectStore;
     this.node = node;
     this.timers = new Hashtable();
-    this.aggregateList = new Hashtable();
-    this.configFileName = configFileName;
+    this.aggregateList = new AggregateList(configFileName, getLocalNodeHandle().getId().toString(), factory, aggregateLogEnabled);
     this.policy = policy;
-    this.rootKey = null;
     this.factory = factory;
     this.expirationCounter = 1;
     this.flushWait = null;
     this.rebuildInProgress = false;
-    this.numAggregates = 0;
-    this.numObjectsInAggregates = 0;
     this.monitorIDs = new Vector();
     this.debugID = "A" + Character.toUpperCase(instance.charAt(instance.lastIndexOf('-')+1));
 
-    readAggregateList();
+    if (!aggregateList.readOK())
+      warn("Failed to read configuration file; aggregate list must be rebuilt!");
+    else 
+      log(2, "Aggregate list read OK -- current root: " + ((aggregateList.getRoot() == null) ? "null" : aggregateList.getRoot().toStringFull()));
+
     addTimer(flushDelayAfterJoin, tiFlush);
     if (monitorEnabled)
       addTimer(monitorRefreshInterval, tiMonitor);
@@ -178,160 +176,6 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private static AggregationPolicy getDefaultPolicy() {
     return new AggregationDefaultPolicy();
-  }
-
-  private String readLineSkipComments(BufferedReader br) throws IOException {
-    while (true) {
-      String line = br.readLine();
-      if ((line != null) && ((line.length() == 0) || (line.charAt(0) == '#')))
-        continue;
-      return line;
-    }
-  }
-
-  private void readAggregateList() {
-
-    rootKey = null;
-    aggregateList.clear();
-    numAggregates = 0;
-    numObjectsInAggregates = 0;
-  
-    String fileName;
-    if ((new File(configFileName)).exists())
-      fileName = configFileName;
-    else if ((new File(configFileName + ".new")).exists())
-      fileName = configFileName + ".new";
-    else {
-      warn("Cannot find configuration file: "+configFileName);
-      return;
-    }
-
-    BufferedReader configFile = null;
-    boolean readSuccessful = false;
-  
-    try {
-      configFile = new BufferedReader(new FileReader(fileName));
-      
-      String[] root = readLineSkipComments(configFile).split("=");
-      if (!root[0].equals("root"))
-        throw new Exception("Cannot read root key: "+root[0]);
-      rootKey = factory.buildIdFromToString(root[1]);
-      
-      while (true) {
-        String aggrKeyLine = readLineSkipComments(configFile);
-        if (aggrKeyLine == null) {
-          readSuccessful = true;
-          break;
-        }
-          
-        String[] aggrKeyS = aggrKeyLine.split("\\[|\\]");
-        Id aggrKey = factory.buildIdFromToString(aggrKeyS[1]);
-        
-        String[] expiresS = readLineSkipComments(configFile).split("=");
-        if (!expiresS[0].equals("expires"))
-          throw new Exception("Cannot find expiration date: "+expiresS[0]);
-        long expires = Long.parseLong(expiresS[1]);
-        
-        String[] objectNumS = readLineSkipComments(configFile).split("=");
-        if (!objectNumS[0].equals("objects"))
-          throw new Exception("Cannot find number of objects: "+objectNumS[0]);
-        int numObjects = Integer.parseInt(objectNumS[1]);
-        
-        ObjectDescriptor[] objects = new ObjectDescriptor[numObjects];
-        for (int i=0; i<numObjects; i++) {
-          String[] objS = readLineSkipComments(configFile).split("=");
-          String[] objArgS = objS[1].split(";");
-          String[] objIdS = objArgS[0].split("v");
-          objects[i] = new ObjectDescriptor(
-            factory.buildIdFromToString(objIdS[0]),
-            Long.parseLong(objIdS[1]),
-            Long.parseLong(objArgS[1]),
-            Long.parseLong(objArgS[2]),
-            Integer.parseInt(objArgS[3])
-          );
-        }
-        
-        String[] pointerNumS = readLineSkipComments(configFile).split("=");
-        if (!pointerNumS[0].equals("pointers"))
-          throw new Exception("Cannot find number of pointers: "+pointerNumS[0]);
-        int numPointers = Integer.parseInt(pointerNumS[1]);
-        
-        Id[] pointers = new Id[numPointers];
-        for (int i=0; i<numPointers; i++) {
-          String[] ptrS = readLineSkipComments(configFile).split("=");
-          pointers[i] = factory.buildIdFromToString(ptrS[1]);
-        }
-        
-        AggregateDescriptor aggr = new AggregateDescriptor(aggrKey, expires, objects, pointers);
-        addAggregateDescriptor(aggr);
-      }
-    } catch (Exception e) {
-      warn("Cannot read configuration file: "+configFileName+" (e="+e+")");
-      e.printStackTrace();
-    }
-
-    if (configFile != null) {
-      try {
-        configFile.close();
-      } catch (Exception e) {
-      }
-    }
-    
-    if (!readSuccessful) {
-      warn("Failed to read configuration file; aggregate list must be rebuilt!");
-      rootKey = null;
-      aggregateList.clear();
-    } else {
-      log(2, "Aggregate list read OK -- current root: " + ((rootKey == null) ? "null" : rootKey.toStringFull()));
-      recalculateReferenceCounts();
-    }
-  }
-
-  private void writeAggregateList() {
-    if (rootKey == null)
-      return;
-  
-    try {
-      PrintStream configFile = new PrintStream(new FileOutputStream(configFileName + ".new"));
-      Enumeration enum = aggregateList.elements();
-
-      resetMarkers();
-      configFile.println("# Aggregate list at " + getLocalNodeHandle().getId() + " (" + (new Date()) + ")");
-      configFile.println();
-      configFile.println("root="+rootKey.toStringFull());
-      configFile.println();
-      
-      while (enum.hasMoreElements()) {
-        AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
-        if (!aggr.marker) {
-          configFile.println("["+aggr.key.toStringFull()+"]");
-          configFile.println("expires=" + aggr.currentLifetime);
-          configFile.println("objects=" + aggr.objects.length);
-          for (int i=0; i<aggr.objects.length; i++)
-            configFile.println("obj"+i+"="+
-              aggr.objects[i].key.toStringFull()+"v"+
-              aggr.objects[i].version+";"+
-              aggr.objects[i].currentLifetime+";"+
-              aggr.objects[i].refreshedLifetime+";"+
-              aggr.objects[i].size
-            );
-          configFile.println("pointers=" + aggr.pointers.length);
-          for (int i=0; i<aggr.pointers.length; i++)
-            configFile.println("ptr"+i+"="+aggr.pointers[i].toStringFull());
-          configFile.println("");
-
-          aggr.marker = true;
-        }
-      }
-
-      configFile.close();
-      (new File(configFileName)).delete();
-      (new File(configFileName + ".new")).renameTo(new File(configFileName));
-    } catch (IOException ioe) {
-      System.err.println("AggregationImpl cannot write to its aggregate list: " + configFileName + " (" + ioe + ")");
-      ioe.printStackTrace();
-      System.exit(1);
-    }
   }
 
   private String getLogPrefix() {
@@ -403,20 +247,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     log(2, "Debug command: "+cmd);
   
     if (cmd.startsWith("status")) {
-      Enumeration enum = aggregateList.elements();
-      int numAggr = 0, numObj = 0;
-
-      resetMarkers();
-      while (enum.hasMoreElements()) {
-        AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
-        if (!aggr.marker) {
-          numAggr ++;
-          numObj += aggr.objects.length;
-          aggr.marker = true;
-        }
-      }
-
-      return numAggr + " active aggregates with " + numObj + " objects\n" + getNumObjectsWaiting() + " objects waiting";
+      return aggregateList.getNumAggregates() + " active aggregates with " + aggregateList.getNumObjects() + " objects\n" + getNumObjectsWaiting() + " objects waiting";
     }
 
     if (cmd.startsWith("insert")) {
@@ -465,7 +296,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       if (cmd.indexOf("-r") < 0)
         now = 0;
 
-      resetMarkers();
+      aggregateList.resetMarkers();
       while (enum.hasMoreElements()) {
         AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
         if (!aggr.marker) {
@@ -493,8 +324,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     }
 
     if (cmd.startsWith("write list")) {
-      writeAggregateList();
-      return "Done, new root is "+((rootKey==null) ? "null" : rootKey.toStringFull());
+      aggregateList.writeToDisk();
+      return "Done, new root is "+((aggregateList.getRoot()==null) ? "null" : aggregateList.getRoot().toStringFull());
     }
 
     if ((cmd.length() >= 5) && cmd.substring(0, 5).equals("reset")) {
@@ -534,7 +365,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     }
     
     if (cmd.startsWith("get root")) {
-      return "root="+((rootKey==null) ? "null" : rootKey.toStringFull());
+      return "root="+((aggregateList.getRoot()==null) ? "null" : aggregateList.getRoot().toStringFull());
     }
 
     if (cmd.startsWith("set root")) {
@@ -605,7 +436,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       TreeSet ids = new TreeSet();
       String result;
       
-      resetMarkers();
+      aggregateList.resetMarkers();
 
       Enumeration enum = aggregateList.elements();
       while (enum.hasMoreElements()) {
@@ -727,7 +558,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             result.append(currentId.toStringFull() + " - OS ");
             result.append((handle==null) ? "--" : ""+(handle.getExpiration()-now));
             
-            AggregateDescriptor adc = (AggregateDescriptor) aggregateList.get(currentId);
+            AggregateDescriptor adc = (AggregateDescriptor) aggregateList.getADC(currentId);
             if (adc != null) {
               result.append(" AD " + (adc.currentLifetime - now));
               
@@ -843,12 +674,12 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       Id id = factory.buildIdFromToString(keyArg);
       long expiration = System.currentTimeMillis() + Long.parseLong(expirationArg);
 
-      AggregateDescriptor aggr = (AggregateDescriptor) aggregateList.get(id);
+      AggregateDescriptor aggr = (AggregateDescriptor) aggregateList.getADC(id);
       if (aggr != null) {
-        aggr.currentLifetime = Math.min(aggr.currentLifetime, expiration);
+        aggregateList.setAggregateLifetime(aggr, Math.min(aggr.currentLifetime, expiration));
         for (int i=0; i<aggr.objects.length; i++) {
-          aggr.objects[i].currentLifetime = Math.min(aggr.objects[i].currentLifetime, expiration);
-          aggr.objects[i].refreshedLifetime = Math.min(aggr.objects[i].refreshedLifetime, expiration);
+          aggregateList.setObjectCurrentLifetime(aggr, i, Math.min(aggr.objects[i].currentLifetime, expiration));
+          aggregateList.setObjectRefreshedLifetime(aggr, i, Math.min(aggr.objects[i].refreshedLifetime, expiration));
         }
         return "OK";
       }
@@ -892,78 +723,11 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     return null;
   }
 
-  private void resetMarkers() {
-    Enumeration enum = aggregateList.elements();
-    while (enum.hasMoreElements()) {
-      AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
-      aggr.marker = false;
-    }
-  }
-
-  private void addAggregateDescriptor(AggregateDescriptor aggr) {
-    aggregateList.put(aggr.key, aggr);
-    numAggregates ++;
-
-    for (int i=0; i<aggr.objects.length; i++) {
-      aggregateList.put(new VersionKey(aggr.objects[i].key, aggr.objects[i].version), aggr);
-      numObjectsInAggregates ++;
-      AggregateDescriptor prevDesc = (AggregateDescriptor) aggregateList.get(aggr.objects[i].key);
-      int objDescIndex = (prevDesc == null) ? -1 : prevDesc.lookupNewest(aggr.objects[i].key);
-      if ((objDescIndex < 0) || (prevDesc.objects[objDescIndex].version < aggr.objects[i].version)) {
-        aggregateList.put(aggr.objects[i].key, aggr);
-      }
-    }
-
-    for (int i=0; i<aggr.pointers.length; i++) {
-      AggregateDescriptor ref = (AggregateDescriptor) aggregateList.get(aggr.pointers[i]);
-      if (ref != null)
-        ref.addReference();
-    }
-  }
-
-  private void removeAggregateDescriptor(AggregateDescriptor aggr) {
-    aggregateList.remove(aggr.key);
-    numAggregates --;
-    
-    for (int i=0; i<aggr.objects.length; i++) {
-      aggregateList.remove(new VersionKey(aggr.objects[i].key, aggr.objects[i].version));
-      numObjectsInAggregates --;
-      AggregateDescriptor prevDesc = (AggregateDescriptor) aggregateList.get(aggr.objects[i].key);
-      if (prevDesc.key.equals(aggr.key))
-        aggregateList.remove(aggr.objects[i].key);
-    }
-    
-    if (aggregateList.containsValue(aggr))
-      warn("Removal from aggregate list incomplete: "+aggr.key.toStringFull());
-  }
-  
-  private void recalculateReferenceCounts() {
-    Enumeration enum = aggregateList.elements();
-    while (enum.hasMoreElements()) {
-      AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
-      aggr.referenceCount = 0;
-      aggr.marker = false;
-    }
-    
-    enum = aggregateList.elements();
-    while (enum.hasMoreElements()) {
-      AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
-      if (!aggr.marker) {
-        aggr.marker = true;
-        for (int i=0; i<aggr.pointers.length; i++) {
-          AggregateDescriptor ref = (AggregateDescriptor) aggregateList.get(aggr.pointers[i]);
-          if (ref != null)
-            ref.addReference();
-        }
-      }
-    }
-  }
-
   private Id[] getSomePointers(int referenceThreshold) {
-    if (rootKey == null)
+    if (aggregateList.getRoot() == null)
       return new Id[] {};
       
-    resetMarkers();
+    aggregateList.resetMarkers();
   
     Vector pointers = new Vector();
 
@@ -1000,9 +764,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         );
 
         if (o instanceof Boolean[]) {
-          addAggregateDescriptor(adc);
-          rootKey = aggr.getId();
-          writeAggregateList();
+          aggregateList.addAggregateDescriptor(adc);
+          aggregateList.setRoot(aggr.getId());
+          aggregateList.writeToDisk();
           log(3, "Aggregate inserted successfully");
           command.receiveResult(new Boolean(true));
         } else {
@@ -1195,7 +959,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
     log(2, "Refreshing aggregates");
 
-    resetMarkers();
+    aggregateList.resetMarkers();
     while (enum.hasMoreElements()) {
       AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
       if (!aggr.marker) {
@@ -1217,10 +981,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                     Object[] oA = (Object[]) o;
                     if ((oA[0] instanceof Boolean) && ((Boolean)oA[0]).booleanValue()) {
                       log(3, "Aggregate successfully refreshed: "+aggrF.key);
-                      aggrF.currentLifetime = newLifetimeF;
-                      for (int i=0; i<aggrF.objects.length; i++) 
-                        aggrF.objects[i].currentLifetime = aggrF.objects[i].refreshedLifetime;
-                      writeAggregateList();
+                      aggregateList.refreshAggregate(aggrF, newLifetimeF);
+                      aggregateList.writeToDisk();
                     } else {
                       warn("Aggregate refresh failed: "+aggrF.key.toStringFull()+" (result="+oA[0]+")");
                     }
@@ -1253,12 +1015,12 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       log(2, "Removing expired aggregate "+aggr.key.toStringFull()+" from list");
       removeList.removeElementAt(0);
       deletedOne = true;
-      removeAggregateDescriptor(aggr);
+      aggregateList.removeAggregateDescriptor(aggr);
     }
     
     if (deletedOne) {
-      recalculateReferenceCounts();
-      writeAggregateList();
+      aggregateList.recalculateReferenceCounts();
+      aggregateList.writeToDisk();
     }
   }
 
@@ -1273,9 +1035,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     
     Id[] disconnected = getSomePointers(1);
     if (disconnected.length < 2) {
-      rootKey = (disconnected.length == 1) ? disconnected[0] : null;
+      aggregateList.setRoot((disconnected.length == 1) ? disconnected[0] : null);
       log(2, "No aggregates disconnected (n="+disconnected.length+")");
-      log(3, "root="+((rootKey == null) ? "null" : rootKey.toStringFull()));
+      log(3, "root="+((aggregateList.getRoot() == null) ? "null" : aggregateList.getRoot().toStringFull()));
       return;
     }
     
@@ -1374,14 +1136,14 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     for (int i=0; i<ids.length; i++) {
       log(2, "Refresh("+ids[i]+"v"+versions[i]+", expiration="+expiration+")");
 
-      AggregateDescriptor adc = (AggregateDescriptor) aggregateList.get(new VersionKey(ids[i], versions[i]));
+      AggregateDescriptor adc = (AggregateDescriptor) aggregateList.getADC(new VersionKey(ids[i], versions[i]));
       if (adc!=null) {
         int objDescIndex = adc.lookupSpecific(ids[i], versions[i]);
         if (objDescIndex < 0) {
           result[i] = new AggregationException("Inconsistency detected in aggregate list -- try restarting the application");
         } else {
           if (adc.objects[objDescIndex].refreshedLifetime < expiration)
-            adc.objects[objDescIndex].refreshedLifetime = expiration;
+            aggregateList.setObjectRefreshedLifetime(adc, objDescIndex, expiration);
 
           result[i] = new Boolean(true);
         }
@@ -1414,7 +1176,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
 
   private void refresh(final Id id, final long expiration, final Continuation command) {
-    AggregateDescriptor adc = (AggregateDescriptor) aggregateList.get(id);
+    AggregateDescriptor adc = (AggregateDescriptor) aggregateList.getADC(id);
     log(2, "Refresh("+id.toStringFull()+", expiration="+expiration+")");
     
     if (adc!=null) {
@@ -1426,7 +1188,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       }
 
       if (adc.objects[objDescIndex].refreshedLifetime < expiration)
-        adc.objects[objDescIndex].refreshedLifetime = expiration;
+        aggregateList.setObjectRefreshedLifetime(adc, objDescIndex, expiration);
         
       refreshInObjectStore(id, expiration, command);
     } else {
@@ -1531,7 +1293,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
 
   public Serializable getHandle() {
-    return rootKey;
+    return aggregateList.getRoot();
   }
   
   public void setHandle(Serializable handle, Continuation command) {
@@ -1542,18 +1304,18 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       return;
     }
     
-    if (aggregateList.get((Id) handle) != null) {
+    if (aggregateList.getADC((Id) handle) != null) {
       log(2, "Rebuild: Handle "+handle+" is already covered by current root");
       command.receiveResult(new Boolean(true));
     }
       
-    rootKey = (Id) handle;
+    aggregateList.setRoot((Id) handle);
     rebuildAggregateList(command);
   }
 
   private void rebuildAggregateList(final Continuation command) {
     log(2, "rebuildAggregateList");
-    if (rootKey == null) {
+    if (aggregateList.getRoot() == null) {
       warn("rebuildAggregateList invoked while rootKey is null");
       command.receiveException(new AggregationException("Set handle first!"));
       return;
@@ -1561,12 +1323,12 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     
     final Vector keysToDo = new Vector();
     final Vector keysDone = new Vector();
-    keysToDo.add(rootKey);
+    keysToDo.add(aggregateList.getRoot());
     rebuildInProgress = true;
     
-    log(3, "Rebuild: Fetching handles for aggregate " + rootKey.toStringFull());
-    aggregateStore.lookupHandles(rootKey, 999, new Continuation() {
-      Id currentLookup = rootKey;
+    log(3, "Rebuild: Fetching handles for aggregate " + aggregateList.getRoot().toStringFull());
+    aggregateStore.lookupHandles(aggregateList.getRoot(), 999, new Continuation() {
+      Id currentLookup = aggregateList.getRoot();
       
       public void receiveResult(Object o) {
         log(3, "Got handles for "+currentLookup);
@@ -1609,7 +1371,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                       getSize(aggr.components[i])
                     );
             
-                  addAggregateDescriptor(new AggregateDescriptor(currentLookup, aggregateExpiration, objects, aggr.getPointers()));
+                  aggregateList.addAggregateDescriptor(new AggregateDescriptor(currentLookup, aggregateExpiration, objects, aggr.getPointers()));
           
                   Id[] pointers = aggr.getPointers();
                   if (pointers != null) {
@@ -1628,8 +1390,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                     log(3, "Rebuild: Fetching handles for aggregate " + currentLookup.toStringFull());
                     aggregateStore.lookupHandles(currentLookup, 999, outerContinuation);
                   } else {
-                    recalculateReferenceCounts();
-                    writeAggregateList();
+                    aggregateList.recalculateReferenceCounts();
+                    aggregateList.writeToDisk();
                     rebuildInProgress = false;
                     command.receiveResult(new Boolean(true));
                   }
@@ -1664,8 +1426,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             rebuildInProgress = false;
             command.receiveException(new AggregationException("Cannot read root aggregate! -- retry later"));
           } else {
-            recalculateReferenceCounts();
-            writeAggregateList();
+            aggregateList.recalculateReferenceCounts();
+            aggregateList.writeToDisk();
             rebuildInProgress = false;
             command.receiveResult(new Boolean(true));
           }
@@ -1789,7 +1551,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
           log(3, "NL: Found in PAST: "+id);
           command.receiveResult(o);
         } else {
-          AggregateDescriptor adc = (AggregateDescriptor) aggregateList.get(id);
+          AggregateDescriptor adc = (AggregateDescriptor) aggregateList.getADC(id);
           if (adc!=null) {
             log(3, "NL: Must retrieve from aggregate");
 
@@ -1817,7 +1579,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   public void lookup(final Id id, final long version, final Continuation command) {
     log(2, "lookup("+id+", version="+version+")");
 
-    AggregateDescriptor adc = (AggregateDescriptor) aggregateList.get(new VersionKey(id, version));
+    AggregateDescriptor adc = (AggregateDescriptor) aggregateList.getADC(new VersionKey(id, version));
     if (adc!=null) {
       log(3, "VL: Retrieving from aggregate");
 
@@ -1879,7 +1641,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         } else {
           warn("lookupHandles("+id+","+max+") failed, ret="+o+" -- restoring");
 
-          AggregateDescriptor adc = (AggregateDescriptor) aggregateList.get(id);
+          AggregateDescriptor adc = (AggregateDescriptor) aggregateList.getADC(id);
           if (adc!=null) {
             log(3, "lookupHandles: Retrieving from aggregate");
 
@@ -1948,7 +1710,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
   
   public void rollback(Id id, Continuation command) {
-    AggregateDescriptor adc = (AggregateDescriptor) aggregateList.get(id);
+    AggregateDescriptor adc = (AggregateDescriptor) aggregateList.getADC(id);
 
     if (adc!=null) {
       int objDescIndex = adc.lookupNewest(id);
@@ -1967,7 +1729,6 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
   
   public void reset(Continuation command) {
-    rootKey = null;
     aggregateList.clear();
 
     Iterator iter = waitingList.scan().getIterator();
@@ -2044,10 +1805,10 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
   
   public int getNumAggregates() {
-    return numAggregates;
+    return aggregateList.getNumAggregates();
   }
   
   public int getNumObjectsInAggregates() {
-    return numObjectsInAggregates;
+    return aggregateList.getNumObjects();
   }
 }
