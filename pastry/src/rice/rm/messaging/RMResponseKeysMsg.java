@@ -172,13 +172,13 @@ public class RMResponseKeysMsg extends RMMessage implements Serializable{
 		continue;
 	    }
 	    if(!hashEnabled) {
-		
+		IdSet myKeySet = rm.app.scan(iRange);
 		// We simple add these keys to the fetchSet
 		Iterator it = keySet.getIterator();
 		while(it.hasNext()) {
 		    if(rm.myRange!=null) {
 			Id key = (Id)it.next();
-			if(rm.myRange.contains(key)) {
+			if(rm.myRange.contains(key) && !myKeySet.isMember(key)) {
 			    fetchSet.addMember(key);
 			}
 			else {
