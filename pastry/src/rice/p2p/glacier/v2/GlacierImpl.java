@@ -113,6 +113,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private final long garbageCollectionInterval = 60 * SECONDS;
   private final int garbageCollectionMaxFragmentsPerRun = 100;
 
+  private final long localScanInterval = 30 * SECONDS;
+  private final int localScanMaxFragmentsPerRun = 20;
+
   private final double restoreMaxRequestFactor = 4.0;
   private final int restoreMaxBoosts = 2;
 
@@ -553,6 +556,150 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         nextTimeout += garbageCollectionInterval;
       }
     });
+    
+    /* Local scan */
+    
+    addContinuation(new GlacierContinuation() {
+      long nextTimeout;
+      
+      public String toString() {
+        return "Local scan";
+      }
+      public void init() {
+        nextTimeout = System.currentTimeMillis() + localScanInterval;
+      }
+      public void receiveResult(Object o) {
+        warn("Local scan received object: "+o);
+      }
+      public void receiveException(Exception e) {
+        warn("Local scan received exception: "+e);
+        e.printStackTrace();
+      }
+      public long getTimeout() {
+        return nextTimeout;
+      }
+      public void timeoutExpired() {
+        final IdSet fragments = fragmentStorage.scan();
+        java.util.TreeSet queries = new java.util.TreeSet();
+
+        log(2, "Performing local scan over "+fragments.numElements()+" fragment(s)...");
+        Iterator iter = fragments.getIterator();
+        while (iter.hasNext()) {
+          final FragmentKey thisKey = (FragmentKey) iter.next();
+          final Id thisObjectKey = thisKey.getVersionKey().getId();
+          final long thisVersion = thisKey.getVersionKey().getVersion();
+          final int thisFragmentID = thisKey.getFragmentID();
+          final int fidLeft = (thisFragmentID + numFragments - 1) % numFragments;
+          final int fidRight = (thisFragmentID + 1) % numFragments;
+          
+          if (responsibleRange.containsId(getFragmentLocation(thisObjectKey, fidLeft, thisVersion))) {
+            if (!fragments.isMemberId(thisKey.getPeerKey(fidLeft))) {
+              log(4, "Missing: "+thisKey+" L="+fidLeft);
+              queries.add(thisKey.getVersionKey());
+            }
+          }
+          
+          if (responsibleRange.containsId(getFragmentLocation(thisObjectKey, fidRight, thisVersion))) {
+            if (!fragments.isMemberId(thisKey.getPeerKey(fidRight))) {
+              log(4, "Missing: "+thisKey+" R="+fidRight);
+              queries.add(thisKey.getVersionKey());
+            }
+          }
+        }
+        
+        if (!queries.isEmpty()) {
+          log(2, "Local scan completed; "+queries.size()+" objects incomplete in local store");
+          iter = queries.iterator();
+          int queriesSent = 0;
+          
+          while (iter.hasNext() && (queriesSent < localScanMaxFragmentsPerRun)) {
+            final VersionKey thisVKey = (VersionKey) iter.next();
+            
+            int localFragmentID = 0;
+            int queriesHere = 0;
+            for (int i=0; i<numFragments; i++) {
+              FragmentKey keyHere = new FragmentKey(thisVKey, i);
+              if (fragments.isMemberId(keyHere)) {
+                localFragmentID = i;
+                break;
+              } else if (responsibleRange.containsID(getFragmentLocation(keyHere))) {
+                queriesHere ++;
+              }
+            }
+            
+            log(3, "Local scan: Fetching manifest for "+thisVKey+" ("+queriesHere+" pending queries)");
+            queriesSent += queriesHere;
+
+            fragmentStorage.getObject(new FragmentKey(thisVKey, localFragmentID), new Continuation() {
+              public void receiveResult(Object o) {
+                if (o instanceof FragmentAndManifest) {
+                  final Manifest thisManifest = ((FragmentAndManifest)o).manifest;
+                  
+                  for (int i=0; i<numFragments; i++) {
+                    final FragmentKey thisKey = new FragmentKey(thisVKey, i);
+                    if (responsibleRange.containsId(getFragmentLocation(thisKey))) {
+                      if (!fragments.isMemberId(thisKey)) {
+                        log(3, "Local scan: Sending query for "+thisKey);
+                        final long tStart = System.currentTimeMillis();
+                        retrieveFragment(thisKey, thisManifest, new GlacierContinuation() {
+                          public String toString() {
+                            return "Local scan: Fetch fragment: "+thisKey;
+                          }
+                          public void receiveResult(Object o) {
+                            if (o instanceof Fragment) {
+                              log(2, "Local scan: Received fragment "+thisKey+" (from primary) matches existing manifest, storing...");
+              
+                              FragmentAndManifest fam = new FragmentAndManifest((Fragment) o, thisManifest);
+
+                              fragmentStorage.store(thisKey, new FragmentMetadata(thisManifest.getExpiration(), 0), fam,
+                                new Continuation() {
+                                  public void receiveResult(Object o) {
+                                    log(3, "Local scan: Recovered fragment stored OK");
+                                  }
+                                  public void receiveException(Exception e) {
+                                    warn("Local scan: receiveException(" + e + ") while storing a fragment with existing manifest (key=" + thisKey + ")");
+                                  }
+                                }
+                              );
+                            } else {
+                              warn("Local scan: FS received something other than a fragment: "+o);
+                            }
+                          }
+                          public void receiveException(Exception e) {
+                            warn("Local scan: Exception while recovering synced fragment "+thisKey+": "+e);
+                            e.printStackTrace();
+                            terminate();
+                          }
+                          public void timeoutExpired() {
+                            warn("Local scan: Timeout while fetching synced fragment "+thisKey+" -- aborted");
+                            terminate();              
+                          }
+                          public long getTimeout() {
+                            return tStart + overallRestoreTimeout;
+                          }
+                        });
+                      }
+                    }
+                  }
+                } else {
+                  warn("Local scan: Cannot retrieve "+thisVKey+" from local store, received o="+o);
+                }
+              }
+              public void receiveException(Exception e) {
+                warn("Local scan: Cannot retrieve "+thisVKey+" from local store, exception e="+e);
+                e.printStackTrace();
+              }
+            });
+          }
+          
+          log(2, queriesSent + " queries sent after local scan");
+        } else {
+          log(2, "Local scan completed; no missing fragments");
+        }
+
+        nextTimeout += garbageCollectionInterval;
+      }
+    });
   }
 
   private void deleteFragment(final Id fkey, final Continuation command) {
@@ -898,6 +1045,28 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       return result + numObjects + " object(s) created\n";
     }
 
+    if ((cmd.length() >= 6) && cmd.substring(0, 6).equals("delete")) {
+      String[] vkeyS = cmd.substring(7).split("[v:]");
+      Id key = factory.buildIdFromToString(vkeyS[0]);
+      long version = Long.parseLong(vkeyS[1]);
+      VersionKey vkey = new VersionKey(key, version);
+      FragmentKey id = new FragmentKey(vkey, Integer.parseInt(vkeyS[2]));
+
+      final String[] ret = new String[] { null };
+      fragmentStorage.unstore(id, new Continuation() {
+        public void receiveResult(Object o) {
+          ret[0] = "result("+o+")";
+        }
+        public void receiveException(Exception e) {
+          ret[0] = "exception("+e+")";
+        }
+      });
+      
+      while (ret[0] == null)
+        Thread.currentThread().yield();
+      
+      return "delete("+id+")="+ret[0];
+    }
     if ((cmd.length() >= 8) && cmd.substring(0, 8).equals("manifest")) {
       String[] vkeyS = cmd.substring(9).split("v");
       Id key = factory.buildIdFromToString(vkeyS[0]);
