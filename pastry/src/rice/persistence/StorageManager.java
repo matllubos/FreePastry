@@ -241,7 +241,34 @@ public class StorageManager implements Cache, Storage {
     while(i.hasNext()){
       toReturn.addId((Id) i.next());
     }
-    return(toReturn);
+    
+    return toReturn;
+  }
+  
+  /**
+   * Return all objects currently stored by this catalog
+   *
+   * NOTE: This method blocks so if the behavior of this method changes and
+   * no longer stored in memory, this method may be deprecated.
+   *
+   * @return The idset containg the keys 
+   */
+  public IdSet scan() {
+    IdSet fromStorage = storage.scan();
+    IdSet fromCache = cache.scan();
+    IdSet toReturn = factory.buildIdSet();
+    
+    Iterator i = fromStorage.getIterator();
+    while(i.hasNext()){
+      toReturn.addId((Id) i.next());
+    }
+    
+    i = fromCache.getIterator();
+    while(i.hasNext()){
+      toReturn.addId((Id) i.next());
+    }
+    
+    return toReturn;
   }
 
   /**

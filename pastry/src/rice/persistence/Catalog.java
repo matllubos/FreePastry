@@ -121,6 +121,16 @@ public interface Catalog {
    * @return The idset containg the keys 
    */
   public IdSet scan(IdRange range);
+  
+  /**
+   * Return all objects currently stored by this catalog
+   *
+   * NOTE: This method blocks so if the behavior of this method changes and
+   * no longer stored in memory, this method may be deprecated.
+   *
+   * @return The idset containg the keys 
+   */
+  public IdSet scan();
 
   /**
    * Returns the total size of the stored data in bytes.The result
