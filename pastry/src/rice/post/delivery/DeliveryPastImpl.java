@@ -120,8 +120,9 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
           log.warning(endpoint.getId() + ": Removal of delivered message caused " + o);
         
         log.finer(endpoint.getId() + ": Synchronizing range " + endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor(), null, true));
-
-        i = storage.getStorage().scan(endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor(), null, true)).getIterator();
+        GCIdRange range = (GCIdRange) endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor(), null, true);
+        
+        i = storage.getStorage().scan(range.getRange()).getIterator();
         
         while (i.hasNext()) {
           Id id = (Id) i.next();
@@ -152,8 +153,9 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
     syncCache();
     
     log.finer("Getting list of groups...");
-  
-    final Id[] array = storage.getStorage().scan(endpoint.range(endpoint.getLocalNodeHandle(), 0, null, true)).asArray();
+    GCIdRange range = (GCIdRange) endpoint.range(endpoint.getLocalNodeHandle(), 0, null, true);
+
+    final Id[] array = storage.getStorage().scan(range.getRange()).asArray();
     
     Continuation c = new StandardContinuation(command) {
       int i=0;
@@ -190,7 +192,8 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
    * @param command The command to return the results to
    */
   public void getMessage(final PostEntityAddress address, final Continuation command) {
-    final Id[] array = storage.getStorage().scan(endpoint.range(endpoint.getLocalNodeHandle(), 0, null, true)).asArray();
+    GCIdRange range = (GCIdRange) endpoint.range(endpoint.getLocalNodeHandle(), 0, null, true);
+    final Id[] array = storage.getStorage().scan(range.getRange()).asArray();
     
     if (array.length == 0) {
       command.receiveResult(null);

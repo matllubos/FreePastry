@@ -513,7 +513,7 @@ public class LeafSet extends Observable implements Serializable {
   public IdRange range(NodeHandle n, int r) { 
    // first, we check the arguments
    if (r < 0) return null;
-   if (! (member(n) || baseId.equals(n))) return null;
+   if (! (member(n) || baseId.equals(n.getNodeId()))) return null;
 
    // get the position of the node and the number of nodes in the network
    int pos = getIndex(n);
