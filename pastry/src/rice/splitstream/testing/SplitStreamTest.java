@@ -21,6 +21,7 @@ import rice.scribe.testing.*;
 import rice.storage.*;
 
 import java.util.*;
+import java.io.*;
 import java.net.*;
 import java.io.Serializable;
 import java.security.*;
@@ -33,6 +34,7 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
  private Vector pastrynodes;
  private Vector scribeNodes;
  private Vector splitStreamNodes;
+ private Vector channels;
  private Random rng;
  private RandomNodeIdFactory idFactory;
  private static int numNodes = 50;
@@ -40,6 +42,7 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
  private static String bshost;
  private static int bsport = 5009;
  private Credentials credentials = new PermissiveCredentials();
+ private int numResponses = 0;
  
  private static int protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
 
@@ -54,21 +57,38 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
 
    public static void main(String argv[]){
       System.out.println("SplitStream Test Program v0.4");
+      PastrySeed.setSeed((int)System.currentTimeMillis());
+      //PastrySeed.setSeed( -1194350751);
       SplitStreamTest test = new SplitStreamTest();
       test.init();
       test.createNodes();
       /** --CREATE -- **/
-      Channel channel = test.createChannel(1);
-      System.out.println(channel);
+      Channel content = test.createChannel();
+      ChannelId channelId = content.getChannelId();
+      System.out.println(content);
+      while(test.simulate());
       /** -- ATTACH -- **/
-      Channel channel2 = test.attachChannel(2, channel);
+      for(int i = 0; i < test.splitStreamNodes.size(); i ++){
+	Channel channel =  test.attachChannel(i, channelId);
+       test.channels.add(channel);
+       
+       while(test.simulate());
+       if(channel.getSpareCapacityId() == null){
+        System.out.println("Channel " + channel.getNodeId() + "Failed to Attach");
+       }
+      }
       while(test.simulate());
-      /* Stripe stripeSender = channel.getSubscribedStripes()[0];
-      StripeId striperecvId = channel2.getStripes()[0];
-      Stripe striperecv = channel2.joinStripe(striperecvId, test);
-      stripeSender.backdoorSend(new String("Hello")); */
+      System.out.println("All nodes attached to Channel");
+      System.out.println("All nodes are joining all stripes");
+      test.join();
       while(test.simulate());
-      
+      test.send(content);
+      while(test.simulate());
+      test.send(content);
+      while(test.simulate());
+      test.showBandwidth();
+
+      System.out.println(PastrySeed.getSeed() );
    }
 
    public SplitStreamTest(){
@@ -78,23 +98,57 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
    public void init(){
       simulator = new EuclideanNetwork();
       idFactory = new RandomNodeIdFactory();
+      PastrySeed.setSeed((int)System.currentTimeMillis());
       factory = new DirectPastryNodeFactory(idFactory, simulator);
       scribeNodes = new Vector();    
       pastrynodes = new Vector();
+      channels = new Vector();
       splitStreamNodes = new Vector();
       rng = new Random(5);
       
    }
-   public Channel createChannel(int index){
+   public Channel createChannel(){
 	System.out.println("Attempting to create a Channel");
+        int base = RoutingTable.baseBitLength();
 	Channel c = 
-           ((ISplitStream) splitStreamNodes.elementAt(index)).createChannel(16);
+           ((ISplitStream) splitStreamNodes.elementAt(rng.nextInt(numNodes))).createChannel(1<<base,"SplitStreamTest");
 	while(simulate());
 	return c;
    }
-   public Channel attachChannel(int index, Channel channel){
-	System.out.println("Attempting to Attach to Channel");
-	return(((ISplitStream) splitStreamNodes.elementAt(index)).attachChannel(channel.getChannelId()));
+   public Channel attachChannel(int index, ChannelId channelId){
+	return(((ISplitStream) splitStreamNodes.elementAt(index)).attachChannel(channelId));
+   }
+   public void join(){
+	for(int i = 0; i < channels.size(); i ++){
+	  Channel channel = (Channel) channels.elementAt(i);
+	  while(channel.getNumSubscribedStripes() < channel.getNumStripes()){
+		Stripe stripe = channel.joinAdditionalStripe(this);
+	  }
+	
+	}
+   }
+   public void send(Channel send){
+	StripeId stripeId = send.getStripes()[rng.nextInt(send.getNumStripes())];
+	Stripe stripe = send.joinStripe(stripeId, this);
+	OutputStream out = stripe.getOutputStream();
+	System.out.println("Sending on Stripe " + stripe.getStripeId());
+	byte[] toSend = "Hello".getBytes() ;
+	try{
+	   out.write(toSend, 0, toSend.length );
+	}
+	catch(IOException e){
+	   e.printStackTrace();
+	}
+        numResponses = 0;
+   }
+   public void showBandwidth(){
+
+	for(int i = 0; i < channels.size(); i ++){
+	  Channel channel = (Channel) channels.elementAt(i);
+	  BandwidthManager bandwidthManager = channel.getBandwidthManager();
+          System.out.println("Channel " + channel.getNodeId() + " has " +
+               bandwidthManager.getUsedBandwidth(channel) + " children "); 
+	  }
    }
    /**
     * ISplitStreamApp Implementation
@@ -109,7 +163,10 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
     * Observer Implementation
     */
    public void update(Observable o, Object arg){
-	System.out.println("Some data came");
+	numResponses++;
+   	if(numResponses == numNodes){
+		System.out.println("All Stripes Have Recieved Message on Stripe" + ((Stripe) o).getStripeId());
+ 	}
    }
 
   /* ---------- Setup methods ---------- */
@@ -144,7 +201,7 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
     scribeNodes.add(scribe);  
     ISplitStream ss = new SplitStreamImpl(pn, scribe);
     splitStreamNodes.add(ss);
-    System.out.println("created " + pn);
+    //System.out.println("created " + pn);
   }
 
   /**
@@ -152,7 +209,6 @@ public class SplitStreamTest implements ISplitStreamApp, Observer{
    */
   protected void createNodes() {
     for (int i=0; i < numNodes; i++) {
-      System.out.println("Making node: " + i);
       makeNode();
     }
     while(simulate());
