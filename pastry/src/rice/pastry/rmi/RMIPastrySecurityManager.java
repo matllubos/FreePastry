@@ -115,7 +115,7 @@ public class RMIPastrySecurityManager implements PastrySecurityManager
 	    RMINodeHandle rnh = (RMINodeHandle) handle;
 
 	    // set local node, for bouncing failed RouteMessages to myself
-	    rnh.setLocalNode(localnode);
+	    //rnh.setLocalNode(localnode);
 
 	    return handlepool.coalesce(rnh);
 	}

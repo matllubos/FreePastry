@@ -48,19 +48,16 @@ import rice.pastry.messaging.*;
  * @author Rongmei Zhang/Y. Charlie Hu
  */
 
-public class DirectNodeHandle extends NodeHandle
+public class DirectNodeHandle extends NodeHandle // which extends LocalNode
 {
-    private PastryNode localNode;
     private PastryNode remoteNode;
     private NetworkSimulator simulator;
 
     public DirectNodeHandle(PastryNode ln, PastryNode rn, NetworkSimulator sim) {
-	localNode = ln;
+	setLocalNode(ln);
 	remoteNode = rn;
 	simulator = sim;
     }
-    
-    public PastryNode getLocal() { return localNode; }
     
     public PastryNode getRemote() { return remoteNode; }
 
@@ -70,7 +67,10 @@ public class DirectNodeHandle extends NodeHandle
 
     public boolean ping() { return isAlive(); }
     
-    public int proximity() { return simulator.proximity(localNode.getNodeId(), remoteNode.getNodeId()); }
+    public int proximity() {
+	assertLocalNode();
+	return simulator.proximity(getLocalNode().getNodeId(), remoteNode.getNodeId());
+    }
 
     public void receiveMessage(Message msg) {  
 	if (!isAlive())

@@ -179,6 +179,8 @@ public abstract class PastryNode implements MessageReceiver
      */
     public final synchronized void receiveMessage(Message msg) 
     {
+	LocalNode.setPendingLocalNodes(msg.getStream(), this);
+
 	if (mySecurityManager.verifyMessage(msg) == true)
 	    myMessageDispatch.dispatchMessage(msg); 
     }

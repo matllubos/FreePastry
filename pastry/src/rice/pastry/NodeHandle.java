@@ -46,7 +46,7 @@ import rice.pastry.messaging.*;
  * @author Andrew Ladd
  */
 
-public abstract class NodeHandle implements MessageReceiver {
+public abstract class NodeHandle extends LocalNode implements MessageReceiver {
     /**
      * Gets the nodeId of this Pastry node.
      *

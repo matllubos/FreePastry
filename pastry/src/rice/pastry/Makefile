@@ -4,6 +4,7 @@ SOURCE  = \
 	NodeId.java\
 	NodeIdFactory.java\
 	NodeHandle.java\
+	LocalNode.java\
 	PastryNode.java\
 	PastryNodeFactory.java\
 	NodeSet.java\

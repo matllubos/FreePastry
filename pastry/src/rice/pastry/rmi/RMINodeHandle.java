@@ -46,12 +46,18 @@ import java.rmi.RemoteException;
 /**
  * A locally stored node handle that points to a remote RMIRemoteNodeI.
  *
+ * Need localnode within handle for three reasons: to determine isLocal
+ * (thus alive and distance = 0), to set senderId in messages (used for
+ * coalescing on the other end), and to bounce messages back to self on
+ * failure.
+ *
  * @version $Id$
  *
  * @author Sitaram Iyer
  */
 
-public class RMINodeHandle extends NodeHandle implements Serializable
+public class RMINodeHandle extends NodeHandle // which extends LocalNode
+		    implements Serializable
 {
     private RMIRemoteNodeI remoteNode;
     private NodeId remotenid;
@@ -72,13 +78,6 @@ public class RMINodeHandle extends NodeHandle implements Serializable
      */
     private transient boolean isInPool;
 
-    /**
-     * Need localnode within handle for three reasons: to determine isLocal
-     * (thus alive and distance = 0), to set senderId in messages (used for
-     * coalescing on the other end), and to bounce messages back to self on
-     * failure.
-     */
-    private transient PastryNode localnode;
     private transient boolean isLocal;
 
     private transient long lastpingtime;
@@ -118,7 +117,6 @@ public class RMINodeHandle extends NodeHandle implements Serializable
 	alive = true;
 	distance = Integer.MAX_VALUE;
 	isInPool = false;
-	localnode = null;
 	isLocal = false;
 	lastpingtime = 0;
     }
@@ -126,27 +124,33 @@ public class RMINodeHandle extends NodeHandle implements Serializable
     public NodeId getNodeId() { return remotenid; }
 
     /**
-     * The two remotenode accessor methods.
+     * Remotenode accessor method.
+
+     * @return RMI remote reference to Pastry node.
      */
     public RMIRemoteNodeI getRemote() { return remoteNode; }
+
+    /**
+     * Remotenode accessor method.
+     *
+     * @param rn RMI remote reference to some Pastry node.
+     */
     public void setRemoteNode(RMIRemoteNodeI rn) {
 	if (remoteNode != null) System.out.println("panic");
 	remoteNode = rn;
     }
 
     /**
-     * The two localnode accessor methods.
+     * Method called from LocalNode after localnode is set to non-null.
      */
-    public PastryNode getLocalNode() { return localnode; }
-    public void setLocalNode(PastryNode ln) {
-	//System.out.println("setlocalnode " + this + "(" + remotenid + ") " + lh);
-	localnode = ln;
-	if (localnode.getNodeId().equals(remotenid))
+    public void afterSetLocalNode() {
+	if (getLocalNode().getNodeId().equals(remotenid))
 	    isLocal = true;
     }
 
     /**
      * The three liveness functions.
+     *
      * @return a cached boolean value.
      */
     public boolean isAlive() {
@@ -154,24 +158,35 @@ public class RMINodeHandle extends NodeHandle implements Serializable
 	return alive;
     }
 
+    /**
+     * Mark this handle as alive (if dead earlier), and reset distance to
+     * infinity.
+     */
     public void markAlive() {
 	if (alive == false) {
-	    if (Log.ifp(5)) System.out.println(localnode + "found " + remotenid + " to be alive after all");
+	    if (Log.ifp(5)) System.out.println(getLocalNode() + "found " + remotenid + " to be alive after all");
 	    alive = true;
 	    distance = Integer.MAX_VALUE; // reset to infinity. alternatively, recompute.
 	}
     }
 
+    /**
+     * Mark this handle as dead (if alive earlier), and reset distance to
+     * infinity.
+     */
     public void markDead() {
 	if (alive == true) {
-	    if (Log.ifp(5)) System.out.println(localnode + "found " + remotenid + " to be dead");
+	    if (Log.ifp(5)) System.out.println(getLocalNode() + "found " + remotenid + " to be dead");
 	    alive = false;
 	    distance = Integer.MAX_VALUE;
 	}
     }
 
     /**
-     * @return the cached proximity value, Integer.MAX_VALUE initially, 0 if its local.
+     * Proximity metric.
+     *
+     * @return the cached proximity value (Integer.MAX_VALUE initially), or
+     * 0 if node is local.
      */
     public int proximity() {
 	if (isLocal) return 0;
@@ -182,10 +197,17 @@ public class RMINodeHandle extends NodeHandle implements Serializable
     public boolean getIsInPool() { return isInPool; }
     public void setIsInPool(boolean iip) { isInPool = iip; }
 
+    /**
+     * Called to send a message to the node corresponding to this handle.
+     *
+     * @param msg Message to be delivered, may or may not be routeMessage.
+     */
     public void receiveMessage(Message msg) {
 
+	assertLocalNode();
+
 	if (isLocal) {
-	    localnode.receiveMessage(msg);
+	    getLocalNode().receiveMessage(msg);
 	    return;
 	}
 
@@ -198,7 +220,7 @@ public class RMINodeHandle extends NodeHandle implements Serializable
 	    System.out.println("panic: sending message to unverified handle "
 			       + this + " for " + remotenid + ": " + msg);
 
-	msg.setSenderId(localnode.getNodeId());
+	msg.setSenderId(getLocalNode().getNodeId());
 
 	if (Log.ifp(6))
 	    System.out.println("sending " +
@@ -218,20 +240,20 @@ public class RMINodeHandle extends NodeHandle implements Serializable
 	    markDead();
 
 	    // bounce back to local dispatcher
-	    if (Log.ifp(6)) System.out.println("bouncing message back to self at " + localnode);
+	    if (Log.ifp(6)) System.out.println("bouncing message back to self at " + getLocalNode());
 	    if (msg instanceof RouteMessage) {
 		RouteMessage rmsg = (RouteMessage) msg;
 		rmsg.nextHop = null;
 		if (Log.ifp(6)) System.out.println("this msg bounced is " + rmsg);
-		localnode.receiveMessage(rmsg);
+		getLocalNode().receiveMessage(rmsg);
 	    } else {
-		localnode.receiveMessage(msg);
+		getLocalNode().receiveMessage(msg);
 	    }
 	}
     }
 
     /**
-     * Ping the remote node.
+     * Ping the remote node now, and update the proximity metric.
      *
      * @return liveness of remote node.
      */
@@ -256,7 +278,7 @@ public class RMINodeHandle extends NodeHandle implements Serializable
 	    return alive;
 	lastpingtime = now;
 
-	if (Log.ifp(7)) System.out.println(localnode + " pinging " + remotenid);
+	if (Log.ifp(7)) System.out.println(getLocalNode() + " pinging " + remotenid);
 	try {
 
 	    long starttime = System.currentTimeMillis();
@@ -291,8 +313,18 @@ public class RMINodeHandle extends NodeHandle implements Serializable
     private void writeObject(ObjectOutputStream out)
 	throws IOException, ClassNotFoundException 
     {
-	if (isLocal) if (Log.ifp(7)) System.out.println("writeObject from " + localnode.getNodeId() + " to local node " + remotenid);
+	if (isLocal) if (Log.ifp(7)) {
+	    assertLocalNode();
+	    System.out.println("writeObject from " + getLocalNode().getNodeId() + " to local node " + remotenid);
+	}
 	out.writeObject(remoteNode);
 	out.writeObject(remotenid);
     } 
+
+    public String toString() {
+	return (isLocal ? "(local " : "") + "handle " + remotenid
+	    + (alive ? "" : ":dead")
+	    + ", localnode = " + getLocalNode()
+	    + ")";
+    }
 }

@@ -234,7 +234,7 @@ public class SphereNetwork implements NetworkSimulator
 	    itRecord = (NodeRecord)it.next();
 	    itHandle = itRecord.handle;
 	    itId = itHandle.getNodeId();
-	    if( !itHandle.getLocal().isReady() || nid == itId )
+	    if( !itHandle.getLocalNode().isReady() || nid == itId )
 		continue;
 	    if( proximity(nid,itId) < bestProx ){
 		bestProx = proximity(nid,itId);

@@ -95,6 +95,9 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
 
 	NodeId nodeId = nidFactory.generateNodeId();
 	RMIPastryNode pn = new RMIPastryNode(nodeId);
+
+	if (bootstrap != null)
+	    bootstrap.setLocalNode(pn);
 	
 	RMINodeHandle localhandle = new RMINodeHandle(null, nodeId);
 	localhandle.setLocalNode(pn);

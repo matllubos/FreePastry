@@ -49,14 +49,17 @@ import rice.pastry.*;
  * @version $Id$
  *
  * @author Andrew Ladd
+ * @author Sitaram Iyer
  */
 
 public abstract class Message implements Serializable 
 {
     private Address destination;
-    private Credentials credentials;
-    private Date theStamp;
+    private transient Credentials credentials;
+    private transient Date theStamp;
     private NodeId senderId;
+    
+    private transient ObjectInputStream stream;
 
     /**
      * Gets the address of message receiver that the message is for.
@@ -99,6 +102,15 @@ public abstract class Message implements Serializable
 
     public void setSenderId(NodeId id) { senderId = id; }
 
+    /**
+     * Get stream over which the object was deserialized. Used for indexing
+     * into the LocalNode.pending hashmap. See README.handle_localnode.
+     * 
+     * @return the object input stream
+     */
+
+    public ObjectInputStream getStream() { return stream; }
+    
     /**
      * If the message has no timestamp, this will stamp the message.
      *
@@ -179,14 +191,7 @@ public abstract class Message implements Serializable
     private void readObject(ObjectInputStream in)
 	throws IOException, ClassNotFoundException 
     {
-	destination = (Address) in.readObject();
-	senderId = (NodeId) in.readObject();
-    }
-
-    private void writeObject(ObjectOutputStream out)
-	throws IOException, ClassNotFoundException 
-    {
-	out.writeObject(destination);
-	out.writeObject(senderId);
+	in.defaultReadObject();
+	stream = in;
     }
 }

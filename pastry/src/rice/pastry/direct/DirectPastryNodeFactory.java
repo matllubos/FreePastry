@@ -102,7 +102,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	if( bootstrap == null )
 	    return null;
 
-	PastryNode	nearNode = ((DirectNodeHandle)bootstrap).getLocal();
+	PastryNode	nearNode = ((DirectNodeHandle)bootstrap).getLocalNode();
 	LeafSet 	ls = nearNode.getLeafSet();
 	NodeHandle 	nearHandle = bootstrap;
 	double		dist = simulator.proximity( localhandle.getNodeId(), bootstrap.getNodeId() );
@@ -121,7 +121,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 	    }
 	}
 
-	nearNode = ((DirectNodeHandle)nearHandle).getLocal();
+	nearNode = ((DirectNodeHandle)nearHandle).getLocalNode();
 	RoutingTable rt = nearNode.getRoutingTable();
 	int depth = rt.numRows();
 
@@ -136,7 +136,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 		    dist = newdist;
 		}
 	    }
-	    nearNode = ((DirectNodeHandle)nearHandle).getLocal();
+	    nearNode = ((DirectNodeHandle)nearHandle).getLocalNode();
 	    rt = nearNode.getRoutingTable();
 	}
 	
@@ -152,7 +152,7 @@ public class DirectPastryNodeFactory implements PastryNodeFactory
 		    dist = newdist;
 		}
 	    }
-	    nearNode = ((DirectNodeHandle)nearHandle).getLocal();
+	    nearNode = ((DirectNodeHandle)nearHandle).getLocalNode();
 	    rt = nearNode.getRoutingTable();
 	}while( currentClosest != nearHandle );
 	return nearHandle;
