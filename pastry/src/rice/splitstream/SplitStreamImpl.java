@@ -1,4 +1,5 @@
 package rice.splitstream;
+import rice.scribe.*;
 import rice.splitstream.messaging.*;
 import rice.pastry.*;
 import rice.pastry.client.*;
@@ -13,6 +14,13 @@ import rice.pastry.security.*;
  * This is the implementing class of the SplitStream service 
  */
 public class SplitStreamImpl extends PastryAppl implements ISplitStream{
+    private IScribe scribe = null;
+
+    public SplitStreamImpl(PastryNode node, IScribe scribe){
+        super(node);
+ 	scribe = this.scribe;   
+    }
+
    /**
     * This method is used by a peer who wishes to distribute the content
     * using SplitStream. It creates a Channel Object consisting of numStripes
