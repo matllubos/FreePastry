@@ -50,7 +50,7 @@ import java.security.*;
 
 public class IdSet implements rice.p2p.commonapi.IdSet {
 
-    private SortedSet idSet;
+    private TreeSet idSet;
 
     // a cache of the fingerprint hash
     private Id cachedHash;
@@ -66,17 +66,21 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
 
     /**
      * Constructor.
+     * constructs a shallow copy of the given IdSet o.
+     * @param s the SortedSet based on which we construct a new IdSet
      */
-    protected IdSet(SortedSet s) {
-	idSet = s;
+    protected IdSet(TreeSet s) {
+	idSet = (TreeSet) s.clone();
 	validHash = false;
     }
 
     /**
      * Copy constructor.
+     * constructs a shallow copy of the given IdSet o.
+     * @param o the IdSet to copy
      */
     public IdSet(IdSet o) {
-	idSet = new TreeSet(idSet);
+	idSet = new TreeSet(o.idSet);
 	cachedHash = o.cachedHash;
 	validHash = o.validHash;
     }
@@ -140,11 +144,11 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
     public IdSet subSet(Id from, Id to) {
 	IdSet res;
 	if (from.compareTo(to) <= 0) {
-	    res = new IdSet(idSet.subSet(from, to));
+	    res = new IdSet( (TreeSet) idSet.subSet(from, to));
 	} else {
 	    SortedSet ss = idSet.tailSet(from);
 	    ss.addAll(idSet.headSet(to));
-	    res = new IdSet(ss);
+	    res = new IdSet( (TreeSet) ss);
 	}  
 
 	return res;
