@@ -88,6 +88,21 @@ public class Channel extends PastryAppl implements IScribeApp {
      */
     private Set m_apps = new HashSet();
 
+    /**
+     * Number of timeouts allowable before generating an upcall
+     */
+    private int max_timeouts = 5;
+
+    /**
+     * Length of time to wait for a response before timing out
+     */
+    private long timeoutLen = 5000;
+
+    /**
+     * Should we ignore any timeout messages received
+     * <CLEAN THIS UP>
+     */
+    private boolean timeoutIgnore = true;
 
     /**
      * Constructor to create a new channel from scratch
@@ -188,6 +203,12 @@ public class Channel extends PastryAppl implements IScribeApp {
 	ControlAttachMessage attachMessage = new ControlAttachMessage();
         //System.out.println("Sending Anycast Message from " + getNodeId());
         scribe.anycast(channelId, attachMessage, cred );
+        timeoutIgnore = false;
+        ControlTimeoutMessage timeoutMessage = new ControlTimeoutMessage( this.getAddress(),
+                                                                          0,
+                                                                          channelId,
+                                                                          cred );
+	this.thePastryNode.scheduleMsg( timeoutMessage, timeoutLen );
 
     }
 
@@ -297,6 +318,25 @@ public class Channel extends PastryAppl implements IScribeApp {
      */
     public boolean isReady(){
        return isReady;
+    }
+
+    /**
+     * Returns the maximum timeouts allowable for this channel instance
+     * @return int The currently set max timeouts
+     */
+    public int getTimeouts()
+    {
+        return max_timeouts;
+    }
+
+    /**
+     * Returns this channel object's maximum time that can elapse before
+     * a timeout is declared
+     * @return long The currently set timeout length
+     */
+    public long getTimeoutLen()
+    {
+        return timeoutLen;
     }
 
     /**
@@ -470,6 +510,10 @@ public class Channel extends PastryAppl implements IScribeApp {
 	    {
 		handleControlPropogatePathMessage( msg );
 	    }
+        else if ( msg instanceof ControlTimeoutMessage )
+        {
+            handleControlTimeoutMessage( msg );
+        }
 	else{
 	    System.out.println("Unknown Pastry Message Type");
 	}
@@ -506,6 +550,7 @@ public class Channel extends PastryAppl implements IScribeApp {
 	if(scribe.join(spareCapacityId, this, cred)){
 	}	
 	isReady = true;
+        timeoutIgnore = true;
 	notifyApps();
     }
 
@@ -619,6 +664,21 @@ public class Channel extends PastryAppl implements IScribeApp {
 	if ( stripe != null ) {
           ppMessage.handleMessage( (Scribe)scribe, this, stripe );
 	}
+    }
+
+    /**
+     * Handles the ControlTimeoutMessage used to regulate timeouts on certain
+     * messages (currently, Attach and FindParent)
+     *
+     * @param msg The message to be handled
+     */
+    private void handleControlTimeoutMessage( Message msg )
+    {
+        ControlTimeoutMessage timeoutMessage = (ControlTimeoutMessage)msg;
+        if ( !timeoutIgnore )
+        {
+            timeoutMessage.handleMessage( this, this.thePastryNode, (Scribe)this.scribe );
+        }
     }
  
     /**
