@@ -132,7 +132,7 @@ public class RMIPastryNodeFactory implements PastryNodeFactory
 	secureMan.setLocalPastryNode(pnode);
 	pnode.setLocalHandle(localhandle);
 
-	if (pnode.syncinit) {
+	if (pnode.syncbind) {
 	    // bind now
 	    rmilocalnode.update(null, null);
 	} else {

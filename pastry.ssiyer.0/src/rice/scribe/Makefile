@@ -1,8 +1,6 @@
 PACKAGE = rice.scribe
 
 SOURCE  = \
-	TestPastry.java \
-	TestPastryApp.java \
 	IScribe.java \
 	IScribeApp.java \
 	Scribe.java \
