@@ -848,7 +848,7 @@ public class DirectScribeMaintenanceTest
 	    for( t = 0; t < topicsForParent.size(); t++){
 		topicId = (NodeId) topicsForParent.elementAt(t);
 		topic = (Topic) scribe.getTopic(topicId);
-		if( topic.getParent() != parent)
+		if( !topic.getParent().equals(parent))
 		    result = false;
 	    }
 	}
