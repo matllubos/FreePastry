@@ -15,6 +15,9 @@ import rice.pastry.NodeId;
  *
  * @version $Id$
  * @author Alan Mislove
+ *
+ * @deprecated This version of storage has been deprecated - please use the version
+ *   located in the rice.persistence package.
  */
 public interface StorageManager {
   

@@ -13,6 +13,9 @@ import java.util.*;
  *
  * @version $Id$
  * @author Charlie Reis
+ *
+ * @deprecated This version of storage has been deprecated - please use the version
+ *   located in the rice.persistence package.
  */
 
 public class DummyPersistenceManager implements PersistenceManager {

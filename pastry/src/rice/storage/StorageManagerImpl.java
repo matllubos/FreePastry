@@ -20,6 +20,9 @@ import java.util.Hashtable;
  *
  * @version $Id$
  * @author Charles Reis
+ *
+ * @deprecated This version of storage has been deprecated - please use the version
+ *   located in the rice.persistence package.
  */
 public class StorageManagerImpl implements StorageManager {
   private final PersistenceManager _storage;

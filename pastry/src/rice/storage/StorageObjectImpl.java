@@ -17,6 +17,9 @@ import java.io.Serializable;
  *
  * @version $Id$
  * @author Charles Reis
+ *
+ * @deprecated This version of storage has been deprecated - please use the version
+ *   located in the rice.persistence package.
  */
 public class StorageObjectImpl implements StorageObject, Serializable {
   

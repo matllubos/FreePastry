@@ -14,6 +14,9 @@ import java.io.Serializable;
  *
  * @version $Id$
  * @author Charlie Reis
+ *
+ * @deprecated This version of storage has been deprecated - please use the version
+ *   located in the rice.persistence package.
  */
 
 public class DummyPersistable implements Persistable, Serializable {
