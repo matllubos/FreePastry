@@ -828,34 +828,39 @@ public class PersistentStorage implements Storage {
     File[] files = dir.listFiles();
         
     for (int i=0; i<files.length; i++) {
-      if (isFile(dir, files[i].getName())) {
-        Id id = readKey(files[i]);
-        long len = getFileLength(files[i]);
-        
-        if (id == null)
-          System.out.println("READING " + files[i] + " RETURNED NULL!");
-        
-        if (len > 0) {
-          increaseUsedSpace(len);
-        
-          /* if the file is newer than the metadata file, update the metadata 
+      try {
+        if (isFile(dir, files[i].getName())) {
+          Id id = readKey(files[i]);
+          long len = getFileLength(files[i]);
+          
+          if (id == null)
+            System.out.println("READING " + files[i] + " RETURNED NULL!");
+          
+          if (len > 0) {
+            increaseUsedSpace(len);
+            
+            /* if the file is newer than the metadata file, update the metadata 
             if we don't have the metadata for this file, update it */
-          if (index) {
-            if ((! metadata.containsKey(id)) || (files[i].lastModified() > modified)) {
-              metadata.put(id, readMetadata(files[i]));
+            if (index) {
+              if ((! metadata.containsKey(id)) || (files[i].lastModified() > modified)) {
+                metadata.put(id, readMetadata(files[i]));
+                dirty.add(dir);
+              }
+            }
+          } else {
+            moveToLost(files[i]);
+            
+            if (index && metadata.containsKey(id)) {
+              metadata.remove(id);
               dirty.add(dir);
             }
           }
-        } else {
-          moveToLost(files[i]);
-          
-          if (index && metadata.containsKey(id)) {
-            metadata.remove(id);
-            dirty.add(dir);
-          }
+        } else if (files[i].isDirectory()) {
+          initFileMap(files[i]);
         }
-      } else if (files[i].isDirectory()) {
-        initFileMap(files[i]);
+      } catch (Exception e) {
+        System.err.println("ERROR: Received Exception " + e + " while initing file " + files[i] + " - moving to lost+found.");
+        moveToLost(files[i]);
       }
     }
   }
