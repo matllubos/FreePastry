@@ -167,19 +167,26 @@ public abstract class CommonAPITest {
   }
 
   /**
+   * Method which creates the nodes
+   */
+  public void createNodes() {
+    for (int i=0; i<NUM_NODES; i++) {
+      nodes[i] = createNode(i);
+    
+      simulate();
+    
+      processNode(i, nodes[i]);
+      simulate();
+    
+      System.out.println("Created node " + i + " with id " + ((PastryNode) nodes[i]).getNodeId());
+    }
+  }
+  
+  /**
    * Method which starts the creation of nodes
    */
   public void start() {
-    for (int i=0; i<NUM_NODES; i++) {
-      nodes[i] = createNode(i);
-
-      simulate();
-      
-      processNode(i, nodes[i]);
-      simulate();
-
-      System.out.println("Created node " + i + " with id " + ((PastryNode) nodes[i]).getNodeId());
-    }
+    createNodes();
 
     System.out.println("\nTest Beginning\n");
     
@@ -210,7 +217,7 @@ public abstract class CommonAPITest {
    */
   protected Node createNode(int num) {
     if (num == 0) {
-      return factory.newNode(null);
+      return factory.newNode((rice.pastry.NodeHandle) null);
     } else {
       return factory.newNode(getBootstrap());
     }
