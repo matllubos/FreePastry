@@ -85,7 +85,6 @@ public class DistScribeRegrTestMessage extends Message implements Serializable
 	int i;
 	NodeId topicId;
 	DistTopicLog topicLog;
-	Random rng = new Random(PastrySeed.getSeed() + scribeApp.m_appIndex);
 	int threshold = scribeApp.m_scribe.getTreeRepairThreshold();
 	int seq_num = -1;
 	int count = 1;
@@ -103,6 +102,7 @@ public class DistScribeRegrTestMessage extends Message implements Serializable
 	
 	for (i=0; i< DistScribeRegrTest.NUM_TOPICS; i++) {
 	    topicId = (NodeId) scribeApp.m_topics.elementAt(i);
+
 	    parent = scribeApp.m_scribe.getParent(topicId);
 	    topicLog = (DistTopicLog) scribeApp.m_logTable.get(topicId);
 	    seq_num = topicLog.getSeqNumToPublish();
@@ -132,14 +132,14 @@ public class DistScribeRegrTestMessage extends Message implements Serializable
 	     */
 	    int allowed = (int)( DistScribeRegrTest.fractionUnsubscribedAllowed * scribeApp.m_driver.localNodes.size());
 	    synchronized( DistScribeRegrTest.LOCK){
-		if( DistScribeRegrTest.numUnsubscribed < allowed){
+		if( DistScribeRegrTest.getNumUnsubscribed(topicId) < allowed){
 		    if(! topicLog.getUnsubscribed()){
 			lastRecv = topicLog.getLastSeqNumRecv();
 			if(lastRecv > DistScribeRegrTest.UNSUBSCRIBE_LIMIT){
-			    int n = rng.nextInt(10);
+			    int n = scribeApp.m_rng.nextInt((int)(1/DistScribeRegrTest.UNSUBSCRIBE_PROBABILITY));
 			    if( n == 0){
 				scribeApp.leave(topicId);
-				DistScribeRegrTest.numUnsubscribed ++;
+				DistScribeRegrTest.incrementNumUnsubscribed(topicId);
 			    }
 			}
 		    }

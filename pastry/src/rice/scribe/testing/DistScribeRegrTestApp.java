@@ -67,7 +67,11 @@ public class DistScribeRegrTestApp extends PastryAppl implements IScribeApp
     public Scribe m_scribe;
     public int m_appIndex;
     public static int m_appCount = 0;
-    
+
+    // This random number generator is used for choosing the random probability of
+    // unsubscribing to topics
+    public Random m_rng = null; 
+
 
     /**
      * The hashtable maintaining mapping from topicId to log object
@@ -125,6 +129,7 @@ public class DistScribeRegrTestApp extends PastryAppl implements IScribeApp
 	m_sendOptions = new SendOptions();
 	m_logTable = new Hashtable();
 	m_appIndex = m_appCount ++;
+	m_rng = new Random(PastrySeed.getSeed() + m_appIndex);
 
 	// This sets the periodic rate at which the DistScribeRegrTest Messages will be 
 	// invoked.
@@ -146,7 +151,7 @@ public class DistScribeRegrTestApp extends PastryAppl implements IScribeApp
 
 	 // Create topicIds
 	 for (i=0; i< DistScribeRegrTest.NUM_TOPICS; i++) {
-	     topicId = generateTopicId(new String("Topic " + i));
+	     topicId = DistScribeRegrTest.generateTopicId(new String("Topic " + i));
 	     m_topics.add(topicId);
 	     m_logTable.put(topicId, new DistTopicLog());
 	 }
@@ -304,24 +309,6 @@ public class DistScribeRegrTestApp extends PastryAppl implements IScribeApp
      */
     private Message makeDistScribeRegrTestMessage(Credentials c) {
 	return new DistScribeRegrTestMessage( m_address, c );
-    }
-    
-  
-    private NodeId generateTopicId( String topicName ) { 
-	MessageDigest md = null;
-
-	try {
-	    md = MessageDigest.getInstance( "SHA" );
-	} catch ( NoSuchAlgorithmException e ) {
-	    System.err.println( "No SHA support!" );
-	}
-
-	md.update( topicName.getBytes() );
-	byte[] digest = md.digest();
-	
-	NodeId newId = new NodeId( digest );
-	
-	return newId;
     }
     
 }

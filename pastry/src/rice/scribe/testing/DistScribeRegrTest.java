@@ -81,11 +81,17 @@ public class DistScribeRegrTest {
     private static int numNodes = 5;
     public Integer num = new Integer(0);
     public static int NUM_TOPICS = 5;
-
+    
     // number of message received before a node tries 
     //to unsubscribe with random probability
-    public static int UNSUBSCRIBE_LIMIT = 100; 
-    public static int numUnsubscribed = 0;
+    public static int UNSUBSCRIBE_LIMIT = 50; 
+    public static double UNSUBSCRIBE_PROBABILITY = 0.1;
+
+    //This hashtable keeps track of the number of nodes out of 'numNodes' virtual nodes that have
+    // already unsubscribed to a topic. The idea is to allow a maximum determined by 
+    // 'fractionUnsubscribedAllowed' of 'numNodes' to unsubscribe for each topic.
+    private static Hashtable numUnsubscribed = null;
+
 
     // fraction of total virtual nodes on this host allowed to unsubscribe
     public static double fractionUnsubscribedAllowed = 0.5; 
@@ -97,12 +103,34 @@ public class DistScribeRegrTest {
 
     public static int protocol = DistPastryNodeFactory.PROTOCOL_RMI;
 
+
     public DistScribeRegrTest(){
+	int i;
+	NodeId topicId;
+	numUnsubscribed = new Hashtable();
+	// Create topicIds & set initially the number of vitual nodes that have unsubscribed to 0
+	for (i=0; i< NUM_TOPICS; i++) {
+	    topicId = generateTopicId(new String("Topic " + i));
+	    numUnsubscribed.put(topicId, new Integer(0));
+	}	
+	
 	factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(), protocol, port);
 	pastryNodes = new Vector();
 	distClients = new Vector();
 	rng = new Random(PastrySeed.getSeed());
 	localNodes = new Vector();
+    }
+
+
+    public static int getNumUnsubscribed(NodeId topicId) {
+	return ((Integer)numUnsubscribed.get(topicId)).intValue();
+    }
+    
+    public static void incrementNumUnsubscribed(NodeId topicId) {
+	int count;
+	count = ((Integer)numUnsubscribed.get(topicId)).intValue();
+	numUnsubscribed.remove(topicId);
+	numUnsubscribed.put(topicId, new Integer(count + 1));
     }
 
     private NodeHandle getBootstrap() {
@@ -121,6 +149,26 @@ public class DistScribeRegrTest {
 	NodeHandle bshandle = ((DistPastryNodeFactory)factory).getNodeHandle(addr);
 	return bshandle;
     }
+
+
+     public static NodeId generateTopicId( String topicName ) { 
+	MessageDigest md = null;
+
+	try {
+	    md = MessageDigest.getInstance( "SHA" );
+	} catch ( NoSuchAlgorithmException e ) {
+	    System.err.println( "No SHA support!" );
+	}
+
+	md.update( topicName.getBytes() );
+	byte[] digest = md.digest();
+	
+	NodeId newId = new NodeId( digest );
+	
+	return newId;
+    }
+
+
 
     /**
      * process command line args, set the security manager
@@ -245,3 +293,12 @@ public class DistScribeRegrTest {
 	if (Log.ifp(5)) System.out.println(numNodes + " nodes constructed");
     }
 }
+
+
+
+
+
+
+
+
+
