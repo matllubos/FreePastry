@@ -22,10 +22,10 @@ import rice.selector.*;
 public class SocketSourceRouteManager {
   
   // the minimum amount of time between check dead checks on dead routes
-  public static long CHECK_DEAD_THROTTLE = 1000 * 60 * 10;
+  public static long CHECK_DEAD_THROTTLE = 1000 * 60 * 5;
   
   // the minimum amount of time between pings
-  public static long PING_THROTTLE = 1000 * 60 * 10;
+  public static long PING_THROTTLE = 1000 * 60 * 5;
   
   // the local pastry node
   private SocketPastryNode spn;
