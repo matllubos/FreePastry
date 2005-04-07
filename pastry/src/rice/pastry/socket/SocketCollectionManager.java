@@ -113,18 +113,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       channel.configureBlocking(false);
       channel.socket().bind(bindAddress.getAddress());
       
-      final SelectionKeyHandler handler = this;
-
-      SelectorManager.getSelectorManager().invoke(
-        new Runnable() {
-          public void run() {
-            try {
-              key = SelectorManager.getSelectorManager().register(channel, handler, SelectionKey.OP_ACCEPT);
-            } catch (IOException e) {
-              System.out.println("ERROR creating server socket key " + e);
-            }
-          }
-        });
+      this.key = SelectorManager.getSelectorManager().register(channel, this, SelectionKey.OP_ACCEPT);
     } catch (IOException e) {
       System.out.println("ERROR creating server socket channel " + e);
       e.printStackTrace();
@@ -547,6 +536,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
 
     // the key to read from
     private SelectionKey key;
+    
+    // the channel we are associated with
+    private SocketChannel channel;
 
     // the reader reading data off of the stream
     private SocketChannelReader reader;
@@ -617,9 +609,11 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public void shutdown() {
       try {
-        if ((key != null) && (key.channel() != null))
-          ((SocketChannel) key.channel()).socket().shutdownOutput();
-        
+        if (channel != null)
+          channel.socket().shutdownOutput();
+        else
+          System.err.println("ERROR: Unable to shutdown output on channel; channel is null!");
+
         socketClosed(path, this);
         SelectorManager.getSelectorManager().modifyKey(key);
       } catch (IOException e) {
@@ -635,11 +629,13 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     public void close() {
       try {
         if (key != null) {
-          key.channel().close();
           key.cancel();
           key.attach(null);
           key = null;
         }
+        
+        if (channel != null) 
+          channel.close();
 
         if (path != null) {
           socketClosed(path, this);
@@ -688,7 +684,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param key The key in question
      */
     public synchronized void modifyKey(SelectionKey key) {
-      if (((SocketChannel) key.channel()).socket().isOutputShutdown()) 
+      if (channel.socket().isOutputShutdown()) 
         key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
       else if ((! writer.isEmpty()) && ((key.interestOps() & SelectionKey.OP_WRITE) == 0))
         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
@@ -704,7 +700,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     public void connect(SelectionKey key) {
       try {
         // deregister interest in connecting to this socket
-        if (((SocketChannel) key.channel()).finishConnect()) 
+        if (channel.finishConnect()) 
           key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
 
         manager.markAlive(path);
@@ -727,7 +723,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public void read(SelectionKey key) {
       try {
-        Object o = reader.read((SocketChannel) key.channel());
+        Object o = reader.read(channel);
 
         if (o != null) {
           debug("Read message " + o + " from socket.");
@@ -749,7 +745,6 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         }
       } catch (IOException e) {
         debug("ERROR " + e + " reading - cancelling.");
-        //System.out.println("SHUTDOWN OUT: " + localAddress + " Read closing of path " + path + " " + ((SocketChannel) key.channel()).socket().isOutputShutdown());
         
         // if it's not a bootstrap path, and we didn't close this socket's output,
         // then check to see if the remote address is dead or just closing a socket
@@ -761,7 +756,6 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       }
     }
 
-
     /**
      * Writes to the socket attached to this socket manager.
      *
@@ -769,7 +763,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public synchronized void write(SelectionKey key) {
       try {        
-        if (writer.write((SocketChannel) key.channel())) {
+        if (writer.write(channel)) {
           key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
           
           if (bootstrap) 
@@ -787,10 +781,11 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param serverKey The server socket key
      * @exception IOException DESCRIBE THE EXCEPTION
      */
-    protected void acceptConnection(SelectionKey key) throws IOException {
-      debug("Accepted connection from " + ((SocketChannel) key.channel()).socket().getRemoteSocketAddress());
-      
+    protected void acceptConnection(SelectionKey key) throws IOException {      
+      this.channel = (SocketChannel) key.channel();
       this.key = SelectorManager.getSelectorManager().register(key.channel(), this, SelectionKey.OP_READ);
+      
+      debug("Accepted connection from " + channel.socket().getRemoteSocketAddress());
     }
 
     /**
@@ -800,34 +795,18 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @exception IOException DESCRIBE THE EXCEPTION
      */
     protected void createConnection(final SourceRoute path) throws IOException {
-      final SocketChannel channel = SocketChannel.open();
-      channel.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
-      channel.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
-      channel.configureBlocking(false);
-
-      final boolean done = channel.connect(path.getFirstHop().getAddress());
       this.path = path;
-
+      this.channel = SocketChannel.open();
+      this.channel.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
+      this.channel.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
+      this.channel.configureBlocking(false);
+      
       debug("Initiating socket connection to path " + path);
 
-      final SelectionKeyHandler handler = this;
-
-      SelectorManager.getSelectorManager().invoke(
-        new Runnable() {
-          public void run() {
-            try {
-              if (done) {
-                key = SelectorManager.getSelectorManager().register(channel, handler, SelectionKey.OP_READ);
-              } else {
-                key = SelectorManager.getSelectorManager().register(channel, handler, SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
-              }
-
-              SelectorManager.getSelectorManager().modifyKey(key);
-            } catch (IOException e) {
-              System.out.println("ERROR creating server socket channel " + e);
-            }
-          }
-        });
+      if (this.channel.connect(path.getFirstHop().getAddress())) 
+        key = SelectorManager.getSelectorManager().register(channel, this, SelectionKey.OP_READ);
+      else 
+        key = SelectorManager.getSelectorManager().register(channel, this, SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
     }
 
     /**
