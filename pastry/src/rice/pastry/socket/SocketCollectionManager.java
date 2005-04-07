@@ -47,6 +47,12 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   // the fake port for booting
   public static int BOOTSTRAP_PORT = 1;
   
+  // the initial timeout for exponential backoff
+  public static long BACKOFF_INITIAL = 250;
+  
+  // the limit on the number of times for exponential backoff
+  public static int BACKOFF_LIMIT = 5;
+  
   // the header which signifies a normal socket
   protected static byte[] HEADER_DIRECT = new byte[] {0x06, 0x1B, 0x49, 0x74};
   
@@ -57,7 +63,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   public static int HEADER_SIZE = HEADER_DIRECT.length;
   
   // the pastry node which this manager serves
-  private PastryNode pastryNode;
+  private SocketPastryNode pastryNode;
 
   // the local address of the node
   private EpochInetSocketAddress localAddress;
@@ -66,7 +72,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   private LinkedList socketQueue;
 
   // maps a SelectionKey -> SocketConnector
-  private Hashtable sockets;
+  public Hashtable sockets;
   
   // the linked list of open source routes
   private LinkedList sourceRouteQueue;
@@ -148,24 +154,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    * @param address The address to send the message to
    */
   public void send(SourceRoute path, Message message) {
-    if (! resigned) {
-      synchronized (sockets) {
-        if (!sockets.containsKey(path)) {
-          debug("No connection open to path " + path + " - opening one");
-          openSocket(path, false);
-        }
-        
-        if (sockets.containsKey(path)) {
-          debug("Found connection open to path " + path + " - sending now");
-          
-          ((SocketManager) sockets.get(path)).send(message);
-          socketUpdated(path);
-        } else {
-          debug("ERROR: Could not connection to remote address " + path + " rerouting message " + message);
-          manager.reroute(path.getLastHop(), message);
-        }
-      }
-    }
+    if (! sendInternal(path, message))
+      new MessageRetry(path, message); 
   }
   
   /**
@@ -206,7 +196,37 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   
   /**
    *      -----  INTERNAL METHODS ----- 
-   */
+   */  
+  
+  /**
+    * Method which sends a message across the wire.
+    *
+    * @param message The message to send
+    * @param address The address to send the message to
+    */
+  protected boolean sendInternal(SourceRoute path, Message message) {
+    if (! resigned) {
+      synchronized (sockets) {
+        if (! sockets.containsKey(path)) {
+          debug("No connection open to path " + path + " - opening one");
+          openSocket(path, false);
+        }
+        
+        if (sockets.containsKey(path)) {
+          debug("Found connection open to path " + path + " - sending now");
+          
+          ((SocketManager) sockets.get(path)).send(message);
+          socketUpdated(path);
+          return true;
+        } else {
+          debug("ERROR: Could not connection to remote address " + path + " delaying " + message);
+          return false;
+        }
+      }
+    } else {
+      return true;
+    }
+  }
 
   /**
    * Specified by the SelectionKeyHandler interface. Is called whenever a key
@@ -234,11 +254,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   protected void openSocket(SourceRoute path, boolean bootstrap) {
     try {
       synchronized (sockets) {
-        if (!sockets.containsKey(path)) {
+        if ((! sockets.containsKey(path)) && 
+            ((sockets.size() < MAX_OPEN_SOCKETS) || (getSocketToClose() != null)))
           socketOpened(path, new SocketManager(path, bootstrap));
-        } else {
-          debug("SERIOUS ERROR: Request to open socket to already-open socket to path " + path);
-        }
       }
     } catch (IOException e) {
       System.out.println("GOT ERROR " + e + " OPENING PATH - MARKING PATH " + path + " AS DEAD!");
@@ -265,6 +283,19 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       }
     }
   }
+  
+  /**
+   * Internal method which returns the next socket to be closed
+   * 
+   * @return The next socket to be closed
+   */
+  protected SourceRoute getSocketToClose() {
+    for (int i=socketQueue.size()-1; i>=0; i--)
+      if (((SocketManager) sockets.get(socketQueue.get(i))).writer.isEmpty()) 
+        return (SourceRoute) socketQueue.get(i);
+    
+    return null;
+  }
 
   /**
    * Method which is designed to be called by node handles when they wish to
@@ -284,8 +315,11 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         debug("Recorded opening of socket to path " + path);
 
         if (sockets.size() > MAX_OPEN_SOCKETS) {
-          SourceRoute toClose = (SourceRoute) socketQueue.removeLast();
-          debug("Too many sockets open - closing socket to path " + toClose);
+          //SourceRoute toClose = (SourceRoute) socketQueue.removeLast();
+          SourceRoute toClose = getSocketToClose();
+          socketQueue.remove(toClose);
+          
+          debug("Too many sockets open - closing currently unused socket to path " + toClose);
           closeSocket(toClose);
         }
       } else {
@@ -462,6 +496,60 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   }
 
   /**
+   * Internal class which represents a message which is currently delayed, waiting
+   * for an open socket.  The message will be tried using exponential backoff up
+   * to BACKOFF_LIMIT times before being dropped.
+   */
+  protected class MessageRetry extends rice.selector.TimerTask {
+    
+    // The number of tries that have occurred so far
+    protected int tries = 0;
+    
+    // the current timeout
+    protected long timeout = BACKOFF_INITIAL;
+   
+    // The destination route
+    protected SourceRoute route;
+    
+    // The message
+    protected Message message;
+    
+    /**
+     * Constructor, taking a message and the route
+     *
+     * @param message The message
+     * @param route The route
+     */
+    public MessageRetry(SourceRoute route, Message message) {
+      this.message = message;
+      this.route = route;
+      this.timeout = (long) (timeout * (0.8 + (0.4 * random.nextDouble())));
+
+      pastryNode.getTimer().schedule(this, timeout);
+    }
+    
+    /**
+     * Main processing method for the DeadChecker object
+     */
+    public void run() {
+      if (! sendInternal(route, message)) {
+        if (SocketPastryNode.verbose) System.out.println("BACKOFF: Could not send message " + message + " after " + tries + " timeout " + timeout + " retries - retrying.");
+
+        if (tries < BACKOFF_LIMIT) {
+          tries++;
+          timeout = (long) ((2 * timeout) * (0.8 + (0.4 * random.nextDouble())));
+          
+          pastryNode.getTimer().schedule(this, timeout);
+        } else {
+          System.out.println("WARNING: Could not send message " + message + " after " + tries + " retries.  Dropping on the floor.");
+        } 
+      } else {
+        if (SocketPastryNode.verbose) System.out.println("BACKOFF: Was able to send message " + message + " after " + tries + " timeout " + timeout + " retries.");
+      }
+    }
+  }
+  
+  /**
    * DESCRIBE THE CLASS
    *
    * @version $Id$
@@ -535,23 +623,23 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   private class SocketManager extends SelectionKeyHandler {
 
     // the key to read from
-    private SelectionKey key;
+    protected SelectionKey key;
     
     // the channel we are associated with
-    private SocketChannel channel;
+    protected SocketChannel channel;
 
     // the reader reading data off of the stream
-    private SocketChannelReader reader;
+    protected SocketChannelReader reader;
 
     // the writer (in case it is necessary)
-    private SocketChannelWriter writer;
+    protected SocketChannelWriter writer;
 
     // the node handle we're talking to
-    private SourceRoute path;
+    protected SourceRoute path;
     
     // whether or not this is a bootstrap socket - if so, we fake the address 
     // and die once the the message has been sent
-    private boolean bootstrap;
+    protected boolean bootstrap;
 
     /**
      * Constructor which accepts an incoming connection, represented by the
