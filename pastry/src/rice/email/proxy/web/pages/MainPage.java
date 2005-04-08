@@ -15,7 +15,7 @@ public class MainPage extends WebPage {
     writeHeader(conn);
     conn.print("<frameset name=main cols=20%,80% border=0>");
     conn.print("  <frame src=hierarchy name=hierarchy frameborder=0>");
-    conn.print("  <frameset rows=30%,70% border=0>");
+    conn.print("  <frameset rows=40%,60% border=0>");
     conn.print("    <frame src=folder name=folder frameborder=0>");
     conn.print("    <frame src=message name=message frameborder=0>");
     conn.print("  </frameset>");

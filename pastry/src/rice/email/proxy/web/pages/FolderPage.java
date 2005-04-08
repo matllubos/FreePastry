@@ -16,6 +16,8 @@ import rice.email.proxy.web.*;
 
 public class FolderPage extends WebPage {
   
+  public static final int NUM_MESSAGES_PER_PAGE = 20;
+  
   public static final SimpleDateFormat DATE = new SimpleDateFormat("MMM d");
   
   public boolean authenticationRequired() { return true; }
@@ -35,14 +37,22 @@ public class FolderPage extends WebPage {
       writeHeader(conn);
       if (state.getCurrentFolder() != null) {
         MailFolder folder = state.getCurrentFolder();
+        final int exists = folder.getExists();
         conn.print("<b>" + folder.getFullName() + "</b><p>");
-        conn.print("<table border=0 cellspacing=0 cellpadding=0 width=100%>");
-        conn.print("  <tr><td width=15%><b><i>From:</i></b></td>");
-        conn.print("<td width=15%><b><i>To:</i></b></td>");
-        conn.print("<td width=60%><b><i>Subject:</i></b></td>");
-        conn.print("<td width=10%><b><i>Date:</i></b></td></tr>");
+        conn.print("  <script>function setURL(indx) {top.location=indx;}</script>");
+        conn.print("<table border=0 cellspacing=0 cellpadding=0><tr><td background=\"#AAAAAA\" >");
+        conn.print("<table border=0 cellspacing=1 cellpadding=1 width=100%>");
+        conn.print("  <tr><td width=20%><b><i>From:</i></b></td>");
+        conn.print("<td background=\"#FFFFFF\" width=70%><b><i>Subject:</i></b></td>");
+        conn.print("<td background=\"#FFFFFF\" width=10%><b><i>Date:</i></b></td></tr>");
         
-        Iterator messages = folder.getMessages(MsgFilter.ALL).iterator();
+        MsgFilter last = new MsgFilter() {
+          public boolean includes(StoredMessage msg) {
+            return msg.getSequenceNumber() > exists - NUM_MESSAGES_PER_PAGE; 
+          }
+        };
+        
+        Iterator messages = folder.getMessages(last).iterator();
         
         while (messages.hasNext()) {
           StoredMessage message = (StoredMessage) messages.next();
@@ -61,28 +71,26 @@ public class FolderPage extends WebPage {
           
           InternetHeaders headers = getHeaders((EmailData) d.getResult());
           
-          String from = getHeader(headers, "From");
-          String to = getHeader(headers, "To");
+          String from = getHeader(headers, "From").replaceAll("\"", "");
           String subject = getHeader(headers, "Subject");
           Date date = new Date(message.getInternalDate());
-          
-          String color="FFFFFF";
-          
-          if (! message.getFlagList().isSeen())
-            color="DDDDDFF";
+                    
+          boolean unseen = (! message.getFlagList().isSeen());
+          boolean selected = (message.getUID() == state.getCurrentMessageUID());
 
-          boolean selected = message.getUID() == state.getCurrentMessageUID();
+          String color="DDDDDFF";
           
-          conn.print("  <script>function setURL(indx) {top.location=indx;}</script>");
+          if (unseen)
+            color="FFFFFF";
           
           conn.print("  <tr onClick=setURL('" + getName() + "?message=" + message.getUID() + "')>");
-          conn.print("<td bgcolor=" + color + ">" + (selected ? "<b>" : "") + from + (selected ? "</b>": "") + "</td>");
-          conn.print("<td bgcolor=" + color + ">" + (selected ? "<b>": "") + to + (selected ? "</b>": "") + "</td>");
-          conn.print("<td bgcolor=" + color + ">" + (selected ? "<b>": "") + subject + (selected ? "</b>": "") + "</td>");
-          conn.print("<td bgcolor=" + color + ">" + (selected ? "<b>": "") + DATE.format(date) + (selected ? "</b>": "") + "</td></tr>");
+          conn.print("<td bgcolor=" + color + ">" + (unseen ? "<b>" : "") + from + (unseen ? "</b>": "") + "</td>");
+          conn.print("<td bgcolor=" + color + ">" + (unseen ? "<b>": "") + subject + (unseen ? "</b>": "") + "</td>");
+          conn.print("<td bgcolor=" + color + ">" + (unseen ? "<b>": "") + DATE.format(date) + (unseen ? "</b>": "") + "</td></tr>");
         }
         
         conn.print("</table>");
+        conn.print("</td></tr></table>");
       } else {
         conn.print("<i>No folder is selected</i>");
       }
