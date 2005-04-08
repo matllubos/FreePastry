@@ -889,7 +889,7 @@ public class PostProxy {
                                               new EmptyCache(VFACTORY));
       if (parameters.getBooleanParameter("glacier_use_trashcan")) {
         glacierTrashStorage = new StorageManagerImpl(KFACTORY,
-                                              new PersistentStorage(KFACTORY, prefix + "-glacier-trash", location, diskLimit),
+                                              new PersistentStorage(KFACTORY, prefix + "-glacier-trash", location, diskLimit, false),
                                               new EmptyCache(KFACTORY));
       } else {
         glacierTrashStorage = null;

@@ -856,7 +856,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           statistics.numNeighbors = neighborStorage.scan().numElements();
           statistics.numFragments = fragmentStorage.scan().numElements();
           statistics.numContinuations = continuations.size();
-          statistics.numObjectsInTrash = (trashStorage == null) ? 0 : trashStorage.scan().numElements();
+//          statistics.numObjectsInTrash = (trashStorage == null) ? 0 : trashStorage.scan().numElements();
           statistics.responsibleRange = responsibleRange;
           statistics.activeFetches = numActiveRestores[0];
           statistics.bucketMin = bucketMin;
@@ -1312,8 +1312,8 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       result = result + neighborStorage.scan().numElements() + " neighbors\n";
       result = result + continuations.size() + " active continuations\n";
       result = result + pendingTraffic.size() + " pending requests\n";
-      if (trashStorage != null) 
-        result = result + trashStorage.scan().numElements() + " fragments in trash\n";
+//      if (trashStorage != null) 
+//        result = result + trashStorage.scan().numElements() + " fragments in trash\n";
 
       return result;
     }
@@ -2740,7 +2740,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   }
           
   public void retrieveFragment(final FragmentKey key, final Manifest manifest, final char tag, final GlacierContinuation c) {
-    Continuation c2 = new Continuation() {
+    final Continuation c2 = new Continuation() {
       public void receiveResult(Object o) {
         if (o != null) {
           if (o instanceof FragmentAndManifest) {
@@ -2892,9 +2892,30 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       }
     };
     
-    if ((trashStorage!=null) && trashStorage.exists(key)) {
+/*    if ((trashStorage!=null) && trashStorage.exists(key)) {
       log(3, "retrieveFragment: Key "+key.toStringFull()+" found in trash, retrieving...");
       trashStorage.getObject(key, c2);
+    } else {
+      log(3, "retrieveFragment: Key "+key.toStringFull()+" not found in trash");
+      c2.receiveResult(null);
+    } */
+    
+    if (trashStorage!=null) {
+      trashStorage.getObject(key, new Continuation() {
+        public void receiveResult(Object o) {
+          if (o != null) 
+            log(3, "retrieveFragment: Key "+key.toStringFull()+" found in trash, retrieving...");
+          else
+            log(3, "retrieveFragment: Key "+key.toStringFull()+" not found in trash");
+
+          c2.receiveResult(o);
+        } 
+        
+        public void receiveException(Exception e) {
+          warn("Exception while getting object " + key + " from trash " + e);
+          c2.receiveResult(null);
+        }
+      });
     } else {
       log(3, "retrieveFragment: Key "+key.toStringFull()+" not found in trash");
       c2.receiveResult(null);
