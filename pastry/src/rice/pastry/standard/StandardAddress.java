@@ -16,6 +16,9 @@ import java.security.*;
  */
 public class StandardAddress implements Address {
 
+  //serial ver for backward compatibility
+  private static final long serialVersionUID = 1564239935633411277L;
+  
   protected int myCode;
   
   protected String name;
