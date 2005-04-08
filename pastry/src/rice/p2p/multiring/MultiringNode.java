@@ -106,6 +106,31 @@ public class MultiringNode implements Node, ScribeClient {
   }
   
   /**
+   * This returns a Endpoint specific to the given application and
+   * instance name to the application, which the application can then use in
+   * order to send an receive messages.  This method allows advanced 
+   * developers to specify which "port" on the node they wish their
+   * application to register as.  This "port" determines which of the
+   * applications on top of the node should receive an incoming 
+   * message.
+   *
+   * NOTE: Use of this method of registering applications is recommended only
+   * for advanced users - 99% of all applications should just use the
+   * other registerApplication
+   * 
+   * @param application The Application
+   * @param port The port to use
+   * @return The endpoint specific to this applicationk, which can be used for
+   *         message sending/receiving.
+   */
+  public Endpoint registerApplication(Application application, int port) {
+    Endpoint endpoint = new MultiringEndpoint(this, node.registerApplication(new MultiringApplication(getRingId(), application), port), application);
+    endpoints.put(endpoint.getInstance(), endpoint);
+  
+    return endpoint;
+  }
+  
+  /**
    * Returns the Id of this node
    *
    * @return This node's Id

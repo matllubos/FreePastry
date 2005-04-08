@@ -44,6 +44,18 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     this.instance = application.getClass().getName() + instance;
     this.application = application;
   }
+  
+  /**
+   * Constructor.
+   *
+   * @param pn the pastry node that the application attaches to.
+   */
+  public PastryEndpoint(PastryNode pn, Application application, int port) {
+    super(pn, port);
+    
+    this.instance = "[PORT " + port + "]";
+    this.application = application;
+  }
 
   // API methods to be invoked by applications
 

@@ -299,6 +299,24 @@ public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.
     }
 
     /**
+     * This returns a Endpoint specific to the given application and
+     * instance name to the application, which the application can then use in
+     * order to send an receive messages.  This method allows advanced 
+     * developers to specify which "port" on the node they wish their
+     * application to register as.  This "port" determines which of the
+     * applications on top of the node should receive an incoming 
+     * message.
+     * 
+     * @param application The Application
+     * @param port The port to use
+     * @return The endpoint specific to this applicationk, which can be used for
+     *         message sending/receiving.
+     */
+    public rice.p2p.commonapi.Endpoint registerApplication(rice.p2p.commonapi.Application application, int port) {
+      return new rice.pastry.commonapi.PastryEndpoint(this, application, port);
+    }
+    
+    /**
      * Returns the Id of this node
      *
      * @return This node's Id

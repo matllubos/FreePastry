@@ -20,6 +20,10 @@ public class StandardAddress implements Address {
   
   protected String name;
 
+  public StandardAddress(int port) {
+    this.myCode = port;
+  }
+  
   public StandardAddress(Class c, String instance) {
     MessageDigest md = null;
     

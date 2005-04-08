@@ -87,8 +87,27 @@ public abstract class PastryAppl implements MessageReceiver
     thePastryNode.addRouteSetObserver(new RouteSetObserver());
 
     thePastryNode.registerApp(this); // just adds it to a list
-     
-
+  }
+  
+  /**
+   * Constructor.  This constructor will perform the same tasks as the
+   * above constructor, but will also create a Pastry address for this
+   * application, using the specified port.
+   *
+   * @param pn the pastry node that client will attach to.
+   * @param instance The instance name of this appl.
+   */
+  public PastryAppl(PastryNode pn, int port) {
+    this.instance = "[PORT " + port + "]";
+    this.address = new StandardAddress(port);
+    
+    thePastryNode = pn;
+    thePastryNode.registerReceiver(getCredentials(), getAddress(), this);
+    
+    thePastryNode.addLeafSetObserver(new LeafSetObserver());
+    thePastryNode.addRouteSetObserver(new RouteSetObserver());
+    
+    thePastryNode.registerApp(this); // just adds it to a list
   }
 
   /**
