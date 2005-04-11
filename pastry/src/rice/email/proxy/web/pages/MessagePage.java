@@ -41,24 +41,19 @@ public class MessagePage extends WebPage {
           conn.print("<i>That message no longer available.</i>");
         } else {
           StoredMessage message = (StoredMessage) list.get(0);
-          Email email = message.getMessage();
           
-          System.out.println("MONKEY3!");
+          Email email = message.getMessage();
 
           ExternalContinuation c = new ExternalContinuation();
           email.getContent(c);
           c.sleep();
           if (c.exceptionThrown()) throw new MailboxException(c.getException());
-          
-          System.out.println("MONKEY4!");
 
           EmailMessagePart real = (EmailMessagePart) c.getResult();
           ExternalContinuation d = new ExternalContinuation();
           real.getHeaders(d);
           d.sleep();
           if (d.exceptionThrown()) throw new MailboxException(d.getException());
-
-          System.out.println("MONKEY5!");
 
           InternetHeaders headers = FolderPage.getHeaders((EmailData) d.getResult());
           
@@ -70,8 +65,6 @@ public class MessagePage extends WebPage {
           EmailContentPart part = (EmailContentPart) e.getResult();
           String body = null;
           
-          System.out.println("MONKEY!");
-          
           if (part instanceof EmailSinglePart) {
             ExternalContinuation f = new ExternalContinuation();
             part.getContent(f);
@@ -79,9 +72,8 @@ public class MessagePage extends WebPage {
             if (f.exceptionThrown()) throw new MailboxException(f.getException());
 
             EmailData data = (EmailData) f.getResult();
-            body = new String(data.getData());
+            body = new String(data.getData()).replaceAll("\r", "").replaceAll("\n", "<br>");
           }
-          System.out.println("MONKEY2!");
           
           String from = FolderPage.getHeader(headers, "From");
           String to = FolderPage.getHeader(headers, "To");

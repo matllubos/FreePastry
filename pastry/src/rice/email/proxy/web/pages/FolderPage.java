@@ -24,38 +24,55 @@ public class FolderPage extends WebPage {
   
   public String getName() { return "/folder"; }
   
-	public void execute(WebConnection conn, WebState state)	throws WebException, IOException {    
+	public void execute(WebConnection conn, final WebState state)	throws WebException, IOException {    
     String uid = conn.getParameter("message");
     
-    if (uid != null) {
-      state.setCurrentMessageUID(Integer.parseInt(uid));
-      conn.redirect("main");
-      return;
-    }
-    
     try {
+      if (uid != null) {
+        state.setCurrentMessageUID(Integer.parseInt(uid));
+        
+        List list = state.getCurrentFolder().getMessages(new MsgFilter() {
+          public boolean includes(StoredMessage msg) {
+            return msg.getUID() == state.getCurrentMessageUID();
+          }
+        });      
+        
+        if (list.size() > 0) {
+          StoredMessage message = (StoredMessage) list.get(0);
+          if (! message.getFlagList().isSeen()) {
+            message.getFlagList().setSeen(true);
+            state.getCurrentFolder().update(new StoredMessage[] {message});
+          }
+        }
+        
+        conn.redirect("main");
+        return;
+      }
+      
       writeHeader(conn);
       if (state.getCurrentFolder() != null) {
         MailFolder folder = state.getCurrentFolder();
         final int exists = folder.getExists();
-        conn.print("<b>" + folder.getFullName() + "</b><p>");
-        conn.print("  <script>function setURL(indx) {top.location=indx;}</script>");
-        conn.print("<table border=0 cellspacing=0 cellpadding=0><tr><td background=\"#AAAAAA\" >");
-        conn.print("<table border=0 cellspacing=1 cellpadding=1 width=100%>");
-        conn.print("  <tr><td width=20%><b><i>From:</i></b></td>");
-        conn.print("<td background=\"#FFFFFF\" width=70%><b><i>Subject:</i></b></td>");
-        conn.print("<td background=\"#FFFFFF\" width=10%><b><i>Date:</i></b></td></tr>");
+
+        int start = (exists > NUM_MESSAGES_PER_PAGE ? exists - NUM_MESSAGES_PER_PAGE : 1);
+        int end = exists;
         
-        MsgFilter last = new MsgFilter() {
+        List messages = folder.getMessages(new MsgFilter() {
           public boolean includes(StoredMessage msg) {
             return msg.getSequenceNumber() > exists - NUM_MESSAGES_PER_PAGE; 
           }
-        };
+        });
         
-        Iterator messages = folder.getMessages(last).iterator();
+        conn.print("<table bgcolor=\"#FFFFFF\" border=0 cellspacing=0 cellpadding=0 width=100%>");
+        conn.print("<tr><td><b>" + folder.getFullName() + "</b><td><td align=right><b>");
+        conn.print(start + "</b> - <b>" + end + "</b> of <b>" + exists + "</b></td></tr>");
+        conn.print("</table><p>");
         
-        while (messages.hasNext()) {
-          StoredMessage message = (StoredMessage) messages.next();
+        conn.print("<table bgcolor=\"#FFFFFF\" border=0 cellspacing=0 cellpadding=0 width=100%>");
+        
+        for (int i=messages.size()-1; i>=0; i--) {
+          conn.println("<tr><td colspan=3 height=1 bgcolor=\"#AAAAAA\"></td></tr>");
+          StoredMessage message = (StoredMessage) messages.get(i);
           Email email = message.getMessage();
           
           ExternalContinuation c = new ExternalContinuation();
@@ -78,19 +95,19 @@ public class FolderPage extends WebPage {
           boolean unseen = (! message.getFlagList().isSeen());
           boolean selected = (message.getUID() == state.getCurrentMessageUID());
 
-          String color="DDDDDFF";
+          String color="EEEEFF";
           
           if (unseen)
             color="FFFFFF";
           
           conn.print("  <tr onClick=setURL('" + getName() + "?message=" + message.getUID() + "')>");
-          conn.print("<td bgcolor=" + color + ">" + (unseen ? "<b>" : "") + from + (unseen ? "</b>": "") + "</td>");
-          conn.print("<td bgcolor=" + color + ">" + (unseen ? "<b>": "") + subject + (unseen ? "</b>": "") + "</td>");
-          conn.print("<td bgcolor=" + color + ">" + (unseen ? "<b>": "") + DATE.format(date) + (unseen ? "</b>": "") + "</td></tr>");
+          conn.print("<td width=20% bgcolor=" + color + ">" + (unseen ? "<b>" : "") + from + (unseen ? "</b>": "") + "</td>");
+          conn.print("<td width=70% bgcolor=" + color + ">" + (unseen ? "<b>": "") + subject + (unseen ? "</b>": "") + "</td>");
+          conn.print("<td width=10% bgcolor=" + color + ">" + (unseen ? "<b>": "") + DATE.format(date) + (unseen ? "</b>": "") + "</td></tr>");
         }
-        
+
+        conn.println("<tr><td colspan=3 height=1 bgcolor=\"#AAAAAA\"></td></tr>");
         conn.print("</table>");
-        conn.print("</td></tr></table>");
       } else {
         conn.print("<i>No folder is selected</i>");
       }

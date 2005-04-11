@@ -31,10 +31,12 @@ public class HierarchyPage extends WebPage {
     try {
       writeHeader(conn);
       MailFolder[] folders = state.getUser().getMailbox().listFolders("*");
-      
+
       conn.print("<table border=0>");
-      for (int i=0; i<folders.length; i++) 
-        conn.print("  <tr><td><a target=_top href='" + getName() + "?folder=" + folders[i].getFullName() + "'>" + folders[i].getFullName() + "</td></tr>");
+      for (int i=0; i<folders.length; i++) {
+        conn.print("  <tr onClick=setURL('" + getName() + "?folder=" + folders[i].getFullName() + "')>");
+        conn.print("<td>" + folders[i].getFullName() + "</td></tr>"); 
+      }
       
       conn.print("</table>");
       

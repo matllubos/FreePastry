@@ -14,7 +14,7 @@ public class WebPageRegistry {
   {
   {"/", new LoginPage()}, {"/folder", new FolderPage()},
   {"/main", new MainPage()}, {"/hierarchy", new HierarchyPage()},
-  {"/message", new MessagePage()}
+  {"/message", new MessagePage()}, {"/top", new TopPage()}
   };
   
   public void load() {

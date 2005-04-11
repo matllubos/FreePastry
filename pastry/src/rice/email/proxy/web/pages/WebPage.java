@@ -9,7 +9,7 @@ public abstract class WebPage {
 	public abstract void execute(WebConnection conn, WebState state) throws WebException, IOException;
   
   public void writeHeader(WebConnection conn) {
-    conn.print("<HTML><HEAD><TITLE>ePOST Webmail</TITLE></HEAD><BODY>");
+    conn.print("<HTML><HEAD><TITLE>ePOST Webmail</TITLE></HEAD><script>function setURL(indx) {top.location=indx;}</script><BODY>");
   }
   
   public void writeFooter(WebConnection conn) throws IOException {
