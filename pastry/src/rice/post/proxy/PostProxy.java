@@ -1784,14 +1784,21 @@ public class PostProxy {
     public void run() {
       try {
         while (true) {
-          in.read(buffer1);
-          ByteBuffer b1 = ByteBuffer.wrap(buffer1);
-          sink.write(b1);  
+          int i = in.read(buffer1);
 
-          ByteBuffer b2 = ByteBuffer.wrap(buffer2);
-          source.read(b2);
-          out.write(buffer2);
-          out.flush();
+          if (i > 0) {
+            ByteBuffer b1 = ByteBuffer.wrap(buffer1);
+            sink.write(b1);  
+
+            ByteBuffer b2 = ByteBuffer.wrap(buffer2);
+            source.read(b2);
+            
+            out.write(buffer2);
+            out.flush();
+          } else {
+            System.err.println("ERROR: Liveness thread read " + i + " bytes - exiting!");
+            return;
+          }
         }
       } catch (IOException e) {
         System.err.println("Got IOException " + e + " while monitoring liveness - exiting!");
