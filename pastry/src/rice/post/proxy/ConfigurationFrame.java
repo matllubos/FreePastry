@@ -1073,11 +1073,15 @@ public class ConfigurationFrame extends JFrame {
       
       submit.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          if (old.getText().equals(parameters.getStringParameter("post_password"))) {
-            if (new1.getText().equals(new2.getText())) {
-              if (new1.getText().length() > 0) {
+          String oldP = new String(old.getPassword());
+          String newP1 = new String(new1.getPassword());
+          String newP2 = new String(new2.getPassword());
+          
+          if (oldP.equals(parameters.getStringParameter("post_password"))) {
+            if (newP1.equals(newP2)) {
+              if (newP1.length() > 0) {
                 try {
-                  rice.post.security.ca.CAPasswordChanger.changePassword(parameters.getStringParameter("post_username"), old.getText(), new1.getText());
+                  rice.post.security.ca.CAPasswordChanger.changePassword(parameters.getStringParameter("post_username"), oldP, newP1);
                   JOptionPane.showMessageDialog(null, "Your password has been changed - it will not take effect until a reboot.");
                 } catch (Exception f) {
                   JOptionPane.showMessageDialog(null, "An error occurred - your password has not been changed.\n\n" + f.toString());   

@@ -1955,7 +1955,7 @@ public class PostProxy {
           parameters.wait();
       }
       
-      return this.field.getText();
+      return new String(this.field.getPassword());
     }
   }
 

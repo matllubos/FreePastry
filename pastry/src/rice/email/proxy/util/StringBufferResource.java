@@ -1,13 +1,6 @@
 package rice.email.proxy.util;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Reader;
-import java.io.StringBufferInputStream;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.io.Writer;
-
+import java.io.*;
 
 public class StringBufferResource implements Resource {
   
@@ -36,7 +29,7 @@ public class StringBufferResource implements Resource {
   public InputStream getInputStream() throws IOException {
     closeInput();
     
-    return new StringBufferInputStream(_contentBuffer.toString());
+    return new ByteArrayInputStream(_contentBuffer.toString().getBytes());
   }
   
   public Reader getReader() throws IOException {
