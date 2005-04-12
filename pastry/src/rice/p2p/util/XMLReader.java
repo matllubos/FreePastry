@@ -46,14 +46,15 @@ public class XMLReader {
     this.in = new BufferedReader(in);
     
     try {
-      XmlPullParserFactory factory = XmlPullParserFactory.newInstance(System.getProperty(XmlPullParserFactory.PROPERTY_NAME), null);
-      factory.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true);
+  /*    XmlPullParserFactory factory = XmlPullParserFactory.newInstance(System.getProperty(XmlPullParserFactory.PROPERTY_NAME), null);
+      factory.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true); 
     
-      xpp = factory.newPullParser();
+      xpp = factory.newPullParser(); */
+      xpp = new XMLParser();
       xpp.setInput(this.in);
     } catch (XmlPullParserException e) {
       throw new IOException("XML Exception thrown: " + e);
-    }
+    } 
   }
   
   /**

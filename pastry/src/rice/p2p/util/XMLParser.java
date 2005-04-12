@@ -15,8 +15,10 @@ public class XMLParser implements XmlPullParser {
    */
   public static final int BUFFER_SIZE = 32000;
   
-  public static final char[] WHITESPACE_OR_TAG_END = new char[] {' ', '\t', '\n', '\r', '>', '/'};
+  public static final char[] QUOTE = new char[] {'\'', '"'};
+  public static final char[] TAG_END = new char[] {'>', '/', '?'};
   public static final char[] WHITESPACE = new char[] {' ', '\t', '\n', '\r'};
+  public static final char[] WHITESPACE_OR_TAG_END = new char[] {' ', '\t', '\n', '\r', '>', '/', '?'};
   public static final char[] WHITESPACE_OR_EQUALS = new char[] {' ', '\t', '\n', '\r', '='};
 
   /**
@@ -61,15 +63,30 @@ public class XMLParser implements XmlPullParser {
   protected HashMap attributes;
   
   /**
+   * Whether or not we are currently in a tag...
+   */
+  protected boolean inTag;
+  
+  /**
+   * Internal variable which keeps track of the current mark
+   */
+  protected int mark;
+  protected CharArrayBuffer marked;
+  
+  protected StringBuffer debug = new StringBuffer();
+  
+  /**
    * Constructor
    */
   public XMLParser() {
     this.buffer = new char[BUFFER_SIZE];
     this.bufferPosition = 0;
     this.bufferLimit = 0;
+    this.mark = -1;
     this.tags = new Stack();
     this.cache = new StringCache();
     this.attributes = new HashMap();
+    this.inTag = false;
   }
   
   /**
@@ -172,23 +189,27 @@ public class XMLParser implements XmlPullParser {
    * @see #END_DOCUMENT
    */
   public int next() throws XmlPullParserException, IOException {
-    if (bufferPosition == bufferLimit) fillBuffer();
-    if (bufferPosition == bufferLimit) return END_DOCUMENT;
+    char next = 0;
     
-    char next = buffer[bufferPosition];
-    
+    try {
+      next = current();
+    } catch (EOFException e) {
+      return END_DOCUMENT;
+    }
+
     switch (next) {
       case '<':
-        char next2 = buffer[bufferPosition+1];
+        int result = parseTag();
         
-        switch (next2) {
-          case '/':
-            return parseEndTag();
-          default:
-            return parseStartTag();
-        }
+        if (result == START_DOCUMENT)
+          return next();
+        else
+          return result;
       case '/':
-        return parseEndTag((String) tags.pop());
+        if (this.inTag)
+          return parseEndTag((String) tags.pop());
+        else
+          return parseText();
       default:
         return parseText();
     }
@@ -210,7 +231,7 @@ public class XMLParser implements XmlPullParser {
    *
    */
   public boolean isWhitespace() throws XmlPullParserException {
-    throw new UnsupportedOperationException();
+    return isWhitespace(text);
   }
   
   /**
@@ -221,11 +242,61 @@ public class XMLParser implements XmlPullParser {
    * Internal method which actually fills the buffer
    */
   protected void fillBuffer() throws IOException {
+    // process the mark
+    if (marked != null)
+      this.marked.append(buffer, 0, bufferPosition);
+    else if (mark != -1)
+      this.marked = new CharArrayBuffer(buffer, mark, bufferPosition - mark);
+    
     int read = reader.read(buffer);
     
     if (read > 0) {
       bufferLimit = read;
       bufferPosition = 0;
+    }
+  }
+  
+  /**
+   * Method which returns the current char in the buffer
+   *
+   * @return The current char
+   */
+  protected char current() throws IOException {
+    if (bufferPosition == bufferLimit) fillBuffer();
+    if (bufferPosition == bufferLimit) throw new EOFException();
+    
+    return buffer[bufferPosition];
+  }
+  
+  /**
+   * Method which steps forward in the buffer
+   */
+  protected void step() {
+    debug.append(buffer[bufferPosition]);
+    bufferPosition++;
+  }
+  
+  /**
+   * Sets the mark
+   */
+  protected void mark() {
+    this.mark = bufferPosition;
+  }
+  
+  /**
+   * Unsets the mark
+   */
+  protected String unmark() {
+    try {    
+      if (this.marked != null) {
+        this.marked.append(buffer, 0, bufferPosition);
+        return cache.get(marked.getBuffer(), 0, marked.getLength());
+      } else {
+        return cache.get(buffer, mark, bufferPosition-mark);
+      }
+    } finally {
+      this.mark = -1;
+      this.marked = null;
     }
   }
   
@@ -248,11 +319,13 @@ public class XMLParser implements XmlPullParser {
    *
    * @param the expected char
    */
-  protected void expect(char c) throws XmlPullParserException {
-    if (buffer[bufferPosition] != c)
-      throw new XmlPullParserException("Expected character '" + c + "' got '" + buffer[bufferPosition] + "'");
-    else
-      bufferPosition++;
+  protected void expect(char c) throws XmlPullParserException, IOException {
+    if (current() != c) {
+      System.out.println("DOC SO FAR!\n'" + debug + current() + "'");
+      
+      throw new XmlPullParserException("Expected character '" + c + "' got '" + current() + "'");
+    } else
+      step();
   }
   
   /**
@@ -261,9 +334,9 @@ public class XMLParser implements XmlPullParser {
    * @param chars The chars to check for
    * @param char The char
    */
-  protected boolean isWhitespace(char[] chars, int off, int len) {
-    for (int i=off; i<off+len; i++)
-      if (! contains(WHITESPACE, chars[i]))
+  public boolean isWhitespace(String text) {
+    for (int i=0; i<text.length(); i++)
+      if (! contains(WHITESPACE, text.charAt(i)))
         return false;
     
     return true;
@@ -288,37 +361,28 @@ public class XMLParser implements XmlPullParser {
    *
    * @return The token
    */
-  protected String parseUntil(char[] chars, boolean ignoreWhitespace) {
-    int pos = bufferPosition;
+  protected String parseUntil(char[] chars) throws IOException {
+    mark();
     
     while (true) {
-      char next = buffer[bufferPosition];
-      
-      if (contains(chars, next))
+      if (contains(chars, current()))
         break;
       else
-        bufferPosition++;
+        step();
     }
     
-    if (ignoreWhitespace && isWhitespace(buffer, pos, (bufferPosition - pos)))
-      return null;
-    else
-      return cache.get(buffer, pos, (bufferPosition - pos));
+    return unmark();
   }
   
   /**
    * Method which parses up to the next token
    */
-  protected void parseUntilNot(char[] chars) {
-    int pos = bufferPosition;
-    
+  protected void parseUntilNot(char[] chars) throws IOException {
     while (true) {
-      char next = buffer[bufferPosition];
-      
-      if (! contains(chars, next))
+      if (! contains(chars, current()))
         break;
       else
-        bufferPosition++;
+        step();
     }    
   }
     
@@ -332,7 +396,27 @@ public class XMLParser implements XmlPullParser {
     expect('>');
 
     this.name = tag;
+    this.inTag = false;
+    
+//    System.out.println("Parsed default END tag '" + this.name + "'");
+    
     return END_TAG;
+  }
+  
+  /**
+   * Internal method which parses a tag
+   */
+  protected int parseTag() throws XmlPullParserException, IOException {
+    expect('<');
+
+    switch (current()) {
+      case '/':
+        return parseEndTag();
+      case '?':
+        return parseDocumentTag();
+      default:
+        return parseStartTag();
+    }    
   }
   
   /**
@@ -341,78 +425,108 @@ public class XMLParser implements XmlPullParser {
    * @param The name of the parsed tag
    */
   protected int parseEndTag() throws XmlPullParserException, IOException {
-    expect('<');
     expect('/');
     parseUntilNot(WHITESPACE);
  
     clearAttributes();
-    this.name = parseUntil(WHITESPACE_OR_TAG_END, false);
+    this.name = parseUntil(WHITESPACE_OR_TAG_END);
     tags.pop();
+    this.inTag = false;
     
     parseUntilNot(WHITESPACE);
     expect('>');
 
+//    System.out.println("Parsed END tag '" + this.name + "'");
+    
     return END_TAG;
   }
   
   /**
    * Method which parses a start tag
    */
-  protected int parseStartTag() throws XmlPullParserException {
-    expect('<');
+  protected int parseStartTag() throws XmlPullParserException, IOException {
     parseUntilNot(WHITESPACE);
     
-    this.name = parseUntil(WHITESPACE_OR_TAG_END, false);
+    this.name = parseUntil(WHITESPACE_OR_TAG_END);
     tags.push(this.name);
     
     parseUntilNot(WHITESPACE);
 
+//    System.out.println("Parsed START tag '" + this.name + "'");
+    
     parseAttributes();
     
     parseUntilNot(WHITESPACE);
-    
-    char next = buffer[bufferPosition];
-    
-    if (next != '/') {
+        
+    if (current() != '/') {
       expect('>');
+      this.inTag = false;
+    } else {
+      this.inTag = true;
     }
     
     return START_TAG;
   }
   
   /**
+   * Method which parses a document tag
+   */
+  protected int parseDocumentTag() throws XmlPullParserException, IOException {
+    expect('?');
+    
+    parseUntilNot(WHITESPACE);
+    
+    String type = parseUntil(WHITESPACE_OR_TAG_END);
+
+    if (! (type.toLowerCase().equals("xml")))
+      throw new XmlPullParserException("This does not appear to be an XML document - found '" + type + "'!");
+    
+    parseUntilNot(WHITESPACE);
+    
+    parseAttributes();
+    clearAttributes();
+    
+    parseUntilNot(WHITESPACE);
+    this.inTag = false;
+    
+    expect('?');
+    expect('>');
+    
+//    System.out.println("Parsed START DOCUMENT tag '" + type + "'");
+    
+    return START_DOCUMENT;
+  }
+  
+  /**
    * Method which parses all of the attributes of a start tag
    */
-  protected void parseAttributes() throws XmlPullParserException {
+  protected void parseAttributes() throws XmlPullParserException, IOException {
     clearAttributes();
 
     while (true) {
       parseUntilNot(WHITESPACE);
       
-      char next = buffer[bufferPosition];
-      
-      switch (next) {
-        case '>':
-          return;
-        case '/':
-          return;
-        default:
-          String key = parseUntil(WHITESPACE_OR_EQUALS, false);
-          parseUntilNot(WHITESPACE);
-          expect('=');
-          parseUntilNot(WHITESPACE);
-          String value = null;
-          char quote = buffer[bufferPosition];
-
-          if ((quote == '\'') || (quote == '"')) {
-            expect(quote);
-            value = parseUntil(new char[] {quote}, false);
-            expect(quote);
-          } else {
-            value = parseUntil(WHITESPACE_OR_TAG_END, false);
-          }
-            
-          addAttribute(key, value);
+      if (contains(TAG_END, current())) {
+        return;
+      } else {
+        String key = parseUntil(WHITESPACE_OR_EQUALS);
+        parseUntilNot(WHITESPACE);
+        expect('=');
+        parseUntilNot(WHITESPACE);
+        String value = null;
+        char quote = current();
+        
+        if (contains(QUOTE, quote)) {
+          expect(quote);
+          value = parseUntil(new char[] {quote});
+          expect(quote);
+        } else {
+          value = parseUntil(WHITESPACE_OR_TAG_END);
+        }
+        
+//        System.out.println("Parsed ATTRIBUTE '" + key + "' -> '"  + value + "'");
+        
+        addAttribute(key, value);
       }
     }
   }
@@ -423,14 +537,86 @@ public class XMLParser implements XmlPullParser {
    * @param The name of the parsed tag
    */
   protected int parseText() throws XmlPullParserException, IOException {
-    String temp = parseUntil(new char[] {'<'}, true);
+    clearAttributes();
+    this.text = parseUntil(new char[] {'<'});
+    this.inTag = false;
+
+    return TEXT;
+  }
+  
+  /**
+   *   ----- INTERNAL CLASS -----
+   */
+  
+  /**
+    * This class implements a char array buffer
+   */
+  public class CharArrayBuffer {
     
-    if (temp == null) {
-      return next();
-    } else {
-      clearAttributes();
-      this.text = temp;
-      return TEXT;
+    /**
+    * The default initial capacity
+     */
+    public static final int DEFAULT_CAPACITY = 32;
+    
+    /**
+    * The internal buffer
+     */
+    protected char[] buffer;
+    
+    /**
+      * The markers
+     */
+    protected int length;
+    
+    /**
+      * Constructor
+     */
+    public CharArrayBuffer(char[] chars, int length, int off) {
+      this.buffer = new char[DEFAULT_CAPACITY];
+      this.length = 0;
+      
+      append(chars, length, off);
+    }
+    
+    /**
+      * Returns the internal array
+     *
+     * @return The array
+     */
+    public char[] getBuffer() {
+      return buffer;
+    }
+    
+    /**
+      * Returns the length
+     *
+     * @return The length
+     */
+    public int getLength() {
+      return length;
+    }
+    
+    /**
+      * Appends some more chars!
+     *
+     * @param THe chars to append
+     */
+    public void append(char[] chars, int off, int len) {
+      while (length + len > buffer.length)
+        expandBuffer();
+      
+      System.arraycopy(chars, off, buffer, length, len);
+      length+=len;
+    }
+    
+    /**
+      * Expands the buffer
+     */
+    protected void expandBuffer() {
+      char[] newbuffer = new char[buffer.length * 2];
+      
+      System.arraycopy(buffer, 0, newbuffer, 0, length);
+      this.buffer = newbuffer;
     }
   }
     

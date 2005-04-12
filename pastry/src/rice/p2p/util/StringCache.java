@@ -196,8 +196,6 @@ public class StringCache {
       return;
     }
     
-    System.out.println("RESIZING TO CAPACITY " + newCapacity);
-    
     Entry[] newTable = new Entry[newCapacity];
     transfer(newTable);
     table = newTable;

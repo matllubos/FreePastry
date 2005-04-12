@@ -833,7 +833,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
   protected Object readString(boolean shared) throws IOException, ClassNotFoundException {
     reader.assertStartTag("string");
     
-    String result = reader.getAttribute("value");
+    String result = new String(reader.getAttribute("value"));
     
     if (shared && (reader.getAttribute("id") != null)) 
       putReference(reader.getAttribute("id"), result);
