@@ -207,13 +207,17 @@ public class NetworkLogManager extends LogManager {
       } finally {
         try {
           if (socket != null) socket.close();
+          if (in != null) in.close();
         } catch (IOException e) {
           System.err.println("PANIC: Got exception " + e + " while closing streams!");
         }
       }
       
-      if (delete)
-        file.delete();
+      if (delete) {
+        boolean result = file.delete();
+        if (! result)
+          System.out.println("WARNING: Error deleting log file " + file + " " + file.exists() + " " + result);
+      }
     }
   }
 }
