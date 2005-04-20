@@ -456,6 +456,7 @@
         <include name="rice/proxy/**/*.java"/>
         <include name="rice/selector/**/*.java"/>
         <include name="rice/visualization/**/*.java"/>
+        <include name="rice/email/proxy/imap/parser/antlr/*.g"/>
       </tarfileset>
       <tarfileset dir="ant" includes="**/*" prefix="ant"/>
       <tarfileset dir="${lib.dir}" includes="*.jar" prefix="lib"/>
@@ -481,6 +482,7 @@
         <include name="rice/proxy/**/*.java"/>
         <include name="rice/selector/**/*.java"/>
         <include name="rice/visualization/**/*.java"/>
+        <include name="rice/email/proxy/imap/parser/antlr/*.g"/>
       </fileset>
       <fileset dir="ant" includes="**/*"/>
       <fileset dir="${lib.dir}" includes="*.jar"/>
