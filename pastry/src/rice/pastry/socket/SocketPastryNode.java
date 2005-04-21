@@ -23,7 +23,7 @@ import rice.selector.*;
  */
 public class SocketPastryNode extends DistPastryNode {
 
-  public static final boolean verbose = false;
+  public static final boolean verbose = true;
   
   // The address (ip + port) of this pastry node
   private EpochInetSocketAddress address;

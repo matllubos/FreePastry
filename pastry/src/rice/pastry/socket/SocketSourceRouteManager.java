@@ -669,7 +669,8 @@ public class SocketSourceRouteManager {
         default:
           this.best = null;
           this.liveness = SocketNodeHandle.LIVENESS_DEAD;
-          pool.update(address, SocketNodeHandle.DECLARED_DEAD);        
+          pool.update(address, SocketNodeHandle.DECLARED_DEAD);   
+          manager.declaredDead(address);
           if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead.");
           break;
       }

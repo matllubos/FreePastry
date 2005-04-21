@@ -33,10 +33,59 @@ public class SourceRouteTest {
     System.out.println("DONE");
   }
   
+  static SocketPastryNode node1,node2,node3,node4,node5,node6,node7,node8,node9,node10;
+  
+  public static class TestMessage2 extends Message {
+    
+    byte[] payload;
+    
+    public TestMessage2() {
+      super(new StandardAddress(27));
+      payload = new byte[10000];
+    }
+  }
+  
   public static void main(String[] args) throws Exception {
     SocketPastryNodeFactory factory = new SocketPastryNodeFactory(new RandomNodeIdFactory(), 20001);
     
-    InetSocketAddress address1 = new InetSocketAddress(InetAddress.getLocalHost(), 20001);
+    new Thread() {
+      int k=0;
+      
+      public void printSockets(SocketPastryNode node) {
+        if (node == null)
+          return;
+        
+        Hashtable sockets = node.getSocketSourceRouteManager().getManager().sockets;
+        Object[] o = sockets.keySet().toArray();
+        
+        for(int i=0; i<o.length; i++)
+          System.out.println("SOCKET::\t" + k + "\t" + ((SocketNodeHandle) node.getLocalNodeHandle()).getEpochAddress() + "\t" + o[i]);
+      }
+      
+      public void run() {
+        while (true) {
+          try {
+            Thread.sleep(5000);
+            k++;
+            
+            printSockets(node1);
+            printSockets(node2);
+            printSockets(node3);
+            printSockets(node4);
+            printSockets(node5);
+            printSockets(node6);
+            printSockets(node7);
+            printSockets(node8);
+            printSockets(node9);
+            printSockets(node10);
+          } catch (Exception e) {
+            System.out.println("ERROR: CNAOCAN " + e);
+          }
+        }
+      }
+    }.start();
+    
+    final InetSocketAddress address1 = new InetSocketAddress(InetAddress.getLocalHost(), 20001);
     InetSocketAddress address2 = new InetSocketAddress(InetAddress.getLocalHost(), 20002);
     InetSocketAddress address3 = new InetSocketAddress(InetAddress.getLocalHost(), 20003);
     InetSocketAddress address4 = new InetSocketAddress(InetAddress.getLocalHost(), 20004);
@@ -48,34 +97,54 @@ public class SourceRouteTest {
     InetSocketAddress address10 = new InetSocketAddress(InetAddress.getLocalHost(), 20010);
     
     System.out.println("Starting 1...");
-    SocketPastryNode node1 = (SocketPastryNode) factory.newNode(null);
+    node1 = (SocketPastryNode) factory.newNode(null);
     Thread.sleep(1000);
     System.out.println("Starting 2...");
-    SocketPastryNode node2 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address1));
+    node2 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address1));
     Thread.sleep(4000);
     System.out.println("Starting 3...");
-    SocketPastryNode node3 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address2));
-    Thread.sleep(20000);
+    node3 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address2));
+    Thread.sleep(4000);
+    
+  /*  new Thread() {
+      public void run() {
+        try {
+          while (true) {
+            Thread.sleep(1000);
+            node2.getSocketSourceRouteManager().send(((SocketNodeHandle) node1.getLocalNodeHandle()).getEpochAddress(), 
+                                                     new TestMessage2());
+          }
+        } catch (Exception e) {
+          System.out.println("NBAHL" + e);
+        }
+      }
+    }.start();
+    Thread.sleep(4000);
+
+    System.out.println("STALLING..."); */
+    
+ //   node1.getSocketSourceRouteManager().getManager().stall();
+    
     System.out.println("Starting 4...");
-    SocketPastryNode node4 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address3));
-    Thread.sleep(20000);
+    node4 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address3));
+    Thread.sleep(10000);
     System.out.println("Starting 5...");
-    SocketPastryNode node5 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address4));
-    Thread.sleep(20000); 
+    node5 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address4));
+    Thread.sleep(13000); 
     System.out.println("Starting 6...");
-    SocketPastryNode node6 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address5));
-    Thread.sleep(20000);
+    node6 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address5));
+    Thread.sleep(16000);
     System.out.println("Starting 7...");
-    SocketPastryNode node7 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address6));
-    Thread.sleep(20000);
+    node7 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address6));
+    Thread.sleep(18000);
     System.out.println("Starting 8...");
-    SocketPastryNode node8 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address7));
+    node8 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address7));
     Thread.sleep(20000);
     System.out.println("Starting 9...");
-    SocketPastryNode node9 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address8));
+    node9 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address8));
     Thread.sleep(20000);
     System.out.println("Starting 10...");
-    SocketPastryNode node10 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address9)); 
+    node10 = (SocketPastryNode) factory.newNode(factory.getNodeHandle(address9)); 
     Thread.sleep(40000);
     
     
@@ -113,11 +182,11 @@ public class SourceRouteTest {
     
     node2.resign();
     
-    Thread.sleep(20000);
+    Thread.sleep(40000);
     
     System.out.println("Later Source Routes...");
-    System.out.println("Node 2 (20002) -> ");
-    printRoutes(node2.getSocketSourceRouteManager());
+    System.out.println("Node 1 (20001) -> ");
+    printRoutes(node1.getSocketSourceRouteManager());
     System.out.println("Node 3 (20003) -> ");
     printRoutes(node3.getSocketSourceRouteManager());
     System.out.println("Node 4 (20004) -> ");
@@ -131,7 +200,7 @@ public class SourceRouteTest {
     System.out.println("Node 9 (20009) -> ");
     printRoutes(node9.getSocketSourceRouteManager());
     System.out.println("Node 10 (20010) -> ");
-    printRoutes(node10.getSocketSourceRouteManager());
+    printRoutes(node10.getSocketSourceRouteManager()); 
     Thread.sleep(10000);    
     
     /*

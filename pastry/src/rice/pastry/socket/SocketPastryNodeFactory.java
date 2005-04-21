@@ -264,8 +264,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       Thread.sleep(1000);
     } catch (InterruptedException e) {}
     
-    pn.doneNode(getNearest(localhandle, bootstrap));
- //   pn.doneNode(bootstrap);
+ //   pn.doneNode(getNearest(localhandle, bootstrap));
+    pn.doneNode(bootstrap);
 
     return pn;
   }

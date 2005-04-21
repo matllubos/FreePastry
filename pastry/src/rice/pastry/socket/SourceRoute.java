@@ -257,6 +257,16 @@ public class SourceRoute implements Serializable {
   }
   
   /**
+   * Method which creates a new source route by removing the last hop of this one
+   */
+  public SourceRoute removeLastHop() {
+    EpochInetSocketAddress[] result = new EpochInetSocketAddress[path.length-1];
+    System.arraycopy(path, 0, result, 0, result.length);
+    
+    return SourceRoute.build(result);
+  }
+  
+  /**
    * Method which creates a new source route by appending the given address
    * to the end of this one
    *

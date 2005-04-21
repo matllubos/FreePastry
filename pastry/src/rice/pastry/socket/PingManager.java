@@ -18,8 +18,17 @@ import rice.selector.*;
  */
 public class PingManager extends SelectionKeyHandler {
   
+  // whether or not we should use short pings
+  public static boolean USE_SHORT_PINGS = true;
+  
   // the header which signifies a normal socket
   protected static byte[] HEADER_PING = new byte[] {0x49, 0x3A, 0x09, 0x5C};
+  
+  // the header which signifies a new, shorter ping
+  protected static byte[] HEADER_SHORT_PING = new byte[] {0x31, 0x1C, 0x0E, 0x11};
+  
+  // the header which signifies a new, shorter ping
+  protected static byte[] HEADER_SHORT_PING_RESPONSE = new byte[] {0x31, 0x1C, 0x0E, 0x12};  
   
   // the length of the ping header
   public static int HEADER_SIZE = HEADER_PING.length;
@@ -103,7 +112,11 @@ public class PingManager extends SelectionKeyHandler {
     debug("Actually sending ping via path " + path + " local " + localAddress);
 
     addPingResponseListener(path, prl);
-    enqueue(path, new PingMessage(path, path.reverse(localAddress)));
+    
+    if (USE_SHORT_PINGS)
+      sendShortPing(path);
+    else
+      enqueue(path, new PingMessage(path, path.reverse(localAddress)));
   }
   
   /**
@@ -116,8 +129,58 @@ public class PingManager extends SelectionKeyHandler {
   }
   
   /**
+   * Internal testing method which simulates a stall. DO NOT USE!!!!!
+   */
+  public void stall() {
+    key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
+  }  
+  
+  /**
    *        ----- INTERNAL METHODS -----
    */
+  
+  /**
+   * Builds the data for a short ping
+   */
+  protected void sendShortPing(SourceRoute route) {
+    try {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      DataOutputStream dos = new DataOutputStream(baos);
+      
+      dos.write(HEADER_SHORT_PING);
+      dos.writeLong(System.currentTimeMillis());
+      
+      dos.flush();
+      
+      enqueue(route, baos.toByteArray());
+    } catch (Exception canthappen) {
+      System.out.println("CANT HAPPEN: " +canthappen);  
+    }
+  }
+  
+  /**
+   * Builds the data for a short ping response
+   */
+  protected void shortPingReceived(SourceRoute route, byte[] payload) throws IOException {
+    System.arraycopy(HEADER_SHORT_PING_RESPONSE, 0, payload, 0, HEADER_SHORT_PING_RESPONSE.length);
+    enqueue(route.reverse(), payload);
+  }
+  
+  /**
+   * Processes a short ping response
+   */
+  protected void shortPingResponseReceived(SourceRoute route, byte[] payload) throws IOException {
+    DataInputStream dis = new DataInputStream(new ByteArrayInputStream(payload));
+    dis.readFully(new byte[HEADER_SHORT_PING_RESPONSE.length]);
+    long start = dis.readLong();
+    int ping = (int) (System.currentTimeMillis() - start);
+
+    SourceRoute from = route.reverse();
+    
+    manager.markAlive(from);
+    manager.markProximity(from, ping);
+    notifyPingResponseListeners(from, ping, start);
+  }
 
   /**
    * Adds a feature to the PingResponseListener attribute of the PingManager
@@ -176,8 +239,15 @@ public class PingManager extends SelectionKeyHandler {
       if ((spn != null) && (spn instanceof SocketPastryNode))
         ((SocketPastryNode) spn).broadcastSentListeners(msg, path.toArray(), data.length);
       
-      if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Sent message " + msg.getClass() + " of size " + data.length  + " to " + path);    
-      
+      if (SocketPastryNode.verbose) {
+        if (! (msg instanceof byte[]))
+          System.out.println("COUNT: " + System.currentTimeMillis() + " Sent message " + msg.getClass() + " of size " + data.length  + " to " + path);    
+        else if (((byte[]) msg)[3] == 0x11)
+          System.out.println("COUNT: " + System.currentTimeMillis() + " Sent message rice.pastry.socket.messaging.ShortPingMessage of size " + data.length  + " to " + path);    
+        else if (((byte[]) msg)[3] == 0x12) 
+          System.out.println("COUNT: " + System.currentTimeMillis() + " Sent message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + data.length  + " to " + path);    
+      }  
+        
       SelectorManager.getSelectorManager().modifyKey(key);
     } catch (IOException e) {
       System.out.println("ERROR: Received exceptoin " + e + " while enqueuing ping " + msg);
@@ -242,11 +312,11 @@ public class PingManager extends SelectionKeyHandler {
       while ((address = (InetSocketAddress) channel.receive(buffer)) != null) {
         buffer.flip();
         
-    /*    if (address.getPort() % 2 == localAddress.getAddress().getPort() % 2) {
+ /*       if (address.getPort() % 2 == localAddress.getAddress().getPort() % 2) {
           buffer.clear();
           System.out.println("Dropping packet");
           return;
-        } */
+        }  */
         
         if (buffer.remaining() > 0) {
           readHeader(address);
@@ -366,11 +436,29 @@ public class PingManager extends SelectionKeyHandler {
     for (int i=0; i<path.getNumHops(); i++) 
       dos.write(SocketChannelRepeater.encodeHeader(path.getHop(i)));
 
-    dos.write(serialize(data));
+    if (data instanceof byte[])
+      dos.write((byte[]) data);
+    else
+      dos.write(serialize(data));
+    
     dos.flush();
   
     return baos.toByteArray();
   }
+  
+  /**
+   * Method which adds a header for the provided path to the given data.
+   *
+   * @return The messag with a header attached
+   */
+  public static SourceRoute decodeHeader(byte[] header) throws IOException {
+    EpochInetSocketAddress[] route = new EpochInetSocketAddress[header.length / SocketChannelRepeater.HEADER_BUFFER_SIZE];
+  
+    for (int i=0; i<route.length; i++)
+      route[i] = SocketChannelRepeater.decodeHeader(header, i);
+    
+    return SourceRoute.build(route);
+  }  
   
   /**
    * Method which processes an incoming message and hands it off to the appropriate
@@ -387,7 +475,7 @@ public class PingManager extends SelectionKeyHandler {
       // first, read all of the source route
       byte[] route = new byte[SocketChannelRepeater.HEADER_BUFFER_SIZE * metadata[1]];
       buffer.get(route);
-      
+            
       // now, check to make sure our hop is correct
       EpochInetSocketAddress eisa = SocketChannelRepeater.decodeHeader(route, metadata[0]);
       
@@ -401,7 +489,20 @@ public class PingManager extends SelectionKeyHandler {
           buffer.get(array);
           buffer.clear();
           
-          receiveMessage(deserialize(array), array.length, address);
+          byte[] test = new byte[HEADER_SHORT_PING.length];
+          System.arraycopy(array, 0, test, 0, test.length);
+          
+          SourceRoute sr = decodeHeader(route).removeLastHop();
+          
+          if (Arrays.equals(test, HEADER_SHORT_PING)) {
+            System.out.println("COUNT: " + System.currentTimeMillis() + " Read message rice.pastry.socket.messaging.ShortPingMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
+            shortPingReceived(sr, array);
+          } else if (Arrays.equals(test, HEADER_SHORT_PING_RESPONSE)) {
+            System.out.println("COUNT: " + System.currentTimeMillis() + " Read message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
+            shortPingResponseReceived(sr, array);
+          } else {
+            receiveMessage(deserialize(array), array.length, address);
+          }
         } else {
           EpochInetSocketAddress next = SocketChannelRepeater.decodeHeader(route, metadata[0] + 1);
           buffer.position(0);
