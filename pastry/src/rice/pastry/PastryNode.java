@@ -363,5 +363,11 @@ public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.
         command.receiveException(e);
       }
     }
+    
+    /**
+     * Method which kills a PastryNode (used only for testing).
+     */
+    public void resign() {
+    }
 }
 
