@@ -1107,10 +1107,10 @@ public class XMLObjectInputStream extends ObjectInputStream {
     try {
       Field f = c.getDeclaredField(reader.getAttribute("field"));
       f.setAccessible(true);
-      
-      int mask = Modifier.STATIC | Modifier.FINAL;
+
+      int mask = Modifier.STATIC;
 	    if ((f.getModifiers() & mask) != 0)
-        throw new NoSuchFieldException("Field read was either static or final!");
+        throw new NoSuchFieldException("Field read was static!");
       
       if (reader.getStartTag().equals("primitive")) {
         readPrimitiveField(o, f);
