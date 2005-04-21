@@ -154,10 +154,10 @@ public class SecurityUtils {
   static {
     // Add a provider for RSA encryption
     Security.insertProviderAt(new org.bouncycastle.jce.provider.BouncyCastleProvider(), 2);
-
+    
     try {
       cipherSymmetric = Cipher.getInstance(SYMMETRIC_ALGORITHM);
-      cipherAsymmetric = Cipher.getInstance(ASYMMETRIC_ALGORITHM);
+      cipherAsymmetric = Cipher.getInstance(ASYMMETRIC_ALGORITHM, "BC");
       deprecatedCipherAsymmetric = Cipher.getInstance(DEPRECATED_ASYMMETRIC_ALGORITHM);
       generatorSymmetric = KeyGenerator.getInstance(SYMMETRIC_GENERATOR);
       generatorAsymmetric = KeyPairGenerator.getInstance(ASYMMETRIC_GENERATOR);
@@ -172,6 +172,8 @@ public class SecurityUtils {
       throw new SecurityException("NoSuchAlgorithmException on construction: " + e);
     } catch (NoSuchPaddingException e) {
       throw new SecurityException("NoSuchPaddingException on construction: " + e);
+    } catch (NoSuchProviderException e) {
+      throw new SecurityException("NoSuchProviderException on construction: " + e);
     }
   }
 
@@ -315,7 +317,7 @@ public class SecurityUtils {
         key = correctLength(key, SYMMETRIC_KEY_LENGTH);
         SecretKeySpec secretKey = new SecretKeySpec(key, SYMMETRIC_ALGORITHM);
         cipherSymmetric.init(Cipher.DECRYPT_MODE, secretKey);
-
+        
         return cipherSymmetric.doFinal(data);
       }
     } catch (InvalidKeyException e) {
@@ -324,7 +326,7 @@ public class SecurityUtils {
       throw new SecurityException("IllegalBlockSizeException decrypting object: " + e);
     } catch (BadPaddingException e) {
       throw new SecurityException("BadPaddingException decrypting object: " + e);
-    }
+    } 
   }
 
   /**
