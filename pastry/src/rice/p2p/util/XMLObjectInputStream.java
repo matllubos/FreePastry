@@ -1111,7 +1111,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
       int mask = Modifier.STATIC;
 	    if ((f.getModifiers() & mask) != 0)
         throw new NoSuchFieldException("Field read was static!");
-      
+
       if (reader.getStartTag().equals("primitive")) {
         readPrimitiveField(o, f);
       } else {
@@ -1124,7 +1124,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
         readObjectHelper();
       }    
     } catch (IllegalAccessException e) {
-      throw new IOException("Field.set() caused " + e);
+      // skip IAE, which is very likely caused by setting a final field on < JVM 1.5
     } catch (IllegalArgumentException e) {
       System.err.println("COULD NOT SET FIELD " + field + " OF " + o.getClass().getName() + " - SKIPPING.  THIS SHOULD NOT HAPPEN!" + e);
       e.printStackTrace();
@@ -1141,32 +1141,28 @@ public class XMLObjectInputStream extends ObjectInputStream {
    * @param f The field representing the primitive about to be read
    * @throws IOException If an error occurs
    */  
-  protected void readPrimitiveField(Object o, Field f) throws IOException {
+  protected void readPrimitiveField(Object o, Field f) throws IOException, IllegalAccessException {
     reader.assertStartTag("primitive");
     
-    try {
-      if (f.getType().equals(Integer.TYPE)) {
-        f.setInt(o, readIntHelper());
-      } else if (f.getType().equals(Boolean.TYPE)) {
-        f.setBoolean(o, readBooleanHelper());
-      } else if (f.getType().equals(Byte.TYPE)) {
-        f.setByte(o, readByteHelper());
-      } else if (f.getType().equals(Character.TYPE)) {
-        f.setChar(o, readCharHelper());
-      } else if (f.getType().equals(Double.TYPE)) {
-        f.setDouble(o, readDoubleHelper());
-      } else if (f.getType().equals(Float.TYPE)) {
-        f.setFloat(o, readFloatHelper());
-      } else if (f.getType().equals(Long.TYPE)) {
-        f.setLong(o, readLongHelper());
-      } else if (f.getType().equals(Short.TYPE)) {
-        f.setInt(o, readShortHelper());
-      } else {
-        throw new IllegalArgumentException("Field " + f + " is not primitive!");
-      }
-    } catch (IllegalAccessException e) {
-      throw new IOException("Field.setPrimitive() caused " + e);
-    } 
+    if (f.getType().equals(Integer.TYPE)) {
+      f.setInt(o, readIntHelper());
+    } else if (f.getType().equals(Boolean.TYPE)) {
+      f.setBoolean(o, readBooleanHelper());
+    } else if (f.getType().equals(Byte.TYPE)) {
+      f.setByte(o, readByteHelper());
+    } else if (f.getType().equals(Character.TYPE)) {
+      f.setChar(o, readCharHelper());
+    } else if (f.getType().equals(Double.TYPE)) {
+      f.setDouble(o, readDoubleHelper());
+    } else if (f.getType().equals(Float.TYPE)) {
+      f.setFloat(o, readFloatHelper());
+    } else if (f.getType().equals(Long.TYPE)) {
+      f.setLong(o, readLongHelper());
+    } else if (f.getType().equals(Short.TYPE)) {
+      f.setInt(o, readShortHelper());
+    } else {
+      throw new IllegalArgumentException("Field " + f + " is not primitive!");
+    }
   }
   
   /**
