@@ -44,6 +44,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   // how many tries to ping before giving up
   public static int NUM_PING_TRIES = 3;
   
+  // the maximal amount of time to wait for write to be called before checking liveness
+  public static int WRITE_WAIT_TIME = 30000;
+  
   // the fake port for booting
   public static int BOOTSTRAP_PORT = 1;
   
@@ -192,6 +195,23 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    */
   public boolean isOpen(SourceRoute route) {
     return sockets.containsKey(route); 
+  }
+  
+  /**
+   * Method which should be called when a remote node is declared dead.  
+   * This method will close any outstanding sockets, and will reroute
+   * any pending messages
+   *
+   * @param address The address which was declared dead
+   */
+  public void declaredDead(EpochInetSocketAddress address) {
+    SourceRoute[] routes = (SourceRoute[]) sockets.keySet().toArray(new SourceRoute[0]);
+    
+    for (int i=0; i<routes.length; i++)
+      if (routes[i].getLastHop().equals(address)) {
+        System.out.println("WRITE_TIMER::Closing active socket to " + routes[i]);
+        ((SocketManager) sockets.get(routes[i])).close();
+      }
   }
   
   /**
@@ -484,6 +504,22 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   public int getNumSockets() {
     return socketQueue.size();
   }
+    
+  /**
+   * Internal testing method which simulates a stall. DO NOT USE!!!!!
+   */
+  public void stall() {
+    key.interestOps(key.interestOps() & ~SelectionKey.OP_ACCEPT);
+
+    Iterator i = sockets.keySet().iterator();
+    
+    while (i.hasNext()) {
+      SelectionKey key = ((SocketManager) sockets.get(i.next())).key; 
+      key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
+    }
+    
+    pingManager.stall();
+  }
   
   /**
    * Method which returns the internal PingManager
@@ -633,6 +669,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
 
     // the writer (in case it is necessary)
     protected SocketChannelWriter writer;
+    
+    // the timer we use to check for stalled nodes
+    protected rice.selector.TimerTask timer;
 
     // the node handle we're talking to
     protected SourceRoute path;
@@ -716,6 +755,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public void close() {
       try {
+        clearTimer();
+        
         if (key != null) {
           key.cancel();
           key.attach(null);
@@ -772,10 +813,13 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param key The key in question
      */
     public synchronized void modifyKey(SelectionKey key) {
-      if (channel.socket().isOutputShutdown()) 
+      if (channel.socket().isOutputShutdown()) {
         key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-      else if ((! writer.isEmpty()) && ((key.interestOps() & SelectionKey.OP_WRITE) == 0))
+        clearTimer();
+      } else if ((! writer.isEmpty()) && ((key.interestOps() & SelectionKey.OP_WRITE) == 0)) {
         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        setTimer();
+      }
     }
 
     /**
@@ -851,11 +895,15 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public synchronized void write(SelectionKey key) {
       try {        
+        clearTimer();
+        
         if (writer.write(channel)) {
           key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
           
           if (bootstrap) 
             close();
+        } else {
+          setTimer();
         }
       } catch (IOException e) {
         debug("ERROR " + e + " writing - cancelling.");
@@ -918,6 +966,32 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         pastryNode.receiveMessage(message);
         if (SocketPastryNode.verbose) System.out.println("ST: " + (System.currentTimeMillis() - start) + " deliver of " + message);
       }
+    }
+    
+    /**
+     * Internal method which sets the internal timer
+     */
+    protected void setTimer() {
+      if (this.timer == null) {
+        this.timer = new rice.selector.TimerTask() {
+          public void run() {
+            System.out.println("WRITE_TIMER::Timer expired, checking liveness...");
+            manager.checkLiveness(path.getLastHop());
+          }
+        };
+        
+        SelectorManager.getSelectorManager().schedule(this.timer, WRITE_WAIT_TIME);
+      }
+    }
+    
+    /**
+     * Internal method which clears the internal timer
+     */
+    protected void clearTimer() {
+      if (this.timer != null)
+        this.timer.cancel();
+      
+      this.timer = null;
     }
 
     /**
