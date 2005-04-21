@@ -14,12 +14,14 @@ public class XMLParser implements XmlPullParser {
    * The size of the internal buffer to allocate
    */
   public static final int BUFFER_SIZE = 32000;
-  
+  public static final int MAX_ATTRIBUTES = 100;
+
   public static final char[] QUOTE = new char[] {'\'', '"'};
   public static final char[] TAG_END = new char[] {'>', '/', '?'};
   public static final char[] WHITESPACE = new char[] {' ', '\t', '\n', '\r'};
   public static final char[] WHITESPACE_OR_TAG_END = new char[] {' ', '\t', '\n', '\r', '>', '/', '?'};
   public static final char[] WHITESPACE_OR_EQUALS = new char[] {' ', '\t', '\n', '\r', '='};
+  public static final char[] SINGLE = new char[1];
 
   /**
    * The internal reader used to read data
@@ -60,7 +62,8 @@ public class XMLParser implements XmlPullParser {
   /**
    * If the tag parsed was a start tag, the list of attribute-> value pairs
    */
-  protected HashMap attributes;
+  protected String[] attributes = new String[2*MAX_ATTRIBUTES];
+  protected int numAttributes;
   
   /**
    * Whether or not we are currently in a tag...
@@ -73,8 +76,6 @@ public class XMLParser implements XmlPullParser {
   protected int mark;
   protected CharArrayBuffer marked;
   
-  protected StringBuffer debug = new StringBuffer();
-  
   /**
    * Constructor
    */
@@ -85,8 +86,8 @@ public class XMLParser implements XmlPullParser {
     this.mark = -1;
     this.tags = new Stack();
     this.cache = new StringCache();
-    this.attributes = new HashMap();
     this.inTag = false;
+    this.numAttributes = 0;
   }
   
   /**
@@ -157,7 +158,11 @@ public class XMLParser implements XmlPullParser {
    * @return value of attribute or null if attribute with given name does not exist
    */
   public String getAttributeValue(String namespace, String name) {
-    return (String) attributes.get(name);
+    for (int i=0; i<numAttributes; i++)
+      if (attributes[2*i].equals(name))
+        return attributes[2*i + 1];
+    
+    return null;
   }
   
   /**
@@ -272,7 +277,6 @@ public class XMLParser implements XmlPullParser {
    * Method which steps forward in the buffer
    */
   protected void step() {
-    debug.append(buffer[bufferPosition]);
     bufferPosition++;
   }
   
@@ -304,14 +308,18 @@ public class XMLParser implements XmlPullParser {
    * Internal method which clears the list of attributes
    */
   protected void clearAttributes() {
-    this.attributes.clear();
+    this.numAttributes = 0;
   }
   
   /**
    * Internal method which adds an attributes
    */
   protected void addAttribute(String key, String value) {
-    this.attributes.put(key, value);
+    if (numAttributes * 2 == attributes.length)
+      throw new RuntimeException("More than 100 attributes encountered - unsupported!");
+    
+    attributes[numAttributes++] = key;
+    attributes[numAttributes++] = value;
   }
   
   /**
@@ -320,11 +328,9 @@ public class XMLParser implements XmlPullParser {
    * @param the expected char
    */
   protected void expect(char c) throws XmlPullParserException, IOException {
-    if (current() != c) {
-      System.out.println("DOC SO FAR!\n'" + debug + current() + "'");
-      
+    if (current() != c) 
       throw new XmlPullParserException("Expected character '" + c + "' got '" + current() + "'");
-    } else
+    else
       step();
   }
   
@@ -366,6 +372,24 @@ public class XMLParser implements XmlPullParser {
     
     while (true) {
       if (contains(chars, current()))
+        break;
+      else
+        step();
+    }
+    
+    return unmark();
+  }
+  
+  /**
+   * Method which parses and returns up to the next token
+   *
+   * @return The token
+   */
+  protected String parseUntil(char c) throws IOException {
+    mark();
+    
+    while (true) {
+      if (current() == c)
         break;
       else
         step();
@@ -518,7 +542,7 @@ public class XMLParser implements XmlPullParser {
         
         if (contains(QUOTE, quote)) {
           expect(quote);
-          value = parseUntil(new char[] {quote});
+          value = parseUntil(quote);
           expect(quote);
         } else {
           value = parseUntil(WHITESPACE_OR_TAG_END);
@@ -538,7 +562,7 @@ public class XMLParser implements XmlPullParser {
    */
   protected int parseText() throws XmlPullParserException, IOException {
     clearAttributes();
-    this.text = parseUntil(new char[] {'<'});
+    this.text = parseUntil('<');
     this.inTag = false;
 
     return TEXT;
