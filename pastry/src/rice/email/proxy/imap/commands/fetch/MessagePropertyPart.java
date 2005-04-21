@@ -109,7 +109,7 @@ public class MessagePropertyPart extends FetchPart {
         if (! bodystructure) {
           type = type.substring(0, type.indexOf(" ("));
         } else {
-          type += " NIL NIL";
+          type += " NIL NIL NIL";
         }
 
         result.append(" " + type);
@@ -179,7 +179,9 @@ public class MessagePropertyPart extends FetchPart {
         else
           result.append(" NIL ");
 
-        result.append(getHeader(headers, "Content-Language"));
+        result.append(getHeader(headers, "Content-Language") + " ");
+        
+        result.append(getHeader(headers, "Content-Location"));
       }
     
       return result.append(")").toString();      
