@@ -715,6 +715,8 @@ public class PostProxy {
       pair = CACertificateGenerator.readKeyPair(file, password);
       stepDone(SUCCESS);
     } catch (SecurityException e) {
+      System.out.println("GOT Exception while fetching key pair " + e);
+      e.printStackTrace();
       parameters.removeParameter("post_password");
       parameters.writeFile();
       stepDone(FAILURE);
@@ -1466,6 +1468,7 @@ public class PostProxy {
   }
     
   public void panic(Exception e, String m, String[] params) throws Exception {
+    resign();
     StringBuffer message = new StringBuffer();
     message.append(m + "\n\n");
     message.append("This was most likely due to the setting ");
@@ -1492,6 +1495,7 @@ public class PostProxy {
   
   public void panic(String m) {
     System.err.println("PANIC : " + m);
+    resign();
 
     try {
       if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) 
@@ -1499,6 +1503,14 @@ public class PostProxy {
     } catch (Throwable f) {}
     
     System.exit(-1);
+  }
+  
+  public void resign() {
+    if (pastryNode != null)
+      pastryNode.resign();
+    
+    if (globalPastryNode != null)
+      globalPastryNode.resign();
   }
 
   public int message(String m, String[] options, String def) {
