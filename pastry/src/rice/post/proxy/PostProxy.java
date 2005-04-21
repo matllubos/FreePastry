@@ -715,8 +715,6 @@ public class PostProxy {
       pair = CACertificateGenerator.readKeyPair(file, password);
       stepDone(SUCCESS);
     } catch (SecurityException e) {
-      System.out.println("GOT Exception while fetching key pair " + e);
-      e.printStackTrace();
       parameters.removeParameter("post_password");
       parameters.writeFile();
       stepDone(FAILURE);
