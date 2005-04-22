@@ -22,7 +22,7 @@ public class EmailMultiPart extends EmailContentPart {
   /**
    * The string used to seperate the parts of this multipart
    */
-  protected String type;
+  public String type;
 
   /**
    * The actual content of this email part
