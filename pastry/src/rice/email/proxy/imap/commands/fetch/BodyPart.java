@@ -76,7 +76,7 @@ public class BodyPart extends FetchPart {
       RFC822PartRequest rreq = (RFC822PartRequest) part;
 
       if (rreq.getType().equals("SIZE")) {
-        return "" + message.getSize();
+        return "" + fetchSize(message);
       } else {
         BodyPartRequest breq = new BodyPartRequest();
  
@@ -113,6 +113,26 @@ public class BodyPart extends FetchPart {
       return result;
     } else {
       return "NIL";
+    }
+  }
+
+  protected String fetchSize(EmailMessagePart message) throws MailboxException {
+    return "" + (message.getSize() + internalFetchSize(message));
+  }
+     
+  protected int internalFetchSize(EmailContentPart content) throws MailboxException {
+    if (content instanceof EmailHeadersPart) {
+      return 2 + internalFetchSize(((EmailHeadersPart) content).content);
+    } else if (content instanceof EmailMultiPart) {
+      EmailMultiPart multi = (EmailMultiPart) content;
+      int result = ((getBoundary(multi.type).length() + 6) * (multi.content.length + 1));
+        
+      for (int i=0; i<multi.content.length; i++)
+        result += internalFetchSize(multi.content[i]);
+          
+      return result;
+    } else {
+      return 0;
     }
   }
 
@@ -236,14 +256,17 @@ public class BodyPart extends FetchPart {
       throw new MailboxException("Unrecognized part " + part);
   }
 
-  public String fetchAll(EmailMultiPart part) throws MailboxException {
-    String type = part.getType();
+  public String getBoundary(String type) {
     String seperator = type.substring(type.toLowerCase().indexOf("boundary=")+9, type.length());
     
     if (seperator.indexOf(";") >= 0)
       seperator = seperator.substring(0, seperator.indexOf(";"));
     
-    seperator = seperator.replaceAll("\"", "").replaceAll("'", "");
+    return seperator.replaceAll("\"", "").replaceAll("'", "");
+  }
+
+  public String fetchAll(EmailMultiPart part) throws MailboxException {
+    String seperator = getBoundary(part.getType());
     StringBuffer result = new StringBuffer();
 
     ExternalContinuation c = new ExternalContinuation();

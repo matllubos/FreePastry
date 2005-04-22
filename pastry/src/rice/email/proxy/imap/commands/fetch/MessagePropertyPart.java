@@ -289,7 +289,24 @@ public class MessagePropertyPart extends FetchPart {
     }
 
     String fetchSize(EmailMessagePart message) throws MailboxException {
-      return "" + message.getSize();
+      return "" + (message.getSize() + internalFetchSize(message));
+    }
+
+    int internalFetchSize(EmailContentPart content) throws MailboxException {
+      if (content instanceof EmailHeadersPart) {
+        return 2 + internalFetchSize(((EmailHeadersPart) content).content); 
+      } else if (content instanceof EmailMultiPart) {
+        EmailMultiPart multi = (EmailMultiPart) content;
+        
+        int result = ((multi.type.length() + 6) * (multi.content.length + 1));
+        
+        for (int i=0; i<multi.content.length; i++)
+          result += internalFetchSize(multi.content[i]);
+
+        return result;
+      } else {
+        return 0;
+      }
     }
 
     String fetchUID(StoredMessage msg) throws MailboxException {
