@@ -606,6 +606,10 @@ public class SocketSourceRouteManager {
      * sends an update out to the observers.
      */
     protected void setAlive() {
+      // we can now send any pending messages
+      while (queue.size() > 0)
+        getRouteManager(best).send((Message) queue.remove(0));    
+      
       switch (liveness) {
         case SocketNodeHandle.LIVENESS_DEAD:
           liveness = SocketNodeHandle.LIVENESS_ALIVE;
@@ -620,10 +624,6 @@ public class SocketSourceRouteManager {
           System.out.println("ERROR: Found dead-forever handle to " + address + " to be alive again!");
           break;
       }
-      
-      // and finally we can now send any pending messages
-      while (queue.size() > 0)
-        getRouteManager(best).send((Message) queue.remove(0));    
     }
     
     /**
