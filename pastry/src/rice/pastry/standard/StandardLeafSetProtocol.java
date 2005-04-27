@@ -81,7 +81,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 
 			if (type == BroadcastLeafSet.JoinInitial) {
 				// we have now successfully joined the ring, set the local node ready
-				localNode.setReady();
+				//localNode.setReady();
 			}
 
 			if (!failstop) {

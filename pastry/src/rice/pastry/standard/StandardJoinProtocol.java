@@ -80,8 +80,12 @@ public class StandardJoinProtocol implements MessageReceiver {
 				if (jr.accepted() == false) {
 					// this is the terminal node on the request path
 					//leafSet.put(nh);
-					jr.acceptJoin(localHandle, leafSet);
-					nh.receiveMessage(jr);
+          if (localNode.isReady()) {
+  					jr.acceptJoin(localHandle, leafSet);
+	  				nh.receiveMessage(jr);
+          } else {
+            System.out.println("NOTE: Dropping incoming JoinRequest " + jr + " because local node is not ready!");
+          }
 				} else { // this is the node that initiated the join request in the first place
 					NodeHandle jh = jr.getJoinHandle(); // the node we joined to.
 
@@ -111,9 +115,9 @@ public class StandardJoinProtocol implements MessageReceiver {
 								jr.getLeafSet(),
 								BroadcastLeafSet.JoinInitial);
 						localHandle.receiveMessage(bls);
-
-						// we have now successfully joined the ring, set the local node ready
-						//localNode.setReady();
+            
+            // we have now successfully joined the ring, set the local node ready
+						setReady();
 					}
 				}
 		} else if (msg instanceof RouteMessage) {
@@ -168,6 +172,10 @@ public class StandardJoinProtocol implements MessageReceiver {
 			}
 		}
 	}
+  
+  protected void setReady() {
+    localNode.setReady(); 
+  }
 
 	/**
 	 * Broadcasts the route table rows.
