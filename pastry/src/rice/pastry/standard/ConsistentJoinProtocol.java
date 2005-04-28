@@ -142,15 +142,18 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   public void receiveMessage(Message msg) {
     if (msg instanceof ConsistentJoinMsg) {
       ConsistentJoinMsg cjm = (ConsistentJoinMsg)msg;
-//      if (localNode.isReady()) {
-//        respond(cjm); 
-//        return;
-//      }
       // identify node j, the sender of the message
       NodeHandle j = cjm.ls.get(0);
 
       // failed_i := failed_i - {j}
       failed.remove(j);
+      
+      if (localNode.isReady()) {
+        if (cjm.request) {
+          sendTheMessage(j, true); 
+        }
+        return;
+      }
       
       // L_i.add(j);
       addToLeafSet(j);
@@ -259,6 +262,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
           // active_i = true;
     //        System.out.println("j = "+j+"setReady() probed "+seen.size()+":"+gotResponse.size()+" nodes.");
           localNode.setReady(); 
+          retryTask.cancel();
         }
         // failed_i = {}
     //      gotResponse.clear();
@@ -289,6 +293,9 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     System.out.println("CJP:"+System.currentTimeMillis()+" sendTheMessage("+nh+","+reply+")");
     // todo, may want to repeat this message as long as the node is alive if we 
     // are worried about rare message drops
+    if (localNode.isReady()) {
+      failed.clear(); 
+    }
     nh.receiveMessage(new ConsistentJoinMsg(getAddress(),leafSet,failed,!reply));      
   }
   
@@ -296,6 +303,10 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * Can be leafset updates, or nodehandle updates.
    */
   public void update(Observable arg0, Object arg) {
+    if (localNode.isReady()) {
+      arg0.deleteObserver(this);
+      return; 
+    }
     
     if (arg instanceof NodeSetUpdate) {
       NodeSetUpdate nsu = (NodeSetUpdate)arg;
