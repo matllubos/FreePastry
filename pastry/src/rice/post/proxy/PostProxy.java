@@ -368,8 +368,7 @@ public class PostProxy {
       
       if (! CompatibilityCheck.testJavaVersion(version))
         panic("You appear to be running an incompatible version of Java '" + System.getProperty("java.version") + "'.\n" +
-              "Currently, only Java 1.4 is supported, and you must be running a\n" +
-              "version of at least 1.4.2.  Please see http://java.sun.com in order\n" +
+              "Currently, only Java 1.4.2 or higher is supported Please see http://java.sun.com in order\n" +
               "to download a compatible version.");
       
       String os = System.getProperty("os.name");
