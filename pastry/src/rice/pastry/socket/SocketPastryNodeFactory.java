@@ -243,7 +243,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     StandardRouter router = new StandardRouter(localhandle, routeTable, leafSet, secureMan);
     PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
     StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
-    StandardJoinProtocol jProtocol = new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
+//    StandardJoinProtocol jProtocol = new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
+    ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
 
     msgDisp.registerReceiver(router.getAddress(), router);
     msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
