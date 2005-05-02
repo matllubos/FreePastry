@@ -5,8 +5,8 @@
 <center>
 <h1><font size="+4">FreePastry release notes</font></h1>
 <hr size="2" width="100%"></center>
+Release 1.4.1,&nbsp; 5/3/05.
 </h2>
-Release 1.4,&nbsp; 3/15/05.
 <p>FreePastry is a modular, open source implementation of the <a href="http://www.cs.rice.edu/CS/Systems/Pastry/"> Pastry</a> p2p structured overlay network. <br>
 &nbsp; </p>
 <h3> Contributors</h3>
@@ -109,6 +109,29 @@ The software requires a Java runtime, version 1.4.2. The software was
 developed using Sun's SDK, version 1.4.2_03+ <br>
 <br>
 &nbsp;<br>
+<h3>Changes since release 1.4</h3>
+<p/>Version 1.4.1 introduces the ConsistentJoinProtocol and some changes to the PeriodicLeafSetProtocol.  These improvements attempt to make strong guarantees regarding routing consistency.  Overlay routing is consistent if for any time there is only 1 node in the network who will accept messages for any given key.  Routing could be inconsistent in FreePastry if there exist 2 consecutive nodes who are both active, and do not know of each other.  This could happen during concurrent joins, or if a node incorrectly determines it's direct neighbor faulty, and therefore takes over that section of the keyspace.  
+<p/>Our consistent join protocol is similar to the <a href="http://www.cs.rice.edu/~jeffh/wiki/msr-tr-2003-94.pdf">MSR-TR-2003-94</a>.  The idea is that when you join, before you accept messages, you must first contact your entire leafset.  This causes concurrent joiners to be aware of each other before both can become active.  We rely on dynamic source routing introduced in FreePastry Version 1.4 to assume that we will never incorrectly determine a node faulty.  
+<p/>In the process of adding strong consistency, we have also dramatically reduced the overhead of leafset maintenance.  By default the system is configured to send and receive a message from each neighbor only 2ce a minute.  This is an overhead of only 8 messages per minute.  2 per neighbor, 2ce a minute. = 2*2*2.
+
+<p/>New behavior:
+<ul>
+  <li>When using the rice.pastry.standard.ConsistentJoinProtocol (which is now the default for the SocketPastryNodeFactory) PastryNode.setReady() will not be called until the node receives a message from every node in its leafset.</li>
+  <li>Messages will not be delivered to a PastryAppl until the PastryNode.isReady() returns true.  The same behavior occurs for applications built on the commonAPI because PastryEndpoint extends PastryAppl.  This change occurred in the rice.pastry.messaging.MessageDispatch</li>
+  <li>If the Pastry process is not scheduled for more than 15 seconds (configured in rice.pastry.selector.SelectorManager.MAX_TIME_TO_BE_SCHEDULED) then the process will exit with code 21.  This code is in SelectorManager.run():
+
+<pre>
+          if (sleepDiff > MAX_TIME_TO_BE_SCHEDULED) {
+            System.out.println("ERROR (SelectorManager.run): " + sleepEnd+" Killing self because thread was not scheduled for "+sleepDiff+" millis.");
+            System.exit(21);
+          }
+</pre>
+This prevents routing inconsistency in the case of putting system in standby mode.  (Otherwise the node may wake up and accept messages even though he is considered faulty by other nodes.)
+  <li>If the pastry node has a leafset collapse then PastryNode.resign() will be called.  This code is in PeriodicLeafSetProtocol.  A leafset collapse is defined by a leafset being incomplete, and 1/2 the max-size.
+
+</ul>  
+  Testing.  We have done extensive routing consistency testing on <a href="">Planetlab</a>.  The only times we find routing inconsistencies is during a network partition (usually the loss of a subnet).  In such a partition, a node will typically resign within 2 minutes due to a leafset collapse.  (Defined by a leafset that is only 1/2 full).  Routing in this case is only inconsistent across the partitions.
+  
 <h3>Changes since release 1.3.2</h3>
 <ul>
   <li>Supports <a href="http://www.epostmail.org/">ePOST</a>, which is now in production use.[<a href="http://www.epostmail.org/code.html">Download</a>]</li><br/>
