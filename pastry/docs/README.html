@@ -110,9 +110,9 @@ developed using Sun's SDK, version 1.4.2_03+ <br>
 <br>
 &nbsp;<br>
 <h3>Changes since release 1.4</h3>
-<p/>Version 1.4.1 introduces the ConsistentJoinProtocol and some changes to the PeriodicLeafSetProtocol.  These improvements attempt to make strong guarantees regarding routing consistency.  Overlay routing is consistent if for any time there is only 1 node in the network who will accept messages for any given key.  Routing could be inconsistent in FreePastry if there exist 2 consecutive nodes who are both active, and do not know of each other.  This could happen during concurrent joins, or if a node incorrectly determines it's direct neighbor faulty, and therefore takes over that section of the keyspace.  
-<p/>Our consistent join protocol is similar to the <a href="http://www.cs.rice.edu/~jeffh/wiki/msr-tr-2003-94.pdf">MSR-TR-2003-94</a>.  The idea is that when you join, before you accept messages, you must first contact your entire leafset.  This causes concurrent joiners to be aware of each other before both can become active.  We rely on dynamic source routing introduced in FreePastry Version 1.4 to assume that we will never incorrectly determine a node faulty.  
-<p/>In the process of adding strong consistency, we have also dramatically reduced the overhead of leafset maintenance.  By default the system is configured to send and receive a message from each neighbor only 2ce a minute.  This is an overhead of only 8 messages per minute.  2 per neighbor, 2ce a minute. = 2*2*2.
+<p/>Version 1.4.1 introduces the ConsistentJoinProtocol and some changes to the PeriodicLeafSetProtocol.  These improvements attempt to make strong guarantees regarding routing consistency.  Overlay routing is consistent if for any time there is only 1 node in the network who will accept messages for any given key.  Routing could be inconsistent in FreePastry if at some point there exists 2 adjacent nodes who are both active and do not know of each other thus believing that they are responsible for some of the same keyspace.  This could happen during concurrent joins, or if a node incorrectly determines its direct neighbor faulty, and therefore takes over that section of the keyspace.  
+<p/>Our consistent join protocol is similar to that described in <a href="http://www.cs.rice.edu/~jeffh/wiki/msr-tr-2003-94.pdf">Microsoft Technical Report MSR-TR-2003-94</a>.  The idea is that when a node joins, before it accepts messages, it must first contact its entire leafset and either recieve a reply from each member or determine them faulty.  This causes concurrent joiners to be aware of each other before both can become active.  We rely on dynamic source routing introduced in FreePastry Version 1.4 to assume that we will never incorrectly determine a node faulty.  
+<p/>In the process of adding strong consistency, we have also dramatically reduced the overhead of leafset maintenance.  By default the system is configured to send and receive a message from each neighbor only twice a minute.  This is an overhead of only 8 messages per minute.  Two per neighbor, twice a minute. = 2*2*2.
 
 <p/>New behavior:
 <ul>
@@ -126,7 +126,7 @@ developed using Sun's SDK, version 1.4.2_03+ <br>
             System.exit(21);
           }
 </pre>
-This prevents routing inconsistency in the case of putting system in standby mode.  (Otherwise the node may wake up and accept messages even though he is considered faulty by other nodes.)
+This prevents routing inconsistency when a system returns from standby or is otherwise unavailbale for an extended period.  (Otherwise the node may wake up and accept messages even though it is considered faulty by other nodes.)
   <li>If the pastry node has a leafset collapse then PastryNode.resign() will be called.  This code is in PeriodicLeafSetProtocol.  A leafset collapse is defined by a leafset being incomplete, and 1/2 the max-size.
 
 </ul>  
