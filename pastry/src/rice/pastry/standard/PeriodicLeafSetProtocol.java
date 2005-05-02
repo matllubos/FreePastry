@@ -1,13 +1,25 @@
 
 package rice.pastry.standard;
 
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.pastry.security.*;
-import rice.pastry.leafset.*;
-import rice.pastry.routing.*;
+import java.util.Hashtable;
+import java.util.Observable;
+import java.util.Observer;
+import java.util.Random;
 
-import java.util.*;
+import rice.pastry.NodeHandle;
+import rice.pastry.NodeSet;
+import rice.pastry.NodeSetUpdate;
+import rice.pastry.PastryNode;
+import rice.pastry.leafset.BroadcastLeafSet;
+import rice.pastry.leafset.InitiateLeafSetMaintenance;
+import rice.pastry.leafset.LeafSet;
+import rice.pastry.leafset.LeafSetProtocolAddress;
+import rice.pastry.leafset.RequestLeafSet;
+import rice.pastry.messaging.Address;
+import rice.pastry.messaging.Message;
+import rice.pastry.messaging.MessageReceiver;
+import rice.pastry.routing.RoutingTable;
+import rice.pastry.security.PastrySecurityManager;
 
 /**
  * An implementation of a periodic-style leafset protocol
@@ -16,7 +28,7 @@ import java.util.*;
  *
  * @author Alan Mislove
  */
-public class PeriodicLeafSetProtocol implements MessageReceiver {
+public class PeriodicLeafSetProtocol implements MessageReceiver, Observer {
 
 	protected NodeHandle localHandle;
 	protected PastryNode localNode;
@@ -28,6 +40,18 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
 	private Address address;
 
   /**
+   * NodeHandle -> Long
+   * remembers the TIME when we received a BLS from that NodeHandle
+   */
+  protected Hashtable lastTimeReceivedBLS;
+  
+  /**
+   * Related to rapidly determining direct neighbor liveness.
+   */
+  public static final int PING_NEIGHBOR_PERIOD = 20*1000;
+  public static final int CHECK_LIVENESS_PERIOD = 30*1000;
+  
+  /**
    * Builds a periodic leafset protocol
    *
    */
@@ -38,8 +62,12 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
 		this.leafSet = ls;
 		this.routeTable = rt;
     this.random = new Random();
+    this.lastTimeReceivedBLS = new Hashtable();
 
+    leafSet.addObserver(this);
 		address = new LeafSetProtocolAddress();
+    localNode.scheduleMsgAtFixedRate(new InitiatePingNeighbor(),
+        PING_NEIGHBOR_PERIOD, PING_NEIGHBOR_PERIOD);
 	}
 
 	/**
@@ -60,13 +88,15 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
 		if (msg instanceof BroadcastLeafSet) {
 			// receive a leafset from another node
 			BroadcastLeafSet bls = (BroadcastLeafSet) msg;
+      
+      lastTimeReceivedBLS.put(bls.from(),new Long(System.currentTimeMillis()));
 
       // if we have now successfully joined the ring, set the local node ready
 			if (bls.type() == BroadcastLeafSet.JoinInitial) {
         // merge the received leaf set into our own
         leafSet.merge(bls.leafSet(), bls.from(), routeTable, security, false, null);
 
-				localNode.setReady();
+//				localNode.setReady();
 				broadcastAll();
       } else {
         // first check for missing entries in their leafset 
@@ -105,9 +135,40 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
         NodeHandle check = set.get(random.nextInt(set.size() - 1) + 1);
         check.checkLiveness();
       }
+    } else if (msg instanceof InitiatePingNeighbor) {
+      // IPN every 20 seconds
+      NodeHandle left = leafSet.get(-1);
+      NodeHandle right = leafSet.get(1);
+      
+      // send BLS to left neighbor
+      if (left != null) {
+        left.receiveMessage(new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update));         
+        left.receiveMessage(new RequestLeafSet(localHandle));         
+      }
+      // see if received BLS within past 30 seconds from right neighbor
+      if (right != null) {
+        Long time = (Long)lastTimeReceivedBLS.get(right);
+        if (time == null || 
+            (time.longValue() < (System.currentTimeMillis()-CHECK_LIVENESS_PERIOD))) {
+          // else checkLiveness() on right neighbor
+          System.out.println("PeriodicLeafSetProtocol: "+System.currentTimeMillis()+" Checking liveness on right neighbor:"+right);
+          right.checkLiveness();
+        }
+      }
+      if (left != null) {
+        Long time = (Long)lastTimeReceivedBLS.get(left);
+        if (time == null || 
+            (time.longValue() < (System.currentTimeMillis()-CHECK_LIVENESS_PERIOD))) {
+          // else checkLiveness() on left neighbor
+          System.out.println("PeriodicLeafSetProtocol: "+System.currentTimeMillis()+" Checking liveness on left neighbor:"+left);
+          left.checkLiveness();
+        }
+      }
 		} 
 	}
 
+  
+  
 	/**
 	 * Broadcast the leaf set to all members of the local leaf set.
 	 *
@@ -120,4 +181,19 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
     for (int i=1; i<set.size(); i++) 
 			set.get(i).receiveMessage(bls);
 	}
+
+  /**
+   * Used to kill self if leafset shrunk by too much.
+   */
+  public void update(Observable arg0, Object arg1) {
+    NodeSetUpdate nsu = (NodeSetUpdate)arg1;
+    if (!nsu.wasAdded()) {
+      if (localNode.isReady() && !leafSet.isComplete() && leafSet.size() < (leafSet.maxSize()/2)) {
+        // kill self
+        System.out.println("PeriodicLeafSetProtocol: "+System.currentTimeMillis()+" Killing self due to leafset collapse. "+leafSet);
+        localNode.resign();
+      }
+    }
+    
+  }
 }
