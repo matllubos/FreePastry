@@ -539,8 +539,8 @@ public class PingManager extends SelectionKeyHandler {
         }
       }
     } else {
-      System.out.println("WARNING: Received unrecognized message header - ignoring.");
-      throw new IOException("Improper message header received - ignoring. Read " + ((byte) header[0]) + " " + ((byte) header[1]) + " " + ((byte) header[2]) + " " + ((byte) header[3]));
+      System.out.println("WARNING: Received unrecognized message header - ignoring from "+address+".");
+      throw new IOException("Improper message header received - ignoring from "+address+". Read " + ((byte) header[0]) + " " + ((byte) header[1]) + " " + ((byte) header[2]) + " " + ((byte) header[3]));
     }    
   }
     
