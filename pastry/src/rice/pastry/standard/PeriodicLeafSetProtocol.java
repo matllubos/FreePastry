@@ -30,6 +30,8 @@ import rice.pastry.security.PastrySecurityManager;
  */
 public class PeriodicLeafSetProtocol implements MessageReceiver, Observer {
 
+  public static final boolean verbose = false;
+  
 	protected NodeHandle localHandle;
 	protected PastryNode localNode;
 	protected PastrySecurityManager security;
@@ -151,7 +153,7 @@ public class PeriodicLeafSetProtocol implements MessageReceiver, Observer {
         if (time == null || 
             (time.longValue() < (System.currentTimeMillis()-CHECK_LIVENESS_PERIOD))) {
           // else checkLiveness() on right neighbor
-          System.out.println("PeriodicLeafSetProtocol: "+System.currentTimeMillis()+" Checking liveness on right neighbor:"+right);
+          if (verbose) System.out.println("PeriodicLeafSetProtocol: "+System.currentTimeMillis()+" Checking liveness on right neighbor:"+right);
           right.checkLiveness();
         }
       }
@@ -160,7 +162,7 @@ public class PeriodicLeafSetProtocol implements MessageReceiver, Observer {
         if (time == null || 
             (time.longValue() < (System.currentTimeMillis()-CHECK_LIVENESS_PERIOD))) {
           // else checkLiveness() on left neighbor
-          System.out.println("PeriodicLeafSetProtocol: "+System.currentTimeMillis()+" Checking liveness on left neighbor:"+left);
+          if (verbose) System.out.println("PeriodicLeafSetProtocol: "+System.currentTimeMillis()+" Checking liveness on left neighbor:"+left);
           left.checkLiveness();
         }
       }

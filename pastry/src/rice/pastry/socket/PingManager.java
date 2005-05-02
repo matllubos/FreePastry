@@ -495,10 +495,10 @@ public class PingManager extends SelectionKeyHandler {
           SourceRoute sr = decodeHeader(route).removeLastHop();
           
           if (Arrays.equals(test, HEADER_SHORT_PING)) {
-            System.out.println("COUNT: " + System.currentTimeMillis() + " Read message rice.pastry.socket.messaging.ShortPingMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
+            if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message rice.pastry.socket.messaging.ShortPingMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
             shortPingReceived(sr, array);
           } else if (Arrays.equals(test, HEADER_SHORT_PING_RESPONSE)) {
-            System.out.println("COUNT: " + System.currentTimeMillis() + " Read message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
+            if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
             shortPingResponseReceived(sr, array);
           } else {
             receiveMessage(deserialize(array), array.length, address);
