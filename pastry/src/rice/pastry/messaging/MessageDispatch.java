@@ -1,18 +1,35 @@
 
 package rice.pastry.messaging;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.Vector;
 
-import rice.p2p.commonapi.RouteMessage;
+import rice.pastry.PastryNode;
+import rice.pastry.client.PastryAppl;
 
 /**
  * An object which remembers the mapping from names to MessageReceivers
  * and dispatches messages by request.
+ * 
+ * For consistent routing, modified to only deliver messages to applications 
+ * if the PastryNode.isReady().  It will still deliver messages to any non-PastryAppl
+ * because these "services" may be needed to boot the node into the ring.  Any 
+ * messages to a PastryAppl will be buffered until the node goes ready.
+ * 
+ * TODO:  We need to make it explicit which apps can receive messages before
+ * PastryNode.isReady().
+ * 
+ * 
+ * 
+ * 
+ * 
  *
  * @version $Id$
  *
+ * @author Jeff Hoye
  * @author Andrew Ladd
  */
 
@@ -32,13 +49,16 @@ public class MessageDispatch {
   // the current count of the number of messages in the bufer
   private int bufferCount;
 
+  protected PastryNode localNode;
+  
   /**
    * Constructor.
    */
-  public MessageDispatch() {
+  public MessageDispatch(PastryNode pn) {
     addressBook = new HashMap();
     buffer = new Hashtable();
     bufferCount = 0;
+    this.localNode = pn;
   }
 
   /**
@@ -67,55 +87,93 @@ public class MessageDispatch {
 
   /**
    * Dispatches a message to the appropriate receiver.
+   * 
+   * It will buffer the message under the following conditions:
+   *   1) The MessageReceiver is not yet registered.
+   *   2) The MessageReceiver is a PastryAppl, and localNode.isReady() == false
    *
    * @param msg the message.
    *
    * @return true if message could be dispatched, false otherwise.
    */
   public boolean dispatchMessage(Message msg) {
+    if (msg.getDestination() == null) {
+      System.out.println("Message "+msg+","+msg.getClass().getName()+" has no destination.");
+      Thread.dumpStack();
+      return false;
+    }
+    
     MessageReceiver mr = (MessageReceiver) addressBook.get(msg.getDestination());
         
-    if (mr != null) {
+    if ((mr != null) && (!(mr instanceof PastryAppl) || localNode.isReady())) {
       Address address = msg.getDestination();
-      mr.receiveMessage(msg); 
+      // note we want to deliver the buffered messages first, otherwise we 
+      // can get out of order messages
       deliverBuffered(address);
+      mr.receiveMessage(msg); 
       return true;
     } else {
       if (bufferCount > BUFFER_SIZE) {
-        System.out.println("Could not dispatch message " + msg + " because the application address " + msg.getDestination() + " was unknown.");
+        if (localNode.isReady()) {
+          System.out.println("Could not dispatch message " + msg + " because the application address " + msg.getDestination() + " was unknown.");
+        } else {
+          System.out.println("Could not dispatch message " + msg + " because the pastry node is not yet ready.");          
+        }
         System.out.println("Message is going to be dropped on the floor.");
       } else {
-        if (msg.getDestination() != null) {
-          Vector vector = (Vector) buffer.get(msg.getDestination());
-          
-          if (vector == null) {
-            vector = new Vector();
-            buffer.put(msg.getDestination(), vector);
-          }
-          
-          vector.add(msg);
-          bufferCount++;
-        } else {
-          System.out.println("Message "+msg+","+msg.getClass().getName()+" has no destination.");
-          Thread.dumpStack();
+        Vector vector = (Vector) buffer.get(msg.getDestination());
+        
+        if (vector == null) {
+          vector = new Vector();
+          buffer.put(msg.getDestination(), vector);
         }
+        
+        vector.add(msg);
+        bufferCount++;
       }
       
       return false;
     }
-  }
+  }  
   
+  /**
+   * Deliveres all buffered messages for the address.
+   * 
+   * Unless:
+   *   1)  The MR for the address is still null.
+   *   2)  The MR is a PastryAppl and localNode.isReady() == false
+   * 
+   * @param address
+   */
   protected void deliverBuffered(Address address) {
     // deliver any buffered messages
-    Vector vector = (Vector) buffer.remove(address);
-    
-    if (vector != null) {
-      MessageReceiver mr = (MessageReceiver) addressBook.get(address);
-      
-      for (int i=0; i<vector.size(); i++) {
-        mr.receiveMessage((Message) vector.elementAt(i));
-        bufferCount--;
+    MessageReceiver mr = (MessageReceiver) addressBook.get(address);
+    if (mr != null) {    
+      if (!(mr instanceof PastryAppl) || localNode.isReady()) {
+        Vector vector = (Vector) buffer.remove(address);
+        
+        if (vector != null) {
+          
+          for (int i=0; i<vector.size(); i++) {
+            mr.receiveMessage((Message) vector.elementAt(i));
+            bufferCount--;
+          }
+        } 
       }
-    } 
+    }
+  }
+  
+  /**
+   * Called when PastryNode.isReady() becomes true.  Delivers all buffered
+   * messages.
+   */
+  public void deliverAllBufferedMessages() {
+    // need to clone the buffer table because it may change during 
+    // the loop
+    Iterator i = ((Hashtable)(buffer.clone())).keySet().iterator();
+    while(i.hasNext()) {
+      Address addr = (Address)i.next(); 
+      deliverBuffered(addr);
+    }
   }
 }
