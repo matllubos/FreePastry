@@ -47,6 +47,12 @@ public class SelectorManager extends Thread implements Timer {
   protected long wakeupTime = 0;
 
   /**
+   * This variable is set to prevent the process from going to sleep or not
+   * being scheduled for too long.
+   */
+  protected int MAX_TIME_TO_BE_SCHEDULED = 15*1000;
+  
+  /**
    * Constructor, which is private since there is only one selector per JVM.
    */
   protected SelectorManager(boolean profile) {
@@ -205,7 +211,14 @@ public class SelectorManager extends Thread implements Timer {
             selectTime = (int)(first.nextExecutionTime - System.currentTimeMillis());
           }
           
+          long sleepBegin = System.currentTimeMillis();
           select(selectTime);
+          long sleepEnd = System.currentTimeMillis();
+          long sleepDiff = sleepEnd-sleepBegin;
+          if (sleepDiff > MAX_TIME_TO_BE_SCHEDULED) {
+            System.out.println("ERROR (SelectorManager.run): " + sleepEnd+" Killing self because thread was not scheduled for "+sleepDiff+" millis.");
+            System.exit(21);
+          }
           
           if (cancelledKeys.size() > 0) {
             Iterator i = cancelledKeys.iterator();
