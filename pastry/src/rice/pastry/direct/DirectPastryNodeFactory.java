@@ -59,7 +59,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     simulator.registerNodeId( localhandle );
 
     DirectSecurityManager secureMan = new DirectSecurityManager(simulator);
-    MessageDispatch msgDisp = new MessageDispatch();
+    MessageDispatch msgDisp = new MessageDispatch(pn);
 
     RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);

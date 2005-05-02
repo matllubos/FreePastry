@@ -236,7 +236,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
     final SocketNodeHandle localhandle = new SocketNodeHandle(proxyAddress, nodeId);
     SocketPastrySecurityManager secureMan = new SocketPastrySecurityManager(localhandle, pool);
-    MessageDispatch msgDisp = new MessageDispatch();
+    MessageDispatch msgDisp = new MessageDispatch(pn);
     RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 

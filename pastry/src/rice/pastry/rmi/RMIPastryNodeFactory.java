@@ -196,7 +196,7 @@ public class RMIPastryNodeFactory extends DistPastryNodeFactory {
 
     RMIPastrySecurityManager secureMan =
       new RMIPastrySecurityManager(localhandle, handlepool);
-    MessageDispatch msgDisp = new MessageDispatch();
+    MessageDispatch msgDisp = new MessageDispatch(pn);
 
     RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);
