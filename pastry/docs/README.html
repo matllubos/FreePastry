@@ -130,7 +130,7 @@ This prevents routing inconsistency when a system returns from standby or is oth
   <li>If the pastry node has a leafset collapse then PastryNode.resign() will be called.  This code is in PeriodicLeafSetProtocol.  A leafset collapse is defined by a leafset being incomplete, and 1/2 the max-size.
 
 </ul>  
-  Testing.  We have done extensive routing consistency testing on <a href="">Planetlab</a>.  The only times we find routing inconsistencies is during a network partition (usually the loss of a subnet).  In such a partition, a node will typically resign within 2 minutes due to a leafset collapse.  (Defined by a leafset that is only 1/2 full).  Routing in this case is only inconsistent across the partitions.
+  Testing.  We have done extensive routing consistency testing on <a href="http://www.planet-lab.org/">Planetlab</a>.  The only times we find routing inconsistencies is during a network partition (usually the loss of a subnet).  In such a partition, a node will typically resign within 2 minutes due to a leafset collapse.  (Defined by a leafset that is only 1/2 full).  Routing in this case is only inconsistent across the partitions.
   
 <h3>Changes since release 1.3.2</h3>
 <ul>
