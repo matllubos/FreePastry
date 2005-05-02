@@ -141,6 +141,9 @@ public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.
 	while (it.hasNext())
 	    ((PastryAppl)(it.next())).notifyReady();
 	
+  // deliver all buffered messages to all registered apps, because the node is now ready
+  myMessageDispatch.deliverAllBufferedMessages();
+  
 	// signal any apps that might be waiting for the node to get ready
 	synchronized (this) { notifyAll(); }
     }
