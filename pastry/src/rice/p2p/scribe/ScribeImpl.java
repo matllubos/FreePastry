@@ -798,10 +798,17 @@ public class ScribeImpl implements Scribe, Application {
       
       // for each topic, make sure our parent is still alive
       while (i.hasNext()) {
-        NodeHandle parent = ((TopicManager) i.next()).getParent();
+        TopicManager manager = (TopicManager) i.next();
+        NodeHandle parent = manager.getParent();
         
-        if (parent != null)
-          parent.checkLiveness();
+        if (parent != null) {
+          if (parent.isAlive()) {
+  	        parent.checkLiveness();
+          } else {
+						log.warning(endpoint.getId() + ": Missed death notification for parent " + parent + " manually telling topic manager for topic " + manager.topic);
+            manager.update(parent, NodeHandle.DECLARED_DEAD);
+          }
+        }
       }
     } else {
       log.warning(endpoint.getId() + ": Received unknown message " + message + " - dropping on floor.");
@@ -1014,7 +1021,9 @@ public class ScribeImpl implements Scribe, Application {
           log.fine(endpoint.getId() + ": Child " + o + " for topic " + topic + " has died - removing.");
 
           ScribeImpl.this.removeChild(topic, (NodeHandle) o);
-        } else if (o.equals(parent)) {
+        } 
+        
+        if (o.equals(parent)) {
           // if our parent has died, then we must resubscribe to the topic
           log.fine(endpoint.getId() + ": Parent " + parent + " for topic " + topic + " has died - resubscribing.");
           
