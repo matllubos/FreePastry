@@ -699,6 +699,10 @@ public class SocketSourceRouteManager {
           if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead forever.");
           break;
       }
+      
+      // and finally we can now send any pending messages
+      while (queue.size() > 0)
+        reroute(address, (Message) queue.remove(0));      
     }
     
     /**
