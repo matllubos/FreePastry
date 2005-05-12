@@ -3,28 +3,50 @@
  */
 package rice.testing.routeconsistent;
 
-import java.io.FileOutputStream;
-import java.io.PrintStream;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.nio.channels.DatagramChannel;
-import java.nio.channels.ServerSocketChannel;
-import java.util.Observable;
-import java.util.Observer;
+import java.io.*;
+import java.net.*;
+import java.nio.channels.*;
+import java.util.*;
 
-import rice.pastry.NodeHandle;
-import rice.pastry.NodeIdFactory;
-import rice.pastry.PastryNode;
-import rice.pastry.PastryNodeFactory;
+import rice.pastry.*;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.SocketPastryNodeFactory;
+import rice.pastry.standard.*;
 import rice.pastry.standard.RandomNodeIdFactory;
 
 /**
  * @author Jeff Hoye
  */
-public class ConsistencyPLTest {
+public class ConsistencyPLTest implements Observer {
+  public static final boolean useScribe = false;
+  public static final boolean artificialChurn = !useScribe;
+  public static final int startPort = 12000;
+  
+  //the object is just to implement the destruction policy.
+  PastryNode localNode;
+  LeafSet leafSet;
 
+  public ConsistencyPLTest(PastryNode localNode, LeafSet leafSet) {
+    this.localNode = localNode;
+    this.leafSet = leafSet;
+    leafSet.addObserver(this);
+  }
+  
+  public void update(Observable arg0, Object arg1) {
+    NodeSetUpdate nsu = (NodeSetUpdate) arg1;
+    if (!nsu.wasAdded()) {
+      if (localNode.isReady() && !leafSet.isComplete()
+          && leafSet.size() < (leafSet.maxSize() / 2)) {
+        // kill self
+        System.out.println("ConsistencyPLTest: "
+            + System.currentTimeMillis()
+            + " Killing self due to leafset collapse. " + leafSet);
+        System.exit(24);
+      }
+    }
+  }
+
+  
   public static void main(String[] args) throws Exception {
     
     PrintStream ps = new PrintStream(new FileOutputStream("log4.txt", true));
@@ -32,6 +54,13 @@ public class ConsistencyPLTest {
     System.setOut(ps);
 
     System.out.println("BOOTUP:"+System.currentTimeMillis());
+    System.out.println("Ping Neighbor Period:"+PeriodicLeafSetProtocol.PING_NEIGHBOR_PERIOD);
+    boolean riceNode = false;
+    InetAddress localAddress = InetAddress.getLocalHost();
+    if (localAddress.getHostName().startsWith("ricepl-1")) {
+      riceNode = true;
+    }
+    System.out.println("Ricenode:"+riceNode);
     
     new Thread(new Runnable() {
       public void run() {
@@ -45,7 +74,7 @@ public class ConsistencyPLTest {
     },"ImALIVE").start();
     
     // the port to use locally    
-    int bindport = 12000;
+    int bindport = startPort;
     if (args.length > 0) {
       bindport = Integer.parseInt(args[0]);
     }
@@ -80,10 +109,16 @@ public class ConsistencyPLTest {
     if (args.length > 1) {
       bootaddr = InetAddress.getByName(args[1]); 
     } else {
-      bootaddr = InetAddress.getByName("ricepl-1.cs.rice.edu");
+      // this code makes ricepl-1 try to boot off of ricepl-3
+      // everyone else boots off of ricepl-1
+      if (riceNode) {
+        bootaddr = InetAddress.getByName("ricepl-3.cs.rice.edu"); 
+      } else {
+        bootaddr = InetAddress.getByName("ricepl-1.cs.rice.edu");
+      }
     }
     
-    int bootport = 12000;
+    int bootport = startPort;
     if (args.length > 2) {
       bootport = Integer.parseInt(args[2]);
     }
@@ -98,7 +133,17 @@ public class ConsistencyPLTest {
 
     // This will return null if we there is no node at that location
     NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
-      
+    
+    if (bootHandle == null) {
+      if (riceNode) {
+        // go ahead and start a new ring
+      } else {
+        // don't boot your own ring unless you are ricepl-1
+        System.out.println("Couldn't find bootstrap... exiting.");        
+        System.exit(23); 
+      }
+    }
+    
     // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
     final PastryNode node = factory.newNode(bootHandle);
     
@@ -106,6 +151,8 @@ public class ConsistencyPLTest {
       public void run() { System.out.println("SHUTDOWN "+System.currentTimeMillis()+" "+node); }
     });
     final LeafSet ls = node.getLeafSet();
+    new ConsistencyPLTest(node, ls);
+    
     
     System.out.println("STARTUP "+System.currentTimeMillis()+" "+node);    
     
@@ -135,10 +182,31 @@ public class ConsistencyPLTest {
         System.out.println("LEAFSET1:"+System.currentTimeMillis()+":"+ls);
       }
     });
+
+    if (useScribe) {
+      // this is to do scribe stuff
+      MyScribeClient app = new MyScribeClient(node);      
+      app.subscribe();
+      if (riceNode) {
+        app.startPublishTask(); 
+      }
+    }
     
+    // this is to cause different connections to open
+    // TODO: Implement
+    
+    Random rng = new Random();
     while(true) {
       System.out.println("LEAFSET2:"+System.currentTimeMillis()+":"+ls);
-      Thread.sleep(3*60*1000);
+      Thread.sleep(1*60*1000);
+      if (artificialChurn) {
+        if (!riceNode) {
+          if (rng.nextInt(60) == 0) {
+            System.out.println("Killing self to cause churn. "+node);
+            System.exit(25);
+          }
+        }
+      }
     }    
   }  
 }
