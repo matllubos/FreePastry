@@ -4,6 +4,7 @@ package rice.pastry;
 import java.io.ObjectInputStream;
 import java.lang.ref.WeakReference;
 import java.util.Iterator;
+import java.util.Observable;
 import java.util.Observer;
 import java.util.Vector;
 import java.util.WeakHashMap;
@@ -27,7 +28,7 @@ import rice.pastry.security.PastrySecurityManager;
  * @author Andrew Ladd
  */
 
-public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.Node {
+public abstract class PastryNode extends Observable implements MessageReceiver, rice.p2p.commonapi.Node {
 
     public static String EC_NO_CODE_AVAILABLE = "no error code available";
 
@@ -113,9 +114,22 @@ public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.
     /**
      * Overridden by derived classes, and invoked when the node has
      * joined successfully.
-     */
-    
+     * 
+     * This one is for backwards compatability.  It will soon be 
+     * deprecated.
+     */    
     public abstract void nodeIsReady();
+    
+    /**
+     * Overridden by derived classes, and invoked when the node has
+     * joined successfully.  This should probably be abstract,
+     * but maybe in a later version.
+     * 
+     * @param state true when the node is ready, false when not
+     */
+    public void nodeIsReady(boolean state) {
+      
+    }
     
     /**
      * Overridden by derived classes to initiate the join process
@@ -123,31 +137,60 @@ public abstract class PastryNode implements MessageReceiver, rice.p2p.commonapi.
      */
     public abstract void initiateJoin(NodeHandle bootstrap);
 
-
     public void setReady() {
-	//System.out.println("setready() called on pastry node" + getNodeId());  
-
-	// It is possible to have the setReady() invoked more than once if the message
-	// denoting the termination of join protocol is duplicated.
-	if(isReady()) return;
-
-	ready = true;
-	nodeIsReady();
-	
-	// notify applications
-	// we iterate over private copy to allow addition of new apps in the context of notifyReady()
-	Vector tmpApps = new Vector(apps); 
-	Iterator it = tmpApps.iterator();
-	while (it.hasNext())
-	    ((PastryAppl)(it.next())).notifyReady();
-	
-  // deliver all buffered messages to all registered apps, because the node is now ready
-  myMessageDispatch.deliverAllBufferedMessages();
-  
-	// signal any apps that might be waiting for the node to get ready
-	synchronized (this) { notifyAll(); }
+      setReady(true); 
     }
+
+    /**
+     * This variable makes it so notifyReady() is only called 
+     * on the apps once.  Deprecating
+     */
+    private boolean neverBeenReady = true;
+    public void setReady(boolean r) {
+      
+      // It is possible to have the setReady() invoked more than once if the message
+      // denoting the termination of join protocol is duplicated.
+      if (ready == r) return;
+        //Thread.dumpStack();
+//      if (r == false)
+//        System.out.println("PastryNode "+localhandle+".setReady("+r+")");
+      
+      //System.out.println("setready() called on pastry node" + getNodeId());  
+      ready = r;
+      
+      if (ready) {
+        nodeIsReady();  // deprecate this
+        nodeIsReady(true);
+
+        notifyObservers(new Boolean(true));
+        
+        if (neverBeenReady) {
+          // notify applications
+          // we iterate over private copy to allow addition of new apps in the context of notifyReady()
+          Vector tmpApps = new Vector(apps);
+          Iterator it = tmpApps.iterator();
+          while (it.hasNext())
+             ((PastryAppl) (it.next())).notifyReady();
+          neverBeenReady = false;
+        }
+        
+        // deliver all buffered messages to all registered apps, because the node is now ready
+        myMessageDispatch.deliverAllBufferedMessages();
     
+        // signal any apps that might be waiting for the node to get ready
+        synchronized (this) {
+          notifyAll();
+        }
+      } else {
+        nodeIsReady(false); 
+        notifyObservers(new Boolean(false));
+
+//        Vector tmpApps = new Vector(apps);
+//        Iterator it = tmpApps.iterator();
+//        while (it.hasNext())
+//           ((PastryAppl) (it.next())).notifyFaulty();  
+      }
+    }
 
     /**
      * Called by the layered Pastry application to check if the local

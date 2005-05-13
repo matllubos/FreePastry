@@ -315,6 +315,8 @@ public abstract class PastryAppl implements MessageReceiver
   /**
    * Invoked when the Pastry node has joined the overlay network and
    * is ready to send and receive messages
+   * 
+   * As of FreePastry 1.4.1, replaced by PastryNode Observer pattern.
    */
   public void notifyReady() {}
   
