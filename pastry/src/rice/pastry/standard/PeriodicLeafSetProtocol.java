@@ -2,13 +2,10 @@
 package rice.pastry.standard;
 
 import java.util.Hashtable;
-import java.util.Observable;
-import java.util.Observer;
 import java.util.Random;
 
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeSet;
-import rice.pastry.NodeSetUpdate;
 import rice.pastry.PastryNode;
 import rice.pastry.leafset.BroadcastLeafSet;
 import rice.pastry.leafset.InitiateLeafSetMaintenance;
@@ -28,7 +25,7 @@ import rice.pastry.security.PastrySecurityManager;
  *
  * @author Alan Mislove
  */
-public class PeriodicLeafSetProtocol implements MessageReceiver, Observer {
+public class PeriodicLeafSetProtocol implements MessageReceiver {
 
   public static final boolean verbose = false;
   
@@ -66,7 +63,8 @@ public class PeriodicLeafSetProtocol implements MessageReceiver, Observer {
     this.random = new Random();
     this.lastTimeReceivedBLS = new Hashtable();
 
-    leafSet.addObserver(this);
+    // Removed after meeting on 5/5/2005  Don't know if this is always the appropriate policy.
+    //leafSet.addObserver(this);
 		address = new LeafSetProtocolAddress();
     localNode.scheduleMsgAtFixedRate(new InitiatePingNeighbor(),
         PING_NEIGHBOR_PERIOD, PING_NEIGHBOR_PERIOD);
@@ -186,16 +184,17 @@ public class PeriodicLeafSetProtocol implements MessageReceiver, Observer {
 
   /**
    * Used to kill self if leafset shrunk by too much.
+   * NOTE: PLSP is not registered as an observer.
+   * 
    */
-  public void update(Observable arg0, Object arg1) {
-    NodeSetUpdate nsu = (NodeSetUpdate)arg1;
-    if (!nsu.wasAdded()) {
-      if (localNode.isReady() && !leafSet.isComplete() && leafSet.size() < (leafSet.maxSize()/2)) {
-        // kill self
-        System.out.println("PeriodicLeafSetProtocol: "+System.currentTimeMillis()+" Killing self due to leafset collapse. "+leafSet);
-        localNode.resign();
-      }
-    }
-    
-  }
+//  public void update(Observable arg0, Object arg1) {
+//    NodeSetUpdate nsu = (NodeSetUpdate)arg1;
+//    if (!nsu.wasAdded()) {
+//      if (localNode.isReady() && !leafSet.isComplete() && leafSet.size() < (leafSet.maxSize()/2)) {
+//        // kill self
+//        System.out.println("PeriodicLeafSetProtocol: "+System.currentTimeMillis()+" Killing self due to leafset collapse. "+leafSet);
+//        localNode.resign();
+//      }
+//    }
+//  }
 }
