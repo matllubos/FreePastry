@@ -279,7 +279,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     }    
 
     if (cmd.startsWith("ls")) {
-      Enumeration enum = aggregateList.elements();
+      Enumeration enumeration = aggregateList.elements();
       StringBuffer result = new StringBuffer();
       int numAggr = 0, numObj = 0;
 
@@ -289,8 +289,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
       aggregateList.recalculateReferenceCounts(null);
       aggregateList.resetMarkers();
-      while (enum.hasMoreElements()) {
-        AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
+      while (enumeration.hasMoreElements()) {
+        AggregateDescriptor aggr = (AggregateDescriptor) enumeration.nextElement();
         if (!aggr.marker) {
           result.append("***" + aggr.key.toStringFull() + " (" + aggr.objects.length + " obj, " + 
                    aggr.pointers.length + " ptr, " + aggr.referenceCount + " ref, exp=" + 
@@ -430,9 +430,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       
       aggregateList.resetMarkers();
 
-      Enumeration enum = aggregateList.elements();
-      while (enum.hasMoreElements()) {
-        AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
+      Enumeration enumeration = aggregateList.elements();
+      while (enumeration.hasMoreElements()) {
+        AggregateDescriptor aggr = (AggregateDescriptor) enumeration.nextElement();
         if (!aggr.marker) {
           aggr.marker = true;
           for (int i=0; i<aggr.objects.length; i++)
@@ -512,10 +512,10 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
     if (cmd.startsWith("monitor ls") && monitorEnabled) {
       StringBuffer result = new StringBuffer();
-      Enumeration enum = monitorIDs.elements();
+      Enumeration enumeration = monitorIDs.elements();
       
-      while (enum.hasMoreElements())
-        result.append(((Id)enum.nextElement()).toStringFull() + "\n");
+      while (enumeration.hasMoreElements())
+        result.append(((Id)enumeration.nextElement()).toStringFull() + "\n");
         
       result.append(monitorIDs.size() + " object(s)");
       return result.toString();
@@ -719,14 +719,14 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private void removeDeadAggregates() {
     Vector toRemove = new Vector();
-    Enumeration enum = aggregateList.elements();
+    Enumeration enumeration = aggregateList.elements();
     long now = System.currentTimeMillis();
   
     /* Note: Multiple keys are mapped to a single aggregate descriptor, so the same ADC
        may be returned multiple times - but we must delete it only once! */
     
-    while (enum.hasMoreElements()) {
-      AggregateDescriptor adc = (AggregateDescriptor) enum.nextElement();
+    while (enumeration.hasMoreElements()) {
+      AggregateDescriptor adc = (AggregateDescriptor) enumeration.nextElement();
       if (adc.currentLifetime < (now - aggregateGracePeriod)) {
         if (!toRemove.contains(adc))
           toRemove.add(adc);
@@ -994,7 +994,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
 
   private void refreshAggregates() {
-    Enumeration enum = aggregateList.elements();
+    Enumeration enumeration = aggregateList.elements();
     long now = System.currentTimeMillis();
     Vector removeList = new Vector();
     final Vector refreshAggregateList = new Vector();
@@ -1003,8 +1003,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     log(2, "Checking aggregate lifetimes");
 
     aggregateList.resetMarkers();
-    while (enum.hasMoreElements()) {
-      AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
+    while (enumeration.hasMoreElements()) {
+      AggregateDescriptor aggr = (AggregateDescriptor) enumeration.nextElement();
       if (!aggr.marker) {
         aggr.marker = true;
         
@@ -1091,14 +1091,14 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private void consolidateAggregates() {
     final long now = System.currentTimeMillis();
-    Enumeration enum = aggregateList.elements();
+    Enumeration enumeration = aggregateList.elements();
     Vector candidateList = new Vector();
 
     log(2, "Looking for aggregates to consolidate");
     
     aggregateList.resetMarkers();
-    while (enum.hasMoreElements()) {
-      AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
+    while (enumeration.hasMoreElements()) {
+      AggregateDescriptor aggr = (AggregateDescriptor) enumeration.nextElement();
       if (!aggr.marker) {
         aggr.marker = true;
         

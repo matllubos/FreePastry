@@ -2096,12 +2096,12 @@ panic("setBit disabled");
     if (!state.fileList.isEmpty()) {
       for (int i = 0; i < maxConcurrentAudits; i++) {
         int index = rand.nextInt(state.fileList.size());
-        Enumeration enum = state.fileList.elements();
+        Enumeration enumeration = state.fileList.elements();
         while ((--index) > 0) {
-          enum.nextElement();
+          enumeration.nextElement();
         }
 
-        FileInfo fileInfo = (FileInfo) enum.nextElement();
+        FileInfo fileInfo = (FileInfo) enumeration.nextElement();
         if (!auditList.containsKey(fileInfo.key)) {
           log("decides to audit " + fileInfo.key);
           auditList.put(fileInfo.key, fileInfo);
@@ -2113,9 +2113,9 @@ panic("setBit disabled");
      *  Make PAST send LookupHandle messages to the primary replicas, and
      *  remove the entries from the AuditList when we get a response
      */
-    Enumeration enum = auditList.keys();
-    while (enum.hasMoreElements()) {
-      final VersionKey key = (VersionKey) enum.nextElement();
+    Enumeration enumeration = auditList.keys();
+    while (enumeration.hasMoreElements()) {
+      final VersionKey key = (VersionKey) enumeration.nextElement();
 
       lookupHandles(key.getId(), 1,
         new Continuation() {

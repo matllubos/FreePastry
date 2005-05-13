@@ -879,9 +879,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           if (logStatistics)
             statistics.dump();
           
-          Enumeration enum = listeners.elements();
-          while (enum.hasMoreElements()) {
-            GlacierStatisticsListener gsl = (GlacierStatisticsListener) enum.nextElement();
+          Enumeration enumeration = listeners.elements();
+          while (enumeration.hasMoreElements()) {
+            GlacierStatisticsListener gsl = (GlacierStatisticsListener) enumeration.nextElement();
             gsl.receiveStatistics(statistics);
           }
         }

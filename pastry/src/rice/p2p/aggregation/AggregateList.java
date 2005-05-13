@@ -237,9 +237,9 @@ public class AggregateList {
   }
   
   public void resetMarkers() {
-    Enumeration enum = aggregateList.elements();
-    while (enum.hasMoreElements()) {
-      AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
+    Enumeration enumerationeration = aggregateList.elements();
+    while (enumerationeration.hasMoreElements()) {
+      AggregateDescriptor aggr = (AggregateDescriptor) enumerationeration.nextElement();
       aggr.marker = false;
     }
   }
@@ -305,9 +305,9 @@ public class AggregateList {
   }
   
   public void recalculateReferenceCounts(Id[] excludes) {
-    Enumeration enum = aggregateList.elements();
-    while (enum.hasMoreElements()) {
-      AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
+    Enumeration enumeration = aggregateList.elements();
+    while (enumeration.hasMoreElements()) {
+      AggregateDescriptor aggr = (AggregateDescriptor) enumeration.nextElement();
       aggr.referenceCount = 0;
       aggr.marker = false;
       
@@ -319,9 +319,9 @@ public class AggregateList {
             aggr.marker = true;
     }
     
-    enum = aggregateList.elements();
-    while (enum.hasMoreElements()) {
-      AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
+    enumeration = aggregateList.elements();
+    while (enumeration.hasMoreElements()) {
+      AggregateDescriptor aggr = (AggregateDescriptor) enumeration.nextElement();
       if (!aggr.marker) {
         aggr.marker = true;
         for (int i=0; i<aggr.pointers.length; i++) {
@@ -464,7 +464,7 @@ public class AggregateList {
   
     try {
       PrintStream configFile = new PrintStream(new FileOutputStream(configFileName + ".new"));
-      Enumeration enum = aggregateList.elements();
+      Enumeration enumeration = aggregateList.elements();
 
       resetMarkers();
       configFile.println("# Aggregate list at " + label + " (" + (new Date()) + ")");
@@ -473,8 +473,8 @@ public class AggregateList {
       configFile.println("root="+rootKey.toStringFull());
       configFile.println();
       
-      while (enum.hasMoreElements()) {
-        AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
+      while (enumeration.hasMoreElements()) {
+        AggregateDescriptor aggr = (AggregateDescriptor) enumeration.nextElement();
         if (!aggr.marker) {
           configFile.println("["+aggr.key.toStringFull()+"]");
           writeAggregate(configFile, aggr);
@@ -501,11 +501,11 @@ public class AggregateList {
       recalculateReferenceCounts(excludes);
   
     Vector pointers = new Vector();
-    Enumeration enum = elements();
+    Enumeration enumeration = elements();
 
     resetMarkers();
-    while (enum.hasMoreElements()) {
-      AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
+    while (enumeration.hasMoreElements()) {
+      AggregateDescriptor aggr = (AggregateDescriptor) enumeration.nextElement();
       if (!aggr.marker) {
         aggr.marker = true;
         
@@ -527,13 +527,13 @@ public class AggregateList {
     final int maxHistoIndex = (int)(range/granularity);
     final long now = System.currentTimeMillis();
     AggregationStatistics stats = new AggregationStatistics(1+maxHistoIndex, granularity);
-    Enumeration enum = elements();
+    Enumeration enumeration = elements();
     
     recalculateReferenceCounts(null);
     resetMarkers();
     
-    while (enum.hasMoreElements()) {
-      AggregateDescriptor aggr = (AggregateDescriptor) enum.nextElement();
+    while (enumeration.hasMoreElements()) {
+      AggregateDescriptor aggr = (AggregateDescriptor) enumeration.nextElement();
       if (!aggr.marker) {
         aggr.marker = true;
     
