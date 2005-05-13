@@ -88,6 +88,14 @@ public interface Scribe {
   public NodeHandle[] getChildren(Topic topic);
 
   /**
+   * Returns the parent node for a given topic
+   * 
+   * @param myTopic The topic to return the parent of
+   * @return The parent of the topic
+   */
+  public NodeHandle getParent(Topic myTopic);
+  
+  /**
    * Adds a child to the given topic
    *
    * @param topic The topic to add the child to
@@ -111,5 +119,6 @@ public interface Scribe {
    * @return The list of topics
    */
   public Topic[] getTopics(ScribeClient client);
+
 }
 
