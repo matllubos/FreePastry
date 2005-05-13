@@ -39,7 +39,7 @@ public class WebServerImpl extends Thread implements WebServer {
     server = new ServerSocket(port);
   }
   
-  protected WebState getState(InetAddress address) {
+  protected WebState getWebState(InetAddress address) {
     WebState result = (WebState) states.get(address);
     
     if (result == null) {
@@ -61,7 +61,7 @@ public class WebServerImpl extends Thread implements WebServer {
         Thread thread = new Thread("Web Server Thread for " + socket.getInetAddress()) {
           public void run() {
             try {
-              WebHandler handler = new WebHandler(manager, workspace, getState(socket.getInetAddress()));
+              WebHandler handler = new WebHandler(manager, workspace, getWebState(socket.getInetAddress()));
               handler.handleConnection(socket);
             } catch (IOException e) {
               System.out.println("IOException occurred during handling of connection - " + e);
