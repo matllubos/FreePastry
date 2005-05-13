@@ -1,11 +1,7 @@
 
 package rice.pastry.messaging;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.Vector;
+import java.util.*;
 
 import rice.pastry.PastryNode;
 import rice.pastry.client.PastryAppl;
@@ -50,6 +46,17 @@ public class MessageDispatch {
   private int bufferCount;
 
   protected PastryNode localNode;
+  
+  /**
+   * If the node is not ready, we do not deliver messages 
+   * to applications.  What should we do with these messages?
+   * Buffer or Drop?
+   * 
+   * true will buffer the messages that should be delivered
+   * false will drop them and print a message
+   */
+  public static final boolean BUFFER_IF_NOT_READY = false;
+  
   
   /**
    * Constructor.
@@ -102,7 +109,8 @@ public class MessageDispatch {
       Thread.dumpStack();
       return false;
     }
-    
+    // NOTE: There is no saftey issue with calling localNode.isReady() because this is on the 
+    // PastryThread, and the only way to set a node ready is also on the ready thread.
     MessageReceiver mr = (MessageReceiver) addressBook.get(msg.getDestination());
         
     if ((mr != null) && (!(mr instanceof PastryAppl) || localNode.isReady())) {
@@ -113,14 +121,10 @@ public class MessageDispatch {
       mr.receiveMessage(msg); 
       return true;
     } else {
-      if (bufferCount > BUFFER_SIZE) {
-        if (localNode.isReady()) {
-          System.out.println("Could not dispatch message " + msg + " because the application address " + msg.getDestination() + " was unknown.");
-        } else {
-          System.out.println("Could not dispatch message " + msg + " because the pastry node is not yet ready.");          
-        }
-        System.out.println("Message is going to be dropped on the floor.");
-      } else {
+      // we should consider buffering the message
+      if ((bufferCount <= BUFFER_SIZE) && // we have enough memory to buffer
+          (localNode.isReady() || BUFFER_IF_NOT_READY)) { // the node is ready, or we are supposed to buffer if not ready
+        // buffer
         Vector vector = (Vector) buffer.get(msg.getDestination());
         
         if (vector == null) {
@@ -130,8 +134,15 @@ public class MessageDispatch {
         
         vector.add(msg);
         bufferCount++;
-      }
-      
+      } else { 
+        // give an excuse
+        if (localNode.isReady()) {
+          System.out.println("Could not dispatch message " + msg + " because the application address " + msg.getDestination() + " was unknown.");
+        } else {
+          System.out.println("Could not dispatch message " + msg + " because the pastry node is not yet ready.");          
+        }
+        System.out.println("Message is going to be dropped on the floor.");
+      }    
       return false;
     }
   }  
