@@ -196,8 +196,11 @@ public class SelectorManager extends Thread implements Timer {
       //System.out.println("SelectorManager starting...");
       debug("SelectorManager starting...");
 
+      lastTime = System.currentTimeMillis();
       // loop while waiting for activity
-      while (true) {
+      while (true) {        
+        notifyLoopListeners();
+        
         // NOTE: This is so we aren't always holding the selector lock when we get context switched 
         Thread.yield();
         executeDueTasks();
@@ -239,7 +242,40 @@ public class SelectorManager extends Thread implements Timer {
       System.exit(-1);
     }
   }
+  
+  long lastTime = System.currentTimeMillis();
+  protected void notifyLoopListeners() {
+    long now = System.currentTimeMillis();
+    long diff = now - lastTime;
+    if (diff > MAX_TIME_TO_BE_SCHEDULED) {
+      // notify observers 
+      synchronized(loopObservers) {
+        Iterator i = loopObservers.iterator();
+        while(i.hasNext()) {
+          LoopObserver lo = (LoopObserver)i.next(); 
+          if (lo.delayInterest() > diff) {
+            lo.loopTime((int)diff);
+          }
+        }
+      }
+    }
+    lastTime = now;
+  }
 
+  ArrayList loopObservers = new ArrayList();
+  public void addLoopObserver(LoopObserver lo) {
+    synchronized(loopObservers) {
+      loopObservers.add(lo);
+    }
+  }
+  
+  public void removeLoopObserver(LoopObserver lo) {
+    synchronized(loopObservers) {
+      loopObservers.remove(lo);
+    }     
+  }
+  
+  
   protected void doSelections() throws IOException {
     SelectionKey[] keys = selectedKeys();
 

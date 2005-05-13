@@ -17,6 +17,8 @@ import rice.pastry.messaging.Address;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RoutingTable;
 import rice.pastry.security.PastrySecurityManager;
+import rice.selector.LoopObserver;
+import rice.selector.SelectorManager;
 import rice.selector.TimerTask;
 
 /**
@@ -31,7 +33,7 @@ import rice.selector.TimerTask;
  * 
  * @author Jeff Hoye
  */
-public class ConsistentJoinProtocol extends StandardJoinProtocol implements Observer {
+public class ConsistentJoinProtocol extends StandardJoinProtocol implements Observer, LoopObserver {
 
   public static final boolean verbose = false;
   
@@ -66,6 +68,8 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     failed = new HashSet();
     observing = new HashSet();
     ls.addObserver(this);
+    ln.addObserver(this);
+    SelectorManager.getSelectorManager().addLoopObserver(this);
   }
   
   /**
@@ -73,6 +77,8 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * setReady();
    */
   protected void setReady() {    
+    gotResponse.clear();
+    failed.clear();
     // send a probe to everyone in the leafset
     for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
       if (i != 0) {
@@ -119,6 +125,21 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       //nh.checkLiveness();
       sendTheMessage(nh, false);
     }
+  }
+  
+  /**
+   * Call this if there is an event such that you may have 
+   * not received messages for long enough for other nodes
+   * to call you faulty.  
+   * 
+   * This method will call PastryNode.setReady(false) which will
+   * stop delivering messages, and then via the observer pattern
+   * will call this.update(PN, FALSE) which will call setReady()
+   * which will begin the join process again.
+   *
+   */
+  public void otherNodesMaySuspectFaulty() {
+    localNode.setReady(false);
   }
   
   /**
@@ -302,15 +323,19 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   }
   
   /**
-   * Can be leafset updates, or nodehandle updates.
+   * Can be PastryNode updates, leafset updates, or nodehandle updates.
    */
   public void update(Observable arg0, Object arg) {
-    if (localNode.isReady()) {
-      arg0.deleteObserver(this);
-      return; 
+    
+    // we wen't offline for whatever reason.  Now we need to try to come back online.
+    if (arg0 == localNode) {
+      if (((Boolean)arg).booleanValue() == false) {
+        setReady();
+      }
     }
     
     if (arg instanceof NodeSetUpdate) {
+      if (localNode.isReady()) return;
       NodeSetUpdate nsu = (NodeSetUpdate)arg;
       if (nsu.wasAdded()) {
         if (!gotResponse.contains(nsu.handle())) {
@@ -319,23 +344,55 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       }
       return;
     }
-      // assume it's a NodeHandle, cause we
-      // want to throw the exception if it is something we don't recognize
-    NodeHandle nh = (NodeHandle)arg0;
-    if (((Integer) arg) == NodeHandle.DECLARED_DEAD) {
-      failed.add(nh);
-      leafSet.remove(nh); 
-      doneProbing();
-    }
-
-    if (((Integer) arg) == NodeHandle.DECLARED_LIVE) {
-      failed.remove(nh);
-      if (!localNode.isReady()) {
-        if (leafSet.test(nh)) {
-          leafSet.put(nh);
-          sendTheMessage(nh, false);
+    
+    if (arg0 instanceof NodeHandle) {
+      if (localNode.isReady()) {
+        observing.remove(arg0);
+        arg0.deleteObserver(this);
+        return; 
+      }
+          
+        // assume it's a NodeHandle, cause we
+        // want to throw the exception if it is something we don't recognize
+      NodeHandle nh = (NodeHandle)arg0;
+      if (((Integer) arg) == NodeHandle.DECLARED_DEAD) {
+        failed.add(nh);
+        leafSet.remove(nh); 
+        doneProbing();
+      }
+  
+      if (((Integer) arg) == NodeHandle.DECLARED_LIVE) {
+        failed.remove(nh);
+        if (!localNode.isReady()) {
+          if (leafSet.test(nh)) {
+            leafSet.put(nh);
+            sendTheMessage(nh, false);
+          }
         }
       }
+    }
+  }
+
+  /**
+   * Part of the LoopObserver interface.  Used to detect if 
+   * we may have been found faulty by other nodes.
+   * 
+   * @return the minimum loop time we are interested in being notified about.
+   */
+  public int delayInterest() {
+    return 20000;
+  }
+
+
+  /**
+   * If it took longer than the time to detect faultiness, then other nodes
+   * may believe we are faulty.  So we best rejoin.
+   * 
+   * @param loopTime the time it took to do a single selection loop.
+   */
+  public void loopTime(int loopTime) {
+    if (loopTime > delayInterest()) {
+      otherNodesMaySuspectFaulty(); 
     }
   }
 }
