@@ -313,8 +313,9 @@ public class SecurityUtils {
    */
   public static byte[] decryptSymmetric(byte[] data, byte[] key) throws SecurityException {
     try {
+      key = correctLength(key, SYMMETRIC_KEY_LENGTH);
+
       synchronized (cipherSymmetric) {
-        key = correctLength(key, SYMMETRIC_KEY_LENGTH);
         SecretKeySpec secretKey = new SecretKeySpec(key, SYMMETRIC_ALGORITHM);
         cipherSymmetric.init(Cipher.DECRYPT_MODE, secretKey);
         
