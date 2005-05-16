@@ -308,6 +308,11 @@ public class PostProxy {
   protected ForwardLog forwardLog;
   
   /**
+   * The SMTP Server
+   */
+  protected String smtpServer;
+  
+  /**
    * Method which redirects standard output and error, if desired.
    *
    * @param parameters The parameters to use
@@ -348,16 +353,20 @@ public class PostProxy {
       String address = InetAddress.getLocalHost().getHostAddress();
       
       if (! CompatibilityCheck.testIPAddress(address)) {
-        int i = message("You computer appears to have the non-routable address " + address + ".\n" +
-                        "This is likely because you are connected from behind a NAT - ePOST can\n" + 
-                        "run from behind a NAT, but you must set up port forwarding on port 10001\n" +
-                        "for both TCP and UDP to your internal address '" + address + "'.\n\n" +
-                        "If you have set up your NAT box, select 'NAT is Set Up' to test your\n" + 
-                        "connection, otherwise, select 'Kill ePOST Proxy'.", 
-                        new String[] {"Kill ePOST Proxy", "NAT is Set Up"}, "Kill ePOST Proxy");
-        
-        if (i == 0) {
-          System.exit(-1);
+        if (parameters.getBooleanParameter("pastry_proxy_connectivity_show_message")) {
+          int i = message("You computer appears to have the non-routable address " + address + ".\n" +
+                          "This is likely because you are connected from behind a NAT - ePOST can\n" + 
+                          "run from behind a NAT, but you must set up port forwarding on port 10001\n" +
+                          "for both TCP and UDP to your internal address '" + address + "'.\n\n" +
+                          "If you have set up your NAT box, select 'NAT is Set Up' to test your\n" + 
+                          "connection, otherwise, select 'Kill ePOST Proxy'.", 
+                          new String[] {"Kill ePOST Proxy", "NAT is Set Up"}, "Kill ePOST Proxy");
+          
+          if (i == 0) {
+            System.exit(-1);
+          } else {
+            startCheckNAT(parameters);
+          }
         } else {
           startCheckNAT(parameters);
         }
@@ -443,9 +452,14 @@ public class PostProxy {
       else
         System.exit(-1);
     } else {
-      message("ePOST successfully checked your connection - it appears that the IP address\n" +
-              "of your NAT is " + natAddress.getHostAddress() + ".  Please do not remove the port forwarding on\n" + 
-              "your NAT as long as you are using ePOST.", new String[] {"OK"}, "OK");
+      if (parameters.getBooleanParameter("pastry_proxy_connectivity_show_message")) {
+        message("ePOST successfully checked your connection - it appears that the IP address\n" +
+                "of your NAT is " + natAddress.getHostAddress() + ".  Please do not remove the port forwarding on\n" + 
+                "your NAT as long as you are using ePOST.", new String[] {"OK"}, "OK");
+        
+        parameters.setBooleanParameter("pastry_proxy_connectivity_show_message", false);
+        parameters.writeFile();
+      }
     }
   }
     
@@ -803,6 +817,37 @@ public class PostProxy {
     if (parameters.getBooleanParameter("multiring_global_enable")) {
       parameter = "pastry_ring_" + generateRingId(null).toStringFull()+ "_port";
       globalPort = (parameters.containsParameter(parameter) ? parameters.getIntParameter(parameter) : globalCert.getPort());
+    }
+    
+    stepDone(SUCCESS);
+  }
+  
+  /**
+   * Method which determines the local SMTP server to use
+   *
+   * @param parameters The parameters to use
+   */
+  protected void startDetermineSMTPServer(Parameters parameters) throws Exception {
+    stepStart("Determining Default SMTP Server");
+    String parameter = "email_ring_" + ((RingId) address.getAddress()).getRingId().toStringFull() + "_smtp_server";
+    if (parameters.getStringParameter(parameter) != null) {
+      smtpServer = parameters.getStringParameter(parameter);
+    } else {
+      smtpServer = "";
+
+      try {
+        if (parameters.getBooleanParameter("proxy_show_dialog")) {
+          SMTPServerPanel panel = new SMTPServerPanel(parameters);
+          smtpServer = panel.getSMTPServer();
+          
+          if (panel.remember()) {
+            parameters.setStringParameter(parameter, smtpServer);
+            parameters.writeFile();
+          }
+        }
+      } catch (Throwable t) {
+        System.out.println("Determining SMTP server causing error " + t);
+      }
     }
     
     stepDone(SUCCESS);
@@ -1397,6 +1442,7 @@ public class PostProxy {
     startRetrieveUser(parameters);
     startLoadRingCertificates(parameters);
     startDeterminePorts(parameters);
+    startDetermineSMTPServer(parameters);
     sectionDone();
     
     sectionStart("Initializing Disk Storage");
@@ -1967,5 +2013,112 @@ public class PostProxy {
       return new String(this.field.getPassword());
     }
   }
+  
+  public class SMTPServerPanel extends JFrame {
+    
+    protected JTextField field;
+    
+    protected JCheckBox box;
+    
+    protected Parameters parameters;
+    
+    protected boolean submitted = false;
+    
+    public SMTPServerPanel(Parameters p) {
+      super("SMTP Server");
+      this.parameters = p;
+      this.field = new JTextField(20);
+      this.box = new JCheckBox((javax.swing.Icon) null, false);
+      GridBagLayout layout = new GridBagLayout();
+      
+      addWindowListener(new WindowListener() {
+        public void windowActivated(WindowEvent e) {}      
+        public void windowClosed(WindowEvent e) {
+          done();
+        }      
+        public void windowClosing(WindowEvent e) {
+          done();
+        }      
+        public void windowDeactivated(WindowEvent e) {}      
+        public void windowDeiconified(WindowEvent e) {}      
+        public void windowIconified(WindowEvent e) {}      
+        public void windowOpened(WindowEvent e) {}
+      });
+      
+      getContentPane().setLayout(layout);
+      
+      JLabel fieldLabel = new JLabel("Please enter your default SMTP server: ", JLabel.TRAILING);
+      fieldLabel.setLabelFor(field);
+      
+      JLabel boxLabel = new JLabel("Remember setting: ", JLabel.TRAILING);
+      boxLabel.setLabelFor(box);
+      
+      GridBagConstraints gbc1 = new GridBagConstraints();
+      layout.setConstraints(fieldLabel, gbc1);      
+      getContentPane().add(fieldLabel);
+      
+      GridBagConstraints gbc2 = new GridBagConstraints();
+      gbc2.gridx = 1;
+      layout.setConstraints(field, gbc2);      
+      getContentPane().add(field);
+      
+      GridBagConstraints gbc5 = new GridBagConstraints();
+      gbc5.gridy = 1;
+      layout.setConstraints(boxLabel, gbc5);      
+      getContentPane().add(boxLabel);
+      
+      GridBagConstraints gbc6 = new GridBagConstraints();
+      gbc6.gridx = 1;
+      gbc6.gridy = 1;
+      layout.setConstraints(box, gbc6);      
+      getContentPane().add(box);
+      
+      JButton submit = new JButton("Submit");
+      
+      GridBagConstraints gbc3 = new GridBagConstraints();
+      gbc3.gridx = 1;
+      gbc3.gridy = 2;
+      layout.setConstraints(submit, gbc3);      
+      getContentPane().add(submit);
+      
+      final JFrame frame = this;
+      
+      getRootPane().setDefaultButton(submit);
+      
+      submit.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          done();
+        }
+      });
+      
+      pack();
+      show();
+    }
+    
+    protected void done() {
+      if (! submitted) {
+        dispose();
+        submitted = true;
+        
+        synchronized (parameters) {
+          parameters.notifyAll();
+        } 
+      }
+    }
+    
+    protected boolean remember() {
+      return box.isSelected();
+    }
+    
+    protected String getSMTPServer() throws Exception {
+      synchronized (parameters) {
+        if (! submitted)
+          parameters.wait();
+      }
+      
+      return new String(this.field.getText());
+    }
+  }
+  
 
 }
