@@ -129,21 +129,25 @@ public class ImapState {
   }
   
   public void printUnsolicited(ImapConnection conn) {
-    if (_selected) {
-      if ((_cachedExists != _folder.getExists()) || (_queue.size() > 0)) {
-        _queue.add(_folder.getExists() + " EXISTS");
-        _cachedExists = _folder.getExists();
+    try {
+      if (_selected) {
+        if ((_cachedExists != _folder.getExists()) || (_queue.size() > 0)) {
+          _queue.add(_folder.getExists() + " EXISTS");
+          _cachedExists = _folder.getExists();
+        }
+        
+        if ((_cachedRecent != _folder.getRecent())  || (_queue.size() > 0)) {
+          _queue.add(_folder.getRecent() + " RECENT");
+          _cachedRecent = _folder.getRecent();
+        }
       }
-      
-      if ((_cachedRecent != _folder.getRecent())  || (_queue.size() > 0)) {
-        _queue.add(_folder.getRecent() + " RECENT");
-        _cachedRecent = _folder.getRecent();
-      }
+    } catch (MailboxException e) {
+      System.err.println("ERROR: Exception " + e + " thrown while printing unsolicited data.");
     }
     
     String[] result = (String[]) _queue.toArray(new String[0]);
     _queue.removeAllElements();
-        
+    
     for (int i=0; i<result.length; i++)
       conn.println("* " + result[i]);
   }

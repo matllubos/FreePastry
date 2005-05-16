@@ -34,7 +34,7 @@ public class MockMailFolder
         return _name;
     }
 
-    public int getExists() {
+    public int getExists() throws MailboxException {
       try {
         return getMsgCount();
       } catch (MailboxException e) {
@@ -42,7 +42,7 @@ public class MockMailFolder
       }
     }
 
-    public int getRecent() {
+    public int getRecent() throws MailboxException {
       try {
         return getRecentMsgCount();
       } catch (MailboxException e) {
@@ -78,7 +78,7 @@ public class MockMailFolder
         return _uid;
     }
 
-    public int getNextUID() {
+    public int getNextUID() throws MailboxException {
       return _nextUID;
     }
 

@@ -15,10 +15,10 @@ public interface MailFolder {
 
     String getFullName();
 
-    int getNextUID();
+    int getNextUID() throws MailboxException;
     String getUIDValidity() throws MailboxException;
-    int getExists();
-    int getRecent();
+    int getExists() throws MailboxException;
+    int getRecent() throws MailboxException;
 
     void put(MovingMessage msg, List flags, long internaldate) throws MailboxException;
     void put(MovingMessage msg) throws MailboxException;

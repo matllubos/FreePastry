@@ -99,7 +99,7 @@ public class FileFolder implements MailFolder {
     return fName.substring(4);
   }
 
-  public int getNextUID() {
+  public int getNextUID() throws MailboxException {
     return UIDFactory.getUniqueId();
   }
 
@@ -107,11 +107,11 @@ public class FileFolder implements MailFolder {
     return new FileMessageList(_folder.listFiles(FileMessage.MSG_FILE_FILTER));
   }
 
-  public int getExists() {
+  public int getExists() throws MailboxException {
     return 0;
   }
 
-  public int getRecent() {
+  public int getRecent() throws MailboxException {
     return 0;
   }
 
