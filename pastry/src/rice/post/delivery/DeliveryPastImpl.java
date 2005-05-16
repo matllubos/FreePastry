@@ -78,6 +78,10 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
     log.finer(endpoint.getId() + ": Synchronizing range " + endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor()+1, null, true));
     
     GCIdRange range = (GCIdRange) endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor()+1, null, true);
+    
+    if (range == null)
+      return;
+    
     final Iterator i = storage.getStorage().scan(range.getRange()).getIterator();
 
     Continuation c = new StandardContinuation(command) {      
