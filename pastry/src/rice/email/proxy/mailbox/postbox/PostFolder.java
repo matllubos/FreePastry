@@ -67,24 +67,16 @@ public class PostFolder implements MailFolder {
       return folder.getName();
   }
 
-  public int getNextUID() {
+  public int getNextUID() throws MailboxException {
     return folder.getNextUID();
   }
 
-  public int getExists() {
-    try {
-      return getMessages(MsgFilter.ALL).size();
-    } catch (MailboxException e) {
-      return 0;
-    }  
+  public int getExists() throws MailboxException {
+    return getMessages(MsgFilter.ALL).size();
   }
 
-  public int getRecent() {
-    try {
-      return getMessages(MsgFilter.RECENT).size();
-    } catch (MailboxException e) {
-      return 0;
-    }
+  public int getRecent() throws MailboxException {
+    return getMessages(MsgFilter.RECENT).size();
   }
 
   public Folder getFolder() {
@@ -153,7 +145,7 @@ public class PostFolder implements MailFolder {
     ExternalContinuation c = new ExternalContinuation();
     folder.getMessages(c);
     c.sleep();
-
+    
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
     LinkedList list = new LinkedList();

@@ -242,6 +242,11 @@ public class EmailLog extends CoalescedLog {
             post.getStorageService().retrieveContentHash(snapshots[i], this);
           }
         }
+
+        public void receiveException(Exception e) {
+          System.out.println("WARNING: Received exception " + e + " while reading snapshots - skipping for now.  This is bad.");
+          receiveResult(new SnapShot(new StoredEmail[0], null));
+        }
       });
     } else {
       command.receiveResult(null);
