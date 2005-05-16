@@ -140,6 +140,10 @@ public class Proxy {
       result.append(" -Djava.nio.preferSelect=true");
     }
     
+    if (System.getProperty("os.name").toLowerCase().indexOf("mac os x") >= 0) {
+      result.append(" -Xdock:name=ePOST -Xdock:icon=lib/epost.png");
+    }
+    
     if (parameters.getBooleanParameter("java_debug_enable")) {
       result.append(" -Xdebug -Djava.compiler=NONE -Xnoagent -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=");
       result.append(parameters.getStringParameter("java_debug_port"));
@@ -394,14 +398,7 @@ public class Proxy {
             if (filename.indexOf("\t") > 0)
               filename = filename.substring(0, filename.indexOf("\t"));
             
-            if (! new File(".", filename).exists()) {
-              ByteArrayOutputStream baos1 = new ByteArrayOutputStream();
-              HttpFetcher hf1 = new HttpFetcher(new URL(root + filename + ".md5sum"), baos1);
-              
-              hf1.fetch();
-              
-              String md5 = new String(baos1.toByteArray()).trim();
-              
+            if (! new File(".", filename).exists()) {              
               if (parameters.getBooleanParameter("proxy_show_dialog") && parameters.getBooleanParameter("proxy_automatic_update_ask_user")) {
                 String message = "A new version of the ePOST software has been detected.\n\n" +
                 "Would you like to automatically upgrade to '" + filename + "' and restart your proxy?";
@@ -422,6 +419,13 @@ public class Proxy {
                     return;
                   }
                 } else if (i == 2) {
+                  ByteArrayOutputStream baos1 = new ByteArrayOutputStream();
+                  hf = new HttpFetcher(new URL(root + filename + ".md5sum"), baos1);
+                  
+                  hf.fetch();
+                  
+                  String md5 = new String(baos1.toByteArray()).trim();                  
+                  
                   hf = new HttpFetcher(new URL(root + filename), new FileOutputStream(new File(".", filename)));
                   byte[] bytes = hf.fetch();
                   
@@ -439,6 +443,13 @@ public class Proxy {
                   }
                 }
               } else {
+                ByteArrayOutputStream baos1 = new ByteArrayOutputStream();
+                hf = new HttpFetcher(new URL(root + filename + ".md5sum"), baos1);
+                
+                hf.fetch();
+                
+                String md5 = new String(baos1.toByteArray()).trim();                
+                
                 hf = new HttpFetcher(new URL(root + filename), new FileOutputStream(new File(".", filename)));
                 byte[] bytes = hf.fetch();
                 
