@@ -63,7 +63,7 @@ public class Parameters {
   }
   
   protected void setProperty(String name, String value) {
-    if (defaults.getProperty(name).equals(value)) {
+    if ((defaults.getProperty(name) != null) && (defaults.getProperty(name).equals(value))) {
       if (properties.getProperty(name) != null) {
         properties.remove(name);
         writeFile();
