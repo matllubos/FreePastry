@@ -202,7 +202,7 @@ public class ConsistencyPLTest implements Observer {
       if (artificialChurn) {
         if (!riceNode) {
           if (rng.nextInt(60) == 0) {
-            System.out.println("Killing self to cause churn. "+node);
+            System.out.println("Killing self to cause churn. "+System.currentTimeMillis()+":"+node+":"+ls);
             System.exit(25);
           }
         }
