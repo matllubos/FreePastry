@@ -460,7 +460,7 @@
       </tarfileset>
       <tarfileset dir="ant" includes="**/*" prefix="ant"/>
       <tarfileset dir="${lib.dir}" includes="*.jar" prefix="lib"/>
-      <tarfileset dir="${jar.dir}" includes="**/*" prefix="jars"/>
+      <tarfileset dir="${jar.dir}/epost/" includes="**/*" prefix="${jar.dir}/epost/"/>
       <tarfileset dir="license" includes="**/*" prefix="license"/>
       <tarfileset dir="." includes="build.xml"/>
     </tar>
@@ -486,7 +486,7 @@
       </fileset>
       <fileset dir="ant" includes="**/*"/>
       <fileset dir="${lib.dir}" includes="*.jar"/>
-      <fileset dir="${jar.dir}" includes="**/*"/>
+      <fileset dir="${jar.dir}/epost/" includes="**/*"/>
       <fileset dir="license" includes="**/*"/>
       <fileset dir="." includes="build.xml"/>
     </zip>
