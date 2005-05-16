@@ -20,7 +20,7 @@ public class ScribeImpl implements Scribe, Application {
   /**
    * The interval with which to perform maintenance
    */
-  public static int MAINTENANCE_INTERVAL = 300000;
+  public static int MAINTENANCE_INTERVAL = 180000;
 
   /**
    * the timeout for a subscribe message
@@ -693,9 +693,15 @@ public class ScribeImpl implements Scribe, Application {
           if (manager.getParent().equals(saMessage.getSource())) {
             manager.setPathToRoot(saMessage.getPathToRoot());
           } else {
-            log.warning(endpoint.getId() + ": Received unexpected subscribe ack message (already have parent " + manager.getParent() +
-                        ") from " + saMessage.getSource() + " for topic " + saMessage.getTopic());
-            endpoint.route(null, new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
+            log.warning(endpoint.getId() + ": Received somewhat unexpected subscribe ack message (already have parent " + manager.getParent() +
+                        ") from " + saMessage.getSource() + " for topic " + saMessage.getTopic() + " - the new policy is now to accept the message");
+  
+            
+            NodeHandle parent = manager.getParent();
+            manager.setParent(saMessage.getSource());
+            manager.setPathToRoot(saMessage.getPathToRoot());
+
+            endpoint.route(null, new UnsubscribeMessage(handle, saMessage.getTopic()), parent);
           }
         } else {
           log.warning(endpoint.getId() + ": Received unexpected subscribe ack message from " +
@@ -801,13 +807,10 @@ public class ScribeImpl implements Scribe, Application {
         TopicManager manager = (TopicManager) i.next();
         NodeHandle parent = manager.getParent();
         
+        // also send a reverse heartbeat message, which should make sure we are still subscribed
         if (parent != null) {
-          if (parent.isAlive()) {
-  	        parent.checkLiveness();
-          } else {
-						log.warning(endpoint.getId() + ": Missed death notification for parent " + parent + " manually telling topic manager for topic " + manager.topic);
-            manager.update(parent, NodeHandle.DECLARED_DEAD);
-          }
+          endpoint.route(manager.getTopic().getId(), new SubscribeMessage(handle, manager.getTopic(), handle.getId(), -1, null), parent);
+          parent.checkLiveness();
         }
       }
     } else {
@@ -915,6 +918,15 @@ public class ScribeImpl implements Scribe, Application {
       this.children = new Vector();
 
       setPathToRoot(new Id[0]);
+    }
+    
+    /**
+     * Gets the topic of the TopicManager object
+     *
+     * @return The Parent value
+     */
+    public Topic getTopic() {
+      return topic;
     }
 
     /**
