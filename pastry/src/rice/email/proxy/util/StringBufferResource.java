@@ -21,7 +21,8 @@ public class StringBufferResource implements Resource {
   }
   
   public Writer getWriter() throws IOException {
-    _currentWriter = new LimitedStringWriter(MAXIMUM_LENGTH);
+//    _currentWriter = new LimitedStringWriter(MAXIMUM_LENGTH);
+    _currentWriter = new StringWriter();
     
     return _currentWriter;
   }
