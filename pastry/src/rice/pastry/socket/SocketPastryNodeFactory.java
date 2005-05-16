@@ -118,7 +118,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     
     // if this is a request for an old version of us, then we return
     // infinity as an answer
-    if (lAddress.equals(rAddress)) {
+    if (lAddress.getAddress().equals(rAddress.getAddress())) {
       return Integer.MAX_VALUE;
     }
     
