@@ -23,6 +23,7 @@ import rice.persistence.*;
  * @author Andreas Haeberlen
  */
 public class GCPastImpl extends PastImpl implements GCPast {
+
   public static final boolean verbose = false;
 
   /**
@@ -342,7 +343,12 @@ public class GCPastImpl extends PastImpl implements GCPast {
                 GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id.getId());
                 
                 if (metadata != null) {
-                  storage.setMetadata(id.getId(), metadata.setExpiration(id.getExpiration()), this);
+                  /* only allow the lifetime to be extended, otherwise skip */
+                  if (metadata.getExpiration() < id.getExpiration()) {
+                    storage.setMetadata(id.getId(), metadata.setExpiration(id.getExpiration()), this);
+                  } else {
+                    receiveResult(Boolean.FALSE);
+                  }
                 } else {
                   storage.getObject(id.getId(), new StandardContinuation(this) {
                     public void receiveResult(Object o) {
