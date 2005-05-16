@@ -122,7 +122,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       channel.configureBlocking(false);
       channel.socket().bind(bindAddress.getAddress());
       
-      this.key = SelectorManager.getSelectorManager().register(channel, this, SelectionKey.OP_ACCEPT);
+      this.key = SelectorManager.getSelectorManager().register(channel, this, 0);
+      this.key.interestOps(SelectionKey.OP_ACCEPT);
     } catch (IOException e) {
       System.out.println("ERROR creating server socket channel " + e);
       e.printStackTrace();
@@ -736,6 +737,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public void shutdown() {
       try {
+        if (SocketPastryNode.verbose) System.out.println("Shutting down output on connection with path " + path);
+        
         if (channel != null)
           channel.socket().shutdownOutput();
         else
@@ -755,6 +758,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public void close() {
       try {
+        if (SocketPastryNode.verbose) System.out.println("Closing connection with path " + path);
+        
         clearTimer();
         
         if (key != null) {
@@ -919,7 +924,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     protected void acceptConnection(SelectionKey key) throws IOException {      
       this.channel = (SocketChannel) key.channel();
-      this.key = SelectorManager.getSelectorManager().register(key.channel(), this, SelectionKey.OP_READ);
+      this.key = SelectorManager.getSelectorManager().register(key.channel(), this, 0);
+      this.key.interestOps(SelectionKey.OP_READ);
       
       debug("Accepted connection from " + channel.socket().getRemoteSocketAddress());
     }
@@ -936,13 +942,14 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       this.channel.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
       this.channel.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
       this.channel.configureBlocking(false);
+      this.key = SelectorManager.getSelectorManager().register(channel, this, 0);
       
       debug("Initiating socket connection to path " + path);
 
       if (this.channel.connect(path.getFirstHop().getAddress())) 
-        key = SelectorManager.getSelectorManager().register(channel, this, SelectionKey.OP_READ);
+        this.key.interestOps(SelectionKey.OP_READ);
       else 
-        key = SelectorManager.getSelectorManager().register(channel, this, SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
+        this.key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
     }
 
     /**

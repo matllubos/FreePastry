@@ -19,7 +19,7 @@ import rice.selector.*;
 public class PingManager extends SelectionKeyHandler {
   
   // whether or not we should use short pings
-  public static boolean USE_SHORT_PINGS = true;
+  public static boolean USE_SHORT_PINGS = false;
   
   // the header which signifies a normal socket
   protected static byte[] HEADER_PING = new byte[] {0x49, 0x3A, 0x09, 0x5C};
@@ -90,7 +90,8 @@ public class PingManager extends SelectionKeyHandler {
       channel.socket().setSendBufferSize(DATAGRAM_SEND_BUFFER_SIZE);
       channel.socket().setReceiveBufferSize(DATAGRAM_RECEIVE_BUFFER_SIZE);
 
-      key = SelectorManager.getSelectorManager().register(channel, this, SelectionKey.OP_READ);
+      key = SelectorManager.getSelectorManager().register(channel, this, 0);
+      key.interestOps(SelectionKey.OP_READ);
     } catch (IOException e) {
       System.out.println("PANIC: Error binding datagram server to address " + localAddress + ": " + e);
     }
