@@ -25,7 +25,7 @@ import rice.persistence.*;
  * @author Peter Druschel
  */
 public class PastImpl implements Past, Application, ReplicationManagerClient {
-
+  
   
   // ----- STATIC FIELDS -----
   public static final boolean verbose = false;
@@ -299,8 +299,17 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
     if (set.size() == max) {
       command.receiveResult(set);
     } else {
-      sendRequest(id, new LookupHandlesMessage(getUID(), id, max, getLocalNodeHandle(), id), 
-                  new NamedContinuation("LookupHandlesMessage for " + id, command));
+      sendRequest(id, new LookupHandlesMessage(getUID(), id, max, getLocalNodeHandle(), id), new StandardContinuation(command) {
+        public void receiveResult(Object o) {
+          NodeHandleSet replicas = (NodeHandleSet) o;
+
+          // check to make sure we've fetched the correct number of replicas
+          if (endpoint.replicaSet(endpoint.getLocalNodeHandle().getId(), replicationFactor+1).size() > replicas.size()) 
+            parent.receiveException(new PastException("Only received " + replicas.size() + " replicas - cannot insert as we know about more nodes."));
+          else
+            parent.receiveResult(replicas);
+        }
+      });
     }
   }
 
