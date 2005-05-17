@@ -5,7 +5,7 @@
 <center>
 <h1><font size="+4">FreePastry release notes</font></h1>
 <hr size="2" width="100%"></center>
-Release 1.4.1,&nbsp; 5/3/05.
+Release 1.4.1,&nbsp; 17 May 2005.
 </h2>
 <p>FreePastry is a modular, open source implementation of the <a href="http://www.cs.rice.edu/CS/Systems/Pastry/"> Pastry</a> p2p structured overlay network. <br>
 &nbsp; </p>
@@ -115,14 +115,17 @@ developed using Sun's SDK, version 1.4.2_03+ <br>
   Routing is <i>consistent</i> if no overlay node ever delivers a lookup message when it is not the current root node for the message's destination key. -- Microsoft Technical Report MSR-TR-2003-94
 
 <h4>Wasn't FreePastry always consistent?  What could have caused routing inconsistencies in previous versions?</h4>
-  Routing could be inconsistent in FreePastry if at some point there exists 2 adjacent nodes who are both active and do not know of each other thus believing that they are responsible for some of the same keyspace.  This could happen during concurrent joins, or if a node incorrectly determines its direct neighbor faulty, and therefore takes over that section of the keyspace.  The result of an inconsistency is that routing to a key (for example a DHT put/get) could cause the message to be delivered to different nodes.  Thus you my do a PUT but then a GET still has the old value!
+  Routing could be inconsistent in FreePastry if at some point there exists 2 adjacent nodes who are both active and do not know of each other thus believing that they are responsible for some of the same keyspace.  This could happen during concurrent joins, or if a node incorrectly determines its direct neighbor faulty, and therefore takes over that section of the keyspace.  The result of an inconsistency is that routing to a key (for example a DHT put/get) could cause the message to be delivered to different nodes.  Thus you may do a PUT but then a subsequent GET still retrieves the old value!
 <h4>How does FreePastry prevent routing inconsistency?</h4>
 <p/>Our consistent join protocol is similar to that described in <a href="http://www.cs.rice.edu/~jeffh/wiki/msr-tr-2003-94.pdf">Microsoft Technical Report MSR-TR-2003-94</a>.  The idea is that when a node joins, before it accepts messages, it must first contact its entire leafset and either receive a reply from each member or determine them faulty.  This causes concurrent joiners to be aware of each other before both can become active.  We rely on dynamic source routing introduced in FreePastry Version 1.4 to assume that we will never incorrectly determine a node faulty.  
 <p/>In the process of adding strong consistency, we have also dramatically reduced the overhead of leafset maintenance.  By default the system is configured to send and receive a message from each neighbor every 20 seconds, and if it takes more than 30 seconds to hear from a neighbor, then a checkLiveness() starts.  This results in the following overhead:
 
-...
-
-
+<p align="center">
+<img src="cjp_percent_graph.png" width="640" height="480"><br>
+<img src="cjp_bytes_graph.png" width="640" height="480"><br>
+<img src="cjp_packets_graph.png" width="640" height="480">
+</p>
+<p>All of the data were collected on a ring running on PlanetLab with no application and induced churn to give an average node lifetime of 60 minutes.  Even at a 10 second polling interval, leafset maintence traffic averages a bit more than 1 packet every 5 seconds, or about 660 bytes per second.  We anticipate the bytes/second overhead will be reducced significantly in a future release of FreePastry using a native binary protocol rather than binary serialization.  Applications can adjust the neighbor ping interval to trade off the amount of time it takes to discover failures (and therefore recover ring space) versus the amount of overhead they find acceptible.</p>
 
 <h4>New behavior:</h4>
 <ul>
@@ -136,7 +139,7 @@ This can occur for 2 reasons:
  <li>Application level code is taking too long to process messages.</li>  
 </ul>
 <br/>
-To prevent inconsistency, the <code>ConsistentJoinProtocol</code> will call <code>PastryNode.setReady(false)</code>.  This will cause your Applications to stop receiving messages until the <code>ConsistentJoinProtocol</code> "rejoins" and calls <code>PastryNode.setReady(true)</code> again.  By default, your application will not receive any notification of these events!  If you wish to hear about such events then register yourself with the PastryNode as an Observer.  You will receive a <code>Boolean(true)</code> when the node becomes ready, and a <code>Boolean(false)</code> when not-ready.  Note that to keep reverse compatibility with your applications, <code>PastryAppl.notifyReady()</code> will still be called <i>only</i>> the first time a node becomes active.<br/><br/></li>
+To prevent inconsistency, the <code>ConsistentJoinProtocol</code> will call <code>PastryNode.setReady(false)</code>.  This will cause your applications to stop receiving messages until the <code>ConsistentJoinProtocol</code> "rejoins" and calls <code>PastryNode.setReady(true)</code> again.  By default, your application will not receive any notification of these events!  If you wish to hear about such events then register yourself with the PastryNode as an Observer.  You will receive a <code>Boolean(true)</code> when the node becomes ready, and a <code>Boolean(false)</code> when not-ready.  Note that to keep reverse compatibility with your applications, <code>PastryAppl.notifyReady()</code> will still be called <i>only</i>> the first time a node becomes active.<br/><br/></li>
 
   <li>In the current version of FreePastry, complete network partitions are not expressly supported.  If a small group of machines loses connectivity to the rest of the overlay, they may detect all other nodes to be faulty and begin accepting messages for larger and larger portions of the key space.  The FreePastry team is currently investigating the best way to handle such partitions, and did not want to include preliminary code in this release.<br/><br/>
   However, if applications wish to force a node to resign if such a case occurs, developers can easily write code which will approximate the correct behavior.  For example, simply monitoring the node density in the leafset over time provides a good indication of a network partition, as a steep drop in density should occur on the partitioned nodes.  A more thorough handling of these partitions will be included in a future release.<br/><br/>
