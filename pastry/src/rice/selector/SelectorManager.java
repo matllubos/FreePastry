@@ -45,12 +45,6 @@ public class SelectorManager extends Thread implements Timer {
   
   // the next time the selector is schedeled to wake up 
   protected long wakeupTime = 0;
-
-  /**
-   * This variable is set to prevent the process from going to sleep or not
-   * being scheduled for too long.
-   */
-  protected int MAX_TIME_TO_BE_SCHEDULED = 15*1000;
   
   /**
    * Constructor, which is private since there is only one selector per JVM.
@@ -214,14 +208,7 @@ public class SelectorManager extends Thread implements Timer {
             selectTime = (int)(first.nextExecutionTime - System.currentTimeMillis());
           }
           
-          long sleepBegin = System.currentTimeMillis();
           select(selectTime);
-          long sleepEnd = System.currentTimeMillis();
-          long sleepDiff = sleepEnd-sleepBegin;
-          if (sleepDiff > MAX_TIME_TO_BE_SCHEDULED) {
-            System.out.println("ERROR (SelectorManager.run): " + sleepEnd+" Killing self because thread was not scheduled for "+sleepDiff+" millis.");
-            System.exit(21);
-          }
           
           if (cancelledKeys.size() > 0) {
             Iterator i = cancelledKeys.iterator();
@@ -247,15 +234,13 @@ public class SelectorManager extends Thread implements Timer {
   protected void notifyLoopListeners() {
     long now = System.currentTimeMillis();
     long diff = now - lastTime;
-    if (diff > MAX_TIME_TO_BE_SCHEDULED) {
       // notify observers 
-      synchronized(loopObservers) {
-        Iterator i = loopObservers.iterator();
-        while(i.hasNext()) {
-          LoopObserver lo = (LoopObserver)i.next(); 
-          if (lo.delayInterest() > diff) {
-            lo.loopTime((int)diff);
-          }
+    synchronized(loopObservers) {
+      Iterator i = loopObservers.iterator();
+      while(i.hasNext()) {
+        LoopObserver lo = (LoopObserver)i.next(); 
+        if (lo.delayInterest() >= diff) {
+          lo.loopTime((int)diff);
         }
       }
     }

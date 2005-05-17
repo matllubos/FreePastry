@@ -35,6 +35,13 @@ import rice.selector.TimerTask;
  */
 public class ConsistentJoinProtocol extends StandardJoinProtocol implements Observer, LoopObserver {
 
+  /**
+   * This variable is set to prevent the process from going to sleep or not
+   * being scheduled for too long.
+   */
+  protected int MAX_TIME_TO_BE_SCHEDULED = 20*1000;
+
+  
   public static final boolean verbose = false;
   
   /**
@@ -380,7 +387,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * @return the minimum loop time we are interested in being notified about.
    */
   public int delayInterest() {
-    return 20000;
+    return MAX_TIME_TO_BE_SCHEDULED;
   }
 
 
