@@ -105,7 +105,7 @@ Miguel Castro, Peter Druschel, Anne-Marie Kermarrec, Animesh Nandi, Antony Rowst
 
 <br>
 <h3>Requirements</h3>
-The software requires a Java runtime, version 1.4.2. The software was
+The software requires a Java runtime, version 1.4.2+. The software was
 developed using Sun's SDK, version 1.4.2_03+ <br>
 <br>
 &nbsp;<br>
@@ -115,25 +115,50 @@ developed using Sun's SDK, version 1.4.2_03+ <br>
   Routing is <i>consistent</i> if no overlay node ever delivers a lookup message when it is not the current root node for the message's destination key. -- Microsoft Technical Report MSR-TR-2003-94
 
 <h4>Wasn't FreePastry always consistent?  What could have caused routing inconsistencies in previous versions?</h4>
-  Routing could be inconsistent in FreePastry if at some point there exists 2 adjacent nodes who are both active and do not know of each other thus believing that they are responsible for some of the same keyspace.  This could happen during concurrent joins, or if a node incorrectly determines its direct neighbor faulty, and therefore takes over that section of the keyspace.  
-<h4>How does it work?</h4>
+  Routing could be inconsistent in FreePastry if at some point there exists 2 adjacent nodes who are both active and do not know of each other thus believing that they are responsible for some of the same keyspace.  This could happen during concurrent joins, or if a node incorrectly determines its direct neighbor faulty, and therefore takes over that section of the keyspace.  The result of an inconsistency is that routing to a key (for example a DHT put/get) could cause the message to be delivered to different nodes.  Thus you my do a PUT but then a GET still has the old value!
+<h4>How does FreePastry prevent routing inconsistency?</h4>
 <p/>Our consistent join protocol is similar to that described in <a href="http://www.cs.rice.edu/~jeffh/wiki/msr-tr-2003-94.pdf">Microsoft Technical Report MSR-TR-2003-94</a>.  The idea is that when a node joins, before it accepts messages, it must first contact its entire leafset and either receive a reply from each member or determine them faulty.  This causes concurrent joiners to be aware of each other before both can become active.  We rely on dynamic source routing introduced in FreePastry Version 1.4 to assume that we will never incorrectly determine a node faulty.  
-<p/>In the process of adding strong consistency, we have also dramatically reduced the overhead of leafset maintenance.  By default the system is configured to send and receive a message from each neighbor only twice a minute.  This is an overhead of only 8 messages per minute.  Two per neighbor, twice a minute. = 2*2*2.
+<p/>In the process of adding strong consistency, we have also dramatically reduced the overhead of leafset maintenance.  By default the system is configured to send and receive a message from each neighbor every 20 seconds, and if it takes more than 30 seconds to hear from a neighbor, then a checkLiveness() starts.  This results in the following overhead:
+
+...
+
+
 
 <h4>New behavior:</h4>
 <ul>
-  <li>When using the rice.pastry.standard.ConsistentJoinProtocol (which is now the default for the SocketPastryNodeFactory) PastryNode.setReady() will not be called until the node receives a message from every node in its leafset.</li>
-  <li>Messages will not be delivered to a PastryAppl until the PastryNode.isReady() returns true.  The same behavior occurs for applications built on the commonAPI because PastryEndpoint extends PastryAppl.  This change occurred in the rice.pastry.messaging.MessageDispatch</li>
-  <li>If the Pastry process is not scheduled for more than 15 seconds (configured in rice.pastry.selector.SelectorManager.MAX_TIME_TO_BE_SCHEDULED) then the process will exit with code 21.  This code is in SelectorManager.run():
+  <li>When using the <code>rice.pastry.standard.ConsistentJoinProtocol</code> (which is now the default for the <code>SocketPastryNodeFactory</code>) <code>PastryNode.setReady()</code> will not be called until the node receives a <code>ConsistentJoinMsg</code> message from every node in its leafset.<br/><br/></li>
+  <li>Messages will not be delivered to a PastryAppl until the PastryNode.isReady() returns true.  The same behavior occurs for applications built on the commonAPI because PastryEndpoint extends PastryAppl.  This change occurred in the rice.pastry.messaging.MessageDispatch<br/><br/></li>
+  <li><b>Important: </b> If the Pastry selector takes more than 20 seconds (the time it takes rice.pastry.socket to find a node faulty) to select, then it is possible that other nodes will have found you faulty, and a routing inconsistency may be possible.<br/><br/>  
 
+This can occur for 2 reasons:
+<ul>
+ <li>A system standby or other type of process pause occurs.</li>
+ <li>Application level code is taking too long to process messages.</li>  
+</ul>
+<br/>
+To prevent inconsistency, the <code>ConsistentJoinProtocol</code> will call <code>PastryNode.setReady(false)</code>.  This will cause your Applications to stop receiving messages until the <code>ConsistentJoinProtocol</code> "rejoins" and calls <code>PastryNode.setReady(true)</code> again.  By default, your application will not receive any notification of these events!  If you wish to hear about such events then register yourself with the PastryNode as an Observer.  You will receive a <code>Boolean(true)</code> when the node becomes ready, and a <code>Boolean(false)</code> when not-ready.  Note that to keep reverse compatibility with your applications, <code>PastryAppl.notifyReady()</code> will still be called <i>only</i>> the first time a node becomes active.<br/><br/></li>
+
+  <li>In the current version of FreePastry, complete network partitions are not expressly supported.  If a small group of machines loses connectivity to the rest of the overlay, they may detect all other nodes to be faulty and begin accepting messages for larger and larger portions of the key space.  The FreePastry team is currently investigating the best way to handle such partitions, and did not want to include preliminary code in this release.<br/><br/>
+  However, if applications wish to force a node to resign if such a case occurs, developers can easily write code which will approximate the correct behavior.  For example, simply monitoring the node density in the leafset over time provides a good indication of a network partition, as a steep drop in density should occur on the partitioned nodes.  A more thorough handling of these partitions will be included in a future release.<br/><br/>
+
+Here is example code to exit if the leafset becomes too small:
 <pre>
-          if (sleepDiff > MAX_TIME_TO_BE_SCHEDULED) {
-            System.out.println("ERROR (SelectorManager.run): " + sleepEnd+" Killing self because thread was not scheduled for "+sleepDiff+" millis.");
-            System.exit(21);
+    PastryNode pn; // acquired elsewhere
+    LeafSet leafset = pn.getLeafSet();
+    leafset.addObserver(new Observer() {
+      public void update(Observable arg0, Object arg1) {
+        NodeSetUpdate nsu = (NodeSetUpdate) arg1;
+        if (!nsu.wasAdded()) {
+          if (localNode.isReady() && !leafSet.isComplete()
+              && leafSet.size() < (leafSet.maxSize() / 2)) {
+            // kill self
+            System.out.println("Killing self due to leafset collapse. " + leafSet);
+            System.exit(24);
           }
-</pre>
-This prevents routing inconsistency when a system returns from standby or is otherwise unavailable for an extended period.  (Otherwise the node may wake up and accept messages even though it is considered faulty by other nodes.)
-  <li>If the pastry node has a leafset collapse then PastryNode.resign() will be called.  This code is in PeriodicLeafSetProtocol.  A leafset collapse is defined by a leafset being incomplete, and 1/2 the max-size.
+        }
+      }
+    });
+<pre>    
 
 </ul>  
 <h4>Testing:</h4>  
