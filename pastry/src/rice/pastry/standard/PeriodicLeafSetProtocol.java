@@ -48,7 +48,7 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
    * Related to rapidly determining direct neighbor liveness.
    */
   public static final int PING_NEIGHBOR_PERIOD = 20*1000;
-  public static final int CHECK_LIVENESS_PERIOD = 30*1000;
+  public static final int CHECK_LIVENESS_PERIOD = PING_NEIGHBOR_PERIOD+(10*1000);//30*1000;
   
   /**
    * Builds a periodic leafset protocol
