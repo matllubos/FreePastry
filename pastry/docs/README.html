@@ -5,7 +5,7 @@
 <center>
 <h1><font size="+4">FreePastry release notes</font></h1>
 <hr size="2" width="100%"></center>
-Release 1.4.1,&nbsp; 17 May 2005.
+Release 1.4.1,&nbsp; 19 May 2005.
 </h2>
 <p>FreePastry is a modular, open source implementation of the <a href="http://www.cs.rice.edu/CS/Systems/Pastry/"> Pastry</a> p2p structured overlay network. <br>
 &nbsp; </p>
@@ -118,14 +118,20 @@ developed using Sun's SDK, version 1.4.2_03+ <br>
   Routing could be inconsistent in FreePastry if at some point there exists 2 adjacent nodes who are both active and do not know of each other thus believing that they are responsible for some of the same keyspace.  This could happen during concurrent joins, or if a node incorrectly determines its direct neighbor faulty, and therefore takes over that section of the keyspace.  The result of an inconsistency is that routing to a key (for example a DHT put/get) could cause the message to be delivered to different nodes.  Thus you may do a PUT but then a subsequent GET still retrieves the old value!
 <h4>How does FreePastry prevent routing inconsistency?</h4>
 <p/>Our consistent join protocol is similar to that described in <a href="http://www.cs.rice.edu/~jeffh/wiki/msr-tr-2003-94.pdf">Microsoft Technical Report MSR-TR-2003-94</a>.  The idea is that when a node joins, before it accepts messages, it must first contact its entire leafset and either receive a reply from each member or determine them faulty.  This causes concurrent joiners to be aware of each other before both can become active.  We rely on dynamic source routing introduced in FreePastry Version 1.4 to assume that we will never incorrectly determine a node faulty.  
-<p/>In the process of adding strong consistency, we have also dramatically reduced the overhead of leafset maintenance.  By default the system is configured to send and receive a message from each neighbor every 20 seconds, and if it takes more than 30 seconds to hear from a neighbor, then a checkLiveness() starts.  This results in the following overhead:
+<p/>In the process of adding strong consistency, we have also dramatically reduced the overhead of leafset maintenance.  By default the system is configured to send and receive a message from each neighbor every 20 seconds, and if it takes more than 30 seconds to hear from a neighbor, then a checkLiveness() starts.  This strategy means that by default a portion of ringspace never remains unclaimed for long than 50 seconds (20 seconds between pings, then 30 seconds to wait for replies) after the death of a node.
 
-<p align="center">
-<img src="cjp_percent_graph.png" width="640" height="480"><br>
-<img src="cjp_bytes_graph.png" width="640" height="480"><br>
-<img src="cjp_packets_graph.png" width="640" height="480">
-</p>
-<p>All of the data were collected on a ring running on PlanetLab with no application and induced churn to give an average node lifetime of 60 minutes.  Even at a 10 second polling interval, leafset maintence traffic averages a bit more than 1 packet every 5 seconds, or about 660 bytes per second.  We anticipate the bytes/second overhead will be reducced significantly in a future release of FreePastry using a native binary protocol rather than binary serialization.  Applications can adjust the neighbor ping interval to trade off the amount of time it takes to discover failures (and therefore recover ring space) versus the amount of overhead they find acceptible.</p>
+<p/>We ran tests on PlanetLab to characterize the overhead of leafset maintence at various neighbor ping intervals. 
+All of the data for the following graphs were collected on a ring running with no application and induced churn to give an average node lifetime of 60 minutes.  
+<div align="center"><img src="cjp_percent_graph.png" width="640" height="480"><br>
+This graph represents the fraction of traffic that is due to leafset maintenance.  One hundred percent would mean that all overlay traffic was due to leafset maintence.  The percent of traffic is a modest 12.4% of traffic in packets even at a fairly aggressive neighbor ping rate of once every 20 seconds (the default).  We expect the overhead as measured in bytes to go down in a future release of pastry that uses a binary wire protocol rather java serialization.
+</div>
+<div align="center"><img src="cjp_bytes_graph.png" width="640" height="480"><br>
+This graph shows the average traffic due to leafset maintenance in bytes per second (smaller numbers are better).  The error bars are at one standard deviation among the nodes in the overlay.  At a 20 second neighbor ping interval leafset maintenance traffic is 71.5% of overlay traffic (top graph) but as this graph shows, that is only a data rate of 500 bytes/second.
+</div>
+<div align="center"><img src="cjp_packets_graph.png" width="640" height="480"><br>
+This graph shows the average traffic due to leafset maintenance in packets per second (smaller numbers are better).  The error bars are at one standard deviation among the nodes in the overlay.  At a 20 second neighbor ping interval leafset maintence traffic is about 0.15 packets per second, or about 10 packets per minute.
+</div>
+<p/>Applications can trade off between the amount of maintence overhead they are willing to tolerate and the length of time they are willing to allow ringspace to be unclaimed by adjusting the neighbor ping interval.
 
 <h4>New behavior:</h4>
 <ul>
@@ -139,30 +145,9 @@ This can occur for 2 reasons:
  <li>Application level code is taking too long to process messages.</li>  
 </ul>
 <br/>
-To prevent inconsistency, the <code>ConsistentJoinProtocol</code> will call <code>PastryNode.setReady(false)</code>.  This will cause your applications to stop receiving messages until the <code>ConsistentJoinProtocol</code> "rejoins" and calls <code>PastryNode.setReady(true)</code> again.  By default, your application will not receive any notification of these events!  If you wish to hear about such events then register yourself with the PastryNode as an Observer.  You will receive a <code>Boolean(true)</code> when the node becomes ready, and a <code>Boolean(false)</code> when not-ready.  Note that to keep reverse compatibility with your applications, <code>PastryAppl.notifyReady()</code> will still be called <i>only</i>> the first time a node becomes active.<br/><br/></li>
+To prevent inconsistency, the <code>ConsistentJoinProtocol</code> will call <code>PastryNode.setReady(false)</code>.  This will cause your applications to stop receiving messages until the <code>ConsistentJoinProtocol</code> "rejoins" and calls <code>PastryNode.setReady(true)</code> again.  By default, your application will not receive any notification of these events!  If you wish to hear about such events then register yourself with the PastryNode as an Observer.  You will receive a <code>Boolean(true)</code> when the node becomes ready, and a <code>Boolean(false)</code> when not-ready.  Note that to keep reverse compatibility with your applications, <code>PastryAppl.notifyReady()</code> will still be called <i>only</i> the first time a node becomes active.<br/><br/></li>
 
-  <li>In the current version of FreePastry, complete network partitions are not expressly supported.  If a small group of machines loses connectivity to the rest of the overlay, they may detect all other nodes to be faulty and begin accepting messages for larger and larger portions of the key space.  The FreePastry team is currently investigating the best way to handle such partitions, and did not want to include preliminary code in this release.<br/><br/>
-  However, if applications wish to force a node to resign if such a case occurs, developers can easily write code which will approximate the correct behavior.  For example, simply monitoring the node density in the leafset over time provides a good indication of a network partition, as a steep drop in density should occur on the partitioned nodes.  A more thorough handling of these partitions will be included in a future release.<br/><br/>
-
-Here is example code to exit if the leafset becomes too small:
-<pre>
-    PastryNode pn; // acquired elsewhere
-    LeafSet leafset = pn.getLeafSet();
-    leafset.addObserver(new Observer() {
-      public void update(Observable arg0, Object arg1) {
-        NodeSetUpdate nsu = (NodeSetUpdate) arg1;
-        if (!nsu.wasAdded()) {
-          if (localNode.isReady() && !leafSet.isComplete()
-              && leafSet.size() < (leafSet.maxSize() / 2)) {
-            // kill self
-            System.out.println("Killing self due to leafset collapse. " + leafSet);
-            System.exit(24);
-          }
-        }
-      }
-    });
-<pre>    
-
+  <li>In the current version of FreePastry, complete network partitions are not expressly supported.  If a small group of machines loses connectivity to the rest of the overlay, they may detect all other nodes to be faulty and begin accepting messages for larger and larger portions of the key space.  The FreePastry team is currently investigating the best way to handle such partitions, and expect a solution in a forthcoming release.<br/><br/>
 </ul>  
 <h4>Testing:</h4>  
 We have done extensive routing consistency testing on <a href="http://www.planet-lab.org/">Planetlab</a>.  The only times we find routing inconsistencies is during a network partition (usually the loss of a subnet).  In such a partition, a node will typically resign within 2 minutes due to a leafset collapse.  (Defined by a leafset that is only 1/2 full).  Routing in this case is only inconsistent across the partitions.
