@@ -259,7 +259,7 @@
   -->   
     
     <tar destfile="FreePastry-${freepastry-version}-source.tgz" compression="gzip">
-      <tarfileset dir="${src.dir}" prefix="src">
+      <tarfileset dir="${src.dir}" prefix="pastry-${freepastry-version}/src">
         <include name="rice/*.java"/>
    <!-- <include name="rice/email/**/*.java"/> -->
         <include name="rice/p2p/commonapi/**/*.java"/>
@@ -296,19 +296,19 @@
    <!-- <include name="rice/serialization/**/*.java"/> -->
    <!-- <include name="rice/visualization/**/*.java"/> -->
       </tarfileset>
-      <tarfileset dir="ant" includes="**/*" prefix="ant"/>
-      <tarfileset dir="license" includes="**/*" prefix="license"/>
-      <tarfileset dir="licensing" includes="**/*" prefix="licensing"/>
-      <tarfileset dir="${lib.dir}" prefix="lib">
+      <tarfileset dir="ant" includes="**/*" prefix="pastry-${freepastry-version}/ant"/>
+      <tarfileset dir="license" includes="**/*" prefix="pastry-${freepastry-version}/license"/>
+      <tarfileset dir="licensing" includes="**/*" prefix="pastry-${freepastry-version}/licensing"/>
+      <tarfileset dir="${lib.dir}" prefix="pastry-${freepastry-version}/lib">
         <include name="xmlpull*.jar"/> 
         <include name="bouncy*.jar"/> 
         <include name="xpp*.jar"/> 
       </tarfileset> 
-      <tarfileset dir="${docs.dir}" includes="README*" prefix="docs" />
-      <tarfileset dir="." includes="build.xml"/>
+      <tarfileset dir="${docs.dir}" includes="README*" prefix="pastry-${freepastry-version}/docs" />
+      <tarfileset dir="." includes="build.xml" prefix="pastry-${freepastry-version}"/>
     </tar>
     <zip destfile="FreePastry-${freepastry-version}-source.zip">
-      <zipfileset dir="${src.dir}" prefix="src">
+      <zipfileset dir="${src.dir}" prefix="pastry-${freepastry-version}/src">
         <include name="rice/*.java"/>
    <!-- <include name="rice/email/**/*.java"/> -->
         <include name="rice/p2p/commonapi/**/*.java"/>
@@ -345,26 +345,26 @@
    <!-- <include name="rice/serialization/**/*.java"/> -->
    <!-- <include name="rice/visualization/**/*.java"/> -->
       </zipfileset>
-      <zipfileset dir="ant" includes="**/*" prefix="ant" />
-      <zipfileset dir="license" includes="**/*" prefix="license" />
-      <zipfileset dir="licensing" includes="**/*" prefix="licensing" />
-      <zipfileset dir="${lib.dir}" prefix="lib">
+      <zipfileset dir="ant" includes="**/*" prefix="pastry-${freepastry-version}/ant" />
+      <zipfileset dir="license" includes="**/*" prefix="pastry-${freepastry-version}/license" />
+      <zipfileset dir="licensing" includes="**/*" prefix="pastry-${freepastry-version}/licensing" />
+      <zipfileset dir="${lib.dir}" prefix="pastry-${freepastry-version}/lib">
         <include name="xmlpull*.jar"/> 
         <include name="bouncy*.jar"/> 
         <include name="xpp*.jar"/> 
       </zipfileset> 
-      <zipfileset dir="${docs.dir}" includes="README*" prefix="docs" />
-      <zipfileset dir="." includes="build.xml"/>
+      <zipfileset dir="${docs.dir}" includes="README*" prefix="pastry-${freepastry-version}/docs" />
+      <zipfileset dir="." includes="build.xml" prefix="pastry-${freepastry-version}"/>
     </zip>
     <tar destfile="FreePastry-${freepastry-version}-docs.tgz" compression="gzip">
-      <tarfileset dir="license" includes="**/*" prefix="license" />
-      <tarfileset dir="licensing" includes="**/*" prefix="licensing" />
-      <tarfileset dir="${docs.dir}" prefix="docs" />
+      <tarfileset dir="license" includes="**/*" prefix="pastry-${freepastry-version}/license" />
+      <tarfileset dir="licensing" includes="**/*" prefix="pastry-${freepastry-version}/licensing" />
+      <tarfileset dir="${docs.dir}" prefix="pastry-${freepastry-version}/docs" />
     </tar>
     <zip destfile="FreePastry-${freepastry-version}-docs.zip">
-      <zipfileset dir="license" includes="**/*" prefix="license" />
-      <zipfileset dir="licensing" includes="**/*" prefix="licensing" />
-      <zipfileset dir="${docs.dir}" prefix="docs" />
+      <zipfileset dir="license" includes="**/*" prefix="pastry-${freepastry-version}/license" />
+      <zipfileset dir="licensing" includes="**/*" prefix="pastry-${freepastry-version}/licensing" />
+      <zipfileset dir="${docs.dir}" prefix="pastry-${freepastry-version}/docs" />
     </zip>
     <checksum fileext=".md5sum" todir="." algorithm="MD5">
       <fileset dir=".">
