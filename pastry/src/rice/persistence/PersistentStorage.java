@@ -38,7 +38,7 @@ import rice.p2p.util.*;
  * costs.  Additionally, any metadata, if provided, is also stored
  * in the on-disk file.  The format of the file is
  *
- * [Object, Gzipped XML]
+ * [Key, Object, Version, Gzipped XML]
  * [Metadata, Gzipped XML]
  * [persistence magic number, long]
  * [persistence version, long]
@@ -76,14 +76,14 @@ public class PersistentStorage implements Storage {
   public static final long PERSISTENCE_MAGIC_NUMBER = 8038844221L;
   public static final long PERSISTENCE_VERSION_2 = 2L;
   public static final long PERSISTENCE_REVISION_2_0 = 0L;
+  public static final long PERSISTENCE_REVISION_2_1 = 1L;
   
-  /**
+  /** 
    * Static variables which define the location of the storage root
    */
   public static final String BACKUP_DIRECTORY = "/FreePastry-Storage-Root/";
   public static final String LOST_AND_FOUND_DIRECTORY = "lost+found";
   public static final String METADATA_FILENAME = "metadata.cache";
-  public static final String METADATA_FILENAME_EXTENSION = ".metadata";
   
   /**
    * The splitting factor, or the number of files in one directory
@@ -130,6 +130,7 @@ public class PersistentStorage implements Storage {
   
   private boolean index;            // whether or not we are indexing the objects
   private HashMap directories;      // the in-memory map of directories (for efficiency)
+  private HashMap prefixes;         // an in-memory cache of the directory prefixes
   private HashSet dirty;            // the list of directories which have dirty metadata
 
   private ReverseTreeMap metadata;  // the in-memory cache of object metadata
@@ -139,7 +140,7 @@ public class PersistentStorage implements Storage {
   private long storageSize;         // The amount of storage allowed to be used 
   private long usedSize;            // The amount of storage currently in use
   private Random rng;               // random number generator
-  protected static final boolean verbose = false;
+  protected static final boolean verbose = true;
 
  /**
   * Builds a PersistentStorage given a root directory in which to
@@ -184,6 +185,7 @@ public class PersistentStorage implements Storage {
     this.index = index;
     this.rng = new Random();
     this.directories = new HashMap();
+    this.prefixes = new HashMap();
     
     if (index) {
       this.dirty = new HashSet();
@@ -724,28 +726,32 @@ public class PersistentStorage implements Storage {
    * @param dir The directory to start on
    */
   private void initFiles(File dir) throws IOException {
-    String[] files = dir.list();
-    boolean metadata = true;
-      
+    String[] dirs = dir.list(new DirectoryFilter());
+    String[] files = dir.list(new FileFilter());
+    
+    /* first, init any files, and relocate any files if there are dirs */
     for (int i=0; i<files.length; i++) {
-      /* check each file and recurse into subdirectories */
-      if (isFile(dir, files[i])) {
-        try {
-          files[i] = initTemporaryFile(dir, files[i]);
+      try {
+        if (! initTemporaryFile(dir, files[i])) {
           
-          if (files[i] != null) 
+          /* if there are directories in the dir, then move the file */
+          if (dirs.length > 0)
             moveFileToCorrectDirectory(dir, files[i]);
-        } catch (Exception e) {
-          moveToLost(new File(dir, files[i]));
+          else
+            upgradeFile(dir, files[i]);
         }
-      } else if (isDirectory(dir, files[i])) {
-        initFiles(new File(dir, files[i]));
-        metadata = false;
-      }
+      } catch (Exception e) {
+        System.out.println("WARNING::Got exception " + e + " initting file " + files[i] + " - moving to lost+found.");
+        moveToLost(new File(dir, files[i]));
+      }      
     }
+      
+    /* next, recurse into any dirs */
+    for (int i=0; i<dirs.length; i++) 
+      initFiles(new File(dir, dirs[i]));
     
     /* and delete the old metadata file, if it exists */
-    if (! metadata)
+    if (dirs.length > 0)
       deleteFile(new File(dir, METADATA_FILENAME));
   }
 
@@ -758,13 +764,29 @@ public class PersistentStorage implements Storage {
    * until they are renamed to an actual ID name.  Thus, if we detect a 
    * temporary file during start-up, it is likely that the file is corrupted
    * and should be deleted.
+   *
+   * @returns Whether or not the file was a temporary file
    */
-  private String initTemporaryFile(File parent, String name) throws IOException {
+  private boolean initTemporaryFile(File parent, String name) throws IOException {
     if (! isTemporaryFile(name))
-      return name;
+      return false;
     
     moveToLost(new File(parent, name));
-    return null;
+    return true;
+  }
+  
+  /**
+   * Method which checks to see if the given file needs to be upgraded to a
+   * new version of the persistent storage layout.
+   *
+   * @param parent The parent directory
+   * @param name The name of the file
+   */
+  private void upgradeFile(File parent, String name) throws IOException {
+    if ((name.length() >= factory.getIdToStringLength()) && name.startsWith(getPrefix(parent)) && (! parent.equals(appDirectory))) {
+      debug("Upgrading file " + name + " to new version " + name.substring(getPrefix(parent).length()));
+      renameFile(new File(parent, name), new File(parent, name.substring(getPrefix(parent).length())));
+    }
   }
   
   /**
@@ -778,8 +800,14 @@ public class PersistentStorage implements Storage {
    *
    */
   private void initFileMap(File dir) throws IOException {
+    debug("Initting directory " + dir);
+    
     /* first, see if this directory needs to be expanded */
     checkDirectory(dir);
+    
+    /* make sure the directory was not pruned */
+    if (! dir.exists())
+      return;
     
     /* now, read the metadata file in this directory */
     long modified = 0;
@@ -793,38 +821,34 @@ public class PersistentStorage implements Storage {
     }
     
     /* next, start processing by listing the number of files and going from there */
-    File[] files = dir.listFiles();
-        
+    File[] files = dir.listFiles(new FileFilter());
+    File[] dirs = dir.listFiles(new DirectoryFilter());    
+    
     for (int i=0; i<files.length; i++) {
       try {
-        if (isFile(dir, files[i].getName())) {
-          Id id = readKey(files[i]);
-          long len = getFileLength(files[i]);
+        Id id = readKey(files[i]);
+        long len = getFileLength(files[i]);
+        
+        if (id == null)
+          System.out.println("READING " + files[i] + " RETURNED NULL!");
+        
+        if (len > 0) {
+          increaseUsedSpace(len);
           
-          if (id == null)
-            System.out.println("READING " + files[i] + " RETURNED NULL!");
-          
-          if (len > 0) {
-            increaseUsedSpace(len);
-            
-            /* if the file is newer than the metadata file, update the metadata 
-            if we don't have the metadata for this file, update it */
-            if (index) {
-              if ((! metadata.containsKey(id)) || (files[i].lastModified() > modified)) {
-                metadata.put(id, readMetadata(files[i]));
-                dirty.add(dir);
-              }
-            }
-          } else {
-            moveToLost(files[i]);
-            
-            if (index && metadata.containsKey(id)) {
-              metadata.remove(id);
-              dirty.add(dir);
-            }
+          /* if the file is newer than the metadata file, update the metadata 
+          if we don't have the metadata for this file, update it */
+          if (index && ((! metadata.containsKey(id)) || (files[i].lastModified() > modified))) {
+            debug("Reading newer metadata out of file " + files[i] + " id " + id + " " + files[i].lastModified() + " " + modified + " " + metadata.containsKey(id));
+            metadata.put(id, readMetadata(files[i]));
+            dirty.add(dir);
           }
-        } else if (files[i].isDirectory()) {
-          initFileMap(files[i]);
+        } else {
+          moveToLost(files[i]);
+          
+          if (index && metadata.containsKey(id)) {
+            metadata.remove(id);
+            dirty.add(dir);
+          }
         }
       } catch (Exception e) {
         System.err.println("ERROR: Received Exception " + e + " while initing file " + files[i] + " - moving to lost+found.");
@@ -832,6 +856,9 @@ public class PersistentStorage implements Storage {
         moveToLost(files[i]);
       }
     }
+    
+    for (int i=0; i<dirs.length; i++) 
+      initFileMap(dirs[i]);
   }
 
   /**
@@ -869,23 +896,12 @@ public class PersistentStorage implements Storage {
    *
    */ 
   private void moveToLost(File file) throws IOException {
-    renameFile(file, new File(lostDirectory, file.getName()));
+    renameFile(file, new File(lostDirectory, getPrefix(file.getParentFile()) + file.getName()));
   }
  
   /*****************************************************************/
   /* Helper functions for Directory Splitting Management           */
   /*****************************************************************/
-  
-  /**
-   * Method which checks to see if a file is in the right directory. If not, it
-   * places the file into the correct directory;
-   *
-   * @param file The file to check
-   */
-  private void checkFile(File file) throws IOException {
-    if (! getDirectoryForName(file.getName()).equals(file.getParentFile()))
-      moveFileToCorrectDirectory(file);
-  }
   
   /**
    * Method which checks to see if a directory has too many files, and if so, 
@@ -895,19 +911,44 @@ public class PersistentStorage implements Storage {
    * @return Whether or not the directory was modified
    */
   private boolean checkDirectory(File directory) throws IOException {
-    debug("Checking directory " + directory + " for oversize");
+    int files = numFilesDir(directory);
+    int dirs = numDirectoriesDir(directory);
 
-    if (numFilesDir(directory) > MAX_FILES) {
+    debug("Checking directory " + directory + " for oversize " + files + "/" + dirs);
+
+    if (files > MAX_FILES) {
       expandDirectory(directory);
       return true;
-    }
-    
-    if (numDirectoriesDir(directory) > MAX_DIRECTORIES) {
+    } else if (dirs > MAX_DIRECTORIES) {
       reformatDirectory(directory);
+      return true;
+    } else if ((files == 0) && (dirs == 0) && (! directory.equals(appDirectory))) {
+      pruneDirectory(directory);
       return true;
     }
     
     return false;
+  }
+  
+  /**
+   * This method removes an empty directory from the storage root, and updates
+   * all of the associated metadata.
+   *
+   * @param dir The directory to remove
+   */
+  private void pruneDirectory(File dir) throws IOException {
+    debug("Pruning directory " + dir + " due to emptiness");
+
+    /* First delete the metadata file, if it exists */
+    deleteFile(new File(dir, METADATA_FILENAME));
+    
+    /* Then remove the directory */
+    deleteDirectory(dir);
+    
+    /* Finally update the metadata */
+    directories.remove(dir);
+    prefixes.remove(dir);
+    this.directories.put(dir.getParentFile(), dir.getParentFile().listFiles(new DirectoryFilter()));
   }
   
   /**
@@ -924,7 +965,7 @@ public class PersistentStorage implements Storage {
   private void reformatDirectory(File dir) throws IOException {
     debug("Expanding directory " + dir + " due to too many subdirectories");
     /* first, determine what directories we should create */
-    String[] newDirNames = getDirectories(dir.list(new DirectoryFilter()), 0);
+    String[] newDirNames = getDirectories(dir.list(new DirectoryFilter()));
     reformatDirectory(dir, newDirNames);
     debug("Done expanding directory " + dir);
   }
@@ -1001,7 +1042,7 @@ public class PersistentStorage implements Storage {
     debug("Expanding directory " + dir + " due to too many files");
     /* first, determine what directories we should create */
     String[] fileNames = dir.list(new FileFilter());
-    String[] dirNames = getDirectories(fileNames, getPrefixLength(dir));
+    String[] dirNames = getDirectories(fileNames);
     File[] dirs = new File[dirNames.length];
     
     /* create the directories */
@@ -1016,18 +1057,25 @@ public class PersistentStorage implements Storage {
         dirty.add(dirs[i]);
     }
     
+    /* add the list of directories to the map */
     directories.put(dir, dirs);
     
     /* last, move the files into the correct directory */
     File[] files = dir.listFiles(new FileFilter());
-    for(int i = 0; i < files.length; i++)
-      moveFileToCorrectDirectory(files[i]);
+    for (int i = 0; i < files.length; i++) {
+      for (int j = 0; j < dirs.length; j++) {
+        if (files[i].getName().startsWith(dirs[j].getName())) {
+          renameFile(files[i], new File(dirs[j], files[i].getName().substring(dirs[j].getName().length())));
+          break;
+        }
+      }
+    }
     
     /* and remove the metadata file */
     deleteFile(new File(dir, METADATA_FILENAME));
     
     debug("Done expanding directory " + dir);
-  } 
+  }
   
   /**
    * This method takes in a list of the file names in a given directory which
@@ -1037,7 +1085,7 @@ public class PersistentStorage implements Storage {
    * @param names The names to return the directories for
    * @return The directory names
    */
-  private String[] getDirectories(String[] names, int offset) {
+  private String[] getDirectories(String[] names) {
     int length = getPrefixLength(names);
     String prefix = names[0].substring(0, length);
     CharacterHashSet set = new CharacterHashSet();
@@ -1049,7 +1097,7 @@ public class PersistentStorage implements Storage {
     String[] result = new String[splits.length];
     
     for (int i=0; i<result.length; i++) 
-      result[i] = prefix.substring(offset) + splits[i];
+      result[i] = prefix + splits[i];
     
     return result;
   }
@@ -1087,17 +1135,6 @@ public class PersistentStorage implements Storage {
     
     return i;
   }
-  
-  /**
-   * Takes a file and moves it to the correct directory
-   * this is used in cojunction with expand to move files to their correct
-   * subdirectories below the expanded directory
-   *
-   * @param file The file to be moved
-   */
-  private void moveFileToCorrectDirectory(File file) throws IOException { 
-    moveFileToCorrectDirectory(file.getParentFile(), file.getName());
-  }
       
   /**
    * Takes a file and moves it to the correct directory
@@ -1107,16 +1144,17 @@ public class PersistentStorage implements Storage {
    * @param file The file to be moved
    */
   private void moveFileToCorrectDirectory(File parent, String name) throws IOException { 
-    File real = getDirectoryForName(name);
+    File file = new File(parent, name);
+    Id id = readKeyFromFile(file);
+    File dest = getDirectoryForName(id.toStringFull());
     
     /* if it's in the wrong directory, then move it and resolve the conflict if necessary */
-    if (! real.equals(parent)) {
-      //debug("moving file " + file + " to correct directory " + parent);
-      File file = new File(parent, name);
-      File other = new File(real, file.getName());
+    if (! dest.equals(parent)) {
+      debug("moving file " + file + " to correct directory " + dest + " from " + parent);
+      File other = new File(dest, id.toStringFull().substring(getPrefix(dest).length()));
       resolveConflict(file, other, other);
-      checkDirectory(real);
-    }
+      checkDirectory(dest);
+    } 
   }
    
   /*****************************************************************/
@@ -1133,7 +1171,23 @@ public class PersistentStorage implements Storage {
     if ((directory != null) && (! directory.exists()) && (! directory.mkdir()))
       throw new IOException("Creation of directory " + directory + " failed!");
   }
+  
+  /**
+   * Removes an empty directory given its name
+   *
+   * @param directory The directory to be created
+   * @return Whether the directory is successfully created.
+   */
+  private static void deleteDirectory(File directory) throws IOException {
+    if ((directory != null) && directory.exists()) {
+      if (directory.listFiles().length > 0)
+        throw new IOException("Cannot delete " + directory + " - directory is not empty!");
 
+      if (! directory.delete())
+        throw new IOException("Deletion of directory " + directory + " failed!");
+    }
+  }
+  
   /**
    *
    * Returns the length of a file in bytes
@@ -1175,7 +1229,7 @@ public class PersistentStorage implements Storage {
    * 
    * @param name The name of the file
    * @return Whether or not it is temporary
-   */static 
+   */ 
   private boolean isTemporaryFile(String name) {    
     return (name.indexOf(".") >= 0);
   }
@@ -1194,10 +1248,10 @@ public class PersistentStorage implements Storage {
    */
   private File makeTemporaryFile(Id id) throws IOException {    
     File directory = getDirectoryForId(id);
-    File file = new File(directory, id.toStringFull() + "." + rng.nextInt() % 100);
+    File file = new File(directory, id.toStringFull().substring(getPrefix(directory).length()) + "." + rng.nextInt() % 100);
     
     while (file.exists()) 
-      file = new File(directory, id.toStringFull() + "." + rng.nextInt() % 100);
+      file = new File(directory, id.toStringFull().substring(getPrefix(directory).length()) + "." + rng.nextInt() % 100);
     
     return file;
   }
@@ -1224,7 +1278,8 @@ public class PersistentStorage implements Storage {
    * @return File the file for the id
    */
   private File getFile(Id id) throws IOException {
-    return new File(getDirectoryForId(id), id.toStringFull());
+    File dir = getDirectoryForId(id);
+    return new File(dir, id.toStringFull().substring(getPrefix(dir).length()));
   }
 
   /**
@@ -1290,7 +1345,7 @@ public class PersistentStorage implements Storage {
         dirs[subDirs.length] = name;
         
         /* now reformat the directory, creating an entry for this name */
-        reformatDirectory(dir, getDirectories(dirs, 0));
+        reformatDirectory(dir, getDirectories(dirs));
         
         /* and finally, recurse, which should find a directory for this name */
         return getDirectoryForName(name, dir);
@@ -1299,17 +1354,34 @@ public class PersistentStorage implements Storage {
   }
   
   /**
-   * Returns the prefix length of the given directory, or how long the prefix
-   * is for all files in the directory.
+   * Internal method which returns the postfix for a given id
    *
-   * @param dir The directory
-   * @return The prefix length
+   * @param id The id to return the postfix for
+   * @param file The directory the id will be stored in
+   * @return The postfix
    */
-  private int getPrefixLength(File dir) {
-    if (dir.equals(appDirectory))
-      return 0;
-    else 
-      return dir.getName().length() + getPrefixLength(dir.getParentFile());
+  private String getPostfix(Id id, File file) {
+    return id.toStringFull().substring(getPrefix(file).length());
+  }
+  
+  /**
+   * Internal method which returns the prefix of a given directory
+   *
+   * @param file The directory to return the prefix for
+   * @return The prefix
+   */
+  private String getPrefix(File file) {
+    if (prefixes.get(file) != null)
+      return (String) prefixes.get(file);
+    
+    StringBuffer buffer = new StringBuffer();
+    while (! file.equals(appDirectory)) {
+      buffer.insert(0, file.getName());
+      file = file.getParentFile();
+    }
+    prefixes.put(file, buffer.toString());
+    
+    return getPrefix(file);
   }
   
   /**
@@ -1338,7 +1410,6 @@ public class PersistentStorage implements Storage {
   private int numDirectoriesDir(File dir) {
     return dir.listFiles(new DirectoryFilter()).length;
   }
-  
 
   /**
    * Gets the number of files in directory (excluding directories)
@@ -1357,7 +1428,8 @@ public class PersistentStorage implements Storage {
    * @return int the number of files
    */
   private boolean isFile(File parent, String name) {
-    return (name.length() >= factory.getIdToStringLength());
+//    return (((getPrefix(parent).length() + name.length()) >= factory.getIdToStringLength()) && (! name.equals(METADATA_FILENAME)));
+    return ((! new File(parent, name).isDirectory()) && (! name.equals(METADATA_FILENAME)));
   }
   
   /**
@@ -1367,7 +1439,8 @@ public class PersistentStorage implements Storage {
    * @return int the number of files
    */
   private boolean isDirectory(File parent, String name) {
-    return ((name.length() < factory.getIdToStringLength()) && (new File(parent, name)).isDirectory());
+//    return (((getPrefix(parent).length() + name.length()) < factory.getIdToStringLength()) && (new File(parent, name)).isDirectory());
+    return (new File(parent, name)).isDirectory();
   }
   
   /**
@@ -1462,7 +1535,7 @@ public class PersistentStorage implements Storage {
         while (keys.hasNext()) {
           Id id = (Id) keys.next();
           
-          if ((range.containsId(id)) && (new File(file, id.toStringFull()).exists()))
+          if ((range.containsId(id)) && (new File(file, id.toStringFull().substring(getPrefix(file).length())).exists()))
             this.metadata.put(id, map.get(id));
           else
             dirty.add(file);
@@ -1586,7 +1659,7 @@ public class PersistentStorage implements Storage {
       } else if (ras.readLong() != PERSISTENCE_VERSION_2) {
         System.out.println("Persistence version did not match - exiting!");
         return null;
-      } else if (ras.readLong() != PERSISTENCE_REVISION_2_0) {
+      } else if (ras.readLong() > PERSISTENCE_REVISION_2_1) {
         System.out.println("Persistence revision did not match - exiting!");
         return null;
       }
@@ -1612,7 +1685,7 @@ public class PersistentStorage implements Storage {
       ras.close();
     }
   }
-
+  
   /**
    * Abstract over reading a single key from a file using Java
    * serialization.
@@ -1621,13 +1694,24 @@ public class PersistentStorage implements Storage {
    * @return The key that was read in
    */
   private Id readKey(File file) {
-    String s = file.getName();
-
+    String s = getPrefix(file.getParentFile()) + file.getName();
+    
     if (s.indexOf(".") >= 0) {
       return factory.buildIdFromToString(s.toCharArray(), 0, s.indexOf("."));
     } else {
       return factory.buildIdFromToString(s.toCharArray(), 0, s.length());
     }
+  }
+  
+  /**
+   * Abstract over reading a single key from a file using Java
+   * serialization.
+   *
+   * @param file The file to create the key from.
+   * @return The key that was read in
+   */
+  private Id readKeyFromFile(File file) throws IOException {
+    return (Id) readObject(file, 0);
   }
     
   /**
@@ -1684,7 +1768,7 @@ public class PersistentStorage implements Storage {
       DataOutputStream dos = new DataOutputStream(fout);
       dos.writeLong(PERSISTENCE_MAGIC_NUMBER);
       dos.writeLong(PERSISTENCE_VERSION_2);
-      dos.writeLong(PERSISTENCE_REVISION_2_0);
+      dos.writeLong(PERSISTENCE_REVISION_2_1);
       dos.writeLong(len2-len1);
       dos.close();
     } finally {
@@ -1712,7 +1796,7 @@ public class PersistentStorage implements Storage {
       
         if ((ras.readLong() == PERSISTENCE_MAGIC_NUMBER) && 
             (ras.readLong() == PERSISTENCE_VERSION_2) &&
-            (ras.readLong() == PERSISTENCE_REVISION_2_0)) {
+            (ras.readLong() <= PERSISTENCE_REVISION_2_1)) {
           long length = ras.readLong();
           ras.setLength(file.length() - 32 - length);
         } 
@@ -1739,7 +1823,7 @@ public class PersistentStorage implements Storage {
       DataOutputStream dos = new DataOutputStream(fout);
       dos.writeLong(PERSISTENCE_MAGIC_NUMBER);
       dos.writeLong(PERSISTENCE_VERSION_2);
-      dos.writeLong(PERSISTENCE_REVISION_2_0);
+      dos.writeLong(PERSISTENCE_REVISION_2_1);
       dos.writeLong(len2-len1);
       dos.close();
     } finally {
@@ -1861,24 +1945,22 @@ public class PersistentStorage implements Storage {
   /*****************************************************************/
 
   /**
-   * 
    * A class that filters out the files in a directory to return
    * only subdirectories.
    */ 
   private class DirectoryFilter implements FilenameFilter {
     public boolean accept(File dir, String name) {
-      return ((name.length() < factory.getIdToStringLength()) && (new File(dir, name)).isDirectory());
+      return isDirectory(dir, name); //(new File(dir, name)).isDirectory(); //((getPrefix(dir).length() + name.length() < factory.getIdToStringLength()) && (new File(dir, name)).isDirectory());
     }
   }
   
   /**
-    *
    * A classs that filters out the files in a directory to return
    * only files ( no directories )
    */
   private class FileFilter implements FilenameFilter {
     public boolean accept(File dir, String name) {
-      return (name.length() >= factory.getIdToStringLength());
+      return isFile(dir, name); //(getPrefix(dir).length() + name.length() >= factory.getIdToStringLength());
     }
   }
   
