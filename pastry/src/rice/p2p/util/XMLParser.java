@@ -22,6 +22,15 @@ public class XMLParser implements XmlPullParser {
   public static final char[] WHITESPACE_OR_TAG_END = new char[] {' ', '\t', '\n', '\r', '>', '/', '?'};
   public static final char[] WHITESPACE_OR_EQUALS = new char[] {' ', '\t', '\n', '\r', '='};
   public static final char[] SINGLE = new char[1];
+  
+  public static final String[][] ENTITIES = new String[][] { {"&apos;", "'"}, 
+                                                             {"&quot;", "\""}, 
+                                                             {"&lt;", "<"},
+                                                             {"&gt;", ">"},
+                                                             {"&#13;", String.valueOf((char) 13)},
+                                                             {"&#10;", String.valueOf((char) 10)},
+                                                             {"&#9;", String.valueOf((char) 9)},
+                                                             {"&amp;", "&"} };
 
   /**
    * The internal reader used to read data
@@ -542,10 +551,10 @@ public class XMLParser implements XmlPullParser {
         
         if (contains(QUOTE, quote)) {
           expect(quote);
-          value = parseUntil(quote);
+          value = convert(parseUntil(quote));
           expect(quote);
         } else {
-          value = parseUntil(WHITESPACE_OR_TAG_END);
+          value = convert(parseUntil(WHITESPACE_OR_TAG_END));
         }
         
 //        System.out.println("Parsed ATTRIBUTE '" + key + "' -> '"  + value + "'");
@@ -562,10 +571,27 @@ public class XMLParser implements XmlPullParser {
    */
   protected int parseText() throws XmlPullParserException, IOException {
     clearAttributes();
-    this.text = parseUntil('<');
+    this.text = convert(parseUntil('<'));
     this.inTag = false;
 
     return TEXT;
+  }
+  
+  /**
+   * Internal method which deconverts all of the HTML/XML entities
+   * like &amp, &gt, &lt, etc...
+   *
+   * @param string The string to convert
+   * @return The result
+   */
+  protected String convert(String string) {
+    if (string.indexOf('&') < 0)
+      return string;
+    
+    for (int i=0; i<ENTITIES.length; i++)
+      string = string.replaceAll(ENTITIES[i][0], ENTITIES[i][1]);
+    
+    return string; 
   }
   
   /**
