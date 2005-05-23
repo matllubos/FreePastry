@@ -23,7 +23,7 @@ public class MockImapConnection
     public MockImapConnection()
                        throws IOException
     {
-        super(null, null);
+        super(null, null, false);
 
         // simulate client input
         PipedReader clientIn     = new PipedReader();
