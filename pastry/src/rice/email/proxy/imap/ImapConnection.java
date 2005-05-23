@@ -34,14 +34,16 @@ public class ImapConnection
     public BufferedReader _in;
     InetAddress _clientAddress;
     SpyInputStream _spy;
+    boolean log;
 
     // see quit()
     Quittable _handler;
 
-    public ImapConnection(Quittable handler, Socket sock)
+    public ImapConnection(Quittable handler, Socket sock, boolean log)
                    throws IOException
     {
-
+      this.log = log;
+      
         // networking
         if (sock != null) {
           _socket = sock;
@@ -75,7 +77,7 @@ public class ImapConnection
      */
     public void println(String line)
     {
-        //System.out.println("S: " + line);
+        if (log) System.out.println("S: " + line);
         _out.print(line);
         _out.print("\r\n");
         _out.flush();
@@ -93,7 +95,7 @@ public class ImapConnection
      */
     public void print(String string)
     {
-        //System.out.print(string);
+        if (log) System.out.print(string);
         _out.print(string);
     }
 
@@ -151,13 +153,13 @@ public class ImapConnection
 
         /* if client has disconnected, make sure socket is closed and throw exception */
         if (line == null) {
-            //System.out.println("C: <disconnected>");
+            if (log) System.out.println("C: <disconnected>");
 
             close();
             throw new DisconnectedException();
         } else {
             /* more crude debug logging */
-            //System.out.println("C: " + line);
+            if (log) System.out.println("C: " + line);
 
             return line;
         }

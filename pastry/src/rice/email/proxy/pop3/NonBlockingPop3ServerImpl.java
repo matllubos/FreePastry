@@ -18,15 +18,17 @@ public class NonBlockingPop3ServerImpl extends SelectionKeyHandler implements Po
   // protocol stuff
   Pop3CommandRegistry registry;
   UserManager manager;
+  boolean log;
   
   boolean acceptNonLocal = false;
   
-  public NonBlockingPop3ServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal) throws IOException {
+  public NonBlockingPop3ServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log) throws IOException {
     this.acceptNonLocal = acceptNonLocal;
     this.port = port;
     this.manager = manager;
     this.registry = new Pop3CommandRegistry();
     this.registry.load();
+    this.log = log;
     
     initialize();
   }
@@ -68,7 +70,7 @@ public class NonBlockingPop3ServerImpl extends SelectionKeyHandler implements Po
           public void run() {
             try {
               Pop3Handler handler = new Pop3Handler(registry, manager);
-              handler.handleConnection(socket);
+              handler.handleConnection(socket, log);
             } catch (IOException e) {
               System.out.println("IOException occurred during handling of connection - " + e);
             }

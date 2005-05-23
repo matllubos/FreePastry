@@ -25,11 +25,13 @@ public class Pop3Connection {
   // IO stuff
   BufferedReader _in;
   PrintWriter _out;
+  boolean log;
   
   Pop3Handler handler;
   
-  public Pop3Connection(Pop3Handler handler, Socket socket) throws IOException {
+  public Pop3Connection(Pop3Handler handler, Socket socket, boolean log) throws IOException {
     this.handler = handler;
+    this.log = log;
     configureSocket(socket);
     configureStreams();
   }
@@ -60,16 +62,18 @@ public class Pop3Connection {
   }
   
   public void println(String line) {
-    System.out.println("S: " + line);
+    if (log) System.out.println("S: " + line);
     _out.print(line);
     println();
   }
   
   public void print(String line) {
+    if (log) System.out.print(line);
     _out.print(line);
   }
   
   public void println() {
+    if (log) System.out.println();
     _out.print("\r\n");
     _out.flush();
   }
@@ -81,7 +85,7 @@ public class Pop3Connection {
   
   public String readLine() throws IOException {
     String line = _in.readLine();
-    System.out.println("C: " + line);
+    if (log) System.out.println("C: " + line);
     
     return line;
   }

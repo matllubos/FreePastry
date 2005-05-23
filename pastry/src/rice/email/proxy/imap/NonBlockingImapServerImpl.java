@@ -13,6 +13,7 @@ import java.nio.channels.*;
 
 public class NonBlockingImapServerImpl extends SelectionKeyHandler implements ImapServer {
   
+  boolean log;
   boolean quit = false;
   int port;
   
@@ -25,13 +26,14 @@ public class NonBlockingImapServerImpl extends SelectionKeyHandler implements Im
   
   EmailService email;
 
-  public NonBlockingImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal) throws IOException {
+  public NonBlockingImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log) throws IOException {
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
     this.port = port;
     this.email = email;
     this.manager = manager;
     this.workspace = new InMemoryWorkspace();
+    this.log = log;
 
     initialize();
   }
@@ -73,7 +75,7 @@ public class NonBlockingImapServerImpl extends SelectionKeyHandler implements Im
           public void run() {
             try {
               ParserImapHandler handler = new ParserImapHandler(manager, workspace);
-              handler.handleConnection(socket);
+              handler.handleConnection(socket, log);
             } catch (IOException e) {
               System.out.println("IOException occurred during handling of connection - " + e);
             }

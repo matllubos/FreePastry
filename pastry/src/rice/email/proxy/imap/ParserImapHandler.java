@@ -33,8 +33,8 @@ final class ParserImapHandler implements Quittable {
         state = new ImapState(manager, workspace);
     }
 
-    public void handleConnection(final Socket socket) throws IOException {
-        conn = new ImapConnection(this, socket);
+    public void handleConnection(final Socket socket, boolean log) throws IOException {
+        conn = new ImapConnection(this, socket, log);
         cmdParser = new ImapLineParser();
 
         try {

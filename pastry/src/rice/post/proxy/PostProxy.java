@@ -1293,7 +1293,8 @@ public class PostProxy {
     stepStart("Starting POST service");
     post = new PostImpl(node, immutablePast, mutablePast, pendingPast, deliveredPast, address, pair, certificate, caPublic, 
                         parameters.getStringParameter("application_instance_name"), 
-                        parameters.getBooleanParameter("post_allow_log_insert"), clone,
+                        parameters.getBooleanParameter("post_allow_log_insert"), 
+                        parameters.getBooleanParameter("post_announce_presence"), clone,
                         parameters.getLongParameter("post_synchronize_interval"),
                         parameters.getLongParameter("post_object_refresh_interval"),
                         parameters.getLongParameter("post_object_timeout_interval"));

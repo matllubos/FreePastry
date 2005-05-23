@@ -155,6 +155,11 @@ public class PostImpl implements Post, Application, ScribeClient {
   private boolean logRewrite;
   
   /**
+   * Whether POST should automatically send presence announcements
+   */
+  private boolean announce;
+  
+  /**
    * The previous address of the user, only used when re-inserting the new log
    */
   private PostEntityAddress previousAddress;
@@ -185,6 +190,7 @@ public class PostImpl implements Post, Application, ScribeClient {
                   PublicKey caPublicKey,
                   String instance,
                   boolean logRewrite,
+                  boolean announce,
                   PostEntityAddress previousAddress,
                   long synchronizeInterval,
                   long refreshInterval,
@@ -196,6 +202,7 @@ public class PostImpl implements Post, Application, ScribeClient {
     this.certificate = certificate;
     this.caPublicKey = caPublicKey;
     this.logRewrite = logRewrite;
+    this.announce = announce;
     this.previousAddress = previousAddress;
     
     this.scribe = new ScribeImpl(node, instance);
@@ -613,7 +620,7 @@ public class PostImpl implements Post, Application, ScribeClient {
       go = (deliveryBuffer.size() == 0);
     }
     
-    if (go)
+    if (go && announce)
       announcePresence();
   }
   

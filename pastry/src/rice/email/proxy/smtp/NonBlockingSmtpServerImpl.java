@@ -33,6 +33,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
   boolean quit = false;
   boolean authenticate = false;
   int port;
+  boolean log;
 
   SmtpManager manager;
 
@@ -50,7 +51,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
   
   int connections = 0;
 
-  public NonBlockingSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server) throws Exception {
+  public NonBlockingSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, boolean log) throws Exception {
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
     this.port = port;
@@ -61,6 +62,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
     this.registry = new SmtpCommandRegistry();
     this.registry.load();
     this.workspace = new InMemoryWorkspace();
+    this.log = log;
 
     initialize();
   }
@@ -121,7 +123,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
           public void run() {
             try {
               SmtpHandler handler = new SmtpHandler(registry, manager, workspace, NonBlockingSmtpServerImpl.this, userManager, authenticate);
-              handler.handleConnection(socket);
+              handler.handleConnection(socket, log);
               
               synchronized (NonBlockingSmtpServerImpl.this) {
                 connections--; 

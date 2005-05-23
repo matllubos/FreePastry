@@ -36,8 +36,8 @@ class SmtpHandler {
     this.authenticate = authenticate;
   }
 
-  public void handleConnection(Socket socket) throws IOException {
-    _conn = new SmtpConnection(this, socket, _server);
+  public void handleConnection(Socket socket, boolean log) throws IOException {
+    _conn = new SmtpConnection(this, socket, _server, log);
     _state = new SmtpState(_workspace, _userManager);
     _state.setRemote(socket.getInetAddress());
 

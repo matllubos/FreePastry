@@ -29,6 +29,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
   boolean authenticate = false;
   int port;
   ServerSocket server;
+  boolean log;
 
   SmtpManager manager;
 
@@ -40,7 +41,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
   
   UserManager userManager;
 
-  public SmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server) throws Exception {
+  public SmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, boolean log) throws Exception {
     super("SMTP Server Thread");
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
@@ -52,6 +53,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
     this.registry = new SmtpCommandRegistry();
     this.registry.load();
     this.workspace = new InMemoryWorkspace();
+    this.log = log;
 
     initialize();
   }
@@ -78,7 +80,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
             public void run() {
               try {
                 SmtpHandler handler = new SmtpHandler(registry, manager, workspace, SmtpServerImpl.this, userManager, authenticate);
-                handler.handleConnection(socket);
+                handler.handleConnection(socket, log);
                 socket.close();
               } catch (IOException e) {
                 System.out.println("IOException occurred during handling of connection - " + e);

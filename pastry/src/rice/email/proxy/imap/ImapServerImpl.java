@@ -11,6 +11,7 @@ import java.net.*;
 
 public class ImapServerImpl extends Thread implements ImapServer {
   
+  boolean log;
   boolean quit = false;
   int port;
   ServerSocket server;
@@ -24,7 +25,7 @@ public class ImapServerImpl extends Thread implements ImapServer {
   
   EmailService email;
 
-  public ImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal) throws IOException {
+  public ImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log) throws IOException {
     super("IMAP Server Thread");
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
@@ -32,6 +33,7 @@ public class ImapServerImpl extends Thread implements ImapServer {
     this.email = email;
     this.manager = manager;
     this.workspace = new InMemoryWorkspace();
+    this.log = log;
 
     initialize();
   }
@@ -57,7 +59,7 @@ public class ImapServerImpl extends Thread implements ImapServer {
             public void run() {
               try {
                 ParserImapHandler handler = new ParserImapHandler(manager, workspace);
-                handler.handleConnection(socket);
+                handler.handleConnection(socket, log);
               } catch (IOException e) {
                 System.out.println("IOException occurred during handling of connection - " + e);
               }

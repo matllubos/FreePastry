@@ -19,8 +19,8 @@ public class SSLImapServerImpl extends ImapServerImpl {
   
   protected String password;
   
-  public SSLImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, String keystore, String password) throws IOException {
-    super(port, email, manager, gateway, acceptNonLocal);
+  public SSLImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, String keystore, String password, boolean log) throws IOException {
+    super(port, email, manager, gateway, acceptNonLocal, log);
     this.keystore = keystore;
     this.password = password;
     

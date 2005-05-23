@@ -93,7 +93,7 @@ public class ConfigurationFrame extends JFrame {
   }
   
   protected void save() {
-    for (int i=0; i<panels.length; i++)
+    for (int i=0; i<panels.length; i++) 
       panels[i].save();
   }
   
@@ -364,7 +364,8 @@ public class ConfigurationFrame extends JFrame {
             new SaveablePanel[][] { 
             { new EnableBox("email_smtp_enable", "SMTP Enable", new GridBagLayout(), "Whether or not the SMTP service should be enabled - if so, there must be a default server"), new NumericBox("email_smtp_port", "SMTP Port", new GridBagLayout(), "#####", "The port which the local SMTP server should run on") },
             { new EnableBox("email_smtp_ssl", "Use SSL", new GridBagLayout(), "Whether or not the SMTP server should run as an SSL server"), new EnableBox("email_smtp_authenticate", "Require Authentication", new GridBagLayout(), "Whether or not the SMTP server should require authenication before sending (via CRAM-MD5 or AUTH LOGIN)") },
-            { new TextBox("email_smtp_server", "Default SMTP Server", new GridBagLayout(), "The default SMTP server to use if an email is sent to a non-ePOST recipient - this is generally the same as your normal SMTP server") } });
+            { new TextBox("email_ring_" + ((rice.p2p.multiring.RingId) proxy.address.getAddress()).getRingId().toStringFull() + "_smtp_server", "Default SMTP Server", new GridBagLayout(), "The default SMTP server to use if an email is sent to a non-ePOST recipient - this is generally the same as your normal SMTP server") },
+            { new EnableBox("email_smtp_log", "Log Traffic", new GridBagLayout(), "Whether or not the SMTP server should log all traffic") } });
     }
   }
   
@@ -372,8 +373,8 @@ public class ConfigurationFrame extends JFrame {
     public ImapConfiguration(GridBagLayout layout) {      
       super("IMAP Server", layout, 
             new SaveablePanel[][] { 
-            { new EnableBox("email_imap_enable", "IMAP Enable", new GridBagLayout(), "Whether or not the IMAP service should be enabled"), new NumericBox("email_imap_port", "SMTP Port", new GridBagLayout(), "#####", "The port which the local IMAP server should run on") },
-            { new EnableBox("email_imap_ssl", "Use SSL", new GridBagLayout(), "Whether or not the IMAP server should run as an SSL server") } });
+            { new EnableBox("email_imap_enable", "IMAP Enable", new GridBagLayout(), "Whether or not the IMAP service should be enabled"), new NumericBox("email_imap_port", "IMAP Port", new GridBagLayout(), "#####", "The port which the local IMAP server should run on") },
+            { new EnableBox("email_imap_ssl", "Use SSL", new GridBagLayout(), "Whether or not the IMAP server should run as an SSL server"), new EnableBox("email_imap_log", "Log Traffic", new GridBagLayout(), "Whether or not the IMAP server should log all traffic") } });
     }
   }
 
@@ -382,7 +383,7 @@ public class ConfigurationFrame extends JFrame {
       super("POP3 Server", layout, 
             new SaveablePanel[][] { 
             { new EnableBox("email_pop3_enable", "POP3 Enable", new GridBagLayout(), "Whether or not the POP3 service should be enabled"), new NumericBox("email_pop3_port", "POP3 Port", new GridBagLayout(), "#####", "The port which the local POP3 server should run on") },
-            { new EnableBox("email_pop3_ssl", "Use SSL", new GridBagLayout(), "Whether or not the POP3 server should run as an SSL server") } });
+            { new EnableBox("email_pop3_ssl", "Use SSL", new GridBagLayout(), "Whether or not the POP3 server should run as an SSL server"), new EnableBox("email_pop3_log", "Log Traffic", new GridBagLayout(), "Whether or not the POP3 server should log all traffic") } });
     }
   }
   
@@ -517,7 +518,6 @@ public class ConfigurationFrame extends JFrame {
     public TitledPanel(String title, GridBagLayout layout) {
       super(layout);
       
-      this.panels = panels;
       this.layout = layout;
       
       setBorder(BorderFactory.createCompoundBorder(BorderFactory.createTitledBorder(title),
@@ -530,6 +530,7 @@ public class ConfigurationFrame extends JFrame {
     }
     
     public void setPanels(SaveablePanel[][] panels) {
+      this.panels = panels;
       for (int i=0; i<panels.length; i++) {
         SaveablePanel[] row = panels[i];
         

@@ -22,9 +22,9 @@ public class Pop3Handler {
     _manager = manager;
   }
   
-  public void handleConnection(Socket socket) throws IOException {
+  public void handleConnection(Socket socket, boolean log) throws IOException {
     try {
-      _conn = new Pop3Connection(this, socket);
+      _conn = new Pop3Connection(this, socket, log);
       _state = new Pop3State(_manager);
       _quitting = false;
       

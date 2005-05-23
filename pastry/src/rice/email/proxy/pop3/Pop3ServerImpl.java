@@ -12,6 +12,7 @@ public class Pop3ServerImpl extends Thread implements Pop3Server {
   // networking stuff
   int port;
   ServerSocket server;
+  boolean log;
   
   // protocol stuff
   Pop3CommandRegistry registry;
@@ -19,13 +20,14 @@ public class Pop3ServerImpl extends Thread implements Pop3Server {
   
   boolean acceptNonLocal = false;
   
-  public Pop3ServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal) throws IOException {
+  public Pop3ServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log) throws IOException {
     super("POP3 Server Thread");
     this.acceptNonLocal = acceptNonLocal;
     this.port = port;
     this.manager = manager;
     this.registry = new Pop3CommandRegistry();
     this.registry.load();
+    this.log = log;
     
     initialize();
   }
@@ -51,7 +53,7 @@ public class Pop3ServerImpl extends Thread implements Pop3Server {
             public void run() {
               try {
                 Pop3Handler handler = new Pop3Handler(registry, manager);
-                handler.handleConnection(socket);
+                handler.handleConnection(socket, log);
               } catch (IOException e) {
                 System.out.println("IOException occurred during handling of connection - " + e);
               }

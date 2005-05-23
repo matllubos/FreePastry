@@ -29,8 +29,9 @@ public class SmtpConnection {
     public StreamTokenizer in;
     SmtpHandler handler;
     String heloName;
+    boolean log;
 
-    public SmtpConnection(SmtpHandler handler, Socket sock, SmtpServer server) throws IOException {
+    public SmtpConnection(SmtpHandler handler, Socket sock, SmtpServer server, boolean log) throws IOException {
         if (sock != null) {
           this.sock = sock;
           sock.setSoTimeout(TIMEOUT_MILLIS);
@@ -48,6 +49,7 @@ public class SmtpConnection {
           
       this.server = server;
         this.handler = handler;
+        this.log = log;
     }
     
     public SmtpServer getServer() {
@@ -59,7 +61,7 @@ public class SmtpConnection {
     }
 
     public void println(String line) {
-   //     System.out.println("S: " + line);
+        if (log) System.out.println("S: " + line);
         out.print(line + "\r\n");
         out.flush();
     }
@@ -68,10 +70,10 @@ public class SmtpConnection {
       int result = in.nextToken();
       
       if (result == in.TT_WORD) {
-   //     System.out.println("C: " + in.sval);
+        if (log)  System.out.println("C: " + in.sval);
         return in.sval;
       } else if (result == in.TT_NUMBER) {
-    //    System.out.println("C*:" + in.nval);
+        if (log) System.out.println("C*:" + in.nval);
         return "" + in.nval;
       } else {
         return null;
