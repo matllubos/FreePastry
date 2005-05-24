@@ -97,64 +97,50 @@ public class PostMessage implements StoredMessage {
 
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
   }
+  
+  protected static PostUserAddress[] getAddresses(MimeParser parser, String field) throws MailboxException {
+    try {
+      String value = parser.getHeaderValue(field);
+      Vector result = new Vector();
+      
+      if (value == null)
+        value = "";
+      
+      while (value.length() > 0) {
+        if ((value.indexOf("<") < 0) || (value.indexOf("<") == value.length() - 1)) break;
+        value = value.substring(0, value.indexOf("<") + 1);
+        
+        if (value.indexOf(">") < 0) break;
+        result.add(new PostUserAddress(factory, value.substring(0, value.indexOf(">"))));
+        
+        value = value.substring(value.indexOf(">"));
+      }
+      
+      return (PostUserAddress[]) result.toArray(new PostUserAddress[0]);
+    } catch (MimeException e) {
+      throw new MailboxException(e);
+    }
+  }
 
   public static Email parseEmail(InetAddress remote, Resource content) throws MailboxException {
     try {
-      Properties props = new Properties();
-      Session session = Session.getDefaultInstance(props, null);
-      javax.mail.internet.MimeMessage mm = new javax.mail.internet.MimeMessage(session, content.getInputStream());
-            
-      Address froms[] = null;
-      Address to[] = null;
-      Address cc[] = null;
-      Address bcc[] = null;
+      MimeParser parser = new MimeParser(content.getInputStream());
+      if (parser.next() != MimeParser.START_HEADERS_PART)
+        throw new MailboxException("ERROR: Parsing Mime message initially returned " + parser.getEventType());
       
-      InternetAddress[] fallback = new InternetAddress[1];
-      fallback[0] = new InternetAddress("malformed@cs.rice.edu","MalformedAddress");
-      /* Ugly fix for malformed addreses ABP4 */
-      try{
-        froms = mm.getFrom();
-      } catch (AddressException ae) { froms = fallback;}
-      
-      try{
-        to = mm.getRecipients(Message.RecipientType.TO);
-      } catch (AddressException ae) { to = fallback;}
-      
-      try{
-        cc = mm.getRecipients(Message.RecipientType.CC);
-      } catch (AddressException ae) { cc = fallback;}
-      
-      try{
-        bcc = mm.getRecipients(Message.RecipientType.BCC);
-      } catch (AddressException ae) { bcc = fallback;}
-      
-      if (to == null) to = new Address[0];
-      if (cc == null) cc = new Address[0];
-      if (bcc == null) bcc = new Address[0];
+      PostUserAddress[] froms = getAddresses(parser, "from");
+      PostUserAddress[] to = getAddresses(parser, "to");
+      PostUserAddress[] cc = getAddresses(parser, "cc");
+      PostUserAddress[] bcc = getAddresses(parser, "bcc");
 
       PostUserAddress[] recipients = new PostUserAddress[to.length + cc.length + bcc.length];
  
-      for (int i=0; i<recipients.length; i++) {
-        if (i < to.length) {
-          recipients[i] = new PostUserAddress(factory, ((InternetAddress) to[i]).getAddress());
-        } else if (i < to.length + cc.length) {
-          recipients[i] = new PostUserAddress(factory, ((InternetAddress) cc[i-to.length]).getAddress());
-        } else {
-          recipients[i] = new PostUserAddress(factory, ((InternetAddress) bcc[i-cc.length-to.length]).getAddress());
-        }
-      }
-
+      System.arraycopy(to, 0, recipients, 0, to.length);
+      System.arraycopy(cc, 0, recipients, to.length, cc.length);
+      System.arraycopy(bcc, 0, recipients, to.length + cc.length, bcc.length);
+      
       return parseEmail(remote, recipients, content);
     } catch (IOException e) {
-      throw new MailboxException(e);
-    } catch(AddressException ae){
-      System.out.println("***********************");
-      ae.printStackTrace();
-      System.out.println(ae.getRef());
-      System.out.println(ae.getPos());
-      System.out.println("***********************");
-      throw new MailboxException(ae);
-    } catch (MessagingException e) {
       throw new MailboxException(e);
     }
   }
@@ -165,62 +151,99 @@ public class PostMessage implements StoredMessage {
   
   public static Email parseEmail(InetAddress remote, PostEntityAddress[] recipients, Resource content, PostEntityAddress address) throws MailboxException {    
     try {
-      Properties props = new Properties();
-      Session session = Session.getDefaultInstance(props, null);
-      javax.mail.internet.MimeMessage mm = new javax.mail.internet.MimeMessage(session, content.getInputStream());
+      MimeParser parser = new MimeParser(content.getInputStream());
+      if (parser.next() != MimeParser.START_HEADERS_PART)
+        throw new MailboxException("ERROR: Parsing Mime message initially returned " + parser.getEventType());      
       
-      Address froms[] = mm.getFrom();
+      PostUserAddress[] froms = getAddresses(parser, "from");
       PostUserAddress from = new PostUserAddress(factory, "Unknown");
-
-      if ((froms != null) && (froms.length > 0)) 
-        from = new PostUserAddress(factory, ((InternetAddress) froms[0]).getAddress());
       
-      if ((address != null) && (address.equals(from))) 
-        mm.addHeaderLine(SECURE_HEADER_LINE);
-      else
-        mm.addHeaderLine(UNSECURE_HEADER_LINE);
+      if ((froms != null) && (froms.length > 0)) 
+        from = froms[0];
 
       if (address != null) 
         from = (PostUserAddress) address;
       
-      try {
-        if ((mm.getHeader("X-Image-Url") == null) || (mm.getHeader("X-Image-Url").length == 0))
-          mm.addHeaderLine(IMAGE_URL_HEADER_LINE);
-
-        if (remote != null)
-          mm.addHeaderLine("Received: from " + remote.getHostAddress() + " by " + InetAddress.getLocalHost().getHostAddress() + " via SMTP; " + MimeMessage.dateReader.format(new Date(System.currentTimeMillis())));
-      } catch (Exception e) {
-        System.out.println("ERROR: Got exception " + e + " adding breadcrumb...");
+      String extraHeaders = "";
+      
+      if ((address != null) && (address.equals(from))) 
+        extraHeaders += SECURE_HEADER_LINE + "\r\n";
+      else
+        extraHeaders += UNSECURE_HEADER_LINE + "\r\n";
+      
+      if (remote != null)
+        extraHeaders += "Received: from " + remote.getHostAddress() + " by " + InetAddress.getLocalHost().getHostAddress() + " via SMTP; " + MimeMessage.dateReader.format(new Date(System.currentTimeMillis())) + "\r\n";
+      
+      return new Email(from, recipients, processMessage(parser, extraHeaders));
+    } catch (IOException ioe) {
+      throw new MailboxException(ioe);
+    }
+  }
+  
+  private static EmailMessagePart processMessage(MimeParser parser, String extraHeaders) throws MailboxException {
+    try {
+      byte[] headers = parser.getHeader();
+      
+      if ((extraHeaders != null) && (extraHeaders.length() > 0)) {
+        byte[] extra = extraHeaders.getBytes();
+        byte[] tmp = new byte[headers.length+extra.length];
+        
+        System.arraycopy(headers, 0, tmp, 0, headers.length);
+        System.arraycopy(extra, 0, tmp, headers.length, extra.length);
+        headers = tmp;
       }
-      return new Email(from, recipients, (EmailMessagePart) process(mm));
-    } catch (Exception e) {
-      try {
-        System.out.println("ERROR: Got Exception " + e + " while parsing message - defaulting to dumb parsing.");
-        BufferedReader r = new BufferedReader(new InputStreamReader(content.getInputStream()));
-        
-        StringBuffer headers = new StringBuffer();
-        StringBuffer body = new StringBuffer();
-        String line = null;
-        boolean done = false;
-        
-        while ((line = r.readLine()) != null) {
-          if (done) {
-            body.append(line + "\r\n");
-          } else {
-            if (line.trim().equals("")) {
-              done = true;
-            } else {
-              headers.append(line + "\r\n");
-            }
-          }
+      
+      return new EmailMessagePart(new EmailData(headers), process(parser));
+    } catch (MimeException e) {
+      throw new MailboxException(e);
+    }
+  }
+  
+  private static EmailContentPart process(MimeParser parser) throws MailboxException {
+    try {
+      switch (parser.next()) {
+        case MimeParser.START_HEADERS_PART:
+          return processMessage(parser, null);
+        case MimeParser.START_MULTIPART:
+          return processMultipart(parser);
+        case MimeParser.SINGLE_PART:
+          return processSinglePart(parser);
+        default:
+          throw new MailboxException("Unexpected next value int processContent " + parser.getEventType());
+      } 
+    } catch (MimeException e) {
+      throw new MailboxException(e);
+    }
+  }
+  
+  private static EmailMultiPart processMultipart(MimeParser parser) throws MailboxException {
+    try {
+      Vector parts = new Vector();
+      String boundary = "boundary=" + parser.getBoundary();
+      
+      System.out.println("PROCESSING MIME MESSAGE WITH BOUNDARY " + boundary);
+      
+      while (true) {
+        switch (parser.next()) {
+          case MimeParser.START_HEADERS_PART:
+            parts.add(new EmailHeadersPart(new EmailData(parser.getHeader()), process(parser)));
+            break;
+          case MimeParser.END_MULTIPART:
+            return new EmailMultiPart((EmailHeadersPart[]) parts.toArray(new EmailHeadersPart[0]), boundary);
+          default:
+            throw new MailboxException("Unexpected next value int processMultipart " + parser.getEventType());
         }
-        
-        EmailSinglePart esp = new EmailSinglePart(new EmailData(body.toString().getBytes()));
-        EmailMessagePart emp = new EmailMessagePart(new EmailData(headers.toString().getBytes()), esp);
-        return new Email((PostUserAddress) address, recipients, emp);
-      } catch (IOException ioe) {
-        throw new MailboxException(ioe);
-      }
+      }  
+    } catch (MimeException e) {
+      throw new MailboxException(e);
+    }
+  }
+  
+  private static EmailSinglePart processSinglePart(MimeParser parser) throws MailboxException {
+    try {
+      return new EmailSinglePart(new EmailData(parser.getPart()));
+    } catch (MimeException e) {
+      throw new MailboxException(e);
     }
   }
   
@@ -239,71 +262,6 @@ public class PostMessage implements StoredMessage {
       System.out.println(indent + "EmailHeadersPart");
       walker(((EmailHeadersPart) part).content, indent + "  ");
     } 
-  }
-
-
-  private static EmailContentPart processContent(MimePart part) throws IOException, MessagingException {
-    try {
-      Object content = part.getContent();
-    
-      if (content instanceof Multipart) {
-        return process((Multipart) content, part.getContentType());
-      } else if (content instanceof MimePart) {
-        return process((MimePart) content);
-      } else {
-        if (part instanceof MimeBodyPart)
-          return process(((MimeBodyPart) part).getRawInputStream());
-        else if (part instanceof javax.mail.internet.MimeMessage)
-          return process(((javax.mail.internet.MimeMessage) part).getRawInputStream());
-        else
-          return process(part.getInputStream());
-      }
-    } catch (UnsupportedEncodingException uex) {
-      if (part instanceof MimeBodyPart)
-        return process(((MimeBodyPart) part).getRawInputStream());
-      else if (part instanceof javax.mail.internet.MimeMessage)
-        return process(((javax.mail.internet.MimeMessage) part).getRawInputStream());
-      else
-        return process(part.getInputStream());
-    }
-  }
-
-  private static EmailHeadersPart process(MimePart mime) throws IOException, MessagingException {
-    EmailData headers = new EmailData(getHeaders(mime).getBytes());
-    EmailContentPart part = processContent(mime);
-
-    if (mime instanceof javax.mail.internet.MimeMessage)
-      return new EmailMessagePart(headers, part);
-    else
-      return new EmailHeadersPart(headers, part);
-  }
-
-  private static EmailMultiPart process(Multipart part, String type) throws IOException, MessagingException {
-    EmailHeadersPart[] parts = new EmailHeadersPart[part.getCount()];
-
-    for (int i=0; i<parts.length; i++) {
-      parts[i] = process((MimePart) part.getBodyPart(i));
-    }
-
-    return new EmailMultiPart(parts, type);
-  }
-
-  private static EmailSinglePart process(InputStream stream) throws IOException, MessagingException {
-    String data = StreamUtils.toString(new InputStreamReader(stream));
-    return new EmailSinglePart(new EmailData(data.getBytes()));
-  }
-
-  private static String getHeaders(MimePart mime) throws MessagingException {
-    Enumeration e = mime.getAllHeaderLines();
-
-    String headersText = "";
-
-    while (e.hasMoreElements()) {
-      String header = (String) e.nextElement();
-      headersText += header + "\r\n";
-    }
-
-    return headersText;
   }
 
   private static Object getContent(EmailContentPart part) throws MailboxException {
