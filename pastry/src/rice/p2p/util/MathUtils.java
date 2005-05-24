@@ -128,7 +128,14 @@ public class MathUtils {
    */
   public static int byteArrayToInt(byte[] input) {
     input = correctLength(input, 4);
-    return ((input[0] << 24) | (input[1] << 16) | (input[2] << 8) | input[3]); 
+
+    int result;
+    result  = (input[0] & 0xFF) << 24;
+    result |= (input[1] & 0xFF) << 16;
+    result |= (input[2] & 0xFF) << 8;
+    result |= (input[3] & 0xFF);
+
+    return result;
   }
 
   /**
@@ -168,8 +175,18 @@ public class MathUtils {
    */
   public static long byteArrayToLong(byte[] input) {
     input = correctLength(input, 8);
-    return ((input[0] << 56) | (input[1] << 48) | (input[2] << 40) | (input[3] << 32) |
-      (input[4] << 24) | (input[5] << 16) | (input[6] << 8) | input[7]);
+ 
+    long result;
+    result  = ((long)(input[0] & 0xFF)) << 56;
+    result |= ((long)(input[1] & 0xFF)) << 48;
+    result |= ((long)(input[2] & 0xFF)) << 40;
+    result |= ((long)(input[3] & 0xFF)) << 32;
+    result |= ((long)(input[4] & 0xFF)) << 24;
+    result |= ((long)(input[5] & 0xFF)) << 16;
+    result |= ((long)(input[6] & 0xFF)) << 8;
+    result |= ((long)(input[7] & 0xFF));
+
+    return result;
   }
 
   /**

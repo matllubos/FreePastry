@@ -40,40 +40,6 @@ public class SecurityUtilsUnit {
     System.out.println("-------------------------------------------------------------");
     System.out.println("  Running Tests");
 
-    System.out.print("    Testing hexadecimal conversion\t\t\t");
-
-    byte[] testHexBytes = new byte[] {(byte) 0xa7, (byte) 0xb3, (byte) 0x00, (byte) 0x12, (byte) 0x4e};
-    String result = MathUtils.toHex(testHexBytes);
-    
-    if (result.equals("a7b300124e")) {
-      System.out.println("[ PASSED ]");
-    } else {
-      System.out.println("[ FAILED ]");
-      System.out.println("    Input: \t" + testHexBytes);
-      System.out.println("    Output:\t" + result);
-    }
-    
-    System.out.print("    Testing long conversion\t\t\t\t");
-    long testLong = Long.parseLong("0123456789ABCDEF", 16);
-
-    byte[] testLongByte = MathUtils.longToByteArray(testLong);
-
-    if ((testLongByte[0] == (byte) 0x01) &&
-      (testLongByte[1] == (byte) 0x23) &&
-      (testLongByte[2] == (byte) 0x45) &&
-      (testLongByte[3] == (byte) 0x67) &&
-      (testLongByte[4] == (byte) 0x89) &&
-      (testLongByte[5] == (byte) 0xAB) &&
-      (testLongByte[6] == (byte) 0xCD) &&
-      (testLongByte[7] == (byte) 0xEF)) {
-      System.out.println("[ PASSED ]");
-    } else {
-      System.out.println("[ FAILED ]");
-      System.out.println("    Input: \t" + testLong);
-      System.out.println("    Output:\t" + testLongByte[0] + " " + testLongByte[1] + " " +
-        testLongByte[2] + " " + testLongByte[3]);
-    }
-
     System.out.print("    Testing serialization\t\t\t\t");
     String testString = "test";
     byte[] testStringByte = SecurityUtils.serialize(testString);
