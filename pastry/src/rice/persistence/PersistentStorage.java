@@ -783,7 +783,7 @@ public class PersistentStorage implements Storage {
    * @param name The name of the file
    */
   private void upgradeFile(File parent, String name) throws IOException {
-    if ((name.length() >= factory.getIdToStringLength()) && name.startsWith(getPrefix(parent)) && (! parent.equals(appDirectory))) {
+    if (name.startsWith(getPrefix(parent)) && (! parent.equals(appDirectory))) {
       debug("Upgrading file " + name + " to new version " + name.substring(getPrefix(parent).length()));
       renameFile(new File(parent, name), new File(parent, name.substring(getPrefix(parent).length())));
     }
