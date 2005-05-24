@@ -33,12 +33,12 @@ public class StringBufferResource implements Resource {
       int pos = 0;
       
       public int read() {
-        return (pos < buffer.length() ? (int) buffer.charAt(pos++) & 0xFF : 0);
+        return (pos < buffer.length() ? (int) buffer.charAt(pos++) & 0xFF : -1);
       }
       
       public int read(byte[] buf, int off, int len) {
         if (pos >= buffer.length())
-          return 0;
+          return -1;
         
         if (len > buffer.length() - pos)
           len = buffer.length() - pos;
