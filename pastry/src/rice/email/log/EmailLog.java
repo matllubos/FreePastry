@@ -90,16 +90,7 @@ public class EmailLog extends CoalescedLog {
   public ContentHashReference[] getSnapshotReferences() {
     return snapshots;
   }
-  
-  /**
-   * Returns the reference to the most recent log entry
-   *
-   * @return The most recent log entry reference
-   */
-  public LogEntryReference getTopEntryReference() {
-    return topEntryReference;
-  }
-  
+    
   /**
    * Returns the list of subscriptions in the log
    *

@@ -2,6 +2,7 @@ package rice.post.log;
 
 import java.lang.ref.*;
 import java.security.*;
+import java.util.Arrays;
 
 import rice.*;
 import rice.p2p.commonapi.*;
@@ -24,7 +25,11 @@ public abstract class LogEntry implements PostData {
   protected PostEntityAddress user;
   
   // a reference to the previous entry in the log
+  // deprecated; use the array previousEntryReferences[] below
   protected LogEntryReference previousEntryReference;
+  
+  // a reference to the previous N_LOG_ENTRIES references in the log
+  protected LogEntryReference previousEntryReferences[];
 
   // the previous entry in the log
   private transient SoftReference previousEntry;
@@ -74,9 +79,12 @@ public abstract class LogEntry implements PostData {
    *
    * @param ref A reference to the previous log entry
    */
-  public void setPreviousEntryReference(LogEntryReference ref) {
-    if ((previousEntryReference == null) || (ref.equals(previousEntryReference))) {
-      previousEntryReference = ref;
+  public void setPreviousEntryReferences(LogEntryReference[] ref) {
+    if (((previousEntryReferences == null) && (previousEntryReference == null)) ||
+        ((previousEntryReferences == null) && (previousEntryReference == ref[0])) ||
+        Arrays.equals(ref,previousEntryReferences)) {
+      System.out.println("LogDAG: setting previous entry references: " + ref);
+      previousEntryReferences = ref;
     } else {
       System.out.println("ERROR - Trying to set previous ref on already-set log.");
       (new Exception()).printStackTrace();
@@ -92,8 +100,13 @@ public abstract class LogEntry implements PostData {
     if (parent != null) {
       return parent.getPreviousEntryReference();
     }
-    
-    return previousEntryReference;
+    if (previousEntryReferences != null) {
+      System.out.println("LogDAG: getting previous entry reference from array: " + previousEntryReferences[0]);
+      return previousEntryReferences[0];
+    } else {
+      System.out.println("LogDAG: getting previous entry reference old way: " + previousEntryReference);
+    	  return previousEntryReference;
+    }
   }
   
   /**
@@ -105,7 +118,7 @@ public abstract class LogEntry implements PostData {
     if (parent != null)
       return parent.hasPreviousEntry();
     else
-      return (previousEntryReference != null);
+      return (previousEntryReferences != null) || (previousEntryReference != null);
   }
   
   /**
@@ -143,7 +156,7 @@ public abstract class LogEntry implements PostData {
     
     LogEntry prev = ((previousEntry == null) ? null : (LogEntry) previousEntry.get());
     
-    if ((prev == null) && (previousEntryReference != null)) {
+    if ((prev == null) && ((previousEntryReferences != null) || (previousEntryReference != null))) {
       Continuation fetch = new Continuation() {
         public void receiveResult(Object o) {
           try {
@@ -161,7 +174,13 @@ public abstract class LogEntry implements PostData {
         }
       };
 
-      post.getStorageService().retrieveContentHash(previousEntryReference, fetch);
+      if (previousEntryReferences == null) {
+        System.out.println("LogDAG: fetching previousEntryReference from storage oldskool " + previousEntryReference);
+        post.getStorageService().retrieveContentHash(previousEntryReference, fetch);
+      } else {
+        System.out.println("LogDAG: fetching previousEntryReferences[0] from storage newskool " + previousEntryReferences[0]);
+      		post.getStorageService().retrieveContentHash(previousEntryReferences[0],fetch);
+      }
     } else {
       command.receiveResult(prev);
     }

@@ -87,6 +87,7 @@ public class PostLog extends Log {
     // now, we copy the necessary metadata over
     this.children = previous.children;
     this.topEntryReference = previous.topEntryReference;
+    this.topEntryReferences = previous.topEntryReferences;
     
     sync(command);
   }

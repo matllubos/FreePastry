@@ -211,7 +211,10 @@ public class CoalescedLog extends EncryptedLog {
      * @return A reference to the previous log entry
      */
     public LogEntryReference getPreviousEntryReference() {
-      return topEntryReference;
+      if (topEntryReferences != null)
+        	return topEntryReferences[0];
+      else	
+        return topEntryReference;
     }
     
     /**
@@ -220,7 +223,7 @@ public class CoalescedLog extends EncryptedLog {
      * @return Whether or not this log entry has a previous
      */
     public boolean hasPreviousEntry() {
-      return (topEntryReference != null);
+      return (topEntryReferences != null) || (topEntryReference != null);
     }    
     
     /**

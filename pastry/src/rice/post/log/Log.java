@@ -55,8 +55,19 @@ public class Log implements PostData {
 
   /**
    * A reference to the most recent entry in this log.
+   * deprecated, use the topEntryReferences[] array below
    */
   protected LogEntryReference topEntryReference;
+  
+  /**
+   * Number of topEntryReferences to keep around. 
+   */
+  protected final static int N_TOP_ENTRIES = 4;
+  
+  /**
+   * References to the last n entries in this log.
+   */
+  protected LogEntryReference topEntryReferences[];
 
   /**
    * The most recent entry in this log.
@@ -317,6 +328,19 @@ public class Log implements PostData {
   }
     
   /**
+   * Returns the reference to the most recent log entry
+   *
+   * @return The most recent log entry reference
+   */
+  public LogEntryReference getTopEntryReference() {
+    if (topEntryReferences != null) {
+      return topEntryReferences[0];
+    } else {
+      return topEntryReference;
+    }
+  }
+  
+  /**
    * This method returns a reference to the most recent entry in the log,
    * which can then be used to walk down the log.
    *
@@ -332,8 +356,16 @@ public class Log implements PostData {
    * @return The top entry which is actually an entry
    */
   protected final void getRealTopEntry(Continuation command) {
-    if ((topEntry == null) && (topEntryReference != null)) {
-      post.getStorageService().retrieveContentHash(topEntryReference, new StandardContinuation(command) {
+    if ((topEntry == null) && ((topEntryReferences != null) || (topEntryReference != null))) {
+      LogEntryReference top;
+      	if (topEntryReferences != null) {
+      	  System.out.println("LogDAG: getRealTopEntry: found top newskool "+topEntryReferences[0]);
+      	  top = topEntryReferences[0];
+      	} else {
+      	  System.out.println("LogDAG: getRealTopEntry: found top oldskool "+topEntryReference);
+      	  top = topEntryReference;
+     	}
+      post.getStorageService().retrieveContentHash(top, new StandardContinuation(command) {
         public void receiveResult(Object o) {
           try {
             topEntry = (LogEntry) o;
@@ -357,10 +389,14 @@ public class Log implements PostData {
    * the handles in to the provided continatuion.
    */
   public void getLogEntryReferences(final Set set, final LogEntry entry, Continuation command) {
-    if (topEntryReference == null) {
+    if ((topEntryReferences == null) && (topEntryReference == null)) {
       command.receiveResult(Boolean.TRUE);
     } else {
-      set.add(topEntryReference);
+      if (topEntryReferences != null) {
+        set.add(topEntryReferences[0]);
+      } else {
+        set.add(topEntryReference);
+      }
 
       getRealTopEntry(new StandardContinuation(command) {
         public void receiveResult(Object o) {
@@ -439,7 +475,7 @@ public class Log implements PostData {
     public static final int STATE_2 = 2;
 
     private LogEntry entry;
-    private LogEntryReference previousTopReference;
+    private LogEntryReference[] previousTopReferences;
     private LogEntry previousTop;
     private Continuation command;
     private int state;
@@ -462,17 +498,39 @@ public class Log implements PostData {
     }
 
     public void start() {
-      previousTopReference = topEntryReference;
+      if (topEntryReferences == null) {
+        // this is probably not strictly necessary, but I don't think it hurts
+        previousTopReferences = new LogEntryReference[1];
+        previousTopReferences[0] = topEntryReference;
+      } else {
+        previousTopReferences = topEntryReferences;
+      }
       previousTop = topEntry;
       state = STATE_1;
       entry.setPost(post);
       entry.setUser(post.getEntityAddress());
-      entry.setPreviousEntryReference(topEntryReference);
+      System.out.println("setting PreviousEntryReferences on entry with: "+topEntryReferencesToString());
+      entry.setPreviousEntryReferences(topEntryReferences);
       entry.setPreviousEntry(topEntry);
       post.getStorageService().storeContentHash(entry, this);
     }
 
     private void startState1(LogEntryReference reference) {
+      // shift around the arrays
+      int newlength = 1;
+      if (topEntryReferences != null) {
+        newlength = topEntryReferences.length + 1;
+      }
+      	if (newlength > N_TOP_ENTRIES)
+      	  newlength = N_TOP_ENTRIES;
+      LogEntryReference[] temp = new LogEntryReference[newlength];
+      for (int i = 1; i < newlength; i++) {
+        temp[i] = topEntryReferences[i-1];
+      }
+      temp[0] = reference;
+      System.out.println("LogDAG: shifting topEntryReferences old: "+topEntryReferencesToString());
+      topEntryReferences = temp;
+      System.out.println("LogDAG: new:"+topEntryReferencesToString());
       topEntryReference = reference;
       topEntry = entry;
       state = STATE_2;
@@ -503,12 +561,32 @@ public class Log implements PostData {
      * @param result The exception caused
      */
     public void receiveException(Exception result) {
-      topEntryReference = previousTopReference;
+      topEntryReferences = previousTopReferences;
+      topEntryReference = previousTopReferences[0];
       topEntry = previousTop;
       command.receiveException(result);
     }
   }
 
+  private String topEntryReferencesToString() {
+    StringBuffer result = new StringBuffer();
+    result.append("[ ");
+
+    	if (topEntryReferences != null) {
+    	  for (int i=0; i<topEntryReferences.length; i++) {
+    	    if (topEntryReferences[i] == null) {
+    	      result.append("null ");
+    	    } else {
+    	      result.append(topEntryReferences[i].toString());
+    	    }
+    	  }
+    	}
+    
+    result.append(" ]");
+    
+    return result.toString();
+  }
+  
   public String toString() {
     return "Log[" + name + "]";
   }
