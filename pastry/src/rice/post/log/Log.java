@@ -359,10 +359,8 @@ public class Log implements PostData {
     if ((topEntry == null) && ((topEntryReferences != null) || (topEntryReference != null))) {
       LogEntryReference top;
       	if (topEntryReferences != null) {
-      	  System.out.println("LogDAG: getRealTopEntry: found top newskool "+topEntryReferences[0]);
       	  top = topEntryReferences[0];
       	} else {
-      	  System.out.println("LogDAG: getRealTopEntry: found top oldskool "+topEntryReference);
       	  top = topEntryReference;
      	}
       post.getStorageService().retrieveContentHash(top, new StandardContinuation(command) {
@@ -528,9 +526,7 @@ public class Log implements PostData {
         temp[i] = topEntryReferences[i-1];
       }
       temp[0] = reference;
-      System.out.println("LogDAG: shifting topEntryReferences old: "+topEntryReferencesToString());
       topEntryReferences = temp;
-      System.out.println("LogDAG: new:"+topEntryReferencesToString());
       topEntryReference = reference;
       topEntry = entry;
       state = STATE_2;

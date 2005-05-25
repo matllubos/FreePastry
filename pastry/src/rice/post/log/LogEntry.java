@@ -83,7 +83,6 @@ public abstract class LogEntry implements PostData {
     if (((previousEntryReferences == null) && (previousEntryReference == null)) ||
         ((previousEntryReferences == null) && (previousEntryReference == ref[0])) ||
         Arrays.equals(ref,previousEntryReferences)) {
-      System.out.println("LogDAG: setting previous entry references: " + ref);
       previousEntryReferences = ref;
     } else {
       System.out.println("ERROR - Trying to set previous ref on already-set log.");
@@ -101,10 +100,8 @@ public abstract class LogEntry implements PostData {
       return parent.getPreviousEntryReference();
     }
     if (previousEntryReferences != null) {
-      System.out.println("LogDAG: getting previous entry reference from array: " + previousEntryReferences[0]);
       return previousEntryReferences[0];
     } else {
-      System.out.println("LogDAG: getting previous entry reference old way: " + previousEntryReference);
     	  return previousEntryReference;
     }
   }
@@ -175,10 +172,8 @@ public abstract class LogEntry implements PostData {
       };
 
       if (previousEntryReferences == null) {
-        System.out.println("LogDAG: fetching previousEntryReference from storage oldskool " + previousEntryReference);
         post.getStorageService().retrieveContentHash(previousEntryReference, fetch);
       } else {
-        System.out.println("LogDAG: fetching previousEntryReferences[0] from storage newskool " + previousEntryReferences[0]);
       		post.getStorageService().retrieveContentHash(previousEntryReferences[0],fetch);
       }
     } else {
