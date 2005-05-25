@@ -161,9 +161,6 @@ public class PostMessage implements StoredMessage {
       if ((froms != null) && (froms.length > 0)) 
         from = froms[0];
 
-      if (address != null) 
-        from = (PostUserAddress) address;
-      
       String extraHeaders = "";
       
       if ((address != null) && (address.equals(from))) 
@@ -173,6 +170,9 @@ public class PostMessage implements StoredMessage {
       
       if (remote != null)
         extraHeaders += "Received: from " + remote.getHostAddress() + " by " + InetAddress.getLocalHost().getHostAddress() + " via SMTP; " + MimeMessage.dateReader.format(new Date(System.currentTimeMillis())) + "\r\n";
+
+      if (address != null) 
+        from = (PostUserAddress) address;
       
       return new Email(from, recipients, processMessage(parser, extraHeaders));
     } catch (IOException ioe) {
