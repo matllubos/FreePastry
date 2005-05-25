@@ -23,6 +23,7 @@ Eric Engineer ,
 <a href="http://www.cs.rice.edu/%7Eabpost">Ansley Post</a> , 
 <a href="http://www.cs.rice.edu/%7Ecreis">Charlie Reis</a> , 
 <a href="http://www.cs.rice.edu/%7Edsandler">Dan Sandler</a> ,
+Jim Stewart,
 <a href="http://www.cs.rice.edu/%7Eatuls">Atul Singh</a> , and 
 <a href="http://composer.ecn.purdue.edu/%7Erongmei/">RongMei Zhang</a>
 contributed to the FreePastry code. The code is based on algorithms and
@@ -110,26 +111,26 @@ developed using Sun's SDK, version 1.4.2_03+ <br>
 <br>
 &nbsp;<br>
 <h3>Changes since release 1.4</h3>
-<p/>Version 1.4.1 introduces the ConsistentJoinProtocol and some changes to the PeriodicLeafSetProtocol.  These improvements attempt to make strong guarantees regarding routing consistency.  
+<p/>Version 1.4.1 introduces the ConsistentJoinProtocol and some changes to the PeriodicLeafSetProtocol.  These improvements provide stronger guarantees regarding routing consistency.  
 <h4>What is consistency?</h4>
   Routing is <i>consistent</i> if no overlay node ever delivers a lookup message when it is not the current root node for the message's destination key. -- Microsoft Technical Report MSR-TR-2003-94
 
 <h4>Wasn't FreePastry always consistent?  What could have caused routing inconsistencies in previous versions?</h4>
-  Routing could be inconsistent in FreePastry if at some point there exists 2 adjacent nodes who are both active and do not know of each other thus believing that they are responsible for some of the same keyspace.  This could happen during concurrent joins, or if a node incorrectly determines its direct neighbor faulty, and therefore takes over that section of the keyspace.  The result of an inconsistency is that routing to a key (for example a DHT put/get) could cause the message to be delivered to different nodes.  Thus you may do a PUT but then a subsequent GET still retrieves the old value!
+  Routing could be inconsistent in FreePastry if at some point there existed two adjacent nodes that are both active and do not know of each other, thus believing that they are responsible for some of the same keyspace.  This could temporarily happen during concurrent joins, or if a node incorrectly determined its direct neighbor to be faulty, and therefore took over that section of the keyspace.  The result of an inconsistency is that routing to a key (for example a DHT put/get) could cause the message to be delivered to different nodes, depending on the origin of the message.  Thus you may do a PUT but then a subsequent GET still retrieves the old value!
 <h4>How does FreePastry prevent routing inconsistency?</h4>
-<p/>Our consistent join protocol is similar to that described in <a href="http://www.cs.rice.edu/~jeffh/wiki/msr-tr-2003-94.pdf">Microsoft Technical Report MSR-TR-2003-94</a>.  The idea is that when a node joins, before it accepts messages, it must first contact its entire leafset and either receive a reply from each member or determine them faulty.  This causes concurrent joiners to be aware of each other before both can become active.  We rely on dynamic source routing introduced in FreePastry Version 1.4 to assume that we will never incorrectly determine a node faulty.  
-<p/>In the process of adding strong consistency, we have also dramatically reduced the overhead of leafset maintenance.  By default the system is configured to send and receive a message from each neighbor every 20 seconds, and if it takes more than 30 seconds to hear from a neighbor, then a checkLiveness() starts.  This strategy means that by default a portion of ringspace never remains unclaimed for long than 50 seconds (20 seconds between pings, then 30 seconds to wait for replies) after the death of a node.
+<p/>Our consistent join protocol is similar to that described in <a href="http://www.cs.rice.edu/~jeffh/wiki/msr-tr-2003-94.pdf">Microsoft Technical Report MSR-TR-2003-94</a>, except that it does not require that all nodes are reachable from any other node at all times.  The idea is that when a node joins, before it accepts messages, it must first contact its entire leafset and either receive a reply from each member or determine them faulty.  This causes concurrent joiners to be aware of each other before both can become active.  We rely on dynamic source routing introduced in FreePastry Version 1.4 to ensure that a node is considered alive as long as it is reachable by one of its leafset members.  
+<p/>The new protocol also dramatically reduces the overhead of leafset maintenance.  By default the system is configured to send and receive a message from each neighbor every 20 seconds, and if it takes more than 30 seconds to hear from a neighbor, then a checkLiveness() starts.  This ensures that a portion of ringspace never remains unclaimed for longer than 50 seconds (20 seconds between pings, then 30 seconds to wait for replies) after the death of a node.
 
 <p/>We ran tests on PlanetLab to characterize the overhead of leafset maintence at various neighbor ping intervals. 
 All of the data for the following graphs were collected on a ring running with no application and induced churn to give an average node lifetime of 60 minutes.  
 <div align="center"><img src="cjp_percent_graph.png" width="640" height="480"><br>
-This graph represents the fraction of traffic that is due to leafset maintenance.  One hundred percent would mean that all overlay traffic was due to leafset maintence.  The percent of traffic is a modest 12.4% of traffic in packets even at a fairly aggressive neighbor ping rate of once every 20 seconds (the default).  We expect the overhead as measured in bytes to go down in a future release of pastry that uses a binary wire protocol rather java serialization.
+This graph represents the fraction of traffic that is due to leafset maintenance.  One hundred percent would mean that all overlay traffic was due to leafset maintence.  Leafset maintenance amounts to a modest 12.4% of traffic in packets even at a fairly aggressive neighbor ping rate of once every 20 seconds (the default).  We expect the overhead as measured in bytes to go down in a future release of FreePastry that uses a binary wire protocol rather than java serialization.
 </div>
 <div align="center"><img src="cjp_bytes_graph.png" width="640" height="480"><br>
-This graph shows the average traffic due to leafset maintenance in bytes per second (smaller numbers are better).  The error bars are at one standard deviation among the nodes in the overlay.  At a 20 second neighbor ping interval leafset maintenance traffic is 71.5% of overlay traffic (top graph) but as this graph shows, that is only a data rate of 500 bytes/second.
+This graph shows the average traffic due to leafset maintenance in bytes per second (smaller numbers are better).  The error bars are at one standard deviation among the nodes in the overlay.  At a 20 second neighbor ping interval leafset maintenance traffic is 71.5% of overlay traffic (top graph) but as this graph shows, that amounts to a data rate of only 500 bytes/second.
 </div>
 <div align="center"><img src="cjp_packets_graph.png" width="640" height="480"><br>
-This graph shows the average traffic due to leafset maintenance in packets per second (smaller numbers are better).  The error bars are at one standard deviation among the nodes in the overlay.  At a 20 second neighbor ping interval leafset maintence traffic is about 0.15 packets per second, or about 10 packets per minute.
+This graph shows the average traffic due to leafset maintenance in packets per second (smaller numbers are better).  The error bars are at one standard deviation among the nodes in the overlay.  At a 20 second neighbor ping interval, leafset maintence requires about 0.15 packets per second, or about 10 packets per minute.
 </div>
 <p/>Applications can trade off between the amount of maintence overhead they are willing to tolerate and the length of time they are willing to allow ringspace to be unclaimed by adjusting the neighbor ping interval.
 
@@ -137,7 +138,7 @@ This graph shows the average traffic due to leafset maintenance in packets per s
 <ul>
   <li>When using the <code>rice.pastry.standard.ConsistentJoinProtocol</code> (which is now the default for the <code>SocketPastryNodeFactory</code>) <code>PastryNode.setReady()</code> will not be called until the node receives a <code>ConsistentJoinMsg</code> message from every node in its leafset.<br/><br/></li>
   <li>Messages will not be delivered to a PastryAppl until the PastryNode.isReady() returns true.  The same behavior occurs for applications built on the commonAPI because PastryEndpoint extends PastryAppl.  This change occurred in the rice.pastry.messaging.MessageDispatch<br/><br/></li>
-  <li><b>Important: </b> If the Pastry selector takes more than 20 seconds (the time it takes rice.pastry.socket to find a node faulty) to select, then it is possible that other nodes will have found you faulty, and a routing inconsistency may be possible.<br/><br/>  
+  <li><b>Important: </b> If the Pastry selector takes more than 20 seconds (the time it takes rice.pastry.socket to find a node faulty) to select, then it is possible that other nodes will have found the node faulty.<br/><br/>  
 
 This can occur for 2 reasons:
 <ul>
@@ -145,12 +146,12 @@ This can occur for 2 reasons:
  <li>Application level code is taking too long to process messages.</li>  
 </ul>
 <br/>
-To prevent inconsistency, the <code>ConsistentJoinProtocol</code> will call <code>PastryNode.setReady(false)</code>.  This will cause your applications to stop receiving messages until the <code>ConsistentJoinProtocol</code> "rejoins" and calls <code>PastryNode.setReady(true)</code> again.  By default, your application will not receive any notification of these events!  If you wish to hear about such events then register yourself with the PastryNode as an Observer.  You will receive a <code>Boolean(true)</code> when the node becomes ready, and a <code>Boolean(false)</code> when not-ready.  Note that to keep reverse compatibility with your applications, <code>PastryAppl.notifyReady()</code> will still be called <i>only</i> the first time a node becomes active.<br/><br/></li>
+To prevent inconsistet routing in this case, the <code>ConsistentJoinProtocol</code> will call <code>PastryNode.setReady(false)</code>.  This will cause your applications to stop receiving messages until the <code>ConsistentJoinProtocol</code> "rejoins" and calls <code>PastryNode.setReady(true)</code> again.  By default, your application will not receive any notification of these events!  If you wish to hear about such events then register yourself with the PastryNode as an Observer.  You will receive a <code>Boolean(true)</code> when the node becomes ready, and a <code>Boolean(false)</code> when not-ready.  Note that to keep reverse compatibility with your applications, <code>PastryAppl.notifyReady()</code> will still be called <i>only</i> the first time a node becomes active.<br/><br/></li>
 
-  <li>In the current version of FreePastry, complete network partitions are not expressly supported.  If a small group of machines loses connectivity to the rest of the overlay, they may detect all other nodes to be faulty and begin accepting messages for larger and larger portions of the key space.  The FreePastry team is currently investigating the best way to handle such partitions, and expect a solution in a forthcoming release.<br/><br/>
+  <li>In the current version of FreePastry, complete network partitions may lead to routing inconsistency.  If a small group of machines loses connectivity to the rest of the overlay, they may detect all other nodes to be faulty and begin accepting messages for larger and larger portions of the key space.  The FreePastry team is currently investigating a approaches to deal with such partitions, and we expect a solution in a forthcoming release.<br/><br/>
 </ul>  
 <h4>Testing:</h4>  
-We have done extensive routing consistency testing on <a href="http://www.planet-lab.org/">Planetlab</a>.  The only times we find routing inconsistencies is during a network partition (usually the loss of a subnet).  In such a partition, a node will typically resign within 2 minutes due to a leafset collapse.  (Defined by a leafset that is only 1/2 full).  Routing in this case is only inconsistent across the partitions.
+We have done extensive routing consistency testing on <a href="http://www.planet-lab.org/">Planetlab</a>.  The only times we find routing inconsistencies is during a network partition (usually the loss of a subnet).  Routing in this case is only inconsistent across the partitions.
   
 <h3>Changes since release 1.3.2</h3>
 <ul>
