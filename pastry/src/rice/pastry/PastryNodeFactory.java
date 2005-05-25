@@ -129,7 +129,7 @@ public abstract class PastryNodeFactory {
       // -- of the routing table, even through some of the rows are probably
       // -- unfilled.  We'll optimize this in a later iteration.
       int depth = (NodeId.nodeIdBitLength / RoutingTable.idBaseBitLength);
-      int i = 0;
+      int i = (int) (3 * (depth / 4));
       
       // now, iteratively walk up the routing table, picking the closest node
       // each time for the next request
