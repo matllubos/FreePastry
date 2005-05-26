@@ -12,8 +12,8 @@
 <div class="abstract">This tutorial is designed to get you cooking quickly with the FreePastry
 API and software toolkit.</div>
 
-<h4>Version 1.1; May 4, 2005.  For <a
-href="http://freepastry.rice.edu/">FreePastry</a> version 1.4_01.  Maintained by <a
+<h4>Version 1.2; May 26, 2005.  For <a
+href="http://freepastry.rice.edu/">FreePastry</a> version 1.4.1.  Maintained by <a
 href="mailto:jeffh@rice.edu">Jeff Hoye</a>.</h4>
 
 </div>
@@ -52,8 +52,9 @@ href="mailto:jeffh@rice.edu">Jeff Hoye</a>.</h4>
 Before you begin, you should meet the following requirements.  
 <ol>
   <li>An intermediate level of knowledge in the Java programming language.  <a href="http://java.sun.com/docs/books/tutorial/">The Java Tutorial</a> is a good place to start. 
+  <li>A copy of a current JDK, 1.4.2_06 or later.  <a href="http://java.sun.com/j2se/index.jsp">Sun's J2SE</a>. 
   <li>A basic understanding of Pastry overlay structure.  Read the short overview <a href="http://freepastry.rice.edu/PAST/overview.pdf">[pdf]</a><a href="http://freepastry.rice.edu/PAST/overview.ps">[ps]</a> of <a href="http://freepastry.rice.edu/">FreePastry</a>.
-  <li>Have a working copy of FreePastry-1.4_01 or later.  You can simply download the <a href="http://freepastry.rice.edu/FreePastry/FreePastry-1.4_01.jar">jar</a>, or download and build the <a href="http://freepastry.rice.edu/FreePastry/">source</a>.
+  <li>Have a working copy of FreePastry-1.4_01 or later.  You can simply download the <a href="http://freepastry.rice.edu/FreePastry/FreePastry-1.4.1.jar">current jar</a>, or download and build the <a href="http://freepastry.rice.edu/FreePastry/">source</a>.
 </ol>
 <hr/>
 
@@ -150,20 +151,28 @@ while(!node.isReady()) {
 <pre>
   /**
    * Usage: 
-   * java [-cp FreePastry-&lt;version&gt;.jar] rice.tutorial.DistTutorial localbindport bootIP bootPort
+   * java [-cp FreePastry-<version>.jar] rice.tutorial.lesson1.DistTutorial localbindport bootIP bootPort
    * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001
    */
   public static void main(String[] args) throws Exception {
-    // the port to use locally
-    int bindport = Integer.parseInt(args[0]);
-    
-    // build the bootaddress from the command line args
-    InetAddress bootaddr = InetAddress.getByName(args[1]);
-    int bootport = Integer.parseInt(args[2]);
-    InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
-
-    // launch our node!
-    DistTutorial dt = new DistTutorial(bindport, bootaddress);
+    try {
+      // the port to use locally
+      int bindport = Integer.parseInt(args[0]);
+      
+      // build the bootaddress from the command line args
+      InetAddress bootaddr = InetAddress.getByName(args[1]);
+      int bootport = Integer.parseInt(args[2]);
+      InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
+  
+      // launch our node!
+      DistTutorial dt = new DistTutorial(bindport, bootaddress);
+    } catch (Exception e) {
+      // remind user how to use
+      System.out.println("Usage:"); 
+      System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.lesson1.DistTutorial localbindport bootIP bootPort");
+      System.out.println("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001");
+      throw e; 
+    } 
   }
 </pre>    
 
@@ -184,6 +193,20 @@ InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
   <li>Finally we execute our constructor.
 <pre>
 DistTutorial dt = new DistTutorial(bindport, bootaddress);
+</pre></li>
+  <li>We wrap the method with an indication of how to use the program in case the user inputs the wrong args.
+<pre>
+    try {
+
+      ...
+      
+    } catch (Exception e) {
+      // remind user how to use
+      System.out.println("Usage:"); 
+      System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.lesson1.DistTutorial localbindport bootIP bootPort");
+      System.out.println("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001");
+      throw e; 
+    } 
 </pre></li>
 </ol>
 
@@ -206,22 +229,22 @@ Lesson 2 will aid you in running your code.</h3>
     <ol type="i">
       <li>Setup your directory as follows:
 <pre>
-FreePastry-1.4_01.jar
+FreePastry-1.4.1.jar
 rice/tutorial/lesson1/DistTutorial.java
 </pre>
       </li>
       <li>Compile the Java sources:
-	  <pre><span class="input">javac -classpath FreePastry-1.4_01.jar rice/tutorial/lesson1/*.java</span></pre></li>
+	  <pre><span class="input">javac -classpath FreePastry-1.4.1.jar rice/tutorial/lesson1/*.java</span></pre></li>
     </ol>
   <li><b>Step 2:</b> Launch the bootstrap node.
 Even though this is the first node, and therefore we know the bootstrap will
 not work, you need to place in a bogus ip/port.  A smarter <code>main()</code> method in DistTutorial.java could fix this problem.
-<pre><span class="input">java -cp .:FreePastry-1.4_01.jar rice.tutorial.lesson1.DistTutorial 9001 <i>yourhost.domain</i> 9001</span></pre>
+<pre><span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson1.DistTutorial 9001 <i>yourhost.domain</i> 9001</span></pre>
 <p>
 (In the above command, <i>yourhost.domain</i> can be the DNS name of your
 host or its IP address.)  Your output will look something like this:</p>
 <pre>
-<span class="input">java -cp .:FreePastry-1.4_01.jar rice.tutorial.lesson1.DistTutorial 9001 10.9.8.7 9001</span>
+<span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson1.DistTutorial 9001 10.9.8.7 9001</span>
 <span class="output">Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
 Couldn't find a bootstrap node, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0xB7E151..&gt;/FOO/10.9.8.7:9001 [-4233509936758121968])</span></pre></li>
@@ -229,10 +252,10 @@ Finished creating new node SocketNodeHandle (&lt;0xB7E151..&gt;/FOO/10.9.8.7:900
   <p>
   You can do this on another computer but make sure you fill in the name of
   the computer from step 2 in <i>bootstraphost.domain</i>.</p>
-<pre><span class="input">java -cp .:FreePastry-1.4_01.jar rice.tutorial.lesson1.DistTutorial 9002 <i>bootstraphost.domain</i> 9001</span></pre>
+<pre><span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson1.DistTutorial 9002 <i>bootstraphost.domain</i> 9001</span></pre>
 <p/> Your output will look something like this:    
 <pre>
-<span class="input">java -cp .:FreePastry-1.4_01.jar rice.tutorial.lesson1.DistTutorial 9002 10.9.8.7 9001</span>
+<span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson1.DistTutorial 9002 10.9.8.7 9001</span>
 <span class="output">Finished creating new node SocketNodeHandle (&lt;0x74345D..&gt;/FOO/10.9.8.7:9002 [6054526012380911947])</span></pre></li>
 </ul>
 
@@ -489,7 +512,7 @@ Now if you execute this code twice you should get something like:
 
 <p><em>(for Node1)</em></p>
 <pre>
-<span class="input">java -cp .:FreePastry-1.4_01.jar rice.tutorial.lesson3.DistTutorial 9001 10.9.8.7 9001</span>
+<span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson3.DistTutorial 9001 10.9.8.7 9001</span>
 <span class="output">Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
 Couldn't find a bootstrap node, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0xC20545..&gt;/FOO/10.9.8.7:9001 [-4445364026872145996])
@@ -505,7 +528,7 @@ MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0xC20545.
 
 <p><em>(for Node2)</em></p>
 <pre>
-<span class="input">java -cp .:FreePastry-1.4_01.jar rice.tutorial.lesson3.DistTutorial 9002 10.9.8.7 9001</span>
+<span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson3.DistTutorial 9002 10.9.8.7 9001</span>
 <span class="output">Finished creating new node SocketNodeHandle (&lt;0xDD90C6..&gt;/FOO/10.9.8.7:9002 [5138450490561334965])
 
 MyApp &lt;0xDD90C6..&gt; sending to &lt;0x2E5C63..&gt;
@@ -604,7 +627,7 @@ In the send direct loop we use our getter <code>MyApp.getNode()</code>.  This pr
 
 Other than that, we changed the delay in several locations so the program doesn't take as long to execute.  Compile and run this program as before, but make sure to specify some the number of nodes to run as the 4th argument.
 <pre>
-<span class="input">java -cp .:FreePastry-1.4_01.jar rice.tutorial.lesson4.DistTutorial 9001 10.9.8.7 9001 10</span>
+<span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson4.DistTutorial 9001 10.9.8.7 9001 10</span>
 <span class="output">Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
 Couldn't find a bootstrap node, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0x93426F..&gt;/FOO/10.9.8.7:9001 [6666451457797044406])
@@ -680,7 +703,7 @@ with the commonAPI, the approach is to schedule a message to be sent to yourself
 
 <p/>Note that due to laziness, I have constructed this Message as an inner class
 of MyApp.  This is fine for what we are going to use it for, but beware that 
-it you will get a NotSerializableException if you attemt to send this 
+it you will get a NotSerializableException if you attempt to send this 
 message over the wire.  While the Message may be serializable it has an implicit
 reference to MyApp, the containing class.  When the message is serialized,
 FreePastry will also attempt to serialize MyApp which will fail and throw the 
@@ -746,7 +769,7 @@ code after constructing the MyApp to cancel the task after 15 seconds.
 
 <p/>Ok, time to run it!  Your output should resemble the following:
 <pre>
-<span class="input">java -cp .:FreePastry-1.4_01.jar rice.tutorial.lesson5.DistTutorial 9001 localhost 9001</span>
+<span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson5.DistTutorial 9001 localhost 9001</span>
 <span class="output">Error connecting to address localhost/127.0.0.1:9001: java.net.ConnectException: Connection refused: no further information
 Couldn't find a bootstrap node, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0x3C1EEA..&gt;/FOO/10.9.8.7:9001 [9038308767327354496])
@@ -841,7 +864,7 @@ multicast, and 1 anycast.
     }
   }
 </pre>
-In case you forgot.  The <code>PublishContent</code> is similar to Lesson 5's <code>MessageToSelf</code>.  
+In case you forgot, the <code>PublishContent</code> is similar to Lesson 5's <code>MessageToSelf</code>.  
 The <code>startPublishTask()</code> method schedules this to be delivered locally every 5 seconds.
 The <code>deliver(id,message)</code> method calls <code>sendMulticast()</code> when the <code>PublishMethod</code> is received.  
 In your application you will likely have some other event that causes content to be published.
@@ -932,11 +955,13 @@ Lastly we have code to introspect the tree.  Note that it is only easy to print 
 entire tree because we are running all of the nodes in the same VM and have global 
 information.  It is significantly more difficult to print the scribe tree in an actual
 distributed environment, as scribe does not provide this information automatically.  Furthermore
-this information could change rapidly as nodes join and leave.<br/>
+this information could change rapidly as nodes join and leave.<br/><br/>
 
 Because we are only going to run the application with a small number of nodes, the tree
 will most likely be only 1 level deep.  (The root being level 0).  However, this will show you how to print out your parent 
-and children.  The first thing to note is that we have 3 accessor methods at the bottom of MyScribeContent:
+and children.<br/><br/>  
+
+The first thing to note is that we have 3 accessor methods at the bottom of <code>MyScribeContent</code>:
 
 <pre>
   public boolean isRoot() {
@@ -952,14 +977,14 @@ and children.  The first thing to note is that we have 3 accessor methods at the
   }
 </pre>
 
-Note that these simply call through to the same method on myScribe, with the correct topic.
+Note that these simply call through to the same method on myScribe, with the correct topic.<br/><br/>
 
 
-This code can be found in ScribeTutorial.java
+This code can be found in <code>ScribeTutorial.java</code><br/><br/>
 
-printTree() does the following:
+<code>printTree()</code> does the following:
 <ol>
-  <li>Create a table mapping NodeHandle to MyScribeClient.</li>
+  <li>Create a table mapping <code>NodeHandle</code> to <code>MyScribeClient</code>.</li>
   <li>Recursively traverse the tree to the root, using the helper: <code>getRoot()</code>.</li>
   <li>Recursively traverse the tree down from the root, depth first and print the nodes using the helper: <code>recursivelyPrintChildren()</code>.</li>
 </ol>
@@ -986,7 +1011,7 @@ printTree() does the following:
 <ol>
  <li><code>getRoot()</code> looks up the client for the seed handle from the appTable.</li>
  <li>If the seed is the root, it is returned.</li>  
- <li>Otherwise, it calls getRoot() on the parent.</li>
+ <li>Otherwise, it calls <code>getRoot()</code> on the parent.</li>
 </ol>
 <pre>
   public static NodeHandle getRoot(NodeHandle seed, Hashtable appTable) {
@@ -1044,7 +1069,7 @@ The parameters are identical to those in Lesson 4:
 <ol>
   <li>Local bind port.</li>
   <li>Bootstrap host. (the local host address)</li>
-  <li>Bootstrap port. (whatever you passed in the first arg)</li>
+  <li>Bootstrap port. (usually whatever you passed in the first arg)</li>
   <li>The number of nodes to launch.</li>
 </ol>
 
@@ -1129,7 +1154,7 @@ Note that anycast is called on different nodes until a node returns true.<br/>
 <h3>Congratulations!  You have built and run your first scribe application!<br>
 
 <div class="footer">
-Pastry tutorial version 1.1. &nbsp;&nbsp;&nbsp; Last updated May 4, 2005.
+Pastry tutorial version 1.2. &nbsp;&nbsp;&nbsp; Last updated May 26, 2005.
 &nbsp;&nbsp;&nbsp; For FreePastry-1.4+. &nbsp;&nbsp;&nbsp; Maintained by <a
 href="mailto:jeffh@rice.edu">Jeff Hoye</a></font>
 </div>
