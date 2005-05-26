@@ -1,0 +1,30 @@
+#!/bin/sh
+
+if [ "$1" == "--debug" ]; then
+	DEBUG=1
+	shift
+fi
+
+TODAY="$1"
+LOGFILE="$2"
+MAIL=sendmail
+RECIPIENTS=freepastry@cs.rice.edu
+
+if [ "$DEBUG" = "1" ]; then
+	RECIPIENTS=dsandler@cs.rice.edu,jeffh@cs.rice.edu
+fi
+
+$MAIL $RECIPIENTS <<__EOM__
+From: Automatic Build Server <jeffh@cs.rice.edu>
+To: Pastry Team <freepastry@cs.rice.edu>
+Subject: [pastry-build] Nightly build $TODAY failed
+Date: `date`
+
+The automatic nightly build failed with the following output:
+
+----------------------------------------------------------------------
+Logfile: $LOGFILE
+----------------------------------------------------------------------
+`cat $LOGFILE`
+----------------------------------------------------------------------
+__EOM__

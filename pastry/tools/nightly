@@ -1,0 +1,65 @@
+#!/bin/bash
+
+export PATH=/bin:/usr/bin:/usr/sbin:/sbin:/usr/etc:/usr/ccs/bin:/usr/ucb:/usr/site/ssh/bin:/usr/local/bin:/usr/X11R6/bin:/home/jeffh/ant/apache-ant-1.6.0/bin
+
+AUTOBUILD_DIR=/home/jeffh/pastry/autobuild
+TODAY=`date +%Y%m%d`
+LOGDIR="$AUTOBUILD_DIR/logs/$TODAY"
+
+cd $AUTOBUILD_DIR
+
+# offer an option to avoid the CVS step, for testing
+if [ "$1" != "--nosync" ]; then
+	echo "Checking out Pastry sources from CVS."
+	rm -rf pastry
+	cvs -Q -d /net/madras/FreePastry/cvsroot/ co pastry
+fi
+
+# Read the version number out of 'VERSION' in CVS
+VERSION=`cat pastry/VERSION`
+
+# Append the date to the version string to uniquely identify this
+# nightly/weekly/snapshot build
+VERSION="${VERSION}_${TODAY}"
+
+# Create the directory for tonight's logs
+if [ ! -d $LOGDIR ]; then
+	mkdir $LOGDIR
+fi
+
+# Find a unique filename for the build output
+N="1"
+LOGFILE="$LOGDIR/build_$N.out"
+while [ -e $LOGFILE ]; do
+	((N=$N+1))
+	LOGFILE="$LOGDIR/build_$N.out"
+done
+
+echo "Starting build of version $VERSION at `date`"
+echo "Logging to $LOGFILE"
+
+# time to make the donuts
+
+# ant needs RAM!  ('export' by any other name ...)
+declare -x ANT_OPTS=-Xmx1024m
+
+cd pastry
+#ant beautifyandlicense
+ant freepastry-release \
+	-Ddontbeautify=1 \
+	-Ddontjavadoc=1 \
+	-Dfreepastry-version="$VERSION" \
+	>$LOGFILE 2>&1
+
+# How did we do?
+build_result=$?
+
+if [ "$build_result" != "0" ]; then
+	# badness
+	echo "Build failed."
+	# send email to the team. someone will be fired.
+	$AUTOBUILD_DIR/report-failure $TODAY $LOGFILE
+else
+	# success
+	echo "Build succeeded."
+fi
