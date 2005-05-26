@@ -49,7 +49,7 @@ public class SelectorManager extends Thread implements Timer {
   /**
    * Constructor, which is private since there is only one selector per JVM.
    */
-  protected SelectorManager(boolean profile) {
+  public SelectorManager(boolean profile) {
     super("Main Selector Thread");
     this.invocations = new LinkedList();
     this.modifyKeys = new HashSet();
