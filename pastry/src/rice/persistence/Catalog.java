@@ -154,4 +154,12 @@ public interface Catalog {
    * @return The total storage size
    */
   public long getTotalSize();
+  
+  /**
+   * Method which is used to erase all data stored in the Catalog.  
+   * Use this method with care!
+   *
+   * @param c The command to run once done
+   */
+  public void flush(Continuation c);
 }

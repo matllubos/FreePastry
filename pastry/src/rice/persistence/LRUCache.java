@@ -392,4 +392,19 @@ public class LRUCache implements Cache {
       return Integer.MAX_VALUE;
     }
   }
+  
+  /**
+   * Method which is used to erase all data stored in the Cache.  
+   * Use this method with care!
+   *
+   * @param c The command to run once done
+   */
+  public void flush(Continuation c) {
+    storage.flush(new StandardContinuation(c) {
+      public void receiveResult(Object o) {
+        order.clear();
+        parent.receiveResult(Boolean.TRUE);
+      }
+    });
+  }
 }

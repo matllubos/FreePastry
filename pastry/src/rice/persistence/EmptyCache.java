@@ -242,6 +242,16 @@ public class EmptyCache implements Cache {
    * (through receiveResult on c).
    */
   public void setMaximumSize(final int size, final Continuation c) {
-    c.receiveResult(new Boolean(true));
+    c.receiveResult(Boolean.TRUE);
+  }
+  
+  /**
+   * Method which is used to erase all data stored in the Catalog.  
+   * Use this method with care!
+   *
+   * @param c The command to run once done
+   */
+  public void flush(Continuation c) {
+    c.receiveResult(Boolean.TRUE);
   }
 }

@@ -332,4 +332,18 @@ public class StorageManagerImpl implements StorageManager {
   public void setMaximumSize(int size, Continuation c) {
     cache.setMaximumSize(size, c);
   }
+  
+  /**
+   * Method which is used to erase all data stored in the Catalog.  
+   * Use this method with care!
+   *
+   * @param c The command to run once done
+   */
+  public void flush(Continuation c) {
+    cache.flush(new StandardContinuation(c) {
+      public void receiveResult(Object o) {
+        storage.flush(parent);
+      }
+    });
+  }
 }

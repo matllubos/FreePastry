@@ -54,6 +54,21 @@ public class MemoryStorage implements Storage {
   } 
   
   /**
+   * Method which is used to erase all data stored in the Storage.  
+   * Use this method with care!
+   *
+   * @param c The command to run once done
+   */
+  public void flush(Continuation c) {
+    storage = new HashMap();
+    metadata = new ReverseTreeMap();
+    idSet = factory.buildIdSet();
+    currentSize = 0;
+    
+    c.receiveResult(Boolean.TRUE);
+  }
+  
+  /**
    * Renames the given object to the new id.  This method is potentially faster
    * than store/cache and unstore/uncache.
    *

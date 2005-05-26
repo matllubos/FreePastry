@@ -658,9 +658,26 @@ public class PersistentStorage implements Storage {
     } else {
       throw new UnsupportedOperationException("getSize() not supported without indexing");
     }
+  }  
+  
+  /**
+   * Method which is used to erase all data stored in the Catalog.  
+   * Use this method with care!
+   *
+   * @param c The command to run once done
+   */
+  public void flush(Continuation c) {
+    QUEUE.enqueue(new WorkRequest(c) { 
+      public String toString() { return "flush"; }
+      public Object doWork() throws Exception {
+        if (PersistentStorage.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Flushing all data in " + name);
+
+        flushDirectory(appDirectory);
+        return Boolean.TRUE;
+      }
+    });
   }
-
-
+                  
   /*****************************************************************/
   /* Functions for init/crash recovery                             */
   /*****************************************************************/
@@ -1155,6 +1172,44 @@ public class PersistentStorage implements Storage {
       resolveConflict(file, other, other);
       checkDirectory(dest);
     } 
+  }
+  
+  /**
+   * Method which recursively flushes a directory hierarchy, removing all data.  Be careful!
+   *
+   * @param dir The directory to flush
+   */
+  private void flushDirectory(File dir) throws IOException {
+    debug("Flushing file " + dir);
+
+    if (! dir.isDirectory()) {
+      Id id = readKey(dir);
+      
+      /* remove id from stored list */
+      if (index) {
+        synchronized (metadata) { 
+          metadata.remove(id);
+        }
+      }
+      
+      /* record the space collected and delete the file */
+      decreaseUsedSpace(dir.length());
+      deleteFile(dir);
+    } else {
+      File[] dirs = dir.listFiles();
+      
+      /* remove all subdirectories */
+      for (int i=0; i<dirs.length; i++) {
+        flushDirectory(dirs[i]);
+
+        /* update the metadata */
+        directories.remove(dirs[i]);
+        prefixes.remove(dirs[i]);      
+
+        /* delete the dir */
+        deleteFile(dirs[i]);
+      }      
+    }
   }
    
   /*****************************************************************/
